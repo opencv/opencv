@@ -3262,31 +3262,24 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 
 } // namespace
 
+// ENGINE_CLASSIC/ENGINE_AUTO have been removed; the TensorFlow importer always uses the new engine.
+static void warnIfUnsupportedTfEngine(int engine)
+{
+    static const int engine_forced =
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
+    if (engine_forced == ENGINE_NEW)
+        engine = engine_forced;
+    if (engine != ENGINE_NEW)
+        CV_LOG_WARNING(NULL, "DNN/TF: only ENGINE_NEW is supported; "
+                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, using ENGINE_NEW.");
+}
+
 Net readNetFromTensorflow(const String &model, const String &config, int engine,
                           const std::vector<String>& extraOutputs)
 {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
-        engine = engine_forced;
-
-    if (engine == ENGINE_AUTO)
-    {
-        try
-        {
-            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(),
-                                                         true, extraOutputs);
-        }
-        catch(const std::exception& e)
-        {
-            CV_LOG_WARNING(NULL, "Can't parse model with the new dnn engine, trying to parse with the old dnn engine: " << e.what());
-            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(),
-                                                         false, extraOutputs);
-        }
-    }
-    else
-    {
-        return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(), engine == ENGINE_NEW || engine == ENGINE_AUTO, extraOutputs);
-    }
+    warnIfUnsupportedTfEngine(engine);
+    return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(),
+                                                 /*newEngine*/ true, extraOutputs);
 }
 
 Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
@@ -3294,26 +3287,9 @@ Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
                           int engine,
                           const std::vector<String>& extraOutputs)
 {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
-        engine = engine_forced;
-
-    if (engine == ENGINE_AUTO)
-    {
-        try
-        {
-            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, true, extraOutputs);
-        }
-        catch(const std::exception& e)
-        {
-            CV_LOG_WARNING(NULL, "Can't parse model with the new dnn engine, trying to parse with the old dnn engine: " << e.what());
-            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, false, extraOutputs);
-        }
-    }
-    else
-    {
-        return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, engine == ENGINE_NEW || engine == ENGINE_AUTO, extraOutputs);
-    }
+    warnIfUnsupportedTfEngine(engine);
+    return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig,
+                                                 /*newEngine*/ true, extraOutputs);
 }
 
 Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>&                                    bufferConfig, int engine,

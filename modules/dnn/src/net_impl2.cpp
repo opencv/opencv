@@ -859,45 +859,44 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     const std::vector<Arg>& outargs = mainGraph->outputs();
     std::vector<int> outidxs;
     int i, j, noutputs = (int)outargs.size();
-    if (!outnames.empty()) {
-        CV_CheckEQ((int)outnames.size(), noutputs, "the number of requested and actual outputs must be the same");
-        if (noutputs == 1 && outnames[0].empty())
-            ;
-        else {
-            for (i = 0; i < noutputs; i++) {
-                const std::string& outname = outnames[i];
-                for (j = 0; j < noutputs; j++) {
-                    const ArgData& adata = args.at(outargs[j].idx);
-                    if (adata.name == outname) {
-                        outidxs.push_back((int)j);
-                        break;
-                    }
+    if (outnames.empty() || (noutputs == 1 && outnames.size() == 1 && outnames[0].empty())) {
+        for (i = 0; i < noutputs; i++)
+            outidxs.push_back(i);
+    } else {
+        for (i = 0; i < (int)outnames.size(); i++) {
+            const std::string& outname = outnames[i];
+            for (j = 0; j < noutputs; j++) {
+                const ArgData& adata = args.at(outargs[j].idx);
+                if (adata.name == outname) {
+                    outidxs.push_back((int)j);
+                    break;
                 }
-                if (j == noutputs) {
-                    CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
-                }
+            }
+            if (j == noutputs) {
+                CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
             }
         }
     }
     std::vector<Mat> inps={}, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(outs.size() == noutputs);
+    int nout = (int)outidxs.size();
     std::vector<Mat>* outMats = nullptr;
     std::vector<UMat>* outUMats = nullptr;
     _InputArray::KindFlag outKind = outblobs.kind();
     if (outKind == _InputArray::STD_VECTOR_MAT) {
         outMats = &outblobs.getMatVecRef();
-        outMats->resize(noutputs);
+        outMats->resize(nout);
     } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
         outUMats = &outblobs.getUMatVecRef();
-        outUMats->resize(noutputs);
+        outUMats->resize(nout);
     } else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT) {
-        CV_Assert(noutputs == 1);
+        CV_Assert(nout == 1);
     } else {
         CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
     }
-    for (i = 0; i < noutputs; i++) {
-        int j = outidxs.empty() ? i : outidxs[i];
+    for (i = 0; i < nout; i++) {
+        int j = outidxs[i];
         Mat src = outs[j];
         if (outMats) {
             src.copyTo(outMats->at(i));

@@ -8,21 +8,11 @@
 #ifdef HAVE_OPENCV_DNN
 
 #include "opencv2/dnn.hpp"
-#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace opencv_test { namespace {
 
-static void skipIfClassicDnnEngine()
-{
-    const auto engine = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine == cv::dnn::ENGINE_CLASSIC)
-        throw SkipTestException("ALIKED/LightGlue reference outputs are generated with the new DNN engine");
-}
-
 TEST(Features2d_ALIKED, Regression)
 {
-    skipIfClassicDnnEngine();
     const std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
 
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
@@ -85,7 +75,6 @@ TEST(Features2d_ALIKED, Regression)
 
 TEST(Features2d_LightGlue, Regression)
 {
-    skipIfClassicDnnEngine();
     const std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
 

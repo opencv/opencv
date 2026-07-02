@@ -719,7 +719,7 @@ Net ONNXImporter2::parseModel()
         sstrm << "DNN/ONNX: the model ";
         if (!onnxFilename.empty())
             sstrm << "'"  << onnxFilename << "' ";
-        sstrm << "cannot be loaded with the new parser. Trying the older parser. ";
+        sstrm << "cannot be loaded by the DNN engine.";
         if (!missing_ops.empty()) {
             sstrm << " Unsupported operations:\n";
             auto it = missing_ops.begin();
@@ -768,21 +768,6 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
         } else {
             // ONNX allows dimensions without dim_value and dim_param.
             // Treat them as unnamed symbolic dimensions.
-            // NOTE: LSTM with unnamed dimensions is not ready in the new graph
-            // engine yet, so force fallback to classic parser.
-            if (curr_graph_proto)
-            {
-                const int n_nodes = curr_graph_proto->node_size();
-                for (int i = 0; i < n_nodes; ++i)
-                {
-                    const std::string& op = curr_graph_proto->node(i).op_type();
-                    if (op == "LSTM")
-                    {
-                        raiseError();
-                        return false;
-                    }
-                }
-            }
             val_j = net.findDim("", true);
         }
         //CV_Assert(0 <= val_j && val_j <= INT_MAX);
@@ -1354,7 +1339,9 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
     layerParams.set("produce_sequence_y", need_y);
 
 
-    if (lstm_proto.input_size() == 8)
+    // The 8th input (P, peephole weights) is optional; an absent ONNX input is
+    // encoded as an empty name. Only enable peephole when it is actually present.
+    if (lstm_proto.input_size() == 8 && !lstm_proto.input(7).empty())
         layerParams.set("use_peephole", true);
 
 

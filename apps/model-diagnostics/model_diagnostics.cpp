@@ -53,7 +53,7 @@ std::string diagnosticKeys =
         "{ model m     | | Path to the model file. }"
         "{ config c    | | Path to the model configuration file. }"
         "{ framework f | | [Optional] Name of the model framework. }"
-        "{ engine e    | auto | [Optional] Graph negine selector: auto or classic or new}"
+        "{ engine e    | new | [Optional] DNN engine selector: new (default) or ort}"
         "{ input0_name | | [Optional] Name of input0. Use with input0_shape}"
         "{ input0_shape | | [Optional] Shape of input0. Use with input0_name}"
         "{ input1_name | | [Optional] Name of input1. Use with input1_shape}"
@@ -98,19 +98,17 @@ int main( int argc, const char** argv )
     std::string input4_name = argParser.get<std::string>("input4_name");
     std::string input4_shape = argParser.get<std::string>("input4_shape");
 
-    dnn::EngineType engine = dnn::ENGINE_AUTO;
+    dnn::EngineType engine = dnn::ENGINE_NEW;
     if (argParser.has("engine"))
     {
         std::string eng_name = argParser.get<std::string>("engine");
-        if(eng_name == "auto")
-            engine = dnn::ENGINE_AUTO;
-        else if(eng_name == "classic")
-            engine = dnn::ENGINE_CLASSIC;
-        else if(eng_name == "new")
+        if(eng_name == "new")
             engine = dnn::ENGINE_NEW;
+        else if(eng_name == "ort")
+            engine = dnn::ENGINE_ORT;
         else
         {
-            std::cerr << "Unknown DNN graph engine \"" << eng_name << "\"\n";
+            std::cerr << "Unknown DNN graph engine \"" << eng_name << "\" (use 'new' or 'ort')\n";
             return -1;
         }
     }

@@ -1497,10 +1497,20 @@ void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& in
     }
 }
 
-Net readNetFromTFLite(const String &modelPath, int engine) {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
+// ENGINE_CLASSIC/ENGINE_AUTO have been removed; the TFLite importer always uses the new engine.
+static void warnIfUnsupportedTFLiteEngine(int engine)
+{
+    static const int engine_forced =
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
+    if (engine_forced == ENGINE_NEW)
         engine = engine_forced;
+    if (engine != ENGINE_NEW)
+        CV_LOG_WARNING(NULL, "DNN/TFLite: only ENGINE_NEW is supported; "
+                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, using ENGINE_NEW.");
+}
+
+Net readNetFromTFLite(const String &modelPath, int engine) {
+    warnIfUnsupportedTFLiteEngine(engine);
 
     Net net;
 
@@ -1520,7 +1530,7 @@ Net readNetFromTFLite(const String &modelPath, int engine) {
     ifs.read(content.data(), sz);
     CV_Assert(!ifs.bad());
 
-    TFLiteImporter(net, content.data(), content.size(), engine == ENGINE_NEW || engine == ENGINE_AUTO);
+    TFLiteImporter(net, content.data(), content.size(), /*newEngine*/ true);
     return net;
 }
 
@@ -1529,12 +1539,10 @@ Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine) {
 }
 
 Net readNetFromTFLite(const char *bufferModel, size_t bufSize, int engine) {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
-        engine = engine_forced;
+    warnIfUnsupportedTFLiteEngine(engine);
 
     Net net;
-    TFLiteImporter(net, bufferModel, bufSize, engine == ENGINE_NEW || engine == ENGINE_AUTO);
+    TFLiteImporter(net, bufferModel, bufSize, /*newEngine*/ true);
     return net;
 }
 

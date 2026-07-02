@@ -217,14 +217,6 @@ public:
     // output against an in-test attention reference computed from the same inputs.
     void testSDPAModel(const String& basename, double l1, double lInf)
     {
-        // SDPA is only handled by the new-engine ONNX importer.
-        auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-        if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-            return;
-        }
-
         Mat Q  = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
         Mat KT = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
         Mat V  = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
@@ -2323,14 +2315,6 @@ TEST_P(Test_ONNX_layers, Gemm_External_Data)
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     testONNXModels("quantized_matmul_variable_inputs", npy, 1.3, 1.3);
 }
 
@@ -3771,7 +3755,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_NEW));
     if (engine_forced == cv::dnn::ENGINE_ORT)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
 
