@@ -1156,6 +1156,9 @@ public:
      */
     Mat row(int y) const;
 
+    //! faster than row() but weaker (original data should stay alive)
+    CV_WRAP Mat row_weak(int y) const;
+
     /** @brief Creates a matrix header for the specified matrix column.
 
     The method makes a new header for the specified matrix column and returns it. This is an O(1)
@@ -1164,6 +1167,9 @@ public:
     @param x A 0-based column index.
      */
     Mat col(int x) const;
+
+    //! faster than row() but weaker (original data should stay alive)
+    CV_WRAP Mat col_weak(int x) const;
 
     /** @brief Creates a matrix header for the specified row span.
 
@@ -1174,10 +1180,16 @@ public:
      */
     Mat rowRange(int startrow, int endrow) const;
 
+    //! faster than rowRange() but weaker (original data should stay alive)
+    Mat rowRange_weak(int startrow, int endrow) const;
+
     /** @overload
     @param r Range structure containing both the start and the end indices.
     */
     Mat rowRange(const Range& r) const;
+
+    //! faster than rowRange() but weaker (original data should stay alive)
+    Mat rowRange_weak(const Range& r) const;
 
     /** @brief Creates a matrix header for the specified column span.
 
@@ -1188,10 +1200,16 @@ public:
      */
     Mat colRange(int startcol, int endcol) const;
 
+    //! faster than colRange() but weaker (original data should stay alive)
+    Mat colRange_weak(int startcol, int endcol) const;
+
     /** @overload
     @param r Range structure containing both the start and the end indices.
     */
     Mat colRange(const Range& r) const;
+
+    //! faster than colRange() but weaker (original data should stay alive)
+    Mat colRange_weak(const Range& r) const;
 
     /** @brief Extracts a diagonal from a matrix
 
@@ -1739,20 +1757,32 @@ public:
      */
     Mat operator()( Range rowRange, Range colRange ) const;
 
+    //! faster than operator()(Range, Range) but weaker (original data should stay alive)
+    Mat roi_weak( Range rowRange, Range colRange ) const;
+
     /** @overload
     @param roi Extracted submatrix specified as a rectangle.
     */
     Mat operator()( const Rect& roi ) const;
+
+    //! faster than operator()(const Rect&) but weaker (original data should stay alive)
+    Mat roi_weak( const Rect& roi ) const;
 
     /** @overload
     @param ranges Array of selected ranges along each array dimension.
     */
     Mat operator()( const Range* ranges ) const;
 
+    //! faster than operator()(const Range*) but weaker (original data should stay alive)
+    Mat roi_weak( const Range* ranges ) const;
+
     /** @overload
     @param ranges Array of selected ranges along each array dimension.
     */
     Mat operator()(const std::vector<Range>& ranges) const;
+
+    //! faster than operator()(const std::vector<Range>&) but weaker (original data should stay alive)
+    Mat roi_weak( const std::vector<Range>& ranges ) const;
 
     template<typename _Tp> operator std::vector<_Tp>() const;
     template<typename _Tp, int n> operator Vec<_Tp, n>() const;

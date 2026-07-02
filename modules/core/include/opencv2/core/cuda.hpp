@@ -303,6 +303,29 @@ public:
     GpuMat operator ()(Range rowRange, Range colRange) const;
     GpuMat operator ()(Rect roi) const;
 
+    //! returns a new GpuMat header for the specified row
+    //! faster than row() but weaker (original data should stay alive)
+    CV_WRAP GpuMat row_weak(int y) const;
+
+    //! returns a new GpuMat header for the specified column
+    //! faster than col() but weaker (original data should stay alive)
+    CV_WRAP GpuMat col_weak(int x) const;
+
+    //! ... for the specified row span
+    //! faster than rowRange() but weaker (original data should stay alive)
+    CV_WRAP GpuMat rowRange_weak(int startrow, int endrow) const;
+    CV_WRAP GpuMat rowRange_weak(Range r) const;
+
+    //! ... for the specified column span
+    //! faster than colRange() but weaker (original data should stay alive)
+    CV_WRAP GpuMat colRange_weak(int startcol, int endcol) const;
+    CV_WRAP GpuMat colRange_weak(Range r) const;
+
+    //! extracts a rectangular sub-GpuMat (this is a generalized form of row, rowRange etc.)
+    //! faster than operator()(Range, Range) or operator(Rect) but weaker (original data should stay alive)
+    CV_WRAP GpuMat roi_weak(Range rowRange, Range colRange) const;
+    CV_WRAP GpuMat roi_weak(Rect roi) const;
+
     //! creates alternative GpuMat header for the same data, with different
     //! number of channels and/or different number of rows
     CV_WRAP GpuMat reshape(int cn, int rows = 0) const;

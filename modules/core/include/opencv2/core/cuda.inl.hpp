@@ -314,6 +314,66 @@ GpuMat GpuMat::operator ()(Rect roi) const
 }
 
 inline
+GpuMat GpuMat::row_weak(int y) const
+{
+    CV_Assert( (y >= 0) && (y < rows) );
+    return GpuMat(1, cols, type(), const_cast<unsigned char*>(ptr<unsigned char>(y)), step);
+}
+
+inline
+GpuMat GpuMat::col_weak(int x) const
+{
+    CV_Assert( (x >= 0) && (x < cols) );
+    return GpuMat(rows, 1, type(), const_cast<unsigned char*>(data)+x*elemSize(), step);
+}
+
+inline
+GpuMat GpuMat::rowRange_weak(int startrow, int endrow) const
+{
+    CV_Assert( (startrow >= 0) && (endrow <= rows) && (startrow <= endrow) );
+    return GpuMat(endrow-startrow, cols, type(), const_cast<unsigned char*>(ptr<unsigned char>(startrow)), step);
+}
+
+inline
+GpuMat GpuMat::rowRange_weak(Range r) const
+{
+    return rowRange_weak(r.start, r.end);
+}
+
+inline
+GpuMat GpuMat::colRange_weak(int startcol, int endcol) const
+{
+    CV_Assert( (startcol >= 0) && (endcol <= cols) && (startcol <= endcol) );
+    return GpuMat(rows, endcol-startcol, type(), const_cast<unsigned char*>(data)+startcol*elemSize(), step);
+}
+
+inline
+GpuMat GpuMat::colRange_weak(Range r) const
+{
+    return colRange_weak(r.start, r.end);
+}
+
+inline
+GpuMat GpuMat::roi_weak(Range rowRange_, Range colRange_) const
+{
+    CV_Assert( (rowRange_.start >= 0) && (rowRange_.end <= rows) && (rowRange_.start <= rowRange_.end) );
+    CV_Assert( (colRange_.start >= 0) && (colRange_.end <= cols) && (colRange_.start <= colRange_.end) );
+    return GpuMat(rowRange_.size(), colRange_.size(), type(),
+                  const_cast<unsigned char*>(ptr<unsigned char>(rowRange_.start))+colRange_.start*elemSize(),
+                  step);
+}
+
+inline
+GpuMat GpuMat::roi_weak(Rect roi) const
+{
+    CV_Assert( (roi.y >= 0) && (roi.y+roi.height <= rows) );
+    CV_Assert( (roi.x >= 0) && (roi.x+roi.width <= cols) );
+    return GpuMat(roi.height, roi.width, type(),
+        const_cast<unsigned char*>(ptr<unsigned char>(roi.y))+roi.x*elemSize(),
+        step);
+}
+
+inline
 bool GpuMat::isContinuous() const
 {
     return (flags & Mat::CONTINUOUS_FLAG) != 0;

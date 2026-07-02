@@ -670,6 +670,88 @@ Mat Mat::operator()(const std::vector<Range>& ranges) const
 }
 
 inline
+Mat Mat::row_weak(int y) const
+{
+    CV_Assert( (y >= 0) && (y < rows) );
+    return Mat(1, cols, type(), const_cast<unsigned char*>(ptr<unsigned char>(y)), step);
+}
+
+inline
+Mat Mat::col_weak(int x) const
+{
+    CV_Assert( (x >= 0) && (x < cols) );
+    return Mat(rows, 1, type(), const_cast<unsigned char*>(data)+x*elemSize(), step);
+}
+
+inline
+Mat Mat::rowRange_weak(int startrow, int endrow) const
+{
+    CV_Assert( (startrow >= 0) && (endrow <= rows) && (startrow <= endrow) );
+    return Mat(endrow-startrow, cols, type(), const_cast<unsigned char*>(ptr<unsigned char>(startrow)), step);
+}
+
+inline
+Mat Mat::rowRange_weak(const Range& r) const
+{
+    return rowRange_weak(r.start, r.end);
+}
+
+inline
+Mat Mat::colRange_weak(int startcol, int endcol) const
+{
+    CV_Assert( (startcol >= 0) && (endcol <= cols) && (startcol <= endcol) );
+    return Mat(rows, endcol-startcol, type(), const_cast<unsigned char*>(data)+startcol*elemSize(), step);
+}
+
+inline
+Mat Mat::colRange_weak(const Range& r) const
+{
+    return colRange_weak(r.start, r.end);
+}
+
+inline
+Mat Mat::roi_weak( Range _rowRange, Range _colRange ) const
+{
+    CV_Assert( (_rowRange.start >= 0) && (_rowRange.end <= rows) && (_rowRange.start <= _rowRange.end) );
+    CV_Assert( (_colRange.start >= 0) && (_colRange.end <= cols) && (_colRange.start <= _colRange.end) );
+    return Mat(_rowRange.size(), _colRange.size(), type(),
+        const_cast<unsigned char*>(ptr<unsigned char>(_rowRange.start))+_colRange.start*elemSize(),
+        step);
+}
+
+inline
+Mat Mat::roi_weak( const Rect& roi ) const
+{
+    CV_Assert( (roi.y >= 0) && (roi.y+roi.height <= rows) );
+    CV_Assert( (roi.x >= 0) && (roi.x+roi.width <= cols) );
+    return Mat(roi.height, roi.width, type(),
+        const_cast<unsigned char*>(ptr<unsigned char>(roi.y))+roi.x*elemSize(),
+        step);
+}
+
+inline
+Mat Mat::roi_weak(const Range* ranges) const
+{
+    CV_Assert( ranges != nullptr );
+    int subSizes[CV_MAX_DIM];
+    const unsigned char* subData = data;
+    for(int k = 0 ; k<dims ; ++k)
+    {
+      const Range& r = ranges[k];
+      subSizes[k] = r.size();
+      subData += r.start*((k+1<dims) ? step[k] : elemSize());
+    }
+    return Mat(dims, subSizes, type(), const_cast<unsigned char*>(subData), step.p);
+}
+
+inline
+Mat Mat::roi_weak(const std::vector<Range>& ranges) const
+{
+    CV_Assert( (int)ranges.size() == dims );
+    return roi_weak(ranges.data());
+}
+
+inline
 bool Mat::isContinuous() const
 {
     return (flags & CONTINUOUS_FLAG) != 0;
