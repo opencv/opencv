@@ -153,6 +153,14 @@ static void convInt8Block(const void* inp_, const void* residual_,
                           const int8_t* activLUT,
                           bool inputIsU8)
 {
+#if CV_TRY_RVV && CV_RVV
+    if (cv::checkHardwareSupport(CV_CPU_RVV)) {
+        opt_RVV::convInt8Block(inp_, residual_, out_, cs, weights_,
+                               weightsVNNI_, bias, biasVNNI_,
+                               multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        return;
+    }
+#endif
 #if CV_TRY_AVX2
     if (cv::checkHardwareSupport(CV_CPU_AVX2)) {
         opt_AVX2::convInt8Block(inp_, residual_, out_, cs, weights_,
