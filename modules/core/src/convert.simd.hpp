@@ -21,6 +21,7 @@ void cvt32f16bf(const float* src, bfloat* dst, int len);
 void addRNGBias32f(float* arr, const float* scaleBiasPairs, int len, int cn);
 void addRNGBias64f(double* arr, const double* scaleBiasPairs, int len, int cn);
 
+
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace cv::hal
 
@@ -315,6 +316,7 @@ static void cvt##suffix(const uchar* src_, size_t sstep, const uchar*, size_t, \
     } \
 }
 
+
 ////////////////////// 8u -> ... ////////////////////////
 
 DEF_CVT_FUNC(8u8s,  cvt_,  uchar, schar,    v_int16)
@@ -325,6 +327,7 @@ DEF_CVT_FUNC(8u64f, cvt_,  uchar, double,   v_int32)
 DEF_CVT_SCALAR_FUNC(8u64s, uchar, int64_t)
 DEF_CVT_FUNC(8u16f, cvt1_, uchar, hfloat, v_float32)
 DEF_CVT_FUNC(8u16bf, cvt1_, uchar, bfloat, v_float32)
+DEF_CVT_FUNC(8u8f, cvt1_, uchar, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(8u8b, uchar, 0)
 
 ////////////////////// 8s -> ... ////////////////////////

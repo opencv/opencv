@@ -73,6 +73,15 @@ static inline void v_store_as(hfloat* ptr, const v_float32& a)
 static inline void v_store_as(bfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
+static inline void v_store_as(fp8_e4m3_t* ptr, const v_float32& a)
+{
+    float buf[VTraits<v_float32>::max_nlanes];
+    v_store(buf, a);
+    const int n = VTraits<v_float32>::vlanes();
+    for (int i = 0; i < n; i++)
+        ptr[i] = fp8_e4m3_t(buf[i]);
+}
+
 static inline void v_store_as(int64_t* ptr, const v_float32& a)
 {
     v_int32 ia = v_round(a);
