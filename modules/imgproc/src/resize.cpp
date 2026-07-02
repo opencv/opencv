@@ -116,260 +116,59 @@ template <typename ET, typename FT, int n, bool mulall, int cncnt> struct hline
         hlineResize<ET, FT, n, mulall>(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
     }
 };
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 1>
+// Merges the four hand-unrolled hline<…,2,true,cncnt> specializations; compile-time cncnt unrolls the channel loop to byte-identical code.
+template <typename ET, typename FT, int cncnt> struct hline<ET, FT, 2, true, cncnt>
 {
     static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
     {
         int i = 0;
-        FT src0(src[0]);
+        FT src0[cncnt];
+        for (int c = 0; c < cncnt; c++) src0[c] = FT(src[c]);
         for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
         for (; i < dst_max; i++, m += 2)
         {
-            ET* px = src + ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[1];
+            ET* px = src + cncnt*ofst[i];
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = m[0] * px[c] + m[1] * px[c + cncnt];
         }
         // Avoid reading a potentially unset ofst, leading to a random memory read.
         if (i >= dst_width) {
             return;
         }
-        src0 = (src + ofst[dst_width - 1])[0];
+        ET* px_last = src + cncnt*ofst[dst_width - 1];
+        for (int c = 0; c < cncnt; c++) src0[c] = px_last[c];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
     }
 };
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 2>
+// Merged hline<…,4,true,cncnt>; preserves the original n=4 quirk of reading src (not src+cncnt*ofst[i]) byte-for-byte.
+template <typename ET, typename FT, int cncnt> struct hline<ET, FT, 4, true, cncnt>
 {
     static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
     {
         int i = 0;
-        FT src0(src[0]), src1(src[1]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 2*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[2];
-            *(dst++) = m[0] * px[1] + m[1] * px[3];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 2*ofst[dst_width - 1])[0];
-        src1 = (src + 2*ofst[dst_width - 1])[1];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 3>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 3*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[3];
-            *(dst++) = m[0] * px[1] + m[1] * px[4];
-            *(dst++) = m[0] * px[2] + m[1] * px[5];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 3*ofst[dst_width - 1])[0];
-        src1 = (src + 3*ofst[dst_width - 1])[1];
-        src2 = (src + 3*ofst[dst_width - 1])[2];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 4>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]), src3(src[3]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 4*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[4];
-            *(dst++) = m[0] * px[1] + m[1] * px[5];
-            *(dst++) = m[0] * px[2] + m[1] * px[6];
-            *(dst++) = m[0] * px[3] + m[1] * px[7];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 4*ofst[dst_width - 1])[0];
-        src1 = (src + 4*ofst[dst_width - 1])[1];
-        src2 = (src + 4*ofst[dst_width - 1])[2];
-        src3 = (src + 4*ofst[dst_width - 1])[3];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 1>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]);
+        FT src0[cncnt];
+        for (int c = 0; c < cncnt; c++) src0[c] = FT(src[c]);
         for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
         for (; i < dst_max; i++, m += 4)
         {
-            ET* px = src + ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[1] + m[2] * src[2] + m[3] * src[3];
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = m[0] * src[c] + m[1] * src[c + cncnt] + m[2] * src[c + 2*cncnt] + m[3] * src[c + 3*cncnt];
         }
         // Avoid reading a potentially unset ofst, leading to a random memory read.
         if (i >= dst_width) {
             return;
         }
-        src0 = (src + ofst[dst_width - 1])[0];
+        ET* px_last = src + cncnt*ofst[dst_width - 1];
+        for (int c = 0; c < cncnt; c++) src0[c] = px_last[c];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 2>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 2*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[2] + m[2] * src[4] + m[3] * src[6];
-            *(dst++) = m[0] * src[1] + m[1] * src[3] + m[2] * src[5] + m[3] * src[7];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 2*ofst[dst_width - 1])[0];
-        src1 = (src + 2*ofst[dst_width - 1])[1];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 3>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 3*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[3] + m[2] * src[6] + m[3] * src[ 9];
-            *(dst++) = m[0] * src[1] + m[1] * src[4] + m[2] * src[7] + m[3] * src[10];
-            *(dst++) = m[0] * src[2] + m[1] * src[5] + m[2] * src[8] + m[3] * src[11];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 3*ofst[dst_width - 1])[0];
-        src1 = (src + 3*ofst[dst_width - 1])[1];
-        src2 = (src + 3*ofst[dst_width - 1])[2];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 4>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]), src3(src[3]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 4*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[4] + m[2] * src[ 8] + m[3] * src[12];
-            *(dst++) = m[0] * src[1] + m[1] * src[5] + m[2] * src[ 9] + m[3] * src[13];
-            *(dst++) = m[0] * src[2] + m[1] * src[6] + m[2] * src[10] + m[3] * src[14];
-            *(dst++) = m[0] * src[3] + m[1] * src[7] + m[2] * src[11] + m[3] * src[15];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 4*ofst[dst_width - 1])[0];
-        src1 = (src + 4*ofst[dst_width - 1])[1];
-        src2 = (src + 4*ofst[dst_width - 1])[2];
-        src3 = (src + 4*ofst[dst_width - 1])[3];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
     }
 };
 template <typename ET, typename FT, int n, bool mulall, int cncnt>
@@ -1341,79 +1140,87 @@ struct VResizeLinearVec_32s8u
     }
 };
 
-struct VResizeLinearVec_32f16u
+// Unified float vertical-resize kernel collapsing the nine VResize*Vec_32f* structs:
+// an N-tap muladd chain (exact original nesting -> bit-identical) + a pack policy.
+template <int K, int N, bool Aligned>
+static inline v_float32 vresizeVecChain(const float** S, const float* beta, int x)
 {
-    int operator()(const float** src, ushort* dst, const float* beta, int width) const
+    v_float32 s;
+    if constexpr (Aligned)
+        s = vx_load_aligned(S[K] + x);
+    else
+        s = vx_load(S[K] + x);
+    v_float32 bK = vx_setall_f32(beta[K]);
+    if constexpr (K + 1 == N)
+        return v_mul(s, bK);
+    else
+        return v_muladd(s, bK, vresizeVecChain<K + 1, N, Aligned>(S, beta, x));
+}
+
+struct VPackF32
+{
+    typedef float DT;
+    enum { groups = 1 };
+    static int step() { return VTraits<v_float32>::vlanes(); }
+    static void store(DT* dst, const v_float32& a0) { v_store(dst, a0); }
+};
+
+template <typename DT_, bool Unsigned>
+struct VPack16  // 16u (v_pack_u) / 16s (v_pack) - selected at compile time
+{
+    typedef DT_ DT;
+    enum { groups = 2 };
+    static int step() { return VTraits<v_int16>::vlanes(); }
+    static void store(DT* dst, const v_float32& a0, const v_float32& a1) { if constexpr (Unsigned) v_store(dst, v_pack_u(v_round(a0), v_round(a1))); else v_store(dst, v_pack(v_round(a0), v_round(a1))); }
+    static void store_low(DT* dst, const v_int32& t0) { if constexpr (Unsigned) v_store_low(dst, v_pack_u(t0, t0)); else v_store_low(dst, v_pack(t0, t0)); }
+};
+
+template <int N, typename Pack, bool Aligned>
+static inline void vresizeVecStore(typename Pack::DT* dst, const float** src, const float* beta, int x)
+{
+    if constexpr (Pack::groups == 1)
+        Pack::store(dst, vresizeVecChain<0, N, Aligned>(src, beta, x));
+    else
+        Pack::store(dst, vresizeVecChain<0, N, Aligned>(src, beta, x),
+                         vresizeVecChain<0, N, Aligned>(src, beta, x + VTraits<v_float32>::vlanes()));
+}
+
+template <int N, typename Pack>
+struct VResizeVec_32f
+{
+    int operator()(const float** src, typename Pack::DT* dst, const float* beta, int width) const
     {
-        const float *S0 = src[0], *S1 = src[1];
         int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
-                                          v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        else
-            for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
-                                          v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
+        const int step = Pack::step();
+        if constexpr (N == 2)
         {
-            v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-            v_store_low(dst + x, v_pack_u(t0, t0));
+            // Linear-only aligned fast path (matches the original, which only the N=2 kernels had).
+            const float *S0 = src[0], *S1 = src[1];
+            if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
+                for( ; x <= width - step; x += step )
+                    vresizeVecStore<N, Pack, true>(dst + x, src, beta, x);
+            else
+                for( ; x <= width - step; x += step )
+                    vresizeVecStore<N, Pack, false>(dst + x, src, beta, x);
         }
-
-        return x;
-    }
-};
-
-struct VResizeLinearVec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-                v_store(dst + x, v_pack(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
-                                        v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
         else
-            for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-                v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
-                                        v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
         {
-            v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-            v_store_low(dst + x, v_pack(t0, t0));
+            for( ; x <= width - step; x += step )
+                vresizeVecStore<N, Pack, false>(dst + x, src, beta, x);
         }
-
+        if constexpr (N == 2 && Pack::groups == 2)
+        {
+            // Linear 16u/16s float-width tail (matches the original).
+            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes() )
+                Pack::store_low(dst + x, v_round(vresizeVecChain<0, N, false>(src, beta, x)));
+        }
         return x;
     }
 };
 
-struct VResizeLinearVec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-                v_store(dst + x, v_muladd(vx_load_aligned(S0 + x), b0, v_mul(vx_load_aligned(S1 + x), b1)));
-        else
-            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-                v_store(dst + x, v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<2, VPack16<ushort, true> > VResizeLinearVec_32f16u;
+typedef VResizeVec_32f<2, VPack16<short, false> > VResizeLinearVec_32f16s;
+typedef VResizeVec_32f<2, VPackF32> VResizeLinearVec_32f;
 
 
 struct VResizeCubicVec_32s8u
@@ -1451,70 +1258,9 @@ struct VResizeCubicVec_32s8u
     }
 };
 
-struct VResizeCubicVec_32f16u
-{
-    int operator()(const float** src, ushort* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-            v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                              v_muladd(vx_load(S1 + x                    ),  b1,
-                                              v_muladd(vx_load(S2 + x                    ),  b2,
-                                                       v_mul(vx_load(S3 + x), b3))))),
-                                      v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                              v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                              v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                                       v_mul(vx_load(S3 + x + VTraits<v_float32>::vlanes()), b3)))))));
-
-        return x;
-    }
-};
-
-struct VResizeCubicVec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-            v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                            v_muladd(vx_load(S1 + x                    ),  b1,
-                                            v_muladd(vx_load(S2 + x                    ),  b2,
-                                                     v_mul(vx_load(S3 + x), b3))))),
-                                    v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                            v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                            v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                                     v_mul(vx_load(S3 + x + VTraits<v_float32>::vlanes()), b3)))))));
-
-        return x;
-    }
-};
-
-struct VResizeCubicVec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-            v_store(dst + x, v_muladd(vx_load(S0 + x),  b0,
-                             v_muladd(vx_load(S1 + x),  b1,
-                             v_muladd(vx_load(S2 + x),  b2,
-                                      v_mul(vx_load(S3 + x), b3)))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<4, VPack16<ushort, true> > VResizeCubicVec_32f16u;
+typedef VResizeVec_32f<4, VPack16<short, false> > VResizeCubicVec_32f16s;
+typedef VResizeVec_32f<4, VPackF32> VResizeCubicVec_32f;
 
 
 #if CV_TRY_SSE4_1
@@ -1532,102 +1278,12 @@ struct VResizeLanczos4Vec_32f16u
 
 #else
 
-struct VResizeLanczos4Vec_32f16u
-{
-    int operator()(const float** src, ushort* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-            v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                              v_muladd(vx_load(S1 + x                    ),  b1,
-                                              v_muladd(vx_load(S2 + x                    ),  b2,
-                                              v_muladd(vx_load(S3 + x                    ),  b3,
-                                              v_muladd(vx_load(S4 + x                    ),  b4,
-                                              v_muladd(vx_load(S5 + x                    ),  b5,
-                                              v_muladd(vx_load(S6 + x                    ),  b6,
-                                                       v_mul(vx_load(S7 + x                    ), b7))))))))),
-                                      v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                              v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                              v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                              v_muladd(vx_load(S3 + x + VTraits<v_float32>::vlanes()),  b3,
-                                              v_muladd(vx_load(S4 + x + VTraits<v_float32>::vlanes()),  b4,
-                                              v_muladd(vx_load(S5 + x + VTraits<v_float32>::vlanes()),  b5,
-                                              v_muladd(vx_load(S6 + x + VTraits<v_float32>::vlanes()),  b6,
-                                                       v_mul(vx_load(S7 + x + VTraits<v_float32>::vlanes()), b7)))))))))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<8, VPack16<ushort, true> > VResizeLanczos4Vec_32f16u;
 
 #endif
 
-struct VResizeLanczos4Vec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-            v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                            v_muladd(vx_load(S1 + x                    ),  b1,
-                                            v_muladd(vx_load(S2 + x                    ),  b2,
-                                            v_muladd(vx_load(S3 + x                    ),  b3,
-                                            v_muladd(vx_load(S4 + x                    ),  b4,
-                                            v_muladd(vx_load(S5 + x                    ),  b5,
-                                            v_muladd(vx_load(S6 + x                    ),  b6,
-                                                     v_mul(vx_load(S7 + x), b7))))))))),
-                                    v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                            v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                            v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                            v_muladd(vx_load(S3 + x + VTraits<v_float32>::vlanes()),  b3,
-                                            v_muladd(vx_load(S4 + x + VTraits<v_float32>::vlanes()),  b4,
-                                            v_muladd(vx_load(S5 + x + VTraits<v_float32>::vlanes()),  b5,
-                                            v_muladd(vx_load(S6 + x + VTraits<v_float32>::vlanes()),  b6,
-                                                     v_mul(vx_load(S7 + x + VTraits<v_float32>::vlanes()), b7)))))))))));
-
-        return x;
-    }
-};
-
-struct VResizeLanczos4Vec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-            v_store(dst + x, v_muladd(vx_load(S0 + x),  b0,
-                             v_muladd(vx_load(S1 + x),  b1,
-                             v_muladd(vx_load(S2 + x),  b2,
-                             v_muladd(vx_load(S3 + x),  b3,
-                             v_muladd(vx_load(S4 + x),  b4,
-                             v_muladd(vx_load(S5 + x),  b5,
-                             v_muladd(vx_load(S6 + x),  b6,
-                                      v_mul(vx_load(S7 + x), b7)))))))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<8, VPack16<short, false> > VResizeLanczos4Vec_32f16s;
+typedef VResizeVec_32f<8, VPackF32> VResizeLanczos4Vec_32f;
 
 #else
 
@@ -1998,8 +1654,8 @@ struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COE
 };
 
 
-template<typename T, typename WT, typename AT>
-struct HResizeCubic
+template<typename T, typename WT, typename AT, int K>
+struct HResizeFilterK
 {
     typedef T value_type;
     typedef WT buf_type;
@@ -2016,11 +1672,11 @@ struct HResizeCubic
             int dx = 0, limit = xmin;
             for(;;)
             {
-                for( ; dx < limit; dx++, alpha += 4 )
+                for( ; dx < limit; dx++, alpha += K )
                 {
-                    int j, sx = xofs[dx] - cn;
+                    int j, sx = xofs[dx] - cn*(K/2 - 1);
                     WT v = 0;
-                    for( j = 0; j < 4; j++ )
+                    for( j = 0; j < K; j++ )
                     {
                         int sxj = sx + j*cn;
                         if( (unsigned)sxj >= (unsigned)swidth )
@@ -2036,18 +1692,22 @@ struct HResizeCubic
                 }
                 if( limit == dwidth )
                     break;
-                for( ; dx < xmax; dx++, alpha += 4 )
+                for( ; dx < xmax; dx++, alpha += K )
                 {
-                    int sx = xofs[dx];
-                    D[dx] = S[sx-cn]*alpha[0] + S[sx]*alpha[1] +
-                        S[sx+cn]*alpha[2] + S[sx+cn*2]*alpha[3];
+                    int sx = xofs[dx] - cn*(K/2 - 1);
+                    WT v = S[sx]*alpha[0];
+                    for( int j = 1; j < K; j++ )
+                        v += S[sx + j*cn]*alpha[j];
+                    D[dx] = v;
                 }
                 limit = dwidth;
             }
-            alpha -= dwidth*4;
+            alpha -= dwidth*K;
         }
     }
 };
+
+template<typename T, typename WT, typename AT> using HResizeCubic = HResizeFilterK<T, WT, AT, 4>;
 
 
 template<typename T, typename WT, typename AT, class CastOp, class VecOp>
@@ -2071,58 +1731,7 @@ struct VResizeCubic
 };
 
 
-template<typename T, typename WT, typename AT>
-struct HResizeLanczos4
-{
-    typedef T value_type;
-    typedef WT buf_type;
-    typedef AT alpha_type;
-
-    void operator()(const T** src, WT** dst, int count,
-                    const int* xofs, const AT* alpha,
-                    int swidth, int dwidth, int cn, int xmin, int xmax ) const
-    {
-        for( int k = 0; k < count; k++ )
-        {
-            const T *S = src[k];
-            WT *D = dst[k];
-            int dx = 0, limit = xmin;
-            for(;;)
-            {
-                for( ; dx < limit; dx++, alpha += 8 )
-                {
-                    int j, sx = xofs[dx] - cn*3;
-                    WT v = 0;
-                    for( j = 0; j < 8; j++ )
-                    {
-                        int sxj = sx + j*cn;
-                        if( (unsigned)sxj >= (unsigned)swidth )
-                        {
-                            while( sxj < 0 )
-                                sxj += cn;
-                            while( sxj >= swidth )
-                                sxj -= cn;
-                        }
-                        v += S[sxj]*alpha[j];
-                    }
-                    D[dx] = v;
-                }
-                if( limit == dwidth )
-                    break;
-                for( ; dx < xmax; dx++, alpha += 8 )
-                {
-                    int sx = xofs[dx];
-                    D[dx] = S[sx-cn*3]*alpha[0] + S[sx-cn*2]*alpha[1] +
-                        S[sx-cn]*alpha[2] + S[sx]*alpha[3] +
-                        S[sx+cn]*alpha[4] + S[sx+cn*2]*alpha[5] +
-                        S[sx+cn*3]*alpha[6] + S[sx+cn*4]*alpha[7];
-                }
-                limit = dwidth;
-            }
-            alpha -= dwidth*8;
-        }
-    }
-};
+template<typename T, typename WT, typename AT> using HResizeLanczos4 = HResizeFilterK<T, WT, AT, 8>;
 
 
 template<typename T, typename WT, typename AT, class CastOp, class VecOp>
@@ -2596,6 +2205,53 @@ private:
     int step;
 };
 
+#if CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
+// Shared cn==3 wide-vector area-fast kernel for the 16u/16s twins (CV_SIMD_WIDTH 32/64): pure type
+// substitution over {element-vector VT, accumulator WT, element ET}, force-inlined so each caller's codegen is unchanged.
+template <typename VT, typename WT, typename ET>
+static CV_ALWAYS_INLINE void resizeAreaFast_cn3_wide(int& dx, const ET* S0, const ET* S1, ET* D, int w)
+{
+    for ( ; dx <= w - 3*VTraits<VT>::vlanes(); dx += 3*VTraits<VT>::vlanes(), S0 += 6*VTraits<VT>::vlanes(), S1 += 6*VTraits<VT>::vlanes(), D += 3*VTraits<VT>::vlanes())
+    {
+        WT t0, t1, t2, t3, t4, t5;
+        WT s0, s1, s2, s3, s4, s5;
+        s0 = v_add(vx_load_expand(S0), vx_load_expand(S1));
+        s1 = v_add(vx_load_expand(S0 + VTraits<WT>::vlanes()), vx_load_expand(S1 + VTraits<WT>::vlanes()));
+        s2 = v_add(vx_load_expand(S0 + 2 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 2 * VTraits<WT>::vlanes()));
+        s3 = v_add(vx_load_expand(S0 + 3 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 3 * VTraits<WT>::vlanes()));
+        s4 = v_add(vx_load_expand(S0 + 4 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 4 * VTraits<WT>::vlanes()));
+        s5 = v_add(vx_load_expand(S0 + 5 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 5 * VTraits<WT>::vlanes()));
+        v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
+        v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
+        WT bl, gl, rl;
+        v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
+#if CV_SIMD_WIDTH == 32
+        bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
+#else //CV_SIMD_WIDTH == 64
+        v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
+        bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
+#endif
+        s0 = v_add(vx_load_expand(S0 + 6 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 6 * VTraits<WT>::vlanes()));
+        s1 = v_add(vx_load_expand(S0 + 7 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 7 * VTraits<WT>::vlanes()));
+        s2 = v_add(vx_load_expand(S0 + 8 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 8 * VTraits<WT>::vlanes()));
+        s3 = v_add(vx_load_expand(S0 + 9 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 9 * VTraits<WT>::vlanes()));
+        s4 = v_add(vx_load_expand(S0 + 10 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 10 * VTraits<WT>::vlanes()));
+        s5 = v_add(vx_load_expand(S0 + 11 * VTraits<WT>::vlanes()), vx_load_expand(S1 + 11 * VTraits<WT>::vlanes()));
+        v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
+        v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
+        WT bh, gh, rh;
+        v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
+#if CV_SIMD_WIDTH == 32
+        bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
+#else //CV_SIMD_WIDTH == 64
+        v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
+        bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
+#endif
+        v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
+    }
+}
+#endif
+
 class ResizeAreaFastVec_SIMD_16u
 {
 public:
@@ -2634,44 +2290,7 @@ public:
                 v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #endif
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
-            for ( ; dx <= w - 3*VTraits<v_uint16>::vlanes(); dx += 3*VTraits<v_uint16>::vlanes(), S0 += 6*VTraits<v_uint16>::vlanes(), S1 += 6*VTraits<v_uint16>::vlanes(), D += 3*VTraits<v_uint16>::vlanes())
-            {
-                v_uint32 t0, t1, t2, t3, t4, t5;
-                v_uint32 s0, s1, s2, s3, s4, s5;
-                s0 = v_add(vx_load_expand(S0), vx_load_expand(S1));
-                s1 = v_add(vx_load_expand(S0 + VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + VTraits<v_uint32>::vlanes()));
-                s2 = v_add(vx_load_expand(S0 + 2 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 2 * VTraits<v_uint32>::vlanes()));
-                s3 = v_add(vx_load_expand(S0 + 3 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 3 * VTraits<v_uint32>::vlanes()));
-                s4 = v_add(vx_load_expand(S0 + 4 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 4 * VTraits<v_uint32>::vlanes()));
-                s5 = v_add(vx_load_expand(S0 + 5 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 5 * VTraits<v_uint32>::vlanes()));
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                v_uint32 bl, gl, rl;
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-#if CV_SIMD_WIDTH == 32
-                bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
-#else //CV_SIMD_WIDTH == 64
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
-#endif
-                s0 = v_add(vx_load_expand(S0 + 6 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 6 * VTraits<v_uint32>::vlanes()));
-                s1 = v_add(vx_load_expand(S0 + 7 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 7 * VTraits<v_uint32>::vlanes()));
-                s2 = v_add(vx_load_expand(S0 + 8 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 8 * VTraits<v_uint32>::vlanes()));
-                s3 = v_add(vx_load_expand(S0 + 9 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 9 * VTraits<v_uint32>::vlanes()));
-                s4 = v_add(vx_load_expand(S0 + 10 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 10 * VTraits<v_uint32>::vlanes()));
-                s5 = v_add(vx_load_expand(S0 + 11 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 11 * VTraits<v_uint32>::vlanes()));
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                v_uint32 bh, gh, rh;
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-#if CV_SIMD_WIDTH == 32
-                bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
-#else //CV_SIMD_WIDTH == 64
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
-#endif
-                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
-            }
+            resizeAreaFast_cn3_wide<v_uint16, v_uint32>(dx, S0, S1, D, w);
 #elif CV_SIMD_WIDTH >= 64
             v_uint32 masklow = vx_setall_u32(0x0000ffff);
             for ( ; dx <= w - 3*VTraits<v_uint16>::vlanes(); dx += 3*VTraits<v_uint16>::vlanes(), S0 += 6*VTraits<v_uint16>::vlanes(), S1 += 6*VTraits<v_uint16>::vlanes(), D += 3*VTraits<v_uint16>::vlanes())
@@ -2764,44 +2383,7 @@ public:
             for ( ; dx <= w - 4; dx += 3, S0 += 6, S1 += 6, D += 3)
                 v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
-            for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
-            {
-                v_int32 t0, t1, t2, t3, t4, t5;
-                v_int32 s0, s1, s2, s3, s4, s5;
-                s0 = v_add(vx_load_expand(S0), vx_load_expand(S1));
-                s1 = v_add(vx_load_expand(S0 + VTraits<v_int32>::vlanes()), vx_load_expand(S1 + VTraits<v_int32>::vlanes()));
-                s2 = v_add(vx_load_expand(S0 + 2 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 2 * VTraits<v_int32>::vlanes()));
-                s3 = v_add(vx_load_expand(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 3 * VTraits<v_int32>::vlanes()));
-                s4 = v_add(vx_load_expand(S0 + 4 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 4 * VTraits<v_int32>::vlanes()));
-                s5 = v_add(vx_load_expand(S0 + 5 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 5 * VTraits<v_int32>::vlanes()));
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                v_int32 bl, gl, rl;
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-#if CV_SIMD_WIDTH == 32
-                bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
-#else //CV_SIMD_WIDTH == 64
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
-#endif
-                s0 = v_add(vx_load_expand(S0 + 6 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 6 * VTraits<v_int32>::vlanes()));
-                s1 = v_add(vx_load_expand(S0 + 7 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 7 * VTraits<v_int32>::vlanes()));
-                s2 = v_add(vx_load_expand(S0 + 8 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 8 * VTraits<v_int32>::vlanes()));
-                s3 = v_add(vx_load_expand(S0 + 9 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 9 * VTraits<v_int32>::vlanes()));
-                s4 = v_add(vx_load_expand(S0 + 10 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 10 * VTraits<v_int32>::vlanes()));
-                s5 = v_add(vx_load_expand(S0 + 11 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 11 * VTraits<v_int32>::vlanes()));
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                v_int32 bh, gh, rh;
-                v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-#if CV_SIMD_WIDTH == 32
-                bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
-#else //CV_SIMD_WIDTH == 64
-                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
-#endif
-                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
-            }
+            resizeAreaFast_cn3_wide<v_int16, v_int32>(dx, S0, S1, D, w);
 #elif CV_SIMD_WIDTH >= 64
             for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
             {
@@ -3340,11 +2922,17 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const int* yofs);
 
 
-static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+// Shared resize-area coefficient-table math for the CPU and OpenCL callers; the
+// per-entry emit (struct vs parallel arrays + ofs_tab) is picked via if constexpr.
+template <bool OCL>
+static int computeResizeAreaTabImpl( int ssize, int dsize, int cn, double scale,
+                                     DecimateAlpha* tab, int* map_tab, float* alpha_tab, int* ofs_tab )
 {
-    int k = 0;
-    for(int dx = 0; dx < dsize; dx++ )
+    int k = 0, dx = 0;
+    for( ; dx < dsize; dx++ )
     {
+        if constexpr (OCL) ofs_tab[dx] = k;
+
         double fsx1 = dx * scale;
         double fsx2 = fsx1 + scale;
         double cellWidth = std::min(scale, ssize - fsx1);
@@ -3354,70 +2942,46 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
         sx2 = std::min(sx2, ssize - 1);
         sx1 = std::min(sx1, sx2);
 
-        if( sx1 - fsx1 > 1e-3 )
+        auto emit = [&](int si, float alpha)
         {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = (sx1 - 1) * cn;
-            tab[k++].alpha = (float)((sx1 - fsx1) / cellWidth);
-        }
+            if constexpr (OCL)
+            {
+                map_tab[k] = si;
+                alpha_tab[k] = alpha;
+            }
+            else
+            {
+                CV_Assert( k < ssize*2 );
+                tab[k].di = dx * cn;
+                tab[k].si = si * cn;
+                tab[k].alpha = alpha;
+            }
+            k++;
+        };
 
-        for(int sx = sx1; sx < sx2; sx++ )
-        {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx * cn;
-            tab[k++].alpha = float(1.0 / cellWidth);
-        }
+        if( sx1 - fsx1 > 1e-3 )
+            emit(sx1 - 1, (float)((sx1 - fsx1) / cellWidth));
+
+        for( int sx = sx1; sx < sx2; sx++ )
+            emit(sx, float(1.0 / cellWidth));
 
         if( fsx2 - sx2 > 1e-3 )
-        {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx2 * cn;
-            tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
-        }
+            emit(sx2, (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth));
     }
+    if constexpr (OCL) ofs_tab[dsize] = k;
     return k;
+}
+
+static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+{
+    return computeResizeAreaTabImpl<false>(ssize, dsize, cn, scale, tab, nullptr, nullptr, nullptr);
 }
 
 #ifdef HAVE_OPENCL
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                       float * const alpha_tab, int * const ofs_tab)
 {
-    int k = 0, dx = 0;
-    for ( ; dx < dsize; dx++)
-    {
-        ofs_tab[dx] = k;
-
-        double fsx1 = dx * scale;
-        double fsx2 = fsx1 + scale;
-        double cellWidth = std::min(scale, ssize - fsx1);
-
-        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
-
-        sx2 = std::min(sx2, ssize - 1);
-        sx1 = std::min(sx1, sx2);
-
-        if (sx1 - fsx1 > 1e-3)
-        {
-            map_tab[k] = sx1 - 1;
-            alpha_tab[k++] = (float)((sx1 - fsx1) / cellWidth);
-        }
-
-        for (int sx = sx1; sx < sx2; sx++)
-        {
-            map_tab[k] = sx;
-            alpha_tab[k++] = float(1.0 / cellWidth);
-        }
-
-        if (fsx2 - sx2 > 1e-3)
-        {
-            map_tab[k] = sx2;
-            alpha_tab[k++] = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
-        }
-    }
-    ofs_tab[dx] = k;
+    computeResizeAreaTabImpl<true>(ssize, dsize, 1, scale, nullptr, map_tab, alpha_tab, ofs_tab);
 }
 
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
@@ -3636,198 +3200,6 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
 #endif
 
-#ifdef HAVE_IPP
-#define IPP_RESIZE_PARALLEL 1
-
-#ifdef HAVE_IPP_IW
-class ipp_resizeParallel: public ParallelLoopBody
-{
-public:
-    ipp_resizeParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
-        m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeParallel()
-    {
-    }
-
-    void Init(IppiInterpolationType inter)
-    {
-        iwiResize.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
-
-        m_ok = true;
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        CV_INSTRUMENT_REGION_IPP();
-
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiResize, m_src, m_dst, ippBorderRepl, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            m_ok = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &m_src;
-    ::ipp::IwiImage &m_dst;
-
-    mutable ::ipp::IwiResize iwiResize;
-
-    volatile bool &m_ok;
-    const ipp_resizeParallel& operator= (const ipp_resizeParallel&);
-};
-
-class ipp_resizeAffineParallel: public ParallelLoopBody
-{
-public:
-    ipp_resizeAffineParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
-        m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeAffineParallel()
-    {
-    }
-
-    void Init(IppiInterpolationType inter, double scaleX, double scaleY)
-    {
-        double shift = (inter == ippNearest)?-1e-10:-0.5;
-        double coeffs[2][3] = {
-            {scaleX, 0,      shift+0.5*scaleX},
-            {0,      scaleY, shift+0.5*scaleY}
-        };
-
-        iwiWarpAffine.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
-
-        m_ok = true;
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        CV_INSTRUMENT_REGION_IPP();
-
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, m_src, m_dst, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            m_ok = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &m_src;
-    ::ipp::IwiImage &m_dst;
-
-    mutable ::ipp::IwiWarpAffine iwiWarpAffine;
-
-    volatile bool &m_ok;
-    const ipp_resizeAffineParallel& operator= (const ipp_resizeAffineParallel&);
-};
-#endif
-
-static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, int src_height,
-            uchar * dst_data, size_t dst_step, int dst_width, int dst_height, double inv_scale_x, double inv_scale_y,
-            int depth, int channels, int interpolation)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    IppDataType           ippDataType = ippiGetDataType(depth);
-    IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
-    if((int)ippInter < 0)
-        return false;
-
-    // Resize which doesn't match OpenCV exactly
-    if (!cv::ipp::useIPP_NotExact())
-    {
-        if (ippInter == ippNearest || ippInter == ippSuper || (ippDataType == ipp8u && ippInter == ippLinear))
-            return false;
-    }
-
-    if(ippInter != ippLinear && ippDataType == ipp64f)
-        return false;
-
-#if IPP_VERSION_X100 < 201801
-    // Degradations on int^2 linear downscale
-    if (ippDataType != ipp64f && ippInter == ippLinear && inv_scale_x < 1 && inv_scale_y < 1) // if downscale
-    {
-        int scale_x = (int)(1 / inv_scale_x);
-        int scale_y = (int)(1 / inv_scale_y);
-        if (1 / inv_scale_x - scale_x < DBL_EPSILON && 1 / inv_scale_y - scale_y < DBL_EPSILON) // if integer
-        {
-            if (!(scale_x&(scale_x - 1)) && !(scale_y&(scale_y - 1))) // if power of 2
-                return false;
-        }
-    }
-#endif
-
-    bool  affine = false;
-    const double IPP_RESIZE_EPS = (depth == CV_64F)?0:1e-10;
-    double ex = fabs((double)dst_width / src_width  - inv_scale_x) / inv_scale_x;
-    double ey = fabs((double)dst_height / src_height - inv_scale_y) / inv_scale_y;
-
-    // Use affine transform resize to allow sub-pixel accuracy
-    if(ex > IPP_RESIZE_EPS || ey > IPP_RESIZE_EPS)
-        affine = true;
-
-    // Affine doesn't support Lanczos and Super interpolations
-    if(affine && (ippInter == ippLanczos || ippInter == ippSuper))
-        return false;
-
-    try
-    {
-        ::ipp::IwiImage iwSrc(::ipp::IwiSize(src_width, src_height), ippDataType, channels, 0, (void*)src_data, src_step);
-        ::ipp::IwiImage iwDst(::ipp::IwiSize(dst_width, dst_height), ippDataType, channels, 0, (void*)dst_data, dst_step);
-
-        bool  ok;
-        int   threads = ippiSuggestThreadsNum(iwDst, 1+((double)(src_width*src_height)/(dst_width*dst_height)));
-        Range range(0, dst_height);
-        ipp_resizeParallel       invokerGeneral(iwSrc, iwDst, ok);
-        ipp_resizeAffineParallel invokerAffine(iwSrc, iwDst, ok);
-        ParallelLoopBody        *pInvoker = NULL;
-        if(affine)
-        {
-            pInvoker = &invokerAffine;
-            invokerAffine.Init(ippInter, inv_scale_x, inv_scale_y);
-        }
-        else
-        {
-            pInvoker = &invokerGeneral;
-            invokerGeneral.Init(ippInter);
-        }
-
-        if(IPP_RESIZE_PARALLEL && threads > 1)
-            parallel_for_(range, *pInvoker, threads*4);
-        else
-            pInvoker->operator()(range);
-
-        if(!ok)
-            return false;
-    }
-    catch(const ::ipp::IwException &)
-    {
-        return false;
-    }
-    return true;
-#else
-    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(src_width); CV_UNUSED(src_height); CV_UNUSED(dst_data); CV_UNUSED(dst_step);
-    CV_UNUSED(dst_width); CV_UNUSED(dst_height); CV_UNUSED(inv_scale_x); CV_UNUSED(inv_scale_y); CV_UNUSED(depth);
-    CV_UNUSED(channels); CV_UNUSED(interpolation);
-    return false;
-#endif
-}
-#endif
-
 //==================================================================================================
 
 namespace hal {
@@ -3852,8 +3224,6 @@ void resize(int src_type,
     Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
                         saturate_cast<int>(src_height*inv_scale_y));
     CV_Assert( !dsize.empty() );
-
-    CV_IPP_RUN_FAST(ipp_resize(src_data, src_step, src_width, src_height, dst_data, dst_step, dsize.width, dsize.height, inv_scale_x, inv_scale_y, depth, cn, interpolation))
 
     static ResizeFunc linear_tab[CV_DEPTH_MAX] =
     {

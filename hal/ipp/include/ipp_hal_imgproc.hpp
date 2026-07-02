@@ -30,6 +30,14 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 
 #endif // IPP_VERSION_X100 >= 202600
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                   uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                   double inv_scale_x, double inv_scale_y, int interpolation);
+#undef cv_hal_resize
+#define cv_hal_resize ipp_hal_resize
+#endif // HAVE_IPP_IW
+
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
