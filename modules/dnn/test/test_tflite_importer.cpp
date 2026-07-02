@@ -280,6 +280,12 @@ TEST_P(Test_TFLite, StridedSlice) {
     testLayer("strided_slice");
 }
 
+// shrink_axis_mask: single and multiple shrunk axes.
+TEST_P(Test_TFLite, StridedSliceShrink) {
+    testLayer("strided_slice_shrink_1");
+    testLayer("strided_slice_shrink_2");
+}
+
 TEST_P(Test_TFLite, face_blendshapes)
 {
     Mat inp = blobFromNPY(findDataFile("dnn/tflite/face_blendshapes_inp.npy"));
@@ -340,6 +346,19 @@ TEST_P(Test_TFLite, minimum)
     }
 
     normAssert(ref, out, "", l1, lInf);
+}
+
+// A multi-output model must keep all declared outputs, not just the last operator's.
+TEST_P(Test_TFLite, multi_output_names)
+{
+    Net net = readNetFromTFLite(findDataFile("dnn/tflite/face_detection_short_range.tflite"));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::sort(outNames.begin(), outNames.end());
+    ASSERT_EQ(outNames, (std::vector<String>{"classificators", "regressors"}));
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
