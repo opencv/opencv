@@ -146,6 +146,9 @@ them together, put both markers of a pair in one `cv::aruco::Board`.
 `cv::aruco::getNestedMarkerObjectPoints()` returns their corners in a common frame: origin at the
 outer marker top left corner, x right, y down, z = 0.
 
+The code below assumes `cameraMatrix` and `distCoeffs` (Python: `camera_matrix` and `dist_coeffs`)
+come from your camera calibration.
+
 @code{.cpp}
 float sideLength = 0.20f;  // printed outer side in meters
 cv::Mat outerPts, innerPts;
@@ -153,10 +156,29 @@ cv::aruco::getNestedMarkerObjectPoints(dictionary, 0, sideLength, outerPts, inne
 cv::aruco::Board board(std::vector<cv::Mat>{outerPts, innerPts}, dictionary,
                        std::vector<int>{0, 1});
 
-cv::Mat objPoints, imgPoints;
-board.matchImagePoints(corners, ids, objPoints, imgPoints);
-cv::Mat rvec, tvec;
-cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
+while (cap.read(frame)) {
+    std::vector<std::vector<cv::Point2f>> corners, rejected;
+    std::vector<int> ids;
+    detector.detectMarkers(frame, corners, ids, rejected);
+    cv::aruco::drawDetectedMarkers(frame, corners, ids);
+
+    if (!ids.empty()) {
+        cv::Mat objPoints, imgPoints;
+        board.matchImagePoints(corners, ids, objPoints, imgPoints);
+
+        if (objPoints.total() >= 4) {
+            cv::Mat rvec, tvec;
+            bool ok = cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
+
+            if (ok) {
+                cv::drawFrameAxes(frame, cameraMatrix, distCoeffs, rvec, tvec, sideLength * 0.5f);
+            }
+        }
+    }
+
+    cv::imshow("nested marker pose", frame);
+    if (cv::waitKey(1) == 27) break;
+}
 @endcode
 
 Or in Python:
@@ -168,12 +190,30 @@ side_length = 0.20  # printed outer side in meters
 outer_pts, inner_pts = cv.aruco.getNestedMarkerObjectPoints(dictionary, 0, side_length)
 board = cv.aruco.Board([outer_pts, inner_pts], dictionary, np.array([0, 1]))
 
-obj_points, img_points = board.matchImagePoints(corners, ids)
-ok, rvec, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs)
+while True:
+    ok, frame = cap.read()
+    if not ok:
+        break
+    corners, ids, rejected = detector.detectMarkers(frame)
+    cv.aruco.drawDetectedMarkers(frame, corners, ids)
+
+    if ids is not None:
+        obj_points, img_points = board.matchImagePoints(corners, ids)
+
+        if len(obj_points) >= 4:
+            ok, rvec, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs)
+
+            if ok:
+                cv.drawFrameAxes(frame, camera_matrix, dist_coeffs, rvec, tvec, side_length * 0.5)
+
+    cv.imshow("nested marker pose", frame)
+    if cv.waitKey(1) == 27:
+        break
 @endcode
 
 `matchImagePoints()` uses whatever is visible: 4 points far away (outer only), 4 points up close
-(inner only), 8 points in between. The pose code does not change with the distance.
+(inner only), 8 points in between. The pose code does not change with the distance, and the drawn
+axis lets you see the fused board pose update as the visible marker changes.
 
 Several pairs can be combined into one board. Measure where each pair sits on your object, shift
 its object points accordingly and add everything to a single `cv::aruco::Board`:
