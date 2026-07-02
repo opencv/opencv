@@ -6,7 +6,7 @@
 // insertion + liveness), the executor (broadcast traversal via BroadcastOp), the hand builders
 // (makeBinaryArithProgram/makeAddWeightedProgram) and the cv::expression parser. Merged from the
 // prototype's ew_op/ew_compile/ew_exec/ew_parser. Kernels are reached through the dispatchers in
-// arithm_kernels.dispatch.cpp (getElemwiseFunc/getDivFunc, declared in arithm_expr.hpp).
+// arithm.dispatch.cpp (getElemwiseFunc/getDivFunc, declared in arithm_expr.hpp).
 
 #include "precomp.hpp"
 #include "arithm_expr.hpp"

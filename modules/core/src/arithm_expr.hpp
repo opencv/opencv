@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 // The new element-wise expression engine - low-level contract shared by the kernels
-// (arithm_kernels.simd.hpp), the per-op dispatchers (arithm_kernels.dispatch.cpp) and the
+// (arithm.simd.hpp), the per-op dispatchers (arithm.dispatch.cpp) and the
 // graph compiler / executor / parser (arithm_expr.cpp).
 //
 // Private core header for now; once cv::add() is rebuilt on top of it, the public-facing parts
@@ -158,9 +158,9 @@ struct TKernel
     int flags = 0;
 };
 
-// ---- per-op kernel entry points (implemented in arithm_kernels.dispatch.cpp) ----------------------
+// ---- per-op kernel entry points (implemented in arithm.dispatch.cpp) ----------------------
 // Each returns the kernel optimized for the current CPU (it forwards through CV_CPU_DISPATCH to the
-// matching get*Func_ compiled per SIMD baseline in arithm_kernels.simd.hpp). `T` is the (common) input
+// matching get*Func_ compiled per SIMD baseline in arithm.simd.hpp). `T` is the (common) input
 // depth, `R` the result depth; EW_DEPTH_NONE marks an unused operand. A null fptr means "no exact
 // kernel for this combination" - the compiler then inserts OP_CAST and retries with a working type.
 // These are the useful, op-specific intermediaries (candidates for CV_EXPORTS later).
