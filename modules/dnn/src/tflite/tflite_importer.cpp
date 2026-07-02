@@ -85,7 +85,8 @@ private:
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
-    int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype, int outTensorId);
+    int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype,
+                        const std::string& inName = std::string(), const std::string& outName = std::string());
     void addConstLayer(const Mat& data, int tensorIdx);
 
     inline bool isInt8(const Operator& op);
@@ -240,19 +241,27 @@ void TFLiteImporter::populateNet()
     if (newEngine)
     {
         const auto last_op = all_operators[all_operators_size - 1];
-        const auto op_outputs = last_op->outputs();
         std::string type = EnumNameBuiltinOperator(
             BuiltinOperator(opCodes->Get(last_op->opcode_index())->deprecated_builtin_code()));
-        for (int idx : *op_outputs)
+        if (type == "CUSTOM")
+            type = opCodes->Get(last_op->opcode_index())->custom_code()->str();
+
+        if (type == "TFLite_Detection_PostProcess")
         {
+            // detection_output merges the op's 4 outputs into one, so register just it.
+            int idx = last_op->outputs()->Get(0);
             std::string tensorName = modelTensors->Get(idx)->name()->str();
             modelOutputs.push_back(netImpl->newArg(tensorName, DNN_ARG_OUTPUT));
-
-            // TFLite_Detection_PostProcess layer returns 4 outputs
-            // (num_bboxes, bboxes, classes, conf)
-            // but our detection_output layer returns one output with all the data
-            if (type == "TFLite_Detection_PostProcess")
-                break;
+        }
+        else
+        {
+            // Register every declared subgraph output, not just the last op's, so
+            // outputs produced by non-terminal operators are kept.
+            for (int idx : *subgraph->outputs())
+            {
+                std::string tensorName = modelTensors->Get(idx)->name()->str();
+                modelOutputs.push_back(netImpl->newArg(tensorName, DNN_ARG_OUTPUT));
+            }
         }
     }
 
@@ -744,8 +753,6 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     parseFusedActivation(op, activ);
 
     if (opcode == "SQUARED_DIFFERENCE" || opcode == "RSQRT") {
-        if (haveFusedActivation)
-            CV_LOG_WARNING(NULL, format("%s with fused activation on new engine is not tested", opcode.c_str()));
         LayerParams lp;
         if (opcode == "RSQRT")
             lp.type = "Reciprocal";
@@ -1078,7 +1085,8 @@ int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, int
     }
 }
 
-int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype, int outTensorId)
+int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype,
+                                    const std::string& inName, const std::string& outName)
 {
     LayerParams lp;
     lp.set("axis", axis);
@@ -1087,8 +1095,7 @@ int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& n
     {
         lp.type = "Flatten";
         lp.name = name;
-        std::string tensorName = modelTensors->Get(outTensorId)->name()->str();
-        addLayer(lp, {tensorName + "_additional_post_layer"}, {tensorName});
+        addLayer(lp, {inName}, {outName});
         return -1;
     }
     else
@@ -1243,11 +1250,15 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     layerParams.set("end", DictValue::arrayInt((int*)ends.data, ends.total()));
     layerParams.set("steps", DictValue::arrayInt((int*)strides.data, strides.total()));
 
-    int lastShrinkAxis = -1;
+    int firstShrinkAxis = -1, lastShrinkAxis = -1;
     for (int axis = 0; axis < num; ++axis)
     {
         if (shrinkMask & (1 << axis))
+        {
+            if (firstShrinkAxis == -1)
+                firstShrinkAxis = axis;
             lastShrinkAxis = axis;
+        }
     }
     std::string layerName = layerParams.name;
     if (!newEngine && lastShrinkAxis != -1)
@@ -1257,24 +1268,38 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
 
     addLayer(layerParams, op, false, lastShrinkAxis != -1);
 
-    for (int axis = 0; axis < num; ++axis)
+    if (newEngine)
     {
-        if (!(shrinkMask & (1 << axis)))
-            continue;
-        if (newEngine)
+        // Each shrunk axis is removed by a Flatten collapsing it into the next axis. Chain the
+        // Flattens highest axis first, so every axis index stays valid as lower dimensions are
+        // removed one at a time; the last (lowest) Flatten keeps the slice's output name.
+        std::string outName = modelTensors->Get(op.outputs()->Get(0))->name()->str();
+        std::string inName = outName + "_additional_post_layer";
+        for (int axis = num - 1; axis >= 0; --axis)
         {
-            if (axis != lastShrinkAxis)
-                CV_LOG_WARNING(NULL, "StridedSlice with multiple axes shrink in new engine is not tested");
-            addFlattenLayer(axis, axis + 1, layerName,
-                layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.outputs()->Get(0));
+            if (!(shrinkMask & (1 << axis)))
+                continue;
+            bool last = (axis == firstShrinkAxis);
+            std::string name = last ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
+            std::string curOut = last ? outName : format("%s/shrink_axis_%d", outName.c_str(), axis);
+            addFlattenLayer(axis, axis + 1, name, {}, isInt8(op) ? CV_8S : CV_32F, inName, curOut);
+            inName = curOut;
         }
-        else
+    }
+    else
+    {
+        // Chain the Flattens highest axis first and route the op output through the final (lowest)
+        // Flatten, not the raw slice, so every shrunk axis is actually removed.
+        std::pair<int, int> inpId = layerIds[op.outputs()->Get(0)];
+        for (int axis = num - 1; axis >= 0; --axis)
         {
-            std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
-            int layerId = addFlattenLayer(axis, axis + 1, name,
-                layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));
-            layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
+            if (!(shrinkMask & (1 << axis)))
+                continue;
+            std::string name = (axis == firstShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
+            int layerId = addFlattenLayer(axis, axis + 1, name, inpId, isInt8(op) ? CV_8S : CV_32F);
+            inpId = std::make_pair(layerId, 0);
         }
+        layerIds[op.outputs()->Get(0)] = inpId;
     }
 }
 
