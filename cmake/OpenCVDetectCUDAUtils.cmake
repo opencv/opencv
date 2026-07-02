@@ -93,6 +93,136 @@ function(ocv_check_for_cmake_cuda_architectures)
   unset(CUDA_GENERATION CACHE)
 endfunction()
 
+function(ocv_cuda_get_nvcc_release nvcc_executable result)
+  set(_release "unknown")
+  execute_process(
+      COMMAND "${nvcc_executable}" --version
+      RESULT_VARIABLE _nvcc_res
+      OUTPUT_VARIABLE _nvcc_out
+      ERROR_VARIABLE _nvcc_err
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_STRIP_TRAILING_WHITESPACE
+  )
+  if(_nvcc_res EQUAL 0)
+    set(_nvcc_version_text "${_nvcc_out}\n${_nvcc_err}")
+    string(REGEX MATCH "release[ \t]+([0-9]+(\\.[0-9]+)?)" _nvcc_release_match "${_nvcc_version_text}")
+    if(_nvcc_release_match)
+      set(_release "${CMAKE_MATCH_1}")
+    endif()
+  endif()
+  set(${result} "${_release}" PARENT_SCOPE)
+endfunction()
+
+function(ocv_check_multiple_cuda_installations nvcc_executable)
+  get_property(_ocv_cuda_multi_detect_done GLOBAL PROPERTY OPENCV_CUDA_MULTI_DETECT_DONE)
+  if(NOT WITH_CUDA OR OPENCV_SKIP_CUDA_MULTI_DETECT OR _ocv_cuda_multi_detect_done)
+    return()
+  endif()
+  set_property(GLOBAL PROPERTY OPENCV_CUDA_MULTI_DETECT_DONE TRUE)
+
+  set(_nvcc_candidates "")
+  if(nvcc_executable)
+    list(APPEND _nvcc_candidates "${nvcc_executable}")
+  endif()
+
+  unset(_ocv_cuda_nvcc_on_path)
+  unset(_ocv_cuda_nvcc_on_path CACHE)
+  if(NOT CMAKE_VERSION VERSION_LESS "3.21")
+    find_program(_ocv_cuda_nvcc_on_path NAMES nvcc nvcc.exe NO_CACHE)
+  else()
+    find_program(_ocv_cuda_nvcc_on_path NAMES nvcc nvcc.exe)
+    set(_ocv_cuda_nvcc_on_path_value "${_ocv_cuda_nvcc_on_path}")
+    unset(_ocv_cuda_nvcc_on_path CACHE)
+    set(_ocv_cuda_nvcc_on_path "${_ocv_cuda_nvcc_on_path_value}")
+  endif()
+  if(_ocv_cuda_nvcc_on_path)
+    list(APPEND _nvcc_candidates "${_ocv_cuda_nvcc_on_path}")
+  endif()
+
+  if(UNIX)
+    file(GLOB _ocv_cuda_unix_nvcc_candidates
+        "/usr/local/cuda*/bin/nvcc"
+        "/opt/cuda*/bin/nvcc"
+    )
+    list(APPEND _nvcc_candidates ${_ocv_cuda_unix_nvcc_candidates})
+  endif()
+
+  if(WIN32)
+    if(DEFINED ENV{ProgramFiles})
+      file(GLOB _ocv_cuda_program_files_nvcc_candidates
+          "$ENV{ProgramFiles}/NVIDIA GPU Computing Toolkit/CUDA/*/bin/nvcc.exe"
+      )
+      list(APPEND _nvcc_candidates ${_ocv_cuda_program_files_nvcc_candidates})
+    endif()
+
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}" -E environment
+        RESULT_VARIABLE _ocv_cuda_env_res
+        OUTPUT_VARIABLE _ocv_cuda_env_out
+        ERROR_QUIET
+    )
+    if(_ocv_cuda_env_res EQUAL 0)
+      string(REPLACE "\n" ";" _ocv_cuda_env_lines "${_ocv_cuda_env_out}")
+      foreach(_ocv_cuda_env_line IN LISTS _ocv_cuda_env_lines)
+        if(_ocv_cuda_env_line MATCHES "^CUDA_PATH_V[^=]*=(.*)$")
+          string(STRIP "${CMAKE_MATCH_1}" _ocv_cuda_env_cuda_path)
+          if(_ocv_cuda_env_cuda_path)
+            list(APPEND _nvcc_candidates "${_ocv_cuda_env_cuda_path}/bin/nvcc.exe")
+          endif()
+        endif()
+      endforeach()
+    endif()
+  endif()
+
+  set(_ocv_cuda_path_env "$ENV{PATH}")
+  if(WIN32)
+    string(REPLACE "\\" "/" _ocv_cuda_path_env "${_ocv_cuda_path_env}")
+    set(_ocv_cuda_path_dirs "${_ocv_cuda_path_env}")
+  else()
+    string(REPLACE ":" ";" _ocv_cuda_path_dirs "${_ocv_cuda_path_env}")
+  endif()
+  foreach(_ocv_cuda_path_dir IN LISTS _ocv_cuda_path_dirs)
+    if(_ocv_cuda_path_dir)
+      if(WIN32)
+        list(APPEND _nvcc_candidates "${_ocv_cuda_path_dir}/nvcc.exe")
+      else()
+        list(APPEND _nvcc_candidates "${_ocv_cuda_path_dir}/nvcc")
+      endif()
+    endif()
+  endforeach()
+
+  set(_nvcc_paths "")
+  set(_nvcc_realpaths "")
+  foreach(_nvcc_candidate IN LISTS _nvcc_candidates)
+    if(_nvcc_candidate AND EXISTS "${_nvcc_candidate}")
+      get_filename_component(_nvcc_candidate_abs "${_nvcc_candidate}" ABSOLUTE)
+      get_filename_component(_nvcc_candidate_realpath "${_nvcc_candidate_abs}" REALPATH)
+      if(NOT _nvcc_candidate_realpath IN_LIST _nvcc_realpaths)
+        list(APPEND _nvcc_realpaths "${_nvcc_candidate_realpath}")
+        list(APPEND _nvcc_paths "${_nvcc_candidate_abs}")
+      endif()
+    endif()
+  endforeach()
+
+  list(LENGTH _nvcc_paths _nvcc_count)
+  if(_nvcc_count LESS 2)
+    return()
+  endif()
+
+  set(_selected_nvcc "${nvcc_executable}")
+  if(_selected_nvcc AND EXISTS "${_selected_nvcc}")
+    get_filename_component(_selected_nvcc "${_selected_nvcc}" ABSOLUTE)
+  endif()
+
+  set(_message "OpenCV: multiple CUDA installations detected:")
+  foreach(_nvcc_path IN LISTS _nvcc_paths)
+    ocv_cuda_get_nvcc_release("${_nvcc_path}" _nvcc_release)
+    string(APPEND _message "\n  - ${_nvcc_path} (release ${_nvcc_release})")
+  endforeach()
+  string(APPEND _message "\nSelected: ${_selected_nvcc}  (set CUDA_TOOLKIT_ROOT_DIR or CMAKE_CUDA_COMPILER to override)")
+  message(STATUS "${_message}")
+endfunction()
+
 macro(ocv_initialize_nvidia_device_generations)
   OCV_OPTION(CUDA_ENABLE_DEPRECATED_GENERATION "Enable deprecated generations in the list" OFF)
   set(_generations "Maxwell" "Pascal" "Volta" "Turing" "Ampere" "Lovelace" "Hopper" "Blackwell")
@@ -320,6 +450,8 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
   endmacro()
   ocv_wipeout_deprecated_cc("10")
   ocv_wipeout_deprecated_cc("21")
+
+  ocv_check_multiple_cuda_installations("${nvcc_executable}")
 endmacro()
 
 macro(ocv_set_nvcc_threads_for_vs)
