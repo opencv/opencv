@@ -1178,6 +1178,10 @@ inline int hal_ni_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_
    @param dst_step Destination image step
    @param width Source image width
    @param height Source image height
+   @param full_width Source image full width (before ROI restriction)
+   @param full_height Source image full height (before ROI restriction)
+   @param offset_x Source image ROI horizontal offset from full image left edge
+   @param offset_y Source image ROI vertical offset from full image top edge
    @param depth Depths of source and destination image. Should support CV_8U and CV_32F
    @param cn Number of channels
    @param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace
@@ -1186,7 +1190,8 @@ inline int hal_ni_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_
    @param border_type border mode used to extrapolate pixels outside of the image
 */
 inline int hal_ni_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                                  int width, int height, int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
+                                  int width, int height, int full_width, int full_height, int offset_x, int offset_y,
+                                  int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED

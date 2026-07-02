@@ -240,7 +240,8 @@ static inline int bilateralFilter32FC3(int start, int end, const uchar* src_data
 // the algorithm is copied from imgproc/src/bilateral_filter.dispatch.cpp
 // in the function static void bilateralFilter_8u and bilateralFilter_32f
 int bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                    int width, int height, int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
+                    int width, int height, int /*full_width*/, int /*full_height*/, int /*offset_x*/, int /*offset_y*/,
+                    int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
 {
     const int type = CV_MAKETYPE(depth, cn);
     if (type != CV_8UC1 && type != CV_8UC3 && type != CV_32FC1 && type != CV_32FC3)
