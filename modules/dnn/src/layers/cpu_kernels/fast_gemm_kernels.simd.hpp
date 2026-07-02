@@ -15,7 +15,10 @@
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
 #define FAST_GEMM_MAX_STACKBUF (1 << 13)
 
-#if CV_AVX
+#if CV_RVV
+#define FAST_GEMM_F32_MC 64
+#define FAST_GEMM_F32_NC 128
+#elif CV_AVX
 #define FAST_GEMM_F32_MC 60
 #define FAST_GEMM_F32_NC 320
 #elif CV_LASX
@@ -26,7 +29,10 @@
 #define FAST_GEMM_F32_NC 72
 #endif
 
-#if CV_AVX
+#if CV_RVV
+#define FAST_GEMM_F32_MR 8
+#define FAST_GEMM_F32_NR 16
+#elif CV_AVX
 #define FAST_GEMM_F32_MR 12
 #define FAST_GEMM_F32_NR 8
 #elif CV_LASX
@@ -37,7 +43,9 @@
 #define FAST_GEMM_F32_NR 12
 #endif
 
-#if CV_AVX
+#if CV_RVV
+#define FAST_GEMM_F32_PACKED_STRIDE_K 128
+#elif CV_AVX
 #define FAST_GEMM_F32_PACKED_STRIDE_K 128
 #else // CV_LASX, CV_NEON_AARCH64, CV_SIMD128
 #define FAST_GEMM_F32_PACKED_STRIDE_K 64
@@ -156,7 +164,83 @@ void pagedAttnAVGemmKernel(
 /*
     Compute kernels that optimized for different platforms
 */
-#if CV_NEON && CV_NEON_AARCH64 // AARCH64: 32 x 128-bit registers
+#if CV_RVV // RVV (32 x VLEN-bit registers, LMUL=m2 for NR=16)
+
+FAST_GEMM_IMPLEMENT_PACK(8, _f32, float, float) // a packer
+FAST_GEMM_IMPLEMENT_PACK(16, _f32, float, float) // b packer
+
+static inline void fast_gemm8x16_f32(int k, const char *a_, const char *b_,
+                                     char *c_, int ldc, float alpha) {
+    const float* a = (const float*)a_;
+    const float* b = (const float*)b_;
+    float* c = (float*)c_;
+
+    if (__riscv_vsetvlmax_e32m1() >= 8) {
+        const size_t vl = __riscv_vsetvl_e32m2(FAST_GEMM_F32_NR);
+        vfloat32m2_t s0 = __riscv_vfmv_v_f_f32m2(0.f, vl);
+        vfloat32m2_t s1 = s0, s2 = s0, s3 = s0, s4 = s0, s5 = s0, s6 = s0, s7 = s0;
+
+        for (int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
+            vfloat32m2_t bp = __riscv_vle32_v_f32m2(b, vl);
+            s0 = __riscv_vfmacc_vf_f32m2(s0, a[0], bp, vl);
+            s1 = __riscv_vfmacc_vf_f32m2(s1, a[1], bp, vl);
+            s2 = __riscv_vfmacc_vf_f32m2(s2, a[2], bp, vl);
+            s3 = __riscv_vfmacc_vf_f32m2(s3, a[3], bp, vl);
+            s4 = __riscv_vfmacc_vf_f32m2(s4, a[4], bp, vl);
+            s5 = __riscv_vfmacc_vf_f32m2(s5, a[5], bp, vl);
+            s6 = __riscv_vfmacc_vf_f32m2(s6, a[6], bp, vl);
+            s7 = __riscv_vfmacc_vf_f32m2(s7, a[7], bp, vl);
+        }
+
+#define FAST_GEMM_RVV_STORE(row) \
+        __riscv_vse32_v_f32m2(c + (row) * ldc, \
+            __riscv_vfmacc_vf_f32m2(__riscv_vle32_v_f32m2(c + (row) * ldc, vl), alpha, s##row, vl), vl)
+        FAST_GEMM_RVV_STORE(0);
+        FAST_GEMM_RVV_STORE(1);
+        FAST_GEMM_RVV_STORE(2);
+        FAST_GEMM_RVV_STORE(3);
+        FAST_GEMM_RVV_STORE(4);
+        FAST_GEMM_RVV_STORE(5);
+        FAST_GEMM_RVV_STORE(6);
+        FAST_GEMM_RVV_STORE(7);
+#undef FAST_GEMM_RVV_STORE
+        return;
+    }
+
+    // fallback for VLEN < 256: strip-mine NR columns with m1
+    for (int j = 0; j < FAST_GEMM_F32_NR; ) {
+        const size_t vl = __riscv_vsetvl_e32m1(FAST_GEMM_F32_NR - j);
+        vfloat32m1_t s0 = __riscv_vfmv_v_f_f32m1(0.f, vl);
+        vfloat32m1_t s1 = s0, s2 = s0, s3 = s0, s4 = s0, s5 = s0, s6 = s0, s7 = s0;
+        for (int p = 0; p < k; p++) {
+            vfloat32m1_t bp = __riscv_vle32_v_f32m1(b + p * FAST_GEMM_F32_NR + j, vl);
+            const float* ap = a + p * FAST_GEMM_F32_MR;
+            s0 = __riscv_vfmacc_vf_f32m1(s0, ap[0], bp, vl);
+            s1 = __riscv_vfmacc_vf_f32m1(s1, ap[1], bp, vl);
+            s2 = __riscv_vfmacc_vf_f32m1(s2, ap[2], bp, vl);
+            s3 = __riscv_vfmacc_vf_f32m1(s3, ap[3], bp, vl);
+            s4 = __riscv_vfmacc_vf_f32m1(s4, ap[4], bp, vl);
+            s5 = __riscv_vfmacc_vf_f32m1(s5, ap[5], bp, vl);
+            s6 = __riscv_vfmacc_vf_f32m1(s6, ap[6], bp, vl);
+            s7 = __riscv_vfmacc_vf_f32m1(s7, ap[7], bp, vl);
+        }
+#define FAST_GEMM_RVV_STORE_TAIL(row) \
+        __riscv_vse32_v_f32m1(c + (row) * ldc + j, \
+            __riscv_vfmacc_vf_f32m1(__riscv_vle32_v_f32m1(c + (row) * ldc + j, vl), alpha, s##row, vl), vl)
+        FAST_GEMM_RVV_STORE_TAIL(0);
+        FAST_GEMM_RVV_STORE_TAIL(1);
+        FAST_GEMM_RVV_STORE_TAIL(2);
+        FAST_GEMM_RVV_STORE_TAIL(3);
+        FAST_GEMM_RVV_STORE_TAIL(4);
+        FAST_GEMM_RVV_STORE_TAIL(5);
+        FAST_GEMM_RVV_STORE_TAIL(6);
+        FAST_GEMM_RVV_STORE_TAIL(7);
+#undef FAST_GEMM_RVV_STORE_TAIL
+        j += (int)vl;
+    }
+}
+
+#elif CV_NEON && CV_NEON_AARCH64 // AARCH64: 32 x 128-bit registers
 
 FAST_GEMM_IMPLEMENT_PACK(8, _f32, float, float) // a packer
 FAST_GEMM_IMPLEMENT_PACK(12, _f32, float, float) // b packer
@@ -531,7 +615,9 @@ static inline void fast_gemm_macro_kernel(int m, int n, int k,
                     memcpy(cptr + p * (ldc * esz), cptr0 + p * ldc0_esz, nr_esz);
             }
 
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+            fast_gemm8x16_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
+#elif CV_NEON && CV_NEON_AARCH64
             fast_gemm8x12_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
 #elif CV_AVX
             fast_gemm12x8_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
@@ -574,7 +660,9 @@ void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size
         for (size_t k = 0; k < K; k += KC) {
             size_t kc = K - k < KC ? K - k : KC;
             size_t step = (k * ldb0 + j0 * ldb1) * esz;
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+            fast_gemm_pack16_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+#elif CV_NEON && CV_NEON_AARCH64
             fast_gemm_pack12_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
 #elif CV_AVX
             fast_gemm_pack8_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
@@ -638,7 +726,9 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
             {
                 size_t kc = K - k0 < KC ? K - k0 : KC;
                 // pack a
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
@@ -648,7 +738,9 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
                 fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 #endif
                 // pack b
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack16_f32(nc, kc, B + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack12_f32(nc, kc, B + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
 #elif CV_AVX
                 fast_gemm_pack8_f32(nc, kc, B +  (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
@@ -730,7 +822,9 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
                 size_t kc = K - k0 < KC ? K - k0 : KC;
                 size_t step_a = (i0 * lda0 + k0 * lda1) * esz;
                 // pack a
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
@@ -815,7 +909,9 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
                 size_t step_a = (i0 * lda0 + k0 * lda1) * esz;
 
                 // pack a
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
@@ -826,7 +922,9 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #endif
                 size_t step_b = (k0 * ldb0 + j0 * ldb1) * esz;
                 // pack b
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack16_f32(nc, kc, b_block + step_b, ldb1, ldb0, packed_b);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack12_f32(nc, kc, b_block + step_b, ldb1, ldb0, packed_b);
 #elif CV_AVX
                 fast_gemm_pack8_f32(nc, kc, b_block + step_b, ldb1, ldb0, packed_b);
@@ -914,7 +1012,9 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
                 // size_t step = ((size_t)k0 * (size_t)lda1 + (size_t)i0 * (size_t)lda0) * (size_t)esz;
                 size_t step = (k0 * lda1 + i0 * lda0) * esz;
                 // pack a
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
@@ -1026,7 +1126,9 @@ void pagedAttnQKGemmKernel(
                 int kc = D - k0 < KC ? D - k0 : KC;
                 // pack q
                 size_t step_q = (i0 * ldq0 + k0) * esz;
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
@@ -1142,7 +1244,9 @@ void pagedAttnAVGemmKernel(
                 const char *v_block = V[sk] + v_offset;
 
                 // pack
-#if CV_NEON && CV_NEON_AARCH64
+#if CV_RVV
+                fast_gemm_pack8_f32(mc, kc, a_block + k0 * esz, T_v, 1, packed_a);
+#elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, a_block + k0 * esz, T_v, 1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, a_block + k0 * esz, T_v, 1, packed_a);
