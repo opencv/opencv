@@ -1307,6 +1307,13 @@ The matcher extends DescriptorMatcher and supports the standard match(), knnMatc
 radiusMatch() interfaces. Context (keypoints and image sizes) must be provided via
 setPairInfo() before matching.
 */
+//! LightGlue model variant (namespace-scoped like dnn::EngineType)
+enum LightGlueType
+{
+    LG_ALIKED = 0,  //!< ALIKED model: keypoints normalized to [-1, 1]
+    LG_DISK = 1     //!< DISK model:  keypoints normalized to [ 0, 1]
+};
+
 class CV_EXPORTS_W LightGlueMatcher : public DescriptorMatcher
 {
 protected:
@@ -1319,8 +1326,9 @@ public:
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LG_ALIKED (default) or LG_DISK.
     */
-    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0, int type = LG_ALIKED);
 
 #ifdef HAVE_OPENCV_DNN
     /** @brief Creates LightGlueMatcher from in-memory model data.
@@ -1328,8 +1336,9 @@ public:
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LG_ALIKED (default) or LG_DISK.
     */
-    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0, int type = LG_ALIKED);
 #endif
 
     /** @brief Sets the keypoint and image size context for the next match() call.

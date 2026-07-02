@@ -690,10 +690,9 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
     forwardGraph(mainGraph, inputs, outputs, true);
 
-    // reset finalizeLayer so that layers are only initialized once.
-    // [TODO] if a target or backend change or there are some other important
-    // global changes in configuration, finalizeLayers should be set to 'true' again
-    finalizeLayers = false;
+    // Keep finalizeLayers = true to ensure layers are always properly initialized
+    // (see doc/bug-analysis-dnn-state-leak.md)
+    // finalizeLayers = false;
 
     // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
     if (useKVCache && kvCacheManager.hasRoutes)
@@ -1146,6 +1145,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     double tickfreq = getTickFrequency();
     int64_t timestamp = 0;
+
+    // FIX: Force re-finalization to avoid global state leakage from prior forwards
+    finalizeLayers = true;
 
     size_t graph_ofs = (size_t)graphofs_it->second;
     CV_Assert(graph_ofs + nops <= totalLayers);
