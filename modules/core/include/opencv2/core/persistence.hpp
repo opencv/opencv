@@ -672,6 +672,8 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
+static inline void write( FileStorage& fs, const String& name, const fp8_t& value )  { write( fs, name, (float)value ); }
+static inline void write( FileStorage& fs, const String& name, const fp8a_t& value ) { write( fs, name, (float)value ); }
 #ifdef CV__LEGACY_PERSISTENCE
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& value);
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DMatch>& value);
@@ -690,6 +692,10 @@ CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
 CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string& default_value);
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
+static inline void read(const FileNode& node, fp8_t& value, const fp8_t& default_value = fp8_t())
+{ float f; read(node, f, (float)default_value); value = fp8_t(f); }
+static inline void read(const FileNode& node, fp8a_t& value, const fp8a_t& default_value = fp8a_t())
+{ float f; read(node, f, (float)default_value); value = fp8a_t(f); }
 #ifdef CV__LEGACY_PERSISTENCE
 CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
 CV_EXPORTS void read(const FileNode& node, std::vector<DMatch>& matches);
