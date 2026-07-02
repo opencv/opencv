@@ -16,6 +16,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/transforms_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/warp_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/sum_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/bilateral_filter_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is

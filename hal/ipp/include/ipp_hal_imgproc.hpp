@@ -37,6 +37,15 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
 #undef cv_hal_remap32f
 #define cv_hal_remap32f ipp_hal_remap32f
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                            int width, int height, int full_width, int full_height, int offset_x, int offset_y,
+                            int depth, int cn, int d,
+                            double sigma_color, double sigma_space, int border_type);
+#undef  cv_hal_bilateralFilter
+#define cv_hal_bilateralFilter ipp_hal_bilateralFilter
+#endif
+
 #endif //IPP_VERSION_X100 >= 810
 
 #endif //__IPP_HAL_IMGPROC_HPP__
