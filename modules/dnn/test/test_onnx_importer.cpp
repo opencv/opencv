@@ -2219,12 +2219,11 @@ TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_Basic)
     float X[] = {0.f, 2.f, -3.f, -2.5f, 1.34f, 0.5f};
     float x_min = -3.f, x_max = 2.f;
     float scale = (x_max - x_min) / 255.f;
-    uint8_t zp = (uint8_t)std::round(-x_min / scale);  // 153
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 153
 
     uint8_t expected_Y[6];
     for (int i = 0; i < 6; i++)
-        expected_Y[i] = (uint8_t)std::max(0, std::min(255,
-            (int)std::round(X[i] / scale) + (int)zp));
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
 
     SCOPED_TRACE("test_dynamicquantizelinear");
     testDynamicQuantizeLinear(X, 1, 6, expected_Y, 6, scale, zp);
@@ -2241,13 +2240,11 @@ TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_MaxAdjusted)
     float X[] = {-1.0f, -2.1f, -1.3f, -2.5f, -3.34f, -4.0f};
     float x_min = -4.f, x_max = 0.f;  // max adjusted to 0
     float scale = (x_max - x_min) / 255.f;
-    uint8_t zp = (uint8_t)std::min(255, std::max(0,
-        (int)std::round(-x_min / scale)));  // 255
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 255
 
     uint8_t expected_Y[6];
     for (int i = 0; i < 6; i++)
-        expected_Y[i] = (uint8_t)std::max(0, std::min(255,
-            (int)std::round(X[i] / scale) + (int)zp));
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
 
     SCOPED_TRACE("test_dynamicquantizelinear_max_adjusted");
     testDynamicQuantizeLinear(X, 1, 6, expected_Y, 6, scale, zp);
@@ -2264,13 +2261,11 @@ TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_MinAdjusted)
     float X[] = {1.f, 2.1f, 1.3f, 2.5f, 3.34f, 4.0f, 1.5f, 2.6f, 3.9f, 4.0f, 3.0f, 2.345f};
     float x_min = 0.f, x_max = 4.f;  // min adjusted to 0
     float scale = (x_max - x_min) / 255.f;
-    uint8_t zp = (uint8_t)std::min(255, std::max(0,
-        (int)std::round(-x_min / scale)));  // 0
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 0
 
     uint8_t expected_Y[12];
     for (int i = 0; i < 12; i++)
-        expected_Y[i] = (uint8_t)std::max(0, std::min(255,
-            (int)std::round(X[i] / scale) + (int)zp));
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
 
     SCOPED_TRACE("test_dynamicquantizelinear_min_adjusted");
     testDynamicQuantizeLinear(X, 3, 4, expected_Y, 12, scale, zp);

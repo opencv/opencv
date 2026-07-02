@@ -6,7 +6,6 @@
 #include "layers_common.hpp"
 
 #include <cstring>
-#include <cmath>
 #include <algorithm>
 
 static_assert(sizeof(float) == 4, "float must be 4 bytes for int8 encoding");
@@ -84,7 +83,7 @@ public:
 
         float sc = (float)((rmax == rmin) ? 1.0 : (rmax - rmin) / (qmax - qmin));
         // zp in uint8 space
-        int zp_uint8 = (int)std::round(std::max(0.0, std::min(255.0, 0.0 - rmin / sc)));
+        int zp_uint8 = saturate_cast<uchar>(cvRound(-rmin / sc));
 
         scales.resize(1); scales[0] = sc;
         zeropoints.resize(1); zeropoints[0] = zp_uint8;
@@ -94,11 +93,10 @@ public:
         const float* inp = inputs[0].ptr<float>();
         int8_t* out = outputs[0].ptr<int8_t>();
         size_t total = inputs[0].total();
-        float inv_sc = 1.f / sc;
         for (size_t i = 0; i < total; i++)
         {
-            // Quantize to uint8 range with round-half-away-from-zero
-            int y_uint8 = (int)std::round(std::max(0.0f, std::min(255.0f, inp[i] * inv_sc + (float)zp_uint8)));
+            // Quantize to uint8 range with round-to-nearest ties-to-even.
+            int y_uint8 = saturate_cast<uchar>(cvRound(inp[i] / sc) + zp_uint8);
             // Convert to int8 for CV_8S storage
             out[i] = (int8_t)(y_uint8 - 128);
         }
