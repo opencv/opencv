@@ -1750,6 +1750,89 @@ inline v_uint8x64 v512_lut_quads(const uchar* tab, const v_uint8x64& idx)
 inline v_int8x64 v512_lut_quads(const schar* tab, const v_uint8x64& idx)
 { return v_reinterpret_as_s8(v512_lut_quads((const uchar *)tab, idx)); }
 
+// Resize-NN VBMI: windowed byte-offset gather via v_lut(tab, v_uint8) when spread fits.
+// Guarded by CV_AVX_512VBMI (AVX512_ICL dispatch); falls back to AVX256 gather below.
+#if CV_AVX_512VBMI
+namespace {
+
+inline int v512_hmin_epi32(__m512i v)
+{
+    __m256i lo = _mm512_castsi512_si256(v);
+    __m256i hi = _mm512_extracti64x4_epi64(v, 1);
+    __m256i m = _mm256_min_epi32(lo, hi);
+    __m128i q = _mm_min_epi32(_mm256_castsi256_si128(m), _mm256_extracti128_si256(m, 1));
+    q = _mm_min_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(1, 0, 3, 2)));
+    q = _mm_min_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(2, 3, 0, 1)));
+    return _mm_cvtsi128_si32(q);
+}
+
+inline int v512_hmax_epi32(__m512i v)
+{
+    __m256i lo = _mm512_castsi512_si256(v);
+    __m256i hi = _mm512_extracti64x4_epi64(v, 1);
+    __m256i m = _mm256_max_epi32(lo, hi);
+    __m128i q = _mm_max_epi32(_mm256_castsi256_si128(m), _mm256_extracti128_si256(m, 1));
+    q = _mm_max_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(1, 0, 3, 2)));
+    q = _mm_max_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(2, 3, 0, 1)));
+    return _mm_cvtsi128_si32(q);
+}
+
+inline v_uint8x64 v512_pack_rel64_byte_idx(__m512i r0, __m512i r1, __m512i r2, __m512i r3)
+{
+    __m128i p0 = _mm512_cvtepi32_epi8(r0);
+    __m128i p1 = _mm512_cvtepi32_epi8(r1);
+    __m128i p2 = _mm512_cvtepi32_epi8(r2);
+    __m128i p3 = _mm512_cvtepi32_epi8(r3);
+    return v_uint8x64(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_inserti32x4(
+        _mm512_castsi128_si512(p0), p1, 1), p2, 2), p3, 3));
+}
+
+inline bool v512_try_lut_u8_byteofs_vbmi(const uchar* S, const int* byte_ofs, v_uint8x64& out)
+{
+    __m512i ofs0 = _mm512_loadu_si512((const __m512i*)byte_ofs);
+    __m512i ofs1 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 16));
+    __m512i ofs2 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 32));
+    __m512i ofs3 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 48));
+    int min_ofs = v512_hmin_epi32(_mm512_min_epi32(_mm512_min_epi32(ofs0, ofs1), _mm512_min_epi32(ofs2, ofs3)));
+    int max_ofs = v512_hmax_epi32(_mm512_max_epi32(_mm512_max_epi32(ofs0, ofs1), _mm512_max_epi32(ofs2, ofs3)));
+    if (max_ofs - min_ofs > 255)
+        return false;
+    __m512i minv = _mm512_set1_epi32(min_ofs);
+    out = v512_lut(S + min_ofs, v512_pack_rel64_byte_idx(
+        _mm512_sub_epi32(ofs0, minv), _mm512_sub_epi32(ofs1, minv),
+        _mm512_sub_epi32(ofs2, minv), _mm512_sub_epi32(ofs3, minv)));
+    return true;
+}
+
+} // namespace
+
+inline v_uint8x64 v512_lut_u8_byteofs(const uchar* S, const int* byte_ofs)
+{
+    v_uint8x64 r;
+    if (v512_try_lut_u8_byteofs_vbmi(S, byte_ofs, r))
+        return r;
+    return v_reinterpret_as_u8(v512_lut((const schar*)S, byte_ofs));
+}
+#endif // CV_AVX_512VBMI
+
+// Resize-NN helpers: byte offsets into a uchar row.
+// Prefer AVX256-width gathers on AVX-512 hosts: wide AVX-512 vpgather can downclock
+// Intel cores and is slower than the hand-tuned AVX2 paths for these NN gathers.
+inline v_uint32x16 v512_lut_u32_byteofs(const uchar* S, const int* byte_ofs)
+{
+    __m256i g0 = _mm256_i32gather_epi32((const int*)S, _mm256_loadu_si256((const __m256i*)byte_ofs), 1);
+    __m256i g1 = _mm256_i32gather_epi32((const int*)S, _mm256_loadu_si256((const __m256i*)(byte_ofs + 8)), 1);
+    return v_uint32x16(_v512_combine(g0, g1));
+}
+
+inline v_uint16x32 v512_lut_u16_byteofs(const uchar* S, const int* byte_ofs)
+{
+    __m256i lo = _v256_lut_u16_byteofs_ymm(S, byte_ofs);
+    __m256i hi = _v256_lut_u16_byteofs_ymm(S, byte_ofs + 16);
+    return v_uint16x32(_v512_combine(lo, hi));
+}
+
+
 inline v_int16x32 v512_lut(const short* tab, const int* idx)
 {
     __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), (const int *)tab, 2));

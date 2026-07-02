@@ -708,6 +708,17 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_lut_quads(const float* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
     //! @}
 
+#if (CV_SIMD256 || CV_SIMD512) && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH >= 256)
+    //! @name Byte-offset row gather (resize NN and similar)
+    //! @{
+#if CV_AVX_512VBMI
+    inline v_uint8 vx_lut_u8_byteofs(const uchar* ptr, const int* byte_ofs) { return VXPREFIX(_lut_u8_byteofs)(ptr, byte_ofs); }
+#endif
+    inline v_uint16 vx_lut_u16_byteofs(const uchar* ptr, const int* byte_ofs) { return VXPREFIX(_lut_u16_byteofs)(ptr, byte_ofs); }
+    inline v_uint32 vx_lut_u32_byteofs(const uchar* ptr, const int* byte_ofs) { return VXPREFIX(_lut_u32_byteofs)(ptr, byte_ofs); }
+    //! @}
+#endif
+
     //! @name Wide load with double expansion
     //! @{
     //! @brief Load maximum available capacity register contents from memory with double expand
