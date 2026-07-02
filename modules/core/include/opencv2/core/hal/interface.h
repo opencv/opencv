@@ -64,7 +64,8 @@ typedef int16_t cv_hal_bf16;
 #define CV_64U  10
 #define CV_64S  11
 #define CV_32U  12
-#define CV_DEPTH_CURR_MAX 13
+#define CV_8F   13
+#define CV_DEPTH_CURR_MAX 14
 
 #define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
 #define CV_MAT_DEPTH(flags)     ((flags) & CV_MAT_DEPTH_MASK)
@@ -151,6 +152,12 @@ typedef int16_t cv_hal_bf16;
 #define CV_16BFC3 CV_MAKETYPE(CV_16BF,3)
 #define CV_16BFC4 CV_MAKETYPE(CV_16BF,4)
 #define CV_16BFC(n) CV_MAKETYPE(CV_16BF,(n))
+
+#define CV_8FC1 CV_MAKETYPE(CV_8F,1)
+#define CV_8FC2 CV_MAKETYPE(CV_8F,2)
+#define CV_8FC3 CV_MAKETYPE(CV_8F,3)
+#define CV_8FC4 CV_MAKETYPE(CV_8F,4)
+#define CV_8FC(n) CV_MAKETYPE(CV_8F,(n))
 
 //! @name Comparison operation
 //! @sa cv::CmpTypes

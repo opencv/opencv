@@ -978,7 +978,89 @@ public:
 protected:
     ushort w;
 };
+CV_INLINE uchar cv_cvt_f32_to_fp8e4m3fn(float x)
+{
+    Cv32suf in;
+    in.f = x;
+    unsigned sign = (in.u >> 31) & 0x1;
+    unsigned exp32 = (in.u >> 23) & 0xFF;
+    unsigned mant32 = in.u & 0x7FFFFF;
 
+    if (exp32 == 0xFF)
+        return (uchar)((sign << 7) | 0x7F);
+
+    int exp8 = (int)exp32 - 127 + 7;
+
+    if (exp8 >= 16)
+    {
+        return (uchar)((sign << 7) | 0x7E);
+    }
+
+    if (exp8 <= 0)
+    {
+        int shift = 1 - exp8;
+        if (shift > 9)
+            return (uchar)(sign << 7);
+        unsigned mant_full = mant32 | 0x800000;
+        unsigned mant8 = mant_full >> (20 + shift);
+        return (uchar)((sign << 7) | (mant8 & 0x7));
+    }
+
+    unsigned mant8 = (mant32 >> 20) & 0x7;
+    if (exp8 == 15 && mant8 == 7)
+    {
+        return (uchar)((sign << 7) | 0x7E);
+    }
+    return (uchar)((sign << 7) | ((unsigned)exp8 << 3) | mant8);
+}
+CV_INLINE float cv_fp8e4m3fn_lut_gen(uchar w)
+{
+    unsigned sign = (w >> 7) & 0x1;
+    unsigned exp8 = (w >> 3) & 0xF;
+    unsigned mant8 = w & 0x7;
+
+    Cv32suf out;
+    if (exp8 == 0 && mant8 == 0)
+    {
+        out.u = sign << 31;
+        return out.f;
+    }
+    if (exp8 == 0xF && mant8 == 0x7)
+    {
+        out.u = 0x7FC00000u | (sign << 31);
+        return out.f;
+    }
+    if (exp8 == 0)
+    {
+        float val = (float)mant8 * 0.001953125f;
+        return sign ? -val : val;
+    }
+    int exp32 = (int)exp8 - 7 + 127;
+    out.u = (sign << 31) | ((unsigned)exp32 << 23) | (mant8 << 20);
+    return out.f;
+}
+
+CV_INLINE const float* fp8e4m3fn_lut()
+{
+    static float table[256];
+    static bool inited = false;
+    if (!inited)
+    {
+        for (int i = 0; i < 256; i++)
+            table[i] = cv_fp8e4m3fn_lut_gen((uchar)i);
+        inited = true;
+    }
+    return table;
+}
+class fp8_e4m3_t
+{
+public:
+    fp8_e4m3_t() : w(0) {}
+    explicit fp8_e4m3_t(float x) { w = cv_cvt_f32_to_fp8e4m3fn(x); }
+    operator float() const { return fp8e4m3fn_lut()[w]; }
+protected:
+    uchar w;
+};
 }
 #endif
 
