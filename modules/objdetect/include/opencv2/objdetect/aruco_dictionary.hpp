@@ -162,6 +162,21 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     CV_WRAP static Mat getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId = 0);
 
 
+    /** @brief Compute the white pixel ratio of each marker cell from a marker image
+      *
+      * @param markerImage grayscale image of the marker, including its border
+      * (e.g. the output of generateImageMarker() or generateImageMarkerNested())
+      * @param markerSize number of cells per dimension, without the border
+      * @param borderBits width of the marker border in cells
+      *
+      * Pixels above 127 are counted as white. Returns a `markerSize x markerSize` CV_8UC1 Mat
+      * holding the white pixel ratio of each cell in percent [0,100], the format expected by
+      * getRatioListFromCellRatios(). Useful to build custom cell-ratio dictionaries from composed
+      * marker images, e.g. markers hosting nested markers.
+      */
+    CV_WRAP static Mat getCellRatiosFromImage(InputArray markerImage, int markerSize, int borderBits = 1);
+
+
     /** @brief Create a cell-ratio encoded copy of this binary dictionary
       *
       * The returned dictionary preserves the marker ids, marker size, rotations, and maximum
@@ -213,7 +228,10 @@ enum PredefinedDictionaryType {
     DICT_APRILTAG_25h9,     ///< 5x5 bits, minimum hamming distance between any two codes = 9, 35 codes
     DICT_APRILTAG_36h10,    ///< 6x6 bits, minimum hamming distance between any two codes = 10, 2320 codes
     DICT_APRILTAG_36h11,     ///< 6x6 bits, minimum hamming distance between any two codes = 11, 587 codes
-    DICT_ARUCO_MIP_36h12     ///< 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes
+    DICT_ARUCO_MIP_36h12,    ///< 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes
+    DICT_4X4_NESTED_5,       ///< 4x4 cells, 5 nested marker pairs (10 ids), minimum separation distance = 4
+    DICT_4X4_NESTED_10,      ///< 4x4 cells, 10 nested marker pairs (20 ids), minimum separation distance = 3
+    DICT_4X4_NESTED_24       ///< 4x4 cells, 24 nested marker pairs (48 ids), minimum separation distance = 2
 };
 
 
@@ -241,6 +259,75 @@ CV_EXPORTS_W Dictionary getPredefinedDictionary(int dict);
 CV_EXPORTS_W Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &baseDictionary = Dictionary(),
                                          int randomSeed=0);
 
+
+/** @brief Generate a dictionary of nested marker pairs
+  *
+  * @param nPairs number of marker pairs; the dictionary holds 2*nPairs entries
+  * @param markerSize number of cells per dimension of each marker
+  * @param minDistance minimum separation distance between any two entries and between an entry
+  * and its own rotations. Two cell values are separating when no single observation can match
+  * both of them under the default DetectorParameters::validBitIdThreshold
+  * @param innerHalfDiagonal half diagonal (center to corner) of the inner marker square, in
+  * outer cell units. The inner marker is rotated 45 degrees, so its diagonals align with the
+  * cell grid and it covers a triangle of area `innerHalfDiagonal^2 / 2` in each of the 4 host
+  * cells. Must be in [0.2, sqrt(0.5)]: the upper bound keeps that coverage at or below a
+  * quarter of the cell, so host ratios stay within 25 percent of their color; the lower
+  * bound keeps them measurably different from plain black or white. It must be passed
+  * unchanged to generateImageMarkerNested()
+  * @param randomSeed user supplied seed for theRNG()
+  *
+  * A nested marker pair is one printed marker showing two ids: an outer marker (even id `2k`)
+  * hosting a smaller inner marker (odd id `2k + 1`) that is rotated 45 degrees and centered on
+  * the corner shared by the outer marker's unique white 2x2 cell block.
+  *
+  * The returned dictionary uses DICT_ENCODING_CELL_RATIO and requires
+  * DetectorParameters::detectNestedMarkers to detect both markers of a pair.
+  * Generation is deterministic for a given randomSeed. Each pattern keeps at least 4 cells of
+  * each color, so plain bright or dark quads never resemble a marker.
+  */
+CV_EXPORTS_W Dictionary generateNestedDictionary(int nPairs, int markerSize, int minDistance = 3,
+                                                 float innerHalfDiagonal = 0.7f, int randomSeed = 0);
+
+
+/** @brief Generate the printable image of a nested marker pair
+  *
+  * @param dictionary dictionary of nested marker pairs, see generateNestedDictionary()
+  * @param outerId even id of the outer marker of the pair; the inner marker id is outerId + 1
+  * @param sidePixels size of the output image in pixels
+  * @param img output image with the outer marker hosting its rotated inner marker
+  * @param borderBits width of the outer marker border in cells
+  * @param innerHalfDiagonal half diagonal of the inner marker square in outer cell units, see
+  * generateNestedDictionary(); must match the value used when the dictionary was generated
+  *
+  * The host block is located automatically from the dictionary entry (the 2x2 group of cells
+  * with a non-binary expected ratio). Prefer sidePixels that give the inner marker enough
+  * resolution, e.g. at least 60 pixels per outer cell.
+  */
+CV_EXPORTS_W void generateImageMarkerNested(const Dictionary &dictionary, int outerId,
+                                            int sidePixels, OutputArray img, int borderBits = 1,
+                                            float innerHalfDiagonal = 0.7f);
+
+
+/** @brief Corner positions of both markers of a nested pair, for building a Board
+  *
+  * @param dictionary dictionary of nested marker pairs, see generateNestedDictionary()
+  * @param outerId even id of the outer marker of the pair
+  * @param outerSideLength printed side length of the outer marker, including its border
+  * @param outerCorners 4x3 CV_32F, corners of the outer marker (id outerId)
+  * @param innerCorners 4x3 CV_32F, corners of the inner marker (id outerId + 1)
+  * @param borderBits width of the outer marker border in cells, as printed
+  * @param innerHalfDiagonal half diagonal of the inner marker square in outer cell units, see
+  * generateNestedDictionary(); must match the value used when the dictionary was generated
+  *
+  * Both corner arrays are in the same planar frame: origin at the outer marker top left corner,
+  * x right, y down, z = 0, in the top-left, top-right, bottom-right, bottom-left order used by
+  * the detector. Can be passed to a cv::aruco::Board with ids {outerId, outerId + 1} so
+  * Board::matchImagePoints() fuses detections into one pose estimate.
+  */
+CV_EXPORTS_W void getNestedMarkerObjectPoints(const Dictionary &dictionary, int outerId,
+                                              float outerSideLength, OutputArray outerCorners,
+                                              OutputArray innerCorners, int borderBits = 1,
+                                              float innerHalfDiagonal = 0.7f);
 
 
 //! @}
