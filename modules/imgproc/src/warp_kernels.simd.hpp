@@ -7,6 +7,14 @@
 #include "warp_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#if CV_SIMD_SCALABLE
+#define CV_WARP_VECTOR_LINEAR_32FC3_PROCESS \
+    CV_WARP_VECTOR_LINEAR_32FC3_PROCESS_SIMDX
+#else
+#define CV_WARP_VECTOR_LINEAR_32FC3_PROCESS \
+    CV_WARP_VECTOR_LINEAR_32FC3_PROCESS_FIXED
+#endif
+
 #define CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1() \
     v_float32 dst_x0 = vx_load(start_indices.data()); \
     v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32))); \
@@ -3219,6 +3227,9 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
+    #if CV_SIMD_SCALABLE
+                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX();
+    #else
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -3259,6 +3270,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
                 CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C3);
+    #endif
     #endif
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
@@ -4511,6 +4523,9 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
+    #if CV_SIMD_SCALABLE
+                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX();
+    #else
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -4551,6 +4566,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
                 CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C3);
+    #endif
     #endif
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
@@ -5157,14 +5173,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
-                if (v_reduce_min(inner_mask) != 0) {
-                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 32F);
-                } else {
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C3, 32F);
-                }
-                CV_WARP_VECTOR_INTER_LOAD(LINEAR, C3, 32F, 32F);
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C3);
+                CV_WARP_VECTOR_LINEAR_32FC3_PROCESS();
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -5814,6 +5823,9 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
+    #if CV_SIMD_SCALABLE
+                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX();
+    #else
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -5854,6 +5866,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                 CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
                 CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C3);
+    #endif
     #endif
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
