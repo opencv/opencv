@@ -952,4 +952,88 @@ TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
+// See https://github.com/opencv/opencv/issues/29232
+// Regression tests for signed integer overflow in borderInterpolate BORDER_WRAP
+
+static int borderWrapRef(int p, int len)
+{
+    int64 r = (int64)p % len;
+    return (int)((r + len) % len);
+}
+
+TEST(Core_BorderInterpolate, WrapSmallNegative)
+{
+    const int len = 10;
+    for( int p = -50; p < 0; p++ )
+    {
+        int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, len);
+        EXPECT_EQ(exp, got) << "p=" << p << " len=" << len;
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, len);
+    }
+}
+
+TEST(Core_BorderInterpolate, WrapNonNegative)
+{
+    const int len = 10;
+    for( int p = 0; p < 50; p++ )
+    {
+        int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, len);
+        EXPECT_EQ(exp, got) << "p=" << p << " len=" << len;
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, len);
+    }
+}
+
+TEST(Core_BorderInterpolate, WrapNearIntMinPoC)
+{
+    const int p   = -2147483583;
+    const int len = 269;
+    const int exp = borderWrapRef(p, len);
+    int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+    EXPECT_EQ(exp, got);
+    EXPECT_GE(got, 0);
+    EXPECT_LT(got, len);
+}
+
+TEST(Core_BorderInterpolate, WrapIntMin)
+{
+    const int p = INT_MIN;
+    const int lens[] = {1, 2, 10, 100, 1000, 32768, INT_MAX};
+    for( int i = 0; i < (int)(sizeof(lens)/sizeof(lens[0])); i++ )
+    {
+        int got = cv::borderInterpolate(p, lens[i], cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, lens[i]);
+        EXPECT_EQ(exp, got) << "p=INT_MIN len=" << lens[i];
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, lens[i]);
+    }
+}
+
+TEST(Core_BorderInterpolate, WrapResultInRange)
+{
+    const struct { int p; int len; } cases[] = {
+        {INT_MIN,         1},
+        {INT_MIN,     10000},
+        {INT_MIN,   INT_MAX},
+        {INT_MIN + 1, INT_MAX},
+        {INT_MIN + 2, INT_MAX - 1},
+        {-2147483583,    269},
+        {-2147483583, INT_MAX},
+        {-1,              1},
+        {-1,             10},
+        {INT_MAX,    INT_MAX},
+    };
+    for( int i = 0; i < (int)(sizeof(cases)/sizeof(cases[0])); i++ )
+    {
+        int got = cv::borderInterpolate(cases[i].p, cases[i].len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(cases[i].p, cases[i].len);
+        EXPECT_EQ(exp, got) << "p=" << cases[i].p << " len=" << cases[i].len;
+        EXPECT_GE(got, 0)      << "p=" << cases[i].p << " len=" << cases[i].len;
+        EXPECT_LT(got, cases[i].len)  << "p=" << cases[i].p << " len=" << cases[i].len;
+    }
+}
+
 }} // namespace
