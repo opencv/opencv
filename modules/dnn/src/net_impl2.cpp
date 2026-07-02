@@ -1093,6 +1093,98 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     }
 }
 
+void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> >& outputBlobs,
+                                                   const std::vector<std::string>& outBlobNames)
+{
+    if (!mainGraph)
+        CV_Error(Error::StsNullPtr, "the model was not loaded");
+
+    const std::vector<Ptr<Layer> >& prog = mainGraph->prog();
+    const std::vector<Arg>& gr_outputs = mainGraph->outputs();
+
+    // Resolve each requested name to all outputs of the op that produces it,
+    // so a multi-output op yields every one of its outputs.
+    size_t nnames = outBlobNames.size();
+    std::vector<std::vector<Arg> > groups(nnames);
+    std::vector<Arg> neededPins;
+    for (size_t i = 0; i < nnames; i++) {
+        const std::string& nm = outBlobNames[i];
+        auto it = argnames.find(nm);
+        if (it == argnames.end()) {
+            size_t excl = nm.rfind('!');
+            if (excl != std::string::npos)
+                it = argnames.find(nm.substr(excl + 1));
+        }
+        if (it == argnames.end())
+            CV_Error_(Error::StsObjectNotFound,
+                      ("DNN: tensor '%s' is not found in the graph", nm.c_str()));
+        int targetIdx = (int)it->second;
+
+        const std::vector<Arg>* producedBy = nullptr;
+        for (const Ptr<Layer>& op : prog) {
+            for (const Arg& o : op->outputs) {
+                if (o.idx == targetIdx) { producedBy = &op->outputs; break; }
+            }
+            if (producedBy) break;
+        }
+        groups[i] = producedBy ? *producedBy : std::vector<Arg>(1, Arg(targetIdx));
+
+        for (const Arg& a : groups[i]) {
+            if (a.idx <= 0 || args.at(a.idx).kind != DNN_ARG_TEMP)
+                continue;
+            bool isOutput = false;
+            for (const Arg& o : gr_outputs)
+                if (o.idx == a.idx) { isOutput = true; break; }
+            if (!isOutput)
+                neededPins.push_back(a);
+        }
+    }
+
+    // Re-plan buffers only when the set of pinned interior tensors actually changes.
+    std::vector<int> want, have;
+    for (const Arg& a : neededPins) want.push_back(a.idx);
+    for (const Arg& a : pinnedArgs) have.push_back(a.idx);
+    std::sort(want.begin(), want.end());
+    std::sort(have.begin(), have.end());
+    if (want != have) {
+        pinnedArgs = neededPins;
+        assignBuffers();
+    }
+
+    std::vector<Mat> inps, outs;
+    forwardMainGraph(inps, outs);
+
+    outputBlobs.resize(nnames);
+    for (size_t i = 0; i < nnames; i++) {
+        outputBlobs[i].resize(groups[i].size());
+        for (size_t j = 0; j < groups[i].size(); j++) {
+            int idx = groups[i][j].idx;
+            Mat result;
+            bool got = false;
+            for (size_t k = 0; k < gr_outputs.size(); k++) {
+                if (gr_outputs[k].idx == idx) { result = outs[k]; got = true; break; }
+            }
+            if (!got) {
+                const ArgData& adata = args.at(idx);
+                if (adata.kind == DNN_ARG_TEMP) {
+                    int bufidx = bufidxs.at(idx);
+                    CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
+                    result = buffers[bufidx];
+                } else {
+                    result = __tensors__.at(idx);
+                }
+            }
+            if (result.shape().layout == DATA_LAYOUT_BLOCK) {
+                Mat converted;
+                transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
+                outputBlobs[i][j] = converted;
+            } else {
+                outputBlobs[i][j] = result.clone();
+            }
+        }
+    }
+}
+
 /*void Net::Impl::checkAndUpdateDim(const Ptr<Graph>& g, const Ptr<Layer>& layer, Arg inp, int j, int value)
 {
     const ArgData& adata = args[inp.idx];
@@ -1899,6 +1991,11 @@ void Net::Impl::useCounts(std::vector<int>& usecounts) const
     usecounts.assign(nargs, 0);
     usecounts[0] = 1; // empty Arg() is always useful
     updateUseCounts(mainGraph, usecounts);
+    // pinned interior tensors must not have their buffers reused (forward-to-layer)
+    for (const Arg& a : pinnedArgs) {
+        if (a.idx > 0 && a.idx < (int)usecounts.size())
+            usecounts[a.idx]++;
+    }
 }
 
 int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
