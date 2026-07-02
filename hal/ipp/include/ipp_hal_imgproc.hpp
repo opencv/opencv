@@ -100,10 +100,6 @@ int ipp_hal_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
 #undef cv_hal_cvtLabtoBGR
 #define cv_hal_cvtLabtoBGR ipp_hal_cvtLabtoBGR
 
-int ipp_hal_cvtColorYUV2Gray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
-                             int width, int height);
-#undef cv_hal_cvtColorYUV2Gray
-#define cv_hal_cvtColorYUV2Gray ipp_hal_cvtColorYUV2Gray
 #endif //IPP_VERSION_X100 >= 700
 
 #endif //__IPP_HAL_IMGPROC_HPP__

@@ -417,9 +417,6 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
     CvtHelper< Set<1>, Set<1>, Set<CV_8U>, FROM_YUV > h(_src, _dst, 1);
 
-    CALL_HAL(cvtColorYUV2Gray, cv_hal_cvtColorYUV2Gray,
-             h.src.data, h.src.step, h.dst.data, h.dst.step, h.dstSz.width, h.dstSz.height);
-
     h.src(Range(0, h.dstSz.height), Range::all()).copyTo(h.dst);
 }
 

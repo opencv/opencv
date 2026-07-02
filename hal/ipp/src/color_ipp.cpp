@@ -954,18 +954,4 @@ int ipp_hal_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-int ipp_hal_cvtColorYUV2Gray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
-                             int width, int height)
-{
-    CV_HAL_CHECK_USE_IPP();
-
-#if IPP_VERSION_X100 >= 201700
-    if (CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, src_data, (IppSizeL)src_step, dst_data, (IppSizeL)dst_step,
-                              ippiSizeL(width, height)) >= 0)
-        return CV_HAL_ERROR_OK;
-#endif
-
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-}
-
 #endif // IPP_VERSION_X100 >= 700
