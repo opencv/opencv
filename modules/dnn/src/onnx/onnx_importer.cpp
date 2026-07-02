@@ -24,6 +24,7 @@
 
 #include <array>
 #include <iostream>
+#include <set>
 #include <fstream>
 #include <string>
 #include <limits>
@@ -119,6 +120,8 @@ protected:
     std::map<std::string, Mat> constBlobs;
     std::map<std::string, TensorInfo> constBlobsExtraInfo;
 
+    std::set<std::string> dynamicQuantScaleZpOutputs;  // Byte-encoded scale/zp tensors produced by DynamicQuantizeLinear.
+
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
     bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
     typedef std::map<std::string, MatShape>::iterator IterShape_t;
@@ -202,6 +205,7 @@ private:
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseQuantDequant         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDynamicQuantizeLinear (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -727,6 +731,7 @@ static bool ifInt8Output(const String& layerType)
     // ai.onnx opset 15
     static std::vector<String> input8output8List = {
             "QuantizeLinear",
+            "DynamicQuantizeLinear",
             "QLinearAdd",
             "QLinearMul",
             "QLinearAveragePool",
@@ -3345,6 +3350,11 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
 
     // If scale is not defined as a constant blob, it is considered an external input.
     if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        // Scale produced by DynamicQuantizeLinear is byte-encoded (1x4 CV_8S); route to
+        // DequantizeDynamic which knows how to decode it.
+        if (layerParams.type == "Dequantize" &&
+            dynamicQuantScaleZpOutputs.count(node_proto.input(1)))
+            layerParams.type = "DequantizeDynamic";
         addLayer(layerParams, node_proto);
         return;
     }
@@ -3400,6 +3410,21 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     }
     else
         addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // DynamicQuantizeLinear (opset 11): 1 input (FP32 data), 3 outputs (UINT8/INT8 data, scale, zeropoint)
+    CV_Assert(node_proto.input_size() == 1);
+    layerParams.type = "QuantizeDynamic";
+    layerParams.set("depth", CV_8S);
+    // Outputs 1 (y_scale) and 2 (y_zero_point) use a byte-encoded convention (see
+    // quantization_utils.cpp); record their names so consumers can be routed properly.
+    if (node_proto.output_size() > 1 && !node_proto.output(1).empty())
+        dynamicQuantScaleZpOutputs.insert(node_proto.output(1));
+    if (node_proto.output_size() > 2 && !node_proto.output(2).empty())
+        dynamicQuantScaleZpOutputs.insert(node_proto.output(2));
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
@@ -4054,6 +4079,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     // ai.onnx: opset 10+
     dispatch["QuantizeLinear"] = dispatch["DequantizeLinear"] = &ONNXImporter::parseQuantDequant;
+    dispatch["DynamicQuantizeLinear"] = &ONNXImporter::parseDynamicQuantizeLinear;
     dispatch["QLinearConv"] = &ONNXImporter::parseQConv;
     dispatch["QLinearMatMul"] = &ONNXImporter::parseQMatMul;
 

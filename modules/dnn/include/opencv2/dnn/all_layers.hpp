@@ -485,6 +485,24 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RequantizeLayer> create(const LayerParams &params);
     };
 
+    /** @brief Dynamic quantization layer that computes scale and zero point at runtime
+     *  from activation min/max values. Outputs quantized data plus scale/zp tensors.
+     */
+    class CV_EXPORTS QuantizeDynamicLayer : public QuantizeLayer
+    {
+    public:
+        static Ptr<QuantizeDynamicLayer> create(const LayerParams &params);
+    };
+
+    /** @brief Dynamic dequantization layer that reads scale and zero point from
+     *  input tensors (produced by QuantizeDynamicLayer) rather than from fixed parameters.
+     */
+    class CV_EXPORTS DequantizeDynamicLayer : public DequantizeLayer
+    {
+    public:
+        static Ptr<DequantizeDynamicLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ConcatLayer : public Layer
     {
     public:

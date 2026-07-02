@@ -2129,6 +2129,189 @@ TEST_P(Test_ONNX_layers, Quantized_Constant)
     testONNXModels("quantized_constant", npy, 0.002, 0.008);
 }
 
+// Custom accuracy tests for DynamicQuantizeLinear.
+// Conformance tests are denylisted because the framework's single-dtype-per-layer
+// constraint prevents correct mixed-type (uint8 + float32) output blobs.
+// These tests reproduce the exact ONNX conformance test cases:
+//   test_dynamicquantizelinear, test_dynamicquantizelinear_max_adjusted,
+//   test_dynamicquantizelinear_min_adjusted
+// using direct layer invocation to verify quantize + dequantize correctness.
+
+// Helper: run QuantizeDynamic forward and verify outputs against ONNX spec.
+static void testDynamicQuantizeLinear(const float* inputData, int rows, int cols,
+                                      const uint8_t* expected_uint8, int numElements,
+                                      float expected_scale, uint8_t expected_zp_uint8)
+{
+    LayerParams qp;
+    qp.name = "test_quantize_dynamic";
+    qp.type = "QuantizeDynamic";
+    qp.set("depth", CV_8S);
+
+    Ptr<Layer> qlayer = LayerFactory::createLayerInstance("QuantizeDynamic", qp);
+    ASSERT_FALSE(qlayer.empty());
+
+    Mat input(rows, cols, CV_32F);
+    memcpy(input.ptr<float>(), inputData, numElements * sizeof(float));
+
+    std::vector<Mat> inputs = {input};
+    std::vector<Mat> outputs = {
+        Mat(rows, cols, CV_8S),
+        Mat(1, 4, CV_8S),   // scale: float encoded as 4 x int8 raw bytes
+        Mat(1, 1, CV_8S)    // zeropoint
+    };
+    std::vector<Mat> internals;
+
+    qlayer->forward(inputs, outputs, internals);
+
+    // Verify scale (decode from 4 raw bytes)
+    float decoded_sc;
+    memcpy(&decoded_sc, outputs[1].ptr(), sizeof(float));
+    EXPECT_NEAR(decoded_sc, expected_scale, 1e-6f) << "Scale mismatch";
+
+    // Verify zero point (stored as int8 = uint8_value - 128)
+    int8_t stored_zp = outputs[2].at<int8_t>(0);
+    int recovered_zp_uint8 = (int)stored_zp + 128;
+    EXPECT_EQ(recovered_zp_uint8, (int)expected_zp_uint8) << "Zero point mismatch";
+
+    // Verify quantized values (compare in uint8 space)
+    const int8_t* qdata = outputs[0].ptr<int8_t>();
+    for (int i = 0; i < numElements; i++)
+    {
+        int actual_uint8 = (int)qdata[i] + 128;
+        EXPECT_EQ(actual_uint8, (int)expected_uint8[i])
+            << "Quantized value mismatch at index " << i
+            << " (expected uint8=" << (int)expected_uint8[i]
+            << ", got uint8=" << actual_uint8 << ")";
+    }
+
+    // Verify round-trip: QuantizeDynamic -> DequantizeDynamic
+    {
+        LayerParams dp;
+        dp.name = "test_dequantize_dynamic";
+        dp.type = "DequantizeDynamic";
+
+        Ptr<Layer> dlayer = LayerFactory::createLayerInstance("DequantizeDynamic", dp);
+        ASSERT_FALSE(dlayer.empty());
+
+        std::vector<Mat> dq_inputs = {outputs[0], outputs[1], outputs[2]};
+        std::vector<Mat> dq_outputs = {Mat(rows, cols, CV_32F)};
+        std::vector<Mat> dq_internals;
+
+        dlayer->forward(dq_inputs, dq_outputs, dq_internals);
+
+        const float* outData = dq_outputs[0].ptr<float>();
+        for (int i = 0; i < numElements; i++)
+        {
+            EXPECT_NEAR(outData[i], inputData[i], 0.5f * expected_scale + 1e-6f)
+                << "Round-trip dequantized value mismatch at index " << i;
+        }
+    }
+}
+
+// test_dynamicquantizelinear: mixed positive/negative input
+// Input: [0, 2, -3, -2.5, 1.34, 0.5]
+// Expected: scale=0.0196078438, zp=153
+TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_Basic)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        return;
+
+    float X[] = {0.f, 2.f, -3.f, -2.5f, 1.34f, 0.5f};
+    float x_min = -3.f, x_max = 2.f;
+    float scale = (x_max - x_min) / 255.f;
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 153
+
+    uint8_t expected_Y[6];
+    for (int i = 0; i < 6; i++)
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
+
+    SCOPED_TRACE("test_dynamicquantizelinear");
+    testDynamicQuantizeLinear(X, 1, 6, expected_Y, 6, scale, zp);
+}
+
+// test_dynamicquantizelinear_max_adjusted: all negative input, max adjusted to 0
+// Input: [-1.0, -2.1, -1.3, -2.5, -3.34, -4.0]
+// Expected: scale=0.0156862754, zp=255
+TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_MaxAdjusted)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        return;
+
+    float X[] = {-1.0f, -2.1f, -1.3f, -2.5f, -3.34f, -4.0f};
+    float x_min = -4.f, x_max = 0.f;  // max adjusted to 0
+    float scale = (x_max - x_min) / 255.f;
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 255
+
+    uint8_t expected_Y[6];
+    for (int i = 0; i < 6; i++)
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
+
+    SCOPED_TRACE("test_dynamicquantizelinear_max_adjusted");
+    testDynamicQuantizeLinear(X, 1, 6, expected_Y, 6, scale, zp);
+}
+
+// test_dynamicquantizelinear_min_adjusted: all positive input (3x4), min adjusted to 0
+// Input: [[1, 2.1, 1.3, 2.5], [3.34, 4.0, 1.5, 2.6], [3.9, 4.0, 3.0, 2.345]]
+// Expected: scale=0.0156862754, zp=0
+TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_MinAdjusted)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        return;
+
+    float X[] = {1.f, 2.1f, 1.3f, 2.5f, 3.34f, 4.0f, 1.5f, 2.6f, 3.9f, 4.0f, 3.0f, 2.345f};
+    float x_min = 0.f, x_max = 4.f;  // min adjusted to 0
+    float scale = (x_max - x_min) / 255.f;
+    uint8_t zp = saturate_cast<uchar>(cvRound(-x_min / scale));  // 0
+
+    uint8_t expected_Y[12];
+    for (int i = 0; i < 12; i++)
+        expected_Y[i] = saturate_cast<uchar>(cvRound(X[i] / scale) + (int)zp);
+
+    SCOPED_TRACE("test_dynamicquantizelinear_min_adjusted");
+    testDynamicQuantizeLinear(X, 3, 4, expected_Y, 12, scale, zp);
+}
+
+// Net-level round trip: QuantizeDynamic -> DequantizeDynamic wired through a Net,
+// mirroring how the importer routes DynamicQuantizeLinear -> DequantizeLinear
+// (the dequantize node consumes the byte-encoded scale/zp output tensors).
+TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_DequantizeRoundTrip)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        return;
+
+    Net net;
+
+    LayerParams qp;
+    qp.name = "quant";
+    qp.type = "QuantizeDynamic";
+    qp.set("depth", CV_8S);
+    int qid = net.addLayerToPrev(qp.name, qp.type, CV_8S, qp);
+
+    LayerParams dp;
+    dp.name = "dequant";
+    dp.type = "DequantizeDynamic";
+    dp.set("depth", CV_32F);
+    int did = net.addLayer(dp.name, dp.type, CV_32F, dp);
+    net.connect(qid, 0, did, 0);  // INT8 data
+    net.connect(qid, 1, did, 1);  // byte-encoded scale
+    net.connect(qid, 2, did, 2);  // zeropoint
+
+    float X[] = {0.f, 2.f, -3.f, -2.5f, 1.34f, 0.5f};
+    Mat input(1, 6, CV_32F, X);
+    float scale = (2.f - (-3.f)) / 255.f;
+
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat out = net.forward(dp.name);
+
+    ASSERT_EQ(out.total(), (size_t)6);
+    const float* outData = out.ptr<float>();
+    for (int i = 0; i < 6; i++)
+        EXPECT_NEAR(outData[i], X[i], 0.5f * scale + 1e-6f)
+            << "Round-trip dequantized value mismatch at index " << i;
+}
+
+
 TEST_P(Test_ONNX_layers, OutputRegistration)
 {
     testONNXModels("output_registration", npy, 0, 0, false, true, 2);
