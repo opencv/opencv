@@ -82,7 +82,8 @@ int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t ds
 /* ############ bilateralFilter ############ */
 
 int bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                    int width, int height, int depth, int cn, int d, double sigma_color,
+                    int width, int height, int full_width, int full_height, int offset_x, int offset_y,
+                    int depth, int cn, int d, double sigma_color,
                     double sigma_space, int border_type);
 
 #undef cv_hal_bilateralFilter
