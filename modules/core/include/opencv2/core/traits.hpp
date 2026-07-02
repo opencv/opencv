@@ -336,6 +336,28 @@ public:
          };
 };
 
+template<> class DataType<fp8_t>
+{
+public:
+    typedef fp8_t value_type;
+    typedef float         work_type;
+    typedef value_type    channel_type;
+    typedef value_type    vec_type;
+    enum { generic_type = 0, depth = CV_8F_E4M3FN, channels = 1,
+           fmt = (int)'e', type = CV_MAKETYPE(depth, channels) };
+};
+
+template<> class DataType<fp8a_t>
+{
+public:
+    typedef fp8a_t value_type;
+    typedef float           work_type;
+    typedef value_type      channel_type;
+    typedef value_type      vec_type;
+    enum { generic_type = 0, depth = CV_8F_E4M3FNUZ, channels = 1,
+           fmt = (int)'E', type = CV_MAKETYPE(depth, channels) };
+};
+
 /** @brief A helper class for cv::DataType
 
 The class is specialized for each fundamental numerical data type supported by OpenCV. It provides
@@ -432,6 +454,18 @@ template<> class TypeDepth<CV_16BF>
 {
     enum { depth = CV_16BF };
     typedef bfloat value_type;
+};
+
+template<> class TypeDepth<CV_8F_E4M3FN>
+{
+    enum { depth = CV_8F_E4M3FN };
+    typedef fp8_t value_type;
+};
+
+template<> class TypeDepth<CV_8F_E4M3FNUZ>
+{
+    enum { depth = CV_8F_E4M3FNUZ };
+    typedef fp8a_t value_type;
 };
 
 template<> class TypeDepth<CV_Bool>

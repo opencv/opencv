@@ -207,6 +207,28 @@ template<> inline bool saturate_cast<bool>(int64_t v){ return v != 0; }
 template<> inline bool saturate_cast<bool>(hfloat v){ return (float)v != 0; }
 template<> inline bool saturate_cast<bool>(bfloat v){ return (float)v != 0; }
 
+// saturate_cast for the FP8 family — routes through float, mirroring hfloat/bfloat above.
+#define CV_FP8_SATURATE_CAST(T) \
+template<typename _Tp> static inline _Tp saturate_cast(T v) { return saturate_cast<_Tp>((float)v); } \
+template<> inline T saturate_cast<T>(uchar v)    { return T((float)v); } \
+template<> inline T saturate_cast<T>(schar v)    { return T((float)v); } \
+template<> inline T saturate_cast<T>(ushort v)   { return T((float)v); } \
+template<> inline T saturate_cast<T>(short v)    { return T((float)v); } \
+template<> inline T saturate_cast<T>(unsigned v) { return T((float)v); } \
+template<> inline T saturate_cast<T>(int v)      { return T((float)v); } \
+template<> inline T saturate_cast<T>(uint64 v)   { return T((float)v); } \
+template<> inline T saturate_cast<T>(int64 v)    { return T((float)v); } \
+template<> inline T saturate_cast<T>(float v)    { return T(v); } \
+template<> inline T saturate_cast<T>(double v)   { return T((float)v); } \
+template<> inline T saturate_cast<T>(hfloat v)   { return T((float)v); } \
+template<> inline T saturate_cast<T>(bfloat v)   { return T((float)v); } \
+template<> inline T saturate_cast<T>(T v)        { return v; } \
+template<> inline bool saturate_cast<bool>(T v)  { return (float)v != 0; }
+
+CV_FP8_SATURATE_CAST(fp8_t)
+CV_FP8_SATURATE_CAST(fp8a_t)
+#undef CV_FP8_SATURATE_CAST
+
 //! @}
 
 } // cv

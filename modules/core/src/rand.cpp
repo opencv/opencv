@@ -232,12 +232,20 @@ DEF_RANDI_FUNC(32s, int)
 DEF_RANDI_FUNC(64u, uint64_t)
 DEF_RANDI_FUNC(64s, int64_t)
 
+// Narrow an f32 buffer into one of the 1-byte FP8 destinations.
+static inline void cvt32fToFP8(const float* src, void* dst, int len, int depth)
+{
+    if (depth == CV_8F_E4M3FN)        { fp8_t*   d = (fp8_t*)dst;   for (int i = 0; i < len; i++) d[i] = fp8_t(src[i]); }
+    else                              { fp8a_t* d = (fp8a_t*)dst; for (int i = 0; i < len; i++) d[i] = fp8a_t(src[i]); }
+}
+static inline bool isFP8Depth(int d) { return d >= CV_8F_E4M3FN && d <= CV_8F_E4M3FNUZ; }
+
 static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const Vec2f* p, float* fbuf, int flags )
 {
     int depth = CV_MAT_DEPTH(flags);
     uint64 temp = *state;
     int k = 0, len = len_*cn;
-    float* arr = depth == CV_16F || depth == CV_16BF ? fbuf : (float*)dst;
+    float* arr = depth == CV_16F || depth == CV_16BF || isFP8Depth(depth) ? fbuf : (float*)dst;
     cn--;
     for( int i = 0; i < len; i++ )
     {
@@ -251,6 +259,8 @@ static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const V
         hal::cvt32f16f(fbuf, (hfloat*)dst, len);
     else if (depth == CV_16BF)
         hal::cvt32f16bf(fbuf, (bfloat*)dst, len);
+    else if (isFP8Depth(depth))
+        cvt32fToFP8(fbuf, dst, len, depth);
 }
 
 static void
@@ -280,7 +290,8 @@ static RandFunc randTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
         (RandFunc)randi_16s, (RandFunc)randi_32s, (RandFunc)randf_16_or_32f,
         (RandFunc)randf_64f, (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f,
         (RandFunc)randi_8b, (RandFunc)randi_64u, (RandFunc)randi_64s,
-        (RandFunc)randi_32u, 0, 0, 0
+        (RandFunc)randi_32u,
+        (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f    // CV_8F_E4M3FN, E4M3FNUZ
     },
     {
         (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u,
@@ -425,7 +436,7 @@ randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
 {
     bool stdmtx = (flags & RNG_FLAG_STDMTX) != 0;
     int depth = CV_MAT_DEPTH(flags);
-    float* arr = depth == CV_16F || depth == CV_16BF ? fbuf : dst;
+    float* arr = depth == CV_16F || depth == CV_16BF || isFP8Depth(depth) ? fbuf : dst;
     int i, j, k;
 
     if( !stdmtx || cn == 1 )
@@ -483,6 +494,8 @@ randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
         hal::cvt32f16f(fbuf, (hfloat*)dst, len);
     else if (depth == CV_16BF)
         hal::cvt32f16bf(fbuf, (bfloat*)dst, len);
+    else if (isFP8Depth(depth))
+        cvt32fToFP8(fbuf, dst, len, depth);
 }
 
 #define DEF_RANDNSCALE_FUNC(suffix, T, PT) \
@@ -510,7 +523,8 @@ static RandnScaleFunc randnScaleTab[CV_DEPTH_MAX] =
     (RandnScaleFunc)randnScale_16s, (RandnScaleFunc)randnScale_32s, (RandnScaleFunc)randnScale_16_or_32f,
     (RandnScaleFunc)randnScale_64f, (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f,
     (RandnScaleFunc)randnScale_8b, (RandnScaleFunc)randnScale_64u, (RandnScaleFunc)randnScale_64s,
-    (RandnScaleFunc)randnScale_32u, 0, 0, 0
+    (RandnScaleFunc)randnScale_32u,
+    (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f   // CV_8F_E4M3FN, E4M3FNUZ
 };
 
 void RNG::fill( InputOutputArray _mat, int disttype,

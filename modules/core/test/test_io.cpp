@@ -2297,9 +2297,60 @@ TEST_P(FileStorage_exact_type, long_int_mat)
     EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
 }
 
+TEST_P(FileStorage_exact_type, fp8_mat)
+{
+    const int fp8[] = { CV_8F_E4M3FN, CV_8F_E4M3FNUZ };
+    float vals[] = { 0.f, 0.5f, 1.f, 1.5f, 2.f, 3.f, 4.f, 6.f, -1.5f, -2.f };
+    Mat f(1, 10, CV_32F, vals);
+    for (int d : fp8)
+    {
+        Mat src; f.convertTo(src, d);
+        Mat dst = fsWriteRead(src, GetParam());
+        ASSERT_EQ(src.type(), dst.type());
+        ASSERT_EQ(src.size, dst.size);
+        EXPECT_EQ(0, memcmp(src.data, dst.data, src.total() * src.elemSize())) << "fp8 depth " << d;
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json", ".xml.gz", ".xml.gz0", ".xml.gz9")
 );
+
+TEST(Core_InputOutput, fp8_base64)
+{
+    const int fp8[] = { CV_8F_E4M3FN, CV_8F_E4M3FNUZ };
+    float vals[] = { 0.f, 0.5f, 1.f, 1.5f, 2.f, 3.f, 4.f, 6.f, -1.5f, -2.f };
+    Mat f(1, 10, CV_32F, vals);
+    for (const char* ext : { ".yml", ".xml", ".json" })
+        for (int d : fp8)
+        {
+            Mat src; f.convertTo(src, d);
+            std::string fn = cv::tempfile(ext);
+            { FileStorage fs(fn, FileStorage::WRITE_BASE64); fs << "m" << src; }
+            Mat dst; { FileStorage fs(fn, FileStorage::READ); fs["m"] >> dst; }
+            remove(fn.c_str());
+            ASSERT_EQ(src.type(), dst.type());
+            ASSERT_EQ(src.size, dst.size);
+            EXPECT_EQ(0, memcmp(src.data, dst.data, src.total() * src.elemSize()))
+                << "fp8 depth " << d << " ext " << ext;
+        }
+}
+
+TEST(Core_InputOutput, fp8_scalar)
+{
+    for (const char* ext : { ".yml", ".xml", ".json" })
+    {
+        cv::fp8_t a(2.5f);
+        cv::fp8a_t b(-1.5f);
+        std::string fn = cv::tempfile(ext);
+        { FileStorage fs(fn, FileStorage::WRITE); fs << "a" << a << "b" << b; }
+        cv::fp8_t a2; cv::fp8a_t b2;
+        { FileStorage fs(fn, FileStorage::READ); fs["a"] >> a2; fs["b"] >> b2; }
+        remove(fn.c_str());
+        EXPECT_EQ((float)a, (float)a2) << ext;
+        EXPECT_EQ((float)b, (float)b2) << ext;
+    }
+}
 
 TEST(Core_InputOutput, YAML_Compatibility)
 {
