@@ -139,11 +139,7 @@ struct RGB2RGB
                 d = v_set<_Tp>::set(alphav);
             }
             if(bi == 2) {
-                #if CV_SIMD_SCALABLE
-                auto t = a; a = c; c = t; // swap(a, c);
-                #else
-                swap(a, c);
-                #endif
+                v_swap(a, c);
             }
 
             if(dcn == 4)
@@ -235,11 +231,7 @@ struct RGB5x52RGB
             r = v_pack(r0, r1);
 
             if(bidx == 2) {
-                #if CV_SIMD_SCALABLE
-                auto t = r; r = b; b = t; // swap(b, r);
-                #else
-                swap(b, r);
-                #endif
+                v_swap(b, r);
             }
             if(dcn == 4)
             {
@@ -318,11 +310,7 @@ struct RGB2RGB5x5
                 v_load_deinterleave(src, b, g, r, a);
             }
             if(bidx == 2){
-                #if CV_SIMD_SCALABLE
-                auto t = r; r = b; b = t; // swap(b, r);
-                #else
-                swap(b, r);
-                #endif
+                v_swap(b, r);
             }
 
             r = v_and(r, v7);
@@ -1106,12 +1094,8 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uchar>(scn, dcn, blueIdx));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<ushort>(scn, dcn, blueIdx));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<float>(scn, dcn, blueIdx));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return RGB2RGB<T>(scn, dcn, blueIdx); });
 }
 
 // only 8u
@@ -1145,12 +1129,8 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<uchar>(scn, blueIdx, 0));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<ushort>(scn, blueIdx, 0));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<float>(scn, blueIdx, 0));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return RGB2Gray<T>(scn, blueIdx, 0); });
 }
 
 // 8u, 16u, 32f
@@ -1161,12 +1141,8 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<uchar>(dcn));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<ushort>(dcn));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<float>(dcn));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return Gray2RGB<T>(dcn); });
 }
 
 // only 8u

@@ -95,6 +95,20 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v
 namespace cv
 {
 
+// swap R<->B in a row-major 3x3 coeff matrix when blueIdx==0
+template<typename CT> static inline void swapBlueCoeffsCols(CT* coeffs)
+{
+    std::swap(coeffs[0], coeffs[2]);
+    std::swap(coeffs[3], coeffs[5]);
+    std::swap(coeffs[6], coeffs[8]);
+}
+template<typename CT> static inline void swapBlueCoeffsRows(CT* coeffs)
+{
+    std::swap(coeffs[0], coeffs[6]);
+    std::swap(coeffs[1], coeffs[7]);
+    std::swap(coeffs[2], coeffs[8]);
+}
+
 ////////////////////////////////////// RGB <-> XYZ ///////////////////////////////////////
 
 // 0.412453, 0.357580, 0.180423,
@@ -152,11 +166,7 @@ template<typename _Tp> struct RGB2XYZ_f
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)sRGB2XYZ_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -189,11 +199,7 @@ struct RGB2XYZ_f<float>
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)sRGB2XYZ_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
 
     void operator()(const float* src, float* dst, int n) const
@@ -257,11 +263,7 @@ template<typename _Tp> struct RGB2XYZ_i
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -296,11 +298,7 @@ struct RGB2XYZ_i<uchar>
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const uchar * src, uchar * dst, int n) const
     {
@@ -416,11 +414,7 @@ struct RGB2XYZ_i<ushort>
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
 
     void operator()(const ushort * src, ushort * dst, int n) const
@@ -542,11 +536,7 @@ template<typename _Tp> struct XYZ2RGB_f
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)XYZ2sRGB_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -583,11 +573,7 @@ struct XYZ2RGB_f<float>
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)XYZ2sRGB_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const float* src, float* dst, int n) const
@@ -655,11 +641,7 @@ template<typename _Tp> struct XYZ2RGB_i
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -698,11 +680,7 @@ struct XYZ2RGB_i<uchar>
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -821,11 +799,7 @@ struct XYZ2RGB_i<ushort>
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const ushort* src, ushort* dst, int n) const
@@ -4077,47 +4051,6 @@ struct Luv2RGB_b
 };
 
 //
-// IPP functions
-//
-
-#if NEED_IPP
-
-#if !IPP_DISABLE_RGB_XYZ
-static ippiGeneralFunc ippiRGB2XYZTab[CV_DEPTH_MAX] =
-{
-    (ippiGeneralFunc)ippiRGBToXYZ_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToXYZ_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiRGBToXYZ_32f_C3R, 0, 0
-};
-#endif
-
-#if !IPP_DISABLE_XYZ_RGB
-static ippiGeneralFunc ippiXYZ2RGBTab[CV_DEPTH_MAX] =
-{
-    (ippiGeneralFunc)ippiXYZToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiXYZToRGB_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
-};
-#endif
-
-#if !IPP_DISABLE_RGB_LAB
-static ippiGeneralFunc ippiRGBToLUVTab[CV_DEPTH_MAX] =
-{
-    (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiRGBToLUV_32f_C3R, 0, 0
-};
-#endif
-
-#if !IPP_DISABLE_LAB_RGB
-static ippiGeneralFunc ippiLUVToRGBTab[CV_DEPTH_MAX] =
-{
-    (ippiGeneralFunc)ippiLUVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiLUVToRGB_16u_C3R, 0,
-    0, (ippiGeneralFunc)ippiLUVToRGB_32f_C3R, 0, 0
-};
-#endif
-
-#endif
-
-
-//
 // HAL functions
 //
 
@@ -4132,38 +4065,6 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoXYZ, cv_hal_cvtBGRtoXYZ, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
-
-#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
-#if !IPP_DISABLE_RGB_XYZ
-    CV_IPP_CHECK()
-    {
-        if(scn == 3 && depth != CV_32F && !swapBlue)
-        {
-            if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
-                                    IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                return;
-        }
-        else if(scn == 4 && depth != CV_32F && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                return;
-        }
-        else if(scn == 3 && depth != CV_32F && swapBlue)
-        {
-            if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
-                                    IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
-                return;
-        }
-        else if(scn == 4 && depth != CV_32F && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
-                return;
-        }
-    }
-#endif
-#endif
 
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
@@ -4184,38 +4085,6 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtXYZtoBGR, cv_hal_cvtXYZtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue);
 
-#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
-#if !IPP_DISABLE_XYZ_RGB
-    CV_IPP_CHECK()
-    {
-        if(dcn == 3 && depth != CV_32F && !swapBlue)
-        {
-            if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
-                                    IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                return;
-        }
-        else if(dcn == 4 && depth != CV_32F && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                return;
-        }
-        if(dcn == 3 && depth != CV_32F && swapBlue)
-        {
-            if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
-                                    IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
-                return;
-        }
-        else if(dcn == 4 && depth != CV_32F && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                return;
-        }
-    }
-#endif
-#endif
-
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, XYZ2RGB_i<uchar>(dcn, blueIdx, 0));
@@ -4235,75 +4104,6 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoLab, cv_hal_cvtBGRtoLab, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isLab, srgb);
-
-#if defined(HAVE_IPP) && !IPP_DISABLE_RGB_LAB
-    CV_IPP_CHECK()
-    {
-        if (!srgb)
-        {
-            if (isLab)
-            {
-                if (scn == 3 && depth == CV_8U && !swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
-                        return;
-                }
-                else if (scn == 4 && depth == CV_8U && !swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                 (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 0, 1, 2, depth)))
-                        return;
-                }
-                else if (scn == 3 && depth == CV_8U && swapBlue) // slower than OpenCV
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                 (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                        return;
-                }
-                else if (scn == 4 && depth == CV_8U && swapBlue) // slower than OpenCV
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                 (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                        return;
-                }
-            }
-            else
-            {
-                if (scn == 3 && swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
-                        return;
-                }
-                else if (scn == 4 && swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                 ippiRGBToLUVTab[depth], 0, 1, 2, depth)))
-                        return;
-                }
-                else if (scn == 3 && !swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                 ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                        return;
-                }
-                else if (scn == 4 && !swapBlue)
-                {
-                    if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                 ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                        return;
-                }
-            }
-        }
-    }
-#endif
 
     int blueIdx = swapBlue ? 2 : 0;
     if(isLab)
@@ -4332,75 +4132,6 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtLabtoBGR, cv_hal_cvtLabtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isLab, srgb);
-
-#if defined(HAVE_IPP) && !IPP_DISABLE_LAB_RGB
-    CV_IPP_CHECK()
-    {
-        if (!srgb)
-        {
-            if (isLab)
-            {
-                if( dcn == 3 && depth == CV_8U && !swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
-                        return;
-                }
-                else if( dcn == 4 && depth == CV_8U && !swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                 ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return;
-                }
-                if( dcn == 3 && depth == CV_8U && swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                 ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                }
-                else if( dcn == 4 && depth == CV_8U && swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                 ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                }
-            }
-            else
-            {
-                if( dcn == 3 && swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
-                        return;
-                }
-                else if( dcn == 4 && swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                 ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return;
-                }
-                if( dcn == 3 && !swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                 ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                }
-                else if( dcn == 4 && !swapBlue)
-                {
-                    if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
-                                        IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                 ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return;
-                }
-            }
-        }
-    }
-#endif
 
     int blueIdx = swapBlue ? 2 : 0;
     if(isLab)
@@ -4714,11 +4445,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = (float)sRGB2XYZ_D65[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
         Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
     }
     else
@@ -4727,11 +4454,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = sRGB2XYZ_D65_i[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
         Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
     }
 
@@ -4762,11 +4485,7 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = (float)XYZ2sRGB_D65[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
         Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
     }
     else
@@ -4775,11 +4494,7 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = XYZ2sRGB_D65_i[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
         Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
     }
 

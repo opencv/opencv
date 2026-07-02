@@ -53,15 +53,6 @@ void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
 namespace {
 //constants for conversion from/to RGB and YUV, YCrCb according to BT.601
 
-#if CV_SIMD_SCALABLE
-template <class T>
-static void swap(T&a, T&b) {
-    T t = a;
-    a = b;
-    b = t;
-}
-#endif
-
 //to YCbCr
 static const float YCBF = 0.564f; // == 1/2/(1-B2YF)
 static const float YCRF = 0.713f; // == 1/2/(1-R2YF)
@@ -91,6 +82,14 @@ static const int CB2GI = -5636;
 static const int CR2GI = -11698;
 static const int CR2RI = 22987;
 
+// select YCrCb (crcb) or YUV (yuv) coefficients into coeffs; size N deduced
+template<typename CT, int N>
+static inline void selectYuvCoeffs(CT (&coeffs)[N], bool isCrCb, const CT (&crcb)[N], const CT (&yuv)[N])
+{
+    for(int i = 0; i < N; i++)
+        coeffs[i] = isCrCb ? crcb[i] : yuv[i];
+}
+
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
 template<typename _Tp> struct RGB2YCrCb_f
@@ -102,10 +101,7 @@ template<typename _Tp> struct RGB2YCrCb_f
     {
         static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
         static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
-        for(int i = 0; i < 5; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
     }
@@ -140,10 +136,7 @@ struct RGB2YCrCb_f<float>
     {
         static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
         static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
-        for(int i = 0; i < 5; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
     }
@@ -178,7 +171,7 @@ struct RGB2YCrCb_f<float>
             y = v_fma(b, vc0, v_fma(g, vc1, v_mul(r, vc2)));
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             cr = v_fma(v_sub(r, y), vc3, vdelta);
             cb = v_fma(v_sub(b, y), vc4, vdelta);
@@ -222,10 +215,7 @@ template<typename _Tp> struct RGB2YCrCb_i
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
 
-        for(int i = 0; i < 5; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -264,10 +254,7 @@ struct RGB2YCrCb_i<ushort>
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
 
-        for(int i = 0; i < 5; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
         if(blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
     }
@@ -336,7 +323,7 @@ struct RGB2YCrCb_i<ushort>
             y = v_reinterpret_as_u16(v_add_wrap(v_pack(ssy0, ssy1), fixmul));
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             // (r-Y) and (b-Y) don't fit into int16 or uint16 range
             v_uint32 r0, r1, b0, b1;
@@ -405,10 +392,7 @@ struct RGB2YCrCb_i<uchar>
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-        for(int i = 0; i < 5; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
     }
@@ -495,7 +479,7 @@ struct RGB2YCrCb_i<uchar>
 
             if(bidx)
             {
-                swap(sr0, sb0); swap(sr1, sb1);
+                v_swap(sr0, sb0); v_swap(sr1, sb1);
             }
 
             v_int32 cr00, cr01, cr10, cr11;
@@ -579,10 +563,7 @@ template<typename _Tp> struct YCrCb2RGB_f
     {
         static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
         static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
-        for(int i = 0; i < 4; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_cbr[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_cbr, coeffs_yuv);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -622,10 +603,7 @@ struct YCrCb2RGB_f<float>
     {
         static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
         static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
-        for(int i = 0; i < 4; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_cbr[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_cbr, coeffs_yuv);
     }
 
     void operator()(const float* src, float* dst, int n) const
@@ -659,7 +637,7 @@ struct YCrCb2RGB_f<float>
             r = v_fma(cr, vc0, y);
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             if(dcn == 3)
                 v_store_interleave(dst, b, g, r);
@@ -699,10 +677,7 @@ template<typename _Tp> struct YCrCb2RGB_i
     {
         static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
         static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
-        for(int i = 0; i < 4; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -746,10 +721,7 @@ struct YCrCb2RGB_i<uchar>
     {
         static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
         static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
-        for(int i = 0; i < 4; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -849,7 +821,7 @@ struct YCrCb2RGB_i<uchar>
             r = v_pack_u(r0, r1);
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             if(dcn == 3)
             {
@@ -897,10 +869,7 @@ struct YCrCb2RGB_i<ushort>
     {
         static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
         static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
-        for(int i = 0; i < 4; i++)
-        {
-            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
-        }
+        selectYuvCoeffs(coeffs, isCrCb, coeffs_crb, coeffs_yuv);
     }
 
     void operator()(const ushort* src, ushort* dst, int n) const
@@ -976,7 +945,7 @@ struct YCrCb2RGB_i<ushort>
             r = v_pack_u(r0, r1);
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             if(dcn == 3)
             {
@@ -1191,6 +1160,74 @@ static inline void cvtYuv42xxp2RGB8(const uchar u, const uchar v,
     }
 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// shared SIMD body for YUV420 sp/p -> RGB: u,v + 4 luma vectors -> two interleaved RGB rows
+template<int bIdx, int dcn>
+static CV_ALWAYS_INLINE void storeYUV420block(const v_uint8& u, const v_uint8& v,
+                                    const v_uint8& vy0, const v_uint8& vy1,
+                                    const v_uint8& vy2, const v_uint8& vy3,
+                                    const v_uint8& a, int vsize, uchar* row1, uchar* row2)
+{
+    v_int32 ruv0, ruv1, ruv2, ruv3,
+            guv0, guv1, guv2, guv3,
+            buv0, buv1, buv2, buv3;
+    uvToRGBuv(u, v,
+            ruv0, ruv1, ruv2, ruv3,
+            guv0, guv1, guv2, guv3,
+            buv0, buv1, buv2, buv3);
+
+    v_uint8 r0, r1, r2, r3, g0, g1, g2, g3, b0, b1, b2, b3;
+
+    auto call_yRGBuvToRGBA = [&](const v_uint8& vy, v_uint8& r, v_uint8& g, v_uint8& b) {
+        yRGBuvToRGBA(vy,
+            ruv0, ruv1, ruv2, ruv3,
+            guv0, guv1, guv2, guv3,
+            buv0, buv1, buv2, buv3,
+            r, g, b);
+    };
+    call_yRGBuvToRGBA(vy0, r0, g0, b0);
+    call_yRGBuvToRGBA(vy1, r1, g1, b1);
+    call_yRGBuvToRGBA(vy2, r2, g2, b2);
+    call_yRGBuvToRGBA(vy3, r3, g3, b3);
+
+    if(bIdx)
+    {
+        v_swap(r0, b0);
+        v_swap(r1, b1);
+        v_swap(r2, b2);
+        v_swap(r3, b3);
+    }
+
+    // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
+    v_uint8 r0_0, r0_1, r1_0, r1_1;
+    v_zip(r0, r1, r0_0, r0_1);
+    v_zip(r2, r3, r1_0, r1_1);
+    v_uint8 g0_0, g0_1, g1_0, g1_1;
+    v_zip(g0, g1, g0_0, g0_1);
+    v_zip(g2, g3, g1_0, g1_1);
+    v_uint8 b0_0, b0_1, b1_0, b1_1;
+    v_zip(b0, b1, b0_0, b0_1);
+    v_zip(b2, b3, b1_0, b1_1);
+
+    if(dcn == 4)
+    {
+        v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
+        v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
+
+        v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
+        v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
+    }
+    else //dcn == 3
+    {
+        v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
+        v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
+
+        v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
+        v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
+    }
+}
+#endif
+
 // bIdx is 0 or 2, uIdx is 0 or 1, dcn is 3 or 4
 template<int bIdx, int uIdx, int dcn>
 struct YUV420sp2RGB8Invoker : ParallelLoopBody
@@ -1233,70 +1270,14 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
 
                 if(uIdx)
                 {
-                    swap(u, v);
+                    v_swap(u, v);
                 }
 
                 v_uint8 vy0, vy1, vy2, vy3;
                 v_load_deinterleave(y1 + i, vy0, vy1);
                 v_load_deinterleave(y2 + i, vy2, vy3);
 
-                v_int32 ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3;
-                uvToRGBuv(u, v,
-                        ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3);
-
-                v_uint8 r0, r1, r2, r3, g0, g1, g2, g3, b0, b1, b2, b3;
-
-                auto call_yRGBuvToRGBA = [&](const v_uint8& vy, v_uint8& r, v_uint8& g, v_uint8& b) {
-                    yRGBuvToRGBA(vy,
-                        ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3,
-                        r, g, b);
-                };
-                call_yRGBuvToRGBA(vy0, r0, g0, b0);
-                call_yRGBuvToRGBA(vy1, r1, g1, b1);
-                call_yRGBuvToRGBA(vy2, r2, g2, b2);
-                call_yRGBuvToRGBA(vy3, r3, g3, b3);
-
-                if(bIdx)
-                {
-                    swap(r0, b0);
-                    swap(r1, b1);
-                    swap(r2, b2);
-                    swap(r3, b3);
-                }
-
-                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
-                v_uint8 r0_0, r0_1, r1_0, r1_1;
-                v_zip(r0, r1, r0_0, r0_1);
-                v_zip(r2, r3, r1_0, r1_1);
-                v_uint8 g0_0, g0_1, g1_0, g1_1;
-                v_zip(g0, g1, g0_0, g0_1);
-                v_zip(g2, g3, g1_0, g1_1);
-                v_uint8 b0_0, b0_1, b1_0, b1_1;
-                v_zip(b0, b1, b0_0, b0_1);
-                v_zip(b2, b3, b1_0, b1_1);
-
-                if(dcn == 4)
-                {
-                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
-                    v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
-
-                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
-                    v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
-                }
-                else //dcn == 3
-                {
-                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
-                    v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
-
-                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
-                    v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
-                }
+                storeYUV420block<bIdx, dcn>(u, v, vy0, vy1, vy2, vy3, a, vsize, row1, row2);
             }
             vx_cleanup();
 #endif
@@ -1368,63 +1349,7 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
                 v_load_deinterleave(y1 + 2*i, vy0, vy1);
                 v_load_deinterleave(y2 + 2*i, vy2, vy3);
 
-                v_int32 ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3;
-                uvToRGBuv(u, v,
-                        ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3);
-
-                v_uint8 r0, r1, r2, r3, g0, g1, g2, g3, b0, b1, b2, b3;
-
-                auto call_yRGBuvToRGBA = [&](const v_uint8& vy, v_uint8& r, v_uint8& g, v_uint8& b) {
-                    yRGBuvToRGBA(vy,
-                        ruv0, ruv1, ruv2, ruv3,
-                        guv0, guv1, guv2, guv3,
-                        buv0, buv1, buv2, buv3,
-                        r, g, b);
-                };
-                call_yRGBuvToRGBA(vy0, r0, g0, b0);
-                call_yRGBuvToRGBA(vy1, r1, g1, b1);
-                call_yRGBuvToRGBA(vy2, r2, g2, b2);
-                call_yRGBuvToRGBA(vy3, r3, g3, b3);
-
-                if(bIdx)
-                {
-                    swap(r0, b0);
-                    swap(r1, b1);
-                    swap(r2, b2);
-                    swap(r3, b3);
-                }
-
-                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
-                v_uint8 r0_0, r0_1, r1_0, r1_1;
-                v_zip(r0, r1, r0_0, r0_1);
-                v_zip(r2, r3, r1_0, r1_1);
-                v_uint8 g0_0, g0_1, g1_0, g1_1;
-                v_zip(g0, g1, g0_0, g0_1);
-                v_zip(g2, g3, g1_0, g1_1);
-                v_uint8 b0_0, b0_1, b1_0, b1_1;
-                v_zip(b0, b1, b0_0, b0_1);
-                v_zip(b2, b3, b1_0, b1_1);
-
-                if(dcn == 4)
-                {
-                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
-                    v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
-
-                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
-                    v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
-                }
-                else //dcn == 3
-                {
-                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
-                    v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
-
-                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
-                    v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
-                }
+                storeYUV420block<bIdx, dcn>(u, v, vy0, vy1, vy2, vy3, a, vsize, row1, row2);
             }
             vx_cleanup();
 #endif
@@ -1632,7 +1557,7 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
 
                 if(swapBlue)
                 {
-                    swap(b0, r0); swap(b1, r1);
+                    v_swap(b0, r0); v_swap(b1, r1);
                 }
 
                 v_uint8 y0, y1;
@@ -1650,7 +1575,7 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
 
                     if(swapUV)
                     {
-                        swap(u, v);
+                        v_swap(u, v);
                     }
 
                     if(interleave)
@@ -1680,7 +1605,7 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
 
                 if(swapBlue)
                 {
-                    swap(b0, r0); swap(b1, r1);
+                    v_swap(b0, r0); v_swap(b1, r1);
                 }
 
                 uchar y0 = rgbToY42x(r0, g0, b0);
@@ -1695,7 +1620,7 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
                     rgbToUV42x(r0, g0, b0, uu, vv);
                     if(swapUV)
                     {
-                        swap(uu, vv);
+                        v_swap(uu, vv);
                     }
 
                     if(interleave)
@@ -1776,7 +1701,7 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
                     v_load_deinterleave(yuv_src + i, vy0, u, vy1, v);
                     if(uIdx == 1) // YVYU
                     {
-                        swap(u, v);
+                        v_swap(u, v);
                     }
                 }
 
@@ -1804,8 +1729,8 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
 
                 if(bIdx)
                 {
-                    swap(r0, b0);
-                    swap(r1, b1);
+                    v_swap(r0, b0);
+                    v_swap(r1, b1);
                 }
 
                 // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
@@ -1899,6 +1824,77 @@ static inline void RGB2UV(const uchar r1, const uchar g1, const uchar b1,
     v = saturate_cast<uchar>(((1 << (RGB2YUV422_SHIFT-1)) + v_) >> RGB2YUV422_SHIFT);
 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// SIMD RGB2Y: v_dotprod (pmaddwd) keeps the multiply in 16-bit, avoiding emulated 32-bit mul on pre-SSE4.1
+static inline v_uint8 v_RGB2Y(const v_uint8& r, const v_uint8& g, const v_uint8& b)
+{
+    v_int16 crg, cb, dummy;
+    v_zip(vx_setall_s16((short)R2Y422), vx_setall_s16((short)G2Y422), crg, dummy);
+    v_zip(vx_setall_s16((short)B2Y422), vx_setall_s16(0), cb, dummy);
+    v_int32 vbias = vx_setall_s32((1 << RGB2YUV422_SHIFT) * 16 + (1 << (RGB2YUV422_SHIFT - 1)));
+    v_int16 vzero = vx_setzero_s16();
+
+    v_uint16 r0, r1, g0, g1, b0, b1;
+    v_expand(r, r0, r1); v_expand(g, g0, g1); v_expand(b, b0, b1);
+    v_int16 sr0 = v_reinterpret_as_s16(r0), sr1 = v_reinterpret_as_s16(r1);
+    v_int16 sg0 = v_reinterpret_as_s16(g0), sg1 = v_reinterpret_as_s16(g1);
+    v_int16 sb0 = v_reinterpret_as_s16(b0), sb1 = v_reinterpret_as_s16(b1);
+
+    v_int16 rg00, rg01, rg10, rg11, bz00, bz01, bz10, bz11;
+    v_zip(sr0, sg0, rg00, rg01); v_zip(sr1, sg1, rg10, rg11);
+    v_zip(sb0, vzero, bz00, bz01); v_zip(sb1, vzero, bz10, bz11);
+
+    v_uint32 y00, y01, y10, y11;
+    y00 = v_shr<RGB2YUV422_SHIFT>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(rg00, crg), v_dotprod(bz00, cb)), vbias)));
+    y01 = v_shr<RGB2YUV422_SHIFT>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(rg01, crg), v_dotprod(bz01, cb)), vbias)));
+    y10 = v_shr<RGB2YUV422_SHIFT>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(rg10, crg), v_dotprod(bz10, cb)), vbias)));
+    y11 = v_shr<RGB2YUV422_SHIFT>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(rg11, crg), v_dotprod(bz11, cb)), vbias)));
+
+    return v_pack(v_pack(y00, y01), v_pack(y10, y11));
+}
+
+// SIMD RGB2UV (same v_dotprod approach); (r0,g0,b0) is the first pixel of each pair, (r1,g1,b1) the second
+static inline void v_RGB2UV(const v_uint8& r0, const v_uint8& g0, const v_uint8& b0,
+                            const v_uint8& r1, const v_uint8& g1, const v_uint8& b1,
+                            v_uint8& u, v_uint8& v)
+{
+    v_int16 cu_rg, cu_b, cv_rg, cv_b, dummy;
+    v_zip(vx_setall_s16((short)R2U422), vx_setall_s16((short)G2U422), cu_rg, dummy);
+    v_zip(vx_setall_s16((short)B2U422), vx_setall_s16(0), cu_b, dummy);
+    v_zip(vx_setall_s16((short)B2U422), vx_setall_s16((short)G2V422), cv_rg, dummy);
+    v_zip(vx_setall_s16((short)B2V422), vx_setall_s16(0), cv_b, dummy);
+    v_int32 vbias = vx_setall_s32((1 << (RGB2YUV422_SHIFT - 1)) * 256 + (1 << (RGB2YUV422_SHIFT - 1)));
+    v_int16 vzero = vx_setzero_s16();
+
+    v_uint16 r0a, r0b, r1a, r1b, g0a, g0b, g1a, g1b, b0a, b0b, b1a, b1b;
+    v_expand(r0, r0a, r0b); v_expand(r1, r1a, r1b);
+    v_expand(g0, g0a, g0b); v_expand(g1, g1a, g1b);
+    v_expand(b0, b0a, b0b); v_expand(b1, b1a, b1b);
+
+    // per-pair sums sr=r0+r1, sg=g0+g1, sb=b0+b1 (max 510, fits s16)
+    v_int16 sr0 = v_reinterpret_as_s16(v_add(r0a, r1a)), sr1 = v_reinterpret_as_s16(v_add(r0b, r1b));
+    v_int16 sg0 = v_reinterpret_as_s16(v_add(g0a, g1a)), sg1 = v_reinterpret_as_s16(v_add(g0b, g1b));
+    v_int16 sb0 = v_reinterpret_as_s16(v_add(b0a, b1a)), sb1 = v_reinterpret_as_s16(v_add(b0b, b1b));
+
+    v_int16 rg00, rg01, rg10, rg11, bz00, bz01, bz10, bz11;
+    v_zip(sr0, sg0, rg00, rg01); v_zip(sr1, sg1, rg10, rg11);
+    v_zip(sb0, vzero, bz00, bz01); v_zip(sb1, vzero, bz10, bz11);
+
+    v_int32 uq00, uq01, uq10, uq11, vq00, vq01, vq10, vq11;
+    uq00 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg00, cu_rg), v_dotprod(bz00, cu_b)), vbias));
+    uq01 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg01, cu_rg), v_dotprod(bz01, cu_b)), vbias));
+    uq10 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg10, cu_rg), v_dotprod(bz10, cu_b)), vbias));
+    uq11 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg11, cu_rg), v_dotprod(bz11, cu_b)), vbias));
+    vq00 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg00, cv_rg), v_dotprod(bz00, cv_b)), vbias));
+    vq01 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg01, cv_rg), v_dotprod(bz01, cv_b)), vbias));
+    vq10 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg10, cv_rg), v_dotprod(bz10, cv_b)), vbias));
+    vq11 = v_shr<RGB2YUV422_SHIFT>(v_add(v_add(v_dotprod(rg11, cv_rg), v_dotprod(bz11, cv_b)), vbias));
+
+    u = v_pack_u(v_pack(uq00, uq01), v_pack(uq10, uq11));
+    v = v_pack_u(v_pack(vq00, vq01), v_pack(vq10, vq11));
+}
+#endif
+
 template<int yidx, int uidx, int vidx>
 static inline void cvtRGB82Yuv422(const uchar r1, const uchar g1, const uchar b1,
                                     const uchar r2, const uchar g2, const uchar b2,
@@ -1946,6 +1942,49 @@ struct RGB8toYUV422Invoker : ParallelLoopBody
         {
             uchar* row = dst_data + (dst_step) * j;
             int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vsize = VTraits<v_uint8>::vlanes();
+            v_uint16 lowByte = vx_setall_u16(0x00ff);
+            // process 2*vsize source pixels -> vsize pairs -> 4*vsize output bytes
+            for( ; i <= scn*width - 2*vsize*scn; i += 2*vsize*scn, row += 4*vsize )
+            {
+                v_uint8 c0lo, glo, c2lo, alo, c0hi, ghi, c2hi, ahi;
+                if(scn == 4)
+                {
+                    v_load_deinterleave(rgb_src + i + 0*vsize*scn, c0lo, glo, c2lo, alo);
+                    v_load_deinterleave(rgb_src + i + 1*vsize*scn, c0hi, ghi, c2hi, ahi);
+                }
+                else // scn == 3
+                {
+                    v_load_deinterleave(rgb_src + i + 0*vsize*scn, c0lo, glo, c2lo);
+                    v_load_deinterleave(rgb_src + i + 1*vsize*scn, c0hi, ghi, c2hi);
+                }
+
+                v_uint8 rlo = (bIdx == 0) ? c2lo : c0lo, blo = (bIdx == 0) ? c0lo : c2lo;
+                v_uint8 rhi = (bIdx == 0) ? c2hi : c0hi, bhi = (bIdx == 0) ? c0hi : c2hi;
+
+                // split each chunk into even/odd pixels (the two members of every pair)
+                v_uint8 rEven = v_pack(v_and(v_reinterpret_as_u16(rlo), lowByte), v_and(v_reinterpret_as_u16(rhi), lowByte));
+                v_uint8 gEven = v_pack(v_and(v_reinterpret_as_u16(glo), lowByte), v_and(v_reinterpret_as_u16(ghi), lowByte));
+                v_uint8 bEven = v_pack(v_and(v_reinterpret_as_u16(blo), lowByte), v_and(v_reinterpret_as_u16(bhi), lowByte));
+                v_uint8 rOdd = v_pack(v_shr<8>(v_reinterpret_as_u16(rlo)), v_shr<8>(v_reinterpret_as_u16(rhi)));
+                v_uint8 gOdd = v_pack(v_shr<8>(v_reinterpret_as_u16(glo)), v_shr<8>(v_reinterpret_as_u16(ghi)));
+                v_uint8 bOdd = v_pack(v_shr<8>(v_reinterpret_as_u16(blo)), v_shr<8>(v_reinterpret_as_u16(bhi)));
+
+                v_uint8 yEven = v_RGB2Y(rEven, gEven, bEven);
+                v_uint8 yOdd = v_RGB2Y(rOdd, gOdd, bOdd);
+                v_uint8 u, v;
+                v_RGB2UV(rEven, gEven, bEven, rOdd, gOdd, bOdd, u, v);
+
+                if(yIdx == 1) // UYVY
+                    v_store_interleave(row, u, yEven, v, yOdd);
+                else if(uIdx == 0) // YUYV
+                    v_store_interleave(row, yEven, u, yOdd, v);
+                else // YVYU
+                    v_store_interleave(row, yEven, v, yOdd, u);
+            }
+            vx_cleanup();
+#endif
             for (; i < scn * width; i += (scn << 1), row += 4)
             {
                 const uchar r1 = rgb_src[i+ridx], g1 = rgb_src[i+1], b1 = rgb_src[i+bIdx];
@@ -1981,12 +2020,12 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, isCbCr));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, isCbCr));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, isCbCr));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t);
+                          if constexpr (std::is_same<T, float>::value)
+                              return RGB2YCrCb_f<float>(scn, blueIdx, isCbCr);
+                          else
+                              return RGB2YCrCb_i<T>(scn, blueIdx, isCbCr); });
 }
 
 void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
@@ -1997,12 +2036,12 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, isCbCr));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, isCbCr));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t);
+                          if constexpr (std::is_same<T, float>::value)
+                              return YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr);
+                          else
+                              return YCrCb2RGB_i<T>(dcn, blueIdx, isCbCr); });
 }
 
 // 4:2:0, two planes: Y, UV interleaved
