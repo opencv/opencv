@@ -343,6 +343,7 @@ DEF_CVT_FUNC(8s64u, cvt_,  schar, uint64_t, v_uint32)
 DEF_CVT_FUNC(8s64s, cvt_,  schar, int64_t,  v_int32)
 DEF_CVT_FUNC(8s16f, cvt1_, schar, hfloat, v_float32)
 DEF_CVT_FUNC(8s16bf, cvt1_, schar, bfloat, v_float32)
+DEF_CVT_FUNC(8s8f, cvt1_, schar, fp8_e4m3_t, v_float32)
 
 ////////////////////// 8b -> ... ////////////////////////
 
@@ -366,6 +367,7 @@ DEF_CVT_FUNC(16u64f, cvt_, ushort, double, v_int32)
 DEF_CVT_SCALAR_FUNC(16u64s, ushort, int64_t)
 DEF_CVT_FUNC(16u16f, cvt1_,ushort, hfloat, v_float32)
 DEF_CVT_FUNC(16u16bf, cvt1_, ushort, bfloat, v_float32)
+DEF_CVT_FUNC(16u8f, cvt1_, ushort, fp8_e4m3_t, v_float32)
 
 ////////////////////// 16s -> ... ////////////////////////
 
@@ -423,6 +425,7 @@ DEF_CVT_FUNC(32f64u, cvt_64f, float, uint64_t, v_float64)
 DEF_CVT_FUNC(32f64s, cvt_64f, float, int64_t, v_float64)
 DEF_CVT_FUNC(32f16f, cvt1_,float, hfloat, v_float32)
 DEF_CVT_FUNC(32f16bf, cvt1_,float, bfloat, v_float32)
+DEF_CVT_FUNC(32f8f, cvt1_, float, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(32f8b, int, 1)
 
 ////////////////////// 64f -> ... ////////////////////////
@@ -666,6 +669,12 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16bf :
             sdepth == CV_64U ? cvt64u16bf :
             sdepth == CV_64S ? cvt64s16bf :
+            0) :
+        ddepth == CV_8F ? (
+            sdepth == CV_8U ? cvt8u8f :
+            sdepth == CV_8S ? cvt8s8f :
+            sdepth == CV_16U ? cvt16u8f :
+            sdepth == CV_32F ? cvt32f8f :
             0) :
         ddepth == CV_Bool ? (
             sdepth == CV_8U ? cvt8u8b :
