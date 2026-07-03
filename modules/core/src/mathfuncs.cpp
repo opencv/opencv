@@ -482,8 +482,7 @@ void exp( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int depth = _src.depth();
-    CV_UNUSED(depth);   // consumed by CV_OCL_RUN only - a no-op without OpenCL
+    [[maybe_unused]] int depth = _src.depth();   // consumed by CV_OCL_RUN only
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (depth == CV_32F || depth == CV_64F),
                ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP))
@@ -500,8 +499,7 @@ void log( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int depth = _src.depth();
-    CV_UNUSED(depth);   // consumed by CV_OCL_RUN only - a no-op without OpenCL
+    [[maybe_unused]] int depth = _src.depth();   // consumed by CV_OCL_RUN only
 
     CV_OCL_RUN( _dst.isUMat() && _src.dims() <= 2 && (depth == CV_32F || depth == CV_64F),
                 ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG))

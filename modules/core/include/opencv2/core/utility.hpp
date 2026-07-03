@@ -1154,8 +1154,19 @@ AutoBuffer<_Tp, fixed_size>::reserve(size_t _cap)
         return;
     _Tp* prevptr = ptr;
     ptr = new _Tp[_cap];
+    // only the LIVE elements [0, sz) are copied - for trivial types the inline buf tail beyond sz
+    // is intentionally raw (AutoBuffer is a scratch buffer), which gcc's -Wmaybe-uninitialized
+    // cannot prove when it inlines a grow-from-inline-storage call chain; the annotation below
+    // documents exactly that, it does not change behavior
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     for( size_t i = 0; i < sz; i++ )    // preserve the live elements
         ptr[i] = prevptr[i];
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
     if( prevptr != buf )
         delete[] prevptr;
     cap = _cap;

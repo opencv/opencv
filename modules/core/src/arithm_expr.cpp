@@ -379,7 +379,8 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
             enum { REAL, CFALSE, CTRUE };
             AutoBuffer<double, MAX_LOCAL_CN> tv; int cn = constDoubles(*this, b, tv);
             CV_Assert(cn <= 4);          // a CONST is <= 4 channels (addConst) - fixed arrays, no heap
-            int kind[4]; double bound[4];
+            int kind[4] = {}; double bound[4] = {};   // {} for -Wmaybe-uninitialized only
+                                                      // (filled for all cn used below)
             const TOp fam = (op == OP_CMP_GT || op == OP_CMP_GE) ? OP_CMP_GE
                           : (op == OP_CMP_LT || op == OP_CMP_LE) ? OP_CMP_LE : op;   // EQ/NE unchanged
             for (int c = 0; c < cn; c++)
