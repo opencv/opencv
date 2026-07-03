@@ -215,8 +215,10 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
 // fractional y, the x == 0 family). One knowing deviation: y==0.5 uses v_sqrt, so pow(-0., .5)
 // returns -0. instead of std::pow's +0.
 //
-// No right-edge tail backoff at all: pow is not idempotent, so an in-place call (dst aliasing an
-// input) would corrupt the re-read region; rows just finish in the scalar tail.
+// The halide right-edge tail backoff is used in every SIMD loop, SUPPRESSED when dst aliases an
+// input: pow is not idempotent, so an in-place backoff would re-read already-written values (the
+// overlap region is otherwise just recomputed from the untouched source). Suppressed rows finish
+// in the scalar tail.
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 static inline v_float32 vxSetallW(float v,  const v_float32&) { return vx_setall_f32(v); }
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
@@ -265,6 +267,8 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
     if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width && s1y == s1x*(size_t)width)
     { width *= height; height = 1; }
 
+    [[maybe_unused]] const bool tail_trick = src0_ != dst_ && src1_ != dst_;
+
     for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         int x = 0;
@@ -277,8 +281,9 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
             {
                 if (p == WT(2) || p == WT(3))
                 {
-                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    for (; x < width; x += VECSZ*2)
                     {
+                        if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
                         Wvec a0, a1;
                         vx_load_pair_as(src0 + x, a0, a1);
                         Wvec r0 = v_mul(a0, a0), r1 = v_mul(a1, a1);
@@ -288,8 +293,9 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                 }
                 else if (p == WT(0.5))
                 {
-                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    for (; x < width; x += VECSZ*2)
                     {
+                        if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
                         Wvec a0, a1;
                         vx_load_pair_as(src0 + x, a0, a1);
                         a0 = v_sqrt(a0); a1 = v_sqrt(a1);
@@ -310,8 +316,9 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                 else                                    // general scalar exponent: exp(p * log(x))
                 {
                     const Wvec vp = vxSetallW(p, Wvec()), z = v_setzero_<Wvec>();
-                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    for (; x < width; x += VECSZ*2)
                     {
+                        if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
                         Wvec a0, a1;
                         vx_load_pair_as(src0 + x, a0, a1);
                         if (v_check_any(v_le(a0, z)) || v_check_any(v_le(a1, z)))
@@ -337,8 +344,9 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
         {
             const int VECSZ = VTraits<Wvec>::vlanes();
             const Wvec z = v_setzero_<Wvec>();
-            for (; x + VECSZ*2 <= width; x += VECSZ*2)
+            for (; x < width; x += VECSZ*2)
             {
+                if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
                 Wvec a0, a1, b0, b1;
                 vx_load_pair_as(src0 + x, a0, a1);
                 vx_load_pair_as(src1 + x, b0, b1);
