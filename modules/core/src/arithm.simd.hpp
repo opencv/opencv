@@ -75,7 +75,7 @@ static inline void vx_setall_as(const short* p, v_float32& a)
 { a = vx_setall_f32(float(*p)); }
 static inline void vx_setall_as(const float* p, v_float32& a)
 { a = vx_setall_f32(*p); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F   // scalable (RVV) has v_float64 without CV_SIMD_64F
 static inline void vx_setall_as(const double*   p, v_float64& a) { a = vx_setall_f64(*p); }
 static inline void vx_setall_as(const int*      p, v_float64& a) { a = vx_setall_f64((double)*p); }
 static inline void vx_setall_as(const unsigned* p, v_float64& a) { a = vx_setall_f64((double)*p); }
