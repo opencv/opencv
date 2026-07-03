@@ -628,7 +628,7 @@ int TExpr::emitTernary(TOp op, int a, int b, int c, int rdepth)
 // producer to write `out` directly (no copy), dropping `temp` when it was the last-added slot so
 // ntemps stays minimal (keeps compile()'s no-temp fast exit for single-op programs). Otherwise copy.
 // ---------------------------------------------------------------------------
-void TExpr::moveToOutput(int temp, int out)
+int TExpr::moveToOutput(int temp, int out)
 {
     const int ninsn = (int)prog.size();
     int producer = -1;
@@ -642,15 +642,22 @@ void TExpr::moveToOutput(int temp, int out)
     if (arginfo[temp].kind == TEMP && producer >= 0 && !usedAsArg &&
         arginfo[temp].depth == arginfo[out].depth)
     {
-        prog[producer].result = out;                       // write straight into `out`
-        if (temp == (int)arginfo.size() - 1)               // dead & last -> drop it (ntemps shrinks)
-        {
-            arginfo.resize(arginfo.size() - 1);
-            ntemps--;
-        }
-        return;
+        // MOVE semantics: redirect `temp`'s single producer to write `out` directly, then leave the
+        // source slot EMPTY - reclassify it to NONE. A NONE slot gets no physical buffer (compile's
+        // liveness only walks TEMP slots) and is skipped everywhere in exec, so no stale dead-TEMP slot
+        // remains (which, buffer or not, would still cost per-tile setup in the general path) - and no
+        // slot removal / index renumbering is needed. This keeps single-op programs at zero temps =>
+        // compile()'s no-temp early-out (zero heap traffic) still fires. Every caller moves the result
+        // it JUST emitted, so `temp` is always the last-created temp - decrement ntemps to retire its
+        // index and keep the temp indices dense (0..ntemps-1) for compile()'s liveness arrays.
+        CV_Assert(arginfo[temp].index == ntemps - 1);
+        prog[producer].result = out;
+        arginfo[temp].kind = NONE;
+        ntemps--;
+        return out;
     }
     addInsn(OP_CAST, temp, 0, 0, out);                     // same/different depth copy into `out`
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -658,9 +665,7 @@ void TExpr::moveToOutput(int temp, int out)
 // ---------------------------------------------------------------------------
 int TExpr::output(int rootSlot)
 {
-    int O = addOutput(arginfo[rootSlot].depth);
-    moveToOutput(rootSlot, O);
-    return O;
+    return moveToOutput(rootSlot, addOutput(arginfo[rootSlot].depth));
 }
 
 // ---------------------------------------------------------------------------
@@ -1080,11 +1085,14 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             if (nbuffers == 0)
             {
                 // No temps (single-op add/sub/mul/...): one flat (total x 1) pass, operands point
-                // straight at the Mat data - no scratch, no fragment loop. Slots are only INPUT/OUTPUT.
+                // straight at the Mat data - no scratch, no fragment loop. Referenced slots are INPUT/
+                // OUTPUT (a moved-from NONE slot may exist but is never an instruction argument).
                 auto ptrOf = [&](int s) -> void* {
                     if (s <= 0) return nullptr;
                     const Arg& ai = arginfo[s];
-                    return ai.kind == INPUT ? (void*)inputs[ai.index]->data : (void*)outputs[ai.index].data;
+                    if (ai.kind == INPUT)  return (void*)inputs[ai.index]->data;
+                    if (ai.kind == OUTPUT) return (void*)outputs[ai.index].data;
+                    return nullptr;   // NONE
                 };
                 const int w = (int)total;
                 for (int n = 0; n < ninsn; n++)
@@ -1101,7 +1109,11 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             // scratch is totalEsz*wf0 (<= ~16KB).
             const int totalEsz = bufEszPrefix[nbuffers];
             const int wf0 = std::min((int)total, capElems);
-            AutoBuffer<uchar> scratch((size_t)totalEsz * (size_t)wf0);
+            // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
+            // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
+            // the rare larger case.
+            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * (size_t)wf0);
+            uchar* scratch = scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
                 const int wf = std::min(wf0, (int)total - x0);
@@ -1111,8 +1123,9 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
                     size_t esz = CV_ELEM_SIZE1(ai.depth);
                     if (ai.kind == INPUT)  return (uchar*)inputs[ai.index]->data  + (size_t)x0 * esz;
                     if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
+                    if (ai.kind != TEMP)   return nullptr;                                    // NONE: moved-from
                     const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
-                    return scratch.data() + (size_t)bufEszPrefix[b] * (size_t)wf0;            // fragment-local
+                    return scratch + (size_t)bufEszPrefix[b] * (size_t)wf0;                   // fragment-local
                 };
                 for (int n = 0; n < ninsn; n++)
                 {
@@ -1195,8 +1208,12 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             slotMap[s] = narr; arr[narr++] = &constHdrBuf[nc];
             nc++;
         }
-        else { // TExpr::TEMP
+        else if (ai.kind == TExpr::TEMP) {
             slotMap[s] = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // physical buffer id
+        }
+        else {  // TExpr::NONE: a moved-from temp (or dead literal) - inert, no operand, no buffer. Never
+                // referenced by any instruction; do NOT touch bufferOfTemp (its retired index may be >= ntemps).
+            slotMap[s] = 0;
         }
     }
 
@@ -1259,7 +1276,8 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         const int bw = std::min(w, bc.capElems);
         const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
         const size_t region = alignSize((size_t)bw * bh, 8);
-        AutoBuffer<uchar> tstore((size_t)bufEszPrefix[bc.nbuffers] * region);
+        AutoBuffer<uchar, 16*1024 + 256> tstoreBuf((size_t)bufEszPrefix[bc.nbuffers] * region);  // inline (<= ~16KB)
+        uchar* tstore = tstoreBuf.data();
 
         AutoBuffer<BrSlice, LOCAL_OPS> args(nslots);
         for (int y0 = 0; y0 < h; y0 += bh)
@@ -1275,7 +1293,7 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
                     size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
                     if (k == TExpr::TEMP)                      // contiguous block-local buffer
                     {
-                        a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
+                        a.ptr = tstore + (size_t)bufEszPrefix[slotMap[s]] * region;
                         a.stepy = (size_t)wf*esz; a.stepx = 1;
                     }
                     else                                    // array operand (incl. 0-dim consts): this
@@ -1565,18 +1583,20 @@ struct Parser
                 return it->second;
             }
             advance();                            // consume '('
-            std::vector<int> args;
-            if (cur.type != T_RPAREN)
+            std::array<int, 8> args; int nargs = 0;   // every function takes <= 3 args (clamp/select) - a
+            if (cur.type != T_RPAREN)                 // small stack buffer avoids a std::vector heap alloc
             {
-                args.push_back(parseExpr(0));
-                while (cur.type == T_COMMA) { advance(); args.push_back(parseExpr(0)); }
+                args[nargs++] = parseExpr(0);
+                while (cur.type == T_COMMA) { advance();
+                    CV_Assert(nargs < (int)args.size() && "ew::expression: too many arguments");
+                    args[nargs++] = parseExpr(0); }
             }
             expect(T_RPAREN, "expected ')'");
 
             int td = typeDepth(name);
             if (td >= 0)
             {
-                CV_Assert(args.size() == 1);                 // type cast: just convert the operand
+                CV_Assert(nargs == 1);                       // type cast: just convert the operand
                 int s = args[0];
                 return isFlexConst(s) ? e.typedConstFrom(s, td)
                                       : e.maybeAddCast(s, td);
@@ -1584,7 +1604,7 @@ struct Parser
 
             int arity = 0; TOp op = fnOp(name, arity);
             CV_Assert(arity != 0 && "ew::expression: unknown function");
-            CV_Assert((int)args.size() == arity && "ew::expression: wrong number of arguments");
+            CV_Assert(nargs == arity && "ew::expression: wrong number of arguments");
             if (arity == 1) return e.emitUnary(op, args[0]);
             if (arity == 2) return e.emitBinary(op, args[0], args[1]);
             return e.emitTernary(op, args[0], args[1], args[2]);
@@ -1696,7 +1716,6 @@ void texpr(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOfArray
     TExpr e;
     AutoBuffer<int> islot(std::max(ninputs, 1));
     for (int i = 0; i < ninputs; i++) islot[i] = e.addInput(inps[i].depth());
-
     Parser(expr, e, islot.data(), ninputs).parse();
     e.compile();
 

@@ -127,8 +127,12 @@ public:
     void allocate(size_t _size);
     //! deallocates the buffer if it was dynamically allocated
     void deallocate();
-    //! resizes the buffer and preserves the content
+    //! resizes the buffer and preserves the content. A grown tail is left as `new _Tp[]` leaves it:
+    //! default-constructed for class types, UNINITIALIZED (raw) for trivial types. Use the two-arg
+    //! overload if you need every new slot set to a value.
     void resize(size_t _size);
+    //! resizes the buffer, preserving the content and setting every newly exposed slot to `value`
+    void resize(size_t _size, const _Tp& value);
     //! grows the capacity to at least _cap (preserving the content); never shrinks
     void reserve(size_t _cap);
     //! returns the current buffer size
@@ -1127,8 +1131,8 @@ AutoBuffer<_Tp, fixed_size>::~AutoBuffer()
 template<typename _Tp, size_t fixed_size> inline void
 AutoBuffer<_Tp, fixed_size>::allocate(size_t _size)
 {
-    resize(_size);      // set the size (resize grows capacity as needed, preserves content and
-                        // value-inits the new tail) - matches the historical allocate-then-fill usage
+    resize(_size);      // set the size (resize grows capacity as needed, preserves content); the new
+                        // tail is raw for trivial types - AutoBuffer is a scratch buffer, callers fill it
 }
 
 template<typename _Tp, size_t fixed_size> inline void
@@ -1167,9 +1171,22 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
     }
     if(_size > cap)         // grow with geometric slack (like push_back) so incremental
         reserve(cap + cap/2 > _size ? cap + cap/2 : _size);   // resize(size()+delta) loops don't realloc every step
-    for( size_t i = sz; i < _size; i++ )    // value-initialize the newly exposed tail
-        ptr[i] = _Tp();
     sz = _size;
+    // !!! DO NOT ADD ANY INITIALIZATION OF THE NEW TAIL HERE (e.g. `for(i=sz..) ptr[i]=_Tp();`) !!!
+    // AutoBuffer IS A RAW SCRATCH BUFFER. Value-initializing the tail zero-fills it on EVERY grow, which
+    // silently dominates the cost of small allocations (measured: ~1.2us per few-KB resize) and there is
+    // NOTHING to init anyway - callers write before they read. Class-type elements are already
+    // constructed by `new _Tp[]` / the inline array. If you truly need filled slots, call the two-arg
+    // overload resize(size, value) EXPLICITLY.
+}
+
+template<typename _Tp, size_t fixed_size> inline void
+AutoBuffer<_Tp, fixed_size>::resize(size_t _size, const _Tp& value)
+{
+    const size_t old = sz;
+    resize(_size);
+    for( size_t i = old; i < _size; i++ )   // fill every newly exposed slot
+        ptr[i] = value;
 }
 
 template<typename _Tp, size_t fixed_size> inline size_t

@@ -344,6 +344,19 @@ struct EwAbsdiff {
     template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
 };
 
+// Signed T -> SAME signed T (rdepth==T): |a-b| saturated into the signed range, in ONE pass. cv::absdiff
+// keeps the signed depth, so the generic path computes absdiff->unsigned then casts back down (2 insns);
+// this fuses it. v_absdiff yields the unsigned |a-b|; v_min clamps to the signed max (already >=0), then
+// a same-width reinterpret to signed (all values now fit).
+struct EwAbsdiffS {
+    static v_int8  vec(const v_int8&  a, const v_int8&  b) { return v_reinterpret_as_s8 (v_min(v_absdiff(a, b), vx_setall_u8 (0x7f))); }
+    static v_int16 vec(const v_int16& a, const v_int16& b) { return v_reinterpret_as_s16(v_min(v_absdiff(a, b), vx_setall_u16(0x7fff))); }
+    static v_int32 vec(const v_int32& a, const v_int32& b) { return v_reinterpret_as_s32(v_min(v_absdiff(a, b), vx_setall_u32(0x7fffffff))); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
+};
+
 // compare: T x T -> u8 mask. cmp(a,b) is the scalar relation over a work type W (integers compare
 // directly, f16/bf16 through float); vec(a,b) is the vector relation returning an all-ones/zero mask
 // in the operand's own lane type. The kernel turns either into 0 / trueVal (1 or 255 via TKernel::flags).
@@ -982,13 +995,13 @@ TKernel getMulFunc_(int T, int R)
             R == CV_32F ? vecBinaryKernel<schar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16U:
-        fptr =
-            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul> :
+        fptr =   // scale==1 fast path loads u16->v_uint32 & multiplies in int (65535^2 < 2^32, exact); Wvec=f32 for scale
+            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul, float, v_uint32> :
             R == CV_32F ? vecBinaryKernel<ushort, float,  v_float32, float, EwMul> : nullptr;
         break;
     case CV_16S:
-        fptr =
-            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMul> :
+        fptr =   // scale==1 fast path loads s16->v_int32 & multiplies in int (32767^2 < 2^31, exact); Wvec=f32 for scale
+            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMul, float, v_int32> :
             R == CV_32F ? vecBinaryKernel<short, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16F:
@@ -1142,51 +1155,38 @@ static TKernel getMinMaxFunc(int T)
     return {fptr, nullptr, 0};
 }
 
-// |a-b| of a value of depth T: unsigned/float -> T, SIGNED integer -> the UNSIGNED type of the same
-// width (8s->8u, ...) so the full 0..2^width-1 range fits without saturation (mirrors absdiffResultDepth).
-static int absdiffOutDepth(int T)
+// absdiff: |a-b|, T x T -> R.
+TKernel getAbsdiffFunc_(int T, int R)
 {
-    switch (T)
-    {
-    case CV_8S:  return CV_8U;
-    case CV_16S: return CV_16U;
-    case CV_32S: return CV_32U;
-    case CV_64S: return CV_64U;
-    default:     return T;
-    }
-}
-
-// absdiff: |a-b|, T x T -> absdiffOutDepth(T). v_absdiff is defined for the UNSIGNED and float lane
-// types only (signed v_absdiff would change the lane type), so u8/u16/f16/bf16/f32 take the SIMD path
-// and the signed / wide / f64 depths use the scalar kernel (|a-b| in a SIGN-CORRECT work type, stored
-// to the unsigned result type for signed inputs). `rdepth` must equal absdiffOutDepth(T).
-TKernel getAbsdiffFunc_(int T, int rdepth)
-{
-    if (rdepth != absdiffOutDepth(T)) return {};
+    // Signed T has TWO outputs: R==T -> EwAbsdiffS (saturating |a-b| kept in the signed range, native work,
+    // ONE pass - the depth cv::absdiff keeps); R==(the unsigned type of the same width) -> EwAbsdiff (the
+    // true |a-b| via v_absdiff, for an explicit unsigned dst). Unsigned/float T only produce R==T. Each case
+    // returns nullptr for a wrong R (no separate rdepth guard).
     KernelFunc fptr = nullptr;
     switch (T)
     {
-    case CV_8U:   fptr = vecBinaryKernel<uchar,  uchar,  v_uint8,  short, EwAbsdiff, uchar>; break;
-    case CV_16U:  fptr = vecBinaryKernel<ushort, ushort, v_uint16, int,   EwAbsdiff, ushort>; break;
+    case CV_8U:   fptr = R == CV_8U  ? vecBinaryKernel<uchar,  uchar,  v_uint8,  short,   EwAbsdiff, uchar>  : nullptr; break;
+    case CV_16U:  fptr = R == CV_16U ? vecBinaryKernel<ushort, ushort, v_uint16, int,     EwAbsdiff, ushort> : nullptr; break;
+    case CV_32U:  fptr = R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_uint32, int64_t, EwAbsdiff, unsigned> : nullptr; break;
+    case CV_8S:   fptr = R == CV_8S  ? vecBinaryKernel<schar, schar, v_int8,  short,   EwAbsdiffS, schar> :
+                         R == CV_8U  ? vecBinaryKernel<schar, uchar, v_int8,  short,   EwAbsdiff,  schar> : nullptr; break;
+    case CV_16S:  fptr = R == CV_16S ? vecBinaryKernel<short, short, v_int16, int,     EwAbsdiffS, short> :
+                         R == CV_16U ? vecBinaryKernel<short, ushort, v_int16, int,     EwAbsdiff,  short> : nullptr; break;
+    case CV_32S:  fptr = R == CV_32S ? vecBinaryKernel<int,   int,   v_int32, int64_t, EwAbsdiffS, int> :
+                         R == CV_32U ? vecBinaryKernel<int, unsigned, v_int32, int64_t, EwAbsdiff,  int> : nullptr; break;
     #if CV_SIMD_16F
-    case CV_16F:  fptr = vecBinaryKernel<hfloat, hfloat, v_float16, float, EwAbsdiff, hfloat>; break;
+    case CV_16F:  fptr = R == CV_16F ? vecBinaryKernel<hfloat, hfloat, v_float16, float, EwAbsdiff, hfloat> : nullptr; break;
     #else
-    case CV_16F:  fptr = vecBinaryKernel<hfloat, hfloat, v_float32, float, EwAbsdiff, float>; break;
+    case CV_16F:  fptr = R == CV_16F ? vecBinaryKernel<hfloat, hfloat, v_float32, float, EwAbsdiff, float>  : nullptr; break;
     #endif
-    case CV_16BF: fptr = vecBinaryKernel<bfloat, bfloat, v_float32, float, EwAbsdiff, float>; break;
-    case CV_32F:  fptr = vecBinaryKernel<float,  float,  v_float32, float, EwAbsdiff, float>; break;
-    // signed: NATIVE work (v_int8/16/32) - v_absdiff returns the matching unsigned result, stored via the
-    // honest unsigned v_store_pair_as (vec's own result type). No widening -> full lane count.
-    case CV_8S:   fptr = vecBinaryKernel<schar,    uchar,    v_int8,   short,   EwAbsdiff, schar>; break;
-    case CV_16S:  fptr = vecBinaryKernel<short,    ushort,   v_int16,  int,     EwAbsdiff, short>; break;
-    case CV_32U:  fptr = vecBinaryKernel<unsigned, unsigned, v_uint32, int64_t, EwAbsdiff, unsigned>; break;
-    case CV_32S:  fptr = vecBinaryKernel<int,      unsigned, v_int32,  int64_t, EwAbsdiff, int>; break;
-    case CV_64U:  fptr = scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwAbsdiff>; break;   // no 64-bit v_absdiff
-    case CV_64S:  fptr = scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff>; break;
+    case CV_16BF: fptr = R == CV_16BF ? vecBinaryKernel<bfloat, bfloat, v_float32, float, EwAbsdiff, float> : nullptr; break;
+    case CV_32F:  fptr = R == CV_32F  ? vecBinaryKernel<float,  float,  v_float32, float, EwAbsdiff, float> : nullptr; break;
+    case CV_64U:  fptr = R == CV_64U  ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwAbsdiff> : nullptr; break;
+    case CV_64S:  fptr = R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
     #if CV_SIMD_64F
-    case CV_64F:  fptr = vecBinaryKernel<double,   double,   v_float64, double, EwAbsdiff, double>; break;
+    case CV_64F:  fptr = R == CV_64F  ? vecBinaryKernel<double, double, v_float64, double, EwAbsdiff, double> : nullptr; break;
     #else
-    case CV_64F:  fptr = scalarBinaryKernel<double,   double,   double,   EwAbsdiff>; break;
+    case CV_64F:  fptr = R == CV_64F  ? scalarBinaryKernel<double, double, double, EwAbsdiff> : nullptr; break;
     #endif
     default:      ;
     }

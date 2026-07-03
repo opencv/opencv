@@ -282,7 +282,7 @@ struct CV_EXPORTS TExpr
 
     // Land `temp` in the existing slot `out`: redirect temp's single producer to write `out` directly
     // (dropping a dead last temp so compile() keeps its no-temp fast exit); otherwise copy via OP_CAST.
-    void moveToOutput(int temp, int out);
+    int  moveToOutput(int temp, int out);
 
     // Declare a result tensor fed by `rootSlot` (a fresh OUTPUT of its depth) and moveToOutput into it.
     int  output(int rootSlot);

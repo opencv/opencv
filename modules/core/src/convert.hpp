@@ -140,6 +140,11 @@ static inline void vx_load_pair_as(const ushort* ptr, v_int32& a, v_int32& b)
     b = v_reinterpret_as_s32(ub);
 }
 
+static inline void vx_load_pair_as(const ushort* ptr, v_uint32& a, v_uint32& b)
+{
+    v_expand(vx_load(ptr), a, b);
+}
+
 static inline void vx_load_pair_as(const short* ptr, v_int32& a, v_int32& b)
 {
     v_expand(vx_load(ptr), a, b);
