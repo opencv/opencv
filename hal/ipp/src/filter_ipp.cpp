@@ -12,10 +12,7 @@
 #include <cmath>
 #include <cfloat>
 
-#if defined(HAVE_IPP_IW)
-
-// Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
-#define IPP_DISABLE_FILTER2D_BIG_MASK   1
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
 
 // Copied from core/private.hpp (gated by HAVE_IPP, which the plugin lacks).
 // filterGetIppBorderType: distinct name; adds the BORDER_REFLECT_101 -> ippBorderMirror
@@ -157,4 +154,4 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
     return CV_HAL_ERROR_OK;
 }
 
-#endif // HAVE_IPP_IW
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
