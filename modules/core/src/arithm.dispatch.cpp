@@ -108,3 +108,19 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
 }
 
 }} // namespace cv::ew
+
+namespace cv { namespace hal {
+
+// Legacy cv::hal entry point, still declared in core/hal/hal.hpp and used by external code (the
+// G-API fluid backend in opencv_contrib calls it directly): forward to the element-wise engine's
+// u8 multiply kernel. `scale` is a pointer to a double, as in the old contract.
+void mul8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+           uchar* dst, size_t step, int width, int height, void* scale)
+{
+    const double params[] = { scale ? *(const double*)scale : 1.0 };
+    ew::TKernel k = ew::getMulFunc(CV_8U, CV_8U);
+    k.fptr(src1, step1, 1, src2, step2, 1, nullptr, 0, 0, dst, step, width, height,
+           params, k.flags, k.userdata);
+}
+
+}} // namespace cv::hal
