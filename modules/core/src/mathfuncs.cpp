@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <cmath>
 #include "mathfuncs.hpp"
+#include "arithm_expr.hpp"      // the element-wise engine: getMathFunc + TExpr for cv::exp/log/sqrt
 
 namespace cv
 {
@@ -436,32 +437,57 @@ void polarToCart( InputArray src1, InputArray src2,
 *                                          E X P                                         *
 \****************************************************************************************/
 
+// The master function of the unary math family (cv::exp/log/sqrt - the analogue of arithm_op):
+// same-shape same-type output over the four float depths, computed by the element-wise engine's
+// kernels (math.simd.hpp). Two tiers:
+//  - SMALL and continuous (a common pattern - exp() over one image row as a lookup substitute):
+//    call the kernel DIRECTLY over the flattened elements. No TExpr, no broadcastOp, no
+//    parallel_for machinery - their setup dominates at these sizes.
+//  - everything else (large arrays - worth parallelizing; ROIs - need real steps): the usual
+//    1-instruction program via compile()/exec().
+enum { MATH_OP_SMALL = 100000 };     // elements; tune with a benchmark if the crossover moves
+
+static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    CV_Assert(depth == CV_16F || depth == CV_16BF || depth == CV_32F || depth == CV_64F);
+
+    Mat src = _src.getMat();
+    _dst.create(src.dims, src.size.p, type);
+    Mat dst = _dst.getMat();
+    if (src.empty())
+        return;
+
+    const size_t total = src.total() * src.channels();
+    if (src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL)
+    {
+        ew::TKernel k = ew::getMathFunc(op, depth);
+        CV_Assert(k.fptr);
+        static const double noparams[4] = {};
+        k.fptr(src.data, 0, 1, nullptr, 0, 0, nullptr, 0, 0,
+               dst.data, 0, (int)total, 1, noparams, k.flags, k.userdata);
+        return;
+    }
+
+    ew::TExpr p;
+    const int a = p.addInput(depth);
+    const int out = p.addOutput(depth);
+    p.moveToOutput(p.emitUnary(op, a, depth), out);
+    p.compile();
+    const Mat* inputs[] = { &src };
+    p.exec(inputs, &dst);
+}
+
 void exp( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), depth = _src.depth(), cn = _src.channels();
-    CV_Assert( depth == CV_32F || depth == CV_64F );
+    int depth = _src.depth();
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (depth == CV_32F || depth == CV_64F),
                ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP))
 
-    Mat src = _src.getMat();
-    _dst.create( src.size, type );
-    Mat dst = _dst.getMat();
-
-    const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2] = {};
-    NAryMatIterator it(arrays, ptrs);
-    int len = (int)(it.size*cn);
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        if( depth == CV_32F )
-            hal::exp32f((const float*)ptrs[0], (float*)ptrs[1], len);
-        else
-            hal::exp64f((const double*)ptrs[0], (double*)ptrs[1], len);
-    }
+    math_op(ew::OP_EXP, _src, _dst);
 }
 
 
@@ -473,28 +499,12 @@ void log( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), depth = _src.depth(), cn = _src.channels();
-    CV_Assert( depth == CV_32F || depth == CV_64F );
+    int depth = _src.depth();
 
-    CV_OCL_RUN( _dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN( _dst.isUMat() && _src.dims() <= 2 && (depth == CV_32F || depth == CV_64F),
                 ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG))
 
-    Mat src = _src.getMat();
-    _dst.create( src.size, type );
-    Mat dst = _dst.getMat();
-
-    const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2] = {};
-    NAryMatIterator it(arrays, ptrs);
-    int len = (int)(it.size*cn);
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        if( depth == CV_32F )
-            hal::log32f( (const float*)ptrs[0], (float*)ptrs[1], len );
-        else
-            hal::log64f( (const double*)ptrs[0], (double*)ptrs[1], len );
-    }
+    math_op(ew::OP_LOG, _src, _dst);
 }
 
 /****************************************************************************************\
@@ -1159,7 +1169,12 @@ void sqrt(InputArray a, OutputArray b)
 {
     CV_INSTRUMENT_REGION();
 
-    cv::pow(a, 0.5, b);
+    if (b.isUMat() && a.dims() <= 2)     // the OpenCL route (via ocl_pow) is unchanged
+    {
+        cv::pow(a, 0.5, b);
+        return;
+    }
+    math_op(ew::OP_SQRT, a, b);
 }
 
 /************************** CheckArray for NaN's, Inf's *********************************/
