@@ -560,7 +560,9 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
     {
         switch (cat)
         {
-        case CAT_MATH:    result = (nd == CV_64F) ? CV_64F : CV_32F; break;     // float domain
+        // math is T -> T over the float depths (f16/bf16/f32/f64 kernels exist natively);
+        // an integer input computes - and lands - in the float domain
+        case CAT_MATH:    result = isFloatDepth(nd) ? nd : CV_32F; break;
         case CAT_BITWISE: result = (nd == EW_DEPTH_NONE) ? CV_32S : nd; break;  // NOT
         default:          result = (nd == EW_DEPTH_NONE) ? CV_32F : nd; break;  // NEG, ABS
         }
@@ -569,7 +571,13 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
     int depth, wide;
     switch (cat)
     {
-    case CAT_MATH:    depth = (nd == CV_64F || result == CV_64F) ? CV_64F : CV_32F; wide = depth; break;
+    case CAT_MATH:
+        // T == result over a float depth => the native kernel (incl. the f16/bf16 in-kernel f32
+        // hub - no materialized f32 temps). Everything else computes in f32/f64 and casts.
+        depth = (isFloatDepth(nd) && nd == result) ? nd
+              : (nd == CV_64F || result == CV_64F) ? CV_64F : CV_32F;
+        wide = depth;
+        break;
     case CAT_BITWISE: depth = result; wide = result; break;
     default:          depth = (nd == EW_DEPTH_NONE) ? result : nd; wide = result; break;  // NEG/ABS
     }
@@ -601,11 +609,19 @@ int TExpr::emitTernary(TOp op, int a, int b, int c, int rdepth)
 {
     auto dep = [&](int s) { return isFlexConst(*this, s) ? EW_DEPTH_NONE : arginfo[s].depth; };
 
-    if (op == OP_SELECT)                         // select(mask=a, x=b, y=c) - mask NOT cast
+    if (op == OP_SELECT)                         // select(mask=a, x=b, y=c)
     {
+        // the kernel consumes a 1-byte mask as-is (u8/s8/bool, mask != 0 semantics). Any other
+        // mask type - a wider array or a literal - is normalized by an explicit `mask != 0`
+        // compare (u8 result), NOT by a value cast (which would saturate/round the values).
+        if (isFlexConst(*this, a) || CV_ELEM_SIZE1(arginfo[a].depth) != 1)
+            a = emitBinary(OP_CMP_NE, a, addConst(EW_DEPTH_NONE, Scalar(0.), 1), CV_8U, Scalar());
         int result = rdepth != EW_DEPTH_NONE ? rdepth : promoteArith(dep(b), dep(c));
         if (result == EW_DEPTH_NONE) result = CV_32F;
-        int sb = maybeAddCast(b, result), sc = maybeAddCast(c, result);
+        // a literal branch (select(m, x, 0)) is a flexible const: type it at `result` directly
+        // (a value conversion in constbuf), never through an OP_CAST of a depth-less slot
+        int sb = isFlexConst(*this, b) ? typedConstFrom(b, result) : maybeAddCast(b, result);
+        int sc = isFlexConst(*this, c) ? typedConstFrom(c, result) : maybeAddCast(c, result);
         int res = addTemp(result);
         addInsn(OP_SELECT, a, sb, sc, res);
         return res;

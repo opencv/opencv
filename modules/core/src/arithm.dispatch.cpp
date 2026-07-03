@@ -104,6 +104,22 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
     if (op == OP_COPY_MASK)
         return getCopyMaskFunc(rdepth);
 
+    // unary math: T -> T over the float depths (math.simd.hpp). Anything else - integer input,
+    // widening/narrowing result - is the compiler's job (cast to a float working type first).
+    if (op == OP_SQRT || op == OP_EXP || op == OP_LOG || op == OP_SIN || op == OP_COS ||
+        op == OP_TANH || op == OP_ERF || op == OP_RELU)
+    {
+        if (rdepth != depth0) return {};
+        return getMathFunc(op, depth0);
+    }
+
+    // OP_SELECT: depth0 is the (1-byte, never cast) mask; both branches and dst share one depth.
+    if (op == OP_SELECT)
+    {
+        if (depth1 != depth2 || rdepth != depth1) return {};
+        return getSelectFunc(depth0, rdepth);
+    }
+
     return {};
 }
 

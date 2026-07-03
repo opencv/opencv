@@ -177,6 +177,10 @@ CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR /
 CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size
 CV_EXPORTS TKernel getAddWeightedFunc(int T, int R);         // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 CV_EXPORTS TKernel getCopyMaskFunc(int depth);
+// math.dispatch.cpp (kernels in math.simd.hpp):
+CV_EXPORTS TKernel getMathFunc(TOp op, int T);               // unary math (OP_SQRT..OP_RELU), T -> T,
+                                                             // T in {f16, bf16, f32, f64}
+CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byte mask, x/y/dst of T
 
 // The op-level dispatcher: routes (op, depths) to the right get*Func above. nullptr if the exact
 // combination is not provided. Unused operand depths are EW_DEPTH_NONE.
