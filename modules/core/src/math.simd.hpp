@@ -54,6 +54,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // ---- per-op kernel entry points for THIS baseline (the regular dispatchers in
 //      math.dispatch.cpp reach them through CV_CPU_DISPATCH). ----
 TKernel getMathFunc_(TOp op, int T);                 // unary math, T -> T, T in {f16, bf16, f32, f64}
+TKernel getPowFunc_(int T, int R);                   // OP_POW, T x T -> T (R must equal T)
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -199,6 +200,184 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
             dst[x] = saturate_cast<T>(Op::scl((WT)src0[x]));
     }
     return 0;
+}
+
+// ===========================================================================
+// OP_POW: dst = pow(x, y), T x T -> T over the float depths. Exact std::pow semantics.
+//
+// The exponent is USUALLY a broadcast scalar (pow(x, 2), texpr literals ride as 0-dim consts with
+// stepx == 0) - dispatched PER ROW to the important special cases: y==2 -> x*x, y==3 -> x*x*x,
+// y==0.5 -> v_sqrt, y==1 -> copy, y==0 -> fill 1 (std::pow(anything, 0) == 1, NaN included).
+// Everything else - and the per-element exponent - runs the general vectorized path
+// exp(y * log(x)), which is only valid for x > 0: any lane with x <= 0 falls back to scalar
+// std::pow for the whole vector pair (v_check_any per pair; negative/zero bases are rare, and the
+// scalar path preserves every std::pow subtlety - signed results for integer y, NaN for
+// fractional y, the x == 0 family). One knowing deviation: y==0.5 uses v_sqrt, so pow(-0., .5)
+// returns -0. instead of std::pow's +0.
+//
+// No right-edge tail backoff at all: pow is not idempotent, so an in-place call (dst aliasing an
+// input) would corrupt the re-read region; rows just finish in the scalar tail.
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+static inline v_float32 vxSetallW(float v,  const v_float32&) { return vx_setall_f32(v); }
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+static inline v_float64 vxSetallW(double v, const v_float64&) { return vx_setall_f64(v); }
+#endif
+#endif
+
+// Plain scalar pow for baselines without the needed SIMD float width (f64 without 64-bit SIMD).
+template<typename T, typename WT>
+static int scalarPowKernel(const void* src0_, size_t s0y, size_t s0x,
+                           const void* src1_, size_t s1y, size_t s1x,
+                           const void*, size_t, size_t,
+                           void* dst_, size_t dsty, int width, int height,
+                           const double*, int, void*)
+{
+    s0y /= sizeof(T); s1y /= sizeof(T); dsty /= sizeof(T);
+    CV_Assert(s0x <= 1u && s1x <= 1u);
+    const T* src0 = (const T*)src0_;
+    const T* src1 = (const T*)src1_;
+    T* dst = (T*)dst_;
+    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width && s1y == s1x*(size_t)width)
+    { width *= height; height = 1; }
+    for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
+        for (int x = 0; x < width; x++)
+            dst[x] = saturate_cast<T>(std::pow((WT)src0[x*s0x], (WT)src1[x*s1x]));
+    return 0;
+}
+
+template<typename T, typename Wvec>
+static int powKernel(const void* src0_, size_t s0y, size_t s0x,
+                     const void* src1_, size_t s1y, size_t s1x,
+                     const void*, size_t, size_t,
+                     void* dst_, size_t dsty, int width, int height,
+                     const double*, int, void*)
+{
+    s0y /= sizeof(T);
+    s1y /= sizeof(T);
+    dsty /= sizeof(T);
+    CV_Assert(s0x <= 1u && s1x <= 1u);
+
+    const T* src0 = (const T*)src0_;
+    const T* src1 = (const T*)src1_;
+    T* dst = (T*)dst_;
+    using WT = typename VTraits<Wvec>::lane_type;
+
+    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width && s1y == s1x*(size_t)width)
+    { width *= height; height = 1; }
+
+    for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
+    {
+        int x = 0;
+        if (s1x == 0)                                   // scalar exponent for this row
+        {
+            const WT p = (WT)src1[0];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int VECSZ = VTraits<Wvec>::vlanes();
+            if (s0x == 1)
+            {
+                if (p == WT(2) || p == WT(3))
+                {
+                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    {
+                        Wvec a0, a1;
+                        vx_load_pair_as(src0 + x, a0, a1);
+                        Wvec r0 = v_mul(a0, a0), r1 = v_mul(a1, a1);
+                        if (p == WT(3)) { r0 = v_mul(r0, a0); r1 = v_mul(r1, a1); }
+                        v_store_pair_as(dst + x, r0, r1);
+                    }
+                }
+                else if (p == WT(0.5))
+                {
+                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    {
+                        Wvec a0, a1;
+                        vx_load_pair_as(src0 + x, a0, a1);
+                        a0 = v_sqrt(a0); a1 = v_sqrt(a1);
+                        v_store_pair_as(dst + x, a0, a1);
+                    }
+                }
+                else if (p == WT(1))
+                {
+                    if ((const void*)src0 != (const void*)dst)
+                        for (; x < width; x++) dst[x] = src0[x];
+                    x = width;
+                }
+                else if (p == WT(0))
+                {
+                    const T one = saturate_cast<T>(1);
+                    for (; x < width; x++) dst[x] = one;
+                }
+                else                                    // general scalar exponent: exp(p * log(x))
+                {
+                    const Wvec vp = vxSetallW(p, Wvec()), z = v_setzero_<Wvec>();
+                    for (; x + VECSZ*2 <= width; x += VECSZ*2)
+                    {
+                        Wvec a0, a1;
+                        vx_load_pair_as(src0 + x, a0, a1);
+                        if (v_check_any(v_le(a0, z)) || v_check_any(v_le(a1, z)))
+                        {                               // exact std::pow for x <= 0 lanes
+                            for (int i = 0; i < VECSZ*2; i++)
+                                dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], p));
+                            continue;
+                        }
+                        a0 = v_exp(v_mul(vp, v_log(a0)));
+                        a1 = v_exp(v_mul(vp, v_log(a1)));
+                        v_store_pair_as(dst + x, a0, a1);
+                    }
+                }
+            }
+#endif
+            for (; x < width; x++)
+                dst[x] = saturate_cast<T>(std::pow((WT)src0[x*s0x], p));
+            continue;
+        }
+        // per-element exponent
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        if (s0x == 1)
+        {
+            const int VECSZ = VTraits<Wvec>::vlanes();
+            const Wvec z = v_setzero_<Wvec>();
+            for (; x + VECSZ*2 <= width; x += VECSZ*2)
+            {
+                Wvec a0, a1, b0, b1;
+                vx_load_pair_as(src0 + x, a0, a1);
+                vx_load_pair_as(src1 + x, b0, b1);
+                if (v_check_any(v_le(a0, z)) || v_check_any(v_le(a1, z)))
+                {
+                    for (int i = 0; i < VECSZ*2; i++)
+                        dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], (WT)src1[x + i]));
+                    continue;
+                }
+                a0 = v_exp(v_mul(b0, v_log(a0)));
+                a1 = v_exp(v_mul(b1, v_log(a1)));
+                v_store_pair_as(dst + x, a0, a1);
+            }
+        }
+#endif
+        for (; x < width; x++)
+            dst[x] = saturate_cast<T>(std::pow((WT)src0[x*s0x], (WT)src1[x]));
+    }
+    return 0;
+}
+
+TKernel getPowFunc_(int T, int R)
+{
+    if (R != T)
+        return {};
+    KernelFunc fptr = nullptr;
+    switch (T)
+    {
+    case CV_16F:  fptr = powKernel<hfloat, v_float32>; break;
+    case CV_16BF: fptr = powKernel<bfloat, v_float32>; break;
+    case CV_32F:  fptr = powKernel<float,  v_float32>; break;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    case CV_64F:  fptr = powKernel<double, v_float64>; break;
+#else
+    case CV_64F:  fptr = scalarPowKernel<double, double>; break;
+#endif
+    default: ;
+    }
+    return {fptr, nullptr, 0};
 }
 
 // ===========================================================================

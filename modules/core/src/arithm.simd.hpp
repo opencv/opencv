@@ -245,7 +245,6 @@ TKernel getAddFunc_(int T, int R);
 TKernel getSubFunc_(int T, int R);
 TKernel getMulFunc_(int T, int R);
 TKernel getDivFunc_(int T, int R, bool checked);
-TKernel getPowFunc_(int T, int R);
 TKernel getMinFunc_(int T, int R);
 TKernel getMaxFunc_(int T, int R);
 TKernel getAbsdiffFunc_(int T, int R);
@@ -327,10 +326,6 @@ struct EwDivFlt {
     template<typename V> static V vec(const V& a, const V& b, const V& s) { return v_div(v_mul(a, s), b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s / b; }
-};
-
-struct EwPow {
-    template<typename W, typename ST> static W scl(W a, W b, ST) { return std::pow(a, b); }
 };
 
 // min / max / absdiff: T x T -> T (same depth in and out, no scale). v_min/v_max exist for every
@@ -1136,22 +1131,6 @@ TKernel getDivFunc_(int T, int R, bool checked)
     return {fptr, nullptr, 0};
 }
 
-TKernel getPowFunc_(int T, int R)
-{
-    KernelFunc fptr = nullptr;
-    switch (T)
-    {
-    case CV_32F:
-        fptr = R == CV_32F ? scalarBinaryKernel<float, float, float, EwPow> : nullptr;
-        break;
-    case CV_64F:
-        fptr = R == CV_64F ? scalarBinaryKernel<double, double, double, EwPow> : nullptr;
-        break;
-    default:
-        ;
-    }
-    return {fptr, nullptr, 0};
-}
 
 // min / max: T x T -> T for every depth. Native v_min/v_max on the matching lane type (8/16/32-bit
 // ints, f16/bf16/f32); 64-bit ints and f64 use the scalar path. Op = EwMin or EwMax.

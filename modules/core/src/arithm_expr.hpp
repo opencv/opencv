@@ -179,6 +179,8 @@ CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byt
 // math.dispatch.cpp (kernels in math.simd.hpp):
 CV_EXPORTS TKernel getMathFunc(TOp op, int T);               // unary math (OP_SQRT..OP_RELU), T -> T,
                                                              // T in {f16, bf16, f32, f64}
+// getPowFunc is declared above with the arithm getters but LIVES in math.dispatch.cpp too
+// (powKernel: special-cased scalar exponents + the exp(y*log(x)) general path)
 
 // The op-level dispatcher: routes (op, depths) to the right get*Func above. nullptr if the exact
 // combination is not provided. Unused operand depths are EW_DEPTH_NONE.

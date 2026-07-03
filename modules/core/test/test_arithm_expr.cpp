@@ -120,6 +120,71 @@ TEST(Core_TExpr, pow_call)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
+// pow over the interesting exponents: the special-cased 2/3/0.5/1/0, the general exp/log path
+// (2.5, -1.5), and negative bases (integer exponent -> exact signed result, fractional -> NaN),
+// against the double std::pow reference. Sizes chosen to exercise both the SIMD body and the tail.
+TEST(Core_TExpr, pow_exponents)
+{
+    for (int depth : { CV_32F, CV_64F })
+    {
+        const double eps = depth == CV_32F ? 1e-6 : 1e-9;
+        Mat a0(37, 41, CV_64F), a;
+        theRNG().fill(a0, RNG::UNIFORM, 0.05, 9.);
+        a0.convertTo(a, depth);
+        for (double p : { 2., 3., 0.5, 1., 0., 2.5, -1.5 })
+        {
+            Mat got = expr1(cv::format("pow({0}, %.10g)", p), { a });
+            ASSERT_EQ(got.depth(), depth) << "p=" << p;
+            Mat ad, gd;
+            a.convertTo(ad, CV_64F); got.convertTo(gd, CV_64F);
+            double maxerr = 0;
+            for (int y = 0; y < a.rows; y++)
+                for (int x = 0; x < a.cols; x++)
+                {
+                    double r = std::pow(ad.at<double>(y, x), p);
+                    maxerr = std::max(maxerr, std::abs(gd.at<double>(y, x) - r) / std::max(1.0, std::abs(r)));
+                }
+            EXPECT_LE(maxerr, eps) << "depth=" << depth << " p=" << p;
+        }
+    }
+}
+
+// negative bases: integer exponents keep exact signed results (scalar patch path), a fractional
+// exponent yields NaN - both matching std::pow
+TEST(Core_TExpr, pow_negative_base)
+{
+    Mat a(9, 13, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, -5.f, -1.f);
+
+    Mat got3 = expr1("pow({0}, 3)", { a });
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+            ASSERT_NEAR(got3.at<float>(y, x), std::pow((double)a.at<float>(y, x), 3.), 1e-2);
+
+    Mat gotf = expr1("pow({0}, 2.5)", { a });
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+            ASSERT_TRUE(cvIsNaN(gotf.at<float>(y, x))) << "pow(neg, frac) must be NaN";
+}
+
+// per-element (array) exponent
+TEST(Core_TExpr, pow_array_exponent)
+{
+    Mat a(21, 27, CV_32F), b(21, 27, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 0.1f, 5.f);
+    theRNG().fill(b, RNG::UNIFORM, -2.f, 3.f);
+
+    Mat got = expr1("pow({0}, {1})", { a, b });
+    double maxerr = 0;
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+        {
+            double r = std::pow((double)a.at<float>(y, x), (double)b.at<float>(y, x));
+            maxerr = std::max(maxerr, std::abs(got.at<float>(y, x) - r) / std::max(1.0, std::abs(r)));
+        }
+    EXPECT_LE(maxerr, 1e-6);
+}
+
 // ---------------------------------------------------------------------------------- unary math
 // Golden result = the double-precision std:: function applied per element (never the op under
 // test); the tolerance is relative, scaled by the output depth's precision.
