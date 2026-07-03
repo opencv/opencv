@@ -472,6 +472,13 @@ DEF_CVT_FUNC(16bf64u, cvt1_, bfloat, uint64_t, v_float32)
 DEF_CVT_FUNC(16bf64s, cvt1_, bfloat, int64_t, v_float32)
 DEF_CVT_FUNC(16bf16f, cvt1_, bfloat, hfloat, v_float32)
 
+////////////////////// 8f -> ... ////////////////////////
+
+DEF_CVT_FUNC(8f8u,  cvt_, fp8_e4m3_t, uchar,  v_float32)
+DEF_CVT_FUNC(8f8s,  cvt_, fp8_e4m3_t, schar,  v_float32)
+DEF_CVT_FUNC(8f16u, cvt1_, fp8_e4m3_t, ushort, v_float32)
+DEF_CVT_FUNC(8f32f, cvt1_, fp8_e4m3_t, float,  v_float32)
+
 ////////////////////// 64s -> ... ////////////////////////
 
 DEF_CVT_FUNC(64s8u,  cvt_, int64_t, uchar,  v_int32)
@@ -530,6 +537,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f8u :
             sdepth == CV_16F ? cvt16f8u :
             sdepth == CV_16BF ? cvt16bf8u :
+            sdepth == CV_8F ? cvt8f8u :
             sdepth == CV_Bool ? cvt8b8u :
             sdepth == CV_64U ? cvt64u8u :
             sdepth == CV_64S ? cvt64s8u :
@@ -545,6 +553,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f8s :
             sdepth == CV_16F ? cvt16f8s :
             sdepth == CV_16BF ? cvt16bf8s :
+            sdepth == CV_8F ? cvt8f8s :
             sdepth == CV_Bool ? cvt8b8u :
             sdepth == CV_64U ? cvt64u8s :
             sdepth == CV_64S ? cvt64s8s :
@@ -560,6 +569,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f16u :
             sdepth == CV_16F ? cvt16f16u :
             sdepth == CV_16BF ? cvt16bf16u :
+            sdepth == CV_8F ? cvt8f16u :
             sdepth == CV_Bool ? cvt8b16s :
             sdepth == CV_64U ? cvt64u16u :
             sdepth == CV_64S ? cvt64s16u :
@@ -621,6 +631,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f32f :
             sdepth == CV_16F ? cvt16f32f :
             sdepth == CV_16BF ? cvt16bf32f :
+            sdepth == CV_8F ? cvt8f32f :
             sdepth == CV_Bool ? cvt8b32f :
             sdepth == CV_64U ? cvt64u32f :
             sdepth == CV_64S ? cvt64s32f :
