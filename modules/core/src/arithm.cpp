@@ -640,6 +640,13 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     if (s1 && s2)
         s1 = s2 = false;    // two scalars: treat both as tiny array operands (element-wise + broadcast),
                             // matching arithm_op (Scalar+Scalar -> 4x1, number+number -> 1x1, ...)
+    // A 4x1 CV_64F Mat/UMat pseudo-scalar (see isScalarArg) is hijacked only against a REAL array:
+    // when the partner is itself a tiny scalar-shaped array (e.g. compare(Mat 4x1, Mat 1x1) -
+    // issue #8999), both are honest data and ride the broadcast. A genuine MATX Scalar never demotes.
+    else if (s1 && src1.kind() != _InputArray::MATX && isScalarLikeMat(src2, cn1))
+        s1 = false;
+    else if (s2 && src2.kind() != _InputArray::MATX && isScalarLikeMat(src1, cn2))
+        s2 = false;
 
     // Compat fallback: Java/Python/user code passes scalars as real little Mats (the classic 4x1
     // CV_64F column, a 1xcn/cnx1 vector - see isScalarLikeMat). Those normally ride broadcasting
@@ -695,7 +702,8 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
         if (!isScalar)
             return p.addInput(m->depth());
         const uchar* sp; int sd;
-        const int scn0 = scalarArgElems(src, sp, sd), cn = otherCn;
+        uchar scbuf[EW_SCALAR_BUF_SIZE];   // stack room for a UMAT scalar; addConst copies the values out
+        const int scn0 = scalarArgElems(src, sp, sd, scbuf), cn = otherCn;
         const int scn = (cn == scn0 || (cn < 4 && scn0 == 4)) ? cn
                       : (scn0 == 1) ? 1 : 0;
         CV_Assert(scn > 0);
