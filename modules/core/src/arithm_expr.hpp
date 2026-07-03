@@ -179,7 +179,11 @@ CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byt
 CV_EXPORTS TKernel getClampFunc(int T);                      // OP_CLAMP: min(max(x, lo), hi), all of T
 // math.dispatch.cpp (kernels in math.simd.hpp):
 CV_EXPORTS TKernel getMathFunc(TOp op, int T);               // unary math (OP_SQRT..OP_RELU), T -> T,
-                                                             // T in {f16, bf16, f32, f64}
+                                                             // T in {f16, bf16, f32, f64}; exp/log at
+                                                             // f32/f64 route through HAL/IPP when installed
+// the engine's OWN vector kernel over one contiguous span - the built-in implementation behind
+// cv::hal::exp32f & co (their table kernels are gone), and getMathFunc's final fallback
+CV_EXPORTS void mathSpanEngine(TOp op, int depth, const void* src, void* dst, int n);
 // getPowFunc is declared above with the arithm getters but LIVES in math.dispatch.cpp too
 // (powKernel: special-cased scalar exponents + the exp(y*log(x)) general path)
 

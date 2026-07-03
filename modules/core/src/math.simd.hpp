@@ -24,7 +24,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "convert.hpp"          // typed vx_load_pair_as / v_store_pair_as helpers (cv::)
 #include "arithm_expr.hpp"      // the kernel contract: TOp / TKernel / KernelFunc
-#include "opencv2/core/hal/hal.hpp"  // hal::exp32f/log32f/... - the pluggable scalar-API math
 #include <cmath>
 
 namespace cv {
@@ -146,7 +145,11 @@ static int vecUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
 
     if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width) { width *= height; height = 1; }
 
-    for (int y = 0; y < height; y++, src0 += s0y, dst += dsty)
+    // vertical broadcast (a row expanded into a matrix, s0y == 0): every output row is identical -
+    // compute the first one, memcpy the rest (transcendentals cost far more than a row copy)
+    const int urows = (s0y == 0 && height > 1) ? 1 : height;
+
+    for (int y = 0; y < urows; y++, src0 += s0y, dst += dsty)
     {
         if (s0x == 0)                     // broadcast-scalar source: one value covers the row
         {
@@ -172,6 +175,9 @@ static int vecUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
         for (; x < width; x++)
             dst[x] = saturate_cast<T>(Op::scl((WT)src0[x]));
     }
+    dst = (T*)dst_;
+    for (int y = urows; y < height; y++)
+        memcpy(dst + (size_t)y*dsty, dst, (size_t)width*sizeof(T));
     return 0;
 }
 
@@ -189,7 +195,8 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src0 = (const T*)src0_;
     T* dst = (T*)dst_;
     if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width) { width *= height; height = 1; }
-    for (int y = 0; y < height; y++, src0 += s0y, dst += dsty)
+    const int urows = (s0y == 0 && height > 1) ? 1 : height;   // vertical broadcast: 1 row + copies
+    for (int y = 0; y < urows; y++, src0 += s0y, dst += dsty)
     {
         if (s0x == 0)
         {
@@ -200,6 +207,9 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
         for (int x = 0; x < width; x++)
             dst[x] = saturate_cast<T>(Op::scl((WT)src0[x]));
     }
+    dst = (T*)dst_;
+    for (int y = urows; y < height; y++)
+        memcpy(dst + (size_t)y*dsty, dst, (size_t)width*sizeof(T));
     return 0;
 }
 
@@ -270,7 +280,10 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
 
     [[maybe_unused]] const bool tail_trick = src0_ != dst_ && src1_ != dst_;
 
-    for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
+    // both operands vertically broadcast: every output row is identical - compute one, copy
+    const int urows = (s0y == 0 && s1y == 0 && height > 1) ? 1 : height;
+
+    for (int y = 0; y < urows; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         int x = 0;
         if (s1x == 0)                                   // scalar exponent for this row
@@ -366,6 +379,9 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
         for (; x < width; x++)
             dst[x] = saturate_cast<T>(std::pow((WT)src0[x*s0x], (WT)src1[x]));
     }
+    dst = (T*)dst_;
+    for (int y = urows; y < height; y++)
+        memcpy(dst + (size_t)y*dsty, dst, (size_t)width*sizeof(T));
     return 0;
 }
 
@@ -392,39 +408,6 @@ TKernel getPowFunc_(int T, int R)
 // ===========================================================================
 // getters for THIS baseline
 // ===========================================================================
-// Wrap a cv::hal:: math function (void(const T*, T*, int) over a contiguous span) as an engine
-// kernel, the same way castKernel wraps a core BinaryFunc: the function pointer rides in
-// TKernel::userdata. This routes exp/log for f32/f64 through the FULL hal stack - an external
-// vendor HAL (CALL_HAL), IPP, or the built-in table kernels - uniformly, whichever is installed;
-// the engine still supplies tiling and parallelism on top. v_exp/v_log remain for the depths and
-// ops hal has no entry points for (f16/bf16, sin/cos/tanh/erf) and for the composed functors.
-template<typename T>
-static int halUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
-                          const void*, size_t, size_t, const void*, size_t, size_t,
-                          void* dst_, size_t dsty, int width, int height,
-                          const double*, int, void* userdata)
-{
-    typedef void (*HalFunc)(const T*, T*, int);
-    const HalFunc fn = (HalFunc)userdata;
-    s0y /= sizeof(T);
-    dsty /= sizeof(T);
-    CV_Assert(s0x <= 1u);
-    const T* src0 = (const T*)src0_;
-    T* dst = (T*)dst_;
-    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width) { width *= height; height = 1; }
-    for (int y = 0; y < height; y++, src0 += s0y, dst += dsty)
-    {
-        if (s0x == 0)                     // broadcast-scalar source: one value covers the row
-        {
-            T v; fn(src0, &v, 1);
-            for (int x = 0; x < width; x++) dst[x] = v;
-        }
-        else
-            fn(src0, dst, width);
-    }
-    return 0;
-}
-
 template<class Op>
 static KernelFunc mathByDepth(int T)
 {
@@ -444,13 +427,6 @@ static KernelFunc mathByDepth(int T)
 
 TKernel getMathFunc_(TOp op, int T)
 {
-    // exp/log at f32/f64 go through cv::hal (external HAL / IPP / built-in tables - the fastest
-    // installed implementation), wrapped via userdata; see halUnaryKernel.
-    if (op == OP_EXP && T == CV_32F) return {halUnaryKernel<float>,  (void*)(void (*)(const float*, float*, int))hal::exp32f, 0};
-    if (op == OP_EXP && T == CV_64F) return {halUnaryKernel<double>, (void*)(void (*)(const double*, double*, int))hal::exp64f, 0};
-    if (op == OP_LOG && T == CV_32F) return {halUnaryKernel<float>,  (void*)(void (*)(const float*, float*, int))hal::log32f, 0};
-    if (op == OP_LOG && T == CV_64F) return {halUnaryKernel<double>, (void*)(void (*)(const double*, double*, int))hal::log64f, 0};
-
     KernelFunc f = nullptr;
     switch (op)
     {
