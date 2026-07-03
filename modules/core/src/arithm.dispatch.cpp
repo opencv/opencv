@@ -28,6 +28,7 @@ TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (
 TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getAddWeightedFunc(int T, int R)    { CV_CPU_DISPATCH(getAddWeightedFunc_, (T, R),      CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getSelectFunc(int mdepth, int T)    { CV_CPU_DISPATCH(getSelectFunc_,  (mdepth, T),     CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getClampFunc(int T)                 { CV_CPU_DISPATCH(getClampFunc_,   (T),             CV_CPU_DISPATCH_MODES_ALL); }
 static TKernel getCastFunc(int sd, int dd, bool scaled)
                                             { CV_CPU_DISPATCH(getCastFunc_,    (sd, dd, scaled),CV_CPU_DISPATCH_MODES_ALL); }
 
@@ -113,6 +114,13 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
     {
         if (depth1 != depth2 || rdepth != depth1) return {};
         return getSelectFunc(depth0, rdepth);
+    }
+
+    // OP_CLAMP: x, lo, hi and dst all share one depth (emitTernary unifies them).
+    if (op == OP_CLAMP)
+    {
+        if (depth1 != depth0 || depth2 != depth0 || rdepth != depth0) return {};
+        return getClampFunc(rdepth);
     }
 
     return {};

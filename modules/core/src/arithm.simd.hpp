@@ -253,6 +253,7 @@ TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR /
 TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
 TKernel getAddWeightedFunc_(int T, int R);                   // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 TKernel getSelectFunc_(int mdepth, int T);   // OP_SELECT: 1-byte mask, a/b/dst of T (by esz)
+TKernel getClampFunc_(int T);                // OP_CLAMP: min(max(x, lo), hi), all operands of T
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -1591,6 +1592,132 @@ TKernel getSelectFunc_(int mdepth, int T)
     case 2: fptr = selectKernel<uint16_t, v_uint16>; break;
     case 4: fptr = selectKernel<uint32_t, v_uint32>; break;
     case 8: fptr = selectKernel<uint64_t, v_uint32>; break;   // SIMD path compiled out -> scalar
+    default: ;
+    }
+    return {fptr, nullptr, 0};
+}
+
+// ===========================================================================
+// OP_CLAMP: dst = min(max(x, lo), hi)
+// ===========================================================================
+// All four operands share one depth (emitTernary unifies them); lo/hi are usually broadcast
+// scalars (clamp(img, 10, 200) - literals ride as 0-dim consts with stepx == 0) but may be full
+// arrays. clamp is IDEMPOTENT, so the right-edge tail backoff stays on when dst aliases x; only
+// dst aliasing lo/hi suppresses it (the store would corrupt the bounds before the re-read).
+// NaN note: v_min/v_max lane behavior on NaN is ISA-specific, matching the scalar std::min/max
+// unspecifiedness - clamp of NaN is not a contract either way.
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+static inline void setallClamp(const uchar*  p, v_uint8&   a) { a = vx_setall_u8(*p); }
+static inline void setallClamp(const schar*  p, v_int8&    a) { a = vx_setall_s8(*p); }
+static inline void setallClamp(const ushort* p, v_uint16&  a) { a = vx_setall_u16(*p); }
+static inline void setallClamp(const short*  p, v_int16&   a) { a = vx_setall_s16(*p); }
+static inline void setallClamp(const unsigned* p, v_uint32& a) { a = vx_setall_u32(*p); }
+static inline void setallClamp(const int*    p, v_int32&   a) { a = vx_setall_s32(*p); }
+static inline void setallClamp(const float*  p, v_float32& a) { a = vx_setall_f32(*p); }
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+static inline void setallClamp(const double* p, v_float64& a) { a = vx_setall_f64(*p); }
+#endif
+#endif
+
+template<typename T, typename Tvec>
+static int clampKernel(const void* src0_, size_t s0y, size_t s0x,
+                       const void* lo_, size_t s1y, size_t s1x,
+                       const void* hi_, size_t s2y, size_t s2x,
+                       void* dst_, size_t dsty, int width, int height,
+                       const double*, int, void*)
+{
+    s0y /= sizeof(T);
+    s1y /= sizeof(T);
+    s2y /= sizeof(T);
+    dsty /= sizeof(T);
+    CV_Assert(s0x <= 1u && s1x <= 1u && s2x <= 1u);
+
+    const T* src0 = (const T*)src0_;
+    const T* lo = (const T*)lo_;
+    const T* hi = (const T*)hi_;
+    T* dst = (T*)dst_;
+
+    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width &&
+        s1y == s1x*(size_t)width && s2y == s2x*(size_t)width)
+    { width *= height; height = 1; }
+
+    for (int y = 0; y < height; y++, src0 += s0y, lo += s1y, hi += s2y, dst += dsty)
+    {
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        if (s0x == 1)
+        {
+            const int VECSZ = VTraits<Tvec>::vlanes();
+            const bool use_tail_trick = width >= VECSZ*2 && lo_ != dst_ && hi_ != dst_;
+            Tvec vlo, vhi;
+            if (s1x == 0) setallClamp(lo, vlo);
+            if (s2x == 0) setallClamp(hi, vhi);
+            for (; x < width; x += VECSZ)
+            {
+                if (x + VECSZ > width) { if (!use_tail_trick || x == 0) break; x = width - VECSZ; }
+                if (s1x) vlo = vx_load(lo + x);
+                if (s2x) vhi = vx_load(hi + x);
+                v_store(dst + x, v_min(v_max(vx_load(src0 + x), vlo), vhi));
+            }
+        }
+#endif
+        for (; x < width; x++)
+        {
+            T v = src0[x*s0x], l = lo[x*s1x], h = hi[x*s2x];
+            dst[x] = std::min(std::max(v, l), h);
+        }
+    }
+    return 0;
+}
+
+// Scalar-only clamp for the depths without a native SIMD lane type here (f16/bf16 - compared in
+// float; 64-bit ints).
+template<typename T, typename WT>
+static int scalarClampKernel(const void* src0_, size_t s0y, size_t s0x,
+                             const void* lo_, size_t s1y, size_t s1x,
+                             const void* hi_, size_t s2y, size_t s2x,
+                             void* dst_, size_t dsty, int width, int height,
+                             const double*, int, void*)
+{
+    s0y /= sizeof(T); s1y /= sizeof(T); s2y /= sizeof(T); dsty /= sizeof(T);
+    CV_Assert(s0x <= 1u && s1x <= 1u && s2x <= 1u);
+    const T* src0 = (const T*)src0_;
+    const T* lo = (const T*)lo_;
+    const T* hi = (const T*)hi_;
+    T* dst = (T*)dst_;
+    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width &&
+        s1y == s1x*(size_t)width && s2y == s2x*(size_t)width)
+    { width *= height; height = 1; }
+    for (int y = 0; y < height; y++, src0 += s0y, lo += s1y, hi += s2y, dst += dsty)
+        for (int x = 0; x < width; x++)
+        {
+            WT v = (WT)src0[x*s0x], l = (WT)lo[x*s1x], h = (WT)hi[x*s2x];
+            dst[x] = saturate_cast<T>(std::min(std::max(v, l), h));
+        }
+    return 0;
+}
+
+TKernel getClampFunc_(int T)
+{
+    KernelFunc fptr = nullptr;
+    switch (T)
+    {
+    case CV_8U:   fptr = clampKernel<uchar,    v_uint8  >; break;
+    case CV_8S:   fptr = clampKernel<schar,    v_int8   >; break;
+    case CV_16U:  fptr = clampKernel<ushort,   v_uint16 >; break;
+    case CV_16S:  fptr = clampKernel<short,    v_int16  >; break;
+    case CV_32U:  fptr = clampKernel<unsigned, v_uint32 >; break;
+    case CV_32S:  fptr = clampKernel<int,      v_int32  >; break;
+    case CV_32F:  fptr = clampKernel<float,    v_float32>; break;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    case CV_64F:  fptr = clampKernel<double,   v_float64>; break;
+#else
+    case CV_64F:  fptr = scalarClampKernel<double, double>; break;
+#endif
+    case CV_16F:  fptr = scalarClampKernel<hfloat, float>; break;
+    case CV_16BF: fptr = scalarClampKernel<bfloat, float>; break;
+    case CV_64U:  fptr = scalarClampKernel<uint64_t, uint64_t>; break;
+    case CV_64S:  fptr = scalarClampKernel<int64_t,  int64_t >; break;
     default: ;
     }
     return {fptr, nullptr, 0};

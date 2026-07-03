@@ -7,6 +7,7 @@
 // today (arithmetic / cast / pow / min / max / absdiff).
 
 #include "test_precomp.hpp"
+#include "../src/arithm_expr.hpp"   // ew::absdiffResultDepth - the engine's absdiff auto-type rule
 
 namespace opencv_test { namespace {
 
@@ -165,6 +166,125 @@ TEST(Core_TExpr, pow_negative_base)
     for (int y = 0; y < a.rows; y++)
         for (int x = 0; x < a.cols; x++)
             ASSERT_TRUE(cvIsNaN(gotf.at<float>(y, x))) << "pow(neg, frac) must be NaN";
+}
+
+// unary minus and abs() - compositions over the binary family (no dedicated kernels)
+TEST(Core_TExpr, neg_abs)
+{
+    for (int depth : { CV_32F, CV_16S })
+    {
+        Mat a(15, 19, depth);
+        theRNG().fill(a, RNG::UNIFORM, -100, 100);
+
+        Mat gneg = expr1("-{0}", { a });
+        Mat eneg; cv::subtract(Scalar(0), a, eneg);
+        ASSERT_EQ(gneg.depth(), depth);
+        EXPECT_EQ(0, cvtest::norm(gneg, eneg, NORM_INF)) << "neg depth=" << depth;
+
+        // abs == absdiff(a, 0) INCLUDING the texpr auto result type rule: signed input -> the
+        // UNSIGNED type of the same width (|SHRT_MIN| fits u16 exactly, no saturation). NB this
+        // deliberately differs from the public cv::absdiff, whose auto depth keeps the source
+        // type for 4.x compatibility - the VALUES agree, the depth rule is the engine's own.
+        Mat gabs = expr1("abs({0})", { a });
+        ASSERT_EQ(gabs.depth(), cv::ew::absdiffResultDepth(depth)) << "texpr absdiff type rule";
+        Mat eabs; cv::absdiff(a, Scalar(0), eabs);
+        eabs.convertTo(eabs, gabs.depth());
+        EXPECT_EQ(0, cvtest::norm(gabs, eabs, NORM_INF)) << "abs depth=" << depth;
+    }
+}
+
+// the abs(a - b) -> absdiff(a, b) peephole: on unsigned data the literal semantics (saturating
+// subtract) would give max(a-b, 0) - the rewrite must give the true |a - b| everywhere
+TEST(Core_TExpr, abs_sub_peephole)
+{
+    for (int depth : { CV_8U, CV_16S, CV_32F })
+    {
+        Mat a(23, 17, depth), b(23, 17, depth);
+        theRNG().fill(a, RNG::UNIFORM, 0, 100);
+        theRNG().fill(b, RNG::UNIFORM, 0, 100);
+
+        Mat got = expr1("abs({0} - {1})", { a, b });
+        ASSERT_EQ(got.depth(), cv::ew::absdiffResultDepth(depth)) << "depth=" << depth;
+        Mat exp; cv::absdiff(a, b, exp);
+        exp.convertTo(exp, got.depth());          // cv::absdiff auto KEEPS the source depth (4.x)
+        EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "depth=" << depth;
+    }
+}
+
+// clamp: scalar bounds (the common shape), array bounds, and type preservation
+TEST(Core_TExpr, clamp)
+{
+    for (int depth : { CV_8U, CV_16S, CV_32F, CV_64F })
+    {
+        Mat a(25, 31, depth);
+        theRNG().fill(a, RNG::UNIFORM, -100, 355);
+
+        Mat got = expr1("clamp({0}, 10, 200)", { a });
+        Mat emax, exp;
+        cv::max(a, 10.0, emax); cv::min(emax, 200.0, exp);
+        ASSERT_EQ(got.depth(), depth) << "clamp must keep the operand type";
+        EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "depth=" << depth;
+    }
+    // array bounds
+    Mat x(14, 22, CV_32F), lo(14, 22, CV_32F), hi(14, 22, CV_32F);
+    theRNG().fill(x, RNG::UNIFORM, -10.f, 10.f);
+    theRNG().fill(lo, RNG::UNIFORM, -5.f, 0.f);
+    theRNG().fill(hi, RNG::UNIFORM, 0.f, 5.f);
+    Mat got = expr1("clamp({0}, {1}, {2})", { x, lo, hi });
+    Mat emax, exp;
+    cv::max(x, lo, emax); cv::min(emax, hi, exp);
+    EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF));
+}
+
+// '**' operator: pow alias, binds tighter than '*', right-associative
+TEST(Core_TExpr, pow_operator)
+{
+    Mat a(13, 18, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 0.5f, 2.f);
+
+    Mat got = expr1("{0} ** 2", { a });
+    Mat exp; cv::pow(a, 2.0, exp);
+    EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF));
+
+    // precedence: 3 * a ** 2 == 3 * (a ** 2)
+    Mat got2 = expr1("3 * {0} ** 2", { a });
+    Mat exp2 = 3.0 * exp;
+    EXPECT_LE(cvtest::norm(got2, exp2, NORM_INF), 1e-4);
+
+    // right associativity: a ** 2 ** 3 == a ** (2 ** 3) == a ** 8
+    Mat got3 = expr1("{0} ** 2 ** 3", { a });
+    Mat exp3; cv::pow(a, 8.0, exp3);
+    EXPECT_LE(cvtest::norm(got3, exp3, NORM_INF), 1e-4);
+}
+
+// '?:' conditional: select alias with the lowest precedence; right-associative chains
+TEST(Core_TExpr, ternary_operator)
+{
+    Mat a(19, 23, CV_32F), b(19, 23, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 0.f, 100.f);
+    theRNG().fill(b, RNG::UNIFORM, 0.f, 100.f);
+
+    // max via ?: - the condition is a full comparison (lower precedence than '>')
+    Mat got = expr1("{0} > {1} ? {0} : {1}", { a, b });
+    Mat exp; cv::max(a, b, exp);
+    EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF));
+
+    // arithmetic in every position without parentheses
+    Mat got2 = expr1("{0} - {1} > 10 ? {0} + 1 : {1} * 2", { a, b });
+    Mat mask = (a - b > 10), e1 = a + 1, e2 = b * 2, exp2 = e2.clone();
+    e1.copyTo(exp2, mask);
+    EXPECT_LE(cvtest::norm(got2, exp2, NORM_INF), 1e-4);
+
+    // right-associative chain: c1 ? x : c2 ? y : z
+    Mat got3 = expr1("{0} > 66 ? 1 : {0} > 33 ? 2 : 3", { a });
+    Mat exp3(a.size(), CV_32F);
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+        {
+            float v = a.at<float>(y, x);
+            exp3.at<float>(y, x) = v > 66 ? 1.f : v > 33 ? 2.f : 3.f;
+        }
+    EXPECT_EQ(0, cvtest::norm(got3, exp3, NORM_INF));
 }
 
 // per-element (array) exponent

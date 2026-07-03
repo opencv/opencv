@@ -554,6 +554,35 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
     const int nd = isFlexConst(*this, a) ? EW_DEPTH_NONE : arginfo[a].depth;
     const ElemwiseCategory cat = opCategory(op);
 
+    // NEG and ABS have no kernels of their own - they are compositions over the binary family
+    // with a zero constant (flexible, so emitBinary types it as the operand's own type).
+    if (op == OP_NEG)
+        return emitBinary(OP_SUB, addConst(EW_DEPTH_NONE, Scalar(0.), 1), a, rdepth, params);
+    if (op == OP_ABS)
+    {
+        // peephole: abs(x - y) -> absdiff(x, y), ALWAYS. Strictly speaking the two differ on
+        // integers - the literal subtract saturates first (u8: max(x-y, 0); signed: clipped
+        // difference), absdiff computes the true |x - y| - but whoever writes abs(a - b) MEANS
+        // absdiff; the saturation artifacts are never the desired result. So we deliberately
+        // "don't notice" the difference and hand out the useful semantics. The sub is necessarily
+        // the last instruction and its result the last temp (abs is emitted right after its
+        // argument) - retire both, the moveToOutput manoeuvre.
+        if (!prog.empty() && arginfo[a].kind == TEMP &&
+            prog.back().op == OP_SUB && prog.back().result == a &&
+            arginfo[a].index == ntemps - 1)
+        {
+            const int x = prog.back().arg0, y = prog.back().arg1;
+            prog.pop_back();
+            arginfo[a].kind = NONE;
+            ntemps--;
+            return emitBinary(OP_ABSDIFF, x, y, rdepth, params);
+        }
+        // abs IS absdiff(a, 0), including the auto result type: a signed |a| lands in the
+        // UNSIGNED type of the same width (|-128| = 128 fits u8 exactly; pinning the result to
+        // the signed operand type would saturate it to 127). Fully uniform with the peephole.
+        return emitBinary(OP_ABSDIFF, a, addConst(EW_DEPTH_NONE, Scalar(0.), 1), rdepth, params);
+    }
+
     int result = rdepth;
     if (result == EW_DEPTH_NONE)
     {
@@ -627,10 +656,15 @@ int TExpr::emitTernary(TOp op, int a, int b, int c, int rdepth)
     }
 
     // clamp(x,lo,hi): unify all three operands at `result` (compute == result, no wide fallback).
+    // The x operand dominates the auto type: clamp(u8_img, 10, 200) must stay u8, and literal
+    // bounds are flexible consts typed at `result` directly (never OP_CAST of a depth-less slot).
     int result = rdepth != EW_DEPTH_NONE ? rdepth
                                          : promoteArith(promoteArith(dep(a), dep(b)), dep(c));
     if (result == EW_DEPTH_NONE) result = CV_32F;
-    int c0 = maybeAddCast(a, result), c1 = maybeAddCast(b, result), c2 = maybeAddCast(c, result);
+    auto typed = [&](int s) {
+        return isFlexConst(*this, s) ? typedConstFrom(s, result) : maybeAddCast(s, result);
+    };
+    int c0 = typed(a), c1 = typed(b), c2 = typed(c);
     TKernel k = getElemwiseFunc(op, result, result, result, result);
     CV_Assert(k.fptr && "ew: no kernel for this op/type combination");
     int res = addTemp(result);
@@ -1480,9 +1514,10 @@ struct Lexer
             return pos + 1 < s.size() && s[pos] == op[0] && s[pos + 1] == op[1];
         };
         t.type = T_OP;
-        if (two("<=") || two(">=") || two("==") || two("!=")) { t.text.assign(s.substr(pos, 2)); pos += 2; return t; }
+        if (two("<=") || two(">=") || two("==") || two("!=") || two("**"))
+        { t.text.assign(s.substr(pos, 2)); pos += 2; return t; }
         if (c == '=') { pos++; t.type = T_ASSIGN; return t; }
-        CV_Assert(std::strchr("+-*/<>&|^!", c) && "ew::expression: unexpected character");
+        CV_Assert(std::strchr("+-*/<>&|^!?:", c) && "ew::expression: unexpected character");
         t.text.assign(1, c); pos++;
         return t;
     }
@@ -1491,6 +1526,7 @@ struct Lexer
 // --- operator / function tables ----------------------------------------------------------
 static int binPrec(const std::string& op)
 {
+    if (op == "**") return 8;              // power binds tighter than '*'; RIGHT-associative
     if (op == "*" || op == "/") return 7;
     if (op == "+" || op == "-") return 6;
     if (op == "<" || op == "<=" || op == ">" || op == ">=") return 5;
@@ -1503,6 +1539,7 @@ static int binPrec(const std::string& op)
 
 static TOp binOp(const std::string& op)
 {
+    if (op == "**") return OP_POW;
     if (op == "+")  return OP_ADD;
     if (op == "-")  return OP_SUB;
     if (op == "*")  return OP_MUL;
@@ -1590,7 +1627,7 @@ struct Parser
         if (cur.type == T_INPUT) { int idx = cur.input; advance();
                                    CV_Assert(idx >= 0 && idx < ninputs && "ew::expression: input index out of range");
                                    return inputSlot[idx]; }
-        if (cur.type == T_LPAREN){ advance(); int x = parseExpr(0); expect(T_RPAREN, "expected ')'"); return x; }
+        if (cur.type == T_LPAREN){ advance(); int x = parseTernary(); expect(T_RPAREN, "expected ')'"); return x; }
         if (cur.type == T_IDENT)
         {
             std::string name = cur.text; advance();
@@ -1604,10 +1641,10 @@ struct Parser
             std::array<int, 8> args; int nargs = 0;   // every function takes <= 3 args (clamp/select) - a
             if (cur.type != T_RPAREN)                 // small stack buffer avoids a std::vector heap alloc
             {
-                args[nargs++] = parseExpr(0);
+                args[nargs++] = parseTernary();
                 while (cur.type == T_COMMA) { advance();
                     CV_Assert(nargs < (int)args.size() && "ew::expression: too many arguments");
-                    args[nargs++] = parseExpr(0); }
+                    args[nargs++] = parseTernary(); }
             }
             expect(T_RPAREN, "expected ')'");
 
@@ -1656,10 +1693,27 @@ struct Parser
             int p = binPrec(cur.text);
             if (p < minPrec) break;
             std::string op = cur.text; advance();
-            int right = parseExpr(p + 1);         // left-associative
+            // '**' is right-associative (a ** b ** c == a ** (b ** c)): recurse at the SAME
+            // precedence so the right side swallows further '**'s; everything else at p+1.
+            int right = parseExpr(op == "**" ? p : p + 1);
             left = e.emitBinary(binOp(op), left, right);
         }
         return left;
+    }
+
+    // The ternary conditional  cond ? a : b  == select(cond, a, b). Lowest precedence (below all
+    // arithmetic/compare/bitwise), right-associative: f1 ? a : f2 ? b : c groups as
+    // f1 ? a : (f2 ? b : c). This is the general expression entry point.
+    int parseTernary()
+    {
+        int cond = parseExpr(0);
+        if (!isOp("?")) return cond;
+        advance();
+        int thenv = parseTernary();
+        CV_Assert(isOp(":") && "ew::expression: expected ':' in a ?: conditional");
+        advance();
+        int elsev = parseTernary();               // right-associative chain
+        return e.emitTernary(OP_SELECT, cond, thenv, elsev);
     }
 
     // final result: a single expression, or a top-level tuple (e0, e1, ...).
@@ -1672,18 +1726,18 @@ struct Parser
             Lexer save = lex; Token savedCur = cur;
             size_t nInsn = e.prog.size(), nArg = e.arginfo.size(); int nTemp = e.ntemps;
             advance();
-            int e0 = parseExpr(0);
+            int e0 = parseTernary();
             if (cur.type == T_COMMA)
             {
                 e.output(e0);
-                while (cur.type == T_COMMA) { advance(); e.output(parseExpr(0)); }
+                while (cur.type == T_COMMA) { advance(); e.output(parseTernary()); }
                 expect(T_RPAREN, "expected ')'");
                 return;
             }
             lex = save; cur = savedCur;                   // not a tuple -> undo the trial parse
             e.prog.resize(nInsn); e.arginfo.resize(nArg); e.ntemps = nTemp;
         }
-        e.output(parseExpr(0));
+        e.output(parseTernary());
     }
 
     void parse()
@@ -1697,7 +1751,7 @@ struct Parser
                 if (cur.type == T_ASSIGN)
                 {
                     advance();
-                    env[name] = parseExpr(0);
+                    env[name] = parseTernary();
                     expect(T_SEMI, "expected ';' after assignment");
                     continue;
                 }

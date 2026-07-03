@@ -176,6 +176,7 @@ CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR /
 CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size
 CV_EXPORTS TKernel getAddWeightedFunc(int T, int R);         // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byte mask, a/b/dst of T
+CV_EXPORTS TKernel getClampFunc(int T);                      // OP_CLAMP: min(max(x, lo), hi), all of T
 // math.dispatch.cpp (kernels in math.simd.hpp):
 CV_EXPORTS TKernel getMathFunc(TOp op, int T);               // unary math (OP_SQRT..OP_RELU), T -> T,
                                                              // T in {f16, bf16, f32, f64}
