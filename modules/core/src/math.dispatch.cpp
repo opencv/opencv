@@ -14,6 +14,5 @@
 namespace cv { namespace ew {
 
 TKernel getMathFunc(TOp op, int T)          { CV_CPU_DISPATCH(getMathFunc_,   (op, T),      CV_CPU_DISPATCH_MODES_ALL); }
-TKernel getSelectFunc(int mdepth, int T)    { CV_CPU_DISPATCH(getSelectFunc_, (mdepth, T),  CV_CPU_DISPATCH_MODES_ALL); }
 
 }} // namespace cv::ew

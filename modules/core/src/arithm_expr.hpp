@@ -61,11 +61,6 @@ enum TOp
     OP_AND, OP_OR, OP_XOR,
     // compare -> mask (result depth given explicitly, e.g. CV_Bool/CV_8U)
     OP_CMP_EQ, OP_CMP_NE, OP_CMP_LT, OP_CMP_LE, OP_CMP_GT, OP_CMP_GE,
-    // partial-output write: dst = (mask != 0) ? src : dst (unmasked output PRESERVED). arg0 = src
-    // (data), arg1 = mask (1 byte: bool/u8/s8). Used to apply an op's mask: the op computes into a
-    // temp, copyMask overwrites only the masked subset of the (pre-existing) output - matching
-    // cv::add/... with a mask.
-    OP_COPY_MASK,
     // addWeighted: a*alpha + b*beta + gamma (params = {alpha, beta, gamma}). A fused composite, not a
     // kernel - emitBinary expands it. Placed last in the binary group so it doesn't renumber the ops
     // above it (some dispatch is by enum value).
@@ -73,7 +68,11 @@ enum TOp
 
     // ---------------- ternary (arity 3) ----------------
     OP_CLAMP = OP_TERNARY_BASE,   // clamp(x, lo, hi)
-    OP_SELECT,                    // select(mask, a, b)  (a.k.a. where)
+    // select(mask, a, b) (a.k.a. where): dst = (mask != 0) ? a : b; mask is 1 byte (bool/u8/s8),
+    // never cast. Also the engine's masked-op tail: cv::add(..., mask) computes into a temp r,
+    // then select(mask, r, dst) -> dst overwrites only the masked subset of the (pre-existing)
+    // output (dst rides as both arg2 and the result slot; the kernel is alias-safe).
+    OP_SELECT,
     OP_CONVERT_SCALE              // cast<rdepth>(src*scale + offset); scale/offset may be tensors
 };
 
@@ -176,11 +175,10 @@ CV_EXPORTS TKernel getCmpFunc(TOp op, int T);                // T x T -> u8 mask
 CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR / OP_XOR, by element size
 CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size
 CV_EXPORTS TKernel getAddWeightedFunc(int T, int R);         // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
-CV_EXPORTS TKernel getCopyMaskFunc(int depth);
+CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byte mask, a/b/dst of T
 // math.dispatch.cpp (kernels in math.simd.hpp):
 CV_EXPORTS TKernel getMathFunc(TOp op, int T);               // unary math (OP_SQRT..OP_RELU), T -> T,
                                                              // T in {f16, bf16, f32, f64}
-CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byte mask, x/y/dst of T
 
 // The op-level dispatcher: routes (op, depths) to the right get*Func above. nullptr if the exact
 // combination is not provided. Unused operand depths are EW_DEPTH_NONE.

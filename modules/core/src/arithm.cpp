@@ -713,8 +713,8 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     const int a1 = addOperand(src2, s2, pm2, cn1);
 
     // Write-mask: a single-channel 1-byte array (u8/s8/bool) the size of the output spatial shape,
-    // added as another broadcast input. The arithmetic result lands in a temp; OP_COPY_MASK then
-    // overwrites only mask!=0 positions of the (pre-existing) output => dst = mask ? result : dst.
+    // added as another broadcast input. The arithmetic result lands in a temp; a final
+    // select(mask, r, dst) -> dst overwrites only mask!=0 positions of the (pre-existing) output.
     int sMask = 0;
     const Mat* pmask = nullptr;
     if (haveMask)
@@ -727,7 +727,7 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     const int r = p.emitBinary(op, a0, a1, rdepth, params);   // result temp (mask-free => none); scale
                                                         // rides params[0] (mul/div), {a,b,g} for addW
     if (haveMask)
-        p.addInsn(ew::OP_COPY_MASK, r, sMask, 0, sOut);
+        p.addInsn(ew::OP_SELECT, sMask, r, sOut, sOut);
     else
         p.moveToOutput(r, sOut);
     p.compile();
@@ -798,7 +798,7 @@ static void unary_op(ew::TOp op, InputArray src, OutputArray dst, InputArray mas
     const int sOut = p.addOutput(rdepth);
     const int r = p.emitUnary(op, a0, rdepth, params);
     if (haveMask)
-        p.addInsn(ew::OP_COPY_MASK, r, sMask, 0, sOut);
+        p.addInsn(ew::OP_SELECT, sMask, r, sOut, sOut);
     else
         p.moveToOutput(r, sOut);
     p.compile();

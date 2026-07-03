@@ -253,7 +253,7 @@ TKernel getCmpFunc_(TOp op, int T);
 TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
 TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
 TKernel getAddWeightedFunc_(int T, int R);                   // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
-TKernel getCopyMaskFunc_(int depth);
+TKernel getSelectFunc_(int mdepth, int T);   // OP_SELECT: 1-byte mask, a/b/dst of T (by esz)
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -1473,178 +1473,145 @@ TKernel getAddWeightedFunc_(int T, int R)
 }
 
 // ===========================================================================
-// OP_COPY_MASK: dst = (mask != 0) ? src : dst   (unmasked elements are PRESERVED)
+// OP_SELECT: dst = (mask != 0) ? a : b
 // ===========================================================================
-// The masked tail of an op: the op computes its full result into a temp, then copyMask moves the
-// masked subset into the (pre-existing) output, leaving the rest UNCHANGED - matching cv::add/...
-// with a mask (dst = mask ? result : dst). src and dst are the data (same depth, contiguous); the
-// mask is one byte per pixel (bool/u8/s8 - never parameterized by its depth, we just test the byte
-// != 0). Templated only by the element SIZE.
+// The one masking primitive of the engine. It serves both the public texpr select() and the
+// masked-op tail: `cv::add(..., mask)` computes the full result into a temp `r`, then a final
+// select(mask, r, dst) -> dst lands the masked subset in the (pre-existing) output and PRESERVES
+// the rest - dst rides as both an input and the result. That aliasing is safe even under the
+// right-edge tail backoff: re-running select over already-blended elements is IDEMPOTENT
+// (mask!=0 lanes stay a, mask==0 lanes stay b/dst). Only dst == mask would break (the store
+// rewrites the mask before the backoff re-reads it) - that combination falls to the scalar tail.
 //
-// The channel handling falls out of the existing broadcast machinery (no special case here): for
-// single-channel data the tile is (width x 1) with the mask aligned per element (s1x == 1); for
-// n-channel data the channel axis is the kernel width and the 1-channel mask broadcasts across it
-// (s1x == 0), so a whole row of n elements is copied (or left untouched) under one mask test.
-// Reference (scalar) implementation for now; a SIMD mask-expand + select can replace it later.
-template<typename T, typename Tvec>
-static int copyMaskKernel(const void* src0_, size_t s0y, size_t s0x,
-                          const void* mask_, size_t s1y, size_t s1x,
-                          const void*, size_t, size_t,
-                          void* dst_, size_t dsty, int width, int height,
-                          const double*, int, void*)
-{
-    s0y /= sizeof(T);
-    dsty /= sizeof(T);
+// The mask is one byte per element (bool/u8/s8 - never parameterized by its depth, we just test
+// the byte != 0); a/b/dst share one depth, the kernel is templated by the element SIZE only.
+// Channels fall out of the broadcast machinery: single-channel data arrives as a (width x 1) tile
+// with a per-element mask (smx == 1); n-channel data as a tall-thin tile - channel axis = width,
+// the 1-channel mask broadcasting across it (smx == 0, one mask byte per row) - handled by the
+// interleaved fast path for 2..4 channels, per-row otherwise. Branches may broadcast (s1x/s2x == 0).
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// VECSZ(T) mask bytes -> T-width lanes (u8 direct, u16/u32 via expand)
+static inline v_uint8  loadSelectMask(const uchar* m, const v_uint8&)  { return vx_load(m); }
+static inline v_uint16 loadSelectMask(const uchar* m, const v_uint16&) { return vx_load_expand(m); }
+static inline v_uint32 loadSelectMask(const uchar* m, const v_uint32&) { return vx_load_expand_q(m); }
 
-    CV_Assert(s0x == 1 && (s1x == 0 || s1x == 1));   // data contiguous; mask per-element or broadcast
-    const T* src = (const T*)src0_;
+static inline void setallSelect(const uint8_t*  p, v_uint8&  a) { a = vx_setall_u8(*p); }
+static inline void setallSelect(const uint16_t* p, v_uint16& a) { a = vx_setall_u16(*p); }
+static inline void setallSelect(const uint32_t* p, v_uint32& a) { a = vx_setall_u32(*p); }
+#endif
+
+template<typename T, typename Tvec>
+static int selectKernel(const void* mask_, size_t smy, size_t smx,
+                        const void* src1_, size_t s1y, size_t s1x,
+                        const void* src2_, size_t s2y, size_t s2x,
+                        void* dst_, size_t dsty, int width, int height,
+                        const double*, int, void*)
+{
+    s1y /= sizeof(T);                    // the 1-byte mask's smy stays in bytes == elements
+    s2y /= sizeof(T);
+    dsty /= sizeof(T);
+    CV_Assert(smx <= 1u && s1x <= 1u && s2x <= 1u);
+
     const uchar* mask = (const uchar*)mask_;
+    const T* src1 = (const T*)src1_;
+    const T* src2 = (const T*)src2_;
     T* dst = (T*)dst_;
 
-    EW_TRY_COLLAPSE(2);
+    if (height > 1 && dsty == (size_t)width && smy == smx*(size_t)width &&
+        s1y == s1x*(size_t)width && s2y == s2x*(size_t)width)
+    { width *= height; height = 1; }
 
     int y = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    if constexpr (sizeof(T) <= 4) {
-        Tvec z = v_setzero_<Tvec>();
-        auto loadExpandMask = [&](const uchar* mrow) {
-            if constexpr (sizeof(T) == 1u)
-                return vx_load(mrow);
-            else if constexpr (sizeof(T) == 2u)
-                return vx_load_expand(mrow);
-            else
-                return vx_load_expand_q(mrow);
-        };
-
+    if constexpr (sizeof(T) <= 4)
+    {
         const int VECSZ = VTraits<Tvec>::vlanes();
-        if (height > 1 && width <= 4 && s0x == 1u && s1x == 0u &&
-            s0y == (size_t)width && s1y == 1u && dsty == (size_t)width) {
+        const Tvec z = v_setzero_<Tvec>();
+
+        // n-channel data under a per-pixel mask (the masked-op shape): channel axis = width (2..4),
+        // one mask byte per row. Process VECSZ rows per iteration - expand the mask once and
+        // interleave it across the channel lanes.
+        if (height > VECSZ && 2 <= width && width <= 4 && smx == 0u && smy == 1u &&
+            s1x == 1u && s1y == (size_t)width && s2x == 1u && s2y == (size_t)width &&
+            dsty == (size_t)width)
+        {
             constexpr int MAXVECSZ = VTraits<Tvec>::max_nlanes;
-            T maskbuf[MAXVECSZ*4]={};
-            int dy = VECSZ;
-
-            if (width == 2) {
-                for (; y + dy <= height; y += dy, src += width*dy, mask += dy, dst += width*dy) {
-                    Tvec m0 = loadExpandMask(mask), m1, s0, s1, d0, d1;
-                    m0 = v_eq(m0, z);
-                    v_store_interleave(maskbuf, m0, m0);
-                    m0 = vx_load(maskbuf);
-                    m1 = vx_load(maskbuf + VECSZ);
-                    s0 = vx_load(src);
-                    s1 = vx_load(src + VECSZ);
-                    d0 = vx_load(dst);
-                    d1 = vx_load(dst + VECSZ);
-                    d0 = v_select(m0, d0, s0);
-                    d1 = v_select(m1, d1, s1);
-                    v_store(dst, d0);
-                    v_store(dst + VECSZ, d1);
-                }
-            }
-            else if (width == 3) {
-                for (; y + dy <= height; y += dy, src += width*dy, mask += dy, dst += width*dy) {
-                    Tvec m0 = loadExpandMask(mask), m1, m2, s0, s1, s2, d0, d1, d2;
-                    m0 = v_eq(m0, z);
-                    v_store_interleave(maskbuf, m0, m0, m0);
-                    m0 = vx_load(maskbuf);
-                    m1 = vx_load(maskbuf + VECSZ);
-                    m2 = vx_load(maskbuf + VECSZ*2);
-                    s0 = vx_load(src);
-                    s1 = vx_load(src + VECSZ);
-                    s2 = vx_load(src + VECSZ*2);
-                    d0 = vx_load(dst);
-                    d1 = vx_load(dst + VECSZ);
-                    d2 = vx_load(dst + VECSZ*2);
-                    d0 = v_select(m0, d0, s0);
-                    d1 = v_select(m1, d1, s1);
-                    d2 = v_select(m2, d2, s2);
-                    v_store(dst, d0);
-                    v_store(dst + VECSZ, d1);
-                    v_store(dst + VECSZ*2, d2);
-                }
-            }
-            else if (width == 4) {
-                for (; y + dy <= height; y += dy, src += width*dy, mask += dy, dst += width*dy) {
-                    Tvec m0 = loadExpandMask(mask), m1, m2, m3, s0, s1, s2, s3, d0, d1, d2, d3;
-                    m0 = v_eq(m0, z);
-                    v_store_interleave(maskbuf, m0, m0, m0, m0);
-                    m0 = vx_load(maskbuf);
-                    m1 = vx_load(maskbuf + VECSZ);
-                    m2 = vx_load(maskbuf + VECSZ*2);
-                    m3 = vx_load(maskbuf + VECSZ*3);
-                    s0 = vx_load(src);
-                    s1 = vx_load(src + VECSZ);
-                    s2 = vx_load(src + VECSZ*2);
-                    s3 = vx_load(src + VECSZ*3);
-                    d0 = vx_load(dst);
-                    d1 = vx_load(dst + VECSZ);
-                    d2 = vx_load(dst + VECSZ*2);
-                    d3 = vx_load(dst + VECSZ*3);
-                    d0 = v_select(m0, d0, s0);
-                    d1 = v_select(m1, d1, s1);
-                    d2 = v_select(m2, d2, s2);
-                    d3 = v_select(m3, d3, s3);
-                    v_store(dst, d0);
-                    v_store(dst + VECSZ, d1);
-                    v_store(dst + VECSZ*2, d2);
-                    v_store(dst + VECSZ*3, d3);
-                }
-            }
-        }
-
-        if (width >= VECSZ*2 && dst_ != mask_ && s0x == s1x) {
-            for (; y < height; y++, src += s0y, mask += s1y, dst += dsty)
+            T maskbuf[MAXVECSZ*4] = {};      // {} for -Wmaybe-uninitialized only (fully written)
+            const int dy = VECSZ;
+            for (; y + dy <= height; y += dy, mask += dy, src1 += width*dy, src2 += width*dy,
+                                                          dst += width*dy)
             {
-                for (int x = 0; x < width; x += VECSZ*2) {
-                    if (x + VECSZ*2 > width) {
-                        x = width - VECSZ*2;
-                    }
-                    Tvec m0, m1, s0, s1, d0, d1;
-                    vx_load_pair_as(mask + x, m0, m1);
-                    s0 = vx_load(src + x);
-                    s1 = vx_load(src + x + VECSZ);
-                    d0 = vx_load(dst + x);
-                    d1 = vx_load(dst + x + VECSZ);
-                    m0 = v_eq(m0, z);
-                    m1 = v_eq(m1, z);
-                    d0 = v_select(m0, d0, s0);
-                    d1 = v_select(m1, d1, s1);
-                    v_store(dst + x, d0);
-                    v_store(dst + x + VECSZ, d1);
+                Tvec m0 = v_ne(loadSelectMask(mask, z), z), m1, m2, m3;
+                if (width == 2)      v_store_interleave(maskbuf, m0, m0);
+                else if (width == 3) v_store_interleave(maskbuf, m0, m0, m0);
+                else                 v_store_interleave(maskbuf, m0, m0, m0, m0);
+                m0 = vx_load(maskbuf);
+                m1 = vx_load(maskbuf + VECSZ);
+                if (width > 2) m2 = vx_load(maskbuf + VECSZ*2);
+                if (width > 3) m3 = vx_load(maskbuf + VECSZ*3);
+                v_store(dst, v_select(m0, vx_load(src1), vx_load(src2)));
+                v_store(dst + VECSZ, v_select(m1, vx_load(src1 + VECSZ), vx_load(src2 + VECSZ)));
+                if (width > 2)
+                    v_store(dst + VECSZ*2,
+                            v_select(m2, vx_load(src1 + VECSZ*2), vx_load(src2 + VECSZ*2)));
+                if (width > 3)
+                    v_store(dst + VECSZ*3,
+                            v_select(m3, vx_load(src1 + VECSZ*3), vx_load(src2 + VECSZ*3)));
+            }
+            // the remaining < VECSZ rows fall through to the per-row path below
+        }
+        else if (smx == 1)                                   // per-element mask - the common case
+        {
+            // a branch aliasing dst is fine under the backoff (idempotent select); dst == mask is not
+            const bool use_tail_trick = width >= VECSZ*2 && dst_ != mask_;
+            Tvec a, b;
+            if (s1x == 0) setallSelect(src1, a);
+            if (s2x == 0) setallSelect(src2, b);
+            for (; y < height; y++, mask += smy, src1 += s1y, src2 += s2y, dst += dsty)
+            {
+                int x = 0;
+                for (; x < width; x += VECSZ)
+                {
+                    if (x + VECSZ > width) { if (!use_tail_trick || x == 0) break; x = width - VECSZ; }
+                    Tvec m = v_ne(loadSelectMask(mask + x, z), z);
+                    if (s1x) a = vx_load(src1 + x);
+                    if (s2x) b = vx_load(src2 + x);
+                    v_store(dst + x, v_select(m, a, b));
                 }
+                for (; x < width; x++)
+                    dst[x] = mask[x] != 0 ? src1[x*s1x] : src2[x*s2x];
             }
             return 0;
         }
     }
 #endif
-
-    for (; y < height; y++, src += s0y, mask += s1y, dst += dsty)
+    for (; y < height; y++, mask += smy, src1 += s1y, src2 += s2y, dst += dsty)
     {
-        if (s1x == 0)
+        if (smx == 0)                     // one mask byte per row (n-channel data / broadcast mask)
         {
-            if (mask[0]) for (int x = 0; x < width; x++) dst[x] = src[x];
-            // else: leave the row untouched (preserve the existing output)
+            const T* s = mask[0] != 0 ? src1 : src2;
+            const size_t sx = mask[0] != 0 ? s1x : s2x;
+            if ((const void*)s != (const void*)dst)      // row select from dst itself is a no-op
+                for (int x = 0; x < width; x++) dst[x] = s[x*sx];
         }
-        else                                // per-element mask (single-channel)
-        {
-            for (int x = 0; x < width; x++) {
-                uchar m = mask[x];
-                T s = src[x], d = dst[x];
-                dst[x] = d ^ ((d ^ s) & T(-int(m != 0)));
-            }
-        }
+        else
+            for (int x = 0; x < width; x++)
+                dst[x] = mask[x] != 0 ? src1[x*s1x] : src2[x*s2x];
     }
     return 0;
 }
 
-TKernel getCopyMaskFunc_(int depth)
+TKernel getSelectFunc_(int mdepth, int T)
 {
+    if (CV_ELEM_SIZE1(mdepth) != 1)      // the mask must be a 1-byte type (u8/s8/bool)
+        return {};
     KernelFunc fptr = nullptr;
-    switch (CV_ELEM_SIZE1(depth))
+    switch (CV_ELEM_SIZE1(T))
     {
-    case 1: fptr = copyMaskKernel<uchar, v_uint8>; break;
-    case 2: fptr = copyMaskKernel<ushort, v_uint16>; break;
-    case 4: fptr = copyMaskKernel<unsigned, v_uint32>; break;
-    case 8: fptr = copyMaskKernel<uint64_t, v_uint32>; break;
+    case 1: fptr = selectKernel<uint8_t,  v_uint8 >; break;
+    case 2: fptr = selectKernel<uint16_t, v_uint16>; break;
+    case 4: fptr = selectKernel<uint32_t, v_uint32>; break;
+    case 8: fptr = selectKernel<uint64_t, v_uint32>; break;   // SIMD path compiled out -> scalar
     default: ;
     }
     return {fptr, nullptr, 0};

@@ -28,7 +28,7 @@ TKernel getCmpFunc(TOp op, int T)           { CV_CPU_DISPATCH(getCmpFunc_,     (
 TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (op, esz),       CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getAddWeightedFunc(int T, int R)    { CV_CPU_DISPATCH(getAddWeightedFunc_, (T, R),      CV_CPU_DISPATCH_MODES_ALL); }
-TKernel getCopyMaskFunc(int depth)          { CV_CPU_DISPATCH(getCopyMaskFunc_,(depth),         CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getSelectFunc(int mdepth, int T)    { CV_CPU_DISPATCH(getSelectFunc_,  (mdepth, T),     CV_CPU_DISPATCH_MODES_ALL); }
 static TKernel getCastFunc(int sd, int dd, bool scaled)
                                             { CV_CPU_DISPATCH(getCastFunc_,    (sd, dd, scaled),CV_CPU_DISPATCH_MODES_ALL); }
 
@@ -99,10 +99,6 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
         if (rdepth != depth0) return {};
         return getNotFunc(CV_ELEM_SIZE1(depth0));
     }
-
-    // OP_COPY_MASK: data depth == depth0 == rdepth; depth1 is the (1-byte) mask. By element size.
-    if (op == OP_COPY_MASK)
-        return getCopyMaskFunc(rdepth);
 
     // unary math: T -> T over the float depths (math.simd.hpp). Anything else - integer input,
     // widening/narrowing result - is the compiler's job (cast to a float working type first).

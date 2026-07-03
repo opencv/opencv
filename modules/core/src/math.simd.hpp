@@ -54,7 +54,6 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // ---- per-op kernel entry points for THIS baseline (the regular dispatchers in
 //      math.dispatch.cpp reach them through CV_CPU_DISPATCH). ----
 TKernel getMathFunc_(TOp op, int T);                 // unary math, T -> T, T in {f16, bf16, f32, f64}
-TKernel getSelectFunc_(int mdepth, int T);           // select(mask, x, y): 1-byte mask, x/y/dst of T
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -203,79 +202,6 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
 }
 
 // ===========================================================================
-// select(mask, x, y): dst = mask != 0 ? x : y. The mask is one byte per element (u8/s8/bool,
-// never cast); x/y/dst share the depth T - the kernel is depth-agnostic, templated by the element
-// SIZE (dispatched over the unsigned int of that width, like the bitwise family), so no float
-// lanes ever meet the mask compare (immune to DAZ/FTZ denormal flushing). Branch operands may
-// broadcast (stepx == 0).
-// ===========================================================================
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-// load VECSZ(T) mask bytes expanded to T-width all-ones/all-zeros lanes (u8 direct, u16/u32 via
-// expand - the compare-kernel trick); the tag argument selects the width.
-static inline v_uint8  loadSelectMask(const uchar* m, const v_uint8&)
-{ return v_ne(vx_load(m), vx_setzero_u8()); }
-static inline v_uint16 loadSelectMask(const uchar* m, const v_uint16&)
-{ return v_ne(vx_load_expand(m), vx_setzero_u16()); }
-static inline v_uint32 loadSelectMask(const uchar* m, const v_uint32&)
-{ return v_ne(vx_load_expand_q(m), vx_setzero_u32()); }
-
-static inline void setallSelect(const uint8_t*  p, v_uint8&  a) { a = vx_setall_u8(*p); }
-static inline void setallSelect(const uint16_t* p, v_uint16& a) { a = vx_setall_u16(*p); }
-static inline void setallSelect(const uint32_t* p, v_uint32& a) { a = vx_setall_u32(*p); }
-#endif
-
-template<typename T, typename Tvec>
-static int selectKernel(const void* mask_, size_t smy, size_t smx,
-                        const void* src1_, size_t s1y, size_t s1x,
-                        const void* src2_, size_t s2y, size_t s2x,
-                        void* dst_, size_t dsty, int width, int height,
-                        const double*, int, void*)
-{
-    s1y /= sizeof(T);                    // the 1-byte mask's smy stays in bytes == elements
-    s2y /= sizeof(T);
-    dsty /= sizeof(T);
-    CV_Assert(smx <= 1u && s1x <= 1u && s2x <= 1u);
-
-    const uchar* mask = (const uchar*)mask_;
-    const T* src1 = (const T*)src1_;
-    const T* src2 = (const T*)src2_;
-    T* dst = (T*)dst_;
-
-    if (height > 1 && dsty == (size_t)width && smy == smx*(size_t)width &&
-        s1y == s1x*(size_t)width && s2y == s2x*(size_t)width)
-    { width *= height; height = 1; }
-
-    for (int y = 0; y < height; y++, mask += smy, src1 += s1y, src2 += s2y, dst += dsty)
-    {
-        int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        if constexpr (sizeof(T) <= 4)
-        {
-            if (smx == 1)                                    // per-element mask - the common case
-            {
-                const int VECSZ = VTraits<Tvec>::vlanes();
-                const bool use_tail_trick = width >= VECSZ*4 && src1_ != dst_ && src2_ != dst_;
-                Tvec a, b;
-                if (s1x == 0) setallSelect(src1, a);
-                if (s2x == 0) setallSelect(src2, b);
-                for (; x < width; x += VECSZ)
-                {
-                    if (x + VECSZ > width) { if (!use_tail_trick || x == 0) break; x = width - VECSZ; }
-                    Tvec m = loadSelectMask(mask + x, Tvec());
-                    if (s1x) a = vx_load(src1 + x);
-                    if (s2x) b = vx_load(src2 + x);
-                    v_store(dst + x, v_select(m, a, b));
-                }
-            }
-        }
-#endif
-        for (; x < width; x++)
-            dst[x] = mask[x*smx] != 0 ? src1[x*s1x] : src2[x*s2x];
-    }
-    return 0;
-}
-
-// ===========================================================================
 // getters for THIS baseline
 // ===========================================================================
 template<class Op>
@@ -313,21 +239,6 @@ TKernel getMathFunc_(TOp op, int T)
     return {f, nullptr, 0};
 }
 
-TKernel getSelectFunc_(int mdepth, int T)
-{
-    if (CV_ELEM_SIZE1(mdepth) != 1)      // the mask must be a 1-byte type (u8/s8/bool)
-        return {};
-    KernelFunc f = nullptr;
-    switch (CV_ELEM_SIZE1(T))
-    {
-    case 1: f = selectKernel<uint8_t,  v_uint8 >; break;
-    case 2: f = selectKernel<uint16_t, v_uint16>; break;
-    case 4: f = selectKernel<uint32_t, v_uint32>; break;
-    case 8: f = selectKernel<uint64_t, v_uint32>; break;   // SIMD path compiled out -> scalar select
-    default: ;
-    }
-    return {f, nullptr, 0};
-}
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

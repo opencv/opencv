@@ -57,7 +57,6 @@ const char* opName(TOp op)
     case OP_CMP_LE:        return "cmp_le";
     case OP_CMP_GT:        return "cmp_gt";
     case OP_CMP_GE:        return "cmp_ge";
-    case OP_COPY_MASK:     return "copymask";
     case OP_CLAMP:         return "clamp";
     case OP_SELECT:        return "select";
     case OP_CONVERT_SCALE: return "convert_scale";
@@ -80,7 +79,7 @@ ElemwiseCategory opCategory(TOp op)
         return CAT_MATH;
     case OP_CAST: case OP_CONVERT_SCALE:
         return CAT_CAST;
-    case OP_SELECT: case OP_COPY_MASK:
+    case OP_SELECT:
         return CAT_SELECT;
     default:
         return CAT_ARITH;   // add/sub/mul/div/pow/min/max/absdiff/neg/abs/clamp
@@ -832,7 +831,7 @@ static int opCost(TOp op)
     {
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_MIN: case OP_MAX:
     case OP_ABSDIFF: case OP_AND: case OP_OR: case OP_XOR: case OP_NOT:
-    case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU: case OP_COPY_MASK:
+    case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU: case OP_SELECT:
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
     case OP_DIV: case OP_SQRT: case OP_CONVERT_SCALE: return 10;
@@ -1354,10 +1353,11 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
 // moveToOutput lands it in the output with no dead temp (so a single-op program keeps zero temps).
 //
 // maskDepth != EW_DEPTH_NONE adds a write-mask (input #2): the arithmetic result lands in a temp and a
-// final OP_COPY_MASK overwrites only the masked subset of the (pre-existing) output, leaving the rest
-// UNCHANGED (dst = mask ? result : dst, matching cv::add/... with a mask). copyMask is always the LAST
-// instruction. The mask is a single-channel 1-byte array (bool/u8/s8) the size of the output spatial
-// shape; it rides the normal broadcast machinery, so nothing special is needed in the executor.
+// final select(mask, r, dst) -> dst overwrites only the masked subset of the (pre-existing) output,
+// leaving the rest UNCHANGED (matching cv::add/... with a mask); the output slot rides as both the
+// select's arg2 and its result (the kernel is alias-safe). select is always the LAST instruction.
+// The mask is a single-channel 1-byte array (bool/u8/s8) the size of the output spatial shape; it
+// rides the normal broadcast machinery, so nothing special is needed in the executor.
 void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth,
                             int maskDepth, double scale)
 {
@@ -1380,7 +1380,7 @@ void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth
 
     int r = p.emitBinary(op, sIn0, sIn1, rdepth, Scalar(scale));
     if (masked)
-        p.addInsn(OP_COPY_MASK, r, sMask, 0, sOut);          // dst = mask ? r : dst
+        p.addInsn(OP_SELECT, sMask, r, sOut, sOut);          // dst = mask ? r : dst
     else
         p.moveToOutput(r, sOut);                             // straight into the output, no dead temp
 
