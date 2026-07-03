@@ -68,6 +68,19 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
 #undef cv_hal_remap32f
 #define cv_hal_remap32f ipp_hal_remap32f
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
+                     uchar * dst_data, size_t dst_step, int dst_type,
+                     int width, int height, int full_width, int full_height,
+                     int offset_x, int offset_y,
+                     const uchar * kernel_data, size_t kernel_step, int kernel_type,
+                     int kernel_width, int kernel_height,
+                     int anchor_x, int anchor_y, double delta, int borderType,
+                     bool isSubmatrix, bool allowInplace);
+#undef cv_hal_filter_stateless
+#define cv_hal_filter_stateless ipp_hal_filter2D
+#endif // HAVE_IPP_IW
+
 #endif //IPP_VERSION_X100 >= 810
 
 #if IPP_VERSION_X100 >= 700

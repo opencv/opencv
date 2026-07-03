@@ -21,6 +21,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/box_filter_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/sum_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/color_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/filter_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
