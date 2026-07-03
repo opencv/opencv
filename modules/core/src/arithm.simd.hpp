@@ -829,17 +829,22 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
         Wvec a0, a1, a2, a3, b0, b1, b2, b3;
         if (s0x == s1x) {
             if (scalar == ST(1)) {
-                for (; x < width; x += VECSZ*4) {
+                // this branch runs on Wvec1, which may be WIDER-laned than Wvec (e.g. the u8 mul
+                // path: Wvec1=v_uint16 is 2x the lanes of Wvec=v_float32) - step by ITS lane count,
+                // or the pairs overlap and the tail backoff writes past the row end
+                const int VECSZ1 = VTraits<Wvec1>::vlanes();
+                const bool tail_trick1 = width >= VECSZ1*4 && src0_ != dst_ && src1_ != dst_;
+                for (; x < width; x += VECSZ1*4) {
                     Wvec1 a0_, a1_, a2_, a3_, b0_, b1_, b2_, b3_;
-                    if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
+                    if (x + VECSZ1*4 > width) { if (!tail_trick1) break; x = width - VECSZ1*4; }
                     vx_load_pair_as(src0 + x, a0_, a1_);
-                    vx_load_pair_as(src0 + x + VECSZ*2, a2_, a3_);
+                    vx_load_pair_as(src0 + x + VECSZ1*2, a2_, a3_);
                     vx_load_pair_as(src1 + x, b0_, b1_);
-                    vx_load_pair_as(src1 + x + VECSZ*2, b2_, b3_);
+                    vx_load_pair_as(src1 + x + VECSZ1*2, b2_, b3_);
                     auto c0 = Op::vec(a0_, b0_), c1 = Op::vec(a1_, b1_),
                          c2 = Op::vec(a2_, b2_), c3 = Op::vec(a3_, b3_);
                     v_store_pair_as(dst + x, c0, c1);
-                    v_store_pair_as(dst + x + VECSZ*2, c2, c3);
+                    v_store_pair_as(dst + x + VECSZ1*2, c2, c3);
                 }
             }
             else {
@@ -985,20 +990,21 @@ TKernel getMulFunc_(int T, int R)
     switch (T)
     {
     case CV_8U:
-        fptr =
+        fptr =   // scale==1 fast path loads u8->v_uint16 & multiplies in int (255^2 < 2^16, exact,
+                 // saturating u16->u8 pack on store); Wvec (f16 where available, else f32) for scale
         #if CV_SIMD_16F
             R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint16> :
         #else
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul, float, v_uint16> :
         #endif
             R == CV_32F ? vecBinaryKernel<uchar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_8S:
-        fptr =
+        fptr =   // scale==1 fast path loads s8->v_int16 & multiplies in int (127^2 < 2^15, exact)
         #if CV_SIMD_16F
             R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMul, float, v_int16> :
         #else
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul> :
+            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul, float, v_int16> :
         #endif
             R == CV_32F ? vecBinaryKernel<schar, float, v_float32, float, EwMul> : nullptr;
         break;
