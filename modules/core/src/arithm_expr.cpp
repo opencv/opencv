@@ -1054,14 +1054,16 @@ void TExpr::outputShape(const Mat* inputs, MatShape& spatial, int& channels) con
     outputShape(ptrs.data(), spatial, channels);
 }
 
+// At namespace scope, NOT inside exec(): MSVC 2019 loses the constexpr-ness of function-local
+// constants used as template arguments inside a lambda (C2975).
+static constexpr int LOCAL_HDRS = 3;
+static constexpr int LOCAL_CONSTS = 4;
+static constexpr int LOCAL_OPS = 16;
+
 void TExpr::exec(const Mat* const* inputs, Mat* outputs)
 {
     using BrTile = BroadcastOp::Tile;
     using BrSlice = BroadcastOp::Slice;
-
-    constexpr int LOCAL_HDRS = 3;
-    constexpr int LOCAL_CONSTS = 4;
-    constexpr int LOCAL_OPS = 16;
     const int nslots = (int)arginfo.size();
     CV_Assert(nslots >= 1 && arginfo[0].kind == TExpr::NONE);
 

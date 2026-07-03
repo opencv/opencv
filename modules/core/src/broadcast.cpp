@@ -232,13 +232,16 @@ static bool fastSameShape(const Mat* const* arrays, int K, bool expandChannels,
 // ---------------------------------------------------------------------------
 // BroadcastOp::run
 // ---------------------------------------------------------------------------
+// At namespace scope, NOT inside run(): MSVC 2019 loses the constexpr-ness of function-local
+// constants used as template arguments inside a lambda (C2975).
+static constexpr int MAX_DIMS = MatShape::MAX_DIMS;
+static constexpr int LOCAL_OPS = 8;
+
 void BroadcastOp::run(const Mat* const* arrays, int narrays,
                       const std::function<void(const Tile&)>& body,
                       bool expandChannels,
                       double nstripes)
 {
-    constexpr int MAX_DIMS = MatShape::MAX_DIMS;
-    constexpr int LOCAL_OPS = 8;
     const int K = narrays;
     CV_Assert(K >= 1 && arrays != nullptr);
 
