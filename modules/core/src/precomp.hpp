@@ -333,10 +333,10 @@ inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, 
 }
 
 // New element-wise engine scalar handling. A genuine number / Scalar / Vec / Matx operand to an
-// arithmetic op always arrives via _InputArray::MATX (its data is inline in the caller's object;
+// arithmetic op arrives via _InputArray::MATX (its data is inline in the caller's object;
 // getObj() points straight at it). Real Mats/UMats - even a 1xN one - ride normal broadcasting and
-// are NOT scalars here. So a scalar operand is simply a MATX with 1, cn, or 4 elements (cn = the
-// channel count of the OTHER, array operand).
+// are NOT scalars here (but see isScalarLikeMat below for the compat fallback). So a scalar operand
+// is simply a MATX with 1, cn, or 4 elements (cn = the channel count of the OTHER, array operand).
 inline bool isScalarArg(const _InputArray& sc, int cn)
 {
     if (sc.kind() != _InputArray::MATX)
@@ -351,6 +351,40 @@ inline bool isScalarArg(const _InputArray& sc, int cn)
     // array, or a single broadcast value. No 4-channel cap: a multichannel scalar rides as a 0-dim
     // per-channel CONST over the caller's data (not squeezed into a 4-slot Scalar).
     return scn0 == cn || (cn < 4 && scn0 == 4) || scn0 == 1;
+}
+
+// The old arithm_op checkScalar geometry: a real Mat that LOOKS like a scalar - 1x1, a 1xcn/cnx1
+// vector, or the classic 4x1 CV_64F column that Scalar/Matx materialize into (operator-(Mat, Matx),
+// python number tuples, java Mats, ...). arithm_op treats such an operand as a per-channel scalar
+// ONLY as a fallback, when the shapes are not broadcast-compatible - a call that is valid under
+// numpy rules keeps its numpy meaning, one that would throw gets the 4.x scalar semantics instead.
+inline bool isScalarLikeMat(const _InputArray& sc, int cn)
+{
+    if (sc.kind() != _InputArray::MAT)
+        return false;
+    const Mat& m = *(const Mat*)sc.getObj();
+    if (m.dims > 2 || !m.isContinuous() || (int)m.total() * m.channels() > 4)
+        return false;
+    Size sz = m.size();
+    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+           (sz == Size(1, 4) && m.type() == CV_64F && cn <= 4);
+}
+
+// A scalar operand's raw payload: the MATX inline storage, or a scalar-like Mat's data (see
+// isScalarArg). p/d receive the data pointer and depth; returns the value count (elems x channels).
+inline int scalarArgElems(const _InputArray& sc, const uchar*& p, int& d)
+{
+    if (sc.kind() == _InputArray::MAT)
+    {
+        const Mat& m = *(const Mat*)sc.getObj();
+        p = m.data;
+        d = m.depth();
+        return (int)m.total() * m.channels();
+    }
+    p = (const uchar*)sc.getObj();
+    d = sc.depth();
+    Size sz = sc.getSz();
+    return sz.width * sz.height;
 }
 
 // Read one element of depth `d` at p as a double (no Mat, no convertTo, no dispatcher).
@@ -374,15 +408,14 @@ inline double elemToDouble(int d, const uchar* p)
     }
 }
 
-// Extract a MATX scalar operand's values as up to 4 doubles, straight from the inline storage
-// (obj = data pointer, getSz()/depth() give layout + type). Returns the element count.
+// Extract a scalar operand's values (see isScalarArg) as up to 4 doubles, straight from its
+// storage. Returns the element count.
 inline int readScalarArg(const _InputArray& sc, Scalar& out)
 {
     out = Scalar();                      // unused channels stay 0 (independent of the caller's Scalar)
-    const uchar* p = (const uchar*)sc.getObj();
-    Size sz = sc.getSz();
-    int n = sz.width * sz.height, d = sc.depth();
-    CV_Assert(n <= 4);                   // Scalar holds 4 slots; isScalarArg never admits more
+    const uchar* p; int d;
+    int n = scalarArgElems(sc, p, d);
+    CV_Assert(n <= 4);                   // Scalar holds 4 slots; isScalarArg admits more only for MATX
     size_t esz = CV_ELEM_SIZE1(d);
     for (int i = 0; i < n; i++)
         out[i] = elemToDouble(d, p + (size_t)i * esz);

@@ -593,6 +593,21 @@ static bool outArrayMatches(const _OutputArray& a, const MatShape& shp, int type
     return true;
 }
 
+// Are two operands' iteration shapes (spatial dims + channels innermost, exactly how the engine
+// iterates) numpy-broadcast-compatible? Powers the scalar-like-Mat compat fallback in arithm_op.
+// Cheap by design: sizend copies the dim arrays inline - no Mat headers, no allocations.
+static bool shapesBroadcastCompat(InputArray a, int acn, InputArray b, int bcn)
+{
+    int asz[MatShape::MAX_DIMS + 1], bsz[MatShape::MAX_DIMS + 1];
+    int ad = a.sizend(asz), bd = b.sizend(bsz);
+    asz[ad++] = acn;
+    bsz[bd++] = bcn;
+    for (int i1 = ad - 1, i2 = bd - 1; i1 >= 0 && i2 >= 0; i1--, i2--)
+        if (asz[i1] != bsz[i2] && asz[i1] != 1 && bsz[i2] != 1)
+            return false;
+    return true;
+}
+
 // The one entry point for every element-wise binary op (add/sub/mul/div/min/max/absdiff/addWeighted/
 // reciprocal). Handles empty inputs, the UMat/OpenCL branch (arithm_op_ocl) and the CPU element-wise
 // engine. `oclop` selects the OpenCL kernel; `muldiv` drives the OpenCL working-type coercion + scale;
@@ -627,6 +642,22 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     if (s1 && s2)
         s1 = s2 = false;    // two scalars: treat both as tiny array operands (element-wise + broadcast),
                             // matching arithm_op (Scalar+Scalar -> 4x1, number+number -> 1x1, ...)
+
+    // Compat fallback: Java/Python/user code passes scalars as real little Mats (the classic 4x1
+    // CV_64F column, a 1xcn/cnx1 vector - see isScalarLikeMat). Those normally ride broadcasting
+    // now, so hijack one as a per-channel scalar ONLY when the shapes do NOT broadcast - just the
+    // calls that would otherwise throw get the 4.x scalar semantics, every valid broadcast keeps
+    // its numpy meaning. Cheap: two geometry probes, and the O(ndims) shape walk runs only when a
+    // probe hits (never for ordinary same-size or MATX-scalar calls).
+    if (!s1 && !s2)
+    {
+        bool like1 = isScalarLikeMat(src1, cn2), like2 = isScalarLikeMat(src2, cn1);
+        if ((like1 || like2) && !shapesBroadcastCompat(src1, cn1, src2, cn2))
+        {
+            s1 = like1;             // src1 preferred when both qualify, like the old checkScalar order
+            s2 = like2 && !like1;
+        }
+    }
 
     // Direct Mat pointers - NO header copy / refcount atomics (the InputArrays outlive this call, so
     // their data stays alive). A MAT operand is used in place via getObj(); a non-MAT one (UMat, or a
@@ -665,12 +696,12 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     auto addOperand = [&](InputArray src, bool isScalar, const Mat* m, int otherCn) -> int {
         if (!isScalar)
             return p.addInput(m->depth());
-        const Size sz = src.getSz();
-        const int scn0 = sz.width * sz.height, cn = otherCn;
+        const uchar* sp; int sd;
+        const int scn0 = scalarArgElems(src, sp, sd), cn = otherCn;
         const int scn = (cn == scn0 || (cn < 4 && scn0 == 4)) ? cn
                       : (scn0 == 1) ? 1 : 0;
         CV_Assert(scn > 0);
-        return p.addConst(ew::EW_DEPTH_NONE, src.depth(), src.getObj(), scn);
+        return p.addConst(ew::EW_DEPTH_NONE, sd, sp, scn);
     };
     const int a0 = addOperand(src1, s1, pm1, cn2);
     const int a1 = addOperand(src2, s2, pm2, cn1);

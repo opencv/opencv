@@ -28,6 +28,10 @@
 
 namespace cv {
 
+// Everything outside cv::ew::CV_CPU_OPTIMIZATION_NAMESPACE must be skipped in the
+// declarations-only re-includes (one per dispatched mode), or it gets redefined.
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
 // BinaryFunc and getConvertFunc / getConvertScaleFunc come from core (precomp.hpp / convert.hpp).
 
 #if CV_SIMD128_FP16
@@ -95,7 +99,7 @@ static inline void vx_load_pair_as(const schar* p, v_int8& a, v_int8& b)
 
 static inline void vx_load_pair_as(const uchar* p, v_uint32& a, v_uint32& b)
 {
-    v_uint16 w = v_load_expand(p);
+    v_uint16 w = vx_load_expand(p);
     v_expand(w, a, b);
 }
 
@@ -139,7 +143,7 @@ static inline void v_store_pair_as(float* p, const v_int16& a, const v_int16& b)
 static inline void v_store_pair_as(float* p, const v_int32& a, const v_int32& b)
 {
     v_store(p, v_cvt_f32(a));
-    v_store(p + VTraits<v_float32>::nlanes, v_cvt_f32(b));
+    v_store(p + VTraits<v_float32>::vlanes(), v_cvt_f32(b));
 }
 
 static inline void v_store_pair_as(hfloat* p, const v_float32& a, const v_float32& b)
@@ -228,6 +232,8 @@ static inline void v_store_pair_as(hfloat* p, const v_float16& a, const v_float1
 
 #endif
 
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
 namespace ew {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
@@ -247,6 +253,8 @@ TKernel getNotFunc_(int esz);                                // OP_NOT, by eleme
 TKernel getAddWeightedFunc_(int T, int R);                   // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 TKernel getCopyMaskFunc_(int depth);
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 // ===========================================================================
 // Op functors (vector + scalar). New binary ops slot in here.
@@ -1687,6 +1695,8 @@ TKernel getAddFunc_(int T, int R) { return getAddSubFunc<EwAdd>(T, R); }
 TKernel getSubFunc_(int T, int R) { return getAddSubFunc<EwSub>(T, R); }
 TKernel getMinFunc_(int T, int R) { (void)R; return getMinMaxFunc<EwMin>(T); }
 TKernel getMaxFunc_(int T, int R) { (void)R; return getMinMaxFunc<EwMax>(T); }
+
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace cv::ew
