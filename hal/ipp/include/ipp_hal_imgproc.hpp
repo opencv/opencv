@@ -22,6 +22,9 @@
 // IPP morphology integration is disabled in main OpenCV (different results); kept behind a macro
 #define DISABLE_IPP_MORPH 1
 
+// IPP medianBlur integration is disabled in main OpenCV; kept behind a macro like box filter
+#define DISABLE_IPP_MEDIAN_BLUR 1
+
 #if IPP_VERSION_X100 >= 810
 #if defined(HAVE_IPP_IW)
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
@@ -147,6 +150,14 @@ int ipp_hal_morph_stateless(int operation, const uchar * src_data, size_t src_st
 #undef cv_hal_morph_stateless
 #define cv_hal_morph_stateless ipp_hal_morph_stateless
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
+
+#if !DISABLE_IPP_MEDIAN_BLUR
+int ipp_hal_medianBlur(const uchar* src_data, size_t src_step,
+                       uchar* dst_data, size_t dst_step,
+                       int width, int height, int depth, int cn, int ksize);
+#undef cv_hal_medianBlur
+#define cv_hal_medianBlur ipp_hal_medianBlur
+#endif // !DISABLE_IPP_MEDIAN_BLUR
 
 #endif //IPP_VERSION_X100 >= 810
 
