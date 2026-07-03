@@ -324,6 +324,11 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if ( (haveMask || haveScalar) && cn > 4 )
         return false;
 
+#ifdef __APPLE__
+    if (depth1 == CV_16U && (oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE))
+        return false;
+#endif
+
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
     if (!doubleSupport)
         wdepth = std::min(wdepth, CV_32F);
