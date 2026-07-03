@@ -260,6 +260,10 @@ TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CON
 // Op functors (vector + scalar). New binary ops slot in here.
 // ===========================================================================
 struct EwAdd {
+    // useScalar: does the op consume the scale scalar (params[0]) in vec()/preproc()? When false,
+    // vecBinaryKernel's fast 2-arg branch is taken unconditionally (the check folds at compile time);
+    // when true, it is taken only if the runtime scale is exactly 1.
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_add(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
@@ -271,6 +275,7 @@ struct EwAdd {
 };
 
 struct EwSub {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_sub(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
@@ -289,6 +294,7 @@ struct EwSub {
 // preproc as identity. vecBinaryKernel always passes vscalar to vec, so every branch (incl. a broadcast
 // denominator) divides correctly. The 2-arg vec (scale==1) is the both-contiguous fast path.
 struct EwMul {
+    static constexpr bool useScalar = true;
     template<typename V> static V vec(const V& a, const V& b) { return v_mul(a, b); }
     static v_uint16 vec(const v_uint16& a, const v_uint16& b) { return v_mul_wrap(a, b); }
     static v_int16 vec(const v_int16& a, const v_int16& b) { return v_mul_wrap(a, b); }
@@ -300,6 +306,7 @@ struct EwMul {
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
 // a/0 -> inf), which then saturates on the cast to an integer output exactly like cv::divide.
 struct EwDivInt {
+    static constexpr bool useScalar = true;
     // integer inputs computed in the float work type: guard b==0 -> 0. Scale rides the numerator (vec).
     template<typename V> static V vec(const V& a, const V& b) {
         const V z = v_setzero_<V>();
@@ -313,6 +320,7 @@ struct EwDivInt {
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return b != W(0) ? a * s / b : W(0); }
 };
 struct EwDivFlt {
+    static constexpr bool useScalar = true;
     template<typename V> static V vec(const V& a, const V& b) { return v_div(a, b); }
     template<typename V> static V vec(const V& a, const V& b, const V& s) { return v_div(v_mul(a, s), b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
@@ -328,18 +336,21 @@ struct EwPow {
 // UNSIGNED and float lane types - signed/wide depths go through the scalar path), and the scalar
 // |a-b| is computed branch-wise so it never underflows an unsigned work type.
 struct EwMin {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_min(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return std::min(a, b); }
 };
 struct EwMax {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_max(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return std::max(a, b); }
 };
 struct EwAbsdiff {
+    static constexpr bool useScalar = false;
     // The absdiff RESULT is the UNSIGNED type of the input width: v_absdiff(v_int8/16/32) already returns
     // v_uint8/16/32 (the true |a-b|, which can exceed the signed max), and v_absdiff on unsigned/float
     // returns the same type. vec() therefore returns THAT type (deduced), not the input V, so the kernel
@@ -357,6 +368,7 @@ struct EwAbsdiff {
 // this fuses it. v_absdiff yields the unsigned |a-b|; v_min clamps to the signed max (already >=0), then
 // a same-width reinterpret to signed (all values now fit).
 struct EwAbsdiffS {
+    static constexpr bool useScalar = false;
     static v_int8  vec(const v_int8&  a, const v_int8&  b) { return v_reinterpret_as_s8 (v_min(v_absdiff(a, b), vx_setall_u8 (0x7f))); }
     static v_int16 vec(const v_int16& a, const v_int16& b) { return v_reinterpret_as_s16(v_min(v_absdiff(a, b), vx_setall_u16(0x7fff))); }
     static v_int32 vec(const v_int32& a, const v_int32& b) { return v_reinterpret_as_s32(v_min(v_absdiff(a, b), vx_setall_u32(0x7fffffff))); }
@@ -383,18 +395,21 @@ struct EwCmpGe { template<typename W> static bool cmp(W a, W b) { return a >= b;
 // T, exactly like min/max); preproc is the identity (min/max share this shape). 64-bit uses the scalar
 // path (no widening vector helpers), the rest ride vecBinaryKernel's native same-type path.
 struct EwAnd {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_and(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a & b); }
 };
 struct EwOr {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_or(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a | b); }
 };
 struct EwXor {
+    static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_xor(a, b); }
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
@@ -828,7 +843,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     #if (CV_SIMD || CV_SIMD_SCALABLE)
         Wvec a0, a1, a2, a3, b0, b1, b2, b3;
         if (s0x == s1x) {
-            if (scalar == ST(1)) {
+            if (!Op::useScalar || scalar == ST(1)) {
                 // this branch runs on Wvec1, which may be WIDER-laned than Wvec (e.g. the u8 mul
                 // path: Wvec1=v_uint16 is 2x the lanes of Wvec=v_float32) - step by ITS lane count,
                 // or the pairs overlap and the tail backoff writes past the row end
