@@ -49,15 +49,10 @@ namespace cv
 {
 
 #ifdef HAVE_IPP
-static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst, float low,  float high, bool L2gradient, int aperture_size)
+static bool ipp_Canny(const Mat& dx_, const Mat& dy_, Mat& dst, float low, float high, bool L2gradient)
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_DISABLE_PERF_CANNY_MT
-    if(cv::getNumThreads()>1)
-        return false;
-#endif
 
     ::ipp::IwiSize size(dst.cols, dst.rows);
     IppDataType    type     = ippiGetDataType(dst.depth());
@@ -73,55 +68,26 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
     if(type != ipp8u)
         return false;
 
-    if(src.empty())
+    try
     {
-        try
-        {
-            ::ipp::IwiImage iwSrcDx;
-            ::ipp::IwiImage iwSrcDy;
-            ::ipp::IwiImage iwDst;
+        ::ipp::IwiImage iwSrcDx;
+        ::ipp::IwiImage iwSrcDy;
+        ::ipp::IwiImage iwDst;
 
-            ippiGetImage(dx_, iwSrcDx);
-            ippiGetImage(dy_, iwSrcDy);
-            ippiGetImage(dst, iwDst);
+        ippiGetImage(dx_, iwSrcDx);
+        ippiGetImage(dy_, iwSrcDy);
+        ippiGetImage(dst, iwDst);
 
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
-        }
-        catch (const ::ipp::IwException &)
-        {
-            return false;
-        }
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
     }
-    else
+    catch (const ::ipp::IwException &)
     {
-        IppiMaskSize kernel;
-
-        if(aperture_size == 3)
-            kernel = ippMskSize3x3;
-        else if(aperture_size == 5)
-            kernel = ippMskSize5x5;
-        else
-            return false;
-
-        try
-        {
-            ::ipp::IwiImage iwSrc;
-            ::ipp::IwiImage iwDst;
-
-            ippiGetImage(src, iwSrc);
-            ippiGetImage(dst, iwDst);
-
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, iwSrc, iwDst, low, high, ::ipp::IwiFilterCannyParams(ippFilterSobel, kernel, norm), ippBorderRepl);
-        }
-        catch (const ::ipp::IwException &)
-        {
-            return false;
-        }
+        return false;
     }
 
     return true;
 #else
-    CV_UNUSED(src); CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient); CV_UNUSED(aperture_size);
+    CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient);
     return false;
 #endif
 }
@@ -803,8 +769,6 @@ void Canny( InputArray _src, OutputArray _dst,
     CALL_HAL(canny, cv_hal_canny, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.channels(),
              low_thresh, high_thresh, aperture_size, L2gradient);
 
-    CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
-
     if (L2gradient)
     {
         low_thresh = std::min(32767.0, low_thresh);
@@ -879,7 +843,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
 
-    CV_IPP_RUN_FAST(ipp_Canny(Mat(), dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient, 0))
+    CV_IPP_RUN_FAST(ipp_Canny(dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient))
 
     if (L2gradient)
     {
