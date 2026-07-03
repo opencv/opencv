@@ -1227,93 +1227,6 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
     return success;
 }
 
-#if 0 //defined HAVE_IPP
-static bool ippFilter2D(int stype, int dtype, int kernel_type,
-              uchar * src_data, size_t src_step,
-              uchar * dst_data, size_t dst_step,
-              int width, int height,
-              int full_width, int full_height,
-              int offset_x, int offset_y,
-              uchar * kernel_data, size_t kernel_step,
-              int kernel_width, int kernel_height,
-              int anchor_x, int anchor_y,
-              double delta, int borderType,
-              bool isSubmatrix)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    ::ipp::IwiSize  iwSize(width, height);
-    ::ipp::IwiSize  kernelSize(kernel_width, kernel_height);
-    IppDataType     type        = ippiGetDataType(CV_MAT_DEPTH(stype));
-    int             channels    = CV_MAT_CN(stype);
-
-    CV_UNUSED(isSubmatrix);
-
-#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 <= 201702 // IPP bug with 1x1 kernel
-    if(kernel_width == 1 && kernel_height == 1)
-        return false;
-#endif
-
-#if IPP_DISABLE_FILTER2D_BIG_MASK
-    // Too big difference compared to OpenCV FFT-based convolution
-    if(kernel_type == CV_32FC1 && (type == ipp16s || type == ipp16u) && (kernel_width > 7 || kernel_height > 7))
-        return false;
-
-    // Poor optimization for big kernels
-    if(kernel_width > 7 || kernel_height > 7)
-        return false;
-#endif
-
-    if(src_data == dst_data)
-        return false;
-
-    if(stype != dtype)
-        return false;
-
-    if(kernel_type != CV_16SC1 && kernel_type != CV_32FC1)
-        return false;
-
-    // TODO: Implement offset for 8u, 16u
-    if(std::fabs(delta) >= DBL_EPSILON)
-        return false;
-
-    if(!ippiCheckAnchor(anchor_x, anchor_y, kernel_width, kernel_height))
-        return false;
-
-    try
-    {
-        ::ipp::IwiBorderSize    iwBorderSize;
-        ::ipp::IwiBorderType    iwBorderType;
-        ::ipp::IwiImage         iwKernel(ippiSize(kernel_width, kernel_height), ippiGetDataType(CV_MAT_DEPTH(kernel_type)), CV_MAT_CN(kernel_type), 0, (void*)kernel_data, kernel_step);
-        ::ipp::IwiImage         iwSrc(iwSize, type, channels, ::ipp::IwiBorderSize(offset_x, offset_y, full_width-offset_x-width, full_height-offset_y-height), (void*)src_data, src_step);
-        ::ipp::IwiImage         iwDst(iwSize, type, channels, ::ipp::IwiBorderSize(offset_x, offset_y, full_width-offset_x-width, full_height-offset_y-height), (void*)dst_data, dst_step);
-
-        iwBorderSize = ::ipp::iwiSizeToBorderSize(kernelSize);
-        iwBorderType = ippiGetBorder(iwSrc, borderType, iwBorderSize);
-        if(!iwBorderType)
-            return false;
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, ::ipp::IwiFilterParams(1, 0, ippAlgHintNone, ippRndFinancial), iwBorderType);
-    }
-    catch(const ::ipp::IwException& ex)
-    {
-        CV_UNUSED(ex);
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(stype); CV_UNUSED(dtype); CV_UNUSED(kernel_type); CV_UNUSED(src_data); CV_UNUSED(src_step);
-    CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(full_width);
-    CV_UNUSED(full_height); CV_UNUSED(offset_x); CV_UNUSED(offset_y); CV_UNUSED(kernel_data); CV_UNUSED(kernel_step);
-    CV_UNUSED(kernel_width); CV_UNUSED(kernel_height); CV_UNUSED(anchor_x); CV_UNUSED(anchor_y); CV_UNUSED(delta);
-    CV_UNUSED(borderType); CV_UNUSED(isSubmatrix);
-    return false;
-#endif
-}
-#endif
-
 static bool dftFilter2D(int stype, int dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
@@ -1523,17 +1436,6 @@ void filter2D(int stype, int dtype, int kernel_type,
                               delta, borderType, isSubmatrix);
     if (res)
         return;
-
-    /*CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
-                              src_data, src_step,
-                              dst_data, dst_step,
-                              width, height,
-                              full_width, full_height,
-                              offset_x, offset_y,
-                              kernel_data, kernel_step,
-                              kernel_width, kernel_height,
-                              anchor_x, anchor_y,
-                              delta, borderType, isSubmatrix))*/
 
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,
