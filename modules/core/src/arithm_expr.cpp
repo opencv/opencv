@@ -1703,7 +1703,7 @@ namespace cv {
 // Public entry point (declared in opencv2/core.hpp): parse a broadcasting element-wise expression,
 // compile it and run it over the inputs. This IS the engine's string front-end - there is no
 // separate cv::ew::expression indirection.
-void texpr(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOfArrays _outputs)
+void texpr(const std::string& expr, InputArrayOfArrays _inputs, OutputArrayOfArrays _outputs)
 {
     using namespace cv::ew;
     CV_INSTRUMENT_REGION();
