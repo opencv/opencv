@@ -48,6 +48,7 @@ const char* opName(TOp op)
     case OP_MIN:           return "min";
     case OP_MAX:           return "max";
     case OP_ABSDIFF:       return "absdiff";
+    case OP_HYPOT:         return "hypot";
     case OP_AND:           return "and";
     case OP_OR:            return "or";
     case OP_XOR:           return "xor";
@@ -486,7 +487,7 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
         }
         break;
     }
-    case OP_POW:
+    case OP_POW: case OP_HYPOT:
         depth = (base == CV_64F) ? CV_64F : CV_32F; wide = depth; break;
     default:        // OP_ADD, OP_SUB
         depth = base; wide = safeWide(depth); break;
@@ -868,7 +869,7 @@ static int opCost(TOp op)
     case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU: case OP_SELECT:
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
-    case OP_DIV: case OP_SQRT: case OP_CONVERT_SCALE: return 10;
+    case OP_DIV: case OP_SQRT: case OP_HYPOT: case OP_CONVERT_SCALE: return 10;
     case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF:
     case OP_EXP: case OP_LOG: case OP_POW:           return 30;
     default:                                         return 10;
@@ -1581,7 +1582,8 @@ static TOp fnOp(const std::string& name, int& arity)
     static const E unary[]  = { {"abs",OP_ABS},{"sqrt",OP_SQRT},{"exp",OP_EXP},{"log",OP_LOG},
                                 {"sin",OP_SIN},{"cos",OP_COS},{"tanh",OP_TANH},{"erf",OP_ERF},
                                 {"relu",OP_RELU} };
-    static const E binary[] = { {"max",OP_MAX},{"min",OP_MIN},{"pow",OP_POW},{"absdiff",OP_ABSDIFF} };
+    static const E binary[] = { {"max",OP_MAX},{"min",OP_MIN},{"pow",OP_POW},{"absdiff",OP_ABSDIFF},
+                                {"hypot",OP_HYPOT},{"mag",OP_HYPOT} };   // mag = the cv::magnitude-flavored alias
     static const E tern[]   = { {"clamp",OP_CLAMP},{"select",OP_SELECT} };
     for (const E& e : unary)  if (name == e.n) { arity = 1; return e.op; }
     for (const E& e : binary) if (name == e.n) { arity = 2; return e.op; }

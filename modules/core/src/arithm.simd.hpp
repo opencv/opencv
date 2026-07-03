@@ -248,6 +248,7 @@ TKernel getDivFunc_(int T, int R, bool checked);
 TKernel getMinFunc_(int T, int R);
 TKernel getMaxFunc_(int T, int R);
 TKernel getAbsdiffFunc_(int T, int R);
+TKernel getHypotFunc_(int T, int R);         // hypot = sqrt(x^2+y^2), float depths, T x T -> T
 TKernel getCmpFunc_(TOp op, int T);
 TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
 TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
@@ -327,6 +328,16 @@ struct EwDivFlt {
     template<typename V> static V vec(const V& a, const V& b, const V& s) { return v_div(v_mul(a, s), b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s / b; }
+};
+
+// hypot(x, y) = sqrt(x^2 + y^2): NAIVE (matches cv::magnitude; overflow at |x| ~ 1e19+ for f32
+// inputs is accepted), computed in the float work type; T x T -> T over the float depths.
+struct EwHypot {
+    static constexpr bool useScalar = false;
+    template<typename V> static V vec(const V& a, const V& b) { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return std::sqrt(a*a + b*b); }
 };
 
 // min / max / absdiff: T x T -> T (same depth in and out, no scale). v_min/v_max exist for every
@@ -1793,6 +1804,26 @@ TKernel getAddFunc_(int T, int R) { return getAddSubFunc<EwAdd>(T, R); }
 TKernel getSubFunc_(int T, int R) { return getAddSubFunc<EwSub>(T, R); }
 TKernel getMinFunc_(int T, int R) { (void)R; return getMinMaxFunc<EwMin>(T); }
 TKernel getMaxFunc_(int T, int R) { (void)R; return getMinMaxFunc<EwMax>(T); }
+
+TKernel getHypotFunc_(int T, int R)
+{
+    if (R != T)
+        return {};
+    KernelFunc fptr = nullptr;
+    switch (T)
+    {
+    case CV_16F:  fptr = vecBinaryKernel<hfloat, hfloat, v_float32, float, EwHypot>; break;
+    case CV_16BF: fptr = vecBinaryKernel<bfloat, bfloat, v_float32, float, EwHypot>; break;
+    case CV_32F:  fptr = vecBinaryKernel<float,  float,  v_float32, float, EwHypot>; break;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    case CV_64F:  fptr = vecBinaryKernel<double, double, v_float64, double, EwHypot>; break;
+#else
+    case CV_64F:  fptr = scalarBinaryKernel<double, double, double, EwHypot>; break;
+#endif
+    default: ;
+    }
+    return {fptr, nullptr, 0};
+}
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

@@ -88,7 +88,7 @@ void mathSpanEngine(TOp op, int depth, const void* src, void* dst, int n)
 {
     TKernel k = getEngineMathFunc(op, depth);
     CV_Assert(k.fptr);
-    static const double noparams[4] = {};
+    const double noparams[4] = {};
     k.fptr(src, 0, 1, nullptr, 0, 0, nullptr, 0, 0, dst, 0, n, 1, noparams, k.flags, k.userdata);
 }
 

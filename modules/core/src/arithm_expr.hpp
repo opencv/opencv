@@ -65,6 +65,9 @@ enum TOp
     // kernel - emitBinary expands it. Placed last in the binary group so it doesn't renumber the ops
     // above it (some dispatch is by enum value).
     OP_ADDW,
+    // hypot(x, y) = sqrt(x^2 + y^2), the magnitude of a 2D vector. NAIVE evaluation (matching
+    // cv::magnitude), NOT the overflow-safe std::hypot. Computes in the float domain like OP_POW.
+    OP_HYPOT,
 
     // ---------------- ternary (arity 3) ----------------
     OP_CLAMP = OP_TERNARY_BASE,   // clamp(x, lo, hi)
@@ -171,6 +174,7 @@ CV_EXPORTS TKernel getPowFunc(int T, int R);
 CV_EXPORTS TKernel getMinFunc(int T, int R);
 CV_EXPORTS TKernel getMaxFunc(int T, int R);
 CV_EXPORTS TKernel getAbsdiffFunc(int T, int R);
+CV_EXPORTS TKernel getHypotFunc(int T, int R);               // OP_HYPOT, T x T -> T (float depths)
 CV_EXPORTS TKernel getCmpFunc(TOp op, int T);                // T x T -> u8 mask (op = OP_CMP_*)
 CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR / OP_XOR, by element size
 CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size

@@ -287,6 +287,43 @@ TEST(Core_TExpr, ternary_operator)
     EXPECT_EQ(0, cvtest::norm(got3, exp3, NORM_INF));
 }
 
+// hypot(x, y) / its cv-flavored alias mag(x, y): naive sqrt(x^2 + y^2), matching cv::magnitude;
+// kernels exist for the float depths only (f16/bf16/f32/f64)
+TEST(Core_TExpr, hypot_mag)
+{
+    for (int depth : { CV_32F, CV_64F })
+    {
+        Mat x(23, 31, depth), y(23, 31, depth);
+        theRNG().fill(x, RNG::UNIFORM, -100, 100);
+        theRNG().fill(y, RNG::UNIFORM, -100, 100);
+
+        Mat got = expr1("hypot({0}, {1})", { x, y });
+        ASSERT_EQ(got.depth(), depth);
+        Mat exp; cv::magnitude(x, y, exp);
+        EXPECT_LE(cvtest::norm(got, exp, NORM_INF), depth == CV_32F ? 1e-4 : 1e-9);
+
+        Mat got2 = expr1("mag({0}, {1})", { x, y });   // alias
+        EXPECT_EQ(0, cvtest::norm(got2, got, NORM_INF));
+    }
+    // broadcast branch: hypot(array, scalar)
+    Mat x(11, 17, CV_32F);
+    theRNG().fill(x, RNG::UNIFORM, -10.f, 10.f);
+    Mat got = expr1("hypot({0}, 3)", { x });
+    for (int r = 0; r < x.rows; r++)
+        for (int c = 0; c < x.cols; c++)
+        {
+            float v = x.at<float>(r, c);
+            ASSERT_NEAR(got.at<float>(r, c), std::sqrt(v*v + 9.f), 1e-4) << r << "," << c;
+        }
+    // f16: T -> T through the native kernel (f32 hub inside)
+    Mat xh, yh, y16(11, 17, CV_32F);
+    x.convertTo(xh, CV_16F);
+    theRNG().fill(y16, RNG::UNIFORM, -10.f, 10.f);
+    y16.convertTo(yh, CV_16F);
+    Mat goth = expr1("hypot({0}, {1})", { xh, yh });
+    ASSERT_EQ(goth.depth(), CV_16F);
+}
+
 // per-element (array) exponent
 TEST(Core_TExpr, pow_array_exponent)
 {
