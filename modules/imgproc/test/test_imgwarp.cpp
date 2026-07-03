@@ -1067,6 +1067,21 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_Remap, issue_29412)
+{
+    Mat src(3, 4, CV_8UC1, Scalar(10));
+    Mat_<float> mapx(7, 8), mapy(7, 8);
+    for (int r = 0; r < 7; ++r)
+        for (int c = 0; c < 8; ++c) { mapx(r, c) = -1.5f + c; mapy(r, c) = -1.5f + r; }
+
+    Mat ref = Mat::zeros(7, 8, CV_8UC1);
+    ref(Rect(2, 2, 4, 3)).setTo(10);
+
+    Mat dst = Mat::zeros(7, 8, CV_8UC1);
+    remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
+    ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF));
+}
+
 TEST(Imgproc_Resize, issue_26497)
 {
     std::vector<float> vec = {0.f, 1.f, 2.f, 3.f};
