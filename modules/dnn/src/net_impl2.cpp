@@ -689,6 +689,24 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
         kvCacheManager.applyRoutes();
 }
 
+// Assign a single result to an output array, including a (pre-allocated) vector
+// of Mat/UMat, which _OutputArray::assign(Mat) does not handle.
+static void assignSingleOutput(OutputArrayOfArrays outputBlobs, const Mat& result)
+{
+    _InputArray::KindFlag k = outputBlobs.kind();
+    if (k == _InputArray::STD_VECTOR_MAT) {
+        std::vector<Mat>& v = outputBlobs.getMatVecRef();
+        v.resize(1);
+        result.copyTo(v[0]);
+    } else if (k == _InputArray::STD_VECTOR_UMAT) {
+        std::vector<UMat>& v = outputBlobs.getUMatVecRef();
+        v.resize(1);
+        result.copyTo(v[0]);
+    } else {
+        outputBlobs.assign(result);
+    }
+}
+
 void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
@@ -715,7 +733,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
         std::vector<int> outIdxs(1, outIdx);
         std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
         CV_Assert(outs.size() == 1);
-        outputBlobs.assign(outs[0]);
+        assignSingleOutput(outputBlobs, outs[0]);
         return;
     }
 #endif
@@ -743,7 +761,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
             const std::vector<Arg>& gr_outputs = mainGraph->outputs();
             for (size_t i = 0; i < gr_outputs.size(); i++) {
                 if (gr_outputs[i].idx == targetArg.idx) {
-                    outputBlobs.assign(outs[i]);
+                    assignSingleOutput(outputBlobs, outs[i]);
                     return;
                 }
             }
@@ -760,9 +778,9 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
                 transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
-                outputBlobs.assign(converted);
+                assignSingleOutput(outputBlobs, converted);
             } else {
-                outputBlobs.assign(result.clone());
+                assignSingleOutput(outputBlobs, result.clone());
             }
             return;
         }
@@ -771,7 +789,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
     std::vector<Mat> inps, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(!outs.empty());
-    outputBlobs.assign(outs[0]);
+    assignSingleOutput(outputBlobs, outs[0]);
 }
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)

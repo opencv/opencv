@@ -1631,21 +1631,20 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 
 Mat Net::Impl::getParam(int layer, int numParam) const
 {
-    LayerData& ld = getLayerData(layer);
-    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
+    std::vector<Mat>& layerBlobs = getLayer(layer)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     return layerBlobs[numParam];
 }
 
 void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
-    LayerData& ld = getLayerData(layer);
-
     // FIXIT we should not modify "execution" instance
-    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
+    std::vector<Mat>& layerBlobs = getLayer(layer)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
+    if (mainGraph)
+        finalizeLayers = true;
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1657,9 +1656,16 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (excl != std::string::npos)
                 it = argnames.find(outputTensorName.substr(excl + 1));
         }
-        if (it == argnames.end())
+        if (it == argnames.end()) {
+            // Not a tensor name; try it as a layer name.
+            int lid = getLayerId(outputTensorName);
+            if (lid >= 0) {
+                setParam(lid, numParam, blob);
+                return;
+            }
             CV_Error_(Error::StsObjectNotFound,
                       ("DNN: tensor '%s' not found in the graph", outputTensorName.c_str()));
+        }
 
         int targetIdx = (int)it->second;
         const std::vector<Ptr<Layer>>& prog = mainGraph->prog();
