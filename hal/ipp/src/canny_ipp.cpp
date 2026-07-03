@@ -55,41 +55,4 @@ int ipp_hal_canny(const uchar* src_data, size_t src_step, uchar* dst_data, size_
     return CV_HAL_ERROR_OK;
 }
 
-int ipp_hal_canny_deriv(const short* dx_data, size_t dx_step, const short* dy_data, size_t dy_step,
-                        uchar* dst_data, size_t dst_step, int width, int height, int cn,
-                        double lowThreshold, double highThreshold, bool L2gradient)
-{
-    CV_HAL_CHECK_USE_IPP();
-
-#if IPP_DISABLE_PERF_CANNY_MT
-    if(cv::getNumThreads() > 1)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-#endif
-
-    if(width <= 3 || height <= 3)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    if(cn != 1)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    IppNormType norm = L2gradient ? ippNormL2 : ippNormL1;
-
-    try
-    {
-        ::ipp::IwiImage iwSrcDx, iwSrcDy, iwDst;
-        iwSrcDx.Init(IwiSize{width, height}, ipp16s, cn, ::ipp::IwiBorderSize(), (void*)dx_data, IwSize(dx_step));
-        iwSrcDy.Init(IwiSize{width, height}, ipp16s, cn, ::ipp::IwiBorderSize(), (void*)dy_data, IwSize(dy_step));
-        iwDst.Init(IwiSize{width, height}, ipp8u, cn, ::ipp::IwiBorderSize(), dst_data, IwSize(dst_step));
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, (float)lowThreshold, (float)highThreshold,
-                              ::ipp::IwiFilterCannyDerivParams(norm));
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    }
-
-    return CV_HAL_ERROR_OK;
-}
-
 #endif

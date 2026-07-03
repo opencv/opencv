@@ -212,4 +212,14 @@ int ipp_hal_canny_deriv(const short* dx_data, size_t dx_step, const short* dy_da
 #define cv_hal_canny_deriv ipp_hal_canny_deriv
 #endif
 
+#define IPP_DISABLE_PERF_CANNY_MT 1 // cv::Canny OpenCV MT performance is better
+
+#if defined(HAVE_IPP_IW)
+int ipp_hal_canny(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                  int width, int height, int cn,
+                  double lowThreshold, double highThreshold, int ksize, bool L2gradient);
+#undef cv_hal_canny
+#define cv_hal_canny ipp_hal_canny
+#endif
+
 #endif //__IPP_HAL_IMGPROC_HPP__

@@ -48,6 +48,51 @@
 namespace cv
 {
 
+#ifdef HAVE_IPP
+static bool ipp_Canny(const Mat& dx_, const Mat& dy_, Mat& dst, float low, float high, bool L2gradient)
+{
+#ifdef HAVE_IPP_IW
+    CV_INSTRUMENT_REGION_IPP();
+
+    ::ipp::IwiSize size(dst.cols, dst.rows);
+    IppDataType    type     = ippiGetDataType(dst.depth());
+    int            channels = dst.channels();
+    IppNormType    norm     = (L2gradient)?ippNormL2:ippNormL1;
+
+    if(size.width <= 3 || size.height <= 3)
+        return false;
+
+    if(channels != 1)
+        return false;
+
+    if(type != ipp8u)
+        return false;
+
+    try
+    {
+        ::ipp::IwiImage iwSrcDx;
+        ::ipp::IwiImage iwSrcDy;
+        ::ipp::IwiImage iwDst;
+
+        ippiGetImage(dx_, iwSrcDx);
+        ippiGetImage(dy_, iwSrcDy);
+        ippiGetImage(dst, iwDst);
+
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
+    }
+    catch (const ::ipp::IwException &)
+    {
+        return false;
+    }
+
+    return true;
+#else
+    CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient);
+    return false;
+#endif
+}
+#endif
+
 #ifdef HAVE_OPENCL
 
 template <bool useCustomDeriv>
@@ -680,6 +725,37 @@ private:
     finalPass& operator=(const finalPass&); // = delete
 };
 
+template <typename T>
+static inline void applyL2GradientThresholds(T& low_thresh, T& high_thresh, bool L2gradient)
+{
+    if (L2gradient)
+    {
+        low_thresh = std::min(T(32767), low_thresh);
+        high_thresh = std::min(T(32767), high_thresh);
+
+        if (low_thresh > 0) low_thresh *= low_thresh;
+        if (high_thresh > 0) high_thresh *= high_thresh;
+    }
+}
+
+static void followWeakEdges(std::deque<uchar*>& stack, ptrdiff_t mapstep)
+{
+    while (!stack.empty())
+    {
+        uchar* m = stack.back();
+        stack.pop_back();
+
+        if (!m[-mapstep-1]) CANNY_PUSH((m-mapstep-1), stack);
+        if (!m[-mapstep])   CANNY_PUSH((m-mapstep), stack);
+        if (!m[-mapstep+1]) CANNY_PUSH((m-mapstep+1), stack);
+        if (!m[-1])         CANNY_PUSH((m-1), stack);
+        if (!m[1])          CANNY_PUSH((m+1), stack);
+        if (!m[mapstep-1])  CANNY_PUSH((m+mapstep-1), stack);
+        if (!m[mapstep])    CANNY_PUSH((m+mapstep), stack);
+        if (!m[mapstep+1])  CANNY_PUSH((m+mapstep+1), stack);
+    }
+}
+
 void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
@@ -724,14 +800,7 @@ void Canny( InputArray _src, OutputArray _dst,
     CALL_HAL(canny, cv_hal_canny, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.channels(),
              low_thresh, high_thresh, aperture_size, L2gradient);
 
-    if (L2gradient)
-    {
-        low_thresh = std::min(32767.0, low_thresh);
-        high_thresh = std::min(32767.0, high_thresh);
-
-        if (low_thresh > 0) low_thresh *= low_thresh;
-        if (high_thresh > 0) high_thresh *= high_thresh;
-    }
+    applyL2GradientThresholds(low_thresh, high_thresh, L2gradient);
     int low = cvFloor(low_thresh);
     int high = cvFloor(high_thresh);
 
@@ -754,20 +823,7 @@ void Canny( InputArray _src, OutputArray _dst,
     // now track the edges (hysteresis thresholding)
     ptrdiff_t mapstep = map.cols;
 
-    while (!stack.empty())
-    {
-        uchar* m = stack.back();
-        stack.pop_back();
-
-        if (!m[-mapstep-1]) CANNY_PUSH((m-mapstep-1), stack);
-        if (!m[-mapstep])   CANNY_PUSH((m-mapstep), stack);
-        if (!m[-mapstep+1]) CANNY_PUSH((m-mapstep+1), stack);
-        if (!m[-1])         CANNY_PUSH((m-1), stack);
-        if (!m[1])          CANNY_PUSH((m+1), stack);
-        if (!m[mapstep-1])  CANNY_PUSH((m+mapstep-1), stack);
-        if (!m[mapstep])    CANNY_PUSH((m+mapstep), stack);
-        if (!m[mapstep+1])  CANNY_PUSH((m+mapstep+1), stack);
-    }
+    followWeakEdges(stack, mapstep);
 
     CV_TRACE_REGION_NEXT("finalPass");
     parallel_for_(Range(0, src.rows), finalPass(map, dst), src.total()/(double)(1<<16));
@@ -798,17 +854,9 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
 
-    CALL_HAL(canny_deriv, cv_hal_canny_deriv, dx.ptr<short>(), dx.step, dy.ptr<short>(), dy.step,
-             dst.data, dst.step, dx.cols, dx.rows, dx.channels(), low_thresh, high_thresh, L2gradient);
+    CV_IPP_RUN_FAST(ipp_Canny(dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient))
 
-    if (L2gradient)
-    {
-        low_thresh = std::min(32767.0, low_thresh);
-        high_thresh = std::min(32767.0, high_thresh);
-
-        if (low_thresh > 0) low_thresh *= low_thresh;
-        if (high_thresh > 0) high_thresh *= high_thresh;
-    }
+    applyL2GradientThresholds(low_thresh, high_thresh, L2gradient);
 
     int low = cvFloor(low_thresh);
     int high = cvFloor(high_thresh);
@@ -827,20 +875,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     // now track the edges (hysteresis thresholding)
     ptrdiff_t mapstep = map.cols;
 
-    while (!stack.empty())
-    {
-        uchar* m = stack.back();
-        stack.pop_back();
-
-        if (!m[-mapstep-1]) CANNY_PUSH((m-mapstep-1), stack);
-        if (!m[-mapstep])   CANNY_PUSH((m-mapstep), stack);
-        if (!m[-mapstep+1]) CANNY_PUSH((m-mapstep+1), stack);
-        if (!m[-1])         CANNY_PUSH((m-1), stack);
-        if (!m[1])          CANNY_PUSH((m+1), stack);
-        if (!m[mapstep-1])  CANNY_PUSH((m+mapstep-1), stack);
-        if (!m[mapstep])    CANNY_PUSH((m+mapstep), stack);
-        if (!m[mapstep+1])  CANNY_PUSH((m+mapstep+1), stack);
-    }
+    followWeakEdges(stack, mapstep);
 
     CV_TRACE_REGION_NEXT("finalPass");
     parallel_for_(Range(0, dx.rows), finalPass(map, dst), dx.total()/(double)(1<<16));
