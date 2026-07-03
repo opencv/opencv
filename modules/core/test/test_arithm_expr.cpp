@@ -324,6 +324,44 @@ TEST(Core_TExpr, hypot_mag)
     ASSERT_EQ(goth.depth(), CV_16F);
 }
 
+// atan2(y, x): radians, the standard C range (-pi, pi], all four quadrants; the f32 kernel is the
+// fastAtan2 minimax polynomial (~1e-5 rad absolute), f64 is exact std::atan2
+TEST(Core_TExpr, atan2)
+{
+    Mat y(23, 31, CV_32F), x(23, 31, CV_32F);
+    theRNG().fill(y, RNG::UNIFORM, -10.f, 10.f);   // both signs -> all quadrants
+    theRNG().fill(x, RNG::UNIFORM, -10.f, 10.f);
+
+    Mat got = expr1("atan2({0}, {1})", { y, x });
+    ASSERT_EQ(got.depth(), CV_32F);
+    double maxerr = 0;
+    for (int r = 0; r < y.rows; r++)
+        for (int c = 0; c < y.cols; c++)
+        {
+            double ref = std::atan2((double)y.at<float>(r, c), (double)x.at<float>(r, c));
+            maxerr = std::max(maxerr, std::abs((double)got.at<float>(r, c) - ref));
+        }
+    EXPECT_LE(maxerr, 2e-4) << "fastAtan2-class polynomial accuracy (measured ~1.6e-4 rad)";
+
+    // f64: exact std::atan2 per element
+    Mat y64, x64;
+    y.convertTo(y64, CV_64F); x.convertTo(x64, CV_64F);
+    Mat got64 = expr1("atan2({0}, {1})", { y64, x64 });
+    ASSERT_EQ(got64.depth(), CV_64F);
+    for (int r = 0; r < y.rows; r++)
+        for (int c = 0; c < y.cols; c++)
+            ASSERT_EQ(got64.at<double>(r, c),
+                      std::atan2(y64.at<double>(r, c), x64.at<double>(r, c)));
+
+    // axis cases: atan2(0, 1) = 0, atan2(1, 0) = pi/2, atan2(0, -1) = pi, atan2(-1, 0) = -pi/2
+    Mat ya = (Mat_<float>(1, 4) << 0.f, 1.f, 0.f, -1.f);
+    Mat xa = (Mat_<float>(1, 4) << 1.f, 0.f, -1.f, 0.f);
+    Mat ga = expr1("atan2({0}, {1})", { ya, xa });
+    const float expctd[] = { 0.f, (float)(CV_PI/2), (float)CV_PI, (float)(-CV_PI/2) };
+    for (int i = 0; i < 4; i++)
+        ASSERT_NEAR(ga.at<float>(0, i), expctd[i], 1e-4) << "axis case " << i;
+}
+
 // per-element (array) exponent
 TEST(Core_TExpr, pow_array_exponent)
 {

@@ -249,6 +249,7 @@ TKernel getMinFunc_(int T, int R);
 TKernel getMaxFunc_(int T, int R);
 TKernel getAbsdiffFunc_(int T, int R);
 TKernel getHypotFunc_(int T, int R);         // hypot = sqrt(x^2+y^2), float depths, T x T -> T
+TKernel getAtan2Func_(int T, int R);         // atan2(y, x), radians (-pi, pi], float depths
 TKernel getCmpFunc_(TOp op, int T);
 TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
 TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
@@ -328,6 +329,41 @@ struct EwDivFlt {
     template<typename V> static V vec(const V& a, const V& b, const V& s) { return v_div(v_mul(a, s), b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s / b; }
+};
+
+// atan2(y, x) in RADIANS over the standard C range (-pi, pi] - the fastAtan2 minimax polynomial
+// (mathfuncs_core.simd.hpp v_atan_f32) with the 180/pi factor dropped and the C quadrant logic
+// (fastAtan2 returns degrees in [0, 360)). Absolute accuracy ~1e-5 rad, same as cv::fastAtan2.
+// Generic over the universal-intrinsic float vector type.
+template<typename V>
+static inline V v_atan2(const V& y, const V& x)
+{
+    using LT = typename VTraits<V>::lane_type;
+    const V eps  = v_setall_<V>((LT)DBL_EPSILON);
+    const V z    = v_setzero_<V>();
+    const V p7   = v_setall_<V>((LT)-0.04432655554792128);
+    const V p5   = v_setall_<V>((LT)0.1555786518463281);
+    const V p3   = v_setall_<V>((LT)-0.3258083974640975);
+    const V p1   = v_setall_<V>((LT)0.9997878412794807);
+    const V vpi2 = v_setall_<V>((LT)(CV_PI/2));
+    const V vpi  = v_setall_<V>((LT)CV_PI);
+
+    V ax = v_abs(x), ay = v_abs(y);
+    V c  = v_div(v_min(ax, ay), v_add(v_max(ax, ay), eps));
+    V c2 = v_mul(c, c);
+    V a  = v_mul(v_fma(v_fma(v_fma(p7, c2, p5), c2, p3), c2, p1), c);
+    a = v_select(v_ge(ax, ay), a, v_sub(vpi2, a));
+    a = v_select(v_lt(x, z), v_sub(vpi, a), a);
+    a = v_select(v_lt(y, z), v_sub(z, a), a);
+    return a;
+}
+
+struct EwAtan2 {
+    static constexpr bool useScalar = false;
+    template<typename V> static V vec(const V& a, const V& b) { return v_atan2(a, b); }   // a = y, b = x
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return std::atan2(a, b); }
 };
 
 // hypot(x, y) = sqrt(x^2 + y^2): NAIVE (matches cv::magnitude; overflow at |x| ~ 1e19+ for f32
@@ -1820,6 +1856,22 @@ TKernel getHypotFunc_(int T, int R)
 #else
     case CV_64F:  fptr = scalarBinaryKernel<double, double, double, EwHypot>; break;
 #endif
+    default: ;
+    }
+    return {fptr, nullptr, 0};
+}
+
+TKernel getAtan2Func_(int T, int R)
+{
+    if (R != T)
+        return {};
+    KernelFunc fptr = nullptr;
+    switch (T)
+    {
+    case CV_16F:  fptr = vecBinaryKernel<hfloat, hfloat, v_float32, float, EwAtan2>; break;
+    case CV_16BF: fptr = vecBinaryKernel<bfloat, bfloat, v_float32, float, EwAtan2>; break;
+    case CV_32F:  fptr = vecBinaryKernel<float,  float,  v_float32, float, EwAtan2>; break;
+    case CV_64F:  fptr = scalarBinaryKernel<double, double, double, EwAtan2>; break;   // exact std::atan2
     default: ;
     }
     return {fptr, nullptr, 0};

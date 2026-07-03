@@ -49,6 +49,7 @@ const char* opName(TOp op)
     case OP_MAX:           return "max";
     case OP_ABSDIFF:       return "absdiff";
     case OP_HYPOT:         return "hypot";
+    case OP_ATAN2:         return "atan2";
     case OP_AND:           return "and";
     case OP_OR:            return "or";
     case OP_XOR:           return "xor";
@@ -76,7 +77,7 @@ ElemwiseCategory opCategory(TOp op)
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE:
         return CAT_COMPARE;
     case OP_SQRT: case OP_EXP: case OP_LOG:
-    case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF: case OP_RELU:
+    case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF: case OP_ATAN2: case OP_RELU:
         return CAT_MATH;
     case OP_CAST: case OP_CONVERT_SCALE:
         return CAT_CAST;
@@ -487,7 +488,7 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
         }
         break;
     }
-    case OP_POW: case OP_HYPOT:
+    case OP_POW: case OP_HYPOT: case OP_ATAN2:
         depth = (base == CV_64F) ? CV_64F : CV_32F; wide = depth; break;
     default:        // OP_ADD, OP_SUB
         depth = base; wide = safeWide(depth); break;
@@ -870,7 +871,7 @@ static int opCost(TOp op)
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
     case OP_DIV: case OP_SQRT: case OP_HYPOT: case OP_CONVERT_SCALE: return 10;
-    case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF:
+    case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF: case OP_ATAN2:
     case OP_EXP: case OP_LOG: case OP_POW:           return 30;
     default:                                         return 10;
     }
@@ -1583,7 +1584,8 @@ static TOp fnOp(const std::string& name, int& arity)
                                 {"sin",OP_SIN},{"cos",OP_COS},{"tanh",OP_TANH},{"erf",OP_ERF},
                                 {"relu",OP_RELU} };
     static const E binary[] = { {"max",OP_MAX},{"min",OP_MIN},{"pow",OP_POW},{"absdiff",OP_ABSDIFF},
-                                {"hypot",OP_HYPOT},{"mag",OP_HYPOT} };   // mag = the cv::magnitude-flavored alias
+                                {"hypot",OP_HYPOT},{"mag",OP_HYPOT},     // mag = the cv::magnitude-flavored alias
+                                {"atan2",OP_ATAN2} };
     static const E tern[]   = { {"clamp",OP_CLAMP},{"select",OP_SELECT} };
     for (const E& e : unary)  if (name == e.n) { arity = 1; return e.op; }
     for (const E& e : binary) if (name == e.n) { arity = 2; return e.op; }

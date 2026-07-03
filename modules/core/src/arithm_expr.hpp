@@ -68,6 +68,9 @@ enum TOp
     // hypot(x, y) = sqrt(x^2 + y^2), the magnitude of a 2D vector. NAIVE evaluation (matching
     // cv::magnitude), NOT the overflow-safe std::hypot. Computes in the float domain like OP_POW.
     OP_HYPOT,
+    // atan2(y, x) in RADIANS, standard C range (-pi, pi] (NB: cv::phase/fastAtan2 use degrees
+    // [0, 360)). arg0 = y, arg1 = x, like std::atan2. Float domain, like OP_POW/OP_HYPOT.
+    OP_ATAN2,
 
     // ---------------- ternary (arity 3) ----------------
     OP_CLAMP = OP_TERNARY_BASE,   // clamp(x, lo, hi)
@@ -175,6 +178,7 @@ CV_EXPORTS TKernel getMinFunc(int T, int R);
 CV_EXPORTS TKernel getMaxFunc(int T, int R);
 CV_EXPORTS TKernel getAbsdiffFunc(int T, int R);
 CV_EXPORTS TKernel getHypotFunc(int T, int R);               // OP_HYPOT, T x T -> T (float depths)
+CV_EXPORTS TKernel getAtan2Func(int T, int R);               // OP_ATAN2, T x T -> T (float depths)
 CV_EXPORTS TKernel getCmpFunc(TOp op, int T);                // T x T -> u8 mask (op = OP_CMP_*)
 CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR / OP_XOR, by element size
 CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size

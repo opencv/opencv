@@ -24,6 +24,7 @@ TKernel getMinFunc(int T, int R)            { CV_CPU_DISPATCH(getMinFunc_,     (
 TKernel getMaxFunc(int T, int R)            { CV_CPU_DISPATCH(getMaxFunc_,     (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getAbsdiffFunc(int T, int R)        { CV_CPU_DISPATCH(getAbsdiffFunc_, (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getHypotFunc(int T, int R)          { CV_CPU_DISPATCH(getHypotFunc_,   (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getAtan2Func(int T, int R)          { CV_CPU_DISPATCH(getAtan2Func_,   (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getCmpFunc(TOp op, int T)           { CV_CPU_DISPATCH(getCmpFunc_,     (op, T),         CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (op, esz),       CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
@@ -101,11 +102,11 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
         return getNotFunc(CV_ELEM_SIZE1(depth0));
     }
 
-    // OP_HYPOT: T x T -> T over the float depths (integer inputs are the compiler's job).
-    if (op == OP_HYPOT)
+    // OP_HYPOT / OP_ATAN2: T x T -> T over the float depths (integer inputs are the compiler's job).
+    if (op == OP_HYPOT || op == OP_ATAN2)
     {
         if (depth0 != depth1) return {};
-        return getHypotFunc(depth0, rdepth);
+        return op == OP_HYPOT ? getHypotFunc(depth0, rdepth) : getAtan2Func(depth0, rdepth);
     }
 
     // unary math: T -> T over the float depths (math.simd.hpp). Anything else - integer input,
