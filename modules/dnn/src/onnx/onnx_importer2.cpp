@@ -1458,9 +1458,17 @@ void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::Node
 {
     layerParams.type = "PReLU";
     CV_Assert(node_inputs.size() == 2);
-    CV_Assert(net.isConstArg(node_inputs[1]));
-    layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
-    addLayer(layerParams, node_proto, 1);
+    if (net.isConstArg(node_inputs[1]))
+    {
+        layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
+        addLayer(layerParams, node_proto, 1);
+    }
+    else
+    {
+        // Slope produced by a foldable subgraph (e.g. Reshape of an initializer):
+        // keep it as a second input for constFold()/constArgs() to resolve.
+        addLayer(layerParams, node_proto);
+    }
 }
 
 void ONNXImporter2::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
