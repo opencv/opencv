@@ -230,9 +230,9 @@ TEST_P(EW_Extensive_BinOp, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
     testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
-    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
-        return cv::format("%s_case%04d", std::get<0>(info.param) ? "sub" : "add",
-                          std::get<1>(info.param));
+    [](const testing::TestParamInfo<std::tuple<int,int>>& ti) {
+        return cv::format("%s_case%04d", std::get<0>(ti.param) ? "sub" : "add",
+                          std::get<1>(ti.param));
     });
 
 // ------------------------------------------------------------------- min / max / absdiff
@@ -302,10 +302,10 @@ TEST_P(EW_Extensive_MinMax, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MinMax,
     testing::Combine(testing::Values(0, 1, 2), testing::Range(0, kNumCases)),
-    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
-        const int o = std::get<0>(info.param);
+    [](const testing::TestParamInfo<std::tuple<int,int>>& ti) {
+        const int o = std::get<0>(ti.param);
         return cv::format("%s_case%04d", o == 0 ? "min" : o == 1 ? "max" : "absdiff",
-                          std::get<1>(info.param));
+                          std::get<1>(ti.param));
     });
 
 // ----------------------------------------------------------------------------------- compare
@@ -318,7 +318,6 @@ TEST_P(EW_Extensive_Compare, accuracy)
 {
     const int opSel = std::get<0>(GetParam());   // 0 = EQ, 1 = GT
     const int caseidx = std::get<1>(GetParam());
-    const TOp op = opSel == 0 ? OP_CMP_EQ : OP_CMP_GT;
     const int cmpop = opSel == 0 ? cv::CMP_EQ : cv::CMP_GT;
     const char* opStr = opSel == 0 ? "cmpEQ" : "cmpGT";
     RNG rng(mix64(kSuiteSalt ^ 0xC0FFEEULL ^ (uint64_t)(caseidx * 2 + opSel)));
@@ -371,9 +370,9 @@ TEST_P(EW_Extensive_Compare, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Compare,
     testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
-    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
-        return cv::format("%s_case%04d", std::get<0>(info.param) == 0 ? "cmpEQ" : "cmpGT",
-                          std::get<1>(info.param));
+    [](const testing::TestParamInfo<std::tuple<int,int>>& ti) {
+        return cv::format("%s_case%04d", std::get<0>(ti.param) == 0 ? "cmpEQ" : "cmpGT",
+                          std::get<1>(ti.param));
     });
 
 // ------------------------------------------------------------------------------------- mul / div
@@ -472,9 +471,9 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MulDiv,
     testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
-    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
-        return cv::format("%s_case%04d", std::get<0>(info.param) ? "div" : "mul",
-                          std::get<1>(info.param));
+    [](const testing::TestParamInfo<std::tuple<int,int>>& ti) {
+        return cv::format("%s_case%04d", std::get<0>(ti.param) ? "div" : "mul",
+                          std::get<1>(ti.param));
     });
 
 // ------------------------------------------------------------------------------- masked add / sub
@@ -541,9 +540,9 @@ TEST_P(EW_Extensive_Mask, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Mask,
     testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
-    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
-        return cv::format("%s_case%04d", std::get<0>(info.param) ? "sub" : "add",
-                          std::get<1>(info.param));
+    [](const testing::TestParamInfo<std::tuple<int,int>>& ti) {
+        return cv::format("%s_case%04d", std::get<0>(ti.param) ? "sub" : "add",
+                          std::get<1>(ti.param));
     });
 
 // NOTE: a standalone cast group was dropped - the engine cast == cv::convertTo (comparing them would

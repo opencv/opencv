@@ -173,6 +173,9 @@ CV_EXPORTS TKernel getMinFunc(int T, int R);
 CV_EXPORTS TKernel getMaxFunc(int T, int R);
 CV_EXPORTS TKernel getAbsdiffFunc(int T, int R);
 CV_EXPORTS TKernel getCmpFunc(TOp op, int T);                // T x T -> u8 mask (op = OP_CMP_*)
+CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR / OP_XOR, by element size
+CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size
+CV_EXPORTS TKernel getAddWeightedFunc(int T, int R);         // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 CV_EXPORTS TKernel getCopyMaskFunc(int depth);
 
 // The op-level dispatcher: routes (op, depths) to the right get*Func above. nullptr if the exact

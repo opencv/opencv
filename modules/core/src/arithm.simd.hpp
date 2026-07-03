@@ -37,6 +37,8 @@ namespace cv {
 #if CV_SIMD128_FP16
 #undef CV_SIMD_16F
 #define CV_SIMD_16F 1
+#elif !defined(CV_SIMD_16F)
+#define CV_SIMD_16F 0       // keep `#if CV_SIMD_16F` -Wundef-clean on builds without FP16 SIMD
 #endif
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -583,8 +585,10 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
         const int VECSZ  = VTraits<Vvec>::vlanes();          // sizeof(T)-type lanes
         const int VECSZ8 = VTraits<v_uint8>::vlanes();       // u8 output lanes
         constexpr int MAXV8 = VTraits<v_uint8>::max_nlanes;
-        T scbuf[MAXV8 * 3];                                  // interleaved threshold (elements)
-        uchar mbuf[MAXV8 * 3], vbuf[MAXV8 * 3];              // interleaved mask / value (bytes)
+        T scbuf[MAXV8 * 3] = {};                             // interleaved threshold (elements)
+        uchar mbuf[MAXV8 * 3] = {}, vbuf[MAXV8 * 3] = {};    // interleaved mask / value (bytes)
+        // ^ the {} inits are for -Wmaybe-uninitialized only: expandScalar/decode fill every lane that
+        //   is later read, but the compiler cannot prove it with a runtime VECSZ
         const bool bc0 = (s0y == 0);                         // src0 is the broadcast (short) operand
         const T* bsrc = bc0 ? src0 : src1; const size_t bsx = bc0 ? s0x : s1x;
         const T*& src = bc0 ? src1 : src0;                   // the row-stepping operand (advanced below)
@@ -795,7 +799,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
          (s1y == 0 && s0y == width*s0x)) &&
         dsty == (size_t)width) {
         constexpr int MAXVECSZ = VTraits<Wvec>::max_nlanes;
-        Wlane scbuf[MAXVECSZ*6];
+        Wlane scbuf[MAXVECSZ*6] = {};   // {} for -Wmaybe-uninitialized only (filled up to VECSZ*6)
         const int ewidth = VECSZ*6;
         expandScalar(s0y == 0 ? src0 : src1, s0y == 0 ? s0x : s1x, width, scbuf, ewidth);
         int dy = ewidth / width;
@@ -1503,13 +1507,13 @@ static int copyMaskKernel(const void* src0_, size_t s0y, size_t s0x,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if constexpr (sizeof(T) <= 4) {
         Tvec z = v_setzero_<Tvec>();
-        auto loadExpandMask = [&](const uchar* mask) {
+        auto loadExpandMask = [&](const uchar* mrow) {
             if constexpr (sizeof(T) == 1u)
-                return vx_load(mask);
+                return vx_load(mrow);
             else if constexpr (sizeof(T) == 2u)
-                return vx_load_expand(mask);
+                return vx_load_expand(mrow);
             else
-                return vx_load_expand_q(mask);
+                return vx_load_expand_q(mrow);
         };
 
         const int VECSZ = VTraits<Tvec>::vlanes();

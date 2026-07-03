@@ -1257,10 +1257,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
     broadcastOp(arr.data(), narr, [&](const BrTile& tile)
     {
         EwBody& bc = body;
-        const TExpr::Insn* prog = bc.prog;             // hot fields -> locals (registers/stack)
-        const int* const slotMap     = bc.slotMap;
-        const signed char* const slotKind = bc.slotKind;
-        const int ninsn = bc.ninsn, nslots = bc.nslots;
+        const TExpr::Insn* insns = bc.prog;            // hot fields -> locals (registers/stack)
+        const int* const smap  = bc.slotMap;
+        const signed char* const skind = bc.slotKind;
+        const int nin = bc.ninsn, nsl = bc.nslots;
         const int w = tile.width, h = tile.height;
 
         // Run the program over L1-sized 2D blocks so the intermediates stay in cache. ONE rule covers
@@ -1272,43 +1272,43 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         // => bw=w, bh=h: one block over the whole tile, region temp store is empty (zero bytes), and
         // each operand slot is re-pointed once straight at its tile slice. Each temp buffer occupies
         // [bufEszPrefix[buf]*region, ...) bytes in tstore; region = bw*bh.
-        const int* const bufEszPrefix = bc.bufEszPrefix;
+        const int* const eszPrefix = bc.bufEszPrefix;
         const int bw = std::min(w, bc.capElems);
         const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
         const size_t region = alignSize((size_t)bw * bh, 8);
-        AutoBuffer<uchar, 16*1024 + 256> tstoreBuf((size_t)bufEszPrefix[bc.nbuffers] * region);  // inline (<= ~16KB)
+        AutoBuffer<uchar, 16*1024 + 256> tstoreBuf((size_t)eszPrefix[bc.nbuffers] * region);  // inline (<= ~16KB)
         uchar* tstore = tstoreBuf.data();
 
-        AutoBuffer<BrSlice, LOCAL_OPS> args(nslots);
+        AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
         for (int y0 = 0; y0 < h; y0 += bh)
         {
             const int hf = std::min(bh, h - y0);
             for (int x0 = 0; x0 < w; x0 += bw)
             {
                 const int wf = std::min(bw, w - x0);
-                for (int s = 1; s < nslots; s++)
+                for (int s = 1; s < nsl; s++)
                 {
                     BrSlice& a = args[s];
-                    const int k = slotKind[s];
+                    const int k = skind[s];
                     size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
                     if (k == TExpr::TEMP)                      // contiguous block-local buffer
                     {
-                        a.ptr = tstore + (size_t)bufEszPrefix[slotMap[s]] * region;
+                        a.ptr = tstore + (size_t)eszPrefix[smap[s]] * region;
                         a.stepy = (size_t)wf*esz; a.stepx = 1;
                     }
                     else                                    // array operand (incl. 0-dim consts): this
                                                             // block of the broadcast slice
                     {
-                        const BrSlice& sl = tile.slices[slotMap[s]];
+                        const BrSlice& sl = tile.slices[smap[s]];
                         a.ptr = (uchar*)sl.ptr +
                             ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * esz;
                         a.stepy = sl.stepy*esz; a.stepx = sl.stepx;
                     }
                 }
 
-                for (int n = 0; n < ninsn; n++)
+                for (int n = 0; n < nin; n++)
                 {
-                    const TExpr::Insn& ins = prog[n];
+                    const TExpr::Insn& ins = insns[n];
                     const BrSlice& a0 = args[ins.arg0]; const BrSlice& a1 = args[ins.arg1];
                     const BrSlice& a2 = args[ins.arg2]; const BrSlice& rr = args[ins.result];
                     runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,

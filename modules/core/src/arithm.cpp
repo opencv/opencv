@@ -162,13 +162,10 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 // scalar) operand order, size the destination, and dispatch the shared bitwise OpenCL kernel. Returns
 // true if OpenCL handled the op, false to fall through to the CPU engine. NOT arrives unary
 // (src2 == src1, forced-scalar). The caller gates this on a UMat operand + dims <= 2 (via CV_OCL_RUN).
+#ifdef HAVE_OPENCL
 static bool bitwise_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
                            InputArray _mask, int oclop)
 {
-#ifndef HAVE_OPENCL
-    CV_UNUSED(_src1); CV_UNUSED(_src2); CV_UNUSED(_dst); CV_UNUSED(_mask); CV_UNUSED(oclop);
-    return false;
-#else
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     int type1 = psrc1->type(), type2 = psrc2->type();
@@ -187,8 +184,8 @@ static bool bitwise_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     _dst.createSameSize(*psrc1, type1);
     return ocl_binary_op(*psrc1, *psrc2, _dst, _mask, true, oclop, haveScalar);
-#endif
 }
+#endif  // HAVE_OPENCL
 
 }
 
@@ -284,6 +281,9 @@ void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
 namespace cv
 {
 
+#ifdef HAVE_OPENCL
+
+// used by the OpenCL branch only (arithm_op_ocl working-type selection)
 static int actualScalarDepth(const double* data, int len)
 {
     int i = 0, minval = INT_MAX, maxval = INT_MIN;
@@ -310,8 +310,6 @@ static int coerceTypes(int depth1, int depth2, bool muldiv)
         (((int)!muldiv & (depth1 <= CV_8S) & (depth2 <= CV_8S)) != 0 ? CV_16S : CV_32S) :
         ((CV_ELEM_SIZE1(depth1) > 4) | (CV_ELEM_SIZE1(depth2) > 4)) != 0 ? CV_64F : CV_32F;
 }
-
-#ifdef HAVE_OPENCL
 
 static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, int wtype,
@@ -1095,6 +1093,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         }
         haveScalar = is_src2_scalar && !is_src1_scalar;
     }
+    CV_UNUSED(haveScalar);   // consumed by CV_OCL_RUN only - a no-op without OpenCL
 
     // OpenCL handles only the same-size and array-op-scalar forms; a broadcast between two arrays of
     // different size falls through to the CPU engine.
