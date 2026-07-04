@@ -1414,33 +1414,22 @@
     CV_WARP_SIMDX_LINEAR_GATHER_32FC3_CHANNEL(HALF, b, i##HALF##_two) \
     v_store_interleave(dstptr + 3*(x + DST_OFFSET), i##HALF##_r, i##HALF##_g, i##HALF##_b);
 
+#define CV_WARP_SIMDX_LINEAR_GATHER_16UC3_HALF(CHANNEL, OFFSET, HALF) \
+    v_uint32 CHANNEL##00_u32_##HALF = v_lut_expand(src + OFFSET, addr_##HALF), \
+             CHANNEL##01_u32_##HALF = v_lut_expand(src + OFFSET + 3, addr_##HALF), \
+             CHANNEL##10_u32_##HALF = v_lut_expand(src + OFFSET + srcstep, addr_##HALF), \
+             CHANNEL##11_u32_##HALF = v_lut_expand(src + OFFSET + srcstep + 3, addr_##HALF); \
+    v_float32 CHANNEL##00_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##00_u32_##HALF)), \
+              CHANNEL##01_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##01_u32_##HALF)), \
+              CHANNEL##10_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##10_u32_##HALF)), \
+              CHANNEL##11_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##11_u32_##HALF)); \
+    CHANNEL##00_f32_##HALF = v_fma(src_x##HALF, v_sub(CHANNEL##01_f32_##HALF, CHANNEL##00_f32_##HALF), CHANNEL##00_f32_##HALF); \
+    CHANNEL##10_f32_##HALF = v_fma(src_x##HALF, v_sub(CHANNEL##11_f32_##HALF, CHANNEL##10_f32_##HALF), CHANNEL##10_f32_##HALF); \
+    v_int32 CHANNEL##_##HALF = v_round(v_fma(src_y##HALF, v_sub(CHANNEL##10_f32_##HALF, CHANNEL##00_f32_##HALF), CHANNEL##00_f32_##HALF));
+
 #define CV_WARP_SIMDX_LINEAR_GATHER_16UC3_CHANNEL(CHANNEL, OFFSET) \
-    v_uint16 CHANNEL##00_u16 = v_lut(src + OFFSET, addr), \
-             CHANNEL##01_u16 = v_lut(src + OFFSET, simdx_addr01), \
-             CHANNEL##10_u16 = v_lut(src + OFFSET, simdx_addr10), \
-             CHANNEL##11_u16 = v_lut(src + OFFSET, simdx_addr11); \
-    v_uint32 CHANNEL##00_u32_0, CHANNEL##00_u32_1, \
-             CHANNEL##01_u32_0, CHANNEL##01_u32_1, \
-             CHANNEL##10_u32_0, CHANNEL##10_u32_1, \
-             CHANNEL##11_u32_0, CHANNEL##11_u32_1; \
-    v_expand(CHANNEL##00_u16, CHANNEL##00_u32_0, CHANNEL##00_u32_1); \
-    v_expand(CHANNEL##01_u16, CHANNEL##01_u32_0, CHANNEL##01_u32_1); \
-    v_expand(CHANNEL##10_u16, CHANNEL##10_u32_0, CHANNEL##10_u32_1); \
-    v_expand(CHANNEL##11_u16, CHANNEL##11_u32_0, CHANNEL##11_u32_1); \
-    v_float32 CHANNEL##00_f32_0 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##00_u32_0)), \
-              CHANNEL##01_f32_0 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##01_u32_0)), \
-              CHANNEL##10_f32_0 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##10_u32_0)), \
-              CHANNEL##11_f32_0 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##11_u32_0)); \
-    CHANNEL##00_f32_0 = v_fma(src_x0, v_sub(CHANNEL##01_f32_0, CHANNEL##00_f32_0), CHANNEL##00_f32_0); \
-    CHANNEL##10_f32_0 = v_fma(src_x0, v_sub(CHANNEL##11_f32_0, CHANNEL##10_f32_0), CHANNEL##10_f32_0); \
-    v_int32 CHANNEL##_0 = v_round(v_fma(src_y0, v_sub(CHANNEL##10_f32_0, CHANNEL##00_f32_0), CHANNEL##00_f32_0)); \
-    v_float32 CHANNEL##00_f32_1 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##00_u32_1)), \
-              CHANNEL##01_f32_1 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##01_u32_1)), \
-              CHANNEL##10_f32_1 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##10_u32_1)), \
-              CHANNEL##11_f32_1 = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##11_u32_1)); \
-    CHANNEL##00_f32_1 = v_fma(src_x1, v_sub(CHANNEL##01_f32_1, CHANNEL##00_f32_1), CHANNEL##00_f32_1); \
-    CHANNEL##10_f32_1 = v_fma(src_x1, v_sub(CHANNEL##11_f32_1, CHANNEL##10_f32_1), CHANNEL##10_f32_1); \
-    v_int32 CHANNEL##_1 = v_round(v_fma(src_y1, v_sub(CHANNEL##10_f32_1, CHANNEL##00_f32_1), CHANNEL##00_f32_1)); \
+    CV_WARP_SIMDX_LINEAR_GATHER_16UC3_HALF(CHANNEL, OFFSET, 0) \
+    CV_WARP_SIMDX_LINEAR_GATHER_16UC3_HALF(CHANNEL, OFFSET, 1) \
     v_uint16 simdx_##CHANNEL = v_pack_u(CHANNEL##_0, CHANNEL##_1);
 
 #define CV_WARP_SIMDX_SHUFFLE_INTER_STORE_C3_LINEAR_8U() \
@@ -1453,12 +1442,6 @@
 
 #define CV_WARP_SIMDX_SHUFFLE_INTER_STORE_C3_LINEAR_16U() \
     (void)max_vlanes_16; \
-    int32_t simdx_addr01[max_uf], simdx_addr10[max_uf], simdx_addr11[max_uf]; \
-    for (int i = 0; i < uf; i++) { \
-        simdx_addr01[i] = addr[i] + 3; \
-        simdx_addr10[i] = addr[i] + int(srcstep); \
-        simdx_addr11[i] = simdx_addr10[i] + 3; \
-    } \
     CV_WARP_SIMDX_LINEAR_GATHER_16UC3_CHANNEL(r, 0) \
     CV_WARP_SIMDX_LINEAR_GATHER_16UC3_CHANNEL(g, 1) \
     CV_WARP_SIMDX_LINEAR_GATHER_16UC3_CHANNEL(b, 2) \

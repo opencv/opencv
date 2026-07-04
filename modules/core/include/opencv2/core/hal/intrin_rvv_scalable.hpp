@@ -706,6 +706,14 @@ OPENCV_HAL_IMPL_RVV_LUT_VEC(v_float32, float)
 OPENCV_HAL_IMPL_RVV_LUT_VEC(v_int32, int)
 OPENCV_HAL_IMPL_RVV_LUT_VEC(v_uint32, unsigned)
 
+inline v_uint32 v_lut_expand(const ushort* tab, const v_int32& vidx)
+{
+    const size_t vl = VTraits<v_int32>::vlanes();
+    v_uint32 byte_idx = __riscv_vmul(__riscv_vreinterpret_u32m2(vidx), sizeof(ushort), vl);
+    vuint16m1_t values = __riscv_vloxei32(tab, byte_idx, vl);
+    return __riscv_vwcvtu_x(values, vl);
+}
+
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
 { \
