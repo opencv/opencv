@@ -2610,12 +2610,14 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
-    return v_float64x2(vcvt_f64_f32(vcvt_f32_s32(vget_low_s32(a.val))));
+    // sxtl + scvtf: EXACT over the whole int32 range, same 2 instructions as the former
+    // f32 round-trip (vcvt_f32_s32 + vcvt_f64_f32), which silently lost bits for |x| > 2^24
+    return v_float64x2(vcvtq_f64_s64(vmovl_s32(vget_low_s32(a.val))));
 }
 
 inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
 {
-    return v_float64x2(vcvt_f64_f32(vcvt_f32_s32(vget_high_s32(a.val))));
+    return v_float64x2(vcvtq_f64_s64(vmovl_s32(vget_high_s32(a.val))));
 }
 
 inline v_float64x2 v_cvt_f64(const v_float32x4& a)
