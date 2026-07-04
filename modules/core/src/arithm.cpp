@@ -615,6 +615,11 @@ static bool shapesBroadcastCompat(InputArray a, int acn, InputArray b, int bcn)
 // reciprocal). Handles empty inputs, the UMat/OpenCL branch (arithm_op_ocl) and the CPU element-wise
 // engine. `oclop` selects the OpenCL kernel; `muldiv` drives the OpenCL working-type coercion + scale;
 // `params` are the op scalars (params[0]=mul/div scale; {alpha,beta,gamma} for addWeighted).
+// Below this many ELEMENTS (total * channels), the per-call constant overhead of the engine path
+// (program build + compile + executor setup) is comparable to the actual work - take the direct
+// kernel call instead. Same tier boundary as math_op's MATH_OP_SMALL for cv::exp.
+enum { ARITHM_SMALL_DIRECT = 100000 };
+
 static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray dst,
                       InputArray mask, int dtype, int oclop, bool muldiv, const Scalar& params)
 {
@@ -699,6 +704,39 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     // result depth: explicit dtype wins; else a fixed-type dst dictates it; else the auto depth above.
     const int rdepth = dtype >= 0 ? CV_MAT_DEPTH(dtype)
                      : (dst.fixedType() ? dst.depth() : autoDepth);
+
+    // FAST PATH for the classic hot call: two same-type same-shape continuous arrays, no mask, no
+    // scalar, no broadcast, result depth == input depth, and the array is SMALL. Building and
+    // compiling the 1-instruction program plus the BroadcastOp setup costs ~40-250ns per call -
+    // negligible on big images, dominant at 127x61-class sizes. Call the T x T -> T kernel directly
+    // over the flattened elements instead (the same tier design as math_op for cv::exp). Only ops
+    // whose emitBinary lowering for this exact type combination IS the plain direct kernel are
+    // listed - compare (boundary rewrite/flags) and divide (int guards) lower to more than one
+    // kernel call and keep the ordinary path. addWeighted qualifies exactly when its direct fused
+    // T -> T kernel exists (u8..f32; the 32/64-bit ints lower to wide-compute + cast and get {}
+    // from getElemwiseFunc below, falling through naturally).
+    if (!haveMask && !s1 && !s2 &&
+        (op == ew::OP_ADD || op == ew::OP_SUB || op == ew::OP_MIN || op == ew::OP_MAX ||
+         op == ew::OP_ABSDIFF || op == ew::OP_MUL || op == ew::OP_ADDW ||
+         op == ew::OP_AND || op == ew::OP_OR || op == ew::OP_XOR) &&
+        rdepth == pm1->depth() && pm1->type() == pm2->type() && pm1->size == pm2->size &&
+        pm1->isContinuous() && pm2->isContinuous() &&
+        pm1->total()*cn1 <= (size_t)ARITHM_SMALL_DIRECT)
+    {
+        ew::TKernel k = ew::getElemwiseFunc(op, rdepth, rdepth, ew::EW_DEPTH_NONE, rdepth);
+        if (k.fptr)
+        {
+            dst.createSameSize(src1, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
+            Mat dloc;
+            Mat* pd = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dloc = dst.getMat());
+            if (pd->isContinuous())     // a reused non-continuous dst view falls through to the engine
+            {
+                k.fptr(pm1->data, 0, 1, pm2->data, 0, 1, nullptr, 0, 0,
+                       pd->data, 0, (int)(pm1->total()*cn1), 1, params.val, k.flags, k.userdata);
+                return;
+            }
+        }
+    }
 
     // operand order = (src1, src2): an array becomes an INPUT, a scalar a flexible per-channel CONST
     // read straight from the caller's inline storage (getObj()), no Mat / convertTo.

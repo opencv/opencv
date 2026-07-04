@@ -5,7 +5,7 @@ namespace opencv_test
 using namespace perf;
 
 #define TYPICAL_MAT_TYPES_ADWEIGHTED  CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1
-#define TYPICAL_MATS_ADWEIGHTED       testing::Combine(testing::Values(szVGA, sz720p, sz1080p), testing::Values(TYPICAL_MAT_TYPES_ADWEIGHTED))
+#define TYPICAL_MATS_ADWEIGHTED       testing::Combine(testing::Values(szVGA, sz720p, sz1080p, Size(127, 61)), testing::Values(TYPICAL_MAT_TYPES_ADWEIGHTED))
 
 PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 {

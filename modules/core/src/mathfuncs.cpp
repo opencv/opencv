@@ -453,7 +453,7 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
     CV_Assert(depth == CV_16F || depth == CV_16BF || depth == CV_32F || depth == CV_64F);
 
     Mat src = _src.getMat();
-    _dst.create(src.dims, src.size.p, type);
+    _dst.createSameSize(_src, type);   // whole-shape transfer (layout & future metadata included)
     Mat dst = _dst.getMat();
     if (src.empty())
         return;
