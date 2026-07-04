@@ -865,7 +865,10 @@ static bool broadcastShape(const MatShape* shps, int K, MatShape& out)
     return true;
 }
 
-// Rough per-element cost of an op, in "cycle units" (tuning for parallel_for_ stripe count).
+// Rough per-element cost of an op for the parallel_for_ stripe-count hint, in units of ~1/4 cycle
+// per element of the VECTORIZED kernel (measured on the SIMD paths; e.g. the atan2/exp polynomials
+// run at ~1.5 cycles/element, not the ~30 a scalar-cost model would suggest - the old values
+// over-split the work into stripes too small to amortize the per-job dispatch overhead).
 // Unknown ops default to ~division. cv::expression will own this once it drives broadcastOp.
 static int opCost(TOp op)
 {
@@ -876,10 +879,10 @@ static int opCost(TOp op)
     case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU: case OP_SELECT:
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
-    case OP_DIV: case OP_SQRT: case OP_HYPOT: case OP_CONVERT_SCALE: return 10;
+    case OP_DIV: case OP_SQRT: case OP_HYPOT: case OP_CONVERT_SCALE: return 3;
     case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF: case OP_ATAN2:
-    case OP_EXP: case OP_LOG: case OP_POW:           return 30;
-    default:                                         return 10;
+    case OP_EXP: case OP_LOG: case OP_POW:           return 6;
+    default:                                         return 3;
     }
 }
 
@@ -1290,8 +1293,16 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
     // ---- 4. parallel work hint: total output scalars x summed per-element op cost / budget. ----
     long long otot = (long long)rchannels;
     for (int d = 0; d < (int)spatial.size(); d++) otot *= spatial[d];
-    const double nstripes = (double)otot * (double)std::max<long long>(costPerElem, 1) *
-                            (1./ (double)(1 << 18));
+    // ~4 stripes per thread is plenty of granularity for element-wise work; more only multiplies
+    // the per-job dispatch overhead (notably on the macOS/GCD backend). The absolute ceiling is
+    // 32 pieces, EXCEPT on machines with many (heterogeneous) cores: there anything coarser than
+    // ~3 pieces per worker makes the slow (efficiency) cores equal-share bottlenecks, so the
+    // ceiling grows as 3*nthreads instead.
+    // getNumThreads() is clamped from below: some backends may report 0 (WINRT, plugins).
+    const double T = (double)std::max(getNumThreads(), 1);
+    const double nstripes = std::min(
+        (double)otot * (double)std::max<long long>(costPerElem, 1) * (1./ (double)(1 << 18)),
+        std::min(4.*T, std::max(32., 3.*T)));
 
     EwBody body;
     body.prog = prog.data();
