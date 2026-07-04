@@ -794,7 +794,12 @@ void TExpr::compile()
         for (int k = 0; k < 3; k++)
         {
             int t = tempOfSlot[as[k]];
-            if (t >= 0 && lastUse[t] == i) freeBufs[nfree++] = bufferOfTemp[t];
+            if (t >= 0 && lastUse[t] == i)
+            {
+                freeBufs[nfree++] = bufferOfTemp[t];
+                lastUse[t] = -1;   // the same temp may be several args of this insn ("d*d") -
+                                   // release its buffer once, or freeBufs overflows/double-frees
+            }
         }
     }
 
