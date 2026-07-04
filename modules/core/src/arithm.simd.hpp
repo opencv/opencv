@@ -77,16 +77,59 @@ static inline void vx_setall_as(const float* p, v_float32& a)
 { a = vx_setall_f32(*p); }
 
 // ---------------------------------------------------------------------------
-// Saturating 32-bit add/sub. Universal intrinsics saturate v_add/v_sub for 8/16-bit lanes but WRAP
-// for 32-bit; cv::add/subtract semantics need clamping. Local for now - the plan is to promote
-// these into core/hal/intrin_*.hpp as proper universal intrinsics (v_add_sat/v_sub_sat for all
-// integer types). NEON has single-instruction versions; elsewhere the Hacker's Delight (2-13)
-// bit tricks over universal intrinsics (RVV/LSX also have native ones - later, in the intrinsics).
+// Saturating integer helpers the universal intrinsics lack: v_add_sat/v_sub_sat for 32-bit lanes
+// (v_add/v_sub saturate 8/16-bit but WRAP 32-bit), and v_mul_sat - the FULL-precision product
+// clamped to the lane type, which is exactly cv::multiply's integer semantics at scale == 1.
+// Local for now - the plan is to promote these into core/hal/intrin_*.hpp as proper universal
+// intrinsics for all integer types. On NEON: single-instruction add/sub (vqadd/vqsub) and the
+// widening-multiply + saturating-narrow pattern (vmull + vqmovn; the vget/vcombine forms compile
+// to smull2/sqxtn2 on AArch64). Elsewhere: the Hacker's Delight (2-13) bit tricks for add/sub and
+// the portable v_mul_expand + saturating v_pack composition for the 8/16-bit multiplies (RVV/LSX
+// also have native ones - later, in the intrinsics). 32-bit lanes have no universal widening
+// multiply (no v_mul_expand for s32), so 32-bit v_mul_sat is NEON-only (EW_HAVE_MULSAT32) and
+// getMulFunc_ keeps the f64 work-vector kernels on the other backends.
 #if defined(__ARM_NEON)
 static inline v_int32  v_add_sat(const v_int32& a,  const v_int32& b)  { return v_int32(vqaddq_s32(a.val, b.val)); }
 static inline v_int32  v_sub_sat(const v_int32& a,  const v_int32& b)  { return v_int32(vqsubq_s32(a.val, b.val)); }
 static inline v_uint32 v_add_sat(const v_uint32& a, const v_uint32& b) { return v_uint32(vqaddq_u32(a.val, b.val)); }
 static inline v_uint32 v_sub_sat(const v_uint32& a, const v_uint32& b) { return v_uint32(vqsubq_u32(a.val, b.val)); }
+#define EW_HAVE_MULSAT32 1
+static inline v_uint8 v_mul_sat(const v_uint8& a, const v_uint8& b)
+{
+    uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
+    uint16x8_t p1 = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
+    return v_uint8(vcombine_u8(vqmovn_u16(p0), vqmovn_u16(p1)));
+}
+static inline v_int8 v_mul_sat(const v_int8& a, const v_int8& b)
+{
+    int16x8_t p0 = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
+    int16x8_t p1 = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
+    return v_int8(vcombine_s8(vqmovn_s16(p0), vqmovn_s16(p1)));
+}
+static inline v_uint16 v_mul_sat(const v_uint16& a, const v_uint16& b)
+{
+    uint32x4_t p0 = vmull_u16(vget_low_u16(a.val), vget_low_u16(b.val));
+    uint32x4_t p1 = vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val));
+    return v_uint16(vcombine_u16(vqmovn_u32(p0), vqmovn_u32(p1)));
+}
+static inline v_int16 v_mul_sat(const v_int16& a, const v_int16& b)
+{
+    int32x4_t p0 = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
+    int32x4_t p1 = vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val));
+    return v_int16(vcombine_s16(vqmovn_s32(p0), vqmovn_s32(p1)));
+}
+static inline v_uint32 v_mul_sat(const v_uint32& a, const v_uint32& b)
+{
+    uint64x2_t p0 = vmull_u32(vget_low_u32(a.val), vget_low_u32(b.val));
+    uint64x2_t p1 = vmull_u32(vget_high_u32(a.val), vget_high_u32(b.val));
+    return v_uint32(vcombine_u32(vqmovn_u64(p0), vqmovn_u64(p1)));
+}
+static inline v_int32 v_mul_sat(const v_int32& a, const v_int32& b)
+{
+    int64x2_t p0 = vmull_s32(vget_low_s32(a.val), vget_low_s32(b.val));
+    int64x2_t p1 = vmull_s32(vget_high_s32(a.val), vget_high_s32(b.val));
+    return v_int32(vcombine_s32(vqmovn_s64(p0), vqmovn_s64(p1)));
+}
 #else
 static inline v_int32 v_add_sat(const v_int32& a, const v_int32& b)
 {
@@ -111,6 +154,14 @@ static inline v_uint32 v_sub_sat(const v_uint32& a, const v_uint32& b)
 {
     return v_and(v_sub(a, b), v_ge(a, b));                           // borrow => zero
 }
+static inline v_uint8 v_mul_sat(const v_uint8& a, const v_uint8& b)
+{ v_uint16 p0, p1; v_mul_expand(a, b, p0, p1); return v_pack(p0, p1); }
+static inline v_int8 v_mul_sat(const v_int8& a, const v_int8& b)
+{ v_int16 p0, p1; v_mul_expand(a, b, p0, p1); return v_pack(p0, p1); }
+static inline v_uint16 v_mul_sat(const v_uint16& a, const v_uint16& b)
+{ v_uint32 p0, p1; v_mul_expand(a, b, p0, p1); return v_pack(p0, p1); }
+static inline v_int16 v_mul_sat(const v_int16& a, const v_int16& b)
+{ v_int32 p0, p1; v_mul_expand(a, b, p0, p1); return v_pack(p0, p1); }
 #endif
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F   // scalable (RVV) has v_float64 without CV_SIMD_64F
 static inline void vx_setall_as(const double*   p, v_float64& a) { a = vx_setall_f64(*p); }
@@ -347,8 +398,21 @@ struct EwSub {
 struct EwMul {
     static constexpr bool useScalar = true;
     template<typename V> static V vec(const V& a, const V& b) { return v_mul(a, b); }
-    static v_uint16 vec(const v_uint16& a, const v_uint16& b) { return v_mul_wrap(a, b); }
-    static v_int16 vec(const v_int16& a, const v_int16& b) { return v_mul_wrap(a, b); }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // integer lanes: full product clamped to the lane type (v_mul_sat) == cv::multiply semantics
+    // at scale 1. These drive the scale==1 fast path on FULL-width registers (Wvec1 = the native
+    // lane vector): whole-register loads/stores, widening happens inside the multiply itself.
+    // The guard matches the v_mul_sat definitions above (like EwAdd's 32-bit overloads): in
+    // no-SIMD builds the vector typedefs still exist (intrin_cpp), but the helpers do not.
+    static v_uint8  vec(const v_uint8& a,  const v_uint8& b)  { return v_mul_sat(a, b); }
+    static v_int8   vec(const v_int8& a,   const v_int8& b)   { return v_mul_sat(a, b); }
+    static v_uint16 vec(const v_uint16& a, const v_uint16& b) { return v_mul_sat(a, b); }
+    static v_int16  vec(const v_int16& a,  const v_int16& b)  { return v_mul_sat(a, b); }
+#ifdef EW_HAVE_MULSAT32
+    static v_uint32 vec(const v_uint32& a, const v_uint32& b) { return v_mul_sat(a, b); }
+    static v_int32  vec(const v_int32& a,  const v_int32& b)  { return v_mul_sat(a, b); }
+#endif
+#endif
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
@@ -1102,32 +1166,32 @@ TKernel getMulFunc_(int T, int R)
     switch (T)
     {
     case CV_8U:
-        fptr =   // scale==1 fast path loads u8->v_uint16 & multiplies in int (255^2 < 2^16, exact,
-                 // saturating u16->u8 pack on store); Wvec (f16 where available, else f32) for scale
+        fptr =   // scale==1 fast path: whole u8 registers, v_mul_sat widens+clamps inside;
+                 // Wvec (f16 where available, else f32) for the scale path
         #if CV_SIMD_16F
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint16> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint8> :
         #else
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul, float, v_uint16> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul, float, v_uint8> :
         #endif
             R == CV_32F ? vecBinaryKernel<uchar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_8S:
-        fptr =   // scale==1 fast path loads s8->v_int16 & multiplies in int (127^2 < 2^15, exact)
+        fptr =   // scale==1 fast path: whole s8 registers via v_mul_sat
         #if CV_SIMD_16F
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMul, float, v_int16> :
+            R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMul, float, v_int8> :
         #else
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul, float, v_int16> :
+            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul, float, v_int8> :
         #endif
             R == CV_32F ? vecBinaryKernel<schar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16U:
-        fptr =   // scale==1 fast path loads u16->v_uint32 & multiplies in int (65535^2 < 2^32, exact); Wvec=f32 for scale
-            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul, float, v_uint32> :
+        fptr =   // scale==1 fast path: whole u16 registers via v_mul_sat; Wvec=f32 for scale
+            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul, float, v_uint16> :
             R == CV_32F ? vecBinaryKernel<ushort, float,  v_float32, float, EwMul> : nullptr;
         break;
     case CV_16S:
-        fptr =   // scale==1 fast path loads s16->v_int32 & multiplies in int (32767^2 < 2^31, exact); Wvec=f32 for scale
-            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMul, float, v_int32> :
+        fptr =   // scale==1 fast path: whole s16 registers via v_mul_sat; Wvec=f32 for scale
+            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMul, float, v_int16> :
             R == CV_32F ? vecBinaryKernel<short, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16F:
@@ -1144,8 +1208,12 @@ TKernel getMulFunc_(int T, int R)
         fptr = R == CV_32F ? vecBinaryKernel<float, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_32U:
-        fptr =
-        #if CV_SIMD_64F
+        fptr =   // scale==1 fast path (where v_mul_sat32 exists): whole u32 registers, widening
+                 // multiply + saturating narrow; the f64 work vector serves the scale path
+        #if defined(EW_HAVE_MULSAT32) && CV_SIMD_64F
+            R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_float64, double, EwMul, double, v_uint32> :
+            R == CV_64F ? vecBinaryKernel<unsigned, double,   v_float64, double, EwMul> : nullptr;
+        #elif CV_SIMD_64F
             R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_float64, double, EwMul> :
             R == CV_64F ? vecBinaryKernel<unsigned, double,   v_float64, double, EwMul> : nullptr;
         #else
@@ -1154,8 +1222,11 @@ TKernel getMulFunc_(int T, int R)
         #endif
         break;
     case CV_32S:
-        fptr =
-        #if CV_SIMD_64F
+        fptr =   // scale==1 fast path: see CV_32U
+        #if defined(EW_HAVE_MULSAT32) && CV_SIMD_64F
+            R == CV_32S ? vecBinaryKernel<int, int,    v_float64, double, EwMul, double, v_int32> :
+            R == CV_64F ? vecBinaryKernel<int, double, v_float64, double, EwMul> : nullptr;
+        #elif CV_SIMD_64F
             R == CV_32S ? vecBinaryKernel<int, int,    v_float64, double, EwMul> :
             R == CV_64F ? vecBinaryKernel<int, double, v_float64, double, EwMul> : nullptr;
         #else
