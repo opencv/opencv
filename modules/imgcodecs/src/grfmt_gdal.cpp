@@ -256,6 +256,7 @@ void write_pixel( const double& pixelValue,
 
     // input: 3 channel, output: 3 channel
     else if( gdalChannels == 3 && image.channels() == 3 ){
+        if( channel >= 3 ){ return; }
         if( image.depth() == CV_8U ){  (*image.ptr<Vec3b>(row,col))[channel] = newValue;  }
         else if( image.depth() == CV_16U ){  (*image.ptr<Vec3s>(row,col))[channel] = newValue;  }
         else if( image.depth() == CV_16S ){  (*image.ptr<Vec3s>(row,col))[channel] = newValue;  }
