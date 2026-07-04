@@ -1643,8 +1643,10 @@ struct Parser
                 return it->second;
             }
             advance();                            // consume '('
-            std::array<int, 8> args; int nargs = 0;   // every function takes <= 3 args (clamp/select) - a
-            if (cur.type != T_RPAREN)                 // small stack buffer avoids a std::vector heap alloc
+            // every function takes <= 3 args (clamp/select); a stack buffer avoids a std::vector
+            // heap alloc. The {} is for gcc's -Wmaybe-uninitialized only.
+            std::array<int, 8> args = {}; int nargs = 0;
+            if (cur.type != T_RPAREN)
             {
                 args[nargs++] = parseTernary();
                 while (cur.type == T_COMMA) { advance();

@@ -1115,7 +1115,7 @@ channels innermost) and the whole expression is fused into a single traversal of
 @param inputs the arrays bound to `{0}`, `{1}`, ...
 @param outputs receives one array per top-level result (one entry, or several for a tuple).
 */
-CV_EXPORTS void texpr(const std::string& expr, InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+CV_EXPORTS_W void texpr(const String& expr, InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
 
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise

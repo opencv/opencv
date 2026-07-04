@@ -75,6 +75,43 @@ static inline void vx_setall_as(const short* p, v_float32& a)
 { a = vx_setall_f32(float(*p)); }
 static inline void vx_setall_as(const float* p, v_float32& a)
 { a = vx_setall_f32(*p); }
+
+// ---------------------------------------------------------------------------
+// Saturating 32-bit add/sub. Universal intrinsics saturate v_add/v_sub for 8/16-bit lanes but WRAP
+// for 32-bit; cv::add/subtract semantics need clamping. Local for now - the plan is to promote
+// these into core/hal/intrin_*.hpp as proper universal intrinsics (v_add_sat/v_sub_sat for all
+// integer types). NEON has single-instruction versions; elsewhere the Hacker's Delight (2-13)
+// bit tricks over universal intrinsics (RVV/LSX also have native ones - later, in the intrinsics).
+#if defined(__ARM_NEON)
+static inline v_int32  v_add_sat(const v_int32& a,  const v_int32& b)  { return v_int32(vqaddq_s32(a.val, b.val)); }
+static inline v_int32  v_sub_sat(const v_int32& a,  const v_int32& b)  { return v_int32(vqsubq_s32(a.val, b.val)); }
+static inline v_uint32 v_add_sat(const v_uint32& a, const v_uint32& b) { return v_uint32(vqaddq_u32(a.val, b.val)); }
+static inline v_uint32 v_sub_sat(const v_uint32& a, const v_uint32& b) { return v_uint32(vqsubq_u32(a.val, b.val)); }
+#else
+static inline v_int32 v_add_sat(const v_int32& a, const v_int32& b)
+{
+    v_int32 res = v_add(a, b);
+    v_int32 ov  = v_and(v_xor(a, res), v_xor(b, res));               // sign bit set iff overflow
+    v_int32 sat = v_xor(v_shr<31>(a), vx_setall_s32(INT_MAX));       // a >= 0 ? INT_MAX : INT_MIN
+    return v_select(v_lt(ov, vx_setzero_s32()), sat, res);
+}
+static inline v_int32 v_sub_sat(const v_int32& a, const v_int32& b)
+{
+    v_int32 res = v_sub(a, b);
+    v_int32 ov  = v_and(v_xor(a, b), v_xor(a, res));
+    v_int32 sat = v_xor(v_shr<31>(a), vx_setall_s32(INT_MAX));
+    return v_select(v_lt(ov, vx_setzero_s32()), sat, res);
+}
+static inline v_uint32 v_add_sat(const v_uint32& a, const v_uint32& b)
+{
+    v_uint32 res = v_add(a, b);
+    return v_or(res, v_lt(res, a));                                  // wrapped => all-ones
+}
+static inline v_uint32 v_sub_sat(const v_uint32& a, const v_uint32& b)
+{
+    return v_and(v_sub(a, b), v_ge(a, b));                           // borrow => zero
+}
+#endif
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F   // scalable (RVV) has v_float64 without CV_SIMD_64F
 static inline void vx_setall_as(const double*   p, v_float64& a) { a = vx_setall_f64(*p); }
 static inline void vx_setall_as(const int*      p, v_float64& a) { a = vx_setall_f64((double)*p); }
@@ -269,6 +306,11 @@ struct EwAdd {
     // when true, it is taken only if the runtime scale is exactly 1.
     static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_add(a, b); }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // 32-bit lanes: v_add wraps - use the saturating version to match the scalar int64+clamp tail
+    static v_int32  vec(const v_int32& a,  const v_int32& b)  { return v_add_sat(a, b); }
+    static v_uint32 vec(const v_uint32& a, const v_uint32& b) { return v_add_sat(a, b); }
+#endif
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     // Accumulate in the promoted type, NOT in W: for the native saturating path W is the narrow
@@ -281,6 +323,11 @@ struct EwAdd {
 struct EwSub {
     static constexpr bool useScalar = false;
     template<typename V> static V vec(const V& a, const V& b) { return v_sub(a, b); }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // 32-bit lanes: see EwAdd::vec
+    static v_int32  vec(const v_int32& a,  const v_int32& b)  { return v_sub_sat(a, b); }
+    static v_uint32 vec(const v_uint32& a, const v_uint32& b) { return v_sub_sat(a, b); }
+#endif
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a - b); }   // see EwAdd::scl
@@ -620,8 +667,10 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     // This is also the ONLY path a per-channel patch (M/V differ by channel) reaches.
     // constexpr: the short-row loads T natively (vx_load->Vvec), so it exists ONLY at native width. The
     // widened f16/bf16->f32 path (sizeof(T) < Vvec lane) and 8-byte f64 fall through to per-row + scalar.
-    if constexpr (sizeof(T) == sizeof(typename VTraits<Vvec>::lane_type))
-    if (sizeof(T) <= 4 && height > 1 && width <= 4 &&
+    // (sizeof(T) <= 4 is part of the constexpr gate: for f64 the body would compile to nothing but
+    // dead stores - gcc 9 flags scbuf/bsrc/bsx as set-but-not-used there.)
+    if constexpr (sizeof(T) == sizeof(typename VTraits<Vvec>::lane_type) && sizeof(T) <= 4)
+    if (height > 1 && width <= 4 &&
         ((s0y == 0 && s1y == (size_t)width*s1x) || (s1y == 0 && s0y == (size_t)width*s0x)) &&
         dsty == (size_t)width)
     {
@@ -966,7 +1015,8 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
 // ===========================================================================
 
 // add dispatch: T x T -> R (operands already same depth T).
-//  - native saturating path (Wvec = native, use_simd=true) for T -> T on <=32-bit ints + f32;
+//  - native saturating path (Wvec = native, use_simd=true) for T -> T on <=32-bit ints + f32
+//    (32-bit lanes via the local v_add_sat/v_sub_sat - v_add/v_sub wrap there);
 //  - widening f32-hub (Wvec = v_float32, use_simd=true) for the widened/half/float outputs;
 //  - scalar (use_simd=false) for 64-bit results and f64 (no vector path yet).
 template<class Op>
@@ -999,12 +1049,12 @@ TKernel getAddSubFunc(int T, int R)
                R == CV_32F ? vecBinaryKernel<short, float, v_int32, int, Op, int> : nullptr;
         break;
     case CV_32U:
-        fptr = R == CV_32U ? scalarBinaryKernel<unsigned, unsigned, int64_t, Op> :
+        fptr = R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_uint32, int64_t, Op, unsigned> :
                 R == CV_64S ? scalarBinaryKernel<unsigned, int64_t, int64_t, Op> :
                 R == CV_64F ? scalarBinaryKernel<unsigned, double, int64_t, Op> : nullptr;
         break;
     case CV_32S:
-        fptr = R == CV_32S ? scalarBinaryKernel<int, int, int64_t, Op> :
+        fptr = R == CV_32S ? vecBinaryKernel<int, int, v_int32, int64_t, Op, int> :
                R == CV_64S ? scalarBinaryKernel<int, int64_t, int64_t, Op> :
                R == CV_64F ? scalarBinaryKernel<int, double, int64_t, Op> : nullptr;
         break;

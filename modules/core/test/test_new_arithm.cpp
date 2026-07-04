@@ -306,4 +306,59 @@ TEST(Core_EW_Slice, cast_basic)
     }
 }
 
+// cv::add / cv::subtract on 32-bit ints SATURATE (SIMD via the local v_add_sat/v_sub_sat, scalar
+// tail via the int64 work type) - uniform random data essentially never crosses the boundaries,
+// so directed cases are mandatory (see the v_sat_arith brief): both rails, the 0 - INT_MIN case,
+// mixed-sign non-overflow, and a random block checked against an exact int64 reference.
+TEST(Core_EW_AddSub, saturation_s32_u32)
+{
+    const int W = 37;                       // odd width: SIMD body + scalar tail both covered
+    {
+        const int mx = INT_MAX, mn = INT_MIN;
+        const int a[] = { mx,      mn,      mx, mn,  0,          -1, mx,      12345 };
+        const int b[] = { 1,       -1,      mx, mn,  mn,         mx, -1,      -54321 };
+        // exact int64 references
+        Mat A(1, 8, CV_32S, (void*)a), B(1, 8, CV_32S, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 8; i++)
+        {
+            int64_t rs = (int64_t)a[i] + b[i], rd = (int64_t)a[i] - b[i];
+            EXPECT_EQ(sum.at<int>(i), (int)std::min<int64_t>(std::max<int64_t>(rs, mn), mx)) << "add s32 case " << i;
+            EXPECT_EQ(dif.at<int>(i), (int)std::min<int64_t>(std::max<int64_t>(rd, mn), mx)) << "sub s32 case " << i;
+        }
+    }
+    {
+        const unsigned mx = UINT_MAX;
+        const unsigned a[] = { mx, 0, mx, 5,  0, 100 };
+        const unsigned b[] = { 1,  1, mx, 5,  0, 7 };
+        Mat A(1, 6, CV_32U, (void*)a), B(1, 6, CV_32U, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 6; i++)
+        {
+            uint64_t rs = (uint64_t)a[i] + b[i];
+            int64_t  rd = (int64_t)a[i] - b[i];
+            EXPECT_EQ(sum.at<unsigned>(i), (unsigned)std::min<uint64_t>(rs, mx)) << "add u32 case " << i;
+            EXPECT_EQ(dif.at<unsigned>(i), (unsigned)std::max<int64_t>(rd, 0)) << "sub u32 case " << i;
+        }
+    }
+    // random block spanning the full range (so saturation DOES occur), vs the int64 reference
+    {
+        Mat a(15, W, CV_32S), b(15, W, CV_32S), sum, dif;
+        theRNG().fill(a, RNG::UNIFORM, INT_MIN, INT_MAX);
+        theRNG().fill(b, RNG::UNIFORM, INT_MIN, INT_MAX);
+        cv::add(a, b, sum);
+        cv::subtract(a, b, dif);
+        for (int y = 0; y < a.rows; y++)
+            for (int x = 0; x < W; x++)
+            {
+                int64_t rs = (int64_t)a.at<int>(y, x) + b.at<int>(y, x);
+                int64_t rd = (int64_t)a.at<int>(y, x) - b.at<int>(y, x);
+                ASSERT_EQ(sum.at<int>(y, x), (int)std::min<int64_t>(std::max<int64_t>(rs, INT_MIN), INT_MAX)) << y << "," << x;
+                ASSERT_EQ(dif.at<int>(y, x), (int)std::min<int64_t>(std::max<int64_t>(rd, INT_MIN), INT_MAX)) << y << "," << x;
+            }
+    }
+}
+
 }} // namespace
