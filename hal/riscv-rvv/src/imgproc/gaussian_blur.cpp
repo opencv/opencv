@@ -136,8 +136,13 @@ static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size
     return CV_HAL_ERROR_OK;
 }
 
-template<int ksize>
-static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int full_width, int full_height, int offset_x, int offset_y, int border_type)
+// Channel-blind kernel for interleaved 8U data: a row is treated as width*cn
+// flat u8 elements whose horizontal taps sit at strides of cn elements, so no
+// segment loads or slide chains are needed; the vertical pass is a single
+// contiguous u16 stream and the output is a plain store. Weighted taps are
+// combined with shifts; u16 is exact (two 16x passes: 16*16*255 = 65280).
+template<int ksize, int cn>
+static inline int gaussianBlurFlat8U(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int full_width, int full_height, int offset_x, int offset_y, int border_type)
 {
     constexpr int noval = std::numeric_limits<int>::max();
     auto accessX = [&](int x) {
@@ -148,28 +153,26 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
         int pj = common::borderInterpolate(offset_x + y - ksize / 2, full_width, border_type);
         return pj < 0 ? noval : pj - offset_x;
     };
-    auto p2idx = [&](int x, int y){ return ((x + ksize) % ksize * width + y) * 4; };
+    const int W = width * cn;
+    auto p2idx = [&](int x){ return (x + ksize) % ksize * W; };
 
     constexpr uint kernel[2][5] = {{1, 2, 1}, {1, 4, 6, 4, 1}};
-    std::vector<ushort> res(width * ksize * 4);
+    std::vector<ushort> res(W * ksize);
     auto process = [&](int x, int y) {
-        ushort sum0, sum1, sum2, sum3;
-        sum0 = sum1 = sum2 = sum3 = 0;
+        ushort sum[cn];
+        for (int c = 0; c < cn; c++)
+            sum[c] = 0;
         for (int i = 0; i < ksize; i++)
         {
             int p = accessY(y + i);
             if (p != noval)
             {
-                sum0 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4    ]);
-                sum1 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4 + 1]);
-                sum2 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4 + 2]);
-                sum3 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4 + 3]);
+                for (int c = 0; c < cn; c++)
+                    sum[c] += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * cn + c]);
             }
         }
-        res[p2idx(x, y)    ] = sum0;
-        res[p2idx(x, y) + 1] = sum1;
-        res[p2idx(x, y) + 2] = sum2;
-        res[p2idx(x, y) + 3] = sum3;
+        for (int c = 0; c < cn; c++)
+            res[p2idx(x) + y * cn + c] = sum[c];
     };
 
     const int left = ksize / 2, right = width - ksize / 2;
@@ -189,80 +192,31 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
                 for (int j = right; j < width; j++)
                     process(i, j);
 
+                ushort* row = res.data() + p2idx(i);
                 int vl;
-                for (int j = left; j < right; j += vl)
+                for (int fj = left * cn; fj < right * cn; fj += vl)
                 {
-                    vl = __riscv_vsetvl_e8m1(right - j);
-                    const uchar* extra = src_data + i * src_step + (j - ksize / 2) * 4;
-                    auto src = __riscv_vlseg4e8_v_u8m1x4(extra, vl);
-                    auto src0 = __riscv_vzext_vf2(__riscv_vget_v_u8m1x4_u8m1(src, 0), vl);
-                    auto src1 = __riscv_vzext_vf2(__riscv_vget_v_u8m1x4_u8m1(src, 1), vl);
-                    auto src2 = __riscv_vzext_vf2(__riscv_vget_v_u8m1x4_u8m1(src, 2), vl);
-                    auto src3 = __riscv_vzext_vf2(__riscv_vget_v_u8m1x4_u8m1(src, 3), vl);
-
-                    extra += vl * 4;
-                    auto sum0 = src0, sum1 = src1, sum2 = src2, sum3 = src3;
+                    vl = __riscv_vsetvl_e8m4(right * cn - fj);
+                    const uchar* p = src_data + i * src_step + fj - (ksize / 2) * cn;
+                    vuint16m8_t acc;
                     if (ksize == 3)
                     {
-                        src0 = __riscv_vslide1down(src0, extra[0], vl);
-                        src1 = __riscv_vslide1down(src1, extra[1], vl);
-                        src2 = __riscv_vslide1down(src2, extra[2], vl);
-                        src3 = __riscv_vslide1down(src3, extra[3], vl);
-                        sum0 = __riscv_vadd(sum0, __riscv_vsll(src0, 1, vl), vl);
-                        sum1 = __riscv_vadd(sum1, __riscv_vsll(src1, 1, vl), vl);
-                        sum2 = __riscv_vadd(sum2, __riscv_vsll(src2, 1, vl), vl);
-                        sum3 = __riscv_vadd(sum3, __riscv_vsll(src3, 1, vl), vl);
-                        src0 = __riscv_vslide1down(src0, extra[4], vl);
-                        src1 = __riscv_vslide1down(src1, extra[5], vl);
-                        src2 = __riscv_vslide1down(src2, extra[6], vl);
-                        src3 = __riscv_vslide1down(src3, extra[7], vl);
-                        sum0 = __riscv_vadd(sum0, src0, vl);
-                        sum1 = __riscv_vadd(sum1, src1, vl);
-                        sum2 = __riscv_vadd(sum2, src2, vl);
-                        sum3 = __riscv_vadd(sum3, src3, vl);
+                        // 1 2 1
+                        acc = __riscv_vwaddu_vv(__riscv_vle8_v_u8m4(p, vl), __riscv_vle8_v_u8m4(p + 2 * cn, vl), vl);
+                        auto mid = __riscv_vle8_v_u8m4(p + cn, vl);
+                        acc = __riscv_vwaddu_wv(acc, mid, vl);
+                        acc = __riscv_vwaddu_wv(acc, mid, vl);
                     }
                     else
                     {
-                        src0 = __riscv_vslide1down(src0, extra[0], vl);
-                        src1 = __riscv_vslide1down(src1, extra[1], vl);
-                        src2 = __riscv_vslide1down(src2, extra[2], vl);
-                        src3 = __riscv_vslide1down(src3, extra[3], vl);
-                        sum0 = __riscv_vadd(sum0, __riscv_vsll(src0, 2, vl), vl);
-                        sum1 = __riscv_vadd(sum1, __riscv_vsll(src1, 2, vl), vl);
-                        sum2 = __riscv_vadd(sum2, __riscv_vsll(src2, 2, vl), vl);
-                        sum3 = __riscv_vadd(sum3, __riscv_vsll(src3, 2, vl), vl);
-                        src0 = __riscv_vslide1down(src0, extra[4], vl);
-                        src1 = __riscv_vslide1down(src1, extra[5], vl);
-                        src2 = __riscv_vslide1down(src2, extra[6], vl);
-                        src3 = __riscv_vslide1down(src3, extra[7], vl);
-                        sum0 = __riscv_vadd(sum0, __riscv_vadd(__riscv_vsll(src0, 1, vl), __riscv_vsll(src0, 2, vl), vl), vl);
-                        sum1 = __riscv_vadd(sum1, __riscv_vadd(__riscv_vsll(src1, 1, vl), __riscv_vsll(src1, 2, vl), vl), vl);
-                        sum2 = __riscv_vadd(sum2, __riscv_vadd(__riscv_vsll(src2, 1, vl), __riscv_vsll(src2, 2, vl), vl), vl);
-                        sum3 = __riscv_vadd(sum3, __riscv_vadd(__riscv_vsll(src3, 1, vl), __riscv_vsll(src3, 2, vl), vl), vl);
-                        src0 = __riscv_vslide1down(src0, extra[ 8], vl);
-                        src1 = __riscv_vslide1down(src1, extra[ 9], vl);
-                        src2 = __riscv_vslide1down(src2, extra[10], vl);
-                        src3 = __riscv_vslide1down(src3, extra[11], vl);
-                        sum0 = __riscv_vadd(sum0, __riscv_vsll(src0, 2, vl), vl);
-                        sum1 = __riscv_vadd(sum1, __riscv_vsll(src1, 2, vl), vl);
-                        sum2 = __riscv_vadd(sum2, __riscv_vsll(src2, 2, vl), vl);
-                        sum3 = __riscv_vadd(sum3, __riscv_vsll(src3, 2, vl), vl);
-                        src0 = __riscv_vslide1down(src0, extra[12], vl);
-                        src1 = __riscv_vslide1down(src1, extra[13], vl);
-                        src2 = __riscv_vslide1down(src2, extra[14], vl);
-                        src3 = __riscv_vslide1down(src3, extra[15], vl);
-                        sum0 = __riscv_vadd(sum0, src0, vl);
-                        sum1 = __riscv_vadd(sum1, src1, vl);
-                        sum2 = __riscv_vadd(sum2, src2, vl);
-                        sum3 = __riscv_vadd(sum3, src3, vl);
+                        // 1 4 6 4 1
+                        acc = __riscv_vwaddu_vv(__riscv_vle8_v_u8m4(p, vl), __riscv_vle8_v_u8m4(p + 4 * cn, vl), vl);
+                        auto t13 = __riscv_vwaddu_vv(__riscv_vle8_v_u8m4(p + cn, vl), __riscv_vle8_v_u8m4(p + 3 * cn, vl), vl);
+                        acc = __riscv_vadd(acc, __riscv_vsll(t13, 2, vl), vl);
+                        auto mid = __riscv_vzext_vf2(__riscv_vle8_v_u8m4(p + 2 * cn, vl), vl);
+                        acc = __riscv_vadd(acc, __riscv_vadd(__riscv_vsll(mid, 2, vl), __riscv_vsll(mid, 1, vl), vl), vl);
                     }
-
-                    vuint16m2x4_t dst{};
-                    dst = __riscv_vset_v_u16m2_u16m2x4(dst, 0, sum0);
-                    dst = __riscv_vset_v_u16m2_u16m2x4(dst, 1, sum1);
-                    dst = __riscv_vset_v_u16m2_u16m2x4(dst, 2, sum2);
-                    dst = __riscv_vset_v_u16m2_u16m2x4(dst, 3, sum3);
-                    __riscv_vsseg4e16(res.data() + p2idx(i, j), dst, vl);
+                    __riscv_vse16(row + fj, acc, vl);
                 }
             }
         }
@@ -270,84 +224,31 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
         int cur = i - ksize / 2;
         if (cur >= start)
         {
-            const ushort* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
-            const ushort* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
-            const ushort* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
-            const ushort* row3 = nullptr, *row4 = nullptr;
-            if (ksize == 5)
-            {
-                row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
-                row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
-            }
+            const ushort* rows[ksize];
+            for (int k = 0; k < ksize; k++)
+                rows[k] = accessX(cur + k) == noval ? nullptr : res.data() + p2idx(accessX(cur + k));
 
             int vl;
-            for (int j = 0; j < width; j += vl)
+            for (int fj = 0; fj < W; fj += vl)
             {
-                vl = __riscv_vsetvl_e16m2(width - j);
-                vuint16m2_t sum0, sum1, sum2, sum3, src0{}, src1{}, src2{}, src3{};
-                sum0 = sum1 = sum2 = sum3 = __riscv_vmv_v_x_u16m2(0, vl);
-
-                auto loadres = [&](const ushort* row) {
-                    auto src = __riscv_vlseg4e16_v_u16m2x4(row + j * 4, vl);
-                    src0 = __riscv_vget_v_u16m2x4_u16m2(src, 0);
-                    src1 = __riscv_vget_v_u16m2x4_u16m2(src, 1);
-                    src2 = __riscv_vget_v_u16m2x4_u16m2(src, 2);
-                    src3 = __riscv_vget_v_u16m2x4_u16m2(src, 3);
-                };
-                if (row0)
+                vl = __riscv_vsetvl_e16m8(W - fj);
+                auto vzero = __riscv_vmv_v_x_u16m8(0, vl);
+                auto load = [&](int k) { return rows[k] ? __riscv_vle16_v_u16m8(rows[k] + fj, vl) : vzero; };
+                vuint16m8_t sum;
+                if (ksize == 3)
                 {
-                    loadres(row0);
-                    sum0 = src0;
-                    sum1 = src1;
-                    sum2 = src2;
-                    sum3 = src3;
+                    // 1 2 1
+                    sum = __riscv_vadd(__riscv_vadd(load(0), load(2), vl), __riscv_vsll(load(1), 1, vl), vl);
                 }
-                if (row1)
+                else
                 {
-                    loadres(row1);
-                    sum0 = __riscv_vadd(sum0, __riscv_vsll(src0, ksize == 5 ? 2 : 1, vl), vl);
-                    sum1 = __riscv_vadd(sum1, __riscv_vsll(src1, ksize == 5 ? 2 : 1, vl), vl);
-                    sum2 = __riscv_vadd(sum2, __riscv_vsll(src2, ksize == 5 ? 2 : 1, vl), vl);
-                    sum3 = __riscv_vadd(sum3, __riscv_vsll(src3, ksize == 5 ? 2 : 1, vl), vl);
+                    // 1 4 6 4 1
+                    sum = __riscv_vadd(load(0), load(4), vl);
+                    sum = __riscv_vadd(sum, __riscv_vsll(__riscv_vadd(load(1), load(3), vl), 2, vl), vl);
+                    auto mid = load(2);
+                    sum = __riscv_vadd(sum, __riscv_vadd(__riscv_vsll(mid, 2, vl), __riscv_vsll(mid, 1, vl), vl), vl);
                 }
-                if (row2)
-                {
-                    loadres(row2);
-                    if (ksize == 5)
-                    {
-                        src0 = __riscv_vadd(__riscv_vsll(src0, 1, vl), __riscv_vsll(src0, 2, vl), vl);
-                        src1 = __riscv_vadd(__riscv_vsll(src1, 1, vl), __riscv_vsll(src1, 2, vl), vl);
-                        src2 = __riscv_vadd(__riscv_vsll(src2, 1, vl), __riscv_vsll(src2, 2, vl), vl);
-                        src3 = __riscv_vadd(__riscv_vsll(src3, 1, vl), __riscv_vsll(src3, 2, vl), vl);
-                    }
-                    sum0 = __riscv_vadd(sum0, src0, vl);
-                    sum1 = __riscv_vadd(sum1, src1, vl);
-                    sum2 = __riscv_vadd(sum2, src2, vl);
-                    sum3 = __riscv_vadd(sum3, src3, vl);
-                }
-                if (row3)
-                {
-                    loadres(row3);
-                    sum0 = __riscv_vadd(sum0, __riscv_vsll(src0, 2, vl), vl);
-                    sum1 = __riscv_vadd(sum1, __riscv_vsll(src1, 2, vl), vl);
-                    sum2 = __riscv_vadd(sum2, __riscv_vsll(src2, 2, vl), vl);
-                    sum3 = __riscv_vadd(sum3, __riscv_vsll(src3, 2, vl), vl);
-                }
-                if (row4)
-                {
-                    loadres(row4);
-                    sum0 = __riscv_vadd(sum0, src0, vl);
-                    sum1 = __riscv_vadd(sum1, src1, vl);
-                    sum2 = __riscv_vadd(sum2, src2, vl);
-                    sum3 = __riscv_vadd(sum3, src3, vl);
-                }
-
-                vuint8m1x4_t dst{};
-                dst = __riscv_vset_v_u8m1_u8m1x4(dst, 0, __riscv_vnclipu(sum0, ksize == 5 ? 8 : 4, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8m1_u8m1x4(dst, 1, __riscv_vnclipu(sum1, ksize == 5 ? 8 : 4, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8m1_u8m1x4(dst, 2, __riscv_vnclipu(sum2, ksize == 5 ? 8 : 4, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8m1_u8m1x4(dst, 3, __riscv_vnclipu(sum3, ksize == 5 ? 8 : 4, __RISCV_VXRM_RNU, vl));
-                __riscv_vsseg4e8(dst_data + cur * dst_step + j * 4, dst, vl);
+                __riscv_vse8(dst_data + cur * dst_step + fj, __riscv_vnclipu(sum, ksize == 5 ? 8 : 4, __RISCV_VXRM_RNU, vl), vl);
             }
         }
     }
@@ -360,7 +261,7 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
 int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type)
 {
     const int type = CV_MAKETYPE(depth, cn);
-    if ((type != CV_8UC1 && type != CV_8UC4 && type != CV_16UC1) || src_data == dst_data)
+    if ((type != CV_8UC1 && type != CV_8UC3 && type != CV_8UC4 && type != CV_16UC1) || src_data == dst_data)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if ((ksize != 3 && ksize != 5) || border_type & BORDER_ISOLATED || border_type == BORDER_WRAP)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -375,10 +276,14 @@ int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data
         return common::invoke(height, {gaussianBlurC1<3, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 500 + CV_16UC1:
         return common::invoke(height, {gaussianBlurC1<5, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
+    case 300 + CV_8UC3:
+        return common::invoke(height, {gaussianBlurFlat8U<3, 3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
+    case 500 + CV_8UC3:
+        return common::invoke(height, {gaussianBlurFlat8U<5, 3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 300 + CV_8UC4:
-        return common::invoke(height, {gaussianBlurC4<3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
+        return common::invoke(height, {gaussianBlurFlat8U<3, 4>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 500 + CV_8UC4:
-        return common::invoke(height, {gaussianBlurC4<5>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
+        return common::invoke(height, {gaussianBlurFlat8U<5, 4>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
