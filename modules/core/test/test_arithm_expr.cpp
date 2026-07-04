@@ -132,7 +132,7 @@ TEST(Core_TExpr, pow_exponents)
         Mat a0(37, 41, CV_64F), a;
         theRNG().fill(a0, RNG::UNIFORM, 0.05, 9.);
         a0.convertTo(a, depth);
-        for (double p : { 2., 3., 0.5, 1., 0., 2.5, -1.5 })
+        for (double p : { 2., 3., 0.5, 1., 0., 2.5, -1.5, -0.5, 5., -2., 11. })
         {
             Mat got = expr1(cv::format("pow({0}, %.10g)", p), { a });
             ASSERT_EQ(got.depth(), depth) << "p=" << p;

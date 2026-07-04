@@ -1043,126 +1043,69 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
     CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
-    Mat src = _src.getMat();
-    _dst.create( src.size, type );
-    Mat dst = _dst.getMat();
+    const bool floatDepth = depth == CV_16F || depth == CV_16BF || depth == CV_32F || depth == CV_64F;
 
-    const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2] = {};
-    NAryMatIterator it(arrays, ptrs);
-    int len = (int)(it.size*cn);
-
-    if( is_ipower )
+    // INTEGER array ** INTEGER power: keep the classic iPow kernels (an exact multiply chain with
+    // the classic wrap-around semantics) - full bit-exact compatibility for whoever relies on it.
+    // Everything else - any power on a float array, a fractional power on an integer one (computed
+    // in the float domain and saturated back), plus the 32U/64-bit depths iPow never supported -
+    // goes through the engine below.
+    if( is_ipower && !floatDepth && ipowTab[depth] )
     {
+        Mat src = _src.getMat();
+        _dst.createSameSize(_src, type);
+        Mat dst = _dst.getMat();
+
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2] = {};
+        NAryMatIterator it(arrays, ptrs);
+        int len = (int)(it.size*cn);
         IPowFunc func = ipowTab[depth];
-        CV_Assert( func != 0 );
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], ptrs[1], len, ipower );
+        return;
     }
-    else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
+
+    // The engine path, two tiers like math_op: the pow kernel special-cases the exponents
+    // 3/0.5 (2/1/0 never reach here) per row and vectorizes the general exp(p*log x) with an exact
+    // std::pow patch for non-positive bases (0^negative -> inf, negative^fractional -> NaN).
+    Mat src = _src.getMat();
+    _dst.createSameSize(_src, type);
+    Mat dst = _dst.getMat();
+    if (src.empty())
+        return;
+
+    const size_t total = src.total() * cn;
+    if (floatDepth && src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL)
     {
-        MathFunc func = power < 0 ?
-            (depth == CV_32F ? (MathFunc)hal::invSqrt32f : (MathFunc)hal::invSqrt64f) :
-            (depth == CV_32F ? (MathFunc)hal::sqrt32f : (MathFunc)hal::sqrt64f);
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func( ptrs[0], ptrs[1], len );
-    }
-    else
-    {
-        int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
-        size_t esz1 = src.elemSize1();
-        AutoBuffer<uchar> buf;
-        Cv32suf inf32, nan32;
-        Cv64suf inf64, nan64;
-        float* fbuf = 0;
-        double* dbuf = 0;
-#ifndef __EMSCRIPTEN__
-        inf32.i = 0x7f800000;
-        nan32.i = 0x7fffffff;
-        inf64.i = CV_BIG_INT(0x7FF0000000000000);
-        nan64.i = CV_BIG_INT(0x7FFFFFFFFFFFFFFF);
-#else
-        inf32.f = std::numeric_limits<float>::infinity();
-        nan32.f = std::numeric_limits<float>::quiet_NaN();
-        inf64.f = std::numeric_limits<double>::infinity();
-        nan64.f = std::numeric_limits<double>::quiet_NaN();
-#endif
-
-        if( src.ptr() == dst.ptr() )
+        ew::TKernel k = ew::getPowFunc(depth, depth);
+        if (k.fptr)
         {
-            buf.allocate(blockSize*esz1);
-            fbuf = (float*)buf.data();
-            dbuf = (double*)buf.data();
-        }
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-        {
-            for( j = 0; j < len; j += blockSize )
+            double pvstore;                    // the broadcast exponent, stored as T
+            void* pv = &pvstore;
+            switch (depth)
             {
-                int bsz = std::min(len - j, blockSize);
-
-                if( depth == CV_32F )
-                {
-                    float* x0 = (float*)ptrs[0];
-                    float* x = fbuf ? fbuf : x0;
-                    float* y = (float*)ptrs[1];
-
-                    if( x != x0 )
-                        memcpy(x, x0, bsz*esz1);
-
-                    hal::log32f(x, y, bsz);
-                    for( k = 0; k < bsz; k++ )
-                        y[k] = (float)(y[k]*power);
-                    hal::exp32f(y, y, bsz);
-                    for( k = 0; k < bsz; k++ )
-                    {
-                        if( x0[k] <= 0 )
-                        {
-                            if( x0[k] == 0.f )
-                            {
-                                if( power < 0 )
-                                    y[k] = inf32.f;
-                            }
-                            else
-                                y[k] = nan32.f;
-                        }
-                    }
-                }
-                else
-                {
-                    double* x0 = (double*)ptrs[0];
-                    double* x = dbuf ? dbuf : x0;
-                    double* y = (double*)ptrs[1];
-
-                    if( x != x0 )
-                        memcpy(x, x0, bsz*esz1);
-
-                    hal::log64f(x, y, bsz);
-                    for( k = 0; k < bsz; k++ )
-                        y[k] *= power;
-                    hal::exp64f(y, y, bsz);
-
-                    for( k = 0; k < bsz; k++ )
-                    {
-                        if( x0[k] <= 0 )
-                        {
-                            if( x0[k] == 0. )
-                            {
-                                if( power < 0 )
-                                    y[k] = inf64.f;
-                            }
-                            else
-                                y[k] = nan64.f;
-                        }
-                    }
-                }
-                ptrs[0] += bsz*esz1;
-                ptrs[1] += bsz*esz1;
+            case CV_16F:  *(hfloat*)pv = saturate_cast<hfloat>(power); break;
+            case CV_16BF: *(bfloat*)pv = saturate_cast<bfloat>(power); break;
+            case CV_32F:  *(float*)pv = (float)power; break;
+            default:      pvstore = power; break;
             }
+            static const double noparams[4] = {};
+            k.fptr(src.data, 0, 1, pv, 0, 0, nullptr, 0, 0,
+                   dst.data, 0, (int)total, 1, noparams, k.flags, k.userdata);
+            return;
         }
     }
+
+    ew::TExpr prog;
+    const int a = prog.addInput(depth);
+    const int c = prog.addConst(ew::EW_DEPTH_NONE, Scalar(power), 1);
+    const int out = prog.addOutput(depth);
+    prog.moveToOutput(prog.emitBinary(ew::OP_POW, a, c, depth), out);
+    prog.compile();
+    const Mat* inputs[] = { &src };
+    prog.exec(inputs, &dst);
 }
 
 void sqrt(InputArray a, OutputArray b)

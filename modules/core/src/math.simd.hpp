@@ -327,6 +327,43 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                     const T one = saturate_cast<T>(1);
                     for (; x < width; x++) dst[x] = one;
                 }
+                else if (p == WT(-0.5))
+                {
+                    const Wvec one = vxSetallW(WT(1), Wvec());
+                    for (; x < width; x += VECSZ*2)
+                    {
+                        if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
+                        Wvec a0, a1;
+                        vx_load_pair_as(src0 + x, a0, a1);
+                        a0 = v_div(one, v_sqrt(a0)); a1 = v_div(one, v_sqrt(a1));
+                        v_store_pair_as(dst + x, a0, a1);
+                    }
+                }
+                else if (p == std::rint(p) && std::abs(p) <= WT(65536))
+                {
+                    // any other INTEGER exponent: LSB-first binary exponentiation - the same
+                    // multiply chain (and order) as the classic iPow, fully vectorized. Also more
+                    // accurate than exp(p*log x) (a few ulp vs ~2e-7 rel) and semantically exact
+                    // on non-positive bases: the sign falls out of the multiplies, 0^negative
+                    // divides to inf - no scalar patching needed.
+                    const int ip = (int)p, ap = ip < 0 ? -ip : ip;   // ap >= 1 (0..3 handled above)
+                    const Wvec one = vxSetallW(WT(1), Wvec());
+                    for (; x < width; x += VECSZ*2)
+                    {
+                        if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
+                        Wvec b0, b1;
+                        vx_load_pair_as(src0 + x, b0, b1);
+                        Wvec a0 = one, a1 = one;
+                        for (int q = ap; q > 1; q >>= 1)
+                        {
+                            if (q & 1) { a0 = v_mul(a0, b0); a1 = v_mul(a1, b1); }
+                            b0 = v_mul(b0, b0); b1 = v_mul(b1, b1);
+                        }
+                        a0 = v_mul(a0, b0); a1 = v_mul(a1, b1);
+                        if (ip < 0) { a0 = v_div(one, a0); a1 = v_div(one, a1); }
+                        v_store_pair_as(dst + x, a0, a1);
+                    }
+                }
                 else                                    // general scalar exponent: exp(p * log(x))
                 {
                     const Wvec vp = vxSetallW(p, Wvec()), z = v_setzero_<Wvec>();
