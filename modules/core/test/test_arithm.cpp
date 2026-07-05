@@ -3069,6 +3069,64 @@ TEST(Core_ConvertTo, regression_12121)
     }
 }
 
+TEST(Core_ConvertTo, fp8_e4m3_basic_roundtrip)
+{
+    Mat src(1, 4, CV_32FC1);
+    src.at<float>(0,0) = 1.0f;
+    src.at<float>(0,1) = 0.0f;
+    src.at<float>(0,2) = 448.0f;
+    src.at<float>(0,3) = -2.0f;
+
+    Mat fp8;
+    src.convertTo(fp8, CV_8F);
+    EXPECT_EQ(CV_8F, fp8.depth());
+    EXPECT_EQ((size_t)1, fp8.elemSize());
+
+    Mat back;
+    fp8.convertTo(back, CV_32F);
+    EXPECT_FLOAT_EQ(1.0f, back.at<float>(0,0));
+    EXPECT_FLOAT_EQ(0.0f, back.at<float>(0,1));
+    EXPECT_FLOAT_EQ(448.0f, back.at<float>(0,2));
+    EXPECT_FLOAT_EQ(-2.0f, back.at<float>(0,3));
+}
+
+TEST(Core_ConvertTo, fp8_e4m3_overflow_clamps_not_nan)
+{
+    // Values that round to the byte pattern reserved for NaN (0x7F) must
+    // clamp to the max finite value (448.0) instead of colliding with it.
+    Mat src(1, 3, CV_32FC1);
+    src.at<float>(0,0) = 500.0f;
+    src.at<float>(0,1) = 420.0f; // inside the collision zone before rounding
+    src.at<float>(0,2) = -500.0f;
+
+    Mat fp8, back;
+    src.convertTo(fp8, CV_8F);
+    fp8.convertTo(back, CV_32F);
+
+    EXPECT_FLOAT_EQ(448.0f, back.at<float>(0,0));
+    EXPECT_FALSE(cvIsNaN(back.at<float>(0,1)));
+    EXPECT_FLOAT_EQ(-448.0f, back.at<float>(0,2));
+}
+
+TEST(Core_ConvertTo, fp8_e4m3_uchar_and_ushort_paths)
+{
+    Mat src8u(1, 3, CV_8UC1);
+    src8u.at<uchar>(0,0) = 0;
+    src8u.at<uchar>(0,1) = 1;
+    src8u.at<uchar>(0,2) = 255;
+
+    Mat fp8;
+    src8u.convertTo(fp8, CV_8F);
+    Mat back8u;
+    fp8.convertTo(back8u, CV_8U);
+    EXPECT_EQ(0, back8u.at<uchar>(0,0));
+    EXPECT_EQ(1, back8u.at<uchar>(0,1));
+    // 255 exceeds fp8's max finite (448 is fine, so 255 is representable
+    // in the lower-precision fp8 grid but may round; just check it's finite
+    // and within a reasonable tolerance of the original)
+    EXPECT_NEAR(255.0, (double)back8u.at<uchar>(0,2), 16.0);
+}
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
