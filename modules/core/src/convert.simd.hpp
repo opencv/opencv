@@ -382,6 +382,7 @@ DEF_CVT_FUNC(16s64u, cvt_, short, uint64_t, v_uint32)
 DEF_CVT_FUNC(16s64s, cvt_, short, int64_t, v_int32)
 DEF_CVT_FUNC(16s16f, cvt1_,short, hfloat, v_float32)
 DEF_CVT_FUNC(16s16bf, cvt1_, short, bfloat, v_float32)
+DEF_CVT_FUNC(16s8f, cvt1_, short, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(16s8b, short, 0)
 
 ////////////////////// 32u -> ... ////////////////////////
@@ -396,6 +397,7 @@ DEF_CVT_FUNC(32u64f, cvt_, unsigned, double, v_float32)
 DEF_CVT_SCALAR_FUNC(32u64s, unsigned, int64_t)
 DEF_CVT_FUNC(32u16f, cvt1_, unsigned, hfloat, v_float32)
 DEF_CVT_FUNC(32u16bf, cvt1_, int, bfloat, v_float32)
+DEF_CVT_FUNC(32u8f, cvt1_, unsigned, fp8_e4m3_t, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
@@ -410,6 +412,7 @@ DEF_CVT_FUNC(32s64u, cvt_, int, uint64_t, v_uint32)
 DEF_CVT_FUNC(32s64s, cvt_, int, int64_t, v_int32)
 DEF_CVT_FUNC(32s16f, cvt1_,int, hfloat, v_float32)
 DEF_CVT_FUNC(32s16bf, cvt1_, int, bfloat, v_float32)
+DEF_CVT_FUNC(32s8f, cvt1_, int, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(32s8b, int, 0)
 
 ////////////////////// 32f -> ... ////////////////////////
@@ -441,6 +444,7 @@ DEF_CVT_FUNC(64f64u, cvt_64f, double, uint64_t, v_float64)
 DEF_CVT_FUNC(64f64s, cvt_64f, double, int64_t, v_float32)
 DEF_CVT_FUNC(64f16f, cvt1_,double, hfloat, v_float32)
 DEF_CVT_FUNC(64f16bf, cvt1_,double, bfloat, v_float32)
+DEF_CVT_FUNC(64f8f, cvt1_, double, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(64f8b, int64_t, 1)
 
 ////////////////////// 16f -> ... ////////////////////////
@@ -456,6 +460,7 @@ DEF_CVT_FUNC(16f64f, cvt1_, hfloat, double, v_float32)
 DEF_CVT_FUNC(16f64u, cvt1_, hfloat, uint64_t, v_float32)
 DEF_CVT_FUNC(16f64s, cvt1_, hfloat, int64_t, v_float32)
 DEF_CVT_FUNC(16f16bf, cvt1_, hfloat, bfloat, v_float32)
+DEF_CVT_FUNC(16f8f, cvt1_, hfloat, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(16f8b, short, 1)
 
 ////////////////////// 16bf -> ... ////////////////////////
@@ -471,13 +476,22 @@ DEF_CVT_FUNC(16bf64f, cvt1_, bfloat, double, v_float32)
 DEF_CVT_FUNC(16bf64u, cvt1_, bfloat, uint64_t, v_float32)
 DEF_CVT_FUNC(16bf64s, cvt1_, bfloat, int64_t, v_float32)
 DEF_CVT_FUNC(16bf16f, cvt1_, bfloat, hfloat, v_float32)
+DEF_CVT_FUNC(16bf8f, cvt1_, bfloat, fp8_e4m3_t, v_float32)
 
 ////////////////////// 8f -> ... ////////////////////////
 
 DEF_CVT_FUNC(8f8u,  cvt_, fp8_e4m3_t, uchar,  v_float32)
 DEF_CVT_FUNC(8f8s,  cvt_, fp8_e4m3_t, schar,  v_float32)
 DEF_CVT_FUNC(8f16u, cvt1_, fp8_e4m3_t, ushort, v_float32)
+DEF_CVT_FUNC(8f16s, cvt1_, fp8_e4m3_t, short,  v_float32)
+DEF_CVT_FUNC(8f32u, cvt1_, fp8_e4m3_t, unsigned, v_float32)
+DEF_CVT_FUNC(8f32s, cvt1_, fp8_e4m3_t, int,    v_float32)
 DEF_CVT_FUNC(8f32f, cvt1_, fp8_e4m3_t, float,  v_float32)
+DEF_CVT_FUNC(8f64f, cvt1_, fp8_e4m3_t, double, v_float32)
+DEF_CVT_FUNC(8f64u, cvt1_, fp8_e4m3_t, uint64_t, v_float32)
+DEF_CVT_FUNC(8f64s, cvt1_, fp8_e4m3_t, int64_t, v_float32)
+DEF_CVT_FUNC(8f16f, cvt1_, fp8_e4m3_t, hfloat, v_float32)
+DEF_CVT_FUNC(8f16bf, cvt1_, fp8_e4m3_t, bfloat, v_float32)
 
 ////////////////////// 64s -> ... ////////////////////////
 
@@ -492,6 +506,7 @@ DEF_CVT_FUNC(64s64f, cvt_64f, int64_t, double,  v_float64)
 DEF_CVT_FUNC(64s64u, cvt_, int64_t, uint64_t, v_uint64)
 DEF_CVT_FUNC(64s16f, cvt1_,int64_t, hfloat, v_float32)
 DEF_CVT_FUNC(64s16bf, cvt1_, int64_t, bfloat, v_float32)
+DEF_CVT_FUNC(64s8f, cvt1_, int64_t, fp8_e4m3_t, v_float32)
 DEF_CVT2BOOL_FUNC(64s8b, int64_t, 0)
 
 ////////////////////// 64u -> ... ////////////////////////
@@ -506,6 +521,7 @@ DEF_CVT_FUNC(64u32f, cvt_64f, uint64_t, float,  v_float64)
 DEF_CVT_FUNC(64u64f, cvt_64f, uint64_t, double,  v_float64)
 DEF_CVT_FUNC(64u16f, cvt1_,uint64_t, hfloat, v_float32)
 DEF_CVT_FUNC(64u16bf, cvt1_, uint64_t, bfloat, v_float32)
+DEF_CVT_FUNC(64u8f, cvt1_, uint64_t, fp8_e4m3_t, v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 
@@ -585,6 +601,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f16s :
             sdepth == CV_16F ? cvt16f16s :
             sdepth == CV_16BF ? cvt16bf16s :
+            sdepth == CV_8F ? cvt8f16s :
             sdepth == CV_Bool ? cvt8b16s :
             sdepth == CV_64U ? cvt64u16s :
             sdepth == CV_64S ? cvt64s16s :
@@ -600,6 +617,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f32u :
             sdepth == CV_16F ? cvt16f32u :
             sdepth == CV_16BF ? cvt16bf32u :
+            sdepth == CV_8F ? cvt8f32u :
             sdepth == CV_Bool ? cvt8b32s :
             sdepth == CV_64U ? cvt64u32u :
             sdepth == CV_64S ? cvt64s32u :
@@ -616,6 +634,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f32s :
             sdepth == CV_16F ? cvt16f32s :
             sdepth == CV_16BF ? cvt16bf32s :
+            sdepth == CV_8F ? cvt8f32s :
             sdepth == CV_Bool ? cvt8b32s :
             sdepth == CV_64U ? cvt64u32s :
             sdepth == CV_64S ? cvt64s32s :
@@ -647,6 +666,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64s :
             sdepth == CV_16F ? cvt16f64f :
             sdepth == CV_16BF ? cvt16bf64f :
+            sdepth == CV_8F ? cvt8f64f :
             sdepth == CV_Bool ? cvt8b64f :
             sdepth == CV_64U ? cvt64u64f :
             sdepth == CV_64S ? cvt64s64f :
@@ -662,6 +682,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f16f :
             sdepth == CV_16F ? cvt16u :
             sdepth == CV_16BF ? cvt16bf16f :
+            sdepth == CV_8F ? cvt8f16f :
             sdepth == CV_Bool ? cvt8b16f :
             sdepth == CV_64U ? cvt64u16f :
             sdepth == CV_64S ? cvt64s16f :
@@ -680,12 +701,21 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16bf :
             sdepth == CV_64U ? cvt64u16bf :
             sdepth == CV_64S ? cvt64s16bf :
+            sdepth == CV_8F ? cvt8f16bf :
             0) :
         ddepth == CV_8F ? (
             sdepth == CV_8U ? cvt8u8f :
             sdepth == CV_8S ? cvt8s8f :
             sdepth == CV_16U ? cvt16u8f :
+            sdepth == CV_16S ? cvt16s8f :
+            sdepth == CV_32U ? cvt32u8f :
+            sdepth == CV_32S ? cvt32s8f :
             sdepth == CV_32F ? cvt32f8f :
+            sdepth == CV_64F ? cvt64f8f :
+            sdepth == CV_16F ? cvt16f8f :
+            sdepth == CV_16BF ? cvt16bf8f :
+            sdepth == CV_64U ? cvt64u8f :
+            sdepth == CV_64S ? cvt64s8f :
             0) :
         ddepth == CV_Bool ? (
             sdepth == CV_8U ? cvt8u8b :
@@ -713,6 +743,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f64u :
             sdepth == CV_16F ? cvt16f64u :
             sdepth == CV_16BF ? cvt16bf64u :
+            sdepth == CV_8F ? cvt8f64u :
             sdepth == CV_Bool ? cvt8b64s :
             sdepth == CV_64U ? cvt64s :
             sdepth == CV_64S ? cvt64s64u :
@@ -728,6 +759,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f64s :
             sdepth == CV_16F ? cvt16f64s :
             sdepth == CV_16BF ? cvt16bf64s :
+            sdepth == CV_8F ? cvt8f64s :
             sdepth == CV_Bool ? cvt8b64s :
             sdepth == CV_64U ? cvt64s :
             sdepth == CV_64S ? cvt64s :
