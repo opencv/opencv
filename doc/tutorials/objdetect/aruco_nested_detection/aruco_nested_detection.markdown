@@ -7,7 +7,7 @@ Detection of Nested ArUco Markers {#tutorial_aruco_nested_detection}
 |    |    |
 | -: | :- |
 | Original author | Jonas Perolini |
-| Compatibility   | OpenCV >= 4.7.0 |
+| Compatibility   | OpenCV >= 4.14.0 |
 
 Why nested markers
 ------------------
@@ -17,23 +17,42 @@ from far away but stops fitting the camera view up close, a small one only works
 camera. Nested markers solve this by printing a small marker inside a cell block of a large one,
 so that some marker is always detectable as the camera approaches the target.
 
-A cell that contains a nested marker is neither black nor white, which is why nested markers
+One common use case is autonomous landing, or any rendezvous where the camera moves toward a known target. From far away the drone sees the large marker. As it gets closer, the inner markers start being detected. In the final approach, the small inner markers keep the target visible.
+
+![Drone landing with continuous nested marker detection](images/nested_landing.png)
+
+Non-binary dictionaries
+------------------
+
+A cell from the host marker that contains an inner marker is neither black nor white, which is why nested markers
 require a `cv::aruco::DICT_ENCODING_CELL_RATIO` dictionary: each cell stores its expected
 white pixel ratio in percent, and identification uses
 `|observed - expected| <= validBitIdThreshold` per cell, exactly like binary markers.
 
-![Far, intermediate and close views of the same printed marker](images/nested_ranges.png)
-
 Ratio dictionaries are a general concept: any composed marker can be described this way, and you
-can build your own (see "Custom composed markers" at the end). This tutorial uses one specific,
-ready-to-use implementation: the predefined nested pair dictionaries. It walks through the full
+can build your own (see "Custom composed markers" at the end).
+
+The image below shows a nested ArUco marker with an
+inner inverted marker. On the right: the nested marker with its bit encoding in the
+center. The cell’s separation are in red and the area considered for the identification process in green.
+On the left: a zoom on the inner marker with the non-binary encoding corresponding to the ratio of
+white pixels inside the margins (green squares).
+
+![Nested marker with non-binary encoding](images/nested_marker_cell_ratio.png)
+
+Tutorial overview
+-----------------
+
+This tutorial uses one specific, ready-to-use implementation: the predefined nested pair dictionaries. It walks through the full
 workflow:
 
 1. pick a dictionary and print a marker,
 2. detect it with your camera,
 3. estimate its pose, alone or combined into a board.
 
-The pairing rules
+The predefined nested dictionaries are intentionally simple. They cover one level of nesting: one inner marker inside one outer marker. The inner id is tied to the outer id (`2k` and `2k + 1`), so only pairs such as `(0, 1)`, `(2, 3)` and `(4, 5)` have generated object points in one shared frame. The predefined sets are also small by design to keep a large inner marker distance. Deeper nesting, larger marker sets and mixed combinations can still be modeled manually with a custom dictionary and a custom `cv::aruco::Board`, but the predefined helpers do not define those layouts for you.
+
+Predefined nested pair dictionaries
 -----------------
 
 The predefined nested dictionaries follow four rules. Everything else (detection, boards, pose)
@@ -45,7 +64,7 @@ is standard ArUco:
 2. The outer pattern contains **exactly one uniform 2x2 cell block, always white**.
 3. The inner marker is printed **rotated 45 degrees**, centered on the corner point shared by
    the block's 4 cells. Its half diagonal spans 0.7 outer cells, which makes the inner marker
-   about 6 times smaller than the outer one.
+   about 6 times smaller than the outer one. The rotation allows to keep the inner marker large while changing only small corner triangles of the outer marker cells.
 4. Both patterns have **at least 4 cells of each color**, so plain bright or dark quads never
    resemble a marker.
 
@@ -55,7 +74,7 @@ There is no extra layout information to store or communicate.
 
 ![A printable pair: outer id 0 and inner id 1](images/nested_pair.png)
 
-Three predefined dictionaries are available. As always, pick the smallest one that fits your
+Three predefined dictionaries are available. Pick the smallest one that fits your
 number of physical targets, it gives the largest safety margins:
 
 | dictionary | pairs | ids | min separation distance |
@@ -65,7 +84,9 @@ number of physical targets, it gives the largest safety margins:
 | `cv::aruco::DICT_4X4_NESTED_24` | 24 | 0..47 | 2 |
 
 Custom sizes can be generated with `cv::aruco::generateNestedDictionary()`. The "Details"
-section below explains how the separation distance is computed and why it prevents confusion.
+section below explains how the separation distance is computed and why it prevents inter-marker confusion. The image below shows the markers composing the `cv::aruco::DICT_4X4_NESTED_10` predefined dictionary.
+
+![Overview of the `cv::aruco::DICT_4X4_NESTED_10`](images/nested_dict_4x4_10.png)
 
 Step 1: create and print the markers
 ------------------------------------
@@ -238,16 +259,22 @@ The candidate is accepted for a dictionary entry when at most `c` cells mismatch
 
 ### The separation distance
 
-Could one candidate match two different entries? Given a single cell with expected values `r`
-(entry A) and `r'` (entry B). Suppose one observation `o` matches both. Then `|o - r| <= T` and
-`|o - r'| <= T`. The difference between the two expected values can be defined as:
+Could one candidate match two different entries? Take one cell whose expected value is `r1` for entry A and `r2` for entry B. If one observation `o` matches both entries, both tests are true:
 
-    |r - r'| = |(r - o) + (o - r')| <= |r - o| + |o - r'| <= T + T = 2T
+    |o - r1| <= T
+    |o - r2| <= T
 
-The first step is the triangle inequality: a sum can never be larger in absolute value than the
+The difference between the two expected values is bounded by:
+
+    |r1 - r2| = |(r1 - o) + (o - r2)|
+              <= |r1 - o| + |o - r2|
+              <= T + T
+              = 2T
+
+The middle step is the triangle inequality: a sum can never be larger in absolute value than the
 sum of the absolute values. So if two expected values are further apart than `2T`, no single
-observation can match both. Such a cell is called **separating**. The bound is tight: if
-`|r - r'| <= 2T`, the observation in the middle of `r` and `r'` matches both.
+observation can match both. Such a cell is called **separating**. When
+the two expected values are at most `2T` apart, an observation halfway between them matches both entries.
 
 The **separation distance** `D` between two entries is the number of separating cells, taking
 the minimum over the 4 relative rotations, because the detector tries all 4 rotations of a
