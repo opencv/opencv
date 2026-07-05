@@ -355,6 +355,7 @@ DEF_CVTBOOL2_FUNC(8b64f, double, 1)
 DEF_CVTBOOL2_FUNC(8b64s, int64_t, 1)
 DEF_CVTBOOL2_FUNC(8b16f, uint16_t, 0x3c00) // hfloat(1.0f)
 DEF_CVTBOOL2_FUNC(8b16bf, uint16_t, 0x3f80) // bfloat(1.0f)
+DEF_CVTBOOL2_FUNC(8b8f, uint8_t, 0x38) // fp8_e4m3(1.0f)
 
 ////////////////////// 16u -> ... ////////////////////////
 
@@ -492,6 +493,17 @@ DEF_CVT_FUNC(8f64u, cvt1_, fp8_e4m3_t, uint64_t, v_float32)
 DEF_CVT_FUNC(8f64s, cvt1_, fp8_e4m3_t, int64_t, v_float32)
 DEF_CVT_FUNC(8f16f, cvt1_, fp8_e4m3_t, hfloat, v_float32)
 DEF_CVT_FUNC(8f16bf, cvt1_, fp8_e4m3_t, bfloat, v_float32)
+static void cvt8f8b(const uchar* src_, size_t sstep, const uchar*, size_t,
+                     uchar* dst, size_t dstep, Size size, void*)
+{
+    CV_INSTRUMENT_REGION();
+    const fp8_e4m3_t* src = (const fp8_e4m3_t*)src_;
+    sstep /= sizeof(src[0]);
+    for (int i = 0; i < size.height; i++, src += sstep, dst += dstep) {
+        for (int j = 0; j < size.width; j++)
+            dst[j] = ((float)src[j] != 0.0f);
+    }
+}
 
 ////////////////////// 64s -> ... ////////////////////////
 
@@ -714,6 +726,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f8f :
             sdepth == CV_16F ? cvt16f8f :
             sdepth == CV_16BF ? cvt16bf8f :
+            sdepth == CV_Bool ? cvt8b8f :
             sdepth == CV_64U ? cvt64u8f :
             sdepth == CV_64S ? cvt64s8f :
             0) :
@@ -728,6 +741,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_64F ? cvt64f8b :
             sdepth == CV_16F ? cvt16f8b :
             sdepth == CV_16BF ? cvt16f8b : // same as cvt16f8b
+            sdepth == CV_8F ? cvt8f8b :
             sdepth == CV_Bool ? cvt8u :
             sdepth == CV_64U ? cvt64s8b :
             sdepth == CV_64S ? cvt64s8b :
