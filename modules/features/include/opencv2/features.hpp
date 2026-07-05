@@ -1378,6 +1378,28 @@ enum LightGlueType
     LG_DISK = 1     //!< DISK model:  keypoints normalized to [ 0, 1]
 };
 
+//! LightGlue keypoint coordinate normalization.
+enum LightGlueKeypointNormalization
+{
+    LG_KEYPOINTS_AUTO = 0,    //!< Matcher chooses normalization from LightGlueType.
+    LG_KEYPOINTS_AS_IS = 1,   //!< Input keypoints are already normalized for the model.
+    LG_KEYPOINTS_ALIKED = 2,  //!< ALIKED normalization: x / width * 2 - 1, y / height * 2 - 1.
+    LG_KEYPOINTS_DISK = 3     //!< DISK normalization: x / (width - 1), y / (height - 1).
+};
+
+/** @brief Normalizes keypoint coordinates for LightGlue models.
+
+@param keypoints Input keypoints as an Nx2 CV_32F matrix with x,y coordinates.
+@param normalizedKeypoints Output Nx2 CV_32F matrix.
+@param imageSize Source image size used for pixel-coordinate normalization.
+@param normalizationType One of LightGlueKeypointNormalization, except LG_KEYPOINTS_AUTO
+                         which is only resolved by LightGlueMatcher.
+ */
+CV_EXPORTS_W void normalizeLightGlueKeypoints(InputArray keypoints,
+                                              OutputArray normalizedKeypoints,
+                                              Size imageSize,
+                                              int normalizationType);
+
 class CV_EXPORTS_W LightGlueMatcher : public DescriptorMatcher
 {
 protected:
@@ -1415,9 +1437,12 @@ public:
     @param trainKpts Train image keypoints (Nx2 float matrix with x,y coordinates).
     @param queryImageSize Size of the query image (width, height).
     @param trainImageSize Size of the train image (width, height).
+    @param keypointNormalization Keypoint normalization mode. The default LG_KEYPOINTS_AUTO
+                                 preserves the model-specific behavior selected by LightGlueType.
     */
     CV_WRAP virtual void setPairInfo(InputArray queryKpts, InputArray trainKpts,
-                                     Size queryImageSize = Size(), Size trainImageSize = Size()) = 0;
+                                     Size queryImageSize = Size(), Size trainImageSize = Size(),
+                                     int keypointNormalization = LG_KEYPOINTS_AUTO) = 0;
 
     /** @brief Clears stored pair context information.
     */
