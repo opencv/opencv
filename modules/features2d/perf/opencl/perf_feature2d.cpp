@@ -76,6 +76,6 @@ OCL_PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DE
 }
 
 } // ocl
-} // cvtest
+} // opencv_test
 
 #endif // HAVE_OPENCL

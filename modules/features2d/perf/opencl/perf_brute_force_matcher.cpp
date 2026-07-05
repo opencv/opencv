@@ -145,6 +145,6 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, MatchCrossCheck, ::testing::Combine(OC
 }
 
 } // ocl
-} // cvtest
+} // opencv_test
 
 #endif // HAVE_OPENCL
