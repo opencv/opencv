@@ -13,8 +13,6 @@
 
 using namespace cv;
 
-// Mirrors CV_IPP_MALLOC from modules/core/include/opencv2/core/private.hpp: ippicv (IPP >= 2017)
-// exposes only the 64-bit ippMalloc_L. private.hpp is gated by HAVE_IPP, which the HAL plugin lacks.
 #if IPP_VERSION_X100 >= 201700
 #define IPP_HAL_MALLOC(SIZE) ippMalloc_L(SIZE)
 #else
@@ -103,7 +101,6 @@ int ipp_hal_matchTemplate(const uchar* src_data, size_t src_step, int src_width,
 {
     CV_HAL_CHECK_USE_IPP();
 
-    // These functions are only implemented for single-channel CV_8U / CV_32F.
     if(cn != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if(depth != CV_8U && depth != CV_32F)
@@ -135,9 +132,8 @@ int ipp_hal_matchTemplate(const uchar* src_data, size_t src_step, int src_width,
     else if(method == cv::TM_SQDIFF_NORMED || method == cv::TM_CCORR ||
             method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
     {
-        // Raw cross-correlation only. TM_CCORR is already the final result; the caller
-        // (cv::matchTemplate) runs common_matchTemplate() to finish TM_SQDIFF_NORMED /
-        // TM_CCOEFF / TM_CCOEFF_NORMED.
+        // Raw cross-correlation; caller finishes SQDIFF_NORMED/CCOEFF/CCOEFF_NORMED via
+        // common_matchTemplate (TM_CCORR is already final).
         if(ipp_crossCorr(img, templ, result, false))
             return CV_HAL_ERROR_OK;
     }

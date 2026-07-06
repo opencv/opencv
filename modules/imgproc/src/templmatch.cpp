@@ -1068,10 +1068,6 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     Mat result = _result.getMat();
 
     {
-        // The IPP HAL performs the heavy step (raw/normalized cross-correlation or squared
-        // distance) that IPP handled historically. On success `result` holds the final answer
-        // for TM_SQDIFF / TM_CCORR / TM_CCORR_NORMED, or the raw cross-correlation for
-        // TM_SQDIFF_NORMED / TM_CCOEFF / TM_CCOEFF_NORMED, which common_matchTemplate finishes here.
         int hal_res = cv_hal_matchTemplate(img.data, img.step, img.cols, img.rows,
                                            templ.data, templ.step, templ.cols, templ.rows,
                                            result.ptr<float>(), result.step, depth, cn, method);
