@@ -1561,6 +1561,37 @@ TEST(Core_MatExpr, empty_check_15760)
     EXPECT_THROW(Mat c = Mat().cross(Mat()), cv::Exception);
 }
 
+// https://github.com/opencv/opencv/issues/23577
+// A scalar passed to Mat::mul() binds to _InputArray(const double&), i.e. to a temporary
+// double on the caller's stack. The returned MatExpr used to keep a Mat header pointing at
+// that stack slot after it died. The helpers are called through volatile function pointers
+// so they cannot be inlined, which makes the stale-stack read deterministic.
+MatExpr makeScalarMulExpr(const Mat& m, double scale)
+{
+    return m.mul(scale);
+}
+
+void overwriteStackFrame()
+{
+    volatile double buf[256];
+    for (int i = 0; i < 256; i++)
+        buf[i] = -1.0;
+    (void)buf;
+}
+
+TEST(Core_MatExpr, mul_scalar_use_after_scope_23577)
+{
+    MatExpr (*volatile makeExprFn)(const Mat&, double) = makeScalarMulExpr;
+    void (*volatile overwriteFn)() = overwriteStackFrame;
+
+    Mat m(2, 3, CV_32FC1, Scalar::all(3.0f));
+    MatExpr e = makeExprFn(m, 7.0);
+    overwriteFn();
+    Mat res = e;
+
+    EXPECT_EQ(0, cvtest::norm(res, Mat(2, 3, CV_32FC1, Scalar::all(21.0f)), NORM_INF));
+}
+
 TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/issues/19599 (OpenCV 4.x+ only)
 {
     Mat a(1, 1, CV_32F, Scalar::all(1));

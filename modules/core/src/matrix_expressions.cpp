@@ -1738,8 +1738,15 @@ MatExpr Mat::mul(InputArray m, double scale) const
 {
     CV_INSTRUMENT_REGION();
 
+    Mat b = m.getMat();
+    // A MATX-kind argument (a scalar bound to _InputArray(const double&), a Matx or a Vec)
+    // is a non-owning view of caller stack memory that the returned MatExpr can outlive,
+    // so snapshot it. See https://github.com/opencv/opencv/issues/23577
+    if( m.isMatx() )
+        b = b.clone();
+
     MatExpr e;
-    MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
+    MatOp_Bin::makeExpr(e, '*', *this, b, scale);
     return e;
 }
 
