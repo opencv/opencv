@@ -624,6 +624,41 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     }
 }
 
+void Net::Impl::saveFusedSnapshot()
+{
+    fusedSnapshot.clear();
+    for (const Ptr<Graph>& g : allgraphs) {
+        FusedGraphSnapshot snap;
+        snap.graph = g;
+        const std::vector<Ptr<LayerInfo> >& prog = g->prog();
+        snap.prog = prog;
+        snap.inputs.reserve(prog.size());
+        snap.outputs.reserve(prog.size());
+        for (const Ptr<LayerInfo>& op : prog) {
+            snap.inputs.push_back(op ? op->inputs : std::vector<Arg>());
+            snap.outputs.push_back(op ? op->outputs : std::vector<Arg>());
+        }
+        fusedSnapshot.push_back(std::move(snap));
+    }
+}
+
+void Net::Impl::restoreFusedSnapshot()
+{
+    // Roll the graph back to its post-fusion state: undo the layer-input rewiring
+    // and remove the TransformLayout ops inserted by a previous useBlockLayout().
+    for (const FusedGraphSnapshot& snap : fusedSnapshot) {
+        for (size_t i = 0; i < snap.prog.size(); i++) {
+            const Ptr<LayerInfo>& op = snap.prog[i];
+            if (!op)
+                continue;
+            op->inputs = snap.inputs[i];
+            op->outputs = snap.outputs[i];
+        }
+        snap.graph->setProg(snap.prog);
+    }
+    totalLayers = updateGraphOfs(mainGraph, 0, true);
+}
+
 void Net::Impl::finalize()
 {
 #ifdef HAVE_ONNXRUNTIME
@@ -636,6 +671,15 @@ void Net::Impl::finalize()
         prepareForInference();
     if (finalized)
         return;
+
+    // Snapshot the fused graph once so finalize() can re-run cleanly on a
+    // backend/target change (block layout + buffer assignment are destructive).
+    if (!fusedSnapshotValid) {
+        saveFusedSnapshot();
+        fusedSnapshotValid = true;
+    } else {
+        restoreFusedSnapshot();
+    }
 
     bool useCUDA = false;
 #ifdef HAVE_CUDA

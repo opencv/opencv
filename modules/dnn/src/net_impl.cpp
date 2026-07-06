@@ -154,6 +154,9 @@ void Net::Impl::clear()
 
     prepared = false;
     finalizeLayers = true;
+    finalized = false;
+    fusedSnapshotValid = false;
+    fusedSnapshot.clear();
 }
 
 
@@ -1419,6 +1422,9 @@ void Net::Impl::getLayerShapes(const ShapesVec& netInputShapes,
         LayerShapes& shapes)
 {
     if (mainGraph) {
+        // Fusion emits block-layout layers; their TransformLayout conversions are
+        // only inserted by finalize(), so shape inference must run post-finalize.
+        finalize();
         std::vector<MatShape> shapeCache;
         std::vector<int> typeCache;
         CV_Assert(layerId == 0);
@@ -2551,6 +2557,7 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
                           const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        finalize();
         // The new graph engine executes in FP32 on CPU regardless of the requested
         // target, so FP16 input types (e.g. coming from an OpenCL FP16 target) would be
         // rejected by Layer::getTypes(). Normalize them to FP32 for shape/FLOPS inference.
@@ -2584,6 +2591,7 @@ int64 Net::Impl::getFLOPS(
         const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        finalize();
         std::vector<MatType> inputTypes = filterFP16InputTypes(netInputTypes);
         LayerShapes shapes;
         std::vector<MatShape> shapeCache;
