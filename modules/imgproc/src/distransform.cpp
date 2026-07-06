@@ -67,6 +67,105 @@ initTopBottom( Mat& temp, int border, unsigned int value )
 }
 
 
+// Scale one row of fixed-point distances to the float output (3x3/5x5 backward pass).
+static inline void
+writeDistRowF32( const unsigned int* cur, float* drow, int width, float scale )
+{
+#if defined(CV_SIMD)
+    int j = 0;
+    const uint32_t* tptr = (const uint32_t*)cur;
+    float* dptr = drow;
+    const v_float32 scale_v = vx_setall<v_float32>(scale);
+
+    for (; j <= width - 8; j += 8)
+    {
+        v_uint32 v0 = vx_load(tptr + j);
+        v_uint32 v1 = vx_load(tptr + j + 4);
+        v_float32 f0 = v_mul(v_cvt_f32(v0), scale_v);
+        v_float32 f1 = v_mul(v_cvt_f32(v1), scale_v);
+        v_store(dptr + j, f0);
+        v_store(dptr + j + 4, f1);
+    }
+
+    for (; j < width; j++)
+        dptr[j] = (float)(tptr[j] * scale);
+#else
+    for (int j = 0; j < width; j++)
+        drow[j] = (float)(cur[j] * scale);
+#endif
+}
+
+
+// Scalar forward-pass step for the 3x3 chamfer transform (SIMD remainder tail + non-SIMD build).
+static inline void
+dtForwardScalar3x3( unsigned int* cur, const uchar* s, const unsigned int* top,
+                    int j0, int width, unsigned int& left,
+                    unsigned int HV_DIST, unsigned int DIAG_DIST, unsigned int DIST_MAX )
+{
+    for (int j = j0; j < width; j++)
+    {
+        if (!s[j])
+        {
+            cur[j] = 0;
+            left = 0;
+        }
+        else
+        {
+            unsigned int t0 = top[j - 1] + DIAG_DIST;
+            unsigned int t1 = top[j]     + HV_DIST;
+            unsigned int t2 = top[j + 1] + DIAG_DIST;
+            unsigned int t3 = left       + HV_DIST;
+
+            unsigned int m = t0 < t1 ? t0 : t1;
+            m = m < t2 ? m : t2;
+            m = m < t3 ? m : t3;
+
+            cur[j] = m > DIST_MAX ? DIST_MAX : m;
+            left = cur[j];
+        }
+    }
+}
+
+
+// Scalar forward-pass step for the 5x5 chamfer transform (SIMD remainder tail + non-SIMD build).
+static inline void
+dtForwardScalar5x5( unsigned int* cur, const uchar* s,
+                    const unsigned int* top1, const unsigned int* top2,
+                    int j0, int width, unsigned int& left,
+                    unsigned int HV_DIST, unsigned int DIAG_DIST,
+                    unsigned int LONG_DIST, unsigned int DIST_MAX )
+{
+    for (int j = j0; j < width; j++)
+    {
+        if (!s[j])
+        {
+            cur[j] = 0;
+            left = 0;
+        }
+        else
+        {
+            unsigned int t0 = top2[j - 1] + LONG_DIST;
+            unsigned int t  = top2[j + 1] + LONG_DIST;
+            if (t < t0) t0 = t;
+            t = top1[j - 2] + LONG_DIST;
+            if (t < t0) t0 = t;
+            t = top1[j - 1] + DIAG_DIST;
+            if (t < t0) t0 = t;
+            t = top1[j]     + HV_DIST;
+            if (t < t0) t0 = t;
+            t = top1[j + 1] + DIAG_DIST;
+            if (t < t0) t0 = t;
+            t = top1[j + 2] + LONG_DIST;
+            if (t < t0) t0 = t;
+            t = left        + HV_DIST;
+            if (t < t0) t0 = t;
+            cur[j] = t0 > DIST_MAX ? DIST_MAX : t0;
+            left = cur[j];
+        }
+    }
+}
+
+
 static void
 distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* metrics )
 {
@@ -153,51 +252,9 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             }
         }
 
-        for (; j < width; j++)
-        {
-            if (!s[j])
-            {
-                cur[j] = 0;
-                left = 0;
-            }
-            else
-            {
-                unsigned int t0 = top[j - 1] + DIAG_DIST;
-                unsigned int t1 = top[j]     + HV_DIST;
-                unsigned int t2 = top[j + 1] + DIAG_DIST;
-                unsigned int t3 = left       + HV_DIST;
-
-                unsigned int m = t0 < t1 ? t0 : t1;
-                m = m < t2 ? m : t2;
-                m = m < t3 ? m : t3;
-
-                cur[j] = m > DIST_MAX ? DIST_MAX : m;
-                left = cur[j];
-            }
-        }
+        dtForwardScalar3x3(cur, s, top, j, width, left, HV_DIST, DIAG_DIST, DIST_MAX);
 #else
-        for (int j = 0; j < width; j++)
-        {
-            if (!s[j])
-            {
-                cur[j] = 0;
-                left = 0;
-            }
-            else
-            {
-                unsigned int t0 = top[j - 1] + DIAG_DIST;
-                unsigned int t1 = top[j]     + HV_DIST;
-                unsigned int t2 = top[j + 1] + DIAG_DIST;
-                unsigned int t3 = left       + HV_DIST;
-
-                unsigned int m = t0 < t1 ? t0 : t1;
-                m = m < t2 ? m : t2;
-                m = m < t3 ? m : t3;
-
-                cur[j] = m > DIST_MAX ? DIST_MAX : m;
-                left = cur[j];
-            }
-        }
+        dtForwardScalar3x3(cur, s, top, 0, width, left, HV_DIST, DIAG_DIST, DIST_MAX);
 #endif
 
         row += step;
@@ -207,9 +264,6 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     // backward pass
     float* drow = dist;
     unsigned int* cur = row - step;
-#if defined(CV_SIMD)
-    const v_float32 scale_v = vx_setall<v_float32>(scale);
-#endif
     for (int i = height - 1; i >= 0; i--)
     {
         unsigned int* bottom = cur + step;
@@ -240,27 +294,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             right = cur[j];
         }
 
-#if defined(CV_SIMD)
-        int j = 0;
-        const uint32_t* tptr = (const uint32_t*)cur;
-        float* dptr = drow;
-
-        for (; j <= width - 8; j += 8)
-        {
-            v_uint32 v0 = vx_load(tptr + j);
-            v_uint32 v1 = vx_load(tptr + j + 4);
-            v_float32 f0 = v_mul(v_cvt_f32(v0), scale_v);
-            v_float32 f1 = v_mul(v_cvt_f32(v1), scale_v);
-            v_store(dptr + j, f0);
-            v_store(dptr + j + 4, f1);
-        }
-
-        for (; j < width; j++)
-            dptr[j] = (float)(tptr[j] * scale);
-#else
-        for (int j = 0; j < width; j++)
-            drow[j] = (float)(cur[j] * scale);
-#endif
+        writeDistRowF32(cur, drow, width, scale);
 
         cur -= step;
         drow -= dststep;
@@ -306,7 +340,6 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
         cur[width] = cur[width + 1] = DIST_MAX;
 #if defined(CV_SIMD)
         unsigned int left1 = DIST_MAX;
-        unsigned int left2 = DIST_MAX;
         const int BLOCK = 8;
         int j = 0;
         const v_uint32 v_hv   = vx_setall<v_uint32>(HV_DIST);
@@ -375,7 +408,6 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                 {
                     cur[idx] = 0;
                     left1 = 0;
-                    left2 = 0;
                 }
                 else
                 {
@@ -384,66 +416,15 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                     if (lm < m) m = lm;
                     if (m > DIST_MAX) m = DIST_MAX;
                     cur[idx] = m;
-                    left2 = left1;
                     left1 = m;
                 }
             }
         }
 
-        for (; j < width; j++)
-        {
-            if (!s[j])
-            {
-                cur[j] = 0;
-                left1 = left2 = 0;
-            }
-            else
-            {
-                unsigned int t0 = top2[j - 1] + LONG_DIST;
-                unsigned int t  = top2[j + 1] + LONG_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j - 2] + LONG_DIST;               if (t < t0) t0 = t;
-                t = top1[j - 1] + DIAG_DIST;               if (t < t0) t0 = t;
-                t = top1[j]     + HV_DIST;                  if (t < t0) t0 = t;
-                t = top1[j + 1] + DIAG_DIST;               if (t < t0) t0 = t;
-                t = top1[j + 2] + LONG_DIST;               if (t < t0) t0 = t;
-                t = left1       + HV_DIST;                  if (t < t0) t0 = t;
-
-                cur[j] = t0 > DIST_MAX ? DIST_MAX : t0;
-                left2 = left1;
-                left1 = cur[j];
-            }
-        }
+        dtForwardScalar5x5(cur, s, top1, top2, j, width, left1, HV_DIST, DIAG_DIST, LONG_DIST, DIST_MAX);
 #else
         unsigned int left = DIST_MAX;
-        for (int j = 0; j < width; j++)
-        {
-            if (!s[j])
-            {
-                cur[j] = 0;
-                left = 0;
-            }
-            else
-            {
-                unsigned int t0 = top2[j - 1] + LONG_DIST;
-                unsigned int t  = top2[j + 1] + LONG_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j - 2] + LONG_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j - 1] + DIAG_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j]     + HV_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j + 1] + DIAG_DIST;
-                if (t < t0) t0 = t;
-                t = top1[j + 2] + LONG_DIST;
-                if (t < t0) t0 = t;
-                t = left        + HV_DIST;
-                if (t < t0) t0 = t;
-                cur[j] = t0 > DIST_MAX ? DIST_MAX : t0;
-                left = cur[j];
-            }
-        }
+        dtForwardScalar5x5(cur, s, top1, top2, 0, width, left, HV_DIST, DIAG_DIST, LONG_DIST, DIST_MAX);
 #endif
         row  += step;
         srow += srcstep;
@@ -452,10 +433,6 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     // backward pass
     float* drow = dist;
     unsigned int* cur = row - step;
-
-#if defined(CV_SIMD)
-    const v_float32 scale_v = vx_setall<v_float32>(scale);
-#endif
 
     for (int i = height - 1; i >= 0; i--)
     {
@@ -490,27 +467,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             right = cur[j];
         }
 
-#if defined(CV_SIMD)
-        int j = 0;
-        const uint32_t* tptr = (const uint32_t*)cur;
-        float* dptr = drow;
-
-        for (; j <= width - 8; j += 8)
-        {
-            v_uint32 v0 = vx_load(tptr + j);
-            v_uint32 v1 = vx_load(tptr + j + 4);
-            v_float32 f0 = v_mul(v_cvt_f32(v0), scale_v);
-            v_float32 f1 = v_mul(v_cvt_f32(v1), scale_v);
-            v_store(dptr + j,     f0);
-            v_store(dptr + j + 4, f1);
-        }
-
-        for (; j < width; j++)
-            dptr[j] = (float)(tptr[j] * scale);
-#else
-        for (int j = 0; j < width; j++)
-            drow[j] = (float)(cur[j] * scale);
-#endif
+        writeDistRowF32(cur, drow, width, scale);
 
         cur  -= step;
         drow -= dststep;
