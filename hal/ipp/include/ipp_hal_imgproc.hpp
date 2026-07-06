@@ -149,6 +149,11 @@ int ipp_hal_threshold(const uchar* src_data, size_t src_step, uchar* dst_data, s
 #undef cv_hal_threshold
 #define cv_hal_threshold ipp_hal_threshold
 
+int ipp_hal_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                              int width, int height, int dst_type, int dist_type, int mask_size);
+#undef cv_hal_distanceTransform
+#define cv_hal_distanceTransform ipp_hal_distanceTransform
+
 #endif // IPP_VERSION_X100 >= 700
 
 #define IPP_DISABLE_PERF_CANNY_MT 1 // cv::Canny OpenCV MT performance is better

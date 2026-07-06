@@ -1242,6 +1242,24 @@ inline int hal_ni_threshold_otsu(const uchar* src_data, size_t src_step, uchar* 
 //! @endcond
 
 /**
+   @brief Calculates the distance to the closest zero pixel for each pixel of the source image
+   @param src_data Source image (8-bit single-channel) data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param dst_type Type of the destination image (CV_8UC1 or CV_32FC1)
+   @param dist_type Type of distance (cv::DistanceTypes: DIST_L1, DIST_L2, DIST_C)
+   @param mask_size Size of the distance transform mask (cv::DistanceTransformMasks: DIST_MASK_3, DIST_MASK_5, DIST_MASK_PRECISE)
+*/
+inline int hal_ni_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int dst_type, int dist_type, int mask_size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_distanceTransform hal_ni_distanceTransform
+//! @endcond
+
+/**
    @brief Calculate box filter
    @param src_data Source image data
    @param src_step Source image step
