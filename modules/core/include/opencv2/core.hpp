@@ -3112,7 +3112,7 @@ public:
 
 };
 
-static inline
+inline
 String& operator << (String& out, Ptr<Formatted> fmtd)
 {
     fmtd->reset();
@@ -3121,7 +3121,7 @@ String& operator << (String& out, Ptr<Formatted> fmtd)
     return out;
 }
 
-static inline
+inline
 String& operator << (String& out, const Mat& mtx)
 {
     return out << Formatter::get()->format(mtx);

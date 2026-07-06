@@ -113,7 +113,7 @@ enum FLAGS
 };
 
 CV_EXPORTS void       setFlags(FLAGS modeFlags);
-static inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
+inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
 CV_EXPORTS FLAGS      getFlags();
 
 } // namespace instr

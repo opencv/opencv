@@ -78,25 +78,25 @@ namespace cv
  @param v Function parameter.
  @sa add, subtract, multiply, divide, Mat::convertTo
  */
-template<typename _Tp> static inline _Tp saturate_cast(uchar v)    { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(uchar v)    { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(schar v)    { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(schar v)    { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(ushort v)   { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(ushort v)   { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(short v)    { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(short v)    { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(unsigned v) { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(unsigned v) { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(int v)      { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(int v)      { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(float v)    { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(float v)    { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(double v)   { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(double v)   { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
+template<typename _Tp> inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
 
 template<> inline uchar saturate_cast<uchar>(schar v)        { return (uchar)std::max((int)v, 0); }
 template<> inline uchar saturate_cast<uchar>(ushort v)       { return (uchar)std::min((unsigned)v, (unsigned)UCHAR_MAX); }
@@ -162,9 +162,9 @@ template<> inline uint64 saturate_cast<uint64>(double v)     { return (int64)rou
 
 
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(hfloat v) { return saturate_cast<_Tp>((float)v); }
-template<typename _Tp> static inline _Tp saturate_cast(bfloat v) { return saturate_cast<_Tp>((float)v); }
-template<typename _Tp> static inline _Tp saturate_cast(bool v) { return saturate_cast<_Tp>(v ? 1 : 0); }
+template<typename _Tp> inline _Tp saturate_cast(hfloat v) { return saturate_cast<_Tp>((float)v); }
+template<typename _Tp> inline _Tp saturate_cast(bfloat v) { return saturate_cast<_Tp>((float)v); }
+template<typename _Tp> inline _Tp saturate_cast(bool v) { return saturate_cast<_Tp>(v ? 1 : 0); }
 
 // in theory, we could use a LUT for 8u/8s->16f conversion,
 // but with hardware support for FP32->FP16 conversion the current approach is preferable

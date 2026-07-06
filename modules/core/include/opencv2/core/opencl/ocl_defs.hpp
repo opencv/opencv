@@ -16,7 +16,7 @@ namespace cv { namespace ocl {
 /// Call is similar to useOpenCL() but doesn't try to load OpenCL runtime or create OpenCL context
 CV_EXPORTS bool isOpenCLActivated();
 #else
-static inline bool isOpenCLActivated() { return false; }
+inline bool isOpenCLActivated() { return false; }
 #endif
 }} // namespace
 

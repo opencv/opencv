@@ -74,7 +74,7 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 
-static inline
+inline
 std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
 {
     fmtd->reset();
@@ -83,59 +83,59 @@ std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
     return out;
 }
 
-static inline
+inline
 std::ostream& operator << (std::ostream& out, const Mat& mtx)
 {
     return out << Formatter::get()->format(mtx);
 }
 
-static inline
+inline
 std::ostream& operator << (std::ostream& out, const UMat& m)
 {
     return out << m.getMat(ACCESS_READ);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
 {
     return out << "(" << c.re << "," << c.im << ")";
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const std::vector<Point_<_Tp> >& vec)
 {
     return out << Formatter::get()->format(Mat(vec));
 }
 
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const std::vector<Point3_<_Tp> >& vec)
 {
     return out << Formatter::get()->format(Mat(vec));
 }
 
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 std::ostream& operator << (std::ostream& out, const Matx<_Tp, m, n>& matx)
 {
     return out << Formatter::get()->format(Mat(matx));
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const Point_<_Tp>& p)
 {
     out << "[" << p.x << ", " << p.y << "]";
     return out;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const Point3_<_Tp>& p)
 {
     out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
     return out;
 }
 
-template<typename _Tp, int n> static inline
+template<typename _Tp, int n> inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
@@ -157,19 +157,19 @@ std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
     return out;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const Size_<_Tp>& size)
 {
     return out << "[" << size.width << " x " << size.height << "]";
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
 {
     return out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
 }
 
-static inline std::ostream& operator << (std::ostream& strm, const MatShape& shape)
+inline std::ostream& operator << (std::ostream& strm, const MatShape& shape)
 {
     strm << '[';
     if (shape.empty()) {
@@ -187,7 +187,7 @@ static inline std::ostream& operator << (std::ostream& strm, const MatShape& sha
     return strm;
 }
 
-static inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
+inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
 {
     return s << "[" << r.start << " : " << r.end << ")";
 }

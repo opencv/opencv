@@ -477,7 +477,7 @@ std::cout << tm;
 @endcode
 */
 
-static inline
+inline
 std::ostream& operator << (std::ostream& out, const TickMeter& tm)
 {
     return out << tm.getTimeSec() << "sec";
@@ -537,7 +537,7 @@ The function returns the aligned pointer of the same type as the input pointer:
 @param ptr Aligned pointer.
 @param n Alignment size that must be a power of two.
  */
-template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
+template<typename _Tp> inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
 {
     CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (_Tp*)(((size_t)ptr + n-1) & -n);
@@ -550,7 +550,7 @@ The function returns the minimum number that is greater than or equal to sz and 
 @param sz Buffer size to align.
 @param n Alignment size that must be a power of two.
  */
-static inline size_t alignSize(size_t sz, int n)
+inline size_t alignSize(size_t sz, int n)
 {
     CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (sz + n-1) & -n;
@@ -562,13 +562,13 @@ Use this function instead of `ceil((float)a / b)` expressions.
 
 @sa alignSize
 */
-static inline int divUp(int a, unsigned int b)
+inline int divUp(int a, unsigned int b)
 {
     CV_DbgAssert(a >= 0);
     return (a + b - 1) / b;
 }
 /** @overload */
-static inline size_t divUp(size_t a, unsigned int b)
+inline size_t divUp(size_t a, unsigned int b)
 {
     return (a + b - 1) / b;
 }
@@ -579,13 +579,13 @@ Use this function instead of `ceil((float)a / b) * b` expressions.
 
 @sa divUp
 */
-static inline int roundUp(int a, unsigned int b)
+inline int roundUp(int a, unsigned int b)
 {
     CV_DbgAssert(a >= 0);
     return a + b - 1 - (a + b -1) % b;
 }
 /** @overload */
-static inline size_t roundUp(size_t a, unsigned int b)
+inline size_t roundUp(size_t a, unsigned int b)
 {
     return a + b - 1 - (a + b - 1) % b;
 }
@@ -596,32 +596,32 @@ Usage: `isAligned<sizeof(int)>(...)`
 
 @note Alignment(N) must be a power of 2 (2**k, 2^k)
 */
-template<int N, typename T> static inline
+template<int N, typename T> inline
 bool isAligned(const T& data)
 {
     CV_StaticAssert((N & (N - 1)) == 0, "");  // power of 2
     return (((size_t)data) & (N - 1)) == 0;
 }
 /** @overload */
-template<int N> static inline
+template<int N> inline
 bool isAligned(const void* p1)
 {
     return isAligned<N>((size_t)p1);
 }
 /** @overload */
-template<int N> static inline
+template<int N> inline
 bool isAligned(const void* p1, const void* p2)
 {
     return isAligned<N>(((size_t)p1)|((size_t)p2));
 }
 /** @overload */
-template<int N> static inline
+template<int N> inline
 bool isAligned(const void* p1, const void* p2, const void* p3)
 {
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3));
 }
 /** @overload */
-template<int N> static inline
+template<int N> inline
 bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
 {
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
@@ -660,7 +660,7 @@ The function returns true if the optimized code is enabled. Otherwise, it return
  */
 CV_EXPORTS_W bool useOptimized();
 
-static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); }
+inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); }
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
@@ -701,7 +701,7 @@ public:
 };
 
 //! @ingroup core_parallel
-static inline
+inline
 void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);

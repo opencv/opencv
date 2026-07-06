@@ -1213,7 +1213,7 @@ CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double 
                                  double gamma, double psi = CV_PI*0.5, int ktype = CV_64F );
 
 //! returns "magic" border value for erosion and dilation. It is automatically transformed to Scalar::all(-DBL_MAX) for dilation.
-static inline Scalar morphologyDefaultBorderValue() { return Scalar::all(DBL_MAX); }
+inline Scalar morphologyDefaultBorderValue() { return Scalar::all(DBL_MAX); }
 
 /** @brief Returns a structuring element of the specified size and shape for morphological operations.
 
@@ -2430,7 +2430,7 @@ float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
                            Size imageSize, int destImageWidth,
                            int m1type, OutputArray map1, OutputArray map2,
                            enum UndistortTypes projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
-static inline
+inline
 float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
                            Size imageSize, int destImageWidth,
                            int m1type, OutputArray map1, OutputArray map2,

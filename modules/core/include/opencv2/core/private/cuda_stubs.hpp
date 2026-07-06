@@ -13,9 +13,9 @@
 #include "opencv2/core/base.hpp"
 
 #ifndef HAVE_CUDA
-static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
+inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
 #else
-static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 #endif
 
 #endif // OPENCV_CORE_PRIVATE_CUDA_STUBS_HPP

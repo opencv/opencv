@@ -94,7 +94,7 @@ namespace cv { namespace cuda {
     CV_EXPORTS GpuMat getInputMat(InputArray _src, Stream& stream);
 
     CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream);
-    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
+    inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
     {
         return getOutputMat(_dst, size.height, size.width, type, stream);
     }
@@ -108,13 +108,13 @@ namespace cv { namespace cuda {
 
 namespace cv { namespace cuda
 {
-    static inline void checkNppError(int code, const char* file, const int line, const char* func)
+    inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
         if (code < 0)
             cv::error(cv::Error::GpuApiCallError, getNppErrorMessage(code), func, file, line);
     }
 
-    static inline void checkCudaDriverApiError(int code, const char* file, const int line, const char* func)
+    inline void checkCudaDriverApiError(int code, const char* file, const int line, const char* func)
     {
         if (code != CUDA_SUCCESS)
             cv::error(cv::Error::GpuApiCallError, getCudaDriverApiErrorMessage(code), func, file, line);

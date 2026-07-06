@@ -373,7 +373,7 @@ void* GpuMat::cudaPtr() const
     return data;
 }
 
-static inline
+inline
 GpuMat createContinuous(int rows, int cols, int type)
 {
     GpuMat m;
@@ -381,13 +381,13 @@ GpuMat createContinuous(int rows, int cols, int type)
     return m;
 }
 
-static inline
+inline
 void createContinuous(Size size, int type, OutputArray arr)
 {
     createContinuous(size.height, size.width, type, arr);
 }
 
-static inline
+inline
 GpuMat createContinuous(Size size, int type)
 {
     GpuMat m;
@@ -395,13 +395,13 @@ GpuMat createContinuous(Size size, int type)
     return m;
 }
 
-static inline
+inline
 void ensureSizeIsEnough(Size size, int type, OutputArray arr)
 {
     ensureSizeIsEnough(size.height, size.width, type, arr);
 }
 
-static inline
+inline
 void swap(GpuMat& a, GpuMat& b)
 {
     a.swap(b);
@@ -640,7 +640,7 @@ bool HostMem::empty() const
     return data == 0;
 }
 
-static inline
+inline
 void swap(HostMem& a, HostMem& b)
 {
     a.swap(b);

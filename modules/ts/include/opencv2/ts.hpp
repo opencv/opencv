@@ -219,38 +219,38 @@ void checkTestTags();
 
 void applyTestTag_(const std::string& tag);
 
-static inline void applyTestTag(const std::string& tag1, const std::string& tag2)
+inline void applyTestTag(const std::string& tag1, const std::string& tag2)
 { applyTestTag_(tag1); applyTestTag_(tag2); checkTestTags(); }
-static inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3)
+inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3)
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); checkTestTags(); }
-static inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
+inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); applyTestTag_(tag4); checkTestTags(); }
-static inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4, const std::string& tag5)
+inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4, const std::string& tag5)
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); applyTestTag_(tag4); applyTestTag_(tag5); checkTestTags(); }
 
 
 /** Append global skip test tags
 */
 void registerGlobalSkipTag(const std::string& skipTag);
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2)
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2)
 { registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); }
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3)
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3)
 { registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); }
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
 { registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4); }
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
     const std::string& tag5)
 {
     registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);
     registerGlobalSkipTag(tag5);
 }
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
     const std::string& tag5, const std::string& tag6)
 {
     registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);
     registerGlobalSkipTag(tag5); registerGlobalSkipTag(tag6);
 }
-static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
     const std::string& tag5, const std::string& tag6, const std::string& tag7)
 {
     registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);

@@ -127,7 +127,7 @@ struct RegionStatistics
     }
 };
 
-static inline
+inline
 std::ostream& operator<<(std::ostream& out, const RegionStatistics& stat)
 {
     out << "skip=" << stat.currentSkippedRegions
@@ -182,7 +182,7 @@ struct RegionStatisticsStatus
     void checkResetSkipMode(int leaveDepth);
 };
 
-static inline
+inline
 std::ostream& operator<<(std::ostream& out, const RegionStatisticsStatus& s)
 {
     out << "ignore={";

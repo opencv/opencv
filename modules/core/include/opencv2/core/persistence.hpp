@@ -697,45 +697,45 @@ CV_EXPORTS void read(const FileNode& node, std::vector<DMatch>& matches);
 CV_EXPORTS void read(const FileNode& node, KeyPoint& value, const KeyPoint& default_value);
 CV_EXPORTS void read(const FileNode& node, DMatch& value, const DMatch& default_value);
 
-template<typename _Tp> static inline void read(const FileNode& node, Point_<_Tp>& value, const Point_<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Point_<_Tp>& value, const Point_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 2 ? default_value : Point_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Point3_<_Tp>& value, const Point3_<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Point3_<_Tp>& value, const Point3_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 3 ? default_value : Point3_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
                                                             saturate_cast<_Tp>(temp[2]));
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Size_<_Tp>& value, const Size_<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Size_<_Tp>& value, const Size_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 2 ? default_value : Size_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Complex<_Tp>& value, const Complex<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Complex<_Tp>& value, const Complex<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 2 ? default_value : Complex<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Rect_<_Tp>& value, const Rect_<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Rect_<_Tp>& value, const Rect_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 4 ? default_value : Rect_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
                                                           saturate_cast<_Tp>(temp[2]), saturate_cast<_Tp>(temp[3]));
 }
 
-template<typename _Tp, int cn> static inline void read(const FileNode& node, Vec<_Tp, cn>& value, const Vec<_Tp, cn>& default_value)
+template<typename _Tp, int cn> inline void read(const FileNode& node, Vec<_Tp, cn>& value, const Vec<_Tp, cn>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != cn ? default_value : Vec<_Tp, cn>(&temp[0]);
 }
 
-template<typename _Tp, int m, int n> static inline void read(const FileNode& node, Matx<_Tp, m, n>& value, const Matx<_Tp, m, n>& default_matx = Matx<_Tp, m, n>())
+template<typename _Tp, int m, int n> inline void read(const FileNode& node, Matx<_Tp, m, n>& value, const Matx<_Tp, m, n>& default_matx = Matx<_Tp, m, n>())
 {
     Mat temp;
     read(node, temp); // read as a Mat class
@@ -746,14 +746,14 @@ template<typename _Tp, int m, int n> static inline void read(const FileNode& nod
         value = Matx<_Tp, m, n>(temp);
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Scalar_<_Tp>& value, const Scalar_<_Tp>& default_value)
+template<typename _Tp> inline void read(const FileNode& node, Scalar_<_Tp>& value, const Scalar_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 4 ? default_value : Scalar_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
                                                             saturate_cast<_Tp>(temp[2]), saturate_cast<_Tp>(temp[3]));
 }
 
-static inline void read(const FileNode& node, Range& value, const Range& default_value)
+inline void read(const FileNode& node, Range& value, const Range& default_value)
 {
     Point2i temp(value.start, value.end); const Point2i default_temp = Point2i(default_value.start, default_value.end);
     read(node, temp, default_temp);
@@ -845,7 +845,7 @@ namespace internal
 
 //! @endcond
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const _Tp& value)
 {
     write(fs, String(), value);
@@ -875,14 +875,14 @@ void write( FileStorage& fs, const String& value )
     writeScalar(fs, value);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Point_<_Tp>& pt )
 {
     write(fs, pt.x);
     write(fs, pt.y);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Point3_<_Tp>& pt )
 {
     write(fs, pt.x);
@@ -890,21 +890,21 @@ void write(FileStorage& fs, const Point3_<_Tp>& pt )
     write(fs, pt.z);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Size_<_Tp>& sz )
 {
     write(fs, sz.width);
     write(fs, sz.height);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Complex<_Tp>& c )
 {
     write(fs, c.re);
     write(fs, c.im);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Rect_<_Tp>& r )
 {
     write(fs, r.x);
@@ -913,20 +913,20 @@ void write(FileStorage& fs, const Rect_<_Tp>& r )
     write(fs, r.height);
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 void write(FileStorage& fs, const Vec<_Tp, cn>& v )
 {
     for(int i = 0; i < cn; i++)
         write(fs, v.val[i]);
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 void write(FileStorage& fs, const Matx<_Tp, m, n>& x )
 {
     write(fs, Mat(x)); // write as a Mat class
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const Scalar_<_Tp>& s )
 {
     write(fs, s.val[0]);
@@ -935,83 +935,83 @@ void write(FileStorage& fs, const Scalar_<_Tp>& s )
     write(fs, s.val[3]);
 }
 
-static inline
+inline
 void write(FileStorage& fs, const Range& r )
 {
     write(fs, r.start);
     write(fs, r.end);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write( FileStorage& fs, const std::vector<_Tp>& vec )
 {
     cv::internal::VecWriterProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> w(&fs);
     w(vec);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Point_<_Tp>& pt )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, pt);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Point3_<_Tp>& pt )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, pt);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Size_<_Tp>& sz )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, sz);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Complex<_Tp>& c )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, c);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Rect_<_Tp>& r )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, r);
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 void write(FileStorage& fs, const String& name, const Vec<_Tp, cn>& v )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, v);
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 void write(FileStorage& fs, const String& name, const Matx<_Tp, m, n>& x )
 {
     write(fs, name, Mat(x)); // write as a Mat class
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write(FileStorage& fs, const String& name, const Scalar_<_Tp>& s )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, s);
 }
 
-static inline
+inline
 void write(FileStorage& fs, const String& name, const Range& r )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, r);
 }
 
-static inline
+inline
 void write(FileStorage& fs, const String& name, const KeyPoint& kpt)
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
@@ -1024,7 +1024,7 @@ void write(FileStorage& fs, const String& name, const KeyPoint& kpt)
     write(fs, kpt.class_id);
 }
 
-static inline
+inline
 void write(FileStorage& fs, const String& name, const DMatch& m)
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
@@ -1035,19 +1035,19 @@ void write(FileStorage& fs, const String& name, const DMatch& m)
 }
 
 template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
-static inline void write( FileStorage& fs, const String& name, const _Tp& val )
+inline void write( FileStorage& fs, const String& name, const _Tp& val )
 {
     write(fs, name, static_cast<int>(val));
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(traits::SafeFmt<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void write( FileStorage& fs, const String& name, const std::vector< std::vector<_Tp> >& vec )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
@@ -1061,14 +1061,14 @@ void write( FileStorage& fs, const String& name, const std::vector< std::vector<
 #ifdef CV__LEGACY_PERSISTENCE
 // This code is not needed anymore, but it is preserved here to keep source compatibility
 // Implementation is similar to templates instantiations
-static inline void write(FileStorage& fs, const KeyPoint& kpt) { write(fs, String(), kpt); }
-static inline void write(FileStorage& fs, const DMatch& m) { write(fs, String(), m); }
-static inline void write(FileStorage& fs, const std::vector<KeyPoint>& vec)
+inline void write(FileStorage& fs, const KeyPoint& kpt) { write(fs, String(), kpt); }
+inline void write(FileStorage& fs, const DMatch& m) { write(fs, String(), m); }
+inline void write(FileStorage& fs, const std::vector<KeyPoint>& vec)
 {
     cv::internal::VecWriterProxy<KeyPoint, 0> w(&fs);
     w(vec);
 }
-static inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
+inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
 {
     cv::internal::VecWriterProxy<DMatch, 0> w(&fs);
     w(vec);
@@ -1077,7 +1077,7 @@ static inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
 #endif
 
 
-static inline
+inline
 void read(const FileNode& node, bool& value, bool default_value)
 {
     int temp;
@@ -1085,7 +1085,7 @@ void read(const FileNode& node, bool& value, bool default_value)
     value = temp != 0;
 }
 
-static inline
+inline
 void read(const FileNode& node, uchar& value, uchar default_value)
 {
     int temp;
@@ -1093,7 +1093,7 @@ void read(const FileNode& node, uchar& value, uchar default_value)
     value = saturate_cast<uchar>(temp);
 }
 
-static inline
+inline
 void read(const FileNode& node, schar& value, schar default_value)
 {
     int temp;
@@ -1101,7 +1101,7 @@ void read(const FileNode& node, schar& value, schar default_value)
     value = saturate_cast<schar>(temp);
 }
 
-static inline
+inline
 void read(const FileNode& node, ushort& value, ushort default_value)
 {
     int temp;
@@ -1109,7 +1109,7 @@ void read(const FileNode& node, ushort& value, ushort default_value)
     value = saturate_cast<ushort>(temp);
 }
 
-static inline
+inline
 void read(const FileNode& node, short& value, short default_value)
 {
     int temp;
@@ -1117,7 +1117,7 @@ void read(const FileNode& node, short& value, short default_value)
     value = saturate_cast<short>(temp);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_t)INT_MAX )
 {
     cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
@@ -1125,14 +1125,14 @@ void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_
 }
 
 template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
-static inline void read(const FileNode& node, _Tp& value, const _Tp& default_value = static_cast<_Tp>(0))
+inline void read(const FileNode& node, _Tp& value, const _Tp& default_value = static_cast<_Tp>(0))
 {
     int temp;
     read(node, temp, static_cast<int>(default_value));
     value = static_cast<_Tp>(temp);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& default_value = std::vector<_Tp>() )
 {
     if(node.empty())
@@ -1144,7 +1144,7 @@ void read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& 
     }
 }
 
-static inline
+inline
 void read( const FileNode& node, std::vector<KeyPoint>& vec, const std::vector<KeyPoint>& default_value )
 {
     if(node.empty())
@@ -1153,7 +1153,7 @@ void read( const FileNode& node, std::vector<KeyPoint>& vec, const std::vector<K
         read(node, vec);
 }
 
-static inline
+inline
 void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMatch>& default_value )
 {
     if(node.empty())
@@ -1164,7 +1164,7 @@ void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMa
 
 /** @brief Writes data to a file storage.
  */
-template<typename _Tp> static inline
+template<typename _Tp> inline
 FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
     if( !fs.isOpened() )
@@ -1179,7 +1179,7 @@ FileStorage& operator << (FileStorage& fs, const _Tp& value)
 
 /** @brief Writes data to a file storage.
  */
-static inline
+inline
 FileStorage& operator << (FileStorage& fs, const char* str)
 {
     return (fs << String(str));
@@ -1187,7 +1187,7 @@ FileStorage& operator << (FileStorage& fs, const char* str)
 
 /** @brief Writes data to a file storage.
  */
-static inline
+inline
 FileStorage& operator << (FileStorage& fs, char* value)
 {
     return (fs << String(value));
@@ -1195,7 +1195,7 @@ FileStorage& operator << (FileStorage& fs, char* value)
 
 /** @brief Reads data from a file storage.
  */
-template<typename _Tp> static inline
+template<typename _Tp> inline
 FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
 {
     read( *it, value, _Tp());
@@ -1204,7 +1204,7 @@ FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
 
 /** @brief Reads data from a file storage.
  */
-template<typename _Tp> static inline
+template<typename _Tp> inline
 FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 {
     cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
@@ -1214,7 +1214,7 @@ FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 
 /** @brief Reads data from a file storage.
  */
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void operator >> (const FileNode& n, _Tp& value)
 {
     read( n, value, _Tp());
@@ -1222,7 +1222,7 @@ void operator >> (const FileNode& n, _Tp& value)
 
 /** @brief Reads data from a file storage.
  */
-template<typename _Tp> static inline
+template<typename _Tp> inline
 void operator >> (const FileNode& n, std::vector<_Tp>& vec)
 {
     FileNodeIterator it = n.begin();
@@ -1232,7 +1232,7 @@ void operator >> (const FileNode& n, std::vector<_Tp>& vec)
 /** @brief Reads KeyPoint from a file storage.
 */
 //It needs special handling because it contains two types of fields, int & float.
-static inline
+inline
 void operator >> (const FileNode& n, KeyPoint& kpt)
 {
     FileNodeIterator it = n.begin();
@@ -1240,12 +1240,12 @@ void operator >> (const FileNode& n, KeyPoint& kpt)
 }
 
 #ifdef CV__LEGACY_PERSISTENCE
-static inline
+inline
 void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
 {
     read(n, vec);
 }
-static inline
+inline
 void operator >> (const FileNode& n, std::vector<DMatch>& vec)
 {
     read(n, vec);
@@ -1255,7 +1255,7 @@ void operator >> (const FileNode& n, std::vector<DMatch>& vec)
 /** @brief Reads DMatch from a file storage.
 */
 //It needs special handling because it contains two types of fields, int & float.
-static inline
+inline
 void operator >> (const FileNode& n, DMatch& m)
 {
     FileNodeIterator it = n.begin();
@@ -1265,13 +1265,13 @@ void operator >> (const FileNode& n, DMatch& m)
 CV_EXPORTS bool operator == (const FileNodeIterator& it1, const FileNodeIterator& it2);
 CV_EXPORTS bool operator != (const FileNodeIterator& it1, const FileNodeIterator& it2);
 
-static inline
+inline
 ptrdiff_t operator - (const FileNodeIterator& it1, const FileNodeIterator& it2)
 {
     return it2.remaining() - it1.remaining();
 }
 
-static inline
+inline
 bool operator < (const FileNodeIterator& it1, const FileNodeIterator& it2)
 {
     return it1.remaining() > it2.remaining();
