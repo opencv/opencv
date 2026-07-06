@@ -18,8 +18,6 @@
 #include "opencv2/stitching/warpers.hpp"
 #include "opencv2/features.hpp"
 #include "opencv2/core/ocl.hpp"
-#include "opencv2/dnn.hpp"
-#include <cfloat>
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
@@ -33,226 +31,6 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-
-namespace
-{
-static Mat toGrayForXFeat(const Mat& image)
-{
-    if (image.channels() == 1)
-        return image;
-    Mat gray;
-    if (image.channels() == 3)
-        cvtColor(image, gray, COLOR_BGR2GRAY);
-    else if (image.channels() == 4)
-        cvtColor(image, gray, COLOR_BGRA2GRAY);
-    else
-        CV_Error(Error::StsBadArg, "XFeat expects grayscale, BGR, or BGRA image");
-    return gray;
-}
-
-static Mat toNCHWForXFeat(const Mat& blob, int channelsHint = -1)
-{
-    CV_Assert(blob.dims == 4);
-    if (channelsHint > 0 && blob.size[1] == channelsHint)
-        return blob;
-
-    const bool isNHWC = (channelsHint > 0) ? (blob.size[3] == channelsHint) : (blob.size[3] < blob.size[1]);
-    if (!isNHWC)
-        return blob;
-
-    const int H = blob.size[1], W = blob.size[2], C = blob.size[3];
-    int outSize[] = {1, C, H, W};
-    Mat out(4, outSize, CV_32F);
-    const float* src = blob.ptr<float>();
-    float* dst = out.ptr<float>();
-    for (int c = 0; c < C; ++c)
-    {
-        for (int y = 0; y < H; ++y)
-        {
-            for (int x = 0; x < W; ++x)
-            {
-                const int srcIdx = (y * W + x) * C + c;
-                const int dstIdx = c * H * W + y * W + x;
-                dst[dstIdx] = src[srcIdx];
-            }
-        }
-    }
-    return out;
-}
-
-static float sampleNearestForXFeat(const Mat& map, float x, float y, int normW, int normH)
-{
-    CV_Assert(map.type() == CV_32F);
-    if (normW <= 1 || normH <= 1 || map.empty())
-        return 0.0f;
-    const float fx = x * static_cast<float>(map.cols - 1) / static_cast<float>(normW - 1);
-    const float fy = y * static_cast<float>(map.rows - 1) / static_cast<float>(normH - 1);
-    const int ix = std::max(0, std::min(map.cols - 1, cvRound(fx)));
-    const int iy = std::max(0, std::min(map.rows - 1, cvRound(fy)));
-    return map.at<float>(iy, ix);
-}
-
-static float sampleBilinearForXFeat(const Mat& map, float x, float y, int normW, int normH)
-{
-    CV_Assert(map.type() == CV_32F);
-    if (map.empty() || normW <= 1 || normH <= 1)
-        return 0.0f;
-
-    float fx = x * static_cast<float>(map.cols - 1) / static_cast<float>(normW - 1);
-    float fy = y * static_cast<float>(map.rows - 1) / static_cast<float>(normH - 1);
-    fx = std::max(0.0f, std::min(fx, static_cast<float>(map.cols - 1)));
-    fy = std::max(0.0f, std::min(fy, static_cast<float>(map.rows - 1)));
-
-    const int x0 = cvFloor(fx), y0 = cvFloor(fy);
-    const int x1 = std::min(x0 + 1, map.cols - 1);
-    const int y1 = std::min(y0 + 1, map.rows - 1);
-    const float dx = fx - x0, dy = fy - y0;
-
-    const float v00 = map.at<float>(y0, x0);
-    const float v01 = map.at<float>(y0, x1);
-    const float v10 = map.at<float>(y1, x0);
-    const float v11 = map.at<float>(y1, x1);
-    return (1.f - dx) * (1.f - dy) * v00 +
-           dx * (1.f - dy) * v01 +
-           (1.f - dx) * dy * v10 +
-           dx * dy * v11;
-}
-
-static void computeImageFeaturesXFeat(const Mat& image, ImageFeatures& features, dnn::Net& net,
-                                      int maxKeypoints = 4096, float detectionThreshold = 0.05f,
-                                      int inputSize = 640)
-{
-    features.keypoints.clear();
-    features.descriptors.release();
-    features.img_size = image.size();
-    if (image.empty())
-        return;
-
-    Mat gray = toGrayForXFeat(image);
-    const float scale = static_cast<float>(inputSize) / static_cast<float>(std::max(gray.cols, gray.rows));
-    const int resizedW = std::max(1, cvRound(gray.cols * scale));
-    const int resizedH = std::max(1, cvRound(gray.rows * scale));
-    Mat resized;
-    resize(gray, resized, Size(resizedW, resizedH), 0, 0, INTER_LINEAR_EXACT);
-    Mat padded = Mat::zeros(inputSize, inputSize, CV_8UC1);
-    resized.copyTo(padded(Rect(0, 0, resizedW, resizedH)));
-
-    Mat blob;
-    dnn::blobFromImage(padded, blob, 1.0 / 255.0, Size(inputSize, inputSize), Scalar(), false, false, CV_32F);
-    net.setInput(blob);
-    vector<Mat> outs;
-    net.forward(outs, {"output_feats", "output_keypoints", "output_heatmap"});
-    CV_Assert(outs.size() == 3);
-
-    Mat featBlob = toNCHWForXFeat(outs[0], 64);
-    Mat kptBlob = toNCHWForXFeat(outs[1], 65);
-    Mat relBlob = toNCHWForXFeat(outs[2], 1);
-    CV_Assert(featBlob.dims == 4 && kptBlob.dims == 4 && relBlob.dims == 4);
-
-    const int featH = featBlob.size[2], featW = featBlob.size[3];
-    const int kptC = kptBlob.size[1], kptH = kptBlob.size[2], kptW = kptBlob.size[3];
-    CV_Assert(featBlob.size[1] == 64 && kptC >= 64);
-
-    Mat reliability(relBlob.size[2], relBlob.size[3], CV_32F, relBlob.ptr<float>());
-    Mat heatmap = Mat::zeros(kptH * 8, kptW * 8, CV_32F);
-    const float* kptPtr = kptBlob.ptr<float>();
-    const int kptHW = kptH * kptW;
-
-    for (int y = 0; y < kptH; ++y)
-    {
-        for (int x = 0; x < kptW; ++x)
-        {
-            const int offset = y * kptW + x;
-            float maxLogit = -FLT_MAX;
-            for (int c = 0; c < kptC; ++c)
-                maxLogit = std::max(maxLogit, kptPtr[c * kptHW + offset]);
-
-            float sumExp = 0.f;
-            float probs[64];
-            for (int c = 0; c < 64; ++c)
-            {
-                probs[c] = std::exp(kptPtr[c * kptHW + offset] - maxLogit);
-                sumExp += probs[c];
-            }
-            if (kptC > 64)
-                sumExp += std::exp(kptPtr[64 * kptHW + offset] - maxLogit);
-            if (sumExp <= 0.f)
-                continue;
-
-            for (int c = 0; c < 64; ++c)
-            {
-                const int dy = c / 8;
-                const int dx = c % 8;
-                heatmap.at<float>(y * 8 + dy, x * 8 + dx) = probs[c] / sumExp;
-            }
-        }
-    }
-
-    Mat localMax;
-    dilate(heatmap, localMax, getStructuringElement(MORPH_RECT, Size(5, 5)));
-
-    struct Candidate { Point2f ptPadded; float score; };
-    vector<Candidate> candidates;
-    candidates.reserve(4096);
-
-    for (int y = 0; y < heatmap.rows; ++y)
-    {
-        const float* hm = heatmap.ptr<float>(y);
-        const float* mx = localMax.ptr<float>(y);
-        for (int x = 0; x < heatmap.cols; ++x)
-        {
-            const float h = hm[x];
-            if (h <= detectionThreshold || h != mx[x])
-                continue;
-            const float xf = static_cast<float>(x), yf = static_cast<float>(y);
-            const float score = sampleNearestForXFeat(heatmap, xf, yf, inputSize, inputSize) *
-                                sampleBilinearForXFeat(reliability, xf, yf, inputSize, inputSize);
-            if (score > 0.f)
-                candidates.push_back({Point2f(xf, yf), score});
-        }
-    }
-
-    if (candidates.empty())
-        return;
-
-    const int keep = maxKeypoints > 0 ? std::min(maxKeypoints, static_cast<int>(candidates.size()))
-                                      : static_cast<int>(candidates.size());
-    std::partial_sort(candidates.begin(), candidates.begin() + keep, candidates.end(),
-                      [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
-    candidates.resize(keep);
-
-    Mat descriptors(keep, 64, CV_32F);
-    const float* featPtr = featBlob.ptr<float>();
-    const int featHW = featH * featW;
-
-    for (int i = 0; i < keep; ++i)
-    {
-        const float xp = candidates[i].ptPadded.x;
-        const float yp = candidates[i].ptPadded.y;
-        const float xOrig = xp / scale;
-        const float yOrig = yp / scale;
-        const int ix = cvFloor(xOrig), iy = cvFloor(yOrig);
-        if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
-            continue;
-
-        float* dst = descriptors.ptr<float>(static_cast<int>(features.keypoints.size()));
-        for (int c = 0; c < 64; ++c)
-        {
-            Mat channel(featH, featW, CV_32F, const_cast<float*>(featPtr + c * featHW));
-            dst[c] = sampleBilinearForXFeat(channel, xp, yp, inputSize, inputSize);
-        }
-        Mat row(1, 64, CV_32F, dst);
-        normalize(row, row, 1.0, 0.0, NORM_L2);
-        features.keypoints.emplace_back(Point2f(xOrig, yOrig), 1.0f, -1.0f, candidates[i].score);
-    }
-
-    if (features.keypoints.empty())
-        return;
-
-    Mat validDesc = descriptors.rowRange(0, static_cast<int>(features.keypoints.size())).clone();
-    validDesc.copyTo(features.descriptors);
-}
-} // namespace
 
 static void printUsage(char** argv)
 {
@@ -706,7 +484,6 @@ int main(int argc, char* argv[])
 #endif
 
     Ptr<Feature2D> finder;
-    dnn::Net xfeatNet;
     if (use_aliked)
     {
         // ALIKED will be created per-image in the loop below
@@ -740,7 +517,7 @@ int main(int argc, char* argv[])
     else if (features_type == "xfeat")
     {
 #ifdef HAVE_OPENCV_DNN
-        xfeatNet = dnn::readNetFromONNX(xfeat_model_path);
+        finder = XFeat::create(xfeat_model_path, 4096, 0.05f, 640);
 #else
         cout << "OpenCV is built without opencv_dnn module. XFeat algorithm is not available!" << std::endl;
         return -1;
@@ -794,10 +571,6 @@ int main(int argc, char* argv[])
         {
             Ptr<ALIKED> aliked = ALIKED::create(aliked_model_path);
             computeImageFeatures(aliked, img, features[i]);
-        }
-        else if (use_xfeat)
-        {
-            computeImageFeaturesXFeat(img, features[i], xfeatNet);
         }
         else
         {

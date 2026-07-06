@@ -6,6 +6,8 @@
 
 #ifdef HAVE_OPENCV_DNN
 
+#include <cfloat>
+#include <cmath>
 #include <numeric>
 
 namespace cv {
@@ -18,10 +20,9 @@ static const int kXFeatDescriptorSize = 64;
 
 struct XFeatCandidate
 {
+    Point2f ptPadded;
     Point2f pt;
     float score;
-    int x;
-    int y;
 };
 
 static Mat toGray(InputArray _image)
@@ -38,6 +39,60 @@ static Mat toGray(InputArray _image)
     else
         CV_Error(Error::StsBadArg, "XFeat expects a grayscale, BGR, or BGRA image");
     return gray;
+}
+
+static Mat toNCHW(const Mat& blob, int channelsHint)
+{
+    CV_Assert(blob.dims == 4);
+    if (blob.size[1] == channelsHint)
+        return blob;
+
+    CV_Assert(blob.size[3] == channelsHint);
+    Mat out;
+    Mat src = blob.isContinuous() ? blob : blob.clone();
+    transposeND(src, {0, 3, 1, 2}, out);
+    return out;
+}
+
+static float sampleNearest(const Mat& map, float x, float y, int normW, int normH)
+{
+    CV_Assert(map.type() == CV_32F);
+    if (map.empty() || normW <= 1 || normH <= 1)
+        return 0.0f;
+
+    const float fx = x * static_cast<float>(map.cols - 1) / static_cast<float>(normW - 1);
+    const float fy = y * static_cast<float>(map.rows - 1) / static_cast<float>(normH - 1);
+    const int ix = std::max(0, std::min(map.cols - 1, cvRound(fx)));
+    const int iy = std::max(0, std::min(map.rows - 1, cvRound(fy)));
+    return map.at<float>(iy, ix);
+}
+
+static float sampleBilinear(const Mat& map, float x, float y, int normW, int normH)
+{
+    CV_Assert(map.type() == CV_32F);
+    if (map.empty() || normW <= 1 || normH <= 1)
+        return 0.0f;
+
+    float fx = x * static_cast<float>(map.cols - 1) / static_cast<float>(normW - 1);
+    float fy = y * static_cast<float>(map.rows - 1) / static_cast<float>(normH - 1);
+    fx = std::max(0.0f, std::min(fx, static_cast<float>(map.cols - 1)));
+    fy = std::max(0.0f, std::min(fy, static_cast<float>(map.rows - 1)));
+
+    const int x0 = cvFloor(fx);
+    const int y0 = cvFloor(fy);
+    const int x1 = std::min(x0 + 1, map.cols - 1);
+    const int y1 = std::min(y0 + 1, map.rows - 1);
+    const float dx = fx - x0;
+    const float dy = fy - y0;
+
+    const float v00 = map.at<float>(y0, x0);
+    const float v01 = map.at<float>(y0, x1);
+    const float v10 = map.at<float>(y1, x0);
+    const float v11 = map.at<float>(y1, x1);
+    return (1.f - dx) * (1.f - dy) * v00 +
+           dx * (1.f - dy) * v01 +
+           (1.f - dx) * dy * v10 +
+           dx * dy * v11;
 }
 
 } // namespace
@@ -111,44 +166,87 @@ public:
         net_.forward(outs, outNames);
         CV_Assert(outs.size() == 3);
 
-        Mat descMap = outs[0];
-        Mat scoreMap = outs[2];
-        CV_Assert(descMap.dims == 4);
-        CV_Assert(scoreMap.dims == 4);
-        CV_Assert(scoreMap.size[1] == 1);
+        Mat featBlob = toNCHW(outs[0], kXFeatDescriptorSize);
+        Mat kptBlob = toNCHW(outs[1], 65);
+        Mat relBlob = toNCHW(outs[2], 1);
+        CV_Assert(featBlob.dims == 4 && kptBlob.dims == 4 && relBlob.dims == 4);
+        if (!featBlob.isContinuous())
+            featBlob = featBlob.clone();
+        if (!kptBlob.isContinuous())
+            kptBlob = kptBlob.clone();
+        if (!relBlob.isContinuous())
+            relBlob = relBlob.clone();
 
-        if (!descMap.isContinuous())
-            descMap = descMap.clone();
-        if (!scoreMap.isContinuous())
-            scoreMap = scoreMap.clone();
+        const int featH = featBlob.size[2];
+        const int featW = featBlob.size[3];
+        const int kptC = kptBlob.size[1];
+        const int kptH = kptBlob.size[2];
+        const int kptW = kptBlob.size[3];
+        CV_Assert(featBlob.size[1] == kXFeatDescriptorSize && kptC >= 64);
 
-        const int scoreH = scoreMap.size[2];
-        const int scoreW = scoreMap.size[3];
-        const bool descNCHW = descMap.size[1] == kXFeatDescriptorSize &&
-                              descMap.size[2] == scoreH &&
-                              descMap.size[3] == scoreW;
-        const bool descNHWC = descMap.size[1] == scoreH &&
-                              descMap.size[2] == scoreW &&
-                              descMap.size[3] == kXFeatDescriptorSize;
-        CV_Assert(descNCHW || descNHWC);
-        const int descChannels = kXFeatDescriptorSize;
-        const float strideX = static_cast<float>(inputSize_) / static_cast<float>(scoreW);
-        const float strideY = static_cast<float>(inputSize_) / static_cast<float>(scoreH);
+        Mat reliability(relBlob.size[2], relBlob.size[3], CV_32F, relBlob.ptr<float>());
+        Mat heatmap = Mat::zeros(kptH * 8, kptW * 8, CV_32F);
+        const float* kptPtr = kptBlob.ptr<float>();
+        const int kptHW = kptH * kptW;
 
-        const float* scores = scoreMap.ptr<float>();
-        std::vector<XFeatCandidate> candidates;
-        candidates.reserve(scoreH * scoreW);
-
-        for (int y = 0; y < scoreH; ++y)
+        parallel_for_(Range(0, kptH), [&](const Range& range)
         {
-            for (int x = 0; x < scoreW; ++x)
+            for (int y = range.start; y < range.end; ++y)
             {
-                const float score = scores[y * scoreW + x];
-                if (score <= scoreThreshold_)
+                for (int x = 0; x < kptW; ++x)
+                {
+                    const int offset = y * kptW + x;
+                    float maxLogit = -FLT_MAX;
+                    for (int ch = 0; ch < kptC; ++ch)
+                        maxLogit = std::max(maxLogit, kptPtr[ch * kptHW + offset]);
+
+                    float sumExp = 0.f;
+                    float probs[64];
+                    for (int ch = 0; ch < 64; ++ch)
+                    {
+                        probs[ch] = std::exp(kptPtr[ch * kptHW + offset] - maxLogit);
+                        sumExp += probs[ch];
+                    }
+                    if (kptC > 64)
+                        sumExp += std::exp(kptPtr[64 * kptHW + offset] - maxLogit);
+                    if (sumExp <= 0.f)
+                        continue;
+
+                    for (int ch = 0; ch < 64; ++ch)
+                    {
+                        const int dy = ch / 8;
+                        const int dx = ch % 8;
+                        heatmap.at<float>(y * 8 + dy, x * 8 + dx) = probs[ch] / sumExp;
+                    }
+                }
+            }
+        });
+
+        Mat localMax;
+        dilate(heatmap, localMax, getStructuringElement(MORPH_RECT, Size(5, 5)));
+
+        std::vector<XFeatCandidate> candidates;
+        candidates.reserve(4096);
+
+        for (int y = 0; y < heatmap.rows; ++y)
+        {
+            const float* hm = heatmap.ptr<float>(y);
+            const float* mx = localMax.ptr<float>(y);
+            for (int x = 0; x < heatmap.cols; ++x)
+            {
+                const float h = hm[x];
+                if (h <= scoreThreshold_ || h != mx[x])
                     continue;
 
-                const float px = x * strideX / scale;
-                const float py = y * strideY / scale;
+                const float xp = static_cast<float>(x);
+                const float yp = static_cast<float>(y);
+                const float score = sampleNearest(heatmap, xp, yp, inputSize_, inputSize_) *
+                                    sampleBilinear(reliability, xp, yp, inputSize_, inputSize_);
+                if (score <= 0.f)
+                    continue;
+
+                const float px = xp / scale;
+                const float py = yp / scale;
                 const int ix = cvFloor(px);
                 const int iy = cvFloor(py);
                 if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
@@ -156,7 +254,7 @@ public:
                 if (!mask.empty() && mask.at<uchar>(iy, ix) == 0)
                     continue;
 
-                candidates.push_back({Point2f(px, py), score, x, y});
+                candidates.push_back({Point2f(xp, yp), Point2f(px, py), score});
             }
         }
 
@@ -182,10 +280,10 @@ public:
                 return;
             }
 
-            _descriptors.create(static_cast<int>(candidates.size()), descChannels, CV_32F);
+            _descriptors.create(static_cast<int>(candidates.size()), kXFeatDescriptorSize, CV_32F);
             Mat descriptors = _descriptors.getMat();
-            const float* descData = descMap.ptr<float>();
-            const int channelStep = scoreH * scoreW;
+            const float* featPtr = featBlob.ptr<float>();
+            const int featHW = featH * featW;
 
             parallel_for_(Range(0, static_cast<int>(candidates.size())),
                           [&](const Range& range)
@@ -194,17 +292,12 @@ public:
                 {
                     float* dst = descriptors.ptr<float>(i);
                     const XFeatCandidate& c = candidates[i];
-                    const int offset = c.y * scoreW + c.x;
-                    if (descNCHW)
+                    for (int ch = 0; ch < kXFeatDescriptorSize; ++ch)
                     {
-                        for (int ch = 0; ch < descChannels; ++ch)
-                            dst[ch] = descData[ch * channelStep + offset];
-                    }
-                    else
-                    {
-                        const int base = offset * descChannels;
-                        for (int ch = 0; ch < descChannels; ++ch)
-                            dst[ch] = descData[base + ch];
+                        Mat channel(featH, featW, CV_32F,
+                                    const_cast<float*>(featPtr + ch * featHW));
+                        dst[ch] = sampleBilinear(channel, c.ptPadded.x, c.ptPadded.y,
+                                                 inputSize_, inputSize_);
                     }
                     normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
                 }
