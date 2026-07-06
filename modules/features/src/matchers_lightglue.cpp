@@ -85,16 +85,11 @@ void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedK
 
 #ifdef HAVE_OPENCV_DNN
 
-static int resolveKeypointNormalization(int normalizationType, int autoNormalizationType)
-{
-    return normalizationType == LG_KEYPOINTS_AUTO ? autoNormalizationType : normalizationType;
-}
-
 static void normalizeMatcherKeypoints(InputArray keypoints, OutputArray normalizedKeypoints,
                                       Size imageSize, int normalizationType,
                                       int autoNormalizationType)
 {
-    int resolvedType = resolveKeypointNormalization(normalizationType, autoNormalizationType);
+    int resolvedType = (normalizationType == LG_KEYPOINTS_AUTO) ? autoNormalizationType : normalizationType;
     if (normalizationType == LG_KEYPOINTS_AUTO && (imageSize.width <= 0 || imageSize.height <= 0))
         resolvedType = LG_KEYPOINTS_AS_IS;
     normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, resolvedType);
