@@ -144,6 +144,18 @@ struct Net::Impl : public detail::NetImplBase
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer
     bool finalized = false; // executors have been selected for the current backend/target
+
+    // Post-fusion (pre block-layout) snapshot so finalize() can re-run from a clean
+    // state on a backend/target change; useBlockLayout() is destructive and must
+    // run after backend assignment (see deviceOp handling in graph_block_layout.cpp).
+    struct FusedGraphSnapshot {
+        Ptr<Graph> graph;
+        std::vector<Ptr<LayerInfo> > prog;
+        std::vector<std::vector<Arg> > inputs;
+        std::vector<std::vector<Arg> > outputs;
+    };
+    bool fusedSnapshotValid = false;
+    std::vector<FusedGraphSnapshot> fusedSnapshot;
     std::vector<Ptr<BackendWrapper> > argWrappers;
     std::vector<const void*> argWrapperData;
     TracingMode tracingMode;
@@ -426,6 +438,9 @@ struct Net::Impl : public detail::NetImplBase
     void finalize();
     // Selects executors for a single graph (recursing into subgraphs).
     void finalizeGraph(const Ptr<Graph>& graph, bool useCUDA);
+    // Save/restore the fused graph so finalize() is re-entrant across backend changes.
+    void saveFusedSnapshot();
+    void restoreFusedSnapshot();
 #ifdef HAVE_CUDA
     Ptr<BackendWrapper> getCudaArgWrapper(Arg arg, Mat& hostMat);
 #endif

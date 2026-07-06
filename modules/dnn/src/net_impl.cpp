@@ -159,6 +159,9 @@ void Net::Impl::clear()
 
     prepared = false;
     finalizeLayers = true;
+    finalized = false;
+    fusedSnapshotValid = false;
+    fusedSnapshot.clear();
 }
 
 
@@ -1413,6 +1416,9 @@ void Net::Impl::getLayerShapes(const ShapesVec& netInputShapes,
         LayerShapes& shapes)
 {
     if (mainGraph) {
+        // Fusion emits block-layout layers; their TransformLayout conversions are
+        // only inserted by finalize(), so shape inference must run post-finalize.
+        finalize();
         std::vector<MatShape> shapeCache;
         std::vector<int> typeCache;
         CV_Assert(layerId == 0);
@@ -2524,6 +2530,7 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
                           const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        finalize();
         LayerShapes shapes;
         std::vector<MatShape> shapeCache;
         std::vector<MatType> typeCache;
@@ -2553,6 +2560,7 @@ int64 Net::Impl::getFLOPS(
         const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        finalize();
         LayerShapes shapes;
         std::vector<MatShape> shapeCache;
         std::vector<MatType> typeCache;
