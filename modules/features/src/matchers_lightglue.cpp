@@ -37,8 +37,10 @@ void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, 
 void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
                                  Size imageSize, int normalizationType)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat keypoints = _keypoints.getMat();
-    CV_CheckTypeEQ(keypoints.type(), CV_32F, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+    CV_CheckTypeEQ(keypoints.type(), CV_32FC1, "LightGlue keypoints must be an Nx2 CV_32F matrix");
     CV_CheckEQ(keypoints.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
 
     if (normalizationType == LG_KEYPOINTS_AS_IS)
@@ -47,40 +49,37 @@ void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedK
         return;
     }
 
-    if (normalizationType == LG_KEYPOINTS_AUTO)
-        CV_Error(Error::StsBadArg,
-                 "LG_KEYPOINTS_AUTO can only be resolved by LightGlueMatcher");
-
-    CV_Check(imageSize.width, imageSize.width > 0 && imageSize.height > 0,
-             "LightGlue keypoint normalization requires a valid image size");
-
-    Mat normalized = keypoints.clone();
-    if (normalizationType == LG_KEYPOINTS_ALIKED)
+    float sx = 0.0f, sy = 0.0f, ox = 0.0f, oy = 0.0f;
+    switch (normalizationType)
     {
-        for (int i = 0; i < normalized.rows; i++)
-        {
-            normalized.at<float>(i, 0) = normalized.at<float>(i, 0) / (float)imageSize.width  * 2.0f - 1.0f;
-            normalized.at<float>(i, 1) = normalized.at<float>(i, 1) / (float)imageSize.height * 2.0f - 1.0f;
-        }
-    }
-    else if (normalizationType == LG_KEYPOINTS_DISK)
-    {
-        CV_Check(imageSize.width, imageSize.width > 1 && imageSize.height > 1,
-                 "DISK LightGlue: image dimensions must be >= 2 for [0,1] normalization");
-        float wNorm = 1.0f / (float)(imageSize.width  - 1);
-        float hNorm = 1.0f / (float)(imageSize.height - 1);
-        for (int i = 0; i < normalized.rows; i++)
-        {
-            normalized.at<float>(i, 0) *= wNorm;
-            normalized.at<float>(i, 1) *= hNorm;
-        }
-    }
-    else
-    {
+    case LG_KEYPOINTS_ALIKED:
+        CV_CheckGT(imageSize.width, 0, "LightGlue keypoint normalization requires a valid image width");
+        CV_CheckGT(imageSize.height, 0, "LightGlue keypoint normalization requires a valid image height");
+        sx = 2.0f / (float)imageSize.width;
+        sy = 2.0f / (float)imageSize.height;
+        ox = oy = -1.0f;
+        break;
+    case LG_KEYPOINTS_DISK:
+        CV_CheckGT(imageSize.width, 1, "DISK LightGlue: image width must be >= 2 for [0,1] normalization");
+        CV_CheckGT(imageSize.height, 1, "DISK LightGlue: image height must be >= 2 for [0,1] normalization");
+        sx = 1.0f / (float)(imageSize.width - 1);
+        sy = 1.0f / (float)(imageSize.height - 1);
+        break;
+    case LG_KEYPOINTS_AUTO:
+        CV_Error(Error::StsBadArg, "LG_KEYPOINTS_AUTO can only be resolved by LightGlueMatcher");
+    default:
         CV_Error(Error::StsBadArg, "Unsupported LightGlue keypoint normalization type");
     }
 
-    normalized.copyTo(_normalizedKeypoints);
+    _normalizedKeypoints.create(keypoints.rows, 2, CV_32F);
+    Mat normalized = _normalizedKeypoints.getMat();
+    for (int i = 0; i < keypoints.rows; i++)
+    {
+        const float* src = keypoints.ptr<float>(i);
+        float* dst = normalized.ptr<float>(i);
+        dst[0] = src[0] * sx + ox;
+        dst[1] = src[1] * sy + oy;
+    }
 }
 
 #ifdef HAVE_OPENCV_DNN
