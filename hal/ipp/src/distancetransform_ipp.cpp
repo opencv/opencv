@@ -8,7 +8,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/geometry.hpp>
+#include <opencv2/geometry.hpp>  // DistanceTypes (DIST_L1/L2/C) live in the geometry module on 5.x
 
 #include <climits>
 #include <cmath>
@@ -21,10 +21,6 @@
 #define IPP_HAL_MALLOC(SIZE) ippMalloc_L(SIZE)
 #else
 #define IPP_HAL_MALLOC(SIZE) ippMalloc((int)(SIZE))
-#endif
-
-#ifndef IPP_DISABLE_PERF_TRUE_DIST_MT
-#define IPP_DISABLE_PERF_TRUE_DIST_MT   1
 #endif
 
 // Fixed distance-transform mask weights, mirroring getDistanceTransformMask() in
@@ -71,14 +67,14 @@ int ipp_hal_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst
 
     if (mask_size == cv::DIST_MASK_PRECISE)
     {
-        // 4097 can't square into a float.
-#if IPP_DISABLE_PERF_TRUE_DIST_MT
+        // OpenCV's multi-threaded true-distance transform outperforms IPP, so IPP is only
+        // used for the single-threaded / small-image case (mirrors IPP_DISABLE_PERF_TRUE_DIST_MT).
+        // IPP uses floats, and 4097 cannot be squared into a float, hence the size cap.
         if (!((cv::getNumThreads() <= 1 || ((size_t)width * height < (size_t)(1 << 14))) &&
               height < 4097 && width < 4097))
         {
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
-#endif
 
         int bufSize = 0;
         if (ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize) < 0)
