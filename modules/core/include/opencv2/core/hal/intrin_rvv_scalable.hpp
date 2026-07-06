@@ -714,6 +714,13 @@ inline v_uint32 v_lut_expand(const ushort* tab, const v_int32& vidx)
     return __riscv_vwcvtu_x(values, vl);
 }
 
+inline v_uint32 v_lut_expand(const uchar* tab, const v_int32& byte_idx)
+{
+    const size_t vl = VTraits<v_int32>::vlanes();
+    vuint8mf2_t values = __riscv_vloxei32(tab, __riscv_vreinterpret_u32m2(byte_idx), vl);
+    return __riscv_vwcvtu_x(__riscv_vwcvtu_x(values, vl), vl);
+}
+
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
 { \

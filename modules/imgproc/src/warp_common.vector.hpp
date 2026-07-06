@@ -1432,6 +1432,34 @@
     CV_WARP_SIMDX_LINEAR_GATHER_16UC3_HALF(CHANNEL, OFFSET, 1) \
     v_uint16 simdx_##CHANNEL = v_pack_u(CHANNEL##_0, CHANNEL##_1);
 
+#define CV_WARP_SIMDX_LINEAR_GATHER_8UC3_HALF(CHANNEL, OFFSET, HALF) \
+    v_uint32 CHANNEL##00_u32_##HALF = v_lut_expand(src + OFFSET, addr_##HALF), \
+             CHANNEL##01_u32_##HALF = v_lut_expand(src + OFFSET + 3, addr_##HALF), \
+             CHANNEL##10_u32_##HALF = v_lut_expand(src + OFFSET + srcstep, addr_##HALF), \
+             CHANNEL##11_u32_##HALF = v_lut_expand(src + OFFSET + srcstep + 3, addr_##HALF); \
+    v_float32 CHANNEL##00_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##00_u32_##HALF)), \
+              CHANNEL##01_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##01_u32_##HALF)), \
+              CHANNEL##10_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##10_u32_##HALF)), \
+              CHANNEL##11_f32_##HALF = v_cvt_f32(v_reinterpret_as_s32(CHANNEL##11_u32_##HALF)); \
+    CHANNEL##00_f32_##HALF = v_fma(src_x##HALF, v_sub(CHANNEL##01_f32_##HALF, CHANNEL##00_f32_##HALF), CHANNEL##00_f32_##HALF); \
+    CHANNEL##10_f32_##HALF = v_fma(src_x##HALF, v_sub(CHANNEL##11_f32_##HALF, CHANNEL##10_f32_##HALF), CHANNEL##10_f32_##HALF); \
+    v_int32 CHANNEL##_##HALF = v_round(v_fma(src_y##HALF, v_sub(CHANNEL##10_f32_##HALF, CHANNEL##00_f32_##HALF), CHANNEL##00_f32_##HALF));
+
+#define CV_WARP_SIMDX_LINEAR_GATHER_8UC3_CHANNEL(CHANNEL, OFFSET) \
+    CV_WARP_SIMDX_LINEAR_GATHER_8UC3_HALF(CHANNEL, OFFSET, 0) \
+    CV_WARP_SIMDX_LINEAR_GATHER_8UC3_HALF(CHANNEL, OFFSET, 1) \
+    v_uint16 simdx_##CHANNEL = v_pack_u(CHANNEL##_0, CHANNEL##_1);
+
+#define CV_WARP_SIMDX_LINEAR_GATHER_8UC3() \
+    CV_WARP_SIMDX_LINEAR_GATHER_8UC3_CHANNEL(r, 0) \
+    CV_WARP_SIMDX_LINEAR_GATHER_8UC3_CHANNEL(g, 1) \
+    CV_WARP_SIMDX_LINEAR_GATHER_8UC3_CHANNEL(b, 2) \
+    uint16_t tbuf[max_vlanes_16*3]; \
+    v_store_interleave(tbuf, simdx_r, simdx_g, simdx_b); \
+    v_pack_store(dstptr + x*3, vx_load(tbuf)); \
+    v_pack_store(dstptr + x*3 + vlanes_16, vx_load(tbuf + vlanes_16)); \
+    v_pack_store(dstptr + x*3 + vlanes_16*2, vx_load(tbuf + vlanes_16*2));
+
 #define CV_WARP_SIMDX_SHUFFLE_INTER_STORE_C3_LINEAR_8U() \
     uint8_t pixbuf[max_uf*4*3]; \
     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 8U); \
@@ -1461,6 +1489,18 @@
 
 #define CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMD, INTER, DEPTH, CN) \
     CV_WARP_##SIMD##_SHUFFLE_INTER_STORE_##CN(INTER, DEPTH)
+
+#define CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX_GATHER() \
+    if (v_reduce_min(inner_mask) != 0) { \
+        CV_WARP_SIMDX_LINEAR_GATHER_8UC3() \
+    } else { \
+        uint8_t pixbuf[max_uf*4*3]; \
+        CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C3, 8U); \
+        CV_WARP_VECTOR_INTER_LOAD(LINEAR, C3, 8U, 16U); \
+        CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3); \
+        CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3); \
+        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C3); \
+    } \
 
 #define CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX() \
     uint8_t pixbuf[max_uf*4*3]; \

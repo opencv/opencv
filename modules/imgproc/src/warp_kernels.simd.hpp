@@ -3230,7 +3230,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
                 // [TODO] apply halide trick
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
     #if CV_SIMD_SCALABLE
-                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX();
+                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX_GATHER();
     #else
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
@@ -5826,7 +5826,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                 // [TODO] apply halide trick
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
     #if CV_SIMD_SCALABLE
-                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX();
+                CV_WARP_VECTOR_LINEAR_8UC3_PROCESS_SIMDX_GATHER();
     #else
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
