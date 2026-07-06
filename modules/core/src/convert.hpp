@@ -49,6 +49,15 @@ static inline void vx_load_as(const hfloat* ptr, v_float32& a)
 static inline void vx_load_as(const bfloat* ptr, v_float32& a)
 { a = vx_load_expand(ptr); }
 
+static inline void vx_load_as(const fp8_e4m3_t* ptr, v_float32& a)
+{
+    float buf[VTraits<v_float32>::max_nlanes];
+    const int n = VTraits<v_float32>::vlanes();
+    for (int i = 0; i < n; i++)
+        buf[i] = (float)ptr[i];
+    a = vx_load(buf);
+}
+
 static inline void v_store_as(ushort* ptr, const v_float32& a)
 { v_pack_u_store(ptr, v_round(a)); }
 
@@ -72,6 +81,36 @@ static inline void v_store_as(hfloat* ptr, const v_float32& a)
 
 static inline void v_store_as(bfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
+
+static inline void v_store_as(fp8_e4m3_t* ptr, const v_float32& a)
+{
+    float buf[VTraits<v_float32>::max_nlanes];
+    v_store(buf, a);
+    const int n = VTraits<v_float32>::vlanes();
+    for (int i = 0; i < n; i++)
+        ptr[i] = fp8_e4m3_t(buf[i]);
+}
+
+static inline void vx_load_pair_as(const fp8_e4m3_t* ptr, v_float32& a, v_float32& b)
+{
+    const int n = VTraits<v_float32>::vlanes();
+    float bufA[VTraits<v_float32>::max_nlanes];
+    float bufB[VTraits<v_float32>::max_nlanes];
+    for (int i = 0; i < n; i++) bufA[i] = (float)ptr[i];
+    for (int i = 0; i < n; i++) bufB[i] = (float)ptr[n + i];
+    a = vx_load(bufA);
+    b = vx_load(bufB);
+}
+static inline void vx_load_pair_as(const fp8_e4m3_t* ptr, v_float64& a, v_float64& b)
+{
+    const int n = VTraits<v_float64>::vlanes();
+    double bufA[VTraits<v_float64>::max_nlanes];
+    double bufB[VTraits<v_float64>::max_nlanes];
+    for (int i = 0; i < n; i++) bufA[i] = (double)(float)ptr[i];
+    for (int i = 0; i < n; i++) bufB[i] = (double)(float)ptr[n + i];
+    a = vx_load(bufA);
+    b = vx_load(bufB);
+}
 
 static inline void v_store_as(int64_t* ptr, const v_float32& a)
 {
