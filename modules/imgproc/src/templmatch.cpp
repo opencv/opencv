@@ -1034,135 +1034,6 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
 }
 }
 
-
-#if defined HAVE_IPP
-namespace cv
-{
-typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
-
-static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    IppStatus status;
-
-    IppiSize srcRoiSize = {src.cols,src.rows};
-    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
-
-    IppAutoBuffer<Ipp8u> buffer;
-    int bufSize=0;
-
-    int depth = src.depth();
-
-    ippimatchTemplate ippiCrossCorrNorm =
-            depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
-            depth==CV_32F? (ippimatchTemplate)ippiCrossCorrNorm_32f_C1R: 0;
-
-    if (ippiCrossCorrNorm==0)
-        return false;
-
-    IppEnum funCfg = (IppEnum)(+ippAlgAuto | ippiROIValid);
-    if(normed)
-        funCfg |= ippiNorm;
-    else
-        funCfg |= ippiNormNone;
-
-    status = ippiCrossCorrNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
-    if ( status < 0 )
-        return false;
-
-    buffer.allocate( bufSize );
-
-    status = CV_INSTRUMENT_FUN_IPP(ippiCrossCorrNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, buffer);
-    return status >= 0;
-}
-
-static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    IppStatus status;
-
-    IppiSize srcRoiSize = {src.cols,src.rows};
-    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
-
-    IppAutoBuffer<Ipp8u> buffer;
-    int bufSize=0;
-
-    int depth = src.depth();
-
-    ippimatchTemplate ippiSqrDistanceNorm =
-            depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
-            depth==CV_32F? (ippimatchTemplate)ippiSqrDistanceNorm_32f_C1R: 0;
-
-    if (ippiSqrDistanceNorm==0)
-        return false;
-
-    IppEnum funCfg = (IppEnum)(+ippAlgAuto | ippiROIValid | ippiNormNone);
-    status = ippiSqrDistanceNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
-    if ( status < 0 )
-        return false;
-
-    buffer.allocate( bufSize );
-
-    status = CV_INSTRUMENT_FUN_IPP(ippiSqrDistanceNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, buffer);
-    dst = cv::max(dst, 0); // handle edge case from rounding in variance computation which can result in negative values
-    return status >= 0;
-}
-
-static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    if(img.channels() != 1)
-        return false;
-
-    // These functions are not efficient if template size is comparable with image size
-    if(templ.size().area()*4 > img.size().area())
-        return false;
-
-    // CV_8U SQDIFF/SQDIFF_NORMED suffer from float32 catastrophic cancellation
-    // in IPP's internal accumulators; fall through to the double-precision path instead.
-    if(img.depth() == CV_8U && (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED))
-        return false;
-
-    if(method == cv::TM_SQDIFF)
-    {
-        if(ipp_sqrDistance(img, templ, result))
-            return true;
-    }
-    else if(method == cv::TM_SQDIFF_NORMED)
-    {
-        if(ipp_crossCorr(img, templ, result, false))
-        {
-            common_matchTemplate(img, templ, result, cv::TM_SQDIFF_NORMED, 1);
-            return true;
-        }
-    }
-    else if(method == cv::TM_CCORR)
-    {
-        if(ipp_crossCorr(img, templ, result, false))
-            return true;
-    }
-    else if(method == cv::TM_CCORR_NORMED)
-    {
-        if(ipp_crossCorr(img, templ, result, true))
-            return true;
-    }
-    else if(method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
-    {
-        if(ipp_crossCorr(img, templ, result, false))
-        {
-            common_matchTemplate(img, templ, result, method, 1);
-            return true;
-        }
-    }
-
-    return false;
-}
-}
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
@@ -1196,7 +1067,26 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
-    CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
+    {
+        // The IPP HAL performs the heavy step (raw/normalized cross-correlation or squared
+        // distance) that IPP handled historically. On success `result` holds the final answer
+        // for TM_SQDIFF / TM_CCORR / TM_CCORR_NORMED, or the raw cross-correlation for
+        // TM_SQDIFF_NORMED / TM_CCOEFF / TM_CCOEFF_NORMED, which common_matchTemplate finishes here.
+        int hal_res = cv_hal_matchTemplate(img.data, img.step, img.cols, img.rows,
+                                           templ.data, templ.step, templ.cols, templ.rows,
+                                           result.ptr<float>(), result.step, depth, cn, method);
+        if (hal_res == CV_HAL_ERROR_OK)
+        {
+            if (method == cv::TM_SQDIFF_NORMED || method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
+                common_matchTemplate(img, templ, result, method, 1);
+            return;
+        }
+        else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+                ("HAL implementation matchTemplate ==> cv_hal_matchTemplate returned %d (0x%08x)", hal_res, hal_res));
+        }
+    }
 
     bool use64f = (depth == CV_8U) && (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED);
     Mat result64f;

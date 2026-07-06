@@ -138,6 +138,12 @@ int ipp_hal_cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step, uch
 #undef cv_hal_cvtRGBAtoMultipliedRGBA
 #define cv_hal_cvtRGBAtoMultipliedRGBA ipp_hal_cvtRGBAtoMultipliedRGBA
 
+int ipp_hal_matchTemplate(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                          const uchar* templ_data, size_t templ_step, int templ_width, int templ_height,
+                          float* result_data, size_t result_step, int depth, int cn, int method);
+#undef cv_hal_matchTemplate
+#define cv_hal_matchTemplate ipp_hal_matchTemplate
+
 #endif // IPP_VERSION_X100 >= 700
 
 #endif //__IPP_HAL_IMGPROC_HPP__

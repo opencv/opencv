@@ -1572,6 +1572,32 @@ inline int hal_ni_calcHist(const uchar* src_data, size_t src_step, int src_type,
 #define cv_hal_calcHist hal_ni_calcHist
 //! @endcond
 
+/**
+   @brief Compares a template against overlapped image regions.
+   @param src_data Source image (single-channel, CV_8U or CV_32F) data
+   @param src_step Source image step
+   @param src_width Source image width
+   @param src_height Source image height
+   @param templ_data Template image data (same type as source)
+   @param templ_step Template image step
+   @param templ_width Template image width
+   @param templ_height Template image height
+   @param result_data Destination map data (single-channel CV_32F, size (src_width-templ_width+1) x (src_height-templ_height+1))
+   @param result_step Destination map step
+   @param depth Depth of source and template images (CV_8U or CV_32F)
+   @param cn Number of channels
+   @param method Comparison method (cv::TemplateMatchModes)
+   @sa matchTemplate
+*/
+inline int hal_ni_matchTemplate(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                                const uchar* templ_data, size_t templ_step, int templ_width, int templ_height,
+                                float* result_data, size_t result_step, int depth, int cn, int method)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_matchTemplate hal_ni_matchTemplate
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)
