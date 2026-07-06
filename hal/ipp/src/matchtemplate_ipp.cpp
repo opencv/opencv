@@ -132,8 +132,9 @@ int ipp_hal_matchTemplate(const uchar* src_data, size_t src_step, int src_width,
     else if(method == cv::TM_SQDIFF_NORMED || method == cv::TM_CCORR ||
             method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
     {
-        // Raw cross-correlation; caller finishes SQDIFF_NORMED/CCOEFF/CCOEFF_NORMED via
-        // common_matchTemplate (TM_CCORR is already final).
+        // Raw cross-correlation only. TM_CCORR is already the final result; the caller
+        // (cv::matchTemplate) runs common_matchTemplate() to finish TM_SQDIFF_NORMED /
+        // TM_CCOEFF / TM_CCOEFF_NORMED.
         if(ipp_crossCorr(img, templ, result, false))
             return CV_HAL_ERROR_OK;
     }
