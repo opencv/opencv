@@ -172,10 +172,9 @@ def _copy_js_tryit_files(out_dir: pathlib.Path) -> None:
             dst = dest / src.name
             if not dst.exists():
                 shutil.copy2(src, dst)
-    # opencv.js from CMake (OPENCV_JS_PATH). Bundle it alongside the Try-it pages
-    # (relative `src="opencv.js"` / utils.js OPENCV_URL resolve here) AND at the
-    # doc-site root: external tutorials and OpenCV's own js_usage docs link
-    # https://docs.opencv.org/<ver>/opencv.js, which 404s unless it exists at root.
+    # opencv.js from CMake (OPENCV_JS_PATH). Needed both alongside the Try-it
+    # pages (relative `src="opencv.js"`) AND at the doc-site root, where
+    # external/js_usage docs link https://docs.opencv.org/<ver>/opencv.js.
     opencv_js = os.environ.get("OPENCV_JS_PATH", "")
     if opencv_js and pathlib.Path(opencv_js).is_file():
         for dst in (dest / "opencv.js", dest.parent / "opencv.js"):
@@ -332,13 +331,9 @@ _PYG_CPF_SPAN_RE = re.compile(
 )
 
 
-# Conservative C++ free-function linkifier for code blocks. A Pygments name
-# span IMMEDIATELY followed by an opening-paren punctuation span is a function
-# *call*, so linking it can't mistake a like-named local variable (`log`,
-# `min`, `split`, …) for the cv:: function — only calls are linked. Scoped to
-# C++ Pygments blocks. The `(` lookahead also makes the pass idempotent and
-# class-safe: once wrapped (or for a pre-linked class constructor) the name
-# span is followed by `</a>`, not the paren span, so it never matches again.
+# C++ free-function linkifier. The `(` lookahead means only call sites match,
+# never a like-named local (`log`, `min`, …); it also makes the pass idempotent
+# and class-safe (a wrapped/constructor name is followed by `</a>`, not `(`).
 _PYG_CPP_PRE_RE = re.compile(
     r'(?P<open><div class="highlight-cpp[^"]*"><div class="highlight"><pre>)'
     r'(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
@@ -346,10 +341,8 @@ _PYG_CALL_SPAN_RE = re.compile(
     r'(?P<span><span class="n">)(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?P<end></span>)'
     r'(?=<span class="p">\()'
 )
-# Python free-function calls. Same call-based heuristic, but additionally
-# REQUIRES a `cv.`/`cv2.` namespace prefix — OpenCV's Python API is always
-# module-qualified (`import cv2 as cv`), so this avoids ever linking a bare
-# builtin (`min(`, `split(`, `append(`) or a `np.`/other-module call.
+# Python free-function calls. Requires a `cv.`/`cv2.` prefix (OpenCV's Python
+# API is always module-qualified) so bare builtins / other modules never link.
 _PYG_PY_PRE_RE = re.compile(
     r'(?P<open><div class="highlight-(?:python|py|pycon|ipython3?|default)[^"]*">'
     r'<div class="highlight"><pre>)(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
@@ -373,13 +366,9 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
         return
     import os
 
-    # Map every built page's basename -> its path relative to the html root,
-    # so a stored URL like `core_basic.html#…` / `classcv_1_1Mat.html` (which
-    # is relative to main_modules/) can be re-pointed correctly from a page at
-    # any depth. Without this, those links 404 on tutorial pages (only the
-    # `classcv…`-style names happen to be fixed up later by
-    # `_localize_doxygen_links`, whose `_SYM` doesn't match module-page names
-    # like `core_basic.html`).
+    # basename -> path relative to the html root. Stored URLs are relative to
+    # main_modules/, so without re-pointing they 404 when linked from a page at
+    # a different depth (e.g. a tutorial referencing `core_basic.html#…`).
     _skip_dirs = {"_static", "_sources", "_images", "_sphinx_design_static"}
     _page_paths: dict[str, str] = {}
     for _f in html_dir.rglob("*.html"):
@@ -389,11 +378,10 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
         _page_paths.setdefault(_f.name, _rel.as_posix())
 
     def _rel_local(url: str, current_html: pathlib.Path) -> "str | None":
-        # Relativize a bare local Sphinx page URL (`page` or `page#frag`) to
-        # the current page. Returns None when the target page wasn't built
-        # locally (e.g. a nested struct documented inline on its parent, which
-        # has no standalone page) so the caller can drop the link rather than
-        # emit a 404. Non-local URLs (http/already-relative) pass through.
+        # Relativize a bare local Sphinx page URL to the current page. Returns
+        # None when the target page wasn't built (e.g. a struct documented
+        # inline, with no standalone page) so the caller drops the link instead
+        # of emitting a 404. Non-local URLs (http/already-relative) pass through.
         page, sep, frag = url.partition("#")
         if page.startswith(("http://", "https://", "../", "/")):
             return url
@@ -406,11 +394,9 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
     def _resolve(name: str) -> str | None:
         return _LOCAL_CLASS_URL.get(name) or _LOCAL_TYPEDEF_URL.get(name)
 
-    # Free-function calls: present in the Doxygen symbol map but NOT a
-    # class/typedef (those already get a local link from `_resolve`). Emits
-    # the docs.opencv.org URL; `_localize_doxygen_links` (run right after)
-    # rewrites it to the local Sphinx page when one exists, exactly as it
-    # does for prose function refs.
+    # Free functions only (classes/typedefs already get a local link via
+    # `_resolve`). Emits the docs.opencv.org URL; `_localize_doxygen_links`
+    # (run right after) rewrites it to the local Sphinx page when one exists.
     def _resolve_fn(name: str) -> str | None:
         if name in _LOCAL_CLASS_URL or name in _LOCAL_TYPEDEF_URL:
             return None
@@ -530,10 +516,9 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
             continue
         new_text = _PRE_BLOCK_RE.sub(
             lambda m: _rewrite_pre(m, html), text)
-        # C++ free-function calls (runs after the class/typedef pass so
-        # constructors are already wrapped and skipped by the `(` lookahead).
+        # Function-call passes run after the class/typedef pass so constructors
+        # are already wrapped and skipped by the `(` lookahead.
         new_text = _PYG_CPP_PRE_RE.sub(_rewrite_cpp_calls, new_text)
-        # Python `cv.`/`cv2.`-namespaced function calls.
         new_text = _PYG_PY_PRE_RE.sub(_rewrite_py_calls, new_text)
         if new_text != text:
             try:
@@ -606,9 +591,8 @@ def _linkify_inline_code(html_dir: pathlib.Path) -> None:
             pass
 
 
-# Center the active section-nav entry inside the scrollable left sidebar on
-# load, so a module far down the list isn't left below the fold. The theme
-# offers no such hook, so inline it once per page before </body>.
+# Center the active nav entry in the scrollable left sidebar on load so a
+# module far down the list isn't below the fold. The theme has no such hook.
 _AUTOSCROLL_SNIPPET = (
     '<script id="opencv-sidebar-autoscroll">'
     "document.addEventListener('DOMContentLoaded',function(){"
@@ -639,8 +623,8 @@ _DETAIL_SEC_RE = re.compile(r'(<section id="detailed-description"[^>]*>)')
 
 def _repair_dangling_toc_anchors(out_dir: pathlib.Path) -> None:
     """Stub a missing #anchor for any secondary-TOC link with no target element.
-    A dangling anchor makes the theme scroll-spy throw, aborting init and killing
-    the collapse-sidebar button on that page. Idempotent."""
+    A dangling anchor makes the theme scroll-spy throw, which aborts init and
+    kills the collapse-sidebar button on that page. Idempotent."""
     for html in out_dir.rglob("*.html"):
         text = html.read_text(encoding="utf-8")
         nav = _TOC_NAV_RE.search(text)
@@ -774,12 +758,10 @@ def _linkify_hal_page(out_dir: pathlib.Path) -> None:
     page.write_text(_INLINE_CODE_SPAN_RE.sub(_inline, text), encoding="utf-8")
 
 
-# Universal Intrinsics tutorial: inline code in *prose* (e.g. cv::hfloat,
-# v_expand) isn't auto-linked. Link every symbol that IS documented by reading
-# the real anchors off core_hal_intrin + the local symbol maps, so coverage
-# tracks the docs (undocumented ones stay plain). Page is 3 dirs deep.
-# (Broken bare links in code blocks resolve in the real build, so not rewritten.)
-_UI_MM = "../../../main_modules/"
+# Universal Intrinsics tutorial: link the intrinsics/types in prose code, which
+# Sphinx doesn't auto-link. Anchors are read off core_hal_intrin + the symbol
+# maps so coverage tracks the docs (undocumented symbols stay plain).
+_UI_MM = "../../../main_modules/"    # page is 3 dirs deep
 
 
 def _univ_intrin_link_map(out_dir: pathlib.Path) -> dict:
@@ -787,7 +769,7 @@ def _univ_intrin_link_map(out_dir: pathlib.Path) -> dict:
          "cv::bfloat": _UI_MM + "classcv_1_1bfloat.html",
          "CV_16F": _UI_MM + "core_hal_interface.html#cv-16f",
          "CV_16BF": _UI_MM + "core_hal_interface.html#cv-16bf"}
-    # Every intrinsic function documented on the rendered group page.
+    # Intrinsic functions, from the anchors on the rendered group page.
     hp = out_dir / "main_modules" / "core_hal_intrin.html"
     if hp.is_file():
         html = hp.read_text(encoding="utf-8")
@@ -798,9 +780,8 @@ def _univ_intrin_link_map(out_dir: pathlib.Path) -> dict:
     for sym, url in {**_LOCAL_TYPEDEF_URL, **_LOCAL_CLASS_URL}.items():
         if sym.startswith("v_") or sym in ("hfloat", "bfloat"):
             m.setdefault(sym, _UI_MM + url)
-    # Symbols with no local page but documented in the Doxygen tag (e.g. v_exp,
-    # v_log, v_erf) link to the official function docs. Symbols absent here too
-    # (v_pow, v_float16, vx_*_f16, …) have no target anywhere and stay plain.
+    # Symbols with no local page but in the Doxygen tag (v_exp, v_log, …) link
+    # to the official docs; those absent here too have no target and stay plain.
     for sym, url in _CV_SYMBOL_URL.items():
         if sym.startswith(("v_", "vx_")) and sym not in m:
             m[sym] = url

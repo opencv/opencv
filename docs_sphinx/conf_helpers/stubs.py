@@ -114,9 +114,9 @@ def _enhance_xphoto_member(m: dict, class_name: str = "") -> dict:
 # Drives write-if-changed and the stale-file sweep.
 _stub_written: set[pathlib.Path] = set()
 
-# Single-class "shell" groups merged with their one class (see _write_api_stub):
-#   _MERGED_GROUPS        -> [(group_out_path, group_title_lines, class_dict)]
-#   _MERGED_CLASS_TO_GROUP-> {class_refid: group_docname}  (cross-refs/redirect)
+# "Shell" groups (<=2 classes, no own members) merged with their classes; see
+# _write_api_stub. _MERGED_GROUPS -> [(out_path, intro_lines, classes)];
+# _MERGED_CLASS_TO_GROUP -> {class_refid: group_docname} for cross-refs/redirect.
 _MERGED_GROUPS: list = []
 _MERGED_CLASS_TO_GROUP: dict[str, str] = {}
 
@@ -758,9 +758,8 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
         items = ns_sections.get(section_title, [])
         if not items:
             continue
-        # Drop the summary (it just indexes the detail block below) only when the
-        # detail fully covers it; keep it otherwise. Enumerations always kept.
-        # The detail loop renders every member except template specializations.
+        # Drop the redundant summary when the detail loop covers every member
+        # (all but template specializations); keep Enumerations always.
         if section_title != "Enumerations" and all(
                 "<" not in (m.get("name") or "") for m in items):
             continue
@@ -972,9 +971,9 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             _stub_write(out_dir / f"{_cn}.md", _md + "\n")
         return
 
-    # Classes-only shell group (<=2 classes, no own members/subgroups): host the
-    # class content here (deferred to the seeded pass) and redirect the standalone
-    # class pages. See _generate_api_stubs.
+    # Classes-only shell group (<=2 classes, no own members/subgroups): defer the
+    # class content to the seeded pass (_generate_api_stubs), which hosts it here
+    # and redirects the standalone class pages.
     if (1 <= len(node["innerclasses"]) <= 2 and not node["sections"]
             and not node["children"]):
         _intro = list(lines)
@@ -1067,11 +1066,9 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             parent_qualified = q.rsplit("::", 1)[0]
             for c in classes_seen.values():
                 if c.get("qualified") == parent_qualified:
-                    # This target is embedded in a raw-HTML <a href> (see
-                    # _func_row_split_md), and MyST only rewrites .md->.html for
-                    # Markdown []() links, not raw HTML — so point at the built
-                    # .html page directly, else the href 404s. (_member_anchor_
-                    # link keeps .md: it IS a Markdown link, so MyST converts it.)
+                    # Used in a raw-HTML <a href> (see _func_row_split_md); MyST
+                    # only rewrites .md->.html for Markdown []() links, not raw
+                    # HTML, so point at .html directly or the href 404s.
                     return f"{_class_page_name(c['refid'])}.html"
         # Functions on core pages: target the `_func_slug`-based anchor
         # that `_render_core_basic_func` actually emits.
@@ -1213,12 +1210,10 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             def _safe(s: str) -> str:
                 return _html_mod.escape(s).replace("::", "&#58;&#58;")
             for m in members:
-                # Named enums anchor on their `### Name` heading slug
-                # (`### AccessFlag` → `#accessflag`). Anonymous enums have no
-                # name; the detail loop gives them a MyST `({id})=` target, whose
-                # slug normalizes `_`-runs to `-` (same as functions, _member_
-                # anchor_target). Match that here instead of emitting an empty
-                # `#` (a raw `#<id>` with underscores does NOT resolve in MyST).
+                # Named enums anchor on their `### Name` heading slug. Anonymous
+                # enums anchor on the detail block's MyST `({id})=` target, whose
+                # slug normalizes `_`-runs to `-`; a raw `#<id>` with underscores
+                # does NOT resolve in MyST, so match the normalized form here.
                 _enum_anchor = (m["name"].lower() if m.get("name")
                                 else re.sub(r"_+", "-", m["id"]))
                 _more = ""
@@ -1237,7 +1232,7 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                         _val_prefix = _qual.rsplit("::", 1)[0] + "::"
                     else:
                         _val_prefix = ""
-                    _href = f"#{_enum_anchor}"  # enum detail block id
+                    _href = f"#{_enum_anchor}"
                     out.append(
                         '<div class="highlight-cpp notranslate '
                         'opencv-enum-clickable"><div class="highlight"><pre>'
@@ -1292,9 +1287,8 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
 
     _named_groups: list[tuple[str, str, list]] = []   # (header, section_title, members)
     def _grp_detail_covers(m, kind_key):
-        # Mirror the detail loop's skips below: a summary member also gets a
-        # detail block unless it's a class member (rendered on the class page)
-        # or a template specialization (listed in summary, but no detail block).
+        # Must mirror the detail loop's skips below: a summary member lacks a
+        # detail block only if it's a class member or a template specialization.
         if kind_key in ("function", "variable") and _is_class_member(m):
             return False
         if _is_template_spec(m):
@@ -1308,9 +1302,8 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         for _hdr, _members in _group_by_section_header(
                 [m for m in items if (m.get("section_header") or "")]):
             _named_groups.append((_hdr, section_title, _members))
-        # Drop the summary (it just indexes the detail block below) only when the
-        # detail fully covers every member; keep it otherwise so nothing is lost.
-        # Enumerations are always kept.
+        # Drop the redundant summary only when the detail loop covers every
+        # ungrouped member; keep Enumerations always.
         if ungrouped:
             _covered = section_title != "Enumerations" and all(
                 _grp_detail_covers(m, kind_key) for m in ungrouped)
@@ -1381,11 +1374,9 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                         "",
                     ]
                 else:
-                    # Anonymous enum: no name → no heading slug. Anchor it by a
-                    # MyST `({id})=` target (its slug normalizes `_`-runs to `-`,
-                    # like function detail blocks), which the summary's
-                    # `_enum_anchor` links to. A raw `<h3 id=…>` is not a
-                    # MyST-resolvable reference target, so it would dead-link.
+                    # Anonymous enum has no heading slug; anchor it with a MyST
+                    # `({id})=` target (what `_enum_anchor` links to). A raw
+                    # `<h3 id=…>` is not a MyST reference target and dead-links.
                     blk = [
                         f"({m['id']})=",
                         f"### {_keyword}",
@@ -1815,9 +1806,9 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
         import html as _html_pkg
         _brief = (_header_data.get("brief") or "").strip()
         if _brief:
-            # Link only when there's a detailed description to jump to. Inlined
-            # onto a group page (possibly with a sibling class) the #detailed-
-            # description anchor would collide, and the detail is right below.
+            # Link only when there's a detailed description to jump to; skip when
+            # inlined, where the #detailed-description anchor collides with a
+            # sibling class and the detail is right below anyway.
             _more = (
                 ' <a class="opencv-class-more" href="#detailed-description">View details</a>'
                 if _header_data.get("detailed") and not inline else ""
@@ -1885,9 +1876,8 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
                             for rid, qual, bi in inherited]
         non_enum_items = [m for m in items if m["kind"] != "enum"]
         enum_items = [m for m in items if m["kind"] == "enum"]
-        # Drop summary rows already documented in a per-member detail block below
-        # (every own typedef/function/variable is); keep kinds with no detail
-        # block (e.g. friends) and enums (always shown as a synopsis).
+        # Own typedef/function/variable get a detail block below, so drop their
+        # summary rows; keep kinds without one (e.g. friends) and enums.
         kept_rows = [m for m in non_enum_items
                      if m["kind"] not in ("typedef", "function", "variable")]
         if not kept_rows and not enum_items and not inline_inherited:
@@ -2386,14 +2376,11 @@ def _fallback_module_tree(name: str):
 
 
 def _apply_group_doc_override(tree: dict, xml_dir: pathlib.Path) -> None:
-    """Header-free fix for module groups whose subgroups were `@addtogroup`'d but
-    never nested under a titled `@defgroup`: Doxygen leaves them as disconnected
-    top-level groups, auto-titled from their id, so the module landing page is
-    empty. Inject the module-group description (if the header gave none) and
-    attach the real subgroups as children (recursively retitled), so the landing
-    page covers the whole module and each subgroup renders once instead of as an
-    orphan. Driven by `_GROUP_DOC_OVERRIDES` / `_GROUP_TITLE_OVERRIDES`; no-op for
-    modules without an override."""
+    """Repair module groups whose subgroups were `@addtogroup`'d but never nested
+    under a titled `@defgroup`, which Doxygen leaves as orphan top-level groups
+    with an empty landing page. Injects the group description and attaches the
+    real subgroups as children (recursively retitled). Driven by
+    `_GROUP_DOC_OVERRIDES` / `_GROUP_TITLE_OVERRIDES`; no-op without an override."""
     ov = _GROUP_DOC_OVERRIDES.get(tree["name"])
     if not ov:
         return
@@ -2415,10 +2402,9 @@ def _apply_group_doc_override(tree: dict, xml_dir: pathlib.Path) -> None:
 
 
 def _harvest_namespace_into_group(tree: dict, xml_dir: pathlib.Path) -> None:
-    # Pull funcs/classes declared under the module's include prefix into the
-    # (otherwise empty) group node — from the cv namespace AND any group they
-    # were filed under (e.g. depth.hpp uses @addtogroup rgbd). See
-    # _GROUP_NS_HARVEST.
+    # Pull funcs/classes under the module's include prefix (per _GROUP_NS_HARVEST)
+    # into the otherwise-empty group node, from the cv namespace and any group
+    # they were filed under (e.g. depth.hpp uses @addtogroup rgbd).
     import xml.etree.ElementTree as _ET
     prefix = _GROUP_NS_HARVEST.get(tree["name"])
     if not prefix:
@@ -2540,8 +2526,8 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     for m in list(modules) + list(extra_groups):
         is_extra = m in extra_groups
         if m in _GROUP_OVERRIDE_SUBGROUPS:
-            # Re-parented as a nested child of its module (see _GROUP_DOC_OVERRIDES);
-            # don't also emit it here as a standalone orphan page.
+            # Re-parented under its module by _apply_group_doc_override; skip so
+            # it isn't also emitted as a standalone orphan page.
             continue
         stem = _module_group_stem(m)
         tree = _build_api_hierarchy("group__" + stem.replace("_", "__"), xml_dir)
@@ -2624,11 +2610,11 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     for _cls in classes_seen.values():
         _ANCHOR_TO_DOC.setdefault(
             _cls["refid"], f"{_doc_prefix}/{_class_page_name(_cls['refid'])}")
-    # Merged shell groups: a Classes box per class, then each class's content
-    # inline (bases are seeded now, so "inherited from" links resolve).
+    # Merged shell groups: a Classes box then each class inline. Done after
+    # seeding above so bases resolve for "inherited from" links.
     for _mout, _mlines, _mclasses in _MERGED_GROUPS:
         _lines = list(_mlines)
-        # Section heading per class + the same-page anchor its box links to.
+        # Slug matching the per-class `## heading` its box entry links to.
         def _cls_slug(_c):
             _h = f"{_c['kind'].title()} {_c.get('qualified') or _c['name']}"
             return re.sub(r"[^a-z0-9]+", "-", _h.lower()).strip("-")
@@ -2651,7 +2637,8 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     for cls in classes_seen.values():
         _grp = _MERGED_CLASS_TO_GROUP.get(cls["refid"])
         if _grp:
-            # Inlined into its group page: redirect this page + point xrefs there.
+            # Inlined into its group page: turn this page into a redirect and
+            # aim refid xrefs at the group instead.
             _rel = _grp.split("/", 1)[-1]
             _stub_write(
                 out_dir / f"{_class_page_name(cls['refid'])}.md",

@@ -176,11 +176,10 @@ _silence_orphan_toctree_warning()
 def _patch_sidebar_section_root():
     """Root the left sidebar at a page's own top-level section.
 
-    A page listed in two toctrees (e.g. a `cuda*` extra module, also grouped
-    under the main `cuda` module) gets a last-wins parent from Sphinx's
-    `_get_toctree_ancestors`, so its sidebar wrongly roots at the foreign
-    section and shows only its own children. Re-pick the parent that shares
-    the longest path prefix (same section) so the full sibling list shows."""
+    A page in two toctrees (e.g. a `cuda*` extra module also grouped under main
+    `cuda`) gets a last-wins parent from `_get_toctree_ancestors`, rooting its
+    sidebar at the foreign section. Re-pick the parent sharing the longest path
+    prefix (same section) so the full sibling list shows."""
     try:
         import pydata_sphinx_theme.toctree as _pt
         from sphinx.environment.adapters.toctree import TocTree
@@ -212,16 +211,13 @@ def _patch_sidebar_section_root():
             out = ancestors[-startdepth]
         except IndexError:
             out = None
-        # Childless root => empty sidebar (e.g. a class under an orphaned module
-        # page). `d` is the dead-end ancestor: prefer it when it's a same-section
-        # page with children, so the current page is listed and highlighted;
-        # otherwise fall back to the section's api_root.
+        # Childless root => empty sidebar. Fall back to the dead-end ancestor `d`
+        # when it's a same-section page with children, else the section api_root.
         if out is None or not ti.get(out):
             _sec = pagename.split("/", 1)[0]
             _base = pagename.rsplit("/", 1)[-1]
-            # Doxygen file/dir-reference pages (#include graphs) are orphan
-            # utilities, not module content: leave None so the sidebar is
-            # suppressed rather than rooting at the section's api_root.
+            # Doxygen file/dir-reference pages are orphan utilities, not module
+            # content: leave None to suppress the sidebar rather than root at api_root.
             if re.search(r"_8\w+$", _base) or _base.startswith("dir_"):
                 out = None
             elif d != pagename and ti.get(d) and d.split("/", 1)[0] == _sec:
@@ -237,12 +233,12 @@ _patch_sidebar_section_root()
 
 
 def _patch_sphinx_toctree_ancestors():
-    """The startdepth=0 sidebar renders the root toctree with `collapse=True`,
-    which keeps only the 'current' branch expanded. Sphinx decides that branch
-    via `_get_toctree_ancestors`, whose last-wins parent map picks the wrong
-    parent for a page listed in two toctrees (e.g. a `cuda*` extra module also
-    grouped under main `cuda`) -> the page's own section doesn't expand. Prefer
-    the parent sharing the longest path prefix (same section)."""
+    """Fix which branch the collapsed startdepth=0 sidebar auto-expands.
+
+    Sphinx picks it via `_get_toctree_ancestors`, whose last-wins parent map
+    mis-picks for a page in two toctrees (e.g. a `cuda*` extra module also under
+    main `cuda`), so its section won't expand. Prefer the parent sharing the
+    longest path prefix (same section)."""
     try:
         import sphinx.environment.adapters.toctree as _st
     except ImportError:
@@ -277,17 +273,13 @@ _patch_sphinx_toctree_ancestors()
 
 
 def register_global_sidebar(app):
-    """Make the left sidebar list ALL top-level sections (startdepth=0) with the
-    current one auto-expanded, instead of only the active section's subtree.
+    """Make the sidebar list ALL top-level sections (startdepth=0), current one
+    auto-expanded, instead of only the active section's subtree.
 
-    The theme injects `generate_toctree_html` -- the sole sidebar nav generator,
-    used only by its sidebar-nav-bs.html -- into each page's context via an
-    html-page-context handler. We connect after it (higher priority) and wrap
-    that one function to force startdepth=0, so the theme keeps its own template
-    (and any future args) while we flip just this argument.
-
-    Note: this makes `_patch_sidebar_section_root` above a no-op (its ancestor
-    lookup only runs when startdepth != 0)."""
+    Wrap the theme's `generate_toctree_html` (its sole sidebar nav generator) to
+    force startdepth=0, connecting after the theme's html-page-context handler so
+    it keeps its own template and we flip only this arg. This makes
+    `_patch_sidebar_section_root` a no-op (its lookup only runs when startdepth != 0)."""
     def _globalize(app, pagename, templatename, context, doctree):
         gen = context.get("generate_toctree_html")
         if not callable(gen):

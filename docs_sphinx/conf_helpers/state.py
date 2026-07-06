@@ -138,13 +138,12 @@ def _module_group_stem(m: str) -> str:
     return m
 
 # -- Header-free API-group doc overrides ------------------------------------
-# Some module umbrella headers declare their subgroups with `@addtogroup` only
-# (never `@defgroup`), so Doxygen emits them un-nested under the module group
-# and un-titled (the id is auto-capitalized, e.g. "Geometry_subdiv2d"), leaving
-# the module landing page empty. These overrides supply the missing module-group
-# description and re-parent + retitle the subgroups at stub-generation time,
-# without editing the headers (cf. `_XPHOTO_DOCS` in stubs.py). Keyed by the
-# module group stem (== Doxygen group id == module folder, by convention).
+# When a module's headers use `@addtogroup` only (never `@defgroup`), Doxygen
+# emits its subgroups un-nested and auto-titled from their id, leaving the module
+# landing page empty. These overrides supply the module-group description and
+# re-parent + retitle the subgroups at stub time, without editing the headers
+# (cf. `_XPHOTO_DOCS` in stubs.py). Keyed by module group stem (== group id ==
+# module folder, by convention).
 _GROUP_DOC_OVERRIDES: dict = {
     "geometry": {
         "detailed": (
@@ -158,12 +157,10 @@ _GROUP_DOC_OVERRIDES: dict = {
             "[convexHull](geometry_shape.md) must include "
             "[opencv2/geometry.hpp](geometry_8hpp.md) directly."
         ),
-        # Direct children to nest under the (otherwise empty) module landing
-        # page. Doxygen left these as disconnected top-level groups because the
-        # headers used `@addtogroup` without nesting under `@defgroup geometry`.
-        # Each pulls in its own subgroups recursively (shape -> subdiv2d).
-        # NB: "d_projection" is Doxygen's mangling of `@defgroup 3d_projection`
-        # (a group id can't start with a digit), and "_3d" is never `@defgroup`'d.
+        # Direct children to nest under the module page (each pulls in its own
+        # subgroups recursively). NB: "d_projection" is Doxygen's mangling of
+        # `@defgroup 3d_projection` (a group id can't start with a digit), and
+        # "_3d" is never `@defgroup`'d.
         "subgroups": ["geometry_shape", "d_projection", "_3d"],
     },
     "ptcloud": {
@@ -175,10 +172,9 @@ _GROUP_DOC_OVERRIDES: dict = {
         # Symbols harvested from the cv namespace (see _GROUP_NS_HARVEST).
     },
 }
-# Recursive title fixes for groups Doxygen auto-titled from their id (the header
-# used `@addtogroup` without a titled `@defgroup`). Applied by group id to every
-# node in an overridden module's tree. Groups with a real title are left alone
-# (e.g. "d_projection" already renders as "3D vision functionality").
+# Title fixes for groups Doxygen auto-titled from their id, applied by group id
+# to every node in an overridden module's tree. Groups with a real title are
+# left out (e.g. "d_projection" already renders as "3D vision functionality").
 _GROUP_TITLE_OVERRIDES: dict = {
     "geometry":          "Computational Geometry Primitives Module",
     "geometry_shape":    "Shape analysis and fitting",

@@ -243,7 +243,7 @@ See also: https://github.com/opencv/opencv/issues/27267
                 It is common to set all values of b to 0. Thus, v_select will give values of "a" or 0 based on the mask.
             */
 
-FP16 and BF16 Arithmetic
+FP16 and BF16 Arithmetic {#fp16-and-bf16-arithmetic}
 ------------------------
 
 OpenCV 5.0 introduces universal intrinsic support for 16-bit floating-point types: FP16 (`cv::hfloat`, `CV_16F`) and BF16 (`cv::bfloat`, `CV_16BF`). These are guarded by two preprocessor flags that mirror the existing `CV_SIMD_64F` / `CV_SIMD_SCALABLE_64F` guards for double-precision support.

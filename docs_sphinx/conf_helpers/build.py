@@ -109,14 +109,11 @@ for _m in CONTRIB_MODULES:
                     _IMAGE_INDEX.setdefault(_img.name,
                                             f"contrib_modules/{_rel}")
 
-# Doxygen's IMAGE_PATH also spans opencv/samples (+ apps), so a tutorial can
-# reference an image that lives only under samples — e.g. the Clojure tutorial's
-# `![](images/lena.png)`, whose file is opencv/samples/java/clojure/.../lena.png.
-# Those resolve to nothing in the tutorial-only index and render broken. Mirror
-# Doxygen, but bounded: index+stage ONLY sample images that a tutorial actually
-# references and that aren't already provided by a tutorial `images/` dir, so we
-# don't copy the whole samples image set. Staged under sample_pics/ like the
-# api_pics mechanism above.
+# Tutorials can reference images that live only under samples/ (+ apps/), which
+# Doxygen's IMAGE_PATH covered but the tutorial-only index misses (renders
+# broken). Index+stage ONLY sample images a tutorial actually references and
+# that a tutorial `images/` dir doesn't already provide, to avoid copying the
+# whole samples image set. Staged under sample_pics/ like api_pics above.
 _referenced_images: set[str] = set()
 for _md in (DOC_ROOT / "tutorials").rglob("*.markdown"):
     try:
@@ -152,17 +149,16 @@ if _missing_images:
                 break
 
 
-# Hand-authored topic injected into the dnn module's Topics; content lives in the
-# dnn module's own doc dir (modules/dnn/doc) so it sits in its natural home.
+# Hand-authored dnn topic; content lives in the dnn module's own doc dir.
 _DNN_ENGINE_SELECTION_MD = (
     OPENCV_ROOT / "modules" / "dnn" / "doc" / "dnn_engine.markdown").read_text(
     encoding="utf-8")
 
 
 def _add_dnn_engine_selection_topic(out_dir: pathlib.Path) -> None:
-    """Add the hand-authored 'DNN Engine Selection' page as a dnn-module topic.
-    Call after stub generation (so its stale-file sweep has run) and before the
-    anchor scan, so the new {#anchor} + @subpage get picked up."""
+    """Add the 'DNN Engine Selection' page as a dnn-module topic.
+    Must run after stub generation (its stale-file sweep) and before the anchor
+    scan, so the new {#anchor} + @subpage get picked up."""
     dnn = out_dir / "dnn.md"
     if not dnn.is_file():
         return
@@ -179,8 +175,7 @@ def _add_dnn_engine_selection_topic(out_dir: pathlib.Path) -> None:
         dnn.write_text(new, encoding="utf-8")
 
 
-# Hand-authored standalone HAL page; content lives in core's own doc dir
-# (modules/core/doc, HAL's home) alongside intro.markdown / cuda.markdown.
+# Hand-authored standalone HAL page; content lives in core's own doc dir.
 _HAL_MD = (
     OPENCV_ROOT / "modules" / "core" / "doc" / "hal.markdown").read_text(
     encoding="utf-8")
@@ -196,10 +191,8 @@ def _add_hal_page(out_dir: pathlib.Path) -> None:
     text = api_root.read_text(encoding="utf-8")
     if "](hal.md)" in text:
         return
-    # Register the page in the section toctree (as the last entry).
     text = re.sub(r"(```\{toctree\}\n.*?\n)(```\n)", r"\1hal\n\2",
                   text, count=1, flags=re.S)
-    # Visible "Learn about HAL" section at the end of the page.
     text = text.rstrip() + (
         "\n\n## Learn about HAL\n\n"
         "OpenCV ships a Hardware Acceleration Layer that lets hardware vendors "
@@ -277,7 +270,7 @@ def _write_root_index() -> None:
             entries.append((heading, link_text, docname))
 
     add("Introduction", "Introduction", "intro", "intro" in _ANCHOR_TO_DOC)
-    # Own landing section, instead of a bullet in the intro "Usage basics" list.
+    # Its own landing section rather than a bullet in the intro's Usage list.
     _prebuilt = _ANCHOR_TO_DOC.get("tutorial_using_prebuilt_binaries")
     add("How to use pre-built OpenCV binaries",
         "Using OpenCV pre-built binaries in your own projects",
@@ -300,9 +293,8 @@ def _write_root_index() -> None:
     toctree = "\n".join(
         f"{heading} <{docname}>" for heading, _link, docname in entries)
 
-    # Body: Markdown H2 section headings so each appears in the "On this page"
-    # TOC; links stay raw HTML so they resolve relative to index.html (Markdown
-    # headings can't live inside a raw <div>, so there is no wrapper).
+    # Markdown H2 headings so each shows in the "On this page" TOC; links stay
+    # raw HTML to resolve relative to index.html (headings can't sit in a <div>).
     body_lines: list[str] = []
     for heading, link_text, docname in entries:
         body_lines.append(f"## {heading}\n")

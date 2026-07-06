@@ -14,8 +14,8 @@
   var searchBox;
   try {
     searchBox = new SearchBox("searchBox", "{{ _search }}", '.html');
-    // Each search is now cheap (see the top-N renderer below), so a short
-    // debounce gives live-feeling results without lag.
+    // Short debounce: the top-N renderer below makes each search cheap enough
+    // for live-feeling results.
     if (searchBox) searchBox.keyTimeoutLength = 120;
   } catch (e) {}
 
@@ -45,13 +45,12 @@
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {
-    // Relabel the left sidebar heading "Section Navigation" -> "Navigation Bar".
     document.querySelectorAll(".bd-links__title").forEach(function (el) {
       if (/section navigation/i.test(el.textContent)) el.textContent = "Navigation Bar";
     });
 
-    // Sidebar drawer: the theme's hamburger only OPENS the dialog. Make it also
-    // close when tapped while open (toggle), and close on an outside/backdrop click.
+    // The theme's hamburger only opens the drawer dialog; add toggle-to-close
+    // and backdrop-click-to-close.
     (function () {
       var dlg = document.getElementById("pst-primary-sidebar-modal");
       var tog = document.querySelector(".primary-toggle");
@@ -176,10 +175,10 @@
         if (sphinxPath) {
           e.preventDefault();
           e.stopPropagation();
-          // Jump to the symbol's section on the Sphinx page. Doxygen anchors
-          // (#ga…, #autotoc_md) don't exist here, so rebuild the slug from the
-          // result text: tutorials use the full heading; functions/enums/members
-          // use the name (scope + "(args)" stripped) -> e.g. "Canny" -> #canny.
+          // Doxygen anchors (#ga…, #autotoc_md) don't exist in Sphinx, so
+          // rebuild the fragment slug from the result text: tutorials use the
+          // full heading; symbols use the name with scope + "(args)" stripped
+          // -> e.g. "cv::Canny(...)" -> #canny.
           var t = (a.textContent || "").trim();
           var slug = /#autotoc_md/.test(href)
             ? t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
