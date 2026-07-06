@@ -196,7 +196,7 @@
  @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
  result is not defined.
  */
-CV_INLINE int
+inline int
 cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
@@ -232,7 +232,7 @@ cvRound( double value )
  @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
  result is not defined.
  */
-CV_INLINE int cvFloor( double value )
+inline int cvFloor( double value )
 {
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
@@ -261,7 +261,7 @@ CV_INLINE int cvFloor( double value )
  @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
  result is not defined.
  */
-CV_INLINE int cvCeil( double value )
+inline int cvCeil( double value )
 {
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
@@ -289,7 +289,7 @@ CV_INLINE int cvCeil( double value )
 
  The function returns 1 if the argument is Not A Number (as defined by IEEE754 standard), 0
  otherwise. */
-CV_INLINE int cvIsNaN( double value )
+inline int cvIsNaN( double value )
 {
 #if defined CV_INLINE_ISNAN_DBL
     CV_INLINE_ISNAN_DBL(value);
@@ -307,7 +307,7 @@ CV_INLINE int cvIsNaN( double value )
 
  The function returns 1 if the argument is a plus or minus infinity (as defined by IEEE754 standard)
  and 0 otherwise. */
-CV_INLINE int cvIsInf( double value )
+inline int cvIsInf( double value )
 {
 #if defined CV_INLINE_ISINF_DBL
     CV_INLINE_ISINF_DBL(value);
@@ -327,7 +327,7 @@ CV_INLINE int cvIsInf( double value )
 #ifdef __cplusplus
 
 /** @overload */
-CV_INLINE int cvRound(float value)
+inline int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
@@ -355,14 +355,14 @@ CV_INLINE int cvRound(float value)
 }
 
 /** @overload */
-CV_INLINE int cvRound( int value )
+inline int cvRound( int value )
 {
     return value;
 }
 
 /** @overload */
 CV_DISABLE_UBSAN
-CV_INLINE int cvFloor( float value )
+inline int cvFloor( float value )
 {
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
@@ -385,13 +385,13 @@ CV_INLINE int cvFloor( float value )
 }
 
 /** @overload */
-CV_INLINE int cvFloor( int value )
+inline int cvFloor( int value )
 {
     return value;
 }
 
 /** @overload */
-CV_INLINE int cvCeil( float value )
+inline int cvCeil( float value )
 {
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
@@ -414,13 +414,13 @@ CV_INLINE int cvCeil( float value )
 }
 
 /** @overload */
-CV_INLINE int cvCeil( int value )
+inline int cvCeil( int value )
 {
     return value;
 }
 
 /** @overload */
-CV_INLINE int cvIsNaN( float value )
+inline int cvIsNaN( float value )
 {
 #if defined CV_INLINE_ISNAN_FLT
     CV_INLINE_ISNAN_FLT(value);
@@ -432,7 +432,7 @@ CV_INLINE int cvIsNaN( float value )
 }
 
 /** @overload */
-CV_INLINE int cvIsInf( float value )
+inline int cvIsInf( float value )
 {
 #if defined CV_INLINE_ISINF_FLT
     CV_INLINE_ISINF_FLT(value);

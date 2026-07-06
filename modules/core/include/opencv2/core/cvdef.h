@@ -745,7 +745,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
   #ifdef OPENCV_FORCE_UNSAFE_XADD
-    CV_INLINE int CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+    inline int CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
   #else
     #error "OpenCV: can't define safe CV_XADD macro for current platform (unsupported). Define CV_XADD macro through custom port header (see OPENCV_INCLUDE_PORT_FILE)"
   #endif
@@ -985,7 +985,7 @@ protected:
 /** @brief Constructs the 'fourcc' code, used in video codecs and many other places.
     Simply call it with 4 chars like `CV_FOURCC('I', 'Y', 'U', 'V')`
 */
-CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
+inline int CV_FOURCC(char c1, char c2, char c3, char c4)
 {
     return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }

@@ -589,43 +589,43 @@ enum {
 /** @brief Add values
 
 For all types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_add(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_add(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Subtract values
 
 For all types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_sub(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_sub(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Multiply values
 
 For 16- and 32-bit integer types and floating types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_mul(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_mul(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Divide values
 
 For floating types only. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_div(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_div(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 
 /** @brief Bitwise AND
 
 Only for integer types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_and(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_and(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise OR
 
 Only for integer types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_or(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_or(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise XOR
 
 Only for integer types.*/
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_xor(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_xor(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise NOT
 
 Only for integer types.*/
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a);
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a);
 
 
 #ifndef CV_DOXYGEN
@@ -666,7 +666,7 @@ CV__HAL_INTRIN_IMPL_BIN_OP(*, v_mul)
 CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, /, v_div)
 
 #define CV__HAL_INTRIN_IMPL_BIT_OP_(_Tp, bit_op, func) \
-template<int n> CV_INLINE \
+template<int n> inline \
 v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
@@ -687,7 +687,7 @@ CV__HAL_INTRIN_IMPL_BIT_OP(|, v_or)
 CV__HAL_INTRIN_IMPL_BIT_OP(^, v_xor)
 
 #define CV__HAL_INTRIN_IMPL_BITWISE_NOT_(_Tp, dummy, dummy2) \
-template<int n> CV_INLINE \
+template<int n> inline \
 v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a) \
 { \
     v_reg<_Tp, n> c; \
@@ -2639,7 +2639,7 @@ template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, co
 /** @brief Convert lower half to double
 
 Supported input type is cv::v_int32. */
-template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
+template<int n> inline v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -2650,7 +2650,7 @@ template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_int32. */
-template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int, n>& a)
+template<int n> inline v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -2661,7 +2661,7 @@ template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int, n
 /** @brief Convert lower half to double
 
 Supported input type is cv::v_float32. */
-template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64(const v_reg<float, n>& a)
+template<int n> inline v_reg<double, (n/2)> v_cvt_f64(const v_reg<float, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -2672,7 +2672,7 @@ template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64(const v_reg<float, n>& 
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_float32. */
-template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<float, n>& a)
+template<int n> inline v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<float, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -2683,7 +2683,7 @@ template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<float,
 /** @brief Convert to double
 
 Supported input type is cv::v_int64. */
-template<int n> CV_INLINE v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
+template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
 {
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )

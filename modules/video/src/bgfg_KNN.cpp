@@ -344,7 +344,7 @@ protected:
 #endif
 };
 
-CV_INLINE void
+static inline void
         _cvUpdatePixelBackgroundNP(int x_idx, const uchar* data, int nchannels, int m_nN,
         uchar* m_aModel,
         uchar* m_nNextLongUpdate,
@@ -395,7 +395,7 @@ CV_INLINE void
     };
 }
 
-CV_INLINE int
+static inline int
         _cvCheckPixelBackgroundNP(const uchar* data, int nchannels,
         int m_nN,
         uchar* m_aModel,

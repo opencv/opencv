@@ -145,7 +145,7 @@ struct RowPitchParams {
 RowPitchParams calculateRowPitch(int width, int bpp, int alignment, const char* format_name);
 int calculateRowSize(int width, int nch, const char* format_name);
 
-CV_INLINE bool  isBigEndian( void )
+inline bool  isBigEndian( void )
 {
 #ifdef WORDS_BIGENDIAN
     return true;
