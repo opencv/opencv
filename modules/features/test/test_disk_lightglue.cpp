@@ -8,6 +8,7 @@
 #ifdef HAVE_OPENCV_DNN
 
 #include "opencv2/dnn.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -122,8 +123,8 @@ TEST(Features2d_LightGlue_DISK, Regression)
                               << " actual matches not found in reference";
 
     if (refNotFound > 0 || actNotFound > 0)
-        std::cout << "[INFO] DISK LightGlue: " << refNotFound << " ref missing, "
-                  << actNotFound << " actual extra (within tolerance)" << std::endl;
+        CV_LOG_INFO(NULL, "DISK LightGlue: " << refNotFound << " ref missing, "
+                    << actNotFound << " actual extra (within tolerance)");
 }
 
 #else  // !HAVE_OPENCV_DNN
