@@ -49,8 +49,6 @@
 
 #include "opencv_lapack.h"
 
-
-
 #include <cmath>
 #include <algorithm>
 #include <typeinfo>
