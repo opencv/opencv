@@ -27,11 +27,12 @@ public:
                        float nms_threshold,
                        int top_k,
                        int backend_id,
-                       int target_id)
+                       int target_id,
+                       int engine)
                        :divisor(32),
                        strides({8, 16, 32})
     {
-        net = dnn::readNet(model, config);
+        net = dnn::readNet(model, config, "", engine);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(backend_id);
@@ -59,11 +60,12 @@ public:
                        float nms_threshold,
                        int top_k,
                        int backend_id,
-                       int target_id)
+                       int target_id,
+                       int engine)
                        :divisor(32),
                        strides({8, 16, 32})
     {
-        net = dnn::readNet(framework, bufferModel, bufferConfig);
+        net = dnn::readNet(framework, bufferModel, bufferConfig, engine);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(backend_id);
@@ -297,9 +299,27 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
                                            const int target_id)
 {
 #ifdef HAVE_OPENCV_DNN
-    return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
+    return create(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id, dnn::ENGINE_AUTO);
 #else
     CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
+#endif
+}
+
+Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
+                                           const String& config,
+                                           const Size& input_size,
+                                           const float score_threshold,
+                                           const float nms_threshold,
+                                           const int top_k,
+                                           const int backend_id,
+                                           const int target_id,
+                                           const int engine)
+{
+#ifdef HAVE_OPENCV_DNN
+    return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id, engine);
+#else
+    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id); CV_UNUSED(engine);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
 #endif
 }
@@ -315,9 +335,28 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
                                            const int target_id)
 {
 #ifdef HAVE_OPENCV_DNN
-    return makePtr<FaceDetectorYNImpl>(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
+    return create(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id, dnn::ENGINE_AUTO);
 #else
     CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
+#endif
+}
+
+Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
+                                           const std::vector<uchar>& bufferModel,
+                                           const std::vector<uchar>& bufferConfig,
+                                           const Size& input_size,
+                                           const float score_threshold,
+                                           const float nms_threshold,
+                                           const int top_k,
+                                           const int backend_id,
+                                           const int target_id,
+                                           const int engine)
+{
+#ifdef HAVE_OPENCV_DNN
+    return makePtr<FaceDetectorYNImpl>(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id, engine);
+#else
+    CV_UNUSED(framework); CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id); CV_UNUSED(engine);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
 #endif
 }

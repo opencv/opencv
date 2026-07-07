@@ -93,6 +93,28 @@ public:
 
     /** @overload
      *
+     *  @param model the path to the requested model
+     *  @param config the path to the config file for compatibility, which is not requested for ONNX models
+     *  @param input_size the size of the input image
+     *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value
+     *  @param nms_threshold the threshold to suppress bounding boxes of IoU bigger than the given value
+     *  @param top_k keep top K bboxes before NMS
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
+     *  @param engine select DNN engine using the same semantics as cv::dnn::readNet
+     */
+    CV_WRAP static Ptr<FaceDetectorYN> create(CV_WRAP_FILE_PATH const String& model,
+                                              CV_WRAP_FILE_PATH const String& config,
+                                              const Size& input_size,
+                                              float score_threshold,
+                                              float nms_threshold,
+                                              int top_k,
+                                              int backend_id,
+                                              int target_id,
+                                              int engine);
+
+    /** @overload
+     *
      *  @param framework Name of origin framework
      *  @param bufferModel A buffer with a content of binary file with weights
      *  @param bufferConfig A buffer with a content of text file contains network configuration
@@ -112,6 +134,30 @@ public:
                                               int top_k = 5000,
                                               int backend_id = 0,
                                               int target_id = 0);
+
+    /** @overload
+     *
+     *  @param framework Name of origin framework
+     *  @param bufferModel A buffer with a content of binary file with weights
+     *  @param bufferConfig A buffer with a content of text file contains network configuration
+     *  @param input_size the size of the input image
+     *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value
+     *  @param nms_threshold the threshold to suppress bounding boxes of IoU bigger than the given value
+     *  @param top_k keep top K bboxes before NMS
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
+     *  @param engine select DNN engine using the same semantics as cv::dnn::readNet
+     */
+    CV_WRAP static Ptr<FaceDetectorYN> create(const String& framework,
+                                              const std::vector<uchar>& bufferModel,
+                                              const std::vector<uchar>& bufferConfig,
+                                              const Size& input_size,
+                                              float score_threshold,
+                                              float nms_threshold,
+                                              int top_k,
+                                              int backend_id,
+                                              int target_id,
+                                              int engine);
 
 };
 
@@ -156,6 +202,19 @@ public:
      */
     CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
 
+    /** @overload
+     *  @param model the path of the onnx model used for face recognition
+     *  @param config the path to the config file for compatibility, which is not requested for ONNX models
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
+     *  @param engine select DNN engine using the same semantics as cv::dnn::readNet
+     */
+    CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model,
+                                                CV_WRAP_FILE_PATH const String& config,
+                                                int backend_id,
+                                                int target_id,
+                                                int engine);
+
     /**
      *  @brief Creates an instance of this class from a buffer containing the model weights and configuration.
      *  @param framework Name of the framework (ONNX, etc.)
@@ -171,6 +230,21 @@ public:
                                                 const std::vector<uchar>& bufferConfig,
                                                 int backend_id = 0,
                                                 int target_id = 0);
+
+    /** @overload
+     *  @param framework Name of the framework (ONNX, etc.)
+     *  @param bufferModel A buffer containing the binary model weights.
+     *  @param bufferConfig A buffer containing the network configuration.
+     *  @param backend_id The id of the backend.
+     *  @param target_id The id of the target device.
+     *  @param engine select DNN engine using the same semantics as cv::dnn::readNet
+     */
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& framework,
+                                                const std::vector<uchar>& bufferModel,
+                                                const std::vector<uchar>& bufferConfig,
+                                                int backend_id,
+                                                int target_id,
+                                                int engine);
 };
 
 //! @}

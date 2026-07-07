@@ -4,7 +4,128 @@
 
 #include "test_precomp.hpp"
 
+#ifdef HAVE_OPENCV_DNN
+#include "opencv2/dnn.hpp"
+#endif
+
 namespace opencv_test { namespace {
+
+#ifdef HAVE_OPENCV_DNN
+static std::vector<uchar> readModel(const std::string& path)
+{
+    std::ifstream stream(path.c_str(), std::ios::binary);
+    CV_Assert(stream.is_open());
+    return std::vector<uchar>((std::istreambuf_iterator<char>(stream)),
+                              std::istreambuf_iterator<char>());
+}
+
+template<typename Operation>
+static bool succeeds(const Operation& operation)
+{
+    try
+    {
+        operation();
+        return true;
+    }
+    catch (const cv::Exception&)
+    {
+        return false;
+    }
+}
+
+TEST(Objdetect_face, dnn_engine_selection)
+{
+    const std::string model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", true);
+    const std::string detectorModel = findDataFile("dnn/onnx/models/yunet-202303.onnx", true);
+    const std::vector<uchar> buffer = readModel(model);
+    const std::vector<uchar> detectorBuffer = readModel(detectorModel);
+    const std::vector<uchar> emptyBuffer;
+    const Size inputSize(32, 32);
+
+    // Existing API remains equivalent to explicit default selection.
+    EXPECT_NO_THROW(FaceDetectorYN::create(detectorModel, "", inputSize));
+    EXPECT_NO_THROW(FaceDetectorYN::create(detectorModel, "", inputSize, 0.9f, 0.3f, 5000, 0, 0,
+                                           dnn::ENGINE_AUTO));
+    EXPECT_NO_THROW(FaceDetectorYN::create("onnx", detectorBuffer, emptyBuffer, inputSize));
+    EXPECT_NO_THROW(FaceDetectorYN::create("onnx", detectorBuffer, emptyBuffer, inputSize,
+                                           0.9f, 0.3f, 5000, 0, 0, dnn::ENGINE_AUTO));
+    EXPECT_NO_THROW(FaceRecognizerSF::create(model, ""));
+    EXPECT_NO_THROW(FaceRecognizerSF::create(model, "", 0, 0, dnn::ENGINE_AUTO));
+    EXPECT_NO_THROW(FaceRecognizerSF::create("onnx", buffer, emptyBuffer));
+    EXPECT_NO_THROW(FaceRecognizerSF::create("onnx", buffer, emptyBuffer, 0, 0,
+                                             dnn::ENGINE_AUTO));
+
+    const int engines[] = { dnn::ENGINE_CLASSIC, dnn::ENGINE_NEW,
+                            dnn::ENGINE_AUTO, dnn::ENGINE_ORT };
+    for (int engine : engines)
+    {
+        SCOPED_TRACE(format("engine=%d", engine));
+
+        // Direct DNN calls are the behavior oracle for each face-factory route.
+        const bool directFile = succeeds([&]() { dnn::readNet(model, "", "", engine); });
+        EXPECT_EQ(directFile, succeeds([&]() {
+            FaceRecognizerSF::create(model, "", 0, 0, engine);
+        }));
+        const bool directBuffer = succeeds([&]() {
+            dnn::readNet("onnx", buffer, emptyBuffer, engine);
+        });
+        EXPECT_EQ(directBuffer, succeeds([&]() {
+            FaceRecognizerSF::create("onnx", buffer, emptyBuffer, 0, 0, engine);
+        }));
+
+        const bool directDetectorFile = succeeds([&]() {
+            dnn::readNet(detectorModel, "", "", engine);
+        });
+        // Classic YuNet preserves the factory's existing fixed-input-shape error.
+        // This also makes selection of Classic observable without inspecting Net internals.
+        if (engine == dnn::ENGINE_CLASSIC)
+            EXPECT_THROW(FaceDetectorYN::create(detectorModel, "", inputSize,
+                                                0.9f, 0.3f, 5000, 0, 0, engine), cv::Exception);
+        else
+            EXPECT_EQ(directDetectorFile, succeeds([&]() {
+                FaceDetectorYN::create(detectorModel, "", inputSize,
+                                       0.9f, 0.3f, 5000, 0, 0, engine);
+            }));
+
+        const bool directDetectorBuffer = succeeds([&]() {
+            dnn::readNet("onnx", detectorBuffer, emptyBuffer, engine);
+        });
+        if (engine == dnn::ENGINE_CLASSIC)
+            EXPECT_THROW(FaceDetectorYN::create("onnx", detectorBuffer, emptyBuffer, inputSize,
+                                                0.9f, 0.3f, 5000, 0, 0, engine), cv::Exception);
+        else
+            EXPECT_EQ(directDetectorBuffer, succeeds([&]() {
+                FaceDetectorYN::create("onnx", detectorBuffer, emptyBuffer, inputSize,
+                                       0.9f, 0.3f, 5000, 0, 0, engine);
+            }));
+    }
+}
+
+TEST(Objdetect_face, invalid_engine_propagation)
+{
+    const std::string model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", true);
+    const std::string detectorModel = findDataFile("dnn/onnx/models/yunet-202303.onnx", true);
+    const std::vector<uchar> buffer = readModel(model);
+    const std::vector<uchar> detectorBuffer = readModel(detectorModel);
+    const std::vector<uchar> emptyBuffer;
+    const Size inputSize(32, 32);
+    // EngineType values 1 through 4 are valid; zero is unsupported.
+    const int invalidEngine = 0;
+
+    EXPECT_THROW(dnn::readNet(model, "", "", invalidEngine), cv::Exception);
+    EXPECT_THROW(dnn::readNet("onnx", buffer, emptyBuffer, invalidEngine), cv::Exception);
+    EXPECT_THROW(FaceRecognizerSF::create(model, "", 0, 0, invalidEngine), cv::Exception);
+    EXPECT_THROW(FaceRecognizerSF::create("onnx", buffer, emptyBuffer, 0, 0, invalidEngine),
+                 cv::Exception);
+
+    EXPECT_THROW(dnn::readNet(detectorModel, "", "", invalidEngine), cv::Exception);
+    EXPECT_THROW(dnn::readNet("onnx", detectorBuffer, emptyBuffer, invalidEngine), cv::Exception);
+    EXPECT_THROW(FaceDetectorYN::create(detectorModel, "", inputSize,
+                                        0.9f, 0.3f, 5000, 0, 0, invalidEngine), cv::Exception);
+    EXPECT_THROW(FaceDetectorYN::create("onnx", detectorBuffer, emptyBuffer, inputSize,
+                                        0.9f, 0.3f, 5000, 0, 0, invalidEngine), cv::Exception);
+}
+#endif  // HAVE_OPENCV_DNN
 
 // label format:
 //   image_name

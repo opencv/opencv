@@ -4267,7 +4267,7 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
-            return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+            return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size(), ENGINE_CLASSIC);
         case ENGINE_NEW:
             return readNetFromONNX2(buffer);
         case ENGINE_ORT:
@@ -4283,7 +4283,7 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
             if (!net.empty())
                 return net;
             else
-                return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+                return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size(), ENGINE_CLASSIC);
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
