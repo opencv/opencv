@@ -36,7 +36,7 @@ def detect_markers():
         ok, frame = cap.read()
         if not ok:
             break
-        corners, ids, rejected = detector.detectMarkers(frame)
+        corners, ids, _ = detector.detectMarkers(frame)
         cv.aruco.drawDetectedMarkers(frame, corners, ids)
         cv.imshow("nested markers", frame)
         if cv.waitKey(1) == 27:
@@ -74,7 +74,7 @@ def estimate_pose():
     board = cv.aruco.Board([outer_pts, inner_pts], dictionary, np.array([0, 1]))
 
     while True:
-        corners, ids, rejected = detector.detectMarkers(frame)
+        corners, ids, _ = detector.detectMarkers(frame)
         cv.aruco.drawDetectedMarkers(frame, corners, ids)
 
         if ids is not None:
@@ -245,7 +245,7 @@ def custom_generate():
         dictionary = build_dictionary(dictionary_images)
         write_dictionary(dictionary, out_dir / f"{name}.yml")
         save_sheet(sheet_items, out_dir / f"{name}_sheet.png")
-        for idx, (image, label) in enumerate(sheet_items):
+        for idx, (image, _) in enumerate(sheet_items):
             cv.imwrite(str(out_dir / f"{name}_marker_{idx}.png"), image)
     ## [nested_custom_write_dictionary_py]
 
@@ -279,7 +279,7 @@ def custom_detect():
         if not ok:
             break
 
-        corners, ids, rejected = detector.detectMarkers(frame)
+        corners, ids, _ = detector.detectMarkers(frame)
         cv.aruco.drawDetectedMarkers(frame, corners, ids)
 
         cv.imshow("custom nested markers", frame)
