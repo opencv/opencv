@@ -596,6 +596,32 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     g->exec_.assign(nops, Ptr<Layer>());
     g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
 
+#ifdef HAVE_CUDA
+    // Whole-graph CUDA gate: run on CUDA only if *every* op has a CUDA executor; if any op is
+    // unsupported (or the graph has control-flow subgraphs) run the entire graph on CPU. This
+    // avoids partial CPU<->CUDA execution and its host/device coherence hazards for now.
+    std::vector<Ptr<Layer> > cudaExecs;
+    bool graphOnCuda = false;
+    if (useCUDA && cudaInfo) {
+        graphOnCuda = true;
+        cudaExecs.assign(nops, Ptr<Layer>());
+        for (i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op)
+                continue;
+            if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
+            Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
+            if (!e) { graphOnCuda = false; break; }
+            cudaExecs[i] = e;
+        }
+        if (!graphOnCuda) {
+            cudaExecs.clear();
+            CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: graph '%s' has layer(s) without CUDA support; "
+                                         "running the whole graph on CPU", graph->name().c_str()));
+        }
+    }
+#endif
+
     for (i = 0; i < nops; i++) {
         const Ptr<LayerInfo>& op = prog[i];
         if (!op)
@@ -611,13 +637,10 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         Ptr<Layer> exec;
         int backend = DNN_BACKEND_OPENCV;
 #ifdef HAVE_CUDA
-        // Try the optimized backend first; its create() returns null if the op is unsupported.
-        if (useCUDA && cudaInfo && !subs) {
-            exec = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
-            if (exec) {
-                exec->preferableTarget = preferableTarget;
-                backend = DNN_BACKEND_CUDA;
-            }
+        if (graphOnCuda && cudaExecs[i]) {
+            exec = cudaExecs[i];
+            exec->preferableTarget = preferableTarget;
+            backend = DNN_BACKEND_CUDA;
         }
 #endif
         if (!exec) {
@@ -1342,15 +1365,24 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         for (i = 0; i < n_gr_inputs; i++) {
             Mat m = inputs_.getMat((int)i);
             setGraphInput(graph, i, m);
+        }
+    }
 #ifdef HAVE_CUDA
+    // Graph inputs are host-authoritative and may be updated between forward() calls
+    // (setInput writes them outside this function, so the loop above is skipped when
+    // forward() is called with no explicit inputs). Mark their device copies stale each
+    // forward so the current input is re-uploaded; otherwise a second forward with a
+    // changed input would read the previous forward's stale device data.
+    if (cudaInfo) {
+        for (i = 0; i < n_gr_inputs; i++) {
             Arg ginp = gr_inputs[i];
-            if (ginp.idx < (int)argWrappers.size()) {
+            if (ginp.idx >= 0 && ginp.idx < (int)argWrappers.size()) {
                 Ptr<CUDABackendWrapper> cw = argWrappers[ginp.idx].dynamicCast<CUDABackendWrapper>();
                 if (cw) cw->setHostDirty();
             }
-#endif
         }
     }
+#endif
 
     for (size_t opidx = 0; opidx < nops; opidx++) {
         const Ptr<LayerInfo>& op = prog.at(opidx);
