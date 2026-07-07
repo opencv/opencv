@@ -11,8 +11,6 @@
 #include "frame.hpp"
 #include "../optimizer/pose_optimizer.hpp"
 
-#include <fstream>
-
 namespace cv {
 namespace slam {
 
@@ -23,35 +21,30 @@ Stage logic is split across:
   - vo_tracking.cpp   : per-frame localisation (motion model, fallback 1/2, local map)
   - vo_keyframe.cpp   : keyframe promotion decision + covisibility helpers
   - vo_map_growth.cpp : triangulation of new map points at promotion time
-  - visual_odometry.cpp : factory, run(), processFrame(), IO writers
+  - visual_odometry.cpp : factory, processFrame()
 */
 class VisualOdometryImpl CV_FINAL : public VisualOdometry
 {
 public:
     VisualOdometryImpl(const Ptr<Feature2D>& detector,
                        const Ptr<DescriptorMatcher>& matcher,
-                       const String& imagesFolder,
-                       const String& outputFolder,
                        const Mat& cameraMatrix,
                        const Mat& distCoeffs,
                        const OdometryParams& params);
 
     // --- VisualOdometry interface -------------------------------------------
 
-    bool run() CV_OVERRIDE;
     bool processFrame(InputArray image) CV_OVERRIDE;
     void reset() CV_OVERRIDE;
 
     OdometryState getState() const CV_OVERRIDE { return state; }
     Matx44d getLastPose() const CV_OVERRIDE { return lastPoseCw; }
     const Map& getMap() const CV_OVERRIDE { return map; }
+    int getNumKeyframes() const CV_OVERRIDE { return map.numKeyframes(); }
+    int getNumMapPoints() const CV_OVERRIDE { return map.numMapPoints(); }
     const std::vector<Matx44d>& getTrajectory() const CV_OVERRIDE { return map.trajectory(); }
     const OdometryParams& getParams() const CV_OVERRIDE { return params; }
     void setParams(const OdometryParams& p) CV_OVERRIDE { params = p; }
-
-    const String& getImagesFolder() const CV_OVERRIDE { return imagesFolder; }
-    const String& getOutputFolder() const CV_OVERRIDE { return outputFolder; }
-    void setOutputFolder(const String& f) CV_OVERRIDE { outputFolder = f; }
 
     // --- Stage entry points -------------------------------------------------
 
@@ -74,12 +67,6 @@ public:
                      const std::vector<KeyPoint>& tKp, const Mat& tDesc, Size tSz,
                      std::vector<DMatch>& matches) const;
 
-    // --- IO helpers (visual_odometry.cpp) ------------------------------------
-
-    void writeCameraIntrinsics(const String& path) const;
-    void writeMapPoints(const String& path) const;
-    void writeImagesTxt(const String& path) const;
-
     // --- Owned state ---------------------------------------------------------
 
     Ptr<Feature2D> detector;
@@ -87,9 +74,6 @@ public:
     Mat K;    // 3×3 CV_64F
     Mat dist; // distortion coefficients (may be empty)
     OdometryParams params;
-
-    String imagesFolder;
-    String outputFolder;
 
     OdometryState state = NOT_INITIALIZED;
     Matx44d lastPoseCw = Matx44d::eye();
@@ -106,7 +90,6 @@ public:
     bool hasPrevFrame = false;
 
     String lastEvent;
-    std::vector<String> poseFilenames;
 
     Map map;
 };
