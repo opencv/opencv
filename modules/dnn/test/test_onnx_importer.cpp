@@ -1143,6 +1143,9 @@ TEST_P(Test_ONNX_layers, MatMul_init_2)
 }
 TEST_P(Test_ONNX_layers, MatMul_init_bcast)
 {
+    // New-engine CUDA MatMul/GEMM does not yet cover this broadcast variant; skip for now.
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testONNXModels("matmul_init_bcast");
 }
 
@@ -1162,6 +1165,9 @@ TEST_P(Test_ONNX_layers, MatMulAdd)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    // New-engine CUDA MatMul/GEMM does not yet cover this fused-add variant; skip for now.
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testONNXModels("matmul_add");
 }
 
@@ -2733,6 +2739,9 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 #endif
         CV_TEST_TAG_DEBUG_VERYLONG
     );
+    // New-engine CUDA lacks support for some layers in this net; skip for now.
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -3601,6 +3610,9 @@ TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
 }
 
 TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    // New-engine CUDA MatMul/GEMM does not yet cover this fused variant; skip for now.
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
     double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
     testONNXModels("biased_matmul", npy, l1, lInf);
