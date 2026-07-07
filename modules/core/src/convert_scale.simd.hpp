@@ -26,6 +26,13 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
 #if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
     const int VECSZ = VTraits<v_float32>::vlanes()*2;
+    // GCC miscompiles this scalable block only on VLEN=128 RVV (opencv/issues/26936).
+    // v_float32 is LMUL=2, so vlanes()==8 means VLEN==128: use scalar there, keep SIMD elsewhere.
+#if (CV_SIMD_SCALABLE && defined(__GNUC__) && !defined(__clang__))
+    const bool useSIMD = VTraits<v_float32>::vlanes() != 8;
+#else
+    const bool useSIMD = true;
+#endif
 #endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -33,8 +40,8 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-// Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
-#if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        if( useSIMD )
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
