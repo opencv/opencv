@@ -7,6 +7,8 @@
 #include "../precomp.hpp"
 #include "vo_impl.hpp"
 
+#include <opencv2/core/quaternion.hpp>
+
 #include <fstream>
 #include <sstream>
 
@@ -105,26 +107,26 @@ bool VisualOdometryImpl::processFrame(InputArray image)
     if (image.empty()) return false;
     lastEvent.clear();
 
-    Frame cur;
-    extractFeatures(image, cur);
-    if (cur.keypoints.empty() || cur.descriptors.empty()) return false;
+    Frame currentFrame;
+    extractFeatures(image, currentFrame);
+    if (currentFrame.keypoints.empty() || currentFrame.descriptors.empty()) return false;
 
-    cur.mapPoints.assign(cur.keypoints.size(), nullptr);
-    cur.outliers.assign(cur.keypoints.size(), false);
-    cur.buildGrid();
+    currentFrame.mapPoints.assign(currentFrame.keypoints.size(), nullptr);
+    currentFrame.outliers.assign(currentFrame.keypoints.size(), false);
+    currentFrame.buildGrid();
 
     switch (state)
     {
     case NOT_INITIALIZED:
-        refFrame = cur;
+        refFrame = currentFrame;
         state = INITIALIZING;
         return false;
 
     case INITIALIZING:
-        return bootstrap(cur);
+        return bootstrap(currentFrame);
 
     case TRACKING:
-        return track(cur);
+        return track(currentFrame);
     }
     return false;
 }
@@ -223,16 +225,11 @@ bool VisualOdometryImpl::run()
 
     if (!outputFolder.empty())
         cv::utils::fs::createDirectories(outputFolder);
-    auto logln = [](const String&) {};
 
-    logln("[INFO] optimizer = reprojection inlier check");
-    logln(String("[INFO] images_folder = ") + imagesFolder);
-    logln(String("[INFO] output_folder = ") + outputFolder);
-    {
-        std::ostringstream ss;
-        ss << "[INFO] found " << imgFiles.size() << " image(s)";
-        logln(ss.str());
-    }
+    CV_LOG_INFO(NULL, "optimizer = reprojection inlier check");
+    CV_LOG_INFO(NULL, "images_folder = " << imagesFolder);
+    CV_LOG_INFO(NULL, "output_folder = " << outputFolder);
+    CV_LOG_INFO(NULL, "found " << imgFiles.size() << " image(s)");
 
     reset();
 
@@ -245,9 +242,8 @@ bool VisualOdometryImpl::run()
         Mat img = imread(imgFiles[i]);
         if (img.empty())
         {
-            std::ostringstream ss;
-            ss << "[FRAME " << i << "] file=" << imgFiles[i] << " ERROR: imread failed";
-            logln(ss.str()); continue;
+            CV_LOG_WARNING(NULL, "[FRAME " << i << "] file=" << imgFiles[i] << " imread failed");
+            continue;
         }
 
         OdometryState before = state;
@@ -283,7 +279,7 @@ bool VisualOdometryImpl::run()
             Point3d C = detail::cameraCenterWorld(lastPoseCw);
             ss << " C=(" << C.x << "," << C.y << "," << C.z << ")";
         }
-        logln(ss.str());
+        CV_LOG_INFO(NULL, ss.str());
     }
 
     if (!outputFolder.empty())
@@ -340,39 +336,6 @@ void VisualOdometryImpl::writeMapPoints(const String& path) const
     }
 }
 
-// Shepperd's method: numerically-stable R → unit quaternion (qw, qx, qy, qz).
-static void rotMatToQuat(const Matx33d& R,
-                         double& qw, double& qx, double& qy, double& qz)
-{
-    const double tr = R(0,0) + R(1,1) + R(2,2);
-    if (tr > 0.0)
-    {
-        double s = std::sqrt(tr + 1.0) * 2.0;
-        qw = 0.25 * s;
-        qx = (R(2,1) - R(1,2)) / s;
-        qy = (R(0,2) - R(2,0)) / s;
-        qz = (R(1,0) - R(0,1)) / s;
-    }
-    else if (R(0,0) > R(1,1) && R(0,0) > R(2,2))
-    {
-        double s = std::sqrt(1.0 + R(0,0) - R(1,1) - R(2,2)) * 2.0;
-        qw = (R(2,1) - R(1,2)) / s; qx = 0.25 * s;
-        qy = (R(0,1) + R(1,0)) / s; qz = (R(0,2) + R(2,0)) / s;
-    }
-    else if (R(1,1) > R(2,2))
-    {
-        double s = std::sqrt(1.0 + R(1,1) - R(0,0) - R(2,2)) * 2.0;
-        qw = (R(0,2) - R(2,0)) / s; qx = (R(0,1) + R(1,0)) / s;
-        qy = 0.25 * s;              qz = (R(1,2) + R(2,1)) / s;
-    }
-    else
-    {
-        double s = std::sqrt(1.0 + R(2,2) - R(0,0) - R(1,1)) * 2.0;
-        qw = (R(1,0) - R(0,1)) / s; qx = (R(0,2) + R(2,0)) / s;
-        qy = (R(1,2) + R(2,1)) / s; qz = 0.25 * s;
-    }
-}
-
 static String basenameOf(const String& path)
 {
     const size_t slash = path.find_last_of("/\\");
@@ -397,8 +360,9 @@ void VisualOdometryImpl::writeImagesTxt(const String& path) const
         Matx33d R;
         for (int r = 0; r < 3; ++r)
             for (int c = 0; c < 3; ++c) R(r,c) = T(r,c);
-        double qw, qx, qy, qz;
-        rotMatToQuat(R, qw, qx, qy, qz);
+        
+        const Quatd q = Quatd::createFromRotMat(R);
+        const double qw = q.w, qx = q.x, qy = q.y, qz = q.z;
 
         const String name = (i < poseFilenames.size())
             ? basenameOf(poseFilenames[i])

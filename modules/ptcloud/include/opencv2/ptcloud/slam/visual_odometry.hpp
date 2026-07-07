@@ -27,8 +27,7 @@ namespace slam {
 State machine: NOT_INITIALIZED → INITIALIZING (H/F two-view bootstrap) → TRACKING
 (per-frame PnP + local-map refinement). Tracking failure rewinds to INITIALIZING.
 
-@ref run writes trajectory.txt, trajectory.bin, map_points.txt, keypoints.txt,
-images.txt, and vo.log into `outputFolder`.
+@ref run writes camera.txt, point3d.txt, and images.txt into `outputFolder`.
 */
 class CV_EXPORTS_W VisualOdometry
 {

@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 
-#include <opencv2/slam.hpp>
+#include <opencv2/ptcloud/slam.hpp>
 #include <opencv2/features.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/core.hpp>
