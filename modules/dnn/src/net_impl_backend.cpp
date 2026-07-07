@@ -348,7 +348,9 @@ void Net::Impl::setPreferableTarget(int targetId)
     if (mainGraph)
     {
         if (targetId != DNN_TARGET_CPU)
+        {
             CV_LOG_WARNING(NULL, "Targets are not supported by the new graph engine for now");
+        }
         return;
     }
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&
