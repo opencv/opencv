@@ -12,10 +12,7 @@
 #include <cmath>
 #include <cfloat>
 
-// Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
-#define IPP_DISABLE_FILTER2D_BIG_MASK   1
-
-#ifdef HAVE_IPP_IW
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
 
 #include "iw++/iw.hpp"
 
@@ -160,6 +157,6 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
     return CV_HAL_ERROR_OK;
 }
 
-#endif // HAVE_IPP_IW
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
 
 #endif // IPP_VERSION_X100 >= 810
