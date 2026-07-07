@@ -1521,6 +1521,27 @@ inline int hal_ni_canny(const uchar* src_data, size_t src_step, uchar* dst_data,
 //! @endcond
 
 /**
+   @brief Canny edge detector from image derivatives
+   @param dx_data Source image x-derivative data
+   @param dx_step Source image x-derivative step
+   @param dy_data Source image y-derivative data
+   @param dy_step Source image y-derivative step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param cn Number of channels
+   @param lowThreshold low hresholds value
+   @param highThreshold high thresholds value
+   @param L2gradient Flag, indicating use L2 or L1 norma.
+*/
+inline int hal_ni_canny_deriv(const short* dx_data, size_t dx_step, const short* dy_data, size_t dy_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, double lowThreshold, double highThreshold, bool L2gradient) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_canny_deriv hal_ni_canny_deriv
+//! @endcond
+
+/**
    @brief Calculates all of the moments up to the third order of a polygon or rasterized shape for image
    @param src_data Source image data
    @param src_step Source image step

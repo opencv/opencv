@@ -48,51 +48,6 @@
 namespace cv
 {
 
-#ifdef HAVE_IPP
-static bool ipp_Canny(const Mat& dx_, const Mat& dy_, Mat& dst, float low, float high, bool L2gradient)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    ::ipp::IwiSize size(dst.cols, dst.rows);
-    IppDataType    type     = ippiGetDataType(dst.depth());
-    int            channels = dst.channels();
-    IppNormType    norm     = (L2gradient)?ippNormL2:ippNormL1;
-
-    if(size.width <= 3 || size.height <= 3)
-        return false;
-
-    if(channels != 1)
-        return false;
-
-    if(type != ipp8u)
-        return false;
-
-    try
-    {
-        ::ipp::IwiImage iwSrcDx;
-        ::ipp::IwiImage iwSrcDy;
-        ::ipp::IwiImage iwDst;
-
-        ippiGetImage(dx_, iwSrcDx);
-        ippiGetImage(dy_, iwSrcDy);
-        ippiGetImage(dst, iwDst);
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient);
-    return false;
-#endif
-}
-#endif
-
 #ifdef HAVE_OPENCL
 
 template <bool useCustomDeriv>
@@ -843,7 +798,8 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
 
-    CV_IPP_RUN_FAST(ipp_Canny(dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient))
+    CALL_HAL(canny_deriv, cv_hal_canny_deriv, dx.ptr<short>(), dx.step, dy.ptr<short>(), dy.step,
+             dst.data, dst.step, dx.cols, dx.rows, dx.channels(), low_thresh, high_thresh, L2gradient);
 
     if (L2gradient)
     {
