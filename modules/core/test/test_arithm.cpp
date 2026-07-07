@@ -13,6 +13,15 @@ const int ARITHM_MAX_CHANNELS = 4;
 const int ARITHM_MAX_NDIMS = 4;
 const int ARITHM_MAX_SIZE_LOG = 10;
 
+// fp8 (E4M3) is excluded from the tolerance-checked element-wise pool: its 3-bit
+// mantissa can't meet these tests' error bounds and out-of-range inputs overflow to
+// NaN. fp8 conversion/arithmetic is covered directly in test_fp8.cpp.
+static const _OutputArray::DepthMask DEPTH_MASK_ALL_NO_FP8 =
+    _OutputArray::DepthMask(_OutputArray::DEPTH_MASK_ALL &
+        ~((1 << CV_8F_E4M3FN) | (1 << CV_8F_E4M3FNUZ)));
+static const _OutputArray::DepthMask DEPTH_MASK_ALL_BUT_8S_NO_FP8 =
+    _OutputArray::DepthMask(DEPTH_MASK_ALL_NO_FP8 & ~_OutputArray::DEPTH_MASK_8S);
+
 struct BaseElemWiseOp
 {
     enum
@@ -41,7 +50,7 @@ struct BaseElemWiseOp
 
     virtual int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1,
+        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S_NO_FP8, 1,
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
@@ -895,8 +904,8 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        int srctype = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
-        ddepth = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
+        int srctype = cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1, ARITHM_MAX_CHANNELS);
+        ddepth = cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1, 1);
         return srctype;
     }
     double getMaxErr(int)
@@ -994,7 +1003,7 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1,
+        return cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1,
             ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
     double getMaxErr(int)
