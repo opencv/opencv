@@ -88,26 +88,18 @@ section below explains how the separation distance is computed and why it preven
 
 ![Overview of the `cv::aruco::DICT_4X4_NESTED_10`](images/nested_dict_4x4_10.png)
 
+The runnable samples used by this tutorial are included in
+`samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp` and
+`samples/python/tutorial_code/objectDetection/aruco_nested_detection.py`.
+
 Step 1: create and print the markers
 ------------------------------------
 
-@code{.cpp}
-#include <opencv2/objdetect/aruco_detector.hpp>
-
-cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_NESTED_10);
-cv::Mat marker;
-cv::aruco::generateImageMarkerNested(dictionary, 0, 1200, marker);  // outer id 0, inner id 1
-cv::imwrite("pair_0.png", marker);
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_marker_create_cpp
 
 Or in Python:
 
-@code{.py}
-import cv2 as cv
-dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_NESTED_10)
-marker = cv.aruco.generateImageMarkerNested(dictionary, 0, 1200)
-cv.imwrite("pair_0.png", marker)
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_marker_create_py
 
 Printing checklist:
 
@@ -120,41 +112,11 @@ Step 2: detect with your camera
 Only one detector parameter changes: `cv::aruco::DetectorParameters::detectNestedMarkers`. It
 keeps markers that are found inside other markers instead of discarding them.
 
-@code{.cpp}
-cv::VideoCapture cap(0);
-cv::aruco::DetectorParameters params;
-params.detectNestedMarkers = true;
-cv::aruco::ArucoDetector detector(dictionary, params);
-
-cv::Mat frame;
-while (cap.read(frame)) {
-    std::vector<std::vector<cv::Point2f>> corners, rejected;
-    std::vector<int> ids;
-    detector.detectMarkers(frame, corners, ids, rejected);
-    cv::aruco::drawDetectedMarkers(frame, corners, ids);
-    cv::imshow("nested markers", frame);
-    if (cv::waitKey(1) == 27) break;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_marker_detect_cpp
 
 Or in Python:
 
-@code{.py}
-cap = cv.VideoCapture(0)
-params = cv.aruco.DetectorParameters()
-params.detectNestedMarkers = True
-detector = cv.aruco.ArucoDetector(dictionary, params)
-
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-    corners, ids, rejected = detector.detectMarkers(frame)
-    cv.aruco.drawDetectedMarkers(frame, corners, ids)
-    cv.imshow("nested markers", frame)
-    if cv.waitKey(1) == 27:
-        break
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_marker_detect_py
 
 Point the camera at your print. From across the room you should see id 0. Walk closer and id 1
 appears next to it. Very close, only id 1 remains. All other parameters keep their defaults.
@@ -170,67 +132,11 @@ outer marker top left corner, x right, y down, z = 0.
 The code below assumes `cameraMatrix` and `distCoeffs` (Python: `camera_matrix` and `dist_coeffs`)
 come from your camera calibration.
 
-@code{.cpp}
-float sideLength = 0.20f;  // printed outer side in meters
-cv::Mat outerPts, innerPts;
-cv::aruco::getNestedMarkerObjectPoints(dictionary, 0, sideLength, outerPts, innerPts);
-cv::aruco::Board board(std::vector<cv::Mat>{outerPts, innerPts}, dictionary,
-                       std::vector<int>{0, 1});
-
-while (cap.read(frame)) {
-    std::vector<std::vector<cv::Point2f>> corners, rejected;
-    std::vector<int> ids;
-    detector.detectMarkers(frame, corners, ids, rejected);
-    cv::aruco::drawDetectedMarkers(frame, corners, ids);
-
-    if (!ids.empty()) {
-        cv::Mat objPoints, imgPoints;
-        board.matchImagePoints(corners, ids, objPoints, imgPoints);
-
-        if (objPoints.total() >= 4) {
-            cv::Mat rvec, tvec;
-            bool ok = cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-
-            if (ok) {
-                cv::drawFrameAxes(frame, cameraMatrix, distCoeffs, rvec, tvec, sideLength * 0.5f);
-            }
-        }
-    }
-
-    cv::imshow("nested marker pose", frame);
-    if (cv::waitKey(1) == 27) break;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_marker_pose_cpp
 
 Or in Python:
 
-@code{.py}
-import numpy as np
-
-side_length = 0.20  # printed outer side in meters
-outer_pts, inner_pts = cv.aruco.getNestedMarkerObjectPoints(dictionary, 0, side_length)
-board = cv.aruco.Board([outer_pts, inner_pts], dictionary, np.array([0, 1]))
-
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-    corners, ids, rejected = detector.detectMarkers(frame)
-    cv.aruco.drawDetectedMarkers(frame, corners, ids)
-
-    if ids is not None:
-        obj_points, img_points = board.matchImagePoints(corners, ids)
-
-        if len(obj_points) >= 4:
-            ok, rvec, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, dist_coeffs)
-
-            if ok:
-                cv.drawFrameAxes(frame, camera_matrix, dist_coeffs, rvec, tvec, side_length * 0.5)
-
-    cv.imshow("nested marker pose", frame)
-    if cv.waitKey(1) == 27:
-        break
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_marker_pose_py
 
 `matchImagePoints()` uses whatever is visible: 4 points far away (outer only), 4 points up close
 (inner only), 8 points in between. The pose code does not change with the distance, and the drawn
@@ -338,167 +244,22 @@ For real dictionaries, also check the distance between inner markers and avoid v
 
 #### Step 1: define the custom rules
 
-@code{.py}
-import cv2 as cv
-import numpy as np
-from pathlib import Path
-
-N = 4
-BORDER = 1
-PX = 160
-
-def bits_from(rows):
-    return np.array([[1 if c == "1" else 0 for c in row] for row in rows], np.uint8)
-
-BILLBOARD_MARKERS = [
-    dict(outer=["1101", "0010", "0000", "1001"], inner=["1110", "1100", "1100", "0000"],
-         block=(0, 1), quiet_ring_is_white=False),
-    dict(outer=["0111", "0011", "1010", "0100"], inner=["0001", "1000", "1111", "0010"],
-         block=(2, 0), quiet_ring_is_white=True),
-    dict(outer=["0001", "1110", "1110", "1111"], inner=["0010", "1010", "1001", "1101"],
-         block=(0, 2), quiet_ring_is_white=True),
-]
-
-CONSTELLATION_MARKERS = [
-    dict(outer=["0000", "0011", "0110", "1111"],
-         children=[(["0111", "1000", "0000", "1101"], (3, 2)),
-                   (["0111", "0011", "1011", "0011"], (3, 0)),
-                   (["1111", "0101", "0101", "1100"], (0, 3))]),
-    dict(outer=["0000", "1011", "1010", "1110"],
-         children=[(["0001", "1110", "1001", "0010"], (0, 1)),
-                   (["0110", "1100", "0100", "0011"], (2, 1)),
-                   (["0110", "1110", "1010", "1111"], (3, 3))]),
-    dict(outer=["1110", "0110", "0001", "1011"],
-         children=[(["1010", "0001", "0110", "0110"], (2, 1)),
-                   (["0111", "0110", "1110", "1010"], (1, 3)),
-                   (["0111", "0110", "0111", "1101"], (0, 0))]),
-]
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_rules_py
 
 #### Step 2: generate marker images
 
-@code{.py}
-
-def render_binary(bits, px=PX):
-    full = np.zeros((N + 2 * BORDER, N + 2 * BORDER), np.uint8)
-    full[BORDER:BORDER + N, BORDER:BORDER + N] = bits
-    return np.kron(full, np.full((px, px), 255, np.uint8))
-
-
-def render_billboard_marker(outer_bits, block, quiet_ring_is_white, inner_image, px=PX, gap=0.25):
-    image = render_binary(outer_bits, px)
-    bx, by = block
-    x0 = (BORDER + bx) * px
-    y0 = (BORDER + by) * px
-    image[y0:y0 + 2 * px, x0:x0 + 2 * px] = 255 if quiet_ring_is_white else 0
-
-    child = inner_image.copy()
-    if not quiet_ring_is_white:
-        child = 255 - child
-    gap_px = int(round(gap * px))
-    side = 2 * px - 2 * gap_px
-    child = cv.resize(child, (side, side), interpolation=cv.INTER_NEAREST)
-    image[y0 + gap_px:y0 + gap_px + side, x0 + gap_px:x0 + gap_px + side] = child
-    return image
-
-
-def render_constellation_marker(outer_bits, children, px=PX, gap=0.2):
-    image = render_binary(outer_bits, px)
-    gap_px = int(round(gap * px))
-    side = px - 2 * gap_px
-
-    for child_image, (hx, hy) in children:
-        child = child_image.copy()
-        child = cv.resize(child, (side, side), interpolation=cv.INTER_NEAREST)
-        patch = child if outer_bits[hy, hx] == 1 else 255 - child
-        x0 = (BORDER + hx) * px + gap_px
-        y0 = (BORDER + hy) * px + gap_px
-        image[y0:y0 + side, x0:x0 + side] = patch
-    return image
-
-
-def make_billboard_dictionary():
-    dictionary_images, sheet_items = [], []
-    for spec in BILLBOARD_MARKERS:
-        inner = render_binary(bits_from(spec["inner"]))
-        outer = render_billboard_marker(bits_from(spec["outer"]), spec["block"],
-                                        spec["quiet_ring_is_white"], inner)
-        out_id = len(dictionary_images)
-        dictionary_images += [outer, inner]
-        sheet_items.append((outer, f"out {out_id} / in {out_id + 1}"))
-    return dictionary_images, sheet_items
-
-
-def make_constellation_dictionary():
-    dictionary_images, sheet_items = [], []
-    for spec in CONSTELLATION_MARKERS:
-        outer_bits = bits_from(spec["outer"])
-        children = [(render_binary(bits_from(rows)), host) for rows, host in spec["children"]]
-        outer = render_constellation_marker(outer_bits, children)
-        out_id = len(dictionary_images)
-        dictionary_images.append(outer)
-        dictionary_images.extend(child for child, host in children)
-        child_ids = ",".join(str(i) for i in range(out_id + 1, out_id + 1 + len(children)))
-        sheet_items.append((outer, f"out {out_id} / in {child_ids}"))
-    return dictionary_images, sheet_items
-
-
-examples_by_name = {
-    "billboard": make_billboard_dictionary(),
-    "constellation": make_constellation_dictionary(),
-}
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_render_py
 
 #### Step 3: build the dictionary from the marker images
 
 This is the central part. The marker renderer can be anything, as long as each image is a
 canonical marker image with its border.
 
-@code{.py}
-def build_dictionary(images):
-    rows = []
-    for image in images:
-        ratios = cv.aruco.Dictionary.getCellRatiosFromImage(image, N, BORDER)
-        rows.append(cv.aruco.Dictionary.getRatioListFromCellRatios(ratios))
-    return cv.aruco.Dictionary(np.concatenate(rows, axis=0), N, 0,
-                               cv.aruco.DICT_ENCODING_CELL_RATIO)
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_build_dictionary_py
 
 #### Step 4: write the dictionary and marker images
 
-@code{.py}
-def write_dictionary(dictionary, path):
-    storage = cv.FileStorage(str(path), cv.FILE_STORAGE_WRITE)
-    dictionary.writeDictionary(storage)
-    storage.release()
-
-
-def save_sheet(images, path):
-    cols, rows = 3, 1
-    tile, pad, header = 300, 14, 34
-    sheet = np.full((rows * (tile + header + pad) + pad, cols * (tile + pad) + pad),
-                    255, np.uint8)
-
-    for idx, (image, label) in enumerate(images):
-        row, col = 0, idx
-        x0 = pad + col * (tile + pad)
-        y0 = pad + row * (tile + header + pad)
-        sheet[y0 + header:y0 + header + tile, x0:x0 + tile] = cv.resize(
-            image, (tile, tile), interpolation=cv.INTER_AREA)
-        cv.putText(sheet, label, (x0, y0 + header - 8),
-                   cv.FONT_HERSHEY_SIMPLEX, 0.50, 0, 1, cv.LINE_AA)
-    cv.imwrite(str(path), sheet)
-
-out_dir = Path("custom_nested_output")
-out_dir.mkdir(parents=True, exist_ok=True)
-
-for name, (dictionary_images, sheet_items) in examples_by_name.items():
-    dictionary = build_dictionary(dictionary_images)
-    write_dictionary(dictionary, out_dir / f"{name}.yml")
-    save_sheet(sheet_items, out_dir / f"{name}_sheet.png")
-    for idx, (image, label) in enumerate(sheet_items):
-        cv.imwrite(str(out_dir / f"{name}_marker_{idx}.png"), image)
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_write_dictionary_py
 
 The sheets generated by the example contain 3 printable nested markers per dictionary:
 
@@ -511,90 +272,8 @@ The sheets generated by the example contain 3 printable nested markers per dicti
 Load the YAML file and draw detections from the camera stream. This example keeps the default
 `validBitIdThreshold` value. For C++:
 
-@code{.cpp}
-#include <iostream>
-#include <string>
-#include <vector>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/objdetect/aruco_detector.hpp>
-#include <opencv2/videoio.hpp>
-
-int main() {
-    const std::string name = "billboard";  // or "constellation"
-    const std::string dir = "custom_nested_output/";
-
-    cv::FileStorage storage(dir + name + ".yml", cv::FileStorage::READ);
-    cv::aruco::Dictionary dictionary;
-    if (!storage.isOpened() || !dictionary.readDictionary(storage.root())) {
-        std::cerr << "dictionary not found or invalid" << std::endl;
-        return 1;
-    }
-    storage.release();
-
-    cv::aruco::DetectorParameters params;
-    params.detectNestedMarkers = true;
-    params.detectInvertedMarker = true;
-    params.errorCorrectionRate = 0.0;
-    params.perspectiveRemovePixelPerCell = 20;
-
-    cv::aruco::ArucoDetector detector(dictionary, params);
-    cv::VideoCapture cap(0);
-    if (!cap.isOpened()) {
-        std::cerr << "could not open camera 0" << std::endl;
-        return 1;
-    }
-
-    cv::Mat frame;
-    while (cap.read(frame)) {
-        std::vector<std::vector<cv::Point2f>> corners, rejected;
-        std::vector<int> ids;
-        detector.detectMarkers(frame, corners, ids, rejected);
-        cv::aruco::drawDetectedMarkers(frame, corners, ids);
-
-        cv::imshow("custom nested markers", frame);
-        if (cv::waitKey(1) == 27) {
-            break;
-        }
-    }
-    return 0;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_custom_detect_cpp
 
 Or in Python:
 
-@code{.py}
-import cv2 as cv
-
-name = "billboard"  # or "constellation"
-directory = "custom_nested_output"
-
-storage = cv.FileStorage(f"{directory}/{name}.yml", cv.FILE_STORAGE_READ)
-dictionary = cv.aruco.Dictionary()
-if not storage.isOpened() or not dictionary.readDictionary(storage.root()):
-    raise RuntimeError("dictionary not found or invalid")
-storage.release()
-
-params = cv.aruco.DetectorParameters()
-params.detectNestedMarkers = True
-params.detectInvertedMarker = True
-params.errorCorrectionRate = 0.0
-params.perspectiveRemovePixelPerCell = 20
-
-detector = cv.aruco.ArucoDetector(dictionary, params)
-cap = cv.VideoCapture(0)
-if not cap.isOpened():
-    raise RuntimeError("could not open camera 0")
-
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-
-    corners, ids, rejected = detector.detectMarkers(frame)
-    cv.aruco.drawDetectedMarkers(frame, corners, ids)
-
-    cv.imshow("custom nested markers", frame)
-    if cv.waitKey(1) == 27:
-        break
-@endcode
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_detect_py
