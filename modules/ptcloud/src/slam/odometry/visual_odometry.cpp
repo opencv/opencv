@@ -174,20 +174,7 @@ void VisualOdometryImpl::matchFrames(
     if (qDesc.empty() || tDesc.empty()) return;
     if (qKp.empty()   || tKp.empty())   return;
 
-    LightGlueMatcher* lg = dynamic_cast<LightGlueMatcher*>(matcher.get());
-    if (lg)
-    {
-        Mat qk((int)qKp.size(), 2, CV_32F);
-        for (size_t i = 0; i < qKp.size(); ++i)
-        { qk.at<float>((int)i,0) = qKp[i].pt.x; qk.at<float>((int)i,1) = qKp[i].pt.y; }
-
-        Mat tk((int)tKp.size(), 2, CV_32F);
-        for (size_t i = 0; i < tKp.size(); ++i)
-        { tk.at<float>((int)i,0) = tKp[i].pt.x; tk.at<float>((int)i,1) = tKp[i].pt.y; }
-
-        lg->setPairInfo(qk, tk, qSz, tSz);
-    }
-
+    matcher->setImagePairInfo(qKp, tKp, qSz, tSz);
     matcher->match(qDesc, tDesc, matches);
 }
 

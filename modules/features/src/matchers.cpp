@@ -580,6 +580,10 @@ bool DescriptorMatcher::empty() const
 void DescriptorMatcher::train()
 {}
 
+void DescriptorMatcher::setImagePairInfo( const std::vector<KeyPoint>&, const std::vector<KeyPoint>&,
+                                          Size, Size )
+{}
+
 void DescriptorMatcher::match( InputArray queryDescriptors, InputArray trainDescriptors,
                               std::vector<DMatch>& matches, InputArray mask ) const
 {

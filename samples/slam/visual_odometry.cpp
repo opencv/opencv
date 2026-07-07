@@ -3,15 +3,27 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 
-#include <opencv2/ptcloud/slam.hpp>
+#include <opencv2/ptcloud.hpp>
 #include <opencv2/features.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/core.hpp>
 #include <iostream>
 
-using namespace cv;
+#include "../dnn/common.hpp"
 
-static const char* keys =
+using namespace cv;
+using namespace std;
+
+const string about =
+    "Monocular visual odometry using ALIKED + LightGlue.\n\n"
+    "Runs feature detection (ALIKED) and matching (LightGlue) from ONNX models over a\n"
+    "directory of images, estimates the camera trajectory and writes it to --output.\n"
+    "To run:\n"
+    "\t ./example_slam_visual_odometry --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq\n"
+    "Sample command (run on the GPU):\n"
+    "\t ./example_slam_visual_odometry --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq --target=cuda\n";
+
+const string param_keys =
     "{ help h           |        | Print help message }"
     "{ aliked           | <none> | Path to ALIKED ONNX model }"
     "{ lightglue        | <none> | Path to LightGlue ONNX model }"
@@ -24,11 +36,31 @@ static const char* keys =
     "{ min-parallax     | 1.5    | Minimum initialisation parallax in degrees }"
     "{ min-points       | 50     | Minimum initialisation map points }";
 
+const string backend_keys = format(
+    "{ backend          | default | Choose one of computation backends: "
+                              "default: automatically (by default), "
+                              "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                              "opencv: OpenCV implementation, "
+                              "vkcom: VKCOM, "
+                              "cuda: CUDA, "
+                              "webnn: WebNN }");
+
+const string target_keys = format(
+    "{ target           | cpu | Choose one of target computation devices: "
+                              "cpu: CPU target (by default), "
+                              "opencl: OpenCL, "
+                              "opencl_fp16: OpenCL fp16 (half-float precision), "
+                              "vpu: VPU, "
+                              "vulkan: Vulkan, "
+                              "cuda: CUDA, "
+                              "cuda_fp16: CUDA fp16 (half-float preprocess) }");
+
+string keys = param_keys + backend_keys + target_keys;
+
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Monocular visual odometry using ALIKED + LightGlue\n"
-                 "  Example: visual_odometry --aliked=aliked.onnx --lightglue=lg.onnx --images=./seq\n");
+    parser.about(about);
 
     if (parser.has("help"))
     {
@@ -36,9 +68,11 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    const String alikedPath    = parser.get<String>("aliked");
+    const String alikedPath = parser.get<String>("aliked");
     const String lightgluePath = parser.get<String>("lightglue");
-    const String imagesDir     = parser.get<String>("images");
+    const String imagesDir = parser.get<String>("images");
+    const int backendId = getBackendID(parser.get<String>("backend"));
+    const int targetId = getTargetID(parser.get<String>("target"));
 
     if (!parser.check() || alikedPath == "<none>" || lightgluePath == "<none>" || imagesDir == "<none>")
     {
@@ -56,11 +90,12 @@ int main(int argc, char** argv)
     ALIKED::Params detParams;
     detParams.inputSize = Size(640, 640);
     detParams.engine    = dnn::ENGINE_NEW;
+    detParams.backend   = backendId;
+    detParams.target    = targetId;
     auto detector = ALIKED::create(alikedPath, detParams);
 
     auto matcher = LightGlueMatcher::create(lightgluePath, 0.0f,
-                                            dnn::DNN_BACKEND_DEFAULT,
-                                            dnn::DNN_TARGET_CPU);
+                                            backendId, targetId);
 
     slam::OdometryParams voParams;
     voParams.minInitParallaxDeg = parser.get<double>("min-parallax");

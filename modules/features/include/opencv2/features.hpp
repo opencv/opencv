@@ -998,6 +998,19 @@ public:
      */
     CV_WRAP virtual bool isMaskSupported() const = 0;
 
+    /** @brief Provides keypoint and image-size context for matchers that need it (e.g. LightGlueMatcher).
+
+    Must be called before match()/knnMatch()/radiusMatch() for matchers that require this context.
+    Matchers that don't need it (e.g. BFMatcher, FlannBasedMatcher) ignore the call.
+
+    @param queryKpts Query image keypoints.
+    @param trainKpts Train image keypoints.
+    @param queryImageSize Size of the query image (width, height).
+    @param trainImageSize Size of the train image (width, height).
+    */
+    CV_WRAP virtual void setImagePairInfo(const std::vector<KeyPoint>& queryKpts, const std::vector<KeyPoint>& trainKpts,
+                                          Size queryImageSize = Size(), Size trainImageSize = Size());
+
     /** @brief Trains a descriptor matcher
 
     Trains a descriptor matcher (for example, the flann index). In all methods to match, the method
@@ -1349,6 +1362,10 @@ public:
     /** @brief Clears stored pair context information.
     */
     CV_WRAP virtual void clearPairInfo() = 0;
+
+    /** @brief Convenience overload of setPairInfo() taking keypoints directly. */
+    CV_WRAP void setImagePairInfo(const std::vector<KeyPoint>& queryKpts, const std::vector<KeyPoint>& trainKpts,
+                                  Size queryImageSize = Size(), Size trainImageSize = Size()) CV_OVERRIDE;
 };
 
 //! @} features_match

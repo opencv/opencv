@@ -15,6 +15,26 @@ namespace cv
 LightGlueMatcher::LightGlueMatcher() {}
 LightGlueMatcher::~LightGlueMatcher() {}
 
+void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, const std::vector<KeyPoint>& trainKpts,
+                                        Size queryImageSize, Size trainImageSize)
+{
+    Mat qk((int)queryKpts.size(), 2, CV_32F);
+    for (size_t i = 0; i < queryKpts.size(); ++i)
+    {
+        qk.at<float>((int)i, 0) = queryKpts[i].pt.x;
+        qk.at<float>((int)i, 1) = queryKpts[i].pt.y;
+    }
+
+    Mat tk((int)trainKpts.size(), 2, CV_32F);
+    for (size_t i = 0; i < trainKpts.size(); ++i)
+    {
+        tk.at<float>((int)i, 0) = trainKpts[i].pt.x;
+        tk.at<float>((int)i, 1) = trainKpts[i].pt.y;
+    }
+
+    setPairInfo(qk, tk, queryImageSize, trainImageSize);
+}
+
 #ifdef HAVE_OPENCV_DNN
 
 struct LightGluePairContext
