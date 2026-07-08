@@ -133,8 +133,8 @@ class BilinearFilter(object):
 class CpVton(object):
     def __init__(self, gmm_model, tom_model, backend, target):
         super(CpVton, self).__init__()
-        self.gmm_net = cv.dnn.readNet(gmm_model)
-        self.tom_net = cv.dnn.readNet(tom_model)
+        self.gmm_net = cv.dnn.readNetFromONNX(gmm_model)
+        self.tom_net = cv.dnn.readNetFromONNX(tom_model)
         self.gmm_net.setPreferableBackend(backend)
         self.gmm_net.setPreferableTarget(target)
         self.tom_net.setPreferableBackend(backend)
