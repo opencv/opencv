@@ -138,7 +138,7 @@ PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) throw SkipTestException("");
-    processNet("dnn/tensorflow_inception_graph.pb", "", cv::Size(224, 224));
+    processNet("dnn/onnx/models/tensorflow_inception_graph.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SSD)
@@ -164,12 +164,21 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "ssd_mobilenet_v1_coco_2017_11_17.pbtxt", cv::Size(300, 300));
+    // image_tensor input is NHWC uint8
+    Mat img(cv::Size(300, 300), CV_8UC3);
+    randu(img, 0, 255);
+    int s[] = {1, 300, 300, 3};
+    Mat inp(4, s, CV_8U, img.data);
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_coco.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
-    processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", cv::Size(300, 300));
+    Mat img(cv::Size(300, 300), CV_8UC3);
+    randu(img, 0, 255);
+    int s[] = {1, 300, 300, 3};
+    Mat inp(4, s, CV_8U, img.data);
+    processNet("dnn/onnx/models/ssd_mobilenet_v2_coco_2018_03_29.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
@@ -191,7 +200,11 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", cv::Size(300, 300));
+    Mat img(cv::Size(300, 300), CV_8UC3);
+    randu(img, 0, 255);
+    int s[] = {1, 300, 300, 3};
+    Mat inp(4, s, CV_8U, img.data);
+    processNet("dnn/onnx/models/ssd_inception_v2_coco_2017_11_17.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
@@ -281,7 +294,7 @@ PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    processNet("dnn/frozen_east_text_detection.pb", "", cv::Size(320, 320));
+    processNet("dnn/onnx/models/east_text_detection.onnx", "", cv::Size(320, 320));
 }
 
 PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
@@ -307,21 +320,29 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
     if (target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled in OpenVINO 2021.1+ / MYRIAD");
 #endif
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         throw SkipTestException("");
-    processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",
-               "dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt",
-               cv::Size(800, 600));
+    if (backend == DNN_BACKEND_OPENCV)
+        throw SkipTestException("Faster R-CNN Inception v2: dynamic-shape ReduceMax in the TF "
+                               "Preprocessor/ResizeToRange subgraph is not yet supported by the new DNN graph engine");
+    // image_tensor input is NHWC uint8
+    Mat img(cv::Size(800, 600), CV_8UC3);
+    randu(img, 0, 255);
+    int s[] = {1, 600, 800, 3};
+    Mat inp(4, s, CV_8U, img.data);
+    processNet("dnn/onnx/models/faster_rcnn_inception_v2_coco_2018_01_28.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EfficientDet)
 {
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/dog416.png"));
-    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(512, 512), Scalar(), true);
-    processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", inp);
+    // image_arrays input is NHWC uint8
+    Mat img(cv::Size(512, 512), CV_8UC3);
+    randu(img, 0, 255);
+    int s[] = {1, 512, 512, 3};
+    Mat inp(4, s, CV_8U, img.data);
+    processNet("dnn/onnx/models/efficientdet-d0.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EfficientNet)

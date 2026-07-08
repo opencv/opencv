@@ -669,6 +669,20 @@ public:
                                    C1_out, HW, out_n);
             }
         }
+
+        if (activationFunc) {
+            activationFunc(outdata, outdata, (int)out.total(), activParams.data());
+
+            const int tail = Cout % 8;
+            if (tail) {
+                for (int n = 0; n < N; n++) {
+                    float* p = outdata + (size_t)n * out_batch_stride
+                                       + (size_t)(C1_out - 1) * (size_t)HW * 8;
+                    for (int i = 0; i < HW; i++)
+                        std::fill(p + (size_t)i * 8 + tail, p + (size_t)i * 8 + 8, 0.f);
+                }
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
