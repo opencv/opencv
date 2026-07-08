@@ -24,7 +24,6 @@ public:
         if (!impl || !backendCtx || !impl->supportBackend(DNN_BACKEND_CUDA))
             return Ptr<Layer>();  // unsupported -> CPU fallback
         Ptr<CUDALegacyExec> e(new CUDALegacyExec(impl, backendCtx));
-        e->data = data;
         e->name = impl->name;
         e->type = impl->type;
         e->inputs = impl->inputs;

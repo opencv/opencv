@@ -794,7 +794,6 @@ public:
         if (!conv || !backendCtx || !conv->cudaSupported())
             return Ptr<Layer>();
         Ptr<CUDAConv2Layer> layer(new CUDAConv2Layer(conv, backendCtx));
-        layer->data = data;
         layer->name = conv->name;
         layer->type = conv->type;
         layer->inputs = conv->inputs;
