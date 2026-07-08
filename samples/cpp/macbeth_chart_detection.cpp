@@ -124,8 +124,6 @@ int main(int argc, char *argv[])
 #ifdef HAVE_OPENCV_DNN
     const string sha1 = parser.get<String>("sha1");
     const string model_path = findModel(parser.get<string>("model"), sha1);
-    const string config_sha1 = parser.get<String>("config_sha1");
-    const string pbtxt_path = findModel(parser.get<string>("config"), config_sha1);
     const string backend = parser.get<String>("backend");
     const string target = parser.get<String>("target");
 #endif
@@ -134,9 +132,12 @@ int main(int argc, char *argv[])
 
     Ptr<CCheckerDetector> detector;
 #ifdef HAVE_OPENCV_DNN
-    if (model_path != "" && pbtxt_path != ""){
-        EngineType engine = ENGINE_OPENCV;
-        Net net = readNetFromTensorflow(model_path, pbtxt_path, engine);
+    if (model_path != ""){
+        EngineType engine = ENGINE_AUTO;
+        if (backend != "default" || target != "cpu"){
+            engine = ENGINE_OPENCV;
+        }
+        Net net = readNetFromONNX(model_path, engine);
         net.setPreferableBackend(getBackendID(backend));
         net.setPreferableTarget(getTargetID(target));
 

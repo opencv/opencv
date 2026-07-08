@@ -51,7 +51,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         }
 
         File dnnTestDataPath = new File(envDnnTestDataPath);
-        modelFileName =  new File(dnnTestDataPath, "dnn/tensorflow_inception_graph.pb").toString();
+        modelFileName =  new File(dnnTestDataPath, "dnn/onnx/models/tensorflow_inception_graph.onnx").toString();
 
         String envTestDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
 
@@ -63,7 +63,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         sourceImageFile = f.toString();
         if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
 
-        net = Dnn.readNetFromTensorflow(modelFileName);
+        net = Dnn.readNetFromONNX(modelFileName);
     }
 
     public void testGetLayerTypes() {
@@ -133,7 +133,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         } catch (IOException e) {
             fail("Failed to read a model: " + e.getMessage());
         }
-        net = Dnn.readNetFromTensorflow(new MatOfByte(modelBuffer));
+        net = Dnn.readNetFromONNX(new MatOfByte(modelBuffer));
         checkInceptionNet(net);
     }
 
