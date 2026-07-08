@@ -6,11 +6,13 @@
 #include "opencv2/core/mat.hpp"
 #include "opencl_kernels_core.hpp"
 
-#undef HAVE_IPP
-#undef CV_IPP_RUN_FAST
-#define CV_IPP_RUN_FAST(f, ...)
-#undef CV_IPP_RUN
-#define CV_IPP_RUN(c, f, ...)
+// IPP re-enable control for this translation unit (see IPP_REENABLE_REPORT_PER_PLATFORM.md).
+// IPP was disabled for the whole file in PR #13085 to reduce binary size. Benchmarking
+// shows sort/sortIdx get a large, consistent speedup across platforms, while reduce is
+// neutral-to-slower (col-reduce regressed to 0.58x on GNR), so we re-enable IPP only for
+// sort/sortIdx via these per-function toggles (same idiom as IPP_DISABLE_* in imgproc).
+#define IPP_DISABLE_REDUCE 0
+#define IPP_DISABLE_SORT   1
 
 /*************************************************************************************************\
                                         Matrix Operations
@@ -512,7 +514,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
     int sstep = (int)srcmat.step, stype = srcmat.type(),
@@ -601,7 +603,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
 #define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
 #define reduceSumC16u64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
@@ -611,14 +613,14 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+#endif
 
 #define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
 #define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
-#endif
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 #define REDUCE_OP(favor, optype, type1, type2) \
 static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
@@ -643,7 +645,7 @@ static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstm
 }
 #endif
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 REDUCE_OP(8u, Max, uchar, uchar)
 REDUCE_OP(16u, Max, ushort, ushort)
 REDUCE_OP(16s, Max, short, short)
@@ -656,7 +658,7 @@ REDUCE_OP(32f, Max, float, float)
 #endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 REDUCE_OP(8u, Min, uchar, uchar)
 REDUCE_OP(16u, Min, ushort, ushort)
 REDUCE_OP(16s, Min, short, short)
@@ -1042,7 +1044,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 }
 
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
 
 static IppSortFunc getSortFunc(int depth, bool sortDescending)
@@ -1190,7 +1192,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     }
 }
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
@@ -1281,7 +1283,9 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
+#if !IPP_DISABLE_SORT
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
+#endif
 
     static SortFunc tab[CV_DEPTH_MAX] =
     {
@@ -1306,7 +1310,9 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
 
+#if !IPP_DISABLE_SORT
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
+#endif
 
     static SortFunc tab[CV_DEPTH_MAX] =
     {
