@@ -802,16 +802,18 @@ public:
         return layer;
     }
 
-    void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
-                     const std::vector<Ptr<BackendWrapper> >& outputs,
+    void forwardCUDA(InputArrayOfArrays inputs_,
+                     OutputArrayOfArrays outputs_,
                      void* workspace) CV_OVERRIDE
     {
+        std::vector<cuda::GpuMatND> inputs, outputs;
+        inputs_.getGpuMatNDVector(inputs);
+        outputs_.getGpuMatNDVector(outputs);
         CV_Assert(!inputs.empty() && !outputs.empty());
+
         auto& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
         if (!node) {
-            auto inW = inputs[0].dynamicCast<CUDABackendWrapper>();
-            auto outW = outputs[0].dynamicCast<CUDABackendWrapper>();
-            node = conv->initCudaConvNode(ctx, inW->getShape(), outW->getShape(), preferableTarget);
+            node = conv->initCudaConvNode(ctx, inputs[0].size, outputs[0].size, preferableTarget);
             cudaNode = node.dynamicCast<CUDABackendNode>();
             CV_Assert(cudaNode);
             ws.require(cudaNode->get_workspace_memory_in_bytes());

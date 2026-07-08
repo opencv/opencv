@@ -1319,11 +1319,13 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_,
+        InputArrayOfArrays outputs
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        std::vector<cuda::GpuMatND> inputs;
+        inputs_.getGpuMatNDVector(inputs);
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
@@ -1360,7 +1362,7 @@ public:
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
 
-        return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), op_, std::vector<float>());
+        return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, CV_MAT_DEPTH(inputs[0].type()), std::move(context->stream), op_, std::vector<float>());
     }
 #endif
 

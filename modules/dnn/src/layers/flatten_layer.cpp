@@ -281,15 +281,18 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_,
+        InputArrayOfArrays outputs
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        if (inputs[0]->getHostMatDepth() == CV_Bool)
+        std::vector<cuda::GpuMatND> inputs;
+        inputs_.getGpuMatNDVector(inputs);
+        int depth = CV_MAT_DEPTH(inputs[0].type());
+        if (depth == CV_Bool)
             return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
         else
-            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
+            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, depth, std::move(context->stream));
     }
 #endif
 
