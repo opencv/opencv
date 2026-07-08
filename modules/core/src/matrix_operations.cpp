@@ -1076,54 +1076,64 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
     if(!ippsSortRadix_I)
         return false;
 
-    if(sortRows)
-    {
-        AutoBuffer<Ipp8u> buffer;
-        int               bufferSize;
-        if(ippsSortRadixGetBufferSize(src.cols, type, &bufferSize) < 0)
-            return false;
-
-        buffer.allocate(bufferSize);
-
-        if(!inplace)
-            src.copyTo(dst);
-
-        for(int i = 0; i < dst.rows; i++)
-        {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer.data()) < 0)
-                return false;
-        }
-    }
+    int n, len;
+    if( sortRows )
+        n = src.rows, len = src.cols;
     else
+        n = src.cols, len = src.rows;
+
+    int bufferSize;
+    if(ippsSortRadixGetBufferSize(len, type, &bufferSize) < 0)
+        return false;
+
+    // Each row/column sorts independently, so parallelize over n like sort_ does.
+    // IPP scratch (buffer) and per-column temporaries are thread-local; a shared flag
+    // records IPP failures since the lambda cannot return from ipp_sort.
+    volatile bool ok = true;
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        AutoBuffer<Ipp8u> buffer;
-        int               bufferSize;
-        if(ippsSortRadixGetBufferSize(src.rows, type, &bufferSize) < 0)
-            return false;
-
-        buffer.allocate(bufferSize);
-
-        Mat  row(1, src.rows, src.type());
-        Mat  srcSub;
-        Mat  dstSub;
+        AutoBuffer<Ipp8u> buffer(bufferSize);
+        Mat  row;
         Rect subRect(0,0,1,src.rows);
+        if( !sortRows )
+            row.create(1, src.rows, src.type());
 
-        for(int i = 0; i < src.cols; i++)
+        for( int i = range.start; i < range.end; i++ )
         {
-            subRect.x = i;
-            srcSub = Mat(src, subRect);
-            dstSub = Mat(dst, subRect);
-            srcSub.copyTo(row);
+            if( !ok )
+                break;
+            void* ptr;
+            if( sortRows )
+            {
+                uchar* dptr = dst.ptr(i);
+                if( !inplace )
+                    memcpy(dptr, src.ptr(i), src.cols * src.elemSize());
+                ptr = dptr;
+            }
+            else
+            {
+                subRect.x = i;
+                Mat(src, subRect).copyTo(row);
+                ptr = row.ptr();
+            }
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer.data()) < 0)
-                return false;
+            if( CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, ptr, len, buffer.data()) < 0 )
+            {
+                ok = false;
+                break;
+            }
 
-            row = row.reshape(1, dstSub.rows);
-            row.copyTo(dstSub);
+            if( !sortRows )
+            {
+                Mat dstSub(dst, subRect);
+                row = row.reshape(1, dstSub.rows);
+                row.copyTo(dstSub);
+                row = row.reshape(1, 1);
+            }
         }
-    }
+    });
 
-    return true;
+    return ok;
 }
 #endif
 
