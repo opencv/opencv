@@ -356,8 +356,8 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays /*inputs*/,
+        InputArrayOfArrays /*outputs*/
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);

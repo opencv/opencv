@@ -493,12 +493,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void* context_,
-                              const std::vector<Ptr<BackendWrapper> >& inputs,
-                              const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+                              InputArrayOfArrays inputs_,
+                              InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
-        auto inW = inputs[0].dynamicCast<CUDABackendWrapper>();
-        MatShape inShape = inW->getShape();
+        std::vector<cuda::GpuMatND> inputs;
+        inputs_.getGpuMatNDVector(inputs);
+        MatShape inShape = inputs[0].size;
         const int nspatial = (int)kernel_shape.size();
 
         cuda4dnn::PoolingConfiguration config;

@@ -438,6 +438,20 @@ CV__DNN_INLINE_NS_BEGIN
         );
 
         /**
+         * @brief Returns a CUDA backend node for the new graph engine (wrapper-free).
+         *
+         * Inputs and outputs are device tensors (arrays of cuda::GpuMatND) carrying shape and type;
+         * only that metadata is needed to build the node, the buffers are filled later by
+         * forwardCUDA(). The default adapts the wrapper-based initCUDA() so classic-engine ops keep
+         * working. @p context is a void pointer to a CSLContext object.
+         */
+        virtual Ptr<BackendNode> initCUDA(
+            void *context,
+            InputArrayOfArrays inputs,
+            InputArrayOfArrays outputs
+        );
+
+        /**
          * @brief Returns a TimVX backend node
          *
          * @param   timVxInfo  void pointer to CSLContext object
@@ -479,12 +493,13 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Executes the operation on the CUDA backend (new graph engine).
          *
-         * Called by the engine for nodes assigned to DNN_BACKEND_CUDA. The default
-         * implementation raises an error. @p workspace is an opaque pointer to a
-         * cuda4dnn::csl::Workspace (kept void* to avoid leaking internal CUDA types).
+         * Called by the engine for nodes assigned to DNN_BACKEND_CUDA. Inputs and outputs are
+         * device-resident tensors passed as arrays of cuda::GpuMatND; no backend wrappers are
+         * involved. The default implementation raises an error. @p workspace is an opaque pointer
+         * to a cuda4dnn::csl::Workspace (kept void* to avoid leaking internal CUDA types).
          */
-        virtual void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                 const std::vector<Ptr<BackendWrapper> >& outputs,
+        virtual void forwardCUDA(InputArrayOfArrays inputs,
+                                 OutputArrayOfArrays outputs,
                                  void* workspace);
 
         /**

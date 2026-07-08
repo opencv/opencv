@@ -8,6 +8,10 @@
 
 #include <limits>
 
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda_stream_accessor.hpp>
+#endif
+
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
 #endif
@@ -706,8 +710,9 @@ void Net::Impl::finalize()
 
     bool useCUDA = false;
 #ifdef HAVE_CUDA
-    argWrappers.clear();
-    argWrapperData.clear();
+    cudaArgBuffers.clear();
+    cudaArgHostDirty.clear();
+    cudaArgDeviceDirty.clear();
     if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
         useCUDA = true;
         if (!cudaInfo) {
@@ -1349,22 +1354,84 @@ static Mat stackScanAxis(const std::vector<Mat>& perIter, int axis, bool reverse
     return stacked;
 }
 #ifdef HAVE_CUDA
-Ptr<BackendWrapper> Net::Impl::getCudaArgWrapper(Arg arg, Mat& hostMat)
+// cv::cuda::Stream view over the (non-owning) cuda4dnn inference stream, so GpuMatND transfers
+// are ordered against the op compute that runs on the same cudaStream_t.
+static inline cuda::Stream wrapCudaStream(cuda4dnn::csl::Stream& s)
+{
+    return cuda::StreamAccessor::wrapStream(s.get());
+}
+
+// Device element type for a host tensor: float tensors are stored as half under the FP16 target,
+// everything else mirrors the host type. fit() reuses the existing allocation when large enough,
+// so buffers persist across forwards.
+int Net::Impl::cudaDeviceType(const Mat& hostMat) const
+{
+    if (preferableTarget == DNN_TARGET_CUDA_FP16 && CV_MAT_DEPTH(hostMat.type()) == CV_32F)
+        return CV_MAKETYPE(CV_16F, CV_MAT_CN(hostMat.type()));
+    return hostMat.type();
+}
+
+cuda::GpuMatND& Net::Impl::getCudaArgBuffer(Arg arg, const Mat& hostMat)
 {
     int idx = arg.idx;
-    if ((int)argWrappers.size() != (int)args.size()) {
-        argWrappers.assign(args.size(), Ptr<BackendWrapper>());
-        argWrapperData.assign(args.size(), nullptr);
+    if ((int)cudaArgBuffers.size() != (int)args.size()) {
+        cudaArgBuffers.assign(args.size(), cuda::GpuMatND());
+        cudaArgHostDirty.assign(args.size(), 1);
+        cudaArgDeviceDirty.assign(args.size(), 0);
     }
-    Ptr<CUDABackendWrapper> cw = argWrappers[idx].dynamicCast<CUDABackendWrapper>();
-    if (!cw || argWrapperData[idx] != (const void*)hostMat.data) {
-        Ptr<BackendWrapper> w = wrapMat(DNN_BACKEND_CUDA, preferableTarget, hostMat);
-        cw = w.dynamicCast<CUDABackendWrapper>();
-        cw->setStream(cudaInfo->context.stream, cudaInfo->d2h_stream);
-        argWrappers[idx] = w;
-        argWrapperData[idx] = (const void*)hostMat.data;
+    cudaArgBuffers[idx].fit(hostMat.shape(), cudaDeviceType(hostMat));
+    return cudaArgBuffers[idx];
+}
+
+void Net::Impl::cudaSetHostDirty(Arg arg)
+{
+    int idx = arg.idx;
+    if (idx >= 0 && idx < (int)cudaArgHostDirty.size()) {
+        cudaArgHostDirty[idx] = 1;
+        cudaArgDeviceDirty[idx] = 0;
     }
-    return argWrappers[idx];
+}
+
+void Net::Impl::cudaUploadArg(Arg arg, const Mat& hostMat)
+{
+    int idx = arg.idx;
+    cuda::GpuMatND& g = getCudaArgBuffer(arg, hostMat);
+    if (cudaArgHostDirty[idx]) {
+        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
+        if (g.type() == hostMat.type()) {
+            g.upload(hostMat, s);
+        } else {
+            // FP32 -> FP16 (device stores half): convert on host, then copy up.
+            Mat tmp;
+            hostMat.convertTo(tmp, CV_MAT_DEPTH(g.type()));
+            g.upload(tmp, s);
+        }
+        cudaArgHostDirty[idx] = 0;
+        cudaArgDeviceDirty[idx] = 0;
+    }
+}
+
+void Net::Impl::cudaDownloadArg(Arg arg, Mat& hostMat)
+{
+    int idx = arg.idx;
+    if (idx < 0 || idx >= (int)cudaArgDeviceDirty.size())
+        return;
+    if (cudaArgDeviceDirty[idx]) {
+        cuda::GpuMatND& g = cudaArgBuffers[idx];
+        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
+        if (g.type() == hostMat.type()) {
+            g.download(hostMat, s);
+            cudaInfo->context.stream.synchronize();  // host read follows immediately
+        } else {
+            // device stores half: copy down, then convert up to the host FP32 tensor.
+            Mat tmp;
+            g.download(tmp, s);
+            cudaInfo->context.stream.synchronize();
+            tmp.convertTo(hostMat, hostMat.type());
+        }
+        cudaArgDeviceDirty[idx] = 0;
+        cudaArgHostDirty[idx] = 0;
+    }
 }
 
 static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
@@ -1373,12 +1440,18 @@ static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
 {
     Ptr<Layer> exec = gimpl->exec_[opidx];
     CV_Assert(exec && netimpl->cudaInfo);
-    std::vector<Ptr<BackendWrapper> > inpWrappers(inputs.size()), outWrappers(outputs.size());
-    for (size_t i = 0; i < inputs.size(); i++)
-        inpWrappers[i] = netimpl->getCudaArgWrapper(inputs[i], inpMats[i]);
-    for (size_t i = 0; i < outputs.size(); i++)
-        outWrappers[i] = netimpl->getCudaArgWrapper(outputs[i], outMats[i]);
-    exec->forwardCUDA(inpWrappers, outWrappers, &netimpl->cudaInfo->workspace);
+    std::vector<cuda::GpuMatND> inpG(inputs.size()), outG(outputs.size());
+    for (size_t i = 0; i < inputs.size(); i++) {
+        netimpl->cudaUploadArg(inputs[i], inpMats[i]);   // H2D only if host-authoritative
+        inpG[i] = netimpl->cudaArgBuffers[inputs[i].idx];
+    }
+    for (size_t i = 0; i < outputs.size(); i++) {
+        outG[i] = netimpl->getCudaArgBuffer(outputs[i], outMats[i]);
+        int oidx = outputs[i].idx;                       // op writes the device buffer
+        netimpl->cudaArgDeviceDirty[oidx] = 1;
+        netimpl->cudaArgHostDirty[oidx] = 0;
+    }
+    exec->forwardCUDA(inpG, outG, &netimpl->cudaInfo->workspace);
 }
 #endif
 
@@ -1422,13 +1495,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     // forward so the current input is re-uploaded; otherwise a second forward with a
     // changed input would read the previous forward's stale device data.
     if (cudaInfo) {
-        for (i = 0; i < n_gr_inputs; i++) {
-            Arg ginp = gr_inputs[i];
-            if (ginp.idx >= 0 && ginp.idx < (int)argWrappers.size()) {
-                Ptr<CUDABackendWrapper> cw = argWrappers[ginp.idx].dynamicCast<CUDABackendWrapper>();
-                if (cw) cw->setHostDirty();
-            }
-        }
+        for (i = 0; i < n_gr_inputs; i++)
+            cudaSetHostDirty(gr_inputs[i]);
     }
 #endif
 
@@ -1497,10 +1565,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 #ifdef HAVE_CUDA
                 // CPU op: bring any device-resident inputs back to host before reading them.
                 for (size_t k = 0; k < ninputs; k++) {
-                    if (inputs[k].idx < (int)argWrappers.size()) {
-                        Ptr<CUDABackendWrapper> cw = argWrappers[inputs[k].idx].dynamicCast<CUDABackendWrapper>();
-                        if (cw) { cw->copyToHost(); inpMats[k] = argTensor(inputs[k]); }
-                    }
+                    Mat& t = argTensor(inputs[k]);
+                    cudaDownloadArg(inputs[k], t);
+                    inpMats[k] = t;
                 }
 #endif
                 if (finalizeLayers)
@@ -1508,12 +1575,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 layer->forward(inpMats, outMats, tempMats);
 #ifdef HAVE_CUDA
                 // CPU produced fresh host data; invalidate any stale device copy of its outputs.
-                for (size_t k = 0; k < noutputs; k++) {
-                    if (outputs[k].idx < (int)argWrappers.size()) {
-                        Ptr<CUDABackendWrapper> cw = argWrappers[outputs[k].idx].dynamicCast<CUDABackendWrapper>();
-                        if (cw) cw->setHostDirty();
-                    }
-                }
+                for (size_t k = 0; k < noutputs; k++)
+                    cudaSetHostDirty(outputs[k]);
 #endif
             }
         }
@@ -1767,9 +1830,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         Arg out = gr_outputs[i];
 #ifdef HAVE_CUDA
         // A graph output produced on the device must be brought back to host before it is read.
-        if (out.idx < (int)argWrappers.size()) {
-            Ptr<CUDABackendWrapper> cw = argWrappers[out.idx].dynamicCast<CUDABackendWrapper>();
-            if (cw) cw->copyToHost();
+        if (out.idx >= 0) {
+            Mat& t = argTensor(out);
+            cudaDownloadArg(out, t);
         }
 #endif
         const Mat& outm = argTensor(out);

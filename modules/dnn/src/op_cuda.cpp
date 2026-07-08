@@ -37,15 +37,19 @@ public:
         impl->finalize(inputs, outputs);
     }
 
-    void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
-                     const std::vector<Ptr<BackendWrapper> >& outputs,
+    void forwardCUDA(InputArrayOfArrays inputs_,
+                     OutputArrayOfArrays outputs_,
                      void* workspace) CV_OVERRIDE
     {
+        std::vector<cuda::GpuMatND> inputs, outputs;
+        inputs_.getGpuMatNDVector(inputs);
+        outputs_.getGpuMatNDVector(outputs);
+
         cuda4dnn::csl::Workspace& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
         if (!node) {
             impl->preferableTarget = preferableTarget;  // initCUDA may pick FP16/FP32 by target
             cuda4dnn::csl::CSLContext context = *reinterpret_cast<cuda4dnn::csl::CSLContext*>(ctx);
-            node = impl->initCUDA(&context, inputs, outputs);
+            node = impl->initCUDA(&context, inputs_, outputs_);
             CV_Assert(node);
             cudaNode = node.dynamicCast<CUDABackendNode>();
             CV_Assert(cudaNode);

@@ -58,9 +58,30 @@ bool Layer::supportBackend(int backendId)
 }
 
 Ptr<BackendNode> Layer::initCUDA(
+        void* context,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs)
+{
+#ifdef HAVE_CUDA
+    // Adapt the classic wrapper-based entry point to the array-based one, so ops ported to the
+    // new graph engine only need to override initCUDA(context, inputs, outputs) with GpuMatND.
+    std::vector<cuda::GpuMatND> inGpu(inputs.size()), outGpu(outputs.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+        inGpu[i] = inputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/false);
+    for (size_t i = 0; i < outputs.size(); i++)
+        outGpu[i] = outputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/true);
+    return initCUDA(context, inGpu, outGpu);
+#else
+    CV_UNUSED(context); CV_UNUSED(inputs); CV_UNUSED(outputs);
+    CV_Error(Error::StsNotImplemented, "CUDA pipeline of " + type + " layers is not defined.");
+    return Ptr<BackendNode>();
+#endif
+}
+
+Ptr<BackendNode> Layer::initCUDA(
         void*,
-        const std::vector<Ptr<BackendWrapper>>&,
-        const std::vector<Ptr<BackendWrapper>>&)
+        InputArrayOfArrays,
+        InputArrayOfArrays)
 {
     CV_Error(Error::StsNotImplemented, "CUDA pipeline of " + type + " layers is not defined.");
     return Ptr<BackendNode>();
@@ -106,9 +127,7 @@ Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputs
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
 bool Layer::tryFuse(Ptr<Layer>&) { return false; }
 
-void Layer::forwardCUDA(const std::vector<Ptr<BackendWrapper> >&,
-                        const std::vector<Ptr<BackendWrapper> >&,
-                        void*)
+void Layer::forwardCUDA(InputArrayOfArrays, OutputArrayOfArrays, void*)
 {
     CV_Error(Error::StsNotImplemented, "CUDA forward of " + type + " layers is not defined.");
 }
