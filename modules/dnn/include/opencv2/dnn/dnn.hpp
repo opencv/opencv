@@ -347,8 +347,6 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
 
-        Ptr<LayerInfo> data;
-
         /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
          *  @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
          *  @param[in]  input  vector of already allocated input blobs
