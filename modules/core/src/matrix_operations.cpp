@@ -6,13 +6,8 @@
 #include "opencv2/core/mat.hpp"
 #include "opencl_kernels_core.hpp"
 
-// IPP re-enable control for this translation unit (see IPP_REENABLE_REPORT_PER_PLATFORM.md).
-// IPP was disabled for the whole file in PR #13085 to reduce binary size. Benchmarking
-// shows sort/sortIdx get a large, consistent speedup across platforms, while reduce is
-// neutral-to-slower (col-reduce regressed to 0.58x on GNR), so we re-enable IPP only for
-// sort/sortIdx via these per-function toggles (same idiom as IPP_DISABLE_* in imgproc).
-#define IPP_DISABLE_REDUCE 0
-#define IPP_DISABLE_SORT   1
+#define IPP_DISABLE_REDUCE 1
+#define IPP_DISABLE_SORT   0
 
 /*************************************************************************************************\
                                         Matrix Operations
