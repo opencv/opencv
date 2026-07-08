@@ -30,6 +30,11 @@
 #define SIFT_BLUR_WG_Y 16
 #define SIFT_BLUR_MAX_RADIUS 32
 
+#define SIFT_DESC_KP_PER_WG 4
+#define SIFT_DESC_THREADS_PER_KP 16
+#define SIFT_DESC_WG_SIZE (SIFT_DESC_KP_PER_WG * SIFT_DESC_THREADS_PER_KP)
+#define SIFT_DESC_BINS (SIFT_N + 2)
+
 #define READ_F32(buf, step, ofs, x, y) \
     (*(__global const float*)((buf) + (ofs) + (y) * (step) + (x) * 4))
 
@@ -117,6 +122,24 @@ SIFT_gaussian_blur_v(
     *((__global float*)(dst + dst_ofs + y * dst_step + x * 4)) = sum;
 }
 
+#define SIFT_SCATTER(cr, cc, w0, w1) \
+    if ((cr) >= 0 && (cr) < SIFT_D && (cc) >= 0 && (cc) < SIFT_D) { \
+        int dri = (cr) - ti, dci = (cc) - tj; \
+        if (dri == 0 && dci == 0) { \
+            my_bins[o0]     += (w0); \
+            my_bins[o0 + 1] += (w1); \
+        } else if (dri == 1 && dci == 0) { \
+            border_down[kid_in_wg][tid][o0]     += (w0); \
+            border_down[kid_in_wg][tid][o0 + 1] += (w1); \
+        } else if (dri == 0 && dci == 1) { \
+            border_right[kid_in_wg][tid][o0]     += (w0); \
+            border_right[kid_in_wg][tid][o0 + 1] += (w1); \
+        } else { \
+            border_down_right[kid_in_wg][tid][o0]     += (w0); \
+            border_down_right[kid_in_wg][tid][o0 + 1] += (w1); \
+        } \
+    }
+
 __kernel void
 SIFT_compute_descriptor(
     __global const uchar* img, int img_step, int img_offset, int img_cols, int img_rows,
@@ -127,172 +150,253 @@ SIFT_compute_descriptor(
     __global uchar* desc, int desc_step, int desc_offset,
     int descriptor_type)
 {
-    int gid = get_global_id(0);
-    if (gid >= nkeypoints)
-        return;
+    int lid = get_local_id(0);
+    int kid_in_wg = lid >> 4;
+    int tid = lid & 15;
+    int ti = tid >> 2;
+    int tj = tid & 3;
 
-    __global const float* kpt = (__global const float*)(kpts + kpts_offset + gid * kpts_step);
-    float ptx = kpt[0];
-    float pty = kpt[1];
-    float ori = kpt[2];
-    float scl = kpt[3];
-    int level_idx = (int)kpt[4];
+    int kid = get_group_id(0) * SIFT_DESC_KP_PER_WG + kid_in_wg;
+    bool valid = (kid < nkeypoints);
 
-    int pt_x = convert_int_rte(ptx);
-    int pt_y = convert_int_rte(pty);
+    __local float border_down[SIFT_DESC_KP_PER_WG][16][SIFT_DESC_BINS];
+    __local float border_right[SIFT_DESC_KP_PER_WG][16][SIFT_DESC_BINS];
+    __local float border_down_right[SIFT_DESC_KP_PER_WG][16][SIFT_DESC_BINS];
+    __local float nrm2_buf[SIFT_DESC_KP_PER_WG][16];
 
-    float cos_t = cos(ori * SIFT_PI / 180.0f);
-    float sin_t = sin(ori * SIFT_PI / 180.0f);
-    float bins_per_rad = (float)SIFT_N / 360.0f;
-    float exp_scale = -1.0f / ((float)SIFT_D * (float)SIFT_D * 0.5f);
-    float hist_width = SIFT_DESCR_SCL_FCTR * scl;
-    int radius = convert_int_rte(hist_width * 1.4142135623730951f * (float)(SIFT_D + 1) * 0.5f);
-    if ((float)radius > diag)
-        radius = convert_int_rte(diag);
-    float inv_hist_width = native_recip(hist_width);
-    cos_t *= inv_hist_width;
-    sin_t *= inv_hist_width;
-
-    __global const uchar* img_base = img + img_offset + (long)level_idx * img_rows * img_step;
-
-    float hist[SIFT_HIST_LEN];
-    for (int ii = 0; ii < SIFT_HIST_LEN; ii++)
-        hist[ii] = 0.0f;
-
-    for (int i = -radius; i <= radius; i++)
+    for (int k = 0; k < SIFT_DESC_BINS; k++)
     {
-        for (int j = -radius; j <= radius; j++)
-        {
-            float c_rot = (float)j * cos_t - (float)i * sin_t;
-            float r_rot = (float)j * sin_t + (float)i * cos_t;
-            float rbin = r_rot + (float)(SIFT_D / 2) - 0.5f;
-            float cbin = c_rot + (float)(SIFT_D / 2) - 0.5f;
-            int r = pt_y + i;
-            int c = pt_x + j;
-
-            if (rbin > -1.0f && rbin < (float)SIFT_D &&
-                cbin > -1.0f && cbin < (float)SIFT_D &&
-                r > 0 && r < img_rows - 1 && c > 0 && c < img_cols - 1)
-            {
-                __global const uchar* row_base = img_base + r * img_step;
-                int c4 = c * 4;
-                float dx = *(__global const float*)(row_base + c4 + 4) -
-                           *(__global const float*)(row_base + c4 - 4);
-                float dy = *(__global const float*)(row_base - img_step + c4) -
-                           *(__global const float*)(row_base + img_step + c4);
-                float w = (c_rot * c_rot + r_rot * r_rot) * exp_scale;
-                float ang = atan2(dy, dx) * SIFT_RAD2DEG;
-                if (ang < 0.0f)
-                    ang += 360.0f;
-                float mag = native_sqrt(dx * dx + dy * dy);
-                float W = native_exp(w);
-
-                float obin = (ang - ori) * bins_per_rad;
-                float magW = mag * W;
-
-                int r0 = (int)floor(rbin);
-                int c0 = (int)floor(cbin);
-                int o0 = (int)floor(obin);
-                rbin -= (float)r0;
-                cbin -= (float)c0;
-                obin -= (float)o0;
-
-                if (o0 < 0)
-                    o0 += SIFT_N;
-                if (o0 >= SIFT_N)
-                    o0 -= SIFT_N;
-
-                float v_r1 = magW * rbin, v_r0 = magW - v_r1;
-                float v_rc11 = v_r1 * cbin, v_rc10 = v_r1 - v_rc11;
-                float v_rc01 = v_r0 * cbin, v_rc00 = v_r0 - v_rc01;
-                float v_rco111 = v_rc11 * obin, v_rco110 = v_rc11 - v_rco111;
-                float v_rco101 = v_rc10 * obin, v_rco100 = v_rc10 - v_rco101;
-                float v_rco011 = v_rc01 * obin, v_rco010 = v_rc01 - v_rco011;
-                float v_rco001 = v_rc00 * obin, v_rco000 = v_rc00 - v_rco001;
-
-                int hidx = ((r0 + 1) * SIFT_DH + (c0 + 1)) * SIFT_NH + o0;
-                hist[hidx]                            += v_rco000;
-                hist[hidx + 1]                        += v_rco001;
-                hist[hidx + SIFT_NH]                  += v_rco010;
-                hist[hidx + SIFT_NH + 1]              += v_rco011;
-                hist[hidx + SIFT_DH * SIFT_NH]        += v_rco100;
-                hist[hidx + SIFT_DH * SIFT_NH + 1]    += v_rco101;
-                hist[hidx + (SIFT_DH + 1) * SIFT_NH]  += v_rco110;
-                hist[hidx + (SIFT_DH + 1) * SIFT_NH + 1] += v_rco111;
-            }
-        }
+        border_down[kid_in_wg][tid][k] = 0.0f;
+        border_right[kid_in_wg][tid][k] = 0.0f;
+        border_down_right[kid_in_wg][tid][k] = 0.0f;
     }
 
-    float nrm2 = 0.0f;
-    for (int i = 0; i < SIFT_D; i++)
+    float my_bins[SIFT_DESC_BINS];
+    for (int k = 0; k < SIFT_DESC_BINS; k++)
+        my_bins[k] = 0.0f;
+
+    float cos_t = 0.0f, sin_t = 0.0f;
+    float bins_per_rad = 0.0f, exp_scale = 0.0f;
+    int radius = 0, pt_x = 0, pt_y = 0;
+    float ori = 0.0f;
+    __global const uchar* img_base = 0;
+    int row = 0;
+
+    if (valid)
     {
-        for (int j = 0; j < SIFT_D; j++)
-        {
-            int hidx = ((i + 1) * SIFT_DH + (j + 1)) * SIFT_NH;
-            hist[hidx]     += hist[hidx + SIFT_N];
-            hist[hidx + 1] += hist[hidx + SIFT_N + 1];
-            for (int k = 0; k < SIFT_N; k++)
-            {
-                float val = hist[hidx + k];
-                nrm2 += val * val;
-            }
-        }
+        __global const float* kpt = (__global const float*)(kpts + kpts_offset + kid * kpts_step);
+        float ptx = kpt[0];
+        float pty = kpt[1];
+        ori = kpt[2];
+        float scl = kpt[3];
+        int level_idx = (int)kpt[4];
+
+        pt_x = convert_int_rte(ptx);
+        pt_y = convert_int_rte(pty);
+
+        cos_t = cos(ori * SIFT_PI / 180.0f);
+        sin_t = sin(ori * SIFT_PI / 180.0f);
+        bins_per_rad = (float)SIFT_N / 360.0f;
+        exp_scale = -1.0f / ((float)SIFT_D * (float)SIFT_D * 0.5f);
+        float hist_width = SIFT_DESCR_SCL_FCTR * scl;
+        radius = convert_int_rte(hist_width * 1.4142135623730951f * (float)(SIFT_D + 1) * 0.5f);
+        if ((float)radius > diag)
+            radius = convert_int_rte(diag);
+        float inv_hist_width = native_recip(hist_width);
+        cos_t *= inv_hist_width;
+        sin_t *= inv_hist_width;
+
+        img_base = img + img_offset + (long)level_idx * img_rows * img_step;
+        row = out_rows[kid + row_start];
     }
 
-    float thr = native_sqrt(nrm2) * SIFT_DESCR_MAG_THR;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-    nrm2 = 0.0f;
-    for (int i = 0; i < SIFT_D; i++)
+    if (valid)
     {
-        for (int j = 0; j < SIFT_D; j++)
-        {
-            int hidx = ((i + 1) * SIFT_DH + (j + 1)) * SIFT_NH;
-            for (int k = 0; k < SIFT_N; k++)
-            {
-                float val = hist[hidx + k];
-                if (val > thr)
-                    val = thr;
-                hist[hidx + k] = val;
-                nrm2 += val * val;
-            }
-        }
-    }
+        float r_min = (ti == 0) ? -1.0f : (float)ti;
+        float r_max = (ti == 0) ? 1.0f : (float)(ti + 1);
+        float c_min = (tj == 0) ? -1.0f : (float)tj;
+        float c_max = (tj == 0) ? 1.0f : (float)(tj + 1);
 
-    float inv = SIFT_INT_DESCR_FCTR / fmax(native_sqrt(nrm2), SIFT_FLT_EPS);
+        float rr0 = r_min - 1.5f, rr1 = r_max - 1.5f;
+        float cc0 = c_min - 1.5f, cc1 = c_max - 1.5f;
 
-    int row = out_rows[gid + row_start];
-    if (descriptor_type == 0)
-    {
-        __global uchar* dst = desc + desc_offset + row * desc_step;
-        for (int i = 0; i < SIFT_D; i++)
+        float det = cos_t * cos_t + sin_t * sin_t;
+        float inv_det = native_recip(det);
+
+        float i1 = (-cc0 * sin_t + rr0 * cos_t) * inv_det;
+        float i2 = (-cc0 * sin_t + rr1 * cos_t) * inv_det;
+        float i3 = (-cc1 * sin_t + rr0 * cos_t) * inv_det;
+        float i4 = (-cc1 * sin_t + rr1 * cos_t) * inv_det;
+        float j1 = (cc0 * cos_t + rr0 * sin_t) * inv_det;
+        float j2 = (cc0 * cos_t + rr1 * sin_t) * inv_det;
+        float j3 = (cc1 * cos_t + rr0 * sin_t) * inv_det;
+        float j4 = (cc1 * cos_t + rr1 * sin_t) * inv_det;
+
+        int i_lo = max(-radius, (int)floor(fmin(fmin(i1, i2), fmin(i3, i4))) - 1);
+        int i_hi = min(radius, (int)ceil(fmax(fmax(i1, i2), fmax(i3, i4))) + 1);
+        int j_lo = max(-radius, (int)floor(fmin(fmin(j1, j2), fmin(j3, j4))) - 1);
+        int j_hi = min(radius, (int)ceil(fmax(fmax(j1, j2), fmax(j3, j4))) + 1);
+
+        for (int i = i_lo; i <= i_hi; i++)
         {
-            for (int j = 0; j < SIFT_D; j++)
+            for (int j = j_lo; j <= j_hi; j++)
             {
-                int hidx = ((i + 1) * SIFT_DH + (j + 1)) * SIFT_NH;
-                int didx = (i * SIFT_D + j) * SIFT_N;
-                for (int k = 0; k < SIFT_N; k++)
-                    dst[didx + k] = convert_uchar_sat_rte(hist[hidx + k] * inv);
-            }
-        }
-    }
-    else
-    {
-        __global float* dst = (__global float*)(desc + desc_offset + row * desc_step);
-        for (int i = 0; i < SIFT_D; i++)
-        {
-            for (int j = 0; j < SIFT_D; j++)
-            {
-                int hidx = ((i + 1) * SIFT_DH + (j + 1)) * SIFT_NH;
-                int didx = (i * SIFT_D + j) * SIFT_N;
-                for (int k = 0; k < SIFT_N; k++)
+                float c_rot = (float)j * cos_t - (float)i * sin_t;
+                float r_rot = (float)j * sin_t + (float)i * cos_t;
+                float rbin = r_rot + (float)(SIFT_D / 2) - 0.5f;
+                float cbin = c_rot + (float)(SIFT_D / 2) - 0.5f;
+                int r = pt_y + i;
+                int c = pt_x + j;
+
+                if (rbin > -1.0f && rbin < (float)SIFT_D &&
+                    cbin > -1.0f && cbin < (float)SIFT_D &&
+                    r > 0 && r < img_rows - 1 && c > 0 && c < img_cols - 1)
                 {
-                    float v = round(hist[hidx + k] * inv);
-                    dst[didx + k] = clamp(v, 0.0f, 255.0f);
+                    int r0 = (int)floor(rbin);
+                    int c0 = (int)floor(cbin);
+
+                    int my_r0 = (r0 > 0) ? r0 : 0;
+                    int my_c0 = (c0 > 0) ? c0 : 0;
+                    if (my_r0 != ti || my_c0 != tj)
+                        continue;
+
+                    __global const uchar* row_base = img_base + r * img_step;
+                    int c4 = c * 4;
+                    float dx = *(__global const float*)(row_base + c4 + 4) -
+                               *(__global const float*)(row_base + c4 - 4);
+                    float dy = *(__global const float*)(row_base - img_step + c4) -
+                               *(__global const float*)(row_base + img_step + c4);
+                    float w = (c_rot * c_rot + r_rot * r_rot) * exp_scale;
+                    float ang = atan2(dy, dx) * SIFT_RAD2DEG;
+                    if (ang < 0.0f)
+                        ang += 360.0f;
+                    float mag = native_sqrt(dx * dx + dy * dy);
+                    float W = native_exp(w);
+
+                    float obin = (ang - ori) * bins_per_rad;
+                    float magW = mag * W;
+
+                    rbin -= (float)r0;
+                    cbin -= (float)c0;
+                    int o0 = (int)floor(obin);
+                    obin -= (float)o0;
+
+                    if (o0 < 0)
+                        o0 += SIFT_N;
+                    if (o0 >= SIFT_N)
+                        o0 -= SIFT_N;
+
+                    float v_r1 = magW * rbin, v_r0 = magW - v_r1;
+                    float v_rc11 = v_r1 * cbin, v_rc10 = v_r1 - v_rc11;
+                    float v_rc01 = v_r0 * cbin, v_rc00 = v_r0 - v_rc01;
+                    float v_rco111 = v_rc11 * obin, v_rco110 = v_rc11 - v_rco111;
+                    float v_rco101 = v_rc10 * obin, v_rco100 = v_rc10 - v_rco101;
+                    float v_rco011 = v_rc01 * obin, v_rco010 = v_rc01 - v_rco011;
+                    float v_rco001 = v_rc00 * obin, v_rco000 = v_rc00 - v_rco001;
+
+                    SIFT_SCATTER(r0,     c0,     v_rco000, v_rco001);
+                    SIFT_SCATTER(r0,     c0 + 1, v_rco010, v_rco011);
+                    SIFT_SCATTER(r0 + 1, c0,     v_rco100, v_rco101);
+                    SIFT_SCATTER(r0 + 1, c0 + 1, v_rco110, v_rco111);
                 }
             }
         }
     }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (valid)
+    {
+        if (ti > 0)
+        {
+            int above_tid = ((ti - 1) << 2) | tj;
+            for (int k = 0; k < SIFT_DESC_BINS; k++)
+                my_bins[k] += border_down[kid_in_wg][above_tid][k];
+        }
+        if (tj > 0)
+        {
+            int left_tid = (ti << 2) | (tj - 1);
+            for (int k = 0; k < SIFT_DESC_BINS; k++)
+                my_bins[k] += border_right[kid_in_wg][left_tid][k];
+        }
+        if (ti > 0 && tj > 0)
+        {
+            int ul_tid = ((ti - 1) << 2) | (tj - 1);
+            for (int k = 0; k < SIFT_DESC_BINS; k++)
+                my_bins[k] += border_down_right[kid_in_wg][ul_tid][k];
+        }
+
+        my_bins[0] += my_bins[SIFT_N];
+        my_bins[1] += my_bins[SIFT_N + 1];
+
+        float my_nrm2 = 0.0f;
+        for (int k = 0; k < SIFT_N; k++)
+            my_nrm2 += my_bins[k] * my_bins[k];
+        nrm2_buf[kid_in_wg][tid] = my_nrm2;
+    }
+    else
+    {
+        nrm2_buf[kid_in_wg][tid] = 0.0f;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (valid)
+    {
+        float total_nrm2 = 0.0f;
+        for (int k = 0; k < 16; k++)
+            total_nrm2 += nrm2_buf[kid_in_wg][k];
+
+        float thr = native_sqrt(total_nrm2) * SIFT_DESCR_MAG_THR;
+
+        float my_nrm2 = 0.0f;
+        for (int k = 0; k < SIFT_N; k++)
+        {
+            float val = my_bins[k];
+            if (val > thr)
+                val = thr;
+            my_bins[k] = val;
+            my_nrm2 += val * val;
+        }
+        nrm2_buf[kid_in_wg][tid] = my_nrm2;
+    }
+    else
+    {
+        nrm2_buf[kid_in_wg][tid] = 0.0f;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (valid)
+    {
+        float total_nrm2 = 0.0f;
+        for (int k = 0; k < 16; k++)
+            total_nrm2 += nrm2_buf[kid_in_wg][k];
+
+        float inv = SIFT_INT_DESCR_FCTR / fmax(native_sqrt(total_nrm2), SIFT_FLT_EPS);
+
+        int didx = (ti * SIFT_D + tj) * SIFT_N;
+        if (descriptor_type == 0)
+        {
+            __global uchar* dst = desc + desc_offset + row * desc_step;
+            for (int k = 0; k < SIFT_N; k++)
+                dst[didx + k] = convert_uchar_sat_rte(my_bins[k] * inv);
+        }
+        else
+        {
+            __global float* dst = (__global float*)(desc + desc_offset + row * desc_step);
+            for (int k = 0; k < SIFT_N; k++)
+            {
+                float v = round(my_bins[k] * inv);
+                dst[didx + k] = clamp(v, 0.0f, 255.0f);
+            }
+        }
+    }
 }
+
+#undef SIFT_SCATTER
 
 __kernel void
 SIFT_detect_and_orient(

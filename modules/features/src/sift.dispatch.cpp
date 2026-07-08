@@ -843,7 +843,10 @@ static bool ocl_computeSIFTDescriptors(
         if (ker.empty())
             return false;
 
-        size_t globalsz = (size_t)nGroup;
+        const int KP_PER_WG = 4;
+        const int WG_SIZE = KP_PER_WG * 16;
+        size_t localsz = WG_SIZE;
+        size_t globalsz = (size_t)(((nGroup + KP_PER_WG - 1) / KP_PER_WG) * WG_SIZE);
         bool ok = ker.args(
             ocl::KernelArg::ReadOnlyNoSize(packed), img_cols, img_rows, diag,
             ocl::KernelArg::ReadOnlyNoSize(kpts_roi),
@@ -852,7 +855,7 @@ static bool ocl_computeSIFTDescriptors(
             nGroup,
             ocl::KernelArg::WriteOnlyNoSize(desc_out),
             descriptor_type
-        ).run(1, &globalsz, 0, false);
+        ).run(1, &globalsz, &localsz, false);
         if (!ok)
             return false;
     }
