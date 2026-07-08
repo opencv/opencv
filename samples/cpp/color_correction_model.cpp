@@ -102,8 +102,6 @@ int main(int argc, char* argv[]) {
 
     const string sha1 = parser.get<String>("sha1");
     const string modelPath = findModel(parser.get<string>("model"), sha1);
-    const string config_sha1 = parser.get<String>("config_sha1");
-    const string configPath = findModel(parser.get<string>("config"), config_sha1);
     const string backend = parser.get<String>("backend");
     const string target = parser.get<String>("target");
 
@@ -163,8 +161,8 @@ int main(int argc, char* argv[]) {
         Mat src;
 
         Ptr<CCheckerDetector> detector;
-        if (!modelPath.empty() && !configPath.empty()) {
-            Net net = readNetFromTensorflow(modelPath, configPath);
+        if (!modelPath.empty()) {
+            Net net = readNetFromONNX(modelPath);
             net.setPreferableBackend(getBackendID(backend));
             net.setPreferableTarget(getTargetID(target));
             detector = CCheckerDetector::create(net);

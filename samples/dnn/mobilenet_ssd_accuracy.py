@@ -3,7 +3,8 @@ from __future__ import print_function
 # using both TensorFlow and OpenCV. Example:
 #
 # python mobilenet_ssd_accuracy.py \
-#   --weights=frozen_inference_graph.pb \
+#   --model=ssd_mobilenet_v1_coco.onnx \
+#   --tf_model=frozen_inference_graph.pb \
 #   --prototxt=ssd_mobilenet_v1_coco.pbtxt \
 #   --images=val2017 \
 #   --annotations=annotations/instances_val2017.json
@@ -17,16 +18,21 @@ import argparse
 parser = argparse.ArgumentParser(
     description='Evaluate MobileNet-SSD model using both TensorFlow and OpenCV. '
                 'COCO evaluation framework is required: http://cocodataset.org')
-parser.add_argument('--weights', required=True,
-                    help='Path to frozen_inference_graph.pb of MobileNet-SSD model. '
-                         'Download it from http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz')
+parser.add_argument('--model', required=True,
+                    help='Path to ssd_mobilenet_v1_coco.onnx model, used for the OpenCV predictions. '
+                         'Download it from https://huggingface.co/opencv/opencv_contribution/resolve/main/'
+                         'ssd_mobilenet_v1_coco_2017_11_17/ssd_mobilenet_v1_coco_2017_11_17_2026jul.onnx?download=true')
+parser.add_argument('--tf_model', required=True,
+                    help='Path to frozen_inference_graph.pb of MobileNet-SSD model, used for the native '
+                         'TensorFlow predictions. Download it from http://download.tensorflow.org/models/'
+                         'object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz')
 parser.add_argument('--prototxt', help='Path to ssd_mobilenet_v1_coco.pbtxt from opencv_extra.', required=True)
 parser.add_argument('--images', help='Path to COCO validation images directory.', required=True)
 parser.add_argument('--annotations', help='Path to COCO annotations file.', required=True)
 args = parser.parse_args()
 
 ### Get OpenCV predictions #####################################################
-net = cv.dnn.readNetFromTensorflow(cv.samples.findFile(args.weights), cv.samples.findFile(args.prototxt))
+net = cv.dnn.readNetFromONNX(cv.samples.findFile(args.model))
 net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 
 detections = []
@@ -61,7 +67,7 @@ with open('cv_result.json', 'wt') as f:
 ### Get TensorFlow predictions #################################################
 import tensorflow as tf
 
-with tf.gfile.FastGFile(args.weights) as f:
+with tf.gfile.FastGFile(args.tf_model) as f:
     # Load the model
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
