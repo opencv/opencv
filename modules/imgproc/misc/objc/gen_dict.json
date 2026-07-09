@@ -57,8 +57,6 @@
                                "mode" : {"ctype" : "RetrievalModes"},
                                "method" : {"ctype" : "ContourApproximationModes"} },
             "getStructuringElement" : { "shape" : {"ctype" : "MorphShapes"} },
-            "EMD" : {"lowerBound" : {"defval" : "cv::Ptr<float>()"},
-                     "distType" : {"ctype" : "DistanceTypes"}},
             "createLineSegmentDetector" : { "_refine" : {"ctype" : "LineSegmentDetectorModes"}},
             "compareHist" : { "method" : {"ctype" : "HistCompMethods"}},
             "threshold" : { "type" : {"ctype" : "ThresholdTypes"}},
