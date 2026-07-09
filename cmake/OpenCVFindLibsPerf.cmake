@@ -68,6 +68,19 @@ To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
   endif()
 endif(WITH_CUDA)
 
+# --- RPP ---
+if(WITH_RPP)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindRPP.cmake")
+  if(HAVE_RPP)
+    message(STATUS "Using AMD ROCm Performance Primitives (RPP)")
+    ocv_include_directories(${rpp_INCLUDE_DIR})
+    list(APPEND OPENCV_LINKER_LIBS ${rpp_LIBRARIES})
+    add_compile_definitions(HAVE_RPP)
+  else()
+    message(STATUS "AMD ROCm Performance Primitives (RPP): Not found or not available")
+  endif()
+endif()
+
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
   if(NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG)

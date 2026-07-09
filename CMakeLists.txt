@@ -231,6 +231,9 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
+OCV_OPTION(WITH_RPP "Include AMD ROCm Performance Primitives (RPP) support" ON
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID AND NOT WINRT AND NOT IOS AND NOT XROS
+  VERIFY HAVE_RPP)
 OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)" OFF
    VISIBLE_IF (AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS
    VERIFY HAVE_ARMPL)
@@ -898,6 +901,13 @@ macro(ocv_hal_register HAL_LIBRARIES_VAR HAL_HEADERS_VAR HAL_INCLUDE_DIRS_VAR)
   # 3. include paths
   ocv_include_directories(${${HAL_INCLUDE_DIRS_VAR}})
 endmacro()
+if(HAVE_RPP)
+  ocv_debug_message(STATUS "Enable RPP acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";rpp;")
+    set(OpenCV_HAL "rpp;${OpenCV_HAL}")
+  endif()
+endif()
+
 
 if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
@@ -1001,6 +1011,15 @@ foreach(hal ${OpenCV_HAL})
     add_subdirectory(hal/ipp)
     ocv_hal_register(IPP_HAL_LIBRARIES IPP_HAL_HEADERS IPP_HAL_INCLUDE_DIRS)
     list(APPEND OpenCV_USED_HAL "ipp (ver ${IPP_HAL_VERSION})")
+  elseif(hal STREQUAL "rpp")
+    find_package(rpp QUIET)
+    if(rpp_FOUND)
+      add_subdirectory(hal/rpp)
+      ocv_hal_register(RPP_HAL_LIBRARIES RPP_HAL_HEADERS RPP_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "rpp (ver ${RPP_HAL_VERSION})")
+    else()
+      message(STATUS "RPP: ROCm Performance Primitives not found, disabling rpp HAL...")
+    endif()
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
