@@ -2612,6 +2612,17 @@ void setOpenGLContextImpl(const char *) {
 
 void updateWindowImpl(const char *) {
 }
+
+void setOpenGLFreeCallbackImpl(const char *, CvOpenGlFreeCallback) {
+}
+
+CvOpenGlDrawCallback getOpenGLDrawCallbackImpl(const char *) {
+    return 0;
+}
+
+void *getOpenGLUserDataImpl(const char *) {
+    return 0;
+}
 #endif // HAVE_OPENGL
 
 #endif // HAVE_WAYLAND

@@ -61,6 +61,7 @@ TEST(Viz3D, render_scene_smoke)
     randu(pts, 0.0f, 1.0f);
     EXPECT_NO_THROW(viz3d::showPoints(w, "pts", pts));
     EXPECT_NO_THROW(viz3d::setGridVisible(w, true));
+    EXPECT_NO_THROW(viz3d::setSky(w, Vec3f(0.2f, 0.5f, 0.8f)));   // exercises the sky-color render path
 
     EXPECT_NO_THROW(viz3d::showBox(w, "box", Vec3f::all(1.0f), Vec3f(1, 0, 0)));
     EXPECT_NO_THROW(viz3d::showSphere(w, "sphere", 1.0f, Vec3f(0, 1, 0)));

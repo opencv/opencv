@@ -40,11 +40,12 @@ static Window* getWindow(const String& win_name)
     if (useGl <= 0)
         CV_Error(cv::Error::StsBadArg, "OpenCV/UI: viz3d can't be used because the window was created without an OpenGL context");
 
+    setOpenGlContext(win_name);
+
     Window* win = static_cast<Window*>(getOpenGlUserData(win_name));
 
     if (!win)
     {
-        setOpenGlContext(win_name);
         std::unique_ptr<Window> new_win(new Window(win_name));
         setOpenGlDrawCallback(win_name, &openGlDrawCallback, new_win.get());
         setOpenGlFreeCallback(win_name, &openGlFreeCallback);
@@ -521,7 +522,6 @@ void showMesh(const String& win_name, const String& obj_name, InputArray verts, 
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    setOpenGlContext(win_name);
     win->set(obj_name, new Mesh(verts, indices));
     updateWindow(win_name);
 #endif
@@ -537,7 +537,6 @@ void showMesh(const String& win_name, const String& obj_name, InputArray verts)
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    setOpenGlContext(win_name);
     win->set(obj_name, new Mesh(verts));
     updateWindow(win_name);
 #endif
@@ -553,7 +552,6 @@ void showPoints(const String& win_name, const String& obj_name, InputArray point
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    setOpenGlContext(win_name);
     win->set(obj_name, new PointCloud(points));
     updateWindow(win_name);
 #endif
@@ -582,24 +580,25 @@ void showRGBD(const String& win_name, const String& obj_name, InputArray img, co
     float cx = intrinsics(0, 2);
     float cy = intrinsics(1, 2);
 
-    // Pre-size and fill row-major (avoids per-pixel Mat reallocation).
+    // Pre-size and fill row-major (avoids per-pixel Mat reallocation), striped over rows.
     Mat points(mat.rows * mat.cols, 6, CV_32F);
-    for (int v = 0; v < mat.rows; ++v)
-        for (int u = 0; u < mat.cols; ++u)
+    parallel_for_(Range(0, mat.rows), [&](const Range& range)
+    {
+        for (int v = range.start; v < range.end; ++v)
         {
-            Vec4f c = mat.at<Vec4f>(v, u);
-            float d = c(3) * 0.001f; // mm to m
-
-            float x_over_z = (cx - static_cast<float>(u)) / fx;
-            float y_over_z = (cy - static_cast<float>(v)) / fy;
-            float z = d;
-            float x = x_over_z * z;
-            float y = y_over_z * z;
-
-            float* p = points.ptr<float>(v * mat.cols + u);
-            p[0] = x * scale;      p[1] = y * scale;      p[2] = z * scale;
-            p[3] = c(0) / 255.0f;  p[4] = c(1) / 255.0f;  p[5] = c(2) / 255.0f;
+            const Vec4f* src = mat.ptr<Vec4f>(v);
+            float* p = points.ptr<float>(v * mat.cols);
+            for (int u = 0; u < mat.cols; ++u, p += 6)
+            {
+                const Vec4f& c = src[u];
+                float z = c(3) * 0.001f;   // mm to m
+                p[0] = (cx - (float)u) / fx * z * scale;
+                p[1] = (cy - (float)v) / fy * z * scale;
+                p[2] = z * scale;
+                p[3] = c(0) / 255.0f;  p[4] = c(1) / 255.0f;  p[5] = c(2) / 255.0f;
+            }
         }
+    });
 
     showPoints(win_name, obj_name, points);
 #endif
@@ -615,7 +614,6 @@ void showLines(const String& win_name, const String& obj_name, InputArray points
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    setOpenGlContext(win_name);
     win->set(obj_name, new Lines(points));
     updateWindow(win_name);
 #endif
@@ -989,6 +987,8 @@ void Window::setGridVisible(bool visible)
 {
     if (visible)
     {
+        if (this->grid)   // already shown; don't overwrite (and leak) the existing grid
+            return;
         this->grid = new Lines(Mat(4096, 6, CV_32F), 0);
         this->grid->setShader(this->shaders[this->grid->getShaderName()]);
     }
@@ -1006,7 +1006,7 @@ void Window::draw()
     this->view.setAspect(aspect);
 
     ogl::enable(ogl::DEPTH_TEST);
-    ogl::clearColor(this->sky_color.mul(255.0f));
+    ogl::clearColor(this->sky_color * 255.0f);
 
     if (this->grid)
     {
