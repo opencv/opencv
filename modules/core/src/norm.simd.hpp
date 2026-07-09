@@ -2105,10 +2105,10 @@ template<> struct MaskedNormDiffL1_SIMD<int, double> {
         v_float64 acc = vx_setzero_f64();
         for (; i <= len - vstep; i += vstep) {
             v_uint32 m  = v_gt(vx_load_expand_q(mask + i), vx_setzero_u32());
-            v_uint32 ad = v_and(v_abs(v_sub(vx_load(s1 + i), vx_load(s2 + i))), m);
-            v_int32 adi = v_reinterpret_as_s32(ad);
-            acc = v_add(acc, v_cvt_f64(adi));
-            acc = v_add(acc, v_cvt_f64_high(adi));
+            v_uint32 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+            v_uint64 e0, e1; v_expand(ad, e0, e1);
+            acc = v_add(acc, v_cvt_f64(v_reinterpret_as_s64(e0)));
+            acc = v_add(acc, v_cvt_f64(v_reinterpret_as_s64(e1)));
         }
         double result = v_reduce_sum(acc);
         for (; i < len; i++) if (mask[i]) result += (double)cv_absdiff(s1[i], s2[i]);
@@ -2161,7 +2161,7 @@ template<> struct MaskedNormDiffL2_SIMD<int, double> {
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         for (; i <= len - vstep; i += vstep) {
             v_uint32 m  = v_gt(vx_load_expand_q(mask + i), vx_setzero_u32());
-            v_uint32 ad = v_and(v_abs(v_sub(vx_load(s1 + i), vx_load(s2 + i))), m);
+            v_uint32 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
             v_uint64 e0, e1; v_expand(ad, e0, e1);
             v_float64 f0 = v_cvt_f64(v_reinterpret_as_s64(e0)), f1 = v_cvt_f64(v_reinterpret_as_s64(e1));
             r0 = v_fma(f0, f0, r0); r1 = v_fma(f1, f1, r1);
