@@ -274,7 +274,7 @@ CV__DNN_INLINE_NS_BEGIN
      * Each operation type registers a `static Ptr<LayerInfo> create(const LayerParams&)` factory
      * via @ref CV_DNN_REGISTER_OP_CLASS_STATIC.
      */
-    class CV_EXPORTS_W LayerInfo : public Algorithm
+    class CV_EXPORTS_W LayerInfo
     {
     public:
         LayerInfo();
@@ -335,10 +335,10 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
-     * A %Layer is the *executable*, backend-specific counterpart of an LayerInfo node: it
+     * A %Layer is the *executable*, backend-specific counterpart of a LayerInfo node: it
      * implements forward() (and finalize()) for a particular backend/target. In the new graph
-     * engine a %Layer is created from an LayerInfo (held in #data) by Net::finalizeNet(); its
-     * inference methods (getMemoryShapes() etc., inherited from LayerInfo) delegate to #data.
+     * engine a %Layer is created from a LayerInfo by the executor factory; shape/type inference
+     * stays on the LayerInfo node.
      *
      * Each class, derived from Layer, must implement forward() method to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.

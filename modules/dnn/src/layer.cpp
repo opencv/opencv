@@ -67,9 +67,9 @@ Ptr<BackendNode> Layer::initCUDA(
     // new graph engine only need to override initCUDA(context, inputs, outputs) with GpuMatND.
     std::vector<cuda::GpuMatND> inGpu(inputs.size()), outGpu(outputs.size());
     for (size_t i = 0; i < inputs.size(); i++)
-        inGpu[i] = inputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/false);
+        inGpu[i] = inputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND();
     for (size_t i = 0; i < outputs.size(); i++)
-        outGpu[i] = outputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/true);
+        outGpu[i] = outputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND();
     return initCUDA(context, inGpu, outGpu);
 #else
     CV_UNUSED(context); CV_UNUSED(inputs); CV_UNUSED(outputs);
