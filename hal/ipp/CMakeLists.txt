@@ -33,6 +33,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/morph_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/median_blur_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gaussian_blur_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/integral_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is

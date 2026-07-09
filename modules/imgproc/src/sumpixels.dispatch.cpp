@@ -138,54 +138,6 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
 
 #endif  // HAVE_OPENCL
 
-#ifdef HAVE_IPP
-
-static bool ipp_integral(
-    int depth, int sdepth, int sqdepth,
-    const uchar* src, size_t srcstep,
-    uchar* sum, size_t sumstep,
-    uchar* sqsum, size_t sqsumstep,
-    uchar* tilted, size_t tstep,
-    int width, int height, int cn)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    IppiSize size = {width, height};
-
-    if(cn > 1)
-        return false;
-    if(tilted)
-    {
-        CV_UNUSED(tstep);
-        return false;
-    }
-
-    if(!sqsum)
-    {
-        if(depth == CV_8U && sdepth == CV_32S)
-            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, size, 0) >= 0;
-        else if(depth == CV_8UC1 && sdepth == CV_32F)
-            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size, 0) >= 0;
-        else if(depth == CV_32FC1 && sdepth == CV_32F)
-            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_32f_C1R, (const Ipp32f*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size) >= 0;
-        else
-            return false;
-    }
-    else
-    {
-        if(depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32S)
-            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp32s*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
-        else if(depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F)
-            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
-        else if(depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F)
-            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32f64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
-        else
-            return false;
-    }
-}
-
-#endif  // HAVE_IPP
-
 namespace hal {
 
 template<typename T, typename ST, typename QT> static
@@ -373,7 +325,6 @@ void integral(
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(integral, cv_hal_integral, depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn);
-    CV_IPP_RUN_FAST(ipp_integral(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn));
 
     if (integral_SIMD(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn))
         return;
