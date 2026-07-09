@@ -1509,6 +1509,37 @@ TEST(Core_InputArray, convert_from_vector_over2GB)
     EXPECT_ANY_THROW(auto work = _InputArray(buf));
 }
 
+// https://github.com/opencv/opencv/issues/29470
+// _InputArray(const double&) stored a pointer to a stack temporary that dies
+// before getMat() is called. The fix heap-allocates the scalar.
+// Volatile function pointers prevent inlining so stack clobbering is effective.
+static double fetchScalarFromInputArray(InputArray arr)
+{
+    Mat m = arr.getMat();
+    return m.at<double>(0, 0);
+}
+
+static void trashStack()
+{
+    volatile double junk[256];
+    for (int i = 0; i < 256; i++)
+        junk[i] = -1.0;
+    (void)junk;
+}
+
+TEST(Core_InputArray, scalar_getMat_use_after_scope_29470)
+{
+    double (*volatile fetchFn)(InputArray) = fetchScalarFromInputArray;
+    void (*volatile trashFn)() = trashStack;
+
+    trashFn();
+    _InputArray ia(3.14);
+    trashFn();
+    double val = fetchFn(ia);
+
+    EXPECT_EQ(3.14, val);
+}
+
 TEST(Core_CopyMask, bug1918)
 {
     Mat_<unsigned char> tmpSrc(100,100);

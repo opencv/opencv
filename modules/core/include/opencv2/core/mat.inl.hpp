@@ -145,7 +145,10 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
 { init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_READ, &m); }
 
 inline _InputArray::_InputArray(const double& val)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
+{
+    double* buf = new double(val);
+    init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, buf, Size(1,1));
+}
 
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(+CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
