@@ -335,14 +335,14 @@ namespace cv { namespace dnn {
 
         virtual void update(const MatShape& shape, std::size_t offset) = 0;
 
-        /** @brief returns a GpuMatND header over the device memory (no copy)
+        /** @brief returns a GpuMatND header over the device memory (no copy, no synchronization)
          *
-         * @p forWrite selects the same synchronization semantics as getSpan()/getView():
-         * for reads the host->device transfer is performed if needed; for writes the device
-         * memory is marked dirty. The returned header borrows the device memory and is only
-         * valid while this wrapper (and its device tensor) is alive.
+         * The header borrows the device memory and is only valid while this wrapper (and its
+         * device tensor) is alive. Host<->device synchronization is the caller's responsibility
+         * (see copyToDevice()/setDeviceDirty()); this accessor must stay side-effect free so it
+         * can be used at init time before any stream is attached.
          */
-        virtual cuda::GpuMatND getDeviceMatND(bool forWrite) = 0;
+        virtual cuda::GpuMatND getDeviceMatND() = 0;
     };
 
     namespace cuda4dnn { namespace detail {
@@ -691,11 +691,7 @@ namespace cv { namespace dnn {
             return tensor_view_type(shared_block->device.get() + offset, std::begin(shape), std::end(shape));
         }
 
-        cuda::GpuMatND getDeviceMatND(bool forWrite) override {
-            if (forWrite)
-                setDeviceDirty();
-            else
-                copyToDevice();
+        cuda::GpuMatND getDeviceMatND() override {
             DEVICE_T* ptr = shared_block->device.get().get() + offset;
             // Report the host element type (e.g. CV_32F even for an FP16 device buffer): the type is
             // only consumed by initCUDA(), while the compute reinterprets the pointer per its own T.
@@ -759,10 +755,16 @@ namespace cv { namespace dnn {
         cuda4dnn::csl::Workspace& workspace)
     {
         std::vector<cuda::GpuMatND> inGpu(inputs.size()), outGpu(outputs.size());
-        for (size_t i = 0; i < inputs.size(); i++)
-            inGpu[i] = inputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/false);
-        for (size_t i = 0; i < outputs.size(); i++)
-            outGpu[i] = outputs[i].dynamicCast<CUDABackendWrapper>()->getDeviceMatND(/*forWrite=*/true);
+        for (size_t i = 0; i < inputs.size(); i++) {
+            auto w = inputs[i].dynamicCast<CUDABackendWrapper>();
+            w->copyToDevice();               // host->device if needed (mirrors getView())
+            inGpu[i] = w->getDeviceMatND();
+        }
+        for (size_t i = 0; i < outputs.size(); i++) {
+            auto w = outputs[i].dynamicCast<CUDABackendWrapper>();
+            w->setDeviceDirty();             // op writes the device buffer (mirrors getSpan())
+            outGpu[i] = w->getDeviceMatND();
+        }
         forward(inGpu, outGpu, workspace);
     }
 

@@ -1313,6 +1313,16 @@ static inline cuda::Stream wrapCudaStream(cuda4dnn::csl::Stream& s)
     return cuda::StreamAccessor::wrapStream(s.get());
 }
 
+// GpuMatND upload/download require at least one dimension (rank-0 shapes trip GpuMatND::setFields).
+// View a rank-0 scalar as a 1-element 1D header over the same data; higher-rank Mats pass through.
+static inline Mat asAtLeast1D(const Mat& m)
+{
+    if (m.shape().dims != 0)
+        return m;
+    int one = 1;
+    return Mat(1, &one, m.type(), const_cast<uchar*>(m.data));
+}
+
 // Device element type for a host tensor: float tensors are stored as half under the FP16 target,
 // everything else mirrors the host type. fit() reuses the existing allocation when large enough,
 // so buffers persist across forwards.
@@ -1331,7 +1341,12 @@ cuda::GpuMatND& Net::Impl::getCudaArgBuffer(Arg arg, const Mat& hostMat)
         cudaArgHostDirty.assign(args.size(), 1);
         cudaArgDeviceDirty.assign(args.size(), 0);
     }
-    cudaArgBuffers[idx].fit(hostMat.shape(), cudaDeviceType(hostMat));
+    // GpuMatND (and cuda4dnn tensors) require at least one dimension; represent a rank-0 scalar
+    // tensor as a 1-element 1D tensor so element-wise ops still see the single value.
+    MatShape shape = hostMat.shape();
+    if (shape.dims == 0)
+        shape = MatShape({1});
+    cudaArgBuffers[idx].fit(shape, cudaDeviceType(hostMat));
     return cudaArgBuffers[idx];
 }
 
@@ -1347,15 +1362,16 @@ void Net::Impl::cudaSetHostDirty(Arg arg)
 void Net::Impl::cudaUploadArg(Arg arg, const Mat& hostMat)
 {
     int idx = arg.idx;
-    cuda::GpuMatND& g = getCudaArgBuffer(arg, hostMat);
+    Mat src = asAtLeast1D(hostMat);
+    cuda::GpuMatND& g = getCudaArgBuffer(arg, src);
     if (cudaArgHostDirty[idx]) {
         cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
-        if (g.type() == hostMat.type()) {
-            g.upload(hostMat, s);
+        if (g.type() == src.type()) {
+            g.upload(src, s);
         } else {
             // FP32 -> FP16 (device stores half): convert on host, then copy up.
             Mat tmp;
-            hostMat.convertTo(tmp, CV_MAT_DEPTH(g.type()));
+            src.convertTo(tmp, CV_MAT_DEPTH(g.type()));
             g.upload(tmp, s);
         }
         cudaArgHostDirty[idx] = 0;
@@ -1371,15 +1387,16 @@ void Net::Impl::cudaDownloadArg(Arg arg, Mat& hostMat)
     if (cudaArgDeviceDirty[idx]) {
         cuda::GpuMatND& g = cudaArgBuffers[idx];
         cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
-        if (g.type() == hostMat.type()) {
-            g.download(hostMat, s);
+        Mat dst = asAtLeast1D(hostMat);   // fill the scalar's storage through a 1D header
+        if (g.type() == dst.type()) {
+            g.download(dst, s);
             cudaInfo->context.stream.synchronize();  // host read follows immediately
         } else {
             // device stores half: copy down, then convert up to the host FP32 tensor.
             Mat tmp;
             g.download(tmp, s);
             cudaInfo->context.stream.synchronize();
-            tmp.convertTo(hostMat, hostMat.type());
+            tmp.convertTo(dst, dst.type());
         }
         cudaArgDeviceDirty[idx] = 0;
         cudaArgHostDirty[idx] = 0;
@@ -1475,6 +1492,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
+#ifdef HAVE_CUDA
+            // CPU op: bring any device-resident input back to host before reading its
+            // shape/data. This must happen before allocateLayerOutputs(), which may fit()
+            // an in-place op's output onto this very buffer and rewrite its header.
+            if (opBackend != DNN_BACKEND_CUDA)
+                cudaDownloadArg(inp, argTensor(inp));
+#endif
             const Mat& m = argTensor(inp);
             inpMats[i] = m;
             inpTypes[i] = m.type();
@@ -1514,14 +1538,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             } else
 #endif
             {
-#ifdef HAVE_CUDA
-                // CPU op: bring any device-resident inputs back to host before reading them.
-                for (size_t k = 0; k < ninputs; k++) {
-                    Mat& t = argTensor(inputs[k]);
-                    cudaDownloadArg(inputs[k], t);
-                    inpMats[k] = t;
-                }
-#endif
+                // Device-resident inputs were already synced to host in the capture loop above.
                 if (finalizeLayers)
                     layer->finalize(inpMats, outMats);
                 layer->forward(inpMats, outMats, tempMats);

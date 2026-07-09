@@ -369,8 +369,8 @@ public:
 #ifdef HAVE_CUDA
     // Channel-wise scale+shift on CUDA; reused by the new graph engine via CUDALegacyExec.
     Ptr<BackendNode> initCUDA(void* context_,
-                              const std::vector<Ptr<BackendWrapper> >&,
-                              const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+                              InputArrayOfArrays,
+                              InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
         Mat scale, bias;
