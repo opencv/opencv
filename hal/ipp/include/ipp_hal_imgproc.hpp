@@ -194,6 +194,11 @@ int ipp_hal_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst
 #undef cv_hal_distanceTransform
 #define cv_hal_distanceTransform ipp_hal_distanceTransform
 
+int ipp_hal_calcHist(const uchar* src_data, size_t src_step, int src_type, int src_width, int src_height,
+                     float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate);
+#undef cv_hal_calcHist
+#define cv_hal_calcHist ipp_hal_calcHist
+
 #endif // IPP_VERSION_X100 >= 700
 
 #define IPP_DISABLE_PERF_CANNY_MT 1 // cv::Canny OpenCV MT performance is better
