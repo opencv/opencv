@@ -1766,7 +1766,17 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         dst = _dst.getMat();
 
         if( depth == CV_8U )
+        {
+            int swg = (code == COLOR_BayerGB2GRAY || code == COLOR_BayerGR2GRAY);
+            int bc = 1868, rc = 4899;
+            if (code != COLOR_BayerBG2GRAY && code != COLOR_BayerGB2GRAY)
+                std::swap(bc, rc);
+            CALL_HAL(demosaicing, cv_hal_demosaicing,
+                     src.ptr(), src.step, src.type(), sz.width, sz.height,
+                     dst.ptr(), dst.step, dst.type(), dcn, 0,
+                     swg, bc, rc);
             Bayer2Gray_<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
+        }
         else if( depth == CV_16U )
             Bayer2Gray_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
         else
@@ -1793,7 +1803,17 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
                 code == COLOR_BayerGR2BGR || code == COLOR_BayerGR2BGRA )
             {
                 if( depth == CV_8U )
+                {
+                    int bl = (code == COLOR_BayerBG2BGR  || code == COLOR_BayerGB2BGR  ||
+                              code == COLOR_BayerBG2BGRA || code == COLOR_BayerGB2BGRA) ? -1 : 1;
+                    int swg = (code == COLOR_BayerGB2BGR  || code == COLOR_BayerGR2BGR  ||
+                               code == COLOR_BayerGB2BGRA || code == COLOR_BayerGR2BGRA);
+                    CALL_HAL(demosaicing, cv_hal_demosaicing,
+                             src.ptr(), src.step, src.type(), sz.width, sz.height,
+                             dst_.ptr(), dst_.step, dst_.type(), dcn, bl,
+                             swg, 0, 0);
                     Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
+                }
                 else if( depth == CV_16U )
                     Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
                 else
