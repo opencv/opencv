@@ -116,6 +116,11 @@ void setOpenGLDrawCallbackImpl(const char* window_name, CvOpenGlDrawCallback cal
 void setOpenGLContextImpl(const char* window_name);
 void updateWindowImpl(const char* window_name);
 
+typedef void (CV_CDECL *CvOpenGlFreeCallback)(void* userdata);
+void setOpenGLFreeCallbackImpl(const char* window_name, CvOpenGlFreeCallback callback);
+CvOpenGlDrawCallback getOpenGLDrawCallbackImpl(const char* window_name);
+void* getOpenGLUserDataImpl(const char* window_name);
+
 
 //Yannick Verdie 2010, Max Kostin 2015
 void cvSetModeWindow_W32(const char* name, double prop_value);

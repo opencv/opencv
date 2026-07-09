@@ -316,6 +316,8 @@ public:
     void copyFrom(GLsizeiptr size, const GLvoid* data);
     void copyTo(GLsizeiptr size, GLvoid* data) const;
 
+    void resize(GLsizeiptr size, GLenum target);
+
     void* mapHost(GLenum access);
     void unmapHost();
 
@@ -404,6 +406,19 @@ void cv::ogl::Buffer::Impl::copyFrom(GLsizeiptr size, const GLvoid* data)
     CV_CheckGlError();
 
     gl::BufferSubData(gl::COPY_WRITE_BUFFER, 0, size, data);
+    CV_CheckGlError();
+}
+
+void cv::ogl::Buffer::Impl::resize(GLsizeiptr size, GLenum target)
+{
+    gl::BindBuffer(target, bufId_);
+    CV_CheckGlError();
+
+    // Reallocate the data store while keeping the same buffer id, so bound vertex arrays stay valid.
+    gl::BufferData(target, size, 0, gl::DYNAMIC_DRAW);
+    CV_CheckGlError();
+
+    gl::BindBuffer(target, 0);
     CV_CheckGlError();
 }
 
@@ -547,8 +562,16 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
 #else
     if (rows_ != arows || cols_ != acols || type_ != atype)
     {
-        const GLsizeiptr asize = arows * acols * CV_ELEM_SIZE(atype);
-        impl_.reset(new Impl(asize, 0, target, autoRelease));
+        const GLsizeiptr asize = (GLsizeiptr)arows * acols * CV_ELEM_SIZE(atype);
+        // Resize in place when sole owner (keeps the GL buffer id, so bound vertex arrays such
+        // as the per-frame grid stay valid); otherwise allocate fresh, preserving copy-on-write.
+        if (impl_->bufId() != 0 && impl_.use_count() == 1)
+        {
+            impl_->resize(asize, target);
+            impl_->setAutoRelease(autoRelease);
+        }
+        else
+            impl_.reset(new Impl(asize, 0, target, autoRelease));
         rows_ = arows;
         cols_ = acols;
         type_ = atype;
@@ -1412,6 +1435,561 @@ void cv::ogl::Arrays::bind() const
 }
 
 ////////////////////////////////////////////////////////////////////////
+// ogl::VertexArray
+
+#ifndef HAVE_OPENGL
+
+class cv::ogl::VertexArray::Impl
+{
+};
+
+#else
+
+class cv::ogl::VertexArray::Impl
+{
+public:
+    static const Ptr<Impl>& empty();
+
+    Impl(GLuint vaId, bool autoRelease);
+    Impl(std::initializer_list<Attribute> attributes, bool autoRelease);
+    ~Impl();
+
+    void bind();
+
+    void setAutoRelease(bool flag) { autoRelease_ = flag; }
+
+    GLuint vaId() const { return vaId_; }
+
+private:
+    Impl();
+
+    GLuint vaId_;
+    bool autoRelease_;
+};
+
+const Ptr<cv::ogl::VertexArray::Impl>& cv::ogl::VertexArray::Impl::empty()
+{
+    static Ptr<Impl> p(new Impl);
+    return p;
+}
+
+cv::ogl::VertexArray::Impl::Impl() : vaId_(0), autoRelease_(false)
+{
+}
+
+cv::ogl::VertexArray::Impl::Impl(GLuint vaId, bool autoRelease) : vaId_(vaId), autoRelease_(autoRelease)
+{
+    CV_Assert( gl::IsVertexArray(vaId) == gl::TRUE_ );
+}
+
+cv::ogl::VertexArray::Impl::Impl(std::initializer_list<Attribute> attributes, bool autoRelease) : vaId_(0), autoRelease_(autoRelease)
+{
+    gl::GenVertexArrays(1, &vaId_);
+    CV_CheckGlError();
+
+    CV_Assert( vaId_ != 0 );
+    gl::BindVertexArray(vaId_);
+    CV_CheckGlError();
+
+    for (auto& attribute : attributes)
+    {
+        attribute.buffer_.bind(Buffer::ARRAY_BUFFER);
+        if (attribute.integer_)
+        {
+            gl::VertexAttribIPointer(
+                attribute.shader_loc_,
+                attribute.size_,
+                attribute.type_,
+                attribute.stride_,
+                (const void*)attribute.offset_
+            );
+            CV_CheckGlError();
+        }
+        else
+        {
+            gl::VertexAttribPointer(
+                attribute.shader_loc_,
+                attribute.size_,
+                attribute.type_,
+                attribute.normalized_,
+                attribute.stride_,
+                (const void*)attribute.offset_
+            );
+            CV_CheckGlError();
+        }
+
+        gl::EnableVertexAttribArray(attribute.shader_loc_);
+        CV_CheckGlError();
+    }
+}
+
+cv::ogl::VertexArray::Impl::~Impl()
+{
+    if (autoRelease_ && vaId_)
+        gl::DeleteVertexArrays(1, &vaId_);
+}
+
+void cv::ogl::VertexArray::Impl::bind()
+{
+    gl::BindVertexArray(vaId_);
+    CV_CheckGlError();
+}
+
+#endif // HAVE_OPENGL
+
+cv::ogl::VertexArray::VertexArray()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+#endif
+}
+
+cv::ogl::VertexArray::VertexArray(std::initializer_list<Attribute> attributes, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(attributes);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(attributes, autoRelease));
+#endif
+}
+
+void cv::ogl::VertexArray::create(std::initializer_list<Attribute> attributes, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(attributes);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(attributes, autoRelease));
+#endif
+}
+
+void cv::ogl::VertexArray::release()
+{
+#ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
+    impl_ = Impl::empty();
+#endif
+}
+
+void cv::ogl::VertexArray::setAutoRelease(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    impl_->setAutoRelease(flag);
+#endif
+}
+
+void cv::ogl::VertexArray::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_->bind();
+#endif
+}
+
+void cv::ogl::VertexArray::unbind()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    gl::BindVertexArray(0);
+#endif
+}
+
+unsigned int cv::ogl::VertexArray::vaId() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->vaId();
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// ogl::Shader
+
+#ifndef HAVE_OPENGL
+
+class cv::ogl::Shader::Impl
+{
+};
+
+#else
+
+class cv::ogl::Shader::Impl
+{
+public:
+    static const Ptr<Impl>& empty();
+
+    Impl(GLuint shaderId, bool autoRelease);
+    Impl(const char* src, GLenum type, bool autoRelease);
+    ~Impl();
+
+    void setAutoRelease(bool flag) { autoRelease_ = flag; }
+
+    GLuint shaderId() const { return shaderId_; }
+
+private:
+    Impl();
+
+    GLuint shaderId_;
+    bool autoRelease_;
+};
+
+const Ptr<cv::ogl::Shader::Impl>& cv::ogl::Shader::Impl::empty()
+{
+    static Ptr<Impl> p(new Impl);
+    return p;
+}
+
+cv::ogl::Shader::Impl::Impl() : shaderId_(0), autoRelease_(false)
+{
+}
+
+cv::ogl::Shader::Impl::Impl(GLuint shaderId, bool autoRelease) : shaderId_(shaderId), autoRelease_(autoRelease)
+{
+    CV_Assert( gl::IsShader(shaderId) == gl::TRUE_ );
+}
+
+cv::ogl::Shader::Impl::Impl(const char* src, GLenum type, bool autoRelease) : shaderId_(0), autoRelease_(autoRelease)
+{
+    shaderId_ = gl::CreateShader(type);
+    CV_CheckGlError();
+
+    CV_Assert( shaderId_ != 0 );
+
+    GLint status;
+    gl::ShaderSource(shaderId_, 1, &src, 0);
+    gl::CompileShader(shaderId_);
+    gl::GetShaderiv(shaderId_, gl::COMPILE_STATUS, &status);
+    if (!status) {
+        String info_log;
+        gl::GetShaderiv(shaderId_, gl::INFO_LOG_LENGTH, &status);
+        info_log.resize(status);
+        gl::GetShaderInfoLog(shaderId_, GLsizei(info_log.size()) + 1, nullptr, &info_log[0]);
+        CV_Error(Error::OpenGlApiCallError, info_log);
+    }
+
+    CV_CheckGlError();
+}
+
+cv::ogl::Shader::Impl::~Impl()
+{
+    if (autoRelease_ && shaderId_)
+        gl::DeleteShader(shaderId_);
+}
+
+#endif // HAVE_OPENGL
+
+cv::ogl::Shader::Shader() : type_(Type::VERTEX)
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+#endif
+}
+
+cv::ogl::Shader::Shader(const char* src, Type type, bool autoRelease) : type_(type)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(src);
+    CV_UNUSED(type);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(src, type, autoRelease));
+#endif
+}
+
+void cv::ogl::Shader::create(const char* src, Type type, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(src);
+    CV_UNUSED(type);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(src, type, autoRelease));
+    type_ = type;
+#endif
+}
+
+void cv::ogl::Shader::release()
+{
+#ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
+    impl_ = Impl::empty();
+#endif
+}
+
+void cv::ogl::Shader::setAutoRelease(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    impl_->setAutoRelease(flag);
+#endif
+}
+
+unsigned int cv::ogl::Shader::shaderId() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->shaderId();
+#endif
+}
+
+cv::ogl::Shader::Type cv::ogl::Shader::type() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return type_;
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// ogl::Program
+
+#ifndef HAVE_OPENGL
+
+class cv::ogl::Program::Impl
+{
+};
+
+#else
+
+class cv::ogl::Program::Impl
+{
+public:
+    static const Ptr<Impl>& empty();
+
+    Impl(GLuint programId, bool autoRelease);
+    Impl(Shader vert, Shader frag, bool autoRelease);
+    ~Impl();
+
+    void bind();
+
+    int getAttributeLocation(const char* name) const;
+    int getUniformLocation(const char* name) const;
+
+    void setAutoRelease(bool flag) { autoRelease_ = flag; }
+
+    GLuint programId() const { return programId_; }
+
+private:
+    Impl();
+
+    Shader vert_;
+    Shader frag_;
+    GLuint programId_;
+    bool autoRelease_;
+};
+
+const Ptr<cv::ogl::Program::Impl>& cv::ogl::Program::Impl::empty()
+{
+    static Ptr<Impl> p(new Impl);
+    return p;
+}
+
+cv::ogl::Program::Impl::Impl() : programId_(0), autoRelease_(false)
+{
+}
+
+cv::ogl::Program::Impl::Impl(GLuint programId, bool autoRelease) : programId_(programId), autoRelease_(autoRelease)
+{
+    CV_Assert( gl::IsProgram(programId) == gl::TRUE_ );
+}
+
+cv::ogl::Program::Impl::Impl(Shader vert, Shader frag, bool autoRelease) : programId_(0), autoRelease_(autoRelease)
+{
+    programId_ = gl::CreateProgram();
+    CV_CheckGlError();
+
+    CV_Assert( programId_ != 0 );
+
+    gl::AttachShader(programId_, vert.shaderId());
+    CV_CheckGlError();
+
+    gl::AttachShader(programId_, frag.shaderId());
+    CV_CheckGlError();
+
+    GLint status;
+    gl::LinkProgram(programId_);
+    gl::GetProgramiv(programId_, gl::LINK_STATUS, &status);
+    if (!status) {
+        String info_log;
+        gl::GetProgramiv(programId_, gl::INFO_LOG_LENGTH, &status);
+        info_log.resize(status);
+        gl::GetProgramInfoLog(programId_, GLsizei(info_log.size()) + 1, nullptr, &info_log[0]);
+        CV_Error(Error::OpenGlApiCallError, info_log);
+    }
+
+    CV_CheckGlError();
+
+    vert_ = vert;
+    frag_ = frag;
+}
+
+cv::ogl::Program::Impl::~Impl()
+{
+    if (autoRelease_ && programId_)
+        gl::DeleteProgram(programId_);
+}
+
+void cv::ogl::Program::Impl::bind()
+{
+    gl::UseProgram(programId_);
+    CV_CheckGlError();
+}
+
+int cv::ogl::Program::Impl::getAttributeLocation(const char* name) const
+{
+    // -1 if absent (e.g. optimized out); caller decides.
+    int location = gl::GetAttribLocation(programId_, name);
+    CV_CheckGlError();
+    return location;
+}
+
+int cv::ogl::Program::Impl::getUniformLocation(const char* name) const
+{
+    // -1 if absent (e.g. optimized out); caller decides.
+    int location = gl::GetUniformLocation(programId_, name);
+    CV_CheckGlError();
+    return location;
+}
+
+#endif // HAVE_OPENGL
+
+cv::ogl::Program::Program()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+#endif
+}
+
+cv::ogl::Program::Program(Shader vert, Shader frag, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(vert);
+    CV_UNUSED(frag);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(vert, frag, autoRelease));
+#endif
+}
+
+void cv::ogl::Program::create(Shader vert, Shader frag, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(vert);
+    CV_UNUSED(frag);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(vert, frag, autoRelease));
+#endif
+}
+
+void cv::ogl::Program::release()
+{
+#ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
+    impl_ = Impl::empty();
+#endif
+}
+
+void cv::ogl::Program::setAutoRelease(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    impl_->setAutoRelease(flag);
+#endif
+}
+
+void cv::ogl::Program::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_->bind();
+#endif
+}
+
+void cv::ogl::Program::unbind()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    gl::UseProgram(0);
+#endif
+}
+
+int cv::ogl::Program::getAttributeLocation(const char* name) const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->getAttributeLocation(name);
+#endif
+}
+
+int cv::ogl::Program::getUniformLocation(const char* name) const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->getUniformLocation(name);
+#endif
+}
+
+void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    gl::Uniform3f(loc, vec(0), vec(1), vec(2));
+#endif
+}
+
+void cv::ogl::Program::setUniformMat4x4(int loc, Matx44f mat)
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    gl::UniformMatrix4fv(loc, 1, true, mat.val);
+#endif
+}
+
+unsigned int cv::ogl::Program::programId() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->programId();
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
 // Rendering
 
 void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<double> texRect)
@@ -1574,6 +2152,73 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
             }
         }
     }
+#endif
+}
+
+void cv::ogl::clearColor(Scalar color)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(color);
+    throw_no_ogl();
+#else
+    gl::ClearColor(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
+    gl::Clear(gl::COLOR_BUFFER_BIT);
+#endif // HAVE_OPENGL
+}
+
+void cv::ogl::clearDepth(float depth)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(depth);
+    throw_no_ogl();
+#else
+    gl::ClearDepth(depth);
+    gl::Clear(gl::DEPTH_BUFFER_BIT);
+#endif // HAVE_OPENGL
+}
+
+void cv::ogl::drawArrays(int first, int count, int mode)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(first);
+    CV_UNUSED(count);
+    CV_UNUSED(mode);
+    throw_no_ogl();
+#else
+    gl::DrawArrays(mode, first, count);
+#endif // HAVE_OPENGL
+}
+
+void cv::ogl::drawElements(int first, int count, int type, int mode)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(first);
+    CV_UNUSED(count);
+    CV_UNUSED(type);
+    CV_UNUSED(mode);
+    throw_no_ogl();
+#else
+    gl::DrawElements(mode, count, type, reinterpret_cast<const void*>(first));
+#endif
+}
+
+void cv::ogl::enable(int cap)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(cap);
+    throw_no_ogl();
+#else
+    gl::Enable(cap);
+#endif
+}
+
+void cv::ogl::disable(int cap)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(cap);
+    throw_no_ogl();
+#else
+    gl::Disable(cap);
 #endif
 }
 

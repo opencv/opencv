@@ -915,6 +915,24 @@ void cv::setOpenGlDrawCallback(const String& name, OpenGlDrawCallback callback, 
     setOpenGLDrawCallbackImpl(name.c_str(), callback, userdata);
 }
 
+void cv::setOpenGlFreeCallback(const String& name, OpenGlFreeCallback callback)
+{
+    CV_TRACE_FUNCTION();
+    setOpenGLFreeCallbackImpl(name.c_str(), callback);
+}
+
+cv::OpenGlDrawCallback cv::getOpenGlDrawCallback(const String& name)
+{
+    CV_TRACE_FUNCTION();
+    return getOpenGLDrawCallbackImpl(name.c_str());
+}
+
+void* cv::getOpenGlUserData(const String& name)
+{
+    CV_TRACE_FUNCTION();
+    return getOpenGLUserDataImpl(name.c_str());
+}
+
 void cv::setOpenGlContext(const String& windowName)
 {
     CV_TRACE_FUNCTION();
@@ -994,6 +1012,14 @@ void cv::imshow( const String& winname, InputArray _img )
     }
     else
     {
+        auto prevCallback = getOpenGlDrawCallback(winname);
+
+        if (prevCallback != nullptr && prevCallback != glDrawTextureCallback)
+        {
+            CV_LOG_ERROR(NULL, "OpenCV/UI: can't show image because the OpenGL callback is already being used on window: '" << winname << "'");
+            return;
+        }
+
         const double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
 
         if (autoSize > 0)
@@ -1109,6 +1135,21 @@ void setOpenGLContextImpl(const char*)
 }
 
 void updateWindowImpl(const char*)
+{
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
+}
+
+void setOpenGLFreeCallbackImpl(const char*, CvOpenGlFreeCallback)
+{
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
+}
+
+CvOpenGlDrawCallback getOpenGLDrawCallbackImpl(const char*)
+{
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
+}
+
+void* getOpenGLUserDataImpl(const char*)
 {
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }

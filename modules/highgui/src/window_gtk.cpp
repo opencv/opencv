@@ -557,7 +557,7 @@ struct CvWindow : CvUIBase
         last_key(0), flags(0), status(0),
         on_mouse(NULL), on_mouse_param(NULL)
 #ifdef HAVE_OPENGL
-        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL), glArea(NULL)
+        ,useGl(false), glDrawCallback(NULL), glFreeCallback(NULL), glDrawData(NULL), glArea(NULL)
 #endif
     {
         CV_LOG_INFO(NULL, "OpenCV/UI: creating GTK window: " << window_name);
@@ -583,6 +583,7 @@ struct CvWindow : CvUIBase
     bool useGl;
 
     CvOpenGlDrawCallback glDrawCallback;
+    CvOpenGlFreeCallback glFreeCallback;
     void* glDrawData;
     GtkWidget* glArea;
 #endif
@@ -728,8 +729,10 @@ static Rect getImageRect_(const std::shared_ptr<CvWindow>& window)
     gint wx, wy;
 #ifdef HAVE_OPENGL
     if (window->useGl) {
-        gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
-        return Rect(wx, wy, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
+        // OpenGL windows render into the GtkGLArea, not window->widget (which is not shown).
+        GtkWidget* surf = window->glArea ? window->glArea : window->widget;
+        gtk_widget_translate_coordinates(surf, gtk_widget_get_toplevel(surf), 0, 0, &wx, &wy);
+        return Rect(wx, wy, gtk_widget_get_allocated_width(surf), gtk_widget_get_allocated_height(surf));
     }
 #endif
 
@@ -846,8 +849,14 @@ double cvGetRatioWindow_GTK(const char* name)
 
 static double getRatioWindow_(const std::shared_ptr<CvWindow>& window)
 {
+#ifdef HAVE_OPENGL
+    // OpenGL windows render into the GtkGLArea, not window->widget.
+    GtkWidget* surf = (window->useGl && window->glArea) ? window->glArea : window->widget;
+#else
+    GtkWidget* surf = window->widget;
+#endif
     double result = static_cast<double>(
-        gtk_widget_get_allocated_width(window->widget)) / gtk_widget_get_allocated_height(window->widget);
+        gtk_widget_get_allocated_width(surf)) / gtk_widget_get_allocated_height(surf);
     return result;
 }
 
@@ -1085,6 +1094,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         createGlContext(window);
 
     window->glDrawCallback = 0;
+    window->glFreeCallback = 0;
     window->glDrawData = 0;
 #endif
 
@@ -1117,6 +1127,22 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #else
     gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK) ;
 #endif //GTK_VERSION3_4
+
+#if defined(HAVE_OPENGL) && defined(GTK_VERSION3)
+    // For OpenGL windows the GtkGLArea is the visible widget; deliver mouse events from it.
+    if ((flags & cv::WINDOW_OPENGL) && window->glArea)
+    {
+        g_signal_connect( window->glArea, "button-press-event",   G_CALLBACK(icvOnMouse), window );
+        g_signal_connect( window->glArea, "button-release-event", G_CALLBACK(icvOnMouse), window );
+        g_signal_connect( window->glArea, "motion-notify-event",  G_CALLBACK(icvOnMouse), window );
+        g_signal_connect( window->glArea, "scroll-event",         G_CALLBACK(icvOnMouse), window );
+#if defined(GTK_VERSION3_4)
+        gtk_widget_add_events( window->glArea, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK );
+#else
+        gtk_widget_add_events( window->glArea, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK );
+#endif
+    }
+#endif
 
     gtk_widget_show( window->frame );
     gtk_window_set_title(GTK_WINDOW(window->frame), name.c_str());
@@ -1226,6 +1252,54 @@ void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, 
     window->glDrawData = userdata;
 }
 
+void setOpenGLFreeCallbackImpl(const char* name, CvOpenGlFreeCallback callback)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if( !window )
+        return;
+
+    if (!window->useGl)
+        CV_Error( cv::Error::OpenGlNotSupported, "Window was created without OpenGL context" );
+
+    window->glFreeCallback = callback;
+}
+
+CvOpenGlDrawCallback getOpenGLDrawCallbackImpl(const char* name)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if (!window)
+        return NULL;
+
+    if (!window->useGl)
+        return NULL;
+
+    return window->glDrawCallback;
+}
+
+void* getOpenGLUserDataImpl(const char* name)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if( !window )
+        return NULL;
+
+    if (!window->useGl)
+        return NULL;
+
+    return window->glDrawData;
+}
+
 #endif // HAVE_OPENGL
 
 
@@ -1239,6 +1313,12 @@ CvWindow::~CvWindow()
 inline void CvWindow::destroy()
 {
     CV_LOG_INFO(NULL, "OpenCV/UI: destroying GTK window: " << name);
+#ifdef HAVE_OPENGL
+    if (glFreeCallback && glDrawData) {
+        glFreeCallback(glDrawData);
+        glDrawData = 0;
+    }
+#endif // HAVE_OPENGL
     gtk_widget_destroy(frame);
     frame = nullptr;
 }
@@ -1837,16 +1917,22 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     // TODO move this logic to CvImageWidget
     // TODO add try-catch wrappers into all callbacks
     CvWindow* window = (CvWindow*)user_data;
+    bool is_gl_area = false;
+#if defined(HAVE_OPENGL) && defined(GTK_VERSION3)
+    is_gl_area = (window && window->glArea && widget == window->glArea);
+#endif
     if (!window || !widget ||
         window->signature != CV_WINDOW_MAGIC_VAL ||
-        window->widget != widget ||
+        (window->widget != widget && !is_gl_area) ||
         !window->on_mouse)
         return FALSE;
 
     Point2f pt32f = {-1., -1.};
     Point pt = {-1,-1};
     int cv_event = -1, state = 0, flags = 0;
-    CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
+    // For OpenGL windows the visible widget is the GtkGLArea; the (empty) image
+    // state lives on window->widget, so read it from there.
+    CvImageWidget * image_widget = CV_IMAGE_WIDGET( window->widget );
 
     if( event->type == GDK_MOTION_NOTIFY )
     {
