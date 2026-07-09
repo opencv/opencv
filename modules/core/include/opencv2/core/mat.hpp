@@ -92,12 +92,14 @@ do not describe it in details. There are a few key things, though, that should b
     complete list).
 -   Optional input arguments: If some of the input arrays may be empty, pass cv::noArray() (or
     simply cv::Mat() as you probably did before).
--   The class is designed solely for passing parameters. That is, normally you *should not*
-    declare class members, local and global variables of this type.
+-   The class is a non-owning proxy designed solely for passing parameters. Do not store instances
+    of this type; the objects passed to its constructors must outlive every use of the proxy.
 -   If you want to design your own function or a class method that can operate of arrays of
     multiple types, you can use InputArray (or OutputArray) for the respective parameters. Inside
     a function you should use _InputArray::getMat() method to construct a matrix header for the
-    array (without copying data). _InputArray::kind() can be used to distinguish Mat from
+    array (without copying data). For non-refcounted inputs, this header does not extend the input
+    lifetime. Clone it before storing it past the function call unless the original input is
+    guaranteed to outlive the header. _InputArray::kind() can be used to distinguish Mat from
     `vector<>` etc., but normally it is not needed.
 
 Here is how you can use a function that takes InputArray :
