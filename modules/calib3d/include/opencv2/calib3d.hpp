@@ -881,7 +881,8 @@ CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mt
 @param projMatrix 3x4 input projection matrix P.
 @param cameraMatrix Output 3x3 camera intrinsic matrix \f$\cameramatrix{A}\f$.
 @param rotMatrix Output 3x3 external rotation matrix R.
-@param transVect Output 4x1 translation vector T.
+@param transVect Output 4x1 vector representing the camera position in homogeneous coordinates.
+To obtain the translation vector, use t = -rotMatrix * transVect[:3].
 @param rotMatrixX Optional 3x3 rotation matrix around x-axis.
 @param rotMatrixY Optional 3x3 rotation matrix around y-axis.
 @param rotMatrixZ Optional 3x3 rotation matrix around z-axis.
