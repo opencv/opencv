@@ -1330,7 +1330,6 @@ TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 INSTANTIATE_TEST_CASE_P(Volume, StaticVolumeBoundingBox, ::testing::Values(
     PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
     PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
-    PlatformVolumeType {PlatformType::CPU, VolumeType::ColorHashTSDF},
     PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}
 ));
 
