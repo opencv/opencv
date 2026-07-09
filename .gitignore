@@ -10,6 +10,8 @@ Thumbs.db
 tags
 tegra/
 bin/
+/ios/
+/ios-build-test/
 *.sdf
 *.opensdf
 *.obj

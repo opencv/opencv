@@ -140,7 +140,16 @@ endif()
 
 enable_testing()
 
+# workaround: https://gitlab.kitware.com/cmake/cmake/-/issues/20989
+if(OPENCV_WORKAROUND_CMAKE_20989)
+  set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
 project(OpenCV CXX C)
+
+if(OPENCV_WORKAROUND_CMAKE_20989)
+  set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR_BACKUP})
+endif()
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)

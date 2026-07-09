@@ -7,8 +7,9 @@ Installation in iOS {#tutorial_ios_install}
 Required Packages
 -----------------
 
--   CMake 2.8.8 or higher
--   Xcode 4.2 or higher
+-   CMake 3.18.5 or higher (3.19+ recommended with Xcode 12.2+)
+-   Xcode 12.2 or higher (required for Apple Silicon simulator)
+-   Python 3.6 or higher
 
 ### Getting the Cutting-edge OpenCV from Git Repository
 
@@ -55,14 +56,25 @@ Building OpenCV from Source, using CMake and Command Line
     python opencv/platforms/ios/build_framework.py ios --contrib opencv_contrib --without optflow
     @endcode
 
-5.  The build process can take a significant amount of time. Currently (OpenCV 3.4 and 4.1), five separate architectures are built: armv7, armv7s, and arm64 for iOS plus i386 and x86_64 for the iPhone simulator. If you want to specify the architectures to include in the framework, use the `--iphoneos_archs` and/or `--iphonesimulator_archs` options. For example, to only build arm64 for iOS and x86_64 for the simulator:
+5.  The build process can take a significant amount of time. By default, `build_framework.py` builds `armv7` and `arm64` for iOS device and `x86_64` and `arm64` for the iPhone simulator. If you want to specify the architectures, use the `--iphoneos_archs` and/or `--iphonesimulator_archs` options. For example, to only build arm64 for iOS and x86_64 for the simulator:
     @code{.bash}
     cd ~/<my_working_directory>
-    python opencv/platforms/ios/build_framework.py ios --contrib opencv_contrib --iphoneos_archs arm64 --iphonesimulator_archs x86_64
+    python opencv/platforms/ios/build_framework.py ios --contrib opencv_contrib --iphoneos_archs arm64 --iphonesimulator_archs x86_64 --build_only_specified_archs
     @endcode
 
+6.  **Apple Silicon simulator:** device and simulator both use `arm64`, which cannot be combined in a single fat framework. Use `build_xcframework.py` instead:
+    @code{.bash}
+    cd ~/<my_working_directory>
+    python3 opencv/platforms/apple/build_xcframework.py --out ios \
+      --iphoneos_archs arm64 --iphonesimulator_archs arm64 \
+      --build_only_specified_archs --disable-bitcode
+    @endcode
+
+    See `platforms/apple/readme.md` for Intel Mac simulator (`x86_64`) and other options.
+
 If everything’s fine, the build process will create
-`~/<my_working_directory>/ios/opencv2.framework`. You can add this framework to your Xcode projects.
+`~/<my_working_directory>/ios/opencv2.framework` (fat framework) or
+`~/<my_working_directory>/ios/opencv2.xcframework` (recommended). You can add either to your Xcode projects.
 
 Further Reading
 ---------------

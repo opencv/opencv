@@ -17,11 +17,11 @@ class OSXBuilder(Builder):
     def getToolchain(self, arch, target):
         return None
 
-    def getBuildCommand(self, archs, target):
+    def getBuildCommand(self, arch, target):
         buildcmd = [
             "xcodebuild",
             "MACOSX_DEPLOYMENT_TARGET=" + os.environ['MACOSX_DEPLOYMENT_TARGET'],
-            "ARCHS=%s" % archs[0],
+            "ARCHS=%s" % arch,
             "-sdk", target.lower(),
             "-configuration", "Debug" if self.debug else "Release",
             "-parallelizeTargets",
@@ -51,8 +51,8 @@ if __name__ == "__main__":
     os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
     print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
 
-    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.disable, args.enablenonfree,
+    b = OSXBuilder(args.opencv, args.contrib, False, True, args.without, args.disable, args.enablenonfree,
         [
             (["x86_64"], "MacOSX")
-        ], args.debug, args.debug_info)
+        ], args.debug, args.debug_info, "opencv2")
     b.build(args.out)
