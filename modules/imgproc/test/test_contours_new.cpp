@@ -5,6 +5,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/imgproc/detail/legacy.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #define CHECK_OLD 1
 
@@ -604,5 +605,62 @@ TEST(Imgproc_FindContours, link_runs)
     EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
 #endif
 }
+
+// See https://github.com/opencv/opencv/issues/23574:
+// with OpenCL enabled, findContours() used to return an all-zero hierarchy
+// when the destination was a UMat, while the contours themselves were correct
+// and the same call on a Mat destination was fine. Verify across all
+// retrieval modes/methods that the hierarchy downloaded from a UMat
+// destination matches the Mat-based reference.
+typedef testing::TestWithParam<tuple<int, int>> Imgproc_FindContours_OCL_UMat;
+
+TEST_P(Imgproc_FindContours_OCL_UMat, hierarchy_matches_cpu)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    const int mode = get<0>(GetParam());
+    const int method = get<1>(GetParam());
+
+    const bool useOCL_prev = cv::ocl::useOpenCL();
+    cv::ocl::setUseOpenCL(true);
+
+    Mat img = Mat::zeros(200, 200, CV_8UC1);
+    rectangle(img, Rect(20, 20, 100, 100), Scalar::all(255), FILLED);
+    rectangle(img, Rect(40, 40, 20, 20), Scalar::all(0), FILLED);
+    rectangle(img, Rect(150, 150, 30, 30), Scalar::all(255), FILLED);
+
+    vector<vector<Point>> contours_ref;
+    vector<Vec4i> hierarchy_ref;
+    findContours(img, contours_ref, hierarchy_ref, mode, method);
+
+    UMat uimg = img.getUMat(ACCESS_READ);
+    vector<UMat> contours_umat;
+    UMat hierarchy_umat;
+    findContours(uimg, contours_umat, hierarchy_umat, mode, method);
+
+    ASSERT_EQ(contours_ref.size(), contours_umat.size());
+    if (!hierarchy_ref.empty())
+    {
+        Mat hierarchy_downloaded = hierarchy_umat.getMat(ACCESS_READ);
+        ASSERT_EQ((size_t)hierarchy_downloaded.total(), hierarchy_ref.size());
+        // findContours() on a std::vector<Vec4i> yields an Nx1 matrix; on a
+        // UMat destination it yields 1xN. Reshape so the comparison is
+        // shape-agnostic.
+        EXPECT_MAT_NEAR(Mat(hierarchy_ref), hierarchy_downloaded.reshape(0, (int)hierarchy_ref.size()), 0);
+    }
+
+    cv::ocl::setUseOpenCL(useOCL_prev);
+}
+
+// no RETR_FLOODFILL - it requires CV_32S input and isn't part of this UMat regression
+INSTANTIATE_TEST_CASE_P(
+    ,
+    Imgproc_FindContours_OCL_UMat,
+    testing::Combine(testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                     testing::Values(CHAIN_APPROX_NONE,
+                                     CHAIN_APPROX_SIMPLE,
+                                     CHAIN_APPROX_TC89_L1,
+                                     CHAIN_APPROX_TC89_KCOS)));
 
 }}  // namespace opencv_test
