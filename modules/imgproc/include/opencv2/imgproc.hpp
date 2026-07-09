@@ -2529,9 +2529,11 @@ with the WARP_RELATIVE_MAP flag :
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using #convertMaps. The reason you might want to
-convert from floating to fixed-point representations of a map is that they can yield much faster
-(\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
+\f$map_1\f$, or fixed-point maps created by using #convertMaps. Fixed-point maps
+use a more compact representation, which can reduce memory bandwidth and benefit
+repeated remap calls that reuse the same map. Performance gains vary by hardware
+and are typically modest; measure before converting. In the converted case,
+\f$map_1\f$ contains pairs (cvFloor(x),
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
 
 This function cannot operate in-place.
@@ -2540,7 +2542,7 @@ This function cannot operate in-place.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
 CV_32FC1, or CV_32FC2. See #convertMaps for details on converting a floating point
-representation to fixed-point for speed.
+representation to fixed-point.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
 @param interpolation Interpolation method (see #InterpolationFlags). The methods #INTER_AREA
