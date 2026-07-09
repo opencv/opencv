@@ -20,7 +20,7 @@ class CV_EXPORTS_W Volume
 {
 public:
     /** @brief Constructor of custom volume.
-    * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
+    * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF, ColorHashTSDF].
     * @param settings the custom settings for volume.
     */
     CV_WRAP explicit Volume(VolumeType vtype = VolumeType::TSDF,
@@ -52,7 +52,7 @@ public:
     Camera intrinsics are taken from volume settings structure.
 
     * @param depth the depth image.
-    * @param image the color image (only for ColorTSDF).
+    * @param image the color image (only for ColorTSDF and ColorHashTSDF).
       For color TSDF a depth data should be registered with color data, i.e. have the same intrinsics & camera pose.
       This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
@@ -78,7 +78,7 @@ public:
     * @param cameraPose the pose of camera in global coordinates.
     * @param points image to store rendered points.
     * @param normals image to store rendered normals corresponding to points.
-    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
+    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF and ColorHashTSDF).
     */
     CV_WRAP_AS(raycastColor) void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const;
 
@@ -106,7 +106,7 @@ public:
     * @param K camera raycast intrinsics
     * @param points image to store rendered points.
     * @param normals image to store rendered normals corresponding to points.
-    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
+    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF and ColorHashTSDF).
     */
     CV_WRAP_AS(raycastExColor) void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals, OutputArray colors) const;
 
@@ -123,7 +123,7 @@ public:
     /** @brief Extract the all data from volume.
     * @param points the storage of all points.
     * @param normals the storage of all normals, corresponding to points.
-    * @param colors the storage of all colors, corresponding to points (only for ColorTSDF).
+    * @param colors the storage of all colors, corresponding to points (only for ColorTSDF and ColorHashTSDF).
     */
     CV_WRAP void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
 
@@ -157,12 +157,12 @@ public:
 
     /**
      * @brief Enables or disables new volume unit allocation during integration.
-     * Makes sense for HashTSDF only.
+     * Makes sense for HashTSDF and ColorHashTSDF only.
      */
     CV_WRAP void setEnableGrowth(bool v);
     /**
      * @brief Returns if new volume units are allocated during integration or not.
-     * Makes sense for HashTSDF only.
+     * Makes sense for HashTSDF and ColorHashTSDF only.
      */
     CV_WRAP bool getEnableGrowth() const;
 
