@@ -91,6 +91,42 @@ CV_EXPORTS_W void removeStatisticalOutliers(InputArray inputCloud, OutputArray o
 CV_EXPORTS_W void removeRadiusOutliers(InputArray inputCloud, OutputArray outputCloud,
         double radius, int minNeighbors = 16, OutputArray keptIndices = noArray());
 
+/** @brief Estimates a normal for every point of a point cloud.
+ *
+ * For each point a plane is fitted to its @p k nearest neighbors (PCA) and the plane normal is
+ * taken as the point normal. The sign of each normal is arbitrary; use cv::orientNormals or
+ * cv::orientNormalsConsistent to orient them. Internally uses cv::normalEstimate.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Output per-point normals, Nx1 CV_32FC3.
+ * @param k Number of nearest neighbors (including the point itself) used for the PCA fit.
+ */
+CV_EXPORTS_W void estimateNormals(InputArray inputCloud, OutputArray normals, int k = 30);
+
+/** @brief Flips point-cloud normals so that they face a given viewpoint.
+ *
+ * Each normal whose direction points away from @p viewpoint is negated. Useful when the sensor
+ * position is known.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals to orient in place, Nx1 CV_32FC3 (as from cv::estimateNormals).
+ * @param viewpoint Point the normals should face towards (e.g. the camera center).
+ */
+CV_EXPORTS_W void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3f& viewpoint);
+
+/** @brief Orients point-cloud normals consistently across the whole cloud.
+ *
+ * Builds a Riemannian graph over the k nearest neighbors (edge weight 1 - |n_i . n_j|), computes
+ * its minimum spanning tree with cv::buildMST, and propagates a consistent sign along the tree
+ * from a seed point (Hoppe et al. 1992). If the neighbor graph is disconnected the normals are
+ * oriented outward about the centroid instead.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals to orient in place, Nx1 CV_32FC3 (as from cv::estimateNormals).
+ * @param k Number of nearest neighbors used to build the graph.
+ */
+CV_EXPORTS_W void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, int k = 30);
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.

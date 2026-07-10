@@ -3,41 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
+#include "ptcloud_utils.hpp"   // toPointVec
 
 namespace cv {
-
-// Read an input point cloud (CV_32FC3, or Nx3 / 3xN CV_32F) into a vector<Point3f>.
-static void toPointVec(InputArray inputCloud, std::vector<Point3f>& points)
-{
-    points.clear();
-    Mat m = inputCloud.getMat();
-    if (m.empty())
-        return;
-
-    Mat mf;
-    if (m.depth() != CV_32F)
-        m.convertTo(mf, CV_32F);
-    else
-        mf = m;
-
-    // getMat() may hand back a non-contiguous view (ROI / column-slice / transpose);
-    // reshape() below requires contiguous data.
-    if (!mf.isContinuous())
-        mf = mf.clone();
-
-    if (mf.channels() == 1)
-    {
-        // Accept Nx3 (or 3xN) single-channel layouts as well.
-        CV_Assert(mf.cols == 3 || mf.rows == 3);
-        if (mf.cols != 3 && mf.rows == 3)
-            mf = mf.t();
-        mf = mf.reshape(3);            // N x 1, CV_32FC3
-    }
-    CV_Assert(mf.channels() == 3);
-
-    mf = mf.reshape(3, (int)mf.total());   // guarantee N x 1, CV_32FC3
-    points.assign(mf.begin<Point3f>(), mf.end<Point3f>());
-}
 
 // Build an octree over the points with a resolution derived from the bounding box.
 static Ptr<Octree> buildOctree(const std::vector<Point3f>& points)
