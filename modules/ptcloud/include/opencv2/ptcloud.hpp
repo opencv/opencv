@@ -115,6 +115,34 @@ CV_EXPORTS_W void orientNormals(InputArray inputCloud, InputOutputArray normals,
  */
 CV_EXPORTS_W void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, int k = 30);
 
+/** @brief Estimates the mean spacing between neighboring points of a point cloud.
+ *
+ * Returns the median distance from a sampled set of points to their nearest neighbor. Useful for
+ * picking a ball radius for cv::createMeshBPA.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @return Median nearest-neighbor distance, or 0 if the cloud has fewer than 2 points.
+ */
+CV_EXPORTS_W float estimateMeanSpacing(InputArray inputCloud);
+
+/** @brief Reconstructs a triangle mesh from an oriented point cloud using Ball-Pivoting.
+ *
+ * Implements the Ball-Pivoting Algorithm (Bernardini et al., 1999): a ball of a given radius is
+ * rolled over the points; whenever it rests on three points without containing any other, those
+ * points form a triangle. Several radii are used in ascending order so larger balls bridge the
+ * gaps left by smaller ones. The algorithm is interpolating — the mesh vertices are the input
+ * points — so estimate and orient the normals first (cv::normalEstimate, cv::orientNormalsConsistent).
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals, Nx1 CV_32FC3 (same count as the cloud).
+ * @param vertices Output mesh vertices (a copy of the input points), Nx1 CV_32FC3.
+ * @param triangles Output triangle vertex indices, Mx3 CV_32S.
+ * @param radii Optional ball radii (1D CV_32F/CV_64F). If empty, radii are derived from
+ *              cv::estimateMeanSpacing as {1x, 2x, 4x} the mean spacing.
+ */
+CV_EXPORTS_W void createMeshBPA(InputArray inputCloud, InputArray normals, OutputArray vertices,
+        OutputArray triangles, InputArray radii = noArray());
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.
