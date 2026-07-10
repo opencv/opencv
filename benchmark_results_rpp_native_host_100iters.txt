@@ -1,0 +1,66 @@
+
+==========================================================================================
+Native RPP benchmark | backend=HOST | warmups=20 | iters=100
+==========================================================================================
+function                              resolution           ms/op      total_ms    status
+------------------------------------------------------------------------------------------
+rpp bitwise_and 8UC1                  640x480             0.0091        0.9090        OK
+rpp bitwise_or 8UC1                   640x480             0.0088        0.8790        OK
+rpp bitwise_xor 8UC1                  640x480             0.0081        0.8080        OK
+rpp bitwise_not 8UC1                  640x480             0.0046        0.4550        OK
+rpp resize 8UC3 bilinear down2x       640x480             0.1284       12.8440        OK
+rpp resize 8UC3 bilinear up2x         640x480             1.4860      148.5970        OK
+rpp flip 8UC3 horizontal              640x480             0.0801        8.0140        OK
+rpp flip 8UC3 vertical                640x480             0.0811        8.1060        OK
+rpp warpAffine 8UC3 bilinear          640x480             0.5847       58.4750        OK
+rpp boxFilter 3x3 8UC3 replicate      640x480             0.1271       12.7110        OK
+rpp boxFilter 5x5 8UC3 replicate      640x480             0.3826       38.2590        OK
+rpp boxFilter 3x3 8UC1 replicate      640x480             0.0631        6.3140        OK
+rpp bitwise_and 8UC1                  1280x720            0.0201        2.0100        OK
+rpp bitwise_or 8UC1                   1280x720            0.0207        2.0680        OK
+rpp bitwise_xor 8UC1                  1280x720            0.0203        2.0290        OK
+rpp bitwise_not 8UC1                  1280x720            0.0129        1.2940        OK
+rpp resize 8UC3 bilinear down2x       1280x720            0.2732       27.3250        OK
+rpp resize 8UC3 bilinear up2x         1280x720            4.3311      433.1120        OK
+rpp flip 8UC3 horizontal              1280x720            0.2408       24.0840        OK
+rpp flip 8UC3 vertical                1280x720            0.2418       24.1840        OK
+rpp warpAffine 8UC3 bilinear          1280x720            1.7475      174.7550        OK
+rpp boxFilter 3x3 8UC3 replicate      1280x720            0.2962       29.6190        OK
+rpp boxFilter 5x5 8UC3 replicate      1280x720            1.1425      114.2530        OK
+rpp boxFilter 3x3 8UC1 replicate      1280x720            0.1043       10.4250        OK
+rpp bitwise_and 8UC1                  1920x1080           0.0514        5.1420        OK
+rpp bitwise_or 8UC1                   1920x1080           0.0514        5.1450        OK
+rpp bitwise_xor 8UC1                  1920x1080           0.0508        5.0820        OK
+rpp bitwise_not 8UC1                  1920x1080           0.0319        3.1880        OK
+rpp resize 8UC3 bilinear down2x       1920x1080           0.6125       61.2520        OK
+rpp resize 8UC3 bilinear up2x         1920x1080           9.7263      972.6310        OK
+rpp flip 8UC3 horizontal              1920x1080           0.5422       54.2230        OK
+rpp flip 8UC3 vertical                1920x1080           0.5487       54.8730        OK
+rpp warpAffine 8UC3 bilinear          1920x1080           3.9330      393.2960        OK
+rpp boxFilter 3x3 8UC3 replicate      1920x1080           0.6107       61.0700        OK
+rpp boxFilter 5x5 8UC3 replicate      1920x1080           2.3701      237.0140        OK
+rpp boxFilter 3x3 8UC1 replicate      1920x1080           0.2867       28.6730        OK
+rpp bitwise_and 8UC1                  2560x1440           0.0960        9.5990        OK
+rpp bitwise_or 8UC1                   2560x1440           0.0882        8.8200        OK
+rpp bitwise_xor 8UC1                  2560x1440           0.0778        7.7770        OK
+rpp bitwise_not 8UC1                  2560x1440           0.0595        5.9530        OK
+rpp resize 8UC3 bilinear down2x       2560x1440           1.0909      109.0910        OK
+rpp resize 8UC3 bilinear up2x         2560x1440          17.3323     1733.2320        OK
+rpp flip 8UC3 horizontal              2560x1440           1.1579      115.7850        OK
+rpp flip 8UC3 vertical                2560x1440           1.0961      109.6150        OK
+rpp warpAffine 8UC3 bilinear          2560x1440           7.0081      700.8100        OK
+rpp boxFilter 3x3 8UC3 replicate      2560x1440           1.0532      105.3230        OK
+rpp boxFilter 5x5 8UC3 replicate      2560x1440           4.0402      404.0240        OK
+rpp boxFilter 3x3 8UC1 replicate      2560x1440           0.4121       41.2120        OK
+rpp bitwise_and 8UC1                  3840x2160           0.2244       22.4370        OK
+rpp bitwise_or 8UC1                   3840x2160           0.2279       22.7880        OK
+rpp bitwise_xor 8UC1                  3840x2160           0.1961       19.6100        OK
+rpp bitwise_not 8UC1                  3840x2160           0.1117       11.1670        OK
+rpp resize 8UC3 bilinear down2x       3840x2160           2.9931      299.3130        OK
+rpp resize 8UC3 bilinear up2x         3840x2160          39.0697     3906.9690        OK
+rpp flip 8UC3 horizontal              3840x2160           4.4890      448.9030        OK
+rpp flip 8UC3 vertical                3840x2160           3.4824      348.2420        OK
+rpp warpAffine 8UC3 bilinear          3840x2160          15.5921     1559.2070        OK
+rpp boxFilter 3x3 8UC3 replicate      3840x2160           2.7399      273.9890        OK
+rpp boxFilter 5x5 8UC3 replicate      3840x2160           9.2326      923.2630        OK
+rpp boxFilter 3x3 8UC1 replicate      3840x2160           0.9005       90.0510        OK

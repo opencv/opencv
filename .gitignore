@@ -32,3 +32,4 @@ xcuserdata/
 /test_imgproc_correctness
 /benchmark_rpp
 /benchmark_rpp_full
+/benchmark_rpp_native
