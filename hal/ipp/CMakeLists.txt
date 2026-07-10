@@ -29,6 +29,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/distancetransform_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/histogram_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/samplers_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/hough_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
