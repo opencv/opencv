@@ -2746,4 +2746,210 @@ TEST(Test_MatMul, FastGemmBatchDynamicAndPackedBroadcast)
     normAssert(packedOutputs[0], packedExpected, "fastGemm packed broadcast batch mismatch", 1e-4, 1e-4);
 }
 
+static Mat runFastNormLayer(const String& type, LayerParams params, std::vector<Mat> inputs)
+{
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(type, params);
+    CV_Assert(layer);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    CV_Assert(outputs.size() == 1);
+    return outputs[0];
+}
+
+static void fillFastNormInput(Mat& input, float offset = 0.f)
+{
+    float* data = input.ptr<float>();
+    for (size_t i = 0; i < input.total(); ++i)
+        data[i] = offset + std::sin((float)i * 0.37f) * 1.7f + (float)(i % 7) * 0.11f;
+}
+
+static void fastNormReferenceMoments(const float* src, size_t n, bool recenter,
+                                     double& mean, double& invStdDev, float epsilon)
+{
+    double sum = 0., sqsum = 0.;
+    for (size_t i = 0; i < n; ++i)
+    {
+        const double value = src[i];
+        sum += value;
+        sqsum += value * value;
+    }
+    mean = recenter ? sum / n : 0.;
+    const double variance = std::max(0., sqsum / n - mean * mean);
+    invStdDev = 1. / std::sqrt(variance + epsilon);
+}
+
+static Mat fastNormReference(const Mat& input, size_t normSize, float epsilon,
+                             bool recenter, bool normalizeVariance,
+                             const Mat* scale = 0, const Mat* bias = 0)
+{
+    Mat reference(input.size, CV_32F);
+    const float* src = input.ptr<float>();
+    float* dst = reference.ptr<float>();
+    const float* scaleData = scale ? scale->ptr<float>() : 0;
+    const float* biasData = bias ? bias->ptr<float>() : 0;
+    const size_t loops = input.total() / normSize;
+
+    for (size_t i = 0; i < loops; ++i)
+    {
+        double mean, invStdDev;
+        fastNormReferenceMoments(src, normSize, recenter, mean, invStdDev, epsilon);
+        if (!normalizeVariance)
+            invStdDev = 1.;
+        for (size_t j = 0; j < normSize; ++j)
+        {
+            double value = (src[j] - mean) * invStdDev;
+            if (scaleData)
+                value *= scaleData[j];
+            if (biasData)
+                value += biasData[j];
+            dst[j] = (float)value;
+        }
+        src += normSize;
+        dst += normSize;
+    }
+    return reference;
+}
+
+TEST(DNN_FastNorm, LayerNorm)
+{
+    const int normSizes[] = {3, 13, 127};
+    for (int normSize : normSizes)
+    {
+        Mat input({2, 3, normSize}, CV_32F);
+        Mat scale(normSize, 1, CV_32F), bias(normSize, 1, CV_32F);
+        fillFastNormInput(input);
+        randu(scale, 0.5f, 1.5f);
+        randu(bias, -0.5f, 0.5f);
+
+        LayerParams params;
+        params.set("axis", 2);
+        params.set("epsilon", 1e-5f);
+        Mat actual = runFastNormLayer("LayerNormalization", params, {input, scale, bias});
+        Mat expected = fastNormReference(input, normSize, 1e-5f, true, true, &scale, &bias);
+        normAssert(actual, expected, format("LayerNorm norm_size=%d", normSize).c_str(), 1e-5, 1e-4);
+
+        actual = runFastNormLayer("LayerNormalization", params, {input, scale});
+        expected = fastNormReference(input, normSize, 1e-5f, true, true, &scale);
+        normAssert(actual, expected, format("LayerNorm without bias norm_size=%d", normSize).c_str(), 1e-5, 1e-4);
+    }
+
+    Mat input({2, 3, 13}, CV_32F, Scalar(4.25f));
+    Mat scale(13, 1, CV_32F, Scalar(1.25f));
+    Mat bias(13, 1, CV_32F);
+    randu(bias, -0.5f, 0.5f);
+    LayerParams params;
+    params.set("axis", 2);
+    params.set("epsilon", 1e-5f);
+    Mat actual = runFastNormLayer("LayerNormalization", params, {input, scale, bias});
+    Mat expected = fastNormReference(input, 13, 1e-5f, true, true, &scale, &bias);
+    normAssert(actual, expected, "LayerNorm constant input", 1e-6, 1e-5);
+}
+
+TEST(DNN_FastNorm, RMSNorm)
+{
+    const int normSizes[] = {3, 13, 127};
+    for (int normSize : normSizes)
+    {
+        Mat input({2, 3, 1, normSize}, CV_32F);
+        Mat scale(1, normSize, CV_32F);
+        fillFastNormInput(input);
+        randu(scale, 0.5f, 1.5f);
+
+        LayerParams params;
+        params.set("axis", 2);
+        params.set("epsilon", 1e-5f);
+        Mat actual = runFastNormLayer("RMSNormalization", params, {input, scale});
+        Mat expected = fastNormReference(input, normSize, 1e-5f, false, true, &scale);
+        normAssert(actual, expected, format("RMSNorm norm_size=%d", normSize).c_str(), 1e-5, 1e-4);
+    }
+}
+
+TEST(DNN_FastNorm, MVN)
+{
+    Mat input({2, 3, 5, 13}, CV_32F);
+    fillFastNormInput(input);
+
+    for (int acrossChannels = 0; acrossChannels <= 1; ++acrossChannels)
+    {
+        for (int normalizeVariance = 0; normalizeVariance <= 1; ++normalizeVariance)
+        {
+            LayerParams params;
+            params.set("across_channels", acrossChannels != 0);
+            params.set("normalize_variance", normalizeVariance != 0);
+            params.set("eps", 1e-5f);
+            Mat actual = runFastNormLayer("MVN", params, {input});
+            const size_t normSize = acrossChannels ? 3 * 5 * 13 : 5 * 13;
+            Mat expected = fastNormReference(input, normSize, 1e-5f, true, normalizeVariance != 0);
+            normAssert(actual, expected,
+                       format("MVN across_channels=%d normalize_variance=%d",
+                              acrossChannels, normalizeVariance).c_str(), 1e-5, 1e-4);
+        }
+    }
+}
+
+TEST(DNN_FastNorm, InstanceNorm)
+{
+    const int N = 2, C = 3, H = 5, W = 13;
+    Mat input({N, C, H, W}, CV_32F);
+    Mat scale(C, 1, CV_32F), bias(C, 1, CV_32F);
+    fillFastNormInput(input);
+    randu(scale, 0.5f, 1.5f);
+    randu(bias, -0.5f, 0.5f);
+
+    LayerParams params;
+    params.set("epsilon", 1e-5f);
+    Mat actual = runFastNormLayer("InstanceNormalization", params, {input, scale, bias});
+    Mat expected(input.size, CV_32F);
+    const size_t spatialSize = H * W;
+    for (int n = 0; n < N; ++n)
+        for (int c = 0; c < C; ++c)
+        {
+            const float* src = input.ptr<float>() + (n * C + c) * spatialSize;
+            float* dst = expected.ptr<float>() + (n * C + c) * spatialSize;
+            double mean, invStdDev;
+            fastNormReferenceMoments(src, spatialSize, true, mean, invStdDev, 1e-5f);
+            for (size_t j = 0; j < spatialSize; ++j)
+                dst[j] = (float)(scale.at<float>(c) * (src[j] - mean) * invStdDev + bias.at<float>(c));
+        }
+    normAssert(actual, expected, "InstanceNorm", 1e-5, 1e-4);
+}
+
+TEST(DNN_FastNorm, GroupNorm)
+{
+    const int N = 2, C = 6, H = 5, W = 13, numGroups = 3;
+    Mat input({N, C, H, W}, CV_32F);
+    Mat scale(C, 1, CV_32F), bias(C, 1, CV_32F);
+    fillFastNormInput(input);
+    randu(scale, 0.5f, 1.5f);
+    randu(bias, -0.5f, 0.5f);
+
+    LayerParams params;
+    params.set("epsilon", 1e-5f);
+    params.set("num_groups", numGroups);
+    Mat actual = runFastNormLayer("GroupNormalization", params, {input, scale, bias});
+    Mat expected(input.size, CV_32F);
+    const size_t spatialSize = H * W;
+    const size_t channelsPerGroup = C / numGroups;
+    const size_t normSize = channelsPerGroup * spatialSize;
+    for (int n = 0; n < N; ++n)
+        for (int g = 0; g < numGroups; ++g)
+        {
+            const float* src = input.ptr<float>() + (n * C + g * channelsPerGroup) * spatialSize;
+            float* dst = expected.ptr<float>() + (n * C + g * channelsPerGroup) * spatialSize;
+            double mean, invStdDev;
+            fastNormReferenceMoments(src, normSize, true, mean, invStdDev, 1e-5f);
+            for (size_t c = 0; c < channelsPerGroup; ++c)
+            {
+                const size_t channel = g * channelsPerGroup + c;
+                for (size_t j = 0; j < spatialSize; ++j)
+                {
+                    const size_t index = c * spatialSize + j;
+                    dst[index] = (float)(scale.at<float>((int)channel) * (src[index] - mean) * invStdDev +
+                                         bias.at<float>((int)channel));
+                }
+            }
+        }
+    normAssert(actual, expected, "GroupNorm", 1e-5, 1e-4);
+}
+
 }} // namespace
