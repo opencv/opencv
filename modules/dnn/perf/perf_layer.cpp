@@ -474,6 +474,94 @@ PERF_TEST_P_(Layer_LayerNorm, LayerNorm)
     test_layer({N, H ,W});
 }
 
+struct Layer_RMSNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape, int axis)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        std::vector<int> scale_shape(x_shape.begin() + axis, x_shape.end());
+        Mat scale(scale_shape, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "RMSNormalization";
+        lp.name = "testLayer";
+        lp.set("axis", axis);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+
+        std::vector<String> inpNames{"x", "scale"};
+        net.setInputsNames(inpNames);
+        net.setInput(x, inpNames[0]);
+        net.setInput(scale, inpNames[1]);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        TEST_CYCLE()
+        {
+            out = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_RMSNorm, RMSNorm)
+{
+    test_layer({1, 50, 1, 768}, 2);
+}
+
+struct Layer_MVN : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape, bool across_channels)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        randu(x, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "testLayer";
+        lp.set("normalize_variance", true);
+        lp.set("across_channels", across_channels);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+
+        net.setInput(x);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        TEST_CYCLE()
+        {
+            out = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_MVN, MVN)
+{
+    test_layer({2, 64, 180, 240}, false);
+}
+
+PERF_TEST_P_(Layer_MVN, MVNAcrossChannels)
+{
+    test_layer({2, 64, 180, 240}, true);
+}
+
 struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& x_shape)
@@ -850,6 +938,8 @@ INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple
 INSTANTIATE_TEST_CASE_P(VULKAN, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN)));
 #endif
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_RMSNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_MVN, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
