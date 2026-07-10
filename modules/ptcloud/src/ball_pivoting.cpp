@@ -18,6 +18,10 @@ namespace cv {
 
 namespace {
 
+// Generous per-query neighbor cap for the local (radius ~2r) searches. Large enough that a
+// well-sampled front is never truncated; kept finite as a guard against pathological density.
+static const int kMaxNeighbors = 256;
+
 // A directed edge on the advancing front, bounding the triangle whose third vertex is `opp`.
 struct FrontEdge
 {
@@ -26,15 +30,40 @@ struct FrontEdge
     bool active;         // false once frozen as a boundary edge (may be retried with a larger ball)
 };
 
+// Median nearest-neighbor distance over a bounded sample (approximate search is fine for a
+// robust median). Shared by estimateMeanSpacing and BallPivoter::medianSpacing.
+static float medianNN(flann::Index& index, const Mat& ptsMat)
+{
+    const int N = ptsMat.rows;
+    const int sample = std::min(N, 1000);
+    std::vector<float> nn; nn.reserve(sample);
+    for (int s = 0; s < sample; s++)
+    {
+        int i = (int)((long long)s * N / sample);
+        float buf[3] = { ptsMat.at<float>(i,0), ptsMat.at<float>(i,1), ptsMat.at<float>(i,2) };
+        Mat q(1, 3, CV_32F, buf), qi, qd;
+        index.knnSearch(q, qi, qd, 2, flann::SearchParams());   // [0] self, [1] nearest other
+        if (qd.cols >= 2) nn.push_back(std::sqrt(qd.at<float>(1)));
+    }
+    if (nn.empty()) return 0.f;
+    std::nth_element(nn.begin(), nn.begin() + nn.size() / 2, nn.end());
+    return nn[nn.size() / 2];
+}
+
 class BallPivoter
 {
 public:
     BallPivoter(const std::vector<Point3f>& points, const std::vector<Vec3f>& normals)
-        : pts(points), nrm(normals), N((int)points.size()), r(0.f), used(N, 0)
+        : pts(points), nrm(normals), N((int)points.size()), r(0.f),
+          exact(cvflann::FLANN_CHECKS_UNLIMITED),  // BPA predicates need EXACT neighbor sets
+          used(N, 0)
     {
         ptsMat = Mat(pts).reshape(1, N);   // N x 3, CV_32F
-        index = makePtr<flann::Index>(ptsMat, flann::KDTreeIndexParams(4));
+        index = makePtr<flann::Index>(ptsMat, flann::KDTreeIndexParams(1));   // single tree for exact search
     }
+
+    // Mean point spacing from this pivoter's own index (avoids building a second kd-tree).
+    float medianSpacing() { return medianNN(*index, ptsMat); }
 
     // Roll each radius in turn (ascending): smaller balls first, larger balls fill the leftover gaps.
     void run(std::vector<Vec3i>& tris, const std::vector<float>& radii)
@@ -72,6 +101,9 @@ public:
                     e->active = false;                          // boundary edge (retried at a larger radius)
                 }
             }
+            if (iters >= maxIters)
+                CV_LOG_WARNING(NULL, "BPA: iteration cap hit at radius " << r
+                                     << "; the mesh may be incomplete");
         }
     }
 
@@ -82,6 +114,7 @@ private:
     float r;
     Mat ptsMat;
     Ptr<flann::Index> index;
+    flann::SearchParams exact;                                  // FLANN_CHECKS_UNLIMITED
     std::vector<char> used;                                     // point belongs to >=1 triangle
 
     std::list<FrontEdge> front;
@@ -103,8 +136,9 @@ private:
     // --- neighbor queries -------------------------------------------------------------------------
     void neighbors(const Point3f& p, float rad, int maxN, std::vector<int>& out) const
     {
-        Mat q = (Mat_<float>(1,3) << p.x, p.y, p.z), idx, dist;
-        int found = index->radiusSearch(q, idx, dist, (double)(rad * rad), maxN, flann::SearchParams());
+        float buf[3] = { p.x, p.y, p.z };                       // stack query (no per-call alloc)
+        Mat q(1, 3, CV_32F, buf), idx, dist;
+        int found = index->radiusSearch(q, idx, dist, (double)(rad * rad), maxN, exact);
         out.clear();
         int cnt = std::min(found, idx.cols);
         for (int t = 0; t < cnt; t++)
@@ -141,7 +175,7 @@ private:
     bool ballEmpty(const Point3f& center, int e0, int e1, int e2) const
     {
         std::vector<int> nb;
-        neighbors(center, r * (1.f - 1e-3f), 64, nb);
+        neighbors(center, r * (1.f - 1e-3f), kMaxNeighbors, nb);
         for (int k : nb)
             if (k != e0 && k != e1 && k != e2) return false;
         return true;
@@ -217,7 +251,7 @@ private:
         Vec3f wdir = axis.cross(a0);
 
         std::vector<int> nb;
-        neighbors(mid, 2.f * r, 128, nb);
+        neighbors(mid, 2.f * r, kMaxNeighbors, nb);
 
         float best = FLT_MAX; int bestK = -1; Point3f bestC;
         for (int k : nb)
@@ -251,7 +285,7 @@ private:
             int i = cursor;
             if (used[i]) continue;
             std::vector<int> nb;
-            neighbors(pts[i], 2.f * r, 128, nb);
+            neighbors(pts[i], 2.f * r, kMaxNeighbors, nb);
             for (size_t x = 0; x < nb.size(); x++)
             {
                 int a = nb[x];
@@ -298,20 +332,7 @@ float estimateMeanSpacing(InputArray inputCloud)
 
     Mat ptsMat = Mat(pts).reshape(1, N);   // N x 3, CV_32F
     flann::Index index(ptsMat, flann::KDTreeIndexParams(4));
-
-    // Median nearest-neighbor distance over a bounded sample.
-    const int sample = std::min(N, 1000);
-    std::vector<float> nn; nn.reserve(sample);
-    for (int s = 0; s < sample; s++)
-    {
-        int i = (int)((long long)s * N / sample);
-        Mat q = ptsMat.row(i), qi, qd;
-        index.knnSearch(q, qi, qd, 2, flann::SearchParams());   // [0] is self, [1] is nearest other
-        if (qd.cols >= 2) nn.push_back(std::sqrt(qd.at<float>(1)));
-    }
-    if (nn.empty()) return 0.f;
-    std::nth_element(nn.begin(), nn.begin() + nn.size() / 2, nn.end());
-    return nn[nn.size() / 2];
+    return medianNN(index, ptsMat);
 }
 
 void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray vertices,
@@ -332,12 +353,14 @@ void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray verti
     for (int i = 0; i < N; i++)
         nrm[i] = normalize(nmf.at<Vec3f>(i));
 
+    BallPivoter bp(pts, nrm);   // builds the kd-tree once; reused for spacing and pivoting
+
     // Radii: caller-supplied, else derived from the mean point spacing (detail pass + two
     // gap-bridging passes).
     std::vector<float> radii;
     if (radii_.empty())
     {
-        float s = estimateMeanSpacing(inputCloud);
+        float s = bp.medianSpacing();
         if (s <= 0.f) { vertices.release(); triangles.release(); return; }
         radii = { 1.0f * s, 2.0f * s, 4.0f * s };
     }
@@ -351,7 +374,6 @@ void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray verti
     }
     if (radii.empty()) { vertices.release(); triangles.release(); return; }
 
-    BallPivoter bp(pts, nrm);
     std::vector<Vec3i> tris;
     bp.run(tris, radii);
 

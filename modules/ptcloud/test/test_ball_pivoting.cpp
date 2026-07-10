@@ -88,6 +88,49 @@ TEST(Ptcloud_BPA, mean_spacing_grid)
     EXPECT_NEAR(estimateMeanSpacing(cloud), 0.1f, 1e-3f);
 }
 
+// Non-uniform sampling + surface noise: the input that actually exercises the exact
+// empty-ball / candidate searches (a perfectly uniform sphere hides approximate-search bugs).
+// The result must stay manifold: every undirected edge is shared by at most two triangles.
+TEST(Ptcloud_BPA, manifold_on_noisy_sphere)
+{
+    RNG rng(7);
+    std::vector<Point3f> pts;
+    const float ga = (float)(CV_PI * (3.0 - std::sqrt(5.0)));
+    for (int i = 0; i < 3000; i++)
+    {
+        // random (non-stratified) sampling + radial/positional jitter
+        float u = (float)rng.uniform(0.0, 1.0);
+        float z = 1.f - 2.f * u;
+        float r = std::sqrt(std::max(0.f, 1.f - z * z));
+        float t = ga * i + (float)rng.uniform(-0.1, 0.1);
+        float rad = 1.f + (float)rng.gaussian(0.01);
+        pts.emplace_back(rad * r * std::cos(t) + (float)rng.gaussian(0.005),
+                         rad * r * std::sin(t) + (float)rng.gaussian(0.005),
+                         rad * z + (float)rng.gaussian(0.005));
+    }
+    Mat cloud(pts);
+    Mat normals = orientedNormals(cloud, 15);
+
+    Mat vertices, triangles;
+    createMeshBPA(cloud, normals, vertices, triangles);
+    ASSERT_FALSE(triangles.empty());
+
+    std::map<std::pair<int,int>, int> edgeUse;
+    for (int i = 0; i < triangles.rows; i++)
+    {
+        const int* t = triangles.ptr<int>(i);
+        for (int e = 0; e < 3; e++)
+        {
+            int a = t[e], b = t[(e + 1) % 3];
+            edgeUse[{std::min(a,b), std::max(a,b)}]++;
+        }
+    }
+    int nonManifold = 0;
+    for (const auto& kv : edgeUse)
+        if (kv.second > 2) nonManifold++;
+    EXPECT_EQ(nonManifold, 0) << nonManifold << " edges shared by >2 triangles";
+}
+
 TEST(Ptcloud_BPA, empty_and_tiny)
 {
     Mat empty, v, t;
