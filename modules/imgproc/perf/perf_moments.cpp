@@ -15,7 +15,7 @@ typedef perf::TestBaseWithParam<MomentsParams_t> MomentsFixture_val;
 PERF_TEST_P(MomentsFixture_val, Moments1,
     ::testing::Combine(
     testing::Values(TYPICAL_MAT_SIZES),
-    testing::Values(CV_16U, CV_16S, CV_32F, CV_64F),
+    testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
     testing::Bool()))
 {
     const MomentsParams_t params = GetParam();

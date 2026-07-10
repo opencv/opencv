@@ -12,7 +12,7 @@ typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 PERF_TEST_P(Size_MatType_ROp, reduceR,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(TYPICAL_MAT_TYPES),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                 ROp::all()
                 )
             )
@@ -40,7 +40,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
 PERF_TEST_P(Size_MatType_ROp, reduceC,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(TYPICAL_MAT_TYPES),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                 ROp::all()
                 )
             )

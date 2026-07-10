@@ -4,7 +4,8 @@ namespace opencv_test
 {
 using namespace perf;
 
-PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, sum, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4 ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -19,7 +20,8 @@ PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
     SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
 }
 
-PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, mean, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4 ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -34,7 +36,8 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
     SANITY_CHECK(s, 1e-5);
 }
 
-PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, mean_mask, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4 ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -50,7 +53,8 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
     SANITY_CHECK(s, 5e-5);
 }
 
-PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, meanStdDev, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4 ) ))
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
@@ -67,7 +71,8 @@ PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
     SANITY_CHECK(dev, 1e-5, ERROR_RELATIVE);
 }
 
-PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, meanStdDev_mask, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4 ) ))
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());

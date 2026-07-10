@@ -436,6 +436,30 @@ PERF_TEST_P_(BinaryOpTest, transpose2d)
     SANITY_CHECK_NOTHING();
 }
 
+// Multichannel transpose (matches IPP perf coverage: 8U/16U/32F x C1/C3/C4)
+typedef Size_MatType TransposeMultiChannelTest;
+
+PERF_TEST_P_(TransposeMultiChannelTest, transpose2d_multichannel)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    Size tsz = Size(sz.height, sz.width);
+    cv::Mat a(sz, type), b(tsz, type);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transpose(a, b);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeMultiChannelTest,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+    )
+);
+
 static cv::Mat makeTransposeNDOutput(const cv::Mat& src, const std::vector<int>& order)
 {
     std::vector<int> new_sz(order.size());
@@ -526,7 +550,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1)
     )
 );
 

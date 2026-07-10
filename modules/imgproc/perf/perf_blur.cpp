@@ -11,7 +11,7 @@ typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;
 PERF_TEST_P(Size_MatType_kSize, medianBlur,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1),
                 testing::Values(3, 5)
                 )
             )
@@ -27,6 +27,31 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
 
     if (CV_MAT_DEPTH(type) > CV_16S || CV_MAT_CN(type) > 1)
         declare.time(15);
+
+    TEST_CYCLE() medianBlur(src, dst, ksize);
+
+    SANITY_CHECK(dst);
+}
+
+// Large median kernels (matches IPP perf coverage: ksize 7, 21).
+// cv::medianBlur only supports aperture > 5 for CV_8U, so this is 8-bit only.
+PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
+            testing::Combine(
+                testing::Values(szODD, szQVGA, szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4),
+                testing::Values(7, 21)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    declare.time(15);
 
     TEST_CYCLE() medianBlur(src, dst, ksize);
 
@@ -52,7 +77,7 @@ typedef perf::TestBaseWithParam<Size_MatType_BorderType_ksize_t> Size_MatType_Bo
 PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3),
                 BorderType3x3::all()
                 )
             )
@@ -121,9 +146,9 @@ PERF_TEST_P(Size_MatType_BorderType, blur16x16,
 PERF_TEST_P(Size_MatType_BorderType_ksize, box,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_32FC3),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4),
                 BorderType::all(),
-                testing::Values(3, 5)
+                testing::Values(3, 5, 7, 21)
                 )
             )
 {
@@ -199,7 +224,7 @@ PERF_TEST_P(Size_MatType_BorderType_ksize, box_inplace,
 PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3),
                 BorderType::all()
                 )
             )
@@ -214,6 +239,32 @@ PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
     declare.in(src, WARMUP_RNG).out(dst);
 
     TEST_CYCLE() GaussianBlur(src, dst, Size(5,5), 0, 0, btype);
+
+    SANITY_CHECK(dst, 1);
+}
+
+// Larger Gaussian kernels (matches IPP perf coverage: kernel sizes 7 and 21)
+PERF_TEST_P(Size_MatType_BorderType_ksize, gaussianBlur,
+            testing::Combine(
+                testing::Values(szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3),
+                BorderType::all(),
+                testing::Values(7, 21)
+                )
+            )
+{
+    auto p = GetParam();
+    Size       size  = get<0>(p);
+    int        type  = get<1>(p);
+    BorderType btype = get<2>(p);
+    int        ksize = get<3>(p);
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() GaussianBlur(src, dst, Size(ksize, ksize), 0, 0, btype);
 
     SANITY_CHECK(dst, 1);
 }

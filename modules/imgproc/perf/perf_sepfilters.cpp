@@ -346,4 +346,57 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
     SANITY_CHECK(dst);
 }
 
+/**************** Sobel / Scharr with 32F source ********************/
+// Matches IPP perf coverage: Sobel/Scharr also run on CV_32FC1 input (32F -> 32F).
+
+PERF_TEST_P(Size_MatType_dx_dy_Border3x3, sobelFilter_32f,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(CV_32F),
+                testing::Values(make_tuple(0, 1), make_tuple(1, 0), make_tuple(1, 1), make_tuple(0, 2), make_tuple(2, 0), make_tuple(2, 2)),
+                BorderType3x3::all()
+            )
+          )
+{
+    Size size = get<0>(GetParam());
+    int ddepth = get<1>(GetParam());
+    int dx = get<0>(get<2>(GetParam()));
+    int dy = get<1>(get<2>(GetParam()));
+    BorderType3x3 border = get<3>(GetParam());
+
+    Mat src(size, CV_32F);
+    Mat dst(size, ddepth);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, 3, 1, 0, border);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter_32f,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(CV_32F),
+                testing::Values(make_tuple(0, 1), make_tuple(1, 0)),
+                BorderType3x3::all()
+            )
+          )
+{
+    Size size = get<0>(GetParam());
+    int ddepth = get<1>(GetParam());
+    int dx = get<0>(get<2>(GetParam()));
+    int dy = get<1>(get<2>(GetParam()));
+    BorderType3x3 border = get<3>(GetParam());
+
+    Mat src(size, CV_32F);
+    Mat dst(size, ddepth);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() Scharr(src, dst, ddepth, dx, dy, 1, 0, border);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
