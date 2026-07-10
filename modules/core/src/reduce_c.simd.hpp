@@ -827,14 +827,8 @@ static void reduceColSum2_8uFallback(const Mat& srcmat, Mat& dstmat)
 template<typename DT>
 static void reduceColSum2_8uC1(const Mat& srcmat, Mat& dstmat)
 {
-#if CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+#if (CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))) || CV_AVX2
     const int cols = srcmat.cols;
-#elif CV_AVX2
-    const int cols = srcmat.cols;
-#else
-    reduceColSum2_8uFallback<DT>(srcmat, dstmat);
-    return;
-#endif
 
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
@@ -869,6 +863,9 @@ static void reduceColSum2_8uC1(const Mat& srcmat, Mat& dstmat)
         }
     });
     v_cleanup();
+#else
+    reduceColSum2_8uFallback<DT>(srcmat, dstmat);
+#endif
 }
 
 template<typename DT>
