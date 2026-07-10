@@ -50,6 +50,28 @@
 #define CV_MAHALANOBIS_BASELINE_ONLY
 #define CV_MULTRANSPOSED_BASELINE_ONLY
 
+// The SIMD GEMM kernels below reorder floating-point accumulation (and use FMA
+// where the ISA provides it), producing a result that is correct (<1e-9 vs a
+// long-double reference) but differs from the scalar reference in the last bits.
+// The multi-view camera-calibration solver is ill-conditioned - fisheye
+// ComputeHomography forms L^T*L, takes an SVD, then iterates (J^T*J)^-1 - so it
+// amplifies that tiny deviation enough to flip its outcome on some build targets.
+// CI (PR #29472, RegisterCamerasTest) shows this only on the 32-bit x86 (Windows)
+// and macOS-x64 (Intel) jobs; Windows x64, macOS-ARM64 and all Linux targets pass.
+// FP background: on 32-bit x86 the x87 FPU holds intermediates in 80-bit extended
+// precision whereas SIMD accumulates in 64-bit; on modern x86-64 and ARM both
+// scalar and SIMD use strict IEEE-754 width (64-bit double / 32-bit float, no
+// hidden extended precision). The failure is therefore a toolchain/ABI-specific
+// bifurcation rather than a single-feature effect, so we simply keep the
+// reference-matching scalar GEMM path on the affected targets.
+#ifndef CV_GEMM_SIMD_ENABLED
+#if defined(__i386__) || defined(_M_IX86) || (defined(__APPLE__) && defined(__x86_64__))
+#define CV_GEMM_SIMD_ENABLED 0
+#else
+#define CV_GEMM_SIMD_ENABLED 1
+#endif
+#endif
+
 namespace cv {
 
 // forward declarations
@@ -620,7 +642,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             {
                 WT s0(0);
                 k = 0;
-#if CV_SIMD
+#if CV_SIMD && CV_GEMM_SIMD_ENABLED
                 if( sizeof(WT) == sizeof(double) )
                 {
 #if CV_SIMD_64F
@@ -674,7 +696,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             }
 
             j = 0;
-#if CV_SIMD
+#if CV_SIMD && CV_GEMM_SIMD_ENABLED
             if( sizeof(WT) == sizeof(double) )
             {
 #if CV_SIMD_64F
@@ -954,7 +976,7 @@ GEMMBlockMul( const T* a_data, size_t a_step,
             {
                 WT s0 = do_acc ? d_data[j] : WT(0);
                 k = 0;
-#if CV_SIMD
+#if CV_SIMD && CV_GEMM_SIMD_ENABLED
                 if( sizeof(WT) == sizeof(double) )
                 {
 #if CV_SIMD_64F
@@ -996,7 +1018,7 @@ GEMMBlockMul( const T* a_data, size_t a_step,
                     a_buf[k] = a_data[a_step1*k];
                 a_data = a_buf;
             }
-#if CV_SIMD_64F
+#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
             if( sizeof(WT) == sizeof(double) )
             {
                 if( sizeof(T) == sizeof(double) )
