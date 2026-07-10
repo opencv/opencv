@@ -15,6 +15,9 @@
 // Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
 #define IPP_DISABLE_FILTER2D_BIG_MASK 1
 
+// IPP Hough integration is disabled in main OpenCV (improper integration/results); kept behind a macro
+#define DISABLE_IPP_HOUGH 1
+
 #if IPP_VERSION_X100 >= 810
 
 #if defined(HAVE_IPP_IW)
@@ -89,6 +92,27 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
 #undef cv_hal_filter_stateless
 #define cv_hal_filter_stateless ipp_hal_filter2D
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
+
+#if !DISABLE_IPP_HOUGH
+int ipp_hal_houghLines(const uchar* src_data, size_t src_step, int width, int height,
+                       float rho, float theta, int threshold, int numangle,
+                       double min_theta, double max_theta,
+                       int lines_max, float** out_lines, int* out_count);
+#undef cv_hal_houghLines
+#define cv_hal_houghLines ipp_hal_houghLines
+
+int ipp_hal_houghLinesProbabilistic(const uchar* src_data, size_t src_step, int width, int height,
+                                    float rho, float theta, int threshold,
+                                    int line_length, int line_gap,
+                                    int numangle, int numrho,
+                                    int lines_max, int** out_lines, int* out_count);
+#undef cv_hal_houghLinesProbabilistic
+#define cv_hal_houghLinesProbabilistic ipp_hal_houghLinesProbabilistic
+
+void ipp_hal_houghLinesFree(void* lines);
+#undef cv_hal_houghLinesFree
+#define cv_hal_houghLinesFree ipp_hal_houghLinesFree
+#endif // !DISABLE_IPP_HOUGH
 
 #endif //IPP_VERSION_X100 >= 810
 

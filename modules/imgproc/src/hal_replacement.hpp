@@ -1560,6 +1560,69 @@ inline int hal_ni_canny_deriv(const short* dx_data, size_t dx_step, const short*
 //! @endcond
 
 /**
+   @brief Standard Hough transform for line detection
+   @param src_data Source image (edge map) data
+   @param src_step Source image step
+   @param width Source image width
+   @param height Source image height
+   @param rho Distance resolution of the accumulator in pixels
+   @param theta Angle resolution of the accumulator in radians
+   @param threshold Accumulator threshold
+   @param numangle Number of angle bins of the accumulator
+   @param min_theta Minimum angle to check for lines
+   @param max_theta Maximum angle to check for lines
+   @param lines_max Upper bound on the number of output lines
+   @param out_lines Output (rho, theta) pairs, 2 floats per line; allocated by the callee, released with cv_hal_houghLinesFree
+   @param out_count Number of output lines written to out_lines
+   @note out_lines/out_count are valid only when the function returns CV_HAL_ERROR_OK
+   @sa HoughLines
+*/
+inline int hal_ni_houghLines(const uchar* src_data, size_t src_step, int width, int height,
+                             float rho, float theta, int threshold, int numangle,
+                             double min_theta, double max_theta,
+                             int lines_max, float** out_lines, int* out_count)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Probabilistic Hough transform for line detection
+   @param src_data Source image (edge map) data
+   @param src_step Source image step
+   @param width Source image width
+   @param height Source image height
+   @param rho Distance resolution of the accumulator in pixels
+   @param theta Angle resolution of the accumulator in radians
+   @param threshold Accumulator threshold
+   @param line_length Minimum line length
+   @param line_gap Maximum allowed gap between points on the same line
+   @param numangle Number of angle bins of the accumulator
+   @param numrho Number of distance bins of the accumulator
+   @param lines_max Upper bound on the number of output line segments
+   @param out_lines Output line segments (x1, y1, x2, y2), 4 ints per segment; allocated by the callee, released with cv_hal_houghLinesFree
+   @param out_count Number of output line segments written to out_lines
+   @note out_lines/out_count are valid only when the function returns CV_HAL_ERROR_OK
+   @sa HoughLinesP
+*/
+inline int hal_ni_houghLinesProbabilistic(const uchar* src_data, size_t src_step, int width, int height,
+                                           float rho, float theta, int threshold,
+                                           int line_length, int line_gap,
+                                           int numangle, int numrho,
+                                           int lines_max, int** out_lines, int* out_count)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Release a buffer returned by cv_hal_houghLines / cv_hal_houghLinesProbabilistic
+   @param lines Buffer previously returned in out_lines
+*/
+inline void hal_ni_houghLinesFree(void* lines)
+{ (void)lines; }
+
+//! @cond IGNORED
+#define cv_hal_houghLines hal_ni_houghLines
+#define cv_hal_houghLinesProbabilistic hal_ni_houghLinesProbabilistic
+#define cv_hal_houghLinesFree hal_ni_houghLinesFree
+//! @endcond
+
+/**
    @brief Calculates a histogram of a set of arrays
    @param src_data Source imgage data
    @param src_step Source image step
