@@ -10,6 +10,7 @@
 #include "rpp_hal_imgproc.hpp"
 #include "rpp_hal_utils.hpp"
 #include <rpp/rppt_tensor_geometric_augmentations.h>
+#include <rpp/rppt_tensor_filter_augmentations.h>
 
 using namespace cv::hal::rpp;
 
@@ -281,12 +282,65 @@ extern "C" int rpp_hal_boxFilter(const uchar* src_data, size_t src_step,
                                  size_t ksize_width, size_t ksize_height,
                                  int anchor_x, int anchor_y,
                                  bool normalize, int border_type) {
-    (void)src_data; (void)src_step; (void)dst_data; (void)dst_step;
-    (void)width; (void)height; (void)src_depth; (void)dst_depth; (void)cn;
     (void)margin_left; (void)margin_top; (void)margin_right; (void)margin_bottom;
-    (void)ksize_width; (void)ksize_height; (void)anchor_x; (void)anchor_y;
-    (void)normalize; (void)border_type;
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    (void)anchor_x; (void)anchor_y; (void)normalize;
+
+    // RPP box_filter requires square kernel and only supports REPLICATE border.
+    if (ksize_width != ksize_height) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if (border_type != cv::BORDER_REPLICATE) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if (src_depth != dst_depth) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if (!supportedDepth(src_depth)) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if (cn != 1 && cn != 3) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RppPath path = selectRppPath();
+    if (path == RPP_NONE) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RpptDesc srcDesc;
+    buildDesc(srcDesc, width, height, cn, src_depth);
+    RpptDesc dstDesc;
+    buildDesc(dstDesc, width, height, cn, dst_depth);
+    RpptROI roi;
+    buildRoi(roi, width, height);
+
+    RppBackend backend = (path == RPP_GPU) ? RPP_HIP_BACKEND : RPP_HOST_BACKEND;
+    Rpp32u kernelSize = static_cast<Rpp32u>(ksize_width);
+    RpptImageBorderType border = REPLICATE;
+
+    if (path == RPP_GPU) {
+        void* d_src = nullptr;
+        void* d_dst = nullptr;
+        if (!uploadRawToHip(src_data, src_step, width, height, src_depth, cn, &d_src) ||
+            !uploadRawToHip(dst_data, dst_step, width, height, dst_depth, cn, &d_dst)) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        rppHandle_t handle = createRppGpuHandle(1);
+        if (!handle) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        RppStatus status = rppt_box_filter(d_src, &srcDesc, d_dst, &dstDesc,
+                                           kernelSize, border, &roi, XYWH, handle, backend);
+
+        bool ok = (status == RPP_SUCCESS);
+        if (ok) {
+            ok = downloadRawFromHip(d_dst, dst_data, dst_step, width, height, dst_depth, cn);
+        }
+        destroyRppGpuHandle(handle);
+        freeHipPtr(d_src); freeHipPtr(d_dst);
+        return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    rppHandle_t handle = createRppCpuHandle(1);
+    if (!handle) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RppStatus status = rppt_box_filter(const_cast<uchar*>(src_data), &srcDesc,
+                                       dst_data, &dstDesc,
+                                       kernelSize, border, &roi, XYWH, handle, backend);
+    destroyRppCpuHandle(handle);
+    return (status == RPP_SUCCESS) ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
 extern "C" int rpp_hal_gaussianBlur(const uchar* src_data, size_t src_step,

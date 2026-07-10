@@ -49,14 +49,29 @@ RpptDataType cvDepthToRppDataType(int cvDepth);
 // Memory helpers for GPU path
 // ---------------------------------------------------------------------------
 
-/** Allocate contiguous device buffer and copy from OpenCV mat (row-by-row) */
+/** Allocate contiguous device buffer and copy from OpenCV mat (row-by-row).
+ *  If pool is enabled, a cached buffer may be reused.
+ */
 bool uploadRawToHip(const void* host_ptr, size_t step, int w, int h, int depth, int cn, void** out_dev_ptr);
 
-/** Copy from contiguous device buffer back to OpenCV mat (row-by-row) */
+/** Copy from contiguous device buffer back to OpenCV mat (row-by-row).
+ *  The device pointer is returned to a pool for reuse unless the pool is disabled.
+ */
 bool downloadRawFromHip(void* dev_ptr, void* host_ptr, size_t step, int w, int h, int depth, int cn);
 
-/** Free HIP device pointer */
+/** Free a HIP device pointer obtained from uploadRawToHip.
+ *  When pooling is on this returns the buffer to the pool.
+ */
 void freeHipPtr(void* devPtr);
+
+/** Release all pooled HIP buffers and disable pooling. Call at process exit. */
+void releaseHipPool();
+
+/** Toggle device buffer pooling. Default enabled when RPP_BACKEND_HIP is defined. */
+void setHipPoolingEnabled(bool enabled);
+
+/** Returns true if device buffer pooling is currently enabled. */
+bool isHipPoolingEnabled();
 
 // ---------------------------------------------------------------------------
 // RPP Handle helpers

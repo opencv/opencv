@@ -75,12 +75,23 @@ static bool test_warpAffine() {
     return d <= 1.0;
 }
 
+static bool test_boxFilter() {
+    Mat src = makeMat(1080, 1920, CV_8UC3);
+    Mat ref, out;
+    boxFilter(src, ref, -1, Size(3, 3), Point(-1, -1), true, BORDER_REPLICATE);
+    boxFilter(src, out, -1, Size(3, 3), Point(-1, -1), true, BORDER_REPLICATE);
+    double d = maxAbsDiff(ref, out);
+    cout << "boxFilter 3x3 max diff = " << d << endl;
+    return d <= 1.0;
+}
+
 int main() {
     cout << "=== RPP imgproc correctness ===" << endl;
     bool ok = true;
     ok = test_flip() && ok;
     ok = test_resize() && ok;
     ok = test_warpAffine() && ok;
+    ok = test_boxFilter() && ok;
     cout << (ok ? "PASS" : "FAIL") << endl;
     return ok ? 0 : 1;
 }

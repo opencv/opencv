@@ -52,6 +52,18 @@ static BenchResult bench_resize(int w, int h, int iterations) {
             ms(t1, t2), iterations, !dst.empty()};
 }
 
+static BenchResult bench_boxFilter(int w, int h, int iterations) {
+    Mat src = makeMat(h, w, CV_8UC3);
+    Mat dst;
+    auto t1 = chrono::steady_clock::now();
+    for (int i = 0; i < iterations; ++i) {
+        boxFilter(src, dst, -1, Size(3, 3), Point(-1, -1), true, BORDER_REPLICATE);
+    }
+    auto t2 = chrono::steady_clock::now();
+    return {"boxFilter 3x3 8UC3 " + to_string(w) + "x" + to_string(h),
+            ms(t1, t2), iterations, !dst.empty()};
+}
+
 static BenchResult bench_warpAffine(int w, int h, int iterations) {
     Mat src = makeMat(h, w, CV_8UC3);
     double M_data[6] = {1.0, 0.1, 10.0, 0.05, 1.0, 20.0};
@@ -97,6 +109,7 @@ static void runSet(const string& label, int w, int h, int iterResize, int iterWa
     results.push_back(bench_resize(w, h, iterResize));
     results.push_back(bench_warpAffine(w, h, iterWarp));
     results.push_back(bench_flip(w, h, iterFlip));
+    results.push_back(bench_boxFilter(w, h, iterBitwise)); // reuse iter count
     results.push_back(bench_bitwise_and(w, h, iterBitwise));
 
     for (const auto& r : results) {
