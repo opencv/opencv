@@ -166,8 +166,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static constexpr float gradientDeltaFactor = 1.0f;  
-        static const int volumeUnitHideThreshold = 10;      
+        static constexpr float gradientDeltaFactor = 1.0f;
+        static const int volumeUnitHideThreshold = 10;
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
@@ -202,8 +202,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.25f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static constexpr float gradientDeltaFactor = 1.0f;  
-        static const int volumeUnitHideThreshold = 10;      
+        static constexpr float gradientDeltaFactor = 1.0f;
+        static const int volumeUnitHideThreshold = 10;
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
@@ -246,8 +246,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static constexpr float gradientDeltaFactor = 1.0f;  
-        static const int volumeUnitHideThreshold = 10;      
+        static constexpr float gradientDeltaFactor = 1.0f;
+        static const int volumeUnitHideThreshold = 10;
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
@@ -282,8 +282,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.25f; // similar to HashTSDF
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static constexpr float gradientDeltaFactor = 1.0f;  
-        static const int volumeUnitHideThreshold = 10;      
+        static constexpr float gradientDeltaFactor = 1.0f;
+        static const int volumeUnitHideThreshold = 10;
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;

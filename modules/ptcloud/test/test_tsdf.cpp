@@ -944,14 +944,14 @@ namespace
         VolumeType val;
     };
     const std::array<VolumeType, 4> VolumeTypeEnum::vals{
-        VolumeType::TSDF, 
-        VolumeType::HashTSDF, 
+        VolumeType::TSDF,
+        VolumeType::HashTSDF,
         VolumeType::ColorTSDF,
         VolumeType::ColorHashTSDF
     };
     const std::array<std::string, 4> VolumeTypeEnum::svals{
         std::string("TSDF"),
-        std::string("HashTSDF"), 
+        std::string("HashTSDF"),
         std::string("ColorTSDF"),
         std::string("ColorHashTSDF")
     };
