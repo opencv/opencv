@@ -6,6 +6,7 @@
 
 #include "../precomp.hpp"
 #include "ptcloud_utils.hpp"
+#include "opencv2/flann.hpp"   // internal kNN when nn_idx is not supplied
 
 namespace cv {
 
@@ -20,11 +21,27 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
     getPointsMatFromInputArray(input_pts_, ori_pts, 0);
     int pts_size = ori_pts.rows;
 
+    // When the caller does not provide neighbor indices, build them here with a kd-tree
+    // (max_neighbor_num is then the number of neighbors k, and must be >= 2). The first
+    // neighbor of each point is itself, exactly as the pre-computed nn_idx contract expects.
     std::vector<Mat> nn_idx;
-    nn_idx_.getMatVector(nn_idx);
-
-    CV_CheckEQ((int) nn_idx.size(), pts_size,
-            "The point number of NN search result should be equal to the size of the point cloud.");
+    Mat builtIdx;
+    const bool buildNN = nn_idx_.empty();
+    if (buildNN)
+    {
+        CV_Check(max_neighbor_num_, max_neighbor_num_ >= 2,
+                "When nn_idx is empty, max_neighbor_num (the number of neighbors k) must be >= 2.");
+        const int kk = std::min(max_neighbor_num_, pts_size);
+        flann::Index index(ori_pts, flann::KDTreeIndexParams(4));
+        Mat dists;
+        index.knnSearch(ori_pts, builtIdx, dists, kk);   // pts_size x kk, CV_32S
+    }
+    else
+    {
+        nn_idx_.getMatVector(nn_idx);
+        CV_CheckEQ((int) nn_idx.size(), pts_size,
+                "The point number of NN search result should be equal to the size of the point cloud.");
+    }
 
     if (normals.channels() == 3 && normals.isVector())
     {
@@ -49,9 +66,13 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         int cur_nei_idx;
         for (int i = range.start; i < range.end; ++i)
         {
+            // Neighbor indices for this point come from either the built kd-tree or the caller.
+            const int *nn_idx_ptr_base;
+            int row_cols;
+            if (buildNN) { nn_idx_ptr_base = builtIdx.ptr<int>(i); row_cols = builtIdx.cols; }
+            else         { nn_idx_ptr_base = (int *) nn_idx[i].data; row_cols = nn_idx[i].cols; }
             // The maximum size that may be used for this row
-            int bound = max_neighbor_num > nn_idx[i].cols ? nn_idx[i].cols : max_neighbor_num;
-            const int *nn_idx_ptr_base = (int *) nn_idx[i].data;
+            int bound = max_neighbor_num > row_cols ? row_cols : max_neighbor_num;
             // The first point should be itself
             Mat pt_set(ori_pts.row(i));
             // Push the nearest neighbor points to pt_set

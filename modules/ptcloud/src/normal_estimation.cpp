@@ -5,40 +5,14 @@
 #include "precomp.hpp"
 #include "ptcloud_utils.hpp"             // toPointVec
 #include "opencv2/flann.hpp"             // cv::flann::Index (nearest-neighbor indices)
-#include "opencv2/geometry/segment.hpp"  // cv::normalEstimate (PCA)
 #include "opencv2/geometry/mst.hpp"      // cv::buildMST, cv::MSTEdge
 
 #include <deque>
 
 namespace cv {
 
-void estimateNormals(InputArray inputCloud, OutputArray normals, int k)
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(k >= 3);
-
-    std::vector<Point3f> points;
-    toPointVec(inputCloud, points);
-    const int N = (int)points.size();
-    if (N == 0) { normals.release(); return; }
-
-    Mat pts = Mat(points).reshape(1, N);              // N x 3, CV_32F (one point per row)
-
-    // Nearest-neighbor indices for every point (column 0 is the point itself, which is
-    // exactly what cv::normalEstimate expects for nn_idx).
-    const int kk = std::min(k, N);
-    flann::Index index(pts, flann::KDTreeIndexParams(4));
-    Mat nnIdx, nnDist;
-    index.knnSearch(pts, nnIdx, nnDist, kk);          // N x kk, CV_32S
-
-    // Reuse the PCA-based estimator from the geometry module (curvature is produced too,
-    // but we don't expose it here).
-    std::vector<Point3f> nvec;
-    Mat curvatures;
-    normalEstimate(nvec, curvatures, pts, nnIdx, kk);
-
-    Mat(nvec).copyTo(normals);                        // N x 1, CV_32FC3
-}
+// Point-cloud normals are estimated by cv::normalEstimate (geometry module), which builds the
+// neighbor search internally when nn_idx is empty. The functions here orient those normals.
 
 void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3f& viewpoint)
 {
@@ -55,14 +29,17 @@ void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3
     Mat work = nm.isContinuous() ? nm : nm.clone();
     Mat nmf = work.reshape(3, N);   // N x 1, CV_32FC3
 
-    // Flip each normal, if needed, so it points towards the viewpoint.
-    for (int i = 0; i < N; i++)
+    // Flip each normal, if needed, so it points towards the viewpoint (independent per point).
+    parallel_for_(Range(0, N), [&](const Range& r)
     {
-        Vec3f n = nmf.at<Vec3f>(i);
-        Vec3f toView(viewpoint.x - points[i].x, viewpoint.y - points[i].y, viewpoint.z - points[i].z);
-        if (n.dot(toView) < 0.f)
-            nmf.at<Vec3f>(i) = -n;
-    }
+        for (int i = r.start; i < r.end; i++)
+        {
+            Vec3f n = nmf.at<Vec3f>(i);
+            Vec3f toView(viewpoint.x - points[i].x, viewpoint.y - points[i].y, viewpoint.z - points[i].z);
+            if (n.dot(toView) < 0.f)
+                nmf.at<Vec3f>(i) = -n;
+        }
+    });
 
     if (work.data != nm.data)
         work.copyTo(nm);   // matching shape/type; copyTo handles a non-contiguous destination
@@ -86,7 +63,11 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
 
     std::vector<Vec3f> n(N);
     for (int i = 0; i < N; i++)
-        n[i] = normalize(nmf.at<Vec3f>(i));
+    {
+        Vec3f v = nmf.at<Vec3f>(i);
+        float len = (float)cv::norm(v);
+        n[i] = (len > 1e-12f) ? v * (1.f / len) : Vec3f(0.f, 0.f, 1.f);   // guard degenerate normals
+    }
 
     // Riemannian graph: connect each point to its k nearest neighbors, edge weight
     // 1 - |n_i . n_j| so that near-parallel normals are linked first (Hoppe et al. 1992).

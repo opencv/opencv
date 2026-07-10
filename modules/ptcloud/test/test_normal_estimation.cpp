@@ -3,10 +3,19 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "opencv2/geometry/segment.hpp"   // cv::normalEstimate (produces the normals to orient)
 
 namespace opencv_test { namespace {
 
 using namespace cv;
+
+// Normals via the geometry estimator (internal kNN), returned as Nx1 CV_32FC3.
+static Mat computeNormals(const Mat& cloud, int k)
+{
+    Mat normals, curv;
+    normalEstimate(normals, curv, cloud, noArray(), k);
+    return normals.reshape(3, (int)cloud.total());
+}
 
 // Planar grid on z = 0 (spacing 0.1). PCA normals must be parallel to +/-Z.
 static Mat makePlane(int n = 30)
@@ -33,27 +42,10 @@ static Mat makeSphere(int n = 2000)
     return Mat(pts).clone();
 }
 
-TEST(Ptcloud_Normals, estimate_on_plane_is_axis)
-{
-    Mat cloud = makePlane();
-    Mat normals;
-    estimateNormals(cloud, normals, 8);
-
-    ASSERT_EQ((int)normals.total(), (int)cloud.total());
-    ASSERT_EQ(normals.channels(), 3);
-    for (int i = 0; i < (int)normals.total(); i++)
-    {
-        Vec3f n = normals.at<Vec3f>(i);
-        EXPECT_NEAR(cv::norm(n), 1.0, 1e-2);              // unit length
-        EXPECT_GT(std::abs(n[2]), 0.99f);                // parallel to Z (plane normal)
-    }
-}
-
 TEST(Ptcloud_Normals, orient_to_viewpoint)
 {
     Mat cloud = makePlane();
-    Mat normals;
-    estimateNormals(cloud, normals, 8);
+    Mat normals = computeNormals(cloud, 8);
 
     const Point3f viewpoint(1.5f, 1.5f, 5.0f);           // above the plane
     orientNormals(cloud, normals, viewpoint);
@@ -70,8 +62,7 @@ TEST(Ptcloud_Normals, orient_to_viewpoint)
 TEST(Ptcloud_Normals, consistent_on_sphere_is_outward)
 {
     Mat cloud = makeSphere(2000);
-    Mat normals;
-    estimateNormals(cloud, normals, 12);
+    Mat normals = computeNormals(cloud, 12);
     orientNormalsConsistent(cloud, normals, 12);
 
     // Sphere is centered at the origin, so a consistent orientation seeded outward
@@ -89,8 +80,6 @@ TEST(Ptcloud_Normals, consistent_on_sphere_is_outward)
 TEST(Ptcloud_Normals, empty_input)
 {
     Mat empty, normals;
-    estimateNormals(empty, normals, 8);
-    EXPECT_TRUE(normals.empty());
     EXPECT_NO_THROW(orientNormals(empty, normals, Point3f(0, 0, 1)));
     EXPECT_NO_THROW(orientNormalsConsistent(empty, normals, 8));
 }
