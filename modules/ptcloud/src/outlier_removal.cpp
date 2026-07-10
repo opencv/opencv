@@ -20,6 +20,11 @@ static void toPointVec(InputArray inputCloud, std::vector<Point3f>& points)
     else
         mf = m;
 
+    // getMat() may hand back a non-contiguous view (ROI / column-slice / transpose);
+    // reshape() below requires contiguous data.
+    if (!mf.isContinuous())
+        mf = mf.clone();
+
     if (mf.channels() == 1)
     {
         // Accept Nx3 (or 3xN) single-channel layouts as well.
@@ -37,13 +42,11 @@ static void toPointVec(InputArray inputCloud, std::vector<Point3f>& points)
 // Build an octree over the points with a resolution derived from the bounding box.
 static Ptr<Octree> buildOctree(const std::vector<Point3f>& points)
 {
-    Point3f lo(FLT_MAX, FLT_MAX, FLT_MAX), hi(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (const Point3f& p : points)
-    {
-        lo.x = std::min(lo.x, p.x); lo.y = std::min(lo.y, p.y); lo.z = std::min(lo.z, p.z);
-        hi.x = std::max(hi.x, p.x); hi.y = std::max(hi.y, p.y); hi.z = std::max(hi.z, p.z);
-    }
-    double diag = norm(Vec3f(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z));
+    Mat p3 = Mat(points).reshape(1, (int)points.size());   // Nx3 CV_32F
+    Mat lo, hi;
+    reduce(p3, lo, 0, REDUCE_MIN);
+    reduce(p3, hi, 0, REDUCE_MAX);
+    double diag = norm(hi - lo);
     double resolution = std::max(diag / 256.0, 1e-6);
     return Octree::createWithResolution(resolution, points);
 }
@@ -70,7 +73,7 @@ void removeStatisticalOutliers(InputArray inputCloud, OutputArray outputCloud,
     std::vector<Point3f> points;
     toPointVec(inputCloud, points);
     const int N = (int)points.size();
-    if (N == 0) { outputCloud.release(); return; }
+    if (N == 0) { outputCloud.release(); if (keptIndices.needed()) keptIndices.release(); return; }
 
     Ptr<Octree> tree = buildOctree(points);
 
@@ -116,7 +119,7 @@ void removeRadiusOutliers(InputArray inputCloud, OutputArray outputCloud,
     std::vector<Point3f> points;
     toPointVec(inputCloud, points);
     const int N = (int)points.size();
-    if (N == 0) { outputCloud.release(); return; }
+    if (N == 0) { outputCloud.release(); if (keptIndices.needed()) keptIndices.release(); return; }
 
     Ptr<Octree> tree = buildOctree(points);
 
@@ -128,7 +131,7 @@ void removeRadiusOutliers(InputArray inputCloud, OutputArray outputCloud,
         {
             // radiusNNSearch includes the query point itself, so subtract 1 for the neighbor count.
             int found = tree->radiusNNSearch(points[i], (float)radius, noArray());
-            keep[i] = (found - 1 >= minNeighbors) ? (uchar)1 : (uchar)0;
+            keep[i] = (std::max(found - 1, 0) >= minNeighbors) ? (uchar)1 : (uchar)0;
         }
     });
 

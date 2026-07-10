@@ -68,7 +68,7 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
  * mean distance exceeds `global_mean + stddevMulThresh * global_stddev` are treated as outliers
  * and dropped. This targets sparse noise scattered around the surface.
  *
- * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 CV_32F matrix.
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
  * @param outputCloud Output filtered point cloud, Nx1 CV_32FC3.
  * @param meanK Number of nearest neighbors used to estimate the mean distance of each point.
  * @param stddevMulThresh Standard-deviation multiplier for the distance threshold.
@@ -82,7 +82,7 @@ CV_EXPORTS_W void removeStatisticalOutliers(InputArray inputCloud, OutputArray o
  * Any point that has fewer than @p minNeighbors other points within @p radius is treated as an
  * isolated outlier and dropped.
  *
- * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 CV_32F matrix.
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
  * @param outputCloud Output filtered point cloud, Nx1 CV_32FC3.
  * @param radius Search radius.
  * @param minNeighbors Minimum number of neighbors (not counting the point itself) required to keep a point.
