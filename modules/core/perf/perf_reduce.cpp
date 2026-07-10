@@ -64,6 +64,51 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     SANITY_CHECK_NOTHING();
 }
 
+// Explicit src->dst depth reduce (matches IPP ippReduce_Diff perf coverage:
+// SUM/AVG with an explicit output depth over src/dst depth pairs x C1/C3/C4).
+CV_ENUM(ROpDiff, REDUCE_SUM, REDUCE_AVG)
+typedef tuple<Size, tuple<MatType, MatDepth>, ROpDiff, int> Size_SrcType_DstDepth_ROp_Dim_t;
+typedef perf::TestBaseWithParam<Size_SrcType_DstDepth_ROp_Dim_t> Size_SrcType_DstDepth_ROp_Dim;
+
+PERF_TEST_P(Size_SrcType_DstDepth_ROp_Dim, reduce_diff,
+            testing::Combine(
+                testing::Values(sz1080p),
+                testing::Values(
+                    make_tuple((MatType)CV_8UC1,  (MatDepth)CV_32S), make_tuple((MatType)CV_8UC3,  (MatDepth)CV_32S), make_tuple((MatType)CV_8UC4,  (MatDepth)CV_32S),
+                    make_tuple((MatType)CV_8UC1,  (MatDepth)CV_32F), make_tuple((MatType)CV_8UC3,  (MatDepth)CV_32F), make_tuple((MatType)CV_8UC4,  (MatDepth)CV_32F),
+                    make_tuple((MatType)CV_8UC1,  (MatDepth)CV_64F), make_tuple((MatType)CV_8UC3,  (MatDepth)CV_64F), make_tuple((MatType)CV_8UC4,  (MatDepth)CV_64F),
+                    make_tuple((MatType)CV_16UC1, (MatDepth)CV_32F), make_tuple((MatType)CV_16UC3, (MatDepth)CV_32F), make_tuple((MatType)CV_16UC4, (MatDepth)CV_32F),
+                    make_tuple((MatType)CV_16UC1, (MatDepth)CV_64F), make_tuple((MatType)CV_16UC3, (MatDepth)CV_64F), make_tuple((MatType)CV_16UC4, (MatDepth)CV_64F),
+                    make_tuple((MatType)CV_16SC1, (MatDepth)CV_32F), make_tuple((MatType)CV_16SC3, (MatDepth)CV_32F), make_tuple((MatType)CV_16SC4, (MatDepth)CV_32F),
+                    make_tuple((MatType)CV_16SC1, (MatDepth)CV_64F), make_tuple((MatType)CV_16SC3, (MatDepth)CV_64F), make_tuple((MatType)CV_16SC4, (MatDepth)CV_64F),
+                    make_tuple((MatType)CV_32FC1, (MatDepth)CV_32F), make_tuple((MatType)CV_32FC3, (MatDepth)CV_32F), make_tuple((MatType)CV_32FC4, (MatDepth)CV_32F),
+                    make_tuple((MatType)CV_32FC1, (MatDepth)CV_64F), make_tuple((MatType)CV_32FC3, (MatDepth)CV_64F), make_tuple((MatType)CV_32FC4, (MatDepth)CV_64F),
+                    make_tuple((MatType)CV_64FC1, (MatDepth)CV_64F), make_tuple((MatType)CV_64FC3, (MatDepth)CV_64F), make_tuple((MatType)CV_64FC4, (MatDepth)CV_64F)),
+                ROpDiff::all(),
+                testing::Values(0, 1)   // reduce dim: 0 = rows, 1 = columns
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int srcType = get<0>(get<1>(GetParam()));
+    int dstDepth = get<1>(get<1>(GetParam()));
+    int reduceOp = get<2>(GetParam());
+    int dim = get<3>(GetParam());
+
+    int cn = CV_MAT_CN(srcType);
+    Size dstSize = (dim == 0) ? Size(sz.width, 1) : Size(1, sz.height);
+
+    Mat src(sz, srcType);
+    Mat vec(dstSize, CV_MAKETYPE(dstDepth, cn));
+
+    declare.in(src, WARMUP_RNG).out(vec);
+    declare.time(100);
+
+    TEST_CYCLE_MULTIRUN(15) reduce(src, vec, dim, reduceOp, dstDepth);
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef tuple<Size, MatType, int> Size_MatType_RMode_t;
 typedef perf::TestBaseWithParam<Size_MatType_RMode_t> Size_MatType_RMode;
 

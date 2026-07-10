@@ -72,6 +72,38 @@ PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
     SANITY_CHECK_NOTHING();
 }
 
+// sepFilter2D type/kernel sweep (matches IPP ippSepFilter2D perf coverage:
+// 8U/16U/16S/32F x C1/C3/C4, kernels 3/5/7/21, same-depth output).
+PERF_TEST_P( TestFilter2dTypes, sepFilter2D_types,
+             Combine(
+                Values( sz1080p ),
+                Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
+                        CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4 ),
+                Values( 3, 5, 7, 21 ),
+                Values( (int)BORDER_REPLICATE )
+             )
+)
+{
+    Size sz     = get<0>(GetParam());
+    int  type   = get<1>(GetParam());
+    int  kSize  = get<2>(GetParam());
+    int  border = get<3>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    Mat kernelX(1, kSize, CV_32FC1);
+    Mat kernelY(1, kSize, CV_32FC1);
+    randu(kernelX, -6, 6);
+    randu(kernelY, -6, 6);
+
+    declare.in(src, WARMUP_RNG).out(dst).time(20);
+
+    TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, Point(-1, -1), 0., border);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(TestFilter2d, DISABLED_Filter2d_ovx,
             Combine(
                 Values(Size(320, 240), sz1080p),

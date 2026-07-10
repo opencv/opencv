@@ -41,6 +41,49 @@ PERF_TEST_P(Size_Source, calcHist1d,
     SANITY_CHECK(hist);
 }
 
+// Non-uniform ranges + accumulate (matches IPP perf coverage: calcHist sweeps
+// uniform ∈ {true,false} × accumulate ∈ {true,false}).
+typedef tuple<Size, MatType, bool, bool> Size_Source_Uniform_Accum_t;
+typedef TestBaseWithParam<Size_Source_Uniform_Accum_t> Size_Source_Uniform_Accum;
+
+PERF_TEST_P(Size_Source_Uniform_Accum, calcHist1d_mode,
+            testing::Combine(testing::Values(sz3MP, sz5MP),
+                             testing::Values(CV_8U, CV_16U, CV_32F),
+                             testing::Bool(),   // uniform
+                             testing::Bool()) ) // accumulate
+{
+    Size size = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    bool uniform = get<2>(GetParam());
+    bool accumulate = get<3>(GetParam());
+
+    Mat source(size.height, size.width, type);
+    Mat hist;
+    int channels [] = {0};
+    const int bins = 256;
+    int histSize [] = {bins};
+    int dims = 1;
+    int numberOfImages = 1;
+
+    randu(source, rangeLow, rangeHight);
+
+    // Uniform ranges use the {low, high} form; non-uniform needs explicit bin edges.
+    const float uni[] = {rangeLow, rangeHight};
+    std::vector<float> edges(bins + 1);
+    for (int i = 0; i <= bins; ++i)
+        edges[i] = rangeLow + (rangeHight - rangeLow) * i / bins;
+    const float* ranges[] = { uniform ? uni : edges.data() };
+
+    declare.in(source);
+
+    TEST_CYCLE_MULTIRUN(3)
+    {
+        calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges, uniform, accumulate);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(Size_Source, calcHist2d,
             testing::Combine(testing::Values(sz3MP, sz5MP),
                              testing::Values(CV_8UC2, CV_16UC2, CV_32FC2) )

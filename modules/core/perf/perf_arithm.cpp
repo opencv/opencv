@@ -830,6 +830,30 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , SqrtFixture,
     )
 );
 
+// Full power sweep (matches IPP perf coverage: cv::pow over a range of exponents)
+typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, double>> PowFixture;
+PERF_TEST_P_(PowFixture, Pow) {
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    double power = get<2>(GetParam());
+
+    Mat src(sz, type), dst(sz, type);
+    randu(src, FLT_EPSILON, 1000);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() cv::pow(src, power, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , PowFixture,
+    testing::Combine(
+        testing::Values(sz1080p),
+        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(-6.0, -5.0, -4.5, -4.0, -3.0, -2.0, -1.0, -0.7, -0.5, 0.0,
+                        0.5, 0.7, 1.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0)
+    )
+);
+
 ///////////// Rotate ////////////////////////
 
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, perf::MatType>> RotateTest;
