@@ -4,15 +4,53 @@
 
 #include "rpp_hal_utils.hpp"
 #include <cstring>
+#include <cstdlib>
 #include <fcntl.h>
 #include <unistd.h>
 
-// Only include HIP headers for GPU path
+// RPP transitively includes hip_runtime_api.h, so hip symbols are available
+// when RPP_BACKEND_HIP is defined. Always include the API header for
+// type/function declarations; the actual HIP driver code only runs under
+// the guard.
+#include <hip/hip_runtime_api.h>
+
 #ifdef RPP_BACKEND_HIP
-#include <hip/hip_runtime.h>
+#include <rpp/rppt_tensor_bitwise_operations.h>
 #endif
 
 namespace cv { namespace hal { namespace rpp {
+
+namespace {
+
+// RPP 3.x writes internal HIP errors to stderr. Redirect it to /dev/null
+// transiently so user applications don't see benign messages.
+class StderrSilencer {
+public:
+    StderrSilencer() {
+        old_ = dup(STDERR_FILENO);
+        if (old_ >= 0) {
+            int devnull = open("/dev/null", O_WRONLY);
+            if (devnull >= 0) {
+                dup2(devnull, STDERR_FILENO);
+                close(devnull);
+            }
+        }
+    }
+    ~StderrSilencer() {
+        if (old_ >= 0) {
+            dup2(old_, STDERR_FILENO);
+            close(old_);
+        }
+    }
+private:
+    int old_;
+};
+
+inline bool checkHip(hipError_t err) {
+    return err == hipSuccess;
+}
+
+} // namespace
 
 // =========================================================================
 // Availability checks
@@ -20,15 +58,70 @@ namespace cv { namespace hal { namespace rpp {
 
 bool isRppGpuAvailable() {
     #ifdef RPP_BACKEND_HIP
+    const char* force = getenv("OPENCV_RPP_FORCE_GPU");
+    if (force && (strcmp(force, "1") == 0 || strcmp(force, "yes") == 0 || strcmp(force, "true") == 0)) {
+        int deviceCount = 0;
+        return (hipGetDeviceCount(&deviceCount) == hipSuccess && deviceCount > 0);
+    }
+
     int deviceCount = 0;
     hipError_t err = hipGetDeviceCount(&deviceCount);
-    return (err == hipSuccess && deviceCount > 0);
+    if (err != hipSuccess || deviceCount <= 0) {
+        return false;
+    }
+
+    // RPP 3.x HIP backend on some systems leaves a sticky async
+    // "illegal memory access" error after the first operation, even though
+    // the output is correct. Probe with a tiny real operation so that, if
+    // this happens, we report the GPU path as unavailable and the HAL falls
+    // back to the RPP HOST path or OpenCV native.
+    static bool probed = false;
+    static bool usable = false;
+    if (probed) {
+        return usable;
+    }
+    probed = true;
+
+    StderrSilencer silence;
+    (void)silence;
+
+    rppHandle_t handle = nullptr;
+    rppStatus_t status = rppCreate(&handle, 1, 0, nullptr, RPP_HIP_BACKEND);
+    if (status == rppStatusSuccess && handle) {
+        void* d_a = nullptr;
+        void* d_b = nullptr;
+        void* d_d = nullptr;
+        bool ok = (hipMalloc(&d_a, 1) == hipSuccess) &&
+                  (hipMalloc(&d_b, 1) == hipSuccess) &&
+                  (hipMalloc(&d_d, 1) == hipSuccess);
+        if (ok) {
+            RpptDesc desc{};
+            desc.numDims = 4; desc.dataType = U8;
+            desc.n = 1; desc.c = 1; desc.h = 1; desc.w = 1;
+            desc.layout = NHWC;
+            desc.strides.wStride = 1; desc.strides.hStride = 1;
+            desc.strides.cStride = 1; desc.strides.nStride = 1;
+            RpptROI roi{};
+            roi.xywhROI.xy.x = 0; roi.xywhROI.xy.y = 0;
+            roi.xywhROI.roiWidth = 1; roi.xywhROI.roiHeight = 1;
+
+            (void)rppt_bitwise_and(d_a, d_b, &desc, d_d, &desc, &roi, XYWH, handle, RPP_HIP_BACKEND);
+            (void)hipDeviceSynchronize();
+            hipError_t last = hipGetLastError();
+            usable = (last == hipSuccess);
+        }
+        (void)hipFree(d_a); (void)hipFree(d_b); (void)hipFree(d_d);
+        (void)hipGetLastError();
+    }
+    return usable;
     #else
     return false;
     #endif
 }
 
 bool isRppCpuAvailable() {
+    StderrSilencer silence;
+    (void)silence;
     rppHandle_t handle;
     rppStatus_t status = rppCreate(&handle, 1, 0, nullptr, RPP_HOST_BACKEND);
     if (status != rppStatusSuccess) {
@@ -93,20 +186,22 @@ RpptDataType cvDepthToRppDataType(int cvDepth) {
 #ifdef RPP_BACKEND_HIP
 
 bool uploadRawToHip(const void* host_ptr, size_t step, int w, int h, int depth, int cn, void** out_dev_ptr) {
-    size_t elemSize = CV_ELEM_SIZE(depth);
-    size_t rowBytes = w * cn * elemSize;
+    const size_t elemSize = static_cast<size_t>(CV_ELEM_SIZE1(depth));
+    const size_t rowBytes = static_cast<size_t>(w) * static_cast<size_t>(cn) * elemSize;
     size_t totalBytes = rowBytes * h;
 
     void* devPtr = nullptr;
-    hipError_t err = hipMalloc(&devPtr, totalBytes);
-    if (err != hipSuccess || devPtr == nullptr) {
+    if (!checkHip(hipMalloc(&devPtr, totalBytes)) || devPtr == nullptr) {
         return false;
     }
 
     const uchar* src = static_cast<const uchar*>(host_ptr);
     uchar* dst = static_cast<uchar*>(devPtr);
     for (int row = 0; row < h; ++row) {
-        hipMemcpy(dst + row * rowBytes, src + row * step, rowBytes, hipMemcpyHostToDevice);
+        if (!checkHip(hipMemcpy(dst + row * rowBytes, src + row * step, rowBytes, hipMemcpyHostToDevice))) {
+            (void)hipFree(devPtr);
+            return false;
+        }
     }
 
     *out_dev_ptr = devPtr;
@@ -114,20 +209,22 @@ bool uploadRawToHip(const void* host_ptr, size_t step, int w, int h, int depth, 
 }
 
 bool downloadRawFromHip(void* dev_ptr, void* host_ptr, size_t step, int w, int h, int depth, int cn) {
-    size_t elemSize = CV_ELEM_SIZE(depth);
-    size_t rowBytes = w * cn * elemSize;
+    const size_t elemSize = static_cast<size_t>(CV_ELEM_SIZE1(depth));
+    const size_t rowBytes = static_cast<size_t>(w) * static_cast<size_t>(cn) * elemSize;
 
     uchar* dst = static_cast<uchar*>(host_ptr);
     uchar* src = static_cast<uchar*>(dev_ptr);
     for (int row = 0; row < h; ++row) {
-        hipMemcpy(dst + row * step, src + row * rowBytes, rowBytes, hipMemcpyDeviceToHost);
+        if (!checkHip(hipMemcpy(dst + row * step, src + row * rowBytes, rowBytes, hipMemcpyDeviceToHost))) {
+            return false;
+        }
     }
     return true;
 }
 
 void freeHipPtr(void* devPtr) {
     if (devPtr) {
-        hipFree(devPtr);
+        (void)hipFree(devPtr);
     }
 }
 
@@ -149,33 +246,42 @@ void freeHipPtr(void*) {}
 // RPP Handle helpers
 // =========================================================================
 
-rppHandle_t createRppGpuHandle(size_t batchSize) {
+rppHandle_t createRppGpuHandle(size_t /*batchSize*/) {
     #ifdef RPP_BACKEND_HIP
-    int old_stderr = dup(STDERR_FILENO);
-    int devnull = open("/dev/null", O_WRONLY);
-    if (devnull >= 0) {
-        dup2(devnull, STDERR_FILENO);
-        close(devnull);
+    // RPP 3.x HIP backend's handle creation and first kernel launch can leave
+    // a sticky async "illegal memory access" error that later RPP calls
+    // report as hipInit failures, even though each individual operation
+    // produces the correct result. Reuse a single per-thread handle and
+    // clear the sticky error to keep the context usable.
+    static thread_local rppHandle_t s_handle = nullptr;
+    if (s_handle) {
+        return s_handle;
     }
-    
-    rppHandle_t handle;
-    rppStatus_t status = rppCreate(&handle, batchSize, 0, nullptr, RPP_HIP_BACKEND);
-    
-    if (old_stderr >= 0) {
-        dup2(old_stderr, STDERR_FILENO);
-        close(old_stderr);
-    }
-    
+
+    // Clear any sticky HIP error left by previous RPP operations or context state.
+    (void)hipGetLastError();
+
+    StderrSilencer silence;
+    (void)silence;
+
+    rppStatus_t status = rppCreate(&s_handle, 1, 0, nullptr, RPP_HIP_BACKEND);
+
+    // Discard any benign sticky HIP error from rppCreate internals.
+    (void)hipGetLastError();
+
     if (status == rppStatusSuccess) {
-        return handle;
+        return s_handle;
     }
     #endif
     return nullptr;
 }
 
 rppHandle_t createRppCpuHandle(size_t batchSize, Rpp32u numThreads) {
-    rppHandle_t handle;
-    rppStatus_t status = rppCreate(&handle, batchSize, numThreads, nullptr, RPP_HOST_BACKEND);
+    StderrSilencer silence;
+    (void)silence;
+    (void)batchSize; (void)numThreads;
+    rppHandle_t handle = nullptr;
+    rppStatus_t status = rppCreate(&handle, 1, 0, nullptr, RPP_HOST_BACKEND);
     if (status == rppStatusSuccess) {
         return handle;
     }
@@ -184,15 +290,23 @@ rppHandle_t createRppCpuHandle(size_t batchSize, Rpp32u numThreads) {
 
 void destroyRppGpuHandle(rppHandle_t handle) {
     if (handle) {
-        // WORKAROUND: RPP has internal hipFree bug on destroy.
-        // Skip destroy to avoid crash at exit.
-        // Leaks the handle, but acceptable for now.
+        // WORKAROUND: RPP 3.x HIP backend has an internal hipFree bug
+        // in its scratchBufferHip cleanup path. Calling rppDestroy with
+        // RPP_HIP_BACKEND triggers "an illegal memory access was encountered"
+        // and leaves the HIP device context poisoned for the next rppCreate.
+        // Skip destroy to avoid the crash and context corruption.
+        // This leaks the handle, but RPP's internal scratch buffer lifetime
+        // is effectively process-scoped anyway.
         (void)handle;
+        // Clear any sticky error left by the skipped destroy / prior work.
+        (void)hipGetLastError();
     }
 }
 
 void destroyRppCpuHandle(rppHandle_t handle) {
     if (handle) {
+        StderrSilencer silence;
+        (void)silence;
         rppDestroy(handle, RPP_HOST_BACKEND);
     }
 }

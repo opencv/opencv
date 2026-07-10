@@ -4,19 +4,274 @@
  * Architecture:
  *   1. GPU: Uses RPP HIP backend with device memory upload/download
  *   2. CPU: Uses RPP HOST backend (no memory copies, direct pointer pass)
- *   3. Fallback: Returns CV_HAL_ERROR_NOT_IMPLEMENTED → OpenCV native
- *
- * NOTE: Currently only core bitwise ops have full GPU+CPU dispatch.
- * Imgproc functions are stubbed — they will be added with verified RPP signatures.
+ *   3. Fallback: Returns CV_HAL_ERROR_NOT_IMPLEMENTED -> OpenCV native
  */
 
 #include "rpp_hal_imgproc.hpp"
 #include "rpp_hal_utils.hpp"
+#include <rpp/rppt_tensor_geometric_augmentations.h>
 
 using namespace cv::hal::rpp;
 
+namespace {
+
+    enum RppPath { RPP_NONE, RPP_GPU, RPP_CPU };
+
+    inline RppPath selectRppPath() {
+        if (isRppGpuAvailable()) return RPP_GPU;
+        if (isRppCpuAvailable()) return RPP_CPU;
+        return RPP_NONE;
+    }
+
+    inline bool checkHip(hipError_t err) { return err == hipSuccess; }
+
+    inline RpptInterpolationType cvInterpolationToRpp(int interpolation) {
+        switch (interpolation) {
+            case 0: return NEAREST_NEIGHBOR; // INTER_NEAREST
+            case 1: return BILINEAR;         // INTER_LINEAR
+            case 2: return BICUBIC;          // INTER_CUBIC
+            case 3: return LANCZOS;            // INTER_LANCZOS4 (closest)
+            default: return BILINEAR;
+        }
+    }
+
+    inline int cvDepthToChannels(int src_type) {
+        return CV_MAT_CN(src_type);
+    }
+
+    inline bool supportedDepth(int depth) {
+        return depth == CV_8U || depth == CV_32F || depth == CV_8S;
+    }
+
+    inline void buildDesc(RpptDesc& desc, int w, int h, int c, int depth) {
+        buildRppDescNHWC(desc, w, h, c, depth);
+    }
+
+    inline void buildRoi(RpptROI& roi, int w, int h) {
+        buildFullRoi(roi, w, h);
+    }
+
+}
+
 // =========================================================================
-// FILTERING
+// FLIP
+// =========================================================================
+
+extern "C" int rpp_hal_flip(int src_type,
+                            const uchar* src_data, size_t src_step,
+                            int src_width, int src_height,
+                            uchar* dst_data, size_t dst_step,
+                            int flip_mode) {
+    RppPath path = selectRppPath();
+    if (path == RPP_NONE) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int cn = cvDepthToChannels(src_type);
+    int depth = CV_MAT_DEPTH(src_type);
+    if (!supportedDepth(depth)) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RpptDesc srcDesc;
+    buildDesc(srcDesc, src_width, src_height, cn, depth);
+    RpptDesc dstDesc;
+    buildDesc(dstDesc, src_width, src_height, cn, depth);
+    RpptROI roi;
+    buildRoi(roi, src_width, src_height);
+
+    Rpp32u horizontal = (flip_mode == 1 || flip_mode == -1) ? 1 : 0;
+    Rpp32u vertical   = (flip_mode == 0 || flip_mode == -1) ? 1 : 0;
+
+    RppBackend backend = (path == RPP_GPU) ? RPP_HIP_BACKEND : RPP_HOST_BACKEND;
+
+    if (path == RPP_GPU) {
+        void* d_src = nullptr;
+        void* d_dst = nullptr;
+        if (!uploadRawToHip(src_data, src_step, src_width, src_height, depth, cn, &d_src) ||
+            !uploadRawToHip(dst_data, dst_step, src_width, src_height, depth, cn, &d_dst)) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        rppHandle_t handle = createRppGpuHandle(1);
+        if (!handle) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        RppStatus status = rppt_flip(d_src, &srcDesc, d_dst, &dstDesc,
+                                     &horizontal, &vertical,
+                                     &roi, XYWH, handle, backend);
+
+        bool ok = (status == RPP_SUCCESS);
+        if (ok) {
+            ok = downloadRawFromHip(d_dst, dst_data, dst_step, src_width, src_height, depth, cn);
+        }
+        destroyRppGpuHandle(handle);
+        freeHipPtr(d_src); freeHipPtr(d_dst);
+        return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    rppHandle_t handle = createRppCpuHandle(1);
+    if (!handle) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RppStatus status = rppt_flip(const_cast<uchar*>(src_data), &srcDesc,
+                                 dst_data, &dstDesc,
+                                 &horizontal, &vertical,
+                                 &roi, XYWH, handle, backend);
+    destroyRppCpuHandle(handle);
+    return (status == RPP_SUCCESS) ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+// =========================================================================
+// RESIZE
+// =========================================================================
+
+extern "C" int rpp_hal_resize(int src_type,
+                                const uchar* src_data, size_t src_step,
+                                int src_width, int src_height,
+                                uchar* dst_data, size_t dst_step,
+                                int dst_width, int dst_height,
+                                double inv_scale_x, double inv_scale_y,
+                                int interpolation) {
+    (void)inv_scale_x; (void)inv_scale_y;
+    RppPath path = selectRppPath();
+    if (path == RPP_NONE) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int cn = cvDepthToChannels(src_type);
+    int depth = CV_MAT_DEPTH(src_type);
+    if (!supportedDepth(depth)) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RpptDesc srcDesc;
+    buildDesc(srcDesc, src_width, src_height, cn, depth);
+    RpptDesc dstDesc;
+    buildDesc(dstDesc, dst_width, dst_height, cn, depth);
+    RpptROI srcRoi;
+    buildRoi(srcRoi, src_width, src_height);
+    RpptImagePatch dstSize;
+    dstSize.width = static_cast<Rpp32u>(dst_width);
+    dstSize.height = static_cast<Rpp32u>(dst_height);
+
+    RpptInterpolationType interp = cvInterpolationToRpp(interpolation);
+    RppBackend backend = (path == RPP_GPU) ? RPP_HIP_BACKEND : RPP_HOST_BACKEND;
+
+    if (path == RPP_GPU) {
+        void* d_src = nullptr;
+        void* d_dst = nullptr;
+        if (!uploadRawToHip(src_data, src_step, src_width, src_height, depth, cn, &d_src) ||
+            !uploadRawToHip(dst_data, dst_step, dst_width, dst_height, depth, cn, &d_dst)) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        rppHandle_t handle = createRppGpuHandle(1);
+        if (!handle) {
+            freeHipPtr(d_src); freeHipPtr(d_dst);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        RppStatus status = rppt_resize(d_src, &srcDesc, d_dst, &dstDesc,
+                                       &dstSize, interp,
+                                       &srcRoi, XYWH, handle, backend);
+
+        bool ok = (status == RPP_SUCCESS);
+        if (ok) {
+            ok = downloadRawFromHip(d_dst, dst_data, dst_step, dst_width, dst_height, depth, cn);
+        }
+        destroyRppGpuHandle(handle);
+        freeHipPtr(d_src); freeHipPtr(d_dst);
+        return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    rppHandle_t handle = createRppCpuHandle(1);
+    if (!handle) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RppStatus status = rppt_resize(const_cast<uchar*>(src_data), &srcDesc,
+                                   dst_data, &dstDesc,
+                                   &dstSize, interp,
+                                   &srcRoi, XYWH, handle, backend);
+    destroyRppCpuHandle(handle);
+    return (status == RPP_SUCCESS) ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+// =========================================================================
+// WARP AFFINE
+// =========================================================================
+
+extern "C" int rpp_hal_warpAffine(int src_type,
+                                    const uchar* src_data, size_t src_step,
+                                    int src_width, int src_height,
+                                    uchar* dst_data, size_t dst_step,
+                                    int dst_width, int dst_height,
+                                    const double M[6], int interpolation,
+                                    int borderType, const double borderValue[4]) {
+    (void)borderType; (void)borderValue;
+    RppPath path = selectRppPath();
+    if (path == RPP_NONE) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int cn = cvDepthToChannels(src_type);
+    int depth = CV_MAT_DEPTH(src_type);
+    if (!supportedDepth(depth)) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    // OpenCV HAL passes the forward affine matrix. RPP expects the same
+    // 2x3 matrix layout [m0 m1 m2; m3 m4 m5].
+    float affine[6];
+    for (int i = 0; i < 6; ++i) affine[i] = static_cast<float>(M[i]);
+
+    RpptDesc srcDesc;
+    buildDesc(srcDesc, src_width, src_height, cn, depth);
+    RpptDesc dstDesc;
+    buildDesc(dstDesc, dst_width, dst_height, cn, depth);
+    RpptROI srcRoi;
+    buildRoi(srcRoi, src_width, src_height);
+
+    RpptInterpolationType interp = cvInterpolationToRpp(interpolation);
+    RppBackend backend = (path == RPP_GPU) ? RPP_HIP_BACKEND : RPP_HOST_BACKEND;
+
+    if (path == RPP_GPU) {
+        void* d_src = nullptr;
+        void* d_dst = nullptr;
+        void* d_affine = nullptr;
+        if (!uploadRawToHip(src_data, src_step, src_width, src_height, depth, cn, &d_src) ||
+            !uploadRawToHip(dst_data, dst_step, dst_width, dst_height, depth, cn, &d_dst) ||
+            hipMalloc(&d_affine, sizeof(affine)) != hipSuccess) {
+            freeHipPtr(d_src); freeHipPtr(d_dst); freeHipPtr(d_affine);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+        if (!checkHip(hipMemcpy(d_affine, affine, sizeof(affine), hipMemcpyHostToDevice))) {
+            freeHipPtr(d_src); freeHipPtr(d_dst); freeHipPtr(d_affine);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        rppHandle_t handle = createRppGpuHandle(1);
+        if (!handle) {
+            freeHipPtr(d_src); freeHipPtr(d_dst); freeHipPtr(d_affine);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        RppStatus status = rppt_warp_affine(d_src, &srcDesc, d_dst, &dstDesc,
+                                            static_cast<Rpp32f*>(d_affine),
+                                            interp, &srcRoi, XYWH, handle, backend);
+
+        bool ok = (status == RPP_SUCCESS);
+        if (ok) {
+            ok = downloadRawFromHip(d_dst, dst_data, dst_step, dst_width, dst_height, depth, cn);
+        }
+        destroyRppGpuHandle(handle);
+        freeHipPtr(d_src); freeHipPtr(d_dst); freeHipPtr(d_affine);
+        return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    rppHandle_t handle = createRppCpuHandle(1);
+    if (!handle) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    RppStatus status = rppt_warp_affine(const_cast<uchar*>(src_data), &srcDesc,
+                                        dst_data, &dstDesc,
+                                        affine, interp,
+                                        &srcRoi, XYWH, handle, backend);
+    destroyRppCpuHandle(handle);
+    return (status == RPP_SUCCESS) ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+// =========================================================================
+// FILTERING (stubs)
 // =========================================================================
 
 extern "C" int rpp_hal_boxFilter(const uchar* src_data, size_t src_step,
@@ -86,33 +341,8 @@ extern "C" int rpp_hal_canny(const uchar* src_data, size_t src_step,
 }
 
 // =========================================================================
-// GEOMETRY
+// GEOMETRY (remaining stubs)
 // =========================================================================
-
-extern "C" int rpp_hal_resize(int src_type,
-                              const uchar* src_data, size_t src_step,
-                              int src_width, int src_height,
-                              uchar* dst_data, size_t dst_step,
-                              int dst_width, int dst_height,
-                              double inv_scale_x, double inv_scale_y, int interpolation) {
-    (void)src_type; (void)src_data; (void)src_step; (void)src_width; (void)src_height;
-    (void)dst_data; (void)dst_step; (void)dst_width; (void)dst_height;
-    (void)inv_scale_x; (void)inv_scale_y; (void)interpolation;
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-}
-
-extern "C" int rpp_hal_warpAffine(int src_type,
-                                    const uchar* src_data, size_t src_step,
-                                    int src_width, int src_height,
-                                    uchar* dst_data, size_t dst_step,
-                                    int dst_width, int dst_height,
-                                    const double M[6], int interpolation,
-                                    int borderType, const double borderValue[4]) {
-    (void)src_type; (void)src_data; (void)src_step; (void)src_width; (void)src_height;
-    (void)dst_data; (void)dst_step; (void)dst_width; (void)dst_height;
-    (void)M; (void)interpolation; (void)borderType; (void)borderValue;
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-}
 
 extern "C" int rpp_hal_warpPerspective(int src_type,
                                        const uchar* src_data, size_t src_step,
@@ -124,16 +354,6 @@ extern "C" int rpp_hal_warpPerspective(int src_type,
     (void)src_type; (void)src_data; (void)src_step; (void)src_width; (void)src_height;
     (void)dst_data; (void)dst_step; (void)dst_width; (void)dst_height;
     (void)M; (void)interpolation; (void)borderType; (void)borderValue;
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-}
-
-extern "C" int rpp_hal_flip(int src_type,
-                              const uchar* src_data, size_t src_step,
-                              int src_width, int src_height,
-                              uchar* dst_data, size_t dst_step,
-                              int flip_mode) {
-    (void)src_type; (void)src_data; (void)src_step; (void)src_width; (void)src_height;
-    (void)dst_data; (void)dst_step; (void)flip_mode;
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 

@@ -1,6 +1,6 @@
 project(rpphal)
 
-set(RPP_HAL_VERSION 0.0.1 CACHE INTERNAL "")
+set(RPP_HAL_VERSION "${rpp_VERSION}" CACHE INTERNAL "")
 set(RPP_HAL_LIBRARIES "rpphal" CACHE INTERNAL "")
 set(RPP_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "")
 set(RPP_HAL_HEADERS
@@ -22,7 +22,16 @@ target_include_directories(rpphal PRIVATE
   ${CMAKE_SOURCE_DIR}/modules/imgproc/include
 )
 
-target_link_libraries(rpphal PUBLIC rpp::rpp /opt/rocm-7.2.1/lib/libamdhip64.so)
+# RPP 3.x (HIP backend) already pulls HIP through rpp::rpp when exported properly.
+# The hardcoded amdhip64 path was for an older ROCm layout; keep it as a fallback
+# only if the target is not otherwise present.
+target_link_libraries(rpphal PUBLIC rpp::rpp)
+if(NOT TARGET hip::host AND EXISTS "/opt/rocm/lib/libamdhip64.so")
+  target_link_libraries(rpphal PUBLIC /opt/rocm/lib/libamdhip64.so)
+elseif(NOT TARGET hip::host)
+  find_package(hip REQUIRED CONFIG HINTS ${ROCM_PATH}/lib/cmake/hip)
+  target_link_libraries(rpphal PUBLIC hip::host)
+endif()
 
 # Define GPU_SUPPORT so RPP exposes GPU APIs.
 # Define __HIP_PLATFORM_AMD__ so HIP headers work in plain C++ mode.
