@@ -31,3 +31,4 @@ xcuserdata/
 /test_minimal_run
 /test_imgproc_correctness
 /benchmark_rpp
+/benchmark_rpp_full

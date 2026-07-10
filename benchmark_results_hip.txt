@@ -1,0 +1,72 @@
+OpenCV version: 5.1.0-dev
+
+==========================================================================================
+RPP HAL full benchmark | warmups=20 | iters=1000
+==========================================================================================
+function                              resolution           ms/op      total_ms    status
+------------------------------------------------------------------------------------------
+bitwise_and 8UC1                      640x480             0.0119       11.9450        OK
+bitwise_or 8UC1                       640x480             0.0119       11.9250        OK
+bitwise_xor 8UC1                      640x480             0.0119       11.9380        OK
+bitwise_not 8UC1                      640x480             0.0096        9.5750        OK
+resize 8UC3 bilinear down2x           640x480             0.0600       60.0060        OK
+resize 8UC3 bilinear up2x             640x480             0.1384      138.3690        OK
+flip 8UC3 horizontal                  640x480             0.2099      209.9170        OK
+flip 8UC3 vertical                    640x480             0.0174       17.4030        OK
+flip 8UC3 both                        640x480             0.2197      219.6700        OK
+warpAffine 8UC3 bilinear              640x480             0.1539      153.8550        OK
+boxFilter 3x3 8UC3 replicate          640x480             0.0605       60.5430        OK
+boxFilter 5x5 8UC3 replicate          640x480             0.0707       70.6770        OK
+boxFilter 3x3 8UC1 replicate          640x480             0.0248       24.7540        OK
+bitwise_and 8UC1                      1280x720            0.0260       26.0150        OK
+bitwise_or 8UC1                       1280x720            0.0261       26.0720        OK
+bitwise_xor 8UC1                      1280x720            0.0260       26.0020        OK
+bitwise_not 8UC1                      1280x720            0.0178       17.7690        OK
+resize 8UC3 bilinear down2x           1280x720            0.0465       46.5390        OK
+resize 8UC3 bilinear up2x             1280x720            0.2827      282.7040        OK
+flip 8UC3 horizontal                  1280x720            0.6071      607.1150        OK
+flip 8UC3 vertical                    1280x720            0.0485       48.5100        OK
+flip 8UC3 both                        1280x720            0.6470      646.9980        OK
+warpAffine 8UC3 bilinear              1280x720            0.3950      395.0220        OK
+boxFilter 3x3 8UC3 replicate          1280x720            0.1799      179.8860        OK
+boxFilter 5x5 8UC3 replicate          1280x720            0.2064      206.3660        OK
+boxFilter 3x3 8UC1 replicate          1280x720            0.0627       62.7280        OK
+bitwise_and 8UC1                      1920x1080           0.0561       56.1460        OK
+bitwise_or 8UC1                       1920x1080           0.0563       56.3300        OK
+bitwise_xor 8UC1                      1920x1080           0.0562       56.1880        OK
+bitwise_not 8UC1                      1920x1080           0.0387       38.7490        OK
+resize 8UC3 bilinear down2x           1920x1080           0.0652       65.2050        OK
+resize 8UC3 bilinear up2x             1920x1080           0.5181      518.0690        OK
+flip 8UC3 horizontal                  1920x1080           1.3862     1386.1520        OK
+flip 8UC3 vertical                    1920x1080           0.0948       94.8010        OK
+flip 8UC3 both                        1920x1080           1.4531     1453.0770        OK
+warpAffine 8UC3 bilinear              1920x1080           0.8655      865.4600        OK
+boxFilter 3x3 8UC3 replicate          1920x1080           0.3838      383.8350        OK
+boxFilter 5x5 8UC3 replicate          1920x1080           0.4454      445.3530        OK
+boxFilter 3x3 8UC1 replicate          1920x1080           0.1215      121.4800        OK
+bitwise_and 8UC1                      2560x1440           0.0774       77.3520        OK
+bitwise_or 8UC1                       2560x1440           0.0772       77.2020        OK
+bitwise_xor 8UC1                      2560x1440           0.0856       85.5670        OK
+bitwise_not 8UC1                      2560x1440           0.0628       62.8150        OK
+resize 8UC3 bilinear down2x           2560x1440           0.0861       86.1220        OK
+resize 8UC3 bilinear up2x             2560x1440           0.8499      849.8710        OK
+flip 8UC3 horizontal                  2560x1440           2.4682     2468.2420        OK
+flip 8UC3 vertical                    2560x1440           0.2539      253.8500        OK
+flip 8UC3 both                        2560x1440           2.6716     2671.5630        OK
+warpAffine 8UC3 bilinear              2560x1440           1.5034     1503.4430        OK
+boxFilter 3x3 8UC3 replicate          2560x1440           0.8324      832.4310        OK
+boxFilter 5x5 8UC3 replicate          2560x1440           0.9377      937.7330        OK
+boxFilter 3x3 8UC1 replicate          2560x1440           0.2346      234.5570        OK
+bitwise_and 8UC1                      3840x2160           0.2359      235.9260        OK
+bitwise_or 8UC1                       3840x2160           0.2341      234.0970        OK
+bitwise_xor 8UC1                      3840x2160           0.2355      235.5110        OK
+bitwise_not 8UC1                      3840x2160           0.1586      158.5900        OK
+resize 8UC3 bilinear down2x           3840x2160           0.1147      114.6530        OK
+resize 8UC3 bilinear up2x             3840x2160           1.7617     1761.7060        OK
+flip 8UC3 horizontal                  3840x2160           5.8001     5800.0670        OK
+flip 8UC3 vertical                    3840x2160           1.4458     1445.8210        OK
+flip 8UC3 both                        3840x2160           6.8781     6878.0900        OK
+warpAffine 8UC3 bilinear              3840x2160           3.3171     3317.1040        OK
+boxFilter 3x3 8UC3 replicate          3840x2160           3.5534     3553.4450        OK
+boxFilter 5x5 8UC3 replicate          3840x2160           3.7886     3788.5810        OK
+boxFilter 3x3 8UC1 replicate          3840x2160           0.5356      535.6230        OK

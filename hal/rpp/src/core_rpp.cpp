@@ -34,6 +34,10 @@ namespace {
     enum RppPath { RPP_NONE, RPP_GPU, RPP_CPU };
 
     inline RppPath selectRppPath() {
+        const char* disable = getenv("OPENCV_RPP_DISABLE");
+        if (disable && (strcmp(disable, "1") == 0 || strcmp(disable, "yes") == 0 || strcmp(disable, "true") == 0)) {
+            return RPP_NONE;
+        }
         if (isRppGpuAvailable()) return RPP_GPU;
         if (isRppCpuAvailable()) return RPP_CPU;
         return RPP_NONE;
