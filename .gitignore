@@ -25,3 +25,9 @@ build
 node_modules
 CMakeSettings.json
 xcuserdata/
+
+# Local RPP HAL test binaries
+/test_rpp_hal
+/test_minimal_run
+/test_imgproc_correctness
+/benchmark_rpp
