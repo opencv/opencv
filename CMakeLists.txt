@@ -28,9 +28,6 @@ if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)  # CMake 3.27+: use CMake FindCUDA if available.
 endif()
 
-if(POLICY CMP0148)
-  cmake_policy(SET CMP0148 OLD)  # CMake 3.27+: use CMake FindPythonInterp and FindPythonLib if available.
-endif()
 
 #
 # Configure OpenCV CMake hooks
@@ -822,7 +819,7 @@ if(ENABLE_FLAKE8 AND PYTHON_DEFAULT_AVAILABLE)
   if(FLAKE8_FOUND)
     list(APPEND OPENCV_FLAKE8_EXCLUDES ".git" "__pycache__" "config.py" "*.config.py" "config-*.py")
     list(APPEND OPENCV_FLAKE8_EXCLUDES "svgfig.py")  # 3rdparty
-    if(NOT PYTHON3_VERSION_STRING VERSION_GREATER 3.6)
+    if(NOT Python3_VERSION VERSION_GREATER 3.6)
       # Python 3.6+ (PEP 526): variable annotations (type hints)
       list(APPEND OPENCV_FLAKE8_EXCLUDES "samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs")
     endif()
@@ -1974,15 +1971,15 @@ endif()
 if(BUILD_opencv_python3)
   status("")
   status("  Python 3:")
-  status("    Interpreter:"     PYTHON3INTERP_FOUND  THEN "${PYTHON3_EXECUTABLE} (ver ${PYTHON3_VERSION_STRING})"       ELSE NO)
-  if(PYTHON3LIBS_VERSION_STRING)
-    status("    Libraries:"   HAVE_opencv_python3  THEN  "${PYTHON3_LIBRARIES} (ver ${PYTHON3LIBS_VERSION_STRING})"   ELSE NO)
+  status("    Interpreter:"     Python3_Interpreter_FOUND  THEN "${Python3_EXECUTABLE} (ver ${Python3_VERSION})"       ELSE NO)
+  if(Python_VERSION)
+    status("    Libraries:"   HAVE_opencv_python3  THEN  "${Python3_LIBRARIES} (ver ${Python3_VERSION})"   ELSE NO)
   else()
-    status("    Libraries:"   HAVE_opencv_python3  THEN  "${PYTHON3_LIBRARIES}"                                      ELSE NO)
+    status("    Libraries:"   HAVE_opencv_python3  THEN  "${Python3_LIBRARIES}"                                      ELSE NO)
   endif()
-  status("    Limited API:" PYTHON3_LIMITED_API THEN "YES (ver ${PYTHON3_LIMITED_API_VERSION})"                    ELSE NO)
-  status("    numpy:"         PYTHON3_NUMPY_INCLUDE_DIRS THEN "${PYTHON3_NUMPY_INCLUDE_DIRS} (ver ${PYTHON3_NUMPY_VERSION})" ELSE "NO (Python3 wrappers can not be generated)")
-  status("    install path:"  HAVE_opencv_python3  THEN "${__INSTALL_PATH_PYTHON3}"                            ELSE "-")
+  status("    Limited API:" Python3_LIMITED_API THEN "YES (ver ${Python3_LIMITED_API_VERSION})"                    ELSE NO)
+  status("    numpy:"         Python3_NumPy_INCLUDE_DIRS THEN "${Python3_NumPy_INCLUDE_DIRS} (ver ${Python3_NumPy_VERSION})" ELSE "NO (Python3 wrappers can not be generated)")
+  status("    install path:"  HAVE_opencv_python3  THEN "${__INSTALL_PATH_Python3}"                            ELSE "-")
 endif()
 
 status("")

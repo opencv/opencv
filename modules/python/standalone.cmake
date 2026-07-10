@@ -6,26 +6,20 @@ if(NOT DEFINED OpenCV_SOURCE_DIR)
   message(FATAL_ERROR "Missing OpenCV_SOURCE_DIR")
 endif()
 if(DEFINED OPENCV_PYTHON_STANDALONE_INSTALL_PATH)
-  set(OPENCV_PYTHON_INSTALL_PATH "${OPENCV_PYTHON_STANDALONE_INSTALL_PATH}")
-elseif(NOT OPENCV_PYTHON_INSTALL_PATH)
-  message(FATAL_ERROR "Missing OPENCV_PYTHON_STANDALONE_INSTALL_PATH / OPENCV_PYTHON_INSTALL_PATH")
+  set(OPENCV_Python_INSTALL_PATH "${OPENCV_PYTHON_STANDALONE_INSTALL_PATH}")
+elseif(NOT OPENCV_Python_INSTALL_PATH)
+  message(FATAL_ERROR "Missing OPENCV_PYTHON_STANDALONE_INSTALL_PATH / OPENCV_Python_INSTALL_PATH")
 endif()
 
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake")
 
 set(OPENCV_PYTHON_SKIP_DETECTION ON)
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectPython.cmake")
-find_python("${OPENCV_PYTHON_VERSION}" "${OPENCV_PYTHON_VERSION}" PYTHON_LIBRARY PYTHON_INCLUDE_DIR
-    PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING
-    PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHONLIBS_FOUND
-    PYTHONLIBS_VERSION_STRING PYTHON_LIBRARIES PYTHON_LIBRARY
-    PYTHON_DEBUG_LIBRARIES PYTHON_LIBRARY_DEBUG PYTHON_INCLUDE_PATH
-    PYTHON_INCLUDE_DIR PYTHON_INCLUDE_DIR2 PYTHON_PACKAGES_PATH
-    PYTHON_NUMPY_INCLUDE_DIRS PYTHON_NUMPY_VERSION)
-if(NOT PYTHON_EXECUTABLE OR NOT PYTHON_INCLUDE_DIR)
+find_package(Python COMPONENTS Interpreter Development NumPy)
+if(NOT Python_EXECUTABLE OR NOT Python_INCLUDE_DIR)
   message(FATAL_ERROR "Can't find Python development files")
 endif()
-if(NOT PYTHON_NUMPY_INCLUDE_DIRS)
+if(NOT Python_NUMPY_INCLUDE_DIRS)
   message(FATAL_ERROR "Can't find Python 'numpy' development files")
 endif()
 
@@ -34,9 +28,9 @@ include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectDLPack.cmake")
 
 status("-----------------------------------------------------------------")
 status("  Python:")
-status("    Interpreter:"   "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})")
-status("    Libraries:"     "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})")
-status("    numpy:"         "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})")
+status("    Interpreter:"   "${Python_EXECUTABLE} (ver ${Python3_VERSION})")
+status("    Libraries:"     "${Python_LIBRARIES} (ver ${Python3_VERSION})")
+status("    numpy:"         "${Python3_NumPy_INCLUDE_DIRS} (ver ${Python3_NumPy_VERSION})")
 status("")
 status("  Install to:" "${CMAKE_INSTALL_PREFIX}")
 status("-----------------------------------------------------------------")
@@ -44,7 +38,7 @@ status("-----------------------------------------------------------------")
 set(OpenCV_DIR "${OpenCV_BINARY_DIR}")
 find_package(OpenCV REQUIRED)
 
-set(PYTHON PYTHON)
+set(PYTHON Python)
 
 macro(ocv_add_module module_name)
   set(the_module opencv_${module_name})

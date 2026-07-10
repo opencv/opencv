@@ -2,11 +2,11 @@
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
-
 include_directories(SYSTEM
-    "${${PYTHON}_INCLUDE_PATH}"
-    ${${PYTHON}_NUMPY_INCLUDE_DIRS}
+    "${${PYTHON}_INCLUDE_DIRS}"
+    ${${PYTHON}_NumPy_INCLUDE_DIRS}
 )
+
 ocv_module_include_directories(
     "${PYTHON_SOURCE_DIR}/src2"
     "${OPENCV_PYTHON_BINDINGS_DIR}"
@@ -46,7 +46,7 @@ if(${PYTHON}_LIMITED_API)
   # support only python3.3+
   ocv_assert(${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 2)
   target_compile_definitions(${the_module} PRIVATE CVPY_DYNAMIC_INIT)
-  target_compile_definitions(${the_module} PRIVATE PYTHON3_LIMITED_API_VERSION=${PYTHON3_LIMITED_API_VERSION})
+  target_compile_definitions(${the_module} PRIVATE Python3_LIMITED_API_VERSION=${Python3_LIMITED_API_VERSION})
   if(WIN32)
     string(REPLACE
       "python${${PYTHON}_VERSION_MAJOR}${${PYTHON}_VERSION_MINOR}.lib"
@@ -56,15 +56,14 @@ if(${PYTHON}_LIMITED_API)
   endif()
 endif()
 
-if(APPLE)
-  set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-elseif(WIN32 OR OPENCV_FORCE_PYTHON_LIBS)
-  if(${PYTHON}_DEBUG_LIBRARIES AND NOT ${PYTHON}_LIBRARIES MATCHES "optimized.*debug")
-    ocv_target_link_libraries(${the_module} PRIVATE ${${PYTHON}_LIBRARIES})
-    ocv_target_link_libraries(${the_module} PRIVATE debug ${${PYTHON}_DEBUG_LIBRARIES} optimized ${${PYTHON}_LIBRARIES})
-  else()
-    ocv_target_link_libraries(${the_module} PRIVATE ${${PYTHON}_LIBRARIES})
-  endif()
+if(WIN32 OR OPENCV_FORCE_PYTHON_LIBS)
+    ocv_target_link_libraries(${the_module} PRIVATE Python3::Module Python3::NumPy)
+else()
+    # On Linux/macOS, link ONLY NumPy. Python symbols resolve dynamically at runtime.
+    ocv_target_link_libraries(${the_module} PRIVATE Python3::NumPy)
+    if(APPLE)
+      set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+    endif()
 endif()
 
 if(TARGET gen_opencv_python_source)
@@ -139,7 +138,7 @@ if(MSVC AND NOT BUILD_SHARED_LIBS)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif()
 
-if(MSVC AND NOT ${PYTHON}_DEBUG_LIBRARIES)
+if(MSVC AND NOT "d" IN_LIST Python3_FIND_ABI)
   set(PYTHON_INSTALL_CONFIGURATIONS CONFIGURATIONS Release)
 else()
   set(PYTHON_INSTALL_CONFIGURATIONS "")
@@ -156,19 +155,19 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
   set(__python_loader_subdir "cv2/")
 endif()
 
-if(NOT " ${PYTHON}" STREQUAL " PYTHON"
-    AND NOT DEFINED OPENCV_PYTHON_INSTALL_PATH
+if(NOT " ${PYTHON}" STREQUAL " Python"
+    AND NOT DEFINED OPENCV_Python_INSTALL_PATH
 )
   if(DEFINED OPENCV_${PYTHON}_INSTALL_PATH)
-    set(OPENCV_PYTHON_INSTALL_PATH "${OPENCV_${PYTHON}_INSTALL_PATH}")
+    set(OPENCV_Python_INSTALL_PATH "${OPENCV_${PYTHON}_INSTALL_PATH}")
   elseif(NOT OPENCV_SKIP_PYTHON_LOADER)
-    set(OPENCV_PYTHON_INSTALL_PATH "${${PYTHON}_PACKAGES_PATH}")
+    set(OPENCV_Python_INSTALL_PATH "${${PYTHON}_PACKAGES_PATH}")
   endif()
 endif()
 
-if(NOT OPENCV_SKIP_PYTHON_LOADER AND DEFINED OPENCV_PYTHON_INSTALL_PATH)
+if(NOT OPENCV_SKIP_PYTHON_LOADER AND DEFINED OPENCV_Python_INSTALL_PATH)
   include("${CMAKE_CURRENT_LIST_DIR}/python_loader.cmake")
-  set(OPENCV_PYTHON_INSTALL_PATH_SETUPVARS "${OPENCV_PYTHON_INSTALL_PATH}" CACHE INTERNAL "")
+  set(OPENCV_Python_INSTALL_PATH_SETUPVARS "${OPENCV_Python_INSTALL_PATH}" CACHE INTERNAL "")
 endif()
 
 if(OPENCV_SKIP_PYTHON_LOADER)
@@ -180,13 +179,13 @@ if(OPENCV_SKIP_PYTHON_LOADER)
     message(FATAL_ERROR "Specify 'OPENCV_${PYTHON}_INSTALL_PATH' variable")
   endif()
 else()
-  ocv_assert(DEFINED OPENCV_PYTHON_INSTALL_PATH)
+  ocv_assert(DEFINED OPENCV_Python_INSTALL_PATH)
   if(${PYTHON}_LIMITED_API)
     set(__python_binary_subdir "python-${${PYTHON}_VERSION_MAJOR}")
   else()
     set(__python_binary_subdir "python-${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}")
   endif()
-  set(__python_binary_install_path "${OPENCV_PYTHON_INSTALL_PATH}/${__python_loader_subdir}${__python_binary_subdir}")
+  set(__python_binary_install_path "${OPENCV_Python_INSTALL_PATH}/${__python_loader_subdir}${__python_binary_subdir}")
 endif()
 
 install(TARGETS ${the_module}
@@ -199,7 +198,7 @@ install(TARGETS ${the_module}
 set(__INSTALL_PATH_${PYTHON} "${__python_binary_install_path}" CACHE INTERNAL "")  # CMake status
 
 if(NOT OPENCV_SKIP_PYTHON_LOADER)
-  ocv_assert(DEFINED OPENCV_PYTHON_INSTALL_PATH)
+  ocv_assert(DEFINED OPENCV_Python_INSTALL_PATH)
   if(OpenCV_FOUND)
     set(__loader_path "${OpenCV_BINARY_DIR}/python_loader")
   else()
@@ -207,9 +206,9 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
   endif()
 
   set(__python_loader_install_tmp_path "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/install/python_loader/")
-  set(OpenCV_PYTHON_LOADER_FULL_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_PYTHON_INSTALL_PATH}/cv2")
-  if(IS_ABSOLUTE "${OPENCV_PYTHON_INSTALL_PATH}")
-    set(CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE "'${OPENCV_PYTHON_INSTALL_PATH}/cv2'")
+  set(OpenCV_PYTHON_LOADER_FULL_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_Python_INSTALL_PATH}/cv2")
+  if(IS_ABSOLUTE "${OPENCV_Python_INSTALL_PATH}")
+    set(CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE "'${OPENCV_Python_INSTALL_PATH}/cv2'")
   else()
     set(CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE "LOADER_DIR")
   endif()
@@ -234,7 +233,7 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
     set(CMAKE_PYTHON_EXTENSION_PATH "os.path.join(${CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE}, '${OpenCV_PYTHON_BINARY_RELATIVE_INSTALL_PATH}')")
   endif()
   configure_file("${PYTHON_SOURCE_DIR}/package/template/config-x.y.py.in" "${__python_loader_install_tmp_path}/cv2/${__target_config}" @ONLY)
-  install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/" COMPONENT python)
+  install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_Python_INSTALL_PATH}/cv2/" COMPONENT python)
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)
