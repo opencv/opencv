@@ -1,5 +1,5 @@
 if(NOT DEFINED MIN_VER_CMAKE)
-  set(MIN_VER_CMAKE 3.13) # Debian 10
+  set(MIN_VER_CMAKE 3.16) # Debian 10
   # set(MIN_VER_CMAKE 3.10) # Visual Studio 2017 15.7
 endif()
 set(MIN_VER_CUDA 6.5)
