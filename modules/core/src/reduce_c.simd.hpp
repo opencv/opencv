@@ -82,6 +82,26 @@ static void reduceColMin_8u(const Mat& srcmat, Mat& dstmat)
     reduceColMinMax_8u<false>(srcmat, dstmat);
 }
 
+static void reduceColMax_16u(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, ushort, ReduceOpMax_16U, ReduceVecOpMax_16U>(srcmat, dstmat);
+}
+
+static void reduceColMin_16u(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, ushort, ReduceOpMin_16U, ReduceVecOpMin_16U>(srcmat, dstmat);
+}
+
+static void reduceColMax_16s(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S>(srcmat, dstmat);
+}
+
+static void reduceColMin_16s(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S>(srcmat, dstmat);
+}
+
 template<bool isMax>
 static void reduceColMinMax_32fC1(const Mat& srcmat, Mat& dstmat)
 {
@@ -143,6 +163,18 @@ static void reduceColMin_32f(const Mat& srcmat, Mat& dstmat)
 {
     reduceColMinMax_32f<false>(srcmat, dstmat);
 }
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+static void reduceColMax_64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<double, double, ReduceOpMax_64F, ReduceVecOpMax_64F>(srcmat, dstmat);
+}
+
+static void reduceColMin_64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<double, double, ReduceOpMin_64F, ReduceVecOpMin_64F>(srcmat, dstmat);
+}
+#endif
 
 template<typename DT>
 static void reduceColSum2_8uC1(const Mat& srcmat, Mat& dstmat)
@@ -215,6 +247,16 @@ static void reduceColSum2_8u64f(const Mat& srcmat, Mat& dstmat)
     reduceColSum2_8u<double>(srcmat, dstmat);
 }
 
+static void reduceColSum2_16u32f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_16s32f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F>(srcmat, dstmat);
+}
+
 static void reduceColSum2_32f32fC1(const Mat& srcmat, Mat& dstmat)
 {
 #if CV_RVV
@@ -262,3 +304,25 @@ static void reduceColSum2_32f32f(const Mat& srcmat, Mat& dstmat)
     else
         reduceColSum2_32f32fFallback(srcmat, dstmat);
 }
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+static void reduceColSum2_16u64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, double, ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_16s64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, double, ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_32f64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<float, double, ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_64f64f(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<double, double, ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F>(srcmat, dstmat);
+}
+#endif

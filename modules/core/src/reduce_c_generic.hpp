@@ -584,7 +584,7 @@ private:
 };
 
 template<typename T, typename ST, class Op, class VecOp> static void
-reduceC_( const Mat& srcmat, Mat& dstmat)
+reduceColGeneric(const Mat& srcmat, Mat& dstmat)
 {
     Op op;
     VecOp vop;
@@ -603,9 +603,9 @@ template<bool isMax>
 static void reduceColMinMax_8uFallback(const Mat& srcmat, Mat& dstmat)
 {
     if (isMax)
-        reduceC_<uchar, uchar, ReduceOpMax_8U, ReduceVecOpMax_8U>(srcmat, dstmat);
+        reduceColGeneric<uchar, uchar, ReduceOpMax_8U, ReduceVecOpMax_8U>(srcmat, dstmat);
     else
-        reduceC_<uchar, uchar, ReduceOpMin_8U, ReduceVecOpMin_8U>(srcmat, dstmat);
+        reduceColGeneric<uchar, uchar, ReduceOpMin_8U, ReduceVecOpMin_8U>(srcmat, dstmat);
 }
 
 template<bool isMax>
@@ -618,23 +618,23 @@ template<bool isMax>
 static void reduceColMinMax_32fFallback(const Mat& srcmat, Mat& dstmat)
 {
     if (isMax)
-        reduceC_<float, float, ReduceOpMax_32F, ReduceVecOpMax_32F>(srcmat, dstmat);
+        reduceColGeneric<float, float, ReduceOpMax_32F, ReduceVecOpMax_32F>(srcmat, dstmat);
     else
-        reduceC_<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F>(srcmat, dstmat);
+        reduceColGeneric<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F>(srcmat, dstmat);
 }
 
 template<typename DT>
 static void reduceColSum2_8uFallback(const Mat& srcmat, Mat& dstmat)
 {
     if (std::is_same<DT, int>::value)
-        reduceC_<uchar, int, ReduceOpAddSqr_8U32S, ReduceVecOpAddSqr_8U32S>(srcmat, dstmat);
+        reduceColGeneric<uchar, int, ReduceOpAddSqr_8U32S, ReduceVecOpAddSqr_8U32S>(srcmat, dstmat);
     else if (std::is_same<DT, float>::value)
-        reduceC_<uchar, float, ReduceOpAddSqr_8U32F, ReduceVecOpAddSqr_8U32F>(srcmat, dstmat);
+        reduceColGeneric<uchar, float, ReduceOpAddSqr_8U32F, ReduceVecOpAddSqr_8U32F>(srcmat, dstmat);
     else
-        reduceC_<uchar, double, ReduceOpAddSqr_8U64F, ReduceVecOpAddSqr_8U64F>(srcmat, dstmat);
+        reduceColGeneric<uchar, double, ReduceOpAddSqr_8U64F, ReduceVecOpAddSqr_8U64F>(srcmat, dstmat);
 }
 
 static void reduceColSum2_32f32fFallback(const Mat& srcmat, Mat& dstmat)
 {
-    reduceC_<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F>(srcmat, dstmat);
+    reduceColGeneric<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F>(srcmat, dstmat);
 }
