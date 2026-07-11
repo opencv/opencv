@@ -338,13 +338,13 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
-typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCAvgFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCMaxFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCMinFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCSum2Func(int sdepth, int ddepth);
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth);
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth);
 
 template <typename T, typename WT, typename Op>
 struct ReduceR_SIMD
@@ -473,8 +473,6 @@ reduceC_( const Mat& srcmat, Mat& dstmat)
     ReduceC_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
     parallel_for_(Range(0, srcmat.size().height), body);
 }
-
-typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
@@ -821,9 +819,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if( op == REDUCE_SUM )
         {
-            ReduceSumFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
+            ReduceFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
@@ -899,11 +897,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == REDUCE_SUM)
         {
-            ReduceSumFunc simd_func = op0 == REDUCE_AVG
+            ReduceFunc simd_func = op0 == REDUCE_AVG
                     ? getReduceCAvgFunc(sdepth, ddepth)
                     : getReduceCSumFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
@@ -927,9 +925,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_MAX)
         {
-            ReduceSumFunc simd_func = getReduceCMaxFunc(sdepth, ddepth);
+            ReduceFunc simd_func = getReduceCMaxFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceMaxC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
@@ -943,9 +941,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_MIN)
         {
-            ReduceSumFunc simd_func = getReduceCMinFunc(sdepth, ddepth);
+            ReduceFunc simd_func = getReduceCMinFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceMinC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
@@ -959,9 +957,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_SUM2)
         {
-            ReduceSumFunc simd_func = getReduceCSum2Func(sdepth, ddepth);
+            ReduceFunc simd_func = getReduceCSum2Func(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSum2C8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)

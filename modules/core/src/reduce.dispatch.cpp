@@ -9,50 +9,50 @@
 
 namespace cv {
 
-typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCAvgFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCMaxFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCMinFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceCSum2Func(int sdepth, int ddepth);
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth);
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth);
 
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceCSumFunc, (sdepth, ddepth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-ReduceSumFunc getReduceCAvgFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceCAvgFunc, (sdepth, ddepth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-ReduceSumFunc getReduceCMaxFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceCMaxFunc, (sdepth, ddepth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-ReduceSumFunc getReduceCMinFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceCMinFunc, (sdepth, ddepth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-ReduceSumFunc getReduceCSum2Func(int sdepth, int ddepth)
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceCSum2Func, (sdepth, ddepth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getReduceRSumFunc, (sdepth, ddepth),
