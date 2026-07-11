@@ -611,7 +611,7 @@ static void reduceColMinMax_8uFallback(const Mat& srcmat, Mat& dstmat)
 template<bool isMax>
 static void reduceColMinMax_8uC1(const Mat& srcmat, Mat& dstmat)
 {
-#if CV_NEON || CV_AVX2
+#if CV_NEON || CV_AVX2 || CV_RVV
     const int cols = srcmat.cols;
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
@@ -642,6 +642,21 @@ static void reduceColMinMax_8uC1(const Mat& srcmat, Mat& dstmat)
             _mm256_storeu_si256((__m256i*)lanes, acc);
             for (int i = 0; i < 32; i++)
                 result = reduceScalarMinMax<isMax>(result, lanes[i]);
+#elif CV_RVV
+            const int vlmax = __riscv_vsetvlmax_e8m8();
+            vuint8m8_t acc = __riscv_vmv_v_x_u8m8(result, vlmax);
+            for (; x < cols; )
+            {
+                const int vl = __riscv_vsetvl_e8m8(cols - x);
+                vuint8m8_t v = __riscv_vle8_v_u8m8(src + x, vl);
+                acc = isMax ? __riscv_vmaxu_tu(acc, acc, v, vl)
+                            : __riscv_vminu_tu(acc, acc, v, vl);
+                x += vl;
+            }
+            vuint8m1_t seed = __riscv_vmv_s_x_u8m1(result, __riscv_vsetvlmax_e8m1());
+            vuint8m1_t reduced = isMax ? __riscv_vredmaxu(acc, seed, vlmax)
+                                       : __riscv_vredminu(acc, seed, vlmax);
+            result = (uchar)__riscv_vmv_x(reduced);
 #endif
             for (; x < cols; x++)
                 result = reduceScalarMinMax<isMax>(result, src[x]);
@@ -900,7 +915,7 @@ static void reduceColMinMax_32fFallback(const Mat& srcmat, Mat& dstmat)
 template<bool isMax>
 static void reduceColMinMax_32fC1(const Mat& srcmat, Mat& dstmat)
 {
-#if CV_NEON || CV_AVX2
+#if CV_NEON || CV_AVX2 || CV_RVV
     const int cols = srcmat.cols;
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
@@ -930,6 +945,21 @@ static void reduceColMinMax_32fC1(const Mat& srcmat, Mat& dstmat)
             _mm256_storeu_ps(lanes, acc);
             for (int i = 0; i < 8; i++)
                 result = reduceScalarMinMax<isMax>(result, lanes[i]);
+#elif CV_RVV
+            const int vlmax = __riscv_vsetvlmax_e32m8();
+            vfloat32m8_t acc = __riscv_vfmv_v_f_f32m8(result, vlmax);
+            for (; x < cols; )
+            {
+                const int vl = __riscv_vsetvl_e32m8(cols - x);
+                vfloat32m8_t v = __riscv_vle32_v_f32m8(src + x, vl);
+                acc = isMax ? __riscv_vfmax_tu(acc, acc, v, vl)
+                            : __riscv_vfmin_tu(acc, acc, v, vl);
+                x += vl;
+            }
+            vfloat32m1_t seed = __riscv_vfmv_s_f_f32m1(result, __riscv_vsetvlmax_e32m1());
+            vfloat32m1_t reduced = isMax ? __riscv_vfredmax(acc, seed, vlmax)
+                                         : __riscv_vfredmin(acc, seed, vlmax);
+            result = __riscv_vfmv_f(reduced);
 #endif
             for (; x < cols; x++)
                 result = reduceScalarMinMax<isMax>(result, src[x]);
@@ -1076,7 +1106,7 @@ static void reduceColSum2_8uFallback(const Mat& srcmat, Mat& dstmat)
 template<typename DT>
 static void reduceColSum2_8uC1(const Mat& srcmat, Mat& dstmat)
 {
-#if (CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))) || CV_AVX2
+#if (CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))) || CV_AVX2 || CV_RVV
     const int cols = srcmat.cols;
 
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
@@ -1105,6 +1135,16 @@ static void reduceColSum2_8uC1(const Mat& srcmat, Mat& dstmat)
             _mm256_storeu_si256((__m256i*)lanes, acc);
             for (int i = 0; i < 8; i++)
                 result += lanes[i];
+#elif CV_RVV
+            vuint32m1_t acc = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
+            for (; x < cols; )
+            {
+                const int vl = __riscv_vsetvl_e8m4(cols - x);
+                vuint8m4_t v = __riscv_vle8_v_u8m4(src + x, vl);
+                acc = __riscv_vwredsumu(__riscv_vwmulu(v, v, vl), acc, vl);
+                x += vl;
+            }
+            result = (uint32_t)__riscv_vmv_x(acc);
 #endif
             for (; x < cols; x++)
                 result += (uint32_t)src[x] * src[x];
@@ -1346,7 +1386,7 @@ static void reduceColSum2_32f32fFallback(const Mat& srcmat, Mat& dstmat)
 
 static void reduceColSum2_32f32fC1(const Mat& srcmat, Mat& dstmat)
 {
-#if CV_NEON || CV_AVX2
+#if CV_NEON || CV_AVX2 || CV_RVV
     const int cols = srcmat.cols;
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
@@ -1376,6 +1416,18 @@ static void reduceColSum2_32f32fC1(const Mat& srcmat, Mat& dstmat)
             _mm256_storeu_ps(lanes, acc);
             for (int i = 0; i < 8; i++)
                 result += lanes[i];
+#elif CV_RVV
+            const int vlmax = __riscv_vsetvlmax_e32m8();
+            vfloat32m8_t acc = __riscv_vfmv_v_f_f32m8(0, vlmax);
+            for (; x < cols; )
+            {
+                const int vl = __riscv_vsetvl_e32m8(cols - x);
+                vfloat32m8_t v = __riscv_vle32_v_f32m8(src + x, vl);
+                acc = __riscv_vfmacc_tu(acc, v, v, vl);
+                x += vl;
+            }
+            vfloat32m1_t zero = __riscv_vfmv_s_f_f32m1(0, __riscv_vsetvlmax_e32m1());
+            result = __riscv_vfmv_f(__riscv_vfredusum(acc, zero, vlmax));
 #endif
             for (; x < cols; x++)
                 result += src[x] * src[x];
