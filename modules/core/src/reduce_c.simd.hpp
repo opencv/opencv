@@ -1057,22 +1057,22 @@ static void reduceColMinMax_32fC3(const Mat& srcmat, Mat& dstmat)
 #if CV_RVV
     const int cols = srcmat.cols;
     const float initial = isMax ? std::numeric_limits<float>::lowest() : std::numeric_limits<float>::max();
-    const int vlmax = __riscv_vsetvlmax_e32m1();
+    const int vlmax = __riscv_vsetvlmax_e32m2();
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
         {
             const float* src = srcmat.ptr<float>(y);
             float* dst = dstmat.ptr<float>(y);
-            vfloat32m1_t acc0 = __riscv_vfmv_v_f_f32m1(initial, vlmax);
-            vfloat32m1_t acc1 = acc0, acc2 = acc0;
+            vfloat32m2_t acc0 = __riscv_vfmv_v_f_f32m2(initial, vlmax);
+            vfloat32m2_t acc1 = acc0, acc2 = acc0;
             int x = 0;
             for (; x < cols; )
             {
-                const int vl = __riscv_vsetvl_e32m1(cols - x);
-                vfloat32m1x3_t v = __riscv_vlseg3e32_v_f32m1x3(src + x * 3, vl);
-                vfloat32m1_t v0 = __riscv_vget_v_f32m1x3_f32m1(v, 0);
-                vfloat32m1_t v1 = __riscv_vget_v_f32m1x3_f32m1(v, 1);
-                vfloat32m1_t v2 = __riscv_vget_v_f32m1x3_f32m1(v, 2);
+                const int vl = __riscv_vsetvl_e32m2(cols - x);
+                vfloat32m2x3_t v = __riscv_vlseg3e32_v_f32m2x3(src + x * 3, vl);
+                vfloat32m2_t v0 = __riscv_vget_v_f32m2x3_f32m2(v, 0);
+                vfloat32m2_t v1 = __riscv_vget_v_f32m2x3_f32m2(v, 1);
+                vfloat32m2_t v2 = __riscv_vget_v_f32m2x3_f32m2(v, 2);
                 acc0 = isMax ? __riscv_vfmax_tu(acc0, acc0, v0, vl)
                              : __riscv_vfmin_tu(acc0, acc0, v0, vl);
                 acc1 = isMax ? __riscv_vfmax_tu(acc1, acc1, v1, vl)
@@ -1081,7 +1081,7 @@ static void reduceColMinMax_32fC3(const Mat& srcmat, Mat& dstmat)
                              : __riscv_vfmin_tu(acc2, acc2, v2, vl);
                 x += vl;
             }
-            vfloat32m1_t seed = __riscv_vfmv_s_f_f32m1(initial, vlmax);
+            vfloat32m1_t seed = __riscv_vfmv_s_f_f32m1(initial, __riscv_vsetvlmax_e32m1());
             dst[0] = __riscv_vfmv_f(isMax ? __riscv_vfredmax(acc0, seed, vlmax)
                                           : __riscv_vfredmin(acc0, seed, vlmax));
             dst[1] = __riscv_vfmv_f(isMax ? __riscv_vfredmax(acc1, seed, vlmax)
@@ -1102,23 +1102,23 @@ static void reduceColMinMax_32fC4(const Mat& srcmat, Mat& dstmat)
 #if CV_RVV
     const int cols = srcmat.cols;
     const float initial = isMax ? std::numeric_limits<float>::lowest() : std::numeric_limits<float>::max();
-    const int vlmax = __riscv_vsetvlmax_e32m1();
+    const int vlmax = __riscv_vsetvlmax_e32m2();
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
         {
             const float* src = srcmat.ptr<float>(y);
             float* dst = dstmat.ptr<float>(y);
-            vfloat32m1_t acc0 = __riscv_vfmv_v_f_f32m1(initial, vlmax);
-            vfloat32m1_t acc1 = acc0, acc2 = acc0, acc3 = acc0;
+            vfloat32m2_t acc0 = __riscv_vfmv_v_f_f32m2(initial, vlmax);
+            vfloat32m2_t acc1 = acc0, acc2 = acc0, acc3 = acc0;
             int x = 0;
             for (; x < cols; )
             {
-                const int vl = __riscv_vsetvl_e32m1(cols - x);
-                vfloat32m1x4_t v = __riscv_vlseg4e32_v_f32m1x4(src + x * 4, vl);
-                vfloat32m1_t v0 = __riscv_vget_v_f32m1x4_f32m1(v, 0);
-                vfloat32m1_t v1 = __riscv_vget_v_f32m1x4_f32m1(v, 1);
-                vfloat32m1_t v2 = __riscv_vget_v_f32m1x4_f32m1(v, 2);
-                vfloat32m1_t v3 = __riscv_vget_v_f32m1x4_f32m1(v, 3);
+                const int vl = __riscv_vsetvl_e32m2(cols - x);
+                vfloat32m2x4_t v = __riscv_vlseg4e32_v_f32m2x4(src + x * 4, vl);
+                vfloat32m2_t v0 = __riscv_vget_v_f32m2x4_f32m2(v, 0);
+                vfloat32m2_t v1 = __riscv_vget_v_f32m2x4_f32m2(v, 1);
+                vfloat32m2_t v2 = __riscv_vget_v_f32m2x4_f32m2(v, 2);
+                vfloat32m2_t v3 = __riscv_vget_v_f32m2x4_f32m2(v, 3);
                 acc0 = isMax ? __riscv_vfmax_tu(acc0, acc0, v0, vl)
                              : __riscv_vfmin_tu(acc0, acc0, v0, vl);
                 acc1 = isMax ? __riscv_vfmax_tu(acc1, acc1, v1, vl)
@@ -1129,7 +1129,7 @@ static void reduceColMinMax_32fC4(const Mat& srcmat, Mat& dstmat)
                              : __riscv_vfmin_tu(acc3, acc3, v3, vl);
                 x += vl;
             }
-            vfloat32m1_t seed = __riscv_vfmv_s_f_f32m1(initial, vlmax);
+            vfloat32m1_t seed = __riscv_vfmv_s_f_f32m1(initial, __riscv_vsetvlmax_e32m1());
             dst[0] = __riscv_vfmv_f(isMax ? __riscv_vfredmax(acc0, seed, vlmax)
                                           : __riscv_vfredmin(acc0, seed, vlmax));
             dst[1] = __riscv_vfmv_f(isMax ? __riscv_vfredmax(acc1, seed, vlmax)
@@ -1669,28 +1669,28 @@ static void reduceColSum2_32f32fC3(const Mat& srcmat, Mat& dstmat)
 {
 #if CV_RVV
     const int cols = srcmat.cols;
-    const int vlmax = __riscv_vsetvlmax_e32m1();
+    const int vlmax = __riscv_vsetvlmax_e32m2();
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
         {
             const float* src = srcmat.ptr<float>(y);
             float* dst = dstmat.ptr<float>(y);
-            vfloat32m1_t acc0 = __riscv_vfmv_v_f_f32m1(0, vlmax);
-            vfloat32m1_t acc1 = acc0, acc2 = acc0;
+            vfloat32m2_t acc0 = __riscv_vfmv_v_f_f32m2(0, vlmax);
+            vfloat32m2_t acc1 = acc0, acc2 = acc0;
             int x = 0;
             for (; x < cols; )
             {
-                const int vl = __riscv_vsetvl_e32m1(cols - x);
-                vfloat32m1x3_t v = __riscv_vlseg3e32_v_f32m1x3(src + x * 3, vl);
-                vfloat32m1_t v0 = __riscv_vget_v_f32m1x3_f32m1(v, 0);
-                vfloat32m1_t v1 = __riscv_vget_v_f32m1x3_f32m1(v, 1);
-                vfloat32m1_t v2 = __riscv_vget_v_f32m1x3_f32m1(v, 2);
+                const int vl = __riscv_vsetvl_e32m2(cols - x);
+                vfloat32m2x3_t v = __riscv_vlseg3e32_v_f32m2x3(src + x * 3, vl);
+                vfloat32m2_t v0 = __riscv_vget_v_f32m2x3_f32m2(v, 0);
+                vfloat32m2_t v1 = __riscv_vget_v_f32m2x3_f32m2(v, 1);
+                vfloat32m2_t v2 = __riscv_vget_v_f32m2x3_f32m2(v, 2);
                 acc0 = __riscv_vfmacc_tu(acc0, v0, v0, vl);
                 acc1 = __riscv_vfmacc_tu(acc1, v1, v1, vl);
                 acc2 = __riscv_vfmacc_tu(acc2, v2, v2, vl);
                 x += vl;
             }
-            vfloat32m1_t zero = __riscv_vfmv_s_f_f32m1(0, vlmax);
+            vfloat32m1_t zero = __riscv_vfmv_s_f_f32m1(0, __riscv_vsetvlmax_e32m1());
             dst[0] = __riscv_vfmv_f(__riscv_vfredusum(acc0, zero, vlmax));
             dst[1] = __riscv_vfmv_f(__riscv_vfredusum(acc1, zero, vlmax));
             dst[2] = __riscv_vfmv_f(__riscv_vfredusum(acc2, zero, vlmax));
@@ -1706,30 +1706,30 @@ static void reduceColSum2_32f32fC4(const Mat& srcmat, Mat& dstmat)
 {
 #if CV_RVV
     const int cols = srcmat.cols;
-    const int vlmax = __riscv_vsetvlmax_e32m1();
+    const int vlmax = __riscv_vsetvlmax_e32m2();
     parallel_for_(Range(0, srcmat.rows), [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
         {
             const float* src = srcmat.ptr<float>(y);
             float* dst = dstmat.ptr<float>(y);
-            vfloat32m1_t acc0 = __riscv_vfmv_v_f_f32m1(0, vlmax);
-            vfloat32m1_t acc1 = acc0, acc2 = acc0, acc3 = acc0;
+            vfloat32m2_t acc0 = __riscv_vfmv_v_f_f32m2(0, vlmax);
+            vfloat32m2_t acc1 = acc0, acc2 = acc0, acc3 = acc0;
             int x = 0;
             for (; x < cols; )
             {
-                const int vl = __riscv_vsetvl_e32m1(cols - x);
-                vfloat32m1x4_t v = __riscv_vlseg4e32_v_f32m1x4(src + x * 4, vl);
-                vfloat32m1_t v0 = __riscv_vget_v_f32m1x4_f32m1(v, 0);
-                vfloat32m1_t v1 = __riscv_vget_v_f32m1x4_f32m1(v, 1);
-                vfloat32m1_t v2 = __riscv_vget_v_f32m1x4_f32m1(v, 2);
-                vfloat32m1_t v3 = __riscv_vget_v_f32m1x4_f32m1(v, 3);
+                const int vl = __riscv_vsetvl_e32m2(cols - x);
+                vfloat32m2x4_t v = __riscv_vlseg4e32_v_f32m2x4(src + x * 4, vl);
+                vfloat32m2_t v0 = __riscv_vget_v_f32m2x4_f32m2(v, 0);
+                vfloat32m2_t v1 = __riscv_vget_v_f32m2x4_f32m2(v, 1);
+                vfloat32m2_t v2 = __riscv_vget_v_f32m2x4_f32m2(v, 2);
+                vfloat32m2_t v3 = __riscv_vget_v_f32m2x4_f32m2(v, 3);
                 acc0 = __riscv_vfmacc_tu(acc0, v0, v0, vl);
                 acc1 = __riscv_vfmacc_tu(acc1, v1, v1, vl);
                 acc2 = __riscv_vfmacc_tu(acc2, v2, v2, vl);
                 acc3 = __riscv_vfmacc_tu(acc3, v3, v3, vl);
                 x += vl;
             }
-            vfloat32m1_t zero = __riscv_vfmv_s_f_f32m1(0, vlmax);
+            vfloat32m1_t zero = __riscv_vfmv_s_f_f32m1(0, __riscv_vsetvlmax_e32m1());
             dst[0] = __riscv_vfmv_f(__riscv_vfredusum(acc0, zero, vlmax));
             dst[1] = __riscv_vfmv_f(__riscv_vfredusum(acc1, zero, vlmax));
             dst[2] = __riscv_vfmv_f(__riscv_vfredusum(acc2, zero, vlmax));
