@@ -1,7 +1,7 @@
 
 # OPENJPEG Library and Applications
 
-## What is OpenJPEG ? 
+## What is OpenJPEG ?
 
 OpenJPEG is an open-source JPEG 2000 codec written in C language. It has been developed in order to promote the use of [JPEG 2000](http://www.jpeg.org/jpeg2000), a still-image compression standard from the Joint Photographic Experts Group ([JPEG](http://www.jpeg.org)).  Since April 2015, it is officially recognized by ISO/IEC and ITU-T as a [JPEG 2000 Reference Software](http://www.itu.int/rec/T-REC-T.804-201504-I!Amd2).
 
@@ -12,11 +12,11 @@ Anyone. As the OpenJPEG code is released under the [BSD 2-clause "Simplified" Li
 
 ## How to install and use OpenJPEG ?
 API Documentation needs a major refactoring. Meanwhile, you can check [installation](https://github.com/uclouvain/openjpeg/wiki/Installation) instructions and [codec documentation](https://github.com/uclouvain/openjpeg/wiki/DocJ2KCodec).
-    
+
 ## Current Status
 [![badge-build]][link-build]
 
-[![badge-msvc-build]][link-msvc-build] 
+[![badge-msvc-build]][link-msvc-build]
 
 [![badge-coverity]][link-coverity]
 

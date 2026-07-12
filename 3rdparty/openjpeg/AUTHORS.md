@@ -11,11 +11,11 @@ Giuseppe Baruffa added the JPWL functionalities.
 
 Mickaël Savinaud implemented the final OpenJPEG 2.0 version based on a big merge between 1.5 version and alpha version of 2.0.
 
-Mathieu Malaterre participated to the OpenJPEG 2.0 version and improved the libraries and utilities. 
+Mathieu Malaterre participated to the OpenJPEG 2.0 version and improved the libraries and utilities.
 
-Yannick Verschueren, 
-Herve Drolon, 
-Francois-Olivier Devaux, 
+Yannick Verschueren,
+Herve Drolon,
+Francois-Olivier Devaux,
 Antonin Descampe
     improved the libraries and utilities.
 
