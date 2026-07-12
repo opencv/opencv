@@ -609,6 +609,24 @@ static void reduceColMinMax_8uFallback(const Mat& srcmat, Mat& dstmat)
 }
 
 template<bool isMax>
+static void reduceColMinMax_16uFallback(const Mat& srcmat, Mat& dstmat)
+{
+    if (isMax)
+        reduceColGeneric<ushort, ushort, ReduceOpMax_16U, ReduceVecOpMax_16U>(srcmat, dstmat);
+    else
+        reduceColGeneric<ushort, ushort, ReduceOpMin_16U, ReduceVecOpMin_16U>(srcmat, dstmat);
+}
+
+template<bool isMax>
+static void reduceColMinMax_16sFallback(const Mat& srcmat, Mat& dstmat)
+{
+    if (isMax)
+        reduceColGeneric<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S>(srcmat, dstmat);
+    else
+        reduceColGeneric<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S>(srcmat, dstmat);
+}
+
+template<bool isMax>
 static inline float reduceScalarMinMax(float a, float b)
 {
     return isMax ? std::max(a, b) : std::min(a, b);
@@ -623,6 +641,17 @@ static void reduceColMinMax_32fFallback(const Mat& srcmat, Mat& dstmat)
         reduceColGeneric<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F>(srcmat, dstmat);
 }
 
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+template<bool isMax>
+static void reduceColMinMax_64fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    if (isMax)
+        reduceColGeneric<double, double, ReduceOpMax_64F, ReduceVecOpMax_64F>(srcmat, dstmat);
+    else
+        reduceColGeneric<double, double, ReduceOpMin_64F, ReduceVecOpMin_64F>(srcmat, dstmat);
+}
+#endif
+
 template<typename DT>
 static void reduceColSum2_8uFallback(const Mat& srcmat, Mat& dstmat)
 {
@@ -634,7 +663,39 @@ static void reduceColSum2_8uFallback(const Mat& srcmat, Mat& dstmat)
         reduceColGeneric<uchar, double, ReduceOpAddSqr_8U64F, ReduceVecOpAddSqr_8U64F>(srcmat, dstmat);
 }
 
+static void reduceColSum2_16u32fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_16s32fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F>(srcmat, dstmat);
+}
+
 static void reduceColSum2_32f32fFallback(const Mat& srcmat, Mat& dstmat)
 {
     reduceColGeneric<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F>(srcmat, dstmat);
 }
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+static void reduceColSum2_16u64fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<ushort, double, ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_16s64fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<short, double, ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_32f64fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<float, double, ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F>(srcmat, dstmat);
+}
+
+static void reduceColSum2_64f64fFallback(const Mat& srcmat, Mat& dstmat)
+{
+    reduceColGeneric<double, double, ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F>(srcmat, dstmat);
+}
+#endif

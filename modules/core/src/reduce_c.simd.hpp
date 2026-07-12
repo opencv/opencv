@@ -82,24 +82,134 @@ static void reduceColMin_8u(const Mat& srcmat, Mat& dstmat)
     reduceColMinMax_8u<false>(srcmat, dstmat);
 }
 
+template<bool isMax>
+static void reduceColMinMax_16uC1(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16uC1<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16uC1<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16uC1<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16uFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16uC4(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16uC4<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16uC4<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16uC4<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16uFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16uC3(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16uC3<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16uC3<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16uC3<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16uFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16u(const Mat& srcmat, Mat& dstmat)
+{
+    if (srcmat.channels() == 1)
+        reduceColMinMax_16uC1<isMax>(srcmat, dstmat);
+    else if (srcmat.channels() == 3)
+        reduceColMinMax_16uC3<isMax>(srcmat, dstmat);
+    else if (srcmat.channels() == 4)
+        reduceColMinMax_16uC4<isMax>(srcmat, dstmat);
+    else
+        reduceColMinMax_16uFallback<isMax>(srcmat, dstmat);
+}
+
 static void reduceColMax_16u(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<ushort, ushort, ReduceOpMax_16U, ReduceVecOpMax_16U>(srcmat, dstmat);
+    reduceColMinMax_16u<true>(srcmat, dstmat);
 }
 
 static void reduceColMin_16u(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<ushort, ushort, ReduceOpMin_16U, ReduceVecOpMin_16U>(srcmat, dstmat);
+    reduceColMinMax_16u<false>(srcmat, dstmat);
+}
+
+template<bool isMax>
+static void reduceColMinMax_16sC1(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16sC1<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16sC1<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16sC1<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16sFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16sC4(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16sC4<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16sC4<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16sC4<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16sFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16sC3(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV
+    reduce_c_rvv::minMax16sC3<isMax>(srcmat, dstmat);
+#elif CV_NEON
+    reduce_c_neon::minMax16sC3<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax16sC3<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_16sFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_16s(const Mat& srcmat, Mat& dstmat)
+{
+    if (srcmat.channels() == 1)
+        reduceColMinMax_16sC1<isMax>(srcmat, dstmat);
+    else if (srcmat.channels() == 3)
+        reduceColMinMax_16sC3<isMax>(srcmat, dstmat);
+    else if (srcmat.channels() == 4)
+        reduceColMinMax_16sC4<isMax>(srcmat, dstmat);
+    else
+        reduceColMinMax_16sFallback<isMax>(srcmat, dstmat);
 }
 
 static void reduceColMax_16s(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S>(srcmat, dstmat);
+    reduceColMinMax_16s<true>(srcmat, dstmat);
 }
 
 static void reduceColMin_16s(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S>(srcmat, dstmat);
+    reduceColMinMax_16s<false>(srcmat, dstmat);
 }
 
 template<bool isMax>
@@ -165,14 +275,37 @@ static void reduceColMin_32f(const Mat& srcmat, Mat& dstmat)
 }
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+template<bool isMax>
+static void reduceColMinMax_64fC1(const Mat& srcmat, Mat& dstmat)
+{
+#if CV_RVV && CV_SIMD_SCALABLE_64F
+    reduce_c_rvv::minMax64fC1<isMax>(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::minMax64fC1<isMax>(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::minMax64fC1<isMax>(srcmat, dstmat);
+#else
+    reduceColMinMax_64fFallback<isMax>(srcmat, dstmat);
+#endif
+}
+
+template<bool isMax>
+static void reduceColMinMax_64f(const Mat& srcmat, Mat& dstmat)
+{
+    if (srcmat.channels() == 1)
+        reduceColMinMax_64fC1<isMax>(srcmat, dstmat);
+    else
+        reduceColMinMax_64fFallback<isMax>(srcmat, dstmat);
+}
+
 static void reduceColMax_64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<double, double, ReduceOpMax_64F, ReduceVecOpMax_64F>(srcmat, dstmat);
+    reduceColMinMax_64f<true>(srcmat, dstmat);
 }
 
 static void reduceColMin_64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<double, double, ReduceOpMin_64F, ReduceVecOpMin_64F>(srcmat, dstmat);
+    reduceColMinMax_64f<false>(srcmat, dstmat);
 }
 #endif
 
@@ -249,12 +382,38 @@ static void reduceColSum2_8u64f(const Mat& srcmat, Mat& dstmat)
 
 static void reduceColSum2_16u32f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<ushort, float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_16u32fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV
+    reduce_c_rvv::sum2_16u32fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_16u32fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_16u32fC1(srcmat, dstmat);
+#else
+    reduceColSum2_16u32fFallback(srcmat, dstmat);
+#endif
 }
 
 static void reduceColSum2_16s32f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_16s32fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV
+    reduce_c_rvv::sum2_16s32fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_16s32fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_16s32fC1(srcmat, dstmat);
+#else
+    reduceColSum2_16s32fFallback(srcmat, dstmat);
+#endif
 }
 
 static void reduceColSum2_32f32fC1(const Mat& srcmat, Mat& dstmat)
@@ -308,21 +467,73 @@ static void reduceColSum2_32f32f(const Mat& srcmat, Mat& dstmat)
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 static void reduceColSum2_16u64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<ushort, double, ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_16u64fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV && CV_SIMD_SCALABLE_64F
+    reduce_c_rvv::sum2_16u64fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_16u64fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_16u64fC1(srcmat, dstmat);
+#else
+    reduceColSum2_16u64fFallback(srcmat, dstmat);
+#endif
 }
 
 static void reduceColSum2_16s64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<short, double, ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_16s64fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV && CV_SIMD_SCALABLE_64F
+    reduce_c_rvv::sum2_16s64fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_16s64fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_16s64fC1(srcmat, dstmat);
+#else
+    reduceColSum2_16s64fFallback(srcmat, dstmat);
+#endif
 }
 
 static void reduceColSum2_32f64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<float, double, ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_32f64fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV && CV_SIMD_SCALABLE_64F
+    reduce_c_rvv::sum2_32f64fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_32f64fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_32f64fC1(srcmat, dstmat);
+#else
+    reduceColSum2_32f64fFallback(srcmat, dstmat);
+#endif
 }
 
 static void reduceColSum2_64f64f(const Mat& srcmat, Mat& dstmat)
 {
-    reduceColGeneric<double, double, ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F>(srcmat, dstmat);
+    if (srcmat.channels() != 1)
+    {
+        reduceColSum2_64f64fFallback(srcmat, dstmat);
+        return;
+    }
+#if CV_RVV && CV_SIMD_SCALABLE_64F
+    reduce_c_rvv::sum2_64f64fC1(srcmat, dstmat);
+#elif CV_NEON && (defined(__aarch64__) || defined(_M_ARM64))
+    reduce_c_neon::sum2_64f64fC1(srcmat, dstmat);
+#elif CV_AVX2
+    reduce_c_avx2::sum2_64f64fC1(srcmat, dstmat);
+#else
+    reduceColSum2_64f64fFallback(srcmat, dstmat);
+#endif
 }
 #endif
