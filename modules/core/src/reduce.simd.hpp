@@ -17,7 +17,9 @@ ReduceFunc getReduceRSumFunc(int sdepth, int ddepth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #include "reduce_c.simd.hpp"
+#endif
 
 // =====================================================================
 //  Col reduce SUM (dim=1): sum each row into cn output values
