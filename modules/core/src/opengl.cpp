@@ -1947,6 +1947,7 @@ void cv::ogl::Program::unbind()
 int cv::ogl::Program::getAttributeLocation(const char* name) const
 {
 #ifndef HAVE_OPENGL
+    CV_UNUSED(name);
     throw_no_ogl();
 #else
     return impl_->getAttributeLocation(name);
@@ -1956,6 +1957,7 @@ int cv::ogl::Program::getAttributeLocation(const char* name) const
 int cv::ogl::Program::getUniformLocation(const char* name) const
 {
 #ifndef HAVE_OPENGL
+    CV_UNUSED(name);
     throw_no_ogl();
 #else
     return impl_->getUniformLocation(name);
@@ -1965,6 +1967,8 @@ int cv::ogl::Program::getUniformLocation(const char* name) const
 void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
 {
 #ifndef HAVE_OPENGL
+    CV_UNUSED(loc);
+    CV_UNUSED(vec);
     throw_no_ogl();
 #else
     gl::Uniform3f(loc, vec(0), vec(1), vec(2));
@@ -1974,6 +1978,8 @@ void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
 void cv::ogl::Program::setUniformMat4x4(int loc, Matx44f mat)
 {
 #ifndef HAVE_OPENGL
+    CV_UNUSED(loc);
+    CV_UNUSED(mat);
     throw_no_ogl();
 #else
     gl::UniformMatrix4fv(loc, 1, true, mat.val);
