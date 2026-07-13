@@ -21,8 +21,18 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int matType = get<1>(GetParam());
     int reduceOp = get<2>(GetParam());
 
+    int sdepth = CV_MAT_DEPTH(matType);
+    bool accumulate = (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2);
+
+    // Accumulate ops (SUM/AVG/SUM2) over 16U/16S need a floating-point output;
+    // that depth-changing coverage is exercised by the reduce_diff test below.
+    // Here we keep the same-depth path: MAX/MIN for all types, and SUM/AVG for
+    // 8U (->32S) and float types.
+    if( accumulate && (sdepth == CV_16U || sdepth == CV_16S) )
+        throw ::perf::TestBase::PerfSkipTestException();
+
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
+    if( accumulate && sdepth < CV_32S )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
@@ -49,8 +59,15 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     int matType = get<1>(GetParam());
     int reduceOp = get<2>(GetParam());
 
+    int sdepth = CV_MAT_DEPTH(matType);
+    bool accumulate = (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2);
+
+    // See reduceR: accumulate ops over 16U/16S are covered by reduce_diff.
+    if( accumulate && (sdepth == CV_16U || sdepth == CV_16S) )
+        throw ::perf::TestBase::PerfSkipTestException();
+
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
+    if( accumulate && sdepth < CV_32S )
         ddepth = CV_32S;
 
     Mat src(sz, matType);

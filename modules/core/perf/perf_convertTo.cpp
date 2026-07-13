@@ -61,10 +61,13 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo_scale_shift,
     randu(src, 0, 255);
     Mat dst(sz, CV_MAKETYPE(depthDst, channels));
 
+    int maxValue = 255;
     int runs = (sz.width <= 640) ? 8 : 1;
     TEST_CYCLE_MULTIRUN(runs) src.convertTo(dst, depthDst, alpha, beta);
 
-    SANITY_CHECK_NOTHING();
+    double eps = depthSrc <= CV_32S && (depthDst <= CV_32S || depthDst == CV_64F) ? 1e-12 : (FLT_EPSILON * maxValue);
+    eps = eps * std::max(1.0, fabs(alpha)) + fabs(beta);
+    SANITY_CHECK(dst, eps);
 }
 
 } // namespace

@@ -69,7 +69,7 @@ PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
 
     TEST_CYCLE() cv::filter2D(src, dst, -1, kernel, Point(-1, -1), 0., border);
 
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(dst, 1);
 }
 
 // sepFilter2D type/kernel sweep (matches IPP ippSepFilter2D perf coverage:

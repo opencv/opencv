@@ -65,7 +65,7 @@ PERF_TEST_P(Size_MatType_kSize_iter, erode_kernel,
 
     TEST_CYCLE() erode(src, dst, kernel, Point(-1, -1), iters);
 
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(dst);
 }
 
 PERF_TEST_P(Size_MatType_kSize_iter, dilate_kernel,
@@ -89,7 +89,7 @@ PERF_TEST_P(Size_MatType_kSize_iter, dilate_kernel,
 
     TEST_CYCLE() dilate(src, dst, kernel, Point(-1, -1), iters);
 
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(dst);
 }
 
 } // namespace

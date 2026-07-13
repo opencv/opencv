@@ -81,7 +81,7 @@ PERF_TEST_P(Size_Source_Uniform_Accum, calcHist1d_mode,
         calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges, uniform, accumulate);
     }
 
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(hist);
 }
 
 PERF_TEST_P(Size_Source, calcHist2d,
