@@ -160,6 +160,12 @@ protected:
                          InputArrayOfArrays masks = noArray(),
                          bool compactResult = false) CV_OVERRIDE;
 
+    void setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
+                            const Mat& queryKpts, const Mat& trainKpts,
+                            Size queryImgSize, Size trainImgSize,
+                            int keypointNormalization,
+                            int autoNormalizationType);
+
     virtual void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                 const Mat& queryKpts, const Mat& trainKpts,
                                 Size queryImgSize, Size trainImgSize,
@@ -206,6 +212,38 @@ bool LightGlueMatcherImpl::resolveContext(Mat& queryKpts, Mat& trainKpts,
         return true;
     }
     return false;
+}
+
+void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
+                                               const Mat& queryKpts, const Mat& trainKpts,
+                                               Size queryImgSize, Size trainImgSize,
+                                               int keypointNormalization,
+                                               int autoNormalizationType)
+{
+    int N = queryDesc.rows;
+    int M = trainDesc.rows;
+
+    Mat kpts0, kpts1;
+    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize,
+                              keypointNormalization, autoNormalizationType);
+    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize,
+                              keypointNormalization, autoNormalizationType);
+
+    // Prepare blobs: [1, N, 2] and [1, N, D]
+    int descDim = queryDesc.cols;
+    int szK0[] = {1, N, 2};
+    int szK1[] = {1, M, 2};
+    int szD0[] = {1, N, descDim};
+    int szD1[] = {1, M, descDim};
+    Mat kpts0blob = kpts0.reshape(0, 3, szK0);
+    Mat kpts1blob = kpts1.reshape(0, 3, szK1);
+    Mat desc0blob = queryDesc.reshape(0, 3, szD0);
+    Mat desc1blob = trainDesc.reshape(0, 3, szD1);
+
+    net.setInput(kpts0blob, "kpts0");
+    net.setInput(kpts1blob, "kpts1");
+    net.setInput(desc0blob, "desc0");
+    net.setInput(desc1blob, "desc1");
 }
 
 void LightGlueMatcherImpl::knnMatchImpl(InputArray _queryDescriptors,
@@ -289,25 +327,9 @@ void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat&
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
-    Mat kpts0, kpts1;
-    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, keypointNormalization, LG_KEYPOINTS_ALIKED);
-    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, keypointNormalization, LG_KEYPOINTS_ALIKED);
-
-    // Prepare blobs: [1, N, 2] and [1, N, D]
-    int descDim = queryDesc.cols;
-    int szK0[] = {1, N, 2};
-    int szK1[] = {1, M, 2};
-    int szD0[] = {1, N, descDim};
-    int szD1[] = {1, M, descDim};
-    Mat kpts0blob = kpts0.reshape(0, 3, szK0);
-    Mat kpts1blob = kpts1.reshape(0, 3, szK1);
-    Mat desc0blob = queryDesc.reshape(0, 3, szD0);
-    Mat desc1blob = trainDesc.reshape(0, 3, szD1);
-
-    net.setInput(kpts0blob, "kpts0");
-    net.setInput(kpts1blob, "kpts1");
-    net.setInput(desc0blob, "desc0");
-    net.setInput(desc1blob, "desc1");
+    setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
+                       queryImgSize, trainImgSize, keypointNormalization,
+                       LG_KEYPOINTS_ALIKED);
 
     std::vector<String> outNames = {"matches0", "mscores0"};
     std::vector<Mat> outs;
@@ -377,25 +399,9 @@ void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& t
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
-    Mat kpts0, kpts1;
-    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, keypointNormalization, LG_KEYPOINTS_DISK);
-    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, keypointNormalization, LG_KEYPOINTS_DISK);
-
-    // Prepare blobs: [1, N, 2] and [1, N, D]
-    int descDim = queryDesc.cols;
-    int szK0[] = {1, N, 2};
-    int szK1[] = {1, M, 2};
-    int szD0[] = {1, N, descDim};
-    int szD1[] = {1, M, descDim};
-    Mat kpts0blob = kpts0.reshape(0, 3, szK0);
-    Mat kpts1blob = kpts1.reshape(0, 3, szK1);
-    Mat desc0blob = queryDesc.reshape(0, 3, szD0);
-    Mat desc1blob = trainDesc.reshape(0, 3, szD1);
-
-    net.setInput(kpts0blob, "kpts0");
-    net.setInput(kpts1blob, "kpts1");
-    net.setInput(desc0blob, "desc0");
-    net.setInput(desc1blob, "desc1");
+    setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
+                       queryImgSize, trainImgSize, keypointNormalization,
+                       LG_KEYPOINTS_DISK);
 
     // DISK LightGlue has 4 outputs (bidirectional matches + scores)
     std::vector<String> outNames = {"matches0", "matches1", "mscores0", "mscores1"};
