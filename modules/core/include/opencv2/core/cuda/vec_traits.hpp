@@ -54,8 +54,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
-    using cv::cuda::device::compat::double4;
-    using cv::cuda::device::compat::make_double4;
+    using ::cv::cuda::device::compat::double4;
+    using ::cv::cuda::device::compat::make_double4;
 
     template<typename T, int N> struct TypeVec;
 
@@ -226,6 +226,24 @@ namespace cv { namespace cuda { namespace device
     OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(uint)
     OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(float)
     OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(double)
+
+template<> struct VecTraits<long>
+{
+    typedef long elem_type;
+    enum {cn=1};
+    static __device__ __host__ __forceinline__ long all(long v) {return v;}
+    static __device__ __host__ __forceinline__ long make(long x) {return x;}
+    static __device__ __host__ __forceinline__ long make(const long* v) {return *v;}
+};
+
+template<> struct VecTraits<unsigned long>
+{
+    typedef unsigned long elem_type;
+    enum {cn=1};
+    static __device__ __host__ __forceinline__ unsigned long all(unsigned long v) {return v;}
+    static __device__ __host__ __forceinline__ unsigned long make(unsigned long x) {return x;}
+    static __device__ __host__ __forceinline__ unsigned long make(const unsigned long* v) {return *v;}
+};
 
     #undef OPENCV_CUDA_IMPLEMENT_VEC_TRAITS
 
