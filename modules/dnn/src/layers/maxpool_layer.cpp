@@ -50,7 +50,17 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
         float* out = (float*)out_ + nc0*planesize;
         const float INITVAL = -FLT_MAX;
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if CV_SIMD_SCALABLE
+        // RVV: the blocked layout fixes C0 == 8 regardless of the hardware vector width, so
+        // the universal intrinsics cannot be used here -- v_float32 is always vlanes() wide
+        // and there is no way to make it span exactly C0 elements. Drop to native RVV and
+        // pin the vector length to C0 (#29454). LMUL=2 guarantees vlmax(e32,m2) =
+        // VLEN/32*2 >= 8 for every VLEN >= 128, so _vl == C0 == 8 on every machine and one
+        // vector spans precisely one channel block -- no VLEN-dependent branches, and
+        // nothing can overrun or under-fill the block.
+        const size_t _vl = __riscv_vsetvl_e32m2(C0);
+        vfloat32m2_t s_min = __riscv_vfmv_v_f_f32m2(INITVAL, _vl);
+    #elif CV_SIMD
         int nlanes = VTraits<v_float32>::vlanes();
         v_float32 s_min = vx_setall_f32(INITVAL);
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
@@ -71,7 +81,24 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD_SCALABLE
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            vfloat32m2_t s0 = s_min;
+                            for (int k = 0; k < ksize; k++) {
+                                int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                if ((unsigned)zi >= (unsigned)Di ||
+                                    (unsigned)yi >= (unsigned)Hi ||
+                                    (unsigned)xi >= (unsigned)Wi)
+                                    continue;
+                                vfloat32m2_t v0 = __riscv_vle32_v_f32m2(inp + ((zi*Hi + yi)*Wi + xi)*C0, _vl);
+                                s0 = __riscv_vfmax_vv_f32m2(s0, v0, _vl);
+                            }
+                            __riscv_vse32_v_f32m2(out + x0*C0, s0, _vl);
+                        }
+                    #elif CV_SIMD
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -136,7 +163,17 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD_SCALABLE
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+
+                            vfloat32m2_t s0 = __riscv_vle32_v_f32m2(inp_xi + ofstab[0], _vl);
+                            for (int k = 1; k < ksize; k++)
+                                s0 = __riscv_vfmax_vv_f32m2(s0, __riscv_vle32_v_f32m2(inp_xi + ofstab[k], _vl), _vl);
+                            __riscv_vse32_v_f32m2(out + x0*C0, s0, _vl);
+                        }
+                    #elif CV_SIMD
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
