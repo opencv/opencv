@@ -74,7 +74,7 @@ public:
             r = rad;
             // Re-arm boundary edges so the larger ball gets a chance to pivot across them.
             for (auto it = front.begin(); it != front.end(); ++it)
-                if (!it->active) { it->active = true; work.push_back(it); }
+                if (!it->active) { it->active = true; work.push_back(ekeyDir(it->i, it->j)); }
 
             int seedCursor = 0;
             long long iters = 0;
@@ -119,7 +119,7 @@ private:
 
     std::list<FrontEdge> front;
     std::unordered_map<long long, std::list<FrontEdge>::iterator> emap;   // live directed edges
-    std::deque<std::list<FrontEdge>::iterator> work;                      // edges awaiting a pivot
+    std::deque<long long> work;                                           // directed-edge keys awaiting a pivot
     std::map<std::pair<int,int>, int> ecount;                             // undirected edge use count
     std::set<std::tuple<int,int,int>> triSet;                            // built triangles (sorted)
 
@@ -215,7 +215,7 @@ private:
         front.push_back(FrontEdge{i, j, opp, center, true});
         auto lit = std::prev(front.end());
         emap[ekeyDir(i, j)] = lit;
-        work.push_back(lit);
+        work.push_back(ekeyDir(i, j));
     }
 
     void removeEdge(std::list<FrontEdge>::iterator lit)
@@ -228,11 +228,13 @@ private:
     {
         while (!work.empty())
         {
-            auto cand = work.front();
+            long long key = work.front();
             work.pop_front();
-            auto mit = emap.find(ekeyDir(cand->i, cand->j));
-            if (mit != emap.end() && mit->second == cand && cand->active)
-                return cand;
+            // Look the key up instead of dereferencing a stored iterator: the edge may have
+            // been erased from `front` (glue path / removeEdge) while its key sat in the queue.
+            auto mit = emap.find(key);
+            if (mit != emap.end() && mit->second->active)
+                return mit->second;
         }
         return front.end();
     }

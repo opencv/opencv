@@ -143,6 +143,36 @@ CV_EXPORTS_W float estimateMeanSpacing(InputArray inputCloud);
 CV_EXPORTS_W void createMeshBPA(InputArray inputCloud, InputArray normals, OutputArray vertices,
         OutputArray triangles, InputArray radii = noArray());
 
+/** @brief Computes the axis-aligned bounding box (AABB) of a point cloud.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param minBound Output minimum corner (x,y,z), 3x1 CV_32F.
+ * @param maxBound Output maximum corner (x,y,z), 3x1 CV_32F.
+ */
+CV_EXPORTS_W void getPointCloudBounds(InputArray inputCloud, OutputArray minBound, OutputArray maxBound);
+
+/** @brief Computes a PCA-based oriented bounding box (OBB) of a point cloud.
+ *
+ * The box axes are the principal axes of the cloud (covariance eigenvectors). This is the common
+ * practical OBB (as in Open3D); it is not guaranteed to be the minimum-volume OBB.
+ * A point p is inside the box iff `abs(axes * (p - center))` is `<= halfExtents` component-wise.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param center Output box center (x,y,z), 3x1 CV_32F.
+ * @param axes Output 3x3 CV_32F; each row is a unit box axis.
+ * @param halfExtents Output half-size along each axis, 3x1 CV_32F.
+ */
+CV_EXPORTS_W void getOrientedBoundingBox(InputArray inputCloud, OutputArray center, OutputArray axes,
+        OutputArray halfExtents);
+
+/** @brief Computes an approximate minimum enclosing sphere of a point cloud (Ritter's algorithm).
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param center Output sphere center (x,y,z), 3x1 CV_32F.
+ * @return Sphere radius, or 0 if the cloud is empty.
+ */
+CV_EXPORTS_W double getBoundingSphere(InputArray inputCloud, OutputArray center);
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.
