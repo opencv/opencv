@@ -224,6 +224,14 @@ static inline void interpolateCubicV(const v_float32& x,
     c3 = v_sub(v_sub(v_sub(one, c0), c1), c2);
 }
 
+// Select one of four vectors by runtime index. Used instead of an array of
+// vector types, which is not valid for sizeless RVV vector types.
+static inline v_float32 selectV4(int i, const v_float32& a, const v_float32& b,
+                                 const v_float32& c, const v_float32& d)
+{
+    return i == 0 ? a : (i == 1 ? b : (i == 2 ? c : d));
+}
+
 template<typename T>
 static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
                               const ushort* FXY, int dx, int dwidth,
@@ -255,18 +263,17 @@ static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
         v_float32 vx0, vx1, vx2, vx3, vy0, vy1, vy2, vy3;
         interpolateCubicV(fx, vx0, vx1, vx2, vx3);
         interpolateCubicV(fy, vy0, vy1, vy2, vy3);
-        const v_float32 vxw[4] = { vx0, vx1, vx2, vx3 };
-        const v_float32 vyw[4] = { vy0, vy1, vy2, vy3 };
 
         v_float32 acc = vx_setzero_f32();
         for( int r = 0; r < 4; r++ )
         {
             const int roff = r * (int)sstep;
+            const v_float32 vyr = selectV4(r, vy0, vy1, vy2, vy3);
             for( int c = 0; c < 4; c++ )
             {
                 for( int k = 0; k < vlanes; k++ )
                     buf[k] = (float)S0[ofs[k] + roff + c];
-                acc = v_fma(vx_load(buf), v_mul(vyw[r], vxw[c]), acc);
+                acc = v_fma(vx_load(buf), v_mul(vyr, selectV4(c, vx0, vx1, vx2, vx3)), acc);
             }
         }
         remapStoreC1(D + (dx - dx0), acc);
