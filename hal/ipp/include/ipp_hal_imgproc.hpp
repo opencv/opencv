@@ -199,6 +199,32 @@ int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, 
 #undef cv_hal_getRectSubPix
 #define cv_hal_getRectSubPix ipp_hal_getRectSubPix
 
+int ipp_hal_accumulate(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                       const uchar* mask_data, size_t mask_step, int width, int height,
+                       int src_type, int dst_type);
+#undef cv_hal_accumulate
+#define cv_hal_accumulate ipp_hal_accumulate
+
+int ipp_hal_accumulateSquare(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                             const uchar* mask_data, size_t mask_step, int width, int height,
+                             int src_type, int dst_type);
+#undef cv_hal_accumulateSquare
+#define cv_hal_accumulateSquare ipp_hal_accumulateSquare
+
+int ipp_hal_accumulateProduct(const uchar* src1_data, size_t src1_step,
+                              const uchar* src2_data, size_t src2_step,
+                              uchar* dst_data, size_t dst_step,
+                              const uchar* mask_data, size_t mask_step, int width, int height,
+                              int src_type, int dst_type);
+#undef cv_hal_accumulateProduct
+#define cv_hal_accumulateProduct ipp_hal_accumulateProduct
+
+int ipp_hal_accumulateWeighted(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                               const uchar* mask_data, size_t mask_step, int width, int height,
+                               int src_type, int dst_type, double alpha);
+#undef cv_hal_accumulateWeighted
+#define cv_hal_accumulateWeighted ipp_hal_accumulateWeighted
+
 #endif // IPP_VERSION_X100 >= 700
 
 #define IPP_DISABLE_PERF_CANNY_MT 1 // cv::Canny OpenCV MT performance is better

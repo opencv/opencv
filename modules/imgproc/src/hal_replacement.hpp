@@ -1311,6 +1311,76 @@ inline int hal_ni_distanceTransform(const uchar* src_data, size_t src_step, ucha
 //! @endcond
 
 /**
+   @brief Adds an image to the accumulator image: dst += src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulate(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Adds the square of an image to the accumulator image: dst += src*src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulateSquare(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Adds the per-element product of two images to the accumulator image: dst += src1*src2
+   @param src1_data First source image data
+   @param src1_step First source image step
+   @param src2_data Second source image data
+   @param src2_step Second source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source images (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulateProduct(const uchar* src1_data, size_t src1_step, const uchar* src2_data, size_t src2_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Updates a running weighted average: dst = (1-alpha)*dst + alpha*src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+   @param alpha Weight of the input image
+*/
+inline int hal_ni_accumulateWeighted(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type, double alpha) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_accumulate hal_ni_accumulate
+#define cv_hal_accumulateSquare hal_ni_accumulateSquare
+#define cv_hal_accumulateProduct hal_ni_accumulateProduct
+#define cv_hal_accumulateWeighted hal_ni_accumulateWeighted
+//! @endcond
+
+/**
    @brief Calculate box filter
    @param src_data Source image data
    @param src_step Source image step

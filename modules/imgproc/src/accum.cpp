@@ -165,72 +165,6 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
 
 }
 
-#if defined(HAVE_IPP)
-namespace cv
-{
-static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
-
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-
-    if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
-    {
-        typedef IppStatus (CV_STDCALL * IppiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * IppiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
-                                                    int srcDstStep, IppiSize roiSize);
-        IppiAdd ippiAdd_I = 0;
-        IppiAddMask ippiAdd_IM = 0;
-
-        if (mask.empty())
-        {
-            CV_SUPPRESS_DEPRECATED_START
-            ippiAdd_I = sdepth == CV_8U && ddepth == CV_32F ? (IppiAdd)ippiAdd_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (IppiAdd)ippiAdd_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (IppiAdd)ippiAdd_32f_C1IR : 0;
-            CV_SUPPRESS_DEPRECATED_END
-        }
-        else if (scn == 1)
-        {
-            ippiAdd_IM = sdepth == CV_8U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (IppiAddMask)ippiAdd_32f_C1IMR : 0;
-        }
-
-        if (ippiAdd_I || ippiAdd_IM)
-        {
-            IppStatus status = ippStsErr;
-
-            Size size = src.size();
-            int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = static_cast<int>(src.total() * src.elemSize());
-                dststep = static_cast<int>(dst.total() * dst.elemSize());
-                maskstep = static_cast<int>(mask.total() * mask.elemSize());
-                size.width = static_cast<int>(src.total());
-                size.height = 1;
-            }
-            size.width *= scn;
-
-            if (ippiAdd_I)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if (ippiAdd_IM)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-            if (status >= 0)
-                return true;
-        }
-    }
-    return false;
-}
-}
-#endif
-
 #ifdef HAVE_OPENVX
 namespace cv
 {
@@ -318,8 +252,24 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
 
-    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
-        ipp_accumulate(_src, _dst, _mask));
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
+        {
+            Size size = src.size();
+            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
+            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+            {
+                srcstep = src.total() * src.elemSize();
+                dststep = dst.total() * dst.elemSize();
+                maskstep = mask.total() * mask.elemSize();
+                size.width = (int)src.total();
+                size.height = 1;
+            }
+            CALL_HAL(accumulate, cv_hal_accumulate, src.data, srcstep, dst.data, dststep,
+                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
+        }
+    }
 
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_OP))
@@ -340,70 +290,6 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
         func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
 
-#if defined(HAVE_IPP)
-namespace cv
-{
-static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputArray _mask)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
-
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-
-    if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
-    {
-        typedef IppStatus (CV_STDCALL * ippiAddSquare)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * ippiAddSquareMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
-                                                            int srcDstStep, IppiSize roiSize);
-        ippiAddSquare ippiAddSquare_I = 0;
-        ippiAddSquareMask ippiAddSquare_IM = 0;
-
-        if (mask.empty())
-        {
-            ippiAddSquare_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_32f_C1IR : 0;
-        }
-        else if (scn == 1)
-        {
-            ippiAddSquare_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_32f_C1IMR : 0;
-        }
-
-        if (ippiAddSquare_I || ippiAddSquare_IM)
-        {
-            IppStatus status = ippStsErr;
-
-            Size size = src.size();
-            int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = static_cast<int>(src.total() * src.elemSize());
-                dststep = static_cast<int>(dst.total() * dst.elemSize());
-                maskstep = static_cast<int>(mask.total() * mask.elemSize());
-                size.width = static_cast<int>(src.total());
-                size.height = 1;
-            }
-            size.width *= scn;
-
-            if (ippiAddSquare_I)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if (ippiAddSquare_IM)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-            if (status >= 0)
-                return true;
-        }
-    }
-    return false;
-}
-}
-#endif
-
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
@@ -417,8 +303,24 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
 
-    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
-        ipp_accumulate_square(_src, _dst, _mask));
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
+        {
+            Size size = src.size();
+            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
+            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+            {
+                srcstep = src.total() * src.elemSize();
+                dststep = dst.total() * dst.elemSize();
+                maskstep = mask.total() * mask.elemSize();
+                size.width = (int)src.total();
+                size.height = 1;
+            }
+            CALL_HAL(accumulateSquare, cv_hal_accumulateSquare, src.data, srcstep, dst.data, dststep,
+                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
+        }
+    }
 
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_SQUARE_OP))
@@ -438,74 +340,6 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
         func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
 
-#if defined(HAVE_IPP)
-namespace cv
-{
-static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
-                            InputOutputArray _dst, InputArray _mask)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
-
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-
-    if (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && dst.isContinuous()))
-    {
-        typedef IppStatus (CV_STDCALL * ippiAddProduct)(const void * pSrc1, int src1Step, const void * pSrc2,
-                                                        int src2Step, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * ippiAddProductMask)(const void * pSrc1, int src1Step, const void * pSrc2, int src2Step,
-                                                            const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
-        ippiAddProduct ippiAddProduct_I = 0;
-        ippiAddProductMask ippiAddProduct_IM = 0;
-
-        if (mask.empty())
-        {
-            ippiAddProduct_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_32f_C1IR : 0;
-        }
-        else if (scn == 1)
-        {
-            ippiAddProduct_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_32f_C1IMR : 0;
-        }
-
-        if (ippiAddProduct_I || ippiAddProduct_IM)
-        {
-            IppStatus status = ippStsErr;
-
-            Size size = src1.size();
-            int src1step = (int)src1.step, src2step = (int)src2.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                src1step = static_cast<int>(src1.total() * src1.elemSize());
-                src2step = static_cast<int>(src2.total() * src2.elemSize());
-                dststep = static_cast<int>(dst.total() * dst.elemSize());
-                maskstep = static_cast<int>(mask.total() * mask.elemSize());
-                size.width = static_cast<int>(src1.total());
-                size.height = 1;
-            }
-            size.width *= scn;
-
-            if (ippiAddProduct_I)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_I, src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
-                    dststep, ippiSize(size.width, size.height));
-            else if (ippiAddProduct_IM)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_IM, src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
-                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-            if (status >= 0)
-                return true;
-        }
-    }
-    return false;
-}
-}
-#endif
-
 
 
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
@@ -523,8 +357,25 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
 
-    CV_IPP_RUN( (_src1.dims() <= 2 || (_src1.isContinuous() && _src2.isContinuous() && _dst.isContinuous())),
-        ipp_accumulate_product(_src1, _src2, _dst, _mask));
+    {
+        Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+        if (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && dst.isContinuous()))
+        {
+            Size size = src1.size();
+            size_t src1step = src1.step, src2step = src2.step, dststep = dst.step, maskstep = mask.step;
+            if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.isContinuous())
+            {
+                src1step = src1.total() * src1.elemSize();
+                src2step = src2.total() * src2.elemSize();
+                dststep = dst.total() * dst.elemSize();
+                maskstep = mask.total() * mask.elemSize();
+                size.width = (int)src1.total();
+                size.height = 1;
+            }
+            CALL_HAL(accumulateProduct, cv_hal_accumulateProduct, src1.data, src1step, src2.data, src2step,
+                     dst.data, dststep, mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
+        }
+    }
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -541,73 +392,6 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
         func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, scn);
 }
 
-#if defined(HAVE_IPP)
-namespace cv
-{
-static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
-                             double alpha, InputArray _mask )
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
-
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-
-    if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && mask.isContinuous()))
-    {
-        typedef IppStatus (CV_STDCALL * ippiAddWeighted)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep,
-                                                            IppiSize roiSize, Ipp32f alpha);
-        typedef IppStatus (CV_STDCALL * ippiAddWeightedMask)(const void * pSrc, int srcStep, const Ipp8u * pMask,
-                                                                int maskStep, Ipp32f * pSrcDst,
-                                                                int srcDstStep, IppiSize roiSize, Ipp32f alpha);
-        ippiAddWeighted ippiAddWeighted_I = 0;
-        ippiAddWeightedMask ippiAddWeighted_IM = 0;
-
-        if (mask.empty())
-        {
-            ippiAddWeighted_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
-        }
-        else if (scn == 1)
-        {
-            ippiAddWeighted_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
-        }
-
-        if (ippiAddWeighted_I || ippiAddWeighted_IM)
-        {
-            IppStatus status = ippStsErr;
-
-            Size size = src.size();
-            int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = static_cast<int>(src.total() * src.elemSize());
-                dststep = static_cast<int>(dst.total() * dst.elemSize());
-                maskstep = static_cast<int>(mask.total() * mask.elemSize());
-                size.width = static_cast<int>((int)src.total());
-                size.height = 1;
-            }
-            size.width *= scn;
-
-            if (ippiAddWeighted_I)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
-            else if (ippiAddWeighted_IM)
-                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
-
-            if (status >= 0)
-                return true;
-        }
-    }
-    return false;
-}
-}
-#endif
-
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
@@ -622,7 +406,24 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))
 
-    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && _mask.isContinuous())), ipp_accumulate_weighted(_src, _dst, alpha, _mask));
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && mask.isContinuous()))
+        {
+            Size size = src.size();
+            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
+            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+            {
+                srcstep = src.total() * src.elemSize();
+                dststep = dst.total() * dst.elemSize();
+                maskstep = mask.total() * mask.elemSize();
+                size.width = (int)src.total();
+                size.height = 1;
+            }
+            CALL_HAL(accumulateWeighted, cv_hal_accumulateWeighted, src.data, srcstep, dst.data, dststep,
+                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype, alpha);
+        }
+    }
 
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, alpha, VX_ACCUMULATE_WEIGHTED_OP))
