@@ -2202,17 +2202,11 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
-#if CV_SIMD_SCALABLE
-        // RVV: block size follows the runtime vector width (defaultC0 = vlanes(), LMUL=2).
-        const int C0 = (int)inpshape.back();
-        int C0shift = 0; while ((1 << C0shift) < C0) C0shift++;
-        const int K0 = C0, K0shift = C0shift;
-        constexpr int C0BUF = VTraits<v_float32>::max_nlanes;  // compile-time scratch bound
-#else
+        // The block size is a fixed property of the blocked layout on every platform,
+        // so C0/K0 are compile-time constants here (#29454).
         constexpr int C0shift = 3, K0shift = C0shift;
         constexpr int C0 = 1 << C0shift, K0 = C0;
         constexpr int C0BUF = K0;
-#endif
 
         CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
 
@@ -2557,16 +2551,9 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
 {
     ConvFunc func = nullptr;
-#if CV_SIMD_SCALABLE
-    // RVV: block size follows the runtime vector width; accept the supported pow2 widths.
-    if (depth == CV_32F && (C0 == 8 || C0 == 16 || C0 == 32 || C0 == 64)) {
-        func = conv32fC8;
-    }
-#else
     if (depth == CV_32F && C0 == 8) {
         func = conv32fC8;
     }
-#endif
     return func;
 }
 

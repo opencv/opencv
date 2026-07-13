@@ -5,7 +5,6 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
@@ -74,14 +73,10 @@ Net::Impl::Impl()
     // onnx_opset = 0;
 
     accuracy = CV_32F;
+    // The block size is a network-wide memory-layout contract, so it must not depend
+    // on the SIMD width of the host: C0 == 8 is the mainstream, well-tested setting.
+    // (Deriving it from vlanes() made the layout hardware-dependent; see #29454.)
     defaultC0 = DEFAULT_C0;
-#if CV_SIMD_SCALABLE
-    // RVV: the universal intrinsics use LMUL=2, so the float vector width is
-    // (VLEN/32)*2 (16 at VLEN=256). The blocked-layout kernels fill a full
-    // vector per channel block, so the net-wide block size must match that
-    // width rather than the fixed default of 8 (#28852).
-    defaultC0 = std::max((int)DEFAULT_C0, VTraits<v_float32>::vlanes());
-#endif
     enableFP16 = haveFP16 = false;
     // FP16 is not ready yet in the new DNN engine
     // Ticket: https://github.com/opencv/opencv/issues/26196
