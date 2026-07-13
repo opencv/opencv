@@ -72,4 +72,54 @@ PERF_TEST_P(Size_MatType, bitwise_xor, TYPICAL_MATS_BITW_ARITHM)
     SANITY_CHECK(c);
 }
 
+// Scalar-operand bitwise ops (matches IPP ippBitwise{And,Or,Xor}_Const:
+// bitwise_*(mat, Scalar)).
+PERF_TEST_P(Size_MatType, bitwise_and_scalar, TYPICAL_MATS_BITW_ARITHM)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+    cv::Scalar s = Scalar::all(50);
+
+    declare.in(a, WARMUP_RNG).out(c);
+    declare.time(100);
+
+    TEST_CYCLE() cv::bitwise_and(a, s, c);
+
+    SANITY_CHECK(c);
+}
+
+PERF_TEST_P(Size_MatType, bitwise_or_scalar, TYPICAL_MATS_BITW_ARITHM)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+    cv::Scalar s = Scalar::all(50);
+
+    declare.in(a, WARMUP_RNG).out(c);
+    declare.time(100);
+
+    TEST_CYCLE() cv::bitwise_or(a, s, c);
+
+    SANITY_CHECK(c);
+}
+
+PERF_TEST_P(Size_MatType, bitwise_xor_scalar, TYPICAL_MATS_BITW_ARITHM)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+    cv::Scalar s = Scalar::all(50);
+
+    declare.in(a, WARMUP_RNG).out(c);
+    declare.time(100);
+
+    TEST_CYCLE() cv::bitwise_xor(a, s, c);
+
+    SANITY_CHECK(c);
+}
+
 } // namespace

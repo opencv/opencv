@@ -27,6 +27,28 @@ PERF_TEST_P(sortFixture, sort, TYPICAL_MATS_SORT)
     SANITY_CHECK(b);
 }
 
+// In-place sort (matches IPP ippSort_Inplace: sort(dst, dst, flags))
+PERF_TEST_P(sortFixture, sort_inplace, TYPICAL_MATS_SORT)
+{
+    const sortParams params = GetParam();
+    const Size sz = get<0>(params);
+    const int type = get<1>(params), flags = get<2>(params);
+
+    cv::Mat a(sz, type), b(sz, type);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    while (next())
+    {
+        a.copyTo(b);
+        startTimer();
+        cv::sort(b, b, flags);
+        stopTimer();
+    }
+
+    SANITY_CHECK(b);
+}
+
 typedef sortFixture sortIdxFixture;
 
 PERF_TEST_P(sortIdxFixture, sorIdx, TYPICAL_MATS_SORT)

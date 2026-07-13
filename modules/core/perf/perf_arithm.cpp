@@ -394,6 +394,26 @@ PERF_TEST_P_(BinaryOpTest, multiplyScale)
     SANITY_CHECK_NOTHING();
 }
 
+// Scalar-operand multiply (matches IPP ippMultiply_Const: multiply(mat, Scalar))
+PERF_TEST_P_(BinaryOpTest, multiplyScalar)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a(sz, type), c(sz, type);
+    cv::Scalar s = 1.333;
+
+    declare.in(a, WARMUP_RNG).out(c);
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        a /= (2 << 16);
+        s = 2.0;
+    }
+
+    TEST_CYCLE() cv::multiply(a, s, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P_(BinaryOpTest, divide)
 {
     Size sz = get<0>(GetParam());
@@ -456,6 +476,36 @@ PERF_TEST_P_(TransposeMultiChannelTest, transpose2d_multichannel)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeMultiChannelTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+    )
+);
+
+// In-place transpose (matches IPP ippTranspose_Inplace: transpose(dst, dst)).
+// In-place transpose requires a square matrix.
+typedef Size_MatType TransposeInplaceTest;
+
+PERF_TEST_P_(TransposeInplaceTest, transpose2d_inplace)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a(sz, type), b(sz, type);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    while (next())
+    {
+        a.copyTo(b);
+        startTimer();
+        cv::transpose(b, b);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeInplaceTest,
+    testing::Combine(
+        testing::Values(cv::Size(1280, 1280), cv::Size(1920, 1920)),
         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
     )
 );
@@ -805,6 +855,46 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
                         std::tuple<perf::MatType, perf::MatType>{CV_8U, CV_32F},
                         std::tuple<perf::MatType, perf::MatType>{CV_8S, CV_32F}
             )
+    )
+);
+
+// add/subtract with two mixed input depths + explicit output depth
+// (matches IPP ippAdd_Scale / ippSubtract_Scale: add(src1{8U/16U/16S}, src2{16U},
+// dst, noArray(), CV_32F)).
+typedef perf::TestBaseWithParam<std::tuple<cv::Size, perf::MatType>> ArithmScaleTest;
+
+PERF_TEST_P_(ArithmScaleTest, add_scale)
+{
+    auto p = GetParam();
+    Size sz = get<0>(p);
+    int src1Type = get<1>(p);
+
+    cv::Mat a(sz, src1Type), b(sz, CV_16UC1), c(sz, CV_32FC1);
+    declare.in(a, b, WARMUP_RNG).out(c);
+
+    TEST_CYCLE() cv::add(a, b, c, noArray(), CV_32F);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(ArithmScaleTest, subtract_scale)
+{
+    auto p = GetParam();
+    Size sz = get<0>(p);
+    int src1Type = get<1>(p);
+
+    cv::Mat a(sz, src1Type), b(sz, CV_16UC1), c(sz, CV_32FC1);
+    declare.in(a, b, WARMUP_RNG).out(c);
+
+    TEST_CYCLE() cv::subtract(a, b, c, noArray(), CV_32F);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmScaleTest,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values((perf::MatType)CV_8UC1, (perf::MatType)CV_16UC1, (perf::MatType)CV_16SC1)
     )
 );
 
