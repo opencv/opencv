@@ -218,9 +218,13 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
     if (!hasPrevFrame || prevFrame.image.empty()) return false;
 
     const Frame& prev = prevFrame;
-    if (prev.undistKpts.empty()) return false;
+    if (prev.keypoints.empty()) return false;
 
-    std::vector<Point2f> prevPts(prev.undistKpts.begin(), prev.undistKpts.end());
+    // LK runs on the raw imgs
+    std::vector<Point2f> prevPts;
+    prevPts.reserve(prev.keypoints.size());
+    for (const auto& kp : prev.keypoints) prevPts.push_back(kp.pt);
+
     std::vector<Point2f> curPts;
     std::vector<uchar> status;
     std::vector<float> err;
@@ -228,6 +232,13 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
     calcOpticalFlowPyrLK(prev.image, cur.image, prevPts, curPts,
                          status, err, Size(21, 21), 3,
                          TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.01));
+
+    // PnP uses K with no distortion
+    std::vector<Point2f> curUndist;
+    if (!dist.empty())
+        undistortPoints(curPts, curUndist, K, dist, noArray(), K);
+    else
+        curUndist = curPts;
 
     std::vector<Point3f> obj; std::vector<Point2f> img;
     obj.reserve(prevPts.size()); img.reserve(prevPts.size());
@@ -239,7 +250,7 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
         MapPoint* mp = prev.mapPoints[i];
         if (!mp || mp->bad) continue;
         obj.push_back(Point3f((float)mp->pos.x,(float)mp->pos.y,(float)mp->pos.z));
-        img.push_back(curPts[i]);
+        img.push_back(curUndist[i]);
     }
 
     if ((int)obj.size() < params.opticalFlowMinInliers)

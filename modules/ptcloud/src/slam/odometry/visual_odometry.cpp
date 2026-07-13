@@ -35,12 +35,12 @@ Ptr<VisualOdometry> VisualOdometry::create(
 // Constructor
 
 VisualOdometryImpl::VisualOdometryImpl(
-    const Ptr<Feature2D>& detector,
-    const Ptr<DescriptorMatcher>& matcher,
+    const Ptr<Feature2D>& detector_,
+    const Ptr<DescriptorMatcher>& matcher_,
     const Mat& cameraMatrix,
     const Mat& distCoeffs,
-    const OdometryParams& params)
-    : detector(detector), matcher(matcher), params(params)
+    const OdometryParams& params_)
+    : detector(detector_), matcher(matcher_), params(params_)
 {
     cameraMatrix.convertTo(K, CV_64F);
     if (!distCoeffs.empty())

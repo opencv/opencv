@@ -5,7 +5,6 @@
 
 #include <opencv2/ptcloud.hpp>
 #include <opencv2/features.hpp>
-#include <opencv2/dnn.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/quaternion.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -13,6 +12,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #include "../dnn/common.hpp"
 
@@ -20,15 +20,6 @@ using namespace cv;
 using namespace std;
 
 namespace {
-
-// path helper: joins a directory and filename, tolerating a dir with/without a trailing slash
-String joinPath(const String& dir, const String& name)
-{
-    if (dir.empty()) return name;
-    char last = dir.back();
-    if (last == '/' || last == '\\') return dir + name;
-    return dir + "/" + name;
-}
 
 // path helper: strips the directory part off a path
 String basenameOf(const String& path)
@@ -93,7 +84,7 @@ void writeColmapFiles(const slam::VisualOdometry& vo, const Mat& K,
     cv::utils::fs::createDirectories(outputFolder);
 
     {
-        std::ofstream f(joinPath(outputFolder, "camera.txt").c_str());
+        std::ofstream f(cv::utils::fs::join(outputFolder, "camera.txt").c_str());
         int width = 0, height = 0;
         if (!vo.getMap().keyframes().empty())
         {
@@ -111,7 +102,7 @@ void writeColmapFiles(const slam::VisualOdometry& vo, const Mat& K,
     }
 
     {
-        std::ofstream f(joinPath(outputFolder, "point3d.txt").c_str());
+        std::ofstream f(cv::utils::fs::join(outputFolder, "point3d.txt").c_str());
         f << "# Map points in world coordinates.\n# Columns: id X Y Z n_observations\n";
         f.setf(std::ios::scientific); f.precision(9);
         for (slam::MapPoint* mp : vo.getMap().mapPoints())
@@ -124,7 +115,7 @@ void writeColmapFiles(const slam::VisualOdometry& vo, const Mat& K,
     }
 
     {
-        std::ofstream f(joinPath(outputFolder, "images.txt").c_str());
+        std::ofstream f(cv::utils::fs::join(outputFolder, "images.txt").c_str());
         const auto& traj = vo.getTrajectory();
         f << "# Image list with two lines of data per image:\n"
           << "#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n"
@@ -170,7 +161,8 @@ const string param_keys =
     "{ fx               | 718.856  | Camera focal length X }"
     "{ fy               | 718.856  | Camera focal length Y }"
     "{ cx               | 607.1928 | Camera principal point X }"
-    "{ cy               | 185.2157 | Camera principal point Y }";
+    "{ cy               | 185.2157 | Camera principal point Y }"
+    "{ dist             |        | Lens distortion coeffs, comma-separated k1,k2,p1,p2[,k3,...] (default: none) }";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -223,6 +215,23 @@ int main(int argc, char** argv)
                     0., parser.get<double>("fy"), parser.get<double>("cy"),
                     0., 0., 1.);
 
+    // Optional lens distortion (k1,k2,p1,p2[,k3,...]); empty means no distortion.
+    Mat distCoeffs;
+    {
+        std::stringstream ss(parser.get<String>("dist"));
+        std::vector<double> coeffs;
+        String tok;
+        while (std::getline(ss, tok, ','))
+        {
+            const size_t b = tok.find_first_not_of(" \t");
+            const size_t e = tok.find_last_not_of(" \t");
+            if (b == String::npos) continue;
+            coeffs.push_back(std::stod(tok.substr(b, e - b + 1)));
+        }
+        if (!coeffs.empty())
+            distCoeffs = Mat(coeffs, true).reshape(1, 1);
+    }
+
     ALIKED::Params detParams;
     detParams.inputSize = Size(640, 640);
     detParams.engine    = dnn::ENGINE_NEW;
@@ -234,7 +243,7 @@ int main(int argc, char** argv)
                                             backendId, targetId);
 
     slam::OdometryParams voParams;
-    
+
     voParams.minInitParallaxDeg = 1.5;
     voParams.minInitPoints      = 50;
     voParams.pnpReprojThresh    = 4.0;
@@ -242,7 +251,7 @@ int main(int argc, char** argv)
     voParams.localMapTopK       = 10;
 
     auto vo = slam::VisualOdometry::create(
-        detector, matcher, Mat(K), Mat(), voParams);
+        detector, matcher, Mat(K), distCoeffs, voParams);
 
     const std::vector<String> imgFiles = listImageFiles(imagesDir);
 
