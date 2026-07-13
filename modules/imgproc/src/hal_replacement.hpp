@@ -1738,6 +1738,27 @@ inline int hal_ni_accumulateWeighted(const uchar* src_data, size_t src_step, uch
 #define cv_hal_accumulateWeighted hal_ni_accumulateWeighted
 //! @endcond
 
+/**
+   @brief Harris corner response for each pixel of a single-channel image
+   @param src_data Source image (8-bit or 32-bit float single-channel) data
+   @param src_step Source image step
+   @param src_type Type of the source image (CV_8UC1 or CV_32FC1)
+   @param dst_data Destination image (32-bit float single-channel) data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param block_size Neighborhood size
+   @param ksize Aperture size for the Sobel operator
+   @param k Harris detector free parameter
+   @param border_type Pixel extrapolation method (may carry BORDER_ISOLATED)
+   @param is_submatrix Whether the source is a submatrix of a larger image
+*/
+inline int hal_ni_cornerHarris(const uchar* src_data, size_t src_step, int src_type, uchar* dst_data, size_t dst_step, int width, int height, int block_size, int ksize, double k, int border_type, bool is_submatrix) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_cornerHarris hal_ni_cornerHarris
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)
