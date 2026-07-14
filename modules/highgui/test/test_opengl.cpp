@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
 #include <opencv2/core/opengl.hpp>
@@ -9,8 +11,7 @@ namespace opencv_test { namespace {
 
 using namespace cv;
 
-// The ogl wrappers need a current GL context. Create an OpenGL window to obtain
-// one, or skip where none is available (headless CI without a display/GL).
+// ogl wrappers need a current GL context; skip when none is available (headless CI).
 static void ensureGlContext(const String& w)
 {
     try
@@ -26,8 +27,7 @@ static void ensureGlContext(const String& w)
     }
 }
 
-// Regression for the in-place Buffer::resize double-free fix: growing a
-// sole-owner buffer must keep the same GL id (bound VAOs stay valid).
+// A grown sole-owner buffer must keep the same GL id (in-place resize).
 TEST(OpenGL_Buffer, resize_keeps_id)
 {
     const String w = "ogl_buf_test";
@@ -44,7 +44,7 @@ TEST(OpenGL_Buffer, resize_keeps_id)
     destroyWindow(w);
 }
 
-// Exercises Shader compile + Shader::type() (the previously-undefined symbol).
+// Shader compile + type().
 TEST(OpenGL_Shader, compile_and_type)
 {
     const String w = "ogl_shader_test";

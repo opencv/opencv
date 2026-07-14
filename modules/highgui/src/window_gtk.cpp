@@ -729,7 +729,7 @@ static Rect getImageRect_(const std::shared_ptr<CvWindow>& window)
     gint wx, wy;
 #ifdef HAVE_OPENGL
     if (window->useGl) {
-        // OpenGL windows render into the GtkGLArea, not window->widget (which is not shown).
+        // OpenGL windows render into the GtkGLArea, not window->widget
         GtkWidget* surf = window->glArea ? window->glArea : window->widget;
         gtk_widget_translate_coordinates(surf, gtk_widget_get_toplevel(surf), 0, 0, &wx, &wy);
         return Rect(wx, wy, gtk_widget_get_allocated_width(surf), gtk_widget_get_allocated_height(surf));
@@ -1930,8 +1930,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     Point2f pt32f = {-1., -1.};
     Point pt = {-1,-1};
     int cv_event = -1, state = 0, flags = 0;
-    // For OpenGL windows the visible widget is the GtkGLArea; the (empty) image
-    // state lives on window->widget, so read it from there.
+    // for OpenGL windows the image state lives on window->widget
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( window->widget );
 
     if( event->type == GDK_MOTION_NOTIFY )
