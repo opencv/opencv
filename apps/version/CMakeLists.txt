@@ -1,0 +1,5 @@
+ocv_add_application(opencv_version MODULES opencv_core SRCS opencv_version.cpp)
+if(WIN32)
+  ocv_add_application(opencv_version_win32 MODULES opencv_core SRCS opencv_version.cpp)
+  target_compile_definitions(opencv_version_win32 PRIVATE "OPENCV_WIN32_API=1")
+endif()

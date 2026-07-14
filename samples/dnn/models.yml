@@ -1,0 +1,313 @@
+%YAML 1.0
+---
+################################################################################
+# Object detection models.
+################################################################################
+
+# OpenCV's face detection network
+opencv_fd:
+  load_info:
+    url: "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
+    sha1: "15aa726b4d46d9f023526d85537db81cbc8dd566"
+  model: "opencv_face_detector.caffemodel"
+  config: "opencv_face_detector.prototxt"
+  mean: [104, 177, 123]
+  scale: 1.0
+  width: 300
+  height: 300
+  rgb: false
+  sample: "object_detection"
+
+# YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
+yolov8x:
+  load_info:
+    url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8x.onnx?download=true"
+    sha1: "462f15d668c046d38e27d3df01fe8142dd004cb4"
+  model: "yolov8x.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8s:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8s.onnx"
+    sha1: "82cd83984396fe929909ecb58212b0e86d0904b1"
+  model: "yolov8s.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8n:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8m:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8m.onnx"
+    sha1: "656ffeb4f3b067bc30df956728b5f9c61a4cb090"
+  model: "yolov8m.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8l.onnx"
+    sha1: "462df53ca3a85d110bf6be7fc2e2bb1277124395"
+  model: "yolov8l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+# YOLOv5 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv5n YOLOv5s YOLOv5m YOLOv5l and YOLOv5x
+
+yolov5l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov5l.onnx"
+    sha1: "9de7e54c524b7fe7577bbd4cdbbdaed53375c8f1"
+  model: "yolov5l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+# YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
+# YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
+# Might be used for all YOLOv2, TinyYolov2, YOLOv3, YOLOv4 and TinyYolov4
+yolov4:
+  load_info:
+    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights"
+    sha1: "0143deb6c46fcc7f74dd35bf3c14edc3784e99ee"
+  model: "yolov4.weights"
+  config: "yolov4.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov4-tiny:
+  load_info:
+    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
+    sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
+  model: "yolov4-tiny.weights"
+  config: "yolov4-tiny.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov3:
+  load_info:
+    url: "https://pjreddie.com/media/files/yolov3.weights"
+    sha1: "520878f12e97cf820529daea502acca380f1cb8e"
+  model: "yolov3.weights"
+  config: "yolov3.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+tiny-yolo-voc:
+  load_info:
+    url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"
+    sha1: "24b4bd049fc4fa5f5e95f684a8967e65c625dff9"
+  model: "tiny-yolo-voc.weights"
+  config: "tiny-yolo-voc.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_pascal_voc.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov8:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  postprocessing: "yolov8"
+  classes: "object_detection_classes_yolo.txt"
+  sample: "object_detection"
+
+# Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
+ssd_caffe:
+  load_info:
+    url: "https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc"
+    sha1: "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a"
+  model: "MobileNetSSD_deploy.caffemodel"
+  config: "MobileNetSSD_deploy.prototxt"
+  mean: [127.5, 127.5, 127.5]
+  scale: 0.007843
+  width: 300
+  height: 300
+  rgb: false
+  classes: "object_detection_classes_pascal_voc.txt"
+  sample: "object_detection"
+
+# TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
+ssd_tf:
+  load_info:
+    url: "http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
+    sha1: "9e4bcdd98f4c6572747679e4ce570de4f03a70e2"
+    download_sha: "6157ddb6da55db2da89dd561eceb7f944928e317"
+    download_name: "ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
+    member: "ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb"
+  model: "ssd_mobilenet_v1_coco_2017_11_17.pb"
+  config: "ssd_mobilenet_v1_coco_2017_11_17.pbtxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 300
+  height: 300
+  rgb: true
+  classes: "object_detection_classes_coco.txt"
+  sample: "object_detection"
+
+# TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
+faster_rcnn_tf:
+  load_info:
+    url: "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
+    sha1: "f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3"
+    download_sha: "c710f25e5c6a3ce85fe793d5bf266d581ab1c230"
+    download_name: "faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
+    member: "faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+  model: "faster_rcnn_inception_v2_coco_2018_01_28.pb"
+  config: "faster_rcnn_inception_v2_coco_2018_01_28.pbtxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 800
+  height: 600
+  rgb: true
+  sample: "object_detection"
+
+################################################################################
+# Image classification models.
+################################################################################
+
+# SqueezeNet v1.1 from https://github.com/DeepScale/SqueezeNet
+squeezenet:
+  load_info:
+    url: "https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel"
+    sha1: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
+  model: "squeezenet_v1.1.caffemodel"
+  config: "squeezenet_v1.1.prototxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 227
+  height: 227
+  rgb: false
+  classes: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
+# Googlenet from https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
+googlenet:
+  load_info:
+    url: "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel"
+    sha1: "405fc5acd08a3bb12de8ee5e23a96bec22f08204"
+  model: "bvlc_googlenet.caffemodel"
+  config: "bvlc_googlenet.prototxt"
+  mean: [104, 117, 123]
+  scale: 1.0
+  width: 224
+  height: 224
+  rgb: false
+  classes: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
+################################################################################
+# Semantic segmentation models.
+################################################################################
+
+# ENet road scene segmentation network from https://github.com/e-lab/ENet-training
+# Works fine for different input sizes.
+enet:
+  load_info:
+    url: "https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1"
+    sha1: "b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315"
+  model: "Enet-model-best.net"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 512
+  height: 256
+  rgb: true
+  classes: "enet-classes.txt"
+  sample: "segmentation"
+
+fcn8s:
+  load_info:
+    url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"
+    sha1: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
+  model: "fcn8s-heavy-pascal.caffemodel"
+  config: "fcn8s-heavy-pascal.prototxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"
+
+fcnresnet101:
+  load_info:
+    url: "https://github.com/onnx/models/raw/fb8271d5d5d9b90dbb1eb5e8e40f8f580fb248b3/vision/object_detection_segmentation/fcn/model/fcn-resnet101-11.onnx"
+    sha1: "e7e76474bf6b73334ab32c4be1374c9e605f5aed"
+  model: "fcn-resnet101-11.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"

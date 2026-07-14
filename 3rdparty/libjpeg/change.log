@@ -1,0 +1,502 @@
+CHANGE LOG for Independent JPEG Group's JPEG software
+
+
+Version 9d  12-Jan-2020
+-----------------------
+
+Optimize the optimal Huffman code table generation to produce
+slightly smaller files.  Thank to John Korejwa for suggestion.
+Note: Requires rebuild of testimgp.jpg.
+
+Decoding Huffman: Use default tables if tables are not defined.
+Thank to Simone Azzalin for report (Motion JPEG),
+and to Martin Strunz for hint.
+
+Add sanity check in optimal Huffman code table generation.
+Thank to Adam Farley for suggestion.
+
+rdtarga.c: use read_byte(), with EOF check, instead of getc()
+in read_*_pixel().
+Thank to Chijin Zhou for cjpeg potential vulnerability report.
+
+jmemnobs.c: respect the max_memory_to_use setting in
+jpeg_mem_available() computation.  Thank to Sheng Shu and
+Dongdong She for djpeg potential vulnerability report.
+
+jdarith.c, jdhuff.c: avoid left shift of negative value
+compiler warning in decode_mcu_AC_refine().
+Thank to Indu Bhagat for suggestion.
+
+Add x64 (64-bit) platform support, avoid compiler warnings.
+Thank to Jonathan Potter, Feiyun Wang, and Sheng Shu for suggestion.
+
+Adjust libjpeg version specification for pkg-config file.
+Thank to Chen Chen for suggestion.
+
+Restore GIF read and write support from libjpeg version 6a.
+Thank to Wolfgang Werner (W.W.) Heinz for suggestion.
+
+Improve consistency in raw (downsampled) image data processing mode.
+Thank to Zhongyuan Zhou for hint.
+
+Avoid out of bounds array read (AC derived table pointers)
+in start pass in jdhuff.c.  Thank to Peng Li for report.
+
+Improve code sanity (jdhuff.c).
+Thank to Reza Mirzazade farkhani for reports.
+
+Add jpegtran -drop option; add options to the crop extension and wipe
+to fill the extra area with content from the source image region,
+instead of gray out.
+
+
+Version 9c  14-Jan-2018
+-----------------------
+
+jpegtran: add an option to the -wipe switch to fill the region
+with the average of adjacent blocks, instead of gray out.
+Thank to Caitlyn Feddock and Maddie Ziegler for inspiration.
+
+Make range extension bits adjustable (in jpegint.h).
+Thank to Robin Watts for suggestion.
+
+Provide macros for fflush() and ferror() in jinclude.h in order
+to facilitate adaption by applications using an own FILE class.
+Thank to Gerhard Huber for suggestion.
+
+Add libjpeg pkg-config file.  Thank to Mark Lavi, Vincent Torri,
+Patrick McMunn, and Huw Davies for suggestion.
+
+Add sanity checks in cjpeg image reader modules.
+Thank to Bingchang, Liu for reports.
+
+
+Version 9b  17-Jan-2016
+-----------------------
+
+Improvements and optimizations in DCT and color calculations.
+Normalize range limit array composition and access pattern.
+Thank to Sia Furler and Maddie Ziegler for inspiration.
+
+Use merged upsample with scaled DCT sizes larger than 8.
+Thank to Taylor Hatala for inspiration.
+
+Check for excessive comment lengths in argument parsing in wrjpgcom.c.
+Thank to Julian Cohen for hint.
+
+Add makefile.b32 for use with Borland C++ 32-bit (bcc32).
+Thank to Joe Slater for contribution.
+
+Document 'f' specifier for jpegtran -crop specification.
+Thank to Michele Martone for suggestion.
+
+Use defined value from header instead of hardwired number in rdswitch.c.
+Thank to Robert Sprowson for hint.
+
+
+Version 9a  19-Jan-2014
+-----------------------
+
+Add support for wide gamut color spaces (JFIF version 2).
+Improve clarity and accuracy in color conversion modules.
+Note: Requires rebuild of test images.
+
+Extend the bit depth support to all values from 8 to 12
+(BITS_IN_JSAMPLE configuration option in jmorecfg.h).
+jpegtran now supports N bits sample data precision with all N from 8 to 12
+in a single instance.  Thank to Roland Fassauer for inspiration.
+
+Try to resolve issues with new boolean type definition.
+Thank also to v4hn for suggestion.
+
+Enable option to use default Huffman tables for lossless compression
+(for hardware solution), and in this case improve lossless RGB compression
+with reversible color transform.  Thank to Benny Alexandar for hint.
+
+Extend the entropy decoding structure, so that extraneous bytes between
+compressed scan data and following marker can be reported correctly.
+Thank to Nigel Tao for hint.
+
+Add jpegtran -wipe option and extension for -crop.
+Thank to Andrew Senior, David Clunie, and Josef Schmid for suggestion.
+
+
+Version 9  13-Jan-2013
+----------------------
+
+Add cjpeg -rgb1 option to create an RGB JPEG file, and insert
+a simple reversible color transform into the processing which
+significantly improves the compression.
+The recommended command for lossless coding of RGB images is now
+cjpeg -rgb1 -block 1 -arithmetic.
+As said, this option improves the compression significantly, but
+the files are not compatible with JPEG decoders prior to IJG v9
+due to the included color transform.
+The used color transform and marker signaling is compatible with
+other JPEG standards (e.g., JPEG-LS part 2).
+
+Remove the automatic de-ANSI-fication support (Automake 1.12).
+Thank also to Nitin A Kamble for suggestion.
+
+Add remark for jpeg_mem_dest() in jdatadst.c.
+Thank to Elie-Gregoire Khoury for the hint.
+
+Support files with invalid component identifiers (created
+by Adobe PDF).  Thank to Robin Watts for the suggestion.
+
+Adapt full buffer case in jcmainct.c for use with scaled DCT.
+Thank to Sergii Biloshytskyi for the suggestion.
+
+Add type identifier for declaration of noreturn functions.
+Thank to Brett L. Moore for the suggestion.
+
+Correct argument type in format string, avoid compiler warnings.
+Thank to Vincent Torri for hint.
+
+Add missing #include directives in configuration checks, avoid
+configuration errors.  Thank to John Spencer for the hint.
+
+
+Version 8d  15-Jan-2012
+-----------------------
+
+Add cjpeg -rgb option to create RGB JPEG files.
+Using this switch suppresses the conversion from RGB
+colorspace input to the default YCbCr JPEG colorspace.
+This feature allows true lossless JPEG coding of RGB color images.
+The recommended command for this purpose is currently
+cjpeg -rgb -block 1 -arithmetic.
+SmartScale capable decoder (introduced with IJG JPEG 8) required.
+Thank to Michael Koch for the initial suggestion.
+
+Add option to disable the region adjustment in the transupp crop code.
+Thank to Jeffrey Friedl for the suggestion.
+
+Thank to Richard Jones and Edd Dawson for various minor corrections.
+
+Thank to Akim Demaille for configure.ac cleanup.
+
+
+Version 8c  16-Jan-2011
+-----------------------
+
+Add option to compression library and cjpeg (-block N) to use
+different DCT block size.
+All N from 1 to 16 are possible.  Default is 8 (baseline format).
+Larger values produce higher compression,
+smaller values produce higher quality.
+SmartScale capable decoder (introduced with IJG JPEG 8) required.
+
+
+Version 8b  16-May-2010
+-----------------------
+
+Repair problem in new memory source manager with corrupt JPEG data.
+Thank to Ted Campbell and Samuel Chun for the report.
+
+Repair problem in Makefile.am test target.
+Thank to anonymous user for the report.
+
+Support MinGW installation with automatic configure.
+Thank to Volker Grabsch for the suggestion.
+
+
+Version 8a  28-Feb-2010
+-----------------------
+
+Writing tables-only datastreams via jpeg_write_tables works again.
+
+Support 32-bit BMPs (RGB image with Alpha channel) for read in cjpeg.
+Thank to Brett Blackham for the suggestion.
+
+Improve accuracy in floating point IDCT calculation.
+Thank to Robert Hooke for the hint.
+
+
+Version 8  10-Jan-2010
+----------------------
+
+jpegtran now supports the same -scale option as djpeg for "lossless" resize.
+An implementation of the JPEG SmartScale extension is required for this
+feature.  A (draft) specification of the JPEG SmartScale extension is
+available as a contributed document at ITU and ISO.  Revision 2 or later
+of the document is required (latest document version is Revision 3).
+The SmartScale extension will enable more features beside lossless resize
+in future implementations, as described in the document (new compression
+options).
+
+Add sanity check in BMP reader module to avoid cjpeg crash for empty input
+image (thank to Isaev Ildar of ISP RAS, Moscow, RU for reporting this error).
+
+Add data source and destination managers for read from and write to
+memory buffers.  New API functions jpeg_mem_src and jpeg_mem_dest.
+Thank to Roberto Boni from Italy for the suggestion.
+
+
+Version 7  27-Jun-2009
+----------------------
+
+New scaled DCTs implemented.
+djpeg now supports scalings N/8 with all N from 1 to 16.
+cjpeg now supports scalings 8/N with all N from 1 to 16.
+Scaled DCTs with size larger than 8 are now also used for resolving the
+common 2x2 chroma subsampling case without additional spatial resampling.
+Separate spatial resampling for those kind of files is now only necessary
+for N>8 scaling cases.
+Furthermore, separate scaled DCT functions are provided for direct resolving
+of the common asymmetric subsampling cases (2x1 and 1x2) without additional
+spatial resampling.
+
+cjpeg -quality option has been extended for support of separate quality
+settings for luminance and chrominance (or in general, for every provided
+quantization table slot).
+New API function jpeg_default_qtables() and q_scale_factor array in library.
+
+Added -nosmooth option to cjpeg, complementary to djpeg.
+New variable "do_fancy_downsampling" in library, complement to fancy
+upsampling.  Fancy upsampling now uses direct DCT scaling with sizes
+larger than 8.  The old method is not reversible and has been removed.
+
+Support arithmetic entropy encoding and decoding.
+Added files jaricom.c, jcarith.c, jdarith.c.
+
+Straighten the file structure:
+Removed files jidctred.c, jcphuff.c, jchuff.h, jdphuff.c, jdhuff.h.
+
+jpegtran has a new "lossless" cropping feature.
+
+Implement -perfect option in jpegtran, new API function
+jtransform_perfect_transform() in transupp. (DP 204_perfect.dpatch)
+
+Better error messages for jpegtran fopen failure.
+(DP 203_jpegtran_errmsg.dpatch)
+
+Fix byte order issue with 16bit PPM/PGM files in rdppm.c/wrppm.c:
+according to Netpbm, the de facto standard implementation of the PNM formats,
+the most significant byte is first. (DP 203_rdppm.dpatch)
+
+Add -raw option to rdjpgcom not to mangle the output.
+(DP 205_rdjpgcom_raw.dpatch)
+
+Make rdjpgcom locale aware. (DP 201_rdjpgcom_locale.dpatch)
+
+Add extern "C" to jpeglib.h.
+This avoids the need to put extern "C" { ... } around #include "jpeglib.h"
+in your C++ application.  Defining the symbol DONT_USE_EXTERN_C in the
+configuration prevents this. (DP 202_jpeglib.h_c++.dpatch)
+
+
+Version 6b  27-Mar-1998
+-----------------------
+
+jpegtran has new features for lossless image transformations (rotation
+and flipping) as well as "lossless" reduction to grayscale.
+
+jpegtran now copies comments by default; it has a -copy switch to enable
+copying all APPn blocks as well, or to suppress comments.  (Formerly it
+always suppressed comments and APPn blocks.)  jpegtran now also preserves
+JFIF version and resolution information.
+
+New decompressor library feature: COM and APPn markers found in the input
+file can be saved in memory for later use by the application.  (Before,
+you had to code this up yourself with a custom marker processor.)
+
+There is an unused field "void * client_data" now in compress and decompress
+parameter structs; this may be useful in some applications.
+
+JFIF version number information is now saved by the decoder and accepted by
+the encoder.  jpegtran uses this to copy the source file's version number,
+to ensure "jpegtran -copy all" won't create bogus files that contain JFXX
+extensions but claim to be version 1.01.  Applications that generate their
+own JFXX extension markers also (finally) have a supported way to cause the
+encoder to emit JFIF version number 1.02.
+
+djpeg's trace mode reports JFIF 1.02 thumbnail images as such, rather
+than as unknown APP0 markers.
+
+In -verbose mode, djpeg and rdjpgcom will try to print the contents of
+APP12 markers as text.  Some digital cameras store useful text information
+in APP12 markers.
+
+Handling of truncated data streams is more robust: blocks beyond the one in
+which the error occurs will be output as uniform gray, or left unchanged
+if decoding a progressive JPEG.  The appearance no longer depends on the
+Huffman tables being used.
+
+Huffman tables are checked for validity much more carefully than before.
+
+To avoid the Unisys LZW patent, djpeg's GIF output capability has been
+changed to produce "uncompressed GIFs", and cjpeg's GIF input capability
+has been removed altogether.  We're not happy about it either, but there
+seems to be no good alternative.
+
+The configure script now supports building libjpeg as a shared library
+on many flavors of Unix (all the ones that GNU libtool knows how to
+build shared libraries for).  Use "./configure --enable-shared" to
+try this out.
+
+New jconfig file and makefiles for Microsoft Visual C++ and Developer Studio.
+Also, a jconfig file and a build script for Metrowerks CodeWarrior
+on Apple Macintosh.  makefile.dj has been updated for DJGPP v2, and there
+are miscellaneous other minor improvements in the makefiles.
+
+jmemmac.c now knows how to create temporary files following Mac System 7
+conventions.
+
+djpeg's -map switch is now able to read raw-format PPM files reliably.
+
+cjpeg -progressive -restart no longer generates any unnecessary DRI markers.
+
+Multiple calls to jpeg_simple_progression for a single JPEG object
+no longer leak memory.
+
+
+Version 6a  7-Feb-96
+--------------------
+
+Library initialization sequence modified to detect version mismatches
+and struct field packing mismatches between library and calling application.
+This change requires applications to be recompiled, but does not require
+any application source code change.
+
+All routine declarations changed to the style "GLOBAL(type) name ...",
+that is, GLOBAL, LOCAL, METHODDEF, EXTERN are now macros taking the
+routine's return type as an argument.  This makes it possible to add
+Microsoft-style linkage keywords to all the routines by changing just
+these macros.  Note that any application code that was using these macros
+will have to be changed.
+
+DCT coefficient quantization tables are now stored in normal array order
+rather than zigzag order.  Application code that calls jpeg_add_quant_table,
+or otherwise manipulates quantization tables directly, will need to be
+changed.  If you need to make such code work with either older or newer
+versions of the library, a test like "#if JPEG_LIB_VERSION >= 61" is
+recommended.
+
+djpeg's trace capability now dumps DQT tables in natural order, not zigzag
+order.  This allows the trace output to be made into a "-qtables" file
+more easily.
+
+New system-dependent memory manager module for use on Apple Macintosh.
+
+Fix bug in cjpeg's -smooth option: last one or two scanlines would be
+duplicates of the prior line unless the image height mod 16 was 1 or 2.
+
+Repair minor problems in VMS, BCC, MC6 makefiles.
+
+New configure script based on latest GNU Autoconf.
+
+Correct the list of include files needed by MetroWerks C for ccommand().
+
+Numerous small documentation updates.
+
+
+Version 6  2-Aug-95
+-------------------
+
+Progressive JPEG support: library can read and write full progressive JPEG
+files.  A "buffered image" mode supports incremental decoding for on-the-fly
+display of progressive images.  Simply recompiling an existing IJG-v5-based
+decoder with v6 should allow it to read progressive files, though of course
+without any special progressive display.
+
+New "jpegtran" application performs lossless transcoding between different
+JPEG formats; primarily, it can be used to convert baseline to progressive
+JPEG and vice versa.  In support of jpegtran, the library now allows lossless
+reading and writing of JPEG files as DCT coefficient arrays.  This ability
+may be of use in other applications.
+
+Notes for programmers:
+* We changed jpeg_start_decompress() to be able to suspend; this makes all
+decoding modes available to suspending-input applications.  However,
+existing applications that use suspending input will need to be changed
+to check the return value from jpeg_start_decompress().  You don't need to
+do anything if you don't use a suspending data source.
+* We changed the interface to the virtual array routines: access_virt_array
+routines now take a count of the number of rows to access this time.  The
+last parameter to request_virt_array routines is now interpreted as the
+maximum number of rows that may be accessed at once, but not necessarily
+the height of every access.
+
+
+Version 5b  15-Mar-95
+---------------------
+
+Correct bugs with grayscale images having v_samp_factor > 1.
+
+jpeg_write_raw_data() now supports output suspension.
+
+Correct bugs in "configure" script for case of compiling in
+a directory other than the one containing the source files.
+
+Repair bug in jquant1.c: sometimes didn't use as many colors as it could.
+
+Borland C makefile and jconfig file work under either MS-DOS or OS/2.
+
+Miscellaneous improvements to documentation.
+
+
+Version 5a  7-Dec-94
+--------------------
+
+Changed color conversion roundoff behavior so that grayscale values are
+represented exactly.  (This causes test image files to change.)
+
+Make ordered dither use 16x16 instead of 4x4 pattern for a small quality
+improvement.
+
+New configure script based on latest GNU Autoconf.
+Fix configure script to handle CFLAGS correctly.
+Rename *.auto files to *.cfg, so that configure script still works if
+file names have been truncated for DOS.
+
+Fix bug in rdbmp.c: didn't allow for extra data between header and image.
+
+Modify rdppm.c/wrppm.c to handle 2-byte raw PPM/PGM formats for 12-bit data.
+
+Fix several bugs in rdrle.c.
+
+NEED_SHORT_EXTERNAL_NAMES option was broken.
+
+Revise jerror.h/jerror.c for more flexibility in message table.
+
+Repair oversight in jmemname.c NO_MKTEMP case: file could be there
+but unreadable.
+
+
+Version 5  24-Sep-94
+--------------------
+
+Version 5 represents a nearly complete redesign and rewrite of the IJG
+software.  Major user-visible changes include:
+  * Automatic configuration simplifies installation for most Unix systems.
+  * A range of speed vs. image quality tradeoffs are supported.
+    This includes resizing of an image during decompression: scaling down
+    by a factor of 1/2, 1/4, or 1/8 is handled very efficiently.
+  * New programs rdjpgcom and wrjpgcom allow insertion and extraction
+    of text comments in a JPEG file.
+
+The application programmer's interface to the library has changed completely.
+Notable improvements include:
+  * We have eliminated the use of callback routines for handling the
+    uncompressed image data.  The application now sees the library as a
+    set of routines that it calls to read or write image data on a
+    scanline-by-scanline basis.
+  * The application image data is represented in a conventional interleaved-
+    pixel format, rather than as a separate array for each color channel.
+    This can save a copying step in many programs.
+  * The handling of compressed data has been cleaned up: the application can
+    supply routines to source or sink the compressed data.  It is possible to
+    suspend processing on source/sink buffer overrun, although this is not
+    supported in all operating modes.
+  * All static state has been eliminated from the library, so that multiple
+    instances of compression or decompression can be active concurrently.
+  * JPEG abbreviated datastream formats are supported, ie, quantization and
+    Huffman tables can be stored separately from the image data.
+  * And not only that, but the documentation of the library has improved
+    considerably!
+
+
+The last widely used release before the version 5 rewrite was version 4A of
+18-Feb-93.  Change logs before that point have been discarded, since they
+are not of much interest after the rewrite.

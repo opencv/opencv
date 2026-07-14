@@ -1,0 +1,61 @@
+name: PR:4.x
+
+on:
+  pull_request:
+    branches:
+      - 4.x
+
+jobs:
+
+  Linux:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
+    with:
+      workflow_branch: main
+
+  Linux-no-HAL:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
+
+  Linux-Apline:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-Alpine.yaml@main
+
+  Windows:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
+    with:
+      workflow_branch: main
+
+  Ubuntu2404-ARM64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
+
+  Ubuntu2404-ARM64-Debug:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
+
+  Ubuntu2004-x64-OpenVINO:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@main
+
+  Ubuntu2004-x64-CUDA:
+    if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
+
+  macOS-ARM64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
+
+  macOS-x64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+
+  macOS-ARM64-Vulkan:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
+
+  iOS:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
+
+  Android-SDK:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@main
+
+  TIM-VX:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+
+  docs:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
+
+  Linux-RISC-V-Clang:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main

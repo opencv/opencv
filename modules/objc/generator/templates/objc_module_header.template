@@ -1,0 +1,28 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+#pragma once
+
+#ifdef __cplusplus
+//#import "opencv.hpp"
+$additionalImports
+#else
+#define CV_EXPORTS
+#endif
+
+#import <Foundation/Foundation.h>
+
+$forwardDeclarations
+
+$enumDeclarations
+
+NS_ASSUME_NONNULL_BEGIN
+
+$docs
+CV_EXPORTS @interface $objcName : $base
+
+$methodDeclarations
+
+@end
+
+NS_ASSUME_NONNULL_END

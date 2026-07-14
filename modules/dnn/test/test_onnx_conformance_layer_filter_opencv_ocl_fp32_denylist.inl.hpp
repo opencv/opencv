@@ -1,0 +1,8 @@
+"test_averagepool_3d_default",
+"test_dequantizelinear",
+"test_dequantizelinear_axis",
+"test_dequantizelinear_blocked",
+"test_maxpool_3d_default",
+"test_quantizelinear",
+"test_quantizelinear_axis",
+"test_quantizelinear_blocked",

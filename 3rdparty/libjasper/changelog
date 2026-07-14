@@ -1,0 +1,162 @@
+jasper (1.900.1-13) unstable; urgency=high
+
+  * Fix CVE-2011-4516 and CVE-2011-4517: Two buffer overflow issues possibly
+    exploitable via specially crafted input files (Closes: #652649)
+    Thanks to Red Hat and Michael Gilbert
+
+ -- Roland Stigge <stigge@antcom.de>  Wed, 04 Jan 2012 19:14:40 +0100
+
+jasper (1.900.1-12) unstable; urgency=low
+
+  * Added patch to fix filename buffer overflow, thanks to Jonas Smedegard
+    and Alex Cherepanov from ghostscript (Closes: #649833)
+
+ -- Roland Stigge <stigge@antcom.de>  Sun, 27 Nov 2011 19:56:01 +0100
+
+jasper (1.900.1-11) unstable; urgency=low
+
+  * Added Multiarch support, thanks to Colin Watson (Closes: #645118)
+
+ -- Roland Stigge <stigge@antcom.de>  Wed, 02 Nov 2011 17:16:10 +0100
+
+jasper (1.900.1-10) unstable; urgency=low
+
+  * Added debian/watch
+  * debian/patches/01-misc-fixes.patch:
+    - Separated out config.{guess,sub}
+
+ -- Roland Stigge <stigge@antcom.de>  Mon, 15 Aug 2011 19:09:29 +0200
+
+jasper (1.900.1-9) unstable; urgency=low
+
+  * Switch to dpkg-source 3.0 (quilt) format
+  * Using new dh 7 build system
+
+ -- Roland Stigge <stigge@antcom.de>  Tue, 12 Jul 2011 20:21:21 +0200
+
+jasper (1.900.1-8) unstable; urgency=low
+
+  * Removed unneeded .la file (Closes: #633162)
+  * debian/control:
+    - Standards-Version: 3.9.2
+    - use libjpeg8-dev instead of libjpeg62-dev
+
+ -- Roland Stigge <stigge@antcom.de>  Mon, 11 Jul 2011 21:27:24 +0200
+
+jasper (1.900.1-7) unstable; urgency=low
+
+  * Acknowledge NMU
+  * Added patch to fix Debian patch for CVE-2008-3521 (Closes: #506739)
+  * debian/control: Standards-Version: 3.8.4
+
+ -- Roland Stigge <stigge@antcom.de>  Sun, 21 Feb 2010 16:09:45 +0100
+
+jasper (1.900.1-6.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * This is a fix for the GeoJP2 patch introduced in 1.900.1-5 which caused 
+    GDAL faulting. Thanks Even Rouault. (Closes: #553429)
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Wed, 28 Oct 2009 09:39:28 +0100
+
+jasper (1.900.1-6) unstable; urgency=low
+
+  * Reverted to jasper 1.900.1-6 because 1.900.1-5.1 messed up (see #528543)
+    but 1.900.1-5 wasn't available anymore. (Closes: #514296, #528543)
+  * Re-applied patch from #275619 as in 1.900.1-5
+  * debian/control: Standards-Version: 3.8.2
+  * Applied patch by Nico Golde (Closes: #501021)
+     - CVE-2008-3522[0]: Buffer overflow.
+     - CVE-2008-3521[1]: unsecure temporary files handling.
+     - CVE-2008-3520[2]: Multiple integer overflows.
+
+ -- Roland Stigge <stigge@antcom.de>  Sat, 20 Jun 2009 15:21:16 +0200
+
+jasper (1.900.1-5.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * add patches/02_security.dpatch to fix various CVEs (Closes: #501021):
+     + CVE-2008-3522[0]: Buffer overflow.
+     + CVE-2008-3521[1]: unsecure temporary files handling.
+     + CVE-2008-3520[2]: Multiple integer overflows.
+
+ -- Pierre Habouzit <madcoder@debian.org>  Sun, 12 Oct 2008 21:40:59 +0200
+
+jasper (1.900.1-5) unstable; urgency=low
+
+  * Added GeoJP2 patch by Sven Geggus <sven.geggus@iitb.fraunhofer.de>
+    (Closes: #275619)
+  * debian/control: Standards-Version: 3.8.0
+
+ -- Roland Stigge <stigge@antcom.de>  Sun, 08 Jun 2008 13:14:24 +0200
+
+jasper (1.900.1-4) unstable; urgency=low
+
+  * src/libjasper/jpc/jpc_dec.c: Extended assert() to accept 4 color
+    components (Closes: #469786)
+  * debian/rules: improve "make distclean", thanks to lintian
+  * debian/control:
+    - Standards-Version: 3.7.3
+    - ${Source-Version} -> ${binary:Version}
+    - Removed self-dependencies of libjasper-dev
+
+ -- Roland Stigge <stigge@antcom.de>  Sun, 09 Mar 2008 11:53:44 +0100
+
+jasper (1.900.1-3) unstable; urgency=low
+
+  * Fixed segfaults on broken images (Closes: #413041)
+
+ -- Roland Stigge <stigge@antcom.de>  Tue, 10 Apr 2007 10:05:10 +0200
+
+jasper (1.900.1-2) experimental; urgency=low
+
+  * Added jas_tmr.h to -dev package (Closes: #414705)
+
+ -- Roland Stigge <stigge@antcom.de>  Tue, 13 Mar 2007 14:23:58 +0100
+
+jasper (1.900.1-1) experimental; urgency=low
+
+  * New upstream release
+  * debian/control:
+    - Standards-Version: 3.7.2
+    - Build-Depends: freeglut3-dev instead of libglut3-dev (Closes: #394496)
+  * Renamed packages to libjasper1, libjasper-dev, libjasper-runtime according
+    to upstream shared library naming change
+
+ -- Roland Stigge <stigge@antcom.de>  Fri, 26 Jan 2007 14:22:18 +0100
+
+jasper (1.701.0-2) unstable; urgency=low
+
+  * Prevent compression of pdf documents in binary packages
+  * Added man pages for the executables (Closes: #250077)
+  * Again renamed binary packages to reflect Policy:
+      - libjasper-1.701-1
+      - libjasper-1.701-dev (Provides, Replaces and Conflicts: libjasper-dev)
+      - libjasper-runtime
+
+ -- Roland Stigge <stigge@antcom.de>  Sun, 20 Jun 2004 13:54:10 +0200
+
+jasper (1.701.0-1) unstable; urgency=low
+
+  * New maintainer (Closes: #217099)
+  * New upstream release (Closes: #217570)
+      - new DFSG-compliant license (Closes: #218999, #245075)
+      - includes newer libtool related files (Closes: #210383)
+  * debian/control:
+      - Standards-Version: 3.6.1
+      - Changed binary package names, fixed interdependencies (Closes: #211592)
+          libjasper-1.700-2 => libjasper1
+          libjasper-1.700-2-dev => libjasper-dev
+          libjasper-progs => libjasper-runtime
+        (new packages conflicting and replacing the old ones)
+      - Added libxi-dev, libxmu-dev, libxt-dev to Build-Depends
+        (Closes: #250481)
+
+ -- Roland Stigge <stigge@antcom.de>  Sat, 19 Jun 2004 23:19:32 +0200
+
+jasper (1.700.2-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Christopher L Cheney <ccheney@debian.org>  Fri, 22 Aug 2003 01:30:00 -0500
+

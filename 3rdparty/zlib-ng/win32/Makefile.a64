@@ -1,0 +1,252 @@
+# Makefile for zlib using Microsoft (Visual) C
+# zlib is copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+#
+# Usage:
+#   nmake -f win32/Makefile.a64                          (standard build)
+#   nmake -f win32/Makefile.a64 LOC=-DFOO                (nonstandard build)
+
+# The toplevel directory of the source tree.
+#
+TOP = .
+
+# optional build flags
+LOC =
+
+# variables
+STATICLIB = zlib.lib
+SHAREDLIB = zlib1.dll
+IMPLIB    = zdll.lib
+SYMBOL_PREFIX =
+
+CC = cl
+LD = link
+AR = lib
+RC = rc
+CP = copy /y
+INCLUDES = -I$(TOP) -I$(TOP)/arch/arm -I$(TOP)/arch/generic
+CFLAGS  = -nologo -MD -W3 -O2 -Oy- -Zi -Fd"zlib" $(LOC) $(INCLUDES)
+WFLAGS  = \
+	-D_ARM64_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1 \
+	-D_CRT_SECURE_NO_DEPRECATE \
+	-D_CRT_NONSTDC_NO_DEPRECATE \
+	-DARM_FEATURES \
+	-DARM_NEON_HASLD4 \
+	#
+LDFLAGS = -nologo -debug -incremental:no -opt:ref -manifest
+ARFLAGS = -nologo
+RCFLAGS = /dARM64 /r
+DEFFILE = zlib.def
+RCFILE = zlib1.rc
+RESFILE = zlib1.res
+WITH_GZFILEOP = yes
+ZLIB_COMPAT =
+SUFFIX =
+
+OBJS = \
+	adler32.obj \
+	adler32_c.obj \
+	adler32_fold_c.obj \
+	arm_features.obj \
+	chunkset_c.obj \
+	compare256_c.obj \
+	compress.obj \
+	cpu_features.obj \
+	crc32.obj \
+	crc32_braid_c.obj \
+	crc32_braid_comb.obj \
+	crc32_fold_c.obj \
+	deflate.obj \
+	deflate_fast.obj \
+	deflate_huff.obj \
+	deflate_medium.obj \
+	deflate_quick.obj \
+	deflate_rle.obj \
+	deflate_slow.obj \
+	deflate_stored.obj \
+	functable.obj \
+	infback.obj \
+	inflate.obj \
+	inftrees.obj \
+	insert_string.obj \
+	insert_string_roll.obj \
+	slide_hash_c.obj \
+	trees.obj \
+	uncompr.obj \
+	zutil.obj \
+	#
+!if "$(ZLIB_COMPAT)" != ""
+WITH_GZFILEOP = yes
+WFLAGS = $(WFLAGS) -DZLIB_COMPAT
+DEFFILE = zlibcompat.def
+!else
+STATICLIB = zlib-ng.lib
+SHAREDLIB = zlib-ng1.dll
+IMPLIB = zngdll.lib
+DEFFILE = zlib-ng.def
+RCFILE = zlib-ng1.rc
+RESFILE = zlib-ng1.res
+SUFFIX = -ng
+!endif
+
+!if "$(WITH_GZFILEOP)" != ""
+WFLAGS = $(WFLAGS) -DWITH_GZFILEOP
+OBJS = $(OBJS) gzlib.obj gzread.obj gzwrite.obj
+!endif
+
+WFLAGS = $(WFLAGS) \
+	-DARM_ACLE \
+	-D__ARM_NEON__=1 \
+	-DARM_NEON \
+	-DARM_NOCHECK_NEON \
+	#
+OBJS = $(OBJS) crc32_acle.obj adler32_neon.obj chunkset_neon.obj compare256_neon.obj slide_hash_neon.obj
+
+# targets
+all: $(STATICLIB) $(SHAREDLIB) $(IMPLIB) \
+     example.exe minigzip.exe example_d.exe minigzip_d.exe
+
+!if "$(SYMBOL_PREFIX)" != ""
+zlib_name_mangling$(SUFFIX).h: zlib_name_mangling$(SUFFIX).h.in
+	cscript $(TOP)\win32\replace.vbs $(TOP)\zlib_name_mangling$(SUFFIX).h.in zlib_name_mangling$(SUFFIX).h "@ZLIB_SYMBOL_PREFIX@" "$(SYMBOL_PREFIX)"
+!else
+zlib_name_mangling$(SUFFIX).h: zlib_name_mangling.h.empty
+	$(CP) $(TOP)\zlib_name_mangling.h.empty zlib_name_mangling$(SUFFIX).h
+!endif
+
+zlib$(SUFFIX).h: zlib$(SUFFIX).h.in
+	cscript $(TOP)\win32\replace.vbs $(TOP)\zlib$(SUFFIX).h.in zlib$(SUFFIX).h "@ZLIB_SYMBOL_PREFIX@" "$(SYMBOL_PREFIX)"
+
+gzread.c: gzread.c.in
+	cscript $(TOP)\win32\replace.vbs $(TOP)\gzread.c.in gzread.c "@ZLIB_SYMBOL_PREFIX@" "$(SYMBOL_PREFIX)"
+
+zconf: $(TOP)/zconf$(SUFFIX).h.in $(TOP)/zlib$(SUFFIX).h $(TOP)/zlib_name_mangling$(SUFFIX).h
+	$(CP) $(TOP)\zconf$(SUFFIX).h.in $(TOP)\zconf$(SUFFIX).h
+
+$(TOP)/win32/$(DEFFILE): $(TOP)/win32/$(DEFFILE).in
+	cscript $(TOP)\win32\replace.vbs $(TOP)/win32/$(DEFFILE).in $(TOP)/win32/$(DEFFILE) "@ZLIB_SYMBOL_PREFIX@" "$(SYMBOL_PREFIX)"
+
+$(STATICLIB): zconf $(OBJS)
+	$(AR) $(ARFLAGS) -out:$@ $(OBJS)
+
+$(IMPLIB): $(SHAREDLIB)
+
+$(SHAREDLIB): zconf $(TOP)/win32/$(DEFFILE) $(OBJS) $(RESFILE)
+	$(LD) $(LDFLAGS) -def:$(TOP)/win32/$(DEFFILE) -dll -implib:$(IMPLIB) \
+	  -out:$@ -base:0x55A4C0000 $(OBJS) $(RESFILE)
+	if exist $@.manifest \
+	  mt -nologo -manifest $@.manifest -outputresource:$@;2
+
+example.exe: example.obj gzlib2.obj gzread2.obj gzwrite2.obj $(STATICLIB)
+	$(LD) $(LDFLAGS) example.obj gzlib2.obj gzread2.obj gzwrite2.obj $(STATICLIB)
+	if exist $@.manifest \
+	  mt -nologo -manifest $@.manifest -outputresource:$@;1
+
+minigzip.exe: minigzip.obj gzlib2.obj gzread2.obj gzwrite2.obj $(STATICLIB)
+	$(LD) $(LDFLAGS) minigzip.obj gzlib2.obj gzread2.obj gzwrite2.obj $(STATICLIB)
+	if exist $@.manifest \
+	  mt -nologo -manifest $@.manifest -outputresource:$@;1
+
+example_d.exe: example.obj gzlib2.obj gzread2.obj gzwrite2.obj $(IMPLIB)
+	$(LD) $(LDFLAGS) -out:$@ example.obj gzlib2.obj gzread2.obj gzwrite2.obj $(IMPLIB)
+	if exist $@.manifest \
+	  mt -nologo -manifest $@.manifest -outputresource:$@;1
+
+minigzip_d.exe: minigzip.obj gzlib2.obj gzread2.obj gzwrite2.obj $(IMPLIB)
+	$(LD) $(LDFLAGS) -out:$@ minigzip.obj gzlib2.obj gzread2.obj gzwrite2.obj $(IMPLIB)
+	if exist $@.manifest \
+	  mt -nologo -manifest $@.manifest -outputresource:$@;1
+
+{$(TOP)}.c.obj:
+	$(CC) -c $(WFLAGS) $(CFLAGS) $<
+
+gzlib2.obj: gzlib.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+	$(CC) -c $(WFLAGS) $(CFLAGS) -DWITH_GZFILEOP -Fogzlib2.obj gzlib.c
+
+gzread2.obj: gzread.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+	$(CC) -c $(WFLAGS) $(CFLAGS) -DWITH_GZFILEOP -Fogzread2.obj gzread.c
+
+gzwrite2.obj: gzwrite.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+	$(CC) -c $(WFLAGS) $(CFLAGS) -DWITH_GZFILEOP -Fogzwrite2.obj gzwrite.c
+
+{$(TOP)/arch/arm}.c.obj:
+	$(CC) -c -I$(TOP) $(WFLAGS) $(CFLAGS) $<
+
+{$(TOP)/arch/generic}.c.obj:
+	$(CC) -c -I$(TOP) $(WFLAGS) $(CFLAGS) $<
+
+{$(TOP)/test}.c.obj:
+	$(CC) -c -I$(TOP) $(WFLAGS) $(CFLAGS) -DWITH_GZFILEOP $<
+
+$(TOP)/zconf$(SUFFIX).h: zconf
+
+adler32.obj: $(TOP)/adler32.c $(TOP)/zbuild.h $(TOP)/functable.h $(TOP)/adler32_p.h
+adler32_c.obj: $(TOP)/arch/generic/adler32_c.c $(TOP)/zbuild.h $(TOP)/functable.h $(TOP)/adler32_p.h
+adler32_fold_c.obj: $(TOP)/arch/generic/adler32_fold_c.c $(TOP)/zbuild.h $(TOP)/functable.h
+chunkset_c.obj: $(TOP)/arch/generic/chunkset_c.c $(TOP)/zbuild.h $(TOP)/chunkset_tpl.h $(TOP)/inffast_tpl.h
+compare256_c.obj: $(TOP)/arch/generic/compare256_c.c $(TOP)/zbuild.h $(TOP)/zutil_p.h $(TOP)/deflate.h $(TOP)/fallback_builtins.h $(TOP)/match_tpl.h
+compress.obj: $(TOP)/compress.c $(TOP)/zbuild.h $(TOP)/zutil.h
+cpu_features.obj: $(TOP)/cpu_features.c $(TOP)/cpu_features.h $(TOP)/zbuild.h
+crc32.obj: $(TOP)/crc32.c $(TOP)/zbuild.h $(TOP)/functable.h $(TOP)/crc32_braid_tbl.h
+crc32_braid_c.obj: $(TOP)/arch/generic/crc32_braid_c.c $(TOP)/zbuild.h $(TOP)/crc32_braid_p.h $(TOP)/crc32_braid_tbl.h
+crc32_braid_comb.obj: $(TOP)/crc32_braid_comb.c $(TOP)/zutil.h $(TOP)/crc32_braid_p.h $(TOP)/crc32_braid_tbl.h $(TOP)/crc32_braid_comb_p.h
+crc32_fold_c.obj: $(TOP)/arch/generic/crc32_fold_c.c $(TOP)/zbuild.h $(TOP)/crc32.h $(TOP)/functable.h $(TOP)/zutil.h
+deflate.obj: $(TOP)/deflate.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+deflate_fast.obj: $(TOP)/deflate_fast.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+deflate_huff.obj: $(TOP)/deflate_huff.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+deflate_medium.obj: $(TOP)/deflate_medium.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+deflate_quick.obj: $(TOP)/deflate_quick.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h $(TOP)/trees_emit.h $(TOP)/zutil_p.h
+deflate_rle.obj: $(TOP)/deflate_rle.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h $(TOP)/compare256_rle.h
+deflate_slow.obj: $(TOP)/deflate_slow.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+deflate_stored.obj: $(TOP)/deflate_stored.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/deflate_p.h $(TOP)/functable.h
+functable.obj: $(TOP)/functable.c $(TOP)/zbuild.h $(TOP)/functable.h $(TOP)/cpu_features.h $(TOP)/arch/arm/arm_features.h $(TOP)/arch_functions.h
+gzlib.obj: $(TOP)/gzlib.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+gzread.obj: $(TOP)/gzread.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+gzwrite.obj: $(TOP)/gzwrite.c $(TOP)/zbuild.h $(TOP)/gzguts.h $(TOP)/zutil_p.h
+infback.obj: $(TOP)/infback.c $(TOP)/zbuild.h $(TOP)/zutil.h $(TOP)/inftrees.h $(TOP)/inflate.h $(TOP)/inflate_p.h $(TOP)/functable.h
+inflate.obj: $(TOP)/inflate.c $(TOP)/zbuild.h $(TOP)/zutil.h $(TOP)/inftrees.h $(TOP)/inflate.h $(TOP)/inflate_p.h $(TOP)/functable.h $(TOP)/inffixed_tbl.h
+inftrees.obj: $(TOP)/inftrees.c $(TOP)/zbuild.h $(TOP)/zutil.h $(TOP)/inftrees.h
+insert_string.obj: $(TOP)/insert_string.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/insert_string_tpl.h
+insert_string_roll.obj: $(TOP)/insert_string_roll.c $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/insert_string_tpl.h
+slide_hash_c.obj: $(TOP)/arch/generic/slide_hash_c.c $(TOP)/zbuild.h $(TOP)/deflate.h
+slide_hash_neon.obj: $(TOP)/arch/arm/slide_hash_neon.c $(TOP)/arch/arm/neon_intrins.h $(TOP)/zbuild.h $(TOP)/deflate.h
+trees.obj: $(TOP)/trees.c $(TOP)/trees.h $(TOP)/trees_emit.h $(TOP)/zbuild.h $(TOP)/deflate.h $(TOP)/trees_tbl.h
+uncompr.obj: $(TOP)/uncompr.c $(TOP)/zbuild.h $(TOP)/zutil.h
+zutil.obj: $(TOP)/zutil.c $(TOP)/zbuild.h $(TOP)/zutil.h $(TOP)/zutil_p.h
+
+$(RESFILE): $(TOP)/win32/$(RCFILE)
+	$(RC) $(RCFLAGS) /fo$@ $(TOP)/win32/$(RCFILE)
+
+# testing
+test: example.exe minigzip.exe
+	example
+	echo hello world | minigzip | minigzip -d
+
+testdll: example_d.exe minigzip_d.exe
+	example_d
+	echo hello world | minigzip_d | minigzip_d -d
+
+example.obj: $(TOP)/test/example.c $(TOP)/zbuild.h $(TOP)/zlib$(SUFFIX).h $(TOP)/deflate.h $(TOP)/test/test_shared_ng.h
+
+minigzip.obj: $(TOP)/test/minigzip.c $(TOP)/zbuild.h $(TOP)/zlib$(SUFFIX).h
+
+
+# cleanup
+clean:
+	-del $(STATICLIB)
+	-del $(SHAREDLIB)
+	-del $(IMPLIB)
+	-del *.obj
+	-del *.res
+	-del *.exp
+	-del *.exe
+	-del *.pdb
+	-del *.manifest
+
+distclean: clean
+	-del zconf$(SUFFIX).h
+	-del zlib$(SUFFIX).h
+	-del zlib_name_mangling$(SUFFIX).h
+	-del $(TOP)\win32\zlib.def
+	-del $(TOP)\win32\zlibcompat.def
+	-del $(TOP)\win32\zlib-ng.def
+	-del gzread.c

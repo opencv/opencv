@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <link rel="stylesheet" href="/css/default.css" />
+    <script src="/js/AdvancedCapture.js"></script>
+</head>
+<body>
+    <div data-win-control="SdkSample.ScenarioInput">
+        <p>
+            This scenario shows how to enumerate cameras in the system.
+            Choose a camera from the list to start previewing from that camera. You can add additional effect
+            using the dropdown provided.
+        </p>
+        <select id="cameraSelect" aria-labelledby="listLabel"></select>
+        <button id="btnStartDevice" disabled="disabled">Start Device</button>
+        <button id="btnStartPreview" disabled="disabled">Start Preview</button>
+        <select id="videoEffect" disabled="disabled">
+            <option>Preview</option>
+            <option>Grayscale</option>
+            <option>Canny</option>
+            <option>Sobel</option>
+            <option>Histogram</option>
+        </select>
+    </div>
+    <div data-win-control="SdkSample.ScenarioOutput">
+        <table>
+            <tr>
+                <td>Preview</td>
+            </tr>
+            <tr>
+                <td>
+                    <video width="320" height="240" id="previewVideo" style="border: 1px solid black">
+                    </video>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

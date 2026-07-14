@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hello OpenCV.js</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Hello OpenCV.js</h2>
+<p id="status">OpenCV.js is loading...</p>
+<div>
+    <table cellpadding="0" cellspacing="0" width="0" border="0">
+    <tr>
+        <td>
+            <img id="imageSrc" alt="No Image" class="small" />
+        </td>
+        <td>
+            <canvas id="canvasOutput" class="small" height="300px"></canvas>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="caption">imageSrc <input type="file" id="fileInput" name="file" accept="image/*" /></div>
+        </td>
+        <td>
+            <div class="caption">canvasOutput</div>
+        </td>
+    </tr>
+    </table>
+</div>
+<script src="utils.js" type="text/javascript"></script>
+<script type="text/javascript">
+let imgElement = document.getElementById('imageSrc');
+let inputElement = document.getElementById('fileInput');
+inputElement.addEventListener('change', (e) => {
+    imgElement.src = URL.createObjectURL(e.target.files[0]);
+}, false);
+
+imgElement.onload = async function() {
+    cv = (cv instanceof Promise) ? await cv : cv;
+    let mat = cv.imread(imgElement);
+    cv.imshow('canvasOutput', mat);
+    mat.delete();
+};
+
+function onOpenCvReady() { // eslint-disable-line no-unused-vars
+    document.getElementById('status').innerHTML = '<b>OpenCV.js is ready</b>.' +
+        'You can upload an image.<br>' +
+        'The <b>imageSrc</b> is a &lt;img&gt; element used as cv.Mat input. ' +
+        'The <b>canvasOutput</b> is a &lt;canvas&gt; element used as cv.Mat output.';
+}
+
+function onOpenCvError() { // eslint-disable-line no-unused-vars
+    let element = document.getElementById('status');
+    element.setAttribute('class', 'err');
+    element.innerHTML = 'Failed to load opencv.js';
+}
+</script>
+<script async src="opencv.js" type="text/javascript" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
+</body>
+</html>

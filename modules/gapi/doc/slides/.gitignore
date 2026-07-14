@@ -1,0 +1,6 @@
+*.bbl
+*.blg
+*.sty
+*.tex
+*-converted-to.pdf
+mtheme.sty/

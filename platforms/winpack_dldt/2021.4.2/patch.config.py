@@ -1,0 +1,5 @@
+applyPatch('20210630-dldt-disable-unused-targets.patch')
+applyPatch('20210630-dldt-pdb.patch')
+applyPatch('20210630-dldt-disable-multidevice-autoplugin.patch')
+applyPatch('20210630-dldt-vs-version.patch')
+applyPatch('20220118-dldt-fix-msvs-compilation-21469.patch')

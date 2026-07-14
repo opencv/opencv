@@ -1,0 +1,12 @@
+{
+    "tensorflow": [
+        {
+            "model": "deeplabv3",
+            "inputSize": "513, 513",
+            "mean": "127.5, 127.5, 127.5",
+            "std": "0.007843",
+            "swapRB": "false",
+            "modelUrl": "https://drive.google.com/uc?id=1v-hfGenaE9tiGOzo5qdgMNG_gqQ5-Xn4&export=download"
+        }
+    ]
+}

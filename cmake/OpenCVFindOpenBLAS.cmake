@@ -1,0 +1,44 @@
+# Search for OpenBLAS library
+
+if(NOT OpenBLAS_FOUND AND NOT SKIP_OPENBLAS_PACKAGE)
+  find_package(OpenBLAS QUIET)
+  if(OpenBLAS_FOUND)
+    message(STATUS "Found OpenBLAS package")
+  endif()
+endif()
+
+if(NOT OpenBLAS_FOUND)
+  find_library(OpenBLAS_LIBRARIES NAMES openblas PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME" PATH_SUFFIXES "lib" NO_DEFAULT_PATH)
+  find_path(OpenBLAS_INCLUDE_DIRS NAMES cblas.h PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME" PATH_SUFFIXES "include" NO_DEFAULT_PATH)
+  find_path(OpenBLAS_LAPACKE_DIR NAMES lapacke.h PATHS "${OpenBLAS_INCLUDE_DIRS}" ENV "OpenBLAS" ENV "OpenBLAS_HOME" PATH_SUFFIXES "include" NO_DEFAULT_PATH)
+  if(OpenBLAS_LIBRARIES AND OpenBLAS_INCLUDE_DIRS)
+    message(STATUS "Found OpenBLAS using environment hint")
+    set(OpenBLAS_FOUND ON)
+  else()
+    ocv_clear_vars(OpenBLAS_LIBRARIES OpenBLAS_INCLUDE_DIRS)
+  endif()
+endif()
+
+if(NOT OpenBLAS_FOUND)
+  find_library(OpenBLAS_LIBRARIES NAMES openblasp openblas)
+  find_path(OpenBLAS_INCLUDE_DIRS
+            NAMES cblas.h
+            PATH_SUFFIXES openblas)
+  find_path(OpenBLAS_LAPACKE_DIR NAMES lapacke.h PATHS "${OpenBLAS_INCLUDE_DIRS}")
+  if(OpenBLAS_LIBRARIES AND OpenBLAS_INCLUDE_DIRS)
+    message(STATUS "Found OpenBLAS in the system")
+    set(OpenBLAS_FOUND ON)
+  else()
+    ocv_clear_vars(OpenBLAS_LIBRARIES OpenBLAS_INCLUDE_DIRS)
+  endif()
+endif()
+
+if(OpenBLAS_FOUND)
+  if(OpenBLAS_LAPACKE_DIR)
+    set(OpenBLAS_INCLUDE_DIRS "${OpenBLAS_INCLUDE_DIRS};${OpenBLAS_LAPACKE_DIR}")
+  endif()
+  message(STATUS "OpenBLAS_LIBRARIES=${OpenBLAS_LIBRARIES}")
+  message(STATUS "OpenBLAS_INCLUDE_DIRS=${OpenBLAS_INCLUDE_DIRS}")
+endif()
+
+mark_as_advanced(OpenBLAS_LIBRARIES OpenBLAS_INCLUDE_DIRS OpenBLAS_LAPACKE_DIR)

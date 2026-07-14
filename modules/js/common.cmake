@@ -1,0 +1,13 @@
+# get list of modules to wrap
+if(HAVE_opencv_js)
+  message(STATUS "Wrapped in JavaScript(js):")
+endif()
+set(OPENCV_JS_MODULES "")
+foreach(m ${OPENCV_MODULES_BUILD})
+  if(";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";js;" AND HAVE_${m})
+    list(APPEND OPENCV_JS_MODULES ${m})
+    if(HAVE_opencv_js)
+      message(STATUS "    ${m}")
+    endif()
+  endif()
+endforeach()

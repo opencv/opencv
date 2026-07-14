@@ -1,0 +1,44 @@
+@PYLINT_CONFIG_SCRIPT@
+
+set(__total 0)
+set(__passed 0)
+set(__errors 0)
+
+if(NOT DEFINED VERBOSE AND DEFINED ENV{VERBOSE})
+  set(VERBOSE "$ENV{VERBOSE}")
+endif()
+
+foreach(__id ${PYLINT_TARGET_ID})
+  message("Pylint check: ${PYLINT_TARGET_${__id}_TARGET}")
+  set(__options ${PYLINT_TARGET_${__id}_OPTIONS})
+  if(PYLINT_TARGET_${__id}_RCFILE)
+    set(__options ${__options} --rcfile=${PYLINT_TARGET_${__id}_RCFILE})
+  endif()
+  set(__cwd "${PYLINT_TARGET_${__id}_CWD}")
+  if(NOT __cwd)
+    set(__cwd ".")
+  endif()
+  if(VERBOSE)
+    message("Run: ${PYLINT_EXECUTABLE} \"${PYLINT_TARGET_${__id}_TARGET}\" ${__options}
+        directory: \"${__cwd}\"")
+  endif()
+  execute_process(COMMAND ${PYLINT_EXECUTABLE} "${PYLINT_TARGET_${__id}_TARGET}" ${__options}
+    WORKING_DIRECTORY "${__cwd}"
+    RESULT_VARIABLE __res
+  )
+  math(EXPR __total "${__total} + 1")
+  if(NOT __res EQUAL 0)
+    math(EXPR __errors "${__errors} + 1")
+  else()
+    math(EXPR __passed "${__passed} + 1")
+  endif()
+endforeach()
+
+message("Pylint status:
+    TOTAL : ${__total}
+    PASSED: ${__passed}
+    ERRORS: ${__errors}
+")
+if(NOT __errors EQUAL 0)
+  message(SEND_ERROR "ERROR: Pylint check FAILED")
+endif()
