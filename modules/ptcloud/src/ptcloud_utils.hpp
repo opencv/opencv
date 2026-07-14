@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_PTCLOUD_UTILS_HPP
 #define OPENCV_PTCLOUD_UTILS_HPP
@@ -24,8 +26,7 @@ static inline void toPointVec(InputArray inputCloud, std::vector<Point3f>& point
     else
         mf = m;
 
-    // getMat() may hand back a non-contiguous view (ROI / column-slice / transpose);
-    // reshape() below requires contiguous data.
+    // getMat() may return a non-contiguous view; reshape() below needs contiguous data.
     if (!mf.isContinuous())
         mf = mf.clone();
 
