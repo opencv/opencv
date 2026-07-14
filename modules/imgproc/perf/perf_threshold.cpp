@@ -69,6 +69,29 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
     SANITY_CHECK_NOTHING();
 }
 
+// In-place OTSU threshold (matches IPP ippThreshold_Inplace GT_OTSU case; OTSU is 8U-only).
+typedef perf::TestBaseWithParam<Size> Size_ThreshInplaceOtsu;
+PERF_TEST_P(Size_ThreshInplaceOtsu, threshold_inplace_otsu, testing::Values(TYPICAL_MAT_SIZES))
+{
+    Size sz = GetParam();
+
+    Mat src(sz, CV_8UC1);
+    Mat dst(sz, CV_8UC1);
+    double maxval = theRNG().uniform(1, 254);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    while (next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        cv::threshold(dst, dst, 0, maxval, THRESH_BINARY | THRESH_OTSU);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef perf::TestBaseWithParam<Size> Size_Only;
 
 PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))

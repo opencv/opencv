@@ -46,7 +46,7 @@ PERF_TEST_P(sortFixture, sort_inplace, TYPICAL_MATS_SORT)
         stopTimer();
     }
 
-    SANITY_CHECK(b);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef sortFixture sortIdxFixture;

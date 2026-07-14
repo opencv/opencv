@@ -292,7 +292,7 @@ PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
                 testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
                                 CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                 testing::Values(sz1080p),
-                testing::Values(0.5, 2.0),
+                testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
                 ResizeInterCubicLanczos::all()
                 ))
 {
@@ -307,6 +307,36 @@ PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
     declare.in(src, WARMUP_RNG).out(dst);
 
     TEST_CYCLE() cv::resize(src, dst, to, 0, 0, inter);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Scale-factor (fx/fy) form (matches IPP ippResize_Affine: resize(src,dst,Size(),fx,fy,inter)).
+// IPP's Affine test used LINEAR+CUBIC; LINEAR at these types/scales is not otherwise
+// covered, so include it here alongside CUBIC.
+CV_ENUM(ResizeInterAffine, INTER_LINEAR, INTER_CUBIC)
+typedef tuple<MatType, Size, double, ResizeInterAffine> MatInfo_Size_Scale_InterAffine_t;
+typedef TestBaseWithParam<MatInfo_Size_Scale_InterAffine_t> MatInfo_Size_Scale_InterAffine;
+
+PERF_TEST_P(MatInfo_Size_Scale_InterAffine, resizeAffine,
+            testing::Combine(
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
+                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(sz1080p),
+                testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
+                ResizeInterAffine::all()
+                ))
+{
+    int    type  = get<0>(GetParam());
+    Size   from  = get<1>(GetParam());
+    double scale = get<2>(GetParam());
+    int    inter = get<3>(GetParam());
+
+    Mat src(from, type);
+    Mat dst(saturate_cast<int>(from.width * scale), saturate_cast<int>(from.height * scale), type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, inter);
 
     SANITY_CHECK_NOTHING();
 }

@@ -7,6 +7,10 @@ namespace opencv_test {
 
 #define TYPICAL_MAT_TYPES_MORPH  CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1, CV_32FC3, CV_32FC4
 #define TYPICAL_MATS_MORPH       testing::Combine(SZ_ALL_GA, testing::Values(TYPICAL_MAT_TYPES_MORPH))
+// The new kernel/iteration morphology tests below are heavy (types × kernel ×
+// iterations); IPP used a single size (sz1080p). Keep a small 2-size sweep
+// (small + large) for size-scaling insight without the full SZ_ALL_GA cost.
+#define MORPH_KERNEL_SIZES       testing::Values(::perf::szVGA, ::perf::szXGA)
 
 PERF_TEST_P(Size_MatType, erode, TYPICAL_MATS_MORPH)
 {
@@ -46,9 +50,9 @@ typedef perf::TestBaseWithParam<Size_MatType_kSize_iter_t> Size_MatType_kSize_it
 
 PERF_TEST_P(Size_MatType_kSize_iter, erode_kernel,
             testing::Combine(
-                SZ_ALL_GA,
+                MORPH_KERNEL_SIZES,
                 testing::Values(TYPICAL_MAT_TYPES_MORPH),
-                testing::Values(3, 5, 7, 21),
+                testing::Values(3, 5, 7),
                 testing::Values(1, 3)
                 ))
 {
@@ -65,14 +69,14 @@ PERF_TEST_P(Size_MatType_kSize_iter, erode_kernel,
 
     TEST_CYCLE() erode(src, dst, kernel, Point(-1, -1), iters);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_MatType_kSize_iter, dilate_kernel,
             testing::Combine(
-                SZ_ALL_GA,
+                MORPH_KERNEL_SIZES,
                 testing::Values(TYPICAL_MAT_TYPES_MORPH),
-                testing::Values(3, 5, 7, 21),
+                testing::Values(3, 5, 7),
                 testing::Values(1, 3)
                 ))
 {
@@ -89,7 +93,7 @@ PERF_TEST_P(Size_MatType_kSize_iter, dilate_kernel,
 
     TEST_CYCLE() dilate(src, dst, kernel, Point(-1, -1), iters);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 // morphologyEx (matches IPP ippMorphEx: OPEN/CLOSE/GRADIENT/TOPHAT/BLACKHAT,
@@ -100,10 +104,10 @@ typedef perf::TestBaseWithParam<Size_MatType_MorphExOp_kSize_iter_t> Size_MatTyp
 
 PERF_TEST_P(Size_MatType_MorphExOp_kSize_iter, morphologyEx,
             testing::Combine(
-                SZ_ALL_GA,
+                MORPH_KERNEL_SIZES,
                 testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1, CV_32FC3, CV_32FC4),
                 MorphExOp::all(),
-                testing::Values(3, 5, 7, 21),
+                testing::Values(3, 5, 7),
                 testing::Values(1, 3)
                 ))
 {

@@ -71,7 +71,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall_32f,
         .out(result)
         .time(30);
 
-    TEST_CYCLE() matchTemplate(img, tmpl, result, method);
+    TEST_CYCLE() cv::matchTemplate(img, tmpl, result, method);
 
     SANITY_CHECK_NOTHING();
 }

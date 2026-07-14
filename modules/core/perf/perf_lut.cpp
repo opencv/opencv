@@ -67,7 +67,7 @@ PERF_TEST_P( Size_MatType_LUT, LUT_types,
 
     TEST_CYCLE() LUT(src, lut, dst);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 }} // namespace

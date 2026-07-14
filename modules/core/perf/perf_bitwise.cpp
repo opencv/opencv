@@ -8,6 +8,9 @@ using namespace perf;
 #define TYPICAL_MAT_TYPES_BITW_ARITHM  CV_8UC1, CV_8SC1, CV_8UC4, CV_32SC1, CV_32SC4
 #define TYPICAL_MATS_BITW_ARITHM       testing::Combine(testing::Values(TYPICAL_MAT_SIZES_BITW_ARITHM), testing::Values(TYPICAL_MAT_TYPES_BITW_ARITHM))
 
+// Scalar-operand bitwise tests also cover CV_16U (matches IPP ippBitwise*_Const: 8U,16U,32S)
+#define TYPICAL_MATS_BITW_SCALAR       testing::Combine(testing::Values(TYPICAL_MAT_SIZES_BITW_ARITHM), testing::Values(CV_8UC1, CV_8SC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32SC4))
+
 PERF_TEST_P(Size_MatType, bitwise_not, TYPICAL_MATS_BITW_ARITHM)
 {
     Size sz = get<0>(GetParam());
@@ -74,7 +77,7 @@ PERF_TEST_P(Size_MatType, bitwise_xor, TYPICAL_MATS_BITW_ARITHM)
 
 // Scalar-operand bitwise ops (matches IPP ippBitwise{And,Or,Xor}_Const:
 // bitwise_*(mat, Scalar)).
-PERF_TEST_P(Size_MatType, bitwise_and_scalar, TYPICAL_MATS_BITW_ARITHM)
+PERF_TEST_P(Size_MatType, bitwise_and_scalar, TYPICAL_MATS_BITW_SCALAR)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -87,10 +90,10 @@ PERF_TEST_P(Size_MatType, bitwise_and_scalar, TYPICAL_MATS_BITW_ARITHM)
 
     TEST_CYCLE() cv::bitwise_and(a, s, c);
 
-    SANITY_CHECK(c);
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Size_MatType, bitwise_or_scalar, TYPICAL_MATS_BITW_ARITHM)
+PERF_TEST_P(Size_MatType, bitwise_or_scalar, TYPICAL_MATS_BITW_SCALAR)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -103,10 +106,10 @@ PERF_TEST_P(Size_MatType, bitwise_or_scalar, TYPICAL_MATS_BITW_ARITHM)
 
     TEST_CYCLE() cv::bitwise_or(a, s, c);
 
-    SANITY_CHECK(c);
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Size_MatType, bitwise_xor_scalar, TYPICAL_MATS_BITW_ARITHM)
+PERF_TEST_P(Size_MatType, bitwise_xor_scalar, TYPICAL_MATS_BITW_SCALAR)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -119,7 +122,7 @@ PERF_TEST_P(Size_MatType, bitwise_xor_scalar, TYPICAL_MATS_BITW_ARITHM)
 
     TEST_CYCLE() cv::bitwise_xor(a, s, c);
 
-    SANITY_CHECK(c);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

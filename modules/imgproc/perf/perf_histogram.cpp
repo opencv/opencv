@@ -76,12 +76,14 @@ PERF_TEST_P(Size_Source_Uniform_Accum, calcHist1d_mode,
 
     declare.in(source);
 
+    // With accumulate=true, calcHist adds into the existing hist, so the result
+    // compounds across timing iterations and is not a stable value to baseline.
     TEST_CYCLE_MULTIRUN(3)
     {
-        calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges, uniform, accumulate);
+        cv::calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges, uniform, accumulate);
     }
 
-    SANITY_CHECK(hist);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_Source, calcHist2d,

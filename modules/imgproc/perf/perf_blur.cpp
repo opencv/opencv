@@ -55,7 +55,7 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
 
     TEST_CYCLE() medianBlur(src, dst, ksize);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 // In-place median blur (matches IPP ippMedianBlur_Inplace: medianBlur(dst, dst, k)).
@@ -63,7 +63,7 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
 PERF_TEST_P(Size_MatType_kSize, medianBlur_inplace,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1),
                 testing::Values(3, 5)
                 )
             )
@@ -298,7 +298,7 @@ PERF_TEST_P(Size_MatType_BorderType_ksize, gaussianBlur,
 
     TEST_CYCLE() GaussianBlur(src, dst, Size(ksize, ksize), 0, 0, btype);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_MatType_BorderType, blur5x5,

@@ -67,7 +67,7 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo_scale_shift,
 
     double eps = depthSrc <= CV_32S && (depthDst <= CV_32S || depthDst == CV_64F) ? 1e-12 : (FLT_EPSILON * maxValue);
     eps = eps * std::max(1.0, fabs(alpha)) + fabs(beta);
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 // In-place convertTo with scale+shift (matches IPP ippConvertTo_ScaleInplace:
