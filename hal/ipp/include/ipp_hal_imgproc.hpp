@@ -43,6 +43,13 @@ int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size
 #undef cv_hal_scharr
 #define cv_hal_scharr ipp_hal_scharr
 
+int ipp_hal_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                             int width, int height, int src_depth, int dst_depth, int cn,
+                             int margin_left, int margin_top, int margin_right, int margin_bottom,
+                             int ksize, double scale, double delta, int border_type);
+#undef cv_hal_laplacian_offset
+#define cv_hal_laplacian_offset ipp_hal_laplacian_offset
+
 #endif
 
 #if !DISABLE_IPP_HOUGH
