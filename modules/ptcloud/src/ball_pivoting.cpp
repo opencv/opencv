@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 // Ball-Pivoting surface reconstruction (Bernardini et al., 1999), multi-radius variant.
 
@@ -18,8 +20,7 @@ namespace cv {
 
 namespace {
 
-// Generous per-query neighbor cap for the local (radius ~2r) searches. Large enough that a
-// well-sampled front is never truncated; kept finite as a guard against pathological density.
+// Per-query neighbor cap for the local (radius ~2r) searches; generous but finite.
 static const int kMaxNeighbors = 256;
 
 // A directed edge on the advancing front, bounding the triangle whose third vertex is `opp`.
@@ -30,8 +31,7 @@ struct FrontEdge
     bool active;         // false once frozen as a boundary edge (may be retried with a larger ball)
 };
 
-// Median nearest-neighbor distance over a bounded sample (approximate search is fine for a
-// robust median). Shared by estimateMeanSpacing and BallPivoter::medianSpacing.
+// Median nearest-neighbor distance over a bounded sample (shared by both spacing entry points).
 static float medianNN(flann::Index& index, const Mat& ptsMat)
 {
     const int N = ptsMat.rows;
@@ -230,8 +230,7 @@ private:
         {
             long long key = work.front();
             work.pop_front();
-            // Look the key up instead of dereferencing a stored iterator: the edge may have
-            // been erased from `front` (glue path / removeEdge) while its key sat in the queue.
+            // look up by key: the edge may have been erased while its key sat in the queue
             auto mit = emap.find(key);
             if (mit != emap.end() && mit->second->active)
                 return mit->second;
@@ -357,8 +356,7 @@ void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray verti
 
     BallPivoter bp(pts, nrm);   // builds the kd-tree once; reused for spacing and pivoting
 
-    // Radii: caller-supplied, else derived from the mean point spacing (detail pass + two
-    // gap-bridging passes).
+    // Radii: caller-supplied, else {1x, 2x, 4x} the mean spacing.
     std::vector<float> radii;
     if (radii_.empty())
     {

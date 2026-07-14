@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
 #include "ptcloud_utils.hpp"             // toPointVec
@@ -11,8 +13,7 @@
 
 namespace cv {
 
-// Point-cloud normals are estimated by cv::normalEstimate (geometry module), which builds the
-// neighbor search internally when nn_idx is empty. The functions here orient those normals.
+// Normals come from cv::normalEstimate (geometry); these functions orient them.
 
 void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3f& viewpoint)
 {
@@ -69,8 +70,7 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
         n[i] = (len > 1e-12f) ? v * (1.f / len) : Vec3f(0.f, 0.f, 1.f);   // guard degenerate normals
     }
 
-    // Riemannian graph: connect each point to its k nearest neighbors, edge weight
-    // 1 - |n_i . n_j| so that near-parallel normals are linked first (Hoppe et al. 1992).
+    // Riemannian graph over kNN, weight 1 - |n_i . n_j| (Hoppe et al. 1992).
     Mat pts = Mat(points).reshape(1, N);
     const int kk = std::min(k + 1, N);
     flann::Index index(pts, flann::KDTreeIndexParams(4));
@@ -87,8 +87,7 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
                 edges.push_back(MSTEdge{ i, j, 1.0 - std::fabs((double)n[i].dot(n[j])) });
         }
 
-    // Seed: the extreme point along +Z, oriented outward (+Z). Orientation then
-    // propagates along the MST so the whole cloud agrees in sign.
+    // Seed the +Z-extreme point outward; orientation propagates along the MST.
     int seed = 0;
     for (int i = 1; i < N; i++)
         if (points[i].z > points[seed].z) seed = i;
@@ -120,8 +119,7 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
     }
     else
     {
-        // Disconnected graph (or invalid): fall back to a global outward orientation
-        // about the centroid so the result is still deterministic and usable.
+        // Disconnected graph: fall back to outward-about-centroid (deterministic).
         Point3f c(0.f, 0.f, 0.f);
         for (const Point3f& p : points) c += p;
         c *= 1.0f / N;

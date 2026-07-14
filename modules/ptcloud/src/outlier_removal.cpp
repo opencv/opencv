@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
 #include "ptcloud_utils.hpp"   // toPointVec
@@ -45,8 +47,7 @@ void removeStatisticalOutliers(InputArray inputCloud, OutputArray outputCloud,
 
     Ptr<Octree> tree = buildOctree(points);
 
-    // Pass 1: mean distance to the meanK nearest neighbors of each point (parallel;
-    // the octree searches are const and touch no shared state, so this is safe).
+    // Pass 1: mean distance to the meanK nearest neighbors (parallel; const octree searches).
     std::vector<double> meanDist(N, 0.0);
     parallel_for_(Range(0, N), [&](const Range& range)
     {
