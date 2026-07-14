@@ -17,7 +17,7 @@ Declaration of various functions which are related to Tensorflow models reading.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
-#include "graph.pb.h"
+#include "tf_graph.pb.h"
 
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
