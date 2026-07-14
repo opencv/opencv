@@ -19,6 +19,9 @@
 // IPP Hough integration is disabled in main OpenCV (improper integration/results); kept behind a macro
 #define DISABLE_IPP_HOUGH 1
 
+// IPP morphology integration is disabled in main OpenCV (different results); kept behind a macro
+#define DISABLE_IPP_MORPH 1
+
 #if IPP_VERSION_X100 >= 810
 #if defined(HAVE_IPP_IW)
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
@@ -125,6 +128,18 @@ int ipp_hal_cornerHarris(const uchar* src_data, size_t src_step, int src_type,
                          int block_size, int ksize, double k, int border_type, bool is_submatrix);
 #undef cv_hal_cornerHarris
 #define cv_hal_cornerHarris ipp_hal_cornerHarris
+
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
+int ipp_hal_morph_stateless(int operation, const uchar * src_data, size_t src_step, int src_type,
+                            uchar * dst_data, size_t dst_step, int dst_type,
+                            int width, int height, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y,
+                            int dst_full_width, int dst_full_height, int dst_roi_x, int dst_roi_y,
+                            const uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
+                            int anchor_x, int anchor_y, int borderType, const double borderValue[4],
+                            int iterations, bool allowSubmatrix, bool allowInplace);
+#undef cv_hal_morph_stateless
+#define cv_hal_morph_stateless ipp_hal_morph_stateless
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
 
 #endif //IPP_VERSION_X100 >= 810
 
