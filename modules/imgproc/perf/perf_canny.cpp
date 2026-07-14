@@ -37,4 +37,36 @@ PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
     SANITY_CHECK(edges);
 }
 
+// Pre-computed-gradient Canny overload Canny(dx, dy, edges, ...) — matches IPP
+// ippCannyDeriv. No OSS perf test existed for this overload.
+typedef tuple<string, bool> Img_L2_t;
+typedef perf::TestBaseWithParam<Img_L2_t> Img_L2;
+
+PERF_TEST_P(Img_L2, cannyDeriv,
+            testing::Combine(
+                testing::Values("cv/shared/lena.png", "stitching/b1.png"),
+                testing::Bool()
+                ))
+{
+    string filename = getDataPath(get<0>(GetParam()));
+    bool useL2 = get<1>(GetParam());
+
+    Mat img = imread(filename, IMREAD_GRAYSCALE);
+    if (img.empty())
+        FAIL() << "Unable to load source image " << filename;
+
+    Mat dx, dy;
+    cv::Sobel(img, dx, CV_16S, 1, 0);
+    cv::Sobel(img, dy, CV_16S, 0, 1);
+
+    Mat edges(img.size(), CV_8UC1);
+    double low = 50, high = 100;
+
+    declare.in(dx, dy).out(edges);
+
+    TEST_CYCLE() cv::Canny(dx, dy, edges, low, high, useL2);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

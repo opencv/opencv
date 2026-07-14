@@ -58,6 +58,38 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
     SANITY_CHECK(dst);
 }
 
+// In-place median blur (matches IPP ippMedianBlur_Inplace: medianBlur(dst, dst, k)).
+// ksize 3/5 for all listed types (ksize > 5 is 8-bit only, covered by _large above).
+PERF_TEST_P(Size_MatType_kSize, medianBlur_inplace,
+            testing::Combine(
+                testing::Values(szODD, szQVGA, szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1),
+                testing::Values(3, 5)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    if (CV_MAT_DEPTH(type) > CV_16S || CV_MAT_CN(type) > 1)
+        declare.time(15);
+
+    while (next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        cv::medianBlur(dst, dst, ksize);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 CV_ENUM(BorderType3x3, BORDER_REPLICATE, BORDER_CONSTANT)
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT101)
 

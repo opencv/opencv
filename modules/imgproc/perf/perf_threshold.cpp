@@ -37,6 +37,38 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     SANITY_CHECK(dst);
 }
 
+// In-place threshold (matches IPP ippThreshold_Inplace: threshold(dst, dst, ...))
+PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                ThreshType::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    ThreshType threshType = get<2>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    double thresh = theRNG().uniform(1, 254);
+    double maxval = theRNG().uniform(1, 254);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    while (next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        cv::threshold(dst, dst, thresh, maxval, threshType);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef perf::TestBaseWithParam<Size> Size_Only;
 
 PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))

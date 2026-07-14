@@ -280,4 +280,35 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     SANITY_CHECK_NOTHING();
 }
 
+// CUBIC / LANCZOS4 interpolation over the wide type set + scale-factor form
+// (matches IPP ippResize_General / ippResize_Affine, which OSS did not cover:
+// no CUBIC/LANCZOS4, no 16U/16S/64F, no scale sweep).
+CV_ENUM(ResizeInterCubicLanczos, INTER_CUBIC, INTER_LANCZOS4)
+typedef tuple<MatType, Size, double, ResizeInterCubicLanczos> MatInfo_Size_Scale_Inter_t;
+typedef TestBaseWithParam<MatInfo_Size_Scale_Inter_t> MatInfo_Size_Scale_Inter;
+
+PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
+            testing::Combine(
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
+                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(sz1080p),
+                testing::Values(0.5, 2.0),
+                ResizeInterCubicLanczos::all()
+                ))
+{
+    int    type  = get<0>(GetParam());
+    Size   from  = get<1>(GetParam());
+    double scale = get<2>(GetParam());
+    int    inter = get<3>(GetParam());
+
+    Size to(saturate_cast<int>(from.width * scale), saturate_cast<int>(from.height * scale));
+
+    Mat src(from, type), dst(to, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::resize(src, dst, to, 0, 0, inter);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
