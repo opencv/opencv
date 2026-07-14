@@ -508,7 +508,7 @@ void showMesh(const String& win_name, const String& obj_name, InputArray verts, 
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    win->set(obj_name, new Mesh(verts, indices));
+    win->set(obj_name, makePtr<Mesh>(verts, indices));
     updateWindow(win_name);
 #endif
 }
@@ -523,7 +523,7 @@ void showMesh(const String& win_name, const String& obj_name, InputArray verts)
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    win->set(obj_name, new Mesh(verts));
+    win->set(obj_name, makePtr<Mesh>(verts));
     updateWindow(win_name);
 #endif
 }
@@ -538,7 +538,7 @@ void showPoints(const String& win_name, const String& obj_name, InputArray point
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    win->set(obj_name, new PointCloud(points));
+    win->set(obj_name, makePtr<PointCloud>(points));
     updateWindow(win_name);
 #endif
 }
@@ -599,7 +599,7 @@ void showLines(const String& win_name, const String& obj_name, InputArray points
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    win->set(obj_name, new Lines(points));
+    win->set(obj_name, makePtr<Lines>(points));
     updateWindow(win_name);
 #endif
 }
@@ -614,7 +614,7 @@ void setObjectPosition(const String& win_name, const String& obj_name, const Vec
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    Object* obj = win->get(obj_name);
+    Ptr<Object> obj = win->get(obj_name);
     if (!obj)
         CV_Error(cv::Error::StsObjectNotFound, "Object not found");
     obj->setPosition(position);
@@ -632,7 +632,7 @@ void setObjectRotation(const String& win_name, const String& obj_name, const Vec
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     Window* win = getWindow(win_name);
-    Object* obj = win->get(obj_name);
+    Ptr<Object> obj = win->get(obj_name);
     if (!obj)
         CV_Error(cv::Error::StsObjectNotFound, "Object not found");
     obj->setRotation(rotation);
@@ -761,24 +761,12 @@ Window::Window(const String& name_)
 
     Mat points_mat = Mat(Size(6, 6), CV_32F, points);
 
-    this->crosshair = new Lines(points_mat);
+    this->crosshair = makePtr<Lines>(points_mat);
     this->shaders[this->crosshair->getShaderName()] = this->crosshair->buildShader();
     this->crosshair->setShader(this->shaders[this->crosshair->getShaderName()]);
-
-    this->grid = nullptr;
 }
 
-Window::~Window()
-{
-    delete this->crosshair;
-    if (this->grid)
-        delete this->grid;
-
-    for (auto obj : this->objects)
-        delete obj.second;
-}
-
-Object* Window::get(const String& obj_name)
+Ptr<Object> Window::get(const String& obj_name)
 {
     auto it = this->objects.find(obj_name);
     if (it == this->objects.end())
@@ -786,14 +774,12 @@ Object* Window::get(const String& obj_name)
     return it->second;
 }
 
-void Window::set(const String& obj_name, Object* obj)
+void Window::set(const String& obj_name, const Ptr<Object>& obj)
 {
     auto it = this->objects.find(obj_name);
     if (it != this->objects.end() && it->second != obj)
     {
-        delete it->second;
-
-        if (obj == nullptr)
+        if (!obj)
             this->objects.erase(it);
         else
             it->second = obj;
@@ -972,12 +958,11 @@ void Window::setGridVisible(bool visible)
     {
         if (this->grid)   // already shown; don't overwrite (and leak) the existing grid
             return;
-        this->grid = new Lines(Mat(4096, 6, CV_32F), 0);
+        this->grid = makePtr<Lines>(Mat(4096, 6, CV_32F), 0);
         this->grid->setShader(this->shaders[this->grid->getShaderName()]);
     }
     else if (this->grid)
     {
-        delete this->grid;
         this->grid = nullptr;
     }
 }
@@ -993,7 +978,7 @@ void Window::draw()
 
     if (this->grid)
     {
-        static_cast<Lines*>(this->grid)->update(getGridVertices(this->view));
+        static_cast<Lines*>(this->grid.get())->update(getGridVertices(this->view));
         this->grid->draw(this->view, this->sun);
     }
     else

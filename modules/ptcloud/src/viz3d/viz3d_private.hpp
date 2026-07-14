@@ -95,10 +95,9 @@ class Window
 {
 public:
     Window(const String& name);
-    ~Window();
 
-    Object* get(const String& obj_name);
-    void set(const String& obj_name, Object* obj);
+    Ptr<Object> get(const String& obj_name);
+    void set(const String& obj_name, const Ptr<Object>& obj);
 
     void setSun(const Vec3f& direction, const Vec3f& ambient, const Vec3f& diffuse);
     void setSky(const Vec3f& color);
@@ -120,9 +119,9 @@ private:
     int l_mouse_x;
     int l_mouse_y;
 
-    Object* crosshair;
-    Object* grid;
-    std::map<String, Object*> objects;
+    Ptr<Object> crosshair;
+    Ptr<Object> grid;
+    std::map<String, Ptr<Object>> objects;
     std::map<String, ogl::Program> shaders;
 };
 
