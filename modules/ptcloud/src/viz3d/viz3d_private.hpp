@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_PTCLOUD_VIZ3D_PRIVATE_HPP
 #define OPENCV_PTCLOUD_VIZ3D_PRIVATE_HPP
@@ -88,7 +90,7 @@ private:
     Matx44f model;
 };
 
-// Class which stores the viz3d data associated to a window.
+// A viz3d window and its objects.
 class Window
 {
 public:
@@ -124,7 +126,7 @@ private:
     std::map<String, ogl::Program> shaders;
 };
 
-// Class which stores the viz3d data associated to a mesh object.
+// Mesh object.
 class Mesh : public Object
 {
 public:
@@ -155,7 +157,7 @@ private:
     int sun_diffuse_loc;
 };
 
-// Class which stores the viz3d data associated to a lines object.
+// Lines object.
 class Lines : public Object
 {
 public:
@@ -180,7 +182,7 @@ private:
     int count;
 };
 
-// Data necessary for drawing a point cloud on a window.
+// Point-cloud object.
 class PointCloud : public Object
 {
 public:

@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
 #include <opencv2/highgui.hpp>            // updateWindow / destroyWindow
@@ -10,10 +12,7 @@ namespace opencv_test { namespace {
 
 using namespace cv;
 
-// Regression for the grid tick_step infinite-loop hang (#1): the old code did
-// logf(1.0) == 0 -> division -> inf -> the halving loop never terminated for
-// distance*scale > 4. gridTickStep must terminate and stay finite/positive for
-// every distance, including the region that used to hang. GL-free (runs in CI).
+// Regression for the old gridTickStep infinite-loop hang: must stay finite/positive. GL-free.
 TEST(Viz3D, grid_tick_step)
 {
     // Values span below/at/above the old hang threshold (dist_scale > 4).
@@ -29,8 +28,7 @@ TEST(Viz3D, grid_tick_step)
     }
 }
 
-// viz3d is OpenGL/window based. Skip when no GL context can be created
-// (e.g. headless CI without a display).
+// viz3d needs a GL context; skip when none is available (headless CI).
 static bool viz3dAvailable()
 {
     try
@@ -45,11 +43,7 @@ static bool viz3dAvailable()
     }
 }
 
-// Smoke test for the public viz3d API. Builds a scene and forces redraws; passes
-// if nothing throws. Exercises the paths touched by review fixes: #3 (showRGBD),
-// #4 (degenerate up-vector trajectory), and the grid render path. The #1 hang
-// itself is distance-triggered (no public camera-distance setter) and is covered
-// by the GL-free Viz3D.grid_tick_step test above.
+// Smoke test for the public viz3d API: build a scene, force redraws, pass if nothing throws.
 TEST(Viz3D, render_scene_smoke)
 {
     if (!viz3dAvailable())

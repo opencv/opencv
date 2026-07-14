@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
 #include "viz3d_private.hpp"
@@ -76,23 +78,19 @@ static void generateBox(Mat& mat, const Vec3f& size, const Vec3f& color, RenderM
     for (int s = -1; s <= 1; s += 2) // For each side
         for (int a = 0; a < 3; ++a) // For each axis
         {
-            // Get the normal vector.
             Vec3f normal = Vec3f::all(0.0f);
             normal((a + 2) % 3) = static_cast<float>(s);
 
-            // Get offset vectors
             Vec3f offset_x, offset_y, offset_z;
             offset_x = offset_y = offset_z = Vec3f::all(0.0f);
             offset_x((a + 0) % 3) = size((a + 0) % 3);
             offset_y((a + 1) % 3) = size((a + 1) % 3);
             offset_z((a + 2) % 3) = static_cast<float>(s) * size((a + 2) % 3);
 
-            // Generate vertex positions
             Vec3f positions[8];
             int count = 0;
 
             if (mode == RENDER_WIREFRAME) {
-                // Face line segments
                 count = 8;
                 positions[0] = offset_z - offset_x - offset_y;
                 positions[1] = offset_z + offset_x - offset_y;
@@ -105,7 +103,6 @@ static void generateBox(Mat& mat, const Vec3f& size, const Vec3f& color, RenderM
             }
             else
             {
-                // Face triangles
                 count = 6;
                 positions[0] = offset_z - offset_x - offset_y;
                 positions[1] = offset_z + offset_x - offset_y;
@@ -115,7 +112,6 @@ static void generateBox(Mat& mat, const Vec3f& size, const Vec3f& color, RenderM
                 positions[5] = offset_z - offset_x - offset_y;
             }
 
-            // Add the vertices
             for (int i = 0; i < count; ++i)
             {
                 mat.at<float>(next_row, 0) = positions[i](0);
@@ -146,16 +142,13 @@ static void generatePlane(Mat& mat, const Vec2f& size, const Vec3f& color, Rende
         mat.create(8, 6, CV_32F); // 8 vertices, and 6 floats per vertex (position + color)
     int next_row = 0;
 
-    // Get offset vectors
     Vec3f offset_x = Vec3f(size(0), 0.0f, 0.0f);
     Vec3f offset_y = Vec3f(0.0f, 0.0f, size(1));
 
-    // Generate vertex positions
     Vec3f positions[8];
     int count = 0;
 
     if (mode == RENDER_WIREFRAME) {
-        // Quad line segments
         count = 8;
         positions[0] = - offset_x - offset_y;
         positions[1] =   offset_x - offset_y;
@@ -168,7 +161,6 @@ static void generatePlane(Mat& mat, const Vec2f& size, const Vec3f& color, Rende
     }
     else
     {
-        // Quad triangles
         count = 6;
         positions[0] = - offset_x - offset_y;
         positions[1] =   offset_x - offset_y;
@@ -178,7 +170,6 @@ static void generatePlane(Mat& mat, const Vec2f& size, const Vec3f& color, Rende
         positions[5] = - offset_x - offset_y;
     }
 
-    // Add the vertices
     for (int i = 0; i < count; ++i)
     {
         mat.at<float>(next_row, 0) = positions[i](0);
@@ -366,7 +357,6 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
                 for (int x = -divs; x < divs; ++x)
                     for (int y = -divs; y < divs; ++y)
                     {
-                        // Quad positions
                         Vec3f positions[6] = {
                             (x + 0) * ex + (y + 0) * ey + pz,
                             (x + 0) * ex + (y + 1) * ey + pz,
@@ -443,7 +433,6 @@ void showCameraTrajectory(
     std::vector<float> points_data;
     points_data.reserve(data.rows * 12 * 2 * 6); // data.rows frustums, 12 lines per frustum, 2 points per line, 6 values per point
 
-    // Add frustums
     for (int i = 0; i < data.rows; ++i)
     {
         Vec3f position = { data.at<float>(i, 0), data.at<float>(i, 1), data.at<float>(i, 2) };
@@ -467,7 +456,6 @@ void showCameraTrajectory(
             position + (-right * aspect + up) * scale * 1.5f + forward * scale * 2.0f,
         };
 
-        // Get line points
         Vec3f lines[24] = {
             // Back face
             back_f[0], back_f[1],
@@ -488,7 +476,6 @@ void showCameraTrajectory(
             back_f[3], front_f[3],
         };
 
-        // Add line points
         for (int j = 0; j < (int)(sizeof(lines) / sizeof(Vec3f)); ++j)
             points_data.insert(points_data.end(), {
                 lines[j](0), lines[j](1), lines[j](2),
@@ -496,7 +483,6 @@ void showCameraTrajectory(
             });
     }
 
-    // Add trajectory line
     for (int i = 1; i < data.rows; ++i)
     {
         points_data.insert(points_data.end(), {
@@ -572,8 +558,7 @@ void showRGBD(const String& win_name, const String& obj_name, InputArray img, co
 
     Mat mat = img.getMat();
 
-    // This section (RGBD to point cloud) should be changed to use the 3d module when
-    // #20013 is merged.
+    // TODO: use the 3d module for RGBD->cloud once #20013 is merged.
 
     float fx = intrinsics(0, 0);
     float fy = intrinsics(1, 1);
@@ -847,8 +832,7 @@ static Mat getGridVertices(const View& view)
 
     const float tick_step = detail::gridTickStep(view.getDistance() * scale);
 
-    // Accumulate line vertices (6 floats each: xyz + rgb), then build one Mat --
-    // avoids the per-frame Mat::push_back reallocation on the render thread.
+    // accumulate into a vector, build one Mat (avoids per-frame push_back reallocation)
     std::vector<float> verts;
     verts.reserve(4096 * 6);
     auto addRows = [&](const float* d, int rows) { verts.insert(verts.end(), d, d + rows * 6); };
@@ -858,7 +842,6 @@ static Mat getGridVertices(const View& view)
     const Vec3f min_p = center - Vec3f(1.0f, 1.0f, 1.0f) * view.getDistance() * scale;
     const Vec3f max_p = center + Vec3f(1.0f, 1.0f, 1.0f) * view.getDistance() * scale;
 
-    // For each axis add a grid
     for (int ai = 0; ai < 3; ++ai)
     {
         Vec3f az = { 0.0f, 0.0f, 0.0f };
@@ -1072,7 +1055,6 @@ void Object::setRotation(const Vec3f& rotation_)
 
 void Object::updateModel()
 {
-    // Calculate rotation matrices
     Matx44f rot_a = Matx44f::eye();
     rot_a(0, 0) = ::cos(this->rotation(0));
     rot_a(1, 0) = ::sin(this->rotation(0));
@@ -1091,25 +1073,21 @@ void Object::updateModel()
     rot_c(0, 2) = -::sin(this->rotation(2));
     rot_c(2, 2) = ::cos(this->rotation(2));
 
-    // Calculate translation matrix
     Matx44f trans = Matx44f::eye();
     trans(3, 0) = this->position(0);
     trans(3, 1) = this->position(1);
     trans(3, 2) = this->position(2);
 
-    // Multiply matrices
     this->model = rot_c * rot_b * rot_a * trans;
 }
 
 Mesh::Mesh(InputArray verts_, InputArray indices_)
 {
-    // Check parameter validity
     CV_Assert(verts_.channels() == 1 && verts_.dims() == 2 && (verts_.size().width == 3 || verts_.size().width == 6 || verts_.size().width == 9));
     CV_Assert(verts_.depth() == CV_32F);
     CV_Assert(indices_.channels() == 1 && indices_.dims() == 2 && indices_.size().width == 3);
     CV_Assert(indices_.depth() == CV_8U || indices_.depth() == CV_16U || indices_.depth() == CV_32S);
 
-    // Prepare buffers
     if (verts_.kind() == _InputArray::OPENGL_BUFFER)
         this->verts = verts_.getOGlBuffer();
     else
@@ -1133,17 +1111,14 @@ Mesh::Mesh(InputArray verts_, InputArray indices_)
         break;
     }
 
-    // Prepare vertex array
     this->initVA(verts_.size().width);
 }
 
 Mesh::Mesh(InputArray verts_)
 {
-    // Check parameter validity
     CV_Assert(verts_.channels() == 1 && verts_.dims() == 2 && (verts_.size().width == 3 || verts_.size().width == 6 || verts_.size().width == 9));
     CV_Assert(verts_.depth() == CV_32F);
 
-    // Prepare buffers
     if (verts_.kind() == _InputArray::OPENGL_BUFFER)
         this->verts = verts_.getOGlBuffer();
     else
@@ -1151,13 +1126,11 @@ Mesh::Mesh(InputArray verts_)
 
     this->index_type = 0;
 
-    // Prepare vertex array
     this->initVA(verts_.size().width);
 }
 
 void Mesh::initVA(int width)
 {
-    // Prepare vertex array
     if (width == 3)
     {
         this->va.create({
@@ -1255,7 +1228,6 @@ ogl::Program Mesh::buildShader()
 {
     ogl::Shader vs, fs;
 
-    // Setup shader pipeline
     if (this->verts.size().width == 3)
     {
         vs = ogl::Shader(R"(
@@ -1378,11 +1350,9 @@ void Mesh::setShader(ogl::Program program_)
 
 Lines::Lines(InputArray points_, int count_)
 {
-    // Check parameter validity
     CV_Assert(points_.channels() == 1 && points_.dims() == 2 && points_.size().width == 6);
     CV_Assert(points_.depth() == CV_32F);
 
-    // Prepare buffers
     if (points_.kind() == _InputArray::OPENGL_BUFFER)
         this->points = points_.getOGlBuffer();
     else
@@ -1392,7 +1362,6 @@ Lines::Lines(InputArray points_, int count_)
             this->points.copyFrom(points_, ogl::Buffer::ARRAY_BUFFER);
     }
 
-    // Prepare vertex array
     this->va.create({
         {
             this->points,
@@ -1435,7 +1404,6 @@ void Lines::draw(const View& view, const Light& light)
 
 void Lines::update(InputArray points_)
 {
-    // Check parameter validity
     CV_Assert(points_.channels() == 1 && points_.dims() == 2 && points_.size().width == 6);
     CV_Assert(points_.depth() == CV_32F);
 
@@ -1450,7 +1418,6 @@ String Lines::getShaderName()
 
 ogl::Program Lines::buildShader()
 {
-    // Setup shader pipeline
     auto vs = ogl::Shader(R"(
         #version 330 core
 
@@ -1494,17 +1461,14 @@ void Lines::setShader(ogl::Program program_)
 
 PointCloud::PointCloud(InputArray points_)
 {
-    // Check parameter validity
     CV_Assert(points_.channels() == 1 && points_.dims() == 2 && points_.size().width == 6);
     CV_Assert(points_.depth() == CV_32F);
 
-    // Prepare buffers
     if (points_.kind() == _InputArray::OPENGL_BUFFER)
         this->points = points_.getOGlBuffer();
     else
         this->points.copyFrom(points_, ogl::Buffer::ARRAY_BUFFER);
 
-    // Prepare vertex array
     this->va.create({
         {
             this->points,
@@ -1544,7 +1508,6 @@ String PointCloud::getShaderName()
 
 ogl::Program PointCloud::buildShader()
 {
-    // Setup shader pipeline
     auto vs = ogl::Shader(R"(
         #version 330 core
 
