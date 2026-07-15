@@ -409,6 +409,54 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
     processNet("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
 }
 
+PERF_TEST_P_(DNNTestNetwork, YOLOv8n_TFLite)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
+    processNet("dnn/tflite/yolov8n.tflite", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv5nu_TFLite)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
+    processNet("dnn/tflite/yolov5nu.tflite", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLO26n_TFLite)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    auto engine_forced = static_cast<dnn::EngineType>(
+        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
+    if (engine_forced == dnn::ENGINE_CLASSIC)
+        throw SkipTestException("yolo26 end2end head is supported on the new DNN engine only");
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
+    processNet("dnn/tflite/yolo26n.tflite", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLO26n_seg_TFLite)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    auto engine_forced = static_cast<dnn::EngineType>(
+        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
+    if (engine_forced == dnn::ENGINE_CLASSIC)
+        throw SkipTestException("yolo26 end2end head is supported on the new DNN engine only");
+    Mat inp = imread(findDataFile("dnn/street.png"));
+    inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
+    processNet("dnn/tflite/yolo26n-seg.tflite", "", inp);
+}
+
 PERF_TEST_P_(DNNTestNetwork, VIT_B_32)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);

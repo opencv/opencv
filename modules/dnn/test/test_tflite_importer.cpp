@@ -361,6 +361,83 @@ TEST_P(Test_TFLite, multi_output_names)
     ASSERT_EQ(outNames, (std::vector<String>{"classificators", "regressors"}));
 }
 
+// end2end head [1,300,C] rows -> Nx7 [batch,cls,conf,x1,y1,x2,y2] for normAssertDetections
+static Mat decodeYoloEnd2End(const Mat& out, float confThr = 0.25f)
+{
+    int n = out.size[out.dims - 2];
+    Mat d = out.reshape(1, n);
+    std::vector<float> rows;
+    for (int i = 0; i < n; ++i)
+    {
+        const float* r = d.ptr<float>(i);
+        if (r[4] < confThr)
+            continue;
+        float v[7] = {0.f, r[5], r[4], r[0], r[1], r[2], r[3]};
+        rows.insert(rows.end(), v, v + 7);
+    }
+    return Mat((int)(rows.size() / 7), 7, CV_32F, rows.data()).clone();
+}
+
+TEST_P(Test_TFLite, yolov8n)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolov8n.tflite"));
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testModel(net, "yolov8n", input, 1e-4, 1e-2);
+}
+
+TEST_P(Test_TFLite, yolov5nu)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolov5nu.tflite"));
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testModel(net, "yolov5nu", input, 1e-4, 1e-2);
+}
+
+TEST_P(Test_TFLite, yolo26n)
+{
+    // end2end head is supported only by the new engine
+    if (static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n.tflite"));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(findDataFile("dnn/tflite/yolo26n_out_serving_default_output_0_output.npy"));
+    normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(out), "", 0.5, 0.01, 0.02);
+}
+
+TEST_P(Test_TFLite, yolo26n_seg)
+{
+    // end2end head is supported only by the new engine
+    if (static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n-seg.tflite"));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/street.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+    for (size_t i = 0; i < outNames.size(); ++i)
+    {
+        Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/yolo26n-seg_out_%s.npy", outNames[i].c_str())));
+        if (outs[i].size[outs[i].dims - 2] == 300)
+            normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(outs[i]), "", 0.5, 0.01, 0.02);
+        else
+            normAssert(ref, outs[i], "", 1e-4, 1e-2);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
