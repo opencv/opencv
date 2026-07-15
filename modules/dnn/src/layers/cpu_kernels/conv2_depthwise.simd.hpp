@@ -89,16 +89,13 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             defaultAlpha = 1.f;
         }
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if CV_SIMD
         v_float32 v_maxval = vx_setall_f32(maxval);
         v_float32 z = vx_setzero_f32();
         const int nlanes = VTraits<v_float32>::vlanes();
-        // TODO(#29493): with the fixed C0=8 this covers VLEN=128 (C0==nlanes*2) and
-        // VLEN=256 (C0==nlanes); VLEN>=512 gives C0<nlanes and trips this assert.
-        // Follow-up: a portable v_setvlmax<v_float32>(C0) universal intrinsic (no-op on
-        // fixed-width ISAs, sets the vl/mask on RVV/SVE) caps the vector to the block so
-        // wide VLEN works; the optimized multi-pixel case (stride=1) is a later RVV-HAL
-        // step. See PR #29493 discussion.
+        // RVV (CV_SIMD_SCALABLE) disabled for the m1 switch: with the fixed C0=8 the
+        // block is narrower than the register at VLEN>=512, tripping this assert. Runs
+        // scalar on RVV; re-enable via v_setvlmax<v_float32>(C0) (#29493, cf #29180).
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
     #endif
 
@@ -132,12 +129,12 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                #if !(CV_SIMD)
                     memset(out, 0, W*C0*sizeof(out[0]));
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf);
                             v_float32 alpha0 = vx_load(alphabuf);
@@ -224,7 +221,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf), alpha0 = vx_load(alphabuf);
                             for (; x0 < x1; x0++) {
@@ -341,7 +338,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                         x1 = W;
                     }
 
-                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                #if !(CV_SIMD)
                     if (residual) {
                         for (int x = 0; x < W*C0; x += C0) {
                             for (int c = 0; c < C0; c++) {
