@@ -127,6 +127,7 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             for (int i = 0; i < g_boards[b].ncorners; i++)
                 getRectSubPix(srcs[b], patchSize, g_boards[b].corners[i], patch, patchType);
     }
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test

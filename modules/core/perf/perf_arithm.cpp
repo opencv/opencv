@@ -1,3 +1,4 @@
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 #include <numeric>
 #include "opencv2/core/softfloat.hpp"
