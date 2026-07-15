@@ -1548,8 +1548,7 @@ cv::ogl::VertexArray::VertexArray()
 cv::ogl::VertexArray::VertexArray(std::initializer_list<Attribute> attributes, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(attributes);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(attributes); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(attributes, autoRelease));
@@ -1559,8 +1558,7 @@ cv::ogl::VertexArray::VertexArray(std::initializer_list<Attribute> attributes, b
 void cv::ogl::VertexArray::create(std::initializer_list<Attribute> attributes, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(attributes);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(attributes); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(attributes, autoRelease));
@@ -1701,9 +1699,7 @@ cv::ogl::Shader::Shader() : type_(Type::VERTEX)
 cv::ogl::Shader::Shader(const char* src, Type type, bool autoRelease) : type_(type)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(src);
-    CV_UNUSED(type);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(src); CV_UNUSED(type); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(src, type, autoRelease));
@@ -1713,9 +1709,7 @@ cv::ogl::Shader::Shader(const char* src, Type type, bool autoRelease) : type_(ty
 void cv::ogl::Shader::create(const char* src, Type type, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(src);
-    CV_UNUSED(type);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(src); CV_UNUSED(type); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(src, type, autoRelease));
@@ -1753,11 +1747,7 @@ unsigned int cv::ogl::Shader::shaderId() const
 
 cv::ogl::Shader::Type cv::ogl::Shader::type() const
 {
-#ifndef HAVE_OPENGL
-    throw_no_ogl();
-#else
     return type_;
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1885,9 +1875,7 @@ cv::ogl::Program::Program()
 cv::ogl::Program::Program(Shader vert, Shader frag, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(vert);
-    CV_UNUSED(frag);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(vert); CV_UNUSED(frag); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(vert, frag, autoRelease));
@@ -1897,9 +1885,7 @@ cv::ogl::Program::Program(Shader vert, Shader frag, bool autoRelease)
 void cv::ogl::Program::create(Shader vert, Shader frag, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(vert);
-    CV_UNUSED(frag);
-    CV_UNUSED(autoRelease);
+    CV_UNUSED(vert); CV_UNUSED(frag); CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(vert, frag, autoRelease));
@@ -1966,8 +1952,7 @@ int cv::ogl::Program::getUniformLocation(const char* name) const
 void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(loc);
-    CV_UNUSED(vec);
+    CV_UNUSED(loc); CV_UNUSED(vec);
     throw_no_ogl();
 #else
     gl::Uniform3f(loc, vec(0), vec(1), vec(2));
@@ -1977,8 +1962,7 @@ void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
 void cv::ogl::Program::setUniformMat4x4(int loc, Matx44f mat)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(loc);
-    CV_UNUSED(mat);
+    CV_UNUSED(loc); CV_UNUSED(mat);
     throw_no_ogl();
 #else
     gl::UniformMatrix4fv(loc, 1, true, mat.val);
@@ -2185,9 +2169,7 @@ void cv::ogl::clearDepth(float depth)
 void cv::ogl::drawArrays(int first, int count, int mode)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(first);
-    CV_UNUSED(count);
-    CV_UNUSED(mode);
+    CV_UNUSED(first); CV_UNUSED(count); CV_UNUSED(mode);
     throw_no_ogl();
 #else
     gl::DrawArrays(mode, first, count);
@@ -2197,10 +2179,7 @@ void cv::ogl::drawArrays(int first, int count, int mode)
 void cv::ogl::drawElements(int first, int count, int type, int mode)
 {
 #ifndef HAVE_OPENGL
-    CV_UNUSED(first);
-    CV_UNUSED(count);
-    CV_UNUSED(type);
-    CV_UNUSED(mode);
+    CV_UNUSED(first); CV_UNUSED(count); CV_UNUSED(type); CV_UNUSED(mode);
     throw_no_ogl();
 #else
     gl::DrawElements(mode, count, type, reinterpret_cast<const void*>(first));
