@@ -53,11 +53,13 @@ static void avgPool32f(const void* inp_, void* out_,
         float* out = (float*)out_ + nc0*planesize;
         float iksize = 1.f/ksize;
 
-#if CV_SIMD
+#if CV_SIMD || CV_SIMD_SCALABLE
+        // Cap the vector length to the C0 channel block so a scalable register wider
+        // than C0 (RVV at VLEN>=512) processes exactly C0 lanes and takes the
+        // nlanes==C0 path below instead of asserting. No-op on fixed-width backends.
+        // Thread-local: set here in each parallel worker, cleared at the end (#29493).
+        v_setvlmax<v_float32>(C0);
         int nlanes = VTraits<v_float32>::vlanes();
-        // RVV (CV_SIMD_SCALABLE) disabled for the m1 switch: with the fixed C0=8 the
-        // block is narrower than the register at VLEN>=512, tripping this assert. Runs
-        // scalar on RVV; re-enable via v_setvlmax<v_float32>(C0) (#29493, cf #29180).
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
         v_float32 z = vx_setzero_f32();
         v_float32 vscale0 = vx_setall_f32(iksize);
@@ -72,12 +74,12 @@ static void avgPool32f(const void* inp_, void* out_,
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD)
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
                     memset(out, 0, W*C0*sizeof(out[0]));
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -165,7 +167,7 @@ static void avgPool32f(const void* inp_, void* out_,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -241,6 +243,9 @@ static void avgPool32f(const void* inp_, void* out_,
                 }
             }
         }
+    #if CV_SIMD || CV_SIMD_SCALABLE
+        v_setvlmax<v_float32>(0);   // restore VLMAX before this worker returns to the pool
+    #endif
     });
 }
 

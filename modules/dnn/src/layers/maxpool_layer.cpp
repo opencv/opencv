@@ -50,12 +50,14 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
         float* out = (float*)out_ + nc0*planesize;
         const float INITVAL = -FLT_MAX;
 
-    #if CV_SIMD
+    #if CV_SIMD || CV_SIMD_SCALABLE
+        // Cap the vector length to the C0 channel block so a scalable register wider
+        // than C0 (RVV at VLEN>=512) processes exactly C0 lanes and takes the
+        // nlanes==C0 path below instead of asserting. No-op on fixed-width backends.
+        // Thread-local: set here in each parallel worker, cleared at the end (#29493).
+        v_setvlmax<v_float32>(C0);
         int nlanes = VTraits<v_float32>::vlanes();
         v_float32 s_min = vx_setall_f32(INITVAL);
-        // RVV (CV_SIMD_SCALABLE) disabled for the m1 switch: with the fixed C0=8 the
-        // block is narrower than the register at VLEN>=512, tripping this assert. Runs
-        // scalar on RVV; re-enable via v_setvlmax<v_float32>(C0) (#29493, cf #29180).
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
     #endif
 
@@ -68,13 +70,13 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD)
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
                     for (int c = 0; c < C0*W; c++)
                         out[c] = INITVAL;
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -139,7 +141,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -207,6 +209,9 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                 }
             }
         }
+    #if CV_SIMD || CV_SIMD_SCALABLE
+        v_setvlmax<v_float32>(0);   // restore VLMAX before this worker returns to the pool
+    #endif
     });
 }
 
