@@ -240,7 +240,7 @@ static void threshSimdDispatch(Size roi, const T* src, size_t src_step, T* dst, 
             [=](const T& s) { return threshToZeroInv<T>(s, thresh); });
         break;
     default:
-        CV_Error( cv::Error::StsBadArg, "" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported threshold type" );
     }
 }
 #endif
