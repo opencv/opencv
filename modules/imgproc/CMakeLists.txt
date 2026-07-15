@@ -24,7 +24,12 @@ endif()
 if(HAVE_IPP)
   # OPENCV_IPP_ENABLE_ALL is defined in modules/core/CMakeList.txt
   OCV_OPTION(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OPENCV_IPP_ENABLE_ALL)
-  if(OPENCV_IPP_GAUSSIAN_BLUR)
+  # IPP GaussianBlur lives in the IPP HAL and needs IPP-IW; enabling it wires
+  # cv_hal_gaussianBlur (in smooth.dispatch.cpp) and compiles the HAL impl (ipphal).
+  if(OPENCV_IPP_GAUSSIAN_BLUR AND HAVE_IPP_IW)
     ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/smooth.dispatch.cpp "ENABLE_IPP_GAUSSIAN_BLUR=1")
+    if(TARGET ipphal)
+      target_compile_definitions(ipphal PRIVATE ENABLE_IPP_GAUSSIAN_BLUR=1)
+    endif()
   endif()
 endif()
