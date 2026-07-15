@@ -149,15 +149,20 @@ public:
                             static_cast<float>(std::max(gray.cols, gray.rows));
         const int resizedW = std::max(1, static_cast<int>(gray.cols * scale));
         const int resizedH = std::max(1, static_cast<int>(gray.rows * scale));
-        Mat resized;
-        resize(gray, resized, Size(resizedW, resizedH));
-
-        Mat padded = Mat::zeros(inputSize_, inputSize_, CV_8UC1);
-        resized.copyTo(padded(Rect(0, 0, resizedW, resizedH)));
+        const int padX = (inputSize_ - resizedW) / 2;
+        const int padY = (inputSize_ - resizedH) / 2;
 
         Mat blob;
-        blobFromImage(padded, blob, 1.0 / 255.0, Size(inputSize_, inputSize_),
-                      Scalar(), false, false);
+        Image2BlobParams blobParams;
+        blobParams.scalefactor = Scalar::all(1.0 / 255.0);
+        blobParams.size = Size(inputSize_, inputSize_);
+        blobParams.mean = Scalar();
+        blobParams.swapRB = false;
+        blobParams.ddepth = CV_32F;
+        blobParams.datalayout = DNN_LAYOUT_NCHW;
+        blobParams.paddingmode = DNN_PMODE_LETTERBOX;
+        blobParams.borderValue = Scalar();
+        blobFromImageWithParams(gray, blob, blobParams);
         net_.setInput(blob);
 
         const std::vector<String> outNames = {"output_feats", "output_keypoints", "output_heatmap"};
@@ -266,8 +271,8 @@ public:
                 if (score <= 0.f)
                     continue;
 
-                const float px = xp / scale;
-                const float py = yp / scale;
+                const float px = (xp - static_cast<float>(padX)) / scale;
+                const float py = (yp - static_cast<float>(padY)) / scale;
                 const int ix = cvFloor(px);
                 const int iy = cvFloor(py);
                 if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
