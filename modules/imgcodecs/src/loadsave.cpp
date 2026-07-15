@@ -1059,18 +1059,21 @@ size_t imcount(const String& filename, int flags)
 }
 
 
-static void normalizeBoolImageForEncoding(Mat& image, Mat& temp)
+// Convert an image to CV_8U for encoders that cannot handle its depth. A
+// CV_Bool image is scaled by 255 so `true` maps to 255 (white) rather than 1;
+// any other unsupported depth uses a plain conversion.
+static void fallbackToCV8U(Mat& image, Mat& temp)
 {
 #ifdef CV_Bool
     if (image.depth() == CV_Bool)
     {
         image.convertTo(temp, CV_8U, 255);
         image = temp;
+        return;
     }
-#else
-    CV_UNUSED(image);
-    CV_UNUSED(temp);
 #endif
+    image.convertTo(temp, CV_8U);
+    image = temp;
 }
 
 
@@ -1099,13 +1102,11 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
 
         Mat temp;
-        normalizeBoolImageForEncoding(image, temp);
         if( !encoder->isFormatSupported(image.depth()) )
         {
             CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
             CV_Assert( encoder->isFormatSupported(CV_8U) );
-            image.convertTo( temp, CV_8U );
-            image = temp;
+            fallbackToCV8U(image, temp);
         }
 
         if( flipv )
@@ -1663,13 +1664,11 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
 #endif
 
         Mat temp;
-        normalizeBoolImageForEncoding(image, temp);
         if( !encoder->isFormatSupported(image.depth()) )
         {
             CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
             CV_Assert( encoder->isFormatSupported(CV_8U) );
-            image.convertTo( temp, CV_8U );
-            image = temp;
+            fallbackToCV8U(image, temp);
         }
 
         write_vec.push_back(image);
