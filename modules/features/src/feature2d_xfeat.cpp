@@ -149,7 +149,6 @@ public:
                             static_cast<float>(std::max(gray.cols, gray.rows));
         const int resizedW = std::max(1, static_cast<int>(gray.cols * scale));
         const int resizedH = std::max(1, static_cast<int>(gray.rows * scale));
-
         Mat resized;
         resize(gray, resized, Size(resizedW, resizedH));
 
@@ -201,12 +200,34 @@ public:
                         maxLogit = std::max(maxLogit, kptPtr[ch * kptHW + offset]);
 
                     float sumExp = 0.f;
+                    float logits[64];
                     float probs[64];
                     for (int ch = 0; ch < 64; ++ch)
+                        logits[ch] = kptPtr[ch * kptHW + offset] - maxLogit;
+#if (defined(CV_SIMD) && CV_SIMD) || (defined(CV_SIMD_SCALABLE) && CV_SIMD_SCALABLE)
+                    const int vlanes = VTraits<v_float32>::vlanes();
+                    int ch = 0;
+                    v_float32 vSum = vx_setzero_f32();
+                    for (; ch <= 64 - vlanes; ch += vlanes)
                     {
-                        probs[ch] = std::exp(kptPtr[ch * kptHW + offset] - maxLogit);
+                        v_float32 v = vx_load(logits + ch);
+                        v_float32 e = v_exp(v);
+                        vx_store(probs + ch, e);
+                        vSum = v_add(vSum, e);
+                    }
+                    sumExp = v_reduce_sum(vSum);
+                    for (; ch < 64; ++ch)
+                    {
+                        probs[ch] = std::exp(logits[ch]);
                         sumExp += probs[ch];
                     }
+#else
+                    for (int ch = 0; ch < 64; ++ch)
+                    {
+                        probs[ch] = std::exp(logits[ch]);
+                        sumExp += probs[ch];
+                    }
+#endif
                     if (kptC > 64)
                         sumExp += std::exp(kptPtr[64 * kptHW + offset] - maxLogit);
                     if (sumExp <= 0.f)

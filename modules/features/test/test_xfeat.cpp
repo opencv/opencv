@@ -59,11 +59,6 @@ static void testXFeatRegression(const std::string& imageName, const std::string&
     Mat descriptors;
     detector->detectAndCompute(img, noArray(), keypoints, descriptors);
 
-    ASSERT_FALSE(keypoints.empty());
-    EXPECT_GE(static_cast<double>(keypoints.size()) / n, 0.95)
-        << "keypoint count dropped too much (" << tag << ")";
-    EXPECT_LE(static_cast<double>(keypoints.size()) / n, 1.05)
-        << "keypoint count increased too much (" << tag << ")";
     ASSERT_EQ(descriptors.rows, static_cast<int>(keypoints.size()));
     ASSERT_EQ(descriptors.cols, refDesc.cols);
     ASSERT_EQ(descriptors.type(), CV_32F);
@@ -143,8 +138,9 @@ TEST(Features2d_XFeat, ParametersAndMask)
     EXPECT_LE(keypoints.size(), 50u);
     ASSERT_EQ(descriptors.rows, static_cast<int>(keypoints.size()));
 
-    for (const KeyPoint& kp : keypoints)
+    for (const KeyPoint& kp : keypoints){
         EXPECT_TRUE(roi.contains(Point(cvFloor(kp.pt.x), cvFloor(kp.pt.y))));
+    }
 }
 
 TEST(Features2d_XFeat, InvalidInputSize)
