@@ -1202,6 +1202,9 @@ typedef TestBaseWithParam<ReduceMinMaxParams> ReduceMinMaxFixture;
 OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
                 ::testing::Combine(OCL_TEST_SIZES,
                                    OCL_PERF_ENUM(std::make_pair<MatType, MatType>(CV_8UC1, CV_8UC1),
+                                                 std::make_pair<MatType, MatType>(CV_8UC4, CV_8UC4),
+                                                 std::make_pair<MatType, MatType>(CV_32FC1, CV_32FC1),
+                                                 std::make_pair<MatType, MatType>(CV_32FC3, CV_32FC3),
                                                  std::make_pair<MatType, MatType>(CV_32FC4, CV_32FC4)),
                                    OCL_PERF_ENUM(0, 1),
                                    ReduceMinMaxOp::all()))

@@ -170,7 +170,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         getMatTypeStr( dstType, dstTypeStr );
         const char* dimStr = dim == 0 ? "ROWS" : "COLS";
 
-        snprintf( msg, sizeof(msg), "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s",
+        snprintf( msg, sizeof(msg), "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s\n",
                 srcTypeStr.c_str(), dstTypeStr.c_str(), opTypeStr, dimStr );
         ts->printf( cvtest::TS::LOG, msg );
         return cvtest::TS::FAIL_BAD_ACCURACY;
