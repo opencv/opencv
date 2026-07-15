@@ -67,11 +67,17 @@ using int64 = long int;
 template <class T>
 struct VTraits;
 
+// Thread-local cap on the active vector length, in elements (0 == no cap, i.e. VLMAX).
+// Set through v_setvlmax() (see below); consulted by VTraits::vlanes(), which is the
+// single point every scalable-backend op derives its `vl` from, so capping it here
+// transparently narrows loads/stores/arithmetic without touching the individual ops.
+inline int& rvv_vl_cap() { static thread_local int cap = 0; return cap; }
+
 #define OPENCV_HAL_IMPL_RVV_TRAITS(REG, TYP, SUF, SZ) \
 template <> \
 struct VTraits<REG> \
 { \
-    static inline int vlanes() { return __riscv_vsetvlmax_##SUF(); } \
+    static inline int vlanes() { int n = __riscv_vsetvlmax_##SUF(); int c = rvv_vl_cap(); return (c > 0 && c < n) ? c : n; } \
     using lane_type = TYP; \
     static const int max_nlanes = CV_RVV_MAX_VLEN/SZ; \
 };
@@ -131,6 +137,18 @@ OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m2_t, double, e64m2, 64)
 OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m4_t, double, e64m4, 64)
 OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m8_t, double, e64m8, 64)
 #endif
+
+//////////// active vector length ////////////
+
+// Cap the active vector length to `n` VT-lanes for subsequent universal-intrinsic ops
+// on this thread; pass n <= 0 to restore the full VLMAX. On fixed-width backends this
+// is a no-op (see intrin.hpp). It lets a kernel whose data block (e.g. the dnn C0
+// channel block) is narrower than the vector register stay vectorized at any VLEN:
+// call v_setvlmax<v_float32>(C0) and the loads/stores/arithmetic process exactly C0
+// lanes instead of the full register (which would over-read the block on wide cores).
+// The cap is thread-local, so it must be set inside each parallel worker that relies
+// on it and cleared when the narrow region ends.
+template<typename VT> inline void v_setvlmax(int n) { rvv_vl_cap() = n > 0 ? n : 0; }
 
 
 // LLVM/Clang defines "overloaded intrinsics" e.g. 'vand(op1, op2)'

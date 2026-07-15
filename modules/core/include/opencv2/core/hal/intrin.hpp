@@ -361,6 +361,14 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD_SCALABLE_FP16 0
 #endif
 
+#if !CV_SIMD_SCALABLE
+// v_setvlmax<VT>(n): cap the active vector length to `n` VT-lanes (see the scalable-RVV
+// backend for the real implementation). Fixed-width backends have a constant register
+// size, so there is nothing to narrow — it is a no-op that lets the same kernel source
+// compile everywhere.
+template<typename VT> inline void v_setvlmax(int /*n*/) {}
+#endif
+
 //==================================================================================================
 
 template<typename _Tp> struct V_RegTraits
