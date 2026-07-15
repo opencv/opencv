@@ -389,42 +389,32 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #elif CV_SIMD_SCALABLE
 
 /////////////////////////// scalable (RVV) implementation /////////////////////////////
-// The blocked layout fixes K0 == C0 == 8 regardless of the hardware vector width, so the
-// universal intrinsics cannot be used here: v_float32 is always vlanes() wide and there is
-// no way to make it span exactly K0 elements. Instead we drop to native RVV and set the
-// vector length explicitly to K0 (#29454).
-//
-// LMUL=2 is chosen so that vlmax(e32,m2) = VLEN/32*2 >= 8 for every VLEN >= 128 (the
-// smallest RVV configuration). __riscv_vsetvl_e32m2(K0) therefore returns exactly K0 = 8
-// on every machine -- 8 of 8 lanes at VLEN=128, 8 of 64 at VLEN=1024 -- so one accumulator
-// per spatial position always spans precisely one output block. No strip-mining, no
-// VLEN-dependent branches, and nothing can overrun or under-fill the block.
-//
-// Note this LMUL is a property of *this kernel only*; it is independent of whatever LMUL
-// the universal intrinsics are built with.
+// K0 == vlanes(), so each of the 10 spatial positions needs exactly one vector
+// accumulator (structurally identical to the AVX2 path, which uses one v_float32x8 per
+// position for its K0=8). One K0-wide weight load is reused across all 10 positions, so
+// the per-output-point load bottleneck of the scalar tail is amortized away. C0 (= vlanes())
+// is a runtime value, so the c0 sweep is a loop rather than a fixed unroll.
 
 #undef CONV_INIT_SUMS
 #define CONV_INIT_SUMS() \
-    const size_t _vl = __riscv_vsetvl_e32m2(K0); \
-    vfloat32m2_t zz = __riscv_vfmv_v_f_f32m2(0.f, _vl); \
-    vfloat32m2_t s0 = zz, s1 = zz, s2 = zz, s3 = zz, s4 = zz; \
-    vfloat32m2_t s5 = zz, s6 = zz, s7 = zz, s8 = zz, s9 = zz
+    v_float32 zz = vx_setzero_f32(); \
+    v_float32 s0 = zz, s1 = zz, s2 = zz, s3 = zz, s4 = zz; \
+    v_float32 s5 = zz, s6 = zz, s7 = zz, s8 = zz, s9 = zz
 
-// s_j += inptr[j][_c0] * w   (vfmacc_vf: vd += rs1 * vs2)
 #undef CONV_UPDATE_LOOP_BODY
 #define CONV_UPDATE_LOOP_BODY() \
     for (int _c0 = 0; _c0 < C0; _c0++) { \
-        vfloat32m2_t _w = __riscv_vle32_v_f32m2(wptr + _c0*K0, _vl); \
-        s0 = __riscv_vfmacc_vf_f32m2(s0, inptr[0][_c0], _w, _vl); \
-        s1 = __riscv_vfmacc_vf_f32m2(s1, inptr[1][_c0], _w, _vl); \
-        s2 = __riscv_vfmacc_vf_f32m2(s2, inptr[2][_c0], _w, _vl); \
-        s3 = __riscv_vfmacc_vf_f32m2(s3, inptr[3][_c0], _w, _vl); \
-        s4 = __riscv_vfmacc_vf_f32m2(s4, inptr[4][_c0], _w, _vl); \
-        s5 = __riscv_vfmacc_vf_f32m2(s5, inptr[5][_c0], _w, _vl); \
-        s6 = __riscv_vfmacc_vf_f32m2(s6, inptr[6][_c0], _w, _vl); \
-        s7 = __riscv_vfmacc_vf_f32m2(s7, inptr[7][_c0], _w, _vl); \
-        s8 = __riscv_vfmacc_vf_f32m2(s8, inptr[8][_c0], _w, _vl); \
-        s9 = __riscv_vfmacc_vf_f32m2(s9, inptr[9][_c0], _w, _vl); \
+        v_float32 _w = vx_load(wptr + _c0*K0); \
+        s0 = v_fma(vx_setall_f32(inptr[0][_c0]), _w, s0); \
+        s1 = v_fma(vx_setall_f32(inptr[1][_c0]), _w, s1); \
+        s2 = v_fma(vx_setall_f32(inptr[2][_c0]), _w, s2); \
+        s3 = v_fma(vx_setall_f32(inptr[3][_c0]), _w, s3); \
+        s4 = v_fma(vx_setall_f32(inptr[4][_c0]), _w, s4); \
+        s5 = v_fma(vx_setall_f32(inptr[5][_c0]), _w, s5); \
+        s6 = v_fma(vx_setall_f32(inptr[6][_c0]), _w, s6); \
+        s7 = v_fma(vx_setall_f32(inptr[7][_c0]), _w, s7); \
+        s8 = v_fma(vx_setall_f32(inptr[8][_c0]), _w, s8); \
+        s9 = v_fma(vx_setall_f32(inptr[9][_c0]), _w, s9); \
     } \
     inptr[0] += inpstep[0]; inptr[1] += inpstep[1]; \
     inptr[2] += inpstep[2]; inptr[3] += inpstep[3]; \
@@ -434,30 +424,26 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 #undef CONV_START_FINALIZE_OUT
 #define CONV_START_FINALIZE_OUT() \
-    vfloat32m2_t vscale = __riscv_vle32_v_f32m2(scalebuf, _vl); \
-    vfloat32m2_t vbias = __riscv_vle32_v_f32m2(biasbuf, _vl); \
-    vfloat32m2_t valpha = __riscv_vle32_v_f32m2(alphabuf, _vl); \
-    vfloat32m2_t vmaxval = __riscv_vfmv_v_f_f32m2(maxval, _vl)
+    v_float32 vscale = vx_load(scalebuf); \
+    v_float32 vbias = vx_load(biasbuf); \
+    v_float32 valpha = vx_load(alphabuf); \
+    v_float32 vmaxval = vx_setall_f32(maxval)
 
 #define CONV_ADD_RESIDUAL2(idx0, idx1) \
-    s##idx0 = __riscv_vfadd_vv_f32m2(s##idx0, __riscv_vle32_v_f32m2(tmpbuf + idx0*K0, _vl), _vl); \
-    s##idx1 = __riscv_vfadd_vv_f32m2(s##idx1, __riscv_vle32_v_f32m2(tmpbuf + idx1*K0, _vl), _vl)
+    s##idx0 = v_add(s##idx0, vx_load(tmpbuf + idx0*K0)); \
+    s##idx1 = v_add(s##idx1, vx_load(tmpbuf + idx1*K0))
 
-// s = s*scale + bias;  s = (s >= 0 ? s : s*alpha);  s = min(s, maxval)
-// (vfmadd_vv: vd = vd*vs1 + vs2;  vmerge_vvm picks vs1 where the mask is set, else vs2)
 #undef CONV_FINALIZE_OUT2
 #define CONV_FINALIZE_OUT2(idx0, idx1, add_residual2) \
-    s##idx0 = __riscv_vfmadd_vv_f32m2(s##idx0, vscale, vbias, _vl); \
-    s##idx1 = __riscv_vfmadd_vv_f32m2(s##idx1, vscale, vbias, _vl); \
+    s##idx0 = v_fma(s##idx0, vscale, vbias); \
+    s##idx1 = v_fma(s##idx1, vscale, vbias); \
     add_residual2(idx0, idx1); \
-    s##idx0 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vv_f32m2(s##idx0, valpha, _vl), s##idx0, \
-                                       __riscv_vmfge_vv_f32m2_b16(s##idx0, zz, _vl), _vl); \
-    s##idx1 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vv_f32m2(s##idx1, valpha, _vl), s##idx1, \
-                                       __riscv_vmfge_vv_f32m2_b16(s##idx1, zz, _vl), _vl); \
-    s##idx0 = __riscv_vfmin_vv_f32m2(s##idx0, vmaxval, _vl); \
-    s##idx1 = __riscv_vfmin_vv_f32m2(s##idx1, vmaxval, _vl); \
-    __riscv_vse32_v_f32m2(outbuf + idx0*K0, s##idx0, _vl); \
-    __riscv_vse32_v_f32m2(outbuf + idx1*K0, s##idx1, _vl)
+    s##idx0 = v_select(v_ge(s##idx0, zz), s##idx0, v_mul(s##idx0, valpha)); \
+    s##idx1 = v_select(v_ge(s##idx1, zz), s##idx1, v_mul(s##idx1, valpha)); \
+    s##idx0 = v_min(s##idx0, vmaxval); \
+    s##idx1 = v_min(s##idx1, vmaxval); \
+    v_store(outbuf + idx0*K0, s##idx0); \
+    v_store(outbuf + idx1*K0, s##idx1)
 
 #undef CONV_FINALIZE_OUT_ALL
 #define CONV_FINALIZE_OUT_ALL() \
@@ -618,12 +604,10 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
     v_float32x4 zz = v_setzero_f32(); \
     v_float32x4 s0 = zz, s1 = zz
 #elif CV_SIMD_SCALABLE
-// RVV: native LMUL=2 with vl fixed to K0, so one vector spans exactly one output block
-// on any VLEN >= 128. See the CONV_INIT_SUMS block above.
+// RVV: K0 == vlanes(), so a single scalable vector spans the whole output block.
 #define CONV_INIT_SCALAR_SUMS() \
-    const size_t _vl = __riscv_vsetvl_e32m2(K0); \
-    vfloat32m2_t zz = __riscv_vfmv_v_f_f32m2(0.f, _vl); \
-    vfloat32m2_t s0 = zz
+    v_float32 zz = vx_setzero_f32(); \
+    v_float32 s0 = zz
 #else
 #define CONV_INIT_SCALAR_SUMS() \
     for (int _ks = 0; _ks < K0; _ks++) tmpbuf[_ks] = 0.f
@@ -661,16 +645,15 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
 #elif CV_SIMD_SCALABLE
 #define CONV_FINALIZE_SCALAR_OUT(outbuf) \
     { \
-        vfloat32m2_t _vsc = __riscv_vle32_v_f32m2(scalebuf, _vl); \
-        vfloat32m2_t _vbi = __riscv_vle32_v_f32m2(biasbuf, _vl); \
-        vfloat32m2_t _val = __riscv_vle32_v_f32m2(alphabuf, _vl); \
-        vfloat32m2_t _vmx = __riscv_vfmv_v_f_f32m2(maxval, _vl); \
-        s0 = __riscv_vfmadd_vv_f32m2(s0, _vsc, _vbi, _vl); \
-        s0 = __riscv_vfadd_vv_f32m2(s0, __riscv_vle32_v_f32m2(resbuf, _vl), _vl); \
-        s0 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vv_f32m2(s0, _val, _vl), s0, \
-                                      __riscv_vmfge_vv_f32m2_b16(s0, zz, _vl), _vl); \
-        s0 = __riscv_vfmin_vv_f32m2(s0, _vmx, _vl); \
-        __riscv_vse32_v_f32m2((outbuf), s0, _vl); \
+        v_float32 _vsc = vx_load(scalebuf); \
+        v_float32 _vbi = vx_load(biasbuf); \
+        v_float32 _val = vx_load(alphabuf); \
+        v_float32 _vmx = vx_setall_f32(maxval); \
+        s0 = v_fma(s0, _vsc, _vbi); \
+        s0 = v_add(s0, vx_load(resbuf)); \
+        s0 = v_select(v_ge(s0, zz), s0, v_mul(s0, _val)); \
+        s0 = v_min(s0, _vmx); \
+        v_store((outbuf), s0); \
     }
 #else
 #define CONV_FINALIZE_SCALAR_OUT(outbuf) \
@@ -681,9 +664,8 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
     }
 #endif
 
-// The C0=8-specialized kernels below are written in fixed-width intrinsics (v_float32x4/x8),
-// which do not exist on scalable backends; RVV uses the generic kernel instead, so do not
-// compile them there (avoids -Wunused-function).
+// RVV uses the generic runtime-C0 path below; the C0=8-specialized kernels are
+// unused on scalable backends, so do not compile them there (avoids -Wunused-function).
 #if !CV_SIMD_SCALABLE
 
 // Specialized 1x1 convolution kernel with stride=1.
@@ -2150,7 +2132,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
 {
-#if !CV_SIMD_SCALABLE  // RVV: skip the fixed-width C0=8 kernels; use the generic kernel
+#if !CV_SIMD_SCALABLE  // RVV: skip the C0=8-specialized kernels; use the generic runtime-C0 path
     int ksize = cs.wshape[2];
     if (ksize == 1 && cs.strides[0]*cs.strides[1]*cs.strides[2] == 1) {
     #if CV_SIMD256 && defined(__AVX2__)
@@ -2221,8 +2203,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
         // The block size is a fixed property of the blocked layout on every platform,
-        // so C0/K0 are compile-time constants here. On RVV the kernels pin the vector
-        // length to K0 rather than sizing the block to the vector (#29454).
+        // so C0/K0 are compile-time constants here (#29454).
         constexpr int C0shift = 3, K0shift = C0shift;
         constexpr int C0 = 1 << C0shift, K0 = C0;
         constexpr int C0BUF = K0;
@@ -2537,12 +2518,13 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                         CONV_UPDATE_BLOCK1(6);
                         CONV_UPDATE_BLOCK1(7);
                     #elif CV_SIMD_SCALABLE
-                        // RVV: weights are contiguous over kk for a fixed c0, and _vl == K0
-                        // (see CONV_INIT_SCALAR_SUMS), so one load gives the whole K0-wide
-                        // weight vector. Broadcast the input lane into the accumulator.
+                        // RVV: K0 == vlanes(); weights are contiguous over kk for a fixed c0,
+                        // so one vx_load gives the whole K0-wide weight vector. Broadcast the
+                        // input lane and accumulate into the persistent block accumulator.
                         for (int c0 = 0; c0 < C0; ++c0) {
-                            vfloat32m2_t w = __riscv_vle32_v_f32m2(wptr + c0*K0, _vl);
-                            s0 = __riscv_vfmacc_vf_f32m2(s0, inptr[c0], w, _vl);
+                            v_float32 w = vx_load(wptr + c0*K0);
+                            v_float32 x = vx_setall_f32(inptr[c0]);
+                            s0 = v_fma(x, w, s0);
                         }
                     #else
                         for (int c0 = 0; c0 < C0; ++c0) {

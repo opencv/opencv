@@ -2214,9 +2214,9 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
 #elif CV_RVV
 {
-    // LMUL=1 kernel: vlanes = VLEN/32 (8 at VLEN=256). Native intrinsics are used so the
-    // tile width is fixed by the kernel rather than by whatever LMUL the universal
-    // intrinsics happen to be built with (#29454).
+    // LMUL=1 kernel: vlanes = VLEN/32 (8 at VLEN=256).
+    // OpenCV's v_float32 is vfloat32m2_t (LMUL=2, vlanes=2*VLEN/32=16 at VLEN=256);
+    // 24 % 16 != 0, so the 24-wide tile requires LMUL=1 and native intrinsics.
     // vfmacc.vf (scalar-into-vector FMA) avoids a broadcast register.
     // Only the exact full-tile case (outLen==convNR) is handled; tails fall to scalar.
     const size_t vl = __riscv_vsetvlmax_e32m1();

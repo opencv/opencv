@@ -63,14 +63,9 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     const float* wdata = (const float*)weights__;
     const float* bias  = bias__;
 
-#if CV_SIMD_SCALABLE
-    // RVV: the vector length is pinned to K0 (see below), so one vector always spans
-    // exactly one output block whatever the hardware VLEN. Only the weight-packing
-    // constraint remains; repackDeconvWeights() zero-fills padded lanes.
-    const bool simd_ok = ((ngroups == 1) || (Kg % C0 == 0));
-#elif CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
-    // zero-fills padded lanes. The block must also be a whole number of vectors.
+    // zero-fills padded lanes.
     const bool simd_ok =
         ((ngroups == 1) || (Kg % C0 == 0)) && (C0 % VTraits<v_float32>::vlanes() == 0);
 #endif
@@ -120,55 +115,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                     }
                 }
 
-#if CV_SIMD_SCALABLE
-                if (simd_ok) {
-                    // Set the vector length to the block size instead of taking whatever
-                    // the hardware offers: vlmax(e32,m2) = VLEN/32*2 >= K0 for every
-                    // VLEN >= 128, so __riscv_vsetvl_e32m2(K0) returns exactly K0. One
-                    // accumulator therefore spans the whole output block on any VLEN, and
-                    // the block never has to be a whole number of vectors (#29454).
-                    const size_t _vl = __riscv_vsetvl_e32m2(K0);
-                    vfloat32m2_t acc = __riscv_vle32_v_f32m2(out_ptr, _vl);
-
-                    for (int ks = 0; ks < ksize; ks++) {
-                        bool valid = true;
-                        int ipos_flat = 0;
-                        for (int i = 0; i < sdims; i++) {
-                            int di = MAX_DIMS - sdims + i;
-                            int raw = ocoords[di] + cs.pads[di]
-                                      - kcoords_tab[ks][di] * cs.dilations[di];
-                            if (raw < 0 || raw % cs.strides[di] != 0) {
-                                valid = false; break;
-                            }
-                            int ic = raw / cs.strides[di];
-                            if (ic >= iDims[di]) { valid = false; break; }
-                            ipos_flat = ipos_flat * iDims[di] + ic;
-                        }
-                        if (!valid) continue;
-
-                        const float* w_base = wdata +
-                            ((int64_t)(simd_g * Kblk + simd_kblk) * ksize + ks)
-                            * C1Max * C0 * K0;
-
-                        for (int c1p = 0; c1p < C1Max; c1p++) {
-                            const int c1_abs = simd_c1_abs_base + c1p;
-                            if (c1_abs >= C1) break;
-
-                            const float* inp_ptr = inp_n +
-                                (int64_t)(c1_abs * ispatial + ipos_flat) * C0;
-                            const float* w_c1p = w_base + (int64_t)c1p * C0 * K0;
-
-                            for (int c0 = 0; c0 < C0; c0++) {
-                                vfloat32m2_t w0 = __riscv_vle32_v_f32m2(w_c1p + c0 * K0, _vl);
-                                acc = __riscv_vfmacc_vf_f32m2(acc, inp_ptr[c0], w0, _vl);
-                            }
-                        }
-                    }
-
-                    __riscv_vse32_v_f32m2(out_ptr, acc, _vl);
-                    continue;
-                }
-#elif CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (simd_ok) {
                     const int VLANES = VTraits<v_float32>::vlanes();
                     const int v_per_block = C0 / VLANES;

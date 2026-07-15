@@ -136,6 +136,12 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                 }
             }
         #if CV_SIMD || CV_SIMD_SCALABLE
+            /*
+                [TODO] support C0 == vlanes/2, maybe C0 == vlanes/4.
+                in this case, load everything into vsc0 and vb0, process
+                most part of the plane using vector code as if C0 == vlanes and
+                then process the tail using scalar code
+            */
             else if (C0 == vlanes*4 || C0 == vlanes*2 || C0 == vlanes) {
                 // accelerated block layout case
                 int c = 0;
@@ -260,63 +266,6 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                             v_pack_store(outptr + i, x0);
                         }
                     }
-                }
-            }
-            else if (C0 < vlanes && vlanes % C0 == 0) {
-                /*
-                    Vector wider than the channel block (e.g. C0 == 8 on a VLEN >= 512
-                    machine). The plane is contiguous [pixel][C0] and the per-channel
-                    coefficients repeat every C0 elements, so replicate the C0-wide
-                    scale/bias pattern vlanes/C0 times. One vector then spans vlanes/C0
-                    consecutive pixels with correctly aligned coefficients, and the plane
-                    can be swept in plain vlanes-sized steps at full lane utilisation.
-                */
-                const int reps = vlanes / C0;
-                int c = 0;
-                for (; c < c_delta; c++) {
-                    scalebuf[c] = scaleptr[c];
-                    biasbuf[c] = biasptr[c];
-                }
-                for (; c < C0; c++)  // padded channels of the last block -> zero output
-                    scalebuf[c] = biasbuf[c] = 0.f;
-                for (int r = 1; r < reps; r++) {
-                    for (int c2 = 0; c2 < C0; c2++) {
-                        scalebuf[r*C0 + c2] = scalebuf[c2];
-                        biasbuf[r*C0 + c2] = biasbuf[c2];
-                    }
-                }
-                v_float32 vsc = vx_load(scalebuf);
-                v_float32 vb = vx_load(biasbuf);
-                if (type == CV_32F) {
-                    const float* inptr = (const float*)inptr_;
-                    float* outptr = (float*)outptr_;
-                    for (; i <= planesize_C0 - vlanes; i += vlanes) {
-                        v_float32 x0 = vx_load(inptr + i);
-                        x0 = v_fma(x0, vsc, vb);
-                        v_store(outptr + i, x0);
-                    }
-                    for (; i < planesize_C0; i++)
-                        outptr[i] = inptr[i]*scalebuf[i % C0] + biasbuf[i % C0];
-                } else if (type == CV_16F) {
-                    const hfloat* inptr = (const hfloat*)inptr_;
-                    hfloat* outptr = (hfloat*)outptr_;
-                    for (; i <= planesize_C0 - vlanes; i += vlanes) {
-                        v_float32 x0 = vx_load_expand(inptr + i);
-                        x0 = v_fma(x0, vsc, vb);
-                        v_pack_store(outptr + i, x0);
-                    }
-                    for (; i < planesize_C0; i++)
-                        outptr[i] = hfloat(float(inptr[i])*scalebuf[i % C0] + biasbuf[i % C0]);
-                } else if (type == CV_16BF) {
-                    const bfloat* inptr = (const bfloat*)inptr_;
-                    bfloat* outptr = (bfloat*)outptr_;
-                    for (; i <= planesize_C0 - vlanes; i += vlanes) {
-                        v_float32 x0 = vx_load_expand(inptr + i);
-                        x0 = v_fma(x0, vsc, vb);
-                        v_pack_store(outptr + i, x0);
-                    }
-                    for (; i < planesize_C0; i++)
-                        outptr[i] = bfloat(float(inptr[i])*scalebuf[i % C0] + biasbuf[i % C0]);
                 }
             }
         #endif

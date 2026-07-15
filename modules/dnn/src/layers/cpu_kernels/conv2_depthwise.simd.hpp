@@ -38,8 +38,6 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     parallel_for_(Range(0, NC1), [&](const Range& range)
     {
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
-        // The block size is a fixed property of the blocked layout on every platform; on RVV
-        // the kernel pins the vector length to C0 instead of sizing C0 to the vector (#29454).
         constexpr int C0 = 8;
 
         CV_Assert(cs.nspatialdims <= MAX_CONV_DIMS && MAX_CONV_DIMS == 3);
@@ -91,18 +89,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             defaultAlpha = 1.f;
         }
 
-    #if CV_SIMD_SCALABLE
-        // RVV: the blocked layout fixes C0 == 8 regardless of the hardware vector width, so
-        // the universal intrinsics cannot be used here -- v_float32 is always vlanes() wide
-        // and there is no way to make it span exactly C0 elements. Drop to native RVV and
-        // pin the vector length to C0 (#29454). LMUL=2 guarantees vlmax(e32,m2) =
-        // VLEN/32*2 >= 8 for every VLEN >= 128, so _vl == C0 == 8 on every machine and one
-        // vector spans precisely one channel block -- no VLEN-dependent branches, and
-        // nothing can overrun or under-fill the block.
-        const size_t _vl = __riscv_vsetvl_e32m2(C0);
-        vfloat32m2_t v_maxval = __riscv_vfmv_v_f_f32m2(maxval, _vl);
-        vfloat32m2_t z = __riscv_vfmv_v_f_f32m2(0.f, _vl);
-    #elif CV_SIMD
+    #if CV_SIMD || CV_SIMD_SCALABLE
         v_float32 v_maxval = vx_setall_f32(maxval);
         v_float32 z = vx_setzero_f32();
         const int nlanes = VTraits<v_float32>::vlanes();
@@ -144,36 +131,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD_SCALABLE
-                        {
-                            vfloat32m2_t sc0 = __riscv_vle32_v_f32m2(scalebuf, _vl);
-                            vfloat32m2_t b0 = __riscv_vle32_v_f32m2(biasbuf, _vl);
-                            vfloat32m2_t alpha0 = __riscv_vle32_v_f32m2(alphabuf, _vl);
-                            for (; x0 < x1; x0++) {
-                                int xi_ = x0*SX - padX0;
-                                vfloat32m2_t s0 = z;
-                                for (int k = 0; k < ksize; k++) {
-                                    int zi = zi_ + zyxtab[k*MAX_CONV_DIMS];
-                                    int yi = yi_ + zyxtab[k*MAX_CONV_DIMS + 1];
-                                    int xi = xi_ + zyxtab[k*MAX_CONV_DIMS + 2];
-                                    if ((unsigned)zi >= (unsigned)Di ||
-                                        (unsigned)yi >= (unsigned)Hi ||
-                                        (unsigned)xi >= (unsigned)Wi)
-                                        continue;
-                                    vfloat32m2_t v0 = __riscv_vle32_v_f32m2(inp + ((zi*Hi + yi)*Wi + xi)*C0, _vl);
-                                    vfloat32m2_t w0 = __riscv_vle32_v_f32m2(weights + k*C0, _vl);
-                                    s0 = __riscv_vfmacc_vv_f32m2(s0, v0, w0, _vl);
-                                }
-                                s0 = __riscv_vfmadd_vv_f32m2(s0, sc0, b0, _vl);
-                                if (residual)
-                                    s0 = __riscv_vfadd_vv_f32m2(s0, __riscv_vle32_v_f32m2(residual + x0*C0, _vl), _vl);
-                                s0 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vv_f32m2(s0, alpha0, _vl), s0,
-                                                              __riscv_vmfge_vv_f32m2_b16(s0, z, _vl), _vl);
-                                s0 = __riscv_vfmin_vv_f32m2(s0, v_maxval, _vl);
-                                __riscv_vse32_v_f32m2(out + x0*C0, s0, _vl);
-                            }
-                        }
-                    #elif CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf);
                             v_float32 alpha0 = vx_load(alphabuf);
@@ -260,31 +218,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD_SCALABLE
-                        {
-                            vfloat32m2_t sc0 = __riscv_vle32_v_f32m2(scalebuf, _vl);
-                            vfloat32m2_t b0 = __riscv_vle32_v_f32m2(biasbuf, _vl);
-                            vfloat32m2_t alpha0 = __riscv_vle32_v_f32m2(alphabuf, _vl);
-                            for (; x0 < x1; x0++) {
-                                int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                vfloat32m2_t s0 = z;
-                                for (int k = 0; k < ksize; k++) {
-                                    vfloat32m2_t v0 = __riscv_vle32_v_f32m2(inp_xi + ofstab[k], _vl);
-                                    vfloat32m2_t w0 = __riscv_vle32_v_f32m2(weights + k*C0, _vl);
-                                    s0 = __riscv_vfmacc_vv_f32m2(s0, v0, w0, _vl);
-                                }
-                                s0 = __riscv_vfmadd_vv_f32m2(s0, sc0, b0, _vl);
-                                if (residual)
-                                    s0 = __riscv_vfadd_vv_f32m2(s0, __riscv_vle32_v_f32m2(residual + x0*C0, _vl), _vl);
-                                s0 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vv_f32m2(s0, alpha0, _vl), s0,
-                                                              __riscv_vmfge_vv_f32m2_b16(s0, z, _vl), _vl);
-                                s0 = __riscv_vfmin_vv_f32m2(s0, v_maxval, _vl);
-                                __riscv_vse32_v_f32m2(out + x0*C0, s0, _vl);
-                            }
-                        }
-                    #elif CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf), alpha0 = vx_load(alphabuf);
                             for (; x0 < x1; x0++) {
