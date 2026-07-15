@@ -386,7 +386,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
         CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
     }
 
-#elif CV_SIMD_SCALABLE
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch, re-enabled in a follow-up (#29454, cf. #29180)
 
 /////////////////////////// scalable (RVV) implementation /////////////////////////////
 // K0 == vlanes(), so each of the 10 spatial positions needs exactly one vector
@@ -603,8 +603,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32x4 zz = v_setzero_f32(); \
     v_float32x4 s0 = zz, s1 = zz
-#elif CV_SIMD_SCALABLE
-// RVV: K0 == vlanes(), so a single scalable vector spans the whole output block.
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29454)
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32 zz = vx_setzero_f32(); \
     v_float32 s0 = zz
@@ -642,7 +641,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
         s0 = v_min(s0, _vmx); s1 = v_min(s1, _vmx); \
         v_store((outbuf), s0); v_store((outbuf) + 4, s1); \
     }
-#elif CV_SIMD_SCALABLE
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29454)
 #define CONV_FINALIZE_SCALAR_OUT(outbuf) \
     { \
         v_float32 _vsc = vx_load(scalebuf); \
@@ -2517,10 +2516,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                         CONV_UPDATE_BLOCK1(5);
                         CONV_UPDATE_BLOCK1(6);
                         CONV_UPDATE_BLOCK1(7);
-                    #elif CV_SIMD_SCALABLE
-                        // RVV: K0 == vlanes(); weights are contiguous over kk for a fixed c0,
-                        // so one vx_load gives the whole K0-wide weight vector. Broadcast the
-                        // input lane and accumulate into the persistent block accumulator.
+                    #elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29454)
                         for (int c0 = 0; c0 < C0; ++c0) {
                             v_float32 w = vx_load(wptr + c0*K0);
                             v_float32 x = vx_setall_f32(inptr[c0]);
