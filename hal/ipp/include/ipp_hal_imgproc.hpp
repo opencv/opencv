@@ -14,6 +14,8 @@
 #define DISABLE_IPP_FILTER2D 1
 // Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
 #define IPP_DISABLE_FILTER2D_BIG_MASK 1
+// IPP median blur integration kept disabled; was #if 0 in main OpenCV.
+#define DISABLE_IPP_MEDIAN_BLUR 1
 
 // IPP Hough integration is disabled in main OpenCV (improper integration/results); kept behind a macro
 #define DISABLE_IPP_HOUGH 1
@@ -140,6 +142,13 @@ int ipp_hal_morph_stateless(int operation, const uchar * src_data, size_t src_st
 #undef cv_hal_morph_stateless
 #define cv_hal_morph_stateless ipp_hal_morph_stateless
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
+
+#if !DISABLE_IPP_MEDIAN_BLUR
+int ipp_hal_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                       int width, int height, int depth, int cn, int ksize);
+#undef cv_hal_medianBlur
+#define cv_hal_medianBlur ipp_hal_medianBlur
+#endif // !DISABLE_IPP_MEDIAN_BLUR
 
 #endif //IPP_VERSION_X100 >= 810
 

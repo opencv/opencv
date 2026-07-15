@@ -110,79 +110,6 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 
 #endif
 
-#if 0 //defined HAVE_IPP
-static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_VERSION_X100 < 201801
-    // Degradations for big kernel
-    if(ksize > 7)
-        return false;
-#endif
-
-    {
-        int         bufSize;
-        IppiSize    dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
-        IppDataType ippType = ippiGetDataType(src0.type());
-        int         channels = src0.channels();
-        IppAutoBuffer<Ipp8u> buffer;
-
-        if(src0.isSubmatrix())
-            return false;
-
-        Mat src;
-        if(dst.data != src0.data)
-            src = src0;
-        else
-            src0.copyTo(src);
-
-        if(ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, ippType, channels, &bufSize) < 0)
-            return false;
-
-        buffer.allocate(bufSize);
-
-        switch(ippType)
-        {
-        case ipp8u:
-            if(channels == 1)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C1R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 3)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C3R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 4)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C4R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else
-                return false;
-        case ipp16u:
-            if(channels == 1)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C1R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 3)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C3R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 4)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C4R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else
-                return false;
-        case ipp16s:
-            if(channels == 1)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C1R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 3)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C3R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else if(channels == 4)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C4R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else
-                return false;
-        case ipp32f:
-            if(channels == 1)
-                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
-            else
-                return false;
-        default:
-            return false;
-        }
-    }
-}
-#endif
-
 void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
     CV_INSTRUMENT_REGION();
@@ -206,8 +133,6 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     CALL_HAL(medianBlur, cv_hal_medianBlur, src0.data, src0.step, dst.data, dst.step, src0.cols, src0.rows, src0.depth(),
              src0.channels(), ksize);
-
-    //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);
