@@ -14,7 +14,6 @@ namespace opencv_test { namespace {
 TEST(Features2d_ALIKED, Regression)
 {
     applyTestTag( CV_TEST_TAG_MEMORY_2GB);
-    skipIfClassicDnnEngine();
 
     const std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
 
@@ -79,7 +78,6 @@ TEST(Features2d_ALIKED, Regression)
 TEST(Features2d_LightGlue, Regression)
 {
     applyTestTag( CV_TEST_TAG_MEMORY_2GB);
-    skipIfClassicDnnEngine();
 
     const std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
