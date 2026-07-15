@@ -32,6 +32,10 @@ if(POLICY CMP0148)
   cmake_policy(SET CMP0148 OLD)  # CMake 3.27+: use CMake FindPythonInterp and FindPythonLib if available.
 endif()
 
+if(POLICY CMP0218)
+  cmake_policy(SET CMP0218 NEW)  # Suppress warning for CMAKE_WARN_DEPRECATED in CMake 4.4.0+
+endif()
+
 #
 # Configure OpenCV CMake hooks
 #
