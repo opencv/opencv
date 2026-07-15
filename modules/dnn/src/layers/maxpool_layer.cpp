@@ -53,6 +53,12 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
     #if CV_SIMD || CV_SIMD_SCALABLE
         int nlanes = VTraits<v_float32>::vlanes();
         v_float32 s_min = vx_setall_f32(INITVAL);
+        // TODO(#29493): with the fixed C0=8 this covers VLEN=128 (C0==nlanes*2) and
+        // VLEN=256 (C0==nlanes); VLEN>=512 gives C0<nlanes and trips this assert.
+        // Follow-up: a portable v_setvlmax<v_float32>(C0) universal intrinsic (no-op on
+        // fixed-width ISAs, sets the vl/mask on RVV/SVE) caps the vector to the block so
+        // wide VLEN works; the optimized multi-pixel case (stride=1) is a later RVV-HAL
+        // step. See PR #29493 discussion.
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
     #endif
 
