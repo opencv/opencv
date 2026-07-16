@@ -289,6 +289,8 @@ protected:
     void parseAttentionOnnxAi      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCausalConvWithState  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGroupQueryAttention  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSkipSimplifiedLayerNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2300,6 +2302,7 @@ void ONNXImporter2::parseDynamicQuantizeLinear(LayerParams& layerParams, const o
 
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "RMSNormalization";
     addLayer(layerParams, node_proto);
 }
 
@@ -2690,6 +2693,18 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
     addLayer(params, node_proto, n_inputs);
 }
 
+void ONNXImporter2::parseGroupQueryAttention(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(layerParams.has("num_heads"), "ONNXImporter2/parseGroupQueryAttention: num_heads is required but missing");
+    CV_CheckTrue(layerParams.has("kv_num_heads"), "ONNXImporter2/parseGroupQueryAttention: kv_num_heads is required but missing");
+    layerParams.type = "GroupQueryAttention";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseSkipSimplifiedLayerNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
+    layerParams.type = "SkipSimplifiedLayerNormalization";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseSDPA(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckEQ(node_proto.input_size(), 3, "ONNXImporter2/parseSDPA: SDPA expects 3 inputs (Q, K^T, V)");
     addLayer(params, node_proto, 3);
@@ -2799,7 +2814,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
-    dispatch["RMSNormalization"] = &ONNXImporter2::parseRMSNormalization;
+    dispatch["RMSNormalization"] = dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseRMSNormalization;
     dispatch["RotaryEmbedding"] = &ONNXImporter2::parseRotaryEmbedding;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
@@ -2861,6 +2876,8 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
     dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
+    dispatch["GroupQueryAttention"] = &ONNXImporter2::parseGroupQueryAttention;
+    dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNormalization;
 
     domain_dispatch_map[str_domain_com_microsoft] = dispatch;
 }

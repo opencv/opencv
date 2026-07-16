@@ -410,6 +410,36 @@ public:
         return ptr;
     }
 
+    uint32_t parseUnicodeEscape(char*& ptr)
+    {
+        uint32_t codepoint = 0;
+        for (int k = 0; k < 4; k++, ptr++) {
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            char hex = *ptr;
+            uint32_t digit = 0;
+            if      (hex >= '0' && hex <= '9') digit = (uint32_t)(hex - '0');
+            else if (hex >= 'a' && hex <= 'f') digit = (uint32_t)(hex - 'a') + 10u;
+            else if (hex >= 'A' && hex <= 'F') digit = (uint32_t)(hex - 'A') + 10u;
+            else CV_PARSE_ERROR_CPP("invalid \\uXXXX escape sequence");
+            codepoint = (codepoint << 4) | digit;
+        }
+        return codepoint;
+    }
+
+    static void appendUtf8(std::string& out, uint32_t codepoint)
+    {
+        if (codepoint < 0x80) {
+            out += (char)codepoint;
+        } else if (codepoint < 0x800) {
+            out += (char)(0xC0 | (codepoint >> 6));
+            out += (char)(0x80 | (codepoint & 0x3F));
+        } else {
+            out += (char)(0xE0 | (codepoint >> 12));
+            out += (char)(0x80 | ((codepoint >> 6) & 0x3F));
+            out += (char)(0x80 | (codepoint & 0x3F));
+        }
+    }
+
     char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder )
     {
         if (!ptr)
@@ -424,6 +454,12 @@ public:
             if (*ptr == '\\') { // skip the next character if current is back slash
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+                if (*ptr == 'u') {
+                    ++ptr;
+                    uint32_t codepoint = parseUnicodeEscape(ptr);
+                    appendUtf8(key_name, codepoint);
+                    continue;
+                }
                 key_name += *ptr;
             } else if (*ptr != '"') {
                 // normal byte: append current, do NOT skip ahead first
@@ -528,29 +564,14 @@ public:
                             case 'b' : { buf[i++] = '\b'; break; }
                             case 'f' : { buf[i++] = '\f'; break; }
                             case 'u' : {
-                                if (i + 4 >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
                                 ptr++;
-                                uint32_t codepoint = 0;
-                                for (int k = 0; k < 4; k++, ptr++) {
-                                    char hex = *ptr;
-                                    uint32_t digit = 0;
-                                    if      (hex >= '0' && hex <= '9') digit = (uint32_t)(hex - '0');
-                                    else if (hex >= 'a' && hex <= 'f') digit = (uint32_t)(hex - 'a') + 10u;
-                                    else if (hex >= 'A' && hex <= 'F') digit = (uint32_t)(hex - 'A') + 10u;
-                                    else CV_PARSE_ERROR_CPP("invalid \\uXXXX escape sequence");
-                                    codepoint = (codepoint << 4) | digit;
-                                }
-                                if (codepoint < 0x80) {
-                                    buf[i++] = (char)codepoint;
-                                } else if (codepoint < 0x800) {
-                                    buf[i++] = (char)(0xC0 | (codepoint >> 6));
-                                    buf[i++] = (char)(0x80 | (codepoint & 0x3F));
-                                } else {
-                                    buf[i++] = (char)(0xE0 | (codepoint >> 12));
-                                    buf[i++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                                    buf[i++] = (char)(0x80 | (codepoint & 0x3F));
-                                }
+                                uint32_t codepoint = parseUnicodeEscape(ptr);
+                                std::string utf8;
+                                appendUtf8(utf8, codepoint);
+                                if (i + (int)utf8.size() >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
+                                memcpy(buf + i, utf8.data(), utf8.size());
+                                i += (int)utf8.size();
                                 beg = ptr;
                                 continue;
                             }

@@ -114,6 +114,12 @@ struct ElementWiseIntDispatch
 };
 
 template<typename Func>
+struct ElementWiseExtraTypes
+{
+    static inline bool allowed(int) { return false; }
+};
+
+template<typename Func>
 class ElementWiseLayer : public Func::Layer
 {
 public:
@@ -221,6 +227,23 @@ public:
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            if (!ElementWiseExtraTypes<Func>::allowed(input))
+            {
+                Layer::getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
+                return;
+            }
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -3345,6 +3368,39 @@ struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
 template<>
 const char* const SignFunctor::BaseDefaultFunctor<SignFunctor>::ocl_kernel_name = "SignForward";
 
+template<>
+struct ElementWiseIntDispatch<SignFunctor>
+{
+    template<typename T>
+    static inline void apply_(const T* sp, T* dp, size_t n)
+    {
+        const int nstripes = getNumThreads();
+        parallel_for_(Range(0, (int)n), [&](const Range& r) {
+            for (int i = r.start; i < r.end; ++i)
+                dp[i] = sp[i] > 0 ? (T)1 : (sp[i] < 0 ? (T)-1 : (T)0);
+        }, nstripes);
+    }
+
+    static inline bool apply(const SignFunctor&, const Mat& src, Mat& dst)
+    {
+        if (src.type() != dst.type())
+            return false;
+
+        const size_t n = src.total();
+        switch (src.depth())
+        {
+            case CV_32S: apply_(src.ptr<int32_t>(), dst.ptr<int32_t>(), n); return true;
+            case CV_64S: apply_(src.ptr<int64_t>(), dst.ptr<int64_t>(), n); return true;
+            default: return false;
+        }
+    }
+};
+
+template<>
+struct ElementWiseExtraTypes<SignFunctor>
+{
+    static inline bool allowed(int type) { return type == CV_32S || type == CV_64S; }
+};
 
 struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
 {

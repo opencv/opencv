@@ -102,7 +102,7 @@ struct SentencePieceTokenizerImpl : public Tokenizer::Impl {
     }
 };
 
-static Ptr<GemmaBpeTokenizerImpl> buildGemmaFromJson(
+static Ptr<GemmaBpeTokenizerImpl> buildBpeFromHfTokenizerJson(
         const std::string& json_path,
         std::unordered_set<std::string>* outSpecial = nullptr) {
 
@@ -263,24 +263,28 @@ static Ptr<SentencePieceTokenizerImpl> buildSentencePieceFromJson(
     return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bosId);
 }
 
+static Ptr<Tokenizer::Impl> buildBPETokenizerImpl(const std::string& model_type, const std::string& dir) {
+    std::string tok_json = dir + "tokenizer.json";
+
+    CoreBPE core;
+    std::unordered_set<std::string> special;
+    if (model_type == "gpt2" || model_type == "gpt4") {
+        core = buildTokenizerFromJson(model_type, tok_json);
+    } else if (model_type == "qwen2" || model_type == "qwen2.5" || model_type == "vlm-ocr") {
+        core = buildTokenizerFromJson(model_type, tok_json, &special);
+    } else {
+        CV_Error(cv::Error::StsError, "Unsupported model_type for BPE: " + model_type);
+    }
+    return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
+}
+
 static void registerDefaultTokenizers() {
     auto& reg = tokenizerRegistry();
     if (reg.find("BPE") == reg.end()) {
         reg["BPE"] = [](const FileStorage& cfg, const std::string& dir) -> Ptr<Tokenizer::Impl> {
             std::string model_type;
             cfg["model_type"] >> model_type;
-            std::string tok_json = dir + "tokenizer.json";
-
-            CoreBPE core;
-            std::unordered_set<std::string> special;
-            if (model_type == "gpt2" || model_type == "gpt4") {
-                core = buildTokenizerFromJson(model_type, tok_json);
-            } else if (model_type == "qwen2" || model_type == "qwen2.5") {
-                core = buildTokenizerFromJson(model_type, tok_json, &special);
-            } else {
-                CV_Error(cv::Error::StsError, "Unsupported model_type for BPE: " + model_type);
-            }
-            return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
+            return buildBPETokenizerImpl(model_type, dir);
         };
     }
 
@@ -288,7 +292,7 @@ static void registerDefaultTokenizers() {
         reg["Gemma"] = [](const FileStorage& /*cfg*/, const std::string& dir) -> Ptr<Tokenizer::Impl> {
             std::string tok_json = dir + "tokenizer.json";
             std::unordered_set<std::string> special;
-            return buildGemmaFromJson(tok_json, &special);
+            return buildBpeFromHfTokenizerJson(tok_json, &special);
         };
     }
 
@@ -326,7 +330,7 @@ CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string&
 
     std::string pattern;
     std::unordered_set<std::string> skip_tokens;
-    if (model_type == "gpt2" || model_type == "r50k_base") {
+    if (model_type == "gpt2" || model_type == "r50k_base" || model_type == "vlm-ocr") {
         pattern = R50K_UTF8;
         skip_tokens.insert("<|endoftext|>");
     } else if (model_type == "gpt4" || model_type == "cl100k_base") {
@@ -335,7 +339,7 @@ CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string&
         pattern = QWEN2_5;
     } else {
         CV_Error(cv::Error::StsError,
-            "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base, gpt4/cl100k_base, or qwen2/qwen2.5)");
+            "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base, gpt4/cl100k_base, qwen2/qwen2.5, or vlm-ocr)");
     }
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
@@ -403,6 +407,25 @@ Tokenizer Tokenizer::load(const std::string& model_config) {
 
     Tokenizer tok;
     tok.impl_ = it->second(cfg, dir);
+    return tok;
+}
+
+Tokenizer Tokenizer::loadVLM(const std::string& tokenizer_dir, const std::string& model_name) {
+    std::string dir = tokenizer_dir;
+    if (!dir.empty() && dir.back() != '/' && dir.back() != '\\')
+        dir += '/';
+
+    Tokenizer tok;
+    if (model_name == "granite-docling") {
+        tok.impl_ = buildBPETokenizerImpl("vlm-ocr", dir);
+    } else if (model_name == "paddleocr-vl") {
+        std::string tok_json = dir + "tokenizer.json";
+        std::unordered_set<std::string> special;
+        tok.impl_ = buildBpeFromHfTokenizerJson(tok_json, &special);
+    } else {
+        CV_Error(cv::Error::StsError,
+            "Unsupported VLM model: '" + model_name + "'. Supported: granite-docling, paddleocr-vl");
+    }
     return tok;
 }
 CV__DNN_INLINE_NS_END

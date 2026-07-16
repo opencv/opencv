@@ -1255,4 +1255,93 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Reduce_Int, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Sign_Int;
+TEST_P(Test_Sign_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target = get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    cv::randu(input, -100, 100);
+
+    if (matType == CV_32S)
+    {
+        input.ptr<int32_t>()[0] = 0;
+        input.ptr<int32_t>()[1] = -5;
+        input.ptr<int32_t>()[2] = 5;
+    }
+    else
+    {
+        input.ptr<int64_t>()[0] = 0;
+        input.ptr<int64_t>()[1] = -5;
+        input.ptr<int64_t>()[2] = 5;
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Sign";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(shape(input), shape(re));
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t v = getValueAt(input, i);
+        int64_t expected = v > 0 ? 1 : (v < 0 ? -1 : 0);
+        EXPECT_EQ(getValueAt(re, i), expected);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Sign_Int_Unsupported;
+TEST_P(Test_Sign_Int_Unsupported, throws)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target = get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    if (backend != DNN_BACKEND_OPENCV)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    cv::randu(input, 0, 2);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Sign";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    EXPECT_ANY_THROW(net.forward());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int_Unsupported, Combine(
+    testing::Values(CV_Bool, CV_8U, CV_8S),
+    dnnBackendsAndTargets()
+));
+
 }} // namespace
