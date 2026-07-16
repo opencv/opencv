@@ -176,6 +176,16 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
             }
         }
     }
+    // Fallback for channels-first inputs lacking the metadata marker: dim1 is a channel count, last dim is not.
+    if (!preferNCHWInput) {
+        const auto* sg0 = model->subgraphs()->Get(0);
+        if (sg0->inputs() && sg0->inputs()->size() > 0) {
+            const auto* shp = sg0->tensors()->Get(sg0->inputs()->Get(0))->shape();
+            auto isChannels = [](int v) { return v == 1 || v == 3 || v == 4; };
+            if (shp && shp->size() == 4 && isChannels(shp->Get(1)) && !isChannels(shp->Get(3)))
+                preferNCHWInput = true;
+        }
+    }
 
     modelTensors = model->subgraphs()->Get(0)->tensors();
     CV_Assert(modelTensors);
@@ -398,6 +408,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["MaxPoolingWithArgmax2D"] = &TFLiteImporter::parsePoolingWithArgmax;
     dispatch["MaxUnpooling2D"] = &TFLiteImporter::parseUnpooling;
     dispatch["PAD"] = &TFLiteImporter::parsePadding;
+    dispatch["PADV2"] = &TFLiteImporter::parsePadding;
     dispatch["RESHAPE"] = &TFLiteImporter::parseReshape;
     dispatch["CONCATENATION"] = &TFLiteImporter::parseConcat;
     dispatch["PACK"] = &TFLiteImporter::parsePack;
@@ -724,6 +735,12 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
     }
 
     layerParams.set("paddings", DictValue::arrayInt<int32_t*>((int32_t*)paddings.data, paddings.total()));
+    if (opcode == "PADV2" && op.inputs()->size() >= 3) {
+        Mat constValue;
+        allTensors[op.inputs()->Get(2)].convertTo(constValue, CV_64F);
+        if (!constValue.empty())
+            layerParams.set("value", constValue.at<double>(0));
+    }
     addLayer(layerParams, op);
 }
 
@@ -1401,24 +1418,10 @@ void TFLiteImporter::parseTransposeConv(const Operator& op, const std::string& o
 
     // Reorder filter data from OHWI to IOHW and change shape correspondingly.
     CV_CheckTypeEQ(filter.type(), CV_32F, "");
-    int newShape[] = {ic, oc, kh, kw};
-    Mat reordered(4, newShape, CV_32F);
-    const float* srcData = filter.ptr<float>();
-    float* dstData = reordered.ptr<float>();
-    int total = oc * ic * kh * kw;
-    for (int i_oc = 0; i_oc < oc; i_oc++) {
-        for (int i_ic = 0; i_ic < ic; i_ic++) {
-            for (int i_h = 0; i_h < kh; i_h++) {
-                for (int i_w = 0; i_w < kw; i_w++) {
-                    int dst_i = kw * (kh * (oc * i_ic + i_oc) + i_h) + i_w;
-                    int src_i = ic * (kw * (kh * i_oc + i_h) + i_w) + i_ic;
-                    CV_CheckLT(dst_i, total, "");
-                    CV_CheckLT(src_i, total, "");
-                    dstData[dst_i] = srcData[src_i];
-                }
-            }
-        }
-    }
+    const int ohwiShape[] = {oc, kh, kw, ic};
+    Mat filterOHWI(4, ohwiShape, CV_32F, (void*)filter.ptr<float>());
+    Mat reordered;
+    transposeND(filterOHWI, {3, 0, 1, 2}, reordered);
 
     // Populate blobs manually so addLayer does not treat the output_shape
     // constant (input 0) as a weight blob.
@@ -1472,6 +1475,9 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     Mat ends = allTensors[op.inputs()->Get(2)].clone();
     Mat strides = allTensors[op.inputs()->Get(3)].clone();
 
+    if (begins.type() == CV_64SC1) begins.convertTo(begins, CV_32S);
+    if (ends.type() == CV_64SC1) ends.convertTo(ends, CV_32S);
+    if (strides.type() == CV_64SC1) strides.convertTo(strides, CV_32S);
     CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
     CV_CheckTypeEQ(ends.type(), CV_32SC1, "");
     CV_CheckTypeEQ(strides.type(), CV_32SC1, "");
@@ -1556,6 +1562,8 @@ void TFLiteImporter::parseSlice(const Operator& op, const std::string& opcode, L
     Mat begins = allTensors[op.inputs()->Get(1)].clone();
     Mat sizes = allTensors[op.inputs()->Get(2)];
 
+    if (begins.type() == CV_64SC1) begins.convertTo(begins, CV_32S);
+    if (sizes.type() == CV_64SC1) sizes.convertTo(sizes, CV_32S);
     CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
     CV_CheckTypeEQ(sizes.type(), CV_32SC1, "");
     const int num = begins.total();
