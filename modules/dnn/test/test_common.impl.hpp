@@ -82,6 +82,12 @@ void normAssert(
 {
     cv::Mat refMat = ref.getMat();
     cv::Mat testMat = test.getMat();
+    // 16-bit float types (half / bfloat16) are compared as float32: the two-arg
+    // cvtest::norm requires identical types and does not down-convert them.
+    if (refMat.depth() == CV_16F || refMat.depth() == CV_16BF)
+        refMat.convertTo(refMat, CV_32F);
+    if (testMat.depth() == CV_16F || testMat.depth() == CV_16BF)
+        testMat.convertTo(testMat, CV_32F);
     const cv::MatShape refShape = refMat.shape();
     const cv::MatShape testShape = testMat.shape();
     const bool scalar1dCompatible =

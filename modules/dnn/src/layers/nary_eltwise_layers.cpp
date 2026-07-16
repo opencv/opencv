@@ -417,7 +417,8 @@ public:
             }
             else if (!baseIsFloat && expIsFloat)
             {
-                out_type = CV_32F;
+                // ONNX Pow output type follows the base (X): integer base -> integer output.
+                out_type = inputs[0];
             }
             else
             {
