@@ -109,12 +109,16 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
     if (fn.empty() || !readParameter("nmarkers", nMarkers, fn) || !readParameter("markersize", _markerSize, fn))
         return false;
+    if (_markerSize <= 0)
+        return false;
     Mat bytes(0, 0, CV_8UC1), marker(_markerSize, _markerSize, CV_8UC1);
     std::string markerString;
     for (int i = 0; i < nMarkers; i++) {
         std::ostringstream ostr;
         ostr << i;
         if (!readParameter("marker_" + ostr.str(), markerString, fn))
+            return false;
+        if (markerString.size() != (size_t)_markerSize * _markerSize)
             return false;
         for (int j = 0; j < (int) markerString.size(); j++)
             marker.at<unsigned char>(j) = (markerString[j] == '0') ? 0 : 1;
