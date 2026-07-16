@@ -39,6 +39,9 @@ public:
     // convertTo: element type conversion with scale/shift — rtype, alpha, beta
     virtual bool convertTo(InputArray, OutputArray, int, double, double) { return false; }
 
+    // split: de-interleave a multi-channel src into single-channel planes
+    virtual bool split(InputArray, OutputArrayOfArrays) { return false; }
+
     // device-aware MatAllocator (keeps UMat data resident), or nullptr for default
     virtual MatAllocator* allocator() const { return NULL; }
 };

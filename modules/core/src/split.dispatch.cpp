@@ -219,6 +219,8 @@ void split(InputArray _m, OutputArrayOfArrays _mv)
 {
     CV_INSTRUMENT_REGION();
 
+    CV_GPU_RUN(_m, split, _m, _mv)
+
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 

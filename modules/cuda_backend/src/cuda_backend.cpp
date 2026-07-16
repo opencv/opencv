@@ -319,6 +319,36 @@ public:
 #endif
     }
 
+    bool split(InputArray src, OutputArrayOfArrays dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        int cn = gsrc.channels();
+        int planeType = CV_MAKETYPE(su.depth(), 1);
+
+        // Only the vector-of-UMat output form can stay resident. For anything
+        // else (vector<Mat>, fixed arrays) fall through to the CPU/OCL path.
+        if (!dst.isUMatVector()) return false;
+
+        // Populate the caller's vector directly with resident single-channel
+        // UMats; cuda::split writes the planes straight into VRAM (no copy,
+        // no host round-trip).
+        std::vector<UMat>& outs = dst.getUMatVecRef();
+        outs.resize(cn);
+        std::vector<cuda::GpuMat> planes(cn);
+        for (int i = 0; i < cn; ++i)
+            planes[i] = makeResidentOutput(outs[i], gsrc.rows, gsrc.cols, planeType);
+
+        cuda::split(gsrc, planes.data());
+        return true;
+#else
+        (void)src; (void)dst;
+        return false;
+#endif
+    }
+
     MatAllocator* allocator() const CV_OVERRIDE { return getCudaAllocator(); }
 };
 
