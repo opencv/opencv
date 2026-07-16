@@ -393,11 +393,24 @@ public:
 
         if (onnx_dtype::isFp8(onnxType))
         {
-            // round onto the FP8 grid, keep the (lossless) result as CV_16F
             const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(onnxType);
-            hfloat* d = dst.ptr<hfloat>();
-            for (size_t i = 0; i < total; i++)
-                d[i] = hfloat(onnx_dtype::fp8ToF32(onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate), fmt));
+            const int ddepth = dst.depth();
+            if (ddepth == CV_8F_E4M3FN || ddepth == CV_8F_E4M3FNUZ)
+            {
+                // native FP8: store the ONNX-encoded byte directly (RNE + saturate stay in DNN;
+                // core's own E4M3 encode uses a different rounding, so we do not route through convertTo).
+                uchar* d = dst.ptr<uchar>();
+                for (size_t i = 0; i < total; i++)
+                    d[i] = onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate);
+            }
+            else
+            {
+                // E5M2/E5M2FNUZ have no native depth yet: round onto the FP8 grid, keep the
+                // (lossless) result as CV_16F.
+                hfloat* d = dst.ptr<hfloat>();
+                for (size_t i = 0; i < total; i++)
+                    d[i] = hfloat(onnx_dtype::fp8ToF32(onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate), fmt));
+            }
         }
         else if (onnxType == onnx_dtype::ONNX_FLOAT8E8M0)
         {
@@ -452,8 +465,9 @@ private:
 
     static int mapToCvDepth(int v)
     {
-        if (v == onnx_dtype::ONNX_FLOAT8E8M0) return CV_32F; // exponent range exceeds FP16
-        if (onnx_dtype::isExoticFloat(v)) return CV_16F;     // FP8/FP4 fit losslessly in FP16
+        if (v == onnx_dtype::ONNX_FLOAT8E8M0) return CV_32F;                  // range exceeds FP16
+        if (onnx_dtype::isFp8Native(v)) return onnx_dtype::fp8NativeDepth(v); // E4M3FN/E4M3FNUZ
+        if (onnx_dtype::isExoticFloat(v)) return CV_16F;                     // E5M2/FP4
         if (onnx_dtype::isInt4(v))        return CV_8S;
         if (onnx_dtype::isUint4(v))       return CV_8U;
         switch (v)

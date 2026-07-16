@@ -2231,10 +2231,18 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             Mat(sizes, CV_64UC1, rawdata).copyTo(blob);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FN ||
-             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ ||
-             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2 ||
+             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ)
+    {
+        // E4M3FN/E4M3FNUZ have a native cv::Mat depth: keep the raw FP8 bytes.
+        checkPayloadSize(raw_data_size);
+        blob.create((int)sizes.size(), sizes.data(),
+                    CV_MAKETYPE(onnx_dtype::fp8NativeDepth(datatype), 1));
+        memcpy(blob.data, rawdata, (size_t)blob.total() * blob.elemSize());
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2 ||
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2FNUZ)
     {
+        // E5M2/E5M2FNUZ have no native depth yet: decode losslessly into CV_16F.
         const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(datatype);
         blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
         const uchar* src = (const uchar*)rawdata;

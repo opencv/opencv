@@ -36,7 +36,10 @@ inline Fp8Fmt fp8FmtFor(int onnxType)
 }
 
 inline bool isFp8(int onnxType)  { return onnxType >= 17 && onnxType <= 20; }
-// FP8/FP4 decode to CV_16F values; E8M0 decodes to CV_32F; INT4->CV_8S, UINT4->CV_8U.
+// E4M3FN (17) and E4M3FNUZ (18) have a native cv::Mat depth; E5M2/E5M2FNUZ do not.
+inline bool isFp8Native(int t)    { return t == 17 || t == 18; }
+inline int  fp8NativeDepth(int t) { return t == 17 ? CV_8F_E4M3FN : CV_8F_E4M3FNUZ; }
+// E4M3 -> native FP8; E5M2/FP4 -> CV_16F; E8M0 -> CV_32F; INT4 -> CV_8S; UINT4 -> CV_8U.
 inline bool isExoticFloat(int t) { return isFp8(t) || t == 23 /*FP4*/ || t == ONNX_FLOAT8E8M0; }
 inline bool isInt4(int t)        { return t == 22; }
 inline bool isUint4(int t)       { return t == 21; }
