@@ -1192,6 +1192,8 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_GPU_RUN(_src1, subtract, _src1, _src2, _dst)
+
     CV_Assert(_src1.empty() == _src2.empty());
     if (_src1.empty() && _src2.empty())
     {
@@ -1349,6 +1351,8 @@ void divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_GPU_RUN(src1, divide, src1, src2, dst)
 
     CV_Assert(src1.empty() == src2.empty());
     if (src1.empty() && src2.empty())

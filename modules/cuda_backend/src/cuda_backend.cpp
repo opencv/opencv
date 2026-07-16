@@ -261,6 +261,64 @@ public:
 #endif
     }
 
+    bool subtract(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::subtract(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
+    bool divide(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::divide(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
+    bool convertTo(InputArray src, OutputArray dst, int rtype, double alpha, double beta) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        // rtype from the dispatcher is a depth (e.g. CV_32F), not a full type:
+        // convertTo changes depth but preserves the source channel count.
+        int outType = CV_MAKETYPE(CV_MAT_DEPTH(rtype), gsrc.channels());
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, outType);
+        gsrc.convertTo(gdst, outType, alpha, beta);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)rtype; (void)alpha; (void)beta;
+        return false;
+#endif
+    }
+
     MatAllocator* allocator() const CV_OVERRIDE { return getCudaAllocator(); }
 };
 

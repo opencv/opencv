@@ -234,6 +234,13 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         return;
     }
 
+    // GPU HAL dispatch
+    if (dims <= 2) {
+        cv::hal::Backend* b = backend();
+        if (b && b->convertTo(*this, dst, ddepth, alpha, beta))
+            return;
+    }
+
     CV_OCL_RUN(dims <= 2,
                ocl_convertTo(*this, dst, ddepth, noScale, alpha, beta))
 #endif // HAVE_OPENCL

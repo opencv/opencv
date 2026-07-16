@@ -30,6 +30,15 @@ public:
     // threshold: thresh, maxval, type
     virtual bool threshold(InputArray, OutputArray, double, double, int) { return false; }
 
+    // subtract: src - src2
+    virtual bool subtract(InputArray, InputArray, OutputArray) { return false; }
+
+    // divide: src / src2
+    virtual bool divide(InputArray, InputArray, OutputArray) { return false; }
+
+    // convertTo: element type conversion with scale/shift — rtype, alpha, beta
+    virtual bool convertTo(InputArray, OutputArray, int, double, double) { return false; }
+
     // device-aware MatAllocator (keeps UMat data resident), or nullptr for default
     virtual MatAllocator* allocator() const { return NULL; }
 };
