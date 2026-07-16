@@ -220,7 +220,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     cv::resize(sample, sample, Size(416, 416));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov3.onnx", "", inp);
+    processNet("dnn/yolov3-converted.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)

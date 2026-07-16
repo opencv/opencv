@@ -341,7 +341,7 @@ TEST_P(Test_YOLO_nets, YOLOv3)
         scoreDiff = 0.04;
         iouDiff = 0.03;
     }
-    std::string model_file = "yolov3.onnx";
+    std::string model_file = "yolov3-converted.onnx";
 
     {
         SCOPED_TRACE("batch size 1");

@@ -364,7 +364,7 @@ TEST_P(Test_Model, YOLOv3)
     cv::resize(img, img, inputSize);
     Mat blob = blobFromImage(img, 1.0 / 255.0, inputSize, Scalar(), true, false);
 
-    Net net = readNet(_tf("yolov3.onnx", false));
+    Net net = readNet(_tf("yolov3-converted.onnx", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     net.setInput(blob);
