@@ -1409,6 +1409,46 @@ TEST(CV_ArucoMultiDict, serialization)
 }
 
 
+TEST(CV_ArucoDictionary, readDictionary_oversized_marker)
+{
+    // A marker string longer than markersize*markersize must be rejected instead of
+    // being written past the markersize x markersize buffer in readDictionary.
+    std::string serialized;
+    {
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        fs_out << "nmarkers" << 1;
+        fs_out << "markersize" << 5;
+        fs_out << "marker_0" << std::string(2000, '1');
+        serialized = fs_out.releaseAndGetString();
+    }
+    FileStorage fs_in(serialized, FileStorage::READ + FileStorage::MEMORY);
+    ASSERT_TRUE(fs_in.isOpened());
+    aruco::Dictionary dict;
+    bool ok = true;
+    ASSERT_NO_THROW(ok = dict.readDictionary(fs_in.root()));
+    EXPECT_FALSE(ok);
+}
+
+
+TEST(CV_ArucoDictionary, readDictionary_roundtrip)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_5X5_50);
+    std::string serialized;
+    {
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        dict.writeDictionary(fs_out);
+        serialized = fs_out.releaseAndGetString();
+    }
+    FileStorage fs_in(serialized, FileStorage::READ + FileStorage::MEMORY);
+    ASSERT_TRUE(fs_in.isOpened());
+    aruco::Dictionary loaded;
+    ASSERT_TRUE(loaded.readDictionary(fs_in.root()));
+    EXPECT_EQ(dict, loaded);
+}
+
+
 struct ArucoThreading: public testing::TestWithParam<aruco::CornerRefineMethod>
 {
     struct NumThreadsSetter {
