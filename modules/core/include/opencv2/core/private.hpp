@@ -690,22 +690,12 @@ public:
     TLSData<InstrTLSStruct> tlsStruct;
 };
 
-class CV_EXPORTS IntrumentationRegion
-{
-public:
-    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
-    ~IntrumentationRegion();
-
-private:
-    bool    m_disabled; // region status
-    uint64  m_regionTicks;
-};
-
 CV_EXPORTS InstrStruct& getInstrumentStruct();
 InstrTLSStruct&         getInstrumentTLSStruct();
-CV_EXPORTS InstrNode*   getCurrentNode();
 }
 }
+
+#include "opencv2/core/utils/instrumentation.private.hpp"
 
 #ifdef _WIN32
 #define CV_INSTRUMENT_GET_RETURN_ADDRESS _ReturnAddress()
@@ -718,45 +708,6 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
     void *CVAUX_CONCAT(__curr_address__, __LINE__) = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
     ::cv::instr::IntrumentationRegion CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CVAUX_CONCAT(__curr_address__, __LINE__), false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
-// Instrument functions with non-void return type
-#define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
-{\
-    if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
-        try{\
-            auto instrStatus = ((FUN)(__VA_ARGS__));\
-            if(ERROR_COND){\
-                ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-                CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
-            }\
-            return instrStatus;\
-        }catch(...){\
-            ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
-            throw;\
-        }\
-    }else{\
-        return ((FUN)(__VA_ARGS__));\
-    }\
-}())
-// Instrument functions with void return type
-#define CV_INSTRUMENT_FUN_RV_META(TYPE, IMPL, FUN, ...) ([&]()\
-{\
-    if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
-        try{\
-            (FUN)(__VA_ARGS__);\
-        }catch(...){\
-            ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, #FUN "- BadExit");\
-            throw;\
-        }\
-    }else{\
-        (FUN)(__VA_ARGS__);\
-    }\
-}())
-// Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
@@ -769,10 +720,6 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
 #define CV_INSTRUMENT_REGION_IPP();          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
-// Function instrumentation macro
-#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, instrStatus < 0, FUN, __VA_ARGS__)
-// Diagnostic markers
-#define CV_INSTRUMENT_MARK_IPP(NAME)        CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_IPP, NAME)
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro
