@@ -66,15 +66,6 @@ static TKernel probeHalUnary(HalFunc fn)
     return {};
 }
 
-#ifdef HAVE_IPP
-// IPP is not (yet) routed through the cv_hal_* hooks, so it gets its own tier: thin adapters give
-// the ipps calls the HalFunc shape and ride the same halUnaryKernel.
-static int ippExp32(const float* s, float* d, int n)  { return CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, s, d, n) >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_UNKNOWN; }
-static int ippExp64(const double* s, double* d, int n){ return CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, s, d, n) >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_UNKNOWN; }
-static int ippLog32(const float* s, float* d, int n)  { return CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21,  s, d, n) >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_UNKNOWN; }
-static int ippLog64(const double* s, double* d, int n){ return CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50,  s, d, n) >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_UNKNOWN; }
-#endif
-
 // The engine's OWN kernel for (op, T) - v_exp/v_log & co, no HAL/IPP tiers. The final fallback of
 // getMathFunc, and what hal::exp32f & co use as THEIR built-in implementation (the former table
 // kernels are gone), via mathSpanEngine below.
@@ -96,16 +87,8 @@ TKernel getMathFunc(TOp op, int T)
 {
     if ((op == OP_EXP || op == OP_LOG) && (T == CV_32F || T == CV_64F))
     {
-#ifdef HAVE_IPP
-        if (ipp::useIPP())   // checked per get (cheap; a program build, not a kernel call)
-        {
-            if (op == OP_EXP)
-                return T == CV_64F ? TKernel{halUnaryKernel<double>, (void*)ippExp64, 0}
-                                   : TKernel{halUnaryKernel<float>,  (void*)ippExp32, 0};
-            return T == CV_64F ? TKernel{halUnaryKernel<double>, (void*)ippLog64, 0}
-                               : TKernel{halUnaryKernel<float>,  (void*)ippLog32, 0};
-        }
-#endif
+        // IPP now rides the cv_hal_* hooks too (hal/ipp), so the single probe below picks it up
+        // together with any external vendor HAL - no separate IPP tier needed here.
         // probe results are process-lifetime stable; cache them (thread-safe magic statics)
         static const TKernel exp32 = probeHalUnary<float >(cv_hal_exp32f);
         static const TKernel exp64 = probeHalUnary<double>(cv_hal_exp64f);
