@@ -65,7 +65,7 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
 \****************************************************************************************/
 
 namespace {
-#if CV_NEON_AARCH64
+#if CV_NEON
 template<typename T, typename ST>
 struct RowSumCn1Neon
 {
@@ -151,7 +151,7 @@ struct RowSumCn1Neon<float, double>
         return true;
     }
 };
-#endif // CV_NEON_AARCH64
+#endif // CV_NEON
 
 template<typename T, typename ST>
 struct RowSum :
@@ -190,7 +190,7 @@ struct RowSum :
         }
         else if( cn == 1 )
         {
-        #if CV_NEON_AARCH64
+        #if CV_NEON
             if (!RowSumCn1Neon<T, ST>::apply(S, D, width, ksz_cn))
         #endif
             {
