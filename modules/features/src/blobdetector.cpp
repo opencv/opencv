@@ -47,7 +47,7 @@
 #include <opencv2/core/utils/logger.hpp>
 
 // Requires CMake flag: DEBUG_opencv_features=ON
-//#define DEBUG_BLOB_DETECTOR
+// #define DEBUG_BLOB_DETECTOR
 
 #ifdef DEBUG_BLOB_DETECTOR
 #include "opencv2/highgui.hpp"
@@ -253,6 +253,8 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
     imshow("contours", contoursImage );
 #endif
 
+    std::vector<double> dists;
+
     for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++)
     {
         Center center;
@@ -317,6 +319,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         if(moms.m00 == 0.0)
             continue;
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
+        center.radius = 0.;
 
         if (params.filterByColor)
         {
@@ -328,14 +331,17 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         {
             const std::vector<cv::Point>& contour = contours[contourIdx];
             const size_t contourSize = contour.size();
-            AutoBuffer<double> dists(contourSize);
-            for (size_t pointIdx = 0; pointIdx < contourSize; pointIdx++)
-            {
-                const Point2d& pt = contour[pointIdx];
-                dists[pointIdx] = norm(center.location - pt);
+
+            if (contourSize > 0u) {
+                dists.resize(contourSize);
+                for (size_t pointIdx = 0; pointIdx < contourSize; pointIdx++)
+                {
+                    const Point2d& pt = contour[pointIdx];
+                    dists[pointIdx] = norm(center.location - pt);
+                }
+                std::sort(dists.begin(), dists.end());
+                center.radius = (dists[(contourSize - 1) / 2] + dists[contourSize / 2]) / 2.;
             }
-            std::sort(dists.begin(), dists.end());
-            center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
         centers.push_back(center);

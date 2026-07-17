@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
+#include "arithm_expr.hpp"      // ew::mathSpanEngine - the engine fallback for exp/log
 
 #include "mathfuncs_core.simd.hpp"
 #include "mathfuncs_core.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -151,8 +152,8 @@ void exp32f(const float *src, float *dst, int n)
 
     CALL_HAL(exp32f, cv_hal_exp32f, src, dst, n);
 
-    CV_CPU_DISPATCH(exp32f, (src, dst, n),
-        CV_CPU_DISPATCH_MODES_ALL);
+    ew::mathSpanEngine(ew::OP_EXP, CV_32F, src, dst, n);   // the engine's vector kernel (the old
+                                                       // table implementation is removed)
 }
 
 void exp64f(const double *src, double *dst, int n)
@@ -161,8 +162,8 @@ void exp64f(const double *src, double *dst, int n)
 
     CALL_HAL(exp64f, cv_hal_exp64f, src, dst, n);
 
-    CV_CPU_DISPATCH(exp64f, (src, dst, n),
-        CV_CPU_DISPATCH_MODES_ALL);
+    ew::mathSpanEngine(ew::OP_EXP, CV_64F, src, dst, n);   // the engine's vector kernel (the old
+                                                       // table implementation is removed)
 }
 
 void log32f(const float *src, float *dst, int n)
@@ -171,8 +172,8 @@ void log32f(const float *src, float *dst, int n)
 
     CALL_HAL(log32f, cv_hal_log32f, src, dst, n);
 
-    CV_CPU_DISPATCH(log32f, (src, dst, n),
-        CV_CPU_DISPATCH_MODES_ALL);
+    ew::mathSpanEngine(ew::OP_LOG, CV_32F, src, dst, n);   // the engine's vector kernel (the old
+                                                       // table implementation is removed)
 }
 
 void log64f(const double *src, double *dst, int n)
@@ -181,8 +182,8 @@ void log64f(const double *src, double *dst, int n)
 
     CALL_HAL(log64f, cv_hal_log64f, src, dst, n);
 
-    CV_CPU_DISPATCH(log64f, (src, dst, n),
-        CV_CPU_DISPATCH_MODES_ALL);
+    ew::mathSpanEngine(ew::OP_LOG, CV_64F, src, dst, n);   // the engine's vector kernel (the old
+                                                       // table implementation is removed)
 }
 
 //=============================================================================

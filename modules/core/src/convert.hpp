@@ -140,6 +140,11 @@ static inline void vx_load_pair_as(const ushort* ptr, v_int32& a, v_int32& b)
     b = v_reinterpret_as_s32(ub);
 }
 
+static inline void vx_load_pair_as(const ushort* ptr, v_uint32& a, v_uint32& b)
+{
+    v_expand(vx_load(ptr), a, b);
+}
+
 static inline void vx_load_pair_as(const short* ptr, v_int32& a, v_int32& b)
 {
     v_expand(vx_load(ptr), a, b);
@@ -428,11 +433,12 @@ static inline void v_store_pair_as(float* ptr, const v_float32& a, const v_float
 
 static inline void v_store_pair_as(unsigned* ptr, const v_float32& a, const v_float32& b)
 {
-    v_int32 z = vx_setzero_s32();
-    v_int32 ia = v_max(v_round(a), z);
-    v_int32 ib = v_max(v_round(b), z);
-    v_store(ptr, v_reinterpret_as_u32(ia));
-    v_store(ptr + VTraits<v_int32>::vlanes(), v_reinterpret_as_u32(ib));
+    // v_round(f32) narrows to v_int32, so values in [2^31, 2^32) saturate to INT32_MAX. Scalar for now
+    // (same class as the f64->{u64,s64,u32} stores above); a proper f32->u32 intrinsic can replace it.
+    const int n = VTraits<v_float32>::vlanes();
+    float buf[VTraits<v_float32>::max_nlanes*2];
+    v_store(buf, a); v_store(buf + n, b);
+    for (int i = 0; i < 2*n; i++) ptr[i] = saturate_cast<unsigned>(buf[i]);
 }
 
 static inline void v_store_pair_as(uchar* ptr, const v_uint32& a, const v_uint32& b)
@@ -657,27 +663,31 @@ static inline void v_store_pair_as(hfloat* ptr, const v_float64& a, const v_floa
     v_pack_store(ptr, v);
 }
 
+// f64 -> {u64, s64, u32}: no correct vector path yet - v_round(f64,f64) narrows to v_int32, which
+// truncates the 64-bit range (u64/s64) and the upper half of u32. Scalar for now (matches the scalar
+// tail these functions already fall back to); a proper f64->s64/u64 intrinsic can replace it later.
 static inline void v_store_pair_as(uint64_t* ptr, const v_float64& a, const v_float64& b)
 {
-    v_float64 z = vx_setzero_f64();
-    v_int64 ia, ib;
-    v_expand(v_round(v_max(a, z), v_max(b, z)), ia, ib);
-    v_store(ptr, v_reinterpret_as_u64(ia));
-    v_store(ptr + VTraits<v_uint64>::vlanes(), v_reinterpret_as_u64(ib));
+    const int n = VTraits<v_float64>::vlanes();
+    double buf[VTraits<v_float64>::max_nlanes*2];
+    v_store(buf, a); v_store(buf + n, b);
+    for (int i = 0; i < 2*n; i++) ptr[i] = saturate_cast<uint64_t>(buf[i]);
 }
 
 static inline void v_store_pair_as(int64_t* ptr, const v_float64& a, const v_float64& b)
 {
-    v_int64 ia, ib;
-    v_expand(v_round(a, b), ia, ib);
-    v_store(ptr, ia);
-    v_store(ptr + VTraits<v_uint64>::vlanes(), ib);
+    const int n = VTraits<v_float64>::vlanes();
+    double buf[VTraits<v_float64>::max_nlanes*2];
+    v_store(buf, a); v_store(buf + n, b);
+    for (int i = 0; i < 2*n; i++) ptr[i] = saturate_cast<int64_t>(buf[i]);
 }
 
 static inline void v_store_pair_as(unsigned* ptr, const v_float64& a, const v_float64& b)
 {
-    v_int32 iab = v_max(v_round(a, b), vx_setzero_s32());
-    v_store(ptr, v_reinterpret_as_u32(iab));
+    const int n = VTraits<v_float64>::vlanes();
+    double buf[VTraits<v_float64>::max_nlanes*2];
+    v_store(buf, a); v_store(buf + n, b);
+    for (int i = 0; i < 2*n; i++) ptr[i] = saturate_cast<unsigned>(buf[i]);
 }
 
 #else
