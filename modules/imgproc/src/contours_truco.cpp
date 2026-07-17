@@ -13,20 +13,23 @@ namespace{
 // zero or non-zero, so its termination conditions are unchanged. However,
 // concurrent read/write of different values is legally UB in C++ and triggers
 // TSAN.
-static inline uchar atomicLoad(const uchar* ptr) {
+inline uchar atomicLoad(const uchar* ptr) {
+#ifdef CV_THREAD_SANITIZER
     if constexpr (sizeof(std::atomic<uchar>) == sizeof(uchar)) {
         return reinterpret_cast<const std::atomic<uchar>*>(ptr)->load(std::memory_order_relaxed);
-    } else {
-        return *ptr;
     }
+#endif
+    return *ptr;
 }
 
-static inline void atomicStore(uchar* ptr, uchar val) {
+inline void atomicStore(uchar* ptr, uchar val) {
+#ifdef CV_THREAD_SANITIZER
     if constexpr (sizeof(std::atomic<uchar>) == sizeof(uchar)) {
         reinterpret_cast<std::atomic<uchar>*>(ptr)->store(val, std::memory_order_relaxed);
-    } else {
-        *ptr = val;
+        return;
     }
+#endif
+    *ptr = val;
 }
 
 // Tunable block size. 1024 points = 8KB (Fits easily in L1 Cache)
