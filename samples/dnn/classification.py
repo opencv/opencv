@@ -83,9 +83,7 @@ def main(func_args=None):
             labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = cv.dnn.ENGINE_NEW
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))

@@ -244,45 +244,31 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 batchSize = input[0].size[0];
             }
 
+            // ONNX LSTM inputs: X(0), W(1), R(2), B(3), sequence_lens(4),
+            // initial_h(5), initial_c(6), P(7). Inputs 3..7 are optional and
+            // may be present-but-empty (e.g. CNTK exports keep all 8 slots with
+            // empties for unused ones). Gather by presence/non-emptiness rather
+            // than by the raw input count so optional/empty inputs are ignored.
+            auto hasInput = [&](int idx) {
+                return idx < numInputs && !input[idx].empty();
+            };
+
             std::vector<Mat> blobs_;
             int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
             int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
 
-            blobs_.push_back(input[1].clone());
-            blobs_.push_back(input[2].clone());
-            switch (numInputs) {
-                case 3:
-                    // X, W, R are given
-                    // create bias
-                    blobs_.push_back(Mat::zeros(2, biasShape, input[0].type()));
-                    // create h0, c0
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    break;
-                case 4:
-                    // X, W, R, B are given
-                    blobs_.push_back(input[3]);
-                    // create h0, c0
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    break;
-                case 7:
-                    // X, W, R, B, h0, c0 are given
-                    blobs_.push_back(input[3]);
-                    blobs_.push_back(input[5]);
-                    blobs_.push_back(input[6]);
-                    break;
-                case 8:
-                    // X, W, R, B, seqlen, h0, c0, P are given
-                    blobs_.push_back(input[3]);
-                    blobs_.push_back(input[5]);
-                    blobs_.push_back(input[6]);
-                    blobs_.push_back(input[7]);
-                    break;
-                default:
-                    CV_Error(Error::StsNotImplemented, "Insufficient inputs for LSTM layer. "
-                             "Required inputs: X, W, R, B, seqLen, h0, c0 [, P for peephole]");
-            }
+            CV_Assert(numInputs >= 3);  // X, W, R are mandatory
+            blobs_.push_back(input[1].clone());  // W
+            blobs_.push_back(input[2].clone());  // R
+            // B
+            blobs_.push_back(hasInput(3) ? input[3] : Mat::zeros(2, biasShape, input[0].type()));
+            // initial_h
+            blobs_.push_back(hasInput(5) ? input[5] : Mat::zeros(3, hidShape, input[0].type()));
+            // initial_c
+            blobs_.push_back(hasInput(6) ? input[6] : Mat::zeros(3, hidShape, input[0].type()));
+            // P (peephole) - only when the layer was configured to use it and the input is present
+            if (usePeephole && hasInput(7))
+                blobs_.push_back(input[7]);
 
             // set outputs to 0
             for (auto& out : output)

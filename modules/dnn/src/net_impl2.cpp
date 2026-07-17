@@ -878,6 +878,24 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
         kvCacheManager.applyRoutes();
 }
 
+// Assign a single result to an output array, including a (pre-allocated) vector
+// of Mat/UMat, which _OutputArray::assign(Mat) does not handle.
+static void assignSingleOutput(OutputArrayOfArrays outputBlobs, const Mat& result)
+{
+    _InputArray::KindFlag k = outputBlobs.kind();
+    if (k == _InputArray::STD_VECTOR_MAT) {
+        std::vector<Mat>& v = outputBlobs.getMatVecRef();
+        v.resize(1);
+        result.copyTo(v[0]);
+    } else if (k == _InputArray::STD_VECTOR_UMAT) {
+        std::vector<UMat>& v = outputBlobs.getUMatVecRef();
+        v.resize(1);
+        result.copyTo(v[0]);
+    } else {
+        outputBlobs.assign(result);
+    }
+}
+
 void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
@@ -904,7 +922,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
         std::vector<int> outIdxs(1, outIdx);
         std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
         CV_Assert(outs.size() == 1);
-        outputBlobs.assign(outs[0]);
+        assignSingleOutput(outputBlobs, outs[0]);
         return;
     }
 #endif
@@ -932,7 +950,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
             const std::vector<Arg>& gr_outputs = mainGraph->outputs();
             for (size_t i = 0; i < gr_outputs.size(); i++) {
                 if (gr_outputs[i].idx == targetArg.idx) {
-                    outputBlobs.assign(outs[i]);
+                    assignSingleOutput(outputBlobs, outs[i]);
                     return;
                 }
             }
@@ -949,9 +967,9 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
                 transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
-                outputBlobs.assign(converted);
+                assignSingleOutput(outputBlobs, converted);
             } else {
-                outputBlobs.assign(result.clone());
+                assignSingleOutput(outputBlobs, result.clone());
             }
             return;
         }
@@ -960,7 +978,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
     std::vector<Mat> inps, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(!outs.empty());
-    outputBlobs.assign(outs[0]);
+    assignSingleOutput(outputBlobs, outs[0]);
 }
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
@@ -1037,45 +1055,44 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     const std::vector<Arg>& outargs = mainGraph->outputs();
     std::vector<int> outidxs;
     int i, j, noutputs = (int)outargs.size();
-    if (!outnames.empty()) {
-        CV_CheckEQ((int)outnames.size(), noutputs, "the number of requested and actual outputs must be the same");
-        if (noutputs == 1 && outnames[0].empty())
-            ;
-        else {
-            for (i = 0; i < noutputs; i++) {
-                const std::string& outname = outnames[i];
-                for (j = 0; j < noutputs; j++) {
-                    const ArgData& adata = args.at(outargs[j].idx);
-                    if (adata.name == outname) {
-                        outidxs.push_back((int)j);
-                        break;
-                    }
+    if (outnames.empty() || (noutputs == 1 && outnames.size() == 1 && outnames[0].empty())) {
+        for (i = 0; i < noutputs; i++)
+            outidxs.push_back(i);
+    } else {
+        for (i = 0; i < (int)outnames.size(); i++) {
+            const std::string& outname = outnames[i];
+            for (j = 0; j < noutputs; j++) {
+                const ArgData& adata = args.at(outargs[j].idx);
+                if (adata.name == outname) {
+                    outidxs.push_back((int)j);
+                    break;
                 }
-                if (j == noutputs) {
-                    CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
-                }
+            }
+            if (j == noutputs) {
+                CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
             }
         }
     }
     std::vector<Mat> inps={}, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(outs.size() == noutputs);
+    int nout = (int)outidxs.size();
     std::vector<Mat>* outMats = nullptr;
     std::vector<UMat>* outUMats = nullptr;
     _InputArray::KindFlag outKind = outblobs.kind();
     if (outKind == _InputArray::STD_VECTOR_MAT) {
         outMats = &outblobs.getMatVecRef();
-        outMats->resize(noutputs);
+        outMats->resize(nout);
     } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
         outUMats = &outblobs.getUMatVecRef();
-        outUMats->resize(noutputs);
+        outUMats->resize(nout);
     } else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT) {
-        CV_Assert(noutputs == 1);
+        CV_Assert(nout == 1);
     } else {
         CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
     }
-    for (i = 0; i < noutputs; i++) {
-        int j = outidxs.empty() ? i : outidxs[i];
+    for (i = 0; i < nout; i++) {
+        int j = outidxs[i];
         Mat src = outs[j];
         if (outMats) {
             src.copyTo(outMats->at(i));

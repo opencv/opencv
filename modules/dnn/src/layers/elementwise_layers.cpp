@@ -3742,6 +3742,14 @@ class ChannelsPReLUImpl CV_FINAL : public ElementWiseLayer<ChannelsPReLUFunctor>
 public:
     using ElementWiseLayer<ChannelsPReLUFunctor>::ElementWiseLayer;
 
+    void setSlope(const Mat& slope) CV_OVERRIDE
+    {
+        slope.reshape(1, (int)slope.total()).convertTo(func.scale, CV_32F);
+#ifdef HAVE_OPENCL
+        func.scale_umat.release();
+#endif
+    }
+
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -3849,6 +3857,13 @@ private:
 
 Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
+    if (params.blobs.empty())
+    {
+        // Slope comes as a second input; constArgs() fills the scale in later.
+        Ptr<ChannelsPReLUImpl> l(new ChannelsPReLUImpl(ChannelsPReLUFunctor()));
+        l->setParamsFrom(params);
+        return l;
+    }
     CV_Assert(params.blobs.size() == 1);
     Mat scale = params.blobs[0];
     float slope = *scale.ptr<float>();
