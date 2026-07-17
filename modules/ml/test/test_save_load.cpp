@@ -96,6 +96,61 @@ ML_Legacy_Param param_list[] = {
 
 INSTANTIATE_TEST_CASE_P(/**/, ML_Legacy_Params, testing::ValuesIn(param_list));
 
+TEST(ML_DTrees, load_bad_categorical_split)
+{
+    // Train a tree with a categorical input so the model carries a
+    // categorical split serialized as an "in"/"not_in" value list.
+    const int n = 40;
+    Mat samples(n, 1, CV_32F);
+    Mat responses(n, 1, CV_32S);
+    for (int i = 0; i < n; i++)
+    {
+        int cat = i % 4;
+        samples.at<float>(i, 0) = (float)cat;
+        responses.at<int>(i, 0) = (cat == 1 || cat == 2) ? 1 : 0;
+    }
+    Mat varType(2, 1, CV_8U);
+    varType.at<uchar>(0) = ml::VAR_CATEGORICAL;
+    varType.at<uchar>(1) = ml::VAR_CATEGORICAL;
+
+    Ptr<ml::TrainData> td = ml::TrainData::create(samples, ml::ROW_SAMPLE, responses,
+                                                  noArray(), noArray(), noArray(), varType);
+    Ptr<ml::DTrees> dt = ml::DTrees::create();
+    dt->setMaxDepth(4);
+    dt->setCVFolds(0);
+    dt->setMaxCategories(4);
+    dt->setMinSampleCount(1);
+    dt->train(td);
+
+    const string filename = cv::tempfile(".yml");
+    dt->save(filename);
+
+    string model;
+    {
+        std::ifstream in(filename.c_str());
+        std::stringstream ss;
+        ss << in.rdbuf();
+        model = ss.str();
+    }
+
+    // Category values in the split list index a per-split subset bitmask.
+    // Injecting a value larger than the number of categories used to write
+    // past that bitmask; loading such a model must be rejected, not crash.
+    size_t pos = model.find("in:");
+    ASSERT_NE(pos, string::npos);
+    size_t br = model.find('[', pos);
+    ASSERT_NE(br, string::npos);
+    model.insert(br + 1, "1000000,");
+    {
+        std::ofstream out(filename.c_str());
+        out << model;
+    }
+
+    Ptr<ml::DTrees> bad;
+    EXPECT_THROW(bad = ml::DTrees::load(filename), Exception);
+    remove(filename.c_str());
+}
+
 /*TEST(ML_SVM, throw_exception_when_save_untrained_model)
 {
     Ptr<cv::ml::SVM> svm;
