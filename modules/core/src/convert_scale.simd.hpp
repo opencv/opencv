@@ -22,8 +22,7 @@ template<typename _Ts, typename _Td> inline void
 cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
             Size size, float a, float b )
 {
-// Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
-#if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
     const int VECSZ = VTraits<v_float32>::vlanes()*2;
     // GCC miscompiles this scalable block only on VLEN=128 RVV (opencv/issues/26936).
