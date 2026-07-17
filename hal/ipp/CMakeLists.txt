@@ -50,7 +50,7 @@ endif()
 # instrumentation trace / IPP weight. Reuses the engine exported from
 # opencv_core (symbols resolved at link time as ipphal is archived into core).
 if(ENABLE_INSTRUMENTATION)
-  target_compile_definitions(ipphal PRIVATE ENABLE_INSTRUMENTATION=1)
+  target_compile_definitions(ipphal PRIVATE ENABLE_INSTRUMENTATION)
 endif()
 
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
