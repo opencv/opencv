@@ -151,4 +151,39 @@ void mul8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
            params, k.flags, k.userdata);
 }
 
+// Legacy cv::hal bitwise entry points, still declared in core/hal/hal.hpp and used by other modules
+// (e.g. opencv_objdetect's aruco) and external code: forward to the element-wise engine's byte-wise
+// bitwise kernels. No scalar params - bitwise ops ignore them.
+static void bitwise8u(ew::TOp op, const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                      uchar* dst, size_t step, int width, int height)
+{
+    const double noparams[4] = {};
+    ew::TKernel k = ew::getBitwiseFunc(op, 1);
+    CV_Assert(k.fptr != nullptr);
+    k.fptr(src1, step1, 1, src2, step2, 1, nullptr, 0, 0, dst, step, width, height,
+           noparams, k.flags, k.userdata);
+}
+
+void and8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+           uchar* dst, size_t step, int width, int height, void*)
+{ bitwise8u(ew::OP_AND, src1, step1, src2, step2, dst, step, width, height); }
+
+void or8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+          uchar* dst, size_t step, int width, int height, void*)
+{ bitwise8u(ew::OP_OR, src1, step1, src2, step2, dst, step, width, height); }
+
+void xor8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+           uchar* dst, size_t step, int width, int height, void*)
+{ bitwise8u(ew::OP_XOR, src1, step1, src2, step2, dst, step, width, height); }
+
+void not8u(const uchar* src1, size_t step1, const uchar* /*src2*/, size_t /*step2*/,
+           uchar* dst, size_t step, int width, int height, void*)
+{
+    const double noparams[4] = {};
+    ew::TKernel k = ew::getNotFunc(1);
+    CV_Assert(k.fptr != nullptr);
+    k.fptr(src1, step1, 1, nullptr, 0, 0, nullptr, 0, 0, dst, step, width, height,
+           noparams, k.flags, k.userdata);
+}
+
 }} // namespace cv::hal
