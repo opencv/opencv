@@ -302,6 +302,21 @@ At the build time this feature does not have any prerequisites. During runtime a
 
 TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS`, `WITH_OPENCL_D3D11_NV`, `WITH_VA_INTEL`
 
+### Metal support
+
+`WITH_METAL` (default: _ON_ on Apple platforms when optimizations are enabled)
+
+Metal support provides an Apple Metal implementation for selected Transparent
+API (`cv::UMat`) paths. User code keeps calling regular OpenCV functions with
+`cv::UMat` inputs and outputs; supported operations use Metal, while unsupported
+cases fall back to the existing CPU implementation. On Apple platforms where
+Metal is detected, OpenCV disables the OpenCL UMat backend during configuration
+so that `cv::UMat` has a single active device runtime.
+
+At runtime, `cv::metal::haveMetal()` can be used to check whether a default
+Metal device and command queue are available. More information can be found in
+@ref metal_umat_backend.
+
 ## Image reading and writing (imgcodecs module)  {#tutorial_config_reference_func_imgcodecs}
 
 ### Built-in formats
@@ -531,6 +546,7 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `ONNXRUNTIME_VERSION` | _1.25.1_ | ONNX Runtime version to download for prebuilt packages. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
+| `WITH_METAL` | _ON on Apple platforms when optimizations are enabled_ | Enable Apple Metal support for selected Transparent API (`cv::UMat`) paths. |
 
 
 # Installation layout {#tutorial_config_reference_install}

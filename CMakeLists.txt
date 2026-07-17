@@ -337,6 +337,9 @@ OCV_OPTION(WITH_CLP "Include Clp support (EPL)" OFF
 OCV_OPTION(WITH_OPENCL "Include OpenCL Runtime support" (NOT ANDROID AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_OPENCL)
+OCV_OPTION(WITH_METAL "Include Apple Metal Runtime support" (APPLE AND NOT CV_DISABLE_OPTIMIZATION)
+  VISIBLE_IF APPLE
+  VERIFY HAVE_METAL)
 OCV_OPTION(WITH_OPENCL_SVM "Include OpenCL Shared Virtual Memory support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_OPENCL_SVM) # experimental
@@ -840,6 +843,17 @@ if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GR
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
 else()
   SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
+endif()
+
+# --- Metal ---
+if(WITH_METAL)
+  include(cmake/OpenCVDetectMetal.cmake)
+endif()
+
+# Metal and OpenCL are mutually exclusive UMat backends on Apple platforms.
+if(APPLE AND HAVE_METAL AND WITH_OPENCL)
+  message(STATUS "Metal is available: disabling OpenCL UMat backend on Apple")
+  set(WITH_OPENCL OFF CACHE BOOL "Include OpenCL Runtime support" FORCE)
 endif()
 
 # --- OpenCL ---
@@ -1933,6 +1947,14 @@ if(WITH_TIMVX)
     status("    Include path"  TIMVX_INCLUDE_DIR THEN "${TIMVX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" TIMVX_LIBRARY THEN "${TIMVX_LIBRARY}" ELSE "NO")
     status("    VIVANTE SDK path" VIVANTE_SDK_DIR THEN "${VIVANTE_SDK_DIR}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_METAL OR HAVE_METAL)
+  status("")
+  status("  Metal:" HAVE_METAL THEN "YES" ELSE "NO")
+  if(HAVE_METAL)
+    status("    Link libraries:" METAL_LIBRARIES THEN "${METAL_LIBRARIES}" ELSE "NO")
   endif()
 endif()
 

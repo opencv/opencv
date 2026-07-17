@@ -81,6 +81,7 @@ performing mathematical computations, and managing memory efficiently within the
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
     @defgroup core_opengl OpenGL interoperability
+    @defgroup core_metal Metal support
     @defgroup core_optim Optimization Algorithms
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
