@@ -2466,6 +2466,21 @@ std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 }
 
 
+// The new graph engine has no FP16 execution path yet: it runs FP32 on CPU regardless
+// of the requested (e.g. OpenCL FP16) target. Map FP16 input types to FP32 so that
+// shape/FLOPS inference through Layer::getTypes() does not reject them.
+static std::vector<MatType> filterFP16InputTypes(const std::vector<MatType>& types)
+{
+    std::vector<MatType> result = types;
+    for (MatType& t : result)
+    {
+        if (t == CV_16F)
+            t = CV_32F;
+    }
+    return result;
+}
+
+
 int64 Net::Impl::getFLOPSGraph(const Ptr<Graph>& graph,
                                const std::vector<MatShape>& shapeCache,
                                const std::vector<MatType>& typeCache) const
@@ -2524,10 +2539,14 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
                           const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        // The new graph engine executes in FP32 on CPU regardless of the requested
+        // target, so FP16 input types (e.g. coming from an OpenCL FP16 target) would be
+        // rejected by Layer::getTypes(). Normalize them to FP32 for shape/FLOPS inference.
+        std::vector<MatType> inputTypes = filterFP16InputTypes(netInputTypes);
         LayerShapes shapes;
         std::vector<MatShape> shapeCache;
         std::vector<MatType> typeCache;
-        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+        tryInferShapes(netInputShapes, inputTypes, shapes, shapeCache, typeCache);
         return getFLOPSGraph(mainGraph, shapeCache, typeCache);
     }
 
@@ -2553,10 +2572,11 @@ int64 Net::Impl::getFLOPS(
         const std::vector<MatType>& netInputTypes) /*const*/
 {
     if (mainGraph) {
+        std::vector<MatType> inputTypes = filterFP16InputTypes(netInputTypes);
         LayerShapes shapes;
         std::vector<MatShape> shapeCache;
         std::vector<MatType> typeCache;
-        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+        tryInferShapes(netInputShapes, inputTypes, shapes, shapeCache, typeCache);
 
         CV_Assert(0 <= layerId && layerId < (int)totalLayers);
         int localIdx = layerId;
