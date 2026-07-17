@@ -46,7 +46,7 @@ struct ModelFusionReshapeTranspose
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
-        const vector<Ptr<Layer>>& prog = graph->prog();
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
         size_t nops = prog.size();
         bool modified = false;
 
@@ -72,7 +72,7 @@ struct ModelFusionReshapeTranspose
         vector<bool> dropped(nops, false);
 
         for (size_t i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             if (!layer || dropped[i]) continue;
             if (layer->inputs.empty() || layer->outputs.empty()) continue;
 
@@ -95,7 +95,7 @@ struct ModelFusionReshapeTranspose
                 if (it != producer.end()) {
                     int prod_idx = it->second;
                     if (prod_idx >= 0 && !dropped[prod_idx]) {
-                        const Ptr<Layer>& pl = prog[prod_idx];
+                        const Ptr<LayerInfo>& pl = prog[prod_idx];
                         TransposeLayer* prevTr = dynamic_cast<TransposeLayer*>(pl.get());
                         Arg prevOut = layer->inputs[0];
                         bool single_consumer = usecounts[prevOut.idx] == 1
@@ -135,7 +135,7 @@ struct ModelFusionReshapeTranspose
                 if (it != producer.end()) {
                     int prod_idx = it->second;
                     if (prod_idx >= 0 && !dropped[prod_idx]) {
-                        const Ptr<Layer>& pl = prog[prod_idx];
+                        const Ptr<LayerInfo>& pl = prog[prod_idx];
                         Reshape2Layer* prevRs = dynamic_cast<Reshape2Layer*>(pl.get());
                         Arg prevOut = layer->inputs[0];
                         bool single_consumer = usecounts[prevOut.idx] == 1
@@ -154,7 +154,7 @@ struct ModelFusionReshapeTranspose
         }
 
         if (modified) {
-            vector<Ptr<Layer>> newprog;
+            vector<Ptr<LayerInfo>> newprog;
             newprog.reserve(nops);
             for (size_t i = 0; i < nops; i++) {
                 if (!dropped[i] && prog[i])
@@ -166,7 +166,7 @@ struct ModelFusionReshapeTranspose
         return modified;
     }
 
-    void redirectConsumers(const vector<Ptr<Layer>>& prog,
+    void redirectConsumers(const vector<Ptr<LayerInfo>>& prog,
                            const vector<bool>& dropped,
                            size_t start_idx, Arg from, Arg to)
     {

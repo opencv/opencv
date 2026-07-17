@@ -40,7 +40,7 @@ struct ModelFusionScaleSoftmax
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
-        const vector<Ptr<Layer>>& prog = graph->prog();
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
         size_t nops = prog.size();
         bool modified = false;
 
@@ -70,7 +70,7 @@ struct ModelFusionScaleSoftmax
         vector<bool> dropped(nops, false);
 
         for (size_t i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             if (!layer || dropped[i]) continue;
 
             SoftmaxLayer* sm = dynamic_cast<SoftmaxLayer*>(layer.get());
@@ -83,7 +83,7 @@ struct ModelFusionScaleSoftmax
             int prod_idx = it->second;
             if (prod_idx < 0 || dropped[prod_idx]) continue;
 
-            const Ptr<Layer>& pl = prog[prod_idx];
+            const Ptr<LayerInfo>& pl = prog[prod_idx];
             NaryEltwiseLayer* elt = dynamic_cast<NaryEltwiseLayer*>(pl.get());
             if (!elt) continue;
             const auto op = elt->op;
@@ -123,7 +123,7 @@ struct ModelFusionScaleSoftmax
         }
 
         if (modified) {
-            vector<Ptr<Layer>> newprog;
+            vector<Ptr<LayerInfo>> newprog;
             newprog.reserve(nops);
             for (size_t i = 0; i < nops; i++) {
                 if (!dropped[i] && prog[i])

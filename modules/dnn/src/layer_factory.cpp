@@ -104,6 +104,72 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String& type, LayerParams& pa
     }
 }
 
+typedef std::map<std::string, LayerFactory::OpConstructor> OpFactory_Impl;
+typedef std::map<std::string, std::map<int, LayerFactory::ExecConstructor> > ExecFactory_Impl;
+
+static OpFactory_Impl& getOpFactoryImpl()
+{
+    static OpFactory_Impl impl;
+    return impl;
+}
+
+static ExecFactory_Impl& getExecFactoryImpl()
+{
+    static ExecFactory_Impl impl;
+    return impl;
+}
+
+void LayerFactory::registerOp(const String& type, OpConstructor constructor)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+    CV_Assert(constructor);
+    cv::AutoLock lock(getLayerFactoryMutex());
+    getOpFactoryImpl()[type] = constructor;  // last registration wins
+}
+
+Ptr<LayerInfo> LayerFactory::createOp(const String& type, const LayerParams& params)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+    cv::AutoLock lock(getLayerFactoryMutex());
+    OpFactory_Impl& impl = getOpFactoryImpl();
+    OpFactory_Impl::const_iterator it = impl.find(type);
+    if (it != impl.end())
+        return it->second(params);
+    return Ptr<LayerInfo>();  // NULL: no LayerInfo constructor for this type yet
+}
+
+void LayerFactory::registerExec(const String& type, int backendId, ExecConstructor constructor)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+    CV_Assert(constructor);
+    cv::AutoLock lock(getLayerFactoryMutex());
+    getExecFactoryImpl()[type][backendId] = constructor;
+}
+
+Ptr<Layer> LayerFactory::createExec(const String& type, int backendId,
+                                    const Ptr<LayerInfo>& data, void* backendCtx)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+    ExecConstructor ctor = nullptr;
+    {
+        cv::AutoLock lock(getLayerFactoryMutex());
+        ExecFactory_Impl& impl = getExecFactoryImpl();
+        ExecFactory_Impl::const_iterator it = impl.find(type);
+        if (it != impl.end()) {
+            auto bit = it->second.find(backendId);
+            if (bit != it->second.end())
+                ctor = bit->second;
+        }
+    }
+    if (ctor)
+        return ctor(data, backendCtx);
+    return Ptr<Layer>();
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

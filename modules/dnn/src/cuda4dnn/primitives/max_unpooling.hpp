@@ -111,6 +111,22 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             );
         }
 
+        void forward(
+            const std::vector<cuda::GpuMatND>& inputs,
+            const std::vector<cuda::GpuMatND>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_Assert(inputs.size() == 1 && outputs.size() == 2);
+
+            auto input_data = csl::viewOf<T>(inputs[0]);
+            auto output_data = csl::spanOf<T>(outputs[0]);
+            auto output_indices = csl::spanOf<T_INDEX>(outputs[1]);
+
+            kernels::max_pooling_with_indices<T, T_INDEX>(
+                stream, output_data, output_indices, input_data, window_size, strides, padding_left
+            );
+        }
+
     private:
         csl::Stream stream;
 

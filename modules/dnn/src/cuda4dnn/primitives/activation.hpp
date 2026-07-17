@@ -25,17 +25,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cuda::GpuMatND>& inputs,
+            const std::vector<cuda::GpuMatND>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
             {
-                auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
-                auto input = input_wrapper->getView();
-
-                auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
-                auto output = output_wrapper->getSpan();
+                auto input = csl::viewOf<T>(inputs[i]);
+                auto output = csl::spanOf<T>(outputs[i]);
 
                 static_cast<const Op<T>*>(this)->calculate(output, input);
             }
