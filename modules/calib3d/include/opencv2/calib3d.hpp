@@ -52,6 +52,14 @@
 
 /**
   @defgroup calib3d Camera Calibration and 3D Reconstruction
+@{
+    @defgroup calib3d_camera Camera Calibration (Pinhole)
+    @defgroup calib3d_fisheye Fisheye camera model
+    @defgroup calib3d_pose Pose Estimation
+    @defgroup calib3d_epipolar Epipolar Geometry
+    @defgroup calib3d_stereo Stereo Correspondence
+    @defgroup calib3d_handeye Hand-Eye Calibration
+@}
 
 The functions in this section use a so-called pinhole camera model. The view of a scene
 is obtained by projecting a scene's 3D point \f$P_w\f$ into the image plane using a perspective
@@ -2225,7 +2233,7 @@ CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray 
                                             bool centerPrincipalPoint = false);
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
-
+@ingroup calib3d_handeye
 @param[in] R_gripper2base Rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the gripper frame to the robot base frame (\f$_{}^{b}\textrm{T}_g\f$).
 This is a vector (`vector<Mat>`) that contains the rotation, `(3x3)` rotation matrices or `(3x1)` rotation vectors,
@@ -2376,6 +2384,7 @@ CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArra
                                     HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
 
 /** @brief Computes Robot-World/Hand-Eye calibration: \f$_{}^{w}\textrm{T}_b\f$ and \f$_{}^{c}\textrm{T}_g\f$
+@ingroup calib3d_handeye
 
 @param[in] R_world2cam Rotation part extracted from the homogeneous matrix that transforms a point
 expressed in the world frame to the camera frame (\f$_{}^{c}\textrm{T}_w\f$).
