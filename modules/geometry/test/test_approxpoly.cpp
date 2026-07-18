@@ -85,7 +85,7 @@ TEST(Imgproc_ApproxPoly, accuracy)
             for (const auto& pt : curve)
             {
                 double min_dist = std::abs(cv::pointPolygonTest(approx_curve, Point2f(pt), true));
-                
+
                 // allow a 1 pixel tolerance for floating point rounding
                 EXPECT_LE(min_dist, eps + 1.0);
             }
