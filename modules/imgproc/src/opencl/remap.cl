@@ -464,7 +464,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 #else
                             #pragma unroll
                             for (int xp = 0; xp < 2; ++xp)
-                                xsum = fma(CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))), coeffs_x[xp], xsum);
+                                xsum = fma(CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))), (WT)(coeffs_x[xp]), xsum);
 #endif
                         }
                         else
@@ -472,12 +472,12 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             #pragma unroll
                             for (int xp = 0; xp < 2; ++xp)
                                 xsum = fma(sx + xp >= 0 && sx + xp < src_cols ?
-                                           CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))) : scalar, coeffs_x[xp], xsum);
+                                           CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))) : scalar, (WT)(coeffs_x[xp]), xsum);
                         }
-                        sum = fma(xsum, coeffs_y[yp], sum);
+                        sum = fma(xsum, (WT)(coeffs_y[yp]), sum);
                     }
                     else
-                        sum = fma(scalar, coeffs_y[yp], sum);
+                        sum = fma(scalar, (WT)(coeffs_y[yp]), sum);
                 }
 
                 storepix(CONVERT_TO_T(sum), dst);
