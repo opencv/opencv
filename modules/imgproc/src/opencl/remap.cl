@@ -437,8 +437,9 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
 #if defined BORDER_CONSTANT
                 float xf = map1[0], yf = map2[0];
-                int sx = (convert_int_sat_rtz(mad(xf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS);
-                int sy = (convert_int_sat_rtz(mad(yf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS);
+                // Coordinates can be negative, so truncation toward zero gives incorrect indices.
+                int sx = (convert_int_sat_rte(xf * (float)INTER_TAB_SIZE) >> INTER_BITS);
+                int sy = (convert_int_sat_rte(yf * (float)INTER_TAB_SIZE) >> INTER_BITS);
                 #if WARP_RELATIVE
                 sx += x;
                 sy += y;
