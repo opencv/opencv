@@ -566,6 +566,65 @@ TEST(Imgcodecs_Png, Read_Exif_From_Text)
     EXPECT_EQ(read_metadata[0], exif_data);
 }
 
+static uint32_t pngCrc32(const uchar* data, size_t len)
+{
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < len; i++)
+    {
+        crc ^= data[i];
+        for (int k = 0; k < 8; k++)
+            crc = (crc & 1u) ? ((crc >> 1) ^ 0xEDB88320u) : (crc >> 1);
+    }
+    return crc ^ 0xFFFFFFFFu;
+}
+
+static void pngAppendBE32(std::vector<uchar>& v, uint32_t x)
+{
+    v.push_back((uchar)(x >> 24)); v.push_back((uchar)(x >> 16));
+    v.push_back((uchar)(x >> 8));  v.push_back((uchar)x);
+}
+
+// Regression: a PNG "Raw profile type exif" text chunk whose declared length is
+// far larger than the payload it carries must be rejected (no multi-GB
+// speculative allocation / no out-of-bounds read in ExifReader::processRawProfile)
+// while the image itself still decodes.
+TEST(Imgcodecs_Png, Read_Exif_From_Text_oversized_length_rejected)
+{
+    Mat img(8, 8, CV_8UC3, Scalar(10, 20, 30));
+    std::vector<uchar> png;
+    ASSERT_TRUE(imencode(".png", img, png));
+    ASSERT_GT(png.size(), 33u);  // 8-byte signature + 25-byte IHDR chunk
+
+    const std::string keyword = "Raw profile type exif";
+    const std::string profile = "\nexif\n999999999\n41414141\n";  // 9e8 declared, tiny payload
+    std::vector<uchar> data(keyword.begin(), keyword.end());
+    data.push_back(0);  // keyword / text separator
+    data.insert(data.end(), profile.begin(), profile.end());
+
+    std::vector<uchar> chunk;
+    pngAppendBE32(chunk, (uint32_t)data.size());
+    const char type[4] = { 't', 'E', 'X', 't' };
+    chunk.insert(chunk.end(), type, type + 4);
+    chunk.insert(chunk.end(), data.begin(), data.end());
+    std::vector<uchar> crc_input(type, type + 4);
+    crc_input.insert(crc_input.end(), data.begin(), data.end());
+    pngAppendBE32(chunk, pngCrc32(crc_input.data(), crc_input.size()));
+
+    // splice the tEXt chunk right after IHDR (valid placement for ancillary chunks)
+    png.insert(png.begin() + 33, chunk.begin(), chunk.end());
+
+    std::vector<int> metadata_types;
+    std::vector<std::vector<uchar> > metadata;
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecodeWithMetadata(png, metadata_types, metadata, IMREAD_COLOR));
+    ASSERT_FALSE(decoded.empty());
+    EXPECT_EQ(decoded.rows, 8);
+    EXPECT_EQ(decoded.cols, 8);
+    // the malformed profile must not produce EXIF metadata
+    for (size_t i = 0; i < metadata_types.size(); i++)
+        EXPECT_NE(metadata_types[i], IMAGE_METADATA_EXIF);
+}
+
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
 {
     size_t plen = pattern.size();

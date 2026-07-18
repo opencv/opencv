@@ -96,7 +96,11 @@ else() # UNIX
 
 endif()
 
-ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+  ocv_update(CMAKE_INSTALL_RPATH "@executable_path/Frameworks;@loader_path/Frameworks;@executable_path/../${OPENCV_3P_LIB_INSTALL_PATH}")
+else()
+  ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(INSTALL_TO_MANGLED_PATHS)

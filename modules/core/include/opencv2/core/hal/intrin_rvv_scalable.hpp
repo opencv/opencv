@@ -4,6 +4,7 @@
 
 // The original implementation is contributed by HAN Liutong.
 // Copyright (C) 2022, Institute of Software, Chinese Academy of Sciences.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
@@ -534,6 +535,13 @@ inline void v_lut_deinterleave(const double* tab, const v_int32& vidx, v_float64
 inline v_uint8 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
+
+// Byte-indexed LUT: vector byte indices -> looked-up bytes (uses RVV indexed load)
+inline v_uint8 v_lut(const uchar* tab, const v_uint8& idx)
+{ return __riscv_vluxei8_v_u8m2(tab, idx, VTraits<v_uint8>::vlanes()); }
+inline v_int8 v_lut(const schar* tab, const v_uint8& idx)
+{ return v_reinterpret_as_s8(v_lut((const uchar*)tab, idx)); }
+
 inline v_uint16 v_lut(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut((short*)tab, idx)); }
 inline v_uint16 v_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_pairs((short*)tab, idx)); }
 inline v_uint16 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
@@ -931,7 +939,7 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
 }
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32, v_float32, vfloat32m1_t, float, f32, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, float, f64, VTraits<v_float64>::vlanes())
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, double, f64, VTraits<v_float64>::vlanes())
 #endif
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE(_Tpvec, _nTpvec, func, scalartype, suffix, vl, red) \

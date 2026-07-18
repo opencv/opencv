@@ -136,9 +136,6 @@ endif()
 
 set(JPEG_LIB_VERSION 70)
 
-# OpenCV
-set(JPEG_LIB_VERSION "${VERSION}-${JPEG_LIB_VERSION}" PARENT_SCOPE)
-
 set(THREAD_LOCAL "")  # WITH_TURBOJPEG is not used
 
 add_definitions(-DNO_GETENV -DNO_PUTENV)

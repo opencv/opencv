@@ -205,6 +205,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Quantize,         QuantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dequantize,       DequantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Requantize,       RequantizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(QuantizeDynamic,  QuantizeDynamicLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DequantizeDynamic, DequantizeDynamicLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ConvolutionInt8,  ConvolutionLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProductInt8, InnerProductLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);

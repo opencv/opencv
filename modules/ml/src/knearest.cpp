@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include "kdtree.hpp"
 
 /****************************************************************************************\
@@ -171,13 +172,21 @@ public:
                 const float* u = _samples.ptr<float>(testidx + range.start);
 
                 float s = 0;
-                for( i = 0; i <= d - 4; i += 4 )
+                i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 {
-                    float t0 = u[i] - v[i], t1 = u[i+1] - v[i+1];
-                    float t2 = u[i+2] - v[i+2], t3 = u[i+3] - v[i+3];
-                    s += t0*t0 + t1*t1 + t2*t2 + t3*t3;
+                    const int vl = VTraits<v_float32>::vlanes();
+                    v_float32 a0 = vx_setzero_f32(), a1 = vx_setzero_f32();
+                    for( ; i <= d - 2*vl; i += 2*vl )
+                    {
+                        v_float32 d0 = v_sub(vx_load(u + i), vx_load(v + i));
+                        a0 = v_fma(d0, d0, a0);
+                        v_float32 d1 = v_sub(vx_load(u + i + vl), vx_load(v + i + vl));
+                        a1 = v_fma(d1, d1, a1);
+                    }
+                    s = v_reduce_sum(v_add(a0, a1));
                 }
-
+#endif
                 for( ; i < d; i++ )
                 {
                     float t0 = u[i] - v[i];

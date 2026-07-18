@@ -4,7 +4,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-#define TYPICAL_MAT_TYPES_ADWEIGHTED  CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1
+#define TYPICAL_MAT_TYPES_ADWEIGHTED  CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1
 #define TYPICAL_MATS_ADWEIGHTED       testing::Combine(testing::Values(szVGA, sz720p, sz1080p), testing::Values(TYPICAL_MAT_TYPES_ADWEIGHTED))
 
 PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
@@ -31,7 +31,10 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 
     TEST_CYCLE() cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
 
-    SANITY_CHECK(dst, depth == CV_32S ? 4 : 1);
+    if (depth == CV_32F)
+        SANITY_CHECK(dst, 1e-4, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, depth == CV_32S ? 4 : 1);
 }
 
 } // namespace

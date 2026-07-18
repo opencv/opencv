@@ -170,7 +170,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         getMatTypeStr( dstType, dstTypeStr );
         const char* dimStr = dim == 0 ? "ROWS" : "COLS";
 
-        snprintf( msg, sizeof(msg), "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s",
+        snprintf( msg, sizeof(msg), "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s\n",
                 srcTypeStr.c_str(), dstTypeStr.c_str(), opTypeStr, dimStr );
         ts->printf( cvtest::TS::LOG, msg );
         return cvtest::TS::FAIL_BAD_ACCURACY;
@@ -2624,6 +2624,24 @@ TEST(Mat1D, DISABLED_basic)
         EXPECT_EQ(50, pt.x);
         EXPECT_EQ(0, pt.y);
     }
+}
+
+TEST(Mat, regression_cvReshapeMatND_continuous)
+{
+    int sizes[] = {2, 3, 4};
+    Mat mat(3, sizes, CV_32SC1);
+    CvMatND src = cvMatND(mat);
+    CvMatND reshaped;
+    int new_sizes[] = {4, 3, 2};
+    CvArr* result = 0;
+
+    ASSERT_NO_THROW(result = cvReshapeMatND(&src, sizeof(reshaped), &reshaped, 0, 3, new_sizes));
+    ASSERT_NE((CvArr*)0, result);
+    EXPECT_EQ(3, reshaped.dims);
+    EXPECT_EQ(new_sizes[0], reshaped.dim[0].size);
+    EXPECT_EQ(new_sizes[1], reshaped.dim[1].size);
+    EXPECT_EQ(new_sizes[2], reshaped.dim[2].size);
+    EXPECT_EQ(src.data.ptr, reshaped.data.ptr);
 }
 
 TEST(Mat, ptrVecni_20044)

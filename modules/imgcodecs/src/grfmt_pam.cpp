@@ -175,28 +175,28 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
  */
 
 static void
-basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_size,
+basic_conversion (void *src, const struct channel_layout *layout, int src_sample_size,
     int src_width, void *target, int target_channels, int target_depth, bool use_rgb)
 {
     switch (target_depth) {
         case CV_8U:
         {
             uchar *d = (uchar *)target, *s = (uchar *)src,
-                *end = ((uchar *)src) + src_width;
+                *end = ((uchar *)src) + src_width * src_sample_size;
             switch (target_channels) {
                 case 1:
-                    for( ; s < end; d += 3, s += src_sampe_size )
-                        d[0] = d[1] = d[2] = s[layout->graychan];
+                    for( ; s < end; d += 1, s += src_sample_size )
+                        d[0] = s[layout->graychan];
                     break;
                 case 3:
                     if (use_rgb)
-                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                        for( ; s < end; d += 3, s += src_sample_size ) {
                             d[0] = s[layout->rchan];
                             d[1] = s[layout->gchan];
                             d[2] = s[layout->bchan];
                         }
                     else
-                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                        for( ; s < end; d += 3, s += src_sample_size ) {
                             d[0] = s[layout->bchan];
                             d[1] = s[layout->gchan];
                             d[2] = s[layout->rchan];
@@ -210,21 +210,21 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
         case CV_16U:
         {
             ushort *d = (ushort *)target, *s = (ushort *)src,
-                *end = ((ushort *)src) + src_width;
+                *end = ((ushort *)src) + src_width * src_sample_size;
             switch (target_channels) {
                 case 1:
-                    for( ; s < end; d += 3, s += src_sampe_size )
-                        d[0] = d[1] = d[2] = s[layout->graychan];
+                    for( ; s < end; d += 1, s += src_sample_size )
+                        d[0] = s[layout->graychan];
                     break;
                 case 3:
                     if (use_rgb)
-                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                        for( ; s < end; d += 3, s += src_sample_size ) {
                             d[0] = s[layout->rchan];
                             d[1] = s[layout->gchan];
                             d[2] = s[layout->bchan];
                         }
                     else
-                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                        for( ; s < end; d += 3, s += src_sample_size ) {
                             d[0] = s[layout->bchan];
                             d[1] = s[layout->gchan];
                             d[2] = s[layout->rchan];

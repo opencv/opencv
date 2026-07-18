@@ -105,7 +105,7 @@ let mat = new cv.Mat();
 let matVec = new cv.MatVector();
 // Push a Mat back into MatVector
 matVec.push_back(mat);
-// Get a Mat fom MatVector
+// Get a Mat from MatVector
 let cnt = matVec.get(0);
 mat.delete(); matVec.delete(); cnt.delete();
 @endcode

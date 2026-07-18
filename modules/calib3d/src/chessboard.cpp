@@ -5,7 +5,7 @@
 #include "precomp.hpp"
 #include "opencv2/flann.hpp"
 #include "chessboard.hpp"
-#include "math.h"
+#include <math.h>
 
 //#define CV_DETECTORS_CHESSBOARD_DEBUG
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG

@@ -2660,7 +2660,7 @@ cvReshapeMatND( const CvArr* arr,
                 mat = &stub;
             }
 
-            if( CV_IS_MAT_CONT( mat->type ))
+            if( !CV_IS_MAT_CONT( mat->type ))
                 CV_Error( cv::Error::StsBadArg, "Non-continuous nD arrays are not supported" );
 
             size1 = mat->dim[0].size;

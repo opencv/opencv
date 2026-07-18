@@ -40,6 +40,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "hal_replacement.hpp"
 
 namespace cv
 {
@@ -1004,19 +1005,8 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
     _dst.create( src.size(), CV_8UC1);
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        IppiSize roi = { src.cols, src.rows };
-        Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
-        if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CALL_HAL(distanceTransform, cv_hal_distanceTransform, src.ptr<uchar>(), src.step, dst.ptr<uchar>(), dst.step,
+             src.cols, src.rows, CV_8U, cv::DIST_L1, cv::DIST_MASK_3);
 
     distanceATS_L1_8u(src, dst);
 }
@@ -1055,53 +1045,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
     if( maskSize == cv::DIST_MASK_PRECISE )
     {
-
-#ifdef HAVE_IPP
-        CV_IPP_CHECK()
-        {
-#if IPP_DISABLE_PERF_TRUE_DIST_MT
-            // IPP uses floats, but 4097 cannot be squared into a float
-            if((cv::getNumThreads()<=1 || (src.total()<(int)(1<<14))) &&
-                src.rows < 4097 && src.cols < 4097)
-#endif
-            {
-                IppStatus status;
-                IppiSize roi = { src.cols, src.rows };
-                Ipp8u *pBuffer;
-                int bufSize=0;
-
-                status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
-                if (status>=0)
-                {
-                    pBuffer = (Ipp8u *)CV_IPP_MALLOC( bufSize );
-                    status = CV_INSTRUMENT_FUN_IPP(ippiTrueDistanceTransform_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
-                    ippFree( pBuffer );
-                    if (status>=0)
-                    {
-                        // https://github.com/opencv/opencv/issues/24082
-                        // There is probably a rounding issue that leads to non-deterministic behavior
-                        // between runs on positions closer to zeros by x-axis in straight direction.
-                        // As a workaround, we detect the distances that expected to be exact
-                        // number of pixels and round manually.
-                        static const float correctionDiff = 1.0f / (1 << 11);
-                        for (int i = 0; i < dst.rows; ++i)
-                        {
-                            float* row = dst.ptr<float>(i);
-                            for (int j = 0; j < dst.cols; ++j)
-                            {
-                                float rounded = static_cast<float>(cvRound(row[j]));
-                                if (fabs(row[j] - rounded) <= correctionDiff)
-                                    row[j] = rounded;
-                            }
-                        }
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-            }
-        }
-#endif
+        CALL_HAL(distanceTransform, cv_hal_distanceTransform, src.ptr<uchar>(), src.step, dst.ptr<uchar>(), dst.step,
+                 src.cols, src.rows, CV_32F, distType, cv::DIST_MASK_PRECISE);
 
         trueDistTrans( src, dst );
         return;
@@ -1121,38 +1066,16 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
         if( maskSize == cv::DIST_MASK_3 )
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
-            if (!has_int_overflow && CV_IPP_CHECK_COND)
-            {
-                IppiSize roi = { src.cols, src.rows };
-                if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP);
-                    return;
-                }
-                setIppErrorStatus();
-            }
-#endif
+            CALL_HAL(distanceTransform, cv_hal_distanceTransform, src.ptr<uchar>(), src.step, dst.ptr<uchar>(), dst.step,
+                     src.cols, src.rows, CV_32F, distType, cv::DIST_MASK_3);
 
             temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_3x3(src, temp, dst, _mask);
         }
         else
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
-            if (!has_int_overflow && CV_IPP_CHECK_COND)
-            {
-                IppiSize roi = { src.cols, src.rows };
-                if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_5x5_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP);
-                    return;
-                }
-                setIppErrorStatus();
-            }
-#endif
+            CALL_HAL(distanceTransform, cv_hal_distanceTransform, src.ptr<uchar>(), src.step, dst.ptr<uchar>(), dst.step,
+                     src.cols, src.rows, CV_32F, distType, cv::DIST_MASK_5);
 
             temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_5x5(src, temp, dst, _mask);

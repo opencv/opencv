@@ -1598,6 +1598,20 @@ inline v_uint8x32 v256_lut(const uchar* tab, const int* idx) { return v_reinterp
 inline v_uint8x32 v256_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_pairs((const schar *)tab, idx)); }
 inline v_uint8x32 v256_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_quads((const schar *)tab, idx)); }
 
+inline v_uint8x32 v256_lut(const uchar* tab, const v_uint8x32& idx)
+{
+    uchar CV_DECL_ALIGNED(32) indices[32], result[32];
+    _mm256_store_si256((__m256i*)indices, idx.val);
+    for (int i = 0; i < 32; i++) result[i] = tab[indices[i]];
+    return v_uint8x32(_mm256_load_si256((const __m256i*)result));
+}
+inline v_int8x32 v256_lut(const schar* tab, const v_uint8x32& idx)
+{ return v_reinterpret_as_s8(v256_lut((const uchar *)tab, idx)); }
+
+
+inline v_uint8x32 v_lut(const uchar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+inline v_int8x32 v_lut(const schar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+
 inline v_int16x16 v256_lut(const short* tab, const int* idx)
 {
     return v_int16x16(_mm256_setr_epi16(tab[idx[0]], tab[idx[1]], tab[idx[ 2]], tab[idx[ 3]], tab[idx[ 4]], tab[idx[ 5]], tab[idx[ 6]], tab[idx[ 7]],

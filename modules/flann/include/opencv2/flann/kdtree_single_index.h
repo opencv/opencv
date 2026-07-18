@@ -158,12 +158,33 @@ public:
     {
         load_value(stream, size_);
         load_value(stream, dim_);
+        // The dataset the index is attached to is fixed by the caller, so a
+        // saved index whose stored size/dim disagree with it is malformed.
+        if (size_ != dataset_.rows || dim_ != dataset_.cols) {
+            FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: saved dataset dimensions do not match");
+        }
         load_value(stream, root_bbox_);
+        if (root_bbox_.size() != dim_) {
+            FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: bounding box has wrong length");
+        }
         load_value(stream, reorder_);
         load_value(stream, leaf_max_size_);
         load_value(stream, vind_);
+        // vind_ holds one dataset point index per row and every entry is
+        // dereferenced during search.
+        if (vind_.size() != size_) {
+            FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: index permutation has wrong length");
+        }
+        for (size_t i = 0; i < vind_.size(); ++i) {
+            if (vind_[i] < 0 || (size_t)vind_[i] >= size_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: point index is out of range");
+            }
+        }
         if (reorder_) {
             load_value(stream, data_);
+            if (data_.rows != size_ || data_.cols != dim_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: reordered data has wrong shape");
+            }
         }
         else {
             data_ = dataset_;
@@ -303,11 +324,25 @@ private:
     {
         tree = pool_.allocate<Node>();
         load_value(stream, *tree);
-        if (tree->child1!=NULL) {
-            load_tree(stream, tree->child1);
+        if (tree->child1!=NULL || tree->child2!=NULL) {
+            // Internal node: divfeat is the split dimension, used to index the
+            // query vector and the per-dimension distance array during search.
+            if (tree->divfeat < 0 || (size_t)tree->divfeat >= dim_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: split dimension is out of range");
+            }
+            if (tree->child1!=NULL) {
+                load_tree(stream, tree->child1);
+            }
+            if (tree->child2!=NULL) {
+                load_tree(stream, tree->child2);
+            }
         }
-        if (tree->child2!=NULL) {
-            load_tree(stream, tree->child2);
+        else {
+            // Leaf node: [left, right) is a range of point slots dereferenced
+            // during search, so it must stay inside the dataset.
+            if (tree->left < 0 || tree->right < tree->left || (size_t)tree->right > size_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree(single) index: leaf point range is out of range");
+            }
         }
     }
 

@@ -266,7 +266,7 @@ int decodeFormat( const char* dt, int* fmt_pairs, int max_len )
 int calcElemSize( const char* dt, int initial_size )
 {
     int size = 0;
-    int fmt_pairs[CV_FS_MAX_FMT_PAIRS], i, fmt_pair_count;
+    int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], i, fmt_pair_count;
     int comp_size;
 
     fmt_pair_count = decodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
@@ -316,7 +316,7 @@ int calcStructSize( const char* dt, int initial_size )
 int decodeSimpleFormat( const char* dt )
 {
     int elem_type = -1;
-    int fmt_pairs[CV_FS_MAX_FMT_PAIRS], fmt_pair_count;
+    int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], fmt_pair_count;
 
     fmt_pair_count = decodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
     if( fmt_pair_count != 1 || fmt_pairs[0] >= CV_CN_MAX)
@@ -2376,7 +2376,7 @@ FileNode::operator float() const
 
     if( type == INT )
     {
-        return (float)readInt(p);
+        return (float)readLong(p);
     }
     else if( type == REAL )
     {
@@ -2397,7 +2397,7 @@ FileNode::operator double() const
 
     if( type == INT )
     {
-        return (double)readInt(p);
+        return (double)readLong(p);
     }
     else if( type == REAL )
     {

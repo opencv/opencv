@@ -206,6 +206,94 @@ void CV_ArucoRefine::run(int) {
     }
 }
 
+// Find the position of a given marker id in the detection results, or -1 if absent.
+static int findMarkerIndex(const vector<int>& ids, int markerId) {
+    for(size_t i = 0; i < ids.size(); i++) {
+        if(ids[i] == markerId)
+            return (int)i;
+    }
+    return -1;
+}
+
+// Warp a marker image onto an arbitrary quad in the scene and paint it over the
+// background. A neutral grey (127) is used as the "background", the marker
+// only contains black/white pixels, so everything that stays 127 after the warp
+// is background and is left untouched.
+static void drawMarkerAtCorners(Mat& image, const Mat& marker, const vector<Point2f>& corners) {
+    vector<Point2f> originalCorners = {
+        Point2f(0.f, 0.f),
+        Point2f((float)marker.cols - 1.f, 0.f),
+        Point2f((float)marker.cols - 1.f, (float)marker.rows - 1.f),
+        Point2f(0.f, (float)marker.rows - 1.f)
+    };
+    Mat transformation = getPerspectiveTransform(originalCorners, corners);
+
+    Mat warped(image.size(), image.type(), Scalar::all(127));
+    warpPerspective(marker, warped, transformation, image.size(), INTER_NEAREST, BORDER_CONSTANT, Scalar::all(127));
+
+    Mat mask = warped != 127;
+    warped.copyTo(image, mask);
+}
+
+// Degrade the marker image: find its first black inner cell and partially fill it with white so
+// that the cell's white-pixel ratio becomes ~whiteRatio. This lets the test control how far a
+// single cell drifts from its ground-truth bit, which is what validBitIdThreshold gates.
+static bool setFirstBlackInnerCellWhiteRatio(Mat& marker, const aruco::Dictionary& dictionary,
+                                             int markerId, int markerBorderBits, float whiteRatio) {
+    const int markerSizeWithBorders = dictionary.markerSize + 2 * markerBorderBits;
+    const int cellSize = marker.rows / markerSizeWithBorders;
+    if(marker.cols != marker.rows || cellSize * markerSizeWithBorders != marker.rows)
+        return false;
+
+    Mat markerBits = dictionary.getMarkerBits(markerId);
+    for(int y = 0; y < dictionary.markerSize; y++) {
+        for(int x = 0; x < dictionary.markerSize; x++) {
+            if(markerBits.ptr<float>(y)[x] != 0.f)
+                continue; // skip white cells
+
+            Rect cell((x + markerBorderBits) * cellSize, (y + markerBorderBits) * cellSize,
+                      cellSize, cellSize);
+            marker(cell).setTo(Scalar::all(0));
+
+            // A centred white square of side sqrt(whiteRatio)*cellSize covers ~whiteRatio of the cell.
+            int whiteSide = cvRound(cellSize * std::sqrt(whiteRatio));
+            whiteSide = std::max(1, std::min(cellSize, whiteSide));
+            const int offset = (cellSize - whiteSide) / 2;
+            marker(Rect(cell.x + offset, cell.y + offset, whiteSide, whiteSide)).setTo(Scalar::all(255));
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Drop a marker from the detection results and move its corners to the rejected list, so that
+// refineDetectedMarkers() has a rejected candidate to try to recover.
+static bool removeMarkerAndMakeRejected(int markerId, vector<vector<Point2f>>& corners,
+                                        vector<int>& ids, vector<vector<Point2f>>& rejected) {
+    const int markerIndex = findMarkerIndex(ids, markerId);
+    if(markerIndex < 0)
+        return false;
+
+    rejected.clear();
+    rejected.push_back(corners[(size_t)markerIndex]);
+    corners.erase(corners.begin() + markerIndex);
+    ids.erase(ids.begin() + markerIndex);
+    return true;
+}
+
+// Render a flat board image and detect its markers.
+// Returns true only when every board marker was found.
+static bool generateBoardForRefine(const aruco::GridBoard& board, int markerBorderBits,
+                                   Mat& image, const aruco::ArucoDetector& detector,
+                                   vector<vector<Point2f>>& corners, vector<int>& ids) {
+    board.generateImage(Size(760, 760), image, 50, markerBorderBits);
+
+    vector<vector<Point2f>> rejected;
+    detector.detectMarkers(image, corners, ids, rejected);
+    return board.getIds().size() == ids.size();
+}
+
 TEST(CV_ArucoBoardPose, accuracy) {
     CV_ArucoBoardPose test(ArucoAlgParams::USE_DEFAULT);
     test.safe_run();
@@ -227,6 +315,75 @@ TEST(CV_ArucoRefine, accuracy) {
 TEST(CV_Aruco3Refine, accuracy) {
     CV_Aruco3Refine test(ArucoAlgParams::USE_ARUCO3);
     test.safe_run();
+}
+
+// refineDetectedMarkers() must use detectorParams.validBitIdThreshold when matching a rejected
+// candidate's cell ratios against the expected marker code. Both cases below refine the very same
+// image: a board whose dropped marker 0 is redrawn with one black cell brightened to a 0.6 white
+// ratio and differ only in the threshold: the strict default (0.49) treats that cell as a bit
+// error and leaves the marker rejected, while a relaxed 0.7 tolerates the deviation and recovers it.
+class CV_ArucoRefineValidBitIdThreshold : public testing::Test {
+protected:
+    void SetUp() override {
+        const int markerBorderBits = 1;
+        const int markerSidePixels = 300;
+
+        dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+        board = aruco::GridBoard(Size(2, 2), 1.f, 0.2f, dictionary);
+
+        detectorParameters.markerBorderBits = markerBorderBits;
+        detectorParameters.perspectiveRemovePixelPerCell = 20;
+        detectorParameters.perspectiveRemoveIgnoredMarginPerCell = 0.;
+
+        const aruco::ArucoDetector detector(dictionary, detectorParameters, refineParameters);
+
+        // Start from a fully detected board (clean markers, so the threshold is irrelevant here).
+        ASSERT_TRUE(generateBoardForRefine(board, markerBorderBits, image, detector, corners, ids));
+
+        // Drop marker 0 so it becomes a rejected candidate for refinement.
+        ASSERT_TRUE(removeMarkerAndMakeRejected(markerId, corners, ids, rejected));
+
+        // Draw a degraded version of marker 0 (one black cell at 0.6 white ratio) at its location.
+        Mat marker;
+        dictionary.generateImageMarker(markerId, markerSidePixels, marker, markerBorderBits);
+        ASSERT_TRUE(setFirstBlackInnerCellWhiteRatio(marker, dictionary, markerId, markerBorderBits, 0.6f));
+        drawMarkerAtCorners(image, marker, rejected[0]);
+    }
+
+    // Refine the shared image with a given threshold and report whether marker 0 was recovered.
+    // refineDetectedMarkers() mutates its inputs, so each attempt runs on its own copy.
+    bool isMarkerRecovered(float validBitIdThreshold) const {
+        aruco::DetectorParameters attemptParameters = detectorParameters;
+        attemptParameters.validBitIdThreshold = validBitIdThreshold;
+        const aruco::ArucoDetector attemptDetector(dictionary, attemptParameters, refineParameters);
+
+        vector<vector<Point2f>> attemptCorners = corners;
+        vector<int> attemptIds = ids;
+        vector<vector<Point2f>> attemptRejected = rejected;
+        attemptDetector.refineDetectedMarkers(image, board, attemptCorners, attemptIds, attemptRejected);
+        return findMarkerIndex(attemptIds, markerId) >= 0;
+    }
+
+    const int markerId = 0;
+    aruco::Dictionary dictionary;
+    aruco::GridBoard board;
+    aruco::DetectorParameters detectorParameters;
+    aruco::RefineParameters refineParameters{10.f, 1.f, true};
+
+    Mat image;
+    vector<vector<Point2f>> corners;
+    vector<int> ids;
+    vector<vector<Point2f>> rejected;
+};
+
+// Strict threshold: the 0.6 white cell is treated as a bit error, so the marker is not recovered.
+TEST_F(CV_ArucoRefineValidBitIdThreshold, strictThresholdKeepsMarkerRejected) {
+    EXPECT_FALSE(isMarkerRecovered(0.49f));
+}
+
+// Relaxed threshold: the deviation is tolerated, so the marker is recovered.
+TEST_F(CV_ArucoRefineValidBitIdThreshold, relaxedThresholdRecoversMarker) {
+    EXPECT_TRUE(isMarkerRecovered(0.7f));
 }
 
 TEST(CV_ArucoBoardPose, CheckNegativeZ)
@@ -329,6 +486,85 @@ TEST(CV_ArucoDictionary, extendDictionary) {
     ASSERT_EQ(custom_dictionary.bytesList.rows, 150);
     ASSERT_EQ(cv::norm(custom_dictionary.bytesList, base_dictionary.bytesList.rowRange(0, 150)), 0.);
 }
+
+// Unit-test both getDistanceToId() overloads on a known marker: the existing bit-based overload
+// must keep its exact Hamming behaviour, and the new ratio-based overload must count a cell as an
+// error only when it deviates from the expected bit by more than validBitIdThreshold.
+TEST(CV_ArucoDictionary, getDistanceToIdCellPixelRatio) {
+    const int markerId = 0;
+    const float validBitIdThreshold = 0.49f;
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+
+    // Bit overload: the exact marker bits are at distance 0 from their own id.
+    Mat bits = aruco::Dictionary::getBitsFromByteList(dictionary.bytesList.rowRange(markerId, markerId + 1),
+                                                      dictionary.markerSize);
+    EXPECT_EQ(0, dictionary.getDistanceToId(bits, markerId, false));
+
+    // Bit overload: flipping a single bit yields a Hamming distance of exactly 1.
+    Mat erroneousBits = bits.clone();
+    erroneousBits.ptr<uchar>(0)[0] = (uchar)!erroneousBits.ptr<uchar>(0)[0];
+    EXPECT_EQ(1, dictionary.getDistanceToId(erroneousBits, markerId, false));
+
+    // Ground-truth bit values (0.f or 1.f) for the ratio overload checks below.
+    Mat markerRatio = dictionary.getMarkerBits(markerId);
+    const float expectedBit = markerRatio.ptr<float>(0)[0];
+
+    // Ratio overload: a 0.4 drift toward the wrong value stays within the 0.49 tolerance -> no error.
+    Mat acceptedRatio = markerRatio.clone();
+    acceptedRatio.ptr<float>(0)[0] = expectedBit > 0.5f ? 0.6f : 0.4f;
+    EXPECT_EQ(0, dictionary.getDistanceToId(acceptedRatio, markerId, false, validBitIdThreshold));
+
+    // Ratio overload: a 0.6 drift exceeds the 0.49 tolerance -> the cell counts as one error.
+    Mat rejectedRatio = markerRatio.clone();
+    rejectedRatio.ptr<float>(0)[0] = expectedBit > 0.5f ? 0.4f : 0.6f;
+    EXPECT_EQ(1, dictionary.getDistanceToId(rejectedRatio, markerId, false, validBitIdThreshold));
+}
+
+// 5x5 markers leave one meaningful bit in the final packed byte. Flip only that cell
+// far enough from its expected value and verify that the ratio distance counts it.
+TEST(CV_ArucoDictionary, getDistanceToIdCellPixelRatioPartialByte) {
+    const int markerId = 15;
+    const float validBitIdThreshold = 0.49f;
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_5X5_50);
+
+    Mat markerRatio = dictionary.getMarkerBits(markerId);
+    EXPECT_EQ(0, dictionary.getDistanceToId(markerRatio, markerId, false, validBitIdThreshold));
+
+    Mat rotatedMarkerRatio = dictionary.getMarkerBits(markerId, 1);
+    EXPECT_EQ(0, dictionary.getDistanceToId(rotatedMarkerRatio, markerId, true, validBitIdThreshold));
+
+    Mat rejectedRatio = markerRatio.clone();
+    float& lastCellRatio = rejectedRatio.ptr<float>(dictionary.markerSize - 1)[dictionary.markerSize - 1];
+    lastCellRatio = lastCellRatio > 0.5f ? 0.4f : 0.6f;
+    EXPECT_EQ(1, dictionary.getDistanceToId(rejectedRatio, markerId, false, validBitIdThreshold));
+}
+
+TEST(CV_ArucoDictionary, identifyBitMask) {
+    const int markerId = 7;
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+
+    // Start with a 0/1 bit matrix for the marker and confirm that the bit-based
+    // identify overload handles it without any ratio threshold input.
+    Mat bits = aruco::Dictionary::getBitsFromByteList(dictionary.bytesList.rowRange(markerId, markerId + 1),
+                                                      dictionary.markerSize);
+
+    int idx = -1;
+    int rotation = -1;
+    ASSERT_TRUE(dictionary.identify(bits, idx, rotation, 0.0));
+    EXPECT_EQ(markerId, idx);
+    EXPECT_EQ(0, rotation);
+
+    // OpenCV comparisons produce masks with values 0 and 255, not 0 and 1. The raw-bit
+    // identify overload must normalize those masks before delegating to the ratio path.
+    Mat bitMask;
+    bits.convertTo(bitMask, CV_8U, 255.0);
+    idx = -1;
+    rotation = -1;
+    ASSERT_TRUE(dictionary.identify(bitMask, idx, rotation, 0.0));
+    EXPECT_EQ(markerId, idx);
+    EXPECT_EQ(0, rotation);
+}
+
 TEST(CV_ArucoBoardGenerateImage_RotationTest, HandlesRotatedMarkersWithoutBoundingBoxError)
 {
     using namespace cv;

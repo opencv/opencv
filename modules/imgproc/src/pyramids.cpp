@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -54,6 +55,12 @@ template<typename T, int shift> struct FixPtCast
     typedef T rtype;
     rtype operator ()(type1 arg) const { return (T)((arg + (1 << (shift-1))) >> shift); }
 };
+template<typename T, int shift> struct FixPtUcharCast
+{
+    typedef ushort type1;
+    typedef T rtype;
+    rtype operator ()(type1 arg) const { return (T)((arg + (1 << (shift-1))) >> shift); }
+};
 
 template<typename T, int shift> struct FltCast
 {
@@ -83,6 +90,76 @@ template<typename T1, typename T2> int PyrUpVecV(T1**, T2**, int) { return 0; }
 template<typename T1, typename T2> int PyrUpVecVOneRow(T1**, T2*, int) { return 0; }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+// Dispatched AVX-512 VBMI implementations
+int PyrDownVecH_uchar_ushort_1_dispatch(const uchar* src, ushort* row, int width);
+int PyrDownVecH_uchar_ushort_2_dispatch(const uchar* src, ushort* row, int width);
+int PyrDownVecH_uchar_ushort_3_dispatch(const uchar* src, ushort* row, int width);
+int PyrDownVecH_uchar_ushort_4_dispatch(const uchar* src, ushort* row, int width);
+
+// uchar -> ushort intermediate storage implementations
+template<> int PyrDownVecH<uchar, ushort, 1>(const uchar* src, ushort* row, int width)
+{
+    int x = PyrDownVecH_uchar_ushort_1_dispatch(src, row, width);
+    return x;
+}
+
+template<> int PyrDownVecH<uchar, ushort, 2>(const uchar* src, ushort* row, int width)
+{
+    int x = PyrDownVecH_uchar_ushort_2_dispatch(src, row, width);
+    return x;
+}
+
+template<> int PyrDownVecH<uchar, ushort, 3>(const uchar* src, ushort* row, int width)
+{
+    int x = PyrDownVecH_uchar_ushort_3_dispatch(src, row, width);
+    return x;
+}
+
+template<> int PyrDownVecH<uchar, ushort, 4>(const uchar* src, ushort* row, int width)
+{
+    int x = PyrDownVecH_uchar_ushort_4_dispatch(src, row, width);
+    return x;
+
+}
+
+template<> int PyrDownVecV<ushort, uchar>(ushort** src, uchar* dst, int width)
+{
+    int x = 0;
+    const ushort *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+
+    for( ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
+    {
+        v_uint16 r0, r1, r2, r3, r4, t0, t1;
+        r0 = vx_load(row0 + x);
+        r1 = vx_load(row1 + x);
+        r2 = vx_load(row2 + x);
+        r3 = vx_load(row3 + x);
+        r4 = vx_load(row4 + x);
+        t0 = v_add(v_add(v_add(r0, r4), v_add(r2, r2)), v_shl<2>(v_add(v_add(r1, r3), r2)));
+        r0 = vx_load(row0 + x + VTraits<v_uint16>::vlanes());
+        r1 = vx_load(row1 + x + VTraits<v_uint16>::vlanes());
+        r2 = vx_load(row2 + x + VTraits<v_uint16>::vlanes());
+        r3 = vx_load(row3 + x + VTraits<v_uint16>::vlanes());
+        r4 = vx_load(row4 + x + VTraits<v_uint16>::vlanes());
+        t1 = v_add(v_add(v_add(r0, r4), v_add(r2, r2)), v_shl<2>(v_add(v_add(r1, r3), r2)));
+        v_store(dst + x, v_rshr_pack<8>(t0, t1));
+    }
+    if (x <= width - VTraits<v_uint16>::vlanes())
+    {
+        v_uint16 r0, r1, r2, r3, r4, t0;
+        r0 = vx_load(row0 + x);
+        r1 = vx_load(row1 + x);
+        r2 = vx_load(row2 + x);
+        r3 = vx_load(row3 + x);
+        r4 = vx_load(row4 + x);
+        t0 = v_add(v_add(v_add(r0, r4), v_add(r2, r2)), v_shl<2>(v_add(v_add(r1, r3), r2)));
+        v_rshr_pack_store<8>(dst + x, t0);
+        x += VTraits<v_uint16>::vlanes();
+    }
+    vx_cleanup();
+
+    return x;
+}
 
 template<> int PyrDownVecH<uchar, int, 1>(const uchar* src, int* row, int width)
 {
@@ -1291,10 +1368,23 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     {
         CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
     }
+    bool use_avx512vbmi = checkHardwareSupport(CPU_AVX_512VBMI);
 
     PyrFunc func = 0;
     if( depth == CV_8U )
-        func = pyrDown_< FixPtCast<uchar, 8> >;
+    {
+        if(use_avx512vbmi)
+        {
+            // intermediate storage in 16bit only improves when used along with AVX512_VBMI ISA.
+            // AVX2: Usage with AVX2 has negligible measurable uplift in performance.
+            // ARM: Using 16bit intermediate storage has shown 5 to 10% degradation on ARM platform.
+            func = pyrDown_< FixPtUcharCast<uchar, 8> >;
+        }
+        else
+        {
+            func = pyrDown_< FixPtCast<uchar, 8> >;
+        }
+    }
     else if( depth == CV_16S )
         func = pyrDown_< FixPtCast<short, 8> >;
     else if( depth == CV_16U )

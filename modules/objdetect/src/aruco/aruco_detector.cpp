@@ -383,31 +383,41 @@ static Mat _extractCellPixelRatio(InputArray _image, const vector<Point2f>& corn
 
 
 /**
-  * @brief Return number of erroneous bits in border, i.e. bits for which pixel ratio > validBitIdThreshold.
+  * @brief Return number of erroneous bits in border.
+  *
+  * Black border error if cellPixelRatio > validBitIdThreshold -> borderErrors
+  * White border error if 1 - cellPixelRatio > validBitIdThreshold
+  * <=>  cellPixelRatio < 1 - validBitIdThreshold) -> invBorderErrors (inverted markers)
   */
- static int _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int borderSize, float validBitIdThreshold) {
+static void _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int borderSize, float validBitIdThreshold,
+    int &borderErrors, int &invBorderErrors) {
 
     int sizeWithBorders = markerSize + 2 * borderSize;
 
     CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
 
     // Get border error. cellPixelRatio has the opposite color as the borders.
-    int totalErrors = 0;
+    const float invThreshold = 1.f - validBitIdThreshold;
+    borderErrors = invBorderErrors = 0;
+    const auto countCell = [&](float ratio) {
+        if(ratio > validBitIdThreshold) borderErrors++;
+        if(ratio < invThreshold) invBorderErrors++;
+    };
     for(int y = 0; y < sizeWithBorders; y++) {
+        const float* row = cellPixelRatio.ptr<float>(y);
         for(int k = 0; k < borderSize; k++) {
             // Left and right vertical sides
-            if(cellPixelRatio.ptr<float>(y)[k] > validBitIdThreshold)  totalErrors++;
-            if(cellPixelRatio.ptr<float>(y)[sizeWithBorders - 1 - k] > validBitIdThreshold) totalErrors++;
+            countCell(row[k]);
+            countCell(row[sizeWithBorders - 1 - k]);
         }
     }
     for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
         for(int k = 0; k < borderSize; k++) {
             // Top and bottom horizontal sides
-            if(cellPixelRatio.ptr<float>(k)[x] > validBitIdThreshold) totalErrors++;
-            if(cellPixelRatio.ptr<float>(sizeWithBorders - 1 - k)[x] > validBitIdThreshold) totalErrors++;
+            countCell(cellPixelRatio.ptr<float>(k)[x]);
+            countCell(cellPixelRatio.ptr<float>(sizeWithBorders - 1 - k)[x]);
         }
     }
-    return totalErrors;
 }
 
 
@@ -456,7 +466,6 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
     return std::max(0.f, std::min(1.f, normalizedMarkerConfidence));
 }
 
-
 /**
  * @brief Tries to identify one candidate given the dictionary
  * @return candidate typ. zero if the candidate is not valid,
@@ -486,27 +495,24 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
     // analyze border bits
     int maximumErrorsInBorder =
     int(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
-    int borderErrors =
-        _getBorderErrors(cellPixelRatio, dictionary.markerSize, params.markerBorderBits, params.validBitIdThreshold);
+    int borderErrors = 0, invBorderErrors = 0;
+    _getBorderErrors(cellPixelRatio, dictionary.markerSize, params.markerBorderBits, params.validBitIdThreshold,
+                     borderErrors, invBorderErrors);
 
     // check if it is a white marker
-    if(params.detectInvertedMarker){
-        Mat invCellPixelRatio = 1.f - cellPixelRatio;
-        int invBError = _getBorderErrors(invCellPixelRatio, dictionary.markerSize, params.markerBorderBits, params.validBitIdThreshold);
-        // white marker
-        if(invBError<borderErrors){
-            borderErrors = invBError;
-            invCellPixelRatio.copyTo(cellPixelRatio);
-            typ=2;
-        }
+    if(params.detectInvertedMarker && invBorderErrors < borderErrors) {
+        // white marker: invert the observed ratios in place and continue as a normal marker
+        borderErrors = invBorderErrors;
+        subtract(Scalar::all(1), cellPixelRatio, cellPixelRatio);
+        typ=2;
     }
     if(borderErrors > maximumErrorsInBorder) return 0; // border is wrong
 
     // take only inner bits
-    Mat onlyCellPixelRatio =
-        cellPixelRatio.rowRange(params.markerBorderBits,
-                                cellPixelRatio.rows - params.markerBorderBits)
-            .colRange(params.markerBorderBits, cellPixelRatio.cols - params.markerBorderBits);
+    Mat onlyCellPixelRatio = cellPixelRatio(
+        Rect(params.markerBorderBits, params.markerBorderBits,
+             cellPixelRatio.cols - 2 * params.markerBorderBits,
+             cellPixelRatio.rows - 2 * params.markerBorderBits));
 
     // try to identify the marker
     if(!dictionary.identify(onlyCellPixelRatio, idx, rotation, params.errorCorrectionRate, params.validBitIdThreshold))
@@ -1398,15 +1404,13 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                     detectorParams.perspectiveRemovePixelPerCell,
                     detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
 
-                Mat bits;
-                cellPixelRatio.convertTo(bits, CV_8UC1);
+                Mat onlyCellPixelRatio = cellPixelRatio(
+                    Rect(detectorParams.markerBorderBits, detectorParams.markerBorderBits,
+                         cellPixelRatio.cols - 2 * detectorParams.markerBorderBits,
+                         cellPixelRatio.rows - 2 * detectorParams.markerBorderBits));
 
-                Mat onlyBits =
-                    bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
-                        .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
-
-                codeDistance =
-                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+                codeDistance = dictionary.getDistanceToId(onlyCellPixelRatio, undetectedMarkersIds[i],
+                                                          false, detectorParams.validBitIdThreshold);
             }
 
             // if everythin is ok, assign values to current best match

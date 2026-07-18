@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #include "opencv2/core/hal/intrin.hpp"
 
@@ -8,11 +10,17 @@ namespace cv { namespace hal {
 
 extern const uchar popCountTable[256];
 
+typedef int (*NormHammingFunc)(const uchar*, int);
+typedef int (*NormHammingDiffFunc)(const uchar*, const uchar*, int);
+
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
 int normHamming(const uchar* a, int n);
 int normHamming(const uchar* a, const uchar* b, int n);
+
+NormHammingFunc getNormHammingFunc();
+NormHammingDiffFunc getNormHammingDiffFunc();
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -123,6 +131,17 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result += popCountTable[a[i] ^ b[i]];
     }
     return result;
+}
+
+NormHammingFunc getNormHammingFunc()
+{
+    NormHammingFunc f = &normHamming; // disambiguate the (a,n) overload
+    return f;
+}
+NormHammingDiffFunc getNormHammingDiffFunc()
+{
+    NormHammingDiffFunc f = &normHamming; // disambiguate the (a,b,n) overload
+    return f;
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

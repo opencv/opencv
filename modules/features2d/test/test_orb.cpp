@@ -195,4 +195,15 @@ TEST(Features2D_ORB, MaskValue)
     ASSERT_EQ(countNonZero(diff), 0);
 }
 
+TEST(Features2D_ORB, invalidCreateParameters)
+{
+    EXPECT_THROW(ORB::create(500, 1.0f), cv::Exception);
+    EXPECT_THROW(ORB::create(500, 1.2f, 0), cv::Exception);
+    EXPECT_THROW(ORB::create(500, 1.2f, 8, 31, 0, 5), cv::Exception);
+    EXPECT_THROW(ORB::create(500, 1.2f, 8, 31, 0, 2,
+                             static_cast<ORB::ScoreType>(-1)), cv::Exception);
+    EXPECT_THROW(ORB::create(500, 1.2f, 8, 31, 0, 2,
+                             ORB::HARRIS_SCORE, 1), cv::Exception);
+}
+
 }} // namespace

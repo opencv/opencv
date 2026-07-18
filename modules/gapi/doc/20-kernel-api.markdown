@@ -118,7 +118,10 @@ computation from inputs to outputs and infer metadata of internal
 for further pipeline optimizations, memory allocation, and other
 operations done by G-API framework during graph compilation.
 
-<!-- TODO add examples -->
+For example, a kernel that blurs an image can use `outMeta()` to copy
+the input image size to the output metadata while keeping the pixel
+type unchanged. A kernel that changes geometry, such as resize, updates
+the output dimensions accordingly before the graph is compiled.
 
 # Implementing a kernel {#gapi_kernel_implementing}
 
@@ -134,10 +137,10 @@ Every backend defines its own way to implement a kernel interface.
 This way is regular, though -- whatever plugin is, its kernel
 implementation must be "derived" from a kernel interface type.
 
-Kernel implementation are then organized into _kernel
-packages_. Kernel packages are passed to cv::GComputation::compile()
-as compile arguments, with some hints to G-API on how to select proper
-kernels (see more on this in "Heterogeneity"[TBD]).
+Kernel implementations are then organized into _kernel packages_.
+Kernel packages are passed to cv::GComputation::compile() as compile
+arguments, with some hints to G-API on how to select proper kernels
+according to the available backends and compilation hints.
 
 For example, the aforementioned `Filter2D` is implemented in
 "reference" CPU (OpenCV) plugin this way (*NOTE* -- this is a
@@ -176,8 +179,11 @@ macro GAPI_COMPOUND_KERNEL():
 
 @snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp compound
 
-<!-- TODO: ADD on how Compound kernels may simplify dispatching -->
-<!-- TODO: Add details on when expand() is called! -->
+Compound kernels can simplify dispatching because a backend may expand
+them into several smaller kernels only when that backend needs the
+decomposition. In practice, `expand()` is called during compilation,
+when G-API resolves the compound implementation into a backend-specific
+subgraph before execution.
 
 It is important to distinguish a compound kernel from G-API high-order
 function, i.e. a C++ function which looks like a kernel but in fact

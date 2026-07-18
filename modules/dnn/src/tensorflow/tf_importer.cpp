@@ -1651,6 +1651,7 @@ void TFImporter::parseSlice(tensorflow::GraphDef& net, const tensorflow::NodeDef
     CV_Assert_N(!begins.empty(), !sizes.empty());
     CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
     CV_CheckTypeEQ(sizes.type(), CV_32SC1, "");
+    CV_CheckEQ(begins.total(), sizes.total(), "Slice: 'begin' and 'size' must have equal length");
 
     if (begins.total() == 4 && getDataLayout(name, data_layouts) == DNN_LAYOUT_NHWC)
     {

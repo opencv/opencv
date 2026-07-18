@@ -8052,6 +8052,9 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
       case AgastFeatureDetector::OAST_9_16:
         OAST_9_16(_img, kpts, threshold);
         break;
+      default:
+        CV_Error_(Error::StsBadArg,
+                  ("Unknown AgastFeatureDetector detector type: %d", static_cast<int>(type)));
     }
 
     cv::Mat img = _img.getMat();

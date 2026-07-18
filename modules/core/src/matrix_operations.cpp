@@ -6,11 +6,8 @@
 #include "opencv2/core/mat.hpp"
 #include "opencl_kernels_core.hpp"
 
-#undef HAVE_IPP
-#undef CV_IPP_RUN_FAST
-#define CV_IPP_RUN_FAST(f, ...)
-#undef CV_IPP_RUN
-#define CV_IPP_RUN(c, f, ...)
+#define IPP_DISABLE_REDUCE 1
+#define IPP_DISABLE_SORT   0
 
 /*************************************************************************************************\
                                         Matrix Operations
@@ -341,9 +338,13 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
-typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth);
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth);
 
 template <typename T, typename WT, typename Op>
 struct ReduceR_SIMD
@@ -353,7 +354,6 @@ struct ReduceR_SIMD
         return start;
     }
 };
-
 
 template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
@@ -474,8 +474,6 @@ reduceC_( const Mat& srcmat, Mat& dstmat)
     parallel_for_(Range(0, srcmat.size().height), body);
 }
 
-typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
-
 }
 
 #define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int>, OpNop<int> >
@@ -512,7 +510,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
     int sstep = (int)srcmat.step, stype = srcmat.type(),
@@ -601,7 +599,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
 #define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
 #define reduceSumC16u64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
@@ -611,14 +609,14 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+#endif
 
 #define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
 #define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
-#endif
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 #define REDUCE_OP(favor, optype, type1, type2) \
 static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
@@ -643,7 +641,7 @@ static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstm
 }
 #endif
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 REDUCE_OP(8u, Max, uchar, uchar)
 REDUCE_OP(16u, Max, ushort, ushort)
 REDUCE_OP(16s, Max, short, short)
@@ -656,7 +654,7 @@ REDUCE_OP(32f, Max, float, float)
 #endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 REDUCE_OP(8u, Min, uchar, uchar)
 REDUCE_OP(16u, Min, ushort, ushort)
 REDUCE_OP(16s, Min, short, short)
@@ -821,9 +819,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if( op == REDUCE_SUM )
         {
-            ReduceSumFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
+            ReduceFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
@@ -899,9 +897,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == REDUCE_SUM)
         {
-            ReduceSumFunc simd_func = getReduceCSumFunc(sdepth, ddepth);
+            ReduceFunc simd_func = op0 == REDUCE_AVG
+                    ? getReduceCAvgFunc(sdepth, ddepth)
+                    : getReduceCSumFunc(sdepth, ddepth);
             if(simd_func)
-                func = (ReduceFunc)simd_func;
+                func = simd_func;
             else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
@@ -925,7 +925,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_MAX)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+            ReduceFunc simd_func = getReduceCMaxFunc(sdepth, ddepth);
+            if(simd_func)
+                func = simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceMaxC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMaxC16u;
@@ -938,7 +941,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_MIN)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+            ReduceFunc simd_func = getReduceCMinFunc(sdepth, ddepth);
+            if(simd_func)
+                func = simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceMinC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMinC16u;
@@ -951,7 +957,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == REDUCE_SUM2)
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceFunc simd_func = getReduceCSum2Func(sdepth, ddepth);
+            if(simd_func)
+                func = simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSum2C8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSum2C8u32f;
@@ -992,7 +1001,6 @@ namespace cv
 
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
-    AutoBuffer<T> buf;
     int n, len;
     bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
@@ -1001,45 +1009,48 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     if( sortRows )
         n = src.rows, len = src.cols;
     else
-    {
         n = src.cols, len = src.rows;
-        buf.allocate(len);
-    }
-    T* bptr = buf.data();
-
-    for( int i = 0; i < n; i++ )
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        T* ptr = bptr;
-        if( sortRows )
-        {
-            T* dptr = dst.ptr<T>(i);
-            if( !inplace )
-            {
-                const T* sptr = src.ptr<T>(i);
-                memcpy(dptr, sptr, sizeof(T) * len);
-            }
-            ptr = dptr;
-        }
-        else
-        {
-            for( int j = 0; j < len; j++ )
-                ptr[j] = src.ptr<T>(j)[i];
-        }
-
-        std::sort( ptr, ptr + len );
-        if( sortDescending )
-        {
-            for( int j = 0; j < len/2; j++ )
-                std::swap(ptr[j], ptr[len-1-j]);
-        }
-
+        AutoBuffer<T> buf;
         if( !sortRows )
-            for( int j = 0; j < len; j++ )
-                dst.ptr<T>(j)[i] = ptr[j];
-    }
+            buf.allocate(len);
+        T* bptr = buf.data();
+
+        for( int i = range.start; i < range.end; i++ )
+        {
+            T* ptr = bptr;
+            if( sortRows )
+            {
+                T* dptr = dst.ptr<T>(i);
+                if( !inplace )
+                {
+                    const T* sptr = src.ptr<T>(i);
+                    memcpy(dptr, sptr, sizeof(T) * len);
+                }
+                ptr = dptr;
+            }
+            else
+            {
+                for( int j = 0; j < len; j++ )
+                    ptr[j] = src.ptr<T>(j)[i];
+            }
+
+            std::sort( ptr, ptr + len );
+            if( sortDescending )
+            {
+                for( int j = 0; j < len/2; j++ )
+                    std::swap(ptr[j], ptr[len-1-j]);
+            }
+
+            if( !sortRows )
+                for( int j = 0; j < len; j++ )
+                    dst.ptr<T>(j)[i] = ptr[j];
+        }
+    });
 }
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
 
 static IppSortFunc getSortFunc(int depth, bool sortDescending)
@@ -1076,54 +1087,64 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
     if(!ippsSortRadix_I)
         return false;
 
-    if(sortRows)
-    {
-        AutoBuffer<Ipp8u> buffer;
-        int               bufferSize;
-        if(ippsSortRadixGetBufferSize(src.cols, type, &bufferSize) < 0)
-            return false;
-
-        buffer.allocate(bufferSize);
-
-        if(!inplace)
-            src.copyTo(dst);
-
-        for(int i = 0; i < dst.rows; i++)
-        {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer.data()) < 0)
-                return false;
-        }
-    }
+    int n, len;
+    if( sortRows )
+        n = src.rows, len = src.cols;
     else
+        n = src.cols, len = src.rows;
+
+    int bufferSize;
+    if(ippsSortRadixGetBufferSize(len, type, &bufferSize) < 0)
+        return false;
+
+    // Each row/column sorts independently, so parallelize over n like sort_ does.
+    // IPP scratch (buffer) and per-column temporaries are thread-local; a shared flag
+    // records IPP failures since the lambda cannot return from ipp_sort.
+    volatile bool ok = true;
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        AutoBuffer<Ipp8u> buffer;
-        int               bufferSize;
-        if(ippsSortRadixGetBufferSize(src.rows, type, &bufferSize) < 0)
-            return false;
-
-        buffer.allocate(bufferSize);
-
-        Mat  row(1, src.rows, src.type());
-        Mat  srcSub;
-        Mat  dstSub;
+        AutoBuffer<Ipp8u> buffer(bufferSize);
+        Mat  row;
         Rect subRect(0,0,1,src.rows);
+        if( !sortRows )
+            row.create(1, src.rows, src.type());
 
-        for(int i = 0; i < src.cols; i++)
+        for( int i = range.start; i < range.end; i++ )
         {
-            subRect.x = i;
-            srcSub = Mat(src, subRect);
-            dstSub = Mat(dst, subRect);
-            srcSub.copyTo(row);
+            if( !ok )
+                break;
+            void* ptr;
+            if( sortRows )
+            {
+                uchar* dptr = dst.ptr(i);
+                if( !inplace )
+                    memcpy(dptr, src.ptr(i), src.cols * src.elemSize());
+                ptr = dptr;
+            }
+            else
+            {
+                subRect.x = i;
+                Mat(src, subRect).copyTo(row);
+                ptr = row.ptr();
+            }
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer.data()) < 0)
-                return false;
+            if( CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, ptr, len, buffer.data()) < 0 )
+            {
+                ok = false;
+                break;
+            }
 
-            row = row.reshape(1, dstSub.rows);
-            row.copyTo(dstSub);
+            if( !sortRows )
+            {
+                Mat dstSub(dst, subRect);
+                row = row.reshape(1, dstSub.rows);
+                row.copyTo(dstSub);
+                row = row.reshape(1, 1);
+            }
         }
-    }
+    });
 
-    return true;
+    return ok;
 }
 #endif
 
@@ -1187,7 +1208,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     }
 }
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
@@ -1278,7 +1299,9 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
+#if !IPP_DISABLE_SORT
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
+#endif
 
     static SortFunc tab[CV_DEPTH_MAX] =
     {
@@ -1303,7 +1326,9 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
     _dst.create( src.size(), CV_32S );
     dst = _dst.getMat();
 
+#if !IPP_DISABLE_SORT
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
+#endif
 
     static SortFunc tab[CV_DEPTH_MAX] =
     {

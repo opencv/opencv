@@ -101,7 +101,7 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
 
     if( _ksize % 2 == 0 || _ksize > 31 )
         CV_Error( cv::Error::StsOutOfRange, "The kernel size must be odd and not larger than 31" );
-    std::vector<int> kerI(std::max(ksizeX, ksizeY) + 1);
+    AutoBuffer<int> kerI(std::max(ksizeX, ksizeY) + 1);
 
     CV_Assert( dx >= 0 && dy >= 0 && dx+dy > 0 );
 
@@ -180,98 +180,6 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
     return createSeparableLinearFilter(srcType, dstType,
         kx, ky, Point(-1,-1), 0, borderType );
 }
-
-
-#if 0 //defined HAVE_IPP
-namespace cv
-{
-
-static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksize, double scale, double delta, int borderType)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    ::ipp::IwiSize size(_src.size().width, _src.size().height);
-    IppDataType   srcType   = ippiGetDataType(_src.depth());
-    IppDataType   dstType   = ippiGetDataType(_dst.depth());
-    int           channels  = _src.channels();
-    bool          useScale  = false;
-    bool          useScharr = false;
-
-    if(channels != _dst.channels() || channels > 1)
-        return false;
-
-    if(fabs(delta) > FLT_EPSILON || fabs(scale-1) > FLT_EPSILON)
-        useScale = true;
-
-    if(ksize <= 0)
-    {
-        ksize     = 3;
-        useScharr = true;
-    }
-
-    IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if((int)maskSize < 0)
-        return false;
-
-#if IPP_VERSION_X100 <= 201703
-    // Bug with mirror wrap
-    if(borderType == BORDER_REFLECT_101 && (ksize/2+1 > size.width || ksize/2+1 > size.height))
-        return false;
-#endif
-
-    IwiDerivativeType derivType = ippiGetDerivType(dx, dy, (useScharr)?false:true);
-    if((int)derivType < 0)
-        return false;
-
-    // Acquire data and begin processing
-    try
-    {
-        Mat src = _src.getMat();
-        Mat dst = _dst.getMat();
-        ::ipp::IwiImage iwSrc      = ippiGetImage(src);
-        ::ipp::IwiImage iwDst      = ippiGetImage(dst);
-        ::ipp::IwiImage iwSrcProc  = iwSrc;
-        ::ipp::IwiImage iwDstProc  = iwDst;
-        ::ipp::IwiBorderSize  borderSize(maskSize);
-        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder)
-            return false;
-
-        if(srcType == ipp8u && dstType == ipp8u)
-        {
-            iwDstProc.Alloc(iwDst.m_size, ipp16s, channels);
-            useScale = true;
-        }
-        else if(srcType == ipp8u && dstType == ipp32f)
-        {
-            iwSrc -= borderSize;
-            iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0, ::ipp::IwiScaleParams(ippAlgHintFast));
-            iwSrcProc += borderSize;
-        }
-
-        if(useScharr)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterScharr, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
-        else
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterSobel, iwSrcProc, iwDstProc, derivType, maskSize, ::ipp::IwDefault(), ippBorder);
-
-        if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta, ::ipp::IwiScaleParams(ippAlgHintFast));
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(dx); CV_UNUSED(dy); CV_UNUSED(ksize); CV_UNUSED(scale); CV_UNUSED(delta); CV_UNUSED(borderType);
-    return false;
-#endif
-}
-}
-#endif
 
 #ifdef HAVE_OPENCL
 namespace cv
@@ -378,8 +286,6 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CALL_HAL(sobel, cv_hal_sobel, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, ksize, scale, delta, borderType&~BORDER_ISOLATED);
 
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
-
     sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
@@ -429,8 +335,6 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 
     CALL_HAL(scharr, cv_hal_scharr, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, scale, delta, borderType&~BORDER_ISOLATED);
-
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
 
     sepFilter2D( src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }

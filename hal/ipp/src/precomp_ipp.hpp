@@ -23,6 +23,20 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+#if IPP_VERSION_X100 >= 201700
+static inline IppiSizeL ippiSizeL(size_t width, size_t height)
+{
+    IppiSizeL size = { (IppSizeL)width, (IppSizeL)height };
+    return size;
+}
+
+static inline IppiSizeL ippiSizeL(const cv::Size & _size)
+{
+    IppiSizeL size = { _size.width, _size.height };
+    return size;
+}
+#endif
+
 static inline IppDataType ippiGetDataType(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
@@ -105,5 +119,31 @@ static inline int ippiSuggestRowThreadsNum(const ::ipp::IwiImage &image, size_t 
     return ippiSuggestRowThreadsNum(image.m_size.width, image.m_size.height, image.m_typeSize*image.m_channels, payloadSize);
 }
 #endif
+
+#if IPP_VERSION_X100 >= 201700
+#define CV_IPP_MALLOC(SIZE) ippMalloc_L(SIZE)
+#else
+#define CV_IPP_MALLOC(SIZE) ippMalloc((int)SIZE)
+#endif
+
+template<typename T>
+class IppAutoBuffer
+{
+public:
+    IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
+    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    ~IppAutoBuffer() { deallocate(); }
+    T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
+    void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
+    inline T* get() { return (T*)m_pBuffer;}
+    inline operator T* () { return (T*)m_pBuffer;}
+    inline operator const T* () const { return (const T*)m_pBuffer;}
+private:
+    IppAutoBuffer(IppAutoBuffer &) {}
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;}
+
+    size_t m_size;
+    T*     m_pBuffer;
+};
 
 #endif //__PRECOMP_IPP_HPP__

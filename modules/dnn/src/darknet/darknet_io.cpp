@@ -534,8 +534,10 @@ namespace cv {
                     std::vector<float> usedAnchors(numAnchors * 2);
                     for (int i = 0; i < numAnchors; ++i)
                     {
-                        usedAnchors[i * 2] = anchors[mask[i] * 2];
-                        usedAnchors[i * 2 + 1] = anchors[mask[i] * 2 + 1];
+                        const int m = mask[i];
+                        CV_Assert(m >= 0 && static_cast<size_t>(m) * 2 + 1 < anchors.size());
+                        usedAnchors[i * 2] = anchors[m * 2];
+                        usedAnchors[i * 2 + 1] = anchors[m * 2 + 1];
                     }
 
                     cv::Mat biasData_mat = cv::Mat(1, numAnchors * 2, CV_32F, &usedAnchors[0]).clone();
@@ -835,6 +837,7 @@ namespace cv {
                         tensor_shape[0] = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
                             layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
+                            CV_Assert(layers_vec[k] >= 0 && static_cast<size_t>(layers_vec[k]) < net->out_channels_vec.size());
                             tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
                         }
 

@@ -266,11 +266,25 @@ private:
     {
         tree = pool_.allocate<Node>();
         load_value(stream, *tree);
-        if (tree->child1!=NULL) {
-            load_tree(stream, tree->child1);
+        if (tree->child1!=NULL || tree->child2!=NULL) {
+            // Internal node: divfeat is the split dimension and is used to index
+            // the query vector during search, so it must be a valid dimension.
+            if (tree->divfeat < 0 || (size_t)tree->divfeat >= veclen_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree index: split dimension is out of range");
+            }
+            if (tree->child1!=NULL) {
+                load_tree(stream, tree->child1);
+            }
+            if (tree->child2!=NULL) {
+                load_tree(stream, tree->child2);
+            }
         }
-        if (tree->child2!=NULL) {
-            load_tree(stream, tree->child2);
+        else {
+            // Leaf node: divfeat is a dataset point index dereferenced during
+            // search, so it must fall inside the dataset.
+            if (tree->divfeat < 0 || (size_t)tree->divfeat >= size_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree index: leaf feature index is out of range");
+            }
         }
     }
 
@@ -449,7 +463,11 @@ private:
         DynamicBitset checked(size_);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
+        // Kept in thread_local storage so each thread owns an independent heap
+        // and no process-wide lock is taken on the search hot path (issue #25281).
+        thread_local cv::Ptr<Heap<BranchSt>> heap = cv::makePtr<Heap<BranchSt>>((int)size_);
+        heap->clear();
+        heap->reserve((int)size_);
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {

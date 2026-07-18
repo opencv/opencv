@@ -807,6 +807,61 @@ TEST(Core_InputOutput, filestorage_heap_overflow)
     EXPECT_EQ(0, remove(name.c_str()));
 }
 
+TEST(Core_InputOutput, filestorage_nd_matrix_too_many_dims)
+{
+    // A declared dimension count above CV_MAX_DIM used to write the sizes list
+    // past the fixed-size sizes[CV_MAX_DIM] stack buffer in cv::read().
+    std::string sizes;
+    for (int i = 0; i < CV_MAX_DIM + 8; i++)
+        sizes += "2, ";
+    sizes += "2";
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-nd-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ 0., 0. ]\n"
+        "sm: !!opencv-sparse-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+
+    SparseMat sm;
+    EXPECT_ANY_THROW(fs["sm"] >> sm);
+}
+
+TEST(Core_InputOutput, filestorage_matrix_dt_too_long)
+{
+    // A "dt" string with many distinct adjacent types makes decodeFormat()
+    // emit more pairs than the caller buffer holds. decodeSimpleFormat() sized
+    // its fmt_pairs buffer as CV_FS_MAX_FMT_PAIRS ints while decodeFormat writes
+    // up to 2*CV_FS_MAX_FMT_PAIRS ints, so a long enough dt wrote past the stack
+    // buffer before the length guard could reject it.
+    // CV_FS_MAX_FMT_PAIRS is 128; well over 2x that many distinct pairs.
+    std::string dt;
+    for (int i = 0; i < 300; i++)
+        dt += (i & 1) ? 'c' : 'u';
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-matrix\n"
+        "   rows: 1\n"
+        "   cols: 1\n"
+        "   dt: \"" + dt + "\"\n"
+        "   data: [ 0 ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+}
+
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
@@ -2097,6 +2152,24 @@ TEST(Core_InputOutput, FileStorage_int64_26829)
         fs["Int64Max"] >> value;
         EXPECT_EQ(value, INT64_MAX);
     }
+}
+
+TEST(Core_InputOutput, FileStorage_read_bigint_as_real_29363)
+{
+    // An integer above INT_MAX (e.g. from externally-produced json/yaml/xml) must
+    // convert to float/double without truncating to int32. Regression for #29363.
+    String content =
+        "%YAML:1.0\n"
+        "a: 6662329666\n"   // ~6.6e9, exact in double
+        "b: -9876543210\n"
+        "c: 4294967296\n";  // 2^32, exact in double and float
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    EXPECT_EQ(6662329666.0,  (double)fs["a"]);
+    EXPECT_EQ(-9876543210.0, (double)fs["b"]);
+    EXPECT_EQ(4294967296.0,  (double)fs["c"]);
+    EXPECT_EQ(4294967296.0f, (float)fs["c"]);
+    EXPECT_EQ((int64_t)6662329666LL, (int64_t)fs["a"]);  // int64 path unchanged
 }
 
 template <typename T>

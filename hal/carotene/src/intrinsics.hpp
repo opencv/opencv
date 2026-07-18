@@ -66,7 +66,7 @@ inline float32x2_t vrecp_f32(float32x2_t val)
     return reciprocal;
 }
 
-// caclulate sqrt value
+// calculate sqrt value
 
 inline float32x4_t vrsqrtq_f32(float32x4_t val)
 {

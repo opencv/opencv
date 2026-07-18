@@ -10,6 +10,14 @@ set(OpenCV_CUDNN_VERSION    "@CUDNN_VERSION@")
 set(OpenCV_USE_CUDNN        "@HAVE_CUDNN@")
 set(ENABLE_CUDA_FIRST_CLASS_LANGUAGE  ON)
 
+# By default OpenCV only requires the consumer's CUDA Toolkit to match the
+# major.minor version it was built with. The CUDA runtime API is stable within
+# a minor release and patch versions change frequently, so pinning the patch
+# component forces needless rebuilds (issue #26965). Set
+# OPENCV_STRONG_CUDA_VERSION_CHECK before find_package(OpenCV) to require an
+# exact match including the patch component.
+string(REGEX MATCH "^[0-9]+\\.[0-9]+" OpenCV_CUDA_VERSION_MAJOR_MINOR "${OpenCV_CUDA_VERSION}")
+
 if(NOT CUDAToolkit_FOUND)
   if(NOT CMAKE_VERSION VERSION_LESS 3.18)
     if(UNIX AND NOT CMAKE_CUDA_COMPILER AND NOT CUDAToolkit_ROOT)
@@ -17,15 +25,28 @@ if(NOT CUDAToolkit_FOUND)
       set(CUDA_PATH "/usr/local/cuda" CACHE INTERNAL "")
       set(ENV{CUDA_PATH} ${CUDA_PATH})
     endif()
-    find_package(CUDAToolkit ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
+    if(OPENCV_STRONG_CUDA_VERSION_CHECK)
+      find_package(CUDAToolkit ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
+    else()
+      find_package(CUDAToolkit ${OpenCV_CUDA_VERSION_MAJOR_MINOR} REQUIRED)
+    endif()
   else()
     message(FATAL_ERROR "Using OpenCV compiled with CUDA as first class language requires CMake \>= 3.18.")
   endif()
+endif()
+
+if(CUDAToolkit_FOUND)
+  set(CUDA_VERSION_STRING ${CUDAToolkit_VERSION})
+endif()
+
+string(REGEX MATCH "^[0-9]+\\.[0-9]+" CUDA_VERSION_STRING_MAJOR_MINOR "${CUDA_VERSION_STRING}")
+if(OPENCV_STRONG_CUDA_VERSION_CHECK)
+  set(__ocv_cuda_found "${CUDA_VERSION_STRING}")
+  set(__ocv_cuda_built "${OpenCV_CUDA_VERSION}")
 else()
-  if(CUDAToolkit_FOUND)
-    set(CUDA_VERSION_STRING ${CUDAToolkit_VERSION})
-  endif()
-  if(NOT CUDA_VERSION_STRING VERSION_EQUAL OpenCV_CUDA_VERSION)
-      message(FATAL_ERROR "OpenCV library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
-  endif()
+  set(__ocv_cuda_found "${CUDA_VERSION_STRING_MAJOR_MINOR}")
+  set(__ocv_cuda_built "${OpenCV_CUDA_VERSION_MAJOR_MINOR}")
+endif()
+if(NOT __ocv_cuda_found VERSION_EQUAL __ocv_cuda_built)
+  message(FATAL_ERROR "OpenCV library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
 endif()

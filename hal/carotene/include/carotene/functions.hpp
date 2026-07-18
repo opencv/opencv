@@ -2285,7 +2285,7 @@ namespace CAROTENE_NS {
                       f64 alpha, f64 beta);
 
     /*
-        Reduce matrix to a vector by calculatin given operation for each column
+        Reduce matrix to a vector by calculating given operation for each column
     */
     void reduceColSum(const Size2D &size,
                       const u8 * srcBase, ptrdiff_t srcStride,

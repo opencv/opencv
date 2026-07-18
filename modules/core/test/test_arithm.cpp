@@ -185,6 +185,10 @@ struct AddWeightedOp : public BaseAddOp
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst, dtype);
     }
+    double getMaxErr(int depth)
+    {
+        return depth < CV_32F ? 1 : depth == CV_32F ? 1e-4 : 1e-12;
+    }
 };
 
 struct MulOp : public BaseElemWiseOp

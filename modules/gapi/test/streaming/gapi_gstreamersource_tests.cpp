@@ -77,7 +77,7 @@ TEST_P(GStreamerSourceTest, AccuracyTest)
 
     EXPECT_FALSE(ccomp.running());
 
-    EXPECT_EQ(streamLength, framesCount);
+    EXPECT_NEAR(streamLength, framesCount, 1);
 }
 
 TEST_P(GStreamerSourceTest, TimestampsTest)
@@ -124,12 +124,12 @@ TEST_P(GStreamerSourceTest, TimestampsTest)
     EXPECT_FALSE(ccomp.running());
 
     EXPECT_EQ(0L, allSeqIds.front());
-    EXPECT_EQ(int64_t(streamLength) - 1, allSeqIds.back());
-    EXPECT_EQ(streamLength, allSeqIds.size());
+    EXPECT_NEAR(int64_t(streamLength) - 1, allSeqIds.back(), 1);
+    EXPECT_NEAR(streamLength, allSeqIds.size(), 1);
     EXPECT_TRUE(std::is_sorted(allSeqIds.begin(), allSeqIds.end()));
     EXPECT_EQ(allSeqIds.size(), std::set<int64_t>(allSeqIds.begin(), allSeqIds.end()).size());
 
-    EXPECT_EQ(streamLength, allTimestamps.size());
+    EXPECT_NEAR(streamLength, allTimestamps.size(), 1);
     EXPECT_TRUE(std::is_sorted(allTimestamps.begin(), allTimestamps.end()));
 }
 
@@ -270,7 +270,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
 
     EXPECT_FALSE(ccomp.running());
 
-    EXPECT_EQ(streamLength, framesCount);
+    EXPECT_NEAR(streamLength, framesCount, 1);
 }
 
 

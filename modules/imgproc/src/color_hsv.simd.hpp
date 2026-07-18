@@ -100,9 +100,18 @@ struct RGB2HSV_b
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
-        for ( ; i <= n - vsize;
+        for ( ; i < n;
               i += vsize, src += scn*vsize, dst += 3*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_uint8 b, g, r;
             if(scn == 4)
             {
@@ -310,8 +319,17 @@ struct RGB2HSV_f
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_float32>::vlanes();
-        for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
+        const float* const src0 = src;
+        for ( ; i < n; i += 3*vsize, src += scn * vsize)
         {
+            if ( i > n - 3*vsize ) {
+                if (i == 0 || src0 == dst) {
+                    break;
+                }
+                int backup = (i - (n - 3*vsize)) / 3;
+                i = n - 3*vsize;
+                src -= backup * scn;
+            }
             v_float32 r, g, b, a;
             if(scn == 4)
             {
@@ -476,8 +494,17 @@ struct HSV2RGB_f
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 valpha = vx_setall_f32(alpha);
-        for (; i <= n - vsize*3; i += vsize*3, dst += dcn * vsize)
+        float* const dst0 = dst;
+        for (; i < n; i += vsize*3, dst += dcn * vsize)
         {
+            if ( i > n - vsize*3 ) {
+                if (i == 0 || src == dst0) {
+                    break;
+                }
+                int backup = (i - (n - vsize*3)) / 3;
+                i = n - vsize*3;
+                dst -= backup * dcn;
+            }
             v_float32 h, s, v, b, g, r;
             v_load_deinterleave(src + i, h, s, v);
 
@@ -722,9 +749,18 @@ struct RGB2HLS_f
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 vhscale = vx_setall_f32(hscale);
 
-        for ( ; i <= n - vsize;
+        for ( ; i < n;
               i += vsize, src += scn * vsize, dst += 3 * vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_float32 r, g, b, h, l, s;
 
             if(scn == 4)
@@ -1018,8 +1054,17 @@ struct HLS2RGB_f
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         static const int vsize = VTraits<v_float32>::vlanes();
-        for (; i <= n - vsize; i += vsize, src += 3*vsize, dst += dcn*vsize)
+        for (; i < n; i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 3;
+                dst -= backup * dcn;
+            }
             v_float32 h, l, s, r, g, b;
             v_load_deinterleave(src, h, l, s);
 

@@ -7,11 +7,19 @@
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth);
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth);
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+#include "reduce_c.simd.hpp"
+#endif
 
 // =====================================================================
 //  Col reduce SUM (dim=1): sum each row into cn output values
@@ -1089,7 +1097,7 @@ static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
 //  Dispatchers
 // =====================================================================
 
-ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCSumFunc(int sdepth, int ddepth)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if (sdepth == CV_8U && ddepth == CV_32S) return reduceColSum_8u32s;
@@ -1108,7 +1116,68 @@ ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
     return nullptr;
 }
 
-ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
+ReduceFunc getReduceCAvgFunc(int sdepth, int ddepth)
+{
+    return getReduceCSumFunc(sdepth, ddepth);
+}
+
+ReduceFunc getReduceCMaxFunc(int sdepth, int ddepth)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (sdepth == CV_8U && ddepth == CV_8U) return reduceColMax_8u;
+    if (sdepth == CV_16U && ddepth == CV_16U) return reduceColMax_16u;
+    if (sdepth == CV_16S && ddepth == CV_16S) return reduceColMax_16s;
+    if (sdepth == CV_32F && ddepth == CV_32F) return reduceColMax_32f;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if (sdepth == CV_64F && ddepth == CV_64F) return reduceColMax_64f;
+#endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
+#endif
+    return nullptr;
+}
+
+ReduceFunc getReduceCMinFunc(int sdepth, int ddepth)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (sdepth == CV_8U && ddepth == CV_8U) return reduceColMin_8u;
+    if (sdepth == CV_16U && ddepth == CV_16U) return reduceColMin_16u;
+    if (sdepth == CV_16S && ddepth == CV_16S) return reduceColMin_16s;
+    if (sdepth == CV_32F && ddepth == CV_32F) return reduceColMin_32f;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if (sdepth == CV_64F && ddepth == CV_64F) return reduceColMin_64f;
+#endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
+#endif
+    return nullptr;
+}
+
+ReduceFunc getReduceCSum2Func(int sdepth, int ddepth)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (sdepth == CV_8U && ddepth == CV_32S) return reduceColSum2_8u32s;
+    if (sdepth == CV_8U && ddepth == CV_32F) return reduceColSum2_8u32f;
+    if (sdepth == CV_8U && ddepth == CV_64F) return reduceColSum2_8u64f;
+    if (sdepth == CV_16U && ddepth == CV_32F) return reduceColSum2_16u32f;
+    if (sdepth == CV_16S && ddepth == CV_32F) return reduceColSum2_16s32f;
+    if (sdepth == CV_32F && ddepth == CV_32F) return reduceColSum2_32f32f;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if (sdepth == CV_16U && ddepth == CV_64F) return reduceColSum2_16u64f;
+    if (sdepth == CV_16S && ddepth == CV_64F) return reduceColSum2_16s64f;
+    if (sdepth == CV_32F && ddepth == CV_64F) return reduceColSum2_32f64f;
+    if (sdepth == CV_64F && ddepth == CV_64F) return reduceColSum2_64f64f;
+#endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
+#endif
+    return nullptr;
+}
+
+ReduceFunc getReduceRSumFunc(int sdepth, int ddepth)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if (sdepth == CV_8U && ddepth == CV_32S) return reduceRowSum_8u32s;

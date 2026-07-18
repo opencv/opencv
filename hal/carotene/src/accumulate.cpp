@@ -231,7 +231,7 @@ void accumulateSquare(const Size2D &size,
     internal::assertSupportedConfiguration();
 
 #ifdef CAROTENE_NEON
-    // this ugly contruction is needed to avoid:
+    // this ugly construction is needed to avoid:
     // /usr/lib/gcc/arm-linux-gnueabihf/4.8/include/arm_neon.h:3581:59: error: argument must be a constant
     // return (int16x8_t)__builtin_neon_vshr_nv8hi (__a, __b, 1);
 

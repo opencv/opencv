@@ -19,6 +19,14 @@ inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, i
 
 int meanStdDev(const uchar* src_data, size_t src_step, int width, int height, int src_type,
                double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+
+    // NOTE: The OpenCV imlementation with universal intrinscs is more efficient
+    // See https://github.com/opencv/opencv/pull/29339#issuecomment-4778104352
+    if (!mask && !stddev_val)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
     switch (src_type)
     {
     case CV_8UC1:
