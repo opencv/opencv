@@ -1588,6 +1588,75 @@ TEST(Imgproc_Warp, regression_28554)
 }
 
 
+TEST(Imgproc_Warp, regression_29279)
+{
+    // https://github.com/opencv/opencv/issues/29279
+    // warpAffine + INTER_NEAREST must be bit-exact with the native fixed-point kernel for
+    // every type. The IPP HAL used to route CV_16S{C1,C3,C4}, CV_64F{C1,C3,C4} and CV_16UC4
+    // nearest-neighbor warps to iwiWarpAffine, whose source-coordinate rounding differs from
+    // the native path, so warping identical data as one of those types silently diverged
+    // from a native warp of the same data (about 0.05-0.07% of pixels under rotation /
+    // fractional translation). CV_32F is never dispatched to IPP for INTER_NEAREST, so it is
+    // used here as the native reference.
+    const Size srcSize(800, 600);
+    const Size dstSize(900, 900);
+
+    // Gradient values in [1, ~30700]: representable exactly in CV_16S, CV_16U, CV_32F and
+    // CV_64F, so any change in the selected source pixel changes the resulting value.
+    Mat base(srcSize, CV_32SC1);
+    for (int y = 0; y < base.rows; y++)
+        for (int x = 0; x < base.cols; x++)
+            base.at<int>(y, x) = 1 + ((x * 7 + y * 13) % 30000);
+
+    const int channels[]     = { 1, 3, 4 };
+    const int nearestDepth[] = { CV_16S, CV_16U, CV_64F };  // formerly IPP-routed for NEAREST
+    const double angles[]    = { 0.0, 13.7, 45.0, 90.0 };   // 0 and 90 are no-ops, guard regressions
+
+    for (size_t ci = 0; ci < sizeof(channels) / sizeof(channels[0]); ci++)
+    {
+        const int cn = channels[ci];
+
+        std::vector<Mat> planes(cn);
+        for (int c = 0; c < cn; c++)
+            planes[c] = base + c * 101;  // distinct per-channel values, still in range
+        Mat srcInt;
+        merge(planes, srcInt);           // CV_32SC(cn)
+
+        Mat srcRef;
+        srcInt.convertTo(srcRef, CV_MAKETYPE(CV_32F, cn));
+
+        for (size_t ai = 0; ai < sizeof(angles) / sizeof(angles[0]); ai++)
+        {
+            const double angle = angles[ai];
+
+            // Same convention as the issue reproducer: rotation about (400, 300) plus a
+            // fractional translation.
+            Mat M = getRotationMatrix2D(Point2f(400.f, 300.f), angle, 1.0);
+            M.at<double>(0, 2) += 37.3;
+            M.at<double>(1, 2) += -12.8;
+
+            Mat dstRef;
+            warpAffine(srcRef, dstRef, M, dstSize, INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
+
+            for (size_t di = 0; di < sizeof(nearestDepth) / sizeof(nearestDepth[0]); di++)
+            {
+                const int type = CV_MAKETYPE(nearestDepth[di], cn);
+                Mat src;
+                srcInt.convertTo(src, type);
+                Mat dst;
+                warpAffine(src, dst, M, dstSize, INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
+
+                Mat dstF;
+                dst.convertTo(dstF, CV_MAKETYPE(CV_32F, cn));
+                EXPECT_EQ(0.0, cvtest::norm(dstRef, dstF, NORM_INF))
+                    << "INTER_NEAREST warp not bit-exact with native: depth=" << nearestDepth[di]
+                    << " cn=" << cn << " angle=" << angle;
+            }
+        }
+    }
+}
+
+
 TEST(Imgproc_GetAffineTransform, singularity)
 {
     Point2f A_sample[3];
