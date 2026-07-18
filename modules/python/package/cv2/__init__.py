@@ -4,7 +4,7 @@ OpenCV Python binary extension loader
 import os
 import importlib
 import sys
-
+import typing
 __all__ = []
 
 try:
