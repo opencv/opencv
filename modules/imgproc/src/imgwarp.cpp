@@ -1769,6 +1769,24 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
 };
 
+    static RemapFunc linear_exact_tab[2][8] =
+{
+    {
+        remapBilinearExact<Cast<float, uchar>, RemapNoVec<false>, float, false>, 0,
+        remapBilinearExact<Cast<float, ushort>, RemapNoVec<false>, float, false>,
+        remapBilinearExact<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
+        remapBilinearExact<Cast<float, float>, RemapNoVec<false>, float, false>,
+        remapBilinearExact<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+    },
+    {
+        remapBilinearExact<Cast<float, uchar>, RemapNoVec<true>, float, true>, 0,
+        remapBilinearExact<Cast<float, ushort>, RemapNoVec<true>, float, true>,
+        remapBilinearExact<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
+        remapBilinearExact<Cast<float, float>, RemapNoVec<true>, float, true>,
+        remapBilinearExact<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+    }
+};
+
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
@@ -1822,6 +1840,10 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         if( interpolation == INTER_LINEAR )
             ifunc = linear_tab[relativeOptionIndex][depth];
+        else if( interpolation == INTER_LINEAR_EXACT ){
+            ifunc = linear_exact_tab[relativeOptionIndex][depth];
+            fixpt = false;
+        }
         else if( interpolation == INTER_CUBIC ){
             ifunc = cubic_tab[relativeOptionIndex][depth];
             CV_Assert( _src.channels() <= 4 );
