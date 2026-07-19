@@ -491,6 +491,54 @@ if(HAVE_CANN)
   list(APPEND libs -Wl,--whole-archive ${CANN_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
+set(metal_module_srcs "")
+if(HAVE_METAL)
+  list(APPEND libs ${METAL_LIBRARIES})
+
+  set(metal_build_dir "${CMAKE_CURRENT_BINARY_DIR}/metal")
+  set(metal_library "${metal_build_dir}/opencv_dnn.metallib")
+  file(GLOB metal_kernels
+       "${CMAKE_CURRENT_LIST_DIR}/src/metal/kernels/*.metal")
+  list(SORT metal_kernels)
+  set(metal_airs "")
+  foreach(metal_kernel IN LISTS metal_kernels)
+    get_filename_component(metal_kernel_name "${metal_kernel}" NAME_WE)
+    set(metal_air "${metal_build_dir}/${metal_kernel_name}.air")
+    list(APPEND metal_airs "${metal_air}")
+    add_custom_command(
+      OUTPUT "${metal_air}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${metal_build_dir}"
+      COMMAND "${CMAKE_COMMAND}" -E env
+              "HOME=${metal_build_dir}/compiler-home"
+              "${XCRUN_EXECUTABLE}" -sdk "${METAL_SDK}" metal -c "${metal_kernel}" -o "${metal_air}"
+      DEPENDS "${metal_kernel}"
+      COMMENT "Compiling OpenCV DNN Metal shader ${metal_kernel_name}"
+      VERBATIM
+    )
+  endforeach()
+  add_custom_command(
+    OUTPUT "${metal_library}"
+    COMMAND "${XCRUN_EXECUTABLE}" -sdk "${METAL_SDK}" metallib ${metal_airs} -o "${metal_library}"
+    DEPENDS ${metal_airs}
+    COMMENT "Linking OpenCV DNN Metal library"
+    VERBATIM
+  )
+
+  set(metal_embed_asm "${metal_build_dir}/opencv_dnn_metallib.S")
+  configure_file(
+    "${OpenCV_SOURCE_DIR}/cmake/templates/opencv_dnn_metallib.S.in"
+    "${metal_embed_asm}"
+    @ONLY
+  )
+  set_source_files_properties("${metal_embed_asm}" PROPERTIES
+    GENERATED TRUE
+    OBJECT_DEPENDS "${metal_library}"
+  )
+  list(APPEND metal_module_srcs "${metal_embed_asm}")
+
+  add_custom_target(opencv_dnn_metallib DEPENDS "${metal_library}")
+endif()
+
 set(webnn_srcs "")
 if(NOT EMSCRIPTEN)
   if(HAVE_WEBNN)
@@ -548,7 +596,7 @@ ocv_list_filterout_ex(dnn_plugin_srcs
     # importers
     "/src/(onnx|tensorflow)/|/src/protobuf_io.cpp$"
     # executors
-    "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn)/"
+    "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn|metal)/"
 )
 
 ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
@@ -572,8 +620,13 @@ endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${MLAS_OBJECTS})
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${MLAS_OBJECTS} ${metal_module_srcs})
 ocv_create_module(${libs} ${dnn_runtime_libs})
+
+if(HAVE_METAL)
+  add_dependencies(${the_module} opencv_dnn_metallib)
+endif()
+
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
