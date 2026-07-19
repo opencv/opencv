@@ -77,7 +77,7 @@ public:
             {
                 pipeline_ = metal::Device::instance()->pipelineState("kernel_softmax_f32");
             }
-            
+
             pipeline = pipeline_;
             executionWidth = static_cast<size_t>([pipeline threadExecutionWidth]);
             pipelineLimit = static_cast<size_t>([pipeline maxTotalThreadsPerThreadgroup]);

@@ -369,7 +369,7 @@ public:
                 {
                     pipeline_ = metal::Device::instance()->pipelineState("kernel_conv2d_f32");
                 }
-                
+
                 const size_t count = outputTensor->total();
                 [encoder setComputePipelineState:pipeline_];
                 [encoder dispatchThreads:MTLSizeMake(count, 1, 1)

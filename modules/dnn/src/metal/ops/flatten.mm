@@ -34,7 +34,7 @@ public:
         {
             pipeline_ = metal::Device::instance()->pipelineState("kernel_flatten_f32");
         }
-        
+
         const std::shared_ptr<metal::Tensor>& inputTensor = input_->tensor();
         const std::shared_ptr<metal::Tensor>& outputTensor = output_->tensor();
         const auto& inputBuffer = inputTensor->bufferForRead();

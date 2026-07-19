@@ -57,7 +57,7 @@ public:
         {
             pipeline_ = metal::Device::instance()->pipelineState("kernel_concat_f32");
         }
-        
+
         for (size_t i = 0; i < inputs_.size(); ++i)
         {
             const std::shared_ptr<metal::Tensor>& inputTensor = inputs_[i]->tensor();

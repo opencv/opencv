@@ -143,7 +143,7 @@ public:
             {
                 pipeline_ = metal::Device::instance()->pipelineState("kernel_affine_f32");
             }
-            
+
             [encoder setComputePipelineState:pipeline_];
             [encoder dispatchThreads:MTLSizeMake(parameters_.count, 1, 1)
                 threadsPerThreadgroup:context.threadsPerThreadgroup1D(

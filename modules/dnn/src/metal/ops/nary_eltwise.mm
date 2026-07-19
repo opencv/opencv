@@ -94,7 +94,7 @@ public:
         {
             pipeline_ = metal::Device::instance()->pipelineState("kernel_nary_eltwise_f32");
         }
-        
+
         const std::shared_ptr<metal::Tensor>& outputTensor = output_->tensor();
         for (size_t i = 1; i < inputs_.size(); ++i)
         {
