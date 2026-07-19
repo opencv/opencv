@@ -75,6 +75,7 @@ struct RowSumCn1Neon
     }
 };
 
+#if CV_NEON && (defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC))
 template<>
 struct RowSumCn1Neon<float, double>
 {
@@ -151,6 +152,7 @@ struct RowSumCn1Neon<float, double>
         return true;
     }
 };
+#endif // CV_NEON && AArch64
 #endif // CV_NEON
 
 template<typename T, typename ST>
