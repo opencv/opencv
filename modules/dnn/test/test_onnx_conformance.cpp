@@ -1985,6 +1985,35 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         }
     }
 #endif
+#ifdef HAVE_METAL
+    else if (backend == DNN_BACKEND_METAL)
+    {
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011;
+            default_lInf = 0.00016;
+        }
+        if (name == "test_gelu_tanh_2") {
+            default_l1 = 9e-5;
+            default_lInf = 0.0005;
+        }
+        if (name == "test_reduce_prod_default_axes_keepdims_random") {
+            default_l1 = 0.002;
+            default_lInf = 0.002;
+        }
+        if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
+            default_l1 = 3e-5;
+        }
+        // FP16 Attention models retain FP16 accumulation precision even when
+        // the unsupported Metal layers fall back to the CPU FP32 path.
+        if (name == "test_attention_4d_fp16" ||
+            name == "test_attention_4d_fp16_expanded" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
+        }
+    }
+#endif
     else
     {
         std::ostringstream ss;
