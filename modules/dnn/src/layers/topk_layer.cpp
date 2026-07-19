@@ -6,6 +6,8 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include "../op_metal.hpp"
+
 namespace cv { namespace dnn {
 
 namespace {
@@ -79,7 +81,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -248,6 +251,19 @@ public:
             }
         }
     }
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::TopKConfiguration config;
+        config.axis = axis;
+        config.k = K;
+        config.largest = largest;
+        return metal::TopKOp::create(inputs, outputs, config);
+    }
+#endif
 
 private:
     int axis;

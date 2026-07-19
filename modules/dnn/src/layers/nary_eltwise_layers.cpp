@@ -16,6 +16,7 @@
 #include "../op_cann.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include "opencv2/core/hal/intrin.hpp"
@@ -280,6 +281,14 @@ public:
         if (backendId == DNN_BACKEND_VKCOM)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
                    op == OPERATION::DIV;
+#endif
+
+#ifdef HAVE_METAL
+        if (backendId == DNN_BACKEND_METAL)
+            return op == OPERATION::MAX || op == OPERATION::MIN ||
+                   op == OPERATION::SUM || op == OPERATION::PROD ||
+                   op == OPERATION::DIV || op == OPERATION::ADD ||
+                   op == OPERATION::SUB;
 #endif
 
         if (backendId == DNN_BACKEND_CUDA) {
@@ -1361,6 +1370,30 @@ public:
         };
 
         return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), op_, std::vector<float>());
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::NaryOperation metalOperation;
+        if (op == OPERATION::SUM || op == OPERATION::ADD)
+            metalOperation = metal::NaryOperation::Add;
+        else if (op == OPERATION::PROD)
+            metalOperation = metal::NaryOperation::Multiply;
+        else if (op == OPERATION::SUB)
+            metalOperation = metal::NaryOperation::Subtract;
+        else if (op == OPERATION::DIV)
+            metalOperation = metal::NaryOperation::Divide;
+        else if (op == OPERATION::MAX)
+            metalOperation = metal::NaryOperation::Maximum;
+        else if (op == OPERATION::MIN)
+            metalOperation = metal::NaryOperation::Minimum;
+        else
+            CV_Error(Error::StsNotImplemented, "Metal NaryEltwise operation is unsupported");
+        return metal::NaryEltwiseOp::create(inputs, outputs, metalOperation);
     }
 #endif
 

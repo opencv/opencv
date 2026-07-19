@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -173,6 +174,12 @@ public:
 #ifdef HAVE_CANN
         if (backendId == DNN_BACKEND_CANN)
             return channelsMode == ELTWISE_CHANNNELS_SAME && coeffs.empty();
+#endif
+
+#ifdef HAVE_METAL
+        if (backendId == DNN_BACKEND_METAL)
+            return op == SUM && coeffs.empty() &&
+                   channelsModeInput == ELTWISE_CHANNNELS_SAME;
 #endif
 
         if (backendId == DNN_BACKEND_CUDA)
@@ -791,6 +798,15 @@ public:
         }();
 
         return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+        const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+        return metal::EltwiseAddOp::create(inputs, outputs);
     }
 #endif
 

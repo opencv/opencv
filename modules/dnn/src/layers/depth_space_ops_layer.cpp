@@ -32,6 +32,11 @@
 #include "../op_timvx.hpp"
 #endif
 
+// Metal backend
+#ifdef HAVE_METAL
+#include "../op_metal.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 struct DepthSpaceOps {
@@ -140,7 +145,8 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CUDA   ||
                backendId == DNN_BACKEND_CANN   ||
-               (backendId == DNN_BACKEND_TIMVX && is_crd);
+               (backendId == DNN_BACKEND_TIMVX && is_crd) ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -223,6 +229,18 @@ public:
         return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        const metal::DepthSpaceOperation operation = is_crd
+            ? metal::DepthSpaceOperation::DEPTH_TO_SPACE_CRD
+            : metal::DepthSpaceOperation::DEPTH_TO_SPACE_DCR;
+        return metal::DepthSpaceOpsOp::create(inputs, outputs, operation, blocksize);
+    }
+#endif
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper>> &inputs,
@@ -325,7 +343,8 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CUDA   ||
                backendId == DNN_BACKEND_CANN   ||
-               (backendId == DNN_BACKEND_TIMVX);
+               (backendId == DNN_BACKEND_TIMVX) ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -400,6 +419,16 @@ public:
         return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        return metal::DepthSpaceOpsOp::create(
+            inputs, outputs, metal::DepthSpaceOperation::SPACE_TO_DEPTH, blocksize);
+    }
+#endif
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper>> &inputs,

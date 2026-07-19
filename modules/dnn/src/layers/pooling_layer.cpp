@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -191,6 +192,10 @@ public:
         {
             return type == MAX || type == AVE;
         }
+#endif
+#ifdef HAVE_METAL
+        if (backendId == DNN_BACKEND_METAL)
+            return kernel_size.size() == 2 && (type == AVE || type == MAX);
 #endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -485,6 +490,44 @@ public:
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
         return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        if (type == AVE)
+        {
+            metal::AvgPool2DConfiguration config;
+            config.kernelHeight = kernel_size[0];
+            config.kernelWidth = kernel_size[1];
+            config.strideHeight = strides[0];
+            config.strideWidth = strides[1];
+            config.padTop = pads_begin[0];
+            config.padBottom = pads_end[0];
+            config.padLeft = pads_begin[1];
+            config.padRight = pads_end[1];
+            config.includePadding = avePoolPaddedArea;
+            return metal::AvgPool2DOp::create(inputs, outputs, config);
+        }
+        else if (type == MAX)
+        {
+            metal::MaxPoolingConfiguration config;
+            config.kernelHeight = kernel_size[0];
+            config.kernelWidth = kernel_size[1];
+            config.strideHeight = strides[0];
+            config.strideWidth = strides[1];
+            config.padTop = pads_begin[0];
+            config.padLeft = pads_begin[1];
+            return metal::MaxPoolingOp::create(inputs, outputs, config);
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Metal supports AVG and MAX pooling.");
+        }
+        return Ptr<MetalBackendNode>();
     }
 #endif
 

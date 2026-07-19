@@ -24,6 +24,9 @@ using namespace cv::dnn::cuda4dnn;
 // CANN backend
 #include "../op_cann.hpp"
 
+// Metal backend
+#include "../op_metal.hpp"
+
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
@@ -48,7 +51,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b) ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -469,6 +473,33 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, bias, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        const size_t inputCount = inputs.size() + blobs.size();
+        CV_CheckGE(inputCount, static_cast<size_t>(2), "Metal MatMul expects B input");
+        CV_CheckLE(inputCount, static_cast<size_t>(3),
+                   "Metal MatMul supports at most A, B and C");
+        CV_CheckFalse(blobs.empty() && inputs.size() >= 3,
+                      "Metal MatMul does not support dynamic C input");
+
+        metal::MatMulConfiguration config;
+        if (!blobs.empty())
+        {
+            config.weights = blobs[0];
+            if (blobs.size() >= 2)
+                config.bias = blobs[1];
+        }
+        config.transA = trans_a;
+        config.transB = trans_b;
+        config.alpha = alpha;
+        config.beta = beta;
+        return metal::MatMulOp::create(inputs, outputs, config);
+    }
+#endif // HAVE_METAL
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

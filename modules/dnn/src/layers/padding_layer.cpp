@@ -15,6 +15,7 @@ Implementation of padding layer, which adds paddings to input blob.
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <vector>
 
@@ -128,7 +129,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -302,6 +304,26 @@ public:
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, pad_mode);
         return Ptr<BackendNode>(new InfEngineNgraphNode(pad));
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::PaddingConfiguration config;
+        if (paddingType == "constant")
+            config.type = metal::PaddingType::CONSTANT;
+        else if (paddingType == "reflect")
+            config.type = metal::PaddingType::REFLECT;
+        else if (paddingType == "edge")
+            config.type = metal::PaddingType::EDGE;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported Metal padding mode");
+        config.paddings = paddings;
+        config.value = paddingValue;
+        return metal::PaddingOp::create(inputs, outputs, config);
     }
 #endif
 

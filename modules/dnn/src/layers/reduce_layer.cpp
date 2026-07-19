@@ -6,6 +6,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 
 namespace cv { namespace dnn {
@@ -63,7 +64,8 @@ public:
                    reduce_type == ReduceType::PROD || reduce_type == ReduceType::LOG_SUM ||
                    reduce_type == ReduceType::LOG_SUM_EXP;
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
@@ -578,6 +580,32 @@ public:
         return Ptr<BackendNode>(new CannBackendNode(reduce_op));
     }
 #endif // HAVE_CANN
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::ReduceConfiguration config;
+        switch (reduce_type)
+        {
+            case ReduceType::MAX:         config.type = metal::ReduceType::MAX; break;
+            case ReduceType::MIN:         config.type = metal::ReduceType::MIN; break;
+            case ReduceType::MEAN:        config.type = metal::ReduceType::MEAN; break;
+            case ReduceType::SUM:         config.type = metal::ReduceType::SUM; break;
+            case ReduceType::L1:          config.type = metal::ReduceType::L1; break;
+            case ReduceType::L2:          config.type = metal::ReduceType::L2; break;
+            case ReduceType::PROD:        config.type = metal::ReduceType::PROD; break;
+            case ReduceType::SUM_SQUARE:  config.type = metal::ReduceType::SUM_SQUARE; break;
+            case ReduceType::LOG_SUM:     config.type = metal::ReduceType::LOG_SUM; break;
+            case ReduceType::LOG_SUM_EXP: config.type = metal::ReduceType::LOG_SUM_EXP; break;
+            default: CV_Error(Error::StsBadArg, "Unsupported Metal Reduce operation");
+        }
+        config.axes = axes;
+        config.noopWithEmptyAxes = noop_with_empty_axes;
+        return metal::ReduceOp::create(inputs, outputs, config);
+    }
+#endif
 
 private:
     enum ReduceType

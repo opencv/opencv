@@ -47,6 +47,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
@@ -105,7 +106,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
 #ifdef HAVE_OPENCL
@@ -413,6 +415,23 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(lrn));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::LRNConfiguration config;
+        config.type = type == CHANNEL_NRM ? metal::LRNType::ACROSS_CHANNELS :
+                                            metal::LRNType::WITHIN_CHANNEL;
+        config.localSize = size;
+        config.alpha = static_cast<float>(alpha);
+        config.beta = static_cast<float>(beta);
+        config.bias = static_cast<float>(bias);
+        config.normBySize = normBySize;
+        return metal::LRNOp::create(inputs, outputs, config);
+    }
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

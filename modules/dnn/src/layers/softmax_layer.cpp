@@ -47,6 +47,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
@@ -118,7 +119,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
 #ifdef HAVE_OPENCL
@@ -254,6 +256,19 @@ public:
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto channel_axis = normalize_axis(axisRaw, input_wrapper->getRank());
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::SoftmaxConfiguration config;
+        config.axis = axisRaw;
+        config.logSoftmax = logSoftMax;
+        config.scale = scale;
+        return metal::SoftmaxOp::create(inputs, outputs, config);
     }
 #endif
 
