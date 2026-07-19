@@ -86,6 +86,241 @@ int split8u(const uchar* src, uchar** dst, int len, int cn)
     return CV_HAL_ERROR_OK;
 }
 
+
+int split16u(const ushort* src, ushort** dst, int len, int cn)
+{
+    int vl = 0;
+    if (cn == 1)
+    {
+        ushort* dst0 = dst[0];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e16m8(len - i);
+            __riscv_vse16_v_u16m8(dst0 + i, __riscv_vle16_v_u16m8(src + i, vl), vl);
+        }
+    }
+    else if (cn == 2)
+    {
+        ushort *dst0 = dst[0], *dst1 = dst[1];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e16m4(len - i);
+            vuint16m4x2_t seg = __riscv_vlseg2e16_v_u16m4x2(src + i * cn, vl);
+            __riscv_vse16_v_u16m4(dst0 + i, __riscv_vget_v_u16m4x2_u16m4(seg, 0), vl);
+            __riscv_vse16_v_u16m4(dst1 + i, __riscv_vget_v_u16m4x2_u16m4(seg, 1), vl);
+        }
+    }
+    else if (cn == 3)
+    {
+        ushort *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e16m2(len - i);
+            vuint16m2x3_t seg = __riscv_vlseg3e16_v_u16m2x3(src + i * cn, vl);
+            __riscv_vse16_v_u16m2(dst0 + i, __riscv_vget_v_u16m2x3_u16m2(seg, 0), vl);
+            __riscv_vse16_v_u16m2(dst1 + i, __riscv_vget_v_u16m2x3_u16m2(seg, 1), vl);
+            __riscv_vse16_v_u16m2(dst2 + i, __riscv_vget_v_u16m2x3_u16m2(seg, 2), vl);
+        }
+    }
+    else if (cn == 4)
+    {
+        ushort *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e16m2(len - i);
+            vuint16m2x4_t seg = __riscv_vlseg4e16_v_u16m2x4(src + i * cn, vl);
+            __riscv_vse16_v_u16m2(dst0 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 0), vl);
+            __riscv_vse16_v_u16m2(dst1 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 1), vl);
+            __riscv_vse16_v_u16m2(dst2 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 2), vl);
+            __riscv_vse16_v_u16m2(dst3 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 3), vl);
+        }
+    }
+    else
+    {
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
+        {
+            ushort *dst0 = dst[k], *dst1 = dst[k + 1], *dst2 = dst[k + 2], *dst3 = dst[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e16m2(len - i);
+                vuint16m2x4_t seg = __riscv_vlsseg4e16_v_u16m2x4(src + k + i * cn, cn * sizeof(ushort), vl);
+                __riscv_vse16_v_u16m2(dst0 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 0), vl);
+                __riscv_vse16_v_u16m2(dst1 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 1), vl);
+                __riscv_vse16_v_u16m2(dst2 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 2), vl);
+                __riscv_vse16_v_u16m2(dst3 + i, __riscv_vget_v_u16m2x4_u16m2(seg, 3), vl);
+            }
+        }
+        for (; k < cn; ++k)
+        {
+            ushort* dstK = dst[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e16m2(len - i);
+                vuint16m2_t seg = __riscv_vlse16_v_u16m2(src + k + i * cn, cn * sizeof(ushort), vl);
+                __riscv_vse16_v_u16m2(dstK + i, seg, vl);
+            }
+        }
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+int split32s(const int* src, int** dst, int len, int cn)
+{
+    int vl = 0;
+    if (cn == 1)
+    {
+        int* dst0 = dst[0];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m8(len - i);
+            __riscv_vse32_v_i32m8(dst0 + i, __riscv_vle32_v_i32m8(src + i, vl), vl);
+        }
+    }
+    else if (cn == 2)
+    {
+        int *dst0 = dst[0], *dst1 = dst[1];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m4(len - i);
+            vint32m4x2_t seg = __riscv_vlseg2e32_v_i32m4x2(src + i * cn, vl);
+            __riscv_vse32_v_i32m4(dst0 + i, __riscv_vget_v_i32m4x2_i32m4(seg, 0), vl);
+            __riscv_vse32_v_i32m4(dst1 + i, __riscv_vget_v_i32m4x2_i32m4(seg, 1), vl);
+        }
+    }
+    else if (cn == 3)
+    {
+        int *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m2(len - i);
+            vint32m2x3_t seg = __riscv_vlseg3e32_v_i32m2x3(src + i * cn, vl);
+            __riscv_vse32_v_i32m2(dst0 + i, __riscv_vget_v_i32m2x3_i32m2(seg, 0), vl);
+            __riscv_vse32_v_i32m2(dst1 + i, __riscv_vget_v_i32m2x3_i32m2(seg, 1), vl);
+            __riscv_vse32_v_i32m2(dst2 + i, __riscv_vget_v_i32m2x3_i32m2(seg, 2), vl);
+        }
+    }
+    else if (cn == 4)
+    {
+        int *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m2(len - i);
+            vint32m2x4_t seg = __riscv_vlseg4e32_v_i32m2x4(src + i * cn, vl);
+            __riscv_vse32_v_i32m2(dst0 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 0), vl);
+            __riscv_vse32_v_i32m2(dst1 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 1), vl);
+            __riscv_vse32_v_i32m2(dst2 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 2), vl);
+            __riscv_vse32_v_i32m2(dst3 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 3), vl);
+        }
+    }
+    else
+    {
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
+        {
+            int *dst0 = dst[k], *dst1 = dst[k + 1], *dst2 = dst[k + 2], *dst3 = dst[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e32m2(len - i);
+                vint32m2x4_t seg = __riscv_vlsseg4e32_v_i32m2x4(src + k + i * cn, cn * sizeof(int), vl);
+                __riscv_vse32_v_i32m2(dst0 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 0), vl);
+                __riscv_vse32_v_i32m2(dst1 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 1), vl);
+                __riscv_vse32_v_i32m2(dst2 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 2), vl);
+                __riscv_vse32_v_i32m2(dst3 + i, __riscv_vget_v_i32m2x4_i32m2(seg, 3), vl);
+            }
+        }
+        for (; k < cn; ++k)
+        {
+            int* dstK = dst[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e32m2(len - i);
+                vint32m2_t seg = __riscv_vlse32_v_i32m2(src + k + i * cn, cn * sizeof(int), vl);
+                __riscv_vse32_v_i32m2(dstK + i, seg, vl);
+            }
+        }
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+int split64s(const int64* src, int64** dst, int len, int cn)
+{
+    int vl = 0;
+    if (cn == 1)
+    {
+        int64* dst0 = dst[0];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m8(len - i);
+            __riscv_vse64_v_i64m8(dst0 + i, __riscv_vle64_v_i64m8(src + i, vl), vl);
+        }
+    }
+    else if (cn == 2)
+    {
+        int64 *dst0 = dst[0], *dst1 = dst[1];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m4(len - i);
+            vint64m4x2_t seg = __riscv_vlseg2e64_v_i64m4x2(src + i * cn, vl);
+            __riscv_vse64_v_i64m4(dst0 + i, __riscv_vget_v_i64m4x2_i64m4(seg, 0), vl);
+            __riscv_vse64_v_i64m4(dst1 + i, __riscv_vget_v_i64m4x2_i64m4(seg, 1), vl);
+        }
+    }
+    else if (cn == 3)
+    {
+        int64 *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m2(len - i);
+            vint64m2x3_t seg = __riscv_vlseg3e64_v_i64m2x3(src + i * cn, vl);
+            __riscv_vse64_v_i64m2(dst0 + i, __riscv_vget_v_i64m2x3_i64m2(seg, 0), vl);
+            __riscv_vse64_v_i64m2(dst1 + i, __riscv_vget_v_i64m2x3_i64m2(seg, 1), vl);
+            __riscv_vse64_v_i64m2(dst2 + i, __riscv_vget_v_i64m2x3_i64m2(seg, 2), vl);
+        }
+    }
+    else if (cn == 4)
+    {
+        int64 *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m2(len - i);
+            vint64m2x4_t seg = __riscv_vlseg4e64_v_i64m2x4(src + i * cn, vl);
+            __riscv_vse64_v_i64m2(dst0 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 0), vl);
+            __riscv_vse64_v_i64m2(dst1 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 1), vl);
+            __riscv_vse64_v_i64m2(dst2 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 2), vl);
+            __riscv_vse64_v_i64m2(dst3 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 3), vl);
+        }
+    }
+    else
+    {
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
+        {
+            int64 *dst0 = dst[k], *dst1 = dst[k + 1], *dst2 = dst[k + 2], *dst3 = dst[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e64m2(len - i);
+                vint64m2x4_t seg = __riscv_vlsseg4e64_v_i64m2x4(src + k + i * cn, cn * sizeof(int64), vl);
+                __riscv_vse64_v_i64m2(dst0 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 0), vl);
+                __riscv_vse64_v_i64m2(dst1 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 1), vl);
+                __riscv_vse64_v_i64m2(dst2 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 2), vl);
+                __riscv_vse64_v_i64m2(dst3 + i, __riscv_vget_v_i64m2x4_i64m2(seg, 3), vl);
+            }
+        }
+        for (; k < cn; ++k)
+        {
+            int64* dstK = dst[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e64m2(len - i);
+                vint64m2_t seg = __riscv_vlse64_v_i64m2(src + k + i * cn, cn * sizeof(int64), vl);
+                __riscv_vse64_v_i64m2(dstK + i, seg, vl);
+            }
+        }
+    }
+    return CV_HAL_ERROR_OK;
+}
+
 #endif // CV_HAL_RVV_1P0_ENABLED
 
 }}} // cv::rvv_hal::core

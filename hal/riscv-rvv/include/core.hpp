@@ -99,9 +99,18 @@ int fast_atan_64(const double* y, const double* x, double* dst, size_t n, bool a
 /* ############ split ############ */
 
 int split8u(const uchar* src, uchar** dst, int len, int cn);
+int split16u(const ushort* src, ushort** dst, int len, int cn);
+int split32s(const int* src, int** dst, int len, int cn);
+int split64s(const int64* src, int64** dst, int len, int cn);
 
 #undef cv_hal_split8u
 #define cv_hal_split8u cv::rvv_hal::core::split8u
+#undef cv_hal_split16u
+#define cv_hal_split16u cv::rvv_hal::core::split16u
+#undef cv_hal_split32s
+#define cv_hal_split32s cv::rvv_hal::core::split32s
+#undef cv_hal_split64s
+#define cv_hal_split64s cv::rvv_hal::core::split64s
 
 /* ############ sqrt ############ */
 
