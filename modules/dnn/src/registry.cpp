@@ -11,6 +11,7 @@
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
 #include "op_cann.hpp"
+#include "op_metal.hpp"
 
 #include "backend.hpp"
 #include "factory.hpp"
@@ -145,6 +146,13 @@ private:
 
 #ifdef HAVE_CANN
         backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
+#endif
+
+#ifdef HAVE_METAL
+        if (haveMetal())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_METAL, DNN_TARGET_METAL));
+        }
 #endif
     }
 
