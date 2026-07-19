@@ -3040,6 +3040,8 @@ public:
         {
             needPaddedBuffer = true;
             padded_step = dst_step + DFT_CACHE_LINE_PAD;
+            if ((padded_step & (padded_step - 1)) == 0)
+                padded_step += DFT_CACHE_LINE_PAD;
             padded_buf.allocate(padded_step * height);
         }
 
@@ -3090,9 +3092,7 @@ public:
                 {
                     if (stages[0] == 1)
                     {
-                        for (int i = 0; i < height; i++)
-                            memcpy(padded_buf.data() + padded_step * i, src + src_step * i, dst_step);
-                        colDft(padded_buf.data(), padded_step, padded_buf.data(), padded_step, stage_src_channels, stage_dst_channels, isLastStage);
+                        colDft(src, src_step, padded_buf.data(), padded_step, stage_src_channels, stage_dst_channels, isLastStage);
                     }
                     else
                     {
