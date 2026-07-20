@@ -211,6 +211,55 @@ private:
 };
 
 
+// ColorHashTSDF is a CPU-only hash-based colored TSDF volume.
+// It does not inherit ColorTsdfVolume (which owns a dense volume Mat) on purpose:
+// the whole point of hashing is to avoid allocating the dense volume.
+class ColorHashTsdfVolume : public Volume::Impl
+{
+public:
+    ColorHashTsdfVolume(const VolumeSettings& settings);
+    ~ColorHashTsdfVolume();
+
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
+    virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
+
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const override;
+
+    virtual void reset() override;
+    virtual int getVisibleBlocks() const override;
+    virtual size_t getTotalVolumeUnits() const override;
+
+    // Enables or disables new volume unit allocation during integration
+    // Applicable for HashTSDF and ColorHashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF and ColorHashTSDF only
+    virtual bool getEnableGrowth() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
+
+public:
+    int lastVolIndex;
+    int lastFrameId;
+    Vec6f frameParams;
+    int volumeUnitDegree;
+    bool enableGrowth;
+
+    Mat volUnitsData;
+    Mat pixNorms;
+    VolumeUnitIndexes volumeUnits;
+};
+
+
 Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     switch (vtype)
@@ -224,8 +273,11 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
     case VolumeType::ColorTSDF:
         this->impl = makePtr<ColorTsdfVolume>(settings);
         break;
+    case VolumeType::ColorHashTSDF:
+        this->impl = makePtr<ColorHashTsdfVolume>(settings);
+        break;
     default:
-        CV_Error(Error::StsInternal, "Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
+        CV_Error(Error::StsInternal, "Incorrect VolumeType");
         break;
     }
 }
@@ -254,4 +306,4 @@ bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 
 }
 
-#endif // !OPENCV_3D_VOLUME_IMPL_HPP
+#endif // OPENCV_3D_VOLUME_IMPL_HPP
