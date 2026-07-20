@@ -1334,6 +1334,426 @@ const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
 
 INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
 
+//==================================================================================================
+// See https://github.com/opencv/opencv/issues/28717
+// In PLANARCONFIG_SEPARATE files all strips (or tiles) of the first sample are stored first,
+// then all strips of the second sample, and so on. OpenCV always writes PLANARCONFIG_CONTIG,
+// so the fixtures below are assembled byte by byte.
+
+static const uint16_t TIFF_PLANARCONFIG_CONTIG = 1;
+static const uint16_t TIFF_PLANARCONFIG_SEPARATE = 2;
+
+static void putLE16(std::vector<uchar>& buf, uint32_t v)
+{
+    buf.push_back((uchar)(v & 0xff));
+    buf.push_back((uchar)((v >> 8) & 0xff));
+}
+
+static void putLE32(std::vector<uchar>& buf, uint32_t v)
+{
+    putLE16(buf, v & 0xffff);
+    putLE16(buf, v >> 16);
+}
+
+static void patchLE32(std::vector<uchar>& buf, size_t pos, uint32_t v)
+{
+    for (int i = 0; i < 4; i++)
+        buf[pos + i] = (uchar)((v >> (8 * i)) & 0xff);
+}
+
+static uint64_t sampleBitsAt(const Mat& img, int y, int x, int ch)
+{
+    const size_t esz = img.elemSize1();
+    const uchar* p = img.ptr(y) + (static_cast<size_t>(x) * img.channels() + ch) * esz;
+    if (esz == 1)
+    {
+        uchar v;
+        memcpy(&v, p, 1);
+        return v;
+    }
+    if (esz == 2)
+    {
+        ushort v;
+        memcpy(&v, p, 2);
+        return v;
+    }
+    if (esz == 4)
+    {
+        uint32_t v;
+        memcpy(&v, p, 4);
+        return v;
+    }
+    uint64_t v;
+    memcpy(&v, p, 8);
+    return v;
+}
+
+// Appends one page to an uncompressed little-endian TIFF. The image is written in R,G,B(,A)
+// sample order while img is B,G,R(,A). ifdLinkPos tracks the IFD chain across pages and must
+// start at 0 with an empty file.
+static void appendTiffPage(std::vector<uchar>& file, size_t& ifdLinkPos, const Mat& img,
+                           uint16_t planarConfig, int rowsPerStrip, Size tileSize = Size(),
+                           int bitsOverride = 0)
+{
+    const int w = img.cols, h = img.rows, spp = img.channels();
+    const bool tiled = tileSize.width > 0;
+    CV_Assert(tiled || rowsPerStrip > 0);
+    const int bits = bitsOverride ? bitsOverride : (int)(img.elemSize1() * 8);
+    const uint16_t sampleFormat = (img.depth() == CV_32F || img.depth() == CV_64F) ? 3 : 1;
+    const int planes = planarConfig == TIFF_PLANARCONFIG_SEPARATE ? spp : 1;
+    const int samplesPerBlockPixel = planarConfig == TIFF_PLANARCONFIG_SEPARATE ? 1 : spp;
+
+    if (file.empty())
+    {
+        file.push_back('I');
+        file.push_back('I');
+        putLE16(file, 42);
+        ifdLinkPos = file.size();
+        putLE32(file, 0);
+    }
+
+    const auto fileChannel = [spp](int s)
+    {
+        return spp >= 3 ? (s == 0 ? 2 : (s == 2 ? 0 : s)) : s;
+    };
+
+    // plane < 0 emits all samples interleaved (contiguous); rows are byte-aligned
+    const auto putRow = [&](int y, int x0, int cols, int plane)
+    {
+        std::vector<uint64_t> vals;
+        for (int x = x0; x < x0 + cols; x++)
+        {
+            if (plane < 0)
+                for (int s = 0; s < spp; s++)
+                    vals.push_back(sampleBitsAt(img, y, x, fileChannel(s)));
+            else
+                vals.push_back(sampleBitsAt(img, y, x, fileChannel(plane)));
+        }
+        if (bits % 8 == 0)
+        {
+            for (size_t i = 0; i < vals.size(); i++)
+                for (int b = 0; b < bits / 8; b++)
+                    file.push_back((uchar)((vals[i] >> (8 * b)) & 0xff));
+        }
+        else
+        {
+            uint32_t acc = 0;
+            int nbits = 0;
+            for (size_t i = 0; i < vals.size(); i++)
+            {
+                CV_Assert(vals[i] < ((uint64_t)1 << bits));
+                acc = (acc << bits) | (uint32_t)vals[i];
+                nbits += bits;
+                while (nbits >= 8)
+                {
+                    nbits -= 8;
+                    file.push_back((uchar)((acc >> nbits) & 0xff));
+                }
+            }
+            if (nbits > 0)
+                file.push_back((uchar)((acc << (8 - nbits)) & 0xff));
+        }
+    };
+
+    std::vector<uint32_t> blockOffsets, blockCounts;
+    const auto alignEven = [&]() { if (file.size() % 2) file.push_back(0); };
+    const auto beginBlock = [&]() { alignEven(); blockOffsets.push_back((uint32_t)file.size()); };
+    const auto endBlock = [&]()
+    {
+        blockCounts.push_back((uint32_t)file.size() - blockOffsets.back());
+    };
+    const auto padZeros = [&](size_t n) { file.insert(file.end(), n, (uchar)0); };
+
+    if (tiled)
+    {
+        // packed rows can only be zero-padded at byte granularity, so packed tiled
+        // fixtures need the width to be a whole number of tiles
+        CV_Assert(bits % 8 == 0 || w % tileSize.width == 0);
+        const int tw = tileSize.width, th = tileSize.height;
+        const size_t fullRowBytes = (size_t)divUp(tw * samplesPerBlockPixel * bits, 8);
+        for (int plane = 0; plane < planes; plane++)
+        {
+            for (int ty = 0; ty < h; ty += th)
+            {
+                for (int tx = 0; tx < w; tx += tw)
+                {
+                    beginBlock();
+                    const int cols = std::min(tw, w - tx);
+                    const size_t colsBytes = (size_t)divUp(cols * samplesPerBlockPixel * bits, 8);
+                    for (int row = 0; row < th; row++)
+                    {
+                        const int y = ty + row;
+                        if (y < h)
+                        {
+                            putRow(y, tx, cols,
+                                   planarConfig == TIFF_PLANARCONFIG_SEPARATE ? plane : -1);
+                            padZeros(fullRowBytes - colsBytes);
+                        }
+                        else
+                        {
+                            padZeros(fullRowBytes);
+                        }
+                    }
+                    endBlock();
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int plane = 0; plane < planes; plane++)
+        {
+            for (int y0 = 0; y0 < h; y0 += rowsPerStrip)
+            {
+                beginBlock();
+                for (int y = y0; y < std::min(h, y0 + rowsPerStrip); y++)
+                    putRow(y, 0, w, planarConfig == TIFF_PLANARCONFIG_SEPARATE ? plane : -1);
+                endBlock();
+            }
+        }
+    }
+
+    const auto putShortArray = [&](const std::vector<uint16_t>& v) -> uint32_t
+    {
+        alignEven();
+        const uint32_t off = (uint32_t)file.size();
+        for (size_t i = 0; i < v.size(); i++)
+            putLE16(file, v[i]);
+        return off;
+    };
+    const auto putLongArray = [&](const std::vector<uint32_t>& v) -> uint32_t
+    {
+        alignEven();
+        const uint32_t off = (uint32_t)file.size();
+        for (size_t i = 0; i < v.size(); i++)
+            putLE32(file, v[i]);
+        return off;
+    };
+
+    struct IfdEntry
+    {
+        uint16_t tag, type;
+        uint32_t count, value;
+    };
+    std::vector<IfdEntry> entries;
+    const auto add = [&entries](uint16_t tag, uint16_t type, uint32_t count, uint32_t value)
+    {
+        IfdEntry e = {tag, type, count, value};
+        entries.push_back(e);
+    };
+
+    add(256, 4, 1, (uint32_t)w);
+    add(257, 4, 1, (uint32_t)h);
+    if (spp == 1)
+        add(258, 3, 1, (uint32_t)bits);
+    else if (spp == 2)
+        add(258, 3, 2, (uint32_t)bits | ((uint32_t)bits << 16));
+    else
+        add(258, 3, (uint32_t)spp, putShortArray(std::vector<uint16_t>(spp, (uint16_t)bits)));
+    add(259, 3, 1, 1);
+    add(262, 3, 1, spp >= 3 ? 2 : 1);
+    const uint32_t nblocks = (uint32_t)blockOffsets.size();
+    if (tiled)
+    {
+        add(322, 4, 1, (uint32_t)tileSize.width);
+        add(323, 4, 1, (uint32_t)tileSize.height);
+        add(324, 4, nblocks, nblocks == 1 ? blockOffsets[0] : putLongArray(blockOffsets));
+        add(325, 4, nblocks, nblocks == 1 ? blockCounts[0] : putLongArray(blockCounts));
+    }
+    else
+    {
+        add(273, 4, nblocks, nblocks == 1 ? blockOffsets[0] : putLongArray(blockOffsets));
+        add(278, 4, 1, (uint32_t)rowsPerStrip);
+        add(279, 4, nblocks, nblocks == 1 ? blockCounts[0] : putLongArray(blockCounts));
+    }
+    add(277, 3, 1, (uint32_t)spp);
+    add(284, 3, 1, planarConfig);
+    if (spp == 2 || spp == 4)
+        add(338, 3, 1, 2);   // one extra sample, unassociated alpha
+    if (spp == 1)
+        add(339, 3, 1, sampleFormat);
+    else if (spp == 2)
+        add(339, 3, 2, (uint32_t)sampleFormat | ((uint32_t)sampleFormat << 16));
+    else
+        add(339, 3, (uint32_t)spp, putShortArray(std::vector<uint16_t>(spp, sampleFormat)));
+
+    std::sort(entries.begin(), entries.end(),
+              [](const IfdEntry& a, const IfdEntry& b) { return a.tag < b.tag; });
+
+    alignEven();
+    patchLE32(file, ifdLinkPos, (uint32_t)file.size());
+    putLE16(file, (uint32_t)entries.size());
+    for (size_t i = 0; i < entries.size(); i++)
+    {
+        putLE16(file, entries[i].tag);
+        putLE16(file, entries[i].type);
+        putLE32(file, entries[i].count);
+        putLE32(file, entries[i].value);
+    }
+    ifdLinkPos = file.size();
+    putLE32(file, 0);
+}
+
+static Mat makePlanarTestMat(int type, Size size)
+{
+    Mat img(size, type);
+    const int cn = img.channels();
+    for (int y = 0; y < size.height; y++)
+    {
+        for (int x = 0; x < size.width; x++)
+        {
+            for (int c = 0; c < cn; c++)
+            {
+                const int seed = x * 619 + y * 131 + c * 21845;
+                switch (img.depth())
+                {
+                case CV_8U:  img.ptr<uchar>(y)[x * cn + c] = (uchar)(seed % 256); break;
+                case CV_16U: img.ptr<ushort>(y)[x * cn + c] = (ushort)(seed % 65536); break;
+                case CV_32F:
+                    img.ptr<float>(y)[x * cn + c] = (float)x + y * 0.25f + c * 1000.5f;
+                    break;
+                case CV_64F: img.ptr<double>(y)[x * cn + c] = x + y * 0.25 + c * 1000.5; break;
+                default: CV_Assert(0);
+                }
+            }
+        }
+    }
+    return img;
+}
+
+typedef tuple<perf::MatType, int> PlanarSeparateParams;   // rowsPerStrip > 0, or 0 for 16x16 tiles
+typedef testing::TestWithParam<PlanarSeparateParams> Imgcodecs_Tiff_PlanarSeparate;
+
+TEST_P(Imgcodecs_Tiff_PlanarSeparate, decode_matches_contig)
+{
+    const int type = get<0>(GetParam());
+    const int rowsPerStrip = get<1>(GetParam());
+    const Size tileSize = rowsPerStrip > 0 ? Size() : Size(16, 16);
+    const Mat truth = makePlanarTestMat(type, Size(21, 13));
+
+    std::vector<uchar> contig, separate;
+    size_t link = 0;
+    appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, rowsPerStrip, tileSize);
+    link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, rowsPerStrip, tileSize);
+
+    // the contiguous file also validates the fixture builder itself
+    Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, decodedContig);
+
+    Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+    ASSERT_FALSE(decodedSeparate.empty());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, decodedSeparate);
+
+    if (truth.depth() == CV_16U && truth.channels() >= 3)
+    {
+        Mat grayContig = imdecode(contig, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+        Mat graySeparate = imdecode(separate, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), grayContig, graySeparate);
+    }
+}
+
+const perf::MatType planar_mat_types[] = { CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC3, CV_64FC3 };
+// single-row strips, partial last strip, one strip, tiles
+const int planar_layouts[] = { 1, 2, 13, 0 };
+
+INSTANTIATE_TEST_CASE_P(Layouts, Imgcodecs_Tiff_PlanarSeparate,
+        testing::Combine(
+            testing::ValuesIn(planar_mat_types),
+            testing::ValuesIn(planar_layouts)
+        )
+);
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_8bit)
+{
+    const Mat truth = makePlanarTestMat(CV_8UC3, Size(21, 13));
+    std::vector<uchar> separate;
+    size_t link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 4);
+
+    Mat unchanged = imdecode(separate, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, unchanged);
+    Mat color = imdecode(separate, IMREAD_COLOR);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, color);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_gray_alpha_16bit)
+{
+    const Mat samples = makePlanarTestMat(CV_16UC2, Size(21, 13));
+    Mat expected;
+    extractChannel(samples, expected, 0);
+
+    std::vector<uchar> separate;
+    size_t link = 0;
+    appendTiffPage(separate, link, samples, TIFF_PLANARCONFIG_SEPARATE, 2);
+
+    Mat decoded = imdecode(separate, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+    ASSERT_EQ(CV_16UC1, decoded.type());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decoded);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_packed)
+{
+    const int packed_bpps[] = { 10, 12, 14 };
+    for (int i = 0; i < 3; i++)
+    {
+        const int bpp = packed_bpps[i];
+        SCOPED_TRACE(cv::format("bpp=%d", bpp));
+        const Mat truth = makePlanarTestMat(CV_16UC3, Size(21, 13)) &
+                          Scalar::all((1 << bpp) - 1);
+        // The decoder scales packed samples up to 16 bits.
+        const Mat expected = truth * (1 << (16 - bpp));
+
+        std::vector<uchar> contig, separate;
+        size_t link = 0;
+        appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, 2, Size(), bpp);
+        link = 0;
+        appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 2, Size(), bpp);
+
+        Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+        ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedContig);
+
+        Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+        ASSERT_FALSE(decodedSeparate.empty());
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedSeparate);
+    }
+
+    // tiled variant, width is a whole number of tiles so packed rows stay byte-aligned
+    const Mat truth = makePlanarTestMat(CV_16UC3, Size(32, 13)) & Scalar::all(0x0fff);
+    const Mat expected = truth * 16;
+
+    std::vector<uchar> contig, separate;
+    size_t link = 0;
+    appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, 0, Size(16, 16), 12);
+    link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 0, Size(16, 16), 12);
+
+    Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedContig);
+
+    Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+    ASSERT_FALSE(decodedSeparate.empty());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedSeparate);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_multipage)
+{
+    const Mat page0 = makePlanarTestMat(CV_16UC3, Size(21, 13));
+    Mat page1;
+    bitwise_not(page0, page1);
+
+    std::vector<uchar> file;
+    size_t link = 0;
+    appendTiffPage(file, link, page0, TIFF_PLANARCONFIG_SEPARATE, 1);
+    appendTiffPage(file, link, page1, TIFF_PLANARCONFIG_SEPARATE, 3);
+
+    std::vector<Mat> pages;
+    ASSERT_TRUE(imdecodemulti(file, IMREAD_UNCHANGED, pages));
+    ASSERT_EQ((size_t)2, pages.size());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page0, pages[0]);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page1, pages[1]);
+}
+
 #endif
 
 }} // namespace
