@@ -1869,13 +1869,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 outputsVec[i].fit(outm.shape(), outm.type());
                 outm.copyTo(outputsVec[i]);
             }
-            // Honor the model's declared FP16 output dtype: ops compute in FP32 on the CPU
-            // path, so narrow the result back to CV_16F to match the ONNX contract.
-            if (i < mainGraphOutTypes.size() && CV_MAT_DEPTH(mainGraphOutTypes[i]) == CV_16F &&
-                !outputsVec[i].empty() && outputsVec[i].depth() != CV_16F)
+            // Honor the model's declared output dtype: some ops compute in a wider type
+            // (e.g. FP32 on the CPU path, or float-typed Pow of an integer base), so narrow
+            // the result back to the declared type to match the ONNX contract.
+            if (i < mainGraphOutTypes.size() && mainGraphOutTypes[i] >= 0 &&
+                !outputsVec[i].empty() &&
+                outputsVec[i].depth() != CV_MAT_DEPTH(mainGraphOutTypes[i]))
             {
                 Mat tmp;
-                outputsVec[i].convertTo(tmp, CV_16F);
+                outputsVec[i].convertTo(tmp, CV_MAT_DEPTH(mainGraphOutTypes[i]));
                 outputsVec[i] = tmp;
             }
         } else {

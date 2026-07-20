@@ -1963,6 +1963,7 @@ int dataType2cv(int dt)
         dt == opencv_onnx::TensorProto_DataType_UINT4 ? CV_8U :
         dt == opencv_onnx::TensorProto_DataType_INT4 ? CV_8S :
         dt == onnx_dtype::ONNX_FLOAT8E8M0 ? CV_32F :
+        onnx_dtype::isFp8Native(dt) ? onnx_dtype::fp8NativeDepth(dt) :
         onnx_dtype::isExoticFloat(dt) ? CV_16F : -1;
 }
 
@@ -2050,7 +2051,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         else
         {
             checkPayloadSize(raw_data_size / sizeof(int16_t));
-            Mat(sizes, CV_16FC1, rawdata).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_16FC1, rawdata).copyTo(blob);
         }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_BFLOAT16)

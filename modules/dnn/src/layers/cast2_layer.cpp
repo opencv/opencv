@@ -61,87 +61,6 @@ namespace
         }
     }
 
-    inline void castQuantized(const Mat& src, Mat& dst, int targetDepth)
-    {
-        if (targetDepth == CV_16F)
-        {
-            CV_Assert(dst.depth() == CV_32F);
-            if (src.depth() == CV_32F)
-            {
-                MatConstIterator_<float> sIt = src.begin<float>(), sEnd = src.end<float>();
-                MatIterator_<float> dIt = dst.begin<float>();
-                for (; sIt != sEnd; ++sIt, ++dIt)
-                {
-                    *dIt = (float)hfloat(*sIt);
-                }
-            }
-            else if (src.depth() == CV_64F)
-            {
-                MatConstIterator_<double> sIt = src.begin<double>(), sEnd = src.end<double>();
-                MatIterator_<float> dIt = dst.begin<float>();
-                for (; sIt != sEnd; ++sIt, ++dIt)
-                {
-                    float v = (float)*sIt;
-                    *dIt = (float)hfloat(v);
-                }
-            }
-            else
-            {
-                Mat src32; src.convertTo(src32, CV_32F);
-                MatConstIterator_<float> sIt = src32.begin<float>(), sEnd = src32.end<float>();
-                MatIterator_<float> dIt = dst.begin<float>();
-                for (; sIt != sEnd; ++sIt, ++dIt)
-                {
-                    *dIt = (float)hfloat(*sIt);
-                }
-            }
-            return;
-        }
-
-        if (targetDepth == CV_16BF)
-        {
-            const int ddepth = dst.depth();
-            if (!(ddepth == CV_16BF || ddepth == CV_16U))
-            {
-                CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
-            }
-
-            Mat dst_bits(dst.size(), CV_MAKETYPE(CV_16U, dst.channels()), dst.data, dst.step);
-
-            const Mat* src32p;
-            Mat src32;
-            if (src.depth() == CV_32F)
-                src32p = &src;
-            else
-            {
-                src.convertTo(src32, CV_32F);
-                src32p = &src32;
-            }
-
-            const int rows = src32p->rows;
-            const int cols_x_cn = src32p->cols * src32p->channels();
-            for (int r = 0; r < rows; ++r)
-            {
-                const float* in = src32p->ptr<float>(r);
-                ushort* out = dst_bits.ptr<ushort>(r);
-                for (int i = 0; i < cols_x_cn; ++i)
-                {
-                    // float32 -> bfloat16 with round-to-nearest-even (matches ONNX).
-                    Cv32suf u; u.f = in[i];
-                    const uint32_t x = u.u;
-                    if ((x & 0x7fffffffu) > 0x7f800000u)      // NaN: keep it NaN
-                        out[i] = (ushort)((x >> 16) | 0x0040u);
-                    else
-                    {
-                        const uint32_t bias = 0x7fffu + ((x >> 16) & 1u);
-                        out[i] = (ushort)((x + bias) >> 16);
-                    }
-                }
-            }
-            return;
-        }
-        src.convertTo(dst, dst.depth());
-    }
 }
 
 class Cast2LayerImpl CV_FINAL : public Cast2Layer
@@ -195,6 +114,20 @@ public:
         return false;
     }
 
+    // FP16/BF16 targets are materialized in FP32 unless the net enables native FP16, mirroring
+    // how FP16 inputs are upcast on the CPU path; the graph output is narrowed to the declared
+    // dtype elsewhere. Exotic dtypes keep their own storage.
+    int resolveStorageDepth(int targetDepth, bool exotic) const
+    {
+        if (!exotic && (targetDepth == CV_16F || targetDepth == CV_16BF))
+        {
+            Net::Impl* ni = getNetImpl(const_cast<Cast2LayerImpl*>(this));
+            if (ni && !ni->enableFP16)
+                return CV_32F;
+        }
+        return targetDepth;
+    }
+
     virtual  void getTypes(const std::vector<MatType>& inputs,
         const int requiredOutputs,
         const int requiredInternals,
@@ -230,9 +163,8 @@ public:
 
         const int in0Type = inputs[0];
         const int in0CN   = in0Type >= 0 ? CV_MAT_CN(in0Type) : 1;
-        // CV_16F is now a native output type; bf16 is stored as raw CV_16U bits.
-        int planDepth = (targetDepth == CV_16BF) ? CV_16U : targetDepth;
-        const int outType = CV_MAKETYPE(planDepth, in0CN);
+        const bool exotic = hasToParam && onnx_dtype::isExotic(toOnnxType_);
+        const int outType = CV_MAKETYPE(resolveStorageDepth(targetDepth, exotic), in0CN);
         outputs.assign(1, outType);
     }
 
@@ -322,15 +254,15 @@ public:
         }
         CV_CheckGE(runtimeTargetDepth, 0, "Cast: failed to resolve target data type at runtime");
 
-        // bf16 is stored as raw CV_16U bits; every other type uses its native depth (incl. CV_16F).
-        int plannedDDepth = (runtimeTargetDepth == CV_16BF) ? CV_16U : runtimeTargetDepth;
-        if (dst0.depth() != plannedDDepth)
-            dst0.create(dst0.size(), CV_MAKETYPE(plannedDDepth, src0.channels()));
+        const bool exotic = hasToParam && onnx_dtype::isExotic(toOnnxType_);
+        const int storeDepth = resolveStorageDepth(runtimeTargetDepth, exotic);
+        if (dst0.depth() != storeDepth)
+            dst0.create(dst0.size(), CV_MAKETYPE(storeDepth, src0.channels()));
 
         Mat src = src0;
         Mat dst = dst0;
 
-        if (hasToParam && onnx_dtype::isExotic(toOnnxType_))
+        if (exotic)
         {
             castExotic(src, dst, toOnnxType_, saturate_);
             return;
@@ -345,17 +277,13 @@ public:
             return;
         }
 
-        if (runtimeTargetDepth == CV_16BF)
-        {
-            castQuantized(src, dst, CV_16BF);   // write bf16 bits into the CV_16U buffer
-        }
-        else if ((sdepth == CV_16F || sdepth == CV_32F || sdepth == CV_64F) && CV_IS_INT_TYPE(ddepth))
+        if ((sdepth == CV_16F || sdepth == CV_32F || sdepth == CV_64F) && CV_IS_INT_TYPE(ddepth))
         {
             truncateFloatToInt(src, dst);       // ONNX float->int truncates toward zero
         }
         else
         {
-            src.convertTo(dst, ddepth);         // f32<->f16, f16->f32, bf16->float, etc.
+            src.convertTo(dst, ddepth);         // f32<->f16/bf16, f16/bf16->float, etc.
         }
     }
 
