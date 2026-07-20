@@ -237,4 +237,20 @@ TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Roundtrip) {
     }
 }
 
+TEST(Tokenizer_VLM, Tokenizer_GraniteDocling) {
+    // vlm-ocr shares gpt2's regex-splitting pattern, so this must match Tokenizer_GPT2_Tokens.
+    Tokenizer tok = Tokenizer::loadVLM(_tf("gpt2/"), "granite-docling");
+    EXPECT_EQ(tok.encode("hello world"), (std::vector<int>{31373, 995}));
+}
+
+TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl) {
+    // paddleocr-vl goes through the same HF-tokenizer.json loader as the Gemma method.
+    Tokenizer tok = Tokenizer::loadVLM(_tf("gemma3/"), "paddleocr-vl");
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{9259, 1902}));
+}
+
+TEST(Tokenizer_VLM, Tokenizer_UnsupportedModelName) {
+    EXPECT_ANY_THROW(Tokenizer::loadVLM(_tf("gpt2/"), "not-a-real-model"));
+}
+
 }}

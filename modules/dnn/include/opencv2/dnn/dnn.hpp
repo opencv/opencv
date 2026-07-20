@@ -2098,6 +2098,16 @@ public:
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
+     * @brief Load a tokenizer for a supported vision-language model.
+     *
+     * @param tokenizer_dir  Directory containing the model's tokenizer.json
+     *                       (and config.json, for BPE-based variants).
+     * @param model_name     One of "granite-docling", "paddleocr-vl".
+     * @return A Tokenizer ready for use. Throws cv::Exception if `model_name` is unsupported.
+     */
+    CV_WRAP static Tokenizer loadVLM(CV_WRAP_FILE_PATH const std::string& tokenizer_dir, const std::string& model_name);
+
+    /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
      *
      * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
