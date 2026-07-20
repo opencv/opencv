@@ -3326,6 +3326,44 @@ CASE(test_attention_4d_with_qk_matmul_softmax)
     SKIP;
 CASE(test_attention_4d_with_qk_matmul_softmax_expanded)
     SKIP;
+
+// ONNX 1.22 additions: unsupported on OpenVINO
+CASE(test_dft_rfft)
+    SKIP;
+CASE(test_nonmaxsuppression_iou_threshold_boundary)
+    SKIP;
+CASE(test_attention_4d_softcap_neginf_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_softcap_neginf_mask_poison_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_b1_c1_degenerate_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_basic_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_decode_step_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_kernel_size_one_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_short_input_no_past_state_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_silu_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_silu_with_past_state_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_swish_alias_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_with_bias_and_past_state_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_with_bias_expanded)
+    SKIP;
+CASE(test_causal_conv_with_state_with_past_state_expanded)
+    SKIP;
+CASE(test_flexattention_scaled_expanded_ver26)
+    SKIP;
+CASE(test_range_bfloat16_type_positive_delta)
+    SKIP;
+CASE(test_range_float16_type_positive_delta)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH
