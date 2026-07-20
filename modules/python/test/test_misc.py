@@ -991,22 +991,18 @@ class AlgorithmImplHit(NewOpenCVTests):
     def test_callable(self):
         res = cv.getDefaultAlgorithmHint()
         self.assertTrue(res is not None)
-        
 class Test_Issue28766(NewOpenCVTests):
     def test_typing_module_shadowing(self):
         # Regression test for Issue #28766: cv2/__init__.py shadowing stdlib typing
         import subprocess
         import sys
-        
         # We run this in a completely fresh subprocess to ensure sys.modules is clean.
         # If the bug is present, importing typing or numpy after cv2 will crash.
         script = "import cv2; import typing; import numpy"
-        
         try:
             # Execute the script in an isolated Python environment
             subprocess.check_call([sys.executable, "-c", script])
         except subprocess.CalledProcessError as e:
             self.fail(f"Namespace shadowing bug reproduced: Subprocess crashed with {e}")
-
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
