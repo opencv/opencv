@@ -30,8 +30,27 @@ static int copyToMasked_e##X##c1(const uchar *src_data, size_t src_step, const u
     return CV_HAL_ERROR_OK; \
 }
 
-CV_HAL_RVV_COPY_MASK_eXc1(8,  8)
-CV_HAL_RVV_COPY_MASK_eXc1(16, 4)
+#define CV_HAL_RVV_COPY_MASK_MERGE_eXc1(X, data_lmul, mask_lmul) \
+static int copyToMasked_e##X##c1(const uchar *src_data, size_t src_step, const uchar *mask_data, size_t mask_step, \
+                                 uchar *dst_data, size_t dst_step, int width, int height) { \
+    for (; height--; mask_data += mask_step, src_data += src_step, dst_data += dst_step) { \
+        const uint##X##_t *src = (const uint##X##_t*)src_data; \
+        uint##X##_t *dst = (uint##X##_t*)dst_data; \
+        int vl; \
+        for (int i = 0; i < width; i += vl) { \
+            vl = __riscv_vsetvl_e##X##m##data_lmul(width - i); \
+            auto m = __riscv_vmsne(__riscv_vle8_v_u8m##mask_lmul(mask_data + i, vl), 0, vl); \
+            auto src_v = __riscv_vle##X##_v_u##X##m##data_lmul(src + i, vl); \
+            auto dst_v = __riscv_vle##X##_v_u##X##m##data_lmul(dst + i, vl); \
+            __riscv_vse##X##_v_u##X##m##data_lmul(dst + i, __riscv_vmerge(dst_v, src_v, m, vl), vl); \
+        } \
+    } \
+    return CV_HAL_ERROR_OK; \
+}
+
+CV_HAL_RVV_COPY_MASK_MERGE_eXc1(8,  8, 8)
+CV_HAL_RVV_COPY_MASK_MERGE_eXc1(16, 8, 4)
+
 CV_HAL_RVV_COPY_MASK_eXc1(32, 2)
 CV_HAL_RVV_COPY_MASK_eXc1(64, 1)
 
