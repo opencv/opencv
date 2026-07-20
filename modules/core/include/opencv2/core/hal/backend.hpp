@@ -33,6 +33,9 @@ public:
     // subtract: src - src2
     virtual bool subtract(InputArray, InputArray, OutputArray) { return false; }
 
+    // multiply: src * src2 (element-wise)
+    virtual bool multiply(InputArray, InputArray, OutputArray) { return false; }
+
     // divide: src / src2
     virtual bool divide(InputArray, InputArray, OutputArray) { return false; }
 

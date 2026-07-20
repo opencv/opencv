@@ -280,6 +280,25 @@ public:
 #endif
     }
 
+    bool multiply(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::multiply(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
     bool divide(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
     {
 #ifdef HAVE_OPENCV_CUDAARITHM
