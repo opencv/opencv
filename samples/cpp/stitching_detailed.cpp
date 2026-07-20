@@ -484,9 +484,9 @@ int main(int argc, char* argv[])
 #endif
 
     Ptr<Feature2D> finder;
-    if (use_aliked)
+    if (features_type == "aliked")
     {
-        // ALIKED will be created per-image in the loop below
+        finder = ALIKED::create(aliked_model_path);
     }
     else if (features_type == "orb")
     {
@@ -517,7 +517,7 @@ int main(int argc, char* argv[])
     else if (features_type == "xfeat")
     {
 #ifdef HAVE_OPENCV_DNN
-        finder = XFeat::create(xfeat_model_path, 4096, 0.05f, 640);
+        finder = XFeat::create(xfeat_model_path, 4096, 0.05f, Size(640, 640));
 #else
         cout << "OpenCV is built without opencv_dnn module. XFeat algorithm is not available!" << std::endl;
         return -1;
@@ -567,15 +567,7 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        if (use_aliked)
-        {
-            Ptr<ALIKED> aliked = ALIKED::create(aliked_model_path);
-            computeImageFeatures(aliked, img, features[i]);
-        }
-        else
-        {
-            computeImageFeatures(finder, img, features[i]);
-        }
+        computeImageFeatures(finder, img, features[i]);
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 

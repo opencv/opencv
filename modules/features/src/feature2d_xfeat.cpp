@@ -17,6 +17,12 @@ using namespace dnn;
 namespace {
 
 static const int kXFeatDescriptorSize = 64;
+static const std::vector<String> kXFeatOutputNames =
+{
+    "output_feats",
+    "output_keypoints",
+    "output_heatmap"
+};
 
 struct XFeatCandidate
 {
@@ -101,22 +107,22 @@ class XFeat_Impl CV_FINAL : public XFeat
 {
 public:
     XFeat_Impl(const String& modelPath, int maxKeypoints, float scoreThreshold,
-               int inputSize, int backendId, int targetId)
+               const Size& inputSize, int backendId, int targetId)
         : maxKeypoints_(maxKeypoints),
           scoreThreshold_(scoreThreshold),
           inputSize_(inputSize)
     {
-        CV_Assert(inputSize_ > 0);
+        CV_Assert(inputSize_.width > 0 && inputSize_.height > 0);
         initNet(readNetFromONNX(modelPath), backendId, targetId);
     }
 
     XFeat_Impl(const std::vector<uchar>& bufferModel, int maxKeypoints, float scoreThreshold,
-               int inputSize, int backendId, int targetId)
+               const Size& inputSize, int backendId, int targetId)
         : maxKeypoints_(maxKeypoints),
           scoreThreshold_(scoreThreshold),
           inputSize_(inputSize)
     {
-        CV_Assert(inputSize_ > 0);
+        CV_Assert(inputSize_.width > 0 && inputSize_.height > 0);
         initNet(readNetFromONNX(bufferModel), backendId, targetId);
     }
 
@@ -140,22 +146,23 @@ public:
         Mat mask = _mask.getMat();
         if (!mask.empty())
         {
-            CV_Assert(mask.type() == CV_8UC1);
+            CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_BoolC1);
             CV_Assert(mask.size() == image.size());
         }
 
         Mat gray = toGray(image);
-        const float scale = static_cast<float>(inputSize_) /
-                            static_cast<float>(std::max(gray.cols, gray.rows));
-        const int resizedW = std::max(1, static_cast<int>(gray.cols * scale));
-        const int resizedH = std::max(1, static_cast<int>(gray.rows * scale));
-        const int padX = (inputSize_ - resizedW) / 2;
-        const int padY = (inputSize_ - resizedH) / 2;
+        const float scaleX = static_cast<float>(inputSize_.width) / static_cast<float>(gray.cols);
+        const float scaleY = static_cast<float>(inputSize_.height) / static_cast<float>(gray.rows);
+        const float scale = std::min(scaleX, scaleY);
+        const int resizedW = std::max(1, cvRound(static_cast<float>(gray.cols) * scale));
+        const int resizedH = std::max(1, cvRound(static_cast<float>(gray.rows) * scale));
+        const int padX = (inputSize_.width - resizedW) / 2;
+        const int padY = (inputSize_.height - resizedH) / 2;
 
         Mat blob;
         Image2BlobParams blobParams;
         blobParams.scalefactor = Scalar::all(1.0 / 255.0);
-        blobParams.size = Size(inputSize_, inputSize_);
+        blobParams.size = inputSize_;
         blobParams.mean = Scalar();
         blobParams.swapRB = false;
         blobParams.ddepth = CV_32F;
@@ -165,13 +172,19 @@ public:
         blobFromImageWithParams(gray, blob, blobParams);
         net_.setInput(blob);
 
-        const std::vector<String> outNames = {"output_feats", "output_keypoints", "output_heatmap"};
         std::vector<Mat> outs;
-        net_.forward(outs, outNames);
+        net_.forward(outs, kXFeatOutputNames);
         CV_Assert(outs.size() == 3);
 
         Mat featBlob = toNCHW(outs[0], kXFeatDescriptorSize);
-        Mat kptBlob = toNCHW(outs[1], 65);
+        Mat kptBlob = outs[1];
+        CV_Assert(kptBlob.dims == 4);
+        if (!(kptBlob.size[1] == 64 || kptBlob.size[1] == 65))
+        {
+            CV_Assert(kptBlob.size[3] == 64 || kptBlob.size[3] == 65);
+            Mat src = kptBlob.isContinuous() ? kptBlob : kptBlob.clone();
+            transposeND(src, {0, 3, 1, 2}, kptBlob);
+        }
         Mat relBlob = toNCHW(outs[2], 1);
         CV_Assert(featBlob.dims == 4 && kptBlob.dims == 4 && relBlob.dims == 4);
         if (!featBlob.isContinuous())
@@ -186,7 +199,7 @@ public:
         const int kptC = kptBlob.size[1];
         const int kptH = kptBlob.size[2];
         const int kptW = kptBlob.size[3];
-        CV_Assert(featBlob.size[1] == kXFeatDescriptorSize && kptC >= 64);
+        CV_Assert(featBlob.size[1] == kXFeatDescriptorSize && (kptC == 64 || kptC == 65));
 
         Mat reliability(relBlob.size[2], relBlob.size[3], CV_32F, relBlob.ptr<float>());
         Mat heatmap = Mat::zeros(kptH * 8, kptW * 8, CV_32F);
@@ -233,7 +246,7 @@ public:
                         sumExp += probs[ch];
                     }
 #endif
-                    if (kptC > 64)
+                    if (kptC == 65)
                         sumExp += std::exp(kptPtr[64 * kptHW + offset] - maxLogit);
                     if (sumExp <= 0.f)
                         continue;
@@ -266,8 +279,8 @@ public:
 
                 const float xp = static_cast<float>(x);
                 const float yp = static_cast<float>(y);
-                const float score = sampleNearest(heatmap, xp, yp, inputSize_, inputSize_) *
-                                    sampleBilinear(reliability, xp, yp, inputSize_, inputSize_);
+                const float score = sampleNearest(heatmap, xp, yp, inputSize_.width, inputSize_.height) *
+                                    sampleBilinear(reliability, xp, yp, inputSize_.width, inputSize_.height);
                 if (score <= 0.f)
                     continue;
 
@@ -323,7 +336,7 @@ public:
                         Mat channel(featH, featW, CV_32F,
                                     const_cast<float*>(featPtr + ch * featHW));
                         dst[ch] = sampleBilinear(channel, c.ptPadded.x, c.ptPadded.y,
-                                                 inputSize_, inputSize_);
+                                                 inputSize_.width, inputSize_.height);
                     }
                     normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
                 }
@@ -343,12 +356,12 @@ public:
     void  setScoreThreshold(float threshold) CV_OVERRIDE { scoreThreshold_ = threshold; }
     float getScoreThreshold() const CV_OVERRIDE { return scoreThreshold_; }
 
-    void setInputSize(int inputSize) CV_OVERRIDE
+    void setInputSize(const Size& inputSize) CV_OVERRIDE
     {
-        CV_Assert(inputSize > 0);
+        CV_Assert(inputSize.width > 0 && inputSize.height > 0);
         inputSize_ = inputSize;
     }
-    int getInputSize() const CV_OVERRIDE { return inputSize_; }
+    Size getInputSize() const CV_OVERRIDE { return inputSize_; }
 
     String getDefaultName() const CV_OVERRIDE { return Feature2D::getDefaultName() + ".XFeat"; }
 
@@ -358,16 +371,64 @@ private:
         net_ = net;
         net_.setPreferableBackend(backendId);
         net_.setPreferableTarget(targetId);
+
+        // Check output names once and fail early.
+        const std::vector<String> modelOutNames = net_.getUnconnectedOutLayersNames();
+        if (modelOutNames.size() != kXFeatOutputNames.size())
+        {
+            String msg = "XFeat ONNX output count mismatch: expected " +
+                         std::to_string(kXFeatOutputNames.size()) + " outputs (";
+            for (size_t i = 0; i < kXFeatOutputNames.size(); ++i)
+            {
+                msg += kXFeatOutputNames[i];
+                if (i + 1 < kXFeatOutputNames.size())
+                    msg += ", ";
+            }
+            msg += "), but model has " + std::to_string(modelOutNames.size()) + " outputs: ";
+            for (size_t i = 0; i < modelOutNames.size(); ++i)
+            {
+                msg += modelOutNames[i];
+                if (i + 1 < modelOutNames.size())
+                    msg += ", ";
+            }
+            CV_Error(Error::StsError, msg);
+        }
+
+        for (size_t i = 0; i < kXFeatOutputNames.size(); ++i)
+        {
+            bool found = false;
+            for (size_t j = 0; j < modelOutNames.size(); ++j)
+            {
+                if (modelOutNames[j] == kXFeatOutputNames[i])
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                String msg = "XFeat ONNX output name mismatch: expected output '" + kXFeatOutputNames[i] +
+                             "'. Please check model outputs. Available outputs: ";
+                for (size_t j = 0; j < modelOutNames.size(); ++j)
+                {
+                    msg += modelOutNames[j];
+                    if (j + 1 < modelOutNames.size())
+                        msg += ", ";
+                }
+                CV_Error(Error::StsError, msg);
+            }
+        }
     }
 
     int maxKeypoints_;
     float scoreThreshold_;
-    int inputSize_;
+    Size inputSize_;
     Net net_;
 };
 
 Ptr<XFeat> XFeat::create(const String& modelPath, int maxKeypoints, float scoreThreshold,
-                         int inputSize, int backendId, int targetId)
+                         const Size& inputSize, int backendId, int targetId)
 {
     CV_TRACE_FUNCTION();
     return makePtr<XFeat_Impl>(modelPath, maxKeypoints, scoreThreshold,
@@ -375,7 +436,7 @@ Ptr<XFeat> XFeat::create(const String& modelPath, int maxKeypoints, float scoreT
 }
 
 Ptr<XFeat> XFeat::create(const std::vector<uchar>& bufferModel, int maxKeypoints,
-                         float scoreThreshold, int inputSize, int backendId, int targetId)
+                         float scoreThreshold, const Size& inputSize, int backendId, int targetId)
 {
     CV_TRACE_FUNCTION();
     return makePtr<XFeat_Impl>(bufferModel, maxKeypoints, scoreThreshold,

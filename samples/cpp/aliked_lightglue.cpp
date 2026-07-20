@@ -23,7 +23,7 @@ static int runXFeatExample(const String& imgPath, const String& xfeatModel, cons
         return -1;
     }
 
-    Ptr<XFeat> xfeat = XFeat::create(xfeatModel, 2000, 0.05f, 640);
+    Ptr<XFeat> xfeat = XFeat::create(xfeatModel, 2000, 0.05f, Size(640, 640));
     vector<KeyPoint> keypoints;
     Mat descriptors;
     xfeat->detectAndCompute(img, Mat(), keypoints, descriptors);
