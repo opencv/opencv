@@ -60,6 +60,33 @@ void poolFree(size_t sz, void* d)
     std::lock_guard<std::mutex> lk(p.mtx);
     p.freelist[sz].push_back(d);
 }
+
+// Pinned (page-locked) host pool: cudaMemcpy to/from page-locked memory runs at
+// full PCIe bandwidth (~2-6x faster than pageable). cudaMallocHost is expensive,
+// so buffers are pooled by size and kept for the plugin's lifetime.
+struct PinnedPool {
+    std::mutex mtx;
+    std::unordered_map<size_t, std::vector<void*> > freelist;
+};
+PinnedPool& pinnedPool() { static PinnedPool p; return p; }
+
+void* pinnedAlloc(size_t sz)
+{
+    PinnedPool& p = pinnedPool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    std::vector<void*>& v = p.freelist[sz];
+    if (!v.empty()) { void* d = v.back(); v.pop_back(); return d; }
+    void* d = nullptr;
+    CV_Assert(cudaMallocHost(&d, sz) == cudaSuccess);
+    return d;
+}
+void pinnedFree(size_t sz, void* d)
+{
+    if (!d) return;
+    PinnedPool& p = pinnedPool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    p.freelist[sz].push_back(d);
+}
 } // anonymous namespace
 
 // MatAllocator that puts UMat memory in VRAM, host copy on demand via map().
@@ -92,7 +119,9 @@ public:
         u->flags     = data ? UMatData::USER_ALLOCATED
                             : static_cast<UMatData::MemoryFlag>(0);
         u->markHostCopyObsolete(true);
-        u->gpuBackend = getCudaBackendInstance();
+        // Associate this UMatData with the CUDA backend out-of-line (keyed by
+        // UMatData*), so UMatData's layout stays ABI-stable.
+        setUMatBackend(u, getCudaBackendInstance());
         return u;
     }
 
@@ -105,10 +134,11 @@ public:
     void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if (!u) return;
+        eraseUMatBackend(u);          // drop out-of-line backend association
         if (u->handle && !(u->flags & UMatData::USER_ALLOCATED))
             poolFree(u->size, u->handle);
         if (u->data)
-            fastFree(u->data);
+            pinnedFree(u->size, u->data);   // return pinned host shadow to pool
         delete u;
     }
 
@@ -116,7 +146,7 @@ public:
     {
         if (!u) return;
         if (u->data == 0)
-            u->data = (uchar*)fastMalloc(u->size);
+            u->data = (uchar*)pinnedAlloc(u->size);   // page-locked shadow
         if ((accessFlags & ACCESS_READ) && u->hostCopyObsolete())
         {
             CV_Assert(cudaMemcpy(u->data, u->handle, u->size,

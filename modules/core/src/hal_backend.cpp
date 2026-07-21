@@ -6,8 +6,9 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/backend_registry.hpp"
 #include <vector>
+#include <unordered_map>
 #include <dlfcn.h>      // dlopen, dlsym, dlclose
-#include <mutex>        // std::once_flag, std::call_once
+#include <mutex>        // std::once_flag, std::call_once, std::mutex
 #include <string>
 #include <cstring>      // memcpy
 #include <cstdlib>      // getenv
@@ -36,6 +37,39 @@ Backend* findBackend() {
 
 void clearBackends() {
     getRegistry().clear();
+}
+
+// ---- Out-of-line UMat<->Backend association (keyed by UMatData*) ----
+// Keeps UMatData's layout/ABI unchanged: the backend pointer lives here, not
+// in the struct. Guarded by its own mutex; entries are added by a backend's
+// allocator (setUMatBackend) and removed on deallocate/UMatData dtor.
+namespace {
+std::mutex& umatBackendMutex() { static std::mutex m; return m; }
+std::unordered_map<const UMatData*, Backend*>& umatBackendMap() {
+    static std::unordered_map<const UMatData*, Backend*> m;
+    return m;
+}
+} // anonymous namespace
+
+void setUMatBackend(const UMatData* u, Backend* backend) {
+    if (!u) return;
+    std::lock_guard<std::mutex> lk(umatBackendMutex());
+    if (backend) umatBackendMap()[u] = backend;
+    else         umatBackendMap().erase(u);
+}
+
+Backend* getUMatBackend(const UMatData* u) {
+    if (!u) return nullptr;
+    std::lock_guard<std::mutex> lk(umatBackendMutex());
+    std::unordered_map<const UMatData*, Backend*>& m = umatBackendMap();
+    std::unordered_map<const UMatData*, Backend*>::iterator it = m.find(u);
+    return it == m.end() ? nullptr : it->second;
+}
+
+void eraseUMatBackend(const UMatData* u) {
+    if (!u) return;
+    std::lock_guard<std::mutex> lk(umatBackendMutex());
+    umatBackendMap().erase(u);
 }
 
 namespace {

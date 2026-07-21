@@ -632,8 +632,13 @@ enum UMatUsageFlags
     __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
 };
 
-namespace hal { class Backend; }
 struct CV_EXPORTS UMatData;
+namespace hal {
+class Backend;
+// Out-of-line UMat<->Backend association (keyed by UMatData*), so UMatData
+// itself keeps its ABI-stable layout — no new fields. See hal_backend.cpp.
+CV_EXPORTS Backend* getUMatBackend(const UMatData* u);
+}
 
 /** @brief  Custom array allocator
 */
@@ -748,7 +753,6 @@ struct CV_EXPORTS UMatData
     int mapcount;
     UMatData* originalUMatData;
     std::shared_ptr<void> allocatorContext;
-    hal::Backend* gpuBackend;
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
@@ -2970,7 +2974,7 @@ public:
     void ndoffset(size_t* ofs) const;
     hal::Backend* backend() const
     {
-        return u ? u->gpuBackend : nullptr;
+        return u ? hal::getUMatBackend(u) : nullptr;
     }
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };

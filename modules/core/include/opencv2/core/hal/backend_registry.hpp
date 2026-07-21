@@ -22,6 +22,13 @@ CV_EXPORTS void clearBackends();
 // Load GPU backend plugins via dlopen at startup (thread-safe, runs once).
 CV_EXPORTS void loadBackendPlugins();
 
+// Out-of-line UMat<->Backend association, keyed by UMatData*. Kept outside
+// UMatData so its layout (and ABI) is unchanged. A backend allocator calls
+// setUMatBackend() in allocate() and eraseUMatBackend() in deallocate();
+// UMat::backend() reads it via getUMatBackend() (declared in core/mat.hpp).
+CV_EXPORTS void setUMatBackend(const UMatData* u, Backend* backend);
+CV_EXPORTS void eraseUMatBackend(const UMatData* u);
+
 }} // cv::hal
 
 #endif // OPENCV_CORE_HAL_BACKEND_REGISTRY_HPP
