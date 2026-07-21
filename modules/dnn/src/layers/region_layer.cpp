@@ -55,7 +55,7 @@
 #include "../ie_ngraph.hpp"
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/region.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -123,7 +123,7 @@ public:
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         return preferableTarget != DNN_TARGET_MYRIAD && new_coords == 0;
 #endif
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
             return true;
 #endif
@@ -388,7 +388,7 @@ public:
         }
     }
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

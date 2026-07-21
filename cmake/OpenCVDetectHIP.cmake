@@ -25,33 +25,6 @@ set(HAVE_HIP 1)
 # HIP needs the first-class CUDA language; legacy FindCUDA can't compile .hip files.
 set(ENABLE_CUDA_FIRST_CLASS_LANGUAGE ON)
 
-# Configs: HIP-only (HAVE_CUDA faked, HIP_STANDALONE=1), HIP+real-CUDA, CUDA-only.
-if(NOT HAVE_CUDA AND NOT CMAKE_CUDA_COMPILER)
-  # No NVIDIA toolkit -> HIP standalone: fake CUDA so CUDA-aware modules still
-  # configure. Test CMAKE_CUDA_COMPILER, not HAVE_CUDA (set later).
-  set(HAVE_CUDA 1)
-  set(HAVE_HIP_STANDALONE 1)
-  # Stub CUDA::cudart targets so modules linking them still configure.
-  foreach(_cuda_stub cudart cudart_static)
-    if(NOT TARGET CUDA::${_cuda_stub})
-      add_library(CUDA::${_cuda_stub} INTERFACE IMPORTED GLOBAL)
-    endif()
-  endforeach()
-  unset(_cuda_stub)
-endif()
-
-# Standalone: point CUDAToolkit_INCLUDE_DIRS at ROCm headers so CUDA-aware modules
-# get a non-empty include list (combined mode keeps the real CUDA path).
-if(HAVE_HIP_STANDALONE)
-  get_target_property(_hip_iface_dirs hip::device INTERFACE_INCLUDE_DIRECTORIES)
-  if(_hip_iface_dirs)
-    set(CUDAToolkit_INCLUDE_DIRS ${_hip_iface_dirs})
-  else()
-    set(CUDAToolkit_INCLUDE_DIRS "${hip_INCLUDE_DIRS}")
-  endif()
-  unset(_hip_iface_dirs)
-endif()
-
 set(CMAKE_HIP_STANDARD 17)
 set(CMAKE_HIP_STANDARD_REQUIRED ON)
 
@@ -103,7 +76,7 @@ endif()
 
 # Define __HIP_PLATFORM_AMD__ for non-CUDA compiles only (nvcc must not see it).
 add_compile_options($<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-D__HIP_PLATFORM_AMD__>)
-if(NOT HAVE_HIP_STANDALONE)
+if(HAVE_CUDA)
   # hip::device forces -D__HIP_PLATFORM_AMD__=1 onto nvcc; undo it and set the
   # NVIDIA platform macro via CUDA_FLAGS (appended after CUDA_DEFINES).
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -U__HIP_PLATFORM_AMD__ -D__HIP_PLATFORM_NVIDIA__")
@@ -124,19 +97,6 @@ set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -I${hip_INCLUDE_DIRS}")
 set(CUDA_VERSION_STRING "${hip_VERSION}")
 if(NOT CUDA_VERSION)
   set(CUDA_VERSION "${hip_VERSION}")
-endif()
-
-# Standalone has no NVIDIA toolkit: disable NVIDIA-only cuda* modules.
-if(HAVE_HIP_STANDALONE)
-  foreach(_nv_mod
-      cudaarithm cudabgsegm cudacodec cudafeatures2d cudafilters
-      cudaimgproc cudalegacy cudaobjdetect cudaoptflow cudastereo cudawarping)
-    if(NOT DEFINED BUILD_opencv_${_nv_mod} OR BUILD_opencv_${_nv_mod})
-      set(BUILD_opencv_${_nv_mod} OFF CACHE BOOL
-          "Disabled: HIP standalone build has no NVIDIA CUDA libraries" FORCE)
-    endif()
-  endforeach()
-  unset(_nv_mod)
 endif()
 
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDAUtils.cmake")

@@ -62,7 +62,7 @@
 using namespace cv::dnn::ocl4dnn;
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
 #include "../cuda4dnn/primitives/transpose_convolution.hpp"
 using namespace cv::dnn::cuda4dnn;
@@ -217,7 +217,7 @@ public:
     float power;
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
     float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil;
@@ -232,7 +232,7 @@ public:
         power = 0.f;
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
@@ -254,7 +254,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         size_t ksize = kernel_size.size();
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
             /* only 1d, 2d and 3d convolutions supported */
@@ -453,7 +453,7 @@ public:
         }
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         if (activ.empty())
         {
             /* setActivation was called with empty argument => reset all fusions */
@@ -530,7 +530,7 @@ public:
         if (fusedAdd)   // If the Conv layer has fused Add layer, it cannot fuse other layers.
             return false;
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
             Ptr<EltwiseLayer> eltwise = top.dynamicCast<EltwiseLayer>();
@@ -1217,7 +1217,7 @@ public:
         }
     }
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

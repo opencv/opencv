@@ -45,7 +45,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/reshape.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -176,7 +176,7 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

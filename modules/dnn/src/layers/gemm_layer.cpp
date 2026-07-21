@@ -6,7 +6,7 @@
 #include "layers_common.hpp"
 // backends
 #include "../op_cuda.hpp"
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 // #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
 using namespace cv::dnn::cuda4dnn;
@@ -580,7 +580,7 @@ public:
         }
     }
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     // Y = A * B + C. B should be guaranteed as two dimensional.
     Ptr<BackendNode> initCUDA(void *context_,
                               InputArrayOfArrays inputs_,

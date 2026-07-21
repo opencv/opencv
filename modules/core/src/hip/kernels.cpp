@@ -12,8 +12,8 @@
 
 using namespace cv;
 
-// ThrustAllocator is needed only in standalone mode; combined mode uses gpu_mat.cu's.
-#ifdef HAVE_HIP_STANDALONE
+// ThrustAllocator is needed only when HIP is active without real CUDA; combined mode uses gpu_mat.cu's.
+#if defined(HAVE_HIP) && !defined(HAVE_CUDA)
 
 namespace cv { namespace cuda { namespace device {
 struct CV_EXPORTS ThrustAllocator {
@@ -52,7 +52,7 @@ void cv::cuda::device::ThrustAllocator::setAllocator(cv::cuda::device::ThrustAll
     g_thrustAllocator = a ? a : &defaultThrustAllocator;
 }
 
-#endif // HAVE_HIP_STANDALONE
+#endif // defined(HAVE_HIP) && !defined(HAVE_CUDA)
 
 // hip_saturate_cast: integer dests clamp via double; float/double use the static_cast specialisations below.
 

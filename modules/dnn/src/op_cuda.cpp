@@ -4,7 +4,7 @@
 
 #include "precomp.hpp"
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "op_cuda.hpp"
 #include "cuda4dnn/init.hpp"
 #include "net_impl.hpp"
@@ -176,7 +176,7 @@ namespace cv { namespace dnn {
 
 bool haveCUDA()
 {
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     int dev = 0;
     static bool ret = (cudaGetDevice(&dev) == cudaSuccess);
     return ret;

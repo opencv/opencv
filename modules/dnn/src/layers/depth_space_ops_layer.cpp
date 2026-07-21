@@ -17,7 +17,7 @@
 #endif
 
 // CUDA backend
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/depth_space_ops.hpp"
 #endif
@@ -213,7 +213,7 @@ public:
     }
 #endif // HAVE_DNN_NGRAPH
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
                               const std::vector<Ptr<BackendWrapper>>& inputs,
                               const std::vector<Ptr<BackendWrapper>>& outputs) override {
@@ -390,7 +390,7 @@ public:
     }
 #endif // HAVE_DNN_NGRAPH
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
                               const std::vector<Ptr<BackendWrapper>> &inputs,
                               const std::vector<Ptr<BackendWrapper>> &outputs) override {

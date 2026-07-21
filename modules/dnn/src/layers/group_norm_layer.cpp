@@ -9,7 +9,7 @@
 
 // CUDA backend
 #include "../op_cuda.hpp"
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/group_norm.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -173,7 +173,7 @@ public:
         }
 #endif
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
                           const std::vector<Ptr<BackendWrapper>>& inputs,
                           const std::vector<Ptr<BackendWrapper>>& outputs) override {

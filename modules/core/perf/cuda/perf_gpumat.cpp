@@ -42,7 +42,7 @@
 
 #include "../perf_precomp.hpp"
 
-#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
+#ifdef HAVE_CUDA
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/ts/cuda_perf.hpp"

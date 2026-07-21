@@ -46,7 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/normalize_bbox.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -313,7 +313,7 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

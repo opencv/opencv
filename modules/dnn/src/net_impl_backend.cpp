@@ -10,7 +10,7 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
 #include "cuda4dnn/init.hpp"
 #endif
 
@@ -184,7 +184,7 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
         else if (preferableBackend == DNN_BACKEND_CUDA)
         {
             CV_Assert(haveCUDA());
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
             CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_8S || host.depth() == CV_8U || host.depth() == CV_32S || host.depth() == CV_64S || host.depth() == CV_Bool, "Unsupported type for CUDA");
             CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
             switch (host.depth())
@@ -258,7 +258,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
     else if (preferableBackend == DNN_BACKEND_CUDA)
     {
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
         initCUDABackend(blobsToKeep_);
 #else
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of CUDA/CUDNN");
@@ -422,7 +422,7 @@ void Net::Impl::setPreferableTarget(int targetId)
         if (IS_DNN_CUDA_TARGET(targetId))
         {
             preferableTarget = DNN_TARGET_CPU;
-#if CV_CUDA4DNN
+#ifdef HAVE_CUDA
             if (cuda4dnn::doesDeviceSupportFP16() && targetId == DNN_TARGET_CUDA_FP16)
                 preferableTarget = DNN_TARGET_CUDA_FP16;
             else

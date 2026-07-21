@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 
-#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
+#ifdef HAVE_CUDA
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda.hpp"
