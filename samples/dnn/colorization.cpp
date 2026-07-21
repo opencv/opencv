@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     resize(imgL, imgLResized, Size(256, 256), 0, 0, INTER_CUBIC);
 
     // Prepare the model
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
     dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engine);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);

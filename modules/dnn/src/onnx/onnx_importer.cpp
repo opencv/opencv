@@ -54,19 +54,22 @@ CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 
-// ENGINE_CLASSIC/ENGINE_AUTO have been removed. Resolve any engine request to a
-// supported one (ENGINE_NEW or ENGINE_ORT), honoring the OPENCV_FORCE_DNN_ENGINE override.
+// Resolve an engine request to a concrete supported engine (ENGINE_OPENCV or ENGINE_ORT).
+// ENGINE_AUTO resolves to ENGINE_OPENCV. The OPENCV_FORCE_DNN_ENGINE override, when set to a
+// concrete engine, wins over the caller's choice; left unset (ENGINE_AUTO) it does not force.
 static int resolveOnnxEngine(int engine)
 {
     static const int engine_forced =
-        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
-    if (engine_forced == ENGINE_NEW || engine_forced == ENGINE_ORT)
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if (engine_forced == ENGINE_OPENCV || engine_forced == ENGINE_ORT)
         engine = engine_forced;
-    if (engine != ENGINE_NEW && engine != ENGINE_ORT)
+    if (engine == ENGINE_AUTO)
+        engine = ENGINE_OPENCV;
+    if (engine != ENGINE_OPENCV && engine != ENGINE_ORT)
     {
-        CV_LOG_WARNING(NULL, "DNN/ONNX: only ENGINE_NEW and ENGINE_ORT are supported; "
-                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, falling back to ENGINE_NEW.");
-        engine = ENGINE_NEW;
+        CV_LOG_WARNING(NULL, "DNN/ONNX: only ENGINE_AUTO, ENGINE_OPENCV and ENGINE_ORT are supported; "
+                             "falling back to ENGINE_OPENCV.");
+        engine = ENGINE_OPENCV;
     }
     return engine;
 }
@@ -83,7 +86,7 @@ Net readNetFromONNX(const String& onnxFile, int engine)
             CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime model metadata was not initialized");
         return net;
 #else
-        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_NEW.");
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_OPENCV.");
 #endif
     }
     return readNetFromONNX2(onnxFile);
@@ -96,7 +99,7 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 #ifdef HAVE_ONNXRUNTIME
         CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
 #else
-        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_NEW.");
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_OPENCV.");
 #endif
     }
     return readNetFromONNX2(buffer, sizeBuffer);
@@ -109,7 +112,7 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
 #ifdef HAVE_ONNXRUNTIME
         CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
 #else
-        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_NEW.");
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_OPENCV.");
 #endif
     }
     return readNetFromONNX2(buffer);

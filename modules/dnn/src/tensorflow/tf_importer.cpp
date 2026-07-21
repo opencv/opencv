@@ -3263,16 +3263,16 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 
 } // namespace
 
-// ENGINE_CLASSIC/ENGINE_AUTO have been removed; the TensorFlow importer always uses the new engine.
+// The TensorFlow importer always runs on the OpenCV engine; ENGINE_AUTO resolves to it.
 static void warnIfUnsupportedTfEngine(int engine)
 {
     static const int engine_forced =
-        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
-    if (engine_forced == ENGINE_NEW)
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if (engine_forced == ENGINE_OPENCV)
         engine = engine_forced;
-    if (engine != ENGINE_NEW)
-        CV_LOG_WARNING(NULL, "DNN/TF: only ENGINE_NEW is supported; "
-                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, using ENGINE_NEW.");
+    if (engine != ENGINE_AUTO && engine != ENGINE_OPENCV)
+        CV_LOG_WARNING(NULL, "DNN/TF: only ENGINE_AUTO and ENGINE_OPENCV are supported; "
+                             "using ENGINE_OPENCV.");
 }
 
 Net readNetFromTensorflow(const String &model, const String &config, int engine,

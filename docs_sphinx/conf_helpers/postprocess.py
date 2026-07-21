@@ -678,9 +678,8 @@ def _redirect_orphan_duplicates(app, out_dir: pathlib.Path) -> None:
 _DNN_ENGINE_LINKS = {
     "readNet": "dnn.html#readnet",
     "readNetFromONNX": "dnn.html#readnetfromonnx",
-    "ENGINE_NEW": "dnn.html#enginetype",
-    "ENGINE_CLASSIC": "dnn.html#enginetype",
     "ENGINE_AUTO": "dnn.html#enginetype",
+    "ENGINE_OPENCV": "dnn.html#enginetype",
     "ENGINE_ORT": "dnn.html#enginetype",
     "EngineType": "dnn.html#enginetype",
     "DNN_BACKEND_CUDA": "dnn.html#backend",

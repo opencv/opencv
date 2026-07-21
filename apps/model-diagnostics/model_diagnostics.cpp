@@ -98,12 +98,12 @@ int main( int argc, const char** argv )
     std::string input4_name = argParser.get<std::string>("input4_name");
     std::string input4_shape = argParser.get<std::string>("input4_shape");
 
-    dnn::EngineType engine = dnn::ENGINE_NEW;
+    dnn::EngineType engine = dnn::ENGINE_OPENCV;
     if (argParser.has("engine"))
     {
         std::string eng_name = argParser.get<std::string>("engine");
         if(eng_name == "new")
-            engine = dnn::ENGINE_NEW;
+            engine = dnn::ENGINE_OPENCV;
         else if(eng_name == "ort")
             engine = dnn::ENGINE_ORT;
         else

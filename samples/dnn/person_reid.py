@@ -183,7 +183,7 @@ def main():
     else:
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
 
-    engine = cv.dnn.ENGINE_NEW
+    engine = cv.dnn.ENGINE_OPENCV
     yolo_net = cv.dnn.readNetFromONNX(args.yolo_model, engine)
     reid_net = cv.dnn.readNetFromONNX(args.model, engine)
     reid_net.setPreferableBackend(get_backend_id(args.backend))

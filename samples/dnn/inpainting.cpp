@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 
     cout<<"Model loading..."<<endl;
 
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
 
     Net net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));

@@ -835,7 +835,7 @@ CV__DNN_INLINE_NS_BEGIN
         */
         CV_WRAP void setParam(int layer, int numParam, CV_ND const Mat &blob);
         /** @brief Sets the parameter blob of a layer identified by its name or output tensor name.
-         *  @param layerName raw ONNX output tensor name (ENGINE_NEW).
+         *  @param layerName raw ONNX output tensor name (ENGINE_OPENCV).
          *  @param numParam index of the constant weight input to update (0 = kernel, 1 = bias, etc.).
          *  @param blob the new parameter value.
          */
@@ -1083,8 +1083,9 @@ CV__DNN_INLINE_NS_BEGIN
 
     enum EngineType
     {
-        ENGINE_NEW=2,     //!< Use the new dnn engine. This is the only supported engine. The engine does not support non CPU back-ends for now.
-        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_AUTO=0,    //!< Automatically select the engine. Currently resolves to ENGINE_OPENCV; the mapping may change as more engines are added.
+        ENGINE_OPENCV=1,  //!< Use OpenCV's built-in DNN engine. Does not support non-CPU back-ends for now.
+        ENGINE_ORT=2      //!< Use the ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
@@ -1099,7 +1100,7 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromTensorflow(CV_WRAP_FILE_PATH const String &model,
                                            CV_WRAP_FILE_PATH const String &config = String(),
-                                           int engine=ENGINE_NEW,
+                                           int engine=ENGINE_AUTO,
                                            const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
@@ -1112,7 +1113,7 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<uchar>& bufferModel,
                                            const std::vector<uchar>& bufferConfig = std::vector<uchar>(),
-                                           int engine=ENGINE_NEW,
+                                           int engine=ENGINE_AUTO,
                                            const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
@@ -1128,34 +1129,34 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0,
-                                         int engine=ENGINE_NEW,
+                                         int engine=ENGINE_AUTO,
                                          const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
-      * @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+      * @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model, int engine=ENGINE_NEW);
+    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param bufferModel buffer containing the content of the tflite file
-      * @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+      * @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine=ENGINE_NEW);
+    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
       * It differs from the above function only in what argument(s) it accepts.
       * @param bufferModel buffer containing the content of the tflite file
       * @param lenModel length of bufferModel
-      * @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+      * @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       */
-    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel, int engine=ENGINE_NEW);
+    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel, int engine=ENGINE_AUTO);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.
@@ -1169,7 +1170,7 @@ CV__DNN_INLINE_NS_BEGIN
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
-      * @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+      * @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       *
@@ -1180,7 +1181,7 @@ CV__DNN_INLINE_NS_BEGIN
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,
                               CV_WRAP_FILE_PATH const String& config = "",
                               const String& framework = "",
-                              int engine = ENGINE_NEW);
+                              int engine = ENGINE_AUTO);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.
@@ -1189,13 +1190,13 @@ CV__DNN_INLINE_NS_BEGIN
       * @param[in] framework    Name of origin framework.
       * @param[in] bufferModel  A buffer with a content of binary file with weights
       * @param[in] bufferConfig A buffer with a content of text file contains network configuration.
-      * @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+      * @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
      CV_EXPORTS_W Net readNet(const String& framework, const std::vector<uchar>& bufferModel,
                               const std::vector<uchar>& bufferConfig = std::vector<uchar>(),
-                              int engine = ENGINE_NEW);
+                              int engine = ENGINE_AUTO);
 
     /** @brief Load a network from Intel's Model Optimizer intermediate representation.
      *  @param[in] xml XML configuration file with network's topology.
@@ -1233,31 +1234,31 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
-     *  @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+     *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_NEW);
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.
      *  @param sizeBuffer size of the buffer.
-     *  @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+     *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine=ENGINE_NEW);
+    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer in-memory buffer that stores the ONNX model bytes.
-     *  @param engine select DNN engine to be used. Only ENGINE_NEW (the default) and ENGINE_ORT are supported.
+     *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, int engine=ENGINE_NEW);
+    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, int engine=ENGINE_AUTO);
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.

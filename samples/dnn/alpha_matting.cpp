@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
     parser.about(about);
 
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
 
     Net net;
     loadModel(model, backend, target, net, engine);

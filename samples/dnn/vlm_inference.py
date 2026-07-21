@@ -117,9 +117,9 @@ if __name__ == '__main__':
     print("Preparing PaliGemma2 model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    siglip_net = cv.dnn.readNetFromONNX(args.siglip, cv.dnn.ENGINE_NEW)
-    embed_net  = cv.dnn.readNetFromONNX(args.embedding, cv.dnn.ENGINE_NEW)
-    gemma_net  = cv.dnn.readNetFromONNX(args.gemma, cv.dnn.ENGINE_NEW)
+    siglip_net = cv.dnn.readNetFromONNX(args.siglip, cv.dnn.ENGINE_OPENCV)
+    embed_net  = cv.dnn.readNetFromONNX(args.embedding, cv.dnn.ENGINE_OPENCV)
+    gemma_net  = cv.dnn.readNetFromONNX(args.gemma, cv.dnn.ENGINE_OPENCV)
 
     print(f"Prompt:\n{args.prompt}")
     pixel_values = preprocess_image(args.input)

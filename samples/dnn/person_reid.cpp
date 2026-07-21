@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     int fontSize = 50;
     int fontWeight = 500;
 
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
     Net reidNet = readNetFromONNX(modelPath, engine);
     reidNet.setPreferableBackend(getBackendID(backend));
     reidNet.setPreferableTarget(getTargetID(target));

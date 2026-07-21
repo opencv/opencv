@@ -140,7 +140,7 @@ def apply_modnet(args, model, image):
 
 def main(func_args=None):
     args = get_args_parser(func_args)
-    engine = cv.dnn.ENGINE_NEW
+    engine = cv.dnn.ENGINE_OPENCV
 
     image = cv.imread(cv.samples.findFile(args.input))
     if image is None:

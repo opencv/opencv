@@ -3758,7 +3758,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_NEW));
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
     if (engine_forced == cv::dnn::ENGINE_ORT)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
 

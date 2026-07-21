@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     }
     CV_Assert(!model.empty());
     //! [Read and initialize network]
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
     Net net = readNetFromONNX(model, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));

@@ -122,7 +122,7 @@ def main(func_args=None):
         # Create color checker detector
         if args.model and args.config:
             # Load the DNN from TensorFlow model
-            engine = cv.dnn.ENGINE_NEW
+            engine = cv.dnn.ENGINE_OPENCV
             net = cv.dnn.readNetFromTensorflow(args.model, args.config, engine)
             net.setPreferableBackend(get_backend_id(args.backend))
             net.setPreferableTarget(get_target_id(args.target))

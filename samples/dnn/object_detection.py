@@ -99,7 +99,7 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-engine = cv.dnn.ENGINE_NEW
+engine = cv.dnn.ENGINE_OPENCV
 net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))

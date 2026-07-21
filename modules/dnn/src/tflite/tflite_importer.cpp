@@ -1503,16 +1503,16 @@ void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& in
     }
 }
 
-// ENGINE_CLASSIC/ENGINE_AUTO have been removed; the TFLite importer always uses the new engine.
+// The TFLite importer always runs on the OpenCV engine; ENGINE_AUTO resolves to it.
 static void warnIfUnsupportedTFLiteEngine(int engine)
 {
     static const int engine_forced =
-        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
-    if (engine_forced == ENGINE_NEW)
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if (engine_forced == ENGINE_OPENCV)
         engine = engine_forced;
-    if (engine != ENGINE_NEW)
-        CV_LOG_WARNING(NULL, "DNN/TFLite: only ENGINE_NEW is supported; "
-                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, using ENGINE_NEW.");
+    if (engine != ENGINE_AUTO && engine != ENGINE_OPENCV)
+        CV_LOG_WARNING(NULL, "DNN/TFLite: only ENGINE_AUTO and ENGINE_OPENCV are supported; "
+                             "using ENGINE_OPENCV.");
 }
 
 Net readNetFromTFLite(const String &modelPath, int engine) {

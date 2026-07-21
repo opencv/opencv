@@ -825,7 +825,7 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
     topK(out, res, K);
     ASSERT_EQ(int(res.size()), K);
 
-    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=4).
+    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=2, ENGINE_ORT).
     std::vector<std::pair<int, float> > ref = {
         {285, 7.683f}, {282, 7.182f}, {281, 6.894f}, {287, 3.623f}, {283, 3.287f}
     };
@@ -1352,7 +1352,7 @@ TEST_P(Reproducibility_SwinIR_ONNX, Accuracy)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_LONG);
 
     std::string modelname = _tf("onnx/models/swinir_x4_gan.onnx", false);
-    Net net = readNetFromONNX(modelname, ENGINE_NEW);
+    Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);

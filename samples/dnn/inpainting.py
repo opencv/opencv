@@ -114,7 +114,7 @@ def main():
 
     args.model = findModel(args.model, args.sha1)
 
-    engine = cv.dnn.ENGINE_NEW
+    engine = cv.dnn.ENGINE_OPENCV
 
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))

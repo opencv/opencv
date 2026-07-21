@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     bool swapRB = parser.get<bool>("rgb");
     Scalar mean_v = parser.get<Scalar>("mean");
 
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
 
     Net net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));

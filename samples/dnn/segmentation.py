@@ -100,7 +100,7 @@ def main(func_args=None):
             colors = [np.array(color.split(' '), np.uint8) for color in f.read().rstrip('\n').split('\n')]
 
     # Load a network
-    engine = cv.dnn.ENGINE_NEW
+    engine = cv.dnn.ENGINE_OPENCV
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))

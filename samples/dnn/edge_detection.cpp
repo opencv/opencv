@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
     string method = parser.get<String>("method");
     String sha1 = parser.get<String>("sha1");
     string model = findModel(parser.get<String>("model"), sha1);
-    EngineType engine = ENGINE_NEW;
+    EngineType engine = ENGINE_OPENCV;
     parser.about(about);
 
     VideoCapture cap;
