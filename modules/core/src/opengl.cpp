@@ -1499,8 +1499,8 @@ cv::ogl::VertexArray::Impl::Impl(std::initializer_list<Attribute> attributes, bo
                 attribute.shader_loc_,
                 attribute.size_,
                 attribute.type_,
-                attribute.stride_,
-                (const void*)attribute.offset_
+                static_cast<GLsizei>(attribute.stride_),
+                reinterpret_cast<const void*>(attribute.offset_)
             );
             CV_CheckGlError();
         }
@@ -1511,8 +1511,8 @@ cv::ogl::VertexArray::Impl::Impl(std::initializer_list<Attribute> attributes, bo
                 attribute.size_,
                 attribute.type_,
                 attribute.normalized_,
-                attribute.stride_,
-                (const void*)attribute.offset_
+                static_cast<GLsizei>(attribute.stride_),
+                reinterpret_cast<const void*>(attribute.offset_)
             );
             CV_CheckGlError();
         }
@@ -2150,7 +2150,8 @@ void cv::ogl::clearColor(Scalar color)
     CV_UNUSED(color);
     throw_no_ogl();
 #else
-    gl::ClearColor(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
+    gl::ClearColor(static_cast<GLfloat>(color[0] / 255.0), static_cast<GLfloat>(color[1] / 255.0),
+                   static_cast<GLfloat>(color[2] / 255.0), static_cast<GLfloat>(color[3] / 255.0));
     gl::Clear(gl::COLOR_BUFFER_BIT);
 #endif // HAVE_OPENGL
 }
@@ -2182,7 +2183,7 @@ void cv::ogl::drawElements(int first, int count, int type, int mode)
     CV_UNUSED(first); CV_UNUSED(count); CV_UNUSED(type); CV_UNUSED(mode);
     throw_no_ogl();
 #else
-    gl::DrawElements(mode, count, type, reinterpret_cast<const void*>(first));
+    gl::DrawElements(mode, count, type, reinterpret_cast<const void*>(static_cast<size_t>(first)));
 #endif
 }
 
