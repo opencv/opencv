@@ -1687,7 +1687,7 @@ cv::ogl::Shader::Impl::~Impl()
 
 #endif // HAVE_OPENGL
 
-cv::ogl::Shader::Shader() : type_(Type::VERTEX)
+cv::ogl::Shader::Shader() : type_(ShaderType::VERTEX)
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
@@ -1696,7 +1696,7 @@ cv::ogl::Shader::Shader() : type_(Type::VERTEX)
 #endif
 }
 
-cv::ogl::Shader::Shader(const char* src, Type type, bool autoRelease) : type_(type)
+cv::ogl::Shader::Shader(const char* src, ShaderType type, bool autoRelease) : type_(type)
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(src); CV_UNUSED(type); CV_UNUSED(autoRelease);
@@ -1706,7 +1706,7 @@ cv::ogl::Shader::Shader(const char* src, Type type, bool autoRelease) : type_(ty
 #endif
 }
 
-void cv::ogl::Shader::create(const char* src, Type type, bool autoRelease)
+void cv::ogl::Shader::create(const char* src, ShaderType type, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(src); CV_UNUSED(type); CV_UNUSED(autoRelease);
@@ -1745,7 +1745,7 @@ unsigned int cv::ogl::Shader::shaderId() const
 #endif
 }
 
-cv::ogl::Shader::Type cv::ogl::Shader::type() const
+cv::ogl::Shader::ShaderType cv::ogl::Shader::type() const
 {
     return type_;
 }
@@ -1767,7 +1767,7 @@ public:
     static const Ptr<Impl>& empty();
 
     Impl(GLuint programId, bool autoRelease);
-    Impl(Shader vert, Shader frag, bool autoRelease);
+    Impl(const Shader& vert, const Shader& frag, bool autoRelease);
     ~Impl();
 
     void bind();
@@ -1803,7 +1803,7 @@ cv::ogl::Program::Impl::Impl(GLuint programId, bool autoRelease) : programId_(pr
     CV_Assert( gl::IsProgram(programId) == gl::TRUE_ );
 }
 
-cv::ogl::Program::Impl::Impl(Shader vert, Shader frag, bool autoRelease) : programId_(0), autoRelease_(autoRelease)
+cv::ogl::Program::Impl::Impl(const Shader& vert, const Shader& frag, bool autoRelease) : programId_(0), autoRelease_(autoRelease)
 {
     programId_ = gl::CreateProgram();
     CV_CheckGlError();
@@ -1872,7 +1872,7 @@ cv::ogl::Program::Program()
 #endif
 }
 
-cv::ogl::Program::Program(Shader vert, Shader frag, bool autoRelease)
+cv::ogl::Program::Program(const Shader& vert, const Shader& frag, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(vert); CV_UNUSED(frag); CV_UNUSED(autoRelease);
@@ -1882,7 +1882,7 @@ cv::ogl::Program::Program(Shader vert, Shader frag, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Program::create(Shader vert, Shader frag, bool autoRelease)
+void cv::ogl::Program::create(const Shader& vert, const Shader& frag, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(vert); CV_UNUSED(frag); CV_UNUSED(autoRelease);

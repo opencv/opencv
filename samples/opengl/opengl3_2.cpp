@@ -1,54 +1,36 @@
 #include <iostream>
 
-#include <epoxy/gl.h>
-
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN 1
-    #define NOMINMAX 1
-    #include <windows.h>
-#endif
-
-#if defined(__APPLE__)
-    #include <OpenGL/gl.h>
-    #include <OpenGL/glu.h>
-#else
-    #include <GL/gl.h>
-    #include <GL/glu.h>
-#endif
-
 #include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
-#include "opencv2/core/cuda.hpp"
 #include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::cuda;
 
 const int win_width = 800;
 const int win_height = 640;
 
+// All GL objects live for the lifetime of the window's GL context.
+// autoRelease is left at its default (false) so they are reclaimed with the
+// context on shutdown; calling glDelete* from a destructor after the context
+// is gone would raise a GL error (see cv::ogl wrapper docs).
 struct DrawData
 {
-    GLuint vao, vbo, program, textureID;
+    ogl::Program program;
+    ogl::Buffer vbo;          // referenced by the VertexArray; must outlive it
+    ogl::VertexArray vao;
+    ogl::Texture2D tex;
+    int transformLoc;
 };
 
-static cv::Mat rot(float angle)
+static cv::Matx44f rot(float angle)
 {
-    cv::Mat R_y = (cv::Mat_<float>(4,4) <<
+    // Row-major; ogl::Program::setUniformMat4x4 uploads with transpose enabled.
+    return cv::Matx44f(
         cos(angle), 0, sin(angle), 0,
         0, 1, 0, 0,
         -sin(angle), 0, cos(angle), 0,
         0, 0, 0, 1);
-
-    return R_y;
-}
-
-static GLuint create_shader(const char* source, GLenum type) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    return shader;
 }
 
 static void draw(void* userdata) {
@@ -56,17 +38,17 @@ static void draw(void* userdata) {
     static float angle = 0.0f;
     angle += 1.f;
 
-    cv::Mat trans = rot(CV_PI * angle / 360.f);
+    cv::Matx44f trans = rot(CV_PI * angle / 360.f);
 
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    ogl::clearColor(Scalar::all(0));
+    ogl::clearDepth(1.0f);
 
-    glUseProgram(data->program);
-    glUniformMatrix4fv(glGetUniformLocation(data->program, "transform"), 1, GL_FALSE, trans.ptr<float>());
-    glBindTexture(GL_TEXTURE_2D, data->textureID);
-    glBindVertexArray(data->vao);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
+    data->program.bind();
+    ogl::Program::setUniformMat4x4(data->transformLoc, trans);
+    data->tex.bind();
+    data->vao.bind();
+    ogl::drawArrays(0, 4, ogl::TRIANGLE_STRIP);
+    ogl::VertexArray::unbind();
 }
 
 int main(int argc, char* argv[])
@@ -93,7 +75,8 @@ int main(int argc, char* argv[])
 
     DrawData data;
 
-    glEnable(GL_DEPTH_TEST);
+    ogl::enable(ogl::DEPTH_TEST);
+
     const char *vertex_shader_source =
             "#version 330 core\n"
             "layout (location = 0) in vec3 position;\n"
@@ -112,15 +95,14 @@ int main(int argc, char* argv[])
             "void main() {\n"
             "   color = texture(ourTexture, TexCoord);\n"
             "}\n";
-    data.program = glCreateProgram();
-    GLuint vertex_shader = create_shader(vertex_shader_source, GL_VERTEX_SHADER);
-    GLuint fragment_shader = create_shader(fragment_shader_source, GL_FRAGMENT_SHADER);
-    glAttachShader(data.program, vertex_shader);
-    glAttachShader(data.program, fragment_shader);
-    glLinkProgram(data.program);
-    glUseProgram(data.program);
 
-    GLfloat vertices[] = {
+    // Compile shaders and link the program via the ogl wrappers.
+    ogl::Shader vertex_shader(vertex_shader_source, ogl::Shader::VERTEX);
+    ogl::Shader fragment_shader(fragment_shader_source, ogl::Shader::FRAGMENT);
+    data.program = ogl::Program(vertex_shader, fragment_shader);
+    data.transformLoc = data.program.getUniformLocation("transform");
+
+    const float vertices[] = {
             // Positions        // Texture Coords
             1.0f,  1.0f, 0.0f,  1.0f, 1.0f,   // Top Right
             1.0f, -1.0f, 0.0f,  1.0f, 0.0f,   // Bottom Right
@@ -128,30 +110,36 @@ int main(int argc, char* argv[])
             -1.0f, -1.0f, 0.0f,  0.0f, 0.0f    // Bottom Left
     };
 
-    glGenVertexArrays(1, &data.vao);
-    glGenBuffers(1, &data.vbo);
-    glBindVertexArray(data.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, data.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // Upload the interleaved vertex data into a GL buffer.
+    Mat vertexMat(4, 5, CV_32F, (void*)vertices);
+    data.vbo = ogl::Buffer(vertexMat, ogl::Buffer::ARRAY_BUFFER);
 
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    // Texture Coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0); // Unbind VAO
+    // Position attribute (location 0): 3 floats, no offset.
+    ogl::Attribute posAttr;
+    posAttr.buffer_ = data.vbo;
+    posAttr.stride_ = 5 * sizeof(float);
+    posAttr.offset_ = 0;
+    posAttr.size_ = 3;
+    posAttr.type_ = ogl::Attribute::FLOAT;
+    posAttr.integer_ = false;
+    posAttr.normalized_ = false;
+    posAttr.shader_loc_ = 0;
 
+    // Texture coord attribute (location 1): 2 floats, offset past the 3 position floats.
+    ogl::Attribute texAttr;
+    texAttr.buffer_ = data.vbo;
+    texAttr.stride_ = 5 * sizeof(float);
+    texAttr.offset_ = 3 * sizeof(float);
+    texAttr.size_ = 2;
+    texAttr.type_ = ogl::Attribute::FLOAT;
+    texAttr.integer_ = false;
+    texAttr.normalized_ = false;
+    texAttr.shader_loc_ = 1;
 
-//        Image to texture
-    glGenTextures(1, &data.textureID);
-    glBindTexture(GL_TEXTURE_2D, data.textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.cols, img.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, img.data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    data.vao = ogl::VertexArray({posAttr, texAttr});
+
+    // Image to texture.
+    data.tex = ogl::Texture2D(img);
 
     setOpenGlDrawCallback("OpenGL", draw, &data);
 

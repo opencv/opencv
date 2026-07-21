@@ -572,7 +572,7 @@ class CV_EXPORTS Shader
 public:
     /** @brief The target defines how you intend to use the buffer object.
     */
-    enum Type
+    enum ShaderType
     {
         FRAGMENT      = 0x8B30, //!< The shader will be a fragment shader
         VERTEX        = 0x8B31, //!< The shader will be a vertex shader
@@ -586,18 +586,18 @@ public:
 
     /** @overload
     @param src Shader source code.
-    @param type Shader type. See cv::ogl::Shader::Type.
+    @param type Shader type. See cv::ogl::Shader::ShaderType.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Shader(const char* src, Type type, bool autoRelease = false);
+    Shader(const char* src, ShaderType type, bool autoRelease = false);
 
     /** @brief Creates ogl::Shader object from source code.
 
     @param src Shader source code.
-    @param type Shader type. See cv::ogl::Shader::Type.
+    @param type Shader type. See cv::ogl::Shader::ShaderType.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
      */
-    void create(const char* src, Type type, bool autoRelease = false);
+    void create(const char* src, ShaderType type, bool autoRelease = false);
 
     /** @brief Decrements the reference counter and destroys the shader object if needed.
 
@@ -616,7 +616,7 @@ public:
      */
     void setAutoRelease(bool flag);
 
-    Type type() const;
+    ShaderType type() const;
 
     //! get OpenGL object id
     unsigned int shaderId() const;
@@ -625,7 +625,7 @@ public:
 
 private:
     Ptr<Impl> impl_;
-    Type type_;
+    ShaderType type_;
 };
 
 /** @brief Smart pointer for OpenGL program with reference counting.
@@ -644,7 +644,7 @@ public:
     @param frag Fragment shader. See cv::ogl::Shader.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Program(Shader vert, Shader frag, bool autoRelease = false);
+    Program(const Shader& vert, const Shader& frag, bool autoRelease = false);
 
     /** @brief Creates ogl::Program object from a group of shader objects.
 
@@ -652,7 +652,7 @@ public:
     @param frag Fragment shader. See cv::ogl::Shader.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
      */
-    void create(Shader vert, Shader frag, bool autoRelease = false);
+    void create(const Shader& vert, const Shader& frag, bool autoRelease = false);
 
     /** @brief Decrements the reference counter and destroys the program object if needed.
 
