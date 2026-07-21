@@ -3364,6 +3364,14 @@ CASE(test_range_bfloat16_type_positive_delta)
     SKIP;
 CASE(test_range_float16_type_positive_delta)
     SKIP;
+CASE(test_dft_rfft_opset19)
+    SKIP;
+CASE(test_div_int32_trunc)
+    SKIP;
+CASE(test_matmul_bcast)
+    SKIP;
+CASE(test_scatter_elements_with_reduction_mul)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH
