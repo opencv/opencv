@@ -3408,6 +3408,108 @@ CASE(test_cumprod_2d_negative_axis)
     SKIP;
 CASE(test_flexattention_scaled_expanded_ver26)
     SKIP;
+// FlexAttention op not supported by OpenVINO
+CASE(test_flexattention)
+    SKIP;
+CASE(test_flexattention_causal_mask)
+    SKIP;
+CASE(test_flexattention_diff_head_sizes)
+    SKIP;
+CASE(test_flexattention_double)
+    SKIP;
+CASE(test_flexattention_fp16)
+    SKIP;
+CASE(test_flexattention_gqa)
+    SKIP;
+CASE(test_flexattention_prob_mod)
+    SKIP;
+CASE(test_flexattention_relative_positional)
+    SKIP;
+CASE(test_flexattention_scaled)
+    SKIP;
+CASE(test_flexattention_score_mod)
+    SKIP;
+CASE(test_flexattention_soft_cap)
+    SKIP;
+// FlexAttention (expanded) not supported by OpenVINO
+CASE(test_flexattention_causal_mask_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_diff_head_sizes_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_double_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_fp16_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_gqa_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_prob_mod_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_relative_positional_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_score_mod_expanded_ver26)
+    SKIP;
+CASE(test_flexattention_soft_cap_expanded_ver26)
+    SKIP;
+// LinearAttention op not supported by OpenVINO
+CASE(test_linear_attention_decode_step)
+    SKIP;
+CASE(test_linear_attention_delta)
+    SKIP;
+CASE(test_linear_attention_explicit_scale)
+    SKIP;
+CASE(test_linear_attention_fp16)
+    SKIP;
+CASE(test_linear_attention_gated)
+    SKIP;
+CASE(test_linear_attention_gated_delta)
+    SKIP;
+CASE(test_linear_attention_gated_delta_beta_scalar)
+    SKIP;
+CASE(test_linear_attention_gated_delta_gqa)
+    SKIP;
+CASE(test_linear_attention_gated_delta_mqa)
+    SKIP;
+CASE(test_linear_attention_gated_per_head_decay)
+    SKIP;
+CASE(test_linear_attention_linear)
+    SKIP;
+CASE(test_linear_attention_linear_t1_no_past)
+    SKIP;
+CASE(test_linear_attention_no_past_explicit_zeros)
+    SKIP;
+CASE(test_linear_attention_prefill_with_past)
+    SKIP;
+// LinearAttention (expanded) decomposes to Scan, not supported by OpenVINO
+CASE(test_linear_attention_decode_step_expanded)
+    SKIP;
+CASE(test_linear_attention_delta_expanded)
+    SKIP;
+CASE(test_linear_attention_explicit_scale_expanded)
+    SKIP;
+CASE(test_linear_attention_fp16_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_delta_beta_scalar_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_delta_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_delta_gqa_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_delta_mqa_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_expanded)
+    SKIP;
+CASE(test_linear_attention_gated_per_head_decay_expanded)
+    SKIP;
+CASE(test_linear_attention_linear_expanded)
+    SKIP;
+CASE(test_linear_attention_linear_t1_no_past_expanded)
+    SKIP;
+CASE(test_linear_attention_no_past_explicit_zeros_expanded)
+    SKIP;
+CASE(test_linear_attention_prefill_with_past_expanded)
+    SKIP;
 CASE(test_range_bfloat16_type_positive_delta)
     SKIP;
 CASE(test_range_float16_type_positive_delta)
