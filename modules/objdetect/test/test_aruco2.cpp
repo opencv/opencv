@@ -488,5 +488,19 @@ TEST(Objdetect_Aruco2, FractalPerspective) {
     ASSERT_EQ(fractals.size(), 1u);
 }
 
+TEST(Objdetect_Aruco2, RArucoDetection) {
+    DictionaryType dict = DICT_APRILTAG_16h5;
+    Mat rarucoImg;
+    getRArucoMarkerImage(rarucoImg, dict, 0, 2, 5);
+    ASSERT_FALSE(rarucoImg.empty());
+
+    Mat canvas(rarucoImg.rows + 100, rarucoImg.cols + 100, CV_8UC1, Scalar(255));
+    Rect roi(50, 50, rarucoImg.cols, rarucoImg.rows);
+    rarucoImg.copyTo(canvas(roi));
+
+    auto markers = detectRArucoMarkers(canvas, dict);
+    ASSERT_GE(markers.size(), 1u);
+}
+
 
 }} // namespace

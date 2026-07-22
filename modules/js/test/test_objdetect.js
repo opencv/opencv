@@ -446,3 +446,21 @@ QUnit.test('ArUco2 Fractal workflow', function (assert) {
     fractalImg.delete(); canvas.delete(); fractals.delete();
     colorCanvas.delete(); objPts.delete(); imgPts.delete();
 });
+
+QUnit.test('ArUco2 RArUco workflow', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_APRILTAG_16h5;
+    let rarucoImg = new cv.Mat();
+    cv.aruco2_getRArucoMarkerImage(rarucoImg, DICT, 0, 2, 5, 2, true);
+    assert.ok(!rarucoImg.empty());
+
+    let canvas = new cv.Mat(rarucoImg.rows + 100, rarucoImg.cols + 100, cv.CV_8UC1);
+    canvas.setTo([255, 255, 255, 255]);
+    let sub = canvas.roi(new cv.Rect(50, 50, rarucoImg.cols, rarucoImg.rows));
+    rarucoImg.copyTo(sub);
+    sub.delete();
+
+    let markers = cv.aruco2_detectRArucoMarkers(canvas, DICT);
+    assert.ok(markers.size() >= 1);
+
+    rarucoImg.delete(); canvas.delete(); markers.delete();
+});

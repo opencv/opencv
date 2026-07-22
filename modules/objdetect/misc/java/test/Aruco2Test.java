@@ -192,4 +192,16 @@ public class Aruco2Test extends OpenCVTestCase {
         assertTrue(objPoints.total() >= 4);
         assertEquals(objPoints.total(), imgPoints.total());
     }
+
+    public void testRArucoWorkflow() {
+        Mat rarucoImg = new Mat();
+        Aruco2.getRArucoMarkerImage(rarucoImg, Aruco2.DICT_APRILTAG_16h5, 0, 2, 5, 2, true);
+        assertFalse(rarucoImg.empty());
+
+        Mat canvas = new Mat(rarucoImg.rows() + 100, rarucoImg.cols() + 100, CvType.CV_8UC1, new Scalar(255));
+        rarucoImg.copyTo(canvas.submat(50, 50 + rarucoImg.rows(), 50, 50 + rarucoImg.cols()));
+
+        List<FiducialMarker> markers = Aruco2.detectRArucoMarkers(canvas, Aruco2.DICT_APRILTAG_16h5);
+        assertTrue(markers.size() >= 1);
+    }
 }

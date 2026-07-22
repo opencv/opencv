@@ -160,5 +160,14 @@ class objdetect_aruco2_test(NewOpenCVTests):
         self.assertGreaterEqual(obj_pts.shape[0], 4)
         self.assertEqual(obj_pts.shape[0], img_pts.shape[0])
 
+    def test_raruco_workflow(self):
+        dict_type = cv.aruco2.DICT_APRILTAG_16h5
+        raruco_img = cv.aruco2.getRArucoMarkerImage(dictionary=dict_type, id=0, depth=2, bitSize=5)
+        self.assertIsNotNone(raruco_img)
+        canvas = np.ones((raruco_img.shape[0]+100, raruco_img.shape[1]+100), dtype=np.uint8) * 255
+        canvas[50:50+raruco_img.shape[0], 50:50+raruco_img.shape[1]] = raruco_img
+        markers = cv.aruco2.detectRArucoMarkers(canvas, dict_type)
+        self.assertGreaterEqual(len(markers), 1)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

@@ -410,6 +410,30 @@ NS_SWIFT_NAME(getSolvePnpPoints(fractal:objPoints:imgPoints:markerSize:));
                                  imgPoints:(Mat*)imgPoints
 NS_SWIFT_NAME(getSolvePnpPoints(fractal:objPoints:imgPoints:));
 
+// ---- RArUco Markers --------------------------------------------------------
+
++ (void)getRArucoMarkerImage:(Mat*)img
+                  dictionary:(int)dictionary
+                          id:(int)markerId
+                       depth:(int)depth
+                     bitSize:(int)bitSize
+                innerBorders:(int)innerBorders
+              externalBorder:(BOOL)externalBorder
+NS_SWIFT_NAME(getRArucoMarkerImage(img:dictionary:id:depth:bitSize:innerBorders:externalBorder:));
+
++ (void)getRArucoMarkerImage:(Mat*)img
+                  dictionary:(int)dictionary
+NS_SWIFT_NAME(getRArucoMarkerImage(img:dictionary:));
+
++ (NSArray<Aruco2FiducialMarker*>*)detectRArucoMarkers:(Mat*)image
+                                            dictionary:(int)dictionary
+                                                params:(nullable Aruco2DetectionParameters*)params
+NS_SWIFT_NAME(detectRArucoMarkers(image:dictionary:params:));
+
++ (NSArray<Aruco2FiducialMarker*>*)detectRArucoMarkers:(Mat*)image
+                                            dictionary:(int)dictionary
+NS_SWIFT_NAME(detectRArucoMarkers(image:dictionary:));
+
 @end
 
 NS_ASSUME_NONNULL_END

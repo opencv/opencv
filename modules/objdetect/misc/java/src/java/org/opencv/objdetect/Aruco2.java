@@ -171,4 +171,23 @@ public class Aruco2 {
     public static void getSolvePnpPoints(FractalMarker fractal, Mat objPoints, Mat imgPoints, float markerSize) {
         Objdetect.Aruco2_getSolvePnpPoints_Fractal(fractal.nativeObj, objPoints, imgPoints, markerSize);
     }
+
+    public static void getRArucoMarkerImage(Mat img, int dictionary, int id, int depth, int bitSize, int innerBorders, boolean externalBorder) {
+        Objdetect.Aruco2_getRArucoMarkerImage(img, dictionary, id, depth, bitSize, innerBorders, externalBorder);
+    }
+
+    public static void getRArucoMarkerImage(Mat img, int dictionary) {
+        Objdetect.Aruco2_getRArucoMarkerImage(img, dictionary);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<FiducialMarker> detectRArucoMarkers(Mat image, int dictionary, DetectionParameters detectorParams) {
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectRArucoMarkers(image, dictionary, detectorParams.nativeObj);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<FiducialMarker> detectRArucoMarkers(Mat image, int dictionary) {
+        DetectionParameters params = new DetectionParameters();
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectRArucoMarkers(image, dictionary, params.nativeObj);
+    }
 }

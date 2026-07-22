@@ -302,4 +302,32 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
     cv::aruco2::getSolvePnpPoints(fractal.nativeRef, objPoints.nativeRef, imgPoints.nativeRef);
 }
 
+// ---- getRArucoMarkerImage ----------------------------------------------------
+
++ (void)getRArucoMarkerImage:(Mat*)img dictionary:(int)dictionary id:(int)markerId
+                       depth:(int)depth bitSize:(int)bitSize
+                innerBorders:(int)innerBorders externalBorder:(BOOL)externalBorder {
+    cv::aruco2::getRArucoMarkerImage(img.nativeRef, (cv::aruco2::DictionaryType)dictionary,
+                                     markerId, depth, bitSize, innerBorders, (bool)externalBorder);
+}
+
++ (void)getRArucoMarkerImage:(Mat*)img dictionary:(int)dictionary {
+    cv::aruco2::getRArucoMarkerImage(img.nativeRef, (cv::aruco2::DictionaryType)dictionary);
+}
+
+// ---- detectRArucoMarkers -----------------------------------------------------
+
++ (NSArray<Aruco2FiducialMarker*>*)detectRArucoMarkers:(Mat*)image dictionary:(int)dictionary params:(Aruco2DetectionParameters*)params {
+    cv::aruco2::DetectionParameters cppParams = (params != nil)
+        ? params.nativeRef
+        : cv::aruco2::DetectionParameters{};
+    std::vector<cv::aruco2::FiducialMarker> result =
+        cv::aruco2::detectRArucoMarkers(image.nativeRef, (cv::aruco2::DictionaryType)dictionary, cppParams);
+    return fiducialVecToArray(result);
+}
+
++ (NSArray<Aruco2FiducialMarker*>*)detectRArucoMarkers:(Mat*)image dictionary:(int)dictionary {
+    return [self detectRArucoMarkers:image dictionary:dictionary params:nil];
+}
+
 @end

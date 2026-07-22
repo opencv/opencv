@@ -276,6 +276,47 @@
                     "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::FractalMarker*)fractal), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}"
                 ]
+            },
+            "Aruco2_getRArucoMarkerImage" : {
+                "j_code" : [
+                    "public static void Aruco2_getRArucoMarkerImage(Mat img, int dictionary, int id, int depth, int bitSize, int innerBorders, boolean externalBorder) {",
+                    "    Aruco2_getRArucoMarkerImage_0(img.nativeObj, dictionary, id, depth, bitSize, innerBorders, externalBorder);",
+                    "}",
+                    "public static void Aruco2_getRArucoMarkerImage(Mat img, int dictionary) {",
+                    "    Aruco2_getRArucoMarkerImage_1(img.nativeObj, dictionary);",
+                    "}"
+                ],
+                "jn_code" : [
+                    "private static native void Aruco2_getRArucoMarkerImage_0(long img, int dictionary, int id, int depth, int bitSize, int innerBorders, boolean externalBorder);",
+                    "private static native void Aruco2_getRArucoMarkerImage_1(long img, int dictionary);"
+                ],
+                "cpp_code" : [
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getRArucoMarkerImage_10(JNIEnv*, jclass, jlong img, jint dictionary, jint id, jint depth, jint bitSize, jint innerBorders, jboolean externalBorder);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getRArucoMarkerImage_10(JNIEnv*, jclass, jlong img, jint dictionary, jint id, jint depth, jint bitSize, jint innerBorders, jboolean externalBorder) {",
+                    "    cv::aruco2::getRArucoMarkerImage(*((cv::Mat*)img), (cv::aruco2::DictionaryType)dictionary, id, depth, bitSize, innerBorders, (bool)externalBorder);",
+                    "}",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getRArucoMarkerImage_11(JNIEnv*, jclass, jlong img, jint dictionary);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getRArucoMarkerImage_11(JNIEnv*, jclass, jlong img, jint dictionary) {",
+                    "    cv::aruco2::getRArucoMarkerImage(*((cv::Mat*)img), (cv::aruco2::DictionaryType)dictionary);",
+                    "}"
+                ]
+            },
+            "Aruco2_detectRArucoMarkers" : {
+                "j_code" : [
+                    "public static List<Aruco2_FiducialMarker> Aruco2_detectRArucoMarkers(Mat image, int dictionary, long detectorParams) {",
+                    "    return Aruco2_detectRArucoMarkers_0(image.nativeObj, dictionary, detectorParams);",
+                    "}"
+                ],
+                "jn_code" : [
+                    "private static native List<Aruco2_FiducialMarker> Aruco2_detectRArucoMarkers_0(long image, int dictionary, long detectorParams);"
+                ],
+                "cpp_code" : [
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectRArucoMarkers_10(JNIEnv* env, jclass, jlong image, jint dictionary, jlong params);",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectRArucoMarkers_10(JNIEnv* env, jclass, jlong image, jint dictionary, jlong params) {",
+                    "    std::vector<cv::aruco2::FiducialMarker> res = cv::aruco2::detectRArucoMarkers(*((cv::Mat*)image), (cv::aruco2::DictionaryType)dictionary, *((cv::aruco2::DetectionParameters*)params));",
+                    "    return vector_aruco2_FiducialMarker_to_List(env, res);",
+                    "}"
+                ]
             }
         }
     },

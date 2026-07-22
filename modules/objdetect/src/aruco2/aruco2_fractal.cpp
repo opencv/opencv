@@ -1055,7 +1055,8 @@ static std::string fractalTypeName(FractalType ft) {
     return "FRACTAL_3L_6";
 }
 
-void getFractalMarkerImage(OutputArray _img, FractalType ftype, int bitSize) {
+void getFractalMarkerImage(OutputArray _img, FractalType ftype, int id, int bitSize) {
+    (void)id;
     nanofractal::FractalMarkerSet fmset(fractalTypeName(ftype));
 
     // The innermost marker (highest id) controls the per-bit pixel size.
@@ -1089,8 +1090,8 @@ void getFractalMarkerImage(OutputArray _img, FractalType ftype, int bitSize) {
     cv::Point2f extTL = externM.keypts[0].pt; // TL corner in normalised space
 
     std::vector<int> stack;
-    for (int id : externM.subMarkers())
-        stack.push_back(id);
+    for (int smId : externM.subMarkers())
+        stack.push_back(smId);
 
     while (!stack.empty()) {
         int subId = stack.back(); stack.pop_back();
@@ -1112,8 +1113,8 @@ void getFractalMarkerImage(OutputArray _img, FractalType ftype, int bitSize) {
                     img(cv::Range(int((1 + y) * subMBS + offY), int((y + 2) * subMBS + offY)),
                         cv::Range(int((1 + x) * subMBS + offX), int((x + 2) * subMBS + offX))).setTo(255);
 
-        for (int id : subM.subMarkers())
-            stack.push_back(id);
+        for (int smId : subM.subMarkers())
+            stack.push_back(smId);
     }
 
     // White outer border, 1 outer-bit wide
