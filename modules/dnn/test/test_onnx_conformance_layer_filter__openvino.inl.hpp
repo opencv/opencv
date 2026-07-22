@@ -3584,6 +3584,16 @@ CASE(test_bitcast_uint16_to_int16)
     SKIP;
 CASE(test_bitcast_uint32_to_int32)
     SKIP;
+CASE(test_matmul_1d_1d)
+    SKIP;
+CASE(test_matmul_1d_3d)
+    SKIP;
+CASE(test_matmul_4d_1d)
+    SKIP;
+CASE(test_dft_irfft)
+    SKIP;
+CASE(test_dft_irfft_opset19)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH

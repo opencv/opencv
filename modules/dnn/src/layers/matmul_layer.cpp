@@ -51,6 +51,56 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                backendId == DNN_BACKEND_CANN;
     }
 
+    // numpy MatMul 1-D promotion: A[K] -> [1,K], B[K] -> [K,1]. Fills the promoted A/B and the
+    // full (promoted) output shape; `out` is the final shape with those inserted 1-dims removed.
+    static void matmulShapes(const MatShape& rawA, const MatShape& rawB, bool trans_a, bool trans_b,
+                             MatShape& Ap, MatShape& Bp, MatShape& full, MatShape& out) {
+        const bool a1d = rawA.size() == 1, b1d = rawB.size() == 1;
+        Ap = a1d ? MatShape{1, rawA[0]} : rawA;
+        Bp = b1d ? MatShape{rawB[0], 1} : rawB;
+        CV_CheckGE(Ap.size(), (size_t)2, "DNN/MatMul: invalid shape of input A");
+        CV_CheckGE(Bp.size(), (size_t)2, "DNN/MatMul: invalid shape of input B");
+
+        int mA = Ap[Ap.size() - 2], nA = Ap.back();
+        int mB = Bp[Bp.size() - 2], nB = Bp.back();
+        int M = trans_a ? nA : mA;
+        int N = trans_b ? mB : nB;
+        int K_A = trans_a ? mA : nA;
+        int K_B = trans_b ? nB : mB;
+        CV_CheckEQ(K_A, K_B, "DNN/MatMul: invalid dimension K");
+
+        if (Ap.size() != 2 || Bp.size() != 2) {
+            const auto &more = Ap.size() > Bp.size() ? Ap : Bp;
+            const auto &less = Ap.size() > Bp.size() ? Bp : Ap;
+            size_t diff_dims = more.size() - less.size();
+            full = more;
+            for (size_t i = 0; i < less.size() - 2; i++) {
+                const auto dl = less[i], dm = more[i + diff_dims];
+                if (dl != 1 && dm != 1 && dl != dm)
+                    CV_Error(Error::StsBadSize, "DNN/MatMul: invalid shape for broadcasting");
+                if (dm == 1)
+                    full[i + diff_dims] = dl;
+            }
+            full[full.size() - 2] = M;
+            full[full.size() - 1] = N;
+        } else {
+            full = MatShape{M, N};
+        }
+
+        // Drop the dimensions that were inserted by 1-D promotion. When both operands were
+        // 1-D and there is no batch, the result is a true 0-D scalar (total()==1), not an
+        // empty shape (total()==0) — the latter would leave the output buffer unallocated.
+        if (a1d && b1d && full.size() == 2) {
+            out = MatShape::scalar();
+            return;
+        }
+        out.clear();
+        for (size_t i = 0; i + 2 < full.size(); i++)
+            out.push_back(full[i]);
+        if (!a1d) out.push_back(M);
+        if (!b1d) out.push_back(N);
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
@@ -60,42 +110,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_CheckLE(num_inputs, 3, "DNN/MatMul: three inputs at most");
 
         const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
-        CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/MatMul: invalid shape of input A");
-        CV_CheckGE(shape_B.size(), static_cast<size_t>(2), "DNN/MatMul: invalid shape of input B");
+        CV_CheckGE(shape_A.size(), static_cast<size_t>(1), "DNN/MatMul: invalid shape of input A");
+        CV_CheckGE(shape_B.size(), static_cast<size_t>(1), "DNN/MatMul: invalid shape of input B");
 
-        // Check legal matrix multiplication
-        int mA = shape_A[shape_A.size() - 2], nA = shape_A.back();
-        int mB = shape_B[shape_B.size() - 2], nB = shape_B.back();
-        int M = trans_a ? nA : mA;
-        int N = trans_b ? mB : nB;
-        int K_A = trans_a ? mA : nA;
-        int K_B = trans_b ? nB : mB;
-        CV_CheckEQ(K_A, K_B, "DNN/MatMul: invalid dimension K");
-
-        // Check if inputs are broadcastable.
-        MatShape common_shape;
-        if (shape_A.size() != 2 || shape_B.size() != 2) {
-            const auto &shape_more_dims = shape_A.size() > shape_B.size() ? shape_A : shape_B;
-            const auto &shape_less_dims = shape_A.size() > shape_B.size() ? shape_B : shape_A;
-            size_t diff_dims = shape_more_dims.size() - shape_less_dims.size();
-            common_shape = shape_more_dims;
-            for (size_t i = 0; i < shape_less_dims.size() - 2; i++) {
-                const auto dl = shape_less_dims[i], dm = shape_more_dims[i + diff_dims];
-                if (dl != 1 && dm != 1 && dl != dm) {
-                    CV_Error(Error::StsBadSize, format("DNN/MatMul: invalid shape for broadcasting, shape_A[%zu]=%d, shape_B[%zu]=%d\n", i, shape_less_dims[i], i, shape_more_dims[i + diff_dims]));
-                }
-
-                if (dm == 1) {
-                    common_shape[i + diff_dims] = dl;
-                }
-            }
-            common_shape[common_shape.size() - 2] = M;
-            common_shape[common_shape.size() - 1] = N;
-        } else {
-            common_shape.resize(2);
-            common_shape[0] = M;
-            common_shape[1] = N;
-        }
+        MatShape shape_Ap, shape_Bp, common_shape, out_shape;
+        matmulShapes(shape_A, shape_B, trans_a, trans_b, shape_Ap, shape_Bp, common_shape, out_shape);
+        int N = common_shape.back();
 
         // Check if bias is broadcastable
         if (num_inputs == 3) {
@@ -115,7 +135,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
         }
 
-        outputs.assign(1, common_shape);
+        outputs.assign(1, out_shape);
         return false;
     }
 
@@ -149,9 +169,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const auto A_shape = shape(inputs[0]),
-                   B_shape = blobs.empty() ? shape(inputs[1]) : shape(blobs[0]),
-                   C_shape = shape(outputs[0]);
+        MatShape A_shape, B_shape, C_shape, out_shape;
+        matmulShapes(shape(inputs[0]), blobs.empty() ? shape(inputs[1]) : shape(blobs[0]),
+                     trans_a, trans_b, A_shape, B_shape, C_shape, out_shape);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
 
         // Pack only 2D weight matrices; skip higher-dim tensors (e.g. Q@K^T in attention).
@@ -233,7 +253,13 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const auto &A = inputs[0];
+        // Promote 1-D operands (numpy MatMul semantics) so leading dims match helper.
+        Mat A = inputs[0];
+        { MatShape sa = shape(A); if (sa.size() == 1) A = A.reshape(1, std::vector<int>{1, sa[0]}); }
+        if (blobs.empty()) {
+            MatShape sb = shape(inputs[1]);
+            if (sb.size() == 1) inputs[1] = inputs[1].reshape(1, std::vector<int>{sb[0], 1});
+        }
         auto &Y = outputs[0];
 
         const auto *a = A.ptr<const float>();

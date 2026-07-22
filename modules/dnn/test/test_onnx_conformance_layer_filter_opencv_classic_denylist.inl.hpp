@@ -970,3 +970,10 @@
 "test_bitcast_scalar_float32_to_int32",
 "test_bitcast_uint16_to_int16",
 "test_bitcast_uint32_to_int32",
+// MatMul with 1-D operand not supported by the classic engine
+"test_matmul_1d_1d",
+"test_matmul_1d_3d",
+"test_matmul_4d_1d",
+// DFT inverse RFFT not supported by the classic engine
+"test_dft_irfft",
+"test_dft_irfft_opset19",
