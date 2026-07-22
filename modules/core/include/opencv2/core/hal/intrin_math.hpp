@@ -299,14 +299,19 @@ inline _TpVec32F v_log_default_32f(const _TpVec32F &x) {
 
     _vlog_z = v_mul(_vlog_x, _vlog_x);
 
-    _vlog_y = v_fma(_vlog_p0_fp32, _vlog_x, _vlog_p1_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p2_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p3_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p4_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p5_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p6_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p7_fp32);
-    _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p8_fp32);
+    // Estrin evaluation of the degree-8 polynomial: the former 8-FMA Horner chain is one long
+    // dependency (~32 cycles of latency); pairing evaluates it in ~4 dependent levels.
+    {
+        _TpVec32F _vlog_x4 = v_mul(_vlog_z, _vlog_z);
+        _TpVec32F _vlog_t0 = v_fma(_vlog_p0_fp32, _vlog_x, _vlog_p1_fp32);
+        _TpVec32F _vlog_t1 = v_fma(_vlog_p2_fp32, _vlog_x, _vlog_p3_fp32);
+        _TpVec32F _vlog_t2 = v_fma(_vlog_p4_fp32, _vlog_x, _vlog_p5_fp32);
+        _TpVec32F _vlog_t3 = v_fma(_vlog_p6_fp32, _vlog_x, _vlog_p7_fp32);
+        _TpVec32F _vlog_u0 = v_fma(_vlog_t0, _vlog_z, _vlog_t1);    // p0..p3 (deg 3)
+        _TpVec32F _vlog_u1 = v_fma(_vlog_t2, _vlog_z, _vlog_t3);    // p4..p7
+        _vlog_y = v_fma(_vlog_u0, _vlog_x4, _vlog_u1);              // p0..p7 (deg 7)
+        _vlog_y = v_fma(_vlog_y, _vlog_x, _vlog_p8_fp32);           // full degree-8
+    }
     _vlog_y = v_mul(_vlog_y, _vlog_x);
     _vlog_y = v_mul(_vlog_y, _vlog_z);
 

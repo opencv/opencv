@@ -261,8 +261,12 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFunc(int sdepth, int ddepth);
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
+// Exported so the new element-wise expression engine can reuse the already-optimized,
+// CPU-dispatched convert / convert-scale kernels through a thin ElemwiseFunc adapter,
+// instead of re-implementing the whole cast matrix. (Prototype: declarations are mirrored
+// engine-side; relocate into a public core header at integration time.)
+CV_EXPORTS BinaryFunc getConvertFunc(int sdepth, int ddepth);
+CV_EXPORTS BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */
@@ -326,6 +330,149 @@ inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, 
         return false;
     return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
            (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+}
+
+// New element-wise engine scalar handling. A genuine number / Scalar / Vec / Matx operand to an
+// arithmetic op arrives via _InputArray::MATX (its data is inline in the caller's object;
+// getObj() points straight at it). In addition, the EXACT Scalar materialization that the
+// python/java bindings and operator-(Mat, Matx) produce - a 2-D 4x1 CV_64F single-channel Mat or
+// UMat - is a scalar UNCONDITIONALLY: by coincidence it can be broadcast-COMPATIBLE with the array
+// (a 4-row array, a 1-D array make (4,1) legal numpy-wise), and the 4.x per-channel-scalar
+// semantics must win there for binding users. Any other real Mat/UMat rides normal broadcasting
+// (but see isScalarLikeMat below for the shape-incompatible compat fallback).
+inline bool isScalarArg(const _InputArray& sc, int cn)
+{
+    const _InputArray::KindFlag kind = sc.kind();
+    if (kind == _InputArray::MATX)
+    {
+        Size sz = sc.getSz();
+        int scn0 = sz.width * sz.height;
+        // A genuine scalar is a 1D MATX (a Vec/Scalar/number: one of width/height is 1). A 2D MATX
+        // (e.g. a Matx33) is a real matrix operand and rides broadcasting - never a scalar.
+        if (scn0 != sz.width + sz.height - 1)
+            return false;
+        // Per-channel match (incl. Vec<_,N> for an N-channel array), a 4-elem Scalar on a <4-channel
+        // array, or a single broadcast value. No 4-channel cap: a multichannel scalar rides as a 0-dim
+        // per-channel CONST over the caller's data (not squeezed into a 4-slot Scalar).
+        return scn0 == cn || (cn < 4 && scn0 == 4) || scn0 == 1;
+    }
+    // the bindings-style Scalar column. dims must be exactly 2: a 1-D [4] CV_64F array is an honest
+    // broadcast operand. Direct field reads (no _InputArray getter dispatch) - this runs on EVERY
+    // engine call with Mat operands, and `rows == 4` alone rejects almost every real array.
+    if (kind == _InputArray::MAT)
+    {
+        const Mat& m = *(const Mat*)sc.getObj();
+        return m.rows == 4 && m.cols == 1 && cn <= 4 && m.dims == 2 &&
+               m.type() == CV_64F && m.isContinuous();
+    }
+    if (kind == _InputArray::UMAT)
+    {
+        const UMat& m = *(const UMat*)sc.getObj();
+        return m.rows == 4 && m.cols == 1 && cn <= 4 && m.dims == 2 &&
+               m.type() == CV_64F && m.isContinuous();
+    }
+    return false;
+}
+
+// The remaining old arithm_op checkScalar geometry: a real Mat/UMat that LOOKS like a scalar - 1x1
+// or a 1xcn/cnx1 vector (the 4x1 CV_64F column is handled unconditionally by isScalarArg above).
+// arithm_op treats such an operand as a per-channel scalar ONLY as a fallback, when the shapes are
+// not broadcast-compatible - a call that is valid under numpy rules keeps its numpy meaning, one
+// that would throw gets the 4.x scalar semantics instead.
+inline bool isScalarLikeMat(const _InputArray& sc, int cn)
+{
+    // direct field reads, like isScalarArg: this probe also runs per engine call (see arithm_op's
+    // compat fallback). `rows != 1 && cols != 1` exits in two inline compares for ordinary arrays.
+    int rows, cols, nval;
+    bool continuous;
+    const _InputArray::KindFlag kind = sc.kind();
+    if (kind == _InputArray::MAT)
+    {
+        const Mat& m = *(const Mat*)sc.getObj();
+        if ((m.rows != 1 && m.cols != 1) || m.dims > 2) return false;
+        rows = m.rows; cols = m.cols; nval = rows * cols * m.channels(); continuous = m.isContinuous();
+    }
+    else if (kind == _InputArray::UMAT)
+    {
+        const UMat& m = *(const UMat*)sc.getObj();
+        if ((m.rows != 1 && m.cols != 1) || m.dims > 2) return false;
+        rows = m.rows; cols = m.cols; nval = rows * cols * m.channels(); continuous = m.isContinuous();
+    }
+    else
+        return false;
+    if (!continuous || nval > 4)
+        return false;
+    return (rows == 1 && cols == 1) || (rows == cn && cols == 1) || (rows == 1 && cols == cn);
+}
+
+// The size of the caller-provided stack buffer for scalarArgElems (4 slots of the widest depth).
+// A scalar is <= 4 values by contract, so it NEVER touches the heap.
+enum { EW_SCALAR_BUF_SIZE = 4 * sizeof(double) };
+
+// A scalar operand's raw payload: the MATX inline storage or the Mat data, both returned in place.
+// A UMAT scalar's values are copied device->host into `scbuf` (>= EW_SCALAR_BUF_SIZE bytes, on the
+// CALLER's stack - no heap, no UMat::getMat mapping machinery for 32 bytes of data).
+// p/d receive the data pointer and depth; returns the value count (elems x channels).
+inline int scalarArgElems(const _InputArray& sc, const uchar*& p, int& d, uchar* scbuf)
+{
+    const _InputArray::KindFlag kind = sc.kind();
+    if (kind == _InputArray::MAT)
+    {
+        const Mat& m = *(const Mat*)sc.getObj();
+        p = m.data;
+        d = m.depth();
+        return (int)m.total() * m.channels();
+    }
+    if (kind == _InputArray::UMAT)
+    {
+        const UMat& u = *(const UMat*)sc.getObj();
+        d = u.depth();
+        int n = (int)u.total() * u.channels();
+        CV_Assert(n * (int)CV_ELEM_SIZE1(d) <= (int)EW_SCALAR_BUF_SIZE);
+        Mat header(u.dims, u.size.p, u.type(), scbuf);   // header over the caller's stack buffer
+        u.copyTo(header);                                // create() is a no-op (exact match) -> the
+        p = scbuf;                                       // copy lands straight in scbuf
+        return n;
+    }
+    p = (const uchar*)sc.getObj();
+    d = sc.depth();
+    Size sz = sc.getSz();
+    return sz.width * sz.height;
+}
+
+// Read one element of depth `d` at p as a double (no Mat, no convertTo, no dispatcher).
+inline double elemToDouble(int d, const uchar* p)
+{
+    switch (d)
+    {
+    case CV_8U:   return *(const uchar*)p;
+    case CV_8S:   return *(const schar*)p;
+    case CV_16U:  return *(const ushort*)p;
+    case CV_16S:  return *(const short*)p;
+    case CV_32U:  return *(const unsigned*)p;
+    case CV_32S:  return *(const int*)p;
+    case CV_64U:  return (double)*(const uint64_t*)p;
+    case CV_64S:  return (double)*(const int64_t*)p;
+    case CV_16F:  return (float)*(const hfloat*)p;
+    case CV_16BF: return (float)*(const bfloat*)p;
+    case CV_32F:  return *(const float*)p;
+    case CV_64F:  return *(const double*)p;
+    default:      CV_Error(Error::StsUnsupportedFormat, "unsupported scalar depth");
+    }
+}
+
+// Extract a scalar operand's values (see isScalarArg) as up to 4 doubles, straight from its
+// storage. Returns the element count.
+inline int readScalarArg(const _InputArray& sc, Scalar& out)
+{
+    out = Scalar();                      // unused channels stay 0 (independent of the caller's Scalar)
+    const uchar* p; int d; uchar scbuf[EW_SCALAR_BUF_SIZE];
+    int n = scalarArgElems(sc, p, d, scbuf);
+    CV_Assert(n <= 4);                   // Scalar holds 4 slots; isScalarArg admits more only for MATX
+    size_t esz = CV_ELEM_SIZE1(d);
+    for (int i = 0; i < n; i++)
+        out[i] = elemToDouble(d, p + (size_t)i * esz);
+    return n;
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );

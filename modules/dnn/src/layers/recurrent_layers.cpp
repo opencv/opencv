@@ -314,8 +314,12 @@ public:
             if (layout == SEQ_BATCH_HID) {
                 _numSamples = inp0[1];
                 outResShape.push_back(inp0[0]);
+                outResShape.push_back(_numSamples);
             } else {
+                // batch-first layout: the output keeps the (batch, seq, ...) order - this must match
+                // what forward() actually writes, the graph engine preallocates outputs by this shape
                 _numSamples = inp0[0];
+                outResShape.push_back(_numSamples);
                 outResShape.push_back(inp0[1]);
             }
         }
@@ -323,9 +327,9 @@ public:
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 1) == _numInp);
             _numSamples = inp0[0];
+            outResShape.push_back(_numSamples);
         }
 
-        outResShape.push_back(_numSamples);
         outResShape.insert(outResShape.end(), outTailShape_.begin(), outTailShape_.end());
         outResShape.back() *= (1 + static_cast<int>(bidirectional));
 
@@ -428,7 +432,19 @@ public:
             input[0] = tmp;
         }
 
-        Mat cOut = produceCellOutput ? output[0].clone() : Mat();
+        // For the batch-first layout the (preallocated) output[0] is (batch, seq, ...), but the
+        // recurrence below assembles rows in seq-major order - run it on a seq-first temp, then
+        // transpose INTO output[0] at the end. output[0] itself must never be reallocated/replaced:
+        // it is the tensor the graph engine preallocated, a new header would silently detach from it.
+        Mat hOutSeqFirst = output[0];
+        if (layout == BATCH_SEQ_HID)
+        {
+            MatShape seqFirstShape = output[0].shape();
+            std::swap(seqFirstShape[0], seqFirstShape[1]);
+            hOutSeqFirst = Mat(seqFirstShape, output[0].type());
+        }
+
+        Mat cOut = produceCellOutput ? hOutSeqFirst.clone() : Mat();
         const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
@@ -484,7 +500,7 @@ public:
             int numSamplesTotal = numTimeStamps*numSamples;
             Mat xTs = input[0].reshape(1, numSamplesTotal);
 
-            Mat hOutTs = output[0].reshape(1, numSamplesTotal);
+            Mat hOutTs = hOutSeqFirst.reshape(1, numSamplesTotal);
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
             Mat cOutTs;
             if (produceCellOutput)
@@ -727,11 +743,10 @@ public:
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
             }
         }
-        // transpose to match batch first output
+        // transpose to match batch first output - into the preallocated tensor (exact-shape create()
+        // inside transposeND reuses it, so the graph's output blob is written in place)
         if (layout == BATCH_SEQ_HID){
-            cv::Mat tmp;
-            cv::transposeND(output[0], {1, 0, 2}, tmp);
-            output[0] = tmp;
+            cv::transposeND(hOutSeqFirst, {1, 0, 2}, output[0]);
         }
         if (needYcTransform && produceCellOutput)
         {

@@ -1066,6 +1066,7 @@ void raycastHashTsdfVolumeUnit(
 
                 float tprev = tcurr;
                 float prevTsdf = truncDist;
+                float currTsdf = truncDist;
                 while (tcurr < tmax)
                 {
 
@@ -1074,8 +1075,7 @@ void raycastHashTsdfVolumeUnit(
 
                     VolumeUnitIndexes::const_iterator it = volumeUnits.find(currVolumeUnitIdx);
 
-                    float currTsdf = prevTsdf;
-                    int currWeight = 0;
+                    currTsdf = prevTsdf;
                     float stepSize = 0.5f * blockSize;
                     cv::Vec3i volUnitLocalIdx;
 
@@ -1089,31 +1089,41 @@ void raycastHashTsdfVolumeUnit(
                         //! TODO: Figure out voxel interpolation
                         TsdfVoxel currVoxel = _at(volUnitsData, volUnitLocalIdx, it->second.index, volResolution.x, volDims);
                         currTsdf = tsdfToFloat(currVoxel.tsdf);
-                        currWeight = currVoxel.weight;
+
+                        if (currTsdf != prevTsdf)
+                        {
+                            // from pos to zero or negative
+                            // or from neg to zero or positive
+                            bool posCurr = currTsdf > 0.f, posPrev = prevTsdf > 0.f;
+                            bool negCurr = currTsdf < 0.f, negPrev = prevTsdf < 0.f;
+                            if (posCurr != posPrev || negCurr != negPrev)
+                                break;
+                        }
+
                         stepSize = tstep;
                     }
 
-                    //! Surface crossing
-                    if (prevTsdf > 0.f && currTsdf <= 0.f && currWeight > 0)
-                    {
-                        float tInterp = (tcurr * prevTsdf - tprev * currTsdf) / (prevTsdf - currTsdf);
-                        if (!cvIsNaN(tInterp) && !cvIsInf(tInterp))
-                        {
-                            Point3f pv = orig + tInterp * rayDirV;
-                            Point3f nv = getNormalVoxel(pv, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
-
-                            if (!isNaN(nv))
-                            {
-                                normal = vol2camRot * nv;
-                                point = vol2cam * pv;
-                            }
-                        }
-                        break;
-                    }
                     prevVolumeUnitIdx = currVolumeUnitIdx;
                     prevTsdf = currTsdf;
                     tprev = tcurr;
                     tcurr += stepSize;
+                }
+
+                //! Surface crossing
+                if (prevTsdf >= 0.f && currTsdf <= 0.f && prevTsdf > currTsdf)
+                {
+                    float tInterp = (tcurr * prevTsdf - tprev * currTsdf) / (prevTsdf - currTsdf);
+                    if (!cvIsNaN(tInterp) && !cvIsInf(tInterp))
+                    {
+                        Point3f pv = orig + tInterp * rayDirV;
+                        Point3f nv = getNormalVoxel(pv, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
+
+                        if (!isNaN(nv))
+                        {
+                            normal = vol2camRot * nv;
+                            point = vol2cam * pv;
+                        }
+                    }
                 }
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);

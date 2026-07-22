@@ -577,7 +577,7 @@ inline float interpolateColor(float tx, float ty, float tz, float vx[8])
 
 inline v_float32x4 getColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const v_float32x4& p)
+    const v_float32x4& p)
 {
     if (v_check_any(v_lt(p, v_float32x4(1.f, 1.f, 1.f, 0.f))) ||
         v_check_any(v_ge(p, v_float32x4((float)(volResolution.x - 2),
@@ -586,14 +586,15 @@ inline v_float32x4 getColorVoxel(const Mat& volume,
         )
         return nanv;
 
-    v_int32x4 ip = v_floor(p);
+    const v_int32x4 ip = v_floor(p);
 
     const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
     const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
 
-    int ix = v_get0(ip); ip = v_rotate_right<1>(ip);
-    int iy = v_get0(ip); ip = v_rotate_right<1>(ip);
-    int iz = v_get0(ip);
+    v_int32x4 ipr = ip;
+    int ix = v_get0(ipr); ipr = v_rotate_right<1>(ipr);
+    int iy = v_get0(ipr); ipr = v_rotate_right<1>(ipr);
+    int iz = v_get0(ipr);
 
     int coordBase = ix * xdim + iy * ydim + iz * zdim;
     float CV_DECL_ALIGNED(16) rgb[4];
@@ -607,10 +608,10 @@ inline v_float32x4 getColorVoxel(const Mat& volume,
         b[i] = (float)volData[neighbourCoords[i] + coordBase].b;
     }
 
-    v_float32x4 vsi(voxelSizeInv, voxelSizeInv, voxelSizeInv, voxelSizeInv);
-    v_float32x4 ptVox = v_mul(p, vsi);
-    v_int32x4 iptVox = v_floor(ptVox);
-    v_float32x4 t = v_sub(ptVox, v_cvt_f32(iptVox));
+    // p is already in voxel-index units (corners were gathered at floor(p)),
+    // so the trilinear weights are just its fractional part. Do NOT rescale by
+    // voxelSizeInv again here — that double-scaling scrambled the weights.
+    v_float32x4 t = v_sub(p, v_cvt_f32(ip));
     float tx = v_get0(t); t = v_rotate_right<1>(t);
     float ty = v_get0(t); t = v_rotate_right<1>(t);
     float tz = v_get0(t);
@@ -630,10 +631,10 @@ inline v_float32x4 getColorVoxel(const Mat& volume,
 
 inline Point3f getColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const Point3f& _p)
+    const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
-    v_float32x4 result = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p);
+    v_float32x4 result = getColorVoxel(volume, volDims, neighbourCoords, volResolution, p);
     float CV_DECL_ALIGNED(16) ares[4];
     v_store_aligned(ares, result);
     return Point3f(ares[0], ares[1], ares[2]);
@@ -643,7 +644,7 @@ inline Point3f getColorVoxel(const Mat& volume,
 #else
 inline Point3f getColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const Point3f& p)
+    const Point3f& p)
 {
     const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
     const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
@@ -670,11 +671,11 @@ inline Point3f getColorVoxel(const Mat& volume,
         b[i] = (float)volData[neighbourCoords[i] + coordBase].b;
     }
 
-    Point3f ptVox = p * voxelSizeInv;
-    Vec3i iptVox(cvFloor(ptVox.x), cvFloor(ptVox.y), cvFloor(ptVox.z));
-    float tx = ptVox.x - iptVox[0];
-    float ty = ptVox.y - iptVox[1];
-    float tz = ptVox.z - iptVox[2];
+    // p is already in voxel-index units (corners gathered at floor(p) above),
+    // so weights are its fractional part — do not rescale by voxelSizeInv again.
+    float tx = p.x - ix;
+    float ty = p.y - iy;
+    float tz = p.z - iz;
 
     res = Point3f(interpolateColor(tx, ty, tz, r),
         interpolateColor(tx, ty, tz, g),
@@ -868,7 +869,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                         {
                             v_float32x4 pv = v_add(orig, v_mul(dir, v_setall_f32(ts)));
                             v_float32x4 nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
-                            v_float32x4 cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
+                            v_float32x4 cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
 
                             if (!isNaN(nv))
                             {
@@ -980,7 +981,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                         {
                             Point3f pv = (orig + dir * ts);
                             Point3f nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
-                            Point3f cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
+                            Point3f cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
                             if (!isNaN(nv))
                             {
                                 //convert pv and nv to camera space
@@ -1114,7 +1115,7 @@ inline void coord(
                             getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
                     if (needColors)
                         colors.push_back(toPtype(pose.rotation() *
-                            getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p * voxelSizeInv)));
+                            getColorVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
                 }
             }
         }

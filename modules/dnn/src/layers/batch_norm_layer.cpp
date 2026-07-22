@@ -92,8 +92,12 @@ public:
         const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
         const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
 
-        origin_weights.create(1, (int)n, CV_32F);
-        origin_bias.create(1, (int)n, CV_32F);
+        // 1-D [n], NOT 1xn: the fused scale/bias participate in element-wise ops against 0/1-D
+        // inputs, and under the broadcasting rules (4) op (1,4) yields (1,4) - a 2-D result that
+        // would not fit a preallocated 1-D output blob. 1-D weights keep every shape exact.
+        const int sz1d[] = { (int)n };
+        origin_weights.create(1, sz1d, CV_32F);
+        origin_bias.create(1, sz1d, CV_32F);
 
         float* dstWeightsData = origin_weights.ptr<float>();
         float* dstBiasData = origin_bias.ptr<float>();
@@ -108,8 +112,8 @@ public:
 
     virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
     {
-        origin_weights.reshape(1, 1).copyTo(weights_);
-        origin_bias.reshape(1, 1).copyTo(bias_);
+        origin_weights.copyTo(weights_);
+        origin_bias.copyTo(bias_);
     }
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
@@ -133,9 +137,11 @@ public:
             (numFusedBias != numChannels && numFusedBias != 1 && !b.empty()))
             return false;
 
+        // reshape the fused factors to 1-D [numChannels], matching weights_/bias_ - a 1xn operand
+        // would broadcast the result up to 2-D and detach weights_ from its expected 1-D shape
+        const int fsz[] = { numChannels };
         if (!w.empty())
         {
-            w = w.reshape(1, 1);
             if (numFusedWeights == 1)
             {
                 multiply(weights_, w.at<float>(0), weights_);
@@ -143,17 +149,17 @@ public:
             }
             else
             {
+                w = w.reshape(1, 1, fsz);
                 multiply(weights_, w, weights_);
                 multiply(bias_, w, bias_);
             }
         }
         if (!b.empty())
         {
-            b = b.reshape(1, 1);
             if (numFusedBias == 1)
                 add(bias_, b.at<float>(0), bias_);
             else
-                add(bias_, b.reshape(1, 1), bias_);
+                add(bias_, b.reshape(1, 1, fsz), bias_);
         }
         return true;
     }
@@ -281,8 +287,13 @@ public:
             Mat &inpBlob = inputs[0];
             Mat &outBlob = outputs[0];
             CV_Assert(inpBlob.total() == weights_.total());
-            cv::multiply(inpBlob, weights_, outBlob);
-            cv::add(outBlob, bias_, outBlob);
+            // run on 1-D [n] views (a 0-D blob views as [1]) so every operand shape matches exactly:
+            // the result lands in the preallocated output blob in place, no realloc/detach possible
+            const int n1[] = { (int)inpBlob.total() };
+            Mat inp1d = inpBlob.reshape(1, 1, n1);
+            Mat out1d = outBlob.reshape(1, 1, n1);
+            cv::multiply(inp1d, weights_, out1d);
+            cv::add(out1d, bias_, out1d);
             return;
         }
 

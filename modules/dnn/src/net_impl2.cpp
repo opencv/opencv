@@ -1697,6 +1697,24 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     m.copyTo(buf);
                 }
             } else {
+                if (!dynamicOutShapes) {
+                    // the same sanity check for non-temp (graph output/state) tensors: the layer must
+                    // write into the preallocated tensor of the inferred shape/type. A mismatch here
+                    // means some op inside Layer::forward() reallocated it (e.g. a broadcast produced
+                    // an unexpected shape) and the result would silently detach from the graph.
+                    if (m.shape() != outShapes[i] || m.type() != outTypes[i] ||
+                        (m.u && (m.u->data != outOrigData[i].first || m.u->size != outOrigData[i].second)))
+                    {
+                        std::ostringstream oss;
+                        oss << "layer '" << layer->name << "' (" << layer->type << "): output #" << i
+                            << " changed during forward(): inferred shape " << outShapes[i]
+                            << " / type " << typeToString(outTypes[i])
+                            << ", actual " << m.shape() << " / " << typeToString(m.type())
+                            << (m.u && m.u->data != outOrigData[i].first
+                                ? "; the tensor was reallocated (the layer must write in place)" : "");
+                        CV_Error(Error::StsInternal, oss.str());
+                    }
+                }
                 __tensors__.at(out.idx) = m;
             }
         }
