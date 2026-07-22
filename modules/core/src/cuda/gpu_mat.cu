@@ -575,7 +575,10 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
         {convertToNoScale<uint32_t, uchar>, convertToNoScale<uint32_t, schar>, convertToNoScale<uint32_t, ushort>, convertToNoScale<uint32_t, short>, convertToNoScale<uint32_t, int>, convertToNoScale<uint32_t, float>, convertToNoScale<uint32_t, double>, 0, 0, 0, convertToNoScale<uint32_t, uint64_t>, convertToNoScale<uint32_t, int64_t>, 0},
     };
 
-    funcs[sdepth][ddepth](src.reshape(1), dst.reshape(1), stream);
+    const func_t func = funcs[sdepth][ddepth];
+    CV_Assert(func);
+
+    func(src.reshape(1), dst.reshape(1), stream);
 }
 
 void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const

@@ -526,6 +526,33 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
     CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
 
+    bool isIdentityOrder = true;
+    for (size_t i = 0; i < order.size(); ++i)
+    {
+        if (order[i] != static_cast<int>(i))
+        {
+            isIdentityOrder = false;
+            break;
+        }
+    }
+    if (isIdentityOrder)
+    {
+        dst_.create(inp.dims, inp.size.p, inp.type());
+        Mat out = dst_.getMat();
+        CV_Assert(out.isContinuous());
+
+        if (inp.data != out.data)
+            inp.copyTo(out);
+        return;
+    }
+
+    const bool is2DSwap = inp.dims == 2 && order.size() == 2 && order[0] == 1 && order[1] == 0;
+    if (is2DSwap)
+    {
+        transpose(inp, dst_);
+        return;
+    }
+
     auto order_ = order;
     std::sort(order_.begin(), order_.end());
     for (size_t i = 0; i < order_.size(); ++i)
@@ -533,7 +560,7 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
         CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
     }
 
-    std::vector<int> newShape(order.size());
+    AutoBuffer<int> newShape(order.size());
     for (size_t i = 0; i < order.size(); ++i)
     {
         newShape[i] = inp.size[order[i]];
@@ -557,7 +584,7 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
     size_t outer_size = out.total() / continuous_size;
 
-    std::vector<size_t> steps(order.size());
+    AutoBuffer<size_t> steps(order.size());
     for (int i = 0; i < static_cast<int>(steps.size()); ++i)
     {
         steps[i] = inp.step1(order[i]);
@@ -1206,7 +1233,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     Mat dst = _dst.getMat();
     if (dst.total() == 0)
         return;
-    std::vector<int> is_same_shape(dims_shape, 0);
+    cv::AutoBuffer<int> is_same_shape(dims_shape, 0);
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
         if (shape_src[i] == ptr_shape[i]) {
             is_same_shape[i] = 1;
@@ -1313,7 +1340,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
             std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
         }
         // broadcast copy (dst inplace)
-        std::vector<int> cumulative_shape(dims_shape, 1);
+        AutoBuffer<int> cumulative_shape(dims_shape, 1);
         int total = static_cast<int>(dst.total());
         for (int i = dims_shape - 1; i >= 0; --i) {
             cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);

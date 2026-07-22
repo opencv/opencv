@@ -2407,10 +2407,14 @@ private:
     cv::Mutex* histogramLock_;
 };
 
+namespace cv {
+    void equalizeHistLut_dispatch( const uchar* src, uchar* dst, int len, const uchar* lut );
+}
+
 class EqualizeHistLut_Invoker : public cv::ParallelLoopBody
 {
 public:
-    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, int* lut )
+    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, uchar* lut )
         : src_(src),
           dst_(dst),
           lut_(lut)
@@ -2423,7 +2427,7 @@ public:
 
         int width = src_.cols;
         int height = rowRange.end - rowRange.start;
-        int* lut = lut_;
+        const uchar* lut = lut_;
 
         if (src_.isContinuous() && dst_.isContinuous())
         {
@@ -2436,26 +2440,7 @@ public:
 
         for (; height--; sptr += sstep, dptr += dstep)
         {
-            int x = 0;
-            for (; x <= width - 4; x += 4)
-            {
-                int v0 = sptr[x];
-                int v1 = sptr[x+1];
-                int x0 = lut[v0];
-                int x1 = lut[v1];
-                dptr[x] = (uchar)x0;
-                dptr[x+1] = (uchar)x1;
-
-                v0 = sptr[x+2];
-                v1 = sptr[x+3];
-                x0 = lut[v0];
-                x1 = lut[v1];
-                dptr[x+2] = (uchar)x0;
-                dptr[x+3] = (uchar)x1;
-            }
-
-            for (; x < width; ++x)
-                dptr[x] = (uchar)lut[sptr[x]];
+            cv::equalizeHistLut_dispatch(sptr, dptr, width, lut);
         }
     }
 
@@ -2469,7 +2454,7 @@ private:
 
     cv::Mat& src_;
     cv::Mat& dst_;
-    int* lut_;
+    uchar* lut_;
 };
 
 #ifdef HAVE_OPENCL
@@ -2545,10 +2530,9 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
-    int lut[hist_sz];
+    int lut[hist_sz] = {0,};
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
-    EqualizeHistLut_Invoker      lutBody(src, dst, lut);
     cv::Range heightRange(0, src.rows);
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
@@ -2574,6 +2558,12 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
         sum += hist[i];
         lut[i] = saturate_cast<uchar>(sum * scale);
     }
+
+    uchar lut_u8[hist_sz];
+    for (int j = 0; j < hist_sz; ++j)
+        lut_u8[j] = (uchar)lut[j];
+
+    EqualizeHistLut_Invoker lutBody(src, dst, lut_u8);
 
     if(EqualizeHistLut_Invoker::isWorthParallel(src))
         parallel_for_(heightRange, lutBody);

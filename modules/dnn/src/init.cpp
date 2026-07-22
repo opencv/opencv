@@ -48,6 +48,11 @@
 
 namespace cv {
 namespace dnn {
+
+#ifdef HAVE_CUDA
+void registerConv2CudaBackend();  // defined in layers/conv2_layer.cpp (plain cv::dnn namespace)
+#endif
+
 CV__DNN_INLINE_NS_BEGIN
 
 static Mutex* __initialization_mutex = NULL;
@@ -76,12 +81,22 @@ public:
 } // namespace
 #endif
 
+#ifdef HAVE_CUDA
+void registerCudaCommonExecs();  // op_cuda.cpp (inline namespace)
+#endif
+
 void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
 #if defined(HAVE_PROTOBUF) && !defined(BUILD_PLUGIN)
     static ProtobufShutdown protobufShutdown; CV_UNUSED(protobufShutdown);
+#endif
+
+#ifdef HAVE_CUDA
+    // New graph engine: per-op CUDA executors.
+    registerConv2CudaBackend();
+    registerCudaCommonExecs();
 #endif
 
     CV_DNN_REGISTER_LAYER_CLASS(If,             IfLayer);
@@ -99,6 +114,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pad2,           Pad2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(NonZero,        NonZeroLayer);
     CV_DNN_REGISTER_LAYER_CLASS(QuantizeLinear, QuantizeLinearLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DynamicQuantizeLinear, DynamicQuantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(NonMaxSuppression, NonMaxSuppressionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Range,          RangeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
@@ -140,6 +156,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pooling,        PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxPool,        MaxPoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AveragePool,    AveragePoolLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(LpPool,         LpPoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ROIPooling,     PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(PSROIPooling,   PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reduce,         ReduceLayer);

@@ -103,4 +103,4 @@ int main(void)
 
 Limitation/Known problem
 ------------------------
-- cv::moveWindow() is not implementated. ( See. https://github.com/opencv/opencv/issues/25478 )
+- cv::moveWindow() is not implemented. ( See. https://github.com/opencv/opencv/issues/25478 )

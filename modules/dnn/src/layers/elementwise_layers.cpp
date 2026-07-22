@@ -310,8 +310,8 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays /*inputs*/,
+        InputArrayOfArrays /*outputs*/
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
@@ -960,6 +960,32 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
                                            GeluApproximationConstants::coef_sqrt_2_pi * x * x)));
     }
 
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f), half = vx_setall_f32(0.5f);
+            v_float32 c1 = vx_setall_f32(GeluApproximationConstants::sqrt_2_pi);
+            v_float32 c2 = vx_setall_f32(GeluApproximationConstants::coef_sqrt_2_pi);
+            v_float32 lo = vx_setall_f32(-88.f), hi = vx_setall_f32(88.f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 u = v_mul(x, v_fma(v_mul(x, x), c2, c1));
+                v_float32 e = v_exp(v_min(v_max(v_add(u, u), lo), hi));
+                v_float32 th = v_sub(one, v_div(two, v_add(e, one)));
+                vx_store(dstptr + i, v_mul(v_mul(half, x), v_add(one, th)));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
+    }
+
     int64 getFLOPSPerElement() const { return 100; }
 };
 
@@ -991,6 +1017,28 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
     inline float calculate(float x) const
     {
         return tanh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f);
+            v_float32 lo = vx_setall_f32(-88.f), hi = vx_setall_f32(88.f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 e = v_exp(v_min(v_max(v_add(x, x), lo), hi));   // e^{2x}, clamped
+                vx_store(dstptr + i, v_sub(one, v_div(two, v_add(e, one)))); // 1 - 2/(e+1)
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1496,6 +1544,14 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 {
     typedef BNLLLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_BNLL);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
@@ -1507,6 +1563,27 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     {
         // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
         return x > 0 ? x + log(1.f + exp(-x)) : log(1.f + exp(x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                // stable single-branch form: max(x,0) + log(1 + exp(-|x|))
+                vx_store(dstptr + i, v_add(v_max(x, z), v_log(v_add(one, v_exp(v_sub(z, v_abs(x)))))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1645,6 +1722,14 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 {
     typedef LogLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_LOG);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1653,6 +1738,22 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
     inline float calculate(float x) const
     {
         return log(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+                vx_store(dstptr + i, v_log(vx_load(srcptr + i)));
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1767,6 +1868,14 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
 {
     typedef AcoshLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ACOSH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1775,6 +1884,26 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
     inline float calculate(float x) const
     {
         return acosh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_log(v_add(x, v_sqrt(v_sub(v_mul(x, x), one)))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1821,6 +1950,14 @@ struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
 {
     typedef AsinhLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ASINH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1829,6 +1966,28 @@ struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
     inline float calculate(float x) const
     {
         return asinh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 ax = v_abs(x);
+                v_float32 r = v_log(v_add(ax, v_sqrt(v_fma(ax, ax, one))));
+                vx_store(dstptr + i, v_select(v_lt(x, z), v_sub(z, r), r));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1875,6 +2034,14 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
 {
     typedef AtanhLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ATANH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1883,6 +2050,26 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
     inline float calculate(float x) const
     {
         return atanh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), half = vx_setall_f32(0.5f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_mul(half, v_log(v_div(v_add(one, x), v_sub(one, x)))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1902,6 +2089,14 @@ struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
 {
     typedef CosLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_COS);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1910,6 +2105,25 @@ struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
     inline float calculate(float x) const
     {
         return cos(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_cos(x));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1929,6 +2143,14 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
 {
     typedef CoshLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_COSH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1937,6 +2159,26 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
     inline float calculate(float x) const
     {
         return cosh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 half = vx_setall_f32(0.5f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_mul(half, v_add(v_exp(x), v_exp(v_sub(z, x)))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1956,6 +2198,14 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
 {
     typedef ErfLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ERF);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1964,6 +2214,22 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
     inline float calculate(float x) const
     {
         return erf(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+                vx_store(dstptr + i, v_erf(vx_load(srcptr + i)));
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -2074,6 +2340,14 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
 {
     typedef SinLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SIN);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2082,6 +2356,25 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
     inline float calculate(float x) const
     {
         return sin(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_sin(x));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -2101,6 +2394,14 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
 {
     typedef SinhLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SINH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2109,6 +2410,26 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
     inline float calculate(float x) const
     {
         return sinh(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 half = vx_setall_f32(0.5f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_mul(half, v_sub(v_exp(x), v_exp(v_sub(z, x)))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -2128,6 +2449,14 @@ struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
 {
     typedef SoftplusLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SOFTPLUS);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2136,6 +2465,26 @@ struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
     inline float calculate(float x) const
     {
         return log1p(exp(x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_log(v_add(one, v_exp(x))));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -2182,6 +2531,14 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
 {
     typedef TanLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_TAN);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2190,6 +2547,25 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
     inline float calculate(float x) const
     {
         return tan(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_div(v_sin(x), v_cos(x)));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -2633,6 +3009,14 @@ struct ElementWiseIntDispatch<PowerFunctor>
 struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 {
     typedef ExpLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams = {normScale, normShift};
+        return cv::dnn::getActivationFunc(ACTIV_EXP);
+    }
     float base, scale, shift;
     float normScale, normShift;
 
@@ -2659,6 +3043,26 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     inline float calculate(float x) const
     {
         return exp(normScale * x + normShift);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 vsc = vx_setall_f32(normScale), vsh = vx_setall_f32(normShift);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                vx_store(dstptr + i, v_exp(v_fma(x, vsc, vsh)));
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
@@ -3338,6 +3742,14 @@ class ChannelsPReLUImpl CV_FINAL : public ElementWiseLayer<ChannelsPReLUFunctor>
 public:
     using ElementWiseLayer<ChannelsPReLUFunctor>::ElementWiseLayer;
 
+    void setSlope(const Mat& slope) CV_OVERRIDE
+    {
+        slope.reshape(1, (int)slope.total()).convertTo(func.scale, CV_32F);
+#ifdef HAVE_OPENCL
+        func.scale_umat.release();
+#endif
+    }
+
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -3445,6 +3857,13 @@ private:
 
 Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
+    if (params.blobs.empty())
+    {
+        // Slope comes as a second input; constArgs() fills the scale in later.
+        Ptr<ChannelsPReLUImpl> l(new ChannelsPReLUImpl(ChannelsPReLUFunctor()));
+        l->setParamsFrom(params);
+        return l;
+    }
     CV_Assert(params.blobs.size() == 1);
     Mat scale = params.blobs[0];
     float slope = *scale.ptr<float>();

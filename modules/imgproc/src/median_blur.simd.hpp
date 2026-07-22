@@ -128,8 +128,8 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 # define CV_ALIGNMENT 16
 #endif
 
-    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
-    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    AutoBuffer<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    AutoBuffer<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
     HT* h_coarse = alignPtr(&_h_coarse[0], CV_ALIGNMENT);
     HT* h_fine = alignPtr(&_h_fine[0], CV_ALIGNMENT);
 

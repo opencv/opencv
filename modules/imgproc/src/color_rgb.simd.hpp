@@ -125,9 +125,18 @@ struct RGB2RGB
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<vt>::vlanes();
 
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*scn, dst += vsize*dcn)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * dcn;
+            }
             vt a, b, c, d;
             if(scn == 4)
             {
@@ -139,11 +148,7 @@ struct RGB2RGB
                 d = v_set<_Tp>::set(alphav);
             }
             if(bi == 2) {
-                #if CV_SIMD_SCALABLE
-                auto t = a; a = c; c = t; // swap(a, c);
-                #else
-                swap(a, c);
-                #endif
+                v_swap(a, c);
             }
 
             if(dcn == 4)
@@ -193,9 +198,18 @@ struct RGB5x52RGB
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
         v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize*dcn)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * sizeof(ushort);
+                dst -= backup * dcn;
+            }
             v_uint16 t0 = v_reinterpret_as_u16(vx_load(src));
             v_uint16 t1 = v_reinterpret_as_u16(vx_load(src +
                                                        sizeof(ushort)*VTraits<v_uint16>::vlanes()));
@@ -235,11 +249,7 @@ struct RGB5x52RGB
             r = v_pack(r0, r1);
 
             if(bidx == 2) {
-                #if CV_SIMD_SCALABLE
-                auto t = r; r = b; b = t; // swap(b, r);
-                #else
-                swap(b, r);
-                #endif
+                v_swap(b, r);
             }
             if(dcn == 4)
             {
@@ -304,9 +314,18 @@ struct RGB2RGB5x5
         v_uint16 vn7 = vx_setall_u16((ushort)(~7));
         v_uint16 vz = vx_setzero_u16();
         v_uint8 v7 = vx_setall_u8((uchar)(~7));
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * sizeof(ushort);
+            }
             v_uint8 r, g, b, a;
             if(scn == 3)
             {
@@ -318,11 +337,7 @@ struct RGB2RGB5x5
                 v_load_deinterleave(src, b, g, r, a);
             }
             if(bidx == 2){
-                #if CV_SIMD_SCALABLE
-                auto t = r; r = b; b = t; // swap(b, r);
-                #else
-                swap(b, r);
-                #endif
+                v_swap(b, r);
             }
 
             r = v_and(r, v7);
@@ -399,9 +414,18 @@ struct Gray2RGB
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<vt>::vlanes();
         vt valpha = v_set<_Tp>::set(alpha);
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize, dst += vsize*dcn)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup;
+                dst -= backup * dcn;
+            }
             vt g = vx_load(src);
 
             if(dcn == 3)
@@ -441,9 +465,18 @@ struct Gray2RGB5x5
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
         v_uint16 v3 = vx_setall_u16((ushort)(~3));
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize, dst += vsize*sizeof(ushort))
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup;
+                dst -= backup * sizeof(ushort);
+            }
             v_uint8 t8 = vx_load_low(src);
             v_uint16 t = v_expand_low(t8);
 
@@ -512,9 +545,18 @@ struct RGB5x52Gray
         v_zip(vx_setall_s16(RY), vx_setall_s16( 1), r12y, dummy);
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * sizeof(ushort);
+                dst -= backup;
+            }
             v_uint16 t = vx_load((ushort*)src);
 
             v_uint16 r, g, b;
@@ -628,9 +670,18 @@ struct RGB2Gray<float>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 rv = vx_setall_f32(cr), gv = vx_setall_f32(cg), bv = vx_setall_f32(cb);
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*scn, dst += vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup;
+            }
             v_float32 r, g, b, a;
             if(scn == 3)
             {
@@ -692,9 +743,18 @@ struct RGB2Gray<uchar>
         v_zip(vx_setall_s16(cr), vx_setall_s16( 1), r12y, dummy);
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += scn*vsize, dst += vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup;
+            }
             v_uint8 r, g, b, a;
             if(scn == 3)
             {
@@ -792,9 +852,18 @@ struct RGB2Gray<ushort>
 
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += scn*vsize, dst += vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup;
+            }
             v_uint16 r, g, b, a;
             if(scn == 3)
             {
@@ -888,9 +957,18 @@ struct RGBA2mRGBA<uchar>
 
         // processing 4 registers per loop cycle is about 10% faster
         // than processing 1 register
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += 4*vsize, dst += 4*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 4;
+                dst -= backup * 4;
+            }
             v_uint8 v[4];
             for(int j = 0; j < 4; j++)
                 v[j] = vx_load(src + j*vsize);
@@ -992,9 +1070,18 @@ struct mRGBA2RGBA<uchar>
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
         v_uint8 vmax = vx_setall_u8(max_val);
 
-        for( ; i <= n-vsize/4;
+        for( ; i < n;
              i += vsize/4, src += vsize, dst += vsize)
         {
+            if ( i > n - vsize/4 ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize/4);
+                i = n - vsize/4;
+                src -= backup * 4;
+                dst -= backup * 4;
+            }
             v_uint8 s = vx_load(src + 0*vsize);
 
             // r0,g0,b0,a0,r1,g1,b1,a1 => 00,00,00,a0,00,00,00,a1 =>
@@ -1106,12 +1193,8 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uchar>(scn, dcn, blueIdx));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<ushort>(scn, dcn, blueIdx));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<float>(scn, dcn, blueIdx));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return RGB2RGB<T>(scn, dcn, blueIdx); });
 }
 
 // only 8u
@@ -1145,12 +1228,8 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<uchar>(scn, blueIdx, 0));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<ushort>(scn, blueIdx, 0));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<float>(scn, blueIdx, 0));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return RGB2Gray<T>(scn, blueIdx, 0); });
 }
 
 // 8u, 16u, 32f
@@ -1161,12 +1240,8 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<uchar>(dcn));
-    else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<ushort>(dcn));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<float>(dcn));
+    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                      [&](auto t){ using T = decltype(t); return Gray2RGB<T>(dcn); });
 }
 
 // only 8u

@@ -24,7 +24,7 @@ typedef wchar_t FileSystemChar_t;
 typedef std::wstring FileSystemPath_t;
 
 // TODO wchar_t <=> UTF-8
-static inline
+inline
 FileSystemPath_t toFileSystemPath(const std::string& p)
 {
     FileSystemPath_t result;
@@ -35,7 +35,7 @@ FileSystemPath_t toFileSystemPath(const std::string& p)
 }
 
 // TODO wchar_t <=> UTF-8
-static inline
+inline
 std::string toPrintablePath(const FileSystemPath_t& p)
 {
     std::string result;
@@ -55,12 +55,12 @@ typedef void* LibHandle_t;
 typedef char FileSystemChar_t;
 typedef std::string FileSystemPath_t;
 
-static inline FileSystemPath_t toFileSystemPath(const std::string& p) { return p; }
-static inline std::string toPrintablePath(const FileSystemPath_t& p) { return p; }
+inline FileSystemPath_t toFileSystemPath(const std::string& p) { return p; }
+inline std::string toPrintablePath(const FileSystemPath_t& p) { return p; }
 #endif
 
 
-static inline
+inline
 void* getSymbol_(LibHandle_t h, const char* symbolName)
 {
 #if defined(_WIN32)
@@ -70,7 +70,7 @@ void* getSymbol_(LibHandle_t h, const char* symbolName)
 #endif
 }
 
-static inline
+inline
 LibHandle_t libraryLoad_(const FileSystemPath_t& filename)
 {
 #if defined(_WIN32)
@@ -86,7 +86,7 @@ LibHandle_t libraryLoad_(const FileSystemPath_t& filename)
 #endif
 }
 
-static inline
+inline
 void libraryRelease_(LibHandle_t h)
 {
 #if defined(_WIN32)
@@ -96,7 +96,7 @@ void libraryRelease_(LibHandle_t h)
 #endif
 }
 
-static inline
+inline
 std::string libraryPrefix()
 {
 #if defined(_WIN32)
@@ -105,7 +105,7 @@ std::string libraryPrefix()
     return "lib";
 #endif
 }
-static inline
+inline
 std::string librarySuffix()
 {
 #if defined(_WIN32)

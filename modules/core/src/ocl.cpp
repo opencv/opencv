@@ -7229,10 +7229,17 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-    int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
-        d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
-        d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf() };
+    // Indexed by depth: must span CV_DEPTH_MAX. bf16 has no OpenCL vector type.
+    int vectorWidths[CV_DEPTH_MAX] = {
+        d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),   // CV_8U,  CV_8S
+        d.preferredVectorWidthShort(), d.preferredVectorWidthShort(), // CV_16U, CV_16S
+        d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),   // CV_32S, CV_32F
+        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf(), // CV_64F, CV_16F
+        1,                                                            // CV_16BF
+        d.preferredVectorWidthChar(),                                 // CV_Bool
+        d.preferredVectorWidthLong(), d.preferredVectorWidthLong(),   // CV_64U, CV_64S
+        d.preferredVectorWidthInt()                                   // CV_32U
+    };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
@@ -7246,12 +7253,21 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
 }
 
-int checkOptimalVectorWidth(const int *vectorWidths,
-                            InputArray src1, InputArray src2, InputArray src3,
-                            InputArray src4, InputArray src5, InputArray src6,
-                            InputArray src7, InputArray src8, InputArray src9,
-                            OclVectorStrategy strat)
+int checkOptimalVectorWidth([[maybe_unused]] const int *vectorWidths,
+                            [[maybe_unused]] InputArray src1,
+                            [[maybe_unused]] InputArray src2,
+                            [[maybe_unused]] InputArray src3,
+                            [[maybe_unused]] InputArray src4,
+                            [[maybe_unused]] InputArray src5,
+                            [[maybe_unused]] InputArray src6,
+                            [[maybe_unused]] InputArray src7,
+                            [[maybe_unused]] InputArray src8,
+                            [[maybe_unused]] InputArray src9,
+                            [[maybe_unused]] OclVectorStrategy strat)
 {
+#ifdef __APPLE__
+    return 1;
+#else
     CV_Assert(vectorWidths);
 
     int ref_type = src1.type();
@@ -7278,6 +7294,7 @@ int checkOptimalVectorWidth(const int *vectorWidths,
     int kercn = *std::min_element(kercns.begin(), kercns.end());
 
     return kercn;
+#endif
 }
 
 int predictOptimalVectorWidthMax(InputArray src1, InputArray src2, InputArray src3,

@@ -220,10 +220,7 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    EngineType engine = ENGINE_AUTO;
-    if ((parser.get<String>("backend") != "default") || (parser.get<String>("target") != "cpu")){
-        engine = ENGINE_CLASSIC;
-    }
+    EngineType engine = ENGINE_NEW;
     Net net = readNet(modelPath, configPath, "", engine);
     int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
@@ -551,31 +548,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, vector<int>& cla
     }
     else if (postprocessing == "yolov4")
     {
-        // boxes[b,N,1,4]+confs[b,N,classes] (normalized) or boxes[b,N,4]+scores[b,N]+classIdx[b,N] (model-px)
-        bool isBoxConfsFormat = (outs.size() == 2 && outs[0].dims == 4 && outs[0].size[outs[0].dims - 1] == 4);
-        bool isBoxScoresIdxFormat = (outs.size() == 3 && outs[0].dims == 3 && outs[0].size[2] == 4);
-        if (isBoxScoresIdxFormat)
-        {
-            int N = outs[0].size[1];
-            const float* boxesPtr = outs[0].ptr<float>(0);
-            const float* scoresPtr = outs[1].ptr<float>(0);
-            const float* classIdxPtr = outs[2].ptr<float>(0);
-            for (int j = 0; j < N; ++j)
-            {
-                float score = scoresPtr[j];
-                if (score > confThreshold)
-                {
-                    float x1 = boxesPtr[j * 4 + 0];
-                    float y1 = boxesPtr[j * 4 + 1];
-                    float x2 = boxesPtr[j * 4 + 2];
-                    float y2 = boxesPtr[j * 4 + 3];
-                    boxes.push_back(Rect((int)x1, (int)y1, (int)(x2 - x1), (int)(y2 - y1)));
-                    confidences.push_back(score);
-                    classIds.push_back((int)classIdxPtr[j]);
-                }
-            }
-        }
-        else if (isBoxConfsFormat)
         {
             Mat boxesMat = outs[0];
             Mat confsMat = outs[1];
@@ -596,11 +568,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, vector<int>& cla
                     classIds.push_back(maxLoc.x);
                 }
             }
-        }
-        else
-        {
-            cout << "Unsupported YOLO ONNX output format" << endl;
-            exit(-1);
         }
         Image2BlobParams paramNet;
         paramNet.scalefactor = Scalar::all(scale);

@@ -143,6 +143,19 @@ struct Net::Impl : public detail::NetImplBase
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer
+    bool finalized = false; // executors have been selected for the current backend/target
+
+    // Post-fusion (pre block-layout) snapshot so finalize() can re-run from a clean
+    // state on a backend/target change; useBlockLayout() is destructive and must
+    // run after backend assignment (see deviceOp handling in graph_block_layout.cpp).
+    struct FusedGraphSnapshot {
+        Ptr<Graph> graph;
+        std::vector<Ptr<LayerInfo> > prog;
+        std::vector<std::vector<Arg> > inputs;
+        std::vector<std::vector<Arg> > outputs;
+    };
+    bool fusedSnapshotValid = false;
+    std::vector<FusedGraphSnapshot> fusedSnapshot;
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<int64_t> dimvalues;
@@ -280,6 +293,22 @@ struct Net::Impl : public detail::NetImplBase
     std::unique_ptr<CudaInfo_t> cudaInfo;
 
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
+
+    // New graph engine: per-Arg device-resident tensors owned directly by the net (no backend
+    // wrappers). Sized lazily via GpuMatND::fit() and reused across forwards. Dirty flags track
+    // which copy (host cv::Mat vs device GpuMatND) is authoritative so transfers happen only at
+    // CPU<->CUDA boundaries; intermediates stay device-resident across consecutive CUDA ops.
+    std::vector<cuda::GpuMatND> cudaArgBuffers;
+    std::vector<uchar> cudaArgHostDirty;    // 1: host copy is authoritative -> needs H2D before device read
+    std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
+
+    // Device element type for a host tensor (half for float tensors under the FP16 target).
+    int cudaDeviceType(const Mat& hostMat) const;
+    // Returns the device buffer for @p arg, fit() to the host Mat's shape and device type.
+    cuda::GpuMatND& getCudaArgBuffer(Arg arg, const Mat& hostMat);
+    void cudaSetHostDirty(Arg arg);       // mark host authoritative (e.g. after a CPU op wrote it)
+    void cudaUploadArg(Arg arg, const Mat& hostMat);   // H2D if host dirty
+    void cudaDownloadArg(Arg arg, Mat& hostMat);       // D2H if device dirty
 #endif
 
     #ifdef HAVE_ONNXRUNTIME
@@ -420,12 +449,18 @@ struct Net::Impl : public detail::NetImplBase
     int findDim(const std::string& name, bool insert=false);
 
     void prepareForInference();
+    void finalize();
+    // Selects executors for a single graph (recursing into subgraphs).
+    void finalizeGraph(const Ptr<Graph>& graph, bool useCUDA);
+    // Save/restore the fused graph so finalize() is re-entrant across backend changes.
+    void saveFusedSnapshot();
+    void restoreFusedSnapshot();
 
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'
     // for outputs (according to bufidxs)
     // instead of allocating fresh outputs
-    void allocateLayerOutputs(const Ptr<Layer>& layer,
+    void allocateLayerOutputs(const Ptr<LayerInfo>& layer,
                               const std::vector<int>& inpTypes,
                               const std::vector<MatShape>& inpShapes,
                               std::vector<int>& outTypes,
@@ -523,9 +558,9 @@ struct Net::Impl : public detail::NetImplBase
 
 };  // Net::Impl
 
-inline Net::Impl* getNetImpl(const Layer* layer)
+inline Net::Impl* getNetImpl(const LayerInfo* op)
 {
-    return reinterpret_cast<Net::Impl*>(layer->netimpl);
+    return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
 
 Net readNetFromONNX2(const String&);

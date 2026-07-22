@@ -1,12 +1,18 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "convert.hpp"
 #include <sys/types.h>
+
+namespace cv {
+void LUT8u_dispatch( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
+void LUT16u_dispatch( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn );
+} // namespace cv
 
 /****************************************************************************************\
 *                                    LUT Transform                                       *
@@ -40,9 +46,9 @@ static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
     {
         switch(dstDepth)
         {
-            case CV_8U:   ret = (LUTFunc)LUT_<uint8_t, uint8_t>;   break;
+            case CV_8U:   ret = (LUTFunc)LUT8u_dispatch;           break;
             case CV_8S:   ret = (LUTFunc)LUT_<uint8_t, int8_t>;    break;
-            case CV_16U:  ret = (LUTFunc)LUT_<uint8_t, uint16_t>;  break;
+            case CV_16U:  ret = (LUTFunc)LUT16u_dispatch;          break;
             case CV_16S:  ret = (LUTFunc)LUT_<uint8_t, int16_t>;   break;
             case CV_32S:  ret = (LUTFunc)LUT_<uint8_t, int32_t>;   break;
             case CV_32F:  ret = (LUTFunc)LUT_<uint8_t, int32_t>;   break; // float

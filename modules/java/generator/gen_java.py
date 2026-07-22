@@ -299,7 +299,8 @@ class ClassInfo(GeneralInfo):
             base_info = ClassInfo(('class {}'.format(base_class), '', [], [], None, None), [self.namespace])
             base_type_name = base_info.name
             if not base_type_name in type_dict:
-                base_type_name = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
+                # Take the base's last name segment; don't strip this class's own name.
+                base_type_name = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip()
             self.base = base_type_name
             self.addImports(self.base)
 
@@ -1360,7 +1361,9 @@ def sanitize_java_documentation_string(doc, type):
         .replace("@param[in]", "@param") \
         .replace("@param[out]", "@param") \
         .replace("@ref", "REF:") \
+        .replace("@remarks", "<b>Remarks:</b>") \
         .replace("@returns", "@return") \
+        .replace("@retval", "<b>Returns:</b>") \
         .replace("@sa", "SEE:") \
         .replace("@see", "SEE:") \
         .replace("@snippet", "SNIPPET:") \

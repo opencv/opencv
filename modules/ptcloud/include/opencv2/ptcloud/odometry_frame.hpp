@@ -9,6 +9,9 @@
 
 namespace cv
 {
+
+//! @addtogroup ptcloud_rgbd
+//! @{
 /** Indicates what pyramid is to access using getPyramidAt() method:
 */
 
@@ -104,5 +107,7 @@ public:
     class Impl;
     Ptr<Impl> impl;
 };
+//! @}
+
 }
 #endif // !OPENCV_3D_ODOMETRY_FRAME_HPP

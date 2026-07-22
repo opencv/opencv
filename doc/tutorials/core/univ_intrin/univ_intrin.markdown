@@ -44,6 +44,9 @@ Supported SIMD/VLA technologies are detailed in @ref core_hal_intrin .
 * Load and store
 * Mathematical Operations
 * Reduce and Mask
+* 16-bit float arithmetic (FP16 and BF16)
+* Math function intrinsics
+* Multi-channel operations
 
 ### Register Structures
 
@@ -76,7 +79,10 @@ There are **two types** of registers:
     |-:|:-|
     |uint| 8, 16, 32, 64|
     |int | 8, 16, 32, 64|
-    |float | 32, 64|
+    |float | 16, 32, 64|
+    |bfloat | 16|
+
+    @note The 16-bit floating-point types (`v_float16`, `v_bfloat16`) require their SIMD guards to be enabled - see the [FP16 and BF16 Arithmetic](#fp16-and-bf16-arithmetic) section below.
 
 * **Constant sized registers**: These structures have a fixed bit size and hold a constant number of values. We need to know what SIMD instruction set is supported by the system and select compatible registers. Use these only if exact bit length is necessary.
     <br>
@@ -116,7 +122,6 @@ Now that we know how registers work, let us look at the functions used for filli
             // Or we can explicitly write down the values.
             v_float32x4(1, 2, 3, 4);
 
-    <br>
     * *Load Function* - We can use the load method and provide the memory address of the data:
 
             float ptr[32] = {1, 2, 3, ..., 32};
@@ -237,6 +242,187 @@ See also: https://github.com/opencv/opencv/issues/27267
                 We can use comparison operators to generate mask and v_select to obtain results based on conditionals.
                 It is common to set all values of b to 0. Thus, v_select will give values of "a" or 0 based on the mask.
             */
+
+FP16 and BF16 Arithmetic {#fp16-and-bf16-arithmetic}
+------------------------
+
+OpenCV 5.0 introduces universal intrinsic support for 16-bit floating-point types: FP16 (`cv::hfloat`, `CV_16F`) and BF16 (`cv::bfloat`, `CV_16BF`). These are guarded by two preprocessor flags that mirror the existing `CV_SIMD_64F` / `CV_SIMD_SCALABLE_64F` guards for double-precision support.
+
+| Flag | Description |
+|---|---|
+| `CV_SIMD_16F` | Fixed-width SIMD targets where native FP16 arithmetic is available (e.g. ARMv8.2+ NEON, RISC-V RVV). |
+| `CV_SIMD_SCALABLE_16F` | VLA targets (SVE, RVV) where the register width is determined at runtime. |
+
+Code written against these guards is forward-compatible. As x86 and other architectures add native FP16/BF16 arithmetic instructions in future hardware generations, the same source will automatically benefit without modification.
+
+### Basic Usage
+
+To operate on 16-bit floating-point types, utilize the `vx_load_f16`, `v_add`, and `vx_store_f16` APIs.
+
+@code{.cpp}
+#if CV_SIMD_16F || CV_SIMD_SCALABLE_16F
+// Load FP16 values from memory into a v_float16 register
+v_float16 a = vx_load_f16(src1_ptr);
+v_float16 b = vx_load_f16(src2_ptr);
+
+// Element-wise addition and fused multiply-add
+v_float16 c = v_add(a, b);
+v_float16 d = v_fma(a, b, c);    // a*b + c
+
+// Store result back to FP16 memory
+vx_store_f16(dst_ptr, d);
+#endif
+@endcode
+
+### Expanding and Packing
+
+To perform intermediate computation in higher precision (FP32), the universal intrinsics provide `v_expand` and `v_pack`. Expanding converts a single 16-bit register into two 32-bit registers, and packing reverses the operation.
+
+@code{.cpp}
+#if CV_SIMD_16F || CV_SIMD_SCALABLE_16F
+v_float16 val_16 = vx_load_f16(src_ptr);
+
+// Widen to FP32 for mixed-precision computation
+v_float32 lo, hi;
+v_expand(val_16, lo, hi);
+
+// Intermediate computation on FP32 registers
+v_float32 res_lo = v_mul(lo, vx_setall_f32(3.14159f));
+v_float32 res_hi = v_mul(hi, vx_setall_f32(3.14159f));
+
+// Pack back to FP16 for storage
+v_float16 res_16 = v_pack(res_lo, res_hi);
+vx_store_f16(dst_ptr, res_16);
+#endif
+@endcode
+
+### BF16 Load/Store and Mixed Precision
+
+BF16 shares its exponent range with FP32, making it critical for deep learning inference. Conversion between BF16 and FP32 via expand/pack is highly efficient and executes primarily as a bit-shift. To handle BF16 data, use the specific `v_bfloat16` type alongside `vx_load_bf16` and `vx_store_bf16`.
+
+@code{.cpp}
+#if CV_SIMD_16BF || CV_SIMD_SCALABLE_16BF
+// Load BF16 values from memory
+v_bfloat16 b_val = vx_load_bf16(bf16_ptr);
+
+// Widen to FP32 for high-precision deep learning accumulation
+v_float32 b_lo, b_hi;
+v_expand(b_val, b_lo, b_hi);
+
+// Computation in FP32
+v_float32 res_lo = v_add(b_lo, vx_setall_f32(1.0f));
+v_float32 res_hi = v_add(b_hi, vx_setall_f32(1.0f));
+
+// Pack back to BF16 for output
+v_bfloat16 b_res = v_pack_b(res_lo, res_hi);
+vx_store_bf16(dst_bf16_ptr, b_res);
+#endif
+@endcode
+
+### Integer Dot Products (Quantization)
+
+To support the optimized DNN module in OpenCV 5.0, universal intrinsics now include fast 8-bit integer dot products. These are essential for writing custom layers for quantized neural networks. Architectures like ARMv8.4+ and AVX-VNNI have dedicated hardware instructions to multiply 8-bit integers and accumulate them into 32-bit integers in a single pass.
+
+@code{.cpp}
+v_int8 vec_a = vx_load(int8_src1);
+v_int8 vec_b = vx_load(int8_src2);
+v_int32 acc = vx_setzero_s32();
+
+// Multiply 8-bit integers and accumulate into 32-bit registers
+acc = v_dotprod_int8(vec_a, vec_b, acc);
+@endcode
+
+### Build Requirements
+
+FP16 SIMD arithmetic and scalable vectors are not available by default. The required targets must be enabled at build time. OpenCV's runtime dispatcher will select the appropriate kernel based on the actual CPU capabilities at launch.
+
+@code{.sh}
+# ARM - enable ARMv8.2+ FP16 extensions
+cmake -DCPU_BASELINE=NEON -DCPU_DISPATCH=FP16 ..
+
+# RISC-V - enable RVV vector extension
+cmake -DRISCV_RVV_SCALABLE=ON ..
+
+# WebAssembly (WASM) - enable 128-bit SIMD for browser execution
+cmake -DCMAKE_TOOLCHAIN_FILE=../platforms/js/build_wasm.sh -DENABLE_WASM_SIMD=ON ..
+@endcode
+
+@note On platforms where `CV_SIMD_16F` is not defined, FP16 intrinsics are not compiled in. Any code that calls them must be wrapped in the corresponding `#if` guard.
+
+### Dynamic Dispatch & Lane Counting
+
+When compiling for Vector Length Agnostic (VLA) architectures (guarded by `CV_SIMD_SCALABLE_*`), the size of the SIMD register is unknown at compile time. It is determined dynamically by the hardware at runtime.
+
+Because of this, you cannot hardcode loop increments (e.g., `i += 4` or `i += 8`). You must use OpenCV's lane-counting macros to advance memory pointers safely.
+
+@code{.cpp}
+// Correct approach for scalable loops
+int step = VTraits<v_float32>::vlanes();   // Dynamic step size
+for (int i = 0; i <= length - step; i += step) {
+    v_float32 v = vx_load(src + i);
+    // ...
+}
+@endcode
+
+Math Function Intrinsics
+------------------------
+
+Vectorized implementations of common mathematical functions were added in OpenCV 5.0 (and backported to 4.x). They operate element-wise on `v_float32` and `v_float64` registers. Generic implementations cover all platforms, with hardware-specific fast paths mapped where supported by the architecture.
+
+### Supported Operations
+
+| Function | Operation | Notes |
+|---|---|---|
+| `v_exp(x)` | \f$e^x\f$ | |
+| `v_log(x)` | \f$\ln(x)\f$ | Requires \f$x > 0\f$ |
+| `v_erf(x)` | Gauss error function | Utilized in GELU activation kernels |
+| `v_sincos(x, s, c)` | Sine and cosine | Simultaneous calculation, more efficient than separate calls |
+| `v_pow(x, y)` | \f$x^y\f$ | |
+| `v_tanh(x)` | Hyperbolic tangent | Utilized in activation kernels |
+| `v_atan2(y, x)` | Arctangent of \f$y/x\f$ | Result in radians |
+
+### Basic Usage
+
+@code{.cpp}
+v_float32 x = vx_load(src_ptr);
+
+v_float32 e   = v_exp(x);           // e^x for each lane
+v_float32 l   = v_log(x);           // ln(x) for each lane, x > 0
+v_float32 err = v_erf(x);           // Gauss error function
+
+v_float32 s, c;
+v_sincos(x, s, c);                  // sine and cosine in one pass
+
+// Sigmoid: 1 / (1 + e^{-x})
+v_float32 ones  = vx_setall_f32(1.f);
+v_float32 neg_x = v_mul(x, vx_setall_f32(-1.f));
+v_float32 sig   = v_div(ones, v_add(ones, v_exp(neg_x)));
+@endcode
+
+@note Math intrinsics do not require guard macros. Generic scalar-loop fallback implementations ensure code compilation across all target platforms.
+
+Multi-Channel Data Operations
+-----------------------------
+
+When vectorizing operations on multi-channel data types (e.g., interleaved 3-channel BGR images), standard load functions such as `vx_load` will capture adjacent channel values into the same register. Element-wise arithmetic operations on such a register will yield incorrect scalar results across the respective channels.
+
+To process multi-channel arrays, use the `v_load_deinterleave` and `v_store_interleave` APIs to distribute channel values into independent registers.
+
+### Basic Usage
+
+@code{.cpp}
+// 3-channel deinterleave
+v_float32 b, g, r;
+v_load_deinterleave(src_ptr, b, g, r);
+
+// Apply independent scalar multipliers per channel
+v_float32 y = v_mul(b, vx_setall_f32(0.114f));
+y = v_fma(g, vx_setall_f32(0.587f), y);
+y = v_fma(r, vx_setall_f32(0.299f), y);
+
+// Interleave registers back to target address
+v_store_interleave(dst_ptr, y, y, y);
+@endcode
 
 ## Demonstration
 In the following section, we will vectorize a simple convolution function for single channel and compare the results to a scalar implementation.

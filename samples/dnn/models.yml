@@ -123,13 +123,13 @@ yolov4-tiny:
 
 yolov3:
   load_info:
-    url: "https://huggingface.co/qualcomm/Yolo-v3/resolve/226ada6de9dcb32eebad7f74bf526714e2af6136/Yolo-v3.onnx"
-    sha1: "c37641ddf05cfe133efd4b66832f269d95f523cf"
+    url: "https://huggingface.co/opencv/opencv_contribution/resolve/main/yolov3/yolov3.onnx"
+    sha1: "2b433d879f318efa55de62a630556162665c6d8e"
   model: "yolov3.onnx"
   mean: [0, 0, 0]
   scale: 0.00392
-  width: 640
-  height: 640
+  width: 416
+  height: 416
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   postprocessing: "yolov4"

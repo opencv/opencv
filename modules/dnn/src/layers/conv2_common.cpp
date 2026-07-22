@@ -91,11 +91,16 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
         int dilation = dilations.empty() ? 1 : dilations[i];
         int outsz;
         if (autoPad == AUTO_PAD_NONE || autoPad == AUTO_PAD_VALID) {
-            int pad = 0;
+            int pad0 = 0, pad = 0;
             if (!pads.empty()) {
+                pad0 = pads[i];
                 pad = pads[i] + pads[i + nspatialdims];
             }
             outsz = (inpsz + pad - 1 - dilation * (k_i - 1) + (ceilMode ? stride - 1 : 0)) / stride + 1;
+            // ONNX: with ceil_mode a sliding window that starts in the right/bottom
+            // padding region is dropped
+            if (ceilMode && (outsz - 1) * stride >= inpsz + pad0)
+                outsz--;
         } else {
             if (ceilMode)
                 outsz = (inpsz + stride - 1)/stride;
@@ -391,7 +396,7 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
                           const std::vector<int>& adjustPads,
                           AutoPadding autoPad)
 {
-    bool blockLayout = true;
+    bool blockLayout = (inpShape.layout == DATA_LAYOUT_BLOCK);
     int ndims = inpShape.dims;
     int nspatialdims = ndims - 2 - int(blockLayout);
     CV_Assert(nspatialdims >= 1);
@@ -408,9 +413,13 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
             kshape_[i] = wshape[i + 2];
     }
 
-    int C0 = inpShape[ndims - 1];
     int K_out = ngroups * wshape[1];
-    outshape[1] = (K_out + C0 - 1) / C0;
+    if (blockLayout) {
+        int C0 = inpShape[ndims - 1];
+        outshape[1] = (K_out + C0 - 1) / C0;
+    } else {
+        outshape[1] = K_out;
+    }
 
     CV_Assert(strides.empty() || (int)strides.size() == nspatialdims);
     CV_Assert(dilations.empty() || (int)dilations.size() == nspatialdims);
@@ -434,7 +443,7 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
         }
         outshape[i + 2] = outsz;
     }
-    outshape.C = K_out;
+    outshape.C = blockLayout ? K_out : 0;
     return outshape;
 }
 

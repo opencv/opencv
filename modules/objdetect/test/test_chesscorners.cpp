@@ -853,6 +853,97 @@ TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
     EXPECT_LE(error, precise_success_error_level);
 }
 
+// Generate a perfect W x H symmetric circle grid at the given spacing.
+// Points are returned in shuffled order so the detector can't rely on input ordering.
+static std::vector<Point2f> makeSyntheticSymmetricGrid(int cols, int rows, float spacing)
+{
+    std::vector<Point2f> pts;
+    pts.reserve(cols * rows);
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            pts.push_back(Point2f(c * spacing, r * spacing));
+
+    cv::RNG& rng = cv::theRNG();
+    for (int k = (int)pts.size() - 1; k > 0; k--)
+        std::swap(pts[k], pts[rng.uniform(0, k + 1)]);
+
+    return pts;
+}
+
+// Generate an asymmetric circle grid. Even rows start at x=0, odd rows are offset by spacing/2.
+static std::vector<Point2f> makeSyntheticAsymmetricGrid(int cols, int rows, float spacing)
+{
+    std::vector<Point2f> pts;
+    pts.reserve(cols * rows);
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            pts.push_back(Point2f(c * spacing + (r % 2) * spacing * 0.5f, r * spacing * 0.5f));
+
+    cv::RNG& rng = cv::theRNG();
+    for (int k = (int)pts.size() - 1; k > 0; k--)
+        std::swap(pts[k], pts[rng.uniform(0, k + 1)]);
+
+    return pts;
+}
+
+typedef testing::TestWithParam<Size> Calib3d_CirclesGrid_RNG_Symmetric;
+
+TEST_P(Calib3d_CirclesGrid_RNG_Symmetric, synthetic)
+{
+    // Verify that findCirclesGrid correctly detects synthetic perfect symmetric grids of
+    // various sizes. This exercises the computeRNG path (Delaunay-based) end-to-end.
+    const float spacing = 30.f;
+    const Size gridSize = GetParam();
+
+    std::vector<Point2f> pts = makeSyntheticSymmetricGrid(gridSize.width, gridSize.height, spacing);
+
+    std::vector<Point2f> centers;
+    bool found = findCirclesGrid(Mat(pts), gridSize, centers,
+                                 CALIB_CB_SYMMETRIC_GRID, Ptr<FeatureDetector>());
+
+    ASSERT_TRUE(found) << "Symmetric grid " << gridSize.width << "x" << gridSize.height << " not detected";
+    ASSERT_EQ((int)centers.size(), gridSize.area());
+    for (const Point2f& c : centers)
+    {
+        bool matched = false;
+        for (const Point2f& p : pts)
+            if (cv::norm(c - p) < 1.f) { matched = true; break; }
+        EXPECT_TRUE(matched) << "Detected center " << c << " does not match any input point "
+                             << "for grid " << gridSize.width << "x" << gridSize.height;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Calib3d_CirclesGrid_RNG_Symmetric,
+                        testing::Values(Size(4, 4), Size(6, 5), Size(8, 6), Size(10, 8)));
+
+typedef testing::TestWithParam<Size> Calib3d_CirclesGrid_RNG_Asymmetric;
+
+TEST_P(Calib3d_CirclesGrid_RNG_Asymmetric, synthetic)
+{
+    const float spacing = 30.f;
+    const Size gridSize = GetParam();
+
+    std::vector<Point2f> pts = makeSyntheticAsymmetricGrid(gridSize.width, gridSize.height, spacing);
+
+    std::vector<Point2f> centers;
+    bool found = findCirclesGrid(Mat(pts), gridSize, centers,
+                                 CALIB_CB_ASYMMETRIC_GRID, Ptr<FeatureDetector>());
+
+    ASSERT_TRUE(found) << "Asymmetric grid " << gridSize.width << "x" << gridSize.height << " not detected";
+    ASSERT_EQ((int)centers.size(), gridSize.area());
+    for (const Point2f& c : centers)
+    {
+        bool matched = false;
+        for (const Point2f& p : pts)
+            if (cv::norm(c - p) < 1.f) { matched = true; break; }
+        EXPECT_TRUE(matched) << "Detected center " << c << " does not match any input point "
+                             << "for grid " << gridSize.width << "x" << gridSize.height;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Calib3d_CirclesGrid_RNG_Asymmetric,
+                        testing::Values(Size(4, 6), Size(5, 8)));
+
 TEST(Calib3d_CornerOrdering, issue_26830) {
     const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cameracalibration/";
     const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");

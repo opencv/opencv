@@ -141,7 +141,7 @@ int filter(cvhalFilter2D *context,
     int cal_y = offset_y - ctx->anchor_y; // negative if top border exceeded
 
     // calculate source border
-    ctx->padding.resize(cal_width * cal_height * cnes);
+    ctx->padding.resize((size_t)cal_width * cal_height * cnes);
     uchar* pad_data = &ctx->padding[0];
     int pad_step = cal_width * cnes;
 

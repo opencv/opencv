@@ -109,6 +109,98 @@ for _m in CONTRIB_MODULES:
                     _IMAGE_INDEX.setdefault(_img.name,
                                             f"contrib_modules/{_rel}")
 
+# Tutorials can reference images that live only under samples/ (+ apps/), which
+# Doxygen's IMAGE_PATH covered but the tutorial-only index misses (renders
+# broken). Index+stage ONLY sample images a tutorial actually references and
+# that a tutorial `images/` dir doesn't already provide, to avoid copying the
+# whole samples image set. Staged under sample_pics/ like api_pics above.
+_referenced_images: set[str] = set()
+for _md in (DOC_ROOT / "tutorials").rglob("*.markdown"):
+    try:
+        _txt = _md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        continue
+    for _m in re.finditer(r'!\[[^\]]*\]\((?:[^)\s]*?/)?images/([^)\s]+)\)', _txt):
+        _referenced_images.add(pathlib.Path(_m.group(1)).name)
+_missing_images = {n for n in _referenced_images if n not in _IMAGE_INDEX}
+if _missing_images:
+    _sample_pics = SPHINX_INPUT_ROOT / "sample_pics"
+    _stage_samples = SPHINX_INPUT_ROOT != DOC_ROOT
+    for _base in (OPENCV_ROOT / "samples", OPENCV_ROOT / "apps"):
+        if not _base.is_dir() or not _missing_images:
+            continue
+        for _img in _base.rglob("*"):
+            if (_img.name in _missing_images and _img.is_file()
+                    and _img.suffix.lower() in _IMAGE_EXTS):
+                _IMAGE_INDEX[_img.name] = f"sample_pics/{_img.name}"
+                _missing_images.discard(_img.name)   # first match wins; stop looking
+                if _stage_samples:
+                    _sample_pics.mkdir(parents=True, exist_ok=True)
+                    _link = _sample_pics / _img.name
+                    if not _link.exists():
+                        try:
+                            _os.symlink(_img, _link)
+                        except (OSError, NotImplementedError):
+                            try:
+                                _shutil.copy2(_img, _link)
+                            except OSError:
+                                pass
+            if not _missing_images:
+                break
+
+
+# Hand-authored dnn topic; content lives in the dnn module's own doc dir.
+_DNN_ENGINE_SELECTION_MD = (
+    OPENCV_ROOT / "modules" / "dnn" / "doc" / "dnn_engine.markdown").read_text(
+    encoding="utf-8")
+
+
+def _add_dnn_engine_selection_topic(out_dir: pathlib.Path) -> None:
+    """Add the 'DNN Engine Selection' page as a dnn-module topic.
+    Must run after stub generation (its stale-file sweep) and before the anchor
+    scan, so the new {#anchor} + @subpage get picked up."""
+    dnn = out_dir / "dnn.md"
+    if not dnn.is_file():
+        return
+    (out_dir / "dnn_engine_selection.md").write_text(
+        _DNN_ENGINE_SELECTION_MD, encoding="utf-8")
+    text = dnn.read_text(encoding="utf-8")
+    if "api_dnn_engine_selection" in text:
+        return
+    new = re.sub(
+        r"(## Topics\n\n(?:- @subpage [^\n]*\n)+)",
+        lambda m: m.group(1) + "- @subpage api_dnn_engine_selection\n",
+        text, count=1)
+    if new != text:
+        dnn.write_text(new, encoding="utf-8")
+
+
+# Hand-authored standalone HAL page; content lives in core's own doc dir.
+_HAL_MD = (
+    OPENCV_ROOT / "modules" / "core" / "doc" / "hal.markdown").read_text(
+    encoding="utf-8")
+
+
+def _add_hal_page(out_dir: pathlib.Path) -> None:
+    """Write the HAL page and add a 'Learn about HAL' link on the api_root page.
+    Call after stub generation and before the anchor scan."""
+    api_root = out_dir / "api_root.markdown"
+    if not api_root.is_file():
+        return
+    (out_dir / "hal.md").write_text(_HAL_MD, encoding="utf-8")
+    text = api_root.read_text(encoding="utf-8")
+    if "](hal.md)" in text:
+        return
+    text = re.sub(r"(```\{toctree\}\n.*?\n)(```\n)", r"\1hal\n\2",
+                  text, count=1, flags=re.S)
+    text = text.rstrip() + (
+        "\n\n## Learn about HAL\n\n"
+        "OpenCV ships a Hardware Acceleration Layer that lets hardware vendors "
+        "inject tuned, silicon-specific implementations behind a stable C "
+        "interface. See [OpenCV Hardware Acceleration Layer (HAL)](hal.md).\n")
+    api_root.write_text(text, encoding="utf-8")
+
+
 if API_MODULES:
     _api_pics = SPHINX_INPUT_ROOT / "api_pics"
     _stage_pics = SPHINX_INPUT_ROOT != DOC_ROOT
@@ -146,6 +238,8 @@ if API_MODULES:
     _generate_api_stubs(_main_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "main_modules",
                         root_anchor="api_root", root_title="Main modules",
                         extra_groups=_main_orphans)
+    _add_dnn_engine_selection_topic(SPHINX_INPUT_ROOT / "main_modules")
+    _add_hal_page(SPHINX_INPUT_ROOT / "main_modules")
     _scan_internal(SPHINX_INPUT_ROOT / "main_modules")
     if _extra_api or _extra_orphans:
         _generate_api_stubs(_extra_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "extra_modules",
@@ -176,6 +270,11 @@ def _write_root_index() -> None:
             entries.append((heading, link_text, docname))
 
     add("Introduction", "Introduction", "intro", "intro" in _ANCHOR_TO_DOC)
+    # Its own landing section rather than a bullet in the intro's Usage list.
+    _prebuilt = _ANCHOR_TO_DOC.get("tutorial_using_prebuilt_binaries")
+    add("How to use pre-built OpenCV binaries",
+        "Using OpenCV pre-built binaries in your own projects",
+        _prebuilt or "", bool(_prebuilt))
     add("OpenCV Tutorials", "OpenCV tutorials", "tutorials/tutorials")
     add("Python Tutorials", "OpenCV-Python tutorials",
         "py_tutorials/py_tutorials", bool(PY_DOC_MODULES))
@@ -194,27 +293,33 @@ def _write_root_index() -> None:
     toctree = "\n".join(
         f"{heading} <{docname}>" for heading, _link, docname in entries)
 
-    # Body: raw HTML so links resolve correctly relative to index.html.
-    html_lines = ['<div class="ocv-landing">']
+    # Markdown H2 headings so each shows in the "On this page" TOC; links stay
+    # raw HTML to resolve relative to index.html (headings can't sit in a <div>).
+    body_lines: list[str] = []
     for heading, link_text, docname in entries:
-        if link_text is None:
-            html_lines.append(
-                f'<h2><a href="{docname}.html">{heading}</a></h2>')
-        else:
-            html_lines.append(f'<h2>{heading}</h2>')
-            html_lines.append(f'<p><a href="{docname}.html">{link_text}</a></p>')
-    html_lines.append("</div>")
-    body = "\n".join(html_lines)
+        body_lines.append(f"## {heading}\n")
+        body_lines.append(
+            f'<ul><li><a href="{docname}.html">{link_text or heading}</a></li></ul>\n')
+    body = "\n".join(body_lines).rstrip()
+
+    # Landing-page intro prose lives in a hand-editable Markdown file next to
+    # conf.py (docs_sphinx/index_intro.md), not inline here.
+    _intro_md = pathlib.Path(__file__).resolve().parent.parent / "index_intro.md"
+    try:
+        intro = _intro_md.read_text(encoding="utf-8").strip()
+    except OSError:
+        intro = ""
 
     text = (
-        "OpenCV modules\n"
-        "==============\n\n"
+        "OpenCV documentation\n"
+        "====================\n\n"
         "```{toctree}\n"
         ":hidden:\n"
         ":maxdepth: 1\n"
         ":titlesonly:\n\n"
         f"{toctree}\n"
         "```\n\n"
+        f"{intro}\n\n"
         f"{body}\n"
     )
     try:

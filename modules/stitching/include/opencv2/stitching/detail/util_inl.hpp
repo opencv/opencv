@@ -98,30 +98,30 @@ B Graph::walkBreadthFirst(int from, B body) const
 //////////////////////////////////////////////////////////////////////////////
 // Some auxiliary math functions
 
-static inline
+inline
 float normL2(const Point3f& a)
 {
     return a.x * a.x + a.y * a.y + a.z * a.z;
 }
 
 
-static inline
+inline
 float normL2(const Point3f& a, const Point3f& b)
 {
     return normL2(a - b);
 }
 
 
-static inline
+inline
 double normL2sq(const Mat &r)
 {
     return r.dot(r);
 }
 
 
-static inline int sqr(int x) { return x * x; }
-static inline float sqr(float x) { return x * x; }
-static inline double sqr(double x) { return x * x; }
+inline int sqr(int x) { return x * x; }
+inline float sqr(float x) { return x * x; }
+inline double sqr(double x) { return x * x; }
 
 } // namespace detail
 } // namespace cv

@@ -265,7 +265,7 @@ public:
 #ifdef HAVE_MLAS
             packed_B_mlas.release();
             packed_B_mlas_M = packed_B_mlas_N = packed_B_mlas_K = 0;
-            if (mlasAvailable()) {
+            if (mlasAvailable() && !opt.use_rvv) {
                 std::vector<Mat> outputs;
                 outputs_arr.getMatVector(outputs);
                 const auto shape_A = shape(inputs[0]);
@@ -448,7 +448,7 @@ public:
 
         if (constB(mode)) {
 #ifdef HAVE_MLAS
-            if (!packed_B_mlas.empty() &&
+            if (!opt.use_rvv && !packed_B_mlas.empty() &&
                 packed_B_mlas_N == N && packed_B_mlas_K == K)
             {
                 if (mlasSgemmPacked(trans_a, trans_b, rows, N, K,
@@ -476,18 +476,19 @@ public:
 #ifdef HAVE_CUDA
     // Y = A * B + C. B should be guaranteed as two dimensional.
     Ptr<BackendNode> initCUDA(void *context_,
-                              const std::vector<Ptr<BackendWrapper>>& inputs,
-                              const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE {
+                              InputArrayOfArrays inputs_,
+                              InputArrayOfArrays outputs) CV_OVERRIDE {
         CV_CheckFalse(trans_a, "DNN/Gemm/Cuda: does not support transA");
         CV_CheckTrue(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        auto wrapper_A = inputs[0].dynamicCast<CUDABackendWrapper>();
+        std::vector<cuda::GpuMatND> inputs;
+        inputs_.getGpuMatNDVector(inputs);
         auto B = blobs[0];
         auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
             cv::transpose(B, B);
-        auto flatten_start_axis = normalize_axis(1, wrapper_A->getRank());
+        auto flatten_start_axis = normalize_axis(1, (int)inputs[0].size.size());
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
     }
 #endif // HAVE_CUDA

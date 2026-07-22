@@ -34,7 +34,7 @@ private:
     const flatbuffers::Vector<flatbuffers::Offset<opencv_tflite::Tensor> >* modelTensors;
     std::map<int, Mat> allTensors;
     Net& dstNet;
-    std::vector<Ptr<Layer>> curProg;
+    std::vector<Ptr<LayerInfo>> curProg;
 
     // This is a vector of pairs (layerId, outputId) where we iterate over
     // indices from TFLite notation and get created OpenCV layers.
@@ -540,6 +540,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
         if (filterScales->size() == 1) {
             layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
         } else {
+            CV_CheckEQ((int)filterScales->size(), oc, "TFLite: number of filter quantization scales must match the number of output channels");
             for (size_t i = 0; i < filterScales->size(); ++i) {
                 layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
             }
@@ -605,6 +606,7 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
         if (filterScales->size() == 1) {
             layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
         } else {
+            CV_CheckEQ((int)filterScales->size(), oc, "TFLite: number of filter quantization scales must match the number of output channels");
             for (size_t i = 0; i < filterScales->size(); ++i) {
                 layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
             }
@@ -631,16 +633,19 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
     Mat paddings = allTensors[op.inputs()->Get(1)].clone();
 
     CV_CheckTypeEQ(paddings.type(), CV_32S, "");
-    //  N    H    W    C
-    // 0 1  2 3  4 5  6 7
-    std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
-    std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
-    //  N    C    W    H
-    // 0 1  2 3  4 5  6 7
-    std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
-    std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
-    //  N    C    H    W
-    // 0 1  2 3  4 5  6 7
+    if (paddings.total() == 8)
+    {
+        //  N    H    W    C
+        // 0 1  2 3  4 5  6 7
+        std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
+        std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
+        //  N    C    W    H
+        // 0 1  2 3  4 5  6 7
+        std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
+        std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
+        //  N    C    H    W
+        // 0 1  2 3  4 5  6 7
+    }
 
     layerParams.set("paddings", DictValue::arrayInt<int32_t*>((int32_t*)paddings.data, paddings.total()));
     addLayer(layerParams, op);
@@ -946,6 +951,7 @@ void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, 
         layerParams.set("half_pixel_centers", options->half_pixel_centers());
     }
     Mat shape = allTensors[op.inputs()->Get(1)].reshape(1, 1);
+    CV_CheckGE(shape.total(), (size_t)2, "TFLite Resize: size tensor must hold height and width");
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
     addLayer(layerParams, op);
@@ -1497,10 +1503,20 @@ void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& in
     }
 }
 
-Net readNetFromTFLite(const String &modelPath, int engine) {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
+// ENGINE_CLASSIC/ENGINE_AUTO have been removed; the TFLite importer always uses the new engine.
+static void warnIfUnsupportedTFLiteEngine(int engine)
+{
+    static const int engine_forced =
+        (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_NEW);
+    if (engine_forced == ENGINE_NEW)
         engine = engine_forced;
+    if (engine != ENGINE_NEW)
+        CV_LOG_WARNING(NULL, "DNN/TFLite: only ENGINE_NEW is supported; "
+                             "ENGINE_CLASSIC/ENGINE_AUTO are deprecated, using ENGINE_NEW.");
+}
+
+Net readNetFromTFLite(const String &modelPath, int engine) {
+    warnIfUnsupportedTFLiteEngine(engine);
 
     Net net;
 
@@ -1520,7 +1536,7 @@ Net readNetFromTFLite(const String &modelPath, int engine) {
     ifs.read(content.data(), sz);
     CV_Assert(!ifs.bad());
 
-    TFLiteImporter(net, content.data(), content.size(), engine == ENGINE_NEW || engine == ENGINE_AUTO);
+    TFLiteImporter(net, content.data(), content.size(), /*newEngine*/ true);
     return net;
 }
 
@@ -1529,12 +1545,10 @@ Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine) {
 }
 
 Net readNetFromTFLite(const char *bufferModel, size_t bufSize, int engine) {
-    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-    if(engine_forced != ENGINE_AUTO)
-        engine = engine_forced;
+    warnIfUnsupportedTFLiteEngine(engine);
 
     Net net;
-    TFLiteImporter(net, bufferModel, bufSize, engine == ENGINE_NEW || engine == ENGINE_AUTO);
+    TFLiteImporter(net, bufferModel, bufSize, /*newEngine*/ true);
     return net;
 }
 

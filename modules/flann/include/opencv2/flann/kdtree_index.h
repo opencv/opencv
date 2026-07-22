@@ -449,7 +449,11 @@ private:
         DynamicBitset checked(size_);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
+        // Kept in thread_local storage so each thread owns an independent heap
+        // and no process-wide lock is taken on the search hot path (issue #25281).
+        thread_local cv::Ptr<Heap<BranchSt>> heap = cv::makePtr<Heap<BranchSt>>((int)size_);
+        heap->clear();
+        heap->reserve((int)size_);
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {

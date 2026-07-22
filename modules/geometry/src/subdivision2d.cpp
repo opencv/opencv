@@ -793,6 +793,7 @@ void Subdiv2D::getLeadingEdgeList(std::vector<int>& leadingEdgeList) const
 {
     leadingEdgeList.clear();
     int i, total = (int)(qedges.size()*4);
+    //use a std::vector<bool> to benefit from the "bitset size/8" implementation
     std::vector<bool> edgemask(total, false);
 
     for( i = 4; i < total; i += 2 )
@@ -813,6 +814,7 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 {
     triangleList.clear();
     int i, total = (int)(qedges.size()*4);
+    //use a std::vector<bool> to benefit from the "bitset size/8" implementation
     std::vector<bool> edgemask(total, false);
     Rect2f rect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
 

@@ -63,10 +63,10 @@
 
 namespace cv
 {
-    static inline uchar abs(uchar a) { return a; }
-    static inline ushort abs(ushort a) { return a; }
-    static inline unsigned abs(unsigned a) { return a; }
-    static inline uint64 abs(uint64 a) { return a; }
+    inline uchar abs(uchar a) { return a; }
+    inline ushort abs(ushort a) { return a; }
+    inline unsigned abs(unsigned a) { return a; }
+    inline uint64 abs(uint64 a) { return a; }
 
     using std::min;
     using std::max;
@@ -155,26 +155,26 @@ typedef std::string String;
 //! @cond IGNORED
 namespace details {
 // std::tolower is int->int
-static inline char char_tolower(char ch)
+inline char char_tolower(char ch)
 {
     return (char)std::tolower((int)ch);
 }
 // std::toupper is int->int
-static inline char char_toupper(char ch)
+inline char char_toupper(char ch)
 {
     return (char)std::toupper((int)ch);
 }
 } // namespace details
 //! @endcond
 
-static inline std::string toLowerCase(const std::string& str)
+inline std::string toLowerCase(const std::string& str)
 {
     std::string result(str);
     std::transform(result.begin(), result.end(), result.begin(), details::char_tolower);
     return result;
 }
 
-static inline std::string toUpperCase(const std::string& str)
+inline std::string toUpperCase(const std::string& str)
 {
     std::string result(str);
     std::transform(result.begin(), result.end(), result.begin(), details::char_toupper);

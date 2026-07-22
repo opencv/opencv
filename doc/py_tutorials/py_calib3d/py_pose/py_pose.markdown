@@ -50,12 +50,14 @@ our X axis is drawn from (0,0,0) to (3,0,0), so for Y axis. For Z axis, it is dr
 (0,0,-3). Negative denotes it is drawn towards the camera.
 @code{.py}
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-objp = np.zeros((6*7,3), np.float32)
-objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+cols = 6
+rows = 7
+objp = np.zeros((cols*rows,3), np.float32)
+objp[:,:2] = np.mgrid[0:cols,0:rows].T.reshape(-1,2)
 
 axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
 @endcode
-Now, as usual, we load each image. Search for 7x6 grid. If found, we refine it with subcorner
+Now, as usual, we load each image. Search for 6x7 grid. If found, we refine it with subcorner
 pixels. Then to calculate the rotation and translation, we use the function,
 **cv.solvePnPRansac()**. Once we those transformation matrices, we use them to project our **axis
 points** to the image plane. In simple words, we find the points on image plane corresponding to
@@ -65,7 +67,7 @@ to each of these points using our generateImage() function. Done !!!
 for fname in glob.glob('left*.jpg'):
     img = cv.imread(fname)
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    ret, corners = cv.findChessboardCorners(gray, (7,6),None)
+    ret, corners = cv.findChessboardCorners(gray, (cols, rows), None)
 
     if ret == True:
         corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)

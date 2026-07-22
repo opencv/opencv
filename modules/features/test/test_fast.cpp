@@ -165,4 +165,14 @@ TEST(Features2d_FAST, noNMS)
     ASSERT_EQ( 0, cvtest::norm(gt_kps, kps, NORM_L2));
 }
 
+TEST(Features2d_FAST, invalidDetectorType)
+{
+    Mat img = Mat::zeros(16, 16, CV_8UC1);
+    vector<KeyPoint> keypoints;
+
+    EXPECT_THROW(FAST(img, keypoints, 10, true,
+                      static_cast<FastFeatureDetector::DetectorType>(-1)),
+                 cv::Exception);
+}
+
 }} // namespace

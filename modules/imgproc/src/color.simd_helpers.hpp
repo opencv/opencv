@@ -39,6 +39,12 @@ template<> struct ColorChannel<float>
     static inline float half() { return 0.5f; }
 };
 
+// in-place swap; works for sizeless scalable vector types, where std::swap may not compile
+template<typename _Tp> static inline void v_swap(_Tp& a, _Tp& b)
+{
+    _Tp t = a; a = b; b = t;
+}
+
 /*template<> struct ColorChannel<double>
 {
     typedef double worktype_f;
@@ -171,6 +177,19 @@ void CvtColorLoop(const uchar * src_data, size_t src_step, uchar * dst_data, siz
     parallel_for_(Range(0, height),
                   CvtColorLoop_Invoker<Cvt>(src_data, src_step, dst_data, dst_step, width, cvt),
                   (width * height) / static_cast<double>(1<<16));
+}
+
+// run CvtColorLoop for CV_8U/CV_16U/CV_32F, building the per-depth functor via make(<typed tag>)
+template <typename MakeCvt> static inline
+void CvtColorLoopDepth(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
+                       int width, int height, int depth, const MakeCvt& make)
+{
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, make(uchar(0)));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, make(ushort(0)));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, make(float(0)));
 }
 
 } //namespace

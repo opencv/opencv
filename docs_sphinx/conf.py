@@ -169,9 +169,12 @@ html_theme_options = {
     "show_toc_level": 2,
     "navigation_with_keys": True,
     "show_prev_next": True,
-    "show_nav_level": 2,
+    # 1, not 2: the theme force-opens every <details> up to this level and
+    # modules render at toctree-l1, so 2 would expand all of them; 1 opens only
+    # the current module's branch. Render depth is unaffected (navigation_depth).
+    "show_nav_level": 1,
     "navigation_depth": 4,
-    "secondary_sidebar_items": {"**": ["page-toc"], "index": []},
+    "secondary_sidebar_items": {"**": ["page-toc"], "index": ["page-toc", "resources"]},
     "back_to_top_button": True,
     "show_version_warning_banner": False,
     "icon_links": [{"name": "GitHub",
@@ -200,4 +203,5 @@ if not _in_source_tree(SPHINX_INPUT_ROOT):
 def setup(app):
     app.connect("source-read", _source_read)
     app.connect("build-finished", _inline_coll_graphs_on_finish)
+    conf_helpers.patches.register_global_sidebar(app)
     return {"parallel_read_safe": True, "parallel_write_safe": True}

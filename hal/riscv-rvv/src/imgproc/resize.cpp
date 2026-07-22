@@ -6,7 +6,26 @@
 
 #include "rvv_hal.hpp"
 #include "common.hpp"
+#include "opencv2/core/softfloat.hpp"
 #include <list>
+
+// Coverage matrix (depth x channels x interpolation). Entries not listed fall back to the
+// generic implementation via CV_HAL_ERROR_NOT_IMPLEMENTED.
+//
+//                    | 8UC1 8UC2 8UC3 8UC4 | 16UC1 16UC2 16UC3 16UC4 | 32FC1 32FC2 32FC3 32FC4
+// NEAREST            |  Y    Y    Y    Y   |  Y*    Y*    -     -    |  Y*    -     -     -
+// NEAREST_EXACT      |  Y    Y    Y    Y   |  Y*    Y*    -     -    |  Y*    -     -     -
+// LINEAR             |  Y    Y    Y    Y   |  Y     Y     Y     Y    |  Y     Y     Y     Y
+// LINEAR_EXACT       |  Y    Y    Y    Y   |  -     -     -     -    |  n/a (core uses LINEAR)
+// AREA (2x2 fast)    |  Y    Y    Y    Y   |  Y     Y     Y     Y    |  -     -     -     -
+// AREA (generic dn)  |  Y    Y    Y    Y   |  -     -     -     -    |  -     -     -     -
+// AREA (upscale)     |  -  (falls back: core maps AREA upscale to LINEAR-like path)
+// CUBIC / LANCZOS4   |  -  (not implemented)
+//
+// Y* : NEAREST dispatches on element size in bytes (1..4), so 16UC1/16UC2/32FC1/32SC1 etc.
+//      are covered by the same gather kernels as 8UC2/8UC4.
+// Additional limits: width guards require cn*src_width (resp. cn*4*src_width for AREA
+// generic) to fit in ushort, since gather indices are 16-bit byte offsets.
 
 namespace cv { namespace rvv_hal { namespace imgproc {
 
@@ -39,16 +58,14 @@ static inline int invoke(int height, std::function<int(int, int, Args...)> func,
     return func(0, 1, std::forward<Args>(args)...);
 }
 
+// cn is the element size in bytes, not the channel count; x_ofs/y_ofs hold precomputed
+// clamped source offsets (x in bytes) so NEAREST and NEAREST_EXACT share the same kernel
 template<int cn>
-static inline int resizeNN(int start, int end, const uchar *src_data, size_t src_step, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, double scale_y, int interpolation, const ushort* x_ofs)
+static inline int resizeNN(int start, int end, const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int dst_width, const int* y_ofs_tab, const ushort* x_ofs)
 {
-    const int ify = ((src_height << 16) + dst_height / 2) / dst_height;
-    const int ify0 = ify / 2 - src_height % 2;
-
     for (int i = start; i < end; i++)
     {
-        int y_ofs = interpolation == CV_HAL_INTER_NEAREST ? static_cast<int>(std::floor(i * scale_y)) : (ify * i + ify0) >> 16;
-        y_ofs = std::min(y_ofs, src_height - 1);
+        int y_ofs = y_ofs_tab[i];
 
         int vl;
         switch (cn)
@@ -102,6 +119,8 @@ template<> struct rvv<RVV_U8M1>
 {
     static inline vfloat32m4_t vcvt0(vuint8m1_t a, size_t b) { return __riscv_vfcvt_f(__riscv_vzext_vf4(a, b), b); }
     static inline vuint8m1_t vcvt1(vfloat32m4_t a, size_t b) { return __riscv_vnclipu(__riscv_vfncvt_xu(a, b), 0, __RISCV_VXRM_RNU, b); }
+    static inline vint32m4_t vwiden(vuint8m1_t a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
+    static inline vuint8m1_t vnarrow(vint32m4_t a, size_t b) { return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m4_u32m4(a), b), b); }
     static inline vuint8m1_t vloxei(const uchar* a, vuint16m2_t b, size_t c) { return __riscv_vloxei16_v_u8m1(a, b, c); }
     static inline void vloxseg2ei(const uchar* a, vuint16m2_t b, size_t c, vuint8m1_t& x, vuint8m1_t& y) { auto src = __riscv_vloxseg2ei16_v_u8m1x2(a, b, c); x = __riscv_vget_v_u8m1x2_u8m1(src, 0); y = __riscv_vget_v_u8m1x2_u8m1(src, 1); }
     static inline void vloxseg3ei(const uchar* a, vuint16m2_t b, size_t c, vuint8m1_t& x, vuint8m1_t& y, vuint8m1_t& z) { auto src = __riscv_vloxseg3ei16_v_u8m1x3(a, b, c); x = __riscv_vget_v_u8m1x3_u8m1(src, 0); y = __riscv_vget_v_u8m1x3_u8m1(src, 1); z = __riscv_vget_v_u8m1x3_u8m1(src, 2); }
@@ -148,6 +167,8 @@ template<> struct rvv<RVV_U8MF2>
 {
     static inline vfloat32m2_t vcvt0(vuint8mf2_t a, size_t b) { return __riscv_vfcvt_f(__riscv_vzext_vf4(a, b), b); }
     static inline vuint8mf2_t vcvt1(vfloat32m2_t a, size_t b) { return __riscv_vnclipu(__riscv_vfncvt_xu(a, b), 0, __RISCV_VXRM_RNU, b); }
+    static inline vint32m2_t vwiden(vuint8mf2_t a, size_t b) { return __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(a, b)); }
+    static inline vuint8mf2_t vnarrow(vint32m2_t a, size_t b) { return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(a), b), b); }
     static inline vuint8mf2_t vloxei(const uchar* a, vuint16m1_t b, size_t c) { return __riscv_vloxei16_v_u8mf2(a, b, c); }
     static inline void vloxseg2ei(const uchar* a, vuint16m1_t b, size_t c, vuint8mf2_t& x, vuint8mf2_t& y) { auto src = __riscv_vloxseg2ei16_v_u8mf2x2(a, b, c); x = __riscv_vget_v_u8mf2x2_u8mf2(src, 0); y = __riscv_vget_v_u8mf2x2_u8mf2(src, 1); }
     static inline void vloxseg3ei(const uchar* a, vuint16m1_t b, size_t c, vuint8mf2_t& x, vuint8mf2_t& y, vuint8mf2_t& z) { auto src = __riscv_vloxseg3ei16_v_u8mf2x3(a, b, c); x = __riscv_vget_v_u8mf2x3_u8mf2(src, 0); y = __riscv_vget_v_u8mf2x3_u8mf2(src, 1); z = __riscv_vget_v_u8mf2x3_u8mf2(src, 2); }
@@ -305,6 +326,150 @@ static inline int resizeLinear(int start, int end, const uchar *src_data, size_t
                 v32 = __riscv_vfmadd(__riscv_vfsub(v33, v32, vl), mx, v32, vl);
                 v30 = __riscv_vfmadd(__riscv_vfsub(v32, v30, vl), my, v30, vl);
                 rvv<helper>::vsseg4e(reinterpret_cast<T*>(dst_data + i * dst_step) + j * 4, vl, rvv<helper>::vcvt1(v00, vl), rvv<helper>::vcvt1(v10, vl), rvv<helper>::vcvt1(v20, vl), rvv<helper>::vcvt1(v30, vl));
+            }
+            break;
+        default:
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+static const int INTER_RESIZE_COEF_BITS = 11;
+static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
+
+// Bit-exact fixed-point vertical+horizontal linear combine for one channel, matching the reference
+// HResizeLinear<uchar,int,short,INTER_RESIZE_COEF_SCALE> + VResizeLinear<uchar,int,short,
+// FixedPtCast<int,uchar,INTER_RESIZE_COEF_BITS*2>> in modules/imgproc/src/resize.cpp.
+// Sxy are the four widened (int32) source corners; a0/a1 the horizontal weights (per column),
+// b0/b1 the vertical weights (per row). The staged >>4 / >>16 / >>2 shifts (total 22) reproduce the
+// reference exactly and keep the intermediates within int32.
+template<typename VI>
+static inline VI resizeLinearU8Combine(VI S00, VI S01, VI S10, VI S11, VI a0, VI a1, int b0, int b1, size_t vl)
+{
+    VI h0 = __riscv_vmacc(__riscv_vmul(S00, a0, vl), S01, a1, vl); // S[y0][x0]*a0 + S[y0][x1]*a1
+    VI h1 = __riscv_vmacc(__riscv_vmul(S10, a0, vl), S11, a1, vl); // S[y1][x0]*a0 + S[y1][x1]*a1
+    h0 = __riscv_vsra(__riscv_vmul(__riscv_vsra(h0, 4, vl), b0, vl), 16, vl); // (b0*(h0>>4))>>16
+    h1 = __riscv_vsra(__riscv_vmul(__riscv_vsra(h1, 4, vl), b1, vl), 16, vl); // (b1*(h1>>4))>>16
+    return __riscv_vsra(__riscv_vadd(__riscv_vadd(h0, h1, vl), 2, vl), 2, vl); // (t0 + t1 + 2) >> 2
+}
+
+// the algorithm is copied from imgproc/src/resize.cpp, HResizeLinear + VResizeLinear for uchar.
+// The generic resizeLinear<> above computes in float, which is bit-exact only for 16U/32F; 8U
+// INTER_LINEAR must use this fixed-point path to match the reference (float drift breaks tight
+// consumers such as DNN blobFromImage preprocessing, issue #28870).
+template<typename helper, int cn>
+static inline int resizeLinearU8(int start, int end, const uchar *src_data, size_t src_step, int src_height, uchar *dst_data, size_t dst_step, int dst_width, double scale_y, const ushort* x_ofs0, const ushort* x_ofs1, const int* ialpha0, const int* ialpha1)
+{
+    for (int i = start; i < end; i++)
+    {
+        float my = (i + 0.5) * scale_y - 0.5;
+        int y_ofs = static_cast<int>(std::floor(my));
+        my -= y_ofs;
+
+        int y_ofs0 = std::min(std::max(y_ofs    , 0), src_height - 1);
+        int y_ofs1 = std::min(std::max(y_ofs + 1, 0), src_height - 1);
+        int b0 = saturate_cast<short>((1.f - my) * INTER_RESIZE_COEF_SCALE);
+        int b1 = saturate_cast<short>(my         * INTER_RESIZE_COEF_SCALE);
+
+        const uchar* S0 = src_data + y_ofs0 * src_step;
+        const uchar* S1 = src_data + y_ofs1 * src_step;
+
+        int vl;
+        switch (cn)
+        {
+        case 1:
+            for (int j = 0; j < dst_width; j += vl)
+            {
+                vl = helper::setvl(dst_width - j);
+                auto ptr0 = RVV_SameLen<ushort, helper>::vload(x_ofs0 + j, vl);
+                auto ptr1 = RVV_SameLen<ushort, helper>::vload(x_ofs1 + j, vl);
+                auto a0 = RVV_SameLen<int, helper>::vload(ialpha0 + j, vl);
+                auto a1 = RVV_SameLen<int, helper>::vload(ialpha1 + j, vl);
+
+                auto v00 = rvv<helper>::vwiden(rvv<helper>::vloxei(S0, ptr0, vl), vl);
+                auto v01 = rvv<helper>::vwiden(rvv<helper>::vloxei(S0, ptr1, vl), vl);
+                auto v02 = rvv<helper>::vwiden(rvv<helper>::vloxei(S1, ptr0, vl), vl);
+                auto v03 = rvv<helper>::vwiden(rvv<helper>::vloxei(S1, ptr1, vl), vl);
+
+                auto d0 = resizeLinearU8Combine(v00, v01, v02, v03, a0, a1, b0, b1, vl);
+                helper::vstore(reinterpret_cast<typename helper::ElemType*>(dst_data + i * dst_step) + j, rvv<helper>::vnarrow(d0, vl), vl);
+            }
+            break;
+        case 2:
+            for (int j = 0; j < dst_width; j += vl)
+            {
+                vl = helper::setvl(dst_width - j);
+                auto ptr0 = RVV_SameLen<ushort, helper>::vload(x_ofs0 + j, vl);
+                auto ptr1 = RVV_SameLen<ushort, helper>::vload(x_ofs1 + j, vl);
+                auto a0 = RVV_SameLen<int, helper>::vload(ialpha0 + j, vl);
+                auto a1 = RVV_SameLen<int, helper>::vload(ialpha1 + j, vl);
+
+                typename helper::VecType s0, s1;
+                rvv<helper>::vloxseg2ei(S0, ptr0, vl, s0, s1);
+                auto v00 = rvv<helper>::vwiden(s0, vl), v10 = rvv<helper>::vwiden(s1, vl);
+                rvv<helper>::vloxseg2ei(S0, ptr1, vl, s0, s1);
+                auto v01 = rvv<helper>::vwiden(s0, vl), v11 = rvv<helper>::vwiden(s1, vl);
+                rvv<helper>::vloxseg2ei(S1, ptr0, vl, s0, s1);
+                auto v02 = rvv<helper>::vwiden(s0, vl), v12 = rvv<helper>::vwiden(s1, vl);
+                rvv<helper>::vloxseg2ei(S1, ptr1, vl, s0, s1);
+                auto v03 = rvv<helper>::vwiden(s0, vl), v13 = rvv<helper>::vwiden(s1, vl);
+
+                auto d0 = resizeLinearU8Combine(v00, v01, v02, v03, a0, a1, b0, b1, vl);
+                auto d1 = resizeLinearU8Combine(v10, v11, v12, v13, a0, a1, b0, b1, vl);
+                rvv<helper>::vsseg2e(reinterpret_cast<typename helper::ElemType*>(dst_data + i * dst_step) + j * 2, vl, rvv<helper>::vnarrow(d0, vl), rvv<helper>::vnarrow(d1, vl));
+            }
+            break;
+        case 3:
+            for (int j = 0; j < dst_width; j += vl)
+            {
+                vl = helper::setvl(dst_width - j);
+                auto ptr0 = RVV_SameLen<ushort, helper>::vload(x_ofs0 + j, vl);
+                auto ptr1 = RVV_SameLen<ushort, helper>::vload(x_ofs1 + j, vl);
+                auto a0 = RVV_SameLen<int, helper>::vload(ialpha0 + j, vl);
+                auto a1 = RVV_SameLen<int, helper>::vload(ialpha1 + j, vl);
+
+                typename helper::VecType s0, s1, s2;
+                rvv<helper>::vloxseg3ei(S0, ptr0, vl, s0, s1, s2);
+                auto v00 = rvv<helper>::vwiden(s0, vl), v10 = rvv<helper>::vwiden(s1, vl), v20 = rvv<helper>::vwiden(s2, vl);
+                rvv<helper>::vloxseg3ei(S0, ptr1, vl, s0, s1, s2);
+                auto v01 = rvv<helper>::vwiden(s0, vl), v11 = rvv<helper>::vwiden(s1, vl), v21 = rvv<helper>::vwiden(s2, vl);
+                rvv<helper>::vloxseg3ei(S1, ptr0, vl, s0, s1, s2);
+                auto v02 = rvv<helper>::vwiden(s0, vl), v12 = rvv<helper>::vwiden(s1, vl), v22 = rvv<helper>::vwiden(s2, vl);
+                rvv<helper>::vloxseg3ei(S1, ptr1, vl, s0, s1, s2);
+                auto v03 = rvv<helper>::vwiden(s0, vl), v13 = rvv<helper>::vwiden(s1, vl), v23 = rvv<helper>::vwiden(s2, vl);
+
+                auto d0 = resizeLinearU8Combine(v00, v01, v02, v03, a0, a1, b0, b1, vl);
+                auto d1 = resizeLinearU8Combine(v10, v11, v12, v13, a0, a1, b0, b1, vl);
+                auto d2 = resizeLinearU8Combine(v20, v21, v22, v23, a0, a1, b0, b1, vl);
+                rvv<helper>::vsseg3e(reinterpret_cast<typename helper::ElemType*>(dst_data + i * dst_step) + j * 3, vl, rvv<helper>::vnarrow(d0, vl), rvv<helper>::vnarrow(d1, vl), rvv<helper>::vnarrow(d2, vl));
+            }
+            break;
+        case 4:
+            for (int j = 0; j < dst_width; j += vl)
+            {
+                vl = helper::setvl(dst_width - j);
+                auto ptr0 = RVV_SameLen<ushort, helper>::vload(x_ofs0 + j, vl);
+                auto ptr1 = RVV_SameLen<ushort, helper>::vload(x_ofs1 + j, vl);
+                auto a0 = RVV_SameLen<int, helper>::vload(ialpha0 + j, vl);
+                auto a1 = RVV_SameLen<int, helper>::vload(ialpha1 + j, vl);
+
+                typename helper::VecType s0, s1, s2, s3;
+                rvv<helper>::vloxseg4ei(S0, ptr0, vl, s0, s1, s2, s3);
+                auto v00 = rvv<helper>::vwiden(s0, vl), v10 = rvv<helper>::vwiden(s1, vl), v20 = rvv<helper>::vwiden(s2, vl), v30 = rvv<helper>::vwiden(s3, vl);
+                rvv<helper>::vloxseg4ei(S0, ptr1, vl, s0, s1, s2, s3);
+                auto v01 = rvv<helper>::vwiden(s0, vl), v11 = rvv<helper>::vwiden(s1, vl), v21 = rvv<helper>::vwiden(s2, vl), v31 = rvv<helper>::vwiden(s3, vl);
+                rvv<helper>::vloxseg4ei(S1, ptr0, vl, s0, s1, s2, s3);
+                auto v02 = rvv<helper>::vwiden(s0, vl), v12 = rvv<helper>::vwiden(s1, vl), v22 = rvv<helper>::vwiden(s2, vl), v32 = rvv<helper>::vwiden(s3, vl);
+                rvv<helper>::vloxseg4ei(S1, ptr1, vl, s0, s1, s2, s3);
+                auto v03 = rvv<helper>::vwiden(s0, vl), v13 = rvv<helper>::vwiden(s1, vl), v23 = rvv<helper>::vwiden(s2, vl), v33 = rvv<helper>::vwiden(s3, vl);
+
+                auto d0 = resizeLinearU8Combine(v00, v01, v02, v03, a0, a1, b0, b1, vl);
+                auto d1 = resizeLinearU8Combine(v10, v11, v12, v13, a0, a1, b0, b1, vl);
+                auto d2 = resizeLinearU8Combine(v20, v21, v22, v23, a0, a1, b0, b1, vl);
+                auto d3 = resizeLinearU8Combine(v30, v31, v32, v33, a0, a1, b0, b1, vl);
+                rvv<helper>::vsseg4e(reinterpret_cast<typename helper::ElemType*>(dst_data + i * dst_step) + j * 4, vl, rvv<helper>::vnarrow(d0, vl), rvv<helper>::vnarrow(d1, vl), rvv<helper>::vnarrow(d2, vl), rvv<helper>::vnarrow(d3, vl));
             }
             break;
         default:
@@ -739,29 +904,44 @@ static inline int resizeArea(int start, int end, const uchar *src_data, size_t s
 // in the function static void resizeNN and static void resizeNN_bitexact
 static inline int resizeNN(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, double scale_x, double scale_y, int interpolation)
 {
-    const int cn = CV_ELEM_SIZE(src_type);
-    if (cn * src_width > std::numeric_limits<ushort>::max())
+    const int pix_size = CV_ELEM_SIZE(src_type);
+    if (pix_size * src_width > std::numeric_limits<ushort>::max())
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     std::vector<ushort> x_ofs(dst_width);
-    const int ifx = ((src_width << 16) + dst_width / 2) / dst_width;
-    const int ifx0 = ifx / 2 - src_width % 2;
-    for (int i = 0; i < dst_width; i++)
+    std::vector<int> y_ofs(dst_height);
+    if (interpolation == CV_HAL_INTER_NEAREST)
     {
-        x_ofs[i] = interpolation == CV_HAL_INTER_NEAREST ? static_cast<ushort>(std::floor(i * scale_x)) : (ifx * i + ifx0) >> 16;
-        x_ofs[i] = std::min(x_ofs[i], static_cast<ushort>(src_width - 1)) * cn;
+        for (int i = 0; i < dst_width; i++)
+            x_ofs[i] = static_cast<ushort>(std::min(cvFloor(i * scale_x), src_width - 1) * pix_size);
+        for (int i = 0; i < dst_height; i++)
+            y_ofs[i] = std::min(cvFloor(i * scale_y), src_height - 1);
+    }
+    else
+    {
+        // NEAREST_EXACT must reproduce resizeNN_bitexact_tab: Pillow-compatible pixel-center
+        // mapping accumulated in softdouble, otherwise results diverge from the core path
+        const softdouble fx = softdouble(src_width) / softdouble(dst_width);
+        softdouble vx = fx * softdouble(0.5);
+        for (int i = 0; i < dst_width; i++, vx += fx)
+            x_ofs[i] = static_cast<ushort>(std::min(cvFloor(vx), src_width - 1) * pix_size);
+        const softdouble fy = softdouble(src_height) / softdouble(dst_height);
+        softdouble vy = fy * softdouble(0.5);
+        for (int i = 0; i < dst_height; i++, vy += fy)
+            y_ofs[i] = std::min(cvFloor(vy), src_height - 1);
     }
 
-    switch (src_type)
+    // gather kernels only depend on the element size, so e.g. 16UC1 shares the 8UC2 path
+    switch (pix_size)
     {
-    case CV_8UC1:
-        return invoke(dst_height, {resizeNN<1>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
-    case CV_8UC2:
-        return invoke(dst_height, {resizeNN<2>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
-    case CV_8UC3:
-        return invoke(dst_height, {resizeNN<3>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
-    case CV_8UC4:
-        return invoke(dst_height, {resizeNN<4>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
+    case 1:
+        return invoke(dst_height, {resizeNN<1>}, src_data, src_step, dst_data, dst_step, dst_width, y_ofs.data(), x_ofs.data());
+    case 2:
+        return invoke(dst_height, {resizeNN<2>}, src_data, src_step, dst_data, dst_step, dst_width, y_ofs.data(), x_ofs.data());
+    case 3:
+        return invoke(dst_height, {resizeNN<3>}, src_data, src_step, dst_data, dst_step, dst_width, y_ofs.data(), x_ofs.data());
+    case 4:
+        return invoke(dst_height, {resizeNN<4>}, src_data, src_step, dst_data, dst_step, dst_width, y_ofs.data(), x_ofs.data());
     }
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
@@ -799,6 +979,37 @@ static inline int resizeLinear(int src_type, const uchar *src_data, size_t src_s
             return invoke(dst_height, {resizeLinearExact<3>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), x_val.data());
         case CV_8UC4:
             return invoke(dst_height, {resizeLinearExact<4>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), x_val.data());
+        }
+    }
+    else if (CV_MAT_DEPTH(src_type) == CV_8U)
+    {
+        // 8U INTER_LINEAR must be bit-exact fixed-point to match the reference implementation;
+        // computing it in float drifts and breaks tight consumers (e.g. DNN preprocessing, #28870).
+        std::vector<int> ialpha0(dst_width), ialpha1(dst_width);
+        for (int i = 0; i < dst_width; i++)
+        {
+            float fx = (float)((i + 0.5) * scale_x - 0.5);
+            int x_ofs = static_cast<int>(std::floor(fx));
+            fx -= x_ofs;
+            if (x_ofs < 0)              { fx = 0; x_ofs = 0; }
+            if (x_ofs >= src_width - 1) { fx = 0; x_ofs = src_width - 1; }
+
+            x_ofs0[i] = static_cast<ushort>(x_ofs) * cn;
+            x_ofs1[i] = static_cast<ushort>(std::min(x_ofs + 1, src_width - 1)) * cn;
+            ialpha0[i] = saturate_cast<short>((1.f - fx) * INTER_RESIZE_COEF_SCALE);
+            ialpha1[i] = saturate_cast<short>(fx         * INTER_RESIZE_COEF_SCALE);
+        }
+
+        switch (src_type)
+        {
+        case CV_8UC1:
+            return invoke(dst_height, {resizeLinearU8<RVV_U8M1, 1>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), ialpha0.data(), ialpha1.data());
+        case CV_8UC2:
+            return invoke(dst_height, {resizeLinearU8<RVV_U8M1, 2>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), ialpha0.data(), ialpha1.data());
+        case CV_8UC3:
+            return invoke(dst_height, {resizeLinearU8<RVV_U8MF2, 3>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), ialpha0.data(), ialpha1.data());
+        case CV_8UC4:
+            return invoke(dst_height, {resizeLinearU8<RVV_U8MF2, 4>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, scale_y, x_ofs0.data(), x_ofs1.data(), ialpha0.data(), ialpha1.data());
         }
     }
     else
@@ -990,8 +1201,8 @@ int resize(int src_type, const uchar *src_data, size_t src_step, int src_width, 
 {
     inv_scale_x = 1 / inv_scale_x;
     inv_scale_y = 1 / inv_scale_y;
-    //if (interpolation == CV_HAL_INTER_NEAREST || interpolation == CV_HAL_INTER_NEAREST_EXACT)
-    //    return resizeNN(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+    if (interpolation == CV_HAL_INTER_NEAREST || interpolation == CV_HAL_INTER_NEAREST_EXACT)
+        return resizeNN(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
     if (interpolation == CV_HAL_INTER_LINEAR || interpolation == CV_HAL_INTER_LINEAR_EXACT)
         return resizeLinear(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
     if (interpolation == CV_HAL_INTER_AREA)

@@ -48,6 +48,7 @@
 // */
 
 #include "precomp.hpp"
+#include "arithm_expr.hpp"   // the new element-wise engine (cv::ew)
 #include "opencl_kernels_core.hpp"
 
 namespace cv
@@ -61,6 +62,15 @@ enum { OCL_OP_ADD=0, OCL_OP_SUB=1, OCL_OP_RSUB=2, OCL_OP_ABSDIFF=3, OCL_OP_MUL=4
        OCL_OP_MUL_SCALE=5, OCL_OP_DIV_SCALE=6, OCL_OP_RECIP_SCALE=7, OCL_OP_ADDW=8,
        OCL_OP_AND=9, OCL_OP_OR=10, OCL_OP_XOR=11, OCL_OP_NOT=12, OCL_OP_MIN=13, OCL_OP_MAX=14,
        OCL_OP_RDIV_SCALE=15 };
+
+// The unified entry point for every element-wise binary op (empty + UMat/OpenCL + CPU engine). Defined
+// lower down (near cv::add); forward-declared here so cv::min/cv::max (above it) can use it too.
+static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray dst,
+                      InputArray mask, int dtype, int oclop, bool muldiv, const Scalar& params = Scalar(1));
+
+// The unary counterpart (bitwise NOT, unary math later). Forward-declared for the same reason.
+static void unary_op(ew::TOp op, InputArray src, OutputArray dst, InputArray mask,
+                     int dtype, const Scalar& params = Scalar());
 
 #ifdef HAVE_OPENCL
 
@@ -148,309 +158,119 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
-static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
-                       InputArray _mask, const BinaryFuncC* tab,
-                       bool bitwise, int oclop )
+// OpenCL path for the bitwise ops (and/or/xor/not), lifted out of binary_op: choose the (possibly
+// scalar) operand order, size the destination, and dispatch the shared bitwise OpenCL kernel. Returns
+// true if OpenCL handled the op, false to fall through to the CPU engine. NOT arrives unary
+// (src2 == src1, forced-scalar). The caller gates this on a UMat operand + dims <= 2 (via CV_OCL_RUN).
+#ifdef HAVE_OPENCL
+static bool bitwise_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
+                           InputArray _mask, int oclop)
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
-    int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
-    int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
-    int dims1 = psrc1->dims(), dims2 = psrc2->dims();
-    Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
-    Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
-#ifdef HAVE_OPENCL
-    bool use_opencl = (kind1 == _InputArray::UMAT || kind2 == _InputArray::UMAT) &&
-            dims1 <= 2 && dims2 <= 2;
-#endif
-    bool haveMask = !_mask.empty(), haveScalar = false;
-    BinaryFuncC func;
-
-    if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
-    {
-        _dst.createSameSize(*psrc1, type1);
-        CV_OCL_RUN(use_opencl,
-                   ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
-
-        if( bitwise )
-        {
-            func = *tab;
-            cn = (int)CV_ELEM_SIZE(type1);
-        }
-        else
-        {
-            func = tab[depth1];
-        }
-        CV_Assert(func);
-
-        Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
-        Size sz = getContinuousSize2D(src1, src2, dst);
-        size_t len = sz.width*(size_t)cn;
-        if (len < INT_MAX)  // FIXIT similar code below doesn't have that check
-        {
-            sz.width = (int)len;
-            func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, 0);
-            return;
-        }
-    }
+    int type1 = psrc1->type(), type2 = psrc2->type();
+    bool haveScalar = false;
 
     if( oclop == OCL_OP_NOT )
         haveScalar = true;
     else if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
-        !psrc1->sameSize(*psrc2) || type1 != type2 )
+             !psrc1->sameSize(*psrc2) || type1 != type2 )
     {
         if( checkScalar(*psrc1, type2, kind1, kind2) )
-        {
-            // src1 is a scalar; swap it with src2
-            swap(psrc1, psrc2);
-            swap(type1, type2);
-            swap(depth1, depth2);
-            swap(cn, cn2);
-            swap(sz1, sz2);
-        }
+        { std::swap(psrc1, psrc2); std::swap(type1, type2); }        // src1 is the scalar; swap it out
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( cv::Error::StsUnmatchedSizes,
-                      "The operation is neither 'array op array' (where arrays have the same size and type), "
-                      "nor 'array op scalar', nor 'scalar op array'" );
+            return false;
         haveScalar = true;
     }
-    else
-    {
-        CV_Assert( psrc1->sameSize(*psrc2) && type1 == type2 );
-    }
-
-    size_t esz = CV_ELEM_SIZE(type1);
-    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
-    BinaryFunc copymask = 0;
-    bool reallocate = false;
-
-    if( haveMask )
-    {
-        int mtype = _mask.type();
-        CV_Assert( (mtype == CV_8U || mtype == CV_8S || mtype == CV_Bool) && _mask.sameSize(*psrc1));
-        copymask = getCopyMaskFunc(esz);
-        reallocate = !_dst.sameSize(*psrc1) || _dst.type() != type1;
-    }
-
-    AutoBuffer<uchar> _buf;
-    uchar *scbuf = 0, *maskbuf = 0;
-
     _dst.createSameSize(*psrc1, type1);
-    // if this is mask operation and dst has been reallocated,
-    // we have to clear the destination
-    if( haveMask && reallocate )
-        _dst.setTo(0.);
-
-    CV_OCL_RUN(use_opencl,
-               ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, haveScalar))
-
-
-    Mat src1 = psrc1->getMat(), src2 = psrc2->getMat();
-    Mat dst = _dst.getMat(), mask = _mask.getMat();
-
-    if( bitwise )
-    {
-        func = *tab;
-        cn = (int)esz;
-    }
-    else
-        func = tab[depth1];
-    CV_Assert(func);
-
-    if( !haveScalar )
-    {
-        const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4] = {};
-
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size, blocksize = total;
-
-        if( blocksize*cn > INT_MAX )
-            blocksize = INT_MAX/cn;
-
-        if( haveMask )
-        {
-            blocksize = std::min(blocksize, blocksize0);
-            _buf.allocate(blocksize*esz);
-            maskbuf = _buf.data();
-        }
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-        {
-            for( size_t j = 0; j < total; j += blocksize )
-            {
-                int bsz = (int)MIN(total - j, blocksize);
-
-                func( ptrs[0], 0, ptrs[1], 0, haveMask ? maskbuf : ptrs[2], 0, bsz*cn, 1, 0 );
-                if( haveMask )
-                {
-                    copymask( maskbuf, 0, ptrs[3], 0, ptrs[2], 0, Size(bsz, 1), &esz );
-                    ptrs[3] += bsz;
-                }
-
-                bsz *= (int)esz;
-                ptrs[0] += bsz; ptrs[1] += bsz; ptrs[2] += bsz;
-            }
-        }
-    }
-    else
-    {
-        const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3] = {};
-
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size, blocksize = std::min(total, blocksize0);
-
-        _buf.allocate(blocksize*(haveMask ? 2 : 1)*esz + 32);
-        scbuf = _buf.data();
-        maskbuf = alignPtr(scbuf + blocksize*esz, 16);
-
-        convertAndUnrollScalar( src2, src1.type(), scbuf, blocksize);
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-        {
-            for( size_t j = 0; j < total; j += blocksize )
-            {
-                int bsz = (int)MIN(total - j, blocksize);
-
-                func( ptrs[0], 0, scbuf, 0, haveMask ? maskbuf : ptrs[1], 0, bsz*cn, 1, 0 );
-                if( haveMask )
-                {
-                    copymask( maskbuf, 0, ptrs[2], 0, ptrs[1], 0, Size(bsz, 1), &esz );
-                    ptrs[2] += bsz;
-                }
-
-                bsz *= (int)esz;
-                ptrs[0] += bsz; ptrs[1] += bsz;
-            }
-        }
-    }
+    return ocl_binary_op(*psrc1, *psrc2, _dst, _mask, true, oclop, haveScalar);
 }
-
-static BinaryFuncC* getMaxTab()
-{
-    static BinaryFuncC maxTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32f),
-        (BinaryFuncC)cv::hal::max64f,
-        (BinaryFuncC)cv::hal::max16f,
-        (BinaryFuncC)cv::hal::max16bf,
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u), // bool
-        (BinaryFuncC)cv::hal::max64u,
-        (BinaryFuncC)cv::hal::max64s,
-        (BinaryFuncC)cv::hal::max32u,
-        0
-    };
-
-    return maxTab;
-}
-
-static BinaryFuncC* getMinTab()
-{
-    static BinaryFuncC minTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32f),
-        (BinaryFuncC)cv::hal::min64f,
-        (BinaryFuncC)cv::hal::min16f,
-        (BinaryFuncC)cv::hal::min16bf,
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u), // bool
-        (BinaryFuncC)cv::hal::min64u,
-        (BinaryFuncC)cv::hal::min64s,
-        (BinaryFuncC)cv::hal::min32u,
-        0
-    };
-
-    return minTab;
-}
+#endif  // HAVE_OPENCL
 
 }
 
+// bitwise and/or/xor: OpenCL runs the shared bitwise kernel (via bitwise_op_ocl); the CPU path is the
+// element-wise engine (OP_AND/OR/XOR, T x T -> T dispatched by element size). oclop = -1 tells
+// arithm_op the OpenCL path was already tried, so it only runs the CPU engine. NOT is unary.
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::and8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_AND);
+    CV_OCL_RUN((a.isUMat() || b.isUMat() || c.isUMat()) && a.dims() <= 2 && b.dims() <= 2,
+               bitwise_op_ocl(a, b, c, mask, OCL_OP_AND))
+    arithm_op(ew::OP_AND, a, b, c, mask, -1, /*oclop=*/-1, /*muldiv=*/false);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::or8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_OR);
+    CV_OCL_RUN((a.isUMat() || b.isUMat() || c.isUMat()) && a.dims() <= 2 && b.dims() <= 2,
+               bitwise_op_ocl(a, b, c, mask, OCL_OP_OR))
+    arithm_op(ew::OP_OR, a, b, c, mask, -1, /*oclop=*/-1, /*muldiv=*/false);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::xor8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_XOR);
+    CV_OCL_RUN((a.isUMat() || b.isUMat() || c.isUMat()) && a.dims() <= 2 && b.dims() <= 2,
+               bitwise_op_ocl(a, b, c, mask, OCL_OP_XOR))
+    arithm_op(ew::OP_XOR, a, b, c, mask, -1, /*oclop=*/-1, /*muldiv=*/false);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::not8u);
-    binary_op(a, a, c, mask, &f, true, OCL_OP_NOT);
+    CV_OCL_RUN((a.isUMat() || c.isUMat()) && a.dims() <= 2,
+               bitwise_op_ocl(a, a, c, mask, OCL_OP_NOT))
+    unary_op(ew::OP_NOT, a, c, mask, -1);
 }
 
 void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    binary_op(src1, src2, dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    arithm_op(ew::OP_MAX, src1, src2, dst, noArray(), -1, OCL_OP_MAX, false);
 }
 
 void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    binary_op(src1, src2, dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
 }
 
+// The concrete Mat/UMat overloads of min/max exist because C++ overload resolution needs them (a
+// bare cv::min(mat, mat, mat) binds Mat& more tightly than InputArray); they must run the SAME engine
+// path as the InputArray forms - NOT the legacy binary_op - so mixed types and broadcasting work.
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
 {
     CV_INSTRUMENT_REGION();
 
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    arithm_op(ew::OP_MAX, src1, src2, dst, noArray(), -1, OCL_OP_MAX, false);
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
 {
     CV_INSTRUMENT_REGION();
 
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
 }
 
 void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
 {
     CV_INSTRUMENT_REGION();
 
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    arithm_op(ew::OP_MAX, src1, src2, dst, noArray(), -1, OCL_OP_MAX, false);
 }
 
 void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
 {
     CV_INSTRUMENT_REGION();
 
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
 }
 
 
@@ -461,6 +281,9 @@ void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
 namespace cv
 {
 
+#ifdef HAVE_OPENCL
+
+// used by the OpenCL branch only (arithm_op_ocl working-type selection)
 static int actualScalarDepth(const double* data, int len)
 {
     int i = 0, minval = INT_MAX, maxval = INT_MIN;
@@ -488,8 +311,6 @@ static int coerceTypes(int depth1, int depth2, bool muldiv)
         ((CV_ELEM_SIZE1(depth1) > 4) | (CV_ELEM_SIZE1(depth2) > 4)) != 0 ? CV_64F : CV_32F;
 }
 
-#ifdef HAVE_OPENCL
-
 static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, int wtype,
                           void* usrdata, int oclop,
@@ -502,6 +323,11 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if ( (haveMask || haveScalar) && cn > 4 )
         return false;
+
+#ifdef __APPLE__
+    if (depth1 == CV_16U && (oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE))
+        return false;
+#endif
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
     if (!doubleSupport)
@@ -611,20 +437,20 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
-typedef int (*ScalarFunc)(const uchar* src, size_t step_src,
-                          uchar* dst, size_t step_dst, int width, int height,
-                          void* scalar, bool scalarIsFirst, int nChannels);
-
-typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
-                                const uchar* src2, size_t step2,
-                                uchar* dst, size_t step, int width, int height,
-                                void*);
-
-static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
-                      InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
-                      void* usrdata=0, int oclop=-1, ExtendedTypeFunc extendedFunc = nullptr,
-                      ScalarFunc scalarFunc = nullptr)
+// OpenCL branch of the arithmetic ops, extracted from the former arithm_op (whose CPU compute is now
+// the element-wise engine). Returns true if an OpenCL kernel handled the op, false to let the caller
+// fall through to the CPU engine. min/max use the bitwise-style kernel; every other op the arithm
+// kernel with a coerced working type. `usrdata` carries the mul/div/addWeighted scale block, `oclop`
+// the kernel id. Only reached for a UMat dst; sizes/types that don't fit the scalar/same-size pattern
+// (e.g. a broadcast) decline (return false) so the engine handles them on the CPU.
+static bool arithm_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
+                          InputArray _mask, int dtype, int oclop, bool muldiv, void* usrdata)
 {
+#ifndef HAVE_OPENCL
+    CV_UNUSED(_src1); CV_UNUSED(_src2); CV_UNUSED(_dst); CV_UNUSED(_mask);
+    CV_UNUSED(dtype); CV_UNUSED(oclop); CV_UNUSED(muldiv); CV_UNUSED(usrdata);
+    return false;
+#else
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
@@ -634,61 +460,53 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int wtype, dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
-#ifdef HAVE_OPENCL
-    bool use_opencl = OCL_PERFORMANCE_CHECK(_dst.isUMat()) && dims1 <= 2 && dims2 <= 2;
-#endif
-    bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
-    bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
 
-    if( (kind1 == kind2 || cn == 1) && sz1 == sz2 && dims1 <= 2 && dims2 <= 2 && type1 == type2 &&
-        !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == depth1)) ||
-                       (_dst.fixedType() && _dst.type() == type1)) &&
-        (src1Scalar == src2Scalar) )
+    if (!(OCL_PERFORMANCE_CHECK(_dst.isUMat()) && dims1 <= 2 && dims2 <= 2))
+        return false;
+
+    // min/max: the bitwise-style OpenCL kernel (same-type element-wise, no working-type coercion).
+    if (oclop == OCL_OP_MIN || oclop == OCL_OP_MAX)
     {
-        _dst.createSameSize(*psrc1, type1);
-        CV_OCL_RUN(use_opencl,
-            ocl_arithm_op(*psrc1, *psrc2, _dst, _mask,
-                          (!usrdata ? type1 : std::max(depth1, CV_32F)),
-                          usrdata, oclop, false))
-
-        Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
-        Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        if (!extendedFunc || extendedFunc(src1.ptr(), src1.step, src2.ptr(), src2.step,
-                                          dst.ptr(), dst.step, sz.width, sz.height, usrdata) != 0)
+        bool haveScalar = false;
+        if ((kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
+            !psrc1->sameSize(*psrc2) || type1 != type2)
         {
-            BinaryFuncC func = tab[depth1];
-            CV_Assert(func);
-            func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+            if (checkScalar(*psrc1, type2, kind1, kind2))
+            { std::swap(psrc1, psrc2); std::swap(type1, type2); }
+            else if (!checkScalar(*psrc2, type1, kind2, kind1))
+                return false;
+            haveScalar = true;
         }
-        return;
+        _dst.createSameSize(*psrc1, type1);
+        return ocl_binary_op(*psrc1, *psrc2, _dst, _mask, false, oclop, haveScalar);
     }
 
-    bool haveScalar = false, swapped12 = false;
+    // reciprocal (scale/src): the OpenCL kernel is unary on src - use src2 for both operands (the CPU
+    // engine received a 0-dim `1` numerator as src1, which the recip kernel would ignore). [TODO.VP: tidy]
+    if (oclop == OCL_OP_RECIP_SCALE)
+    {
+        psrc1 = psrc2; kind1 = kind2; type1 = type2; depth1 = depth2; cn = cn2; dims1 = dims2; sz1 = sz2;
+    }
 
-    if( dims1 != dims2 || sz1 != sz2 || cn != cn2 ||
+    // add/sub/mul/div/absdiff/addWeighted/recip: the arithm OpenCL kernel with a coerced work type.
+    bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
+    bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
+    bool haveScalar = false;
+
+    if (dims1 != dims2 || sz1 != sz2 || cn != cn2 ||
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
-        (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
+        (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))))
     {
         if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) && src1Scalar)
         {
             // src1 is a scalar; swap it with src2
-            swap(psrc1, psrc2);
-            swap(sz1, sz2);
-            swap(type1, type2);
-            swap(depth1, depth2);
-            swap(cn, cn2);
-            swap(dims1, dims2);
-            swapped12 = true;
-            if( oclop == OCL_OP_SUB )
-                oclop = OCL_OP_RSUB;
-            if ( oclop == OCL_OP_DIV_SCALE )
-                oclop = OCL_OP_RDIV_SCALE;
+            std::swap(psrc1, psrc2); std::swap(sz1, sz2); std::swap(type1, type2);
+            std::swap(depth1, depth2); std::swap(cn, cn2); std::swap(dims1, dims2);
+            if (oclop == OCL_OP_SUB) oclop = OCL_OP_RSUB;
+            if (oclop == OCL_OP_DIV_SCALE) oclop = OCL_OP_RDIV_SCALE;
         }
-        else if( !src2Scalar )
-            CV_Error( cv::Error::StsUnmatchedSizes,
-                     "The operation is neither 'array op array' "
-                     "(where arrays have the same size and the same number of channels), "
-                     "nor 'array op scalar', nor 'scalar op array'" );
+        else if (!src2Scalar)
+            return false;   // array op array with mismatched size/cn: engine broadcasts on the CPU
         haveScalar = true;
         CV_Assert((type2 == CV_64F || type2 == CV_32F) && (sz2.height == 1 || sz2.height == 4));
 
@@ -696,20 +514,20 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             Mat sc = psrc2->getMat();
             depth2 = actualScalarDepth(sc.ptr<double>(), sz2 == Size(1, 1) ? cn2 : cn);
-            if( depth2 == CV_64F && CV_ELEM_SIZE1(depth1) < 8 )
+            if (depth2 == CV_64F && CV_ELEM_SIZE1(depth1) < 8)
                 depth2 = CV_32F;
         }
         else
             depth2 = CV_64F;
     }
 
-    if( dtype < 0 )
+    if (dtype < 0)
     {
-        if( _dst.fixedType() )
+        if (_dst.fixedType())
             dtype = _dst.type();
         else
         {
-            if( !haveScalar && type1 != type2 )
+            if (!haveScalar && type1 != type2)
                 CV_Error(cv::Error::StsBadArg,
                      "When the input arrays in add/subtract/multiply/divide functions have different types, "
                      "the output array type must be explicitly specified");
@@ -718,17 +536,13 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     dtype = CV_MAT_DEPTH(dtype);
 
-    if( depth1 == depth2 && dtype == depth1 )
+    if (depth1 == depth2 && dtype == depth1)
         wtype = dtype;
-    else if( !muldiv )
+    else if (!muldiv)
     {
         wtype = coerceTypes(depth1, depth2, false);
         wtype = coerceTypes(wtype, dtype, false);
-
-        // when the result of addition should be converted to an integer type,
-        // and just one of the input arrays is floating-point, it makes sense to convert that input to integer type before the operation,
-        // instead of converting the other input to floating-point and then converting the operation result back to integers.
-        if( dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F) )
+        if (dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F))
             wtype = CV_32S;
     }
     else
@@ -737,421 +551,315 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         wtype = coerceTypes(wtype, dtype, true);
     }
 
+    // The scaled OpenCL kernels (mul/div by a scale, reciprocal, addWeighted) compute in float; the old
+    // same-type fast path forced max(depth, CV_32F). coerceTypes keeps same-type integer, so bump here.
+    if (oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE || oclop == OCL_OP_RDIV_SCALE ||
+        oclop == OCL_OP_RECIP_SCALE || oclop == OCL_OP_ADDW)
+        wtype = std::max(wtype, (int)CV_32F);
+
     dtype = CV_MAKETYPE(dtype, cn);
     wtype = CV_MAKETYPE(wtype, cn);
 
-    if( haveMask )
+    if (haveMask)
     {
         int mtype = _mask.type();
-        CV_Assert( (mtype == CV_8UC1 || mtype == CV_8SC1 || mtype == CV_Bool) && _mask.sameSize(*psrc1) );
+        CV_Assert((mtype == CV_8UC1 || mtype == CV_8SC1 || mtype == CV_Bool) && _mask.sameSize(*psrc1));
         reallocate = !_dst.sameSize(*psrc1) || _dst.type() != dtype;
     }
 
     _dst.createSameSize(*psrc1, dtype);
-    if( reallocate )
+    if (reallocate)
         _dst.setTo(0.);
 
-    CV_OCL_RUN(use_opencl,
-               ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
-               usrdata, oclop, haveScalar))
+    return ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype, usrdata, oclop, haveScalar);
+#endif
+}
 
-    BinaryFunc cvtsrc1 = type1 == wtype ? 0 : getConvertFunc(type1, wtype);
-    BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : getConvertFunc(type2, wtype);
-    BinaryFunc cvtdst = dtype == wtype ? 0 : getConvertFunc(wtype, dtype);
+// Element-wise binary op (ADD/SUB/...) on two CPU operands - each an array Mat or a MATX scalar -
+// through the new broadcasting engine. Handles mixed input types (emitBinary inserts the casts) and
+// broadcasting (a scalar rides as a 0-dim per-channel CONST; arrays broadcast via outputShape/exec).
+// Returns false (declining) for UMat, a write-mask, or two scalar operands, so the caller falls
+// through to arithm_op. Incompatible shapes make the engine throw (matching cv::add's error).
+// Does the output array already have exactly this shape+type (=> create() reuses it, no realloc)?
+// Works for Mat and UMat alike (shape/type queries, no data-pointer peeking).
+static bool outArrayMatches(const _OutputArray& a, const MatShape& shp, int type)
+{
+    if (a.empty() || a.type() != type)
+        return false;
+    int sz[MatShape::MAX_DIMS];
+    int nd = a.sizend(sz);
+    if (nd != (int)shp.size())
+        return false;
+    for (int i = 0; i < nd; i++)
+        if (sz[i] != shp[i])
+            return false;
+    return true;
+}
 
-    size_t esz1 = CV_ELEM_SIZE(type1), esz2 = CV_ELEM_SIZE(type2);
-    size_t dsz = CV_ELEM_SIZE(dtype), wsz = CV_ELEM_SIZE(wtype);
-    size_t blocksize0 = (size_t)(BLOCK_SIZE + wsz-1)/wsz;
-    BinaryFunc copymask = getCopyMaskFunc(dsz);
-    Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+// Are two operands' iteration shapes (spatial dims + channels innermost, exactly how the engine
+// iterates) numpy-broadcast-compatible? Powers the scalar-like-Mat compat fallback in arithm_op.
+// Cheap by design: sizend copies the dim arrays inline - no Mat headers, no allocations.
+static bool shapesBroadcastCompat(InputArray a, int acn, InputArray b, int bcn)
+{
+    int asz[MatShape::MAX_DIMS + 1], bsz[MatShape::MAX_DIMS + 1];
+    int ad = a.sizend(asz), bd = b.sizend(bsz);
+    asz[ad++] = acn;
+    bsz[bd++] = bcn;
+    for (int i1 = ad - 1, i2 = bd - 1; i1 >= 0 && i2 >= 0; i1--, i2--)
+        if (asz[i1] != bsz[i2] && asz[i1] != 1 && bsz[i2] != 1)
+            return false;
+    return true;
+}
 
-    AutoBuffer<uchar> _buf;
-    uchar *buf, *maskbuf = 0, *buf1 = 0, *buf2 = 0, *wbuf = 0;
-    size_t bufesz = (cvtsrc1 ? wsz : 0) +
-                    (cvtsrc2 || haveScalar ? wsz : 0) +
-                    (cvtdst ? wsz : 0) +
-                    (haveMask ? dsz : 0);
-    BinaryFuncC func = tab[CV_MAT_DEPTH(wtype)];
-    CV_Assert(func);
+// The one entry point for every element-wise binary op (add/sub/mul/div/min/max/absdiff/addWeighted/
+// reciprocal). Handles empty inputs, the UMat/OpenCL branch (arithm_op_ocl) and the CPU element-wise
+// engine. `oclop` selects the OpenCL kernel; `muldiv` drives the OpenCL working-type coercion + scale;
+// `params` are the op scalars (params[0]=mul/div scale; {alpha,beta,gamma} for addWeighted).
+// Below this many ELEMENTS (total * channels), the per-call constant overhead of the engine path
+// (program build + compile + executor setup) is comparable to the actual work - take the direct
+// kernel call instead. Same tier boundary as math_op's MATH_OP_SMALL for cv::exp.
+enum { ARITHM_SMALL_DIRECT = 100000 };
 
-    if( !haveScalar )
+static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray dst,
+                      InputArray mask, int dtype, int oclop, bool muldiv, const Scalar& params)
+{
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())          // empty inputs -> empty result
     {
-        const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4] = {};
+        dst.release();
+        if (dtype >= 0)
+            dst.create(0, 0, dtype);
+        return;
+    }
 
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size, blocksize = total;
+    // UMat -> classic OpenCL kernel. It declines (false) when OpenCL can't apply (no device, dims>2, a
+    // broadcast, cn>4 masked, ...) - then the CPU engine below handles it (mapping the UMat via getMat).
+    // oclop < 0 is a sentinel: the caller (e.g. cv::compare) already ran its own OpenCL path, so this
+    // helper only runs the CPU engine (a UMat operand is mapped via getMat).
+    if (oclop >= 0 && (src1.isUMat() || src2.isUMat() || dst.isUMat()))
+    {
+        double abg[3] = { params[0], params[1], params[2] }, scale = params[0];
+        void* usrdata = (op == ew::OP_ADDW) ? (void*)abg : (muldiv ? (void*)&scale : nullptr);
+        if (arithm_op_ocl(src1, src2, dst, mask, dtype, oclop, muldiv, usrdata))
+            return;
+    }
 
-        if( haveMask || cvtsrc1 || cvtsrc2 || cvtdst )
-            blocksize = std::min(blocksize, blocksize0);
+    const bool haveMask = !mask.empty();
+    const int cn1 = src1.channels(), cn2 = src2.channels();
+    bool s1 = isScalarArg(src1, cn2), s2 = isScalarArg(src2, cn1);
+    if (s1 && s2)
+        s1 = s2 = false;    // two scalars: treat both as tiny array operands (element-wise + broadcast),
+                            // matching arithm_op (Scalar+Scalar -> 4x1, number+number -> 1x1, ...)
+    // A 4x1 CV_64F Mat/UMat pseudo-scalar (see isScalarArg) is hijacked only against a REAL array:
+    // when the partner is itself a tiny scalar-shaped array (e.g. compare(Mat 4x1, Mat 1x1) -
+    // issue #8999), both are honest data and ride the broadcast. A genuine MATX Scalar never demotes.
+    else if (s1 && src1.kind() != _InputArray::MATX && isScalarLikeMat(src2, cn1))
+        s1 = false;
+    else if (s2 && src2.kind() != _InputArray::MATX && isScalarLikeMat(src1, cn2))
+        s2 = false;
 
-        _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf.data();
-        if( cvtsrc1 )
+    // Compat fallback: Java/Python/user code passes scalars as real little Mats (the classic 4x1
+    // CV_64F column, a 1xcn/cnx1 vector - see isScalarLikeMat). Those normally ride broadcasting
+    // now, so hijack one as a per-channel scalar ONLY when the shapes do NOT broadcast - just the
+    // calls that would otherwise throw get the 4.x scalar semantics, every valid broadcast keeps
+    // its numpy meaning. Cheap: two geometry probes, and the O(ndims) shape walk runs only when a
+    // probe hits (never for ordinary same-size or MATX-scalar calls).
+    if (!s1 && !s2)
+    {
+        bool like1 = isScalarLikeMat(src1, cn2), like2 = isScalarLikeMat(src2, cn1);
+        if ((like1 || like2) && !shapesBroadcastCompat(src1, cn1, src2, cn2))
         {
-            buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+            s1 = like1;             // src1 preferred when both qualify, like the old checkScalar order
+            s2 = like2 && !like1;
         }
-        if( cvtsrc2 )
-        {
-            buf2 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
-        }
-        wbuf = maskbuf = buf;
-        if( cvtdst )
-        {
-            buf = alignPtr(buf + blocksize*wsz, 16);
-        }
-        if( haveMask )
-        {
-            maskbuf = buf;
-        }
+    }
 
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
+    // Direct Mat pointers - NO header copy / refcount atomics (the InputArrays outlive this call, so
+    // their data stays alive). A MAT operand is used in place via getObj(); a non-MAT one (UMat, or a
+    // two-scalar operand handled as an array) is mapped once into a local. EXCEPTION - in-place with a
+    // realloc: if dst IS one of the sources, dst.create() may free that source's data mid-op, so take a
+    // header copy (increfs, keeping the old data alive) of the sources in that case only.
+    const void* dstObj = (dst.kind() == _InputArray::MAT) ? dst.getObj() : nullptr;
+    const bool aliased = dstObj && (dstObj == src1.getObj() || dstObj == src2.getObj());
+    Mat m1loc, m2loc, mloc;
+    auto asMat = [&](InputArray a, Mat& loc) -> const Mat* {
+        if (a.kind() == _InputArray::MAT && !aliased) return (const Mat*)a.getObj();
+        loc = a.getMat(); return &loc;
+    };
+    const Mat* pm1 = s1 ? nullptr : asMat(src1, m1loc);
+    const Mat* pm2 = s2 ? nullptr : asMat(src2, m2loc);
+    const int adepth = s1 ? pm2->depth() : pm1->depth();   // the (first) array operand's depth
+    // auto result depth (no explicit dtype, no fixed-type dst): add/sub/mul/div keep the first array
+    // operand's depth (cv::'s dtype==-1 convention), but min/max/absdiff have NO dtype argument and
+    // must promote mixed inputs to their common type (min(u32,f32) in u32 would drop the float). For
+    // same-type inputs promoteArith(da,db)==da, so classic behaviour is preserved (e.g. absdiff of two
+    // s16 stays s16, saturating - the wide unsigned |a-b| is computed then cast back down by emitBinary).
+    int autoDepth = adepth;
+    if (op == ew::OP_MIN || op == ew::OP_MAX || op == ew::OP_ABSDIFF)
+    {
+        const int d1 = s1 ? ew::EW_DEPTH_NONE : pm1->depth();
+        const int d2 = s2 ? ew::EW_DEPTH_NONE : pm2->depth();
+        autoDepth = ew::promoteArith(d1, d2);
+    }
+    // result depth: explicit dtype wins; else a fixed-type dst dictates it; else the auto depth above.
+    const int rdepth = dtype >= 0 ? CV_MAT_DEPTH(dtype)
+                     : (dst.fixedType() ? dst.depth() : autoDepth);
+
+    // FAST PATH for the classic hot call: two same-type same-shape continuous arrays, no mask, no
+    // scalar, no broadcast, result depth == input depth, and the array is SMALL. Building and
+    // compiling the 1-instruction program plus the BroadcastOp setup costs ~40-250ns per call -
+    // negligible on big images, dominant at 127x61-class sizes. Call the T x T -> T kernel directly
+    // over the flattened elements instead (the same tier design as math_op for cv::exp). Only ops
+    // whose emitBinary lowering for this exact type combination IS the plain direct kernel are
+    // listed - compare (boundary rewrite/flags) and divide (int guards) lower to more than one
+    // kernel call and keep the ordinary path. addWeighted qualifies exactly when its direct fused
+    // T -> T kernel exists (u8..f32; the 32/64-bit ints lower to wide-compute + cast and get {}
+    // from getElemwiseFunc below, falling through naturally).
+    if (!haveMask && !s1 && !s2 &&
+        (op == ew::OP_ADD || op == ew::OP_SUB || op == ew::OP_MIN || op == ew::OP_MAX ||
+         op == ew::OP_ABSDIFF || op == ew::OP_MUL || op == ew::OP_ADDW ||
+         op == ew::OP_AND || op == ew::OP_OR || op == ew::OP_XOR) &&
+        rdepth == pm1->depth() && pm1->type() == pm2->type() && pm1->size == pm2->size &&
+        pm1->isContinuous() && pm2->isContinuous() &&
+        pm1->total()*cn1 <= (size_t)ARITHM_SMALL_DIRECT)
+    {
+        ew::TKernel k = ew::getElemwiseFunc(op, rdepth, rdepth, ew::EW_DEPTH_NONE, rdepth);
+        if (k.fptr)
         {
-            for( size_t j = 0; j < total; j += blocksize )
+            dst.createSameSize(src1, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
+            Mat dloc;
+            Mat* pd = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dloc = dst.getMat());
+            if (pd->isContinuous())     // a reused non-continuous dst view falls through to the engine
             {
-                int bsz = (int)MIN(total - j, blocksize);
-                Size bszn(bsz*cn, 1);
-                const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
-                uchar* dptr = ptrs[2];
-                // try to perform operation with conversion in one call
-                // if fail, use converter functions
-                uchar* opconverted = haveMask ? maskbuf : dptr;
-                if (!extendedFunc || extendedFunc(sptr1, 1, sptr2, 1, opconverted, (!haveMask),
-                                                  bszn.width, bszn.height, usrdata) != 0)
-                {
-                    if( cvtsrc1 )
-                    {
-                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                        sptr1 = buf1;
-                    }
-                    if( ptrs[0] == ptrs[1] )
-                    {
-                        sptr2 = sptr1;
-                    }
-                    else if( cvtsrc2 )
-                    {
-                        cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
-                        sptr2 = buf2;
-                    }
-
-                    uchar* fdst = (haveMask || cvtdst) ? wbuf : dptr;
-                    func(sptr1, 1, sptr2, 1, fdst, (!haveMask && !cvtdst), bszn.width, bszn.height, usrdata);
-
-                    if (cvtdst)
-                    {
-                        uchar* cdst = haveMask ? maskbuf : dptr;
-                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
-                    }
-                    opconverted = cvtdst ? maskbuf : wbuf;
-                }
-
-                if (haveMask)
-                {
-                    copymask(opconverted, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz);
-                    ptrs[3] += bsz;
-                }
-
-                ptrs[0] += bsz*esz1; ptrs[1] += bsz*esz2; ptrs[2] += bsz*dsz;
+                k.fptr(pm1->data, 0, 1, pm2->data, 0, 1, nullptr, 0, 0,
+                       pd->data, 0, (int)(pm1->total()*cn1), 1, params.val, k.flags, k.userdata);
+                return;
             }
         }
     }
-    else
-    {
-        const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3] = {};
 
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size, blocksize = std::min(total, blocksize0);
-
-        _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf.data();
-        if( cvtsrc1 )
-        {
-            buf1 = buf, buf = alignPtr(buf + blocksize * wsz, 16);
-        }
-        buf2 = buf; buf = alignPtr(buf + blocksize*wsz, 16);
-        wbuf = maskbuf = buf;
-        if( cvtdst )
-        {
-            buf = alignPtr(buf + blocksize * wsz, 16);
-        }
-        if( haveMask )
-        {
-            maskbuf = buf;
-        }
-
-        convertAndUnrollScalar( src2, wtype, buf2, blocksize);
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-        {
-            for( size_t j = 0; j < total; j += blocksize )
-            {
-                int bsz = (int)MIN(total - j, blocksize);
-                const uchar *sptr1 = ptrs[0];
-                const uchar* sptr2 = buf2;
-                uchar* dptr = ptrs[1];
-
-                const uchar* extSptr1 = sptr1;
-                const uchar* extSptr2 = sptr2;
-                if( swapped12 )
-                    std::swap(extSptr1, extSptr2);
-
-                // try to perform operation in 1 call, fallback to classic way if fail
-                uchar* opconverted = haveMask ? maskbuf : dptr;
-                if (!scalarFunc || src2.total() != 1 ||
-                    scalarFunc(extSptr1, 1, opconverted, 1, bsz, 1, (void*)extSptr2, swapped12, cn) != 0)
-                {
-                    // try to perform operation with conversion in one call
-                    // if fail, use converter functions
-
-                    if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
-                                                      bsz*cn, 1, usrdata) != 0)
-                    {
-                        if( cvtsrc1 )
-                        {
-                            cvtsrc1( sptr1, 1, 0, 1, buf1, 1, Size(bsz*cn, 1), 0 );
-                            sptr1 = buf1;
-                        }
-
-                        if( swapped12 )
-                            std::swap(sptr1, sptr2);
-
-                        uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
-                        func( sptr1, 1, sptr2, 1, fdst, 1, bsz*cn, 1, usrdata );
-
-                        if (cvtdst)
-                        {
-                            uchar* cdst = haveMask ? maskbuf : dptr;
-                            cvtdst(wbuf, 1, 0, 1, cdst, 1, Size(bsz*cn, 1), 0);
-                        }
-                        opconverted = cvtdst ? maskbuf : wbuf;
-                    }
-                }
-
-                if (haveMask)
-                {
-                    copymask(opconverted, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz);
-                    ptrs[2] += bsz;
-                }
-
-                ptrs[0] += bsz*esz1; ptrs[1] += bsz*dsz;
-            }
-        }
-    }
-}
-
-static BinaryFuncC* getAddTab()
-{
-    static BinaryFuncC addTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32f),
-        (BinaryFuncC)cv::hal::add64f,
-        (BinaryFuncC)cv::hal::add16f,
-        (BinaryFuncC)cv::hal::add16bf,
-        0,
-        (BinaryFuncC)cv::hal::add64u,
-        (BinaryFuncC)cv::hal::add64s,
-        (BinaryFuncC)cv::hal::add32u,
-        0
+    // operand order = (src1, src2): an array becomes an INPUT, a scalar a flexible per-channel CONST
+    // read straight from the caller's inline storage (getObj()), no Mat / convertTo.
+    ew::TExpr p;
+    auto addOperand = [&](InputArray src, bool isScalar, const Mat* m, int otherCn) -> int {
+        if (!isScalar)
+            return p.addInput(m->depth());
+        const uchar* sp; int sd;
+        uchar scbuf[EW_SCALAR_BUF_SIZE];   // stack room for a UMAT scalar; addConst copies the values out
+        const int scn0 = scalarArgElems(src, sp, sd, scbuf), cn = otherCn;
+        const int scn = (cn == scn0 || (cn < 4 && scn0 == 4)) ? cn
+                      : (scn0 == 1) ? 1 : 0;
+        CV_Assert(scn > 0);
+        return p.addConst(ew::EW_DEPTH_NONE, sd, sp, scn);
     };
+    const int a0 = addOperand(src1, s1, pm1, cn2);
+    const int a1 = addOperand(src2, s2, pm2, cn1);
 
-    return addTab;
-}
-
-static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
-                                  void* scalar, bool /*scalarIsFirst*/, int nChannels)
-{
-    int res = cv_hal_addScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar, nChannels);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
+    // Write-mask: a single-channel 1-byte array (u8/s8/bool) the size of the output spatial shape,
+    // added as another broadcast input. The arithmetic result lands in a temp; a final
+    // select(mask, r, dst) -> dst overwrites only mask!=0 positions of the (pre-existing) output.
+    int sMask = 0;
+    const Mat* pmask = nullptr;
+    if (haveMask)
+    {
+        CV_Assert(mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
+        pmask = asMat(mask, mloc);
+        sMask = p.addInput(pmask->depth());
+    }
+    const int sOut = p.addOutput(rdepth);               // output BEFORE emit -> moveToOutput drops the
+    const int r = p.emitBinary(op, a0, a1, rdepth, params);   // result temp (mask-free => none); scale
+                                                        // rides params[0] (mul/div), {a,b,g} for addW
+    if (haveMask)
+        p.addInsn(ew::OP_SELECT, sMask, r, sOut, sOut);
     else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
+        p.moveToOutput(r, sOut);
+    p.compile();
+
+    const Mat* inputs[3]; int ni = 0;                   // inputs in program (input-index) order
+    if (!s1) inputs[ni++] = pm1;
+    if (!s2) inputs[ni++] = pm2;
+    if (haveMask) inputs[ni++] = pmask;
+
+    // Pre-create the output at the broadcast shape, ALWAYS via dst.create() - never hand exec a raw
+    // dst Mat. Routing through the _OutputArray is what enforces its contract: a FIXED_SIZE/FIXED_TYPE
+    // dst (in-place 'a += b' passes '(const Mat&)a') throws here if a broadcast would change its shape
+    // or type (Mat(1x1) += Mat(1x4)), instead of silently reallocating - exec sees only a Mat and has
+    // no view of the array's fixed flags. Cost over a direct exec is negligible: exec keeps its own
+    // fast path for a matching-shape op, and dst.create() with an unchanged shape/type is a no-op.
+    // With a mask, a freshly (re)allocated dst is zeroed so mask==0 reads 0 (matches arithm_op); a
+    // reused dst keeps its prior content there - detect reuse by shape+type BEFORE create (correct for
+    // a reused UMat dst too).
+    MatShape oshape; int ocn;
+    p.outputShape(inputs, oshape, ocn);
+    const int otype = CV_MAKETYPE(rdepth, ocn);
+    const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
+    dst.create(oshape, otype);
+    Mat dstloc;
+    Mat* pdst = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dstloc = dst.getMat());
+    if (haveMask && !reused)
+        pdst->setZero();                          // setZero (not setTo, which caps at 4 channels)
+    p.exec(inputs, pdst);
 }
 
-static int addScalar16s16sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
-                                  void* scalar, bool /*scalarIsFirst*/, int nChannels)
+// Unary element-wise op through the engine (bitwise NOT now; unary math later). One array input, an
+// optional write-mask; result depth = dtype (>=0), else a fixed-type dst's depth, else the input
+// depth. Mirrors arithm_op's build/mask/exec tail with a single input and no scalar operand. OpenCL is
+// run by the caller (bitwise_op_ocl), so this is the CPU engine only.
+static void unary_op(ew::TOp op, InputArray src, OutputArray dst, InputArray mask,
+                     int dtype, const Scalar& params)
 {
-    int res = cv_hal_addScalar16s16s((const int16_t*)src, step_src, (int16_t *)dst, step_dst, width, height, (const int16_t*)scalar, nChannels);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
+    if (src.empty())
+    {
+        dst.release();
+        if (dtype >= 0)
+            dst.create(0, 0, dtype);
+        return;
+    }
+
+    const bool haveMask = !mask.empty();
+    // in-place (dst aliases src): keep a header copy so a shape/type-changing dst.create() can't free
+    // src's data mid-op (matches arithm_op). A fixed-size/type dst never reallocs, so this is only for
+    // an explicit dtype change.
+    const void* dstObj = (dst.kind() == _InputArray::MAT) ? dst.getObj() : nullptr;
+    const bool aliased = dstObj && src.kind() == _InputArray::MAT && dstObj == src.getObj();
+    Mat sloc, mloc;
+    const Mat* psrc = (src.kind() == _InputArray::MAT && !aliased) ? (const Mat*)src.getObj()
+                                                                   : &(sloc = src.getMat());
+    const int rdepth = dtype >= 0 ? CV_MAT_DEPTH(dtype)
+                     : (dst.fixedType() ? dst.depth() : psrc->depth());
+
+    ew::TExpr p;
+    const int a0 = p.addInput(psrc->depth());
+    int sMask = 0;
+    const Mat* pmask = nullptr;
+    if (haveMask)
+    {
+        CV_Assert(mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
+        pmask = (mask.kind() == _InputArray::MAT) ? (const Mat*)mask.getObj() : &(mloc = mask.getMat());
+        sMask = p.addInput(pmask->depth());
+    }
+    const int sOut = p.addOutput(rdepth);
+    const int r = p.emitUnary(op, a0, rdepth, params);
+    if (haveMask)
+        p.addInsn(ew::OP_SELECT, sMask, r, sOut, sOut);
     else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar16s16s ==> " CVAUX_STR(cv_hal_addScalar16s16s)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
+        p.moveToOutput(r, sOut);
+    p.compile();
 
-static ScalarFunc getAddScalarFunc(int srcType, int dstType)
-{
-    if (srcType == CV_32F && dstType == CV_32F)
-    {
-        return addScalar32f32fWrapper;
-    }
-    else if (srcType == CV_16S && dstType == CV_16S)
-    {
-        return addScalar16s16sWrapper;
-    }
-    else
-    {
-        return nullptr;
-    }
-}
+    const Mat* inputs[2]; int ni = 0;
+    inputs[ni++] = psrc;
+    if (haveMask) inputs[ni++] = pmask;
 
-static int sub8u32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, int width, int height, void* )
-{
-    int res = cv_hal_sub8u32f(src1, step1, src2, step2, (float *)dst, step, width, height);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8u32f ==> " CVAUX_STR(cv_hal_sub8u32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static int sub8s32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, int width, int height, void* )
-{
-    int res = cv_hal_sub8s32f((schar*)src1, step1, (schar*)src2, step2, (float *)dst, step, width, height);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8s32f ==> " CVAUX_STR(cv_hal_sub8s32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static BinaryFuncC* getSubTab()
-{
-    static BinaryFuncC subTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32f),
-        (BinaryFuncC)cv::hal::sub64f,
-        (BinaryFuncC)cv::hal::sub16f,
-        (BinaryFuncC)cv::hal::sub16bf,
-        0,
-        (BinaryFuncC)cv::hal::sub64u,
-        (BinaryFuncC)cv::hal::sub64s,
-        (BinaryFuncC)cv::hal::sub32u,
-        0
-    };
-
-    return subTab;
-}
-
-static ExtendedTypeFunc getSubExtFunc(int src1Type, int src2Type, int dstType)
-{
-    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_32F)
-    {
-        return sub8u32fWrapper;
-    }
-    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_32F)
-    {
-        return sub8s32fWrapper;
-    }
-    else
-    {
-        return nullptr;
-    }
-}
-
-static BinaryFuncC* getAbsDiffTab()
-{
-    static BinaryFuncC absDiffTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32f),
-        (BinaryFuncC)cv::hal::absdiff64f,
-        (BinaryFuncC)cv::hal::absdiff16f,
-        (BinaryFuncC)cv::hal::absdiff16bf,
-        0,
-        (BinaryFuncC)cv::hal::absdiff64u,
-        (BinaryFuncC)cv::hal::absdiff64s,
-        (BinaryFuncC)cv::hal::absdiff32u,
-        0
-    };
-
-    return absDiffTab;
-}
-
-
-static int absDiffScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
-                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
-{
-    int res = cv_hal_absDiffScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar, nChannels);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static int absDiffScalar32s32uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
-                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
-{
-    int res = cv_hal_absDiffScalar32s32u((const int*)src, step_src, (uint32_t*)dst, step_dst, width, height, (const int*)scalar, nChannels);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static int absDiffScalar8u8uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
-                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
-{
-    int res = cv_hal_absDiffScalar8u8u((const uchar*)src, step_src, (uchar*)dst, step_dst, width, height, (const uchar*)scalar, nChannels);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static ScalarFunc getAbsDiffScalarFunc(int srcType, int dstType)
-{
-    if (srcType == CV_32F && dstType == CV_32F)
-    {
-        return absDiffScalar32f32fWrapper;
-    }
-    // resulting type is 32U in fact
-    else if (srcType == CV_32S && dstType == CV_32S)
-    {
-        return absDiffScalar32s32uWrapper;
-    }
-    else if (srcType == CV_8U && dstType == CV_8U)
-    {
-        return absDiffScalar8u8uWrapper;
-    }
-    else
-    {
-        return nullptr;
-    }
+    MatShape oshape; int ocn;
+    p.outputShape(inputs, oshape, ocn);
+    const int otype = CV_MAKETYPE(rdepth, ocn);
+    const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
+    dst.create(oshape, otype);
+    Mat dstloc;
+    Mat* pdst = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dstloc = dst.getMat());
+    if (haveMask && !reused)
+        pdst->setZero();
+    p.exec(inputs, pdst);
 }
 
 }
@@ -1161,78 +869,24 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())
-    {
-        dst.release();
-        if (dtype >= 0)
-        {
-            dst.create(0, 0, dtype);
-        }
-        return;
-    }
-
-    int sdepth = src1.depth();
-    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
-    {
-        sdepth = src2.depth();
-    }
-    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
-    {
-        sdepth = src1.depth();
-    }
-
-    ScalarFunc scalarFunc = getAddScalarFunc(sdepth, dtype < 0 ? dst.depth() : dtype);
-    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD, nullptr,
-              /* scalarFunc */ scalarFunc );
+    arithm_op(ew::OP_ADD, src1, src2, dst, mask, dtype, OCL_OP_ADD, false);
 }
 
-void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
+void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
                    InputArray mask, int dtype )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_GPU_RUN(_src1, subtract, _src1, _src2, _dst)
+    CV_GPU_RUN(src1, subtract, src1, src2, dst)
 
-    CV_Assert(_src1.empty() == _src2.empty());
-    if (_src1.empty() && _src2.empty())
-    {
-        _dst.release();
-        if (dtype >= 0)
-        {
-            _dst.create(0, 0, dtype);
-        }
-        return;
-    }
-
-    ExtendedTypeFunc subExtFunc = getSubExtFunc(_src1.depth(), _src2.depth(), dtype < 0 ? _dst.depth() : dtype);
-    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB,
-              /* extendedFunc */ subExtFunc);
+    arithm_op(ew::OP_SUB, src1, src2, dst, mask, dtype, OCL_OP_SUB, false);
 }
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())
-    {
-        dst.release();
-        return;
-    }
-
-    int sdepth = src1.depth();
-    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
-    {
-        sdepth = src2.depth();
-    }
-    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
-    {
-        sdepth = src1.depth();
-    }
-    ScalarFunc scalarFunc = getAbsDiffScalarFunc(sdepth, dst.depth());
-    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF,
-              /* extendedFunc */ nullptr, scalarFunc);
+    arithm_op(ew::OP_ABSDIFF, src1, src2, dst, noArray(), -1, OCL_OP_ABSDIFF, false);
 }
 
 void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
@@ -1249,93 +903,6 @@ void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
 namespace cv
 {
 
-static int mul8u16uWrapper(const uchar* src1, size_t step1,
-                           const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, int width, int height,
-                           void* usrdata)
-{
-    double scale = *((double*)usrdata);
-    int res = cv_hal_mul8u16u(src1, step1, src2, step2, (ushort *)dst, step, width, height, scale);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8u16u ==> " CVAUX_STR(cv_hal_mul8u16u)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static int mul8s16sWrapper(const uchar* src1, size_t step1,
-                           const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, int width, int height,
-                           void* usrdata)
-{
-    double scale = *((double*)usrdata);
-    int res = cv_hal_mul8s16s((schar *)src1, step1, (schar *)src2, step2, (short *)dst, step, width, height, scale);
-    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return res;
-    else
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8s16s ==> " CVAUX_STR(cv_hal_mul8s16s)
-                                           " returned %d (0x%08x)", res, res));
-    }
-}
-
-static BinaryFuncC* getMulTab()
-{
-    static BinaryFuncC mulTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
-        (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
-        (BinaryFuncC)cv::hal::mul64f, (BinaryFuncC)cv::hal::mul16f, (BinaryFuncC)cv::hal::mul16bf, 0,
-        (BinaryFuncC)cv::hal::mul64u, (BinaryFuncC)cv::hal::mul64s, (BinaryFuncC)cv::hal::mul32u, 0
-    };
-
-    return mulTab;
-}
-
-static ExtendedTypeFunc getMulExtFunc(int src1Type, int src2Type, int dstType)
-{
-    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_16U)
-    {
-        return mul8u16uWrapper;
-    }
-    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_16S)
-    {
-        return mul8s16sWrapper;
-    }
-    else
-    {
-        return nullptr;
-    }
-}
-
-static BinaryFuncC* getDivTab()
-{
-    static BinaryFuncC divTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
-        (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
-        (BinaryFuncC)cv::hal::div64f, (BinaryFuncC)cv::hal::div16f, (BinaryFuncC)cv::hal::div16bf, 0,
-        (BinaryFuncC)cv::hal::div64u, (BinaryFuncC)cv::hal::div64s, (BinaryFuncC)cv::hal::div32u, 0
-    };
-
-    return divTab;
-}
-
-static BinaryFuncC* getRecipTab()
-{
-    static BinaryFuncC recipTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
-        (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
-        (BinaryFuncC)cv::hal::recip64f, (BinaryFuncC)cv::hal::recip16f, (BinaryFuncC)cv::hal::recip16bf, 0,
-        (BinaryFuncC)cv::hal::recip64u, (BinaryFuncC)cv::hal::recip64s, (BinaryFuncC)cv::hal::recip32u, 0
-    };
-
-    return recipTab;
-}
-
 void multiply(InputArray src1, InputArray src2,
               OutputArray dst, double scale, int dtype)
 {
@@ -1344,10 +911,8 @@ void multiply(InputArray src1, InputArray src2,
     if (std::abs(scale - 1.0) < DBL_EPSILON)
         CV_GPU_RUN(src1, multiply, src1, src2, dst)
 
-    ExtendedTypeFunc mulExtFunc = getMulExtFunc(src1.depth(), src2.depth(), dtype < 0 ? dst.depth() : dtype);
-    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
-              /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
-              /* extendedFunc */ mulExtFunc );
+    const int oclop = std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE;
+    arithm_op(ew::OP_MUL, src1, src2, dst, noArray(), dtype, oclop, /*muldiv*/ true, Scalar(scale));
 }
 
 void divide(InputArray src1, InputArray src2,
@@ -1357,14 +922,7 @@ void divide(InputArray src1, InputArray src2,
 
     CV_GPU_RUN(src1, divide, src1, src2, dst)
 
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())
-    {
-        dst.release();
-        return;
-    }
-
-    arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
+    arithm_op(ew::OP_DIV, src1, src2, dst, noArray(), dtype, OCL_OP_DIV_SCALE, /*muldiv*/ true, Scalar(scale));
 }
 
 void divide(double scale, InputArray src2,
@@ -1378,7 +936,17 @@ void divide(double scale, InputArray src2,
         return;
     }
 
-    arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
+    // scale / src2 == scale * 1 / src2: feed a 0-dim `1` as the numerator so the CPU engine reuses the
+    // normal divide (scale*a/b). Give the numerator src2's OWN depth: then OP_DIV(T, T) is same-type and
+    // takes the fast per-type kernel (f32 work for <=16-bit / f16 / bf16, not the s32->f64 path a CV_32S
+    // numerator would force). An integer src2 keeps its div-by-zero->0 guard (both operands integer); a
+    // float src2 divides as float (1/0->inf), both matching cv::divide. dtype<0 follows src2's depth (a
+    // fixed-type dst still wins). The UMat path uses the dedicated reciprocal kernel (OCL_OP_RECIP_SCALE).
+    double one = 1;
+    Mat numerator(MatShape::scalar(), src2.depth(), &one);
+    scalarToRawData(Scalar(1), &one, src2.depth(), 1);       // write `1` in src2's depth (no allocation)
+    const int rtype = (dtype < 0 && !dst.fixedType()) ? src2.depth() : dtype;
+    arithm_op(ew::OP_DIV, numerator, src2, dst, noArray(), rtype, OCL_OP_RECIP_SCALE, /*muldiv*/ true, Scalar(scale));
 }
 
 UMat UMat::mul(InputArray m, double scale) const
@@ -1392,27 +960,6 @@ UMat UMat::mul(InputArray m, double scale) const
 *                                      addWeighted                                       *
 \****************************************************************************************/
 
-static BinaryFuncC* getAddWeightedTab()
-{
-    static BinaryFuncC addWeightedTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s),
-        (BinaryFuncC)cv::hal::addWeighted32f,
-        (BinaryFuncC)cv::hal::addWeighted64f,
-        (BinaryFuncC)cv::hal::addWeighted16f,
-        (BinaryFuncC)cv::hal::addWeighted16bf, 0,
-        (BinaryFuncC)cv::hal::addWeighted64u,
-        (BinaryFuncC)cv::hal::addWeighted64s,
-        (BinaryFuncC)cv::hal::addWeighted32u, 0
-    };
-
-    return addWeightedTab;
-}
-
 }
 
 void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
@@ -1420,19 +967,8 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())
-    {
-        dst.release();
-        if (dtype >= 0)
-        {
-            dst.create(0, 0, dtype);
-        }
-        return;
-    }
-
-    double scalars[] = {alpha, beta, gamma};
-    arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedTab(), true, scalars, OCL_OP_ADDW);
+    arithm_op(ew::OP_ADDW, src1, src2, dst, noArray(), dtype, OCL_OP_ADDW, /*muldiv*/ true,
+              Scalar(alpha, beta, gamma));
 }
 
 
@@ -1443,28 +979,6 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
 namespace cv
 {
 
-static BinaryFuncC getCmpFunc(int depth)
-{
-    static BinaryFuncC cmpTab[CV_DEPTH_MAX] =
-    {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32f),
-        (BinaryFuncC)cv::hal::cmp64f,
-        (BinaryFuncC)cv::hal::cmp16f,
-        (BinaryFuncC)cv::hal::cmp16bf,
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u),
-        (BinaryFuncC)cv::hal::cmp64u,
-        (BinaryFuncC)cv::hal::cmp64s,
-        (BinaryFuncC)cv::hal::cmp32u,
-        0
-    };
-
-    return cmpTab[depth];
-}
 
 static double getMinVal(int depth)
 {
@@ -1499,6 +1013,23 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
             return false;
+
+    // This OpenCL kernel broadcasts a scalar's FIRST channel to all channels. The CPU path compares
+    // per-channel (scalar[c] for channel c), so a multichannel array against a scalar with DISTINCT
+    // channel values would disagree - bail to the CPU engine in that case (rare; not worth a kernel fix).
+    if (haveScalar && cn > 1)
+    {
+        Mat sc = _src2.getMat();
+        int scn = (int)sc.total();
+        if (scn > 1)
+        {
+            double v[4] = { 0, 0, 0, 0 };
+            getConvertFunc(sc.depth(), CV_64F)(sc.ptr(), 1, 0, 1, (uchar*)v, 1, Size(std::min(scn, 4), 1), 0);
+            for (int i = 1, n = std::min(cn, scn); i < n; i++)
+                if (v[i] != v[0])
+                    return false;
+        }
+    }
 
     int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
     // Workaround for bug with "?:" operator in AMD OpenCL compiler
@@ -1606,6 +1137,10 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         bool is_src1_scalar = checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind());
         bool is_src2_scalar = checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind());
 
+        // exactly one scalar operand: keep it as src2 (swapping flips the ordering ops) so the OpenCL
+        // path sees the array-op-scalar form. Otherwise - two arrays of different size (broadcast),
+        // mixed types, or two scalars - the CPU engine broadcasts / promotes them, so there is NO error
+        // here: fall through to arithm_op (which handles scalar detection, broadcast and mixed types).
         if (is_src1_scalar && !is_src2_scalar)
         {
             op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
@@ -1614,113 +1149,25 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             compare(_src2, _src1, _dst, op);
             return;
         }
-        else if(is_src1_scalar == is_src2_scalar)
-            CV_Error( cv::Error::StsUnmatchedSizes,
-                     "The operation is neither 'array op array' (where arrays have the same size and the same type), "
-                     "nor 'array op scalar', nor 'scalar op array'" );
-        haveScalar = true;
+        haveScalar = is_src2_scalar && !is_src1_scalar;
     }
+    CV_UNUSED(haveScalar);   // consumed by CV_OCL_RUN only - a no-op without OpenCL
 
-    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
+    // OpenCL handles only the same-size and array-op-scalar forms; a broadcast between two arrays of
+    // different size falls through to the CPU engine.
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat())
+               && (haveScalar || _src1.sameSize(_src2)),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
-    _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    int depth1 = src1.depth(), depth2 = src2.depth();
-
-    if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
-    {
-        int cn = src1.channels();
-        _dst.createSameSize(src1, CV_8UC(cn));
-        Mat dst = _dst.getMat();
-        Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        BinaryFuncC cmpFn = getCmpFunc(depth1);
-        CV_Assert(cmpFn);
-        cmpFn(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
-        return;
-    }
-
-    int cn = src1.channels();
-
-    _dst.create(src1.size, CV_8UC(cn));
-    src1 = src1.reshape(1); src2 = src2.reshape(1);
-    Mat dst = _dst.getMat().reshape(1);
-
-    size_t esz = std::max(src1.elemSize(), (size_t)1);
-    size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
-    BinaryFuncC func = getCmpFunc(depth1);
-    CV_Assert(func);
-
-    if( !haveScalar )
-    {
-        const Mat* arrays[] = { &src1, &src2, &dst, 0 };
-        uchar* ptrs[3] = {};
-
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size;
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func( ptrs[0], 0, ptrs[1], 0, ptrs[2], 0, (int)total, 1, &op );
-    }
-    else
-    {
-        const Mat* arrays[] = { &src1, &dst, 0 };
-        uchar* ptrs[2] = {};
-
-        NAryMatIterator it(arrays, ptrs);
-        size_t total = it.size, blocksize = std::min(total, blocksize0);
-
-        AutoBuffer<uchar> _buf(blocksize*esz);
-        uchar *buf = _buf.data();
-
-        if( ((depth1 == CV_16F) | (depth1 == CV_16BF) |
-             (depth1 == CV_32F) | (depth1 == CV_64F)) != 0 )
-            convertAndUnrollScalar( src2, depth1, buf, blocksize );
-        else
-        {
-            double fval=0;
-            BinaryFunc cvtFn = getConvertFunc(depth2, CV_64F);
-            CV_Assert(cvtFn);
-            cvtFn(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
-            if( fval < getMinVal(depth1) )
-            {
-                dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
-                return;
-            }
-
-            if( fval > getMaxVal(depth1) )
-            {
-                dst = Scalar::all(op == CMP_LT || op == CMP_LE || op == CMP_NE ? 255 : 0);
-                return;
-            }
-
-            double ival = round(fval);
-            if( fval != ival )
-            {
-                if( op == CMP_LT || op == CMP_GE )
-                    ival = ceil(fval);
-                else if( op == CMP_LE || op == CMP_GT )
-                    ival = floor(fval);
-                else
-                {
-                    dst = Scalar::all(op == CMP_NE ? 255 : 0);
-                    return;
-                }
-            }
-            convertAndUnrollScalar(Mat(1, 1, CV_64F, &ival), depth1, buf, blocksize);
-        }
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-        {
-            for( size_t j = 0; j < total; j += blocksize )
-            {
-                int bsz = (int)MIN(total - j, blocksize);
-                func( ptrs[0], 0, buf, 0, ptrs[1], 0, bsz, 1, &op);
-                ptrs[0] += bsz*esz;
-                ptrs[1] += bsz;
-            }
-        }
-    }
+    // CPU: the element-wise engine. A CMP_* code maps to the corresponding OP_CMP_* TOp; the engine
+    // forces a u8 mask (dtype = CV_8U) and compares in the common operand type (a fractional scalar
+    // threshold promotes both operands to float - matching the classic ceil/floor threshold logic).
+    // The scalar / broadcast / mixed-shape cases are handled inside arithm_op. oclop = -1 tells it the
+    // OpenCL path was already tried above (via ocl_compare), so it only runs the CPU engine.
+    ew::TOp cmpOp = op == CMP_EQ ? ew::OP_CMP_EQ : op == CMP_NE ? ew::OP_CMP_NE :
+                    op == CMP_LT ? ew::OP_CMP_LT : op == CMP_LE ? ew::OP_CMP_LE :
+                    op == CMP_GT ? ew::OP_CMP_GT : ew::OP_CMP_GE;
+    arithm_op(cmpOp, _src1, _src2, _dst, noArray(), CV_8U, /*oclop=*/-1, /*muldiv=*/false);
 }
 
 /****************************************************************************************\

@@ -1104,4 +1104,58 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_TopK,
                                               /* withWebnn= */           false,
                                               /* withCann= */            false));
 
+// Single-input elementwise activation throughput (the transcendental functors
+// vectorized in elementwise_layers.cpp via the activation_kernels registry).
+// Inputs are drawn from each function's valid domain so the output stays finite.
+struct Layer_Activation : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_activation(const String& type, float lo, float hi)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat input({N, C, H, W}, CV_32F);
+        randu(input, lo, hi);
+
+        Net net;
+        LayerParams lp;
+        lp.type = type;
+        lp.name = "testLayer";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(input);
+        Mat out = net.forward();  // warmup
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 8;
+    int C = 256;
+    int H = 128;
+    int W = 100;
+};
+
+PERF_TEST_P_(Layer_Activation, Log)      { test_activation("Log",      0.1f,  10.f); }
+PERF_TEST_P_(Layer_Activation, Erf)      { test_activation("Erf",      -3.f,   3.f); }
+PERF_TEST_P_(Layer_Activation, Exp)      { test_activation("Exp",      -5.f,   5.f); }
+PERF_TEST_P_(Layer_Activation, Sin)      { test_activation("Sin",      -3.f,   3.f); }
+PERF_TEST_P_(Layer_Activation, Cos)      { test_activation("Cos",      -3.f,   3.f); }
+PERF_TEST_P_(Layer_Activation, Sinh)     { test_activation("Sinh",     -5.f,   5.f); }
+PERF_TEST_P_(Layer_Activation, Cosh)     { test_activation("Cosh",     -5.f,   5.f); }
+PERF_TEST_P_(Layer_Activation, Tan)      { test_activation("Tan",      -1.4f,  1.4f); }
+PERF_TEST_P_(Layer_Activation, Softplus) { test_activation("Softplus", -5.f,   5.f); }
+PERF_TEST_P_(Layer_Activation, BNLL)     { test_activation("BNLL",     -5.f,   5.f); }
+PERF_TEST_P_(Layer_Activation, Asinh)    { test_activation("Asinh",    -10.f,  10.f); }
+PERF_TEST_P_(Layer_Activation, Acosh)    { test_activation("Acosh",     1.f,   20.f); }
+PERF_TEST_P_(Layer_Activation, Atanh)    { test_activation("Atanh",    -0.95f, 0.95f); }
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Activation, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+
 } // namespace

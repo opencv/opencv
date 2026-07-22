@@ -95,8 +95,23 @@ if(WITH_JPEG)
   macro(ocv_detect_jpeg_version header_file)
     if(NOT DEFINED JPEG_LIB_VERSION AND EXISTS "${header_file}")
       ocv_parse_header("${header_file}" JPEG_VERSION_LINES JPEG_LIB_VERSION)
+
+      if(DEFINED JPEG_LIB_VERSION)
+        # Extract libjpeg-turbo version from the header file if JPEG_LIB_VERSION is found.
+        file(STRINGS "${header_file}" JPEG_TURBO_VERSION_LINE REGEX "^#define[\t ]+LIBJPEG_TURBO_VERSION[\t ]")
+
+        if(JPEG_TURBO_VERSION_LINE)
+          # Support both raw values (e.g., 3.1.2) and quoted strings (e.g., "3.1.2").
+          string(REGEX REPLACE "^#define[\t ]+LIBJPEG_TURBO_VERSION[\t ]+\"?([^\"]+)\"?.*" "\\1" JPEG_TURBO_VERSION_STRING "${JPEG_TURBO_VERSION_LINE}")
+          if(JPEG_TURBO_VERSION_STRING)
+            string(STRIP "${JPEG_TURBO_VERSION_STRING}" JPEG_TURBO_VERSION_STRING)
+            set(JPEG_LIB_VERSION "${JPEG_TURBO_VERSION_STRING}-${JPEG_LIB_VERSION}")
+          endif()
+        endif()
+      endif()
     endif()
   endmacro()
+
   ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jpeglib.h")
   if(DEFINED CMAKE_CXX_LIBRARY_ARCHITECTURE)
     ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/${CMAKE_CXX_LIBRARY_ARCHITECTURE}/jconfig.h")

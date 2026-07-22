@@ -1334,4 +1334,23 @@ TEST(Drawing, line_connectivity_regression_26413)
     EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
 }
 
+//This test ensures that the tipLength geometric ratio is strictly bounded  within the logical range (0.0, 1.0].
+TEST(Imgproc_Drawing, arrowedLine_tipLength_validation)
+{
+    // Create a simple miniature canvas for testing. Added cv:: prefix.
+    cv::Mat img = cv::Mat::zeros(100, 100, CV_8UC3);
+    cv::Point pt1(10, 10), pt2(90, 90);
+
+    // 1. Validate legal parameters: should not throw any exceptions (Normal cases)
+    EXPECT_NO_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, 0.1));
+    EXPECT_NO_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, 1.0));
+
+    // 2. Validate illegal parameters: expect cv::Exception to be thrown (Boundary violations)
+    // Negative ratio (tipLength <= 0.0)
+    EXPECT_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, -0.5), cv::Exception);
+
+    // Overflow ratio (tipLength > 1.0)
+    EXPECT_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, 1.5), cv::Exception);
+}
+
 }} // namespace

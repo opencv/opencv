@@ -442,118 +442,77 @@ double EMDSolver::calcFlow(Mat* flow_) const
 
 int EMDSolver::findBasicVars() const
 {
-    int i, j;
-    int u_cfound, v_cfound;
-    Node1D u0_head, u1_head, *cur_u, *prev_u;
-    Node1D v0_head, v1_head, *cur_v, *prev_v;
-    bool found;
-
     CV_Assert(u != 0 && v != 0);
 
-    /* initialize the rows list (u) and the columns list (v) */
-    u0_head.next = u;
-    for (i = 0; i < ssize; i++)
-    {
-        u[i].next = u + i + 1;
-    }
-    u[ssize - 1].next = 0;
-    u1_head.next = 0;
+    // 1. Initialize status flags using contiguous memory to eliminate pointer chasing
+    AutoBuffer<char> computed_buf(ssize + dsize);
+    char* row_computed = computed_buf.data();
+    char* col_computed = computed_buf.data() + ssize;
+    memset(row_computed, 0, ssize + dsize);
 
-    v0_head.next = ssize > 1 ? v + 1 : 0;
-    for (i = 1; i < dsize; i++)
-    {
-        v[i].next = v + i + 1;
-    }
-    v[dsize - 1].next = 0;
-    v1_head.next = 0;
+    // 2. Create BFS queues
+    AutoBuffer<int> queue_buf(ssize + dsize);
+    int* row_queue = queue_buf.data();
+    int* col_queue = queue_buf.data() + ssize;
 
-    /* there are ssize+dsize variables but only ssize+dsize-1 independent equations,
-       so set v[0]=0 */
+    int row_head = 0, row_tail = 0;
+    int col_head = 0, col_tail = 0;
+
+    // Initial condition: enqueue column 0 as the root node and set its value to 0
     v[0].val = 0;
-    v1_head.next = v;
-    v1_head.next->next = 0;
+    col_computed[0] = true;
+    col_queue[col_tail++] = 0;
 
-    /* loop until all variables are found */
-    u_cfound = v_cfound = 0;
-    while (u_cfound < ssize || v_cfound < dsize)
+    int u_cfound = 0;
+    int v_cfound = 1;
+
+    // 3. Dual-queue interactive BFS traversal over the spanning tree (Time Complexity: O(N + M))
+    while (row_head < row_tail || col_head < col_tail)
     {
-        found = false;
-        if (v_cfound < dsize)
+        // Process currently marked columns to update their connected rows
+        while (col_head < col_tail)
         {
-            /* loop over all marked columns */
-            prev_v = &v1_head;
-            cur_v = v1_head.next;
-            found = found || (cur_v != 0);
-            for (; cur_v != 0; cur_v = cur_v->next)
-            {
-                float cur_v_val = cur_v->val;
+            int j = col_queue[col_head++];
+            float cur_v_val = v[j].val;
 
-                j = (int)(cur_v - v);
-                /* find the variables in column j */
-                prev_u = &u0_head;
-                for (cur_u = u0_head.next; cur_u != 0;)
+            // Use adjacency list cols_x to directly access rows connected to column j, avoiding full scans
+            for (Node2D* xp = cols_x[j]; xp != 0; xp = xp->next[1])
+            {
+                int i = xp->i;
+                if (!row_computed[i])
                 {
-                    i = (int)(cur_u - u);
-                    if (getIsX(i, j))
-                    {
-                        /* compute u[i] */
-                        cur_u->val = getCost(i, j) - cur_v_val;
-                        /* ...and add it to the marked list */
-                        prev_u->next = cur_u->next;
-                        cur_u->next = u1_head.next;
-                        u1_head.next = cur_u;
-                        cur_u = prev_u->next;
-                    }
-                    else
-                    {
-                        prev_u = cur_u;
-                        cur_u = cur_u->next;
-                    }
+                    u[i].val = getCost(i, j) - cur_v_val;
+                    row_computed[i] = true;
+                    row_queue[row_tail++] = i; // Enqueue the newly resolved row
+                    u_cfound++;
                 }
-                prev_v->next = cur_v->next;
-                v_cfound++;
             }
         }
 
-        if (u_cfound < ssize)
+        // Process currently marked rows to update their connected columns
+        while (row_head < row_tail)
         {
-            /* loop over all marked rows */
-            prev_u = &u1_head;
-            cur_u = u1_head.next;
-            found = found || (cur_u != 0);
-            for (; cur_u != 0; cur_u = cur_u->next)
+            int i = row_queue[row_head++];
+            float cur_u_val = u[i].val;
+
+            // Use adjacency list rows_x to directly access columns connected to row i
+            for (Node2D* xp = rows_x[i]; xp != 0; xp = xp->next[0])
             {
-                float cur_u_val = cur_u->val;
-                i = (int)(cur_u - u);
-                /* find the variables in rows i */
-                prev_v = &v0_head;
-                for (cur_v = v0_head.next; cur_v != 0;)
+                int j = xp->j;
+                if (!col_computed[j])
                 {
-                    j = (int)(cur_v - v);
-                    if (getIsX(i, j))
-                    {
-                        /* compute v[j] */
-                        cur_v->val = getCost(i, j) - cur_u_val;
-                        /* ...and add it to the marked list */
-                        prev_v->next = cur_v->next;
-                        cur_v->next = v1_head.next;
-                        v1_head.next = cur_v;
-                        cur_v = prev_v->next;
-                    }
-                    else
-                    {
-                        prev_v = cur_v;
-                        cur_v = cur_v->next;
-                    }
+                    v[j].val = getCost(i, j) - cur_u_val;
+                    col_computed[j] = true;
+                    col_queue[col_tail++] = j; // Enqueue the newly resolved column
+                    v_cfound++;
                 }
-                prev_u->next = cur_u->next;
-                u_cfound++;
             }
         }
-
-        if (!found)
-            return -1;
     }
+
+    // If the number of traversed nodes is insufficient, the graph is disconnected and the spanning tree is incomplete
+    if (u_cfound < ssize || v_cfound < dsize)
+        return -1;
 
     return 0;
 }

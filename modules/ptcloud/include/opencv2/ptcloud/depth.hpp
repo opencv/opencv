@@ -10,7 +10,7 @@
 
 namespace cv
 {
-//! @addtogroup rgbd
+//! @addtogroup ptcloud_rgbd
 //! @{
 
 /** Object that can compute the normals in an image.

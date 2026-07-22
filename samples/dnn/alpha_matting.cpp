@@ -165,11 +165,7 @@ int main(int argc, char **argv)
 
     parser.about(about);
 
-    EngineType engine = ENGINE_AUTO;
-    if (backend != "default" || target != "cpu")
-    {
-        engine = ENGINE_CLASSIC;
-    }
+    EngineType engine = ENGINE_NEW;
 
     Net net;
     loadModel(model, backend, target, net, engine);

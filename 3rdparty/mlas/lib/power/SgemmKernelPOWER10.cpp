@@ -19,6 +19,7 @@ Abstract:
     asm volatile("dcbt 0, %0" ::"r"(addr) : "memory");
 
 #include "SgemmKernelpower.h"
+#include <cstring>  // memset; OpenCV's vendored mlasi.h subset does not pull in <cstring>
 extern "C" void
 PackAKernelPOWER10(__vector float* D, const float* A, size_t lda, size_t k, size_t RowCount);
 struct MlasSgemmBroadcastAElementsMMA

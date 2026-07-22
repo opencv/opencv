@@ -63,6 +63,11 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
     int sdepth = CV_MAT_DEPTH(stype);
     int cn = CV_MAT_CN(stype);
 
+    // FP8 types are not supported by the OpenCL kernels yet; fall back to CPU.
+    if ((sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E4M3FNUZ) ||
+        (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E4M3FNUZ))
+        return false;
+
     int dtype = CV_MAKETYPE(ddepth, cn);
 
     int wdepth = (sdepth == CV_64F) ? CV_64F : CV_32F;
@@ -140,10 +145,10 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
         const int dtype = CV_MAKETYPE(ddepth, channels());
 
         dst.release();
-        if (dims <= 2)
-            dst.create(size(), dtype);
-        else
-            dst.create(dims, size.p, dtype);
+        bool allowTransposed = dims == 1 ||
+            dst.kind() == _InputArray::STD_VECTOR ||
+            (dst.fixedSize() && dst.dims() == 1);
+        dst.create(size, dtype, -1, allowTransposed);
         return;
     }
 

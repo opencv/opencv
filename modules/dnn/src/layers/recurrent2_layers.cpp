@@ -143,24 +143,34 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 if (layout == SEQ_BATCH_HID) {
                     _batchSize = inp0[1];
                     _seqLen = inp0[0];
+                    outResShape.push_back(_seqLen);
+                    outResShape.push_back(1 + static_cast<int>(bidirectional));
+                    outResShape.push_back(_batchSize);
                 } else {
+                    // ONNX layout=1: Y is (batch, seq, dirs, hid) - this must match what forward()
+                    // actually writes, the graph engine preallocates the output by this shape
                     _batchSize = inp0[0];
                     _seqLen = inp0[1];
+                    outResShape.push_back(_batchSize);
+                    outResShape.push_back(_seqLen);
+                    outResShape.push_back(1 + static_cast<int>(bidirectional));
                 }
-                outResShape.push_back(_seqLen);
             }
             else
             {
                 CV_Assert(inp0.size() >= 2 && total(inp0, 1) == _inpSize);
                 _batchSize = inp0[0];
+                outResShape.push_back(1 + static_cast<int>(bidirectional));
+                outResShape.push_back(_batchSize);
             }
 
-            outResShape.push_back(1 + static_cast<int>(bidirectional));
-            outResShape.push_back(_batchSize);
             outResShape.push_back(_hidSize);
             outputs.assign(1, outResShape);
 
+            // Yh / Yc: ONNX layout=0 -> (dirs, batch, hid), layout=1 -> (batch, dirs, hid)
             int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
+            if (layout == BATCH_SEQ_HID)
+                std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
             // compute output shape of yc
@@ -244,45 +254,31 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 batchSize = input[0].size[0];
             }
 
+            // ONNX LSTM inputs: X(0), W(1), R(2), B(3), sequence_lens(4),
+            // initial_h(5), initial_c(6), P(7). Inputs 3..7 are optional and
+            // may be present-but-empty (e.g. CNTK exports keep all 8 slots with
+            // empties for unused ones). Gather by presence/non-emptiness rather
+            // than by the raw input count so optional/empty inputs are ignored.
+            auto hasInput = [&](int idx) {
+                return idx < numInputs && !input[idx].empty();
+            };
+
             std::vector<Mat> blobs_;
             int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
             int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
 
-            blobs_.push_back(input[1].clone());
-            blobs_.push_back(input[2].clone());
-            switch (numInputs) {
-                case 3:
-                    // X, W, R are given
-                    // create bias
-                    blobs_.push_back(Mat::zeros(2, biasShape, input[0].type()));
-                    // create h0, c0
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    break;
-                case 4:
-                    // X, W, R, B are given
-                    blobs_.push_back(input[3]);
-                    // create h0, c0
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
-                    break;
-                case 7:
-                    // X, W, R, B, h0, c0 are given
-                    blobs_.push_back(input[3]);
-                    blobs_.push_back(input[5]);
-                    blobs_.push_back(input[6]);
-                    break;
-                case 8:
-                    // X, W, R, B, seqlen, h0, c0, P are given
-                    blobs_.push_back(input[3]);
-                    blobs_.push_back(input[5]);
-                    blobs_.push_back(input[6]);
-                    blobs_.push_back(input[7]);
-                    break;
-                default:
-                    CV_Error(Error::StsNotImplemented, "Insufficient inputs for LSTM layer. "
-                             "Required inputs: X, W, R, B, seqLen, h0, c0 [, P for peephole]");
-            }
+            CV_Assert(numInputs >= 3);  // X, W, R are mandatory
+            blobs_.push_back(input[1].clone());  // W
+            blobs_.push_back(input[2].clone());  // R
+            // B
+            blobs_.push_back(hasInput(3) ? input[3] : Mat::zeros(2, biasShape, input[0].type()));
+            // initial_h
+            blobs_.push_back(hasInput(5) ? input[5] : Mat::zeros(3, hidShape, input[0].type()));
+            // initial_c
+            blobs_.push_back(hasInput(6) ? input[6] : Mat::zeros(3, hidShape, input[0].type()));
+            // P (peephole) - only when the layer was configured to use it and the input is present
+            if (usePeephole && hasInput(7))
+                blobs_.push_back(input[7]);
 
             // set outputs to 0
             for (auto& out : output)
@@ -302,13 +298,16 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
 
             Mat cOutTs;
-            Mat cOut = produceCellOutput ? output[0].clone() : Mat();
+            // seq-major scratch for the cell states, (seq, batch, dirs, hid) like the recurrence writes
+            int cOutShape[] = {seqLenth, batchSize, numDirs, numHidden};
+            Mat cOut = produceCellOutput ? Mat::zeros(4, cOutShape, output[0].type()) : Mat();
             Mat hOutTs = Mat::zeros(seqLenth * batchSize, hidSize, output[0].type());
             Mat xTs = input[0].reshape(1, batchSizeTotal);
 
-            // Prepare output[0] buffer to store the results
-            int shp0[] = {seqLenth * batchSize, numDirs * numHidden};
-            output[0] = output[0].reshape(1, sizeof(shp0)/sizeof(shp0[0]), shp0);
+            // seq-major assembly buffer for Y. The final result is transposed from it INTO output[0]:
+            // the preallocated output tensor must never be reallocated or get its header replaced,
+            // or the result would silently detach from the graph.
+            Mat hOutAll(batchSizeTotal, numDirs * numHidden, output[0].type());
 
             // Initialize Wx, Wh, bias, h_0, c_0, pI, pF, pO
             Mat Wx, Wh, bias, h_0, c_0, pI, pF, pO;
@@ -416,32 +415,31 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                 }
 
-                // slice in the result from each direction to the output[0] buffer
-                hOutTs.copyTo(output[0].colRange(i * hOutTs.cols, (i + 1) * hOutTs.cols));
+                // slice in the result from each direction to the assembly buffer
+                hOutTs.copyTo(hOutAll.colRange(i * hOutTs.cols, (i + 1) * hOutTs.cols));
             }
 
-            // this one is needed to make make the output[0] compatible with ONNX LSTM layer standard
+            // (seq*batch, dirs*hid) -> (seq, batch, dirs, hid), then into the ONNX Y layout for this
+            // `layout` attribute, written INTO the preallocated output[0] (transposeND's exact-shape
+            // create() keeps it in place)
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
-            output[0] = output[0].reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
-
-            // this transpose is needed to make the output[0] compatible with ONNX LSTM layer standard
-            Mat tmp = output[0].clone();
-            cv::transposeND(tmp, {0, 2, 1, 3}, output[0]);
+            Mat y4d = hOutAll.reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
+            Mat ySeqFirst;   // (seq, dirs, batch, hid) - the layout=0 Y; Yh is sliced from it
+            if (layout == SEQ_BATCH_HID) {
+                cv::transposeND(y4d, {0, 2, 1, 3}, output[0]);
+                ySeqFirst = output[0];
+            } else {
+                cv::transposeND(y4d, {0, 2, 1, 3}, ySeqFirst);
+                cv::transposeND(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
+            }
 
             if (produceOutputYh){
-                getCellStateYh(output[0], output[1], numDirs);
+                getCellStateYh(ySeqFirst, output[1], numDirs);
             }
 
             if (produceCellOutput){
                 getCellStateYc(cOut, output[2], numDirs);
             }
-
-            if (layout == BATCH_SEQ_HID) {
-                cv::transposeND(output[0], {2, 0, 1, 3}, output[0]);
-            }
-
-            // Make sure changes are written back to outputs_arr
-            outputs_arr.assign(output);
         }
 
         void getCellStateYh(Mat& scr, Mat& dst, int numDirs)
@@ -463,28 +461,30 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 }
 
             } else {
-                // there is issue here.
                 // Slice: SxDxBxH -> last sequence, first direction
                 Range ranges1[] = {cv::Range(scr.size[0] - 1, scr.size[0]), cv::Range(0, 1), cv::Range::all(), cv::Range::all()};
                 Mat part1 = scr(ranges1);
-
 
                 // Slice: SxDxBxH -> first sequence, last direction
                 Range ranges2[] = {cv::Range(0, 1), cv::Range(scr.size[1] - 1, scr.size[1]), cv::Range::all(), cv::Range::all()};
                 Mat part2 = scr(ranges2);
 
-
                 int shp[] = {1, part1.size[2] * part1.size[3]};
                 part1 = part1.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
                 part2 = part2.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
 
-                vconcat(part1, part2, dst);
+                // build into a temp, then write into the preallocated dst in place (vconcat straight
+                // into dst would replace its header and detach it from the graph's output tensor)
+                Mat tmp;
+                vconcat(part1, part2, tmp);
 
                 int finalShape[] = {2, batchSize, numHidden};
-                dst = dst.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
+                tmp = tmp.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
 
                 if (layout == BATCH_SEQ_HID){
-                    cv::transposeND(dst, {1, 0, 2}, dst);
+                    cv::transposeND(tmp, {1, 0, 2}, dst);
+                } else {
+                    tmp.copyTo(dst);
                 }
             }
         }
@@ -496,15 +496,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             int shp[] = {0, batchSize, numDirs, numHidden};
             cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
 
-            // permute to {0, 2, 1, 3};
+            // permute to (seq, dirs, batch, hidden); the `layout` only affects the FINAL Yc order
+            // below, the last-timestep/last-direction slicing is layout-independent
             cv::Mat newCellState;
-            // transpose to match batch first output
-            if (layout == BATCH_SEQ_HID){
-                cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
-            }
-            else{
-                cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
-            }
+            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
             cOut = newCellState;
 
             if (numDirs == 1)
@@ -515,7 +510,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 // Reshape: 1x1xBxH -> 1xBxH
                 int shp[] = {1, batchSize, numHidden};
                 cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-                cOut.copyTo(dst);
             }
             else
             {
@@ -536,6 +530,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 // Reshape: 1x2xBxH -> 2xBxH
                 int finalShape[] = {2, batchSize, numHidden};
                 cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
+            }
+
+            // (dirs, batch, hid), or (batch, dirs, hid) for the batch-first layout - written into the
+            // preallocated dst in place
+            if (layout == BATCH_SEQ_HID){
+                cv::transposeND(cOut, {1, 0, 2}, dst);
+            } else {
                 cOut.copyTo(dst);
             }
         }

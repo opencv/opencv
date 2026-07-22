@@ -306,8 +306,8 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
                 int map2Value = convert_int(map2[0]) & (INTER_TAB_SIZE2 - 1);
-                int dx = (map2Value & (INTER_TAB_SIZE - 1)) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
-                int dy = (map2Value >> INTER_BITS) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
+                int dx = (map2Value & (INTER_TAB_SIZE - 1)) >= (INTER_TAB_SIZE >> 1) ? 1 : 0;
+                int dy = (map2Value >> INTER_BITS) >= (INTER_TAB_SIZE >> 1) ? 1 : 0;
                 int2 gxy = convert_int2(map1[0]) + (int2)(dx, dy);
                 #if WARP_RELATIVE
                 gxy.x += x;

@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+//
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 
 #include "precomp.hpp"
@@ -155,20 +157,27 @@ float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vl = VTraits<v_float32>::vlanes();
     v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
     v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
-    for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes())
+    for (; j <= n - 4 * vl; j += 4 * vl)
     {
         v_float32 t0 = v_sub(vx_load(a + j), vx_load(b + j));
-        v_float32 t1 = v_sub(vx_load(a + j + VTraits<v_float32>::vlanes()), vx_load(b + j + VTraits<v_float32>::vlanes()));
+        v_float32 t1 = v_sub(vx_load(a + j + vl), vx_load(b + j + vl));
         v_d0 = v_muladd(t0, t0, v_d0);
-        v_float32 t2 = v_sub(vx_load(a + j + 2 * VTraits<v_float32>::vlanes()), vx_load(b + j + 2 * VTraits<v_float32>::vlanes()));
+        v_float32 t2 = v_sub(vx_load(a + j + 2 * vl), vx_load(b + j + 2 * vl));
         v_d1 = v_muladd(t1, t1, v_d1);
-        v_float32 t3 = v_sub(vx_load(a + j + 3 * VTraits<v_float32>::vlanes()), vx_load(b + j + 3 * VTraits<v_float32>::vlanes()));
+        v_float32 t3 = v_sub(vx_load(a + j + 3 * vl), vx_load(b + j + 3 * vl));
         v_d2 = v_muladd(t2, t2, v_d2);
         v_d3 = v_muladd(t3, t3, v_d3);
     }
-    d = v_reduce_sum(v_add(v_add(v_add(v_d0, v_d1), v_d2), v_d3));
+    v_d0 = v_add(v_add(v_d0, v_d1), v_add(v_d2, v_d3));
+    for (; j <= n - vl; j += vl)
+    {
+        v_float32 t0 = v_sub(vx_load(a + j), vx_load(b + j));
+        v_d0 = v_muladd(t0, t0, v_d0);
+    }
+    d = v_reduce_sum(v_d0);
 #endif
     for( ; j < n; j++ )
     {
@@ -183,16 +192,20 @@ float normL1_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vl = VTraits<v_float32>::vlanes();
     v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
     v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
-    for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes())
+    for (; j <= n - 4 * vl; j += 4 * vl)
     {
         v_d0 = v_add(v_d0, v_absdiff(vx_load(a + j), vx_load(b + j)));
-        v_d1 = v_add(v_d1, v_absdiff(vx_load(a + j + VTraits<v_float32>::vlanes()), vx_load(b + j + VTraits<v_float32>::vlanes())));
-        v_d2 = v_add(v_d2, v_absdiff(vx_load(a + j + 2 * VTraits<v_float32>::vlanes()), vx_load(b + j + 2 * VTraits<v_float32>::vlanes())));
-        v_d3 = v_add(v_d3, v_absdiff(vx_load(a + j + 3 * VTraits<v_float32>::vlanes()), vx_load(b + j + 3 * VTraits<v_float32>::vlanes())));
+        v_d1 = v_add(v_d1, v_absdiff(vx_load(a + j + vl), vx_load(b + j + vl)));
+        v_d2 = v_add(v_d2, v_absdiff(vx_load(a + j + 2 * vl), vx_load(b + j + 2 * vl)));
+        v_d3 = v_add(v_d3, v_absdiff(vx_load(a + j + 3 * vl), vx_load(b + j + 3 * vl)));
     }
-    d = v_reduce_sum(v_add(v_add(v_add(v_d0, v_d1), v_d2), v_d3));
+    v_d0 = v_add(v_add(v_d0, v_d1), v_add(v_d2, v_d3));
+    for (; j <= n - vl; j += vl)
+        v_d0 = v_add(v_d0, v_absdiff(vx_load(a + j), vx_load(b + j)));
+    d = v_reduce_sum(v_d0);
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -203,11 +216,14 @@ int normL1_(const uchar* a, const uchar* b, int n)
 {
     int j = 0, d = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    for (; j <= n - 4 * VTraits<v_uint8>::vlanes(); j += 4 * VTraits<v_uint8>::vlanes())
+    const int vl = VTraits<v_uint8>::vlanes();
+    for (; j <= n - 4 * vl; j += 4 * vl)
         d += v_reduce_sad(vx_load(a + j), vx_load(b + j)) +
-             v_reduce_sad(vx_load(a + j + VTraits<v_uint8>::vlanes()), vx_load(b + j + VTraits<v_uint8>::vlanes())) +
-             v_reduce_sad(vx_load(a + j + 2 * VTraits<v_uint8>::vlanes()), vx_load(b + j + 2 * VTraits<v_uint8>::vlanes())) +
-             v_reduce_sad(vx_load(a + j + 3 * VTraits<v_uint8>::vlanes()), vx_load(b + j + 3 * VTraits<v_uint8>::vlanes()));
+             v_reduce_sad(vx_load(a + j + vl), vx_load(b + j + vl)) +
+             v_reduce_sad(vx_load(a + j + 2 * vl), vx_load(b + j + 2 * vl)) +
+             v_reduce_sad(vx_load(a + j + 3 * vl), vx_load(b + j + 3 * vl));
+    for (; j <= n - vl; j += vl)
+        d += v_reduce_sad(vx_load(a + j), vx_load(b + j));
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);

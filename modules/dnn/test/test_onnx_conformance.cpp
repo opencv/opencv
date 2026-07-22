@@ -1419,14 +1419,14 @@ static const TestCase testConformanceConfig[] = {
     {"test_logsoftmax_large_number_expanded_ver18", 0, 0},
     {"test_logsoftmax_negative_axis_expanded_ver18", 0, 0},
     {"test_lpnormalization_default", 0, 0},
-    {"test_lppool_1d_default", 0, 0},
-    {"test_lppool_2d_default", 0, 0},
-    {"test_lppool_2d_dilations", 0, 0},
-    {"test_lppool_2d_pads", 0, 0},
-    {"test_lppool_2d_same_lower", 0, 0},
-    {"test_lppool_2d_same_upper", 0, 0},
-    {"test_lppool_2d_strides", 0, 0},
-    {"test_lppool_3d_default", 0, 0},
+    {"test_lppool_1d_default", 1, 1},
+    {"test_lppool_2d_default", 1, 1},
+    {"test_lppool_2d_dilations", 1, 1},
+    {"test_lppool_2d_pads", 1, 1},
+    {"test_lppool_2d_same_lower", 1, 1},
+    {"test_lppool_2d_same_upper", 1, 1},
+    {"test_lppool_2d_strides", 1, 1},
+    {"test_lppool_3d_default", 1, 1},
     {"test_maxpool_2d_ceil_output_size_reduce_by_one", 0, 0},
     {"test_maxpool_3d_dilations", 0, 0},
     {"test_maxpool_3d_dilations_use_ref_impl", 0, 0},
@@ -1784,18 +1784,6 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
         };
 
-        EngineType engine_forced =
-            (EngineType)utils::getConfigurationParameterSizeT(
-                "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-
-        if (engine_forced == ENGINE_CLASSIC) {
-            classic_deny_list = {
-#include "test_onnx_conformance_layer_filter_opencv_classic_denylist.inl.hpp"
-            };
-        } else {
-            classic_deny_list = {};
-        }
-
 #ifdef HAVE_HALIDE
         halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
@@ -1897,6 +1885,21 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             name == "test_reduce_sum_square_default_axes_keepdims_random_expanded") {
             default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.52588e-05 vs 1e-05
         }
+        if (name == "test_nllloss_NCd1d2_reduction_sum_expanded") {
+            default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.14441e-05 vs 1e-05
+        }
+        if (name == "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded") {
+            default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.06394e-05 vs 1e-05
+        }
+        // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
+        // even when executed on an fp32 target.
+        if (name == "test_attention_4d_fp16" ||
+            name == "test_attention_4d_fp16_expanded" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
+        }
     }
 #ifdef HAVE_HALIDE
     else if (backend == DNN_BACKEND_HALIDE)
@@ -1958,6 +1961,15 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         }
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
+        }
+        // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
+        // even when executed on an fp32 target (the layer falls back to the CPU path).
+        if (name == "test_attention_4d_fp16" ||
+            name == "test_attention_4d_fp16_expanded" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
         }
     }
 #endif

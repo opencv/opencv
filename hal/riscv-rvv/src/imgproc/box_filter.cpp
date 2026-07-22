@@ -13,12 +13,22 @@ namespace cv { namespace rvv_hal { namespace imgproc {
 
 namespace {
 
+// Exact (a + b/2) / b for b in {9, 25, 49} via multiply-high and shift
+// (Granlund-Montgomery, m = ceil(2^18 / b)); exact while a + b/2 < 32768,
+// the maximum here is 49*255 + 24 = 12519
+template<typename VecType>
+static inline VecType vdiv_box_u16(VecType a, ushort b, size_t vl)
+{
+    const ushort m = b == 9 ? 29128 : b == 25 ? 10486 : 5350;
+    return __riscv_vsrl(__riscv_vmulhu(__riscv_vadd(a, b / 2, vl), m, vl), 2, vl);
+}
+
 template<typename T> struct rvv;
 template<> struct rvv<uchar>
 {
     static inline vuint16m8_t vcvt0(vuint8m4_t a, size_t b) { return __riscv_vzext_vf2(a, b); }
     static inline vuint8m4_t vcvt1(vuint16m8_t a, size_t b) { return __riscv_vnclipu(a, 0, __RISCV_VXRM_RNU, b); }
-    static inline vuint16m8_t vdiv(vuint16m8_t a, ushort b, size_t c) { return __riscv_vdivu(__riscv_vadd(a, b / 2, c), b, c); }
+    static inline vuint16m8_t vdiv(vuint16m8_t a, ushort b, size_t c) { return vdiv_box_u16(a, b, c); }
 };
 template<> struct rvv<short>
 {
@@ -101,11 +111,18 @@ static inline int boxFilterC1(int start, int end, const uchar* src_data, size_t 
                     sum = helperWT::vadd(sum, src, vl);
                     src = helperWT::vslide1down(src, extra[1], vl);
                     sum = helperWT::vadd(sum, src, vl);
-                    if (ksize == 5)
+                    if (ksize >= 5)
                     {
                         src = helperWT::vslide1down(src, extra[2], vl);
                         sum = helperWT::vadd(sum, src, vl);
                         src = helperWT::vslide1down(src, extra[3], vl);
+                        sum = helperWT::vadd(sum, src, vl);
+                    }
+                    if (ksize == 7)
+                    {
+                        src = helperWT::vslide1down(src, extra[4], vl);
+                        sum = helperWT::vadd(sum, src, vl);
+                        src = helperWT::vslide1down(src, extra[5], vl);
                         sum = helperWT::vadd(sum, src, vl);
                     }
                     helperWT::vstore(res.data() + p2idx(i, j), sum, vl);
@@ -119,11 +136,16 @@ static inline int boxFilterC1(int start, int end, const uchar* src_data, size_t 
             const WT* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
             const WT* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
             const WT* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
-            const WT* row3 = nullptr, *row4 = nullptr;
-            if (ksize == 5)
+            const WT* row3 = nullptr, *row4 = nullptr, *row5 = nullptr, *row6 = nullptr;
+            if (ksize >= 5)
             {
                 row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
                 row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
+            }
+            if (ksize == 7)
+            {
+                row5 = accessX(cur + 5) == noval ? nullptr : res.data() + p2idx(accessX(cur + 5), 0);
+                row6 = accessX(cur + 6) == noval ? nullptr : res.data() + p2idx(accessX(cur + 6), 0);
             }
 
             int vl;
@@ -135,6 +157,8 @@ static inline int boxFilterC1(int start, int end, const uchar* src_data, size_t 
                 if (row2) sum = helperWT::vadd(sum, helperWT::vload(row2 + j, vl), vl);
                 if (row3) sum = helperWT::vadd(sum, helperWT::vload(row3 + j, vl), vl);
                 if (row4) sum = helperWT::vadd(sum, helperWT::vload(row4 + j, vl), vl);
+                if (row5) sum = helperWT::vadd(sum, helperWT::vload(row5 + j, vl), vl);
+                if (row6) sum = helperWT::vadd(sum, helperWT::vload(row6 + j, vl), vl);
                 if (normalize) sum = rvv<T>::vdiv(sum, ksize * ksize, vl);
 
                 if (cast)
@@ -226,7 +250,7 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
                     sum0 = __riscv_vfadd(sum0, src0, vl);
                     sum1 = __riscv_vfadd(sum1, src1, vl);
                     sum2 = __riscv_vfadd(sum2, src2, vl);
-                    if (ksize == 5)
+                    if (ksize >= 5)
                     {
                         src0 = __riscv_vfslide1down(src0, extra[6], vl);
                         src1 = __riscv_vfslide1down(src1, extra[7], vl);
@@ -237,6 +261,21 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
                         src0 = __riscv_vfslide1down(src0, extra[ 9], vl);
                         src1 = __riscv_vfslide1down(src1, extra[10], vl);
                         src2 = __riscv_vfslide1down(src2, extra[11], vl);
+                        sum0 = __riscv_vfadd(sum0, src0, vl);
+                        sum1 = __riscv_vfadd(sum1, src1, vl);
+                        sum2 = __riscv_vfadd(sum2, src2, vl);
+                    }
+                    if (ksize == 7)
+                    {
+                        src0 = __riscv_vfslide1down(src0, extra[12], vl);
+                        src1 = __riscv_vfslide1down(src1, extra[13], vl);
+                        src2 = __riscv_vfslide1down(src2, extra[14], vl);
+                        sum0 = __riscv_vfadd(sum0, src0, vl);
+                        sum1 = __riscv_vfadd(sum1, src1, vl);
+                        sum2 = __riscv_vfadd(sum2, src2, vl);
+                        src0 = __riscv_vfslide1down(src0, extra[15], vl);
+                        src1 = __riscv_vfslide1down(src1, extra[16], vl);
+                        src2 = __riscv_vfslide1down(src2, extra[17], vl);
                         sum0 = __riscv_vfadd(sum0, src0, vl);
                         sum1 = __riscv_vfadd(sum1, src1, vl);
                         sum2 = __riscv_vfadd(sum2, src2, vl);
@@ -257,11 +296,16 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
             const float* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
             const float* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
             const float* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
-            const float* row3 = nullptr, *row4 = nullptr;
-            if (ksize == 5)
+            const float* row3 = nullptr, *row4 = nullptr, *row5 = nullptr, *row6 = nullptr;
+            if (ksize >= 5)
             {
                 row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
                 row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
+            }
+            if (ksize == 7)
+            {
+                row5 = accessX(cur + 5) == noval ? nullptr : res.data() + p2idx(accessX(cur + 5), 0);
+                row6 = accessX(cur + 6) == noval ? nullptr : res.data() + p2idx(accessX(cur + 6), 0);
             }
 
             int vl;
@@ -282,6 +326,8 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
                 loadres(row2);
                 loadres(row3);
                 loadres(row4);
+                loadres(row5);
+                loadres(row6);
                 if (normalize)
                 {
                     sum0 = __riscv_vfdiv(sum0, ksize * ksize, vl);
@@ -301,12 +347,139 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
     return CV_HAL_ERROR_OK;
 }
 
+// Channel-blind kernel for interleaved 8U data: a row is treated as width*cn
+// flat u8 elements, whose horizontal taps sit at strides of cn elements
+// (flat[i] sums flat[i], flat[i+cn], ..., flat[i+(ksize-1)*cn], which are
+// exactly element i's own-channel taps). This removes all segment loads and
+// slide chains: the horizontal pass is ksize independent unaligned loads with
+// widening adds, the vertical pass is a single contiguous u16 stream, and the
+// output is a plain store. u16 column sums are exact for ksize <= 7
+// (49*255 = 12495 < 65535).
+template<int ksize, int cn>
+static inline int boxFilterFlat8U(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int full_width, int full_height, int offset_x, int offset_y, int anchor_x, int anchor_y, bool normalize, int border_type)
+{
+    constexpr int noval = std::numeric_limits<int>::max();
+    auto accessX = [&](int x) {
+        int pi = common::borderInterpolate(offset_y + x - anchor_y, full_height, border_type);
+        return pi < 0 ? noval : pi - offset_y;
+    };
+    auto accessY = [&](int y) {
+        int pj = common::borderInterpolate(offset_x + y - anchor_x, full_width, border_type);
+        return pj < 0 ? noval : pj - offset_x;
+    };
+    const int W = width * cn;
+    // ring keeps one extra row so the row leaving the window is still present
+    // for the incremental vertical update (ksize > 3)
+    constexpr int ring = ksize > 3 ? ksize + 1 : ksize;
+    auto p2idx = [&](int x){ return (x + ring) % ring * W; };
+
+    std::vector<ushort> res(W * ring);
+    std::vector<ushort> vsum(ksize > 3 ? W : 0);
+    bool vsum_valid = false;
+    auto process = [&](int x, int y) {
+        ushort sum[cn];
+        for (int c = 0; c < cn; c++)
+            sum[c] = 0;
+        for (int i = 0; i < ksize; i++)
+        {
+            int p = accessY(y + i);
+            if (p != noval)
+            {
+                for (int c = 0; c < cn; c++)
+                    sum[c] += (src_data + x * src_step)[p * cn + c];
+            }
+        }
+        for (int c = 0; c < cn; c++)
+            res[p2idx(x) + y * cn + c] = sum[c];
+    };
+
+    const int left = anchor_x, right = width - (ksize - 1 - anchor_x);
+    for (int i = start - anchor_y; i < end + (ksize - 1 - anchor_y); i++)
+    {
+        if (i + offset_y >= 0 && i + offset_y < full_height)
+        {
+            if (left >= right)
+            {
+                for (int j = 0; j < width; j++)
+                    process(i, j);
+            }
+            else
+            {
+                for (int j = 0; j < left; j++)
+                    process(i, j);
+                for (int j = right; j < width; j++)
+                    process(i, j);
+
+                ushort* row = res.data() + p2idx(i);
+                int vl;
+                for (int fj = left * cn; fj < right * cn; fj += vl)
+                {
+                    vl = __riscv_vsetvl_e8m4(right * cn - fj);
+                    const uchar* p = src_data + i * src_step + fj - anchor_x * cn;
+                    auto acc = __riscv_vwaddu_vv(__riscv_vle8_v_u8m4(p, vl), __riscv_vle8_v_u8m4(p + cn, vl), vl);
+                    for (int t = 2; t < ksize; t++)
+                        acc = __riscv_vwaddu_wv(acc, __riscv_vle8_v_u8m4(p + t * cn, vl), vl);
+                    __riscv_vse16(row + fj, acc, vl);
+                }
+            }
+        }
+
+        int cur = i - (ksize - 1 - anchor_y);
+        if (cur >= start)
+        {
+            if (ksize > 3 && vsum_valid)
+            {
+                // slide the window down one row: add the entering row's column
+                // sums, subtract the leaving row's (u16 stays exact: the window
+                // sum and the intermediate sum+entering both fit)
+                int add_r = accessX(cur + ksize - 1);
+                int sub_r = accessX(cur - 1);
+                const ushort* addp = add_r == noval ? nullptr : res.data() + p2idx(add_r);
+                const ushort* subp = sub_r == noval ? nullptr : res.data() + p2idx(sub_r);
+
+                int vl;
+                for (int fj = 0; fj < W; fj += vl)
+                {
+                    vl = __riscv_vsetvl_e16m8(W - fj);
+                    auto sum = __riscv_vle16_v_u16m8(vsum.data() + fj, vl);
+                    if (addp) sum = __riscv_vadd(sum, __riscv_vle16_v_u16m8(addp + fj, vl), vl);
+                    if (subp) sum = __riscv_vsub(sum, __riscv_vle16_v_u16m8(subp + fj, vl), vl);
+                    __riscv_vse16(vsum.data() + fj, sum, vl);
+                    if (normalize) sum = vdiv_box_u16(sum, ksize * ksize, vl);
+                    __riscv_vse8(dst_data + cur * dst_step + fj, __riscv_vnclipu(sum, 0, __RISCV_VXRM_RNU, vl), vl);
+                }
+            }
+            else
+            {
+                const ushort* rows[ksize];
+                for (int k = 0; k < ksize; k++)
+                    rows[k] = accessX(cur + k) == noval ? nullptr : res.data() + p2idx(accessX(cur + k));
+
+                int vl;
+                for (int fj = 0; fj < W; fj += vl)
+                {
+                    vl = __riscv_vsetvl_e16m8(W - fj);
+                    auto sum = rows[0] ? __riscv_vle16_v_u16m8(rows[0] + fj, vl) : __riscv_vmv_v_x_u16m8(0, vl);
+                    for (int k = 1; k < ksize; k++)
+                        if (rows[k]) sum = __riscv_vadd(sum, __riscv_vle16_v_u16m8(rows[k] + fj, vl), vl);
+                    if (ksize > 3) __riscv_vse16(vsum.data() + fj, sum, vl);
+                    if (normalize) sum = vdiv_box_u16(sum, ksize * ksize, vl);
+                    __riscv_vse8(dst_data + cur * dst_step + fj, __riscv_vnclipu(sum, 0, __RISCV_VXRM_RNU, vl), vl);
+                }
+                vsum_valid = true;
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 } // anonymous
 
 int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, size_t ksize_width, size_t ksize_height, int anchor_x, int anchor_y, bool normalize, int border_type)
 {
     const int src_type = CV_MAKETYPE(src_depth, cn), dst_type = CV_MAKETYPE(dst_depth, cn);
-    if (ksize_width != ksize_height || (ksize_width != 3 && ksize_width != 5))
+    if (ksize_width != ksize_height || (ksize_width != 3 && ksize_width != 5 && ksize_width != 7))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (border_type & BORDER_ISOLATED || border_type == BORDER_WRAP)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -337,6 +510,10 @@ int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t ds
             {
                 res = common::invoke(height, {boxFilterC1<5, RVV_U8M4, RVV_U16M8, false>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             }
+            if (ksize_width == 7)
+            {
+                res = common::invoke(height, {boxFilterC1<7, RVV_U8M4, RVV_U16M8, false>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            }
         }
     }
     else
@@ -349,11 +526,35 @@ int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t ds
         case 500 + CV_8UC1:
             res = common::invoke(height, {boxFilterC1<5, RVV_U8M4, RVV_U16M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
+        case 700 + CV_8UC1:
+            res = common::invoke(height, {boxFilterFlat8U<7, 1>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 300 + CV_8UC3:
+            res = common::invoke(height, {boxFilterFlat8U<3, 3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 500 + CV_8UC3:
+            res = common::invoke(height, {boxFilterFlat8U<5, 3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 700 + CV_8UC3:
+            res = common::invoke(height, {boxFilterFlat8U<7, 3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 300 + CV_8UC4:
+            res = common::invoke(height, {boxFilterFlat8U<3, 4>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 500 + CV_8UC4:
+            res = common::invoke(height, {boxFilterFlat8U<5, 4>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 700 + CV_8UC4:
+            res = common::invoke(height, {boxFilterFlat8U<7, 4>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
         case 300 + CV_16SC1:
             res = common::invoke(height, {boxFilterC1<3, RVV_I16M4, RVV_I32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
         case 500 + CV_16SC1:
             res = common::invoke(height, {boxFilterC1<5, RVV_I16M4, RVV_I32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 700 + CV_16SC1:
+            res = common::invoke(height, {boxFilterC1<7, RVV_I16M4, RVV_I32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
         case 300 + CV_32SC1:
             res = common::invoke(height, {boxFilterC1<3, RVV_I32M8, RVV_I32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
@@ -367,11 +568,17 @@ int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t ds
         case 500 + CV_32FC1:
             res = common::invoke(height, {boxFilterC1<5, RVV_F32M8, RVV_F32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
+        case 700 + CV_32FC1:
+            res = common::invoke(height, {boxFilterC1<7, RVV_F32M8, RVV_F32M8, true>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
         case 300 + CV_32FC3:
             res = common::invoke(height, {boxFilterC3<3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
         case 500 + CV_32FC3:
             res = common::invoke(height, {boxFilterC3<5>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
+            break;
+        case 700 + CV_32FC3:
+            res = common::invoke(height, {boxFilterC3<7>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, anchor_x, anchor_y, normalize, border_type);
             break;
         }
     }

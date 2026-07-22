@@ -1242,6 +1242,24 @@ inline int hal_ni_threshold_otsu(const uchar* src_data, size_t src_step, uchar* 
 //! @endcond
 
 /**
+   @brief Calculates the distance to the closest zero pixel for each pixel of the source image
+   @param src_data Source image (8-bit single-channel) data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param dst_type Type of the destination image (CV_8UC1 or CV_32FC1)
+   @param dist_type Type of distance (cv::DistanceTypes: DIST_L1, DIST_L2, DIST_C)
+   @param mask_size Size of the distance transform mask (cv::DistanceTransformMasks: DIST_MASK_3, DIST_MASK_5, DIST_MASK_PRECISE)
+*/
+inline int hal_ni_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int dst_type, int dist_type, int mask_size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_distanceTransform hal_ni_distanceTransform
+//! @endcond
+
+/**
    @brief Calculate box filter
    @param src_data Source image data
    @param src_step Source image step
@@ -1521,6 +1539,27 @@ inline int hal_ni_canny(const uchar* src_data, size_t src_step, uchar* dst_data,
 //! @endcond
 
 /**
+   @brief Canny edge detector from image derivatives
+   @param dx_data Source image x-derivative data
+   @param dx_step Source image x-derivative step
+   @param dy_data Source image y-derivative data
+   @param dy_step Source image y-derivative step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param cn Number of channels
+   @param lowThreshold low hresholds value
+   @param highThreshold high thresholds value
+   @param L2gradient Flag, indicating use L2 or L1 norma.
+*/
+inline int hal_ni_canny_deriv(const short* dx_data, size_t dx_step, const short* dy_data, size_t dy_step, uchar* dst_data, size_t dst_step, int width, int height, int cn, double lowThreshold, double highThreshold, bool L2gradient) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_canny_deriv hal_ni_canny_deriv
+//! @endcond
+
+/**
    @brief Calculates a histogram of a set of arrays
    @param src_data Source imgage data
    @param src_step Source image step
@@ -1538,6 +1577,32 @@ inline int hal_ni_calcHist(const uchar* src_data, size_t src_step, int src_type,
 
 //! @cond IGNORED
 #define cv_hal_calcHist hal_ni_calcHist
+//! @endcond
+
+/**
+   @brief Compares a template against overlapped image regions.
+   @param src_data Source image (single-channel, CV_8U or CV_32F) data
+   @param src_step Source image step
+   @param src_width Source image width
+   @param src_height Source image height
+   @param templ_data Template image data (same type as source)
+   @param templ_step Template image step
+   @param templ_width Template image width
+   @param templ_height Template image height
+   @param result_data Destination map data (single-channel CV_32F, size (src_width-templ_width+1) x (src_height-templ_height+1))
+   @param result_step Destination map step
+   @param depth Depth of source and template images (CV_8U or CV_32F)
+   @param cn Number of channels
+   @param method Comparison method (cv::TemplateMatchModes)
+   @sa matchTemplate
+*/
+inline int hal_ni_matchTemplate(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                                const uchar* templ_data, size_t templ_step, int templ_width, int templ_height,
+                                float* result_data, size_t result_step, int depth, int cn, int method)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_matchTemplate hal_ni_matchTemplate
 //! @endcond
 
 //! @}

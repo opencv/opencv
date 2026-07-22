@@ -128,7 +128,7 @@ than YOLOX) in case it is needed. However, usually each YOLO repository has pred
 
 #### Exporting YOLOv10 model
 
-In oder to run YOLOv10 one needs to cut off postporcessing with dynamic shapes from torch and then convert it to ONNX. If someone is looking for on how to cut off the postprocessing, there is this [forked branch](https://github.com/Abdurrahheem/yolov10/tree/ash/opencv-export) from official YOLOv10. The forked branch cuts of the postprocessing by [returning output](https://github.com/Abdurrahheem/yolov10/blob/4fdaafd912c8891642bfbe85751ea66ec20f05ad/ultralytics/nn/modules/head.py#L522) of the model before postprocessing procedure itself. To convert torch model to ONNX follow this proceduce.
+In order to run YOLOv10 one needs to cut off postprocessing with dynamic shapes from torch and then convert it to ONNX. If someone is looking for on how to cut off the postprocessing, there is this [forked branch](https://github.com/Abdurrahheem/yolov10/tree/ash/opencv-export) from official YOLOv10. The forked branch cuts off the postprocessing by [returning output](https://github.com/Abdurrahheem/yolov10/blob/4fdaafd912c8891642bfbe85751ea66ec20f05ad/ultralytics/nn/modules/head.py#L522) of the model before postprocessing procedure itself. To convert torch model to ONNX follow this procedure.
 
 @code{.bash}
 git clone git@github.com:Abdurrahheem/yolov10.git

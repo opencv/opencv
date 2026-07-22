@@ -441,6 +441,14 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     CV_INSTRUMENT_REGION();
 
+    if (type != FastFeatureDetector::TYPE_5_8 &&
+        type != FastFeatureDetector::TYPE_7_12 &&
+        type != FastFeatureDetector::TYPE_9_16)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("Unknown FastFeatureDetector detector type: %d", static_cast<int>(type)));
+    }
+
     const size_t max_fast_features = std::max(_img.total()/100, size_t(1000)); // Simple heuristic that depends on resolution.
 
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
@@ -541,7 +549,7 @@ public:
         else if(prop == FAST_N)
             type = static_cast<FastFeatureDetector::DetectorType>(cvRound(value));
         else
-            CV_Error(Error::StsBadArg, "");
+            CV_Error_(Error::StsBadArg, ("Unknown FastFeatureDetector property: %d", prop));
     }
 
     double get(int prop) const
@@ -552,7 +560,7 @@ public:
             return nonmaxSuppression;
         if(prop == FAST_N)
             return static_cast<int>(type);
-        CV_Error(Error::StsBadArg, "");
+        CV_Error_(Error::StsBadArg, ("Unknown FastFeatureDetector property: %d", prop));
         return 0;
     }
 

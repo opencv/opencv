@@ -7,11 +7,11 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/affine.hpp"
-#include "opencv2/core/utils/logger.hpp"
 #include "opencv2/geometry/segment.hpp"
 
 /**
   @defgroup 3d_projection 3D vision functionality
+  @ingroup geometry
 
 Most of the functions in this section use a so-called pinhole camera model. The view of a scene
 is obtained by projecting a scene's 3D point \f$P_w\f$ into the image plane using a perspective
@@ -832,7 +832,8 @@ CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mt
 @param projMatrix 3x4 input projection matrix P.
 @param cameraMatrix Output 3x3 camera intrinsic matrix \f$\cameramatrix{A}\f$.
 @param rotMatrix Output 3x3 external rotation matrix R.
-@param transVect Output 4x1 translation vector T.
+@param transVect Output 4x1 vector representing the camera position in homogeneous coordinates.
+To obtain the translation vector, use t = -rotMatrix * transVect[:3]
 @param rotMatrixX Optional 3x3 rotation matrix around x-axis.
 @param rotMatrixY Optional 3x3 rotation matrix around y-axis.
 @param rotMatrixZ Optional 3x3 rotation matrix around z-axis.

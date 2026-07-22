@@ -6,7 +6,6 @@
 #define OPENCV_2D_HPP
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/utils/logger.hpp"
 
 namespace cv {
 

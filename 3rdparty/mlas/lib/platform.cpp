@@ -420,6 +420,17 @@ MLAS_PLATFORM::MLAS_PLATFORM(void)
     // calls MlasSgemmKernelZero / MlasSgemmKernelAdd directly without going
     // through GetMlasPlatform().GemmFloatKernel.
 }
+
+// FP16 HGemm kernels aren't vendored (MLAS_GEMM_ONLY) but compute.cpp references this probe; define it so static links resolve. See opencv/opencv#29342.
+bool
+MLASCALL
+MlasHGemmSupported(
+    CBLAS_TRANSPOSE /*TransA*/,
+    CBLAS_TRANSPOSE /*TransB*/
+    )
+{
+    return false;
+}
 #else  // !MLAS_GEMM_ONLY
 MLAS_PLATFORM::MLAS_PLATFORM(
     void
@@ -881,7 +892,7 @@ Return Value:
         }
         else{
             this->ErfFP16KernelRoutine = MlasNeonErfFP16Kernel;
-            this->GeluFP16KernelRoutine = MlasNeonGeluFP16Kernel; 
+            this->GeluFP16KernelRoutine = MlasNeonGeluFP16Kernel;
         }
     #else
         this->ErfFP16KernelRoutine = MlasNeonErfFP16Kernel;
@@ -1088,7 +1099,7 @@ MlasPlatformU8S8Overflow(
 
 #endif
 thread_local size_t ThreadedBufSize = 0;
-#ifdef _MSC_VER
+#ifdef _WIN32
 thread_local std::unique_ptr<uint8_t, decltype(&_aligned_free)> ThreadedBufHolder(nullptr, &_aligned_free);
 #else
 thread_local std::unique_ptr<uint8_t, decltype(&free)> ThreadedBufHolder(nullptr, &free);

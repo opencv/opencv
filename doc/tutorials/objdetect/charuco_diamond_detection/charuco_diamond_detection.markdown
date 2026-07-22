@@ -12,7 +12,7 @@ It is similar to a ChArUco board in appearance, however they are conceptually di
 In both, ChArUco board and Diamond markers, their detection is based on the previous detected ArUco
 markers. In the ChArUco case, the used markers are selected by directly looking their identifiers. This means
 that if a marker (included in the board) is found on a image, it will be automatically assumed to belong to the board. Furthermore,
-if a marker board is found more than once in the image, it will produce an ambiguity since the system wont
+if a marker board is found more than once in the image, it will produce an ambiguity since the system won't
 be able to know which one should be used for the Board.
 
 On the other hand, the detection of Diamond marker is not based on the identifiers. Instead, their detection

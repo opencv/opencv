@@ -24,14 +24,14 @@
     v_float32 dst_y = vx_setall_f32(float(y));
 
 #define CV_WARP_VECTOR_GET_ADDR_C1() \
-    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0), \
-            addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
+    v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, src_ix0), \
+            addr_1 = v_muladd(v_srcstep, src_iy1, src_ix1);
 #define CV_WARP_VECTOR_GET_ADDR_C3() \
-    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)), \
-            addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
+    v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, v_mul(src_ix0, three)), \
+            addr_1 = v_muladd(v_srcstep, src_iy1, v_mul(src_ix1, three));
 #define CV_WARP_VECTOR_GET_ADDR_C4() \
-    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)), \
-            addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
+    v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, v_mul(src_ix0, four)), \
+            addr_1 = v_muladd(v_srcstep, src_iy1, v_mul(src_ix1, four));
 #define CV_WARP_VECTOR_GET_ADDR(CN) \
     CV_WARP_VECTOR_GET_ADDR_##CN() \
     vx_store(addr, addr_0); \

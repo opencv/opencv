@@ -10,6 +10,9 @@
 namespace cv
 {
 
+//! @addtogroup geometry_shape
+//! @{
+
 /**
  * @brief Represents an edge in a graph for Minimum Spanning Tree (MST) computation.
  *
@@ -59,6 +62,8 @@ CV_EXPORTS_W bool buildMST(
     MSTAlgorithm algorithm,
     int root = 0
 );
+
+//! @}
 
 } // namespace cv
 

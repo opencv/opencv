@@ -101,7 +101,7 @@ if(BUILD_DOCS)
     install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc
       DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html"
       COMPONENT "docs" OPTIONAL
-      ${compatible_MESSAGE_NEVER}
+      MESSAGE_NEVER
     )
   elseif(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "JAVA")
     set(Java_JAVADOC_EXECUTABLE ${Java_JAVADOC_EXECUTABLE} -encoding utf-8)
@@ -121,7 +121,7 @@ if(BUILD_DOCS)
     install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc/${the_module}/
       DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html/javadoc"
       COMPONENT "docs" OPTIONAL
-      ${compatible_MESSAGE_NEVER}
+      MESSAGE_NEVER
     )
   else()
     ocv_assert(0)

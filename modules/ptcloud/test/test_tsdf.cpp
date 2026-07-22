@@ -517,11 +517,11 @@ void staticBoundingBoxTest(VolumeType volumeType)
 }
 
 
-// For HashTSDF only
-void boundingBoxGrowthTest(bool enableGrowth)
+// For HashTSDF and ColorHashTSDF
+void boundingBoxGrowthTest(VolumeType volumeType, bool enableGrowth)
 {
-    VolumeSettings vs(VolumeType::HashTSDF);
-    Volume volume(VolumeType::HashTSDF, vs);
+    VolumeSettings vs(volumeType);
+    Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intrIntegrate, intrRaycast;
@@ -536,11 +536,25 @@ void boundingBoxGrowthTest(bool enableGrowth)
     UMat udepth;
     depth.copyTo(udepth);
 
+    const bool isColor = (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF);
+    Mat rgb;
+    UMat urgb;
+    if (isColor)
+    {
+        rgb = scene->rgb(poses[0]);
+        rgb.copyTo(urgb);
+    }
+
     // depth is integrated with multiple weight
     // TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
     const int nIntegrations = 1;
     for (int i = 0; i < nIntegrations; i++)
-        volume.integrate(udepth, poses[0].matrix);
+    {
+        if (isColor)
+            volume.integrate(udepth, urgb, poses[0].matrix);
+        else
+            volume.integrate(udepth, poses[0].matrix);
+    }
 
     Vec6f bb;
     volume.getBoundingBox(bb, Volume::BoundingBoxPrecision::VOLUME_UNIT);
@@ -569,7 +583,12 @@ void boundingBoxGrowthTest(bool enableGrowth)
     volume.setEnableGrowth(enableGrowth);
 
     for (int i = 0; i < nIntegrations; i++)
-        volume.integrate(udepth2, poses[0].matrix);
+    {
+        if (isColor)
+            volume.integrate(udepth2, urgb, poses[0].matrix);
+        else
+            volume.integrate(udepth2, poses[0].matrix);
+    }
 
     Vec6f bb2;
     volume.getBoundingBox(bb2, Volume::BoundingBoxPrecision::VOLUME_UNIT);
@@ -675,12 +694,12 @@ Ptr<Scene> makeRepeatableScene(Size sz, Matx33f _intr, float _depthFactor)
     return makePtr<CubesScene>(sz, _intr, _depthFactor);
 }
 
-// For HashTSDF only
-void hugeSceneGrowthTest()
+// For HashTSDF and ColorHashTSDF
+void hugeSceneGrowthTest(VolumeType volumeType)
 {
-    VolumeSettings vs(VolumeType::HashTSDF);
+    VolumeSettings vs(volumeType);
     vs.setMaxDepth(10);
-    Volume volume(VolumeType::HashTSDF, vs);
+    Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intrIntegrate, intrRaycast;
@@ -690,12 +709,24 @@ void hugeSceneGrowthTest()
     Ptr<Scene> scene = makeRepeatableScene(frameSize, intrIntegrate, depthFactor);
     std::vector<Affine3f> poses = scene->getPoses();
 
+    const bool isColor = (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF);
+
     // this should exceed the standard size of 8192 volume units
     // to grow volume more, use more poses
     Mat depth = scene->depth(poses[0]);
     UMat udepth;
     depth.copyTo(udepth);
-    volume.integrate(udepth, poses[0].matrix);
+    if (isColor)
+    {
+        Mat rgb = scene->rgb(poses[0]);
+        UMat urgb;
+        rgb.copyTo(urgb);
+        volume.integrate(udepth, urgb, poses[0].matrix);
+    }
+    else
+    {
+        volume.integrate(udepth, poses[0].matrix);
+    }
     if (cvtest::debugLevel > 0)
     {
         debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
@@ -769,18 +800,18 @@ static Mat normalsError(Mat srcNormals, Mat dstNormals)
     return Mat();
 }
 
-void regressionVolPoseRot()
+void regressionVolPoseRot(VolumeType volumeType)
 {
     // Make 2 volumes which differ only in their pose (especially rotation)
-    VolumeSettings vs(VolumeType::HashTSDF);
-    Volume volume0(VolumeType::HashTSDF, vs);
+    VolumeSettings vs(volumeType);
+    Volume volume0(volumeType, vs);
 
     VolumeSettings vsRot(vs);
     Matx44f pose;
     vsRot.getVolumePose(pose);
     pose = Affine3f(Vec3f(1, 1, 1), Vec3f()).matrix;
     vsRot.setVolumePose(pose);
-    Volume volumeRot(VolumeType::HashTSDF, vsRot);
+    Volume volumeRot(volumeType, vsRot);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intrIntegrate, intrRaycast;
@@ -796,8 +827,20 @@ void regressionVolPoseRot()
     UMat udepth;
     depth.copyTo(udepth);
 
-    volume0.integrate(udepth, poses[0].matrix);
-    volumeRot.integrate(udepth, poses[0].matrix);
+    const bool isColor = (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF);
+    UMat urgb;
+    if (isColor)
+    {
+        Mat rgb = scene->rgb(poses[0]);
+        rgb.copyTo(urgb);
+        volume0.integrate(udepth, urgb, poses[0].matrix);
+        volumeRot.integrate(udepth, urgb, poses[0].matrix);
+    }
+    else
+    {
+        volume0.integrate(udepth, poses[0].matrix);
+        volumeRot.integrate(udepth, poses[0].matrix);
+    }
 
     UMat upts, unrm, uptsRot, unrmRot;
 
@@ -875,15 +918,15 @@ namespace
 {
     struct VolumeTypeEnum
     {
-        static const std::array<VolumeType, 3> vals;
-        static const std::array<std::string, 3> svals;
+        static const std::array<VolumeType, 4> vals;
+        static const std::array<std::string, 4> svals;
 
         VolumeTypeEnum(VolumeType v = VolumeType::TSDF) : val(v) {}
         operator VolumeType() const { return val; }
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 3)
+            if (v >= 0 && v < 4)
             {
                 *os << svals[v];
             }
@@ -894,14 +937,24 @@ namespace
         }
         static ::testing::internal::ParamGenerator<VolumeTypeEnum> all()
         {
-            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]));
+            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]), VolumeTypeEnum(vals[3]));
         }
 
     private:
         VolumeType val;
     };
-    const std::array<VolumeType, 3> VolumeTypeEnum::vals{VolumeType::TSDF, VolumeType::HashTSDF, VolumeType::ColorTSDF};
-    const std::array<std::string, 3> VolumeTypeEnum::svals{std::string("TSDF"), std::string("HashTSDF"), std::string("ColorTSDF")};
+    const std::array<VolumeType, 4> VolumeTypeEnum::vals{
+        VolumeType::TSDF,
+        VolumeType::HashTSDF,
+        VolumeType::ColorTSDF,
+        VolumeType::ColorHashTSDF
+    };
+    const std::array<std::string, 4> VolumeTypeEnum::svals{
+        std::string("TSDF"),
+        std::string("HashTSDF"),
+        std::string("ColorTSDF"),
+        std::string("ColorHashTSDF")
+    };
 
     static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 
@@ -1011,7 +1064,7 @@ protected:
 
         if (testSrcType == VolumeTestSrcType::MAT)
         {
-            if (volumeType == VolumeType::ColorTSDF)
+            if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
                 volume->integrate(udepth, urgb, poses[0].matrix);
             else
                 volume->integrate(udepth, poses[0].matrix);
@@ -1056,7 +1109,8 @@ void VolumeTestFixture::saveObj(std::string funcName, Mat points, Mat normals)
     string platformString = gpu ? "GPU" : "CPU";
     string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
                               volumeType == VolumeType::HashTSDF ? "HashTSDF" :
-                              volumeType == VolumeType::ColorTSDF  ? "ColorTSDF" : "";
+                              volumeType == VolumeType::ColorTSDF  ? "ColorTSDF" :
+                              volumeType == VolumeType::ColorHashTSDF  ? "ColorHashTSDF" : "";
     string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
                                testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
     string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
@@ -1071,14 +1125,14 @@ void VolumeTestFixture::raycast_test()
     UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (frameSizeSpecified == FrameSizeType::DEFAULT)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, upoints, unormals);
@@ -1091,7 +1145,7 @@ void VolumeTestFixture::raycast_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
@@ -1146,14 +1200,14 @@ void VolumeTestFixture::valid_points_test()
     UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (frameSizeSpecified == FrameSizeType::DEFAULT)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, upoints, unormals);
@@ -1169,7 +1223,7 @@ void VolumeTestFixture::valid_points_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
@@ -1180,14 +1234,14 @@ void VolumeTestFixture::valid_points_test()
 
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2, ucolors2);
         else
             volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2);
     }
     else
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[17].matrix, upoints2, unormals2, ucolors2);
         else
             volume->raycast(poses[17].matrix, upoints2, unormals2);
@@ -1202,7 +1256,7 @@ void VolumeTestFixture::valid_points_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points2, normals2, colors2, depthFactor, lightPose);
         else
             displayImage(depth, points2, normals2, depthFactor, lightPose);
@@ -1239,14 +1293,21 @@ TEST_P(VolumeTestFixture, fetch_normals)
 }
 
 //TODO: fix it when ColorTSDF gets GPU version
-INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
-                        ::testing::Combine(
-                        ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
-                                          PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
-                                          PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
-                                          PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
-                                          PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}),
-                        VolumeTestSrcTypeEnum::all(), FrameSizeTypeEnum::all()));
+INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture,
+    ::testing::Combine(
+        ::testing::Values(
+            PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorHashTSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}
+            // Note: Color types don't support GPU yet
+        ),
+        VolumeTestSrcTypeEnum::all(),
+        FrameSizeTypeEnum::all()
+    )
+);
 
 
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
@@ -1267,27 +1328,33 @@ TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 
 //TODO: edit this list when ColorTSDF gets GPU support
 INSTANTIATE_TEST_CASE_P(Volume, StaticVolumeBoundingBox, ::testing::Values(
-                        PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
-                        PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
-                        PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
+    PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+    PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+    PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}
+));
 
 
-class ReproduceVolPoseRotTest : public ::testing::TestWithParam<PlatformTypeEnum>
+class ReproduceVolPoseRotTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, VolumeTypeEnum>>
 { };
 
 TEST_P(ReproduceVolPoseRotTest, reproduce_volPoseRot)
 {
-    bool gpu = (GetParam() == PlatformType::GPU);
+    auto p = GetParam();
+    bool gpu = (std::get<0>(p) == PlatformType::GPU);
+    VolumeType volumeType = std::get<1>(p);
 
     OpenCLStatusRevert oclStatus;
 
     if (!gpu)
         oclStatus.off();
 
-    regressionVolPoseRot();
+    regressionVolPoseRot(volumeType);
 }
 
-INSTANTIATE_TEST_CASE_P(Volume, ReproduceVolPoseRotTest, PlatformTypeEnum::all());
+INSTANTIATE_TEST_CASE_P(Volume, ReproduceVolPoseRotTest,
+    ::testing::Combine(PlatformTypeEnum::all(),
+        ::testing::Values(VolumeTypeEnum(VolumeType::HashTSDF),
+                          VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
 
 enum Growth
@@ -1296,7 +1363,7 @@ enum Growth
 };
 CV_ENUM(GrowthEnum, Growth::OFF, Growth::ON);
 
-class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, GrowthEnum>>
+class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, GrowthEnum, VolumeTypeEnum>>
 { };
 
 TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
@@ -1304,35 +1371,43 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
     auto p = GetParam();
     bool gpu = (std::get<0>(p) == PlatformType::GPU);
     bool enableGrowth = (std::get<1>(p) == Growth::ON);
+    VolumeType volumeType = std::get<2>(p);
 
     OpenCLStatusRevert oclStatus;
 
     if (!gpu)
         oclStatus.off();
 
-    boundingBoxGrowthTest(enableGrowth);
+    boundingBoxGrowthTest(volumeType, enableGrowth);
 }
 
-INSTANTIATE_TEST_CASE_P(Volume, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
+INSTANTIATE_TEST_CASE_P(Volume, BoundingBoxEnableGrowthTest,
+    ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all(),
+        ::testing::Values(VolumeTypeEnum(VolumeType::HashTSDF),
+                          VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
 
-class HugeSceneGrowthTest : public ::testing::TestWithParam<PlatformTypeEnum>
+class HugeSceneGrowthTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, VolumeTypeEnum>>
 { };
 
 TEST_P(HugeSceneGrowthTest, boundingBoxEnableGrowth)
 {
     auto p = GetParam();
-    bool gpu = (p == PlatformType::GPU);
+    bool gpu = (std::get<0>(p) == PlatformType::GPU);
+    VolumeType volumeType = std::get<1>(p);
 
     OpenCLStatusRevert oclStatus;
 
     if (!gpu)
         oclStatus.off();
 
-    hugeSceneGrowthTest();
+    hugeSceneGrowthTest(volumeType);
 }
 
-INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest, PlatformTypeEnum::all());
+INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest,
+    ::testing::Combine(PlatformTypeEnum::all(),
+        ::testing::Values(VolumeTypeEnum(VolumeType::HashTSDF),
+                          VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
 }
 }  // namespace

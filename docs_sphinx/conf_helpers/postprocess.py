@@ -9,7 +9,8 @@ from __future__ import annotations
 import pathlib, re
 
 from .state import (_doxy_page_to_local, _DOXY_ANCHOR_TO_MEMBER, DOXYGEN_BASE_URL,
-                    _LOCAL_CLASS_URL, _LOCAL_TYPEDEF_URL, _FILE_URL, _API_XML_DIR, DOC_ROOT)
+                    _LOCAL_CLASS_URL, _LOCAL_TYPEDEF_URL, _FILE_URL, _API_XML_DIR, DOC_ROOT,
+                    _CV_SYMBOL_URL)
 
 
 def _doxy_parent_page(page: str, api_dir: pathlib.Path) -> str:
@@ -171,12 +172,14 @@ def _copy_js_tryit_files(out_dir: pathlib.Path) -> None:
             dst = dest / src.name
             if not dst.exists():
                 shutil.copy2(src, dst)
-    # opencv.js from CMake (OPENCV_JS_PATH); bundle it alongside the Try-it pages.
+    # opencv.js from CMake (OPENCV_JS_PATH). Needed both alongside the Try-it
+    # pages (relative `src="opencv.js"`) AND at the doc-site root, where
+    # external/js_usage docs link https://docs.opencv.org/<ver>/opencv.js.
     opencv_js = os.environ.get("OPENCV_JS_PATH", "")
     if opencv_js and pathlib.Path(opencv_js).is_file():
-        dst = dest / "opencv.js"
-        if not dst.exists():
-            shutil.copy2(opencv_js, dst)
+        for dst in (dest / "opencv.js", dest.parent / "opencv.js"):
+            if not dst.exists():
+                shutil.copy2(opencv_js, dst)
     # Extra assets referenced by Try-it pages but not in js_assets/.
     _opencv_root = DOC_ROOT.parent
     for _name, _src in {
@@ -328,6 +331,28 @@ _PYG_CPF_SPAN_RE = re.compile(
 )
 
 
+# C++ free-function linkifier. The `(` lookahead means only call sites match,
+# never a like-named local (`log`, `min`, …); it also makes the pass idempotent
+# and class-safe (a wrapped/constructor name is followed by `</a>`, not `(`).
+_PYG_CPP_PRE_RE = re.compile(
+    r'(?P<open><div class="highlight-cpp[^"]*"><div class="highlight"><pre>)'
+    r'(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
+_PYG_CALL_SPAN_RE = re.compile(
+    r'(?P<span><span class="n">)(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?P<end></span>)'
+    r'(?=<span class="p">\()'
+)
+# Python free-function calls. Requires a `cv.`/`cv2.` prefix (OpenCV's Python
+# API is always module-qualified) so bare builtins / other modules never link.
+_PYG_PY_PRE_RE = re.compile(
+    r'(?P<open><div class="highlight-(?:python|py|pycon|ipython3?|default)[^"]*">'
+    r'<div class="highlight"><pre>)(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
+_PYG_PY_CALL_RE = re.compile(
+    r'(?P<pre><span class="n">cv2?</span><span class="o">\.</span>)'
+    r'(?P<span><span class="n">)(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?P<end></span>)'
+    r'(?=<span class="p">\()'
+)
+
+
 def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
     """Walk every `.html` under `html_dir` and turn known identifier
     tokens inside Pygments-rendered `<pre>` blocks into clickable
@@ -335,14 +360,72 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
     don't accidentally repaint inline `<code class="n">` chips in
     prose; the rule above already targets only Pygments span classes
     that Pygments uses inside its `<pre>` output."""
-    if not (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL or _FILE_URL):
+    if not (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL or _FILE_URL or _CV_SYMBOL_URL):
         return
     if not html_dir.is_dir():
         return
     import os
 
+    # basename -> path relative to the html root. Stored URLs are relative to
+    # main_modules/, so without re-pointing they 404 when linked from a page at
+    # a different depth (e.g. a tutorial referencing `core_basic.html#…`).
+    _skip_dirs = {"_static", "_sources", "_images", "_sphinx_design_static"}
+    _page_paths: dict[str, str] = {}
+    for _f in html_dir.rglob("*.html"):
+        _rel = _f.relative_to(html_dir)
+        if _rel.parts and _rel.parts[0] in _skip_dirs:
+            continue
+        _page_paths.setdefault(_f.name, _rel.as_posix())
+
+    def _rel_local(url: str, current_html: pathlib.Path) -> "str | None":
+        # Relativize a bare local Sphinx page URL to the current page. Returns
+        # None when the target page wasn't built (e.g. a struct documented
+        # inline, with no standalone page) so the caller drops the link instead
+        # of emitting a 404. Non-local URLs (http/already-relative) pass through.
+        page, sep, frag = url.partition("#")
+        if page.startswith(("http://", "https://", "../", "/")):
+            return url
+        tgt = _page_paths.get(page)
+        if not tgt:
+            return None
+        rel = os.path.relpath(html_dir / tgt, start=current_html.parent)
+        return rel + (sep + frag if sep else "")
+
     def _resolve(name: str) -> str | None:
         return _LOCAL_CLASS_URL.get(name) or _LOCAL_TYPEDEF_URL.get(name)
+
+    # Free functions only (classes/typedefs already get a local link via
+    # `_resolve`). Emits the docs.opencv.org URL; `_localize_doxygen_links`
+    # (run right after) rewrites it to the local Sphinx page when one exists.
+    def _resolve_fn(name: str) -> str | None:
+        if name in _LOCAL_CLASS_URL or name in _LOCAL_TYPEDEF_URL:
+            return None
+        return _CV_SYMBOL_URL.get(name)
+
+    def _wrap_call(m: "re.Match") -> str:
+        url = _resolve_fn(m.group("name"))
+        if not url:
+            return m.group(0)
+        return (f'<a class="reference external" href="{url}">'
+                f'{m.group("span")}{m.group("name")}{m.group("end")}</a>')
+
+    def _rewrite_cpp_calls(m: "re.Match") -> str:
+        return (m.group("open")
+                + _PYG_CALL_SPAN_RE.sub(_wrap_call, m.group("body"))
+                + m.group("close"))
+
+    def _wrap_py_call(m: "re.Match") -> str:
+        url = _resolve_fn(m.group("name"))
+        if not url:
+            return m.group(0)
+        return (m.group("pre")
+                + f'<a class="reference external" href="{url}">'
+                + f'{m.group("span")}{m.group("name")}{m.group("end")}</a>')
+
+    def _rewrite_py_calls(m: "re.Match") -> str:
+        return (m.group("open")
+                + _PYG_PY_CALL_RE.sub(_wrap_py_call, m.group("body"))
+                + m.group("close"))
 
     # `<pre>…</pre>` blocks only — keeps the substitution from touching
     # inline `<span class="n">` runs that may appear in other contexts.
@@ -361,10 +444,13 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
         except ValueError:
             return f"../../../doc/doxygen/html/{file_url}"
 
-    def _wrap_span(m: re.Match) -> str:
+    def _wrap_span(m: re.Match, current_html: pathlib.Path) -> str:
         name = m.group("name")
         url = _resolve(name)
         if not url:
+            return m.group(0)
+        url = _rel_local(url, current_html)
+        if url is None:        # target page not built — don't emit a 404 link
             return m.group(0)
         return (f'<a class="reference internal" href="{url}">'
                 f'{m.group("prefix")}{name}{m.group("suffix")}</a>')
@@ -408,13 +494,13 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
                 k = inner.find("<a ", i)
                 if k < 0:
                     seg = inner[i:]
-                    seg = _PYG_IDENT_SPAN_RE.sub(_wrap_span, seg)
+                    seg = _PYG_IDENT_SPAN_RE.sub(lambda mm: _wrap_span(mm, current_html), seg)
                     seg = _PYG_CPF_SPAN_RE.sub(
                         lambda mm: _wrap_cpf(mm, current_html), seg)
                     out.append(seg)
                     break
                 seg = inner[i:k]
-                seg = _PYG_IDENT_SPAN_RE.sub(_wrap_span, seg)
+                seg = _PYG_IDENT_SPAN_RE.sub(lambda mm: _wrap_span(mm, current_html), seg)
                 seg = _PYG_CPF_SPAN_RE.sub(
                     lambda mm: _wrap_cpf(mm, current_html), seg)
                 out.append(seg)
@@ -430,6 +516,10 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
             continue
         new_text = _PRE_BLOCK_RE.sub(
             lambda m: _rewrite_pre(m, html), text)
+        # Function-call passes run after the class/typedef pass so constructors
+        # are already wrapped and skipped by the `(` lookahead.
+        new_text = _PYG_CPP_PRE_RE.sub(_rewrite_cpp_calls, new_text)
+        new_text = _PYG_PY_PRE_RE.sub(_rewrite_py_calls, new_text)
         if new_text != text:
             try:
                 html.write_text(new_text, encoding="utf-8")
@@ -501,6 +591,240 @@ def _linkify_inline_code(html_dir: pathlib.Path) -> None:
             pass
 
 
+# Center the active nav entry in the scrollable left sidebar on load so a
+# module far down the list isn't below the fold. The theme has no such hook.
+_AUTOSCROLL_SNIPPET = (
+    '<script id="opencv-sidebar-autoscroll">'
+    "document.addEventListener('DOMContentLoaded',function(){"
+    "var s=document.querySelector('.bd-sidebar-primary');if(!s)return;"
+    "var a=s.querySelectorAll('a.current'),t=a[a.length-1];if(!t)return;"  # deepest = current page
+    "var sr=s.getBoundingClientRect(),tr=t.getBoundingClientRect();"
+    "s.scrollTop+=(tr.top-sr.top)-(s.clientHeight-tr.height)/2;});"
+    "</script>"
+)
+
+
+def _inject_sidebar_autoscroll(out_dir: pathlib.Path) -> None:
+    """Inject the sidebar auto-scroll script before </body>; idempotent."""
+    for html in out_dir.rglob("*.html"):
+        text = html.read_text(encoding="utf-8")
+        if "opencv-sidebar-autoscroll" in text or "</body>" not in text:
+            continue
+        html.write_text(
+            text.replace("</body>", _AUTOSCROLL_SNIPPET + "</body>", 1),
+            encoding="utf-8")
+
+
+_TOC_NAV_RE = re.compile(r'id="pst-page-toc-nav".*?</nav>', re.S)
+_TOC_HREF_RE = re.compile(r'href="#([^"]+)"')
+_ANY_ID_RE = re.compile(r'id="([^"]+)"')
+_DETAIL_SEC_RE = re.compile(r'(<section id="detailed-description"[^>]*>)')
+
+
+def _repair_dangling_toc_anchors(out_dir: pathlib.Path) -> None:
+    """Stub a missing #anchor for any secondary-TOC link with no target element.
+    A dangling anchor makes the theme scroll-spy throw, which aborts init and
+    kills the collapse-sidebar button on that page. Idempotent."""
+    for html in out_dir.rglob("*.html"):
+        text = html.read_text(encoding="utf-8")
+        nav = _TOC_NAV_RE.search(text)
+        if not nav:
+            continue
+        ids = set(_ANY_ID_RE.findall(text))
+        missing = [a for a in _TOC_HREF_RE.findall(nav.group(0)) if a not in ids]
+        if not missing:
+            continue
+        stubs = "".join(f'<span id="{a}"></span>' for a in missing)
+        new = _DETAIL_SEC_RE.sub(lambda m: m.group(1) + stubs, text, count=1)
+        if new != text:
+            html.write_text(new, encoding="utf-8")
+
+
+def _redirect_orphan_duplicates(app, out_dir: pathlib.Path) -> None:
+    """An orphaned main_modules/* page that duplicates an in-nav extra_modules
+    page redirects to that twin, which has proper section nav. Idempotent."""
+    ti = app.env.toctree_includes
+    seen, stack = set(), [app.env.config.root_doc]
+    while stack:
+        d = stack.pop()
+        if d in seen:
+            continue
+        seen.add(d)
+        stack.extend(ti.get(d, []))
+    for doc in set(app.env.all_docs):
+        if not doc.startswith("main_modules/") or doc in seen:
+            continue
+        base = doc.split("/", 1)[1]
+        if "extra_modules/" + base not in seen:
+            continue
+        html = out_dir / (doc + ".html")
+        if not html.is_file():
+            continue
+        text = html.read_text(encoding="utf-8")
+        if "opencv-dup-redirect" in text:
+            continue
+        target = f"../extra_modules/{base}.html"
+        snippet = (
+            f'<link rel="canonical" href="{target}">'
+            f'<script id="opencv-dup-redirect">location.replace("{target}"+location.hash)</script>'
+            f'<noscript><meta http-equiv="refresh" content="0;url={target}"></noscript>'
+        )
+        new = text.replace("<head>", "<head>" + snippet, 1)
+        if new != text:
+            html.write_text(new, encoding="utf-8")
+
+
+# DNN engine-selection topic: symbols → their API anchor (same dir as the page).
+_DNN_ENGINE_LINKS = {
+    "readNet": "dnn.html#readnet",
+    "readNetFromONNX": "dnn.html#readnetfromonnx",
+    "ENGINE_NEW": "dnn.html#enginetype",
+    "ENGINE_CLASSIC": "dnn.html#enginetype",
+    "ENGINE_AUTO": "dnn.html#enginetype",
+    "ENGINE_ORT": "dnn.html#enginetype",
+    "EngineType": "dnn.html#enginetype",
+    "DNN_BACKEND_CUDA": "dnn.html#backend",
+    "DNN_BACKEND_OPENVINO": "dnn.html#backend",
+    "DNN_TARGET_CUDA": "dnn.html#target",
+    "setPreferableBackend": "classcv_1_1dnn_1_1Net.html#setpreferablebackend",
+    "setPreferableTarget": "classcv_1_1dnn_1_1Net.html#setpreferabletarget",
+}
+# Whole inline-code spans (qualified forms) → anchor; bare names reuse the above.
+_DNN_ENGINE_INLINE = {
+    "cv::dnn::readNet()": "dnn.html#readnet",
+    "net.forward()": "classcv_1_1dnn_1_1Net.html#forward",
+    "readNet*()": "dnn.html#readnet",
+    **_DNN_ENGINE_LINKS,
+}
+_INLINE_CODE_SPAN_RE = re.compile(
+    r'<code class="docutils literal notranslate">'
+    r'(?:<span class="pre">)?([^<]+)(?:</span>)?</code>')
+_PYG_TOKEN_SPAN_RE = re.compile(r'<span class="(n|nc|nf|nb|nv|na)">(\w+)</span>')
+
+
+def _linkify_dnn_engine_selection(out_dir: pathlib.Path) -> None:
+    """Make DNN engine/backend symbols clickable on the engine-selection topic,
+    in both inline code and highlighted code blocks. Idempotent."""
+    page = out_dir / "main_modules" / "dnn_engine_selection.html"
+    if not page.is_file():
+        return
+    text = page.read_text(encoding="utf-8")
+    if 'href="dnn.html#enginetype"' in text:        # already linkified
+        return
+
+    def _inline(m: "re.Match") -> str:
+        href = _DNN_ENGINE_INLINE.get(m.group(1).strip())
+        return (f'<code class="docutils literal notranslate">'
+                f'<a class="reference internal" href="{href}">'
+                f'<span class="pre">{m.group(1)}</span></a></code>'
+                ) if href else m.group(0)
+
+    def _token(m: "re.Match") -> str:
+        href = _DNN_ENGINE_LINKS.get(m.group(2))
+        return (f'<a class="reference internal" href="{href}">'
+                f'<span class="{m.group(1)}">{m.group(2)}</span></a>'
+                ) if href else m.group(0)
+
+    text = _PYG_TOKEN_SPAN_RE.sub(_token, _INLINE_CODE_SPAN_RE.sub(_inline, text))
+    page.write_text(text, encoding="utf-8")
+
+
+# HAL page: cv::* API symbols -> their module-page anchors (same dir as the page).
+_HAL_INLINE = {
+    "cv::resize": "imgproc_transform.html#resize",
+    "cv::cvtColor": "imgproc_color_conversions.html#cvtcolor",
+    "cv::gemm": "core_array.html#gemm",
+}
+
+
+def _linkify_hal_page(out_dir: pathlib.Path) -> None:
+    """Make the cv::* API symbols on the HAL page clickable. Idempotent.
+    HAL-only tokens (cv_hal_*, NOT_IMPLEMENTED, WITH_*, …) have no API page and
+    are intentionally left plain."""
+    page = out_dir / "main_modules" / "hal.html"
+    if not page.is_file():
+        return
+    text = page.read_text(encoding="utf-8")
+    if 'href="imgproc_transform.html#resize"' in text:   # already linkified
+        return
+
+    def _inline(m: "re.Match") -> str:
+        href = _HAL_INLINE.get(m.group(1).strip())
+        return (f'<code class="docutils literal notranslate">'
+                f'<a class="reference internal" href="{href}">'
+                f'<span class="pre">{m.group(1)}</span></a></code>'
+                ) if href else m.group(0)
+
+    page.write_text(_INLINE_CODE_SPAN_RE.sub(_inline, text), encoding="utf-8")
+
+
+# Universal Intrinsics tutorial: link the intrinsics/types in prose code, which
+# Sphinx doesn't auto-link. Anchors are read off core_hal_intrin + the symbol
+# maps so coverage tracks the docs (undocumented symbols stay plain).
+_UI_MM = "../../../main_modules/"    # page is 3 dirs deep
+
+
+def _univ_intrin_link_map(out_dir: pathlib.Path) -> dict:
+    m = {"cv::hfloat": _UI_MM + "classcv_1_1hfloat.html",
+         "cv::bfloat": _UI_MM + "classcv_1_1bfloat.html",
+         "CV_16F": _UI_MM + "core_hal_interface.html#cv-16f",
+         "CV_16BF": _UI_MM + "core_hal_interface.html#cv-16bf"}
+    # Intrinsic functions, from the anchors on the rendered group page.
+    hp = out_dir / "main_modules" / "core_hal_intrin.html"
+    if hp.is_file():
+        html = hp.read_text(encoding="utf-8")
+        for a in set(re.findall(r'id="(cv-v-[a-z0-9-]+)"', html)):
+            m.setdefault("v_" + a[len("cv-v-"):].replace("-", "_"),
+                         _UI_MM + "core_hal_intrin.html#" + a)
+    # Register typedefs (v_float32, …) and the FP16/BF16 classes, from the maps.
+    for sym, url in {**_LOCAL_TYPEDEF_URL, **_LOCAL_CLASS_URL}.items():
+        if sym.startswith("v_") or sym in ("hfloat", "bfloat"):
+            m.setdefault(sym, _UI_MM + url)
+    # Symbols with no local page but in the Doxygen tag (v_exp, v_log, …) link
+    # to the official docs; those absent here too have no target and stay plain.
+    for sym, url in _CV_SYMBOL_URL.items():
+        if sym.startswith(("v_", "vx_")) and sym not in m:
+            m[sym] = url
+    return m
+
+
+def _linkify_univ_intrin(out_dir: pathlib.Path) -> None:
+    """Link every documented intrinsic/type on the univ_intrin tutorial (inline
+    code and highlighted blocks). Idempotent; undocumented symbols stay plain."""
+    page = out_dir / "tutorials" / "core" / "univ_intrin" / "univ_intrin.html"
+    if not page.is_file():
+        return
+    text = page.read_text(encoding="utf-8")
+    if _UI_MM + "classcv_1_1hfloat.html" in text:       # already linkified
+        return
+    links = _univ_intrin_link_map(out_dir)
+
+    def _inline(m: "re.Match") -> str:
+        txt = m.group(1).strip()
+        href = links.get(txt)
+        if not href:                                    # e.g. "v_exp(x)" -> v_exp
+            lead = re.match(r"[A-Za-z_:][\w:]*", txt)
+            href = links.get(lead.group(0)) if lead else None
+        return (f'<code class="docutils literal notranslate">'
+                f'<a class="reference internal" href="{href}">'
+                f'<span class="pre">{m.group(1)}</span></a></code>'
+                ) if href else m.group(0)
+
+    def _token(m: "re.Match") -> str:
+        href = links.get(m.group(2))
+        return (f'<a class="reference internal" href="{href}">'
+                f'<span class="{m.group(1)}">{m.group(2)}</span></a>'
+                ) if href else m.group(0)
+
+    text = _INLINE_CODE_SPAN_RE.sub(_inline, text)
+    # Token-link only outside existing <a>…</a> spans (typedefs/classes are
+    # already linked by _linkify_code_blocks) so we never nest anchors.
+    parts = re.split(r"(<a\b[^>]*>.*?</a>)", text, flags=re.DOTALL)
+    text = "".join(p if i % 2 else _PYG_TOKEN_SPAN_RE.sub(_token, p)
+                   for i, p in enumerate(parts))
+    page.write_text(text, encoding="utf-8")
+
+
 def _inline_coll_graphs_on_finish(app, exception):
     """build-finished entry point."""
     if exception is not None:
@@ -516,3 +840,9 @@ def _inline_coll_graphs_on_finish(app, exception):
     _copy_js_tryit_files(out)
     _fix_gapi_images(out)
     _generate_search_map(out)
+    _repair_dangling_toc_anchors(out)
+    _redirect_orphan_duplicates(app, out)
+    _linkify_dnn_engine_selection(out)
+    _linkify_hal_page(out)
+    _linkify_univ_intrin(out)
+    _inject_sidebar_autoscroll(out)

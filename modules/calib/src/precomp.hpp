@@ -45,7 +45,7 @@
 #include "opencv2/core/utility.hpp"
 
 #include "opencv2/core/private.hpp"
-
+#include "opencv2/core/utils/logger.hpp"
 #include "opencv2/calib.hpp"
 #include "opencv2/geometry.hpp"
 #include "opencv2/imgproc.hpp"

@@ -71,6 +71,10 @@ set(mlas_platform_srcs)
 set(OPENCV_DNN_MLAS_ENABLED     0  CACHE INTERNAL "" FORCE)
 set(OPENCV_DNN_MLAS_SKIP_REASON "" CACHE INTERNAL "" FORCE)
 
+if(WIN32)
+  return()
+endif()
+
 # Probe ASM language once. check_language(ASM) is a no-op when
 # CMAKE_ASM_COMPILER is already set in cache — and the Android NDK toolchain
 # pre-sets it for every ABI. So on Android the guard falls through to

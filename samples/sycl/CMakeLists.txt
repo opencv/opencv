@@ -1,6 +1,7 @@
 if(OPENCV_SKIP_SAMPLES_SYCL)
   return()
 endif()
+cmake_minimum_required(VERSION 3.13)
 
 ocv_install_example_src(sycl *.cpp *.hpp CMakeLists.txt)
 

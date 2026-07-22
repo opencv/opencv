@@ -403,8 +403,8 @@ CV_EXPORTS int  cvCeil(const cv::softdouble& a);
 namespace cv
 {
 /** @brief Saturate casts */
-template<typename _Tp> static inline _Tp saturate_cast(softfloat  a) { return _Tp(a); }
-template<typename _Tp> static inline _Tp saturate_cast(softdouble a) { return _Tp(a); }
+template<typename _Tp> inline _Tp saturate_cast(softfloat  a) { return _Tp(a); }
+template<typename _Tp> inline _Tp saturate_cast(softdouble a) { return _Tp(a); }
 
 template<> inline uchar saturate_cast<uchar>(softfloat  a) { return (uchar)std::max(std::min(cvRound(a), (int)UCHAR_MAX), 0); }
 template<> inline uchar saturate_cast<uchar>(softdouble a) { return (uchar)std::max(std::min(cvRound(a), (int)UCHAR_MAX), 0); }

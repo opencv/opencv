@@ -22,7 +22,7 @@ using std::nullptr_t;
 
 template <typename _Tp> using Ptr = std::shared_ptr<_Tp>;  // In ideal world it should look like this, but we need some compatibility workarounds below
 
-template<typename _Tp, typename ... A1> static inline
+template<typename _Tp, typename ... A1> inline
 Ptr<_Tp> makePtr(const A1&... a1) { return std::make_shared<_Tp>(a1...); }
 
 #else  // cv::Ptr with compatibility workarounds
@@ -134,7 +134,7 @@ struct Ptr : public std::shared_ptr<T>
     Ptr<Y> dynamicCast() const CV_NOEXCEPT { return std::dynamic_pointer_cast<Y>(*this); }
 };
 
-template<typename _Tp, typename ... A1> static inline
+template<typename _Tp, typename ... A1> inline
 Ptr<_Tp> makePtr(const A1&... a1)
 {
     static_assert( !has_custom_delete<_Tp>::value, "Can't use this makePtr with custom DefaultDeleter");

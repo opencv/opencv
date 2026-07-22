@@ -1427,10 +1427,11 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
+        static const int MSMF_MAX_AUDIO_SAMPLES_PER_SECOND = 384000; // highest rate used by real PCM audio hardware
         int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
-        if (value < 0)
+        if (value < 0 || value > MSMF_MAX_AUDIO_SAMPLES_PER_SECOND)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << value);
             return false;
         }
         else
@@ -1727,7 +1728,7 @@ bool CvCapture_MSMF::grabAudioFrame()
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
                 aEOS = true;
-                if (videoStream != -1 && !vEOS)
+                if (videoStream != -1)
                     returnFlag = true;
                 if (videoStream == -1)
                     audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);

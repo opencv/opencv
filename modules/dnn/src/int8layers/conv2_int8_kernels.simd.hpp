@@ -1104,6 +1104,399 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
 #undef CONV_NEON_STORE
 #endif // CV_NEON && CV_NEON_DOT
 
+#if CV_RVV
+#include <riscv_vector.h>
+
+// The int8 conv kernel below is instantiated for two register layouts via
+// these traits. Both variants keep i32 accumulators over the K0=8 output
+// channels (vl=8) and use i16 widening multiply-accumulate (vwmacc):
+//  - M1: accumulators in LMUL=1; needs vlmax_e32m1 >= 8, i.e. VLEN >= 256
+//    (checked at runtime; e.g. SpacemiT K1).
+//  - M2: accumulators in LMUL=2; works on any RVV 1.0 core with VLEN >= 128.
+struct ConvInt8RVV_M1
+{
+    typedef vint32m1_t vi32;
+    typedef vint16mf2_t vi16;
+    typedef vfloat32m1_t vf32;
+    static inline vi32 vle32(const int32_t* p, size_t vl) { return __riscv_vle32_v_i32m1(p, vl); }
+    static inline vf32 vle32f(const float* p, size_t vl) { return __riscv_vle32_v_f32m1(p, vl); }
+    static inline vf32 vfmv(float x, size_t vl) { return __riscv_vfmv_v_f_f32m1(x, vl); }
+    static inline vi16 loadw16(const int8_t* p, size_t vl)
+    { return __riscv_vsext_vf2_i16mf2(__riscv_vle8_v_i8mf4(p, vl), vl); }
+    static inline vi32 vwmacc(vi32 acc, int16_t x, vi16 w, size_t vl)
+    { return __riscv_vwmacc_vx_i32m1(acc, x, w, vl); }
+    static inline vf32 tofloat(vi32 x, size_t vl) { return __riscv_vfcvt_f_x_v_f32m1(x, vl); }
+    static inline vf32 fmadd(vf32 a, vf32 b, vf32 c, size_t vl) { return __riscv_vfmadd_vv_f32m1(a, b, c, vl); }
+    static inline vf32 fadd(vf32 a, vf32 b, size_t vl) { return __riscv_vfadd_vv_f32m1(a, b, vl); }
+    static inline vf32 fsub(vf32 a, vf32 b, size_t vl) { return __riscv_vfsub_vv_f32m1(a, b, vl); }
+    static inline vi32 res32(const int8_t* p, bool isU8, size_t vl)
+    {
+        if (isU8)
+            return __riscv_vreinterpret_v_u32m1_i32m1(
+                __riscv_vzext_vf4_u32m1(__riscv_vle8_v_u8mf4((const uint8_t*)p, vl), vl));
+        return __riscv_vsext_vf4_i32m1(__riscv_vle8_v_i8mf4(p, vl), vl);
+    }
+    static inline vi32 round32(vf32 x, size_t vl) { return __riscv_vfcvt_x_f_v_i32m1(x, vl); }
+    static inline void clampstore(int8_t* dst, vi32 x, int lo, int hi, size_t vl)
+    {
+        x = __riscv_vmax_vx_i32m1(x, lo, vl);
+        x = __riscv_vmin_vx_i32m1(x, hi, vl);
+        vint16mf2_t x16 = __riscv_vncvt_x_x_w_i16mf2(x, vl);
+        __riscv_vse8_v_i8mf4(dst, __riscv_vncvt_x_x_w_i8mf4(x16, vl), vl);
+    }
+};
+
+struct ConvInt8RVV_M2
+{
+    typedef vint32m2_t vi32;
+    typedef vint16m1_t vi16;
+    typedef vfloat32m2_t vf32;
+    static inline vi32 vle32(const int32_t* p, size_t vl) { return __riscv_vle32_v_i32m2(p, vl); }
+    static inline vf32 vle32f(const float* p, size_t vl) { return __riscv_vle32_v_f32m2(p, vl); }
+    static inline vf32 vfmv(float x, size_t vl) { return __riscv_vfmv_v_f_f32m2(x, vl); }
+    static inline vi16 loadw16(const int8_t* p, size_t vl)
+    { return __riscv_vsext_vf2_i16m1(__riscv_vle8_v_i8mf2(p, vl), vl); }
+    static inline vi32 vwmacc(vi32 acc, int16_t x, vi16 w, size_t vl)
+    { return __riscv_vwmacc_vx_i32m2(acc, x, w, vl); }
+    static inline vf32 tofloat(vi32 x, size_t vl) { return __riscv_vfcvt_f_x_v_f32m2(x, vl); }
+    static inline vf32 fmadd(vf32 a, vf32 b, vf32 c, size_t vl) { return __riscv_vfmadd_vv_f32m2(a, b, c, vl); }
+    static inline vf32 fadd(vf32 a, vf32 b, size_t vl) { return __riscv_vfadd_vv_f32m2(a, b, vl); }
+    static inline vf32 fsub(vf32 a, vf32 b, size_t vl) { return __riscv_vfsub_vv_f32m2(a, b, vl); }
+    static inline vi32 res32(const int8_t* p, bool isU8, size_t vl)
+    {
+        if (isU8)
+            return __riscv_vreinterpret_v_u32m2_i32m2(
+                __riscv_vzext_vf4_u32m2(__riscv_vle8_v_u8mf2((const uint8_t*)p, vl), vl));
+        return __riscv_vsext_vf4_i32m2(__riscv_vle8_v_i8mf2(p, vl), vl);
+    }
+    static inline vi32 round32(vf32 x, size_t vl) { return __riscv_vfcvt_x_f_v_i32m2(x, vl); }
+    static inline void clampstore(int8_t* dst, vi32 x, int lo, int hi, size_t vl)
+    {
+        x = __riscv_vmax_vx_i32m2(x, lo, vl);
+        x = __riscv_vmin_vx_i32m2(x, hi, vl);
+        vint16m1_t x16 = __riscv_vncvt_x_x_w_i16m1(x, vl);
+        __riscv_vse8_v_i8mf2(dst, __riscv_vncvt_x_x_w_i8mf2(x16, vl), vl);
+    }
+};
+
+// vfcvt.x.f.v uses the current FP rounding mode; Linux default is RNE,
+// which matches cvRound() used by the scalar reference path.
+#define CONV_RVV_MAC(j) { \
+    const int8_t* ipj = inptr[(j)]; \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[0] ^ xor_val), w0, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[1] ^ xor_val), w1, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[2] ^ xor_val), w2, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[3] ^ xor_val), w3, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[4] ^ xor_val), w4, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[5] ^ xor_val), w5, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[6] ^ xor_val), w6, vl); \
+    acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[7] ^ xor_val), w7, vl); \
+}
+
+#define CONV_RVV_STORE(j) { \
+    typename RVV::vf32 facc = RVV::fmadd(RVV::tofloat(acc##j, vl), vmult, vzp, vl); \
+    int8_t* optrj = outptr + (size_t)(p + (j)) * K0; \
+    if (resptr) { \
+        const int8_t* rp = resptr + (size_t)(p + (j)) * K0; \
+        facc = RVV::fadd(facc, \
+            RVV::fsub(RVV::tofloat(RVV::res32(rp, inputIsU8, vl), vl), vzp, vl), vl); \
+    } \
+    typename RVV::vi32 ival = RVV::round32(facc, vl); \
+    if (inputIsU8) { \
+        if (activLUT) { \
+            int8_t tmp8[K0]; \
+            RVV::clampstore(tmp8, ival, 0, 255, vl); \
+            for (int k = 0; k < K0; k++) \
+                ((uint8_t*)optrj)[k] = (uint8_t)activLUT[(int)(uint8_t)tmp8[k]]; \
+        } else { \
+            RVV::clampstore(optrj, ival, 0, 255, vl); \
+        } \
+    } else { \
+        if (activLUT) { \
+            int8_t tmp8[K0]; \
+            RVV::clampstore(tmp8, ival, -128, 127, vl); \
+            for (int k = 0; k < K0; k++) \
+                optrj[k] = (int8_t)activLUT[(int)tmp8[k] + 128]; \
+        } else { \
+            RVV::clampstore(optrj, ival, -128, 127, vl); \
+        } \
+    } \
+}
+
+template<typename RVV>
+static void convInt8BlockRVV(const void* inp_, const void* residual_,
+                             void* out_, const ConvState& cs,
+                             const void* weights_,
+                             const int* bias, const float* multiplier,
+                             int inp_zp, int out_zp,
+                             const int8_t* activLUT,
+                             bool inputIsU8)
+{
+    constexpr int C0 = 8, K0 = 8;
+    constexpr int C0shift = 3;
+    constexpr int SPAT_BLOCK_SIZE = 8;
+    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.back() == C0);
+
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    int N = outshape[0];
+    int ndims = outshape.dims;
+    int K = outshape.channels();
+    int C = inpshape.channels();
+    int K1 = (K + K0 - 1) / K0;
+    int C1 = (C + C0 - 1) / C0;
+
+    int D_ = ndims >= 6 ? outshape[ndims-4] : 1;
+    int H_ = ndims >= 5 ? outshape[ndims-3] : 1;
+    int W_ = outshape[ndims-2];
+    int planeblocks_ = D_ * H_ * W_;
+
+    int ngroups = cs.ngroups;
+    int Kg = K / ngroups;
+    int Cg = C / ngroups;
+    int Kblk = cs.wshape[1];
+    int ksize_ = cs.wshape[2];
+    int C1Max = cs.wshape[3];
+
+    int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
+    int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
+    int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+
+    const int8_t* inp = (const int8_t*)inp_;
+    const int8_t* residual = (const int8_t*)residual_;
+    int8_t* out = (int8_t*)out_;
+    const int8_t* wdata = (const int8_t*)weights_;
+    const int* ofsZYX = cs.coordtab.data();
+
+    size_t outtotal = outshape.total();
+    if ((Kg % K0) != 0)
+        memset(out, 0, outtotal);
+
+    int total_blocks = N * ngroups * Kblk;
+
+    parallel_for_(Range(0, total_blocks), [&](const Range& range) {
+        const size_t vl = K0;   // 8 lanes over output channels; gated by vlmax check at dispatch
+        const uint8_t xor_val = inputIsU8 ? 0x80 : 0;
+
+        int D = D_, H = H_, W = W_;
+        int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
+        int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
+        int Wi = inpshape[ndims-2];
+        int planeblocks = planeblocks_;
+        int iplanesize = Di * Hi * Wi * C0;
+        int planesize = planeblocks * K0;
+
+        int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
+        int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        int ksize = ksize_;
+        int8_t zbuf[C0];
+        memset(zbuf, (uint8_t)inp_zp, C0);
+
+        for (int t = range.start; t < range.end; t++) {
+            int n = t / (ngroups * Kblk);
+            int rem = t - n * (ngroups * Kblk);
+            int g = rem / Kblk;
+            int kblk = rem - g * Kblk;
+
+            int k_base = g * Kg + kblk * K0;
+            if (k_base >= K) continue;
+
+            int c_start = g * Cg;
+            int c1_start = c_start >> C0shift;
+            int c00 = c_start & (C0 - 1);
+            int cblocks = (c00 + Cg + C0 - 1) >> C0shift;
+
+            const int8_t* inpbaseptr = inp + (size_t)(n * C1 + c1_start) * iplanesize;
+            const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * ksize * C1Max * C0 * K0;
+
+            int k1 = k_base >> C0shift;
+            int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+            const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
+
+            int D_l = D, H_l = H, W_l = W;
+            int Di_l = Di, Hi_l = Hi, Wi_l = Wi;
+            int iplanesize_l = iplanesize;
+            int planeblocks_l = planeblocks;
+            int ksize_l = ksize;
+
+            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1) {
+                W_l *= D_l * H_l;
+                Wi_l *= Di_l * Hi_l;
+                D_l = Di_l = H_l = Hi_l = 1;
+                iplanesize_l = Wi_l * C0;
+                planeblocks_l = W_l;
+            }
+
+            alignas(32) int32_t biasbuf[K0];
+            alignas(32) float multbuf[K0];
+            {
+                int k_valid = std::min(K0, K - k_base);
+                memcpy(biasbuf, bias + k_base, k_valid * sizeof(int32_t));
+                memset(biasbuf + k_valid, 0, (K0 - k_valid) * sizeof(int32_t));
+                memcpy(multbuf, multiplier + k_base, k_valid * sizeof(float));
+                memset(multbuf + k_valid, 0, (K0 - k_valid) * sizeof(float));
+            }
+
+            typename RVV::vi32 vbias = RVV::vle32(biasbuf, vl);
+            typename RVV::vf32 vmult = RVV::vle32f(multbuf, vl);
+            typename RVV::vf32 vzp = RVV::vfmv((float)out_zp, vl);
+
+            int p = 0;
+            for (; p < planeblocks_l; p += SPAT_BLOCK_SIZE) {
+                if (p + SPAT_BLOCK_SIZE > planeblocks_l) {
+                    if (p == 0) break;
+                    p = planeblocks_l - SPAT_BLOCK_SIZE;
+                }
+
+                Vec3i pt[SPAT_BLOCK_SIZE];
+                bool inner[SPAT_BLOCK_SIZE];
+
+                if ((p % W_l) + SPAT_BLOCK_SIZE <= W_l) {
+                    int zj = p / (H_l * W_l);
+                    int yxj = p - zj * H_l * W_l;
+                    int yj = yxj / W_l;
+                    int xj0 = yxj - yj * W_l;
+                    bool zy_inner = (zj >= innerZ0 && zj < innerZ1) &&
+                                    (yj >= innerY0 && yj < innerY1);
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int xj = xj0 + j;
+                        pt[j] = Vec3i(zj * Sz - padZ, yj * Sy - padY, xj * Sx - padX);
+                        inner[j] = zy_inner && (xj >= innerX0 && xj < innerX1);
+                    }
+                } else {
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int pj = p + j;
+                        int zj = pj / (H_l * W_l);
+                        int yxj = pj - zj * H_l * W_l;
+                        int yj = yxj / W_l;
+                        int xj = yxj - yj * W_l;
+                        pt[j] = Vec3i(zj * Sz - padZ, yj * Sy - padY, xj * Sx - padX);
+                        inner[j] = (zj >= innerZ0 && zj < innerZ1) &&
+                                   (yj >= innerY0 && yj < innerY1) &&
+                                   (xj >= innerX0 && xj < innerX1);
+                    }
+                }
+
+                typename RVV::vi32 acc0 = vbias, acc1 = vbias, acc2 = vbias, acc3 = vbias;
+                typename RVV::vi32 acc4 = vbias, acc5 = vbias, acc6 = vbias, acc7 = vbias;
+
+                for (int i = 0; i < ksize_l; i++) {
+                    const int8_t* inptr[SPAT_BLOCK_SIZE];
+                    int inpstep[SPAT_BLOCK_SIZE];
+
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int zij = pt[j][0] + ofsZYX[i * 3];
+                        int yij = pt[j][1] + ofsZYX[i * 3 + 1];
+                        int xij = pt[j][2] + ofsZYX[i * 3 + 2];
+
+                        if (inner[j] || ((((unsigned)zij < (unsigned)Di_l) &
+                             ((unsigned)yij < (unsigned)Hi_l) &
+                             ((unsigned)xij < (unsigned)Wi_l)) != 0)) {
+                            inptr[j] = inpbaseptr + (((zij * Hi_l) + yij) * Wi_l + xij) * C0;
+                            inpstep[j] = iplanesize_l;
+                        } else {
+                            inptr[j] = zbuf;
+                            inpstep[j] = 0;
+                        }
+                    }
+
+                    const int8_t* wptr = wbaseptr + (size_t)i * C1Max * K0 * C0;
+
+                    for (int c1 = 0; c1 < cblocks; c1++, wptr += C0 * K0) {
+                        typename RVV::vi16 w0 = RVV::loadw16(wptr, vl);
+                        typename RVV::vi16 w1 = RVV::loadw16(wptr + K0, vl);
+                        typename RVV::vi16 w2 = RVV::loadw16(wptr + 2 * K0, vl);
+                        typename RVV::vi16 w3 = RVV::loadw16(wptr + 3 * K0, vl);
+                        typename RVV::vi16 w4 = RVV::loadw16(wptr + 4 * K0, vl);
+                        typename RVV::vi16 w5 = RVV::loadw16(wptr + 5 * K0, vl);
+                        typename RVV::vi16 w6 = RVV::loadw16(wptr + 6 * K0, vl);
+                        typename RVV::vi16 w7 = RVV::loadw16(wptr + 7 * K0, vl);
+
+                        CONV_RVV_MAC(0); CONV_RVV_MAC(1);
+                        CONV_RVV_MAC(2); CONV_RVV_MAC(3);
+                        CONV_RVV_MAC(4); CONV_RVV_MAC(5);
+                        CONV_RVV_MAC(6); CONV_RVV_MAC(7);
+
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                            inptr[j] += inpstep[j];
+                    }
+                }
+
+                CONV_RVV_STORE(0); CONV_RVV_STORE(1);
+                CONV_RVV_STORE(2); CONV_RVV_STORE(3);
+                CONV_RVV_STORE(4); CONV_RVV_STORE(5);
+                CONV_RVV_STORE(6); CONV_RVV_STORE(7);
+            }
+
+            for (; p < planeblocks_l; p++) {
+                alignas(32) int32_t acc[K0];
+                memcpy(acc, biasbuf, K0 * sizeof(int32_t));
+
+                int zj = p / (H_l * W_l);
+                int yxj = p - zj * H_l * W_l;
+                int yj = yxj / W_l;
+                int xj = yxj - yj * W_l;
+                int zi_base = zj * Sz - padZ;
+                int yi_base = yj * Sy - padY;
+                int xi_base = xj * Sx - padX;
+
+                for (int i = 0; i < ksize_l; i++) {
+                    int zi = zi_base + ofsZYX[i * 3];
+                    int yi = yi_base + ofsZYX[i * 3 + 1];
+                    int xi = xi_base + ofsZYX[i * 3 + 2];
+
+                    bool out_of_bounds = (((unsigned)zi >= (unsigned)Di_l) |
+                         ((unsigned)yi >= (unsigned)Hi_l) |
+                         ((unsigned)xi >= (unsigned)Wi_l)) != 0;
+
+                    const int8_t* inptr = out_of_bounds ? zbuf :
+                        inpbaseptr + (((zi * Hi_l) + yi) * Wi_l + xi) * C0;
+                    int inpstep = out_of_bounds ? 0 : iplanesize_l;
+                    const int8_t* wptr = wbaseptr + (size_t)i * C1Max * K0 * C0;
+
+                    for (int c1 = 0; c1 < cblocks; c1++, inptr += inpstep, wptr += C0 * K0) {
+                        for (int c0 = 0; c0 < C0; c0++) {
+                            int ival = (int)(int8_t)((uint8_t)inptr[c0] ^ xor_val);
+                            const int8_t* wp = wptr + c0 * K0;
+                            for (int k0 = 0; k0 < K0; k0++)
+                                acc[k0] += ival * (int)wp[k0];
+                        }
+                    }
+                }
+
+                int8_t* optr = outptr + p * K0;
+                const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
+                for (int k0 = 0; k0 < K0; k0++) {
+                    float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
+                    if (rptr) {
+                        int rval = inputIsU8 ? (int)(uint8_t)rptr[k0] : (int)rptr[k0];
+                        val += (float)(rval - out_zp);
+                    }
+                    int ival = cvRound(val);
+                    if (inputIsU8) {
+                        ival = std::max(0, std::min(255, ival));
+                        if (activLUT) ival = (int)(uint8_t)activLUT[ival];
+                        ((uint8_t*)optr)[k0] = (uint8_t)ival;
+                    } else {
+                        ival = std::max(-128, std::min(127, ival));
+                        if (activLUT) ival = (int)activLUT[ival + 128];
+                        optr[k0] = (int8_t)ival;
+                    }
+                }
+            }
+        }
+    });
+}
+
+#undef CONV_RVV_MAC
+#undef CONV_RVV_STORE
+#endif // CV_RVV
+
 // INT8 depthwise convolution kernel (ngroups==K==C, Kg==Cg==1).
 static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                                    void* out_, const ConvState& cs,
@@ -1530,6 +1923,22 @@ void convInt8Block(const void* inp_, const void* residual_,
         convInt8BlockNEON(inp_, residual_, out_, cs, weightsVNNI_,
                           bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
         return;
+    }
+#endif
+#if CV_RVV
+    if (weights_) {
+        // vl=8 over the K0 output channels; pick the narrowest register group
+        // that provides 8 lanes at the runtime VLEN (no VLEN hardcoded).
+        if (__riscv_vsetvlmax_e32m1() >= 8) {
+            convInt8BlockRVV<ConvInt8RVV_M1>(inp_, residual_, out_, cs, weights_,
+                                             bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+            return;
+        }
+        if (__riscv_vsetvlmax_e32m2() >= 8) {
+            convInt8BlockRVV<ConvInt8RVV_M2>(inp_, residual_, out_, cs, weights_,
+                                             bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+            return;
+        }
     }
 #endif
 #if !CV_AVXVNNI_AVAILABLE && !(CV_NEON && defined(CV_NEON_DOT) && CV_NEON_DOT)

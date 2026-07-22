@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+#include <queue>
 
  // Requires CMake flag: DEBUG_opencv_calib=ON
 //#define DEBUG_CIRCLES
@@ -574,8 +575,6 @@ CirclesGridFinder::Segment::Segment(cv::Point2f _s, cv::Point2f _e) :
 {
 }
 
-void computeShortestPath(Mat &predecessorMatrix, int v1, int v2, std::vector<int> &path);
-void computePredecessorMatrix(const Mat &dm, int verticesCount, Mat &predecessorMatrix);
 
 CirclesGridFinderParameters::CirclesGridFinderParameters()
 {
@@ -1209,79 +1208,91 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
   rng = Graph(keypoints.size());
   vectors.clear();
 
-  //TODO: use more fast algorithm instead of naive N^3
-  for (size_t i = 0; i < keypoints.size(); i++)
-  {
-    for (size_t j = 0; j < keypoints.size(); j++)
-    {
-      if (i == j)
-        continue;
-
-      Point2f vec = keypoints[i] - keypoints[j];
-      double dist = norm(vec);
-
-      bool isNeighbors = true;
-      for (size_t k = 0; k < keypoints.size(); k++)
-      {
-        if (k == i || k == j)
-          continue;
-
-        double dist1 = norm(keypoints[i] - keypoints[k]);
-        double dist2 = norm(keypoints[j] - keypoints[k]);
-        if (dist1 < dist && dist2 < dist)
-        {
-          isNeighbors = false;
-          break;
-        }
-      }
-
-      if (isNeighbors)
-      {
-        rng.addEdge(i, j);
-        vectors.push_back(keypoints[i] - keypoints[j]);
-        if (drawImage != 0)
-        {
-          line(*drawImage, keypoints[i], keypoints[j], Scalar(255, 0, 0), 2);
-          circle(*drawImage, keypoints[i], 3, Scalar(0, 0, 255), -1);
-          circle(*drawImage, keypoints[j], 3, Scalar(0, 0, 255), -1);
-        }
-      }
-    }
-  }
-}
-
-void computePredecessorMatrix(const Mat &dm, int verticesCount, Mat &predecessorMatrix)
-{
-  CV_Assert( dm.type() == CV_32SC1 );
-  predecessorMatrix.create(verticesCount, verticesCount, CV_32SC1);
-  predecessorMatrix = -1;
-  for (int i = 0; i < predecessorMatrix.rows; i++)
-  {
-    for (int j = 0; j < predecessorMatrix.cols; j++)
-    {
-      int dist = dm.at<int> (i, j);
-      for (int k = 0; k < verticesCount; k++)
-      {
-        if (dm.at<int> (i, k) == dist - 1 && dm.at<int> (k, j) == 1)
-        {
-          predecessorMatrix.at<int> (i, j) = k;
-          break;
-        }
-      }
-    }
-  }
-}
-
-static void computeShortestPath(Mat &predecessorMatrix, size_t v1, size_t v2, std::vector<size_t> &path)
-{
-  if (predecessorMatrix.at<int> ((int)v1, (int)v2) < 0)
-  {
-    path.push_back(v1);
+  const size_t n = keypoints.size();
+  if (n < 2)
     return;
+
+  // RNG is a subgraph of the Delaunay triangulation, so we only need to test
+  // Delaunay edges as candidates. This brings the complexity from O(N^3) down
+  // to O(N^2) in the worst case, and much better in practice for regular grids
+  // where Delaunay edges (~3N) are almost all RNG edges anyway.
+
+  float minX = keypoints[0].x, minY = keypoints[0].y;
+  float maxX = minX, maxY = minY;
+  for (size_t i = 1; i < n; i++)
+  {
+    minX = std::min(minX, keypoints[i].x);
+    minY = std::min(minY, keypoints[i].y);
+    maxX = std::max(maxX, keypoints[i].x);
+    maxY = std::max(maxY, keypoints[i].y);
   }
 
-  computeShortestPath(predecessorMatrix, v1, predecessorMatrix.at<int> ((int)v1, (int)v2), path);
-  path.push_back(v2);
+  // Subdiv2D requires a rect that strictly contains all points.
+  const float margin = 1.f;
+  Rect2f rect(minX - margin, minY - margin,
+              (maxX - minX) + 2*margin,
+              (maxY - minY) + 2*margin);
+  Subdiv2D subdiv(rect);
+  subdiv.insert(std::vector<Point2f>(keypoints.begin(), keypoints.end()));
+
+  // Map coordinates back to keypoint indices. Subdiv2D stores and returns the
+  // exact float values we inserted, so direct comparison is safe here.
+  std::map<std::pair<float, float>, size_t> ptToIdx;
+  for (size_t i = 0; i < n; i++)
+    ptToIdx[{keypoints[i].x, keypoints[i].y}] = i;
+
+  std::vector<Vec4f> edgeList;
+  subdiv.getEdgeList(edgeList);
+
+  for (const Vec4f& e : edgeList)
+  {
+    auto it1 = ptToIdx.find({e[0], e[1]});
+    auto it2 = ptToIdx.find({e[2], e[3]});
+    // Edges involving the virtual bounding-rect vertices won't be in ptToIdx.
+    if (it1 == ptToIdx.end() || it2 == ptToIdx.end())
+      continue;
+
+    size_t i = it1->second;
+    size_t j = it2->second;
+    if (i == j)
+      continue;
+    if (i > j)
+      std::swap(i, j);
+
+    Point2f vec = keypoints[i] - keypoints[j];
+    double distSq = (double)vec.x*vec.x + (double)vec.y*vec.y;
+
+    bool isRNG = true;
+    for (size_t k = 0; k < n; k++)
+    {
+      if (k == i || k == j)
+        continue;
+      Point2f d1 = keypoints[i] - keypoints[k];
+      Point2f d2 = keypoints[j] - keypoints[k];
+      double d1Sq = (double)d1.x*d1.x + (double)d1.y*d1.y;
+      double d2Sq = (double)d2.x*d2.x + (double)d2.y*d2.y;
+      if (d1Sq < distSq && d2Sq < distSq)
+      {
+        isRNG = false;
+        break;
+      }
+    }
+
+    if (isRNG)
+    {
+      rng.addEdge(i, j);
+      // Push both directions; findBasis needs the full set to cluster into
+      // the 4 groups (two grid axes and their negatives) via k-means.
+      vectors.push_back(keypoints[i] - keypoints[j]);
+      vectors.push_back(keypoints[j] - keypoints[i]);
+      if (drawImage != 0)
+      {
+        line(*drawImage, keypoints[i], keypoints[j], Scalar(255, 0, 0), 2);
+        circle(*drawImage, keypoints[i], 3, Scalar(0, 0, 255), -1);
+        circle(*drawImage, keypoints[j], 3, Scalar(0, 0, 255), -1);
+      }
+    }
+  }
 }
 
 size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path &bestPath)
@@ -1290,40 +1301,90 @@ size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path 
   std::vector<int> confidences;
 
   size_t bestGraphIdx = 0;
-  const int infinity = -1;
   for (size_t graphIdx = 0; graphIdx < basisGraphs.size(); graphIdx++)
   {
     const Graph &g = basisGraphs[graphIdx];
-    Mat distanceMatrix;
-    g.floydWarshall(distanceMatrix, infinity);
-    Mat predecessorMatrix;
-    computePredecessorMatrix(distanceMatrix, (int)g.getVerticesCount(), predecessorMatrix);
+    const int n = (int)g.getVerticesCount();
 
-    double maxVal;
-    Point maxLoc;
-    minMaxLoc(distanceMatrix, 0, &maxVal, 0, &maxLoc);
+    // BFS from every vertex to find the diameter (longest shortest path).
+    // basisGraphs are sparse -- each vertex connects only to grid neighbors in
+    // one direction -- so this is O(N^2) vs Floyd-Warshall's O(N^3).
+    std::vector<int> dist(n);
+    std::queue<int> q;
 
-    if (maxVal > longestPaths[0].length)
+    int maxDist = 0;
+    int srcBest = 0, dstBest = 0;
+
+    for (int src = 0; src < n; src++)
+    {
+      std::fill(dist.begin(), dist.end(), -1);
+      dist[src] = 0;
+      q.push(src);
+      while (!q.empty())
+      {
+        int v = q.front(); q.pop();
+        for (size_t nb : g.getNeighbors((size_t)v))
+        {
+          int u = (int)nb;
+          if (dist[u] < 0)
+          {
+            dist[u] = dist[v] + 1;
+            q.push(u);
+          }
+        }
+      }
+      for (int dst = 0; dst < n; dst++)
+      {
+        if (dist[dst] > maxDist)
+        {
+          maxDist = dist[dst];
+          srcBest = src;
+          dstBest = dst;
+        }
+      }
+    }
+
+    if (maxDist > longestPaths[0].length)
     {
       longestPaths.clear();
       confidences.clear();
       bestGraphIdx = graphIdx;
     }
-    if (longestPaths.empty() || (maxVal == longestPaths[0].length && graphIdx == bestGraphIdx))
+    if (longestPaths.empty() || (maxDist == longestPaths[0].length && graphIdx == bestGraphIdx))
     {
-      Path path = Path(maxLoc.x, maxLoc.y, cvRound(maxVal));
-      CV_Assert(maxLoc.x >= 0 && maxLoc.y >= 0)
-        ;
-      size_t id1 = static_cast<size_t> (maxLoc.x);
-      size_t id2 = static_cast<size_t> (maxLoc.y);
-      computeShortestPath(predecessorMatrix, id1, id2, path.vertices);
+      Path path = Path(srcBest, dstBest, maxDist);
+
+      // BFS again from srcBest to reconstruct the path to dstBest
+      std::vector<int> pred(n, -1);
+      std::fill(dist.begin(), dist.end(), -1);
+      dist[srcBest] = 0;
+      q.push(srcBest);
+      while (!q.empty())
+      {
+        int v = q.front(); q.pop();
+        for (size_t nb : g.getNeighbors((size_t)v))
+        {
+          int u = (int)nb;
+          if (dist[u] < 0)
+          {
+            dist[u] = dist[v] + 1;
+            pred[u] = v;
+            q.push(u);
+          }
+        }
+      }
+      std::vector<size_t> pathVertices;
+      for (int cur = dstBest; cur != srcBest; cur = pred[cur])
+        pathVertices.push_back((size_t)cur);
+      pathVertices.push_back((size_t)srcBest);
+      std::reverse(pathVertices.begin(), pathVertices.end());
+      path.vertices = pathVertices;
+
       longestPaths.push_back(path);
 
       int conf = 0;
       for (int v2 = 0; v2 < (int)path.vertices.size(); v2++)
-      {
-        conf += (int)basisGraphs[1 - (int)graphIdx].getDegree(v2);
-      }
+        conf += (int)basisGraphs[1 - (int)graphIdx].getDegree(path.vertices[v2]);
       confidences.push_back(conf);
     }
   }
@@ -1339,7 +1400,6 @@ size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path 
     }
   }
 
-  //int bestPathIdx = rand() % longestPaths.size();
   bestPath = longestPaths.at(bestPathIdx);
   bool needReverse = (bestGraphIdx == 0 && keypoints[bestPath.lastVertex].x < keypoints[bestPath.firstVertex].x)
       || (bestGraphIdx == 1 && keypoints[bestPath.lastVertex].y < keypoints[bestPath.firstVertex].y);

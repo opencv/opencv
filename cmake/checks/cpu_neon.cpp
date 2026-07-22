@@ -2,7 +2,7 @@
 
 #if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
 # define _ARM64_DISTINCT_NEON_TYPES
-# include <Intrin.h>
+# include <intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
 #elif defined(__ARM_NEON)

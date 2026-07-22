@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_DNN_CAFFE_GLOG_EMULATOR_HPP__
-#define __OPENCV_DNN_CAFFE_GLOG_EMULATOR_HPP__
+#ifndef __OPENCV_DNN_GLOG_EMULATOR_HPP__
+#define __OPENCV_DNN_GLOG_EMULATOR_HPP__
 #include <cstdlib>
 #include <iostream>
 #include <sstream>

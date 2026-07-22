@@ -72,7 +72,7 @@ class photo_test(NewOpenCVTests):
             [0.47141286, 0.13592419, 0.01362205],
             [0.17377101, 0.03256864, 0.00203026]
         ], dtype=np.float64)
-        np.testing.assert_allclose(src_rgbl, model.getSrcLinearRGB().reshape(-1, 3), rtol=1e-4, atol=1e-4)
+        self.assertTrue(np.allclose(src_rgbl, model.getSrcLinearRGB().reshape(-1, 3), rtol=1e-4, atol=1e-4))
 
         dst_rgbl = np.array([
             [0.17303173, 0.08211037, 0.05672686],
@@ -100,10 +100,10 @@ class photo_test(NewOpenCVTests):
             [0.08529188, 0.08887994, 0.09257601],
             [0.0303193, 0.03113818, 0.03274845]
         ], dtype=np.float64)
-        np.testing.assert_allclose(dst_rgbl, model.getRefLinearRGB().reshape(-1, 3), rtol=1e-4, atol=1e-4)
+        self.assertTrue(np.allclose(dst_rgbl, model.getRefLinearRGB().reshape(-1, 3), rtol=1e-4, atol=1e-4))
 
         mask = np.ones((24, 1), dtype=np.uint8)
-        np.testing.assert_allclose(model.getMask(), mask, rtol=0.0, atol=0.0)
+        self.assertTrue(np.allclose(model.getMask(), mask, rtol=0.0, atol=0.0))
 
         # Test reference color matrix
         refColorMat = np.array([
@@ -111,7 +111,7 @@ class photo_test(NewOpenCVTests):
             [0.12719672, 0.77389268, -0.01569404],
             [-0.27627010, 0.00603427, 2.74272981]
         ], dtype=np.float64)
-        np.testing.assert_allclose(colorCorrectionMat, refColorMat, rtol=1e-4, atol=1e-4)
+        self.assertTrue(np.allclose(colorCorrectionMat, refColorMat, rtol=1e-4, atol=1e-4))
 
     def test_masks_weights_1(self):
         s = np.array([
@@ -160,13 +160,13 @@ class photo_test(NewOpenCVTests):
 
         weights = np.array([1.15789474, 1.26315789, 1.36842105, 1.47368421,
                            0.52631579, 0.63157895, 0.73684211, 0.84210526], dtype=np.float64)
-        np.testing.assert_allclose(model.getWeights(), weights.reshape(-1, 1), rtol=1e-4, atol=1e-4)
+        self.assertTrue(np.allclose(model.getWeights(), weights.reshape(-1, 1), rtol=1e-4, atol=1e-4))
 
         mask = np.array([True, False, False, True, False, False,
                         True, False, False, True, False, False,
                         True, False, False, True, False, False,
                         True, False, False, True, False, False], dtype=np.uint8)
-        np.testing.assert_allclose(model.getMask(), mask.reshape(-1, 1), rtol=0.0, atol=0.0)
+        self.assertTrue(np.allclose(model.getMask(), mask.reshape(-1, 1), rtol=0.0, atol=0.0))
 
     def test_masks_weights_2(self):
         s = np.array([
@@ -214,14 +214,14 @@ class photo_test(NewOpenCVTests):
             1.70312161, 0.45414218, 1.15910007, 0.7540434, 1.05049802,
             1.04551645, 1.54082353, 1.02453421, 0.6015915, 0.26154558
         ], dtype=np.float64)
-        np.testing.assert_allclose(model.getWeights(), weights.reshape(-1, 1), rtol=1e-4, atol=1e-4)
+        self.assertTrue(np.allclose(model.getWeights(), weights.reshape(-1, 1), rtol=1e-4, atol=1e-4))
 
         # Test mask
         mask = np.array([True, True, True, True, True, True,
                         True, True, True, True, False, True,
                         True, True, True, False, True, True,
                         False, False, True, True, True, True], dtype=np.uint8)
-        np.testing.assert_allclose(model.getMask(), mask.reshape(-1, 1), rtol=0.0, atol=0.0)
+        self.assertTrue(np.allclose(model.getMask(), mask.reshape(-1, 1), rtol=0.0, atol=0.0))
 
     def test_compute_color_correction_matrix(self):
         path = self.find_file('cv/mcc/mcc_ccm_test.yml')
@@ -236,7 +236,7 @@ class photo_test(NewOpenCVTests):
         gold_ccm = fs.getNode("ccm").mat()
         fs.release()
 
-        np.testing.assert_allclose(gold_ccm, colorCorrectionMat, rtol=1e-8, atol=1e-8)
+        self.assertTrue(np.allclose(gold_ccm, colorCorrectionMat, rtol=1e-8, atol=1e-8))
 
         gold_loss = 4.6386569120323129
         loss = model.getLoss()
@@ -263,7 +263,7 @@ class photo_test(NewOpenCVTests):
         calibratedImage = np.zeros_like(img)
         model.correctImage(img, calibratedImage)
 
-        np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
+        self.assertTrue(np.allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1))
 
     def test_mcc_ccm_combined(self):
         detector = cv.mcc_CCheckerDetector.create()
@@ -290,7 +290,7 @@ class photo_test(NewOpenCVTests):
         fs.release()
 
         # Verify that detected colors are close to reference colors
-        np.testing.assert_allclose(src, ref_src, rtol=0.01, atol=0.01)
+        self.assertTrue(np.allclose(src, ref_src, rtol=0.01, atol=0.01))
 
         # Use reference colors for model computation
         model = cv.ccm.ColorCorrectionModel(ref_src, cv.ccm.COLORCHECKER_MACBETH)
@@ -299,7 +299,7 @@ class photo_test(NewOpenCVTests):
         calibratedImage = np.zeros_like(img)
         model.correctImage(img, calibratedImage)
 
-        np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
+        self.assertTrue(np.allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1))
 
     def test_serialization(self):
         path1 = self.find_file("cv/mcc/mcc_ccm_test.yml")

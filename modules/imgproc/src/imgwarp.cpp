@@ -311,8 +311,8 @@ static const void* initInterTab2D( int method, bool fixpt )
             for( j = 0; j < INTER_TAB_SIZE; j++, tab += ksize*ksize, itab += ksize*ksize )
             {
                 int isum = 0;
-                NNDeltaTab_i[i*INTER_TAB_SIZE+j][0] = j < INTER_TAB_SIZE/2;
-                NNDeltaTab_i[i*INTER_TAB_SIZE+j][1] = i < INTER_TAB_SIZE/2;
+                NNDeltaTab_i[i*INTER_TAB_SIZE+j][0] = j >= INTER_TAB_SIZE/2;
+                NNDeltaTab_i[i*INTER_TAB_SIZE+j][1] = i >= INTER_TAB_SIZE/2;
 
                 for( k1 = 0; k1 < ksize; k1++ )
                 {

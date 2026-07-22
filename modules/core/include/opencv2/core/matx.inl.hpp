@@ -513,13 +513,13 @@ Vec<_Tp, n> Matx<_Tp, m, n>::solve(const Vec<_Tp, m>& rhs, int method) const
     return (Vec<_Tp, n>&)(x);
 }
 
-template<typename _Tp, int m> static inline
+template<typename _Tp, int m> inline
 double determinant(const Matx<_Tp, m, m>& a)
 {
     return cv::internal::Matx_DetOp<_Tp, m>()(a);
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 double trace(const Matx<_Tp, m, n>& a)
 {
     _Tp s = 0;
@@ -528,13 +528,13 @@ double trace(const Matx<_Tp, m, n>& a)
     return s;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 double norm(const Matx<_Tp, m, n>& M)
 {
     return std::sqrt(normL2Sqr<_Tp, double>(M.val, m*n));
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 double norm(const Matx<_Tp, m, n>& M, int normType)
 {
     switch(normType) {
@@ -550,7 +550,7 @@ double norm(const Matx<_Tp, m, n>& M, int normType)
     }
 }
 
-template<typename _Tp1, typename _Tp2, int m, int n> static inline
+template<typename _Tp1, typename _Tp2, int m, int n> inline
 Matx<_Tp1, m, n>& operator += (Matx<_Tp1, m, n>& a, const Matx<_Tp2, m, n>& b)
 {
     for( int i = 0; i < m*n; i++ )
@@ -558,7 +558,7 @@ Matx<_Tp1, m, n>& operator += (Matx<_Tp1, m, n>& a, const Matx<_Tp2, m, n>& b)
     return a;
 }
 
-template<typename _Tp1, typename _Tp2, int m, int n> static inline
+template<typename _Tp1, typename _Tp2, int m, int n> inline
 Matx<_Tp1, m, n>& operator -= (Matx<_Tp1, m, n>& a, const Matx<_Tp2, m, n>& b)
 {
     for( int i = 0; i < m*n; i++ )
@@ -566,19 +566,19 @@ Matx<_Tp1, m, n>& operator -= (Matx<_Tp1, m, n>& a, const Matx<_Tp2, m, n>& b)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator + (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
 {
     return Matx<_Tp, m, n>(a, b, Matx_AddOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator - (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
 {
     return Matx<_Tp, m, n>(a, b, Matx_SubOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, int alpha)
 {
     for( int i = 0; i < m*n; i++ )
@@ -586,7 +586,7 @@ Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, int alpha)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, float alpha)
 {
     for( int i = 0; i < m*n; i++ )
@@ -594,7 +594,7 @@ Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, float alpha)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, double alpha)
 {
     for( int i = 0; i < m*n; i++ )
@@ -602,43 +602,43 @@ Matx<_Tp, m, n>& operator *= (Matx<_Tp, m, n>& a, double alpha)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (const Matx<_Tp, m, n>& a, int alpha)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (const Matx<_Tp, m, n>& a, float alpha)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (const Matx<_Tp, m, n>& a, double alpha)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (int alpha, const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (float alpha, const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator * (double alpha, const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, float alpha)
 {
     for( int i = 0; i < m*n; i++ )
@@ -646,7 +646,7 @@ Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, float alpha)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, double alpha)
 {
     for( int i = 0; i < m*n; i++ )
@@ -654,38 +654,38 @@ Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, double alpha)
     return a;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, float alpha)
 {
     return Matx<_Tp, m, n>(a, 1.f/alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, double alpha)
 {
     return Matx<_Tp, m, n>(a, 1./alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> operator - (const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, -1, Matx_ScaleOp());
 }
 
-template<typename _Tp, int m, int n, int l> static inline
+template<typename _Tp, int m, int n, int l> inline
 Matx<_Tp, m, n> operator * (const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b)
 {
     return Matx<_Tp, m, n>(a, b, Matx_MatMulOp());
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
 {
     Matx<_Tp, m, 1> c(a, b, Matx_MatMulOp());
     return (const Vec<_Tp, m>&)(c);
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 bool operator == (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
 {
     for( int i = 0; i < m*n; i++ )
@@ -693,7 +693,7 @@ bool operator == (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
     return true;
 }
 
-template<typename _Tp, int m, int n> static inline
+template<typename _Tp, int m, int n> inline
 bool operator != (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
 {
     return !(a == b);
@@ -955,7 +955,7 @@ Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v)
     return v * (nv ? 1./nv : 0.);
 }
 
-template<typename _Tp1, typename _Tp2, int cn> static inline
+template<typename _Tp1, typename _Tp2, int cn> inline
 Vec<_Tp1, cn>& operator += (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
 {
     for( int i = 0; i < cn; i++ )
@@ -963,7 +963,7 @@ Vec<_Tp1, cn>& operator += (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
     return a;
 }
 
-template<typename _Tp1, typename _Tp2, int cn> static inline
+template<typename _Tp1, typename _Tp2, int cn> inline
 Vec<_Tp1, cn>& operator -= (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
 {
     for( int i = 0; i < cn; i++ )
@@ -971,19 +971,19 @@ Vec<_Tp1, cn>& operator -= (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator + (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
 {
     return Vec<_Tp, cn>(a, b, Matx_AddOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator - (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
 {
     return Vec<_Tp, cn>(a, b, Matx_SubOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, int alpha)
 {
     for( int i = 0; i < cn; i++ )
@@ -991,7 +991,7 @@ Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, int alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, float alpha)
 {
     for( int i = 0; i < cn; i++ )
@@ -999,7 +999,7 @@ Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, float alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, double alpha)
 {
     for( int i = 0; i < cn; i++ )
@@ -1007,7 +1007,7 @@ Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, double alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, int alpha)
 {
     double ialpha = 1./alpha;
@@ -1016,7 +1016,7 @@ Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, int alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, float alpha)
 {
     float ialpha = 1.f/alpha;
@@ -1025,7 +1025,7 @@ Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, float alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, double alpha)
 {
     double ialpha = 1./alpha;
@@ -1034,61 +1034,61 @@ Vec<_Tp, cn>& operator /= (Vec<_Tp, cn>& a, double alpha)
     return a;
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (const Vec<_Tp, cn>& a, int alpha)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (int alpha, const Vec<_Tp, cn>& a)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (const Vec<_Tp, cn>& a, float alpha)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (float alpha, const Vec<_Tp, cn>& a)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (const Vec<_Tp, cn>& a, double alpha)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator * (double alpha, const Vec<_Tp, cn>& a)
 {
     return Vec<_Tp, cn>(a, alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator / (const Vec<_Tp, cn>& a, int alpha)
 {
     return Vec<_Tp, cn>(a, 1./alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator / (const Vec<_Tp, cn>& a, float alpha)
 {
     return Vec<_Tp, cn>(a, 1.f/alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator / (const Vec<_Tp, cn>& a, double alpha)
 {
     return Vec<_Tp, cn>(a, 1./alpha, Matx_ScaleOp());
 }
 
-template<typename _Tp, int cn> static inline
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn> operator - (const Vec<_Tp, cn>& a)
 {
     Vec<_Tp,cn> t;

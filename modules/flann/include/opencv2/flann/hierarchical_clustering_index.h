@@ -532,7 +532,11 @@ public:
         const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
+        // Kept in thread_local storage so each thread owns an independent heap
+        // and no process-wide lock is taken on the search hot path (issue #25281).
+        thread_local cv::Ptr<Heap<BranchSt>> heap = cv::makePtr<Heap<BranchSt>>((int)size_);
+        heap->clear();
+        heap->reserve((int)size_);
 
         std::vector<bool> checked(size_,false);
         int checks = 0;
@@ -686,8 +690,8 @@ private:
             return;
         }
 
-        std::vector<int> centers(branching);
-        std::vector<int> labels(indices_length);
+        cv::AutoBuffer<int> centers(branching);
+        cv::AutoBuffer<int> labels(indices_length);
 
         int centers_length;
         (this->*chooseCenters)(branching, dsindices, indices_length, &centers[0], centers_length);

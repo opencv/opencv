@@ -1211,7 +1211,21 @@ CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
     if (mMovieWriterInput && mMovieWriter && mMovieWriterAdaptor)
     {
         [mMovieWriterInput markAsFinished];
-        [mMovieWriter finishWriting];
+
+        // Use finishWritingWithCompletionHandler + semaphore to synchronously
+        // wait for the async completion block to finish, avoiding a race
+        // condition where NSOperation KVO observer blocks are dispatched
+        // asynchronously to GCD worker threads and may access already-released
+        // objects after the autorelease pool is drained.
+        // Replaces deprecated finishWriting (sync) which falsely appears safe
+        // but does NOT wait for internal NSOperation KVO callbacks to complete.
+        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+        [mMovieWriter finishWritingWithCompletionHandler:^{
+            dispatch_semaphore_signal(sem);
+        }];
+        dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+        dispatch_release(sem);
+
         [mMovieWriter release];
         [mMovieWriterInput release];
         [mMovieWriterAdaptor release];

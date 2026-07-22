@@ -5,19 +5,6 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#if CV_SIMD_SCALABLE
-/* FIX IT:
-// std::swap(a, b) is not available for RVV vector types,
-// and CV_SWAP needs another "t" as input,
-// For compatibility, we swap RVV vector manually by using this macro.
-
-// If others scalable types (e.g. type in ARM SVE) can use std::swap,
-// then replace CV_SIMD_SCALABLE with CV_RVV.
-// If std::swap is available for RVV vector types in future, remove this macro.
-*/
-#define swap(a, b) {auto t = a; a = b; b = t;}
-#endif
-
 namespace cv {
 namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -100,9 +87,18 @@ struct RGB2HSV_b
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
-        for ( ; i <= n - vsize;
+        for ( ; i < n;
               i += vsize, src += scn*vsize, dst += 3*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_uint8 b, g, r;
             if(scn == 4)
             {
@@ -115,7 +111,7 @@ struct RGB2HSV_b
             }
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             v_uint8 h, s, v;
             v_uint8 vmin;
@@ -310,8 +306,17 @@ struct RGB2HSV_f
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_float32>::vlanes();
-        for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
+        const float* const src0 = src;
+        for ( ; i < n; i += 3*vsize, src += scn * vsize)
         {
+            if ( i > n - 3*vsize ) {
+                if (i == 0 || src0 == dst) {
+                    break;
+                }
+                int backup = (i - (n - 3*vsize)) / 3;
+                i = n - 3*vsize;
+                src -= backup * scn;
+            }
             v_float32 r, g, b, a;
             if(scn == 4)
             {
@@ -323,7 +328,7 @@ struct RGB2HSV_f
             }
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             v_float32 h, s, v;
             process(b, g, r, h, s, v, hscale);
@@ -476,15 +481,24 @@ struct HSV2RGB_f
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 valpha = vx_setall_f32(alpha);
-        for (; i <= n - vsize*3; i += vsize*3, dst += dcn * vsize)
+        float* const dst0 = dst;
+        for (; i < n; i += vsize*3, dst += dcn * vsize)
         {
+            if ( i > n - vsize*3 ) {
+                if (i == 0 || src == dst0) {
+                    break;
+                }
+                int backup = (i - (n - vsize*3)) / 3;
+                i = n - vsize*3;
+                dst -= backup * dcn;
+            }
             v_float32 h, s, v, b, g, r;
             v_load_deinterleave(src + i, h, s, v);
 
             HSV2RGB_simd(h, s, v, b, g, r, hs);
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             if(dcn == 4)
             {
@@ -722,9 +736,18 @@ struct RGB2HLS_f
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 vhscale = vx_setall_f32(hscale);
 
-        for ( ; i <= n - vsize;
+        for ( ; i < n;
               i += vsize, src += scn * vsize, dst += 3 * vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_float32 r, g, b, h, l, s;
 
             if(scn == 4)
@@ -738,7 +761,7 @@ struct RGB2HLS_f
             }
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             process(r, g, b, vhscale, h, l, s);
 
@@ -1018,15 +1041,24 @@ struct HLS2RGB_f
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         static const int vsize = VTraits<v_float32>::vlanes();
-        for (; i <= n - vsize; i += vsize, src += 3*vsize, dst += dcn*vsize)
+        for (; i < n; i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 3;
+                dst -= backup * dcn;
+            }
             v_float32 h, l, s, r, g, b;
             v_load_deinterleave(src, h, l, s);
 
             process(h, l, s, b, g, r);
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             if(dcn == 3)
             {

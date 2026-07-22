@@ -12,7 +12,12 @@
   // SearchBox lives in search.js; guard so a load failure can't abort this
   // script (which would leave the modal trigger unwired).
   var searchBox;
-  try { searchBox = new SearchBox("searchBox", "{{ _search }}", '.html'); } catch (e) {}
+  try {
+    searchBox = new SearchBox("searchBox", "{{ _search }}", '.html');
+    // Short debounce: the top-N renderer below makes each search cheap enough
+    // for live-feeling results.
+    if (searchBox) searchBox.keyTimeoutLength = 120;
+  } catch (e) {}
 
   // Open/close the centered modal. Defined early so the Ctrl+K handler can use
   // them, and kept independent of the Doxygen backend so opening always works.
@@ -40,6 +45,22 @@
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".bd-links__title").forEach(function (el) {
+      if (/section navigation/i.test(el.textContent)) el.textContent = "Navigation Bar";
+    });
+
+    // The theme's hamburger only opens the drawer dialog; add toggle-to-close
+    // and backdrop-click-to-close.
+    (function () {
+      var dlg = document.getElementById("pst-primary-sidebar-modal");
+      var tog = document.querySelector(".primary-toggle");
+      if (!dlg || !tog) return;
+      tog.addEventListener("click", function (e) {
+        if (dlg.open) { e.preventDefault(); e.stopImmediatePropagation(); dlg.close(); }
+      }, true);  // capture: pre-empt the theme's open-only handler when already open
+      dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    })();
+
     // The theme renders navbar_end twice (desktop header + mobile drawer), so
     // the search component appears twice → duplicate #opencvSearchTrigger /
     // #opencvSearchOverlay IDs. Keep ONE overlay; wire EVERY trigger to it
@@ -81,6 +102,54 @@
       init_search();
       searchBox.OnSelectItem(0); // default to "All" on every page load
 
+      // Fast results: render only the top matches from the in-memory index,
+      // instead of Doxygen building/toggling all ~4000 rows every keystroke.
+      try { createResults = function () {}; } catch (e) {}
+      if (typeof searchResults !== "undefined" && searchResults) {
+        searchResults.Search = function (q) {
+          q = (q || "").replace(/^ +| +$/g, "").toLowerCase();
+          var box = document.getElementById("SRResults");
+          if (!box) return true;
+          box.innerHTML = "";
+          var data = (typeof searchData !== "undefined") ? searchData : [];
+          var rp = searchBox.resultsPath, shown = 0, MAX = 40;
+          function cls(el, c) { el.setAttribute("class", c); el.setAttribute("className", c); }
+          for (var i = 0; i < data.length && shown < MAX; i++) {
+            var el = data[i];
+            if ((el[1][0] || "").replace(/<[^>]*>/g, "").toLowerCase().indexOf(q) !== 0) continue;
+            var r = document.createElement("div");
+            r.id = "SR_" + el[0]; cls(r, "SRResult"); r.style.display = "block";
+            var e = document.createElement("div"); cls(e, "SREntry");
+            var a = document.createElement("a"); a.id = "Item" + shown; cls(a, "SRSymbol");
+            a.innerHTML = el[1][0]; e.appendChild(a);
+            if (el[1].length === 2) {
+              a.setAttribute("href", rp + el[1][1][0]);
+              a.setAttribute("onclick", "searchBox.CloseResultsWindow()");
+              a.setAttribute("target", el[1][1][1] ? "_parent" : "_blank");
+              var sp = document.createElement("span"); cls(sp, "SRScope");
+              sp.innerHTML = el[1][1][2] || ""; e.appendChild(sp);
+            } else {
+              a.setAttribute("href", 'javascript:searchResults.Toggle("SR_' + el[0] + '")');
+              var chn = document.createElement("div"); cls(chn, "SRChildren");
+              for (var c = 0; c < el[1].length - 1; c++) {
+                var ca = document.createElement("a"); cls(ca, "SRScope");
+                ca.setAttribute("href", rp + el[1][c + 1][0]);
+                ca.setAttribute("onclick", "searchBox.CloseResultsWindow()");
+                ca.setAttribute("target", el[1][c + 1][1] ? "_parent" : "_blank");
+                ca.innerHTML = el[1][c + 1][2] || ""; chn.appendChild(ca);
+              }
+              e.appendChild(chn);
+            }
+            r.appendChild(e); box.appendChild(r); shown++;
+          }
+          var nm = document.getElementById("NoMatches"); if (nm) nm.style.display = shown ? "none" : "block";
+          var ld = document.getElementById("Loading"); if (ld) ld.style.display = "none";
+          var sg = document.getElementById("Searching"); if (sg) sg.style.display = "none";
+          searchResults.lastMatchCount = shown;
+          return true;
+        };
+      }
+
       var sphinxRoot = "{{ '../' * (pagename or '').count('/') }}";
       // Doxygen result href -> Sphinx page, or "" if that page is not in our build.
       function resolveSphinx(href) {
@@ -106,13 +175,16 @@
         if (sphinxPath) {
           e.preventDefault();
           e.stopPropagation();
-          // Doxygen #autotoc_md anchors don't exist in Sphinx; rebuild from heading text.
-          var frag = "";
-          if (/#autotoc_md/.test(href)) {
-            var slug = (a.textContent || "").trim().toLowerCase()
-                         .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-            if (slug) frag = "#" + slug;
-          }
+          // Doxygen anchors (#ga…, #autotoc_md) don't exist in Sphinx, so
+          // rebuild the fragment slug from the result text: tutorials use the
+          // full heading; symbols use the name with scope + "(args)" stripped
+          // -> e.g. "cv::Canny(...)" -> #canny.
+          var t = (a.textContent || "").trim();
+          var slug = /#autotoc_md/.test(href)
+            ? t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+            : t.replace(/.*::/, "").replace(/\s*\(.*$/, "").toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          var frag = slug ? "#" + slug : "";
           window.location.href = sphinxRoot + sphinxPath + frag;
         } else if (href.indexOf("doc/doxygen/html/") >= 0) {
           e.preventDefault();

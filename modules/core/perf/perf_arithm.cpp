@@ -436,7 +436,22 @@ PERF_TEST_P_(BinaryOpTest, transpose2d)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(BinaryOpTest, transposeND)
+static cv::Mat makeTransposeNDOutput(const cv::Mat& src, const std::vector<int>& order)
+{
+    std::vector<int> new_sz(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+        new_sz[i] = src.size[order[i]];
+    return Mat(static_cast<int>(new_sz.size()), new_sz.data(), src.type());
+}
+
+static cv::Mat makeTransposeNDInput3D(Size sz, int type)
+{
+    const int channels = CV_MAT_CN(type);
+    int dims[] = { sz.height, sz.width, channels };
+    return Mat(3, dims, CV_MAKETYPE(CV_MAT_DEPTH(type), 1));
+}
+
+PERF_TEST_P_(BinaryOpTest, transposeND_identity_order)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -444,14 +459,66 @@ PERF_TEST_P_(BinaryOpTest, transposeND)
 
     std::vector<int> order(a.dims);
     std::iota(order.begin(), order.end(), 0);
-    std::reverse(order.begin(), order.end());
 
-    std::vector<int> new_sz(a.dims);
-    std::copy(a.size.p, a.size.p + a.dims, new_sz.begin());
-    std::reverse(new_sz.begin(), new_sz.end());
-    cv::Mat b = Mat(new_sz, type);
+    cv::Mat b = makeTransposeNDOutput(a, order);
 
-    declare.in(a,WARMUP_RNG).out(b);
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transposeND(a, order, b);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BinaryOpTest, transposeND_2d_swap_order)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type).reshape(1);
+
+    std::vector<int> order{1, 0};
+
+    cv::Mat b = makeTransposeNDOutput(a, order);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transposeND(a, order, b);
+
+    SANITY_CHECK_NOTHING();
+}
+
+
+PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = makeTransposeNDInput3D(sz, type);
+
+    std::vector<int> order{1, 0, 2};
+
+    cv::Mat b = makeTransposeNDOutput(a, order);
+
+    randu(a, 0, 255);
+    //BUG: //BUG: in/out calls do not support arrays with more than 2 dimentions
+    //declare.in(a).out(b);
+
+    TEST_CYCLE() cv::transposeND(a, order, b);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = makeTransposeNDInput3D(sz, type);
+
+    std::vector<int> order{2, 0, 1};
+
+    cv::Mat b = makeTransposeNDOutput(a, order);
+
+    randu(a, 0, 255);
+    //BUG: in/out calls do not support arrays with more than 2 dimentions
+    //declare.in(a).out(b);
 
     TEST_CYCLE() cv::transposeND(a, order, b);
 
@@ -460,7 +527,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
-        testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values(szVGA, sz720p, sz1080p, Size(127, 61)),   // 127x61 guards per-call overhead
         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
     )
 );

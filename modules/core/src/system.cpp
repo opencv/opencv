@@ -1176,12 +1176,19 @@ String tempfile( const char* suffix )
 #else
     // Use GUID-based naming to avoid race condition with GetTempFileNameA
     // See issue #19648
-    char temp_dir2[MAX_PATH] = { 0 };
+    wchar_t temp_dir2_w[MAX_PATH] = { 0 };
 
     if (temp_dir.empty())
     {
-        ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
-        temp_dir = std::string(temp_dir2);
+        ::GetTempPathW(sizeof(temp_dir2_w)/sizeof(wchar_t), temp_dir2_w);
+        // Convert from UTF-16 to UTF-8 to support Unicode paths
+        int len = WideCharToMultiByte(CP_UTF8, 0, temp_dir2_w, -1, NULL, 0, NULL, NULL);
+        if (len > 0)
+        {
+            std::vector<char> utf8_buf(len);
+            WideCharToMultiByte(CP_UTF8, 0, temp_dir2_w, -1, utf8_buf.data(), len, NULL, NULL);
+            temp_dir = std::string(utf8_buf.data());
+        }
     }
 
     GUID g;
@@ -2481,7 +2488,12 @@ public:
     IPPInitSingleton()
     {
         useIPP         = true;
+
+#if defined(OPENCV_ALGO_HINT_DEFAULT)
+        useIPP_NE      = OPENCV_ALGO_HINT_DEFAULT == cv::ALGO_HINT_APPROX;
+#else
         useIPP_NE      = false;
+#endif
         ippStatus      = 0;
         funcname       = NULL;
         filename       = NULL;

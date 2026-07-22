@@ -22,6 +22,11 @@
 namespace cv { namespace dnn {
 
 int fastGemmMC(const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        return opt_RVV::fastGemmMC();
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmMC();
@@ -48,6 +53,11 @@ int fastGemmMC(const FastGemmOpt &opt) {
 }
 
 int fastGemmNC(const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        return opt_RVV::fastGemmNC();
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmNC();
@@ -74,6 +84,11 @@ int fastGemmNC(const FastGemmOpt &opt) {
 }
 
 int fastGemmKC(const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        return opt_RVV::fastGemmKC();
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmKC();
@@ -100,6 +115,11 @@ int fastGemmKC(const FastGemmOpt &opt) {
 }
 
 int fastGemmNR(const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        return opt_RVV::fastGemmNR();
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmNR();
@@ -128,6 +148,11 @@ int fastGemmNR(const FastGemmOpt &opt) {
 
 
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        return static_cast<size_t>(opt_RVV::fastGemmPackBSize(N, K));
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return static_cast<size_t>(opt_NEON::fastGemmPackBSize(N, K));
@@ -167,6 +192,18 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     const auto *b = B.ptr<const char>();
     int esz = B.elemSize();
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        size_t size_packed_B = opt_RVV::fastGemmPackBSize(N, K);
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
+        }
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         size_t size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
@@ -237,6 +274,11 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
     const auto &b = (const char *)B;
     auto *packed_b = (char *)packed_B;
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
@@ -482,6 +524,11 @@ void fastGemm(bool trans_a, int M, int N, int K,
         std::swap(lda0, lda1);
     }
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
@@ -532,7 +579,7 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 #ifdef HAVE_MLAS
     const bool a_row_major = (lda0 == 1 || lda1 == 1);
     const bool b_row_major = (ldb0 == 1 || ldb1 == 1);
-    if (a_row_major && b_row_major) {
+    if (!opt.use_rvv && a_row_major && b_row_major) {
         const int phys_lda = std::max(lda0, lda1);
         const int phys_ldb = std::max(ldb0, ldb1);
         if (mlasSgemm(trans_a, trans_b, M, N, K,
@@ -543,6 +590,13 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     }
 #endif
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                b, ldb0, ldb1, beta,
+                                c, ldc, sizeof(float), opt.multi_thread);
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
@@ -645,7 +699,7 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     else if (lda0 == 1) { a_ok = true; mlas_trans_a = true;  mlas_lda = lda1; }
     if (ldb1 == 1)      { b_ok = true; mlas_trans_b = false; mlas_ldb = ldb0; }
     else if (ldb0 == 1) { b_ok = true; mlas_trans_b = true;  mlas_ldb = ldb1; }
-    if (a_ok && b_ok) {
+    if (!opt.use_rvv && a_ok && b_ok) {
         if (mlasSgemmBatch(batch, A_offsets, B_offsets, C_offsets,
                             mlas_trans_a, mlas_trans_b, M, N, K,
                             alpha, A, mlas_lda, B, mlas_ldb,
@@ -655,6 +709,11 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     }
 #endif
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
@@ -687,6 +746,11 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *packed_B
     const char *b = (const char *)packed_B;
     char *c = (char *)C;
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
@@ -768,6 +832,11 @@ void fastGemmBatch(size_t batch,
         return;
     }
 
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
+    } else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
@@ -839,6 +908,15 @@ void pagedAttnQKGemm(
 
     char*a = A.ptr<char>();
     bool isQ3D = shape_q.size() == 3;
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv)
+        opt_RVV::pagedAttnQKGemmKernel(
+            Q.ptr<const char>(), packed_K, a,
+            B, T_q, Nq, N_k, T_s, D, T_k,
+            sm_scale, esz, isQ3D
+        );
+    else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon)
         opt_NEON::pagedAttnQKGemmKernel(
@@ -928,6 +1006,15 @@ void pagedAttnAVGemm(
     }
 
     bool canonical_layout = shape(Out).size() == 3;
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv)
+        opt_RVV::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D, T_v,
+            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
+        );
+    else
+#endif
 #if CV_TRY_NEON
     if (opt.use_neon)
         opt_NEON::pagedAttnAVGemmKernel(

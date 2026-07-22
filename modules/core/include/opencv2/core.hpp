@@ -1103,6 +1103,20 @@ CV_EXPORTS_W void broadcast(InputArray src, InputArray shape, OutputArray dst);
  */
 CV_EXPORTS void broadcast(InputArray src, const MatShape& shape, OutputArray dst);
 
+/** @brief Evaluate a broadcasting element-wise expression over the input arrays.
+
+The expression is a small std::format-like string over placeholders `{0}`, `{1}`, ... (the entries of
+@p inputs), C-style arithmetic / comparison / bitwise operators, type-cast and math function calls
+(`uint8(...)`, `min`, `max`, `absdiff`, `pow`, ...), `;`-separated named temporaries and a
+parenthesized tuple for multiple results. All operands broadcast against each other (numpy rules,
+channels innermost) and the whole expression is fused into a single traversal of the data.
+
+@param expr the expression string, e.g. `"{0} * 2.5 + {1}"` or `"({0} + {1}, {0} - {1})"`.
+@param inputs the arrays bound to `{0}`, `{1}`, ...
+@param outputs receives one array per top-level result (one entry, or several for a tuple).
+*/
+CV_EXPORTS_W void texpr(const String& expr, InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
     ROTATE_180 = 1, //!<Rotate 180 degrees clockwise
@@ -3112,7 +3126,7 @@ public:
 
 };
 
-static inline
+inline
 String& operator << (String& out, Ptr<Formatted> fmtd)
 {
     fmtd->reset();
@@ -3121,7 +3135,7 @@ String& operator << (String& out, Ptr<Formatted> fmtd)
     return out;
 }
 
-static inline
+inline
 String& operator << (String& out, const Mat& mtx)
 {
     return out << Formatter::get()->format(mtx);

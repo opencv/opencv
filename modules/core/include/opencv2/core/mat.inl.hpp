@@ -75,7 +75,7 @@ namespace cv
 
 ////////////////////////// Custom (raw) type wrapper //////////////////////////
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 int rawType()
 {
     CV_StaticAssert(sizeof(_Tp) <= CV_CN_MAX, "sizeof(_Tp) is too large");
@@ -572,9 +572,9 @@ _InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
 }
 
 
-template<typename _Tp> static inline _InputArray rawIn(_Tp& v) { return _InputArray::rawIn(v); }
-template<typename _Tp> static inline _OutputArray rawOut(_Tp& v) { return _OutputArray::rawOut(v); }
-template<typename _Tp> static inline _InputOutputArray rawInOut(_Tp& v) { return _InputOutputArray::rawInOut(v); }
+template<typename _Tp> inline _InputArray rawIn(_Tp& v) { return _InputArray::rawIn(v); }
+template<typename _Tp> inline _OutputArray rawOut(_Tp& v) { return _OutputArray::rawOut(v); }
+template<typename _Tp> inline _InputOutputArray rawInOut(_Tp& v) { return _InputOutputArray::rawInOut(v); }
 
 CV__DEBUG_NS_END
 
@@ -2602,43 +2602,43 @@ inline MatConstIterator MatConstIterator::operator ++(int)
 }
 
 
-static inline
+inline
 bool operator == (const MatConstIterator& a, const MatConstIterator& b)
 {
     return a.m == b.m && a.ptr == b.ptr;
 }
 
-static inline
+inline
 bool operator != (const MatConstIterator& a, const MatConstIterator& b)
 {
     return !(a == b);
 }
 
-static inline
+inline
 bool operator < (const MatConstIterator& a, const MatConstIterator& b)
 {
     return a.ptr < b.ptr;
 }
 
-static inline
+inline
 bool operator > (const MatConstIterator& a, const MatConstIterator& b)
 {
     return a.ptr > b.ptr;
 }
 
-static inline
+inline
 bool operator <= (const MatConstIterator& a, const MatConstIterator& b)
 {
     return a.ptr <= b.ptr;
 }
 
-static inline
+inline
 bool operator >= (const MatConstIterator& a, const MatConstIterator& b)
 {
     return a.ptr >= b.ptr;
 }
 
-static inline
+inline
 ptrdiff_t operator - (const MatConstIterator& b, const MatConstIterator& a)
 {
     if( a.m != b.m )
@@ -2649,21 +2649,21 @@ ptrdiff_t operator - (const MatConstIterator& b, const MatConstIterator& a)
     return b.lpos() - a.lpos();
 }
 
-static inline
+inline
 MatConstIterator operator + (const MatConstIterator& a, ptrdiff_t ofs)
 {
     MatConstIterator b = a;
     return b += ofs;
 }
 
-static inline
+inline
 MatConstIterator operator + (ptrdiff_t ofs, const MatConstIterator& a)
 {
     MatConstIterator b = a;
     return b += ofs;
 }
 
-static inline
+inline
 MatConstIterator operator - (const MatConstIterator& a, ptrdiff_t ofs)
 {
     MatConstIterator b = a;
@@ -2785,33 +2785,33 @@ Point MatConstIterator_<_Tp>::pos() const
 }
 
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 bool operator == (const MatConstIterator_<_Tp>& a, const MatConstIterator_<_Tp>& b)
 {
     return a.m == b.m && a.ptr == b.ptr;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 bool operator != (const MatConstIterator_<_Tp>& a, const MatConstIterator_<_Tp>& b)
 {
     return a.m != b.m || a.ptr != b.ptr;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatConstIterator_<_Tp> operator + (const MatConstIterator_<_Tp>& a, ptrdiff_t ofs)
 {
     MatConstIterator t = (const MatConstIterator&)a + ofs;
     return (MatConstIterator_<_Tp>&)t;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatConstIterator_<_Tp> operator + (ptrdiff_t ofs, const MatConstIterator_<_Tp>& a)
 {
     MatConstIterator t = (const MatConstIterator&)a + ofs;
     return (MatConstIterator_<_Tp>&)t;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatConstIterator_<_Tp> operator - (const MatConstIterator_<_Tp>& a, ptrdiff_t ofs)
 {
     MatConstIterator t = (const MatConstIterator&)a - ofs;
@@ -2922,33 +2922,33 @@ _Tp& MatIterator_<_Tp>::operator [](ptrdiff_t i) const
 }
 
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 bool operator == (const MatIterator_<_Tp>& a, const MatIterator_<_Tp>& b)
 {
     return a.m == b.m && a.ptr == b.ptr;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 bool operator != (const MatIterator_<_Tp>& a, const MatIterator_<_Tp>& b)
 {
     return a.m != b.m || a.ptr != b.ptr;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatIterator_<_Tp> operator + (const MatIterator_<_Tp>& a, ptrdiff_t ofs)
 {
     MatConstIterator t = (const MatConstIterator&)a + ofs;
     return (MatIterator_<_Tp>&)t;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatIterator_<_Tp> operator + (ptrdiff_t ofs, const MatIterator_<_Tp>& a)
 {
     MatConstIterator t = (const MatConstIterator&)a + ofs;
     return (MatIterator_<_Tp>&)t;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatIterator_<_Tp> operator - (const MatIterator_<_Tp>& a, ptrdiff_t ofs)
 {
     MatConstIterator t = (const MatConstIterator&)a - ofs;
@@ -3011,13 +3011,13 @@ void SparseMatConstIterator::seekEnd()
 }
 
 
-static inline
+inline
 bool operator == (const SparseMatConstIterator& it1, const SparseMatConstIterator& it2)
 {
     return it1.m == it2.m && it1.ptr == it2.ptr;
 }
 
-static inline
+inline
 bool operator != (const SparseMatConstIterator& it1, const SparseMatConstIterator& it2)
 {
     return !(it1 == it2);
@@ -3308,155 +3308,155 @@ MatExpr::operator Mat_<_Tp>() const
 }
 
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr min(const Mat_<_Tp>& a, const Mat_<_Tp>& b)
 {
     return cv::min((const Mat&)a, (const Mat&)b);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr min(const Mat_<_Tp>& a, double s)
 {
     return cv::min((const Mat&)a, s);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr min(double s, const Mat_<_Tp>& a)
 {
     return cv::min((const Mat&)a, s);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr max(const Mat_<_Tp>& a, const Mat_<_Tp>& b)
 {
     return cv::max((const Mat&)a, (const Mat&)b);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr max(const Mat_<_Tp>& a, double s)
 {
     return cv::max((const Mat&)a, s);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr max(double s, const Mat_<_Tp>& a)
 {
     return cv::max((const Mat&)a, s);
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 MatExpr abs(const Mat_<_Tp>& m)
 {
     return cv::abs((const Mat&)m);
 }
 
 
-static inline
+inline
 Mat& operator += (Mat& a, const MatExpr& b)
 {
     b.op->augAssignAdd(b, a);
     return a;
 }
 
-static inline
+inline
 const Mat& operator += (const Mat& a, const MatExpr& b)
 {
     b.op->augAssignAdd(b, (Mat&)a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 Mat_<_Tp>& operator += (Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignAdd(b, a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 const Mat_<_Tp>& operator += (const Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignAdd(b, (Mat&)a);
     return a;
 }
 
-static inline
+inline
 Mat& operator -= (Mat& a, const MatExpr& b)
 {
     b.op->augAssignSubtract(b, a);
     return a;
 }
 
-static inline
+inline
 const Mat& operator -= (const Mat& a, const MatExpr& b)
 {
     b.op->augAssignSubtract(b, (Mat&)a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 Mat_<_Tp>& operator -= (Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignSubtract(b, a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 const Mat_<_Tp>& operator -= (const Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignSubtract(b, (Mat&)a);
     return a;
 }
 
-static inline
+inline
 Mat& operator *= (Mat& a, const MatExpr& b)
 {
     b.op->augAssignMultiply(b, a);
     return a;
 }
 
-static inline
+inline
 const Mat& operator *= (const Mat& a, const MatExpr& b)
 {
     b.op->augAssignMultiply(b, (Mat&)a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 Mat_<_Tp>& operator *= (Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignMultiply(b, a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 const Mat_<_Tp>& operator *= (const Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignMultiply(b, (Mat&)a);
     return a;
 }
 
-static inline
+inline
 Mat& operator /= (Mat& a, const MatExpr& b)
 {
     b.op->augAssignDivide(b, a);
     return a;
 }
 
-static inline
+inline
 const Mat& operator /= (const Mat& a, const MatExpr& b)
 {
     b.op->augAssignDivide(b, (Mat&)a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 Mat_<_Tp>& operator /= (Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignDivide(b, a);
     return a;
 }
 
-template<typename _Tp> static inline
+template<typename _Tp> inline
 const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 {
     b.op->augAssignDivide(b, (Mat&)a);
@@ -3607,7 +3607,7 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
 
 //! @endcond
 
-static inline
+inline
 void swap(MatExpr& a, MatExpr& b) { a.swap(b); }
 
 } //cv

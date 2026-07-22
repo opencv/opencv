@@ -87,45 +87,85 @@
 //
 //M*/
 
-#ifndef __OPENCV_DNN_CAFFE_IO_HPP__
-#define __OPENCV_DNN_CAFFE_IO_HPP__
+#include "precomp.hpp"
+
 #ifdef HAVE_PROTOBUF
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/text_format.h>
 
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-#include "opencv-caffe.pb.h"
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic pop
-#endif
+#include <opencv2/core.hpp>
 
-namespace caffe { using namespace opencv_caffe; } // avoid massive renames from caffe proto package
+#include <climits>
+#include <fstream>
+
+#include "protobuf_io.hpp"
+#include "glog_emulator.hpp"
 
 namespace cv {
 namespace dnn {
 
-// Read parameters from a file into a NetParameter proto message.
-void ReadNetParamsFromTextFileOrDie(const char* param_file,
-                                    caffe::NetParameter* param);
-void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
-                                      caffe::NetParameter* param);
+using namespace ::google::protobuf;
+using namespace ::google::protobuf::io;
 
-// Read parameters from a memory buffer into a NetParammeter proto message.
-void ReadNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
-                                        caffe::NetParameter* param);
-void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
-                                      caffe::NetParameter* param);
+static const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
-// Utility functions used internally by Caffe and TensorFlow loaders
-bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::Message* proto);
-bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::MessageLite* proto);
-bool ReadProtoFromBinaryFile(const char* filename, ::google::protobuf::MessageLite* proto);
-bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
-bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::MessageLite* proto);
-bool ReadProtoFromBinaryBuffer(const char* data, size_t len, ::google::protobuf::MessageLite* proto);
-
-}
-}
+static bool ReadProtoFromBinary(ZeroCopyInputStream* input, MessageLite *proto) {
+    CodedInputStream coded_input(input);
+#if defined(GOOGLE_PROTOBUF_VERSION) && GOOGLE_PROTOBUF_VERSION < 3006000
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+#else
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit);
 #endif
+
+    return proto->ParseFromCodedStream(&coded_input);
+}
+
+bool ReadProtoFromTextFile(const char* filename, Message* proto) {
+    std::ifstream fs(filename, std::ifstream::in);
+    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
+    IstreamInputStream input(&fs);
+    google::protobuf::TextFormat::Parser parser;
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
+#endif
+    return parser.Parse(&input, proto);
+}
+
+bool ReadProtoFromTextFile(const char* filename, MessageLite* proto) {
+    CV_Error(Error::StsError, "DNN/Protobuf: do not have your message be a MessageLite");
+    return false;
+}
+
+bool ReadProtoFromBinaryFile(const char* filename, MessageLite* proto) {
+    std::ifstream fs(filename, std::ifstream::in | std::ifstream::binary);
+    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
+    IstreamInputStream raw_input(&fs);
+
+    return ReadProtoFromBinary(&raw_input, proto);
+}
+
+bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream input(data, len);
+    google::protobuf::TextFormat::Parser parser;
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
+#endif
+    return parser.Parse(&input, proto);
+}
+
+bool ReadProtoFromTextBuffer(const char* data, size_t len, MessageLite* proto) {
+    CV_Error(Error::StsError, "DNN/Protobuf: do not have your message be a MessageLite");
+    return false;
+}
+
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, MessageLite* proto) {
+    ArrayInputStream raw_input(data, len);
+    return ReadProtoFromBinary(&raw_input, proto);
+}
+
+}
+}
 #endif

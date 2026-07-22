@@ -341,4 +341,20 @@ INSTANTIATE_TEST_CASE_P(/**/,
             testing::Values(1, 3),
             testing::Values(TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)));
 
+
+TEST(Imgproc_MatchTemplate, bug_21786)
+{
+    // CV_8U identical image/template with large patch sums triggers float32
+    // catastrophic cancellation in TM_SQDIFF. Result must be exactly zero.
+    Mat img(100, 100, CV_8U, Scalar(255));
+    Mat templ(25, 25, CV_8U, Scalar(255));
+    Mat result;
+
+    matchTemplate(img, templ, result, TM_SQDIFF);
+    EXPECT_NEAR(0.0, cv::norm(result, cv::NORM_INF), 1e-6);
+
+    matchTemplate(img, templ, result, TM_SQDIFF_NORMED);
+    EXPECT_NEAR(0.0, cv::norm(result, cv::NORM_INF), 1e-6);
+}
+
 }} // namespace

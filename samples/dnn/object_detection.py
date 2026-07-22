@@ -99,9 +99,7 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-engine = cv.dnn.ENGINE_AUTO
-if args.backend != "default" or args.target != "cpu":
-    engine = cv.dnn.ENGINE_CLASSIC
+engine = cv.dnn.ENGINE_NEW
 net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))
@@ -159,43 +157,20 @@ def postprocess(frame, outs):
                     boxes.append([left, top, width, height])
 
     elif args.postprocessing == 'yolov4':
-        # boxes[b,N,1,4]+confs[b,N,classes] (normalized) or boxes[b,N,4]+scores[b,N]+classIdx[b,N] (model-px)
-        if len(outs) == 3 and outs[0].ndim == 3 and outs[0].shape[2] == 4:
-            boxesArr = outs[0][0]
-            scoresArr = outs[1][0]
-            classIdxArr = outs[2][0]
-            for j in range(boxesArr.shape[0]):
-                score = float(scoresArr[j])
-                if score > confThreshold:
-                    x1 = boxesArr[j][0] / args.width
-                    y1 = boxesArr[j][1] / args.height
-                    x2 = boxesArr[j][2] / args.width
-                    y2 = boxesArr[j][3] / args.height
-                    left = int(x1 * frameWidth)
-                    top = int(y1 * frameHeight)
-                    width = int((x2 - x1) * frameWidth)
-                    height = int((y2 - y1) * frameHeight)
-                    classIds.append(int(classIdxArr[j]))
-                    confidences.append(score)
-                    boxes.append([left, top, width, height])
-        elif len(outs) == 2 and outs[0].ndim == 4 and outs[0].shape[-1] == 4:
-            boxesArr = outs[0].reshape(-1, 4)
-            confsArr = outs[1].reshape(boxesArr.shape[0], -1)
-            for j in range(boxesArr.shape[0]):
-                classId = np.argmax(confsArr[j])
-                confidence = float(confsArr[j][classId])
-                if confidence > confThreshold:
-                    box = boxesArr[j]
-                    left = int(box[0] * frameWidth)
-                    top = int(box[1] * frameHeight)
-                    width = int((box[2] - box[0]) * frameWidth)
-                    height = int((box[3] - box[1]) * frameHeight)
-                    classIds.append(classId)
-                    confidences.append(confidence)
-                    boxes.append([left, top, width, height])
-        else:
-            print('Unsupported YOLO ONNX output format')
-            exit()
+        boxesArr = outs[0].reshape(-1, 4)
+        confsArr = outs[1].reshape(boxesArr.shape[0], -1)
+        for j in range(boxesArr.shape[0]):
+            classId = np.argmax(confsArr[j])
+            confidence = float(confsArr[j][classId])
+            if confidence > confThreshold:
+                box = boxesArr[j]
+                left = int(box[0] * frameWidth)
+                top = int(box[1] * frameHeight)
+                width = int((box[2] - box[0]) * frameWidth)
+                height = int((box[3] - box[1]) * frameHeight)
+                classIds.append(classId)
+                confidences.append(confidence)
+                boxes.append([left, top, width, height])
 
     elif args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5':
         # Network produces output blob with a shape NxC where N is a number of
@@ -236,7 +211,7 @@ def postprocess(frame, outs):
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or args.postprocessing == 'yolov4' or (args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)

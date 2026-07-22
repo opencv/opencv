@@ -91,7 +91,7 @@ namespace cv
         int _begin, _end, _grainsize;
     };
 
-    template<typename Body> static inline
+    template<typename Body> inline
     void parallel_for( const BlockedRange& range, const Body& body )
     {
         body(range);
@@ -100,7 +100,7 @@ namespace cv
 
     class Split {};
 
-    template<typename Body> static inline
+    template<typename Body> inline
     void parallel_reduce( const BlockedRange& range, Body& body )
     {
         body(range);
@@ -122,13 +122,13 @@ namespace cv
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
 #define  CV_TOGGLE_DBL(x) ((x)^((int64)(x) < 0 ? CV_BIG_INT(0x7fffffffffffffff) : 0))
 
-static inline void* cvAlignPtr( const void* ptr, int align = 32 )
+inline void* cvAlignPtr( const void* ptr, int align = 32 )
 {
     CV_DbgAssert ( (align & (align-1)) == 0 );
     return (void*)( ((size_t)ptr + align - 1) & ~(size_t)(align-1) );
 }
 
-static inline int cvAlign( int size, int align )
+inline int cvAlign( int size, int align )
 {
     CV_DbgAssert( (align & (align-1)) == 0 && size < INT_MAX );
     return (size + align - 1) & -align;
@@ -142,14 +142,14 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 CV_EXPORTS void* allocSingletonBuffer(size_t size);
 
 //! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call
-template <typename T> static inline
+template <typename T> inline
 T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffer(sizeof(T) * count)); }
 
 //! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses generic malloc() call.
 CV_EXPORTS void* allocSingletonNewBuffer(size_t size);
 
 //! Allocate memory buffers which will not be freed, ease filtering memcheck issues.  Uses generic malloc() call.
-template <typename T> static inline
+template <typename T> inline
 T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 } // namespace
@@ -191,20 +191,12 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results
 #define IPP_DISABLE_PYRAMIDS_BUILD      1 // Different results
 #define IPP_DISABLE_REMAP               1 // Different results
-#define IPP_DISABLE_YUV_RGB             1 // accuracy difference
-#define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
-#define IPP_DISABLE_RGB_HSV             1 // breaks OCL accuracy tests
-#define IPP_DISABLE_RGB_LAB             1 // breaks OCL accuracy tests
-#define IPP_DISABLE_LAB_RGB             1 // breaks OCL accuracy tests
-#define IPP_DISABLE_RGB_XYZ             1 // big accuracy difference
-#define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
 #define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
-#define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
 
 #ifdef HAVE_IPP
 #include "ippversion.h"
@@ -269,45 +261,45 @@ CV_EXPORTS   unsigned long long getIppTopFeatures(); // Returns top major enable
 }
 }
 
-static inline IppiSize ippiSize(size_t width, size_t height)
+inline IppiSize ippiSize(size_t width, size_t height)
 {
     IppiSize size = { (int)width, (int)height };
     return size;
 }
 
-static inline IppiSize ippiSize(const cv::Size & _size)
+inline IppiSize ippiSize(const cv::Size & _size)
 {
     IppiSize size = { _size.width, _size.height };
     return size;
 }
 
 #if IPP_VERSION_X100 >= 201700
-static inline IppiSizeL ippiSizeL(size_t width, size_t height)
+inline IppiSizeL ippiSizeL(size_t width, size_t height)
 {
     IppiSizeL size = { (IppSizeL)width, (IppSizeL)height };
     return size;
 }
 
-static inline IppiSizeL ippiSizeL(const cv::Size & _size)
+inline IppiSizeL ippiSizeL(const cv::Size & _size)
 {
     IppiSizeL size = { _size.width, _size.height };
     return size;
 }
 #endif
 
-static inline IppiPoint ippiPoint(const cv::Point & _point)
+inline IppiPoint ippiPoint(const cv::Point & _point)
 {
     IppiPoint point = { _point.x, _point.y };
     return point;
 }
 
-static inline IppiPoint ippiPoint(int x, int y)
+inline IppiPoint ippiPoint(int x, int y)
 {
     IppiPoint point = { x, y };
     return point;
 }
 
-static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
+inline IppiBorderType ippiGetBorderType(int borderTypeNI)
 {
     return borderTypeNI == cv::BORDER_CONSTANT    ? ippBorderConst   :
            borderTypeNI == cv::BORDER_TRANSPARENT ? ippBorderTransp  :
@@ -316,7 +308,7 @@ static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
            (IppiBorderType)-1;
 }
 
-static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
+inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
 {
     return (kx == 1 && ky == 3) ? ippMskSize1x3 :
            (kx == 1 && ky == 5) ? ippMskSize1x5 :
@@ -327,7 +319,7 @@ static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
            (IppiMaskSize)-1;
 }
 
-static inline IppDataType ippiGetDataType(int depth)
+inline IppDataType ippiGetDataType(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
     return depth == CV_8U ? ipp8u :
@@ -340,7 +332,7 @@ static inline IppDataType ippiGetDataType(int depth)
         (IppDataType)-1;
 }
 
-static inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elemSize, double multiplier)
+inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elemSize, double multiplier)
 {
     int threads = cv::getNumThreads();
     if(threads > 1 && height >= 64)
@@ -358,13 +350,13 @@ static inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elem
     return 1;
 }
 
-static inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
+inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
 {
     return ippiSuggestThreadsNum(image.cols, image.rows, image.elemSize(), multiplier);
 }
 
 #ifdef HAVE_IPP_IW
-static inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeight)
+inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeight)
 {
     if(x != ((kernelWidth-1)/2) || y != ((kernelHeight-1)/2))
         return 0;
@@ -372,12 +364,12 @@ static inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeig
         return 1;
 }
 
-static inline ::ipp::IwiSize ippiGetSize(const cv::Size & size)
+inline ::ipp::IwiSize ippiGetSize(const cv::Size & size)
 {
     return ::ipp::IwiSize((IwSize)size.width, (IwSize)size.height);
 }
 
-static inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
+inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
 {
     return (dx == 1 && dy == 0) ? ((nvert)?iwiDerivNVerFirst:iwiDerivVerFirst) :
            (dx == 0 && dy == 1) ? iwiDerivHorFirst :
@@ -386,7 +378,7 @@ static inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
            (IwiDerivativeType)-1;
 }
 
-static inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
+inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
 {
     ::ipp::IwiBorderSize inMemBorder;
     if(src.isSubmatrix()) // already have physical border
@@ -404,14 +396,14 @@ static inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
     dst.Init(ippiSize(src.size()), ippiGetDataType(src.depth()), src.channels(), inMemBorder, (void*)src.ptr(), src.step);
 }
 
-static inline ::ipp::IwiImage ippiGetImage(const cv::Mat &src)
+inline ::ipp::IwiImage ippiGetImage(const cv::Mat &src)
 {
     ::ipp::IwiImage image;
     ippiGetImage(src, image);
     return image;
 }
 
-static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, ipp::IwiBorderSize &borderSize)
+inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, ipp::IwiBorderSize &borderSize)
 {
     int            inMemFlags = 0;
     IppiBorderType border     = ippiGetBorderType(ocvBorderType & ~cv::BORDER_ISOLATED);
@@ -463,12 +455,12 @@ static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorder
     return (IppiBorderType)(border|inMemFlags);
 }
 
-static inline ::ipp::IwValueFloat ippiGetValue(const cv::Scalar &scalar)
+inline ::ipp::IwValueFloat ippiGetValue(const cv::Scalar &scalar)
 {
     return ::ipp::IwValueFloat(scalar[0], scalar[1], scalar[2], scalar[3]);
 }
 
-static inline int ippiSuggestThreadsNum(const ::ipp::IwiImage &image, double multiplier)
+inline int ippiSuggestThreadsNum(const ::ipp::IwiImage &image, double multiplier)
 {
     return ippiSuggestThreadsNum(image.m_size.width, image.m_size.height, image.m_typeSize*image.m_channels, multiplier);
 }

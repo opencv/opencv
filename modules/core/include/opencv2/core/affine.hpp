@@ -615,7 +615,7 @@ V cv::operator*(const cv::Affine3<T>& affine, const V& v)
     return r;
 }
 
-static inline
+inline
 cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)
 {
     const cv::Matx44f& m = affine.matrix;
@@ -626,7 +626,7 @@ cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)
     return r;
 }
 
-static inline
+inline
 cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
 {
     const cv::Matx44d& m = affine.matrix;

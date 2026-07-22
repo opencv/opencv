@@ -23,6 +23,20 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+#if IPP_VERSION_X100 >= 201700
+static inline IppiSizeL ippiSizeL(size_t width, size_t height)
+{
+    IppiSizeL size = { (IppSizeL)width, (IppSizeL)height };
+    return size;
+}
+
+static inline IppiSizeL ippiSizeL(const cv::Size & _size)
+{
+    IppiSizeL size = { _size.width, _size.height };
+    return size;
+}
+#endif
+
 static inline IppDataType ippiGetDataType(int depth)
 {
     depth = CV_MAT_DEPTH(depth);

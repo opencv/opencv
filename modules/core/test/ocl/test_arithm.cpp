@@ -2124,6 +2124,30 @@ OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(um, uresult, NORM_INF));
 }
 
+// Regression: predictOptimalVectorWidth() must handle every depth without
+// reading past its per-depth table.
+OCL_TEST(Arithm, predictOptimalVectorWidth_all_depths)
+{
+    if (!cv::ocl::useOpenCL())
+        return;
+
+    const int depths[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F,
+                           CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U };
+    for (size_t i = 0; i < sizeof(depths) / sizeof(depths[0]); ++i)
+    {
+        const int depth = depths[i];
+        for (int cn = 1; cn <= 4; ++cn)
+        {
+            const int type = CV_MAKE_TYPE(depth, cn);
+            UMat a(11, 13, type), b(11, 13, type);
+            EXPECT_GE(cv::ocl::predictOptimalVectorWidth(a), 1)
+                << "depth=" << depth << " cn=" << cn;
+            EXPECT_GE(cv::ocl::predictOptimalVectorWidth(a, b), 1)
+                << "depth=" << depth << " cn=" << cn;
+        }
+    }
+}
+
 } } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

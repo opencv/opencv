@@ -11,7 +11,7 @@ namespace cv {
 namespace detail {
 
 template<template<typename> class Functor, typename... Args>
-static inline void depthDispatch(const int depth, Args&&... args)
+inline void depthDispatch(const int depth, Args&&... args)
 {
     switch (depth)
     {

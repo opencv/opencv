@@ -855,6 +855,61 @@ TEST(Core_InputOutput, filestorage_heap_overflow)
     EXPECT_EQ(0, remove(name.c_str()));
 }
 
+TEST(Core_InputOutput, filestorage_nd_matrix_too_many_dims)
+{
+    // A declared dimension count above CV_MAX_DIM used to write the sizes list
+    // past the fixed-size sizes[CV_MAX_DIM] stack buffer in cv::read().
+    std::string sizes;
+    for (int i = 0; i < CV_MAX_DIM + 8; i++)
+        sizes += "2, ";
+    sizes += "2";
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-nd-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ 0., 0. ]\n"
+        "sm: !!opencv-sparse-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+
+    SparseMat sm;
+    EXPECT_ANY_THROW(fs["sm"] >> sm);
+}
+
+TEST(Core_InputOutput, filestorage_matrix_dt_too_long)
+{
+    // A "dt" string with many distinct adjacent types makes decodeFormat()
+    // emit more pairs than the caller buffer holds. decodeSimpleFormat() sized
+    // its fmt_pairs buffer as CV_FS_MAX_FMT_PAIRS ints while decodeFormat writes
+    // up to 2*CV_FS_MAX_FMT_PAIRS ints, so a long enough dt wrote past the stack
+    // buffer before the length guard could reject it.
+    // CV_FS_MAX_FMT_PAIRS is 128; well over 2x that many distinct pairs.
+    std::string dt;
+    for (int i = 0; i < 300; i++)
+        dt += (i & 1) ? 'c' : 'u';
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-matrix\n"
+        "   rows: 1\n"
+        "   cols: 1\n"
+        "   dt: \"" + dt + "\"\n"
+        "   data: [ 0 ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+}
+
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
@@ -2222,6 +2277,24 @@ TEST(Core_InputOutput, FileStorage_int64_26829)
     }
 }
 
+TEST(Core_InputOutput, FileStorage_read_bigint_as_real_29363)
+{
+    // An integer above INT_MAX (e.g. from externally-produced json/yaml/xml) must
+    // convert to float/double without truncating to int32. Regression for #29363.
+    String content =
+        "%YAML:1.0\n"
+        "a: 6662329666\n"   // ~6.6e9, exact in double
+        "b: -9876543210\n"
+        "c: 4294967296\n";  // 2^32, exact in double and float
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    EXPECT_EQ(6662329666.0,  (double)fs["a"]);
+    EXPECT_EQ(-9876543210.0, (double)fs["b"]);
+    EXPECT_EQ(4294967296.0,  (double)fs["c"]);
+    EXPECT_EQ(4294967296.0f, (float)fs["c"]);
+    EXPECT_EQ((int64_t)6662329666LL, (int64_t)fs["a"]);  // int64 path unchanged
+}
+
 template <typename T>
 T fsWriteRead(const T& expectedValue, const char* ext)
 {
@@ -2297,9 +2370,60 @@ TEST_P(FileStorage_exact_type, long_int_mat)
     EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
 }
 
+TEST_P(FileStorage_exact_type, fp8_mat)
+{
+    const int fp8[] = { CV_8F_E4M3FN, CV_8F_E4M3FNUZ };
+    float vals[] = { 0.f, 0.5f, 1.f, 1.5f, 2.f, 3.f, 4.f, 6.f, -1.5f, -2.f };
+    Mat f(1, 10, CV_32F, vals);
+    for (int d : fp8)
+    {
+        Mat src; f.convertTo(src, d);
+        Mat dst = fsWriteRead(src, GetParam());
+        ASSERT_EQ(src.type(), dst.type());
+        ASSERT_EQ(src.size, dst.size);
+        EXPECT_EQ(0, memcmp(src.data, dst.data, src.total() * src.elemSize())) << "fp8 depth " << d;
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json", ".xml.gz", ".xml.gz0", ".xml.gz9")
 );
+
+TEST(Core_InputOutput, fp8_base64)
+{
+    const int fp8[] = { CV_8F_E4M3FN, CV_8F_E4M3FNUZ };
+    float vals[] = { 0.f, 0.5f, 1.f, 1.5f, 2.f, 3.f, 4.f, 6.f, -1.5f, -2.f };
+    Mat f(1, 10, CV_32F, vals);
+    for (const char* ext : { ".yml", ".xml", ".json" })
+        for (int d : fp8)
+        {
+            Mat src; f.convertTo(src, d);
+            std::string fn = cv::tempfile(ext);
+            { FileStorage fs(fn, FileStorage::WRITE_BASE64); fs << "m" << src; }
+            Mat dst; { FileStorage fs(fn, FileStorage::READ); fs["m"] >> dst; }
+            remove(fn.c_str());
+            ASSERT_EQ(src.type(), dst.type());
+            ASSERT_EQ(src.size, dst.size);
+            EXPECT_EQ(0, memcmp(src.data, dst.data, src.total() * src.elemSize()))
+                << "fp8 depth " << d << " ext " << ext;
+        }
+}
+
+TEST(Core_InputOutput, fp8_scalar)
+{
+    for (const char* ext : { ".yml", ".xml", ".json" })
+    {
+        cv::fp8_t a(2.5f);
+        cv::fp8a_t b(-1.5f);
+        std::string fn = cv::tempfile(ext);
+        { FileStorage fs(fn, FileStorage::WRITE); fs << "a" << a << "b" << b; }
+        cv::fp8_t a2; cv::fp8a_t b2;
+        { FileStorage fs(fn, FileStorage::READ); fs["a"] >> a2; fs["b"] >> b2; }
+        remove(fn.c_str());
+        EXPECT_EQ((float)a, (float)a2) << ext;
+        EXPECT_EQ((float)b, (float)b2) << ext;
+    }
+}
 
 TEST(Core_InputOutput, YAML_Compatibility)
 {

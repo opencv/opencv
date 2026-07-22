@@ -591,7 +591,7 @@ CV_EXPORTS_W bool imwriteWithMetadata( const String& filename, InputArray img,
                                        const std::vector<int>& params = std::vector<int>());
 
 //! @brief multi-image overload for bindings
-CV_WRAP static inline
+CV_WRAP inline
 bool imwritemulti(const String& filename, InputArrayOfArrays img,
                   const std::vector<int>& params = std::vector<int>())
 {

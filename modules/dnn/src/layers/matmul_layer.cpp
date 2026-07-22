@@ -275,7 +275,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             const auto &B = inputs[1];
             const auto *b = B.ptr<const float>();
             bool done = false;
-            if (mlasAvailable() && helper.M > 0 && helper.N > 0 && helper.K > 0) {
+            if (mlasAvailable() && !opt.use_rvv && helper.M > 0 && helper.N > 0 && helper.K > 0) {
                 const auto A_shape = shape(A);
                 const auto B_shape = shape(B);
                 const int lda_mem = A_shape.back();

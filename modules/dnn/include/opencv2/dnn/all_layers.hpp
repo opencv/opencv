@@ -577,6 +577,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MaxPoolLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS LpPoolLayer : public Layer
+    {
+    public:
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+        int p;
+
+        static Ptr<LpPoolLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS GlobalAveragePoolLayer : public Layer
     {
     public:
@@ -789,6 +800,12 @@ CV__DNN_INLINE_NS_BEGIN
         bool saturate;
 
         static Ptr<QuantizeLinearLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS DynamicQuantizeLinearLayer : public Layer
+    {
+    public:
+        static Ptr<DynamicQuantizeLinearLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS DequantizeLayer : public Layer
@@ -1021,7 +1038,20 @@ CV__DNN_INLINE_NS_BEGIN
         ACTIV_GELU,
         ACTIV_GELU_APPROX,
         ACTIV_RELU,
-        ACTIV_CLIP
+        ACTIV_CLIP,
+        ACTIV_LOG,
+        ACTIV_ERF,
+        ACTIV_EXP,
+        ACTIV_SIN,
+        ACTIV_COS,
+        ACTIV_SINH,
+        ACTIV_COSH,
+        ACTIV_TAN,
+        ACTIV_SOFTPLUS,
+        ACTIV_BNLL,
+        ACTIV_ASINH,
+        ACTIV_ACOSH,
+        ACTIV_ATANH
     };
 
     /** Returns a platform-optimized activation function pointer for the given type.
@@ -1071,6 +1101,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
+        // Set the per-channel slope when it arrives as a second input, not a blob.
+        virtual void setSlope(const Mat& /*slope*/) {}
     };
 
     class CV_EXPORTS ELULayer : public ActivationLayer

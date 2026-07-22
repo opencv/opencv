@@ -493,31 +493,31 @@ enum CameraModel {
     CALIB_MODEL_FISHEYE = 1, //!< Fisheye camera model
 };
 
-enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as initial point for optimization.
-       CALIB_FIX_ASPECT_RATIO    = 0x00002, //!< Use with CALIB_USE_INTRINSIC_GUESS. The ratio fx/fy stays the same as in the input cameraMatrix.
-       CALIB_FIX_PRINCIPAL_POINT = 0x00004, //!< The principal point (cx, cy) stays the same as in the input camera matrix. Image center is used as principal point, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_ZERO_TANGENT_DIST   = 0x00008, //!< For pinhole model only. Tangential distortion coefficients \f$(p_1, p_2)\f$ are set to zeros and stay zero.
-       CALIB_FIX_FOCAL_LENGTH    = 0x00010, //!< Use with CALIB_USE_INTRINSIC_GUESS. The focal length (fx, fy) stays the same as in the input cameraMatrix.
-       CALIB_FIX_K1              = 0x00020, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_FIX_K2              = 0x00040, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_FIX_K3              = 0x00080, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_FIX_K4              = 0x00800, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_FIX_K5              = 0x01000, //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_FIX_K6              = 0x02000, //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_RATIONAL_MODEL      = 0x04000, //!< For pinhole model only. Use rational distortion model with coefficients k4..k6.
-       CALIB_THIN_PRISM_MODEL    = 0x08000, //!< For pinhole model only. Use thin prism distortion model with coefficients s1..s4.
-       CALIB_FIX_S1_S2_S3_S4     = 0x10000, //!< For pinhole model only. The thin prism distortion coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_TILTED_MODEL        = 0x40000, //!< For pinhole model only. Coefficients tauX and tauY are enabled in camera matrix.
-       CALIB_FIX_TAUX_TAUY       = 0x80000, //!< For pinhole model only. The tauX and tauY coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
-       CALIB_USE_QR              = 0x100000, //!< Use QR instead of SVD decomposition for solving. Faster but potentially less precise
-       CALIB_FIX_TANGENT_DIST    = 0x200000, //!< For pinhole model only. Tangential distortion coefficients (p1,p2) are set to zeros and stay zero.
+enum { CALIB_USE_INTRINSIC_GUESS = (1 << 0), //!< Use user provided intrinsics as initial point for optimization.
+       CALIB_FIX_ASPECT_RATIO    = (1 << 1), //!< Use with CALIB_USE_INTRINSIC_GUESS. The ratio fx/fy stays the same as in the input cameraMatrix.
+       CALIB_FIX_PRINCIPAL_POINT = (1 << 2), //!< The principal point (cx, cy) stays the same as in the input camera matrix. Image center is used as principal point, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_ZERO_TANGENT_DIST   = (1 << 3), //!< For pinhole model only. Tangential distortion coefficients \f$(p_1, p_2)\f$ are set to zeros and stay zero.
+       CALIB_FIX_FOCAL_LENGTH    = (1 << 4), //!< Use with CALIB_USE_INTRINSIC_GUESS. The focal length (fx, fy) stays the same as in the input cameraMatrix.
+       CALIB_FIX_K1              = (1 << 5), //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K2              = (1 << 6), //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K3              = (1 << 7), //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K4              = (1 << 11), //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K5              = (1 << 12), //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K6              = (1 << 13), //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_RATIONAL_MODEL      = (1 << 14), //!< For pinhole model only. Use rational distortion model with coefficients k4..k6.
+       CALIB_THIN_PRISM_MODEL    = (1 << 15), //!< For pinhole model only. Use thin prism distortion model with coefficients s1..s4.
+       CALIB_FIX_S1_S2_S3_S4     = (1 << 16), //!< For pinhole model only. The thin prism distortion coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_TILTED_MODEL        = (1 << 18), //!< For pinhole model only. Coefficients tauX and tauY are enabled in camera matrix.
+       CALIB_FIX_TAUX_TAUY       = (1 << 19), //!< For pinhole model only. The tauX and tauY coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_USE_QR              = (1 << 20), //!< Use QR instead of SVD decomposition for solving. Faster but potentially less precise
+       CALIB_FIX_TANGENT_DIST    = (1 << 21), //!< For pinhole model only. Tangential distortion coefficients (p1,p2) are set to zeros and stay zero.
        // only for stereo
-       CALIB_FIX_INTRINSIC       = 0x00100, //!< For stereo and milti-camera calibration only. Do not optimize cameras intrinsics
-       CALIB_SAME_FOCAL_LENGTH   = 0x00200, //!< For stereo calibration only. Use the same focal length for cameras in pair.
+       CALIB_FIX_INTRINSIC       = (1 << 8), //!< For stereo and milti-camera calibration only. Do not optimize cameras intrinsics
+       CALIB_SAME_FOCAL_LENGTH   = (1 << 9), //!< For stereo calibration only. Use the same focal length for cameras in pair.
        // for stereo rectification
-       CALIB_ZERO_DISPARITY      = 0x00400, //!< Deprecated synonim of @ref STEREO_ZERO_DISPARITY. See @ref stereoRectify.
+       CALIB_ZERO_DISPARITY      = (1 << 10), //!< Deprecated synonim of @ref STEREO_ZERO_DISPARITY. See @ref stereoRectify.
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_DISABLE_SCHUR_COMPLEMENT = (1 << 18),  //!< disable Schur complement (use Bouguet calibration engine)
+       CALIB_DISABLE_SCHUR_COMPLEMENT = (1 << 27),  //!< disable Schur complement (use Bouguet calibration engine)
        CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< For stereo and multi-view calibration. Use user provided extrinsics (R, T) as initial point for optimization
        // fisheye only flags
        CALIB_RECOMPUTE_EXTRINSIC = (1 << 23), //!< For fisheye model only. Recompute board position on each calibration iteration

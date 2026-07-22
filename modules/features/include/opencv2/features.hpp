@@ -1220,7 +1220,7 @@ public:
 
     virtual ~BFMatcher() {}
 
-    virtual bool isMaskSupported() const CV_OVERRIDE { return true; }
+    virtual bool isMaskSupported() const CV_OVERRIDE { return !crossCheck; }
 
     /** @brief Brute-force matcher create method.
     @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are

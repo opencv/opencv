@@ -682,13 +682,14 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
-        if (input_dims.empty()){
+        const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
+
+        if (input_dims.empty() || currSubscriptIndices.empty()){
+            CV_CheckEQ(total(input_dims), (size_t)1, "Einsum: input with no subscript labels must be a scalar");
             homogenizedInputDims[inputIter] = MatShape(numLetterIndices, 1);
             ++inputIter;
             continue;
         }
-
-        const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
         CV_CheckEQ(input_dims.size(), currSubscriptIndices.size(),
@@ -1055,6 +1056,8 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                 CV_CheckNE(letterIdx, -1,
                     "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
 
+                CV_CheckLT(dim_count, rank,
+                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
                 int dimValue = shape[dim_count];
 
                 // The subscript label was not found in the global subscript label array
@@ -1082,8 +1085,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                 ++letter2count[letterIdx];
                 currTokenIndices.push_back(letter2index[letterIdx]);
 
-                CV_CheckLE(++dim_count, rank,
-                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
+                ++dim_count;
             }
         }
 

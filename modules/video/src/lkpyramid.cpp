@@ -469,6 +469,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             const int16x4_t d28_2 = vdup_n_s16((int16_t)iw10);
             const int16x4_t d29_2 = vdup_n_s16((int16_t)iw11);
 
+#elif CV_RVV
+            const size_t rvv_lanes = __riscv_vsetvlmax_e16m1();
+            vfloat32m2_t rvvB1 = __riscv_vfmv_v_f_f32m2(0.f, rvv_lanes);
+            vfloat32m2_t rvvB2 = __riscv_vfmv_v_f_f32m2(0.f, rvv_lanes);
 #endif
 
             for( y = 0; y < winSize.height; y++ )
@@ -578,6 +582,61 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     vst1q_f32(nB1, nB1v);
                     vst1q_f32(nB2, nB2v);
                 }
+#elif CV_RVV
+                for( ; x < winSize.width*cn; )
+                {
+                    const size_t vl = __riscv_vsetvl_e16m1(winSize.width*cn - x);
+
+                    vuint16m1_t j00 = __riscv_vwcvtu_x_x_v_u16m1(
+                            __riscv_vle8_v_u8mf2(Jptr + x, vl), vl);
+                    vint32m2_t interp = __riscv_vwmul_vx_i32m2(
+                            __riscv_vreinterpret_i16m1(j00), (int16_t)iw00, vl);
+
+                    vuint16m1_t j01 = __riscv_vwcvtu_x_x_v_u16m1(
+                            __riscv_vle8_v_u8mf2(Jptr + x + cn, vl), vl);
+                    interp = __riscv_vwmacc_vx_i32m2(
+                            interp, (int16_t)iw01, __riscv_vreinterpret_i16m1(j01), vl);
+
+                    vuint16m1_t j10 = __riscv_vwcvtu_x_x_v_u16m1(
+                            __riscv_vle8_v_u8mf2(Jptr + x + stepJ, vl), vl);
+                    interp = __riscv_vwmacc_vx_i32m2(
+                            interp, (int16_t)iw10, __riscv_vreinterpret_i16m1(j10), vl);
+
+                    vuint16m1_t j11 = __riscv_vwcvtu_x_x_v_u16m1(
+                            __riscv_vle8_v_u8mf2(Jptr + x + stepJ + cn, vl), vl);
+                    interp = __riscv_vwmacc_vx_i32m2(
+                            interp, (int16_t)iw11, __riscv_vreinterpret_i16m1(j11), vl);
+
+                    interp = __riscv_vsra_vx_i32m2(
+                            __riscv_vadd_vx_i32m2(
+                                    interp, 1 << (W_BITS1 - 5 - 1), vl),
+                            W_BITS1 - 5, vl);
+                    vint32m2_t diff = __riscv_vsub_vv_i32m2(
+                            interp,
+                            __riscv_vwcvt_x_x_v_i32m2(
+                                    __riscv_vle16_v_i16m1(Iptr + x, vl), vl),
+                            vl);
+
+                    vint16m1x2_t gradient = __riscv_vlseg2e16_v_i16m1x2(dIptr, vl);
+                    vint32m2_t ix = __riscv_vwcvt_x_x_v_i32m2(
+                            __riscv_vget_v_i16m1x2_i16m1(gradient, 0), vl);
+                    vint32m2_t iy = __riscv_vwcvt_x_x_v_i32m2(
+                            __riscv_vget_v_i16m1x2_i16m1(gradient, 1), vl);
+
+                    rvvB1 = __riscv_vfadd_tu(
+                            rvvB1, rvvB1,
+                            __riscv_vfcvt_f_x_v_f32m2(
+                                    __riscv_vmul_vv_i32m2(diff, ix, vl), vl),
+                            vl);
+                    rvvB2 = __riscv_vfadd_tu(
+                            rvvB2, rvvB2,
+                            __riscv_vfcvt_f_x_v_f32m2(
+                                    __riscv_vmul_vv_i32m2(diff, iy, vl), vl),
+                            vl);
+
+                    x += (int)vl;
+                    dIptr += vl*2;
+                }
 #endif
 
                 for( ; x < winSize.width*cn; x++, dIptr += 2 )
@@ -601,6 +660,12 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             ib1 += (float)(nB1[0] + nB1[1] + nB1[2] + nB1[3]);
             ib2 += (float)(nB2[0] + nB2[1] + nB2[2] + nB2[3]);
+#elif CV_RVV
+            vfloat32m1_t rvvZero = __riscv_vfmv_v_f_f32m1(0.f, 1);
+            ib1 += __riscv_vfmv_f_s_f32m1_f32(
+                    __riscv_vfredusum_vs_f32m2_f32m1(rvvB1, rvvZero, rvv_lanes));
+            ib2 += __riscv_vfmv_f_s_f32m1_f32(
+                    __riscv_vfredusum_vs_f32m2_f32m1(rvvB2, rvvZero, rvv_lanes));
 #endif
 
             b1 = ib1*FLT_SCALE;

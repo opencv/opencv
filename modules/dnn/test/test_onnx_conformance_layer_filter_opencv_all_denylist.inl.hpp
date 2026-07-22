@@ -1,6 +1,7 @@
 "test_averagepool_2d_pads_count_include_pad",  // wrong output
 "test_averagepool_2d_precomputed_pads_count_include_pad", // wrong output
 "test_averagepool_2d_same_lower", // wrong output
+"test_lppool_2d_same_lower", // wrong output (same SAME_LOWER padding issue)
 "test_cast_FLOAT_to_STRING", // Unsupported type in function 'parseCast'
 "test_cast_STRING_to_FLOAT", // unexception during net.forward() call
 "test_castlike_FLOAT_to_STRING_expanded", // Unsupported type in function 'parseCast'

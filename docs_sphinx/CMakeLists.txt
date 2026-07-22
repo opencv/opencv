@@ -199,7 +199,7 @@ set(_SPHINX_WARNINGS "${CMAKE_CURRENT_BINARY_DIR}/sphinx-warnings.log")
 set(_OPENCV_JS "${CMAKE_CURRENT_BINARY_DIR}/opencv.js")
 if(NOT EXISTS "${_OPENCV_JS}")
   message(STATUS "docs_sphinx: downloading opencv.js (one-time)")
-  file(DOWNLOAD "https://docs.opencv.org/5.x/opencv.js" "${_OPENCV_JS}"
+  file(DOWNLOAD "https://docs.opencv.org/5.x/js_tutorials/opencv.js" "${_OPENCV_JS}"
        SHOW_PROGRESS STATUS _DL_STATUS)
   list(GET _DL_STATUS 0 _DL_OK)
   if(NOT _DL_OK EQUAL 0)

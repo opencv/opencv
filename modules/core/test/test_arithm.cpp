@@ -13,6 +13,15 @@ const int ARITHM_MAX_CHANNELS = 4;
 const int ARITHM_MAX_NDIMS = 4;
 const int ARITHM_MAX_SIZE_LOG = 10;
 
+// fp8 (E4M3) is excluded from the tolerance-checked element-wise pool: its 3-bit
+// mantissa can't meet these tests' error bounds and out-of-range inputs overflow to
+// NaN. fp8 conversion/arithmetic is covered directly in test_fp8.cpp.
+static const _OutputArray::DepthMask DEPTH_MASK_ALL_NO_FP8 =
+    _OutputArray::DepthMask(_OutputArray::DEPTH_MASK_ALL &
+        ~((1 << CV_8F_E4M3FN) | (1 << CV_8F_E4M3FNUZ)));
+static const _OutputArray::DepthMask DEPTH_MASK_ALL_BUT_8S_NO_FP8 =
+    _OutputArray::DepthMask(DEPTH_MASK_ALL_NO_FP8 & ~_OutputArray::DEPTH_MASK_8S);
+
 struct BaseElemWiseOp
 {
     enum
@@ -41,7 +50,7 @@ struct BaseElemWiseOp
 
     virtual int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1,
+        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S_NO_FP8, 1,
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
@@ -895,8 +904,8 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        int srctype = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
-        ddepth = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
+        int srctype = cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1, ARITHM_MAX_CHANNELS);
+        ddepth = cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1, 1);
         return srctype;
     }
     double getMaxErr(int)
@@ -994,7 +1003,7 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1,
+        return cvtest::randomType(rng, DEPTH_MASK_ALL_NO_FP8, 1,
             ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
     double getMaxErr(int)
@@ -2505,10 +2514,14 @@ TEST(Compare, empty)
 
 TEST(Compare, regression_8999)
 {
+    // Issue #8999 predates broadcasting element-wise ops: comparing a 4x1 array against a 1x1 operand
+    // used to throw (both look like a Scalar). It now broadcasts the 1x1 operand across the 4x1 array.
     Mat_<double> A(4,1); A << 1, 3, 2, 4;
     Mat_<double> B(1,1); B << 2;
     Mat C;
-    EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
+    cv::compare(A, B, C, CMP_LT);
+    Mat expected = (Mat_<uchar>(4,1) << 255, 0, 0, 0);   // A < 2
+    EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 
 TEST(Compare, regression_16F_do_not_crash)

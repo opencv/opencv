@@ -25,7 +25,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_END
 namespace cv { namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
 // AVX2 8x8 f32 in-register transpose. v_transpose4x4 transposes the two
 // 128-bit halves independently; v_combine_low/high then exchange halves so
 // element k of each target row comes from the right source row.
@@ -88,7 +88,7 @@ void transpose2D_f32_(const float* inp, float* out,
             const float* inB  = inp + b * batchStride;
             float* outB = out + b * batchStride;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
             if (VTraits<v_float32>::vlanes() == 8) {
                 int64_t r = r0;
                 for (; r + 8 <= r1; r += 8) {

@@ -524,7 +524,7 @@ inline void Canny3x3(const Size2D &size, s32 cn,
 
     //i == 0
     normEstimator.firstRow(size, cn, srcBase, srcStride, dxBase, dxStride, dyBase, dyStride, mag_buf);
-    // calculate magnitude and angle of gradient, perform non-maxima supression.
+    // calculate magnitude and angle of gradient, perform non-maxima suppression.
     // fill the map with one of the following values:
     //   0 - the pixel might belong to an edge
     //   1 - the pixel can not belong to an edge

@@ -137,6 +137,64 @@ def _module_group_stem(m: str) -> str:
             return _mm.group(1) if _mm else m
     return m
 
+# -- Header-free API-group doc overrides ------------------------------------
+# When a module's headers use `@addtogroup` only (never `@defgroup`), Doxygen
+# emits its subgroups un-nested and auto-titled from their id, leaving the module
+# landing page empty. These overrides supply the module-group description and
+# re-parent + retitle the subgroups at stub time, without editing the headers
+# (cf. `_XPHOTO_DOCS` in stubs.py). Keyed by module group stem (== group id ==
+# module folder, by convention).
+_GROUP_DOC_OVERRIDES: dict = {
+    "geometry": {
+        "detailed": (
+            "Coordinate geometry grouped into one module: 2D shape analysis and "
+            "fitting, planar subdivision, multi-view 3D vision (camera pose, "
+            "triangulation, homography) and point-cloud sampling and "
+            "segmentation. In OpenCV 5 these were consolidated here from the "
+            "[imgproc](imgproc.md) and [calib](calib.md) modules.\n\n"
+            "**Migration (OpenCV 5):** these symbols are no longer re-exported "
+            "by [imgproc](imgproc.md); code that calls e.g. "
+            "[convexHull](geometry_shape.md) must include "
+            "[opencv2/geometry.hpp](geometry_8hpp.md) directly."
+        ),
+        # Direct children to nest under the module page (each pulls in its own
+        # subgroups recursively). NB: "d_projection" is Doxygen's mangling of
+        # `@defgroup 3d_projection` (a group id can't start with a digit), and
+        # "_3d" is never `@defgroup`'d.
+        "subgroups": ["geometry_shape", "d_projection", "_3d"],
+    },
+    "ptcloud": {
+        "detailed": (
+            "Point-cloud and mesh processing: reading and writing point clouds "
+            "and meshes, triangle rasterization, spatial partitioning (octree), "
+            "and RGB-D / volumetric 3D reconstruction (odometry, TSDF volumes)."
+        ),
+        # Symbols harvested from the cv namespace (see _GROUP_NS_HARVEST).
+    },
+}
+# Title fixes for groups Doxygen auto-titled from their id, applied by group id
+# to every node in an overridden module's tree. Groups with a real title are
+# left out (e.g. "d_projection" already renders as "3D vision functionality").
+_GROUP_TITLE_OVERRIDES: dict = {
+    "geometry":          "Computational Geometry Primitives Module",
+    "geometry_shape":    "Shape analysis and fitting",
+    "geometry_subdiv2d": "Planar subdivision",
+    "_3d":               "Point-cloud sampling and segmentation",
+    "ptcloud":           "Point Cloud Processing",  # header typo'd "Clound"
+}
+# Group ids re-parented by an override — skipped by orphan-group emission so each
+# renders once, nested under its module, not also as a standalone page.
+_GROUP_OVERRIDE_SUBGROUPS: set = {
+    _sub for _ov in _GROUP_DOC_OVERRIDES.values()
+    for _sub in _ov.get("subgroups", ())
+}
+# group stem -> include prefix: harvest cv-namespace symbols (orphaned when a
+# header opens @addtogroup outside `namespace cv`) back into the module page.
+_GROUP_NS_HARVEST: dict = {
+    "ptcloud": "opencv2/ptcloud",
+    "geometry": "opencv2/geometry/mst.hpp",  # mst.hpp has no @addtogroup
+}
+
 # -- Python enum/constant signatures ----------------------------------------
 # C++ enumerator FQN -> cv2.* name; env OPENCV_PYTHON_SIGNATURES_FILE
 _PY_SIGNATURES: dict = {}
@@ -686,7 +744,7 @@ def _bib_fields(body: str) -> dict[str, str]:
     return fields
 
 # LaTeX accent + special-char cleanup
-_LATEX_ACCENT_RE = re.compile(r"\\([\"'`^~.])\s*\{?\s*([A-Za-z])\s*\}?")
+_LATEX_ACCENT_RE = re.compile(r"\\([\"'`^~.])\s*\{?\s*\\?([A-Za-z])\s*\}?")
 _LATEX_ACCENT_MAP = {
     ('"', 'a'): 'ä', ('"', 'e'): 'ë', ('"', 'i'): 'ï', ('"', 'o'): 'ö',
     ('"', 'u'): 'ü', ('"', 'A'): 'Ä', ('"', 'O'): 'Ö', ('"', 'U'): 'Ü',
@@ -700,10 +758,26 @@ _LATEX_ACCENT_MAP = {
     ('~', 'a'): 'ã', ('~', 'n'): 'ñ', ('~', 'o'): 'õ',
     ('.', 'c'): 'ċ', ('.', 'e'): 'ė',
 }
+# Letter-command accents: \c c (cedilla), \v s (caron), \u g (breve), \H o
+# (double acute), \k a (ogonek), \r u (ring). Form is "\c{c}" or "\c c".
+_LATEX_CMD_ACCENT_RE = re.compile(r"\\([cvuHkr])(?:\s+|\{)\s*\\?([A-Za-z])\s*\}?")
+_LATEX_CMD_ACCENT_MAP = {
+    ('c', 'c'): 'ç', ('c', 'C'): 'Ç', ('c', 's'): 'ş', ('c', 'S'): 'Ş',
+    ('c', 'g'): 'ģ', ('c', 'e'): 'ȩ',
+    ('v', 'c'): 'č', ('v', 'C'): 'Č', ('v', 's'): 'š', ('v', 'S'): 'Š',
+    ('v', 'z'): 'ž', ('v', 'Z'): 'Ž', ('v', 'r'): 'ř', ('v', 'n'): 'ň',
+    ('v', 'e'): 'ě', ('v', 'd'): 'ď', ('v', 't'): 'ť', ('v', 'g'): 'ǧ',
+    ('u', 'g'): 'ğ', ('u', 'a'): 'ă',
+    ('H', 'o'): 'ő', ('H', 'u'): 'ű', ('H', 'O'): 'Ő', ('H', 'U'): 'Ű',
+    ('k', 'a'): 'ą', ('k', 'e'): 'ę', ('k', 'A'): 'Ą', ('k', 'E'): 'Ę',
+    ('r', 'u'): 'ů', ('r', 'a'): 'å', ('r', 'U'): 'Ů', ('r', 'A'): 'Å',
+}
 _LATEX_SPECIAL = {
     r"\&": "&", r"\%": "%", r"\#": "#", r"\$": "$",
     r"\_": "_", r"\{": "{", r"\}": "}",
     r"\textendash": "–", r"\textemdash": "—",
+    r"\textregistered": "®", r"\texttrademark": "™",
+    r"\textcopyright": "©", r"\copyright": "©",
     r"\ldots": "…", r"\dots": "…",
     r"\o": "ø", r"\O": "Ø", r"\ss": "ß",
     r"\aa": "å", r"\AA": "Å", r"\ae": "æ", r"\AE": "Æ",
@@ -712,8 +786,13 @@ _LATEX_SPECIAL = {
 
 def _bib_clean(s: str) -> str:
     s = re.sub(r"\s+", " ", s or "").strip()
+    s = re.sub(r"\\url\s*\{([^}]*)\}", r"\1", s)            # \url{X} -> X
+    s = re.sub(r"\\([lL])(?![A-Za-z])",                     # \l -> ł, \L -> Ł
+               lambda m: "ł" if m.group(1) == "l" else "Ł", s)
     s = _LATEX_ACCENT_RE.sub(
         lambda m: _LATEX_ACCENT_MAP.get((m.group(1), m.group(2)), m.group(2)), s)
+    s = _LATEX_CMD_ACCENT_RE.sub(
+        lambda m: _LATEX_CMD_ACCENT_MAP.get((m.group(1), m.group(2)), m.group(2)), s)
     for k, v in _LATEX_SPECIAL.items():
         s = s.replace(k, v)
     return s.replace("{", "").replace("}", "").strip()
@@ -991,6 +1070,8 @@ __all__ = [
     "DOC_MODULES", "JS_DOC_MODULES", "PY_DOC_MODULES",
     "CONTRIB_MODULES", "CONTRIB_ROOT", "SPHINX_INPUT_ROOT", "API_MODULES",
     "_API_XML_DIR", "_PATCHED_XML_DIR", "_module_group_stem",
+    "_GROUP_DOC_OVERRIDES", "_GROUP_OVERRIDE_SUBGROUPS", "_GROUP_TITLE_OVERRIDES",
+    "_GROUP_NS_HARVEST",
     "_PY_SIGNATURES", "_python_enum_name",
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",

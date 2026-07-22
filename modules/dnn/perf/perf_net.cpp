@@ -145,12 +145,6 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    // SSD_VGG16's specialized preprocessing is handled by the new engine importer only.
-    auto engine_forced = static_cast<dnn::EngineType>(
-        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
-    if (engine_forced == dnn::ENGINE_CLASSIC)
-        throw SkipTestException("SSD_VGG16 is supported on the new DNN engine only");
-
     processNet("dnn/onnx/models/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }
 
@@ -218,9 +212,9 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 #endif
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
-    cv::resize(sample, sample, Size(640, 640));
+    cv::resize(sample, sample, Size(416, 416));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov3.onnx", "", inp);
+    processNet("dnn/yolov3-converted.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)

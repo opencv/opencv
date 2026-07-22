@@ -62,7 +62,7 @@ Example code to generate features coordinates for calibration with symmetric gri
         }
     }
 ```
-Example code to generate features corrdinates for calibration with asymmetic grid (object points):
+Example code to generate features coordinates for calibration with asymmetric grid (object points):
 ```
     std::vector<cv::Point3f> objectPoints;
     for (int i = 0; i < boardSize.height; i++) {
@@ -83,7 +83,7 @@ about ArUco pairs. In opposite to the previous pattern partially occluded board 
 corners are labeled. The board is rotation invariant, but set of ArUco markers and their order
 should be known to detector apriori. It cannot detect ChAruco board with predefined size and random
 set of markers.
-Example code to generate features corrdinates for calibration (object points) for board size in units:
+Example code to generate features coordinates for calibration (object points) for board size in units:
 ```
     std::vector<cv::Point3f> objectPoints;
     for (int i = 0; i < boardSize.height-1; ++i) {

@@ -67,6 +67,15 @@ html[data-theme="dark"] .bd-article-container li > a:hover {
 }
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
+/* Re-assert link colour for xref links inside code — the `color: inherit`
+   above would otherwise render them in the plain code colour. */
+.bd-content code > a.reference,
+.bd-content pre a.reference {
+    color: var(--pst-color-link, #0969da) !important;
+}
+.bd-content code > a.reference span,
+.bd-content pre a.reference span { color: inherit !important; }
+
 .bd-content a.opencv-enum-link,
 .bd-content code.opencv-enum-sig > a,
 .bd-content .opencv-enum-clickable a,
@@ -320,6 +329,45 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-header button.theme-switch-button:hover,
 .bd-header .navbar-icon-links a.nav-link:hover { color: var(--opencv-accent); }
 
+/* Override the theme's col-lg-3 (25%) width on __start, which would wrap the
+   version switcher below the logo; size to content and keep the row unwrapped. */
+.bd-header .navbar-header-items__start { width: auto; }
+.bd-header .navbar-header-items__start,
+.bd-header .navbar-header-items__end,
+.bd-header .navbar-header-items__center,
+.bd-header .navbar-nav { flex-wrap: nowrap; }
+
+/* Below 1200px: collapse only the nav links into the drawer; keep search,
+   theme toggle and GitHub icon in the header (search shrinks to its icon). */
+@media (max-width: 1199.98px) {
+    .bd-header .navbar-header-items { display: flex !important; flex-grow: 1; }
+    .bd-header .navbar-header-items__center { display: none !important; }
+    .bd-header .navbar-header-items__end { margin-left: auto; }
+    .bd-header button.primary-toggle { display: flex !important; }
+    .bd-sidebar-primary .sidebar-header-items { display: flex !important; }
+    .bd-sidebar-primary .sidebar-header-items__end { display: none !important; }
+    .search-button-field > :not(svg) { display: none !important; }
+    /* Hide the desktop "Collapse Sidebar" toggle; also keeps it out of the
+       mobile drawer, which reuses this content. */
+    .bd-sidebar-primary .pst-sidebar-collapse { display: none !important; }
+}
+
+/* 960-1200px: header has folded into the hamburger, so extend the theme's own
+   <960px off-canvas drawer up to the header breakpoint instead of showing a
+   persistent column (which would mix header links + nav + collapse toggle). */
+@media (min-width: 960px) and (max-width: 1199.98px) {
+    .bd-sidebar-primary {
+        position: fixed; top: 0; left: 0; z-index: 1055;
+        height: 100vh; max-height: 100vh; width: 75%; max-width: 350px;
+        margin-left: -75%; visibility: hidden; border: 0; flex-grow: 0.75;
+    }
+}
+
+/* On small screens drop the wordmark + subtitle, keep just the logo mark. */
+@media (max-width: 768px) {
+    .bd-header .navbar-brand.logo .logo__textwrap { display: none; }
+}
+
 /* --- Version switcher dropdown (navbar) -------------------------------- *
  * Sits in the `navbar_start` slot right after `navbar-logo`. The custom
  * template `_templates/opencv-version-switcher.html` renders a plain
@@ -384,8 +432,13 @@ html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
    the content and the (often wide) diagrams get more room. Desktop only; the
    mobile off-canvas drawer keeps the theme's own sizing. */
 @media (min-width: 960px) {
-    .bd-sidebar-primary { width: 16rem; flex: 0 0 16rem; }
+    /* flex:0 0 auto (not a rigid 16rem basis) so the theme's collapse rule
+       (.pst-squeeze{width:4rem}) can still shrink it when collapsed. */
+    .bd-sidebar-primary { width: 16rem; flex: 0 0 auto; }
 }
+
+/* Collapsed: drop the divider so no leftover vertical border remains. */
+.bd-sidebar-primary.pst-squeeze { border-right: none; }
 
 .bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
 .bd-sidebar-primary nav.bd-docs-nav p.bd-links__title {
@@ -421,6 +474,10 @@ html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
     font-weight: 600 !important;
 }
 html[data-theme="dark"] .bd-sidebar-primary nav.bd-links .current > a { color: #539bf5 !important; }
+
+/* Hide the site footer (Sphinx/PyData credit); the prev/next nav
+   (.prev-next-footer) is a separate element and stays. */
+.bd-footer { display: none !important; }
 
 /* --- Code blocks ------------------------------------------------------- */
 div.highlight {
@@ -662,6 +719,17 @@ html[data-theme="dark"] section[id$="-documentation"] > section:hover {
     border-color: #58a6ff;
     box-shadow: none;
 }
+/* Landing page id "opencv-documentation" matches the module card selectors
+   above; undo the boxing so the landing sections stay flat. */
+#opencv-documentation > section,
+html[data-theme="dark"] #opencv-documentation > section {
+    border: none;
+    background: none;
+    box-shadow: none;
+    margin: 0;
+}
+#opencv-documentation > section > h2 { margin-bottom: 0.25rem; }
+#opencv-documentation > section > ul { margin-top: 0; }
 
 section[id$="-documentation"] > section > h3 {
     display: flex;
@@ -1780,4 +1848,22 @@ html[data-theme="dark"] section[id$="-documentation"] code.opencv-param-name {
     background-color: #2d333b !important;
     border: 1px solid #444c56 !important;
     color: #adbac7 !important;
+}
+/* Breathe (namespace pages) renders param names as plain <strong>; box them
+   to match the code.opencv-param-name chips used on other function pages. */
+dl.field-list dd ul.simple > li > p > strong:first-child {
+    font-family: var(--pst-font-family-monospace, monospace);
+    font-weight: 400;
+    background-color: #eff1f3;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    font-size: 0.85em;
+    color: #24292f;
+    white-space: nowrap;
+}
+html[data-theme="dark"] dl.field-list dd ul.simple > li > p > strong:first-child {
+    background-color: #2d333b;
+    border: 1px solid #444c56;
+    color: #adbac7;
 }

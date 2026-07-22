@@ -1447,6 +1447,16 @@ inline v_uint8x16 v_lut_pairs(const uchar* tab, const int* idx)
 inline v_uint8x16 v_lut_quads(const uchar* tab, const int* idx)
 { return v_reinterpret_as_u8(v_lut_quads((const schar*)tab, idx)); }
 
+inline v_uint8x16 v_lut(const uchar* tab, const v_uint8x16& idx)
+{
+    uchar CV_DECL_ALIGNED(16) indices[16], result[16];
+    __lsx_vst(idx.val, indices, 0);
+    for (int i = 0; i < 16; i++) result[i] = tab[indices[i]];
+    return v_uint8x16(__lsx_vld(result, 0));
+}
+inline v_int8x16 v_lut(const schar* tab, const v_uint8x16& idx)
+{ return v_reinterpret_as_s8(v_lut((const uchar*)tab, idx)); }
+
 inline v_int16x8 v_lut(const short* tab, const int* idx)
 {
     return v_int16x8(_v128_setr_h(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]],

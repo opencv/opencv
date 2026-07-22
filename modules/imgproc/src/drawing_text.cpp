@@ -42,9 +42,6 @@
 #include <unordered_map>
 #include "zlib.h"
 
-namespace cv
-{
-
 #ifdef HAVE_HARFBUZZ
 
 #include <hb.h>
@@ -58,6 +55,9 @@ namespace cv
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////
+
+namespace cv
+{
 
 typedef struct BuiltinFontData
 {

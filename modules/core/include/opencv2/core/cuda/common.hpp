@@ -63,7 +63,7 @@
 #endif
 
 namespace cv { namespace cuda {
-    static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
+    inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
         if (cudaSuccess != err) {
             cudaGetLastError(); // reset the last stored error to cudaSuccess
@@ -78,12 +78,12 @@ namespace cv { namespace cuda {
 
 namespace cv { namespace cuda
 {
-    template <typename T> static inline bool isAligned(const T* ptr, size_t size)
+    template <typename T> inline bool isAligned(const T* ptr, size_t size)
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
     }
 
-    static inline bool isAligned(size_t step, size_t size)
+    inline bool isAligned(size_t step, size_t size)
     {
         return step % size == 0;
     }

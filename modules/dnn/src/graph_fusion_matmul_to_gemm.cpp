@@ -43,7 +43,7 @@ struct ModelFusionMatMulToGemm
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
-        const vector<Ptr<Layer>>& prog = graph->prog();
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
         size_t nops = prog.size();
         bool modified = false;
 
@@ -56,11 +56,11 @@ struct ModelFusionMatMulToGemm
             }
         }
 
-        vector<Ptr<Layer>> newprog = prog;
+        vector<Ptr<LayerInfo>> newprog = prog;
         bool changed = false;
 
         for (size_t i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = newprog[i];
+            const Ptr<LayerInfo>& layer = newprog[i];
             if (!layer) continue;
 
             MatMulLayer* mm = dynamic_cast<MatMulLayer*>(layer.get());
@@ -120,7 +120,7 @@ struct ModelFusionMatMulToGemm
             gp.blobs.push_back(B);
             if (have_bias) gp.blobs.push_back(layer->blobs[1]);
 
-            Ptr<Layer> gemm = LayerFactory::createLayerInstance("Gemm", gp);
+            Ptr<LayerInfo> gemm = LayerFactory::createLayerInstance("Gemm", gp);
             if (!gemm) continue;
             gemm->inputs  = layer->inputs;
             gemm->outputs = layer->outputs;

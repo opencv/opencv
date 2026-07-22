@@ -28,7 +28,7 @@ CGImageRef MatToCGImage(const cv::Mat& image) {
 
     // Preserve alpha transparency, if exists
     bool alpha = image.channels() == 4;
-    CGBitmapInfo bitmapInfo = (alpha ? kCGImageAlphaLast : kCGImageAlphaNone) | kCGBitmapByteOrderDefault;
+    CGBitmapInfo bitmapInfo = (CGBitmapInfo)(alpha ? kCGImageAlphaLast : kCGImageAlphaNone) | (CGBitmapInfo)kCGBitmapByteOrderDefault;
 
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = CGImageCreate(image.cols,
@@ -73,8 +73,8 @@ void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist) {
         colorSpace = CGColorSpaceCreateDeviceRGB();
         m.create(rows, cols, CV_8UC4); // 8 bits per component, 4 channels
         if (!alphaExist)
-            bitmapInfo = kCGImageAlphaNoneSkipLast |
-                                kCGBitmapByteOrderDefault;
+            bitmapInfo = (CGBitmapInfo)kCGImageAlphaNoneSkipLast |
+                                (CGBitmapInfo)kCGBitmapByteOrderDefault;
         else
             m = cv::Scalar(0);
         contextRef = CGBitmapContextCreate(m.data, m.cols, m.rows, 8,
@@ -86,8 +86,8 @@ void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist) {
     {
         m.create(rows, cols, CV_8UC4); // 8 bits per component, 4 channels
         if (!alphaExist)
-            bitmapInfo = kCGImageAlphaNoneSkipLast |
-                                kCGBitmapByteOrderDefault;
+            bitmapInfo = (CGBitmapInfo)kCGImageAlphaNoneSkipLast |
+                                (CGBitmapInfo)kCGBitmapByteOrderDefault;
         else
             m = cv::Scalar(0);
         contextRef = CGBitmapContextCreate(m.data, m.cols, m.rows, 8,

@@ -23,19 +23,19 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument);
 
 CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argument);
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpBool(bool argument)
 {
     return (argument) ? String("Bool: True") : String("Bool: False");
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpInt(int argument)
 {
     return cv::format("Int: %d", argument);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpInt64(int64 argument)
 {
     std::ostringstream oss("Int64: ", std::ios::ate);
@@ -43,7 +43,7 @@ String dumpInt64(int64 argument)
     return oss.str();
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpSizeT(size_t argument)
 {
     std::ostringstream oss("size_t: ", std::ios::ate);
@@ -51,45 +51,45 @@ String dumpSizeT(size_t argument)
     return oss.str();
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpFloat(float argument)
 {
     return cv::format("Float: %.2f", argument);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpDouble(double argument)
 {
     return cv::format("Double: %.2f", argument);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpCString(const char* argument)
 {
     return cv::format("String: %s", argument);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpString(const String& argument)
 {
     return cv::format("String: %s", argument.c_str());
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpRect(const Rect& argument)
 {
     return format("rect: (x=%d, y=%d, w=%d, h=%d)", argument.x, argument.y,
                   argument.width, argument.height);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpTermCriteria(const TermCriteria& argument)
 {
     return format("term_criteria: (type=%d, max_count=%d, epsilon=%lf",
                   argument.type, argument.maxCount, argument.epsilon);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpRotatedRect(const RotatedRect& argument)
 {
     return format("rotated_rect: (c_x=%f, c_y=%f, w=%f, h=%f, a=%f)",
@@ -97,7 +97,7 @@ String dumpRotatedRect(const RotatedRect& argument)
                   argument.size.height, argument.angle);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpRange(const Range& argument)
 {
     if (argument == Range::all())
@@ -119,27 +119,27 @@ CV_EXPORTS_W String dumpVectorOfRect(const std::vector<Rect>& vec);
 
 //! @cond IGNORED
 
-CV_WRAP static inline
+CV_WRAP inline
 String testOverloadResolution(int value, const Point& point = Point(42, 24))
 {
     return format("overload (int=%d, point=(x=%d, y=%d))", value, point.x,
                   point.y);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String testOverloadResolution(const Rect& rect)
 {
     return format("overload (rect=(x=%d, y=%d, w=%d, h=%d))", rect.x, rect.y,
                   rect.width, rect.height);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 RotatedRect testRotatedRect(float x, float y, float w, float h, float angle)
 {
     return RotatedRect(Point2f(x, y), Size2f(w, h), angle);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 std::vector<RotatedRect> testRotatedRectVector(float x, float y, float w, float h, float angle)
 {
     std::vector<RotatedRect> result;
@@ -148,19 +148,19 @@ std::vector<RotatedRect> testRotatedRectVector(float x, float y, float w, float 
     return result;
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 int testOverwriteNativeMethod(int argument)
 {
     return argument;
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String testReservedKeywordConversion(int positional_argument, int lambda = 2, int from = 3)
 {
     return format("arg=%d, lambda=%d, from=%d", positional_argument, lambda, from);
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 void generateVectorOfRect(size_t len, CV_OUT std::vector<Rect>& vec)
 {
     vec.resize(len);
@@ -173,7 +173,7 @@ void generateVectorOfRect(size_t len, CV_OUT std::vector<Rect>& vec)
     }
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 void generateVectorOfInt(size_t len, CV_OUT std::vector<int>& vec)
 {
     vec.resize(len);
@@ -186,7 +186,7 @@ void generateVectorOfInt(size_t len, CV_OUT std::vector<int>& vec)
     }
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 void generateVectorOfMat(size_t len, int rows, int cols, int dtype, CV_OUT std::vector<Mat>& vec)
 {
     vec.resize(len);
@@ -201,13 +201,13 @@ void generateVectorOfMat(size_t len, int rows, int cols, int dtype, CV_OUT std::
     }
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 void testRaiseGeneralException()
 {
     throw std::runtime_error("exception text");
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 AsyncArray testAsyncArray(InputArray argument)
 {
     AsyncPromise p;
@@ -215,7 +215,7 @@ AsyncArray testAsyncArray(InputArray argument)
     return p.getArrayResult();
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 AsyncArray testAsyncException()
 {
     AsyncPromise p;
@@ -230,7 +230,7 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
-CV_WRAP static inline
+CV_WRAP inline
 String dumpVec2i(const cv::Vec2i value = cv::Vec2i(42, 24)) {
     return format("Vec2i(%d, %d)", value[0], value[1]);
 }
@@ -264,7 +264,7 @@ struct CV_EXPORTS_W_PARAMS FunctionParams
     }
 };
 
-CV_WRAP static inline String
+CV_WRAP inline String
 copyMatAndDumpNamedArguments(InputArray src, OutputArray dst,
                              const FunctionParams& params = FunctionParams())
 {
@@ -274,7 +274,7 @@ copyMatAndDumpNamedArguments(InputArray src, OutputArray dst,
 }
 
 namespace nested {
-CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
+CV_WRAP inline bool testEchoBooleanFunction(bool flag) {
     return flag;
 }
 

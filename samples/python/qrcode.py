@@ -12,6 +12,19 @@ import cv2 as cv
 
 import argparse
 
+# Colors for distinguishing multiple QR codes visually
+QR_COLORS = [
+    (0, 255, 0),    # green
+    (255, 0, 0),    # blue
+    (0, 0, 255),    # red
+    (255, 255, 0),  # cyan
+    (0, 255, 255),  # yellow
+    (255, 0, 255),  # magenta
+    (128, 255, 0),  # lime
+    (255, 128, 0),  # orange
+]
+
+
 class QrSample:
     def __init__(self, args):
         self.fname = ''
@@ -36,15 +49,14 @@ class QrSample:
         cv.putText(result, message, (20, 20), 1,
                    cv.FONT_HERSHEY_DUPLEX, (0, 0, 255))
 
-    def drawQRCodeContours(self, image, cnt):
+    def drawQRCodeContours(self, image, cnt, color=(0, 255, 0)):
         if cnt.size != 0:
             rows, cols, _ = image.shape
             show_radius = 2.813 * ((rows / cols) if rows > cols else (cols / rows))
             contour_radius = show_radius * 0.4
-            cv.drawContours(image, [cnt], 0, (0, 255, 0), int(round(contour_radius)))
+            cv.drawContours(image, [cnt], 0, color, int(round(contour_radius)))
             tpl = cnt.reshape((-1, 2))
             for x in tuple(tpl.tolist()):
-                color = (255, 0, 0)
                 cv.circle(image, tuple(x), int(round(contour_radius)), color, -1)
 
     def drawQRCodeResults(self, result, points, decode_info, fps):
@@ -54,7 +66,8 @@ class QrSample:
         if n > 0:
             for i in range(n):
                 cnt = np.array(points[i]).reshape((-1, 1, 2)).astype(np.int32)
-                self.drawQRCodeContours(result, cnt)
+                color = QR_COLORS[i % len(QR_COLORS)]
+                self.drawQRCodeContours(result, cnt, color)
                 msg = 'QR[{:d}]@{} : '.format(i, *(cnt.reshape(1, -1).tolist()))
                 print(msg, end="")
                 if len(decode_info) > i:

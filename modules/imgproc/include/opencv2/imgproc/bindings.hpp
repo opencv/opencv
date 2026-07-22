@@ -16,7 +16,7 @@ namespace cv {
  *
  * @sa HoughLines
  */
-CV_WRAP static inline
+CV_WRAP inline
 void HoughLinesWithAccumulator(
         InputArray image, OutputArray lines,
         double rho, double theta, int threshold,
@@ -36,7 +36,7 @@ void HoughLinesWithAccumulator(
  *
  * @sa HoughCircles
  */
-CV_WRAP static inline
+CV_WRAP inline
 void HoughCirclesWithAccumulator(
         InputArray image, OutputArray circles,
         int method, double dp, double minDist,

@@ -164,13 +164,18 @@ Ptr<FastConv> initFastConv(
     }
 
     conv->conv_type = ifRunDepthWise && conv_dim != CONV_3D ? CONV_TYPE_DEPTHWISE :
-            useWinograd && (conv_dim == CONV_2D && (conv->useSIMD128 || conv->useAVX || conv->useAVX2 || conv->useNEON) &&
+            useWinograd && (conv_dim == CONV_2D && (conv->useSIMD128 || conv->useAVX || conv->useAVX2 || conv->useNEON || conv->useRVV) &&
             Hk == 3 && Wk == 3 && dilation_h == 1 && dilation_w == 1 && stride_h == 1 && stride_w == 1) ?
             CONV_TYPE_WINOGRAD3X3 :
             (ifRunDepthWiseRemain ? CONV_TYPE_DEPTHWISE_REMAIN : CONV_TYPE_GENERIC);
 
-#if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX || CV_TRY_AVX2)
-    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128 ,CV_TRY_AVX and CV_TRY_AVX2 are not available.
+#if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX || CV_TRY_AVX2 || CV_RVV)
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128, CV_TRY_AVX, CV_TRY_AVX2 and CV_RVV are not available.
+        conv->conv_type = CONV_TYPE_GENERIC;
+#endif
+#if CV_RVV
+    // Winograd RVV requires vsetvlmax_e32m1() >= 8 (i.e. VLEN >= 256). Fall back to generic on narrower implementations.
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3 && conv->useRVV && (int)__riscv_vsetvlmax_e32m1() < 8)
         conv->conv_type = CONV_TYPE_GENERIC;
 #endif
 
@@ -244,6 +249,8 @@ Ptr<FastConv> initFastConv(
 
 #if CV_TRY_AVX || CV_TRY_AVX2
         const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+#elif CV_RVV
+        const int CONV_WINO_ATOM_F32 = (conv->useRVV && (int)__riscv_vsetvlmax_e32m1() >= 8) ? 8 : 4;
 #else
         const int CONV_WINO_ATOM_F32 = 4;
 #endif
@@ -1858,6 +1865,58 @@ void convBlockMR1_F32(int np, const float* a, const float* b, float *c, const fl
     }
      else
         convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+#elif CV_RVV
+{
+    // LMUL=1 kernel: vlanes = VLEN/32 (8 at VLEN=256), so the convNR==24 tile is 3 vectors.
+    // OpenCV's scalable v_float32 is LMUL=2 (16 lanes at VLEN=256) and does not divide 24,
+    // hence native LMUL=1 intrinsics here; vfmacc.vf broadcasts a[p] without an extra register.
+    // Like the NEON MR1 kernel, all convNR outputs are stored even for partial outLen:
+    // the caller redirects partial stripes into a CONV_NR-sized buffer and copies outLen back.
+    const int vl = (int)__riscv_vsetvlmax_e32m1();
+    if (convNR == 3 * vl)
+    {
+        vfloat32m1_t c0 = __riscv_vfmv_v_f_f32m1(bias, vl), c1 = c0, c2 = c0;
+        if (outLen > 2 * vl)
+        {
+            for (int p = 0; p < np; p++, a++, b += convNR)
+            {
+                c0 = __riscv_vfmacc_vf_f32m1(c0, a[0], __riscv_vle32_v_f32m1(b,          vl), vl);
+                c1 = __riscv_vfmacc_vf_f32m1(c1, a[0], __riscv_vle32_v_f32m1(b + vl,     vl), vl);
+                c2 = __riscv_vfmacc_vf_f32m1(c2, a[0], __riscv_vle32_v_f32m1(b + 2 * vl, vl), vl);
+            }
+        }
+        else if (outLen > vl)
+        {
+            for (int p = 0; p < np; p++, a++, b += convNR)
+            {
+                c0 = __riscv_vfmacc_vf_f32m1(c0, a[0], __riscv_vle32_v_f32m1(b,      vl), vl);
+                c1 = __riscv_vfmacc_vf_f32m1(c1, a[0], __riscv_vle32_v_f32m1(b + vl, vl), vl);
+            }
+        }
+        else
+        {
+            for (int p = 0; p < np; p++, a++, b += convNR)
+                c0 = __riscv_vfmacc_vf_f32m1(c0, a[0], __riscv_vle32_v_f32m1(b, vl), vl);
+        }
+        if (init_c)
+        {
+            c0 = __riscv_vfadd_vv_f32m1(c0, __riscv_vle32_v_f32m1(c,          vl), vl);
+            c1 = __riscv_vfadd_vv_f32m1(c1, __riscv_vle32_v_f32m1(c + vl,     vl), vl);
+            c2 = __riscv_vfadd_vv_f32m1(c2, __riscv_vle32_v_f32m1(c + 2 * vl, vl), vl);
+        }
+        if (ifMinMaxAct)
+        {
+            c0 = __riscv_vfmin_vf_f32m1(__riscv_vfmax_vf_f32m1(c0, minval, vl), maxval, vl);
+            c1 = __riscv_vfmin_vf_f32m1(__riscv_vfmax_vf_f32m1(c1, minval, vl), maxval, vl);
+            c2 = __riscv_vfmin_vf_f32m1(__riscv_vfmax_vf_f32m1(c2, minval, vl), maxval, vl);
+        }
+        __riscv_vse32_v_f32m1(c,          c0, vl);
+        __riscv_vse32_v_f32m1(c + vl,     c1, vl);
+        __riscv_vse32_v_f32m1(c + 2 * vl, c2, vl);
+        return;
+    }
+    convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+}
 #else
     convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
 #endif
@@ -2205,6 +2264,70 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
         return;
     }
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+#elif CV_RVV
+{
+    // LMUL=1 kernel: vlanes = VLEN/32 (8 at VLEN=256).
+    // OpenCV's v_float32 is vfloat32m2_t (LMUL=2, vlanes=2*VLEN/32=16 at VLEN=256);
+    // 24 % 16 != 0, so the 24-wide tile requires LMUL=1 and native intrinsics.
+    // vfmacc.vf (scalar-into-vector FMA) avoids a broadcast register.
+    // Only the exact full-tile case (outLen==convNR) is handled; tails fall to scalar.
+    const size_t vl = __riscv_vsetvlmax_e32m1();
+    if (convMR == 4 && (size_t)convNR == 3 * vl && outLen == convNR)
+    {
+        vfloat32m1_t c00 = __riscv_vfmv_v_f_f32m1(0.f, vl);
+        vfloat32m1_t c01 = c00, c02 = c00;
+        vfloat32m1_t c10 = c00, c11 = c00, c12 = c00;
+        vfloat32m1_t c20 = c00, c21 = c00, c22 = c00;
+        vfloat32m1_t c30 = c00, c31 = c00, c32 = c00;
+        for (int p = 0; p < np; p++, a += convMR, b += convNR)
+        {
+            vfloat32m1_t b0 = __riscv_vle32_v_f32m1(b,          vl);
+            vfloat32m1_t b1 = __riscv_vle32_v_f32m1(b + vl,     vl);
+            vfloat32m1_t b2 = __riscv_vle32_v_f32m1(b + 2 * vl, vl);
+            c00 = __riscv_vfmacc_vf_f32m1(c00, a[0], b0, vl);
+            c01 = __riscv_vfmacc_vf_f32m1(c01, a[0], b1, vl);
+            c02 = __riscv_vfmacc_vf_f32m1(c02, a[0], b2, vl);
+            c10 = __riscv_vfmacc_vf_f32m1(c10, a[1], b0, vl);
+            c11 = __riscv_vfmacc_vf_f32m1(c11, a[1], b1, vl);
+            c12 = __riscv_vfmacc_vf_f32m1(c12, a[1], b2, vl);
+            c20 = __riscv_vfmacc_vf_f32m1(c20, a[2], b0, vl);
+            c21 = __riscv_vfmacc_vf_f32m1(c21, a[2], b1, vl);
+            c22 = __riscv_vfmacc_vf_f32m1(c22, a[2], b2, vl);
+            c30 = __riscv_vfmacc_vf_f32m1(c30, a[3], b0, vl);
+            c31 = __riscv_vfmacc_vf_f32m1(c31, a[3], b1, vl);
+            c32 = __riscv_vfmacc_vf_f32m1(c32, a[3], b2, vl);
+        }
+        if (!init_c)
+        {
+            c00 = __riscv_vfadd_vv_f32m1(c00, __riscv_vle32_v_f32m1(c,              vl), vl);
+            c01 = __riscv_vfadd_vv_f32m1(c01, __riscv_vle32_v_f32m1(c + vl,         vl), vl);
+            c02 = __riscv_vfadd_vv_f32m1(c02, __riscv_vle32_v_f32m1(c + 2*vl,       vl), vl);
+            c10 = __riscv_vfadd_vv_f32m1(c10, __riscv_vle32_v_f32m1(c + ldc,        vl), vl);
+            c11 = __riscv_vfadd_vv_f32m1(c11, __riscv_vle32_v_f32m1(c + ldc + vl,   vl), vl);
+            c12 = __riscv_vfadd_vv_f32m1(c12, __riscv_vle32_v_f32m1(c + ldc + 2*vl, vl), vl);
+            c20 = __riscv_vfadd_vv_f32m1(c20, __riscv_vle32_v_f32m1(c + ldc*2,          vl), vl);
+            c21 = __riscv_vfadd_vv_f32m1(c21, __riscv_vle32_v_f32m1(c + ldc*2 + vl,     vl), vl);
+            c22 = __riscv_vfadd_vv_f32m1(c22, __riscv_vle32_v_f32m1(c + ldc*2 + 2*vl,   vl), vl);
+            c30 = __riscv_vfadd_vv_f32m1(c30, __riscv_vle32_v_f32m1(c + ldc*3,          vl), vl);
+            c31 = __riscv_vfadd_vv_f32m1(c31, __riscv_vle32_v_f32m1(c + ldc*3 + vl,     vl), vl);
+            c32 = __riscv_vfadd_vv_f32m1(c32, __riscv_vle32_v_f32m1(c + ldc*3 + 2*vl,   vl), vl);
+        }
+        __riscv_vse32_v_f32m1(c,              c00, vl);
+        __riscv_vse32_v_f32m1(c + vl,         c01, vl);
+        __riscv_vse32_v_f32m1(c + 2*vl,       c02, vl);
+        __riscv_vse32_v_f32m1(c + ldc,        c10, vl);
+        __riscv_vse32_v_f32m1(c + ldc + vl,   c11, vl);
+        __riscv_vse32_v_f32m1(c + ldc + 2*vl, c12, vl);
+        __riscv_vse32_v_f32m1(c + ldc*2,          c20, vl);
+        __riscv_vse32_v_f32m1(c + ldc*2 + vl,     c21, vl);
+        __riscv_vse32_v_f32m1(c + ldc*2 + 2*vl,   c22, vl);
+        __riscv_vse32_v_f32m1(c + ldc*3,          c30, vl);
+        __riscv_vse32_v_f32m1(c + ldc*3 + vl,     c31, vl);
+        __riscv_vse32_v_f32m1(c + ldc*3 + 2*vl,   c32, vl);
+        return;
+    }
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+}
 #else
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
     return;

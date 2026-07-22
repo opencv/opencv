@@ -67,6 +67,9 @@
 #ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann.hpp"
 #endif
+#ifdef HAVE_OPENCV_GEOMETRY
+#include "opencv2/geometry.hpp"
+#endif
 #ifdef HAVE_OPENCV_HIGHGUI
 #include "opencv2/highgui.hpp"
 #endif

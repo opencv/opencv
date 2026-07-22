@@ -34,11 +34,9 @@
 #      - OpenCV_STATIC
 #      - OpenCV_CUDA
 
-if(CMAKE_VERSION VERSION_GREATER 2.6)
-  get_property(OpenCV_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if(NOT ";${OpenCV_LANGUAGES};" MATCHES ";CXX;")
-    enable_language(CXX)
-  endif()
+get_property(OpenCV_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
+if(NOT ";${OpenCV_LANGUAGES};" MATCHES ";CXX;")
+  enable_language(CXX)
 endif()
 
 if(NOT DEFINED OpenCV_STATIC)
