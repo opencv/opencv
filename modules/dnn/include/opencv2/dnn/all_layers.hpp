@@ -1974,8 +1974,13 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     class CV_EXPORTS CumProdLayer : public Layer {
-     public:
+        public:
         static Ptr<CumProdLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BitCastLayer : public Layer {
+     public:
+        static Ptr<BitCastLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS LinearAttentionLayer : public Layer {

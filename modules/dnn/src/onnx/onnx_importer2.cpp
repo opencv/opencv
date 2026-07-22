@@ -192,6 +192,7 @@ protected:
     void parseBatchNormalization   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCast2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitCast              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1696,6 +1697,16 @@ void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::N
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseBitCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckTrue(layerParams.has("to"), "ONNXImporter2/parseBitCast: 'to' attribute is required");
+    int cvtype = dataType2cv(layerParams.get<int>("to"));
+    CV_CheckGE(cvtype, 0, "ONNXImporter2/parseBitCast: unsupported target datatype");
+    layerParams.set("outputType", cvtype);
+    layerParams.type = "BitCast";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseConstantOfShape(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ConstantOfShape";
@@ -3124,6 +3135,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["OneHot"] = &ONNXImporter2::parseOneHot;
     dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
+    dispatch["BitCast"] = &ONNXImporter2::parseBitCast;
     dispatch["EyeLike"] = &ONNXImporter2::parseEyeLike;
     dispatch["BlackmanWindow"] = &ONNXImporter2::parseBlackmanWindow;
     dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
