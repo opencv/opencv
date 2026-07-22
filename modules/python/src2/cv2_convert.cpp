@@ -315,9 +315,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    if( !m.data )
+    if( m.empty() )
     {
-        // Shaped Mat with a zero-length dim: return a matching empty array, not None.
+        // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
         if( m.dims >= 1 )
         {
             int cn = m.channels();
