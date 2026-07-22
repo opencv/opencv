@@ -2065,6 +2065,11 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             default_l1 = std::max(default_l1, 2e-4);
             default_lInf = std::max(default_lInf, 1e-3);
         }
+        // fp16 CausalConvWithState keeps fp16 output precision (~8e-4 Inf) on fp32 targets.
+        if (name == "test_causal_conv_with_state_fp16" || name == "test_causal_conv_with_state_silu_fp16") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 2e-3);
+        }
     }
 #ifdef HAVE_HALIDE
     else if (backend == DNN_BACKEND_HALIDE)

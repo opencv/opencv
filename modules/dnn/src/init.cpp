@@ -216,6 +216,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SDPA,            SDPALayer);
     CV_DNN_REGISTER_LAYER_CLASS(AttentionOnnxAi, AttentionOnnxAiLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CausalConvWithState, CausalConvWithStateLayer);
     CV_DNN_REGISTER_LAYER_CLASS(RotaryEmbedding, RotaryEmbeddingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast,           CastLayer);

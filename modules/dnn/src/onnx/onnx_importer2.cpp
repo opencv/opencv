@@ -285,6 +285,7 @@ protected:
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAttentionOnnxAi      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCausalConvWithState  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2632,6 +2633,11 @@ void ONNXImporter2::parseSDPA(LayerParams& params, const opencv_onnx::NodeProto&
     addLayer(params, node_proto, 3);
 }
 
+void ONNXImporter2::parseCausalConvWithState(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    params.type = "CausalConvWithState";
+    addLayer(params, node_proto);
+}
+
 void ONNXImporter2::parseRoiAlign(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "RoiAlign";
@@ -2770,6 +2776,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     //               Opset domain cannot be modified from onnx_graph_simplifier.cpp so this
     //               operator cannot be parsed if only added in buildDispatchMap_COM_MICROSOFT
     dispatch["Attention"] = &ONNXImporter2::parseAttentionOnnxAi;
+    dispatch["CausalConvWithState"] = &ONNXImporter2::parseCausalConvWithState;
 
     domain_dispatch_map[str_domain_ai_onnx] = dispatch;
 }
