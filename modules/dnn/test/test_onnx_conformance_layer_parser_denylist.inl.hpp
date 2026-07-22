@@ -379,16 +379,6 @@
 "test_dequantizelinear_uint2",
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
-// CumProd op not supported
-"test_cumprod_1d",
-"test_cumprod_1d_exclusive",
-"test_cumprod_1d_int32_exclusive",
-"test_cumprod_1d_reverse",
-"test_cumprod_1d_reverse_exclusive",
-"test_cumprod_2d_axis_0",
-"test_cumprod_2d_axis_1",
-"test_cumprod_2d_int32",
-"test_cumprod_2d_negative_axis",
 // FlexAttention op not supported
 "test_flexattention",
 "test_flexattention_causal_mask",

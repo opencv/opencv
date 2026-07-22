@@ -3384,6 +3384,24 @@ CASE(test_causal_conv_with_state_with_bias_and_past_state)
     SKIP;
 CASE(test_causal_conv_with_state_with_past_state)
     SKIP;
+CASE(test_cumprod_1d)
+    SKIP;
+CASE(test_cumprod_1d_exclusive)
+    SKIP;
+CASE(test_cumprod_1d_int32_exclusive)
+    SKIP;
+CASE(test_cumprod_1d_reverse)
+    SKIP;
+CASE(test_cumprod_1d_reverse_exclusive)
+    SKIP;
+CASE(test_cumprod_2d_axis_0)
+    SKIP;
+CASE(test_cumprod_2d_axis_1)
+    SKIP;
+CASE(test_cumprod_2d_int32)
+    SKIP;
+CASE(test_cumprod_2d_negative_axis)
+    SKIP;
 CASE(test_flexattention_scaled_expanded_ver26)
     SKIP;
 CASE(test_range_bfloat16_type_positive_delta)

@@ -208,6 +208,7 @@ protected:
     void parseConv                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConvTranspose        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCumProd              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePriorBox             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2121,6 +2122,22 @@ void ONNXImporter2::parseCumSum(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
+void ONNXImporter2::parseCumProd(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int ninputs = node_proto.input_size();
+    CV_Assert(ninputs == 2);
+    layerParams.type = "CumProd";
+    if (net.isConstArg(node_inputs[1]))
+    {
+        Mat axisTensor;
+        net.argTensor(node_inputs[1]).convertTo(axisTensor, CV_32S);
+        CV_Assert(axisTensor.total() == 1);
+        layerParams.set("axis", axisTensor.at<int>(0));
+        ninputs = 1;
+    }
+    addLayer(layerParams, node_proto, ninputs);
+}
+
 // "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual" "And" "Or" "Xor"
 void ONNXImporter2::parseElementWise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
@@ -2730,6 +2747,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["PriorBox"] = &ONNXImporter2::parsePriorBox;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;
+    dispatch["CumProd"] = &ONNXImporter2::parseCumProd;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter2::parseDepthSpaceOps;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter2::parseScatter;
     dispatch["Tile"] = &ONNXImporter2::parseTile;

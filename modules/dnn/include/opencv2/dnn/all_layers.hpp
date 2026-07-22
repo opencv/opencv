@@ -1925,6 +1925,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CausalConvWithStateLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CumProdLayer : public Layer {
+     public:
+        static Ptr<CumProdLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS GroupNormLayer : public Layer {
     public:
         static Ptr<GroupNormLayer> create(const LayerParams &params);
