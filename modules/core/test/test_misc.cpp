@@ -953,8 +953,10 @@ TEST_F(TestSetUpSkip, NoBodyRun) {
 }
 
 // See https://github.com/opencv/opencv/issues/29232
-// Regression tests for signed integer overflow in borderInterpolate BORDER_WRAP
+// Regression tests for signed integer overflow (UB) in borderInterpolate
+// when the coordinate p is close to INT_MIN with BORDER_WRAP.
 
+// Reference helper: 64-bit modulo, always non-negative
 static int borderWrapRef(int p, int len)
 {
     int64 r = (int64)p % len;
@@ -989,6 +991,9 @@ TEST(Core_BorderInterpolate, WrapNonNegative)
 
 TEST(Core_BorderInterpolate, WrapNearIntMinPoC)
 {
+    // Exact PoC from the bug report (issue #29232).
+    // p = -2147483583 (near INT_MIN) caused signed integer overflow:
+    // (-2147483583 - 269 + 1) underflows a 32-bit signed int.
     const int p   = -2147483583;
     const int len = 269;
     const int exp = borderWrapRef(p, len);
