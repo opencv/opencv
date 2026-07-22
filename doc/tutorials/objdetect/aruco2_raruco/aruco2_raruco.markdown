@@ -11,7 +11,7 @@ Detection of ArUco2 RArUco Markers {#tutorial_aruco2_raruco}
 
 RArUco markers (@cite MunozSalinas2026RArUco) are recursive fiducial markers designed specifically for long-range target tracking and UAV landing operations. A single marker ID is recursively nested within its own bit cells, maintaining identifier consistency across vastly different camera distances.
 
-![Example of RArUco marker](images/raruco.jpg)
+<img src="images/raruco.jpg" width="50%"/>
 
 Benefits of RArUco Markers
 --------------------------
