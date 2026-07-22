@@ -45,6 +45,12 @@ public:
     // split: de-interleave a multi-channel src into single-channel planes
     virtual bool split(InputArray, OutputArrayOfArrays) { return false; }
 
+    // softmax: numerically-stable softmax over a 1xN row (classification logits)
+    virtual bool softmax(InputArray, OutputArray) { return false; }
+
+    // argmax: index + value of the maximum element (top-1 class); out params
+    virtual bool argmax(InputArray, CV_OUT int*, CV_OUT double*) { return false; }
+
     // device-aware MatAllocator (keeps UMat data resident), or nullptr for default
     virtual MatAllocator* allocator() const { return NULL; }
 };

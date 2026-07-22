@@ -150,4 +150,24 @@ void gpuDownload(InputArray _src, OutputArray _dst)
     hdr.copyTo(_dst);
 }
 
+void gpuSoftmax(InputArray _src, OutputArray _dst)
+{
+    hal::Backend* b = _src.isUMat() ? _src.getUMat().backend() : nullptr;
+    CV_Assert(b && "gpuSoftmax: source has no GPU backend");
+    bool ok = b->softmax(_src, _dst);
+    CV_Assert(ok && "gpuSoftmax: backend did not handle softmax");
+}
+
+int gpuArgmax(InputArray _src, double* score)
+{
+    hal::Backend* b = _src.isUMat() ? _src.getUMat().backend() : nullptr;
+    CV_Assert(b && "gpuArgmax: source has no GPU backend");
+    int index = -1;
+    double s = 0.0;
+    bool ok = b->argmax(_src, &index, &s);
+    CV_Assert(ok && "gpuArgmax: backend did not handle argmax");
+    if (score) *score = s;
+    return index;
+}
+
 } // namespace cv

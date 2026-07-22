@@ -398,6 +398,57 @@ public:
 #endif
     }
 
+    // Numerically-stable softmax over all elements (classification logits):
+    // p = exp(x - max) / sum(exp(x - max)). Stays resident in VRAM.
+    bool softmax(InputArray src, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        // work in float for exp()
+        cuda::GpuMat gf;
+        if (gsrc.type() == CV_32F) gf = gsrc;
+        else gsrc.convertTo(gf, CV_32F);
+
+        double maxVal = 0.0;
+        cuda::minMax(gf, nullptr, &maxVal);           // subtract max for stability
+
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gf.rows, gf.cols, CV_32F);
+        cuda::subtract(gf, Scalar(maxVal), gdst);     // x - max
+        cuda::exp(gdst, gdst);                         // exp(x - max)
+        double denom = cuda::sum(gdst)[0];             // Σ exp(x - max)
+        if (denom == 0.0) return false;
+        cuda::divide(gdst, Scalar(denom), gdst);       // normalize -> probabilities
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst;
+        return false;
+#endif
+    }
+
+    // Top-1: index and value of the maximum element (predicted class).
+    bool argmax(InputArray src, int* index, double* score) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        double maxVal = 0.0;
+        Point maxLoc;
+        cuda::minMaxLoc(gsrc, nullptr, &maxVal, nullptr, &maxLoc);
+        // 1xN row -> class index is the column; Nx1 col -> the row.
+        if (index) *index = (gsrc.rows == 1) ? maxLoc.x : maxLoc.y;
+        if (score) *score = maxVal;
+        return true;
+#else
+        (void)src; (void)index; (void)score;
+        return false;
+#endif
+    }
+
     MatAllocator* allocator() const CV_OVERRIDE { return getCudaAllocator(); }
 };
 

@@ -243,6 +243,18 @@ CV_EXPORTS_W UMat gpuUpload(InputArray src);
 /** @brief Download a GPU-HAL-resident UMat back to a host array. */
 CV_EXPORTS_W void gpuDownload(InputArray src, OutputArray dst);
 
+/** @brief Softmax of a GPU-HAL-resident UMat (classification logits -> probabilities).
+Runs on the source's GPU backend and keeps the result resident. Requires a backend.
+@param src resident UMat of logits (1xN or Nx1)
+@param dst resident UMat of probabilities (CV_32F), summing to 1 */
+CV_EXPORTS_W void gpuSoftmax(InputArray src, OutputArray dst);
+
+/** @brief Top-1 argmax of a GPU-HAL-resident UMat (predicted class). Requires a backend.
+@param src resident UMat of scores
+@param score [out] the maximum value
+@return index of the maximum element */
+CV_EXPORTS_W int gpuArgmax(InputArray src, CV_OUT double* score = 0);
+
 /** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
 
 If threads == 1, OpenCV will disable threading optimizations and run all it's functions
