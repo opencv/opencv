@@ -71,6 +71,9 @@ UMatData::UMatData(const MatAllocator* allocator)
 
 UMatData::~UMatData()
 {
+    // Drop any out-of-line GPU-backend association for this UMatData (safety net;
+    // the owning allocator normally erases it in deallocate()).
+    hal::eraseUMatBackend(this);
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
     CV_Assert(mapcount == 0);

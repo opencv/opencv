@@ -110,9 +110,7 @@ def apply_dexined(model, image):
 
 def main(func_args=None):
     args = get_args_parser(func_args)
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = cv.dnn.ENGINE_NEW
 
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     if not cap.isOpened():

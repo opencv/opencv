@@ -634,6 +634,12 @@ enum UMatUsageFlags
 };
 
 struct CV_EXPORTS UMatData;
+namespace hal {
+class Backend;
+// Out-of-line UMat<->Backend association (keyed by UMatData*), so UMatData
+// itself keeps its ABI-stable layout — no new fields. See hal_backend.cpp.
+CV_EXPORTS Backend* getUMatBackend(const UMatData* u);
+}
 
 /** @brief  Custom array allocator
 */
@@ -2968,6 +2974,10 @@ public:
      */
     void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;
+    hal::Backend* backend() const
+    {
+        return u ? hal::getUMatBackend(u) : nullptr;
+    }
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };

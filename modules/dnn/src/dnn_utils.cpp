@@ -60,7 +60,9 @@ void getChannelFromBlob(UMat& m, InputArray blob, int i, int j, int rows, int co
 
     const int newShape[1] { length };
     UMat reshaped = ublob.reshape(1, 1, newShape);
-    UMat roi = reshaped(Rect(0, offset, 1, rows * cols));
+    // reshaped is 1 x length (single row); the channel slice is a horizontal
+    // span [offset, offset + rows*cols) of that row, not a vertical one.
+    UMat roi = reshaped(Rect(offset, 0, rows * cols, 1));
     m = roi.reshape(CV_MAT_CN(type), rows);
 }
 

@@ -59,8 +59,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cuda::GpuMatND>& inputs,
+            const std::vector<cuda::GpuMatND>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(outputs.size() == 1);
@@ -68,16 +68,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             CV_Assert(coeffs.size() == 0 || op == EltwiseOpType::SUM);
             CV_Assert(coeffs.size() == 0 || inputs.size() == coeffs.size());
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs[0]);
 
             if (inputs.size() == 2)
             {
-                auto input_wrapper_x = inputs[0].dynamicCast<wrapper_type>();
-                auto input_x = input_wrapper_x->getView();
-
-                auto input_wrapper_y = inputs[1].dynamicCast<wrapper_type>();
-                auto input_y = input_wrapper_y->getView();
+                auto input_x = csl::viewOf<T>(inputs[0]);
+                auto input_y = csl::viewOf<T>(inputs[1]);
 
                 switch (op)
                 {
@@ -97,20 +93,17 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 case EltwiseOpType::POW: kernels::eltwise_pow_2<T>(stream, output, input_x, input_y); break;
                 }
             } else if (inputs.size() == 1) {
-                auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
-                auto input_0 = input_wrapper_0->getView();
+                auto input_0 = csl::viewOf<T>(inputs[0]);
                 csl::tensor_ops::copy(stream, output, input_0);
             } else {
-                auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
-                auto input_0 = input_wrapper_0->getView();
+                auto input_0 = csl::viewOf<T>(inputs[0]);
 
                 /* we first make a copy and then apply EltwiseOp cumulatively */
                 csl::tensor_ops::copy(stream, output, input_0);
 
                 for (int i = 1; i < inputs.size(); i++)
                 {
-                    auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
-                    auto input = input_wrapper->getView();
+                    auto input = csl::viewOf<T>(inputs[i]);
 
                     switch (op)
                     {

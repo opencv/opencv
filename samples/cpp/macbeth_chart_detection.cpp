@@ -135,10 +135,7 @@ int main(int argc, char *argv[])
     Ptr<CCheckerDetector> detector;
 #ifdef HAVE_OPENCV_DNN
     if (model_path != "" && pbtxt_path != ""){
-        EngineType engine = ENGINE_AUTO;
-        if (backend != "default" || target != "cpu"){
-            engine = ENGINE_CLASSIC;
-        }
+        EngineType engine = ENGINE_NEW;
         Net net = readNetFromTensorflow(model_path, pbtxt_path, engine);
         net.setPreferableBackend(getBackendID(backend));
         net.setPreferableTarget(getTargetID(target));

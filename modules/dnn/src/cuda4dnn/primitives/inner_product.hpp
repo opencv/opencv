@@ -43,17 +43,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cuda::GpuMatND>& inputs,
+            const std::vector<cuda::GpuMatND>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
             {
-                auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
-                auto input = input_wrapper->getView();
-
-                auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
-                auto output = output_wrapper->getSpan();
+                auto input = csl::viewOf<T>(inputs[i]);
+                auto output = csl::spanOf<T>(outputs[i]);
 
                 std::size_t batch_size = input.size_range(0, axis);
 

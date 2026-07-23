@@ -36,14 +36,14 @@ struct ConstArgs
 
     void processGraph(Ptr<Graph>& graph)
     {
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nops = prog.size();
         std::vector<Arg> removed_args;
         std::vector<Arg> saved_tail_inputs;
 
         for (i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
-            Layer* layer_ptr = const_cast<Layer*>(layer.get());
+            const Ptr<LayerInfo>& layer = prog[i];
+            LayerInfo* layer_ptr = const_cast<LayerInfo*>(layer.get());
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
                 for (Ptr<Graph>& g: *subgraphs) {
@@ -68,6 +68,7 @@ struct ConstArgs
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer_ptr);
             ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer_ptr);
             BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
+            ChannelsPReLULayer* prelu = dynamic_cast<ChannelsPReLULayer*>(layer_ptr);
             //ActivationLayer* activ = dynamic_cast<ActivationLayer*>(layer_ptr);
 
             if (tail_const) {
@@ -87,6 +88,10 @@ struct ConstArgs
                     unuse_tail = true;
                 } else if (bn && bn->freezeScaleBias()) {
                     // batch norm with constant parameters
+                    unuse_tail = true;
+                } else if (prelu && ninputs == 2) {
+                    prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
+                    prelu->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {
                     // [TODO] ...

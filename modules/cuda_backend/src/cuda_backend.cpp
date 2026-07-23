@@ -1,0 +1,469 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
+// GPU HAL CUDA backend plugin: cv::hal::Backend + a CudaAllocator that keeps
+// UMat results resident in VRAM. Loaded at runtime by hal_backend.cpp via dlopen.
+
+#include "opencv2/core.hpp"
+#include "opencv2/core/hal/backend.hpp"
+#include "opencv2/core/hal/backend_registry.hpp"
+#include "opencv2/core/cuda.hpp"
+
+#include <cuda_runtime.h>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+
+#ifdef HAVE_OPENCV_CUDAWARPING
+#include "opencv2/cudawarping.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAARITHM
+#include "opencv2/cudaarithm.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#include "opencv2/cudafilters.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#include "opencv2/cudaimgproc.hpp"
+#endif
+
+namespace cv { namespace hal {
+
+class CudaBackend;                       // fwd
+static Backend* getCudaBackendInstance();
+
+// Device memory pool: reuse VRAM blocks by size (cudaMalloc/Free are expensive
+// and sync the device). Buffers are kept for the plugin's lifetime.
+namespace {
+struct DevicePool {
+    std::mutex mtx;
+    std::unordered_map<size_t, std::vector<void*> > freelist;
+};
+DevicePool& devicePool() { static DevicePool p; return p; }
+
+void* poolAlloc(size_t sz)
+{
+    DevicePool& p = devicePool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    std::vector<void*>& v = p.freelist[sz];
+    if (!v.empty()) { void* d = v.back(); v.pop_back(); return d; }
+    void* d = nullptr;
+    CV_Assert(cudaMalloc(&d, sz) == cudaSuccess);
+    return d;
+}
+void poolFree(size_t sz, void* d)
+{
+    if (!d) return;
+    DevicePool& p = devicePool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    p.freelist[sz].push_back(d);
+}
+
+// Pinned (page-locked) host pool: cudaMemcpy to/from page-locked memory runs at
+// full PCIe bandwidth (~2-6x faster than pageable). cudaMallocHost is expensive,
+// so buffers are pooled by size and kept for the plugin's lifetime.
+struct PinnedPool {
+    std::mutex mtx;
+    std::unordered_map<size_t, std::vector<void*> > freelist;
+};
+PinnedPool& pinnedPool() { static PinnedPool p; return p; }
+
+void* pinnedAlloc(size_t sz)
+{
+    PinnedPool& p = pinnedPool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    std::vector<void*>& v = p.freelist[sz];
+    if (!v.empty()) { void* d = v.back(); v.pop_back(); return d; }
+    void* d = nullptr;
+    CV_Assert(cudaMallocHost(&d, sz) == cudaSuccess);
+    return d;
+}
+void pinnedFree(size_t sz, void* d)
+{
+    if (!d) return;
+    PinnedPool& p = pinnedPool();
+    std::lock_guard<std::mutex> lk(p.mtx);
+    p.freelist[sz].push_back(d);
+}
+} // anonymous namespace
+
+// MatAllocator that puts UMat memory in VRAM, host copy on demand via map().
+// UMatData convention: handle = device ptr, data = host shadow (0 until used).
+class CudaAllocator CV_FINAL : public MatAllocator
+{
+public:
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data, size_t* step,
+                       AccessFlag /*flags*/,
+                       UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    {
+        size_t esz = CV_ELEM_SIZE(type);
+        int rows = dims >= 1 ? sizes[0] : 1;
+        int cols = dims >= 2 ? sizes[1] : 1;
+        if (step)
+        {
+            step[dims - 1] = esz;            // last dim must equal elemSize
+            if (dims >= 2) step[0] = (size_t)cols * esz;
+        }
+        size_t total = (size_t)rows * (size_t)cols * esz;
+
+        void* dev = data ? data : poolAlloc(total);
+
+        UMatData* u = new UMatData(this);
+        u->data      = 0;
+        u->origdata  = 0;
+        u->handle    = dev;
+        u->size      = total;
+        u->flags     = data ? UMatData::USER_ALLOCATED
+                            : static_cast<UMatData::MemoryFlag>(0);
+        u->markHostCopyObsolete(true);
+        // Associate this UMatData with the CUDA backend out-of-line (keyed by
+        // UMatData*), so UMatData's layout stays ABI-stable.
+        setUMatBackend(u, getCudaBackendInstance());
+        return u;
+    }
+
+    bool allocate(UMatData* u, AccessFlag /*accessFlags*/,
+                  UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    {
+        return u != nullptr;
+    }
+
+    void deallocate(UMatData* u) const CV_OVERRIDE
+    {
+        if (!u) return;
+        eraseUMatBackend(u);          // drop out-of-line backend association
+        if (u->handle && !(u->flags & UMatData::USER_ALLOCATED))
+            poolFree(u->size, u->handle);
+        if (u->data)
+            pinnedFree(u->size, u->data);   // return pinned host shadow to pool
+        delete u;
+    }
+
+    void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE
+    {
+        if (!u) return;
+        if (u->data == 0)
+            u->data = (uchar*)pinnedAlloc(u->size);   // page-locked shadow
+        if ((accessFlags & ACCESS_READ) && u->hostCopyObsolete())
+        {
+            CV_Assert(cudaMemcpy(u->data, u->handle, u->size,
+                                 cudaMemcpyDeviceToHost) == cudaSuccess);
+            u->markHostCopyObsolete(false);
+        }
+        if (accessFlags & ACCESS_WRITE)
+            u->markDeviceCopyObsolete(true);
+    }
+
+    void unmap(UMatData* u) const CV_OVERRIDE
+    {
+        if (!u) return;
+        if (u->deviceCopyObsolete() && u->data && u->handle)
+        {
+            CV_Assert(cudaMemcpy(u->handle, u->data, u->size,
+                                 cudaMemcpyHostToDevice) == cudaSuccess);
+            u->markDeviceCopyObsolete(false);
+        }
+    }
+};
+
+static CudaAllocator* getCudaAllocator()
+{
+    static CudaAllocator alloc;
+    return &alloc;
+}
+
+// View a resident UMat's device memory as a GpuMat (zero copy).
+static cuda::GpuMat extractGpuMat(const UMat& u)
+{
+    CV_Assert(u.u != nullptr && u.u->handle != nullptr);
+    return cuda::GpuMat(u.rows, u.cols, u.type(),
+                        u.u->handle, u.step[0]);
+}
+
+// Allocate a VRAM UMat (returned via 'out') and view it as a GpuMat written in-place.
+static cuda::GpuMat makeResidentOutput(UMat& out, int rows, int cols, int type)
+{
+    out.allocator = getCudaAllocator();
+    out.create(rows, cols, type);
+    out.u->markHostCopyObsolete(true);
+    return extractGpuMat(out);
+}
+
+// One typed method per op. Returns false (fall through to CPU) when the source
+// isn't a resident CUDA UMat or the needed contrib module isn't built.
+class CudaBackend CV_FINAL : public Backend
+{
+public:
+    bool resize(InputArray src, OutputArray dst, Size dsize,
+                double inv_scale_x, double inv_scale_y, int interpolation) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAWARPING
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        Size ds = dsize;
+        if (ds.empty())
+            ds = Size(saturate_cast<int>(gsrc.cols * inv_scale_x),
+                      saturate_cast<int>(gsrc.rows * inv_scale_y));
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, ds.height, ds.width, su.type());
+        cuda::resize(gsrc, gdst, ds, inv_scale_x, inv_scale_y, interpolation);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)dsize;
+        (void)inv_scale_x; (void)inv_scale_y; (void)interpolation;
+        return false;
+#endif
+    }
+
+    bool gaussianBlur(InputArray src, OutputArray dst, Size ksize,
+                      double sigma1, double sigma2) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAFILTERS
+        if (ksize.width <= 1 || ksize.height <= 1) return false;  // 1x1 -> CPU
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        // Cache the filter — createGaussianFilter is expensive, config recurs.
+        static cv::Ptr<cuda::Filter> cached;
+        static int    cT = -1, cKw = -1, cKh = -1;
+        static double cS1 = -1, cS2 = -1;
+        int t = su.type();
+        if (cached.empty() || cT != t || cKw != ksize.width ||
+            cKh != ksize.height || cS1 != sigma1 || cS2 != sigma2)
+        {
+            cached = cuda::createGaussianFilter(t, t, ksize, sigma1, sigma2);
+            cT = t; cKw = ksize.width; cKh = ksize.height;
+            cS1 = sigma1; cS2 = sigma2;
+        }
+        cached->apply(gsrc, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)ksize; (void)sigma1; (void)sigma2;
+        return false;
+#endif
+    }
+
+    bool cvtColor(InputArray src, OutputArray dst, int code, int dcn) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        int outcn = dcn;
+        if (outcn <= 0)
+            outcn = (code == COLOR_BGR2GRAY || code == COLOR_RGB2GRAY)
+                        ? 1 : gsrc.channels();
+        int outType = CV_MAKETYPE(su.depth(), outcn);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, outType);
+        cuda::cvtColor(gsrc, gdst, code, outcn);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)code; (void)dcn;
+        return false;
+#endif
+    }
+
+    bool threshold(InputArray src, OutputArray dst, double thresh,
+                   double maxval, int type) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::threshold(gsrc, gdst, thresh, maxval, type);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)thresh; (void)maxval; (void)type;
+        return false;
+#endif
+    }
+
+    bool subtract(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::subtract(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
+    bool multiply(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::multiply(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
+    bool divide(InputArray src, InputArray src2, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        UMat su2 = src2.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        cuda::GpuMat gsrc2 = extractGpuMat(su2);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::divide(gsrc, gsrc2, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)src2; (void)dst;
+        return false;
+#endif
+    }
+
+    bool convertTo(InputArray src, OutputArray dst, int rtype, double alpha, double beta) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        // rtype from the dispatcher is a depth (e.g. CV_32F), not a full type:
+        // convertTo changes depth but preserves the source channel count.
+        int outType = CV_MAKETYPE(CV_MAT_DEPTH(rtype), gsrc.channels());
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, outType);
+        gsrc.convertTo(gdst, outType, alpha, beta);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)rtype; (void)alpha; (void)beta;
+        return false;
+#endif
+    }
+
+    bool split(InputArray src, OutputArrayOfArrays dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        int cn = gsrc.channels();
+        int planeType = CV_MAKETYPE(su.depth(), 1);
+
+        // Only the vector-of-UMat output form can stay resident. For anything
+        // else (vector<Mat>, fixed arrays) fall through to the CPU/OCL path.
+        if (!dst.isUMatVector()) return false;
+
+        // Populate the caller's vector directly with resident single-channel
+        // UMats; cuda::split writes the planes straight into VRAM (no copy,
+        // no host round-trip).
+        std::vector<UMat>& outs = dst.getUMatVecRef();
+        outs.resize(cn);
+        std::vector<cuda::GpuMat> planes(cn);
+        for (int i = 0; i < cn; ++i)
+            planes[i] = makeResidentOutput(outs[i], gsrc.rows, gsrc.cols, planeType);
+
+        cuda::split(gsrc, planes.data());
+        return true;
+#else
+        (void)src; (void)dst;
+        return false;
+#endif
+    }
+
+    // Numerically-stable softmax over all elements (classification logits):
+    // p = exp(x - max) / sum(exp(x - max)). Stays resident in VRAM.
+    bool softmax(InputArray src, OutputArray dst) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        // work in float for exp()
+        cuda::GpuMat gf;
+        if (gsrc.type() == CV_32F) gf = gsrc;
+        else gsrc.convertTo(gf, CV_32F);
+
+        double maxVal = 0.0;
+        cuda::minMax(gf, nullptr, &maxVal);           // subtract max for stability
+
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gf.rows, gf.cols, CV_32F);
+        cuda::subtract(gf, Scalar(maxVal), gdst);     // x - max
+        cuda::exp(gdst, gdst);                         // exp(x - max)
+        double denom = cuda::sum(gdst)[0];             // Σ exp(x - max)
+        if (denom == 0.0) return false;
+        cuda::divide(gdst, Scalar(denom), gdst);       // normalize -> probabilities
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst;
+        return false;
+#endif
+    }
+
+    // Top-1: index and value of the maximum element (predicted class).
+    bool argmax(InputArray src, int* index, double* score) CV_OVERRIDE
+    {
+#ifdef HAVE_OPENCV_CUDAARITHM
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        double maxVal = 0.0;
+        Point maxLoc;
+        cuda::minMaxLoc(gsrc, nullptr, &maxVal, nullptr, &maxLoc);
+        // 1xN row -> class index is the column; Nx1 col -> the row.
+        if (index) *index = (gsrc.rows == 1) ? maxLoc.x : maxLoc.y;
+        if (score) *score = maxVal;
+        return true;
+#else
+        (void)src; (void)index; (void)score;
+        return false;
+#endif
+    }
+
+    MatAllocator* allocator() const CV_OVERRIDE { return getCudaAllocator(); }
+};
+
+static Backend* getCudaBackendInstance()
+{
+    static CudaBackend backend;
+    return &backend;
+}
+
+}} // cv::hal
+
+// Factory — dlopen entry point; extern "C" so dlsym finds an unmangled name.
+extern "C" CV_EXPORTS cv::hal::Backend* cv_hal_createCudaBackend();
+
+cv::hal::Backend* cv_hal_createCudaBackend()
+{
+    return cv::hal::getCudaBackendInstance();
+}

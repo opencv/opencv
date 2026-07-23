@@ -877,6 +877,8 @@ void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_GPU_RUN(src1, subtract, src1, src2, dst)
+
     arithm_op(ew::OP_SUB, src1, src2, dst, mask, dtype, OCL_OP_SUB, false);
 }
 
@@ -906,6 +908,9 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
+    if (std::abs(scale - 1.0) < DBL_EPSILON)
+        CV_GPU_RUN(src1, multiply, src1, src2, dst)
+
     const int oclop = std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE;
     arithm_op(ew::OP_MUL, src1, src2, dst, noArray(), dtype, oclop, /*muldiv*/ true, Scalar(scale));
 }
@@ -914,6 +919,8 @@ void divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_GPU_RUN(src1, divide, src1, src2, dst)
 
     arithm_op(ew::OP_DIV, src1, src2, dst, noArray(), dtype, OCL_OP_DIV_SCALE, /*muldiv*/ true, Scalar(scale));
 }

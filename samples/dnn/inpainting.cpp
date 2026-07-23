@@ -129,10 +129,7 @@ int main(int argc, char **argv)
 
     cout<<"Model loading..."<<endl;
 
-    EngineType engine = ENGINE_AUTO;
-    if (backend != "default" || target != "cpu"){
-        engine = ENGINE_CLASSIC;
-    }
+    EngineType engine = ENGINE_NEW;
 
     Net net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));

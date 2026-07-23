@@ -167,7 +167,7 @@ protected:
     std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
-    std::vector<Ptr<Layer> > curr_prog;
+    std::vector<Ptr<LayerInfo> > curr_prog;
     std::vector<Arg> node_inputs, node_outputs;
 
     std::string framework_name;
@@ -719,7 +719,7 @@ Net ONNXImporter2::parseModel()
         sstrm << "DNN/ONNX: the model ";
         if (!onnxFilename.empty())
             sstrm << "'"  << onnxFilename << "' ";
-        sstrm << "cannot be loaded with the new parser. Trying the older parser. ";
+        sstrm << "cannot be loaded by the DNN engine.";
         if (!missing_ops.empty()) {
             sstrm << " Unsupported operations:\n";
             auto it = missing_ops.begin();
@@ -768,21 +768,6 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
         } else {
             // ONNX allows dimensions without dim_value and dim_param.
             // Treat them as unnamed symbolic dimensions.
-            // NOTE: LSTM with unnamed dimensions is not ready in the new graph
-            // engine yet, so force fallback to classic parser.
-            if (curr_graph_proto)
-            {
-                const int n_nodes = curr_graph_proto->node_size();
-                for (int i = 0; i < n_nodes; ++i)
-                {
-                    const std::string& op = curr_graph_proto->node(i).op_type();
-                    if (op == "LSTM")
-                    {
-                        raiseError();
-                        return false;
-                    }
-                }
-            }
             val_j = net.findDim("", true);
         }
         //CV_Assert(0 <= val_j && val_j <= INT_MAX);
@@ -898,7 +883,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
-    std::vector<Ptr<Layer> > saved_prog;
+    std::vector<Ptr<LayerInfo> > saved_prog;
 
     curr_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
@@ -1354,7 +1339,9 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
     layerParams.set("produce_sequence_y", need_y);
 
 
-    if (lstm_proto.input_size() == 8)
+    // The 8th input (P, peephole weights) is optional; an absent ONNX input is
+    // encoded as an empty name. Only enable peephole when it is actually present.
+    if (lstm_proto.input_size() == 8 && !lstm_proto.input(7).empty())
         layerParams.set("use_peephole", true);
 
 
@@ -1462,9 +1449,17 @@ void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::Node
 {
     layerParams.type = "PReLU";
     CV_Assert(node_inputs.size() == 2);
-    CV_Assert(net.isConstArg(node_inputs[1]));
-    layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
-    addLayer(layerParams, node_proto, 1);
+    if (net.isConstArg(node_inputs[1]))
+    {
+        layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
+        addLayer(layerParams, node_proto, 1);
+    }
+    else
+    {
+        // Slope produced by a foldable subgraph (e.g. Reshape of an initializer):
+        // keep it as a second input for constFold()/constArgs() to resolve.
+        addLayer(layerParams, node_proto);
+    }
 }
 
 void ONNXImporter2::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1500,9 +1495,12 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
         Mat B = net.argTensor(node_inputs[1]);
         layerParams.blobs.push_back(B);
+        layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
         if (n_inputs > 2) {
             Mat bias = net.argTensor(node_inputs[2]);
             layerParams.blobs.push_back(bias);
+            layerParams.set("have_bias", true);
+            layerParams.set("constC", true);
         }
         n_inputs = 1;
     }
@@ -1717,7 +1715,7 @@ void ONNXImporter2::parseLoop(LayerParams& layerParams,
 
     CV_Assert(!subgraphs[0].empty());
 
-    Ptr<Layer>& loopLayer = curr_prog.back();
+    Ptr<LayerInfo>& loopLayer = curr_prog.back();
     *loopLayer->subgraphs() = subgraphs;
 }
 
@@ -1742,7 +1740,7 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 
     CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
 
-    Ptr<Layer>& ifLayer = curr_prog.back();
+    Ptr<LayerInfo>& ifLayer = curr_prog.back();
     *ifLayer->subgraphs() = thenelse;
 }
 

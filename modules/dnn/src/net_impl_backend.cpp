@@ -299,6 +299,18 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 
     if (mainGraph)
     {
+        if (backendId == DNN_BACKEND_OPENCV
+#ifdef HAVE_CUDA
+            || backendId == DNN_BACKEND_CUDA
+#endif
+            )
+        {
+            if (preferableBackend != backendId) {
+                preferableBackend = backendId;
+                finalized = false;  // re-select per-op executors on next finalize()
+            }
+            return;
+        }
         CV_LOG_WARNING(NULL, "Back-ends are not supported by the new graph engine for now");
         preferableBackend = backendId;
         return;
@@ -347,10 +359,17 @@ void Net::Impl::setPreferableTarget(int targetId)
 
     if (mainGraph)
     {
-        if (targetId != DNN_TARGET_CPU)
+#ifdef HAVE_CUDA
+        if (targetId == DNN_TARGET_CPU || IS_DNN_CUDA_TARGET(targetId))
         {
-            CV_LOG_WARNING(NULL, "Targets are not supported by the new graph engine for now");
+            if (preferableTarget != targetId) {
+                preferableTarget = targetId;
+                finalized = false;  // re-select per-op executors on next finalize()
+            }
+            return;
         }
+#endif
+        CV_LOG_WARNING(NULL, "Targets are not supported by the new graph engine for now");
         return;
     }
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&
