@@ -1256,7 +1256,7 @@ A minimum of 2 motions with non parallel rotation axes are necessary to determin
 So at least 3 different poses are required, but it is strongly recommended to use many more poses.
 
  */
-CV_EXPORTS void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
+CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
                                     InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                                     OutputArray R_cam2gripper, OutputArray t_cam2gripper,
                                     HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
@@ -1399,7 +1399,7 @@ This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{Z}\mat
 At least 3 measurements are required (input vectors size must be greater or equal to 3).
 
  */
-CV_EXPORTS void calibrateRobotWorldHandEye( InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
+CV_EXPORTS_W void calibrateRobotWorldHandEye( InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
                                               InputArrayOfArrays R_base2gripper, InputArrayOfArrays t_base2gripper,
                                               OutputArray R_base2world, OutputArray t_base2world,
                                               OutputArray R_gripper2cam, OutputArray t_gripper2cam,
