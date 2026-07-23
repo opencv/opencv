@@ -376,7 +376,7 @@ std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
         std::vector<std::string> names;
         if (opname == "If")
             names = {"then", "else"};
-        else if (opname == "Loop")
+        else if (opname == "Loop" || opname == "Scan")
             names = {"body"};
         else {
             CV_Error(Error::StsError,

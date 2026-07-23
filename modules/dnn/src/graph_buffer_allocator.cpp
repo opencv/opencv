@@ -397,6 +397,52 @@ struct BufferAllocator
                         --buf_usecounts[bidx];
                     }
                 }
+            } else if (opname == "Scan") {
+                // Scan body inputs (state vars + per-iteration scan slices) get their own
+                // buffers via assign(subgraph); we only need to keep outer-scope args the
+                // body references (constants, scale) alive across the subgraph.
+                auto subgraphs = layer->subgraphs();
+                CV_Assert(subgraphs && subgraphs->size() == 1);
+                const Ptr<Graph>& body = subgraphs->at(0);
+
+                std::unordered_set<int> bodyDefined;
+                for (Arg ba : body->inputs())
+                    bodyDefined.insert(ba.idx);
+                for (const Ptr<Layer>& blayer : body->prog()) {
+                    if (!blayer) continue;
+                    for (Arg bo : blayer->outputs)
+                        bodyDefined.insert(bo.idx);
+                }
+                std::unordered_set<int> closureBumped;
+                for (const Ptr<Layer>& blayer : body->prog()) {
+                    if (!blayer) continue;
+                    for (Arg bi : blayer->inputs) {
+                        if (bi.idx <= 0) continue;
+                        if (bodyDefined.count(bi.idx)) continue;
+                        if (netimpl->isConstArg(bi)) continue;
+                        if (bufidxs[bi.idx] < 0) continue;
+                        if (closureBumped.insert(bi.idx).second) {
+                            usecounts[bi.idx]++;
+                            buf_usecounts[bufidxs[bi.idx]]++;
+                        }
+                    }
+                }
+
+                std::vector<int> saved_freebufs = freebufs;
+                freebufs.clear();
+                assign(body);
+                freebufs = saved_freebufs;
+
+                for (int idx : closureBumped) {
+                    int bidx = bufidxs[idx];
+                    if (--usecounts[idx] == 0) {
+                        if (bidx >= 0)
+                            releaseBuffer(bidx);
+                    } else if (bidx >= 0) {
+                        CV_Assert(buf_usecounts[bidx] > 0);
+                        --buf_usecounts[bidx];
+                    }
+                }
             }
 
             for (auto out: outputs) {

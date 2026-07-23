@@ -1127,6 +1127,49 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
 }
 
+// Slice a Scan input at index `idx` along `axis`, removing that axis (contiguous result).
+static Mat sliceScanAxis(const Mat& m, int axis, int idx)
+{
+    std::vector<Range> r(m.dims, Range::all());
+    r[axis] = Range(idx, idx + 1);
+    Mat sub = m(r).clone();
+    std::vector<int> ns;
+    for (int d = 0; d < m.dims; d++)
+        if (d != axis) ns.push_back(m.size[d]);
+    if (ns.empty()) ns.push_back(1);
+    return sub.reshape(0, (int)ns.size(), &ns[0]);
+}
+
+// Stack per-iteration Scan outputs into one tensor with a new axis at `axis`.
+static Mat stackScanAxis(const std::vector<Mat>& perIter, int axis, bool reverse)
+{
+    if (perIter.empty()) return Mat();
+    const Mat& first = perIter[0];
+    const int e = first.dims, T = (int)perIter.size();
+    if (axis < 0) axis += e + 1;
+    CV_Assert(axis >= 0 && axis <= e);
+
+    std::vector<int> os, ss;
+    for (int d = 0; d < e; d++) {
+        if (d == axis) { os.push_back(T); ss.push_back(1); }
+        os.push_back(first.size[d]);
+        ss.push_back(first.size[d]);
+    }
+    if (axis == e) { os.push_back(T); ss.push_back(1); }
+
+    Mat stacked;
+    stacked.create((int)os.size(), &os[0], first.type());
+    for (int k = 0; k < T; k++) {
+        int idx = reverse ? (T - 1 - k) : k;
+        std::vector<Range> r(os.size(), Range::all());
+        r[axis] = Range(k, k + 1);
+        Mat dst = stacked(r);
+        Mat src = perIter[idx].reshape(0, (int)ss.size(), &ss[0]);
+        src.copyTo(dst);
+    }
+    return stacked;
+}
+
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
 {
@@ -1214,6 +1257,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
             Ptr<LoopLayer> loopLayer = layer.dynamicCast<LoopLayer>();
+            Ptr<ScanLayer> scanLayer = layer.dynamicCast<ScanLayer>();
             if (iflayer) {
                 int branch = iflayer->branch(inpMats[0]);
                 Ptr<Graph> subgraph = subgraphs->at(branch);
@@ -1304,6 +1348,76 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                         src.copyTo(dst);
                     }
                     outMats[n_state + i] = stacked;
+                }
+            }
+            else if (scanLayer) {
+                CV_Assert(subgraphs->size() == 1);
+                Ptr<Graph> body = subgraphs->at(0);
+
+                const int M = scanLayer->numScanInputs();
+                const int bodyNIn = (int)body->inputs().size();
+                const int S = bodyNIn - M;              // loop-carried state count
+                const int K = (int)body->outputs().size() - S;  // scan output count
+                CV_Assert(M > 0 && S >= 0 && K >= 0);
+
+                // opset-8 Scan prefixes an optional sequence_lens input; skip a leading arg.
+                int off = 0;
+                if ((int)inpMats.size() == S + M + 1)
+                    off = 1;
+                else
+                    CV_Assert((int)inpMats.size() == S + M);
+
+                const std::vector<int>& iax = scanLayer->scanInputAxes();
+                const std::vector<int>& oax = scanLayer->scanOutputAxes();
+                const std::vector<int>& idir = scanLayer->scanInputDirections();
+                const std::vector<int>& odir = scanLayer->scanOutputDirections();
+                const std::vector<int>& orank = scanLayer->scanOutputRanks();
+
+                std::vector<Mat> scanIn(M);
+                std::vector<int> inAxis(M);
+                std::vector<char> inRev(M);
+                int T = -1;
+                for (int j = 0; j < M; j++) {
+                    scanIn[j] = inpMats[off + S + j];
+                    int ax = iax.empty() ? 0 : iax[j];
+                    if (ax < 0) ax += scanIn[j].dims;
+                    inAxis[j] = ax;
+                    inRev[j] = (char)(!idir.empty() && idir[j] != 0);
+                    int len = scanIn[j].size[ax];
+                    if (T < 0) T = len; else CV_Assert(T == len);
+                }
+                CV_Assert(T >= 0);
+
+                std::vector<Mat> state(S);
+                for (int i = 0; i < S; i++) state[i] = inpMats[off + i];
+
+                std::vector<std::vector<Mat> > history(K);
+                std::vector<Mat> inputs(bodyNIn), outputs;
+
+                for (int t = 0; t < T; t++) {
+                    for (int i = 0; i < S; i++) inputs[i] = state[i];
+                    for (int j = 0; j < M; j++) {
+                        int idx = inRev[j] ? (T - 1 - t) : t;
+                        inputs[S + j] = sliceScanAxis(scanIn[j], inAxis[j], idx);
+                    }
+                    forwardGraph(body, inputs, outputs, false);
+                    // Deep-copy: body buffers are recycled across iterations.
+                    for (int i = 0; i < S; i++) state[i] = outputs[i].clone();
+                    for (int k = 0; k < K; k++) history[k].push_back(outputs[S + k].clone());
+                }
+
+                outMats.assign(state.begin(), state.end());
+                outMats.resize(S + K);
+                for (int k = 0; k < K; k++) {
+                    int ax = oax.empty() ? 0 : oax[k];
+                    bool rev = !odir.empty() && odir[k] != 0;
+                    // A body scan output declared as a 0-D scalar is stored as [1]; drop the
+                    // phantom axis so T scalars stack into a rank-1 [T] tensor, not [T, 1].
+                    if (k < (int)orank.size() && orank[k] == 0) {
+                        for (Mat& e : history[k])
+                            e = e.reshape(0, 0, nullptr);
+                    }
+                    outMats[S + k] = stackScanAxis(history[k], ax, rev);
                 }
             }
             else {
