@@ -521,10 +521,11 @@ Cv64suf;
     CV_16U - 2 bytes
     ...
 */
+// '& 15' == '- 16' for depth in [16,31] here, but avoids a spurious MSVC C4293 on this ternary.
 #define CV_ELEM_SIZE1(type) \
     ((int)((CV_MAT_DEPTH(type) < 16 \
-        ? (0x1114881228442211ULL >> (CV_MAT_DEPTH(type) * 4)) \
-        : (0x0000000000000001ULL >> ((CV_MAT_DEPTH(type) - 16) * 4))) & 15))
+        ? (0x1114881228442211ULL >> ((CV_MAT_DEPTH(type) & 15) * 4)) \
+        : (0x0000000000000001ULL >> ((CV_MAT_DEPTH(type) & 15) * 4))) & 15))
 
 #define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
