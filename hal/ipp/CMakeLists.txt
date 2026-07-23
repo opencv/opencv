@@ -48,6 +48,7 @@ endif()
 
 if(HAVE_IPP_IW)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
+  target_compile_definitions(ipphal PRIVATE ENABLE_IPP_GAUSSIAN_BLUR=1)
 endif()
 
 if(WITH_IPP_CALLS_ENFORCED)

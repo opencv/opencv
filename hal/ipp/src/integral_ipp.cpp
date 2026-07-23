@@ -18,6 +18,7 @@ int ipp_hal_integral(int depth, int sdepth, int sqdepth,
                      int width, int height, int cn)
 {
     CV_HAL_CHECK_USE_IPP();
+    CV_UNUSED(tilted_step);
 
     if (cn > 1 || tilted_data)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

@@ -99,8 +99,6 @@ public:
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP();
-
         if(!*m_pOk)
             return;
 
