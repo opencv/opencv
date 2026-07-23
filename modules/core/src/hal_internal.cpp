@@ -379,6 +379,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             else if (typeid(fptype) == typeid(double))
                 OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)b, &_m, (double*)&work1, &lwork, _info);
 
+            CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
             if (*info < 0)
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -403,6 +404,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             else if (typeid(fptype) == typeid(double))
                 OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)tmpB, &_m, (double*)&work1, &lwork, _info);
 
+            CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
             if (*info < 0)
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -425,6 +427,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         else if (typeid(fptype) == typeid(double))
             dgeqrf_(&_m, &_n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, _info);
 
+        CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
         if (*info < 0)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
