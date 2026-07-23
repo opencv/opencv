@@ -601,7 +601,7 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
         CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
-#if defined(__GNUC__) && (__GNUC__ >= 11)
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
@@ -628,7 +628,7 @@ struct InitializerFunctor5D{
     }
 };
 
-#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 
