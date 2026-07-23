@@ -402,7 +402,7 @@ public:
 
     static inline int findStartContourPoint(uchar* src_data, int width, int j)
     {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_THREAD_SANITIZER)
         cv::v_uint8 v_zero = cv::vx_setzero_u8();
         for (; j <= width - cv::VTraits<cv::v_uint8>::vlanes(); j += cv::VTraits<cv::v_uint8>::vlanes())
         {
@@ -423,7 +423,7 @@ public:
 
     inline static int findEndContourPoint(uchar* src_data,int width, int j)
     {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_THREAD_SANITIZER)
         if (j <  width && !src_data[j])
         {
             return j;
