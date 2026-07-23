@@ -13,13 +13,12 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-// ONNX Scan operator. The scan body subgraph is iterated over the scan axis of the
-// scan inputs; the interpreter (Net::Impl::forwardGraph) drives the loop and stacks
-// the per-iteration scan outputs. This layer only holds the body and its attributes.
+// ONNX op: Scan — https://onnx.ai/onnx/operators/onnx__Scan.html
+// Supported opsets: 9 .. latest (opset-9 dataflow semantics).
+// Opset-8 Scan (leading batch dimension + optional sequence_lens input) has different
+// semantics and is NOT supported.
 //
-// Supported ONNX opsets: 9, 11, 16, 19, 21, 23 (opset-9 dataflow semantics).
-// Opset-8 Scan (leading batch dimension + optional sequence_lens input) uses different
-// semantics and is not supported.
+// Net::Impl::forwardGraph drives the loop; this layer only holds the body and its attributes.
 class ScanLayerImpl CV_FINAL : public ScanLayer
 {
 public:

@@ -741,8 +741,7 @@ Net ONNXImporter2::parseModel()
 bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoProto, ArgData& data)
 {
     CV_Assert(valueInfoProto.has_name());
-    // Subgraph (e.g. Scan/Loop body) value-infos may omit type and/or shape; those are
-    // inferred at runtime, so leave the arg's type/shape unset rather than failing.
+    // Subgraph body value-infos may omit type/shape; leave unset, inferred at runtime.
     if (!valueInfoProto.has_type())
         return true;
     const opencv_onnx::TypeProto& typeProto = valueInfoProto.type();

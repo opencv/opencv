@@ -1360,12 +1360,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 const int K = (int)body->outputs().size() - S;  // scan output count
                 CV_Assert(M > 0 && S >= 0 && K >= 0);
 
-                // opset-8 Scan prefixes an optional sequence_lens input; skip a leading arg.
-                int off = 0;
-                if ((int)inpMats.size() == S + M + 1)
-                    off = 1;
-                else
-                    CV_Assert((int)inpMats.size() == S + M);
+                // Reject opset-8 (batch dim + sequence_lens); those semantics are not implemented.
+                CV_CheckEQ((int)inpMats.size(), S + M,
+                           "Scan: opset-8 form (batch dim + sequence_lens) is not supported; re-export with opset>=9");
 
                 const std::vector<int>& iax = scanLayer->scanInputAxes();
                 const std::vector<int>& oax = scanLayer->scanOutputAxes();
@@ -1378,7 +1375,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 std::vector<char> inRev(M);
                 int T = -1;
                 for (int j = 0; j < M; j++) {
-                    scanIn[j] = inpMats[off + S + j];
+                    scanIn[j] = inpMats[S + j];
                     int ax = iax.empty() ? 0 : iax[j];
                     if (ax < 0) ax += scanIn[j].dims;
                     inAxis[j] = ax;
@@ -1389,7 +1386,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 CV_Assert(T >= 0);
 
                 std::vector<Mat> state(S);
-                for (int i = 0; i < S; i++) state[i] = inpMats[off + i];
+                for (int i = 0; i < S; i++) state[i] = inpMats[i];
 
                 std::vector<std::vector<Mat> > history(K);
                 std::vector<Mat> inputs(bodyNIn), outputs;
@@ -1402,6 +1399,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     }
                     forwardGraph(body, inputs, outputs, false);
                     // Deep-copy: body buffers are recycled across iterations.
+                    // TODO: alias state in/out buffers like Loop to drop this copy.
                     for (int i = 0; i < S; i++) state[i] = outputs[i].clone();
                     for (int k = 0; k < K; k++) history[k].push_back(outputs[S + k].clone());
                 }
@@ -1411,8 +1409,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 for (int k = 0; k < K; k++) {
                     int ax = oax.empty() ? 0 : oax[k];
                     bool rev = !odir.empty() && odir[k] != 0;
-                    // A body scan output declared as a 0-D scalar is stored as [1]; drop the
-                    // phantom axis so T scalars stack into a rank-1 [T] tensor, not [T, 1].
+                    // 0-D scalar output is stored as [1]; drop it so T scalars stack to [T], not [T,1].
                     if (k < (int)orank.size() && orank[k] == 0) {
                         for (Mat& e : history[k])
                             e = e.reshape(0, 0, nullptr);
