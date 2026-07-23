@@ -739,7 +739,7 @@ location of the window windowName.
 
 @param windowName Name of the window.
  */
-CV_EXPORTS void saveWindowParameters(const String& windowName);
+CV_EXPORTS_W void saveWindowParameters(const String& windowName);
 
 /** @brief Loads parameters of the specified window.
 
@@ -748,7 +748,7 @@ location of the window windowName.
 
 @param windowName Name of the window.
  */
-CV_EXPORTS void loadWindowParameters(const String& windowName);
+CV_EXPORTS_W void loadWindowParameters(const String& windowName);
 
 CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 
