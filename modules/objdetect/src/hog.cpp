@@ -723,7 +723,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
     #if CV_SIMD128
         idx = v_float32x4(0.0f, 1.0f, 2.0f, 3.0f);
 
-        for (; j <= blockSize.height - 4; j += 4)
+        for (; j <= blockSize.width - 4; j += 4)
         {
             v_float32x4 t = v_sub(idx, _bw);
             t = v_mul(t, t);
