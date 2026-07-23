@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -115,8 +116,13 @@ namespace
         CV_Assert( cannyLowThresh_ > 0 && cannyLowThresh_ < cannyHighThresh_ );
 
         Canny(src, edges, cannyLowThresh_, cannyHighThresh_);
+        // TODO(follow-up PR): use the fused spatialGradient once its CV_32F fast path lands.
+#if 0
+        spatialGradient(src, dx, dy, 3, BORDER_DEFAULT, CV_32F);
+#else
         Sobel(src, dx, CV_32F, 1, 0);
         Sobel(src, dy, CV_32F, 0, 1);
+#endif
     }
 
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)

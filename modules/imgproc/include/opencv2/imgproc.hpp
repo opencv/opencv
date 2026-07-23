@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1809,28 +1810,38 @@ CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
 
-/** @brief Calculates the first order image derivative in both x and y using a Sobel operator
+/** @brief Calculates the first order image derivatives in both x and y using a Sobel operator,
+computing them together in a single pass.
 
-Equivalent to calling:
-
+This is a fused variant of #Sobel: instead of two separate calls
 @code
-Sobel( src, dx, CV_16SC1, 1, 0, 3 );
-Sobel( src, dy, CV_16SC1, 0, 1, 3 );
+Sobel( src, dx, ddepth, 1, 0, ksize, scale );
+Sobel( src, dy, ddepth, 0, 1, ksize, scale );
 @endcode
+it produces both first-order derivatives in one traversal of the source. For an 8-bit single-channel
+whole-image (non-ROI) source with @p ksize = 3, @p ddepth = CV_16S, @p scale = 1, and
+#BORDER_DEFAULT (#BORDER_REFLECT_101) or #BORDER_REPLICATE, a dedicated fused 3x3 stencil kernel is
+used (including a HAL fast path) that reads each source sample once and shares it between the dx and
+dy computations; the result is bit-identical to the two #Sobel calls above. All other cases
+(@p ddepth = CV_32F, @p ksize = 5, scaled int16 output, floating-point source, other border types,
+or ROI/sub-matrix input) currently fall back to the two equivalent #Sobel passes. @note Fused fast
+paths for CV_32F output and @p ksize = 5 are added in a follow-up change.
 
-@param src input image.
-@param dx output image with first-order derivative in x.
-@param dy output image with first-order derivative in y.
-@param ksize size of Sobel kernel. It must be 3.
-@param borderType pixel extrapolation method, see #BorderTypes.
-                  Only #BORDER_DEFAULT=#BORDER_REFLECT_101 and #BORDER_REPLICATE are supported.
+@param src input image; single-channel, 8-bit (CV_8UC1) for the fused fast paths (CV_32FC1 is
+            accepted via the fallback).
+@param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
+@param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
+@param ksize size of the Sobel kernel; must be 3 or 5.
+@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param ddepth output image depth; CV_16S or CV_32F.
+@param scale optional scale factor applied to the computed derivatives.
 
 @sa Sobel
  */
-
 CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
                                    OutputArray dy, int ksize = 3,
-                                   int borderType = BORDER_DEFAULT );
+                                   int borderType = BORDER_DEFAULT,
+                                   int ddepth = CV_16S, double scale = 1 );
 
 /** @brief Calculates the first x- or y- image derivative using Scharr operator.
 

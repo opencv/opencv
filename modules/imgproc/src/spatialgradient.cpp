@@ -43,7 +43,6 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#include <iostream>
 namespace cv
 {
 
@@ -93,32 +92,75 @@ static inline void spatialGradientKernel( T& vx, T& vy,
     vy = tmp_add - tmp_sub + tmp_y + tmp_y;
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define CV_SPATIALGRAD_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#  define CV_SPATIALGRAD_NOINLINE __declspec(noinline)
+#else
+#  define CV_SPATIALGRAD_NOINLINE
+#endif
+
+// Fused single-pass 3x3 Sobel over the whole image: 8-bit input, CV_16S output,
+// unit scale, BORDER_REFLECT_101 / BORDER_REPLICATE. Kept in its own (non-inlined)
+// function so the hot vectorized loop is codegen'd in isolation from the public
+// entry point's dispatch/fallback logic. Folding both into one frame perturbs loop
+// alignment and costs ~10% on some microarchitectures (observed on AMD Zen5/Turin).
+static CV_SPATIALGRAD_NOINLINE
+void spatialGradientFused3x3_8u16s( Mat src, OutputArray _dx, OutputArray _dy, int bt );
+
 void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
-                      int ksize, int borderType )
+                      int ksize, int borderType, int ddepth, double scale )
 {
     CV_INSTRUMENT_REGION();
 
     // Prepare InputArray src
     Mat src = _src.getMat();
     CV_Assert( !src.empty() );
-    CV_Assert( src.type() == CV_8UC1 );
-    CV_Assert( borderType == BORDER_DEFAULT || borderType == BORDER_REPLICATE );
+    CV_Assert( ksize == 3 || ksize == 5 );
+    CV_Assert( ddepth == CV_16S || ddepth == CV_32F );
 
+    // Fused single-pass 3x3 Sobel fast path (existing vectorized kernel): 8-bit source,
+    // CV_16S output, unit scale, whole-image (non-ROI), BORDER_REFLECT_101/REPLICATE.
+    // NOTE: fused fast paths for CV_32F output and ksize == 5 (plus ROI-aware slicing and
+    // other border types) are added in a follow-up PR; until then those cases are computed
+    // with the two equivalent cv::Sobel() passes below.
+    Size wholeSize;
+    Point ofs;
+    src.locateROI( wholeSize, ofs );
+    const bool entireParent = ( ofs.x == 0 && ofs.y == 0 &&
+        src.cols == wholeSize.width && src.rows == wholeSize.height );
+    const bool isolated = ( borderType & BORDER_ISOLATED ) != 0;
+    const int bt = borderType & ~BORDER_ISOLATED;
+
+    const bool fastPath = ( ksize == 3 && ddepth == CV_16S && scale == 1.0
+        && src.type() == CV_8UC1 && entireParent && !isolated
+        && ( bt == BORDER_DEFAULT || bt == BORDER_REPLICATE ) );
+
+    if ( !fastPath )
+    {
+        Sobel( _src, _dx, ddepth, 1, 0, ksize, scale, 0, borderType );
+        Sobel( _src, _dy, ddepth, 0, 1, ksize, scale, 0, borderType );
+        return;
+    }
+
+    spatialGradientFused3x3_8u16s( src, _dx, _dy, bt );
+}
+
+static CV_SPATIALGRAD_NOINLINE
+void spatialGradientFused3x3_8u16s( Mat src, OutputArray _dx, OutputArray _dy, int bt )
+{
     // Prepare OutputArrays dx, dy
     _dx.create( src.size(), CV_16SC1 );
     _dy.create( src.size(), CV_16SC1 );
     Mat dx = _dx.getMat(),
         dy = _dy.getMat();
 
-    // TODO: Allow for other kernel sizes
-    CV_Assert(ksize == 3);
-
     CALL_HAL(spatialGradient, cv_hal_spatialGradient,
          src.data, src.step,
          dx.ptr<short>(), dx.step,
          dy.ptr<short>(), dy.step,
          src.cols, src.rows,
-         ksize, borderType);
+         3, bt);
 
     // Get dimensions
     const int H = src.rows,
@@ -134,7 +176,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         j_offl   = 0,     // j offset from 0th   pixel to reach -1st pixel
         j_offr   = 0;     // j offset from W-1th pixel to reach Wth  pixel
 
-    if ( borderType == BORDER_DEFAULT ) // Equiv. to BORDER_REFLECT_101
+    if ( bt == BORDER_DEFAULT ) // Equiv. to BORDER_REFLECT_101
     {
         if ( H > 1 )
         {

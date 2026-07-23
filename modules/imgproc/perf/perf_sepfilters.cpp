@@ -134,6 +134,110 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
     SANITY_CHECK(dst);
 }
 
+/**************** spatialGradient (fused dx+dy) ********************/
+
+typedef tuple<Size, int, int> Size_Aperture_Border_t;
+typedef perf::TestBaseWithParam<Size_Aperture_Border_t> Size_Aperture_Border;
+
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_fused,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(3, 5),
+                testing::Values((int)BORDER_DEFAULT, (int)BORDER_REPLICATE)
+            )
+          )
+{
+    Size size  = get<0>(GetParam());
+    int ksize  = get<1>(GetParam());
+    int border = get<2>(GetParam());
+
+    Mat src(size, CV_8U);
+    Mat dx(size, CV_16S), dy(size, CV_16S);
+
+    declare.in(src, WARMUP_RNG).out(dx, dy);
+
+    TEST_CYCLE() spatialGradient(src, dx, dy, ksize, border);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Float output variant (CV_8U source -> CV_32F dx/dy), as used by corner detectors.
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_fused_32f,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(3, 5),
+                testing::Values((int)BORDER_DEFAULT, (int)BORDER_REPLICATE)
+            )
+          )
+{
+    Size size  = get<0>(GetParam());
+    int ksize  = get<1>(GetParam());
+    int border = get<2>(GetParam());
+
+    Mat src(size, CV_8U);
+    Mat dx(size, CV_32F), dy(size, CV_32F);
+
+    declare.in(src, WARMUP_RNG).out(dx, dy);
+
+    TEST_CYCLE() spatialGradient(src, dx, dy, ksize, border, CV_32F);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Float baseline: the two cv::Sobel CV_32F calls (corner-detector gradient stage).
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_32f_baseline,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(3, 5),
+                testing::Values((int)BORDER_DEFAULT, (int)BORDER_REPLICATE)
+            )
+          )
+{
+    Size size  = get<0>(GetParam());
+    int ksize  = get<1>(GetParam());
+    int border = get<2>(GetParam());
+
+    Mat src(size, CV_8U);
+    Mat dx(size, CV_32F), dy(size, CV_32F);
+
+    declare.in(src, WARMUP_RNG).out(dx, dy);
+
+    TEST_CYCLE()
+    {
+        Sobel(src, dx, CV_32F, 1, 0, ksize, 1, 0, border);
+        Sobel(src, dy, CV_32F, 0, 1, ksize, 1, 0, border);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Baseline: the two separate cv::Sobel calls that spatialGradient fuses (same params).
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_baseline,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(3, 5),
+                testing::Values((int)BORDER_DEFAULT, (int)BORDER_REPLICATE)
+            )
+          )
+{
+    Size size  = get<0>(GetParam());
+    int ksize  = get<1>(GetParam());
+    int border = get<2>(GetParam());
+
+    Mat src(size, CV_8U);
+    Mat dx(size, CV_16S), dy(size, CV_16S);
+
+    declare.in(src, WARMUP_RNG).out(dx, dy);
+
+    TEST_CYCLE()
+    {
+        Sobel(src, dx, CV_16S, 1, 0, ksize, 1, 0, border);
+        Sobel(src, dy, CV_16S, 0, 1, ksize, 1, 0, border);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 /**************** Scharr ********************/
 
 PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter,
