@@ -118,8 +118,16 @@ namespace
                 ushort* out = dst_bits.ptr<ushort>(r);
                 for (int i = 0; i < cols_x_cn; ++i)
                 {
+                    // float32 -> bfloat16 with round-to-nearest-even (matches ONNX).
                     Cv32suf u; u.f = in[i];
-                    out[i] = (ushort)(u.u >> 16);
+                    const uint32_t x = u.u;
+                    if ((x & 0x7fffffffu) > 0x7f800000u)      // NaN: keep it NaN
+                        out[i] = (ushort)((x >> 16) | 0x0040u);
+                    else
+                    {
+                        const uint32_t bias = 0x7fffu + ((x >> 16) & 1u);
+                        out[i] = (ushort)((x + bias) >> 16);
+                    }
                 }
             }
             return;
@@ -210,7 +218,6 @@ public:
         const int in0CN   = in0Type >= 0 ? CV_MAT_CN(in0Type) : 1;
         int planDepth = targetDepth;
         if (planDepth == CV_16F)   planDepth = CV_32F;
-        if (planDepth == CV_16BF)  planDepth = CV_16U;
         const int outType = CV_MAKETYPE(planDepth, in0CN);
         outputs.assign(1, outType);
     }
@@ -239,6 +246,13 @@ public:
         }
 
         if (runtimeTargetDepth == CV_16F && outputs[0].depth() == CV_32F)
+        {
+            return false;
+        }
+
+        // bf16 needs the float->bfloat16 bit reduction; a plain OpenCL convertTo
+        // would numerically round instead. Fall back to the CPU path.
+        if (runtimeTargetDepth == CV_16BF)
         {
             return false;
         }
@@ -291,8 +305,7 @@ public:
         }
         CV_CheckGE(runtimeTargetDepth, 0, "Cast: failed to resolve target data type at runtime");
 
-        int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F :
-                            (runtimeTargetDepth == CV_16BF ? CV_16U : runtimeTargetDepth);
+        int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F : runtimeTargetDepth;
         if (dst0.depth() != plannedDDepth)
             dst0.create(dst0.size(), CV_MAKETYPE(plannedDDepth, src0.channels()));
 
