@@ -830,7 +830,7 @@ trueDistTrans( const Mat& src, Mat& dst )
 
     CV_Assert( src.size() == dst.size() );
 
-    CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_32FC1 );
+    CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_BoolC1) && dst.type() == CV_32FC1 );
     int i, m = src.rows, n = src.cols;
 
     cv::AutoBuffer<uchar> _buf(std::max(m*2*sizeof(int) + (m*3+1)*sizeof(int), n*2*sizeof(float)));
@@ -886,7 +886,7 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
     int srcstep = (int)src.step;
     int dststep = (int)dst.step;
 
-    CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_8UC1 );
+    CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_BoolC1) && dst.type() == CV_8UC1 );
     CV_Assert( src.size() == dst.size() );
 
     ////////////////////// forward scan ////////////////////////
@@ -957,7 +957,9 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 
     Mat src = _src.getMat();
 
-    CV_Assert( src.type() == CV_8UC1);
+    // CV_Bool is a 1-byte mask type (added in 5.0) and is only ever zero-tested
+    // here, so accept it wherever a CV_8UC1 mask was accepted. See #29596.
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
 
     _dst.create( src.size(), CV_8UC1);
     Mat dst = _dst.getMat();
@@ -978,7 +980,9 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     Mat src = _src.getMat(), labels;
     bool need_labels = _labels.needed();
 
-    CV_Assert( src.type() == CV_8UC1);
+    // CV_Bool is a 1-byte mask type (added in 5.0) and is only ever zero-tested
+    // here, so accept it wherever a CV_8UC1 mask was accepted. See #29596.
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
 
     _dst.create( src.size(), CV_32F);
     Mat dst = _dst.getMat();
