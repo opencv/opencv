@@ -35,7 +35,7 @@ public:
                          std::vector<MatShape>& outputs, std::vector<MatShape>&) const CV_OVERRIDE
     {
         outputs.assign(1, inputs[0]);
-        return exclusive_raw == 0;
+        return false;
     }
 
     void getTypes(const std::vector<MatType>& inputs, const int, const int,
@@ -95,29 +95,38 @@ public:
         const int target_step = target_delta * (int)inner_size;
         const int exclusive_delta = exclusive ? target_step : 0;
 
-        for (size_t outer_idx = 0; outer_idx < outer_size; outer_idx++)
+        // Each outer slice holds independent scans, so parallelize over it.
+        parallel_for_(Range(0, (int)outer_size), [&](const Range& range)
         {
-            const size_t target_offset = outer_idx * outer_step_length;
-
-            // First element: multiplicative identity when exclusive, else the source value.
-            size_t first_inner_offset = target_offset + (size_t)target_start * inner_size;
-            if (exclusive)
-                for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
-                    dst_ptr[first_inner_offset + inner_idx] = (T)1;
-            else
-                for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
-                    dst_ptr[first_inner_offset + inner_idx] = src_ptr[first_inner_offset + inner_idx];
-
-            for (int target_idx = target_start + target_delta; target_idx != target_stop; target_idx += target_delta)
+            for (int outer_idx = range.start; outer_idx < range.end; outer_idx++)
             {
-                const size_t inner_offset = target_offset + (size_t)target_idx * inner_size;
-                for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
+                const size_t target_offset = (size_t)outer_idx * outer_step_length;
+
+                // First element: multiplicative identity when exclusive, else the source value.
+                size_t first_inner_offset = target_offset + (size_t)target_start * inner_size;
+                if (exclusive)
+                    for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
+                        dst_ptr[first_inner_offset + inner_idx] = (T)1;
+                else
+                    for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
+                        dst_ptr[first_inner_offset + inner_idx] = src_ptr[first_inner_offset + inner_idx];
+
+                for (int target_idx = target_start + target_delta; target_idx != target_stop; target_idx += target_delta)
                 {
-                    dst_ptr[inner_offset + inner_idx] = dst_ptr[inner_offset - target_step + inner_idx] *
-                        src_ptr[inner_offset - exclusive_delta + inner_idx];
+                    const size_t inner_offset = target_offset + (size_t)target_idx * inner_size;
+                    for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
+                    {
+                        dst_ptr[inner_offset + inner_idx] = dst_ptr[inner_offset - target_step + inner_idx] *
+                            src_ptr[inner_offset - exclusive_delta + inner_idx];
+                    }
                 }
             }
-        }
+        });
+    }
+
+    int64 getFLOPS(const std::vector<MatShape>& inputs, const std::vector<MatShape>&) const CV_OVERRIDE
+    {
+        return (int64)total(inputs[0]);  // one multiply per element
     }
 
     int parseAxis(const Mat& axis_mat)

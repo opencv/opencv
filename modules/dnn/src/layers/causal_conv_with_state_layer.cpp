@@ -111,10 +111,11 @@ public:
                     float acc = bias;
                     for (int k = 0; k < K; ++k)
                         acc += w[k] * pad[t + k];
-                    if (silu)
-                        acc = acc / (1.f + std::exp(-acc));
                     o[t] = acc;
                 }
+                if (silu)
+                    for (int t = 0; t < T; ++t)
+                        o[t] = o[t] / (1.f + std::exp(-o[t]));
 
                 float* ps = PSp + (size_t)bc * P;
                 for (int j = 0; j < P; ++j)
