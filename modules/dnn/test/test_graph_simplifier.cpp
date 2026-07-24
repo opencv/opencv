@@ -23,6 +23,15 @@ class Test_Graph_Simplifier : public ::testing::Test {
     void test(const std::string &basename, const std::vector<std::string> &expected_layers, const std::string &model_path_prefix = std::string("dnn/onnx/models/")) {
         std::string model_path = findDataFile(model_path_prefix + basename + std::string(".onnx"), required);
         auto net = readNet(model_path);
+
+        bool isOrt = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO) == ENGINE_ORT;
+        if (isOrt) {
+            // Under ORT engine, OpenCV's graph simplifier never runs (ORT owns the whole graph).
+            // Just verify the model loads successfully.
+            EXPECT_FALSE(net.empty());
+            return;
+        }
+
         std::vector<std::string> layers;
         net.getLayerTypes(layers);
 

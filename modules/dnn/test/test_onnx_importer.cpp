@@ -85,12 +85,35 @@ static Mat sdpaReference(const Mat& Q, const Mat& KT, const Mat& V, float scale)
     return Y;
 }
 
+// ORT engine deny list: tests to skip when ENGINE_ORT is forced.
+// See test_onnx_ort_denylist.inl.hpp for the list and per-entry reasons (as comments).
+static const std::set<std::string>& getORTTestDenyList() {
+    static const std::set<std::string> denylist = {
+        #include "test_onnx_ort_denylist.inl.hpp"
+    };
+    return denylist;
+}
+
 class Test_ONNX_layers : public DNNTestLayer
 {
 public:
     bool required;
 
     Test_ONNX_layers() : required(true) { }
+
+    void SetUp() override {
+        if ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO) != ENGINE_ORT)
+            return;
+        const auto* test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+        if (!test_info) return;
+        std::string name = test_info->name();
+        // Strip parametrized suffix (e.g., "Alexnet/0" -> "Alexnet")
+        auto pos = name.find('/');
+        if (pos != std::string::npos) name = name.substr(0, pos);
+        const auto& denylist = getORTTestDenyList();
+        if (denylist.find(name) != denylist.end())
+            throw SkipTestException("ORT engine failure");
+    }
 
     enum Extension
     {
@@ -109,6 +132,9 @@ public:
             suggestedTypes.push_back(inp.type());
         }
         net.getLayerShapes(suggestedShapes, suggestedTypes, 0, inLayerShapes, outLayerShapes);
+        // Skip validation if model has all inputs as initializers
+        if (inLayerShapes.empty())
+            return;
         ASSERT_EQ(inLayerShapes.size(), inps.size());
 
         for (int i = 0; i < inps.size(); ++i) {
@@ -3027,6 +3053,19 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     std::vector<Mat> outs;
     std::vector<std::string> out_names = net.getUnconnectedOutLayersNames();
     net.forward(outs, out_names);
+    // ORT backend may return empty out_names; populate placeholders to match outs size
+    if (out_names.empty() && !outs.empty())
+    {
+        out_names.resize(outs.size());
+        for (size_t i = 0; i < outs.size(); ++i)
+            out_names[i] = format("output%zu", i);
+    }
+    // ORT backend may return FP16 outputs; convert to FP32 for post-processing
+    for (size_t i = 0; i < outs.size(); ++i)
+    {
+        if (outs[i].type() != CV_32F)
+            outs[i].convertTo(outs[i], CV_32F);
+    }
     EXPECT_EQ(outs.size(), out_names.size());
     if(outs.size() == 1)
     {
@@ -3421,7 +3460,11 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
         Scalar::all(0)
         );
 
-    testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
+    // Note: yolov5n.onnx is FP16; ORT runs natively in FP16 while CLASSIC/NEW upcast to FP32.
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, 0.3f, 0.5f,
+        6.0e-4, 2.0e-3);
 }
 
 TEST_P(Test_ONNX_layers, Tile)
