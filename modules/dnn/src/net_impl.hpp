@@ -142,7 +142,6 @@ struct Net::Impl : public detail::NetImplBase
     int defaultC0;
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
-    bool finalizeLayers; // need to initialize each layer
     bool finalized = false; // executors have been selected for the current backend/target
 
     // Post-fusion (pre block-layout) snapshot so finalize() can re-run from a clean

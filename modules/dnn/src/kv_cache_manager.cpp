@@ -116,7 +116,7 @@ void KVCacheManager::initPastTensors()
 
         Mat& past_t = netimpl->__tensors__.at(route.second);
         past_t = Mat(shape_vec, dtype, Scalar(0));
-        netimpl->finalizeLayers = true;
+        // The consumer's signature changed; the op loop re-finalizes it.
     }
 }
 
@@ -128,8 +128,7 @@ void KVCacheManager::applyRoutes()
         Mat& past_t = netimpl->__tensors__.at(route.second);
         if (present_t.empty())
             continue;
-        if (past_t.shape() != present_t.shape() || past_t.type() != present_t.type())
-            netimpl->finalizeLayers = true;
+        // Grown buffer changes the consumer's signature; the op loop re-finalizes it.
         present_t.copyTo(past_t);
     }
 }

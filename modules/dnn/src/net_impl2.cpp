@@ -558,7 +558,6 @@ void Net::Impl::prepareForInference()
     if (this->ort_session)
     {
         prepared = true;
-        finalizeLayers = false;
         return;
     }
 #endif
@@ -577,7 +576,6 @@ void Net::Impl::prepareForInference()
         fuseBasic();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
-        finalizeLayers = true;
     }
 }
 
@@ -643,6 +641,11 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
             backend = DNN_BACKEND_OPENCV;
         }
         CV_Assert(exec);
+        // Re-finalize can hand back the same object, so reset state for the new backend.
+        exec->packedWeightEpoch = 0;
+        exec->finalizedOnce = false;
+        exec->lastInpShapes.clear();
+        exec->lastInpTypes.clear();
         g->exec_[i] = exec;
         g->execBackend_[i] = backend;
         CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize op #%zu '%s' (%s) -> %s",
@@ -856,11 +859,6 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     layersTimings.assign(totalLayers + 1, 0.);
 
     forwardGraph(mainGraph, inputs, outputs, true);
-
-    // reset finalizeLayer so that layers are only initialized once.
-    // [TODO] if a target or backend change or there are some other important
-    // global changes in configuration, finalizeLayers should be set to 'true' again
-    finalizeLayers = false;
 
     // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
     if (useKVCache && kvCacheManager.hasRoutes)
@@ -1281,8 +1279,7 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
                                          typeToString(adata.type).c_str()));
         }
         Mat& inp_t = argTensor(inp);
-        if (inp_t.shape() != mshape || inp_t.type() != adata_type)
-            finalizeLayers = true;
+        // The op loop detects signature changes per layer; no global flag needed.
         inp_t.fit(mshape, adata_type);
 
         if (adata.type == CV_16BF && mtype == CV_16U)
@@ -1579,17 +1576,27 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         std::vector<Ptr<Graph> >* subgraphs = op->subgraphs();
         if (!subgraphs) {
+            // Blobs live on 'op', packed buffers on the executor 'layer'.
+            if (layer->packedWeightEpoch != op->weightEpoch) {
+                layer->prepackWeights();
+                layer->packedWeightEpoch = op->weightEpoch;
+                // New weights: re-finalize too, for layers that pack inside finalize().
+                layer->finalizedOnce = false;
+            }
+            // Re-finalize only when this layer's own input signature changed.
+            if (!layer->finalizedOnce || layer->lastInpShapes != inpShapes || layer->lastInpTypes != inpTypes) {
+                layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
+                layer->lastInpShapes = inpShapes;
+                layer->lastInpTypes = inpTypes;
+                layer->finalizedOnce = true;
+            }
 #ifdef HAVE_CUDA
             if (opBackend == DNN_BACKEND_CUDA) {
-                if (finalizeLayers)
-                    layer->finalize(inpMats, outMats);
                 forwardOpCUDA(this, gimpl, opidx, inputs, outputs, inpMats, outMats);
             } else
 #endif
             {
                 // Device-resident inputs were already synced to host in the capture loop above.
-                if (finalizeLayers)
-                    layer->finalize(inpMats, outMats);
                 layer->forward(inpMats, outMats, tempMats);
 #ifdef HAVE_CUDA
                 // CPU produced fresh host data; invalidate any stale device copy of its outputs.
