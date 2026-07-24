@@ -6,7 +6,6 @@
 
 #include "precomp.hpp"
 
-#include <mutex>
 #include <set>
 #include <unordered_map>
 
@@ -24,7 +23,6 @@ struct Map::Impl
     KeyFrame* currentKf = nullptr;
 
     std::vector<Matx44d> trajectory;
-    std::mutex mutex;
 
     int nextKfId = 0;
     int nextMpId = 0;
