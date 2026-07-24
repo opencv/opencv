@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import os
+
+# Force Qt's headless-safe platform plugin when nothing else is already
+# configured. Without this, namedWindow() on a Qt-enabled build with no
+# display server available (e.g. CI workers, which do not run the Python
+# test suite under a virtual framebuffer) aborts the whole process instead
+# of raising a catchable exception -- so this must be set *before* the
+# first GUI call, and a plain try/except around namedWindow is not enough.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 import cv2 as cv
 
 from tests_common import NewOpenCVTests
