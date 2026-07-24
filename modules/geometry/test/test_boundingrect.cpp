@@ -96,4 +96,31 @@ TEST(Imgproc_BoundingRect, bug_24217)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/29578
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, which regressed boundingRect
+// (it used to be treated as CV_8U in 4.x). A boolean mask must be handled as a
+// byte-wise mask, matching the CV_8UC1 result.
+TEST(Imgproc_BoundingRect, bool_mask_29578)
+{
+    for (int image_width = 3; image_width < 20; image_width++)
+    {
+        for (int image_height = 1; image_height < 15; image_height++)
+        {
+            cv::Rect rect(0, image_height - 1, 3, 1);
+
+            cv::Mat_<bool> mask(cv::Size(image_width, image_height), false);
+            mask(rect).setTo(true);
+
+            cv::Mat_<uchar> ref(cv::Size(image_width, image_height), (uchar)0);
+            ref(rect).setTo(255);
+
+            EXPECT_EQ(mask.depth(), CV_Bool);
+            cv::Rect result;
+            ASSERT_NO_THROW(result = boundingRect(mask));
+            EXPECT_EQ(result, rect);
+            EXPECT_EQ(result, boundingRect(ref));
+        }
+    }
+}
+
 }} // namespace

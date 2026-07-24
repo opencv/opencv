@@ -504,7 +504,7 @@ double arcLength( InputArray _curve, bool is_closed )
 
 static Rect maskBoundingRect( const Mat& img )
 {
-    CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
+    CV_Assert( (img.depth() <= CV_8S || img.depth() == CV_Bool) && img.channels() == 1 );
 
     Size size = img.size();
     int xmin = size.width, ymin = -1, xmax = -1, ymax = -1, i, j, k;
@@ -709,7 +709,10 @@ cv::Rect boundingRect(InputArray array)
     CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
-    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+    // CV_Bool is a 1-byte mask type (added in 5.0); route it through the
+    // byte-wise mask path, same as CV_8U/CV_8S. See #29578.
+    int depth = m.depth();
+    return (depth <= CV_8U || depth == CV_Bool) ? maskBoundingRect(m) : pointSetBoundingRect(m);
 }
 
 cv::Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale)
