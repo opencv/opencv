@@ -51,8 +51,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                backendId == DNN_BACKEND_CANN;
     }
 
-    // numpy MatMul 1-D promotion: A[K] -> [1,K], B[K] -> [K,1]. Fills the promoted A/B and the
-    // full (promoted) output shape; `out` is the final shape with those inserted 1-dims removed.
+    // numpy 1-D promotion: A[K]->[1,K], B[K]->[K,1]. `out` drops the inserted 1-dims.
     static void matmulShapes(const MatShape& rawA, const MatShape& rawB, bool trans_a, bool trans_b,
                              MatShape& Ap, MatShape& Bp, MatShape& full, MatShape& out) {
         const bool a1d = rawA.size() == 1, b1d = rawB.size() == 1;
@@ -87,13 +86,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             full = MatShape{M, N};
         }
 
-        // Drop the dimensions that were inserted by 1-D promotion. When both operands were
-        // 1-D and there is no batch, the result is a true 0-D scalar (total()==1), not an
-        // empty shape (total()==0) — the latter would leave the output buffer unallocated.
+        // both 1-D, no batch -> 0-D scalar (total 1), not empty (total 0)
         if (a1d && b1d && full.size() == 2) {
             out = MatShape::scalar();
             return;
         }
+        // drop the 1-dims inserted by promotion
         out.clear();
         for (size_t i = 0; i + 2 < full.size(); i++)
             out.push_back(full[i]);
@@ -143,16 +141,18 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_Assert(!inputs.empty());
-        const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
-        int mA = shape_A[shape_A.size() - 2], nA = shape_A.back();
-        int mB = shape_B[shape_B.size() - 2], nB = shape_B.back();
+        // Promote 1-D operands so shape.size()-2 can't underflow on a 1-D input.
+        MatShape shape_Ap, shape_Bp, full_shape, out_shape;
+        matmulShapes(inputs[0], blobs.empty() ? inputs[1] : shape(blobs[0]),
+                     trans_a, trans_b, shape_Ap, shape_Bp, full_shape, out_shape);
+        int mA = shape_Ap[shape_Ap.size() - 2], nA = shape_Ap.back();
         int M = trans_a ? nA : mA;
-        int N = trans_b ? mB : nB;
         int K = trans_a ? mA : nA;
+        int N = full_shape.back();
 
         int64 batch = 1;
-        for (size_t i = 0; i + 2 < outputs[0].size(); i++)
-            batch *= outputs[0][i];
+        for (size_t i = 0; i + 2 < full_shape.size(); i++)
+            batch *= full_shape[i];
 
         // 2*M*N*K multiply-adds per batch element, +M*N for bias if present
         int64 flops = batch * (CV_BIG_INT(2) * M * N * K);

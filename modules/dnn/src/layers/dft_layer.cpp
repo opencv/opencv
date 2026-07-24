@@ -131,8 +131,7 @@ static void runTypedDFT(const Mat& src,
     }
 }
 
-// Inverse real DFT (irfft): expand the onesided complex spectrum to the full length N via
-// Hermitian symmetry (X[N-k] = conj(X[k])), inverse-DFT each lane, and keep the real part.
+// Inverse real DFT: rebuild full spectrum via Hermitian symmetry, keep real part.
 template<typename T, typename ComplexVec>
 static void runIRFFT(const Mat& src, Mat& dst,
                      const std::vector<size_t>& stridesSrc,
@@ -164,18 +163,20 @@ static void runIRFFT(const Mat& src, Mat& dst,
             ComplexVec* fp = full.ptr<ComplexVec>(0);
             for (int k = 0; k < N; ++k)
             {
-                if (k < L) {
-                    size_t o = (size_t)k * strideAxisSrc;
-                    fp[k][0] = in[o + 0]; fp[k][1] = in[o + 1];
+                // k<L: copy; else mirror conj(X[N-k]); missing bins -> zero.
+                int src_k = (k < L) ? k : (N - k);
+                if (src_k >= 0 && src_k < L) {
+                    size_t o = (size_t)src_k * strideAxisSrc;
+                    fp[k][0] = in[o + 0];
+                    fp[k][1] = (k < L) ? in[o + 1] : -in[o + 1];
                 } else {
-                    size_t o = (size_t)(N - k) * strideAxisSrc;   // Hermitian: conj(X[N-k])
-                    fp[k][0] = in[o + 0]; fp[k][1] = -in[o + 1];
+                    fp[k][0] = fp[k][1] = T(0);
                 }
             }
             cv::dft(full, outRow, DFT_INVERSE | DFT_SCALE);
             const ComplexVec* op = outRow.ptr<ComplexVec>(0);
             for (int n = 0; n < N; ++n)
-                out[(size_t)n * strideAxisDst] = op[n][0];        // keep the real part
+                out[(size_t)n * strideAxisDst] = op[n][0];
         }
     });
 }
@@ -192,8 +193,7 @@ public:
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
-        // dft_length (input 1) and axis (input 2, opset-20) can be runtime tensors; if either
-        // is non-const the output length/axis is only known at forward time.
+        // Non-const dft_length/axis inputs make the output shape known only at forward time.
         Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
         for (size_t i = 1; i < this->inputs.size(); ++i)
         {
@@ -234,6 +234,31 @@ private:
         return -1;
     }
 
+    // Read the opset-20 axis input when it is a constant.
+    int getAxisFromConstant() const
+    {
+        if (this->inputs.size() < 3 || this->inputs[2].idx <= 0)
+        {
+            return INT_MIN;   // no axis input, or empty optional input
+        }
+
+        Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
+        if (!netimpl_ || !netimpl_->isConstArg(this->inputs[2]))
+        {
+            return INT_MIN;
+        }
+
+        Mat axis_tensor = netimpl_->argTensor(this->inputs[2]);
+        if (axis_tensor.empty() || axis_tensor.total() != 1)
+        {
+            return INT_MIN;
+        }
+
+        int64_t axis64 = 0;
+        tensorToScalar(axis_tensor, CV_64S, &axis64);
+        return static_cast<int>(axis64);
+    }
+
 public:
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int /*requiredOutputs*/,
@@ -252,6 +277,13 @@ public:
             ax = (inshape.back() == 2 || inshape.back() == 1) ? ndims_in - 2 : ndims_in - 1;
         }
         if (ax < 0) ax += ndims_in;
+
+        // A constant opset-20 axis input overrides the attribute (matches forward()).
+        int ax_const = getAxisFromConstant();
+        if (ax_const != INT_MIN)
+        {
+            ax = ax_const < 0 ? ax_const + ndims_in : ax_const;
+        }
 
         // Inverse real DFT (irfft): real output, axis restored to full length N.
         if (inverse && onesided)

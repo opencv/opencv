@@ -50,7 +50,7 @@ public:
     {
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(CV_ELEM_SIZE1(inputs[0]), CV_ELEM_SIZE1(outputType),
-                   "BitCast: only equal-width type reinterpretation is supported");
+                   "BitCast: input and target types must have equal bit-width (ONNX spec)");
         outputs.assign(requiredOutputs, MatType(outputType));
         internals.clear();
     }
