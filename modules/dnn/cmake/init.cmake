@@ -3,7 +3,7 @@ if(PROJECT_NAME STREQUAL "OpenCV")
   if(EMSCRIPTEN OR IOS OR WINRT)
     set(ENABLE_PLUGINS_DEFAULT OFF)
   endif()
-  set(DNN_PLUGIN_LIST "" CACHE STRING "List of DNN backends to be compiled as plugins (openvino, etc or special value 'all')")
+  set(DNN_PLUGIN_LIST "" CACHE STRING "List of DNN backends to be compiled as plugins (openvino, cuda, etc or special value 'all')")
   set(DNN_ENABLE_PLUGINS "${ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building and using of DNN plugins")
   mark_as_advanced(DNN_PLUGIN_LIST DNN_ENABLE_PLUGINS)
 

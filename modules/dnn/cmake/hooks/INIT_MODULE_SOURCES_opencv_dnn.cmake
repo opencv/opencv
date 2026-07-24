@@ -4,7 +4,7 @@ if(NOT (OPENCV_DNN_OPENCL AND HAVE_OPENCL))
   ocv_list_filterout(OPENCV_MODULE_${the_module}_HEADERS "/ocl4dnn/")
 endif()
 
-if(NOT (OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN))
+if(NOT (OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN AND NOT OPENCV_DNN_CUDA_AS_PLUGIN))
   message(STATUS "opencv_dnn: filter out cuda4dnn source code")
   ocv_list_filterout(OPENCV_MODULE_${the_module}_SOURCES "/cuda4dnn/")
   ocv_list_filterout(OPENCV_MODULE_${the_module}_HEADERS "/cuda4dnn/")

@@ -21,6 +21,8 @@ function(ocv_create_builtin_dnn_plugin name target)
   foreach(src ${ARGN})
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${src}")
       list(APPEND sources "${CMAKE_CURRENT_LIST_DIR}/src/${src}")
+    elseif(src MATCHES "^\\$<TARGET_OBJECTS:")
+      list(APPEND sources "${src}")
     elseif(IS_ABSOLUTE "${src}")
       list(APPEND sources "${src}")
     else()
@@ -32,10 +34,29 @@ function(ocv_create_builtin_dnn_plugin name target)
     list(APPEND sources ${OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED})
   endif()
 
+  set(cuda_objs "")
+  if(NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
+    set(cuda_sources "")
+    foreach(src ${sources})
+      if(src MATCHES "\\.cu$")
+        list(APPEND cuda_sources "${src}")
+      endif()
+    endforeach()
+    if(cuda_sources)
+      list(REMOVE_ITEM sources ${cuda_sources})
+      ocv_include_directories(${CUDA_INCLUDE_DIRS})
+      ocv_cuda_compile(cuda_objs ${cuda_sources})
+    endif()
+  endif()
+
   set(__${name}_DEPS_EXT "")
   ocv_compiler_optimization_process_sources(sources __${name}_DEPS_EXT ${name})
 
-  add_library(${name} MODULE ${sources})
+  add_library(${name} MODULE ${sources} ${cuda_objs})
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
+    set(target ${name})
+    ocv_add_cuda_compile_flags()
+  endif()
   target_include_directories(${name} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
   target_link_libraries(${name} PRIVATE ${target} ${__${name}_DEPS_EXT})
   target_link_libraries(${name} PRIVATE ${__plugin_libs})
@@ -62,8 +83,15 @@ function(ocv_create_builtin_dnn_plugin name target)
     set(OPENCV_PLUGIN_ARCH "" CACHE STRING "")
   endif()
 
+  if(CMAKE_CXX_STANDARD)
+    set(OPENCV_DNN_PLUGIN_CXX_STANDARD "${CMAKE_CXX_STANDARD}")
+  else()
+    set(OPENCV_DNN_PLUGIN_CXX_STANDARD 11)
+  endif()
+
   set_target_properties(${name} PROPERTIES
-    CXX_STANDARD 11
+    CXX_STANDARD "${OPENCV_DNN_PLUGIN_CXX_STANDARD}"
+    CXX_STANDARD_REQUIRED ON
     CXX_VISIBILITY_PRESET hidden
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     OUTPUT_NAME "${name}${OPENCV_PLUGIN_VERSION}${OPENCV_PLUGIN_ARCH}"
