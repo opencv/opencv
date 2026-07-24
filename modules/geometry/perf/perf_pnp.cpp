@@ -54,8 +54,9 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     }
 
     SANITY_CHECK(rvec, 1e-4);
-    // the check is relaxed from 1e-4 to 2e-2 after LevMarq replacement
-    SANITY_CHECK(tvec, 2e-2);
+    // the check is relaxed from 1e-4 to 2e-2 after LevMarq replacement (#21018),
+    // then to 3e-2 after the cv::Mat broadcasting element-wise engine rewrite (#29426)
+    SANITY_CHECK(tvec, 3e-2);
 }
 
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
