@@ -83,6 +83,13 @@ static const GemmParam_t test_matmul_configs[] = {
     { {16, 197, 64 }, {16, 64, 197} },
     { {16, 50, 64}, {16, 64, 50} },
     { {16, 50, 50}, {16, 50, 64} },
+
+    // transformer token generation cases (thin-M GEMV, fastGemmThin path)
+    { {1, 1, 768}, {1, 768, 768} },
+    { {1, 1, 768}, {1, 768, 3072} },
+    { {1, 1, 3072}, {1, 3072, 768} },
+    { {1, 2, 768}, {1, 768, 768} },
+    { {1, 4, 768}, {1, 768, 768} },
 };
 
 struct GemmParamId
