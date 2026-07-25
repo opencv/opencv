@@ -1147,6 +1147,11 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
 Size HOGCache::windowsInImage(const Size& imageSize, const Size& winStride) const
 {
+    // The window does not fit into the (padded) image even once: report zero
+    // windows instead of a negative count, which the callers store in a size_t.
+    if( imageSize.width < winSize.width || imageSize.height < winSize.height )
+        return Size(0, 0);
+
     return Size((imageSize.width - winSize.width)/winStride.width + 1,
         (imageSize.height - winSize.height)/winStride.height + 1);
 }

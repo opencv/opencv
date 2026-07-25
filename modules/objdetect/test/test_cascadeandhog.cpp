@@ -1382,4 +1382,43 @@ TEST(Objdetect_HOGDescriptor, issue_23580_tall_block_no_overflow)
     EXPECT_FALSE(descriptors.empty());
 }
 
+// See https://github.com/opencv/opencv/issues/8793
+// When the image is smaller than the detection window even after padding,
+// HOGCache::windowsInImage() returned a negative number of window rows. Its area()
+// is negative and the callers keep it in a size_t, so the window loop of
+// HOGDescriptor::detect() ran ~2^64 times and read far outside the gradient
+// buffers (AddressSanitizer: heap-buffer-overflow read in HOGCache::getBlock).
+// 77x101 with padding 8x8 gives a padded size of 93x117, which is lower than the
+// 64x128 default window; padding 32x32 makes the window fit again.
+TEST(Objdetect_HOGDescriptor, issue_8793_small_image_no_out_of_bounds)
+{
+    HOGDescriptor hog;
+    hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
+
+    Mat img(101, 77, CV_8UC3);
+    randu(img, Scalar::all(0), Scalar::all(255));
+
+    std::vector<Rect> found;
+    std::vector<double> weights;
+    ASSERT_NO_THROW(hog.detectMultiScale(img, found, weights, 0, Size(4, 4), Size(8, 8),
+                                         1.05, 2.0, true));
+    EXPECT_TRUE(found.empty()); // no window fits, so there is nothing to detect
+
+    // compute() takes the same window count, where it ended up in resize()
+    std::vector<float> descriptors;
+    ASSERT_NO_THROW(hog.compute(img, descriptors, Size(4, 4), Size(8, 8)));
+    EXPECT_TRUE(descriptors.empty());
+
+    // one side alone being smaller than the window is enough
+    Mat narrow(300, 40, CV_8UC3);
+    randu(narrow, Scalar::all(0), Scalar::all(255));
+    ASSERT_NO_THROW(hog.detectMultiScale(narrow, found, weights, 0, Size(4, 4), Size(8, 8),
+                                         1.05, 2.0, false));
+    EXPECT_TRUE(found.empty());
+
+    // Padding large enough to fit the window still goes through the regular path.
+    ASSERT_NO_THROW(hog.detectMultiScale(img, found, weights, 0, Size(4, 4), Size(32, 32),
+                                         1.05, 2.0, true));
+}
+
 }} // namespace
