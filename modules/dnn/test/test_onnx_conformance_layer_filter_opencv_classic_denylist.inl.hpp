@@ -736,6 +736,9 @@
 "test_reduce_sum_square_empty_set_expanded",
 "test_reduce_log_sum_exp_empty_set_expanded",
 "test_loop11",
+"test_scan9_multi_state",  // Scan supported only by the new graph engine
+"test_scan9_scalar",       // ---- same as above ---
+"test_scan9_sum",          // ---- same as above ---
 "test_eyelike_populate_off_main_diagonal",
 "test_eyelike_with_dtype",
 "test_eyelike_without_dtype",

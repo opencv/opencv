@@ -272,8 +272,8 @@
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time",  // ---- same as above ---
 "test_rnn_seq_length",  // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
-"test_scan9_sum",  // Issue:: Parser: 'Graph' is not supported in function 'getLayerParams'
-"test_scan_sum", // ---- same as above ---
+// Scan edge cases beyond the opset-9+ dataflow the new engine supports:
+"test_scan_sum",  // opset-8 Scan (leading batch dim + sequence_lens, different semantics)
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
 "test_sequence_insert_at_front",  // ---- same as above ---
 "test_sequence_map_add_1_sequence_1_tensor",
@@ -420,9 +420,6 @@
 "test_linear_attention_no_past_explicit_zeros_expanded",
 "test_linear_attention_prefill_with_past",
 "test_linear_attention_prefill_with_past_expanded",
-// Scan op not supported
-"test_scan9_multi_state",
-"test_scan9_scalar",
 // misc unsupported (expanded subgraphs / new ops)
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded",

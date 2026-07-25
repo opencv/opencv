@@ -202,6 +202,7 @@ protected:
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseScan                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -742,19 +743,25 @@ Net ONNXImporter2::parseModel()
 bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoProto, ArgData& data)
 {
     CV_Assert(valueInfoProto.has_name());
-    CV_Assert(valueInfoProto.has_type());
+    // Subgraph body value-infos may omit type/shape; leave unset, inferred at runtime.
+    if (!valueInfoProto.has_type())
+        return true;
     const opencv_onnx::TypeProto& typeProto = valueInfoProto.type();
-    CV_Assert(typeProto.has_tensor_type());
+    if (!typeProto.has_tensor_type())
+        return true;
     const opencv_onnx::TypeProto::Tensor& tensor = typeProto.tensor_type();
-    CV_Assert(tensor.has_shape());
-    const opencv_onnx::TensorShapeProto& tensorShape = tensor.shape();
-    auto elem_type = tensor.elem_type();
 
-    data.type = dataType2cv(elem_type);
-    if (data.type < 0) {
-        CV_Error(Error::StsNotImplemented, format("unsupported datatype '%s'", dataType2str(elem_type).c_str()));
+    if (tensor.has_elem_type()) {
+        auto elem_type = tensor.elem_type();
+        data.type = dataType2cv(elem_type);
+        if (data.type < 0) {
+            CV_Error(Error::StsNotImplemented, format("unsupported datatype '%s'", dataType2str(elem_type).c_str()));
+        }
     }
 
+    if (!tensor.has_shape())
+        return true;
+    const opencv_onnx::TensorShapeProto& tensorShape = tensor.shape();
     int dim_size = tensorShape.dim_size();
     CV_CheckGE(dim_size, 0, "");
     MatShape shape(dim_size);
@@ -1721,6 +1728,46 @@ void ONNXImporter2::parseLoop(LayerParams& layerParams,
 
     Ptr<Layer>& loopLayer = curr_prog.back();
     *loopLayer->subgraphs() = subgraphs;
+}
+
+void ONNXImporter2::parseScan(LayerParams& layerParams,
+                              const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(layerParams.has("num_scan_inputs"));
+    layerParams.type = "Scan";
+
+    std::vector<Arg> saved_inputs = node_inputs, saved_outputs = node_outputs;
+    std::vector<Ptr<Graph> > subgraphs(1);
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "body")
+        {
+            opencv_onnx::GraphProto body = attr.g();
+            subgraphs[0] = parseGraph(&body, false);
+        }
+    }
+    CV_Assert(!subgraphs[0].empty());
+    node_inputs = saved_inputs;
+    node_outputs = saved_outputs;
+
+    const int num_scan_inputs = layerParams.get<int>("num_scan_inputs");
+    const int n_state = (int)subgraphs[0]->inputs().size() - num_scan_inputs;
+    const int n_scan_out = (int)subgraphs[0]->outputs().size() - n_state;
+    if (n_state >= 0 && n_scan_out > 0)
+    {
+        std::vector<int> scan_output_ranks(n_scan_out);
+        for (int k = 0; k < n_scan_out; ++k)
+        {
+            const Arg& a = subgraphs[0]->outputs()[n_state + k];
+            scan_output_ranks[k] = netimpl->args.at(a.idx).shape.dims;
+        }
+        layerParams.set("scan_output_ranks", DictValue::arrayInt(scan_output_ranks.data(), n_scan_out));
+    }
+
+    addLayer(layerParams, node_proto);
+    Ptr<Layer>& scanLayer = curr_prog.back();
+    *scanLayer->subgraphs() = subgraphs;
 }
 
 void ONNXImporter2::parseIf(LayerParams& layerParams,
@@ -2718,6 +2765,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
     dispatch["Loop"] = &ONNXImporter2::parseLoop;
+    dispatch["Scan"] = &ONNXImporter2::parseScan;
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;

@@ -86,6 +86,7 @@ void initializeLayerFactory()
 
     CV_DNN_REGISTER_LAYER_CLASS(If,             IfLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Loop,           LoopLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Scan,           ScanLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat2,        Concat2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(ConstantOfShape, ConstantOfShapeLayer);

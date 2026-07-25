@@ -2423,8 +2423,12 @@ CASE(test_rms_normalization_4d_axis_negative_4_expanded)
     SKIP;
 CASE(test_rms_normalization_default_axis_expanded)
     SKIP;
+CASE(test_scan9_multi_state)
+    SKIP;
+CASE(test_scan9_scalar)
+    SKIP;
 CASE(test_scan9_sum)
-    // no filter
+    SKIP;
 CASE(test_scan_sum)
     // no filter
 CASE(test_scatter_elements_with_axis)
