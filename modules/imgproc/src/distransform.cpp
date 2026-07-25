@@ -957,8 +957,6 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 
     Mat src = _src.getMat();
 
-    // CV_Bool is a 1-byte mask type (added in 5.0) and is only ever zero-tested
-    // here, so accept it wherever a CV_8UC1 mask was accepted. See #29596.
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
 
     _dst.create( src.size(), CV_8UC1);
@@ -980,8 +978,6 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     Mat src = _src.getMat(), labels;
     bool need_labels = _labels.needed();
 
-    // CV_Bool is a 1-byte mask type (added in 5.0) and is only ever zero-tested
-    // here, so accept it wherever a CV_8UC1 mask was accepted. See #29596.
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
 
     _dst.create( src.size(), CV_32F);
