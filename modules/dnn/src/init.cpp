@@ -216,6 +216,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SDPA,            SDPALayer);
     CV_DNN_REGISTER_LAYER_CLASS(AttentionOnnxAi, AttentionOnnxAiLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CausalConvWithState, CausalConvWithStateLayer);
     CV_DNN_REGISTER_LAYER_CLASS(RotaryEmbedding, RotaryEmbeddingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast,           CastLayer);
@@ -252,6 +253,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LSTM2,          LSTM2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
     CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CumProd,        CumProdLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Einsum,         EinsumLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Hardmax,        HardmaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GatherND,       GatherNDLayer);
