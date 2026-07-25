@@ -5659,7 +5659,7 @@ namespace cv{
         const char *currentParallelFramework = cv::currentParallelFramework();
         const int nThreads = cv::getNumThreads();
 
-        CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
+        CV_Assert(iDepth == CV_8U || iDepth == CV_8S || iDepth == CV_Bool);
 
         //Run parallel labeling only if the rows of the image are at least twice the number of available threads
         const bool is_parallel = currentParallelFramework != NULL && nThreads > 1 && L.rows / nThreads >= 2;
