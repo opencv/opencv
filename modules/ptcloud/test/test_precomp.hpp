@@ -13,6 +13,8 @@
 #include <opencv2/core/utils/logger.hpp>
 #include "opencv2/ptcloud/depth.hpp"
 #include "opencv2/ptcloud/odometry.hpp"
+#include "opencv2/ptcloud/slam.hpp"
+#include "opencv2/features.hpp"
 
 #ifdef HAVE_OPENCL
 #include <opencv2/core/ocl.hpp>
