@@ -244,6 +244,11 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
 {
     CV_INSTRUMENT_REGION();
 
+    /* The inverse search may place a patch up to patch_size - 1 pixels outside of I1,
+       so the border of I1s_ext has to be at least patch_size wide for the search limits
+       in PatchInverseSearch to stay inside the buffer. patch_size is user controlled. */
+    border_size = max(16, patch_size);
+
     I0s.resize(coarsest_scale + 1);
     I1s.resize(coarsest_scale + 1);
     I1s_ext.resize(coarsest_scale + 1);
@@ -1219,6 +1224,9 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, InputArray flow,
 {
     CV_INSTRUMENT_REGION();
     // not pure OpenCV code: CV_INSTRUMENT_REGION_OPENCL();
+
+    /* See prepareBuffers(): the border has to be at least patch_size wide. */
+    border_size = max(16, patch_size);
 
     u_I0s.resize(coarsest_scale + 1);
     u_I1s.resize(coarsest_scale + 1);
