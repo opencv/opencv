@@ -386,7 +386,13 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
         CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
     }
 
-#elif CV_SIMD_SCALABLE
+// TODO(#29493): RVV conv is temporarily scalar. This universal path assumed
+// K0 == vlanes(), which under m1 holds only at VLEN=256. Disabled as in #29180.
+// Re-enable in a follow-up with a portable v_setvlmax<v_float32>(K0) universal
+// intrinsic (no-op on fixed-width ISAs, sets the vl/mask on RVV/SVE) so one vector
+// spans exactly the K0=8 block at any VLEN; the optimized multi-pixel case is a
+// later RVV-HAL step. See PR #29493 discussion.
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
 
 /////////////////////////// scalable (RVV) implementation /////////////////////////////
 // K0 == vlanes(), so each of the 10 spatial positions needs exactly one vector
@@ -603,8 +609,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32x4 zz = v_setzero_f32(); \
     v_float32x4 s0 = zz, s1 = zz
-#elif CV_SIMD_SCALABLE
-// RVV: K0 == vlanes(), so a single scalable vector spans the whole output block.
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32 zz = vx_setzero_f32(); \
     v_float32 s0 = zz
@@ -642,7 +647,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
         s0 = v_min(s0, _vmx); s1 = v_min(s1, _vmx); \
         v_store((outbuf), s0); v_store((outbuf) + 4, s1); \
     }
-#elif CV_SIMD_SCALABLE
+#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
 #define CONV_FINALIZE_SCALAR_OUT(outbuf) \
     { \
         v_float32 _vsc = vx_load(scalebuf); \
@@ -2202,17 +2207,11 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
-#if CV_SIMD_SCALABLE
-        // RVV: block size follows the runtime vector width (defaultC0 = vlanes(), LMUL=2).
-        const int C0 = (int)inpshape.back();
-        int C0shift = 0; while ((1 << C0shift) < C0) C0shift++;
-        const int K0 = C0, K0shift = C0shift;
-        constexpr int C0BUF = VTraits<v_float32>::max_nlanes;  // compile-time scratch bound
-#else
+        // The block size is a fixed property of the blocked layout on every platform,
+        // so C0/K0 are compile-time constants here (#29493).
         constexpr int C0shift = 3, K0shift = C0shift;
         constexpr int C0 = 1 << C0shift, K0 = C0;
         constexpr int C0BUF = K0;
-#endif
 
         CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
 
@@ -2523,10 +2522,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                         CONV_UPDATE_BLOCK1(5);
                         CONV_UPDATE_BLOCK1(6);
                         CONV_UPDATE_BLOCK1(7);
-                    #elif CV_SIMD_SCALABLE
-                        // RVV: K0 == vlanes(); weights are contiguous over kk for a fixed c0,
-                        // so one vx_load gives the whole K0-wide weight vector. Broadcast the
-                        // input lane and accumulate into the persistent block accumulator.
+                    #elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
                         for (int c0 = 0; c0 < C0; ++c0) {
                             v_float32 w = vx_load(wptr + c0*K0);
                             v_float32 x = vx_setall_f32(inptr[c0]);
@@ -2557,16 +2553,9 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
 {
     ConvFunc func = nullptr;
-#if CV_SIMD_SCALABLE
-    // RVV: block size follows the runtime vector width; accept the supported pow2 widths.
-    if (depth == CV_32F && (C0 == 8 || C0 == 16 || C0 == 32 || C0 == 64)) {
-        func = conv32fC8;
-    }
-#else
     if (depth == CV_32F && C0 == 8) {
         func = conv32fC8;
     }
-#endif
     return func;
 }
 
