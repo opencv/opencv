@@ -795,8 +795,13 @@ TEST(Imgproc_ConnectedComponents, regression_27568)
     }
 }
 
-TEST(Imgproc_ConnectedComponents, bool_mask_29593)
+typedef testing::TestWithParam<std::tuple<int, int>> Imgproc_ConnectedComponents_BoolMask;
+
+TEST_P(Imgproc_ConnectedComponents_BoolMask, bool_mask_29593)
 {
+    const int connectivity = std::get<0>(GetParam());
+    const int ccltype = std::get<1>(GetParam());
+
     cv::Mat_<bool> mask = (cv::Mat_<bool>(3, 4) <<
         true,  true,  false, true,
         false, false, false, true,
@@ -808,20 +813,19 @@ TEST(Imgproc_ConnectedComponents, bool_mask_29593)
           0,   0,   0, 255,
         255,   0, 255, 255);
 
-    for (const int connectivity : {4, 8})
-    {
-        for (const int ccltype : {CCL_DEFAULT, CCL_WU, CCL_GRANA, CCL_BOLELLI, CCL_SAUF, CCL_BBDT, CCL_SPAGHETTI})
-        {
-            Mat1i labels_mask, labels_ref, stats;
-            Mat1d centroids;
-            int n_mask = 0, n_ref = 0;
-            ASSERT_NO_THROW(n_mask = connectedComponentsWithStats(mask, labels_mask, stats, centroids, connectivity, CV_32S, ccltype));
-            ASSERT_NO_THROW(n_ref = connectedComponentsWithStats(ref, labels_ref, stats, centroids, connectivity, CV_32S, ccltype));
-            EXPECT_EQ(n_mask, n_ref);
-            EXPECT_EQ(cv::countNonZero(labels_mask != labels_ref), 0);
-        }
-    }
+    Mat1i labels_mask, labels_ref, stats;
+    Mat1d centroids;
+    int n_mask = 0, n_ref = 0;
+    ASSERT_NO_THROW(n_mask = connectedComponentsWithStats(mask, labels_mask, stats, centroids, connectivity, CV_32S, ccltype));
+    ASSERT_NO_THROW(n_ref = connectedComponentsWithStats(ref, labels_ref, stats, centroids, connectivity, CV_32S, ccltype));
+    EXPECT_EQ(n_mask, n_ref);
+    EXPECT_EQ(cv::countNonZero(labels_mask != labels_ref), 0);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ConnectedComponents_BoolMask,
+    testing::Combine(
+        testing::Values(4, 8),
+        testing::Values(CCL_DEFAULT, CCL_WU, CCL_GRANA, CCL_BOLELLI, CCL_SAUF, CCL_BBDT, CCL_SPAGHETTI)));
 
 }
 } // namespace
