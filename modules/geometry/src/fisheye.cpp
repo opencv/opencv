@@ -373,6 +373,81 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         maxCount = criteria.maxCount;
     }
 
+    // Vectorized fast path: fixed iteration count (no EPS early-exit), no reprojection (R,P empty),
+    // double I/O. This is the compute-bound common case (per-point Newton solve is embarrassingly
+    // parallel). Other cases (EPS convergence, R/P reprojection, float I/O) fall through to scalar.
+    if( !isEps && R.empty() && P.empty() && sdepth == CV_64F )
+    {
+        const double fx = f[0], fy = f[1], cx = c[0], cy = c[1];
+        const double k0 = k[0], k1 = k[1], k2 = k[2], k3 = k[3];
+        const double lo = -CV_PI/2., hi = CV_PI/2.;
+        size_t i = 0;
+#if (CV_SIMD_SCALABLE_64F || CV_SIMD_64F)
+        {
+            const int vl = VTraits<v_float64>::vlanes();
+            const v_float64 v_fx = vx_setall_f64(fx), v_fy = vx_setall_f64(fy);
+            const v_float64 v_cx = vx_setall_f64(cx), v_cy = vx_setall_f64(cy);
+            const v_float64 v_k0 = vx_setall_f64(k0), v_k1 = vx_setall_f64(k1);
+            const v_float64 v_k2 = vx_setall_f64(k2), v_k3 = vx_setall_f64(k3);
+            const v_float64 v_one = vx_setall_f64(1.0), v_zero = vx_setzero_f64();
+            const v_float64 v_lo = vx_setall_f64(lo), v_hi = vx_setall_f64(hi);
+            const v_float64 v_sent = vx_setall_f64(-1000000.0);
+            cv::AutoBuffer<double> tbuf(vl);
+            for( ; i + (size_t)vl <= n; i += vl )
+            {
+                v_float64 px, py;
+                v_load_deinterleave((const double*)(srcd + i), px, py);
+                v_float64 pwx = v_div(v_sub(px, v_cx), v_fx);
+                v_float64 pwy = v_div(v_sub(py, v_cy), v_fy);
+                v_float64 theta_d = v_sqrt(v_add(v_mul(pwx, pwx), v_mul(pwy, pwy)));
+                theta_d = v_min(v_max(theta_d, v_lo), v_hi);
+                v_float64 theta = theta_d;
+                for( int it = 0; it < maxCount; it++ )
+                {
+                    v_float64 t2 = v_mul(theta, theta), t4 = v_mul(t2, t2);
+                    v_float64 t6 = v_mul(t4, t2), t8 = v_mul(t6, t2);
+                    v_float64 a0 = v_mul(t2, v_k0), a1 = v_mul(t4, v_k1);
+                    v_float64 a2 = v_mul(t6, v_k2), a3 = v_mul(t8, v_k3);
+                    v_float64 poly = v_add(v_one, v_add(v_add(a0, a1), v_add(a2, a3)));
+                    v_float64 num = v_sub(v_mul(theta, poly), theta_d);
+                    v_float64 den = v_add(v_one, v_add(
+                        v_add(v_mul(a0, vx_setall_f64(3.0)), v_mul(a1, vx_setall_f64(5.0))),
+                        v_add(v_mul(a2, vx_setall_f64(7.0)), v_mul(a3, vx_setall_f64(9.0)))));
+                    theta = v_sub(theta, v_div(num, den));
+                }
+                // scale = tan(theta) / theta_d  (scalar tan pass; transcendental has no vector op)
+                v_store(tbuf.data(), theta);
+                for( int j = 0; j < vl; j++ ) tbuf[j] = std::tan(tbuf[j]);
+                v_float64 vscale = v_div(vx_load(tbuf.data()), theta_d);
+                v_float64 pux = v_mul(pwx, vscale), puy = v_mul(pwy, vscale);
+                // theta_flipped -> sentinel (-1e6). theta_d>=0, so flip == (theta < 0).
+                v_float64 mflip = v_lt(theta, v_zero);
+                pux = v_select(mflip, v_sent, pux);
+                puy = v_select(mflip, v_sent, puy);
+                v_store_interleave((double*)(dstd + i), pux, puy);
+            }
+        }
+#endif
+        for( ; i < n; i++ )
+        {
+            Vec2d pi = srcd[i];
+            Vec2d pw((pi[0] - cx)/fx, (pi[1] - cy)/fy);
+            double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
+            theta_d = min(max(lo, theta_d), hi);
+            double theta = theta_d;
+            for( int it = 0; it < maxCount; it++ )
+            {
+                double t2 = theta*theta, t4 = t2*t2, t6 = t4*t2, t8 = t6*t2;
+                double a0 = k0*t2, a1 = k1*t4, a2 = k2*t6, a3 = k3*t8;
+                double fix = (theta*(1 + a0 + a1 + a2 + a3) - theta_d) /
+                             (1 + 3*a0 + 5*a1 + 7*a2 + 9*a3);
+                theta -= fix;
+            }
+            double scale = std::tan(theta)/theta_d;
+            dstd[i] = (theta < 0) ? Vec2d(-1000000.0, -1000000.0) : pw*scale;
+        }
+        return;
+    }
 
     for(size_t i = 0; i < n; i++ )
     {
