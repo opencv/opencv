@@ -1720,9 +1720,9 @@ larger) and the direct algorithm for small kernels.
 @param src input image.
 @param dst output image of the same size and the same number of channels as src.
 @param ddepth desired depth of the destination image, see @ref filter_depths "combinations"
-@param kernel convolution kernel (or rather a correlation kernel), a single-channel floating point
-matrix; if you want to apply different kernels to different channels, split the image into
-separate color planes using split and process them individually.
+@param kernel convolution kernel (or rather a correlation kernel), a single-channel matrix; if you
+want to apply different kernels to different channels, split the image into separate color planes
+using split and process them individually.
 @param anchor anchor of the kernel that indicates the relative position of a filtered point within
 the kernel; the anchor should lie within the kernel; default value (-1,-1) means that the anchor
 is at the kernel center.

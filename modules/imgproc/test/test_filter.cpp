@@ -1940,6 +1940,46 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_FilterSupportedFormats,
     )
 );
 
+typedef testing::TestWithParam<perf::MatDepth> Imgproc_Filter2DKernelDepth;
+
+TEST_P(Imgproc_Filter2DKernelDepth, direct_and_dft)
+{
+    Mat src(32, 32, CV_8U);
+    RNG rng(0);
+    rng.fill(src, RNG::UNIFORM, 0, 16);
+
+    const int kernelSizes[] = { 3, 13 };  // direct and DFT paths, respectively
+    for (int ksize : kernelSizes)
+    {
+        SCOPED_TRACE(cv::format("kernel depth=%d, size=%dx%d", int(GetParam()), ksize, ksize));
+
+        Mat kernel32s = Mat::zeros(ksize, ksize, CV_32S);
+        kernel32s.at<int>(0, 0) = 1;
+        kernel32s.at<int>(ksize / 2, ksize / 2) = 2;
+        kernel32s.at<int>(ksize - 1, ksize - 1) = 1;
+
+        Mat kernel, referenceKernel, dst, reference;
+        kernel32s.convertTo(kernel, GetParam());
+        kernel.convertTo(referenceKernel, CV_64F);
+
+        cv::filter2D(src, dst, CV_32F, kernel, Point(-1, -1), 0, BORDER_REPLICATE);
+        cvtest::filter2D(src, reference, CV_32F, referenceKernel,
+                         Point(-1, -1), 0, BORDER_REPLICATE);
+
+        EXPECT_LE(cvtest::norm(dst, reference, NORM_INF), 1e-4);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Integer, Imgproc_Filter2DKernelDepth,
+    testing::Values(
+        perf::MatDepth(CV_8U),
+        perf::MatDepth(CV_8S),
+        perf::MatDepth(CV_16U),
+        perf::MatDepth(CV_16S),
+        perf::MatDepth(CV_32S)
+    )
+);
+
 TEST(Imgproc_Blur, borderTypes)
 {
     Size kernelSize(3, 3);
