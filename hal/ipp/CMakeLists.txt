@@ -46,6 +46,13 @@ if(WITH_IPP_CALLS_ENFORCED)
   message("WITH_IPP_CALLS_ENFORCED=${WITH_IPP_CALLS_ENFORCED}: enforced IPP calls are enabled in IPP HAL")
 endif()
 
+# Enable cv::instr tracing of IPP calls inside the HAL so they show up in the
+# instrumentation trace / IPP weight. Reuses the engine exported from
+# opencv_core (symbols resolved at link time as ipphal is archived into core).
+if(ENABLE_INSTRUMENTATION)
+  target_compile_definitions(ipphal PRIVATE ENABLE_INSTRUMENTATION)
+endif()
+
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-suggest-override)
 
