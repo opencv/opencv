@@ -175,8 +175,8 @@ double VideoCapture_uEye::getProperty(int property_id) const
         ASSERT_UEYE(is_Exposure(cam_id, IS_EXPOSURE_CMD_GET_EXPOSURE, (void*)&value, sizeof(value)));
         break;
     case CAP_PROP_GAIN:
-        auto gain = is_SetHWGainFactor(cam_id, IS_GET_MASTER_GAIN_FACTOR, 100);
-        value = static_cast<double>(gain)/100.0;
+        auto gain = is_SetHardwareGain(cam_id, IS_GET_MASTER_GAIN, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER);
+        value = static_cast<double>(gain);
         break;
     }
     return value;
@@ -212,7 +212,7 @@ bool VideoCapture_uEye::setProperty(int property_id, double value)
             ASSERT_UEYE(is_Exposure(cam_id, IS_EXPOSURE_CMD_SET_EXPOSURE, (void*)&value, sizeof(value)));
             break;
         case CAP_PROP_GAIN:
-            is_SetHWGainFactor(cam_id, IS_SET_MASTER_GAIN_FACTOR, static_cast<int>(value));
+            ASSERT_UEYE(is_SetHardwareGain(cam_id, static_cast<int>(value), IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER));
             break;
         }
         if(set_format)
