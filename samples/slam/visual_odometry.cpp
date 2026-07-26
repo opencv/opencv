@@ -268,7 +268,7 @@ int main(int argc, char** argv)
     PoseFilenameTracker poseTracker;
     int nEmitted = 0;
 
-    const int nDigits = std::to_string(imgFiles.size()).size();
+    const int nDigits = static_cast<int>(std::to_string(imgFiles.size()).size());
     const int64 t0 = getTickCount();
     for (size_t i = 0; i < imgFiles.size(); ++i)
     {
