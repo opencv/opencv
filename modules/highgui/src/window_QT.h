@@ -156,6 +156,9 @@ public slots:
     void enablePropertiesButtonEachWindow();
 
     void setOpenGlDrawCallback(QString name, void* callback, void* userdata);
+    void setOpenGlFreeCallback(QString name, void* callback);
+    void* getOpenGlDrawCallback(QString name);
+    void* getOpenGlUserData(QString name);
     void setOpenGlContext(QString name);
     void updateWindow(QString name);
     double isOpenGl(QString name);
@@ -327,6 +330,9 @@ public:
     static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* userdata);
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
+    void setOpenGlFreeCallback(CvOpenGlFreeCallback callback);
+    CvOpenGlDrawCallback getOpenGlDrawCallback();
+    void* getOpenGlUserData();
     void makeCurrentOpenGlContext();
     void updateGl();
     bool isOpenGl();
@@ -413,6 +419,9 @@ public:
     virtual void startDisplayInfo(QString text, int delayms) = 0;
 
     virtual void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) = 0;
+    virtual void setOpenGlFreeCallback(CvOpenGlFreeCallback callback) = 0;
+    virtual CvOpenGlDrawCallback getOpenGlDrawCallback() = 0;
+    virtual void* getOpenGlUserData() = 0;
     virtual void makeCurrentOpenGlContext() = 0;
     virtual void updateGl() = 0;
 
@@ -465,6 +474,9 @@ public:
     void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) CV_OVERRIDE;
+    void setOpenGlFreeCallback(CvOpenGlFreeCallback callback) CV_OVERRIDE;
+    CvOpenGlDrawCallback getOpenGlDrawCallback() CV_OVERRIDE;
+    void* getOpenGlUserData() CV_OVERRIDE;
     void makeCurrentOpenGlContext() CV_OVERRIDE;
     void updateGl() CV_OVERRIDE;
 
@@ -487,6 +499,7 @@ private:
     QSize size;
 
     CvOpenGlDrawCallback glDrawCallback;
+    CvOpenGlFreeCallback glFreeCallback;
     void* glDrawData;
 };
 
@@ -514,6 +527,10 @@ public:
     void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) CV_OVERRIDE;
+    void setOpenGlFreeCallback(CvOpenGlFreeCallback callback) CV_OVERRIDE;
+    CvOpenGlDrawCallback getOpenGlDrawCallback() CV_OVERRIDE;
+    void* getOpenGlUserData() CV_OVERRIDE;
+
     void makeCurrentOpenGlContext() CV_OVERRIDE;
     void updateGl() CV_OVERRIDE;
 
