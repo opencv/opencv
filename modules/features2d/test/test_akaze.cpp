@@ -84,4 +84,13 @@ TEST(Features2d_KAZE, diffusivity_charbonnier)
     ASSERT_EQ(desc_charbonnier.cols, desc_pm_g2.cols);
 }
 
+TEST(Features2D_AKAZE, Subsample_Channels_Overflow_Fix)
+{
+    cv::Mat img(48, 48, CV_8UC3, cv::Scalar(128, 128, 128));
+    cv::Ptr<cv::AKAZE> akaze = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 32, 2);
+
+    std::vector<cv::KeyPoint> keypoints;
+    EXPECT_NO_THROW(akaze->detect(img, keypoints));
+}
+
 }} // namespace

@@ -2597,6 +2597,12 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
   Mat_<int> fullcopy = fullM.clone();
   samples = -1;
 
+  auto assign_comps = [&](int row_idx, int col_idx, int base_idx) {
+    for (int ch = 0; ch < nchannels; ch++) {
+      comps(row_idx * nchannels + ch, col_idx) = base_idx + ch;
+    }
+  };
+
   for (int i = 0; i < npicks; i++) {
     int k = rng(fullM.rows - i);
     if (i < 6) {
@@ -2609,9 +2615,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
     for (int j = 0; j < count; j++) {
       if (samples(j, 0) == fullcopy(k, 0) && samples(j, 1) == fullcopy(k, 1) && samples(j, 2) == fullcopy(k, 2)) {
         n = false;
-        comps(i*nchannels, 0) = nchannels*j;
-        comps(i*nchannels + 1, 0) = nchannels*j + 1;
-        comps(i*nchannels + 2, 0) = nchannels*j + 2;
+        assign_comps(i, 0, nchannels * j);
         break;
       }
     }
@@ -2620,9 +2624,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
       samples(count, 0) = fullcopy(k, 0);
       samples(count, 1) = fullcopy(k, 1);
       samples(count, 2) = fullcopy(k, 2);
-      comps(i*nchannels, 0) = nchannels*count;
-      comps(i*nchannels + 1, 0) = nchannels*count + 1;
-      comps(i*nchannels + 2, 0) = nchannels*count + 2;
+      assign_comps(i, 0, nchannels * count);
       count++;
     }
 
@@ -2630,9 +2632,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
     for (int j = 0; j < count; j++) {
       if (samples(j, 0) == fullcopy(k, 0) && samples(j, 1) == fullcopy(k, 3) && samples(j, 2) == fullcopy(k, 4)) {
         n = false;
-        comps(i*nchannels, 1) = nchannels*j;
-        comps(i*nchannels + 1, 1) = nchannels*j + 1;
-        comps(i*nchannels + 2, 1) = nchannels*j + 2;
+        assign_comps(i, 1, nchannels * j);
         break;
       }
     }
@@ -2641,9 +2641,7 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
       samples(count, 0) = fullcopy(k, 0);
       samples(count, 1) = fullcopy(k, 3);
       samples(count, 2) = fullcopy(k, 4);
-      comps(i*nchannels, 1) = nchannels*count;
-      comps(i*nchannels + 1, 1) = nchannels*count + 1;
-      comps(i*nchannels + 2, 1) = nchannels*count + 2;
+      assign_comps(i, 1, nchannels * count);
       count++;
     }
 
