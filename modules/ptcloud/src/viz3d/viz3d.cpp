@@ -1534,7 +1534,7 @@ void PointCloud::setShader(ogl::Program program_)
     this->proj_loc = this->program.getUniformLocation("proj");
 }
 
+#endif // HAVE_OPENGL
+
 } // namespace viz3d
 } // namespace cv
-
-#endif
