@@ -457,6 +457,10 @@ PERF_TEST_P_(BinaryOpTest, transpose2d)
     SANITY_CHECK_NOTHING();
 }
 
+// 8U/16U/32F x C1/C3/C4 (matches IPP transpose coverage; shared by the
+// multichannel and in-place transpose tests below).
+#define TRANSPOSE_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4
+
 // Multichannel transpose (matches IPP perf coverage: 8U/16U/32F x C1/C3/C4)
 typedef Size_MatType TransposeMultiChannelTest;
 
@@ -477,7 +481,7 @@ PERF_TEST_P_(TransposeMultiChannelTest, transpose2d_multichannel)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeMultiChannelTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+        testing::Values(TRANSPOSE_TYPES)
     )
 );
 
@@ -507,7 +511,7 @@ PERF_TEST_P_(TransposeInplaceTest, transpose2d_inplace)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeInplaceTest,
     testing::Combine(
         testing::Values(cv::Size(1280, 1280), cv::Size(1920, 1920)),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+        testing::Values(TRANSPOSE_TYPES)
     )
 );
 

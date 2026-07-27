@@ -106,7 +106,7 @@ typedef perf::TestBaseWithParam<Size_MatType_MorphExOp_kSize_iter_t> Size_MatTyp
 PERF_TEST_P(Size_MatType_MorphExOp_kSize_iter, morphologyEx,
             testing::Combine(
                 MORPH_KERNEL_SIZES,
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(TYPICAL_MAT_TYPES_MORPH),
                 MorphExOp::all(),
                 testing::Values(3, 5, 7),
                 testing::Values(1, 3)

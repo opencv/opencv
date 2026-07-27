@@ -9,11 +9,14 @@ CV_ENUM(ROp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN, REDUCE_SUM2)
 typedef tuple<Size, MatType, ROp> Size_MatType_ROp_t;
 typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 
+// C1/C3/C4 over 8U/16U/16S/32F (widened from TYPICAL_MAT_TYPES to match IPP MAX/MIN coverage).
+#define TYPICAL_MAT_TYPES_REDUCE CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                                 CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
 
 PERF_TEST_P(Size_MatType_ROp, reduceR,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(TYPICAL_MAT_TYPES_REDUCE),
                 ROp::all()
                 )
             )
@@ -51,7 +54,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
 PERF_TEST_P(Size_MatType_ROp, reduceC,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(TYPICAL_MAT_TYPES_REDUCE),
                 ROp::all()
                 )
             )

@@ -8,6 +8,10 @@ namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 
+// 8U/16U/16S/32F x C1/C3/C4 (matches IPP filter2D/sepFilter2D coverage).
+#define FILTER2D_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                       CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
+
 typedef TestBaseWithParam< tuple<Size, int, BorderMode> > TestFilter2d;
 typedef TestBaseWithParam< tuple<string, int> > Image_KernelSize;
 
@@ -47,8 +51,7 @@ typedef TestBaseWithParam< tuple<Size, MatType, int, MatType> > TestFilter2dType
 PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
              Combine(
                 Values( sz1080p ),
-                Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                        CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4 ),
+                Values( FILTER2D_TYPES ),
                 Values( 3, 5, 7, 21 ),
                 Values( CV_16SC1, CV_32FC1 )   // kernel type
              )
@@ -82,8 +85,7 @@ PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
 PERF_TEST_P( TestFilter2dTypes, sepFilter2D_types,
              Combine(
                 Values( sz1080p ),
-                Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                        CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4 ),
+                Values( FILTER2D_TYPES ),
                 Values( 3, 5, 7, 21 ),
                 Values( CV_32FC1 )   // separable kernels are float
              )

@@ -6,13 +6,19 @@
 
 namespace opencv_test {
 
+// 8U/16U/16S x C1/C3/C4 + 32FC1 (matches IPP medianBlur coverage; ksize 3/5 for
+// all types — shared by the out-of-place and in-place median tests).
+#define MEDIAN_BLUR_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1
+// 3x3 / 5x5 GaussianBlur type coverage (matches IPP; shared by both fixed-kernel tests).
+#define GAUSSIAN_BLUR_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
+
 typedef tuple<Size, MatType, int> Size_MatType_kSize_t;
 typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;
 
 PERF_TEST_P(Size_MatType_kSize, medianBlur,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1),
+                testing::Values(MEDIAN_BLUR_TYPES),
                 testing::Values(3, 5)
                 )
             )
@@ -64,7 +70,7 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
 PERF_TEST_P(Size_MatType_kSize, medianBlur_inplace,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1),
+                testing::Values(MEDIAN_BLUR_TYPES),
                 testing::Values(3, 5)
                 )
             )
@@ -110,7 +116,7 @@ typedef perf::TestBaseWithParam<Size_MatType_BorderType_ksize_t> Size_MatType_Bo
 PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3),
+                testing::Values(GAUSSIAN_BLUR_TYPES),
                 BorderType3x3::all()
                 )
             )
@@ -257,7 +263,7 @@ PERF_TEST_P(Size_MatType_BorderType_ksize, box_inplace,
 PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3),
+                testing::Values(GAUSSIAN_BLUR_TYPES),
                 BorderType::all()
                 )
             )

@@ -16,6 +16,11 @@ typedef TestBaseWithParam<MatInfo_SizePair_t> MatInfo_SizePair;
                           CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
                           CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4
 
+// 8U/16U/16S/32F x C1/C3/C4 (matches IPP CUBIC/LANCZOS4/affine coverage;
+// shared by the resizeCubicLanczos and resizeAffine tests below).
+#define RESIZE_INTER_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                           CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
+
 // For gradient-ish testing of the other matrix formats
 template<typename T>
 static void fillFPGradient(Mat& img)
@@ -290,8 +295,7 @@ typedef TestBaseWithParam<MatInfo_Size_Scale_Inter_t> MatInfo_Size_Scale_Inter;
 
 PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
             testing::Combine(
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(RESIZE_INTER_TYPES),
                 testing::Values(sz1080p),
                 testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
                 ResizeInterCubicLanczos::all()
@@ -321,8 +325,7 @@ typedef TestBaseWithParam<MatInfo_Size_Scale_InterAffine_t> MatInfo_Size_Scale_I
 
 PERF_TEST_P(MatInfo_Size_Scale_InterAffine, resizeAffine,
             testing::Combine(
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(RESIZE_INTER_TYPES),
                 testing::Values(sz1080p),
                 testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
                 ResizeInterAffine::all()

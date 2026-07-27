@@ -5,6 +5,9 @@ namespace opencv_test
 {
 using namespace perf;
 
+// Full depth sweep exercised by convertTo (src and dst independently).
+#define CONVERT_TO_DEPTHS CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F
+
 typedef tuple<Size, MatType, MatType, int, double> Size_DepthSrc_DepthDst_Channels_alpha_t;
 typedef perf::TestBaseWithParam<Size_DepthSrc_DepthDst_Channels_alpha_t> Size_DepthSrc_DepthDst_Channels_alpha;
 
@@ -12,8 +15,8 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
              testing::Combine
              (
                  testing::Values(szVGA, sz1080p),
-                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                 testing::Values(CONVERT_TO_DEPTHS),
+                 testing::Values(CONVERT_TO_DEPTHS),
                  testing::Values(1, 4),
                  testing::Values(1.0, 1./255)
              )
@@ -44,8 +47,8 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo_scale_shift,
              testing::Combine
              (
                  testing::Values(szVGA, sz1080p),
-                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                 testing::Values(CONVERT_TO_DEPTHS),
+                 testing::Values(CONVERT_TO_DEPTHS),
                  testing::Values(1, 4),
                  testing::Values(1.0, 1./255)
              )
@@ -80,7 +83,7 @@ PERF_TEST_P( Size_Depth_alpha, convertTo_scale_shift_inplace,
              testing::Combine
              (
                  testing::Values(szVGA, sz1080p),
-                 testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                 testing::Values(CONVERT_TO_DEPTHS),
                  testing::Values(1.0, 1./255)
              )
            )
