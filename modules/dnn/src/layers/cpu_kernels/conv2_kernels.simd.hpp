@@ -386,13 +386,12 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
         CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
     }
 
-// TODO(#29493): RVV conv is temporarily scalar. This universal path assumed
-// K0 == vlanes(), which under m1 holds only at VLEN=256. Disabled as in #29180.
-// Re-enable in a follow-up with a portable v_setvlmax<v_float32>(K0) universal
-// intrinsic (no-op on fixed-width ISAs, sets the vl/mask on RVV/SVE) so one vector
-// spans exactly the K0=8 block at any VLEN; the optimized multi-pixel case is a
-// later RVV-HAL step. See PR #29493 discussion.
-#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
+// RVV (scalable): this path assumes K0 == vlanes(), so one vector spans the K0=8 block.
+// Under m1 that holds natively only at VLEN=256, so the conv worker caps the active vector
+// length with v_setvlmax<v_float32>(K0) (a no-op on fixed-width ISAs) to make it hold at any
+// VLEN. Optimizing the multi-pixel case with the full register is a later RVV-HAL step.
+// See PR #29493 discussion (#28852).
+#elif CV_SIMD_SCALABLE  // RVV: re-enabled at any VLEN via v_setvlmax<v_float32>(K0) (#29493 follow-up)
 
 /////////////////////////// scalable (RVV) implementation /////////////////////////////
 // K0 == vlanes(), so each of the 10 spatial positions needs exactly one vector
@@ -609,7 +608,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32x4 zz = v_setzero_f32(); \
     v_float32x4 s0 = zz, s1 = zz
-#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
+#elif 0  // RVV: the scalar per-point tail uses the #else scalar path (correct at any VLEN, incl. VLEN=128 where vlanes<K0); the blocked path above carries the vectorized bulk
 #define CONV_INIT_SCALAR_SUMS() \
     v_float32 zz = vx_setzero_f32(); \
     v_float32 s0 = zz
@@ -647,7 +646,7 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
         s0 = v_min(s0, _vmx); s1 = v_min(s1, _vmx); \
         v_store((outbuf), s0); v_store((outbuf) + 4, s1); \
     }
-#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
+#elif 0  // RVV: the scalar per-point tail uses the #else scalar path (correct at any VLEN, incl. VLEN=128 where vlanes<K0); the blocked path above carries the vectorized bulk
 #define CONV_FINALIZE_SCALAR_OUT(outbuf) \
     { \
         v_float32 _vsc = vx_load(scalebuf); \
@@ -2251,6 +2250,24 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         float scalebuf[C0BUF], biasbuf[C0BUF], alphabuf[C0BUF];
         setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
 
+    #ifdef CONV_ENABLE_SIMD
+        // Cap the vector length to the K0 output block so a scalable register wider than
+        // K0 (RVV at VLEN>=512) processes exactly K0 lanes: the blocked SIMD path assumes one
+        // vector spans one K0=8 block and the scale/bias/tmp buffers are K0-sized. No-op on
+        // fixed-width backends; thread-local, cleared before this worker returns (#29493).
+        v_setvlmax<v_float32>(K0);
+      #if CV_SIMD_SCALABLE
+        // The cap can only shrink the register, not widen it: at VLEN=128 the m1 register is
+        // 4 lanes < K0=8, so the scalable blocked path (one vector per K0 block) cannot run.
+        // Gate it on vlanes==K0 (true at VLEN>=256 once capped) and let the scalar per-point
+        // tail handle everything at VLEN=128. Fixed-width backends cover K0 with lane pairs,
+        // so they are always ok.
+        const bool simd_ok = (VTraits<v_float32>::vlanes() == K0);
+      #else
+        const bool simd_ok = true;
+      #endif
+    #endif
+
         // 1x1x1 convolution with (1,1,1) strides:
         bool is_1x1s1 = (ksize == 1 && Sz*Sy*Sx == 1);
         if (is_1x1s1) {
@@ -2294,7 +2311,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             int p = p0;
 
         #ifdef CONV_ENABLE_SIMD
-            if (is_1x1s1) {
+            if (simd_ok && is_1x1s1) {
             for (; p < p1; p += SPAT_BLOCK_SIZE,
                            outptr += SPAT_BLOCK_SIZE*K0)
             {
@@ -2318,7 +2335,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 if (activation) { activation(outbuf, outbuf, SPAT_BLOCK_SIZE*K0, activParams); }
                 scatterOutputBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, outptr, tmpbuf);
             }
-            } else {
+            } else if (simd_ok) {
             cv::AutoBuffer<int, 64> kofs_tab(ksize);
             for (int i = 0; i < ksize; i++) {
                 kofs_tab[i] = ((ofsZYX[i*3] * Hi + ofsZYX[i*3+1]) * Wi + ofsZYX[i*3+2]) * C0;
@@ -2522,7 +2539,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                         CONV_UPDATE_BLOCK1(5);
                         CONV_UPDATE_BLOCK1(6);
                         CONV_UPDATE_BLOCK1(7);
-                    #elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
+                    #elif 0  // RVV: scalar tail via the #else path (correct at any VLEN, incl. VLEN=128 where vlanes<K0)
                         for (int c0 = 0; c0 < C0; ++c0) {
                             v_float32 w = vx_load(wptr + c0*K0);
                             v_float32 x = vx_setall_f32(inptr[c0]);
@@ -2544,6 +2561,9 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
+    #ifdef CONV_ENABLE_SIMD
+        v_setvlmax<v_float32>(0);   // restore VLMAX before this worker returns to the pool
+    #endif
     });
 }
 #if defined(__GNUC__) && !defined(__clang__) && defined(__riscv) && __GNUC__ < 15

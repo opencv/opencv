@@ -63,15 +63,19 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     const float* wdata = (const float*)weights__;
     const float* bias  = bias__;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
-    // zero-fills padded lanes.
-    const bool simd_ok =
-        ((ngroups == 1) || (Kg % C0 == 0)) && (C0 % VTraits<v_float32>::vlanes() == 0);
-#endif
-
     const int NK1 = N * K1;
     parallel_for_(Range(0, NK1), [&](const Range& range) {
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+        // Cap the vector length to the C0 channel block so a scalable register wider than
+        // C0 (RVV at VLEN>=512) processes exactly C0 lanes and satisfies C0 % vlanes == 0;
+        // without this, wide cores fall to scalar. No-op on fixed-width backends. Thread-local:
+        // set per worker, cleared before return (#29493). simd_ok is computed under the cap.
+        v_setvlmax<v_float32>(C0);
+        // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
+        // zero-fills padded lanes.
+        const bool simd_ok =
+            ((ngroups == 1) || (Kg % C0 == 0)) && (C0 % VTraits<v_float32>::vlanes() == 0);
+    #endif
         for (int nk1 = range.start; nk1 < range.end; nk1++) {
             const int n  = nk1 / K1;
             const int k1 = nk1 % K1;
@@ -219,6 +223,9 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                 }
             }
         }
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_setvlmax<v_float32>(0);   // restore VLMAX before this worker returns to the pool
+    #endif
     });
 }
 

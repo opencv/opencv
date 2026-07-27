@@ -47,7 +47,6 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
     int C1_ = layout != DATA_LAYOUT_NHWC ? shape[1] : 1;
     int C0_ = layout != DATA_LAYOUT_NCHW ? shape[shape.dims-1] : 1;
     int type_ = inp.type();
-    CV_SIMD_ONLY(int vlanes_ = VTraits<v_float32>::vlanes());
 
     size_t esz = inp.elemSize();
 
@@ -67,7 +66,12 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
         int C0 = C0_, C1 = C1_, C = C_;
         int planesize_C0 = planesize_*C0;
         int type = type_;
-        CV_SIMD_ONLY(int vlanes = vlanes_;
+        // For blocked layout (C0>1), cap the vector length to the C0 channel block so a
+        // scalable register wider than C0 (RVV at VLEN>=512) takes the C0==vlanes fast path
+        // instead of the scalar general case. NCHW (C0==1) keeps the full register for its
+        // planar loop. No-op on fixed-width backends; thread-local, cleared before return (#29493).
+        CV_SIMD_ONLY(if (C0 > 1) v_setvlmax<v_float32>(C0);
+        int vlanes = VTraits<v_float32>::vlanes();
         constexpr int max_lanes = VTraits<v_float32>::max_nlanes;
         constexpr int MAX_UNROLL = 4;
         float scalebuf[max_lanes*MAX_UNROLL];
@@ -342,6 +346,9 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                 }
             }
         }
+    #if CV_SIMD || CV_SIMD_SCALABLE
+        v_setvlmax<v_float32>(0);   // restore VLMAX before this worker returns to the pool
+    #endif
     }, (planesize_*C0_ > 1000000 ? N*C1_ : 1));
 }
 
