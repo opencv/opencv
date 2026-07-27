@@ -209,4 +209,49 @@ TEST(Imgproc_DistanceTransform, ipp_deterministic)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/29596
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so
+// distanceTransform started rejecting boolean masks. CV_Bool is a 1-byte type
+// whose values are only ever zero-tested here, so the result must match the one
+// produced by an equivalent CV_8UC1 mask.
+TEST(Imgproc_DistanceTransform, bool_mask_29596)
+{
+    Mat_<bool> mask(7, 7, true);
+    mask(3, 3) = false;
+    mask(0, 6) = false;
+
+    Mat_<uchar> ref(7, 7, (uchar)255);
+    ref(3, 3) = 0;
+    ref(0, 6) = 0;
+
+    ASSERT_EQ(mask.depth(), CV_Bool);
+
+    // CV_32F output: 3x3 and 5x5 kernels, plus the precise (trueDistTrans) path
+    const int maskSizes[] = { DIST_MASK_3, DIST_MASK_5, DIST_MASK_PRECISE };
+    for (size_t i = 0; i < sizeof(maskSizes)/sizeof(maskSizes[0]); i++)
+    {
+        Mat dist_bool, dist_ref;
+        ASSERT_NO_THROW(distanceTransform(mask, dist_bool, DIST_L2, maskSizes[i]));
+        distanceTransform(ref, dist_ref, DIST_L2, maskSizes[i]);
+        EXPECT_EQ(cv::norm(dist_bool, dist_ref, NORM_INF), 0) << "maskSize = " << maskSizes[i];
+    }
+
+    // CV_8U output path (distanceTransform_L1_8U -> distanceATS_L1_8u)
+    {
+        Mat dist_bool, dist_ref;
+        ASSERT_NO_THROW(distanceTransform(mask, dist_bool, DIST_L1, DIST_MASK_3, CV_8U));
+        distanceTransform(ref, dist_ref, DIST_L1, DIST_MASK_3, CV_8U);
+        EXPECT_EQ(cv::norm(dist_bool, dist_ref, NORM_INF), 0);
+    }
+
+    // labels overload
+    {
+        Mat dist_bool, labels_bool, dist_ref, labels_ref;
+        ASSERT_NO_THROW(distanceTransform(mask, dist_bool, labels_bool, DIST_L2, DIST_MASK_5));
+        distanceTransform(ref, dist_ref, labels_ref, DIST_L2, DIST_MASK_5);
+        EXPECT_EQ(cv::norm(dist_bool, dist_ref, NORM_INF), 0);
+        EXPECT_EQ(cv::norm(labels_bool, labels_ref, NORM_INF), 0);
+    }
+}
+
 }} // namespace
