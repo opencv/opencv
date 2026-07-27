@@ -4,43 +4,12 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include <fstream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/ptcloud.hpp>  // cv::viz3d now lives in the ptcloud module
 
 using namespace cv;
-
-static Mat loadPoints(const String& path)
-{
-    Mat points;
-    std::ifstream ifs(path);
-
-    int _;
-    float x, y, z, r, g, b;
-    Vec3f c = Vec3f::all(0.0f);
-    int count;
-
-    std::string str;
-    std::getline(ifs, str);
-
-    for (count = 0; ifs >> _ && ifs >> x && ifs >> z && ifs >> y && ifs >> r && ifs >> g && ifs >> b; ++count)
-    {
-        y = -y;
-        float data[] = { x, y, z, r / 255.0f, g / 255.0f, b / 255.0f };
-        points.push_back(Mat(Size(6, 1), CV_32F, &data));
-        c += Vec3f(x, y, z);
-    }
-
-    c /= count;
-
-    for (int i = 0; i < count; ++i)
-        for (int j = 0; j < 3; ++j)
-            points.at<float>(i, j) -= c(j);
-
-    return points;
-}
 
 int main()
 {
@@ -95,7 +64,10 @@ int main()
     cvtColor(rgbd, rgbd, COLOR_BGRA2RGBA);
 
     // Point cloud data taken from https://sketchfab.com/3d-models/anthidium-forcipatum-point-cloud-3493da15a8db4f34929fc38d9d0fcb2c
-    Mat bee_mat = loadPoints(samples::findFile("anthidium-forcipatum.csv"));
+    Mat bee_verts, bee_rgb;
+    loadPointCloud(samples::findFile("anthidium-forcipatum.ply"), bee_verts, noArray(), bee_rgb);
+    Mat bee_mat;
+    hconcat(bee_verts.reshape(1, bee_verts.rows), bee_rgb.reshape(1, bee_rgb.rows), bee_mat);
 
     // Show two instances of the same example mesh
     viz3d::showMesh("viz3d", "mesh1", verts_mat, indices_mat);
