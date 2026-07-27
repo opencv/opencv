@@ -12,7 +12,7 @@
 
 using namespace cv;
 
-Mat loadPoints(const String& path)
+static Mat loadPoints(const String& path)
 {
     Mat points;
     std::ifstream ifs(path);
