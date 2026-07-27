@@ -169,13 +169,13 @@ void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
                               ushort* bgr, int bgr_step, Size size )
 {
     int i;
-    for( ; size.height--; gray += gray_step/sizeof(gray[0]) )
+    for( ; size.height--; gray += gray_step/(int)sizeof(gray[0]) )
     {
         for( i = 0; i < size.width; i++, bgr += 3 )
         {
             bgr[0] = bgr[1] = bgr[2] = gray[i];
         }
-        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
+        bgr += bgr_step/(int)sizeof(bgr[0]) - size.width*3;
     }
 }
 
@@ -214,8 +214,8 @@ void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
             bgr[0] = t0; bgr[1] = t1;
             t0 = bgra[swap_rb^2]; bgr[2] = t0;
         }
-        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
-        bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
+        bgr += bgr_step/(int)sizeof(bgr[0]) - size.width*3;
+        bgra += bgra_step/(int)sizeof(bgra[0]) - size.width*4;
     }
 }
 
@@ -252,8 +252,8 @@ void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
          rgba[0] = t2; rgba[1] = t1;
          rgba[2] = t0; rgba[3] = t3;
      }
-     bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
-     rgba += rgba_step/sizeof(rgba[0]) - size.width*4;
+     bgra += bgra_step/(int)sizeof(bgra[0]) - size.width*4;
+     rgba += rgba_step/(int)sizeof(rgba[0]) - size.width*4;
  }
 }
 

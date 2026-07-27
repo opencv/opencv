@@ -689,6 +689,28 @@ TEST(Imgcodecs_Tiff, readWrite_unsigned)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+// See https://github.com/opencv/opencv/issues/29615
+// Decoding a 16-bit 4-channel TIFF used to form an out of range pointer in
+// icvCvt_BGRA2RGBA_16u_C4R because the byte step was divided by an unsigned
+// sizeof and then had size.width*4 subtracted, which wraps around for a zero
+// step. This just checks that a 16UC4 TIFF round-trips correctly; the value is
+// mainly that the sanitizer builds no longer report the pointer overflow.
+TEST(Imgcodecs_Tiff, regression_29615_16UC4)
+{
+    Mat img(4, 3, CV_16UC4);
+    randu(img, Scalar::all(0), Scalar::all(65535));
+
+    vector<uchar> buf;
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", img, buf)));
+
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecode(buf, IMREAD_UNCHANGED));
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(CV_16UC4, decoded.type());
+    ASSERT_EQ(img.size(), decoded.size());
+    EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
+}
+
 TEST(Imgcodecs_Tiff, readWrite_32FC1)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
