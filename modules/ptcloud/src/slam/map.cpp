@@ -89,6 +89,7 @@ void Map::addObservation(KeyFrame* kf, size_t kpIdx, MapPoint* mp)
     CV_Assert(kf && mp);
     CV_Assert(kpIdx < kf->mapPoints.size());
     if (kf->mapPoints[kpIdx] != nullptr) return;
+    if (mp->observations.count(kf)) return;
     kf->mapPoints[kpIdx] = mp;
     mp->observations[kf] = kpIdx;
 }
@@ -113,6 +114,46 @@ void Map::removeMapPoint(MapPoint* mp)
     impl->mapPoints.erase(mp);
     impl->mpIndex.erase(mp->id);
     delete mp;
+}
+
+void Map::replaceMapPoint(MapPoint* oldMp, MapPoint* newMp)
+{
+    if (!oldMp || !newMp || oldMp == newMp) return;
+    for (auto& [kf, kpIdx] : oldMp->observations)
+    {
+        if (kpIdx >= kf->mapPoints.size() || kf->mapPoints[kpIdx] != oldMp)
+            continue;
+
+        if (newMp->observations.find(kf) == newMp->observations.end())
+        {
+            // newMp not yet observed in this keyframe: take over the slot.
+            kf->mapPoints[kpIdx] = newMp;
+            newMp->observations.emplace(kf, kpIdx);
+        }
+        else
+        {
+            kf->mapPoints[kpIdx] = nullptr;
+        }
+    }
+    oldMp->bad = true;
+    impl->mapPoints.erase(oldMp);
+    impl->mpIndex.erase(oldMp->id);
+    delete oldMp;
+}
+
+void Map::removeKeyframe(KeyFrame* kf)
+{
+    if (!kf) return;
+    for (size_t i = 0; i < kf->mapPoints.size(); ++i)
+    {
+        MapPoint* mp = kf->mapPoints[i];
+        if (!mp) continue;
+        mp->observations.erase(kf);
+        if (mp->observations.empty()) mp->bad = true;
+    }
+    impl->keyframes.erase(kf);
+    impl->kfIndex.erase(kf->id);
+    kf->bad = true;
 }
 
 // Reference / current keyframes

@@ -30,6 +30,7 @@ inline double cameraDepth(const Matx44d& T_cw, double X, double Y, double Z)
 
 void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
 {
+    // promote current frame to a keyframe
     KeyFrame* newKf = new KeyFrame();
     newKf->poseCw = cur.poseCw;
     newKf->keypoints = cur.keypoints;
@@ -41,6 +42,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
 
     map.addKeyframe(newKf);
 
+    // register map points already tracked by this frame
     for (size_t i = 0; i < cur.mapPoints.size(); ++i)
     {
         MapPoint* mp = cur.mapPoints[i];
@@ -48,6 +50,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
         map.addObservation(newKf, i, mp);
     }
 
+    // match lastKf↔newKf and keep only pairs where neither keypoint has a map point yet
     std::vector<DMatch> kfToCur;
     matchFrames(lastKf->keypoints, lastKf->descriptors, lastKf->imageSize,
                 cur.keypoints, cur.descriptors, cur.imageSize, kfToCur);
@@ -75,10 +78,13 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
         pts2.push_back(cur.undistKpts[m.trainIdx]);
         triMatchIdx.push_back((int)i);
     }
-
+    
+    // every matched keypoint between the two keyframes is already linked to an existing map point. Nothing new to triangulate.
     if (pts1.empty())
     {
         detail::updateCovisibility(newKf);
+        Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
+        detectLoop(newKf);
         map.setCurrentKeyframe(newKf);
         lastKf = newKf;
         lastKfInliers = 0;
@@ -86,6 +92,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
         return;
     }
 
+    // triangulate and add new map points, rejecting by depth / reprojection / parallax
     Mat pts4D;
     triangulatePoints(P1, P2, pts1, pts2, pts4D);
 
@@ -113,6 +120,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
 
         MapPoint* mp = new MapPoint();
         mp->pos = Xw;
+        mp->refKf = newKf;
         const DMatch& dm = kfToCur[triMatchIdx[i]];
         mp->refDesc = cur.descriptors.row(dm.trainIdx).clone();
 
@@ -123,6 +131,12 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& cur)
     }
 
     detail::updateCovisibility(newKf);
+
+    // Local BA 
+    Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
+
+    // Loop detection
+    detectLoop(newKf);
 
     map.setCurrentKeyframe(newKf);
     lastKf = newKf;

@@ -78,6 +78,16 @@ void updateCovisibility(KeyFrame* kf)
 {
     if (!kf) return;
 
+    // Neighbours whose ordered list may change: previous ∪ new.
+    std::set<KeyFrame*> affected;
+
+    // Drop kf's stale reciprocal entries from its *previous* neighbours first, so
+    // repeated calls for the same kf (keyframe creation, and again for Kc/Km in
+    // closeLoop) cannot accumulate/desync the graph. Only kf->covisibility was
+    // cleared before, leaving nb->covisibility[kf] growing on every call.
+    for (auto& [oldNb, cnt] : kf->covisibility)
+        if (oldNb) { oldNb->covisibility.erase(kf); affected.insert(oldNb); }
+
     kf->covisibility.clear();
 
     for (MapPoint* mp : kf->mapPoints)
@@ -87,12 +97,19 @@ void updateCovisibility(KeyFrame* kf)
         {
             if (obsKf == kf) continue;
             kf->covisibility[obsKf]++;
-            obsKf->covisibility[kf]++;
         }
     }
 
-    rebuildOrderedCovisibility(kf);
+    // Write the reciprocal weight symmetrically (set, not increment) so the
+    // graph is idempotent and consistent regardless of call order.
     for (auto& [nb, cnt] : kf->covisibility)
+    {
+        nb->covisibility[kf] = cnt;
+        affected.insert(nb);
+    }
+
+    rebuildOrderedCovisibility(kf);
+    for (KeyFrame* nb : affected)
         rebuildOrderedCovisibility(nb);
 }
 
@@ -132,10 +149,10 @@ bool VisualOdometryImpl::shouldPromoteKeyframe(int nInliers, const Matx44d& T_cw
     Point3d cCur  = detail::cameraCenterWorld(T_cw);
     Point3d cLast = detail::cameraCenterWorld(lastKf->poseCw);
     Point3d d     = cCur - cLast;
-    double transDist = std::sqrt(d.dot(d));
-    if (transDist > params.kfTransThresh)
+    double dist   = std::sqrt(d.dot(d));
+    if (dist > params.kfTransThresh)
     {
-        reason = format("trans=%.3f", transDist);
+        reason = format("trans=%.3f", dist);
         return true;
     }
 

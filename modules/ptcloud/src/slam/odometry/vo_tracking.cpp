@@ -152,7 +152,7 @@ bool VisualOdometryImpl::trackWithMotionModel(Frame& cur)
                            params.pnpMinInliers);
     if (nInliers < 0) return false;
 
-    int nOpt = poseInlierCheck(cur, K, params.pnpReprojThresh);
+    int nOpt = Optimizer::PoseOptimization(cur, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
@@ -208,7 +208,7 @@ bool VisualOdometryImpl::trackWithReferenceKF(Frame& cur)
             cur.mapPoints[kpIdx] = corrMps[k];
     }
 
-    int nOpt = poseInlierCheck(cur, K, params.pnpReprojThresh);
+    int nOpt = Optimizer::PoseOptimization(cur, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
@@ -218,13 +218,9 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
     if (!hasPrevFrame || prevFrame.image.empty()) return false;
 
     const Frame& prev = prevFrame;
-    if (prev.keypoints.empty()) return false;
+    if (prev.undistKpts.empty()) return false;
 
-    // LK runs on the raw imgs
-    std::vector<Point2f> prevPts;
-    prevPts.reserve(prev.keypoints.size());
-    for (const auto& kp : prev.keypoints) prevPts.push_back(kp.pt);
-
+    std::vector<Point2f> prevPts(prev.undistKpts.begin(), prev.undistKpts.end());
     std::vector<Point2f> curPts;
     std::vector<uchar> status;
     std::vector<float> err;
@@ -232,13 +228,6 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
     calcOpticalFlowPyrLK(prev.image, cur.image, prevPts, curPts,
                          status, err, Size(21, 21), 3,
                          TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.01));
-
-    // PnP uses K with no distortion
-    std::vector<Point2f> curUndist;
-    if (!dist.empty())
-        undistortPoints(curPts, curUndist, K, dist, noArray(), K);
-    else
-        curUndist = curPts;
 
     std::vector<Point3f> obj; std::vector<Point2f> img;
     obj.reserve(prevPts.size()); img.reserve(prevPts.size());
@@ -250,7 +239,7 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
         MapPoint* mp = prev.mapPoints[i];
         if (!mp || mp->bad) continue;
         obj.push_back(Point3f((float)mp->pos.x,(float)mp->pos.y,(float)mp->pos.z));
-        img.push_back(curUndist[i]);
+        img.push_back(curPts[i]);
     }
 
     if ((int)obj.size() < params.opticalFlowMinInliers)
@@ -332,7 +321,7 @@ void VisualOdometryImpl::trackLocalMap(Frame& cur)
     }
 
     if (anyNew)
-        poseInlierCheck(cur, K, params.pnpReprojThresh);
+        Optimizer::PoseOptimization(cur, K, params.pnpReprojThresh, params.poseOptEnable);
 }
 
 bool VisualOdometryImpl::track(Frame& cur)
@@ -379,6 +368,7 @@ bool VisualOdometryImpl::track(Frame& cur)
 
     lastPoseCw = cur.poseCw;
     map.appendPose(cur.poseCw);
+    frameRecords.push_back({ cur.poseCw * lastKf->poseCw.inv(), lastKf });
     ++framesSinceKf;
 
     prevFrame = cur;
@@ -388,11 +378,21 @@ bool VisualOdometryImpl::track(Frame& cur)
     if (shouldPromoteKeyframe(nInliers, cur.poseCw, kf_reason))
     {
         int mpBefore = map.numMapPoints();
-        promoteKeyframeAndGrowMap(cur);
+        promoteKeyframeAndGrowMap(cur);   // runs local BA + detectLoop/closeLoop,
+                                          // which append their events to lastEvent
         lastPoseCw = lastKf->poseCw;
-        lastEvent = format("keyframe: %s, +%d mp",
+        // Prepend the keyframe annotation (with a LocalBA marker) to whatever
+        // detectLoop()/closeLoop() already appended this frame — a plain
+        // assignment here would wipe the loop-detection/closure log.
+        String kfEv = format("keyframe: %s, +%d mp%s",
                              kf_reason.c_str(),
-                             map.numMapPoints() - mpBefore);
+                             map.numMapPoints() - mpBefore,
+#ifdef HAVE_G2O
+                             params.localBaEnable ? " (LocalBA)" : "");
+#else
+                             "");
+#endif
+        lastEvent = lastEvent.empty() ? kfEv : (kfEv + " | " + lastEvent);
     }
 
     return true;
