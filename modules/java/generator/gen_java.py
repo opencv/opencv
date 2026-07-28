@@ -1223,6 +1223,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """
     private final Cleaner.Cleanable cleanable;
 
+    /**
+     * Closes this instance, releasing all of the native memory associated with it
+     */
     @Override
     public void close() {
         cleanable.clean();

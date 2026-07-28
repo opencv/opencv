@@ -18,6 +18,9 @@ public abstract class CleanableMat implements AutoCloseable {
         cleanable = cleaner.register(this, () -> n_delete(nativeObjCopy));
     }
 
+    /**
+     * Closes this instance, releasing all of the native memory associated with it
+     */
     @Override
     public void close() {
         cleanable.clean();
