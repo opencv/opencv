@@ -2,14 +2,10 @@
     "ManualFuncs" : {
         "QRCodeDetectorAruco": {
             "getDetectorParameters": { "declaration" : [""], "implementation" : [""] }
-        }
-    },
-    "type_dict" : {
-        "vector_vector_int": {
-            "objc_type": "IntVector*",
-            "v_type": "IntVector",
-            "primitive_vector_vector": true,
-            "swift_type": "[[Int32]]"
+        },
+        "CharucoBoard": {
+            "getNearestMarkerIdx"     : { "declaration" : [""], "implementation" : [""] },
+            "getNearestMarkerCorners" : { "declaration" : [""], "implementation" : [""] }
         }
     }
 }
