@@ -6,18 +6,21 @@
 
 namespace opencv_test {
 
-// 8U/16U/16S x C1/C3/C4 + 32FC1 (matches IPP medianBlur coverage; ksize 3/5 for
-// all types — shared by the out-of-place and in-place median tests).
-#define MEDIAN_BLUR_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1
+// 8U x C1/C3/C4 — depth/channel base shared by the type sweeps below.
+#define BLUR_8U_TYPES CV_8UC1, CV_8UC3, CV_8UC4
+// 8U/16U/16S x C1/C3/C4 — integer coverage shared by medianBlur and boxFilter.
+#define BLUR_INT_TYPES BLUR_8U_TYPES, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4
+// + 32FC1 (matches IPP medianBlur coverage; ksize 3/5 for all types — shared by
+// the out-of-place and in-place median tests).
+#define MEDIAN_BLUR_TYPES BLUR_INT_TYPES, CV_32FC1
+// cv::medianBlur supports aperture > 5 for CV_8U only.
+#define MEDIAN_BLUR_LARGE_TYPES BLUR_8U_TYPES
+// Full boxFilter type sweep (matches IPP ippFilterBox coverage).
+#define BOX_FILTER_TYPES BLUR_INT_TYPES, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4
 // 3x3 / 5x5 GaussianBlur type coverage (matches IPP; shared by both fixed-kernel tests).
-#define GAUSSIAN_BLUR_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
+#define GAUSSIAN_BLUR_TYPES BLUR_8U_TYPES, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
 // Large Gaussian kernels (7/21) drop the C4 variants.
 #define GAUSSIAN_BLUR_LARGE_TYPES CV_8UC1, CV_8UC3, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
-// cv::medianBlur supports aperture > 5 for CV_8U only.
-#define MEDIAN_BLUR_LARGE_TYPES CV_8UC1, CV_8UC3, CV_8UC4
-// Full boxFilter type sweep (matches IPP ippFilterBox coverage).
-#define BOX_FILTER_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
-                         CV_16SC1, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4
 
 typedef tuple<Size, MatType, int> Size_MatType_kSize_t;
 typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;

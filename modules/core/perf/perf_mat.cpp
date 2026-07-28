@@ -5,12 +5,14 @@ namespace opencv_test
 {
 using namespace perf;
 
+// 8U x C1..C4 — leading block common to both masked-operation sweeps below.
+#define MAT_MASK_8U_TYPES     CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4
 // Full type sweep for the masked copy (matches IPP ippCopy_Mask coverage).
-#define MAT_COPYTO_MASK_TYPES CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
+#define MAT_COPYTO_MASK_TYPES MAT_MASK_8U_TYPES, CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
                               CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32SC2, CV_32SC3, CV_32SC4, \
                               CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC2
 // Masked set-to (matches IPP ippSet_Mask coverage).
-#define MAT_SETTO_MASK_TYPES  CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+#define MAT_SETTO_MASK_TYPES  MAT_MASK_8U_TYPES, CV_16UC1, CV_16UC3, CV_16UC4, \
                               CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4
 
 PERF_TEST_P(Size_MatType, Mat_Eye,
