@@ -11,6 +11,7 @@
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/pooling.hpp"
 #endif
+#include "../hal_replacement.hpp"
 
 namespace cv
 {
@@ -26,6 +27,20 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
     CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
     parallel_for_(Range(0, NC1), [&](const Range& r) {
+        // Offer this task range to an accelerated HAL first, flattening the descriptor into
+        // a stable C argument list (no dnn types cross the boundary). On NOT_IMPLEMENTED
+        // (the default) fall through to the built-in kernel for [r.start, r.end).
+        {
+            int sd = cs.nspatialdims;
+            int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
+            int outsize[3] = { sd > 2 ? cs.outshape[sd-1] : 1, sd > 1 ? cs.outshape[sd] : 1, cs.outshape[sd+1] };
+            CALL_HAL(dnn_maxpool32f, cv_hal_dnn_maxpool32f,
+                     (const float*)inp_, (float*)out_, cs.inpshape.back(),
+                     insize, outsize, cs.strides, cs.pads, cs.inner,
+                     cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),
+                     r.start, r.end);
+        }
+
         constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
 
         CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
