@@ -7,8 +7,34 @@
 #include "../precomp.hpp"
 #include "vo_impl.hpp"
 
+#include <fstream>
+#include <sstream>
+
 namespace cv {
 namespace slam {
+
+namespace {
+
+const char* stateName(OdometryState s)
+{
+    switch (s)
+    {
+    case NOT_INITIALIZED: return "NOT_INITIALIZED";
+    case INITIALIZING:    return "INITIALIZING";
+    case TRACKING:        return "TRACKING";
+    }
+    return "NOT_INITIALIZED";
+}
+
+String joinPath(const String& dir, const String& name)
+{
+    if (dir.empty()) return name;
+    char last = dir.back();
+    if (last == '/' || last == '\\') return dir + name;
+    return dir + "/" + name;
+}
+
+} // anonymous namespace
 
 // Factory
 
@@ -18,6 +44,8 @@ VisualOdometry::~VisualOdometry() = default;
 Ptr<VisualOdometry> VisualOdometry::create(
     const Ptr<Feature2D>& detector,
     const Ptr<DescriptorMatcher>& matcher,
+    const String& imagesFolder,
+    const String& outputFolder,
     InputArray cameraMatrix,
     InputArray distCoeffs,
     const OdometryParams& params)
@@ -29,18 +57,22 @@ Ptr<VisualOdometry> VisualOdometry::create(
     CV_Assert(!K.empty() && K.rows == 3 && K.cols == 3);
     Mat dist = distCoeffs.empty() ? Mat() : distCoeffs.getMat();
 
-    return makePtr<VisualOdometryImpl>(detector, matcher, K, dist, params);
+    return makePtr<VisualOdometryImpl>(
+        detector, matcher, imagesFolder, outputFolder, K, dist, params);
 }
 
 // Constructor
 
 VisualOdometryImpl::VisualOdometryImpl(
-    const Ptr<Feature2D>& detector_,
-    const Ptr<DescriptorMatcher>& matcher_,
+    const Ptr<Feature2D>& detector,
+    const Ptr<DescriptorMatcher>& matcher,
+    const String& imagesFolder,
+    const String& outputFolder,
     const Mat& cameraMatrix,
     const Mat& distCoeffs,
-    const OdometryParams& params_)
-    : detector(detector_), matcher(matcher_), params(params_)
+    const OdometryParams& params)
+    : detector(detector), matcher(matcher), params(params),
+      imagesFolder(imagesFolder), outputFolder(outputFolder)
 {
     cameraMatrix.convertTo(K, CV_64F);
     if (!distCoeffs.empty())
@@ -62,6 +94,7 @@ void VisualOdometryImpl::reset()
     prevFrame = Frame();
     hasPrevFrame = false;
     lastEvent.clear();
+    frameRecords.clear();
     map.clear();
 }
 
@@ -72,26 +105,26 @@ bool VisualOdometryImpl::processFrame(InputArray image)
     if (image.empty()) return false;
     lastEvent.clear();
 
-    Frame currentFrame;
-    extractFeatures(image, currentFrame);
-    if (currentFrame.keypoints.empty() || currentFrame.descriptors.empty()) return false;
+    Frame cur;
+    extractFeatures(image, cur);
+    if (cur.keypoints.empty() || cur.descriptors.empty()) return false;
 
-    currentFrame.mapPoints.assign(currentFrame.keypoints.size(), nullptr);
-    currentFrame.outliers.assign(currentFrame.keypoints.size(), false);
-    currentFrame.buildGrid();
+    cur.mapPoints.assign(cur.keypoints.size(), nullptr);
+    cur.outliers.assign(cur.keypoints.size(), false);
+    cur.buildGrid();
 
     switch (state)
     {
     case NOT_INITIALIZED:
-        refFrame = currentFrame;
+        refFrame = cur;
         state = INITIALIZING;
         return false;
 
     case INITIALIZING:
-        return bootstrap(currentFrame);
+        return bootstrap(cur);
 
     case TRACKING:
-        return track(currentFrame);
+        return track(cur);
     }
     return false;
 }
@@ -139,8 +172,226 @@ void VisualOdometryImpl::matchFrames(
     if (qDesc.empty() || tDesc.empty()) return;
     if (qKp.empty()   || tKp.empty())   return;
 
-    matcher->setImagePairInfo(qKp, tKp, qSz, tSz);
+    LightGlueMatcher* lg = dynamic_cast<LightGlueMatcher*>(matcher.get());
+    if (lg)
+    {
+        Mat qk((int)qKp.size(), 2, CV_32F);
+        for (size_t i = 0; i < qKp.size(); ++i)
+        { qk.at<float>((int)i,0) = qKp[i].pt.x; qk.at<float>((int)i,1) = qKp[i].pt.y; }
+
+        Mat tk((int)tKp.size(), 2, CV_32F);
+        for (size_t i = 0; i < tKp.size(); ++i)
+        { tk.at<float>((int)i,0) = tKp[i].pt.x; tk.at<float>((int)i,1) = tKp[i].pt.y; }
+
+        lg->setPairInfo(qk, tk, qSz, tSz);
+    }
+
     matcher->match(qDesc, tDesc, matches);
+}
+
+// Batch run()
+
+bool VisualOdometryImpl::run()
+{
+    CV_INSTRUMENT_REGION();
+
+    if (imagesFolder.empty())
+    {
+        CV_LOG_ERROR(NULL, "VisualOdometry::run: imagesFolder is empty");
+        return false;
+    }
+
+    std::vector<String> allFiles;
+    try { cv::glob(imagesFolder, allFiles, false); }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "VisualOdometry::run: glob failed: " << e.what());
+        return false;
+    }
+
+    std::vector<String> imgFiles;
+    imgFiles.reserve(allFiles.size());
+    for (const auto& f : allFiles)
+        if (cv::haveImageReader(f)) imgFiles.push_back(f);
+    std::sort(imgFiles.begin(), imgFiles.end());
+
+    if (imgFiles.empty())
+    {
+        CV_LOG_WARNING(NULL, "VisualOdometry::run: no images in " << imagesFolder);
+        return false;
+    }
+
+    std::ofstream log;
+    if (!outputFolder.empty())
+    {
+        cv::utils::fs::createDirectories(outputFolder);
+        log.open(joinPath(outputFolder, "vo.log").c_str());
+    }
+    auto logln = [&](const String& s) { if (log.is_open()) log << s << "\n"; };
+
+    {
+        std::ostringstream ss;
+        ss << "[INFO] optimizer: pose_ba=" << (params.poseOptEnable ? "g2o" : "reproj")
+           << " local_ba=" << (params.localBaEnable ? "on" : "off")
+           << " global_ba=" << (params.globalBaEnable ? "on" : "off")
+           << " loop=" << (params.loopEnable ? "on" : "off");
+        #ifndef HAVE_G2O
+        ss << " [WARNING: g2o unavailable — BA and loop-closure are no-ops]";
+        #endif
+        logln(ss.str());
+    }
+    logln(String("[INFO] images_folder = ") + imagesFolder);
+    logln(String("[INFO] output_folder = ") + outputFolder);
+    {
+        std::ostringstream ss;
+        ss << "[INFO] found " << imgFiles.size() << " image(s)";
+        logln(ss.str());
+    }
+
+    reset();
+
+    int nEmitted = 0;
+
+    for (size_t i = 0; i < imgFiles.size(); ++i)
+    {
+        Mat img = imread(imgFiles[i]);
+        if (img.empty())
+        {
+            std::ostringstream ss;
+            ss << "[FRAME " << i << "] file=" << imgFiles[i] << " ERROR: imread failed";
+            logln(ss.str()); continue;
+        }
+
+        OdometryState before = state;
+        bool emitted = processFrame(img);
+        OdometryState after = state;
+        if (emitted) ++nEmitted;
+
+        std::ostringstream ss;
+        ss << "[FRAME " << i << "] file=" << imgFiles[i]
+           << " state=" << stateName(before);
+        if (before != after) ss << "->" << stateName(after);
+        ss << " emitted=" << (emitted ? "yes" : "no")
+           << " keyframes=" << map.numKeyframes()
+           << " map_points=" << map.numMapPoints();
+        if (!lastEvent.empty()) ss << " [" << lastEvent << "]";
+        if (emitted)
+        {
+            Point3d C = detail::cameraCenterWorld(lastPoseCw);
+            ss << " C=(" << C.x << "," << C.y << "," << C.z << ")";
+        }
+        logln(ss.str());
+    }
+    
+    // Global BA: full map refinement after all frames are processed.
+    {
+        Optimizer::GlobalBAStats gbaStats;
+        Optimizer::GlobalBundleAdjustment(map, K, params.globalBaIters,
+                                          params.globalBaMinObs, params.globalBaEnable,
+                                          nullptr, &gbaStats);
+        if (gbaStats.ran)
+        {
+            std::ostringstream gs;
+            gs << "[INFO] global BA: chi2 " << gbaStats.chi2Before
+               << " -> " << gbaStats.chi2After
+               << " (" << gbaStats.posesUpdated << " poses updated, "
+               << gbaStats.culled << " observations culled)";
+            logln(gs.str());
+            CV_LOG_INFO(NULL, "slam global BA complete: chi2 "
+                              << gbaStats.chi2Before << " -> " << gbaStats.chi2After
+                              << " (" << gbaStats.posesUpdated << " poses updated, "
+                              << gbaStats.culled << " observations culled)");
+        }
+    }
+
+    if (!outputFolder.empty())
+    {
+        writeImages        (joinPath(outputFolder, "images.txt"));
+        writeKeyframeImages(joinPath(outputFolder, "keyframe_images.txt"));
+        writePoint3D       (joinPath(outputFolder, "point3d.txt"));
+        writeCamera        (joinPath(outputFolder, "camera.txt"));
+
+        std::ostringstream ss;
+        ss << "[INFO] run complete: frames=" << imgFiles.size()
+           << " emitted=" << nEmitted
+           << " keyframes=" << map.numKeyframes()
+           << " map_points=" << map.numMapPoints();
+        logln(ss.str());
+        logln("[INFO] wrote images.txt, keyframe_images.txt, point3d.txt, camera.txt");
+    }
+
+    return nEmitted > 0;
+}
+
+// IO helpers
+
+// all frames, corrected — each frame rides along with its reference keyframe's corrected pose
+void VisualOdometryImpl::writeImages(const String& path) const
+{
+    std::ofstream f(path.c_str());
+    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeImages: cannot open " << path); return; }
+    f << "# Corrected per-frame camera centre in world coordinates.\n# Columns: Cx Cy Cz\n";
+    f.setf(std::ios::scientific); f.precision(9);
+    for (const auto& rec : frameRecords)
+    {
+        if (!rec.refKf) continue;
+        Matx44d corrected = rec.relPose * rec.refKf->poseCw;
+        Point3d C = detail::cameraCenterWorld(corrected);
+        f << C.x << " " << C.y << " " << C.z << "\n";
+    }
+}
+
+// keyframes only, corrected — final poses after local BA, loop closure, global BA
+void VisualOdometryImpl::writeKeyframeImages(const String& path) const
+{
+    std::ofstream f(path.c_str());
+    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeKeyframeImages: cannot open " << path); return; }
+    f << "# Corrected keyframe camera centres in world coordinates.\n# Columns: kf_id Cx Cy Cz\n";
+    f.setf(std::ios::scientific); f.precision(9);
+    std::vector<KeyFrame*> kfs(map.keyframes().begin(), map.keyframes().end());
+    std::sort(kfs.begin(), kfs.end(),
+              [](const KeyFrame* a, const KeyFrame* b){ return a->id < b->id; });
+    for (const KeyFrame* kf : kfs)
+    {
+        if (!kf || kf->bad) continue;
+        Point3d C = detail::cameraCenterWorld(kf->poseCw);
+        f << kf->id << " " << C.x << " " << C.y << " " << C.z << "\n";
+    }
+}
+
+// all 3D map points, corrected
+void VisualOdometryImpl::writePoint3D(const String& path) const
+{
+    std::ofstream f(path.c_str());
+    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writePoint3D: cannot open " << path); return; }
+    f << "# Map points in world coordinates.\n# Columns: id X Y Z n_observations\n";
+    f.setf(std::ios::scientific); f.precision(9);
+    for (MapPoint* mp : map.mapPoints())
+    {
+        if (!mp || mp->bad) continue;
+        f << mp->id << " "
+          << mp->pos.x << " " << mp->pos.y << " " << mp->pos.z << " "
+          << mp->observations.size() << "\n";
+    }
+}
+
+// camera intrinsics as-is
+void VisualOdometryImpl::writeCamera(const String& path) const
+{
+    std::ofstream f(path.c_str());
+    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeCamera: cannot open " << path); return; }
+    f << "# Camera intrinsics\n";
+    f << "# fx fy cx cy\n";
+    f.setf(std::ios::scientific); f.precision(9);
+    f << K.at<double>(0,0) << " " << K.at<double>(1,1) << " "
+      << K.at<double>(0,2) << " " << K.at<double>(1,2) << "\n";
+    if (!dist.empty())
+    {
+        f << "# distortion coefficients\n";
+        Mat d = dist.reshape(1, 1);
+        for (int i = 0; i < d.cols; ++i)
+            f << d.at<double>(0, i) << (i + 1 < d.cols ? " " : "\n");
+    }
 }
 
 }} // namespace cv::slam

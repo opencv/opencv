@@ -222,6 +222,7 @@ bool VisualOdometryImpl::bootstrap(Frame& cur)
     {
         MapPoint* mp = new MapPoint();
         mp->pos = goodPts[i];
+        mp->refKf = kfRef;
         const DMatch& m = matches[goodMatch[i]];
         mp->refDesc = refFrame.descriptors.row(m.queryIdx).clone();
 
@@ -244,6 +245,8 @@ bool VisualOdometryImpl::bootstrap(Frame& cur)
 
     map.appendPose(T_ref);
     map.appendPose(T_cur);
+    frameRecords.push_back({ Matx44d::eye(), kfRef });
+    frameRecords.push_back({ Matx44d::eye(), kfCur });
 
     refFrame = Frame();
     return true;
