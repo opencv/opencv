@@ -10,7 +10,8 @@ using namespace perf;
 #define TYPICAL_MATS_BITW_ARITHM       testing::Combine(testing::Values(TYPICAL_MAT_SIZES_BITW_ARITHM), testing::Values(TYPICAL_MAT_TYPES_BITW_ARITHM))
 
 // Scalar-operand bitwise tests also cover CV_16U (matches IPP ippBitwise*_Const: 8U,16U,32S)
-#define TYPICAL_MATS_BITW_SCALAR       testing::Combine(testing::Values(TYPICAL_MAT_SIZES_BITW_ARITHM), testing::Values(CV_8UC1, CV_8SC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32SC4))
+#define TYPICAL_MAT_TYPES_BITW_SCALAR  CV_8UC1, CV_8SC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32SC4
+#define TYPICAL_MATS_BITW_SCALAR       testing::Combine(testing::Values(TYPICAL_MAT_SIZES_BITW_ARITHM), testing::Values(TYPICAL_MAT_TYPES_BITW_SCALAR))
 
 PERF_TEST_P(Size_MatType, bitwise_not, TYPICAL_MATS_BITW_ARITHM)
 {

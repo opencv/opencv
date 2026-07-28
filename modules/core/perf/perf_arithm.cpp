@@ -7,6 +7,14 @@ namespace opencv_test
 {
 using namespace perf;
 
+// Shared BinaryOpTest coverage (matches IPP add/subtract/multiply/absdiff/min/max/transpose).
+#define BINARY_OP_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, \
+                        CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1
+// Integer types accepting a scale factor (matches IPP add/subtract _Scale).
+#define ARITHM_SCALE_TYPES (perf::MatType)CV_8UC1, (perf::MatType)CV_16UC1, (perf::MatType)CV_16SC1
+// Floating-point-only ops (cv::pow / sqrt).
+#define ARITHM_FLOAT_TYPES CV_32FC1, CV_64FC1
+
 using BroadcastTest = perf::TestBaseWithParam<std::tuple<std::vector<int>, perf::MatType, std::vector<int>>>;
 typedef Size_MatType BinaryOpTest;
 
@@ -605,7 +613,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1)
+        testing::Values(BINARY_OP_TYPES)
     )
 );
 
@@ -899,7 +907,7 @@ PERF_TEST_P_(ArithmScaleTest, subtract_scale)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmScaleTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values((perf::MatType)CV_8UC1, (perf::MatType)CV_16UC1, (perf::MatType)CV_16SC1)
+        testing::Values(ARITHM_SCALE_TYPES)
     )
 );
 
@@ -920,7 +928,7 @@ PERF_TEST_P_(SqrtFixture, Sqrt) {
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , SqrtFixture,
     testing::Combine(
         testing::Values(TYPICAL_MAT_SIZES),
-        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(ARITHM_FLOAT_TYPES),
         testing::Bool()
     )
 );
@@ -943,7 +951,7 @@ PERF_TEST_P_(PowFixture, Pow) {
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , PowFixture,
     testing::Combine(
         testing::Values(sz1080p),
-        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(ARITHM_FLOAT_TYPES),
         testing::Values(-6.0, -5.0, -4.5, -4.0, -3.0, -2.0, -1.0, -0.7, -0.5, 0.0,
                         0.5, 0.7, 1.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0)
     )

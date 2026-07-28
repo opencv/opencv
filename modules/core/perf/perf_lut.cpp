@@ -46,12 +46,14 @@ PERF_TEST_P( SizePrm, LUT_multi,
 
 // Channel + output-depth sweep (matches IPP perf coverage:
 // 8U->8U C1/C3/C4 and 8U->32S C1).
+#define LUT_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1
+
 typedef perf::TestBaseWithParam< tuple<Size, MatType> > Size_MatType_LUT;
 
 PERF_TEST_P( Size_MatType_LUT, LUT_types,
              testing::Combine(
                  testing::Values(szVGA, sz1080p),
-                 testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1)
+                 testing::Values(LUT_TYPES)
              )
            )
 {

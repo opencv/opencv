@@ -8,13 +8,16 @@ namespace opencv_test
 {
 using namespace perf;
 
+// Multichannel types (matches IPP extractChannel/insertChannel coverage).
+#define CHANNELS_TYPES CV_8UC3, CV_8UC4, CV_16UC3, CV_16UC4, CV_32FC3, CV_32FC4
+
 typedef tuple<Size, MatType> Size_MatType_t;
 typedef perf::TestBaseWithParam<Size_MatType_t> Size_MatType_Channels;
 
 PERF_TEST_P(Size_MatType_Channels, extractChannel,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC3, CV_8UC4, CV_16UC3, CV_16UC4, CV_32FC3, CV_32FC4)
+                testing::Values(CHANNELS_TYPES)
                 ))
 {
     Size sz  = get<0>(GetParam());
@@ -34,7 +37,7 @@ PERF_TEST_P(Size_MatType_Channels, extractChannel,
 PERF_TEST_P(Size_MatType_Channels, insertChannel,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC3, CV_8UC4, CV_16UC3, CV_16UC4, CV_32FC3, CV_32FC4)
+                testing::Values(CHANNELS_TYPES)
                 ))
 {
     Size sz  = get<0>(GetParam());

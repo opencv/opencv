@@ -10,15 +10,19 @@ using namespace perf;
 
 CV_ENUM(BorderTypeCopy, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 
+// 8U/16U/16S/32S/32F x C1/C3/C4 (matches IPP copyMakeBorder coverage;
+// shared by copyMakeBorder/copyMakeBorder_inplace).
+#define COPYMAKEBORDER_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                             CV_16SC1, CV_16SC3, CV_16SC4, CV_32SC1, CV_32SC3, CV_32SC4, \
+                             CV_32FC1, CV_32FC3, CV_32FC4
+
 typedef tuple<Size, MatType, BorderTypeCopy, int> Size_MatType_Border_BorderSize_t;
 typedef perf::TestBaseWithParam<Size_MatType_Border_BorderSize_t> Size_MatType_Border_BorderSize;
 
 PERF_TEST_P(Size_MatType_Border_BorderSize, copyMakeBorder,
             testing::Combine(
                 testing::Values(szVGA, sz720p, sz1080p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32SC1, CV_32SC3, CV_32SC4,
-                                CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(COPYMAKEBORDER_TYPES),
                 BorderTypeCopy::all(),
                 testing::Values(1, 2, 6)
                 ))
@@ -45,9 +49,7 @@ PERF_TEST_P(Size_MatType_Border_BorderSize, copyMakeBorder,
 PERF_TEST_P(Size_MatType_Border_BorderSize, copyMakeBorder_inplace,
             testing::Combine(
                 testing::Values(szVGA, sz720p, sz1080p),
-                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4,
-                                CV_16SC1, CV_16SC3, CV_16SC4, CV_32SC1, CV_32SC3, CV_32SC4,
-                                CV_32FC1, CV_32FC3, CV_32FC4),
+                testing::Values(COPYMAKEBORDER_TYPES),
                 BorderTypeCopy::all(),
                 testing::Values(1, 2, 6)
                 ))

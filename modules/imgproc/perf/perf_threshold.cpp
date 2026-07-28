@@ -8,13 +8,17 @@ namespace opencv_test {
 
 CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
+#define THRESHOLD_TYPES         CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1
+// In-place variant matches IPP ippThreshold_Inplace coverage (no 64F).
+#define THRESHOLD_INPLACE_TYPES CV_8UC1, CV_16SC1, CV_32FC1
+
 typedef tuple<Size, MatType, ThreshType> Size_MatType_ThreshType_t;
 typedef perf::TestBaseWithParam<Size_MatType_ThreshType_t> Size_MatType_ThreshType;
 
 PERF_TEST_P(Size_MatType_ThreshType, threshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1),
+                testing::Values(THRESHOLD_TYPES),
                 ThreshType::all()
                 )
             )
@@ -42,7 +46,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
 PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                testing::Values(THRESHOLD_INPLACE_TYPES),
                 ThreshType::all()
                 )
             )

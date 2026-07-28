@@ -11,6 +11,11 @@ CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 // 8U/16U/16S/32F x C1/C3/C4 (matches IPP filter2D/sepFilter2D coverage).
 #define FILTER2D_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
                        CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
+// filter2D accepts both integer and float kernels; separable kernels are float only.
+#define FILTER2D_KERNEL_TYPES    CV_16SC1, CV_32FC1
+#define SEPFILTER2D_KERNEL_TYPES CV_32FC1
+// Common types for the tiled parallel FilterEngine path.
+#define FILTER2D_PARALLEL_TYPES  CV_8UC1, CV_8UC3, CV_32FC1
 
 typedef TestBaseWithParam< tuple<Size, int, BorderMode> > TestFilter2d;
 typedef TestBaseWithParam< tuple<string, int> > Image_KernelSize;
@@ -53,7 +58,7 @@ PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
                 Values( sz1080p ),
                 Values( FILTER2D_TYPES ),
                 Values( 3, 5, 7, 21 ),
-                Values( CV_16SC1, CV_32FC1 )   // kernel type
+                Values( FILTER2D_KERNEL_TYPES )   // kernel type
              )
 )
 {
@@ -87,7 +92,7 @@ PERF_TEST_P( TestFilter2dTypes, sepFilter2D_types,
                 Values( sz1080p ),
                 Values( FILTER2D_TYPES ),
                 Values( 3, 5, 7, 21 ),
-                Values( CV_32FC1 )   // separable kernels are float
+                Values( SEPFILTER2D_KERNEL_TYPES )   // separable kernels are float
              )
 )
 {
@@ -175,7 +180,7 @@ typedef TestBaseWithParam< tuple<Size, int, BorderMode, bool> > ImgProc_Parallel
 PERF_TEST_P( ImgProc_ParallelFilter_Perf, filter2D_parallel,
              Combine(
                  Values( Size(1280, 1024), sz1080p ),
-                 Values( CV_8UC1, CV_8UC3, CV_32FC1 ),
+                 Values( FILTER2D_PARALLEL_TYPES ),
                  Values( BORDER_DEFAULT, BORDER_CONSTANT ),
                  Values( false, true )   // false = filter2D, true = sepFilter2D
              )
