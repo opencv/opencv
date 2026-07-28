@@ -52,7 +52,8 @@ public:
         }
         else
         {
-            out.assign(1, MatShape(1, 1));
+            // Reduced (mean/sum) loss is a rank-0 scalar in ONNX, not a [1] tensor.
+            out.assign(1, MatShape::scalar());
         }
         return false;
     }
@@ -164,7 +165,7 @@ public:
                 }
             }
             const float out = (reduction == LOSS_REDUCTION_SUM) ? static_cast<float>(num) : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
-            out_loss.at<float>(0) = out;
+            out_loss.ptr<float>()[0] = out;
         }
     }
 

@@ -315,8 +315,23 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    if( !m.data )
+    if( m.empty() )
+    {
+        // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
+        if( m.dims >= 1 )
+        {
+            int cn = m.channels();
+            int typenum = cvDepthToNumpyType(m.depth());
+            int dims = m.dims;
+            cv::AutoBuffer<npy_intp> _sizes(dims + 1);
+            for( int i = 0; i < dims; i++ )
+                _sizes[i] = (npy_intp)m.size[i];
+            if( cn > 1 )
+                _sizes[dims++] = cn;
+            return PyArray_SimpleNew(dims, _sizes.data(), typenum);
+        }
         Py_RETURN_NONE;
+    }
     // 0D (scalar) Mat: return a true 0D numpy array.
     if( m.dims == 0 )
     {
