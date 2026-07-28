@@ -18,12 +18,7 @@ target_include_directories(${HAL_LIB_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/modules/core/include
   ${CMAKE_SOURCE_DIR}/modules/imgproc/include
-  ${CMAKE_SOURCE_DIR}/modules/features/include
-  ${CMAKE_SOURCE_DIR}/modules/dnn/include
-  # dnn's internal ConvState descriptor (src/layers/conv2_common.hpp) crosses the
-  # HAL boundary as an opaque pointer; the dnn kernels cast it back here. See the
-  # "descriptor ABI" discussion in the DNN HAL proposal.
-  ${CMAKE_SOURCE_DIR}/modules/dnn/src)
+  ${CMAKE_SOURCE_DIR}/modules/features/include)
 
 set(RVV_HAL_FOUND TRUE CACHE INTERNAL "")
 set(RVV_HAL_VERSION "0.0.1" CACHE INTERNAL "")

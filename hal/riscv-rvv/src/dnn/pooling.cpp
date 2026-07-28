@@ -6,7 +6,6 @@
 
 #if CV_HAL_RVV_1P0_ENABLED
 #include <cfloat>
-#include "layers/conv2_common.hpp"   // cv::dnn::ConvState (opaque across the HAL boundary)
 #endif
 
 namespace cv { namespace rvv_hal { namespace dnn {
@@ -30,32 +29,22 @@ namespace cv { namespace rvv_hal { namespace dnn {
 //   * stride-x > 1: pixels' tap data are strided; we fall back to processing C0
 //     channels per vector, register-blocked 4 output columns at a time for ILP.
 
-int maxpool32f(const float* inp_data, float* out_data,
-               const void* state, int task_start, int task_end)
+int maxpool32f(const float* inp_data, float* out_data, int C0,
+               const int* insize, const int* outsize, const int* strides,
+               const int* pads, const int* inner, const int* coordtab,
+               const int* ofstab, int ksize, int task_start, int task_end)
 {
-    const cv::dnn::ConvState* cs = static_cast<const cv::dnn::ConvState*>(state);
-    constexpr int MAX_POOL_DIMS = cv::dnn::ConvState::MAX_CONV_DIMS;
-    if (cs->nspatialdims > MAX_POOL_DIMS)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    const int sdims = cs->nspatialdims;
-    const int C0 = cs->inpshape.back();
-    const int Di = sdims > 2 ? cs->inpshape[sdims - 1] : 1;
-    const int Hi = sdims > 1 ? cs->inpshape[sdims] : 1;
-    const int Wi = cs->inpshape[sdims + 1];
-    const int D  = sdims > 2 ? cs->outshape[sdims - 1] : 1;
-    const int H  = sdims > 1 ? cs->outshape[sdims] : 1;
-    const int W  = cs->outshape[sdims + 1];
+    constexpr int MAX_POOL_DIMS = 3;   // coordtab/pads/inner use a fixed Z,Y,X frame
+    const int Di = insize[0], Hi = insize[1], Wi = insize[2];
+    const int D  = outsize[0], H = outsize[1], W = outsize[2];
     const int64_t iplanesize = (int64_t)Di*Hi*Wi*C0;
     const int64_t planesize  = (int64_t)D*H*W*C0;
-    const int SZ = cs->strides[0], SY = cs->strides[1], SX = cs->strides[2];
-    const int padZ0 = cs->pads[0], padY0 = cs->pads[1], padX0 = cs->pads[2];
-    const int inner_z0 = cs->inner[0], inner_z1 = cs->inner[MAX_POOL_DIMS];
-    const int inner_y0 = cs->inner[1], inner_y1 = cs->inner[MAX_POOL_DIMS + 1];
-    const int inner_x0 = cs->inner[2], inner_x1 = cs->inner[MAX_POOL_DIMS + 2];
-    const int ksize = (int)cs->ofstab.size();
-    const int* zyxtab = cs->coordtab.data();
-    const int* ofstab = cs->ofstab.data();
+    const int SZ = strides[0], SY = strides[1], SX = strides[2];
+    const int padZ0 = pads[0], padY0 = pads[1], padX0 = pads[2];
+    const int inner_z0 = inner[0], inner_z1 = inner[MAX_POOL_DIMS];
+    const int inner_y0 = inner[1], inner_y1 = inner[MAX_POOL_DIMS + 1];
+    const int inner_x0 = inner[2], inner_x1 = inner[MAX_POOL_DIMS + 2];
+    const int* zyxtab = coordtab;
 
     for (int nc = task_start; nc < task_end; nc++) {
         const float* inp = inp_data + nc * iplanesize;
@@ -159,35 +148,25 @@ int maxpool32f(const float* inp_data, float* out_data,
     return CV_HAL_ERROR_OK;
 }
 
-int avgpool32f(const float* inp_data, float* out_data,
-               const void* state, int count_include_pad,
+int avgpool32f(const float* inp_data, float* out_data, int C0,
+               const int* insize, const int* outsize, const int* strides,
+               const int* pads, const int* inner, const int* coordtab,
+               const int* ofstab, int ksize, int count_include_pad,
                int task_start, int task_end)
 {
-    const cv::dnn::ConvState* cs = static_cast<const cv::dnn::ConvState*>(state);
-    constexpr int MAX_POOL_DIMS = cv::dnn::ConvState::MAX_CONV_DIMS;
-    if (cs->nspatialdims > MAX_POOL_DIMS)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    const int sdims = cs->nspatialdims;
-    const int C0 = cs->inpshape.back();
-    const int Di = sdims > 2 ? cs->inpshape[sdims - 1] : 1;
-    const int Hi = sdims > 1 ? cs->inpshape[sdims] : 1;
-    const int Wi = cs->inpshape[sdims + 1];
-    const int D  = sdims > 2 ? cs->outshape[sdims - 1] : 1;
-    const int H  = sdims > 1 ? cs->outshape[sdims] : 1;
-    const int W  = cs->outshape[sdims + 1];
+    constexpr int MAX_POOL_DIMS = 3;   // coordtab/pads/inner use a fixed Z,Y,X frame
+    const int Di = insize[0], Hi = insize[1], Wi = insize[2];
+    const int D  = outsize[0], H = outsize[1], W = outsize[2];
     const int64_t iplanesize = (int64_t)Di*Hi*Wi*C0;
     const int64_t planesize  = (int64_t)D*H*W*C0;
-    const int SZ = cs->strides[0], SY = cs->strides[1], SX = cs->strides[2];
-    const int padZ0 = cs->pads[0], padY0 = cs->pads[1], padX0 = cs->pads[2];
-    const int padZ1 = cs->pads[MAX_POOL_DIMS], padY1 = cs->pads[MAX_POOL_DIMS + 1],
-              padX1 = cs->pads[MAX_POOL_DIMS + 2];
-    const int inner_z0 = cs->inner[0], inner_z1 = cs->inner[MAX_POOL_DIMS];
-    const int inner_y0 = cs->inner[1], inner_y1 = cs->inner[MAX_POOL_DIMS + 1];
-    const int inner_x0 = cs->inner[2], inner_x1 = cs->inner[MAX_POOL_DIMS + 2];
-    const int ksize = (int)cs->ofstab.size();
-    const int* zyxtab = cs->coordtab.data();
-    const int* ofstab = cs->ofstab.data();
+    const int SZ = strides[0], SY = strides[1], SX = strides[2];
+    const int padZ0 = pads[0], padY0 = pads[1], padX0 = pads[2];
+    const int padZ1 = pads[MAX_POOL_DIMS], padY1 = pads[MAX_POOL_DIMS + 1],
+              padX1 = pads[MAX_POOL_DIMS + 2];
+    const int inner_z0 = inner[0], inner_z1 = inner[MAX_POOL_DIMS];
+    const int inner_y0 = inner[1], inner_y1 = inner[MAX_POOL_DIMS + 1];
+    const int inner_x0 = inner[2], inner_x1 = inner[MAX_POOL_DIMS + 2];
+    const int* zyxtab = coordtab;
     const float iksize = 1.f/ksize;   // interior has no padding: denom == ksize either way
 
     for (int nc = task_start; nc < task_end; nc++) {
