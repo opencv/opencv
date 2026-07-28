@@ -357,6 +357,8 @@ class ClassInfo(GeneralInfo):
                 self.j_code.write(T_JAVA_START_ORPHAN)
             else:
                 self.j_code.write(T_JAVA_START_MODULE)
+            if USE_CLEANERS:
+                self.imports.add("java.lang.ref.Cleaner")
         # misc handling
         if self.name == Module:
           for i in module_imports or []:
@@ -378,7 +380,8 @@ class ClassInfo(GeneralInfo):
                             jmodule = make_jmodule(m),
                             name = self.name,
                             jname = self.jname,
-                            jcleaner = "long nativeObjCopy = nativeObj;\n org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy));" if USE_CLEANERS else "",
+                            jimplements = "implements AutoCloseable" if USE_CLEANERS else "",
+                            jcleaner = "long nativeObjCopy = nativeObj;\n        cleanable = org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy));" if USE_CLEANERS else "",
                             imports = "\n".join(self.getAllImports(M)),
                             docs = self.docstring,
                             annotation = "\n" + "\n".join(self.annotation) if self.annotation else "",
@@ -963,7 +966,7 @@ class JavaWrapperGenerator(object):
                     tail = ")"
                 else:
                     ret_val = "nativeObj = "
-                    tail = ";\n long nativeObjCopy = nativeObj;\n org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy))" if USE_CLEANERS else ""
+                    tail = ";\n        long nativeObjCopy = nativeObj;\n        cleanable = org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy))" if USE_CLEANERS else ""
                 ret = ""
             elif self.isWrapped(ret_type): # wrapped class
                 constructor = self.getClass(ret_type).jname + "("
@@ -1155,8 +1158,6 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname
             else:
                 break
 
-
-
     def gen_class(self, ci):
         logging.info("%s", ci)
         # constants
@@ -1230,9 +1231,20 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname
                 ci.jn_code.write("\n".join(fn["jn_code"]))
                 ci.cpp_code.write("\n".join(fn["cpp_code"]))
 
-        if ci.name != self.Module or ci.base:
-            # finalize() for old Java
-            if not USE_CLEANERS:
+        if ci.name != self.Module and not ci.base:
+            if USE_CLEANERS:
+                # AutoClosable.close() for new Java
+                ci.j_code.write(
+"""
+    private final Cleaner.Cleanable cleanable;
+
+    @Override
+    public void close() {
+        cleanable.clean();
+    }
+""" )
+            else:
+                # finalize() for old Java
                 ci.j_code.write(
 """
     @Override
