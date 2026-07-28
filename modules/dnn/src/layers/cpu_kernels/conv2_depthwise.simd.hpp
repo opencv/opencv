@@ -4,6 +4,8 @@
 
 #include "../conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../../hal_replacement.hpp"
+#include <cfloat>
 
 // === dispatched calls (implemented here)
 
@@ -37,6 +39,34 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
 
     parallel_for_(Range(0, NC1), [&](const Range& range)
     {
+        // Offer this task range to an accelerated HAL first, flattening the descriptor into a
+        // stable C argument list (no dnn types cross the boundary). The generic activation is a
+        // function pointer that cannot cross the ABI, so only the fast-activation path is offered
+        // (out = min(s>=0 ? s : s*alpha, maxval)); on NOT_IMPLEMENTED fall through to the built-in.
+        if (cs.activation == nullptr)
+        {
+            int sd = cs.nspatialdims;
+            int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
+            int outsize[3] = { sd > 2 ? cs.outshape[sd-1] : 1, sd > 1 ? cs.outshape[sd] : 1, cs.outshape[sd+1] };
+            float maxval = FLT_MAX, default_alpha = 0.f;
+            const float* prelu_slope = nullptr;
+            switch (cs.fastActivation) {
+                case FAST_ACTIV_CLIP:       maxval = cs.activParams[1]; break;
+                case FAST_ACTIV_LEAKY_RELU: default_alpha = cs.activParams[0]; break;
+                case FAST_ACTIV_PRELU:      prelu_slope = cs.activParams.data(); break;
+                case FAST_ACTIV_NONE:       default_alpha = 1.f; break;
+                default: break; // FAST_ACTIV_RELU: maxval = FLT_MAX, default_alpha = 0
+            }
+            CALL_HAL(dnn_depthwise_conv32f, cv_hal_dnn_depthwise_conv32f,
+                     (const float*)inp__, (const float*)residual__, (float*)out__,
+                     (const float*)weights__, scale__, bias__,
+                     cs.inpshape.C, cs.inpshape.back(), cs.inpshape[1],
+                     insize, outsize, cs.strides, cs.pads, cs.inner,
+                     cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),
+                     maxval, default_alpha, prelu_slope,
+                     range.start, range.end);
+        }
+
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
         constexpr int C0 = 8;
 
