@@ -31,7 +31,7 @@ static void avgPool32f(const void* inp_, void* out_,
             int sd = cs.nspatialdims;
             int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
             int outsize[3] = { sd > 2 ? cs.outshape[sd-1] : 1, sd > 1 ? cs.outshape[sd] : 1, cs.outshape[sd+1] };
-            CALL_HAL(dnn_avgpool32f, cv_hal_dnn_avgpool32f,
+            CALL_HAL(dnn_avgpool3d32f, cv_hal_dnn_avgpool3d32f,
                      (const float*)inp_, (float*)out_, cs.inpshape.back(),
                      insize, outsize, cs.strides, cs.pads, cs.inner,
                      cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),

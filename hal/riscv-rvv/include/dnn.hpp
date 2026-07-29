@@ -9,7 +9,7 @@ namespace cv { namespace rvv_hal { namespace dnn {
 
 #if CV_HAL_RVV_1P0_ENABLED
 
-// Blocked NCHWc pooling, CV_32F. The geometry crosses the boundary as a flat, stable
+// Blocked NCDHWc pooling, CV_32F. The geometry crosses the boundary as a flat, stable
 // C argument list (no dnn types): C0 channel block; insize/outsize = the [3] input/output
 // spatial dims in a fixed Z,Y,X frame (unused leading dims = 1); strides[3]; pads[6]
 // (begin[0..2]+end[3..5]); inner[6] = the padding-free interior bounds; coordtab[ksize*3]
@@ -17,26 +17,26 @@ namespace cv { namespace rvv_hal { namespace dnn {
 // Each hook computes only the block-plane range [task_start, task_end) (N*C1 planes);
 // OpenCV owns the parallel_for_ and never expects the HAL to spawn threads.
 
-/* ############ maxpool32f ############ */
+/* ############ maxpool3d32f ############ */
 
-int maxpool32f(const float* inp_data, float* out_data, int C0,
+int maxpool3d32f(const float* inp_data, float* out_data, int C0,
                const int* insize, const int* outsize, const int* strides,
                const int* pads, const int* inner, const int* coordtab,
                const int* ofstab, int ksize, int task_start, int task_end);
 
-#undef cv_hal_dnn_maxpool32f
-#define cv_hal_dnn_maxpool32f cv::rvv_hal::dnn::maxpool32f
+#undef cv_hal_dnn_maxpool3d32f
+#define cv_hal_dnn_maxpool3d32f cv::rvv_hal::dnn::maxpool3d32f
 
-/* ############ avgpool32f ############ */
+/* ############ avgpool3d32f ############ */
 
-int avgpool32f(const float* inp_data, float* out_data, int C0,
+int avgpool3d32f(const float* inp_data, float* out_data, int C0,
                const int* insize, const int* outsize, const int* strides,
                const int* pads, const int* inner, const int* coordtab,
                const int* ofstab, int ksize, int count_include_pad,
                int task_start, int task_end);
 
-#undef cv_hal_dnn_avgpool32f
-#define cv_hal_dnn_avgpool32f cv::rvv_hal::dnn::avgpool32f
+#undef cv_hal_dnn_avgpool3d32f
+#define cv_hal_dnn_avgpool3d32f cv::rvv_hal::dnn::avgpool3d32f
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 

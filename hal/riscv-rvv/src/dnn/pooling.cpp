@@ -12,7 +12,7 @@ namespace cv { namespace rvv_hal { namespace dnn {
 
 #if CV_HAL_RVV_1P0_ENABLED
 
-// Blocked NCHWc pooling, RVV, CV_32F. Mirrors the built-in maxPool32f/avgPool32f
+// Blocked NCDHWc pooling, RVV, CV_32F. Mirrors the built-in maxPool32f/avgPool32f
 // semantics (modules/dnn/src/layers/{max,avg}pool_layer.cpp) but computes only the
 // block-plane range [task_start, task_end).
 //
@@ -29,7 +29,7 @@ namespace cv { namespace rvv_hal { namespace dnn {
 //   * stride-x > 1: pixels' tap data are strided; we fall back to processing C0
 //     channels per vector, register-blocked 4 output columns at a time for ILP.
 
-int maxpool32f(const float* inp_data, float* out_data, int C0,
+int maxpool3d32f(const float* inp_data, float* out_data, int C0,
                const int* insize, const int* outsize, const int* strides,
                const int* pads, const int* inner, const int* coordtab,
                const int* ofstab, int ksize, int task_start, int task_end)
@@ -148,7 +148,7 @@ int maxpool32f(const float* inp_data, float* out_data, int C0,
     return CV_HAL_ERROR_OK;
 }
 
-int avgpool32f(const float* inp_data, float* out_data, int C0,
+int avgpool3d32f(const float* inp_data, float* out_data, int C0,
                const int* insize, const int* outsize, const int* strides,
                const int* pads, const int* inner, const int* coordtab,
                const int* ofstab, int ksize, int count_include_pad,

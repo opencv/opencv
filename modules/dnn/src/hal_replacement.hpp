@@ -28,7 +28,7 @@
 //! the default @c hal_ni_* below returns @c CV_HAL_ERROR_NOT_IMPLEMENTED, so the
 //! built-in implementation runs unchanged when no backend is present.
 //!
-//! Tensors use the engine's blocked NCHWc layout described by @ref cv::dnn::ConvState:
+//! Tensors use the engine's blocked NCDHWc layout described by @ref cv::dnn::ConvState:
 //! @c N * C1 channel-blocks of @c C0 channels each, laid out as [N, C1, ...spatial..., C0].
 //!
 //! **Parallelism is owned by OpenCV, not by the HAL.** Each hook receives a task
@@ -42,16 +42,16 @@
 // (begin[0..2] + end[3..5]); @c inner [6] = the padding-free interior bounds; @c coordtab
 // [ksize*3] = per-tap (dz,dy,dx); @c ofstab [ksize] = per-tap flat input offset (interior).
 
-/** @brief Max pooling over a slice [task_start, task_end) of the output (blocked NCHWc, CV_32F). */
-inline int hal_ni_dnn_maxpool32f(const float* inp_data, float* out_data, int C0,
+/** @brief Max pooling over a slice [task_start, task_end) of the output (blocked NCDHWc, CV_32F). */
+inline int hal_ni_dnn_maxpool3d32f(const float* inp_data, float* out_data, int C0,
                                  const int* insize, const int* outsize, const int* strides,
                                  const int* pads, const int* inner, const int* coordtab,
                                  const int* ofstab, int ksize, int task_start, int task_end)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
-/** @brief Average pooling over a slice [task_start, task_end) of the output (blocked NCHWc, CV_32F).
+/** @brief Average pooling over a slice [task_start, task_end) of the output (blocked NCDHWc, CV_32F).
 @param count_include_pad nonzero to divide by the full kernel size (count padded cells) */
-inline int hal_ni_dnn_avgpool32f(const float* inp_data, float* out_data, int C0,
+inline int hal_ni_dnn_avgpool3d32f(const float* inp_data, float* out_data, int C0,
                                  const int* insize, const int* outsize, const int* strides,
                                  const int* pads, const int* inner, const int* coordtab,
                                  const int* ofstab, int ksize, int count_include_pad,
@@ -59,8 +59,8 @@ inline int hal_ni_dnn_avgpool32f(const float* inp_data, float* out_data, int C0,
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
-#define cv_hal_dnn_maxpool32f hal_ni_dnn_maxpool32f
-#define cv_hal_dnn_avgpool32f hal_ni_dnn_avgpool32f
+#define cv_hal_dnn_maxpool3d32f hal_ni_dnn_maxpool3d32f
+#define cv_hal_dnn_avgpool3d32f hal_ni_dnn_avgpool3d32f
 //! @endcond
 
 //! @}
