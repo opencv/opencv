@@ -1839,12 +1839,14 @@ int DTreesImpl::readSplit( const FileNode& fn )
     Split split;
 
     int vi = (int)fn["var"];
-    CV_Assert( 0 <= vi && vi <= (int)varType.size() );
+    CV_Assert( 0 <= vi && vi < (int)varMapping.size() );
     vi = varMapping[vi]; // convert to varIdx if needed
+    CV_Assert( 0 <= vi && vi < (int)varType.size() );
     split.varIdx = vi;
 
     if( varType[vi] == VAR_CATEGORICAL ) // split on categorical var
     {
+        CV_Assert( vi < (int)catOfs.size() );
         int i, val, ssize = getSubsetSize(vi);
         split.subsetOfs = (int)subsets.size();
         for( i = 0; i < ssize; i++ )
@@ -1860,6 +1862,7 @@ int DTreesImpl::readSplit( const FileNode& fn )
         if( fns.isInt() )
         {
             val = (int)fns;
+            CV_Assert( 0 <= val && (val >> 5) < ssize );
             subset[val >> 5] |= 1 << (val & 31);
         }
         else
@@ -1869,6 +1872,7 @@ int DTreesImpl::readSplit( const FileNode& fn )
             for( i = 0; i < n; i++, ++it )
             {
                 val = (int)*it;
+                CV_Assert( 0 <= val && (val >> 5) < ssize );
                 subset[val >> 5] |= 1 << (val & 31);
             }
         }
