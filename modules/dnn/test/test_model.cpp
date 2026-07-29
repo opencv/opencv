@@ -798,13 +798,6 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
-    auto engine_forced = static_cast<EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
-    if (engine_forced == ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
 
     std::string modelname = _tf("vit_base_patch16_224_Opset16.onnx", false);
     Net net = readNetFromONNX(modelname);
@@ -832,7 +825,7 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
     topK(out, res, K);
     ASSERT_EQ(int(res.size()), K);
 
-    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=4).
+    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=2, ENGINE_ORT).
     std::vector<std::pair<int, float> > ref = {
         {285, 7.683f}, {282, 7.182f}, {281, 6.894f}, {287, 3.623f}, {283, 3.287f}
     };
@@ -859,13 +852,6 @@ TEST_P(Reproducibility_BERT_ONNX, Accuracy)
 
     Target targetId = GetParam();
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
-    auto engine_forced = static_cast<EngineType>(
-    cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
-    if (engine_forced == ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
 
     std::string modelname = _tf("onnx/models/bert.onnx", false);
     Net net = readNetFromONNX(modelname);
@@ -931,14 +917,6 @@ typedef testing::TestWithParam<Target> Reproducibility_MobileNetSSD_ONNX;
 TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 {
     Target targetId = GetParam();
-    auto engine_forced = static_cast<EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
-    if (engine_forced == ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
@@ -1265,14 +1243,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOXS_ONNX,
 typedef testing::TestWithParam<Target> Reproducibility_BlazeFace_ONNX;
 TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
@@ -1381,16 +1351,8 @@ TEST_P(Reproducibility_SwinIR_ONNX, Accuracy)
     Target targetId = GetParam();
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_LONG);
 
-    auto engine_forced = static_cast<EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
-    if (engine_forced == ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     std::string modelname = _tf("onnx/models/swinir_x4_gan.onnx", false);
-    Net net = readNetFromONNX(modelname, ENGINE_NEW);
+    Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);

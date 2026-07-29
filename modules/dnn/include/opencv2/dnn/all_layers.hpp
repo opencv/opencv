@@ -1123,6 +1123,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
+        // Set the per-channel slope when it arrives as a second input, not a blob.
+        virtual void setSlope(const Mat& /*slope*/) {}
     };
 
     class CV_EXPORTS ELULayer : public ActivationLayer

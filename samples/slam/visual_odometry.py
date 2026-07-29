@@ -112,7 +112,7 @@ def main():
 
     det_params = cv.ALIKED.Params()
     det_params.inputSize = (640, 640)
-    det_params.engine    = cv.dnn.ENGINE_NEW
+    det_params.engine    = cv.dnn.ENGINE_OPENCV
     detector = cv.ALIKED.create(args.aliked, det_params)
 
     matcher = cv.LightGlueMatcher.create(

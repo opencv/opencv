@@ -234,7 +234,7 @@ int main(int argc, char** argv)
 
     ALIKED::Params detParams;
     detParams.inputSize = Size(640, 640);
-    detParams.engine    = dnn::ENGINE_NEW;
+    detParams.engine    = dnn::ENGINE_OPENCV;
     detParams.backend   = backendId;
     detParams.target    = targetId;
     auto detector = ALIKED::create(alikedPath, detParams);

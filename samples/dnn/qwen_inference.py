@@ -123,7 +123,7 @@ if __name__ == '__main__':
     print("Preparing Qwen2.5 model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_NEW)
+    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
 
     chatml_prompt = build_chatml_prompt(args.prompt)
     print(f"Prompt:\n{chatml_prompt}")
