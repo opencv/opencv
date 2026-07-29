@@ -1764,7 +1764,7 @@ void ONNXImporter2::parseScan(LayerParams& layerParams,
     }
 
     addLayer(layerParams, node_proto);
-    Ptr<Layer>& scanLayer = curr_prog.back();
+    Ptr<LayerInfo>& scanLayer = curr_prog.back();
     *scanLayer->subgraphs() = subgraphs;
 }
 

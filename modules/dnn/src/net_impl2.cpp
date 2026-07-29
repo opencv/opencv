@@ -1311,48 +1311,6 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
 }
 
-// Slice a Scan input at index `idx` along `axis`, removing that axis (contiguous result).
-static Mat sliceScanAxis(const Mat& m, int axis, int idx)
-{
-    std::vector<Range> r(m.dims, Range::all());
-    r[axis] = Range(idx, idx + 1);
-    Mat sub = m(r).clone();
-    std::vector<int> ns;
-    for (int d = 0; d < m.dims; d++)
-        if (d != axis) ns.push_back(m.size[d]);
-    if (ns.empty()) ns.push_back(1);
-    return sub.reshape(0, (int)ns.size(), &ns[0]);
-}
-
-// Stack per-iteration Scan outputs into one tensor with a new axis at `axis`.
-static Mat stackScanAxis(const std::vector<Mat>& perIter, int axis, bool reverse)
-{
-    if (perIter.empty()) return Mat();
-    const Mat& first = perIter[0];
-    const int e = first.dims, T = (int)perIter.size();
-    if (axis < 0) axis += e + 1;
-    CV_Assert(axis >= 0 && axis <= e);
-
-    std::vector<int> os, ss;
-    for (int d = 0; d < e; d++) {
-        if (d == axis) { os.push_back(T); ss.push_back(1); }
-        os.push_back(first.size[d]);
-        ss.push_back(first.size[d]);
-    }
-    if (axis == e) { os.push_back(T); ss.push_back(1); }
-
-    Mat stacked;
-    stacked.create((int)os.size(), &os[0], first.type());
-    for (int k = 0; k < T; k++) {
-        int idx = reverse ? (T - 1 - k) : k;
-        std::vector<Range> r(os.size(), Range::all());
-        r[axis] = Range(k, k + 1);
-        Mat dst = stacked(r);
-        Mat src = perIter[idx].reshape(0, (int)ss.size(), &ss[0]);
-        src.copyTo(dst);
-    }
-    return stacked;
-}
 #ifdef HAVE_CUDA
 // cv::cuda::Stream view over the (non-owning) cuda4dnn inference stream, so GpuMatND transfers
 // are ordered against the op compute that runs on the same cudaStream_t.
@@ -1471,6 +1429,49 @@ static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
     exec->forwardCUDA(inpG, outG, &netimpl->cudaInfo->workspace);
 }
 #endif
+
+// Slice a Scan input at index `idx` along `axis`, removing that axis (contiguous result).
+static Mat sliceScanAxis(const Mat& m, int axis, int idx)
+{
+    std::vector<Range> r(m.dims, Range::all());
+    r[axis] = Range(idx, idx + 1);
+    Mat sub = m(r).clone();
+    std::vector<int> ns;
+    for (int d = 0; d < m.dims; d++)
+        if (d != axis) ns.push_back(m.size[d]);
+    if (ns.empty()) ns.push_back(1);
+    return sub.reshape(0, (int)ns.size(), &ns[0]);
+}
+
+// Stack per-iteration Scan outputs into one tensor with a new axis at `axis`.
+static Mat stackScanAxis(const std::vector<Mat>& perIter, int axis, bool reverse)
+{
+    if (perIter.empty()) return Mat();
+    const Mat& first = perIter[0];
+    const int e = first.dims, T = (int)perIter.size();
+    if (axis < 0) axis += e + 1;
+    CV_Assert(axis >= 0 && axis <= e);
+
+    std::vector<int> os, ss;
+    for (int d = 0; d < e; d++) {
+        if (d == axis) { os.push_back(T); ss.push_back(1); }
+        os.push_back(first.size[d]);
+        ss.push_back(first.size[d]);
+    }
+    if (axis == e) { os.push_back(T); ss.push_back(1); }
+
+    Mat stacked;
+    stacked.create((int)os.size(), &os[0], first.type());
+    for (int k = 0; k < T; k++) {
+        int idx = reverse ? (T - 1 - k) : k;
+        std::vector<Range> r(os.size(), Range::all());
+        r[axis] = Range(k, k + 1);
+        Mat dst = stacked(r);
+        Mat src = perIter[idx].reshape(0, (int)ss.size(), &ss[0]);
+        src.copyTo(dst);
+    }
+    return stacked;
+}
 
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
