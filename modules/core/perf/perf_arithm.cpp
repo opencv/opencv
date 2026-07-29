@@ -7,10 +7,10 @@ namespace opencv_test
 {
 using namespace perf;
 
-// Shared BinaryOpTest coverage (matches IPP add/subtract/multiply/absdiff/min/max/transpose).
+// Shared BinaryOpTest coverage.
 #define BINARY_OP_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, \
                         CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1
-// Integer types accepting a scale factor (matches IPP add/subtract _Scale).
+// Integer types accepting a scale factor.
 #define ARITHM_SCALE_TYPES (perf::MatType)CV_8UC1, (perf::MatType)CV_16UC1, (perf::MatType)CV_16SC1
 // Floating-point-only ops (cv::pow / sqrt).
 #define ARITHM_FLOAT_TYPES CV_32FC1, CV_64FC1
@@ -403,7 +403,6 @@ PERF_TEST_P_(BinaryOpTest, multiplyScale)
     SANITY_CHECK_NOTHING();
 }
 
-// Scalar-operand multiply (matches IPP ippMultiply_Const: multiply(mat, Scalar))
 PERF_TEST_P_(BinaryOpTest, multiplyScalar)
 {
     Size sz = get<0>(GetParam());
@@ -465,11 +464,8 @@ PERF_TEST_P_(BinaryOpTest, transpose2d)
     SANITY_CHECK_NOTHING();
 }
 
-// 8U/16U/32F x C1/C3/C4 (matches IPP transpose coverage; shared by the
-// multichannel and in-place transpose tests below).
 #define TRANSPOSE_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4
 
-// Multichannel transpose (matches IPP perf coverage: 8U/16U/32F x C1/C3/C4)
 typedef Size_MatType TransposeMultiChannelTest;
 
 PERF_TEST_P_(TransposeMultiChannelTest, transpose2d_multichannel)
@@ -493,8 +489,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeMultiChannelTest,
     )
 );
 
-// In-place transpose (matches IPP ippTranspose_Inplace: transpose(dst, dst)).
-// In-place transpose requires a square matrix.
 typedef Size_MatType TransposeInplaceTest;
 
 PERF_TEST_P_(TransposeInplaceTest, transpose2d_inplace)
@@ -871,9 +865,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
     )
 );
 
-// add/subtract with two mixed input depths + explicit output depth
-// (matches IPP ippAdd_Scale / ippSubtract_Scale: add(src1{8U/16U/16S}, src2{16U},
-// dst, noArray(), CV_32F)).
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, perf::MatType>> ArithmScaleTest;
 
 PERF_TEST_P_(ArithmScaleTest, add_scale)
@@ -933,7 +924,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , SqrtFixture,
     )
 );
 
-// Full power sweep (matches IPP perf coverage: cv::pow over a range of exponents)
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, double>> PowFixture;
 PERF_TEST_P_(PowFixture, Pow) {
     Size sz = get<0>(GetParam());

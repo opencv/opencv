@@ -47,7 +47,6 @@ enum
 };
 CV_ENUM(MinMaxType, MMI_ALL, MMI_MIN_MAX, MMI_MIN_IDX, MMI_MAX_IDX)
 
-// 8U/16U/16S/32F C1 (matches IPP minMaxIdx coverage; shared by the plain and masked tests).
 #define MINMAXIDX_TYPES CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1
 
 typedef tuple<Size, MatType, MinMaxType> Size_MatType_MinMaxType_t;

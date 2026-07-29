@@ -42,7 +42,6 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
     SANITY_CHECK(dst, eps);
 }
 
-// Scale + shift (matches IPP perf coverage: convertTo with a nonzero beta/shift)
 PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo_scale_shift,
              testing::Combine
              (
@@ -74,8 +73,6 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo_scale_shift,
     SANITY_CHECK_NOTHING();
 }
 
-// In-place convertTo with scale+shift (matches IPP ippConvertTo_ScaleInplace:
-// dst.convertTo(dst, sameType, scale, shift)). In-place requires src type==dst type.
 typedef tuple<Size, MatType, double> Size_Depth_alpha_t;
 typedef perf::TestBaseWithParam<Size_Depth_alpha_t> Size_Depth_alpha;
 

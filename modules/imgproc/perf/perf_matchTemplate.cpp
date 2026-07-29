@@ -48,7 +48,6 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
     SANITY_CHECK(result, eps);
 }
 
-// 32F source (matches IPP perf coverage: matchTemplate also runs on CV_32FC1 input)
 PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall_32f,
             testing::Combine(
                 testing::Values(cv::Size(320, 240), cv::Size(640, 480),

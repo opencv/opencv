@@ -16,8 +16,6 @@ typedef TestBaseWithParam<MatInfo_SizePair_t> MatInfo_SizePair;
                           CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
                           CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4
 
-// 8U/16U/16S/32F x C1/C3/C4 (matches IPP CUBIC/LANCZOS4/affine coverage;
-// shared by the resizeCubicLanczos and resizeAffine tests below).
 #define RESIZE_INTER_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
                            CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
 
@@ -286,9 +284,6 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     SANITY_CHECK_NOTHING();
 }
 
-// CUBIC / LANCZOS4 interpolation over the wide type set + scale-factor form
-// (matches IPP ippResize_General / ippResize_Affine, which OSS did not cover:
-// no CUBIC/LANCZOS4, no 16U/16S/64F, no scale sweep).
 CV_ENUM(ResizeInterCubicLanczos, INTER_CUBIC, INTER_LANCZOS4)
 typedef tuple<MatType, Size, double, ResizeInterCubicLanczos> MatInfo_Size_Scale_Inter_t;
 typedef TestBaseWithParam<MatInfo_Size_Scale_Inter_t> MatInfo_Size_Scale_Inter;
@@ -316,9 +311,6 @@ PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
     SANITY_CHECK_NOTHING();
 }
 
-// Scale-factor (fx/fy) form (matches IPP ippResize_Affine: resize(src,dst,Size(),fx,fy,inter)).
-// IPP's Affine test used LINEAR+CUBIC; LINEAR at these types/scales is not otherwise
-// covered, so include it here alongside CUBIC.
 CV_ENUM(ResizeInterAffine, INTER_LINEAR, INTER_CUBIC)
 typedef tuple<MatType, Size, double, ResizeInterAffine> MatInfo_Size_Scale_InterAffine_t;
 typedef TestBaseWithParam<MatInfo_Size_Scale_InterAffine_t> MatInfo_Size_Scale_InterAffine;

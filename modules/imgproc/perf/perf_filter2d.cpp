@@ -8,7 +8,7 @@ namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 
-// 8U/16U/16S/32F x C1/C3/C4 (matches IPP filter2D/sepFilter2D coverage).
+// 8U/16U/16S/32F x C1/C3/C4.
 #define FILTER2D_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
                        CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
 // filter2D accepts both integer and float kernels; separable kernels are float only.
@@ -49,8 +49,6 @@ PERF_TEST_P( TestFilter2d, Filter2d,
     SANITY_CHECK(dst, 1);
 }
 
-// Type/kernel sweep (matches IPP perf coverage: 8U/16U/16S/32F x C1/C3/C4,
-// kernels 3/5/7/21, kernel type {16S, 32F}).
 typedef TestBaseWithParam< tuple<Size, MatType, int, MatType> > TestFilter2dTypes;
 
 PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
@@ -85,8 +83,6 @@ PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
     SANITY_CHECK_NOTHING();
 }
 
-// sepFilter2D type/kernel sweep (matches IPP ippSepFilter2D perf coverage:
-// 8U/16U/16S/32F x C1/C3/C4, kernels 3/5/7/21, same-depth output).
 PERF_TEST_P( TestFilter2dTypes, sepFilter2D_types,
              Combine(
                 Values( sz1080p ),

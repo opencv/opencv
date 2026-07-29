@@ -28,7 +28,6 @@ PERF_TEST_P(sortFixture, sort, TYPICAL_MATS_SORT)
     SANITY_CHECK(b);
 }
 
-// In-place sort (matches IPP ippSort_Inplace: sort(dst, dst, flags))
 PERF_TEST_P(sortFixture, sort_inplace, TYPICAL_MATS_SORT)
 {
     const sortParams params = GetParam();

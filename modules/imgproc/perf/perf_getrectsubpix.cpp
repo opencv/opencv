@@ -134,7 +134,6 @@ namespace opencv_test
 {
 using namespace perf;
 
-// src/dst depths swept independently (matches IPP getRectSubPix coverage).
 #define GETRECTSUBPIX_TYPES CV_8UC1, CV_32FC1
 
 typedef tuple<Size, MatType, MatType> Size_SrcType_DstType_t;

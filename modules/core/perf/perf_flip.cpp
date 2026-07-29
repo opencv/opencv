@@ -45,7 +45,6 @@ PERF_TEST_P(Size_MatType_FlipCode,
     SANITY_CHECK_NOTHING();
 }
 
-// In-place flip (matches IPP ippFlip_Inplace: flip(dst, dst, ...))
 PERF_TEST_P(Size_MatType_FlipCode,
             flip_inplace,
             testing::Combine(testing::Values(FLIP_SIZES),

@@ -8,7 +8,7 @@ using namespace perf;
 CV_ENUM(CmpType, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
 
 #define COMPARE_TYPES        CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1
-// Scalar-operand compare adds 16U/16S (matches IPP ippCompareScalar: 8U,16U,16S,32F).
+// Scalar-operand compare adds 16U/16S.
 #define COMPARE_SCALAR_TYPES CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1
 
 typedef tuple<Size, MatType, CmpType> Size_MatType_CmpType_t;

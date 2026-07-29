@@ -5,7 +5,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-// Masked variants: 8U/16U/32F x C1/C3/C4 (matches IPP mean_mask/meanStdDev_mask).
+// Masked variants: 8U/16U/32F x C1/C3/C4.
 #define TYPICAL_MAT_TYPES_STAT_MASK CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4
 // sum/mean/meanStdDev additionally cover 16S.
 #define TYPICAL_MAT_TYPES_STAT      TYPICAL_MAT_TYPES_STAT_MASK, CV_16SC1, CV_16SC3, CV_16SC4

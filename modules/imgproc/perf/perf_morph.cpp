@@ -44,8 +44,6 @@ PERF_TEST_P(Size_MatType, dilate, TYPICAL_MATS_MORPH)
     SANITY_CHECK(dst);
 }
 
-// Parameterized kernel size + iterations (matches IPP perf coverage:
-// rect structuring element of size 3/5/7/21, 1 and 3 iterations).
 typedef tuple<Size, MatType, int, int> Size_MatType_kSize_iter_t;
 typedef perf::TestBaseWithParam<Size_MatType_kSize_iter_t> Size_MatType_kSize_iter;
 
@@ -97,8 +95,6 @@ PERF_TEST_P(Size_MatType_kSize_iter, dilate_kernel,
     SANITY_CHECK_NOTHING();
 }
 
-// morphologyEx (matches IPP ippMorphEx: OPEN/CLOSE/GRADIENT/TOPHAT/BLACKHAT,
-// rect kernel of size 3/5/7/21, 1 and 3 iterations). No CPU OSS perf test existed.
 CV_ENUM(MorphExOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 typedef tuple<Size, MatType, MorphExOp, int, int> Size_MatType_MorphExOp_kSize_iter_t;
 typedef perf::TestBaseWithParam<Size_MatType_MorphExOp_kSize_iter_t> Size_MatType_MorphExOp_kSize_iter;

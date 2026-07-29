@@ -39,9 +39,6 @@ PERF_TEST_P(Perf_Laplacian, Laplacian,
     SANITY_CHECK(dst);
 }
 
-// Float source + scale/delta sweep (matches IPP perf coverage: 32F src -> 32F dst,
-// scaled∈{0,1}: scale=1.333, delta=2). cv::Laplacian requires ddepth >= sdepth,
-// so a 32F source cannot produce a 16S output.
 typedef tuple<Size, int, TargetDepth, BorderMode, bool> LaplacianParams32f;
 typedef perf::TestBaseWithParam<LaplacianParams32f> Perf_Laplacian32f;
 
@@ -75,9 +72,6 @@ PERF_TEST_P(Perf_Laplacian32f, Laplacian,
     SANITY_CHECK_NOTHING();
 }
 
-// 8U source + scale/delta sweep (matches IPP: 8U src -> 8U/16S/32F dst, scaled).
-// The base Perf_Laplacian test above keeps its SANITY_CHECK baseline (scale=1);
-// this variant adds the scaled path without disturbing that baseline.
 typedef tuple<Size, int, TargetDepth, BorderMode> LaplacianParamsScaled;
 typedef perf::TestBaseWithParam<LaplacianParamsScaled> Perf_Laplacian_scaled;
 

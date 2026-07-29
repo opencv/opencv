@@ -8,7 +8,6 @@ namespace opencv_test {
 
 CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
-// In-place variant matches IPP ippThreshold_Inplace coverage (no 64F).
 #define THRESHOLD_INPLACE_TYPES CV_8UC1, CV_16SC1, CV_32FC1
 #define THRESHOLD_TYPES         THRESHOLD_INPLACE_TYPES, CV_64FC1
 
@@ -42,7 +41,6 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     SANITY_CHECK(dst);
 }
 
-// In-place threshold (matches IPP ippThreshold_Inplace: threshold(dst, dst, ...))
 PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
@@ -74,7 +72,6 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
     SANITY_CHECK_NOTHING();
 }
 
-// In-place OTSU threshold (matches IPP ippThreshold_Inplace GT_OTSU case; OTSU is 8U-only).
 typedef perf::TestBaseWithParam<Size> Size_ThreshInplaceOtsu;
 PERF_TEST_P(Size_ThreshInplaceOtsu, threshold_inplace_otsu, testing::Values(TYPICAL_MAT_SIZES))
 {

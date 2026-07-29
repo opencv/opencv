@@ -10,14 +10,12 @@ namespace opencv_test {
 #define BLUR_8U_TYPES CV_8UC1, CV_8UC3, CV_8UC4
 // 8U/16U/16S x C1/C3/C4 — integer coverage shared by medianBlur and boxFilter.
 #define BLUR_INT_TYPES BLUR_8U_TYPES, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4
-// + 32FC1 (matches IPP medianBlur coverage; ksize 3/5 for all types — shared by
-// the out-of-place and in-place median tests).
 #define MEDIAN_BLUR_TYPES BLUR_INT_TYPES, CV_32FC1
 // cv::medianBlur supports aperture > 5 for CV_8U only.
 #define MEDIAN_BLUR_LARGE_TYPES BLUR_8U_TYPES
-// Full boxFilter type sweep (matches IPP ippFilterBox coverage).
+// Full boxFilter type sweep.
 #define BOX_FILTER_TYPES BLUR_INT_TYPES, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4
-// 3x3 / 5x5 GaussianBlur type coverage (matches IPP; shared by both fixed-kernel tests).
+// 3x3 / 5x5 GaussianBlur type coverage.
 #define GAUSSIAN_BLUR_TYPES BLUR_8U_TYPES, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
 // Large Gaussian kernels (7/21) drop the C4 variants.
 #define GAUSSIAN_BLUR_LARGE_TYPES CV_8UC1, CV_8UC3, CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3, CV_32FC1, CV_32FC3
@@ -50,8 +48,6 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
     SANITY_CHECK(dst);
 }
 
-// Large median kernels (matches IPP perf coverage: ksize 7, 21).
-// cv::medianBlur only supports aperture > 5 for CV_8U, so this is 8-bit only.
 PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
@@ -75,8 +71,6 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur_large,
     SANITY_CHECK_NOTHING();
 }
 
-// In-place median blur (matches IPP ippMedianBlur_Inplace: medianBlur(dst, dst, k)).
-// ksize 3/5 for all listed types (ksize > 5 is 8-bit only, covered by _large above).
 PERF_TEST_P(Size_MatType_kSize, medianBlur_inplace,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
@@ -292,7 +286,6 @@ PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
     SANITY_CHECK(dst, 1);
 }
 
-// Larger Gaussian kernels (matches IPP perf coverage: kernel sizes 7 and 21)
 PERF_TEST_P(Size_MatType_BorderType_ksize, gaussianBlur,
             testing::Combine(
                 testing::Values(szVGA, sz720p),

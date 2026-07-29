@@ -85,8 +85,6 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     SANITY_CHECK_NOTHING();
 }
 
-// Explicit src->dst depth reduce (matches IPP ippReduce_Diff perf coverage:
-// SUM/AVG with an explicit output depth over src/dst depth pairs x C1/C3/C4).
 CV_ENUM(ROpDiff, REDUCE_SUM, REDUCE_AVG)
 typedef tuple<Size, tuple<MatType, MatDepth>, ROpDiff, int> Size_SrcType_DstDepth_ROp_Dim_t;
 typedef perf::TestBaseWithParam<Size_SrcType_DstDepth_ROp_Dim_t> Size_SrcType_DstDepth_ROp_Dim;

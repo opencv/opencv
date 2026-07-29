@@ -37,7 +37,6 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
 
-// 32F source (matches IPP perf coverage: cornerHarris also runs on CV_32FC1 input)
 PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris_32f,
             testing::Combine(
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
@@ -120,7 +119,6 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
 
-// 32F source (matches IPP perf coverage: cornerMinEigenVal also runs on CV_32FC1 input)
 PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal_32f,
             testing::Combine(
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),

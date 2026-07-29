@@ -348,9 +348,6 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
 }
 
 /**************** Sobel / Scharr with 16S and 32F source ********************/
-// Matches IPP perf coverage: Sobel/Scharr also run on CV_16SC1 and CV_32FC1
-// input (src -> same-depth dst), with a scale/delta sweep (IPP scaled∈{0,1}:
-// scale=1.333, delta=2). 8U source is covered by the tests above.
 
 // Extra tuple slot for ksize {3,5} (IPP ippSobel swept both).
 typedef tuple<Size, MatType, tuple<int, int>, BorderType3x3, bool, int> Size_MatType_dx_dy_Border3x3_scale_ksize_t;

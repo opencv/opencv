@@ -8,7 +8,6 @@ namespace opencv_test
 {
 using namespace perf;
 
-// Disparity-map types accepted by filterSpeckles (matches IPP coverage).
 #define FILTERSPECKLES_TYPES CV_8UC1, CV_16SC1
 
 typedef tuple<Size, MatType> Size_MatType_t;

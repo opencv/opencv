@@ -42,8 +42,6 @@ PERF_TEST_P(Size_Source, calcHist1d,
     SANITY_CHECK(hist);
 }
 
-// Non-uniform ranges + accumulate (matches IPP perf coverage: calcHist sweeps
-// uniform ∈ {true,false} × accumulate ∈ {true,false}).
 typedef tuple<Size, MatType, bool, bool> Size_Source_Uniform_Accum_t;
 typedef TestBaseWithParam<Size_Source_Uniform_Accum_t> Size_Source_Uniform_Accum;
 

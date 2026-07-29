@@ -8,7 +8,6 @@ namespace opencv_test
 {
 using namespace perf;
 
-// Multichannel types (matches IPP extractChannel/insertChannel coverage).
 #define CHANNELS_TYPES CV_8UC3, CV_8UC4, CV_16UC3, CV_16UC4, CV_32FC3, CV_32FC4
 
 typedef tuple<Size, MatType> Size_MatType_t;

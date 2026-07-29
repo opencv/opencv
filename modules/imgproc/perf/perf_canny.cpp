@@ -38,8 +38,6 @@ PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
     SANITY_CHECK(edges);
 }
 
-// Pre-computed-gradient Canny overload Canny(dx, dy, edges, ...) — matches IPP
-// ippCannyDeriv. No OSS perf test existed for this overload.
 typedef tuple<string, bool> Img_L2_t;
 typedef perf::TestBaseWithParam<Img_L2_t> Img_L2;
 
