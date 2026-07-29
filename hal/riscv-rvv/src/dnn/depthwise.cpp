@@ -17,13 +17,24 @@ namespace cv { namespace rvv_hal { namespace dnn {
 // Each output row is split into border pixels ([0,inner_x0) and [inner_x1,W): a tap may fall
 // in padding, so every tap is bounds-checked via the coordinate table) and interior pixels
 // ([inner_x0,inner_x1): no tap touches padding, so the precomputed flat offset table ofstab[]
-// is used with no checks). The interior processes 4 output columns at a time for ILP; the
-// per-tap weight vector is loaded once and reused across the 4 columns.
+// is used with no checks).
 //
-// The block is C0-narrow (C0 == 8), so one e32m2 group holds a whole C0 vector at any
-// VLEN >= 128 -- this uses native vsetvl and never trips the C0-vs-VLMAX assert that forces
-// the universal-intrinsic path to run scalar on RVV, so it beats the shipped scalar path at
-// every VLEN without the register-fill/vrgather that regressed at wide VLEN.
+// The channel block is C0-narrow (C0 == 8), so one e32m2 group holds a whole C0 vector at any
+// VLEN >= 128. This uses native vsetvl and never trips the C0-vs-VLMAX assert that forces the
+// universal-intrinsic path to run scalar on RVV. Two strategies share the kernel:
+//
+//   * per-pixel (m2): the correctness floor. Borders, stride>1, narrow VLEN and small planes
+//     all use it; it processes one output pixel's C0 channels per vector op (interior blocks 4
+//     output columns for ILP). Beats the shipped scalar path at every VLEN, no regression.
+//   * register-fill (m8): for stride-1 interiors on large planes at wide VLEN (>= 512), where
+//     the per-pixel path uses only C0 of the wide register's lanes. It packs P = VLMAX/C0
+//     consecutive output pixels into one wide vector, reusing per-tap weights that are tiled
+//     across the P pixels ONCE per channel-block via vrgather (into a small scratch buffer).
+//     This reaches ~full register utilisation; the per-block tiling build is amortised over the
+//     plane, so it is gated to sizes where that pays (see use_fill below).
+//
+// The two produce identical results; use_fill only selects the faster path per call. Because the
+// per-pixel path is always available, a mis-tuned guard costs speed, never correctness.
 
 int depthwise_conv32f(const float* inp_data, const float* residual_data,
                       float* out_data, const float* weights_all,
@@ -52,6 +63,20 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
     const int* zyxtab = coordtab;
 
     float scalebuf[MAX_C0], biasbuf[MAX_C0], alphabuf[MAX_C0];
+
+    // Register-fill selection. fillw = P*C0 pixels-worth of lanes in one e32m8 group. Enable
+    // only where the fill's per-block vrgather tiling pays off: a wide register (VLEN >= 512,
+    // else per-pixel already uses most lanes), a stride-1 interior (contiguous input), the
+    // benchmarked small-kernel regime (ksize <= 3x3), and a plane large enough to amortise the
+    // build (>= 2*fillw, the measured VLEN-1024 crossover). Everything else uses per-pixel.
+    const int fillw = (int)((__riscv_vsetvlmax_e32m8() / C0) * C0);
+    const bool use_fill = (__riscv_vlenb() * 8 >= 512) && (SX == 1) && (ksize <= 9)
+                          && ((int64_t)D * H * W >= (int64_t)2 * fillw);
+    cv::AutoBuffer<float> fillscratch(use_fill ? (size_t)(ksize + 3) * fillw : 0);
+    float* tw  = fillscratch.data();               // ksize * fillw : tiled per-tap weights
+    float* tsc = tw  + (int64_t)ksize * fillw;     // fillw : tiled scale
+    float* tbi = tsc + fillw;                       // fillw : tiled bias
+    float* tal = tbi + fillw;                       // fillw : tiled alpha
 
     // Fused epilogue on one C0-lane accumulator: acc = acc*scale + bias (+ residual), then
     // acc = min(acc >= 0 ? acc : acc*alpha, maxval). rp_c is the residual pointer already
@@ -89,6 +114,19 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
             } else {
                 scalebuf[c] = 0.f; biasbuf[c] = 0.f; alphabuf[c] = 0.f;
             }
+        }
+
+        // Tile this block's per-tap weights (and scale/bias/alpha) across the P pixels of a fill
+        // group ONCE, so the wide interior loop just reloads them from L1: t[k][j] = src[k*C0 + j%C0].
+        if (use_fill) {
+            size_t vl = (size_t)fillw;
+            vuint32m8_t idx = __riscv_vand_vx_u32m8(__riscv_vid_v_u32m8(vl), C0 - 1, vl);
+            for (int k = 0; k < ksize; k++)
+                __riscv_vse32_v_f32m8(tw + (int64_t)k*fillw,
+                    __riscv_vrgather_vv_f32m8(__riscv_vle32_v_f32m8(wblk + k*C0, C0), idx, vl), vl);
+            __riscv_vse32_v_f32m8(tsc, __riscv_vrgather_vv_f32m8(__riscv_vle32_v_f32m8(scalebuf, C0), idx, vl), vl);
+            __riscv_vse32_v_f32m8(tbi, __riscv_vrgather_vv_f32m8(__riscv_vle32_v_f32m8(biasbuf,  C0), idx, vl), vl);
+            __riscv_vse32_v_f32m8(tal, __riscv_vrgather_vv_f32m8(__riscv_vle32_v_f32m8(alphabuf, C0), idx, vl), vl);
         }
 
         for (int z0 = 0; z0 < D; z0++) {
@@ -134,6 +172,34 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
                 do_border(0, inner_x0);
 
                 const int64_t rowbase = ((int64_t)(Hi*zi_ + yi_)*Wi)*C0;
+                if (use_fill) {
+                    // register-fill: pack P = fillw/C0 stride-1 output pixels into one wide (m8)
+                    // vector; tiled weights come from the per-block scratch built above.
+                    int xi = inner_x0;
+                    while (xi < inner_x1) {
+                        int gp = inner_x1 - xi;
+                        if (gp > fillw / C0) gp = fillw / C0;
+                        size_t vl = (size_t)gp * C0;
+                        const float* base = inp + rowbase + (int64_t)(xi - padX0)*C0;   // SX == 1
+                        vfloat32m8_t acc = __riscv_vfmv_v_f_f32m8(0.f, vl);
+                        for (int k = 0; k < ksize; k++)
+                            acc = __riscv_vfmacc_vv_f32m8(acc, __riscv_vle32_v_f32m8(base + ofstab[k], vl),
+                                                          __riscv_vle32_v_f32m8(tw + (int64_t)k*fillw, vl), vl);
+                        acc = __riscv_vfmadd_vv_f32m8(acc, __riscv_vle32_v_f32m8(tsc, vl),
+                                                      __riscv_vle32_v_f32m8(tbi, vl), vl);
+                        if (res_row)
+                            acc = __riscv_vfadd_vv_f32m8(acc, __riscv_vle32_v_f32m8(res_row + (int64_t)xi*C0, vl), vl);
+                        vfloat32m8_t neg = __riscv_vfmul_vv_f32m8(acc, __riscv_vle32_v_f32m8(tal, vl), vl);
+                        vbool4_t m = __riscv_vmfge_vf_f32m8_b4(acc, 0.f, vl);
+                        acc = __riscv_vmerge_vvm_f32m8(neg, acc, m, vl);
+                        acc = __riscv_vfmin_vf_f32m8(acc, maxval, vl);
+                        __riscv_vse32_v_f32m8(out_row + (int64_t)xi*C0, acc, vl);
+                        xi += gp;
+                    }
+                    do_border(inner_x1, W);
+                    continue;
+                }
+
                 int x0 = inner_x0;
                 // interior, 4 output columns at a time: weight loaded once per tap, reused x4
                 for (; x0 + 4 <= inner_x1; x0 += 4) {
