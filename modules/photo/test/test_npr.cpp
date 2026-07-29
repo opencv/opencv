@@ -137,4 +137,35 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+// See https://github.com/opencv/opencv/issues/29614
+// Domain_Filter::compute_NCfilter (npr.hpp) indexes a summed-area-table
+// buffer using arithmetic that goes out of bounds when the matrix passed to
+// it has a single column. cv::stylization always uses NORMCONV_FILTER, so a
+// single-column source triggers this directly; a single-row source triggers
+// the same bug through the internal transposed pass. cv::edgePreservingFilter
+// reaches the identical code path when called with NORMCONV_FILTER.
+TEST(Photo_NPR_Stylization, degenerate_dimension_29614)
+{
+    Mat colSrc(5, 1, CV_8UC3, Scalar(100, 150, 200));
+    Mat rowSrc(1, 5, CV_8UC3, Scalar(100, 150, 200));
+
+    Mat colResult, rowResult;
+    ASSERT_NO_THROW(stylization(colSrc, colResult, 100.0f, 0.5f));
+    ASSERT_NO_THROW(stylization(rowSrc, rowResult, 100.0f, 0.5f));
+    EXPECT_EQ(colResult.size(), colSrc.size());
+    EXPECT_EQ(rowResult.size(), rowSrc.size());
+}
+
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, degenerate_dimension_29614)
+{
+    Mat colSrc(5, 1, CV_8UC3, Scalar(100, 150, 200));
+    Mat rowSrc(1, 5, CV_8UC3, Scalar(100, 150, 200));
+
+    Mat colResult, rowResult;
+    ASSERT_NO_THROW(edgePreservingFilter(colSrc, colResult, 2 /* NORMCONV_FILTER */));
+    ASSERT_NO_THROW(edgePreservingFilter(rowSrc, rowResult, 2 /* NORMCONV_FILTER */));
+    EXPECT_EQ(colResult.size(), colSrc.size());
+    EXPECT_EQ(rowResult.size(), rowSrc.size());
+}
+
 }} // namespace
