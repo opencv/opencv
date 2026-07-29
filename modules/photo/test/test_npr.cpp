@@ -138,12 +138,6 @@ TEST(Photo_NPR_Stylization, regression)
 }
 
 // See https://github.com/opencv/opencv/issues/29614
-// Domain_Filter::compute_NCfilter (npr.hpp) indexes a summed-area-table
-// buffer using arithmetic that goes out of bounds when the matrix passed to
-// it has a single column. cv::stylization always uses NORMCONV_FILTER, so a
-// single-column source triggers this directly; a single-row source triggers
-// the same bug through the internal transposed pass. cv::edgePreservingFilter
-// reaches the identical code path when called with NORMCONV_FILTER.
 TEST(Photo_NPR_Stylization, degenerate_dimension_29614)
 {
     Mat colSrc(5, 1, CV_8UC3, Scalar(100, 150, 200));
