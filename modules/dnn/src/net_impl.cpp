@@ -179,6 +179,8 @@ void Net::Impl::validateBackendAndTarget()
               IS_DNN_CUDA_TARGET(preferableTarget));
     CV_Assert(preferableBackend != DNN_BACKEND_TIMVX ||
               preferableTarget == DNN_TARGET_NPU);
+    CV_Assert(preferableBackend != DNN_BACKEND_METAL ||
+              preferableTarget == DNN_TARGET_METAL);
 
     CV_Assert(preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && "Inheritance internal error");
 }
@@ -241,6 +243,12 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
         }
 
         if (preferableBackend == DNN_BACKEND_TIMVX && !haveTimVX())
+        {
+            preferableBackend = DNN_BACKEND_OPENCV;
+            preferableTarget = DNN_TARGET_CPU;
+        }
+
+        if (preferableBackend == DNN_BACKEND_METAL && !haveMetal())
         {
             preferableBackend = DNN_BACKEND_OPENCV;
             preferableTarget = DNN_TARGET_CPU;
@@ -904,6 +912,14 @@ void Net::Impl::forwardLayer(LayerData& ld)
             else if (preferableBackend == DNN_BACKEND_TIMVX)
             {
                 forwardTimVX(ld.outputBlobsWrappers, node);
+            }
+            else if (preferableBackend == DNN_BACKEND_METAL)
+            {
+#ifdef HAVE_METAL
+                forwardMetal(node);
+#else
+                CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Metal support");
+#endif
             }
 #ifdef HAVE_VULKAN
             else if (preferableBackend == DNN_BACKEND_VKCOM)
@@ -1802,6 +1818,7 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
     case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
     case DNN_BACKEND_CANN: backend = "CANN/"; break;
+    case DNN_BACKEND_METAL: backend = "METAL/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -1993,6 +2010,10 @@ string Net::Impl::dump(bool forceAllocation) const
         case DNN_TARGET_CPU_FP16:
             out << "CPU_FP16";
             colorId = 10;
+            break;
+        case DNN_TARGET_METAL:
+            out << "METAL";
+            colorId = 11;
             break;
             // don't use default:
         }
@@ -2211,6 +2232,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
             case DNN_BACKEND_WEBNN:     backend = "WEBNN"; break;
             case DNN_BACKEND_TIMVX:     backend = "TIMVX"; break;
             case DNN_BACKEND_CANN:      backend = "CANN"; break;
+            case DNN_BACKEND_METAL:     backend = "METAL"; break;
         }
         return backend;
     };
@@ -2228,6 +2250,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
             case DNN_TARGET_HDDL:        target = "HDDL"; break;
             case DNN_TARGET_NPU:         target = "NPU"; break;
             case DNN_TARGET_CPU_FP16:    target = "CPU_FP16"; break;
+            case DNN_TARGET_METAL:       target = "METAL"; break;
         }
         return target;
     };

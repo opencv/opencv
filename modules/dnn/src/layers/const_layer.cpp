@@ -12,6 +12,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -44,7 +45,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -176,6 +178,15 @@ public:
             return make_cuda_node_bool<cuda4dnn::ConstOp>(std::move(context->stream), blob);
         else
             return make_cuda_node_with_type<cuda4dnn::ConstOp>(preferableTarget, blob.type(), std::move(context->stream), blob);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        return metal::ConstOp::create(inputs, outputs, blobs[0]);
     }
 #endif
 };

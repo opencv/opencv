@@ -1,0 +1,9 @@
+.section __DATA,__cv_dnn_mtl
+
+.private_extern _opencv_dnn_metallib_start
+.p2align 4
+_opencv_dnn_metallib_start:
+.incbin "@metal_library@"
+
+.private_extern _opencv_dnn_metallib_end
+_opencv_dnn_metallib_end:

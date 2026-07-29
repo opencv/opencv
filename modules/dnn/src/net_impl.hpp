@@ -12,6 +12,7 @@
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
 #include "op_cann.hpp"
+#include "op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
@@ -255,6 +256,10 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_VULKAN
     Ptr<vkcom::Context> context;
     void initVkComBackend();
+#endif
+
+#ifdef HAVE_METAL
+    void initMetalBackend();
 #endif
 
 #ifdef HAVE_TIMVX

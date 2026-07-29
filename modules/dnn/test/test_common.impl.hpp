@@ -40,6 +40,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
     case DNN_BACKEND_TIMVX: *os << "TIMVX"; return;
     case DNN_BACKEND_CANN: *os << "CANN"; return;
+    case DNN_BACKEND_METAL: *os << "METAL"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -58,6 +59,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     case DNN_TARGET_NPU: *os << "NPU"; return;
     case DNN_TARGET_CPU_FP16: *os << "CPU_FP16"; return;
+    case DNN_TARGET_METAL: *os << "METAL"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -295,7 +297,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withCUDA /*= true*/,
         bool withNgraph /*= true*/,
         bool withWebnn /*= false*/,
-        bool withCann /*= true*/
+        bool withCann /*= true*/,
+        bool withMetal /*= true*/
 )
 {
     bool withVPU = validateVPUType();
@@ -358,6 +361,16 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #else
     CV_UNUSED(withCann);
 #endif // HAVE_CANN
+
+#ifdef HAVE_METAL
+    if (withMetal)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_METAL))
+            targets.push_back(make_tuple(DNN_BACKEND_METAL, target));
+    }
+#else
+    CV_UNUSED(withMetal);
+#endif
 
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
@@ -517,6 +530,11 @@ void initDNNTests()
 #ifdef HAVE_CANN
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_CANN
+    );
+#endif
+#ifdef HAVE_METAL
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_METAL
     );
 #endif
     registerGlobalSkipTag(

@@ -48,6 +48,7 @@
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -319,6 +320,15 @@ public:
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+        const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+        return func.initMetal(inputs, outputs);
+    }
+#endif
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -389,7 +399,8 @@ struct ReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
@@ -429,6 +440,15 @@ struct ReLUFunctor : public BaseFunctor
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ReLUOp::create(inputs, outputs, slope);
     }
 #endif
 
@@ -559,7 +579,8 @@ struct ReLU6Functor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
@@ -631,6 +652,15 @@ struct ReLU6Functor : public BaseFunctor
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ReLU6Op::create(inputs, outputs, minValue, maxValue);
     }
 #endif
 
@@ -814,7 +844,8 @@ struct GeluFunctor : public BaseFunctor {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -857,6 +888,14 @@ struct GeluFunctor : public BaseFunctor {
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::GeluOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::GeluOp::create(inputs, outputs);
     }
 #endif
 
@@ -951,7 +990,8 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -986,6 +1026,14 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
         }
     }
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::GeluApproximationOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 100; }
 };
 
@@ -1011,7 +1059,8 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1076,6 +1125,14 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::TanHOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1108,7 +1165,8 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1146,6 +1204,15 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SwishOp::create(inputs, outputs);
     }
 #endif
 
@@ -1220,7 +1287,8 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1290,6 +1358,14 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::MishOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -1315,7 +1391,8 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1334,6 +1411,15 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SigmoidOp::create(inputs, outputs);
     }
 #endif
 
@@ -1401,7 +1487,8 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1473,6 +1560,14 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ELUOp::create(inputs, outputs, alpha);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -1491,7 +1586,8 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1534,6 +1630,14 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AbsValOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1556,7 +1660,8 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1614,6 +1719,14 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     }
 #endif // HAVE_CANN
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::BNLLOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 5; }
 };
 
@@ -1626,7 +1739,9 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1662,6 +1777,14 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
     }
 #endif // HAVE_CANN
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::CeilOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1676,7 +1799,8 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1712,6 +1836,14 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     }
 #endif // HAVE_CANN
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::FloorOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1732,7 +1864,9 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1763,6 +1897,14 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::LogOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1775,7 +1917,9 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1795,6 +1939,14 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::RoundOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -1809,7 +1961,8 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1831,6 +1984,14 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SqrtOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1843,7 +2004,9 @@ struct AcosFunctor : public BaseDefaultFunctor<AcosFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1855,6 +2018,14 @@ struct AcosFunctor : public BaseDefaultFunctor<AcosFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AcosOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AcosOp::create(inputs, outputs);
     }
 #endif
 
@@ -1878,7 +2049,9 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1913,6 +2086,14 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AcoshOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1925,7 +2106,9 @@ struct AsinFunctor : public BaseDefaultFunctor<AsinFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1937,6 +2120,14 @@ struct AsinFunctor : public BaseDefaultFunctor<AsinFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AsinOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AsinOp::create(inputs, outputs);
     }
 #endif
 
@@ -1960,7 +2151,9 @@ struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -1997,6 +2190,14 @@ struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AsinhOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2009,7 +2210,9 @@ struct AtanFunctor : public BaseDefaultFunctor<AtanFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2021,6 +2224,14 @@ struct AtanFunctor : public BaseDefaultFunctor<AtanFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AtanOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AtanOp::create(inputs, outputs);
     }
 #endif
 
@@ -2044,7 +2255,9 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2079,6 +2292,14 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::AtanhOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2099,7 +2320,9 @@ struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2133,6 +2356,14 @@ struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::CosOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2153,7 +2384,9 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2188,6 +2421,14 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::CoshOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2208,7 +2449,9 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2236,6 +2479,14 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ErfOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ErfOp::create(inputs, outputs);
     }
 #endif
 
@@ -2269,7 +2520,8 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2330,6 +2582,14 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::HardSwishOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2350,7 +2610,9 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2384,6 +2646,14 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
         }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SinOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2404,7 +2674,9 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2439,6 +2711,14 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SinhOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2459,7 +2739,9 @@ struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2494,6 +2776,14 @@ struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SoftplusOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2506,7 +2796,9 @@ struct SoftsignFunctor : public BaseDefaultFunctor<SoftsignFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2518,6 +2810,14 @@ struct SoftsignFunctor : public BaseDefaultFunctor<SoftsignFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SoftsignOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SoftsignOp::create(inputs, outputs);
     }
 #endif
 
@@ -2541,7 +2841,9 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2575,6 +2877,14 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::TanOp::create(inputs, outputs);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2598,7 +2908,9 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2641,6 +2953,14 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::CeluOp::create(inputs, outputs, alpha);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2665,7 +2985,9 @@ struct HardSigmoidFunctor : public BaseDefaultFunctor<HardSigmoidFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2683,6 +3005,14 @@ struct HardSigmoidFunctor : public BaseDefaultFunctor<HardSigmoidFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::HardSigmoidOp>(target, stream, alpha, beta);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::HardSigmoidOp::create(inputs, outputs, alpha, beta);
     }
 #endif
 
@@ -2712,7 +3042,9 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2757,6 +3089,14 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SeluOp::create(inputs, outputs, alpha, gamma);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -2774,7 +3114,9 @@ struct ThresholdedReluFunctor : public BaseDefaultFunctor<ThresholdedReluFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -2791,6 +3133,14 @@ struct ThresholdedReluFunctor : public BaseDefaultFunctor<ThresholdedReluFunctor
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ThresholdedReluOp>(target, stream, alpha);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ThresholdedReluOp::create(inputs, outputs, alpha);
     }
 #endif
 
@@ -2819,7 +3169,8 @@ struct PowerFunctor : public BaseFunctor
 #endif
         {
             return backendId == DNN_BACKEND_OPENCV ||
-                   backendId == DNN_BACKEND_CUDA;
+                   backendId == DNN_BACKEND_CUDA ||
+                   backendId == DNN_BACKEND_METAL;
         }
     }
 
@@ -2893,6 +3244,14 @@ struct PowerFunctor : public BaseFunctor
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::PowerOp::create(inputs, outputs, power, scale, shift);
     }
 #endif
 
@@ -3037,7 +3396,8 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     bool supportBackend(int backendId, int targetId)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -3091,6 +3451,14 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ExpOp::create(inputs, outputs, normScale, normShift);
+    }
+#endif
+
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -3118,7 +3486,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
@@ -3200,6 +3569,14 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     }
 #endif
 
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ChannelsPReLUOp::create(inputs, outputs, scale);
+    }
+#endif
+
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -3261,7 +3638,8 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CANN ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
@@ -3315,6 +3693,14 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
         return std::make_shared<ov::op::v0::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::PReLUOp::create(inputs, outputs, scale);
+    }
+#endif
 };
 
 struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
@@ -3324,7 +3710,8 @@ struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -3336,6 +3723,14 @@ struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SignOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::SignOp::create(inputs, outputs);
     }
 #endif
 
@@ -3357,7 +3752,8 @@ struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -3369,6 +3765,14 @@ struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ShrinkOp>(target, stream, bias, lambd);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ShrinkOp::create(inputs, outputs, bias, lambd);
     }
 #endif
 
@@ -3385,7 +3789,8 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     inline float calculate(float x) const
@@ -3397,6 +3802,14 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ReciprocalOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(const std::vector<Ptr<BackendWrapper> >& inputs,
+                               const std::vector<Ptr<BackendWrapper> >& outputs) const
+    {
+        return metal::ReciprocalOp::create(inputs, outputs);
     }
 #endif
 

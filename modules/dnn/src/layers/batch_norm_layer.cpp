@@ -16,6 +16,7 @@ Implementation of Batch Normalization layer.
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -189,6 +190,7 @@ public:
 #endif
         return (backendId == DNN_BACKEND_OPENCV) ||
                backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -362,6 +364,19 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         return make_cuda_node<cuda4dnn::BatchNormOp>(preferableTarget, std::move(context->stream), weights_, bias_);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::BatchNormConfiguration config;
+        config.scale = weights_;
+        config.bias = bias_;
+        config.axis = dims <= 1 ? 0 : 1;
+        return metal::BatchNormOp::create(inputs, outputs, config);
     }
 #endif
 

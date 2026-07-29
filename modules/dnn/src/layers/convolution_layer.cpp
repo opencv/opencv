@@ -48,6 +48,7 @@
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -284,6 +285,10 @@ public:
             return ksize >= 1 && ksize <= 3;
 #ifdef HAVE_VULKAN
         if (backendId == DNN_BACKEND_VKCOM)
+            return ksize == 2;
+#endif
+#ifdef HAVE_METAL
+        if (backendId == DNN_BACKEND_METAL)
             return ksize == 2;
 #endif
 #ifdef HAVE_WEBNN
@@ -1300,6 +1305,47 @@ public:
 
         return make_cuda_node<cuda4dnn::ConvolutionOp>(
             preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+        const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+        CV_CheckEQ(kernel_size.size(), static_cast<size_t>(2),
+                   "Metal convolution supports Conv2D only");
+        const bool dynamicWeights = blobs.empty();
+        if (dynamicWeights)
+        {
+            CV_CheckGE(inputs.size(), static_cast<size_t>(2),
+                       "Metal Conv2D with dynamic weights expects a weight input");
+            CV_CheckLE(inputs.size(), static_cast<size_t>(3),
+                       "Metal Conv2D supports at most input, weights and bias");
+        }
+        else
+        {
+            CV_CheckEQ(inputs.size(), static_cast<size_t>(1),
+                       "Metal Conv2D with static weights expects one input");
+        }
+
+        Mat biasMat;
+        if (hasBias())
+            biasMat = Mat(numOutput, 1, CV_32F, biasvec.data());
+        metal::ConvolutionConfiguration config;
+        if (!dynamicWeights)
+            config.weights = blobs[0];
+        config.bias = biasMat;
+        config.groups = groups;
+        config.kernelHeight = kernel_size[0];
+        config.kernelWidth = kernel_size[1];
+        config.strideHeight = strides[0];
+        config.strideWidth = strides[1];
+        config.dilationHeight = dilations[0];
+        config.dilationWidth = dilations[1];
+        config.padTop = pads_begin[0];
+        config.padLeft = pads_begin[1];
+        return metal::ConvolutionOp::create(inputs, outputs, config);
     }
 #endif
 

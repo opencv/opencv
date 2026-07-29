@@ -26,6 +26,10 @@ using namespace cv::dnn::cuda4dnn;
 #include "opencl_kernels_dnn.hpp"
 #endif
 
+#ifdef HAVE_METAL
+#include "../op_metal.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#LayerNormalization
@@ -55,7 +59,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               (backendId == DNN_BACKEND_CANN && axis != -1); // axis=-1 not supported due to 1d mat shape problem
+               (backendId == DNN_BACKEND_CANN && axis != -1) || // axis=-1 not supported due to 1d mat shape problem
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -389,6 +394,25 @@ public:
         return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), scale, bias, axis, epsilon, loops);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::LayerNormConfiguration config;
+        config.axis = axis0;
+        config.epsilon = epsilon;
+        config.hasBias = inputs.size() + blobs.size() >= 3;
+        if (!blobs.empty())
+        {
+            config.scale = blobs.front();
+            if (config.hasBias)
+                config.bias = blobs.back();
+        }
+        return metal::LayerNormOp::create(inputs, outputs, config);
+    }
+#endif
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)

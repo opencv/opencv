@@ -9,6 +9,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 #include "../net_impl.hpp"
 #include <opencv2/imgproc.hpp>
 
@@ -122,6 +123,9 @@ public:
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
 
         if (backendId == DNN_BACKEND_CANN)
+            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+
+        if (backendId == DNN_BACKEND_METAL)
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
 
 #ifdef HAVE_INF_ENGINE
@@ -574,6 +578,21 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
         return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::ResizeConfiguration config;
+        config.interpolation = interpolation == "nearest"
+            ? metal::InterpolationType::Nearest
+            : metal::InterpolationType::Bilinear;
+        config.alignCorners = alignCorners;
+        config.halfPixelCenters = halfPixelCenters;
+        return metal::ResizeOp::create(inputs, outputs, config);
     }
 #endif
 

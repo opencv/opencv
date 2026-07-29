@@ -21,6 +21,9 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+// Metal backend
+#include "../op_metal.hpp"
+
 // OpenCL backend
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/math_functions.hpp"
@@ -44,7 +47,8 @@ public:
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_METAL;
             //    backendId == DNN_BACKEND_CANN; // not supported due to 1d mat shape issue
     }
 
@@ -276,6 +280,17 @@ public:
         return make_cuda_node<cuda4dnn::InstanceNormOp>(preferableTarget, std::move(context->stream), epsilon, loops);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::InstanceNormConfiguration config;
+        config.epsilon = epsilon;
+        return metal::InstanceNormOp::create(inputs, outputs, config);
+    }
+#endif // HAVE_METAL
 
 };
 

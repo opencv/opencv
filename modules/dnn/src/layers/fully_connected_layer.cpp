@@ -48,6 +48,7 @@
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -185,7 +186,8 @@ public:
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB) ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -635,6 +637,29 @@ public:
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        if (blobs.empty() || isMatMul)
+        {
+            metal::MatMulConfiguration config;
+            config.weights = oriMat;
+            config.bias = bias ? biasMat : Mat();
+            config.transA = transA;
+            config.transB = transB;
+            return metal::MatMulOp::create(inputs, outputs, config);
+        }
+
+        metal::FullyConnectedConfiguration config;
+        config.weights = blobs[0];
+        config.bias = bias ? biasMat : Mat();
+        config.axis = axis;
+        return metal::FullyConnectedOp::create(inputs, outputs, config);
     }
 #endif
 

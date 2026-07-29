@@ -80,6 +80,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
         DNN_BACKEND_CANN,
+        DNN_BACKEND_METAL,
 #if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
 #if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -105,6 +106,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_HDDL,
         DNN_TARGET_NPU,
         DNN_TARGET_CPU_FP16, // Only the ARM platform is supported. Low precision computing, accelerate model inference.
+        DNN_TARGET_METAL,
     };
 
     enum TracingMode
@@ -375,6 +377,17 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual Ptr<BackendNode> initCUDA(
             void *context,
+            const std::vector<Ptr<BackendWrapper>>& inputs,
+            const std::vector<Ptr<BackendWrapper>>& outputs
+        );
+
+        /**
+         * @brief Returns a Metal backend node
+         *
+         * @param   inputs   layer inputs
+         * @param   outputs  layer outputs
+         */
+        virtual Ptr<BackendNode> initMetal(
             const std::vector<Ptr<BackendWrapper>>& inputs,
             const std::vector<Ptr<BackendWrapper>>& outputs
         );
@@ -758,16 +771,17 @@ CV__DNN_INLINE_NS_BEGIN
          * @see Target
          *
          * List of supported combinations backend / target:
-         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE |  DNN_BACKEND_CUDA |
-         * |------------------------|--------------------|------------------------------|-------------------|
-         * | DNN_TARGET_CPU         |                  + |                            + |                   |
-         * | DNN_TARGET_OPENCL      |                  + |                            + |                   |
-         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                   |
-         * | DNN_TARGET_MYRIAD      |                    |                            + |                   |
-         * | DNN_TARGET_FPGA        |                    |                            + |                   |
-         * | DNN_TARGET_CUDA        |                    |                              |                 + |
-         * | DNN_TARGET_CUDA_FP16   |                    |                              |                 + |
-         * | DNN_TARGET_HDDL        |                    |                            + |                   |
+         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE |  DNN_BACKEND_CUDA | DNN_BACKEND_METAL |
+         * |------------------------|--------------------|------------------------------|-------------------|-------------------|
+         * | DNN_TARGET_CPU         |                  + |                            + |                   |                   |
+         * | DNN_TARGET_OPENCL      |                  + |                            + |                   |                   |
+         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                   |                   |
+         * | DNN_TARGET_MYRIAD      |                    |                            + |                   |                   |
+         * | DNN_TARGET_FPGA        |                    |                            + |                   |                   |
+         * | DNN_TARGET_CUDA        |                    |                              |                 + |                   |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                 + |                   |
+         * | DNN_TARGET_HDDL        |                    |                            + |                   |                   |
+         * | DNN_TARGET_METAL       |                    |                              |                   |                 + |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

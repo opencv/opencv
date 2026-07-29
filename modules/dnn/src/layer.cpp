@@ -55,6 +55,14 @@ Ptr<BackendNode> Layer::initCUDA(
     return Ptr<BackendNode>();
 }
 
+Ptr<BackendNode> Layer::initMetal(
+        const std::vector<Ptr<BackendWrapper>>&,
+        const std::vector<Ptr<BackendWrapper>>&)
+{
+    CV_Error(Error::StsNotImplemented, "Metal pipeline of " + type + " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
 Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
                                   std::vector<Ptr<BackendWrapper> > &outputs)
 {

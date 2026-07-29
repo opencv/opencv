@@ -45,6 +45,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -234,7 +235,8 @@ public:
         if (backendId == DNN_BACKEND_CUDA)
             return !hasSteps && neg_step_dims.empty();
 #endif
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
@@ -828,6 +830,19 @@ public:
             return make_cuda_node_bool<cuda4dnn::SliceOp>(std::move(context->stream), std::move(offsets));
         else
             return make_cuda_node_with_type<cuda4dnn::SliceOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), std::move(offsets));
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        metal::SliceConfiguration config;
+        config.ranges = finalSliceRanges;
+        config.steps = sliceSteps;
+        config.flippedDimensions = neg_step_dims;
+        return metal::SliceOp::create(inputs, outputs, config);
     }
 #endif
 

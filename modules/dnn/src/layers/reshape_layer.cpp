@@ -48,6 +48,7 @@
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -236,7 +237,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
@@ -453,6 +455,15 @@ public:
             return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
         else
             return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        return metal::ReshapeOp::create(inputs, outputs);
     }
 #endif
 

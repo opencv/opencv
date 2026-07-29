@@ -49,6 +49,7 @@
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -144,7 +145,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
@@ -526,6 +528,15 @@ public:
             return make_cuda_node_bool<cuda4dnn::PermuteOp>(std::move(context->stream), _order);
         else
             return make_cuda_node_with_type<cuda4dnn::PermuteOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), _order);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        return metal::PermuteOp::create(inputs, outputs, _order);
     }
 #endif
 

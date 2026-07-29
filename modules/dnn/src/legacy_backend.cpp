@@ -13,6 +13,7 @@
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
 #include "op_cann.hpp"
+#include "op_metal.hpp"
 
 namespace cv {
 namespace dnn {
@@ -120,6 +121,13 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #ifdef HAVE_TIMVX
         return Ptr<BackendWrapper>(new TimVXBackendWrapper(m));
 #endif  // HAVE_TIMVX
+    }
+    else if (backendId == DNN_BACKEND_METAL)
+    {
+        CV_Assert(haveMetal());
+#ifdef HAVE_METAL
+        return Ptr<BackendWrapper>(new MetalBackendWrapper(m));
+#endif
     }
     else if (backendId == DNN_BACKEND_CANN)
     {

@@ -48,6 +48,7 @@
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -188,7 +189,8 @@ public:
 
         {
             return backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_OPENCV ||
-            (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
+            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_CANN ||
+                                         backendId == DNN_BACKEND_METAL));
         }
     }
 
@@ -955,6 +957,54 @@ public:
 
         return make_cuda_node<cuda4dnn::TransposeConvolutionOp>(
             preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        CV_CheckEQ(kernel_size.size(), static_cast<size_t>(2),
+                   "Metal deconvolution supports Deconv2D only");
+        const bool dynamicWeights = blobs.empty();
+        if (dynamicWeights)
+        {
+            CV_CheckGE(inputs.size(), static_cast<size_t>(2),
+                       "Metal Deconv2D with dynamic weights expects a weight input");
+            CV_CheckLE(inputs.size(), static_cast<size_t>(3),
+                       "Metal Deconv2D supports at most input, weights and bias");
+        }
+        else
+        {
+            CV_CheckEQ(inputs.size(), static_cast<size_t>(1),
+                       "Metal Deconv2D with static weights expects one input");
+        }
+
+        metal::DeconvolutionConfiguration config;
+        if (!dynamicWeights)
+            config.weights = fusedWeights ? weightsMat.t() : blobs[0];
+        if (hasBias() || fusedBias)
+            config.bias = biasesMat.empty() ? blobs[1] : biasesMat;
+        config.groups = groups;
+        config.kernelHeight = kernel_size[0];
+        config.kernelWidth = kernel_size[1];
+        config.strideHeight = strides[0];
+        config.strideWidth = strides[1];
+        config.dilationHeight = dilations[0];
+        config.dilationWidth = dilations[1];
+        config.padTop = pads_begin[0];
+        config.padLeft = pads_begin[1];
+        if (padMode.empty())
+            config.paddingMode = metal::DeconvolutionConfiguration::PaddingMode::MANUAL;
+        else if (padMode == "VALID")
+            config.paddingMode = metal::DeconvolutionConfiguration::PaddingMode::VALID;
+        else if (padMode == "SAME")
+            config.paddingMode = metal::DeconvolutionConfiguration::PaddingMode::SAME;
+        else
+            CV_Error(Error::StsNotImplemented,
+                     padMode + " padding mode not supported by Metal Deconvolution");
+        return metal::DeconvolutionOp::create(inputs, outputs, config);
     }
 #endif
 

@@ -15,6 +15,7 @@ Implementation of Scale layer.
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
@@ -83,7 +84,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_WEBNN && axis >0);
+               (backendId == DNN_BACKEND_WEBNN && axis >0) ||
+               backendId == DNN_BACKEND_METAL;
     }
 
     template<typename T>
@@ -265,6 +267,30 @@ public:
         config.axis = axis;
 
         return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(context->stream), config, weightsMat, biasMat);
+    }
+#endif
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper> >& inputs,
+        const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+        Mat weights = hasWeights && !blobs.empty() ? blobs[0] : Mat();
+        Mat bias = hasBias && !blobs.empty() ? blobs.back() : Mat();
+        metal::AffineConfiguration config;
+        if (blobs.empty())
+        {
+            config.dynamicParameter = hasWeights
+                ? metal::AffineConfiguration::DynamicParameter::SCALE
+                : metal::AffineConfiguration::DynamicParameter::BIAS;
+        }
+        else
+        {
+            config.scale = weights;
+            config.bias = bias;
+        }
+        config.axis = axis;
+        return metal::AffineOp::create(inputs, outputs, config);
     }
 #endif
 

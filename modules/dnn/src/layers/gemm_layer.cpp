@@ -14,6 +14,7 @@ using namespace cv::dnn::cuda4dnn;
 #include "../op_cann.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_metal.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include "cpu_kernels/fast_gemm.hpp"
@@ -74,7 +75,8 @@ public:
                (backendId == DNN_BACKEND_CUDA && const_B && !trans_a) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a) ||
+               backendId == DNN_BACKEND_METAL;
     }
 
 
@@ -491,6 +493,28 @@ public:
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_METAL
+    Ptr<BackendNode> initMetal(
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        const LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
+        metal::GemmConfiguration config;
+        if (constB(mode))
+            config.weights = blobs[0];
+        if (constC(mode))
+            config.bias = blobs.back();
+        config.hasBias = have_bias;
+        config.transA = trans_a;
+        config.transB = trans_b;
+        config.flattenA = flatten_a;
+        config.alpha = alpha;
+        config.beta = beta;
+        config.realBiasRank = real_ndims_C;
+        return metal::GemmOp::create(inputs, outputs, config);
+    }
+#endif // HAVE_METAL
 
 #ifdef HAVE_CANN
     // Y = A * B + C.
