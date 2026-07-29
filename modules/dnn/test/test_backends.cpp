@@ -125,9 +125,11 @@ TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
     // fc6 needs one contiguous 9216*4096*4 = 144 MiB block, which does not fit
-    // reliably in the 2 GB user address space of a 32-bit process on any target.
+    // reliably in the 2 GB user address space of a 32-bit process on Windows.
+#ifdef _WIN32
     if (sizeof(void*) == 4)
-        throw SkipTestException("Skip memory-heavy network on 32-bit (x86) platform");
+        throw SkipTestException("Skip memory-heavy network on 32-bit (x86) Windows platform");
+#endif
     processNet("dnn/onnx/models/alexnet.onnx", "", Size(227, 227));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
