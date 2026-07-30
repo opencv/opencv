@@ -2277,6 +2277,42 @@ TEST(Imgproc_MedianBlur, regression_28385)
     ASSERT_EQ(out.size(), Size(100, 50000));
 }
 
+// Regression test for https://github.com/opencv/opencv/issues/29592
+// medianBlur used to reject CV_8U images with channel counts other than
+// 1, 3 or 4 whenever the large-kernel path was needed (ksize >= 7, or
+// ksize == 5 on SIMD-enabled builds). Any channel count should now work,
+// and must match filtering each channel independently.
+TEST(Imgproc_MedianBlur, arbitrary_channel_count_29592)
+{
+    const int channelCounts[] = { 1, 2, 3, 4, 5, 6, 9 };
+    const int ksizes[] = { 3, 5, 7, 9 };
+
+    for (int cn : channelCounts)
+    {
+        Mat src(17, 19, CV_MAKETYPE(CV_8U, cn));
+        randu(src, 0, 256);
+
+        std::vector<Mat> srcChannels;
+        cv::split(src, srcChannels);
+
+        for (int ksize : ksizes)
+        {
+            Mat dst;
+            ASSERT_NO_THROW(medianBlur(src, dst, ksize)) << "cn=" << cn << " ksize=" << ksize;
+            ASSERT_EQ(dst.size(), src.size());
+            ASSERT_EQ(dst.type(), src.type());
+
+            std::vector<Mat> dstChannels(srcChannels.size());
+            for (size_t i = 0; i < srcChannels.size(); i++)
+                medianBlur(srcChannels[i], dstChannels[i], ksize);
+            Mat expected;
+            cv::merge(dstChannels, expected);
+
+            EXPECT_EQ(0.0, cvtest::norm(dst, expected, NORM_INF)) << "cn=" << cn << " ksize=" << ksize;
+        }
+    }
+}
+
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
     Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,

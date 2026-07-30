@@ -197,6 +197,25 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         return;
     }
 
+    int cn = _src0.channels();
+    if( cn != 1 && cn != 3 && cn != 4 )
+    {
+        // The single-call implementations (SIMD large-kernel path, HAL, OpenCL)
+        // only support 1, 3 or 4 channels. Median filtering is channel-independent,
+        // so any other channel count (2, 5, 6, ...) is handled by filtering each
+        // channel on its own -- always supported, since cn == 1 -- and merging
+        // the results back together.
+        std::vector<Mat> srcChannels;
+        cv::split(_src0, srcChannels);
+
+        std::vector<Mat> dstChannels(srcChannels.size());
+        for( size_t i = 0; i < srcChannels.size(); i++ )
+            medianBlur(srcChannels[i], dstChannels[i], ksize);
+
+        cv::merge(dstChannels, _dst);
+        return;
+    }
+
     CV_OCL_RUN(_dst.isUMat(),
                ocl_medianFilter(_src0,_dst, ksize))
 
