@@ -7,7 +7,7 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <cmath>
-
+#include "opencv2/core/utils/logger.hpp"
 namespace cv { namespace dnn {
 
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#com.microsoft.GroupQueryAttention
@@ -28,6 +28,8 @@ public:
         kv_num_heads = params.get<int>("kv_num_heads");
         scale = params.get<float>("scale", 0.f);
         local_window_size = params.get<int>("local_window_size", -1);
+        CV_LOG_WARNING(NULL, "DEBUG GQA: local_window_size raw param present=" << params.has("local_window_size")
+            << " value=" << local_window_size);
         softcap = params.get<float>("softcap", 0.f);
         do_rotary = params.get<int>("do_rotary", 0) != 0;
         rotary_interleaved = params.get<int>("rotary_interleaved", 0) != 0;

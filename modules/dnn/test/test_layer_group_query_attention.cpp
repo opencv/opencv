@@ -11,22 +11,10 @@
 
 namespace opencv_test { namespace {
 
-static bool skipIfClassicEngineForced()
-{
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return true;
-    }
-    return false;
-}
-
 static void runGQAModel(const std::string& basename, const std::vector<std::string>& inputNames,
                          std::vector<Mat>& outs)
 {
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_NEW);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
     for (size_t i = 0; i < inputNames.size(); ++i)
@@ -55,7 +43,6 @@ static const std::vector<std::string> GQA_INPUT_NAMES = {
 
 TEST(GroupQueryAttentionLayer, ONNXModel_CausalSelfAttentionNoCache)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_causal", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_causal", outs);
@@ -63,7 +50,6 @@ TEST(GroupQueryAttentionLayer, ONNXModel_CausalSelfAttentionNoCache)
 
 TEST(GroupQueryAttentionLayer, ONNXModel_GroupedHeadsMapToCorrectKVHead)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_grouped_heads", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_grouped_heads", outs);
@@ -71,7 +57,6 @@ TEST(GroupQueryAttentionLayer, ONNXModel_GroupedHeadsMapToCorrectKVHead)
 
 TEST(GroupQueryAttentionLayer, ONNXModel_PresentKVConcatenatesPastAndNew)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_past_kv", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_past_kv", outs);
@@ -79,7 +64,6 @@ TEST(GroupQueryAttentionLayer, ONNXModel_PresentKVConcatenatesPastAndNew)
 
 TEST(GroupQueryAttentionLayer, ONNXModel_LocalWindowRestrictsAttentionRange)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_local_window", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_local_window", outs);
@@ -87,7 +71,6 @@ TEST(GroupQueryAttentionLayer, ONNXModel_LocalWindowRestrictsAttentionRange)
 
 TEST(GroupQueryAttentionLayer, ONNXModel_SoftcapClampsScores)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_softcap", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_softcap", outs);
@@ -95,7 +78,6 @@ TEST(GroupQueryAttentionLayer, ONNXModel_SoftcapClampsScores)
 
 TEST(GroupQueryAttentionLayer, ONNXModel_RotaryAppliesOnlyToNewToken)
 {
-    if (skipIfClassicEngineForced()) return;
     std::vector<Mat> outs;
     runGQAModel("group_query_attention_rotary", GQA_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_rotary", outs);

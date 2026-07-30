@@ -13,24 +13,11 @@
 
 namespace opencv_test { namespace {
 
-static bool skipIfClassicEngineForced()
-{
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return true;
-    }
-    return false;
-}
-
 TEST(SkipSimplifiedLayerNormalizationLayer, ONNXModel_NoBiasMultiRow)
 {
-    if (skipIfClassicEngineForced()) return;
 
     const std::string basename = "skip_simplified_layer_norm";
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_NEW);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
     net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + basename + "_0.npy")), "input");
@@ -49,11 +36,10 @@ TEST(SkipSimplifiedLayerNormalizationLayer, ONNXModel_NoBiasMultiRow)
 
 TEST(SkipSimplifiedLayerNormalizationLayer, ONNXModel_BiasNonUniformGammaFourOutputs)
 {
-    if (skipIfClassicEngineForced()) return;
 
     const float epsilon = 1e-5f;
     const std::string basename = "skip_simplified_layer_norm_with_bias";
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_NEW);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + basename + ".onnx", true), cv::dnn::ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
     net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + basename + "_0.npy")), "input");
