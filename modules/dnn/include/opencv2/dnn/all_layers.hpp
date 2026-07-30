@@ -1872,6 +1872,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };
 
+    // com.microsoft MatMulNBits: weights stay n-bit packed, dequantized per block during the GEMM
+    class CV_EXPORTS MatMulNBitsLayer : public Layer {
+     public:
+        int K;
+        int N;
+        int bits;
+        int block_size;
+
+        static Ptr<MatMulNBitsLayer> create(const LayerParams &params);
+    };
+
     struct MatMulInt8Params
     {
         String name;

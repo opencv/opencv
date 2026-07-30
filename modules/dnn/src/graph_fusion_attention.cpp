@@ -1136,6 +1136,31 @@ struct ModelFusionAttention
                         if (all_consumers_removed) to_remove.insert(op_idx);
                     }
 
+                    // Bail unless the removal set is self-contained: a removed op's output
+                    // may only feed other removed ops, or an arg the fused layer re-produces.
+                    // Otherwise a surviving consumer would read a deleted arg.
+                    {
+                        std::set<int> attn_out_idx;
+                        for (const Arg& o : attn_layer->outputs) attn_out_idx.insert(o.idx);
+                        bool self_contained = true;
+                        for (int op_idx : to_remove) {
+                            if (op_idx < 0 || op_idx >= (int)prog.size() || !prog[op_idx]) continue;
+                            for (const Arg& out : prog[op_idx]->outputs) {
+                                if (attn_out_idx.count(out.idx)) continue;
+                                auto cit = consumers_.find(out.idx);
+                                if (cit == consumers_.end()) continue;
+                                for (int c : cit->second) {
+                                    if (to_remove.count(c)) continue;
+                                    self_contained = false;
+                                    break;
+                                }
+                                if (!self_contained) break;
+                            }
+                            if (!self_contained) break;
+                        }
+                        if (!self_contained) continue;
+                    }
+
                     for (int op : to_remove)
                         removed_ops.insert(op);
 
