@@ -124,10 +124,12 @@ TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
-    // Skip memory-heavy OpenCL targets on 32-bit (x86) platforms to avoid OutOfMemoryError
-    if (sizeof(void*) == 4 &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("Skip memory-heavy OpenCL target on 32-bit (x86) platform");
+    // fc6 needs one contiguous 9216*4096*4 = 144 MiB block, which does not fit
+    // reliably in the 2 GB user address space of a 32-bit process on Windows.
+#ifdef _WIN32
+    if (sizeof(void*) == 4)
+        throw SkipTestException("Skip memory-heavy network on 32-bit (x86) Windows platform");
+#endif
     processNet("dnn/onnx/models/alexnet.onnx", "", Size(227, 227));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
