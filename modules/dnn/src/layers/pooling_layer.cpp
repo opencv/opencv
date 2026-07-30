@@ -373,16 +373,18 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_,
+        InputArrayOfArrays outputs_
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         if (type == ROI)
             return make_cuda_node<cuda4dnn::ROIPoolingOp>(preferableTarget, std::move(context->stream), spatialScale);
 
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto input_shape = input_wrapper->getShape();
+        std::vector<cuda::GpuMatND> inputs, outputs;
+        inputs_.getGpuMatNDVector(inputs);
+        outputs_.getGpuMatNDVector(outputs);
+        MatShape input_shape = inputs[0].size;
 
         /* storing max indices is a special case and we deal with it separately */
         if (computeMaxIdx) {
@@ -412,13 +414,13 @@ public:
 
             config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-            int indicesType = outputs[1]->getHostMatDepth();
+            int indicesType = CV_MAT_DEPTH(outputs[1].type());
             CV_CheckType(indicesType, indicesType == CV_32S || indicesType == CV_64S, "Unsupported indices type");
 
             if (indicesType == CV_32S)
-                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int32_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int32_t>(preferableTarget, CV_MAT_DEPTH(inputs[0].type()), std::move(context->stream), config);
             else if (indicesType == CV_64S)
-                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, CV_MAT_DEPTH(inputs[0].type()), std::move(context->stream), config);
 
             CV_Error(Error::BadDepth, "Unsupported indices type");
             return Ptr<BackendNode>();

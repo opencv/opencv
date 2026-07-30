@@ -8,6 +8,10 @@
 
 #include <limits>
 
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda_stream_accessor.hpp>
+#endif
+
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
 #endif
@@ -316,30 +320,30 @@ public:
         return g;
     }*/
 
-    virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
+    virtual const std::vector<Arg>& append(Ptr<LayerInfo>& op,
                 const std::vector<std::string>& outnames) override
     {
-        CV_Assert(layer);
+        CV_Assert(op);
         int i, noutputs = (int)outnames.size();
-        //CV_Assert(layer->minNumOutputs() <= noutputs && noutputs <= layer->maxNumOutputs());
+        //CV_Assert(op->minNumOutputs() <= noutputs && noutputs <= op->maxNumOutputs());
 
-        layer->outputs.resize(noutputs);
+        op->outputs.resize(noutputs);
         for (i = 0; i < noutputs; i++) {
             Arg outarg = netimpl_->getArg(outnames[i]);
             ArgKind kind = netimpl_->argKind(outarg);
             CV_Assert(kind == DNN_ARG_TEMP || kind == DNN_ARG_OUTPUT);
-            layer->outputs[i] = outarg;
+            op->outputs[i] = outarg;
         }
 
-        prog_.push_back(layer);
-        return layer->outputs;
+        prog_.push_back(op);
+        return op->outputs;
     }
 
-    virtual Arg append(Ptr<Layer>& layer,
+    virtual Arg append(Ptr<LayerInfo>& op,
                const std::string& outname) override
     {
         std::vector<std::string> outnames = {outname};
-        const std::vector<Arg>& outputs = append(layer, outnames);
+        const std::vector<Arg>& outputs = append(op, outnames);
         CV_Assert(outputs.size() == 1);
         return outputs[0];
     }
@@ -378,8 +382,8 @@ public:
         for (size_t i = 0; i < nlayers; i++) {
             prindent(strm, argindent);
             strm << "// op #" << i << "\n";
-            const Ptr<Layer>& layer = prog_[i];
-            layer->dump(strm, argindent, i+1 < nlayers);
+            const Ptr<LayerInfo>& op = prog_[i];
+            op->dump(strm, argindent, i+1 < nlayers);
         }
         prindent(strm, subindent);
         strm << "]\n";
@@ -400,15 +404,30 @@ public:
         netimpl_->checkArgs(outputs);
         outputs_ = outputs;
     }
-    virtual const std::vector<Ptr<Layer> >& prog() const override { return prog_; }
-    virtual void setProg(const std::vector<Ptr<Layer> >& newprog) override { prog_ = newprog; }
+    virtual const std::vector<Ptr<LayerInfo> >& prog() const override { return prog_; }
+    virtual int opBackend(int opidx) const override
+    {
+        return (opidx >= 0 && opidx < (int)execBackend_.size()) ? execBackend_[opidx]
+                                                                : DNN_BACKEND_OPENCV;
+    }
+    virtual void setProg(const std::vector<Ptr<LayerInfo> >& newprog) override
+    {
+        prog_ = newprog;
+        exec_.clear();
+        execBackend_.clear();
+        inH2D_.clear();
+        outD2H_.clear();
+    }
 
-protected:
     Net::Impl* netimpl_;
     std::string name_;
     std::vector<Arg> inputs_;
     std::vector<Arg> outputs_;
-    std::vector<Ptr<Layer> > prog_;
+    std::vector<Ptr<LayerInfo> > prog_;
+    std::vector<Ptr<Layer> > exec_;
+    std::vector<int> execBackend_;
+    std::vector<std::vector<uchar> > inH2D_;
+    std::vector<std::vector<uchar> > outD2H_;
 };
 
 Ptr<Graph> Graph::create(void* netimpl, const std::string& name,
@@ -556,16 +575,174 @@ void Net::Impl::prepareForInference()
         fuseTransposeMatMul();
         fuseScaleSoftmax();
         fuseBasic();
-        useBlockLayout();
-        assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
         finalizeLayers = true;
     }
 }
 
+void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
+{
+    GraphImpl* g = static_cast<GraphImpl*>(graph.get());
+    const std::vector<Ptr<LayerInfo> >& prog = g->prog_;
+    size_t i, nops = prog.size();
+    g->exec_.assign(nops, Ptr<Layer>());
+    g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
+
+#ifdef HAVE_CUDA
+    // Whole-graph CUDA gate: run on CUDA only if *every* op has a CUDA executor; if any op is
+    // unsupported (or the graph has control-flow subgraphs) run the entire graph on CPU. This
+    // avoids partial CPU<->CUDA execution and its host/device coherence hazards for now.
+    std::vector<Ptr<Layer> > cudaExecs;
+    bool graphOnCuda = false;
+    if (useCUDA && cudaInfo) {
+        graphOnCuda = true;
+        cudaExecs.assign(nops, Ptr<Layer>());
+        for (i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op)
+                continue;
+            if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
+            Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
+            if (!e) { graphOnCuda = false; break; }
+            cudaExecs[i] = e;
+        }
+        if (!graphOnCuda) {
+            cudaExecs.clear();
+            CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: graph '%s' has layer(s) without CUDA support; "
+                                         "running the whole graph on CPU", graph->name().c_str()));
+        }
+    }
+#endif
+
+    for (i = 0; i < nops; i++) {
+        const Ptr<LayerInfo>& op = prog[i];
+        if (!op)
+            continue;
+
+        // recurse into subgraphs (If/Loop bodies) first
+        const std::vector<Ptr<Graph> >* subs = op->subgraphs();
+        if (subs) {
+            for (const Ptr<Graph>& sub : *subs)
+                finalizeGraph(sub, useCUDA);
+        }
+
+        Ptr<Layer> exec;
+        int backend = DNN_BACKEND_OPENCV;
+#ifdef HAVE_CUDA
+        if (graphOnCuda && cudaExecs[i]) {
+            exec = cudaExecs[i];
+            exec->preferableTarget = preferableTarget;
+            backend = DNN_BACKEND_CUDA;
+        }
+#endif
+        if (!exec) {
+            exec = LayerFactory::createExec(op->type, DNN_BACKEND_OPENCV, op, nullptr);
+            if (!exec)
+                exec = op.dynamicCast<Layer>();
+            backend = DNN_BACKEND_OPENCV;
+        }
+        CV_Assert(exec);
+        g->exec_[i] = exec;
+        g->execBackend_[i] = backend;
+        CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize op #%zu '%s' (%s) -> %s",
+                    i, op->name.c_str(), op->type.c_str(),
+                    backend == DNN_BACKEND_CUDA ? "CUDA" : "CPU"));
+    }
+}
+
+void Net::Impl::saveFusedSnapshot()
+{
+    fusedSnapshot.clear();
+    for (const Ptr<Graph>& g : allgraphs) {
+        FusedGraphSnapshot snap;
+        snap.graph = g;
+        const std::vector<Ptr<LayerInfo> >& prog = g->prog();
+        snap.prog = prog;
+        snap.inputs.reserve(prog.size());
+        snap.outputs.reserve(prog.size());
+        for (const Ptr<LayerInfo>& op : prog) {
+            snap.inputs.push_back(op ? op->inputs : std::vector<Arg>());
+            snap.outputs.push_back(op ? op->outputs : std::vector<Arg>());
+        }
+        fusedSnapshot.push_back(std::move(snap));
+    }
+}
+
+void Net::Impl::restoreFusedSnapshot()
+{
+    // Roll the graph back to its post-fusion state: undo the layer-input rewiring
+    // and remove the TransformLayout ops inserted by a previous useBlockLayout().
+    for (const FusedGraphSnapshot& snap : fusedSnapshot) {
+        for (size_t i = 0; i < snap.prog.size(); i++) {
+            const Ptr<LayerInfo>& op = snap.prog[i];
+            if (!op)
+                continue;
+            op->inputs = snap.inputs[i];
+            op->outputs = snap.outputs[i];
+        }
+        snap.graph->setProg(snap.prog);
+    }
+    totalLayers = updateGraphOfs(mainGraph, 0, true);
+}
+
+void Net::Impl::finalize()
+{
+#ifdef HAVE_ONNXRUNTIME
+    if (ort_session)
+        return;  // ONNX Runtime manages its own execution session
+#endif
+    if (!mainGraph)
+        return;
+    if (!prepared)
+        prepareForInference();
+    if (finalized)
+        return;
+
+    // Snapshot the fused graph once so finalize() can re-run cleanly on a
+    // backend/target change (block layout + buffer assignment are destructive).
+    if (!fusedSnapshotValid) {
+        saveFusedSnapshot();
+        fusedSnapshotValid = true;
+    } else {
+        restoreFusedSnapshot();
+    }
+
+    bool useCUDA = false;
+#ifdef HAVE_CUDA
+    cudaArgBuffers.clear();
+    cudaArgHostDirty.clear();
+    cudaArgDeviceDirty.clear();
+    if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
+        useCUDA = true;
+        if (!cudaInfo) {
+            cuda4dnn::csl::CSLContext context;
+            context.stream = cuda4dnn::csl::Stream(true);
+            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
+            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
+            auto d2h_stream = cuda4dnn::csl::Stream(true);
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
+        }
+    }
+#endif
+
+    CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize() backend=%d target=%d useCUDA=%d over %zu graph(s)",
+                preferableBackend, preferableTarget, (int)useCUDA, allgraphs.size()));
+
+    for (const Ptr<Graph>& g : allgraphs)
+        finalizeGraph(g, useCUDA);
+    useBlockLayout();
+    assignBuffers();
+    totalLayers = updateGraphOfs(mainGraph, 0, true);
+
+    for (const Ptr<Graph>& g : allgraphs)
+        finalizeGraph(g, useCUDA);
+
+    finalized = true;
+}
+
 void Net::Impl::allocateLayerOutputs(
-                          const Ptr<Layer>& layer,
+                          const Ptr<LayerInfo>& layer,
                           const std::vector<int>& inpTypes,
                           const std::vector<MatShape>& inpShapes,
                           std::vector<int>& outTypes,
@@ -669,6 +846,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
+    finalize();  // select per-op executors for the chosen backend/target (idempotent)
     // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;
     //tracingMode = DNN_TRACE_ALL;
@@ -1133,6 +1311,125 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
 }
 
+#ifdef HAVE_CUDA
+// cv::cuda::Stream view over the (non-owning) cuda4dnn inference stream, so GpuMatND transfers
+// are ordered against the op compute that runs on the same cudaStream_t.
+static inline cuda::Stream wrapCudaStream(cuda4dnn::csl::Stream& s)
+{
+    return cuda::StreamAccessor::wrapStream(s.get());
+}
+
+// GpuMatND upload/download require at least one dimension (rank-0 shapes trip GpuMatND::setFields).
+// View a rank-0 scalar as a 1-element 1D header over the same data; higher-rank Mats pass through.
+static inline Mat asAtLeast1D(const Mat& m)
+{
+    if (m.shape().dims != 0)
+        return m;
+    int one = 1;
+    return Mat(1, &one, m.type(), const_cast<uchar*>(m.data));
+}
+
+// Device element type for a host tensor: float tensors are stored as half under the FP16 target,
+// everything else mirrors the host type. fit() reuses the existing allocation when large enough,
+// so buffers persist across forwards.
+int Net::Impl::cudaDeviceType(const Mat& hostMat) const
+{
+    if (preferableTarget == DNN_TARGET_CUDA_FP16 && CV_MAT_DEPTH(hostMat.type()) == CV_32F)
+        return CV_MAKETYPE(CV_16F, CV_MAT_CN(hostMat.type()));
+    return hostMat.type();
+}
+
+cuda::GpuMatND& Net::Impl::getCudaArgBuffer(Arg arg, const Mat& hostMat)
+{
+    int idx = arg.idx;
+    if ((int)cudaArgBuffers.size() != (int)args.size()) {
+        cudaArgBuffers.assign(args.size(), cuda::GpuMatND());
+        cudaArgHostDirty.assign(args.size(), 1);
+        cudaArgDeviceDirty.assign(args.size(), 0);
+    }
+    // GpuMatND (and cuda4dnn tensors) require at least one dimension; represent a rank-0 scalar
+    // tensor as a 1-element 1D tensor so element-wise ops still see the single value.
+    MatShape shape = hostMat.shape();
+    if (shape.dims == 0)
+        shape = MatShape({1});
+    cudaArgBuffers[idx].fit(shape, cudaDeviceType(hostMat));
+    return cudaArgBuffers[idx];
+}
+
+void Net::Impl::cudaSetHostDirty(Arg arg)
+{
+    int idx = arg.idx;
+    if (idx >= 0 && idx < (int)cudaArgHostDirty.size()) {
+        cudaArgHostDirty[idx] = 1;
+        cudaArgDeviceDirty[idx] = 0;
+    }
+}
+
+void Net::Impl::cudaUploadArg(Arg arg, const Mat& hostMat)
+{
+    int idx = arg.idx;
+    Mat src = asAtLeast1D(hostMat);
+    cuda::GpuMatND& g = getCudaArgBuffer(arg, src);
+    if (cudaArgHostDirty[idx]) {
+        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
+        if (g.type() == src.type()) {
+            g.upload(src, s);
+        } else {
+            // FP32 -> FP16 (device stores half): convert on host, then copy up.
+            Mat tmp;
+            src.convertTo(tmp, CV_MAT_DEPTH(g.type()));
+            g.upload(tmp, s);
+        }
+        cudaArgHostDirty[idx] = 0;
+        cudaArgDeviceDirty[idx] = 0;
+    }
+}
+
+void Net::Impl::cudaDownloadArg(Arg arg, Mat& hostMat)
+{
+    int idx = arg.idx;
+    if (idx < 0 || idx >= (int)cudaArgDeviceDirty.size())
+        return;
+    if (cudaArgDeviceDirty[idx]) {
+        cuda::GpuMatND& g = cudaArgBuffers[idx];
+        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
+        Mat dst = asAtLeast1D(hostMat);   // fill the scalar's storage through a 1D header
+        if (g.type() == dst.type()) {
+            g.download(dst, s);
+            cudaInfo->context.stream.synchronize();  // host read follows immediately
+        } else {
+            // device stores half: copy down, then convert up to the host FP32 tensor.
+            Mat tmp;
+            g.download(tmp, s);
+            cudaInfo->context.stream.synchronize();
+            tmp.convertTo(dst, dst.type());
+        }
+        cudaArgDeviceDirty[idx] = 0;
+        cudaArgHostDirty[idx] = 0;
+    }
+}
+
+static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
+                          const std::vector<Arg>& inputs, const std::vector<Arg>& outputs,
+                          std::vector<Mat>& inpMats, std::vector<Mat>& outMats)
+{
+    Ptr<Layer> exec = gimpl->exec_[opidx];
+    CV_Assert(exec && netimpl->cudaInfo);
+    std::vector<cuda::GpuMatND> inpG(inputs.size()), outG(outputs.size());
+    for (size_t i = 0; i < inputs.size(); i++) {
+        netimpl->cudaUploadArg(inputs[i], inpMats[i]);   // H2D only if host-authoritative
+        inpG[i] = netimpl->cudaArgBuffers[inputs[i].idx];
+    }
+    for (size_t i = 0; i < outputs.size(); i++) {
+        outG[i] = netimpl->getCudaArgBuffer(outputs[i], outMats[i]);
+        int oidx = outputs[i].idx;                       // op writes the device buffer
+        netimpl->cudaArgDeviceDirty[oidx] = 1;
+        netimpl->cudaArgHostDirty[oidx] = 0;
+    }
+    exec->forwardCUDA(inpG, outG, &netimpl->cudaInfo->workspace);
+}
+#endif
+
 // Slice a Scan input at index `idx` along `axis`, removing that axis (contiguous result).
 static Mat sliceScanAxis(const Mat& m, int axis, int idx)
 {
@@ -1184,7 +1481,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         CV_Error_(Error::StsObjectNotFound, ("graph '%s' does not belong to the model", graph->name().c_str()));
     }
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    GraphImpl* gimpl = static_cast<GraphImpl*>(graph.get());
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();
     const std::vector<Arg>& gr_outputs = graph->outputs();
@@ -1208,13 +1506,31 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             setGraphInput(graph, i, m);
         }
     }
+#ifdef HAVE_CUDA
+    // Graph inputs are host-authoritative and may be updated between forward() calls
+    // (setInput writes them outside this function, so the loop above is skipped when
+    // forward() is called with no explicit inputs). Mark their device copies stale each
+    // forward so the current input is re-uploaded; otherwise a second forward with a
+    // changed input would read the previous forward's stale device data.
+    if (cudaInfo) {
+        for (i = 0; i < n_gr_inputs; i++)
+            cudaSetHostDirty(gr_inputs[i]);
+    }
+#endif
 
     for (size_t opidx = 0; opidx < nops; opidx++) {
-        const Ptr<Layer>& layer = prog.at(opidx);
-        if (!layer) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
+        const Ptr<LayerInfo>& op = prog.at(opidx);
+        if (!op) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
             continue;
-        const std::vector<Arg>& inputs = layer->inputs;
-        const std::vector<Arg>& outputs = layer->outputs;
+        Ptr<Layer> layer = (opidx < gimpl->exec_.size()) ? gimpl->exec_[opidx] : Ptr<Layer>();
+        if (!layer)
+            layer = op.dynamicCast<Layer>();
+        CV_Assert(layer);
+        int opBackend = (opidx < gimpl->execBackend_.size()) ? gimpl->execBackend_[opidx]
+                                                             : DNN_BACKEND_OPENCV;
+        CV_UNUSED(opBackend);  // only consumed by the HAVE_CUDA dispatch below
+        const std::vector<Arg>& inputs = op->inputs;
+        const std::vector<Arg>& outputs = op->outputs;
         size_t ninputs = inputs.size(), noutputs = outputs.size();
 
         inpMats.resize(ninputs);
@@ -1225,6 +1541,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
+#ifdef HAVE_CUDA
+            // CPU op: bring any device-resident input back to host before reading its
+            // shape/data. This must happen before allocateLayerOutputs(), which may fit()
+            // an in-place op's output onto this very buffer and rewrite its header.
+            if (opBackend != DNN_BACKEND_CUDA)
+                cudaDownloadArg(inp, argTensor(inp));
+#endif
             const Mat& m = argTensor(inp);
             inpMats[i] = m;
             inpTypes[i] = m.type();
@@ -1233,15 +1556,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         if (tracingMode != DNN_TRACE_NONE) {
             strm_ << "-----------\n";
-            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << layer->type << " node: " << layer->name << "\n";
+            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << op->type << " node: " << op->name << "\n";
             for (i = 0; i < ninputs; i++) {
                 Arg inp = inputs[i];
                 traceArg(strm_, "Input", i, inp, false);
             }
         }
-        bool dynamicOutShapes = layer->dynamicOutputShapes();
+        bool dynamicOutShapes = op->dynamicOutputShapes();
         if (!dynamicOutShapes) {
-            allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+            allocateLayerOutputs(op, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
         } else {
             outMats.resize(noutputs);
@@ -1254,11 +1577,26 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
-        std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        std::vector<Ptr<Graph> >* subgraphs = op->subgraphs();
         if (!subgraphs) {
-            if (finalizeLayers)
-                layer->finalize(inpMats, outMats);
-            layer->forward(inpMats, outMats, tempMats);
+#ifdef HAVE_CUDA
+            if (opBackend == DNN_BACKEND_CUDA) {
+                if (finalizeLayers)
+                    layer->finalize(inpMats, outMats);
+                forwardOpCUDA(this, gimpl, opidx, inputs, outputs, inpMats, outMats);
+            } else
+#endif
+            {
+                // Device-resident inputs were already synced to host in the capture loop above.
+                if (finalizeLayers)
+                    layer->finalize(inpMats, outMats);
+                layer->forward(inpMats, outMats, tempMats);
+#ifdef HAVE_CUDA
+                // CPU produced fresh host data; invalidate any stale device copy of its outputs.
+                for (size_t k = 0; k < noutputs; k++)
+                    cudaSetHostDirty(outputs[k]);
+#endif
+            }
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
@@ -1425,7 +1763,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
             else {
                 CV_Error_(Error::StsNotImplemented,
-                          ("unknown layer type '%s' with subgraphs", layer->type.c_str()));
+                          ("unknown layer type '%s' with subgraphs", op->type.c_str()));
             }
         }
         CV_Assert(outMats.size() == noutputs);
@@ -1508,6 +1846,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     outputsVec.resize(n_gr_outputs);
     for (i = 0; i < n_gr_outputs; i++) {
         Arg out = gr_outputs[i];
+#ifdef HAVE_CUDA
+        // A graph output produced on the device must be brought back to host before it is read.
+        if (out.idx >= 0) {
+            Mat& t = argTensor(out);
+            cudaDownloadArg(out, t);
+        }
+#endif
         const Mat& outm = argTensor(out);
         if (isMainGraph) {
             if (outm.size.layout == DATA_LAYOUT_BLOCK) {
@@ -1532,8 +1877,8 @@ void Net::Impl::updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& useco
         CV_Assert(output.idx < (int)usecounts.size());
         usecounts[output.idx]++;
     }
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
-    for (const Ptr<Layer>& layer: prog) {
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
+    for (const Ptr<LayerInfo>& layer: prog) {
         const std::vector<Arg>& inputs = layer->inputs;
         for (const Arg& input: inputs) {
             CV_Assert(input.idx < (int)usecounts.size());
@@ -1564,14 +1909,14 @@ int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
         allgraphs.clear();
         layerNameToId.clear();
     }
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     int subgraph_ofs = currofs + (int)nops;
     std::string name = graph->name();
     graphofs.insert(std::make_pair(name, currofs));
     allgraphs.push_back(graph);
     for (i = 0; i < nops; i++) {
-        const Ptr<Layer>& layer = prog[i];
+        const Ptr<LayerInfo>& layer = prog[i];
         layerNameToId.insert(std::make_pair(layer->name, currofs + (int)i));
         const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (subgraphs) {
@@ -1718,12 +2063,12 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
     if (!graph)
         return true;
 
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
 
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     std::vector<int> inpTypes, outTypes, tempTypes;
 
-    for (const Ptr<Layer>& layer: prog) {
+    for (const Ptr<LayerInfo>& layer: prog) {
         if (!layer)
             continue;
 

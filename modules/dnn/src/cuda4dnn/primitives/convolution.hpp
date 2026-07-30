@@ -286,8 +286,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cuda::GpuMatND>& inputs,
+            const std::vector<cuda::GpuMatND>& outputs,
             csl::Workspace& workspace) override
         {
             /* input[0] = conv input, input[1] = bias (from fused eltwise layer) */
@@ -296,8 +296,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             csl::WorkspaceAllocator allocator(workspace);
 
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto input = input_wrapper->getView();
+            auto input = csl::viewOf<T>(inputs[0]);
 
             if (!transformed_shape.empty())
             {
@@ -309,8 +308,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto conv_scratchpad = allocator.get_instance();
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs[0]);
 
             if (fusion_location == InternalFusionLocation::CUDNN)
             {
@@ -320,8 +318,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                         convoluter.convolve_with_bias_activation(output, input, filtersTensor, biasTensor, conv_scratchpad);
                     else if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION)
                     {
-                        auto eltwise_wrapper = inputs[1].dynamicCast<wrapper_type>();
-                        auto eltwise = eltwise_wrapper->getView();
+                        auto eltwise = csl::viewOf<T>(inputs[1]);
                         CV_Assert(is_shape_same(eltwise, output));
 
                         convoluter.convolve_with_bias_eltwise_activation(output, input, filtersTensor, biasTensor, eltwise, conv_scratchpad);
@@ -357,8 +354,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                               fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION ||
                               fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM);
 
-                    auto eltwise_wrapper = inputs[1].dynamicCast<wrapper_type>();
-                    auto eltwise = eltwise_wrapper->getView();
+                    auto eltwise = csl::viewOf<T>(inputs[1]);
                     CV_Assert(is_shape_same(eltwise, output));
 
                     std::size_t inner_size = output.size_range(2, output.rank());
@@ -472,8 +468,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                               fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION ||
                               fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM);
 
-                    auto eltwise_wrapper = inputs[1].dynamicCast<wrapper_type>();
-                    auto eltwise = eltwise_wrapper->getView();
+                    auto eltwise = csl::viewOf<T>(inputs[1]);
                     CV_Assert(is_shape_same(eltwise, output));
 
                     /* we pass `eltwise` as `bias` (with `inner_size` as one) to bias-activation kernels */
