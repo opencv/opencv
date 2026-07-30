@@ -407,7 +407,20 @@ inline _TpVec64F v_log_default_64f(const _TpVec64F &x) {
 
 //! @name Sine and Cosine
 //! @{
+// The range reduction below relies on exact (non-reassociated) cancellation
+// between x and the split DP1/DP2/DP3 constants. -ffast-math (in particular
+// -fassociative-math) allows the compiler to reorder/fuse that arithmetic,
+// which destroys the cancellation and yields grossly wrong results for
+// arguments away from zero. Force strict math for these functions regardless
+// of the translation unit's optimization flags.
+#if defined __GNUC__ && !defined __clang__
+#define CV_HAL_INTRIN_SINCOS_NO_FAST_MATH __attribute__((optimize("no-fast-math")))
+#else
+#define CV_HAL_INTRIN_SINCOS_NO_FAST_MATH
+#endif
+
 template<typename _TpVec16F, typename _TpVec16S>
+CV_HAL_INTRIN_SINCOS_NO_FAST_MATH
 inline void v_sincos_default_16f(const _TpVec16F &x, _TpVec16F &ysin, _TpVec16F &ycos) {
     const _TpVec16F v_cephes_FOPI = v_setall_<_TpVec16F>(hfloat(1.27323954473516f)); // 4 / M_PI
     const _TpVec16F v_minus_DP1 = v_setall_<_TpVec16F>(hfloat(-0.78515625f));
@@ -484,6 +497,7 @@ inline _TpVec16F v_cos_default_16f(const _TpVec16F &x) {
 
 
 template<typename _TpVec32F, typename _TpVec32S>
+CV_HAL_INTRIN_SINCOS_NO_FAST_MATH
 inline void v_sincos_default_32f(const _TpVec32F &x, _TpVec32F &ysin, _TpVec32F &ycos) {
     const _TpVec32F v_cephes_FOPI = v_setall_<_TpVec32F>(1.27323954473516f); // 4 / M_PI
     const _TpVec32F v_minus_DP1 = v_setall_<_TpVec32F>(-0.78515625f);
@@ -559,6 +573,7 @@ inline _TpVec32F v_cos_default_32f(const _TpVec32F &x) {
 }
 
 template<typename _TpVec64F, typename _TpVec64S>
+CV_HAL_INTRIN_SINCOS_NO_FAST_MATH
 inline void v_sincos_default_64f(const _TpVec64F &x, _TpVec64F &ysin, _TpVec64F &ycos) {
     const _TpVec64F v_cephes_FOPI = v_setall_<_TpVec64F>(1.2732395447351626861510701069801148); // 4 / M_PI
     const _TpVec64F v_minus_DP1 = v_setall_<_TpVec64F>(-7.853981554508209228515625E-1);
@@ -644,6 +659,7 @@ inline _TpVec64F v_cos_default_64f(const _TpVec64F &x) {
     v_sincos_default_64f<_TpVec64F, _TpVec64S>(x, ysin, ycos);
     return ycos;
 }
+#undef CV_HAL_INTRIN_SINCOS_NO_FAST_MATH
 //! @}
 
 

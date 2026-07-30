@@ -151,6 +151,45 @@ TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
     EXPECT_NEAR(std::abs(phaseShift.y), 0.0, 1.0);
 }
 
+// Regression test for https://github.com/opencv/opencv/issues/29634
+// createHanningWindow must match the analytical separable Hann window
+// w(x, y) = sqrt(wr(y) * wc(x)), regardless of the SIMD path taken.
+static void checkHanningWindow(const Mat& hann, Size winSize)
+{
+    ASSERT_EQ(hann.size(), winSize);
+    const double coeff0 = 2.0 * CV_PI / (double)(winSize.width - 1);
+    const double coeff1 = 2.0 * CV_PI / (double)(winSize.height - 1);
+
+    for (int y = 0; y < winSize.height; y++)
+    {
+        const double wr = 0.5 * (1.0 - std::cos(coeff1 * y));
+        for (int x = 0; x < winSize.width; x++)
+        {
+            const double wc = 0.5 * (1.0 - std::cos(coeff0 * x));
+            const double expected = std::sqrt(wr * wc);
+            const double actual = hann.depth() == CV_32F
+                ? (double)hann.at<float>(y, x)
+                : hann.at<double>(y, x);
+            ASSERT_NEAR(expected, actual, 1e-4) << "at (" << x << ", " << y << ") for size " << winSize;
+        }
+    }
+}
+
+TEST(Imgproc_HanningWindow, accuracy)
+{
+    // Sizes are chosen to exercise both the SIMD-processed portion and the
+    // scalar remainder of createHanningWindow's internal loops.
+    const Size sizes[] = { Size(12, 12), Size(13, 7), Size(2, 2), Size(33, 17) };
+    for (const Size& sz : sizes)
+    {
+        Mat hann32f, hann64f;
+        createHanningWindow(hann32f, sz, CV_32F);
+        createHanningWindow(hann64f, sz, CV_64F);
+        checkHanningWindow(hann32f, sz);
+        checkHanningWindow(hann64f, sz);
+    }
+}
+
 ////////////////////// DivSpectrums ////////////////////////
 class CV_DivSpectrumsTest : public cvtest::ArrayTest
 {
