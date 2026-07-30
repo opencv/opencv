@@ -3,8 +3,12 @@ SimpleBlobDetector Tutorial {#tutorial_simple_blob_detector}
 
 @tableofcontents
 
+@prev_tutorial{tutorial_akaze_matching}
+@next_tutorial{tutorial_akaze_tracking}
+
 |    |    |
 | -: | :- |
+| Original author | Olabode Felix Akinyemi |
 | Compatibility | OpenCV >= 3.0 |
 
 Goal
