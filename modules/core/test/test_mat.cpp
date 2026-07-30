@@ -1381,6 +1381,17 @@ TEST(Core_Mat, regression_9507)
     EXPECT_EQ(25u, m2.total());
 }
 
+TEST(Core_Mat, extractChannel_inplace_29568)
+{
+    // https://github.com/opencv/opencv/issues/29568
+    // extractChannel() must support in-place operation (dst aliasing src).
+    Mat mat(3, 3, CV_8UC3, Scalar(1, 2, 3));
+    ASSERT_NO_THROW(cv::extractChannel(mat, mat, 1));
+    EXPECT_EQ(1, mat.channels());
+    EXPECT_EQ(Size(3, 3), mat.size());
+    EXPECT_EQ(0, cv::norm(mat, Mat(3, 3, CV_8UC1, Scalar(2)), NORM_INF));
+}
+
 TEST(Core_Mat, empty)
 {
     // Should not crash.
