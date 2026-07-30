@@ -1602,6 +1602,33 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
     EXPECT_EQ(1, c.rows);
 }
 
+TEST(Core_ExtractChannel, twoChannel8uSubmatrix)
+{
+    Mat sourceStorage(5, 37, CV_8UC2);
+    randu(sourceStorage, 0, 256);
+    Mat source = sourceStorage(Rect(3, 1, 31, 3));
+    ASSERT_FALSE(source.isContinuous());
+
+    for (int channel = 0; channel < 2; ++channel)
+    {
+        Mat destinationStorage(5, 37, CV_8UC1, Scalar::all(0));
+        Mat destination = destinationStorage(Rect(3, 1, source.cols, source.rows));
+        Mat expected(source.size(), CV_8UC1);
+        ASSERT_FALSE(destination.isContinuous());
+
+        for (int row = 0; row < source.rows; ++row)
+        {
+            const uchar* sourceRow = source.ptr<uchar>(row);
+            uchar* expectedRow = expected.ptr<uchar>(row);
+            for (int column = 0; column < source.cols; ++column)
+                expectedRow[column] = sourceRow[column * 2 + channel];
+        }
+
+        extractChannel(source, destination, channel);
+        EXPECT_EQ(0, cvtest::norm(expected, destination, NORM_INF));
+    }
+}
+
 // https://github.com/opencv/opencv/issues/24163
 typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
 typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
