@@ -1561,19 +1561,6 @@ public:
     }
 };
 
-class MulCastSubgraph : public Subgraph
-{
-public:
-    MulCastSubgraph()
-    {
-        int input = addNodeToMatch("");
-        int scaleNode = addNodeToMatch("Constant");
-        int mul = addNodeToMatch("Mul", input, scaleNode);
-        addNodeToMatch("Cast", mul);
-        setFusedNode("Mul", input, scaleNode);
-    }
-};
-
 class ExtractScalesSubgraph : public Subgraph
 {
 public:
@@ -1854,7 +1841,6 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath
     subgraphs.push_back(makePtr<GeluSubGraph>());
     subgraphs.push_back(makePtr<GeluApproximationSubGraph>());
     subgraphs.push_back(makePtr<LayerNormSubGraph>());
-    subgraphs.push_back(makePtr<MulCastSubgraph>());
     subgraphs.push_back(makePtr<UpsampleSubgraph>());
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());
