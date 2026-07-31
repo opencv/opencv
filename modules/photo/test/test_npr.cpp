@@ -137,4 +137,29 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+// See https://github.com/opencv/opencv/issues/29614
+TEST(Photo_NPR_Stylization, degenerate_dimension_29614)
+{
+    Mat colSrc(5, 1, CV_8UC3, Scalar(100, 150, 200));
+    Mat rowSrc(1, 5, CV_8UC3, Scalar(100, 150, 200));
+
+    Mat colResult, rowResult;
+    ASSERT_NO_THROW(stylization(colSrc, colResult, 100.0f, 0.5f));
+    ASSERT_NO_THROW(stylization(rowSrc, rowResult, 100.0f, 0.5f));
+    EXPECT_EQ(colResult.size(), colSrc.size());
+    EXPECT_EQ(rowResult.size(), rowSrc.size());
+}
+
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, degenerate_dimension_29614)
+{
+    Mat colSrc(5, 1, CV_8UC3, Scalar(100, 150, 200));
+    Mat rowSrc(1, 5, CV_8UC3, Scalar(100, 150, 200));
+
+    Mat colResult, rowResult;
+    ASSERT_NO_THROW(edgePreservingFilter(colSrc, colResult, 2 /* NORMCONV_FILTER */));
+    ASSERT_NO_THROW(edgePreservingFilter(rowSrc, rowResult, 2 /* NORMCONV_FILTER */));
+    EXPECT_EQ(colResult.size(), colSrc.size());
+    EXPECT_EQ(rowResult.size(), rowSrc.size());
+}
+
 }} // namespace

@@ -310,6 +310,9 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
     int w = output.cols;
     int channel = output.channels();
 
+    if (w < 2)
+        return;
+
     compute_boxfilter(output,hz,psketch,radius);
 
     Mat box_filter = Mat::zeros(h,w+1,CV_32FC3);
