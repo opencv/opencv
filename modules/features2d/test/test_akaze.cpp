@@ -88,13 +88,15 @@ TEST(Features2D_AKAZE, Subsample_Channels_Overflow_Fix)
 {
     cv::Ptr<cv::AKAZE> akaze = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 32, 2);
 
-    cv::Mat img3(48, 48, CV_8UC3, cv::Scalar(128, 128, 128));
-    std::vector<cv::KeyPoint> keypoints3;
-    EXPECT_NO_THROW(akaze->detect(img3, keypoints3));
-    
-    cv::Mat img1(48, 48, CV_8UC1, cv::Scalar(128));
-    std::vector<cv::KeyPoint> keypoints1;
-    EXPECT_NO_THROW(akaze->detect(img1, keypoints1));
+    std::vector<cv::Mat> test_images = {
+        cv::Mat(48, 48, CV_8UC3, cv::Scalar(128, 128, 128)),
+        cv::Mat(48, 48, CV_8UC1, cv::Scalar(128))
+    };
+
+    for (const auto& img : test_images) {
+        std::vector<cv::KeyPoint> keypoints;
+        EXPECT_NO_THROW(akaze->detect(img, keypoints));
+    }
 }
 
 }} // namespace
