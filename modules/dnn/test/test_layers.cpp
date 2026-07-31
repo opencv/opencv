@@ -2912,6 +2912,17 @@ TEST(DNN_FastNorm, InstanceNorm)
                 dst[j] = (float)(scale.at<float>(c) * (src[j] - mean) * invStdDev + bias.at<float>(c));
         }
     normAssert(actual, expected, "InstanceNorm", 1e-5, 1e-4);
+
+    Mat singletonInput({1, 5, 1, 1}, CV_32F);
+    fillFastNormInput(singletonInput, 1.f);
+    Mat singletonScale(5, 1, CV_32F, Scalar(1.25f));
+    Mat singletonBias(5, 1, CV_32F);
+    randu(singletonBias, -2.f, 2.f);
+    actual = runFastNormLayer("InstanceNormalization", params,
+                              {singletonInput, singletonScale, singletonBias});
+    Mat singletonExpected(singletonInput.size, CV_32F);
+    singletonBias.copyTo(singletonExpected.reshape(1, 5));
+    normAssert(actual, singletonExpected, "InstanceNorm singleton spatial dimensions", 0., 0.);
 }
 
 TEST(DNN_FastNorm, GroupNorm)

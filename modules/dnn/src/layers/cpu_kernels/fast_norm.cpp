@@ -27,18 +27,20 @@ static inline size_t fastNormMoments(const float* x, size_t n, float& sum, float
     return j;
 }
 
-static inline void fastNormAffine(const float* x, float* y, size_t n, float alpha, float beta)
+static inline void fastNormCenteredAffine(const float* x, float* y, size_t n,
+                                          float mean, float alpha, float beta)
 {
     size_t j = 0;
 #if CV_SIMD || CV_SIMD_SCALABLE
     const size_t vlanes = VTraits<v_float32>::vlanes();
+    const v_float32 vmean = vx_setall_f32(mean);
     const v_float32 valpha = vx_setall_f32(alpha);
     const v_float32 vbeta = vx_setall_f32(beta);
     for (; j + vlanes <= n; j += vlanes)
-        vx_store(y + j, v_fma(vx_load(x + j), valpha, vbeta));
+        vx_store(y + j, v_fma(v_sub(vx_load(x + j), vmean), valpha, vbeta));
 #endif
     for (; j < n; ++j)
-        y[j] = x[j] * alpha + beta;
+        y[j] = (x[j] - mean) * alpha + beta;
 }
 
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
@@ -68,7 +70,7 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
 
-            fastNormAffine(x, y, norm_size, inv_stdev, -mean * inv_stdev);
+            fastNormCenteredAffine(x, y, norm_size, mean, inv_stdev, 0.f);
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -418,7 +420,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
-            fastNormAffine(x, y, norm_size, s, b - s * mean);
+            fastNormCenteredAffine(x, y, norm_size, mean, s, b);
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -587,7 +589,7 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             for (size_t c0 = 0; c0 < channels_per_group; ++c0) {
                 size_t c = group_idx + c0;
                 float s = scale_data[c] * inv_stdev, b = bias_data[c];
-                fastNormAffine(x + c0 * step, y + c0 * step, step, s, b - s * mean);
+                fastNormCenteredAffine(x + c0 * step, y + c0 * step, step, mean, s, b);
             }
         }
     };
