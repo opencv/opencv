@@ -1590,14 +1590,9 @@ TEST(Imgproc_Warp, regression_28554)
 
 TEST(Imgproc_Warp, regression_29279)
 {
-    // https://github.com/opencv/opencv/issues/29279
-    // warpAffine + INTER_NEAREST must be bit-exact with the native fixed-point kernel for
-    // every type. The IPP HAL used to route CV_16S{C1,C3,C4}, CV_64F{C1,C3,C4} and CV_16UC4
-    // nearest-neighbor warps to iwiWarpAffine, whose source-coordinate rounding differs from
-    // the native path, so warping identical data as one of those types silently diverged
-    // from a native warp of the same data (about 0.05-0.07% of pixels under rotation /
-    // fractional translation). CV_32F is never dispatched to IPP for INTER_NEAREST, so it is
-    // used here as the native reference.
+    // IPP's iwiWarpAffine rounds source coords at the half-pixel boundary unlike the native
+    // kernel (warpAffineBlocklineNN), so its NN output is not bit-exact.
+    // See https://github.com/opencv/opencv/issues/29279
     const Size srcSize(800, 600);
     const Size dstSize(900, 900);
 
