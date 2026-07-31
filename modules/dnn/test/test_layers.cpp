@@ -2349,14 +2349,6 @@ TEST(Layer_Size, onnx_0d_scalar)
 
 TEST(Layer_GatherCast, preserves_float_cast)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_ORT)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string modelname = findDataFile("dnn/onnx/models/gather_cast_float.onnx", true);
     Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
@@ -2377,14 +2369,6 @@ TEST(Layer_GatherCast, preserves_float_cast)
 
 TEST(Layer_MulCast, preserves_float_cast)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_ORT)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string modelname = findDataFile("dnn/onnx/models/mul_cast_float.onnx", true);
     Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
