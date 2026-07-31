@@ -515,6 +515,15 @@ void Net::resetKVCache()
     setKVCacheManager(impl);
 }
 
+void Net::reserveKVCache(int maxSequenceLength)
+{
+    CV_Assert(impl);
+    CV_CheckTrue(impl->useKVCache && impl->kvCacheManager.isInitialized,
+                 "reserveKVCache() requires enableKVCache() to be called first");
+    CV_CheckGE(maxSequenceLength, 0, "maxSequenceLength must be non-negative");
+    impl->kvCacheManager.reserve(maxSequenceLength);
+}
+
 
 Ptr<Graph> Net::getMainGraph() const
 {

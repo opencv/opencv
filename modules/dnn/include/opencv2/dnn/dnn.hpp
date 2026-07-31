@@ -1029,6 +1029,13 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Resets KV-Cache for all AttentionOnnxI layers */
         CV_WRAP void resetKVCache();
+
+        /** @brief Pre-allocates KV-Cache pages for up to @p maxSequenceLength tokens.
+         *
+         * Call after enableKVCache() and before the prefill forward. Reserving the
+         * full generation length up front keeps the cache buffers fixed, so no page
+         * allocation happens during token-by-token generation. */
+        CV_WRAP void reserveKVCache(int maxSequenceLength);
         /** @brief Returns profiling data captured during the last forward pass.
          *
          * Entries are sorted by time in descending order. Empty vectors are returned

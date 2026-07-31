@@ -2541,11 +2541,82 @@ public:
         std::string msg = "Attention generate " + layout + ": KV vs standard";
         normAssert(Y, Yref, msg.c_str(), 1e-3, 1e-3);
     }
+
+    // Generate in multi-token chunks (chunked prefill / speculative decode) with the
+    // page pool pre-reserved via reserveKVCache(). Must match the non-cached full run.
+    void testKVCacheChunkedReserve(const std::string& layout)
+    {
+        std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
+
+        Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_OPENCV);
+        netWithKVCache.enableKVCache();
+        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_OPENCV);
+
+        int T = 523, Nq = 8, Nkv = 4, D = 256;
+        int T_pref = T - 37;    // generate the tail in chunks, incl. a partial last chunk
+        int chunk = 5;
+
+        netWithKVCache.reserveKVCache(T);   // static pre-allocation
+
+        std::vector<int> q_sz, k_sz, v_sz;
+        if (layout == "3d") { q_sz = {1, T, Nq * D}; k_sz = {1, T, Nkv * D}; v_sz = {1, T, Nkv * D}; }
+        else                { q_sz = {1, Nq, T, D}; k_sz = {1, Nkv, T, D}; v_sz = {1, Nkv, T, D}; }
+
+        Mat Q_all(q_sz, CV_32F), K_all(k_sz, CV_32F), V_all(v_sz, CV_32F);
+        cv::randn(Q_all, 0.0, 1.0); cv::randn(K_all, 0.0, 1.0); cv::randn(V_all, 0.0, 1.0);
+
+        std::vector<int> mask_sz = {1, Nq, T, T};
+        Mat mask(mask_sz, CV_32S, cv::Scalar(0));
+        int* mask_ptr = (int*)mask.data;
+        for (int n = 0; n < Nq; n++)
+            for (int i = 0; i < T; i++)
+                for (int j = 0; j < T; j++) {
+                    int idx = n * T * T + i * T + j;
+                    if (i < T_pref) { if (j < T_pref) mask_ptr[idx] = 1; }
+                    else            { if (j <= i)      mask_ptr[idx] = 1; }
+                }
+
+        Mat Y(q_sz, CV_32F); Y.setTo(0);
+
+        // Prefill (lo=0) then generate in multi-token chunks. A chunk needs within-chunk
+        // causality supplied explicitly (this model is not is_causal), so feed the reference
+        // mask restricted to queries [lo,hi) against the cache [0,hi).
+        for (int lo = 0; lo < T; )
+        {
+            int hi = (lo == 0) ? T_pref : std::min(lo + chunk, T);
+            std::vector<Range> qr;
+            if (layout == "3d") qr = { Range::all(), Range(lo, hi), Range::all() };
+            else                qr = { Range::all(), Range::all(), Range(lo, hi), Range::all() };
+            std::vector<Range> mr = { Range::all(), Range::all(), Range(lo, hi), Range(0, hi) };
+
+            netWithKVCache.setInput(Q_all(qr), "Q");
+            netWithKVCache.setInput(K_all(qr), "K");
+            netWithKVCache.setInput(V_all(qr), "V");
+            netWithKVCache.setInput(mask(mr).clone(), "Mask");
+            netWithKVCache.forward().copyTo(Y(qr));
+            lo = hi;
+        }
+
+        // 3. Reference: full sequence, no cache
+        netWithoutKVCache.setInput(Q_all, "Q");
+        netWithoutKVCache.setInput(K_all, "K");
+        netWithoutKVCache.setInput(V_all, "V");
+        netWithoutKVCache.setInput(mask, "Mask");
+        Mat Yref = netWithoutKVCache.forward();
+
+        std::string msg = "Attention chunked+reserve " + layout + ": KV vs standard";
+        normAssert(Y, Yref, msg.c_str(), 1e-3, 1e-3);
+    }
 };
 
 TEST_P(TESTKVCache, layouts)
 {
     testKVCache(GetParam());
+}
+
+TEST_P(TESTKVCache, chunked_reserve)
+{
+    testKVCacheChunkedReserve(GetParam());
 }
 
 INSTANTIATE_TEST_CASE_P(KV_Cache, TESTKVCache, testing::Values("3d", "4d"));

@@ -274,6 +274,8 @@ protected:
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAttentionOnnxAi      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMultiHeadAttention   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGroupQueryAttention  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimplifiedLayerNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCausalConvWithState  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2766,6 +2768,60 @@ void ONNXImporter2::parseSDPA(LayerParams& params, const opencv_onnx::NodeProto&
     addLayer(params, node_proto, 3);
 }
 
+// True if node input i exists and is not an omitted optional ("").
+static bool hasInput(const opencv_onnx::NodeProto& node, int i) {
+    return i < node.input_size() && !node.input(i).empty();
+}
+
+// com.microsoft MultiHeadAttention (unpacked Q/K/V) -> AttentionOnnxAi.
+void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(params.has("num_heads"), "MultiHeadAttention: num_heads is required");
+    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
+                 "MultiHeadAttention: separate key and value are required");
+    CV_CheckFalse(hasInput(node_proto, 3) || hasInput(node_proto, 4) || hasInput(node_proto, 9),
+        "MultiHeadAttention: bias / key_padding_mask / cache_indirection inputs are not supported");
+
+    // inputs: query, key, value, bias, key_padding_mask, attention_bias, past_key, past_value, ...
+    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
+    if (hasInput(node_proto, 5)) ins.push_back(node_inputs[5]);  // attention_bias -> mask
+    if (hasInput(node_proto, 6) && hasInput(node_proto, 7)) { ins.push_back(node_inputs[6]); ins.push_back(node_inputs[7]); }
+    node_inputs = ins;
+
+    params.type = "AttentionOnnxAi";
+    params.set("q_num_heads", params.get<int>("num_heads"));   // MHA is not grouped
+    params.set("kv_num_heads", params.get<int>("num_heads"));
+    if (params.get<int>("unidirectional", 0))
+        params.set("is_causal", true);
+
+    addLayer(params, node_proto, (int)node_inputs.size());
+}
+
+// com.microsoft GroupQueryAttention (grouped, causal) -> AttentionOnnxAi.
+// Dynamic-cache export: past_key/past_value carry the real length; seqlens_k and
+// total_sequence_length are dropped.
+void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
+                 "GroupQueryAttention: num_heads and kv_num_heads are required");
+    CV_CheckEQ(params.get<int>("do_rotary", 0), 0, "GroupQueryAttention: do_rotary=1 is not supported");
+    CV_CheckEQ(params.get<int>("local_window_size", -1), -1, "GroupQueryAttention: sliding window is not supported");
+    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
+                 "GroupQueryAttention: separate key and value are required");
+    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
+        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
+
+    // inputs: query, key, value, past_key, past_value, seqlens_k, total_sequence_length, ...
+    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
+    if (hasInput(node_proto, 3) && hasInput(node_proto, 4)) { ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]); }
+    node_inputs = ins;
+
+    params.type = "AttentionOnnxAi";
+    params.set("q_num_heads", params.get<int>("num_heads"));
+    params.set("kv_num_heads", params.get<int>("kv_num_heads"));
+    params.set("is_causal", true);
+
+    addLayer(params, node_proto, (int)node_inputs.size());
+}
+
 void ONNXImporter2::parseCausalConvWithState(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     params.type = "CausalConvWithState";
     addLayer(params, node_proto);
@@ -2933,6 +2989,8 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
     dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
+    dispatch["MultiHeadAttention"] = &ONNXImporter2::parseMultiHeadAttention;
+    dispatch["GroupQueryAttention"] = &ONNXImporter2::parseGroupQueryAttention;
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
     dispatch["MatMulNBits"] = &ONNXImporter2::parseMatMulNBits;
 
