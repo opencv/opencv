@@ -8,6 +8,39 @@
 
 namespace cv { namespace dnn {
 
+static inline size_t fastNormMoments(const float* x, size_t n, float& sum, float& sqsum)
+{
+    size_t j = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const size_t vlanes = VTraits<v_float32>::vlanes();
+    v_float32 vsum = vx_setzero_f32();
+    v_float32 vsqsum = vx_setzero_f32();
+    for (; j + vlanes <= n; j += vlanes)
+    {
+        v_float32 vx = vx_load(x + j);
+        vsum = v_add(vsum, vx);
+        vsqsum = v_fma(vx, vx, vsqsum);
+    }
+    sum += v_reduce_sum(vsum);
+    sqsum += v_reduce_sum(vsqsum);
+#endif
+    return j;
+}
+
+static inline void fastNormAffine(const float* x, float* y, size_t n, float alpha, float beta)
+{
+    size_t j = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const size_t vlanes = VTraits<v_float32>::vlanes();
+    const v_float32 valpha = vx_setall_f32(alpha);
+    const v_float32 vbeta = vx_setall_f32(beta);
+    for (; j + vlanes <= n; j += vlanes)
+        vx_store(y + j, v_fma(vx_load(x + j), valpha, vbeta));
+#endif
+    for (; j < n; ++j)
+        y[j] = x[j] * alpha + beta;
+}
+
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
@@ -24,7 +57,8 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
+            size_t j = fastNormMoments(x, norm_size, mean, mean_square);
+            for (; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
@@ -34,9 +68,7 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
 
-            for (size_t j = 0; j < norm_size; j++) {
-                y[j] = (x[j] - mean) * inv_stdev;
-            }
+            fastNormAffine(x, y, norm_size, inv_stdev, -mean * inv_stdev);
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -68,7 +100,8 @@ void fastNormMeanInvStdDev(const Mat& input, Mat& mean, Mat& invStdDev, float ep
         {
             const float* x = input_data + norm_size * (size_t)i;
             float m = 0.f, mean_square = 0.f;
-            for (size_t j = 0; j < norm_size; ++j)
+            size_t j = fastNormMoments(x, norm_size, m, mean_square);
+            for (; j < norm_size; ++j)
             {
                 float v = x[j];
                 m += v;
@@ -103,7 +136,22 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
+            size_t j = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+            const size_t vlanes = VTraits<v_float32>::vlanes();
+            v_float32 vsum = vx_setzero_f32();
+            v_float32 vsqsum = vx_setzero_f32();
+            for (; j + vlanes <= norm_size; j += vlanes) {
+                v_float32 vx = vx_load(x + j);
+                if (recenter)
+                    vsum = v_add(vsum, vx);
+                vsqsum = v_fma(vx, vx, vsqsum);
+            }
+            if (recenter)
+                mean += v_reduce_sum(vsum);
+            mean_square += v_reduce_sum(vsqsum);
+#endif
+            for (; j < norm_size; j++) {
                 float v = x[j];
                 if (recenter)
                     mean += v;
@@ -114,9 +162,20 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
-            for (size_t j = 0; j < norm_size; j++) {
-                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
+            j = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+            {
+                const size_t vlanes = VTraits<v_float32>::vlanes();
+                const v_float32 vmean = vx_setall_f32(mean);
+                const v_float32 vinv = vx_setall_f32(inv_stdev);
+                for (; j + vlanes <= norm_size; j += vlanes) {
+                    v_float32 v = v_mul(v_sub(vx_load(x + j), vmean), vinv);
+                    vx_store(y + j, v_mul(vx_load(scale_data + j), v));
+                }
             }
+#endif
+            for (; j < norm_size; j++)
+                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -142,7 +201,8 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
+            size_t j = fastNormMoments(x, norm_size, mean, mean_square);
+            for (; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
@@ -152,9 +212,20 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
-            for (size_t j = 0; j < norm_size; j++) {
-                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
+            j = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+            {
+                const size_t vlanes = VTraits<v_float32>::vlanes();
+                const v_float32 vmean = vx_setall_f32(mean);
+                const v_float32 vinv = vx_setall_f32(inv_stdev);
+                for (; j + vlanes <= norm_size; j += vlanes) {
+                    v_float32 v = v_mul(v_sub(vx_load(x + j), vmean), vinv);
+                    vx_store(y + j, v_fma(vx_load(scale_data + j), v, vx_load(bias_data + j)));
+                }
             }
+#endif
+            for (; j < norm_size; j++)
+                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -331,7 +402,11 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             auto *y = output_data + norm_size * i;
 
             double dmean = 0., dmean_sq = 0.;
-            for (size_t j = 0; j < norm_size; j++) {
+            float mean_f = 0.f, mean_sq_f = 0.f;
+            size_t j = fastNormMoments(x, norm_size, mean_f, mean_sq_f);
+            dmean += mean_f;
+            dmean_sq += mean_sq_f;
+            for (; j < norm_size; j++) {
                 double v = (double)x[j];
                 dmean += v;
                 dmean_sq += v * v;
@@ -343,9 +418,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
-            for (size_t j = 0; j < norm_size; j++) {
-                y[j] = s * (x[j] - mean) + b;
-            }
+            fastNormAffine(x, y, norm_size, s, b - s * mean);
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -496,7 +569,11 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             auto *y = output_data + norm_size * i;
 
             double dmean = 0., dmean_sq = 0.;
-            for (size_t j = 0; j < norm_size; j++) {
+            float mean_f = 0.f, mean_sq_f = 0.f;
+            size_t j = fastNormMoments(x, norm_size, mean_f, mean_sq_f);
+            dmean += mean_f;
+            dmean_sq += mean_sq_f;
+            for (; j < norm_size; j++) {
                 double v = (double)x[j];
                 dmean += v;
                 dmean_sq += v * v;
@@ -507,10 +584,10 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t group_idx = i % num_groups * channels_per_group;
-            for (size_t j = 0; j < norm_size; j++) {
-                size_t c = group_idx + (j / step);
+            for (size_t c0 = 0; c0 < channels_per_group; ++c0) {
+                size_t c = group_idx + c0;
                 float s = scale_data[c] * inv_stdev, b = bias_data[c];
-                y[j] = s * (x[j] - mean) + b;
+                fastNormAffine(x + c0 * step, y + c0 * step, step, s, b - s * mean);
             }
         }
     };
