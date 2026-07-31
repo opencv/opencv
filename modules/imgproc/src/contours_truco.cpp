@@ -2,9 +2,35 @@
 #include "precomp.hpp"
 #include "contours_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-#include <map>
+#include <atomic>
 
 namespace{
+
+// Atomic operations to avoid data race between findStartContourPoint and
+// traceExternalContourMock. The race is benign functionally because threads
+// only modify FOREGROUND (255) to VISITED_OUTER_RIGHT (100) or VISITED_ (200),
+// all of which are NON-ZERO. findStartContourPoint only cares if a pixel is
+// zero or non-zero, so its termination conditions are unchanged. However,
+// concurrent read/write of different values is legally UB in C++ and triggers
+// TSAN.
+inline uchar atomicLoad(const uchar* ptr) {
+#ifdef CV_THREAD_SANITIZER
+    if constexpr (sizeof(std::atomic<uchar>) == sizeof(uchar)) {
+        return reinterpret_cast<const std::atomic<uchar>*>(ptr)->load(std::memory_order_relaxed);
+    }
+#endif
+    return *ptr;
+}
+
+inline void atomicStore(uchar* ptr, uchar val) {
+#ifdef CV_THREAD_SANITIZER
+    if constexpr (sizeof(std::atomic<uchar>) == sizeof(uchar)) {
+        reinterpret_cast<std::atomic<uchar>*>(ptr)->store(val, std::memory_order_relaxed);
+        return;
+    }
+#endif
+    *ptr = val;
+}
 
 // Tunable block size. 1024 points = 8KB (Fits easily in L1 Cache)
 template <size_t BLOCK_SIZE = 2048>
@@ -186,10 +212,10 @@ public:
                 int idx = search_idx + n;
                 // Use offset cache
                 uchar* neighbor = curr_ptr + offsets_[idx];
-                if (*neighbor == BACKGROUND) continue;
+                if (atomicLoad(neighbor) == BACKGROUND) continue;
                 dir = idx & 7;
                 if (((search_idx <= 1)  || (dir <= search_idx - 2)) && (curr_x!=c && curr_y!=r))//do nt apply to first pixel in the way back
-                    *curr_ptr = VISITED_OUTER_RIGHT;
+                    atomicStore(curr_ptr, VISITED_OUTER_RIGHT);
                 // --- EXECUTE MOVE ---
                 curr_y += dy_[dir];
                 curr_x += dx_[dir];
@@ -238,7 +264,7 @@ public:
             for ( n = 0; n < 8; ++n)
             {
                 int idx = search_idx + n;
-                if ( *(curr_ptr + offsets_[idx]) == BACKGROUND) continue;
+                if (atomicLoad(curr_ptr + offsets_[idx]) == BACKGROUND) continue;
                 if(curr_x+ dx_[ idx & 7]!=c+1 || curr_y+ dy_[ idx & 7]!=r-1) return false;
                 break;
             }
@@ -254,7 +280,7 @@ public:
                 int idx = search_idx + n;
                 // Use offset cache
                 uchar* neighbor = curr_ptr + offsets_[idx];
-                if (*neighbor == BACKGROUND) continue;
+                if (atomicLoad(neighbor) == BACKGROUND) continue;
 
                 dir = idx & 7;
                 // --- EXECUTE MOVE ---
@@ -268,11 +294,11 @@ public:
                 }
                 if ((search_idx <= 1)  || (dir <= search_idx - 2))
                 {
-                    *curr_ptr = VISITED_OUTER_RIGHT;
+                    atomicStore(curr_ptr, VISITED_OUTER_RIGHT);
                 }
-                else if (*curr_ptr == FOREGROUND)
+                else if (atomicLoad(curr_ptr) == FOREGROUND)
                 {
-                    *curr_ptr = VISITED_;
+                    atomicStore(curr_ptr, VISITED_);
                 }
 
                 // Short-circuit Jacob's Check
@@ -291,7 +317,7 @@ public:
             }
             if (is_first_move) {
                 if(dir==-1){//single pixel
-                    *curr_ptr = VISITED_OUTER_RIGHT;
+                    atomicStore(curr_ptr, VISITED_OUTER_RIGHT);
                     break;//not moved
                 }
                 start_dir = dir;
@@ -328,7 +354,7 @@ public:
                     if ((c = findStartContourPoint(row_ptr, cols, c)) == cols) break;
 
                     // 2. CHECK: Only process if actually FOREGROUND (redundancy check)
-                    if (row_ptr[c] == FOREGROUND && r<rowRange.end )
+                    if (atomicLoad(&row_ptr[c]) == FOREGROUND && r<rowRange.end)
                     {
                         if( traceContour(&buffer,r,c,row_ptr,rowRange,true)){
                             // Post-processing
@@ -345,7 +371,7 @@ public:
                             }
                         }
                     }
-                    else if( row_ptr[c] == FOREGROUND && r==rowRange.end ){//extra step to mark east pixels only so that internal contours can be correctly extracted in this line
+                    else if (atomicLoad(&row_ptr[c]) == FOREGROUND && r==rowRange.end){//extra step to mark east pixels only so that internal contours can be correctly extracted in this line
                         traceExternalContourMock(r,c,row_ptr,rowRange);
                     }
 
@@ -353,7 +379,7 @@ public:
                     c = findEndContourPoint(row_ptr, cols, c + 1);
                     if(c>=cols)break;//end of row
                     //internal contour
-                    if(row_ptr[c-1]>VISITED_OUTER_RIGHT && r>rowRange.start){//inner contours of first line are handled by the thread above
+                    if (atomicLoad(&row_ptr[c - 1]) > VISITED_OUTER_RIGHT && r>rowRange.start){//inner contours of first line are handled by the thread above
 
                         if(traceContour(&buffer,r,c-1,row_ptr,rowRange,false)){
                             // Post-processing
@@ -376,7 +402,7 @@ public:
 
     static inline int findStartContourPoint(uchar* src_data, int width, int j)
     {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_THREAD_SANITIZER)
         cv::v_uint8 v_zero = cv::vx_setzero_u8();
         for (; j <= width - cv::VTraits<cv::v_uint8>::vlanes(); j += cv::VTraits<cv::v_uint8>::vlanes())
         {
@@ -388,14 +414,16 @@ public:
             }
         }
 #endif
-        for (; j < width && !src_data[j]; ++j)
-            ;
+        for (; j < width; ++j) {
+          if (atomicLoad(&src_data[j])) break;
+        }
+
         return j;
     }
 
     inline static int findEndContourPoint(uchar* src_data,int width, int j)
     {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_THREAD_SANITIZER)
         if (j <  width && !src_data[j])
         {
             return j;
@@ -414,8 +442,9 @@ public:
             }
         }
 #endif
-        for (; j < width && src_data[j]; ++j)
-            ;
+        for (; j < width; ++j) {
+          if (atomicLoad(&src_data[j]) == 0) break;
+        }
 
         return j;
     }
