@@ -362,20 +362,22 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
 
                 r = (int) b.at<float>(i,j)/(h*(w+1));
                 rem = (int) b.at<float>(i,j) - r*h*(w+1);
-                q = rem/h;
-                p = rem - q*h;
-                if(q==0)
+                if (rem == 0)
                 {
-                    p=h;
-                    q=w;
-                    r=r-1;
+                    p = h;
+                    q = w;
+                    r = r - 1;
                 }
-                if(p==0)
+                else
                 {
-                    p=h;
-                    q=q-1;
+                    q = rem/h;
+                    p = rem - q*h;
+                    if (p == 0)
+                    {
+                        p = h;
+                        q = q - 1;
+                    }
                 }
-
                 r1 = (int) a.at<float>(i,j)/(h*(w+1));
                 rem1 = (int) a.at<float>(i,j) - r1*h*(w+1);
                 q1 = rem1/h;

@@ -137,4 +137,19 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+TEST(Photo_NPR_Stylization, singleColumnRow_regression)
+{
+    // Test 1-column image (w=1, h=2)
+    Mat src1(2, 1, CV_8UC3, Scalar(128, 128, 128));
+    Mat dst1;
+    EXPECT_NO_THROW(cv::stylization(src1, dst1, 100.0f, 0.5f));
+    EXPECT_EQ(dst1.size(), src1.size());
+
+    // Test 1-row image (w=2, h=1)
+    Mat src2(1, 2, CV_8UC3, Scalar(128, 128, 128));
+    Mat dst2;
+    EXPECT_NO_THROW(cv::stylization(src2, dst2, 100.0f, 0.5f));
+    EXPECT_EQ(dst2.size(), src2.size());
+}
+
 }} // namespace

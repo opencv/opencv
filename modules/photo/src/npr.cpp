@@ -133,8 +133,17 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
+    if (I.empty())
+        return;
+
     _dst.create(I.size(), CV_8UC3);
     Mat dst = _dst.getMat();
+
+    if (I.cols < 2 || I.rows < 2)
+    {
+        I.copyTo(dst);
+        return;
+    }
 
     Mat img;
     I.convertTo(img,CV_32FC3,1.0/255.0);
