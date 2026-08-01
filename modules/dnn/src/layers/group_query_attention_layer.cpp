@@ -57,7 +57,7 @@ public:
                           const int requiredInternals,
                           std::vector<MatType>& outputs,
                           std::vector<MatType>& internals) const CV_OVERRIDE {
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_16F, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_16F, "GroupQueryAttention: only CV_32F and CV_16F are supported");
         outputs.assign(3, inputs[0]);
         internals.assign(requiredInternals, inputs[0]);
     }
@@ -239,15 +239,18 @@ public:
 
                     const float* Qi = Qbh + (size_t)i * D;
                     float mx = -FLT_MAX;
+                    const bool useSoftcap = softcap > 0.f;
+                    const float invSoftcap = useSoftcap ? 1.f / softcap : 0.f;
                     for (int j = lo; j <= hi; ++j) {
                         const float* Kj = Kbh + (size_t)j * D;
                         float s = 0.f;
                         for (int d = 0; d < D; ++d) s += Qi[d] * Kj[d];
                         s *= effScale;
-                        if (softcap > 0.f) s = softcap * std::tanh(s / softcap);
                         scores[j] = s;
-                        if (s > mx) mx = s;
                     }
+                    if (useSoftcap)
+                        for (int j = lo; j <= hi; ++j) scores[j] = softcap * std::tanh(scores[j] * invSoftcap);
+                    for (int j = lo; j <= hi; ++j) mx = std::max(mx, scores[j]);
                     float sum = 0.f;
                     for (int j = lo; j <= hi; ++j) {
                         float e = std::exp(scores[j] - mx);

@@ -58,7 +58,6 @@ static double typeMax(int depth)
         case CV_16U: return std::numeric_limits<ushort>::max();
         case CV_16S: return std::numeric_limits<short>::max();
         case CV_32S: return std::numeric_limits<int>::max();
-
         case CV_64S: return std::nextafter((double)std::numeric_limits<int64_t>::max(), 0.0);
         case CV_32F: return  FLT_MAX;
         case CV_64F: return  DBL_MAX;
