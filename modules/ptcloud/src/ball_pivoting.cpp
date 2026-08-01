@@ -39,7 +39,7 @@ static float medianNN(flann::Index& index, const Mat& ptsMat)
     std::vector<float> nn; nn.reserve(sample);
     for (int s = 0; s < sample; s++)
     {
-        int i = (int)((long long)s * N / sample);
+        int i = (int)((int64_t)s * N / sample);
         float buf[3] = { ptsMat.at<float>(i,0), ptsMat.at<float>(i,1), ptsMat.at<float>(i,2) };
         Mat q(1, 3, CV_32F, buf), qi, qd;
         index.knnSearch(q, qi, qd, 2, flann::SearchParams());   // [0] self, [1] nearest other
@@ -68,7 +68,7 @@ public:
     // Roll each radius in turn (ascending): smaller balls first, larger balls fill the leftover gaps.
     void run(std::vector<Vec3i>& tris, const std::vector<float>& radii)
     {
-        const long long maxIters = 100LL * N + 1000;   // safety bound against pathological loops
+        const int64_t maxIters = (int64_t)100 * N + 1000;   // safety bound against pathological loops
         for (float rad : radii)
         {
             r = rad;
@@ -77,7 +77,7 @@ public:
                 if (!it->active) { it->active = true; work.push_back(ekeyDir(it->i, it->j)); }
 
             int seedCursor = 0;
-            long long iters = 0;
+            int64_t iters = 0;
             while (iters++ < maxIters)
             {
                 std::list<FrontEdge>::iterator e = popActive();
@@ -118,12 +118,12 @@ private:
     std::vector<char> used;                                     // point belongs to >=1 triangle
 
     std::list<FrontEdge> front;
-    std::unordered_map<long long, std::list<FrontEdge>::iterator> emap;   // live directed edges
-    std::deque<long long> work;                                           // directed-edge keys awaiting a pivot
+    std::unordered_map<int64_t, std::list<FrontEdge>::iterator> emap;   // live directed edges
+    std::deque<int64_t> work;                                           // directed-edge keys awaiting a pivot
     std::map<std::pair<int,int>, int> ecount;                             // undirected edge use count
     std::set<std::tuple<int,int,int>> triSet;                            // built triangles (sorted)
 
-    long long ekeyDir(int a, int b) const { return (long long)a * N + b; }
+    int64_t ekeyDir(int a, int b) const { return (int64_t)a * N + b; }
     std::pair<int,int> ekeyUndir(int a, int b) const { return std::make_pair(std::min(a,b), std::max(a,b)); }
     static std::tuple<int,int,int> sorted3(int a, int b, int c)
     {
@@ -155,11 +155,11 @@ private:
         Vec3f u(b.x-a.x, b.y-a.y, b.z-a.z);
         Vec3f v(c.x-a.x, c.y-a.y, c.z-a.z);
         Vec3f n = u.cross(v);
-        float n2 = (float)n.dot(n);
+        float n2 = n.dot(n);
         if (n2 < 1e-16f) return false;                                    // degenerate triangle
 
-        Vec3f o = ((float)u.dot(u) * v - (float)v.dot(v) * u).cross(n) * (1.0f / (2.0f * n2));
-        float circ2 = (float)o.dot(o);
+        Vec3f o = (u.dot(u) * v - v.dot(v) * u).cross(n) * (1.0f / (2.0f * n2));
+        float circ2 = o.dot(o);
         float h2 = r * r - circ2;
         if (h2 < 0.f) return false;                                       // circumradius > r
 
@@ -228,7 +228,7 @@ private:
     {
         while (!work.empty())
         {
-            long long key = work.front();
+            int64_t key = work.front();
             work.pop_front();
             // look up by key: the edge may have been erased while its key sat in the queue
             auto mit = emap.find(key);
@@ -246,7 +246,7 @@ private:
         Vec3f axis = normalize(Vec3f(pj.x-pi.x, pj.y-pi.y, pj.z-pi.z));
 
         Vec3f a0(e.center.x-mid.x, e.center.y-mid.y, e.center.z-mid.z);
-        a0 -= axis * (float)a0.dot(axis);
+        a0 -= axis * a0.dot(axis);
         if (norm(a0) < 1e-12) return false;
         a0 = normalize(a0);
         Vec3f wdir = axis.cross(a0);
@@ -263,11 +263,11 @@ private:
             if (!ballCenter(pi, pj, pts[k], r, an, c)) continue;
 
             Vec3f a1(c.x-mid.x, c.y-mid.y, c.z-mid.z);
-            a1 -= axis * (float)a1.dot(axis);
+            a1 -= axis * a1.dot(axis);
             if (norm(a1) < 1e-12) continue;
             a1 = normalize(a1);
 
-            float x = (float)a1.dot(a0), y = (float)a1.dot(wdir);
+            float x = a1.dot(a0), y = a1.dot(wdir);
             float ang = std::atan2(y, x);
             if (ang < 0.f) ang += 2.f * (float)CV_PI;      // roll angle in [0, 2pi)
             if (ang < best) { best = ang; bestK = k; bestC = c; }
