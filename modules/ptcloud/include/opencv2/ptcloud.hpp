@@ -12,6 +12,7 @@
 #include "opencv2/ptcloud/odometry_frame.hpp"
 #include "opencv2/ptcloud/odometry_settings.hpp"
 #include "opencv2/ptcloud/slam.hpp"
+#include "opencv2/ptcloud/viz3d.hpp"
 
 /**
 @defgroup ptcloud Point Cloud Processing

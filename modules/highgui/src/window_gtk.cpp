@@ -1069,6 +1069,8 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #if defined(HAVE_OPENGL) && defined(GTK_VERSION3)
     if (flags & cv::WINDOW_OPENGL) {
         window->glArea = gtk_gl_area_new();
+        // GtkGLArea has no depth buffer by default; request one so GL_DEPTH_TEST works.
+        gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(window->glArea), TRUE);
         gtk_container_add(GTK_CONTAINER(window->frame), window->glArea);
         gtk_widget_show(window->glArea);
     } else {
