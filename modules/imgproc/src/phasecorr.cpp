@@ -615,27 +615,13 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     double* const wc = _wc.data();
 
     double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0 * CV_PI / (double)(rows - 1);
-    int c = 0;
+    for(int c = 0; c < cols; c++)
+        wc[c] = 0.5 * (1.0 - cos(coeff0 * c));
+
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     const int nlanes32 = VTraits<v_float32>::vlanes();
     const int nlanes64 = VTraits<v_float64>::vlanes();
-    const int max_nlanes = VTraits<v_float64>::max_nlanes;
-    std::array<double, max_nlanes> index;
-    std::iota(index.data(), index.data()+max_nlanes, 0.f);
-    v_float64 vindex = vx_load(index.data());
-    v_float64 delta = vx_setall_f64(VTraits<v_float64>::vlanes());
-    v_float64 vcoeff0 = vx_setall_f64(coeff0);
-    v_float64 one = vx_setall_f64(1.f);
-    v_float64 half = vx_setall_f64(0.5f);
-    for (; c <= cols - nlanes64; c += nlanes64)
-    {
-        v_float64 v = v_mul(half, v_sub(one, v_cos(v_mul(vcoeff0, vindex))));
-        vx_store(wc + c, v);
-        vindex = v_add(vindex, delta);
-    }
 #endif
-    for(; c < cols; c++)
-        wc[c] = 0.5 * (1.0 - cos(coeff0 * c));
 
     if(dst.depth() == CV_32F)
     {
