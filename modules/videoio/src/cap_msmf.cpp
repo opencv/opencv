@@ -567,6 +567,11 @@ private:
     virtual ~SourceReaderCB()
     {
         CV_LOG_INFO(NULL, "terminating async callback");
+        if (m_hEvent)
+        {
+            CloseHandle(m_hEvent);
+            m_hEvent = NULL;
+        }
     }
 
 public:
