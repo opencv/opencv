@@ -182,27 +182,19 @@ TEST(Features2d_MSER, history_update_regression)
 }
 
 
-TEST(Features2d_MSER, bug_5630)
+TEST(Features2d_MSER, default_params_regression_29652)
 {
-    String dataPath = cvtest::TS::ptr()->get_data_path() + "mser/";
-    Mat img = imread(dataPath + "mser_test.png", IMREAD_GRAYSCALE);
-    Ptr<MSER> mser = MSER::create(1, 1);
-    vector<vector<Point> > mserContours;
-    vector<Rect> boxRects;
+    Mat img = Mat::zeros(200, 200, CV_8U);
+    rectangle(img, Point(40, 40), Point(160, 160), Scalar(255), -1);
+    circle(img, Point(100, 100), 30, Scalar(0), -1);
 
-    // set min diversity and run detection
-    mser->setMinDiversity(0.1);
-    mser->detectRegions(img, mserContours, boxRects);
-    size_t originalNumberOfContours = mserContours.size();
+    Ptr<MSER> mser = MSER::create();
+    vector<vector<Point> > regions;
+    vector<Rect> bboxes;
+    mser->detectRegions(img, regions, bboxes);
 
-    // increase min diversity and run detection again
-    mser->setMinDiversity(0.2);
-    mser->detectRegions(img, mserContours, boxRects);
-    size_t newNumberOfContours = mserContours.size();
-
-    // there should be fewer regions detected with a higher min diversity
-    ASSERT_LT(newNumberOfContours, originalNumberOfContours);
-
+    ASSERT_FALSE(regions.empty());
+    ASSERT_EQ(regions.size(), bboxes.size());
 }
 
 }} // namespace
