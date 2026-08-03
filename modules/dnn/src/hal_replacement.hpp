@@ -28,7 +28,7 @@
 //! the default @c hal_ni_* below returns @c CV_HAL_ERROR_NOT_IMPLEMENTED, so the
 //! built-in implementation runs unchanged when no backend is present.
 //!
-//! Tensors use the engine's blocked NCDHWc layout described by @ref cv::dnn::ConvState:
+//! Tensors use the engine's blocked NCDHWc layout described by @c cv::dnn::ConvState:
 //! @c N * C1 channel-blocks of @c C0 channels each, laid out as [N, C1, ...spatial..., C0].
 //!
 //! **Parallelism is owned by OpenCV, not by the HAL.** Each hook receives a task
@@ -49,8 +49,8 @@ inline int hal_ni_dnn_maxpool3d32f(const float* inp_data, float* out_data, int C
                                  const int* ofstab, int ksize, int task_start, int task_end)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
-/** @brief Average pooling over a slice [task_start, task_end) of the output (blocked NCDHWc, CV_32F).
-@param count_include_pad nonzero to divide by the full kernel size (count padded cells) */
+/** @brief Average pooling over a slice [task_start, task_end) of the output (blocked NCDHWc,
+CV_32F); a nonzero @c count_include_pad divides by the full kernel size (counts padded cells). */
 inline int hal_ni_dnn_avgpool3d32f(const float* inp_data, float* out_data, int C0,
                                  const int* insize, const int* outsize, const int* strides,
                                  const int* pads, const int* inner, const int* coordtab,
