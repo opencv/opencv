@@ -848,6 +848,22 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
+    // Keep UMats in the UMat domain, like ocl_normalize() above: getMat() maps the source, so an
+    // in-place call that changes the element size would free a buffer that is still mapped.
+    if( _src.isUMat() && _dst.isUMat() )
+    {
+        UMat usrc = _src.getUMat();
+        if( _mask.empty() )
+            usrc.convertTo( _dst, rtype, scale, shift );
+        else
+        {
+            UMat utemp;
+            usrc.convertTo( utemp, rtype, scale, shift );
+            utemp.copyTo( _dst, _mask );
+        }
+        return;
+    }
+
     Mat src = _src.getMat();
     if( _mask.empty() )
         src.convertTo( _dst, rtype, scale, shift );

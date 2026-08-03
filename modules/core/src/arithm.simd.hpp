@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
+#include <type_traits>
 
 namespace cv {
 
@@ -578,6 +580,22 @@ struct EwXor {
         s0y == s0x*(size_t)width && (NSRC < 2 || s1y == s1x*(size_t)width)) \
     { width *= height; height = 1; }
 
+// saturate_cast<T>(float|double) narrows via cvRound() -> int, so a work value past INT_MAX wraps
+// to INT_MIN and saturates the wrong way (#28557). Clamping first is a no-op in range. Only
+// <=16-bit T: their bounds are exact in float, INT_MAX is not. This guard is scalar-tail-only;
+// CV_32S/CV_32U mul (WT=double) has an unclamped overflow of its own in v_store_pair_as
+// (convert.hpp), a known, separately tracked gap this function can't reach.
+template<typename Tr, typename W>
+static inline Tr narrowSaturate(W v)
+{
+    if constexpr (std::is_floating_point<W>::value && std::is_integral<Tr>::value && sizeof(Tr) <= 2)
+    {
+        const W lo = (W)std::numeric_limits<Tr>::min(), hi = (W)std::numeric_limits<Tr>::max();
+        v = v < lo ? lo : (v > hi ? hi : v);
+    }
+    return saturate_cast<Tr>(v);
+}
+
 // Unified binary kernel: T0 x T1 -> Tr (operands same depth for arithmetic; cast is separate).
 //   Wvec     = work vector. Native (v_uint8/...) drives the same-type saturating path
 //              (v_add saturates 8/16-bit, wraps 32-bit); v_float32 drives the widening hub.
@@ -606,17 +624,17 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     {
         if (s0x == s1x) {
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
         }
         else if (s0x == 0) {
             WT sc0 = (WT)src0[0];
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
         }
         else {
             WT sc1 = (WT)src1[0];
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], sc1, scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], sc1, scalar));
         }
     }
     return 0;
@@ -1066,7 +1084,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
         }
     #endif
         for (; x < width; x++)
-            dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
+            dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
     }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
@@ -1572,13 +1590,13 @@ static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
         }
     #endif
         if (s0x == s1x) {
-            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + (WT)src1[x]*beta + gamma);
+            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src0[x]*alpha + (WT)src1[x]*beta + gamma);
         } else if (s0x == 0) {
             const WT ac = (WT)src0[0]*alpha + gamma;
-            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src1[x]*beta + ac);
+            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src1[x]*beta + ac);
         } else {
             const WT bc = (WT)src1[0]*beta + gamma;
-            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + bc);
+            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src0[x]*alpha + bc);
         }
     }
     return 0;

@@ -4262,12 +4262,27 @@ TEST_P(Core_MaskTypeTest, MeanStdDev)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MaskTypeTest, MaskType::all());
 
-// Still fails in 5.x: https://github.com/opencv/opencv/issues/28557
-TEST(Core_Arithm, DISABLED_mul_overflow_28557)
+// Fixed: mul's scalar tail wraps saturate_cast<Tr> in narrowSaturate to clamp the cvRound()->int
+// overflow before casting (arithm.simd.hpp).
+TEST(Core_Arithm, mul_overflow_28557)
 {
     uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
     cv::Mat m(1, 6, CV_16U, data);
     cv::Mat res = m.mul(m);
+
+    for (int i = 0; i < 6; i++)
+    {
+        EXPECT_EQ(65535, res.at<uint16_t>(0, i));
+    }
+}
+
+// addWeightedKernel had the same unpatched saturate_cast<Tr> scalar tail as mul (#28557).
+TEST(Core_Arithm, addWeighted_overflow_28557)
+{
+    uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
+    cv::Mat m(1, 6, CV_16U, data);
+    cv::Mat res;
+    cv::addWeighted(m, 1e6, m, 0, 0, res, CV_16U);
 
     for (int i = 0; i < 6; i++)
     {

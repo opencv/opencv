@@ -94,7 +94,7 @@ TEST(Core_LPSolver, regression_init_unfeasible){
 #endif
 }
 
-TEST(DISABLED_Core_LPSolver, regression_absolutely_unfeasible){
+TEST(Core_LPSolver, regression_absolutely_unfeasible){
     cv::Mat A,B,z,etalon_z;
 
 #if 1

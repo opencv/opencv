@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <atomic>
 #include "opencv2/core/utils/logger.defines.hpp"
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
@@ -295,17 +296,39 @@ TEST(CommandLineParser, testScalar)
 }
 
 
-TEST(Logger, DISABLED_message)
+std::atomic<int>& logMessageCounter()
 {
-    int id = 42;
-    CV_LOG_VERBOSE(NULL, 0, "Verbose message: " << id);
-    CV_LOG_VERBOSE(NULL, 1, "Verbose message: " << id);
-    CV_LOG_DEBUG(NULL, "Debug message: " << id);
-    CV_LOG_INFO(NULL, "Info message: " << id);
-    CV_LOG_WARNING(NULL, "Warning message: " << id);
-    CV_LOG_ERROR(NULL, "Error message: " << id);
-    CV_LOG_FATAL(NULL, "Fatal message: " << id);
+    static std::atomic<int> counter(0);
+    return counter;
 }
+
+void countLogMessage(cv::utils::logging::LogLevel, const char*, const char*, int,
+                     const char*, const char*)
+{
+    logMessageCounter().fetch_add(1);
+}
+
+// Level and hook are process-global; the destructor restores them even when an
+// assertion returns early, which would otherwise swallow all later log output.
+struct LogCapture
+{
+    cv::utils::logging::LogLevel prevLevel;
+
+    explicit LogCapture(cv::utils::logging::LogLevel level)
+    {
+        prevLevel = cv::utils::logging::setLogLevel(level);
+        logMessageCounter().store(0);
+        cv::utils::logging::internal::replaceWriteLogMessageEx(countLogMessage);
+    }
+
+    ~LogCapture()
+    {
+        cv::utils::logging::internal::replaceWriteLogMessageEx(nullptr);
+        cv::utils::logging::setLogLevel(prevLevel);
+    }
+
+    int count() const { return logMessageCounter().load(); }
+};
 
 static int testLoggerMessageOnce(int id)
 {
@@ -318,7 +341,7 @@ static int testLoggerMessageOnce(int id)
     // doesn't make sense: CV_LOG_ONCE_FATAL
     return id;
 }
-TEST(Logger, DISABLED_message_once)
+TEST(Logger, message_once)
 {
     int check_id_first = testLoggerMessageOnce(42);
     EXPECT_GT(check_id_first, 42);
@@ -326,18 +349,26 @@ TEST(Logger, DISABLED_message_once)
     EXPECT_EQ(0, check_id_second);
 }
 
-TEST(Logger, DISABLED_message_if)
+TEST(Logger, message_if)
 {
+    LogCapture capture(cv::utils::logging::LOG_LEVEL_VERBOSE);
+
+    int evalCount = 0;
     for (int i = 0; i < 100; i++)
     {
-        CV_LOG_IF_VERBOSE(NULL, 0, i == 0 || i == 42, "Verbose message: " << i);
-        CV_LOG_IF_VERBOSE(NULL, 1, i == 0 || i == 42, "Verbose message: " << i);
-        CV_LOG_IF_DEBUG(NULL, i == 0 || i == 42, "Debug message: " << i);
-        CV_LOG_IF_INFO(NULL, i == 0 || i == 42, "Info message: " << i);
-        CV_LOG_IF_WARNING(NULL, i == 0 || i == 42, "Warning message: " << i);
-        CV_LOG_IF_ERROR(NULL, i == 0 || i == 42, "Error message: " << i);
-        CV_LOG_IF_FATAL(NULL, i == 0 || i == 42, "Fatal message: " << i);
+        CV_LOG_IF_VERBOSE(NULL, 0, i == 0 || i == 42, "Verbose message: " << evalCount++);
+        CV_LOG_IF_VERBOSE(NULL, 1, i == 0 || i == 42, "Verbose message: " << evalCount++);
+        CV_LOG_IF_DEBUG(NULL, i == 0 || i == 42, "Debug message: " << evalCount++);
+        CV_LOG_IF_INFO(NULL, i == 0 || i == 42, "Info message: " << evalCount++);
+        CV_LOG_IF_WARNING(NULL, i == 0 || i == 42, "Warning message: " << evalCount++);
+        CV_LOG_IF_ERROR(NULL, i == 0 || i == 42, "Error message: " << evalCount++);
+        CV_LOG_IF_FATAL(NULL, i == 0 || i == 42, "Fatal message: " << evalCount++);
     }
+
+    // 6 of the 7 emit - CV_LOG_IF_VERBOSE(v=1) reaches CV_LOG_STRIP_LEVEL - on the 2
+    // iterations the condition holds. Arguments must be evaluated only when emitted.
+    EXPECT_EQ(12, capture.count());
+    EXPECT_EQ(12, evalCount);
 }
 
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT

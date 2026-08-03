@@ -1476,8 +1476,9 @@ TEST(Core_SparseMat, footprint)
 }
 
 
-// Can't fix without dirty hacks or broken user code (PR #4159)
-TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
+// A vector-backed OutputArray is 1-D: create() fixes only the element count, and getMat() returns
+// a 1-D Mat, so rows is 1 and cols is the element count, not the requested 2-D shape.
+TEST(Core_Mat_vector, OutputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
     std::vector<uchar> dst8;
@@ -1489,9 +1490,10 @@ TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
     {
         _dst.create(src.rows, src.cols, src.type());
         Mat dst = _dst.getMat();
-        EXPECT_EQ(src.dims, dst.dims);
-        EXPECT_EQ(src.cols, dst.cols);
-        EXPECT_EQ(src.rows, dst.rows);
+        EXPECT_EQ(1, dst.dims);
+        EXPECT_EQ(1, dst.rows);
+        EXPECT_EQ(5, dst.cols);
+        EXPECT_EQ(src.total(), dst.total());
     }
 }
 

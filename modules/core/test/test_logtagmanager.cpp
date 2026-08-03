@@ -186,30 +186,6 @@ TEST_F(LogTagManagerGlobalSmokeTest, AfterCtorCanSetGlobalByFullName)
     EXPECT_EQ(globalLogTag->level, constTestLevelChanged);
 }
 
-#if 0
-// "global" level is not supposed to be settable by name-parts.
-// Therefore this test code is supposed to fail.
-TEST_F(LogTagManagerGlobalSmokeTest, DISABLED_AfterCtorCanSetGlobalByFirstPart)
-{
-    m_logTagManager.setLevelByFirstPart(m_globalTagName, constTestLevelChanged);
-    auto globalLogTag = m_logTagManager.get(m_globalTagName);
-    ASSERT_NE(globalLogTag, nullptr);
-    EXPECT_EQ(globalLogTag->level, constTestLevelChanged);
-}
-#endif
-
-#if 0
-// "global" level is not supposed to be settable by name-parts.
-// Therefore this test code is supposed to fail.
-TEST_F(LogTagManagerGlobalSmokeTest, DISABLED_AfterCtorCanSetGlobalByAnyPart)
-{
-    m_logTagManager.setLevelByAnyPart(m_globalTagName, constTestLevelChanged);
-    auto globalLogTag = m_logTagManager.get(m_globalTagName);
-    ASSERT_NE(globalLogTag, nullptr);
-    EXPECT_EQ(globalLogTag->level, constTestLevelChanged);
-}
-#endif
-
 // LogTagManagerNonGlobalSmokeTest performs basic smoke tests to verify that
 // a log tag (that is not the "global" log tag) can be assigned, and its
 // log level can be configured.

@@ -1257,8 +1257,17 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
 
 
 
-TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
+// A live Mat view blocks device access: UMat::handle() requires refcount == 0. getMat() upgrades
+// every request to ACCESS_RW, so the access flags below make no difference.
+// Two reads are not a data race, but this asserts the actual behaviour, not that expectation.
+TEST(UMat, Test_same_behaviour_read_and_read)
 {
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+
     bool exceptionDetected = false;
     try
     {
@@ -1271,12 +1280,17 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
     {
         exceptionDetected = true;
     }
-    ASSERT_FALSE(exceptionDetected); // no data race, 2+ reads are valid
+    ASSERT_TRUE(exceptionDetected);
 }
 
-// VP: this test (and probably others from same_behaviour series) is not valid in my opinion.
-TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
+TEST(UMat, Test_same_behaviour_read_and_write)
 {
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+
     bool exceptionDetected = false;
     try
     {
@@ -1288,11 +1302,17 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
     {
         exceptionDetected = true;
     }
-    ASSERT_TRUE(exceptionDetected); // data race
+    ASSERT_TRUE(exceptionDetected);
 }
 
-TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
+TEST(UMat, Test_same_behaviour_write_and_read)
 {
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+
     bool exceptionDetected = false;
     try
     {
@@ -1305,11 +1325,17 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
     {
         exceptionDetected = true;
     }
-    ASSERT_TRUE(exceptionDetected); // data race
+    ASSERT_TRUE(exceptionDetected);
 }
 
-TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
+TEST(UMat, Test_same_behaviour_write_and_write)
 {
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+
     bool exceptionDetected = false;
     try
     {
@@ -1321,7 +1347,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     {
         exceptionDetected = true;
     }
-    ASSERT_TRUE(exceptionDetected); // data race
+    ASSERT_TRUE(exceptionDetected);
 }
 
 TEST(UMat, mat_umat_sync)
@@ -1387,7 +1413,7 @@ TEST(UMat, testWrongLifetime_Mat)
     }
 }
 
-TEST(UMat, DISABLED_regression_5991)
+TEST(UMat, regression_5991)
 {
     int sz[] = {2,3,2};
     UMat mat(3, sz, CV_32F, Scalar(1));

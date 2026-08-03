@@ -1592,18 +1592,16 @@ TEST(Core_MatExpr, mul_scalar_use_after_scope_23577)
     EXPECT_EQ(0, cvtest::norm(res, Mat(2, 3, CV_32FC1, Scalar::all(21.0f)), NORM_INF));
 }
 
-// Disabled with the new broadcasting element-wise engine: a 4x1 CV_64F *Mat* is no longer treated as a
-// Scalar (only true scalars - numbers / cv::Scalar / Vec / Matx, which arrive via _InputArray::MATX -
-// are scalars; real Mats ride broadcasting). Here b broadcasts against a(1x1) -> 4x1, not 1x1. A
-// follow-up OpenCV issue tracks this intended behavior change.
-TEST(Core_Arithm, DISABLED_scalar_handling_19599)  // https://github.com/opencv/opencv/issues/19599 (OpenCV 4.x+ only)
+// A 4x1 CV_64F Mat is not a Scalar - only numbers, cv::Scalar, Vec and Matx are.
+// So b broadcasts against a and the result is 4x1; it was 1x1 before #29426.
+TEST(Core_Arithm, scalar_handling_19599)
 {
     Mat a(1, 1, CV_32F, Scalar::all(1));
-    Mat b(4, 1, CV_64F, Scalar::all(1));  // MatExpr may convert Scalar to Mat
+    Mat b(4, 1, CV_64F, Scalar::all(1));
     Mat c;
     EXPECT_NO_THROW(cv::multiply(a, b, c));
+    EXPECT_EQ(4, c.rows);
     EXPECT_EQ(1, c.cols);
-    EXPECT_EQ(1, c.rows);
 }
 
 // https://github.com/opencv/opencv/issues/24163

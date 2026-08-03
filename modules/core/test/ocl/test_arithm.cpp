@@ -2108,8 +2108,9 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMin, Combine(testing::Values(std::make
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 
 
-// T-API BUG (haveOpenCL() is false): modules/core/src/matrix.cpp:212: error: (-215) u->refcount == 0 in function deallocate
-OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
+// Fixed: the no-OpenCL fallback now stays in the UMat domain (norm.dispatch.cpp) instead of mapping
+// through getMat(); that used to crash matrix.cpp:212 CV_Assert(u->refcount == 0) on type change.
+OCL_TEST(Normalize, regression_5876_inplace_change_type)
 {
     double initial_values[] = {1, 2, 5, 4, 3};
     float result_values[] = {0, 0.25, 1, 0.75, 0.5};
