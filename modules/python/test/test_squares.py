@@ -44,8 +44,7 @@ def find_squares(img):
     return squares
 
 def intersectionRate(s1, s2):
-    # dtype is explicit: these helpers take plain integer lists, and the geometry
-    # functions accept only CV_32S/CV_32F point coordinates.
+    # intersectConvexConvex()/contourArea() accept only CV_32S/CV_32F points
     s1 = np.array(s1, dtype=np.int32)
     s2 = np.array(s2, dtype=np.int32)
     area, _intersection = cv.intersectConvexConvex(s1, s2)

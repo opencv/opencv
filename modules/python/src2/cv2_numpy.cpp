@@ -34,10 +34,8 @@ UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, void* 
 
     int depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
-    // cvDepthToNumpyType() widens CV_16BF to NPY_FLOAT for export, which is only
-    // valid when the values are converted (see pyopencv_from). Backing a CV_16BF
-    // Mat with a float32 buffer here would instead pair a 2-byte element step with
-    // 4-byte NumPy strides and silently corrupt the data, so refuse it outright.
+    // Backing a CV_16BF Mat with the float32 buffer cvDepthToNumpyType() asks for
+    // would pair a 2-byte element step with 4-byte NumPy strides and corrupt the data.
     if( depth == CV_16BF )
         CV_Error(Error::StsNotImplemented,
                  "CV_16BF (bfloat16) arrays cannot be allocated through the NumPy allocator: "

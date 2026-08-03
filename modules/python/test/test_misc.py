@@ -263,8 +263,7 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(res2_1, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=2 dims(-1)=2 size(-1)=1x2 type(-1)=CV_64FC1")
         res2_2 = cv.utils.dumpInputArray(1.5)  # Scalar(1.5, 1.5, 1.5, 1.5)
         self.assertEqual(res2_2, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=4 dims(-1)=2 size(-1)=1x4 type(-1)=CV_64FC1")
-        # dtype is explicit: NumPy's default integer type is platform/version
-        # dependent, and 64-bit integers now map to CV_64S rather than CV_32S.
+        # explicit dtype: NumPy's default integer type is platform dependent
         a = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.int32)
         res3 = cv.utils.dumpInputArray(a)  # 32SC1
         self.assertEqual(res3, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=6 dims(-1)=2 size(-1)=2x3 type(-1)=CV_32SC1")
@@ -295,7 +294,6 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(res2_1, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_64FC1 dims(0)=2 size(0)=1x4")
         res2_2 = cv.utils.dumpInputArrayOfArrays([1.5])
         self.assertEqual(res2_2, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=1 dims(-1)=1 size(-1)=1x1 type(0)=CV_64FC1 dims(0)=2 size(0)=1x4")
-        # see test_InputArray: keep the integer dtype explicit
         a = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.int32)
         b = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.int32)
         res3 = cv.utils.dumpInputArrayOfArrays([a, b])
@@ -331,14 +329,12 @@ class Arguments(NewOpenCVTests):
             cv.rectangle(array, (0, 0), (5, 5), (255), 2)
 
     def test_64bit_integers_map_to_64bit_depths(self):
-        # 64-bit integer arrays used to fall through to a CV_32S cast.
         for dtype, expected in ((np.int64, "CV_64SC1"), (np.uint64, "CV_64UC1")):
             array = np.zeros((2, 2), dtype=dtype)
             self.assertIn(expected, cv.utils.dumpInputArray(array))
 
     def test_64bit_integers_are_not_truncated(self):
-        # Regression: values outside the int32 range were silently truncated
-        # (2**40 came back as 0) because of that cast.
+        # Values outside the int32 range used to be silently truncated.
         for dtype in (np.int64, np.uint64):
             for value in (2 ** 40, 2 ** 40 + 12345):
                 array = np.array([[value]], dtype=dtype)
@@ -349,9 +345,8 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(cv.add(signed, np.zeros_like(signed))[0, 0], -2 ** 40)
 
     def test_64bit_integer_dtype_number_is_preserved(self):
-        # np.dtype('uint64') == np.dtype('ulonglong') compares equal even though
-        # their type numbers differ, so an exported array can look correct while
-        # being unusable as an input. Compare .num explicitly.
+        # np.dtype('uint64') == np.dtype('ulonglong') compares equal despite having
+        # different type numbers, so compare .num explicitly.
         for dtype in (np.int64, np.uint64):
             array = np.zeros((2, 2), dtype=dtype)
             self.assertEqual(cv.add(array, array).dtype.num, np.dtype(dtype).num)

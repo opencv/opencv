@@ -21,14 +21,10 @@ int cvDepthToNumpyType(int depth)
     case CV_32F:  return NPY_FLOAT;
     case CV_64F:  return NPY_DOUBLE;
     case CV_16F:  return NPY_HALF;
-    // NumPy has no bfloat16 dtype, so CV_16BF is exported as float32 (a lossless
-    // widening). pyopencv_from() performs the value conversion; without it the
-    // 2-byte payload would be reinterpreted as 4-byte elements.
+    // NumPy has no bfloat16 dtype; pyopencv_from() converts the values to float32.
     case CV_16BF: return NPY_FLOAT;
     case CV_Bool: return NPY_BOOL;
     default:
-        // Deliberately an error rather than a fallback: silently mapping an
-        // unknown depth to some default dtype mislabels the payload.
         CV_Error(cv::Error::StsNotImplemented,
                  cv::format("Mat depth %d has no corresponding NumPy dtype", depth));
     }
@@ -36,7 +32,7 @@ int cvDepthToNumpyType(int depth)
 
 int numpyTypeToCvDepth(int typenum)
 {
-    // Only canonical NPY_* values may appear as case labels: the fixed-width
+    // Only canonical NPY_* values may be used as case labels: the fixed-width
     // aliases (NPY_INT32, NPY_INT64, ...) expand to these and would collide.
     switch (typenum)
     {
@@ -48,8 +44,7 @@ int numpyTypeToCvDepth(int typenum)
     case NPY_INT:       return CV_32S;
     case NPY_ULONGLONG: return CV_64U;
     case NPY_LONGLONG:  return CV_64S;
-    // 'long' is 64-bit on LP64 (Linux/macOS) but 32-bit on LLP64 (Windows),
-    // so this must be decided by size rather than by name.
+    // 'long' is 64-bit on LP64 but 32-bit on LLP64, so decide by size, not by name.
     case NPY_ULONG:     return NPY_SIZEOF_LONG == 8 ? CV_64U : CV_32U;
     case NPY_LONG:      return NPY_SIZEOF_LONG == 8 ? CV_64S : CV_32S;
     case NPY_HALF:      return CV_16F;

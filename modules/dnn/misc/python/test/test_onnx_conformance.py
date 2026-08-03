@@ -632,8 +632,6 @@ TOLERANCE_OVERRIDES = {
     "test_roialign_aligned_true": (3e-05, 0.0001),
 }
 
-# Cases the C++ suite passes but that fail only through the Python bindings.
-# Not a port of the C++ denylist; empty is the expected state.
 KNOWN_SKIPS = {
     # "test_name": "reason",
 }

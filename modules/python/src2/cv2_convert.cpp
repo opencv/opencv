@@ -133,10 +133,6 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     if( type < 0 )
     {
-        // 64-bit integers used to be force-cast to CV_32S here, which silently
-        // truncated any value outside the int32 range. They now map to
-        // CV_64S/CV_64U in numpyTypeToCvDepth(), so reaching this point means
-        // the dtype genuinely has no cv::Mat equivalent.
         const std::string dtype_name = getArrayTypeName(oarr);
         failmsg("%s data type = %s is not supported", info.name,
                 dtype_name.c_str());
@@ -304,15 +300,12 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    // NumPy has no bfloat16 dtype, so CV_16BF is widened to float32 (lossless).
-    // The values must actually be converted, not just relabelled: cvDepthToNumpyType()
-    // reports NPY_FLOAT for CV_16BF, and handing a 2-byte-per-element buffer to the
-    // NumPy allocator under a 4-byte dtype would misinterpret the payload.
+    // NumPy has no bfloat16 dtype: widen CV_16BF to float32 (lossless).
     if( m.depth() == CV_16BF )
     {
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));
-        return pyopencv_from(m32f);  // m32f is CV_32F, so this recurses at most once
+        return pyopencv_from(m32f);
     }
     if( m.empty() )
     {
