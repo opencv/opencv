@@ -917,9 +917,9 @@ TEST_P(CharucoBoardGenerate, issue_24806)
     }
 }
 
-// Temporary disabled in https://github.com/opencv/opencv/pull/24338
-// 5.x version produces conrnes with different shape than 4.x (32F_C2 instead of 2x 32FC1)
-TEST(Charuco, DISABLED_testSeveralBoardsWithCustomIds)
+// Disabled by PR #24338 over 5.x's charuco-corner shape change (PR #23473); re-enabled since the
+// comparison below already reshapes both sides to a flat row, so the shape difference doesn't matter.
+TEST(Charuco, testSeveralBoardsWithCustomIds)
 {
     Size res{500, 500};
     Mat K = (Mat_<double>(3,3) <<
