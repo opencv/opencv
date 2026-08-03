@@ -632,48 +632,10 @@ TOLERANCE_OVERRIDES = {
     "test_roialign_aligned_true": (3e-05, 0.0001),
 }
 
-UINT64_SETINPUT_REASON = (
-    "cv2.dnn.Net.setInput() does not accept a uint64 ndarray (\"Overload "
-    "resolution failed: blob data type\"); readTensorFromONNX decodes the "
-    "input correctly (verified byte-for-byte against the onnx package), so "
-    "this is a Python-binding overload gap, not a data or C++ Mat/Net issue."
-)
-BFLOAT16_READ_REASON = (
-    "cv2.dnn.readTensorFromONNX does not support the ONNX BFLOAT16 element "
-    "type: it returns a uint64-dtyped array of nonsensical values (raw bytes "
-    "misinterpreted) instead of the actual tensor content, for both BFLOAT16 "
-    "inputs and outputs."
-)
-
+# Cases the C++ suite passes but that fail only through the Python bindings.
+# Not a port of the C++ denylist; empty is the expected state.
 KNOWN_SKIPS = {
-    "test_add_uint64": UINT64_SETINPUT_REASON,
-    "test_bitshift_left_uint64": UINT64_SETINPUT_REASON,
-    "test_bitshift_right_uint64": UINT64_SETINPUT_REASON,
-    "test_bitwise_and_ui64_bcast_3v1d": UINT64_SETINPUT_REASON,
-    "test_bitwise_or_ui64_bcast_3v1d": UINT64_SETINPUT_REASON,
-    "test_bitwise_xor_ui64_bcast_3v1d": UINT64_SETINPUT_REASON,
-    "test_cast_BFLOAT16_to_FLOAT": BFLOAT16_READ_REASON,
-    "test_cast_FLOAT_to_BFLOAT16": BFLOAT16_READ_REASON,
-    "test_castlike_BFLOAT16_to_FLOAT": BFLOAT16_READ_REASON,
-    "test_castlike_BFLOAT16_to_FLOAT_expanded": BFLOAT16_READ_REASON,
-    "test_castlike_FLOAT_to_BFLOAT16": BFLOAT16_READ_REASON,
-    "test_castlike_FLOAT_to_BFLOAT16_expanded": BFLOAT16_READ_REASON,
-    "test_div_uint64": UINT64_SETINPUT_REASON,
-    "test_equal_uint64": UINT64_SETINPUT_REASON,
-    "test_greater_equal_uint64": UINT64_SETINPUT_REASON,
-    "test_greater_equal_uint64_expanded": UINT64_SETINPUT_REASON,
-    "test_greater_uint64": UINT64_SETINPUT_REASON,
-    "test_less_equal_uint64": UINT64_SETINPUT_REASON,
-    "test_less_equal_uint64_expanded": UINT64_SETINPUT_REASON,
-    "test_less_uint64": UINT64_SETINPUT_REASON,
-    "test_max_uint64": UINT64_SETINPUT_REASON,
-    "test_min_uint64": UINT64_SETINPUT_REASON,
-    "test_mod_uint64": UINT64_SETINPUT_REASON,
-    "test_mul_uint64": UINT64_SETINPUT_REASON,
-    "test_pow_types_float32_uint64": UINT64_SETINPUT_REASON,
-    "test_range_bfloat16_type_positive_delta": BFLOAT16_READ_REASON,
-    "test_sub_uint64": UINT64_SETINPUT_REASON,
-    "test_top_k_uint64": UINT64_SETINPUT_REASON,
+    # "test_name": "reason",
 }
 
 L1_DEFAULT = 1e-5

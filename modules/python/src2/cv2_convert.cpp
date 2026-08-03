@@ -127,25 +127,20 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return false;
     }
 
-    bool needcopy = false, needcast = false;
-    int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
+    bool needcopy = false;
+    int typenum = PyArray_TYPE(oarr);
     int type = numpyTypeToCvDepth(typenum);
 
     if( type < 0 )
     {
-        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
-        {
-            needcopy = needcast = true;
-            new_typenum = NPY_INT;
-            type = CV_32S;
-        }
-        else
-        {
-            const std::string dtype_name = getArrayTypeName(oarr);
-            failmsg("%s data type = %s is not supported", info.name,
-                    dtype_name.c_str());
-            return false;
-        }
+        // 64-bit integers used to be force-cast to CV_32S here, which silently
+        // truncated any value outside the int32 range. They now map to
+        // CV_64S/CV_64U in numpyTypeToCvDepth(), so reaching this point means
+        // the dtype genuinely has no cv::Mat equivalent.
+        const std::string dtype_name = getArrayTypeName(oarr);
+        failmsg("%s data type = %s is not supported", info.name,
+                dtype_name.c_str());
+        return false;
     }
 
 #ifndef CV_MAX_DIM
@@ -220,14 +215,8 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             return false;
         }
 
-        if( needcast ) {
-            o = PyArray_Cast(oarr, new_typenum);
-            oarr = (PyArrayObject*) o;
-        }
-        else {
-            oarr = PyArray_GETCONTIGUOUS(oarr);
-            o = (PyObject*) oarr;
-        }
+        oarr = PyArray_GETCONTIGUOUS(oarr);
+        o = (PyObject*) oarr;
 
         _strides = PyArray_STRIDES(oarr);
     }
@@ -315,6 +304,16 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
+    // NumPy has no bfloat16 dtype, so CV_16BF is widened to float32 (lossless).
+    // The values must actually be converted, not just relabelled: cvDepthToNumpyType()
+    // reports NPY_FLOAT for CV_16BF, and handing a 2-byte-per-element buffer to the
+    // NumPy allocator under a 4-byte dtype would misinterpret the payload.
+    if( m.depth() == CV_16BF )
+    {
+        cv::Mat m32f;
+        ERRWRAP2(m.convertTo(m32f, CV_32F));
+        return pyopencv_from(m32f);  // m32f is CV_32F, so this recurses at most once
+    }
     if( m.empty() )
     {
         // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
