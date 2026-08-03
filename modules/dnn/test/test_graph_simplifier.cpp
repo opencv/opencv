@@ -26,8 +26,9 @@ class Test_Graph_Simplifier : public ::testing::Test {
         std::vector<std::string> layers;
         net.getLayerTypes(layers);
 
-        // remove Const, Identity (output layer), __NetInputLayer__ (input layer)
-        layers.erase(std::remove_if(layers.begin(), layers.end(), [] (const std::string l) { return l == "Const" || l == "Identity" || l == "__NetInputLayer__"; }), layers.end());
+        // remove Const, Identity (output layer), __NetInputLayer__ (input layer),
+        // TransformLayout (inserted by the block layout pass)
+        layers.erase(std::remove_if(layers.begin(), layers.end(), [] (const std::string l) { return l == "Const" || l == "Identity" || l == "__NetInputLayer__" || l == "TransformLayout"; }), layers.end());
         // Instead of 'Tile', 'Expand' etc. we may now have 'Tile2', 'Expand2' etc.
         // We should correctly match them with the respective patterns
         for (auto& l: layers) {
@@ -57,19 +58,21 @@ TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
     test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
 }
 
-TEST_F(Test_Graph_Simplifier, DISABLED_ResizeSubgraph) {
-    /* Test for 6 subgraphs:
-        - GatherCastSubgraph
-        - MulCastSubgraph
+TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
+    /* Test for 4 subgraphs (was 6): GatherCastSubgraph and MulCastSubgraph were removed
+       (Gather/Mul -> Cast is no longer fused, since folding it away silently dropped the Cast's
+       dtype semantics); the dynamic-scale Shape/Gather/Cast/Floor/Concat/Unsqueeze/Slice chain
+       these 4 models use to compute Resize's scale factor no longer collapses.
         - UpsampleSubgraph
         - ResizeSubgraph1
         - ResizeSubgraph2
         - ResizeSubgraph3
     */
-    test("upsample_unfused_torch1.2", std::vector<std::string>{"BatchNorm", "Resize"});
-    test("resize_nearest_unfused_opset11_torch1.3", std::vector<std::string>{"BatchNorm", "Convolution", "Resize"});
-    test("resize_nearest_unfused_opset11_torch1.4", std::vector<std::string>{"BatchNorm", "Convolution", "Resize"});
-    test("upsample_unfused_opset9_torch1.4", std::vector<std::string>{"BatchNorm", "Convolution", "Resize"});
+    test("upsample_unfused_torch1.2", std::vector<std::string>{"BatchNorm", "Cast", "Concat", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
+    // In the models below the BatchNorm is folded into the preceding convolution by fuseBN().
+    test("resize_nearest_unfused_opset11_torch1.3", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Unsqueeze"});
+    test("resize_nearest_unfused_opset11_torch1.4", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
+    test("upsample_unfused_opset9_torch1.4", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
     test("two_resizes_with_shared_subgraphs", std::vector<std::string>{"NaryEltwise", "Resize"});
 }
 

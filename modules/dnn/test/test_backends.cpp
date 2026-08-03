@@ -115,7 +115,7 @@ public:
     Net net;
 };
 
-TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
+TEST_P(DNNTestNetwork, YOLOv8n) {
     processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0");
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);

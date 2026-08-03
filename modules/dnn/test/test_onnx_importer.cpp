@@ -1374,8 +1374,9 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_neg_axis");
 }
 
-// Mul inside with 0-d tensor, output should be A x 1, but is 1 x A. PR #22652
-TEST_P(Test_ONNX_layers, DISABLED_Split_sizes_0d)
+// Was a Mul/0-d-tensor row/column shape ambiguity (A x 1 vs 1 x A); dnn now supports real 1-d
+// Mats, so the output is a true 1-d shape, matching the reference exactly.
+TEST_P(Test_ONNX_layers, Split_sizes_0d)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -1551,14 +1552,16 @@ TEST_P(Test_ONNX_layers, LSTM_Activations)
     testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
 }
 
-// disabled due to poor handling of 1-d mats
-TEST_P(Test_ONNX_layers, DISABLED_LSTM)
+// Was poor handling of 1-d mats in the importer of that era; no longer reproduces on the
+// current importer.
+TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
 }
 
-// disabled due to poor handling of 1-d mats
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_bidirectional)
+// Was poor handling of 1-d mats in the importer of that era; no longer reproduces on the
+// current importer.
+TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
@@ -1721,20 +1724,14 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
 
-// epsilon is larger because onnx does not match with torch/opencv exactly
-// Test uses incorrect ONNX and test data with 3 dims instead of 4.
-// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_seq)
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
 }
 
-// epsilon is larger because onnx does not match with torch/opencv exactly
-// Test uses incorrect ONNX and test data with 3 dims instead of 4.
-// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_batch)
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
