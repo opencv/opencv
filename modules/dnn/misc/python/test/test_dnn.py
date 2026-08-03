@@ -366,7 +366,7 @@ class dnn_test(NewOpenCVTests):
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
-            net = cv.dnn.readNet(model, engine=cv.dnn.ENGINE_CLASSIC)
+            net = cv.dnn.readNet(model, engine=cv.dnn.ENGINE_OPENCV)
 
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
@@ -415,7 +415,7 @@ class dnn_test(NewOpenCVTests):
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
-            net = cv.dnn.readNet(model_path, "", "", engine=cv.dnn.ENGINE_CLASSIC)
+            net = cv.dnn.readNet(model_path, "", "", engine=cv.dnn.ENGINE_OPENCV)
 
             node_name = net.getLayerNames()[0]
             w = net.getParam(node_name, 0) # returns the original tensor of three-dimensional shape

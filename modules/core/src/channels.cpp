@@ -428,11 +428,14 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
 
-    _dst.createSameSize(_src, depth);
 #ifdef HAVE_OPENCL
     if (ocl::isOpenCLActivated() && _src.dims() <= 2 && _dst.isUMat())
     {
         UMat src = _src.getUMat();
+        // NB: fetch the source before (re)allocating the destination so that
+        // in-place operation (_src and _dst referencing the same array) keeps
+        // the multi-channel source alive while dst is reshaped to 1 channel.
+        _dst.createSameSize(_src, depth);
         UMat dst = _dst.getUMat();
         mixChannels(std::vector<UMat>(1, src), std::vector<UMat>(1, dst), ch, 1);
         return;
@@ -440,6 +443,7 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 #endif
 
     Mat src = _src.getMat();
+    _dst.createSameSize(_src, depth);
     Mat dst = _dst.getMat();
 
     CV_IPP_RUN_FAST(ipp_extractChannel(src, dst, coi))

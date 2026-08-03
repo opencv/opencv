@@ -82,7 +82,7 @@ if __name__ == '__main__':
     prompt = args.prompt
     tokenizer_path = args.tokenizer_path
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_NEW)
+    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
     tokenizer = cv.dnn.Tokenizer.load(tokenizer_path)
 
     tokens = gpt2_inference(net, prompt, max_length, tokenizer)

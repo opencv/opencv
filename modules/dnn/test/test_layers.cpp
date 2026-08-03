@@ -2249,21 +2249,10 @@ TEST(Layer_LSTM, repeatedInference)
 
 TEST(Layer_If, resize)
 {
-    // Skip this test when the classic DNN engine is explicitly requested. The
-    // "if" layer is supported only by the new engine.
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        // Mark the test as skipped and exit early.
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string imgname   = findDataFile("cv/shared/lena.png", true);
     const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", true);
 
-    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
+    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_OPENCV);
     Mat src = imread(imgname), blob;
     dnn::blobFromImage(src, blob, 1.0, cv::Size(), cv::Scalar(), false, false);
 
@@ -2286,16 +2275,8 @@ TEST(Layer_If, resize)
 
 TEST(Layer_If, subgraph_name_scoping)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string modelname = findDataFile("dnn/onnx/models/subgraph_name_scoping.onnx", true);
-    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
+    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_OPENCV);
 
     int xshape[1] = {2};
     Mat x(1, xshape, CV_32F);
@@ -2331,16 +2312,8 @@ TEST(Layer_If, subgraph_name_scoping)
 
 TEST(Layer_Size, onnx_1d)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string modelname = findDataFile("dnn/onnx/models/test_size_1d_model.onnx", true);
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_OPENCV);
 
     int sz1d[1] = {7};
     cv::Mat x(1, sz1d, CV_32F);
@@ -2358,16 +2331,8 @@ TEST(Layer_Size, onnx_1d)
 
 TEST(Layer_Size, onnx_0d_scalar)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     const std::string modelname = findDataFile("dnn/onnx/models/test_size_0d_model.onnx", true);
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_OPENCV);
 
     cv::Mat x(1, 1, CV_32F);
     x.at<float>(0, 0) = 3.14f;
@@ -2430,20 +2395,11 @@ class TESTKVCache : public testing::TestWithParam<std::string>
 public:
     void testKVCache(const std::string& layout)
     {
-        auto engine_forced = static_cast<cv::dnn::EngineType>(
-                cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-        if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-        {
-            // Mark the test as skipped and exit early.
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-            return;
-        }
-
         std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
 
-        Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+        Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_OPENCV);
         netWithKVCache.enableKVCache();
-        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_OPENCV);
 
         int T = 523, Nq = 8, Nkv = 4, D = 256;
         // Keep the prefill larger than one cache page, then exercise generation

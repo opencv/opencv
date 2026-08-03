@@ -38,7 +38,7 @@ struct ModelFusionTransposeMatMul
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
-        const vector<Ptr<Layer>>& prog = graph->prog();
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
         size_t nops = prog.size();
         bool modified = false;
 
@@ -68,7 +68,7 @@ struct ModelFusionTransposeMatMul
         vector<bool> dropped(nops, false);
 
         for (size_t i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             if (!layer || dropped[i]) continue;
 
             MatMulLayer* mm = dynamic_cast<MatMulLayer*>(layer.get());
@@ -83,7 +83,7 @@ struct ModelFusionTransposeMatMul
                 int prod_idx = it->second;
                 if (prod_idx < 0 || dropped[prod_idx]) continue;
 
-                const Ptr<Layer>& pl = prog[prod_idx];
+                const Ptr<LayerInfo>& pl = prog[prod_idx];
                 TransposeLayer* tr = dynamic_cast<TransposeLayer*>(pl.get());
                 if (!tr || pl->outputs.size() != 1) continue;
                 if (!isLastTwoSwap(tr->perm)) continue;
@@ -103,7 +103,7 @@ struct ModelFusionTransposeMatMul
         }
 
         if (modified) {
-            vector<Ptr<Layer>> newprog;
+            vector<Ptr<LayerInfo>> newprog;
             newprog.reserve(nops);
             for (size_t i = 0; i < nops; i++) {
                 if (!dropped[i] && prog[i])

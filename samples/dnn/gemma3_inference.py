@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print("Preparing Gemma3 model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_NEW)
+    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
 
     gemma3_prompt = build_gemma3_prompt(args.prompt)
     print(f"Prompt:\n{gemma3_prompt}")

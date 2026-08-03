@@ -142,6 +142,10 @@ void Net::finalizeNet()
         return;
     }
 #endif
+    // New graph engine: explicitly select per-op executors for the chosen backend/target now,
+    // so the first forward() isn't slowed by it.
+    if (impl->mainGraph)
+        impl->finalize();
 }
 
 void Net::setInputsNames(const std::vector<String>& inputBlobNames)

@@ -145,12 +145,6 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    // SSD_VGG16's specialized preprocessing is handled by the new engine importer only.
-    auto engine_forced = static_cast<dnn::EngineType>(
-        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
-    if (engine_forced == dnn::ENGINE_CLASSIC)
-        throw SkipTestException("SSD_VGG16 is supported on the new DNN engine only");
-
     processNet("dnn/onnx/models/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }
 
