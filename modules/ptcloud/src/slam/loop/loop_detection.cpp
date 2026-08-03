@@ -10,15 +10,6 @@
 namespace cv {
 namespace slam {
 
-// count differing bits between two binary hash codes
-static int hammingDist(const uint8_t* a, const uint8_t* b, int nbytes)
-{
-    int d = 0;
-    for (int i = 0; i < nbytes; ++i)
-        d += __builtin_popcount(a[i] ^ b[i]);
-    return d;
-}
-
 // project a VLAD vector into a compact binary code via random projections
 static std::vector<uint8_t> lshHash(const Mat& vlad, const Mat& proj)
 {
@@ -190,14 +181,15 @@ void VisualOdometryImpl::detectLoop(KeyFrame* query)
     {
         const int nbytes   = (int)query->globalHash.size();
         const int coarseK  = std::max(params.loopTopK, params.loopCoarseTopk);
+        const Mat queryCode(1, nbytes, CV_8U, (void*)query->globalHash.data());
         std::vector<std::pair<int, KeyFrame*>> ham;
         ham.reserve(256);
         for (KeyFrame* kf : map.keyframes())
         {
             if (kf->id > maxEligibleId || kf->globalDesc.empty() || kf->bad) continue;
             if ((int)kf->globalHash.size() != nbytes) continue;
-            ham.emplace_back(
-                hammingDist(query->globalHash.data(), kf->globalHash.data(), nbytes), kf);
+            const Mat candidateCode(1, nbytes, CV_8U, (void*)kf->globalHash.data());
+            ham.emplace_back((int)norm(queryCode, candidateCode, NORM_HAMMING), kf);
         }
         std::sort(ham.begin(), ham.end(),
                   [](const std::pair<int, KeyFrame*>& a,

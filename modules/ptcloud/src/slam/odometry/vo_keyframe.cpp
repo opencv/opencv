@@ -146,13 +146,13 @@ bool VisualOdometryImpl::shouldPromoteKeyframe(int nInliers, const Matx44d& T_cw
         return true;
     }
 
-    Point3d cCur  = detail::cameraCenterWorld(T_cw);
-    Point3d cLast = detail::cameraCenterWorld(lastKf->poseCw);
-    Point3d d     = cCur - cLast;
-    double dist   = std::sqrt(d.dot(d));
-    if (dist > params.kfTransThresh)
+    Point3d currentCentre = detail::cameraCenterWorld(T_cw);
+    Point3d lastKfCentre  = detail::cameraCenterWorld(lastKf->poseCw);
+    Point3d offset        = currentCentre - lastKfCentre;
+    double translation    = std::sqrt(offset.dot(offset));
+    if (translation > params.kfTransThresh)
     {
-        reason = format("trans=%.3f", dist);
+        reason = format("trans=%.3f", translation);
         return true;
     }
 

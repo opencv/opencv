@@ -1,6 +1,5 @@
 '''
-Modular monocular visual odometry: feature tracking + PnP, no bundle adjustment
-or loop closure.
+Modular monocular SLAM: tracking + local/global bundle adjustment + loop closure.
 
 Feeds a directory of images through a pluggable feature detector + matcher pair,
 estimates the camera trajectory, and writes the result to --output in COLMAP text
@@ -8,9 +7,9 @@ format. This sample wires up one ONNX detector/matcher pair by default; the
 pipeline (cv.slam.VisualOdometry) accepts any cv2.Feature2D + cv2.DescriptorMatcher.
 
 Example:
-    python visual_odometry.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq
+    python slam.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq
 Sample command (run on the GPU):
-    python visual_odometry.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq --target cuda
+    python slam.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq --target cuda
 '''
 
 import argparse
@@ -107,9 +106,9 @@ def write_colmap_files(vo, K, image_size, pose_filenames, output_dir):
         f.write(f"width {image_size[0]}\n")
         f.write(f"height {image_size[1]}\n")
 
-    # No bundle adjustment or loop closure runs here, so getTrajectory() (the raw,
-    # per-frame log) already is the final trajectory -- there is nothing to correct.
-    traj = vo.getTrajectory()
+    # Corrected poses ride on the optimised keyframe graph, so they carry the loop-closure
+    # and bundle-adjustment corrections; getTrajectory() is the raw per-frame log.
+    traj = vo.getCorrectedTrajectory()
     with open(os.path.join(output_dir, 'images.txt'), 'w') as f:
         f.write("# Image list with two lines of data per image:\n")
         f.write("#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
@@ -124,7 +123,7 @@ def write_colmap_files(vo, K, image_size, pose_filenames, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Modular monocular visual odometry')
+    parser = argparse.ArgumentParser(description='Modular monocular SLAM')
     parser.add_argument('--aliked',    required=True,
                         help='Path to detector ONNX model')
     parser.add_argument('--lightglue', required=True,
@@ -166,18 +165,12 @@ def main():
 
     matcher = cv.LightGlueMatcher.create(args.lightglue, 0.0, backend_id, target_id)
 
-    # Pure tracking: no g2o pose/local/global BA, no loop detection or closing.
     vo_params = cv.slam.OdometryParams()
     vo_params.minInitParallaxDeg = 1.5
     vo_params.minInitPoints      = 50
     vo_params.pnpReprojThresh    = 4.0
     vo_params.kfMaxFrames        = 30
     vo_params.localMapTopK       = 10
-    vo_params.poseOptEnable      = False
-    vo_params.localBaEnable      = False
-    vo_params.globalBaEnable     = False
-    vo_params.loopEnable         = False
-    vo_params.loopCloseEnable    = False
 
     K = build_K(args.fx, args.fy, args.cx, args.cy)
     dist_coeffs = parse_dist_coeffs(args.dist)
@@ -198,7 +191,7 @@ def main():
     print(f"images folder : {args.images}\n"
           f"output folder : {args.output}\n"
           f"images found  : {len(image_files)}\n\n"
-          f"Running feature tracking (PnP), no BA or loop closure.\n"
+          f"Running tracking + local/global BA + loop closure.\n"
           f"{progress_line}")
 
     # Tracks which input image each emitted trajectory pose came from, for images.txt.
@@ -232,6 +225,8 @@ def main():
             pose_filenames.append(path)
         prev_traj_len = traj_len
 
+    # End-of-sequence global bundle adjustment over the whole map.
+    vo.finalize()
     elapsed = time.perf_counter() - t0
 
     ok = len(vo.getTrajectory()) > 0
@@ -241,7 +236,7 @@ def main():
         exported = True
 
     print("\n"
-          "================ Visual Odometry Result ================\n"
+          "==================== SLAM Result ====================\n"
           f"status        : {'OK' if ok else 'FAILED'}\n"
           f"camera poses  : {len(vo.getTrajectory())}\n"
           f"keyframes     : {vo.getNumKeyframes()}\n"
@@ -249,7 +244,7 @@ def main():
           f"elapsed time  : {elapsed:.2f} s")
     if exported:
         print(f"output        : {args.output}/{{camera,images}}.txt")
-    print("==========================================================")
+    print("======================================================")
     return 0 if ok else 1
 
 

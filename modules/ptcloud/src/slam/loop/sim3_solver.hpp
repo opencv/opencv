@@ -15,10 +15,10 @@ namespace slam {
 
 struct Sim3Result
 {
-    bool ok        = false; 
-    Sim3 Scm;               
-    int  nInliers  = 0;     
-    int  nPairs    = 0;     
+    bool ok        = false;
+    Sim3 Scm;
+    int  nInliers  = 0;
+    int  nPairs    = 0;
 };
 
 Sim3Result estimateSim3(const KeyFrame* Kc, const KeyFrame* Km,

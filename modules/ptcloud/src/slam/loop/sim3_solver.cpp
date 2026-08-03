@@ -4,12 +4,9 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Relative Sim(3) estimation between two keyframes.
-//
-// Horn 1987 closed-form absolute orientation (unit quaternions) inside a
-// RANSAC loop, adapted to cv::slam types.  Used by closeLoop() to recover
-// the 7-DoF transform — including the accumulated monocular scale — that
-// snaps the current keyframe onto the matched (older) keyframe.
+// Relative Sim(3) estimation between two keyframes: Horn's closed-form
+// absolute orientation inside a RANSAC loop, recovering the 7-DoF
+// transform (with scale) used by closeLoop().
 
 #include "sim3_solver.hpp"
 
@@ -100,12 +97,7 @@ void computeSim3(const Mat& P1, const Mat& P2, bool fixScale,
     tout = Vec3d(tt.at<double>(0), tt.at<double>(1), tt.at<double>(2));
 }
 
-inline Matx33d rotationOf(const Matx44d& T)
-{
-    return Matx33d(T(0,0), T(0,1), T(0,2),
-                   T(1,0), T(1,1), T(1,2),
-                   T(2,0), T(2,1), T(2,2));
-}
+inline Matx33d rotationOf(const Matx44d& T) { return T.get_minor<3,3>(0, 0); }
 inline Vec3d translationOf(const Matx44d& T) { return Vec3d(T(0,3), T(1,3), T(2,3)); }
 
 } // anonymous namespace
@@ -125,7 +117,7 @@ Sim3Result estimateSim3(const KeyFrame* Kc, const KeyFrame* Km,
     const Matx33d Rc = rotationOf(Kc->poseCw); const Vec3d tc = translationOf(Kc->poseCw);
     const Matx33d Rm = rotationOf(Km->poseCw); const Vec3d tm = translationOf(Km->poseCw);
 
-    // Build 3D-3D correspondences in each camera frame.
+    // build 3D-3D correspondences in each camera frame
     std::vector<Vec3d>   X1, X2;
     std::vector<Point2f> obs1, obs2;
     X1.reserve(matches.size()); X2.reserve(matches.size());
@@ -182,7 +174,6 @@ Sim3Result estimateSim3(const KeyFrame* Kc, const KeyFrame* Km,
         return inl;
     };
 
-    // RANSAC over minimal (3-point) sets.
     RNG rng(0x5EED3D);
     Matx33d bestR = Matx33d::eye(); Vec3d bestT = Vec3d::all(0); double bestS = 1.0;
     int bestInliers = 0;
@@ -216,7 +207,7 @@ Sim3Result estimateSim3(const KeyFrame* Kc, const KeyFrame* Km,
 
     if (bestInliers < minInliers) return res;
 
-    // Refit on all inliers for a tighter estimate.
+    // refit on all inliers for a tighter estimate
     Mat Q1(3, bestInliers, CV_64F), Q2(3, bestInliers, CV_64F);
     int col = 0;
     for (int k = 0; k < Np; ++k)

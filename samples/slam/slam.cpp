@@ -22,16 +22,15 @@ using namespace cv;
 using namespace std;
 
 const string about =
-    "Modular monocular visual odometry: feature tracking + PnP, no bundle adjustment\n"
-    "or loop closure.\n\n"
+    "Modular monocular SLAM: tracking + local/global bundle adjustment + loop closure.\n\n"
     "Feeds a directory of images through a pluggable feature detector + matcher pair,\n"
     "estimates the camera trajectory, and writes the result to --output in COLMAP text\n"
     "format. This sample wires up one ONNX detector/matcher pair by default; the\n"
     "pipeline (cv::slam::VisualOdometry) accepts any cv::Feature2D + cv::DescriptorMatcher.\n"
     "To run:\n"
-    "\t ./example_slam_visual_odometry --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq\n"
+    "\t ./example_slam_slam --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq\n"
     "Sample command (run on the GPU):\n"
-    "\t ./example_slam_visual_odometry --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq --target=cuda\n";
+    "\t ./example_slam_slam --aliked=aliked.onnx --lightglue=lightglue.onnx --images=./seq --target=cuda\n";
 
 const string param_keys =
     "{ help h           |        | Print help message }"
@@ -105,6 +104,39 @@ static Mat parseDistCoeffs(const String& text)
     return coeffs.empty() ? Mat() : Mat(coeffs, true).reshape(1, 1);
 }
 
+static Point3d cameraCentre(const Matx44d& poseCw)
+{
+    const Matx33d R = poseCw.get_minor<3, 3>(0, 0);
+    const Vec3d t(poseCw(0, 3), poseCw(1, 3), poseCw(2, 3));
+    const Vec3d centre = -R.t() * t;
+    return Point3d(centre[0], centre[1], centre[2]);
+}
+
+// Corrected keyframe centres - kept separate from the COLMAP export 
+static bool writeKeyframeCentres(const Ptr<slam::VisualOdometry>& vo, const String& outputFolder)
+{
+    ofstream file(utils::fs::join(outputFolder, "keyframe_images.txt").c_str());
+    if (!file.is_open()) { cerr << "cannot write keyframe_images.txt" << endl; return false; }
+
+    file << "# Corrected keyframe camera centres in world coordinates.\n"
+         << "# Columns: kf_id Cx Cy Cz\n";
+    file.setf(ios::scientific);
+    file.precision(9);
+
+    const set<slam::KeyFrame*>& keyframeSet = vo->getMap().keyframes();
+    vector<slam::KeyFrame*> keyframes(keyframeSet.begin(), keyframeSet.end());
+    sort(keyframes.begin(), keyframes.end(),
+         [](const slam::KeyFrame* a, const slam::KeyFrame* b) { return a->id < b->id; });
+
+    for (const slam::KeyFrame* keyframe : keyframes)
+    {
+        if (!keyframe || keyframe->bad) continue;
+        const Point3d centre = cameraCentre(keyframe->poseCw);
+        file << keyframe->id << " " << centre.x << " " << centre.y << " " << centre.z << "\n";
+    }
+    return true;
+}
+
 static bool writeColmapFiles(const Ptr<slam::VisualOdometry>& vo,
                              const Matx33d& K, const Mat& distCoeffs, Size imageSize,
                              const vector<String>& poseImageNames,
@@ -133,7 +165,7 @@ static bool writeColmapFiles(const Ptr<slam::VisualOdometry>& vo,
 
     // images.txt
     {
-        const vector<Matx44d>& trajectory = vo->getTrajectory();
+        const vector<Matx44d> trajectory = vo->getCorrectedTrajectory();
         ofstream file(utils::fs::join(outputFolder, "images.txt").c_str());
         if (!file.is_open()) { cerr << "cannot write images.txt" << endl; return false; }
         file << "# Image list with one line of data per image:\n"
@@ -224,28 +256,23 @@ int main(int argc, char** argv)
 
     auto matcher = LightGlueMatcher::create(lightgluePath, 0.0f, backendId, targetId);
 
-    // tracking parameters
     slam::OdometryParams voParams;
     voParams.minInitParallaxDeg = 1.5;
     voParams.minInitPoints      = 50;
     voParams.pnpReprojThresh    = 4.0;
     voParams.kfMaxFrames        = 30;
     voParams.localMapTopK       = 10;
-    voParams.poseOptEnable      = false;
-    voParams.localBaEnable      = false;
-    voParams.globalBaEnable     = false;
-    voParams.loopEnable         = false;
-    voParams.loopCloseEnable    = false;
 
     auto vo = slam::VisualOdometry::create(detector, matcher, Mat(K), distCoeffs, voParams);
 
     cout << "images folder : " << imagesDir << "\n"
          << "output folder : " << outputDir << "\n"
          << "images found  : " << imageFiles.size() << "\n\n"
-         << "Running feature tracking (PnP), no BA or loop closure.\n"
+         << "Running tracking + local/global BA + loop closure.\n"
          << (showProgress
                 ? "Per-frame progress is printed below (OpenCV logs to stderr). Pass --progress=false to silence it.\n\n"
                 : "Per-frame progress is disabled. Re-run with --progress=true (the default) to see it.\n\n");
+
 
     vector<String> poseImageNames;
     String refImageName;
@@ -281,6 +308,8 @@ int main(int argc, char** argv)
         }
         previousPoseCount = poseCount;
     }
+
+    vo->finalize();
     const double elapsed = (getTickCount() - ticksBefore) / getTickFrequency();
 
     const bool ok = !vo->getTrajectory().empty();
@@ -289,7 +318,8 @@ int main(int argc, char** argv)
     {
         try
         {
-            exported = writeColmapFiles(vo, K, distCoeffs, imageSize, poseImageNames, outputDir);
+            exported = writeColmapFiles(vo, K, distCoeffs, imageSize, poseImageNames, outputDir)
+                    && writeKeyframeCentres(vo, outputDir);
         }
         catch (const Exception& e)
         {
@@ -298,15 +328,16 @@ int main(int argc, char** argv)
     }
 
     cout << "\n"
-         << "================ Visual Odometry Result ================\n"
+         << "==================== SLAM Result ====================\n"
          << "status        : " << (ok ? "OK" : "FAILED") << "\n"
          << "camera poses  : " << vo->getTrajectory().size() << "\n"
          << "keyframes     : " << vo->getNumKeyframes() << "\n"
          << "map points    : " << vo->getNumMapPoints() << "\n"
          << "elapsed time  : " << fixed << setprecision(2) << elapsed << " s\n";
     if (exported)
-        cout << "output        : " << outputDir << "/{camera,images,point3d}.txt\n";
-    cout << "==========================================================\n";
+        cout << "output        : " << outputDir
+             << "/{camera,images,point3d,keyframe_images}.txt\n";
+    cout << "======================================================\n";
 
     return ok ? 0 : 1;
 }

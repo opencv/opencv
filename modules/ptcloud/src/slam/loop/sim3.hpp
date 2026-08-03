@@ -14,9 +14,8 @@ namespace slam {
 
 /** @brief 7-DoF similarity transform  (s·R, t)  acting as  p' = s·R·p + t.
 
-Deliberately g2o-free so it can be used by the pure-cv correction code in
-loop closing (Stage A / Stage C).  Only the essential-graph optimiser converts
-this to/from g2o::Sim3 internally, behind HAVE_G2O.
+@note cv::Affine3d is not used here since it only models SE(3); loop closure needs
+the scale term explicit (monocular SLAM closes loops with Sim(3), not SE(3)).
 
 Convention matches the module's poses: a camera pose is Sim3(R_cw, t_cw, s)
 (world -> camera).  A relative S_cm maps a point in camera m into camera c:
@@ -60,9 +59,7 @@ inline Sim3 sim3FromPoseCW(const Matx44d& T, double s = 1.0)
 {
     Sim3 r;
     r.s = s;
-    r.R = Matx33d(T(0,0), T(0,1), T(0,2),
-                  T(1,0), T(1,1), T(1,2),
-                  T(2,0), T(2,1), T(2,2));
+    r.R = T.get_minor<3,3>(0, 0);
     r.t = Vec3d(T(0,3), T(1,3), T(2,3));
     return r;
 }

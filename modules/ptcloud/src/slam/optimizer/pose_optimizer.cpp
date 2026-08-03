@@ -9,9 +9,7 @@
 
 namespace cv { namespace slam {
 
-//  Reprojection-only inlier check
-//  fallback for PoseOptimization when g2o is disabled at runtime or not built.
-
+// reprojection-only inlier check; fallback for PoseOptimization without g2o
 static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThresh)
 {
     const double fx = K.at<double>(0, 0);
@@ -48,7 +46,7 @@ static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThres
 
 }} // namespace cv::slam
 
-//  g2o pose-only BA  
+// g2o pose-only BA
 
 #ifdef HAVE_G2O
 
@@ -66,13 +64,8 @@ static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThres
 
 namespace cv { namespace slam {
 
-// EdgeSE3ProjectXYZOnlyPose
-//
-// Unary reprojection edge: one variable vertex (camera pose T_cw as SE3Quat),
-// one FIXED 3D point Xw baked into the edge at construction time.
-//
-// Error = obs_2d − π(T_cw · Xw)
-
+// Unary reprojection edge: variable pose vertex (T_cw), fixed 3D point Xw
+// baked in at construction. Error = obs_2d − π(T_cw · Xw)
 class EdgeSE3ProjectXYZOnlyPose :
     public g2o::BaseUnaryEdge<2, Eigen::Vector2d, g2o::VertexSE3Expmap>
 {
@@ -135,8 +128,7 @@ private:
     double fx_, fy_, cx_, cy_;
 };
 
-// poseOptimizationG2O — real 6-DoF pose-only bundle adjustment
-
+// real 6-DoF pose-only bundle adjustment
 static int poseOptimizationG2O(Frame& frame, const Mat& K)
 {
     const double fx = K.at<double>(0, 0);
@@ -153,7 +145,6 @@ static int poseOptimizationG2O(Frame& frame, const Mat& K)
         new g2o::OptimizationAlgorithmLevenberg(
             std::make_unique<Block>(std::make_unique<LSolver>())));
 
-    // pose vertex
     const Matx44d& T = frame.poseCw;
     Eigen::Matrix3d R_eig;
     R_eig << T(0,0), T(0,1), T(0,2),

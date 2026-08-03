@@ -81,11 +81,11 @@ struct CV_EXPORTS_W_SIMPLE OdometryParams
     CV_PROP_RW int loopCoarseTopk = 20;      //!< candidates kept after Hamming pre-filter before cosine rerank
 
     // Loop closure
-    CV_PROP_RW bool loopCloseEnable = true;
-    CV_PROP_RW int sim3RansacIters = 300;
-    CV_PROP_RW int sim3MinInliers = 20;
+    CV_PROP_RW bool loopCloseEnable = true;     //!< Enable Sim3 loop closure and essential graph optimization
+    CV_PROP_RW int sim3RansacIters = 300;       //!< Maximum RANSAC iterations for Sim3 estimation
+    CV_PROP_RW int sim3MinInliers = 20;         //!< Minimum inliers required to accept a Sim3 loop closure
     CV_PROP_RW double sim3MaxReprojErr2 = 9.21; //!< squared-pixel gate for Sim3 RANSAC
-    CV_PROP_RW int essentialGraphIters = 20;
+    CV_PROP_RW int essentialGraphIters = 20;    //!< Optimization iterations for the essential graph
     CV_PROP_RW int essentialMinCovisWeight = 100; //!< min shared-MP count for covis edge
 };
 

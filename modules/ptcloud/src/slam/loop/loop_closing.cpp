@@ -18,7 +18,6 @@ bool VisualOdometryImpl::closeLoop(KeyFrame* Kc, KeyFrame* Km,
 {
     if (!params.loopCloseEnable || !Kc || !Km || Kc == Km) return false;
 
-    // estimate relative Sim3 between the two keyframes
     Sim3Result sr = estimateSim3(Kc, Km, matches, K, /*fixScale*/false,
                                  params.sim3RansacIters,
                                  params.sim3MinInliers,
