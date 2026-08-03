@@ -7,7 +7,7 @@
 #include "../precomp.hpp"
 #include "optimizer.hpp"
 
-//  g2o bundle adjustment backends 
+// g2o bundle adjustment backends
 
 #ifdef HAVE_G2O
 
@@ -30,13 +30,8 @@
 
 namespace cv { namespace slam {
 
-//  EdgeSE3ProjectXYZ — binary reprojection edge for local and global BA
-//
-//  vertex 0 : g2o::VertexSBAPointXYZ  (3D world point - variable)
-//  vertex 1 : g2o::VertexSE3Expmap    (camera pose   - variable or fixed)
-
-//  both the point and the pose move
-
+// Binary reprojection edge for local/global BA: vertex 0 is the 3D world
+// point, vertex 1 the camera pose (variable or fixed); both move.
 class EdgeSE3ProjectXYZ :
     public g2o::BaseBinaryEdge<2, Eigen::Vector2d,
                                g2o::VertexSBAPointXYZ,
@@ -108,7 +103,6 @@ private:
     double fx_, fy_, cx_, cy_;
 };
 
-// localBundleAdjustmentG2O
 static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFlag)
 {
     if (!newKf) return;
@@ -122,7 +116,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
     constexpr int    kItersCoarse  = 5;
     constexpr int    kItersFine    = 10;
 
-    // 1. Local KFs: newKf + top-K covisible
+    // local KFs: newKf + top-K covisible
     std::vector<KeyFrame*> localKfs;
     std::set<KeyFrame*>    localKfSet;
     localKfs.push_back(newKf);
@@ -138,7 +132,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
     }
     if (localKfs.size() < 2) return;
 
-    // 2. Local MPs: all seen by any local KF
+    // local MPs: all seen by any local KF
     std::vector<MapPoint*> localMps;
     std::set<MapPoint*>    localMpSet;
     for (KeyFrame* kf : localKfs)
@@ -148,14 +142,14 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
 
     if (localMps.empty()) return;
 
-    // 3. Fixed KFs: observe local MPs but lie outside the window
+    // fixed KFs: observe local MPs but lie outside the window
     std::set<KeyFrame*> fixedKfSet;
     for (MapPoint* mp : localMps)
         for (const auto& [obsKf, kpIdx] : mp->observations)
             if (!localKfSet.count(obsKf))
                 fixedKfSet.insert(obsKf);
 
-    // Monocular gauge: need >= 2 anchors; promote oldest local KFs if needed.
+    // monocular gauge needs >= 2 anchors; promote oldest local KFs if short
     if (fixedKfSet.size() < 2)
     {
         std::vector<KeyFrame*> byAge = localKfs;
@@ -174,7 +168,6 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
     for (KeyFrame* kf : localKfs)    maxKFid = std::max(maxKFid, kf->id);
     for (KeyFrame* kf : fixedKfSet)  maxKFid = std::max(maxKFid, kf->id);
 
-    // 4. Build optimizer
     using Block   = g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>>;
     using LSolver = g2o::LinearSolverEigen<Block::PoseMatrixType>;
 
@@ -195,7 +188,6 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
                             Eigen::Vector3d(T(0,3), T(1,3), T(2,3)));
     };
 
-    // 5. KF vertices
     for (KeyFrame* kf : localKfs)
     {
         if (!localKfSet.count(kf)) continue;
@@ -214,7 +206,6 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         optimizer.addVertex(v);
     }
 
-    // 6. MP vertices (marginalized)
     for (MapPoint* mp : localMps)
     {
         auto* v = new g2o::VertexSBAPointXYZ();
@@ -224,7 +215,6 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         optimizer.addVertex(v);
     }
 
-    // 7. Reprojection edges
     struct EdgeRec { EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
     std::vector<EdgeRec> recs;
     recs.reserve(localMps.size() * 4);
@@ -254,7 +244,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
     if (recs.empty()) return;
     if (stopFlag && *stopFlag) return;
 
-    // 8. Pass 1: coarse, Huber
+    // pass 1: coarse, Huber
     optimizer.initializeOptimization();
     optimizer.optimize(kItersCoarse);
 
@@ -265,7 +255,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         if (!bad) r.e->setRobustKernel(nullptr);
     }
 
-    // 9. Pass 2: fine, L2, inliers only
+    // pass 2: fine, L2, inliers only
     if (stopFlag && *stopFlag) return;
     {
         int nPass2 = 0;
@@ -278,7 +268,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         }
     }
 
-    // 10. Write back KF poses (finite-guarded)
+    // write back KF poses (finite-guarded)
     for (KeyFrame* kf : localKfs)
     {
         if (!localKfSet.count(kf)) continue;
@@ -296,7 +286,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         kf->poseCw(3, 3) = 1.0;
     }
 
-    // 11. Write back MP positions (finite-guarded)
+    // write back MP positions (finite-guarded)
     for (MapPoint* mp : localMps)
     {
         auto* v = static_cast<g2o::VertexSBAPointXYZ*>(
@@ -307,7 +297,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
             mp->pos = cv::Point3d(est[0], est[1], est[2]);
     }
 
-    // 12. Erase final outlier KF↔MP links
+    // erase final outlier KF-MP links
     for (auto& r : recs)
     {
         if (r.e->level() == 0) continue;
@@ -319,7 +309,6 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
     }
 }
 
-//  globalBundleAdjustmentG2O
 static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
                                       int minObs, bool* stopFlag,
                                       Optimizer::GlobalBAStats* stats)
@@ -330,7 +319,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
     constexpr double kChi2Thresh = 5.991;
     constexpr double kHuberDelta = 2.4495;
 
-    // 1. Collect non-bad keyframes; fix the lowest-id (gauge)
+    // collect non-bad keyframes; fix the lowest-id (gauge)
     std::vector<KeyFrame*> kfs;
     int minId = -1;
     for (KeyFrame* kf : map.keyframes())
@@ -344,7 +333,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
     int maxKFid = 0;
     for (KeyFrame* kf : kfs) maxKFid = std::max(maxKFid, kf->id);
 
-    // 2. Collect map points with enough observations
+    // collect map points with enough observations
     std::vector<MapPoint*> mps;
     for (MapPoint* mp : map.mapPoints())
     {
@@ -356,7 +345,6 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
     }
     if (mps.empty()) return;
 
-    // 3. Build optimizer
     using Block   = g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>>;
     using LSolver = g2o::LinearSolverEigen<Block::PoseMatrixType>;
 
@@ -377,7 +365,6 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
                             Eigen::Vector3d(T(0,3), T(1,3), T(2,3)));
     };
 
-    // 4. KF vertices
     for (KeyFrame* kf : kfs)
     {
         auto* v = new g2o::VertexSE3Expmap();
@@ -387,7 +374,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
         optimizer.addVertex(v);
     }
 
-    // 5. MP vertices + reprojection edges
+    // MP vertices + reprojection edges
     struct EdgeRec { EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
     std::vector<EdgeRec> recs;
     recs.reserve(mps.size() * 3);
@@ -431,7 +418,6 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
         stats->observations = (long)nEdges;
     }
 
-    // 6. Optimise
     optimizer.initializeOptimization();
     optimizer.computeActiveErrors();
     const double chi2Before = optimizer.activeRobustChi2();
@@ -446,7 +432,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
 
     if (stopFlag && *stopFlag) return;
 
-    // 7. Write back KF poses (finite-guarded)
+    // write back KF poses (finite-guarded)
     int nPoseWrites = 0;
     for (KeyFrame* kf : kfs)
     {
@@ -467,7 +453,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
         ++nPoseWrites;
     }
 
-    // 8. Write back MP positions (finite-guarded)
+    // write back MP positions (finite-guarded)
     for (MapPoint* mp : mps)
     {
         auto* v = static_cast<g2o::VertexSBAPointXYZ*>(
@@ -478,7 +464,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
             mp->pos = cv::Point3d(est[0], est[1], est[2]);
     }
 
-    // 9. Cull surviving outlier observations
+    // cull surviving outlier observations
     int nCulled = 0;
     for (auto& r : recs)
     {
@@ -494,8 +480,8 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
                       << " poses, culled " << nCulled << " outlier observations");
 }
 
-//  Sim(3) essential-graph optimisation (loop closure)
-//  Compiled only when g2o Sim(3) types are available.
+// Sim(3) essential-graph optimisation (loop closure); compiled only when
+// g2o Sim(3) types are available.
 
 #if OPENCV_SLAM_HAVE_G2O_SIM3
 

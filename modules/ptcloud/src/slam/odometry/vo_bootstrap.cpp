@@ -56,16 +56,16 @@ int bestHomographyCandidate(
 
 } // anonymous namespace
 
-bool VisualOdometryImpl::bootstrap(Frame& cur)
+bool VisualOdometryImpl::bootstrap(Frame& currentFrame)
 {
     std::vector<DMatch> matches;
     matchFrames(refFrame.keypoints, refFrame.descriptors, refFrame.imageSize,
-                cur.keypoints, cur.descriptors, cur.imageSize, matches);
+                currentFrame.keypoints, currentFrame.descriptors, currentFrame.imageSize, matches);
 
     if ((int)matches.size() < params.minInitInliers)
     {
         // slide ref forward so we don't keep trying against a frame that's too far
-        refFrame = std::move(cur);
+        refFrame = std::move(currentFrame);
         return false;
     }
 
@@ -75,7 +75,7 @@ bool VisualOdometryImpl::bootstrap(Frame& cur)
     for (const auto& m : matches)
     {
         refU.push_back(refFrame.undistKpts[m.queryIdx]);
-        curU.push_back(cur.undistKpts[m.trainIdx]);
+        curU.push_back(currentFrame.undistKpts[m.trainIdx]);
     }
 
     Mat maskE, maskH;
@@ -211,7 +211,7 @@ bool VisualOdometryImpl::bootstrap(Frame& cur)
     KeyFrame* kfRef = makeKF(refFrame);
     kfRef->poseCw = T_ref;
 
-    KeyFrame* kfCur = makeKF(cur);
+    KeyFrame* kfCur = makeKF(currentFrame);
     kfCur->poseCw = T_cur;
     kfCur->parent = kfRef;
 

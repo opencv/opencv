@@ -1,8 +1,16 @@
 '''
-Monocular visual odometry with cv.slam.VisualOdometry (ALIKED + LightGlue).
+Modular monocular visual odometry: feature tracking + PnP, no bundle adjustment
+or loop closure.
+
+Feeds a directory of images through a pluggable feature detector + matcher pair,
+estimates the camera trajectory, and writes the result to --output in COLMAP text
+format. This sample wires up one ONNX detector/matcher pair by default; the
+pipeline (cv.slam.VisualOdometry) accepts any cv2.Feature2D + cv2.DescriptorMatcher.
 
 Example:
     python visual_odometry.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq
+Sample command (run on the GPU):
+    python visual_odometry.py --aliked aliked.onnx --lightglue lg.onnx --images ./seq --target cuda
 '''
 
 import argparse
@@ -13,11 +21,37 @@ import time
 import numpy as np
 import cv2 as cv
 
+BACKENDS = {
+    'default': cv.dnn.DNN_BACKEND_DEFAULT,
+    'openvino': cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+    'opencv': cv.dnn.DNN_BACKEND_OPENCV,
+    'vkcom': cv.dnn.DNN_BACKEND_VKCOM,
+    'cuda': cv.dnn.DNN_BACKEND_CUDA,
+    'webnn': cv.dnn.DNN_BACKEND_WEBNN,
+}
+
+TARGETS = {
+    'cpu': cv.dnn.DNN_TARGET_CPU,
+    'opencl': cv.dnn.DNN_TARGET_OPENCL,
+    'opencl_fp16': cv.dnn.DNN_TARGET_OPENCL_FP16,
+    'vpu': cv.dnn.DNN_TARGET_MYRIAD,
+    'vulkan': cv.dnn.DNN_TARGET_VULKAN,
+    'cuda': cv.dnn.DNN_TARGET_CUDA,
+    'cuda_fp16': cv.dnn.DNN_TARGET_CUDA_FP16,
+}
+
 
 def build_K(fx, fy, cx, cy):
     return np.array([[fx, 0., cx],
                      [0., fy, cy],
                      [0., 0., 1.]], dtype=np.float64)
+
+
+def parse_dist_coeffs(text):
+    # "k1,k2,p1,p2[,k3,...]" -> 1xN row; empty input means no distortion.
+    if not text:
+        return np.array([])
+    return np.array([float(tok) for tok in text.split(',') if tok.strip()], dtype=np.float64)
 
 
 def list_image_files(images_dir):
@@ -27,7 +61,9 @@ def list_image_files(images_dir):
 
 
 def rotation_matrix_to_quaternion(R):
-    # Shepperd's method: numerically stable for all rotations.
+    # cv::Quat::createFromRotMat() (used by the C++ sample) is not exposed to Python,
+    # so the conversion is done here with Shepperd's method: numerically stable for all
+    # rotations.
     trace = R[0, 0] + R[1, 1] + R[2, 2]
     if trace > 0:
         s = np.sqrt(trace + 1.0) * 2
@@ -71,6 +107,8 @@ def write_colmap_files(vo, K, image_size, pose_filenames, output_dir):
         f.write(f"width {image_size[0]}\n")
         f.write(f"height {image_size[1]}\n")
 
+    # No bundle adjustment or loop closure runs here, so getTrajectory() (the raw,
+    # per-frame log) already is the final trajectory -- there is nothing to correct.
     traj = vo.getTrajectory()
     with open(os.path.join(output_dir, 'images.txt'), 'w') as f:
         f.write("# Image list with two lines of data per image:\n")
@@ -86,12 +124,11 @@ def write_colmap_files(vo, K, image_size, pose_filenames, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Monocular visual odometry using ALIKED + LightGlue')
+    parser = argparse.ArgumentParser(description='Modular monocular visual odometry')
     parser.add_argument('--aliked',    required=True,
-                        help='Path to ALIKED ONNX model')
+                        help='Path to detector ONNX model')
     parser.add_argument('--lightglue', required=True,
-                        help='Path to LightGlue ONNX model')
+                        help='Path to matcher ONNX model')
     parser.add_argument('--images',    required=True,
                         help='Path to directory with input images')
     parser.add_argument('--output',    default='vo_out',
@@ -104,62 +141,84 @@ def main():
                         help='Camera principal point X (default: KITTI-00)')
     parser.add_argument('--cy', type=float, default=185.2157,
                         help='Camera principal point Y (default: KITTI-00)')
-    parser.add_argument('--min-parallax', type=float, default=1.5,
-                        help='Minimum initialisation parallax in degrees (default: 1.5)')
-    parser.add_argument('--min-points', type=int, default=50,
-                        help='Minimum initialisation map points (default: 50)')
+    parser.add_argument('--dist', default='',
+                        help='Lens distortion coeffs, comma-separated k1,k2,p1,p2[,k3,...] (default: none)')
+    parser.add_argument('--backend', default='default', choices=sorted(BACKENDS),
+                        help='Choose a computation backend (default: default)')
+    parser.add_argument('--target', default='cpu', choices=sorted(TARGETS),
+                        help='Choose a target computation device (default: cpu)')
+    parser.add_argument('--progress', type=lambda s: s.lower() != 'false', default=True,
+                        help='Print per-frame progress logs to the console as they happen (default: true)')
     args = parser.parse_args()
+
+    if args.progress:
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
+
+    backend_id = BACKENDS[args.backend]
+    target_id = TARGETS[args.target]
 
     det_params = cv.ALIKED.Params()
     det_params.inputSize = (640, 640)
     det_params.engine    = cv.dnn.ENGINE_OPENCV
+    det_params.backend   = backend_id
+    det_params.target    = target_id
     detector = cv.ALIKED.create(args.aliked, det_params)
 
-    matcher = cv.LightGlueMatcher.create(
-        args.lightglue, 0.0,
-        cv.dnn.DNN_BACKEND_DEFAULT,
-        cv.dnn.DNN_TARGET_CPU)
+    matcher = cv.LightGlueMatcher.create(args.lightglue, 0.0, backend_id, target_id)
 
+    # Pure tracking: no g2o pose/local/global BA, no loop detection or closing.
     vo_params = cv.slam.OdometryParams()
-    vo_params.minInitParallaxDeg = args.min_parallax
-    vo_params.minInitPoints      = args.min_points
+    vo_params.minInitParallaxDeg = 1.5
+    vo_params.minInitPoints      = 50
+    vo_params.pnpReprojThresh    = 4.0
+    vo_params.kfMaxFrames        = 30
+    vo_params.localMapTopK       = 10
+    vo_params.poseOptEnable      = False
+    vo_params.localBaEnable      = False
+    vo_params.globalBaEnable     = False
+    vo_params.loopEnable         = False
+    vo_params.loopCloseEnable    = False
 
     K = build_K(args.fx, args.fy, args.cx, args.cy)
+    dist_coeffs = parse_dist_coeffs(args.dist)
 
     vo = cv.slam.VisualOdometry.create(
-        detector, matcher, K, np.array([]), vo_params)
+        detector, matcher, K, dist_coeffs, vo_params)
 
     image_files = list_image_files(args.images)
     if not image_files:
         print(f"no images found in {args.images}", file=sys.stderr)
         return 1
 
-    print(f"images_folder = {args.images}")
-    print(f"output_folder = {args.output}")
-    print(f"found {len(image_files)} image(s)")
+    progress_line = ("Per-frame progress is printed below (OpenCV logs to stderr)."
+                      " Pass --progress=false to silence it.\n"
+                      if args.progress else
+                      "Per-frame progress is disabled."
+                      " Re-run with --progress=true (the default) to see it.\n")
+    print(f"images folder : {args.images}\n"
+          f"output folder : {args.output}\n"
+          f"images found  : {len(image_files)}\n\n"
+          f"Running feature tracking (PnP), no BA or loop closure.\n"
+          f"{progress_line}")
 
     # Tracks which input image each emitted trajectory pose came from, for images.txt.
     pose_filenames = []
     prev_traj_len = 0
     ref_filename = None
     image_size = (0, 0)
-    n_emitted = 0
 
     t0 = time.perf_counter()
     for i, path in enumerate(image_files):
         img = cv.imread(path)
         if img is None:
-            print(f"[FRAME {i}] file={path} imread failed", file=sys.stderr)
+            print(f"[frame {i}] imread failed: {path}", file=sys.stderr)
             continue
         image_size = (img.shape[1], img.shape[0])
 
         before = vo.getState()
-        emitted = vo.processFrame(img)
+        vo.processFrame(img)
         after = vo.getState()
-        if emitted:
-            n_emitted += 1
 
-        # Track which input image maps to each trajectory pose.
         if before == cv.slam.NOT_INITIALIZED or \
            (before == cv.slam.TRACKING and after == cv.slam.INITIALIZING):
             ref_filename = path
@@ -173,18 +232,24 @@ def main():
             pose_filenames.append(path)
         prev_traj_len = traj_len
 
-        print(f"[FRAME {i}] file={path}"
-              f" emitted={'yes' if emitted else 'no'}"
-              f" keyframes={vo.getNumKeyframes()}"
-              f" map_points={vo.getNumMapPoints()}")
     elapsed = time.perf_counter() - t0
-    ok = n_emitted > 0
 
+    ok = len(vo.getTrajectory()) > 0
+    exported = False
     if ok and args.output:
         write_colmap_files(vo, K, image_size, pose_filenames, args.output)
+        exported = True
 
-    print(f"run={'ok' if ok else 'FAILED'}  frames={len(vo.getTrajectory())}  elapsed={elapsed:.2f}s")
-    print(f"output -> {args.output}")
+    print("\n"
+          "================ Visual Odometry Result ================\n"
+          f"status        : {'OK' if ok else 'FAILED'}\n"
+          f"camera poses  : {len(vo.getTrajectory())}\n"
+          f"keyframes     : {vo.getNumKeyframes()}\n"
+          f"map points    : {vo.getNumMapPoints()}\n"
+          f"elapsed time  : {elapsed:.2f} s")
+    if exported:
+        print(f"output        : {args.output}/{{camera,images}}.txt")
+    print("==========================================================")
     return 0 if ok else 1
 
 

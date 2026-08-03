@@ -106,7 +106,7 @@ static Ptr<slam::VisualOdometry> makeOdometry(int nFrames,
         detector->frames.push_back(renderFrame(cloud, camCenters[f]));
 
     Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2, true);
-    return slam::VisualOdometry::create(detector, matcher, "", "",
+    return slam::VisualOdometry::create(detector, matcher,
                                         Mat(cameraMatrix()), noArray(), params);
 }
 
@@ -135,13 +135,13 @@ TEST(SLAM_VisualOdometry, create_validates_arguments)
     Ptr<DescriptorMatcher> matcher = BFMatcher::create(NORM_L2, true);
     Mat K(cameraMatrix());
 
-    EXPECT_THROW(slam::VisualOdometry::create(Ptr<Feature2D>(), matcher, "", "", K),
+    EXPECT_THROW(slam::VisualOdometry::create(Ptr<Feature2D>(), matcher, K),
                  cv::Exception);                                  // null detector
-    EXPECT_THROW(slam::VisualOdometry::create(detector, Ptr<DescriptorMatcher>(), "", "", K),
+    EXPECT_THROW(slam::VisualOdometry::create(detector, Ptr<DescriptorMatcher>(), K),
                  cv::Exception);                                  // null matcher
-    EXPECT_THROW(slam::VisualOdometry::create(detector, matcher, "", "", Mat()),
+    EXPECT_THROW(slam::VisualOdometry::create(detector, matcher, Mat()),
                  cv::Exception);                                  // empty intrinsics
-    EXPECT_THROW(slam::VisualOdometry::create(detector, matcher, "", "", Mat::eye(2, 2, CV_64F)),
+    EXPECT_THROW(slam::VisualOdometry::create(detector, matcher, Mat::eye(2, 2, CV_64F)),
                  cv::Exception);                                  // wrong-size intrinsics
 }
 
