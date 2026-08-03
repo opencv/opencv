@@ -44,7 +44,7 @@ TEST( Features2d_Detector_Harris, regression )
     test.safe_run();
 }
 
-TEST( Features2d_Detector_MSER, DISABLED_regression )
+TEST( Features2d_Detector_MSER, regression )
 {
     CV_FeatureDetectorTest test( "detector-mser", MSER::create() );
     test.safe_run();
