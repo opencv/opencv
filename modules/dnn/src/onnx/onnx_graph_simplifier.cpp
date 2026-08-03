@@ -1402,74 +1402,6 @@ public:
     }
 };
 
-class GatherCastSubgraph : public Subgraph
-{
-public:
-    GatherCastSubgraph()
-    {
-        int input = addNodeToMatch("");
-        int index = addNodeToMatch("Constant");
-        gather = addNodeToMatch("Gather", input, index);
-        cast = addNodeToMatch("Cast", gather);
-        setFusedNode("Gather", input, index);
-    }
-
-    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
-    {
-        bool retVal = Subgraph::match(net, nodeId, matchedNodesIds);
-        size_t matchedNodesNum = matchedNodesIds.size();
-        // Now we check if merging can be made for these Gather and Cast nodes
-        if (!retVal || matchedNodesNum < 2)
-            return retVal;
-        else {
-            int nodeToMatch = matchedNodesIds[cast];
-            const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
-            if (node->getType() == "Cast") {
-                int inpNodeId = matchedNodesIds[gather];
-                const Ptr<ImportNodeWrapper> inpNode = net->getNode(inpNodeId);
-                if (inpNode->getType() == "Gather") {
-                    int numNodes = net->getNumNodes();
-                    std::string inpNodeName = node->getInputName(0);
-                    for (int i = 0; i < numNodes; ++i) {
-                        const Ptr<ImportNodeWrapper> node_to_check = net->getNode(i);
-                        int numInp = node_to_check->getNumInputs();
-                        for (int inp = 0; inp < numInp; ++inp) {
-                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(inp)) {
-                                // Another node has the same input node, so it cannot be merged.
-                                return false;
-                            }
-                        }
-                    }
-                    // extract axis from original Gather node
-                    axis = 0;
-                    opencv_onnx::NodeProto* origGatherNode =
-                        inpNode.dynamicCast<ONNXNodeWrapper>()->node;
-                    for (int i = 0; i < origGatherNode->attribute_size(); i++) {
-                        opencv_onnx::AttributeProto attr = origGatherNode->attribute(i);
-                        if (attr.name() == "axis")
-                            axis = attr.i();
-                    }
-                }
-            }
-        }
-        return retVal;
-    }
-
-    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
-                          const Ptr<ImportNodeWrapper>& fusedNode,
-                          std::vector<Ptr<ImportNodeWrapper> >& /*inputs*/) CV_OVERRIDE
-    {
-        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
-        opencv_onnx::AttributeProto* new_attr = node->add_attribute();
-        new_attr->set_name("axis");
-        new_attr->set_i(axis);
-    }
-
-private:
-    int cast, gather, axis;
-};
-
 /*  Constant folding shape for Expand.
 
     Before fusion:
@@ -1626,19 +1558,6 @@ public:
         int add = addNodeToMatch("Add", addVal, exp);
         addNodeToMatch("Log", add);
         setFusedNode("Softplus", input);
-    }
-};
-
-class MulCastSubgraph : public Subgraph
-{
-public:
-    MulCastSubgraph()
-    {
-        int input = addNodeToMatch("");
-        int scaleNode = addNodeToMatch("Constant");
-        int mul = addNodeToMatch("Mul", input, scaleNode);
-        addNodeToMatch("Cast", mul);
-        setFusedNode("Mul", input, scaleNode);
     }
 };
 
@@ -1922,8 +1841,6 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath
     subgraphs.push_back(makePtr<GeluSubGraph>());
     subgraphs.push_back(makePtr<GeluApproximationSubGraph>());
     subgraphs.push_back(makePtr<LayerNormSubGraph>());
-    subgraphs.push_back(makePtr<GatherCastSubgraph>());
-    subgraphs.push_back(makePtr<MulCastSubgraph>());
     subgraphs.push_back(makePtr<UpsampleSubgraph>());
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());

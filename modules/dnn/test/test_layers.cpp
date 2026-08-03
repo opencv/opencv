@@ -2347,6 +2347,47 @@ TEST(Layer_Size, onnx_0d_scalar)
     EXPECT_EQ(outs[0].at<int64_t>(0), 1);
 }
 
+TEST(Layer_GatherCast, preserves_float_cast)
+{
+    const std::string modelname = findDataFile("dnn/onnx/models/gather_cast_float.onnx", true);
+    Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
+    ASSERT_FALSE(net.empty());
+    ASSERT_TRUE(net.getMainGraph());
+
+    int inputShape[] = {2, 3};
+    Mat input(2, inputShape, CV_32F, Scalar(0));
+    net.setInput(input, "input");
+
+    std::vector<Mat> outputs;
+    net.forward(outputs, std::vector<String>{"output"});
+
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(outputs[0].total(), (size_t)1);
+    EXPECT_EQ(outputs[0].type(), CV_32F);
+    EXPECT_FLOAT_EQ(outputs[0].ptr<float>()[0], 2.f);
+}
+
+TEST(Layer_MulCast, preserves_float_cast)
+{
+    const std::string modelname = findDataFile("dnn/onnx/models/mul_cast_float.onnx", true);
+    Net net = readNetFromONNX(modelname, ENGINE_OPENCV);
+    ASSERT_FALSE(net.empty());
+    ASSERT_TRUE(net.getMainGraph());
+
+    int inputShape[] = {2, 3};
+    Mat input(2, inputShape, CV_32F, Scalar(0));
+    net.setInput(input, "input");
+
+    std::vector<Mat> outputs;
+    net.forward(outputs, std::vector<String>{"output"});
+
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(outputs[0].total(), (size_t)2);
+    EXPECT_EQ(outputs[0].type(), CV_32F);
+    EXPECT_FLOAT_EQ(outputs[0].ptr<float>()[0], 2.f);
+    EXPECT_FLOAT_EQ(outputs[0].ptr<float>()[1], 2.f);
+}
+
 TEST(ConvolutionWinograd, Accuracy)
 {
     Mat weights({2, 1, 3, 3}, CV_32F);
