@@ -3639,8 +3639,8 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
 
 TEST_P(Test_ONNX_layers, MatMulNBits) {
     testONNXModels("matmulnbits", npy, 1e-4, 1e-3);
-    testONNXModels("matmulnbits_2bits", npy, 1e-4, 1e-3);
     testONNXModels("matmulnbits_8bits", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_partial_block", npy, 1e-4, 1e-3);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
 }
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {

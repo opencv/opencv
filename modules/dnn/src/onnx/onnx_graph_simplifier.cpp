@@ -2023,6 +2023,29 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     }
 }
 
+// Mirrors the cv depth the payload switch below assigns to each ONNX dtype, so an empty
+// tensor is typed identically to a non-empty one (FP16->CV_32F); -1 if the switch omits it.
+static int matDepthFromOnnxDataType(int datatype)
+{
+    switch (datatype)
+    {
+    case opencv_onnx::TensorProto_DataType_FLOAT:
+    case opencv_onnx::TensorProto_DataType_FLOAT16:  return CV_32F;
+    case opencv_onnx::TensorProto_DataType_BFLOAT16: return CV_16BF;
+    case opencv_onnx::TensorProto_DataType_DOUBLE:   return CV_64F;
+    case opencv_onnx::TensorProto_DataType_INT8:     return CV_8S;
+    case opencv_onnx::TensorProto_DataType_UINT8:    return CV_8U;
+    case opencv_onnx::TensorProto_DataType_INT16:    return CV_16S;
+    case opencv_onnx::TensorProto_DataType_UINT16:   return CV_16U;
+    case opencv_onnx::TensorProto_DataType_INT32:    return CV_32S;
+    case opencv_onnx::TensorProto_DataType_UINT32:   return CV_32U;
+    case opencv_onnx::TensorProto_DataType_INT64:    return CV_64S;
+    case opencv_onnx::TensorProto_DataType_UINT64:   return CV_64U;
+    case opencv_onnx::TensorProto_DataType_BOOL:     return CV_Bool;
+    default:                                         return -1;
+    }
+}
+
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
@@ -2030,7 +2053,20 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         tensor_proto.int32_data().empty() &&
         (!tensor_proto.has_data_location() || tensor_proto.data_location() != opencv_onnx::TensorProto::EXTERNAL)
     )
+    {
+        // Keep the declared dtype for a genuine empty tensor (a 0-sized dim); an untyped
+        // Mat() would read as CV_8U. A malformed no-data tensor stays bare.
+        const int depth = matDepthFromOnnxDataType(tensor_proto.data_type());
+        bool genuinely_empty = false;
+        for (int d = 0; d < tensor_proto.dims_size(); d++)
+            if (tensor_proto.dims(d) == 0) { genuinely_empty = true; break; }
+        if (depth >= 0 && genuinely_empty)
+        {
+            std::vector<int> shape(tensor_proto.dims().begin(), tensor_proto.dims().end());
+            return Mat(shape, depth);
+        }
         return Mat();
+    }
 
     // read binary data, should be just empty in case it is set in <DTYPE>_data field
     std::vector<int64_t> external_tensor_data;

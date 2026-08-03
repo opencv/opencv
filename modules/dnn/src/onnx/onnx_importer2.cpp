@@ -110,20 +110,6 @@ static std::string dataType2str(int dt)
 static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
 {
     Mat m = getMatFromTensor(tensor_proto, false, base_path);
-    if (m.empty())
-    {
-        // getMatFromTensor drops dtype on an empty payload; restore it only for a genuine
-        // empty tensor (a 0-sized dim), not a malformed all-nonzero shape with no data.
-        int type = dataType2cv(tensor_proto.data_type());
-        bool genuinely_empty = false;
-        for (int d = 0; d < tensor_proto.dims_size(); d++)
-            if (tensor_proto.dims(d) == 0) { genuinely_empty = true; break; }
-        if (type >= 0 && genuinely_empty)
-        {
-            std::vector<int> shape(tensor_proto.dims().begin(), tensor_proto.dims().end());
-            m = Mat(shape, type);
-        }
-    }
     m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -171,6 +157,8 @@ protected:
                   int max_inputs = std::numeric_limits<int>::max());
     void setParamsDtype(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
+    Arg resolveConstThroughIdentity(Arg arg);
+
     void raiseError() {
         have_errors = true;
     }
@@ -181,6 +169,9 @@ protected:
     std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
+    // resolveConstThroughIdentity producer map, cached per graph (curr_graph_proto swaps per subgraph).
+    const opencv_onnx::GraphProto* const_producers_graph = nullptr;
+    std::unordered_map<std::string, const opencv_onnx::NodeProto*> const_producers;
     std::vector<Ptr<LayerInfo> > curr_prog;
     std::vector<Arg> node_inputs, node_outputs;
 
@@ -1556,7 +1547,9 @@ void ONNXImporter2::parseMatMulNBits(LayerParams& layerParams, const opencv_onnx
                  "DNN/MatMulNBits: packed weights and scales must be constants");
 
     layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
-    layerParams.blobs.push_back(net.argTensor(node_inputs[2]));
+    Mat scales;
+    net.argTensor(node_inputs[2]).convertTo(scales, CV_32F);
+    layerParams.blobs.push_back(scales);
     addLayer(layerParams, node_proto, 1);
 }
 
@@ -1823,26 +1816,30 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
 // simplifySubgraphs has no Identity/const-fold rewrite and constFold() runs only at inference, so an
 // Identity-fed const is still DNN_ARG_TEMP at parse; walk it back to the const (unchanged if none).
-static Arg resolveConstThroughIdentity(Net::Impl* netimpl,
-                                       const opencv_onnx::GraphProto* graph, Arg arg)
+Arg ONNXImporter2::resolveConstThroughIdentity(Arg arg)
 {
+    const opencv_onnx::GraphProto* graph = curr_graph_proto;
     if (!graph)
         return arg;
     const int n_nodes = graph->node_size();
-    std::unordered_map<std::string, const opencv_onnx::NodeProto*> producers;
-    for (int i = 0; i < n_nodes; ++i)
+    if (graph != const_producers_graph)
     {
-        const auto& nd = graph->node(i);
-        for (int o = 0; o < nd.output_size(); ++o)
-            producers.emplace(nd.output(o), &nd);
+        const_producers.clear();
+        for (int i = 0; i < n_nodes; ++i)
+        {
+            const auto& nd = graph->node(i);
+            for (int o = 0; o < nd.output_size(); ++o)
+                const_producers.emplace(nd.output(o), &nd);
+        }
+        const_producers_graph = graph;
     }
     std::string name = netimpl->argName(arg);
     for (int hop = 0; hop < n_nodes; ++hop)  // hop bound also guards against a cyclic Identity chain
     {
         if (netimpl->haveArg(name) && netimpl->isConstArg(netimpl->getArg(name)))
             return netimpl->getArg(name);
-        auto it = producers.find(name);
-        if (it == producers.end() || it->second->op_type() != "Identity" || it->second->input_size() < 1)
+        auto it = const_producers.find(name);
+        if (it == const_producers.end() || it->second->op_type() != "Identity" || it->second->input_size() < 1)
             break;
         name = it->second->input(0);
     }
@@ -1926,7 +1923,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
         {
             // sizes may reach a const through Identity node(s); adopt only rank-3 (NCW),
             // otherwise unsupported today, so no rank-4 NCHW path can regress.
-            Arg resolved = resolveConstThroughIdentity(netimpl, curr_graph_proto, sizesArg);
+            Arg resolved = resolveConstThroughIdentity(sizesArg);
             if (netimpl->isConstArg(resolved) && netimpl->argTensor(resolved).total() == 3)
                 sizesArg = resolved;
         }

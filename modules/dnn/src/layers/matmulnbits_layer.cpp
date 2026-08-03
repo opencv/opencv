@@ -9,7 +9,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
-// com.microsoft MatMulNBits: Y = A @ dequant(B).T. Weights are block-quantized to {2,4,8} bits
+// com.microsoft MatMulNBits: Y = A @ dequant(B).T. Weights are block-quantized to {4,8} bits
 // (symmetric, default zero-point 2^(bits-1)) and dequantized per block inside the GEMM (no fp32 copy).
 
 namespace cv { namespace dnn {
@@ -24,11 +24,10 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         bits = params.get<int>("bits", 4);
         block_size = params.get<int>("block_size");
 
-        CV_Check(bits, bits == 2 || bits == 4 || bits == 8,
-                 "DNN/MatMulNBits: only 2/4/8-bit weights are supported");
+        CV_Check(bits, bits == 4 || bits == 8,
+                 "DNN/MatMulNBits: only 4/8-bit weights are supported");
         CV_Check(block_size, block_size > 0 && (block_size * bits) % 8 == 0,
                  "DNN/MatMulNBits: block_size*bits must be a positive multiple of 8");
-        CV_CheckEQ(K % block_size, 0, "DNN/MatMulNBits: K must be a multiple of block_size");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -44,7 +43,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         CV_CheckEQ(blobs.size(), static_cast<size_t>(2),
                    "DNN/MatMulNBits: expected packed weights and scales as constant blobs");
 
-        const int n_blk = K / block_size;
+        const int n_blk = (K + block_size - 1) / block_size;   // ceil: K need not divide block_size; last block may be partial
         CV_CheckEQ(static_cast<int>(blobs[0].total()), N * n_blk * (block_size * bits / 8),
                    "DNN/MatMulNBits: packed weight size mismatch");
         CV_CheckEQ(static_cast<int>(blobs[1].total()), N * n_blk,
@@ -87,7 +86,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
     // unpack unrolls and the shift folds to a constant (the hot half of the kernel).
     template<int BITS>
     static inline void dequantBlock(const uchar* packed, int blob_bytes, float scale, float* w) {
-        const int EPB = 8 / BITS;            // elements per byte: 2-bit:4  4-bit:2  8-bit:1
+        const int EPB = 8 / BITS;            // elements per byte: 4-bit:2  8-bit:1
         const int QMASK = (1 << BITS) - 1;
         const int ZP = 1 << (BITS - 1);      // symmetric default zero-point
         for (int j = 0; j < blob_bytes; j++) {
@@ -100,7 +99,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
     template<int BITS>
     void runImpl(const Mat& A, const Mat& B, const Mat& scales, Mat& Y) const {
         const int M = static_cast<int>(A.total() / K);
-        const int n_blk = K / block_size;
+        const int n_blk = (K + block_size - 1) / block_size;
         const int blob_bytes = block_size * BITS / 8;   // packed weights per block
 
         const float* a = A.ptr<const float>();
@@ -111,7 +110,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         // Each range owns a disjoint set of output columns n, so the column writes are race-free.
         parallel_for_(Range(0, N), [&](const Range& r) {
             // Dequant the whole column once so it amortizes across the M rows.
-            AutoBuffer<float, 1024> wcol(K);
+            AutoBuffer<float, 1024> wcol(n_blk * block_size);   // whole blocks (>= K): the last block is dequantized in full
             for (int n = r.start; n < r.end; n++) {
                 const uchar* bq_n = bq + static_cast<size_t>(n) * n_blk * blob_bytes;
                 const float* sc_n = sc + static_cast<size_t>(n) * n_blk;
@@ -126,7 +125,15 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
                     int t = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                     const int vlanes = VTraits<v_float32>::vlanes();
-                    v_float32 vacc = vx_setzero_f32();
+                    v_float32 vacc0 = vx_setzero_f32(), vacc1 = vx_setzero_f32();
+                    v_float32 vacc2 = vx_setzero_f32(), vacc3 = vx_setzero_f32();
+                    for (; t <= K - 4 * vlanes; t += 4 * vlanes) {
+                        vacc0 = v_fma(vx_load(arow + t),              vx_load(w + t),              vacc0);
+                        vacc1 = v_fma(vx_load(arow + t + vlanes),     vx_load(w + t + vlanes),     vacc1);
+                        vacc2 = v_fma(vx_load(arow + t + 2 * vlanes), vx_load(w + t + 2 * vlanes), vacc2);
+                        vacc3 = v_fma(vx_load(arow + t + 3 * vlanes), vx_load(w + t + 3 * vlanes), vacc3);
+                    }
+                    v_float32 vacc = v_add(v_add(vacc0, vacc1), v_add(vacc2, vacc3));
                     for (; t <= K - vlanes; t += vlanes)
                         vacc = v_fma(vx_load(arow + t), vx_load(w + t), vacc);
                     acc = v_reduce_sum(vacc);
@@ -154,8 +161,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
 
         CV_Assert(A.isContinuous() && Y.isContinuous());
 
-        switch (bits) {                 // bits ∈ {2,4,8} enforced in the constructor
-            case 2:  runImpl<2>(A, B, scales, Y); break;
+        switch (bits) {                 // bits ∈ {4,8} enforced in the constructor
             case 4:  runImpl<4>(A, B, scales, Y); break;
             default: runImpl<8>(A, B, scales, Y); break;
         }
