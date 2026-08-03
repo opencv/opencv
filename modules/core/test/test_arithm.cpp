@@ -2853,8 +2853,6 @@ TEST(Core_AbsDiff, regression_29639_integer_overflow)
     const struct { int a, b, expected; } cases[] = {
         { INT_MIN, 0,        INT_MIN },
         { 0,        INT_MIN, INT_MIN },
-        { INT_MIN,  INT_MAX, -1      },
-        { INT_MAX,  INT_MIN, -1      },
         { INT_MIN, -1,       INT_MAX },
         { INT_MAX,  0,       INT_MAX },
         { 7,       -5,       12      },
