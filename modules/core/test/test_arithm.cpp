@@ -2848,6 +2848,30 @@ TEST(Core_ConvertTo, regression_12121)
     }
 }
 
+TEST(Core_AbsDiff, regression_29639_integer_overflow)
+  {
+    const struct { int a, b, expected; } cases[] = {
+        { INT_MIN, 0,        INT_MIN },
+        { 0,        INT_MIN, INT_MIN },
+        { INT_MIN,  INT_MAX, -1      },
+        { INT_MAX,  INT_MIN, -1      },
+        { INT_MIN, -1,       INT_MAX },
+        { INT_MAX,  0,       INT_MAX },
+        { 7,       -5,       12      },
+    };
+    for (const auto& c : cases)
+    {
+        cv::Mat a(3, 11, CV_32SC1, cv::Scalar(c.a));
+        cv::Mat b(3, 11, CV_32SC1, cv::Scalar(c.b));
+        cv::Mat d;
+        cv::absdiff(a, b, d);
+        EXPECT_EQ(c.expected, d.at<int>(0, 0))
+            << "absdiff(" << c.a << ", " << c.b << ") first element (vector path)";
+        EXPECT_EQ(c.expected, d.at<int>(d.rows - 1, d.cols - 1))
+            << "absdiff(" << c.a << ", " << c.b << ") last element (scalar remainder)";
+    }
+}
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {

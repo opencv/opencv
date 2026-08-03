@@ -168,10 +168,10 @@ inline schar c_absdiff(schar a, schar b)
 template<>
 inline short c_absdiff(short a, short b)
 { return saturate_cast<short>(std::abs(a - b)); }
-// specializations to prevent "-0" results
 template<> inline int c_absdiff<int>(int a, int b){
     return (int)((unsigned)std::max(a, b) - (unsigned)std::min(a, b));
 }
+// specializations to prevent "-0" results
 template<>
 inline float c_absdiff<float>(float a, float b)
 { return std::abs(a - b); }
