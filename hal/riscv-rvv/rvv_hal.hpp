@@ -28,5 +28,6 @@
 #include "include/core.hpp"
 #include "include/imgproc.hpp"
 #include "include/features2d.hpp"
+#include "include/dnn.hpp"
 
 #endif // OPENCV_HAL_RVV_HPP_INCLUDED
