@@ -21,7 +21,8 @@ and the remaining 10000 - to test the classifier.
 '''
 
 # Python 2/3 compatibility
-from __future__ import print_function
+
+
 
 import numpy as np
 import cv2 as cv
@@ -36,7 +37,7 @@ class LetterStatModel(object):
     train_ratio = 0.5
 
     def load(self, fn):
-        self.model.load(fn)
+        self.model = self.model.load(fn)
     def save(self, fn):
         self.model.save(fn)
 
