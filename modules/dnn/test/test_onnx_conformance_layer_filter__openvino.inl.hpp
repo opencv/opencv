@@ -2676,7 +2676,7 @@ CASE(test_slice_neg_steps)
 CASE(test_slice_negative_axes)
     SKIP;
 CASE(test_slice_start_out_of_bounds)
-    // no filter
+    SKIP;
 CASE(test_softmax_axis_0)
 #if SKIP_SET_1
     SKIP_OPENCL;

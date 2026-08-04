@@ -18,8 +18,16 @@ int64_t getValueAt(const Mat &m, const int *indices)
         return m.at<uint8_t>(indices);
     else if (m.type() == CV_8S)
         return m.at<int8_t>(indices);
+    else if (m.type() == CV_16U)
+        return m.at<uint16_t>(indices);
+    else if (m.type() == CV_16S)
+        return m.at<int16_t>(indices);
+    else if (m.type() == CV_32U)
+        return m.at<uint32_t>(indices);
     else if (m.type() == CV_32S)
         return m.at<int32_t>(indices);
+    else if (m.type() == CV_64U)
+        return (int64_t)m.at<uint64_t>(indices);
     else if (m.type() == CV_64S)
         return m.at<int64_t>(indices);
     else
@@ -35,8 +43,16 @@ int64_t getValueAt(const Mat &m, int index)
         return m.ptr<uint8_t>()[index];
     else if (m.type() == CV_8S)
         return m.ptr<int8_t>()[index];
+    else if (m.type() == CV_16U)
+        return m.ptr<uint16_t>()[index];
+    else if (m.type() == CV_16S)
+        return m.ptr<int16_t>()[index];
+    else if (m.type() == CV_32U)
+        return m.ptr<uint32_t>()[index];
     else if (m.type() == CV_32S)
         return m.ptr<int32_t>()[index];
+    else if (m.type() == CV_64U)
+        return (int64_t)m.ptr<uint64_t>()[index];
     else if (m.type() == CV_64S)
         return m.ptr<int64_t>()[index];
     else
@@ -52,12 +68,83 @@ void fillRandom(Mat& m, int matType, Backend backend)
         cv::randu(m, 1000000000000000ll, 1000000000000100ll);
     else if (matType == CV_32S)
         cv::randu(m, 1000000000, 1000000100);
+    // CV_64U stays inside the int64_t range so getValueAt() round-trips exactly.
+    else if (matType == CV_64U)
+        cv::randu(m, 1000000000000000ll, 1000000000000100ll);
+    else if (matType == CV_32U)
+        cv::randu(m, 1000000000, 1000000100);
+    else if (matType == CV_16S)
+        cv::randu(m, -1000, 1000);
+    else if (matType == CV_16U)
+        cv::randu(m, 0, 1000);
     else if (matType == CV_8S)
         cv::randu(m, -50, 50);
     else if (matType == CV_8U)
         cv::randu(m, 0, 100);
     else if (matType == CV_Bool)
         cv::randu(m, 0, 2);
+    else
+        CV_Error(Error::BadDepth, "Unsupported type");
+}
+
+void setValueAt(Mat &m, int index, int64_t value)
+{
+    if (m.type() == CV_Bool)
+        m.ptr<bool>()[index] = (bool)value;
+    else if (m.type() == CV_8U)
+        m.ptr<uint8_t>()[index] = (uint8_t)value;
+    else if (m.type() == CV_8S)
+        m.ptr<int8_t>()[index] = (int8_t)value;
+    else if (m.type() == CV_16U)
+        m.ptr<uint16_t>()[index] = (uint16_t)value;
+    else if (m.type() == CV_16S)
+        m.ptr<int16_t>()[index] = (int16_t)value;
+    else if (m.type() == CV_32U)
+        m.ptr<uint32_t>()[index] = (uint32_t)value;
+    else if (m.type() == CV_32S)
+        m.ptr<int32_t>()[index] = (int32_t)value;
+    else if (m.type() == CV_64U)
+        m.ptr<uint64_t>()[index] = (uint64_t)value;
+    else if (m.type() == CV_64S)
+        m.ptr<int64_t>()[index] = value;
+    else
+        CV_Error(Error::BadDepth, "Unsupported type");
+}
+
+int64_t minValueAt(int matType)
+{
+    if (matType == CV_8S)
+        return std::numeric_limits<int8_t>::min();
+    else if (matType == CV_16S)
+        return std::numeric_limits<int16_t>::min();
+    else if (matType == CV_32S)
+        return std::numeric_limits<int32_t>::min();
+    else if (matType == CV_64S)
+        return std::numeric_limits<int64_t>::min();
+    return 0;
+}
+
+// Abs and Sign are decided by the sign of their input, which fillRandom's
+// positive-only ranges would never vary.
+void fillRandomSigned(Mat& m, int matType)
+{
+    if (matType == CV_8U)
+        cv::randu(m, 0, 100);
+    else if (matType == CV_8S)
+        cv::randu(m, -50, 50);
+    else if (matType == CV_16U)
+        cv::randu(m, 0, 1000);
+    else if (matType == CV_16S)
+        cv::randu(m, -1000, 1000);
+    else if (matType == CV_32U)
+        cv::randu(m, 0, 1000000000);
+    else if (matType == CV_32S)
+        cv::randu(m, -1000000000, 1000000000);
+    // CV_64U stays inside the int64_t range so getValueAt() round-trips exactly.
+    else if (matType == CV_64U)
+        cv::randu(m, 0ll, 1000000000000000ll);
+    else if (matType == CV_64S)
+        cv::randu(m, -1000000000000000ll, 1000000000000000ll);
     else
         CV_Error(Error::BadDepth, "Unsupported type");
 }
@@ -245,18 +332,7 @@ TEST_P(Test_ScatterND_Int, random)
     }
 
     for (int i = 0; i < updatesValues.size(); ++i)
-    {
-        if (matType == CV_32S)
-            updates.ptr<int32_t>()[i] = updatesValues[i];
-        else if (matType == CV_64S)
-            updates.ptr<int64_t>()[i] = updatesValues[i];
-        else if (matType == CV_8S)
-            updates.ptr<int8_t>()[i] = updatesValues[i];
-        else if (matType == CV_8U)
-            updates.ptr<uint8_t>()[i] = updatesValues[i];
-        else if (matType == CV_Bool)
-            updates.ptr<bool>()[i] = updatesValues[i];
-    }
+        setValueAt(updates, i, updatesValues[i]);
 
     Net net;
     LayerParams lp;
@@ -322,7 +398,7 @@ TEST_P(Test_ScatterND_Int, random)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ScatterND_Int, Combine(
-    testing::Values(CV_Bool, CV_8U, CV_8S, CV_32S, CV_64S),
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
@@ -734,7 +810,7 @@ TEST_P(Test_GatherElements_Int, random)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_GatherElements_Int, Combine(
-    testing::Values(CV_Bool, CV_8U, CV_8S, CV_32S, CV_64S),
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
@@ -1253,6 +1329,139 @@ TEST_P(Test_Reduce_Int, two_axes)
 INSTANTIATE_TEST_CASE_P(/**/, Test_Reduce_Int, Combine(
     testing::Values(CV_8U, CV_8S, CV_32S, CV_64S),
     dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Abs_Int;
+TEST_P(Test_Abs_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType);
+    setValueAt(input, 0, minValueAt(matType));
+    setValueAt(input, 1, 0);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "AbsVal";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        // the minimum has no positive counterpart, so it maps to itself
+        int64_t expected = value == minValueAt(matType) ? value : (value < 0 ? -value : value);
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+// Integer Abs/Sign are implemented for the OpenCV backend; the other backends take these
+// ops through their own nodes, whose integer support is a separate question.
+INSTANTIATE_TEST_CASE_P(/**/, Test_Abs_Int, Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Sign_Int;
+TEST_P(Test_Sign_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType);
+    setValueAt(input, 0, minValueAt(matType));
+    setValueAt(input, 1, 0);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Sign";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        int64_t expected = (value > 0) - (value < 0);
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int, Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+// ONNX Neg imports as Power with scale=-1, which is the only form of Power that has an
+// integer path.
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Neg_Int;
+TEST_P(Test_Neg_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType);
+    setValueAt(input, 0, 0);
+    setValueAt(input, 1, minValueAt(matType));
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Power";
+    lp.name = "testLayer";
+    lp.set("scale", -1);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        // the minimum has no positive counterpart, so it wraps to itself
+        int64_t expected = value == minValueAt(matType) ? value : -value;
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Neg_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
 ));
 
 }} // namespace

@@ -405,6 +405,22 @@ private:
         parallel_for_(Range(0, parallel_size), body, nstripes);
     }
 
+    // Slicing copies elements without interpreting them, so only the width matters.
+    void run_parallel_by_width(const Mat& inp, Mat& out,
+                               const std::vector<Range>& ranges, const std::vector<int>& steps)
+    {
+        if (inp.elemSize() == 1) {
+            run_parallel<uint8_t>(inp, out, ranges, steps);
+        } else if (inp.elemSize() == 2) {
+            run_parallel<uint16_t>(inp, out, ranges, steps);
+        } else if (inp.elemSize() == 4) {
+            run_parallel<uint32_t>(inp, out, ranges, steps);
+        } else {
+            CV_Assert(inp.elemSize() == 8);
+            run_parallel<uint64_t>(inp, out, ranges, steps);
+        }
+    }
+
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
@@ -461,13 +477,7 @@ private:
             outs.resize(1);
             outs[0].fit(outShape, inpType);
 
-            if (inp.depth() == CV_32S) run_parallel<int32_t>(inp, outs[0], ranges, steps_vec);
-            else if (inp.depth() == CV_64S) run_parallel<int64_t>(inp, outs[0], ranges, steps_vec);
-            else if (inp.depth() == CV_16F) run_parallel<int16_t>(inp, outs[0], ranges, steps_vec);
-            else if (inp.depth() == CV_8S) run_parallel<int8_t>(inp, outs[0], ranges, steps_vec);
-            else if (inp.depth() == CV_8U) run_parallel<uint8_t>(inp, outs[0], ranges, steps_vec);
-            else if (inp.depth() == CV_Bool) run_parallel<uint8_t>(inp, outs[0], ranges, steps_vec);
-            else run_parallel<float>(inp, outs[0], ranges, steps_vec);
+            run_parallel_by_width(inp, outs[0], ranges, steps_vec);
         } else {
              Mat inp = inputs_arr.getMat(0);
              std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
@@ -475,13 +485,7 @@ private:
              outs[0].fit(outShape, inpType);
              Mat temp(outShape, inpType);
 
-             if (inp.depth() == CV_32S) run_parallel<int32_t>(inp, temp, ranges, steps_vec);
-             else if (inp.depth() == CV_64S) run_parallel<int64_t>(inp, temp, ranges, steps_vec);
-             else if (inp.depth() == CV_16F) run_parallel<int16_t>(inp, temp, ranges, steps_vec);
-             else if (inp.depth() == CV_8S) run_parallel<int8_t>(inp, temp, ranges, steps_vec);
-             else if (inp.depth() == CV_8U) run_parallel<uint8_t>(inp, temp, ranges, steps_vec);
-             else if (inp.depth() == CV_Bool) run_parallel<uint8_t>(inp, temp, ranges, steps_vec);
-             else run_parallel<float>(inp, temp, ranges, steps_vec);
+             run_parallel_by_width(inp, temp, ranges, steps_vec);
 
              temp.copyTo(outs[0]);
         }
