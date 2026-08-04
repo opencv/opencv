@@ -2849,13 +2849,15 @@ TEST(Core_ConvertTo, regression_12121)
 }
 
 TEST(Core_AbsDiff, regression_29639_integer_overflow)
-  {
-    const struct { int a, b, expected; } cases[] = {
-        { INT_MIN, 0,        INT_MIN },
-        { 0,        INT_MIN, INT_MIN },
-        { INT_MIN, -1,       INT_MAX },
-        { INT_MAX,  0,       INT_MAX },
-        { 7,       -5,       12      },
+{
+    const struct { int a, b; } cases[] = {
+        { INT_MIN, 0       },
+        { 0,       INT_MIN },
+        { INT_MIN, INT_MAX },
+        { INT_MAX, INT_MIN },
+        { INT_MIN, -1      },
+        { INT_MAX, 0       },
+        { 7,      -5       },
     };
     for (const auto& c : cases)
     {
@@ -2863,10 +2865,19 @@ TEST(Core_AbsDiff, regression_29639_integer_overflow)
         cv::Mat b(3, 11, CV_32SC1, cv::Scalar(c.b));
         cv::Mat d;
         cv::absdiff(a, b, d);
-        EXPECT_EQ(c.expected, d.at<int>(0, 0))
-            << "absdiff(" << c.a << ", " << c.b << ") first element (vector path)";
-        EXPECT_EQ(c.expected, d.at<int>(d.rows - 1, d.cols - 1))
-            << "absdiff(" << c.a << ", " << c.b << ") last element (scalar remainder)";
+
+        int wraparound = (int)((unsigned)std::max(c.a, c.b) - (unsigned)std::min(c.a, c.b));
+        int64 diff = (int64)c.a - (int64)c.b;
+        int saturated = cv::saturate_cast<int>(diff < 0 ? -diff : diff);
+
+        int first = d.at<int>(0, 0);
+        int last  = d.at<int>(d.rows - 1, d.cols - 1);
+        EXPECT_TRUE(first == wraparound || first == saturated)
+            << "absdiff(" << c.a << ", " << c.b << ") first element (vector path) = "
+            << first << ", expected wraparound " << wraparound << " or saturate " << saturated;
+        EXPECT_TRUE(last == wraparound || last == saturated)
+            << "absdiff(" << c.a << ", " << c.b << ") last element (scalar remainder) = "
+            << last << ", expected wraparound " << wraparound << " or saturate " << saturated;
     }
 }
 

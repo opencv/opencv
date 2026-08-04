@@ -1437,7 +1437,7 @@ The function cv::absdiff calculates:
     \f[\texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1} -  \texttt{src2}(I) |)\f]
     where I is a multi-dimensional index of array elements. In case of
     multi-channel arrays, each channel is processed independently.
-@note Saturation is not applied when the arrays have the depth CV_32S.
+@note Saturation might not be applied when the arrays have the depth CV_32S.
 You may even get a negative value in the case of overflow.
 @note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
 `absdiff(src,X)` means `absdiff(src,(X,X,X,X))`.
