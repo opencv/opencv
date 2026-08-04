@@ -14,11 +14,11 @@ import numpy as np
 import cv2 as cv
 
 from tests_common import NewOpenCVTests, unittest
-from test_onnx_conformance_list import CONFORMANCE_TESTS
+from test_onnx_conformance_list import CONFORMANCE_TESTS, cpp_denylisted
 
 # Mirrors modules/dnn/test/test_onnx_conformance.cpp through cv2.dnn bindings, since that C++ suite never calls into Python and so can't catch binding-layer regressions.
-# The case list lives in test_onnx_conformance_list.py; OpenCV/CPU only, since bindings are backend-agnostic.
-# Denylisted cases are read from OpenCV's own C++ .inl.hpp files at test time (reused, not duplicated).
+# The case list and the denylist lookup live in test_onnx_conformance_list.py.
+# OpenCV/CPU only: the bindings are backend-agnostic, so iterating targets would only re-test C++ math.
 
 TOLERANCE_OVERRIDES = {
     "test_attention_4d_fp16": (0.0002, 0.001),
@@ -40,28 +40,6 @@ TOLERANCE_OVERRIDES = {
 
 L1_DEFAULT = 1e-5
 LINF_DEFAULT = 1e-4
-
-# Only parser + opencv_all apply to a CPU-only test; classic/CUDA/Vulkan/OCL denylists don't.
-_CPP_DENYLIST_FILES = (
-    'test_onnx_conformance_layer_parser_denylist.inl.hpp',
-    'test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp',
-)
-_DENYLIST_ENTRY_RE = re.compile(r'^\s*"(test_[A-Za-z0-9_]+)"\s*,', re.M)
-
-
-def _cpp_denylisted(repoPath):
-    """Names excluded by OpenCV's C++ ONNX denylists; empty if the source tree isn't available."""
-    names = set()
-    if not repoPath:
-        return names
-    test_dir = os.path.join(repoPath, 'modules', 'dnn', 'test')
-    for fname in _CPP_DENYLIST_FILES:
-        fpath = os.path.join(test_dir, fname)
-        if os.path.isfile(fpath):
-            with open(fpath) as fh:
-                names.update(_DENYLIST_ENTRY_RE.findall(fh.read()))
-    return names
-
 
 def _pbIndex(path):
     """Sort key for input_N.pb / output_N.pb, matching the C++ test's extractIndex."""
@@ -115,7 +93,7 @@ class onnx_conformance_test(NewOpenCVTests):
     def setUp(self):
         super(onnx_conformance_test, self).setUp()
         if onnx_conformance_test._cppDenylisted is None:
-            onnx_conformance_test._cppDenylisted = _cpp_denylisted(self.repoPath)
+            onnx_conformance_test._cppDenylisted = cpp_denylisted(self.repoPath)
 
     def find_conformance_model(self, name, required=True):
         relpath = '/'.join(['dnn', 'onnx', 'conformance', 'node', name, 'model.onnx'])

@@ -5,10 +5,39 @@
 # Copyright (C) 2026, BigVision LLC, all rights reserved.
 # Third party copyrights are property of their respective owners.
 
-"""ONNX conformance case list for test_onnx_conformance.py.
+"""Which ONNX conformance cases exist, and which of them are excluded.
 
-Mirrors testConformanceConfig[] in modules/dnn/test/test_onnx_conformance.cpp.
+CONFORMANCE_TESTS mirrors testConformanceConfig[] in
+modules/dnn/test/test_onnx_conformance.cpp.
+
+The exclusions are not duplicated here: cpp_denylisted() reads OpenCV's own
+C++ denylists, which change whenever an operator's support does.
 """
+
+import os
+import re
+
+# Only parser + opencv_all apply to a CPU-only test; classic/CUDA/Vulkan/OCL denylists don't.
+_CPP_DENYLIST_FILES = (
+    'test_onnx_conformance_layer_parser_denylist.inl.hpp',
+    'test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp',
+)
+_DENYLIST_ENTRY_RE = re.compile(r'^\s*"(test_[A-Za-z0-9_]+)"\s*,', re.M)
+
+
+def cpp_denylisted(repoPath):
+    """Names excluded by OpenCV's C++ ONNX denylists; empty if the source tree isn't available."""
+    names = set()
+    if not repoPath:
+        return names
+    test_dir = os.path.join(repoPath, 'modules', 'dnn', 'test')
+    for fname in _CPP_DENYLIST_FILES:
+        fpath = os.path.join(test_dir, fname)
+        if os.path.isfile(fpath):
+            with open(fpath) as fh:
+                names.update(_DENYLIST_ENTRY_RE.findall(fh.read()))
+    return names
+
 
 CONFORMANCE_TESTS = (
     "test_abs", "test_acos", "test_acos_example",
