@@ -217,6 +217,171 @@ TEST_F(fisheyeTest, distortUndistortPointsNewCameraRandom)
     }
 }
 
+// Reference implementation of the fisheye undistortion solver, kept scalar and independent of the
+// library so that the vectorized path can be checked against it. Mirrors the scalar loop in
+// modules/geometry/src/fisheye.cpp for the case without rectification/new camera matrix.
+static void undistortPointsScalarReference(const cv::Mat& distorted, cv::Mat& undistorted,
+                                           const cv::Matx33d& K, const cv::Vec4d& D, int maxCount)
+{
+    undistorted.create(distorted.size(), distorted.type());
+
+    const double fx = K(0, 0), fy = K(1, 1), cx = K(0, 2), cy = K(1, 2);
+    const bool isFloat = distorted.depth() == CV_32F;
+    const size_t n = distorted.total();
+
+    for (size_t i = 0; i < n; i++)
+    {
+        cv::Vec2d pi = isFloat ? (cv::Vec2d)distorted.ptr<cv::Vec2f>()[i]
+                               : distorted.ptr<cv::Vec2d>()[i];
+        cv::Vec2d pw((pi[0] - cx)/fx, (pi[1] - cy)/fy);
+
+        double theta_d = std::sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
+        theta_d = std::min(std::max(-CV_PI/2., theta_d), CV_PI/2.);
+
+        double theta = theta_d;
+        for (int j = 0; j < maxCount; j++)
+        {
+            double theta2 = theta*theta, theta4 = theta2*theta2;
+            double theta6 = theta4*theta2, theta8 = theta6*theta2;
+            double k0_theta2 = D[0]*theta2, k1_theta4 = D[1]*theta4;
+            double k2_theta6 = D[2]*theta6, k3_theta8 = D[3]*theta8;
+            double theta_fix = (theta*(1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
+                               (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
+            theta = theta - theta_fix;
+        }
+        double scale = std::tan(theta) / theta_d;
+
+        bool theta_flipped = ((theta_d < 0 && theta > 0) || (theta_d > 0 && theta < 0));
+        cv::Vec2d fi = theta_flipped ? cv::Vec2d(-1000000.0, -1000000.0) : pw*scale;
+
+        if (isFloat)
+            undistorted.ptr<cv::Vec2f>()[i] = cv::Vec2f(fi);
+        else
+            undistorted.ptr<cv::Vec2d>()[i] = fi;
+    }
+}
+
+// Largest elementwise relative difference, |a - b| / max(|b|, 1). Points far outside the valid
+// field of view are ill-conditioned: theta approaches pi/2, where tan() amplifies the last bits of
+// theta, so the two implementations are compared in relative rather than absolute terms.
+static double maxRelativeDiff(const cv::Mat& a, const cv::Mat& b)
+{
+    CV_Assert(a.size() == b.size() && a.type() == b.type());
+    cv::Mat a64, b64;
+    a.reshape(1).convertTo(a64, CV_64F);
+    b.reshape(1).convertTo(b64, CV_64F);
+
+    double maxRel = 0.0;
+    for (int i = 0; i < a64.rows; i++)
+    {
+        for (int j = 0; j < a64.cols; j++)
+        {
+            const double x = a64.at<double>(i, j), y = b64.at<double>(i, j);
+            // The principal point yields tan(0)/0, so NaN must appear in the same places in both.
+            if (cvIsNaN(x) || cvIsNaN(y))
+            {
+                if (cvIsNaN(x) != cvIsNaN(y))
+                    return std::numeric_limits<double>::infinity();
+                continue;
+            }
+            if (cvIsInf(x) || cvIsInf(y))
+            {
+                if (x != y)
+                    return std::numeric_limits<double>::infinity();
+                continue;
+            }
+            maxRel = std::max(maxRel, std::abs(x - y) / std::max(std::abs(y), 1.0));
+        }
+    }
+    return maxRel;
+}
+
+// The vectorized path of undistortPoints must agree with the scalar solver. It is selected by
+// MAX_ITER-only criteria with CV_64FC2 input and no rectification, so the test uses exactly that;
+// CV_32FC2 stays on the scalar path and is checked as well. The point counts include values that
+// are not multiples of the vector width, so the scalar tail is exercised on 2-, 4- and 8-lane
+// builds; the largest case also covers the multi-stripe parallel path.
+TEST_F(fisheyeTest, undistortPointsFastPathMatchesScalar)
+{
+    const int counts[] = { 1, 2, 3, 7, 33, 129, 257, 10001 };
+    const int maxCount = 10;
+    const cv::TermCriteria criteria(cv::TermCriteria::MAX_ITER, maxCount, 0);
+
+    cv::RNG rng(0x8f3a21c5);
+
+    for (size_t ci = 0; ci < sizeof(counts)/sizeof(counts[0]); ci++)
+    {
+        const int n = counts[ci];
+
+        cv::Mat points64(n, 1, CV_64FC2);
+        cv::Vec2d* pts = points64.ptr<cv::Vec2d>();
+        for (int i = 0; i < n; i++)
+        {
+            pts[i] = cv::Vec2d(rng.uniform(0.0, (double)imageSize.width),
+                               rng.uniform(0.0, (double)imageSize.height));
+        }
+        pts[0] = cv::Vec2d(K(0, 2), K(1, 2)); // principal point
+
+        cv::Mat expected, actual;
+
+        undistortPointsScalarReference(points64, expected, K, D, maxCount);
+        cv::fisheye::undistortPoints(points64, actual, K, D, cv::noArray(), cv::noArray(), criteria);
+        EXPECT_LT(maxRelativeDiff(actual, expected), 1e-12) << "CV_64FC2, n = " << n;
+
+        cv::Mat points32;
+        points64.convertTo(points32, CV_32FC2);
+        undistortPointsScalarReference(points32, expected, K, D, maxCount);
+        cv::fisheye::undistortPoints(points32, actual, K, D, cv::noArray(), cv::noArray(), criteria);
+        EXPECT_LT(maxRelativeDiff(actual, expected), 1e-6) << "CV_32FC2, n = " << n;
+    }
+}
+
+// Points whose theta flips sign during the iteration are replaced by a sentinel value. Check that
+// the vectorized path marks exactly the same points as the scalar solver.
+TEST_F(fisheyeTest, undistortPointsSentinelMatchesScalar)
+{
+    const int maxCount = 10;
+    const cv::TermCriteria criteria(cv::TermCriteria::MAX_ITER, maxCount, 0);
+    // Strong negative distortion makes the iteration diverge for large radii.
+    const cv::Vec4d strongD(-0.5, 0.05, -0.01, 0.002);
+
+    const int n = 129;
+    cv::Mat points(n, 1, CV_64FC2);
+    cv::Vec2d* pts = points.ptr<cv::Vec2d>();
+    for (int i = 0; i < n; i++)
+    {
+        // Sweep the radius from inside the image out to far beyond the valid field of view.
+        const double radius = 40.0*(i + 1);
+        const double angle = 0.37*i;
+        pts[i] = cv::Vec2d(K(0, 2) + radius*std::cos(angle),
+                           K(1, 2) + radius*std::sin(angle));
+    }
+
+    cv::Mat expected, actual;
+    undistortPointsScalarReference(points, expected, K, strongD, maxCount);
+    cv::fisheye::undistortPoints(points, actual, K, strongD, cv::noArray(), cv::noArray(), criteria);
+
+    int sentinels = 0;
+    for (int i = 0; i < n; i++)
+        if (expected.ptr<cv::Vec2d>()[i][0] == -1000000.0)
+            sentinels++;
+
+    // The test is only meaningful if the sentinel branch is actually taken.
+    EXPECT_GT(sentinels, 0);
+    EXPECT_LT(sentinels, n);
+
+    // Both paths must mark exactly the same points, and agree on the remaining ones.
+    for (int i = 0; i < n; i++)
+    {
+        const bool expectedSentinel = expected.ptr<cv::Vec2d>()[i][0] == -1000000.0;
+        const bool actualSentinel = actual.ptr<cv::Vec2d>()[i][0] == -1000000.0;
+        ASSERT_EQ(expectedSentinel, actualSentinel) << "point " << i;
+    }
+    // Strong distortion makes the non-sentinel points numerically ill-conditioned. The sentinel
+    // mask above is exact; use a relative check only to catch large deviations in the other points.
+    EXPECT_LT(maxRelativeDiff(actual, expected), 1e-8);
+}
+
 TEST_F(fisheyeTest, solvePnP)
 {
     const int n = 16;

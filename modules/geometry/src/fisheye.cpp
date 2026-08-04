@@ -308,6 +308,36 @@ void cv::fisheye::distortPoints(InputArray _undistorted, OutputArray distorted, 
     cv::fisheye::distortPoints(normalized, distorted, K, D, alpha);
 }
 
+// Compensate distortion iteratively using Newton's method. The vectorized loop in
+// undistortPoints() mirrors this solver.
+// theta_d = theta * (1 + k1 * theta^2 + k2 * theta^4 + k3 * theta^6 + k4 * theta^8) =>
+// f(theta) := theta * (1 + k1 * theta^2 + k2 * theta^4 + k3 * theta^6 + k4 * theta^8) - theta_d = 0
+// Newton's method: new_theta = theta - theta_fix, theta_fix := f(theta) / f'(theta)
+// f'(theta) = 1 + 3 * k1 * theta^2 + 5 * k2 * theta^4 + 7 * k3 * theta^6 + 9 * k4 * theta^8
+static inline double solveThetaFromThetaD(double theta_d, const Vec4d& k, int maxCount,
+                                          bool isEps, double epsilon, bool& converged)
+{
+    double theta = theta_d;
+    converged = false;
+
+    for (int j = 0; j < maxCount; j++)
+    {
+        double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
+        double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
+        double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
+                           (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
+        theta = theta - theta_fix;
+
+        if (isEps && (fabs(theta_fix) < epsilon))
+        {
+            converged = true;
+            break;
+        }
+    }
+
+    return theta;
+}
+
 void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D,
                                    InputArray R, InputArray P, TermCriteria criteria)
 {
@@ -373,8 +403,93 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         maxCount = criteria.maxCount;
     }
 
+    size_t i = 0;
+#if (CV_SIMD_SCALABLE_64F || CV_SIMD_64F)
+    // Vectorized fast path: fixed iteration count (no EPS early-exit), no reprojection (R, P empty)
+    // and double I/O. The per-point Newton iteration is independent, so a whole vector of points is
+    // solved at once. Every other case, and the trailing points, go to the scalar loop below.
+    if( !isEps && R.empty() && P.empty() && sdepth == CV_64F )
+    {
+        const int vl = VTraits<v_float64>::vlanes();
+        if( n >= (size_t)vl )
+        {
+            const size_t totalBlocks = n / vl;
+            auto processBlocks = [&](size_t blockBegin, size_t blockEnd)
+            {
+                const v_float64 v_fx = vx_setall_f64(f[0]), v_fy = vx_setall_f64(f[1]);
+                const v_float64 v_cx = vx_setall_f64(c[0]), v_cy = vx_setall_f64(c[1]);
+                const v_float64 v_k0 = vx_setall_f64(k[0]), v_k1 = vx_setall_f64(k[1]);
+                const v_float64 v_k2 = vx_setall_f64(k[2]), v_k3 = vx_setall_f64(k[3]);
+                const v_float64 v_one = vx_setall_f64(1.0), v_zero = vx_setzero_f64();
+                const v_float64 v_three = vx_setall_f64(3.0), v_five = vx_setall_f64(5.0);
+                const v_float64 v_seven = vx_setall_f64(7.0), v_nine = vx_setall_f64(9.0);
+                const v_float64 v_lo = vx_setall_f64(-CV_PI/2.), v_hi = vx_setall_f64(CV_PI/2.);
+                const v_float64 v_sent = vx_setall_f64(-1000000.0);
+                AutoBuffer<double> tbuf(vl);
 
-    for(size_t i = 0; i < n; i++ )
+                for( size_t block = blockBegin; block < blockEnd; block++ )
+                {
+                    const size_t j = block * vl;
+                    v_float64 px, py;
+                    v_load_deinterleave((const double*)(srcd + j), px, py);
+                    v_float64 pwx = v_div(v_sub(px, v_cx), v_fx);
+                    v_float64 pwy = v_div(v_sub(py, v_cy), v_fy);
+                    v_float64 theta_d = v_sqrt(v_add(v_mul(pwx, pwx), v_mul(pwy, pwy)));
+                    theta_d = v_min(v_max(theta_d, v_lo), v_hi);
+                    v_float64 theta = theta_d;
+
+                    for( int it = 0; it < maxCount; it++ )
+                    {
+                        v_float64 t2 = v_mul(theta, theta), t4 = v_mul(t2, t2);
+                        v_float64 t6 = v_mul(t4, t2), t8 = v_mul(t6, t2);
+                        v_float64 a0 = v_mul(t2, v_k0), a1 = v_mul(t4, v_k1);
+                        v_float64 a2 = v_mul(t6, v_k2), a3 = v_mul(t8, v_k3);
+                        v_float64 poly = v_add(v_one, v_add(v_add(a0, a1), v_add(a2, a3)));
+                        v_float64 num = v_sub(v_mul(theta, poly), theta_d);
+                        v_float64 den = v_add(v_one, v_add(
+                            v_add(v_mul(a0, v_three), v_mul(a1, v_five)),
+                            v_add(v_mul(a2, v_seven), v_mul(a3, v_nine))));
+                        theta = v_sub(theta, v_div(num, den));
+                    }
+
+                    // scale = tan(theta) / theta_d  (scalar pass; there is no vector transcendental)
+                    v_store(tbuf.data(), theta);
+                    for( int lane = 0; lane < vl; lane++ ) tbuf[lane] = std::tan(tbuf[lane]);
+                    v_float64 scale = v_div(vx_load(tbuf.data()), theta_d);
+                    v_float64 pux = v_mul(pwx, scale), puy = v_mul(pwy, scale);
+
+                    // theta_d is non-negative, so a sign flip is exactly theta < 0.
+                    v_float64 flipped = v_lt(theta, v_zero);
+                    pux = v_select(flipped, v_sent, pux);
+                    puy = v_select(flipped, v_sent, puy);
+                    v_store_interleave((double*)(dstd + j), pux, puy);
+                }
+            };
+
+            if( totalBlocks <= (size_t)std::numeric_limits<int>::max() )
+            {
+                // Keep small inputs single-threaded while splitting sufficiently expensive Newton
+                // workloads into multiple stripes.
+                const double nstripes = (double)n * maxCount / (1 << 16);
+                if( nstripes < 1.5 )
+                    processBlocks(0, totalBlocks);
+                else
+                {
+                    parallel_for_(Range(0, (int)totalBlocks), [&](const Range& range)
+                    {
+                        processBlocks((size_t)range.start, (size_t)range.end);
+                    }, nstripes);
+                }
+            }
+            else
+                processBlocks(0, totalBlocks);
+
+            i = totalBlocks * vl;
+        }
+    }
+#endif
+
+    for( ; i < n; i++ )
     {
         Vec2d pi = sdepth == CV_32F ? (Vec2d)srcf[i] : srcd[i];  // image point
         // u = fx * x' + cx (alpha = 0), v = fy * y' + cy =>
@@ -401,27 +516,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         if (!isEps || fabs(theta_d) > criteria.epsilon)
         {
             // compensate distortion iteratively using Newton method
-
-            for (int j = 0; j < maxCount; j++)
-            {
-                // theta_d = theta * (1 + k1 * theta^2 + k2 * theta^4 + k3 * theta^6 + k4 * theta^8) =>
-                // f(theta) := theta * (1 + k1 * theta^2 + k2 * theta^4 + k3 * theta^6 + k4 * theta^8) - theta_d = 0
-                // Newton's method: new_theta = theta - theta_fix, theta_fix := f(theta) / f'(theta)
-                // f'(theta) = (theta * (1 + k1 * theta^2 + k2 * theta^4 + k3 * theta^6 + k4 * theta^8) - theta_d)' =
-                // (theta + k1 * theta^3 + k2 * theta^5 + k3 * theta^7 + k4 * theta^9 - theta_d)' =
-                // 1 + 3 * k1 * theta^2 + 5 * k2 * theta^4 + 7 * k3 * theta^6 + 9 * k4 * theta^8
-                double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
-                double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
-                double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
-                                   (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
-                theta = theta - theta_fix;
-
-                if (isEps && (fabs(theta_fix) < criteria.epsilon))
-                {
-                    converged = true;
-                    break;
-                }
-            }
+            theta = solveThetaFromThetaD(theta_d, k, maxCount, isEps, criteria.epsilon, converged);
 
             // x' = (theta_d / r) * a, y' = (theta_d / r) * b =>
             // a = x' * r / theta_d, b = y' * r / theta_d =>
