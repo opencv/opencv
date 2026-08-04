@@ -101,6 +101,7 @@ bool VisualOdometryImpl::closeLoop(KeyFrame* Kc, KeyFrame* Km,
     // fuse matched map points — keep the loop side, track fused set to avoid use-after-free
     int nFused = 0;
     std::set<MapPoint*> fused;
+    std::set<KeyFrame*> touched{Kc, Km};
     for (const DMatch& m : matches)
     {
         const size_t qi = (size_t)m.queryIdx, ti = (size_t)m.trainIdx;
@@ -112,6 +113,8 @@ bool VisualOdometryImpl::closeLoop(KeyFrame* Kc, KeyFrame* Km,
         if (curMp && !curMp->bad && curMp != loopMp)
         {
             fused.insert(curMp);
+            // snapshot curMp's observers before replaceMapPoint frees it (map.cpp)
+            for (const auto& [okf, idx] : curMp->observations) touched.insert(okf);
             map.replaceMapPoint(curMp, loopMp);
             ++nFused;
         }
@@ -122,11 +125,12 @@ bool VisualOdometryImpl::closeLoop(KeyFrame* Kc, KeyFrame* Km,
         }
     }
 
-    // register loop edge and rebuild covisibility
+    // register loop edge and rebuild covisibility for every keyframe whose
+    // observation set changed during fusion, not just Kc/Km.
     Kc->loopEdges.insert(Km);
     Km->loopEdges.insert(Kc);
-    detail::updateCovisibility(Kc);
-    detail::updateCovisibility(Km);
+    for (KeyFrame* kf : touched)
+        if (kf && !kf->bad) detail::updateCovisibility(kf);
 
     // reset motion model to corrected pose
     lastPoseCw    = Kc->poseCw;
