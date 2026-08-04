@@ -26,12 +26,10 @@ from tst_scene_render import TestSceneRender
 def intersectionRate(s1, s2):
 
     x1, y1, x2, y2 = s1
-    # intersectConvexConvex()/contourArea() accept only CV_32S/CV_32F points
-    s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]], dtype=np.int32)
-    s2 = np.array(s2, dtype=np.int32)
+    s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
-    area, _intersection = cv.intersectConvexConvex(s1, s2)
-    return 2 * area / (cv.contourArea(s1) + cv.contourArea(s2))
+    area, _intersection = cv.intersectConvexConvex(s1, np.array(s2))
+    return 2 * area / (cv.contourArea(s1) + cv.contourArea(np.array(s2)))
 
 from tests_common import NewOpenCVTests
 

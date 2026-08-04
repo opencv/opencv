@@ -44,11 +44,8 @@ def find_squares(img):
     return squares
 
 def intersectionRate(s1, s2):
-    # intersectConvexConvex()/contourArea() accept only CV_32S/CV_32F points
-    s1 = np.array(s1, dtype=np.int32)
-    s2 = np.array(s2, dtype=np.int32)
-    area, _intersection = cv.intersectConvexConvex(s1, s2)
-    return 2 * area / (cv.contourArea(s1) + cv.contourArea(s2))
+    area, _intersection = cv.intersectConvexConvex(np.array(s1), np.array(s2))
+    return 2 * area / (cv.contourArea(np.array(s1)) + cv.contourArea(np.array(s2)))
 
 def filterSquares(squares, square):
 

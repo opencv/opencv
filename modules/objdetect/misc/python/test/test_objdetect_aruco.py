@@ -74,8 +74,7 @@ def projectChessboard(squaresX, squaresY, squareSize, imageSize, cameraMatrix, r
                                       squareCorners[0] + [0, squareSize, 0]))
 
             projectedCorners, _ = cv.projectPoints(squareCorners, rvec, tvec, cameraMatrix, distCoeffs)
-            # fillPoly() requires CV_32S point coordinates
-            projectedCorners = projectedCorners.astype(np.int32)
+            projectedCorners = projectedCorners.astype(np.int64)
             projectedCorners = projectedCorners.reshape(1, 4, 2)
             img = cv.fillPoly(img, [projectedCorners], 0)
 

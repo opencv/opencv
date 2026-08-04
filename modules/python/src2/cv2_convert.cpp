@@ -127,16 +127,25 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return false;
     }
 
-    bool needcopy = false;
-    int typenum = PyArray_TYPE(oarr);
+    bool needcopy = false, needcast = false;
+    int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
 
     if( type < 0 )
     {
-        const std::string dtype_name = getArrayTypeName(oarr);
-        failmsg("%s data type = %s is not supported", info.name,
-                dtype_name.c_str());
-        return false;
+        if( typenum == NPY_INT64 || typenum == NPY_LONG || typenum == NPY_LONGLONG )
+        {
+            needcopy = needcast = true;
+            new_typenum = NPY_INT;
+            type = CV_32S;
+        }
+        else
+        {
+            const std::string dtype_name = getArrayTypeName(oarr);
+            failmsg("%s data type = %s is not supported", info.name,
+                    dtype_name.c_str());
+            return false;
+        }
     }
 
 #ifndef CV_MAX_DIM
@@ -211,8 +220,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             return false;
         }
 
-        oarr = PyArray_GETCONTIGUOUS(oarr);
-        o = (PyObject*) oarr;
+        if( needcast ) {
+            o = PyArray_Cast(oarr, new_typenum);
+            oarr = (PyArrayObject*) o;
+        }
+        else {
+            oarr = PyArray_GETCONTIGUOUS(oarr);
+            o = (PyObject*) oarr;
+        }
 
         _strides = PyArray_STRIDES(oarr);
     }
