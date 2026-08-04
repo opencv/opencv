@@ -72,14 +72,19 @@ def normAssert(test, ref, actual, msg="", l1=L1_DEFAULT, lInf=LINF_DEFAULT):
     ref64 = ref.astype(np.float64)
     act64 = actual.astype(np.float64)
 
-    # inf - inf = nan in IEEE arithmetic, so non-finite values need an exact-equality check, not a subtraction.
+    # NaN/Inf must match exactly, and NaN never equals itself (array_equal(equal_nan=) needs NumPy 1.19).
     nonfinite = ~np.isfinite(ref64) | ~np.isfinite(act64)
     if np.any(nonfinite):
+        ref_nf, act_nf = ref64[nonfinite], act64[nonfinite]
+        both_nan = np.isnan(ref_nf) & np.isnan(act_nf)
         test.assertTrue(
-            np.array_equal(ref64[nonfinite], act64[nonfinite], equal_nan=True),
+            bool(np.all((ref_nf == act_nf) | both_nan)),
             '%s: non-finite value mismatch (NaN/Inf) at %d position(s)' % (msg, int(nonfinite.sum())))
 
-    diff = np.where(nonfinite, 0.0, np.abs(ref64 - act64))
+    # Subtract only where both sides are finite: inf - inf would warn and produce NaN.
+    diff = np.zeros(ref64.shape, dtype=np.float64)
+    finite = ~nonfinite
+    diff[finite] = np.abs(ref64[finite] - act64[finite])
     normL1 = float(diff.sum()) / diff.size
     normInf = float(diff.max())
     test.assertLessEqual(normL1, l1, '%s: normL1=%r (l1=%r)' % (msg, normL1, l1))
