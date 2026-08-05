@@ -307,8 +307,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** sets \p n elements to \p ch in \p dest
      *
-     * \param[in]   src     device pointer
-     * \param[out]  ch      8-bit value to fill the device memory with
+     * \param[out]  dest    device pointer
+     * \param[in]   ch      8-bit value to fill the device memory with
      *
      * Pre-conditions:
      * - memory pointed by \p dest must be large enough to hold \p n elements
@@ -388,8 +388,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** sets \p n elements to \p ch in \p dest asynchronously
      *
-     * \param[in]   src     device pointer
-     * \param[out]  ch      8-bit value to fill the device memory with
+     * \param[out]  dest    device pointer
+     * \param[in]   ch      8-bit value to fill the device memory with
      * \param       stream  CUDA stream that has to be used for the memory operation
      *
      * Pre-conditions:
