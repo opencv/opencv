@@ -26,6 +26,18 @@ inline double cameraDepth(const Matx44d& T_cw, double X, double Y, double Z)
     return T_cw(2,0)*X + T_cw(2,1)*Y + T_cw(2,2)*Z + T_cw(2,3);
 }
 
+// erase bad/low-quality map points; snapshot first since removeMapPoint mutates the live set.
+void cullMapPoints(Map& map)
+{
+    const std::vector<MapPoint*> snapshot(map.mapPoints().begin(), map.mapPoints().end());
+    for (MapPoint* mp : snapshot)
+    {
+        if (mp->bad ||
+            (mp->visibleCount > 10 && mp->foundCount < 0.25 * mp->visibleCount))
+            map.removeMapPoint(mp);
+    }
+}
+
 } // anonymous namespace
 
 void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
@@ -38,6 +50,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
     newKf->imageSize = currentFrame.imageSize;
     newKf->mapPoints.assign(currentFrame.keypoints.size(), nullptr);
     newKf->parent = lastKf;
+    if (lastKf) lastKf->children.insert(newKf);
 
     map.addKeyframe(newKf);
 
@@ -84,6 +97,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
         detail::updateCovisibility(newKf);
         Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
         detectLoop(newKf);
+        cullMapPoints(map);
         map.setCurrentKeyframe(newKf);
         lastKf = newKf;
         lastKfInliers = 0;
@@ -133,6 +147,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
 
     Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
     detectLoop(newKf);
+    cullMapPoints(map);
 
     map.setCurrentKeyframe(newKf);
     lastKf = newKf;

@@ -214,6 +214,7 @@ bool VisualOdometryImpl::bootstrap(Frame& currentFrame)
     KeyFrame* kfCur = makeKF(currentFrame);
     kfCur->poseCw = T_cur;
     kfCur->parent = kfRef;
+    kfRef->children.insert(kfCur);
 
     map.addKeyframe(kfRef);
     map.addKeyframe(kfCur);

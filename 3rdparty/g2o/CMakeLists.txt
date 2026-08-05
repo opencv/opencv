@@ -41,7 +41,7 @@ file(GLOB g2o_sba_srcs   "${G2O_SRC}/types/sba/*.cpp")
 file(GLOB g2o_sim3_srcs  "${G2O_SRC}/types/sim3/*.cpp")
 set(g2o_srcs ${g2o_core_srcs} ${g2o_stuff_srcs} ${g2o_sba_srcs} ${g2o_sim3_srcs})
 
-add_library(g2o STATIC ${g2o_srcs})
+add_library(g2o STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${g2o_srcs})
 
 target_include_directories(g2o
   PUBLIC
@@ -66,13 +66,24 @@ endif()
 set_target_properties(g2o PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   FOLDER "3rdparty"
+  ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
 )
 
 # Suppress all warnings for this 3rdparty target only.
+# NOTE: single-value $<CXX_COMPILER_ID:...> checks (not the comma-list form,
+# which needs CMake >= 3.15) to stay compatible with MIN_VER_CMAKE (3.13).
 target_compile_options(g2o PRIVATE
-  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-w>
+  $<$<CXX_COMPILER_ID:GNU>:-w>
+  $<$<CXX_COMPILER_ID:Clang>:-w>
+  $<$<CXX_COMPILER_ID:AppleClang>:-w>
   $<$<CXX_COMPILER_ID:MSVC>:/w>
 )
+
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(g2o EXPORT OpenCVModules
+      ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
+endif()
+ocv_install_3rdparty_licenses(g2o license-bsd.txt)
 
 # Export variables for the parent build to consume.
 set(G2O_INCLUDE_DIRS
