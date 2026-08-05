@@ -40,10 +40,12 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     parallel_for_(Range(0, NC1), [&](const Range& range)
     {
         // Offer this task range to an accelerated HAL first, flattening the descriptor into a
-        // stable C argument list (no dnn types cross the boundary). The generic activation is a
-        // function pointer that cannot cross the ABI, so only the fast-activation path is offered
-        // (out = min(s>=0 ? s : s*alpha, maxval)); on NOT_IMPLEMENTED fall through to the built-in.
-        if (cs.activation == nullptr)
+        // stable C argument list (no dnn types cross the boundary). The HAL fuses conv, scale,
+        // bias, residual and the fast-activation (out = min(s>=0 ? s : s*alpha, maxval)). A
+        // generic activation is a function pointer that cannot cross the ABI, so when one is
+        // present we still run the HAL for the heavy conv and apply the (elementwise) activation
+        // over this range afterwards -- matching the built-in fast-epilogue-then-activation
+        // order below. On NOT_IMPLEMENTED fall through to the built-in path.
         {
             int sd = cs.nspatialdims;
             int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
@@ -57,7 +59,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                 case FAST_ACTIV_NONE:       default_alpha = 1.f; break;
                 default: break; // FAST_ACTIV_RELU: maxval = FLT_MAX, default_alpha = 0
             }
-            CALL_HAL(dnn_depthwise_conv32f, cv_hal_dnn_depthwise_conv32f,
+            int hal_res = cv_hal_dnn_depthwise_conv32f(
                      (const float*)inp__, (const float*)residual__, (float*)out__,
                      (const float*)weights__, scale__, bias__,
                      cs.inpshape.C, cs.inpshape.back(), cs.inpshape[1],
@@ -65,6 +67,21 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                      cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),
                      maxval, default_alpha, prelu_slope,
                      range.start, range.end);
+            if (hal_res == CV_HAL_ERROR_OK) {
+                if (cs.activation) {
+                    // The HAL wrote conv + scale/bias/residual with an identity fast-epilogue;
+                    // apply the generic activation in place over this range's output planes.
+                    int planesz = outsize[0]*outsize[1]*outsize[2]*cs.inpshape.back();
+                    const float* activParams = cs.activParams.data();
+                    float* outp = (float*)out__ + range.start*planesz;
+                    for (int nc1 = range.start; nc1 < range.end; nc1++, outp += planesz)
+                        cs.activation(outp, outp, planesz, activParams);
+                }
+                return;
+            }
+            else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+                CV_Error_(cv::Error::StsInternal,
+                    ("HAL implementation dnn_depthwise_conv32f ==> cv_hal_dnn_depthwise_conv32f returned %d (0x%08x)", hal_res, hal_res));
         }
 
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
