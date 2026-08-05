@@ -214,7 +214,7 @@ class BuilderDLDT:
         patch_hashsum = None
         try:
             import hashlib
-            patch_hashsum = hashlib.md5(self.patch_file_contents.encode('utf-8')).hexdigest()
+            patch_hashsum = hashlib.sha256(self.patch_file_contents.encode('utf-8')).hexdigest()
         except:
             log.warn("Can't compute hashsum of patches: %s", self.patch_file)
         self.patch_hashsum = self.config.override_patch_hashsum if self.config.override_patch_hashsum else patch_hashsum
