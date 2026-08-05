@@ -11,7 +11,6 @@
 
 #ifdef HAVE_G2O
 
-#include <g2o/core/base_binary_edge.h>
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/core/robust_kernel_impl.h>
@@ -29,79 +28,6 @@
 #include <Eigen/Geometry>
 
 namespace cv { namespace slam {
-
-// Binary reprojection edge for local/global BA: vertex 0 is the 3D world
-// point, vertex 1 the camera pose (variable or fixed); both move.
-class EdgeSE3ProjectXYZ :
-    public g2o::BaseBinaryEdge<2, Eigen::Vector2d,
-                               g2o::VertexSBAPointXYZ,
-                               g2o::VertexSE3Expmap>
-{
-public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    EdgeSE3ProjectXYZ(double fx, double fy, double cx, double cy)
-        : fx_(fx), fy_(fy), cx_(cx), cy_(cy) {}
-
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-    bool read(std::istream&)        { return false; }
-    bool write(std::ostream&) const { return false; }
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic pop
-#endif
-
-    void computeError() CV_OVERRIDE
-    {
-        const auto* vp = static_cast<const g2o::VertexSBAPointXYZ*>(_vertices[0]);
-        const auto* vT = static_cast<const g2o::VertexSE3Expmap*>(_vertices[1]);
-        const Eigen::Vector3d Xc = vT->estimate().map(vp->estimate());
-        _error = _measurement - Eigen::Vector2d(fx_ * Xc[0] / Xc[2] + cx_,
-                                                 fy_ * Xc[1] / Xc[2] + cy_);
-    }
-
-    bool isDepthPositive() const
-    {
-        const auto* vp = static_cast<const g2o::VertexSBAPointXYZ*>(_vertices[0]);
-        const auto* vT = static_cast<const g2o::VertexSE3Expmap*>(_vertices[1]);
-        return vT->estimate().map(vp->estimate())[2] > 0.0;
-    }
-
-    void linearizeOplus() CV_OVERRIDE
-    {
-        const auto* vp = static_cast<const g2o::VertexSBAPointXYZ*>(_vertices[0]);
-        const auto* vT = static_cast<const g2o::VertexSE3Expmap*>(_vertices[1]);
-        const Eigen::Vector3d Xc = vT->estimate().map(vp->estimate());
-        const double x = Xc[0], y = Xc[1];
-        const double invz = 1.0 / Xc[2], iz2 = invz * invz;
-        const Eigen::Matrix3d R = vT->estimate().rotation().toRotationMatrix();
-
-        for (int j = 0; j < 3; ++j)
-        {
-            _jacobianOplusXi(0, j) = -fx_ * invz * R(0,j) + fx_ * x * iz2 * R(2,j);
-            _jacobianOplusXi(1, j) = -fy_ * invz * R(1,j) + fy_ * y * iz2 * R(2,j);
-        }
-
-        _jacobianOplusXj(0, 0) =  x * y * iz2 * fx_;
-        _jacobianOplusXj(0, 1) = -(1.0 + x * x * iz2) * fx_;
-        _jacobianOplusXj(0, 2) =  y * invz * fx_;
-        _jacobianOplusXj(0, 3) = -invz * fx_;
-        _jacobianOplusXj(0, 4) =  0.0;
-        _jacobianOplusXj(0, 5) =  x * iz2 * fx_;
-
-        _jacobianOplusXj(1, 0) =  (1.0 + y * y * iz2) * fy_;
-        _jacobianOplusXj(1, 1) = -x * y * iz2 * fy_;
-        _jacobianOplusXj(1, 2) = -x * invz * fy_;
-        _jacobianOplusXj(1, 3) =  0.0;
-        _jacobianOplusXj(1, 4) = -invz * fy_;
-        _jacobianOplusXj(1, 5) =  y * iz2 * fy_;
-    }
-
-private:
-    double fx_, fy_, cx_, cy_;
-};
 
 static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFlag)
 {
@@ -215,7 +141,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
         optimizer.addVertex(v);
     }
 
-    struct EdgeRec { EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
+    struct EdgeRec { g2o::EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
     std::vector<EdgeRec> recs;
     recs.reserve(localMps.size() * 4);
 
@@ -227,7 +153,8 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
             if (!localKfSet.count(obsKf) && !fixedKfSet.count(obsKf)) continue;
             if (kpIdx >= obsKf->undistKpts.size()) continue;
 
-            auto* e = new EdgeSE3ProjectXYZ(fx, fy, cx, cy);
+            auto* e = new g2o::EdgeSE3ProjectXYZ();
+            e->fx = fx; e->fy = fy; e->cx = cx; e->cy = cy;
             e->setVertex(0, optimizer.vertex(ptVid));
             e->setVertex(1, optimizer.vertex(obsKf->id));
             e->setMeasurement(Eigen::Vector2d(obsKf->undistKpts[kpIdx].x,
@@ -375,7 +302,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
     }
 
     // MP vertices + reprojection edges
-    struct EdgeRec { EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
+    struct EdgeRec { g2o::EdgeSE3ProjectXYZ* e; KeyFrame* kf; MapPoint* mp; size_t kpIdx; };
     std::vector<EdgeRec> recs;
     recs.reserve(mps.size() * 3);
     size_t nEdges = 0;
@@ -395,7 +322,8 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
             if (!optimizer.vertex(obsKf->id)) continue;
             if (kpIdx >= obsKf->undistKpts.size()) continue;
 
-            auto* e = new EdgeSE3ProjectXYZ(fx, fy, cx, cy);
+            auto* e = new g2o::EdgeSE3ProjectXYZ();
+            e->fx = fx; e->fy = fy; e->cx = cx; e->cy = cy;
             e->setVertex(0, optimizer.vertex(pid));
             e->setVertex(1, optimizer.vertex(obsKf->id));
             e->setMeasurement(Eigen::Vector2d(obsKf->undistKpts[kpIdx].x,

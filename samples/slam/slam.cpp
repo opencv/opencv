@@ -148,29 +148,34 @@ static bool writeColmapFiles(const Ptr<slam::VisualOdometry>& vo,
         return false;
     }
 
-    // camera.txt
+    // cameras.txt
     {
-        ofstream file(utils::fs::join(outputFolder, "camera.txt").c_str());
-        if (!file.is_open()) { cerr << "cannot write camera.txt" << endl; return false; }
+        ofstream file(utils::fs::join(outputFolder, "cameras.txt").c_str());
+        if (!file.is_open()) { cerr << "cannot write cameras.txt" << endl; return false; }
         file << "# Camera list with one line of data per camera:\n"
-             << "#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[fx, fy, cx, cy, dist...]\n";
+             << "#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n"
+             << "# Number of cameras: 1\n";
         file << setprecision(9);
-        file << "1 " << (distCoeffs.empty() ? "PINHOLE" : "FULL_OPENCV") << " "
+        const bool hasDist = !distCoeffs.empty();
+        file << "1 " << (hasDist ? "FULL_OPENCV" : "PINHOLE") << " "
              << imageSize.width << " " << imageSize.height << " "
              << K(0, 0) << " " << K(1, 1) << " " << K(0, 2) << " " << K(1, 2);
-        for (int i = 0; i < (int)distCoeffs.total(); ++i)
-            file << " " << distCoeffs.at<double>(i);
+        if (hasDist)
+            // FULL_OPENCV needs exactly 8 params (k1,k2,p1,p2,k3,k4,k5,k6); pad any shorter --dist with zeros.
+            for (int i = 0; i < 8; ++i)
+                file << " " << (i < (int)distCoeffs.total() ? distCoeffs.at<double>(i) : 0.0);
         file << "\n";
     }
 
-    // images.txt
+    // images.txt; IDs are 1-based because COLMAP reserves id 0 as "invalid".
     {
         const vector<Matx44d> trajectory = vo->getCorrectedTrajectory();
         ofstream file(utils::fs::join(outputFolder, "images.txt").c_str());
         if (!file.is_open()) { cerr << "cannot write images.txt" << endl; return false; }
-        file << "# Image list with one line of data per image:\n"
+        file << "# Image list with two lines of data per image:\n"
              << "#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n"
-             << "# Number of images: " << trajectory.size() << "\n";
+             << "#   POINTS2D[] as (X, Y, POINT3D_ID)\n"
+             << "# Number of images: " << trajectory.size() << ", mean observations per image: 0\n";
         file << setprecision(9);
         for (size_t i = 0; i < trajectory.size(); ++i)
         {
@@ -180,25 +185,31 @@ static bool writeColmapFiles(const Ptr<slam::VisualOdometry>& vo,
             const String name = i < poseImageNames.size()
                               ? poseImageNames[i].substr(poseImageNames[i].find_last_of("/\\") + 1)
                               : format("pose_%zu", i);
-            file << i << " " << q.w << " " << q.x << " " << q.y << " " << q.z << " "
+            file << (i + 1) << " " << q.w << " " << q.x << " " << q.y << " " << q.z << " "
                  << poseCw(0, 3) << " " << poseCw(1, 3) << " " << poseCw(2, 3)
-                 << " 1 " << name << "\n";
+                 << " 1 " << name << "\n"
+                 // Second (POINTS2D) line left blank: 2D-3D correspondences are only known for
+                 // keyframes, but this file enumerates every tracked frame, so there's no
+                 // reliable per-frame keypoint list to emit here.
+                 << "\n";
         }
     }
 
-    // point3d.txt
+    // points3D.txt; IDs are 1-based for the same reason as images.txt.
     {
-        ofstream file(utils::fs::join(outputFolder, "point3d.txt").c_str());
-        if (!file.is_open()) { cerr << "cannot write point3d.txt" << endl; return false; }
+        ofstream file(utils::fs::join(outputFolder, "points3D.txt").c_str());
+        if (!file.is_open()) { cerr << "cannot write points3D.txt" << endl; return false; }
         file << "# 3D point list with one line of data per point:\n"
-             << "#   POINT3D_ID, X, Y, Z, TRACK_LENGTH\n";
+             << "#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n";
         file << setprecision(9);
         for (const slam::MapPoint* point : vo->getMap().mapPoints())
         {
             if (!point || point->bad) continue;
-            file << point->id << " "
-                 << point->pos.x << " " << point->pos.y << " " << point->pos.z << " "
-                 << point->observations.size() << "\n";
+            // Color is unavailable (no per-point sampling) and TRACK is left empty: observations
+            // are keyed by KeyFrame*, which doesn't map to the per-frame IMAGE_IDs above.
+            file << (point->id + 1) << " "
+                 << point->pos.x << " " << point->pos.y << " " << point->pos.z
+                 << " 128 128 128 -1\n";
         }
     }
 
@@ -336,7 +347,7 @@ int main(int argc, char** argv)
          << "elapsed time  : " << fixed << setprecision(2) << elapsed << " s\n";
     if (exported)
         cout << "output        : " << outputDir
-             << "/{camera,images,point3d,keyframe_images}.txt\n";
+             << "/{cameras,images,points3D,keyframe_images}.txt\n";
     cout << "======================================================\n";
 
     return ok ? 0 : 1;

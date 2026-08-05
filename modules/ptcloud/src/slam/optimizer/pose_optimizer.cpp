@@ -50,7 +50,6 @@ static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThres
 
 #ifdef HAVE_G2O
 
-#include <g2o/core/base_unary_edge.h>
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/core/robust_kernel_impl.h>
@@ -63,70 +62,6 @@ static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThres
 #include <Eigen/Geometry>
 
 namespace cv { namespace slam {
-
-// Unary reprojection edge: variable pose vertex (T_cw), fixed 3D point Xw
-// baked in at construction. Error = obs_2d − π(T_cw · Xw)
-class EdgeSE3ProjectXYZOnlyPose :
-    public g2o::BaseUnaryEdge<2, Eigen::Vector2d, g2o::VertexSE3Expmap>
-{
-public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    EdgeSE3ProjectXYZOnlyPose(const Eigen::Vector3d& Xw,
-                               double fx, double fy, double cx, double cy)
-        : Xw_(Xw), fx_(fx), fy_(fy), cx_(cx), cy_(cy) {}
-
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-    bool read(std::istream&)        { return false; }
-    bool write(std::ostream&) const { return false; }
-#if defined(__GNUC__) && __GNUC__ >= 5
-#pragma GCC diagnostic pop
-#endif
-
-    void computeError() CV_OVERRIDE
-    {
-        const auto* v = static_cast<const g2o::VertexSE3Expmap*>(_vertices[0]);
-        const Eigen::Vector3d Xc = v->estimate().map(Xw_);
-        _error = _measurement - Eigen::Vector2d(fx_ * Xc[0] / Xc[2] + cx_,
-                                                 fy_ * Xc[1] / Xc[2] + cy_);
-    }
-
-    bool isDepthPositive() const
-    {
-        const auto* v = static_cast<const g2o::VertexSE3Expmap*>(_vertices[0]);
-        return v->estimate().map(Xw_)[2] > 0.0;
-    }
-
-    void linearizeOplus() CV_OVERRIDE
-    {
-        const auto* v = static_cast<const g2o::VertexSE3Expmap*>(_vertices[0]);
-        const Eigen::Vector3d Xc   = v->estimate().map(Xw_);
-        const double x    = Xc[0], y = Xc[1];
-        const double invz = 1.0 / Xc[2];
-        const double iz2  = invz * invz;
-
-        _jacobianOplusXi(0, 0) =  x * y * iz2 * fx_;
-        _jacobianOplusXi(0, 1) = -(1.0 + x * x * iz2) * fx_;
-        _jacobianOplusXi(0, 2) =  y * invz * fx_;
-        _jacobianOplusXi(0, 3) = -invz * fx_;
-        _jacobianOplusXi(0, 4) =  0.0;
-        _jacobianOplusXi(0, 5) =  x * iz2 * fx_;
-
-        _jacobianOplusXi(1, 0) =  (1.0 + y * y * iz2) * fy_;
-        _jacobianOplusXi(1, 1) = -x * y * iz2 * fy_;
-        _jacobianOplusXi(1, 2) = -x * invz * fy_;
-        _jacobianOplusXi(1, 3) =  0.0;
-        _jacobianOplusXi(1, 4) = -invz * fy_;
-        _jacobianOplusXi(1, 5) =  y * iz2 * fy_;
-    }
-
-private:
-    Eigen::Vector3d Xw_;
-    double fx_, fy_, cx_, cy_;
-};
 
 // real 6-DoF pose-only bundle adjustment
 static int poseOptimizationG2O(Frame& frame, const Mat& K)
@@ -163,7 +98,7 @@ static int poseOptimizationG2O(Frame& frame, const Mat& K)
     constexpr int    kIters      = 4;
 
     const int N = static_cast<int>(frame.mapPoints.size());
-    std::vector<EdgeSE3ProjectXYZOnlyPose*> edges(N, nullptr);
+    std::vector<g2o::EdgeSE3ProjectXYZOnlyPose*> edges(N, nullptr);
 
     for (int i = 0; i < N; ++i)
     {
@@ -171,9 +106,9 @@ static int poseOptimizationG2O(Frame& frame, const Mat& K)
         MapPoint* mp = frame.mapPoints[i];
         if (!mp || mp->bad) continue;
 
-        auto* e = new EdgeSE3ProjectXYZOnlyPose(
-            Eigen::Vector3d(mp->pos.x, mp->pos.y, mp->pos.z),
-            fx, fy, cx, cy);
+        auto* e = new g2o::EdgeSE3ProjectXYZOnlyPose();
+        e->Xw = Eigen::Vector3d(mp->pos.x, mp->pos.y, mp->pos.z);
+        e->fx = fx; e->fy = fy; e->cx = cx; e->cy = cy;
 
         e->setId(i + 1);
         e->setVertex(0, vPose);

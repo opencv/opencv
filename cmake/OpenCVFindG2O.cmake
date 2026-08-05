@@ -10,7 +10,7 @@ if(NOT HAVE_EIGEN)
   return()
 endif()
 
-add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/g2o" "${CMAKE_BINARY_DIR}/3rdparty/g2o")
+add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/g2o")
 
 if(HAVE_G2O)
   message(STATUS "G2O: static library ready")

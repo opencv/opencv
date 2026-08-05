@@ -19,7 +19,7 @@ namespace slam {
 class Map; // forward declaration
 
 // static optimisation routines — never instantiated, called as Optimizer::Xxx(...)
-class Optimizer
+class CV_EXPORTS Optimizer   // exported so the accuracy tests can link them
 {
 public:
     Optimizer() = delete;

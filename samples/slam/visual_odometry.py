@@ -14,12 +14,11 @@ Sample command (run on the GPU):
 '''
 
 import argparse
-import glob
-import os
 import sys
 import time
-import numpy as np
 import cv2 as cv
+
+from slam_common import build_K, parse_dist_coeffs, list_image_files, write_colmap_files
 
 BACKENDS = {
     'default': cv.dnn.DNN_BACKEND_DEFAULT,
@@ -39,88 +38,6 @@ TARGETS = {
     'cuda': cv.dnn.DNN_TARGET_CUDA,
     'cuda_fp16': cv.dnn.DNN_TARGET_CUDA_FP16,
 }
-
-
-def build_K(fx, fy, cx, cy):
-    return np.array([[fx, 0., cx],
-                     [0., fy, cy],
-                     [0., 0., 1.]], dtype=np.float64)
-
-
-def parse_dist_coeffs(text):
-    # "k1,k2,p1,p2[,k3,...]" -> 1xN row; empty input means no distortion.
-    if not text:
-        return np.array([])
-    return np.array([float(tok) for tok in text.split(',') if tok.strip()], dtype=np.float64)
-
-
-def list_image_files(images_dir):
-    files = [f for f in sorted(glob.glob(os.path.join(images_dir, '*')))
-             if cv.haveImageReader(f)]
-    return files
-
-
-def rotation_matrix_to_quaternion(R):
-    # cv::Quat::createFromRotMat() (used by the C++ sample) is not exposed to Python,
-    # so the conversion is done here with Shepperd's method: numerically stable for all
-    # rotations.
-    trace = R[0, 0] + R[1, 1] + R[2, 2]
-    if trace > 0:
-        s = np.sqrt(trace + 1.0) * 2
-        qw = 0.25 * s
-        qx = (R[2, 1] - R[1, 2]) / s
-        qy = (R[0, 2] - R[2, 0]) / s
-        qz = (R[1, 0] - R[0, 1]) / s
-    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
-        s = np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2
-        qw = (R[2, 1] - R[1, 2]) / s
-        qx = 0.25 * s
-        qy = (R[0, 1] + R[1, 0]) / s
-        qz = (R[0, 2] + R[2, 0]) / s
-    elif R[1, 1] > R[2, 2]:
-        s = np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2
-        qw = (R[0, 2] - R[2, 0]) / s
-        qx = (R[0, 1] + R[1, 0]) / s
-        qy = 0.25 * s
-        qz = (R[1, 2] + R[2, 1]) / s
-    else:
-        s = np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2
-        qw = (R[1, 0] - R[0, 1]) / s
-        qx = (R[0, 2] + R[2, 0]) / s
-        qy = (R[1, 2] + R[2, 1]) / s
-        qz = 0.25 * s
-    return qw, qx, qy, qz
-
-
-def write_colmap_files(vo, K, image_size, pose_filenames, output_dir):
-    # Note: cv.slam.Map isn't wrapped for Python (only aggregate counts are,
-    # via getNumKeyframes/getNumMapPoints), so only camera intrinsics and the
-    # trajectory (images.txt) can be exported here; point3d.txt (map points)
-    # requires the C++ sample.
-    os.makedirs(output_dir, exist_ok=True)
-
-    with open(os.path.join(output_dir, 'camera.txt'), 'w') as f:
-        f.write(f"fx {K[0, 0]:.4f}\n")
-        f.write(f"fy {K[1, 1]:.4f}\n")
-        f.write(f"cx {K[0, 2]:.4f}\n")
-        f.write(f"cy {K[1, 2]:.4f}\n")
-        f.write(f"width {image_size[0]}\n")
-        f.write(f"height {image_size[1]}\n")
-
-    # No bundle adjustment or loop closure runs here, so getTrajectory() (the raw,
-    # per-frame log) already is the final trajectory -- there is nothing to correct.
-    traj = vo.getTrajectory()
-    with open(os.path.join(output_dir, 'images.txt'), 'w') as f:
-        f.write("# Image list with two lines of data per image:\n")
-        f.write("#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
-        f.write("#   POINTS2D[] as (X, Y, POINT3D_ID)\n")
-        f.write(f"# Number of images: {len(traj)}, mean observations per image: 0.0\n")
-        for i, T in enumerate(traj):
-            qw, qx, qy, qz = rotation_matrix_to_quaternion(T[:3, :3])
-            name = (os.path.basename(pose_filenames[i]) if i < len(pose_filenames)
-                    else f"pose_{i}")
-            f.write(f"{i} {qw:.6f} {qx:.6f} {qy:.6f} {qz:.6f} "
-                    f"{T[0,3]:.6f} {T[1,3]:.6f} {T[2,3]:.6f} 1 {name}\n")
 
 
 def main():
@@ -159,7 +76,7 @@ def main():
 
     det_params = cv.ALIKED.Params()
     det_params.inputSize = (640, 640)
-    det_params.engine    = cv.dnn.ENGINE_NEW
+    det_params.engine    = cv.dnn.ENGINE_OPENCV
     det_params.backend   = backend_id
     det_params.target    = target_id
     detector = cv.ALIKED.create(args.aliked, det_params)
@@ -237,7 +154,10 @@ def main():
     ok = len(vo.getTrajectory()) > 0
     exported = False
     if ok and args.output:
-        write_colmap_files(vo, K, image_size, pose_filenames, args.output)
+        # No bundle adjustment or loop closure runs here, so getTrajectory() (the raw,
+        # per-frame log) already is the final trajectory -- there is nothing to correct.
+        write_colmap_files(vo, K, dist_coeffs, image_size, pose_filenames, args.output,
+                            vo.getTrajectory())
         exported = True
 
     print("\n"
@@ -248,7 +168,7 @@ def main():
           f"map points    : {vo.getNumMapPoints()}\n"
           f"elapsed time  : {elapsed:.2f} s")
     if exported:
-        print(f"output        : {args.output}/{{camera,images}}.txt")
+        print(f"output        : {args.output}/{{cameras,images,points3D}}.txt")
     print("==========================================================")
     return 0 if ok else 1
 

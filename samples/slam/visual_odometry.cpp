@@ -3,23 +3,11 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 
-#include <opencv2/ptcloud.hpp>
 #include <opencv2/features.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/core/quaternion.hpp>
-#include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/core/utils/logger.hpp>
-#include <opencv2/imgcodecs.hpp>
-
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
 
 #include "../dnn/common.hpp"
-
-using namespace cv;
-using namespace std;
+#include "slam_common.hpp"
 
 const string about =
     "Modular monocular visual odometry: feature tracking + PnP, no bundle adjustment\n"
@@ -66,112 +54,6 @@ const string target_keys = format(
                               "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 string keys = param_keys + backend_keys + target_keys;
-
-static vector<String> collectImages(const String& imagesDir)
-{
-    vector<String> allFiles;
-    try
-    {
-        glob(imagesDir, allFiles, false);
-    }
-    catch (const Exception& e)
-    {
-        cerr << "glob failed on " << imagesDir << ": " << e.what() << endl;
-        return {};
-    }
-
-    vector<String> imageFiles;
-    imageFiles.reserve(allFiles.size());
-    for (const String& file : allFiles)
-        if (haveImageReader(file))
-            imageFiles.push_back(file);
-
-    sort(imageFiles.begin(), imageFiles.end());
-    return imageFiles;
-}
-
-static Mat parseDistCoeffs(const String& text)
-{
-    stringstream stream(text);
-    vector<double> coeffs;
-    String token;
-    while (getline(stream, token, ','))
-    {
-        const size_t begin = token.find_first_not_of(" \t");
-        const size_t end   = token.find_last_not_of(" \t");
-        if (begin == String::npos) continue;
-        coeffs.push_back(stod(token.substr(begin, end - begin + 1)));
-    }
-    return coeffs.empty() ? Mat() : Mat(coeffs, true).reshape(1, 1);
-}
-
-static bool writeColmapFiles(const Ptr<slam::VisualOdometry>& vo,
-                             const Matx33d& K, const Mat& distCoeffs, Size imageSize,
-                             const vector<String>& poseImageNames,
-                             const String& outputFolder)
-{
-    if (!utils::fs::createDirectories(outputFolder))
-    {
-        cerr << "cannot create output directory " << outputFolder << endl;
-        return false;
-    }
-
-    // camera.txt
-    {
-        ofstream file(utils::fs::join(outputFolder, "camera.txt").c_str());
-        if (!file.is_open()) { cerr << "cannot write camera.txt" << endl; return false; }
-        file << "# Camera list with one line of data per camera:\n"
-             << "#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[fx, fy, cx, cy, dist...]\n";
-        file << setprecision(9);
-        file << "1 " << (distCoeffs.empty() ? "PINHOLE" : "FULL_OPENCV") << " "
-             << imageSize.width << " " << imageSize.height << " "
-             << K(0, 0) << " " << K(1, 1) << " " << K(0, 2) << " " << K(1, 2);
-        for (int i = 0; i < (int)distCoeffs.total(); ++i)
-            file << " " << distCoeffs.at<double>(i);
-        file << "\n";
-    }
-
-    // images.txt
-    {
-        const vector<Matx44d>& trajectory = vo->getTrajectory();
-        ofstream file(utils::fs::join(outputFolder, "images.txt").c_str());
-        if (!file.is_open()) { cerr << "cannot write images.txt" << endl; return false; }
-        file << "# Image list with one line of data per image:\n"
-             << "#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n"
-             << "# Number of images: " << trajectory.size() << "\n";
-        file << setprecision(9);
-        for (size_t i = 0; i < trajectory.size(); ++i)
-        {
-            const Matx44d& poseCw = trajectory[i];
-            const Quatd q = Quatd::createFromRotMat(poseCw.get_minor<3, 3>(0, 0));
-            // COLMAP expects a name relative to the image directory, not a full path.
-            const String name = i < poseImageNames.size()
-                              ? poseImageNames[i].substr(poseImageNames[i].find_last_of("/\\") + 1)
-                              : format("pose_%zu", i);
-            file << i << " " << q.w << " " << q.x << " " << q.y << " " << q.z << " "
-                 << poseCw(0, 3) << " " << poseCw(1, 3) << " " << poseCw(2, 3)
-                 << " 1 " << name << "\n";
-        }
-    }
-
-    // point3d.txt
-    {
-        ofstream file(utils::fs::join(outputFolder, "point3d.txt").c_str());
-        if (!file.is_open()) { cerr << "cannot write point3d.txt" << endl; return false; }
-        file << "# 3D point list with one line of data per point:\n"
-             << "#   POINT3D_ID, X, Y, Z, TRACK_LENGTH\n";
-        file << setprecision(9);
-        for (const slam::MapPoint* point : vo->getMap().mapPoints())
-        {
-            if (!point || point->bad) continue;
-            file << point->id << " "
-                 << point->pos.x << " " << point->pos.y << " " << point->pos.z << " "
-                 << point->observations.size() << "\n";
-        }
-    }
-
-    return true;
-}
 
 int main(int argc, char** argv)
 {
@@ -289,7 +171,7 @@ int main(int argc, char** argv)
     {
         try
         {
-            exported = writeColmapFiles(vo, K, distCoeffs, imageSize, poseImageNames, outputDir);
+            exported = writeColmapFiles(vo, vo->getTrajectory(), K, distCoeffs, imageSize, poseImageNames, outputDir);
         }
         catch (const Exception& e)
         {
@@ -305,7 +187,7 @@ int main(int argc, char** argv)
          << "map points    : " << vo->getNumMapPoints() << "\n"
          << "elapsed time  : " << fixed << setprecision(2) << elapsed << " s\n";
     if (exported)
-        cout << "output        : " << outputDir << "/{camera,images,point3d}.txt\n";
+        cout << "output        : " << outputDir << "/{cameras,images,points3D}.txt\n";
     cout << "==========================================================\n";
 
     return ok ? 0 : 1;
