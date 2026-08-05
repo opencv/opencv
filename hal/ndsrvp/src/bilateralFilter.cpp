@@ -209,7 +209,7 @@ int bilateralFilter(const uchar* src_data, size_t src_step,
         for(; j + cal_x < 0; j++)
         {
             int x = borderInterpolate(j + cal_x, width, border_type);
-            if(x < 0) // border constant return value -1
+            if(x < 0 || x >= width) // border constant return value -1
                 ogn_ptr = &vec_zeros[0];
             else
                 ogn_ptr = ogn_data + y * ogn_step + x * cn;
@@ -228,7 +228,7 @@ int bilateralFilter(const uchar* src_data, size_t src_step,
         for(; j < cal_width; j++)
         {
             int x = borderInterpolate(j + cal_x, width, border_type);
-            if(x < 0) // border constant return value -1
+            if(x < 0 || x >= width) // border constant return value -1
                 ogn_ptr = &vec_zeros[0];
             else
                 ogn_ptr = ogn_data + y * ogn_step + x * cn;
