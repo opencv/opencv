@@ -397,6 +397,91 @@ TEST_P(Test_ScatterND_Int, random)
     }
 }
 
+typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_Scatter_Int;
+TEST_P(Test_Scatter_Int, random)
+{
+    int matType = get<0>(GetParam());
+    int indicesType = get<1>(GetParam());
+    tuple<Backend, Target> backend_target= get<2>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    const int axis = 2, scatterAt = 2;
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandom(input, matType, backend);
+
+    // One update per (i0, i1, i3), all aimed at the same position along the axis.
+    std::vector<int> idxShape{2, 3, 1, 5};
+    Mat indices(idxShape, indicesType);
+    Mat updates(idxShape, matType);
+    for (int i = 0; i < (int)updates.total(); ++i)
+    {
+        if (indicesType == CV_32S)
+            indices.ptr<int32_t>()[i] = scatterAt;
+        else
+            indices.ptr<int64_t>()[i] = scatterAt;
+        setValueAt(updates, i, matType == CV_Bool ? 1 : i + 1);
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Scatter";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+    net.connect(0, 2, id, 2);
+
+    std::vector<String> inpNames(3);
+    inpNames[0] = "scatter_input";
+    inpNames[1] = "scatter_indices";
+    inpNames[2] = "scatter_updates";
+    net.setInputsNames(inpNames);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    net.setInput(updates, inpNames[2]);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(shape(input), shape(re));
+
+    std::vector<int> reIndices(4);
+    for (int i0 = 0; i0 < input.size[0]; ++i0)
+    {
+        reIndices[0] = i0;
+        for (int i1 = 0; i1 < input.size[1]; ++i1)
+        {
+            reIndices[1] = i1;
+            for (int i2 = 0; i2 < input.size[2]; ++i2)
+            {
+                reIndices[2] = i2;
+                for (int i3 = 0; i3 < input.size[3]; ++i3)
+                {
+                    reIndices[3] = i3;
+                    if (i2 == scatterAt)
+                    {
+                        int flat = (i0 * idxShape[1] + i1) * idxShape[3] + i3;
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(updates, flat));
+                    }
+                    else
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, reIndices.data()));
+                }
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Scatter_Int, Combine(
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ScatterND_Int, Combine(
     testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
@@ -1462,6 +1547,79 @@ TEST_P(Test_Neg_Int, random)
 INSTANTIATE_TEST_CASE_P(/**/, Test_Neg_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_GatherND_Int;
+TEST_P(Test_GatherND_Int, random)
+{
+    int matType = get<0>(GetParam());
+    int indicesType = get<1>(GetParam());
+    tuple<Backend, Target> backend_target= get<2>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    // CV_64S data currently requires int64 indices.
+    if (matType == CV_64S && indicesType == CV_32S)
+        return;
+
+    std::vector<int> inShape{4, 5};
+    Mat input(inShape, matType);
+    fillRandom(input, matType, backend);
+
+    // Each row of indices selects one full row of the input.
+    std::vector<int64_t> rowPicks{2, 0, 3};
+    std::vector<int> idxShape{(int)rowPicks.size(), 1};
+    Mat indices(idxShape, indicesType);
+    for (size_t i = 0; i < rowPicks.size(); ++i)
+    {
+        if (indicesType == CV_32S)
+            indices.ptr<int32_t>()[i] = (int32_t)rowPicks[i];
+        else
+            indices.ptr<int64_t>()[i] = rowPicks[i];
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "gathernd_input";
+    inpNames[1] = "gathernd_indices";
+    net.setInputsNames(inpNames);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.size.dims, 2);
+    ASSERT_EQ(re.size[0], (int)rowPicks.size());
+    ASSERT_EQ(re.size[1], input.size[1]);
+
+    std::vector<int> reIndices(2), inIndices(2);
+    for (int i = 0; i < re.size[0]; ++i)
+    {
+        reIndices[0] = i;
+        inIndices[0] = (int)rowPicks[i];
+        for (int j = 0; j < re.size[1]; ++j)
+        {
+            reIndices[1] = j;
+            inIndices[1] = j;
+            EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, inIndices.data()));
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_GatherND_Int, Combine(
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
 ));
 
 }} // namespace
