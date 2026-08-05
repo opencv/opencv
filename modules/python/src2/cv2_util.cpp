@@ -8,21 +8,49 @@ cv::TLSData<std::vector<std::string> > conversionErrorsTLS;
 
 int cvDepthToNumpyType(int depth)
 {
-    const int f = (int)(sizeof(size_t)/8);
-    return depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
-           depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
-           depth == CV_32U ? NPY_UINT32 : depth == CV_32S ? NPY_INT32 : depth == CV_64S ? NPY_INT64 :
-           depth == CV_32F ? NPY_FLOAT : depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF :
-           depth == CV_Bool ? NPY_BOOL : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+    switch (depth)
+    {
+    case CV_8U:   return NPY_UBYTE;
+    case CV_8S:   return NPY_BYTE;
+    case CV_16U:  return NPY_USHORT;
+    case CV_16S:  return NPY_SHORT;
+    case CV_32U:  return NPY_UINT32;
+    case CV_32S:  return NPY_INT32;
+    case CV_64U:  return NPY_UINT64;
+    case CV_64S:  return NPY_INT64;
+    case CV_32F:  return NPY_FLOAT;
+    case CV_64F:  return NPY_DOUBLE;
+    case CV_16F:  return NPY_HALF;
+    // NumPy has no bfloat16 dtype; pyopencv_from() converts the values to float32.
+    case CV_16BF: return NPY_FLOAT;
+    case CV_Bool: return NPY_BOOL;
+    default:
+        CV_Error(cv::Error::StsNotImplemented,
+                 cv::format("Mat depth %d has no corresponding NumPy dtype", depth));
+    }
 }
 
 int numpyTypeToCvDepth(int typenum)
 {
-    return typenum == NPY_UBYTE ? CV_8U : typenum == NPY_BYTE ? CV_8S :
-           typenum == NPY_USHORT ? CV_16U : typenum == NPY_SHORT ? CV_16S :
-           typenum == NPY_INT ? CV_32S : typenum == NPY_UINT32 ? CV_32U : typenum == NPY_INT32 ? CV_32S :
-           typenum == NPY_HALF ? CV_16F : typenum == NPY_FLOAT ? CV_32F : typenum == NPY_DOUBLE ? CV_64F :
-           typenum == NPY_BOOL ? CV_Bool : -1;
+    // Only canonical NPY_* values may be used as case labels: the fixed-width
+    // aliases (NPY_INT32, NPY_INT64, ...) expand to these and would collide.
+    switch (typenum)
+    {
+    case NPY_UBYTE:     return CV_8U;
+    case NPY_BYTE:      return CV_8S;
+    case NPY_USHORT:    return CV_16U;
+    case NPY_SHORT:     return CV_16S;
+    case NPY_UINT:      return CV_32U;
+    case NPY_INT:       return CV_32S;
+    case NPY_ULONGLONG: return CV_64U;
+    // 'long' is 64-bit on LP64 but 32-bit on LLP64, so decide by size, not by name.
+    case NPY_ULONG:     return NPY_SIZEOF_LONG == 8 ? CV_64U : CV_32U;
+    case NPY_HALF:      return CV_16F;
+    case NPY_FLOAT:     return CV_32F;
+    case NPY_DOUBLE:    return CV_64F;
+    case NPY_BOOL:      return CV_Bool;
+    default:            return -1;
+    }
 }
 
 using namespace cv;

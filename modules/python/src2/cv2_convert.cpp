@@ -133,7 +133,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     if( type < 0 )
     {
-        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
+        if( typenum == NPY_INT64 || typenum == NPY_LONG || typenum == NPY_LONGLONG )
         {
             needcopy = needcast = true;
             new_typenum = NPY_INT;
@@ -315,6 +315,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
+    // NumPy has no bfloat16 dtype: widen CV_16BF to float32 (lossless).
+    if( m.depth() == CV_16BF )
+    {
+        cv::Mat m32f;
+        ERRWRAP2(m.convertTo(m32f, CV_32F));
+        return pyopencv_from(m32f);
+    }
     if( m.empty() )
     {
         // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
