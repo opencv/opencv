@@ -1353,6 +1353,14 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
     if (lstm_proto.input_size() == 8 && !lstm_proto.input(7).empty())
         layerParams.set("use_peephole", true);
 
+    // W/R (and B/P if present) are usually const: let the layer transform them once.
+    bool const_weights = lstm_proto.input_size() >= 3 &&
+                         net.isConstArg(node_inputs[1]) && net.isConstArg(node_inputs[2]);
+    if (const_weights && lstm_proto.input_size() > 3 && !lstm_proto.input(3).empty())
+        const_weights = net.isConstArg(node_inputs[3]);
+    if (const_weights && lstm_proto.input_size() > 7 && !lstm_proto.input(7).empty())
+        const_weights = net.isConstArg(node_inputs[7]);
+    layerParams.set("const_weights", const_weights);
 
     addLayer(layerParams, lstm_proto);
 }
