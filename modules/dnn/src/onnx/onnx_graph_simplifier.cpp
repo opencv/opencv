@@ -2023,27 +2023,25 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     }
 }
 
-// Mirrors the cv depth the payload switch below assigns to each ONNX dtype, so an empty
-// tensor is typed identically to a non-empty one (FP16->CV_32F); -1 if the switch omits it.
-static int matDepthFromOnnxDataType(int datatype)
+// ONNX dtype -> OpenCV type. Shared with the ONNX importer (declared in the header).
+int dataType2cv(int dt)
 {
-    switch (datatype)
-    {
-    case opencv_onnx::TensorProto_DataType_FLOAT:
-    case opencv_onnx::TensorProto_DataType_FLOAT16:  return CV_32F;
-    case opencv_onnx::TensorProto_DataType_BFLOAT16: return CV_16BF;
-    case opencv_onnx::TensorProto_DataType_DOUBLE:   return CV_64F;
-    case opencv_onnx::TensorProto_DataType_INT8:     return CV_8S;
-    case opencv_onnx::TensorProto_DataType_UINT8:    return CV_8U;
-    case opencv_onnx::TensorProto_DataType_INT16:    return CV_16S;
-    case opencv_onnx::TensorProto_DataType_UINT16:   return CV_16U;
-    case opencv_onnx::TensorProto_DataType_INT32:    return CV_32S;
-    case opencv_onnx::TensorProto_DataType_UINT32:   return CV_32U;
-    case opencv_onnx::TensorProto_DataType_INT64:    return CV_64S;
-    case opencv_onnx::TensorProto_DataType_UINT64:   return CV_64U;
-    case opencv_onnx::TensorProto_DataType_BOOL:     return CV_Bool;
-    default:                                         return -1;
-    }
+    return
+        dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
+        dt == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S :
+        dt == opencv_onnx::TensorProto_DataType_UINT16 ? CV_16U :
+        dt == opencv_onnx::TensorProto_DataType_INT16 ? CV_16S :
+        dt == opencv_onnx::TensorProto_DataType_UINT32 ? CV_32U :
+        dt == opencv_onnx::TensorProto_DataType_INT32 ? CV_32S :
+        dt == opencv_onnx::TensorProto_DataType_UINT64 ? CV_64U :
+        dt == opencv_onnx::TensorProto_DataType_INT64 ? CV_64S :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
+        dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
+        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
+        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
 }
 
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
@@ -2054,16 +2052,18 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         (!tensor_proto.has_data_location() || tensor_proto.data_location() != opencv_onnx::TensorProto::EXTERNAL)
     )
     {
-        // Keep the declared dtype for a genuine empty tensor (a 0-sized dim); an untyped
-        // Mat() would read as CV_8U. A malformed no-data tensor stays bare.
-        const int depth = matDepthFromOnnxDataType(tensor_proto.data_type());
+        // Preserve dtype for an empty tensor (0-sized dim); untyped Mat() defaults to CV_8U.
+        // fp16 -> CV_32F to match the payload widening below.
+        int type = dataType2cv(tensor_proto.data_type());
+        if (type == CV_16F)
+            type = CV_32F;
         bool genuinely_empty = false;
         for (int d = 0; d < tensor_proto.dims_size(); d++)
             if (tensor_proto.dims(d) == 0) { genuinely_empty = true; break; }
-        if (depth >= 0 && genuinely_empty)
+        if (type >= 0 && genuinely_empty)
         {
             std::vector<int> shape(tensor_proto.dims().begin(), tensor_proto.dims().end());
-            return Mat(shape, depth);
+            return Mat(shape, type);
         }
         return Mat();
     }

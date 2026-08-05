@@ -9,8 +9,10 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
-// com.microsoft MatMulNBits: Y = A @ dequant(B).T. Weights are block-quantized to {4,8} bits
-// (symmetric, default zero-point 2^(bits-1)) and dequantized per block inside the GEMM (no fp32 copy).
+// com.microsoft MatMulNBits (contrib op, since com.microsoft opset 1):
+// https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#commicrosoftmatmulnbits
+// Y = A @ dequant(B).T. Weights are block-quantized to {4,8} bits (symmetric, default
+// zero-point 2^(bits-1)) and dequantized per block inside the GEMM (no fp32 copy).
 
 namespace cv { namespace dnn {
 

@@ -62,25 +62,6 @@ static T getScalarFromMat(Mat m)
 
 
 
-static int dataType2cv(int dt)
-{
-    return
-        dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
-        dt == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S :
-        dt == opencv_onnx::TensorProto_DataType_UINT16 ? CV_16U :
-        dt == opencv_onnx::TensorProto_DataType_INT16 ? CV_16S :
-        dt == opencv_onnx::TensorProto_DataType_UINT32 ? CV_32U :
-        dt == opencv_onnx::TensorProto_DataType_INT32 ? CV_32S :
-        dt == opencv_onnx::TensorProto_DataType_UINT64 ? CV_64U :
-        dt == opencv_onnx::TensorProto_DataType_INT64 ? CV_64S :
-        dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
-        dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
-        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
-        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
-        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
-        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
-        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
-}
 
 
 static std::string dataType2str(int dt)
