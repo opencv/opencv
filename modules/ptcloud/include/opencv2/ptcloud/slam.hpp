@@ -16,7 +16,7 @@ Bootstraps an initial map from two-view geometry, then tracks subsequent frames 
 growing the map at keyframe promotions. Each keyframe additionally triggers pose-graph
 refinement — pose-only and local bundle adjustment, plus appearance-based loop detection
 and Sim(3) loop closure with essential-graph optimisation. A final global bundle
-adjustment runs on @ref cv::slam::VisualOdometry::finalize.
+adjustment runs on @ref cv::slam::VisualOdometry::finalizeMap.
 
 The graph-optimisation stages require g2o (build with `-DWITH_G2O=ON`); without it the
 module still builds and tracks, and every bundle-adjustment and loop-closure stage becomes

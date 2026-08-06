@@ -138,7 +138,7 @@ bool VisualOdometryImpl::processFrame(InputArray image)
 
 // End-of-sequence refinement
 
-bool VisualOdometryImpl::finalize()
+bool VisualOdometryImpl::finalizeMap()
 {
     CV_INSTRUMENT_REGION();
 

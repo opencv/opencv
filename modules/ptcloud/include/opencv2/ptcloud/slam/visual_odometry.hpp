@@ -36,7 +36,7 @@ Typical use:
     Ptr<VisualOdometry> vo = VisualOdometry::create(detector, matcher, K);
     for (const String& path : imageFiles)
         vo->processFrame(imread(path));
-    vo->finalize();                       // end-of-sequence global bundle adjustment
+    vo->finalizeMap();                    // end-of-sequence global bundle adjustment
     writeColmapFiles(vo, K, imageSize, outputFolder);
 @endcode
 */
@@ -63,7 +63,7 @@ public:
     Returns true if the optimisation actually ran (it is skipped when global BA is
     disabled in @ref OdometryParams, when g2o is unavailable, or when the map is too
     small to optimise). */
-    CV_WRAP virtual bool finalize() = 0;
+    CV_WRAP virtual bool finalizeMap() = 0;
 
     /** @brief Reset to NOT_INITIALIZED, clearing map and trajectory. */
     CV_WRAP virtual void reset() = 0;
