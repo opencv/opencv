@@ -1090,6 +1090,8 @@ static int jas_icctxtdesc_input(jas_iccattrval_t *attrval, jas_stream_t *in,
     txtdesc->ucdata = 0;
     if (jas_iccgetuint32(in, &txtdesc->asclen))
         goto error;
+    if (!txtdesc->asclen)
+        goto error;
     if (!(txtdesc->ascdata = jas_malloc(txtdesc->asclen)))
         goto error;
     if (jas_stream_read(in, txtdesc->ascdata, txtdesc->asclen) !=
