@@ -178,8 +178,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** sets device memory block to a specific 8-bit value
      *
-     * \param[in]   src     device pointer
-     * \param[out]  ch      8-bit value to fill the device memory with
+     * \param[out]  dest    device pointer
+     * \param[in]   ch      8-bit value to fill the device memory with
      *
      * Exception Guarantee: Basic
      */
@@ -243,8 +243,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** sets device memory block to a specific 8-bit value asynchronously
      *
-     * \param[in]   src     device pointer
-     * \param[out]  ch      8-bit value to fill the device memory with
+     * \param[out]  dest    device pointer
+     * \param[in]   ch      8-bit value to fill the device memory with
      * \param       stream  CUDA stream that has to be used for the memory operation
      *
      * Exception Guarantee: Basic
