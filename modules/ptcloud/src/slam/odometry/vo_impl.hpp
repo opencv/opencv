@@ -21,7 +21,7 @@ Stage logic is split across:
   - vo_tracking.cpp   : per-frame localisation (motion model, fallback 1/2, local map)
   - vo_keyframe.cpp   : keyframe promotion decision + covisibility helpers
   - vo_map_growth.cpp : triangulation of new map points at promotion time
-  - visual_odometry.cpp : factory, processFrame(), finalize()
+  - visual_odometry.cpp : factory, processFrame(), finalizeMap()
 */
 class VisualOdometryImpl CV_FINAL : public VisualOdometry
 {
@@ -35,7 +35,7 @@ public:
     // --- VisualOdometry interface -------------------------------------------
 
     bool processFrame(InputArray image) CV_OVERRIDE;
-    bool finalize() CV_OVERRIDE;
+    bool finalizeMap() CV_OVERRIDE;
     void reset() CV_OVERRIDE;
 
     OdometryState getState() const CV_OVERRIDE { return state; }

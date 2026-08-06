@@ -143,7 +143,7 @@ def main():
         prev_traj_len = traj_len
 
     # End-of-sequence global bundle adjustment over the whole map.
-    vo.finalize()
+    vo.finalizeMap()
     elapsed = time.perf_counter() - t0
 
     ok = len(vo.getTrajectory()) > 0

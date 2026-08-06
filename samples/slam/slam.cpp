@@ -112,7 +112,7 @@ static Point3d cameraCentre(const Matx44d& poseCw)
     return Point3d(centre[0], centre[1], centre[2]);
 }
 
-// Corrected keyframe centres - kept separate from the COLMAP export 
+// Corrected keyframe centres - kept separate from the COLMAP export
 static bool writeKeyframeCentres(const Ptr<slam::VisualOdometry>& vo, const String& outputFolder)
 {
     ofstream file(utils::fs::join(outputFolder, "keyframe_images.txt").c_str());
@@ -320,7 +320,7 @@ int main(int argc, char** argv)
         previousPoseCount = poseCount;
     }
 
-    vo->finalize();
+    vo->finalizeMap();
     const double elapsed = (getTickCount() - ticksBefore) / getTickFrequency();
 
     const bool ok = !vo->getTrajectory().empty();
