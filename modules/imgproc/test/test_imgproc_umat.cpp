@@ -44,41 +44,31 @@
 
 namespace opencv_test { namespace {
 
-class CV_ImgprocUMatTest : public cvtest::BaseTest
+TEST(Imgproc_UMat, regression)
 {
-public:
-    CV_ImgprocUMatTest() {}
-    ~CV_ImgprocUMatTest() {}
-protected:
-    void run(int)
-    {
-        string imgpath = string(ts->get_data_path()) + "shared/lena.png";
-        Mat img = imread(imgpath, IMREAD_COLOR), gray, smallimg, result;
-        UMat uimg = img.getUMat(ACCESS_READ), ugray, usmallimg, uresult;
+    const string imgpath = cvtest::findDataFile("shared/lena.png");
+    Mat img = imread(imgpath, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
 
-        cvtColor(img, gray, COLOR_BGR2GRAY);
-        resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
-        equalizeHist(smallimg, result);
+    Mat gray, smallimg, result;
+    cvtColor(img, gray, COLOR_BGR2GRAY);
+    resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
+    equalizeHist(smallimg, result);
 
-        cvtColor(uimg, ugray, COLOR_BGR2GRAY);
-        resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
-        equalizeHist(usmallimg, uresult);
+    // Deliberately getUMat() rather than copyTo(): the ocl/ tests always upload
+    // by copy (UMAT_UPLOAD_INPUT_PARAMETER), so this is the only coverage of an
+    // imgproc chain fed by a UMat view over a Mat that stays alive alongside it.
+    UMat uimg = img.getUMat(ACCESS_READ), ugray, usmallimg, uresult;
+    cvtColor(uimg, ugray, COLOR_BGR2GRAY);
+    resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
+    equalizeHist(usmallimg, uresult);
 
-#if 0
-        imshow("orig", uimg);
-        imshow("small", usmallimg);
-        imshow("equalized gray", uresult);
-        waitKey();
-        destroyWindow("orig");
-        destroyWindow("small");
-        destroyWindow("equalized gray");
-#endif
-        ts->set_failed_test_info(cvtest::TS::OK);
-
-        (void)uresult.getMat(ACCESS_READ);
-    }
-};
-
-TEST(Imgproc_UMat, regression) { CV_ImgprocUMatTest test; test.safe_run(); }
+    // Both pipelines are bit-exact by construction (INTER_LINEAR_EXACT, integer
+    // histogram + LUT, fixed-point BGR2GRAY) and measured identical here; the
+    // tolerance of 1 matches OCL_TEST_P(EqualizeHist, Mat) for other devices.
+    Mat uresult_host = uresult.getMat(ACCESS_READ);
+    EXPECT_LE(cv::norm(result, uresult_host, NORM_INF), 1)
+        << "Mat and UMat imgproc pipelines disagree";
+}
 
 }} // namespace
