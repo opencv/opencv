@@ -84,18 +84,19 @@ TEST(Features2d_KAZE, diffusivity_charbonnier)
     ASSERT_EQ(desc_charbonnier.cols, desc_pm_g2.cols);
 }
 
-TEST(Features2D_AKAZE, Subsample_Channels_Overflow_Fix)
+TEST(Features2d_AKAZE, generateDescriptorSubsample_channels_overflow_29613)
 {
-    cv::Ptr<cv::AKAZE> akaze = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 32, 2);
-
-    std::vector<cv::Mat> test_images = {
-        cv::Mat(48, 48, CV_8UC3, cv::Scalar(128, 128, 128)),
-        cv::Mat(48, 48, CV_8UC1, cv::Scalar(128))
-    };
-
-    for (const auto& img : test_images) {
-        std::vector<cv::KeyPoint> keypoints;
-        EXPECT_NO_THROW(akaze->detect(img, keypoints));
+    Mat img(48, 48, CV_8UC1);
+    randu(img, 0, 256);
+    for (int channels = 1; channels <= 3; channels++)
+    {
+        Ptr<AKAZE> akaze = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 32, channels);
+        std::vector<KeyPoint> kpts;
+        Mat desc;
+        ASSERT_NO_THROW(akaze->detectAndCompute(img, noArray(), kpts, desc)) << "channels=" << channels;
+        if (!kpts.empty()) {
+            EXPECT_EQ(desc.cols, divUp(32, 8)) << "channels=" << channels; // 32-bit descriptor -> 4 bytes
+        }
     }
 }
 
