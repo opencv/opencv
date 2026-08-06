@@ -212,8 +212,11 @@ bool VideoCapture_uEye::setProperty(int property_id, double value)
             ASSERT_UEYE(is_Exposure(cam_id, IS_EXPOSURE_CMD_SET_EXPOSURE, (void*)&value, sizeof(value)));
             break;
         case CAP_PROP_GAIN:
-            ASSERT_UEYE(is_SetHardwareGain(cam_id, static_cast<int>(value), IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER));
+        {
+            int master = std::min(100, std::max(0, static_cast<int>(value)));
+            ASSERT_UEYE(is_SetHardwareGain(cam_id, master, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER, IS_IGNORE_PARAMETER));
             break;
+        }
         }
         if(set_format)
         {
