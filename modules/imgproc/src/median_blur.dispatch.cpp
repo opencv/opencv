@@ -198,13 +198,15 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     }
 
     int cn = _src0.channels();
-    if( cn != 1 && cn != 3 && cn != 4 )
+    if( ksize > 5 && cn != 1 && cn != 3 && cn != 4 )
     {
-        // The single-call implementations (SIMD large-kernel path, HAL, OpenCL)
-        // only support 1, 3 or 4 channels. Median filtering is channel-independent,
-        // so any other channel count (2, 5, 6, ...) is handled by filtering each
-        // channel on its own -- always supported, since cn == 1 -- and merging
-        // the results back together.
+        // ksize == 3 and ksize == 5 go through the generic "sort net" path,
+        // which already supports any channel count. Only the large-kernel
+        // path (ksize > 5) hard-codes support for 1, 3 or 4 channels. Median
+        // filtering is channel-independent, so any other channel count
+        // (2, 5, 6, ...) is handled by filtering each channel on its own --
+        // always supported, since cn == 1 -- and merging the results back
+        // together.
         std::vector<Mat> srcChannels;
         cv::split(_src0, srcChannels);
 
