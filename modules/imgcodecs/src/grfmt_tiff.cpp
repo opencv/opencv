@@ -383,7 +383,7 @@ bool TiffDecoder::readHeader()
 
             if( bpp > 8 &&
                ((photometric > 2) ||
-                (ncn != 1 && ncn != 3 && ncn != 4)))
+                (ncn != 1 && (ncn != 2 || !isGrayScale) && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
             uint16_t sample_format = SAMPLEFORMAT_UINT;
@@ -677,6 +677,80 @@ static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
 }
 //end _unpack14To16()
 
+// Reads one strip (or tile) per sample and interleaves the planes, so that the
+// conversion code below sees the same pixel layout as for PLANARCONFIG_CONTIG.
+// Packed 10/12/14-bit planes are unpacked here, per plane row.
+static void readSeparatePlanesBand(TIFF* tif, int band_x, int band_y, int rows,
+                                   bool is_tiled, uint32_t tile_width, uint16_t ncn,
+                                   uint16_t bpp, int dst_bpp, uchar* dst,
+                                   size_t dst_bytes_per_row, uchar* plane_buffer,
+                                   size_t plane_buffer_size, size_t plane_bytes_per_row,
+                                   ushort* plane_row_unpacked)
+{
+    constexpr const int bitsPerByte = 8;
+    const bool needsUnpacking = bpp < dst_bpp;
+    const int elem_bytes = (needsUnpacking ? dst_bpp : (int)bpp) / bitsPerByte;
+    for (uint16_t sample = 0; sample < ncn; sample++)
+    {
+        if (is_tiled)
+        {
+            const uint32_t tile = TIFFComputeTile(tif, band_x, band_y, 0, sample);
+            CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(
+                    tif, tile, plane_buffer, plane_buffer_size) >= 0);
+        }
+        else
+        {
+            const uint32_t strip = TIFFComputeStrip(tif, band_y, sample);
+            CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(
+                    tif, strip, plane_buffer, plane_buffer_size) >= 0);
+        }
+        for (int row = 0; row < rows; row++)
+        {
+            const uchar* src_row = plane_buffer + row * plane_bytes_per_row;
+            if (needsUnpacking)
+            {
+                if (bpp == 10)
+                    _unpack10To16(src_row, src_row + plane_bytes_per_row,
+                                  plane_row_unpacked,
+                                  plane_row_unpacked + tile_width, tile_width);
+                else if (bpp == 12)
+                    _unpack12To16(src_row, src_row + plane_bytes_per_row,
+                                  plane_row_unpacked,
+                                  plane_row_unpacked + tile_width, tile_width);
+                else if (bpp == 14)
+                    _unpack14To16(src_row, src_row + plane_bytes_per_row,
+                                  plane_row_unpacked,
+                                  plane_row_unpacked + tile_width, tile_width);
+                src_row = (const uchar*)plane_row_unpacked;
+            }
+            uchar* dst_row = dst + row * dst_bytes_per_row;
+            if (elem_bytes == 2)
+            {
+                const ushort* s = (const ushort*)src_row;
+                ushort* d = (ushort*)dst_row;
+                for (uint32_t j = 0; j < tile_width; j++)
+                    d[static_cast<size_t>(j) * ncn + sample] = s[j];
+            }
+            else if (elem_bytes == 4)
+            {
+                const uint32_t* s = (const uint32_t*)src_row;
+                uint32_t* d = (uint32_t*)dst_row;
+                for (uint32_t j = 0; j < tile_width; j++)
+                    d[static_cast<size_t>(j) * ncn + sample] = s[j];
+            }
+            else
+            {
+                // 8-byte rows may be only 4-aligned on 32-bit platforms (AutoBuffer
+                // inline storage), so copy without a uint64_t* dereference
+                CV_DbgAssert(elem_bytes == 8);
+                for (uint32_t j = 0; j < tile_width; j++)
+                    memcpy(dst_row + (static_cast<size_t>(j) * ncn + sample) * 8,
+                           src_row + static_cast<size_t>(j) * 8, 8);
+            }
+        }
+    }
+}
+
 bool  TiffDecoder::readData( Mat& img )
 {
     int type = img.type();
@@ -708,6 +782,9 @@ bool  TiffDecoder::readData( Mat& img )
             bpp = 1;
         }
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
+        uint16_t planar_config = PLANARCONFIG_CONTIG;
+        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planar_config));
+        const bool is_planar = ncn > 1 && planar_config == PLANARCONFIG_SEPARATE;
         uint16_t img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
         constexpr const int bitsPerByte = 8;
@@ -860,16 +937,64 @@ bool  TiffDecoder::readData( Mat& img )
                 tile_height0 = 1;
             }
 
-            const size_t src_buffer_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * bpp), static_cast<size_t>(bitsPerByte));
-            const size_t src_buffer_size = tile_height0 * src_buffer_bytes_per_row;
-            CV_CheckLT(src_buffer_size, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
-            const size_t src_buffer_unpacked_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * dst_bpp), static_cast<size_t>(bitsPerByte));
-            const size_t src_buffer_unpacked_size = tile_height0 * src_buffer_unpacked_bytes_per_row;
+            const uint64_t src_buffer_bits_per_row =
+                    static_cast<uint64_t>(ncn) * tile_width0 * bpp;
+            const uint64_t src_buffer_bytes_per_row64 =
+                    (src_buffer_bits_per_row + bitsPerByte - 1) / bitsPerByte;
+            const uint64_t src_buffer_size64 =
+                    static_cast<uint64_t>(tile_height0) * src_buffer_bytes_per_row64;
+            if (src_buffer_size64 >= MAX_TILE_SIZE)
+                CV_Error(Error::StsError, "buffer_size is too large: >= 1Gb");
+            const size_t src_buffer_bytes_per_row = static_cast<size_t>(src_buffer_bytes_per_row64);
+            const size_t src_buffer_size = static_cast<size_t>(src_buffer_size64);
+            const uint64_t src_buffer_unpacked_bits_per_row =
+                    static_cast<uint64_t>(ncn) * tile_width0 * dst_bpp;
+            const uint64_t src_buffer_unpacked_bytes_per_row64 =
+                    (src_buffer_unpacked_bits_per_row + bitsPerByte - 1) / bitsPerByte;
+            const uint64_t src_buffer_unpacked_size64 =
+                    static_cast<uint64_t>(tile_height0) * src_buffer_unpacked_bytes_per_row64;
+            if (src_buffer_unpacked_size64 >
+                    static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+                CV_Error(Error::StsError, "unpacked buffer size is too large");
+            const size_t src_buffer_unpacked_bytes_per_row =
+                    static_cast<size_t>(src_buffer_unpacked_bytes_per_row64);
+            const size_t src_buffer_unpacked_size =
+                    static_cast<size_t>(src_buffer_unpacked_size64);
             const bool needsUnpacking = (bpp < dst_bpp);
             AutoBuffer<uchar> _src_buffer(src_buffer_size);
             uchar* src_buffer = _src_buffer.data();
             AutoBuffer<uchar> _src_buffer_unpacked(needsUnpacking ? src_buffer_unpacked_size : 0);
             uchar* src_buffer_unpacked = needsUnpacking ? _src_buffer_unpacked.data() : nullptr;
+
+            // In PLANARCONFIG_SEPARATE files all strips (or tiles) of sample 0 are stored
+            // first, then all strips of sample 1, and so on (TIFF 6.0). The dst_bpp == 8 path
+            // is not affected because TIFFReadRGBA* handles both planar configurations.
+            const bool doReadSeparatePlanes = is_planar && dst_bpp > 8 && !doReadScanline;
+            const uint64_t plane_bits_per_row = static_cast<uint64_t>(tile_width0) * bpp;
+            const uint64_t plane_bytes_per_row64 =
+                    (plane_bits_per_row + bitsPerByte - 1) / bitsPerByte;
+            const uint64_t plane_buffer_size64 =
+                    static_cast<uint64_t>(tile_height0) * plane_bytes_per_row64;
+            if (plane_buffer_size64 > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+                CV_Error(Error::StsError, "plane buffer size is too large");
+            const size_t plane_bytes_per_row = static_cast<size_t>(plane_bytes_per_row64);
+            const size_t plane_buffer_size = static_cast<size_t>(plane_buffer_size64);
+            AutoBuffer<uchar> _plane_buffer(doReadSeparatePlanes ? plane_buffer_size : 0);
+            uchar* plane_buffer = _plane_buffer.data();
+            AutoBuffer<ushort> _plane_row_unpacked(
+                    doReadSeparatePlanes && needsUnpacking ? tile_width0 : 0);
+            ushort* plane_row_unpacked = _plane_row_unpacked.data();
+
+            if (doReadSeparatePlanes)
+            {
+                CV_CheckGE(plane_buffer_size,
+                           static_cast<size_t>(is_tiled ? TIFFTileSize(tif) : TIFFStripSize(tif)),
+                           "plane buffer is smaller than libtiff strip/tile size");
+            }
+
+            uchar* separate_planes_dst = needsUnpacking ? src_buffer_unpacked : src_buffer;
+            const size_t separate_planes_dst_bytes_per_row =
+                    needsUnpacking ? src_buffer_unpacked_bytes_per_row : src_buffer_bytes_per_row;
 
             if ( doReadScanline )
             {
@@ -1028,6 +1153,15 @@ bool  TiffDecoder::readData( Mat& img )
                             {
                                 CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32_t*)src_buffer, y) >= 0);
                             }
+                            else if (doReadSeparatePlanes)
+                            {
+                                readSeparatePlanesBand(
+                                        tif, x, y, tile_height, is_tiled, tile_width0, ncn,
+                                        bpp, dst_bpp, separate_planes_dst,
+                                        separate_planes_dst_bytes_per_row, plane_buffer,
+                                        plane_buffer_size, plane_bytes_per_row,
+                                        plane_row_unpacked);
+                            }
                             else if (!is_tiled)
                             {
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32_t*)src_buffer, src_buffer_size) >= 0);
@@ -1040,7 +1174,13 @@ bool  TiffDecoder::readData( Mat& img )
                             for (int i = 0; i < tile_height; i++)
                             {
                                 ushort* buffer16 = (ushort*)(src_buffer+i*src_buffer_bytes_per_row);
-                                if (needsUnpacking)
+                                if (needsUnpacking && doReadSeparatePlanes)
+                                {
+                                    // readSeparatePlanesBand already unpacked while interleaving
+                                    buffer16 = (ushort*)(src_buffer_unpacked +
+                                            i * src_buffer_unpacked_bytes_per_row);
+                                }
+                                else if (needsUnpacking)
                                 {
                                     const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
                                     uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
@@ -1108,6 +1248,12 @@ bool  TiffDecoder::readData( Mat& img )
                                                     buffer16,
                                                     tile_width*sizeof(ushort));
                                     }
+                                    else if( ncn == 2 )
+                                    {
+                                        ushort* dst = img.ptr<ushort>(img_y + i, x);
+                                        for (int j = 0; j < tile_width; j++)
+                                            dst[j] = buffer16[j * 2];
+                                    }
                                     else
                                     {
                                         icvCvt_BGRA2Gray_16u_CnC1R(buffer16, 0,
@@ -1122,7 +1268,16 @@ bool  TiffDecoder::readData( Mat& img )
                         case 32:
                         case 64:
                         {
-                            if( !is_tiled )
+                            if( doReadSeparatePlanes )
+                            {
+                                readSeparatePlanesBand(
+                                        tif, x, y, tile_height, is_tiled, tile_width0, ncn,
+                                        bpp, dst_bpp, separate_planes_dst,
+                                        separate_planes_dst_bytes_per_row, plane_buffer,
+                                        plane_buffer_size, plane_bytes_per_row,
+                                        plane_row_unpacked);
+                            }
+                            else if( !is_tiled )
                             {
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, src_buffer, src_buffer_size) >= 0);
                             }
