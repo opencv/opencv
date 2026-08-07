@@ -204,7 +204,7 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         // which already supports any channel count. Only the large-kernel
         // path (ksize > 5) hard-codes support for 1, 3 or 4 channels. Median
         // filtering is channel-independent, so any other channel count
-        // (2, 5, 6, ...) is handled by filtering each channel on its own --
+        // (2, 5, 6,...) is handled by filtering each channel on its own --
         // always supported, since cn == 1 -- and merging the results back
         // together.
         std::vector<Mat> srcChannels;
