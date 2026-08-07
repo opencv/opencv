@@ -43,7 +43,7 @@ def main():
                 pt1 = ( int(x0+1000*(-b)), int(y0+1000*(a)) )
                 pt2 = ( int(x0-1000*(-b)), int(y0-1000*(a)) )
                 cv.line(cdst, pt1, pt2, (0, 0, 255), 3, cv.LINE_AA)
-                
+
     cv.imshow("detected lines", cdst)
 
     cv.imshow("source", src)
