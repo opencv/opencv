@@ -11,7 +11,6 @@ namespace cv {
 namespace slam {
 
 namespace {
-
 const char* stateName(OdometryState s)
 {
     switch (s)
@@ -22,7 +21,6 @@ const char* stateName(OdometryState s)
     }
     return "NOT_INITIALIZED";
 }
-
 } // anonymous namespace
 
 // Factory
