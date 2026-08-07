@@ -88,6 +88,7 @@ TEST(Features2d_AKAZE, generateDescriptorSubsample_channels_overflow_29613)
 {
     Mat img(48, 48, CV_8UC1);
     randu(img, 0, 256);
+
     for (int channels = 1; channels <= 3; channels++)
     {
         Ptr<AKAZE> akaze = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 32, channels);
