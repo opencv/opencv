@@ -99,6 +99,10 @@ uint8_t     unicode_utf8_to_byte(const std::string & utf8);
 
 uint32_t unicode_tolower(uint32_t cpt);
 
+// Base (accent-stripped) codepoint for `cpt` (e.g. 'a' for U+00E0 'à'), via
+// unicode_ranges_nfd's precomposed->base entries; returns `cpt` if not found.
+uint32_t unicode_strip_accent_base(uint32_t cpt);
+
 std::vector<std::string> unicode_regex_split(const std::string & text, const std::vector<std::string> & regex_exprs);
 }}
 #endif

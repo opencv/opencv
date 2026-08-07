@@ -207,11 +207,22 @@ struct ModelFusionAttention
         return -1;
     }
 
+    // Only remove nodes whose consumers are all owner_idx/chain.
     void collectShapeChain(const vector<Ptr<LayerInfo>>& prog, int concat_idx,
-                           std::set<int>& chain) const
+                           std::set<int>& chain, int owner_idx = -1) const
     {
         if (concat_idx < 0 || concat_idx >= (int)prog.size() || !prog[concat_idx])
             return;
+        {
+            Arg concat_out = prog[concat_idx]->outputs[0];
+            auto cit0 = consumers_.find(concat_out.idx);
+            if (cit0 != consumers_.end()) {
+                for (int c : cit0->second)
+                    if (c != owner_idx && !chain.count(c)) {
+                        return;
+                    }
+            }
+        }
         chain.insert(concat_idx);
         for (Arg ci : prog[concat_idx]->inputs) {
             if (netimpl->isConstArg(ci)) continue;
@@ -220,13 +231,17 @@ struct ModelFusionAttention
             if (it != producer_.end()) cur = it->second;
             while (cur >= 0 && (int)prog.size() > cur && prog[cur]) {
                 const std::string& t = prog[cur]->type;
-                if (t != "Unsqueeze" && t != "Gather2" && t != "Shape") break;
+                if (t != "Unsqueeze" && t != "Gather2" && t != "Shape" && t != "Slice2") {
+                    break;
+                }
                 Arg cur_out = prog[cur]->outputs[0];
                 auto cit = consumers_.find(cur_out.idx);
                 if (cit == consumers_.end()) break;
                 bool all_in_chain = true;
                 for (int c : cit->second) if (!chain.count(c)) { all_in_chain = false; break; }
-                if (!all_in_chain) break;
+                if (!all_in_chain) {
+                    break;
+                }
                 chain.insert(cur);
                 if (prog[cur]->inputs.empty()) break;
                 Arg prev = prog[cur]->inputs[0];
@@ -295,7 +310,7 @@ struct ModelFusionAttention
             num_heads = extractConstInt(prog, cinputs[2]);
             if (num_heads <= 0) return -1;
             if (extra_ops_to_remove)
-                collectShapeChain(prog, concat_idx, *extra_ops_to_remove);
+                collectShapeChain(prog, concat_idx, *extra_ops_to_remove, reshape_idx);
         }
         *out_num_heads = num_heads;
         *out_reshape_idx = reshape_idx;
@@ -389,7 +404,7 @@ struct ModelFusionAttention
             num_heads = extractConstInt(prog, cinputs[3]);
             head_dim  = extractConstInt(prog, cinputs[4]);
             if (num_heads <= 0 || head_dim <= 0) return false;
-            collectShapeChain(prog, concat_idx, extra_ops);
+            collectShapeChain(prog, concat_idx, extra_ops, reshape_idx);
         }
         if (num_heads * head_dim != proj_hidden) return false;
 
@@ -464,7 +479,7 @@ struct ModelFusionAttention
         if (or_inputs.size() >= 2 && !netimpl->isConstArg(or_inputs[1])) {
             auto it = producer_.find(or_inputs[1].idx);
             if (it != producer_.end())
-                collectShapeChain(prog, it->second, extra_ops);
+                collectShapeChain(prog, it->second, extra_ops, out_reshape_idx);
         }
 
         // W is already laid out as [Q|K|V] along the output dim.
@@ -547,7 +562,7 @@ struct ModelFusionAttention
         if (!netimpl->isConstArg(shape_arg_r3d)) {
             int sh_idx = stepProducer(shape_arg_r3d);
             if (sh_idx >= 0)
-                collectShapeChain(prog, sh_idx, ops_consumed);
+                collectShapeChain(prog, sh_idx, ops_consumed, r3d_idx);
         }
         cur = prog[r3d_idx]->inputs[0];
 
@@ -582,7 +597,7 @@ struct ModelFusionAttention
             if (cinputs.size() != 4) return -1;
             num_heads = extractConstInt(prog, cinputs[2]);
             if (num_heads <= 0) return -1;
-            collectShapeChain(prog, concat_idx, ops_consumed);
+            collectShapeChain(prog, concat_idx, ops_consumed, r4d_idx);
         }
         if (num_heads <= 0) return -1;
         out_num_heads = num_heads;
@@ -1028,7 +1043,7 @@ struct ModelFusionAttention
                     if (or_inputs.size() >= 2 && !netimpl->isConstArg(or_inputs[1])) {
                         auto it = producer_.find(or_inputs[1].idx);
                         if (it != producer_.end())
-                            collectShapeChain(prog, it->second, extra_ops);
+                            collectShapeChain(prog, it->second, extra_ops, out_reshape_idx);
                     }
 
                     // Normalize each projection weight to [K, N] regardless of

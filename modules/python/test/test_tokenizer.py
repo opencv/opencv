@@ -43,7 +43,6 @@ class TokenizerBindingTest(NewOpenCVTests):
     def test_tokenizer_gpt4(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt4/config.json"))
         tokens = tok.encode("hello world")
-        # expects {15339, 1917}
         self.assertEqual(list(tokens), [15339, 1917])
         sent = tok.decode([15339, 1917])
         self.assertEqual(sent, "hello world")

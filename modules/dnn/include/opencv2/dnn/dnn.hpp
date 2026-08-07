@@ -2077,27 +2077,34 @@ public:
      * @brief Load a tokenizer from a model directory.
      *
      * Expects the directory to contain:
-     *  - `config.json` with field `model_type` with value "gpt2" or "gpt4".
+     *  - `config.json` with field `method` (one of: BPE, Gemma, SentencePiece, Unigram, WordPiece).
      *  - `tokenizer.json` produced by the corresponding model family.
      *
      * The argument is a path prefix; this function concatenates file
      * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
      * end with an appropriate path separator.
      *
-     * @param model_config  Path to config.json for model.
-     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `model_type` is unsupported.
+     * @param modelConfig  Path to config.json for model.
+     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& modelConfig);
 
     /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
      *
-     * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
+     * For BPE-family models this calls `CoreBPE::encode` with an empty
+     * allowed-special set, so special-token text in `text` is encoded as
+     * ordinary text rather than recognized as a special token.
      *
      * @param text  UTF-8 input string.
+     * @param textPair  Optional second UTF-8 input string, for tokenizers
+     *   that support paired-sequence encoding (currently only WordPiece:
+     *   wraps as `[CLS] text [SEP] textPair [SEP]`). Ignored if empty;
+     *   throws cv::Exception if non-empty and unsupported by the loaded
+     *   tokenizer.
      * @return Vector of token ids (32-bit ids narrowed to int for convenience).
      */
-    CV_WRAP std::vector<int> encode(const std::string& text);
+    CV_WRAP std::vector<int> encode(const std::string& text, const std::string& textPair = std::string());
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;
