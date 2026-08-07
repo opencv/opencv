@@ -77,6 +77,9 @@ static Point3d cameraCenter(const Matx44d& T)
     return Point3d(C(0), C(1), C(2));
 }
 
+#ifdef HAVE_G2O
+// Only the g2o-backed tests assert on pose accuracy; without g2o this would be
+// an unused static function (-Wunused-function is an error on the CI builders).
 static double rotationErrDeg(const Matx44d& A, const Matx44d& B)
 {
     Matx33d Ra(A(0,0),A(0,1),A(0,2), A(1,0),A(1,1),A(1,2), A(2,0),A(2,1),A(2,2));
@@ -85,6 +88,7 @@ static double rotationErrDeg(const Matx44d& A, const Matx44d& B)
     const double c = std::max(-1.0, std::min(1.0, (D(0,0) + D(1,1) + D(2,2) - 1.0) * 0.5));
     return std::acos(c) * 180.0 / CV_PI;
 }
+#endif // HAVE_G2O
 
 // Rotates about the camera's own centre and then shifts that centre by @p dt.
 // Rotating about the world origin instead would largely cancel in the image,
