@@ -722,4 +722,46 @@ TEST(RGBD_Plane, regression2309ValgrindCheck)
     findPlanes(points, noArray(), mask, planes, blockSize);
 }
 
+// findPlanes() documents a 3-channel points3d, but works on Vec4f internally. It used to
+// assign the input straight into a Mat_<Vec4f>, which reshapes rather than converts when
+// the depths match, so a WxH CV_32FC3 image silently became (W*3/4)xH: the returned mask
+// had the wrong width and every point read was a mix of neighbouring points. All the
+// other findPlanes tests feed CV_32FC4, so nothing covered the documented input.
+//
+// Both representations describe the same geometry, so both must give the same answer.
+TEST(RGBD_Plane, regression_3channel_matches_4channel)
+{
+    const int rows = 240, cols = 320;
+
+    // A single tilted plane, z = 2 + 0.001*u + 0.002*v, so the result is not degenerate.
+    Mat points3(rows, cols, CV_32FC3);
+    Mat points4(rows, cols, CV_32FC4);
+    for (int v = 0; v < rows; v++)
+    {
+        for (int u = 0; u < cols; u++)
+        {
+            const float z = 2.f + 0.001f * u + 0.002f * v;
+            const Vec3f p((float)u * 0.01f, (float)v * 0.01f, z);
+            points3.at<Vec3f>(v, u) = p;
+            points4.at<Vec4f>(v, u) = Vec4f(p[0], p[1], p[2], 0.f);
+        }
+    }
+
+    Mat mask3, mask4;
+    std::vector<Vec4f> planes3, planes4;
+    findPlanes(points3, noArray(), mask3, planes3);
+    findPlanes(points4, noArray(), mask4, planes4);
+
+    // The documented contract: one label per input pixel.
+    EXPECT_EQ(points3.size(), mask3.size());
+    EXPECT_EQ(CV_8U, mask3.type());
+
+    // ... and the two representations must agree, which the reshape made impossible.
+    ASSERT_EQ(mask4.size(), mask3.size());
+    EXPECT_EQ(0, cv::countNonZero(mask3 != mask4));
+    ASSERT_EQ(planes4.size(), planes3.size());
+    for (size_t i = 0; i < planes3.size(); i++)
+        EXPECT_LE(cv::norm(planes3[i], planes4[i], NORM_INF), 1e-6) << "plane " << i;
+}
+
 }} // namespace
