@@ -26,6 +26,7 @@ void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3
 
     Mat nm = normals.getMat();
     CV_Assert(!nm.empty() && nm.channels() * (int)nm.total() == 3 * N);
+    CV_CheckDepthEQ(nm.depth(), CV_32F, "Data with only depth CV_32F are supported");
     // reshape() needs contiguous data; clone a non-contiguous view and copy back at the end.
     Mat work = nm.isContinuous() ? nm : nm.clone();
     Mat nmf = work.reshape(3, N);   // N x 1, CV_32FC3
@@ -58,6 +59,7 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
 
     Mat nm = normals.getMat();
     CV_Assert(!nm.empty() && nm.channels() * (int)nm.total() == 3 * N);
+    CV_CheckDepthEQ(nm.depth(), CV_32F, "Data with only depth CV_32F are supported");
     // reshape() needs contiguous data; clone a non-contiguous view and copy back at the end.
     Mat work = nm.isContinuous() ? nm : nm.clone();
     Mat nmf = work.reshape(3, N);
