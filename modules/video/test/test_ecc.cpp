@@ -471,5 +471,41 @@ TEST(Video_ECC_BigMS_Mask, accuracy) {
     CV_ECC_BigPictureTest test(true);
     test.safe_run();
 }
+
+// See https://github.com/opencv/opencv/issues/25895
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x. The input
+// mask is fed to cv::threshold(), which has no CV_Bool path, so a boolean mask must be
+// widened and must produce the same warp as the equivalent CV_8U mask.
+TEST(Video_ECC_BoolMask, matches_uchar_mask) {
+    Mat templateImage(64, 64, CV_8UC1, Scalar::all(0));
+    for (int i = 0; i < 8; i++)
+        for (int j = 0; j < 8; j++)
+            if ((i + j) % 2 == 0)
+                templateImage(Rect(j * 8, i * 8, 8, 8)) = 200;
+    GaussianBlur(templateImage, templateImage, Size(5, 5), 0);
+
+    Mat shift = (Mat_<float>(2, 3) << 1, 0, 2, 0, 1, 1);
+    Mat inputImage;
+    warpAffine(templateImage, inputImage, shift, templateImage.size());
+
+    Mat_<bool> mask_bool(templateImage.size(), false);
+    mask_bool(Rect(8, 8, 48, 48)) = true;
+    ASSERT_EQ(mask_bool.depth(), CV_Bool);
+
+    Mat mask_uchar(templateImage.size(), CV_8UC1, Scalar::all(0));
+    mask_uchar(Rect(8, 8, 48, 48)) = 255;
+
+    const TermCriteria criteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+
+    Mat warp_bool = Mat::eye(2, 3, CV_32F);
+    Mat warp_uchar = Mat::eye(2, 3, CV_32F);
+
+    ASSERT_NO_THROW(findTransformECC(templateImage, inputImage, warp_bool,
+                                     MOTION_TRANSLATION, criteria, mask_bool));
+    findTransformECC(templateImage, inputImage, warp_uchar,
+                     MOTION_TRANSLATION, criteria, mask_uchar);
+
+    EXPECT_LE(cv::norm(warp_bool, warp_uchar, NORM_INF), 1e-5);
+}
 }  // namespace
 }  // namespace opencv_test
