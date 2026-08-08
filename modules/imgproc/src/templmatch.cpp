@@ -734,7 +734,7 @@ static Mat sumChannels( const Mat& e, int rows )
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_32F);
+    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_Bool || _mask.depth() == CV_32F);
     CV_Assert(_mask.channels() == _templ.channels() || _mask.channels() == 1);
     CV_Assert(_templ.size() == _mask.size());
     CV_Assert(_img.size().height >= _templ.size().height &&
@@ -750,6 +750,12 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     {
         templ.convertTo(templ, CV_32F);
     }
+    // cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x.
+    // cv::threshold() does not accept CV_Bool, so widen the mask to CV_8U and let the
+    // binarization below treat any non-zero entry as selected, as it does for CV_8U. See #25895.
+    if (mask.depth() == CV_Bool)
+        mask.convertTo(mask, CV_8U);
+
     if (mask.depth() == CV_8U)
     {
         Mat maskBin;

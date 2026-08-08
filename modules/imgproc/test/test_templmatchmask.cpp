@@ -287,4 +287,41 @@ TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
     }
 }
 
+// See https://github.com/opencv/opencv/issues/25895
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so a
+// boolean mask must keep working and must agree with the equivalent CV_8U mask.
+typedef testing::TestWithParam<tuple<perf::MatType, int>> Imgproc_MatchTemplateBoolMask;
+
+TEST_P(Imgproc_MatchTemplateBoolMask, matches_uchar_mask)
+{
+    const int type = get<0>(GetParam());
+    const int method = get<1>(GetParam());
+
+    Mat image(20, 20, type);
+    Mat templ(7, 7, type);
+    cv::randu(image, Scalar::all(0), Scalar::all(255));
+    cv::randu(templ, Scalar::all(0), Scalar::all(255));
+
+    Mat_<bool> mask_bool(templ.size(), false);
+    mask_bool(Rect(1, 1, 5, 5)) = true;
+    ASSERT_EQ(mask_bool.depth(), CV_Bool);
+
+    Mat mask_uchar(templ.size(), CV_8UC1, Scalar::all(0));
+    mask_uchar(Rect(1, 1, 5, 5)) = 255;
+
+    Mat result_bool, result_uchar;
+    ASSERT_NO_THROW(matchTemplate(image, templ, result_bool, method, mask_bool));
+    matchTemplate(image, templ, result_uchar, method, mask_uchar);
+
+    ASSERT_EQ(result_bool.size(), result_uchar.size());
+    ASSERT_EQ(result_bool.type(), result_uchar.type());
+    EXPECT_LE(cv::norm(result_bool, result_uchar, NORM_INF), 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_MatchTemplateBoolMask,
+    Combine(
+        Values(CV_8UC1, CV_8UC3, CV_32FC1),
+        Values(cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED,
+               cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)));
+
 }} // namespace
