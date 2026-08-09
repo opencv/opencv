@@ -2471,6 +2471,24 @@ CV_EXPORTS_W void resize3D( InputArray src, OutputArray dst,
                             Vec3i dsize, double fx = 0, double fy = 0, double fz = 0,
                             int interpolation = INTER_LINEAR );
 
+/** @brief Sharpens an image using unsharp masking.
+
+The function unsharpMask sharpens the input image by subtracting a blurred version from the original
+and scaling the difference.
+
+@param src input image (1, 3, or 4 channels, uint8, float32, etc.).
+@param dst output image of the same size and type as src.
+@param sigma Gaussian blur standard deviation.
+@param amount Sharpening strength factor (default 1.0).
+@param threshold Minimum difference threshold to apply sharpening (default 0).
+@param borderType Pixel extrapolation method, see #BorderTypes.
+ */
+CV_EXPORTS_W void unsharpMask( InputArray src, OutputArray dst,
+                               double sigma = 1.0, double amount = 1.0,
+                               double threshold = 0.0,
+                               int borderType = BORDER_DEFAULT );
+
+
 
 /** @brief Applies an affine transformation to an image.
 
