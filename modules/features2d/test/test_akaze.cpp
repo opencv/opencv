@@ -25,6 +25,20 @@ TEST(Features2d_AKAZE, detect_and_compute_split)
         ASSERT_EQ(detKps[i].hash(), detAndCompKps[i].hash());
 }
 
+// Test for https://github.com/opencv/opencv/issues/29613
+TEST(Features2d_AKAZE, descriptor_channel_count)
+{
+    Mat testImg(48, 48, CV_8U, Scalar::all(128));
+
+    for (int channels = 1; channels <= 3; channels++)
+    {
+        Ptr<Feature2D> akaze = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 32, channels);
+        vector<KeyPoint> keypoints;
+        Mat descriptors;
+        akaze->detectAndCompute(testImg, noArray(), keypoints, descriptors);
+    }
+}
+
 /**
  * This test is here to guard propagation of NaNs that happens on this image. NaNs are guarded
  * by debug asserts in AKAZE, which should fire for you if you are lucky.
