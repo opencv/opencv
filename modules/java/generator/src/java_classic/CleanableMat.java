@@ -1,6 +1,8 @@
 package org.opencv.core;
 
-public abstract class CleanableMat {
+public abstract class CleanableMat implements AutoCloseable {
+
+    public long nativeObj;
 
     protected CleanableMat(long obj) {
         if (obj == 0)
@@ -11,11 +13,17 @@ public abstract class CleanableMat {
 
     @Override
     protected void finalize() throws Throwable {
-        n_delete(nativeObj);
+        close();
         super.finalize();
     }
 
-    private static native void n_delete(long nativeObj);
+    @Override
+    public synchronized void close() {
+        if (nativeObj != 0) {
+            n_delete(nativeObj);
+            nativeObj = 0;
+        }
+    }
 
-    public final long nativeObj;
+    private static native void n_delete(long nativeObj);
 }

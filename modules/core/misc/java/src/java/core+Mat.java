@@ -533,7 +533,7 @@ public class Mat extends CleanableMat {
 
     // javadoc: Mat::release()
     public void release() {
-        n_release(nativeObj);
+        close();
     }
 
     //

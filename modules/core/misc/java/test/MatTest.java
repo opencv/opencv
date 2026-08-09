@@ -1322,4 +1322,20 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(bgr.get_1().byteValue(), (byte)138);
         assertEquals(bgr.get_2().byteValue(), (byte)225);
     }
+
+    public void testAutoCloseable() {
+        try (Mat m = new Mat(10, 10, CvType.CV_8UC1)) {
+            assertFalse(m.empty());
+            assertEquals(10, m.rows());
+            assertEquals(10, m.cols());
+        }
+    }
+
+    public void testRapidAllocationRelease() {
+        for (int i = 0; i < 100000; ++i) {
+            try (Mat m = new Mat(1, 1, CvType.CV_8UC1)) {
+                m.put(0, 0, 1);
+            }
+        }
+    }
 }
