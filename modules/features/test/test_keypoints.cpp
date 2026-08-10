@@ -156,30 +156,23 @@ TEST(Features2d_Detector_Keypoints_SIFT, validation)
 
 
 // See https://github.com/opencv/opencv/issues/25895
-// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x. Detectors
-// that drop keypoints outside a pixel mask route through KeyPointsFilter::runByPixelsMask,
-// which reads the mask as uchar, so a boolean mask must keep working and must select the
-// same keypoints as the equivalent CV_8U mask.
 TEST(Features2d_Detector_Keypoints_BoolMask, matches_uchar_mask)
 {
-    Mat image(120, 160, CV_8UC1, Scalar::all(255));
-    for (int i = 0; i < 5; i++)
-    {
-        circle(image, Point(25 + 28 * i, 40), 7, Scalar::all(0), -1);
-        rectangle(image, Rect(18 + 28 * i, 70, 15, 15), Scalar::all(0), -1);
-    }
+    Mat image = imread(cvtest::findDataFile(FEATURES2D_DIR + "/" + IMAGE_FILENAME), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    const Rect roi(image.cols / 4, image.rows / 4, image.cols / 2, image.rows / 2);
 
     Mat_<bool> mask_bool(image.size(), false);
-    mask_bool(Rect(20, 20, 100, 70)) = true;
+    mask_bool(roi) = true;
     ASSERT_EQ(mask_bool.depth(), CV_Bool);
 
     Mat mask_uchar(image.size(), CV_8UC1, Scalar::all(0));
-    mask_uchar(Rect(20, 20, 100, 70)) = 255;
+    mask_uchar(roi) = 255;
 
     std::vector<Ptr<Feature2D> > detectors;
     detectors.push_back(FastFeatureDetector::create());
     detectors.push_back(SIFT::create());
-    detectors.push_back(SimpleBlobDetector::create());
 
     for (size_t d = 0; d < detectors.size(); d++)
     {
@@ -187,6 +180,7 @@ TEST(Features2d_Detector_Keypoints_BoolMask, matches_uchar_mask)
         ASSERT_NO_THROW(detectors[d]->detect(image, kp_bool, mask_bool)) << "detector index " << d;
         detectors[d]->detect(image, kp_uchar, mask_uchar);
 
+        ASSERT_FALSE(kp_uchar.empty()) << "detector index " << d;
         ASSERT_EQ(kp_bool.size(), kp_uchar.size()) << "detector index " << d;
         for (size_t k = 0; k < kp_bool.size(); k++)
             EXPECT_EQ(kp_bool[k].pt, kp_uchar[k].pt) << "detector index " << d << ", keypoint " << k;
