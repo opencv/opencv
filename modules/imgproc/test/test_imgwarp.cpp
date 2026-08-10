@@ -1275,6 +1275,29 @@ TEST(Imgproc_resize_area, regression)
     check_resize_area<ushort>(expected, actual, 1.0);
 }
 
+TEST(Imgproc_Resize, regression_29651_multichannel)
+{
+    // Regression test for https://github.com/opencv/opencv/issues/29651
+    // cv::resize used to reject images with more than 4 channels.
+    for (int cn = 1; cn <= 8; cn++)
+    {
+        cv::Mat src = cv::Mat::zeros(8, 8, CV_8UC(cn));
+        cv::Mat dst;
+
+        // Exact 2x downscale with INTER_LINEAR internally redirects to the
+        // INTER_AREA fast path, which previously asserted cn <= 4.
+        ASSERT_NO_THROW(cv::resize(src, dst, cv::Size(4, 4), 0, 0, cv::INTER_LINEAR));
+        EXPECT_EQ(dst.channels(), cn);
+        EXPECT_EQ(dst.size(), cv::Size(4, 4));
+
+        // Also exercise INTER_AREA directly (non-exact-2x case).
+        cv::Mat dst2;
+        ASSERT_NO_THROW(cv::resize(src, dst2, cv::Size(3, 3), 0, 0, cv::INTER_AREA));
+        EXPECT_EQ(dst2.channels(), cn);
+        EXPECT_EQ(dst2.size(), cv::Size(3, 3));
+    }
+}
+
 TEST(Imgproc_resize_area, regression_half_round)
 {
     static uchar input_data[32 * 32];

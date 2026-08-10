@@ -3848,7 +3848,7 @@ void resize(int src_type,
             }
 
             ResizeAreaFunc func = area_tab[depth];
-            CV_Assert( func != 0 && cn <= 4 );
+            CV_Assert( func != 0 );
 
             AutoBuffer<DecimateAlpha> _xytab((src_width + src_height)*2);
             DecimateAlpha* xtab = _xytab.data(), *ytab = xtab + src_width*2;
