@@ -473,9 +473,6 @@ TEST(Video_ECC_BigMS_Mask, accuracy) {
 }
 
 // See https://github.com/opencv/opencv/issues/25895
-// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x. The input
-// mask is fed to cv::threshold(), which has no CV_Bool path, so a boolean mask must be
-// widened and must produce the same warp as the equivalent CV_8U mask.
 TEST(Video_ECC_BoolMask, matches_uchar_mask) {
     Mat templateImage(64, 64, CV_8UC1, Scalar::all(0));
     for (int i = 0; i < 8; i++)

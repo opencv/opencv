@@ -480,15 +480,19 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     else
     {
         Mat preMaskFloat;
-        // cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, and
-        // cv::threshold() has no CV_Bool path, so widen the mask first. Any non-zero entry
-        // is then treated as selected, as it is for a CV_8U mask. See #25895.
         Mat inputMaskMat = inputMask.getMat();
         if (inputMaskMat.depth() == CV_Bool)
-            inputMaskMat.convertTo(inputMaskMat, CV_8U);
-        threshold(inputMaskMat, preMask, 0, 1, THRESH_BINARY);
-
-        preMask.convertTo(preMaskFloat, CV_32F);
+        {
+            // Conversion out of CV_Bool maps every non-zero entry to exactly 1, so this single
+            // step yields the same 0.0/1.0 matrix as the threshold-then-convert path below.
+            // See #25895.
+            inputMaskMat.convertTo(preMaskFloat, CV_32F);
+        }
+        else
+        {
+            threshold(inputMaskMat, preMask, 0, 1, THRESH_BINARY);
+            preMask.convertTo(preMaskFloat, CV_32F);
+        }
         GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
         // Change threshold.
         preMaskFloat *= (0.5/0.95);
