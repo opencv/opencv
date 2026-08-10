@@ -4,6 +4,7 @@
 
 #include "../conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../../hal_replacement.hpp"
 
 // === dispatched calls (implemented here)
 
@@ -386,13 +387,14 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
         CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
     }
 
-// TODO(#29493): RVV conv is temporarily scalar. This universal path assumed
-// K0 == vlanes(), which under m1 holds only at VLEN=256. Disabled as in #29180.
-// Re-enable in a follow-up with a portable v_setvlmax<v_float32>(K0) universal
-// intrinsic (no-op on fixed-width ISAs, sets the vl/mask on RVV/SVE) so one vector
-// spans exactly the K0=8 block at any VLEN; the optimized multi-pixel case is a
-// later RVV-HAL step. See PR #29493 discussion.
-#elif 0  // CV_SIMD_SCALABLE: RVV temporarily disabled for the m1 switch (#29493)
+// This universal path assumed K0 == vlanes(), which under m1 holds only at VLEN=256,
+// so it is disabled on scalable backends as in #29180. The portable re-enable (a
+// v_setvlmax<v_float32>(K0) universal intrinsic) was implemented and measured in #29619
+// and rejected: capping vlanes() to a non-VLMAX value makes GCC emit a vsetvli per op
+// instead of one per region, which slows down every RVV vector op in the library. A
+// vector of exactly K0 lanes therefore needs native vsetvl, i.e. an accelerated backend
+// behind cv_hal_dnn_conv32f -- which RVV now provides. See #29493 / #29619.
+#elif 0  // CV_SIMD_SCALABLE: RVV goes through cv_hal_dnn_conv32f (#29493, #29619)
 
 /////////////////////////// scalable (RVV) implementation /////////////////////////////
 // K0 == vlanes(), so each of the 10 spatial positions needs exactly one vector
@@ -2206,6 +2208,68 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     int total_tasks_gen = total_blocks * nSpatChunksGen_;
 
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
+        // Offer this task range to an accelerated HAL first, flattening the descriptor into a
+        // stable C argument list (no dnn types cross the boundary). The HAL fuses conv, scale,
+        // bias, residual and the fast-activation (out = min(s>=0 ? s : s*alpha, maxval)). A
+        // generic activation is a function pointer that cannot cross the ABI, so when one is
+        // present we still run the HAL for the heavy convolution and apply the (elementwise)
+        // activation over this range's output spans afterwards -- matching the built-in
+        // fast-epilogue-then-activation order below. On NOT_IMPLEMENTED fall through.
+        {
+            const int K0_ = outshape.back();
+            int sd = cs.nspatialdims;
+            int insize[3]  = { sd > 2 ? inpshape[sd-1] : 1, sd > 1 ? inpshape[sd] : 1, inpshape[sd+1] };
+            int outsize[3] = { sd > 2 ? outshape[sd-1] : 1, sd > 1 ? outshape[sd] : 1, outshape[sd+1] };
+            float maxval = FLT_MAX, default_alpha = 0.f;
+            const float* prelu_slope = nullptr;
+            switch (cs.fastActivation) {
+                case FAST_ACTIV_CLIP:       maxval = cs.activParams[1]; break;
+                case FAST_ACTIV_LEAKY_RELU: default_alpha = cs.activParams[0]; break;
+                case FAST_ACTIV_PRELU:      prelu_slope = cs.activParams.data(); break;
+                case FAST_ACTIV_NONE:       default_alpha = 1.f; break;
+                default: break; // FAST_ACTIV_RELU: maxval = FLT_MAX, default_alpha = 0
+            }
+            int hal_res = cv_hal_dnn_conv32f(
+                    (const float*)inp__, (const float*)residual__, (float*)out__,
+                    (const float*)weights__, scale__, bias__,
+                    inpshape.channels(), outshape.channels(), inpshape.back(),
+                    cs.ngroups, Kblk_, C1Max_,
+                    insize, outsize, cs.strides, cs.pads, cs.inner,
+                    cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),
+                    maxval, default_alpha, prelu_slope,
+                    nSpatChunksGen_, range.start, range.end);
+            if (hal_res == CV_HAL_ERROR_OK) {
+                if (cs.activation) {
+                    // The HAL wrote conv + scale/bias/residual with an identity fast-epilogue
+                    // (a generic activation always comes with FAST_ACTIV_NONE); apply it in
+                    // place over the output span of every task in this range. The HAL only
+                    // accepts K0-aligned blocks, so each span is contiguous.
+                    const int K = outshape.channels();
+                    const int K1 = (K + K0_ - 1)/K0_;
+                    const int Kg = K/cs.ngroups;
+                    const float* activParams = cs.activParams.data();
+                    for (int t = range.start; t < range.end; t++) {
+                        int block_id = t/nSpatChunksGen_, chunk_id = t - block_id*nSpatChunksGen_;
+                        int p0 = chunk_id*planeblocks_/nSpatChunksGen_;
+                        int p1 = (chunk_id + 1)*planeblocks_/nSpatChunksGen_;
+                        int n = block_id/(cs.ngroups*Kblk_);
+                        int rem = block_id - n*(cs.ngroups*Kblk_);
+                        int g = rem/Kblk_, kblk = rem - g*Kblk_;
+                        int k_base = g*Kg + kblk*K0_;
+                        if (k_base >= K || p1 <= p0)
+                            continue;
+                        float* obuf = (float*)out__ + (size_t)n*K1*planeblocks_*K0_ +
+                                      (size_t)k_base*planeblocks_ + (size_t)p0*K0_;
+                        cs.activation(obuf, obuf, (p1 - p0)*K0_, activParams);
+                    }
+                }
+                return;
+            }
+            else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+                CV_Error_(cv::Error::StsInternal,
+                    ("HAL implementation dnn_conv32f ==> cv_hal_dnn_conv32f returned %d (0x%08x)", hal_res, hal_res));
+        }
+
         constexpr int SPAT_BLOCK_SIZE = 10;
         // The block size is a fixed property of the blocked layout on every platform,
         // so C0/K0 are compile-time constants here (#29493).
