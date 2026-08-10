@@ -750,13 +750,13 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     {
         templ.convertTo(templ, CV_32F);
     }
-    // cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x.
-    // cv::threshold() does not accept CV_Bool, so widen the mask to CV_8U and let the
-    // binarization below treat any non-zero entry as selected, as it does for CV_8U. See #25895.
     if (mask.depth() == CV_Bool)
-        mask.convertTo(mask, CV_8U);
-
-    if (mask.depth() == CV_8U)
+    {
+        // Conversion out of CV_Bool maps every non-zero entry to exactly 1, so this single step
+        // yields the same 0.0/1.0 mask as the CV_8U branch below. See #25895.
+        mask.convertTo(mask, CV_32F);
+    }
+    else if (mask.depth() == CV_8U)
     {
         Mat maskBin;
         threshold(mask, maskBin, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);
