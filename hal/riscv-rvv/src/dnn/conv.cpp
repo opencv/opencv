@@ -29,9 +29,15 @@ namespace cv { namespace rvv_hal { namespace dnn {
 // (flat per-tap offsets from ofstab[], no checks) or general (every tap bounds-checked against
 // the coordinate table, an out-of-range tap reading a zero vector so the FMA stays branch-free).
 //
-// NOTE the K0-lane vector uses 8 of VLMAX lanes, so throughput does not grow past VLEN=256.
-// Filling the register at wider VLEN means processing several output channel blocks at once,
-// which is a separable follow-up (cf. the register-fill path of depthwise.cpp).
+// A K0-lane vector leaves most of a wide register idle, so a second strategy packs P = VLMAX/K0
+// *output channel blocks* into one vector (vl = P*K0). The input value x[c0] does not depend on
+// the output channel, so all P blocks share one vfmacc.vf and no per-iteration gather is needed --
+// unlike packing spatial positions, which would need a strided load plus a vrgather every
+// iteration. The P blocks live blockstride apart in the weight tensor, so their weights are tiled
+// once per group into a contiguous scratch (below) and the inner loop stays unit-stride; the P
+// outputs are planesize apart, so the wide epilogue is followed by a K0-at-a-time scatter (about
+// 1% of the inner loop). Both strategies produce identical results; the wide one is selected only
+// where the tiling cost amortises (see use_wide).
 
 namespace {
 
@@ -187,6 +193,127 @@ static CONV_ALWAYS_INLINE void NAME(int p, int cur_z, int cur_y, int cur_x,     
 CONV_DEFINE_BLOCK(convBlock10, CONV_SPAT_BLOCK, CONV_ACC_LIST10)
 CONV_DEFINE_BLOCK(convBlock1, 1, CONV_ACC_LIST1)
 
+// --- wide path: P output channel blocks per vector -------------------------------------------
+// Same traversal as above, but the weight vector comes from the tiled scratch (P blocks laid out
+// contiguously) and one accumulator covers P*K0 channels. out0/res0 point at the group's first
+// block; block b is planesize away.
+
+#define CONV_ACC_WINIT(j)  vfloat32m2_t acc##j = __riscv_vfmv_v_f_f32m2(0.f, vlw);
+#define CONV_ACC_WINNER(j) acc##j = __riscv_vfmacc_vf_f32m2(acc##j, xb[(int64_t)(j)*x_step + c0], w, vlw);
+#define CONV_ACC_WGEN(j)   acc##j = __riscv_vfmacc_vf_f32m2(acc##j, xp[j][c0], w, vlw);
+#define CONV_ACC_WSTORE(j) { \
+    vfloat32m2_t s = __riscv_vfmadd_vv_f32m2(acc##j, vsc, vbi, vlw); \
+    if (res0) { \
+        for (int b = 0; b < P; b++) \
+            __riscv_vse32_v_f32m2(scratch + (int64_t)b*K0, \
+                __riscv_vle32_v_f32m2(res0 + (int64_t)b*planesize + (int64_t)(j)*K0, vk), vk); \
+        s = __riscv_vfadd_vv_f32m2(s, __riscv_vle32_v_f32m2(scratch, vlw), vlw); \
+    } \
+    vfloat32m2_t neg = __riscv_vfmul_vv_f32m2(s, val, vlw); \
+    vbool16_t m = __riscv_vmfge_vf_f32m2_b16(s, 0.f, vlw); \
+    s = __riscv_vmerge_vvm_f32m2(neg, s, m, vlw); \
+    s = __riscv_vfmin_vf_f32m2(s, maxval, vlw); \
+    __riscv_vse32_v_f32m2(scratch, s, vlw); \
+    for (int b = 0; b < P; b++) \
+        __riscv_vse32_v_f32m2(out0 + (int64_t)b*planesize + (int64_t)(j)*K0, \
+            __riscv_vle32_v_f32m2(scratch + (int64_t)b*K0, vk), vk); \
+}
+
+#define CONV_DEFINE_WIDE_BLOCK(NAME, NP, ACC_LIST)                                            \
+static CONV_ALWAYS_INLINE void NAME(int p, int cur_z, int cur_y, int cur_x,                   \
+                                    const float* inpbase, const float* tw,                    \
+                                    float* out0, const float* res0, int64_t planesize, int P, \
+                                    const float* scalebuf, const float* biasbuf,              \
+                                    const float* alphabuf, float maxval, float* scratch,      \
+                                    const ConvGeom& G)                                        \
+{                                                                                             \
+    const int C0 = G.C0, K0 = G.K0;                                                           \
+    const size_t vk  = __riscv_vsetvl_e32m2((size_t)K0);                                      \
+    const size_t vlw = __riscv_vsetvl_e32m2((size_t)(P*K0));                                  \
+    const int64_t wstep_c0 = (int64_t)P*K0;                                                   \
+    const int64_t wstep_c1 = (int64_t)C0*P*K0;                                                \
+                                                                                              \
+    ACC_LIST(CONV_ACC_WINIT)                                                                  \
+                                                                                              \
+    const bool same_row = (cur_x + (NP) <= G.W);                                              \
+    const bool all_inner = same_row &&                                                        \
+        (cur_z >= G.innerZ0 && cur_z < G.innerZ1) &&                                          \
+        (cur_y >= G.innerY0 && cur_y < G.innerY1) &&                                          \
+        (cur_x >= G.innerX0) && (cur_x + (NP) - 1 < G.innerX1);                               \
+                                                                                              \
+    if (all_inner) {                                                                          \
+        const int x_step = G.Sx*C0;                                                           \
+        const int64_t base_ofs = (((int64_t)(cur_z*G.Sz - G.padZ)*G.Hi +                      \
+                                   (cur_y*G.Sy - G.padY))*G.Wi + (cur_x*G.Sx - G.padX))*C0;   \
+        for (int i = 0; i < G.ksize; i++) {                                                   \
+            const float* kw = tw + (int64_t)i*G.cblocks*wstep_c1;                             \
+            const float* xb = inpbase + base_ofs + G.ofstab[i];                               \
+            for (int c1 = 0; c1 < G.cblocks; c1++, kw += wstep_c1, xb += G.iplanesize) {      \
+                for (int c0 = 0; c0 < C0; c0++) {                                             \
+                    vfloat32m2_t w = __riscv_vle32_v_f32m2(kw + c0*wstep_c0, vlw);            \
+                    ACC_LIST(CONV_ACC_WINNER)                                                 \
+                }                                                                             \
+            }                                                                                 \
+        }                                                                                     \
+    } else {                                                                                  \
+        int pz[NP], py[NP], px[NP];                                                           \
+        bool inr[NP];                                                                         \
+        if (same_row) {                                                                       \
+            const bool zy_inner = (cur_z >= G.innerZ0 && cur_z < G.innerZ1) &&                \
+                                  (cur_y >= G.innerY0 && cur_y < G.innerY1);                  \
+            for (int j = 0; j < (NP); j++) {                                                  \
+                pz[j] = cur_z*G.Sz - G.padZ;                                                  \
+                py[j] = cur_y*G.Sy - G.padY;                                                  \
+                px[j] = (cur_x + j)*G.Sx - G.padX;                                            \
+                inr[j] = zy_inner && (cur_x + j >= G.innerX0) && (cur_x + j < G.innerX1);     \
+            }                                                                                 \
+        } else {                                                                              \
+            for (int j = 0; j < (NP); j++) {                                                  \
+                int zj, yj, xj;                                                               \
+                convDecodePos(p + j, G.D, G.H, G.W, zj, yj, xj);                              \
+                pz[j] = zj*G.Sz - G.padZ;                                                     \
+                py[j] = yj*G.Sy - G.padY;                                                     \
+                px[j] = xj*G.Sx - G.padX;                                                     \
+                inr[j] = (zj >= G.innerZ0 && zj < G.innerZ1) &&                               \
+                         (yj >= G.innerY0 && yj < G.innerY1) &&                               \
+                         (xj >= G.innerX0 && xj < G.innerX1);                                 \
+            }                                                                                 \
+        }                                                                                     \
+                                                                                              \
+        int64_t xofs[NP];                                                                     \
+        bool xok[NP];                                                                         \
+        for (int i = 0; i < G.ksize; i++) {                                                   \
+            const int dz = G.coordtab[i*CONV_DIMS], dy = G.coordtab[i*CONV_DIMS + 1],         \
+                      dx = G.coordtab[i*CONV_DIMS + 2];                                       \
+            for (int j = 0; j < (NP); j++) {                                                  \
+                const int zij = pz[j] + dz, yij = py[j] + dy, xij = px[j] + dx;               \
+                xok[j] = inr[j] || (((unsigned)zij < (unsigned)G.Di) &                        \
+                                    ((unsigned)yij < (unsigned)G.Hi) &                        \
+                                    ((unsigned)xij < (unsigned)G.Wi)) != 0;                   \
+                xofs[j] = (((int64_t)zij*G.Hi + yij)*G.Wi + xij)*C0;                          \
+            }                                                                                 \
+            const float* kw = tw + (int64_t)i*G.cblocks*wstep_c1;                             \
+            for (int c1 = 0; c1 < G.cblocks; c1++, kw += wstep_c1) {                          \
+                const float* xp[NP];                                                          \
+                for (int j = 0; j < (NP); j++)                                                \
+                    xp[j] = xok[j] ? inpbase + (int64_t)c1*G.iplanesize + xofs[j] : G.zbuf;   \
+                for (int c0 = 0; c0 < C0; c0++) {                                             \
+                    vfloat32m2_t w = __riscv_vle32_v_f32m2(kw + c0*wstep_c0, vlw);            \
+                    ACC_LIST(CONV_ACC_WGEN)                                                   \
+                }                                                                             \
+            }                                                                                 \
+        }                                                                                     \
+    }                                                                                         \
+                                                                                              \
+    const vfloat32m2_t vsc = __riscv_vle32_v_f32m2(scalebuf, vlw);                            \
+    const vfloat32m2_t vbi = __riscv_vle32_v_f32m2(biasbuf, vlw);                             \
+    const vfloat32m2_t val = __riscv_vle32_v_f32m2(alphabuf, vlw);                            \
+    ACC_LIST(CONV_ACC_WSTORE)                                                                 \
+}
+
+CONV_DEFINE_WIDE_BLOCK(convWideBlock10, CONV_SPAT_BLOCK, CONV_ACC_LIST10)
+CONV_DEFINE_WIDE_BLOCK(convWideBlock1, 1, CONV_ACC_LIST1)
+
 } // anonymous namespace
 
 int conv32f(const float* inp_data, const float* residual_data,
@@ -249,6 +376,24 @@ int conv32f(const float* inp_data, const float* residual_data,
     G.zbuf = zbuf;
     float scalebuf[CONV_MAX_C0], biasbuf[CONV_MAX_C0], alphabuf[CONV_MAX_C0];
 
+    // Wide path selection: pack P output channel blocks into one vector. P is what a full e32m2
+    // register holds (1 at VLEN=128 -- no gain, so the wide path is off there). Tiling the P
+    // blocks' weights costs ~2*P vector copies per (tap, c1, c0) and is amortised over the
+    // positions of a chunk, so require a chunk long enough to pay for it; everything else keeps
+    // the per-block path, which means a mis-tuned guard costs speed, never correctness.
+    const int Pmax = (int)(__riscv_vsetvlmax_e32m2()/(size_t)K0);
+    const int P = Pmax < Kblk ? Pmax : Kblk;
+    const int chunk_len = planeblocks/nspat_chunks;
+    const bool use_wide = P > 1 && chunk_len >= 8*P;
+    const int64_t blockstride = (int64_t)ksize*C1Max*C0*K0;
+    const int64_t twsize = use_wide ? (int64_t)ksize*G.cblocks*C0*P*K0 : 0;
+    cv::AutoBuffer<float> widebuf(use_wide ? (size_t)(twsize + 4*P*K0) : 0);
+    float* tw      = widebuf.data();                  // tiled weights
+    float* tscale  = tw + twsize;                     // tiled scale/bias/alpha, P*K0 each
+    float* tbias   = tscale + (int64_t)P*K0;
+    float* talpha  = tbias + (int64_t)P*K0;
+    float* scratch = talpha + (int64_t)P*K0;          // epilogue gather/scatter staging
+
     for (int t = task_start; t < task_end; t++) {
         const int block_id = t/nspat_chunks, chunk_id = t - block_id*nspat_chunks;
         const int p0 = (int)((int64_t)chunk_id*planeblocks/nspat_chunks);
@@ -263,6 +408,23 @@ int conv32f(const float* inp_data, const float* residual_data,
         if (k_base >= K)
             continue;
 
+        // Group [gstart, gstart+np) of channel blocks into one wide vector. Sibling blocks are
+        // nspat_chunks apart in the task grid; only group when every sibling is inside this
+        // worker's range, otherwise a block outside it belongs to another worker. Members other
+        // than the group start skip themselves, so nothing is computed (or stored) twice.
+        int np = 0;
+        int gstart = 0;
+        if (use_wide) {
+            gstart = kblk - kblk % P;
+            np = Kblk - gstart < P ? Kblk - gstart : P;
+            const int t0 = t - (kblk - gstart)*nspat_chunks;
+            const int tlast = t0 + (np - 1)*nspat_chunks;
+            if (t0 < task_start || tlast >= task_end)
+                np = 0;                 // group straddles the range: fall back to per-block
+            else if (t != t0)
+                continue;               // already computed as part of its group
+        }
+
         for (int kk = 0; kk < K0; kk++) {
             scalebuf[kk] = scale_all ? scale_all[k_base + kk] : 1.f;
             biasbuf[kk]  = bias_all  ? bias_all[k_base + kk]  : 0.f;
@@ -275,6 +437,51 @@ int conv32f(const float* inp_data, const float* residual_data,
         const int64_t outofs = (int64_t)n*K1*planesize + (int64_t)k_base*planeblocks;
         float* outp = out_data + outofs + (int64_t)p0*K0;
         const float* resp = residual_data ? residual_data + outofs + (int64_t)p0*K0 : nullptr;
+
+        if (np > 1) {
+            // Tile the group's weights so the inner loop reads P*K0 contiguous lanes:
+            //   tw[(i*cblocks + c1)*C0*P*K0 + c0*P*K0 + b*K0 + k] = w_(gstart+b)[i][c1][c0][k]
+            const size_t vk = __riscv_vsetvl_e32m2((size_t)K0);
+            for (int i = 0; i < ksize; i++) {
+                for (int c1 = 0; c1 < G.cblocks; c1++) {
+                    float* dst = tw + ((int64_t)i*G.cblocks + c1)*C0*np*K0;
+                    for (int b = 0; b < np; b++) {
+                        const float* src = wbase + (int64_t)b*blockstride +
+                                           (int64_t)i*C1Max*C0*K0 + (int64_t)c1*C0*K0;
+                        for (int c0 = 0; c0 < C0; c0++)
+                            __riscv_vse32_v_f32m2(dst + (int64_t)c0*np*K0 + (int64_t)b*K0,
+                                __riscv_vle32_v_f32m2(src + (int64_t)c0*K0, vk), vk);
+                    }
+                }
+            }
+            for (int b = 0; b < np; b++) {
+                const int kb = k_base + b*K0;
+                for (int kk = 0; kk < K0; kk++) {
+                    tscale[b*K0 + kk] = scale_all ? scale_all[kb + kk] : 1.f;
+                    tbias[b*K0 + kk]  = bias_all  ? bias_all[kb + kk]  : 0.f;
+                    talpha[b*K0 + kk] = prelu_slope ? prelu_slope[kb + kk] : default_alpha;
+                }
+            }
+
+            float* outw = outp;
+            const float* resw = resp;
+            int pw = p0;
+            for (; pw + CONV_SPAT_BLOCK <= p1; pw += CONV_SPAT_BLOCK, outw += CONV_SPAT_BLOCK*K0) {
+                int z, y, x;
+                convDecodePos(pw, G.D, G.H, G.W, z, y, x);
+                convWideBlock10(pw, z, y, x, inpbase, tw, outw, resw, planesize, np,
+                                tscale, tbias, talpha, maxval, scratch, G);
+                if (resw) resw += CONV_SPAT_BLOCK*K0;
+            }
+            for (; pw < p1; pw++, outw += K0) {
+                int z, y, x;
+                convDecodePos(pw, G.D, G.H, G.W, z, y, x);
+                convWideBlock1(pw, z, y, x, inpbase, tw, outw, resw, planesize, np,
+                               tscale, tbias, talpha, maxval, scratch, G);
+                if (resw) resw += K0;
+            }
+            continue;
+        }
 
         int p = p0;
         for (; p + CONV_SPAT_BLOCK <= p1; p += CONV_SPAT_BLOCK, outp += CONV_SPAT_BLOCK*K0) {
