@@ -12,6 +12,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/dnn/dnn.hpp>
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -53,15 +54,14 @@ static const std::string UNIGRAM_METASPACE = "\xE2\x96\x81";
 
 static inline std::string unigramBase64Decode(const std::string& in)
 {
-    static int T[256];
-    static bool inited = false;
-    if (!inited) {
-        std::fill(std::begin(T), std::end(T), -1);
+    static const std::array<int, 256> T = []{
+        std::array<int, 256> t;
+        t.fill(-1);
         static const char* alphabet =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        for (int i = 0; i < 64; i++) T[(unsigned char)alphabet[i]] = i;
-        inited = true;
-    }
+        for (int i = 0; i < 64; i++) t[(unsigned char)alphabet[i]] = i;
+        return t;
+    }();
     std::string out;
     out.reserve(in.size() / 4 * 3 + 3);
     int val = 0, valb = -8;

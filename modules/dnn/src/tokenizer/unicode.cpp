@@ -5,6 +5,8 @@
 #include "unicode.hpp"
 #include "unicode-data.hpp"
 
+#include <opencv2/core.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <codecvt>
@@ -13,7 +15,6 @@
 #include <locale>
 #include <map>
 #include <regex>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -22,18 +23,18 @@
 namespace cv { namespace dnn {
 
 uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
-    assert(offset < utf8.size());
+    CV_CheckLT(offset, utf8.size(), "unicode_cpt_from_utf8: offset out of range");
     if (!(utf8[offset + 0] & 0x80)) {
         auto result = utf8[offset + 0];
         offset += 1;
         return result;
     }
     if (!(utf8[offset + 0] & 0x40)) {
-        throw std::invalid_argument("invalid character");
+        CV_Error(cv::Error::StsBadArg, "invalid character");
     }
     if (!(utf8[offset + 0] & 0x20)) {
         if (offset + 1 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80)) {
-            throw std::invalid_argument("invalid character");
+            CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x1f) << 6) | (utf8[offset + 1] & 0x3f);
         offset += 2;
@@ -41,7 +42,7 @@ uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
     }
     if (!(utf8[offset + 0] & 0x10)) {
         if (offset + 2 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) || ! ((utf8[offset + 2] & 0xc0) == 0x80)) {
-            throw std::invalid_argument("invalid character");
+            CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x0f) << 12) | ((utf8[offset + 1] & 0x3f) << 6) | (utf8[offset + 2] & 0x3f);
         offset += 3;
@@ -49,20 +50,20 @@ uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
     }
     if (!(utf8[offset + 0] & 0x08)) {
         if (offset + 3 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) || ! ((utf8[offset + 2] & 0xc0) == 0x80) || !((utf8[offset + 3] & 0xc0) == 0x80)) {
-            throw std::invalid_argument("invalid character");
+            CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x07) << 18) | ((utf8[offset + 1] & 0x3f) << 12) | ((utf8[offset + 2] & 0x3f) << 6) | (utf8[offset + 3] & 0x3f);
         offset += 4;
         return result;
     }
-    throw std::invalid_argument("failed to convert utf8 to codepoint");
+    CV_Error(cv::Error::StsBadArg, "failed to convert utf8 to codepoint");
 }
 
 static std::vector<unicode_cpt_flags> unicode_cpt_flags_array() {
     std::vector<unicode_cpt_flags> cpt_flags(MAX_CODEPOINTS, unicode_cpt_flags::UNDEFINED);
 
-    assert (unicode_ranges_flags.begin()[0].first == 0);
-    assert (unicode_ranges_flags.begin()[unicode_ranges_flags.size()-1].first == MAX_CODEPOINTS);
+    CV_Assert(unicode_ranges_flags.begin()[0].first == 0);
+    CV_Assert(unicode_ranges_flags.begin()[unicode_ranges_flags.size()-1].first == MAX_CODEPOINTS);
     for (size_t i = 1; i < unicode_ranges_flags.size(); ++i) {
         const auto range_ini = unicode_ranges_flags.begin()[i-1];  // codepoint_ini, flags
         const auto range_end = unicode_ranges_flags.begin()[i];    // codepoint_end, flags

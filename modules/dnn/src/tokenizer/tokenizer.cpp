@@ -51,11 +51,8 @@ static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
 struct Tokenizer::Impl {
     virtual ~Impl() {}
     virtual std::vector<int> encode(const std::string& text) = 0;
-    // Default: no pairing; empty textPair passes, else error.
-    virtual std::vector<int> encode(const std::string& text, const std::string& textPair) {
-        if (!textPair.empty())
-            CV_Error(cv::Error::StsNotImplemented, "This tokenizer does not support paired-sequence encoding");
-        return encode(text);
+    virtual std::vector<int> encodePair(const std::string&, const std::string&) {
+        CV_Error(cv::Error::StsNotImplemented, "This tokenizer does not support paired-sequence encoding");
     }
     virtual std::string decode(const std::vector<int>& tokens) = 0;
 };
@@ -189,7 +186,7 @@ public:
                             std::unordered_map<std::string, int> specialToId);
 
     std::vector<int> encode(const std::string& text) override;
-    std::vector<int> encode(const std::string& textA, const std::string& textB) override;
+    std::vector<int> encodePair(const std::string& textA, const std::string& textB) override;
     std::string decode(const std::vector<int>& tokens) override;
 
 private:
@@ -324,10 +321,10 @@ void WordPieceTokenizerImpl::encodeSegment(const std::string& text, std::vector<
 }
 
 std::vector<int> WordPieceTokenizerImpl::encode(const std::string& text) {
-    return encode(text, std::string());
+    return encodePair(text, std::string());
 }
 
-std::vector<int> WordPieceTokenizerImpl::encode(const std::string& textA, const std::string& textB) {
+std::vector<int> WordPieceTokenizerImpl::encodePair(const std::string& textA, const std::string& textB) {
     std::vector<int> ids;
     if (clsId_ >= 0) ids.push_back(clsId_);
     encodeSegment(textA, ids);
@@ -525,7 +522,7 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
 
     bool merges_are_string_format = false;
     cv::FileNode merges_node = model_node["merges"];
-    if (!merges_node.empty()) {
+    if (merges_node.size() > 0) {
         cv::FileNode first_entry = *merges_node.begin();
         merges_are_string_format = first_entry.isString();
 
@@ -778,10 +775,16 @@ static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir)
 
 Tokenizer::Tokenizer() : impl_(nullptr) {}
 
-std::vector<int> Tokenizer::encode(const std::string& text, const std::string& textPair)
+std::vector<int> Tokenizer::encode(const std::string& text)
 {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
-    return impl_->encode(text, textPair);
+    return impl_->encode(text);
+}
+
+std::vector<int> Tokenizer::encodePair(const std::string& text, const std::string& textPair)
+{
+    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
+    return impl_->encodePair(text, textPair);
 }
 
 std::string Tokenizer::decode(const std::vector<int>& tokens)

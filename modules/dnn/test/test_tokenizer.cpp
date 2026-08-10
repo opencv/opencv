@@ -432,4 +432,40 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_Roundtrip) {
     }
 }
 
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodePair) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    std::vector<int> a = tok.encode("hello world");
+    std::vector<int> b = tok.encode("OpenCV is Great");
+    std::vector<int> pair = tok.encodePair("hello world", "OpenCV is Great");
+
+    EXPECT_EQ(pair, (std::vector<int>{101, 7592, 2088, 102, 2330, 2278, 2615, 2003, 2307, 102}));
+
+    std::vector<int> expected(a.begin(), a.end());
+    expected.insert(expected.end(), b.begin() + 1, b.end());
+    EXPECT_EQ(pair, expected);
+}
+
+TEST(Tokenizer_BPE, Tokenizer_EncodePair_Unsupported) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_EncodePair_Unsupported) {
+    Tokenizer tok = Tokenizer::load(_tf("gemma2/config.json"));
+    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_EncodePair_Unsupported) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_MalformedUtf8) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    EXPECT_THROW(tok.encode("\xff"), cv::Exception);          // invalid lead byte
+    EXPECT_THROW(tok.encode("\xc3"), cv::Exception);           // truncated 2-byte sequence
+}
+
 }}

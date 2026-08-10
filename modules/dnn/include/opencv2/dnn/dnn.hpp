@@ -2078,6 +2078,7 @@ public:
      *
      * Expects the directory to contain:
      *  - `config.json` with field `method` (one of: BPE, Gemma, SentencePiece, Unigram, WordPiece).
+     *    `encodePair` is supported only for WordPiece; other methods throw.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
      * The argument is a path prefix; this function concatenates file
@@ -2097,14 +2098,18 @@ public:
      * ordinary text rather than recognized as a special token.
      *
      * @param text  UTF-8 input string.
-     * @param textPair  Optional second UTF-8 input string, for tokenizers
-     *   that support paired-sequence encoding (currently only WordPiece:
-     *   wraps as `[CLS] text [SEP] textPair [SEP]`). Ignored if empty;
-     *   throws cv::Exception if non-empty and unsupported by the loaded
-     *   tokenizer.
      * @return Vector of token ids (32-bit ids narrowed to int for convenience).
      */
-    CV_WRAP std::vector<int> encode(const std::string& text, const std::string& textPair = std::string());
+    CV_WRAP std::vector<int> encode(const std::string& text);
+
+    /**
+     * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`. WordPiece only.
+     * @param text  UTF-8 first input string.
+     * @param textPair  UTF-8 second input string.
+     * @return Vector of token ids.
+     * @throw cv::Exception if unsupported by the loaded tokenizer.
+     */
+    CV_WRAP std::vector<int> encodePair(const std::string& text, const std::string& textPair);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;

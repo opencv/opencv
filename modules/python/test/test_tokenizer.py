@@ -47,6 +47,27 @@ class TokenizerBindingTest(NewOpenCVTests):
         sent = tok.decode([15339, 1917])
         self.assertEqual(sent, "hello world")
 
+    def test_tokenizer_bert_encode_pair(self):
+        tok = cv.dnn.Tokenizer.load(_tf("bert/config.json"))
+        a = list(tok.encode("hello world"))
+        b = list(tok.encode("OpenCV is Great"))
+        pair = list(tok.encodePair("hello world", "OpenCV is Great"))
+        self.assertEqual(pair, a + b[1:])
+        self.assertEqual(pair, [101, 7592, 2088, 102, 2330, 2278, 2615, 2003, 2307, 102])
+
+    def test_tokenizer_encode_pair_unsupported(self):
+        for cfg in ["gpt2/config.json", "gemma2/config.json", "t5/config.json"]:
+            tok = cv.dnn.Tokenizer.load(_tf(cfg))
+            with self.assertRaises(cv.error):
+                tok.encodePair("hello", "world")
+
+    def test_tokenizer_malformed_utf8(self):
+        tok = cv.dnn.Tokenizer.load(_tf("t5/config.json"))
+        with self.assertRaises(cv.error):
+            tok.encode(b"\xff")
+        with self.assertRaises(cv.error):
+            tok.encode(b"\xc3")
+
     def test_with_hf_tiktoken(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt2/config.json"))
         with open(_tf("gpt2/gpt2_hf_tik_testdata.json"), "r", encoding="utf-8") as f:
