@@ -93,21 +93,26 @@ static CONV_ALWAYS_INLINE void convDecodePos(int p, int D, int H, int W, int& z,
     vbool16_t m = __riscv_vmfge_vf_f32m2_b16(s, 0.f, vl); \
     s = __riscv_vmerge_vvm_f32m2(neg, s, m, vl); \
     s = __riscv_vfmin_vf_f32m2(s, maxval, vl); \
-    __riscv_vse32_v_f32m2(op + (int64_t)(j)*K0, s, vl); \
+    __riscv_vse32_v_f32m2(op + (int64_t)(j)*K0, s, vstore); \
 }
 
 // Compute NP consecutive output positions starting at plane index p (whose coordinates are
 // cur_z/cur_y/cur_x), then apply the fused epilogue and store. op/rp point at the first of the
 // NP output/residual pixels; inpbase/wbase are this task's input and weight block bases.
-#define CONV_DEFINE_BLOCK(NAME, NP, ACC_LIST)                                                 \
+// k_count is how many of the K0 channel lanes are real: a partial last block stores only those,
+// leaving the layout's padding lanes untouched (the engine has zeroed them).
+#define CONV_DEFINE_BLOCK(NAME, NP, ACC_LIST, STORE_VL)                                       \
 static CONV_ALWAYS_INLINE void NAME(int p, int cur_z, int cur_y, int cur_x,                   \
                                     const float* inpbase, const float* wbase,                 \
                                     float* op, const float* rp,                               \
                                     const float* scalebuf, const float* biasbuf,              \
-                                    const float* alphabuf, float maxval, const ConvGeom& G)   \
+                                    const float* alphabuf, float maxval, int k_count,         \
+                                    const ConvGeom& G)                                        \
 {                                                                                             \
     const int C0 = G.C0, K0 = G.K0;                                                           \
     const size_t vl = __riscv_vsetvl_e32m2((size_t)K0); /* K0 <= 8 <= VLMAX(e32m2) */         \
+    (void)k_count;                                                                            \
+    const size_t vstore = (STORE_VL);                                                         \
                                                                                               \
     ACC_LIST(CONV_ACC_INIT)                                                                   \
                                                                                               \
@@ -190,8 +195,11 @@ static CONV_ALWAYS_INLINE void NAME(int p, int cur_z, int cur_y, int cur_x,     
     ACC_LIST(CONV_ACC_STORE)                                                                  \
 }
 
-CONV_DEFINE_BLOCK(convBlock10, CONV_SPAT_BLOCK, CONV_ACC_LIST10)
-CONV_DEFINE_BLOCK(convBlock1, 1, CONV_ACC_LIST1)
+CONV_DEFINE_BLOCK(convBlock10, CONV_SPAT_BLOCK, CONV_ACC_LIST10, vl)
+CONV_DEFINE_BLOCK(convBlock1, 1, CONV_ACC_LIST1, vl)
+// Partial-block variants: identical apart from storing only the k_count real channel lanes.
+CONV_DEFINE_BLOCK(convBlock10p, CONV_SPAT_BLOCK, CONV_ACC_LIST10, __riscv_vsetvl_e32m2((size_t)k_count))
+CONV_DEFINE_BLOCK(convBlock1p, 1, CONV_ACC_LIST1, __riscv_vsetvl_e32m2((size_t)k_count))
 
 // --- wide path: P output channel blocks per vector -------------------------------------------
 // Same traversal as above, but the weight vector comes from the tiled scratch (P blocks laid out
@@ -331,12 +339,13 @@ int conv32f(const float* inp_data, const float* residual_data,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const int Cg = C/ngroups, Kg = K/ngroups;
-    // Only the aligned case is handled: every output channel block is full (k_count == K0 with a
-    // K0-aligned k_base) and every group starts on a channel block. Anything else needs the
-    // built-in's scatter/gather epilogue, so decline the whole range and let it run.
-    if (K % K0 != 0 || Kg % K0 != 0)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    if (ngroups > 1 && Cg % C0 != 0)
+    // The one case left to the built-in is an output channel block that does not START on a block
+    // boundary -- a grouped convolution whose per-group channel count is not a multiple of K0 --
+    // because its channels straddle two output planes and need a scattered epilogue. A partial
+    // LAST block (K not a multiple of K0) is handled here: it is block-aligned, so only its real
+    // lanes are stored and the layout's padding lanes are left as the engine zeroed them (it
+    // memsets the output whenever K/ngroups is not a multiple of K0).
+    if (ngroups > 1 && Kg % K0 != 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     ConvGeom G;
@@ -348,7 +357,7 @@ int conv32f(const float* inp_data, const float* residual_data,
     G.innerY0 = inner[1]; G.innerY1 = inner[CONV_DIMS + 1];
     G.innerX0 = inner[2]; G.innerX1 = inner[CONV_DIMS + 2];
     G.C0 = C0; G.K0 = K0; G.C1Max = C1Max; G.ksize = ksize;
-    G.cblocks = (Cg + C0 - 1)/C0;
+    G.cblocks = 0;              // per group: depends on where the group starts within a block
     G.coordtab = coordtab;
     G.ofstab = ofstab;
 
@@ -383,15 +392,17 @@ int conv32f(const float* inp_data, const float* residual_data,
     // the per-block path, which means a mis-tuned guard costs speed, never correctness.
     const int Pmax = (int)(__riscv_vsetvlmax_e32m2()/(size_t)K0);
     const int P = Pmax < Kblk ? Pmax : Kblk;
+    const int Kfull = Kg/K0;    // completely filled channel blocks; a trailing partial one is
+                                // computed per block, since the group shares one store width
     const int chunk_len = planeblocks/nspat_chunks;
     // Scratch element count is formed in 64 bits and range-checked before it is narrowed to
     // size_t, so a platform with a 32-bit size_t cannot wrap it into an under-allocation; the
     // wide path simply stays off in that case.
-    const int64_t wideneed = (int64_t)ksize*G.cblocks*C0*P*K0 + 4*(int64_t)P*K0;
+    const int64_t wideneed = (int64_t)ksize*C1Max*C0*P*K0 + 4*(int64_t)P*K0;
     const bool use_wide = P > 1 && chunk_len >= 8*P &&
                           wideneed <= (int64_t)(SIZE_MAX/sizeof(float));
     const int64_t blockstride = (int64_t)ksize*C1Max*C0*K0;
-    const int64_t twsize = use_wide ? (int64_t)ksize*G.cblocks*C0*P*K0 : 0;
+    const int64_t twsize = use_wide ? (int64_t)ksize*C1Max*C0*P*K0 : 0;
     cv::AutoBuffer<float> widebuf(use_wide ? (size_t)wideneed : 0);
     float* tw      = widebuf.data();                  // tiled weights
     float* tscale  = tw + twsize;                     // tiled scale/bias/alpha, P*K0 each
@@ -413,15 +424,23 @@ int conv32f(const float* inp_data, const float* residual_data,
         if (k_base >= K)
             continue;
 
+        // How many of this block's K0 lanes are real output channels.
+        int k_count = Kg - kblk*K0;
+        if (k_count > K0)      k_count = K0;
+        if (k_count > K - k_base) k_count = K - k_base;
+        if (k_count <= 0)
+            continue;
+
         // Group [gstart, gstart+np) of channel blocks into one wide vector. Sibling blocks are
         // nspat_chunks apart in the task grid; only group when every sibling is inside this
         // worker's range, otherwise a block outside it belongs to another worker. Members other
         // than the group start skip themselves, so nothing is computed (or stored) twice.
+        // Only full blocks are grouped: a partial one needs a narrower store than its siblings.
         int np = 0;
         int gstart = 0;
-        if (use_wide) {
+        if (use_wide && kblk < Kfull) {
             gstart = kblk - kblk % P;
-            np = Kblk - gstart < P ? Kblk - gstart : P;
+            np = Kfull - gstart < P ? Kfull - gstart : P;
             const int t0 = t - (kblk - gstart)*nspat_chunks;
             const int tlast = t0 + (np - 1)*nspat_chunks;
             if (t0 < task_start || tlast >= task_end)
@@ -430,12 +449,22 @@ int conv32f(const float* inp_data, const float* residual_data,
                 continue;               // already computed as part of its group
         }
 
+        // Lanes past k_count are layout padding: zero coefficients keep them harmless (and stop
+        // the per-channel vectors, which are only K long, from being read out of bounds).
         for (int kk = 0; kk < K0; kk++) {
-            scalebuf[kk] = scale_all ? scale_all[k_base + kk] : 1.f;
-            biasbuf[kk]  = bias_all  ? bias_all[k_base + kk]  : 0.f;
-            alphabuf[kk] = prelu_slope ? prelu_slope[k_base + kk] : default_alpha;
+            if (kk < k_count) {
+                scalebuf[kk] = scale_all ? scale_all[k_base + kk] : 1.f;
+                biasbuf[kk]  = bias_all  ? bias_all[k_base + kk]  : 0.f;
+                alphabuf[kk] = prelu_slope ? prelu_slope[k_base + kk] : default_alpha;
+            } else {
+                scalebuf[kk] = 0.f; biasbuf[kk] = 0.f; alphabuf[kk] = 0.f;
+            }
         }
 
+        // A group that does not start on a channel block reads its weights from the block that
+        // contains it, so the block count follows the offset within that block.
+        const int c00 = (g*Cg) & (C0 - 1);
+        G.cblocks = (c00 + Cg + C0 - 1)/C0;
         const int c1_start = (g*Cg)/C0;
         const float* inpbase = inp_data + ((int64_t)n*C1 + c1_start)*iplanesize;
         const float* wbase = weights_all + (int64_t)(g*Kblk + kblk)*ksize*C1Max*C0*K0;
@@ -492,15 +521,23 @@ int conv32f(const float* inp_data, const float* residual_data,
         for (; p + CONV_SPAT_BLOCK <= p1; p += CONV_SPAT_BLOCK, outp += CONV_SPAT_BLOCK*K0) {
             int z, y, x;
             convDecodePos(p, G.D, G.H, G.W, z, y, x);
-            convBlock10(p, z, y, x, inpbase, wbase, outp, resp,
-                        scalebuf, biasbuf, alphabuf, maxval, G);
+            if (k_count == K0)
+                convBlock10(p, z, y, x, inpbase, wbase, outp, resp,
+                            scalebuf, biasbuf, alphabuf, maxval, k_count, G);
+            else
+                convBlock10p(p, z, y, x, inpbase, wbase, outp, resp,
+                             scalebuf, biasbuf, alphabuf, maxval, k_count, G);
             if (resp) resp += CONV_SPAT_BLOCK*K0;
         }
         for (; p < p1; p++, outp += K0) {
             int z, y, x;
             convDecodePos(p, G.D, G.H, G.W, z, y, x);
-            convBlock1(p, z, y, x, inpbase, wbase, outp, resp,
-                       scalebuf, biasbuf, alphabuf, maxval, G);
+            if (k_count == K0)
+                convBlock1(p, z, y, x, inpbase, wbase, outp, resp,
+                           scalebuf, biasbuf, alphabuf, maxval, k_count, G);
+            else
+                convBlock1p(p, z, y, x, inpbase, wbase, outp, resp,
+                            scalebuf, biasbuf, alphabuf, maxval, k_count, G);
             if (resp) resp += K0;
         }
     }
