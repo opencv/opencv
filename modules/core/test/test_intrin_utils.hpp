@@ -1493,18 +1493,24 @@ template<typename R> struct TheTest
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
         dataB += VTraits<R>::vlanes();
+        
+        Data<R> dataC_in;
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            dataC_in[i] = (LaneType)-1;
 
-        R a = dataA, b = dataB;
-        v_float64 c = v_cvt_f64(a), d = v_cvt_f64(b);
+        R a = dataA, b = dataB, c_in = dataC_in;
+        v_float64 c = v_cvt_f64(a), d = v_cvt_f64(b), e = v_cvt_f64(c_in);
 
         Data<v_float64> resC = c;
         Data<v_float64> resD = d;
+        Data<v_float64> resE = e;
 
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((double)dataA[i], resC[i]);
             EXPECT_EQ((double)dataB[i], resD[i]);
+            EXPECT_EQ((double)dataC_in[i], resE[i]);
         }
 #endif
         return *this;
