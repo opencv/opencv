@@ -225,7 +225,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
     }
 
 #if !defined(IPP_CALLS_ENFORCED)
-    if (borderType == cv::BORDER_TRANSPARENT))
+    if (borderType == cv::BORDER_TRANSPARENT)
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
