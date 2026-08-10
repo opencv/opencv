@@ -7,12 +7,8 @@
 #include "unicode.hpp"
 #include "core_bpe.hpp"
 #include "core_gemma.hpp"
-#include "core_unigram.hpp"
 
-#include <cctype>
-#include <fstream>
 #include <functional>
-#include <sstream>
 #include <unordered_set>
 
 namespace cv { namespace dnn {
@@ -26,32 +22,8 @@ static std::unordered_map<std::string, ImplRegestry>& tokenizerRegistry() {
     return reg;
 }
 
-CoreBPE buildTokenizerFromJson(const std::string& json_path,
+CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial = nullptr);
-
-// Opens a tokenizer.json file for FileStorage/JSON parsing while stripping
-// out any oversized field values (currently just "precompiled_charsmap")
-// that would otherwise overflow FileStorage's JSON parser. Pass a non-null
-// out_charsmap to receive the stripped "precompiled_charsmap" value, if any.
-static cv::FileStorage openTokenizerJson(const std::string& json_path,
-    std::string* out_charsmap = nullptr) {
-    std::ifstream in(json_path, std::ios::binary);
-    if (!in.is_open())
-        CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
-
-    std::ostringstream ss;
-    ss << in.rdbuf();
-    std::string text = ss.str();
-
-    std::string charsmap = extractAndStripLongStringField(text, "precompiled_charsmap");
-    if (out_charsmap)
-        *out_charsmap = std::move(charsmap);
-
-    cv::FileStorage fs(text, cv::FileStorage::MEMORY | cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
-    if (!fs.isOpened())
-        CV_Error(cv::Error::StsError, "Failed to parse tokenizer.json: " + json_path);
-    return fs;
-}
 
 struct Tokenizer::Impl {
     virtual ~Impl() {}
@@ -84,6 +56,23 @@ struct BpeTokenizerImpl : public Tokenizer::Impl {
     }
 };
 
+struct GemmaBpeTokenizerImpl : public Tokenizer::Impl {
+    CoreGemmaBPE model;
+    std::unordered_set<std::string> allowedSpecial;
+
+    explicit GemmaBpeTokenizerImpl(CoreGemmaBPE m,
+                                   std::unordered_set<std::string> special = {})
+        : model(std::move(m)), allowedSpecial(std::move(special)) {}
+
+    std::vector<int> encode(const std::string& text) override {
+        return model.encode(text, allowedSpecial);
+    }
+
+    std::string decode(const std::vector<int>& tokens) override {
+        return model.decode(tokens);
+    }
+};
+
 struct SentencePieceTokenizerImpl : public Tokenizer::Impl {
     CoreGemmaBPE model;
     std::unordered_set<std::string> allowedSpecial;
@@ -96,6 +85,7 @@ struct SentencePieceTokenizerImpl : public Tokenizer::Impl {
 
     std::vector<int> encode(const std::string& text) override {
         std::vector<int> ids = model.encode(text, allowedSpecial);
+        // HuggingFace SentencePiece tokenizers (Gemma2) prepend <bos> automatically
         if (bosTokenId >= 0) {
             ids.insert(ids.begin(), bosTokenId);
         }
@@ -112,151 +102,22 @@ struct SentencePieceTokenizerImpl : public Tokenizer::Impl {
     }
 };
 
-// SentencePiece Unigram (T5-style): CoreUnigram already appends the trailing
-// eos (via post_processor's TemplateProcessing) inside encode() and strips
-// special tokens inside decode(), so this wrapper is a thin pass-through --
-// unlike SentencePieceTokenizerImpl above, it must NOT re-add or re-strip
-// anything itself.
-struct UnigramTokenizerImpl : public Tokenizer::Impl {
-    CoreUnigram model;
-    std::unordered_set<std::string> allowedSpecial;
-
-    explicit UnigramTokenizerImpl(CoreUnigram m,
-                                  std::unordered_set<std::string> special = {})
-        : model(std::move(m)), allowedSpecial(std::move(special)) {}
-
-    std::vector<int> encode(const std::string& text) override {
-        return model.encode(text, allowedSpecial);
-    }
-
-    std::string decode(const std::vector<int>& tokens) override {
-        return model.decode(tokens);
-    }
-};
-
-static std::string expandCaseInsensitiveGroups(const std::string& in) {
-    std::string out;
-    out.reserve(in.size());
-    size_t i = 0;
-    while (i < in.size()) {
-        if (in.compare(i, 4, "(?i:") == 0) {
-            size_t j = i + 4;
-            int depth = 1;
-            while (j < in.size() && depth > 0) {
-                if (in[j] == '(') depth++;
-                else if (in[j] == ')') depth--;
-                if (depth > 0) j++;
-            }
-            std::string inner = in.substr(i + 4, j - (i + 4));
-            out += "(?:";
-            for (char c : inner) {
-                if (std::isalpha(static_cast<unsigned char>(c))) {
-                    out += '[';
-                    out += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    out += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                    out += ']';
-                } else {
-                    out += c;
-                }
-            }
-            out += ")";
-            i = (j < in.size()) ? j + 1 : j;
-        } else {
-            out += in[i++];
-        }
-    }
-    return out;
-}
-
-static std::string stripPossessiveQuantifiers(const std::string& in) {
-    std::string out;
-    out.reserve(in.size());
-    for (char c : in) {
-        if (c == '+' && !out.empty()) {
-            char prev = out.back();
-            if (prev == '+' || prev == '*' || prev == '?') {
-                continue;
-            }
-            if (prev == '}') {
-                // '}' can either close a {m,n} repetition quantifier (in which
-                // case a following '+' is a possessive quantifier that should
-                // be stripped) or close a \p{...}/\P{...} Unicode property
-                // escape (in which case the following '+' is a normal,
-                // legitimate quantifier applied to the whole \p{...} atom and
-                // must NOT be stripped). Walk back to the matching '{' to
-                // tell these two cases apart.
-                int depth = 1;
-                size_t j = out.size() - 1;
-                while (j > 0 && depth > 0) {
-                    --j;
-                    if (out[j] == '}') ++depth;
-                    else if (out[j] == '{') --depth;
-                }
-                bool isPropertyEscape = (depth == 0 && out[j] == '{' &&
-                    j >= 2 && out[j - 1] == 'p' && out[j - 2] == '\\');
-                if (!isPropertyEscape) {
-                    isPropertyEscape = (depth == 0 && out[j] == '{' &&
-                        j >= 2 && out[j - 1] == 'P' && out[j - 2] == '\\');
-                }
-                if (depth == 0 && out[j] == '{' && !isPropertyEscape) {
-                    continue;
-                }
-            }
-        }
-        out.push_back(c);
-    }
-    return out;
-}
-
-static std::string adaptHfPreTokenizerRegex(const std::string& raw) {
-    return stripPossessiveQuantifiers(expandCaseInsensitiveGroups(raw));
-}
-
-static bool findEmbeddedSplitRegex(const cv::FileNode& preTok, std::string& outRegex) {
-    if (preTok.empty()) return false;
-    std::string type;
-    preTok["type"] >> type;
-    if (type == "Sequence") {
-        cv::FileNode list = preTok["pretokenizers"];
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            cv::FileNode child = *it;
-            cv::FileNode regexNode = child["pattern"]["Regex"];
-            if (!regexNode.empty() && regexNode.isString()) {
-                regexNode >> outRegex;
-                return true;
-            }
-        }
-        return false;
-    }
-    cv::FileNode regexNode = preTok["pattern"]["Regex"];
-    if (!regexNode.empty() && regexNode.isString()) {
-        regexNode >> outRegex;
-        return true;
-    }
-    return false;
-}
-
-static std::string detectSplitPattern(const cv::FileStorage& fs) {
-    std::string raw;
-    if (findEmbeddedSplitRegex(fs["pre_tokenizer"], raw))
-        return adaptHfPreTokenizerRegex(raw);
-    return R50K_UTF8;
-}
-
-static Ptr<Tokenizer::Impl> buildGemmaFamilyFromJson(
+static Ptr<GemmaBpeTokenizerImpl> buildGemmaFromJson(
         const std::string& json_path,
         std::unordered_set<std::string>* outSpecial = nullptr) {
 
-    cv::FileStorage fs = openTokenizerJson(json_path);
+    cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!fs.isOpened())
+        CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
 
     cv::FileNode model_node = fs["model"];
     CV_CheckFalse(model_node.empty(), "tokenizer.json missing 'model'");
 
     std::string model_type;
     model_node["type"] >> model_type;
-    if (!model_type.empty() && model_type != "BPE")
+    if (model_type != "BPE")
         CV_Error(cv::Error::StsError,
-            "Expected a byte-fallback BPE model in tokenizer.json, got: " + model_type);
+            "Expected BPE model in tokenizer.json for Gemma3, got: " + model_type);
 
     CoreGemmaBPE gemma;
 
@@ -276,17 +137,88 @@ static Ptr<Tokenizer::Impl> buildGemmaFamilyFromJson(
     for (const auto& kv : gemma.pieceToId)
         gemma.idToPiece[kv.second] = kv.first;
 
-    bool mergesAreStringFormat = false;
     cv::FileNode merges_node = model_node["merges"];
     if (!merges_node.empty()) {
-        cv::FileNode first_entry = *merges_node.begin();
-        mergesAreStringFormat = first_entry.isString();
+        uint32_t rank = 0;
+        for (auto it = merges_node.begin(); it != merges_node.end(); ++it) {
+            cv::FileNode entry = *it;
+            if (static_cast<int>(entry.size()) != 2) {
+                ++rank;
+                continue;
+            }
+            std::string a, b;
+            entry[0] >> a;
+            entry[1] >> b;
+            gemma.addMerge(a, b, rank);
+            ++rank;
+        }
+    }
 
+    std::unordered_set<std::string> special;
+    cv::FileNode added = fs["added_tokens"];
+    if (!added.empty()) {
+        for (auto it = added.begin(); it != added.end(); ++it) {
+            cv::FileNode t = *it;
+            int id = -1;         t["id"]      >> id;
+            std::string content; t["content"] >> content;
+            bool is_special = false; t["special"] >> is_special;
+            if (id >= 0 && !content.empty()) {
+                gemma.specialToId[content] = id;
+                gemma.idToSpecial[id]      = content;
+                // All added tokens bypass BPE (matching HuggingFace behavior),
+                // not just those marked special.
+                special.insert(content);
+                if (outSpecial) outSpecial->insert(content);
+            }
+        }
+    }
+
+    return makePtr<GemmaBpeTokenizerImpl>(std::move(gemma), std::move(special));
+}
+
+static Ptr<SentencePieceTokenizerImpl> buildSentencePieceFromJson(
+        const std::string& json_path,
+        std::unordered_set<std::string>* outSpecial = nullptr) {
+
+    cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!fs.isOpened())
+        CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
+
+    cv::FileNode model_node = fs["model"];
+    CV_CheckFalse(model_node.empty(), "tokenizer.json missing 'model'");
+
+    std::string model_type;
+    model_node["type"] >> model_type;
+    if (model_type != "BPE")
+        CV_Error(cv::Error::StsError,
+            "Expected BPE model in tokenizer.json for SentencePiece, got: " + model_type);
+
+    CoreGemmaBPE gemma;
+
+    cv::FileNode vocab_node = model_node["vocab"];
+    CV_CheckFalse(vocab_node.empty(), "tokenizer.json model missing 'vocab'");
+
+    int maxId = -1;
+    for (auto it = vocab_node.begin(); it != vocab_node.end(); ++it) {
+        cv::FileNode entry = *it;
+        std::string piece = entry.name();
+        int id = (int)entry;
+        if (id > maxId) maxId = id;
+        gemma.pieceToId[piece] = id;
+    }
+
+    gemma.idToPiece.resize(maxId + 1);
+    for (const auto& kv : gemma.pieceToId)
+        gemma.idToPiece[kv.second] = kv.first;
+
+    cv::FileNode merges_node = model_node["merges"];
+    if (!merges_node.empty()) {
         uint32_t rank = 0;
         for (auto it = merges_node.begin(); it != merges_node.end(); ++it) {
             cv::FileNode entry = *it;
             std::string a, b;
             if (entry.isString()) {
+                // SentencePiece format: "a b" (single string with space separator)
                 std::string merge_str;
                 entry >> merge_str;
                 size_t sp = merge_str.find(' ');
@@ -297,6 +229,7 @@ static Ptr<Tokenizer::Impl> buildGemmaFamilyFromJson(
                 a = merge_str.substr(0, sp);
                 b = merge_str.substr(sp + 1);
             } else if (entry.size() == 2) {
+                // Array format: ["a", "b"]
                 entry[0] >> a;
                 entry[1] >> b;
             } else {
@@ -321,146 +254,49 @@ static Ptr<Tokenizer::Impl> buildGemmaFamilyFromJson(
                 gemma.idToSpecial[id]      = content;
                 special.insert(content);
                 if (outSpecial) outSpecial->insert(content);
+                // Capture <bos> token id for SentencePiece auto-prepend
                 if (content == "<bos>") bosId = id;
             }
         }
     }
 
-    int bosTokenId = (mergesAreStringFormat && bosId >= 0) ? bosId : -1;
-    return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bosTokenId);
-}
-
-static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
-        const std::string& json_path,
-        std::unordered_set<std::string>* outSpecial = nullptr) {
-
-    std::string charsmap_b64;
-    cv::FileStorage fs = openTokenizerJson(json_path, &charsmap_b64);
-
-    cv::FileNode model_node = fs["model"];
-    CV_CheckFalse(model_node.empty(), "tokenizer.json missing 'model'");
-
-    std::string model_type;
-    model_node["type"] >> model_type;
-    if (!model_type.empty() && model_type != "Unigram")
-        CV_Error(cv::Error::StsError,
-            "Expected a Unigram model in tokenizer.json, got: " + model_type);
-
-    cv::FileNode vocab_node = model_node["vocab"];
-    CV_CheckFalse(vocab_node.empty(), "tokenizer.json model missing 'vocab'");
-
-    CoreUnigram unigram;
-    unigram.idToPiece.reserve(vocab_node.size());
-    unigram.idToScore.reserve(vocab_node.size());
-    int id = 0;
-    for (auto it = vocab_node.begin(); it != vocab_node.end(); ++it, ++id) {
-        cv::FileNode entry = *it;
-        std::string piece;
-        double score = 0.0;
-        if (entry.size() >= 2) {
-            entry[0] >> piece;
-            entry[1] >> score;
-        }
-        unigram.idToPiece.push_back(piece);
-        unigram.idToScore.push_back((float)score);
-        unigram.pieceToId[piece] = id;
-    }
-
-    int unkId = -1;
-    model_node["unk_id"] >> unkId;
-    unigram.unkId = unkId;
-
-    unigram.normalizer = buildUnigramPrecompiledNormalizer(charsmap_b64);
-
-    std::unordered_set<std::string> special;
-    int eosId = -1;
-    cv::FileNode added = fs["added_tokens"];
-    if (!added.empty()) {
-        for (auto it = added.begin(); it != added.end(); ++it) {
-            cv::FileNode t = *it;
-            bool isSpecial = false; t["special"] >> isSpecial;
-            int tid = -1;           t["id"]      >> tid;
-            std::string content;    t["content"] >> content;
-            if (isSpecial && tid >= 0 && !content.empty()) {
-                unigram.specialToId[content] = tid;
-                unigram.idToSpecial[tid]     = content;
-                special.insert(content);
-                if (outSpecial) outSpecial->insert(content);
-                if (content == "</s>") eosId = tid;
-            }
-        }
-    }
-    unigram.eosId = eosId;
-
-    unigram.finalize();
-
-    return makePtr<UnigramTokenizerImpl>(std::move(unigram), std::move(special));
-}
-
-static Ptr<Tokenizer::Impl> buildBPETokenizerImpl(const std::string& dir) {
-    std::string tok_json = dir + "tokenizer.json";
-    std::unordered_set<std::string> special;
-    CoreBPE core = buildTokenizerFromJson(tok_json, &special);
-    return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
-}
-
-static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir) {
-    std::string tok_json = dir + "tokenizer.json";
-    cv::FileStorage fs = openTokenizerJson(tok_json);
-
-    cv::FileNode model = fs["model"];
-    if (model.empty())
-        CV_Error(cv::Error::StsError,
-            "tokenizer.json has no 'model' field; raw rank-table tokenizers are not "
-            "supported by this loader: " + tok_json);
-
-    std::string model_type;
-    model["type"] >> model_type;
-
-    if (model_type == "Unigram")
-        return buildUnigramTokenizerImpl(tok_json);
-
-    if (!model_type.empty() && model_type != "BPE")
-        CV_Error(cv::Error::StsError,
-            "Unsupported tokenizer model type '" + model_type + "' in " + tok_json +
-            " (only BPE-family and Unigram models are currently supported)");
-
-    if (model["merges"].empty())
-        CV_Error(cv::Error::StsError,
-            "tokenizer.json model has no 'merges' table in " + tok_json +
-            " (only merge-based BPE models are currently supported)");
-
-    bool byteFallback = false;
-    model["byte_fallback"] >> byteFallback;
-
-    if (byteFallback)
-        return buildGemmaFamilyFromJson(tok_json);
-    return buildBPETokenizerImpl(dir);
+    return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bosId);
 }
 
 static void registerDefaultTokenizers() {
     auto& reg = tokenizerRegistry();
     if (reg.find("BPE") == reg.end()) {
-        reg["BPE"] = [](const FileStorage& /*cfg*/, const std::string& dir) -> Ptr<Tokenizer::Impl> {
-            return buildFromTokenizerDir(dir);
+        reg["BPE"] = [](const FileStorage& cfg, const std::string& dir) -> Ptr<Tokenizer::Impl> {
+            std::string model_type;
+            cfg["model_type"] >> model_type;
+            std::string tok_json = dir + "tokenizer.json";
+
+            CoreBPE core;
+            std::unordered_set<std::string> special;
+            if (model_type == "gpt2" || model_type == "gpt4") {
+                core = buildTokenizerFromJson(model_type, tok_json);
+            } else if (model_type == "qwen2" || model_type == "qwen2.5") {
+                core = buildTokenizerFromJson(model_type, tok_json, &special);
+            } else {
+                CV_Error(cv::Error::StsError, "Unsupported model_type for BPE: " + model_type);
+            }
+            return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
         };
     }
 
     if (reg.find("Gemma") == reg.end()) {
         reg["Gemma"] = [](const FileStorage& /*cfg*/, const std::string& dir) -> Ptr<Tokenizer::Impl> {
-            return buildFromTokenizerDir(dir);
+            std::string tok_json = dir + "tokenizer.json";
+            std::unordered_set<std::string> special;
+            return buildGemmaFromJson(tok_json, &special);
         };
     }
 
     if (reg.find("SentencePiece") == reg.end()) {
         reg["SentencePiece"] = [](const FileStorage& /*cfg*/, const std::string& dir) -> Ptr<Tokenizer::Impl> {
-            return buildFromTokenizerDir(dir);
-        };
-    }
-
-    if (reg.find("Unigram") == reg.end()) {
-        reg["Unigram"] = [](const FileStorage& /*cfg*/, const std::string& dir) -> Ptr<Tokenizer::Impl> {
-            return buildFromTokenizerDir(dir);
+            std::string tok_json = dir + "tokenizer.json";
+            std::unordered_set<std::string> special;
+            return buildSentencePieceFromJson(tok_json, &special);
         };
     }
 }
@@ -477,22 +313,30 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
     return impl_->decode(tokens);
 };
 
-CoreBPE buildTokenizerFromJson(const std::string& json_path,
+CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial) {
-    cv::FileStorage fs = openTokenizerJson(json_path);
+    cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!fs.isOpened())
+        CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
 
     cv::FileNode model = fs["model"];
     CV_CheckFalse(model.empty(), "tokenizer.json missing 'model'");
     cv::FileNode vocab = model["vocab"];
     CV_CheckFalse(vocab.empty(), "tokenizer.json missing model.vocab");
 
-    std::string model_type;
-    model["type"] >> model_type;
-    if (!model_type.empty() && model_type != "BPE")
+    std::string pattern;
+    std::unordered_set<std::string> skip_tokens;
+    if (model_type == "gpt2" || model_type == "r50k_base") {
+        pattern = R50K_UTF8;
+        skip_tokens.insert("<|endoftext|>");
+    } else if (model_type == "gpt4" || model_type == "cl100k_base") {
+        pattern = CL100K_BASE;
+    } else if (model_type == "qwen2" || model_type == "qwen2.5") {
+        pattern = QWEN2_5;
+    } else {
         CV_Error(cv::Error::StsError,
-            "Expected a BPE model in tokenizer.json, got: " + model_type);
-
-    std::string pattern = detectSplitPattern(fs);
+            "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base, gpt4/cl100k_base, or qwen2/qwen2.5)");
+    }
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
         std::vector<std::uint8_t> out;
@@ -504,18 +348,6 @@ CoreBPE buildTokenizerFromJson(const std::string& json_path,
         }
         return out;
     };
-
-    std::unordered_set<std::string> skip_tokens;
-    FileNode added_peek = fs["added_tokens"];
-    if (!added_peek.empty()) {
-        for (auto it = added_peek.begin(); it != added_peek.end(); ++it) {
-            cv::FileNode t = *it;
-            bool is_special = false; t["special"]  >> is_special;
-            std::string content;     t["content"]  >> content;
-            if (is_special && !content.empty())
-                skip_tokens.insert(content);
-        }
-    }
 
     ByteVecRankMap mergeableRanks;
     mergeableRanks.reserve((size_t)vocab.size());
@@ -567,12 +399,11 @@ Tokenizer Tokenizer::load(const std::string& model_config) {
     auto it = reg.find(methodType);
     if (it == reg.end())
         CV_Error(cv::Error::StsError,
-            "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE, Gemma, SentencePiece, Unigram");
+            "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE, Gemma, SentencePiece");
 
     Tokenizer tok;
     tok.impl_ = it->second(cfg, dir);
     return tok;
 }
-
 CV__DNN_INLINE_NS_END
 }}
