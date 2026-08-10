@@ -22,8 +22,18 @@ class watershed_test(NewOpenCVTests):
         if img is None or markers is None:
             self.assertEqual(0, 1, 'Missing test data')
 
+        # cv.watershed() writes its result into the markers argument in place, so the
+        # CV_32S array must be bound to a name and passed. np.int32(markers) inline would
+        # hand over a temporary, leaving 'markers' untouched and the result discarded.
+        markers = np.int32(markers)
+        before = markers.copy()
+
         colors = np.int32( list(np.ndindex(3, 3, 3)) ) * 122
-        cv.watershed(img, np.int32(markers))
+        cv.watershed(img, markers)
+
+        self.assertFalse(np.array_equal(before, markers),
+                         'cv.watershed() did not modify the markers in place')
+
         segments = colors[np.maximum(markers, 0)]
 
         if refSegments is None:

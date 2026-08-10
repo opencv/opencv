@@ -41,3 +41,80 @@
 //M*/
 
 #include "test_precomp.hpp"
+
+namespace opencv_test { namespace {
+
+// cv::watershed had no effective coverage: the C++ test here was #if 0'd out and then
+// deleted with the C API in 8a62b03761, and modules/python/test/test_watershed.py passes
+// np.int32(markers) -- a temporary -- to a function that writes its output in place, then
+// inspects the untouched original, so it scores the same with the watershed call removed.
+//
+// Seeds are built by eroding each region of the stored reference, so watershed has to
+// re-grow the boundaries. Doing it this way rather than reading watershed/comp.xml keeps
+// the test off the C API: that file is an "opencv-sequence-tree" holding CvSeq contours.
+TEST(Imgproc_Watershed, regression)
+{
+    const string folder = string(cvtest::TS::ptr()->get_data_path());
+    const string expPath = folder + "watershed/wshed_exp.png";
+
+    Mat image = imread(folder + "inpaint/orig.png", IMREAD_COLOR);
+    Mat expLabels8 = imread(expPath, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty()) << "Could not read " << folder << "inpaint/orig.png";
+    ASSERT_FALSE(expLabels8.empty()) << "Could not read " << expPath;
+    ASSERT_EQ(image.size(), expLabels8.size());
+
+    // wshed_exp.png stores the expected labels offset by +1, so that the -1 used for
+    // watershed boundaries survives being written to an 8-bit PNG.
+    Mat expected;
+    expLabels8.convertTo(expected, CV_32S);
+    expected -= 1;                       // -1 = boundary, 1..nLabels = regions
+
+    double maxLabel = 0;
+    minMaxLoc(expected, 0, &maxLabel);
+    const int nLabels = cvRound(maxLabel);
+    ASSERT_GT(nLabels, 1) << "reference image does not contain several regions";
+
+    // Shrink every region so the boundaries have to be recovered rather than handed over.
+    Mat markers = Mat::zeros(expected.size(), CV_32S);
+    Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(15, 15));
+    for (int label = 1; label <= nLabels; label++)
+    {
+        Mat seed;
+        erode(expected == label, seed, kernel);
+        ASSERT_GT(countNonZero(seed), 0) << "region " << label << " vanished when eroded";
+        markers.setTo(label, seed);
+    }
+
+    Mat result = markers.clone();
+    watershed(image, result);
+
+    ASSERT_EQ(expected.size(), result.size());
+    ASSERT_EQ(CV_32S, result.type());
+
+    // Every unlabelled pixel must be resolved, either to a region or to a boundary.
+    EXPECT_EQ(0, countNonZero(result == 0)) << "watershed left pixels unlabelled";
+
+    // No label may be invented that was not seeded.
+    double minVal = 0, maxVal = 0;
+    minMaxLoc(result, &minVal, &maxVal);
+    EXPECT_GE(minVal, -1);
+    EXPECT_LE(maxVal, nLabels) << "watershed produced a label that was never seeded";
+
+    // The recovered segmentation must match the reference away from its own boundaries.
+    // Measured: ~99.6% for a correct implementation, ~78.7% if watershed does nothing.
+    Mat interior = expected > 0;
+    const int totalPx = countNonZero(interior);
+    ASSERT_GT(totalPx, 0);
+    Mat agreeMask;
+    bitwise_and(result == expected, interior, agreeMask);
+    const double agreement = (double)countNonZero(agreeMask) / totalPx;
+    EXPECT_GT(agreement, 0.95)
+        << "only " << agreement * 100 << "% of interior pixels match " << expPath;
+
+    // The algorithm is deterministic, so a second run on the same seeds must agree.
+    Mat again = markers.clone();
+    watershed(image, again);
+    EXPECT_EQ(0, countNonZero(again != result)) << "watershed is not deterministic";
+}
+
+}} // namespace
