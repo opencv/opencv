@@ -1569,6 +1569,9 @@ inline v_float64x4 v_cvt_f64(const v_int64x4& v)
             v_hi         = _mm256_xor_si256(v_hi, magic_i_hi32);
     // Compute in double precision
     __m256d v_hi_dbl     = _mm256_sub_pd(_mm256_castsi256_pd(v_hi), magic_d_all);
+#if defined(__GNUC__)
+    __asm__ __volatile__ ("" : "+x" (v_hi_dbl));
+#endif
     // (v_hi - magic_d_all) + v_lo  Do not assume associativity of floating point addition
     __m256d result       = _mm256_add_pd(v_hi_dbl, _mm256_castsi256_pd(v_lo));
     return v_float64x4(result);
