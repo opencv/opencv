@@ -124,29 +124,16 @@ int64_t minValueAt(int matType)
     return 0;
 }
 
-// Abs and Sign are decided by the sign of their input, which fillRandom's
-// positive-only ranges would never vary.
-void fillRandomSigned(Mat& m, int matType)
+// Abs and Sign are decided by the sign of their input, and fillRandom keeps the 32-bit
+// and 64-bit signed ranges above zero.
+void fillRandomSigned(Mat& m, int matType, Backend backend)
 {
-    if (matType == CV_8U)
-        cv::randu(m, 0, 100);
-    else if (matType == CV_8S)
-        cv::randu(m, -50, 50);
-    else if (matType == CV_16U)
-        cv::randu(m, 0, 1000);
-    else if (matType == CV_16S)
-        cv::randu(m, -1000, 1000);
-    else if (matType == CV_32U)
-        cv::randu(m, 0, 1000000000);
-    else if (matType == CV_32S)
+    if (matType == CV_32S)
         cv::randu(m, -1000000000, 1000000000);
-    // CV_64U stays inside the int64_t range so getValueAt() round-trips exactly.
-    else if (matType == CV_64U)
-        cv::randu(m, 0ll, 1000000000000000ll);
     else if (matType == CV_64S)
         cv::randu(m, -1000000000000000ll, 1000000000000000ll);
     else
-        CV_Error(Error::BadDepth, "Unsupported type");
+        fillRandom(m, matType, backend);
 }
 
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_NaryEltwise_Int;
@@ -476,10 +463,11 @@ TEST_P(Test_Scatter_Int, random)
     }
 }
 
+// Only the OpenCV backend implements the integer kernels.
 INSTANTIATE_TEST_CASE_P(/**/, Test_Scatter_Int, Combine(
     testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
-    dnnBackendsAndTargets()
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
 ));
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ScatterND_Int, Combine(
@@ -1426,7 +1414,7 @@ TEST_P(Test_Abs_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
-    fillRandomSigned(input, matType);
+    fillRandomSigned(input, matType, backend);
     setValueAt(input, 0, minValueAt(matType));
     setValueAt(input, 1, 0);
 
@@ -1454,8 +1442,7 @@ TEST_P(Test_Abs_Int, random)
     }
 }
 
-// Integer Abs/Sign are implemented for the OpenCV backend; the other backends take these
-// ops through their own nodes, whose integer support is a separate question.
+// Only the OpenCV backend implements the integer kernels.
 INSTANTIATE_TEST_CASE_P(/**/, Test_Abs_Int, Combine(
     testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
@@ -1471,7 +1458,7 @@ TEST_P(Test_Sign_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
-    fillRandomSigned(input, matType);
+    fillRandomSigned(input, matType, backend);
     setValueAt(input, 0, minValueAt(matType));
     setValueAt(input, 1, 0);
 
@@ -1498,6 +1485,7 @@ TEST_P(Test_Sign_Int, random)
     }
 }
 
+// Only the OpenCV backend implements the integer kernels.
 INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int, Combine(
     testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
@@ -1515,7 +1503,7 @@ TEST_P(Test_Neg_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
-    fillRandomSigned(input, matType);
+    fillRandomSigned(input, matType, backend);
     setValueAt(input, 0, 0);
     setValueAt(input, 1, minValueAt(matType));
 
@@ -1544,6 +1532,7 @@ TEST_P(Test_Neg_Int, random)
     }
 }
 
+// Only the OpenCV backend implements the integer kernels.
 INSTANTIATE_TEST_CASE_P(/**/, Test_Neg_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
@@ -1557,10 +1546,6 @@ TEST_P(Test_GatherND_Int, random)
     tuple<Backend, Target> backend_target= get<2>(GetParam());
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
-
-    // CV_64S data currently requires int64 indices.
-    if (matType == CV_64S && indicesType == CV_32S)
-        return;
 
     std::vector<int> inShape{4, 5};
     Mat input(inShape, matType);

@@ -123,12 +123,12 @@ public:
                 if (innermost_axis) {
                     for (int j = 0; j < inner_most_dim; j++) {
                         int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
-                        out[j] = data[index];
+                        std::memcpy(out + j, data + index, sizeof(T));
                     }
                 } else {
                     for (int j = 0; j < inner_most_dim; j++) {
                         int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
-                        out[j] = data[index * axis_step + j];
+                        std::memcpy(out + j, data + index * axis_step + j, sizeof(T));
                     }
                 }
             }
@@ -155,46 +155,23 @@ public:
         };
     }
 
+    // Gathering copies elements without interpreting them, so only the width matters.
     template<typename T_INDEX, typename... Args>
     inline void typeDispatch(const int type, Args&&... args)
     {
-        switch (type)
+        switch (CV_ELEM_SIZE(type))
         {
-            case CV_Bool:
-                forward_impl<bool, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_8U:
+            case 1:
                 forward_impl<uint8_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
-            case CV_8S:
-                forward_impl<int8_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_16F:
-                forward_impl<int16_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_16U:
+            case 2:
                 forward_impl<uint16_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
-            case CV_16S:
-                forward_impl<int16_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_32U:
+            case 4:
                 forward_impl<uint32_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
-            case CV_32S:
-                forward_impl<int32_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_64U:
+            case 8:
                 forward_impl<uint64_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_64S:
-                forward_impl<int64_t, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_32F:
-                forward_impl<float, T_INDEX>(std::forward<Args>(args)...);
-                break;
-            case CV_64F:
-                forward_impl<double, T_INDEX>(std::forward<Args>(args)...);
                 break;
             default:
                 CV_Error(cv::Error::BadDepth, "DNN/GatherElements: Unsupported type.");

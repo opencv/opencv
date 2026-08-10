@@ -123,6 +123,11 @@ static inline bool isIntegerDepth(int depth)
            depth == CV_32U || depth == CV_32S || depth == CV_64U || depth == CV_64S;
 }
 
+static inline bool isUnsignedDepth(int depth)
+{
+    return depth == CV_8U || depth == CV_16U || depth == CV_32U || depth == CV_64U;
+}
+
 template<typename T> static inline T intAbs(T x, std::true_type)
 {
     // Negating the type's minimum is undefined; the unsigned round trip wraps instead.
@@ -152,24 +157,30 @@ struct IntSignOp
     }
 };
 
-template<typename T, typename Op> static inline void intUnaryKernel(const Mat& src, Mat& dst)
+template<typename Body> static inline void blockedParallelFor(size_t total, Body&& body)
 {
-    const T* srcptr = src.ptr<T>();
-    T* dstptr = dst.ptr<T>();
-    const size_t total = src.total();
-
     const size_t BLOCK_SIZE = 1 << 16;
     parallel_for_(Range(0, (int)((total + BLOCK_SIZE - 1) / BLOCK_SIZE)),
         [&](const Range& r)
         {
             for (int b = r.start; b < r.end; b++)
             {
-                size_t start = b * BLOCK_SIZE;
-                size_t len = std::min(BLOCK_SIZE, total - start);
-                for (size_t i = start; i < start + len; i++)
-                    dstptr[i] = Op::apply(srcptr[i]);
+                size_t start = (size_t)b * BLOCK_SIZE;
+                body(start, std::min(BLOCK_SIZE, total - start));
             }
         });
+}
+
+template<typename T, typename Op> static inline void intUnaryKernel(const Mat& src, Mat& dst)
+{
+    const T* srcptr = src.ptr<T>();
+    T* dstptr = dst.ptr<T>();
+
+    blockedParallelFor(src.total(), [&](size_t start, size_t len)
+    {
+        for (size_t i = start; i < start + len; i++)
+            dstptr[i] = Op::apply(srcptr[i]);
+    });
 }
 
 template<typename Op> static inline bool intUnaryDispatch(const Mat& src, Mat& dst)
@@ -310,9 +321,14 @@ public:
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S ||
-                                input == CV_8U || input == CV_64S ||
-                                ElementWiseIntDispatch<Func>::supports(func, input), "");
+        {
+            // Types the functor has no integer kernel for follow the default gate.
+            if (!ElementWiseIntDispatch<Func>::supports(func, input))
+            {
+                LayerInfo::getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
+                return;
+            }
+        }
 
         outputs.assign(requiredOutputs, inputs[0]);
         internals.assign(requiredInternals, inputs[0]);
@@ -360,15 +376,9 @@ public:
                     const float* srcptr = src.ptr<float>();
                     float* dstptr = dst.ptr<float>();
 
-                    const size_t BLOCK_SIZE = 1 << 16;
-                    parallel_for_(Range(0, (int)((total + BLOCK_SIZE - 1) / BLOCK_SIZE)),
-                        [&](const Range& r) {
-                            for (int b = r.start; b < r.end; b++) {
-                                size_t start = b * BLOCK_SIZE;
-                                size_t len = std::min(BLOCK_SIZE, total - start);
-                                activFunc(srcptr + start, dstptr + start, len, params);
-                            }
-                        });
+                    blockedParallelFor(total, [&](size_t start, size_t len) {
+                        activFunc(srcptr + start, dstptr + start, len, params);
+                    });
                     continue;
                 }
 
@@ -1643,6 +1653,15 @@ struct ElementWiseIntDispatch<AbsValFunctor>
 
     static inline bool apply(const AbsValFunctor&, const Mat& src, Mat& dst)
     {
+        if (src.type() != dst.type())
+            return false;
+
+        // |x| leaves an unsigned value unchanged.
+        if (isUnsignedDepth(src.depth()))
+        {
+            src.copyTo(dst);
+            return true;
+        }
         return intUnaryDispatch<IntAbsOp>(src, dst);
     }
 };

@@ -307,7 +307,7 @@ private:
                     {
                         for (int k = begin; k < end; k += step)
                         {
-                            *(T*)d_ptr = *(const T*)s_ptr;
+                            std::memcpy(d_ptr, s_ptr, sizeof(T));
                             s_ptr += s_stride;
                             d_ptr += d_stride;
                         }
@@ -316,7 +316,7 @@ private:
                     {
                         for (int k = begin; k > end; k += step)
                         {
-                            *(T*)d_ptr = *(const T*)s_ptr;
+                            std::memcpy(d_ptr, s_ptr, sizeof(T));
                             s_ptr += s_stride;
                             d_ptr += d_stride;
                         }
