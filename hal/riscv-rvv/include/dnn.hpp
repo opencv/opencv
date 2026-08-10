@@ -59,6 +59,27 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
 #undef cv_hal_dnn_depthwise_conv32f
 #define cv_hal_dnn_depthwise_conv32f cv::rvv_hal::dnn::depthwise_conv32f
 
+/* ############ conv32f ############ */
+
+// General (non-depthwise) convolution. The task index runs over the engine's task grid
+// [0, N*ngroups*Kblk*nspat_chunks): task t selects output channel block t/nspat_chunks and
+// spatial chunk t%nspat_chunks. weights is the repacked (ngroups, Kblk, ksize, C1Max, C0*K0)
+// tensor; scale/bias are optional per-output-channel [K] vectors; the fused epilogue matches
+// depthwise_conv32f above. K0 == C0.
+
+int conv32f(const float* inp_data, const float* residual_data,
+            float* out_data, const float* weights,
+            const float* scale, const float* bias,
+            int C, int K, int C0, int ngroups, int Kblk, int C1Max,
+            const int* insize, const int* outsize, const int* strides,
+            const int* pads, const int* inner, const int* coordtab,
+            const int* ofstab, int ksize,
+            float maxval, float default_alpha, const float* prelu_slope,
+            int nspat_chunks, int task_start, int task_end);
+
+#undef cv_hal_dnn_conv32f
+#define cv_hal_dnn_conv32f cv::rvv_hal::dnn::conv32f
+
 #endif // CV_HAL_RVV_1P0_ENABLED
 
 }}} // cv::rvv_hal::dnn
