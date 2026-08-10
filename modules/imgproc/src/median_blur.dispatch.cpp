@@ -211,8 +211,11 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         cv::split(_src0, srcChannels);
 
         std::vector<Mat> dstChannels(srcChannels.size());
-        for( size_t i = 0; i < srcChannels.size(); i++ )
-            medianBlur(srcChannels[i], dstChannels[i], ksize);
+        parallel_for_(Range(0, (int)srcChannels.size()), [&](const Range& range)
+        {
+            for( int i = range.start; i < range.end; i++ )
+                medianBlur(srcChannels[i], dstChannels[i], ksize);
+        });
 
         cv::merge(dstChannels, _dst);
         return;
