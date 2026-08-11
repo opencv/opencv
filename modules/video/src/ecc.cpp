@@ -483,9 +483,6 @@ double cv::findTransformECCWithMask( InputArray templateImage,
         Mat inputMaskMat = inputMask.getMat();
         if (inputMaskMat.depth() == CV_Bool)
         {
-            // Conversion out of CV_Bool maps every non-zero entry to exactly 1, so this single
-            // step yields the same 0.0/1.0 matrix as the threshold-then-convert path below.
-            // See #25895.
             inputMaskMat.convertTo(preMaskFloat, CV_32F);
         }
         else

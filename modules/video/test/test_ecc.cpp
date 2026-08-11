@@ -472,7 +472,6 @@ TEST(Video_ECC_BigMS_Mask, accuracy) {
     test.safe_run();
 }
 
-// See https://github.com/opencv/opencv/issues/25895
 TEST(Video_ECC_BoolMask, matches_uchar_mask) {
     Mat templateImage(64, 64, CV_8UC1, Scalar::all(0));
     for (int i = 0; i < 8; i++)
