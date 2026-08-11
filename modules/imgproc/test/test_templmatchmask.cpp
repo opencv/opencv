@@ -287,9 +287,6 @@ TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
     }
 }
 
-// See https://github.com/opencv/opencv/issues/25895
-// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so a
-// boolean mask must keep working and must agree with the equivalent CV_8U mask.
 typedef testing::TestWithParam<tuple<perf::MatType, int>> Imgproc_MatchTemplateBoolMask;
 
 TEST_P(Imgproc_MatchTemplateBoolMask, matches_uchar_mask)

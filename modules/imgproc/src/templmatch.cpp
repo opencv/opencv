@@ -752,8 +752,6 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     }
     if (mask.depth() == CV_Bool)
     {
-        // Conversion out of CV_Bool maps every non-zero entry to exactly 1, so this single step
-        // yields the same 0.0/1.0 mask as the CV_8U branch below. See #25895.
         mask.convertTo(mask, CV_32F);
     }
     else if (mask.depth() == CV_8U)
