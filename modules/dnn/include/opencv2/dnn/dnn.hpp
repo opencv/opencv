@@ -2103,8 +2103,7 @@ public:
      * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`. WordPiece only.
      * @param text  UTF-8 first input string.
      * @param textPair  UTF-8 second input string.
-     * @return Vector of token ids.
-     * @throws cv::Exception if unsupported by the loaded tokenizer.
+     * @return Vector of token ids. Throws cv::Exception if unsupported by the loaded tokenizer.
      */
     CV_WRAP std::vector<int> encodePair(const std::string& text, const std::string& textPair);
 
