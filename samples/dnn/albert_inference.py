@@ -11,6 +11,19 @@ in OpenCV using an ONNX model. The input text must contain a single literal
 
 Model: https://huggingface.co/Xenova/albert-large-v2
 
+Downloading the ALBERT model and tokenizer:
+
+1. Install the Hugging Face CLI:
+
+    pip install -U "hf"
+
+2. Download only the files needed (full-precision ONNX model, config.json and
+   the SentencePiece tokenizer.json) into a local directory:
+
+    hf download Xenova/albert-large-v2 \
+        onnx/model.onnx config.json tokenizer.json tokenizer_config.json \
+        --local-dir albert-large-v2
+
 Run the script:
 1. Install the required dependencies:
 

@@ -11,6 +11,19 @@ in OpenCV using an ONNX model. The input text must contain a single literal
 
 Model: https://huggingface.co/google-bert/bert-base-uncased
 
+Downloading the BERT model and tokenizer:
+
+1. Install the Hugging Face CLI:
+
+    pip install -U "hf"
+
+2. Download only the files needed (model.onnx, config.json and the WordPiece
+   tokenizer.json/vocab.txt) into a local directory:
+
+    hf download google-bert/bert-base-uncased \
+        model.onnx config.json tokenizer.json tokenizer_config.json vocab.txt \
+        --local-dir bert-base-uncased
+
 Run the script:
 1. Install the required dependencies:
 
@@ -46,7 +59,8 @@ def find_file(model_dir, filename):
     raise FileNotFoundError(f'{filename} not found under {model_dir}')
 
 def encode_with_mask(tokenizer, text):
-    assert text.count(MASK_TOKEN) == 1, 'expected exactly one [MASK] token'
+    if text.count(MASK_TOKEN) != 1:
+        raise ValueError('expected exactly one [MASK] token')
     mask_id = tokenizer.encode(MASK_TOKEN)[1]
     ids = list(tokenizer.encode(text))
     mask_pos = ids.index(mask_id)
@@ -70,7 +84,7 @@ def bert_inference(net, tokenizer, text, topk):
     net.setInput(input_ids, 'input_ids')
     net.setInput(attention_mask, 'attention_mask')
     net.setInput(token_type_ids, 'token_type_ids')
-    logits = net.forward()
+    logits = net.forward('logits')
 
     row = logits[0, mask_pos]
     probs = softmax(row)

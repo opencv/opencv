@@ -2060,7 +2060,7 @@ public:
  *
  * @code
  * using namespace cv::dnn;
- * Tokenizer tok = Tokenizer::load("/path/to/model/");
+ * Tokenizer tok = Tokenizer::load("/path/to/model/config.json");
  * std::vector<int> ids = tok.encode("hello world");
  * std::string text = tok.decode(ids);
  * @endcode
@@ -2076,14 +2076,11 @@ public:
     /**
      * @brief Load a tokenizer from a model directory.
      *
-     * Expects the directory to contain:
+     * `modelConfig` is the path to `config.json`. Its parent directory must
+     * also contain:
      *  - `config.json` with field `method` (one of: BPE, Gemma, SentencePiece, Unigram, WordPiece).
      *    `encodePair` is supported only for WordPiece; other methods throw.
      *  - `tokenizer.json` produced by the corresponding model family.
-     *
-     * The argument is a path prefix; this function concatenates file
-     * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
-     * end with an appropriate path separator.
      *
      * @param modelConfig  Path to config.json for model.
      * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
@@ -2107,7 +2104,7 @@ public:
      * @param text  UTF-8 first input string.
      * @param textPair  UTF-8 second input string.
      * @return Vector of token ids.
-     * @throw cv::Exception if unsupported by the loaded tokenizer.
+     * @throws cv::Exception if unsupported by the loaded tokenizer.
      */
     CV_WRAP std::vector<int> encodePair(const std::string& text, const std::string& textPair);
 
