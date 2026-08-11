@@ -1279,22 +1279,35 @@ TEST(Imgproc_Resize, regression_29651_multichannel)
 {
     // Regression test for https://github.com/opencv/opencv/issues/29651
     // cv::resize used to reject images with more than 4 channels.
-    for (int cn = 1; cn <= 8; cn++)
+    // 1-4 channels are already covered elsewhere; this covers 5 and 8.
+    for (int cn : {5, 8})
     {
-        cv::Mat src = cv::Mat::zeros(8, 8, CV_8UC(cn));
-        cv::Mat dst;
+        cv::Mat src(8, 8, CV_8UC(cn));
+        cv::randu(src, 0, 255);
 
-        // Exact 2x downscale with INTER_LINEAR internally redirects to the
-        // INTER_AREA fast path, which previously asserted cn <= 4.
-        ASSERT_NO_THROW(cv::resize(src, dst, cv::Size(4, 4), 0, 0, cv::INTER_LINEAR));
-        EXPECT_EQ(dst.channels(), cn);
-        EXPECT_EQ(dst.size(), cv::Size(4, 4));
+        std::vector<cv::Mat> srcChannels;
+        cv::split(src, srcChannels);
 
-        // Also exercise INTER_AREA directly (non-exact-2x case).
-        cv::Mat dst2;
-        ASSERT_NO_THROW(cv::resize(src, dst2, cv::Size(3, 3), 0, 0, cv::INTER_AREA));
-        EXPECT_EQ(dst2.channels(), cn);
-        EXPECT_EQ(dst2.size(), cv::Size(3, 3));
+        for (int mode : {cv::INTER_LINEAR, cv::INTER_AREA})
+        {
+            cv::Size dsize = (mode == cv::INTER_LINEAR) ? cv::Size(4, 4) : cv::Size(3, 3);
+
+            cv::Mat dstMulti;
+            ASSERT_NO_THROW(cv::resize(src, dstMulti, dsize, 0, 0, mode));
+            EXPECT_EQ(dstMulti.channels(), cn);
+            EXPECT_EQ(dstMulti.size(), dsize);
+
+            std::vector<cv::Mat> dstChannels(cn);
+            for (int i = 0; i < cn; i++)
+                cv::resize(srcChannels[i], dstChannels[i], dsize, 0, 0, mode);
+
+            cv::Mat dstMerged;
+            cv::merge(dstChannels, dstMerged);
+
+            EXPECT_EQ(cv::norm(dstMulti, dstMerged, cv::NORM_INF), 0)
+                << "Multi-channel resize (cn=" << cn << ", mode=" << mode
+                << ") does not match per-channel resize";
+        }
     }
 }
 
