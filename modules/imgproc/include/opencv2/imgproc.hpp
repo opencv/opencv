@@ -2561,6 +2561,36 @@ CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          int interpolation, int borderMode = BORDER_CONSTANT,
                          const Scalar& borderValue = Scalar());
 
+/** @brief Applies a dense geometric transformation to a batch of images.
+
+The input must be a three-dimensional `Mat` with shape `(N, H, W)` (single-channel
+images) or `(N, H, W)` with multiple channels, or a four-dimensional `Mat` with
+shape `(N, H, W, C)` as produced by the Python bindings. The output has the same
+batch and channel layout, with its spatial dimensions taken from the map.
+
+`map1` and `map2` may be shared by every image (the same two-dimensional maps
+accepted by #remap), or supplied per image as three-dimensional maps with shape
+`(N, H, W)` (and a final map-channel dimension for two-channel maps). Per-image
+maps must all have the same spatial size.
+
+Each image is processed with the same interpolation and border semantics as
+#remap. The images are dispatched as one native operation, allowing callers to
+avoid a Python loop while preserving the single-image implementation.
+
+@param src Batch of source images.
+@param dst Batch of destination images. It is created with the same batch and
+       channel layout as `src`.
+@param map1 The first shared or per-image map.
+@param map2 The second shared or per-image map, or an empty array for two-channel maps.
+@param interpolation Interpolation method (see #InterpolationFlags).
+@param borderMode Pixel extrapolation method (see #BorderTypes).
+@param borderValue Value used in case of a constant border.
+ */
+CV_EXPORTS_W void remapBatch( InputArray src, OutputArray dst,
+                              InputArray map1, InputArray map2,
+                              int interpolation, int borderMode = BORDER_CONSTANT,
+                              const Scalar& borderValue = Scalar());
+
 /** @brief Converts image transformation maps from one representation to another.
 
 The function converts a pair of maps for remap from one representation to another. The following

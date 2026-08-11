@@ -1857,6 +1857,100 @@ void cv::remap( InputArray _src, OutputArray _dst,
     parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
 }
 
+namespace {
+
+static Mat remapBatchImageView(const Mat& batch, int index)
+{
+    CV_Assert(batch.dims == 3 || batch.dims == 4);
+    const int channels = batch.dims == 4 ? batch.size[3] : batch.channels();
+    CV_Assert(channels > 0 && channels <= CV_CN_MAX);
+    const int type = CV_MAKETYPE(batch.depth(), channels);
+    return Mat(batch.size[1], batch.size[2], type,
+               batch.data + static_cast<size_t>(index) * batch.step[0], batch.step[1]);
+}
+
+static Mat remapBatchMapView(const Mat& maps, int index)
+{
+    CV_Assert(maps.dims == 3 || maps.dims == 4);
+    const int channels = maps.dims == 4 ? maps.size[3] : maps.channels();
+    CV_Assert(channels > 0 && channels <= CV_CN_MAX);
+    const int type = CV_MAKETYPE(maps.depth(), channels);
+    return Mat(maps.size[1], maps.size[2], type,
+               maps.data + static_cast<size_t>(index) * maps.step[0], maps.step[1]);
+}
+
+static Size remapBatchMapSize(const Mat& maps)
+{
+    CV_Assert(maps.dims == 2 || maps.dims == 3 || maps.dims == 4);
+    return maps.dims == 2 ? maps.size() : Size(maps.size[2], maps.size[1]);
+}
+
+static bool remapBatchMapIsPerImage(const Mat& maps)
+{
+    return maps.dims == 3 || maps.dims == 4;
+}
+
+} // namespace
+
+void cv::remapBatch( InputArray _src, OutputArray _dst,
+                     InputArray _map1, InputArray _map2,
+                     int interpolation, int borderType, const Scalar& borderValue )
+{
+    CV_INSTRUMENT_REGION();
+
+    const Mat src = _src.getMat();
+    const Mat map1 = _map1.getMat();
+    const Mat map2 = _map2.getMat();
+
+    CV_Assert(src.dims == 3 || src.dims == 4);
+    CV_Assert(src.size[0] > 0 && src.size[1] > 0 && src.size[2] > 0);
+    CV_Assert(!map1.empty());
+    CV_Assert(map1.dims == 2 || map1.dims == 3 || map1.dims == 4);
+    CV_Assert(map2.empty() || map2.dims == map1.dims);
+
+    const int batchSize = src.size[0];
+    const bool perImageMap = remapBatchMapIsPerImage(map1);
+    if (perImageMap)
+    {
+        CV_Assert(map1.size[0] == batchSize);
+        CV_Assert(map2.empty() || map2.size[0] == batchSize);
+    }
+    else
+    {
+        CV_Assert(map1.dims == 2);
+        CV_Assert(map2.empty() || map2.dims == 2);
+    }
+
+    const Size mapSize = remapBatchMapSize(map1);
+    CV_Assert(mapSize.width > 0 && mapSize.height > 0);
+    CV_Assert(map2.empty() || remapBatchMapSize(map2) == mapSize);
+    if (perImageMap)
+    {
+        CV_Assert(map1.size[1] == mapSize.height && map1.size[2] == mapSize.width);
+        CV_Assert(map2.empty() || (map2.size[1] == mapSize.height && map2.size[2] == mapSize.width));
+    }
+
+    int outputSizes[CV_MAX_DIM];
+    for (int i = 0; i < src.dims; ++i)
+        outputSizes[i] = src.size[i];
+    outputSizes[1] = mapSize.height;
+    outputSizes[2] = mapSize.width;
+    _dst.create(src.dims, outputSizes, src.type());
+    const Mat dst = _dst.getMat();
+
+    parallel_for_(Range(0, batchSize), [&](const Range& range) {
+        for (int i = range.start; i < range.end; ++i)
+        {
+            const Mat srcImage = remapBatchImageView(src, i);
+            Mat dstImage = remapBatchImageView(dst, i);
+            const Mat map1Image = perImageMap ? remapBatchMapView(map1, i) : map1;
+            const Mat map2Image = map2.empty() ? Mat() : (perImageMap ? remapBatchMapView(map2, i) : map2);
+            remap(srcImage, dstImage, map1Image, map2Image,
+                  interpolation, borderType, borderValue);
+        }
+    });
+}
+
 
 void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,

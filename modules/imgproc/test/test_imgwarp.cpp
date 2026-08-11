@@ -1856,6 +1856,67 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_RemapBatch, shared_and_per_image_maps)
+{
+    const int batchSize = 3;
+    const int rows = 4;
+    const int cols = 5;
+
+    int srcSizes[] = {batchSize, rows, cols};
+    Mat src(3, srcSizes, CV_8UC3);
+    randu(src, 0, 256);
+
+    Mat mapx(rows, cols, CV_32FC1), mapy(rows, cols, CV_32FC1);
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            mapx.at<float>(y, x) = static_cast<float>(x);
+            mapy.at<float>(y, x) = static_cast<float>(y);
+        }
+    }
+
+    Mat shared;
+    remapBatch(src, shared, mapx, mapy, INTER_NEAREST);
+    ASSERT_EQ(src.dims, shared.dims);
+    ASSERT_EQ(src.size[0], shared.size[0]);
+    ASSERT_EQ(src.size[1], shared.size[1]);
+    ASSERT_EQ(src.size[2], shared.size[2]);
+    ASSERT_EQ(src.type(), shared.type());
+    for (int i = 0; i < batchSize; ++i)
+    {
+        Mat srcImage(rows, cols, CV_8UC3, src.ptr(i), src.step[1]);
+        Mat dstImage(rows, cols, CV_8UC3, shared.ptr(i), shared.step[1]);
+        Mat expected;
+        remap(srcImage, expected, mapx, mapy, INTER_NEAREST);
+        EXPECT_EQ(0.0, cvtest::norm(expected, dstImage, NORM_INF)) << "batch=" << i;
+    }
+
+    int mapSizes[] = {batchSize, rows, cols};
+    Mat perImageX(3, mapSizes, CV_32FC1), perImageY(3, mapSizes, CV_32FC1);
+    for (int i = 0; i < batchSize; ++i)
+    {
+        Mat mapxImage(rows, cols, CV_32FC1, perImageX.ptr(i), perImageX.step[1]);
+        Mat mapyImage(rows, cols, CV_32FC1, perImageY.ptr(i), perImageY.step[1]);
+        mapx.copyTo(mapxImage);
+        mapy.copyTo(mapyImage);
+        mapxImage.at<float>(0, 0) = static_cast<float>(i);
+    }
+
+    Mat perImage;
+    remapBatch(src, perImage, perImageX, perImageY, INTER_NEAREST);
+    for (int i = 0; i < batchSize; ++i)
+    {
+        Mat srcImage(rows, cols, CV_8UC3, src.ptr(i), src.step[1]);
+        Mat mapxImage(rows, cols, CV_32FC1, perImageX.ptr(i), perImageX.step[1]);
+        Mat mapyImage(rows, cols, CV_32FC1, perImageY.ptr(i), perImageY.step[1]);
+        Mat dstImage(rows, cols, CV_8UC3, perImage.ptr(i), perImage.step[1]);
+        Mat expected;
+        remap(srcImage, expected, mapxImage, mapyImage, INTER_NEAREST);
+        EXPECT_EQ(0.0, cvtest::norm(expected, dstImage, NORM_INF)) << "per-image batch=" << i;
+    }
+}
+
 TEST(Imgproc_getPerspectiveTransform, issue_26916)
 {
     double src_data[] = {320, 512, 960, 512, 0, 1024, 1280, 1024};
