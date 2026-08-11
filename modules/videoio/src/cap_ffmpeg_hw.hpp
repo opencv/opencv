@@ -757,7 +757,7 @@ AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_categor
 #endif
             if (hw_type == AV_HWDEVICE_TYPE_CUDA) // CUDA encoders don't support avcodec_get_hw_config()
                 hw_native_fmt = AV_PIX_FMT_CUDA;
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+#if LIBAVCODEC_BUILD >= AV_VERSION_INT(61, 13, 100)
             if (av_codec_is_encoder(c) && hw_native_fmt != AV_PIX_FMT_NONE) {
                 const AVPixelFormat *pix_fmts = NULL;
                 int num_pix_fmts = 0;
@@ -770,15 +770,15 @@ AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_categor
                     (const void **)&pix_fmts,
                     &num_pix_fmts);
 
-            if (ret >= 0 && pix_fmts && num_pix_fmts > 0) {
-                    for (int i = 0; i < num_pix_fmts; i++) {
-                        if (pix_fmts[i] == hw_native_fmt) {
-                            *hw_pix_fmt = hw_native_fmt;
-                            if (hw_check_codec(c, hw_type, disabled_codecs))
-                                return c;
+                if (ret >= 0 && pix_fmts && num_pix_fmts > 0) {
+                        for (int i = 0; i < num_pix_fmts; i++) {
+                            if (pix_fmts[i] == hw_native_fmt) {
+                                *hw_pix_fmt = hw_native_fmt;
+                                if (hw_check_codec(c, hw_type, disabled_codecs))
+                                    return c;
+                            }
                         }
                     }
-                }
             }
 #else
             if (av_codec_is_encoder(c) && hw_native_fmt != AV_PIX_FMT_NONE && c->pix_fmts) {
