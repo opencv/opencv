@@ -46,7 +46,7 @@ namespace opencv_test { namespace {
 
 // Tests that every point on the original polygon is
 // within epsilon distance to the approximated polygon.
-TEST(Imgproc_ApproxPoly, accuracy)
+TEST(Geometry_ApproxPoly, accuracy)
 {
     RNG& rng = TS::ptr()->get_rng();
     const int polygon_count = 30;
@@ -95,7 +95,7 @@ TEST(Imgproc_ApproxPoly, accuracy)
 
 //Tests to make sure that unreasonable epsilon (error)
 //values never get passed to the Douglas-Peucker algorithm.
-TEST(Imgproc_ApproxPoly, bad_epsilon)
+TEST(Geometry_ApproxPoly, bad_epsilon)
 {
     std::vector<Point2f> inputPoints;
     inputPoints.push_back(Point2f(0.0f, 0.0f));
@@ -114,7 +114,7 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
-TEST(Imgproc_ApproxPoly, distace_between_point_and_segment)
+TEST(Geometry_ApproxPoly, distace_between_point_and_segment)
 {
     vector<Point2f> inputPoints = {
         { {0.f, 0.f}, {4.f, 2.f}, {11.f, 1.f}, {8.f, 0.f} }
