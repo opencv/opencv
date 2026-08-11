@@ -642,17 +642,13 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             {
                 WT s0(0);
                 k = 0;
-#if CV_SIMD && CV_GEMM_SIMD_ENABLED
+#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
                 if( sizeof(WT) == sizeof(double) )
                 {
-#if CV_SIMD_64F
                     if( sizeof(T) == sizeof(double) )
                         s0 = (WT)simdDotProduct((const double*)a_data, (const double*)b_data, n, k);
                     else if( sizeof(T) == sizeof(float) )
                         s0 = (WT)simdDotProduct_f32f64((const float*)a_data, (const float*)b_data, n, k);
-                    else
-#endif
-                        s0 = (WT)simdDotProduct((const float*)a_data, (const float*)b_data, n, k);
                 }
                 else
 #endif
@@ -696,10 +692,9 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             }
 
             j = 0;
-#if CV_SIMD && CV_GEMM_SIMD_ENABLED
+#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
             if( sizeof(WT) == sizeof(double) )
             {
-#if CV_SIMD_64F
                 if( sizeof(T) == sizeof(double) )
                     simdGEMM_kj((const double*)a_data, (const double*)_b_data, b_step,
                                         (const double*)_c_data, c_step1,
@@ -707,11 +702,6 @@ GEMMSingleMul( const T* a_data, size_t a_step,
                 else if( sizeof(T) == sizeof(float) )
                     simdGEMM_kj_f32f64((const float*)a_data, (const float*)_b_data, b_step,
                                         (const float*)_c_data, c_step1,
-                                (float*)d_data, n, m, alpha, beta, j);
-                else
-#endif
-                    simdGEMM_kj((const float*)a_data, (const float*)_b_data, b_step,
-                                (const float*)_c_data, c_step1,
                                 (float*)d_data, n, m, alpha, beta, j);
             }
 #endif
@@ -852,15 +842,6 @@ static inline void setDoubleDataZero(WT* d_data, int m, int vlanes)
 }
 
 template<typename ST>
-static inline void scalarTail_kj(const ST* a_k, const ST* b_j,
-                                 double* d_j, int j, int m)
-{
-    double al = (double)(*a_k);
-    for( ; j < m; j++ )
-        d_j[j] += al * (double)(b_j[j]);
-}
-
-template<typename ST>
 static inline void simdMulAdd(const ST* b, double* d, int m, double a_val);
 
 template<>
@@ -976,17 +957,13 @@ GEMMBlockMul( const T* a_data, size_t a_step,
             {
                 WT s0 = do_acc ? d_data[j] : WT(0);
                 k = 0;
-#if CV_SIMD && CV_GEMM_SIMD_ENABLED
+#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
                 if( sizeof(WT) == sizeof(double) )
                 {
-#if CV_SIMD_64F
                     if( sizeof(T) == sizeof(double) )
                         s0 += (WT)simdDotProduct((const double*)a_data, (const double*)b_data, n, k);
                     else if( sizeof(T) == sizeof(float) )
                         s0 += (WT)simdDotProduct_f32f64((const float*)a_data, (const float*)b_data, n, k);
-                    else
-#endif
-                        s0 += (WT)simdDotProduct((const float*)a_data, (const float*)b_data, n, k);
                 }
                 else
 #endif
