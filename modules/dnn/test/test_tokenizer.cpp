@@ -468,4 +468,34 @@ TEST(Tokenizer_Unigram, Tokenizer_MalformedUtf8) {
     EXPECT_THROW(tok.encode("\xc3"), cv::Exception);           // truncated 2-byte sequence
 }
 
+TEST(Tokenizer_BPE, Tokenizer_ExplicitModelType) {
+    Tokenizer autoTok = Tokenizer::load(_tf("gpt2/config.json"));
+    Tokenizer explicitTok = Tokenizer::load(_tf("gpt2/config.json"), DNN_TOKENIZER_BPE);
+    EXPECT_EQ(autoTok.encode("hello world"), explicitTok.encode("hello world"));
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_ExplicitModelType) {
+    Tokenizer autoTok = Tokenizer::load(_tf("gemma2/config.json"));
+    Tokenizer explicitTok = Tokenizer::load(_tf("gemma2/config.json"), DNN_TOKENIZER_SENTENCEPIECE);
+    EXPECT_EQ(autoTok.encode("hello world"), explicitTok.encode("hello world"));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_ExplicitModelType) {
+    Tokenizer autoTok = Tokenizer::load(_tf("gemma3/config.json"));
+    Tokenizer explicitTok = Tokenizer::load(_tf("gemma3/config.json"), DNN_TOKENIZER_SENTENCEPIECE);
+    EXPECT_EQ(autoTok.encode("hello world"), explicitTok.encode("hello world"));
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_ExplicitModelType) {
+    Tokenizer autoTok = Tokenizer::load(_tf("t5/config.json"));
+    Tokenizer explicitTok = Tokenizer::load(_tf("t5/config.json"), DNN_TOKENIZER_UNIGRAM);
+    EXPECT_EQ(autoTok.encode("hello world"), explicitTok.encode("hello world"));
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_ExplicitModelType) {
+    Tokenizer autoTok = Tokenizer::load(_tf("bert/config.json"));
+    Tokenizer explicitTok = Tokenizer::load(_tf("bert/config.json"), DNN_TOKENIZER_WORDPIECE);
+    EXPECT_EQ(autoTok.encode("hello world"), explicitTok.encode("hello world"));
+}
+
 }}

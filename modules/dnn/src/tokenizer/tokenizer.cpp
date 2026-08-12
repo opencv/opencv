@@ -715,7 +715,8 @@ static Ptr<Tokenizer::Impl> buildBPETokenizerImpl(cv::FileStorage& fs)
     return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
 }
 
-static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir)
+static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir,
+        TokenizerModelType modelTypeOverride = DNN_TOKENIZER_AUTO)
 {
     std::string tokJson = dir + "tokenizer.json";
     std::string charsmapB64;
@@ -729,6 +730,15 @@ static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir)
 
     std::string modelType;
     model["type"] >> modelType;
+
+    if (modelTypeOverride == DNN_TOKENIZER_UNIGRAM)
+        return buildUnigramTokenizerImpl(fs, charsmapB64);
+    if (modelTypeOverride == DNN_TOKENIZER_WORDPIECE)
+        return buildWordPieceTokenizerImpl(fs, dir);
+    if (modelTypeOverride == DNN_TOKENIZER_SENTENCEPIECE)
+        return buildSentencePieceTokenizerImpl(fs);
+    if (modelTypeOverride == DNN_TOKENIZER_BPE)
+        return buildBPETokenizerImpl(fs);
 
     // Some older HF tokenizer.json snapshots omit the model "type" field
     // entirely. Detect that case via each model kind's distinctive schema
@@ -865,7 +875,7 @@ static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), pattern);
 }
 
-Tokenizer Tokenizer::load(const std::string& modelConfig)
+Tokenizer Tokenizer::load(const std::string& modelConfig, TokenizerModelType modelType)
 {
     cv::FileStorage cfg(modelConfig, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened())
@@ -886,7 +896,7 @@ Tokenizer Tokenizer::load(const std::string& modelConfig)
             "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE, Gemma, SentencePiece, Unigram, WordPiece");
 
     Tokenizer tok;
-    tok.impl_ = buildFromTokenizerDir(dir);
+    tok.impl_ = buildFromTokenizerDir(dir, modelType);
     return tok;
 }
 

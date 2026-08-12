@@ -2052,6 +2052,16 @@ public:
 };
 
 
+/** @brief Tokenizer model family, used to bypass tokenizer.json auto-detection in Tokenizer::load(). */
+enum TokenizerModelType
+{
+    DNN_TOKENIZER_AUTO,         //!< Auto-detect model family from tokenizer.
+    DNN_TOKENIZER_BPE,              //!< Byte Pair Encoding (BPE) family.
+    DNN_TOKENIZER_SENTENCEPIECE,    //!< SentencePiece-derived byte-fallback BPE
+    DNN_TOKENIZER_UNIGRAM,          //!< Unigram language model.
+    DNN_TOKENIZER_WORDPIECE         //!< WordPiece (BERT-style).
+};
+
 /**
  * @brief High-level tokenizer wrapper for DNN usage.
  *
@@ -2083,9 +2093,10 @@ public:
      *  - `tokenizer.json` produced by the corresponding model family.
      *
      * @param modelConfig  Path to config.json for model.
+     * @param modelType  Force a specific tokenizer.json model family instead of auto-detecting it (default DNN_TOKENIZER_AUTO).
      * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& modelConfig);
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& modelConfig, TokenizerModelType modelType = DNN_TOKENIZER_AUTO);
 
     /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
