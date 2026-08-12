@@ -39,7 +39,7 @@ def main(argv):
     ## [draw_lines]
     # Draw the lines
     if lines is not None:
-        for rho, theta in np.asarray(lines).reshape(-1, 2):
+        for rho, theta in lines.reshape(-1, 2):
             a = math.cos(theta)
             b = math.sin(theta)
             x0 = a * rho
@@ -57,8 +57,10 @@ def main(argv):
     ## [draw_lines_p]
     # Draw the lines
     if linesP is not None:
-        for x1, y1, x2, y2 in np.asarray(linesP).reshape(-1, 4):
-            cv.line(cdstP, (x1, y1), (x2, y2), (0,0,255), 3, cv.LINE_AA)
+        num_lines, _ = linesP.shape
+        for i in range(num_lines):
+            l = linesP[i]
+            cv.line(cdstP, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv.LINE_AA)
     ## [draw_lines_p]
     ## [imshow]
     # Show results
