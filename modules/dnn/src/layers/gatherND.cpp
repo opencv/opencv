@@ -30,13 +30,13 @@ public:
         if (preferableTarget == DNN_TARGET_OPENCL_FP16)
         {
             CV_CheckType(dataType, dataType == CV_16F || dataType == CV_8S || dataType == CV_8U ||
-                                   dataType == CV_32S || dataType == CV_64S,
+                                   dataType == CV_32S || dataType == CV_64S || dataType == CV_Bool,
                          "GatherND: unsupported data type for OpenCL FP16 target");
         }
         else
         {
             CV_CheckType(dataType, dataType == CV_32F || dataType == CV_8S || dataType == CV_8U ||
-                                   dataType == CV_32S || dataType == CV_64S,
+                                   dataType == CV_32S || dataType == CV_64S || dataType == CV_Bool,
                          "GatherND: unsupported data type");
         }
 
@@ -94,7 +94,8 @@ public:
             case CV_32S:
             {
                 switch (dtype) {
-                    case CV_8U: forward_impl<int32_t, uchar>(data, indices, out); break;
+                    case CV_8U:
+                    case CV_Bool: forward_impl<int32_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int32_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int32_t, int32_t>(data, indices, out); break;
                     case CV_16F: forward_impl<int32_t, int16_t>(data, indices, out); break;
@@ -106,7 +107,8 @@ public:
             case CV_64S:
             {
                 switch (dtype) {
-                    case CV_8U: forward_impl<int64_t, uchar>(data, indices, out); break;
+                    case CV_8U:
+                    case CV_Bool: forward_impl<int64_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int64_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int64_t, int32_t>(data, indices, out); break;
                     case CV_16F: forward_impl<int64_t, int16_t>(data, indices, out); break;
