@@ -582,6 +582,7 @@ struct CvCapture_FFMPEG
     AVPacket          packet;
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
+    AVPixelFormat     img_convert_ctx_format;
 
     int64_t frame_number, first_frame_number;
 
@@ -648,6 +649,7 @@ void CvCapture_FFMPEG::init()
     memset(&packet, 0, sizeof(packet));
     av_init_packet(&packet);
     img_convert_ctx = 0;
+    img_convert_ctx_format = AV_PIX_FMT_NONE;
 
     avcodec = 0;
     context = 0;
@@ -689,6 +691,7 @@ void CvCapture_FFMPEG::close()
     {
         sws_freeContext(img_convert_ctx);
         img_convert_ctx = 0;
+        img_convert_ctx_format = AV_PIX_FMT_NONE;
     }
 
     if( picture )
@@ -1922,7 +1925,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if( img_convert_ctx == NULL ||
         frame.width != video_st->CV_FFMPEG_CODEC_FIELD->width ||
         frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
-        frame.data == NULL )
+        frame.data == NULL ||
+        (AVPixelFormat)sw_picture->format != img_convert_ctx_format )
     {
 #if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
         int buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
@@ -1999,6 +2003,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 #endif
             return false;
         }
+
+        img_convert_ctx_format = (AVPixelFormat)sw_picture->format;
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);

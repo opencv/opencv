@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 using namespace std;
 
@@ -1186,6 +1187,67 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
         ASSERT_FALSE(frame.empty());
         EXPECT_GE(cap.get(CAP_PROP_POS_FRAMES), f);
     }
+}
+
+// MJPEG stream whose chroma subsampling changes mid-stream at constant
+// frame size must not reuse a conversion context built for the previous frame.
+// related issue: https://github.com/opencv/opencv/issues/29699
+TEST(videoio_ffmpeg, mjpeg_pixel_format_change)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    Mat frame0(64, 64, CV_8UC3, Scalar(0, 0, 255));
+    Mat frame1(64, 64, CV_8UC3);
+    for (int y = 0; y < frame1.rows; y++)
+        for (int x = 0; x < frame1.cols; x++)
+            frame1.at<Vec3b>(y, x) = Vec3b((uchar)(x * 4), (uchar)(y * 4), (uchar)((x + y) * 2));
+
+    vector<uchar> buf0, buf1;
+    ASSERT_TRUE(imencode(".jpg", frame0, buf0,
+        {IMWRITE_JPEG_SAMPLING_FACTOR, IMWRITE_JPEG_SAMPLING_FACTOR_422, IMWRITE_JPEG_QUALITY, 100}));
+    ASSERT_TRUE(imencode(".jpg", frame1, buf1,
+        {IMWRITE_JPEG_SAMPLING_FACTOR, IMWRITE_JPEG_SAMPLING_FACTOR_420, IMWRITE_JPEG_QUALITY, 100}));
+
+    const string filename = tempfile("test_pixfmt_change.mjpeg");
+    std::ofstream file(filename.c_str(), ios::out | ios::trunc | std::ios::binary);
+    file.write(reinterpret_cast<char*>(buf0.data()), buf0.size());
+    file.write(reinterpret_cast<char*>(buf1.data()), buf1.size());
+    file.close();
+
+    VideoCapture cap(filename, CAP_FFMPEG);
+    ASSERT_TRUE(cap.isOpened());
+
+    Mat read0, read1;
+    ASSERT_TRUE(cap.read(read0));
+    ASSERT_TRUE(cap.read(read1));
+
+    Mat decodedRef0 = imdecode(buf0, IMREAD_COLOR);
+    Mat decodedRef1 = imdecode(buf1, IMREAD_COLOR);
+    ASSERT_FALSE(decodedRef0.empty());
+    ASSERT_FALSE(decodedRef1.empty());
+    ASSERT_EQ(read0.size(), decodedRef0.size());
+    ASSERT_EQ(read1.size(), decodedRef1.size());
+
+    // JPEG re-encoding is not bit exact, but a correctly decoded frame stays
+    // within a couple of intensity levels per channel; a stale conversion
+    // context (the bug) produces gross corruption of tens of levels.
+    const double maeThreshold = 5.0;
+
+    Mat diff0, diff1;
+    absdiff(read0, decodedRef0, diff0);
+    absdiff(read1, decodedRef1, diff1);
+    Scalar mae0 = mean(diff0);
+    Scalar mae1 = mean(diff1);
+    for (int c = 0; c < 3; c++)
+    {
+        EXPECT_LE(mae0[c], maeThreshold)
+            << "First frame (channel " << c << ") decoded incorrectly";
+        EXPECT_LE(mae1[c], maeThreshold)
+            << "Second frame (channel " << c << ") decoded incorrectly after pixel format change mid-stream";
+    }
+
+    remove(filename.c_str());
 }
 
 }} // namespace
