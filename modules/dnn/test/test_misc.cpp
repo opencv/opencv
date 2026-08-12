@@ -97,6 +97,26 @@ TEST(blobFromImage_4ch, Regression)
     }
 }
 
+TEST(blobFromImage_UMat, Regression)
+{
+    Mat image(10, 10, CV_32FC3);
+    randu(image, 0.0f, 1.0f);
+
+    UMat uimage;
+    image.copyTo(uimage);
+    UMat ublob;
+    dnn::blobFromImage(uimage, ublob, 1.0, Size(), Scalar(), false, false);
+
+    Mat expected = dnn::blobFromImage(image, 1.0, Size(), Scalar(), false, false);
+    Mat actual = ublob.getMat(ACCESS_READ);
+    EXPECT_EQ(actual.dims, expected.dims);
+    EXPECT_EQ(actual.size[0], expected.size[0]);
+    EXPECT_EQ(actual.size[1], expected.size[1]);
+    EXPECT_EQ(actual.size[2], expected.size[2]);
+    EXPECT_EQ(actual.size[3], expected.size[3]);
+    EXPECT_EQ(cvtest::norm(actual, expected, NORM_INF), 0.0);
+}
+
 TEST(blobFromImage, allocated)
 {
     int size[] = { 1, 3, 4, 5 };
