@@ -24,6 +24,13 @@
 #define __CV_CPU_DISPATCH_EXPAND(fn, args, ...) __CV_EXPAND(__CV_CPU_DISPATCH(fn, args, __VA_ARGS__))
 #define CV_CPU_DISPATCH(fn, args, ...) __CV_CPU_DISPATCH_EXPAND(fn, args, __VA_ARGS__, END) // expand macros
 
+// Same as CV_CPU_DISPATCH, but returns a pointer to the selected implementation
+// instead of calling it. Use it to resolve a function pointer once and cache it.
+#define __CV_CPU_DISPATCH_CHAIN_FN_END(fn, mode, ...)  /* done */
+#define __CV_CPU_DISPATCH_FN(fn, mode, ...) __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_FN_ ## mode(fn, __VA_ARGS__))
+#define __CV_CPU_DISPATCH_FN_EXPAND(fn, ...) __CV_EXPAND(__CV_CPU_DISPATCH_FN(fn, __VA_ARGS__))
+#define CV_CPU_DISPATCH_FN(fn, ...) __CV_CPU_DISPATCH_FN_EXPAND(fn, __VA_ARGS__, END) // expand macros
+
 
 #if defined CV_ENABLE_INTRINSICS \
     && !defined CV_DISABLE_OPTIMIZATION \
