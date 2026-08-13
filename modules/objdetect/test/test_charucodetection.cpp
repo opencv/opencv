@@ -849,7 +849,6 @@ TEST(CharucoDetection, toughPerspectiveIssue25850)
     vector<Point2f> charucoCorners;
     detector.detectBoard(warped, charucoCorners, charucoIds);
 
-    EXPECT_FALSE(charucoCorners.empty());
     EXPECT_GT(charucoCorners.size(), 4u);
     EXPECT_EQ(charucoCorners.size(), charucoIds.size());
 }
