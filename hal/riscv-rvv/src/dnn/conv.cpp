@@ -384,10 +384,15 @@ int conv32f(const float* inp_data, const float* residual_data,
     const int Pmax = (int)(__riscv_vsetvlmax_e32m2()/(size_t)K0);
     const int P = Pmax < Kblk ? Pmax : Kblk;
     const int chunk_len = planeblocks/nspat_chunks;
-    const bool use_wide = P > 1 && chunk_len >= 8*P;
+    // Scratch element count is formed in 64 bits and range-checked before it is narrowed to
+    // size_t, so a platform with a 32-bit size_t cannot wrap it into an under-allocation; the
+    // wide path simply stays off in that case.
+    const int64_t wideneed = (int64_t)ksize*G.cblocks*C0*P*K0 + 4*(int64_t)P*K0;
+    const bool use_wide = P > 1 && chunk_len >= 8*P &&
+                          wideneed <= (int64_t)(SIZE_MAX/sizeof(float));
     const int64_t blockstride = (int64_t)ksize*C1Max*C0*K0;
     const int64_t twsize = use_wide ? (int64_t)ksize*G.cblocks*C0*P*K0 : 0;
-    cv::AutoBuffer<float> widebuf(use_wide ? (size_t)(twsize + 4*P*K0) : 0);
+    cv::AutoBuffer<float> widebuf(use_wide ? (size_t)wideneed : 0);
     float* tw      = widebuf.data();                  // tiled weights
     float* tscale  = tw + twsize;                     // tiled scale/bias/alpha, P*K0 each
     float* tbias   = tscale + (int64_t)P*K0;
