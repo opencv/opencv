@@ -54,6 +54,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <opencv2/core/utils/logger.hpp>
+
 
 namespace cv{
 
@@ -413,6 +415,14 @@ bool GdalDecoder::readData( Mat& img ){
             break;
         default:
             CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
+        }
+
+        // an out-of-range color index (e.g. an alpha band mapped to index 3
+        // with a 3-channel image) would write past the pixel in write_pixel
+        if( color >= img.channels() ){
+            CV_LOG_WARNING(NULL, "GDAL: band " << (c+1) << " maps to channel " << color <<
+                ", which is out of range for the " << img.channels() << "-channel image; skipping the band");
+            continue;
         }
 
         // make sure the image band has the same dimensions as the image
