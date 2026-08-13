@@ -348,11 +348,16 @@ void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray verti
 
     Mat nm = normals_.getMat();
     CV_Assert(!nm.empty() && nm.channels() * (int)nm.total() == 3 * N);
+    CV_CheckDepthEQ(nm.depth(), CV_32F, "Normals with only depth CV_32F are supported");
     Mat nmw = nm.isContinuous() ? nm : nm.clone();     // read-only; reshape needs contiguity
     Mat nmf = nmw.reshape(3, N);
     std::vector<Vec3f> nrm(N);
     for (int i = 0; i < N; i++)
-        nrm[i] = normalize(nmf.at<Vec3f>(i));
+    {
+        Vec3f v = nmf.at<Vec3f>(i);
+        float len = (float)cv::norm(v);
+        nrm[i] = (len > 1e-12f) ? v * (1.f / len) : Vec3f(0.f, 0.f, 1.f);   // guard degenerate normals
+    }
 
     BallPivoter bp(pts, nrm);   // builds the kd-tree once; reused for spacing and pivoting
 

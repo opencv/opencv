@@ -94,8 +94,7 @@ int main()
     viz3d::showPoints("processing", "cleaned", withColor(cleaned, {0.2f, 1.0f, 0.2f}));
 
     Mat meshVerts = vertices.reshape(1, (int)vertices.total());     // N x 3, CV_32F
-    Mat meshTris  = triangles.reshape(1, (int)triangles.total());   // M x 3, CV_32S
-    viz3d::showMesh("processing", "mesh", meshVerts, meshTris);
+    viz3d::showMesh("processing", "mesh", meshVerts, triangles);    // triangles is already M x 3, CV_32S
     viz3d::setObjectPosition("processing", "mesh", {3.0f, 0.0f, 0.0f});
 
     viz3d::setGridVisible("processing", true);
