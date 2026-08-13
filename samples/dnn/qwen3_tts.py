@@ -21,7 +21,7 @@ How to use:
         talker_cache   : inputs_embeds[1,T,1024] f32 + position_ids[3,1,T] i64
                          + attention_mask[1,T] i64 + 56 past K/V [1,8,past,128] f32
                          -> logits[1,T,3072] f32, hidden_states[1,T,1024] f32
-        code_predictor : talker_hidden[1,1024] f32 + codec_ids[1,16] i64 -> [1,15,3072] f32
+        code_predictor : talker_hidden[1,1024] f32 + codec_ids[1,16] i64 -> [1,15,2048] f32
         residual_embed : codec_ids[1,16] i64          -> [1,1024] f32
         tok_decoder    : audio_codes[1,25,16] i64     -> waveform[1,1,L] f32
 
@@ -53,6 +53,8 @@ CODEC_PAD, CODEC_BOS, CODEC_EOS = 2148, 2149, 2150
 CODEC_THINK, CODEC_NOTHINK = 2154, 2155
 CODEC_THINK_BOS, CODEC_THINK_EOS = 2156, 2157
 VOCAB, CONTROL_IDS = 3072, 1024
+REPETITION_PENALTY = 1.05
+MAX_CONSECUTIVE_REPEAT = 12
 
 # config.json talker_config: spk_id and codec_language_id.
 SPEAKER_IDS = {'serena': 3066, 'vivian': 3065, 'uncle_fu': 3010, 'ryan': 3061, 'aiden': 2861,
@@ -147,6 +149,7 @@ def main():
                  'code_predictor', 'residual_embed', 'tok_decoder'):
         path = os.path.join(args.model, name + '.onnx')
         require_file(path)
+        print('loading  : %s' % name)
         nets[name] = cv.dnn.readNetFromONNX(path)
         nets[name].setPreferableBackend(get_backend_id(args.backend))
         nets[name].setPreferableTarget(get_target_id(args.target))
@@ -183,6 +186,12 @@ def main():
     print('text     : "%s" (%d tokens)' % (args.text, len(text_ids)))
 
     codes = []
+    seen_first = np.zeros(VOCAB - CONTROL_IDS, bool)
+    last_first = -1
+    repeat_run = 0
+    seen_sub = [np.zeros(VOCAB - CONTROL_IDS, bool) for _ in range(GROUPS)]
+    last_sub = [-1] * GROUPS
+    repeat_run_sub = [0] * GROUPS
     for _ in range(args.max_frames):
         total = len(talker_in)
         talker = nets['talker_cache']
@@ -194,18 +203,40 @@ def main():
         logits, hidden = talker.forward(['logits', 'hidden_states'])
 
         step = logits[0, -1]
-        first = int(np.argmax(step[:VOCAB - CONTROL_IDS]))
-        if step[CODEC_EOS] > step[first]:
+        allowed = step[:VOCAB - CONTROL_IDS].astype(np.float64).copy()
+        penalized = allowed[seen_first]
+        allowed[seen_first] = np.where(penalized < 0, penalized * REPETITION_PENALTY,
+                                       penalized / REPETITION_PENALTY)
+        first = int(np.argmax(allowed))
+        if step[CODEC_EOS] > allowed[first]:
             break
+        repeat_run = repeat_run + 1 if first == last_first else 1
+        if repeat_run >= MAX_CONSECUTIVE_REPEAT:
+            break
+        last_first = first
+        seen_first[first] = True
 
         frame = np.zeros(GROUPS, np.int64)
         frame[0] = first
         talker_hidden = hidden[0, -1].reshape(1, HIDDEN).astype(np.float32)
 
+        stuck_sub = False
         for g in range(1, GROUPS):
             nets['code_predictor'].setInput(talker_hidden, 'talker_hidden')
             nets['code_predictor'].setInput(frame.reshape(1, GROUPS), 'codec_ids')
-            frame[g] = int(np.argmax(nets['code_predictor'].forward()[0, g - 1]))
+            gv = nets['code_predictor'].forward()[0, g - 1].astype(np.float64).copy()
+            penalized = gv[seen_sub[g]]
+            gv[seen_sub[g]] = np.where(penalized < 0, penalized * REPETITION_PENALTY,
+                                       penalized / REPETITION_PENALTY)
+            val = int(np.argmax(gv))
+            repeat_run_sub[g] = repeat_run_sub[g] + 1 if val == last_sub[g] else 1
+            if repeat_run_sub[g] >= MAX_CONSECUTIVE_REPEAT:
+                stuck_sub = True
+            last_sub[g] = val
+            seen_sub[g][val] = True
+            frame[g] = val
+        if stuck_sub:
+            break
         codes.append(frame.copy())
 
         nets['residual_embed'].setInput(frame.reshape(1, GROUPS), 'codec_ids')

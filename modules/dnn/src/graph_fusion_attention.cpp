@@ -812,7 +812,7 @@ struct ModelFusionAttention
         return true;
     }
 
-    // A removal set is self-contained iff each removed op's output is re-produced by the
+    // A removal set is self-contained if each removed op's output is re-produced by the
     // replacement layer or consumed only by other removed ops. A graph output, or an output
     // still feeding a surviving op, would otherwise lose its producer.
     bool removalIsSelfContained(const vector<Ptr<LayerInfo>>& prog,

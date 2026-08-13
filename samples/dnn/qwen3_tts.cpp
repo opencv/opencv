@@ -20,7 +20,7 @@ How to use:
         talker_cache   : inputs_embeds[1,T,1024] f32 + position_ids[3,1,T] i64
                          + attention_mask[1,T] i64 + 56 past K/V [1,8,past,128] f32
                          -> logits[1,T,3072] f32, hidden_states[1,T,1024] f32
-        code_predictor : talker_hidden[1,1024] f32 + codec_ids[1,16] i64 -> [1,15,3072] f32
+        code_predictor : talker_hidden[1,1024] f32 + codec_ids[1,16] i64 -> [1,15,2048] f32
         residual_embed : codec_ids[1,16] i64          -> [1,1024] f32
         tok_decoder    : audio_codes[1,25,16] i64     -> waveform[1,1,L] f32
 
@@ -97,6 +97,8 @@ const int64_t CODEC_PAD = 2148, CODEC_BOS = 2149, CODEC_EOS = 2150;
 const int64_t CODEC_THINK = 2154, CODEC_NOTHINK = 2155;
 const int64_t CODEC_THINK_BOS = 2156, CODEC_THINK_EOS = 2157;
 const int VOCAB = 3072, CONTROL_IDS = 1024;
+const double REPETITION_PENALTY = 1.05;
+const int MAX_CONSECUTIVE_REPEAT = 12;
 
 // config.json talker_config: spk_id and codec_language_id.
 const map<string, int64_t> SPEAKER_IDS {
@@ -289,6 +291,7 @@ int main(int argc, char** argv)
     {
         const string path = modelDir + "/" + graphs[i] + ".onnx";
         requireFile(path);
+        cout << "loading  : " << graphs[i] << endl;
         nets[i] = readNetFromONNX(path);
         nets[i].setPreferableBackend(backendId);
         nets[i].setPreferableTarget(targetId);
@@ -336,6 +339,12 @@ int main(int argc, char** argv)
     cout << "text     : \"" << text << "\" (" << textIds.size() << " tokens)" << endl;
 
     vector<int64_t> codes;
+    vector<char> seenFirst((size_t)(VOCAB - CONTROL_IDS), 0);
+    int64_t lastFirst = -1;
+    int repeatRun = 0;
+    vector<vector<char>> seenSub(GROUPS, vector<char>((size_t)(VOCAB - CONTROL_IDS), 0));
+    vector<int64_t> lastSub(GROUPS, -1);
+    vector<int> repeatRunSub(GROUPS, 0);
     int frames = 0;
     for (; frames < maxFrames; frames++)
     {
@@ -362,9 +371,19 @@ int main(int argc, char** argv)
         const Mat& hidden = talkerOut[1];
 
         const float* step = logits.ptr<float>(0, logits.size[1] - 1);
-        const int first = argmaxRange(step, VOCAB - CONTROL_IDS);
-        if (step[CODEC_EOS] > step[first])
+        vector<float> allowed(step, step + (VOCAB - CONTROL_IDS));
+        for (size_t i = 0; i < allowed.size(); i++)
+            if (seenFirst[i])
+                allowed[i] = allowed[i] < 0 ? (float)(allowed[i] * REPETITION_PENALTY)
+                                            : (float)(allowed[i] / REPETITION_PENALTY);
+        const int first = argmaxRange(allowed.data(), (int)allowed.size());
+        if (step[CODEC_EOS] > allowed[first])
             break;
+        repeatRun = (first == lastFirst) ? repeatRun + 1 : 1;
+        if (repeatRun >= MAX_CONSECUTIVE_REPEAT)
+            break;
+        lastFirst = first;
+        seenFirst[first] = 1;
 
         vector<int64_t> frame((size_t)GROUPS, 0);
         frame[0] = first;
@@ -372,13 +391,28 @@ int main(int argc, char** argv)
         memcpy(talkerHidden.ptr<float>(), hidden.ptr<float>(0, hidden.size[1] - 1),
                HIDDEN * sizeof(float));
 
+        bool stuckSub = false;
         for (int g = 1; g < GROUPS; g++)
         {
             codePredictor.setInput(talkerHidden, "talker_hidden");
             codePredictor.setInput(idsMat(frame), "codec_ids");
             Mat groupLogits = codePredictor.forward();
-            frame[g] = argmaxRange(groupLogits.ptr<float>(0, g - 1), groupLogits.size[2]);
+            const float* gp = groupLogits.ptr<float>(0, g - 1);
+            vector<float> gallowed(gp, gp + groupLogits.size[2]);
+            for (size_t i = 0; i < gallowed.size(); i++)
+                if (seenSub[g][i])
+                    gallowed[i] = gallowed[i] < 0 ? (float)(gallowed[i] * REPETITION_PENALTY)
+                                                  : (float)(gallowed[i] / REPETITION_PENALTY);
+            const int val = argmaxRange(gallowed.data(), (int)gallowed.size());
+            repeatRunSub[g] = (val == lastSub[g]) ? repeatRunSub[g] + 1 : 1;
+            if (repeatRunSub[g] >= MAX_CONSECUTIVE_REPEAT)
+                stuckSub = true;
+            lastSub[g] = val;
+            seenSub[g][val] = 1;
+            frame[g] = val;
         }
+        if (stuckSub)
+            break;
         codes.insert(codes.end(), frame.begin(), frame.end());
 
         residualEmbed.setInput(idsMat(frame), "codec_ids");
