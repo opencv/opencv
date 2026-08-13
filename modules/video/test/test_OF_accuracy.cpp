@@ -197,4 +197,68 @@ TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
     EXPECT_EQ(dis->getCoarsestScale(), -1);
 }
 
+// See https://github.com/opencv/opencv/issues/20185
+// DISOpticalFlow pads I1 with a fixed 16 pixel border, while the search limits in
+// PatchInverseSearch let a patch hang up to patch_size - 1 pixels outside of the image.
+// With a patch larger than the border, the clamped position is itself outside of the
+// padded buffer and computeSSD*() reads out of bounds (AddressSanitizer:
+// heap-buffer-overflow in cv::computeSSDMeanNorm). Here the search is pushed against
+// those limits with an initial flow field larger than the border; "done" is that calc()
+// does not read out of bounds and returns a flow field of the expected size.
+TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
+{
+    Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
+    RNG rng(42);
+    rng.fill(prev, RNG::UNIFORM, 0, 256);
+    rng.fill(next, RNG::UNIFORM, 0, 256);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->setPatchStride(10);
+
+    // flow of the previous frame pair, used as a temporal candidate; it is larger than
+    // the border, so the patch search is pushed against its limits
+    Mat flow(prev.size(), CV_32FC2, Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow)); // default patch size, fits the border
+    EXPECT_EQ(flow.size(), prev.size());
+
+    // the padded buffers have to be re-created when the patch grows past the border
+    dis->setPatchSize(25);
+    flow.setTo(Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+}
+
+TEST(DenseOpticalFlow_DIS, regression_20185_stress)
+{
+    RNG rng(12345);
+    for (int trial = 0; trial < 40; ++trial)
+    {
+        int rows = 120 + rng.uniform(0, 300);
+        int cols = 120 + rng.uniform(0, 300);
+        int patch_size = 9 + rng.uniform(0, 40); // 9..48, spans and exceeds border_size=16
+        int patch_stride = 1 + rng.uniform(0, 15);
+        float flow_mag = (float)rng.uniform(20, 120); // exceeds border_size=16 in many cases
+
+        Mat prev(rows, cols, CV_8UC1), next(rows, cols, CV_8UC1);
+        rng.fill(prev, RNG::UNIFORM, 0, 256);
+        rng.fill(next, RNG::UNIFORM, 0, 256);
+
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+        dis->setPatchStride(patch_stride);
+        dis->setPatchSize(patch_size);
+
+        Mat flow(prev.size(), CV_32FC2, Scalar(flow_mag, -flow_mag));
+        SCOPED_TRACE(cv::format("trial=%d rows=%d cols=%d patch_size=%d patch_stride=%d flow_mag=%f",
+                                 trial, rows, cols, patch_size, patch_stride, flow_mag));
+        ASSERT_NO_THROW(dis->calc(prev, next, flow));
+        EXPECT_EQ(flow.size(), prev.size());
+
+        // second call on the same instance, patch size unchanged from the previous trial's
+        // instance -- but a *fresh* instance above already exercises the "grow" transition;
+        // this second call on the *same* instance exercises re-use of already-sized buffers.
+        flow.setTo(Scalar(flow_mag, -flow_mag));
+        ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    }
+}
+
 }} // namespace
