@@ -3793,14 +3793,15 @@ If conversion adds the alpha channel, its value will set to the maximum of corre
 range: 255 for CV_8U, 65535 for CV_16U, 1 for CV_32F.
 
 @param src input image: 8-bit unsigned, 16-bit unsigned ( CV_16UC... ), or single-precision
-floating-point.
+floating-point. The accepted depths differ between conversions and are listed with each code in
+#ColorConversionCodes: for example #COLOR_BGR2GRAY is marked `[8U/16U/32F]`, while
+#COLOR_BGR2HSV is marked `[8U/32F]` and rejects `CV_16U`.
 @param dst output image of the same size and depth as src.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
 @param hint Implementation modfication flags. See #AlgorithmHint
 
-@note The source image (src) must be of an appropriate type for the desired color conversion. see ColorConversionCodes
 @see @ref imgproc_color_conversions
  */
 CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
@@ -3828,7 +3829,10 @@ CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArra
 
 /** @brief main function for all demosaicing processes
 
-@param src input image: 8-bit unsigned or 16-bit unsigned.
+@param src input image: 8-bit unsigned or 16-bit unsigned. The accepted depths differ between
+codes and are listed with each code in #ColorConversionCodes: the Variable Number of Gradients
+codes such as #COLOR_BayerBG2BGR_VNG are marked `[8U]` and reject `CV_16U`, while for example
+#COLOR_BayerBG2BGR is marked `[8U/16U]`.
 @param dst output image of the same size and depth as src.
 @param code Color space conversion code (see the description below).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
@@ -3854,7 +3858,6 @@ The function can do the following transformations:
 
     #COLOR_BayerBG2BGRA , #COLOR_BayerGB2BGRA , #COLOR_BayerRG2BGRA , #COLOR_BayerGR2BGRA
 
-@note The source image (src) must be of an appropriate type for the desired color conversion. see ColorConversionCodes
 @sa cvtColor
 */
 CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dstCn = 0);
