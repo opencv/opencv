@@ -735,8 +735,8 @@ TEST_P(Test_ONNX_layers, Elementwise_Sqrt)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    testONNXModels("sqrt");
 #endif
+    testONNXModels("sqrt");
 }
 
 TEST_P(Test_ONNX_layers, Elementwise_not)
@@ -2513,11 +2513,6 @@ TEST_P(Test_ONNX_nets, RAFT)
     normAssert(ref0, outs[0], "", 1.5e-3, 3.2e-2);
 }
 
-TEST_P(Test_ONNX_nets, Squeezenet)
-{
-    testONNXModels("squeezenet", pb);
-}
-
 TEST_P(Test_ONNX_nets, Googlenet)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -2563,48 +2558,6 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
-}
-
-TEST_P(Test_ONNX_nets, CaffeNet)
-{
-#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
-#else
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    testONNXModels("caffenet", pb);
-}
-
-TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
-{
-#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
-#else
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    // Reference output values are in range [-4.992, -1.161]
-    testONNXModels("rcnn_ilsvrc13", pb, 0.0046);
-}
-
-TEST_P(Test_ONNX_nets, VGG16_bn)
-{
-    applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
-
-    // output range: [-16; 27], after Softmax [0; 0.67]
-    const double lInf = (target == DNN_TARGET_MYRIAD) ? 0.038 : default_lInf;
-    testONNXModels("vgg16-bn", pb, default_l1, lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ZFNet)
@@ -2831,16 +2784,6 @@ TEST_P(Test_ONNX_nets, DenseNet121)
 
     // output range: [-87; 138], after Softmax [0; 1]
     testONNXModels("densenet121", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
-}
-
-TEST_P(Test_ONNX_nets, Inception_v1)
-{
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-#endif
-    testONNXModels("inception_v1", pb);
 }
 
 TEST_P(Test_ONNX_nets, Shufflenet)

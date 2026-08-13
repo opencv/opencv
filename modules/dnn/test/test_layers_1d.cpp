@@ -78,9 +78,9 @@ TEST_P(Layer_Test_01D, Clip)
 
     lp.type = "Clip";
     lp.name = "ClipLayer";
-    lp.set("min_value", 0.0);
-    lp.set("max_value", 1.0);
-    Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
+    lp.set("min", 0.0);
+    lp.set("max", 1.0);
+    Ptr<ClipLayer> layer = ClipLayer::create(lp);
 
     Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, 1.0);
     std::vector<Mat> inputs{input};
@@ -725,7 +725,6 @@ int arg_op(const std::vector<T>& vec, const std::string& operation) {
         CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
     }
 }
-// Test for ArgLayer is disabled because there problem in runLayer function related to type assignment
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_Test;
 TEST_P(Layer_Arg_Test, Accuracy_01D) {
     std::vector<int> input_shape = get<0>(GetParam());
@@ -774,7 +773,7 @@ TEST_P(Layer_Arg_Test, Accuracy_01D) {
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    // convert output_ref to float to match the output type
+    // ArgLayer::getTypes() reports CV_64S; match it before comparing
     output_ref.convertTo(output_ref, CV_64SC1);
     normAssert(output_ref, outputs[0]);
 }
