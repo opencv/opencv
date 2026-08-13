@@ -471,6 +471,57 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
         cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 }
 
+TEST_F(fisheyeTest, CalibrationWithColumnPoints)
+{
+    // regression test for https://github.com/opencv/opencv/issues/29692
+    // objectPoints/imagePoints given as Nx1 (column) arrays must calibrate
+    // to the same result as the 1xN (row) representation.
+    cv::Size boardSize(9, 6);
+    const float squareSize = 25.f;
+    std::vector<cv::Point3f> corners;
+    for (int i = 0; i < boardSize.height; i++)
+        for (int j = 0; j < boardSize.width; j++)
+            corners.push_back(cv::Point3f(j * squareSize, i * squareSize, 0));
+
+    cv::Matx33d K(600, 0, 320,
+                  0, 600, 240,
+                  0, 0, 1);
+    cv::Vec4d D(0.01, -0.005, 0.001, 0.0001);
+    cv::Vec3d rvec(0.1, 0.2, 0.05);
+    cv::Vec3d tvec(0, 0, 500);
+
+    std::vector<cv::Point2f> imgPoints;
+    cv::fisheye::projectPoints(corners, imgPoints, rvec, tvec, K, D);
+
+    const int n = (int)corners.size();
+
+    cv::Mat objRow(1, n, CV_32FC3), imgRow(1, n, CV_32FC2);
+    cv::Mat objCol(n, 1, CV_32FC3), imgCol(n, 1, CV_32FC2);
+    for (int i = 0; i < n; i++)
+    {
+        cv::Vec3f obj(corners[i].x, corners[i].y, corners[i].z);
+        cv::Vec2f img(imgPoints[i].x, imgPoints[i].y);
+        objRow.at<cv::Vec3f>(0, i) = obj;
+        imgRow.at<cv::Vec2f>(0, i) = img;
+        objCol.at<cv::Vec3f>(i, 0) = obj;
+        imgCol.at<cv::Vec2f>(i, 0) = img;
+    }
+
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 20, 1e-6);
+
+    cv::Mat Krow, Drow;
+    double rmsRow = cv::fisheye::calibrate(std::vector<cv::Mat>{objRow}, std::vector<cv::Mat>{imgRow},
+        cv::Size(640, 480), Krow, Drow, cv::noArray(), cv::noArray(), 0, criteria);
+
+    cv::Mat Kcol, Dcol;
+    double rmsCol = cv::fisheye::calibrate(std::vector<cv::Mat>{objCol}, std::vector<cv::Mat>{imgCol},
+        cv::Size(640, 480), Kcol, Dcol, cv::noArray(), cv::noArray(), 0, criteria);
+
+    EXPECT_MAT_NEAR(Krow, Kcol, 1e-6);
+    EXPECT_MAT_NEAR(Drow, Dcol, 1e-6);
+    EXPECT_NEAR(rmsRow, rmsCol, 1e-6);
+}
+
 
 TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 {

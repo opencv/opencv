@@ -831,7 +831,7 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.channels() == 1 && image.rows > image.cols;
+        bool imT = image.rows > image.cols;
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
@@ -897,7 +897,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.channels() == 1 && image.rows > image.cols;
+        bool imT = image.rows > image.cols;
 
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
