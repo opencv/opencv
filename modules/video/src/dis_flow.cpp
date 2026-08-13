@@ -244,6 +244,8 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
 {
     CV_INSTRUMENT_REGION();
 
+    border_size = max(16, patch_size);
+
     I0s.resize(coarsest_scale + 1);
     I1s.resize(coarsest_scale + 1);
     I1s_ext.resize(coarsest_scale + 1);
