@@ -4,6 +4,16 @@
 
 #include "opencv2/core/hal/intrin.hpp"
 
+// Hand-tuned 256-bit ymm f32/f64 kernels outperform universal-intrinsic paths on
+// bandwidth-bound accumulate (AVX2 and AVX-512 TUs where 512-bit regresses).
+// x86-only (never defined on ARM). Any _mm256*_pd use must still be nested
+// inside #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F).
+#if defined(CV_CPU_COMPILE_AVX2) \
+    || defined(CV_CPU_COMPILE_AVX512_COMMON) \
+    || (CV_AVX && !CV_AVX2)
+#define CV_ACCUM_FP_USE_YMM 1
+#endif
+
 #define DEF_ACC_INT_FUNCS(suffix, type, acctype) \
 void acc_##suffix(const type* src, acctype* dst, \
                          const uchar* mask, int len, int cn) \
@@ -586,7 +596,7 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1033,7 +1043,7 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1121,7 +1131,7 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for ( ; x <= size - 4 ; x += 4)
         {
             __m256d v_src = _mm256_loadu_pd(src + x);
@@ -1427,7 +1437,7 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for ( ; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1796,7 +1806,7 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1891,7 +1901,7 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for (; x <= size - 4 ; x += 4)
         {
             __m256d v_src = _mm256_loadu_pd(src + x);
@@ -2206,7 +2216,7 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src0 = _mm256_loadu_ps(src1 + x);
@@ -2569,7 +2579,7 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for ( ; x <= size - 8 ; x += 8)
         {
             __m256 v_1src = _mm256_loadu_ps(src1 + x);
@@ -2672,7 +2682,7 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
     if (!mask)
     {
         int size = len * cn;
-        #if CV_AVX && !CV_AVX2
+        #if defined(CV_ACCUM_FP_USE_YMM)
         for ( ; x <= size - 4 ; x += 4)
         {
             __m256d v_src0 = _mm256_loadu_pd(src1 + x);
@@ -3020,26 +3030,51 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
 void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn, double alpha)
 {
     int x = 0;
-#if CV_AVX && !CV_AVX2
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_ACCUM_FP_USE_YMM)
+    const v_float32 v_alpha = vx_setall_f32((float)alpha);
+    const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
+    const int cVectorWidth = VTraits<v_uint16>::vlanes();
+    const int step = VTraits<v_float32>::vlanes();
+#endif
+#if defined(CV_ACCUM_FP_USE_YMM)
+    {
     const __m256 v_alpha = _mm256_set1_ps((float)alpha);
     const __m256 v_beta = _mm256_set1_ps((float)(1.0f - alpha));
-    const int cVectorWidth = 16;
+#if CV_AVX2
+    const __m256 v_zero = _mm256_setzero_ps();
+#endif
+    const int ymmWidth = 16;
 
     if (!mask)
     {
         int size = len * cn;
-        for ( ; x <= size - cVectorWidth ; x += cVectorWidth)
+        for ( ; x <= size - ymmWidth ; x += ymmWidth)
         {
             _mm256_storeu_ps(dst + x, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x), v_alpha)));
             _mm256_storeu_ps(dst + x + 8, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x + 8), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x + 8), v_alpha)));
         }
     }
+    else if (cn == 1)
+    {
+        for ( ; x <= len - 8; x += 8)
+        {
+            __m128i mb = _mm_loadl_epi64((const __m128i*)(mask + x));
+#if CV_AVX2
+            __m256 mf = _mm256_cmp_ps(_mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(mb)), v_zero, _CMP_NEQ_OQ);
+#else
+            // SSE4.1 expand: AVX-only TUs lack _mm256_cvtepi8_epi32 (AVX2).
+            __m128 mf0 = _mm_cmpneq_ps(_mm_cvtepi32_ps(_mm_cvtepi8_epi32(mb)), _mm_setzero_ps());
+            __m128 mf1 = _mm_cmpneq_ps(_mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_srli_si128(mb, 4))), _mm_setzero_ps());
+            __m256 mf = _mm256_insertf128_ps(_mm256_castps128_ps256(mf0), mf1, 1);
+#endif
+            __m256 v_src = _mm256_loadu_ps(src + x);
+            __m256 v_dst = _mm256_loadu_ps(dst + x);
+            __m256 v_new = _mm256_add_ps(_mm256_mul_ps(v_dst, v_beta), _mm256_mul_ps(v_src, v_alpha));
+            _mm256_storeu_ps(dst + x, _mm256_blendv_ps(v_dst, v_new, mf));
+        }
+    }
+    }
 #elif (CV_SIMD || CV_SIMD_SCALABLE)
-    const v_float32 v_alpha = vx_setall_f32((float)alpha);
-    const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
-    const int cVectorWidth = VTraits<v_uint16>::vlanes();
-    const int step = VTraits<v_float32>::vlanes();
-
     if (!mask)
     {
         int size = len * cn;
@@ -3053,6 +3088,66 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
 
             v_store(dst + x, v_dst0);
             v_store(dst + x + step, v_dst1);
+        }
+    }
+    else if (cn == 1)
+    {
+        v_uint32 v_0 = vx_setzero_u32();
+        for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+        {
+            v_uint16 v_mask16 = vx_load_expand(mask + x);
+            v_uint32 v_mask_0, v_mask_1;
+            v_expand(v_mask16, v_mask_0, v_mask_1);
+            v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask_0, v_0)));
+            v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask_1, v_0)));
+
+            v_float32 v_dst0 = vx_load(dst + x);
+            v_float32 v_dst1 = vx_load(dst + x + step);
+
+            v_dst0 = v_select(v_mask0, v_fma(v_dst0, v_beta, v_mul(vx_load(src + x), v_alpha)), v_dst0);
+            v_dst1 = v_select(v_mask1, v_fma(v_dst1, v_beta, v_mul(vx_load(src + x + step), v_alpha)), v_dst1);
+
+            v_store(dst + x, v_dst0);
+            v_store(dst + x + step, v_dst1);
+        }
+    }
+#endif // CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (mask && cn == 3)
+    {
+#if defined(CV_ACCUM_FP_USE_YMM)
+        const v_float32 v_alpha = vx_setall_f32((float)alpha);
+        const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
+        const int cVectorWidth = VTraits<v_uint16>::vlanes();
+        const int step = VTraits<v_float32>::vlanes();
+#endif
+        v_uint32 v_0 = vx_setzero_u32();
+
+        for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+        {
+            v_uint16 v_mask16 = vx_load_expand(mask + x);
+            v_uint32 v_mask_0, v_mask_1;
+            v_expand(v_mask16, v_mask_0, v_mask_1);
+            v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask_0, v_0)));
+            v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask_1, v_0)));
+
+            v_float32 v_src00, v_src10, v_src20, v_src01, v_src11, v_src21;
+            v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
+            v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
+
+            v_float32 v_dst00, v_dst10, v_dst20, v_dst01, v_dst11, v_dst21;
+            v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
+            v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
+
+            v_dst00 = v_select(v_mask0, v_fma(v_dst00, v_beta, v_mul(v_src00, v_alpha)), v_dst00);
+            v_dst01 = v_select(v_mask1, v_fma(v_dst01, v_beta, v_mul(v_src01, v_alpha)), v_dst01);
+            v_dst10 = v_select(v_mask0, v_fma(v_dst10, v_beta, v_mul(v_src10, v_alpha)), v_dst10);
+            v_dst11 = v_select(v_mask1, v_fma(v_dst11, v_beta, v_mul(v_src11, v_alpha)), v_dst11);
+            v_dst20 = v_select(v_mask0, v_fma(v_dst20, v_beta, v_mul(v_src20, v_alpha)), v_dst20);
+            v_dst21 = v_select(v_mask1, v_fma(v_dst21, v_beta, v_mul(v_src21, v_alpha)), v_dst21);
+
+            v_store_interleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
+            v_store_interleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
         }
     }
 #endif // CV_SIMD
@@ -3155,15 +3250,19 @@ void accW_simd_(const ushort* src, double* dst, const uchar* mask, int len, int 
 void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int cn, double alpha)
 {
     int x = 0;
-#if CV_AVX && !CV_AVX2
-    const __m256d v_alpha = _mm256_set1_pd(alpha);
-    const __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
-    const int cVectorWidth = 16;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const v_float64 v_alpha = vx_setall_f64(alpha);
+    const v_float64 v_beta = vx_setall_f64(1.0f - alpha);
+    const int cVectorWidth = VTraits<v_float32>::vlanes();
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
         int size = len * cn;
-        for ( ; x <= size - cVectorWidth ; x += cVectorWidth)
+        #if defined(CV_ACCUM_FP_USE_YMM)
+        const __m256d v_alpha_ymm = _mm256_set1_pd(alpha);
+        const __m256d v_beta_ymm = _mm256_set1_pd(1.0f - alpha);
+        for ( ; x <= size - 16 ; x += 16)
         {
             __m256 v_src0 = _mm256_loadu_ps(src + x);
             __m256 v_src1 = _mm256_loadu_ps(src + x + 8);
@@ -3172,22 +3271,13 @@ void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int c
             __m256d v_src10 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,0));
             __m256d v_src11 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,1));
 
-            _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta), _mm256_mul_pd(v_src00, v_alpha)));
-            _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src01, v_alpha)));
-            _mm256_storeu_pd(dst + x + 8, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 8), v_beta), _mm256_mul_pd(v_src10, v_alpha)));
-            _mm256_storeu_pd(dst + x + 12, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 12), v_beta), _mm256_mul_pd(v_src11, v_alpha)));
+            _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta_ymm), _mm256_mul_pd(v_src00, v_alpha_ymm)));
+            _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta_ymm), _mm256_mul_pd(v_src01, v_alpha_ymm)));
+            _mm256_storeu_pd(dst + x + 8, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 8), v_beta_ymm), _mm256_mul_pd(v_src10, v_alpha_ymm)));
+            _mm256_storeu_pd(dst + x + 12, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 12), v_beta_ymm), _mm256_mul_pd(v_src11, v_alpha_ymm)));
         }
-    }
-#elif (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    const v_float64 v_alpha = vx_setall_f64(alpha);
-    const v_float64 v_beta = vx_setall_f64(1.0f - alpha);
-    const int cVectorWidth = VTraits<v_float32>::vlanes() * 2;
-    const int step = VTraits<v_float64>::vlanes();
-
-    if (!mask)
-    {
-        int size = len * cn;
-        for (; x <= size - cVectorWidth; x += cVectorWidth)
+        #else
+        for (; x <= size - cVectorWidth * 2; x += cVectorWidth * 2)
         {
             v_float32 v_src0 = vx_load(src + x);
             v_float32 v_src1 = vx_load(src + x + VTraits<v_float32>::vlanes());
@@ -3211,6 +3301,69 @@ void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int c
             v_store(dst + x + step * 2, v_dst10);
             v_store(dst + x + step * 3, v_dst11);
         }
+        #endif // CV_ACCUM_FP_USE_YMM
+    }
+    else
+    {
+        v_uint64 v_0 = vx_setzero_u64();
+        if (cn == 1)
+        {
+            for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
+            {
+                v_uint32 v_masku32 = vx_load_expand_q(mask + x);
+                v_uint64 v_masku640, v_masku641;
+                v_expand(v_masku32, v_masku640, v_masku641);
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
+
+                v_float32 v_src = vx_load(src + x);
+                v_float64 v_src0 = v_cvt_f64(v_src);
+                v_float64 v_src1 = v_cvt_f64_high(v_src);
+
+                v_float64 v_dst0 = vx_load(dst + x);
+                v_float64 v_dst1 = vx_load(dst + x + step);
+
+                v_dst0 = v_select(v_mask0, v_fma(v_dst0, v_beta, v_mul(v_src0, v_alpha)), v_dst0);
+                v_dst1 = v_select(v_mask1, v_fma(v_dst1, v_beta, v_mul(v_src1, v_alpha)), v_dst1);
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + step, v_dst1);
+            }
+        }
+        else if (cn == 3)
+        {
+            for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
+            {
+                v_uint32 v_masku32 = vx_load_expand_q(mask + x);
+                v_uint64 v_masku640, v_masku641;
+                v_expand(v_masku32, v_masku640, v_masku641);
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
+
+                v_float32 v_src0, v_src1, v_src2;
+                v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
+                v_float64 v_src00 = v_cvt_f64(v_src0);
+                v_float64 v_src01 = v_cvt_f64_high(v_src0);
+                v_float64 v_src10 = v_cvt_f64(v_src1);
+                v_float64 v_src11 = v_cvt_f64_high(v_src1);
+                v_float64 v_src20 = v_cvt_f64(v_src2);
+                v_float64 v_src21 = v_cvt_f64_high(v_src2);
+
+                v_float64 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
+                v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
+                v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
+
+                v_dst00 = v_select(v_mask0, v_fma(v_dst00, v_beta, v_mul(v_src00, v_alpha)), v_dst00);
+                v_dst01 = v_select(v_mask1, v_fma(v_dst01, v_beta, v_mul(v_src01, v_alpha)), v_dst01);
+                v_dst10 = v_select(v_mask0, v_fma(v_dst10, v_beta, v_mul(v_src10, v_alpha)), v_dst10);
+                v_dst11 = v_select(v_mask1, v_fma(v_dst11, v_beta, v_mul(v_src11, v_alpha)), v_dst11);
+                v_dst20 = v_select(v_mask0, v_fma(v_dst20, v_beta, v_mul(v_src20, v_alpha)), v_dst20);
+                v_dst21 = v_select(v_mask1, v_fma(v_dst21, v_beta, v_mul(v_src21, v_alpha)), v_dst21);
+
+                v_store_interleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
+                v_store_interleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
+            }
+        }
     }
 #endif // CV_SIMD_64F
     accW_general_(src, dst, mask, len, cn, alpha, x);
@@ -3219,7 +3372,8 @@ void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int c
 void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int cn, double alpha)
 {
     int x = 0;
-#if CV_AVX && !CV_AVX2
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#if defined(CV_ACCUM_FP_USE_YMM)
     const __m256d v_alpha = _mm256_set1_pd(alpha);
     const __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
     const int cVectorWidth = 8;
@@ -3236,7 +3390,24 @@ void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int 
             _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src1, v_alpha)));
         }
     }
-#elif (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    else if (cn == 1)
+    {
+        for ( ; x <= len - 4; x += 4)
+        {
+            __m128i mb = _mm_loadl_epi64((const __m128i*)(mask + x));
+#if CV_AVX2
+            __m256d mf = _mm256_castsi256_pd(_mm256_cmpgt_epi32(_mm256_cvtepi8_epi32(mb), _mm256_setzero_si256()));
+#else
+            // SSE4.1 expand: AVX-only TUs lack _mm256_cvtepi8_epi32 / _mm256_cmpgt_epi32 (AVX2).
+            __m256d mf = _mm256_castpd128_pd256(_mm_castsi128_pd(_mm_cmpgt_epi32(_mm_cvtepi8_epi32(mb), _mm_setzero_si128())));
+#endif
+            __m256d v_src = _mm256_loadu_pd(src + x);
+            __m256d v_dst = _mm256_loadu_pd(dst + x);
+            __m256d v_new = _mm256_add_pd(_mm256_mul_pd(v_dst, v_beta), _mm256_mul_pd(v_src, v_alpha));
+            _mm256_storeu_pd(dst + x, _mm256_blendv_pd(v_dst, v_new, mf));
+        }
+    }
+#else
     const v_float64 v_alpha = vx_setall_f64(alpha);
     const v_float64 v_beta = vx_setall_f64(1.0f - alpha);
     const int cVectorWidth = VTraits<v_float64>::vlanes() * 2;
@@ -3260,6 +3431,7 @@ void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int 
             v_store(dst + x + step, v_dst1);
         }
     }
+#endif // CV_ACCUM_FP_USE_YMM
 #endif // CV_SIMD_64F
     accW_general_(src, dst, mask, len, cn, alpha, x);
 }
