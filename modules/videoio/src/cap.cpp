@@ -530,54 +530,32 @@ void VideoCapture::release()
     fpsCtl = FpsControlState(); // don't leak fps-control state (clock/buffers) across reopen
 }
 
-// target_fps <= 0 disables frame-rate control entirely (plain passthrough).
-//
-// Only enabled for backends confirmed (by reading each one's getProperty(CAP_PROP_POS_MSEC)
-// implementation) to report a real, per-frame timestamp:
-//   - FFmpeg          -- decoded AVFrame/AVPacket pts
-//   - GStreamer        -- pipeline buffer timestamp
-//   - V4L2             -- kernel capture buffer timestamp
-//   - OpenCV MJPEG     -- derived frame-index * 1000/fps; not a decoded PTS, but genuinely monotonic
-//   - MSMF (Windows)   -- real per-sample presentation timestamp (usedVideoSampleTime); used for
-//                         both file playback and live cameras on Windows -- NOT the same backend
-//                         as the older CAP_DSHOW, which has no CAP_PROP_POS_MSEC case at all
-//   - Aravis           -- derived frameID/fps, same genuinely-monotonic pattern as OpenCV MJPEG
-//   - OpenNI2 / ASUS   -- real per-frame SDK timestamp (streamFrames[...].getTimestamp())
-//   - Xine             -- real xine_get_pos_length() position; NOTE falls back to
-//                         CAP_PROP_UNKNOWN on an individual query failure, not bulletproof
-//   - gPhoto2          -- real elapsed time since first frame, but only whole-second (time_t)
-//                         resolution -- coarser than the others, fine only if frames arrive
-//                         >1s apart (true for its tethered-DSLR use case, not a general guarantee)
-// Every other backend either never implements CAP_PROP_POS_MSEC at all (falls through to the
-// interface's own CAP_PROP_UNKNOWN default, e.g. Intel MFX/UEYE/OBSENSOR/DShow/Android/DC1394/
-// PvAPI/WinRT/RealSense/XIMEA) or explicitly returns a constant unrelated to real time
-// (CV_IMAGES) -- silently trusting one of those would either drop every frame but the last one
-// (bounded sources, confirmed empirically on CV_IMAGES) or hang grab() forever (live sources that
-// never reach EOF), since the drop-selection algorithm has no way to detect a stale/constant
-// timestamp on its own. Falling back to plain, unrestricted passthrough is always safe; silently
-// mis-selecting frames or hanging is not.
+// Enable drop-only frame-rate control; target_fps <= 0 leaves the capture as plain passthrough.
+// Restricted to backends whose CAP_PROP_POS_MSEC is a real per-frame timestamp -- the rest either
+// never implement it or return a constant, which would make every drop comparison read as stale.
 void VideoCapture::enableFpsControl(double target_fps)
 {
     fpsCtl = FpsControlState();
-    if (target_fps > 0 && !icap.empty())
+    if (target_fps <= 0 || icap.empty())
+        return;
+
+    const int domain = icap->isOpened() ? icap->getCaptureDomain() : 0;
+    if (domain != CAP_FFMPEG && domain != CAP_GSTREAMER && domain != CAP_V4L2 &&
+        domain != CAP_OPENCV_MJPEG)
     {
-        int domain = icap->isOpened() ? icap->getCaptureDomain() : 0;
-        if (domain != CAP_FFMPEG && domain != CAP_GSTREAMER && domain != CAP_V4L2 &&
-            domain != CAP_OPENCV_MJPEG)
-        {
-            CV_LOG_WARNING(NULL, "VIDEOIO: target_fps is not supported for backend "
-                << (domain != 0 ? cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(domain)) : cv::String("<unknown>"))
-                << " -- frame-rate control not enabled, using plain passthrough instead");
-            return; // fpsCtl.enabled stays false from the reset above
-        }
-        fpsCtl.enabled = true;
-        fpsCtl.outFrameDurationMs = 1000.0 / target_fps;
+        CV_LOG_WARNING(NULL, "VIDEOIO: target_fps is not supported for backend "
+            << (domain != 0 ? cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(domain)) : cv::String("<unknown>"))
+            << " -- frame-rate control not enabled, using plain passthrough instead");
+        return; // fpsCtl.enabled stays false from the reset above
     }
+
+    fpsCtl.enabled = true;
+    fpsCtl.targetFps = target_fps;
+    fpsCtl.outFrameDurationMs = 1000.0 / target_fps;
 }
 
-// Pull exactly one real frame from the backend into the next free lookahead-buffer slot.
-// Always clones: some backends reuse a single internal decode buffer across grabFrame() calls,
-// and we need two buffered frames to stay valid and independent at the same time.
+// Pull one frame into the next free lookahead slot, cloned because some backends reuse a single
+// internal decode buffer across grabFrame() calls.
 bool VideoCapture::fpsControlReadOne()
 {
     CV_Assert(fpsCtl.bufCount < 2);
@@ -586,27 +564,35 @@ bool VideoCapture::fpsControlReadOne()
     Mat frame;
     if (!icap->retrieveFrame(0, frame) || frame.empty())
         return false;
-    fpsCtl.bufFrame[fpsCtl.bufCount] = frame.clone();
-    fpsCtl.bufPts[fpsCtl.bufCount] = icap->getProperty(CAP_PROP_POS_MSEC);
+    FpsControlFrame& slot = fpsCtl.buf[fpsCtl.bufCount];
+    slot.frame = frame.clone();
+    // Read the positions now, while the backend is still on this frame; by get() time it has
+    // advanced to the lookahead frame.
+    slot.posMsec = icap->getProperty(CAP_PROP_POS_MSEC);
+    slot.posFrames = icap->getProperty(CAP_PROP_POS_FRAMES);
+    slot.posAviRatio = icap->getProperty(CAP_PROP_POS_AVI_RATIO);
     fpsCtl.bufCount++;
     return true;
 }
 
-// Drop-only version of FFmpeg's vf_fps.c decision rule: keep 2 frames buffered and compare the
-// *next* frame's timestamp against the output clock (nextOutPts). If the next frame has already
-// reached or passed the current tick, the buffered frame is stale -- drop it and re-check.
-// Otherwise it's the answer for this tick -- consume it and advance the clock by one output-frame
-// duration. Since target_fps is always <= the source rate here, a buffered frame is never held
-// over for a second tick, so there is no duplicate case to handle.
-//
-// At end of stream, only one frame may be left buffered with no lookahead to compare it against --
-// in that case its own timestamp is checked directly against the clock instead: still due -> emit
-// it (the last available data is the best answer for this tick); not yet due -> the schedule never
-// caught up before the source ran out, so there's nothing to emit for this tick.
-//
-// kFpsControlEpsMs (see videoio.hpp, next to FpsControlState) absorbs floating-point rounding
-// noise in backend-reported timestamps so an exact schedule boundary doesn't get flipped by it.
+// Drop the output clock and buffers on a seek, leaving the feature enabled and its rate intact.
+void VideoCapture::fpsControlResetClock()
+{
+    fpsCtl.nextOutPts = -1.0;
+    fpsCtl.buf[0].reset();
+    fpsCtl.buf[1].reset();
+    fpsCtl.bufCount = 0;
+    fpsCtl.pending.reset();
+}
+
+// Absorbs floating-point rounding noise in backend timestamps so an exact schedule boundary in
+// fpsControlGrab() doesn't get flipped by it.
 const double VideoCapture::kFpsControlEpsMs = 1e-6;
+
+// Drop-only port of FFmpeg's vf_fps.c rule: with 2 frames buffered, if the *next* frame has already
+// reached the output clock then the buffered one is stale, so drop it and re-check; otherwise emit
+// it and advance the clock by one output-frame duration. At end of stream only one frame may remain,
+// with no lookahead to compare against, so its own timestamp is checked against the clock instead.
 
 bool VideoCapture::fpsControlGrab()
 {
@@ -623,46 +609,40 @@ bool VideoCapture::fpsControlGrab()
 
         if (s.bufCount == 0)
         {
-            // Nothing buffered and nothing left to emit -- invalidate the previous answer so a
-            // retrieve() call made without checking this grab()'s return value can't silently
-            // re-serve a stale frame instead of failing.
-            s.pendingFrame.release();
-            s.pendingPts = -1.0;
+            // Invalidate the previous answer, so a retrieve() after a failed grab() can't re-serve
+            // a stale frame instead of failing.
+            s.pending.reset();
             return false;
         }
 
         if (s.nextOutPts < 0)
-            s.nextOutPts = s.bufPts[0]; // anchor the output clock to the first real frame's timestamp
+            s.nextOutPts = s.buf[0].posMsec; // anchor the output clock to the first real frame's timestamp
 
         if (s.bufCount == 2)
         {
-            if (s.bufPts[1] <= s.nextOutPts + kFpsControlEpsMs)
+            if (s.buf[1].posMsec <= s.nextOutPts + kFpsControlEpsMs)
             {
                 // buf[0] is stale -- drop it, shift, and re-check against the new pair.
-                s.bufFrame[0] = s.bufFrame[1];
-                s.bufPts[0] = s.bufPts[1];
+                s.buf[0] = s.buf[1];
                 s.bufCount = 1;
                 continue;
             }
         }
         else // bufCount == 1: source is exhausted, no lookahead frame left to compare against
         {
-            if (s.bufPts[0] < s.nextOutPts - kFpsControlEpsMs)
+            if (s.buf[0].posMsec < s.nextOutPts - kFpsControlEpsMs)
             {
-                s.pendingFrame.release(); // same reasoning as the bufCount==0 case above
-                s.pendingPts = -1.0;
+                s.pending.reset(); // same reasoning as the bufCount==0 case above
                 return false; // schedule never caught up before the source ran out
             }
         }
 
         // buf[0] is the answer for this tick.
-        s.pendingFrame = s.bufFrame[0];
-        s.pendingPts = s.bufPts[0];
+        s.pending = s.buf[0];
         s.nextOutPts += s.outFrameDurationMs;
         if (s.bufCount == 2)
         {
-            s.bufFrame[0] = s.bufFrame[1];
-            s.bufPts[0] = s.bufPts[1];
+            s.buf[0] = s.buf[1];
             s.bufCount = 1;
         }
         else
@@ -697,19 +677,18 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
     {
         if (fpsCtl.enabled)
         {
-            // target_fps only buffers/decodes channel 0 (fpsControlReadOne() always calls
-            // retrieveFrame(0, ...)) -- it does not support multi-head sources (stereo camera,
-            // Kinect, etc: see the multi-head note on grab() above). Fail loudly rather than
-            // silently handing back channel 0's data for a different requested channel.
+            // fpsControlReadOne() only ever buffers channel 0, so multi-head sources (stereo
+            // camera, Kinect) are unsupported. Fail loudly rather than silently returning
+            // channel 0's data for a different requested channel.
             if (channel != 0)
             {
                 CV_LOG_WARNING(NULL, "VIDEOIO: target_fps does not support multi-head capture "
                                       "(channel != 0); use target_fps <= 0 for multi-head sources");
             }
-            else if (!fpsCtl.pendingFrame.empty())
+            else if (!fpsCtl.pending.frame.empty())
             {
                 // grab() already fully decoded this frame via fpsControlGrab() -- hand back a copy.
-                fpsCtl.pendingFrame.copyTo(image);
+                fpsCtl.pending.frame.copyTo(image);
                 ret = true;
             }
         }
@@ -778,6 +757,13 @@ bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
     bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    if (ret && fpsCtl.enabled &&
+        (propId == CAP_PROP_POS_MSEC || propId == CAP_PROP_POS_FRAMES || propId == CAP_PROP_POS_AVI_RATIO))
+    {
+        // Pre-seek frames would otherwise be emitted, and the stale clock would drop frames until
+        // the source caught up to it (fpsControlGrab() only re-anchors when the clock is unset).
+        fpsControlResetClock();
+    }
     if (!ret && throwOnFail)
     {
         CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
@@ -800,14 +786,38 @@ double VideoCapture::get(int propId) const
         }
         return static_cast<double>(api);
     }
-    if (propId == CAP_PROP_POS_MSEC && fpsCtl.enabled && fpsCtl.pendingPts >= 0)
+    if (fpsCtl.enabled)
     {
-        // Report the timestamp of the frame actually handed back by read()/retrieve(), not the
-        // backend's own internal position -- which, under fps control, sits on whichever
-        // lookahead frame the algorithm most recently had to pull to make its drop/keep decision
-        // (one frame ahead of the emitted one in steady state, or an inconsistent
-        // backend-specific value right at end-of-stream).
-        return fpsCtl.pendingPts;
+        // Report the stream the caller sees, not the backend's own position, which sits on the
+        // lookahead frame. All three positions come from the same captured frame so they cannot
+        // contradict each other, and each falls through to the backend until one has been emitted.
+        switch (propId)
+        {
+        case CAP_PROP_POS_MSEC:
+            if (fpsCtl.pending.posMsec >= 0)
+                return fpsCtl.pending.posMsec;
+            break;
+        case CAP_PROP_POS_FRAMES:
+            if (fpsCtl.pending.posFrames >= 0)
+                return fpsCtl.pending.posFrames;
+            break;
+        case CAP_PROP_POS_AVI_RATIO:
+            if (fpsCtl.pending.posAviRatio >= 0)
+                return fpsCtl.pending.posAviRatio;
+            break;
+        case CAP_PROP_FPS:
+        {
+            // The rate read() actually emits at, so `VideoWriter(..., cap.get(CAP_PROP_FPS), ...)`
+            // tags the output correctly. Clamped to the native rate because this only ever drops
+            // frames: above it, target_fps degrades to plain passthrough.
+            const double nativeFps = !icap.empty() ? icap->getProperty(CAP_PROP_FPS) : 0.0;
+            if (nativeFps > 0 && nativeFps < fpsCtl.targetFps)
+                return nativeFps;
+            return fpsCtl.targetFps;
+        }
+        default:
+            break;
+        }
     }
     return !icap.empty() ? icap->getProperty(propId) : static_cast<double>(CAP_PROP_UNKNOWN);
 }
