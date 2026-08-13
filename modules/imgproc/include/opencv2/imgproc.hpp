@@ -2097,6 +2097,30 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
                           Size dsize, double fx = 0, double fy = 0,
                           int interpolation = INTER_LINEAR );
 
+/** @brief Resizes a batch of images, avoiding a per-image call from Python.
+
+The function is equivalent to calling #resize independently on every element of `src` with the
+same `dsize`, `fx`, `fy`, and `interpolation` -- the per-image results are numerically identical
+to what independent #resize calls would produce, since each image is processed by that same code
+path. The batch elements do not need to share a size, depth, or channel count; each is resized
+according to its own size/type exactly as a standalone #resize call would. The batch is
+distributed across worker threads (see #parallel_for_), so the loop over images happens natively
+in C++ instead of costing one Python/C++ boundary crossing per image.
+
+@param src input images.
+@param dst output images; will contain the same number of elements as src, each resized as
+described in #resize.
+@param dsize output image size, applied to every element of src; see #resize.
+@param fx scale factor along the horizontal axis, applied to every element of src; see #resize.
+@param fy scale factor along the vertical axis, applied to every element of src; see #resize.
+@param interpolation interpolation method, applied to every element of src, see #InterpolationFlags
+
+@sa resize
+ */
+CV_EXPORTS_W void resizeBatch( InputArrayOfArrays src, OutputArrayOfArrays dst,
+                                Size dsize, double fx = 0, double fy = 0,
+                                int interpolation = INTER_LINEAR );
+
 /** @brief Applies an affine transformation to an image.
 
 The function warpAffine transforms the source image using the specified matrix:

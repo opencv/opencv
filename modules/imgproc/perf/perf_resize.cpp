@@ -262,4 +262,38 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     SANITY_CHECK_NOTHING();
 }
 
+typedef tuple<MatType, int, Size> MatInfo_BatchSize_Size_t;
+typedef TestBaseWithParam<MatInfo_BatchSize_Size_t> MatInfo_BatchSize_Size;
+
+PERF_TEST_P(MatInfo_BatchSize_Size, resizeBatchVsLoop,
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8UC3, CV_32FC1, CV_32FC3),
+        testing::Values(2, 4, 8, 16),
+        testing::Values(Size(256, 256), Size(512, 512), Size(1024, 1024))
+    )
+)
+{
+    int matType = get<0>(GetParam());
+    int batchSize = get<1>(GetParam());
+    Size from = get<2>(GetParam());
+    Size to(from.width / 2, from.height / 2);
+
+    std::vector<cv::Mat> src(batchSize), dst(batchSize);
+    for (int i = 0; i < batchSize; i++)
+    {
+        src[i] = cv::Mat(from, matType);
+        switch (src[i].depth())
+        {
+            case CV_8U: cvtest::fillGradient<uint8_t>(src[i]); break;
+            case CV_32F: cvtest::fillGradient<float>(src[i]); break;
+        }
+    }
+
+    TEST_CYCLE() resizeBatch(src, dst, to, 0, 0, INTER_LINEAR);
+
+    for (int i = 0; i < batchSize; i++)
+        EXPECT_EQ(dst[i].size(), to);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

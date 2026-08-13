@@ -4059,3 +4059,54 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }
+
+namespace cv {
+
+class ResizeBatchInvoker CV_FINAL : public ParallelLoopBody
+{
+public:
+    ResizeBatchInvoker(const std::vector<Mat>& src, OutputArrayOfArrays dst,
+                        Size dsize, double fx, double fy, int interpolation)
+        : src_(src), dst_(dst), dsize_(dsize), fx_(fx), fy_(fy), interpolation_(interpolation)
+    {
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        for (int i = range.start; i < range.end; i++)
+            cv::resize(src_[i], dst_.getMatRef(i), dsize_, fx_, fy_, interpolation_);
+    }
+
+private:
+    const std::vector<Mat>& src_;
+    OutputArrayOfArrays dst_;
+    Size dsize_;
+    double fx_, fy_;
+    int interpolation_;
+};
+
+void resizeBatch( InputArrayOfArrays _src, OutputArrayOfArrays _dst, Size dsize,
+                   double fx, double fy, int interpolation )
+{
+    CV_INSTRUMENT_REGION();
+
+    std::vector<Mat> src;
+    _src.getMatVector(src);
+
+    int n = (int)src.size();
+    // element type is left unspecified (0): elements may differ in depth/channels, exactly as
+    // independent resize() calls on heterogeneous inputs would produce heterogeneous outputs.
+    _dst.create(n, 1, 0);
+
+    if (n == 0)
+        return;
+
+    double total = 0;
+    for (int i = 0; i < n; i++)
+        total += src[i].total();
+
+    ResizeBatchInvoker invoker(src, _dst, dsize, fx, fy, interpolation);
+    parallel_for_(Range(0, n), invoker, total / (double)(1 << 16));
+}
+
+} // namespace cv
