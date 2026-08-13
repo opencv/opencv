@@ -136,62 +136,39 @@ struct CHullCmpPoints
 };
 
 
-void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
+// Core algorithm, templated on the point type and shared by the CV_32S/CV_32F instantiations
+// below. 'data0' must already be typed as Point_<_Tp>* -- i.e. the caller picks the branch
+// matching the input Mat's actual depth -- so 'pointer' here is always a genuinely
+// Point_<_Tp>*-typed array. The historical code instead allocated a single Point** buffer and
+// obtained a Point2f** view of the *same storage* via reinterpret_cast to share this code
+// between the int and float cases; reinterpreting a Point** as Point2f** (and reading Mat data
+// that is actually CV_32F through a Point* obtained unconditionally via points.ptr<Point>()) is
+// undefined behavior (strict aliasing violation) regardless of Point and Point2f happening to
+// have the same size -- see #26952. Templating instead means every dereference here is already
+// at its correct type, so no cast is ever needed.
+template<typename _Tp, typename _DotTp>
+static int convexHull_( Point_<_Tp>* data0, int total, int* hullbuf, bool clockwise, bool returnPoints )
 {
-    CV_INSTRUMENT_REGION();
-
-    CV_Assert(_points.getObj() != _hull.getObj());
-    Mat points = _points.getMat();
-    int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
+    int i, nout = 0;
     int miny_ind = 0, maxy_ind = 0;
-    CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
 
-    if( total == 0 )
-    {
-        _hull.release();
-        return;
-    }
-
-    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
-
-    bool is_float = depth == CV_32F;
-    AutoBuffer<Point*> _pointer(total);
-    AutoBuffer<int> _stack(total + 2), _hullbuf(total);
-    Point** pointer = _pointer.data();
-    Point2f** pointerf = (Point2f**)pointer;
-    Point* data0 = points.ptr<Point>();
+    AutoBuffer<Point_<_Tp>*> _pointer(total);
+    AutoBuffer<int> _stack(total + 2);
+    Point_<_Tp>** pointer = _pointer.data();
     int* stack = _stack.data();
-    int* hullbuf = _hullbuf.data();
-
-    CV_Assert(points.isContinuous());
 
     for( i = 0; i < total; i++ )
         pointer[i] = &data0[i];
 
     // sort the point set by x-coordinate, find min and max y
-    if( !is_float )
+    std::sort(pointer, pointer + total, CHullCmpPoints<_Tp>());
+    for( i = 1; i < total; i++ )
     {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
-        {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
-    }
-    else
-    {
-        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
-        for( i = 1; i < total; i++ )
-        {
-            float y = pointerf[i]->y;
-            if( pointerf[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointerf[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
+        _Tp y = pointer[i]->y;
+        if( pointer[miny_ind]->y > y )
+            miny_ind = i;
+        if( pointer[maxy_ind]->y < y )
+            maxy_ind = i;
     }
 
     if( pointer[0]->x == pointer[total-1]->x &&
@@ -203,13 +180,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     {
         // upper half
         int *tl_stack = stack;
-        int tl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+        int tl_count = Sklansky_<_Tp, _DotTp>( pointer, 0, maxy_ind, tl_stack, -1, 1);
         int *tr_stack = stack + tl_count;
-        int tr_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+        int tr_count = Sklansky_<_Tp, _DotTp>( pointer, total-1, maxy_ind, tr_stack, -1, -1);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -226,13 +199,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
         // lower half
         int *bl_stack = stack;
-        int bl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
+        int bl_count = Sklansky_<_Tp, _DotTp>( pointer, 0, miny_ind, bl_stack, 1, -1);
         int *br_stack = stack + bl_count;
-        int br_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
+        int br_count = Sklansky_<_Tp, _DotTp>( pointer, total-1, miny_ind, br_stack, 1, 1);
 
         if( clockwise )
         {
@@ -335,15 +304,58 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
     }
 
+    return nout;
+}
+
+
+void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(_points.getObj() != _hull.getObj());
+    Mat points = _points.getMat();
+    int total = points.checkVector(2), depth = points.depth(), nout = 0;
+    CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    if( total == 0 )
+    {
+        _hull.release();
+        return;
+    }
+
+    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
+
+    bool is_float = depth == CV_32F;
+    AutoBuffer<int> _hullbuf(total);
+    int* hullbuf = _hullbuf.data();
+
+    CV_Assert(points.isContinuous());
+
+    if( !is_float )
+        nout = convexHull_<int, int64>(points.ptr<Point>(), total, hullbuf, clockwise, returnPoints);
+    else
+        nout = convexHull_<float, double>(points.ptr<Point2f>(), total, hullbuf, clockwise, returnPoints);
+
     if( !returnPoints )
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     else
     {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
         Mat hull = _hull.getMat();
-        size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point);
-        for( i = 0; i < nout; i++ )
-            *(Point*)(hull.ptr() + i*step) = data0[hullbuf[i]];
+        if( !is_float )
+        {
+            const Point* data0 = points.ptr<Point>();
+            size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point);
+            for( int i = 0; i < nout; i++ )
+                *(Point*)(hull.ptr() + i*step) = data0[hullbuf[i]];
+        }
+        else
+        {
+            const Point2f* data0 = points.ptr<Point2f>();
+            size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point2f);
+            for( int i = 0; i < nout; i++ )
+                *(Point2f*)(hull.ptr() + i*step) = data0[hullbuf[i]];
+        }
     }
 }
 
