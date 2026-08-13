@@ -21,6 +21,14 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
     getPointsMatFromInputArray(input_pts_, ori_pts, 0);
     int pts_size = ori_pts.rows;
 
+    // Empty input yields empty outputs (no error), matching the pre-internal-kNN behavior.
+    if (pts_size == 0)
+    {
+        normals.release();
+        curvatures.release();
+        return;
+    }
+
     // When the caller does not provide neighbor indices, build them here with a kd-tree
     // (max_neighbor_num is then the number of neighbors k, and must be >= 2). The first
     // neighbor of each point is itself, exactly as the pre-computed nn_idx contract expects.
