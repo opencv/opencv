@@ -17,20 +17,12 @@ typedef void (*LUT16uFunc)( const uchar*, const ushort*, ushort*, int, int, int 
 
 static LUT8uFunc resolveLUT8uFunc()
 {
-#if CV_TRY_AVX512_ICL
-    if (cv::checkHardwareSupport(CV_CPU_AVX512_ICL))
-        return opt_AVX512_ICL::LUT8u_;
-#endif
-    return cpu_baseline::LUT8u_;
+    CV_CPU_DISPATCH_FN(LUT8u_, CV_CPU_DISPATCH_MODES_ALL);
 }
 
 static LUT16uFunc resolveLUT16uFunc()
 {
-#if CV_TRY_AVX512_ICL
-    if (cv::checkHardwareSupport(CV_CPU_AVX512_ICL))
-        return opt_AVX512_ICL::LUT16u_;
-#endif
-    return cpu_baseline::LUT16u_;
+    CV_CPU_DISPATCH_FN(LUT16u_, CV_CPU_DISPATCH_MODES_ALL);
 }
 
 } // namespace

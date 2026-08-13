@@ -16,11 +16,7 @@ typedef void (*EqualizeHistLutFunc)( const uchar*, uchar*, int, const uchar* );
 
 static EqualizeHistLutFunc resolveEqualizeHistLutFunc()
 {
-#if CV_TRY_AVX512_ICL
-    if (cv::checkHardwareSupport(CV_CPU_AVX512_ICL))
-        return opt_AVX512_ICL::equalizeHistLut_;
-#endif
-    return cpu_baseline::equalizeHistLut_;
+    CV_CPU_DISPATCH_FN(equalizeHistLut_, CV_CPU_DISPATCH_MODES_ALL);
 }
 
 } // namespace
