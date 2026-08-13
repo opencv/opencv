@@ -82,12 +82,11 @@ TEST(Geometry_ApproxPoly, accuracy)
             EXPECT_GT(approx_curve.size(), 0U);
 
             // every point on original curve should be within epsilon distance to the new polygon
+            const double tol = std::max(1e-3, 16 * FLT_EPSILON * max_diameter);
             for (const auto& pt : curve)
             {
-                double min_dist = std::abs(cv::pointPolygonTest(approx_curve, Point2f(pt), true));
-
-                // allow a 1 pixel tolerance for floating point rounding
-                EXPECT_LE(min_dist, eps + 1.0);
+                const double min_dist = std::abs(cv::pointPolygonTest(approx_curve, Point2f(pt), true));
+                EXPECT_LE(min_dist, eps + tol);
             }
         }
     }
