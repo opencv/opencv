@@ -156,7 +156,7 @@ TEST(Features2d_Detector_Keypoints_SIFT, validation)
 
 
 // See https://github.com/opencv/opencv/issues/25895
-typedef std::function<Ptr<FeatureDetector>()> DetectorFactory;
+typedef Ptr<FeatureDetector> (*DetectorFactory)();
 typedef testing::TestWithParam<DetectorFactory> Features2d_Detector_Keypoints_BoolMask;
 
 TEST_P(Features2d_Detector_Keypoints_BoolMask, matches_uchar_mask)
@@ -186,9 +186,9 @@ TEST_P(Features2d_Detector_Keypoints_BoolMask, matches_uchar_mask)
 }
 
 INSTANTIATE_TEST_CASE_P(FAST, Features2d_Detector_Keypoints_BoolMask,
-                        Values(DetectorFactory([]() { return FastFeatureDetector::create(); })));
+                        Values([]() -> Ptr<FeatureDetector> { return FastFeatureDetector::create(); }));
 
 INSTANTIATE_TEST_CASE_P(SIFT, Features2d_Detector_Keypoints_BoolMask,
-                        Values(DetectorFactory([]() { return SIFT::create(); })));
+                        Values([]() -> Ptr<FeatureDetector> { return SIFT::create(); }));
 
 }} // namespace
