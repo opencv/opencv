@@ -63,9 +63,8 @@ TEST(Imgproc_UMat, regression)
     resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR_EXACT);
     equalizeHist(usmallimg, uresult);
 
-    // Both pipelines are bit-exact by construction (INTER_LINEAR_EXACT, integer
-    // histogram + LUT, fixed-point BGR2GRAY) and measured identical here; the
-    // tolerance of 1 matches OCL_TEST_P(EqualizeHist, Mat) for other devices.
+    // Measured identical here; the tolerance of 1 matches OCL_TEST_P(EqualizeHist, Mat),
+    // since bit-exactness was only confirmed on one device.
     Mat uresult_host = uresult.getMat(ACCESS_READ);
     EXPECT_LE(cv::norm(result, uresult_host, NORM_INF), 1)
         << "Mat and UMat imgproc pipelines disagree";
