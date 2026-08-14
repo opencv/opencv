@@ -165,7 +165,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
 
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX && !info.nd_mat;
+    bool ismultichannel = ndims == 3 && !info.nd_mat;
     if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
     {
         bool wrapChannels = false;
