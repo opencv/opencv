@@ -290,14 +290,12 @@ TEST(PointCloud, LoadBadExtension)
 
 TEST(PointCloud, SaveBadExtension)
 {
-    // The vertices must be non-empty: savePointCloud() returns at its empty-input
-    // guard before it ever calls findEncoder(), so passing an empty vector would
-    // exercise that guard instead of the unsupported-extension path named here.
+    // Non-empty: savePointCloud() returns at its empty-input guard before it ever reaches
+    // findEncoder(), so an empty vector would exercise that guard instead of this path.
     std::vector<cv::Point3f> points { cv::Point3f(1.f, 2.f, 3.f) };
     std::vector<cv::Point3f> normals;
 
-    // tempfile() rather than get_data_path(): this call reaches the writing code,
-    // and the rest of this file writes its output to temporary files too.
+    // tempfile(), not get_data_path(): this call reaches the writing code.
     std::string new_path = tempfile("new.fake");
 
     cv::savePointCloud(new_path, points, normals);
@@ -312,8 +310,7 @@ TEST(PointCloud, SaveBadExtension)
 
 TEST(PointCloud, SaveEmptyVertices)
 {
-    // The early-return branch that SaveBadExtension used to land on by accident:
-    // an empty vertex set is a no-op even when the extension is supported.
+    // An empty vertex set is a no-op even when the extension is supported.
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
