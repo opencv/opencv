@@ -6,14 +6,8 @@
 
 namespace opencv_test { namespace {
 
-// cv::checkChessboard() is public API, and findChessboardCorners() falls back to it under
-// CALIB_CB_FAST_CHECK (see calibinit.cpp): when it returns false there, detection stops
-// immediately, so a false negative here silently costs a detection.
-//
-// Its only coverage used to be an assertion buried inside
-// TEST(Calib3d_ChessboardDetector, timing), which stopped at the first mismatch via a goto
-// and sat among per-image timing printf output that nothing collected. Extracted here so
-// the check is named for what it verifies and cannot be dropped along with the timing.
+// findChessboardCorners() falls back to checkChessboard() under CALIB_CB_FAST_CHECK
+// (calibinit.cpp), so a false negative here costs a detection.
 //
 // checkChessboard() is deliberately not required to agree with findChessboardCorners():
 // it is a permissive pre-filter, and the two legitimately differ on
@@ -54,8 +48,7 @@ TEST(Objdetect_CheckChessboard, accuracy)
         Mat gray;
         cvtColor(img, gray, COLOR_BGR2GRAY);
 
-        // EXPECT, not ASSERT: every image is reported, rather than stopping at the first
-        // mismatch as the original loop did.
+        // EXPECT, not ASSERT: report every image rather than stopping at the first.
         EXPECT_EQ(isChessboard != 0, checkChessboard(gray, patternSize));
     }
 }
