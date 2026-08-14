@@ -55,6 +55,8 @@ static void makeRange(_Tp start, _Tp limit, _Tp delta, Mat& out)
         IMPL_RANGE(int32_t);
     } else if (type == CV_64S) {
         IMPL_RANGE(int64_t);
+    } else if (type == CV_16S) {
+        IMPL_RANGE(int16_t);
     } else {
         CV_Error_(Error::StsNotImplemented, ("invalid/unsupported tensor type: %s", typeToString(out.type()).c_str()));
     }
