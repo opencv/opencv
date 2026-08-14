@@ -9,7 +9,7 @@
 
 namespace cv {
 
-void getPointCloudBounds(InputArray inputCloud, OutputArray minBound, OutputArray maxBound)
+void boundingBox3D(InputArray inputCloud, OutputArray minBound, OutputArray maxBound)
 {
     CV_TRACE_FUNCTION();
 
@@ -25,7 +25,7 @@ void getPointCloudBounds(InputArray inputCloud, OutputArray minBound, OutputArra
     hi.reshape(1, 3).copyTo(maxBound);
 }
 
-void getOrientedBoundingBox(InputArray inputCloud, OutputArray center, OutputArray axes,
+void orientedBoundingBox3D(InputArray inputCloud, OutputArray center, OutputArray axes,
                             OutputArray halfExtents)
 {
     CV_TRACE_FUNCTION();
@@ -70,7 +70,7 @@ void getOrientedBoundingBox(InputArray inputCloud, OutputArray center, OutputArr
     he.reshape(1, 3).copyTo(halfExtents);             // 3 x 1
 }
 
-double getBoundingSphere(InputArray inputCloud, OutputArray center)
+double approxEnclosingSphere3D(InputArray inputCloud, OutputArray center)
 {
     CV_TRACE_FUNCTION();
 

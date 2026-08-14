@@ -66,7 +66,7 @@ int main()
               << " points (removed " << cloud.total() - cleaned.total() << ")" << std::endl;
 
     // 2) Mean spacing and normals (estimate, then orient consistently).
-    std::cout << "mean spacing: " << estimateMeanSpacing(cleaned) << std::endl;
+    std::cout << "median spacing: " << estimateMedianSpacing(cleaned) << std::endl;
 
     Mat normals, curvatures;
     normalEstimate(normals, curvatures, cleaned, noArray(), 12);
@@ -81,9 +81,9 @@ int main()
 
     // 4) Bounding volumes.
     Mat center, axes, halfExtents;
-    getOrientedBoundingBox(cleaned, center, axes, halfExtents);
+    orientedBoundingBox3D(cleaned, center, axes, halfExtents);
     Mat sphereCenter;
-    double sphereRadius = getBoundingSphere(cleaned, sphereCenter);
+    double sphereRadius = approxEnclosingSphere3D(cleaned, sphereCenter);
     std::cout << "oriented bounding box half-extents: " << halfExtents.reshape(1, 1) << std::endl;
     std::cout << "bounding sphere radius: " << sphereRadius << std::endl;
 

@@ -12,7 +12,6 @@
 
 #include <list>
 #include <deque>
-#include <map>
 #include <set>
 #include <unordered_map>
 
@@ -36,15 +35,19 @@ static float medianNN(flann::Index& index, const Mat& ptsMat)
 {
     const int N = ptsMat.rows;
     const int sample = std::min(N, 1000);
-    std::vector<float> nn; nn.reserve(sample);
+
+    // Gather all sampled queries and search them in a single batched FLANN call.
+    Mat q(sample, 3, CV_32F);
     for (int s = 0; s < sample; s++)
-    {
-        int i = (int)((int64_t)s * N / sample);
-        float buf[3] = { ptsMat.at<float>(i,0), ptsMat.at<float>(i,1), ptsMat.at<float>(i,2) };
-        Mat q(1, 3, CV_32F, buf), qi, qd;
-        index.knnSearch(q, qi, qd, 2, flann::SearchParams());   // [0] self, [1] nearest other
-        if (qd.cols >= 2) nn.push_back(std::sqrt(qd.at<float>(1)));
-    }
+        ptsMat.row((int)((int64_t)s * N / sample)).copyTo(q.row(s));
+
+    Mat qi, qd;
+    index.knnSearch(q, qi, qd, 2, flann::SearchParams());   // col 0 self, col 1 nearest other
+
+    std::vector<float> nn; nn.reserve(sample);
+    if (qd.cols >= 2)
+        for (int s = 0; s < sample; s++)
+            nn.push_back(std::sqrt(qd.at<float>(s, 1)));
     if (nn.empty()) return 0.f;
     std::nth_element(nn.begin(), nn.begin() + nn.size() / 2, nn.end());
     return nn[nn.size() / 2];
@@ -120,11 +123,12 @@ private:
     std::list<FrontEdge> front;
     std::unordered_map<int64_t, std::list<FrontEdge>::iterator> emap;   // live directed edges
     std::deque<int64_t> work;                                           // directed-edge keys awaiting a pivot
-    std::map<std::pair<int,int>, int> ecount;                             // undirected edge use count
+    std::unordered_map<int64_t, int> ecount;                            // undirected edge use count (packed key)
     std::set<std::tuple<int,int,int>> triSet;                            // built triangles (sorted)
+    mutable bool truncWarned = false;                                   // one-shot neighbor-cap warning
 
     int64_t ekeyDir(int a, int b) const { return (int64_t)a * N + b; }
-    std::pair<int,int> ekeyUndir(int a, int b) const { return std::make_pair(std::min(a,b), std::max(a,b)); }
+    int64_t ekeyUndir(int a, int b) const { return (int64_t)std::min(a,b) * N + std::max(a,b); }
     static std::tuple<int,int,int> sorted3(int a, int b, int c)
     {
         if (a > b) std::swap(a, b);
@@ -139,6 +143,11 @@ private:
         float buf[3] = { p.x, p.y, p.z };                       // stack query (no per-call alloc)
         Mat q(1, 3, CV_32F, buf), idx, dist;
         int found = index->radiusSearch(q, idx, dist, (double)(rad * rad), maxN, exact);
+        if (found >= maxN && !truncWarned)
+        {
+            truncWarned = true;
+            CV_LOG_WARNING(NULL, "BPA: neighbor cap (" << maxN << ") reached; the mesh may be incomplete");
+        }
         out.clear();
         int cnt = std::min(found, idx.cols);
         for (int t = 0; t < cnt; t++)
@@ -174,10 +183,17 @@ private:
     // No point (other than the three it rests on) lies strictly inside the ball.
     bool ballEmpty(const Point3f& center, int e0, int e1, int e2) const
     {
-        std::vector<int> nb;
-        neighbors(center, r * (1.f - 1e-3f), kMaxNeighbors, nb);
-        for (int k : nb)
-            if (k != e0 && k != e1 && k != e2) return false;
+        // 3 supports lie on the ball; an interior point is closer, so k=4 catches any intruder.
+        float buf[3] = { center.x, center.y, center.z };
+        Mat q(1, 3, CV_32F, buf), beIdx, beDist;
+        index->knnSearch(q, beIdx, beDist, 4, exact);
+        const float rq2 = (r * (1.f - 1e-3f)) * (r * (1.f - 1e-3f));   // FLANN dist is squared L2
+        for (int t = 0; t < beIdx.cols; t++)
+        {
+            int id = beIdx.at<int>(t);
+            if (id < 0 || beDist.at<float>(t) > rq2) continue;
+            if (id != e0 && id != e1 && id != e2) return false;
+        }
         return true;
     }
 
@@ -322,7 +338,7 @@ private:
 
 } // namespace
 
-float estimateMeanSpacing(InputArray inputCloud)
+float estimateMedianSpacing(InputArray inputCloud)
 {
     CV_TRACE_FUNCTION();
 
@@ -353,15 +369,11 @@ void createMeshBPA(InputArray inputCloud, InputArray normals_, OutputArray verti
     Mat nmf = nmw.reshape(3, N);
     std::vector<Vec3f> nrm(N);
     for (int i = 0; i < N; i++)
-    {
-        Vec3f v = nmf.at<Vec3f>(i);
-        float len = (float)cv::norm(v);
-        nrm[i] = (len > 1e-12f) ? v * (1.f / len) : Vec3f(0.f, 0.f, 1.f);   // guard degenerate normals
-    }
+        nrm[i] = safeNormalize(nmf.at<Vec3f>(i));
 
     BallPivoter bp(pts, nrm);   // builds the kd-tree once; reused for spacing and pivoting
 
-    // Radii: caller-supplied, else {1x, 2x, 4x} the mean spacing.
+    // Radii: caller-supplied, else {1x, 2x, 4x} the median spacing.
     std::vector<float> radii;
     if (radii_.empty())
     {
