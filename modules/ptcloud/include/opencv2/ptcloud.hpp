@@ -115,7 +115,7 @@ CV_EXPORTS_W void orientNormals(InputArray inputCloud, InputOutputArray normals,
  */
 CV_EXPORTS_W void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, int k = 30);
 
-/** @brief Estimates the mean spacing between neighboring points of a point cloud.
+/** @brief Estimates the median spacing between neighboring points of a point cloud.
  *
  * Returns the median distance from a sampled set of points to their nearest neighbor. Useful for
  * picking a ball radius for cv::createMeshBPA.
@@ -123,7 +123,7 @@ CV_EXPORTS_W void orientNormalsConsistent(InputArray inputCloud, InputOutputArra
  * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
  * @return Median nearest-neighbor distance, or 0 if the cloud has fewer than 2 points.
  */
-CV_EXPORTS_W float estimateMeanSpacing(InputArray inputCloud);
+CV_EXPORTS_W float estimateMedianSpacing(InputArray inputCloud);
 
 /** @brief Reconstructs a triangle mesh from an oriented point cloud using Ball-Pivoting.
  *
@@ -138,7 +138,7 @@ CV_EXPORTS_W float estimateMeanSpacing(InputArray inputCloud);
  * @param vertices Output mesh vertices (a copy of the input points), Nx1 CV_32FC3.
  * @param triangles Output triangle vertex indices, Mx3 CV_32S.
  * @param radii Optional ball radii (1D CV_32F/CV_64F). If empty, radii are derived from
- *              cv::estimateMeanSpacing as {1x, 2x, 4x} the mean spacing.
+ *              cv::estimateMedianSpacing as {1x, 2x, 4x} the median spacing.
  */
 CV_EXPORTS_W void createMeshBPA(InputArray inputCloud, InputArray normals, OutputArray vertices,
         OutputArray triangles, InputArray radii = noArray());
@@ -149,7 +149,7 @@ CV_EXPORTS_W void createMeshBPA(InputArray inputCloud, InputArray normals, Outpu
  * @param minBound Output minimum corner (x,y,z), 3x1 CV_32F.
  * @param maxBound Output maximum corner (x,y,z), 3x1 CV_32F.
  */
-CV_EXPORTS_W void getPointCloudBounds(InputArray inputCloud, OutputArray minBound, OutputArray maxBound);
+CV_EXPORTS_W void boundingBox3D(InputArray inputCloud, OutputArray minBound, OutputArray maxBound);
 
 /** @brief Computes a PCA-based oriented bounding box (OBB) of a point cloud.
  *
@@ -162,7 +162,7 @@ CV_EXPORTS_W void getPointCloudBounds(InputArray inputCloud, OutputArray minBoun
  * @param axes Output 3x3 CV_32F; each row is a unit box axis.
  * @param halfExtents Output half-size along each axis, 3x1 CV_32F.
  */
-CV_EXPORTS_W void getOrientedBoundingBox(InputArray inputCloud, OutputArray center, OutputArray axes,
+CV_EXPORTS_W void orientedBoundingBox3D(InputArray inputCloud, OutputArray center, OutputArray axes,
         OutputArray halfExtents);
 
 /** @brief Computes an approximate minimum enclosing sphere of a point cloud (Ritter's algorithm).
@@ -171,7 +171,7 @@ CV_EXPORTS_W void getOrientedBoundingBox(InputArray inputCloud, OutputArray cent
  * @param center Output sphere center (x,y,z), 3x1 CV_32F.
  * @return Sphere radius, or 0 if the cloud is empty.
  */
-CV_EXPORTS_W double getBoundingSphere(InputArray inputCloud, OutputArray center);
+CV_EXPORTS_W double approxEnclosingSphere3D(InputArray inputCloud, OutputArray center);
 
 /** @brief Loads a mesh from a file.
  *
