@@ -1189,6 +1189,8 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
     }
 }
 
+// The test requires FFmpeg wrapper rebuild on Windows
+#ifndef _WIN32
 // MJPEG stream whose chroma subsampling changes mid-stream at constant
 // frame size must not reuse a conversion context built for the previous frame.
 // related issue: https://github.com/opencv/opencv/issues/29699
@@ -1249,5 +1251,6 @@ TEST(videoio_ffmpeg, mjpeg_pixel_format_change)
 
     remove(filename.c_str());
 }
+#endif
 
 }} // namespace
