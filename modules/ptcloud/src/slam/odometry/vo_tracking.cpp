@@ -152,7 +152,7 @@ bool VisualOdometryImpl::trackWithMotionModel(Frame& currentFrame)
                            params.pnpMinInliers);
     if (nInliers < 0) return false;
 
-    int nOpt = Optimizer::PoseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
+    int nOpt = Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
@@ -208,7 +208,7 @@ bool VisualOdometryImpl::trackWithReferenceKF(Frame& currentFrame)
             currentFrame.mapPoints[kpIdx] = corrMps[k];
     }
 
-    int nOpt = Optimizer::PoseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
+    int nOpt = Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
@@ -330,7 +330,7 @@ void VisualOdometryImpl::trackLocalMap(Frame& currentFrame)
     }
 
     if (anyNew)
-        Optimizer::PoseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
+        Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
 }
 
 bool VisualOdometryImpl::track(Frame& currentFrame)
@@ -375,9 +375,6 @@ bool VisualOdometryImpl::track(Frame& currentFrame)
     frameRecords.push_back({ currentFrame.poseCw * lastKf->poseCw.inv(), lastKf });
     ++framesSinceKf;
 
-    prevFrame = currentFrame;
-    hasPrevFrame = true;
-
     String kf_reason;
     if (shouldPromoteKeyframe(nInliers, currentFrame.poseCw, kf_reason))
     {
@@ -395,6 +392,9 @@ bool VisualOdometryImpl::track(Frame& currentFrame)
 #endif
         lastEvent = lastEvent.empty() ? kfEv : (kfEv + " | " + lastEvent);
     }
+
+    prevFrame = currentFrame;
+    hasPrevFrame = true;
 
     return true;
 }

@@ -602,7 +602,7 @@ static bool optimizeEssentialGraphG2O(
 
 namespace cv { namespace slam {
 
-void Optimizer::LocalBundleAdjustment(KeyFrame* newKf, const Mat& K, bool enable, bool* stopFlag)
+void Optimizer::localBundleAdjustment(KeyFrame* newKf, const Mat& K, bool enable, bool* stopFlag)
 {
     #ifdef HAVE_G2O
         if (enable)
@@ -612,7 +612,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame* newKf, const Mat& K, bool enable
     #endif
 }
 
-bool Optimizer::OptimizeEssentialGraph(
+bool Optimizer::optimizeEssentialGraph(
     Map& map, KeyFrame* loopKf, KeyFrame* curKf,
     const std::map<KeyFrame*, Sim3>& nonCorrectedScw,
     const std::map<KeyFrame*, Sim3>& correctedScw,
@@ -632,7 +632,7 @@ bool Optimizer::OptimizeEssentialGraph(
 #endif
 }
 
-void Optimizer::GlobalBundleAdjustment(Map& map, const Mat& K, int iterations,
+void Optimizer::globalBundleAdjustment(Map& map, const Mat& K, int iterations,
                                        int minObservations, bool enable, bool* stopFlag,
                                        GlobalBAStats* stats)
 {

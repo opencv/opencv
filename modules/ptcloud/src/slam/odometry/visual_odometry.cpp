@@ -141,7 +141,7 @@ bool VisualOdometryImpl::finalizeMap()
     CV_INSTRUMENT_REGION();
 
     Optimizer::GlobalBAStats stats;
-    Optimizer::GlobalBundleAdjustment(map, K, params.globalBaIters,
+    Optimizer::globalBundleAdjustment(map, K, params.globalBaIters,
                                       params.globalBaMinObs, params.globalBaEnable,
                                       nullptr, &stats);
     if (!stats.ran)

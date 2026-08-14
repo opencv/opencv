@@ -25,13 +25,13 @@ public:
     Optimizer() = delete;
 
     // pose-only BA: refines frame.poseCw with map points fixed; falls back to reprojection check without g2o
-    static int PoseOptimization(Frame& frame, const Mat& K, double reprojThresh, bool enable);
+    static int poseOptimization(Frame& frame, const Mat& K, double reprojThresh, bool enable);
 
     // local BA: jointly refines newKf + its top-10 covisible keyframes and all their map points
-    static void LocalBundleAdjustment(KeyFrame* newKf, const Mat& K, bool enable,
+    static void localBundleAdjustment(KeyFrame* newKf, const Mat& K, bool enable,
                                       bool* stopFlag = nullptr);
 
-    // diagnostics returned by GlobalBundleAdjustment
+    // diagnostics returned by globalBundleAdjustment
     struct GlobalBAStats
     {
         bool ran = false; // false if skipped (no g2o / too few KFs or points)
@@ -45,13 +45,13 @@ public:
     };
 
     // global BA: optimises every keyframe pose and map point against all reprojection errors
-    static void GlobalBundleAdjustment(Map& map, const Mat& K, int iterations,
+    static void globalBundleAdjustment(Map& map, const Mat& K, int iterations,
                                        int minObservations, bool enable,
                                        bool* stopFlag = nullptr,
                                        GlobalBAStats* stats = nullptr);
 
     // essential graph optimisation: distributes loop-closure drift over the full trajectory, then corrects map points
-    static bool OptimizeEssentialGraph(
+    static bool optimizeEssentialGraph(
     Map& map, KeyFrame* loopKf, KeyFrame* curKf,
     const std::map<KeyFrame*, Sim3>& nonCorrectedScw,
     const std::map<KeyFrame*, Sim3>& correctedScw,

@@ -38,6 +38,13 @@ void cullMapPoints(Map& map)
     }
 }
 
+void syncFrameMapPoints(Frame& frame, const KeyFrame* kf)
+{
+    const size_t n = std::min(frame.mapPoints.size(), kf->mapPoints.size());
+    for (size_t i = 0; i < n; ++i)
+        frame.mapPoints[i] = kf->mapPoints[i];
+}
+
 } // anonymous namespace
 
 void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
@@ -95,9 +102,10 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
     if (pts1.empty())
     {
         detail::updateCovisibility(newKf);
-        Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
+        Optimizer::localBundleAdjustment(newKf, K, params.localBaEnable);
         detectLoop(newKf);
         cullMapPoints(map);
+        syncFrameMapPoints(currentFrame, newKf);
         map.setCurrentKeyframe(newKf);
         lastKf = newKf;
         lastKfInliers = 0;
@@ -145,9 +153,10 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
 
     detail::updateCovisibility(newKf);
 
-    Optimizer::LocalBundleAdjustment(newKf, K, params.localBaEnable);
+    Optimizer::localBundleAdjustment(newKf, K, params.localBaEnable);
     detectLoop(newKf);
     cullMapPoints(map);
+    syncFrameMapPoints(currentFrame, newKf);
 
     map.setCurrentKeyframe(newKf);
     lastKf = newKf;

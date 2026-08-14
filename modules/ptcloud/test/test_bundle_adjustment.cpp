@@ -11,7 +11,7 @@ namespace opencv_test { namespace {
 
 // Synthetic scene with exact (noise-free) measurements, so the residual minimum is
 // zero and ground truth can be asserted after perturbing the state. The g2o-free
-// build keeps the PoseOptimization fallback, hence the two unguarded tests.
+// build keeps the poseOptimization fallback, hence the two unguarded tests.
 
 using namespace cv::slam;
 
@@ -251,7 +251,7 @@ TEST(SLAM_BundleAdjustment, pose_optimization_recovers_perturbed_pose)
     errBefore /= nPoints;
     EXPECT_GT(errBefore, 5.0);
 
-    const int nInliers = Optimizer::PoseOptimization(frame, sc.K, 4.0, /*enable*/ true);
+    const int nInliers = Optimizer::poseOptimization(frame, sc.K, 4.0, /*enable*/ true);
 
     EXPECT_GE(nInliers, (int)(0.9 * nPoints));
     EXPECT_LT(rotationErrDeg(frame.poseCw, gt), 0.05);
@@ -327,7 +327,7 @@ TEST(SLAM_BundleAdjustment, pose_optimization_flags_outliers)
 
     {
         Frame f = frame;
-        const int n = Optimizer::PoseOptimization(f, sc.K, 4.0, /*enable*/ false);
+        const int n = Optimizer::poseOptimization(f, sc.K, 4.0, /*enable*/ false);
         checkClassification(f, n, "reprojection fallback");
         EXPECT_DOUBLE_EQ(cv::norm(f.poseCw - gtPose(1)), 0.0);   // must not touch the pose
     }
@@ -335,7 +335,7 @@ TEST(SLAM_BundleAdjustment, pose_optimization_flags_outliers)
 #ifdef HAVE_G2O
     {
         Frame f = frame;
-        const int n = Optimizer::PoseOptimization(f, sc.K, 4.0, /*enable*/ true);
+        const int n = Optimizer::poseOptimization(f, sc.K, 4.0, /*enable*/ true);
         checkClassification(f, n, "g2o pose-only BA");
         // Huber must keep the outliers from dragging the pose off truth.
         EXPECT_LT(rotationErrDeg(f.poseCw, gtPose(1)), 0.05);
@@ -366,7 +366,7 @@ TEST(SLAM_BundleAdjustment, global_ba_reduces_chi2_and_recovers_geometry)
     EXPECT_GT(rmseBefore, 1.0);
 
     Optimizer::GlobalBAStats stats;
-    Optimizer::GlobalBundleAdjustment(map, sc.K, /*iterations*/ 20, /*minObservations*/ 2,
+    Optimizer::globalBundleAdjustment(map, sc.K, /*iterations*/ 20, /*minObservations*/ 2,
                                       /*enable*/ true, /*stopFlag*/ nullptr, &stats);
 
     ASSERT_TRUE(stats.ran);
@@ -420,7 +420,7 @@ TEST(SLAM_BundleAdjustment, local_ba_refines_window_and_fixes_anchors)
     const double rmseBefore = sc.reprojRmse();
     EXPECT_GT(rmseBefore, 1.0);
 
-    Optimizer::LocalBundleAdjustment(newKf, sc.K, /*enable*/ true);
+    Optimizer::localBundleAdjustment(newKf, sc.K, /*enable*/ true);
 
     EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[0]->poseCw - gtPose(0)), 0.0);
     EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[1]->poseCw - gtPose(1)), 0.0);
@@ -475,11 +475,11 @@ TEST(SLAM_BundleAdjustment, ba_disabled_and_guards_are_noops)
 
     snapshot();
 
-    Optimizer::LocalBundleAdjustment(sc.kfs[nKeyframes - 1], sc.K, /*enable*/ false);
+    Optimizer::localBundleAdjustment(sc.kfs[nKeyframes - 1], sc.K, /*enable*/ false);
     expectUnchanged("local BA disabled");
 
     Optimizer::GlobalBAStats stats;
-    Optimizer::GlobalBundleAdjustment(map, sc.K, 10, 2, /*enable*/ false, nullptr, &stats);
+    Optimizer::globalBundleAdjustment(map, sc.K, 10, 2, /*enable*/ false, nullptr, &stats);
     expectUnchanged("global BA disabled");
     EXPECT_FALSE(stats.ran);
     EXPECT_EQ(stats.keyframes, 0);
@@ -488,14 +488,14 @@ TEST(SLAM_BundleAdjustment, ba_disabled_and_guards_are_noops)
     EXPECT_DOUBLE_EQ(stats.chi2After, 0.0);
 
     // No point reaches minObservations.
-    Optimizer::GlobalBundleAdjustment(map, sc.K, 10, /*minObservations*/ 99,
+    Optimizer::globalBundleAdjustment(map, sc.K, 10, /*minObservations*/ 99,
                                       /*enable*/ true, nullptr, &stats);
     expectUnchanged("minObservations too high");
     EXPECT_FALSE(stats.ran);
 
     // Stop requested before the write-back.
     bool stop = true;
-    Optimizer::GlobalBundleAdjustment(map, sc.K, 10, 2, /*enable*/ true, &stop, &stats);
+    Optimizer::globalBundleAdjustment(map, sc.K, 10, 2, /*enable*/ true, &stop, &stats);
     expectUnchanged("stop flag set");
     EXPECT_FALSE(stats.ran);
 #ifdef HAVE_G2O
@@ -507,7 +507,7 @@ TEST(SLAM_BundleAdjustment, ba_disabled_and_guards_are_noops)
     KeyFrame* lone = new KeyFrame();
     lone->mapPoints.assign(1, nullptr);
     tiny.addKeyframe(lone);
-    Optimizer::GlobalBundleAdjustment(tiny, sc.K, 10, 2, /*enable*/ true, nullptr, &stats);
+    Optimizer::globalBundleAdjustment(tiny, sc.K, 10, 2, /*enable*/ true, nullptr, &stats);
     EXPECT_FALSE(stats.ran);
 }
 
