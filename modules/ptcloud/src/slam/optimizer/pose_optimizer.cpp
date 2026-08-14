@@ -9,7 +9,7 @@
 
 namespace cv { namespace slam {
 
-// reprojection-only inlier check; fallback for PoseOptimization without g2o
+// reprojection-only inlier check; fallback for poseOptimization without g2o
 static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThresh)
 {
     const double fx = K.at<double>(0, 0);
@@ -183,7 +183,7 @@ static int poseOptimizationG2O(Frame& frame, const Mat& K)
 
 namespace cv { namespace slam {
 
-int Optimizer::PoseOptimization(Frame& frame, const Mat& K, double reprojThresh, bool enable)
+int Optimizer::poseOptimization(Frame& frame, const Mat& K, double reprojThresh, bool enable)
 {
 #ifdef HAVE_G2O
     if (enable)

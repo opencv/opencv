@@ -10,7 +10,6 @@
 
 if(NOT HAVE_EIGEN)
   message(STATUS "G2O: Eigen not found — g2o will not be built")
-  set(HAVE_G2O 0 CACHE INTERNAL "")
   return()
 endif()
 
@@ -85,14 +84,12 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 ocv_install_3rdparty_licenses(g2o license-bsd.txt)
 
-# Export variables for the parent build to consume.
 set(G2O_INCLUDE_DIRS
   "${G2O_ROOT}"
   "${CMAKE_CURRENT_BINARY_DIR}"
-  CACHE INTERNAL "g2o include directories"
+  PARENT_SCOPE
 )
-set(G2O_LIBRARIES g2o CACHE INTERNAL "g2o library target")
-set(HAVE_G2O 1 CACHE INTERNAL "g2o is available")
+set(G2O_LIBRARIES g2o PARENT_SCOPE)
 
 if(TARGET Eigen3::Eigen)
   message(STATUS "G2O: build enabled (BSD subset, tag 20200410; Eigen: Eigen3::Eigen target)")

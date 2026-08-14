@@ -99,8 +99,7 @@ Mat VisualOdometryImpl::computeVlad(const Mat& descriptorsIn) const
         cNorm2.at<float>(0, k) = 0.5f * (float)vocab.row(k).dot(vocab.row(k));
 
     Mat dots = desc * vocab.t();
-    for (int k = 0; k < Kv; ++k)
-        dots.col(k) -= cNorm2.at<float>(0, k);
+    subtract(dots, repeat(cNorm2, dots.rows, 1), dots);
 
     Mat v = Mat::zeros(Kv, D, CV_32F);
     for (int m = 0; m < M; ++m)

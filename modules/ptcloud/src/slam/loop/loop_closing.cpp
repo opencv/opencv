@@ -81,7 +81,7 @@ bool VisualOdometryImpl::closeLoop(KeyFrame* Kc, KeyFrame* Km,
     loopConnections[Kc].insert(Km);
 
     double chi2 = 0.0;
-    const bool ok = Optimizer::OptimizeEssentialGraph(
+    const bool ok = Optimizer::optimizeEssentialGraph(
         map, Km, Kc, nonCorrectedScw, correctedScw, loopConnections,
         /*fixScale*/false, params.essentialGraphIters,
         params.essentialMinCovisWeight, &chi2);
