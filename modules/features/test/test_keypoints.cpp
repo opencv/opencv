@@ -155,4 +155,40 @@ TEST(Features2d_Detector_Keypoints_SIFT, validation)
 }
 
 
+// See https://github.com/opencv/opencv/issues/25895
+typedef Ptr<FeatureDetector> (*DetectorFactory)();
+typedef testing::TestWithParam<DetectorFactory> Features2d_Detector_Keypoints_BoolMask;
+
+TEST_P(Features2d_Detector_Keypoints_BoolMask, matches_uchar_mask)
+{
+    Mat image = imread(cvtest::findDataFile(FEATURES2D_DIR + "/" + IMAGE_FILENAME), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    const Rect roi(image.cols / 4, image.rows / 4, image.cols / 2, image.rows / 2);
+
+    Mat_<bool> mask_bool(image.size(), false);
+    mask_bool(roi) = true;
+    ASSERT_EQ(mask_bool.depth(), CV_Bool);
+
+    Mat mask_uchar(image.size(), CV_8UC1, Scalar::all(0));
+    mask_uchar(roi) = 255;
+
+    Ptr<FeatureDetector> detector = GetParam()();
+
+    std::vector<KeyPoint> kp_bool, kp_uchar;
+    ASSERT_NO_THROW(detector->detect(image, kp_bool, mask_bool));
+    detector->detect(image, kp_uchar, mask_uchar);
+
+    ASSERT_FALSE(kp_uchar.empty());
+    ASSERT_EQ(kp_bool.size(), kp_uchar.size());
+    for (size_t k = 0; k < kp_bool.size(); k++)
+        EXPECT_EQ(kp_bool[k].pt, kp_uchar[k].pt) << "keypoint " << k;
+}
+
+INSTANTIATE_TEST_CASE_P(FAST, Features2d_Detector_Keypoints_BoolMask,
+                        Values([]() -> Ptr<FeatureDetector> { return FastFeatureDetector::create(); }));
+
+INSTANTIATE_TEST_CASE_P(SIFT, Features2d_Detector_Keypoints_BoolMask,
+                        Values([]() -> Ptr<FeatureDetector> { return SIFT::create(); }));
+
 }} // namespace
