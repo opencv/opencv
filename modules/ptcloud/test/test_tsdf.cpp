@@ -732,22 +732,12 @@ void hugeSceneGrowthTest(VolumeType volumeType)
         debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
     }
 
-    // Growth check.
+    // The scene is sized to exceed the initial capacity of VOLUMES_SIZE (8192) volume
+    // units, which is what distinguishes this from boundingBoxGrowthTest. 8192 is
+    // spelled out because VOLUMES_SIZE lives in the private hash_tsdf_functions.hpp.
     //
-    // The scene above is built to push the hash volume past its initial capacity of
-    // VOLUMES_SIZE (8192) volume units -- that is what makes this a huge-scene test
-    // rather than a second copy of boundingBoxGrowthTest, whose scene stays small.
-    // Without this check the test would keep passing if the scene ever stopped
-    // growing the volume, i.e. it would silently stop covering what it exists for.
-    //
-    // Only checkable for ColorHashTSDF: HashTsdfVolume::getTotalVolumeUnits() is a
-    // hardcoded "return 1" (src/volume_impl.cpp), so it reports 1 both after
-    // integrating and after reset(). ColorHashTsdfVolume is CPU-only and returns
-    // volumeUnits.size(); HashTsdfVolume keeps its units in volumeUnits,
-    // cpu_volumeUnits or a GPU buffer counted by lastVolIndex depending on
-    // HAVE_OPENCL and cv::ocl::useOpenCL(), so implementing it there is a real
-    // change and is left alone here.
-    // VOLUMES_SIZE lives in the private src/hash_tsdf_functions.hpp, hence the literal.
+    // ColorHashTSDF only: HashTsdfVolume::getTotalVolumeUnits() is a hardcoded
+    // "return 1" (src/volume_impl.cpp).
     if (volumeType == VolumeType::ColorHashTSDF)
     {
         EXPECT_GT(volume.getTotalVolumeUnits(), size_t(8192))
@@ -755,10 +745,8 @@ void hugeSceneGrowthTest(VolumeType volumeType)
                "test no longer covers hash volume growth";
     }
 
-    // Integrating a real depth frame has to leave a non-empty volume: the bounding
-    // box must have positive extent on every axis. The exact box is deliberately not
-    // asserted -- it follows from the scene geometry and cannot be derived
-    // independently here, so pinning it would only record current behaviour.
+    // The exact box is deliberately not asserted: it follows from the scene geometry and
+    // cannot be derived independently, so pinning it would only record current behaviour.
     Vec6f bb;
     volume.getBoundingBox(bb, Volume::BoundingBoxPrecision::VOLUME_UNIT);
     EXPECT_GT(bb[3], bb[0]) << "bounding box = " << bb;
