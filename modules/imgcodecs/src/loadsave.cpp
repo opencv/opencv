@@ -1612,6 +1612,64 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
     }
 }
 
+bool imdecodeBatch( InputArrayOfArrays bufs, int flags, std::vector<Mat>& images )
+{
+    CV_TRACE_FUNCTION();
+
+    std::vector<Mat> buf_vec;
+    if (!bufs.empty())
+        bufs.getMatVector(buf_vec);
+
+    images.clear();
+    if (buf_vec.empty())
+        return true;  // an empty batch is a successful no-op
+
+    images.resize(buf_vec.size());
+
+    // uchar and not bool: std::vector<bool> is bit-packed, so concurrent writes to distinct
+    // elements would race. Pre-sized so that workers only touch elements that already exist.
+    std::vector<uchar> decoded(buf_vec.size(), 0);
+
+    // Initialize the codec registry before the workers start racing for it.
+    getCodecs();
+
+    parallel_for_(Range(0, (int)buf_vec.size()), [&](const Range& range)
+    {
+        for (int i = range.start; i < range.end; i++)
+        {
+            // Each buffer goes through the same path a standalone imdecode() would take, with its
+            // own decoder instance, so the result does not depend on the thread count.
+            try
+            {
+                if (imdecode_(buf_vec[i], flags, images[i], nullptr, noArray()))
+                    decoded[i] = 1;
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "imdecodeBatch(): can't decode buffer #" << i << ": " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "imdecodeBatch(): can't decode buffer #" << i << ": unknown exception");
+            }
+        }
+    });
+
+    // Report each failure with its batch index instead of shortening the result.
+    bool code = true;
+    for (size_t i = 0; i < images.size(); i++)
+    {
+        if (!decoded[i])
+        {
+            images[i].release();
+            CV_LOG_ERROR(NULL, "imdecodeBatch(): failed to decode buffer #" << i
+                               << " out of " << images.size());
+            code = false;
+        }
+    }
+    return code;
+}
+
 bool imencodeWithMetadata( const String& ext, InputArray _img,
                            const std::vector<int>& metadata_types,
                            InputArrayOfArrays metadata,
@@ -1736,6 +1794,77 @@ bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                     std::vector<uchar>& buf, const std::vector<int>& params)
 {
     return imencode(ext, imgs, buf, params);
+}
+
+bool imencodeBatch( const String& ext, InputArrayOfArrays images,
+                    std::vector<std::vector<uchar> >& buffers,
+                    const std::vector<int>& params )
+{
+    CV_TRACE_FUNCTION();
+
+    // An unknown extension and malformed params are properties of the call rather than of any one
+    // image, so they are rejected once here instead of turning into per-image failures. Resolving
+    // the encoder also initializes the codec registry before the workers start racing for it.
+    if( !findEncoder( ext ) )
+        CV_Error( Error::StsError, "could not find encoder for the specified extension" );
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    std::vector<Mat> img_vec;
+    if (!images.empty())
+    {
+        if (images.isMatVector() || images.isUMatVector())
+            images.getMatVector(img_vec);
+        else
+            img_vec.push_back(images.getMat());
+    }
+
+    buffers.clear();
+    if (img_vec.empty())
+        return true;  // an empty batch is a successful no-op
+
+    buffers.resize(img_vec.size());
+
+    // uchar and not bool: std::vector<bool> is bit-packed, so concurrent writes to distinct
+    // elements would race. Pre-sized so that workers only touch elements that already exist.
+    std::vector<uchar> encoded(img_vec.size(), 0);
+
+    parallel_for_(Range(0, (int)img_vec.size()), [&](const Range& range)
+    {
+        for (int i = range.start; i < range.end; i++)
+        {
+            // Dispatching to imencode() is what makes the batch deterministic: every image is
+            // compressed by exactly the call a sequential loop would have made, with its own
+            // encoder instance, so the bytes do not depend on the thread count.
+            try
+            {
+                if (imencode(ext, img_vec[i], buffers[i], params))
+                    encoded[i] = 1;
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "imencodeBatch(): can't encode image #" << i << ": " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "imencodeBatch(): can't encode image #" << i << ": unknown exception");
+            }
+        }
+    });
+
+    // Report each failure with its batch index instead of shortening the result.
+    bool code = true;
+    for (size_t i = 0; i < buffers.size(); i++)
+    {
+        if (!encoded[i])
+        {
+            buffers[i].clear();
+            CV_LOG_ERROR(NULL, "imencodeBatch(): failed to encode image #" << i
+                               << " out of " << buffers.size());
+            code = false;
+        }
+    }
+    return code;
 }
 
 bool haveImageReader( const String& filename )
