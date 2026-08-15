@@ -483,15 +483,15 @@ TEST_F(fisheyeTest, CalibrationWithColumnPoints)
         for (int j = 0; j < boardSize.width; j++)
             corners.push_back(cv::Point3f(j * squareSize, i * squareSize, 0));
 
-    cv::Matx33d K(600, 0, 320,
-                  0, 600, 240,
-                  0, 0, 1);
-    cv::Vec4d D(0.01, -0.005, 0.001, 0.0001);
+    cv::Matx33d theK(600, 0, 320,
+                     0, 600, 240,
+                     0, 0, 1);
+    cv::Vec4d theD(0.01, -0.005, 0.001, 0.0001);
     cv::Vec3d rvec(0.1, 0.2, 0.05);
     cv::Vec3d tvec(0, 0, 500);
 
     std::vector<cv::Point2f> imgPoints;
-    cv::fisheye::projectPoints(corners, imgPoints, rvec, tvec, K, D);
+    cv::fisheye::projectPoints(corners, imgPoints, rvec, tvec, theK, theD);
 
     const int n = (int)corners.size();
 
