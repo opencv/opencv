@@ -1064,15 +1064,7 @@ size_t imcount(const String& filename, int flags)
 // any other unsupported depth uses a plain conversion.
 static void fallbackToCV8U(Mat& image, Mat& temp)
 {
-#ifdef CV_Bool
-    if (image.depth() == CV_Bool)
-    {
-        image.convertTo(temp, CV_8U, 255);
-        image = temp;
-        return;
-    }
-#endif
-    image.convertTo(temp, CV_8U);
+    image.convertTo(temp, CV_8U, image.depth() == CV_Bool ? 255 : 1);
     image = temp;
 }
 
