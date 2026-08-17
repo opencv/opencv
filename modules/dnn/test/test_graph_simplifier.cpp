@@ -59,10 +59,7 @@ TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
 }
 
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
-    /* Test for 4 subgraphs (was 6): GatherCastSubgraph and MulCastSubgraph were removed
-       (Gather/Mul -> Cast is no longer fused, since folding it away silently dropped the Cast's
-       dtype semantics); the dynamic-scale Shape/Gather/Cast/Floor/Concat/Unsqueeze/Slice chain
-       these 4 models use to compute Resize's scale factor no longer collapses.
+    /* Test for 4 subgraphs:
         - UpsampleSubgraph
         - ResizeSubgraph1
         - ResizeSubgraph2

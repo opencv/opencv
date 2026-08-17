@@ -1374,8 +1374,6 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_neg_axis");
 }
 
-// Was a Mul/0-d-tensor row/column shape ambiguity (A x 1 vs 1 x A); dnn now supports real 1-d
-// Mats, so the output is a true 1-d shape, matching the reference exactly.
 TEST_P(Test_ONNX_layers, Split_sizes_0d)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -1552,15 +1550,11 @@ TEST_P(Test_ONNX_layers, LSTM_Activations)
     testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
 }
 
-// Was poor handling of 1-d mats in the importer of that era; no longer reproduces on the
-// current importer.
 TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
 }
 
-// Was poor handling of 1-d mats in the importer of that era; no longer reproduces on the
-// current importer.
 TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
