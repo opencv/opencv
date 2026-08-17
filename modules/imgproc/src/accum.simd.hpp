@@ -6,12 +6,12 @@
 
 // Hand-tuned 256-bit ymm f32/f64 kernels outperform universal-intrinsic paths on
 // bandwidth-bound accumulate (AVX2 and AVX-512 TUs where 512-bit regresses).
-// x86-only (never defined on ARM). Any _mm256*_pd use must still be nested
-// inside #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F).
-#if defined(CV_CPU_COMPILE_AVX2) \
-    || defined(CV_CPU_COMPILE_AVX512_COMMON) \
-    || (CV_AVX && !CV_AVX2)
+// Any _mm256*_pd use must still be nested inside
+// #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F).
+#if CV_AVX2 || CV_AVX512_COMMON || (CV_AVX && !CV_AVX2)
 #define CV_ACCUM_FP_USE_YMM 1
+#else
+#define CV_ACCUM_FP_USE_YMM 0
 #endif
 
 #define DEF_ACC_INT_FUNCS(suffix, type, acctype) \
@@ -596,7 +596,7 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1043,7 +1043,7 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1131,7 +1131,7 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for ( ; x <= size - 4 ; x += 4)
         {
             __m256d v_src = _mm256_loadu_pd(src + x);
@@ -1437,7 +1437,7 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for ( ; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1806,7 +1806,7 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src = _mm256_loadu_ps(src + x);
@@ -1901,7 +1901,7 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for (; x <= size - 4 ; x += 4)
         {
             __m256d v_src = _mm256_loadu_pd(src + x);
@@ -2216,7 +2216,7 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for (; x <= size - 8 ; x += 8)
         {
             __m256 v_src0 = _mm256_loadu_ps(src1 + x);
@@ -2579,7 +2579,7 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for ( ; x <= size - 8 ; x += 8)
         {
             __m256 v_1src = _mm256_loadu_ps(src1 + x);
@@ -2682,7 +2682,7 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         for ( ; x <= size - 4 ; x += 4)
         {
             __m256d v_src0 = _mm256_loadu_pd(src1 + x);
@@ -3030,13 +3030,13 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
 void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn, double alpha)
 {
     int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_ACCUM_FP_USE_YMM)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !CV_ACCUM_FP_USE_YMM
     const v_float32 v_alpha = vx_setall_f32((float)alpha);
     const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
     const int cVectorWidth = VTraits<v_uint16>::vlanes();
     const int step = VTraits<v_float32>::vlanes();
 #endif
-#if defined(CV_ACCUM_FP_USE_YMM)
+#if CV_ACCUM_FP_USE_YMM
     {
     const __m256 v_alpha = _mm256_set1_ps((float)alpha);
     const __m256 v_beta = _mm256_set1_ps((float)(1.0f - alpha));
@@ -3115,7 +3115,7 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if (mask && cn == 3)
     {
-#if defined(CV_ACCUM_FP_USE_YMM)
+#if CV_ACCUM_FP_USE_YMM
         const v_float32 v_alpha = vx_setall_f32((float)alpha);
         const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
         const int cVectorWidth = VTraits<v_uint16>::vlanes();
@@ -3259,7 +3259,7 @@ void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int c
     if (!mask)
     {
         int size = len * cn;
-        #if defined(CV_ACCUM_FP_USE_YMM)
+        #if CV_ACCUM_FP_USE_YMM
         const __m256d v_alpha_ymm = _mm256_set1_pd(alpha);
         const __m256d v_beta_ymm = _mm256_set1_pd(1.0f - alpha);
         for ( ; x <= size - 16 ; x += 16)
@@ -3381,7 +3381,7 @@ void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int 
     if (!mask)
     {
         int size = len * cn;
-#if defined(CV_ACCUM_FP_USE_YMM)
+#if CV_ACCUM_FP_USE_YMM
         const __m256d v_alpha_ymm = _mm256_set1_pd(alpha);
         const __m256d v_beta_ymm = _mm256_set1_pd(1.0f - alpha);
         for ( ; x <= size - 8 ; x += 8)
