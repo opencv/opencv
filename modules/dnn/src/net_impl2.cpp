@@ -1099,7 +1099,7 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
     if (!mainGraph)
         CV_Error(Error::StsNullPtr, "the model was not loaded");
 
-    const std::vector<Ptr<Layer> >& prog = mainGraph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = mainGraph->prog();
     const std::vector<Arg>& gr_outputs = mainGraph->outputs();
 
     // Resolve each requested name to all outputs of the op that produces it,
@@ -1121,7 +1121,7 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
         int targetIdx = (int)it->second;
 
         const std::vector<Arg>* producedBy = nullptr;
-        for (const Ptr<Layer>& op : prog) {
+        for (const Ptr<LayerInfo>& op : prog) {
             for (const Arg& o : op->outputs) {
                 if (o.idx == targetIdx) { producedBy = &op->outputs; break; }
             }
