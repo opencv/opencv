@@ -136,16 +136,6 @@ struct CHullCmpPoints
 };
 
 
-// Core algorithm, templated on the point type and shared by the CV_32S/CV_32F instantiations
-// below. 'data0' must already be typed as Point_<_Tp>* -- i.e. the caller picks the branch
-// matching the input Mat's actual depth -- so 'pointer' here is always a genuinely
-// Point_<_Tp>*-typed array. The historical code instead allocated a single Point** buffer and
-// obtained a Point2f** view of the *same storage* via reinterpret_cast to share this code
-// between the int and float cases; reinterpreting a Point** as Point2f** (and reading Mat data
-// that is actually CV_32F through a Point* obtained unconditionally via points.ptr<Point>()) is
-// undefined behavior (strict aliasing violation) regardless of Point and Point2f happening to
-// have the same size -- see #26952. Templating instead means every dereference here is already
-// at its correct type, so no cast is ever needed.
 template<typename _Tp, typename _DotTp>
 static int convexHull_( Point_<_Tp>* data0, int total, int* hullbuf, bool clockwise, bool returnPoints )
 {
