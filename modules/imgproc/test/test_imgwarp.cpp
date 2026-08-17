@@ -1275,41 +1275,44 @@ TEST(Imgproc_resize_area, regression)
     check_resize_area<ushort>(expected, actual, 1.0);
 }
 
-TEST(Imgproc_Resize, regression_29651_multichannel)
+CV_ENUM(MultiChannelResizeInter, cv::INTER_LINEAR, cv::INTER_AREA);
+typedef testing::TestWithParam<testing::tuple<MultiChannelResizeInter, int>> Imgproc_ResizeMultiChannel;
+
+TEST_P(Imgproc_ResizeMultiChannel, smoke)
 {
-    // Regression test for https://github.com/opencv/opencv/issues/29651
-    // cv::resize used to reject images with more than 4 channels.
-    // 1-4 channels are already covered elsewhere; this covers 5 and 8.
-    for (int cn : {5, 8})
-    {
-        cv::Mat src(8, 8, CV_8UC(cn));
-        cv::randu(src, 0, 255);
+    int mode = get<0>(GetParam());
+    int cn = get<1>(GetParam());
 
-        std::vector<cv::Mat> srcChannels;
-        cv::split(src, srcChannels);
+    cv::Mat src(64, 64, CV_8UC(cn));
+    cv::randu(src, 0, 255);
 
-        for (int mode : {cv::INTER_LINEAR, cv::INTER_AREA})
-        {
-            cv::Size dsize = (mode == cv::INTER_LINEAR) ? cv::Size(4, 4) : cv::Size(3, 3);
+    std::vector<cv::Mat> srcChannels;
+    cv::split(src, srcChannels);
 
-            cv::Mat dstMulti;
-            ASSERT_NO_THROW(cv::resize(src, dstMulti, dsize, 0, 0, mode));
-            EXPECT_EQ(dstMulti.channels(), cn);
-            EXPECT_EQ(dstMulti.size(), dsize);
+    cv::Size dsize = (mode == cv::INTER_LINEAR) ? cv::Size(32, 32) : cv::Size(31, 31);
 
-            std::vector<cv::Mat> dstChannels(cn);
-            for (int i = 0; i < cn; i++)
-                cv::resize(srcChannels[i], dstChannels[i], dsize, 0, 0, mode);
+    cv::Mat dstMulti;
+    ASSERT_NO_THROW(cv::resize(src, dstMulti, dsize, 0, 0, mode));
+    EXPECT_EQ(dstMulti.channels(), cn);
+    EXPECT_EQ(dstMulti.size(), dsize);
 
-            cv::Mat dstMerged;
-            cv::merge(dstChannels, dstMerged);
+    std::vector<cv::Mat> dstChannels(cn);
+    for (int i = 0; i < cn; i++)
+        cv::resize(srcChannels[i], dstChannels[i], dsize, 0, 0, mode);
 
-            EXPECT_LE(cv::norm(dstMulti, dstMerged, cv::NORM_INF), 1)
-                << "Multi-channel resize (cn=" << cn << ", mode=" << mode
-                << ") does not match per-channel resize";
-        }
-    }
+    cv::Mat dstMerged;
+    cv::merge(dstChannels, dstMerged);
+
+    EXPECT_LE(cv::norm(dstMulti, dstMerged, cv::NORM_INF), 1)
+        << "Multi-channel resize (cn=" << cn << ", mode=" << mode
+        << ") does not match per-channel resize";
 }
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgproc_ResizeMultiChannel,
+        testing::Combine(
+            testing::Values(cv::INTER_LINEAR, cv::INTER_AREA),
+            testing::Values(5, 8)));
 
 TEST(Imgproc_resize_area, regression_half_round)
 {
