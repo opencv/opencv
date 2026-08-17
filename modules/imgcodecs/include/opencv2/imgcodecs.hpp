@@ -653,6 +653,35 @@ See cv::imreadmulti for the list of supported formats and flags description.
 */
 CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats, const cv::Range& range = Range::all());
 
+/** @brief Decodes a batch of independent image buffers.
+
+Unlike cv::imdecodemulti, which reads several pages out of a *single* multi-page container, this
+function treats every element of @p bufs as a self-contained encoded image and decodes it into its
+own cv::Mat. The buffers do not have to share a format, a size or a number of channels.
+
+Each buffer is decoded exactly as a separate cv::imdecode call would decode it, so the result is
+deterministic and independent of the number of threads OpenCV is configured to use. The batch may
+be processed in parallel internally.
+
+@p images is always resized to `bufs.total()`, even when some items fail: an item that cannot be
+decoded is left empty and its index is reported through the error log, so a failure never silently
+shortens the result. Decoding an empty batch clears @p images and succeeds.
+
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
+@note In Python an item that failed to decode is returned as `None`, which is how an empty cv::Mat
+is exposed to the bindings.
+
+@param bufs Array of buffers, one encoded image per element. A `std::vector<std::vector<uchar>>`
+can be passed directly.
+@param flags Flag that can take values of cv::ImreadModes, applied to every item of the batch.
+@param images Output vector receiving one decoded image per input buffer, in the input order.
+
+@return true if every buffer was decoded, false if at least one of them failed.
+
+@sa cv::imdecode, cv::imencodeBatch
+*/
+CV_EXPORTS_W bool imdecodeBatch(InputArrayOfArrays bufs, int flags, CV_OUT std::vector<Mat>& images);
+
 /** @brief Encodes an image into a memory buffer.
 
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
@@ -697,6 +726,38 @@ See cv::imwrite for the list of supported formats and flags description.
 */
 CV_EXPORTS_W bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                                  CV_OUT std::vector<uchar>& buf,
+                                 const std::vector<int>& params = std::vector<int>());
+
+/** @brief Encodes a batch of images into independent memory buffers.
+
+Unlike cv::imencodemulti, which packs several pages into a *single* multi-page container, this
+function compresses every image separately and returns one independent buffer per image. This makes
+it usable with formats that have no multi-page container at all, such as JPEG, and lets a whole
+batch be compressed without a per-image call from the calling language.
+
+Every image is encoded exactly as a separate cv::imencode call with the same @p params would encode
+it, so the produced bytes are deterministic and independent of the number of threads OpenCV is
+configured to use. The batch may be processed in parallel internally.
+
+@p buffers is always resized to `images.total()`, even when some items fail: an image that cannot be
+encoded leaves its buffer empty and its index is reported through the error log, so a failure never
+silently shortens the result. Encoding an empty batch clears @p buffers and succeeds.
+
+@p params apply to the whole batch. Per-image parameters are not supported; call cv::imencode for
+the images that need different settings.
+
+@param ext File extension that defines the output format. Must include a leading period.
+@param images Images to be compressed. They may differ in size, depth and number of channels.
+@param buffers Output vector receiving one buffer per input image, in the input order. Each buffer
+is resized to fit its compressed image.
+@param params Format-specific parameters shared by the whole batch. See cv::imwrite and cv::ImwriteFlags.
+
+@return true if every image was encoded, false if at least one of them failed.
+
+@sa cv::imencode, cv::imdecodeBatch
+*/
+CV_EXPORTS_W bool imencodeBatch( const String& ext, InputArrayOfArrays images,
+                                 CV_OUT std::vector<std::vector<uchar> >& buffers,
                                  const std::vector<int>& params = std::vector<int>());
 
 /** @brief Checks if the specified image file can be decoded by OpenCV.
