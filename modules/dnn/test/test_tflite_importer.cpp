@@ -481,12 +481,6 @@ TEST_P(Test_TFLite, yolov5nu)
 
 TEST_P(Test_TFLite, yolo26n)
 {
-    // end2end head is supported only by the new engine
-    if (static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
     Net net = readNet(findDataFile("dnn/tflite/yolo26n.tflite"));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -500,12 +494,6 @@ TEST_P(Test_TFLite, yolo26n)
 
 TEST_P(Test_TFLite, yolo26n_seg)
 {
-    // end2end head is supported only by the new engine
-    if (static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
     Net net = readNet(findDataFile("dnn/tflite/yolo26n-seg.tflite"));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);

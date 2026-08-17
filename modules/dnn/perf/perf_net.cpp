@@ -434,10 +434,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n_TFLite)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("");
-    auto engine_forced = static_cast<dnn::EngineType>(
-        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
-    if (engine_forced == dnn::ENGINE_CLASSIC)
-        throw SkipTestException("yolo26 end2end head is supported on the new DNN engine only");
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolo26n.tflite", "", inp);
@@ -448,10 +444,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n_seg_TFLite)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("");
-    auto engine_forced = static_cast<dnn::EngineType>(
-        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
-    if (engine_forced == dnn::ENGINE_CLASSIC)
-        throw SkipTestException("yolo26 end2end head is supported on the new DNN engine only");
     Mat inp = imread(findDataFile("dnn/street.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolo26n-seg.tflite", "", inp);
