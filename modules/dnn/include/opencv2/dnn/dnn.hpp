@@ -1034,7 +1034,17 @@ CV__DNN_INLINE_NS_BEGIN
          *
          * Call after enableKVCache() and before the prefill forward. Reserving the
          * full generation length up front keeps the cache buffers fixed, so no page
-         * allocation happens during token-by-token generation. */
+         * allocation happens during token-by-token generation.
+         *
+         * The reservation is applied when the cache is filled for the first time, so calling
+         * this after the prefill forward has no effect until the cache is cleared. It is a
+         * hint, not a limit: generating past @p maxSequenceLength still grows the cache.
+         *
+         * resetKVCache() drops the reservation, so it has to be re-issued for every generation.
+         *
+         * Only models whose attention is imported as a single fused op (ONNX Attention,
+         * com.microsoft MultiHeadAttention / GroupQueryAttention) use the paged cache. On a
+         * model with decomposed attention this logs a warning and does nothing. */
         CV_WRAP void reserveKVCache(int maxSequenceLength);
         /** @brief Returns profiling data captured during the last forward pass.
          *

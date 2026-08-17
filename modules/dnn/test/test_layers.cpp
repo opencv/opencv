@@ -2542,9 +2542,10 @@ public:
         normAssert(Y, Yref, msg.c_str(), 1e-3, 1e-3);
     }
 
-    // Generate in multi-token chunks (chunked prefill / speculative decode) with the
-    // page pool pre-reserved via reserveKVCache(). Must match the non-cached full run.
-    void testKVCacheChunkedReserve(const std::string& layout)
+    // Generate in multi-token chunks (chunked prefill / speculative decode) with the page pool
+    // pre-reserved. Must match the non-cached full run; reserveTokens below the full length
+    // exercises reservation as a hint rather than a limit.
+    void testKVCacheChunkedReserve(const std::string& layout, int reserveTokens)
     {
         std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
 
@@ -2556,7 +2557,7 @@ public:
         int T_pref = T - 37;    // generate the tail in chunks, incl. a partial last chunk
         int chunk = 5;
 
-        netWithKVCache.reserveKVCache(T);   // static pre-allocation
+        netWithKVCache.reserveKVCache(reserveTokens);   // static pre-allocation
 
         std::vector<int> q_sz, k_sz, v_sz;
         if (layout == "3d") { q_sz = {1, T, Nq * D}; k_sz = {1, T, Nkv * D}; v_sz = {1, T, Nkv * D}; }
@@ -2616,7 +2617,24 @@ TEST_P(TESTKVCache, layouts)
 
 TEST_P(TESTKVCache, chunked_reserve)
 {
-    testKVCacheChunkedReserve(GetParam());
+    testKVCacheChunkedReserve(GetParam(), 523);
+}
+
+// Reservation is a hint, not a cap: the pool still grows past it.
+TEST_P(TESTKVCache, reserve_underrun)
+{
+    testKVCacheChunkedReserve(GetParam(), 100);
+}
+
+TEST_P(TESTKVCache, reserve_requires_enable)
+{
+    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + GetParam() + ".onnx";
+    Net net = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_OPENCV);
+    EXPECT_THROW(net.reserveKVCache(128), cv::Exception);
+
+    net.enableKVCache();
+    EXPECT_NO_THROW(net.reserveKVCache(128));
+    EXPECT_THROW(net.reserveKVCache(-1), cv::Exception);
 }
 
 INSTANTIATE_TEST_CASE_P(KV_Cache, TESTKVCache, testing::Values("3d", "4d"));

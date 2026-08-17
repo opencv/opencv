@@ -42,6 +42,9 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
 {
     CV_Assert(netimpl != nullptr);
 
+    // readNetFromONNX() returns an empty Net on unsupported ops; don't walk a null graph.
+    CV_CheckTrue(!netimpl->mainGraph.empty(),
+                 "enableKVCache() requires a successfully loaded model");
     CV_Assert(!netimpl->layers.empty());
 
     auto manager = KVCacheManager();
@@ -172,7 +175,7 @@ void KVCache::grow(const Mat& newData) {
     if (pages.empty()) {
         // Prefill: allocate the page pool, honouring any reserved capacity.
         int neededPages   = (T + pageSize - 1) / pageSize;
-        int reservedPages = (reservedTokens + pageSize - 1) / pageSize;
+        int reservedPages = (int)(((int64_t)reservedTokens + pageSize - 1) / pageSize);
         int totalPages    = std::max(neededPages, reservedPages);
         for (int i = 0; i < totalPages; i++) {
             int page_size = isKCache ?

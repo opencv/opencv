@@ -11,6 +11,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/dnn/dnn.hpp>
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
@@ -19,6 +20,9 @@
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+// Upper bound for reserveKVCache(); keeps the page-count arithmetic in range.
+enum { KV_CACHE_MAX_RESERVED_TOKENS = 1 << 24 };
 
 class KVCache
 {
@@ -33,7 +37,6 @@ class KVCache
         }
         // Reserve the page pool for up to maxTokens (static cache); applied at prefill.
         void reserve(int maxTokens) { reservedTokens = std::max(reservedTokens, maxTokens); }
-        const std::vector<Mat>& getPages() const { return pages; }
         int getActivePageCount() const { return pageSize > 0 ? (nTokens + pageSize - 1) / pageSize : 0; }
         // Pages holding tokens. The paged kernels size the last page from the page count,
         // so reserved empty trailing pages must not be passed to them.
@@ -111,6 +114,7 @@ struct KVCacheManager
     void initPastTensors();
     // Pre-reserve every per-layer K/V cache for up to maxTokens total sequence length.
     void reserve(int maxTokens);
+    bool empty() const { return kData.empty() && vData.empty(); }
 };
 
 void setKVCacheManager(Ptr<Net::Impl> netimpl);
