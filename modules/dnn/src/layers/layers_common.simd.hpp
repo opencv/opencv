@@ -213,15 +213,25 @@ void fastGEMM1T( const float* vec, const float* weights,
             k    = vecsize - 4;
             wptr = weights + i * wstep + k;
             float32x4_t v = vld1q_f32(vec + k);
-            v  = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(v), vreinterpretq_u32_f32(tailMask)));
-            vs0 = vmlaq_f32(vs0, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)),             vreinterpretq_u32_f32(tailMask))), v);
-            vs1 = vmlaq_f32(vs1, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep)),     vreinterpretq_u32_f32(tailMask))), v);
-            vs2 = vmlaq_f32(vs2, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 2)), vreinterpretq_u32_f32(tailMask))), v);
-            vs3 = vmlaq_f32(vs3, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 3)), vreinterpretq_u32_f32(tailMask))), v);
-            vs4 = vmlaq_f32(vs4, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 4)), vreinterpretq_u32_f32(tailMask))), v);
-            vs5 = vmlaq_f32(vs5, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 5)), vreinterpretq_u32_f32(tailMask))), v);
-            vs6 = vmlaq_f32(vs6, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 6)), vreinterpretq_u32_f32(tailMask))), v);
-            vs7 = vmlaq_f32(vs7, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 7)), vreinterpretq_u32_f32(tailMask))), v);
+            v = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(v), tailMaskU));
+
+            float32x4_t w0 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)), tailMaskU));
+            float32x4_t w1 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep)), tailMaskU));
+            float32x4_t w2 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 2)), tailMaskU));
+            float32x4_t w3 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 3)), tailMaskU));
+            float32x4_t w4 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 4)), tailMaskU));
+            float32x4_t w5 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 5)), tailMaskU));
+            float32x4_t w6 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 6)), tailMaskU));
+            float32x4_t w7 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 7)), tailMaskU));
+
+            vs0 = vmlaq_f32(vs0, w0, v);
+            vs1 = vmlaq_f32(vs1, w1, v);
+            vs2 = vmlaq_f32(vs2, w2, v);
+            vs3 = vmlaq_f32(vs3, w3, v);
+            vs4 = vmlaq_f32(vs4, w4, v);
+            vs5 = vmlaq_f32(vs5, w5, v);
+            vs6 = vmlaq_f32(vs6, w6, v);
+            vs7 = vmlaq_f32(vs7, w7, v);
         }
         dst[i + 0] = hsumq_f32(vs0) + bias[i + 0];
         dst[i + 1] = hsumq_f32(vs1) + bias[i + 1];
