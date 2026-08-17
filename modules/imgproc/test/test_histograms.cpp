@@ -2013,21 +2013,25 @@ TEST(Imgproc_Hist_Calc, self_correlation_regression_29706)
 {
     // Regression test for #29706: HISTCMP_CORREL could return -1.0
     // for self-comparison due to catastrophic cancellation.
-    cv::Mat img(100, 100, CV_8UC1);
-    cv::randu(img, cv::Scalar(0), cv::Scalar(255));
+    //
+    // Triggered when bin counts are large (~1.68e7, just under 2^24 so
+    // they remain exactly representable as float) and nearly uniform
+    // (differing only by 1 between bins). The true variance is tiny
+    // relative to the magnitude of sq0 and s0*s0/N, so computing
+    // sq0 - s0*s0/N in double precision loses enough precision to go
+    // slightly negative, and sqrt() of that corrupts the result.
+    const int histSize = 256;
+    cv::Mat hist(histSize, 1, CV_32F);
 
-    int histSize = 256;
-    float range[] = { 0, 256 };
-    const float* histRange = { range };
-
-    cv::Mat hist;
-    cv::calcHist(&img, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange);
+    const long long base = 16776954LL;
+    const long long halfBinsPerturbed = 128;
+    for (int k = 0; k < histSize; k++)
+        hist.at<float>(k) = (float)(base + (k < halfBinsPerturbed ? 1 : 0));
 
     double correl = cv::compareHist(hist, hist, cv::HISTCMP_CORREL);
 
     ASSERT_NEAR(correl, 1.0, 1e-6) << "Self-comparison should be 1.0, got " << correl;
 }
-
 
 
 TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
