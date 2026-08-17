@@ -20,10 +20,8 @@
 #if defined(HAVE_IPP_IW)
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                        int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
-
-// Does not pass tests in 5.x branch
-//#undef cv_hal_warpAffine
-//#define cv_hal_warpAffine ipp_hal_warpAffine
+#undef cv_hal_warpAffine
+#define cv_hal_warpAffine ipp_hal_warpAffine
 
 int ipp_hal_sobel(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                   int width, int height, int src_depth, int dst_depth, int cn,
@@ -45,10 +43,8 @@ int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size
 
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                             int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]);
-
-// Does not pass tests in 5.x branch
-//#undef cv_hal_warpPerspective
-//#define cv_hal_warpPerspective ipp_hal_warpPerspective
+#undef cv_hal_warpPerspective
+#define cv_hal_warpPerspective ipp_hal_warpPerspective
 
 #endif // IPP_VERSION_X100 >= 202600
 
