@@ -491,7 +491,18 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // seq-major cell-state scratch: (seq, batch, dirs, hid), matching the recurrence.
             int cOutShape[] = {seqLenth, batchSize, numDirs, numHidden};
             Mat cOut = produceCellOutput ? Mat::zeros(4, cOutShape, output[0].type()) : Mat();
-            Mat xTs = input[0].reshape(1, batchSizeTotal);
+
+            // the recurrence below slices X by timestep, so it needs the seq-major order;
+            // under ONNX layout=1 the input arrives as (batch, seq, ...)
+            Mat xSeqFirst = input[0];
+            if (layout == BATCH_SEQ_HID)
+            {
+                std::vector<int> perm(input[0].dims);
+                std::iota(perm.begin(), perm.end(), 0);
+                std::swap(perm[0], perm[1]);
+                cv::transposeND(input[0], perm, xSeqFirst);
+            }
+            Mat xTs = xSeqFirst.reshape(1, batchSizeTotal);
 
             // seq-major Y assembly buffer; transposed into output[0] below.
             // Never reallocate output[0]'s header or it detaches from the graph.
