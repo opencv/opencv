@@ -287,11 +287,17 @@ TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
     }
 }
 
-static void testConstantTemplateWithMask(const string& testName, int type, int maskType, const Scalar& templValue)
-{
-    SCOPED_TRACE(testName);
+typedef testing::tuple<MatType, MatType, Scalar> ConstantTemplateParams;
 
-    Mat image(Size(8, 8), type);
+typedef testing::TestWithParam<ConstantTemplateParams> ConstantTemplateWithMask;
+
+TEST_P(ConstantTemplateWithMask, regression_23257)
+{
+    int type = std::get<0>(GetParam());
+    int maskType = std::get<1>(GetParam());
+    Scalar templValue = std::get<2>(GetParam());
+
+    Mat image(Size(16, 16), type);
     randu(image, 0, 255);
 
     const Mat templ(Size(3, 3), type, templValue);
@@ -313,12 +319,13 @@ static void testConstantTemplateWithMask(const string& testName, int type, int m
     }
 }
 
-TEST(Imgproc_MatchTemplateWithMask, regression_23257_constant_template)
-{
-    testConstantTemplateWithMask("8UC1 template, 8UC1 mask", CV_8UC1, CV_8UC1, Scalar::all(1));
-    testConstantTemplateWithMask("32FC1 template, 32FC1 mask", CV_32FC1, CV_32FC1, Scalar::all(3.5));
-    testConstantTemplateWithMask("8UC3 template, 8UC1 mask", CV_8UC3, CV_8UC1, Scalar(1, 2, 3));
-    testConstantTemplateWithMask("32FC3 template, 32FC3 mask", CV_32FC3, CV_32FC3, Scalar(1.5, 2.5, 3.5));
-}
+std::vector<ConstantTemplateParams> ctparams = {
+    {CV_8UC1, CV_8UC1, Scalar::all(1)},
+    {CV_32FC1, CV_32FC1, Scalar::all(3.5)},
+    {CV_8UC3, CV_8UC1, Scalar(1, 2, 3)},
+    {CV_32FC3, CV_32FC3, Scalar(1.5, 2.5, 3.5)}
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, ConstantTemplateWithMask, testing::ValuesIn(ctparams));
 
 }} // namespace
