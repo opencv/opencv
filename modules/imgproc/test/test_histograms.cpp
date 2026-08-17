@@ -2009,6 +2009,26 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(0), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(0);
     ASSERT_EQ(histogram_u.at<float>(1), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
 }
+TEST(Imgproc_Hist_Calc, self_correlation_regression_29706)
+{
+    // Regression test for #29706: HISTCMP_CORREL could return -1.0
+    // for self-comparison due to catastrophic cancellation.
+    cv::Mat img(100, 100, CV_8UC1);
+    cv::randu(img, cv::Scalar(0), cv::Scalar(255));
+
+    int histSize = 256;
+    float range[] = { 0, 256 };
+    const float* histRange = { range };
+
+    cv::Mat hist;
+    cv::calcHist(&img, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange);
+
+    double correl = cv::compareHist(hist, hist, cv::HISTCMP_CORREL);
+
+    ASSERT_NEAR(correl, 1.0, 1e-6) << "Self-comparison should be 1.0, got " << correl;
+}
+
+
 
 TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
 {
