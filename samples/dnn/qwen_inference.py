@@ -45,13 +45,12 @@ Run the script:
 
 Paged KV-cache and reserveKVCache():
 
-    OpenCV keeps K/V in a paged, pre-packed cache only for models whose attention imports as
-    a single fused op. The optimum-cli exports above decompose attention into MatMul/Softmax,
-    so they fall back to carrying state through present.* -> past_key_values.* and
-    reserveKVCache() logs a warning and does nothing.
+    The paged cache needs attention to import as a single fused op. The optimum-cli exports
+    above decompose it into MatMul/Softmax, so they carry state through
+    present.* -> past_key_values.* instead and reserveKVCache() does nothing.
 
-    To get the paged cache, export with the dynamo exporter at opset 23, which lowers
-    scaled_dot_product_attention to a single ai.onnx Attention node (needs onnxscript):
+    For the paged cache, export with the dynamo exporter at opset 23, which lowers
+    scaled_dot_product_attention to one ai.onnx Attention node (needs onnxscript):
 
         import torch
         from transformers import AutoModelForCausalLM
@@ -75,11 +74,11 @@ Paged KV-cache and reserveKVCache():
                           input_names=['input_ids', 'position_ids'],
                           output_names=['logits'])
 
-    Export without past_key_values: the paged cache holds K/V across forwards, so the graph
-    only ever sees the current chunk. Pass position_ids explicitly instead.
+    Export without past_key_values - the cache holds K/V across forwards, so the graph only
+    sees the current chunk. Pass position_ids explicitly instead.
 
-    With --use_kv_cache the script then calls reserveKVCache(prompt_len + max_new_tokens)
-    before prefill, sizing the page pool once so the decode loop allocates nothing.
+    With --use_kv_cache the script calls reserveKVCache(prompt_len + max_new_tokens) before
+    prefill, so the decode loop allocates nothing.
 '''
 
 import numpy as np
