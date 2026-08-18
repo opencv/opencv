@@ -2011,22 +2011,21 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
 }
 TEST(Imgproc_Hist_Calc, self_correlation_regression_29706)
 {
-    // Regression test for #29706: HISTCMP_CORREL could return -1.0
-    // for self-comparison due to catastrophic cancellation.
-    //
-    // Triggered when bin counts are large (~1.68e7, just under 2^24 so
-    // they remain exactly representable as float) and nearly uniform
-    // (differing only by 1 between bins). The true variance is tiny
-    // relative to the magnitude of sq0 and s0*s0/N, so computing
-    // sq0 - s0*s0/N in double precision loses enough precision to go
-    // slightly negative, and sqrt() of that corrupts the result.
+// Regression test for #29706: HISTCMP_CORREL could return -1.0
+// for self-comparison due to catastrophic cancellation.
+// Triggered when bin counts are at 2^24 - 1 (the largest value where
+// base and base+1 are both exactly representable in float32) and only
+// ONE bin differs by 1. The true variance signal is tiny (~1) but the
+// sum-of-squares terms are large enough (~7.2e16) that double-precision
+// subtraction loses the signal entirely, producing a spurious negative
+// "variance" and corrupting the sqrt().
     const int histSize = 256;
     cv::Mat hist(histSize, 1, CV_32F);
 
-    const long long base = 16776954LL;
-    const long long halfBinsPerturbed = 128;
+    const long long base = 16777215LL;  // 2^24 - 1
+    const long long numBinsPerturbed = 1; // only perturb ONE bin
     for (int k = 0; k < histSize; k++)
-        hist.at<float>(k) = (float)(base + (k < halfBinsPerturbed ? 1 : 0));
+        hist.at<float>(k) = (float)(base + (k < numBinsPerturbed ? 1 : 0));
 
     double correl = cv::compareHist(hist, hist, cv::HISTCMP_CORREL);
 
