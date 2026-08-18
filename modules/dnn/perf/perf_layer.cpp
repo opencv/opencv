@@ -781,6 +781,64 @@ PERF_TEST_P_(Layer_Attention, VisionTransformer) {
     test_layer({1, 197, 768}, {768, 768, 768}, 12);
 }
 
+struct Layer_AttentionOnnxAi : public TestBaseWithParam<int>
+{
+    void decode_step(const std::string& layout, int nq, int nkv)
+    {
+        int past = GetParam();
+        bool is3d = layout == "3d";
+
+        std::string model = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
+        Net net = readNetFromONNX(findDataFile(model, true), ENGINE_OPENCV);
+
+        auto qkv = [&](int n, int t) {
+            return is3d ? std::vector<int>{1, t, n * D} : std::vector<int>{1, n, t, D};
+        };
+
+        Mat qp(qkv(nq, past), CV_32F), kp(qkv(nkv, past), CV_32F), vp(qkv(nkv, past), CV_32F);
+        Mat qd(qkv(nq, 1), CV_32F), kd(qkv(nkv, 1), CV_32F), vd(qkv(nkv, 1), CV_32F);
+        for (Mat* m : {&qp, &kp, &vp, &qd, &kd, &vd})
+            randu(*m, -1.f, 1.f);
+
+        std::vector<int> mp_sz{1, nq, past, past}, md_sz{1, nq, 1, past + 1};
+        Mat mp(mp_sz, CV_32S, Scalar(1)), md(md_sz, CV_32S, Scalar(1));
+
+        net.enableKVCache();
+
+        while (next())
+        {
+            // Reset, reserve and prefill stay outside the timer, so the measurement is one
+            // decode step against `past` cached tokens with the page pool already allocated.
+            net.resetKVCache();
+            net.reserveKVCache(past + 1);
+            net.setInput(qp, "Q");
+            net.setInput(kp, "K");
+            net.setInput(vp, "V");
+            net.setInput(mp, "Mask");
+            net.forward();
+
+            net.setInput(qd, "Q");
+            net.setInput(kd, "K");
+            net.setInput(vd, "V");
+            net.setInput(md, "Mask");
+
+            startTimer();
+            net.forward();
+            stopTimer();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    const int D = 256;
+};
+
+// 3D takes its head counts from the model attributes (q_num_heads=8, kv_num_heads=4);
+// 4D takes them from the [batch, heads, seq, head_dim] layout, so both ratios are drivable.
+PERF_TEST_P_(Layer_AttentionOnnxAi, decode_gqa_3d) { decode_step("3d", 8, 4); }
+PERF_TEST_P_(Layer_AttentionOnnxAi, decode_gqa_4d) { decode_step("4d", 8, 2); }
+PERF_TEST_P_(Layer_AttentionOnnxAi, decode_mha_4d) { decode_step("4d", 8, 8); }
+
 struct Layer_GroupNorm : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& x_shape, int num_groups)
@@ -854,6 +912,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionOnnxAi, testing::Values(1, 64, 512));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GroupNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
