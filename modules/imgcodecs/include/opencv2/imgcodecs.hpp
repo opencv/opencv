@@ -743,8 +743,11 @@ configured to use. The batch may be processed in parallel internally.
 encoded leaves its buffer empty and its index is reported through the error log, so a failure never
 silently shortens the result. Encoding an empty batch clears @p buffers and succeeds.
 
-@p params apply to the whole batch. Per-image parameters are not supported; call cv::imencode for
-the images that need different settings.
+@p params apply to the whole batch. Per-image parameters are deliberately left out of this overload
+rather than ruled out: because the parameters are the last argument, an overload taking one
+parameter vector per image (for example `const std::vector<std::vector<int> >&`) can be added later
+without changing or breaking this signature. Until then, call cv::imencode for the images that need
+different settings.
 
 @param ext File extension that defines the output format. Must include a leading period.
 @param images Images to be compressed. They may differ in size, depth and number of channels.
