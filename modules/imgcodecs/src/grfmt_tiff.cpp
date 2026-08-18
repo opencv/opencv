@@ -236,8 +236,10 @@ bool TiffDecoder::checkSignature( const String& signature ) const
 
 int TiffDecoder::normalizeChannelsNumber(int channels) const
 {
-    CV_Check(channels, channels >= 1 && channels <= 4, "Unsupported number of channels");
-    return channels;
+    CV_Check(channels, channels >= 1, "Unsupported number of channels");
+    // TIFFs may have >4 samples per pixel (CMYK, CMYK + alpha, ...); libtiff's RGBA
+    // reader collapses them to 4 channels, so clamp instead of rejecting.
+    return std::min(channels, 4);
 }
 
 ImageDecoder TiffDecoder::newDecoder() const
@@ -821,7 +823,10 @@ bool  TiffDecoder::readData( Mat& img )
             CV_Assert((int)tile_width0 > 0 && (int)tile_width0 <= TILE_MAX_WIDTH);
             CV_Assert((int)tile_height0 > 0 && (int)tile_height0 <= TILE_MAX_HEIGHT);
             const uint64_t MAX_TILE_SIZE = (CV_BIG_UINT(1) << 30);
-            CV_CheckLE((int)ncn, 4, "");
+            // 8-bit images are read via libtiff's RGBA reader, which handles >4 samples
+            // per pixel; deeper depths read raw samples and support at most 4 channels.
+            if (dst_bpp != 8)
+                CV_CheckLE((int)ncn, 4, "");
             CV_CheckLE((int)bpp, 64, "");
 
             if (dst_bpp == 8)
