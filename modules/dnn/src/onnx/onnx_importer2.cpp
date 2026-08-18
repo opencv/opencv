@@ -2783,8 +2783,11 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
     CV_CheckTrue(params.has("num_heads"), "MultiHeadAttention: num_heads is required");
     CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
                  "MultiHeadAttention: separate key and value are required");
-    CV_CheckFalse(hasInput(node_proto, 3) || hasInput(node_proto, 4) || hasInput(node_proto, 9),
-        "MultiHeadAttention: bias / key_padding_mask / cache_indirection inputs are not supported");
+    CV_CheckFalse(hasInput(node_proto, 3) || hasInput(node_proto, 4),
+        "MultiHeadAttention: bias / key_padding_mask inputs are not supported");
+    for (int i = 8; i < node_proto.input_size(); i++)  // past_sequence_length / cache_indirection
+        CV_CheckFalse(hasInput(node_proto, i),
+            "MultiHeadAttention: only query/key/value/attention_bias/past_key/past_value are supported");
 
     // inputs: query, key, value, bias, key_padding_mask, attention_bias, past_key, past_value, ...
     const bool has_past_k = hasInput(node_proto, 6), has_past_v = hasInput(node_proto, 7);
@@ -2793,7 +2796,17 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
 
     std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
     if (hasInput(node_proto, 5)) ins.push_back(node_inputs[5]);  // attention_bias -> mask
-    if (has_past_k) { ins.push_back(node_inputs[6]); ins.push_back(node_inputs[7]); }
+    if (has_past_k) {
+        // The past length is read back off past_key's shape. A fixed seq dim means a shared-buffer
+        // cache whose real length lives in past_sequence_length, so the unwritten tail would be
+        // taken as history.
+        const MatShape& pk = netimpl->args.at(node_inputs[6].idx).shape;
+        if (pk.dims >= 2)
+            CV_CheckLE(pk[pk.dims - 2], 0,
+                "MultiHeadAttention: past_key has a fixed sequence length (shared-buffer / static "
+                "cache export); only dynamic-cache exports are supported");
+        ins.push_back(node_inputs[6]); ins.push_back(node_inputs[7]);
+    }
     node_inputs = ins;
 
     params.type = "AttentionOnnxAi";
