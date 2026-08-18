@@ -83,10 +83,42 @@ inline int hal_ni_dnn_depthwise_conv32f(const float* inp_data, const float* resi
                                         int task_start, int task_end)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+//! @brief General (non-depthwise) convolution over a slice [task_start, task_end) of the
+//! engine's task grid (blocked NCDHWc, CV_32F), with the same fused epilogue as the depthwise
+//! hook above.
+//!
+//! Unlike the pooling and depthwise hooks, whose task index runs over block-planes, the task
+//! index here runs over @c [0, N*ngroups*Kblk*nspat_chunks): task @c t selects the output
+//! channel block @c block=t/nspat_chunks and the spatial chunk @c t%nspat_chunks, where
+//! @c block decomposes as @c n=block/(ngroups*Kblk) and @c kblk=block%Kblk within group
+//! @c g. Chunk @c c covers the plane positions @c [c*planeblocks/nspat_chunks,
+//! (c+1)*planeblocks/nspat_chunks), @c planeblocks being the product of @c outsize.
+//!
+//! @c weights is the repacked (ngroups, Kblk, ksize, C1Max, C0*K0) tensor, i.e. block
+//! @c (g,kblk) starts at @c (g*Kblk+kblk)*ksize*C1Max*C0*K0 and holds, per tap and per input
+//! channel block, a @c C0 x K0 matrix in row-major @c [c0][k0] order. @c K0 equals @c C0.
+//! @c scale / @c bias are optional per-output-channel vectors of length @c K.
+//!
+//! A hook may decline configurations it does not cover (returning
+//! @c CV_HAL_ERROR_NOT_IMPLEMENTED for the whole range) -- in particular the unaligned case
+//! where an output channel block is only partially filled, i.e. where @c K or @c K/ngroups is
+//! not a multiple of @c K0, or @c C/ngroups is not a multiple of @c C0.
+inline int hal_ni_dnn_conv32f(const float* inp_data, const float* residual_data,
+                              float* out_data, const float* weights,
+                              const float* scale, const float* bias,
+                              int C, int K, int C0, int ngroups, int Kblk, int C1Max,
+                              const int* insize, const int* outsize, const int* strides,
+                              const int* pads, const int* inner, const int* coordtab,
+                              const int* ofstab, int ksize,
+                              float maxval, float default_alpha, const float* prelu_slope,
+                              int nspat_chunks, int task_start, int task_end)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_dnn_maxpool3d32f hal_ni_dnn_maxpool3d32f
 #define cv_hal_dnn_avgpool3d32f hal_ni_dnn_avgpool3d32f
 #define cv_hal_dnn_depthwise_conv32f hal_ni_dnn_depthwise_conv32f
+#define cv_hal_dnn_conv32f hal_ni_dnn_conv32f
 //! @endcond
 
 //! @}
