@@ -2937,6 +2937,13 @@ TEST_P(Test_ONNX_layers, TileInt64)
     testONNXModels("tile_int64");
 }
 
+TEST_P(Test_ONNX_layers, EmptyConstantInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("empty_constant_int64");
+}
+
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
                      const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes,
                      Image2BlobParams imgParams, float conf_threshold = 0.3, float iou_threshold = 0.5,
@@ -3458,6 +3465,9 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
 
     testONNXModels("pytorch_attention_single_head");
 }
+TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
+    testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
+}
 
 // Batch + multi-head, square attention (B=2, H=4, S_q=S_kv=16, D=D_v=32).
 TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
@@ -3543,6 +3553,15 @@ TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
 }
 
+TEST_P(Test_ONNX_layers, SimplifiedLayerNormalization) {
+    testONNXModels("simplified_layer_normalization");
+}
+
+TEST_P(Test_ONNX_layers, Resize1D) {
+    // Rank-3 (N,C,W) Resize folds a unit H axis ([N,C,W] -> [N,C,1,W]) to reuse the NCHW kernel.
+    testONNXModels("resize_1d_linear");
+}
+
 TEST_P(Test_ONNX_layers, MatMulAddFusion) {
     // New-engine CUDA MatMul/GEMM does not yet cover this fused variant; skip for now.
     if (backend == DNN_BACKEND_CUDA)
@@ -3550,6 +3569,12 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
     double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
     double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
     testONNXModels("biased_matmul", npy, l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, MatMulNBits) {
+    testONNXModels("matmulnbits", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_8bits", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_partial_block", npy, 1e-4, 1e-3);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
 }
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {

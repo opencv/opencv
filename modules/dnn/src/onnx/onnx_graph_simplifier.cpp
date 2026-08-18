@@ -1940,6 +1940,27 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     }
 }
 
+// ONNX dtype -> OpenCV type. Shared with the ONNX importer (declared in the header).
+int dataType2cv(int dt)
+{
+    return
+        dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
+        dt == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S :
+        dt == opencv_onnx::TensorProto_DataType_UINT16 ? CV_16U :
+        dt == opencv_onnx::TensorProto_DataType_INT16 ? CV_16S :
+        dt == opencv_onnx::TensorProto_DataType_UINT32 ? CV_32U :
+        dt == opencv_onnx::TensorProto_DataType_INT32 ? CV_32S :
+        dt == opencv_onnx::TensorProto_DataType_UINT64 ? CV_64U :
+        dt == opencv_onnx::TensorProto_DataType_INT64 ? CV_64S :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
+        dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
+        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
+        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
+}
+
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
@@ -1947,7 +1968,22 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         tensor_proto.int32_data().empty() &&
         (!tensor_proto.has_data_location() || tensor_proto.data_location() != opencv_onnx::TensorProto::EXTERNAL)
     )
+    {
+        // Preserve dtype for an empty tensor (0-sized dim); untyped Mat() defaults to CV_8U.
+        // fp16 -> CV_32F to match the payload widening below.
+        int type = dataType2cv(tensor_proto.data_type());
+        if (type == CV_16F)
+            type = CV_32F;
+        bool genuinely_empty = false;
+        for (int d = 0; d < tensor_proto.dims_size(); d++)
+            if (tensor_proto.dims(d) == 0) { genuinely_empty = true; break; }
+        if (type >= 0 && genuinely_empty)
+        {
+            std::vector<int> shape(tensor_proto.dims().begin(), tensor_proto.dims().end());
+            return Mat(shape, type);
+        }
         return Mat();
+    }
 
     // read binary data, should be just empty in case it is set in <DTYPE>_data field
     std::vector<int64_t> external_tensor_data;

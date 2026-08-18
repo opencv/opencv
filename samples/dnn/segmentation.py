@@ -13,6 +13,9 @@ def help():
             python segmentation.py model_name(e.g. u2netp) --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)
 
         Model path can also be specified using --model argument
+
+        For promptable segmentation (sam) pass a foreground point with --point=x,y (defaults to the image centre):
+            python segmentation.py sam --input=path/to/your/input/image/or/video --point=320,240 (don't give --input flag if want to use device camera)
         '''
     )
 
@@ -26,6 +29,8 @@ def get_args_parser(func_args):
     parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
                                         'An every color is represented with three values from 0 to 255 in BGR channels order.')
+    parser.add_argument('--point', help="Foreground point prompt as 'x,y' in input image coordinates, "
+                                        "used by promptable models (sam). Defaults to the image centre.")
     parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
                          "default: automatically (by default), "
@@ -47,10 +52,30 @@ def get_args_parser(func_args):
 
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, 'segmentation')
+    args, _ = parser.parse_known_args()
+    if args.alias == 'sam':
+        add_preproc_args(args.zoo, parser, 'segmentation', prefix='decoder_', alias='sam')
     parser = argparse.ArgumentParser(parents=[parser],
                                     description='Use this script to run semantic segmentation deep learning networks using OpenCV.',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args(func_args)
+
+# SAM input: longest edge scaled to target, per-channel normalized, zero-padded to a square.
+# Not expressible with blobFromImage; newH/newW report the unpadded extent for mask cropping.
+def samPreprocess(frame, target):
+    mean = np.array([0.485, 0.456, 0.406], np.float32)
+    std = np.array([0.229, 0.224, 0.225], np.float32)
+
+    h, w = frame.shape[:2]
+    s = target / max(h, w)
+    newH, newW = int(h * s + 0.5), int(w * s + 0.5)
+
+    img = cv.resize(cv.cvtColor(frame, cv.COLOR_BGR2RGB), (newW, newH), interpolation=cv.INTER_LINEAR)
+    img = (img.astype(np.float32) / 255.0 - mean) / std
+
+    blob = np.zeros((1, 3, target, target), np.float32)
+    blob[0, :, :newH, :newW] = img.transpose(2, 0, 1)
+    return blob, newH, newW
 
 def showLegend(labels, colors, legend):
     if not labels is None and legend is None:
@@ -107,6 +132,17 @@ def main(func_args=None):
     if hasattr(cv.dnn, 'DNN_PROFILE_SUMMARY'):
         net.setProfilingMode(cv.dnn.DNN_PROFILE_SUMMARY)
 
+    # Promptable models split into an image encoder (the primary model) and a prompt/mask decoder.
+    decoder = None
+    if args.alias == 'sam':
+        decoder = cv.dnn.readNetFromONNX(findModel(args.decoder_model, args.decoder_sha1), engine)
+        decoder.setPreferableBackend(get_backend_id(args.backend))
+        decoder.setPreferableTarget(get_target_id(args.target))
+
+    point = None
+    if args.point:
+        point = tuple(int(v) for v in args.point.split(','))
+
     winName = 'Deep learning semantic segmentation in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
 
@@ -133,11 +169,43 @@ def main(func_args=None):
         inpWidth = args.width if args.width else frameWidth
         inpHeight = args.height if args.height else frameHeight
 
-        blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
-        net.setInput(blob)
+        if args.alias != 'sam':  # SAM builds its own padded blob and uses named inputs
+            blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
+            net.setInput(blob)
 
         t0 = cv.getTickCount()
-        if args.alias == 'u2netp':
+        if args.alias == 'sam':
+            blob, newH, newW = samPreprocess(frame, inpWidth)
+            net.setInput(blob, 'pixel_values')
+            emb, pos = net.forward(['image_embeddings', 'image_positional_embeddings'])
+            net.printPerfProfile()
+
+            # The prompt is given in input image coordinates, so scale it into the padded frame.
+            pt = point if point else (frameWidth // 2, frameHeight // 2)
+            s = inpWidth / max(frameHeight, frameWidth)
+            inputPoints = np.array([[[[pt[0] * s, pt[1] * s]]]], np.float32)
+            inputLabels = np.ones((1, 1, 1), np.int64)  # 1 = foreground point
+
+            decoder.setInput(inputPoints, 'input_points')
+            decoder.setInput(inputLabels, 'input_labels')
+            decoder.setInput(emb, 'image_embeddings')
+            decoder.setInput(pos, 'image_positional_embeddings')
+            iouScores, predMasks = decoder.forward(['iou_scores', 'pred_masks'])
+
+            # The decoder proposes several masks per prompt; keep the highest scoring one.
+            best = int(np.argmax(iouScores.reshape(-1)))
+            lowRes = predMasks.reshape(-1, predMasks.shape[-2], predMasks.shape[-1])[best]
+
+            # Mask logits cover the padded square: upsample, crop the unpadded extent, then
+            # resize to the frame. A logit above zero belongs to the object.
+            padded = cv.resize(lowRes, (inpWidth, inpHeight), interpolation=cv.INTER_LINEAR)
+            logits = cv.resize(padded[:newH, :newW], (frameWidth, frameHeight), interpolation=cv.INTER_LINEAR)
+
+            overlay = np.zeros_like(frame)
+            overlay[logits > 0] = (0, 0, 255)
+            frame = cv.addWeighted(frame, 0.6, overlay, 0.4, 0)
+            cv.circle(frame, (int(pt[0]), int(pt[1])), 5, (0, 255, 0), cv.FILLED)
+        elif args.alias == 'u2netp':
             output = net.forward(net.getUnconnectedOutLayersNames())
             net.printPerfProfile()
             pred = output[0][0, 0, :, :]

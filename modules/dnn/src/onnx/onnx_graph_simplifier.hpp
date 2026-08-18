@@ -38,6 +38,10 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
 */
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8=true, const std::string base_path = "");
 
+// Maps an ONNX declared data_type to its OpenCV type (e.g. FLOAT16 becomes CV_16F),
+// or returns -1 when the data_type has no OpenCV equivalent.
+int dataType2cv(int dt);
+
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 

@@ -1049,6 +1049,14 @@ public:
         size_t ninputs = inputs.size();
         CV_Assert(ninputs == 1 || ninputs == 2 || ninputs >= 4);
         outputs.resize(1, inputs[0]);
+
+        // Rank-3 (N,C,W): 1-D resize of the W axis; width baked into params, stays rank-3.
+        if (inputs[0].dims == 3) {
+            CV_CheckEQ(ninputs, (size_t)1, "1-D Resize2 expects sizes baked as width param");
+            outputs[0][2] = zoomFactorWidth > 0 ? cvFloor(inputs[0][2] * zoomFactorWidth) : outWidth0;
+            return outputs[0][2] == inputs[0][2];
+        }
+
         // New ONNX importer may provide "sizes" or "scales" via constant blobs
         // (blobs[0] = roi, blobs[1] = scales, blobs[2] = sizes, blobs[3] = axes).
         if (ninputs == 1 && !this->blobs.empty()) {
@@ -1067,8 +1075,8 @@ public:
         }
 
         if (ninputs == 1) {
-            outputs[0][2] = zoomFactorHeight > 0 ? (int)(inputs[0][2] * zoomFactorHeight) : outHeight0;
-            outputs[0][3] = zoomFactorWidth > 0 ? (int)(inputs[0][3] * zoomFactorWidth) : outWidth0;
+            outputs[0][2] = zoomFactorHeight > 0 ? cvFloor(inputs[0][2] * zoomFactorHeight) : outHeight0;
+            outputs[0][3] = zoomFactorWidth > 0 ? cvFloor(inputs[0][3] * zoomFactorWidth) : outWidth0;
         } else if (ninputs == 2 && inputs[1].dims == 4) {
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
@@ -1141,10 +1149,21 @@ public:
         MatShape inpShape = inp_.shape();
         MatShape outShape;
 
+        // Rank-3 (N,C,W): fold a unit H axis so the rank-4 kernels run, unfold on output.
+        const bool fold1d = (inp_.dims == 3);
+        MatShape outShape1d;
+        if (fold1d) {
+            int outW = zoomFactorWidth > 0 ? cvFloor(inpShape[2] * zoomFactorWidth) : outWidth0;
+            outShape1d = inpShape;
+            outShape1d[2] = outW;
+            inp_ = inp_.reshape(1, MatShape({inpShape[0], inpShape[1], 1, inpShape[2]}));
+            inpShape = inp_.shape();
+        }
+
         if (ninputs == 1) {
             outShape = inpShape;
-            outShape[2] = zoomFactorHeight > 0 ? (int)(inpShape[2] * zoomFactorHeight) : outHeight0;
-            outShape[3] = zoomFactorWidth > 0 ? (int)(inpShape[3] * zoomFactorWidth) : outWidth0;
+            outShape[2] = zoomFactorHeight > 0 ? cvFloor(inpShape[2] * zoomFactorHeight) : outHeight0;
+            outShape[3] = zoomFactorWidth > 0 ? cvFloor(inpShape[3] * zoomFactorWidth) : outWidth0;
         } else if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
             outShape = inpShape;
             outShape[2] = inputs[1].size[2];
@@ -1225,8 +1244,8 @@ public:
         UMat uout_;
         if (kind == _InputArray::STD_VECTOR_MAT) {
             std::vector<Mat>& outputs = outputs_arr.getMatVecRef();
-            outputs[0].fit(outShape, inp_.type());
-            out_ = outputs[0];
+            outputs[0].fit(fold1d ? outShape1d : outShape, inp_.type());
+            out_ = fold1d ? outputs[0].reshape(1, outShape) : outputs[0];
 
             if (outShape == inpShape)
             {
@@ -1237,8 +1256,8 @@ public:
         else {
             CV_Assert(kind == _InputArray::STD_VECTOR_UMAT);
             std::vector<UMat>& u_outputs = outputs_arr.getUMatVecRef();
-            u_outputs[0].fit(outShape, inp_.type());
-            uout_ = u_outputs[0];
+            u_outputs[0].fit(fold1d ? outShape1d : outShape, inp_.type());
+            uout_ = fold1d ? u_outputs[0].reshape(1, outShape) : u_outputs[0];
             if (outShape == inpShape)
             {
                 inp_.copyTo(uout_);
