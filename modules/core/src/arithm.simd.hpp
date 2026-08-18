@@ -26,7 +26,6 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
-#include <type_traits>
 
 namespace cv {
 
@@ -419,6 +418,18 @@ struct EwMul {
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
 };
+// mul into a <=16-bit integer Tr: the product can pass INT_MAX, where saturate_cast<Tr>(float) wraps
+// via cvRound() -> int (#28557). Clamps to Tr - exact in float, unlike INT_MAX. Scalar tail only;
+// the vector path saturates in v_mul_sat. CV_32S/CV_32U are out of reach and tracked separately.
+template<typename Tr>
+struct EwMulNarrow : EwMul {
+    template<typename W, typename ST> static W scl(W a, W b, ST s)
+    {
+        const W v = a * b * s;
+        const W lo = (W)std::numeric_limits<Tr>::min(), hi = (W)std::numeric_limits<Tr>::max();
+        return v < lo ? lo : (v > hi ? hi : v);
+    }
+};
 // div has two variants by the COMMON INPUT type (matching cv::'s per-type kernel choice): integer
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
 // a/0 -> inf), which then saturates on the cast to an integer output exactly like cv::divide.
@@ -580,22 +591,6 @@ struct EwXor {
         s0y == s0x*(size_t)width && (NSRC < 2 || s1y == s1x*(size_t)width)) \
     { width *= height; height = 1; }
 
-// saturate_cast<T>(float|double) narrows via cvRound() -> int, so a work value past INT_MAX wraps
-// to INT_MIN and saturates the wrong way (#28557). Clamping first is a no-op in range. Only
-// <=16-bit T: their bounds are exact in float, INT_MAX is not. This guard is scalar-tail-only;
-// CV_32S/CV_32U mul (WT=double) has an unclamped overflow of its own in v_store_pair_as
-// (convert.hpp), a known, separately tracked gap this function can't reach.
-template<typename Tr, typename W>
-static inline Tr narrowSaturate(W v)
-{
-    if constexpr (std::is_floating_point<W>::value && std::is_integral<Tr>::value && sizeof(Tr) <= 2)
-    {
-        const W lo = (W)std::numeric_limits<Tr>::min(), hi = (W)std::numeric_limits<Tr>::max();
-        v = v < lo ? lo : (v > hi ? hi : v);
-    }
-    return saturate_cast<Tr>(v);
-}
-
 // Unified binary kernel: T0 x T1 -> Tr (operands same depth for arithmetic; cast is separate).
 //   Wvec     = work vector. Native (v_uint8/...) drives the same-type saturating path
 //              (v_add saturates 8/16-bit, wraps 32-bit); v_float32 drives the widening hub.
@@ -624,17 +619,17 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     {
         if (s0x == s1x) {
             for (int x = 0; x < width; x++)
-                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
+                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
         }
         else if (s0x == 0) {
             WT sc0 = (WT)src0[0];
             for (int x = 0; x < width; x++)
-                dst[x] = narrowSaturate<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
+                dst[x] = saturate_cast<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
         }
         else {
             WT sc1 = (WT)src1[0];
             for (int x = 0; x < width; x++)
-                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], sc1, scalar));
+                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], sc1, scalar));
         }
     }
     return 0;
@@ -1084,7 +1079,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
         }
     #endif
         for (; x < width; x++)
-            dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
+            dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
     }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
@@ -1187,29 +1182,29 @@ TKernel getMulFunc_(int T, int R)
         fptr =   // scale==1 fast path: whole u8 registers, v_mul_sat widens+clamps inside;
                  // Wvec (f16 where available, else f32) for the scale path
         #if CV_SIMD_16F
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint8> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMulNarrow<uchar>, float, v_uint8> :
         #else
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul, float, v_uint8> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMulNarrow<uchar>, float, v_uint8> :
         #endif
             R == CV_32F ? vecBinaryKernel<uchar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_8S:
         fptr =   // scale==1 fast path: whole s8 registers via v_mul_sat
         #if CV_SIMD_16F
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMul, float, v_int8> :
+            R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMulNarrow<schar>, float, v_int8> :
         #else
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul, float, v_int8> :
+            R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMulNarrow<schar>, float, v_int8> :
         #endif
             R == CV_32F ? vecBinaryKernel<schar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16U:
         fptr =   // scale==1 fast path: whole u16 registers via v_mul_sat; Wvec=f32 for scale
-            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul, float, v_uint16> :
+            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMulNarrow<ushort>, float, v_uint16> :
             R == CV_32F ? vecBinaryKernel<ushort, float,  v_float32, float, EwMul> : nullptr;
         break;
     case CV_16S:
         fptr =   // scale==1 fast path: whole s16 registers via v_mul_sat; Wvec=f32 for scale
-            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMul, float, v_int16> :
+            R == CV_16S ? vecBinaryKernel<short, short, v_float32, float, EwMulNarrow<short>, float, v_int16> :
             R == CV_32F ? vecBinaryKernel<short, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16F:
@@ -1590,13 +1585,13 @@ static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
         }
     #endif
         if (s0x == s1x) {
-            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src0[x]*alpha + (WT)src1[x]*beta + gamma);
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + (WT)src1[x]*beta + gamma);
         } else if (s0x == 0) {
             const WT ac = (WT)src0[0]*alpha + gamma;
-            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src1[x]*beta + ac);
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src1[x]*beta + ac);
         } else {
             const WT bc = (WT)src1[0]*beta + gamma;
-            for (; x < width; x++) dst[x] = narrowSaturate<Tr>((WT)src0[x]*alpha + bc);
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + bc);
         }
     }
     return 0;

@@ -100,7 +100,7 @@ TEST(Core_LPSolver, regression_absolutely_unfeasible){
 #if 1
     //trivial absolutely unfeasible example
     A=(cv::Mat_<double>(1,1)<<1);
-    B=(cv::Mat_<double>(2,2)<<1,-1);
+    B=(cv::Mat_<double>(1,2)<<1,-1);
     std::cout<<"here A goes\n"<<A<<"\n";
     int res=cv::solveLP(A,B,z);
     ASSERT_EQ(res,-1);
