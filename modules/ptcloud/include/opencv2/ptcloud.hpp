@@ -62,6 +62,21 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
  */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
+/** @brief Loads a 3D Gaussian Splatting scene from a PLY or SPLAT file.
+ *
+ * Requires a trained scene, i.e. a PLY whose vertices carry `f_dc_0..2`, `opacity`, `scale_0..2`
+ * and `rot_0..3` alongside `x`, `y`, `z`, or a SPLAT file of 32 byte records. Higher order
+ * `f_rest_*` harmonics are ignored.
+ *
+ * PLY attributes are decoded on load: scales exponentiated, opacity through a sigmoid, the
+ * quaternion normalized into a 3D covariance, and the zeroth order harmonic evaluated to an RGB
+ * color. SPLAT stores them already activated, so only the covariance is built.
+ *
+ * @param filename Name of the file, the format is chosen from its extension.
+ * @param splats Decoded scene in the layout cv::viz3d::showSplats expects, or empty on failure.
+ */
+CV_EXPORTS_W void loadGaussianSplats(const String &filename, OutputArray splats);
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.

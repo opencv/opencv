@@ -411,6 +411,87 @@ uchar readNext<uchar>(std::ifstream &file, DataFormat format)
     return val;
 }
 
+static float readPropertyValue(std::ifstream &file, int valType, DataFormat format)
+{
+    switch (valType)
+    {
+    case CV_8U:
+        return (float)readNext<uchar>(file, format);
+    case CV_8S:
+        return (float)(schar)readNext<uchar>(file, format);
+    case CV_16U:
+        return (float)readNext<ushort>(file, format);
+    case CV_16S:
+        return (float)(short)readNext<ushort>(file, format);
+    case CV_32U:
+        return (float)readNext<uint>(file, format);
+    case CV_32S:
+        return (float)(int)readNext<uint>(file, format);
+    case CV_32F:
+        return readNext<float>(file, format);
+    case CV_64F:
+        return (float)readNext<double>(file, format);
+    default:
+        return 0.f;
+    }
+}
+
+bool PlyDecoder::readNamedProperties(const std::vector<std::string>& names, Mat& values)
+{
+    values.release();
+
+    std::ifstream file(m_filename, std::ios::binary);
+    int nTexCoords = 0;
+    if (!parseHeader(file, nTexCoords))
+        return false;
+
+    const size_t nProps = m_vertexDescription.properties.size();
+    std::vector<int> colOf(nProps, -1);
+    std::vector<bool> got(names.size(), false);
+
+    for (size_t j = 0; j < nProps; j++)
+    {
+        for (size_t k = 0; k < names.size(); k++)
+        {
+            if (m_vertexDescription.properties[j].name == names[k] && !got[k])
+            {
+                colOf[j] = (int)k;
+                got[k] = true;
+                break;
+            }
+        }
+    }
+
+    for (size_t k = 0; k < names.size(); k++)
+    {
+        if (!got[k])
+        {
+            CV_LOG_ERROR(NULL, "Vertex property " << names[k] << " is not present in the file");
+            return false;
+        }
+    }
+
+    values.create((int)m_vertexCount, (int)names.size(), CV_32F);
+    for (size_t i = 0; i < m_vertexCount; i++)
+    {
+        float* row = values.ptr<float>((int)i);
+        for (size_t j = 0; j < nProps; j++)
+        {
+            float v = readPropertyValue(file, m_vertexDescription.properties[j].valType, m_inputDataFormat);
+            if (colOf[j] >= 0)
+                row[colOf[j]] = v;
+        }
+        if (!file)
+        {
+            CV_LOG_ERROR(NULL, "PLY file ended after " << i << " of " << m_vertexCount << " vertices");
+            values.release();
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void PlyDecoder::parseBody(std::ifstream &file,
                            std::vector<Point3f>& points, std::vector<Point3f>& normals,
                            std::vector<Point3f>& rgb, std::vector<Point3f>& texCoords,

@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "viz3d_private.hpp"
 #include "grid_ticks.hpp"
+#include "../utils.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -543,6 +544,21 @@ void showPoints(const String& win_name, const String& obj_name, InputArray point
 #endif
 }
 
+void showSplats(const String& win_name, const String& obj_name, InputArray splats)
+{
+    CV_TRACE_FUNCTION();
+#ifndef HAVE_OPENGL
+    CV_UNUSED(win_name);
+    CV_UNUSED(obj_name);
+    CV_UNUSED(splats);
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
+#else
+    Window* win = getWindow(win_name);
+    win->set(obj_name, makePtr<GaussianSplats>(splats));
+    updateWindow(win_name);
+#endif
+}
+
 void showRGBD(const String& win_name, const String& obj_name, InputArray img, const Matx33f& intrinsics, float scale)
 {
     CV_TRACE_FUNCTION();
@@ -664,6 +680,7 @@ View::View()
     this->up = { 0.0f, 1.0f, 0.0f };
 
     this->aspect = 1.0f;
+    this->viewport = Size(1, 1);
     this->setPerspective(1.3f, 0.1f, 2000.0f);
     this->lookAt(this->origin, { 0.0f, 1.0f, 0.0f });
 }
@@ -675,6 +692,11 @@ void View::setAspect(float aspect_)
         this->aspect = aspect_;
         this->setPerspective(this->fov, this->z_near, this->z_far);
     }
+}
+
+void View::setViewport(Size viewport_)
+{
+    this->viewport = viewport_;
 }
 
 void View::setPerspective(float fov_, float z_near_, float z_far_)
@@ -972,9 +994,11 @@ void Window::draw()
     Rect rect = getWindowImageRect(this->name);
     float aspect = static_cast<float>(rect.width) / static_cast<float>(rect.height);
     this->view.setAspect(aspect);
+    this->view.setViewport(rect.size());
 
     ogl::enable(ogl::DEPTH_TEST);
     ogl::clearColor(this->sky_color * 255.0f);
+    ogl::clearDepth(1.0f);
 
     if (this->grid)
     {
@@ -988,7 +1012,12 @@ void Window::draw()
     }
 
     for (auto& obj : this->objects)
-        obj.second->draw(this->view, this->sun);
+        if (!obj.second->isTransparent())
+            obj.second->draw(this->view, this->sun);
+
+    for (auto& obj : this->objects)
+        if (obj.second->isTransparent())
+            obj.second->draw(this->view, this->sun);
 }
 
 void Window::onMouse(int event, int x, int y, int flags)
@@ -1532,6 +1561,253 @@ void PointCloud::setShader(ogl::Program program_)
     this->model_loc = this->program.getUniformLocation("model");
     this->view_loc = this->program.getUniformLocation("view");
     this->proj_loc = this->program.getUniformLocation("proj");
+}
+
+GaussianSplats::GaussianSplats(InputArray splats_)
+{
+    CV_Assert(splats_.channels() == 1 && splats_.dims() == 2 && splats_.size().width == splat::STRIDE);
+    CV_Assert(splats_.depth() == CV_32F);
+    CV_Assert(splats_.size().height > 0);
+
+    this->splats = splats_.getMat().clone();
+    this->count = this->splats.rows;
+
+    Mat packed(this->count * 4, 1, CV_32FC4, Scalar::all(0.0));
+    Vec4f* texel = packed.ptr<Vec4f>(0);
+    for (int i = 0; i < this->count; i++)
+    {
+        const float* s = this->splats.ptr<float>(i);
+        texel[i * 4 + 0] = Vec4f(s[0], s[1], s[2], s[splat::OFS_ALPHA]);
+        texel[i * 4 + 1] = Vec4f(s[splat::OFS_COV + 0], s[splat::OFS_COV + 1], s[splat::OFS_COV + 2], 0.0f);
+        texel[i * 4 + 2] = Vec4f(s[splat::OFS_COV + 3], s[splat::OFS_COV + 4], s[splat::OFS_COV + 5], 0.0f);
+        texel[i * 4 + 3] = Vec4f(s[splat::OFS_RGB + 0], s[splat::OFS_RGB + 1], s[splat::OFS_RGB + 2], 0.0f);
+    }
+    this->data.copyFrom(packed, ogl::Buffer::TEXTURE_BUFFER);
+    this->data_tex.create(this->data, ogl::TextureBuffer::RGBA32F);
+
+    this->order_cpu.resize(this->count);
+    for (int i = 0; i < this->count; i++)
+        this->order_cpu[i] = i;
+    this->order.copyFrom(Mat(this->count, 1, CV_32S, this->order_cpu.data()), ogl::Buffer::TEXTURE_BUFFER);
+    this->order_tex.create(this->order, ogl::TextureBuffer::R32I);
+
+    float quad_data[] = {
+        -1.0f, -1.0f,
+        +1.0f, -1.0f,
+        +1.0f, +1.0f,
+        -1.0f, +1.0f,
+    };
+    this->quad.copyFrom(Mat(4, 2, CV_32F, quad_data), ogl::Buffer::ARRAY_BUFFER);
+
+    int quad_index_data[] = { 0, 1, 2, 2, 3, 0 };
+    this->quad_indices.copyFrom(Mat(2, 3, CV_32S, quad_index_data), ogl::Buffer::ELEMENT_ARRAY_BUFFER);
+
+    this->va.create({
+        {
+            this->quad,
+            2 * sizeof(float), 0,
+            2, ogl::Attribute::FLOAT,
+            false, false,
+            0
+        }
+    });
+
+    this->sorted = false;
+    this->last_cam = Vec3f::all(0.0f);
+    this->last_model = Matx44f::eye();
+}
+
+void GaussianSplats::reorder(const Vec3f& cam)
+{
+    splat::sortByDepth(this->splats, cam, this->order_cpu);
+    this->order.copyFrom(Mat(this->count, 1, CV_32S, this->order_cpu.data()), ogl::Buffer::TEXTURE_BUFFER);
+}
+
+void GaussianSplats::draw(const View& view, const Light& light)
+{
+    CV_UNUSED(light);
+
+    Vec3f cam = view.getPosition();
+    Matx44f model = this->getModel();
+
+    if (!this->sorted || norm(cam - this->last_cam) > 1e-6 ||
+        norm(Matx44f(model - this->last_model)) > 0.0)
+    {
+        // The shader applies model, so sort against the camera in object space.
+        Matx<float, 1, 4> world(cam[0], cam[1], cam[2], 1.0f);
+        Matx<float, 1, 4> local = world * model.inv();
+
+        this->reorder(Vec3f(local(0, 0), local(0, 1), local(0, 2)));
+        this->last_cam = cam;
+        this->last_model = model;
+        this->sorted = true;
+    }
+
+    this->program.bind();
+    this->va.bind();
+
+    ogl::Program::setUniformMat4x4(this->model_loc, this->getModel());
+    ogl::Program::setUniformMat4x4(this->view_loc, view.getView());
+    ogl::Program::setUniformMat4x4(this->proj_loc, view.getProj());
+
+    Matx44f proj = view.getProj();
+    Size vp = view.getViewport();
+
+    ogl::Program::setUniformVec2(this->focal_loc, Vec2f(0.5f * vp.width * proj(0, 0),
+                                                       0.5f * vp.height * proj(1, 1)));
+    ogl::Program::setUniformVec2(this->viewport_loc, Vec2f(static_cast<float>(vp.width),
+                                                          static_cast<float>(vp.height)));
+
+    // Unit 0 is bound last so the active texture unit is left where other objects expect it.
+    this->order_tex.bind(1);
+    ogl::Program::setUniform1i(this->order_loc, 1);
+    this->data_tex.bind(0);
+    ogl::Program::setUniform1i(this->data_loc, 0);
+
+    ogl::enable(ogl::BLEND);
+    ogl::blendFunc(ogl::BLEND_SRC_ALPHA, ogl::BLEND_ONE_MINUS_SRC_ALPHA);
+    ogl::disable(ogl::CULL_FACE);
+    ogl::depthMask(false);
+
+    this->quad_indices.bind(ogl::Buffer::ELEMENT_ARRAY_BUFFER);
+    ogl::drawElementsInstanced(0, 6, ogl::UNSIGNED_INT, ogl::TRIANGLES, this->count);
+
+    ogl::depthMask(true);
+    ogl::disable(ogl::BLEND);
+}
+
+String GaussianSplats::getShaderName()
+{
+    return "splats";
+}
+
+ogl::Program GaussianSplats::buildShader()
+{
+    auto vs = ogl::Shader(R"(
+        #version 330 core
+
+        layout (location = 0) in vec2 quad;
+
+        out vec3 frag_color;
+        out vec2 frag_offset;
+        out float frag_alpha;
+
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 proj;
+        uniform vec2 focal;
+        uniform vec2 viewport;
+        uniform samplerBuffer splat_data;
+        uniform isamplerBuffer splat_order;
+
+        const float CUTOFF = 3.0;
+        const float Z_NEAR = 0.2;
+        const float LOWPASS = 0.3;
+        const float MAX_EXTENT = 0.75;
+
+        void main() {
+            int id = texelFetch(splat_order, gl_InstanceID).r;
+
+            vec4 d0 = texelFetch(splat_data, id * 4 + 0);
+            vec4 d1 = texelFetch(splat_data, id * 4 + 1);
+            vec4 d2 = texelFetch(splat_data, id * 4 + 2);
+            vec4 d3 = texelFetch(splat_data, id * 4 + 3);
+
+            mat4 mv = model * view;
+            vec4 cam = vec4(d0.xyz, 1.0) * mv;
+
+            frag_color = d3.rgb;
+            frag_alpha = d0.w;
+            frag_offset = quad * CUTOFF;
+
+            if (cam.z <= Z_NEAR) {
+                gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+                return;
+            }
+
+            mat3 sigma = mat3(d1.x, d1.y, d1.z,
+                              d1.y, d2.x, d2.y,
+                              d1.z, d2.y, d2.z);
+
+            mat3 xf = mat3(mv);
+            mat3 sigma_cam = transpose(xf) * sigma * xf;
+
+            float z2 = cam.z * cam.z;
+            mat3x2 j = mat3x2(focal.x / cam.z, 0.0,
+                              0.0, focal.y / cam.z,
+                              -focal.x * cam.x / z2, -focal.y * cam.y / z2);
+
+            mat2 cov = j * sigma_cam * transpose(j);
+
+            float det_raw = determinant(cov);
+            cov[0][0] += LOWPASS;
+            cov[1][1] += LOWPASS;
+            frag_alpha *= sqrt(max(0.0, det_raw / max(determinant(cov), 1e-9)));
+
+            float a = cov[0][0];
+            float b = cov[0][1];
+            float c = cov[1][1];
+            float mid = 0.5 * (a + c);
+            float disc = sqrt(max(0.0, mid * mid - (a * c - b * b)));
+            float l1 = mid + disc;
+            float l2 = max(mid - disc, 0.0);
+
+            float r1 = CUTOFF * sqrt(l1);
+            float r2 = CUTOFF * sqrt(l2);
+
+            if (l1 <= 0.0 || r1 > MAX_EXTENT * max(viewport.x, viewport.y)) {
+                gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+                return;
+            }
+
+            vec2 e1;
+            if (abs(b) < 1e-9)
+                e1 = (a >= c) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+            else
+                e1 = normalize(vec2(b, l1 - a));
+            vec2 e2 = vec2(-e1.y, e1.x);
+
+            vec2 offset = quad.x * r1 * e1 + quad.y * r2 * e2;
+
+            vec4 clip = cam * proj;
+            clip.xy += offset * 2.0 / viewport * clip.w;
+            gl_Position = clip;
+        }
+    )", ogl::Shader::VERTEX);
+
+    auto fs = ogl::Shader(R"(
+        #version 330 core
+
+        in vec3 frag_color;
+        in vec2 frag_offset;
+        in float frag_alpha;
+
+        out vec4 color;
+
+        // Below one 8-bit level the contribution is invisible.
+        const float MIN_ALPHA = 1.0 / 255.0;
+
+        void main() {
+            float alpha = frag_alpha * exp(-0.5 * dot(frag_offset, frag_offset));
+            if (alpha < MIN_ALPHA)
+                discard;
+            color = vec4(frag_color, alpha);
+        }
+    )", ogl::Shader::FRAGMENT);
+
+    return ogl::Program(vs, fs);
+}
+
+void GaussianSplats::setShader(ogl::Program program_)
+{
+    this->program = program_;
+    this->model_loc = this->program.getUniformLocation("model");
+    this->view_loc = this->program.getUniformLocation("view");
+    this->proj_loc = this->program.getUniformLocation("proj");
+    this->focal_loc = this->program.getUniformLocation("focal");
+    this->viewport_loc = this->program.getUniformLocation("viewport");
+    this->data_loc = this->program.getUniformLocation("splat_data");
+    this->order_loc = this->program.getUniformLocation("splat_order");
 }
 
 #endif // HAVE_OPENGL
