@@ -133,8 +133,8 @@ template<> inline int VBLAS<float>::dotD(const float* a, const float* b, int n, 
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        s0 = v_fma(v_cvt_f64(a0), v_cvt_f64(b0), s0);
-        s1 = v_fma(v_cvt_f64_high(a0), v_cvt_f64_high(b0), s1);
+        s0 = v_add(s0, v_mul(v_cvt_f64(a0), v_cvt_f64(b0)));
+        s1 = v_add(s1, v_mul(v_cvt_f64_high(a0), v_cvt_f64_high(b0)));
     }
     *result += v_reduce_sum(v_add(s0, s1));
     vx_cleanup();
@@ -156,17 +156,17 @@ template<> inline int VBLAS<float>::givensD(float* a, float* b, int n, float c, 
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = v_fma(a0, c4, v_mul(b0, s4));
-        v_float32 t1 = v_fma(a0, ns4, v_mul(b0, c4));
+        v_float32 t0 = v_add(v_mul(a0, c4), v_mul(b0, s4));
+        v_float32 t1 = v_add(v_mul(a0, ns4), v_mul(b0, c4));
         v_store(a + k, t0);
         v_store(b + k, t1);
         // accumulate squared norms in double precision
         v_float64 t0lo = v_cvt_f64(t0), t0hi = v_cvt_f64_high(t0);
         v_float64 t1lo = v_cvt_f64(t1), t1hi = v_cvt_f64_high(t1);
-        a0d = v_fma(t0lo, t0lo, a0d);
-        a1d = v_fma(t0hi, t0hi, a1d);
-        b0d = v_fma(t1lo, t1lo, b0d);
-        b1d = v_fma(t1hi, t1hi, b1d);
+        a0d = v_add(a0d, v_mul(t0lo, t0lo));
+        a1d = v_add(a1d, v_mul(t0hi, t0hi));
+        b0d = v_add(b0d, v_mul(t1lo, t1lo));
+        b1d = v_add(b1d, v_mul(t1hi, t1hi));
     }
     *na += v_reduce_sum(v_add(a0d, a1d));
     *nb += v_reduce_sum(v_add(b0d, b1d));
@@ -225,7 +225,7 @@ template<> inline int VBLAS<double>::dotD(const double* a, const double* b, int 
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        s0 = v_fma(a0, b0, s0);
+        s0 = v_add(s0, v_mul(a0, b0));
     }
     *result += v_reduce_sum(s0);
     vx_cleanup();
@@ -246,12 +246,12 @@ template<> inline int VBLAS<double>::givensD(double* a, double* b, int n, double
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = v_fma(a0, c2, v_mul(b0, s2));
-        v_float64 t1 = v_fma(a0, ns2, v_mul(b0, c2));
+        v_float64 t0 = v_add(v_mul(a0, c2), v_mul(b0, s2));
+        v_float64 t1 = v_add(v_mul(a0, ns2), v_mul(b0, c2));
         v_store(a + k, t0);
         v_store(b + k, t1);
-        nacc = v_fma(t0, t0, nacc);
-        nbcc = v_fma(t1, t1, nbcc);
+        nacc = v_add(nacc, v_mul(t0, t0));
+        nbcc = v_add(nbcc, v_mul(t1, t1));
     }
     *na += v_reduce_sum(nacc);
     *nb += v_reduce_sum(nbcc);
