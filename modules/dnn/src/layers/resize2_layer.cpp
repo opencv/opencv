@@ -1097,6 +1097,25 @@ public:
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
 
+    // CV_32S added to the default gate; only resizeNearest is a genuine int32
+    // path today (pure gather), so forward() rejects CV_32S for bilinear/cubic/
+    // antialias rather than silently routing it through the CV_32F conversion
+    // that would lose precision above float32's 24-bit mantissa.
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U ||
+                                input == CV_64S || input == CV_32S, "");
+
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
@@ -1268,8 +1287,20 @@ public:
 
         int depth = inp_.type(), orig_depth = depth;
 
+        // Nearest is a pure gather, so CV_32S is exact there; bilinear/cubic/antialias
+        // would need a fixed-point (non-float) accumulator to be genuine for CV_32S,
+        // which doesn't exist yet -- reject explicitly rather than silently falling
+        // through to the CV_32F conversion below and losing precision.
+        if (depth == CV_32S && interpolation != "nearest") {
+            CV_Error(Error::StsNotImplemented,
+                     "Resize2: CV_32S is currently only supported with nearest-neighbor "
+                     "interpolation; bilinear/cubic/antialias would need a fixed-point "
+                     "implementation to preserve int32 precision");
+        }
+
         Mat inp, out;
-        if (depth != CV_32F && depth != CV_8S && depth != CV_8U && depth != CV_16F && depth != CV_16BF) {
+        if (depth != CV_32F && depth != CV_8S && depth != CV_8U && depth != CV_16F && depth != CV_16BF &&
+            depth != CV_32S) {
             inp_.convertTo(inp, CV_32F);
             out.fit(outShape, CV_32F);
             depth = CV_32F;
@@ -1316,6 +1347,9 @@ public:
                 break;
             case CV_32F:
                 resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            case CV_32S:
+                resizeNearest<int32_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
             }
