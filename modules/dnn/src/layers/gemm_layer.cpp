@@ -253,9 +253,7 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
 
-        // CV_64F runs entirely through forward()'s separate cv::gemm-based path
-        // (forwardDouble), recomputed fresh every call. None of the packed-B /
-        // MLAS fast-path caching below is float-only-safe, so skip it here.
+        // CV_64F skips the float-only packed-B/MLAS caching below; see forwardDouble().
         if (inputs[0].depth() == CV_64F)
             return;
 
@@ -485,10 +483,7 @@ public:
         }
     }
 
-    // Writes beta*C, broadcast to (M, N), into dst. Double-precision analogue of
-    // broadcastCWtihBeta() above, recomputed on every call instead of cached -- this
-    // path skips finalize()'s packed-B/broadcast caching entirely for CV_64F (see
-    // finalize() and forwardDouble()), so there is no cache to keep in sync here.
+    // Double-precision analogue of broadcastCWtihBeta() above; not cached (see finalize()).
     static void fillBroadcastCDouble(int M, int N, const Mat& C, double beta, Mat& dst)
     {
         CV_Assert(dst.rows == M && dst.cols == N);
@@ -527,14 +522,7 @@ public:
         }
     }
 
-    // Y = alpha * A' * B' + beta * C for CV_64F, via cv::gemm's HAL-backed CV_64FC1
-    // path. Deliberately not reusing fastGemm/fastGemmBatch/MLAS above: those are
-    // float-only fast kernels (SIMD/packed), and extending them to double would mean
-    // writing a new SIMD double GEMM from scratch -- disproportionate for one dtype.
-    // ORT takes the same posture: its fast/packed kernels are float (and fp16) only,
-    // with MatMul<double>/GemmEx<double> going through the plain, unfused path.
-    // No B-packing or bias-broadcast caching here either (see finalize()) -- this is
-    // the correctness-first, unoptimized double path, not a fused fast path.
+    // CV_64F via cv::gemm, not the float-only fastGemm/MLAS kernels above.
     void forwardDouble(const std::vector<Mat>& inputs, std::vector<Mat>& outputs, LayerGemmOpMode mode)
     {
         const Mat &A = inputs[0];
@@ -551,10 +539,7 @@ public:
         int N = shape_Y[dims_Y - 1];
         const int rows = (int)(Y.total() / (size_t)N);
 
-        // A/Y reshaped to plain 2D views onto their own (contiguous) data -- no copy.
-        // B is already exactly 2D per the CV_CheckEQ in getMemoryShapes(). trans_a/
-        // trans_b are expressed via cv::gemm's own transpose flags rather than a
-        // pre-transposed/packed buffer, matching the "no packing" scope above.
+        // 2D views onto existing data, no copy; trans_a/trans_b via cv::gemm's own flags.
         Mat Aview = A.reshape(1, (int)(A.total() / (size_t)na));
         Mat Yview = Y.reshape(1, rows);
         const int flags = (trans_a ? GEMM_1_T : 0) | (trans_b ? GEMM_2_T : 0);

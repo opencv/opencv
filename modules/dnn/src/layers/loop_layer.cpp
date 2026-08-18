@@ -29,10 +29,7 @@ public:
         return false;
     }
 
-    // Control flow forwards subgraph tensors rather than computing on them, so
-    // it's native for any type; only cond (read below) needs a depth this
-    // layer itself understands, and that switch already covers every
-    // non-fp16/bf16 depth.
+    // Control flow just forwards tensors; cond() below already handles every depth.
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
                   const int requiredInternals,

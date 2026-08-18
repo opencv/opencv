@@ -46,9 +46,7 @@ public:
         return false;
     }
 
-    // Scan iterates by shape/axis alone and never inspects an element value, so
-    // it's native for any type; unlike If/Loop there's no condition tensor to
-    // read either.
+    // Scan iterates by shape/axis alone; there's no value to gate on.
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
                   const int requiredInternals,

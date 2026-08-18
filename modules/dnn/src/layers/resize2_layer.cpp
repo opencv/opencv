@@ -1097,10 +1097,7 @@ public:
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
 
-    // CV_32S added to the default gate; only resizeNearest is a genuine int32
-    // path today (pure gather), so forward() rejects CV_32S for bilinear/cubic/
-    // antialias rather than silently routing it through the CV_32F conversion
-    // that would lose precision above float32's 24-bit mantissa.
+    // Only resizeNearest has a genuine CV_32S path; other modes reject it below.
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
                   const int requiredInternals,
@@ -1287,10 +1284,7 @@ public:
 
         int depth = inp_.type(), orig_depth = depth;
 
-        // Nearest is a pure gather, so CV_32S is exact there; bilinear/cubic/antialias
-        // would need a fixed-point (non-float) accumulator to be genuine for CV_32S,
-        // which doesn't exist yet -- reject explicitly rather than silently falling
-        // through to the CV_32F conversion below and losing precision.
+        // Bilinear/cubic/antialias have no fixed-point CV_32S path yet.
         if (depth == CV_32S && interpolation != "nearest") {
             CV_Error(Error::StsNotImplemented,
                      "Resize2: CV_32S is currently only supported with nearest-neighbor "

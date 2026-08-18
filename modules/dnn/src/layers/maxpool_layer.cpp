@@ -229,9 +229,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
     });
 }
 
-// Scalar (non-SIMD) BLOCK-layout kernel for the types maxPool32f's SIMD path
-// doesn't cover. Max needs no accumulator and is exact in every type, so a
-// plain std::max reduction is already the correct, native answer here.
+// Scalar counterpart to maxPool32f's SIMD path, for the types it doesn't cover.
 template<typename _Tp>
 static void maxPoolScalarT(const void* inp_, void* out_, const ConvState& cs)
 {

@@ -120,8 +120,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return false;
     }
 
-    // No override existed before -- inherited the default gate (32F/64F/8S/8U/64S).
-    // 64F/64S were already admitted; 32S/32U/64U are the new ones here.
+    // 64F/64S were already admitted by the default gate; 32S/32U/64U are new here.
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
                   const int requiredInternals,
@@ -172,9 +171,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                    C_shape = shape(outputs[0]);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
 
-        // CV_64F/32S/64S/32U/64U run entirely through forward()'s dedicated cv::gemm /
-        // integer-accumulation paths (forwardDouble/forwardInt), recomputed fresh every
-        // call -- none of the float-only packed-B/MLAS caching below applies to them.
+        // These five types skip the float-only packed-B/MLAS caching below.
         {
             int depth0 = inputs[0].depth();
             if (depth0 == CV_64F || depth0 == CV_32S || depth0 == CV_64S || depth0 == CV_32U || depth0 == CV_64U)
@@ -345,19 +342,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         }
     }
 
-    // Y = alpha * A' * B' + beta * C for CV_64F, one cv::gemm call per batch slice.
-    // Unlike Gemm's single monolithic 2D multiply, MatMul's batches are genuinely
-    // independent matrix products (helper.batch may be > 1), so this loops over them
-    // rather than collapsing into one call. Deliberately not using fastGemmBatch/MLAS
-    // (float-only fast kernels) or the packed-B cache in finalize() (skipped for these
-    // types there) -- same posture as Gemm's forwardDouble: correctness-first, matching
-    // ORT's own plain (unfused) double path.
-    //
-    // Bias here uses the mathematically correct alpha*A@B + beta*bias formula, not
-    // necessarily bit-identical to the float path's beta handling for non-scalar bias
-    // with beta != 1: genuine ONNX MatMul never carries alpha/beta at all (those are
-    // Gemm-only attributes, reachable here only through internal fusion), so that
-    // combination is practically unreachable from any real imported graph.
+    // CV_64F: one cv::gemm call per batch slice (batches don't collapse like Gemm's).
     void forwardDouble(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
         const Mat &A = inputs[0];
@@ -403,14 +388,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         }
     }
 
-    // Y = alpha * A' * B' + beta * C for CV_32S/64S/32U/64U -- no BLAS-like routine
-    // handles integer types, so this is a direct accumulation loop using helper's own
-    // lda0/lda1/ldb0/ldb1 strides (already account for trans_a/trans_b). Accumulator
-    // is always 64-bit: a genuine widen for the 32-bit types, matching width (not
-    // narrower) for the 64-bit types -- same choice already made for CumSum/CumProd
-    // and PowerFunctor's integer Neg/Power path elsewhere in this codebase. The final
-    // narrowing cast wraps rather than saturates, matching that same precedent
-    // (ONNX integer overflow is wraparound, not clamped).
+    // No BLAS routine handles integers; accumulates in 64-bit Acc and wraps on cast.
     template<typename T>
     void forwardInt(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
@@ -433,9 +411,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const T* bptr0 = B.ptr<T>();
         T* yptr0 = Y.ptr<T>();
 
-        // Real ONNX MatMul never carries alpha/beta; only relevant if internal fusion
-        // sets them, so round to the nearest integer scale rather than reject --
-        // mirrors PowerFunctor's integerScale() gate for elementwise Neg/Power.
+        // Real ONNX MatMul never sets alpha/beta; round rather than reject if fusion does.
         const Acc alphaScale = (Acc)std::llround((double)alpha);
         const Acc betaScale  = (Acc)std::llround((double)beta);
 
