@@ -2881,6 +2881,15 @@ Net readNetFromONNX2(const String& onnxFile)
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
         //net.setTracingMode(DNN_TRACE_ALL);
+#ifdef HAVE_MIGRAPHX
+        std::ifstream migx_ifs(onnxFile.c_str(), std::ios::binary | std::ios::ate);
+        if (migx_ifs) {
+            std::streamsize migx_sz = migx_ifs.tellg();
+            migx_ifs.seekg(0, std::ios::beg);
+            net.getImpl()->onnxModelBuffer.resize((size_t)migx_sz);
+            migx_ifs.read((char*)net.getImpl()->onnxModelBuffer.data(), migx_sz);
+        }
+#endif
     }
     return net;
 }
@@ -2907,13 +2916,23 @@ Net readNetFromONNX2_ORT(const String& onnxFile)
 Net readNetFromONNX2(const char* buffer, size_t size)
 {
     ONNXImporter2 importer;
-    return importer.parseBuffer(buffer, size);
+    Net net = importer.parseBuffer(buffer, size);
+#ifdef HAVE_MIGRAPHX
+    if (net.getMainGraph())
+        net.getImpl()->onnxModelBuffer.assign((const uchar*)buffer, (const uchar*)buffer + size);
+#endif
+    return net;
 }
 
 Net readNetFromONNX2(const std::vector<uchar>& buffer)
 {
     ONNXImporter2 importer;
-    return importer.parseBuffer(buffer.data(), buffer.size());
+    Net net = importer.parseBuffer(buffer.data(), buffer.size());
+#ifdef HAVE_MIGRAPHX
+    if (net.getMainGraph())
+        net.getImpl()->onnxModelBuffer.assign(buffer.begin(), buffer.end());
+#endif
+    return net;
 }
 
 #else  // HAVE_PROTOBUF

@@ -303,6 +303,9 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 #ifdef HAVE_CUDA
             || backendId == DNN_BACKEND_CUDA
 #endif
+#ifdef HAVE_MIGRAPHX
+            || backendId == DNN_BACKEND_MIGRAPHX
+#endif
             )
         {
             if (preferableBackend != backendId) {
@@ -359,7 +362,8 @@ void Net::Impl::setPreferableTarget(int targetId)
 
     if (mainGraph)
     {
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) || defined(HAVE_MIGRAPHX)
+        // MIGraphX offload reuses the CUDA target enums (DNN_TARGET_CUDA / _FP16).
         if (targetId == DNN_TARGET_CPU || IS_DNN_CUDA_TARGET(targetId))
         {
             if (preferableTarget != targetId) {

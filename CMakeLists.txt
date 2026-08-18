@@ -434,6 +434,9 @@ OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_CANN)
+OCV_OPTION(WITH_MIGRAPHX "Include AMD MIGraphX (ROCm) DNN backend support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_MIGRAPHX)
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
@@ -790,6 +793,9 @@ if(WITH_TIMVX)
 endif()
 if(WITH_CANN)
   include(cmake/OpenCVFindCANN.cmake)
+endif()
+if(WITH_MIGRAPHX)
+  include(cmake/OpenCVFindMIGraphX.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1962,6 +1968,15 @@ if(DEFINED WITH_ONNXRUNTIME OR DEFINED HAVE_ONNXRUNTIME)
   if(HAVE_ONNXRUNTIME)
     status("    Include path:"  ONNX_INCLUDE_DIR THEN "${ONNX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" ONNX_LIBRARIES THEN "${ONNX_LIBRARIES}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_MIGRAPHX)
+  status("")
+  status("  MIGraphX:"    HAVE_MIGRAPHX THEN "YES" ELSE "NO")
+  if(HAVE_MIGRAPHX)
+    status("    Include path:"    MIGRAPHX_INCLUDE_DIRS THEN "${MIGRAPHX_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"  MIGRAPHX_LIBRARIES    THEN "${MIGRAPHX_LIBRARIES}"    ELSE "NO")
   endif()
 endif()
 
