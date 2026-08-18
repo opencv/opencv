@@ -86,7 +86,8 @@ public:
         ARRAY_BUFFER         = 0x8892, //!< The buffer will be used as a source for vertex data
         ELEMENT_ARRAY_BUFFER = 0x8893, //!< The buffer will be used for indices (in glDrawElements, for example)
         PIXEL_PACK_BUFFER    = 0x88EB, //!< The buffer will be used for reading from OpenGL textures
-        PIXEL_UNPACK_BUFFER  = 0x88EC  //!< The buffer will be used for writing to OpenGL textures
+        PIXEL_UNPACK_BUFFER  = 0x88EC, //!< The buffer will be used for writing to OpenGL textures
+        TEXTURE_BUFFER       = 0x8C2A
     };
 
     enum Access
@@ -399,6 +400,45 @@ private:
     Format format_;
 };
 
+class CV_EXPORTS TextureBuffer
+{
+public:
+    enum Format
+    {
+        NONE    = 0,
+        R32F    = 0x822E,
+        RG32F   = 0x8230,
+        RGBA32F = 0x8814,
+        R32I    = 0x8235,
+        RG32I   = 0x823B,
+        RGBA32I = 0x8D82
+    };
+
+    TextureBuffer();
+
+    TextureBuffer(const Buffer& buf, Format aformat, bool autoRelease = false);
+
+    void create(const Buffer& buf, Format aformat, bool autoRelease = false);
+
+    void release();
+
+    void setAutoRelease(bool flag);
+
+    void bind(int unit = 0) const;
+
+    Format format() const;
+    bool empty() const;
+
+    unsigned int texId() const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+    Buffer buf_;
+    Format format_;
+};
+
 /** @brief Wrapper for OpenGL Client-Side Vertex arrays.
 
 ogl::Arrays stores vertex data in ogl::Buffer objects.
@@ -695,11 +735,19 @@ public:
      */
     static void setUniformVec3(int location, Vec3f vec);
 
+    static void setUniformVec2(int location, Vec2f vec);
+
+    static void setUniformVec4(int location, Vec4f vec);
+
     /** @brief Sets a uniform matrix value.
      @param location Uniform location.
      @param mat Matrix value.
      */
     static void setUniformMat4x4(int location, Matx44f mat);
+
+    static void setUniform1f(int location, float value);
+
+    static void setUniform1i(int location, int value);
 
     //! get OpenGL object id
     unsigned int programId() const;
@@ -736,6 +784,22 @@ enum IndexType {
 //! capability
 enum Capability {
     DEPTH_TEST     = 0x0B71,
+    CULL_FACE      = 0x0B44,
+    BLEND          = 0x0BE2,
+};
+
+//! blend factor
+enum BlendFactor {
+    BLEND_ZERO                = 0,
+    BLEND_ONE                 = 1,
+    BLEND_SRC_COLOR           = 0x0300,
+    BLEND_ONE_MINUS_SRC_COLOR = 0x0301,
+    BLEND_SRC_ALPHA           = 0x0302,
+    BLEND_ONE_MINUS_SRC_ALPHA = 0x0303,
+    BLEND_DST_ALPHA           = 0x0304,
+    BLEND_ONE_MINUS_DST_ALPHA = 0x0305,
+    BLEND_DST_COLOR           = 0x0306,
+    BLEND_ONE_MINUS_DST_COLOR = 0x0307,
 };
 
 /** @brief Render OpenGL texture or primitives.
@@ -786,6 +850,26 @@ CV_EXPORTS void drawArrays(int first, int count, int mode);
 @param mode Rendering mode. See cv::ogl::RenderModes.
 */
 CV_EXPORTS void drawElements(int first, int count, int type, int mode);
+
+/** @brief Renders multiple instances of primitives from array data with index buffer set.
+@param first Byte offset of the first index in the bound element buffer.
+@param count Number of indices to draw.
+@param type Index type. See cv::ogl::IndexType.
+@param mode Rendering mode. See cv::ogl::RenderModes.
+@param instanceCount Number of instances to draw. Each instance sees its own gl_InstanceID.
+*/
+CV_EXPORTS void drawElementsInstanced(int first, int count, int type, int mode, int instanceCount);
+
+/** @brief Sets the blend function for the current target.
+@param sfactor Source blend factor. See cv::ogl::BlendFactor.
+@param dfactor Destination blend factor. See cv::ogl::BlendFactor.
+*/
+CV_EXPORTS void blendFunc(int sfactor, int dfactor);
+
+/** @brief Enables or disables writing to the depth buffer.
+@param flag If false, depth testing still happens but no depth value is written.
+*/
+CV_EXPORTS void depthMask(bool flag);
 
 /** @brief Enable server-side GL capabilities.
 @param cap The capability to enable.

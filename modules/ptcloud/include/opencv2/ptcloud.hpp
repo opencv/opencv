@@ -62,6 +62,7 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
  */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
+<<<<<<< HEAD
 /** @brief Removes statistical outliers from a point cloud.
  *
  * For each point the mean distance to its @p meanK nearest neighbors is computed. Points whose
@@ -172,6 +173,22 @@ CV_EXPORTS_W void orientedBoundingBox3D(InputArray inputCloud, OutputArray cente
  * @return Sphere radius, or 0 if the cloud is empty.
  */
 CV_EXPORTS_W double approxEnclosingSphere3D(InputArray inputCloud, OutputArray center);
+=======
+/** @brief Loads a 3D Gaussian Splatting scene from a PLY or SPLAT file.
+ *
+ * Requires a trained scene, i.e. a PLY whose vertices carry `f_dc_0..2`, `opacity`, `scale_0..2`
+ * and `rot_0..3` alongside `x`, `y`, `z`, or a SPLAT file of 32 byte records. Higher order
+ * `f_rest_*` harmonics are ignored.
+ *
+ * PLY attributes are decoded on load: scales exponentiated, opacity through a sigmoid, the
+ * quaternion normalized into a 3D covariance, and the zeroth order harmonic evaluated to an RGB
+ * color. SPLAT stores them already activated, so only the covariance is built.
+ *
+ * @param filename Name of the file, the format is chosen from its extension.
+ * @param splats Decoded scene in the layout cv::viz3d::showSplats expects, or empty on failure.
+ */
+CV_EXPORTS_W void loadGaussianSplats(const String &filename, OutputArray splats);
+>>>>>>> bb41ffb888 (Added Gaussian Splat Renderer Support)
 
 /** @brief Loads a mesh from a file.
  *

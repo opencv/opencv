@@ -26,6 +26,7 @@ public:
     View();
 
     void setAspect(float aspect);
+    void setViewport(Size viewport);
     void setPerspective(float fov, float z_near, float z_far);
 
     void rotate(float dx, float dy); // Rotates the camera using mouse input
@@ -37,6 +38,7 @@ public:
     inline float getDistance() const { return this->distance; }
     inline Matx44f getView() const { return this->view; }
     inline Matx44f getProj() const { return this->proj; }
+    inline Size getViewport() const { return this->viewport; }
 
 private:
     void lookAt(const Vec3f& point, const Vec3f& up);
@@ -45,6 +47,7 @@ private:
     float fov;
     float z_near;
     float z_far;
+    Size viewport;
 
     Matx44f proj;
     Matx44f view;
@@ -78,6 +81,9 @@ public:
     virtual String getShaderName() = 0;
     virtual ogl::Program buildShader() = 0;
     virtual void setShader(ogl::Program program) = 0;
+
+    // Alpha-blended objects must be drawn after all opaque ones. See Window::draw.
+    virtual bool isTransparent() const { return false; }
 
     inline Matx44f getModel() const { return this->model; }
 
@@ -201,6 +207,48 @@ private:
     int model_loc;
     int view_loc;
     int proj_loc;
+};
+
+// 3D Gaussian Splatting object.
+class GaussianSplats : public Object
+{
+public:
+    GaussianSplats(InputArray splats);
+
+    virtual void draw(const View& view, const Light& light) override;
+
+    virtual String getShaderName() override;
+    virtual ogl::Program buildShader() override;
+    virtual void setShader(ogl::Program program) override;
+
+    virtual bool isTransparent() const override { return true; }
+
+private:
+    void reorder(const Vec3f& cam);
+
+    ogl::Program program;
+    ogl::VertexArray va;
+    ogl::Buffer quad;
+    ogl::Buffer quad_indices;
+    ogl::Buffer data;
+    ogl::Buffer order;
+    ogl::TextureBuffer data_tex;
+    ogl::TextureBuffer order_tex;
+
+    Mat splats;
+    std::vector<int> order_cpu;
+    Vec3f last_cam;
+    Matx44f last_model;
+    bool sorted;
+    int count;
+
+    int model_loc;
+    int view_loc;
+    int proj_loc;
+    int focal_loc;
+    int viewport_loc;
+    int data_loc;
+    int order_loc;
 };
 
 }} // namespace cv::viz3d
