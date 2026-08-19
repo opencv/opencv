@@ -888,6 +888,34 @@ TEST(CharucoDetection, markerCheckRejectsWrongBoard)
     }
 }
 
+// Marker swaps must be rejected independently of the board dimensions.
+TEST(CharucoDetection, markerCheckRejectsSwappedMarkerIdsOnLargeBoard)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_5X5_1000);
+    const Size boardSize(30, 20);
+    aruco::CharucoBoard trueBoard(boardSize, 1.f, 0.6f, dict);
+    vector<vector<Point2f>> markerCorners;
+    for (const vector<Point3f>& marker : trueBoard.getObjPoints()) {
+        vector<Point2f> corners;
+        for (const Point3f& p : marker)
+            corners.emplace_back(50.f * p.x + 100.f, 50.f * p.y + 100.f);
+        markerCorners.push_back(corners);
+    }
+
+    const vector<int>& trueIds = trueBoard.getIds();
+    vector<int> wrongIds = trueIds;
+    swap(wrongIds[0], wrongIds[1]);
+    aruco::CharucoBoard wrongBoard(boardSize, 1.f, 0.6f, dict, wrongIds);
+    aruco::CharucoDetector detector(wrongBoard);
+    Mat image(1200, 1700, CV_8UC1, Scalar::all(255));
+    vector<Point2f> charucoCorners;
+    vector<int> charucoIds;
+    detector.detectBoard(image, charucoCorners, charucoIds, markerCorners, trueIds);
+
+    EXPECT_TRUE(charucoCorners.empty());
+    EXPECT_TRUE(charucoIds.empty());
+}
+
 
 typedef testing::TestWithParam<std::tuple<cv::Size, float, cv::Size, int>> CharucoBoardGenerate;
 INSTANTIATE_TEST_CASE_P(/**/, CharucoBoardGenerate, testing::Values(make_tuple(Size(7, 4), 13.f, Size(400, 300), 24),

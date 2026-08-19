@@ -132,28 +132,39 @@ struct CharucoDetector::CharucoDetectorImpl {
         if (imgPts.size() < (size_t)minMarkers * 4)
             return false;
 
-        Mat H = findHomography(objPts, imgPts, 0);
+        vector<Point2f> points = imgPts;
+        if (!charucoParameters.cameraMatrix.empty()) {
+            undistortPoints(imgPts, points, charucoParameters.cameraMatrix,
+                            charucoParameters.distCoeffs, noArray(), charucoParameters.cameraMatrix,
+                            TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 30, 1e-12));
+        }
+
+        Mat H = findHomography(objPts, points, 0);
         if (H.empty())
             return false;
         vector<Point2f> proj;
         perspectiveTransform(objPts, proj, H);
-        Point2f centroid(0.f, 0.f);
-        for (const Point2f& p : imgPts) centroid += p;
-        centroid *= 1.f / imgPts.size();
-        double err = 0.0, maxErr = 0.0, scaleSq = 0.0;
-        for (size_t i = 0; i < imgPts.size(); i++) {
-            double e = sqrt(normL2Sqr<float>(proj[i] - imgPts[i]));
-            err += e;
-            maxErr = max(maxErr, e);
-            scaleSq += normL2Sqr<float>(imgPts[i] - centroid);
+
+        double err = 0.0, maxErr = 0.0;
+        for (size_t marker = 0; marker < mIds.total(); marker++) {
+            double scale = std::numeric_limits<double>::max();
+            for (int c = 0; c < 4; c++) {
+                size_t idx = marker * 4 + c;
+                size_t nextIdx = marker * 4 + (c + 1) % 4;
+                scale = min(scale, norm(points[idx] - points[nextIdx]));
+            }
+            if (scale < 1e-6)
+                return false;
+
+            for (int c = 0; c < 4; c++) {
+                size_t idx = marker * 4 + c;
+                double e = sqrt(normL2Sqr<float>(proj[idx] - points[idx])) / scale;
+                err += e;
+                maxErr = max(maxErr, e);
+            }
         }
-        double scale = sqrt(scaleSq / imgPts.size());
-        if (scale < 1e-6)
-            return false;
-        // Both the mean error and the worst single-corner error must be small. The max-error cap
-        // stops a wrong board from passing by averaging one badly-placed marker corner away.
-        return (err / imgPts.size()) / scale <= reprojThreshold
-            && maxErr / scale <= maxReprojThreshold;
+        // Marker-relative errors do not become smaller when the board contains more markers.
+        return err / points.size() <= reprojThreshold && maxErr <= maxReprojThreshold;
     }
 
     /** Calculate the maximum window sizes for corner refinement for each charuco corner based on the distance
