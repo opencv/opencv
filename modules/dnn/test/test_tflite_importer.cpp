@@ -383,7 +383,7 @@ TEST_P(Test_TFLite, minimum)
 // A multi-output model must keep all declared outputs, not just the last operator's.
 TEST_P(Test_TFLite, multi_output_names)
 {
-    Net net = readNetFromTFLite(findDataFile("dnn/tflite/face_detection_short_range.tflite"));
+    Net net = readNetFromTFLite(findDataFile("dnn/tflite/face_detection_short_range.tflite", false));
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -446,7 +446,7 @@ static Mat decodeYoloClassic(const Mat& out, float confThr = 0.25f, float nmsThr
 
 TEST_P(Test_TFLite, yolov8n)
 {
-    Net net = readNet(findDataFile("dnn/tflite/yolov8n.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/yolov8n.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
@@ -464,7 +464,7 @@ TEST_P(Test_TFLite, yolov8n)
 
 TEST_P(Test_TFLite, yolov5nu)
 {
-    Net net = readNet(findDataFile("dnn/tflite/yolov5nu.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/yolov5nu.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
@@ -481,7 +481,7 @@ TEST_P(Test_TFLite, yolov5nu)
 
 TEST_P(Test_TFLite, yolo26n)
 {
-    Net net = readNet(findDataFile("dnn/tflite/yolo26n.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
@@ -494,7 +494,7 @@ TEST_P(Test_TFLite, yolo26n)
 
 TEST_P(Test_TFLite, yolo26n_seg)
 {
-    Net net = readNet(findDataFile("dnn/tflite/yolo26n-seg.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n-seg.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat input = blobFromImage(imread(findDataFile("dnn/street.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
@@ -515,35 +515,35 @@ TEST_P(Test_TFLite, yolo26n_seg)
 
 TEST_P(Test_TFLite, resnet18)
 {
-    Net net = readNet(findDataFile("dnn/tflite/resnet18.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/resnet18.tflite", false));
     Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
     testModel(net, "resnet18", input, 0.05, 0.2);
 }
 
 TEST_P(Test_TFLite, mobilenet_v2)
 {
-    Net net = readNet(findDataFile("dnn/tflite/mobilenet_v2.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/mobilenet_v2.tflite", false));
     Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
     testModel(net, "mobilenet_v2", input, 0.05, 0.15);
 }
 
 TEST_P(Test_TFLite, squeezenet1_1)
 {
-    Net net = readNet(findDataFile("dnn/tflite/squeezenet1_1.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/squeezenet1_1.tflite", false));
     Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
     testModel(net, "squeezenet1_1", input, 0.05, 0.15);
 }
 
 TEST_P(Test_TFLite, yunet)
 {
-    Net net = readNet(findDataFile("dnn/tflite/yunet_float32.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/yunet_float32.tflite", false));
     Mat input = blobFromImage(imread(findDataFile("cv/shared/lena.png")), 1.0 / 255, Size(160, 120), Scalar(), true, false);
     testModel(net, "yunet_float32", input, 1e-4, 1e-2);
 }
 
 TEST_P(Test_TFLite, hand_landmark)
 {
-    Net net = readNet(findDataFile("dnn/tflite/hand_landmark_lite.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/hand_landmark_lite.tflite", false));
     Mat hand = imread(findDataFile("dnn/pose.png"))(Rect(0, 138, 140, 140));
     Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false);
     testModel(net, "hand_landmark_lite", input, 1e-4, 1e-2);
@@ -551,7 +551,7 @@ TEST_P(Test_TFLite, hand_landmark)
 
 TEST_P(Test_TFLite, pose_landmark)
 {
-    Net net = readNet(findDataFile("dnn/tflite/pose_landmark_lite.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/pose_landmark_lite.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat input = blobFromImage(imread(findDataFile("dnn/pose.png")), 1.0 / 255, Size(256, 256), Scalar(), true, false);
