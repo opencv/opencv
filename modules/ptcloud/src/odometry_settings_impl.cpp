@@ -11,8 +11,8 @@ namespace cv
 class OdometrySettings::Impl
 {
 public:
-    Impl() {};
-    virtual ~Impl() {};
+    Impl() {}
+    virtual ~Impl() {}
     virtual void setCameraMatrix(InputArray val) = 0;
     virtual void getCameraMatrix(OutputArray val) const = 0;
     virtual void setIterCounts(InputArray val) = 0;
@@ -56,7 +56,7 @@ class OdometrySettingsImplCommon : public OdometrySettings::Impl
 {
 public:
     OdometrySettingsImplCommon();
-    ~OdometrySettingsImplCommon() {};
+    ~OdometrySettingsImplCommon() {}
     virtual void setCameraMatrix(InputArray val) override;
     virtual void getCameraMatrix(OutputArray val) const override;
     virtual void setIterCounts(InputArray val) override;

@@ -169,7 +169,7 @@ public:
      */
     virtual bool checkSignature(const String& signature) const;
 
-    const Animation& animation() const { return m_animation; };
+    const Animation& animation() const { return m_animation; }
 
     /**
      * @brief Create and return a new instance of the derived image decoder.
