@@ -36,6 +36,8 @@ public:
     bool offloadCopy = true;                 // Phase 1: host in/out, MIGraphX does H2D/D2H
     migraphx::program prog;
     std::vector<std::string> paramNames;     // program parameter (input) names
+    std::vector<std::vector<int> > builtShapes;  // input shapes the program was compiled for
+    bool builtFp16 = false;                  // fp16 flag the program was compiled with
 };
 
 CV__DNN_INLINE_NS_END

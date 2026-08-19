@@ -55,7 +55,6 @@ static std::string migraphxCacheFile(const uchar* onnxData, size_t onnxSize,
 #endif
     if (dir.empty() || dir == "disabled")
         return std::string();
-    utils::fs::createDirectories(dir);
 
     // Metadata that (with the model bytes) fully determines the compiled program.
     std::string meta = format("mgx=%d.%d.%d|fp16=%d|offload=%d",
@@ -220,8 +219,6 @@ bool MIGraphXNet::run(const std::vector<Mat>& inputBlobs,
 
 bool Net::Impl::finalizeMIGraphX()
 {
-    if (migraphxNet && migraphxNet->compiled)
-        return true;
     if (onnxModelBuffer.empty())
     {
         CV_LOG_ONCE_WARNING(NULL, "DNN/MIGraphX: no retained ONNX buffer; cannot offload to MIGraphX");
@@ -245,13 +242,25 @@ bool Net::Impl::finalizeMIGraphX()
         }
     }
 
-    migraphxNet = makePtr<MIGraphXNet>();
     const bool fp16 = (preferableTarget == DNN_TARGET_CUDA_FP16);
+
+    // Reuse the compiled program only when the input shapes and precision are
+    // unchanged; otherwise it was compiled for a different shape and binding a
+    // mismatched Mat would silently produce wrong output -> rebuild (a shape seen
+    // before reloads instantly from the on-disk compile cache).
+    if (migraphxNet && migraphxNet->compiled
+        && migraphxNet->builtFp16 == fp16
+        && migraphxNet->builtShapes == inShapes)
+        return true;
+
+    migraphxNet = makePtr<MIGraphXNet>();
     if (!migraphxNet->build(onnxModelBuffer.data(), onnxModelBuffer.size(), inNames, inShapes, fp16))
     {
         migraphxNet.release();
         return false;
     }
+    migraphxNet->builtShapes = inShapes;
+    migraphxNet->builtFp16 = fp16;
     return true;
 }
 

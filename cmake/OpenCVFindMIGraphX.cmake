@@ -1,4 +1,9 @@
 # Locate AMD MIGraphX (graph-compiler inference engine) for the DNN MIGraphX backend.
+# MIGraphX (ROCm) is Linux/Unix only.
+if(NOT UNIX)
+  set(HAVE_MIGRAPHX OFF)
+  return()
+endif()
 ocv_check_environment_variables(MIGRAPHX_ROOT)
 if(NOT MIGRAPHX_ROOT AND DEFINED ENV{ROCM_PATH})
   set(MIGRAPHX_ROOT "$ENV{ROCM_PATH}")
