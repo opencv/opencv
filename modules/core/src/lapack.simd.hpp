@@ -128,20 +128,12 @@ template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n,
     if( n <= 0 )
         return;
     const int vl = VTraits<v_float32>::vlanes();
-    const int half = vl / 2;
     v_float64 s0 = vx_setzero_f64(), s1 = vx_setzero_f64();
     int k = 0;
     for( ; k <= n - vl; k += vl )
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        s0 = v_add(s0, v_mul(v_cvt_f64(a0), v_cvt_f64(b0)));
-        s1 = v_add(s1, v_mul(v_cvt_f64_high(a0), v_cvt_f64_high(b0)));
-    }
-    for( ; k + half <= n; k += half )
-    {
-        v_float32 a0 = vx_load_low(a + k);
-        v_float32 b0 = vx_load_low(b + k);
         s0 = v_add(s0, v_mul(v_cvt_f64(a0), v_cvt_f64(b0)));
         s1 = v_add(s1, v_mul(v_cvt_f64_high(a0), v_cvt_f64_high(b0)));
     }
@@ -158,7 +150,6 @@ template<> inline void VBLAS<float>::givensD(float* a, float* b, int n, float c,
     if( n <= 0 )
         return;
     const int vl = VTraits<v_float32>::vlanes();
-    const int half = vl / 2;
     v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
     v_float32 ns4 = vx_setall_f32(-s);
     v_float64 a0d = vx_setzero_f64(), a1d = vx_setzero_f64();
@@ -172,21 +163,6 @@ template<> inline void VBLAS<float>::givensD(float* a, float* b, int n, float c,
         v_float32 t1 = v_add(v_mul(a0, ns4), v_mul(b0, c4));
         v_store(a + k, t0);
         v_store(b + k, t1);
-        v_float64 t0lo = v_cvt_f64(t0), t0hi = v_cvt_f64_high(t0);
-        v_float64 t1lo = v_cvt_f64(t1), t1hi = v_cvt_f64_high(t1);
-        a0d = v_add(a0d, v_mul(t0lo, t0lo));
-        a1d = v_add(a1d, v_mul(t0hi, t0hi));
-        b0d = v_add(b0d, v_mul(t1lo, t1lo));
-        b1d = v_add(b1d, v_mul(t1hi, t1hi));
-    }
-    for( ; k + half <= n; k += half )
-    {
-        v_float32 a0 = vx_load_low(a + k);
-        v_float32 b0 = vx_load_low(b + k);
-        v_float32 t0 = v_add(v_mul(a0, c4), v_mul(b0, s4));
-        v_float32 t1 = v_add(v_mul(a0, ns4), v_mul(b0, c4));
-        v_store_low(a + k, t0);
-        v_store_low(b + k, t1);
         v_float64 t0lo = v_cvt_f64(t0), t0hi = v_cvt_f64_high(t0);
         v_float64 t1lo = v_cvt_f64(t1), t1hi = v_cvt_f64_high(t1);
         a0d = v_add(a0d, v_mul(t0lo, t0lo));
@@ -213,19 +189,12 @@ template<> inline void VBLAS<double>::dotD(const double* a, const double* b, int
     if( n <= 0 )
         return;
     const int vl = VTraits<v_float64>::vlanes();
-    const int half = vl / 2;
     v_float64 s0 = vx_setzero_f64();
     int k = 0;
     for( ; k <= n - vl; k += vl )
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        s0 = v_add(s0, v_mul(a0, b0));
-    }
-    for( ; k + half <= n; k += half )
-    {
-        v_float64 a0 = vx_load_low(a + k);
-        v_float64 b0 = vx_load_low(b + k);
         s0 = v_add(s0, v_mul(a0, b0));
     }
     *result += v_reduce_sum(s0);
@@ -241,7 +210,6 @@ template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, doubl
     if( n <= 0 )
         return;
     const int vl = VTraits<v_float64>::vlanes();
-    const int half = vl / 2;
     v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
     v_float64 ns2 = vx_setall_f64(-s);
     v_float64 nacc = vx_setzero_f64(), nbcc = vx_setzero_f64();
@@ -254,17 +222,6 @@ template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, doubl
         v_float64 t1 = v_add(v_mul(a0, ns2), v_mul(b0, c2));
         v_store(a + k, t0);
         v_store(b + k, t1);
-        nacc = v_add(nacc, v_mul(t0, t0));
-        nbcc = v_add(nbcc, v_mul(t1, t1));
-    }
-    for( ; k + half <= n; k += half )
-    {
-        v_float64 a0 = vx_load_low(a + k);
-        v_float64 b0 = vx_load_low(b + k);
-        v_float64 t0 = v_add(v_mul(a0, c2), v_mul(b0, s2));
-        v_float64 t1 = v_add(v_mul(a0, ns2), v_mul(b0, c2));
-        v_store_low(a + k, t0);
-        v_store_low(b + k, t1);
         nacc = v_add(nacc, v_mul(t0, t0));
         nbcc = v_add(nbcc, v_mul(t1, t1));
     }
@@ -323,6 +280,46 @@ template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double 
 
 #endif // CV_SIMD_64F
 #endif // CV_SIMD
+
+#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n, double* result) const
+{
+    for( int k = 0; k < n; k++ )
+        *result += (double)a[k]*(double)b[k];
+}
+
+template<> inline void VBLAS<float>::givensD(float* a, float* b, int n, float c, float s,
+                                            double* na, double* nb) const
+{
+    for( int k = 0; k < n; k++ )
+    {
+        float t0 = c*a[k] + s*b[k];
+        float t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+        *na += (double)t0*t0;
+        *nb += (double)t1*t1;
+    }
+}
+
+template<> inline void VBLAS<double>::dotD(const double* a, const double* b, int n, double* result) const
+{
+    for( int k = 0; k < n; k++ )
+        *result += a[k]*b[k];
+}
+
+template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, double c, double s,
+                                             double* na, double* nb) const
+{
+    for( int k = 0; k < n; k++ )
+    {
+        double t0 = c*a[k] + s*b[k];
+        double t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+        *na += t0*t0;
+        *nb += t1*t1;
+    }
+}
+#endif
 
 template<typename _Tp> void
 JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
