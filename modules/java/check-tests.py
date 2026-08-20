@@ -127,7 +127,6 @@ class JavaParser:
             func = clsname + "--" + func[0].upper() + func[1:]
             args_str = args_str.replace("[]", "Array").replace("...", "Array ")
             args_str = re.sub(r"List<(\w+)>", r"ListOf\g<1>", args_str)
-            args_str = re.sub(r"List<(\w+)>", r"ListOf\g<1>", args_str)
             args = [a.split()[0] for a in args_str.split(",") if a]
             func_ex = func + "".join([a[0].upper() + a[1:] for a in args])
             func_loc = fname + " (line: " + str(linenum)  + ")"
