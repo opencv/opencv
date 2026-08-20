@@ -1953,8 +1953,7 @@ Mat _OutputArray::reinterpret(int mtype) const
 
 void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
 {
-    int arrsz[CV_MAX_DIM], d = arr.sizend(arrsz);
-    create(d, arrsz, mtype);
+    create(arr.shape(), mtype);
 }
 
 void _OutputArray::fit(int d, const int* sizes, int mtype, int i,
