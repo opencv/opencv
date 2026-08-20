@@ -119,13 +119,13 @@ TEST(Splat, decode_activations)
 // Sorting must run strictly far to near, which is what alpha blending requires.
 TEST(Splat, sort_far_to_near)
 {
-    Mat splats = Mat::zeros(4, splat::STRIDE, CV_32F);
+    Mat pos = Mat::zeros(4, 3, CV_32F);
     const float xs[] = { 1.f, 8.f, 4.f, 2.f };
     for (int i = 0; i < 4; i++)
-        splats.ptr<float>(i)[0] = xs[i];
+        pos.ptr<float>(i)[0] = xs[i];
 
     std::vector<int> order;
-    splat::sortByDepth(splats, Vec3f(0.f, 0.f, 0.f), order);
+    splat::sortByDepth(pos, Vec3f(0.f, 0.f, 0.f), order);
 
     ASSERT_EQ(order.size(), (size_t)4);
     EXPECT_EQ(order[0], 1);
@@ -135,8 +135,8 @@ TEST(Splat, sort_far_to_near)
 
     for (size_t i = 1; i < order.size(); i++)
     {
-        float prev = splats.ptr<float>(order[i - 1])[0];
-        float cur = splats.ptr<float>(order[i])[0];
+        float prev = pos.ptr<float>(order[i - 1])[0];
+        float cur = pos.ptr<float>(order[i])[0];
         EXPECT_GE(prev, cur);
     }
 }

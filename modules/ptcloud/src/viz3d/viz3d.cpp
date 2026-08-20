@@ -1569,14 +1569,17 @@ GaussianSplats::GaussianSplats(InputArray splats_)
     CV_Assert(splats_.depth() == CV_32F);
     CV_Assert(splats_.size().height > 0);
 
-    this->splats = splats_.getMat().clone();
-    this->count = this->splats.rows;
+    Mat src = splats_.getMat();
+    this->count = src.rows;
+
+    // Only the positions are kept on the CPU, for the depth sort.
+    this->pos = src.colRange(0, 3).clone();
 
     Mat packed(this->count * 4, 1, CV_32FC4, Scalar::all(0.0));
     Vec4f* texel = packed.ptr<Vec4f>(0);
     for (int i = 0; i < this->count; i++)
     {
-        const float* s = this->splats.ptr<float>(i);
+        const float* s = src.ptr<float>(i);
         texel[i * 4 + 0] = Vec4f(s[0], s[1], s[2], s[splat::OFS_ALPHA]);
         texel[i * 4 + 1] = Vec4f(s[splat::OFS_COV + 0], s[splat::OFS_COV + 1], s[splat::OFS_COV + 2], 0.0f);
         texel[i * 4 + 2] = Vec4f(s[splat::OFS_COV + 3], s[splat::OFS_COV + 4], s[splat::OFS_COV + 5], 0.0f);
@@ -1619,7 +1622,7 @@ GaussianSplats::GaussianSplats(InputArray splats_)
 
 void GaussianSplats::reorder(const Vec3f& cam)
 {
-    splat::sortByDepth(this->splats, cam, this->order_cpu);
+    splat::sortByDepth(this->pos, cam, this->order_cpu);
     this->order.copyFrom(Mat(this->count, 1, CV_32S, this->order_cpu.data()), ogl::Buffer::TEXTURE_BUFFER);
 }
 
@@ -1628,35 +1631,36 @@ void GaussianSplats::draw(const View& view, const Light& light)
     CV_UNUSED(light);
 
     Vec3f cam = view.getPosition();
-    Matx44f model = this->getModel();
+    Matx44f model_ = this->getModel();
 
     if (!this->sorted || norm(cam - this->last_cam) > 1e-6 ||
-        norm(Matx44f(model - this->last_model)) > 0.0)
+        norm(model_ - this->last_model) > 0.0)
     {
         // The shader applies model, so sort against the camera in object space.
         Matx<float, 1, 4> world(cam[0], cam[1], cam[2], 1.0f);
-        Matx<float, 1, 4> local = world * model.inv();
+        Matx<float, 1, 4> local = world * model_.inv();
 
         this->reorder(Vec3f(local(0, 0), local(0, 1), local(0, 2)));
         this->last_cam = cam;
-        this->last_model = model;
+        this->last_model = model_;
         this->sorted = true;
     }
 
     this->program.bind();
     this->va.bind();
 
-    ogl::Program::setUniformMat4x4(this->model_loc, this->getModel());
-    ogl::Program::setUniformMat4x4(this->view_loc, view.getView());
-    ogl::Program::setUniformMat4x4(this->proj_loc, view.getProj());
-
     Matx44f proj = view.getProj();
     Size vp = view.getViewport();
+
+    ogl::Program::setUniformMat4x4(this->model_loc, model_);
+    ogl::Program::setUniformMat4x4(this->view_loc, view.getView());
+    ogl::Program::setUniformMat4x4(this->proj_loc, proj);
 
     ogl::Program::setUniformVec2(this->focal_loc, Vec2f(0.5f * vp.width * proj(0, 0),
                                                        0.5f * vp.height * proj(1, 1)));
     ogl::Program::setUniformVec2(this->viewport_loc, Vec2f(static_cast<float>(vp.width),
                                                           static_cast<float>(vp.height)));
+    ogl::Program::setUniform1f(this->z_near_loc, view.getZNear());
 
     // Unit 0 is bound last so the active texture unit is left where other objects expect it.
     this->order_tex.bind(1);
@@ -1666,7 +1670,6 @@ void GaussianSplats::draw(const View& view, const Light& light)
 
     ogl::enable(ogl::BLEND);
     ogl::blendFunc(ogl::BLEND_SRC_ALPHA, ogl::BLEND_ONE_MINUS_SRC_ALPHA);
-    ogl::disable(ogl::CULL_FACE);
     ogl::depthMask(false);
 
     this->quad_indices.bind(ogl::Buffer::ELEMENT_ARRAY_BUFFER);
@@ -1697,11 +1700,11 @@ ogl::Program GaussianSplats::buildShader()
         uniform mat4 proj;
         uniform vec2 focal;
         uniform vec2 viewport;
+        uniform float z_near;
         uniform samplerBuffer splat_data;
         uniform isamplerBuffer splat_order;
 
         const float CUTOFF = 3.0;
-        const float Z_NEAR = 0.2;
         const float LOWPASS = 0.3;
         const float MAX_EXTENT = 0.75;
 
@@ -1720,7 +1723,7 @@ ogl::Program GaussianSplats::buildShader()
             frag_alpha = d0.w;
             frag_offset = quad * CUTOFF;
 
-            if (cam.z <= Z_NEAR) {
+            if (cam.z <= z_near) {
                 gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
                 return;
             }
@@ -1806,6 +1809,7 @@ void GaussianSplats::setShader(ogl::Program program_)
     this->proj_loc = this->program.getUniformLocation("proj");
     this->focal_loc = this->program.getUniformLocation("focal");
     this->viewport_loc = this->program.getUniformLocation("viewport");
+    this->z_near_loc = this->program.getUniformLocation("z_near");
     this->data_loc = this->program.getUniformLocation("splat_data");
     this->order_loc = this->program.getUniformLocation("splat_order");
 }

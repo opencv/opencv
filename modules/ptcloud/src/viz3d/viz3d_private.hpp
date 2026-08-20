@@ -39,6 +39,7 @@ public:
     inline Matx44f getView() const { return this->view; }
     inline Matx44f getProj() const { return this->proj; }
     inline Size getViewport() const { return this->viewport; }
+    inline float getZNear() const { return this->z_near; }
 
 private:
     void lookAt(const Vec3f& point, const Vec3f& up);
@@ -235,7 +236,7 @@ private:
     ogl::TextureBuffer data_tex;
     ogl::TextureBuffer order_tex;
 
-    Mat splats;
+    Mat pos;
     std::vector<int> order_cpu;
     Vec3f last_cam;
     Matx44f last_model;
@@ -247,6 +248,7 @@ private:
     int proj_loc;
     int focal_loc;
     int viewport_loc;
+    int z_near_loc;
     int data_loc;
     int order_loc;
 };
