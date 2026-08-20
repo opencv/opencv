@@ -297,7 +297,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         // The function is exception safe and sets the 'ok' flag to false if any exception occurs during processing.
         // The 'ok' flag is checked before and after parallel processing to determine
         // if the operation was successful or if it should fall back to a non-IPP implementation.
-        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, &ok](const cv::Range& range)
+        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, localRectInfinite, &ok](const cv::Range& range)
         {
             //CV_INSTRUMENT_REGION_IPP();
             if (!ok.load(std::memory_order_relaxed))
