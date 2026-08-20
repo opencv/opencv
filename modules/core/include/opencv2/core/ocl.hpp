@@ -374,6 +374,51 @@ CV_EXPORTS void attachContext(const String& platformName, void* platformID, void
 */
 CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
 
+/** @brief Creates a UMat backed by a Linux DMA-BUF without copying its contents.
+@note
+  The DMA-BUF is imported into the current OpenCL context through
+  `cl_khr_external_memory` and `cl_khr_external_memory_dma_buf`, then wrapped by
+  the regular OpenCV OpenCL allocator. OpenCV duplicates @p fd before import, so
+  the caller keeps ownership of the original file descriptor.
+
+  Import is intended to be performed once for each persistent DMA-BUF (for
+  example, once for every buffer in a camera ring). Reuse the returned UMat and
+  call acquireExternalMemory()/releaseExternalMemory() at ownership boundaries.
+  The returned UMat is tied to the OpenCL context/device used during import.
+
+  This API imports a linear buffer starting at DMA-BUF offset zero. Multi-plane
+  offsets, image objects, and format modifiers are outside its scope.
+
+@param fd Linux DMA-BUF file descriptor. The caller retains ownership of this
+  descriptor and may close it after this function returns successfully.
+@param size size of the DMA-BUF allocation in bytes.
+@param step number of bytes in one image row.
+@param rows number of image rows.
+@param cols number of image columns.
+@param type OpenCV matrix type.
+@return UMat backed by the imported DMA-BUF.
+ */
+CV_EXPORTS_W UMat createUMatFromDmaBuf(int fd, size_t size, size_t step,
+                                       int rows, int cols, int type);
+
+/** @brief Acquires ownership of a DMA-BUF-backed UMat for OpenCL access.
+@note
+  The external producer must finish accessing the DMA-BUF before this call.
+  The acquire command is enqueued on the current OpenCV OpenCL queue. Subsequent
+  OpenCV operations submitted to that queue execute after the acquire command.
+@param src UMat created by createUMatFromDmaBuf().
+ */
+CV_EXPORTS_W void acquireExternalMemory(const UMat& src);
+
+/** @brief Releases ownership of a DMA-BUF-backed UMat back to the external API.
+@note
+  This function waits for the current OpenCV OpenCL queue to complete the
+  release command before returning. After it returns the external producer may
+  access the DMA-BUF again.
+@param src UMat created by createUMatFromDmaBuf().
+ */
+CV_EXPORTS_W void releaseExternalMemory(const UMat& src);
+
 /** @brief Convert OpenCL image2d_t to UMat
 @note
   OpenCL `image2d_t` (cl_mem_image), should be compatible with OpenCV UMat formats. Memory content
