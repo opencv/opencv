@@ -38,7 +38,7 @@ public:
     Color(Mat colors_, const ColorSpaceBase& cs, Mat colored);
     Color(Mat colors_, const ColorSpaceBase& cs);
     Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_);
-    virtual ~Color() {};
+    virtual ~Color() {}
 
     /** @brief Change to other color space.
                  The conversion process incorporates linear transformations to speed up.

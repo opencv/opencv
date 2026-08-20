@@ -99,7 +99,7 @@ public:
     public:
         ColorCorrectionModel::Impl* ccmLoss;
         LossFunction(ColorCorrectionModel::Impl* ccm)
-            : ccmLoss(ccm) {};
+            : ccmLoss(ccm) {}
 
         /** @brief Reset dims to ccm->shape.
         */

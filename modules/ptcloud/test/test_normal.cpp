@@ -375,7 +375,7 @@ struct RenderedNormals: public ::testing::TestWithParam<std::tuple<MatDepth, Nor
             fs["testImg"] >> img;
         }
         return img;
-    };
+    }
 
     static Mat nanMask(Mat img)
     {

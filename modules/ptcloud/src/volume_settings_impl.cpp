@@ -33,8 +33,8 @@ static Vec4i calcVolumeStrides(Point3i volumeResolution, bool ZFirstMemOrder)
 class VolumeSettings::Impl
 {
 public:
-    Impl() {};
-    virtual ~Impl() {};
+    Impl() {}
+    virtual ~Impl() {}
 
     virtual void  setIntegrateWidth(int  val) = 0;
     virtual int   getIntegrateWidth() const = 0;
