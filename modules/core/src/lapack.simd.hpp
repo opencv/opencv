@@ -76,7 +76,7 @@ template<typename _Tp> static inline _Tp hypot(_Tp a, _Tp b)
 template<typename T> struct VBLAS
 {
     int dot(const T*, const T*, int, T*) const { return 0; }
-    int givens(T*, T*, int, T, T) const { return 0; }
+    void givens(T*, T*, int, T, T) const {}
     void dotD(const T*, const T*, int, double*) const {}
     void givensD(T*, T*, int, T, T, double*, double*) const {}
 };
@@ -101,24 +101,30 @@ template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, f
 }
 
 
-template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
+template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
 {
-    if( n < VTraits<v_float32>::vlanes())
-        return 0;
-    int k = 0;
+    if( n <= 0 )
+        return;
+    const int vl = VTraits<v_float32>::vlanes();
     v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
     v_float32 ns4 = vx_setall_f32(-s);
-    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
+    int k = 0;
+    for( ; k <= n - vl; k += vl )
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = v_fma(a0, c4, v_mul(b0, s4));
-        v_float32 t1 = v_fma(a0, ns4, v_mul(b0, c4));
+        v_float32 t0 = v_add(v_mul(a0, c4), v_mul(b0, s4));
+        v_float32 t1 = v_add(v_mul(a0, ns4), v_mul(b0, c4));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
+    for( ; k < n; k++ )
+    {
+        float t0 = c*a[k] + s*b[k];
+        float t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+    }
     vx_cleanup();
-    return k;
 }
 
 
@@ -260,26 +266,46 @@ template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n
 }
 
 
-template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
+template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
 {
-    int k = 0;
+    if( n <= 0 )
+        return;
+    const int vl = VTraits<v_float64>::vlanes();
     v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
     v_float64 ns2 = vx_setall_f64(-s);
-    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
+    int k = 0;
+    for( ; k <= n - vl; k += vl )
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = v_fma(a0, c2, v_mul(b0, s2));
-        v_float64 t1 = v_fma(a0, ns2, v_mul(b0, c2));
+        v_float64 t0 = v_add(v_mul(a0, c2), v_mul(b0, s2));
+        v_float64 t1 = v_add(v_mul(a0, ns2), v_mul(b0, c2));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
+    for( ; k < n; k++ )
+    {
+        double t0 = c*a[k] + s*b[k];
+        double t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+    }
     vx_cleanup();
-    return k;
 }
 
 #endif // CV_SIMD_64F
 #endif // CV_SIMD
+
+#if !CV_SIMD
+template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
+{
+    for( int k = 0; k < n; k++ )
+    {
+        float t0 = c*a[k] + s*b[k];
+        float t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+    }
+}
+#endif
 
 #if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n, double* result) const
@@ -305,6 +331,16 @@ template<> inline void VBLAS<double>::dotD(const double* a, const double* b, int
 {
     for( int k = 0; k < n; k++ )
         *result += a[k]*b[k];
+}
+
+template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
+{
+    for( int k = 0; k < n; k++ )
+    {
+        double t0 = c*a[k] + s*b[k];
+        double t1 = -s*a[k] + c*b[k];
+        a[k] = t0; b[k] = t1;
+    }
 }
 
 template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, double c, double s,
@@ -387,14 +423,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                 if( Vt )
                 {
                     _Tp *Vi = Vt + i*vstep, *Vj = Vt + j*vstep;
-                    k = vblas.givens(Vi, Vj, n, c, s);
-
-                    for( ; k < n; k++ )
-                    {
-                        _Tp t0 = c*Vi[k] + s*Vj[k];
-                        _Tp t1 = -s*Vi[k] + c*Vj[k];
-                        Vi[k] = t0; Vj[k] = t1;
-                    }
+                    vblas.givens(Vi, Vj, n, c, s);
                 }
             }
         if( !changed )
