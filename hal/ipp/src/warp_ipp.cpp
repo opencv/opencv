@@ -287,7 +287,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         ::ipp::IwiImage iwDst(IwiSize{dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), IwiBorderSize(), dst_data, IwSize(dst_step));
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue, 4});
         IwTransDirection iwTransDirection = iwTransInverse;  //fixed for IPP
-        const IppiRect localRectInfinite = {IPP_MIN_32S / 2, IPP_MIN_32S / 2, IPP_MAX_32S, IPP_MAX_32S};
+        constexpr IppiRect localRectInfinite = {IPP_MIN_32S / 2, IPP_MIN_32S / 2, IPP_MAX_32S, IPP_MAX_32S};
         if ((int)ippBorder == -1)
         {
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -297,7 +297,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         // The function is exception safe and sets the 'ok' flag to false if any exception occurs during processing.
         // The 'ok' flag is checked before and after parallel processing to determine
         // if the operation was successful or if it should fall back to a non-IPP implementation.
-        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, localRectInfinite, &ok](const cv::Range& range)
+        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, &ok](const cv::Range& range)
         {
             //CV_INSTRUMENT_REGION_IPP();
             if (!ok.load(std::memory_order_relaxed))
