@@ -45,6 +45,8 @@ int numpyTypeToCvDepth(int typenum)
     case NPY_ULONGLONG: return CV_64U;
     // 'long' is 64-bit on LP64 but 32-bit on LLP64, so decide by size, not by name.
     case NPY_ULONG:     return NPY_SIZEOF_LONG == 8 ? CV_64U : CV_32U;
+    // Map the 32-bit case: it is numpy's int32 on LLP64, and output arrays cannot be cast.
+    case NPY_LONG:      return NPY_SIZEOF_LONG == 4 ? CV_32S : -1;
     case NPY_HALF:      return CV_16F;
     case NPY_FLOAT:     return CV_32F;
     case NPY_DOUBLE:    return CV_64F;
