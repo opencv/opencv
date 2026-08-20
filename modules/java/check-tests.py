@@ -10,9 +10,9 @@ classes_ignore_list = (
 )
 
 funcs_ignore_list = (
-    '\w+--HashCode',
+    r'\w+--HashCode',
     'Mat--MatLong',
-    '\w+--Equals',
+    r'\w+--Equals',
     'Core--MinMaxLocResult',
 )
 
@@ -26,9 +26,9 @@ class JavaParser:
         self.mwhere = {}
         self.twhere = {}
         self.empty_stubs_cnt = 0
-        self.r1 = re.compile("\s*public\s+(?:static\s+)?(\w+)\(([^)]*)\)") # c-tor
-        self.r2 = re.compile("\s*(?:(?:public|static|final)\s+){1,3}\S+\s+(\w+)\(([^)]*)\)")
-        self.r3 = re.compile('\s*fail\("Not yet implemented"\);') # empty test stub
+        self.r1 = re.compile(r"\s*public\s+(?:static\s+)?(\w+)\(([^)]*)\)") # c-tor
+        self.r2 = re.compile(r"\s*(?:(?:public|static|final)\s+){1,3}\S+\s+(\w+)\(([^)]*)\)")
+        self.r3 = re.compile(r'\s*fail\("Not yet implemented"\);') # empty test stub
 
 
     def dict2set(self, d):
@@ -66,22 +66,24 @@ class JavaParser:
         if ".svn" in path:
             return
         if os.path.isfile(path):
+            if not path.endswith(".java"):
+                return
             if path.endswith("FeatureDetector.java"):
                 for prefix1 in ("", "Grid", "Pyramid", "Dynamic"):
                     for prefix2 in ("FAST", "STAR", "MSER", "ORB", "SIFT", "SURF", "GFTT", "HARRIS", "SIMPLEBLOB", "DENSE", "AKAZE", "KAZE", "BRISK", "AGAST"):
-                        parser.parse_file(path,prefix1+prefix2)
+                        self.parse_file(path,prefix1+prefix2)
             elif path.endswith("DescriptorExtractor.java"):
                 for prefix1 in ("", "Opponent"):
                     for prefix2 in ("BRIEF", "ORB", "SIFT", "SURF", "AKAZE", "KAZE", "BEBLID", "DAISY", "FREAK", "LUCID", "LATCH"):
-                        parser.parse_file(path,prefix1+prefix2)
+                        self.parse_file(path,prefix1+prefix2)
             elif path.endswith("GenericDescriptorMatcher.java"):
                 for prefix in ("OneWay", "Fern"):
-                    parser.parse_file(path,prefix)
+                    self.parse_file(path,prefix)
             elif path.endswith("DescriptorMatcher.java"):
                 for prefix in ("BruteForce", "BruteForceHamming", "BruteForceHammingLUT", "BruteForceL1", "FlannBased", "BruteForceSL2"):
-                    parser.parse_file(path,prefix)
+                    self.parse_file(path,prefix)
             else:
-                parser.parse_file(path)
+                self.parse_file(path)
         elif os.path.isdir(path):
             for x in os.listdir(path):
                 self.parse(path + "/" + x)
@@ -124,8 +126,8 @@ class JavaParser:
             func = re.sub(r"^test", "", func)
             func = clsname + "--" + func[0].upper() + func[1:]
             args_str = args_str.replace("[]", "Array").replace("...", "Array ")
-            args_str = re.sub(r"List<(\w+)>", "ListOf\g<1>", args_str)
-            args_str = re.sub(r"List<(\w+)>", "ListOf\g<1>", args_str)
+            args_str = re.sub(r"List<(\w+)>", r"ListOf\g<1>", args_str)
+            args_str = re.sub(r"List<(\w+)>", r"ListOf\g<1>", args_str)
             args = [a.split()[0] for a in args_str.split(",") if a]
             func_ex = func + "".join([a[0].upper() + a[1:] for a in args])
             func_loc = fname + " (line: " + str(linenum)  + ")"
