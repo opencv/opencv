@@ -119,7 +119,7 @@ void loadGaussianSplats(const String &filename, OutputArray splats)
         return;
     }
 
-    decoded.copyTo(splats);
+    splats.move(decoded);
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);

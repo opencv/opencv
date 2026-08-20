@@ -87,7 +87,7 @@ public:
         ELEMENT_ARRAY_BUFFER = 0x8893, //!< The buffer will be used for indices (in glDrawElements, for example)
         PIXEL_PACK_BUFFER    = 0x88EB, //!< The buffer will be used for reading from OpenGL textures
         PIXEL_UNPACK_BUFFER  = 0x88EC, //!< The buffer will be used for writing to OpenGL textures
-        TEXTURE_BUFFER       = 0x8C2A
+        TEXTURE_BUFFER       = 0x8C2A  //!< The buffer will be sampled by a shader through ogl::TextureBuffer
     };
 
     enum Access
@@ -400,35 +400,92 @@ private:
     Format format_;
 };
 
+/** @brief Smart pointer for an OpenGL buffer texture with reference counting.
+
+A buffer texture is a read-only, one-dimensional view of an ogl::Buffer that a shader samples with
+`samplerBuffer` (float formats) or `isamplerBuffer` (integer formats). Unlike ogl::Texture2D it has
+no filtering, no mipmaps and no normalized coordinates: the shader indexes it by element with
+`texelFetch`. It is the way to feed a shader more data than uniforms can hold.
+
+The object keeps a reference to the source buffer, so the buffer stays alive as long as the texture
+does. The attachment records the buffer's id at create() time, so re-creating or resizing the source
+buffer needs a matching create() call to re-attach.
+
+Requires OpenGL 3.1 or later.
+ */
 class CV_EXPORTS TextureBuffer
 {
 public:
+    /** @brief The internal format the shader sees, i.e. component count and type per element.
+    */
     enum Format
     {
         NONE    = 0,
-        R32F    = 0x822E,
-        RG32F   = 0x8230,
-        RGBA32F = 0x8814,
-        R32I    = 0x8235,
-        RG32I   = 0x823B,
-        RGBA32I = 0x8D82
+        R32F    = 0x822E, //!< 1 x 32-bit float
+        RG32F   = 0x8230, //!< 2 x 32-bit float
+        RGBA32F = 0x8814, //!< 4 x 32-bit float
+        R32I    = 0x8235, //!< 1 x 32-bit signed int
+        RG32I   = 0x823B, //!< 2 x 32-bit signed int
+        RGBA32I = 0x8D82  //!< 4 x 32-bit signed int
     };
 
+    /** @brief The constructors.
+
+    Creates an empty ogl::TextureBuffer object or attaches one to an existing buffer.
+     */
     TextureBuffer();
 
+    /** @overload
+    @param buf Source buffer, must be non-empty. Should have been created with the
+    ogl::Buffer::TEXTURE_BUFFER target.
+    @param aformat Element format. See cv::ogl::TextureBuffer::Format .
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+    */
     TextureBuffer(const Buffer& buf, Format aformat, bool autoRelease = false);
 
+    /** @brief Attaches the texture to an OpenGL buffer.
+
+    @param buf Source buffer, must be non-empty. Should have been created with the
+    ogl::Buffer::TEXTURE_BUFFER target.
+    @param aformat Element format, must not be NONE. See cv::ogl::TextureBuffer::Format .
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+
+    No data is copied - the texture reads whatever the buffer holds at draw time, so writing to the
+    buffer is enough to update what the shader samples.
+     */
     void create(const Buffer& buf, Format aformat, bool autoRelease = false);
 
+    /** @brief Detaches from the buffer and destroys the texture object if needed.
+
+    The function will call setAutoRelease(true) .
+     */
     void release();
 
+    /** @brief Sets auto release mode.
+
+    @param flag Auto release mode (if true, release will be called in object's destructor).
+
+    The lifetime of the OpenGL object is tied to the lifetime of the context, so ogl::TextureBuffer
+    doesn't destroy the OpenGL object in its destructor by default. See
+    ogl::Texture2D::setAutoRelease for the full rationale.
+     */
     void setAutoRelease(bool flag);
 
+    /** @brief Binds the texture to a texture unit for the GL_TEXTURE_BUFFER target.
+
+    @param unit Texture unit index to bind to, must be non-negative. Pass the same index to the
+    shader's sampler uniform.
+
+    Leaves that unit active, so bind the unit a caller expects to stay current last.
+     */
     void bind(int unit = 0) const;
 
+    //! element format, NONE if not attached
     Format format() const;
+    //! true if the texture is not attached to any buffer
     bool empty() const;
 
+    //! get OpenGL object id
     unsigned int texId() const;
 
     class Impl;

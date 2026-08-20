@@ -356,32 +356,35 @@ inline void decode(const Mat& raw, Mat& splats)
     CV_Assert(raw.type() == CV_32F && raw.cols == RAW_STRIDE);
 
     splats.create(raw.rows, STRIDE, CV_32F);
-    for (int i = 0; i < raw.rows; i++)
+    parallel_for_(Range(0, raw.rows), [&](const Range& range)
     {
-        const float* s = raw.ptr<float>(i);
-        float* d = splats.ptr<float>(i);
+        for (int i = range.start; i < range.end; i++)
+        {
+            const float* s = raw.ptr<float>(i);
+            float* d = splats.ptr<float>(i);
 
-        for (int k = 0; k < 3; k++)
-            d[OFS_POS + k] = s[RAW_OFS_POS + k];
+            for (int k = 0; k < 3; k++)
+                d[OFS_POS + k] = s[RAW_OFS_POS + k];
 
-        Vec3f scale(std::exp(s[RAW_OFS_SCALE + 0]),
-                    std::exp(s[RAW_OFS_SCALE + 1]),
-                    std::exp(s[RAW_OFS_SCALE + 2]));
-        Matx33f cov = covariance(scale, Vec4f(s[RAW_OFS_ROT + 0], s[RAW_OFS_ROT + 1],
-                                              s[RAW_OFS_ROT + 2], s[RAW_OFS_ROT + 3]));
+            Vec3f scale(std::exp(s[RAW_OFS_SCALE + 0]),
+                        std::exp(s[RAW_OFS_SCALE + 1]),
+                        std::exp(s[RAW_OFS_SCALE + 2]));
+            Matx33f cov = covariance(scale, Vec4f(s[RAW_OFS_ROT + 0], s[RAW_OFS_ROT + 1],
+                                                  s[RAW_OFS_ROT + 2], s[RAW_OFS_ROT + 3]));
 
-        d[OFS_COV + 0] = cov(0, 0);
-        d[OFS_COV + 1] = cov(0, 1);
-        d[OFS_COV + 2] = cov(0, 2);
-        d[OFS_COV + 3] = cov(1, 1);
-        d[OFS_COV + 4] = cov(1, 2);
-        d[OFS_COV + 5] = cov(2, 2);
+            d[OFS_COV + 0] = cov(0, 0);
+            d[OFS_COV + 1] = cov(0, 1);
+            d[OFS_COV + 2] = cov(0, 2);
+            d[OFS_COV + 3] = cov(1, 1);
+            d[OFS_COV + 4] = cov(1, 2);
+            d[OFS_COV + 5] = cov(2, 2);
 
-        for (int k = 0; k < 3; k++)
-            d[OFS_RGB + k] = shDcToColor(s[RAW_OFS_DC + k]);
+            for (int k = 0; k < 3; k++)
+                d[OFS_RGB + k] = shDcToColor(s[RAW_OFS_DC + k]);
 
-        d[OFS_ALPHA] = sigmoid(s[RAW_OFS_OPACITY]);
-    }
+            d[OFS_ALPHA] = sigmoid(s[RAW_OFS_OPACITY]);
+        }
+    });
 }
 
 // Values arrive already activated, so only the covariance is built.
@@ -390,57 +393,64 @@ inline void decodePacked(const uchar* data, int n, Mat& splats)
     CV_Assert(data != nullptr && n >= 0);
 
     splats.create(n, STRIDE, CV_32F);
-    for (int i = 0; i < n; i++)
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        const uchar* s = data + (size_t)i * PACKED_STRIDE;
-        float* d = splats.ptr<float>(i);
+        for (int i = range.start; i < range.end; i++)
+        {
+            const uchar* s = data + (size_t)i * PACKED_STRIDE;
+            float* d = splats.ptr<float>(i);
 
-        Vec3f pos, scale;
-        memcpy(pos.val, s + PACKED_OFS_POS, sizeof(pos.val));
-        memcpy(scale.val, s + PACKED_OFS_SCALE, sizeof(scale.val));
+            Vec3f pos, scale;
+            memcpy(pos.val, s + PACKED_OFS_POS, sizeof(pos.val));
+            memcpy(scale.val, s + PACKED_OFS_SCALE, sizeof(scale.val));
 
-        for (int k = 0; k < 3; k++)
-            d[OFS_POS + k] = pos[k];
+            for (int k = 0; k < 3; k++)
+                d[OFS_POS + k] = pos[k];
 
-        Vec4f rot;
-        for (int k = 0; k < 4; k++)
-            rot[k] = (s[PACKED_OFS_ROT + k] - 128.f) / 128.f;
-        if (rot.dot(rot) < 1e-12f)
-            rot = Vec4f(1.f, 0.f, 0.f, 0.f);
+            Vec4f rot;
+            for (int k = 0; k < 4; k++)
+                rot[k] = (s[PACKED_OFS_ROT + k] - 128.f) / 128.f;
+            if (rot.dot(rot) < 1e-12f)
+                rot = Vec4f(1.f, 0.f, 0.f, 0.f);
 
-        Matx33f cov = covariance(scale, rot);
+            Matx33f cov = covariance(scale, rot);
 
-        d[OFS_COV + 0] = cov(0, 0);
-        d[OFS_COV + 1] = cov(0, 1);
-        d[OFS_COV + 2] = cov(0, 2);
-        d[OFS_COV + 3] = cov(1, 1);
-        d[OFS_COV + 4] = cov(1, 2);
-        d[OFS_COV + 5] = cov(2, 2);
+            d[OFS_COV + 0] = cov(0, 0);
+            d[OFS_COV + 1] = cov(0, 1);
+            d[OFS_COV + 2] = cov(0, 2);
+            d[OFS_COV + 3] = cov(1, 1);
+            d[OFS_COV + 4] = cov(1, 2);
+            d[OFS_COV + 5] = cov(2, 2);
 
-        for (int k = 0; k < 3; k++)
-            d[OFS_RGB + k] = s[PACKED_OFS_RGBA + k] / 255.f;
+            for (int k = 0; k < 3; k++)
+                d[OFS_RGB + k] = s[PACKED_OFS_RGBA + k] / 255.f;
 
-        d[OFS_ALPHA] = s[PACKED_OFS_RGBA + 3] / 255.f;
-    }
+            d[OFS_ALPHA] = s[PACKED_OFS_RGBA + 3] / 255.f;
+        }
+    });
 }
 
-inline void sortByDepth(const Mat& splats, const Vec3f& cam, std::vector<int>& order)
+inline void sortByDepth(const Mat& pos, const Vec3f& cam, std::vector<int>& order)
 {
-    CV_Assert(splats.type() == CV_32F && splats.cols == STRIDE);
+    CV_Assert(pos.type() == CV_32F && pos.cols == 3);
 
-    const int n = splats.rows;
-    std::vector<float> key(n);
-    order.resize(n);
-    for (int i = 0; i < n; i++)
+    const int n = pos.rows;
+    Mat key(1, n, CV_32F);
+    float* k = key.ptr<float>();
+
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        const float* p = splats.ptr<float>(i);
-        Vec3f d(p[0] - cam[0], p[1] - cam[1], p[2] - cam[2]);
-        key[i] = d.dot(d);
-        order[i] = i;
-    }
+        for (int i = range.start; i < range.end; i++)
+        {
+            const float* p = pos.ptr<float>(i);
+            Vec3f d(p[0] - cam[0], p[1] - cam[1], p[2] - cam[2]);
+            k[i] = d.dot(d);
+        }
+    });
 
-    std::sort(order.begin(), order.end(),
-              [&key](int a, int b) { return key[a] > key[b]; });
+    order.resize(n);
+    Mat idx(1, n, CV_32S, order.data());
+    sortIdx(key, idx, SORT_EVERY_ROW | SORT_DESCENDING);
 }
 
 } // namespace splat
