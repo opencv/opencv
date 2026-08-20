@@ -230,7 +230,7 @@ public:
 private:
     /** Defines the comparator on score and index
      */
-    typedef std::pair<float, unsigned int> ScoreIndexPair;
+    typedef std::pair<DistanceType, unsigned int> ScoreIndexPair;
     struct SortScoreIndexPairOnSecond
     {
         bool operator()(const ScoreIndexPair& left, const ScoreIndexPair& right) const
@@ -271,7 +271,7 @@ private:
         static std::vector<ScoreIndexPair> score_index_heap;
 
         if (do_k) {
-            unsigned int worst_score = std::numeric_limits<unsigned int>::max();
+            DistanceType worst_score = std::numeric_limits<DistanceType>::max();
             typename std::vector<lsh::LshTable<ElementType> >::const_iterator table = tables_.begin();
             typename std::vector<lsh::LshTable<ElementType> >::const_iterator table_end = tables_.end();
             for (; table != table_end; ++table) {
