@@ -1,7 +1,8 @@
 # Locate AMD MIGraphX (graph-compiler inference engine) for the DNN MIGraphX backend.
-# MIGraphX (ROCm) is Linux/Unix only.
+# Supported system: UNIX (ROCm/MIGraphX is Linux-only).
 if(NOT UNIX)
   set(HAVE_MIGRAPHX OFF)
+  message(WARNING "MIGraphX: ROCm/MIGraphX supports unix but not ${CMAKE_SYSTEM_NAME}. Turning off HAVE_MIGRAPHX")
   return()
 endif()
 ocv_check_environment_variables(MIGRAPHX_ROOT)
