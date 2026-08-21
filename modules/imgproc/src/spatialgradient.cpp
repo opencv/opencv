@@ -116,7 +116,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     // Prepare InputArray src
     Mat src = _src.getMat();
     CV_Assert( !src.empty() );
-    CV_Assert( ksize == 3 || ksize == 5 );
+    CV_Assert( ksize == -1 || ksize == 3 || ksize == 5 || ksize == 7 );
     CV_Assert( ddepth == CV_16S || ddepth == CV_32F );
 
     // Fused single-pass 3x3 Sobel fast path (existing vectorized kernel): 8-bit source,

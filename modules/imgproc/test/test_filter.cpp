@@ -1957,7 +1957,6 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
 
     // invalid aperture sizes must be rejected
     Mat src(16, 16, CV_8UC1), dx, dy;
-    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 7));
     EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 1));
 }
 

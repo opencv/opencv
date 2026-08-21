@@ -1831,7 +1831,8 @@ paths for CV_32F output and @p ksize = 5 are added in a follow-up change.
             accepted via the fallback).
 @param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
 @param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
-@param ksize size of the Sobel kernel; must be 3 or 5.
+@param ksize size of the Sobel kernel; fused fast paths require 3 (5 uses the Sobel fallback).
+            Also accepts -1 (Scharr) and 7 for Sobel-compatible callers such as #HoughCircles.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 @param ddepth output image depth; CV_16S or CV_32F.
 @param scale optional scale factor applied to the computed derivatives.
