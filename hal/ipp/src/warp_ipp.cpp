@@ -287,7 +287,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         ::ipp::IwiImage iwDst(IwiSize{dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), IwiBorderSize(), dst_data, IwSize(dst_step));
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue, 4});
         IwTransDirection iwTransDirection = iwTransInverse;  //fixed for IPP
-        constexpr IppiRect localRectInfinite = {IPP_MIN_32S / 2, IPP_MIN_32S / 2, IPP_MAX_32S, IPP_MAX_32S};
+        const IppiRect localRectInfinite = {IPP_MIN_32S / 2, IPP_MIN_32S / 2, IPP_MAX_32S, IPP_MAX_32S};
         if ((int)ippBorder == -1)
         {
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
