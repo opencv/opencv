@@ -4275,4 +4275,12 @@ TEST(Core_Arithm, DISABLED_mul_overflow_28557)
     }
 }
 
+
+TEST(Core_Arithm, min_empty)
+{
+  cv::Mat A, B, C;
+  cv::max(A,B,C);
+  EXPECT_TRUE(C.empty());
+}
+
 }} // namespace
