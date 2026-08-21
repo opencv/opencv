@@ -37,6 +37,74 @@ TEST(Core_SaturateCast, NegativeNotClipped)
     ASSERT_EQ(0xffffffff, val);
 }
 
+// See https://github.com/opencv/opencv/issues/29736
+static int borderReflectReference(int p, int len, int borderType)
+{
+    const int delta = borderType == BORDER_REFLECT_101;
+    if( len == 1 )
+        return 0;
+    while( p < 0 || p >= len )
+    {
+        if( p < 0 )
+            p = -p - 1 + delta;
+        else
+            p = len - 1 - (p - len) - delta;
+    }
+    return p;
+}
+
+TEST(Core_BorderInterpolate, ReflectCompatibility)
+{
+    const int borderTypes[] = { BORDER_REFLECT, BORDER_REFLECT_101 };
+    const int lengths[] = { 1, 2, 3, 5, 17 };
+    for( size_t i = 0; i < sizeof(borderTypes) / sizeof(borderTypes[0]); i++ )
+    {
+        for( size_t j = 0; j < sizeof(lengths) / sizeof(lengths[0]); j++ )
+        {
+            for( int p = -1000; p <= 1000; p++ )
+            {
+                EXPECT_EQ(borderReflectReference(p, lengths[j], borderTypes[i]),
+                          cv::borderInterpolate(p, lengths[j], borderTypes[i]))
+                    << "p=" << p << ", len=" << lengths[j]
+                    << ", borderType=" << borderTypes[i];
+            }
+        }
+    }
+}
+
+TEST(Core_BorderInterpolate, ReflectExtremeCoordinates)
+{
+    struct TestCase
+    {
+        int p;
+        int len;
+        int borderType;
+        int expected;
+    };
+    const TestCase cases[] = {
+        { INT_MIN, 2, BORDER_REFLECT, 0 },
+        { INT_MAX, 2, BORDER_REFLECT, 0 },
+        { INT_MIN, 3, BORDER_REFLECT, 1 },
+        { INT_MAX, 3, BORDER_REFLECT, 1 },
+        { INT_MIN, INT_MAX, BORDER_REFLECT, INT_MAX - 1 },
+        { INT_MAX, INT_MAX, BORDER_REFLECT, INT_MAX - 1 },
+        { INT_MIN, 2, BORDER_REFLECT_101, 0 },
+        { INT_MAX, 2, BORDER_REFLECT_101, 1 },
+        { INT_MIN, 3, BORDER_REFLECT_101, 0 },
+        { INT_MAX, 3, BORDER_REFLECT_101, 1 },
+        { INT_MIN, INT_MAX, BORDER_REFLECT_101, INT_MAX - 3 },
+        { INT_MAX, INT_MAX, BORDER_REFLECT_101, INT_MAX - 2 },
+    };
+
+    for( size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++ )
+    {
+        EXPECT_EQ(cases[i].expected,
+                  cv::borderInterpolate(cases[i].p, cases[i].len, cases[i].borderType))
+            << "p=" << cases[i].p << ", len=" << cases[i].len
+            << ", borderType=" << cases[i].borderType;
+    }
+}
+
 template<typename T, typename U>
 static double maxAbsDiff(const T &t, const U &u)
 {
