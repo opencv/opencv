@@ -898,6 +898,20 @@ TEST(Imgproc_Warp, multichannel)
 }
 
 
+TEST(Imgproc_Warp, perspective_transparent_border)
+{
+    const Mat src(3, 3, CV_8UC1, Scalar::all(7));
+    Mat dst(5, 5, CV_8UC1, Scalar::all(42));
+    const Mat transform = Mat::eye(3, 3, CV_64F);
+
+    warpPerspective(src, dst, transform, dst.size(), INTER_NEAREST, BORDER_TRANSPARENT);
+
+    Mat expected(5, 5, CV_8UC1, Scalar::all(42));
+    src.copyTo(expected(Rect(0, 0, src.cols, src.rows)));
+    EXPECT_EQ(0.0, cvtest::norm(dst, expected, NORM_INF));
+}
+
+
 TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
 {
     const Size imgSize(8192, 8);
