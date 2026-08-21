@@ -28,6 +28,7 @@ namespace dnn {
 //   out_t = scale * (q_t . S)
 // GQA/MQA: q has q_num_heads, the state has kv_num_heads; the state is shared across
 // the q_num_heads / kv_num_heads queries in each group.
+// chunk_size is a prefill tuning hint only; ignored.
 
 class LinearAttentionLayerImpl CV_FINAL : public LinearAttentionLayer
 {
@@ -38,8 +39,12 @@ public:
         q_num_heads  = params.get<int>("q_num_heads", 0);
         kv_num_heads = params.get<int>("kv_num_heads", 0);
         scale        = params.get<float>("scale", 0.f);
-        has_scale    = params.has("scale");
+        // Spec: scale 0.0 means "derive 1/sqrt(d_k)", so test the value, not presence.
+        has_scale    = (scale != 0.f);
         update_rule  = params.get<std::string>("update_rule", "gated_delta");
+        CV_Check(update_rule, update_rule == "linear" || update_rule == "gated" ||
+                              update_rule == "delta"  || update_rule == "gated_delta",
+                 "LinearAttention: unknown update_rule");
         CV_CheckGT(q_num_heads, 0, "LinearAttention: q_num_heads is required");
         CV_CheckGT(kv_num_heads, 0, "LinearAttention: kv_num_heads is required");
         CV_CheckEQ(q_num_heads % kv_num_heads, 0, "LinearAttention: q_num_heads must be divisible by kv_num_heads");

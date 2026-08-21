@@ -2922,11 +2922,12 @@ void ONNXImporter2::parseFlexAttention(LayerParams& params, const opencv_onnx::N
     const opencv_onnx::GraphProto* probMod = nullptr;
     for (int i = 0; i < node_proto.attribute_size(); i++) {
         const opencv_onnx::AttributeProto& a = node_proto.attribute(i);
+        // Only the spec-default softmax precision is implemented.
+        if (a.name() == "softmax_precision")
+            CV_Error(Error::StsNotImplemented, "ONNXImporter2/parseFlexAttention: explicit softmax_precision is not supported");
         if (!a.has_g()) continue;
         if (a.name() == "score_mod") scoreMod = &a.g();
         else if (a.name() == "prob_mod") probMod = &a.g();
-        else if (a.name() == "mask_mod")
-            CV_Error(Error::StsNotImplemented, "ONNXImporter2/parseFlexAttention: mask_mod is not supported");
     }
 
     // No sub-graphs: a single fused FlexAttention layer computes Q,K,V -> Y.

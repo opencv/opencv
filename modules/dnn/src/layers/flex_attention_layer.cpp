@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/softmax.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <cmath>
@@ -17,8 +18,8 @@ namespace dnn {
 /*
     Implementation of FlexAttention (domain ai.onnx.preview, opset 1).
     Spec: https://github.com/onnx/onnx/blob/main/docs/Operators-preview.md#aionnxpreviewFlexAttention
-    Supported: score_mod / prob_mod sub-graphs (inlined by the importer); mask_mod is
-    rejected with StsNotImplemented.
+    Supported: score_mod / prob_mod sub-graphs (inlined by the importer).
+    An explicit softmax_precision is rejected; only the spec default is implemented.
 */
 // Scaled dot-product attention with GQA and optional score_mod / prob_mod
 // sub-graphs that rewrite the whole [B, H, L, S] score / probability tensor:
@@ -46,48 +47,64 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE { return backendId == DNN_BACKEND_OPENCV; }
 
-    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int /*ri*/,
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
                   std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
     {
+        CV_CheckGE(inputs.size(), (size_t)2, "FlexAttention needs at least 2 inputs");
         CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F || inputs[0] == CV_16F,
                      "FlexAttention: only FP32/FP64/FP16 are supported");
         outputs.assign(requiredOutputs, inputs[0]);
-        internals.clear();
+        internals.assign(requiredInternals, CV_32F);   // scores buffer is always fp32
     }
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs, const int /*ro*/,
-                         std::vector<MatShape>& outputs, std::vector<MatShape>& /*internals*/) const CV_OVERRIDE
+                         std::vector<MatShape>& outputs, std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs[0].dims, 4, "FlexAttention: inputs must be 4D [batch, heads, seq, head_size]");
         const int B = inputs[0][0], Hq = inputs[0][1], L = inputs[0][2];
+        internals.clear();
         if (stage == "qk")            // Q[B,Hq,L,D], K[B,Hkv,S,D] -> scores[B,Hq,L,S]
             outputs.assign(1, MatShape{B, Hq, L, inputs[1][2]});
         else if (stage == "av")       // probs[B,Hq,L,S], V[B,Hkv,S,Dv] -> Y[B,Hq,L,Dv]
             outputs.assign(1, MatShape{B, Hq, L, inputs[1][3]});
         else                          // Q,K,V -> Y[B,Hq,L,Dv]
+        {
             outputs.assign(1, MatShape{B, Hq, L, inputs[2][3]});
+            // scores buffer, pooled across forward(); the fp64 path uses its own scratch.
+            internals.assign(1, MatShape{B, Hq, L, inputs[1][2]});
+        }
         return false;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays /*internals*/) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        std::vector<Mat> inputs, outputs;
+        std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         if (inputs[0].depth() == CV_64F)
-            run<double>(inputs, outputs, false);        // scalar path (fastGemmBatch is float-only)
-        else if (inputs[0].depth() == CV_16F)
-            runFloat(inputs, outputs, true);
+            run<double>(inputs, outputs);               // scalar path (fastGemmBatch is float-only)
         else
-            runFloat(inputs, outputs, false);
+            runFloat(inputs, outputs, internals, inputs[0].depth() == CV_16F);
+    }
+
+    int64 getFLOPS(const std::vector<MatShape>& inputs, const std::vector<MatShape>& /*outputs*/) const CV_OVERRIDE
+    {
+        const int64 B = inputs[0][0], Hq = inputs[0][1], L = inputs[0][2];
+        if (stage == "qk")            // Q[B,Hq,L,D] x K[B,Hkv,S,D]^T
+            return CV_BIG_INT(2) * B * Hq * L * inputs[1][2] * inputs[0][3];
+        if (stage == "av")            // P[B,Hq,L,S] x V[B,Hkv,S,Dv]
+            return CV_BIG_INT(2) * B * Hq * L * inputs[0][3] * inputs[1][3];
+        const int64 S = inputs[1][2], D = inputs[0][3], Dv = inputs[2][3];
+        return CV_BIG_INT(2) * B * Hq * L * S * (D + Dv) + 4 * B * Hq * L * S;   // + softmax
     }
 
 private:
     // fp32/fp16 path: batched GEMM via fastGemmBatch (MLAS-accelerated when built with
     // HAVE_MLAS). fp16 is computed in fp32. K/V are shared across each GQA group through the
     // per-head offset arithmetic (n -> n/group), matching the ONNX Attention layer.
-    void runFloat(std::vector<Mat>& rawIn, std::vector<Mat>& rawOut, bool fp16)
+    void runFloat(std::vector<Mat>& rawIn, std::vector<Mat>& rawOut, std::vector<Mat>& internals, bool fp16)
     {
         std::vector<Mat> in, out;
         if (fp16)
@@ -106,7 +123,10 @@ private:
         else if (stage == "av")
             avGemm(I[0], I[1], O[0]);
         else
-            fullFloat(I[0], I[1], I[2], O[0]);
+        {
+            CV_CheckEQ(internals.size(), (size_t)1, "FlexAttention: missing scores buffer");
+            fullFloat(I[0], I[1], I[2], O[0], internals[0]);
+        }
 
         if (fp16) O[0].convertTo(rawOut[0], CV_16F);
     }
@@ -117,6 +137,8 @@ private:
         const int B = Q.size[0], Hq = Q.size[1], L = Q.size[2], D = Q.size[3];
         const int Hkv = K.size[1], Skv = K.size[2], group = Hq / Hkv;
         const float scl = has_scale ? scale : (float)(1.0 / std::sqrt((double)D));
+        // offset tables assume fully packed tensors
+        CV_Assert(Q.isContinuous() && K.isContinuous() && S.isContinuous());
 
         const size_t batch = (size_t)B * Hq;
         std::vector<size_t> qo(batch), ko(batch), so(batch);
@@ -138,6 +160,7 @@ private:
     {
         const int B = P.size[0], Hq = P.size[1], L = P.size[2], Skv = P.size[3];
         const int Hkv = V.size[1], Dv = V.size[3], group = Hq / Hkv;
+        CV_Assert(P.isContinuous() && V.isContinuous() && Y.isContinuous());
 
         const size_t batch = (size_t)B * Hq;
         std::vector<size_t> po(batch), vo(batch), yo(batch);
@@ -154,58 +177,23 @@ private:
                       0.f, Y.ptr<float>(), Dv, opt);
     }
 
-    void fullFloat(const Mat& Q, const Mat& K, const Mat& V, Mat& Y)
+    void fullFloat(const Mat& Q, const Mat& K, const Mat& V, Mat& Y, Mat& scores)
     {
-        const int B = Q.size[0], Hq = Q.size[1], L = Q.size[2], Skv = K.size[2];
-        int ssz[4] = {B, Hq, L, Skv};
-        Mat scores(4, ssz, CV_32F);
         qkGemm(Q, K, scores);
-        softmaxLastDim(scores, (int)((size_t)B * Hq * L), Skv);
+        softmax(scores, scores, 3);   // in-place, last axis
         avGemm(scores, V, Y);
-    }
-
-    static void softmaxLastDim(Mat& S, int rows, int cols)
-    {
-        float* base = S.ptr<float>();
-        parallel_for_(Range(0, rows), [&](const Range& r) {
-            for (int i = r.start; i < r.end; ++i)
-            {
-                float* row = base + (size_t)i * cols;
-                float mx = row[0];
-                for (int j = 1; j < cols; ++j) mx = std::max(mx, row[j]);
-                float sum = 0.f;
-                for (int j = 0; j < cols; ++j) { const float e = std::exp(row[j] - mx); row[j] = e; sum += e; }
-                const float inv = sum > 0.f ? 1.f / sum : 0.f;
-                for (int j = 0; j < cols; ++j) row[j] *= inv;
-            }
-        });
     }
 
     // ---- CV_64F reference path (scalar templates; fastGemmBatch is float-only) ----
     template<typename T>
-    void run(std::vector<Mat>& rawIn, std::vector<Mat>& rawOut, bool fp16)
+    void run(std::vector<Mat>& I, std::vector<Mat>& O)
     {
-        // fp16 is computed in fp32 with conversion in/out.
-        std::vector<Mat> in, out;
-        if (fp16)
-        {
-            in.resize(rawIn.size());
-            for (size_t i = 0; i < rawIn.size(); ++i)
-                if (!rawIn[i].empty()) rawIn[i].convertTo(in[i], CV_32F);
-            out.resize(rawOut.size());
-            out[0].create(rawOut[0].dims, rawOut[0].size.p, CV_32F);
-        }
-        std::vector<Mat>& I = fp16 ? in : rawIn;
-        std::vector<Mat>& O = fp16 ? out : rawOut;
-
         if (stage == "qk")
             qk<T>(I[0], I[1], O[0]);
         else if (stage == "av")
             av<T>(I[0], I[1], O[0]);
         else
             full<T>(I[0], I[1], I[2], O[0]);
-
-        if (fp16) O[0].convertTo(rawOut[0], CV_16F);
     }
 
     // scores[b,n,l,s] = scale * sum_d Q[b,n,l,d] * K[b, n/group, s, d]
