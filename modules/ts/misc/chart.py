@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-r""" OpenCV performance test results charts generator.
+""" OpenCV performance test results charts generator.
 
 This script formats results of a performance test as a table or a series of tables according to test
 parameters.
