@@ -160,9 +160,11 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
                     // bilinearly interpolate depth at projected
                     {
                         const v_float32x4& pt = projected;
-                        // check coords >= 0 and < imgSize
+                        // check coords >= 0 and < imgSize; NaN (e.g. from an unstable pose)
+                        // compares false against both bounds and must be rejected explicitly
                         v_uint32x4 limits = v_or(v_reinterpret_as_u32(v_lt(pt, v_setzero_f32())),
                             v_reinterpret_as_u32(v_ge(pt, upLimits)));
+                        limits = v_or(limits, v_reinterpret_as_u32(v_ne(pt, pt)));
                         limits = v_or(limits, v_rotate_right<1>(limits));
                         if (v_get0(limits))
                             continue;

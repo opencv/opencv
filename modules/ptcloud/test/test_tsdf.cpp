@@ -1409,5 +1409,43 @@ INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest,
         ::testing::Values(VolumeTypeEnum(VolumeType::HashTSDF),
                           VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
+
+// A near-singular cameraPose makes Matx44f::inv() produce NaN entries. Those NaNs used to
+// bypass the SIMD bounds check in integrateTsdfVolumeUnit() (NaN compares false against both
+// bounds), reaching v_load_low() with an out-of-range index.
+TEST(Volume_TSDF, integrateSingularPoseNoOOBRead)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+
+    VolumeSettings vs(VolumeType::TSDF);
+    vs.setVolumeResolution(Vec3i(128, 128, 128));
+    vs.setVoxelSize(0.5f);
+    vs.setTsdfTruncateDistance(0.001f);
+    vs.setDepthFactor(1.0f);
+    vs.setCameraIntegrateIntrinsics(Matx33f(2.0793828200968182e-21f, 0.0f, 0.0f,
+                                             0.0f, 2.0793828200968182e-21f, 2.079376761645066e-21f,
+                                             0.0f, 0.0f, 1.0f));
+    vs.setIntegrateWidth(256);
+    vs.setIntegrateHeight(256);
+
+    Volume volume(VolumeType::TSDF, vs);
+
+    Mat depth(256, 256, CV_32F, Scalar(2.0f));
+    Matx44f cameraPose(
+        2.370550395715484e-21f, 0.0f, 2.0793955428454976e-21f, 2.0793828200968182e-21f,
+        -2.3058509806729953e+18f, 2.079376761645066e-21f, 2.673673266036358e-39f, 2.0778708324878865e-21f,
+        2.3573155059146355e-21f, 48.23234939575195f, 4.336825233554269e-19f, -2.3078916742541476e+18f,
+        2.3510601678662556e-38f, -3.040599552058244e+27f, -9.17830472262132e+27f, 0.0f);
+
+    ASSERT_NO_FATAL_FAILURE(volume.integrate(depth, cameraPose));
+
+    // Every projected pixel here is NaN, so none should be treated as a valid depth sample;
+    // the volume must come out of integrate() with no voxels touched.
+    Mat points, normals;
+    volume.fetchPointsNormals(points, normals);
+    ASSERT_EQ(points.total(), 0u);
+}
+
 }
 }  // namespace
