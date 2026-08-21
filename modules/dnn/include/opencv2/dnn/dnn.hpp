@@ -2057,7 +2057,7 @@ enum TokenizerModelType
 {
     DNN_TOKENIZER_AUTO,         //!< Auto-detect model family from tokenizer.
     DNN_TOKENIZER_BPE,              //!< Byte Pair Encoding (BPE) family.
-    DNN_TOKENIZER_SENTENCEPIECE,    //!< SentencePiece-derived byte-fallback BPE
+    DNN_TOKENIZER_SENTENCEPIECE,    //!< SentencePiece-derived byte-fallback BPE (also config.json method "Gemma")
     DNN_TOKENIZER_UNIGRAM,          //!< Unigram language model.
     DNN_TOKENIZER_WORDPIECE         //!< WordPiece (BERT-style).
 };

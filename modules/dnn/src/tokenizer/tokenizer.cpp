@@ -25,8 +25,10 @@ static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
 
 static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs, const std::string& dir);
 
-// Strips oversized "precompiled_charsmap" field (overflows FileStorage's
-// JSON parser) before parsing; outCharsmap optionally receives it.
+// "precompiled_charsmap" carries a base64 SentencePiece normalizer blob that
+// can run to several MB; FileStorage's JSON parser overflows on a field that
+// large, so it is located and erased from the raw text before FileStorage
+// ever sees it. outCharsmap optionally receives the stripped value.
 static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
     std::string* outCharsmap = nullptr)
 {
@@ -294,30 +296,10 @@ void WordPieceTokenizerImpl::encodeSegment(const std::string& text, std::vector<
         encodeNormalized(text, ids);
         return;
     }
-    size_t chunkStart = 0;
-    size_t pos = 0;
-    while (pos < text.size()) {
-        std::string matched;
-        int matchedId = -1;
-        for (const auto& kv : specialToId_) {
-            const std::string& sp = kv.first;
-            if (sp.empty()) continue;
-            if (pos + sp.size() > text.size()) continue;
-            if (text.compare(pos, sp.size(), sp) != 0) continue;
-            if (sp.size() > matched.size()) { matched = sp; matchedId = kv.second; }
-        }
-        if (matchedId >= 0) {
-            if (pos > chunkStart)
-                encodeNormalized(text.substr(chunkStart, pos - chunkStart), ids);
-            ids.push_back(matchedId);
-            pos += matched.size();
-            chunkStart = pos;
-        } else {
-            ++pos;
-        }
-    }
-    if (chunkStart < text.size())
-        encodeNormalized(text.substr(chunkStart), ids);
+    splitOnSpecialTokens(text, specialToId_,
+        [](const std::string&) { return true; },
+        [&](const std::string& literal) { encodeNormalized(literal, ids); },
+        [&](int id) { ids.push_back(id); });
 }
 
 std::vector<int> WordPieceTokenizerImpl::encode(const std::string& text) {
@@ -691,7 +673,7 @@ static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs, con
         cv::read(normNode["handle_chinese_chars"], handleChineseChars, handleChineseChars);
         cv::read(normNode["lowercase"], lowercase, lowercase);
         cv::FileNode stripAccentsNode = normNode["strip_accents"];
-        if (!stripAccentsNode.empty())
+        if (!stripAccentsNode.empty() && !stripAccentsNode.isNone())
             stripAccentsNode >> stripAccents;
         else
             stripAccents = lowercase;
@@ -886,17 +868,33 @@ Tokenizer Tokenizer::load(const std::string& modelConfig, TokenizerModelType mod
     dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
 
     std::string methodType = "BPE";
-    if (!cfg["method"].empty())
-        cfg["method"] >> methodType;
+    cv::FileNode methodNode = cfg["method"];
+    bool hasMethod = !methodNode.empty() && !methodNode.isNone();
+    if (hasMethod)
+        methodNode >> methodType;
+    // Gemma is byte-fallback BPE under the hood, hence SentencePiece here too.
+    static const std::pair<const char*, TokenizerModelType> kFamilies[] = {
+        { "BPE",           DNN_TOKENIZER_BPE },
+        { "Gemma",         DNN_TOKENIZER_SENTENCEPIECE },
+        { "SentencePiece", DNN_TOKENIZER_SENTENCEPIECE },
+        { "Unigram",       DNN_TOKENIZER_UNIGRAM },
+        { "WordPiece",     DNN_TOKENIZER_WORDPIECE },
+    };
+    // config.json without a "method" key (e.g. stock HF config.json) keeps
+    // auto-detecting from tokenizer.json; only an explicit "method" routes.
+    TokenizerModelType methodOverride = DNN_TOKENIZER_AUTO;
+    if (hasMethod) {
+        auto methodIt = std::find_if(std::begin(kFamilies), std::end(kFamilies),
+                                      [&](const std::pair<const char*, TokenizerModelType>& f) { return methodType == f.first; });
+        if (methodIt == std::end(kFamilies))
+            CV_Error(cv::Error::StsError,
+                "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE, Gemma, SentencePiece, Unigram, WordPiece");
+        methodOverride = methodIt->second;
+    }
 
-    static const char* const kFamilies[] = { "BPE", "Gemma", "SentencePiece", "Unigram", "WordPiece" };
-    if (std::none_of(std::begin(kFamilies), std::end(kFamilies),
-                      [&](const char* f) { return methodType == f; }))
-        CV_Error(cv::Error::StsError,
-            "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE, Gemma, SentencePiece, Unigram, WordPiece");
-
+    TokenizerModelType effectiveType = (modelType != DNN_TOKENIZER_AUTO) ? modelType : methodOverride;
     Tokenizer tok;
-    tok.impl_ = buildFromTokenizerDir(dir, modelType);
+    tok.impl_ = buildFromTokenizerDir(dir, effectiveType);
     return tok;
 }
 

@@ -68,6 +68,21 @@ class TokenizerBindingTest(NewOpenCVTests):
         with self.assertRaises(cv.error):
             tok.encode(b"\xc3")
 
+    def test_tokenizer_explicit_model_type(self):
+        cases = [
+            ("gpt2/config.json", cv.dnn.DNN_TOKENIZER_BPE),
+            ("gemma2/config.json", cv.dnn.DNN_TOKENIZER_SENTENCEPIECE),
+            ("gemma3/config.json", cv.dnn.DNN_TOKENIZER_SENTENCEPIECE),
+            ("t5/config.json", cv.dnn.DNN_TOKENIZER_UNIGRAM),
+            ("bert/config.json", cv.dnn.DNN_TOKENIZER_WORDPIECE),
+        ]
+        for cfg, model_type in cases:
+            auto_tok = cv.dnn.Tokenizer.load(_tf(cfg))
+            explicit_tok = cv.dnn.Tokenizer.load(_tf(cfg), model_type)
+            self.assertEqual(list(auto_tok.encode("hello world")),
+                              list(explicit_tok.encode("hello world")),
+                              msg=f"Mismatch for '{cfg}' with modelType={model_type}")
+
     def test_with_hf_tiktoken(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt2/config.json"))
         with open(_tf("gpt2/gpt2_hf_tik_testdata.json"), "r", encoding="utf-8") as f:

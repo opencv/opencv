@@ -271,7 +271,6 @@ TEST(Tokenizer_Unigram, Tokenizer_T5_Numbers) {
     EXPECT_EQ(tok.encode("Invoice #12345, total: $1,234.56"),
               (std::vector<int>{86, 23235, 7172, 2773, 2128, 6, 792, 10, 1970, 6, 2773, 12451, 948, 1}));
 }
-
 TEST(Tokenizer_Unigram, Tokenizer_T5_Whitespace) {
     std::string model = _tf("t5/config.json");
     Tokenizer tok = Tokenizer::load(model);
@@ -445,6 +444,12 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodePair) {
     std::vector<int> expected(a.begin(), a.end());
     expected.insert(expected.end(), b.begin() + 1, b.end());
     EXPECT_EQ(pair, expected);
+}
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsNullFollowsLowercase) {
+    std::string model = _tf("bert-cased/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.decode(tok.encode("café")), "café");
+    EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
 }
 
 TEST(Tokenizer_BPE, Tokenizer_EncodePair_Unsupported) {

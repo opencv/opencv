@@ -5,6 +5,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "unicode.hpp"
+#include "utils.hpp"
 #include "core_unigram.hpp"
 
 #include <algorithm>
@@ -245,36 +246,17 @@ void CoreUnigram::pretokenizeAndEncode(const std::string& normalized, std::vecto
 
 std::vector<int> CoreUnigram::encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
     std::vector<int> ids;
-    size_t chunkStart = 0;
-    size_t pos = 0;
-    while (pos < text.size()) {
-        std::string matched;
-        int matchedId = -1;
-        if (!allowedSpecial.empty()) {
-            for (const auto& kv : specialToId_) {
-                const std::string& sp = kv.first;
-                bool isCandidate = !sp.empty() &&
-                    pos + sp.size() <= text.size() &&
-                    allowedSpecial.find(sp) != allowedSpecial.end() &&
-                    text.compare(pos, sp.size(), sp) == 0;
-                if (isCandidate && sp.size() > matched.size()) { matched = sp; matchedId = kv.second; }
-            }
-        }
-        if (matchedId >= 0) {
-            if (pos > chunkStart) {
-                std::string norm = normalizer_.normalize(text.substr(chunkStart, pos - chunkStart));
-                pretokenizeAndEncode(norm, ids);
-            }
-            ids.push_back(matchedId);
-            pos += matched.size();
-            chunkStart = pos;
-        } else {
-            ++pos;
-        }
-    }
-    if (chunkStart < text.size()) {
-        std::string norm = normalizer_.normalize(text.substr(chunkStart));
+    auto normalizeAndEncode = [&](const std::string& literal) {
+        std::string norm = normalizer_.normalize(literal);
         pretokenizeAndEncode(norm, ids);
+    };
+    if (allowedSpecial.empty()) {
+        normalizeAndEncode(text);
+    } else {
+        splitOnSpecialTokens(text, specialToId_,
+            [&](const std::string& sp) { return allowedSpecial.count(sp) != 0; },
+            normalizeAndEncode,
+            [&](int id) { ids.push_back(id); });
     }
     if (eosId_ >= 0) ids.push_back(eosId_);
     return ids;
