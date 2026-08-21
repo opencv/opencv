@@ -114,16 +114,10 @@ int main(int argc, char** argv)
                   << " (pass --flip=false to disable)" << std::endl;
     }
 
-    Vec3f lo(FLT_MAX, FLT_MAX, FLT_MAX), hi(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (int i = 0; i < splats.rows; i++)
-    {
-        const float* p = splats.ptr<float>(i);
-        for (int k = 0; k < 3; k++)
-        {
-            lo[k] = std::min(lo[k], p[k]);
-            hi[k] = std::max(hi[k], p[k]);
-        }
-    }
+    Mat loM, hiM;
+    reduce(splats.colRange(0, 3), loM, 0, REDUCE_MIN);
+    reduce(splats.colRange(0, 3), hiM, 0, REDUCE_MAX);
+    Vec3f lo(loM.ptr<float>()), hi(hiM.ptr<float>());
 
     std::cout << "bounds  min [" << lo[0] << ", " << lo[1] << ", " << lo[2] << "]"
               << "  max [" << hi[0] << ", " << hi[1] << ", " << hi[2] << "]" << std::endl;
