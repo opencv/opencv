@@ -2074,41 +2074,44 @@ void SGBM3WayMainLoop::impl(const Range& range) const
             {
                 d = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                horPassCostVolume+=x;
-                int thresh = (100*min_cost)/(100-uniquenessRatio);
-                v_int16 thresh_reg = vx_setall_s16((short)(thresh+1));
-                v_int16 d1 = vx_setall_s16((short)(best_d-1));
-                v_int16 d2 = vx_setall_s16((short)(best_d+1));
-                v_int16 eight_reg = vx_setall_s16((short)VTraits<v_int16>::vlanes());
-                v_int16 cur_d = vx_load(idx_row);
-                v_int16 mask;
+                if(uniquenessRatio<100)
+                {
+                    horPassCostVolume+=x;
+                    int thresh = (100*min_cost)/(100-uniquenessRatio);
+                    v_int16 thresh_reg = vx_setall_s16((short)(thresh+1));
+                    v_int16 d1 = vx_setall_s16((short)(best_d-1));
+                    v_int16 d2 = vx_setall_s16((short)(best_d+1));
+                    v_int16 eight_reg = vx_setall_s16((short)VTraits<v_int16>::vlanes());
+                    v_int16 cur_d = vx_load(idx_row);
+                    v_int16 mask;
 
-                for( ; d <= D - 2*VTraits<v_int16>::vlanes(); d+=2*VTraits<v_int16>::vlanes() )
-                {
-                    mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
-                    cur_d = v_add(cur_d, eight_reg);
-                    if( v_check_any(mask) )
-                        break;
-                    mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d + VTraits<v_int16>::vlanes()), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
-                    cur_d = v_add(cur_d, eight_reg);
-                    if( v_check_any(mask) )
-                        break;
-                }
-                if( d <= D - 2*VTraits<v_int16>::vlanes() )
-                {
-                    horPassCostVolume-=x;
-                    continue;
-                }
-                if( d <= D - VTraits<v_int16>::vlanes() )
-                {
-                    if( v_check_any(v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)))) )
+                    for( ; d <= D - 2*VTraits<v_int16>::vlanes(); d+=2*VTraits<v_int16>::vlanes() )
+                    {
+                        mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
+                        cur_d = v_add(cur_d, eight_reg);
+                        if( v_check_any(mask) )
+                            break;
+                        mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d + VTraits<v_int16>::vlanes()), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
+                        cur_d = v_add(cur_d, eight_reg);
+                        if( v_check_any(mask) )
+                            break;
+                    }
+                    if( d <= D - 2*VTraits<v_int16>::vlanes() )
                     {
                         horPassCostVolume-=x;
                         continue;
                     }
-                    d+=VTraits<v_int16>::vlanes();
+                    if( d <= D - VTraits<v_int16>::vlanes() )
+                    {
+                        if( v_check_any(v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)))) )
+                        {
+                            horPassCostVolume-=x;
+                            continue;
+                        }
+                        d+=VTraits<v_int16>::vlanes();
+                    }
+                    horPassCostVolume-=x;
                 }
-                horPassCostVolume-=x;
 #endif
                 for( ; d < D; d++ )
                 {
