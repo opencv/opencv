@@ -1029,6 +1029,17 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Resets KV-Cache for all AttentionOnnxI layers */
         CV_WRAP void resetKVCache();
+
+        /** @brief Pre-allocates KV-Cache pages for up to @p maxSequenceLength tokens.
+         *
+         * Call after enableKVCache() and before the prefill forward, so no page allocation
+         * happens during generation. A hint, not a limit: going past @p maxSequenceLength
+         * still grows the cache. resetKVCache() drops the reservation.
+         *
+         * Only models whose attention imports as a single fused op (ONNX Attention,
+         * com.microsoft MultiHeadAttention / GroupQueryAttention) use the paged cache;
+         * otherwise this warns and does nothing. */
+        CV_WRAP void reserveKVCache(int maxSequenceLength);
         /** @brief Returns profiling data captured during the last forward pass.
          *
          * Entries are sorted by time in descending order. Empty vectors are returned

@@ -42,6 +42,9 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
 {
     CV_Assert(netimpl != nullptr);
 
+    // readNetFromONNX() returns an empty Net on unsupported ops; don't walk a null graph.
+    CV_CheckTrue(!netimpl->mainGraph.empty(),
+                 "enableKVCache() requires a successfully loaded model");
     CV_Assert(!netimpl->layers.empty());
 
     auto manager = KVCacheManager();
@@ -134,6 +137,12 @@ void KVCacheManager::applyRoutes()
     }
 }
 
+void KVCacheManager::reserve(int maxTokens)
+{
+    for (auto& kv : kData) kv.second.reserve(maxTokens);
+    for (auto& kv : vData) kv.second.reserve(maxTokens);
+}
+
 void KVCache::grow(const Mat& newData) {
     CV_Assert(newData.dims == 4 || newData.dims == 3);
 
@@ -163,16 +172,11 @@ void KVCache::grow(const Mat& newData) {
 
     int T = newData.dims == 4 ? newData.size[2] : newData.size[1];
 
-    if (T > 1 || pages.empty()) {
-        // prefetch
-        if(!pages.empty())
-            CV_Error(
-                cv::Error::StsNotImplemented,
-                "storing multiple tokens to a non-empty cache is not supported yet. Either clear the cache (to reenter the prefetch phase) or provide tokens one-by-one"
-            );
-
-        // add pages
-        int totalPages = (T + pageSize - 1) / pageSize;
+    if (pages.empty()) {
+        // Prefill: allocate the page pool, honouring any reserved capacity.
+        int neededPages   = (T + pageSize - 1) / pageSize;
+        int reservedPages = (int)(((int64_t)reservedTokens + pageSize - 1) / pageSize);
+        int totalPages    = std::max(neededPages, reservedPages);
         for (int i = 0; i < totalPages; i++) {
             int page_size = isKCache ?
                 (int)fastGemmPackBSize(pageSize, headDim, opt):
@@ -183,11 +187,25 @@ void KVCache::grow(const Mat& newData) {
             );
         }
         growPrefill(newData, T);
-    } else{
-        // generate
-        growGenerate(newData);
+    } else {
+        // Non-empty cache: append T (>=1) tokens (T>1 = chunked prefill / speculative decode).
+        appendTokens(newData, T);
     }
 
+}
+
+void KVCache::appendTokens(const Mat& newData, int T) {
+    if (T == 1) {
+        growGenerate(newData);
+        return;
+    }
+    const int seqAxis = newData.dims == 4 ? 2 : 1;
+    std::vector<Range> ranges(newData.dims, Range::all());
+    for (int t = 0; t < T; t++) {
+        ranges[seqAxis] = Range(t, t + 1);
+        Mat token = newData(ranges).clone(); // contiguous single-token slice
+        growGenerate(token);
+    }
 }
 
 void KVCache::growPrefill(const Mat& newData, int T){

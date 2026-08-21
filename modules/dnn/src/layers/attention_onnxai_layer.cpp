@@ -266,7 +266,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             kData.grow(inputs[1]);
 
-            const std::vector<Mat>& kCachePages = kData.getPages();
+            const std::vector<Mat> kCachePages = kData.getActivePages();
             seq_len_kv = kData.getNumTokens();
 
             pagedAttnQKGemm(
@@ -292,7 +292,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             seq_len_kv = vData.getNumTokens();
 
             pagedAttnAVGemm(
-                attention_prob, vData.getPages(), outputs[0],
+                attention_prob, vData.getActivePages(), outputs[0],
                 seq_len_q, nhq, nhkv, vData.getPageSize() , v_head_size, seq_len_kv,
                 opt
             );

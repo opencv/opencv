@@ -274,7 +274,10 @@ protected:
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAttentionOnnxAi      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMultiHeadAttention   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGroupQueryAttention  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimplifiedLayerNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSkipSimplifiedLayerNorm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCausalConvWithState  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2766,6 +2769,132 @@ void ONNXImporter2::parseSDPA(LayerParams& params, const opencv_onnx::NodeProto&
     addLayer(params, node_proto, 3);
 }
 
+// True if node input i exists and is not an omitted optional ("").
+static bool hasInput(const opencv_onnx::NodeProto& node, int i) {
+    return i < node.input_size() && !node.input(i).empty();
+}
+
+static bool hasOutput(const opencv_onnx::NodeProto& node, int i) {
+    return i < node.output_size() && !node.output(i).empty();
+}
+
+// com.microsoft MultiHeadAttention (unpacked Q/K/V) -> AttentionOnnxAi.
+void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(params.has("num_heads"), "MultiHeadAttention: num_heads is required");
+    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
+                 "MultiHeadAttention: separate key and value are required");
+    CV_CheckFalse(hasInput(node_proto, 3) || hasInput(node_proto, 4),
+        "MultiHeadAttention: bias / key_padding_mask inputs are not supported");
+    for (int i = 8; i < node_proto.input_size(); i++)  // past_sequence_length / cache_indirection
+        CV_CheckFalse(hasInput(node_proto, i),
+            "MultiHeadAttention: only query/key/value/attention_bias/past_key/past_value are supported");
+
+    // inputs: query, key, value, bias, key_padding_mask, attention_bias, past_key, past_value, ...
+    const bool has_past_k = hasInput(node_proto, 6), has_past_v = hasInput(node_proto, 7);
+    CV_CheckTrue(has_past_k == has_past_v,
+                 "MultiHeadAttention: past_key and past_value must be provided as a pair");
+
+    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
+    if (hasInput(node_proto, 5)) ins.push_back(node_inputs[5]);  // attention_bias -> mask
+    if (has_past_k) {
+        // The past length is read back off past_key's shape. A fixed seq dim means a shared-buffer
+        // cache whose real length lives in past_sequence_length, so the unwritten tail would be
+        // taken as history.
+        const MatShape& pk = netimpl->args.at(node_inputs[6].idx).shape;
+        if (pk.dims >= 2)
+            CV_CheckLE(pk[pk.dims - 2], 0,
+                "MultiHeadAttention: past_key has a fixed sequence length (shared-buffer / static "
+                "cache export); only dynamic-cache exports are supported");
+        ins.push_back(node_inputs[6]); ins.push_back(node_inputs[7]);
+    }
+    node_inputs = ins;
+
+    params.type = "AttentionOnnxAi";
+    params.set("q_num_heads", params.get<int>("num_heads"));   // MHA is not grouped
+    params.set("kv_num_heads", params.get<int>("num_heads"));
+    if (params.get<int>("unidirectional", 0))
+        params.set("is_causal", true);
+
+    addLayer(params, node_proto, (int)node_inputs.size());
+}
+
+// com.microsoft GroupQueryAttention (grouped, causal) -> AttentionOnnxAi.
+void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
+                 "GroupQueryAttention: num_heads and kv_num_heads are required");
+    CV_CheckEQ(params.get<int>("do_rotary", 0), 0, "GroupQueryAttention: do_rotary=1 is not supported");
+    CV_CheckEQ(params.get<int>("local_window_size", -1), -1, "GroupQueryAttention: sliding window is not supported");
+    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
+                 "GroupQueryAttention: separate key and value are required");
+    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
+        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
+
+    // inputs: query, key, value, past_key, past_value, seqlens_k, total_sequence_length, ...
+    const bool has_past_k = hasInput(node_proto, 3), has_past_v = hasInput(node_proto, 4);
+    CV_CheckTrue(has_past_k == has_past_v,
+                 "GroupQueryAttention: past_key and past_value must be provided as a pair");
+
+    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
+    if (has_past_k) {
+        // Dropping seqlens_k is only sound for a growing past. A fixed past seq dim means a
+        // shared-buffer cache whose real length lives in seqlens_k, so it would be mis-read.
+        const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
+        if (pk.dims >= 2)
+            CV_CheckLE(pk[pk.dims - 2], 0,
+                "GroupQueryAttention: past_key has a fixed sequence length (shared-buffer / static "
+                "cache export); only dynamic-cache exports are supported");
+        ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]);
+    }
+    node_inputs = ins;
+
+    params.type = "AttentionOnnxAi";
+    params.set("q_num_heads", params.get<int>("num_heads"));
+    params.set("kv_num_heads", params.get<int>("kv_num_heads"));
+    params.set("is_causal", true);
+
+    addLayer(params, node_proto, (int)node_inputs.size());
+}
+
+// SkipSimplifiedLayerNormalization = RMSNorm(input + skip [+ bias]) * gamma, decomposed here.
+// outputs: output, mean?, inv_std_var?, input_skip_bias_sum?
+void ONNXImporter2::parseSkipSimplifiedLayerNorm(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
+                 "SkipSimplifiedLayerNormalization: skip and gamma are required");
+    CV_CheckFalse(hasOutput(node_proto, 1) || hasOutput(node_proto, 2),
+                  "SkipSimplifiedLayerNormalization: mean / inv_std_var outputs are not supported");
+
+    const std::vector<Arg> ins = node_inputs, outs = node_outputs;
+    const bool has_bias = hasInput(node_proto, 3);
+    // input_skip_bias_sum is the next block's residual, so produce it when asked for.
+    const bool want_sum = hasOutput(node_proto, 3) && outs.size() > 3;
+
+    LayerParams add;
+    add.name = params.name + "/skip_add";
+    add.type = "NaryEltwise";
+    add.set("operation", "add");
+    Arg sum = (want_sum && !has_bias) ? outs[3] : net.getArg(add.name + "/out");
+    node_inputs = {ins[0], ins[1]};
+    node_outputs = {sum};
+    addLayer(add, node_proto, 2);
+
+    if (has_bias) {
+        LayerParams addb;
+        addb.name = params.name + "/bias_add";
+        addb.type = "NaryEltwise";
+        addb.set("operation", "add");
+        Arg biased = want_sum ? outs[3] : net.getArg(addb.name + "/out");
+        node_inputs = {sum, ins[3]};
+        node_outputs = {biased};
+        addLayer(addb, node_proto, 2);
+        sum = biased;
+    }
+
+    params.type = "RMSNormalization";
+    node_inputs = {sum, ins[2]};
+    node_outputs = {outs[0]};
+    addLayer(params, node_proto, 2);
+}
+
 void ONNXImporter2::parseCausalConvWithState(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     params.type = "CausalConvWithState";
     addLayer(params, node_proto);
@@ -2913,6 +3042,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Attention"] = &ONNXImporter2::parseAttentionOnnxAi;
     dispatch["CausalConvWithState"] = &ONNXImporter2::parseCausalConvWithState;
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
+    dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNorm;
 
     domain_dispatch_map[str_domain_ai_onnx] = dispatch;
 }
@@ -2933,7 +3063,10 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
     dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
+    dispatch["MultiHeadAttention"] = &ONNXImporter2::parseMultiHeadAttention;
+    dispatch["GroupQueryAttention"] = &ONNXImporter2::parseGroupQueryAttention;
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
+    dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNorm;
     dispatch["MatMulNBits"] = &ONNXImporter2::parseMatMulNBits;
 
     domain_dispatch_map[str_domain_com_microsoft] = dispatch;
