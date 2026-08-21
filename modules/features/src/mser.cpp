@@ -1033,22 +1033,26 @@ void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArr
 {
     CV_INSTRUMENT_REGION();
 
-    // detectRegions() rejects anything below 3x3; the empty case must return no keypoints
-    // instead, like the Feature2D::detect() this overrides.
+    keypoints.clear();
+
+    // Empty input yields no keypoints, matching the base Feature2D::detect() this overrides.
     if( _image.empty() )
-    {
-        keypoints.clear();
         return;
-    }
+
+    Mat image = _image.getMat(), mask = _mask.getMat();
+
+    if( image.type() != CV_8UC1 && image.type() != CV_8UC3 && image.type() != CV_8UC4 )
+        CV_Error( Error::StsBadArg, "image has incorrect type (must be CV_8UC1, CV_8UC3 or CV_8UC4)" );
+
+    if( !mask.empty() && (mask.type() != CV_8UC1 || mask.size() != image.size()) )
+        CV_Error( Error::StsBadArg, "mask has incorrect type (!=CV_8UC1) or size (!=image size)" );
 
     vector<Rect> bboxes;
     vector<vector<Point> > msers;
-    Mat mask = _mask.getMat();
 
-    detectRegions(_image, msers, bboxes);
+    detectRegions(image, msers, bboxes);
     int i, ncomps = (int)msers.size();
 
-    keypoints.clear();
     for( i = 0; i < ncomps; i++ )
     {
         Rect r = bboxes[i];
