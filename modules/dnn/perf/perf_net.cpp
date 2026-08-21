@@ -412,8 +412,6 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
 PERF_TEST_P_(DNNTestNetwork, YOLOv8n_TFLite)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolov8n.tflite", "", inp);
@@ -422,8 +420,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv8n_TFLite)
 PERF_TEST_P_(DNNTestNetwork, YOLOv5nu_TFLite)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolov5nu.tflite", "", inp);
@@ -432,8 +428,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv5nu_TFLite)
 PERF_TEST_P_(DNNTestNetwork, YOLO26n_TFLite)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolo26n.tflite", "", inp);
@@ -442,8 +436,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n_TFLite)
 PERF_TEST_P_(DNNTestNetwork, YOLO26n_seg_TFLite)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/street.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/tflite/yolo26n-seg.tflite", "", inp);
@@ -451,8 +443,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n_seg_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, ResNet18_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/space_shuttle.jpg"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     processNet("dnn/tflite/resnet18.tflite", "", inp);
@@ -460,8 +450,6 @@ PERF_TEST_P_(DNNTestNetwork, ResNet18_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, MobileNetV2_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/space_shuttle.jpg"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     processNet("dnn/tflite/mobilenet_v2.tflite", "", inp);
@@ -469,8 +457,6 @@ PERF_TEST_P_(DNNTestNetwork, MobileNetV2_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/space_shuttle.jpg"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     processNet("dnn/tflite/squeezenet1_1.tflite", "", inp);
@@ -478,8 +464,6 @@ PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, YuNet_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("cv/shared/lena.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(160, 120), Scalar(), true);
     processNet("dnn/tflite/yunet_float32.tflite", "", inp);
@@ -487,8 +471,6 @@ PERF_TEST_P_(DNNTestNetwork, YuNet_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, HandLandmark_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/pose.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     processNet("dnn/tflite/hand_landmark_lite.tflite", "", inp);
@@ -496,8 +478,6 @@ PERF_TEST_P_(DNNTestNetwork, HandLandmark_TFLite)
 
 PERF_TEST_P_(DNNTestNetwork, PoseLandmark_TFLite)
 {
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("");
     Mat inp = imread(findDataFile("dnn/pose.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(256, 256), Scalar(), true);
     processNet("dnn/tflite/pose_landmark_lite.tflite", "", inp);
