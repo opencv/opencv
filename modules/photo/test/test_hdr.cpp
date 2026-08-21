@@ -309,7 +309,7 @@ TEST(Photo_CalibrateDebevec, regression)
     minMaxLoc(diff, NULL, &max);
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     ASSERT_LT(max, 0.25);
-#elif !defined(HAVE_IPP)
+#elif !defined(HAVE_IPP) && !(defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
     ASSERT_LT(max, 0.22);
 #else
     ASSERT_LT(max, 0.15);
