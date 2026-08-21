@@ -182,12 +182,6 @@ void fastGEMM1T( const float* vec, const float* weights,
     const uint32x4_t tailMaskU = vld1q_u32(tailMaskPtr);
     const float32x4_t tailMask = vreinterpretq_f32_u32(tailMaskU);
 
-    auto hsumq_f32 = [](float32x4_t x) -> float {
-        float32x2_t s2 = vadd_f32(vget_low_f32(x), vget_high_f32(x));
-        s2 = vpadd_f32(s2, s2);
-        return vget_lane_f32(s2, 0);
-    };
-
     for ( ; i <= nvecs - 8; i += 8 )
     {
         const float* wptr = weights + i * wstep;
@@ -233,14 +227,10 @@ void fastGEMM1T( const float* vec, const float* weights,
             vs6 = vmlaq_f32(vs6, w6, v);
             vs7 = vmlaq_f32(vs7, w7, v);
         }
-        dst[i + 0] = hsumq_f32(vs0) + bias[i + 0];
-        dst[i + 1] = hsumq_f32(vs1) + bias[i + 1];
-        dst[i + 2] = hsumq_f32(vs2) + bias[i + 2];
-        dst[i + 3] = hsumq_f32(vs3) + bias[i + 3];
-        dst[i + 4] = hsumq_f32(vs4) + bias[i + 4];
-        dst[i + 5] = hsumq_f32(vs5) + bias[i + 5];
-        dst[i + 6] = hsumq_f32(vs6) + bias[i + 6];
-        dst[i + 7] = hsumq_f32(vs7) + bias[i + 7];
+        v_float32x4 sum03 = v_reduce_sum4(v_float32x4(vs0), v_float32x4(vs1), v_float32x4(vs2), v_float32x4(vs3));
+        v_float32x4 sum47 = v_reduce_sum4(v_float32x4(vs4), v_float32x4(vs5), v_float32x4(vs6), v_float32x4(vs7));
+        v_store(dst + i,     v_add(sum03, v_load(bias + i)));
+        v_store(dst + i + 4, v_add(sum47, v_load(bias + i + 4)));
     }
 
     for ( ; i <= nvecs - 4; i += 4 )
@@ -276,10 +266,8 @@ void fastGEMM1T( const float* vec, const float* weights,
             vs3 = vmlaq_f32(vs3, w3, v);
         }
 
-        dst[i + 0] = hsumq_f32(vs0) + bias[i + 0];
-        dst[i + 1] = hsumq_f32(vs1) + bias[i + 1];
-        dst[i + 2] = hsumq_f32(vs2) + bias[i + 2];
-        dst[i + 3] = hsumq_f32(vs3) + bias[i + 3];
+        v_float32x4 sum03 = v_reduce_sum4(v_float32x4(vs0), v_float32x4(vs1), v_float32x4(vs2), v_float32x4(vs3));
+        v_store(dst + i, v_add(sum03, v_load(bias + i)));
     }
 
     for ( ; i < nvecs; i++ )
