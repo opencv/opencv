@@ -2078,7 +2078,7 @@ void SGBM3WayMainLoop::impl(const Range& range) const
                 {
                     horPassCostVolume+=x;
                     int thresh = (100*min_cost)/(100-uniquenessRatio);
-                    v_int16 thresh_reg = vx_setall_s16((short)(thresh+1));
+                    v_int16 thresh_reg = vx_setall_s16(saturate_cast<short>(thresh+1));
                     v_int16 d1 = vx_setall_s16((short)(best_d-1));
                     v_int16 d2 = vx_setall_s16((short)(best_d+1));
                     v_int16 eight_reg = vx_setall_s16((short)VTraits<v_int16>::vlanes());
