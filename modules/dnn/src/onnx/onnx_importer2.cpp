@@ -716,8 +716,7 @@ Net ONNXImporter2::parseModel()
     parseOperatorSet();
     Ptr<Graph> mainGraph = parseGraph(graph_proto, true);
     netimpl->mainGraph = mainGraph;
-    // Capture declared ONNX output dtypes now, before prepareForInference() overwrites
-    // arg types with computed ones, so outputs can be narrowed to the declared type later.
+    // Capture declared output dtypes before prepareForInference() replaces them with computed ones.
     if (mainGraph)
     {
         const std::vector<Arg>& outs = mainGraph->outputs();
@@ -1696,7 +1695,7 @@ void ONNXImporter2::parseCast2(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-// Returns the ONNX TensorProto.DataType of a graph tensor by name, or -1 if unknown.
+// Returns a graph tensor's ONNX data_type by name, or -1 if unknown.
 int ONNXImporter2::findGraphTensorOnnxType(const std::string& name) const
 {
     if (!curr_graph_proto)

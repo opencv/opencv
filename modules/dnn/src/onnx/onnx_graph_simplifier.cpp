@@ -2035,8 +2035,8 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT16)
     {
-        // Load FP16 natively as CV_16F. ONNX saves float16 either in int32_data (low 16 bits)
-        // or in raw_data. Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
+        // Load FP16 natively as CV_16F; ONNX stores it in int32_data or raw_data.
+        // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
         if (!tensor_proto.int32_data().empty())
         {
             size_t sz = tensor_proto.int32_data().size();
@@ -2234,7 +2234,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FN ||
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ)
     {
-        // E4M3FN/E4M3FNUZ have a native cv::Mat depth: keep the raw FP8 bytes.
+        // E4M3FN/E4M3FNUZ have a native depth: keep the raw FP8 bytes.
         checkPayloadSize(raw_data_size);
         blob.create((int)sizes.size(), sizes.data(),
                     CV_MAKETYPE(onnx_dtype::fp8NativeDepth(datatype), 1));
@@ -2243,7 +2243,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2 ||
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2FNUZ)
     {
-        // E5M2/E5M2FNUZ have no native depth yet: decode losslessly into CV_16F.
+        // E5M2/E5M2FNUZ have no native depth: decode losslessly into CV_16F.
         const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(datatype);
         blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
         const uchar* src = (const uchar*)rawdata;

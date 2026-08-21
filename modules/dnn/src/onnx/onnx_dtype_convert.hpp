@@ -4,7 +4,7 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// TODO: stopgap until these dtypes are native cv::Mat depths; then this conversion math moves to core (convertTo) and only ONNX glue stays in DNN.
+// TODO: drop when these dtypes get native cv::Mat depths; math then moves to core.
 
 #ifndef OPENCV_DNN_ONNX_DTYPE_CONVERT_HPP
 #define OPENCV_DNN_ONNX_DTYPE_CONVERT_HPP
@@ -39,7 +39,7 @@ inline bool isFp8(int onnxType)  { return onnxType >= 17 && onnxType <= 20; }
 // E4M3FN (17) and E4M3FNUZ (18) have a native cv::Mat depth; E5M2/E5M2FNUZ do not.
 inline bool isFp8Native(int t)    { return t == 17 || t == 18; }
 inline int  fp8NativeDepth(int t) { return t == 17 ? CV_8F_E4M3FN : CV_8F_E4M3FNUZ; }
-// E4M3 -> native FP8; E5M2/FP4 -> CV_16F; E8M0 -> CV_32F; INT4 -> CV_8S; UINT4 -> CV_8U.
+// Storage: E4M3 native FP8; E5M2/FP4 CV_16F; E8M0 CV_32F; INT4 CV_8S; UINT4 CV_8U.
 inline bool isExoticFloat(int t) { return isFp8(t) || t == 23 /*FP4*/ || t == ONNX_FLOAT8E8M0; }
 inline bool isInt4(int t)        { return t == 22; }
 inline bool isUint4(int t)       { return t == 21; }
@@ -102,8 +102,7 @@ inline uint8_t f32ToFp8(float x, const Fp8Fmt& f, bool saturate)
     return (uint8_t)(sbit | ((uint32_t)newexp << f.mbits) | mant);
 }
 
-// Quiet NaN whose sign matches the source code (ONNX preserves the sign bit, e.g. the
-// FNUZ NaN code 0x80 decodes to -NaN). Matching the exact bits matters for bit-exact tests.
+// ONNX preserves the NaN sign bit (FNUZ 0x80 decodes to -NaN); bit-exact tests need it.
 inline float signedQNaN(uint32_t sign) { Cv32suf s; s.u = sign ? 0xFFC00000u : 0x7FC00000u; return s.f; }
 
 inline float fp8ToF32(uint8_t code, const Fp8Fmt& f)
@@ -176,7 +175,7 @@ inline uint8_t f32ToFp4(float x)
 
 inline float fp4ToF32(uint8_t code) { return (code & 0x8 ? -1.f : 1.f) * fp4Values()[code & 7]; }
 
-// INT4/UINT4: cast truncates toward zero then keeps the low 4 bits (wraps; ONNX does not clamp).
+// INT4/UINT4: truncate toward zero, keep low 4 bits (wraps; ONNX does not clamp).
 inline int8_t  f32ToInt4(float x)  { int n = (int)std::trunc(x) & 0xF; return (int8_t)(n >= 8 ? n - 16 : n); }
 inline uint8_t f32ToUint4(float x) { return (uint8_t)((int)std::trunc(x) & 0xF); }
 inline int8_t  int4SignExtend(uint8_t nib) { return (int8_t)((nib & 0xF) >= 8 ? (int)(nib & 0xF) - 16 : (nib & 0xF)); }

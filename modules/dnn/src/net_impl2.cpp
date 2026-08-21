@@ -552,6 +552,29 @@ Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>&
     return graph;
 }
 
+// No half kernels yet, so half constants are widened just as setGraphInput() widens inputs.
+void Net::Impl::widenHalfConstants()
+{
+    if (enableFP16)
+        return;
+    size_t nargs = args.size();
+    __tensors__.resize(nargs);
+    for (size_t i = 1; i < nargs; i++) {
+        ArgData& adata = args[i];
+        if (adata.kind != DNN_ARG_CONST ||
+            (adata.type != CV_16F && adata.type != CV_16BF))
+            continue;
+        Mat& t = __tensors__[i];
+        if (!t.empty()) {
+            Mat widened;
+            widened.fit(t.shape(), accuracy);
+            t.convertTo(widened, accuracy);
+            t = widened;
+        }
+        adata.type = accuracy;
+    }
+}
+
 void Net::Impl::prepareForInference()
 {
 #ifdef HAVE_ONNXRUNTIME
@@ -563,6 +586,7 @@ void Net::Impl::prepareForInference()
 #endif
 
     if (!prepared) {
+        widenHalfConstants();
         fuseQDQ();
         constFold();
         fuseBN();
@@ -1266,9 +1290,7 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
 
-        // setInput converts the data to the declared input type, so any numeric source
-        // type is acceptable (e.g. a placeholder fed to an unused CastLike "like" donor
-        // whose declared dtype maps to a different family). Reject only non-numeric mismatches.
+        // setInput converts to the declared type, so any numeric source type is acceptable.
         const bool aNumeric = CV_IS_INT_TYPE(adata_type) || CV_IS_FLOAT_TYPE(adata_type);
         const bool mNumeric = CV_IS_INT_TYPE(mtype) || CV_IS_FLOAT_TYPE(mtype);
         if (adata_type != mtype && !(aNumeric && mNumeric) &&
@@ -1869,15 +1891,16 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 outputsVec[i].fit(outm.shape(), outm.type());
                 outm.copyTo(outputsVec[i]);
             }
-            // Honor the model's declared output dtype: some ops compute in a wider type
-            // (e.g. FP32 on the CPU path, or float-typed Pow of an integer base), so narrow
-            // the result back to the declared type to match the ONNX contract.
-            if (i < mainGraphOutTypes.size() && mainGraphOutTypes[i] >= 0 &&
-                !outputsVec[i].empty() &&
-                outputsVec[i].depth() != CV_MAT_DEPTH(mainGraphOutTypes[i]))
+            // Narrow to the declared output dtype when an op computed in a wider type.
+            // Half is excepted: the graph was widened, so narrowing would only lose precision.
+            int declaredOutType = i < mainGraphOutTypes.size() ? mainGraphOutTypes[i] : -1;
+            if (!enableFP16 && (declaredOutType == CV_16F || declaredOutType == CV_16BF))
+                declaredOutType = -1;
+            if (declaredOutType >= 0 && !outputsVec[i].empty() &&
+                outputsVec[i].depth() != CV_MAT_DEPTH(declaredOutType))
             {
                 Mat tmp;
-                outputsVec[i].convertTo(tmp, CV_MAT_DEPTH(mainGraphOutTypes[i]));
+                outputsVec[i].convertTo(tmp, CV_MAT_DEPTH(declaredOutType));
                 outputsVec[i] = tmp;
             }
         } else {

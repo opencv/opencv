@@ -114,9 +114,7 @@ public:
         return false;
     }
 
-    // FP16/BF16 targets are materialized in FP32 unless the net enables native FP16, mirroring
-    // how FP16 inputs are upcast on the CPU path; the graph output is narrowed to the declared
-    // dtype elsewhere. Exotic dtypes keep their own storage.
+    // Half targets are stored as FP32 unless native FP16 is enabled; forward() still rounds.
     int resolveStorageDepth(int targetDepth, bool exotic) const
     {
         if (!exotic && (targetDepth == CV_16F || targetDepth == CV_16BF))
@@ -268,6 +266,16 @@ public:
             return;
         }
 
+        // Cast to half yields half-representable values even when FP32 carries them.
+        if (storeDepth != runtimeTargetDepth &&
+            (runtimeTargetDepth == CV_16F || runtimeTargetDepth == CV_16BF))
+        {
+            Mat half;
+            src.convertTo(half, runtimeTargetDepth);
+            half.convertTo(dst, storeDepth);
+            return;
+        }
+
         const int sdepth = src.depth();
         const int ddepth = dst.depth();
 
@@ -283,7 +291,7 @@ public:
         }
         else
         {
-            src.convertTo(dst, ddepth);         // f32<->f16/bf16, f16/bf16->float, etc.
+            src.convertTo(dst, ddepth);
         }
     }
 
@@ -325,16 +333,14 @@ public:
             const int ddepth = dst.depth();
             if (ddepth == CV_8F_E4M3FN || ddepth == CV_8F_E4M3FNUZ)
             {
-                // native FP8: store the ONNX-encoded byte directly (RNE + saturate stay in DNN;
-                // core's own E4M3 encode uses a different rounding, so we do not route through convertTo).
+                // Store the ONNX-encoded byte: core's E4M3 encode rounds differently.
                 uchar* d = dst.ptr<uchar>();
                 for (size_t i = 0; i < total; i++)
                     d[i] = onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate);
             }
             else
             {
-                // E5M2/E5M2FNUZ have no native depth yet: round onto the FP8 grid, keep the
-                // (lossless) result as CV_16F.
+                // E5M2/E5M2FNUZ have no native depth: round onto the FP8 grid, keep CV_16F.
                 hfloat* d = dst.ptr<hfloat>();
                 for (size_t i = 0; i < total; i++)
                     d[i] = hfloat(onnx_dtype::fp8ToF32(onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate), fmt));
