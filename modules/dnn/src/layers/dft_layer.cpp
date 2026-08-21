@@ -131,8 +131,24 @@ static void runTypedDFT(const Mat& src,
     }
 }
 
-// Inverse real DFT: rebuild full spectrum via Hermitian symmetry, keep real part.
-template<typename T, typename ComplexVec>
+// Offset of the pos-th signal, walking the dims that are not transformed.
+static inline size_t dftSignalOffset(int pos,
+                                     const std::vector<int>& iterDims,
+                                     const std::vector<int>& outerSizes,
+                                     const std::vector<size_t>& outerStep,
+                                     const std::vector<size_t>& strides)
+{
+    size_t base = 0;
+    for (size_t t = 0; t < iterDims.size(); ++t)
+    {
+        int idxVal = outerStep.empty() ? 0 : (int)((pos / outerStep[t]) % (size_t)outerSizes[t]);
+        base += (size_t)idxVal * strides[iterDims[t]];
+    }
+    return base;
+}
+
+// Inverse real DFT: cv::dft() takes the one-sided spectrum in CCS layout directly.
+template<typename T>
 static void runIRFFT(const Mat& src, Mat& dst,
                      const std::vector<size_t>& stridesSrc,
                      const std::vector<size_t>& stridesDst,
@@ -143,42 +159,52 @@ static void runIRFFT(const Mat& src, Mat& dst,
                      const int N, const int L,
                      const size_t strideAxisSrc, const size_t strideAxisDst)
 {
-    const int matTypeComplex = std::is_same<T, float>::value ? CV_32FC2 : CV_64FC2;
+    const int matTypeReal = std::is_same<T, float>::value ? CV_32F : CV_64F;
     const T* sp = src.ptr<T>();
     T* dp = dst.ptr<T>();
-    cv::parallel_for_(Range(0, (int)totalOuter), [&](const Range& r){
-        Mat full(1, N, matTypeComplex), outRow;
+
+    // Innermost axis: dst rows are already the N-element rows cv::dft() wants.
+    const bool inPlaceOnDst = (strideAxisDst == 1);
+    Mat rows = inPlaceOnDst ? Mat((int)totalOuter, N, matTypeReal, dp)
+                            : Mat((int)totalOuter, N, matTypeReal);
+
+    const int nbins = std::min(L, N / 2 + 1);   // bins a CCS row can hold
+    const bool zeroPad = nbins < N / 2 + 1;
+
+    // One DFT_ROWS call per stripe: cv::dft() rebuilds its tables on every call.
+    const double nstripes = std::min<double>((double)totalOuter, std::max(getNumThreads(), 1));
+    parallel_for_(Range(0, (int)totalOuter), [&](const Range& r)
+    {
         for (int pos = r.start; pos < r.end; ++pos)
         {
-            size_t baseSrc = 0, baseDst = 0;
-            for (size_t t = 0; t < iterDims.size(); ++t)
+            const T* in = sp + dftSignalOffset(pos, iterDims, outerSizes, outerStep, stridesSrc);
+            T* ccs = rows.ptr<T>(pos);
+            if (zeroPad)
+                std::fill(ccs, ccs + N, T(0));
+            // CCS: [Re0, Re1, Im1, ...] plus a trailing Re(N/2) for even N.
+            ccs[0] = in[0];
+            for (int k = 1; k < nbins; ++k)
             {
-                int idxVal = outerStep.empty() ? 0 : (int)((pos / outerStep[t]) % (size_t)outerSizes[t]);
-                int d = iterDims[t];
-                baseSrc += (size_t)idxVal * stridesSrc[d];
-                baseDst += (size_t)idxVal * stridesDst[d];
+                const size_t o = (size_t)k * strideAxisSrc;
+                ccs[2 * k - 1] = in[o];
+                if (2 * k < N)
+                    ccs[2 * k] = in[o + 1];
             }
-            const T* in = sp + baseSrc;
-            T* out = dp + baseDst;
-            ComplexVec* fp = full.ptr<ComplexVec>(0);
-            for (int k = 0; k < N; ++k)
-            {
-                // k<L: copy; else mirror conj(X[N-k]); missing bins -> zero.
-                int src_k = (k < L) ? k : (N - k);
-                if (src_k >= 0 && src_k < L) {
-                    size_t o = (size_t)src_k * strideAxisSrc;
-                    fp[k][0] = in[o + 0];
-                    fp[k][1] = (k < L) ? in[o + 1] : -in[o + 1];
-                } else {
-                    fp[k][0] = fp[k][1] = T(0);
-                }
-            }
-            cv::dft(full, outRow, DFT_INVERSE | DFT_SCALE);
-            const ComplexVec* op = outRow.ptr<ComplexVec>(0);
-            for (int n = 0; n < N; ++n)
-                out[(size_t)n * strideAxisDst] = op[n][0];
         }
-    });
+
+        Mat stripe = rows.rowRange(r.start, r.end);
+        cv::dft(stripe, stripe, DFT_INVERSE | DFT_SCALE | DFT_ROWS);
+
+        if (inPlaceOnDst)
+            return;   // dst already holds the result
+        for (int pos = r.start; pos < r.end; ++pos)
+        {
+            const T* res = rows.ptr<T>(pos);
+            T* out = dp + dftSignalOffset(pos, iterDims, outerSizes, outerStep, stridesDst);
+            for (int n = 0; n < N; ++n)
+                out[(size_t)n * strideAxisDst] = res[n];
+        }
+    }, nstripes);
 }
 
 class DFTLayerImpl CV_FINAL : public DFTLayer {
@@ -403,9 +429,9 @@ public:
             const size_t strideAxisSrc = stridesSrc[axis];
             const size_t strideAxisDst = stridesDst[axis];
             if (src.depth() == CV_32F)
-                runIRFFT<float, Vec2f>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
+                runIRFFT<float>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
             else if (src.depth() == CV_64F)
-                runIRFFT<double, Vec2d>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
+                runIRFFT<double>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
             else
                 CV_Error(Error::StsNotImplemented, "DFT supports float32/float64 only");
             return;
