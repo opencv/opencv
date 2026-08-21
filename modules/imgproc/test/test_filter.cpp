@@ -1874,42 +1874,53 @@ TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe
 
 // spatialGradient (fused dx+dy) must match the two separate cv::Sobel calls it fuses:
 // bit-exact for ddepth=CV_16S/scale=1 and ddepth=CV_32F (scale folded into kernels like cv::Sobel).
+typedef tuple<int, double> SpatialGradientFusedDepthScale_t;
+typedef tuple<int, int, int, SpatialGradientFusedDepthScale_t> SpatialGradientFusedParams_t;
+typedef TestWithParam<SpatialGradientFusedParams_t> Imgproc_SpatialGradient_Fused;
+
+TEST_P(Imgproc_SpatialGradient_Fused, fused_accuracy)
+{
+    const int iter = get<0>(GetParam());
+    const int ksize = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const int ddepth = get<0>(get<3>(GetParam()));
+    const double scale = get<1>(get<3>(GetParam()));
+
+    RNG& rng = TS::ptr()->get_rng();
+    rng.state += iter;
+    Size sz(rng.uniform(3, 320), rng.uniform(3, 240));
+    Mat src(sz, CV_8UC1);
+    rng.fill(src, RNG::UNIFORM, 0, 256);
+
+    Mat dx, dy, dxRef, dyRef;
+    spatialGradient(src, dx, dy, ksize, border, ddepth, scale);
+    Sobel(src, dxRef, ddepth, 1, 0, ksize, scale, 0, border);
+    Sobel(src, dyRef, ddepth, 0, 1, ksize, scale, 0, border);
+
+    EXPECT_EQ(CV_MAKETYPE(ddepth, 1), dx.type());
+    EXPECT_EQ(sz, dx.size());
+    const double tol = 0.0;
+    EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol);
+    EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), tol);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_SpatialGradient_Fused,
+    testing::Combine(
+        testing::Range(0, 16),
+        testing::Values(3, 5),
+        testing::Values(BORDER_DEFAULT, BORDER_REPLICATE, BORDER_REFLECT,
+                        BORDER_REFLECT_101, BORDER_CONSTANT),
+        testing::Values(
+            make_tuple(CV_16S, 1.0),
+            make_tuple(CV_32F, 1.0),
+            make_tuple(CV_32F, 0.25)
+        )
+    )
+);
+
 TEST(Imgproc_SpatialGradient, fused_accuracy)
 {
     RNG& rng = TS::ptr()->get_rng();
-    const int ksizes[]  = { 3, 5 };
-    const int borders[] = { BORDER_DEFAULT, BORDER_REPLICATE, BORDER_REFLECT,
-                            BORDER_REFLECT_101, BORDER_CONSTANT };
-
-    for (int iter = 0; iter < 16; iter++)
-    {
-        Size sz(rng.uniform(3, 320), rng.uniform(3, 240));
-        Mat src(sz, CV_8UC1);
-        rng.fill(src, RNG::UNIFORM, 0, 256);
-
-        for (int ksize : ksizes)
-            for (int border : borders)
-                for (int ddepth : {CV_16S, CV_32F})
-                    for (double scale : {1.0, 0.25})
-                    {
-                        if (ddepth == CV_16S && scale != 1.0)
-                            continue; // int16 + non-unit scale is the fallback only
-                        Mat dx, dy, dxRef, dyRef;
-                        spatialGradient(src, dx, dy, ksize, border, ddepth, scale);
-                        Sobel(src, dxRef, ddepth, 1, 0, ksize, scale, 0, border);
-                        Sobel(src, dyRef, ddepth, 0, 1, ksize, scale, 0, border);
-
-                        EXPECT_EQ(CV_MAKETYPE(ddepth, 1), dx.type());
-                        EXPECT_EQ(sz, dx.size());
-                        double tol = 0.0;
-                        EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol)
-                            << "dx: ksize=" << ksize << " border=" << border
-                            << " ddepth=" << ddepth << " scale=" << scale << " size=" << sz;
-                        EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), tol)
-                            << "dy: ksize=" << ksize << " border=" << border
-                            << " ddepth=" << ddepth << " scale=" << scale << " size=" << sz;
-                    }
-    }
 
     // CV_32FC1 source must work via the fallback and match cv::Sobel.
     {
@@ -1952,51 +1963,64 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
 
 // Reproduces parallelCanny's per-slice row splitting and checks each slice's
 // spatialGradient output matches the whole-image gradient (i.e. multi-threaded == single).
-TEST(Imgproc_SpatialGradient, slice_equivalence)
+typedef tuple<int, int> SpatialGradientSliceThread_t;
+typedef tuple<int, int, SpatialGradientSliceThread_t> SpatialGradientSliceParams_t;
+typedef TestWithParam<SpatialGradientSliceParams_t> Imgproc_SpatialGradient_Slice;
+
+TEST_P(Imgproc_SpatialGradient_Slice, slice_equivalence)
 {
+    const int ksize = get<0>(GetParam());
+    const int border = get<1>(GetParam());
+    const int nThreads = get<0>(get<2>(GetParam()));
+    const int t = get<1>(get<2>(GetParam()));
+
+    Mat src(193, 137, CV_8UC1);   // odd dims to stress tail handling
     RNG& rng = TS::ptr()->get_rng();
+    rng.state += (int)((int64)ksize * 10000 + border * 1000 + nThreads * 100 + t);
+    rng.fill(src, RNG::UNIFORM, 0, 256);
 
-    for (int ksize : {3, 5})
-        for (int border : {BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101})
-        {
-            Mat src(193, 137, CV_8UC1);   // odd dims to stress tail handling
-            rng.fill(src, RNG::UNIFORM, 0, 256);
+    Mat dxRef, dyRef;
+    spatialGradient(src, dxRef, dyRef, ksize, border);
 
-            Mat dxRef, dyRef;
-            spatialGradient(src, dxRef, dyRef, ksize, border);
+    const int start = (int)((int64)src.rows * t / nThreads);
+    const int end   = (int)((int64)src.rows * (t + 1) / nThreads);
+    if (start >= end)
+        return;
 
-            for (int nThreads : {2, 3, 4, 7, 16})
-            {
-                for (int t = 0; t < nThreads; t++)
-                {
-                    int start = (int)((int64)src.rows * t / nThreads);
-                    int end   = (int)((int64)src.rows * (t + 1) / nThreads);
-                    if (start >= end)
-                        continue;
+    const int rowStart = std::max(0, start - 1);
+    const int rowEnd   = std::min(src.rows, end + 1);
 
-                    int rowStart = std::max(0, start - 1);
-                    int rowEnd   = std::min(src.rows, end + 1);
+    Mat dx, dy;
+    spatialGradient(src.rowRange(rowStart, rowEnd), dx, dy, ksize, border);
 
-                    Mat dx, dy;
-                    spatialGradient(src.rowRange(rowStart, rowEnd), dx, dy, ksize, border);
+    // rows [start, end) live at offset (start - rowStart) in the slice output
+    const int off = start - rowStart;
+    Mat dxSlice = dx.rowRange(off, off + (end - start));
+    Mat dySlice = dy.rowRange(off, off + (end - start));
+    Mat dxWhole = dxRef.rowRange(start, end);
+    Mat dyWhole = dyRef.rowRange(start, end);
 
-                    // rows [start, end) live at offset (start - rowStart) in the slice output
-                    int off = start - rowStart;
-                    Mat dxSlice = dx.rowRange(off, off + (end - start));
-                    Mat dySlice = dy.rowRange(off, off + (end - start));
-                    Mat dxWhole = dxRef.rowRange(start, end);
-                    Mat dyWhole = dyRef.rowRange(start, end);
-
-                    EXPECT_EQ(0.0, cvtest::norm(dxSlice, dxWhole, NORM_INF))
-                        << "dx slice mismatch: ksize=" << ksize << " border=" << border
-                        << " nThreads=" << nThreads << " t=" << t;
-                    EXPECT_EQ(0.0, cvtest::norm(dySlice, dyWhole, NORM_INF))
-                        << "dy slice mismatch: ksize=" << ksize << " border=" << border
-                        << " nThreads=" << nThreads << " t=" << t;
-                }
-            }
-        }
+    EXPECT_EQ(0.0, cvtest::norm(dxSlice, dxWhole, NORM_INF));
+    EXPECT_EQ(0.0, cvtest::norm(dySlice, dyWhole, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_SpatialGradient_Slice,
+    testing::Combine(
+        testing::Values(3, 5),
+        testing::Values(BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101),
+        testing::Values(
+            make_tuple(2, 0), make_tuple(2, 1),
+            make_tuple(3, 0), make_tuple(3, 1), make_tuple(3, 2),
+            make_tuple(4, 0), make_tuple(4, 1), make_tuple(4, 2), make_tuple(4, 3),
+            make_tuple(7, 0), make_tuple(7, 1), make_tuple(7, 2), make_tuple(7, 3),
+            make_tuple(7, 4), make_tuple(7, 5), make_tuple(7, 6),
+            make_tuple(16, 0), make_tuple(16, 1), make_tuple(16, 2), make_tuple(16, 3),
+            make_tuple(16, 4), make_tuple(16, 5), make_tuple(16, 6), make_tuple(16, 7),
+            make_tuple(16, 8), make_tuple(16, 9), make_tuple(16, 10), make_tuple(16, 11),
+            make_tuple(16, 12), make_tuple(16, 13), make_tuple(16, 14), make_tuple(16, 15)
+        )
+    )
+);
 TEST(Imgproc_Laplace, accuracy) { CV_LaplaceTest test; test.safe_run(); }
 TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }

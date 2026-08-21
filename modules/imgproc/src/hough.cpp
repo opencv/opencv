@@ -1711,11 +1711,8 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 
     Mat edges, dx, dy;
 
-    // ksize==5 fused fast path lands in a follow-up PR; keep it on the tuned Sobel path for now.
-    if (kernelSize == 3)
-    {
+    if (kernelSize == 3 || kernelSize == 5)
         spatialGradient(_image, dx, dy, kernelSize, BORDER_REPLICATE);
-    }
     else
     {
         Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
