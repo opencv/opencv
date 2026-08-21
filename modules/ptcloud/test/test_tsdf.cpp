@@ -1410,10 +1410,9 @@ INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest,
                           VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
 
-// A near-singular cameraPose makes Matx44f::inv() produce NaN entries. Those NaNs used to
-// bypass the SIMD bounds check in integrateTsdfVolumeUnit() (NaN compares false against both
-// bounds), reaching v_load_low() with an out-of-range index.
-TEST(Volume_TSDF, integrateSingularPoseNoOOBRead)
+// cameraPose/K below are the singular-pose reproducer from issue 29763 verbatim: Matx44f::inv()
+// turns them into NaN, which used to slip past the bounds check in integrateTsdfVolumeUnit().
+TEST(Volume, issue_29763)
 {
     OpenCLStatusRevert oclStatus;
     oclStatus.off();
@@ -1424,8 +1423,8 @@ TEST(Volume_TSDF, integrateSingularPoseNoOOBRead)
     vs.setTsdfTruncateDistance(0.001f);
     vs.setDepthFactor(1.0f);
     vs.setCameraIntegrateIntrinsics(Matx33f(2.0793828200968182e-21f, 0.0f, 0.0f,
-                                             0.0f, 2.0793828200968182e-21f, 2.079376761645066e-21f,
-                                             0.0f, 0.0f, 1.0f));
+        0.0f, 2.0793828200968182e-21f, 2.079376761645066e-21f,
+        0.0f, 0.0f, 1.0f));
     vs.setIntegrateWidth(256);
     vs.setIntegrateHeight(256);
 
@@ -1438,13 +1437,12 @@ TEST(Volume_TSDF, integrateSingularPoseNoOOBRead)
         2.3573155059146355e-21f, 48.23234939575195f, 4.336825233554269e-19f, -2.3078916742541476e+18f,
         2.3510601678662556e-38f, -3.040599552058244e+27f, -9.17830472262132e+27f, 0.0f);
 
-    ASSERT_NO_FATAL_FAILURE(volume.integrate(depth, cameraPose));
+    // The crash is a wild read, not a gtest failure, so surviving this call is the actual check.
+    volume.integrate(depth, cameraPose);
 
-    // Every projected pixel here is NaN, so none should be treated as a valid depth sample;
-    // the volume must come out of integrate() with no voxels touched.
     Mat points, normals;
     volume.fetchPointsNormals(points, normals);
-    ASSERT_EQ(points.total(), 0u);
+    ASSERT_EQ(points.total(), 0u) << "NaN projections must not touch any voxel";
 }
 
 }
