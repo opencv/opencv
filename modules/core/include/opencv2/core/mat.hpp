@@ -2785,7 +2785,31 @@ typedef Mat_<Vec2d> Mat2d;
 typedef Mat_<Vec3d> Mat3d;
 typedef Mat_<Vec4d> Mat4d;
 
-/** @todo document */
+/** @brief Matrix class whose data may reside outside host memory. \anchor UMat_Details
+
+UMat repeats the Mat interface, but the buffer is owned by a MatAllocator, and it is the
+allocator that decides where the data physically resides: in host memory, in an OpenCL
+device buffer (see cv::ocl::getOpenCLAllocator) or in CUDA device memory (see
+cv::cuda::getCudaAllocator). Headers, reference counting, ROIs and submatrices and
+n-dimensional shapes behave as they do in Mat.
+
+Passing UMat instead of Mat to a cv:: function is the basis of the Transparent API
+(T-API). The dispatch is not keyed on the allocator: a cv:: call takes its OpenCL branch
+when OpenCL is active and the arguments are UMat objects, and otherwise maps the data
+back to host memory and runs the CPU implementation. UMat has no `data` pointer and no
+element accessors, because there may be no host address to expose; host access goes
+through UMat::getMat.
+
+@note
+  A non-default allocator must be assigned to @ref cv::UMat::allocator "UMat::allocator"
+  before the data is allocated. OpenCL is the only allocator with accelerated cv::
+  implementations, and because the T-API branch tests only whether OpenCL is active, a
+  UMat backed by any other device allocator must not be passed to cv:: functions while
+  OpenCL is enabled.
+
+@sa Mat, MatAllocator, UMatUsageFlags, cv::ocl::getOpenCLAllocator,
+cv::cuda::getCudaAllocator
+*/
 class CV_EXPORTS UMat
 {
 public:
@@ -2819,6 +2843,14 @@ public:
     //! assignment operators
     UMat& operator = (const UMat& m);
 
+    /** @brief Returns a Mat header giving host access to the same data
+    @note
+      The data is mapped into host memory on the first such view and unmapped when the
+      returned Mat is destroyed. @p flags is widened to ACCESS_RW internally, so the
+      mapping is always read-write and the allocator may write back even after
+      read-only use.
+    @param flags combination of AccessFlag values
+    */
     Mat getMat(AccessFlag flags) const;
 
     //! returns a new matrix header for the specified row
@@ -2962,7 +2994,9 @@ public:
     UMat(UMat&& m);
     UMat& operator = (UMat&& m);
 
-    /*! Returns the OpenCL buffer handle on which UMat operates on.
+    /*! Returns the device buffer handle on which UMat operates on.
+        The concrete type depends on the allocator: a `cl_mem` for the OpenCL allocator,
+        a CUDA device pointer for cv::cuda::getCudaAllocator().
         The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
         returned to the OpenCV buffer pool.
      */
@@ -2989,7 +3023,7 @@ public:
     //! number of columns in the matrix; -1 when the matrix has more than 2 dimensions
     int cols;
 
-    //! custom allocator
+    //! custom allocator; assign before the data is allocated, see @ref UMat_Details
     MatAllocator* allocator;
 
     //! usage flags for allocator; recommend do not set directly, instead set during construct/create/getUMat
