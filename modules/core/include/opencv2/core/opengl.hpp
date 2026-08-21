@@ -792,8 +792,16 @@ public:
      */
     static void setUniformVec3(int location, Vec3f vec);
 
+    /** @brief Sets a uniform vector value.
+     @param location Uniform location.
+     @param vec Vector value.
+     */
     static void setUniformVec2(int location, Vec2f vec);
 
+    /** @brief Sets a uniform vector value.
+     @param location Uniform location.
+     @param vec Vector value.
+     */
     static void setUniformVec4(int location, Vec4f vec);
 
     /** @brief Sets a uniform matrix value.
@@ -802,8 +810,16 @@ public:
      */
     static void setUniformMat4x4(int location, Matx44f mat);
 
+    /** @brief Sets a uniform scalar value.
+     @param location Uniform location.
+     @param value Float value.
+     */
     static void setUniform1f(int location, float value);
 
+    /** @brief Sets a uniform scalar value.
+     @param location Uniform location.
+     @param value Integer value. Also used for sampler uniforms, where it is the texture unit index.
+     */
     static void setUniform1i(int location, int value);
 
     //! get OpenGL object id
