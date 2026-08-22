@@ -1409,5 +1409,41 @@ INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest,
         ::testing::Values(VolumeTypeEnum(VolumeType::HashTSDF),
                           VolumeTypeEnum(VolumeType::ColorHashTSDF))));
 
+
+// cameraPose/K below are the singular-pose reproducer from issue 29763 verbatim: Matx44f::inv()
+// turns them into NaN, which used to slip past the bounds check in integrateTsdfVolumeUnit().
+TEST(Volume, issue_29763)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+
+    VolumeSettings vs(VolumeType::TSDF);
+    vs.setVolumeResolution(Vec3i(128, 128, 128));
+    vs.setVoxelSize(0.5f);
+    vs.setTsdfTruncateDistance(0.001f);
+    vs.setDepthFactor(1.0f);
+    vs.setCameraIntegrateIntrinsics(Matx33f(2.0793828200968182e-21f, 0.0f, 0.0f,
+        0.0f, 2.0793828200968182e-21f, 2.079376761645066e-21f,
+        0.0f, 0.0f, 1.0f));
+    vs.setIntegrateWidth(256);
+    vs.setIntegrateHeight(256);
+
+    Volume volume(VolumeType::TSDF, vs);
+
+    Mat depth(256, 256, CV_32F, Scalar(2.0f));
+    Matx44f cameraPose(
+        2.370550395715484e-21f, 0.0f, 2.0793955428454976e-21f, 2.0793828200968182e-21f,
+        -2.3058509806729953e+18f, 2.079376761645066e-21f, 2.673673266036358e-39f, 2.0778708324878865e-21f,
+        2.3573155059146355e-21f, 48.23234939575195f, 4.336825233554269e-19f, -2.3078916742541476e+18f,
+        2.3510601678662556e-38f, -3.040599552058244e+27f, -9.17830472262132e+27f, 0.0f);
+
+    // The crash is a wild read, not a gtest failure, so surviving this call is the actual check.
+    volume.integrate(depth, cameraPose);
+
+    Mat points, normals;
+    volume.fetchPointsNormals(points, normals);
+    ASSERT_EQ(points.total(), 0u) << "NaN projections must not touch any voxel";
+}
+
 }
 }  // namespace
