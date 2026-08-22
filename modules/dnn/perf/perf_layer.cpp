@@ -474,6 +474,12 @@ PERF_TEST_P_(Layer_LayerNorm, LayerNorm)
     test_layer({N, H ,W});
 }
 
+// Transformer-sized sequence: the small shape above is dominated by threading overhead.
+PERF_TEST_P_(Layer_LayerNorm, LayerNorm_Large)
+{
+    test_layer({1, 512, 768});
+}
+
 struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& x_shape)
@@ -898,6 +904,109 @@ PERF_TEST_P_(Layer_GroupNorm, GroupNorm)
     test_layer({N, C, H, W}, num_groups);
 }
 
+struct Layer_MVN : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape, bool across_channels, bool normalize_variance)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        randu(x, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "testLayer";
+        lp.set("across_channels", across_channels);
+        lp.set("normalize_variance", normalize_variance);
+
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+
+        // warmup
+        {
+            std::vector<String> inpNames{"x"};
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 2;
+    int C = 64;
+    int H = 180;
+    int W = 240;
+};
+
+PERF_TEST_P_(Layer_MVN, MVN)
+{
+    test_layer({N, C, H, W}, false, true);
+}
+
+struct Layer_RMSNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(std::vector<int>{x_shape.back()}, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "RMSNormalization";
+        lp.name = "testLayer";
+        lp.set("axis", -1);
+
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+
+        // warmup
+        {
+            std::vector<String> inpNames{"x", "scale"};
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 1;
+    int H = 50;
+    int W = 768;
+};
+
+PERF_TEST_P_(Layer_RMSNorm, RMSNorm)
+{
+    test_layer({N, H, W});
+}
+
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
@@ -914,6 +1023,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tupl
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionOnnxAi, testing::Values(1, 64, 512));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GroupNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_MVN, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_RMSNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
 PERF_TEST_P_(Layer_FullyConnected, fc)

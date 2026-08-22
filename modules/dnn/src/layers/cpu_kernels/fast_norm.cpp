@@ -8,6 +8,66 @@
 
 namespace cv { namespace dnn {
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Sum and squared sum of n floats with single-precision accumulators, tail processed in scalar.
+static inline void normAccumSumSqSum(const float* x, size_t n, float& sum, float& sqsum) {
+    const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+    v_float32 vsum0 = vx_setzero_f32(), vsum1 = vx_setzero_f32(),
+              vsqsum0 = vx_setzero_f32(), vsqsum1 = vx_setzero_f32();
+    size_t j = 0;
+    for (; j + 2 * VEC_SZ <= n; j += 2 * VEC_SZ) {
+        v_float32 v0 = vx_load(x + j), v1 = vx_load(x + j + VEC_SZ);
+        vsum0 = v_add(vsum0, v0);
+        vsum1 = v_add(vsum1, v1);
+        vsqsum0 = v_fma(v0, v0, vsqsum0);
+        vsqsum1 = v_fma(v1, v1, vsqsum1);
+    }
+    if (j + VEC_SZ <= n) {
+        v_float32 v0 = vx_load(x + j);
+        vsum0 = v_add(vsum0, v0);
+        vsqsum0 = v_fma(v0, v0, vsqsum0);
+        j += VEC_SZ;
+    }
+    float s = v_reduce_sum(v_add(vsum0, vsum1));
+    float sq = v_reduce_sum(v_add(vsqsum0, vsqsum1));
+    for (; j < n; j++) {
+        float v = x[j];
+        s += v;
+        sq += v * v;
+    }
+    sum = s;
+    sqsum = sq;
+}
+#endif
+
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+// Same as normAccumSumSqSum but with double-precision accumulators (used where the scalar
+// reference accumulates in double).
+static inline void normAccumSumSqSum64f(const float* x, size_t n, double& sum, double& sqsum) {
+    const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+    v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64(),
+              vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
+    size_t j = 0;
+    for (; j + VEC_SZ <= n; j += VEC_SZ) {
+        v_float32 v = vx_load(x + j);
+        v_float64 vlo = v_cvt_f64(v), vhi = v_cvt_f64_high(v);
+        vsum_lo = v_add(vsum_lo, vlo);
+        vsum_hi = v_add(vsum_hi, vhi);
+        vsqsum_lo = v_fma(vlo, vlo, vsqsum_lo);
+        vsqsum_hi = v_fma(vhi, vhi, vsqsum_hi);
+    }
+    double s = v_reduce_sum(v_add(vsum_lo, vsum_hi));
+    double sq = v_reduce_sum(v_add(vsqsum_lo, vsqsum_hi));
+    for (; j < n; j++) {
+        double v = (double)x[j];
+        s += v;
+        sq += v * v;
+    }
+    sum = s;
+    sqsum = sq;
+}
+#endif
+
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
@@ -24,17 +84,28 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normAccumSumSqSum(x, norm_size, mean, mean_square);
+#else
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
 
-            for (size_t j = 0; j < norm_size; j++) {
+            size_t j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+            v_float32 vmean = vx_setall_f32(mean), vinv_stdev = vx_setall_f32(inv_stdev);
+            for (; j + VEC_SZ <= norm_size; j += VEC_SZ)
+                vx_store(y + j, v_mul(v_sub(vx_load(x + j), vmean), vinv_stdev));
+#endif
+            for (; j < norm_size; j++) {
                 y[j] = (x[j] - mean) * inv_stdev;
             }
         }
@@ -68,12 +139,16 @@ void fastNormMeanInvStdDev(const Mat& input, Mat& mean, Mat& invStdDev, float ep
         {
             const float* x = input_data + norm_size * (size_t)i;
             float m = 0.f, mean_square = 0.f;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normAccumSumSqSum(x, norm_size, m, mean_square);
+#else
             for (size_t j = 0; j < norm_size; ++j)
             {
                 float v = x[j];
                 m += v;
                 mean_square += v * v;
             }
+#endif
             m *= inv_norm_size;
             const float var = std::max(0.f, mean_square * inv_norm_size - m * m);
             const float stdev = std::sqrt(var + epsilon);
@@ -103,18 +178,33 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normAccumSumSqSum(x, norm_size, mean, mean_square);
+            if (!recenter)
+                mean = 0.f;
+#else
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 if (recenter)
                     mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
-            for (size_t j = 0; j < norm_size; j++) {
+            size_t j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+            v_float32 vmean = vx_setall_f32(mean), vinv_stdev = vx_setall_f32(inv_stdev);
+            for (; j + VEC_SZ <= norm_size; j += VEC_SZ) {
+                v_float32 vs = vx_load(scale_data + j);
+                vx_store(y + j, v_mul(v_mul(vs, v_sub(vx_load(x + j), vmean)), vinv_stdev));
+            }
+#endif
+            for (; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
             }
         }
@@ -142,17 +232,31 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             auto *y = output_data + norm_size * i;
 
             float mean = 0.f, mean_square = 0.f;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normAccumSumSqSum(x, norm_size, mean, mean_square);
+#else
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
-            for (size_t j = 0; j < norm_size; j++) {
+            size_t j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+            v_float32 vmean = vx_setall_f32(mean), vinv_stdev = vx_setall_f32(inv_stdev);
+            for (; j + VEC_SZ <= norm_size; j += VEC_SZ) {
+                v_float32 vs = vx_load(scale_data + j);
+                v_float32 vb = vx_load(bias_data + j);
+                vx_store(y + j, v_fma(v_mul(vs, v_sub(vx_load(x + j), vmean)), vinv_stdev, vb));
+            }
+#endif
+            for (; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
             }
         }
@@ -194,7 +298,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
         const size_t norm_size = (size_t)H * (size_t)W;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VEC_SZ = VTraits<v_float32>::vlanes();
 #endif
 
@@ -222,7 +326,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
                 int c0 = 0;
-#if CV_SIMD && CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
                 const int VEC_SZ_D = VTraits<v_float64>::vlanes();
                 CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
                 for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ) {
@@ -269,7 +373,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 }
 
                 c0 = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ) {
                     v_float32 va = vx_load(alpha + c0);
                     v_float32 vb = vx_load(beta + c0);
@@ -294,7 +398,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 }
 
                 int c0_pad = validC0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 for (; c0_pad <= C0 - VEC_SZ; c0_pad += VEC_SZ) {
                     v_float32 vzero = vx_setzero_f32();
                     for (int h = 0; h < H; ++h) {
@@ -331,11 +435,15 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             auto *y = output_data + norm_size * i;
 
             double dmean = 0., dmean_sq = 0.;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+            normAccumSumSqSum64f(x, norm_size, dmean, dmean_sq);
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 double v = (double)x[j];
                 dmean += v;
                 dmean_sq += v * v;
             }
+#endif
 
             float mean = (float)(dmean / norm_size);
             float var = (float)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
@@ -343,7 +451,14 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
-            for (size_t j = 0; j < norm_size; j++) {
+            size_t j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+            v_float32 vmean = vx_setall_f32(mean), vs = vx_setall_f32(s), vb = vx_setall_f32(b);
+            for (; j + VEC_SZ <= norm_size; j += VEC_SZ)
+                vx_store(y + j, v_fma(v_sub(vx_load(x + j), vmean), vs, vb));
+#endif
+            for (; j < norm_size; j++) {
                 y[j] = s * (x[j] - mean) + b;
             }
         }
@@ -387,7 +502,7 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
         const size_t norm_size = (size_t)channels_per_group * (size_t)H * (size_t)W;
         const double inv_norm_size = 1.0 / (double)norm_size;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VEC_SZ = VTraits<v_float32>::vlanes();
 #endif
 
@@ -440,7 +555,7 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
                     float*       outbase = outptr + n * outStep0 + c1 * outStep1;
 
                     int c0 = c0_lo;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                     for (; c0 <= c0_hi - VEC_SZ; c0 += VEC_SZ) {
                         v_float32 va = vx_load(alpha + c0);
                         v_float32 vb = vx_load(beta + c0);
@@ -496,21 +611,37 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             auto *y = output_data + norm_size * i;
 
             double dmean = 0., dmean_sq = 0.;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+            normAccumSumSqSum64f(x, norm_size, dmean, dmean_sq);
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 double v = (double)x[j];
                 dmean += v;
                 dmean_sq += v * v;
             }
+#endif
 
             float mean = (float)(dmean / norm_size);
             float var = (float)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
             float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t group_idx = i % num_groups * channels_per_group;
-            for (size_t j = 0; j < norm_size; j++) {
-                size_t c = group_idx + (j / step);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+            v_float32 vmean = vx_setall_f32(mean);
+#endif
+            size_t j = 0;
+            for (size_t c_idx = 0; c_idx < channels_per_group; c_idx++) {
+                size_t c = group_idx + c_idx;
                 float s = scale_data[c] * inv_stdev, b = bias_data[c];
-                y[j] = s * (x[j] - mean) + b;
+                const size_t j_end = j + step;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                v_float32 vs = vx_setall_f32(s), vb = vx_setall_f32(b);
+                for (; j + VEC_SZ <= j_end; j += VEC_SZ)
+                    vx_store(y + j, v_fma(v_sub(vx_load(x + j), vmean), vs, vb));
+#endif
+                for (; j < j_end; j++)
+                    y[j] = s * (x[j] - mean) + b;
             }
         }
     };
