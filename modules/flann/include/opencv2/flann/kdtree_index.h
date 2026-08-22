@@ -95,6 +95,9 @@ public:
 
         trees_ = get_param(index_params_,"trees",4);
         tree_roots_ = new NodePtr[trees_];
+        for (int i = 0; i < trees_; ++i) {
+            tree_roots_[i] = NULL;
+        }
 
         // Create a permutable array of indices to the input vectors.
         vind_.resize(size_);
@@ -127,6 +130,13 @@ public:
      */
     void buildIndex() CV_OVERRIDE
     {
+        if (size_ == 0) {
+            for (int i = 0; i < trees_; i++) {
+                tree_roots_[i] = NULL;
+            }
+            return;
+        }
+
         /* Construct the randomized trees. */
         for (int i = 0; i < trees_; i++) {
             /* Randomize the order of vectors to allow for unbiased sampling. */
@@ -136,7 +146,7 @@ public:
             std::random_shuffle(vind_.begin(), vind_.end());
 #endif
 
-            tree_roots_[i] = divideTree(&vind_[0], int(size_) );
+            tree_roots_[i] = divideTree(vind_.data(), int(size_) );
         }
     }
 
@@ -208,6 +218,8 @@ public:
      */
     void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
+        if (size_ == 0) return;
+
         const int maxChecks = get_param(searchParams,"checks", 32);
         const float epsError = 1+get_param(searchParams,"eps",0.0f);
         const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
@@ -286,6 +298,10 @@ private:
      */
     NodePtr divideTree(int* ind, int count)
     {
+        if (count <= 0) {
+            return NULL;
+        }
+
         NodePtr node = pool_.allocate<Node>(); // allocate memory
 
         /* If too few exemplars remain, then make this a leaf node. */
@@ -481,6 +497,10 @@ private:
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
                      float epsError, const cv::Ptr<Heap<BranchSt>>& heap, DynamicBitset& checked, bool explore_all_trees = false)
     {
+        if (node == NULL) {
+            return;
+        }
+
         if (result_set.worstDist()<mindist) {
             //			printf("Ignoring branch, too far\n");
             return;
@@ -535,6 +555,10 @@ private:
      */
     void searchLevelExact(ResultSet<DistanceType>& result_set, const ElementType* vec, const NodePtr node, DistanceType mindist, const float epsError)
     {
+        if (node == NULL) {
+            return;
+        }
+
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {
             int index = node->divfeat;
