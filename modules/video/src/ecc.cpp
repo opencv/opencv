@@ -471,6 +471,20 @@ double cv::findTransformECCWithMask( InputArray templateImage,
         templtMask.convertTo(templtMask, CV_8U);
     }
 
+    // The Gaussian pre-filter above extrapolates the template border
+    // (BORDER_REFLECT_101), so a ring of gaussFiltSize/2 px of templateFloat is
+    // fabricated rather than measured.  Used at full weight it biases the
+    // estimated linear part, so drop it.  (The blur+threshold erosion above
+    // cannot do this: blurring an all-ones mask returns all ones.)
+    const int blurRing = gaussFiltSize / 2;
+    if (blurRing > 0 && templtMask.rows > 2*blurRing && templtMask.cols > 2*blurRing)
+    {
+        templtMask.rowRange(0, blurRing).setTo(0);
+        templtMask.rowRange(templtMask.rows - blurRing, templtMask.rows).setTo(0);
+        templtMask.colRange(0, blurRing).setTo(0);
+        templtMask.colRange(templtMask.cols - blurRing, templtMask.cols).setTo(0);
+    }
+
     //to use it for mask warping
     Mat preMask;
     if(inputMask.empty())
@@ -531,7 +545,7 @@ double cv::findTransformECCWithMask( InputArray templateImage,
             warpPerspective(preMask, imageMask, map, imageMask.size(), maskFlags);
         }
 
-        if (!templateMask.empty())
+        if (!templateMask.empty() || blurRing > 0)
         {
             cv::bitwise_and(imageMask, templtMask, imageMask);
 
