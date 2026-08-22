@@ -153,8 +153,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         output_ndims = params.get<int>("output_ndims", 3);
 
         do_rotary = params.get<bool>("do_rotary", false);
-
-        is_prepacked = false;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -242,6 +240,27 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return flops;
     }
 
+    // Geometry derives from the weight shape alone, so this is safe before finalize().
+    void packQKV(const Mat& weight) {
+        opt.init();
+        const auto weight_shape = shape(weight);
+        input_hidden_size = static_cast<size_t>(weight_shape[0]);
+        hidden_size = weight_shape[1];
+        qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
+        qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
+
+        const auto *weight_data = weight.ptr<const float>();
+        packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
+        packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
+        packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
+    }
+
+    // Dynamic weights (blobs empty) aren't available yet; forward() packs those.
+    void prepackWeights() CV_OVERRIDE {
+        if (!blobs.empty())
+            packQKV(blobs.front());
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
 
@@ -257,15 +276,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
-
-        if (!blobs.empty()) {
-            const auto *weight_data = weight.ptr<const float>();
-            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
-            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
-            packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
-
-            is_prepacked = true;
-        }
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
@@ -283,16 +293,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        // prepack weights
-        if (!is_prepacked) {
-            const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
-            const auto *weight_data = weight.ptr<const float>();
-            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
-            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
-            packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
-
-            is_prepacked = true;
-        }
+        // Dynamic weight (blobs empty) may change each call, so repack it.
+        if (blobs.empty())
+            packQKV(inputs[1]);
+        // Const weight: pack once as fallback when prepackWeights() wasn't called.
+        else if (packed_weight_q.empty())
+            packQKV(blobs.front());
 
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
@@ -555,7 +561,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t hidden_size;
 
     bool do_rotary;
-    bool is_prepacked;
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;
