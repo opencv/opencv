@@ -41,11 +41,11 @@ void HoughCirclesWithAccumulator(
         InputArray image, OutputArray circles,
         int method, double dp, double minDist,
         double param1 = 100, double param2 = 100,
-        int minRadius = 0, int maxRadius = 0
+        int minRadius = 0, int maxRadius = 0, InputArray edges = noArray()
 )
 {
     std::vector<Vec4f> circles_acc;
-    HoughCircles(image, circles_acc, method, dp, minDist, param1, param2, minRadius, maxRadius);
+    HoughCircles(image, circles_acc, method, dp, minDist, param1, param2, minRadius, maxRadius, edges);
     Mat(1, static_cast<int>(circles_acc.size()), CV_32FC4, &circles_acc.front()).copyTo(circles);
 }
 
