@@ -5,6 +5,23 @@
 
 #include "dlpack/dlpack.h"
 
+// cv::RNG is a "simple" wrapped type, so its C++ instance is stored by value inside
+// the Python object. Functions like cv::randShuffle() accept an optional RNG*, which
+// must alias that very instance (and not a copy of it) to advance the caller's state.
+// The pointer stays valid for the duration of the call because the Python object is
+// kept alive by the argument tuple. A missing argument (or None) is left as the
+// default null pointer, which means "use cv::theRNG()".
+template<>
+bool pyopencv_to(PyObject* obj, cv::RNG*& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+        return true;
+    if (pyopencv_RNG_getp(obj, value))
+        return true;
+    failmsg("Expected cv::RNG for argument '%s'", info.name);
+    return false;
+}
+
 static PyObject* pycvMakeType(PyObject* , PyObject* args, PyObject* kw) {
     const char *keywords[] = { "depth", "channels", NULL };
 

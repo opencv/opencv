@@ -33,7 +33,7 @@ else:
 
 forbidden_arg_types = ["void*"]
 
-ignored_arg_types = ["RNG*"]
+ignored_arg_types = []
 
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
 
@@ -229,6 +229,7 @@ ArgTypeInfo.__new__.__defaults__ = (False,)
 simple_argtype_mapping = {
     "bool": ArgTypeInfo("bool", FormatStrings.unsigned_char, "0", True),
     "size_t": ArgTypeInfo("size_t", FormatStrings.unsigned_long_long, "0", True),
+    "uint64": ArgTypeInfo("uint64", FormatStrings.unsigned_long_long, "0", True),
     "int": ArgTypeInfo("int", FormatStrings.int, "0", True),
     "float": ArgTypeInfo("float", FormatStrings.float, "0.f", True),
     "double": ArgTypeInfo("double", FormatStrings.double, "0", True),

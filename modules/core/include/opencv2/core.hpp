@@ -2878,7 +2878,7 @@ Gaussian-distribution random numbers are generated using the Ziggurat
 algorithm ( <http://en.wikipedia.org/wiki/Ziggurat_algorithm> ),
 introduced by G. Marsaglia and W. W. Tsang.
 */
-class CV_EXPORTS RNG
+class CV_EXPORTS_W_SIMPLE RNG
 {
 public:
     enum { UNIFORM = 0,
@@ -2893,14 +2893,14 @@ public:
     , the constructor uses the above default value instead to avoid the
     singular random number sequence, consisting of all zeros.
     */
-    RNG();
+    CV_WRAP RNG();
     /** @overload
     @param state 64-bit value used to initialize the RNG.
     */
-    RNG(uint64 state);
+    CV_WRAP RNG(uint64 state);
     /**The method updates the state using the MWC algorithm and returns the
     next 32-bit random number.*/
-    unsigned next();
+    CV_WRAP unsigned next();
 
     /**Each of the methods updates the state using the MWC algorithm and
     returns the next random number of the specified type. In case of integer
@@ -2973,11 +2973,11 @@ public:
     @param a lower inclusive boundary of the returned random number.
     @param b upper non-inclusive boundary of the returned random number.
     */
-    int uniform(int a, int b);
+    CV_WRAP int uniform(int a, int b);
     /** @overload */
     float uniform(float a, float b);
     /** @overload */
-    double uniform(double a, double b);
+    CV_WRAP double uniform(double a, double b);
 
     /** @brief Fills arrays with random numbers.
 
@@ -3013,7 +3013,7 @@ public:
     with zero mean and identity covariation matrix, and then transforms them
     using transform to get samples from the specified Gaussian distribution.
     */
-    void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
+    CV_WRAP void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
 
     /** @brief Returns the next random number sampled from the Gaussian distribution
     @param sigma standard deviation of the distribution.
@@ -3023,9 +3023,9 @@ public:
     the mean value of the returned random numbers is zero and the standard
     deviation is the specified sigma .
     */
-    double gaussian(double sigma);
+    CV_WRAP double gaussian(double sigma);
 
-    uint64 state;
+    CV_PROP_RW uint64 state;
 
     bool operator ==(const RNG& other) const;
 };
