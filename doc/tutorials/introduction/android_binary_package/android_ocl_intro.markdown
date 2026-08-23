@@ -49,7 +49,7 @@ libOpenCL.so may be provided with BSP or just downloaded from any OpenCL-cabaple
 cd your_path/ANDROID_OPENCL_SDK && mkdir lib && cd lib
 adb pull /system/vendor/lib64/libOpenCL.so
 @endcode
-System verison of libOpenCL.so may have a lot of platform specific dependencies. `-Wl,--allow-shlib-undefined` flag allows
+System version of libOpenCL.so may have a lot of platform specific dependencies. `-Wl,--allow-shlib-undefined` flag allows
 to ignore 3rdparty symbols if they are not used during the build.
 The following CMake line allows to link the JNI part against standard OpenCL, but not include the loadLibrary into
 application package. System OpenCL API is used in run-time.

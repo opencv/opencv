@@ -54,7 +54,7 @@ sizes contingent upon the model's scale.
 
 This table provides a quick reference to understand the different input dimensions commonly used in
 various YOLO models inputs. These are standard input shapes. Make sure you use input size that you
-trained model with, if it is differed from from the size mentioned in the table.
+trained model with, if it is differed from the size mentioned in the table.
 
 The next critical element in the process involves understanding the specifics of image pre-processing
 for YOLO detectors. While the fundamental pre-processing approach remains consistent across the YOLO
@@ -78,7 +78,7 @@ the ONNX graph, a process that we will detail further in the subsequent sections
 
 ### PyTorch Model Export
 
-Now that we know know the parameters of the pre-precessing we can go on and export the model from
+Now that we know the parameters of the pre-processing we can go on and export the model from
 Pytorch to ONNX graph. Since in this tutorial we are using YOLOX as our sample model, lets use its
 export for demonstration purposes (the process is  identical for the rest of the YOLO detectors except `YOLOv10` model, see details on how to export it later in the post).
 To exporting YOLOX we can just use [export script](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/tools/export_onnx.py). Particularly we need following commands:
