@@ -65,9 +65,9 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
 \****************************************************************************************/
 
 namespace {
-#if CV_NEON
+#if CV_SIMD128_64F
 template<typename T, typename ST>
-struct RowSumCn1Neon
+struct RowSumCn1SIMD128
 {
     static CV_ALWAYS_INLINE bool apply(const T*, ST*, int, int)
     {
@@ -75,85 +75,64 @@ struct RowSumCn1Neon
     }
 };
 
-#if CV_NEON && (defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC))
 template<>
-struct RowSumCn1Neon<float, double>
+struct RowSumCn1SIMD128<float, double>
 {
     static CV_ALWAYS_INLINE bool apply(const float* S, double* D, int width, int ksz_cn)
     {
         double s = 0;
         int i = 0;
         {
-            float64x2_t vsum0 = vdupq_n_f64(0.0);
-            float64x2_t vsum1 = vdupq_n_f64(0.0);
-            for( ; i <= ksz_cn - 8; i += 8 )
+            v_float64x2 vsum0 = v_setzero_f64();
+            v_float64x2 vsum1 = v_setzero_f64();
+            for( ; i <= ksz_cn - 2*VTraits<v_float32x4>::nlanes; i += 2*VTraits<v_float32x4>::nlanes )
             {
-                float32x4_t va = vld1q_f32(S + i);
-                float32x4_t vb = vld1q_f32(S + i + 4);
-                vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_low_f32(va)));
-                vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_high_f32(va)));
-                vsum1 = vaddq_f64(vsum1, vcvt_f64_f32(vget_low_f32(vb)));
-                vsum1 = vaddq_f64(vsum1, vcvt_f64_f32(vget_high_f32(vb)));
+                v_float32x4 va = v_load(S + i);
+                v_float32x4 vb = v_load(S + i + VTraits<v_float32x4>::nlanes);
+                vsum0 = v_add(vsum0, v_cvt_f64(va));
+                vsum0 = v_add(vsum0, v_cvt_f64_high(va));
+                vsum1 = v_add(vsum1, v_cvt_f64(vb));
+                vsum1 = v_add(vsum1, v_cvt_f64_high(vb));
             }
-            for( ; i <= ksz_cn - 4; i += 4 )
+            for( ; i <= ksz_cn - VTraits<v_float32x4>::nlanes; i += VTraits<v_float32x4>::nlanes )
             {
-                float32x4_t v = vld1q_f32(S + i);
-                vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_low_f32(v)));
-                vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_high_f32(v)));
+                v_float32x4 v = v_load(S + i);
+                vsum0 = v_add(vsum0, v_cvt_f64(v));
+                vsum0 = v_add(vsum0, v_cvt_f64_high(v));
             }
-            vsum0 = vaddq_f64(vsum0, vsum1);
-            s = vgetq_lane_f64(vsum0, 0) + vgetq_lane_f64(vsum0, 1);
+            vsum0 = v_add(vsum0, vsum1);
+            s = v_reduce_sum(vsum0);
             for( ; i < ksz_cn; i++ )
                 s += (double)S[i];
         }
         D[0] = s;
-        static const int CHUNK = 512;
-        double delta[CHUNK];
-        const float64x2_t vzero = vdupq_n_f64(0.0);
 
-        i = 0;
-        while( i < width )
+        int j = 0;
+        for( ; j <= width - VTraits<v_float32x4>::nlanes; j += VTraits<v_float32x4>::nlanes )
         {
-            const int chunk_sz = std::min(width - i, CHUNK);
-            int j = 0;
-            for( ; j <= chunk_sz - 4; j += 4 )
-            {
-                float32x4_t vnew = vld1q_f32(S + i + j + ksz_cn);
-                float32x4_t vold = vld1q_f32(S + i + j);
-                vst1q_f64(delta + j, vsubq_f64(vcvt_f64_f32(vget_low_f32(vnew)), vcvt_f64_f32(vget_low_f32(vold))));
-                vst1q_f64(delta + j + 2, vsubq_f64(vcvt_f64_f32(vget_high_f32(vnew)), vcvt_f64_f32(vget_high_f32(vold))));
-            }
-            for( ; j < chunk_sz; j++ )
-                delta[j] = (double)S[i + j + ksz_cn] - (double)S[i + j];
-
-            j = 0;
-            for( ; j <= chunk_sz - 4; j += 4 )
-            {
-                float64x2_t vd0 = vld1q_f64(delta + j);
-                float64x2_t vd1 = vld1q_f64(delta + j + 2);
-                float64x2_t vp0 = vaddq_f64(vd0, vextq_f64(vzero, vd0, 1));
-                float64x2_t vp1 = vaddq_f64(vd1, vextq_f64(vzero, vd1, 1));
-                double pair0_sum = vgetq_lane_f64(vp0, 1);
-                float64x2_t vp1off = vaddq_f64(vp1, vdupq_n_f64(pair0_sum));
-                float64x2_t vc  = vdupq_n_f64(s);
-                vst1q_f64(D + i + j + 1, vaddq_f64(vp0, vc));
-                float64x2_t vr2 = vaddq_f64(vp1off, vc);
-                vst1q_f64(D + i + j + 3, vr2);
-                s = vgetq_lane_f64(vr2, 1);
-            }
-            for( ; j < chunk_sz; j++ )
-            {
-                s += delta[j];
-                D[i + j + 1] = s;
-            }
-
-            i += chunk_sz;
+            v_float32x4 vnew = v_load(S + j + ksz_cn);
+            v_float32x4 vold = v_load(S + j);
+            v_float64x2 vd0 = v_sub(v_cvt_f64(vnew), v_cvt_f64(vold));
+            v_float64x2 vd1 = v_sub(v_cvt_f64_high(vnew), v_cvt_f64_high(vold));
+            v_float64x2 vp0 = v_add(vd0, v_rotate_left<1>(vd0));
+            v_float64x2 vp1 = v_add(vd1, v_rotate_left<1>(vd1));
+            double pair0_sum = v_extract_n<1>(vp0);
+            v_float64x2 vp1off = v_add(vp1, v_setall_f64(pair0_sum));
+            v_float64x2 vc = v_setall_f64(s);
+            v_store(D + j + 1, v_add(vp0, vc));
+            v_float64x2 vr2 = v_add(vp1off, vc);
+            v_store(D + j + 1 + VTraits<v_float64x2>::nlanes, vr2);
+            s = v_extract_n<1>(vr2);
+        }
+        for( ; j < width; j++ )
+        {
+            s += (double)S[j + ksz_cn] - (double)S[j];
+            D[j + 1] = s;
         }
         return true;
     }
 };
-#endif // CV_NEON && AArch64
-#endif // CV_NEON
+#endif // CV_SIMD128_64F
 
 template<typename T, typename ST>
 struct RowSum :
@@ -192,9 +171,9 @@ struct RowSum :
         }
         else if( cn == 1 )
         {
-        #if CV_NEON
-            if (!RowSumCn1Neon<T, ST>::apply(S, D, width, ksz_cn))
-        #endif
+#if CV_SIMD128_64F
+            if (!RowSumCn1SIMD128<T, ST>::apply(S, D, width, ksz_cn))
+#endif
             {
                 ST s = 0;
                 for( i = 0; i < ksz_cn; i++ )
