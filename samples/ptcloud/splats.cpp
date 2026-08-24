@@ -26,7 +26,7 @@ int main(int argc, char** argv)
         "{ size      | 0.5   | splat sigma as a multiple of point spacing, for plain point clouds }";
 
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Renders a 3D Gaussian Splatting scene with cv::viz3d::showSplats.");
+    parser.about("Renders a 3D Gaussian Splatting scene with cv::viz3d::showGaussianSplats.");
 
     if (!parser.check())
     {
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
     }
 
     viz3d::setPerspective("splats", 1.3f, 0.01f, 1000.0f);
-    viz3d::showSplats("splats", "scene", splats);
+    viz3d::showGaussianSplats("splats", "scene", splats);
 
     if (parser.get<bool>("points"))
     {

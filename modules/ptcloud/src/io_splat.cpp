@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 
 #include "io_splat.hpp"
-#include "utils.hpp"
+#include "splat.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
 #include <fstream>
@@ -15,21 +15,21 @@
 
 namespace cv {
 
-bool SplatDecoder::readSplats(Mat& splats)
+bool readSplatFile(const std::string& filename, Mat& splats)
 {
     splats.release();
 
-    std::ifstream file(m_filename, std::ios::binary | std::ios::ate);
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
     if (!file)
     {
-        CV_LOG_ERROR(NULL, "Failed to open '" << m_filename << "'");
+        CV_LOG_ERROR(NULL, "Failed to open '" << filename << "'");
         return false;
     }
 
     const std::streamoff size = file.tellg();
     if (size <= 0 || size % (int)splat::PACKED_STRIDE != 0)
     {
-        CV_LOG_ERROR(NULL, "'" << m_filename << "' is not a .splat file: size " << size
+        CV_LOG_ERROR(NULL, "'" << filename << "' is not a .splat file: size " << size
                      << " is not a positive multiple of " << (int)splat::PACKED_STRIDE);
         return false;
     }
@@ -38,11 +38,11 @@ bool SplatDecoder::readSplats(Mat& splats)
     std::vector<uchar> buf((size_t)size);
     if (!file.read((char*)buf.data(), size))
     {
-        CV_LOG_ERROR(NULL, "Failed to read '" << m_filename << "'");
+        CV_LOG_ERROR(NULL, "Failed to read '" << filename << "'");
         return false;
     }
 
-    splat::decodePacked(buf.data(), (int)(size / (int)splat::PACKED_STRIDE), splats);
+    decodeGaussianSplatsPacked(buf, splats);
     return true;
 }
 

@@ -7,16 +7,12 @@
 
 #include "precomp.hpp"
 
-#include <opencv2/core/quaternion.hpp>
-
 #include <string>
 #include <vector>
 #include <sstream>
 #include <array>
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
-#include <cstring>
 
 namespace cv {
 
@@ -290,170 +286,6 @@ struct Intr
 
     float fx, fy, cx, cy;
 };
-
-// 3D Gaussian Splatting attribute decoding and depth sorting. Deliberately free of
-// OpenGL so it stays testable on headless builds.
-namespace splat {
-
-enum
-{
-    STRIDE = 13,
-    OFS_POS = 0,
-    OFS_COV = 3,
-    OFS_RGB = 9,
-    OFS_ALPHA = 12,
-
-    // Column order of plyProperties(), which decode() reads.
-    RAW_STRIDE = 14,
-    RAW_OFS_POS = 0,
-    RAW_OFS_DC = 3,
-    RAW_OFS_OPACITY = 6,
-    RAW_OFS_SCALE = 7,
-    RAW_OFS_ROT = 10,
-
-    // Byte layout of a ".splat" record, which decodePacked() reads.
-    PACKED_STRIDE = 32,
-    PACKED_OFS_POS = 0,
-    PACKED_OFS_SCALE = 12,
-    PACKED_OFS_RGBA = 24,
-    PACKED_OFS_ROT = 28
-};
-
-inline const std::vector<std::string>& plyProperties()
-{
-    static const std::vector<std::string> names = {
-        "x", "y", "z",
-        "f_dc_0", "f_dc_1", "f_dc_2",
-        "opacity",
-        "scale_0", "scale_1", "scale_2",
-        "rot_0", "rot_1", "rot_2", "rot_3"
-    };
-    return names;
-}
-
-inline float sigmoid(float x)
-{
-    return 1.0f / (1.0f + std::exp(-x));
-}
-
-inline float shDcToColor(float dc)
-{
-    return std::min(1.0f, std::max(0.0f, 0.5f + 0.28209479177387814f * dc));
-}
-
-// Sigma = R S S^T R^T, symmetric positive semi-definite for any rotation and scale.
-inline Matx33f covariance(const Vec3f& scale, const Vec4f& rot)
-{
-    Matx33f rs = Quatf(rot[0], rot[1], rot[2], rot[3]).toRotMat3x3(QUAT_ASSUME_NOT_UNIT);
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            rs(i, j) *= scale[j];
-    return rs * rs.t();
-}
-
-inline void decode(const Mat& raw, Mat& splats)
-{
-    CV_Assert(raw.type() == CV_32F && raw.cols == RAW_STRIDE);
-
-    splats.create(raw.rows, STRIDE, CV_32F);
-    parallel_for_(Range(0, raw.rows), [&](const Range& range)
-    {
-        for (int i = range.start; i < range.end; i++)
-        {
-            const float* s = raw.ptr<float>(i);
-            float* d = splats.ptr<float>(i);
-
-            for (int k = 0; k < 3; k++)
-                d[OFS_POS + k] = s[RAW_OFS_POS + k];
-
-            Vec3f scale(std::exp(s[RAW_OFS_SCALE + 0]),
-                        std::exp(s[RAW_OFS_SCALE + 1]),
-                        std::exp(s[RAW_OFS_SCALE + 2]));
-            Matx33f cov = covariance(scale, Vec4f(s[RAW_OFS_ROT + 0], s[RAW_OFS_ROT + 1],
-                                                  s[RAW_OFS_ROT + 2], s[RAW_OFS_ROT + 3]));
-
-            d[OFS_COV + 0] = cov(0, 0);
-            d[OFS_COV + 1] = cov(0, 1);
-            d[OFS_COV + 2] = cov(0, 2);
-            d[OFS_COV + 3] = cov(1, 1);
-            d[OFS_COV + 4] = cov(1, 2);
-            d[OFS_COV + 5] = cov(2, 2);
-
-            for (int k = 0; k < 3; k++)
-                d[OFS_RGB + k] = shDcToColor(s[RAW_OFS_DC + k]);
-
-            d[OFS_ALPHA] = sigmoid(s[RAW_OFS_OPACITY]);
-        }
-    });
-}
-
-// Values arrive already activated, so only the covariance is built.
-inline void decodePacked(const uchar* data, int n, Mat& splats)
-{
-    CV_Assert(data != nullptr && n >= 0);
-
-    splats.create(n, STRIDE, CV_32F);
-    parallel_for_(Range(0, n), [&](const Range& range)
-    {
-        for (int i = range.start; i < range.end; i++)
-        {
-            const uchar* s = data + (size_t)i * PACKED_STRIDE;
-            float* d = splats.ptr<float>(i);
-
-            Vec3f pos, scale;
-            memcpy(pos.val, s + PACKED_OFS_POS, sizeof(pos.val));
-            memcpy(scale.val, s + PACKED_OFS_SCALE, sizeof(scale.val));
-
-            for (int k = 0; k < 3; k++)
-                d[OFS_POS + k] = pos[k];
-
-            Vec4f rot;
-            for (int k = 0; k < 4; k++)
-                rot[k] = (s[PACKED_OFS_ROT + k] - 128.f) / 128.f;
-            if (rot.dot(rot) < 1e-12f)
-                rot = Vec4f(1.f, 0.f, 0.f, 0.f);
-
-            Matx33f cov = covariance(scale, rot);
-
-            d[OFS_COV + 0] = cov(0, 0);
-            d[OFS_COV + 1] = cov(0, 1);
-            d[OFS_COV + 2] = cov(0, 2);
-            d[OFS_COV + 3] = cov(1, 1);
-            d[OFS_COV + 4] = cov(1, 2);
-            d[OFS_COV + 5] = cov(2, 2);
-
-            for (int k = 0; k < 3; k++)
-                d[OFS_RGB + k] = s[PACKED_OFS_RGBA + k] / 255.f;
-
-            d[OFS_ALPHA] = s[PACKED_OFS_RGBA + 3] / 255.f;
-        }
-    });
-}
-
-inline void sortByDepth(const Mat& pos, const Vec3f& cam, std::vector<int>& order)
-{
-    CV_Assert(pos.type() == CV_32F && pos.cols == 3);
-
-    const int n = pos.rows;
-    Mat key(1, n, CV_32F);
-    float* k = key.ptr<float>();
-
-    parallel_for_(Range(0, n), [&](const Range& range)
-    {
-        for (int i = range.start; i < range.end; i++)
-        {
-            const float* p = pos.ptr<float>(i);
-            Vec3f d(p[0] - cam[0], p[1] - cam[1], p[2] - cam[2]);
-            k[i] = d.dot(d);
-        }
-    });
-
-    order.resize(n);
-    Mat idx(1, n, CV_32S, order.data());
-    sortIdx(key, idx, SORT_EVERY_ROW | SORT_DESCENDING);
-}
-
-} // namespace splat
 
 class OdometryFrame::Impl
 {

@@ -7,7 +7,7 @@
 #include "../precomp.hpp"
 #include "viz3d_private.hpp"
 #include "grid_ticks.hpp"
-#include "../utils.hpp"
+#include "../splat.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -544,7 +544,7 @@ void showPoints(const String& win_name, const String& obj_name, InputArray point
 #endif
 }
 
-void showSplats(const String& win_name, const String& obj_name, InputArray splats)
+void showGaussianSplats(const String& win_name, const String& obj_name, InputArray splats)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -1565,7 +1565,7 @@ void PointCloud::setShader(ogl::Program program_)
 
 GaussianSplats::GaussianSplats(InputArray splats_)
 {
-    CV_Assert(splats_.channels() == 1 && splats_.dims() == 2 && splats_.size().width == splat::STRIDE);
+    CV_Assert(splats_.channels() == 1 && splats_.dims() == 2 && splats_.size().width == GAUSSIAN_SPLAT_STRIDE);
     CV_Assert(splats_.depth() == CV_32F);
     CV_Assert(splats_.size().height > 0);
 
@@ -1580,10 +1580,10 @@ GaussianSplats::GaussianSplats(InputArray splats_)
     for (int i = 0; i < this->count; i++)
     {
         const float* s = src.ptr<float>(i);
-        texel[i * 4 + 0] = Vec4f(s[0], s[1], s[2], s[splat::OFS_ALPHA]);
-        texel[i * 4 + 1] = Vec4f(s[splat::OFS_COV + 0], s[splat::OFS_COV + 1], s[splat::OFS_COV + 2], 0.0f);
-        texel[i * 4 + 2] = Vec4f(s[splat::OFS_COV + 3], s[splat::OFS_COV + 4], s[splat::OFS_COV + 5], 0.0f);
-        texel[i * 4 + 3] = Vec4f(s[splat::OFS_RGB + 0], s[splat::OFS_RGB + 1], s[splat::OFS_RGB + 2], 0.0f);
+        texel[i * 4 + 0] = Vec4f(s[0], s[1], s[2], s[GAUSSIAN_SPLAT_ALPHA]);
+        texel[i * 4 + 1] = Vec4f(s[GAUSSIAN_SPLAT_COV + 0], s[GAUSSIAN_SPLAT_COV + 1], s[GAUSSIAN_SPLAT_COV + 2], 0.0f);
+        texel[i * 4 + 2] = Vec4f(s[GAUSSIAN_SPLAT_COV + 3], s[GAUSSIAN_SPLAT_COV + 4], s[GAUSSIAN_SPLAT_COV + 5], 0.0f);
+        texel[i * 4 + 3] = Vec4f(s[GAUSSIAN_SPLAT_RGB + 0], s[GAUSSIAN_SPLAT_RGB + 1], s[GAUSSIAN_SPLAT_RGB + 2], 0.0f);
     }
     this->data.copyFrom(packed, ogl::Buffer::TEXTURE_BUFFER);
     this->data_tex.create(this->data, ogl::TextureBuffer::RGBA32F);

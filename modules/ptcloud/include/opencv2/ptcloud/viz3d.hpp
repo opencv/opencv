@@ -146,9 +146,9 @@ opaque objects in the same window.
 @param obj_name Name of the object.
 @param splats One row per Gaussian, 13 floats wide: position (3), upper triangle of the symmetric
 3D covariance (6: xx, xy, xz, yy, yz, zz), color (3), opacity (1). As produced by
-cv::loadGaussianSplats.
+cv::loadGaussianSplats or cv::decodeGaussianSplats, see cv::GaussianSplatLayout.
  */
-CV_EXPORTS_W void showSplats(const String& win_name, const String& obj_name, InputArray splats);
+CV_EXPORTS_W void showGaussianSplats(const String& win_name, const String& obj_name, InputArray splats);
 
 /** @brief Shows a colored depth map as a point cloud in the specified viz3d window. See cv::viz3d::destroyObject.
 
