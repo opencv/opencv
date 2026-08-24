@@ -55,8 +55,7 @@ public:
     {
         CV_Assert(inputs.size() == 1);
         int channels = pixelFormat == PF_GRAYSCALE ? 1 : 3;
-        MatShape out(3, -1);
-        out[2] = channels;
+        MatShape out({-1, -1, channels});
         outputs.assign(1, out);
         return false;
     }
@@ -94,32 +93,22 @@ public:
         const int channels = pixelFormat == PF_GRAYSCALE ? 1 : 3;
         MatShape outShape({decoded.rows, decoded.cols, channels});
 
+        // Zero-copy reshape; ternary guards the empty case since reshape() throws on it.
+        Mat Y = decoded.empty() ? Mat(outShape, CV_8U) : decoded.reshape(1, outShape);
+
         auto kind = out_arr.kind();
-        std::vector<Mat>* out_mats = nullptr;
-        std::vector<UMat>* out_umats = nullptr;
-        Mat Y;
-        if (kind == _InputArray::STD_VECTOR_MAT) {
-            out_mats = &out_arr.getMatVecRef();
-            out_mats->resize(1);
-            out_mats->at(0).fit(outShape, CV_8U);
-            Y = out_mats->at(0);
-        } else {
-            CV_Assert(kind == _InputArray::STD_VECTOR_UMAT);
-            out_umats = &out_arr.getUMatVecRef();
-            out_umats->resize(1);
-            out_umats->at(0).fit(outShape, CV_8U);
-            Y = Mat(outShape, CV_8U);
-        }
-
-        if (!decoded.empty())
+        if (kind == _InputArray::STD_VECTOR_MAT)
         {
-            CV_Assert(decoded.isContinuous());
-            CV_Assert(decoded.total() * decoded.elemSize() == Y.total() * Y.elemSize());
-            std::memcpy(Y.data, decoded.data, Y.total() * Y.elemSize());
+            std::vector<Mat>& out_mats = out_arr.getMatVecRef();
+            out_mats.resize(1);
+            out_mats[0] = Y;
         }
-
-        if (kind == _InputArray::STD_VECTOR_UMAT) {
-            Y.copyTo(out_umats->at(0));
+        else
+        {
+            CV_Assert(kind == _InputArray::STD_VECTOR_UMAT);
+            std::vector<UMat>& out_umats = out_arr.getUMatVecRef();
+            out_umats.resize(1);
+            Y.copyTo(out_umats[0]);
         }
 #endif
     }
