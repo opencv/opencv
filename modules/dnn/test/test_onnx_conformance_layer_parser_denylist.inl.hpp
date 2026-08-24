@@ -157,11 +157,7 @@
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ",
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ_expanded",
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2_expanded",
-"test_clip_example_expanded", //wrong output
-"test_clip_expanded",
 "test_clip_min_greater_than_max",
-"test_clip_min_greater_than_max_expanded",
-"test_clip_outbounds_expanded",
 "test_col2im",
 "test_col2im_5d",
 "test_col2im_dilations",
@@ -171,8 +167,6 @@
 "test_compress_1",  // ---- same as above ---
 "test_compress_default_axis",  // ---- same as above ---
 "test_compress_negative_axis",  // ---- same as above ---
-"test_constant_pad_axes", //type mismatch
-"test_constant_pad_negative_axes",
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convtranspose_autopad_same",
@@ -188,32 +182,17 @@
 "test_dequantizelinear_uint16",
 "test_dequantizelinear_uint4",
 "test_dft_axis",
-"test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
-"test_dropout_default_mask_ratio",  // ---- same as above ---
 "test_equal_string",
 "test_equal_string_broadcast",
-"test_gridsample_bicubic",  // ---- same as above ---
-"test_gridsample_bicubic_align_corners_0_additional_1",
-"test_gridsample_bicubic_align_corners_1_additional_1",
 "test_group_normalization_epsilon_expanded",
 "test_group_normalization_example_expanded",
 "test_identity_opt",  //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt",  // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
 "test_if_seq",  // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
-"test_l2normalization_axis_0", //nan
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_lppool_1d_default",
-"test_lppool_2d_default",
-"test_lppool_2d_dilations",
-"test_lppool_2d_pads",
-"test_lppool_2d_same_lower",
-"test_lppool_2d_same_upper",
-"test_lppool_2d_strides",
-"test_lppool_3d_default",
 "test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
-"test_maxpool_2d_ceil_output_size_reduce_by_one",
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
@@ -320,8 +299,6 @@
 "test_training_dropout_default",  // ---- same as above --- type mismatch
 "test_training_dropout_default_mask",  // ---- same as above ---
 "test_training_dropout_mask",  // ---- same as above ---
-"test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_unique_length_1", //incorrect output
 
 // ===== ONNX 1.22 additions: ops/dtypes not yet supported by the importer =====
 // BitCast op not supported by the ONNX importer

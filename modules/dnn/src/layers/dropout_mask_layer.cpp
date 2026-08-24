@@ -1,25 +1,24 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-// Copyright (C) 2025, BigVision LLC, all rights reserved.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv {
 namespace dnn {
 
-class SizeLayerImpl CV_FINAL : public SizeLayer
+class DropoutMaskLayerImpl CV_FINAL : public DropoutMaskLayer
 {
 public:
-    SizeLayerImpl(const LayerParams& params)
+    DropoutMaskLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -29,18 +28,22 @@ public:
                          std::vector<MatShape>& outputs,
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
-        outputs.assign(1, MatShape::scalar());
-        return false;
+        CV_Assert(!inputs.empty() && requiredOutputs >= 2);
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.clear();
+        return true;
     }
 
-    void getTypes(const std::vector<MatType>& /*inputs*/,
+    void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
-                  const int requiredInternals,
+                  const int /*requiredInternals*/,
                   std::vector<MatType>& outputs,
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        outputs.assign(requiredOutputs, MatType(CV_64S));
-        internals.assign(requiredInternals, MatType(CV_64S));
+        CV_Assert(!inputs.empty() && requiredOutputs >= 2);
+        outputs.assign(requiredOutputs, MatType(CV_Bool));
+        outputs[0] = inputs[0];
+        internals.clear();
     }
 
     void forward(InputArrayOfArrays inputs_arr,
@@ -51,19 +54,23 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(!inputs.empty() && outputs.size() >= 2);
         const Mat& x = inputs[0];
+        if (outputs[0].data != x.data)
+            x.copyTo(outputs[0]);
 
-        const MatShape xShape = shape(x);
-        int64_t totalElems = static_cast<int64_t>(total(xShape));
-
-        outputs[0].ptr<int64_t>()[0] = totalElems;
+        for (size_t i = 1; i < outputs.size(); ++i)
+        {
+            Mat& mask = outputs[i];
+            CV_Assert(mask.isContinuous());
+            std::fill_n(mask.ptr<bool>(), mask.total(), true);
+        }
     }
 };
 
-Ptr<SizeLayer> SizeLayer::create(const LayerParams& params)
+Ptr<DropoutMaskLayer> DropoutMaskLayer::create(const LayerParams& params)
 {
-    return Ptr<SizeLayer>(new SizeLayerImpl(params));
+    return Ptr<DropoutMaskLayer>(new DropoutMaskLayerImpl(params));
 }
 
 }}

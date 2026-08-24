@@ -259,6 +259,7 @@ protected:
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDropout              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSlice                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2333,6 +2334,15 @@ void ONNXImporter2::parseSimpleLayers(LayerParams& layerParams, const opencv_onn
     addLayer(layerParams, node_proto);
 }
 
+// Passthrough Dropout (eval mode) with an optional 2nd "mask" output. BlankLayer handles the
+// 1-output case; the 2-output case needs a deterministic all-true mask, so route it to DropoutMask.
+void ONNXImporter2::parseDropout(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    if (node_proto.output_size() > 1)
+        layerParams.type = "DropoutMask";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     // Check if of equation is valid
@@ -3157,7 +3167,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
 
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
-        "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
+        "Cosh", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
         "Identity", "Log", "Not", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
         "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
         "GeluApproximation"
@@ -3166,6 +3176,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     {
         dispatch[name] = &ONNXImporter2::parseSimpleLayers;
     }
+    dispatch["Dropout"] = &ONNXImporter2::parseDropout;
 
     // BUG: https://github.com/opencv/opencv/issues/26310
     // ai.onnx: opset 10+

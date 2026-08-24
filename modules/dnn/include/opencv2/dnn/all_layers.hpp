@@ -1701,6 +1701,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
+    /** @brief ONNX Dropout in eval mode: passes input through, mask output is all-true. */
+    class CV_EXPORTS DropoutMaskLayer : public Layer
+    {
+    public:
+        static Ptr<DropoutMaskLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS EyeLikeLayer : public Layer
     {
     public:
