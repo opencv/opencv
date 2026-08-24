@@ -308,6 +308,11 @@ class Arguments(NewOpenCVTests):
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
 
+    def test_InputOutputArray(self):
+        a = np.zeros((2, 3), dtype=np.int32)
+        res, _ = cv.utils.dumpInputOutputArray(a)
+        self.assertIn('type(-1)=CV_32SC1', res)
+
     def test_unsupported_numpy_data_types_string_description(self):
         for dtype in (object, str, np.complex128):
             test_array = np.zeros((4, 4, 3), dtype=dtype)
