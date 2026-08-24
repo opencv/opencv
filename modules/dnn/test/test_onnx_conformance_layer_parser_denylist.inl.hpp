@@ -201,15 +201,6 @@
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt",  // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
 "test_if_seq",  // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
-"test_image_decoder_decode_bmp_rgb",
-"test_image_decoder_decode_jpeg2k_rgb",
-"test_image_decoder_decode_jpeg_bgr",
-"test_image_decoder_decode_jpeg_grayscale",
-"test_image_decoder_decode_jpeg_rgb",
-"test_image_decoder_decode_png_rgb",
-"test_image_decoder_decode_pnm_rgb",
-"test_image_decoder_decode_tiff_rgb",
-"test_image_decoder_decode_webp_rgb",
 "test_l2normalization_axis_0", //nan
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
