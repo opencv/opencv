@@ -370,7 +370,7 @@ If enabling Python 3 wrapper is succeeded, `Python 3:` section shows more.
 
 ### Step 3. Build and archive OpenCV libraries and headers
 
-This step in in host.
+This step in host.
 
 Build and install.
 (This `install` means only that copying artifacts to `install` folder.)
