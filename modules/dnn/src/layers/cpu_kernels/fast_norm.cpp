@@ -922,9 +922,7 @@ static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bia
             T var = (T)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
             T inv_stdev = (T)1 / std::sqrt(var + epsilon);
 
-            // Loop restructured (channel outer, offset inner) instead of j/step per
-            // element -- avoids a per-element division, cheap win for T=double too and
-            // what lets the T=float instantiation vectorize below.
+            // Channel-outer loop avoids a per-element j/step division and lets T=float vectorize below.
             size_t group_idx = i % num_groups * channels_per_group;
             size_t j = 0;
             for (size_t c_idx = 0; c_idx < channels_per_group; c_idx++) {

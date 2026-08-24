@@ -411,10 +411,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const T* bptr0 = B.ptr<T>();
         T* yptr0 = Y.ptr<T>();
 
-        // Real ONNX MatMul never sets alpha/beta; only some internal fusion could.
-        // A non-integer scale has no exact meaning for an integer accumulator, so
-        // reject it here rather than round it away -- rounding 0.4 or 0.2 to 0 would
-        // silently zero out the product/bias instead of erroring.
+        // Reject non-integer alpha/beta rather than round: rounding 0.4/0.2 to 0 would silently zero the result.
         const bool haveBias = (inputs.size() + blobs.size()) >= 3;
         double alpha_d = (double)alpha, beta_d = haveBias ? (double)beta : 0.0;
         CV_CheckTrue(std::floor(alpha_d) == alpha_d, "DNN/MatMul: alpha must be an integer value for integer types");
