@@ -952,14 +952,6 @@ public:
                 }
             }
         });
-        if (activationFunc) {
-            float* dst = out;
-            const int total = K1 * HW * 8;
-            const float* prm = activParams.empty() ? nullptr : activParams.data();
-            parallel_for_(Range(0, total), [&](const Range& r) {
-                activationFunc(dst + r.start, dst + r.start, (size_t)(r.end - r.start), prm);
-            });
-        }
     }
 
     // Chunked 1x1 SGEMM-as-conv: gather NCHWc8 -> SGEMM -> scatter+activate
