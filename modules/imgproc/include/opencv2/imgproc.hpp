@@ -3475,6 +3475,32 @@ CV_EXPORTS int floodFill( InputOutputArray image,
 //! @param dst It is created if it does not have the same size and type with src1.
 CV_EXPORTS_W void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
+/** @brief Composites an overlay with an alpha channel on top of a background image (Porter-Duff "over" operator).
+
+The function draws overlay on top of background, blending the two according to overlay's alpha
+channel so that partially-transparent pixels mix smoothly into the background with no fringing at
+the edges. It does this by working in premultiplied alpha space: the color channels of overlay
+(and of background, when background has its own alpha channel) are premultiplied by their alpha
+before blending and, if requested, the un-premultiplied (straight-alpha) result is restored
+afterwards. This premultiply / un-premultiply step reuses #cvtColor with #COLOR_RGBA2mRGBA and
+#COLOR_mRGBA2RGBA, so alphaComposite accepts the same two alpha conventions those conversions do.
+
+@param overlay 8-bit 4-channel image (RGBA or BGRA; channel order does not matter as long as it
+matches background) to be drawn on top; must be the same size as background.
+@param background 8-bit 3-channel or 4-channel image to draw underneath. A 3-channel background is
+treated as fully opaque and dst has 3 channels; a 4-channel background contributes its own alpha
+channel to the blend (using the same straight/premultiplied convention as overlay) and dst has 4
+channels with a composited alpha.
+@param dst output image, created with the same size and type as background.
+@param premultiplied false (the default) if overlay's alpha (and background's, when it has one) is
+straight/unassociated, as produced by e.g. `imread(..., IMREAD_UNCHANGED)`; true if it is already
+premultiplied, which skips the internal conversion.
+
+@sa cvtColor, COLOR_RGBA2mRGBA, COLOR_mRGBA2RGBA, blendLinear
+*/
+CV_EXPORTS_W void alphaComposite(InputArray overlay, InputArray background, OutputArray dst,
+                                  bool premultiplied = false);
+
 //! @} imgproc_misc
 
 //! @addtogroup imgproc_color_conversions
