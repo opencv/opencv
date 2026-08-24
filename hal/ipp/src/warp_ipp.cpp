@@ -130,10 +130,6 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                             int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
     CV_HAL_CHECK_USE_IPP();
-<<<<<<< HEAD
-
-=======
->>>>>>> 492e17e922 (added missed extra function calls)
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter = ippiGetInterpolation(interpolation);
