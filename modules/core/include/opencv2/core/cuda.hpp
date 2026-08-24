@@ -1335,13 +1335,15 @@ private:
 CV_EXPORTS_W void printCudaDeviceInfo(int device);
 CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
 
-/** @brief Returns the MatAllocator that backs cv::UMat with CUDA device memory.
-
-Bind it to a UMat before allocation to place the buffer on the current CUDA device:
-@code
-    UMat u; u.allocator = cv::cuda::getCudaAllocator(); u.create(rows, cols, CV_32F);
-@endcode
-Returns NULL when OpenCV is built without CUDA. Mirrors cv::ocl::getOpenCLAllocator().
+/** @brief Returns the MatAllocator that backs cv::UMat with CUDA device memory
+@note
+  Assign it to @ref cv::UMat::allocator "UMat::allocator" before the data is allocated. Host
+  and device copies are kept in sync with synchronous cudaMemcpy calls and the buffers are
+  always packed and continuous. The allocator provides device storage only: no cv:: function
+  dispatches to CUDA for UMat input, and because the T-API branch tests only whether OpenCL
+  is active it would hand the CUDA pointer to the OpenCL driver, so
+  cv::ocl::setUseOpenCL(false) is required. UMatUsageFlags are ignored.
+@return the allocator, or NULL when OpenCV is built without CUDA support
 */
 CV_EXPORTS MatAllocator* getCudaAllocator();
 
