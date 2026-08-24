@@ -120,7 +120,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return false;
     }
 
-    // 64F/64S were already admitted by the default gate; 32S/32U/64U are new here.
+    // Only types forward() actually dispatches; the default gate's CV_8S/CV_8U had no kernel and corrupted memory.
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
                   const int requiredInternals,
@@ -129,7 +129,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U ||
+            CV_CheckType(input, input == CV_32F || input == CV_64F ||
                                 input == CV_32S || input == CV_64S || input == CV_32U || input == CV_64U, "");
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -411,11 +411,17 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const T* bptr0 = B.ptr<T>();
         T* yptr0 = Y.ptr<T>();
 
-        // Real ONNX MatMul never sets alpha/beta; round rather than reject if fusion does.
-        const Acc alphaScale = (Acc)std::llround((double)alpha);
-        const Acc betaScale  = (Acc)std::llround((double)beta);
-
+        // Real ONNX MatMul never sets alpha/beta; only some internal fusion could.
+        // A non-integer scale has no exact meaning for an integer accumulator, so
+        // reject it here rather than round it away -- rounding 0.4 or 0.2 to 0 would
+        // silently zero out the product/bias instead of erroring.
         const bool haveBias = (inputs.size() + blobs.size()) >= 3;
+        double alpha_d = (double)alpha, beta_d = haveBias ? (double)beta : 0.0;
+        CV_CheckTrue(std::floor(alpha_d) == alpha_d, "DNN/MatMul: alpha must be an integer value for integer types");
+        CV_CheckTrue(std::floor(beta_d) == beta_d, "DNN/MatMul: beta must be an integer value for integer types");
+        const Acc alphaScale = (Acc)alpha_d;
+        const Acc betaScale  = (Acc)beta_d;
+
         Mat biasBroadcast;
         if (haveBias) {
             const Mat& bias_mat = blobs.size() >= 2 ? blobs.back() : inputs.back();
