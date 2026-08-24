@@ -350,11 +350,9 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
                  ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y,
                  d, sigmaColor, sigmaSpace, borderType & (~BORDER_ISOLATED));
     }
-    else
-    {
-        CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step,
-                 src.cols, src.rows, src.depth(), src.channels(), d, sigmaColor, sigmaSpace, borderType);
-    }
+
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step,
+             src.cols, src.rows, src.depth(), src.channels(), d, sigmaColor, sigmaSpace, borderType);
 
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
