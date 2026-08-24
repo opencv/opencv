@@ -63,11 +63,17 @@ int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, s
 
 #if defined(HAVE_IPP_IW)
 int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                            int width, int height, int full_width, int full_height, int offset_x, int offset_y,
-                            int depth, int cn, int d,
+                            int width, int height, int depth, int cn, int d,
                             double sigma_color, double sigma_space, int border_type);
 #undef  cv_hal_bilateralFilter
 #define cv_hal_bilateralFilter ipp_hal_bilateralFilter
+
+int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                   int width, int height, int depth, int cn,
+                                   int margin_left, int margin_top, int margin_right, int margin_bottom,
+                                   int d, double sigma_color, double sigma_space, int border_type);
+#undef  cv_hal_bilateralFilter_offset
+#define cv_hal_bilateralFilter_offset ipp_hal_bilateralFilter_offset
 #endif // HAVE_IPP_IW
 
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,

@@ -59,11 +59,11 @@ private:
     const ipp_bilateralFilterParallel& operator= (const ipp_bilateralFilterParallel&);
 };
 
-int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step,
-                            uchar* dst_data, size_t dst_step,
-                            int width, int height, int full_width, int full_height, int offset_x, int offset_y,
-                            int depth, int cn, int d,
-                            double sigma_color, double sigma_space, int border_type)
+int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step,
+                                   uchar* dst_data, size_t dst_step,
+                                   int width, int height, int depth, int cn,
+                                   int margin_left, int margin_top, int margin_right, int margin_bottom,
+                                   int d, double sigma_color, double sigma_space, int border_type)
 {
     CV_HAL_CHECK_USE_IPP();
 
@@ -88,10 +88,10 @@ int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step,
     Ipp32f valSquareSigma = (Ipp32f)(sigma_color*sigma_color);
     Ipp32f posSquareSigma = (Ipp32f)(sigma_space*sigma_space);
 
-    IwSize marginLeft   = offset_x;
-    IwSize marginTop    = offset_y;
-    IwSize marginRight  = full_width  - width  - offset_x;
-    IwSize marginBottom = full_height - height - offset_y;
+    IwSize marginLeft   = margin_left;
+    IwSize marginTop    = margin_top;
+    IwSize marginRight  = margin_right;
+    IwSize marginBottom = margin_bottom;
 
     try
     {
@@ -157,6 +157,15 @@ int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
     return CV_HAL_ERROR_OK;
+}
+
+int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step,
+                            uchar* dst_data, size_t dst_step,
+                            int width, int height, int depth, int cn, int d,
+                            double sigma_color, double sigma_space, int border_type)
+{
+    return ipp_hal_bilateralFilter_offset(src_data, src_step, dst_data, dst_step, width, height, depth, cn,
+                                          0, 0, 0, 0, d, sigma_color, sigma_space, border_type);
 }
 
 #endif
