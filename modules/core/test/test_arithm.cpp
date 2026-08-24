@@ -2698,6 +2698,41 @@ INSTANTIATE_TEST_CASE_P(Arithm, FlipND, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
 ));
 
+TEST(Flip, BatchedNHWC)
+{
+    const int shape[] = {2, 3, 4, 2};
+    Mat src(4, shape, CV_8UC1);
+    randu(src, 0, 255);
+
+    for (int flip_code = -1; flip_code <= 1; ++flip_code)
+    {
+        Mat expected = src.clone();
+        for (int n = 0; n < shape[0]; ++n)
+            for (int h = 0; h < shape[1]; ++h)
+                for (int w = 0; w < shape[2]; ++w)
+                    for (int c = 0; c < shape[3]; ++c)
+                    {
+                        int src_idx[] = {n, h, w, c};
+                        if (flip_code <= 0)
+                            src_idx[1] = shape[1] - h - 1;
+                        if (flip_code != 0)
+                            src_idx[2] = shape[2] - w - 1;
+                        int dst_idx[] = {n, h, w, c};
+                        expected.at<uchar>(dst_idx) = src.at<uchar>(src_idx);
+                    }
+
+        Mat dst;
+        cv::flip(src, dst, flip_code);
+        EXPECT_EQ(dst.dims, 4);
+        EXPECT_EQ(dst.type(), src.type());
+        EXPECT_EQ(cv::norm(dst, expected, NORM_INF), 0);
+
+        Mat inplace = src.clone();
+        cv::flip(inplace, inplace, flip_code);
+        EXPECT_EQ(cv::norm(inplace, expected, NORM_INF), 0);
+    }
+}
+
 TEST(BroadcastTo, basic) {
     std::vector<int> shape_src{2, 1};
     std::vector<int> data_src{1, 2};

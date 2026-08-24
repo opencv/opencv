@@ -71,6 +71,17 @@ try:
             res2 = cv.utils.dumpInputArray(mat_data2)
             self.assertEqual(res2, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=500 dims(-1)=3 size(-1)=[5 10 10] type(-1)=CV_64FC3")
 
+        def test_flip_batched_nhwc(self):
+            data = np.arange(2 * 3 * 4 * 2, dtype=np.uint8).reshape(2, 3, 4, 2)
+            expected_axes = {-1: (1, 2), 0: 1, 1: 2}
+
+            for flip_code, axes in expected_axes.items():
+                expected = np.flip(data, axis=axes)
+                result = cv.flip(data, flip_code)
+                np.testing.assert_array_equal(result, expected)
+                self.assertEqual(result.shape, data.shape)
+                self.assertEqual(result.dtype, data.dtype)
+
 
         def test_mat_wrap_channels_fail(self):
             data = np.random.random([2, 3, 4, 520])
