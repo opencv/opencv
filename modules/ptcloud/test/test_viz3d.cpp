@@ -7,7 +7,7 @@
 #include "test_precomp.hpp"
 #include <opencv2/highgui.hpp>            // updateWindow / destroyWindow
 #include "../src/viz3d/grid_ticks.hpp"    // GL-free grid spacing helper
-#include "../src/utils.hpp"               // GL-free 3DGS decode/sort helpers
+#include "../src/splat.hpp"               // GL-free 3DGS decode/sort helpers
 
 #include <cstdio>
 #include <fstream>
@@ -96,24 +96,24 @@ TEST(Splat, decode_activations)
     r[10] = 1.f;                          // identity quaternion, zero scale, zero opacity, zero f_dc
 
     Mat splats;
-    splat::decode(raw, splats);
+    decodeGaussianSplats(raw, splats);
 
     ASSERT_EQ(splats.rows, 1);
-    ASSERT_EQ(splats.cols, (int)splat::STRIDE);
+    ASSERT_EQ(splats.cols, (int)GAUSSIAN_SPLAT_STRIDE);
 
     const float* d = splats.ptr<float>(0);
-    EXPECT_NEAR(d[splat::OFS_POS + 0], 1.f, 1e-6f);
-    EXPECT_NEAR(d[splat::OFS_POS + 1], 2.f, 1e-6f);
-    EXPECT_NEAR(d[splat::OFS_POS + 2], 3.f, 1e-6f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_POS + 0], 1.f, 1e-6f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_POS + 1], 2.f, 1e-6f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_POS + 2], 3.f, 1e-6f);
 
     // exp(0) == 1 on every axis, so the covariance is the identity
-    EXPECT_NEAR(d[splat::OFS_COV + 0], 1.f, 1e-5f);
-    EXPECT_NEAR(d[splat::OFS_COV + 3], 1.f, 1e-5f);
-    EXPECT_NEAR(d[splat::OFS_COV + 5], 1.f, 1e-5f);
-    EXPECT_NEAR(d[splat::OFS_COV + 1], 0.f, 1e-5f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 0], 1.f, 1e-5f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 3], 1.f, 1e-5f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 5], 1.f, 1e-5f);
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 1], 0.f, 1e-5f);
 
-    EXPECT_NEAR(d[splat::OFS_RGB + 0], 0.5f, 1e-5f);   // 0.5 + C0 * 0
-    EXPECT_NEAR(d[splat::OFS_ALPHA], 0.5f, 1e-5f);     // sigmoid(0)
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_RGB + 0], 0.5f, 1e-5f);   // 0.5 + C0 * 0
+    EXPECT_NEAR(d[GAUSSIAN_SPLAT_ALPHA], 0.5f, 1e-5f);     // sigmoid(0)
 }
 
 // Sorting must run strictly far to near, which is what alpha blending requires.
@@ -180,7 +180,7 @@ TEST(Splat, load_ply)
 
     ASSERT_FALSE(splats.empty());
     ASSERT_EQ(splats.rows, 2);
-    ASSERT_EQ(splats.cols, (int)splat::STRIDE);
+    ASSERT_EQ(splats.cols, (int)GAUSSIAN_SPLAT_STRIDE);
 
     EXPECT_NEAR(splats.ptr<float>(0)[0], 1.f, 1e-6f);
     EXPECT_NEAR(splats.ptr<float>(0)[2], 3.f, 1e-6f);
@@ -190,9 +190,9 @@ TEST(Splat, load_ply)
     for (int i = 0; i < 2; i++)
     {
         const float* d = splats.ptr<float>(i);
-        EXPECT_NEAR(d[splat::OFS_ALPHA], 0.5f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_COV + 0], 1.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_RGB + 0], 0.5f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_ALPHA], 0.5f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 0], 1.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_RGB + 0], 0.5f, 1e-5f);
     }
 }
 
@@ -241,7 +241,7 @@ TEST(Splat, load_splat)
 
     ASSERT_FALSE(splats.empty());
     ASSERT_EQ(splats.rows, 2);
-    ASSERT_EQ(splats.cols, (int)splat::STRIDE);
+    ASSERT_EQ(splats.cols, (int)GAUSSIAN_SPLAT_STRIDE);
 
     EXPECT_NEAR(splats.ptr<float>(0)[0], 1.f, 1e-6f);
     EXPECT_NEAR(splats.ptr<float>(0)[2], 3.f, 1e-6f);
@@ -251,12 +251,12 @@ TEST(Splat, load_splat)
     for (int i = 0; i < 2; i++)
     {
         const float* d = splats.ptr<float>(i);
-        EXPECT_NEAR(d[splat::OFS_ALPHA], 128.f / 255.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_RGB + 0], 128.f / 255.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_COV + 0], 1.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_COV + 3], 1.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_COV + 5], 1.f, 1e-5f);
-        EXPECT_NEAR(d[splat::OFS_COV + 1], 0.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_ALPHA], 128.f / 255.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_RGB + 0], 128.f / 255.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 0], 1.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 3], 1.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 5], 1.f, 1e-5f);
+        EXPECT_NEAR(d[GAUSSIAN_SPLAT_COV + 1], 0.f, 1e-5f);
     }
 }
 
@@ -347,9 +347,9 @@ TEST(Viz3D, render_splats_smoke)
     }
 
     Mat splats;
-    splat::decode(raw, splats);
+    decodeGaussianSplats(raw, splats);
 
-    EXPECT_NO_THROW(viz3d::showSplats(w, "splats", splats));
+    EXPECT_NO_THROW(viz3d::showGaussianSplats(w, "splats", splats));
 
     // An opaque object in the same window: splats must be drawn after it.
     Mat pts(16, 6, CV_32F);
@@ -381,9 +381,9 @@ TEST(Viz3D, render_single_splat)
     raw.ptr<float>(0)[10] = 1.0f;
 
     Mat splats;
-    splat::decode(raw, splats);
+    decodeGaussianSplats(raw, splats);
 
-    EXPECT_NO_THROW(viz3d::showSplats(w, "one", splats));
+    EXPECT_NO_THROW(viz3d::showGaussianSplats(w, "one", splats));
     for (int i = 0; i < 4; ++i)
         EXPECT_NO_THROW(updateWindow(w));
 

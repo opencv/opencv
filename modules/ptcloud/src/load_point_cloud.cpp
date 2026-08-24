@@ -84,7 +84,8 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
 #endif
 }
 
-void loadGaussianSplats(const String &filename, OutputArray splats)
+void loadGaussianSplats(const String &filename, OutputArray splats,
+                        const std::vector<String> &ply_properties)
 {
     splats.release();
 
@@ -94,9 +95,7 @@ void loadGaussianSplats(const String &filename, OutputArray splats)
 
     if (file_ext == "splat" || file_ext == "SPLAT")
     {
-        SplatDecoder decoder;
-        decoder.setSource(filename);
-        if (!decoder.readSplats(decoded))
+        if (!readSplatFile(filename, decoded))
             return;
     }
     else if (file_ext == "ply" || file_ext == "PLY")
@@ -104,14 +103,17 @@ void loadGaussianSplats(const String &filename, OutputArray splats)
         PlyDecoder decoder;
         decoder.setSource(filename);
 
+        const std::vector<String> names =
+            ply_properties.empty() ? getGaussianSplatPlyProperties() : ply_properties;
+
         Mat raw;
-        if (!decoder.readNamedProperties(splat::plyProperties(), raw))
+        if (!decoder.readNamedProperties(names, raw))
         {
             CV_LOG_ERROR(NULL, "'" << filename << "' is not a 3D Gaussian Splatting PLY file");
             return;
         }
 
-        splat::decode(raw, decoded);
+        decodeGaussianSplats(raw, decoded);
     }
     else
     {
@@ -124,6 +126,7 @@ void loadGaussianSplats(const String &filename, OutputArray splats)
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(splats);
+    CV_UNUSED(ply_properties);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }

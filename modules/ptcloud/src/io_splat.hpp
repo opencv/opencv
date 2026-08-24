@@ -13,16 +13,7 @@
 namespace cv {
 
 // Headerless, no point cloud attributes, so it stays outside BasePointCloudDecoder.
-class SplatDecoder
-{
-public:
-    void setSource(const std::string& filename) noexcept { m_filename = filename; }
-
-    bool readSplats(Mat& splats);
-
-protected:
-    std::string m_filename;
-};
+bool readSplatFile(const std::string& filename, Mat& splats);
 
 } /* namespace cv */
 
