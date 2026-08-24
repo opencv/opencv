@@ -80,15 +80,16 @@ public:
         CV_Error(Error::StsNotImplemented, "DNN/ImageDecoder: OpenCV was built without imgcodecs support");
 #else
         Mat buf(1, (int)encoded.total(), CV_8UC1, encoded.data);
-        // IMREAD_GRAYSCALE's libjpeg path doesn't bit-match the ONNX reference; use cvtColor instead.
-        Mat color = imdecode(buf, IMREAD_COLOR_BGR);
         Mat decoded;
         if (pixelFormat == PF_GRAYSCALE)
+        {
+            Mat color = imdecode(buf, IMREAD_COLOR_BGR);
             cvtColor(color, decoded, COLOR_BGR2GRAY);
-        else if (pixelFormat == PF_RGB)
-            cvtColor(color, decoded, COLOR_BGR2RGB);
+        }
         else
-            decoded = color;
+        {
+            decoded = imdecode(buf, pixelFormat == PF_RGB ? IMREAD_COLOR_RGB : IMREAD_COLOR_BGR);
+        }
 
         const int channels = pixelFormat == PF_GRAYSCALE ? 1 : 3;
         MatShape outShape({decoded.rows, decoded.cols, channels});
