@@ -606,11 +606,6 @@ public:
                 }
             }
         });
-        if (activationFunc) {
-            float* dst = out;
-            int total = K1 * HW * 8;
-            activationFunc(dst, dst, total, activParams.data());
-        }
     }
 
     // Chunked 1x1 SGEMM-as-conv: gather NCHWc8 -> SGEMM -> scatter+activate
