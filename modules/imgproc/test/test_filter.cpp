@@ -1080,7 +1080,7 @@ TEST(Imgproc, morphologyEx_small_input_22893)
 // morphological operations should keep accepting boolean masks as binary input.
 TEST(Imgproc_Morphology, bool_mask_29798)
 {
-    cv::Mat_<bool> mask(7, 9, false);
+    Mat_<bool> mask(7, 9, false);
     mask(1, 1) = true;
     mask(2, 2) = true;
     mask(2, 3) = true;
@@ -1089,30 +1089,45 @@ TEST(Imgproc_Morphology, bool_mask_29798)
     mask(5, 7) = true;
     mask(6, 7) = true;
 
-    cv::Mat_<uchar> ref(mask.size(), (uchar)0);
+    Mat_<uchar> ref;
     mask.convertTo(ref, CV_8U);
 
     ASSERT_EQ(mask.depth(), CV_Bool);
 
-    const int ops[] = { cv::MORPH_ERODE, cv::MORPH_DILATE, cv::MORPH_OPEN, cv::MORPH_CLOSE };
-    const int shapes[] = { cv::MORPH_RECT, cv::MORPH_CROSS, cv::MORPH_ELLIPSE };
+    const int ops[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE };
+    const int shapes[] = { MORPH_RECT, MORPH_CROSS, MORPH_ELLIPSE };
+    const int borderTypes[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101 };
 
-    for (int shape : shapes)
+    for (size_t i = 0; i < sizeof(shapes)/sizeof(shapes[0]); i++)
     {
-        cv::Mat kernel = getStructuringElement(shape, cv::Size(3, 3));
-        for (int op : ops)
+        Mat kernel = getStructuringElement(shapes[i], Size(3, 3));
+        for (size_t j = 0; j < sizeof(ops)/sizeof(ops[0]); j++)
         {
-            cv::Mat result_bool, result_uchar;
-            ASSERT_NO_THROW(morphologyEx(mask, result_bool, op, kernel))
-                << "op = " << op << ", shape = " << shape;
-            morphologyEx(ref, result_uchar, op, kernel);
+            for (size_t k = 0; k < sizeof(borderTypes)/sizeof(borderTypes[0]); k++)
+            {
+                Mat result_bool, result_ref, result_8u;
+                ASSERT_NO_THROW(morphologyEx(mask, result_bool, ops[j], kernel, Point(-1, -1), 1, borderTypes[k]));
+                morphologyEx(ref, result_ref, ops[j], kernel, Point(-1, -1), 1, borderTypes[k]);
 
-            EXPECT_EQ(result_bool.depth(), CV_Bool) << "op = " << op << ", shape = " << shape;
-            result_bool.convertTo(result_bool, CV_8U);
-            EXPECT_EQ(countNonZero(result_bool != result_uchar), 0)
-                << "op = " << op << ", shape = " << shape;
+                EXPECT_EQ(result_bool.depth(), CV_Bool);
+                result_bool.convertTo(result_8u, CV_8U);
+                EXPECT_EQ(0, cvtest::norm(result_8u, result_ref, NORM_INF))
+                    << "op = " << ops[j] << ", shape = " << shapes[i] << ", borderType = " << borderTypes[k];
+            }
         }
     }
+
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
+    Mat_<bool> inplace = mask.clone();
+    Mat_<uchar> inplace_ref = ref.clone();
+    ASSERT_NO_THROW(cv::dilate(inplace, inplace, kernel, Point(-1, -1), 2));
+    cv::erode(inplace, inplace, kernel, Point(-1, -1), 2);
+    cv::dilate(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2);
+    cv::erode(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2);
+
+    Mat inplace_8u;
+    inplace.convertTo(inplace_8u, CV_8U);
+    EXPECT_EQ(0, cvtest::norm(inplace_8u, inplace_ref, NORM_INF));
 }
 
 TEST(Imgproc_sepFilter2D, identity)

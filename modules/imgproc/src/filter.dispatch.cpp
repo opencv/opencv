@@ -145,7 +145,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     CV_Assert( 0 <= anchor.x && anchor.x < ksize.width &&
                0 <= anchor.y && anchor.y < ksize.height );
 
-    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);
+    borderElemSize = srcElemSize/(CV_ELEM_SIZE1(srcType) >= (int)sizeof(int) ? sizeof(int) : 1);
     int borderLength = std::max(ksize.width - 1, 1);
     borderTab.resize(borderLength*borderElemSize);
 

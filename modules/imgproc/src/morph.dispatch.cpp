@@ -798,7 +798,8 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     Size ksize = !kernel.empty() ? kernel.size() : Size(3, 3), ssize = _src.size();
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
-    if ((depth == CV_64F && !doubleSupport) || depth == CV_Bool || borderType != BORDER_CONSTANT)
+    // ocl::typeToStr() has no mapping for CV_Bool, so fall back to the CPU path
+    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT || depth == CV_Bool)
         return false;
 
     bool haveExtraMat = !_extraMat.empty();
