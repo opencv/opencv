@@ -113,15 +113,16 @@ Ptr<FilterEngine> createMorphologyFilter(
             borderValue == morphologyDefaultBorderValue() )
     {
         int depth = CV_MAT_DEPTH(type);
-        CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_16S ||
+        CV_Assert( depth == CV_8U || depth == CV_Bool || depth == CV_16U || depth == CV_16S ||
                    depth == CV_32F || depth == CV_64F );
         if( op == MORPH_ERODE )
             borderValue = Scalar::all( depth == CV_8U ? (double)UCHAR_MAX :
+                                       depth == CV_Bool ? 1. :
                                        depth == CV_16U ? (double)USHRT_MAX :
                                        depth == CV_16S ? (double)SHRT_MAX :
                                        depth == CV_32F ? (double)FLT_MAX : DBL_MAX);
         else
-            borderValue = Scalar::all( depth == CV_8U || depth == CV_16U ?
+            borderValue = Scalar::all( depth == CV_8U || depth == CV_Bool || depth == CV_16U ?
                                            0. :
                                        depth == CV_16S ? (double)SHRT_MIN :
                                        depth == CV_32F ? (double)-FLT_MAX : -DBL_MAX);
@@ -797,7 +798,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     Size ksize = !kernel.empty() ? kernel.size() : Size(3, 3), ssize = _src.size();
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
-    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT)
+    if ((depth == CV_64F && !doubleSupport) || depth == CV_Bool || borderType != BORDER_CONSTANT)
         return false;
 
     bool haveExtraMat = !_extraMat.empty();

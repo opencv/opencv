@@ -1075,6 +1075,46 @@ TEST(Imgproc, morphologyEx_small_input_22893)
     ASSERT_EQ(0, cvtest::norm(result, gold, NORM_INF));
 }
 
+// See https://github.com/opencv/opencv/issues/29798
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so
+// morphological operations should keep accepting boolean masks as binary input.
+TEST(Imgproc_Morphology, bool_mask_29798)
+{
+    cv::Mat_<bool> mask(7, 9, false);
+    mask(1, 1) = true;
+    mask(2, 2) = true;
+    mask(2, 3) = true;
+    mask(3, 3) = true;
+    mask(5, 6) = true;
+    mask(5, 7) = true;
+    mask(6, 7) = true;
+
+    cv::Mat_<uchar> ref(mask.size(), (uchar)0);
+    mask.convertTo(ref, CV_8U);
+
+    ASSERT_EQ(mask.depth(), CV_Bool);
+
+    const int ops[] = { cv::MORPH_ERODE, cv::MORPH_DILATE, cv::MORPH_OPEN, cv::MORPH_CLOSE };
+    const int shapes[] = { cv::MORPH_RECT, cv::MORPH_CROSS, cv::MORPH_ELLIPSE };
+
+    for (int shape : shapes)
+    {
+        cv::Mat kernel = getStructuringElement(shape, cv::Size(3, 3));
+        for (int op : ops)
+        {
+            cv::Mat result_bool, result_uchar;
+            ASSERT_NO_THROW(morphologyEx(mask, result_bool, op, kernel))
+                << "op = " << op << ", shape = " << shape;
+            morphologyEx(ref, result_uchar, op, kernel);
+
+            EXPECT_EQ(result_bool.depth(), CV_Bool) << "op = " << op << ", shape = " << shape;
+            result_bool.convertTo(result_bool, CV_8U);
+            EXPECT_EQ(countNonZero(result_bool != result_uchar), 0)
+                << "op = " << op << ", shape = " << shape;
+        }
+    }
+}
+
 TEST(Imgproc_sepFilter2D, identity)
 {
     std::vector<uint8_t> kernelX{0, 0, 0, 1, 0, 0, 0};
