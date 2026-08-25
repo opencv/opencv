@@ -381,6 +381,7 @@ bool VisualOdometryImpl::track(Frame& currentFrame)
         int mpBefore = map.numMapPoints();
         promoteKeyframeAndGrowMap(currentFrame); // also runs local BA + detectLoop/closeLoop
         lastPoseCw = lastKf->poseCw;
+        frameRecords.back() = { Matx44d::eye(), lastKf };
 
         String kfEv = format("keyframe: %s, +%d mp%s",
                              kf_reason.c_str(),
