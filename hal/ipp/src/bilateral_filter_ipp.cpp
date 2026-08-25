@@ -159,13 +159,4 @@ int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step,
     return CV_HAL_ERROR_OK;
 }
 
-int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step,
-                            uchar* dst_data, size_t dst_step,
-                            int width, int height, int depth, int cn, int d,
-                            double sigma_color, double sigma_space, int border_type)
-{
-    return ipp_hal_bilateralFilter_offset(src_data, src_step, dst_data, dst_step, width, height, depth, cn,
-                                          0, 0, 0, 0, d, sigma_color, sigma_space, border_type);
-}
-
 #endif
