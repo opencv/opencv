@@ -185,6 +185,7 @@ public:
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
+    std::vector<Mat> convBufs;  // promoted operands, reused so forward() does not allocate
 public:
     std::string operation;
 
@@ -335,11 +336,116 @@ public:
         return outShape;
     }
 
+    // Rank within the type's own domain; 0 if typeDispatch has no arm for it.
+    static int conversionRank(int type)
+    {
+        switch (type)
+        {
+            case CV_8S: case CV_8U: return 1;
+            case CV_16S: case CV_16U: return 2;
+            case CV_32S: case CV_32U: return 3;
+            case CV_64S: case CV_64U: return 4;
+            case CV_32F: return 1;
+            case CV_64F: return 2;
+        }
+        return 0;
+    }
+
+    static bool isSignedInt(int type)
+    {
+        return type == CV_8S || type == CV_16S || type == CV_32S || type == CV_64S;
+    }
+
+    // Narrowest type representing every value of both operands; pairs without one are rejected.
+    static int commonArithType(int type0, int type1)
+    {
+        if (type0 == type1)
+            return type0;
+
+        int rank0 = conversionRank(type0), rank1 = conversionRank(type1);
+        bool isFloat0 = CV_IS_FLOAT_TYPE(type0) != 0, isFloat1 = CV_IS_FLOAT_TYPE(type1) != 0;
+
+        if (rank0 > 0 && rank1 > 0 && isFloat0 && isFloat1)
+        {
+            return rank0 > rank1 ? type0 : type1;
+        }
+
+        if (rank0 > 0 && rank1 > 0 && !isFloat0 && !isFloat1)
+        {
+            bool isSigned0 = isSignedInt(type0);
+            if (isSigned0 == isSignedInt(type1))
+                return rank0 > rank1 ? type0 : type1;
+
+            // Mixed sign: the signed result sits one rank above the unsigned operand; none past 64.
+            static const int signedTypes[] = { CV_8S, CV_16S, CV_32S, CV_64S };
+            int unsignedRank = isSigned0 ? rank1 : rank0;
+            int signedRank = isSigned0 ? rank0 : rank1;
+            int rank = std::max(unsignedRank + 1, signedRank);
+            if (rank <= 4)
+                return signedTypes[rank - 1];
+        }
+
+        // CV_32F is exact to 2^24 and CV_64F to 2^53: an 8- or 16-bit int keeps the float type,
+        // a 32-bit int forces CV_64F, and a 64-bit int is rejected below.
+        if (rank0 > 0 && rank1 > 0 && isFloat0 != isFloat1)
+        {
+            int intRank = isFloat0 ? rank1 : rank0;
+            if (intRank <= 2)
+                return isFloat0 ? type0 : type1;
+            if (intRank == 3)
+                return CV_64F;
+        }
+
+        CV_Error_(Error::StsBadArg, ("NaryEltwiseLayer: inputs of type %s and %s have no common type",
+                                     typeToString(type0).c_str(), typeToString(type1).c_str()));
+    }
+
+    static int findCommonType(const std::vector<MatType>& inputs)
+    {
+        int commonType = inputs[0];
+        for (size_t i = 1; i < inputs.size(); i++)
+            commonType = commonArithType(commonType, inputs[i]);
+        return commonType;
+    }
+
+    bool isComparison() const
+    {
+        return op == OPERATION::EQUAL || op == OPERATION::GREATER ||
+               op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS ||
+               op == OPERATION::LESS_EQUAL;
+    }
+
+    // typeDispatch instantiates one kernel, so every operand must hold the returned type.
+    int promoteOperands(std::vector<Mat>& operands, const std::vector<Mat>& outputs)
+    {
+        int dispatchType = outputs.front().type();
+        // A comparison declares CV_Bool, so its output type is not the type the kernel computes in.
+        if (isComparison())
+        {
+            dispatchType = operands.front().type();
+            for (size_t i = 1; i < operands.size(); i++)
+                dispatchType = commonArithType(dispatchType, operands[i].type());
+        }
+
+        size_t firstOperand = op == OPERATION::WHERE ? 1 : 0;
+        convBufs.resize(operands.size());
+        for (size_t i = firstOperand; i < operands.size(); i++)
+        {
+            if (operands[i].type() == dispatchType)
+                continue;
+            operands[i].convertTo(convBufs[i], dispatchType);
+            operands[i] = convBufs[i];
+        }
+        return dispatchType;
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        // helper.init() reads steps and elemsize off the Mats, so convert first.
+        promoteOperands(inputs, outputs);
         helper.init(inputs, outputs);
         CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
     }
@@ -367,8 +473,7 @@ public:
         if (op == OPERATION::WHERE)
         {
             CV_CheckTypeEQ(inputs[0], CV_Bool, "");
-            CV_CheckTypeEQ(inputs[1], inputs[2], "");
-            outputs.assign(1, inputs[1]);
+            outputs.assign(1, commonArithType(inputs[1], inputs[2]));
             return;
         }
 
@@ -384,11 +489,8 @@ public:
         {
             CV_Assert(inputs.size());
             for (auto input : inputs)
-            {
-                CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
                 CV_CheckType(input, input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
-            }
-            outputs.assign(requiredOutputs, inputs[0]);
+            outputs.assign(requiredOutputs, findCommonType(inputs));
             return;
         }
 
@@ -431,17 +533,17 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
                 CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
+        int commonType = findCommonType(inputs);
 
-        if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
+        if (isComparison())
             outputs.assign(1, CV_Bool);
         else
-            outputs.assign(requiredOutputs, inputs[0]);
+            outputs.assign(requiredOutputs, commonType);
     }
 
     int getLayouts(const std::vector<DataLayout>& actualInputs,
@@ -934,6 +1036,7 @@ public:
         }
 
         std::vector<Mat> used_inputs = inputs;
+        int type_for_dispatch = promoteOperands(used_inputs, outputs);
 
         const Mat& out0 = outputs[0];
         bool needsCrop = false;
@@ -970,20 +1073,6 @@ public:
             CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
         }
 
-        if (op == OPERATION::POW) {
-            CV_Assert(used_inputs.size() == 2);
-            const int out_type = outputs[0].type();
-            if (used_inputs[0].type() != out_type || used_inputs[1].type() != out_type) {
-                Mat a_conv, b_conv;
-                used_inputs[0].convertTo(a_conv, out_type);
-                used_inputs[1].convertTo(b_conv, out_type);
-                used_inputs = {a_conv, b_conv};
-                helper.init(used_inputs, outputs);
-                CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
-            }
-        }
-
-        int type_for_dispatch = (op == OPERATION::WHERE || op == OPERATION::POW) ? outputs.front().type() : used_inputs.front().type();
         typeDispatch(type_for_dispatch, used_inputs.size(), used_inputs, outputs);
     }
 
@@ -1327,6 +1416,11 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<cuda::GpuMatND> inputs;
         inputs_.getGpuMatNDVector(inputs);
+
+        // The CUDA executor asserts on an empty node, so mismatched types must error.
+        for (size_t i = 1; i < inputs.size(); i++)
+            CV_CheckTypeEQ(inputs[0].type(), inputs[i].type(),
+                           "NaryEltwiseLayer: CUDA requires equal input types");
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
