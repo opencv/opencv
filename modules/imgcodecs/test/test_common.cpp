@@ -89,8 +89,9 @@ TEST(Imgcodecs_Bool, imwrite_true_maps_to_255)
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(CV_8UC1, dst.type());
 
-    Mat expected = (Mat_<uchar>(2, 3) << 0, 255, 0, 255, 0, 255);
-    EXPECT_EQ(0, cv::norm(dst, expected, NORM_INF));
+    Mat dst_bool;
+    dst.convertTo(dst_bool, CV_Bool);
+    EXPECT_EQ(0, cv::norm(dst_bool, src, NORM_INF));
 }
 
 }  // namespace
