@@ -1204,6 +1204,24 @@ CASE(test_if_opt)
     // no filter
 CASE(test_if_seq)
     // no filter
+CASE(test_image_decoder_decode_bmp_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_jpeg2k_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_jpeg_bgr)
+    SKIP;
+CASE(test_image_decoder_decode_jpeg_grayscale)
+    SKIP;
+CASE(test_image_decoder_decode_jpeg_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_png_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_pnm_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_tiff_rgb)
+    SKIP;
+CASE(test_image_decoder_decode_webp_rgb)
+    SKIP;
 CASE(test_instancenorm_epsilon)
     // no filter
 CASE(test_instancenorm_example)

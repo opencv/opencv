@@ -227,6 +227,7 @@ protected:
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNonZero              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseImageDecoder         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2175,6 +2176,12 @@ void ONNXImporter2::parseNonZero(LayerParams& layerParams, const opencv_onnx::No
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseImageDecoder(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "ImageDecoder";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseSoftMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& layer_type = node_proto.op_type();
@@ -2941,6 +2948,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Abs"] = &ONNXImporter2::parseAbs;
     dispatch["PRelu"] = &ONNXImporter2::parsePRelu;
     dispatch["NonZero"] = &ONNXImporter2::parseNonZero;
+    dispatch["ImageDecoder"] = &ONNXImporter2::parseImageDecoder;
     dispatch["LpNormalization"] = &ONNXImporter2::parseLpNormalization;
     dispatch["LRN"] = &ONNXImporter2::parseLRN;
     dispatch["InstanceNormalization"] = &ONNXImporter2::parseInstanceNormalization;
