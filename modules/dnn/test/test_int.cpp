@@ -293,6 +293,13 @@ TEST_P(Test_ScatterND_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
     fillRandom(input, matType, backend);
@@ -824,6 +831,13 @@ TEST_P(Test_GatherElements_Int, random)
     tuple<Backend, Target> backend_target= get<2>(GetParam());
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
+
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
 
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
@@ -1546,6 +1560,15 @@ TEST_P(Test_GatherND_Int, random)
     tuple<Backend, Target> backend_target= get<2>(GetParam());
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
+
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
 
     std::vector<int> inShape{4, 5};
     Mat input(inShape, matType);
