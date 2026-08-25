@@ -101,15 +101,7 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
     // no unmatched pairs left to triangulate
     if (pts1.empty())
     {
-        detail::updateCovisibility(newKf);
-        Optimizer::localBundleAdjustment(newKf, K, params.localBaEnable);
-        detectLoop(newKf);
-        cullMapPoints(map);
-        syncFrameMapPoints(currentFrame, newKf);
-        map.setCurrentKeyframe(newKf);
-        lastKf = newKf;
-        lastKfInliers = 0;
-        framesSinceKf = 0;
+        finalizeKeyframe(newKf, currentFrame);
         return;
     }
 
@@ -151,19 +143,22 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
         ++nNew;
     }
 
-    detail::updateCovisibility(newKf);
+    finalizeKeyframe(newKf, currentFrame);
 
+    (void)nNew;
+}
+
+void VisualOdometryImpl::finalizeKeyframe(KeyFrame* newKf, Frame& currentFrame)
+{
+    detail::updateCovisibility(newKf);
     Optimizer::localBundleAdjustment(newKf, K, params.localBaEnable);
     detectLoop(newKf);
     cullMapPoints(map);
     syncFrameMapPoints(currentFrame, newKf);
-
     map.setCurrentKeyframe(newKf);
     lastKf = newKf;
     lastKfInliers = 0;
     framesSinceKf = 0;
-
-    (void)nNew;
 }
 
 }} // namespace cv::slam

@@ -51,6 +51,13 @@ public:
                                        GlobalBAStats* stats = nullptr);
 
     // essential graph optimisation: distributes loop-closure drift over the full trajectory, then corrects map points
+    // @note This does not duplicate cv::detail::PoseGraph (ptcloud/detail/pose_graph.hpp).
+    // PoseGraph optimizes rigid SE(3) poses and has no scale degree of freedom. Monocular VO
+    // has no absolute scale reference, so scale drifts around a loop just as rotation and
+    // translation do, and correcting that drift requires a Sim(3) formulation that SE(3)
+    // cannot express. PoseGraph is also documented as an internal Large KinFu utility, and
+    // this module already requires g2o for local and global BA, so extending PoseGraph here
+    // would not remove that dependency. Keeping the two separate.
     static bool optimizeEssentialGraph(
     Map& map, KeyFrame* loopKf, KeyFrame* curKf,
     const std::map<KeyFrame*, Sim3>& nonCorrectedScw,

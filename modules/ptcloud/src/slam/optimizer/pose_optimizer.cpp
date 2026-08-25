@@ -64,7 +64,7 @@ static int poseOptimizationReproj(Frame& frame, const Mat& K, double reprojThres
 namespace cv { namespace slam {
 
 // real 6-DoF pose-only bundle adjustment
-static int poseOptimizationG2O(Frame& frame, const Mat& K)
+static int poseOptimizationG2O(Frame& frame, const Mat& K, double reprojThresh)
 {
     const double fx = K.at<double>(0, 0);
     const double fy = K.at<double>(1, 1);
@@ -164,18 +164,10 @@ static int poseOptimizationG2O(Frame& frame, const Mat& K)
         frame.poseCw(3, 3) = 1.0;
     }
 
-    int nInliers = 0;
-    for (int i = 0; i < N; ++i)
-    {
-        auto* e = edges[i];
-        if (!e) continue;
-        const bool good = (e->level() == 0)
-                       && (e->chi2() < kChi2Thresh)
-                       && e->isDepthPositive();
-        frame.outliers[i] = !good;
-        if (good) ++nInliers;
-    }
-    return nInliers;
+    // Classify against the caller's pixel threshold so both backends report inliers by the
+    // same rule. The 5.991 chi2 gate above only steers the robust two-pass solve; reusing it
+    // here would silently ignore reprojThresh in g2o builds.
+    return poseOptimizationReproj(frame, K, reprojThresh);
 }
 
 }} // namespace cv::slam
@@ -187,7 +179,7 @@ int Optimizer::poseOptimization(Frame& frame, const Mat& K, double reprojThresh,
 {
 #ifdef HAVE_G2O
     if (enable)
-        return poseOptimizationG2O(frame, K);
+        return poseOptimizationG2O(frame, K, reprojThresh);
 #else
     (void)enable;
 #endif

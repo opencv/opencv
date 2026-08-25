@@ -213,8 +213,8 @@ OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" ON
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_EIGEN)
-OCV_OPTION(WITH_G2O "Include g2o graph-optimization support (for SLAM loop closing / bundle adjustment)" OFF
-  VISIBLE_IF TRUE
+OCV_OPTION(WITH_G2O "Include g2o graph-optimization support (for SLAM loop closing / bundle adjustment)" WITH_EIGEN
+  VISIBLE_IF WITH_EIGEN
   VERIFY HAVE_G2O)
 OCV_OPTION(WITH_FFMPEG "Include FFMPEG support" (NOT ANDROID)
   VISIBLE_IF NOT IOS AND NOT XROS AND NOT WINRT

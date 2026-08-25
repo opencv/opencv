@@ -20,7 +20,6 @@
 
 // Sim(3) types for the loop-closure essential graph.
 #include <g2o/types/sim3/types_seven_dof_expmap.h>
-#define OPENCV_SLAM_HAVE_G2O_SIM3 1
 
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
 
@@ -89,6 +88,7 @@ static void localBundleAdjustmentG2O(KeyFrame* newKf, const Mat& K, bool* stopFl
             fixedKfSet.insert(kf);
         }
     }
+    if (fixedKfSet.size() < 2) return;
 
     int maxKFid = 0;
     for (KeyFrame* kf : localKfs)    maxKFid = std::max(maxKFid, kf->id);
@@ -408,10 +408,7 @@ static void globalBundleAdjustmentG2O(Map& map, const Mat& K, int iters,
                       << " poses, culled " << nCulled << " outlier observations");
 }
 
-// Sim(3) essential-graph optimisation (loop closure); compiled only when
-// g2o Sim(3) types are available.
-
-#if OPENCV_SLAM_HAVE_G2O_SIM3
+// Sim(3) essential-graph optimisation (loop closure).
 
 static g2o::Sim3 toG2oSim3(const Sim3& S)
 {
@@ -594,7 +591,6 @@ static bool optimizeEssentialGraphG2O(
     }
     return true;
 }
-#endif // OPENCV_SLAM_HAVE_G2O_SIM3
 
 }} // namespace cv::slam
 #endif // HAVE_G2O
@@ -619,7 +615,7 @@ bool Optimizer::optimizeEssentialGraph(
     const std::map<KeyFrame*, std::set<KeyFrame*>>& loopConnections,
     bool fixScale, int iterations, int minCovisWeight, double* outFinalChi2)
 {
-#if defined(HAVE_G2O) && OPENCV_SLAM_HAVE_G2O_SIM3
+#ifdef HAVE_G2O
     return optimizeEssentialGraphG2O(map, loopKf, curKf, nonCorrectedScw,
                                      correctedScw, loopConnections, fixScale,
                                      iterations, minCovisWeight, outFinalChi2);

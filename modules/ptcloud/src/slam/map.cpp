@@ -141,21 +141,6 @@ void Map::replaceMapPoint(MapPoint* oldMp, MapPoint* newMp)
     delete oldMp;
 }
 
-void Map::removeKeyframe(KeyFrame* kf)
-{
-    if (!kf) return;
-    for (size_t i = 0; i < kf->mapPoints.size(); ++i)
-    {
-        MapPoint* mp = kf->mapPoints[i];
-        if (!mp) continue;
-        mp->observations.erase(kf);
-        if (mp->observations.empty()) mp->bad = true;
-    }
-    impl->keyframes.erase(kf);
-    impl->kfIndex.erase(kf->id);
-    kf->bad = true;
-}
-
 // Reference / current keyframes
 
 void Map::setRefKeyframe(KeyFrame* kf) { impl->refKf = kf; }

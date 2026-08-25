@@ -101,14 +101,13 @@ Mat VisualOdometryImpl::computeVlad(const Mat& descriptorsIn) const
     Mat dots = desc * vocab.t();
     subtract(dots, repeat(cNorm2, dots.rows, 1), dots);
 
+    Mat bestIdx;
+    reduceArgMax(dots, bestIdx, 1);
+
     Mat v = Mat::zeros(Kv, D, CV_32F);
     for (int m = 0; m < M; ++m)
     {
-        int best = 0; float bestScore = -FLT_MAX;
-        const float* row = dots.ptr<float>(m);
-        for (int k = 0; k < Kv; ++k)
-            if (row[k] > bestScore) { bestScore = row[k]; best = k; }
-
+        const int best = bestIdx.at<int>(m, 0);
         v.row(best) += desc.row(m) - vocab.row(best);
     }
 
@@ -118,8 +117,7 @@ Mat VisualOdometryImpl::computeVlad(const Mat& descriptorsIn) const
         float& x = vf.at<float>(0, i);
         x = (x >= 0.f ? 1.f : -1.f) * std::sqrt(std::abs(x));
     }
-    double n = norm(vf, NORM_L2);
-    if (n > 1e-12) vf /= n;
+    normalize(vf, vf, 1.0, 0.0, NORM_L2);
     return vf.clone();
 }
 

@@ -60,6 +60,7 @@ public:
 
     bool shouldPromoteKeyframe(int nInliers, const Matx44d& T_cw, String& reason) const;
     void promoteKeyframeAndGrowMap(Frame& currentFrame);
+    void finalizeKeyframe(KeyFrame* newKf, Frame& currentFrame);
 
     // --- Loop detection / closure (loop/loop_detection.cpp, loop/loop_closing.cpp) ---
 
