@@ -48,6 +48,13 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache;
+
+#ifdef _WIN32
+typedef std::wstring OrtPathString;
+#else
+typedef std::string OrtPathString;
+#endif
+OrtPathString toOrtPath(const std::string& utf8Path);
 #endif
 
 /** @brief Single entry in a @ref PerfProfile.

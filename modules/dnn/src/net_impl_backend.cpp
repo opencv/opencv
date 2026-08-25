@@ -16,6 +16,9 @@
 
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #endif
 
 namespace cv {
@@ -23,6 +26,31 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_ONNXRUNTIME
+
+OrtPathString toOrtPath(const std::string& utf8Path)
+{
+#ifdef _WIN32
+    if (utf8Path.empty())
+        return std::wstring();
+
+    const int len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                                        utf8Path.c_str(), (int)utf8Path.size(), NULL, 0);
+    if (len <= 0)
+    {
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: path is not valid UTF-8, cannot pass it to ONNX Runtime: "
+                             << utf8Path);
+        return std::wstring();
+    }
+
+    std::wstring wide((size_t)len, L'\0');
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                        utf8Path.c_str(), (int)utf8Path.size(), &wide[0], len);
+    return wide;
+#else
+    return utf8Path;
+#endif
+}
+
 void Net::Impl::refreshOrtMainGraphOutputs()
 {
     CV_Assert(mainGraph && ort_session);
@@ -96,20 +124,12 @@ void Net::Impl::finalizeOrt()
     ort_profile_data.clear();
     if (profilingMode != DNN_PROFILE_NONE) {
         ort_profile_path_prefix = cv::tempfile("opencv_ort_profile_");
-#ifdef _WIN32
-        std::wstring w_profile_path(ort_profile_path_prefix.begin(), ort_profile_path_prefix.end());
-        opts.EnableProfiling(w_profile_path.c_str());
-#else
-        opts.EnableProfiling(ort_profile_path_prefix.c_str());
-#endif
+        const OrtPathString profilePath = toOrtPath(ort_profile_path_prefix);
+        opts.EnableProfiling(profilePath.c_str());
     }
 
-#ifdef _WIN32
-    std::wstring wpath(modelFileName.begin(), modelFileName.end());
-    ort_session = std::make_shared<Ort::Session>(*ort_env, wpath.c_str(), opts);
-#else
-    ort_session = std::make_shared<Ort::Session>(*ort_env, modelFileName.c_str(), opts);
-#endif
+    const OrtPathString modelPath = toOrtPath(modelFileName);
+    ort_session = std::make_shared<Ort::Session>(*ort_env, modelPath.c_str(), opts);
     preferableTarget = target;
     ortNeedsReinit = false;
 
