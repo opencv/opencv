@@ -63,23 +63,26 @@ public:
 
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
-                  const int /*requiredInternals*/,
+                  const int requiredInternals,
                   std::vector<MatType>& outputs,
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_CheckGE(inputs.size(), (size_t)3, "LinearAttention needs query, key, value");
         CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_16F, "LinearAttention: only FP32/FP16 are supported");
         outputs.assign(requiredOutputs, inputs[0]);
-        internals.clear();
+        internals.assign(requiredInternals, CV_32F);   // recurrence-state scratch is always fp32
     }
 
+    // requiredOutputs can be 1 (trimmed graph); state then lives in internals.
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int /*requiredOutputs*/,
+                         const int requiredOutputs,
                          std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& /*internals*/) const CV_OVERRIDE
+                         std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_CheckGE(inputs.size(), (size_t)3, "LinearAttention needs query, key, value");
         CV_CheckEQ(inputs[0].dims, 3, "LinearAttention: query must be 3D [batch, seq, q_num_heads*head_size]");
+        CV_Check(requiredOutputs, requiredOutputs == 1 || requiredOutputs == 2,
+                 "LinearAttention: expects 1 (output) or 2 (output, present_state) outputs");
 
         const int batch = inputs[0][0];
         const int seq   = inputs[0][1];
@@ -87,31 +90,39 @@ public:
         const int dv    = inputs[2][2] / kv_num_heads;
         CV_CheckEQ(inputs[1][2] / kv_num_heads, dk, "LinearAttention: key head_size must equal query head_size");
 
+        const MatShape stateShape{batch, kv_num_heads, dk, dv};
         outputs.assign(1, MatShape{batch, seq, q_num_heads * dv});   // output
-        outputs.push_back(MatShape{batch, kv_num_heads, dk, dv});    // present_state
+        internals.clear();
+        if (requiredOutputs >= 2)
+            outputs.push_back(stateShape);                          // present_state
+        else
+            internals.assign(1, stateShape);                        // recurrence scratch, not exposed
         return false;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays /*internals_arr*/) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        std::vector<Mat> rawInputs, rawOutputs;
+        std::vector<Mat> rawInputs, rawOutputs, internals;
         inputs_arr.getMatVector(rawInputs);
         outputs_arr.getMatVector(rawOutputs);
+        internals_arr.getMatVector(internals);
+        const bool has_state_output = rawOutputs.size() >= 2;   // else present_state lives in internals[0]
 
-        // Compute in fp32; convert fp16 tensors in/out (the no-op forward_fallback path is unusable here).
-        const bool is_fp16 = rawInputs[0].depth() == CV_16F;
-        std::vector<Mat> in32, out32;
-        if (is_fp16)
+        // past_state/present_state use an independent ONNX dtype from Q/K/V; convert per-tensor.
+        std::vector<Mat> in32(rawInputs.size()), out32(rawOutputs.size());
+        for (size_t i = 0; i < rawInputs.size(); ++i)
         {
-            in32.resize(rawInputs.size());
-            for (size_t i = 0; i < rawInputs.size(); ++i)
-                if (!rawInputs[i].empty()) rawInputs[i].convertTo(in32[i], CV_32F);
-            out32.resize(rawOutputs.size());
-            for (size_t i = 0; i < rawOutputs.size(); ++i)
-                out32[i].create(rawOutputs[i].dims, rawOutputs[i].size.p, CV_32F);
+            if (rawInputs[i].empty()) continue;
+            if (rawInputs[i].depth() == CV_16F) rawInputs[i].convertTo(in32[i], CV_32F);
+            else in32[i] = rawInputs[i];
         }
-        std::vector<Mat>& inputs  = is_fp16 ? in32  : rawInputs;
-        std::vector<Mat>& outputs = is_fp16 ? out32 : rawOutputs;
+        for (size_t i = 0; i < rawOutputs.size(); ++i)
+        {
+            if (rawOutputs[i].depth() == CV_16F) out32[i].create(rawOutputs[i].dims, rawOutputs[i].size.p, CV_32F);
+            else out32[i] = rawOutputs[i];
+        }
+        std::vector<Mat>& inputs  = in32;
+        std::vector<Mat>& outputs = out32;
 
         const Mat& query = inputs[0];
         const Mat& key   = inputs[1];
@@ -143,7 +154,7 @@ public:
         const float* Pp = has_past  ? inputs[3].ptr<float>() : nullptr;
 
         float* Op = outputs[0].ptr<float>();
-        float* Sp = outputs[1].ptr<float>();
+        float* Sp = has_state_output ? outputs[1].ptr<float>() : internals[0].ptr<float>();
 
         const size_t qStride = (size_t)seq * Hq * Dk;   // per batch
         const size_t kStride = (size_t)seq * Hkv * Dk;
@@ -245,8 +256,8 @@ public:
             }
         });
 
-        if (is_fp16)
-            for (size_t i = 0; i < rawOutputs.size(); ++i)
+        for (size_t i = 0; i < rawOutputs.size(); ++i)
+            if (rawOutputs[i].depth() == CV_16F)
                 out32[i].convertTo(rawOutputs[i], CV_16F);
     }
 
