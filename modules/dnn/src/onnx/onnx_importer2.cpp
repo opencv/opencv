@@ -537,7 +537,7 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if (attribute_proto.has_t())
             {
-                opencv_onnx::TensorProto tensor = attribute_proto.t();
+                const opencv_onnx::TensorProto& tensor = attribute_proto.t();
                 Mat blob = parseTensor(tensor);
                 lp.blobs.push_back(blob);
                 lp.set("original_dims_of_mat", tensor.dims_size());
@@ -891,9 +891,10 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     // parse constant tensors
     int n_consts = graph_proto->initializer_size();
     for (int i = 0; i < n_consts; i++) {
-        const opencv_onnx::TensorProto& const_i = graph_proto->initializer(i);
-        Mat t = parseTensor(const_i);
-        netimpl->newConstArg(remap(const_i.name()), t);
+        opencv_onnx::TensorProto* const_i = graph_proto->mutable_initializer(i);
+        Mat t = parseTensor(*const_i);
+        netimpl->newConstArg(remap(const_i->name()), t);
+        releaseONNXTensor(*const_i);
     }
 
     // parse graph inputs

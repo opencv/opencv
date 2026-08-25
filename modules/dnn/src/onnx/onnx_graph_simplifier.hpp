@@ -42,6 +42,15 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
 // or returns -1 when the data_type has no OpenCV equivalent.
 int dataType2cv(int dt);
 
+/** @brief frees a tensor's raw payload once it has been copied into a Mat.
+ *  clear_raw_data() only empties the string and keeps its capacity, so it must be released.
+ */
+inline void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
+{
+    if (!tensor_proto.raw_data().empty())
+        delete tensor_proto.release_raw_data();
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
