@@ -1965,7 +1965,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&
-        tensor_proto.int32_data().empty() &&
+        tensor_proto.int32_data().empty() && tensor_proto.uint64_data().empty() &&
         (!tensor_proto.has_data_location() || tensor_proto.data_location() != opencv_onnx::TensorProto::EXTERNAL)
     )
     {
@@ -2088,7 +2088,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         if (!tensor_proto.double_data().empty())
         {
             checkPayloadSize(tensor_proto.double_data().size());
-            Mat(sizes, CV_64FC1, (void*)tensor_proto.double_data().data()).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_64FC1, (void*)tensor_proto.double_data().data()).copyTo(blob);
         }
         else
         {
@@ -2172,10 +2172,11 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_UINT32)
     {
-        if (!tensor_proto.int32_data().empty())
+        // ONNX packs both UINT32 and UINT64 values into uint64_data, per spec.
+        if (!tensor_proto.uint64_data().empty())
         {
-            checkPayloadSize(tensor_proto.int32_data().size());
-            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_32UC1);
+            checkPayloadSize(tensor_proto.uint64_data().size());
+            Mat(sizes, CV_64UC1, (void*)tensor_proto.uint64_data().data()).convertTo(blob, CV_32UC1);
         }
         else
         {
@@ -2185,10 +2186,10 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_UINT64)
     {
-        if (!tensor_proto.int64_data().empty())
+        if (!tensor_proto.uint64_data().empty())
         {
-            checkPayloadSize(tensor_proto.int64_data().size());
-            Mat(sizes, CV_64SC1, (void*)tensor_proto.int64_data().data()).convertTo(blob, CV_64UC1);
+            checkPayloadSize(tensor_proto.uint64_data().size());
+            Mat(sizes, CV_64UC1, (void*)tensor_proto.uint64_data().data()).copyTo(blob);
         }
         else
         {
