@@ -105,6 +105,8 @@ public:
     }
 
     bool open(int);
+    bool open(const std::string&);
+    void configure();
     void close();
     double getProperty(int) const CV_OVERRIDE;
     bool setProperty(int, double) CV_OVERRIDE;
@@ -118,6 +120,7 @@ public:
 
 protected:
     bool create(int);
+    bool create(const std::string&);
     bool init_buffers();
 
     void stopCapture();
@@ -226,6 +229,21 @@ bool CvCaptureCAM_Aravis::create( int index )
     return NULL != (camera = arv_camera_new(deviceName.c_str(), NULL));
 }
 
+bool CvCaptureCAM_Aravis::create( const std::string &deviceName )
+{
+    GError *error = NULL;
+
+    // NULL name asks Aravis for the first device found
+    camera = arv_camera_new(deviceName.empty() ? NULL : deviceName.c_str(), &error);
+    if(error) {
+        CV_LOG_WARNING(NULL, cv::format("Aravis: failed to open camera '%s': %s",
+                                        deviceName.c_str(), error->message));
+        g_clear_error(&error);
+    }
+
+    return camera != NULL;
+ }
+
 bool CvCaptureCAM_Aravis::init_buffers()
 {
     if(stream) {
@@ -254,41 +272,54 @@ bool CvCaptureCAM_Aravis::init_buffers()
     return false;
 }
 
+void CvCaptureCAM_Aravis::configure()
+{
+    // fetch properties bounds
+    arv_camera_get_width_bounds(camera, &widthMin, &widthMax, NULL);
+    arv_camera_get_height_bounds(camera, &heightMin, &heightMax, NULL);
+    arv_camera_set_region(camera, 0, 0, widthMax, heightMax, NULL);
+
+    if( (fpsAvailable = arv_camera_is_frame_rate_available(camera, NULL)) )
+        arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax, NULL);
+    if( (gainAvailable = arv_camera_is_gain_available(camera, NULL)) )
+        arv_camera_get_gain_bounds (camera, &gainMin, &gainMax, NULL);
+    if( (exposureAvailable = arv_camera_is_exposure_time_available(camera, NULL)) )
+        arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax, NULL);
+
+    // get initial values
+    pixelFormat = arv_camera_get_pixel_format(camera, NULL);
+
+    // If camera's pixel format is not one of the supported formats, set a default
+    if (pixelFormat != ARV_PIXEL_FORMAT_MONO_8 &&
+        pixelFormat != ARV_PIXEL_FORMAT_BAYER_GR_8 &&
+        pixelFormat != ARV_PIXEL_FORMAT_MONO_12 &&
+        pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
+        pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
+        arv_camera_set_pixel_format(camera, pixelFormat, NULL);
+        CV_LOG_WARNING(NULL, "Current camera pixel format is not supported. Failed back to MONO_8.");
+    }
+
+    midGrey = getExpectedMidGrey(pixelFormat);
+
+    exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
+    gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
+    fps = arv_camera_get_frame_rate(camera, NULL);
+    softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera, NULL), "Software") == 0);
+}
+
 bool CvCaptureCAM_Aravis::open( int index )
 {
     if(create(index)) {
-        // fetch properties bounds
-        arv_camera_get_width_bounds(camera, &widthMin, &widthMax, NULL);
-        arv_camera_get_height_bounds(camera, &heightMin, &heightMax, NULL);
-        arv_camera_set_region(camera, 0, 0, widthMax, heightMax, NULL);
+        configure();
+        return startCapture();
+    }
+    return false;
+}
 
-        if( (fpsAvailable = arv_camera_is_frame_rate_available(camera, NULL)) )
-            arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax, NULL);
-        if( (gainAvailable = arv_camera_is_gain_available(camera, NULL)) )
-            arv_camera_get_gain_bounds (camera, &gainMin, &gainMax, NULL);
-        if( (exposureAvailable = arv_camera_is_exposure_time_available(camera, NULL)) )
-            arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax, NULL);
-
-        // get initial values
-        pixelFormat = arv_camera_get_pixel_format(camera, NULL);
-
-        // If camera's pixel format is not one of the supported formats, set a default
-        if (pixelFormat != ARV_PIXEL_FORMAT_MONO_8 &&
-            pixelFormat != ARV_PIXEL_FORMAT_BAYER_GR_8 &&
-            pixelFormat != ARV_PIXEL_FORMAT_MONO_12 &&
-            pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
-            pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
-            arv_camera_set_pixel_format(camera, pixelFormat, NULL);
-            CV_LOG_WARNING(NULL, "Current camera pixel format is not supported. Failed back to MONO_8.");
-        }
-
-        midGrey = getExpectedMidGrey(pixelFormat);
-
-        exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
-        gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
-        fps = arv_camera_get_frame_rate(camera, NULL);
-        softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera, NULL), "Software") == 0);
-
+bool CvCaptureCAM_Aravis::open( const std::string& deviceName)
+{
+    if(create(deviceName)) {
+        configure();
         return startCapture();
     }
     return false;
@@ -644,4 +675,14 @@ cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
     }
     return NULL;
 }
+
+cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture_by_name( const std::string &deviceName )
+{
+    Ptr<CvCaptureCAM_Aravis> capture = makePtr<CvCaptureCAM_Aravis>();
+    if(capture->open(deviceName)) {
+        return capture;
+    }
+    return NULL;
+}
+
 #endif
