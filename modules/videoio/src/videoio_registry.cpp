@@ -576,6 +576,48 @@ std::string getWriterBackendPluginVersion(VideoCaptureAPIs api,
 }
 
 
+std::vector<VideoDeviceInfo> enumerateBackends(VideoCaptureAPIs apiPreference)
+{
+    std::vector<VideoDeviceInfo> result;
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (apiPreference != CAP_ANY && apiPreference != info.id)
+            continue;
+
+#if !defined _WIN32 && (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
+        if (info.id == CAP_V4L2)
+        {
+            const std::vector<VideoDeviceInfo> devices = enumerate_V4L_devices();
+            result.insert(result.end(), devices.begin(), devices.end());
+        }
+#endif
+#ifdef HAVE_MSMF
+        if (info.id == CAP_MSMF)
+        {
+            const std::vector<VideoDeviceInfo> devices = enumerate_MSMF_devices();
+            result.insert(result.end(), devices.begin(), devices.end());
+        }
+#endif
+#if defined _WIN32 && defined HAVE_DSHOW
+        if (info.id == CAP_DSHOW)
+        {
+            const std::vector<VideoDeviceInfo> devices = enumerate_DShow_devices();
+            result.insert(result.end(), devices.begin(), devices.end());
+        }
+#endif
+#ifdef HAVE_AVFOUNDATION
+        if (info.id == CAP_AVFOUNDATION)
+        {
+            const std::vector<VideoDeviceInfo> devices = enumerate_AVFoundation_devices();
+            result.insert(result.end(), devices.begin(), devices.end());
+        }
+#endif
+    }
+    return result;
+}
+
 } // namespace registry
 
 } // namespace

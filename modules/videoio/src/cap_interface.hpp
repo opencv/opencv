@@ -325,6 +325,7 @@ Ptr<IVideoCapture> create_AVFoundation_capture_cam(int index);
 Ptr<IVideoWriter> create_AVFoundation_writer(const std::string& filename, int fourcc,
                                              double fps, const Size& frameSize,
                                              const VideoWriterParameters& params);
+std::vector<VideoDeviceInfo> enumerate_AVFoundation_devices();
 
 Ptr<IVideoCapture> create_WRT_capture(int device);
 
@@ -334,11 +335,14 @@ Ptr<IVideoCapture> cvCreateCapture_MSMF(const Ptr<IStreamReader>& stream, const 
 Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc,
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
+std::vector<VideoDeviceInfo> enumerate_MSMF_devices();
 
 Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params);
+std::vector<VideoDeviceInfo> enumerate_DShow_devices();
 
 Ptr<IVideoCapture> create_V4L_capture_cam(int index);
 Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename);
+std::vector<VideoDeviceInfo> enumerate_V4L_devices();
 
 Ptr<IVideoCapture> create_OpenNI2_capture_cam( int index );
 Ptr<IVideoCapture> create_OpenNI2_capture_file( const std::string &filename );

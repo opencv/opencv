@@ -214,6 +214,7 @@ make & enjoy!
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <dirent.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -2262,6 +2263,71 @@ bool VideoCapture_V4L_waitAny(const std::vector<VideoCapture>& streams, CV_OUT s
     }
     return res;
 }
+
+std::vector<VideoDeviceInfo> enumerate_V4L_devices()
+{
+    std::vector<VideoDeviceInfo> result;
+    std::vector<int> indices;
+
+    DIR* dir = ::opendir("/dev");
+    if (!dir)
+        return result;
+
+    while (const dirent* ent = ::readdir(dir))
+    {
+        const char* name = ent->d_name;
+        if (strncmp(name, "video", 5) != 0 || name[5] == '\0')
+            continue;
+        const char* p = name + 5;
+        while (*p >= '0' && *p <= '9')
+            ++p;
+        if (*p != '\0')
+            continue;
+        indices.push_back(atoi(name + 5));
+    }
+    ::closedir(dir);
+    std::sort(indices.begin(), indices.end());
+
+    for (size_t i = 0; i < indices.size(); ++i)
+    {
+        const int index = indices[i];
+        const std::string path = cv::format("/dev/video%d", index);
+        int fd = ::open(path.c_str(), O_RDONLY | O_NONBLOCK);
+        if (fd == -1)
+            continue;
+
+        v4l2_capability capability = v4l2_capability();
+        int res;
+        do {
+            res = ioctl(fd, VIDIOC_QUERYCAP, &capability);
+        } while (res == -1 && errno == EINTR);
+        ::close(fd);
+
+        if (res == -1)
+            continue;
+
+        #ifdef V4L2_CAP_DEVICE_CAPS
+            const __u32 caps = (capability.capabilities & V4L2_CAP_DEVICE_CAPS)
+                            ? capability.device_caps
+                            : capability.capabilities;
+        #else
+            const __u32 caps = capability.capabilities;
+        #endif
+
+        if ((caps & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE)) == 0)
+            continue;
+
+        const char* card = reinterpret_cast<const char*>(capability.card);
+
+        VideoDeviceInfo info;
+        info.cam_idx = index;
+        info.cam_name.assign(card, strnlen(card, sizeof(capability.card)));
+        info.backend = CAP_V4L2;
+        result.push_back(info);
+    }
+    return result;
+}
+
 
 } // cv::
 

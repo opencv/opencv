@@ -3696,6 +3696,27 @@ Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters&
     return makePtr<VideoCapture_DShow>(index, params);
 }
 
+std::vector<VideoDeviceInfo> enumerate_DShow_devices()
+{
+    std::vector<VideoDeviceInfo> result;
+    const int count = videoInput::listDevices(true);
+
+    for (int i = 0; i < count; i++)
+    {
+        VideoDeviceInfo info;
+        info.cam_idx = i;
+        info.cam_name = cv::format("cam: %d", i);
+        info.backend = CAP_DSHOW;
+
+        const char* name = videoInput::getDeviceName(i);
+        if (name && name[0] != '\0')
+            info.cam_name = name;
+
+        result.push_back(info);
+    }
+    return result;
+}
+
 
 }
 

@@ -2472,6 +2472,52 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const Ptr<IStreamReader>& st
     return cv::Ptr<cv::IVideoCapture>();
 }
 
+std::vector<cv::VideoDeviceInfo> cv::enumerate_MSMF_devices()
+{
+    std::vector<cv::VideoDeviceInfo> result;
+    Media_Foundation::getInstance();
+
+    _ComPtr<IMFAttributes> attr;
+    if (FAILED(MFCreateAttributes(&attr, 1)) ||
+        FAILED(attr->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID)))
+        return result;
+
+    IMFActivate** devices = NULL;
+    UINT32 count = 0;
+    if (FAILED(MFEnumDeviceSources(attr.Get(), &devices, &count)))
+        return result;
+
+    for (UINT32 i = 0; i < count; i++)
+    {
+        cv::VideoDeviceInfo info;
+        info.cam_idx = (int)i;
+        info.cam_name = cv::format("cam: %u", i);
+        info.backend = cv::CAP_MSMF;
+
+        if (devices[i])
+        {
+            WCHAR* wname = NULL;
+            UINT32 length = 0;
+            if (SUCCEEDED(devices[i]->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME, &wname, &length)))
+            {
+                std::string name;
+                const int size = ::WideCharToMultiByte(CP_UTF8, 0, wname, (int)length, NULL, 0, NULL, NULL);
+                if (size > 0)
+                {
+                    name.resize((size_t)size);
+                    ::WideCharToMultiByte(CP_UTF8, 0, wname, (int)length, &name[0], size, NULL, NULL);
+                    info.cam_name = name;
+                }
+                CoTaskMemFree(wname);
+            }
+            devices[i]->Release();
+        }
+        result.push_back(info);
+    }
+    CoTaskMemFree(devices);
+    return result;
+}
+
 //
 //
 // Media Foundation-based Video Writer

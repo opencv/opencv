@@ -75,6 +75,14 @@ CV_EXPORTS_W std::string getWriterBackendPluginVersion(
     CV_OUT int& version_API
 );
 
+/** @brief Returns list of camera devices available via `cv::VideoCapture(int index)`
+
+Devices are returned in backend priority order. With #CAP_ANY the same physical camera may be
+reported by more than one backend; use VideoDeviceInfo::backend to tell those entries apart.
+
+@param apiPreference backend to query (#VideoCaptureAPIs), or #CAP_ANY for all camera backends
+*/
+CV_EXPORTS_W std::vector<VideoDeviceInfo> enumerateBackends(VideoCaptureAPIs apiPreference = CAP_ANY);
 
 //! @}
 }} // namespace
