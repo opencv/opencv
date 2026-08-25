@@ -917,8 +917,6 @@ TEST_P(CharucoBoardGenerate, issue_24806)
     }
 }
 
-// Disabled by PR #24338 over 5.x's charuco-corner shape change (PR #23473); re-enabled since the
-// comparison below already reshapes both sides to a flat row, so the shape difference doesn't matter.
 TEST(Charuco, testSeveralBoardsWithCustomIds)
 {
     Size res{500, 500};
