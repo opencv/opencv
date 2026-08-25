@@ -340,21 +340,16 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
-    if( src.isSubmatrix() && !(borderType & BORDER_ISOLATED) )
     {
         Point ofs;
         Size wsz(src.cols, src.rows);
-        src.locateROI( wsz, ofs );
+        if( !(borderType & BORDER_ISOLATED) )
+            src.locateROI( wsz, ofs );
+
         CALL_HAL(bilateralFilter, cv_hal_bilateralFilter_offset, src.data, src.step, dst.data, dst.step,
                  src.cols, src.rows, src.depth(), src.channels(),
                  ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y,
                  d, sigmaColor, sigmaSpace, borderType & (~BORDER_ISOLATED));
-    }
-
-    {
-        CALL_HAL(bilateralFilter, cv_hal_bilateralFilter_offset, src.data, src.step, dst.data, dst.step,
-                src.cols, src.rows, src.depth(), src.channels(), 0, 0, 0, 0,
-                d, sigmaColor, sigmaSpace, borderType & (~BORDER_ISOLATED));
     }
 
     {
