@@ -213,4 +213,42 @@ TEST(Objdetect_face_recognition, regression)
     }
 }
 
+TEST(Objdetect_face_recognition, match_does_not_modify_input)
+{
+    std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
+    Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
+
+    // match() is declared const and takes both features as InputArray, so it must leave
+    // the caller's data untouched.
+    Mat feature1(1, 128, CV_32F), feature2(1, 128, CV_32F);
+    randu(feature1, Scalar::all(-10), Scalar::all(10));
+    randu(feature2, Scalar::all(-10), Scalar::all(10));
+    Mat expected1 = feature1.clone(), expected2 = feature2.clone();
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_COSINE);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_COSINE changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_COSINE changed input 2";
+
+    // Restore the inputs so the next pair of assertions is about FR_NORM_L2 alone.
+    expected1.copyTo(feature1);
+    expected2.copyTo(feature2);
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_NORM_L2);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_NORM_L2 changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_NORM_L2 changed input 2";
+
+    // Overlapping views of one buffer: normalizing the first in place also rewrote part
+    // of the second before it was read, so the score itself came out wrong.
+    Mat wide(1, 192, CV_32F);
+    randu(wide, Scalar::all(-10), Scalar::all(10));
+    Mat head = wide.colRange(0, 128), tail = wide.colRange(64, 192);
+    Mat headCopy = head.clone(), tailCopy = tail.clone();
+
+    double overlapped = faceRecognizer->match(head, tail,
+                                              FaceRecognizerSF::DisType::FR_COSINE);
+    double separate = faceRecognizer->match(headCopy, tailCopy,
+                                            FaceRecognizerSF::DisType::FR_COSINE);
+    EXPECT_NEAR(separate, overlapped, 1e-6) << "overlapping inputs changed the score";
+}
+
 }} // namespace
