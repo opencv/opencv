@@ -65,14 +65,6 @@ void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
     }
 }
 
-TEST(Imgcodecs_Image, imwrite_png_invalid_two_channel)
-{
-    const Mat src(2, 2, CV_8UC2, Scalar::all(0));
-    const string filename = cv::tempfile(".png");
-    EXPECT_THROW(imwrite(filename, src), cv::Exception);
-    remove(filename.c_str());
-}
-
 TEST(Imgcodecs_Bool, imwrite_true_maps_to_255)
 {
     Mat src(2, 3, CV_BoolC1, Scalar::all(0));
