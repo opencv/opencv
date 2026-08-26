@@ -6,6 +6,7 @@
 #define __OPENCV_DNN_LAYERS_CONV2_COMMON_HPP__
 
 #include <opencv2/dnn/all_layers.hpp>
+#include <algorithm>
 #include <array>
 
 namespace cv
@@ -88,6 +89,29 @@ struct ConvState
 };
 
 AutoPadding getAutoPadding(const LayerParams& params);
+
+// Compute number of spatial chunks for load balancing across threads.
+//
+// Both the forward-convolution and deconvolution kernels parallelise over
+// N * <output channel blocks> first. For layers with few output channels that
+// alone can be far below the thread count -- e.g. a 32-channel blocked output
+// is only 32/C0 = 4 tasks -- leaving most of the machine idle while each task
+// walks the whole spatial plane serially. Splitting the spatial range into
+// `nSpatChunks` pieces per block restores the missing parallelism.
+//
+// Returns 1 whenever total_blocks already saturates the pool, so layers that
+// were already decomposed well keep their existing behaviour unchanged.
+static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_per_chunk = 16) {
+    int nSpatChunks = 1;
+    int nthreads = cv::getNumThreads();
+    int target_tasks = nthreads * 8;
+    if (total_blocks < target_tasks && planeblocks > min_per_chunk) {
+        nSpatChunks = (target_tasks + total_blocks - 1) / total_blocks;
+        int max_chunks = planeblocks / min_per_chunk;
+        nSpatChunks = std::min(nSpatChunks, std::max(1, max_chunks));
+    }
+    return nSpatChunks;
+}
 
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,
