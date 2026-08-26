@@ -65,7 +65,7 @@ public:
         CV_CheckEQ(src.total(), dst.total(), "");
 
         // Reinterprets dst's buffer as src's layout so copyTo strided-copies non-contiguous src.
-        Mat dstAsSrcLayout(src.dims, src.size, src.type(), dst.data);
+        Mat dstAsSrcLayout(src.shape(), src.type(), dst.data);
         src.copyTo(dstAsSrcLayout);
     }
 
