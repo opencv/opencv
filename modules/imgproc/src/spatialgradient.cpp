@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -43,329 +44,141 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "spatialgradient.simd.hpp"
+#include "spatialgradient.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL based on CMakeLists.txt content
+
 namespace cv
 {
 
-/* NOTE:
- *
- * Sobel-x: -1  0  1
- *          -2  0  2
- *          -1  0  1
- *
- * Sobel-y: -1 -2 -1
- *           0  0  0
- *           1  2  1
- */
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-template <typename T>
-static inline void spatialGradientKernel_vec( T& vx, T& vy,
-                                          const T& v00, const T& v01, const T& v02,
-                                          const T& v10,               const T& v12,
-                                          const T& v20, const T& v21, const T& v22 )
+// Baseline dispatchers: pick the best CPU variant of each fused kernel at runtime.
+static void dispatchSep3x3_16s(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                               int rowStart, int rowEnd,
+                               short* dx, short* dy, size_t dst_step, int borderType)
 {
-    // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
-    // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
-    T tmp_add = v_sub(v22, v00),
-      tmp_sub = v_sub(v02, v20),
-      tmp_x   = v_sub(v12, v10),
-      tmp_y   = v_sub(v21, v01);
-
-    vx = v_add(v_add(v_add(tmp_add, tmp_sub), tmp_x), tmp_x);
-    vy = v_add(v_add(v_sub(tmp_add, tmp_sub), tmp_y), tmp_y);
-}
-#endif
-
-template <typename T>
-static inline void spatialGradientKernel( T& vx, T& vy,
-                                          const T& v00, const T& v01, const T& v02,
-                                          const T& v10,               const T& v12,
-                                          const T& v20, const T& v21, const T& v22 )
-{
-    // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
-    // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
-    T tmp_add = v22 - v00,
-      tmp_sub = v02 - v20,
-      tmp_x   = v12 - v10,
-      tmp_y   = v21 - v01;
-
-    vx = tmp_add + tmp_sub + tmp_x + tmp_x;
-    vy = tmp_add - tmp_sub + tmp_y + tmp_y;
+    CV_CPU_DISPATCH(spatialGradientSep3x3_16s,
+        (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
 }
 
-#if defined(__GNUC__) || defined(__clang__)
-#  define CV_SPATIALGRAD_NOINLINE __attribute__((noinline))
-#elif defined(_MSC_VER)
-#  define CV_SPATIALGRAD_NOINLINE __declspec(noinline)
-#else
-#  define CV_SPATIALGRAD_NOINLINE
-#endif
+static void dispatchSep5x5_16s(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                               int rowStart, int rowEnd,
+                               short* dx, short* dy, size_t dst_step, int borderType)
+{
+    CV_CPU_DISPATCH(spatialGradientSep5x5_16s,
+        (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
 
-// Fused single-pass 3x3 Sobel over the whole image: 8-bit input, CV_16S output,
-// unit scale, BORDER_REFLECT_101 / BORDER_REPLICATE. Kept in its own (non-inlined)
-// function so the hot vectorized loop is codegen'd in isolation from the public
-// entry point's dispatch/fallback logic. Folding both into one frame perturbs loop
-// alignment and costs ~10% on some microarchitectures (observed on AMD Zen5/Turin).
-static CV_SPATIALGRAD_NOINLINE
-void spatialGradientFused3x3_8u16s( Mat src, OutputArray _dx, OutputArray _dy, int bt );
+static void dispatchSep3x3_32f(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                               int rowStart, int rowEnd,
+                               float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    CV_CPU_DISPATCH(spatialGradientSep3x3_32f,
+        (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, scale, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+static void dispatchSep5x5_32f(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                               int rowStart, int rowEnd,
+                               float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    CV_CPU_DISPATCH(spatialGradientSep5x5_32f,
+        (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, scale, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+// 3x3 CV_8U -> CV_16S via cv_hal_spatialGradient when a platform HAL provides it
+// (e.g. RISC-V RVV). Returns false if the HAL is not implemented so the caller
+// falls back to the fused separable kernel.
+static bool spatialGradient3x3_tryHal( const Mat& src, OutputArray _dx, OutputArray _dy, int bt )
+{
+    _dx.create( src.size(), CV_16SC1 );
+    _dy.create( src.size(), CV_16SC1 );
+    Mat dx = _dx.getMat(), dy = _dy.getMat();
+
+    int res = cv_hal_spatialGradient( src.data, src.step,
+                                      dx.ptr<short>(), dx.step,
+                                      dy.ptr<short>(), dy.step,
+                                      src.cols, src.rows, 3, bt );
+    if ( res == CV_HAL_ERROR_OK )
+        return true;
+    if ( res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+        CV_Error_( cv::Error::StsInternal,
+                   ("HAL implementation spatialGradient ==> cv_hal_spatialGradient returned %d (0x%08x)", res, res) );
+    return false;
+}
 
 void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
                       int ksize, int borderType, int ddepth, double scale )
 {
     CV_INSTRUMENT_REGION();
 
-    // Prepare InputArray src
     Mat src = _src.getMat();
     CV_Assert( !src.empty() );
-    CV_Assert( ksize == -1 || ksize == 3 || ksize == 5 || ksize == 7 );
+    CV_Assert( ksize == -1 || ksize == 1 || ksize == 3 || ksize == 5 || ksize == 7 );
     CV_Assert( ddepth == CV_16S || ddepth == CV_32F );
 
-    // Fused single-pass 3x3 Sobel fast path (existing vectorized kernel): 8-bit source,
-    // CV_16S output, unit scale, whole-image (non-ROI), BORDER_REFLECT_101/REPLICATE.
-    // NOTE: fused fast paths for CV_32F output and ksize == 5 (plus ROI-aware slicing and
-    // other border types) are added in a follow-up PR; until then those cases are computed
-    // with the two equivalent cv::Sobel() passes below.
     Size wholeSize;
     Point ofs;
     src.locateROI( wholeSize, ofs );
     const bool entireParent = ( ofs.x == 0 && ofs.y == 0 &&
         src.cols == wholeSize.width && src.rows == wholeSize.height );
     const bool isolated = ( borderType & BORDER_ISOLATED ) != 0;
-    const int bt = borderType & ~BORDER_ISOLATED;
+    const int  bt = borderType & ~BORDER_ISOLATED;
 
-    const bool fastPath = ( ksize == 3 && ddepth == CV_16S && scale == 1.0
+    // (1) Optional platform HAL for whole-image 3x3 CV_8U->CV_16S at unit scale.
+    const bool halEligible = ( ksize == 3 && ddepth == CV_16S && scale == 1.0
         && src.type() == CV_8UC1 && entireParent && !isolated
-        && ( bt == BORDER_DEFAULT || bt == BORDER_REPLICATE ) );
+        && ( bt == BORDER_REFLECT_101 || bt == BORDER_REPLICATE ) );
+    if ( halEligible && spatialGradient3x3_tryHal( src, _dx, _dy, bt ) )
+        return;
 
-    if ( !fastPath )
+    // (2) Fused separable single-pass path (CV_8U source): 3x3/5x5, CV_16S (unit scale) and
+    //     CV_32F (any scale), reflect/replicate borders and full-width row-range ROIs. Each
+    //     source sample is read once and shared between dx and dy; output is bit-identical to
+    //     two cv::Sobel() passes. CV_16S fuses only at unit scale (the kernel emits the
+    //     unscaled int16 result); a scaled int16 request falls back to keep cv::Sobel rounding.
+    const bool fusableBorder = ( bt == BORDER_REPLICATE || bt == BORDER_REFLECT
+                                 || bt == BORDER_REFLECT_101 );
+    const bool fullWidthRoi  = ( ofs.x == 0 && src.cols == wholeSize.width );
+    const bool scaleOk       = ( ddepth == CV_32F ) || ( scale == 1.0 );
+
+    if ( (ksize == 3 || ksize == 5) && src.type() == CV_8UC1 && fusableBorder && fullWidthRoi && !isolated && scaleOk )
     {
-        Sobel( _src, _dx, ddepth, 1, 0, ksize, scale, 0, borderType );
-        Sobel( _src, _dy, ddepth, 0, 1, ksize, scale, 0, borderType );
+        _dx.create( src.size(), CV_MAKETYPE(ddepth, 1) );
+        _dy.create( src.size(), CV_MAKETYPE(ddepth, 1) );
+        Mat dx = _dx.getMat(), dy = _dy.getMat();
+
+        const uchar* base = src.ptr<uchar>(0) - (size_t)ofs.y * src.step;
+        const int parentRows = wholeSize.height;
+        const int rowStart = ofs.y;
+        const int rowEnd   = ofs.y + src.rows;
+
+        if ( ddepth == CV_32F )
+        {
+            const float fscale = (float)scale;
+            if ( ksize == 3 )
+                dispatchSep3x3_32f( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                                    dx.ptr<float>(), dy.ptr<float>(), dx.step1(), fscale, bt );
+            else
+                dispatchSep5x5_32f( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                                    dx.ptr<float>(), dy.ptr<float>(), dx.step1(), fscale, bt );
+        }
+        else
+        {
+            if ( ksize == 3 )
+                dispatchSep3x3_16s( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                                    dx.ptr<short>(), dy.ptr<short>(), dx.step1(), bt );
+            else
+                dispatchSep5x5_16s( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                                    dx.ptr<short>(), dy.ptr<short>(), dx.step1(), bt );
+        }
         return;
     }
 
-    spatialGradientFused3x3_8u16s( src, _dx, _dy, bt );
-}
-
-static CV_SPATIALGRAD_NOINLINE
-void spatialGradientFused3x3_8u16s( Mat src, OutputArray _dx, OutputArray _dy, int bt )
-{
-    // Prepare OutputArrays dx, dy
-    _dx.create( src.size(), CV_16SC1 );
-    _dy.create( src.size(), CV_16SC1 );
-    Mat dx = _dx.getMat(),
-        dy = _dy.getMat();
-
-    CALL_HAL(spatialGradient, cv_hal_spatialGradient,
-         src.data, src.step,
-         dx.ptr<short>(), dx.step,
-         dy.ptr<short>(), dy.step,
-         src.cols, src.rows,
-         3, bt);
-
-    // Get dimensions
-    const int H = src.rows,
-              W = src.cols;
-
-    // Row, column indices
-    int i = 0,
-        j = 0;
-
-    // Handle border types
-    int i_top    = 0,     // Case for H == 1 && W == 1 && BORDER_REPLICATE
-        i_bottom = H - 1,
-        j_offl   = 0,     // j offset from 0th   pixel to reach -1st pixel
-        j_offr   = 0;     // j offset from W-1th pixel to reach Wth  pixel
-
-    if ( bt == BORDER_DEFAULT ) // Equiv. to BORDER_REFLECT_101
-    {
-        if ( H > 1 )
-        {
-            i_top    = 1;
-            i_bottom = H - 2;
-        }
-        if ( W > 1 )
-        {
-            j_offl = 1;
-            j_offr = -1;
-        }
-    }
-
-    int i_start = 0;
-    int j_start = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    // Characters in variable names have the following meanings:
-    // u: unsigned char
-    // s: signed int
-    //
-    // [row][column]
-    // m: offset -1
-    // n: offset  0
-    // p: offset  1
-    // Example: umn is offset -1 in row and offset 0 in column
-    for ( i = 0; i < H - 1; i += 2 )
-    {
-        uchar *p_src = src.ptr<uchar>(i == 0 ? i_top : i - 1);
-        uchar *c_src = src.ptr<uchar>(i);
-        uchar *n_src = src.ptr<uchar>(i+1);
-        uchar *m_src = src.ptr<uchar>(i == H - 2 ? i_bottom : i + 2);
-
-        short *c_dx = dx.ptr<short>(i);
-        short *c_dy = dy.ptr<short>(i);
-        short *n_dx = dx.ptr<short>(i+1);
-        short *n_dy = dy.ptr<short>(i+1);
-
-        // Process rest of columns 16-column chunks at a time
-        for ( j = 1; j < W - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
-        {
-            // Load top row for 3x3 Sobel filter
-            v_uint8 v_um = vx_load(&p_src[j-1]);
-            v_uint8 v_un = vx_load(&p_src[j]);
-            v_uint8 v_up = vx_load(&p_src[j+1]);
-            v_uint16 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16 v_s1m1 = v_reinterpret_as_s16(v_um1);
-            v_int16 v_s1m2 = v_reinterpret_as_s16(v_um2);
-            v_int16 v_s1n1 = v_reinterpret_as_s16(v_un1);
-            v_int16 v_s1n2 = v_reinterpret_as_s16(v_un2);
-            v_int16 v_s1p1 = v_reinterpret_as_s16(v_up1);
-            v_int16 v_s1p2 = v_reinterpret_as_s16(v_up2);
-
-            // Load second row for 3x3 Sobel filter
-            v_um = vx_load(&c_src[j-1]);
-            v_un = vx_load(&c_src[j]);
-            v_up = vx_load(&c_src[j+1]);
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16 v_s2m1 = v_reinterpret_as_s16(v_um1);
-            v_int16 v_s2m2 = v_reinterpret_as_s16(v_um2);
-            v_int16 v_s2n1 = v_reinterpret_as_s16(v_un1);
-            v_int16 v_s2n2 = v_reinterpret_as_s16(v_un2);
-            v_int16 v_s2p1 = v_reinterpret_as_s16(v_up1);
-            v_int16 v_s2p2 = v_reinterpret_as_s16(v_up2);
-
-            // Load third row for 3x3 Sobel filter
-            v_um = vx_load(&n_src[j-1]);
-            v_un = vx_load(&n_src[j]);
-            v_up = vx_load(&n_src[j+1]);
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16 v_s3m1 = v_reinterpret_as_s16(v_um1);
-            v_int16 v_s3m2 = v_reinterpret_as_s16(v_um2);
-            v_int16 v_s3n1 = v_reinterpret_as_s16(v_un1);
-            v_int16 v_s3n2 = v_reinterpret_as_s16(v_un2);
-            v_int16 v_s3p1 = v_reinterpret_as_s16(v_up1);
-            v_int16 v_s3p2 = v_reinterpret_as_s16(v_up2);
-
-            // dx & dy for rows 1, 2, 3
-            v_int16 v_sdx1, v_sdy1;
-            spatialGradientKernel_vec<v_int16>( v_sdx1, v_sdy1,
-                                              v_s1m1, v_s1n1, v_s1p1,
-                                              v_s2m1,         v_s2p1,
-                                              v_s3m1, v_s3n1, v_s3p1 );
-
-            v_int16 v_sdx2, v_sdy2;
-            spatialGradientKernel_vec<v_int16>( v_sdx2, v_sdy2,
-                                              v_s1m2, v_s1n2, v_s1p2,
-                                              v_s2m2,         v_s2p2,
-                                              v_s3m2, v_s3n2, v_s3p2 );
-
-            // Store
-            v_store(&c_dx[j],                 v_sdx1);
-            v_store(&c_dx[j+VTraits<v_int16>::vlanes()], v_sdx2);
-            v_store(&c_dy[j],                 v_sdy1);
-            v_store(&c_dy[j+VTraits<v_int16>::vlanes()], v_sdy2);
-
-            // Load fourth row for 3x3 Sobel filter
-            v_um = vx_load(&m_src[j-1]);
-            v_un = vx_load(&m_src[j]);
-            v_up = vx_load(&m_src[j+1]);
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16 v_s4m1 = v_reinterpret_as_s16(v_um1);
-            v_int16 v_s4m2 = v_reinterpret_as_s16(v_um2);
-            v_int16 v_s4n1 = v_reinterpret_as_s16(v_un1);
-            v_int16 v_s4n2 = v_reinterpret_as_s16(v_un2);
-            v_int16 v_s4p1 = v_reinterpret_as_s16(v_up1);
-            v_int16 v_s4p2 = v_reinterpret_as_s16(v_up2);
-
-            // dx & dy for rows 2, 3, 4
-            spatialGradientKernel_vec<v_int16>( v_sdx1, v_sdy1,
-                                              v_s2m1, v_s2n1, v_s2p1,
-                                              v_s3m1,         v_s3p1,
-                                              v_s4m1, v_s4n1, v_s4p1 );
-
-            spatialGradientKernel_vec<v_int16>( v_sdx2, v_sdy2,
-                                              v_s2m2, v_s2n2, v_s2p2,
-                                              v_s3m2,         v_s3p2,
-                                              v_s4m2, v_s4n2, v_s4p2 );
-
-            // Store
-            v_store(&n_dx[j],                 v_sdx1);
-            v_store(&n_dx[j+VTraits<v_int16>::vlanes()], v_sdx2);
-            v_store(&n_dy[j],                 v_sdy1);
-            v_store(&n_dy[j+VTraits<v_int16>::vlanes()], v_sdy2);
-        }
-    }
-    i_start = i;
-    j_start = j;
-#endif
-    int j_p, j_n;
-    uchar v00, v01, v02, v10, v11, v12, v20, v21, v22;
-    for ( i = 0; i < H; i++ )
-    {
-        uchar *p_src = src.ptr<uchar>(i == 0 ? i_top : i - 1);
-        uchar *c_src = src.ptr<uchar>(i);
-        uchar *n_src = src.ptr<uchar>(i == H - 1 ? i_bottom : i + 1);
-
-        short *c_dx = dx.ptr<short>(i);
-        short *c_dy = dy.ptr<short>(i);
-
-        // Process left-most column
-        j = 0;
-        j_p = j + j_offl;
-        j_n = 1;
-        if ( j_n >= W ) j_n = j + j_offr;
-        v00 = p_src[j_p]; v01 = p_src[j]; v02 = p_src[j_n];
-        v10 = c_src[j_p]; v11 = c_src[j]; v12 = c_src[j_n];
-        v20 = n_src[j_p]; v21 = n_src[j]; v22 = n_src[j_n];
-        spatialGradientKernel<short>( c_dx[0], c_dy[0], v00, v01, v02, v10,
-                                      v12, v20, v21, v22 );
-        v00 = v01; v10 = v11; v20 = v21;
-        v01 = v02; v11 = v12; v21 = v22;
-
-        // Process middle columns
-        j = i >= i_start ? 1 : j_start;
-        j_p = j - 1;
-        v00 = p_src[j_p]; v01 = p_src[j];
-        v10 = c_src[j_p]; v11 = c_src[j];
-        v20 = n_src[j_p]; v21 = n_src[j];
-
-        for ( ; j < W - 1; j++ )
-        {
-            // Get values for next column
-            j_n = j + 1; v02 = p_src[j_n]; v12 = c_src[j_n]; v22 = n_src[j_n];
-            spatialGradientKernel<short>( c_dx[j], c_dy[j], v00, v01, v02, v10,
-                                          v12, v20, v21, v22 );
-
-            // Move values back one column for next iteration
-            v00 = v01; v10 = v11; v20 = v21;
-            v01 = v02; v11 = v12; v21 = v22;
-        }
-
-        // Process right-most column
-        if ( j < W )
-        {
-            j_n = j + j_offr; v02 = p_src[j_n]; v12 = c_src[j_n]; v22 = n_src[j_n];
-            spatialGradientKernel<short>( c_dx[j], c_dy[j], v00, v01, v02, v10,
-                                          v12, v20, v21, v22 );
-        }
-    }
-
+    // (3) General fallback: two separable cv::Sobel passes.
+    Sobel( _src, _dx, ddepth, 1, 0, ksize, scale, 0, borderType );
+    Sobel( _src, _dy, ddepth, 0, 1, ksize, scale, 0, borderType );
 }
 
 }

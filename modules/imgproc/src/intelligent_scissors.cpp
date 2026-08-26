@@ -145,18 +145,7 @@ struct IntelligentScissorsMB::Impl
         if (!Ix_.empty())
             return;
         initGrayscale_(image);
-        // TODO(follow-up PR): use the fused spatialGradient once its CV_32F/ksize=5 fast paths land.
-#if 0
-        if (sobelKernelSize == 3 || sobelKernelSize == 5)
-        {
-            spatialGradient(grayscale_, Ix_, Iy_, sobelKernelSize, BORDER_DEFAULT, CV_32F);
-        }
-        else
-#endif
-        {
-            Sobel(grayscale_, Ix_, CV_32FC1, 1, 0, sobelKernelSize);
-            Sobel(grayscale_, Iy_, CV_32FC1, 0, 1, sobelKernelSize);
-        }
+        spatialGradient(grayscale_, Ix_, Iy_, sobelKernelSize, BORDER_DEFAULT, CV_32F);
     }
     Mat image_magnitude_;
     void initImageMagnitude_(InputArray image)
