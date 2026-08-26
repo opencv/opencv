@@ -1971,6 +1971,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CumProdLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS LinearAttentionLayer : public Layer {
+     public:
+        static Ptr<LinearAttentionLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS FlexAttentionLayer : public Layer {
+     public:
+        static Ptr<FlexAttentionLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS GroupNormLayer : public Layer {
     public:
         static Ptr<GroupNormLayer> create(const LayerParams &params);

@@ -136,6 +136,13 @@ protected:
     void addLayer(LayerParams& layerParams,
                   const opencv_onnx::NodeProto& node_proto,
                   int max_inputs = std::numeric_limits<int>::max());
+    // Append a layer to the current program from explicit input/output arg names.
+    void addComputedLayer(const std::string& type, LayerParams& lp,
+                          const std::vector<std::string>& inNames,
+                          const std::vector<std::string>& outNames);
+    // Inline a single-in/single-out sub-graph into the current program; returns the output arg name.
+    std::string inlineSubgraph(const opencv_onnx::GraphProto& g,
+                               const std::string& srcArg, const std::string& prefix);
     void setParamsDtype(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     Arg resolveConstThroughIdentity(Arg arg);
@@ -174,6 +181,7 @@ protected:
     std::string getLayerTypeDomain(const opencv_onnx::NodeProto& node_proto);
     const DispatchMap& getDispatchMap(const opencv_onnx::NodeProto& node_proto);
     void buildDispatchMap_ONNX_AI();
+    void buildDispatchMap_ONNX_AI_PREVIEW();
     void buildDispatchMap_COM_MICROSOFT();
 
     // Domain: 'ai.onnx' (default)
@@ -280,6 +288,8 @@ protected:
     void parseSimplifiedLayerNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSkipSimplifiedLayerNorm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCausalConvWithState  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLinearAttention      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseFlexAttention        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -305,6 +315,7 @@ protected:
     void parseOperatorSet();
 
     const std::string str_domain_ai_onnx = "ai.onnx";
+    const std::string str_domain_ai_onnx_preview = "ai.onnx.preview";
     const std::string str_domain_com_microsoft = "com.microsoft";
 
     bool useLegacyNames;
@@ -628,6 +639,7 @@ void ONNXImporter2::parseOperatorSet()
         }
     }
     buildDispatchMap_ONNX_AI();
+    buildDispatchMap_ONNX_AI_PREVIEW();
     buildDispatchMap_COM_MICROSOFT();
 
 }
@@ -2908,6 +2920,124 @@ void ONNXImporter2::parseCausalConvWithState(LayerParams& params, const opencv_o
     addLayer(params, node_proto);
 }
 
+void ONNXImporter2::parseLinearAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    params.type = "LinearAttention";
+    addLayer(params, node_proto);
+}
+
+void ONNXImporter2::parseFlexAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    const opencv_onnx::GraphProto* scoreMod = nullptr;
+    const opencv_onnx::GraphProto* probMod = nullptr;
+    for (int i = 0; i < node_proto.attribute_size(); i++) {
+        const opencv_onnx::AttributeProto& a = node_proto.attribute(i);
+        // Only the spec-default softmax precision is implemented.
+        if (a.name() == "softmax_precision")
+            CV_Error(Error::StsNotImplemented, "ONNXImporter2/parseFlexAttention: explicit softmax_precision is not supported");
+        if (!a.has_g()) continue;
+        if (a.name() == "score_mod") scoreMod = &a.g();
+        else if (a.name() == "prob_mod") probMod = &a.g();
+    }
+
+    // No sub-graphs: a single fused FlexAttention layer computes Q,K,V -> Y.
+    if (!scoreMod && !probMod) {
+        params.type = "FlexAttention";
+        addLayer(params, node_proto, 3);
+        return;
+    }
+
+    // score_mod / prob_mod are pure data-flow, so decompose into stages and inline the
+    // sub-graph nodes as ordinary graph nodes (no runtime sub-graph execution):
+    //   qk -> [score_mod] -> Softmax -> [prob_mod] -> av
+    const std::string nm = node_proto.name().empty() ? node_proto.output(0) : node_proto.name();
+    const std::string qArg = node_proto.input(0);
+    const std::string kArg = node_proto.input(1);
+    const std::string vArg = node_proto.input(2);
+    const std::string yArg = node_proto.output(0);
+    const std::string scoresArg = nm + "/scores";
+    const std::string probsArg  = nm + "/probs";
+
+    LayerParams qkp;
+    qkp.name = nm + "/qk";
+    if (params.has("scale")) qkp.set("scale", params.get<float>("scale"));
+    qkp.set("stage", "qk");
+    addComputedLayer("FlexAttention", qkp, {qArg, kArg}, {scoresArg});
+
+    std::string afterScore = scoreMod ? inlineSubgraph(*scoreMod, scoresArg, nm + "/smod#") : scoresArg;
+
+    LayerParams smp;
+    smp.name = nm + "/softmax";
+    smp.set("axis", -1);
+    addComputedLayer("Softmax", smp, {afterScore}, {probsArg});
+
+    std::string afterProb = probMod ? inlineSubgraph(*probMod, probsArg, nm + "/pmod#") : probsArg;
+
+    LayerParams avp;
+    avp.name = nm + "/av";
+    avp.set("stage", "av");
+    addComputedLayer("FlexAttention", avp, {afterProb, vArg}, {yArg});
+}
+
+void ONNXImporter2::addComputedLayer(const std::string& type, LayerParams& lp,
+                                     const std::vector<std::string>& inNames,
+                                     const std::vector<std::string>& outNames)
+{
+    lp.type = type;
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(type, lp);
+    if (!layer) {
+        rememberMissingOp(type);
+        raiseError();
+        return;
+    }
+    layer->inputs.clear();
+    for (const std::string& n : inNames) {
+        if (!net.haveArg(n)) {
+            CV_LOG_ERROR(NULL, "DNN/ONNX: unknown input '" << n << "' of computed layer '" << lp.name << "'");
+            raiseError();
+            return;
+        }
+        layer->inputs.push_back(net.getArg(n));
+    }
+    layer->outputs.clear();
+    for (const std::string& n : outNames)
+        layer->outputs.push_back(net.getArg(n));
+    layer->netimpl = netimpl;
+    curr_prog.push_back(layer);
+}
+
+std::string ONNXImporter2::inlineSubgraph(const opencv_onnx::GraphProto& g,
+                                          const std::string& srcArg, const std::string& prefix)
+{
+    CV_CheckEQ(g.input_size(), 1, "ONNXImporter2/FlexAttention: sub-graph must have exactly one input");
+    CV_CheckEQ(g.output_size(), 1, "ONNXImporter2/FlexAttention: sub-graph must have exactly one output");
+
+    std::vector<RenameUndo> undos;
+    // sub-graph input tensor resolves to the arg feeding this modifier
+    {
+        RenameUndo u;
+        u.key = g.input(0).name();
+        auto it = rename_map.find(u.key);
+        u.had_prev = (it != rename_map.end());
+        if (u.had_prev) u.prev_value = it->second;
+        undos.push_back(u);
+        rename_map[u.key] = srcArg;
+    }
+    // prefix every value the sub-graph defines to keep the parent namespace collision-free
+    for (int i = 0; i < g.initializer_size(); i++)
+        recordSubgraphRename(g.initializer(i).name(), prefix, undos);
+    for (int i = 0; i < g.node_size(); i++)
+        for (int j = 0; j < g.node(i).output_size(); j++)
+            recordSubgraphRename(g.node(i).output(j), prefix, undos);
+
+    for (int i = 0; i < g.initializer_size(); i++)
+        netimpl->newConstArg(remap(g.initializer(i).name()), parseTensor(g.initializer(i)));
+    for (int i = 0; i < g.node_size(); i++)
+        parseNode(g.node(i));
+
+    std::string out = remap(g.output(0).name());
+    popRenames(undos);
+    return out;
+}
+
 void ONNXImporter2::parseRoiAlign(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "RoiAlign";
@@ -3051,9 +3181,18 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Attention"] = &ONNXImporter2::parseAttentionOnnxAi;
     dispatch["CausalConvWithState"] = &ONNXImporter2::parseCausalConvWithState;
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
+    dispatch["LinearAttention"] = &ONNXImporter2::parseLinearAttention;
     dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNorm;
 
     domain_dispatch_map[str_domain_ai_onnx] = dispatch;
+}
+
+// Domain: ai.onnx.preview
+void ONNXImporter2::buildDispatchMap_ONNX_AI_PREVIEW()
+{
+    DispatchMap dispatch;
+    dispatch["FlexAttention"] = &ONNXImporter2::parseFlexAttention;
+    domain_dispatch_map[str_domain_ai_onnx_preview] = dispatch;
 }
 
 // Domain: com.microsoft
