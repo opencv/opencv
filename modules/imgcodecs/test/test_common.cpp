@@ -65,4 +65,25 @@ void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
     }
 }
 
+TEST(Imgcodecs_Bool, imwrite_true_maps_to_255)
+{
+    Mat src(2, 3, CV_BoolC1, Scalar::all(0));
+    src.at<bool>(0, 1) = true;
+    src.at<bool>(1, 0) = true;
+    src.at<bool>(1, 2) = true;
+
+    const string filename = cv::tempfile(".png");
+    ASSERT_TRUE(imwrite(filename, src));
+
+    Mat dst = imread(filename, IMREAD_UNCHANGED);
+    remove(filename.c_str());
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(CV_8UC1, dst.type());
+
+    Mat dst_bool;
+    dst.convertTo(dst_bool, CV_Bool);
+    EXPECT_EQ(0, cv::norm(dst_bool, src, NORM_INF));
+}
+
 }  // namespace
