@@ -29,7 +29,7 @@ struct ModelFusionScaleSoftmax
     bool extractScalar(Arg a, float& out) const
     {
         if (!netimpl->isConstArg(a)) return false;
-        Mat t = netimpl->argTensor(a);
+        Mat t = netimpl->argTensor(a).getMat(ACCESS_READ);
         if (t.total() != 1) return false;
         if (t.type() == CV_32F) { out = t.ptr<float>()[0]; return true; }
         if (t.type() == CV_64F) { out = (float)t.ptr<double>()[0]; return true; }

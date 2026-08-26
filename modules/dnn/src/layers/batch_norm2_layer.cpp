@@ -488,10 +488,10 @@ public:
             !netimpl_->isConstArg(inputs[3]) ||
             !netimpl_->isConstArg(inputs[4]))
             return false;
-        Mat scale_ = netimpl_->argTensor(inputs[1]);
-        Mat bias_ = netimpl_->argTensor(inputs[2]);
-        Mat mean_ = netimpl_->argTensor(inputs[3]);
-        Mat var_ = netimpl_->argTensor(inputs[4]);
+        Mat scale_ = netimpl_->argTensor(inputs[1]).getMat(ACCESS_READ);
+        Mat bias_ = netimpl_->argTensor(inputs[2]).getMat(ACCESS_READ);
+        Mat mean_ = netimpl_->argTensor(inputs[3]).getMat(ACCESS_READ);
+        Mat var_ = netimpl_->argTensor(inputs[4]).getMat(ACCESS_READ);
         BatchNorm2Layer::getScaleBias(scale_, bias_, mean_, var_, epsilon, scale, bias);
         inputs.resize(1);
         return true;

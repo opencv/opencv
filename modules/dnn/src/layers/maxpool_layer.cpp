@@ -620,9 +620,9 @@ public:
                               InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
-        std::vector<cuda::GpuMatND> inputs;
-        inputs_.getGpuMatNDVector(inputs);
-        MatShape inShape = inputs[0].size;
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
+        MatShape inShape = cv::dnn::shape(inputs[0]);
         const int nspatial = (int)kernel_shape.size();
 
         cuda4dnn::PoolingConfiguration config;
