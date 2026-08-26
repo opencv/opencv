@@ -7,8 +7,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 
-#include <cstring>
-
 namespace cv {
 namespace dnn {
 
@@ -61,11 +59,14 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const Mat src = inputs[0].isContinuous() ? inputs[0] : inputs[0].clone();
+        const Mat& src = inputs[0];
         Mat& dst = outputs[0];
         CV_CheckEQ(src.elemSize(), dst.elemSize(), "BitCast: element sizes must match");
         CV_CheckEQ(src.total(), dst.total(), "");
-        std::memcpy(dst.ptr(), src.ptr(), src.total() * src.elemSize());
+
+        // Reinterprets dst's buffer as src's layout so copyTo strided-copies non-contiguous src.
+        Mat dstAsSrcLayout(src.dims, src.size, src.type(), dst.data);
+        src.copyTo(dstAsSrcLayout);
     }
 
 private:
