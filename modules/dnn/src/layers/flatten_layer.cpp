@@ -286,8 +286,8 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        std::vector<cuda::GpuMatND> inputs;
-        inputs_.getGpuMatNDVector(inputs);
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
         int depth = CV_MAT_DEPTH(inputs[0].type());
         if (depth == CV_Bool)
             return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));

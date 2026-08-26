@@ -73,7 +73,7 @@ public:
         if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
             return false;
 
-        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
+        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
         shapeSpec = tensorToShape(shapeTensor);
         return true;
     }
@@ -196,7 +196,7 @@ public:
         {
             CV_Assert(this->inputs.size() == 2);
             Net::Impl* netimpl_ = getNetImpl(this);
-            Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
+            Mat shapeTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             shapeSpec = tensorToShape(shapeTensor);
         } else {
             CV_Assert(shapeSpec.dims >= 0);

@@ -30,7 +30,7 @@ struct ConstArgs
     {
         CV_Assert(usecounts[inp.idx] > 0);
         if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
-            netimpl->__tensors__[inp.idx] = Mat(); // deallocate unused tensor
+            netimpl->__tensors__[inp.idx] = UMat(); // deallocate unused tensor
         }
     }
 
@@ -75,14 +75,14 @@ struct ConstArgs
                 if (conv) {
                     // convolution with constant weights and bias
                     conv->setWeights(netimpl->__tensors__[inputs[1]],
-                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
+                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : UMat(),
                                      netimpl->defaultC0, netimpl->accuracy);
                     conv->inputs.resize(1);
                     unuse_tail = true;
                 } else if (deconv) {
                     // deconvolution with constant weights and bias
                     deconv->setWeights(netimpl->__tensors__[inputs[1]],
-                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
+                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : UMat(),
                                        netimpl->defaultC0, netimpl->accuracy);
                     deconv->inputs.resize(1);
                     unuse_tail = true;
@@ -90,7 +90,7 @@ struct ConstArgs
                     // batch norm with constant parameters
                     unuse_tail = true;
                 } else if (prelu && ninputs == 2) {
-                    prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
+                    prelu->setSlope(netimpl->__tensors__[inputs[1].idx].getMat(ACCESS_READ));
                     prelu->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {

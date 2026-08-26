@@ -245,7 +245,7 @@ private:
             return -1;
         }
 
-        Mat dft_length_tensor = netimpl_->argTensor(this->inputs[1]);
+        Mat dft_length_tensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
         if (dft_length_tensor.empty() || dft_length_tensor.total() != 1)
         {
             return -1;

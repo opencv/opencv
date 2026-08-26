@@ -61,7 +61,7 @@ public:
         CV_Assert(ninputs == (size_t)2);
         Net::Impl* netimpl_ = getNetImpl(this);
 
-        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
+        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
 
         outputs.assign(1, getOutShape(inputs[0], shapeTensor));
         internals.clear();
