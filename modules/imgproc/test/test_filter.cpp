@@ -1078,8 +1078,14 @@ TEST(Imgproc, morphologyEx_small_input_22893)
 // See https://github.com/opencv/opencv/issues/29798
 // cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so
 // morphological operations should keep accepting boolean masks as binary input.
-TEST(Imgproc_Morphology, bool_mask_29798)
+typedef TestWithParam< tuple<int, int, int> > Imgproc_Morphology_Bool;
+
+TEST_P(Imgproc_Morphology_Bool, bool_mask_29798)
 {
+    const int op         = get<0>(GetParam());
+    const int shape      = get<1>(GetParam());
+    const int borderType = get<2>(GetParam());
+
     Mat_<bool> mask(7, 9, false);
     mask(1, 1) = true;
     mask(2, 2) = true;
@@ -1094,41 +1100,36 @@ TEST(Imgproc_Morphology, bool_mask_29798)
 
     ASSERT_EQ(mask.depth(), CV_Bool);
 
-    const int ops[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE };
-    const int shapes[] = { MORPH_RECT, MORPH_CROSS, MORPH_ELLIPSE };
-    const int borderTypes[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101 };
+    Mat kernel = getStructuringElement(shape, Size(3, 3));
 
-    for (size_t i = 0; i < sizeof(shapes)/sizeof(shapes[0]); i++)
-    {
-        Mat kernel = getStructuringElement(shapes[i], Size(3, 3));
-        for (size_t j = 0; j < sizeof(ops)/sizeof(ops[0]); j++)
-        {
-            for (size_t k = 0; k < sizeof(borderTypes)/sizeof(borderTypes[0]); k++)
-            {
-                Mat result_bool, result_ref, result_8u;
-                ASSERT_NO_THROW(morphologyEx(mask, result_bool, ops[j], kernel, Point(-1, -1), 1, borderTypes[k]));
-                morphologyEx(ref, result_ref, ops[j], kernel, Point(-1, -1), 1, borderTypes[k]);
+    Mat result_bool, result_ref, result_8u;
+    ASSERT_NO_THROW(morphologyEx(mask, result_bool, op, kernel, Point(-1, -1), 1, borderType));
+    morphologyEx(ref, result_ref, op, kernel, Point(-1, -1), 1, borderType);
 
-                EXPECT_EQ(result_bool.depth(), CV_Bool);
-                result_bool.convertTo(result_8u, CV_8U);
-                EXPECT_EQ(0, cvtest::norm(result_8u, result_ref, NORM_INF))
-                    << "op = " << ops[j] << ", shape = " << shapes[i] << ", borderType = " << borderTypes[k];
-            }
-        }
-    }
+    EXPECT_EQ(result_bool.depth(), CV_Bool);
+    result_bool.convertTo(result_8u, CV_8U);
+    EXPECT_EQ(0, cvtest::norm(result_8u, result_ref, NORM_INF));
 
-    Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
+    // The issue reports cv::dilate directly, so cover it in-place and with several iterations too.
     Mat_<bool> inplace = mask.clone();
     Mat_<uchar> inplace_ref = ref.clone();
-    ASSERT_NO_THROW(cv::dilate(inplace, inplace, kernel, Point(-1, -1), 2));
-    cv::erode(inplace, inplace, kernel, Point(-1, -1), 2);
-    cv::dilate(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2);
-    cv::erode(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2);
+    ASSERT_NO_THROW(cv::dilate(inplace, inplace, kernel, Point(-1, -1), 2, borderType));
+    cv::erode(inplace, inplace, kernel, Point(-1, -1), 2, borderType);
+    cv::dilate(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2, borderType);
+    cv::erode(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2, borderType);
 
     Mat inplace_8u;
     inplace.convertTo(inplace_8u, CV_8U);
     EXPECT_EQ(0, cvtest::norm(inplace_8u, inplace_ref, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Morphology_Bool,
+    Combine(
+        Values(MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE),
+        Values(MORPH_RECT, MORPH_CROSS, MORPH_ELLIPSE),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101)
+    )
+);
 
 TEST(Imgproc_sepFilter2D, identity)
 {
