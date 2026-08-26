@@ -123,12 +123,12 @@ public:
                 if (innermost_axis) {
                     for (int j = 0; j < inner_most_dim; j++) {
                         int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
-                        std::memcpy(out + j, data + index, sizeof(T));
+                        out[j] = data[index];
                     }
                 } else {
                     for (int j = 0; j < inner_most_dim; j++) {
                         int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
-                        std::memcpy(out + j, data + index * axis_step + j, sizeof(T));
+                        out[j] = data[index * axis_step + j];
                     }
                 }
             }
