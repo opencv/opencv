@@ -3,54 +3,6 @@
 # Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 # file Copyright.txt or https://cmake.org/licensing for details.
 
-#[=======================================================================[.rst:
-FindCUDNNJIT
-------------
-
-Finds the cuDNN graph API and its runtime compiled (JIT) engine library.
-
-This is an alternative to :module:`FindCUDNN` for builds that talk to cuDNN
-through the graph API only. Instead of the single full library it locates the
-dispatch shim plus the two backend libraries the graph API needs, so the
-legacy cuDNN C API is never linked. The two modules are mutually exclusive.
-
-Requires:
-^^^^^^^^^
-
-find_cuda_helper_libs from FindCUDA.cmake
-i.e. CUDA module should be found using FindCUDA.cmake before attempting to find cuDNN
-
-Result Variables
-^^^^^^^^^^^^^^^^
-
-This will define the following variables:
-
-``CUDNNJIT_FOUND``
-``CUDNNJIT_INCLUDE_DIRS``   location of cudnn_graph.h
-``CUDNNJIT_LIBRARIES``      location of the shim, graph and runtime compiled engine libraries
-
-Cache Variables
-^^^^^^^^^^^^^^^
-
-The following cache variables will be set if cuDNN was found. They may also be set on failure.
-
-``CUDNN_SHIM_LIBRARY``
-``CUDNN_GRAPH_LIBRARY``
-``CUDNN_ENGINES_RTC_LIBRARY``
-``CUDNNJIT_INCLUDE_DIR``
-``CUDNN_VERSION``
-
-``CUDNN_VERSION_MAJOR`` INTERNAL
-``CUDNN_VERSION_MINOR`` INTERNAL
-``CUDNN_VERSION_PATCH`` INTERNAL
-
-The version variables are shared with FindCUDNN: they describe the cuDNN
-installation, not the way it is reached, and only one of the two modules runs
-in any given configuration.
-
-#]=======================================================================]
-
-# find the libraries
 if(CUDA_FOUND)
   find_cuda_helper_libs(cudnn)
   find_cuda_helper_libs(cudnn_graph)
@@ -63,7 +15,6 @@ if(CUDA_FOUND)
   unset(CUDA_cudnn_engines_runtime_compiled_LIBRARY CACHE)
 endif()
 
-# find the include
 if(CUDNN_GRAPH_LIBRARY)
   find_path(CUDNNJIT_INCLUDE_DIR
     cudnn_graph.h
@@ -80,7 +31,6 @@ if(CUDNN_GRAPH_LIBRARY)
   endif()
 endif()
 
-# extract version from the include
 if(CUDNNJIT_INCLUDE_DIR AND EXISTS "${CUDNNJIT_INCLUDE_DIR}/cudnn_version.h")
   file(READ "${CUDNNJIT_INCLUDE_DIR}/cudnn_version.h" CUDNN_H_CONTENTS)
 
