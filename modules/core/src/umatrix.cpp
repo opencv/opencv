@@ -1167,7 +1167,7 @@ UMat UMat::reshape(int _cn, const MatShape& _newshape) const
 Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)
-        return Mat();
+        return Mat(dims, size.p, type(), nullptr, step.p);
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
@@ -1183,6 +1183,10 @@ Mat UMat::getMat(AccessFlag accessFlags) const
             hdr.datastart = u->data;
             hdr.data = u->data + offset;
             hdr.datalimit = hdr.dataend = u->data + u->size;
+            // the Mat header ctor above does not carry over the tensor layout/block-channel
+            // metadata (as UMat::fit() does), so propagate them explicitly
+            hdr.size.layout = size.layout;
+            hdr.size.C = size.C;
             return hdr;
         }
     }

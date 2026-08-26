@@ -186,8 +186,8 @@ struct ModelFusionQDQ
                                     ? netimpl->argData(dq_ptrs[k]->inputs[2]).type : -1;
                                 const int inp_type = (inp_type0 >= 0) ? inp_type0 : zp_type;
                                 eltwise_in_int8 = eltwise_in_int8 && (inp_type == CV_8S || inp_type == CV_8U);
-                                in_scales[k] = netimpl->argTensor(dq_ptrs[k]->inputs[1]).at<float>(0);
-                                const Mat& zp_m = netimpl->argTensor(dq_ptrs[k]->inputs[2]);
+                                in_scales[k] = netimpl->argTensor(dq_ptrs[k]->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                                const Mat& zp_m = netimpl->argTensor(dq_ptrs[k]->inputs[2]).getMat(ACCESS_READ);
                                 in_zps[k] = zp_m.depth() == CV_8U
                                     ? (int)zp_m.at<uint8_t>(0)
                                     : (int)zp_m.at<int8_t>(0);
@@ -195,8 +195,8 @@ struct ModelFusionQDQ
                             if (!eltwise_in_int8)
                                 break;
 
-                            float out_scale_val = netimpl->argTensor(out_scale).at<float>(0);
-                            const Mat& elt_out_zp_m = netimpl->argTensor(out_zp);
+                            float out_scale_val = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& elt_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                             int out_zp_val = elt_out_zp_m.depth() == CV_8U
                                 ? (int)elt_out_zp_m.at<uint8_t>(0)
                                 : (int)elt_out_zp_m.at<int8_t>(0);
@@ -242,13 +242,13 @@ struct ModelFusionQDQ
                         areDqArgsConst(dq) &&
                         relu_in_int8 && relu_out_int8 &&
                         usecounts.at(relu_in.idx) == 1) {
-                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                        const Mat& relu_zp_m = netimpl->argTensor(dq->inputs[2]);
+                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                        const Mat& relu_zp_m = netimpl->argTensor(dq->inputs[2]).getMat(ACCESS_READ);
                         const int inp_zp = relu_zp_m.depth() == CV_8U
                             ? (int)relu_zp_m.at<uint8_t>(0)
                             : (int)relu_zp_m.at<int8_t>(0);
-                        const float out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                        const Mat& out_zp_relu_m = netimpl->argTensor(out_zp);
+                        const float out_sc = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                        const Mat& out_zp_relu_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                         const int out_zp_i = out_zp_relu_m.depth() == CV_8U
                             ? (int)out_zp_relu_m.at<uint8_t>(0)
                             : (int)out_zp_relu_m.at<int8_t>(0);
@@ -316,13 +316,13 @@ struct ModelFusionQDQ
                         areDqArgsConst(dq) &&
                         sig_in_int8 && sig_out_int8 &&
                         usecounts.at(sig_in.idx) == 1) {
-                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                        const Mat& sig_in_zp_m = netimpl->argTensor(dq->inputs[2]);
+                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                        const Mat& sig_in_zp_m = netimpl->argTensor(dq->inputs[2]).getMat(ACCESS_READ);
                         const int inp_zp = sig_in_zp_m.depth() == CV_8U
                             ? (int)sig_in_zp_m.at<uint8_t>(0)
                             : (int)sig_in_zp_m.at<int8_t>(0);
-                        const float out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                        const Mat& sig_out_zp_m = netimpl->argTensor(out_zp);
+                        const float out_sc = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                        const Mat& sig_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                         const int out_zp_i = sig_out_zp_m.depth() == CV_8U
                             ? (int)sig_out_zp_m.at<uint8_t>(0)
                             : (int)sig_out_zp_m.at<int8_t>(0);
@@ -417,7 +417,7 @@ struct ModelFusionQDQ
 
                             int elt_out_type2 = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
                             if (elt_out_type2 < 0 && netimpl->isConstArg(inputs[2])) {
-                                const Mat& zp_tensor = netimpl->argTensor(inputs[2]);
+                                const Mat& zp_tensor = netimpl->argTensor(inputs[2]).getMat(ACCESS_READ);
                                 elt_out_type2 = !zp_tensor.empty() ? zp_tensor.type() : CV_8S;
                             }
                             const bool elt_out_int82 = (elt_out_type2 == CV_8S || elt_out_type2 == CV_8U);
@@ -429,12 +429,12 @@ struct ModelFusionQDQ
                                     if (dq_ptrs2[k]) {
                                         int it = netimpl->argData(dq_ptrs2[k]->inputs[0]).type;
                                         if (it < 0) {
-                                            const Mat& zp_infer = netimpl->argTensor(dq_ptrs2[k]->inputs[2]);
+                                            const Mat& zp_infer = netimpl->argTensor(dq_ptrs2[k]->inputs[2]).getMat(ACCESS_READ);
                                             it = !zp_infer.empty() ? zp_infer.type() : CV_8S;
                                         }
                                         elt_in_int82 = elt_in_int82 && (it == CV_8S || it == CV_8U);
-                                        in_scales2[k] = netimpl->argTensor(dq_ptrs2[k]->inputs[1]).at<float>(0);
-                                        const Mat& zp_m2 = netimpl->argTensor(dq_ptrs2[k]->inputs[2]);
+                                        in_scales2[k] = netimpl->argTensor(dq_ptrs2[k]->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                                        const Mat& zp_m2 = netimpl->argTensor(dq_ptrs2[k]->inputs[2]).getMat(ACCESS_READ);
                                         in_zps2[k] = zp_m2.depth() == CV_8U
                                             ? (int)zp_m2.at<uint8_t>(0)
                                             : (int)zp_m2.at<int8_t>(0);
@@ -456,8 +456,8 @@ struct ModelFusionQDQ
                                     }
                                 }
                                 if (elt_in_int82) {
-                                    float out_sc2 = netimpl->argTensor(inputs[1]).at<float>(0);
-                                    const Mat& out_zp_m2 = netimpl->argTensor(inputs[2]);
+                                    float out_sc2 = netimpl->argTensor(inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                                    const Mat& out_zp_m2 = netimpl->argTensor(inputs[2]).getMat(ACCESS_READ);
                                     int out_zp_val2 = out_zp_m2.depth() == CV_8U
                                         ? (int)out_zp_m2.at<uint8_t>(0)
                                         : (int)out_zp_m2.at<int8_t>(0);
@@ -523,15 +523,15 @@ struct ModelFusionQDQ
                             areDqArgsConst(dq_x) && areDqArgsConst(dq_w) &&
                             netimpl->isConstArg(dq_w->inputs[0]) &&
                             usecounts.at(conv_w.idx) == 1) {
-                            float inp_sc = netimpl->argTensor(dq_x->inputs[1]).at<float>(0);
-                            float out_sc = netimpl->argTensor(out_scale_arg).at<float>(0);
+                            float inp_sc = netimpl->argTensor(dq_x->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                            float out_sc = netimpl->argTensor(out_scale_arg).getMat(ACCESS_READ).at<float>(0);
                             int inp_zp = 0, out_zp = 0;
-                            const Mat& x_zp_m_read = netimpl->argTensor(dq_x->inputs[2]);
+                            const Mat& x_zp_m_read = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
                             if (x_zp_m_read.depth() == CV_8S)
                                 inp_zp = (int)x_zp_m_read.at<int8_t>(0);
                             else
                                 inp_zp = (int)x_zp_m_read.at<uint8_t>(0);
-                            const Mat& out_zp_m = netimpl->argTensor(out_zp_arg);
+                            const Mat& out_zp_m = netimpl->argTensor(out_zp_arg).getMat(ACCESS_READ);
                             if (out_zp_m.depth() == CV_8S)
                                 out_zp = (int)out_zp_m.at<int8_t>(0);
                             else if (out_zp_m.depth() == CV_8U)
@@ -540,10 +540,10 @@ struct ModelFusionQDQ
                                 out_zp = out_zp_m.at<int>(0);
                             if (!(inp_sc > 0.f && out_sc > 0.f))
                                 break;
-                            Mat w_q = netimpl->argTensor(dq_w->inputs[0]);
-                            Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]);
-                            Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]);
-                            const Mat& x_zp_m = netimpl->argTensor(dq_x->inputs[2]);
+                            Mat w_q = netimpl->argTensor(dq_w->inputs[0]).getMat(ACCESS_READ);
+                            Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]).getMat(ACCESS_READ);
+                            Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]).getMat(ACCESS_READ);
+                            const Mat& x_zp_m = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
                             if (!w_q.empty() && w_q.depth() == CV_8S && w_q.dims >= 3) {
                                 const int outCn = w_q.size[0];
                                 Mat wt_sc = (w_sc_m.total() == (size_t)outCn)
@@ -587,7 +587,7 @@ struct ModelFusionQDQ
                                     int dq_bias_idx = -1;
                                     if (conv->inputs.size() == 3) {
                                         if (netimpl->isConstArg(conv->inputs[2])) {
-                                            Mat b = netimpl->argTensor(conv->inputs[2]);
+                                            Mat b = netimpl->argTensor(conv->inputs[2]).getMat(ACCESS_READ);
                                             if (b.empty() || b.total() != (size_t)outCn) {
                                                 biasOk = false;
                                             } else if (b.depth() == CV_32S) {
@@ -614,7 +614,7 @@ struct ModelFusionQDQ
                                                 !netimpl->isConstArg(dq_b->inputs[0])) {
                                                 biasOk = false;
                                             } else {
-                                                Mat bq = netimpl->argTensor(dq_b->inputs[0]);
+                                                Mat bq = netimpl->argTensor(dq_b->inputs[0]).getMat(ACCESS_READ);
                                                 if (bq.empty() || bq.total() != (size_t)outCn || bq.depth() != CV_32S)
                                                     biasOk = false;
                                                 else {
@@ -694,14 +694,14 @@ struct ModelFusionQDQ
                         int inp_zp = 0, out_zp_i = 0;
                         int fc_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
                         if (fc_out_type < 0 && netimpl->isConstArg(inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(inputs[2]).getMat(ACCESS_READ);
                             fc_out_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool fc_out_int8 = (fc_out_type == CV_8S || fc_out_type == CV_8U);
                         int fc_in_type = (dq_x && !dq_x->inputs.empty()) ? netimpl->argData(dq_x->inputs[0]).type : -1;
                         if (fc_in_type < 0 && dq_x && dq_x->inputs.size() >= 3 &&
                             netimpl->isConstArg(dq_x->inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(dq_x->inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
                             fc_in_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool fc_in_int8 = (fc_in_type == CV_8S || fc_in_type == CV_8U);
@@ -711,22 +711,22 @@ struct ModelFusionQDQ
                             netimpl->isConstArg(dq_w->inputs[0]) &&
                             fc_in_int8 && fc_out_int8 &&
                             usecounts.at(mm_x.idx) == 1 && usecounts.at(mm_w.idx) == 1) {
-                            inp_sc = netimpl->argTensor(dq_x->inputs[1]).at<float>(0);
-                            const Mat& fc_zp_m = netimpl->argTensor(dq_x->inputs[2]);
+                            inp_sc = netimpl->argTensor(dq_x->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& fc_zp_m = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
 
                             inp_zp = fc_zp_m.depth() == CV_8U
                                 ? (int)fc_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_zp_m.at<int8_t>(0);
-                            out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                            const Mat& fc_out_zp_m = netimpl->argTensor(out_zp);
+                            out_sc = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& fc_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                             out_zp_i = fc_out_zp_m.depth() == CV_8U
                                 ? (int)fc_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_out_zp_m.at<int8_t>(0);
                             if (!(inp_sc > 0.f && out_sc > 0.f))
                                 break;
-                            Mat w_q = netimpl->argTensor(dq_w->inputs[0]);
-                            Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]);
-                            Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]);
+                            Mat w_q = netimpl->argTensor(dq_w->inputs[0]).getMat(ACCESS_READ);
+                            Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]).getMat(ACCESS_READ);
+                            Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]).getMat(ACCESS_READ);
                             if (!w_q.empty() && w_q.depth() == CV_8S && w_q.dims == 2) {
                                 bool all_wzp_zero = true;
                                 for (size_t t = 0; all_wzp_zero && t < w_zp_m.total(); t++) {
@@ -809,14 +809,14 @@ struct ModelFusionQDQ
                         DequantizeLinearLayer* dq_w = getLayer<DequantizeLinearLayer>(newprog, dq_w_idx);
                         int fc_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
                         if (fc_out_type < 0 && netimpl->isConstArg(inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(inputs[2]).getMat(ACCESS_READ);
                             fc_out_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool fc_out_int8 = (fc_out_type == CV_8S || fc_out_type == CV_8U);
                         int fc_in_type = (dq_x && !dq_x->inputs.empty()) ? netimpl->argData(dq_x->inputs[0]).type : -1;
                         if (fc_in_type < 0 && dq_x && dq_x->inputs.size() >= 3 &&
                             netimpl->isConstArg(dq_x->inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(dq_x->inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
                             fc_in_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool fc_in_int8 = (fc_in_type == CV_8S || fc_in_type == CV_8U);
@@ -826,20 +826,20 @@ struct ModelFusionQDQ
                             netimpl->isConstArg(dq_w->inputs[0]) &&
                             fc_in_int8 && fc_out_int8 &&
                             usecounts.at(mm_x.idx) == 1 && usecounts.at(mm_w.idx) == 1) {
-                            float inp_sc = netimpl->argTensor(dq_x->inputs[1]).at<float>(0);
-                            const Mat& fc_zp_m = netimpl->argTensor(dq_x->inputs[2]);
+                            float inp_sc = netimpl->argTensor(dq_x->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& fc_zp_m = netimpl->argTensor(dq_x->inputs[2]).getMat(ACCESS_READ);
                             int inp_zp = fc_zp_m.depth() == CV_8U
                                 ? (int)fc_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_zp_m.at<int8_t>(0);
-                            float out_sc_val = netimpl->argTensor(out_scale).at<float>(0);
-                            const Mat& fc_out_zp_m = netimpl->argTensor(out_zp);
+                            float out_sc_val = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& fc_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                             int out_zp_i = fc_out_zp_m.depth() == CV_8U
                                 ? (int)fc_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_out_zp_m.at<int8_t>(0);
                             if (inp_sc > 0.f && out_sc_val > 0.f) {
-                                Mat w_q = netimpl->argTensor(dq_w->inputs[0]);
-                                Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]);
-                                Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]);
+                                Mat w_q = netimpl->argTensor(dq_w->inputs[0]).getMat(ACCESS_READ);
+                                Mat w_sc_m = netimpl->argTensor(dq_w->inputs[1]).getMat(ACCESS_READ);
+                                Mat w_zp_m = netimpl->argTensor(dq_w->inputs[2]).getMat(ACCESS_READ);
                                 if (!w_q.empty() && w_q.depth() == CV_8S && w_q.dims == 2) {
                                     bool all_wzp_zero = true;
                                     for (size_t t = 0; all_wzp_zero && t < w_zp_m.total(); t++) {
@@ -856,7 +856,7 @@ struct ModelFusionQDQ
                                         bool per_channel = w_sc_m.total() == (size_t)outCn;
 
                                         // Fuse the float bias into int32 bias
-                                        Mat float_bias = netimpl->argTensor(add_bias->inputs[bias_inp_k]);
+                                        Mat float_bias = netimpl->argTensor(add_bias->inputs[bias_inp_k]).getMat(ACCESS_READ);
                                         Mat bias(1, outCn, CV_32S);
                                         Mat outputMultiplier(1, outCn, CV_32F);
                                         bool biasOk = (float_bias.total() == (size_t)outCn);
@@ -927,14 +927,14 @@ struct ModelFusionQDQ
 
                         int g_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
                         if (g_out_type < 0 && netimpl->isConstArg(inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(inputs[2]).getMat(ACCESS_READ);
                             g_out_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool g_out_int8 = (g_out_type == CV_8S || g_out_type == CV_8U);
                         int g_in_type = (dq_a && !dq_a->inputs.empty()) ? netimpl->argData(dq_a->inputs[0]).type : -1;
                         if (g_in_type < 0 && dq_a && dq_a->inputs.size() >= 3 &&
                             netimpl->isConstArg(dq_a->inputs[2])) {
-                            const Mat& zp_t = netimpl->argTensor(dq_a->inputs[2]);
+                            const Mat& zp_t = netimpl->argTensor(dq_a->inputs[2]).getMat(ACCESS_READ);
                             g_in_type = !zp_t.empty() ? zp_t.type() : CV_8S;
                         }
                         const bool g_in_int8 = (g_in_type == CV_8S || g_in_type == CV_8U);
@@ -945,20 +945,20 @@ struct ModelFusionQDQ
                             netimpl->isConstArg(dq_b->inputs[0]) &&
                             g_in_int8 && g_out_int8 &&
                             usecounts.at(gemm_a.idx) == 1 && usecounts.at(gemm_b.idx) == 1) {
-                            float inp_sc = netimpl->argTensor(dq_a->inputs[1]).at<float>(0);
-                            const Mat& g_zp_m = netimpl->argTensor(dq_a->inputs[2]);
+                            float inp_sc = netimpl->argTensor(dq_a->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& g_zp_m = netimpl->argTensor(dq_a->inputs[2]).getMat(ACCESS_READ);
                             int inp_zp = g_zp_m.depth() == CV_8U
                                 ? (int)g_zp_m.at<uint8_t>(0) - 128
                                 : (int)g_zp_m.at<int8_t>(0);
-                            float out_sc_val = netimpl->argTensor(out_scale).at<float>(0);
-                            const Mat& g_out_zp_m = netimpl->argTensor(out_zp);
+                            float out_sc_val = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& g_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                             int out_zp_i = g_out_zp_m.depth() == CV_8U
                                 ? (int)g_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)g_out_zp_m.at<int8_t>(0);
                             if (inp_sc > 0.f && out_sc_val > 0.f) {
-                                Mat w_q = netimpl->argTensor(dq_b->inputs[0]);
-                                Mat w_sc_m = netimpl->argTensor(dq_b->inputs[1]);
-                                Mat w_zp_m = netimpl->argTensor(dq_b->inputs[2]);
+                                Mat w_q = netimpl->argTensor(dq_b->inputs[0]).getMat(ACCESS_READ);
+                                Mat w_sc_m = netimpl->argTensor(dq_b->inputs[1]).getMat(ACCESS_READ);
+                                Mat w_zp_m = netimpl->argTensor(dq_b->inputs[2]).getMat(ACCESS_READ);
                                 if (!w_q.empty() && w_q.depth() == CV_8S && w_q.dims == 2) {
                                     bool all_wzp_zero = true;
                                     for (size_t t = 0; all_wzp_zero && t < w_zp_m.total(); t++) {
@@ -981,7 +981,7 @@ struct ModelFusionQDQ
                                         // Fuse optional bias (C input of Gemm)
                                         Mat float_bias;
                                         if (gemm->inputs.size() >= 3)
-                                            float_bias = netimpl->argTensor(gemm->inputs[2]);
+                                            float_bias = netimpl->argTensor(gemm->inputs[2]).getMat(ACCESS_READ);
 
                                         Mat bias(1, outCn, CV_32S);
                                         Mat outputMult(1, outCn, CV_32F);
@@ -1058,13 +1058,13 @@ struct ModelFusionQDQ
                             areDqArgsConst(dq) &&
                             pool_in_int8 && pool_out_int8 &&
                             usecounts.at(pool_in.idx) == 1) {
-                            float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                            const Mat& pool_zp_m = netimpl->argTensor(dq->inputs[2]);
+                            float inp_sc = netimpl->argTensor(dq->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& pool_zp_m = netimpl->argTensor(dq->inputs[2]).getMat(ACCESS_READ);
                             int inp_zp = pool_zp_m.depth() == CV_8U
                                 ? (int)pool_zp_m.at<uint8_t>(0)
                                 : (int)pool_zp_m.at<int8_t>(0);
-                            float out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                            const Mat& pool_out_zp_m = netimpl->argTensor(out_zp);
+                            float out_sc = netimpl->argTensor(out_scale).getMat(ACCESS_READ).at<float>(0);
+                            const Mat& pool_out_zp_m = netimpl->argTensor(out_zp).getMat(ACCESS_READ);
                             int out_zp_i = pool_out_zp_m.depth() == CV_8U
                                 ? (int)pool_out_zp_m.at<uint8_t>(0)
                                 : (int)pool_out_zp_m.at<int8_t>(0);
@@ -1119,10 +1119,10 @@ struct ModelFusionQDQ
 
                             if (dq && dq->inputs.size() >= 3 &&
                                 usecounts.at(shuffle_inp.idx) == 1) {
-                                float dq_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                                float q_sc = netimpl->argTensor(ql_scale).at<float>(0);
-                                const Mat& dq_zp_m = netimpl->argTensor(dq->inputs[2]);
-                                const Mat& q_zp_m = netimpl->argTensor(ql_zp);
+                                float dq_sc = netimpl->argTensor(dq->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+                                float q_sc = netimpl->argTensor(ql_scale).getMat(ACCESS_READ).at<float>(0);
+                                const Mat& dq_zp_m = netimpl->argTensor(dq->inputs[2]).getMat(ACCESS_READ);
+                                const Mat& q_zp_m = netimpl->argTensor(ql_zp).getMat(ACCESS_READ);
 
                                 int dq_zp = dq_zp_m.depth() == CV_8U
                                     ? (int)dq_zp_m.at<uint8_t>(0) : (int)dq_zp_m.at<int8_t>(0);
@@ -1234,8 +1234,8 @@ struct ModelFusionQDQ
                 (ql->inputs.size() >= 3 && !netimpl->isConstArg(ql->inputs[2])))
                 continue;
 
-            float inp_sc = netimpl->argTensor(ql->inputs[1]).at<float>(0);
-            const Mat& inp_zp_m = ql->inputs.size() >= 3 ? netimpl->argTensor(ql->inputs[2]) : Mat();
+            float inp_sc = netimpl->argTensor(ql->inputs[1]).getMat(ACCESS_READ).at<float>(0);
+            const Mat& inp_zp_m = ql->inputs.size() >= 3 ? netimpl->argTensor(ql->inputs[2]).getMat(ACCESS_READ) : Mat();
             int inp_zp = inp_zp_m.empty() ? 0 :
                 inp_zp_m.depth() == CV_8U ? (int)inp_zp_m.at<uint8_t>(0) :
                 (int)inp_zp_m.at<int8_t>(0);

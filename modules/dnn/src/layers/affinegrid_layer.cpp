@@ -146,7 +146,7 @@ private:
                 return;
             try
             {
-                sz = netimpl_->argTensor(this->inputs[1]);
+                sz = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             }
             catch (const cv::Exception& e)
             {
@@ -211,7 +211,7 @@ private:
 
         if (netimpl_->isConstArg(this->inputs[1])) return false;
         try {
-            const Mat& sz = netimpl_->argTensor(this->inputs[1]);
+            const Mat& sz = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             return sz.empty();
         } catch (const cv::Exception& e) {
             CV_Error(cv::Error::StsError, cv::format("DNN/AffineGrid: cannot query 'size' tensor at runtime: %s", e.what()));

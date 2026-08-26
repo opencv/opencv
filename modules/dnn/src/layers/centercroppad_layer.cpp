@@ -110,10 +110,10 @@ public:
         Net::Impl* netimpl_ = getNetImpl(this);
         CV_Assert(netimpl_);
 
-        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
+        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
         Mat axesTensor;
         if (this->inputs.size() >= 3)
-            axesTensor = netimpl_->argTensor(this->inputs[2]);
+            axesTensor = netimpl_->argTensor(this->inputs[2]).getMat(ACCESS_READ);
 
         std::vector<int> targetShape, usedAxes;
         buildTargetShape(inShape, shapeTensor, axesTensor, targetShape, usedAxes);
