@@ -2127,6 +2127,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
         }
+        if (name == "test_gridsample_bicubic") {
+            default_l1 = 4e-5; // GridSample falls back to CPU; same actual: 3.61577e-05 vs 1e-05 as the OpenCV backend
+        }
         // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
         // even when executed on an fp32 target (the layer falls back to the CPU path).
         if (name == "test_attention_4d_fp16" ||

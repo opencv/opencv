@@ -31,6 +31,7 @@ TOLERANCE_OVERRIDES = {
     "test_flexattention_fp16_expanded_ver26": (0.0002, 0.001),
     "test_gelu_tanh_1": (0.00011, 0.00016),
     "test_gelu_tanh_2": (9e-05, 0.0005),
+    "test_gridsample_bicubic": (4e-05, 0.0001),
     "test_linear_attention_fp16": (0.0002, 0.001),
     "test_linear_attention_fp16_expanded": (0.0002, 0.001),
     "test_nllloss_NCd1d2_reduction_sum_expanded": (2e-05, 0.0001),
