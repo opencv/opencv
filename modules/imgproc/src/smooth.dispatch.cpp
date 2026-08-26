@@ -318,10 +318,9 @@ Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
 static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, int ddepth,
                                   InputArray _kernelX, InputArray _kernelY, int borderType)
 {
-    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+    if ( !(type == CV_8UC1 &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
          ((ksize.width == 5 && (_src.cols() % 4 == 0)) ||
          (ksize.width == 3 && (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)))) )
