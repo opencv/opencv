@@ -8,8 +8,8 @@
 
 namespace opencv_test { namespace {
 
-// Independent reference for the over operator -- avoids reusing alphaComposite's own rounding.
-static void referenceOver(const Mat& overlay, const Mat& background, Mat& dst)
+// Compares in premultiplied space -- straight color is unstable when alpha is near zero.
+static void referenceOverPremultiplied(const Mat& overlay, const Mat& background, Mat& dst)
 {
     CV_Assert(overlay.type() == CV_8UC4);
     int bgChannels = background.channels();
@@ -23,14 +23,14 @@ static void referenceOver(const Mat& overlay, const Mat& background, Mat& dst)
         for (int x = 0; x < overlay.cols; ++x, ov += 4, bg += bgChannels, d += bgChannels)
         {
             double as = ov[3] / 255.0;
+            double ad = (bgChannels == 4) ? bg[3] / 255.0 : 1.0;
             for (int c = 0; c < 3; ++c)
             {
-                double blended = ov[c] * as + bg[c] * (1.0 - as);
-                d[c] = saturate_cast<uchar>(cvRound(blended));
+                double premul = ov[c] * as + bg[c] * ad * (1.0 - as);
+                d[c] = saturate_cast<uchar>(cvRound(premul));
             }
             if (bgChannels == 4)
             {
-                double ad = bg[3] / 255.0;
                 double ao = as + ad * (1.0 - as);
                 d[3] = saturate_cast<uchar>(cvRound(ao * 255.0));
             }
@@ -65,20 +65,39 @@ TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
     bool premultiplied = std::get<1>(GetParam());
 
     Size size(157, 83);
-    Mat overlay(size, CV_8UC4), background(size, CV_8UC(bgChannels)), dst, ref;
+    Mat overlay(size, CV_8UC4), background(size, CV_8UC(bgChannels));
     randu(overlay, 0, 256);
     randu(background, 0, 256);
 
-    Mat overlayInput = overlay;
+    // Fresh, non-aliased Mats regardless of backend; reference() keeps the original straight values.
+    Mat overlayInput;
     if (premultiplied)
         cvtColor(overlay, overlayInput, COLOR_RGBA2mRGBA);
+    else
+        overlayInput = overlay;
 
-    alphaComposite(overlayInput, background, dst, premultiplied);
-    referenceOver(overlay, background, ref);
+    // premultiplied=true needs an already-premultiplied background too, when it has alpha.
+    Mat backgroundInput;
+    if (premultiplied && bgChannels == 4)
+        cvtColor(background, backgroundInput, COLOR_RGBA2mRGBA);
+    else
+        backgroundInput = background;
+
+    Mat dst;
+    alphaComposite(overlayInput, backgroundInput, dst, premultiplied);
 
     ASSERT_EQ(dst.type(), background.type());
     ASSERT_EQ(dst.size(), background.size());
-    EXPECT_LE(maxAbsDiff(dst, ref), kRoundingTolerance);
+
+    Mat dstPremul;
+    if (bgChannels == 4 && !premultiplied)
+        cvtColor(dst, dstPremul, COLOR_RGBA2mRGBA);
+    else
+        dstPremul = dst;
+
+    Mat ref;
+    referenceOverPremultiplied(overlay, background, ref);
+    EXPECT_LE(maxAbsDiff(dstPremul, ref), kRoundingTolerance);
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_Correctness,
