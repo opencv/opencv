@@ -71,8 +71,34 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
 #endif
 
     const int NK1 = N * K1;
-    parallel_for_(Range(0, NK1), [&](const Range& range) {
-        for (int nk1 = range.start; nk1 < range.end; nk1++) {
+
+    // Each (n, k1) task below walks the entire output plane serially, so NK1 on its
+    // own is the whole parallel decomposition -- and it is K1 = K/C0 wide, which for
+    // a narrow output is a small fraction of the core count (a 32-channel blocked
+    // output is just 4 tasks). Split the spatial range as well.
+    //
+    // Safe without any synchronisation: the loop gathers rather than scatters --
+    // it derives each contributing input position backwards from the output
+    // coordinates, and every opos_flat writes only its own C0-wide slot at
+    // out_k1 + opos_flat*C0 -- so distinct spatial chunks never touch the same
+    // output element. computeSpatChunks() returns 1 when NK1 already saturates the
+    // pool, leaving wide-output layers on their previous decomposition.
+    const int nSpatChunks   = computeSpatChunks(NK1, ospatial);
+    const int spatChunkSize = (ospatial + nSpatChunks - 1) / nSpatChunks;
+    const int total_tasks   = NK1 * nSpatChunks;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        for (int task = range.start; task < range.end; task++) {
+            // nk1 major, chunk minor: consecutive tasks stay within one (n, k1) and
+            // advance through the output plane, so a thread's slice keeps its weight
+            // block hot and writes out_k1 contiguously.
+            const int nk1   = task / nSpatChunks;
+            const int chunk = task % nSpatChunks;
+
+            const int opos_begin = chunk * spatChunkSize;
+            const int opos_end   = std::min(opos_begin + spatChunkSize, ospatial);
+            if (opos_begin >= opos_end) continue;
+
             const int n  = nk1 / K1;
             const int k1 = nk1 % K1;
 
@@ -94,7 +120,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
             }
 #endif
 
-            for (int opos_flat = 0; opos_flat < ospatial; opos_flat++) {
+            for (int opos_flat = opos_begin; opos_flat < opos_end; opos_flat++) {
                 float* out_ptr = out_k1 + opos_flat * C0;
 
                 // Bias init: write currK0 valid lanes + zero-pad the rest.
