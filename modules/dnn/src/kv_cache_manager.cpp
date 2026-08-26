@@ -117,8 +117,8 @@ void KVCacheManager::initPastTensors()
         if (dtype < 0)
             dtype = CV_32F;
 
-        Mat& past_t = netimpl->__tensors__.at(route.second);
-        past_t = Mat(shape_vec, dtype, Scalar(0));
+        UMat& past_t = netimpl->__tensors__.at(route.second);
+        past_t = UMat((int)shape_vec.size(), shape_vec.data(), dtype, Scalar(0));
         // The consumer's signature changed; the op loop re-finalizes it.
     }
 }
@@ -127,8 +127,8 @@ void KVCacheManager::applyRoutes()
 {
     for (const auto& route : presentToPastRoutes)
     {
-        const Mat& present_t = netimpl->argTensor(Arg(route.first));
-        Mat& past_t = netimpl->__tensors__.at(route.second);
+        const Mat& present_t = netimpl->argTensor(Arg(route.first)).getMat(ACCESS_READ);
+        UMat& past_t = netimpl->__tensors__.at(route.second);
         if (present_t.empty())
             continue;
         // Grown buffer changes the consumer's signature; the op loop re-finalizes it.
