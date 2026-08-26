@@ -805,10 +805,21 @@ public:
       documentation of source stream to know the right URL.
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    @param target_fps if greater than 0, VideoCapture::read() drops frames so they are emitted
+    at this rate instead of the source's native rate; 0 (default) leaves the source untouched.
+    Frames are never duplicated, so a target_fps above the native rate has no effect. Supported on
+    cv::CAP_FFMPEG, cv::CAP_GSTREAMER, cv::CAP_V4L2 and cv::CAP_OPENCV_MJPEG; ignored with a warning
+    on any other backend. While enabled, VideoCapture::get() describes the emitted stream:
+    CAP_PROP_FPS is the emitted rate, so `VideoWriter(..., cap.get(CAP_PROP_FPS), ...)` tags output
+    correctly, and the CAP_PROP_POS_* properties refer to the frame the last read() returned as the
+    backend reported it (cv::CAP_OPENCV_MJPEG derives CAP_PROP_POS_MSEC from the next frame's index,
+    so on that backend it reads one source frame ahead). grab() decodes every source frame in order
+    to inspect its timestamp, and only channel 0 is supported. Not available on the `params` vector
+    overloads below.
 
     @sa cv::VideoCaptureAPIs
     */
-    CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY, double target_fps = 0);
 
     /** @overload
     @brief Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
@@ -825,10 +836,21 @@ public:
     (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
+    @param target_fps if greater than 0, VideoCapture::read() drops frames so they are emitted
+    at this rate instead of the source's native rate; 0 (default) leaves the source untouched.
+    Frames are never duplicated, so a target_fps above the native rate has no effect. Supported on
+    cv::CAP_FFMPEG, cv::CAP_GSTREAMER, cv::CAP_V4L2 and cv::CAP_OPENCV_MJPEG; ignored with a warning
+    on any other backend. While enabled, VideoCapture::get() describes the emitted stream:
+    CAP_PROP_FPS is the emitted rate, so `VideoWriter(..., cap.get(CAP_PROP_FPS), ...)` tags output
+    correctly, and the CAP_PROP_POS_* properties refer to the frame the last read() returned as the
+    backend reported it (cv::CAP_OPENCV_MJPEG derives CAP_PROP_POS_MSEC from the next frame's index,
+    so on that backend it reads one source frame ahead). grab() decodes every source frame in order
+    to inspect its timestamp, and only channel 0 is supported. Not available on the `params` vector
+    overloads below.
 
     @sa cv::VideoCaptureAPIs
     */
-    CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY);
+    CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY, double target_fps = 0);
 
     /** @overload
     @brief Opens a camera for video capturing with API Preference and parameters
@@ -860,8 +882,14 @@ public:
     @return `true` if the file has been successfully opened
 
     The method first calls VideoCapture::release to close the already opened file or camera.
+
+    @param target_fps if greater than 0, subsequent VideoCapture::read() calls drop frames so
+    they are emitted at this rate instead of the source's native rate. Only supports reducing
+    the rate; see the target_fps documentation on the matching VideoCapture constructor for the
+    supported backends, what VideoCapture::get() reports while it is enabled, and the grab()
+    cost, multi-head/channel, and params-overload limitations.
      */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY, double target_fps = 0);
 
     /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
 
@@ -884,8 +912,14 @@ public:
     @return `true` if the camera has been successfully opened.
 
     The method first calls VideoCapture::release to close the already opened file or camera.
+
+    @param target_fps if greater than 0, subsequent VideoCapture::read() calls drop frames so
+    they are emitted at this rate instead of the source's native rate. Only supports reducing
+    the rate; see the target_fps documentation on the matching VideoCapture constructor for the
+    supported backends, what VideoCapture::get() reports while it is enabled, and the grab()
+    cost, multi-head/channel, and params-overload limitations.
     */
-    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY, double target_fps = 0);
 
     /** @brief  Opens a camera for video capturing with API Preference and parameters
 
@@ -1055,6 +1089,42 @@ public:
 protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+
+    // Drop-only frame-rate control set via the target_fps constructor/open() parameter; see
+    // fpsControlGrab() in cap.cpp for the algorithm.
+
+    // Tolerance for backend timestamp rounding noise at an exact schedule boundary.
+    static const double kFpsControlEpsMs;
+
+    // A frame plus the position properties the backend reported for it, captured together at
+    // retrieve time so get() can report them consistently for the frame actually emitted.
+    struct FpsControlFrame
+    {
+        Mat frame;
+        double posMsec = -1.0;
+        double posFrames = -1.0;
+        double posAviRatio = -1.0;
+
+        void reset() { frame.release(); posMsec = posFrames = posAviRatio = -1.0; }
+    };
+
+    struct FpsControlState
+    {
+        bool enabled = false;
+        double targetFps = 0.0;            // requested output fps, for get(CAP_PROP_FPS)
+        double outFrameDurationMs = 0.0;   // 1000 / requested output fps
+        double nextOutPts = -1.0;          // output clock; unset (<0) until first frame anchors it
+
+        FpsControlFrame buf[2];            // lookahead buffer
+        int bufCount = 0;
+
+        FpsControlFrame pending;           // frame fpsControlGrab() picked for retrieve() to return
+    } fpsCtl;
+
+    void enableFpsControl(double target_fps);
+    bool fpsControlReadOne();
+    bool fpsControlGrab();
+    void fpsControlResetClock();
 
     friend class internal::VideoCapturePrivateAccessor;
 };
