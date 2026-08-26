@@ -2091,11 +2091,110 @@ src.size(), fx, and fy; the type of dst is the same as of src.
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see #InterpolationFlags
 
+@note `src` may also be an N-D tensor or `std::vector<Mat>`/`std::vector<UMat>` -- see the
+#resize(InputArray,OutputArray,Size,const ResizeParams&,double,double) overload below.
+
 @sa  warpAffine, warpPerspective, remap
  */
 CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
                           Size dsize, double fx = 0, double fy = 0,
                           int interpolation = INTER_LINEAR );
+
+/** \brief Coordinate mapping convention used to align source and destination samples during resize.
+
+#PIXEL_CENTER is classic #resize's convention; others are ONNX Resize's `coordinate_transformation_mode` values.
+Only #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC support non-#PIXEL_CENTER modes.
+
+@note #HALF_PIXEL_SYMMETRIC and #ALIGN_CORNERS need the true scale -- pass it via #resize's `fx`/`fy`.
+*/
+enum ResizeCoordMode
+{
+    PIXEL_CENTER = 0,       //!< OpenCV's fixed pixel-center formula (default, matches classic #resize)
+    HALF_PIXEL,             //!< ONNX Resize "half_pixel": `src = (dst + 0.5) * scale - 0.5`
+    PYTORCH_HALF_PIXEL,     //!< ONNX Resize "pytorch_half_pixel": #HALF_PIXEL, but `src = 0` when the output axis has length 1
+    ALIGN_CORNERS,          //!< ONNX Resize "align_corners": `src = dst * (srcLen-1)/(dstLen-1)`; see @ref ResizeCoordMode note
+    ASYMMETRIC,             //!< ONNX Resize "asymmetric": `src = dst * scale`
+    TF_HALF_PIXEL_FOR_NN,   //!< ONNX Resize "tf_half_pixel_for_nn": `src = (dst + 0.5) * scale`
+    HALF_PIXEL_SYMMETRIC    //!< ONNX Resize "half_pixel_symmetric"; see @ref ResizeCoordMode note
+};
+
+/** \brief Index-rounding rule used by #INTER_NEAREST when @ref ResizeParams::coordMode is not
+#ResizeCoordMode::PIXEL_CENTER.
+
+Matches ONNX Resize's `nearest_mode` attribute; no effect for #ResizeCoordMode::PIXEL_CENTER.
+*/
+enum ResizeNearestMode
+{
+    FLOOR = 0,          //!< always round down
+    CEIL,               //!< always round up
+    ROUND_PREFER_CEIL,  //!< round to nearest, ties go up
+    ROUND_PREFER_FLOOR  //!< round to nearest, ties go down (ONNX Resize's default)
+};
+
+/** @brief Parameters for the struct-based and batched #resize overloads.
+
+Collects flags previously scattered across `interpolation` and external globals, like @ref cv::dnn::Image2BlobParams.
+
+@sa resize
+*/
+struct CV_EXPORTS_W_SIMPLE ResizeParams
+{
+    CV_WRAP ResizeParams();
+
+    //! interpolation method: #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC/#INTER_AREA/#INTER_LANCZOS4.
+    //! Use #bitExact instead of the _EXACT variants.
+    CV_PROP_RW int interpolation;
+
+    //! bit-exact output; only #INTER_NEAREST/#INTER_LINEAR with #PIXEL_CENTER.
+    //! Replaces #INTER_NEAREST_EXACT/#INTER_LINEAR_EXACT.
+    CV_PROP_RW bool bitExact;
+
+    //! coordinate mapping convention; see #ResizeCoordMode
+    CV_PROP_RW ResizeCoordMode coordMode;
+
+    //! index-rounding rule for #INTER_NEAREST when #coordMode is not
+    //! #ResizeCoordMode::PIXEL_CENTER; see #ResizeNearestMode
+    CV_PROP_RW ResizeNearestMode nearestMode;
+
+    //! Keys cubic coefficient for #INTER_CUBIC when #coordMode isn't #PIXEL_CENTER. Default -0.75.
+    CV_PROP_RW float cubicCoeffA;
+
+    //! For non-#PIXEL_CENTER #INTER_CUBIC: zero-weight out-of-bounds taps instead of clamping
+    //! (ONNX `exclude_outside`).
+    CV_PROP_RW bool excludeOutside;
+
+    //! apply antialiasing filter when downscaling (not yet implemented)
+    CV_PROP_RW bool antialias;
+
+    //! precision/speed hint, consistent with #warpAffine/#warpPerspective/#remap/#cvtColor.
+    //! Reserved -- resize has no approximate path yet.
+    CV_PROP_RW AlgorithmHint hint;
+};
+
+/** @overload
+
+Same three `src` kinds as the classic overload above, picked at runtime by `src.kind()`:
+
+- single 2D image;
+- N-D tensor (`dims >= 3`): batch axes then spatial dims, one shared coefficient table;
+- `std::vector<Mat>`/`std::vector<UMat>`: resized independently, no shared table; C++ only, not
+  usable from Python.
+
+@param src input image, N-D batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
+@param dst output image or batch, matching `src`'s kind; see #resize.
+@param dsize output spatial size (height/width of the last two dims, or of every element for a
+vector batch); see #resize.
+@param params resize parameters, see #ResizeParams.
+@param fx scale factor along the horizontal axis, see #resize. For #ResizeParams::coordMode
+other than #ResizeCoordMode::PIXEL_CENTER, also pass this explicitly (rather than leaving it 0)
+whenever `dsize` was computed by flooring/rounding a scale you already know, e.g. an ONNX Resize
+node's "scales" input -- re-deriving it from `dsize` and the input size alone is exact only when
+`dsize` was itself computed as `round(srcSize * scale)`, and can otherwise recover a noticeably
+different value.
+@param fy scale factor along the vertical axis, see #resize; see `fx`.
+*/
+CV_EXPORTS_W void resize( InputArray src, OutputArray dst, Size dsize,
+                          const ResizeParams& params, double fx = 0, double fy = 0 );
 
 /** @brief Applies an affine transformation to an image.
 
