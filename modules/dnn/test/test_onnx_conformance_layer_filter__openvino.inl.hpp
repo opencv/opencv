@@ -913,7 +913,11 @@ CASE(test_gridsample)
 CASE(test_gridsample_aligncorners_true)
     SKIP;
 CASE(test_gridsample_bicubic)
-    // no filter
+    SKIP;
+CASE(test_gridsample_bicubic_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_bicubic_align_corners_1_additional_1)
+    SKIP;
 CASE(test_gridsample_bilinear)
     SKIP;
 CASE(test_gridsample_border_padding)

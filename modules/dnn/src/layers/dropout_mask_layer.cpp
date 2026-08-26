@@ -61,9 +61,7 @@ public:
 
         for (size_t i = 1; i < outputs.size(); ++i)
         {
-            Mat& mask = outputs[i];
-            CV_Assert(mask.isContinuous());
-            std::fill_n(mask.ptr<bool>(), mask.total(), true);
+            outputs[i].setTo(true);
         }
     }
 };
