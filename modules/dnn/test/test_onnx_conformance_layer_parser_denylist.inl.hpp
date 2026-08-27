@@ -283,7 +283,6 @@
 "test_simple_rnn_batchwise",  // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults",  // ---- same as above ---
 "test_simple_rnn_with_initial_bias",  // ---- same as above ---
-"test_slice_start_out_of_bounds",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",

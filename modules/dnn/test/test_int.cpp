@@ -18,8 +18,16 @@ int64_t getValueAt(const Mat &m, const int *indices)
         return m.at<uint8_t>(indices);
     else if (m.type() == CV_8S)
         return m.at<int8_t>(indices);
+    else if (m.type() == CV_16U)
+        return m.at<uint16_t>(indices);
+    else if (m.type() == CV_16S)
+        return m.at<int16_t>(indices);
+    else if (m.type() == CV_32U)
+        return m.at<uint32_t>(indices);
     else if (m.type() == CV_32S)
         return m.at<int32_t>(indices);
+    else if (m.type() == CV_64U)
+        return (int64_t)m.at<uint64_t>(indices);
     else if (m.type() == CV_64S)
         return m.at<int64_t>(indices);
     else
@@ -35,8 +43,16 @@ int64_t getValueAt(const Mat &m, int index)
         return m.ptr<uint8_t>()[index];
     else if (m.type() == CV_8S)
         return m.ptr<int8_t>()[index];
+    else if (m.type() == CV_16U)
+        return m.ptr<uint16_t>()[index];
+    else if (m.type() == CV_16S)
+        return m.ptr<int16_t>()[index];
+    else if (m.type() == CV_32U)
+        return m.ptr<uint32_t>()[index];
     else if (m.type() == CV_32S)
         return m.ptr<int32_t>()[index];
+    else if (m.type() == CV_64U)
+        return (int64_t)m.ptr<uint64_t>()[index];
     else if (m.type() == CV_64S)
         return m.ptr<int64_t>()[index];
     else
@@ -52,6 +68,15 @@ void fillRandom(Mat& m, int matType, Backend backend)
         cv::randu(m, 1000000000000000ll, 1000000000000100ll);
     else if (matType == CV_32S)
         cv::randu(m, 1000000000, 1000000100);
+    // CV_64U stays inside the int64_t range so getValueAt() round-trips exactly.
+    else if (matType == CV_64U)
+        cv::randu(m, 1000000000000000ll, 1000000000000100ll);
+    else if (matType == CV_32U)
+        cv::randu(m, 1000000000, 1000000100);
+    else if (matType == CV_16S)
+        cv::randu(m, -1000, 1000);
+    else if (matType == CV_16U)
+        cv::randu(m, 0, 1000);
     else if (matType == CV_8S)
         cv::randu(m, -50, 50);
     else if (matType == CV_8U)
@@ -60,6 +85,55 @@ void fillRandom(Mat& m, int matType, Backend backend)
         cv::randu(m, 0, 2);
     else
         CV_Error(Error::BadDepth, "Unsupported type");
+}
+
+void setValueAt(Mat &m, int index, int64_t value)
+{
+    if (m.type() == CV_Bool)
+        m.ptr<bool>()[index] = (bool)value;
+    else if (m.type() == CV_8U)
+        m.ptr<uint8_t>()[index] = (uint8_t)value;
+    else if (m.type() == CV_8S)
+        m.ptr<int8_t>()[index] = (int8_t)value;
+    else if (m.type() == CV_16U)
+        m.ptr<uint16_t>()[index] = (uint16_t)value;
+    else if (m.type() == CV_16S)
+        m.ptr<int16_t>()[index] = (int16_t)value;
+    else if (m.type() == CV_32U)
+        m.ptr<uint32_t>()[index] = (uint32_t)value;
+    else if (m.type() == CV_32S)
+        m.ptr<int32_t>()[index] = (int32_t)value;
+    else if (m.type() == CV_64U)
+        m.ptr<uint64_t>()[index] = (uint64_t)value;
+    else if (m.type() == CV_64S)
+        m.ptr<int64_t>()[index] = value;
+    else
+        CV_Error(Error::BadDepth, "Unsupported type");
+}
+
+int64_t minValueAt(int matType)
+{
+    if (matType == CV_8S)
+        return std::numeric_limits<int8_t>::min();
+    else if (matType == CV_16S)
+        return std::numeric_limits<int16_t>::min();
+    else if (matType == CV_32S)
+        return std::numeric_limits<int32_t>::min();
+    else if (matType == CV_64S)
+        return std::numeric_limits<int64_t>::min();
+    return 0;
+}
+
+// Abs and Sign are decided by the sign of their input, and fillRandom keeps the 32-bit
+// and 64-bit signed ranges above zero.
+void fillRandomSigned(Mat& m, int matType, Backend backend)
+{
+    if (matType == CV_32S)
+        cv::randu(m, -1000000000, 1000000000);
+    else if (matType == CV_64S)
+        cv::randu(m, -1000000000000000ll, 1000000000000000ll);
+    else
+        fillRandom(m, matType, backend);
 }
 
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_NaryEltwise_Int;
@@ -219,6 +293,13 @@ TEST_P(Test_ScatterND_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
     fillRandom(input, matType, backend);
@@ -245,18 +326,7 @@ TEST_P(Test_ScatterND_Int, random)
     }
 
     for (int i = 0; i < updatesValues.size(); ++i)
-    {
-        if (matType == CV_32S)
-            updates.ptr<int32_t>()[i] = updatesValues[i];
-        else if (matType == CV_64S)
-            updates.ptr<int64_t>()[i] = updatesValues[i];
-        else if (matType == CV_8S)
-            updates.ptr<int8_t>()[i] = updatesValues[i];
-        else if (matType == CV_8U)
-            updates.ptr<uint8_t>()[i] = updatesValues[i];
-        else if (matType == CV_Bool)
-            updates.ptr<bool>()[i] = updatesValues[i];
-    }
+        setValueAt(updates, i, updatesValues[i]);
 
     Net net;
     LayerParams lp;
@@ -321,8 +391,94 @@ TEST_P(Test_ScatterND_Int, random)
     }
 }
 
+typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_Scatter_Int;
+TEST_P(Test_Scatter_Int, random)
+{
+    int matType = get<0>(GetParam());
+    int indicesType = get<1>(GetParam());
+    tuple<Backend, Target> backend_target= get<2>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    const int axis = 2, scatterAt = 2;
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandom(input, matType, backend);
+
+    // One update per (i0, i1, i3), all aimed at the same position along the axis.
+    std::vector<int> idxShape{2, 3, 1, 5};
+    Mat indices(idxShape, indicesType);
+    Mat updates(idxShape, matType);
+    for (int i = 0; i < (int)updates.total(); ++i)
+    {
+        if (indicesType == CV_32S)
+            indices.ptr<int32_t>()[i] = scatterAt;
+        else
+            indices.ptr<int64_t>()[i] = scatterAt;
+        setValueAt(updates, i, matType == CV_Bool ? 1 : i + 1);
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Scatter";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+    net.connect(0, 2, id, 2);
+
+    std::vector<String> inpNames(3);
+    inpNames[0] = "scatter_input";
+    inpNames[1] = "scatter_indices";
+    inpNames[2] = "scatter_updates";
+    net.setInputsNames(inpNames);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    net.setInput(updates, inpNames[2]);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(shape(input), shape(re));
+
+    std::vector<int> reIndices(4);
+    for (int i0 = 0; i0 < input.size[0]; ++i0)
+    {
+        reIndices[0] = i0;
+        for (int i1 = 0; i1 < input.size[1]; ++i1)
+        {
+            reIndices[1] = i1;
+            for (int i2 = 0; i2 < input.size[2]; ++i2)
+            {
+                reIndices[2] = i2;
+                for (int i3 = 0; i3 < input.size[3]; ++i3)
+                {
+                    reIndices[3] = i3;
+                    if (i2 == scatterAt)
+                    {
+                        int flat = (i0 * idxShape[1] + i1) * idxShape[3] + i3;
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(updates, flat));
+                    }
+                    else
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, reIndices.data()));
+                }
+            }
+        }
+    }
+}
+
+// Only the OpenCV backend implements the integer kernels.
+INSTANTIATE_TEST_CASE_P(/**/, Test_Scatter_Int, Combine(
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ScatterND_Int, Combine(
-    testing::Values(CV_Bool, CV_8U, CV_8S, CV_32S, CV_64S),
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
@@ -676,6 +832,13 @@ TEST_P(Test_GatherElements_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
     fillRandom(input, matType, backend);
@@ -734,7 +897,7 @@ TEST_P(Test_GatherElements_Int, random)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_GatherElements_Int, Combine(
-    testing::Values(CV_Bool, CV_8U, CV_8S, CV_32S, CV_64S),
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
@@ -1252,6 +1415,218 @@ TEST_P(Test_Reduce_Int, two_axes)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Reduce_Int, Combine(
     testing::Values(CV_8U, CV_8S, CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Abs_Int;
+TEST_P(Test_Abs_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType, backend);
+    setValueAt(input, 0, minValueAt(matType));
+    setValueAt(input, 1, 0);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "AbsVal";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        // the minimum has no positive counterpart, so it maps to itself
+        int64_t expected = value == minValueAt(matType) ? value : (value < 0 ? -value : value);
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+// Only the OpenCV backend implements the integer kernels.
+INSTANTIATE_TEST_CASE_P(/**/, Test_Abs_Int, Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Sign_Int;
+TEST_P(Test_Sign_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType, backend);
+    setValueAt(input, 0, minValueAt(matType));
+    setValueAt(input, 1, 0);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Sign";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        int64_t expected = (value > 0) - (value < 0);
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+// Only the OpenCV backend implements the integer kernels.
+INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int, Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+// ONNX Neg imports as Power with scale=-1, which is the only form of Power that has an
+// integer path.
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Neg_Int;
+TEST_P(Test_Neg_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType, backend);
+    setValueAt(input, 0, 0);
+    setValueAt(input, 1, minValueAt(matType));
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Power";
+    lp.name = "testLayer";
+    lp.set("scale", -1);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        // the minimum has no positive counterpart, so it wraps to itself
+        int64_t expected = value == minValueAt(matType) ? value : -value;
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+// Only the OpenCV backend implements the integer kernels.
+INSTANTIATE_TEST_CASE_P(/**/, Test_Neg_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
+typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_GatherND_Int;
+TEST_P(Test_GatherND_Int, random)
+{
+    int matType = get<0>(GetParam());
+    int indicesType = get<1>(GetParam());
+    tuple<Backend, Target> backend_target= get<2>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    const bool wideIntType = matType == CV_16U || matType == CV_16S ||
+                             matType == CV_32U || matType == CV_64U;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_CUDA && wideIntType)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
+
+    std::vector<int> inShape{4, 5};
+    Mat input(inShape, matType);
+    fillRandom(input, matType, backend);
+
+    // Each row of indices selects one full row of the input.
+    std::vector<int64_t> rowPicks{2, 0, 3};
+    std::vector<int> idxShape{(int)rowPicks.size(), 1};
+    Mat indices(idxShape, indicesType);
+    for (size_t i = 0; i < rowPicks.size(); ++i)
+    {
+        if (indicesType == CV_32S)
+            indices.ptr<int32_t>()[i] = (int32_t)rowPicks[i];
+        else
+            indices.ptr<int64_t>()[i] = rowPicks[i];
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "gathernd_input";
+    inpNames[1] = "gathernd_indices";
+    net.setInputsNames(inpNames);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.size.dims, 2);
+    ASSERT_EQ(re.size[0], (int)rowPicks.size());
+    ASSERT_EQ(re.size[1], input.size[1]);
+
+    std::vector<int> reIndices(2), inIndices(2);
+    for (int i = 0; i < re.size[0]; ++i)
+    {
+        reIndices[0] = i;
+        inIndices[0] = (int)rowPicks[i];
+        for (int j = 0; j < re.size[1]; ++j)
+        {
+            reIndices[1] = j;
+            inIndices[1] = j;
+            EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, inIndices.data()));
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_GatherND_Int, Combine(
+    testing::Values(CV_Bool, CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
 
