@@ -3081,8 +3081,11 @@ void TFImporter::populateNet()
     if (newEngine)
     {
         Net::Impl* netimpl = dstNet.getImpl();
-        for (const std::string& outputName : layersOutputs.back())
-            netimpl->newArg(outputName, DNN_ARG_OUTPUT);
+        if (!layersOutputs.empty())
+        {
+            for (const std::string& outputName : layersOutputs.back())
+                netimpl->newArg(outputName, DNN_ARG_OUTPUT);
+        }
         for (size_t layerId = 0; layerId < layersOutputs.size(); layerId++)
         {
             for (const std::string& outputName : layersOutputs[layerId])
@@ -3296,7 +3299,8 @@ Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
 Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>&                                    bufferConfig, int engine,
                           const std::vector<String>& extraOutputs)
 {
-    const char* bufferModelPtr = reinterpret_cast<const char*>(&bufferModel[0]);
+    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+                                 reinterpret_cast<const char*>(&bufferModel[0]);
     const char* bufferConfigPtr = bufferConfig.empty() ? NULL :
                                   reinterpret_cast<const char*>(&bufferConfig[0]);
     return readNetFromTensorflow(bufferModelPtr, bufferModel.size(),

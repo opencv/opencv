@@ -162,6 +162,9 @@ struct Net::Impl : public detail::NetImplBase
     int dump_indent;
 
     virtual bool empty() const;
+    // Throws if the model has no outputs. Implemented by the engine so that
+    // all model importers report such models in the same way.
+    void checkModelOutputs() const;
     virtual void setPreferableBackend(Net& net, int backendId);
     virtual void setPreferableTarget(int targetId);
 

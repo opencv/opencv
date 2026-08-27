@@ -1911,6 +1911,23 @@ TEST(Test_TensorFlow_Importer, tf_graph_simplifier_buffer_overflow_21947)
     EXPECT_ANY_THROW(readNetFromTensorflow(reinterpret_cast<const char*>(payload), sizeof(payload) / sizeof(payload[0])));
 }
 
+TEST(Test_TensorFlow_Importer, no_layers_graph)
+{
+    // A valid GraphDef without model outputs used to crash the importer.
+    // The engine has to report it as a regular exception instead.
+    std::string config =
+        "node {\n"
+        "  name: \"x\"\n"
+        "  op: \"Placeholder\"\n"
+        "  attr { key: \"dtype\" value { type: DT_FLOAT } }\n"
+        "}\n";
+    EXPECT_THROW(readNetFromTensorflow(NULL, 0, config.c_str(), config.size()), cv::Exception);
+
+    // an empty model buffer must not be dereferenced
+    std::vector<uchar> bufferConfig(config.begin(), config.end());
+    EXPECT_THROW(readNetFromTensorflow(std::vector<uchar>(), bufferConfig), cv::Exception);
+}
+
 TEST(Test_TF_Model, Inception_GetLayer)
 {
     const std::string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);

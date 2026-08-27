@@ -562,6 +562,8 @@ void Net::Impl::prepareForInference()
     }
 #endif
 
+    checkModelOutputs();
+
     if (!prepared) {
         fuseQDQ();
         constFold();
