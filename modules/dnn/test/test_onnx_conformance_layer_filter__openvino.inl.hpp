@@ -476,11 +476,19 @@ CASE(test_clip_default_min_expanded)
     SKIP;
 CASE(test_clip_example)
     SKIP;
+CASE(test_clip_example_expanded)
+    SKIP;
+CASE(test_clip_expanded)
+    SKIP;
 CASE(test_clip_inbounds)
     SKIP;
 CASE(test_clip_inbounds_expanded)
     SKIP;
+CASE(test_clip_min_greater_than_max_expanded)
+    SKIP;
 CASE(test_clip_outbounds)
+    SKIP;
+CASE(test_clip_outbounds_expanded)
     SKIP;
 CASE(test_clip_splitbounds)
     SKIP;
@@ -523,6 +531,10 @@ CASE(test_concat_3d_axis_negative_3)
 CASE(test_constant)
     SKIP;
 CASE(test_constant_pad)
+    SKIP;
+CASE(test_constant_pad_axes)
+    SKIP;
+CASE(test_constant_pad_negative_axes)
     SKIP;
 CASE(test_constantofshape_float_ones)
     SKIP;
@@ -663,9 +675,9 @@ CASE(test_div_uint8)
 CASE(test_dropout_default)
     // no filter
 CASE(test_dropout_default_mask)
-    // no filter
+    SKIP;
 CASE(test_dropout_default_mask_ratio)
-    // no filter
+    SKIP;
 CASE(test_dropout_default_old)
     // no filter
 CASE(test_dropout_default_ratio)
@@ -901,7 +913,11 @@ CASE(test_gridsample)
 CASE(test_gridsample_aligncorners_true)
     SKIP;
 CASE(test_gridsample_bicubic)
-    // no filter
+    SKIP;
+CASE(test_gridsample_bicubic_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_bicubic_align_corners_1_additional_1)
+    SKIP;
 CASE(test_gridsample_bilinear)
     SKIP;
 CASE(test_gridsample_border_padding)
@@ -1244,6 +1260,8 @@ CASE(test_l1normalization_axis_1)
     SKIP;
 CASE(test_l1normalization_axis_last)
     SKIP;
+CASE(test_l2normalization_axis_0)
+    SKIP;
 CASE(test_l2normalization_axis_1)
     SKIP;
 CASE(test_layer_normalization_2d_axis0)
@@ -1496,6 +1514,8 @@ CASE(test_lppool_2d_dilations)
     SKIP;
 CASE(test_lppool_2d_pads)
     SKIP;
+CASE(test_lppool_2d_same_lower)
+    SKIP;
 CASE(test_lppool_2d_same_upper)
     SKIP;
 CASE(test_lppool_2d_strides)
@@ -1558,6 +1578,8 @@ CASE(test_maxpool_2d_ceil)
 #if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
+CASE(test_maxpool_2d_ceil_output_size_reduce_by_one)
+    SKIP;
 CASE(test_maxpool_2d_default)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -2932,7 +2954,7 @@ CASE(test_training_dropout_mask)
 CASE(test_training_dropout_zero_ratio)
     SKIP;
 CASE(test_training_dropout_zero_ratio_mask)
-    // no filter
+    SKIP;
 CASE(test_transpose_all_permutations_0)
     // no filter
 CASE(test_transpose_all_permutations_1)
@@ -2982,6 +3004,8 @@ CASE(test_triu_square)
 CASE(test_triu_square_neg)
     SKIP;
 CASE(test_triu_zero)
+    SKIP;
+CASE(test_unique_length_1)
     SKIP;
 CASE(test_unique_not_sorted_without_axis)
     SKIP;

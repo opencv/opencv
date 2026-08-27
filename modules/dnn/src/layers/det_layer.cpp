@@ -45,7 +45,7 @@ public:
         if (in.size() > 2)
             out.assign(in.begin(), in.end() - 2);
         else
-            out = MatShape({1});
+            out = MatShape::scalar();
 
         outputs.assign(1, out);
         return false;
@@ -83,19 +83,13 @@ public:
 
         size_t batch = X.total() / (X.size[X.dims - 2] * X.size[X.dims - 1]);
 
-        int outDims;
-        std::vector<int> outSizes;
         if (X.dims > 2)
         {
-            outDims = X.dims - 2;
-            outSizes.assign(X.size.p, X.size.p + outDims);
+            int outDims = X.dims - 2;
+            std::vector<int> outSizes(X.size.p, X.size.p + outDims);
+            outputs[0].create(outDims, outSizes.data(), X.type());
         }
-        else
-        {
-            outDims = 1;
-            outSizes = {1};
-        }
-        outputs[0].create(outDims, outSizes.data(), X.type());
+        // else: scalar output is pre-allocated by the engine; create() would detach it.
 
         const int type = X.type();
         const size_t elemSz = X.elemSize();
