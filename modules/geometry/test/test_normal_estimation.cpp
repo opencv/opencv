@@ -84,6 +84,15 @@ TEST(NormalEstimationTest, InternalKnnMatchesExternal)
     normalEstimate(got, gotCurv, plane_pts, noArray(), k);
 
     ASSERT_EQ(ref.size(), got.size());
+
+    // The internal-kNN path must reproduce the caller-supplied-neighbor result.
+    for (int i = 0; i < num; ++i)
+    {
+        float denom = std::sqrt(ref[i].dot(ref[i]) * got[i].dot(got[i])) + 1e-12f;
+        EXPECT_NEAR(std::abs(ref[i].dot(got[i])) / denom, 1.f, 1e-3f);   // parallel, up to sign
+    }
+
+    // ...and both must be parallel to the analytic plane normal.
     Point3f n1(model[0], model[1], model[2]);
     float n1m = n1.dot(n1);
     float total_theta = 0.f;

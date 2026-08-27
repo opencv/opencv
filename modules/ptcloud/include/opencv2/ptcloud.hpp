@@ -127,7 +127,7 @@ CV_EXPORTS_W float estimateMedianSpacing(InputArray inputCloud);
 
 /** @brief Reconstructs a triangle mesh from an oriented point cloud using Ball-Pivoting.
  *
- * Implements the Ball-Pivoting Algorithm (Bernardini et al., 1999): a ball of a given radius is
+ * Implements the Ball-Pivoting Algorithm @cite Bernardini1999 : a ball of a given radius is
  * rolled over the points; whenever it rests on three points without containing any other, those
  * points form a triangle. Several radii are used in ascending order so larger balls bridge the
  * gaps left by smaller ones. The algorithm is interpolating — the mesh vertices are the input

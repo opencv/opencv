@@ -32,16 +32,13 @@ void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3
     Mat nmf = work.reshape(3, N);   // N x 1, CV_32FC3
 
     // Flip each normal, if needed, so it points towards the viewpoint (independent per point).
-    parallel_for_(Range(0, N), [&](const Range& r)
+    for (int i = 0; i < N; i++)
     {
-        for (int i = r.start; i < r.end; i++)
-        {
-            Vec3f n = nmf.at<Vec3f>(i);
-            Vec3f toView(viewpoint.x - points[i].x, viewpoint.y - points[i].y, viewpoint.z - points[i].z);
-            if (n.dot(toView) < 0.f)
-                nmf.at<Vec3f>(i) = -n;
-        }
-    });
+        Vec3f n = nmf.at<Vec3f>(i);
+        Vec3f toView(viewpoint.x - points[i].x, viewpoint.y - points[i].y, viewpoint.z - points[i].z);
+        if (n.dot(toView) < 0.f)
+            nmf.at<Vec3f>(i) = -n;
+    }
 
     if (work.data != nm.data)
         work.copyTo(nm);   // matching shape/type; copyTo handles a non-contiguous destination
@@ -75,27 +72,15 @@ void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, in
     Mat nnIdx, nnDist;
     index.knnSearch(pts, nnIdx, nnDist, kk);
 
-    // Build the kNN edges in parallel: each point writes to its own fixed slots, then compact.
-    std::vector<MSTEdge> slots((size_t)N * (kk - 1));
-    std::vector<char> valid((size_t)N * (kk - 1), 0);
-    parallel_for_(Range(0, N), [&](const Range& range)
-    {
-        for (int i = range.start; i < range.end; i++)
-            for (int c = 1; c < kk; c++)              // skip self at column 0
-            {
-                int j = nnIdx.at<int>(i, c);
-                if (j >= 0 && j != i)
-                {
-                    size_t s = (size_t)i * (kk - 1) + (c - 1);
-                    slots[s] = MSTEdge{ i, j, 1.0 - std::fabs((double)n[i].dot(n[j])) };
-                    valid[s] = 1;
-                }
-            }
-    });
     std::vector<MSTEdge> edges;
-    edges.reserve(slots.size());
-    for (size_t s = 0; s < slots.size(); s++)
-        if (valid[s]) edges.push_back(slots[s]);
+    edges.reserve((size_t)N * (kk - 1));
+    for (int i = 0; i < N; i++)
+        for (int c = 1; c < kk; c++)              // skip self at column 0
+        {
+            int j = nnIdx.at<int>(i, c);
+            if (j >= 0 && j != i)
+                edges.push_back(MSTEdge{ i, j, 1.0 - std::fabs((double)n[i].dot(n[j])) });
+        }
 
     // Seed the +Z-extreme point outward; orientation propagates along the MST.
     int seed = 0;
