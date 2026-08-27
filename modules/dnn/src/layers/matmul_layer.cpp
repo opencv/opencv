@@ -41,6 +41,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         beta = params.get<float>("beta", 1.f);
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
+
+        for (Mat& blob : blobs) {
+            if (blob.type() == CV_16F || blob.type() == CV_16BF) {
+                Mat widened;
+                blob.convertTo(widened, CV_32F);
+                blob = widened;
+            }
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
