@@ -74,6 +74,9 @@ Net::Impl::Impl()
     // onnx_opset = 0;
 
     accuracy = CV_32F;
+    // CPU only: the block size is a network-wide memory-layout contract, so it must not
+    // depend on the SIMD width of the host: C0 == 8 is the mainstream, well-tested setting.
+    // (Deriving it from vlanes() made the layout hardware-dependent; see the #29493 discussion.)
     defaultC0 = DEFAULT_C0;
     enableFP16 = haveFP16 = false;
     // FP16 is not ready yet in the new DNN engine
