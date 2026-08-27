@@ -14,6 +14,13 @@
 #define DISABLE_IPP_FILTER2D 1
 // Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
 #define IPP_DISABLE_FILTER2D_BIG_MASK 1
+// IPP median blur integration kept disabled; was #if 0 in main OpenCV.
+#define DISABLE_IPP_MEDIAN_BLUR 1
+
+// IPP Hough integration is disabled in main OpenCV (improper integration/results); kept behind a macro
+#define DISABLE_IPP_HOUGH 1
+
+#define DISABLE_IPP_MORPH 1
 
 #if IPP_VERSION_X100 >= 810
 
@@ -36,6 +43,13 @@ int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size
                    int dx, int dy, double scale, double delta, int border_type);
 #undef cv_hal_scharr
 #define cv_hal_scharr ipp_hal_scharr
+
+int ipp_hal_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                             int width, int height, int src_depth, int dst_depth, int cn,
+                             int margin_left, int margin_top, int margin_right, int margin_bottom,
+                             int ksize, double scale, double delta, int border_type);
+#undef cv_hal_laplacian_offset
+#define cv_hal_laplacian_offset ipp_hal_laplacian_offset
 
 #endif
 
@@ -85,6 +99,61 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
 #undef cv_hal_filter_stateless
 #define cv_hal_filter_stateless ipp_hal_filter2D
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
+
+#if !DISABLE_IPP_HOUGH
+int ipp_hal_houghLines(const uchar* src_data, size_t src_step, int width, int height,
+                       float rho, float theta, int threshold, int numangle,
+                       double min_theta, double max_theta,
+                       int lines_max, float** out_lines, int* out_count);
+#undef cv_hal_houghLines
+#define cv_hal_houghLines ipp_hal_houghLines
+
+int ipp_hal_houghLinesProbabilistic(const uchar* src_data, size_t src_step, int width, int height,
+                                    float rho, float theta, int threshold,
+                                    int line_length, int line_gap,
+                                    int numangle, int numrho,
+                                    int lines_max, int** out_lines, int* out_count);
+#undef cv_hal_houghLinesProbabilistic
+#define cv_hal_houghLinesProbabilistic ipp_hal_houghLinesProbabilistic
+
+void ipp_hal_houghLinesFree(void* lines);
+#undef cv_hal_houghLinesFree
+#define cv_hal_houghLinesFree ipp_hal_houghLinesFree
+#endif // !DISABLE_IPP_HOUGH
+
+int ipp_hal_cornerHarris(const uchar* src_data, size_t src_step, int src_type,
+                         uchar* dst_data, size_t dst_step, int width, int height,
+                         int block_size, int ksize, double k, int border_type, bool is_submatrix);
+#undef cv_hal_cornerHarris
+#define cv_hal_cornerHarris ipp_hal_cornerHarris
+
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
+int ipp_hal_morph_stateless(int operation, const uchar * src_data, size_t src_step, int src_type,
+                            uchar * dst_data, size_t dst_step, int dst_type,
+                            int width, int height, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y,
+                            int dst_full_width, int dst_full_height, int dst_roi_x, int dst_roi_y,
+                            const uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
+                            int anchor_x, int anchor_y, int borderType, const double borderValue[4],
+                            int iterations, bool allowSubmatrix, bool allowInplace);
+#undef cv_hal_morph_stateless
+#define cv_hal_morph_stateless ipp_hal_morph_stateless
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_MORPH
+
+#if !DISABLE_IPP_MEDIAN_BLUR
+int ipp_hal_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                       int width, int height, int depth, int cn, int ksize);
+#undef cv_hal_medianBlur
+#define cv_hal_medianBlur ipp_hal_medianBlur
+#endif // !DISABLE_IPP_MEDIAN_BLUR
+
+#if defined(HAVE_IPP_IW) && defined(ENABLE_IPP_GAUSSIAN_BLUR)
+int ipp_hal_gaussianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                         int width, int height, int depth, int cn,
+                         size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom,
+                         size_t ksize_width, size_t ksize_height, double sigmaX, double sigmaY, int border_type);
+#undef cv_hal_gaussianBlur
+#define cv_hal_gaussianBlur ipp_hal_gaussianBlur
+#endif // defined(HAVE_IPP_IW) && defined(ENABLE_IPP_GAUSSIAN_BLUR)
 
 #endif //IPP_VERSION_X100 >= 810
 
@@ -189,6 +258,36 @@ int ipp_hal_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst
                               int width, int height, int dst_type, int dist_type, int mask_size);
 #undef cv_hal_distanceTransform
 #define cv_hal_distanceTransform ipp_hal_distanceTransform
+
+int ipp_hal_accumulate(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                       const uchar* mask_data, size_t mask_step, int width, int height,
+                       int src_type, int dst_type);
+#undef cv_hal_accumulate
+#define cv_hal_accumulate ipp_hal_accumulate
+
+int ipp_hal_accumulateSquare(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                             const uchar* mask_data, size_t mask_step, int width, int height,
+                             int src_type, int dst_type);
+#undef cv_hal_accumulateSquare
+#define cv_hal_accumulateSquare ipp_hal_accumulateSquare
+
+int ipp_hal_accumulateProduct(const uchar* src1_data, size_t src1_step,
+                              const uchar* src2_data, size_t src2_step,
+                              uchar* dst_data, size_t dst_step,
+                              const uchar* mask_data, size_t mask_step, int width, int height,
+                              int src_type, int dst_type);
+#undef cv_hal_accumulateProduct
+#define cv_hal_accumulateProduct ipp_hal_accumulateProduct
+
+int ipp_hal_accumulateWeighted(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                               const uchar* mask_data, size_t mask_step, int width, int height,
+                               int src_type, int dst_type, double alpha);
+#undef cv_hal_accumulateWeighted
+#define cv_hal_accumulateWeighted ipp_hal_accumulateWeighted
+
+int ipp_hal_integral(int depth, int sdepth, int sqdepth, const uchar * src_data, size_t src_step, uchar * sum_data, size_t sum_step, uchar * sqsum_data, size_t sqsum_step, uchar * tilted_data, size_t tilted_step, int width, int height, int cn);
+#undef cv_hal_integral
+#define cv_hal_integral ipp_hal_integral
 
 #endif // IPP_VERSION_X100 >= 700
 

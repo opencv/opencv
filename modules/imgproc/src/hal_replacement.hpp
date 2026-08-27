@@ -1428,6 +1428,32 @@ inline int hal_ni_laplacian(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
+   @brief Computes Laplacian filter with scale/delta and submatrix (offset) support
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param src_depth Depth of source image
+   @param dst_depth Depth of destination image
+   @param cn Number of channels
+   @param margin_left Left margin of the source ROI within the full image
+   @param margin_top Top margin of the source ROI within the full image
+   @param margin_right Right margin of the source ROI within the full image
+   @param margin_bottom Bottom margin of the source ROI within the full image
+   @param ksize Kernel size (3 or 5)
+   @param scale Scale factor applied to the results
+   @param delta Delta value added to the results
+   @param border_type Border type
+ */
+inline int hal_ni_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int ksize, double scale, double delta, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_laplacian_offset hal_ni_laplacian_offset
+//! @endcond
+
+/**
    @brief Compute spatial gradient (Sobel X and Y simultaneously).
    @param src_data Source image data (8-bit single channel)
    @param src_step Source image step
@@ -1560,6 +1586,69 @@ inline int hal_ni_canny_deriv(const short* dx_data, size_t dx_step, const short*
 //! @endcond
 
 /**
+   @brief Standard Hough transform for line detection
+   @param src_data Source image (edge map) data
+   @param src_step Source image step
+   @param width Source image width
+   @param height Source image height
+   @param rho Distance resolution of the accumulator in pixels
+   @param theta Angle resolution of the accumulator in radians
+   @param threshold Accumulator threshold
+   @param numangle Number of angle bins of the accumulator
+   @param min_theta Minimum angle to check for lines
+   @param max_theta Maximum angle to check for lines
+   @param lines_max Upper bound on the number of output lines
+   @param out_lines Output (rho, theta) pairs, 2 floats per line; allocated by the callee, released with cv_hal_houghLinesFree
+   @param out_count Number of output lines written to out_lines
+   @note out_lines/out_count are valid only when the function returns CV_HAL_ERROR_OK
+   @sa HoughLines
+*/
+inline int hal_ni_houghLines(const uchar* src_data, size_t src_step, int width, int height,
+                             float rho, float theta, int threshold, int numangle,
+                             double min_theta, double max_theta,
+                             int lines_max, float** out_lines, int* out_count)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Probabilistic Hough transform for line detection
+   @param src_data Source image (edge map) data
+   @param src_step Source image step
+   @param width Source image width
+   @param height Source image height
+   @param rho Distance resolution of the accumulator in pixels
+   @param theta Angle resolution of the accumulator in radians
+   @param threshold Accumulator threshold
+   @param line_length Minimum line length
+   @param line_gap Maximum allowed gap between points on the same line
+   @param numangle Number of angle bins of the accumulator
+   @param numrho Number of distance bins of the accumulator
+   @param lines_max Upper bound on the number of output line segments
+   @param out_lines Output line segments (x1, y1, x2, y2), 4 ints per segment; allocated by the callee, released with cv_hal_houghLinesFree
+   @param out_count Number of output line segments written to out_lines
+   @note out_lines/out_count are valid only when the function returns CV_HAL_ERROR_OK
+   @sa HoughLinesP
+*/
+inline int hal_ni_houghLinesProbabilistic(const uchar* src_data, size_t src_step, int width, int height,
+                                           float rho, float theta, int threshold,
+                                           int line_length, int line_gap,
+                                           int numangle, int numrho,
+                                           int lines_max, int** out_lines, int* out_count)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Release a buffer returned by cv_hal_houghLines / cv_hal_houghLinesProbabilistic
+   @param lines Buffer previously returned in out_lines
+*/
+inline void hal_ni_houghLinesFree(void* lines)
+{ (void)lines; }
+
+//! @cond IGNORED
+#define cv_hal_houghLines hal_ni_houghLines
+#define cv_hal_houghLinesProbabilistic hal_ni_houghLinesProbabilistic
+#define cv_hal_houghLinesFree hal_ni_houghLinesFree
+//! @endcond
+
+/**
    @brief Calculates a histogram of a set of arrays
    @param src_data Source imgage data
    @param src_step Source image step
@@ -1603,6 +1692,97 @@ inline int hal_ni_matchTemplate(const uchar* src_data, size_t src_step, int src_
 
 //! @cond IGNORED
 #define cv_hal_matchTemplate hal_ni_matchTemplate
+//! @endcond
+
+/**
+   @brief Adds an image to the accumulator image: dst += src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulate(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Adds the square of an image to the accumulator image: dst += src*src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulateSquare(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Adds the per-element product of two images to the accumulator image: dst += src1*src2
+   @param src1_data First source image data
+   @param src1_step First source image step
+   @param src2_data Second source image data
+   @param src2_step Second source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source images (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+*/
+inline int hal_ni_accumulateProduct(const uchar* src1_data, size_t src1_step, const uchar* src2_data, size_t src2_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Updates a running weighted average: dst = (1-alpha)*dst + alpha*src
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Accumulator image data
+   @param dst_step Accumulator image step
+   @param mask_data Optional operation mask data (NULL if no mask)
+   @param mask_step Optional operation mask step
+   @param width Source image width
+   @param height Source image height
+   @param src_type Type of the source image (depth + channels)
+   @param dst_type Type of the accumulator image (32F or 64F destination depth)
+   @param alpha Weight of the input image
+*/
+inline int hal_ni_accumulateWeighted(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, const uchar* mask_data, size_t mask_step, int width, int height, int src_type, int dst_type, double alpha) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_accumulate hal_ni_accumulate
+#define cv_hal_accumulateSquare hal_ni_accumulateSquare
+#define cv_hal_accumulateProduct hal_ni_accumulateProduct
+#define cv_hal_accumulateWeighted hal_ni_accumulateWeighted
+//! @endcond
+
+/**
+   @brief Harris corner response for each pixel of a single-channel image
+   @param src_data Source image (8-bit or 32-bit float single-channel) data
+   @param src_step Source image step
+   @param src_type Type of the source image (CV_8UC1 or CV_32FC1)
+   @param dst_data Destination image (32-bit float single-channel) data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param block_size Neighborhood size
+   @param ksize Aperture size for the Sobel operator
+   @param k Harris detector free parameter
+   @param border_type Pixel extrapolation method (may carry BORDER_ISOLATED)
+   @param is_submatrix Whether the source is a submatrix of a larger image
+*/
+inline int hal_ni_cornerHarris(const uchar* src_data, size_t src_step, int src_type, uchar* dst_data, size_t dst_step, int width, int height, int block_size, int ksize, double k, int border_type, bool is_submatrix) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_cornerHarris hal_ni_cornerHarris
 //! @endcond
 
 //! @}

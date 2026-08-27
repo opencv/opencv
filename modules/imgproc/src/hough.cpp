@@ -145,31 +145,19 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
     int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
 
-#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
-    if (type == CV_32FC2 && CV_IPP_CHECK_COND)
+    if (type == CV_32FC2)
     {
-        IppiSize srcSize = { width, height };
-        IppPointPolar delta = { rho, theta };
-        IppPointPolar dstRoi[2] = {{(Ipp32f) min_rho, (Ipp32f) min_theta},{(Ipp32f) max_rho, (Ipp32f) max_theta}};
-        int bufferSize;
-        int nz = countNonZero(img);
-        int ipp_linesMax = std::min(linesMax, nz*numangle/threshold);
-        int linesCount = 0;
-        std::vector<Vec2f> _lines(ipp_linesMax);
-        IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
-        Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
-        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughLine_Region_8u32f_C1R, image, step, srcSize, (IppPointPolar*) &_lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);};
-        ippsFree(buffer);
-        if (ok >= 0)
+        float* hough_lines = NULL;
+        int hough_count = 0;
+        int res = cv_hal_houghLines(image, step, width, height, rho, theta, threshold, numangle,
+                                    min_theta, max_theta, linesMax, &hough_lines, &hough_count);
+        if (res == CV_HAL_ERROR_OK)
         {
-            lines.create(linesCount, 1, CV_32FC2);
-            Mat(linesCount, 1, CV_32FC2, &_lines[0]).copyTo(lines);
-            CV_IMPL_ADD(CV_IMPL_IPP);
+            Mat(hough_count, 1, CV_32FC2, hough_lines).copyTo(lines);
+            cv_hal_houghLinesFree(hough_lines);
             return;
         }
-        setIppErrorStatus();
     }
-#endif
 
 
     Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
@@ -555,34 +543,20 @@ HoughLinesProbabilistic( Mat& image,
     int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
-    CV_IPP_CHECK()
     {
-        IppiSize srcSize = { width, height };
-        IppPointPolar delta = { rho, theta };
-        IppiHoughProbSpec* pSpec;
-        int bufferSize, specSize;
-        int ipp_linesMax = std::min(linesMax, numangle*numrho);
-        int linesCount = 0;
-        lines.resize(ipp_linesMax);
-        IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
-        Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
-        pSpec = (IppiHoughProbSpec*) ippsMalloc_8u_L(specSize);
-        if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
-        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughProbLine_8u32f_C1R, image.data, (int)image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);};
-
-        ippsFree(pSpec);
-        ippsFree(buffer);
-        if (ok >= 0)
+        int* hough_lines = NULL;
+        int hough_count = 0;
+        int res = cv_hal_houghLinesProbabilistic(image.data, image.step, width, height, rho, theta,
+                                                 threshold, lineLength, lineGap, numangle, numrho,
+                                                 linesMax, &hough_lines, &hough_count);
+        if (res == CV_HAL_ERROR_OK)
         {
-            lines.resize(linesCount);
-            CV_IMPL_ADD(CV_IMPL_IPP);
+            lines.assign((Vec4i*)hough_lines, (Vec4i*)hough_lines + hough_count);
+            cv_hal_houghLinesFree(hough_lines);
             return;
         }
         lines.clear();
-        setIppErrorStatus();
     }
-#endif
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
