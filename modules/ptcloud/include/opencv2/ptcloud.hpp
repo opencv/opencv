@@ -81,7 +81,7 @@ enum GaussianSplatLayout
  * of this list to cv::loadGaussianSplats to read a scene whose exporter spells the properties
  * differently, keeping the same order.
  */
-CV_EXPORTS_W std::vector<String> getGaussianSplatPlyProperties();
+CV_EXPORTS_W std::vector<String> getGaussianSplatPlyPropNames();
 
 /** @brief Decodes 3D Gaussian Splatting attributes into a renderable scene.
  *
@@ -93,27 +93,27 @@ CV_EXPORTS_W std::vector<String> getGaussianSplatPlyProperties();
  * on a platform without filesystem access.
  *
  * @param attributes CV_32F matrix with one row per Gaussian and one column per name of
- * cv::getGaussianSplatPlyProperties, in that order.
+ * cv::getGaussianSplatPlyPropNames, in that order.
  * @param splats Decoded scene, see #GaussianSplatLayout.
  */
 CV_EXPORTS_W void decodeGaussianSplats(InputArray attributes, OutputArray splats);
 
-/** @brief Decodes the contents of a SPLAT file into a renderable scene.
+/** @brief Decodes the contents of a `.splat` file into a renderable scene.
  *
- * SPLAT stores 32 byte records whose values are already activated, so only the covariance is
- * built. The format is headerless, which makes this the in memory counterpart of
- * cv::loadGaussianSplats for platforms without filesystem access, or for scenes shipped as
- * application resources.
+ * A `.splat` file is a headerless array of 32 byte records, one per Gaussian, holding position,
+ * scale, color and rotation. The values are already activated, so only the covariance is built.
+ * Being headerless makes this the in memory counterpart of cv::loadGaussianSplats for platforms
+ * without filesystem access, or for scenes shipped as application resources.
  *
- * @param buf CV_8U buffer holding whole SPLAT records, i.e. the bytes of a SPLAT file.
+ * @param buf CV_8U buffer holding the bytes of a `.splat` file.
  * @param splats Decoded scene, see #GaussianSplatLayout.
  */
 CV_EXPORTS_W void decodeGaussianSplatsPacked(InputArray buf, OutputArray splats);
 
-/** @brief Loads a 3D Gaussian Splatting scene from a PLY or SPLAT file.
+/** @brief Loads a 3D Gaussian Splatting scene from a PLY or `.splat` file.
  *
  * Requires a trained scene, i.e. a PLY whose vertices carry `f_dc_0..2`, `opacity`, `scale_0..2`
- * and `rot_0..3` alongside `x`, `y`, `z`, or a SPLAT file of 32 byte records. Higher order
+ * and `rot_0..3` alongside `x`, `y`, `z`, or a `.splat` file of 32 byte records. Higher order
  * `f_rest_*` harmonics are ignored.
  *
  * The attributes are decoded on load, see cv::decodeGaussianSplats and
@@ -123,7 +123,7 @@ CV_EXPORTS_W void decodeGaussianSplatsPacked(InputArray buf, OutputArray splats)
  * @param splats Decoded scene in the layout cv::viz3d::showGaussianSplats expects, see
  * #GaussianSplatLayout, or empty on failure.
  * @param ply_properties Vertex property names to read from a PLY file, in the column order of
- * cv::getGaussianSplatPlyProperties. Empty selects that default list. Unused for SPLAT files.
+ * cv::getGaussianSplatPlyPropNames. Empty selects that default list. Unused for `.splat` files.
  */
 CV_EXPORTS_W void loadGaussianSplats(const String &filename, OutputArray splats,
                                      const std::vector<String> &ply_properties = std::vector<String>());

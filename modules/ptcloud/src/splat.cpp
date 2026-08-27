@@ -10,7 +10,7 @@
 
 namespace cv {
 
-std::vector<String> getGaussianSplatPlyProperties()
+std::vector<String> getGaussianSplatPlyPropNames()
 {
     return {
         "x", "y", "z",

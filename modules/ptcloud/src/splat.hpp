@@ -24,7 +24,7 @@ namespace splat {
 
 enum
 {
-    // Column order of getGaussianSplatPlyProperties(), which decodeGaussianSplats() reads.
+    // Column order of getGaussianSplatPlyPropNames(), which decodeGaussianSplats() reads.
     RAW_STRIDE = 14,
     RAW_OFS_POS = 0,
     RAW_OFS_DC = 3,

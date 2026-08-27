@@ -104,7 +104,7 @@ void loadGaussianSplats(const String &filename, OutputArray splats,
         decoder.setSource(filename);
 
         const std::vector<String> names =
-            ply_properties.empty() ? getGaussianSplatPlyProperties() : ply_properties;
+            ply_properties.empty() ? getGaussianSplatPlyPropNames() : ply_properties;
 
         Mat raw;
         if (!decoder.readNamedProperties(names, raw))
