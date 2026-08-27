@@ -5,7 +5,6 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 
 #include <limits>
 
