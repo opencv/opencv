@@ -552,6 +552,8 @@ static void maxPoolNchwWithIndices(const _Tp* inp, _Tp* out, int64_t* outIdx,
 class MaxPoolLayerImpl : public MaxPoolLayer
 {
 public:
+    mutable int inpType = -1;
+
     MaxPoolLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
@@ -601,6 +603,8 @@ public:
     {
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
+            if (inpType != CV_32F)
+                return false;
             if (kernel_shape.size() != 2 || outputs.size() != 1)
                 return false;
             for (int d : dilations) if (d != 1) return false;
@@ -665,6 +669,7 @@ public:
         int ninputs = (int)inptypes.size();
         CV_Assert(ninputs == 1);
 
+        inpType = inptypes[0];
         outtypes.clear();
         outtypes.push_back(inferType(inptypes[0]));
         if (outputs.size() == 2u)

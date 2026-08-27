@@ -52,6 +52,8 @@ bool constC(LayerGemmOpMode mode){
 // Y = alpha * A’ * B’ + beta * C
 class GemmLayerImpl CV_FINAL : public GemmLayer {
 public:
+    mutable int inpType = -1;
+
     GemmLayerImpl(const LayerParams& params) {
         setParamsFrom(params);
 
@@ -71,10 +73,25 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a) ||
+               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && inpType == CV_32F) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
+    }
+
+    virtual void getTypes(const std::vector<MatType>& inputs,
+                          const int requiredOutputs,
+                          const int requiredInternals,
+                          std::vector<MatType>& outputs,
+                          std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            CV_CheckType(input, input == CV_32F || input == CV_64F, "");
+
+        inpType = inputs[0];
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
     }
 
 
