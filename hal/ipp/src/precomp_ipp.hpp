@@ -120,4 +120,30 @@ static inline int ippiSuggestRowThreadsNum(const ::ipp::IwiImage &image, size_t 
 }
 #endif
 
+#if IPP_VERSION_X100 >= 201700
+#define CV_IPP_MALLOC(SIZE) ippMalloc_L(SIZE)
+#else
+#define CV_IPP_MALLOC(SIZE) ippMalloc((int)SIZE)
+#endif
+
+template<typename T>
+class IppAutoBuffer
+{
+public:
+    IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
+    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    ~IppAutoBuffer() { deallocate(); }
+    T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
+    void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
+    inline T* get() { return (T*)m_pBuffer;}
+    inline operator T* () { return (T*)m_pBuffer;}
+    inline operator const T* () const { return (const T*)m_pBuffer;}
+private:
+    IppAutoBuffer(IppAutoBuffer &) {}
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;}
+
+    size_t m_size;
+    T*     m_pBuffer;
+};
+
 #endif //__PRECOMP_IPP_HPP__
