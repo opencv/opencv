@@ -40,7 +40,6 @@ struct ConstFolding
         CV_Assert(usecounts[inp.idx] > 0);
         if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
             UMat& t = netimpl->__tensors__[inp.idx];
-            // a live Mat view (UMat::getMat() bumps refcount, not urefcount) must outlive the UMat
             if (!t.u || t.u->refcount == 0)
                 t.release(); // deallocate unused tensor
         }

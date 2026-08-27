@@ -280,8 +280,7 @@ struct ModelFusionAttention
         if (netimpl->isConstArg(shape_arg)) {
             Mat shape_mat = netimpl->argTensor(shape_arg).getMat(ACCESS_READ);
             if (shape_mat.total() != 4) return -1;
-            const int64_t* shape_data = shape_mat.ptr<int64_t>();
-            num_heads = static_cast<int>(shape_data[2]);
+            num_heads = shape_mat.at<int64_t>(2);
         } else {
             auto it = producer_.find(shape_arg.idx);
             if (it == producer_.end()) return -1;

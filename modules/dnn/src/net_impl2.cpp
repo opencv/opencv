@@ -613,6 +613,7 @@ void Net::Impl::prepareForInference()
 #endif
 
     if (!prepared) {
+<<<<<<< HEAD
         widenHalfConstants();
 #if CV_SIMD_SCALABLE
         // RVV (#28852): keep quantized graphs at C0=8. The int8 kernels are hardwired to
@@ -624,6 +625,19 @@ void Net::Impl::prepareForInference()
             if (a.type == CV_8S) { defaultC0 = 8; break; }
         }
 #endif
+||||||| parent of 3475d534ce (resolved the comments)
+#if CV_SIMD_SCALABLE
+        // RVV (#28852): keep quantized graphs at C0=8. The int8 kernels are hardwired to
+        // C0=8 (VNNI/NEON weight packing + per-channel quantization) and run scalar on RVV,
+        // so a wider block gives no benefit and breaks them. Only fp32 graphs use the wider
+        // vlanes()-based defaultC0. Signed-int8 (CV_8S) args are the quantization signature
+        // (uint8 image inputs are CV_8U, so they don't trigger this).
+        for (const ArgData& a : args) {
+            if (a.type == CV_8S) { defaultC0 = 8; break; }
+        }
+#endif
+=======
+>>>>>>> 3475d534ce (resolved the comments)
         fuseQDQ();
         constFold();
         fuseBN();
