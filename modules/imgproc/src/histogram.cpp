@@ -2122,7 +2122,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         size_t total = H1.total();
         double scale = 1./total;
         double num = s12 - s1*s2*scale;
-        double denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
+        double var1 = std::max(0., s11 - s1*s1*scale);
+        double var2 = std::max(0., s22 - s2*s2*scale);
+        double denom2 = var1*var2;
         result = std::abs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1.;
     }
     else if( method == CV_COMP_BHATTACHARYYA )
