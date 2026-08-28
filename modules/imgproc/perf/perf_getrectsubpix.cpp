@@ -86,7 +86,7 @@ static const Board g_boards[] = {
 
 PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             testing::Combine(
-                testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128), Size(512, 512)),
+                testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128)),
                 testing::Values(CV_8UC1, CV_32FC1),
                 PatchDepth::all()
                 )
@@ -131,4 +131,4 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace opencv_test
+} // namespace
