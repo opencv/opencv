@@ -86,7 +86,7 @@ static const Board g_boards[] = {
 
 PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             testing::Combine(
-                testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128)),
+                testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128), Size(512, 512)),
                 testing::Values(CV_8UC1, CV_32FC1),
                 PatchDepth::all()
                 )
@@ -127,44 +127,8 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             for (int i = 0; i < g_boards[b].ncorners; i++)
                 getRectSubPix(srcs[b], patchSize, g_boards[b].corners[i], patch, patchType);
     }
-// Copyright (C) 2026, Intel Corporation, all rights reserved.
-#include "perf_precomp.hpp"
-
-namespace opencv_test
-{
-using namespace perf;
-
-#define GETRECTSUBPIX_TYPES CV_8UC1, CV_32FC1
-
-typedef tuple<Size, MatType, MatType> Size_SrcType_DstType_t;
-typedef perf::TestBaseWithParam<Size_SrcType_DstType_t> Size_SrcType_DstType;
-
-PERF_TEST_P(Size_SrcType_DstType, getRectSubPix,
-            testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p),
-                testing::Values(GETRECTSUBPIX_TYPES),
-                testing::Values(GETRECTSUBPIX_TYPES)
-                ))
-{
-    Size sz      = get<0>(GetParam());
-    int  srcType = get<1>(GetParam());
-    int  dstType = get<2>(GetParam());
-
-    // getRectSubPix does not support a lower-depth output than the input
-    if (CV_MAT_DEPTH(dstType) < CV_MAT_DEPTH(srcType))
-        throw ::perf::TestBase::PerfSkipTestException();
-
-    Size    rectSize(std::min(800, sz.width), std::min(600, sz.height));
-    Point2f rectCenter(100.33f, 100.77f);
-
-    Mat src(sz, srcType);
-    Mat dst(rectSize, dstType);
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    TEST_CYCLE() cv::getRectSubPix(src, rectSize, rectCenter, dst, dstType);
 
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace
+} // namespace opencv_test
