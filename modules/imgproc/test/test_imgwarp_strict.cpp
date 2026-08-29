@@ -1079,6 +1079,10 @@ void CV_WarpAffine_Test::generate_test_data()
     // warp_matrix is inverse
     if (rng.uniform(0., 1.) > 0)
         interpolation |= cv::WARP_INVERSE_MAP;
+
+    // base sets only REPLICATE and REFLECT while want to test TRANSPARENT as well
+    static const int borderTypes[] = { BORDER_REPLICATE, BORDER_REFLECT, BORDER_TRANSPARENT };
+    borderType = borderTypes[rng.uniform(0, sizeof(borderTypes) / sizeof(borderTypes[0]))];
 }
 
 void CV_WarpAffine_Test::run_func()
@@ -1201,6 +1205,11 @@ void CV_WarpPerspective_Test::generate_test_data()
     static const int depths[] = { CV_32F, CV_64F };
     int depth = depths[rng.uniform(0, 2)];
     M.clone().convertTo(M, depth);
+
+    // BUG: https://github.com/opencv/opencv/issues/29816
+    // BORDER_REPLICATE disabled due to KleidiCV accuracy issue on ARM
+    static const int borderTypes[] = { /*BORDER_REPLICATE,*/ BORDER_REFLECT, BORDER_TRANSPARENT };
+    borderType = borderTypes[rng.uniform(0, sizeof(borderTypes) / sizeof(borderTypes[0]))];
 }
 
 void CV_WarpPerspective_Test::run_func()
