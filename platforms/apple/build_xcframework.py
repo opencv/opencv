@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-This script builds OpenCV into an xcframework compatible with the platforms
-of your choice. Just run it and grab a snack; you'll be waiting a while.
-"""
 
 import sys, os, argparse, pathlib, traceback, contextlib, shutil
 from cv_build_utils import execute, print_error, print_header, get_xcode_version, get_cmake_version
