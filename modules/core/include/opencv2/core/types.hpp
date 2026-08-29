@@ -2012,9 +2012,9 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
         a = Rect_<_Tp>();
         return a;
     }
-    
-    // if the difference of Rx_min and Rx_max is larger than width,
-    // it's impossible for them to overlap
+
+    // If the delta between x/y coordinates exceeds the corresponding width/height,
+    // the rectangles cannot overlap and `width - delta` would underflow for unsigned types.
     if (Rx_min.width < (Rx_max.x - Rx_min.x) ||
         Ry_min.height < (Ry_max.y - Ry_min.y)) {
         a = Rect_<_Tp>();
