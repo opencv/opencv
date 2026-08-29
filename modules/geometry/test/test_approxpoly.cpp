@@ -113,7 +113,7 @@ TEST(Geometry_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
-TEST(Geometry_ApproxPoly, distace_between_point_and_segment)
+TEST(Geometry_ApproxPoly, distance_between_point_and_segment)
 {
     vector<Point2f> inputPoints = {
         { {0.f, 0.f}, {4.f, 2.f}, {11.f, 1.f}, {8.f, 0.f} }
