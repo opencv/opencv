@@ -1171,11 +1171,39 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
 }
 
+// Source index sampled for output position i under INTER_NEAREST_EXACT.
+//
+// The sample sits at the centre of the destination pixel, (i + 0.5)*src/dst in
+// source coordinates, and the source pixel containing it is the one taken.
+// Evaluating that as a single exact integer division keeps each position
+// independent of the others. The previous code instead rounded src/dst into a
+// 16.16 fixed-point step and multiplied it by i, so the rounding error grew
+// along the axis: a 10 -> 1920 upscale placed 91 of its 100 blocks one pixel
+// off. Past roughly a 65536x upscale the step rounded to zero and the offset
+// went negative, and the resize then read in front of the row.
+//
+// A centre that lands exactly on a pixel boundary is a tie, resolved downwards
+// when the source length is odd - the convention the fixed-point code carried as
+// its -(src_len % 2) term. Pillow and scikit-image, which this mode is
+// documented to agree with, settle those ties in floating point and so cannot be
+// matched by any integer rule; every unambiguous position now agrees with them.
+//
+// See https://github.com/opencv/opencv/issues/27191
+static inline int resizeNN_bitexactIndex( int i, int src_len, int dst_len )
+{
+    const int64_t num = (int64_t)src_len * (2*(int64_t)i + 1);
+    const int64_t den = (int64_t)dst_len * 2;
+    int64_t s = num / den;
+    if( (src_len & 1) && num % den == 0 )
+        s--;
+    return (int)s;
+}
+
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse)
+        : src(_src), dst(_dst), x_ofse(_x_ofse) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -1184,7 +1212,7 @@ public:
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int _sy = (ify * y + ify0) >> 16;
+            int _sy = resizeNN_bitexactIndex(y, ssize.height, dsize.height);
             int sy = std::min(_sy, ssize.height-1);
             const uchar* S = src.ptr(sy);
 
@@ -1260,17 +1288,11 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int ify;
-    const int ify0;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
@@ -1279,11 +1301,11 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
 
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
+        int sx = resizeNN_bitexactIndex(x, ssize.width, dsize.width);
         x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
     }
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 

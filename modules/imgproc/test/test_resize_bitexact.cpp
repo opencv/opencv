@@ -240,4 +240,65 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/27191
+//
+// An integer scale factor leaves no room for interpretation: every source pixel
+// must become a solid k x k block. The index used to be built from a 16.16
+// fixed-point step multiplied by the destination coordinate, so the rounding
+// error in that step accumulated along the axis and eventually crossed a whole
+// source pixel - a 10 -> 1920 upscale placed 91 of its 100 blocks one off.
+TEST(Resize_Bitexact, Nearest8U_integerScale_27191)
+{
+    for (int srcLen : {1, 2, 3, 5, 8, 10, 17})
+    {
+        Mat src(srcLen, srcLen, CV_8UC1);
+        for (int y = 0; y < srcLen; y++)
+            for (int x = 0; x < srcLen; x++)
+                src.at<uchar>(y, x) = (uchar)((y*srcLen + x) & 0xFF);
+
+        for (int k : {2, 3, 7, 64, 192, 257})
+        {
+            Mat calc;
+            resize(src, calc, Size(srcLen*k, srcLen*k), 0, 0, INTER_NEAREST_EXACT);
+
+            Mat expected(srcLen*k, srcLen*k, CV_8UC1);
+            for (int y = 0; y < srcLen*k; y++)
+                for (int x = 0; x < srcLen*k; x++)
+                    expected.at<uchar>(y, x) = src.at<uchar>(y/k, x/k);
+
+            EXPECT_EQ(cvtest::norm(calc, expected, cv::NORM_INF), 0)
+                << "source " << srcLen << "x" << srcLen << " scaled by " << k;
+        }
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/27191
+//
+// Beyond roughly a 65536x upscale the fixed-point step rounded down to zero and
+// the starting offset went negative, so every column resolved to source index -1
+// and the resize read in front of the row. A one pixel wide source stretched
+// that far has to come back as that one pixel.
+TEST(Resize_Bitexact, Nearest8U_extremeUpscale_27191)
+{
+    for (int dstWidth : {66000, 100000, 200000})
+    {
+        Mat src(1, 1, CV_8UC1, Scalar(200));
+        Mat calc;
+        resize(src, calc, Size(dstWidth, 1), 0, 0, INTER_NEAREST_EXACT);
+
+        double lo = 0, hi = 0;
+        cv::minMaxLoc(calc, &lo, &hi);
+        EXPECT_EQ(lo, 200.0) << "width " << dstWidth;
+        EXPECT_EQ(hi, 200.0) << "width " << dstWidth;
+    }
+
+    // and the same along the other axis
+    Mat src(1, 1, CV_8UC1, Scalar(37)), calc;
+    resize(src, calc, Size(1, 100000), 0, 0, INTER_NEAREST_EXACT);
+    double lo = 0, hi = 0;
+    cv::minMaxLoc(calc, &lo, &hi);
+    EXPECT_EQ(lo, 37.0);
+    EXPECT_EQ(hi, 37.0);
+}
+
 }} // namespace
