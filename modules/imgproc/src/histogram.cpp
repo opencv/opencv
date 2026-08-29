@@ -1877,17 +1877,14 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
 
 ////////////////// C O M P A R E   H I S T O G R A M S ////////////////////////
 
-// Finish a HISTCMP_CORREL comparison from the accumulated sums.
-//
-// The two variance terms are mathematically non-negative, but they are evaluated
-// as the difference of two large and nearly equal sums. When the histograms hold
-// large values that vary little, that subtraction is dominated by rounding error
-// and can come out negative, which used to leave the result NaN (square root of a
-// negative denominator), sign-flipped, or outside the [-1, 1] range a correlation
-// coefficient is defined on. Clamping the variances keeps the denominator real,
-// and clamping the quotient keeps the result in range; together they also make
-// comparing a histogram with itself yield exactly 1. See
-// https://github.com/opencv/opencv/issues/29706
+// Finish a HISTCMP_CORREL comparison from the accumulated sums, for the sparse
+// inputs. A sparse histogram is dominated by empty bins, so its variance is large
+// next to its mean and the cancellation that ruins the dense case (see
+// compareHistCorrel below) does not arise; the plain form is kept here because
+// centring it would mean visiting the implicit zeros as well. The variances are
+// still clamped: they are mathematically non-negative, and letting rounding push
+// one below zero would leave the result NaN or sign-flipped rather than merely
+// imprecise. See https://github.com/opencv/opencv/issues/29706
 static double finalizeCorrel( double s1, double s11, double s2, double s22, double s12, size_t total )
 {
     double scale = 1./total;
@@ -1897,6 +1894,111 @@ static double finalizeCorrel( double s1, double s11, double s2, double s22, doub
     double denom2 = var1*var2;
     return denom2 > DBL_EPSILON ? std::min(std::max(num/std::sqrt(denom2), -1.), 1.) : 1.;
 }
+
+namespace cv {
+
+// HISTCMP_CORREL, accumulated about an assumed mean.
+//
+// The textbook "computational" form - sum(a*a) - sum(a)^2/n for a variance, and
+// the matching expression for the covariance - subtracts two large and nearly
+// equal quantities. Its relative error grows in proportion to mean^2/variance, so
+// a histogram whose values vary little about a large mean loses roughly two
+// decimal digits for every decade of relative spread: at a spread of 1e-7 barely
+// one correct digit survives. Worse, once the rounding error swamps the true
+// variance that term can come out negative, which left the comparison NaN (the
+// denominator is the product of the two variances and its square root is taken),
+// sign-flipped, or outside the [-1, 1] range a correlation coefficient is defined
+// on - so comparing a histogram with itself could return -1.
+//
+// Shifting each histogram by an assumed mean before accumulating (Chan, Golub &
+// LeVeque, 1983) makes the sums proportional to the spread instead of to the mean
+// squared, which removes the cancellation without a second pass over the data.
+// The first bin serves as the estimate; it only has to be close enough that the
+// residuals are comparable to the spread, and even a poor choice leaves the
+// conditioning bounded by the bin count rather than by the mean.
+//
+// See https://github.com/opencv/opencv/issues/29706
+static double compareHistCorrel( const Mat& H1, const Mat& H2 )
+{
+    const Mat* arrays[] = {&H1, &H2, 0};
+    Mat planes[2];
+
+    const double total = (double)H1.total()*H1.channels();
+    if( !(total > 0) )
+        return 1.;
+
+    NAryMatIterator it(arrays, planes);
+    if( it.nplanes == 0 )
+        return 1.;
+
+    // Assumed means: the first bin of each histogram. Accumulating about them keeps
+    // the sums proportional to the spread rather than to the mean squared.
+    const double K1 = it.planes[0].ptr<float>()[0];
+    const double K2 = it.planes[1].ptr<float>()[0];
+
+    double d1 = 0, d2 = 0, q11 = 0, q22 = 0, q12 = 0;
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        const float* h1 = it.planes[0].ptr<float>();
+        const float* h2 = it.planes[1].ptr<float>();
+        const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
+        int j = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        v_float64 v_K1 = vx_setall_f64(K1);
+        v_float64 v_K2 = vx_setall_f64(K2);
+        v_float64 v_d1 = vx_setzero_f64();
+        v_float64 v_d2 = vx_setzero_f64();
+        v_float64 v_q11 = vx_setzero_f64();
+        v_float64 v_q22 = vx_setzero_f64();
+        v_float64 v_q12 = vx_setzero_f64();
+        for( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes() )
+        {
+            v_float32 v_a = vx_load(h1 + j);
+            v_float32 v_b = vx_load(h2 + j);
+
+            // 0-1
+            v_float64 v_u = v_sub(v_cvt_f64(v_a), v_K1);
+            v_float64 v_v = v_sub(v_cvt_f64(v_b), v_K2);
+            v_d1 = v_add(v_d1, v_u);
+            v_d2 = v_add(v_d2, v_v);
+            v_q12 = v_muladd(v_u, v_v, v_q12);
+            v_q11 = v_muladd(v_u, v_u, v_q11);
+            v_q22 = v_muladd(v_v, v_v, v_q22);
+
+            // 2-3
+            v_u = v_sub(v_cvt_f64_high(v_a), v_K1);
+            v_v = v_sub(v_cvt_f64_high(v_b), v_K2);
+            v_d1 = v_add(v_d1, v_u);
+            v_d2 = v_add(v_d2, v_v);
+            v_q12 = v_muladd(v_u, v_v, v_q12);
+            v_q11 = v_muladd(v_u, v_u, v_q11);
+            v_q22 = v_muladd(v_v, v_v, v_q22);
+        }
+        d1 += v_reduce_sum(v_d1);
+        d2 += v_reduce_sum(v_d2);
+        q11 += v_reduce_sum(v_q11);
+        q22 += v_reduce_sum(v_q22);
+        q12 += v_reduce_sum(v_q12);
+#endif
+        for( ; j < len; j++ )
+        {
+            double u = h1[j] - K1, v = h2[j] - K2;
+            d1 += u; d2 += v;
+            q12 += u*v; q11 += u*u; q22 += v*v;
+        }
+    }
+
+    const double cov = q12 - d1*d2/total;
+    const double var1 = std::max(q11 - d1*d1/total, 0.);
+    const double var2 = std::max(q22 - d2*d2/total, 0.);
+
+    const double denom2 = var1*var2;
+    if( !(denom2 > 0) )
+        return 1.;
+    return std::min(std::max(cov/std::sqrt(denom2), -1.), 1.);
+}
+
+} // namespace cv
 
 double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 {
@@ -1911,7 +2013,10 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 
     CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
-    double s1 = 0, s2 = 0, s11 = 0, s12 = 0, s22 = 0;
+    if( method == CV_COMP_CORREL )
+        return compareHistCorrel(H1, H2);
+
+    double s1 = 0, s2 = 0;
 
     CV_Assert( it.planes[0].isContinuous() && it.planes[1].isContinuous() );
 
@@ -1970,77 +2075,6 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 double b = (method == CV_COMP_CHISQR) ? h1[j] : h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
                     result += a*a/b;
-            }
-        }
-        else if( method == CV_COMP_CORREL )
-        {
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-            v_float64 v_s1 = vx_setzero_f64();
-            v_float64 v_s2 = vx_setzero_f64();
-            v_float64 v_s11 = vx_setzero_f64();
-            v_float64 v_s12 = vx_setzero_f64();
-            v_float64 v_s22 = vx_setzero_f64();
-            for ( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
-            {
-                v_float32 v_a = vx_load(h1 + j);
-                v_float32 v_b = vx_load(h2 + j);
-
-                // 0-1
-                v_float64 v_ad = v_cvt_f64(v_a);
-                v_float64 v_bd = v_cvt_f64(v_b);
-                v_s12 = v_muladd(v_ad, v_bd, v_s12);
-                v_s11 = v_muladd(v_ad, v_ad, v_s11);
-                v_s22 = v_muladd(v_bd, v_bd, v_s22);
-                v_s1 = v_add(v_s1, v_ad);
-                v_s2 = v_add(v_s2, v_bd);
-
-                // 2-3
-                v_ad = v_cvt_f64_high(v_a);
-                v_bd = v_cvt_f64_high(v_b);
-                v_s12 = v_muladd(v_ad, v_bd, v_s12);
-                v_s11 = v_muladd(v_ad, v_ad, v_s11);
-                v_s22 = v_muladd(v_bd, v_bd, v_s22);
-                v_s1 = v_add(v_s1, v_ad);
-                v_s2 = v_add(v_s2, v_bd);
-            }
-            s12 += v_reduce_sum(v_s12);
-            s11 += v_reduce_sum(v_s11);
-            s22 += v_reduce_sum(v_s22);
-            s1 += v_reduce_sum(v_s1);
-            s2 += v_reduce_sum(v_s2);
-#elif CV_SIMD && 0 //Disable vectorization for CV_COMP_CORREL if f64 is unsupported due to low precision
-            v_float32 v_s1 = vx_setzero_f32();
-            v_float32 v_s2 = vx_setzero_f32();
-            v_float32 v_s11 = vx_setzero_f32();
-            v_float32 v_s12 = vx_setzero_f32();
-            v_float32 v_s22 = vx_setzero_f32();
-            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
-            {
-                v_float32 v_a = vx_load(h1 + j);
-                v_float32 v_b = vx_load(h2 + j);
-
-                v_s12 = v_muladd(v_a, v_b, v_s12);
-                v_s11 = v_muladd(v_a, v_a, v_s11);
-                v_s22 = v_muladd(v_b, v_b, v_s22);
-                v_s1 += v_a;
-                v_s2 += v_b;
-            }
-            s12 += v_reduce_sum(v_s12);
-            s11 += v_reduce_sum(v_s11);
-            s22 += v_reduce_sum(v_s22);
-            s1 += v_reduce_sum(v_s1);
-            s2 += v_reduce_sum(v_s2);
-#endif
-            for( ; j < len; j++ )
-            {
-                double a = h1[j];
-                double b = h2[j];
-
-                s12 += a*b;
-                s1 += a;
-                s11 += a*a;
-                s2 += b;
-                s22 += b*b;
             }
         }
         else if( method == CV_COMP_INTERSECT )
@@ -2138,10 +2172,6 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 
     if( method == CV_COMP_CHISQR_ALT )
         result *= 2;
-    else if( method == CV_COMP_CORREL )
-    {
-        result = finalizeCorrel(s1, s11, s2, s22, s12, H1.total());
-    }
     else if( method == CV_COMP_BHATTACHARYYA )
     {
         s1 *= s2;

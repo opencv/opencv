@@ -2165,5 +2165,75 @@ TEST(Imgproc_Hist_Compare, correl_regression_29706)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/29706
+//
+// Accumulating about an assumed mean has to stay accurate where the textbook form
+// loses everything: a histogram varying by one part in a million about a large
+// mean. The reference values come from the exact rational correlation of the same
+// float32 bins, so the tolerance measures the algorithm and not the expectation.
+TEST(Imgproc_Hist_Compare, correl_precision_29706)
+{
+    const int n = 256;
+    cv::RNG rng(0x29706);
+
+    for (double spread : {1e-1, 1e-3, 1e-5, 1e-7})
+    {
+        const double mean = 1e6;
+        cv::Mat h1(n, 1, CV_32FC1), h2(n, 1, CV_32FC1);
+        for (int i = 0; i < n; i++)
+        {
+            h1.at<float>(i, 0) = (float)(mean + mean*spread*rng.gaussian(1.0));
+            h2.at<float>(i, 0) = (float)(mean + mean*spread*rng.gaussian(1.0));
+        }
+
+        // Reference correlation, accumulated about the sample means in long double.
+        long double m1 = 0, m2 = 0;
+        for (int i = 0; i < n; i++) { m1 += h1.at<float>(i,0); m2 += h2.at<float>(i,0); }
+        m1 /= n; m2 /= n;
+        long double cov = 0, v1 = 0, v2 = 0;
+        for (int i = 0; i < n; i++)
+        {
+            long double da = (long double)h1.at<float>(i,0) - m1;
+            long double db = (long double)h2.at<float>(i,0) - m2;
+            cov += da*db; v1 += da*da; v2 += db*db;
+        }
+        const double expected = (double)(cov / std::sqrt(v1*v2));
+        const double got = compareHist(h1, h2, cv::HISTCMP_CORREL);
+
+        EXPECT_NEAR(got, expected, 1e-9)
+            << "relative spread " << spread
+            << " (the single-pass form used to be wrong in the first digit here)";
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/13990
+//
+// A 3-D histogram reaches compareHist from the Python bindings as a 2-D Mat with
+// one channel per plane, so the bin count is total()*channels(). Dividing by
+// total() alone made HISTCMP_CORREL disagree with the same data laid out flat.
+TEST(Imgproc_Hist_Compare, correl_multichannel_13990)
+{
+    const int rows = 64, chans = 8, n = rows*chans;
+    cv::RNG rng(0x13990);
+
+    cv::Mat flat1(n, 1, CV_32FC1), flat2(n, 1, CV_32FC1);
+    rng.fill(flat1, cv::RNG::UNIFORM, 0.f, 1000.f);
+    rng.fill(flat2, cv::RNG::UNIFORM, 0.f, 1000.f);
+
+    // The very same bytes, seen as rows x 1 with `chans` channels.
+    cv::Mat multi1(rows, 1, CV_MAKETYPE(CV_32F, chans), flat1.data);
+    cv::Mat multi2(rows, 1, CV_MAKETYPE(CV_32F, chans), flat2.data);
+
+    const double flatCorrel = compareHist(flat1, flat2, cv::HISTCMP_CORREL);
+    const double multiCorrel = compareHist(multi1, multi2, cv::HISTCMP_CORREL);
+    EXPECT_NEAR(multiCorrel, flatCorrel, 1e-12);
+
+    // Methods that never divide by the bin count already agreed; they must still.
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi2, cv::HISTCMP_INTERSECT),
+                     compareHist(flat1, flat2, cv::HISTCMP_INTERSECT));
+
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi1, cv::HISTCMP_CORREL), 1.0);
+}
+
 }} // namespace
 /* End Of File */
