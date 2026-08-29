@@ -81,12 +81,23 @@ Mat blobFromNPY(const std::string& path)
 
     // Extract data type.
     int matType;
-    if (getType(header) == "<f4")
+    std::string npyType = getType(header);
+    if (npyType == "<f4")
         matType = CV_32F;
-    else if (getType(header) == "<i4")
+    else if (npyType == "<f8")
+        matType = CV_64F;
+    else if (npyType == "<i4")
         matType = CV_32S;
-    else if (getType(header) == "<i8")
+    else if (npyType == "<i8")
         matType = CV_64S;
+    else if (npyType == "<u4")
+        matType = CV_32U;
+    else if (npyType == "<u8")
+        matType = CV_64U;
+    else if (npyType == "|i1")
+        matType = CV_8S;
+    else if (npyType == "|u1")
+        matType = CV_8U;
     else
         CV_Error(Error::BadDepth, "Unsupported numpy type");
 
