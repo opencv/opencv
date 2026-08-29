@@ -1877,6 +1877,27 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
 
 ////////////////// C O M P A R E   H I S T O G R A M S ////////////////////////
 
+// Finish a HISTCMP_CORREL comparison from the accumulated sums.
+//
+// The two variance terms are mathematically non-negative, but they are evaluated
+// as the difference of two large and nearly equal sums. When the histograms hold
+// large values that vary little, that subtraction is dominated by rounding error
+// and can come out negative, which used to leave the result NaN (square root of a
+// negative denominator), sign-flipped, or outside the [-1, 1] range a correlation
+// coefficient is defined on. Clamping the variances keeps the denominator real,
+// and clamping the quotient keeps the result in range; together they also make
+// comparing a histogram with itself yield exactly 1. See
+// https://github.com/opencv/opencv/issues/29706
+static double finalizeCorrel( double s1, double s11, double s2, double s22, double s12, size_t total )
+{
+    double scale = 1./total;
+    double num = s12 - s1*s2*scale;
+    double var1 = std::max(s11 - s1*s1*scale, 0.);
+    double var2 = std::max(s22 - s2*s2*scale, 0.);
+    double denom2 = var1*var2;
+    return denom2 > DBL_EPSILON ? std::min(std::max(num/std::sqrt(denom2), -1.), 1.) : 1.;
+}
+
 double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 {
     CV_INSTRUMENT_REGION();
@@ -2119,11 +2140,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         result *= 2;
     else if( method == CV_COMP_CORREL )
     {
-        size_t total = H1.total();
-        double scale = 1./total;
-        double num = s12 - s1*s2*scale;
-        double denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
-        result = std::abs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1.;
+        result = finalizeCorrel(s1, s11, s2, s22, s12, H1.total());
     }
     else if( method == CV_COMP_BHATTACHARYYA )
     {
@@ -2195,10 +2212,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         size_t total = 1;
         for( i = 0; i < H1.dims(); i++ )
             total *= H1.size(i);
-        double scale = 1./total;
-        double num = s12 - s1*s2*scale;
-        double denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
-        result = std::abs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1.;
+        result = finalizeCorrel(s1, s11, s2, s22, s12, total);
     }
     else if( method == CV_COMP_INTERSECT )
     {
@@ -2620,7 +2634,6 @@ cvCompareHist( const CvHistogram* hist1,
         double s1 = 0, s11 = 0;
         double s2 = 0, s22 = 0;
         double s12 = 0;
-        double num, denom2, scale = 1./total;
 
         for( node1 = cvInitSparseMatIterator( mat1, &iterator );
              node1 != 0; node1 = cvGetNextSparseNode( &iterator ))
@@ -2645,9 +2658,7 @@ cvCompareHist( const CvHistogram* hist1,
             s22 += v2*v2;
         }
 
-        num = s12 - s1*s2*scale;
-        denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
-        result = fabs(denom2) > DBL_EPSILON ? num/sqrt(denom2) : 1;
+        result = finalizeCorrel(s1, s11, s2, s22, s12, (size_t)total);
     }
     else if( method == CV_COMP_INTERSECT )
     {

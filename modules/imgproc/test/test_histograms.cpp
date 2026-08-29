@@ -2111,5 +2111,59 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
     EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
 
+// See https://github.com/opencv/opencv/issues/29706
+//
+// The HISTCMP_CORREL variance terms are computed as the difference of two large,
+// nearly equal sums. For histograms holding large values that vary little, that
+// subtraction is lost to rounding and can go negative, which made the comparison
+// return -1, NaN, or a value outside [-1, 1].
+TEST(Imgproc_Hist_Compare, correl_regression_29706)
+{
+    // 2^24-1 is the largest float where both it and its successor are exact, so
+    // the histograms below hold their values without any input rounding while the
+    // sums of squares are large enough to swamp the true variance.
+    const float base = 16777215.f;
+
+    // A histogram is perfectly correlated with itself, whatever it holds.
+    for (int n : {4, 10, 100, 256})
+    {
+        cv::Mat flat(n, 1, CV_32FC1, cv::Scalar(base));
+        EXPECT_DOUBLE_EQ(compareHist(flat, flat, cv::HISTCMP_CORREL), 1.0)
+            << "constant histogram of " << n << " bins";
+
+        cv::Mat almost = flat.clone();
+        almost.at<float>(n / 2, 0) = base + 1.f;
+        EXPECT_DOUBLE_EQ(compareHist(almost, almost, cv::HISTCMP_CORREL), 1.0)
+            << "near-constant histogram of " << n << " bins";
+    }
+
+    // Comparing two different near-constant histograms must still land inside the
+    // range a correlation coefficient is defined on, and must never be NaN.
+    for (int n = 2; n <= 64; n++)
+    {
+        for (int shifted = 0; shifted < n; shifted++)
+        {
+            cv::Mat h1(n, 1, CV_32FC1, cv::Scalar(base));
+            cv::Mat h2 = h1.clone();
+            h1.at<float>(shifted, 0) = base + 1.f;
+
+            const double r = compareHist(h1, h2, cv::HISTCMP_CORREL);
+            ASSERT_FALSE(cvIsNaN(r)) << "n=" << n << " shifted=" << shifted;
+            ASSERT_LE(r, 1.0) << "n=" << n << " shifted=" << shifted;
+            ASSERT_GE(r, -1.0) << "n=" << n << " shifted=" << shifted;
+        }
+    }
+
+    // The sparse overload shares the same computation.
+    {
+        const int n = 100;
+        int dims[] = { n };
+        cv::SparseMat sparse(1, dims, CV_32F);
+        for (int i = 0; i < n; i++)
+            sparse.ref<float>(i) = base;
+        EXPECT_DOUBLE_EQ(compareHist(sparse, sparse, cv::HISTCMP_CORREL), 1.0);
+    }
+}
+
 }} // namespace
 /* End Of File */
