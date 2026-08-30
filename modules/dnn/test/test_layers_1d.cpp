@@ -1659,5 +1659,30 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
     std::make_tuple(std::vector<int>({4, 4}), std::vector<int>({4, 4}), "ij,ij->i")
     ));
 
+TEST(Layer_Einsum, DynamicLeadingDimensionReusesLayer)
+{
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "dynamic_leading_dimension";
+    lp.set("equation", "mc,mchw->mhw");
+    Ptr<Layer> layer = EinsumLayer::create(lp);
+
+    const int channels = 3, height = 2, width = 2;
+    const int leadingDimensions[] = {2, 5, 2};
+    for (const int leadingDimension : leadingDimensions)
+    {
+        Mat coefficients(MatShape{leadingDimension, channels}, CV_32F, Scalar::all(1));
+        Mat features(MatShape{leadingDimension, channels, height, width}, CV_32F, Scalar::all(2));
+        std::vector<Mat> inputs{coefficients, features}, outputs;
+
+        runLayer(layer, inputs, outputs);
+
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        EXPECT_EQ(shape(outputs[0]), MatShape({leadingDimension, height, width}));
+        Mat expected(MatShape{leadingDimension, height, width}, CV_32F, Scalar::all(6));
+        normAssert(outputs[0], expected);
+    }
+}
+
 
 }}
