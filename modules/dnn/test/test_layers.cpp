@@ -289,6 +289,88 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
+static Mat runGatherElementsLayer(const Mat& data, const Mat& indices, int axis)
+{
+    LayerParams params;
+    params.set("axis", axis);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("GatherElements", params);
+
+    std::vector<Mat> inputs{data.clone(), indices.clone()};
+    std::vector<MatShape> inputShapes{shape(inputs[0]), shape(inputs[1])};
+    std::vector<MatShape> outputShapes, internalShapes;
+    layer->getMemoryShapes(inputShapes, 0, outputShapes, internalShapes);
+
+    CV_Assert(outputShapes.size() == 1);
+    std::vector<Mat> outputs{Mat(outputShapes[0], data.type())};
+    std::vector<Mat> internals;
+    for (size_t i = 0; i < internalShapes.size(); ++i)
+        internals.push_back(Mat(internalShapes[i], data.type()));
+
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+    return outputs[0];
+}
+
+TEST(Layer_Test_GatherElements, SmallerNonAxisDimensionsNonInnermostAxis)
+{
+    Mat data({2, 4, 3}, CV_32S);
+    int32_t* dataPtr = data.ptr<int32_t>();
+    for (size_t i = 0; i < data.total(); ++i)
+        dataPtr[i] = static_cast<int32_t>(i);
+
+    Mat indices({1, 3, 2}, CV_32S);
+    int32_t* indicesPtr = indices.ptr<int32_t>();
+    indicesPtr[0] = 3;
+    indicesPtr[1] = 0;
+    indicesPtr[2] = 1;
+    indicesPtr[3] = 2;
+    indicesPtr[4] = 0;
+    indicesPtr[5] = 3;
+
+    Mat output = runGatherElementsLayer(data, indices, 1);
+    EXPECT_EQ(shape(1, 3, 2), shape(output));
+
+    const int32_t expected[] = {9, 1, 3, 7, 0, 10};
+    const int32_t* outputPtr = output.ptr<int32_t>();
+    ASSERT_EQ(sizeof(expected) / sizeof(expected[0]), output.total());
+    for (size_t i = 0; i < output.total(); ++i)
+        EXPECT_EQ(expected[i], outputPtr[i]);
+}
+
+TEST(Layer_Test_GatherElements, SmallerNonAxisDimensionsInnermostAxis)
+{
+    Mat data({2, 3, 4}, CV_32S);
+    int32_t* dataPtr = data.ptr<int32_t>();
+    for (size_t i = 0; i < data.total(); ++i)
+        dataPtr[i] = static_cast<int32_t>(i);
+
+    Mat indices({1, 2, 3}, CV_32S);
+    int32_t* indicesPtr = indices.ptr<int32_t>();
+    indicesPtr[0] = 3;
+    indicesPtr[1] = 0;
+    indicesPtr[2] = 1;
+    indicesPtr[3] = 2;
+    indicesPtr[4] = 3;
+    indicesPtr[5] = 0;
+
+    Mat output = runGatherElementsLayer(data, indices, 2);
+    EXPECT_EQ(shape(1, 2, 3), shape(output));
+
+    const int32_t expected[] = {3, 0, 1, 6, 7, 4};
+    const int32_t* outputPtr = output.ptr<int32_t>();
+    ASSERT_EQ(sizeof(expected) / sizeof(expected[0]), output.total());
+    for (size_t i = 0; i < output.total(); ++i)
+        EXPECT_EQ(expected[i], outputPtr[i]);
+}
+
+TEST(Layer_Test_GatherElements, RejectsOversizedNonAxisDimension)
+{
+    Mat data({1, 2, 3}, CV_32S);
+    Mat indices({1, 3, 3}, CV_32S);
+
+    EXPECT_THROW(runGatherElementsLayer(data, indices, 2), cv::Exception);
+}
+
 TEST_P(Test_Caffe_layers, BatchNorm)
 {
     testLayerUsingCaffeModels("layer_batch_norm", true);
