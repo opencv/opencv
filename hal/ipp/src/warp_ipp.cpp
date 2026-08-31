@@ -89,6 +89,12 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
     if((int)ippInter < 0 || interpolation > 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+#if !defined(IPP_CALLS_ENFORCED)
+    // ippBorderTransp does not reproduce cv::BORDER_TRANSPARENT for warping
+    if (borderType == cv::BORDER_TRANSPARENT)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+#endif
+
 #if defined(IPP_CALLS_ENFORCED)
                                      /* C1         C2         C3         C4 */
     char impl[CV_DEPTH_MAX][4][3]={{{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //8U
@@ -99,14 +105,22 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
+    // Zeroed entries diverge:
+    //   16S, 64F  - LINEAR differs on 94-99% of pixels (maxdiff 77..106) and NEAREST
+    //               differs on ~0.1% of pixels (maxdiff ~3900): IPP has no 16S/64F
+    //               warp of its own, so IW falls back to a different code path.
+    //   C2        - not implemented by IPP IW yet.
+    //   8S, 32S   - not supported by cv::warpAffine itself.
+    //   CUBIC     - never reaches the HAL: genericWarp() in imgwarp.cpp handles
+    //               INTER_CUBIC before hal::warpAffine() is called.
                                      /* C1         C2         C3         C4 */
-    char impl[CV_DEPTH_MAX][4][3]={{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8U
+    char impl[CV_DEPTH_MAX][4][3]={{{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //8U
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //16U
-                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
+                                   {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //16U
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
-                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}}};  //64F
+                                   {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
 #endif
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
@@ -210,6 +224,13 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
+#if !defined(IPP_CALLS_ENFORCED)
+    if (borderType == cv::BORDER_TRANSPARENT)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+#endif
+
     // Unsupported source type
     if (src_type !=  CV_8UC1 && src_type !=  CV_8UC3 && src_type !=  CV_8UC4 &&
         src_type != CV_16UC1 && src_type != CV_16UC3 && src_type != CV_16UC4 &&
@@ -229,13 +250,20 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                                    {{1, 1}, {0, 0}, {1, 1}, {1, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
+    // Zeroed entries diverge:
+    //   NEAREST for 8U/16U/32F - differs on a handful of pixels (1 per channel) where
+    //               the sample coordinate lands exactly on a .5 boundary and IPP rounds
+    //               the opposite way from cvRound(); maxdiff is a full pixel value.
+    //   LINEAR for 16S - differs on 90-97% of pixels (maxdiff 92..100).
+    //   C2        - not implemented by IPP IW, always declines.
+    //   8S, 32S, 64F - unsupported: rejected by the src_type check above.
                                     /* C1      C2      C3      C4 */
-    char impl[CV_DEPTH_MAX][4][2]={{{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //8U
+    char impl[CV_DEPTH_MAX][4][2]={{{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //8U
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //8S
-                                   {{0, 0}, {0, 0}, {0, 0}, {0, 1}},   //16U
-                                   {{1, 1}, {0, 0}, {1, 0}, {1, 1}},   //16S
-                                   {{1, 1}, {0, 0}, {1, 0}, {1, 1}},   //32S
-                                   {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //32F
+                                   {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //16U
+                                   {{1, 0}, {0, 0}, {1, 0}, {1, 0}},   //16S
+                                   {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //32S
+                                   {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #endif
 
@@ -259,6 +287,9 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         ::ipp::IwiImage iwDst(IwiSize{dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), IwiBorderSize(), dst_data, IwSize(dst_step));
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue, 4});
         IwTransDirection iwTransDirection = iwTransInverse;  //fixed for IPP
+        // This is the workaround for the ICV issue
+        // TODO: remove the workaround when the issue is gone
+        const IppiRect localRectInfinite = {IPP_MIN_32S / 2, IPP_MIN_32S / 2, IPP_MAX_32S, IPP_MAX_32S};
         if ((int)ippBorder == -1)
         {
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -268,7 +299,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         // The function is exception safe and sets the 'ok' flag to false if any exception occurs during processing.
         // The 'ok' flag is checked before and after parallel processing to determine
         // if the operation was successful or if it should fall back to a non-IPP implementation.
-        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, &ok](const cv::Range& range)
+        auto IPPWarpPerspectiveInvokerLambda = [&iwSrc, &iwDst, dst_width, ippInter, &coeffs, ippBorder, iwTransDirection, localRectInfinite, &ok](const cv::Range& range)
         {
             //CV_INSTRUMENT_REGION_IPP();
             if (!ok.load(std::memory_order_relaxed))
@@ -279,7 +310,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
             try
             {
                 ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst_width, range.end - range.start);
-                CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpPerspective, iwSrc, iwDst, ippRectInfinite, coeffs, iwTransDirection, ippInter, ::ipp::IwiWarpPerspectiveParams(), ippBorder, tile);
+                CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpPerspective, iwSrc, iwDst, localRectInfinite, coeffs, iwTransDirection, ippInter, ::ipp::IwiWarpPerspectiveParams(), ippBorder, tile);
             }
             catch (const ::ipp::IwException &)
             {
@@ -299,7 +330,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
         }
         else
         {
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpPerspective, iwSrc, iwDst, ippRectInfinite, coeffs, iwTransDirection, ippInter, ::ipp::IwiWarpPerspectiveParams(), ippBorder);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpPerspective, iwSrc, iwDst, localRectInfinite, coeffs, iwTransDirection, ippInter, ::ipp::IwiWarpPerspectiveParams(), ippBorder);
         }
 
         if (!ok)

@@ -30,18 +30,18 @@ public:
     ColorSpaceBase* l;
     ColorSpaceBase* nl;
 
-    ColorSpaceBase() {};
+    ColorSpaceBase() {}
 
     ColorSpaceBase(IllumObserver illumobserver_, std::string type_, bool linear_)
         : illumobserver(illumobserver_)
         , type(type_)
-        , linear(linear_) {};
+        , linear(linear_) {}
 
     virtual ~ColorSpaceBase()
     {
         l = 0;
         nl = 0;
-    };
+    }
     virtual bool relate(const ColorSpaceBase& other) const;
 
     virtual Operations relation(const ColorSpaceBase& /*other*/) const;
@@ -91,7 +91,7 @@ public:
 
     virtual Mat fromLFunc(Mat& /*rgbl*/, Mat dst=Mat()) const;
 private:
-    virtual void setParameter() {};
+    virtual void setParameter() {}
 
     /** @brief Calculation of M_RGBL2XYZ_base.
     */
@@ -101,7 +101,7 @@ private:
     */
     virtual void calOperations();
 
-    virtual void calLinear() {};
+    virtual void calLinear() {}
 };
 
 /** @brief Base of Adobe RGB color space;
@@ -165,7 +165,7 @@ class sRGB_ : public sRGBBase_
 {
 public:
     sRGB_(bool linear_)
-        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "sRGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "sRGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -177,7 +177,7 @@ class AdobeRGB_ : public AdobeRGBBase_
 {
 public:
     AdobeRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AdobeRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AdobeRGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -190,7 +190,7 @@ class WideGamutRGB_ : public AdobeRGBBase_
 {
 public:
     WideGamutRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "WideGamutRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "WideGamutRGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -204,7 +204,7 @@ class ProPhotoRGB_ : public AdobeRGBBase_
 {
 public:
     ProPhotoRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "ProPhotoRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "ProPhotoRGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -217,7 +217,7 @@ class DCI_P3_RGB_ : public AdobeRGBBase_
 {
 public:
     DCI_P3_RGB_(bool linear_ = false)
-        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "DCI_P3_RGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "DCI_P3_RGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -230,7 +230,7 @@ class AppleRGB_ : public AdobeRGBBase_
 {
 public:
     AppleRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AppleRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AppleRGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -243,7 +243,7 @@ class REC_709_RGB_ : public sRGBBase_
 {
 public:
     REC_709_RGB_(bool linear_)
-        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_709_RGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_709_RGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -256,7 +256,7 @@ class REC_2020_RGB_ : public sRGBBase_
 {
 public:
     REC_2020_RGB_(bool linear_)
-        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_2020_RGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_2020_RGB", linear_) {}
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -279,7 +279,7 @@ class XYZ : public ColorSpaceBase
 {
 public:
     XYZ(IllumObserver illumobserver_)
-        : ColorSpaceBase(illumobserver_, "XYZ", true) {};
+        : ColorSpaceBase(illumobserver_, "XYZ", true) {}
     Operations cam(IllumObserver dio, ChromaticAdaptationType method = BRADFORD);
     static std::shared_ptr<XYZ> get(IllumObserver illumobserver);
 

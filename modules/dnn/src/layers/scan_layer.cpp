@@ -46,6 +46,24 @@ public:
         return false;
     }
 
+    // Scan iterates by shape/axis alone; there's no value to gate on.
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8U || input == CV_8S ||
+                                input == CV_16U || input == CV_16S || input == CV_32U || input == CV_32S ||
+                                input == CV_64U || input == CV_64S || input == CV_Bool,
+                         "Scan: unsupported input type");
+
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
     int numScanInputs() const CV_OVERRIDE { return num_scan_inputs; }
     const std::vector<int>& scanInputAxes() const CV_OVERRIDE { return input_axes; }
     const std::vector<int>& scanOutputAxes() const CV_OVERRIDE { return output_axes; }

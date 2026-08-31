@@ -1701,6 +1701,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
+    /** @brief ONNX Dropout in eval mode: passes input through, mask output is all-true. */
+    class CV_EXPORTS DropoutMaskLayer : public Layer
+    {
+    public:
+        static Ptr<DropoutMaskLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS EyeLikeLayer : public Layer
     {
     public:
@@ -1872,6 +1879,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };
 
+    // com.microsoft MatMulNBits: weights stay n-bit packed, dequantized per block during the GEMM
+    class CV_EXPORTS MatMulNBitsLayer : public Layer {
+     public:
+        int K;
+        int N;
+        int bits;
+        int block_size;
+
+        static Ptr<MatMulNBitsLayer> create(const LayerParams &params);
+    };
+
     struct MatMulInt8Params
     {
         String name;
@@ -1914,6 +1932,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<NonZeroLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ImageDecoderLayer : public Layer
+    {
+    public:
+        static Ptr<ImageDecoderLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS InstanceNormLayer : public Layer {
     public:
         float epsilon;
@@ -1952,6 +1976,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS CumProdLayer : public Layer {
      public:
         static Ptr<CumProdLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS LinearAttentionLayer : public Layer {
+     public:
+        static Ptr<LinearAttentionLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS FlexAttentionLayer : public Layer {
+     public:
+        static Ptr<FlexAttentionLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS GroupNormLayer : public Layer {

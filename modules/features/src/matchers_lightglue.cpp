@@ -80,7 +80,7 @@ public:
 
     // Private constructor for clone() — shares the already-loaded network
     LightGlueMatcherImpl(const dnn::Net& _net, float _scoreThreshold)
-        : net(_net), scoreThreshold(_scoreThreshold) {};
+        : net(_net), scoreThreshold(_scoreThreshold) {}
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }

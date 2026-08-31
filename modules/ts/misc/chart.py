@@ -46,8 +46,8 @@ import testlog_parser, sys, os, xml, re
 from table_formatter import *
 from optparse import OptionParser
 
-cvsize_re = re.compile("^\d+x\d+$")
-cvtype_re = re.compile("^(CV_)(8U|8S|16U|16S|32S|32F|64F)(C\d{1,3})?$")
+cvsize_re = re.compile(r"^\d+x\d+$")
+cvtype_re = re.compile(r"^(CV_)(8U|8S|16U|16S|32S|32F|64F)(C\d{1,3})?$")
 
 def keyselector(a):
     if cvsize_re.match(a):
@@ -247,7 +247,7 @@ if __name__ == "__main__":
                 stests.append(pair)
 
         tbl = table(metrix_table[options.metric][0] + " for\n" + getTestWideName(sname, indexes, arglists, x, y))
-        tbl.newColumn("x", "X\Y")
+        tbl.newColumn("x", r"X\Y")
         for col in arglists[y]:
             tbl.newColumn(col, col, align="center")
         for row in arglists[x]:

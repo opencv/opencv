@@ -27,18 +27,11 @@ public:
         CV_CheckType(indicesType, indicesType == CV_32S || indicesType == CV_64S,
                      "GatherND: indices must be CV_32S or CV_64S");
 
-        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-        {
-            CV_CheckType(dataType, dataType == CV_16F || dataType == CV_8S || dataType == CV_8U ||
-                                   dataType == CV_32S || dataType == CV_64S,
-                         "GatherND: unsupported data type for OpenCL FP16 target");
-        }
-        else
-        {
-            CV_CheckType(dataType, dataType == CV_32F || dataType == CV_8S || dataType == CV_8U ||
-                                   dataType == CV_32S || dataType == CV_64S,
-                         "GatherND: unsupported data type");
-        }
+        CV_CheckType(dataType, dataType == CV_16F || dataType == CV_32F || dataType == CV_64F ||
+                               dataType == CV_8S || dataType == CV_8U || dataType == CV_16U ||
+                               dataType == CV_16S || dataType == CV_32U || dataType == CV_32S ||
+                               dataType == CV_64U || dataType == CV_64S || dataType == CV_Bool,
+                     "GatherND: unsupported data type");
 
         outputs.resize(1, dataType);
         internals.clear();
@@ -87,38 +80,27 @@ public:
         const Mat& indices = inputs[1];
         Mat& out = outputs[0];
 
-        int dtype = data.depth();
         int itype = indices.depth();
 
         switch (itype) {
-            case CV_32S:
-            {
-                switch (dtype) {
-                    case CV_8U: forward_impl<int32_t, uchar>(data, indices, out); break;
-                    case CV_8S: forward_impl<int32_t, schar>(data, indices, out); break;
-                    case CV_32S: forward_impl<int32_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int32_t, int16_t>(data, indices, out); break;
-                    case CV_32F: forward_impl<int32_t, float>(data, indices, out); break;
-                    case CV_64F: forward_impl<int32_t, double>(data, indices, out); break;
-                    default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
-                }
-            } break;
-            case CV_64S:
-            {
-                switch (dtype) {
-                    case CV_8U: forward_impl<int64_t, uchar>(data, indices, out); break;
-                    case CV_8S: forward_impl<int64_t, schar>(data, indices, out); break;
-                    case CV_32S: forward_impl<int64_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int64_t, int16_t>(data, indices, out); break;
-                    case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
-                    case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
-                    case CV_64S: forward_impl<int64_t, int64_t>(data, indices, out); break;
-                    default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
-                }
-            } break;
+            case CV_32S: widthDispatch<int32_t>(data, indices, out); break;
+            case CV_64S: widthDispatch<int64_t>(data, indices, out); break;
             default: CV_Error(Error::StsNotImplemented, "Unsupported indices type");
         }
 
+    }
+
+    // Gathering copies elements without interpreting them, so only the width matters.
+    template <typename iT>
+    void widthDispatch(const Mat& data, const Mat& indices, Mat& out)
+    {
+        switch (data.elemSize()) {
+            case 1: forward_impl<iT, uint8_t>(data, indices, out); break;
+            case 2: forward_impl<iT, uint16_t>(data, indices, out); break;
+            case 4: forward_impl<iT, uint32_t>(data, indices, out); break;
+            case 8: forward_impl<iT, uint64_t>(data, indices, out); break;
+            default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+        }
     }
 
     template <typename iT, typename dT>
@@ -172,10 +154,7 @@ public:
                     offset += (size_t)batch_idx * data_strides[batch_dims - 1];
                 }
                 // copy data from data to out
-                for (size_t j = 0; j < inner_size; ++j)
-                {
-                    out_ptr[i * inner_size + j] = data_ptr[offset + j];
-                }
+                std::memcpy(out_ptr + i * inner_size, data_ptr + offset, inner_size * sizeof(dT));
             }
         }, nstripes);
     }

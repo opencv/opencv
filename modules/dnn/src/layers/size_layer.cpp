@@ -29,7 +29,7 @@ public:
                          std::vector<MatShape>& outputs,
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
-        outputs.assign(1, MatShape({1}));
+        outputs.assign(1, MatShape::scalar());
         return false;
     }
 
@@ -57,8 +57,7 @@ public:
         const MatShape xShape = shape(x);
         int64_t totalElems = static_cast<int64_t>(total(xShape));
 
-        outputs[0].create(1, 1, CV_64S);
-        outputs[0].at<int64_t>(0) = totalElems;
+        outputs[0].ptr<int64_t>()[0] = totalElems;
     }
 };
 

@@ -36,11 +36,12 @@
 //! compute *only* that slice of the output tensor. The engine drives @c parallel_for_
 //! and calls the hook once per worker range, so a hook must never spawn its own threads.
 
-// The pooling geometry crosses the boundary as a flat, stable C argument list (no dnn
-// types): @c C0 = channel block; @c insize / @c outsize = the [3] input/output spatial
-// dims in a fixed Z,Y,X frame (unused leading dims = 1); @c strides [3]; @c pads [6]
-// (begin[0..2] + end[3..5]); @c inner [6] = the padding-free interior bounds; @c coordtab
-// [ksize*3] = per-tap (dz,dy,dx); @c ofstab [ksize] = per-tap flat input offset (interior).
+// The pooling and depthwise-convolution geometry crosses the boundary as a flat, stable C
+// argument list (no dnn types): @c C0 = channel block; @c insize / @c outsize = the [3]
+// input/output spatial dims in a fixed Z,Y,X frame (unused leading dims = 1); @c strides [3];
+// @c pads [6] (begin[0..2] + end[3..5]); @c inner [6] = the padding-free interior bounds;
+// @c coordtab [ksize*3] = per-tap (dz,dy,dx); @c ofstab [ksize] = per-tap flat input offset
+// (interior).
 
 /** @brief Max pooling over a slice [task_start, task_end) of the output (blocked NCDHWc, CV_32F). */
 inline int hal_ni_dnn_maxpool3d32f(const float* inp_data, float* out_data, int C0,
@@ -58,9 +59,66 @@ inline int hal_ni_dnn_avgpool3d32f(const float* inp_data, float* out_data, int C
                                  int task_start, int task_end)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+//! @brief Depthwise convolution over a slice [task_start, task_end) of the output
+//! (blocked NCDHWc, CV_32F), with the fused post-op @c out = act(in*W + bias, scaled).
+//!
+//! In addition to the geometry above, this carries the per-block weights and the fused
+//! epilogue. @c weights is the repacked @c C1*ksize*C0 tensor (block @c b at @c b*ksize*C0);
+//! @c scale / @c bias are optional per-channel vectors of length @c C (null => 1 / 0). The
+//! task index runs over @c [0, N*C1) block-planes decomposed as @c n=nc1/C1,
+//! @c c_base=(nc1-n*C1)*C0. @c residual (optional, null when absent) is added before the
+//! activation. The activation is passed enum-free: @c out = min(s>=0 ? s : s*alpha, maxval),
+//! where @c alpha is @c prelu_slope[c] when @c prelu_slope != null else @c default_alpha
+//! (1 => identity, 0 => ReLU, in (0,1) => leaky), and @c maxval clamps (FLT_MAX => none).
+//! A generic (function-pointer) activation the engine cannot express here is applied by the
+//! engine after this hook returns.
+inline int hal_ni_dnn_depthwise_conv32f(const float* inp_data, const float* residual_data,
+                                        float* out_data, const float* weights,
+                                        const float* scale, const float* bias,
+                                        int C, int C0, int C1,
+                                        const int* insize, const int* outsize, const int* strides,
+                                        const int* pads, const int* inner, const int* coordtab,
+                                        const int* ofstab, int ksize,
+                                        float maxval, float default_alpha, const float* prelu_slope,
+                                        int task_start, int task_end)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @brief General (non-depthwise) convolution over a slice [task_start, task_end) of the
+//! engine's task grid (blocked NCDHWc, CV_32F), with the same fused epilogue as the depthwise
+//! hook above.
+//!
+//! Unlike the pooling and depthwise hooks, whose task index runs over block-planes, the task
+//! index here runs over @c [0, N*ngroups*Kblk*nspat_chunks): task @c t selects the output
+//! channel block @c block=t/nspat_chunks and the spatial chunk @c t%nspat_chunks, where
+//! @c block decomposes as @c n=block/(ngroups*Kblk) and @c kblk=block%Kblk within group
+//! @c g. Chunk @c c covers the plane positions @c [c*planeblocks/nspat_chunks,
+//! (c+1)*planeblocks/nspat_chunks), @c planeblocks being the product of @c outsize.
+//!
+//! @c weights is the repacked (ngroups, Kblk, ksize, C1Max, C0*K0) tensor, i.e. block
+//! @c (g,kblk) starts at @c (g*Kblk+kblk)*ksize*C1Max*C0*K0 and holds, per tap and per input
+//! channel block, a @c C0 x K0 matrix in row-major @c [c0][k0] order. @c K0 equals @c C0.
+//! @c scale / @c bias are optional per-output-channel vectors of length @c K.
+//!
+//! A hook may decline configurations it does not cover (returning
+//! @c CV_HAL_ERROR_NOT_IMPLEMENTED for the whole range) -- in particular the unaligned case
+//! where an output channel block is only partially filled, i.e. where @c K or @c K/ngroups is
+//! not a multiple of @c K0, or @c C/ngroups is not a multiple of @c C0.
+inline int hal_ni_dnn_conv32f(const float* inp_data, const float* residual_data,
+                              float* out_data, const float* weights,
+                              const float* scale, const float* bias,
+                              int C, int K, int C0, int ngroups, int Kblk, int C1Max,
+                              const int* insize, const int* outsize, const int* strides,
+                              const int* pads, const int* inner, const int* coordtab,
+                              const int* ofstab, int ksize,
+                              float maxval, float default_alpha, const float* prelu_slope,
+                              int nspat_chunks, int task_start, int task_end)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_dnn_maxpool3d32f hal_ni_dnn_maxpool3d32f
 #define cv_hal_dnn_avgpool3d32f hal_ni_dnn_avgpool3d32f
+#define cv_hal_dnn_depthwise_conv32f hal_ni_dnn_depthwise_conv32f
+#define cv_hal_dnn_conv32f hal_ni_dnn_conv32f
 //! @endcond
 
 //! @}

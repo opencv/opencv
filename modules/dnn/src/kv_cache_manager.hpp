@@ -11,6 +11,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/dnn/dnn.hpp>
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
@@ -19,6 +20,9 @@
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+// Upper bound for reserveKVCache(); keeps the page-count arithmetic in range.
+enum { KV_CACHE_MAX_RESERVED_TOKENS = 1 << 24 };
 
 class KVCache
 {
@@ -31,11 +35,21 @@ class KVCache
             pages.clear();
             nTokens = 0;
         }
-        const std::vector<Mat>& getPages() const { return pages; }
+        // Reserve the page pool for up to maxTokens (static cache); applied at prefill.
+        void reserve(int maxTokens) { reservedTokens = std::max(reservedTokens, maxTokens); }
+        int getActivePageCount() const { return pageSize > 0 ? (nTokens + pageSize - 1) / pageSize : 0; }
+        // Pages holding tokens. The paged kernels size the last page from the page count,
+        // so reserved empty trailing pages must not be passed to them.
+        std::vector<Mat> getActivePages() const {
+            size_t n = std::min((size_t)getActivePageCount(), pages.size());
+            return std::vector<Mat>(pages.begin(), pages.begin() + n);
+        }
         int getPageSize() const { return pageSize; }
         int getNumTokens() const { return nTokens; }
     protected:
         void growPrefill(const Mat& newData, int T);
+        // Append T (>=1) tokens to a non-empty cache one column at a time.
+        void appendTokens(const Mat& newData, int T);
 
         virtual void growGenerate(const Mat& newData) = 0;
         std::vector<Mat> pages;
@@ -46,6 +60,7 @@ class KVCache
         int headDim;
         int batchSize = -1;
         int offset;
+        int reservedTokens = 0;
         bool isKCache = false;
         FastGemmOpt opt;
 };
@@ -97,6 +112,9 @@ struct KVCacheManager
     void buildRoutes();
     void applyRoutes();
     void initPastTensors();
+    // Pre-reserve every per-layer K/V cache for up to maxTokens total sequence length.
+    void reserve(int maxTokens);
+    bool empty() const { return kData.empty() && vData.empty(); }
 };
 
 void setKVCacheManager(Ptr<Net::Impl> netimpl);

@@ -50,6 +50,19 @@ Run the script:
 
     The tokenizer_path should point to an OpenCV-format config.json (e.g., from
     opencv_extra/testdata/dnn/llm/gemma3/config.json), NOT the HuggingFace tokenizer_config.json.
+
+
+Paged KV-cache and reserveKVCache():
+
+    The paged cache needs attention to import as a single fused op. The optimum-cli exports
+    above decompose it into MatMul/Softmax, so they carry state through
+    present.* -> past_key_values.* instead and reserveKVCache() does nothing.
+
+    For the paged cache, export with the dynamo exporter at opset 23 and without
+    past_key_values - see samples/dnn/qwen_inference.py for the recipe.
+
+    With --use_kv_cache the script calls reserveKVCache(prompt_len + max_new_tokens) before
+    prefill, so the decode loop allocates nothing.
 '''
 
 import numpy as np
@@ -66,6 +79,14 @@ def parse_args():
     parser.add_argument('--use_kv_cache', action='store_true', default=False, help='Enable KV-cache for faster inference (requires causal-lm-with-past export).')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
     return parser.parse_args()
+
+def set_optional_input(net, name, value):
+    '''setInput() for a graph input the model may not declare. Returns True if it took.'''
+    try:
+        net.setInput(value, name)
+        return True
+    except cv.error:
+        return False
 
 def build_gemma3_prompt(user_prompt):
     '''Wrap user prompt in Gemma3 chat format.'''
@@ -91,9 +112,14 @@ def gemma3_inference(net, prompt, max_new_tokens, tokenizer, use_kv_cache=True):
         net.enableKVCache()
         prompt_len = input_ids.shape[1]
 
+        # Pre-size the cache so the decode loop allocates no pages. Must precede prefill.
+        net.reserveKVCache(prompt_len + max_new_tokens)
+
         # Prefill: process full prompt once to populate KV-cache
         net.setInput(input_ids, 'input_ids')
-        net.setInput(np.ones((1, prompt_len), dtype=np.int64), 'attention_mask')
+        # opset-23 dynamo exports take only input_ids; optimum ones also want a mask.
+        has_mask = set_optional_input(net, 'attention_mask',
+                                      np.ones((1, prompt_len), dtype=np.int64))
         logits = net.forward()
         new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
         generated = [new_id]
@@ -103,7 +129,8 @@ def gemma3_inference(net, prompt, max_new_tokens, tokenizer, use_kv_cache=True):
             if new_id in stop_ids:
                 break
             net.setInput(np.array([[new_id]], dtype=np.int64), 'input_ids')
-            net.setInput(np.ones((1, prompt_len + len(generated)), dtype=np.int64), 'attention_mask')
+            if has_mask:
+                net.setInput(np.ones((1, prompt_len + len(generated)), dtype=np.int64), 'attention_mask')
             logits = net.forward()
             new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
             generated.append(new_id)
@@ -111,7 +138,7 @@ def gemma3_inference(net, prompt, max_new_tokens, tokenizer, use_kv_cache=True):
         # Without KV-cache: feed full growing sequence each step
         for _ in range(max_new_tokens):
             net.setInput(input_ids, 'input_ids')
-            net.setInput(np.ones((1, input_ids.shape[1]), dtype=np.int64), 'attention_mask')
+            set_optional_input(net, 'attention_mask', np.ones((1, input_ids.shape[1]), dtype=np.int64))
             logits = net.forward()
             new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
             if new_id in stop_ids:
@@ -130,6 +157,9 @@ if __name__ == '__main__':
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
     net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+    if net.empty():
+        raise SystemExit('Failed to load the model - readNetFromONNX() only warns, it does not raise. '
+                         'Re-run with OPENCV_LOG_LEVEL=INFO to see which node was rejected and why.')
 
     gemma3_prompt = build_gemma3_prompt(args.prompt)
     print(f"Prompt:\n{gemma3_prompt}")

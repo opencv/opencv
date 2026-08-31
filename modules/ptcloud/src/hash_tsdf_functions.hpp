@@ -199,7 +199,7 @@ public:
         this->bufferNums = vt.bufferNums;
         return *this;
     }
-    ~VolumesTable() {};
+    ~VolumesTable() {}
 
     bool insert(Vec3i idx, int row)
     {

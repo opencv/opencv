@@ -69,6 +69,13 @@ foreach(m ${OPENCV_MODULE_${the_module}_DEPS} opencv_world)
   endif()
 endforeach()
 
+# MLAS_OBJECTS (set with PARENT_SCOPE inside 3rdparty/mlas) doesn't
+# survive back to this scope. Pull the OBJECT library objects
+# in directly using the globally-visible target and cache flag.
+if(OPENCV_DNN_MLAS_ENABLED AND TARGET opencv_dnn_mlas)
+  list(APPEND sources_list $<TARGET_OBJECTS:opencv_dnn_mlas>)
+endif()
+
 ocv_glob_module_sources(HEADERS ${headers_list} SOURCES ${sources_list})
 
 ocv_module_include_directories()

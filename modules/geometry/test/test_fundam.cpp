@@ -403,6 +403,9 @@ void CV_ComputeEpilinesTest::prepare_to_validation( int /*test_case_idx*/ )
 TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; test.safe_run(); }
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
 
+// Regression test for https://github.com/opencv/opencv/issues/4330, fixed by 85149f8686. Both
+// epipoles at infinity collapses the 6th-degree polynomial correctMatches() solves; cv::solvePoly()
+// used to return garbage roots for it, giving NaN / DBL_MAX. These checks keep that closed.
 TEST(Calib3d_FindFundamentalMat, correctMatches)
 {
     double fdata[] = {0, 0, 0, 0, 0, -1, 0, 1, 0};
@@ -416,8 +419,19 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
 
     correctMatches(F, p1, p2, np1, np2);
 
-    cout << np1 << endl;
-    cout << np2 << endl;
+    ASSERT_EQ(p1.size(), np1.size());
+    ASSERT_EQ(p1.type(), np1.type());
+    ASSERT_EQ(p2.size(), np2.size());
+    ASSERT_EQ(p2.type(), np2.type());
+
+    // rejects NaN and DBL_MAX, the pre-fix output
+    EXPECT_TRUE(cv::checkRange(np1)) << "np1 = " << np1;
+    EXPECT_TRUE(cv::checkRange(np2)) << "np2 = " << np2;
+
+    // The input pair already satisfies p2^T * F * p1 == 0 exactly, so the
+    // optimal correction is zero and both points must come back unchanged.
+    EXPECT_LE(cv::norm(np1, p1, NORM_INF), 1e-9) << "np1 = " << np1;
+    EXPECT_LE(cv::norm(np2, p2, NORM_INF), 1e-9) << "np2 = " << np2;
 }
 
 TEST(Calib3d_FindFundamentalMat, Crash)

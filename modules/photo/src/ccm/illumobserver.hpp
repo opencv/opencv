@@ -38,9 +38,9 @@ class IllumObserver
 public:
     std::string illuminant;
     std::string observer;
-    IllumObserver() {};
+    IllumObserver() {}
     IllumObserver(std::string illuminant, std::string observer);
-    virtual ~IllumObserver() {};
+    virtual ~IllumObserver() {}
     bool operator<(const IllumObserver& other) const;
     bool operator==(const IllumObserver& other) const;
     static IllumObserver getIllumObservers(IllumObserverType illumobserver);

@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 
+#include <type_traits>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
@@ -41,6 +42,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         beta = params.get<float>("beta", 1.f);
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
+
+        for (Mat& blob : blobs) {
+            if (blob.type() == CV_16F || blob.type() == CV_16BF) {
+                Mat widened;
+                blob.convertTo(widened, CV_32F);
+                blob = widened;
+            }
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -119,6 +128,22 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return false;
     }
 
+    // Only types forward() actually dispatches; the default gate's CV_8S/CV_8U had no kernel and corrupted memory.
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            CV_CheckType(input, input == CV_32F || input == CV_64F ||
+                                input == CV_32S || input == CV_64S || input == CV_32U || input == CV_64U, "");
+
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -153,6 +178,13 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                    B_shape = blobs.empty() ? shape(inputs[1]) : shape(blobs[0]),
                    C_shape = shape(outputs[0]);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
+
+        // These five types skip the float-only packed-B/MLAS caching below.
+        {
+            int depth0 = inputs[0].depth();
+            if (depth0 == CV_64F || depth0 == CV_32S || depth0 == CV_64S || depth0 == CV_32U || depth0 == CV_64U)
+                return;
+        }
 
         // Pack only 2D weight matrices; skip higher-dim tensors (e.g. Q@K^T in attention).
         const Mat* B_mat = !blobs.empty() ? &blobs[0] :
@@ -233,6 +265,15 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        switch (inputs[0].depth()) {
+            case CV_64F: forwardDouble(inputs, outputs); return;
+            case CV_32S: forwardInt<int32_t>(inputs, outputs); return;
+            case CV_64S: forwardInt<int64_t>(inputs, outputs); return;
+            case CV_32U: forwardInt<uint32_t>(inputs, outputs); return;
+            case CV_64U: forwardInt<uint64_t>(inputs, outputs); return;
+            default: break;
+        }
+
         const auto &A = inputs[0];
         auto &Y = outputs[0];
 
@@ -307,6 +348,121 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
         }
+    }
+
+    // CV_64F: one cv::gemm call per batch slice (batches don't collapse like Gemm's).
+    void forwardDouble(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        const Mat &A = inputs[0];
+        Mat &Y = outputs[0];
+        const Mat &B = blobs.empty() ? inputs[1] : blobs[0];
+
+        CV_CheckTypeEQ(B.depth(), CV_64F, "DNN/MatMul: B must be CV_64F to match A");
+        CV_Assert(A.isContinuous() && B.isContinuous() && Y.isContinuous());
+
+        const auto shape_A = shape(A), shape_B = shape(B), shape_Y = shape(Y);
+        const int ma = shape_A[shape_A.size() - 2], na = shape_A.back();
+        const int mb = shape_B[shape_B.size() - 2], nb = shape_B.back();
+        const int M = helper.M, N = helper.N;
+
+        double* yptr0 = Y.ptr<double>();
+        const bool haveBias = (inputs.size() + blobs.size()) >= 3;
+        if (haveBias) {
+            const Mat& bias_mat = blobs.size() >= 2 ? blobs.back() : inputs.back();
+            CV_CheckTypeEQ(bias_mat.depth(), CV_64F, "DNN/MatMul: bias must be CV_64F to match A");
+            if (bias_mat.total() == 1) {
+                std::fill_n(yptr0, Y.total(), (double)beta * bias_mat.ptr<double>()[0]);
+            } else {
+                Mat biasBroadcast(shape_Y, CV_64F);
+                cv::broadcast(bias_mat, shape_Y, biasBroadcast);
+                const double* bb = biasBroadcast.ptr<double>();
+                double b = (double)beta;
+                for (size_t i = 0; i < Y.total(); i++)
+                    yptr0[i] = b * bb[i];
+            }
+        } else {
+            std::fill_n(yptr0, Y.total(), 0.0);
+        }
+
+        const int flags = (trans_a ? GEMM_1_T : 0) | (trans_b ? GEMM_2_T : 0);
+        const double* aptr0 = A.ptr<double>();
+        const double* bptr0 = B.ptr<double>();
+
+        for (size_t i = 0; i < helper.batch; i++) {
+            Mat Aview(ma, na, CV_64F, (void*)(aptr0 + helper.A_offsets[i]));
+            Mat Bview(mb, nb, CV_64F, (void*)(bptr0 + helper.B_offsets[i]));
+            Mat Yview(M, N, CV_64F, (void*)(yptr0 + helper.C_offsets[i]));
+            cv::gemm(Aview, Bview, (double)alpha, Yview, 1.0, Yview, flags);
+        }
+    }
+
+    // No BLAS routine handles integers; accumulates in 64-bit Acc and wraps on cast.
+    template<typename T>
+    void forwardInt(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        typedef typename std::conditional<std::is_unsigned<T>::value, uint64_t, int64_t>::type Acc;
+
+        const Mat &A = inputs[0];
+        Mat &Y = outputs[0];
+        const Mat &B = blobs.empty() ? inputs[1] : blobs[0];
+
+        CV_CheckTypeEQ(B.depth(), A.depth(), "DNN/MatMul: B must match A's type");
+        CV_Assert(A.isContinuous() && B.isContinuous() && Y.isContinuous());
+
+        const auto shape_Y = shape(Y);
+        const int M = helper.M, N = helper.N, K = helper.K;
+        const int lda0 = helper.lda0, lda1 = helper.lda1;
+        const int ldb0 = helper.ldb0, ldb1 = helper.ldb1;
+        const int ldc = helper.ldc;
+
+        const T* aptr0 = A.ptr<T>();
+        const T* bptr0 = B.ptr<T>();
+        T* yptr0 = Y.ptr<T>();
+
+        // Reject non-integer alpha/beta rather than round: rounding 0.4/0.2 to 0 would silently zero the result.
+        const bool haveBias = (inputs.size() + blobs.size()) >= 3;
+        double alpha_d = (double)alpha, beta_d = haveBias ? (double)beta : 0.0;
+        CV_CheckTrue(std::floor(alpha_d) == alpha_d, "DNN/MatMul: alpha must be an integer value for integer types");
+        CV_CheckTrue(std::floor(beta_d) == beta_d, "DNN/MatMul: beta must be an integer value for integer types");
+        const Acc alphaScale = (Acc)alpha_d;
+        const Acc betaScale  = (Acc)beta_d;
+
+        Mat biasBroadcast;
+        if (haveBias) {
+            const Mat& bias_mat = blobs.size() >= 2 ? blobs.back() : inputs.back();
+            CV_CheckTypeEQ(bias_mat.depth(), A.depth(), "DNN/MatMul: bias must match A's type");
+            if ((size_t)bias_mat.total() != Y.total() || shape(bias_mat).size() != shape_Y.size()) {
+                biasBroadcast = Mat(shape_Y, A.depth());
+                cv::broadcast(bias_mat, shape_Y, biasBroadcast);
+            } else {
+                biasBroadcast = bias_mat;
+            }
+        }
+        const T* biasPtr0 = haveBias ? biasBroadcast.ptr<T>() : nullptr;
+
+        parallel_for_(Range(0, (int)(helper.batch * (size_t)M)), [&](const Range& r) {
+            for (int idx = r.start; idx < r.end; idx++) {
+                int bi = idx / M;
+                int m  = idx % M;
+                const T* aBase = aptr0 + helper.A_offsets[bi];
+                const T* bBase = bptr0 + helper.B_offsets[bi];
+                T* yRow = yptr0 + helper.C_offsets[bi] + (size_t)m * ldc;
+                const T* biasRow = haveBias ? biasPtr0 + helper.C_offsets[bi] + (size_t)m * ldc : nullptr;
+
+                for (int n = 0; n < N; n++) {
+                    Acc sum = 0;
+                    for (int k = 0; k < K; k++) {
+                        Acc av = (Acc)aBase[(size_t)m * lda0 + (size_t)k * lda1];
+                        Acc bv = (Acc)bBase[(size_t)k * ldb0 + (size_t)n * ldb1];
+                        sum += av * bv;
+                    }
+                    Acc result = sum * alphaScale;
+                    if (haveBias)
+                        result += betaScale * (Acc)biasRow[n];
+                    yRow[n] = (T)result;
+                }
+            }
+        }, (double)helper.batch * M * N * (1 / 1024.0));
     }
 
 #ifdef HAVE_OPENCL

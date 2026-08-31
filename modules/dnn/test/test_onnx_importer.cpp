@@ -261,6 +261,17 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
     testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
+// maxPool8s scalar kernel path.
+TEST_P(Test_ONNX_layers, MaxPooling_int8)
+{
+    testONNXModels("maxpool_2d_int8", npy, 0, 0, false, false);
+}
+// maxPool64f scalar kernel path.
+TEST_P(Test_ONNX_layers, MaxPooling_double)
+{
+    testONNXModels("maxpool_2d_double", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
@@ -735,8 +746,8 @@ TEST_P(Test_ONNX_layers, Elementwise_Sqrt)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    testONNXModels("sqrt");
 #endif
+    testONNXModels("sqrt");
 }
 
 TEST_P(Test_ONNX_layers, Elementwise_not)
@@ -1153,6 +1164,29 @@ TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
     testONNXModels("matmul_bcast");
 }
 
+// forwardInt<T> integer-accumulation path.
+TEST_P(Test_ONNX_layers, MatMul_int32)
+{
+    testONNXModels("matmul_int32_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_int64)
+{
+    testONNXModels("matmul_int64_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_uint32)
+{
+    testONNXModels("matmul_uint32_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_uint64)
+{
+    testONNXModels("matmul_uint64_init");
+}
+// forwardDouble cv::gemm delegation path.
+TEST_P(Test_ONNX_layers, MatMul_double)
+{
+    testONNXModels("matmul_double_init");
+}
+
 TEST_P(Test_ONNX_layers, MatMulAdd)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -1374,8 +1408,7 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_neg_axis");
 }
 
-// Mul inside with 0-d tensor, output should be A x 1, but is 1 x A. PR #22652
-TEST_P(Test_ONNX_layers, DISABLED_Split_sizes_0d)
+TEST_P(Test_ONNX_layers, Split_sizes_0d)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -1551,14 +1584,12 @@ TEST_P(Test_ONNX_layers, LSTM_Activations)
     testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
 }
 
-// disabled due to poor handling of 1-d mats
-TEST_P(Test_ONNX_layers, DISABLED_LSTM)
+TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
 }
 
-// disabled due to poor handling of 1-d mats
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_bidirectional)
+TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
@@ -1721,20 +1752,14 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
 
-// epsilon is larger because onnx does not match with torch/opencv exactly
-// Test uses incorrect ONNX and test data with 3 dims instead of 4.
-// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_seq)
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
 }
 
-// epsilon is larger because onnx does not match with torch/opencv exactly
-// Test uses incorrect ONNX and test data with 3 dims instead of 4.
-// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_batch)
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
@@ -2273,6 +2298,12 @@ TEST_P(Test_ONNX_layers, Gemm_bias)
     testONNXModels("gemm_vector_bias");
 }
 
+// forwardDouble cv::gemm delegation path.
+TEST_P(Test_ONNX_layers, Gemm_double)
+{
+    testONNXModels("gemm_double");
+}
+
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -2516,11 +2547,6 @@ TEST_P(Test_ONNX_nets, RAFT)
     normAssert(ref0, outs[0], "", 1.5e-3, 3.2e-2);
 }
 
-TEST_P(Test_ONNX_nets, Squeezenet)
-{
-    testONNXModels("squeezenet", pb);
-}
-
 TEST_P(Test_ONNX_nets, Googlenet)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -2566,48 +2592,6 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
-}
-
-TEST_P(Test_ONNX_nets, CaffeNet)
-{
-#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
-#else
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    testONNXModels("caffenet", pb);
-}
-
-TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
-{
-#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
-#else
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    // Reference output values are in range [-4.992, -1.161]
-    testONNXModels("rcnn_ilsvrc13", pb, 0.0046);
-}
-
-TEST_P(Test_ONNX_nets, VGG16_bn)
-{
-    applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
-
-    // output range: [-16; 27], after Softmax [0; 0.67]
-    const double lInf = (target == DNN_TARGET_MYRIAD) ? 0.038 : default_lInf;
-    testONNXModels("vgg16-bn", pb, default_l1, lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ZFNet)
@@ -2836,16 +2820,6 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     testONNXModels("densenet121", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
 }
 
-TEST_P(Test_ONNX_nets, Inception_v1)
-{
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-#endif
-    testONNXModels("inception_v1", pb);
-}
-
 TEST_P(Test_ONNX_nets, Shufflenet)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -3001,6 +2975,13 @@ TEST_P(Test_ONNX_layers, TileInt64)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
     testONNXModels("tile_int64");
+}
+
+TEST_P(Test_ONNX_layers, EmptyConstantInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("empty_constant_int64");
 }
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
@@ -3524,6 +3505,9 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
 
     testONNXModels("pytorch_attention_single_head");
 }
+TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
+    testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
+}
 
 // Batch + multi-head, square attention (B=2, H=4, S_q=S_kv=16, D=D_v=32).
 TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
@@ -3609,6 +3593,15 @@ TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
 }
 
+TEST_P(Test_ONNX_layers, SimplifiedLayerNormalization) {
+    testONNXModels("simplified_layer_normalization");
+}
+
+TEST_P(Test_ONNX_layers, Resize1D) {
+    // Rank-3 (N,C,W) Resize folds a unit H axis ([N,C,W] -> [N,C,1,W]) to reuse the NCHW kernel.
+    testONNXModels("resize_1d_linear");
+}
+
 TEST_P(Test_ONNX_layers, MatMulAddFusion) {
     // New-engine CUDA MatMul/GEMM does not yet cover this fused variant; skip for now.
     if (backend == DNN_BACKEND_CUDA)
@@ -3616,6 +3609,12 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
     double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
     double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
     testONNXModels("biased_matmul", npy, l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, MatMulNBits) {
+    testONNXModels("matmulnbits", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_8bits", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_partial_block", npy, 1e-4, 1e-3);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
 }
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {

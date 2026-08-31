@@ -1460,7 +1460,7 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
 double norm(InputArray _src, int normType, InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
-    if( src.depth() == CV_16F )
+    if( src.depth() == CV_16F || src.depth() == CV_8F_E4M3FN || src.depth() == CV_8F_E4M3FNUZ )
     {
         Mat src32f;
         src.convertTo(src32f, CV_32F);
@@ -1659,6 +1659,12 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
             break;
         case CV_16BF:
             result = norm_flt_<cv::bfloat, short>((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_8F_E4M3FN:
+            result = norm_flt_<cv::fp8_t, schar>((const cv::fp8_t*)sptr1, (const cv::fp8_t*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_8F_E4M3FNUZ:
+            result = norm_flt_<cv::fp8a_t, schar>((const cv::fp8a_t*)sptr1, (const cv::fp8a_t*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");

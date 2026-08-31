@@ -1139,7 +1139,7 @@ PARAM_TEST_CASE(FillPolyFully, unsigned, unsigned, int, int, Point, cv::LineType
     }
 };
 
-TEST_P(FillPolyFully, DISABLED_fillpoly_fully)
+TEST_P(FillPolyFully, fillpoly_fully)
 {
     int imageSizeOffset = 15;
 

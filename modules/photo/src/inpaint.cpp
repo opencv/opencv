@@ -709,8 +709,8 @@ icvInpaint( const Mat &input_img, const Mat &inpaint_mask, Mat &output_img,
         CV_Error( cv::Error::StsUnsupportedFormat,
         "8-bit, 16-bit unsigned or 32-bit float 1-channel and 8-bit 3-channel input/output images are supported" );
 
-    if( inpaint_mask.type() != CV_8UC1 )
-        CV_Error( cv::Error::StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
+    if( inpaint_mask.type() != CV_8UC1 && inpaint_mask.type() != CV_BoolC1 )
+        CV_Error( cv::Error::StsUnsupportedFormat, "The mask must be 8-bit or boolean 1-channel image" );
 
     range = MAX(range,1);
     range = MIN(range,100);

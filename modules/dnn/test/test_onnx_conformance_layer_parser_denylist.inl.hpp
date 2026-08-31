@@ -39,63 +39,7 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed",  // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_cast_FLOAT16_to_FLOAT4E2M1",
-"test_cast_FLOAT16_to_FLOAT8E4M3FN",
-"test_cast_FLOAT16_to_FLOAT8E4M3FNUZ",
-"test_cast_FLOAT16_to_FLOAT8E5M2",
-"test_cast_FLOAT16_to_FLOAT8E5M2FNUZ",
-"test_cast_FLOAT16_to_INT4",
-"test_cast_FLOAT16_to_UINT4",
-"test_cast_FLOAT4E2M1_to_FLOAT",
-"test_cast_FLOAT4E2M1_to_FLOAT16",
-"test_cast_FLOAT8E4M3FNUZ_to_FLOAT",
-"test_cast_FLOAT8E4M3FNUZ_to_FLOAT16",
-"test_cast_FLOAT8E4M3FN_to_FLOAT",
-"test_cast_FLOAT8E4M3FN_to_FLOAT16",
-"test_cast_FLOAT8E5M2FNUZ_to_FLOAT",
-"test_cast_FLOAT8E5M2FNUZ_to_FLOAT16",
-"test_cast_FLOAT8E5M2_to_FLOAT",
-"test_cast_FLOAT8E5M2_to_FLOAT16",
-"test_cast_FLOAT_to_FLOAT4E2M1",
-"test_cast_FLOAT_to_FLOAT8E4M3FN",
-"test_cast_FLOAT_to_FLOAT8E4M3FNUZ",
-"test_cast_FLOAT_to_FLOAT8E5M2",
-"test_cast_FLOAT_to_FLOAT8E5M2FNUZ",
-"test_cast_FLOAT_to_INT4",
-"test_cast_FLOAT_to_UINT4",
-"test_cast_INT4_to_FLOAT",
-"test_cast_INT4_to_FLOAT16",
-"test_cast_INT4_to_INT8",
-"test_cast_UINT4_to_FLOAT",
-"test_cast_UINT4_to_FLOAT16",
-"test_cast_UINT4_to_UINT8",
-"test_cast_e8m0_FLOAT16_to_FLOAT8E8M0",
-"test_cast_e8m0_FLOAT8E8M0_to_FLOAT",
-"test_cast_e8m0_FLOAT8E8M0_to_FLOAT16",
-"test_cast_e8m0_FLOAT_to_FLOAT8E8M0",
-"test_cast_no_saturate_FLOAT16_to_FLOAT8E4M3FN",
-"test_cast_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ",
-"test_cast_no_saturate_FLOAT16_to_FLOAT8E5M2",
-"test_cast_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ",
-"test_cast_no_saturate_FLOAT_to_FLOAT8E4M3FN",
-"test_cast_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ",
-"test_cast_no_saturate_FLOAT_to_FLOAT8E5M2",
-"test_cast_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ",
-"test_castlike_FLOAT16_to_FLOAT4E2M1",
-"test_castlike_FLOAT16_to_FLOAT4E2M1_expanded",
-"test_castlike_FLOAT16_to_FLOAT8E4M3FN",
-"test_castlike_FLOAT16_to_FLOAT8E4M3FNUZ",
-"test_castlike_FLOAT16_to_FLOAT8E4M3FNUZ_expanded",
-"test_castlike_FLOAT16_to_FLOAT8E4M3FN_expanded",
-"test_castlike_FLOAT16_to_FLOAT8E5M2",
-"test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ",
-"test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ_expanded",
-"test_castlike_FLOAT16_to_FLOAT8E5M2_expanded",
-"test_castlike_FLOAT16_to_INT4",
-"test_castlike_FLOAT16_to_INT4_expanded",
-"test_castlike_FLOAT16_to_UINT4",
-"test_castlike_FLOAT16_to_UINT4_expanded",
-"test_castlike_FLOAT4E2M1_to_FLOAT",
+"test_castlike_FLOAT4E2M1_to_FLOAT",  // opencv_extra stores empty input data for these from-exotic CastLike cases
 "test_castlike_FLOAT4E2M1_to_FLOAT16",
 "test_castlike_FLOAT4E2M1_to_FLOAT16_expanded",
 "test_castlike_FLOAT4E2M1_to_FLOAT_expanded",
@@ -115,21 +59,7 @@
 "test_castlike_FLOAT8E5M2_to_FLOAT16",
 "test_castlike_FLOAT8E5M2_to_FLOAT16_expanded",
 "test_castlike_FLOAT8E5M2_to_FLOAT_expanded",
-"test_castlike_FLOAT_to_FLOAT4E2M1",
-"test_castlike_FLOAT_to_FLOAT4E2M1_expanded",
-"test_castlike_FLOAT_to_FLOAT8E4M3FN",
-"test_castlike_FLOAT_to_FLOAT8E4M3FNUZ",
-"test_castlike_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
-"test_castlike_FLOAT_to_FLOAT8E4M3FN_expanded",
-"test_castlike_FLOAT_to_FLOAT8E5M2",
-"test_castlike_FLOAT_to_FLOAT8E5M2FNUZ",
-"test_castlike_FLOAT_to_FLOAT8E5M2FNUZ_expanded",
-"test_castlike_FLOAT_to_FLOAT8E5M2_expanded",
-"test_castlike_FLOAT_to_INT4",
-"test_castlike_FLOAT_to_INT4_expanded",
 "test_castlike_FLOAT_to_STRING",
-"test_castlike_FLOAT_to_UINT4",
-"test_castlike_FLOAT_to_UINT4_expanded",
 "test_castlike_INT4_to_FLOAT",
 "test_castlike_INT4_to_FLOAT16",
 "test_castlike_INT4_to_FLOAT16_expanded",
@@ -143,25 +73,7 @@
 "test_castlike_UINT4_to_FLOAT_expanded",
 "test_castlike_UINT4_to_UINT8",
 "test_castlike_UINT4_to_UINT8_expanded",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FN",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ_expanded",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FN_expanded",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ_expanded",
-"test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2_expanded",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ_expanded",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2_expanded",
-"test_clip_example_expanded", //wrong output
-"test_clip_expanded",
 "test_clip_min_greater_than_max",
-"test_clip_min_greater_than_max_expanded",
-"test_clip_outbounds_expanded",
 "test_col2im",
 "test_col2im_5d",
 "test_col2im_dilations",
@@ -171,8 +83,6 @@
 "test_compress_1",  // ---- same as above ---
 "test_compress_default_axis",  // ---- same as above ---
 "test_compress_negative_axis",  // ---- same as above ---
-"test_constant_pad_axes", //type mismatch
-"test_constant_pad_negative_axes",
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convtranspose_autopad_same",
@@ -188,41 +98,17 @@
 "test_dequantizelinear_uint16",
 "test_dequantizelinear_uint4",
 "test_dft_axis",
-"test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
-"test_dropout_default_mask_ratio",  // ---- same as above ---
 "test_equal_string",
 "test_equal_string_broadcast",
-"test_gridsample_bicubic",  // ---- same as above ---
-"test_gridsample_bicubic_align_corners_0_additional_1",
-"test_gridsample_bicubic_align_corners_1_additional_1",
 "test_group_normalization_epsilon_expanded",
 "test_group_normalization_example_expanded",
 "test_identity_opt",  //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt",  // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
 "test_if_seq",  // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
-"test_image_decoder_decode_bmp_rgb",
-"test_image_decoder_decode_jpeg2k_rgb",
-"test_image_decoder_decode_jpeg_bgr",
-"test_image_decoder_decode_jpeg_grayscale",
-"test_image_decoder_decode_jpeg_rgb",
-"test_image_decoder_decode_png_rgb",
-"test_image_decoder_decode_pnm_rgb",
-"test_image_decoder_decode_tiff_rgb",
-"test_image_decoder_decode_webp_rgb",
-"test_l2normalization_axis_0", //nan
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_lppool_1d_default",
-"test_lppool_2d_default",
-"test_lppool_2d_dilations",
-"test_lppool_2d_pads",
-"test_lppool_2d_same_lower",
-"test_lppool_2d_same_upper",
-"test_lppool_2d_strides",
-"test_lppool_3d_default",
 "test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
-"test_maxpool_2d_ceil_output_size_reduce_by_one",
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
@@ -292,7 +178,6 @@
 "test_simple_rnn_batchwise",  // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults",  // ---- same as above ---
 "test_simple_rnn_with_initial_bias",  // ---- same as above ---
-"test_slice_start_out_of_bounds",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",
@@ -329,8 +214,6 @@
 "test_training_dropout_default",  // ---- same as above --- type mismatch
 "test_training_dropout_default_mask",  // ---- same as above ---
 "test_training_dropout_mask",  // ---- same as above ---
-"test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_unique_length_1", //incorrect output
 
 // ===== ONNX 1.22 additions: ops/dtypes not yet supported by the importer =====
 // BitCast op not supported by the ONNX importer
@@ -379,47 +262,6 @@
 "test_dequantizelinear_uint2",
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
-// FlexAttention op not supported
-"test_flexattention",
-"test_flexattention_causal_mask",
-"test_flexattention_diff_head_sizes",
-"test_flexattention_double",
-"test_flexattention_fp16",
-"test_flexattention_gqa",
-"test_flexattention_prob_mod",
-"test_flexattention_relative_positional",
-"test_flexattention_scaled",
-"test_flexattention_score_mod",
-"test_flexattention_soft_cap",
-// LinearAttention op not supported
-"test_linear_attention_decode_step",
-"test_linear_attention_decode_step_expanded",
-"test_linear_attention_delta",
-"test_linear_attention_delta_expanded",
-"test_linear_attention_explicit_scale",
-"test_linear_attention_explicit_scale_expanded",
-"test_linear_attention_fp16",
-"test_linear_attention_fp16_expanded",
-"test_linear_attention_gated",
-"test_linear_attention_gated_delta",
-"test_linear_attention_gated_delta_beta_scalar",
-"test_linear_attention_gated_delta_beta_scalar_expanded",
-"test_linear_attention_gated_delta_expanded",
-"test_linear_attention_gated_delta_gqa",
-"test_linear_attention_gated_delta_gqa_expanded",
-"test_linear_attention_gated_delta_mqa",
-"test_linear_attention_gated_delta_mqa_expanded",
-"test_linear_attention_gated_expanded",
-"test_linear_attention_gated_per_head_decay",
-"test_linear_attention_gated_per_head_decay_expanded",
-"test_linear_attention_linear",
-"test_linear_attention_linear_expanded",
-"test_linear_attention_linear_t1_no_past",
-"test_linear_attention_linear_t1_no_past_expanded",
-"test_linear_attention_no_past_explicit_zeros",
-"test_linear_attention_no_past_explicit_zeros_expanded",
-"test_linear_attention_prefill_with_past",
-"test_linear_attention_prefill_with_past_expanded",
 // misc unsupported (expanded subgraphs / new ops)
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded",
@@ -439,14 +281,3 @@
 // CausalConvWithState fp16 (expanded) accuracy
 "test_causal_conv_with_state_fp16_expanded",
 "test_causal_conv_with_state_silu_fp16_expanded",
-// FlexAttention (expanded) accuracy
-"test_flexattention_causal_mask_expanded_ver26",
-"test_flexattention_diff_head_sizes_expanded_ver26",
-"test_flexattention_double_expanded_ver26",
-"test_flexattention_expanded_ver26",
-"test_flexattention_fp16_expanded_ver26",
-"test_flexattention_gqa_expanded_ver26",
-"test_flexattention_prob_mod_expanded_ver26",
-"test_flexattention_relative_positional_expanded_ver26",
-"test_flexattention_score_mod_expanded_ver26",
-"test_flexattention_soft_cap_expanded_ver26",

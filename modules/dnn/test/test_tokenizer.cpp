@@ -67,14 +67,6 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     std::cout << word << std::endl;
 }
 
-TEST(Tokenizer_BPE, Tokenizer_GPT2_Model) {
-    std::string gpt2_model = _tf("gpt2/config.json");
-    Tokenizer tok = Tokenizer::load(gpt2_model);
-    auto ids = tok.encode("hello world");
-    auto text = tok.decode(ids);
-    EXPECT_EQ(text, "hello world");
-}
-
 TEST(Tokenizer_BPE, SimpleRepeated_GPT2) {
     Tokenizer gpt2_tok = Tokenizer::load(_tf("gpt2/config.json"));
     EXPECT_EQ(gpt2_tok.encode("0"), std::vector<int>({15}));

@@ -370,9 +370,7 @@ void UMat::create(Size _sz, int _type, UMatUsageFlags _usageFlags)
 
 void UMat::createSameSize(InputArray arr, int _type, UMatUsageFlags _usageFlags)
 {
-    int arr_size[CV_MAX_DIM];
-    int ndims = arr.sizend(arr_size);
-    create(ndims, arr_size, _type, _usageFlags);
+    create(arr.shape(), _type, _usageFlags);
 }
 
 void UMat::addref()
