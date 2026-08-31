@@ -139,6 +139,7 @@ struct Net::Impl : public detail::NetImplBase
     KVCacheManager kvCacheManager;
 
     Ptr<Graph> mainGraph;
+    std::vector<int> mainGraphOutTypes;
     int globGraphIdx;
 
     int accuracy;
@@ -551,6 +552,8 @@ struct Net::Impl : public detail::NetImplBase
     void fuseScaleSoftmax();
     // replace constant sub-expressions with their results
 
+    // widen FP16/BF16 constants to execution precision while the engine lacks half kernels
+    void widenHalfConstants();
     void fuseQDQ();
     void constFold();
     // make some operations (activation, batch norm, convolution) unary if
