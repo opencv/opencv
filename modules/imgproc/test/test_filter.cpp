@@ -1941,7 +1941,7 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
     {
         Mat parent(200, 160, CV_8UC1);
         rng.fill(parent, RNG::UNIFORM, 0, 256);
-        for (int ks : {3, 5})
+        for (int ks : {1, 3, 5})
             for (int b : {BORDER_DEFAULT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_CONSTANT})
                 for (int ddepth : {CV_16S, CV_32F})
                 {
@@ -1957,7 +1957,7 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
 
     // invalid aperture sizes must be rejected
     Mat src(16, 16, CV_8UC1), dx, dy;
-    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 1));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 2));
 }
 
 // Reproduces parallelCanny's per-slice row splitting and checks each slice's

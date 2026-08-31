@@ -255,25 +255,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
     Mat Dx, Dy;
-    // TODO(follow-up PR): route CV_32F gradients through the fused spatialGradient once its
-    // CV_32F/ksize=5 fast paths land. Disabled for now so this stays on the tuned Sobel path.
-#if 0
-    if( aperture_size == 3 || aperture_size == 5 )
-    {
-        spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
-    }
-    else
-#endif
-    if( aperture_size > 0 )
-    {
-        Sobel( src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
-        Sobel( src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
-    }
-    else
-    {
-        Scharr( src, Dx, CV_32F, 1, 0, scale, 0, borderType );
-        Scharr( src, Dy, CV_32F, 0, 1, scale, 0, borderType );
-    }
+    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
 
     Size size = src.size();
     Mat cov( size, CV_32FC3 );
@@ -376,18 +358,7 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
         return k.run(2, globalsize, localsize, false);
     }
     else
-    {
-        if (aperture_size > 0)
-        {
-            Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
-            Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
-        }
-        else
-        {
-            Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
-            Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
-        }
-    }
+        spatialGradient(_src, Dx, Dy, aperture_size, borderType, CV_32F, scale);
 
     return true;
 }

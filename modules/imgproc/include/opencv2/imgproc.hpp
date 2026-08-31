@@ -1818,21 +1818,22 @@ This is a fused variant of #Sobel: instead of two separate calls
 Sobel( src, dx, ddepth, 1, 0, ksize, scale );
 Sobel( src, dy, ddepth, 0, 1, ksize, scale );
 @endcode
-it produces both first-order derivatives in one traversal of the source. For an 8-bit single-channel
-whole-image (non-ROI) source with @p ksize = 3, @p ddepth = CV_16S, @p scale = 1, and
-#BORDER_DEFAULT (#BORDER_REFLECT_101) or #BORDER_REPLICATE, a dedicated fused 3x3 stencil kernel is
-used (including a HAL fast path) that reads each source sample once and shares it between the dx and
-dy computations; the result is bit-identical to the two #Sobel calls above. All other cases
-(@p ddepth = CV_32F, @p ksize = 5, scaled int16 output, floating-point source, other border types,
-or ROI/sub-matrix input) currently fall back to the two equivalent #Sobel passes. @note Fused fast
-paths for CV_32F output and @p ksize = 5 are added in a follow-up change.
+it produces both first-order derivatives in one traversal of the source. The fused single-pass
+kernels apply to an 8-bit single-channel (CV_8UC1) source with @p ksize = 3 or 5 and a
+reflect/replicate border (#BORDER_DEFAULT / #BORDER_REFLECT_101, #BORDER_REFLECT, #BORDER_REPLICATE),
+for both @p ddepth = CV_16S (unit @p scale) and @p ddepth = CV_32F (any @p scale); full-width
+row-range ROIs are supported as well. In these cases each source sample is read once and shared
+between the dx and dy computations, and the result is bit-identical to the two #Sobel calls above.
+The remaining cases (scaled int16 output, floating-point source, #BORDER_CONSTANT/#BORDER_WRAP, or a
+column-offset/partial-width ROI) fall back to the two equivalent #Sobel passes.
 
 @param src input image; single-channel, 8-bit (CV_8UC1) for the fused fast paths (CV_32FC1 is
             accepted via the fallback).
 @param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
 @param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
-@param ksize size of the Sobel kernel; fused fast paths require 3 (5 uses the Sobel fallback).
-            Also accepts -1 (Scharr) and 7 for Sobel-compatible callers such as #HoughCircles.
+@param ksize size of the Sobel kernel; fused fast paths require 3 or 5 (other sizes use the Sobel
+            fallback). Also accepts 1, -1 (Scharr), and 7 for Sobel-compatible callers such as
+            #HoughCircles and #cv::segmentation::IntelligentScissorsMB.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 @param ddepth output image depth; CV_16S or CV_32F.
 @param scale optional scale factor applied to the computed derivatives.
