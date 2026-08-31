@@ -17,10 +17,8 @@ static double refArcLength(const std::vector<T>& curve, bool is_closed)
     int start_idx = is_closed ? 0 : 1;
     for (size_t i = start_idx; i < npoints; i++)
     {
-        Point2i pt = curve[i];
-        double dx = (double)pt.x - prev_pt.x;
-        double dy = (double)pt.y - prev_pt.y;
-        expected_length += sqrt(dx * dx + dy * dy);
+        T pt = curve[i];
+        expected_length += cv::norm(pt - prev_pt);
         prev_pt = pt;
     }
 
@@ -70,7 +68,7 @@ TEST_P(Geometry_ArcLength, accuracy_int)
     double length = cv::arcLength(curvei, is_closed);
     double expected_length = refArcLength(curvei, is_closed);
 
-    EXPECT_NEAR(expected_length, length, FLT_EPSILON * 100 * expected_length);
+    EXPECT_NEAR(expected_length, length, FLT_EPSILON * expected_length);
 }
 
 // Simple test with a manually defined shape
