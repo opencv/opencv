@@ -177,6 +177,17 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         // Pack only 2D weight matrices; skip higher-dim tensors (e.g. Q@K^T in attention).
         const Mat* B_mat = !blobs.empty() ? &blobs[0] :
                            (inputs.size() >= 2 && inputs[1].dims == 2 ? &inputs[1] : nullptr);
+
+        // A constant rank-1 weight ([K] in the logical [M, K] @ [K] -> [M] contract) is
+        // still physically 1-D here; fastGemmPackB/fastGemmThinPackB read the last two
+        // dims, so promote it to [K, 1] first. reshape() shares the blob's buffer, so
+        // last_packed_input_B_data below still tracks the original data pointer.
+        Mat promoted_B;
+        if (B_mat && B_mat->dims == 1) {
+            promoted_B = B_mat->reshape(1, std::vector<int>{B_mat->size[0], 1});
+            B_mat = &promoted_B;
+        }
+
         if (B_mat && B_mat->data != last_packed_input_B_data) {
             packed_input_B.clear();
             packed_input_B.shrink_to_fit();
