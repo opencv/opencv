@@ -11,6 +11,7 @@
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -187,6 +188,32 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
     NaryEltwiseHelper helper;
 public:
     std::string operation;
+
+    bool unfoldOp(LayerMath& r, const ConstOperand& side) const CV_OVERRIDE
+    {
+        if (!side.hasValue) return false;
+        if (inputs.size() != 2) return false;
+        if (op == OPERATION::SUB && !side.flowIsFirstInput) return false;
+
+        FusionEltwiseOp o;
+        switch (op) {
+        case OPERATION::ADD:
+        case OPERATION::SUM:  o = FusionEltwiseOp::ADD; break;
+        case OPERATION::SUB:  o = FusionEltwiseOp::SUB; break;
+        case OPERATION::PROD: o = FusionEltwiseOp::MUL; break;
+        case OPERATION::MAX:  o = FusionEltwiseOp::MAX; break;
+        case OPERATION::MIN:  o = FusionEltwiseOp::MIN; break;
+        default: return false;
+        }
+
+        if (o == FusionEltwiseOp::MAX && side.bufferId < 0 && side.value == 0.f)
+            r.setKernel(cv::dnn::getActivationFunc(ACTIV_RELU), { 0.f });
+
+        const int operand = side.bufferId >= 0 ? r.perChannelConstant(side.bufferId)
+                                              : r.constant(side.value);
+        r.binary(o, LayerMath::INPUT_VALUE, operand);
+        return true;
+    }
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {

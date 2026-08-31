@@ -5,6 +5,7 @@
 // Copyright (C) 2025, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
+#include "../adjacency_graph.hpp"
 #define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "cpu_kernels/activation_kernels.simd.hpp"
 #include "layers/cpu_kernels/activation_kernels.simd_declarations.hpp"
@@ -80,6 +81,27 @@ public:
         if (hasMax) maxValue = params.get<float>("max");
         if (hasMin && hasMax)
             CV_Assert(minValue <= maxValue);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand& side) const CV_OVERRIDE
+    {
+        float lo = -FLT_MAX, hi = FLT_MAX;
+        if (hasMin) lo = minValue;
+        if (hasMax) hi = maxValue;
+        if ((!hasMin || !hasMax) && inputs.size() > 1) {
+            // ConstOperand carries two anonymous scalars with no slot information, so
+            // only the fully specified (x, min, max) form can be read unambiguously.
+            // An omitted optional input shows up as an empty Arg, not a missing one.
+            if (inputs.size() != 3 || !side.hasValue)
+                return false;
+            if (inputs[1].idx == 0 || inputs[2].idx == 0)
+                return false;
+            if (!hasMin) lo = side.value;
+            if (!hasMax) hi = side.value2;
+        }
+        r.setKernel(cv::dnn::getActivationFunc(ACTIV_CLIP), { lo, hi });
+        r.clamp(LayerMath::INPUT_VALUE, lo, hi);
+        return true;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "layers_common.hpp"
 #include "conv2_common.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
@@ -331,6 +332,142 @@ public:
         return true;
     }
 
+    static bool splitConstOperand(const std::vector<FusionNode>& nd, int node,
+                             int& other, int& bufId, float& scalarVal)
+    {
+        const FusionNode& n = nd[node];
+        if (n.inputs.size() != 2)
+            return false;
+        for (int s = 0; s < 2; s++) {
+            const FusionNode& c = nd[n.inputs[s]];
+            if (c.op == FusionEltwiseOp::CONST) {
+                bufId = -1;
+                scalarVal = c.scalar;
+                other = n.inputs[1 - s];
+                return true;
+            }
+            if (c.op == FusionEltwiseOp::PER_CHANNEL_CONST) {
+                bufId = c.constBufferId;
+                scalarVal = 0.f;
+                other = n.inputs[1 - s];
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool readPerChannelValues(const AdjacencyGraph& g, int bufId, float scalarVal, int K,
+                       std::vector<float>& out) const
+    {
+        if (bufId < 0) {
+            std::fill(out.begin(), out.end(), scalarVal);
+            return true;
+        }
+        if (bufId >= (int)g.constBufs.size())
+            return false;
+        const Mat& c = g.constBufs[bufId];
+        if (c.empty() || c.type() != CV_32F || !c.isContinuous() || (int)c.total() != K)
+            return false;
+
+        // Broadcasting puts the channel axis last-but-the-spatial-dims, so the
+        // constant is only per-channel if that axis holds K and the rest are 1.
+        const int nspatial = wshape0.dims - 2;
+        const int ax = c.dims - nspatial - 1;
+        if (ax < 0)
+            return false;
+        for (int d = 0; d < c.dims; d++) {
+            if (c.size[d] != (d == ax ? K : 1))
+                return false;
+        }
+        const float* p = c.ptr<float>();
+        std::copy(p, p + K, out.begin());
+        return true;
+    }
+
+    virtual bool absorbMath(const Ptr<AdjacencyGraph>& expr) CV_OVERRIDE
+    {
+        if (!expr || expr->size() == 0)
+            return false;
+        const std::vector<FusionNode>& nd = expr->nodes();
+        if (nd[0].op != FusionEltwiseOp::INPUT)
+            return false;
+        if (expr->outputNode != (int)nd.size() - 1)
+            return false;
+        if (fusedBatchNorm || addResidual || inputs.size() > 1)
+            return false;
+        if (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr || !activ.empty())
+            return false;
+        if (wshape0.empty() || wshape0.dims < 3)
+            return false;
+
+        const int K = wshape0[0];
+        if (!bias.empty() && (bias.dims != 1 || (int)bias.total() != K))
+            return false;
+
+        int cur = expr->outputNode;
+
+        FastActivation act = FAST_ACTIV_NONE;
+        std::vector<float> ap;
+        if (nd[cur].op == FusionEltwiseOp::CLAMP && fusion::detail::bits(nd[cur].scalar) == fusion::detail::bits(0.f)) {
+            act = FAST_ACTIV_CLIP;
+            ap.assign(2, 0.f);
+            ap[1] = nd[cur].scalar2;
+            cur = nd[cur].inputs[0];
+        } else if (nd[cur].op == FusionEltwiseOp::MAX && nd[cur].inputs.size() == 2 &&
+                   nd[nd[cur].inputs[1]].op == FusionEltwiseOp::CONST &&
+                   fusion::detail::bits(nd[nd[cur].inputs[1]].scalar) == fusion::detail::bits(0.f)) {
+            act = FAST_ACTIV_RELU;
+            cur = nd[cur].inputs[0];
+        }
+
+        std::vector<float> scale(K, 1.f), shift(K, 0.f);
+        bool affine = false;
+
+        if (nd[cur].op == FusionEltwiseOp::ADD) {
+            int other = -1, bufId = -1;
+            float sv = 0.f;
+            if (!splitConstOperand(nd, cur, other, bufId, sv))
+                return false;
+            if (!readPerChannelValues(*expr, bufId, sv, K, shift))
+                return false;
+            affine = true;
+            cur = other;
+        }
+        if (nd[cur].op == FusionEltwiseOp::MUL) {
+            int other = -1, bufId = -1;
+            float sv = 0.f;
+            if (!splitConstOperand(nd, cur, other, bufId, sv))
+                return false;
+            if (!readPerChannelValues(*expr, bufId, sv, K, scale))
+                return false;
+            affine = true;
+            cur = other;
+        }
+
+        if (cur != 0)
+            return false;
+        if (!affine && act == FAST_ACTIV_NONE)
+            return false;
+
+        if (affine) {
+            fusedScale.fit(1, &K, CV_32F);
+            fusedBias.fit(1, &K, CV_32F);
+            float* fs = fusedScale.ptr<float>();
+            float* fb = fusedBias.ptr<float>();
+            const float* b = bias.empty() ? nullptr : bias.ptr<float>();
+            for (int k = 0; k < K; k++) {
+                fs[k] = scale[k];
+                fb[k] = (b ? b[k] * scale[k] : 0.f) + shift[k];
+            }
+            fusedBatchNorm = true;
+        }
+        if (act != FAST_ACTIV_NONE) {
+            fastActivation = act;
+            activParams = ap;
+        }
+        return true;
+    }
+
     virtual int64_t getFLOPS(const std::vector<MatShape>& inputs,
                              const std::vector<MatShape>& outputs) const CV_OVERRIDE
     {
@@ -653,8 +790,11 @@ public:
         });
         if (activationFunc) {
             float* dst = out;
-            int total = K1 * HW * 8;
-            activationFunc(dst, dst, total, activParams.data());
+            const int total = K1 * HW * 8;
+            const float* prm = activParams.empty() ? nullptr : activParams.data();
+            parallel_for_(Range(0, total), [&](const Range& r) {
+                activationFunc(dst + r.start, dst + r.start, (size_t)(r.end - r.start), prm);
+            });
         }
     }
 

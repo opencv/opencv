@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/fusion_apply.hpp"
 // backends
 #include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
@@ -54,6 +55,13 @@ class GemmLayerImpl CV_FINAL : public GemmLayer {
 public:
     mutable int inpType = -1;
 
+    PreparedFusion fusion;
+
+    virtual bool absorbMath(const Ptr<AdjacencyGraph>& expr) CV_OVERRIDE
+    {
+        return fusion.take(expr);
+    }
+
     GemmLayerImpl(const LayerParams& params) {
         setParamsFrom(params);
 
@@ -80,6 +88,8 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        if (fusion.expr)
+            return backendId == DNN_BACKEND_OPENCV;
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && inpType == CV_32F) ||
                backendId == DNN_BACKEND_CANN ||
@@ -373,6 +383,16 @@ public:
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            if (fusion.expr) {
+                std::vector<Mat> outs;
+                outputs_arr.getMatVector(outs);
+                if (!outs.empty()) {
+                    Mat y32;
+                    outs[0].convertTo(y32, CV_32F);
+                    fusion.run(y32);
+                    y32.convertTo(outs[0], outs[0].type());
+                }
+            }
             return;
         }
 
@@ -492,6 +512,7 @@ public:
                                     packed_B_mlas.data,
                                     1.f,
                                     Y.ptr<float>(), N)) {
+                    fusion.run(Y);
                     return;
                 }
             }
@@ -506,6 +527,7 @@ public:
         } else {
             fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
+        fusion.run(Y);
     }
 
     // Double-precision analogue of broadcastCWtihBeta() above; not cached (see finalize()).
