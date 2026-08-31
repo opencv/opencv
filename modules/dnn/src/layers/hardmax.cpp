@@ -31,7 +31,7 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);

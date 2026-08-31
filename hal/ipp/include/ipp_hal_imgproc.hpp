@@ -86,6 +86,15 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
 #define cv_hal_filter_stateless ipp_hal_filter2D
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                   int width, int height, int depth, int cn,
+                                   int margin_left, int margin_top, int margin_right, int margin_bottom,
+                                   int d, double sigma_color, double sigma_space, int border_type);
+#undef  cv_hal_bilateralFilter_offset
+#define cv_hal_bilateralFilter_offset ipp_hal_bilateralFilter_offset
+#endif
+
 #endif //IPP_VERSION_X100 >= 810
 
 #if IPP_VERSION_X100 >= 700

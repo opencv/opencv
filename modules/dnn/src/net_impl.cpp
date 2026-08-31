@@ -2774,7 +2774,7 @@ void Net::Impl::collectOrtProfileData() const
     }
 
     // Read the JSON entirely into memory, then parse it from the string.
-    std::ifstream in(profile_path.get());
+    std::ifstream in(toOrtPath(profile_path.get()).c_str());
     if (!in.is_open()) {
         CV_LOG_WARNING(NULL, "DNN/ORT: failed to open profile JSON " << profile_path.get());
         return;

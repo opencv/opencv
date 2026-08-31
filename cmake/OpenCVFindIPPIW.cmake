@@ -88,9 +88,7 @@ macro(ippiw_setup PATH BUILD)
           set(IPP_IW_LIBRARY ippiw)
           set(IPP_IW_INCLUDES "${IPP_IW_PATH}/include")
           set(IPP_IW_LIBRARIES ${IPP_IW_LIBRARY})
-          if(NOT EXISTS "${IPP_IW_PATH}/CMakeLists.txt")
-            file(COPY "${OpenCV_SOURCE_DIR}/3rdparty/ippicv/CMakeLists.txt" DESTINATION "${IPP_IW_PATH}")
-          endif()
+          file(COPY "${OpenCV_SOURCE_DIR}/3rdparty/ippicv/CMakeLists.txt" DESTINATION "${IPP_IW_PATH}") # always rewrite IPP cmake files
           add_subdirectory("${IPP_IW_PATH}/" ${OpenCV_BINARY_DIR}/3rdparty/ippiw)
 
           set(HAVE_IPP_IW 1)

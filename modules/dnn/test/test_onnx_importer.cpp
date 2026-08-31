@@ -261,6 +261,17 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
     testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
+// maxPool8s scalar kernel path.
+TEST_P(Test_ONNX_layers, MaxPooling_int8)
+{
+    testONNXModels("maxpool_2d_int8", npy, 0, 0, false, false);
+}
+// maxPool64f scalar kernel path.
+TEST_P(Test_ONNX_layers, MaxPooling_double)
+{
+    testONNXModels("maxpool_2d_double", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
@@ -1151,6 +1162,29 @@ TEST_P(Test_ONNX_layers, MatMul_init_bcast)
 
 TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
     testONNXModels("matmul_bcast");
+}
+
+// forwardInt<T> integer-accumulation path.
+TEST_P(Test_ONNX_layers, MatMul_int32)
+{
+    testONNXModels("matmul_int32_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_int64)
+{
+    testONNXModels("matmul_int64_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_uint32)
+{
+    testONNXModels("matmul_uint32_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_uint64)
+{
+    testONNXModels("matmul_uint64_init");
+}
+// forwardDouble cv::gemm delegation path.
+TEST_P(Test_ONNX_layers, MatMul_double)
+{
+    testONNXModels("matmul_double_init");
 }
 
 TEST_P(Test_ONNX_layers, MatMulAdd)
@@ -2262,6 +2296,12 @@ TEST_P(Test_ONNX_layers, Gemm)
 TEST_P(Test_ONNX_layers, Gemm_bias)
 {
     testONNXModels("gemm_vector_bias");
+}
+
+// forwardDouble cv::gemm delegation path.
+TEST_P(Test_ONNX_layers, Gemm_double)
+{
+    testONNXModels("gemm_double");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)

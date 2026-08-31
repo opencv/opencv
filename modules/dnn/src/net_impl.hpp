@@ -48,6 +48,13 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache;
+
+#ifdef _WIN32
+typedef std::wstring OrtPathString;
+#else
+typedef std::string OrtPathString;
+#endif
+OrtPathString toOrtPath(const std::string& utf8Path);
 #endif
 
 /** @brief Single entry in a @ref PerfProfile.
@@ -132,6 +139,7 @@ struct Net::Impl : public detail::NetImplBase
     KVCacheManager kvCacheManager;
 
     Ptr<Graph> mainGraph;
+    std::vector<int> mainGraphOutTypes;
     int globGraphIdx;
 
     int accuracy;
@@ -544,6 +552,8 @@ struct Net::Impl : public detail::NetImplBase
     void fuseScaleSoftmax();
     // replace constant sub-expressions with their results
 
+    // widen FP16/BF16 constants to execution precision while the engine lacks half kernels
+    void widenHalfConstants();
     void fuseQDQ();
     void constFold();
     // make some operations (activation, batch norm, convolution) unary if

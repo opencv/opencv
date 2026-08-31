@@ -335,8 +335,8 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    // NumPy has no bfloat16 dtype: widen CV_16BF to float32 (lossless).
-    if( m.depth() == CV_16BF )
+    // NumPy has no bfloat16 or float8 dtype: widen these to float32 (lossless).
+    if( m.depth() == CV_16BF || m.depth() == CV_8F_E4M3FN || m.depth() == CV_8F_E4M3FNUZ )
     {
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));
