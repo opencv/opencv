@@ -1595,6 +1595,23 @@ TEST(Layer_Eltwise_promote, preserves_wide_values)
     EXPECT_ANY_THROW(runEltwise("add", {wide, asFloat}));
 }
 
+// Sum/Mean/Max/Min are variadic, and the common type must not depend on operand order: resolving
+// two integers first would build a wider integer that no float covers exactly.
+TEST(Layer_Eltwise_promote, order_independent)
+{
+    const std::vector<int> shape{2, 3};
+    Mat i32(shape, CV_32S), u32(shape, CV_32U), f32(shape, CV_32F);
+    cv::randu(i32, 0, 100);
+    cv::randu(u32, 0, 100);
+    cv::randu(f32, -100, 100);
+
+    Mat intsFirst = runEltwise("sum", {i32, u32, f32});
+    Mat floatFirst = runEltwise("sum", {f32, i32, u32});
+    EXPECT_EQ(intsFirst.type(), CV_64F);
+    EXPECT_EQ(floatFirst.type(), CV_64F);
+    normAssert(intsFirst, floatFirst, "", 0, 0);
+}
+
 // where promotes its two value operands and leaves the CV_Bool condition alone; comparisons
 // promote for the computation but keep a CV_Bool output; bitwise ops promote across signedness.
 TEST(Layer_Eltwise_promote, where_comparison_bitwise)

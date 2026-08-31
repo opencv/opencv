@@ -357,6 +357,34 @@ public:
     }
 
     // Narrowest type representing every value of both operands; pairs without one are rejected.
+    // Significand bits a float needs to hold every value of an integer type exactly.
+    static int intValueBits(int type)
+    {
+        switch (type)
+        {
+            case CV_8S:  return 7;
+            case CV_8U:  return 8;
+            case CV_16S: return 15;
+            case CV_16U: return 16;
+            case CV_32S: return 31;
+            case CV_32U: return 32;
+            case CV_64S: return 63;
+            case CV_64U: return 64;
+        }
+        return 0;
+    }
+
+    // Narrowest float holding integers up to `bits`, and at least `atLeast`; 0 when none does.
+    // CV_32F is exact to 2^24 and CV_64F to 2^53; the 16-bit floats have no typeDispatch arm.
+    static int narrowestFloat(int bits, int atLeast)
+    {
+        if (atLeast == CV_32F && bits <= 24)
+            return CV_32F;
+        if (atLeast == CV_32F || atLeast == CV_64F)
+            return bits <= 53 ? CV_64F : 0;
+        return 0;
+    }
+
     static int commonArithType(int type0, int type1)
     {
         if (type0 == type1)
@@ -385,15 +413,12 @@ public:
                 return signedTypes[rank - 1];
         }
 
-        // CV_32F is exact to 2^24 and CV_64F to 2^53: an 8- or 16-bit int keeps the float type,
-        // a 32-bit int forces CV_64F, and a 64-bit int is rejected below.
         if (rank0 > 0 && rank1 > 0 && isFloat0 != isFloat1)
         {
-            int intRank = isFloat0 ? rank1 : rank0;
-            if (intRank <= 2)
-                return isFloat0 ? type0 : type1;
-            if (intRank == 3)
-                return CV_64F;
+            int common = isFloat0 ? narrowestFloat(intValueBits(type1), type0)
+                                  : narrowestFloat(intValueBits(type0), type1);
+            if (common != 0)
+                return common;
         }
 
         CV_Error_(Error::StsBadArg, ("NaryEltwiseLayer: inputs of type %s and %s have no common type",
@@ -402,10 +427,34 @@ public:
 
     static int findCommonType(const std::vector<MatType>& inputs)
     {
-        int commonType = inputs[0];
-        for (size_t i = 1; i < inputs.size(); i++)
-            commonType = commonArithType(commonType, inputs[i]);
-        return commonType;
+        // Folding pairwise across the int/float boundary would merge two integers into a wider one
+        // and lose the individual bit counts narrowestFloat() needs, so the two are kept apart.
+        int floatType = -1, intType = -1, intBits = 0;
+        for (auto input : inputs)
+        {
+            if (CV_IS_FLOAT_TYPE(input) != 0)
+                floatType = floatType < 0 ? input : commonArithType(floatType, input);
+            else if (intValueBits(input) > intBits)
+            {
+                intBits = intValueBits(input);
+                intType = input;
+            }
+        }
+
+        if (intType < 0)
+            return floatType;
+
+        if (floatType < 0)
+        {
+            int commonType = inputs[0];
+            for (size_t i = 1; i < inputs.size(); i++)
+                commonType = commonArithType(commonType, inputs[i]);
+            return commonType;
+        }
+
+        // intType carries intBits, so if no float covers it commonArithType raises the error.
+        int common = narrowestFloat(intBits, floatType);
+        return common != 0 ? common : commonArithType(intType, floatType);
     }
 
     bool isComparison() const
@@ -419,12 +468,11 @@ public:
     int promoteOperands(std::vector<Mat>& operands, const std::vector<Mat>& outputs)
     {
         int dispatchType = outputs.front().type();
-        // A comparison declares CV_Bool, so its output type is not the type the kernel computes in.
+        // A comparison declares CV_Bool and is binary, so its compute type is the operand pair.
         if (isComparison())
         {
-            dispatchType = operands.front().type();
-            for (size_t i = 1; i < operands.size(); i++)
-                dispatchType = commonArithType(dispatchType, operands[i].type());
+            CV_CheckEQ(operands.size(), 2u, "");
+            dispatchType = commonArithType(operands[0].type(), operands[1].type());
         }
 
         size_t firstOperand = op == OPERATION::WHERE ? 1 : 0;
