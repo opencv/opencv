@@ -196,19 +196,16 @@ template<> int PyrDownVecH<uchar, int, 3>(const uchar* src, int* row, int width)
     const v_uint16 lo_mask = vx_setall_u16(0x00FFu);
     const v_uint16 w6      = vx_setall_u16(6u);
 
-    for (; x <= width - step; x += step, src += VU8 * 3, row += step)
+    for (; x <= width - step - 3; x += step, src += VU8 * 3, row += step)
     {
-        v_uint8 s0R, s0G, s0B, s1R, s1G, s1B;
-        v_load_deinterleave(src,         s0R, s0G, s0B);
-        v_load_deinterleave(src + VU8*3, s1R, s1G, s1B);
+        v_uint8 s0R, s0G, s0B, scR, scG, scB, s4R, s4G, s4B;
+        v_load_deinterleave(src,      s0R, s0G, s0B);
+        v_load_deinterleave(src + 6,  scR, scG, scB);
+        v_load_deinterleave(src + 12, s4R, s4G, s4B);
 
-        v_uint8 sh2R = v_extract<2>(s0R, s1R), sh4R = v_extract<4>(s0R, s1R);
-        v_uint8 sh2G = v_extract<2>(s0G, s1G), sh4G = v_extract<4>(s0G, s1G);
-        v_uint8 sh2B = v_extract<2>(s0B, s1B), sh4B = v_extract<4>(s0B, s1B);
-
-        v_uint16 u0R = v_reinterpret_as_u16(s0R), ucR = v_reinterpret_as_u16(sh2R), up2R = v_reinterpret_as_u16(sh4R);
-        v_uint16 u0G = v_reinterpret_as_u16(s0G), ucG = v_reinterpret_as_u16(sh2G), up2G = v_reinterpret_as_u16(sh4G);
-        v_uint16 u0B = v_reinterpret_as_u16(s0B), ucB = v_reinterpret_as_u16(sh2B), up2B = v_reinterpret_as_u16(sh4B);
+        v_uint16 u0R = v_reinterpret_as_u16(s0R), ucR = v_reinterpret_as_u16(scR), up2R = v_reinterpret_as_u16(s4R);
+        v_uint16 u0G = v_reinterpret_as_u16(s0G), ucG = v_reinterpret_as_u16(scG), up2G = v_reinterpret_as_u16(s4G);
+        v_uint16 u0B = v_reinterpret_as_u16(s0B), ucB = v_reinterpret_as_u16(scB), up2B = v_reinterpret_as_u16(s4B);
 
         // Five-tap [1,4,6,4,1] filter; max value 255×16 = 4080, fits uint16.
         v_uint16 accR = v_add(v_add(v_and(u0R, lo_mask), v_and(up2R, lo_mask)),
