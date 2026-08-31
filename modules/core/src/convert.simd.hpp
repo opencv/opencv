@@ -517,7 +517,6 @@ static void cvt64s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* 
     DEF_CVT_SCALAR_FUNC(S##16s,  T, short)     DEF_CVT_SCALAR_FUNC(16s##S,  short, T) \
     DEF_CVT_SCALAR_FUNC(S##32u,  T, unsigned)  DEF_CVT_SCALAR_FUNC(32u##S,  unsigned, T) \
     DEF_CVT_SCALAR_FUNC(S##32s,  T, int)       DEF_CVT_SCALAR_FUNC(32s##S,  int, T) \
-    DEF_CVT_SCALAR_FUNC(32f##S,  float, T) \
     DEF_CVT_SCALAR_FUNC(S##64f,  T, double)    DEF_CVT_SCALAR_FUNC(64f##S,  double, T) \
     DEF_CVT_SCALAR_FUNC(S##16f,  T, hfloat)    DEF_CVT_SCALAR_FUNC(16f##S,  hfloat, T) \
     DEF_CVT_SCALAR_FUNC(S##16bf, T, bfloat)    DEF_CVT_SCALAR_FUNC(16bf##S, bfloat, T) \
@@ -531,6 +530,129 @@ DEF_CVT_FP8(8fe4m3u, fp8a_t)
 // FP8 -> FP8, cross-format only (identity uses the 1-byte copy cvt8u, like 16f->16f uses cvt16u)
 DEF_CVT_SCALAR_FUNC(8fe4m38fe4m3u, fp8_t,   fp8a_t)
 DEF_CVT_SCALAR_FUNC(8fe4m3u8fe4m3, fp8a_t, fp8_t)
+
+// float32 -> FP8: vectorized encode for the common case (finite source, normal-range FP8 result);
+// overflow-to-NaN is folded into the same select. Lanes that would land on a subnormal/zero FP8
+// result, or come from a NaN/Inf source, are flagged and patched with the reference scalar
+// fp8_detail::encodeE4M3 (those need a per-lane variable shift that has no portable vector form).
+//
+// fp8FallbackMask is the cheap "would this lane need the fallback" test on its own, factored out
+// of encodeFp8FastPath so a whole SIMD group that is entirely subnormal/zero/NaN (e.g. a tensor
+// region near zero) can skip the ~5x costlier rounding/carry/overflow math below and go straight
+// to the scalar reference, instead of paying for both.
+template<int bias> static inline v_int32
+fp8FallbackMask(const v_float32& vf)
+{
+    v_uint32 u = v_reinterpret_as_u32(vf);
+    v_uint32 e = v_and(v_shr<23>(u), vx_setall_u32(0xFFu));
+    v_int32 newexpRaw = v_sub(v_reinterpret_as_s32(e), vx_setall_s32(127 - bias));
+    v_int32 isNan = v_reinterpret_as_s32(v_eq(e, vx_setall_u32(0xFFu)));
+    return v_or(isNan, v_le(newexpRaw, vx_setall_s32(0)));
+}
+
+template<int bias, bool fnuz> static inline void
+encodeFp8FastPath(const v_float32& vf, v_int32& byteOut, v_int32& needsFallback)
+{
+    v_uint32 u    = v_reinterpret_as_u32(vf);
+    v_uint32 e    = v_and(v_shr<23>(u), vx_setall_u32(0xFFu));
+    v_uint32 m    = v_and(u, vx_setall_u32(0x7FFFFFu));
+    v_uint32 sbit = v_and(v_shr<24>(u), vx_setall_u32(0x80u));
+    v_uint32 full = v_or(m, vx_setall_u32(1u << 23));
+
+    v_int32 newexpRaw = v_sub(v_reinterpret_as_s32(e), vx_setall_s32(127 - bias));
+
+    // roundHalfUp(full, 20): valid only while newexpRaw > 0, matching the scalar "else" branch
+    v_uint32 q       = v_shr<20>(full);
+    v_uint32 rem     = v_and(full, vx_setall_u32((1u << 20) - 1));
+    v_uint32 inc     = v_and(v_ge(rem, vx_setall_u32(1u << 19)), vx_setall_u32(1u));
+    v_uint32 rounded = v_add(q, inc);
+
+    v_uint32 carry  = v_ne(v_and(rounded, vx_setall_u32(16u)), vx_setall_u32(0u));
+    rounded = v_select(carry, v_shr<1>(rounded), rounded);
+    v_int32 newexp = v_add(newexpRaw, v_and(v_reinterpret_as_s32(carry), vx_setall_s32(1)));
+
+    v_uint32 mant = v_and(rounded, vx_setall_u32(7u));
+
+    v_int32 gt15 = v_gt(newexp, vx_setall_s32(15));
+    v_int32 overflow;
+    if constexpr (fnuz)
+        overflow = gt15;
+    else
+        overflow = v_or(gt15, v_and(v_eq(newexp, vx_setall_s32(15)),
+                                     v_eq(v_reinterpret_as_s32(mant), vx_setall_s32(7))));
+
+    v_uint32 nanCode;
+    if constexpr (fnuz)
+        nanCode = vx_setall_u32(0x80u);
+    else
+        nanCode = v_or(sbit, vx_setall_u32(0x7Fu));
+
+    v_uint32 normal = v_or(v_or(sbit, v_shl<3>(v_reinterpret_as_u32(newexp))), mant);
+    v_uint32 result = v_select(v_reinterpret_as_u32(overflow), nanCode, normal);
+
+    v_int32 isNan = v_reinterpret_as_s32(v_eq(e, vx_setall_u32(0xFFu)));
+    needsFallback = v_and(v_or(isNan, v_le(newexpRaw, vx_setall_s32(0))), vx_setall_s32(1));
+    byteOut = v_reinterpret_as_s32(result);
+}
+
+template<int bias, bool fnuz> static void
+cvtF32ToFp8(const uchar* src_, size_t sstep, const uchar*, size_t,
+            uchar* dst, size_t dstep, Size size, void*)
+{
+    CV_INSTRUMENT_REGION();
+    const float* src = (const float*)src_;
+    sstep /= sizeof(src[0]);
+
+    for (int i = 0; i < size.height; i++, src += sstep, dst += dstep)
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int LANES32 = VTraits<v_int32>::vlanes();
+        const int VECSZ = LANES32 * 4;
+        for (; j <= size.width - VECSZ; j += VECSZ)
+        {
+            v_float32 vf0 = vx_load(src + j);
+            v_float32 vf1 = vx_load(src + j + LANES32);
+            v_float32 vf2 = vx_load(src + j + 2 * LANES32);
+            v_float32 vf3 = vx_load(src + j + 3 * LANES32);
+
+            v_int32 pre0 = fp8FallbackMask<bias>(vf0);
+            v_int32 pre1 = fp8FallbackMask<bias>(vf1);
+            v_int32 pre2 = fp8FallbackMask<bias>(vf2);
+            v_int32 pre3 = fp8FallbackMask<bias>(vf3);
+            if (v_check_all(v_and(v_and(pre0, pre1), v_and(pre2, pre3))))
+            {
+                // whole group is subnormal/zero/NaN — skip the costlier fast-path math
+                for (int k = 0; k < VECSZ; k++)
+                    dst[j + k] = fp8_detail::encodeE4M3(src[j + k], bias, fnuz);
+                continue;
+            }
+
+            v_int32 byte0, byte1, byte2, byte3;
+            v_int32 fb0, fb1, fb2, fb3;
+            encodeFp8FastPath<bias, fnuz>(vf0, byte0, fb0);
+            encodeFp8FastPath<bias, fnuz>(vf1, byte1, fb1);
+            encodeFp8FastPath<bias, fnuz>(vf2, byte2, fb2);
+            encodeFp8FastPath<bias, fnuz>(vf3, byte3, fb3);
+
+            v_store(dst + j, v_pack_u(v_pack(byte0, byte1), v_pack(byte2, byte3)));
+
+            uchar fallback[VTraits<v_uint8>::max_nlanes];
+            v_store(fallback, v_pack_u(v_pack(fb0, fb1), v_pack(fb2, fb3)));
+            for (int k = 0; k < VECSZ; k++)
+                if (fallback[k])
+                    dst[j + k] = fp8_detail::encodeE4M3(src[j + k], bias, fnuz);
+        }
+        vx_cleanup();
+#endif
+        for (; j < size.width; j++)
+            dst[j] = fp8_detail::encodeE4M3(src[j], bias, fnuz);
+    }
+}
+static void cvt32f8fe4m3(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtF32ToFp8<7, false>(s, ss, p, ps, d, ds, sz, x); }
+static void cvt32f8fe4m3u(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtF32ToFp8<8, true>(s, ss, p, ps, d, ds, sz, x); }
 
 // FP8 -> float32: 256-entry decode table gathered via universal intrinsics (same table as scalar)
 template<typename FP8>
