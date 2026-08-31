@@ -2118,10 +2118,10 @@ enum ResizeCoordMode
     HALF_PIXEL_SYMMETRIC    //!< ONNX Resize "half_pixel_symmetric"; see @ref ResizeCoordMode note
 };
 
-/** \brief Index-rounding rule used by #INTER_NEAREST when @ref ResizeParams::coordMode is not
-#ResizeCoordMode::PIXEL_CENTER.
+/** \brief Index-rounding rule used by INTER_NEAREST in non-default coordinate modes.
 
-Matches ONNX Resize's `nearest_mode` attribute; no effect for #ResizeCoordMode::PIXEL_CENTER.
+Applies when #ResizeParams::coordMode is not #ResizeCoordMode::PIXEL_CENTER; matches ONNX
+Resize's `nearest_mode` attribute. No effect for #ResizeCoordMode::PIXEL_CENTER.
 */
 enum ResizeNearestMode
 {
