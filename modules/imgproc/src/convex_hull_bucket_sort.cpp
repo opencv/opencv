@@ -2,7 +2,6 @@
 #include "convex_hull_bucket_sort.hpp"
 #include <vector>
 #include <algorithm>
-#include <climits>
 
 namespace cv {
 bool convex_hull_bucket_sort(const Point* data,
@@ -11,6 +10,9 @@ bool convex_hull_bucket_sort(const Point* data,
                              int& ind_miny,
                              int& ind_maxy)
 {
+    const int MAX_RANGE = 100000;       // ~1.6 MB of bucket pointers (2 * 8 * MAX_RANGE)
+    const int MAX_SPARSITY_FACTOR = 4;  // std::sort beats buckets on sparse ranges
+
     if (total <= 0) {
         return true;
     }
@@ -23,12 +25,18 @@ bool convex_hull_bucket_sort(const Point* data,
         minX = std::min(minX, data[i].x);
         maxX = std::max(maxX, data[i].x);
     }
-    
-    const int rangeX = maxX - minX + 1;
-    const int MAX_RANGE = 100000;
-    if (rangeX <= 0 || rangeX > MAX_RANGE) {
+
+    const int64 rangeX64 = (int64)maxX - (int64)minX + 1;    
+    if (rangeX64 > MAX_SPARSITY_FACTOR * (int64)total) {
+        // bail out, std::sort is faster for sparse data
         return false;
     }
+    if (rangeX64 > MAX_RANGE) {
+        // bail out, we cannot allocate too much memory for buckets
+        return false;
+    }
+
+    const int rangeX = (int)rangeX64;
 
     // 2) Create buckets that store pointers into data
     std::vector<const Point*> min_buckets(rangeX, nullptr);
