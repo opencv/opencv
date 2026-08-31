@@ -375,6 +375,8 @@ CV__DNN_INLINE_NS_BEGIN
         virtual bool fuseBatchNorm(const Ptr<Layer>& bn) = 0;
         virtual bool fuseActivation(const Ptr<Layer>& activ) = 0;
         virtual bool fuseAddResidual(Arg residual) = 0;
+        // Folds a trailing scalar multiply into the pre-activation scale/bias; requires scale >= 0 and act(x)*s == act(x*s).
+        virtual bool fuseTrailingScale(InputArray scale) = 0;
 
         std::vector<int> strides, dilations, pads;
         int ngroups;

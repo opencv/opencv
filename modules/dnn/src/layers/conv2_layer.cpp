@@ -286,6 +286,51 @@ public:
         return false;
     }
 
+    virtual bool fuseTrailingScale(InputArray scale_arr) CV_OVERRIDE
+    {
+        // act(x)*s == act(x*s) only for s >= 0 and a positively homogeneous act; PReLU's slope and Clip's bounds break that.
+        if (activationFunc != nullptr || !activ.empty() || addResidual ||
+            (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
+             fastActivation != FAST_ACTIV_LEAKY_RELU))
+            return false;
+        if (wshape0.empty())
+            return false;
+
+        // Scalar only: a per-channel scale needs the same broadcast-axis check fuseBatchNormWeights() does.
+        Mat s = scale_arr.getMat();
+        if (s.empty() || s.total() != 1)
+            return false;
+        int stype = s.type();
+        if (stype != CV_32F && stype != CV_64F)
+            return false;
+
+        const float scalar = stype == CV_32F ? s.ptr<float>()[0] : (float)s.ptr<double>()[0];
+        if (!(scalar >= 0.f))  // also rejects NaN
+            return false;
+
+        const int K = wshape0[0];
+        if (!fusedBatchNorm) {
+            const float* bp = bias.empty() ? nullptr : bias.ptr<float>();
+            fusedScale.fit(1, &K, CV_32F);
+            fusedBias.fit(1, &K, CV_32F);
+            float* fs = fusedScale.ptr<float>();
+            float* fb = fusedBias.ptr<float>();
+            for (int k = 0; k < K; k++) {
+                fs[k] = scalar;
+                fb[k] = (bp ? bp[k] : 0.f) * scalar;
+            }
+            fusedBatchNorm = true;
+        } else {
+            float* fs = fusedScale.ptr<float>();
+            float* fb = fusedBias.ptr<float>();
+            for (int k = 0; k < K; k++) {
+                fs[k] *= scalar;
+                fb[k] *= scalar;
+            }
+        }
+        return true;
+    }
+
     virtual int64_t getFLOPS(const std::vector<MatShape>& inputs,
                              const std::vector<MatShape>& outputs) const CV_OVERRIDE
     {
