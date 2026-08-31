@@ -6,6 +6,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../onnx/onnx_dtype_convert.hpp"
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -151,9 +152,52 @@ static void quantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
     });
 }
 
+// Rounding is the fp8-grid snap itself, done by f32ToFp8 - no separate int round step.
+template <typename _InpTp, typename _ScaleTp>
+static void quantizeLinearToFp8Native(const _InpTp* inp, const _ScaleTp* scale, const uchar* zp,
+                                       uchar* out, const onnx_dtype::Fp8Fmt& fmt, bool saturate,
+                                       int64_t nslices, int sz_a, int64_t slice_size)
+{
+    parallel_for_(Range(0, (int)nslices), [&](const Range& r) {
+        for (int slice = r.start; slice < r.end; slice++) {
+            size_t base = (size_t)slice * sz_a * slice_size;
+            for (int a = 0; a < sz_a; a++) {
+                float sc = (float)scale[a];
+                float zpv = zp ? onnx_dtype::fp8ToF32(zp[a], fmt) : 0.f;
+                for (int64_t j = 0; j < slice_size; j++) {
+                    size_t idx = base + (size_t)a * slice_size + j;
+                    out[idx] = onnx_dtype::f32ToFp8((float)inp[idx] / sc + zpv, fmt, saturate);
+                }
+            }
+        }
+    });
+}
+
+// E5M2/E5M2FNUZ have no native depth; store the grid-snapped value as CV_16F.
+template <typename _InpTp, typename _ScaleTp>
+static void quantizeLinearToFp8Wide(const _InpTp* inp, const _ScaleTp* scale, const hfloat* zp,
+                                     hfloat* out, const onnx_dtype::Fp8Fmt& fmt, bool saturate,
+                                     int64_t nslices, int sz_a, int64_t slice_size)
+{
+    parallel_for_(Range(0, (int)nslices), [&](const Range& r) {
+        for (int slice = r.start; slice < r.end; slice++) {
+            size_t base = (size_t)slice * sz_a * slice_size;
+            for (int a = 0; a < sz_a; a++) {
+                float sc = (float)scale[a];
+                float zpv = zp ? (float)zp[a] : 0.f;
+                for (int64_t j = 0; j < slice_size; j++) {
+                    size_t idx = base + (size_t)a * slice_size + j;
+                    uint8_t code = onnx_dtype::f32ToFp8((float)inp[idx] / sc + zpv, fmt, saturate);
+                    out[idx] = hfloat(onnx_dtype::fp8ToF32(code, fmt));
+                }
+            }
+        }
+    });
+}
+
 // Dequantize INT8/UINT8 to FP32/FP16; out must be preallocated
 static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
-                           int axis, int block_size, Mat& out)
+                           int axis, int block_size, int outputOnnxDtype, bool saturate, Mat& out)
 {
     Mat scale = scale_;
     CV_Assert(inp.isContinuous());
@@ -172,7 +216,10 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
 
     CV_Assert(inptype == CV_32F || inptype == CV_16F);
     CV_Assert(sctype == CV_32F || sctype == CV_16F);
-    CV_Assert(outtype == CV_8U || outtype == CV_8S);
+    CV_Assert(outtype == CV_8U || outtype == CV_8S ||
+              outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || outtype == CV_16F);
+    if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || outtype == CV_16F)
+        CV_Assert(block_size == 0);  // block-wise FP8 quantization not yet supported
 
     if (!zp.empty()) {
         CV_Assert(zp.isContinuous());
@@ -289,6 +336,41 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                          reinterpret_cast<const int8_t*>(zp.data),
                          reinterpret_cast<int8_t*>(out.data),
                          nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ) {
+        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outtype == CV_8F_E4M3FN ? 17 : 18);
+        const uchar* zpdata = zp.empty() ? nullptr : reinterpret_cast<const uchar*>(zp.data);
+        uchar* d = reinterpret_cast<uchar*>(out.data);
+        if (inptype == CV_32F && sctype == CV_32F)
+            quantizeLinearToFp8Native(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                       zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_32F && sctype == CV_16F)
+            quantizeLinearToFp8Native(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                       zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_16F && sctype == CV_32F)
+            quantizeLinearToFp8Native(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                       zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else
+            quantizeLinearToFp8Native(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                       zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+    }
+    else if (outtype == CV_16F) {
+        // Default to E5M2 if the importer couldn't resolve E5M2 vs E5M2FNUZ.
+        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outputOnnxDtype == 20 ? 20 : 19);
+        const hfloat* zpdata = zp.empty() ? nullptr : reinterpret_cast<const hfloat*>(zp.data);
+        hfloat* d = reinterpret_cast<hfloat*>(out.data);
+        if (inptype == CV_32F && sctype == CV_32F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_32F && sctype == CV_16F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_16F && sctype == CV_32F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else
+            quantizeLinearToFp8Wide(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+    }
     else {
         CV_Error_(Error::StsNotImplemented,
                   ("the following combination of types is not supported in "
@@ -310,6 +392,7 @@ public:
         block_size = params.get<int>("block_size", 0);
         saturate = params.get<bool>("saturate", true);
         output_dtype = params.get<int>("output_dtype", -1);
+        output_onnx_dtype = params.get<int>("output_onnx_dtype", -1);
         CV_Assert(block_size >= 0);
         CV_Assert(saturate);
     }
@@ -383,13 +466,13 @@ public:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(inpshape, outtype);
-            quantizeLinear(inp, scale, zeropoint, axis, block_size, outs[0]);
+            quantizeLinear(inp, scale, zeropoint, axis, block_size, output_onnx_dtype, saturate, outs[0]);
         } else if (kind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
             outs[0].fit(inpshape, outtype);
             Mat temp(inpshape, outtype);
-            quantizeLinear(inp, scale, zeropoint, axis, block_size, temp);
+            quantizeLinear(inp, scale, zeropoint, axis, block_size, output_onnx_dtype, saturate, temp);
             temp.copyTo(outs[0]);
         } else {
             CV_Error(Error::StsNotImplemented, "");
