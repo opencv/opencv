@@ -165,11 +165,36 @@ TEST(Core_FP8, convert_all_depths)
         }
 }
 
-// float32 -> FP8 goes through a vectorized fast path plus a scalar fallback for
-// zero/subnormal-result/NaN/Inf lanes; every other test in this file uses arrays far
-// smaller than a SIMD width, so it never touches that code. Build a wide, irregularly
-// sized buffer (forces both the vector loop and its scalar tail to run) and check every
-// encoded byte against the scalar fp8_t/fp8a_t constructor, which is the ground truth.
+// Wide stress buffer to exercise the SIMD encode path and its scalar tail.
+static std::vector<float> fp8EncodeStressValues()
+{
+    std::vector<float> vals;
+
+    // every representable FP8 value in both formats, round-tripped through float32
+    for (int b = 0; b < 256; b++) vals.push_back(fp8_t::decodeLUT()[b]);
+    for (int b = 0; b < 256; b++) vals.push_back(fp8a_t::decodeLUT()[b]);
+
+    // dense sweep across the normal range, both signs, crossing every rounding boundary
+    for (int i = -20000; i <= 20000; i++)
+        vals.push_back(i * 0.031f);
+
+    // geometric sweep from subnormal-FP8 through overflow-to-NaN
+    for (int e = -30; e <= 30; e++)
+        for (int m = 0; m < 8; m++)
+            vals.push_back((float)(std::ldexp(1.0 + m / 8.0, e)));
+
+    float specials[] = {
+        0.f, -0.f,
+        std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(),
+        std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::min(), 1e-40f, -1e-40f,
+    };
+    vals.insert(vals.end(), std::begin(specials), std::end(specials));
+    return vals;
+}
+
 template<typename FP8>
 static void checkFp8EncodeMatchesScalar(const std::vector<float>& vals)
 {
@@ -188,36 +213,45 @@ static void checkFp8EncodeMatchesScalar(const std::vector<float>& vals)
 
 TEST(Core_FP8, simd_encode_matches_scalar)
 {
-    std::vector<float> vals;
-
-    // every representable FP8 value in both formats, decoded back to float32:
-    // re-encoding must round-trip to the exact same byte
-    for (int b = 0; b < 256; b++) vals.push_back(fp8_t::decodeLUT()[b]);
-    for (int b = 0; b < 256; b++) vals.push_back(fp8a_t::decodeLUT()[b]);
-
-    // dense sweep across the normal range, both signs, crossing every rounding boundary
-    for (int i = -20000; i <= 20000; i++)
-        vals.push_back(i * 0.031f);
-
-    // geometric sweep spanning subnormal-FP8 through overflow-to-NaN, with several
-    // mantissa offsets per exponent so both the fast path and the fallback path fire
-    for (int e = -30; e <= 30; e++)
-        for (int m = 0; m < 8; m++)
-            vals.push_back((float)(std::ldexp(1.0 + m / 8.0, e)));
-
-    // special values
-    float specials[] = {
-        0.f, -0.f,
-        std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
-        std::numeric_limits<float>::quiet_NaN(),
-        std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(),
-        std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::min(), 1e-40f, -1e-40f,
-    };
-    vals.insert(vals.end(), std::begin(specials), std::end(specials));
-
+    std::vector<float> vals = fp8EncodeStressValues();
     checkFp8EncodeMatchesScalar<fp8_t>(vals);
     checkFp8EncodeMatchesScalar<fp8a_t>(vals);
+}
+
+// Scale path uses a different kernel than the identity path above; check separately.
+template<typename FP8>
+static void checkFp8ScaleEncodeMatchesScalar(const std::vector<float>& vals, double alpha, double beta)
+{
+    Mat f(1, (int)vals.size(), CV_32F, (void*)vals.data());
+    Mat q;
+    f.convertTo(q, DataType<FP8>::depth, alpha, beta);
+    ASSERT_EQ(q.total(), vals.size());
+    const uchar* qd = q.ptr<uchar>();
+    for (size_t i = 0; i < vals.size(); i++)
+    {
+        float scaled = (float)((double)vals[i]*alpha + beta);
+        FP8 ref(scaled);
+        uchar refByte = *reinterpret_cast<const uchar*>(&ref);
+        ASSERT_EQ(qd[i], refByte) << "value " << vals[i] << " * " << alpha << " + " << beta
+                                   << " = " << scaled << " (idx " << i << ")";
+    }
+}
+
+TEST(Core_FP8, simd_scale_encode_matches_scalar)
+{
+    std::vector<float> vals = fp8EncodeStressValues();
+    // representative quantization scales: shrink, grow, shift-only, negate
+    double alphas[] = { 1.0, 0.015625, 64.0, -1.0 };
+    double betas[]  = { 0.0, 0.5, -3.25 };
+    for (double alpha : alphas)
+        for (double beta : betas)
+        {
+            // alpha=1,beta=0 is convertTo's noScale case; skips the scale kernel entirely.
+            if (alpha == 1.0 && beta == 0.0)
+                continue;
+            checkFp8ScaleEncodeMatchesScalar<fp8_t>(vals, alpha, beta);
+            checkFp8ScaleEncodeMatchesScalar<fp8a_t>(vals, alpha, beta);
+        }
 }
 
 }} // namespace
