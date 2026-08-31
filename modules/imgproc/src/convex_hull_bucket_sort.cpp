@@ -23,10 +23,12 @@ bool convex_hull_bucket_sort(const Point* data,
         minX = std::min(minX, data[i].x);
         maxX = std::max(maxX, data[i].x);
     }
+    
     const int rangeX = maxX - minX + 1;
     const int MAX_RANGE = 100000;
-    if (rangeX <= 0 || rangeX > MAX_RANGE)
-        return false; 
+    if (rangeX <= 0 || rangeX > MAX_RANGE) {
+        return false;
+    }
 
     // 2) Create buckets that store pointers into data
     std::vector<const Point*> min_buckets(rangeX, nullptr);
@@ -38,10 +40,12 @@ bool convex_hull_bucket_sort(const Point* data,
         const int x = data[i].x;
         const int y = data[i].y;
         const int idx = x - minX;
-        if (min_buckets[idx] == nullptr || y < min_buckets[idx]->y)
+        if (min_buckets[idx] == nullptr || y < min_buckets[idx]->y) {
             min_buckets[idx] = &data[i];
-        if (max_buckets[idx] == nullptr || y > max_buckets[idx]->y)
+        }
+        if (max_buckets[idx] == nullptr || y > max_buckets[idx]->y) {
             max_buckets[idx] = &data[i];
+        }
     }
 
     // 4) Rebuild output pointer array in sorted X order
@@ -58,20 +62,21 @@ bool convex_hull_bucket_sort(const Point* data,
         const Point* pmax = max_buckets[i];
         CV_Assert(pmax == nullptr || pmin->y <= pmax->y);
         out_points[out++] = const_cast<Point*>(pmin);
-        cur= out-1;
+        cur = out-1;
         int y = out_points[cur]->y;
-        if (out_points[ind_miny]->y > y)
+        if (out_points[ind_miny]->y > y) {
             ind_miny = cur;
-        if (out_points[ind_maxy]->y < y)
-                    ind_maxy = cur;
-        if (pmax != pmin)
-            {
-                out_points[out++] = const_cast<Point*>(pmax);
-                cur = out-1;
-                y=out_points[cur]->y;
-                if (out_points[ind_maxy]->y < y)
-                    ind_maxy = cur;
-            }    
+        }
+        if (out_points[ind_maxy]->y < y) {
+            ind_maxy = cur;
+        }
+        if (pmax != pmin) {
+            out_points[out++] = const_cast<Point*>(pmax);
+            cur = out-1;
+            y=out_points[cur]->y;
+            if (out_points[ind_maxy]->y < y)
+                ind_maxy = cur;
+        }
     }
 
     total = out;
