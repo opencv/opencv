@@ -4263,8 +4263,8 @@ void resizeLinearGeneric(const cv::Mat& src, cv::Mat& dst, int numPlanes, double
                     const int step = VTraits<v_float32>::vlanes();
                     for (; ox + step <= dst.cols; ox += step)
                     {
-                        v_float32 p0 = v_lut(hbuf.data(), &x0[ox]);
-                        v_float32 p1 = v_lut(hbuf.data(), &x1[ox]);
+                        v_float32 p0 = v_lut(hbuf.data(), vx_load(&x0[ox]));
+                        v_float32 p1 = v_lut(hbuf.data(), vx_load(&x1[ox]));
                         v_store(outRow + ox, v_fma(vx_load(&lx[ox]), v_sub(p1, p0), p0));
                     }
                 }
