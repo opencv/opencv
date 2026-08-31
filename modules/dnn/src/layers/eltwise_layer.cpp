@@ -419,9 +419,6 @@ public:
             float* dstptr0 = dst->ptr<float>();
             int blockSize0 = 1 << 12;
 
-            if (stripeStart >= stripeEnd)
-                return;
-
             size_t planeIdx = stripeStart / planeSize;
             int delta = (int)(stripeStart - planeIdx * planeSize);
             int sampleIdx = (int)(planeIdx / channels);
