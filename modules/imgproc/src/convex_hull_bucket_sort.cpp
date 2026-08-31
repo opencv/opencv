@@ -9,7 +9,9 @@ bool convex_hull_bucket_sort(const Point* data,
                              int& ind_miny,
                              int& ind_maxy)
 {
-    const int MAX_RANGE = 100000;       // ~1.6 MB of bucket pointers (2 * 8 * MAX_RANGE)
+    struct XBucket { const Point* lo; const Point* hi; };
+
+    const int MAX_RANGE = 100000;       // ~1.6 MB of buckets (sizeof(XBucket) * MAX_RANGE)
     const int MAX_SPARSITY_FACTOR = 4;  // std::sort beats buckets on sparse ranges
 
     if (total <= 0) {
@@ -38,23 +40,21 @@ bool convex_hull_bucket_sort(const Point* data,
     const int rangeX = (int)rangeX64;
 
     // 2) Create buckets that store pointers into data.
-    //    Single allocation for both halves; min_buckets / max_buckets alias into it.
-    AutoBuffer<const Point*> buckets(2 * (size_t)rangeX);
-    const Point** min_buckets = buckets.data();
-    const Point** max_buckets = min_buckets + rangeX;
-    std::fill_n(min_buckets, 2 * (size_t)rangeX, nullptr);
+    // having lo and hi near to each other in memory should induce better cache locality
+    AutoBuffer<XBucket> buckets(rangeX);
+    std::fill_n(buckets.data(), rangeX, XBucket{nullptr, nullptr});
 
     // 3) Fill buckets
     for (int i = 0; i < total; ++i)
     {
-        const int x = data[i].x;
+        const int idx = data[i].x - minX;
         const int y = data[i].y;
-        const int idx = x - minX;
-        if (min_buckets[idx] == nullptr || y < min_buckets[idx]->y) {
-            min_buckets[idx] = &data[i];
+        XBucket& b = buckets[idx];
+        if (b.lo == nullptr || y < b.lo->y) {
+            b.lo = &data[i];
         }
-        if (max_buckets[idx] == nullptr || y > max_buckets[idx]->y) {
-            max_buckets[idx] = &data[i];
+        if (b.hi == nullptr || y > b.hi->y) {
+            b.hi = &data[i];
         }
     }
 
@@ -65,12 +65,12 @@ bool convex_hull_bucket_sort(const Point* data,
     int cur = 0;
     for (int i = 0; i < rangeX; ++i)
     {
-        if (min_buckets[i] == nullptr)
+        const Point* pmin = buckets[i].lo;
+        if (pmin == nullptr)
             continue;
 
-        const Point* pmin = min_buckets[i];
-        const Point* pmax = max_buckets[i];
-        CV_DbgAssert(pmax == nullptr || pmin->y <= pmax->y);
+        const Point* pmax = buckets[i].hi;
+        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y);
         out_points[out++] = const_cast<Point*>(pmin);
         cur = out-1;
         int y = out_points[cur]->y;
