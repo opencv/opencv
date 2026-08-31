@@ -1292,8 +1292,6 @@ static inline void v_normmask_u64(const uchar* m, v_uint64& m0, v_uint64& m1) {
     m1 = v_or(e1, v_shl<32>(e1));
 }
 
-#endif
-
 template <>
 struct MaskedNormInf_SIMD<float, float> {
     inline float operator()(const float* src, const uchar* mask, int len, int cn) const {
@@ -1744,8 +1742,6 @@ struct MaskedNormL2_SIMD<ushort, double> {
         return result;
     }
 };
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct MaskedNormInf_SIMD<schar, int> {
