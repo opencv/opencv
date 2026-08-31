@@ -411,7 +411,7 @@ public:
         void operator()(const Range& r) const CV_OVERRIDE
         {
             const EltwiseOp op = self.op;
-            size_t total = dst->size[0]*planeSize;
+            size_t total = dst->total();
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
@@ -419,21 +419,24 @@ public:
             float* dstptr0 = dst->ptr<float>();
             int blockSize0 = 1 << 12;
 
+            if (stripeStart >= stripeEnd)
+                return;
+
+            size_t planeIdx = stripeStart / planeSize;
+            int delta = (int)(stripeStart - planeIdx * planeSize);
+            int sampleIdx = (int)(planeIdx / channels);
+            int c = (int)(planeIdx % channels);
+
             for (size_t ofs = stripeStart; ofs < stripeEnd; )
             {
-                int sampleIdx = (int)(ofs / planeSize);
-                int delta = (int)ofs - sampleIdx * planeSize;
                 int blockSize = std::min(blockSize0, std::min((int)(stripeEnd - ofs), (int)planeSize - delta));
                 if( blockSize <= 0 )
                     break;
-                ofs += blockSize;
 
-                for (int c = 0; c < channels; c++)
-                {
-                    size_t dstIdx = delta + (sampleIdx*channels + c)*planeSize;
+                    size_t dstIdx = ofs;
                     float* dstptr = dstptr0 + dstIdx;
+                    ofs += blockSize;
 
-                    // process first two inputs
                     {
                         const float* srcptr0 = srcs[0]->ptr<float>() + dstIdx;
 
@@ -573,12 +576,21 @@ public:
                         else
                             CV_Error(Error::StsInternal, "");
                     }
-                }
 
                 if( activ )
                 {
-                    float* ptr = dstptr0 + delta + sampleIdx*channels*planeSize;
-                    activ->forwardSlice(ptr, ptr, blockSize, planeSize, 0, channels);
+                    activ->forwardSlice(dstptr, dstptr, blockSize, planeSize, c, c + 1);
+                }
+
+                delta += blockSize;
+                if (delta == (int)planeSize)
+                {
+                    delta = 0;
+                    if (++c == channels)
+                    {
+                        c = 0;
+                        sampleIdx++;
+                    }
                 }
             }
         }
