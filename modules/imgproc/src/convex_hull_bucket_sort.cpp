@@ -1,6 +1,5 @@
 #include "precomp.hpp"
 #include "convex_hull_bucket_sort.hpp"
-#include <vector>
 #include <algorithm>
 
 namespace cv {
@@ -26,7 +25,7 @@ bool convex_hull_bucket_sort(const Point* data,
         maxX = std::max(maxX, data[i].x);
     }
 
-    const int64 rangeX64 = (int64)maxX - (int64)minX + 1;    
+    const int64 rangeX64 = (int64)maxX - (int64)minX + 1;
     if (rangeX64 > MAX_SPARSITY_FACTOR * (int64)total) {
         // bail out, std::sort is faster for sparse data
         return false;
@@ -38,9 +37,12 @@ bool convex_hull_bucket_sort(const Point* data,
 
     const int rangeX = (int)rangeX64;
 
-    // 2) Create buckets that store pointers into data
-    std::vector<const Point*> min_buckets(rangeX, nullptr);
-    std::vector<const Point*> max_buckets(rangeX, nullptr);
+    // 2) Create buckets that store pointers into data.
+    //    Single allocation for both halves; min_buckets / max_buckets alias into it.
+    AutoBuffer<const Point*> buckets(2 * (size_t)rangeX);
+    const Point** min_buckets = buckets.data();
+    const Point** max_buckets = min_buckets + rangeX;
+    std::fill_n(min_buckets, 2 * (size_t)rangeX, nullptr);
 
     // 3) Fill buckets
     for (int i = 0; i < total; ++i)
@@ -68,7 +70,7 @@ bool convex_hull_bucket_sort(const Point* data,
 
         const Point* pmin = min_buckets[i];
         const Point* pmax = max_buckets[i];
-        CV_Assert(pmax == nullptr || pmin->y <= pmax->y);
+        CV_DbgAssert(pmax == nullptr || pmin->y <= pmax->y);
         out_points[out++] = const_cast<Point*>(pmin);
         cur = out-1;
         int y = out_points[cur]->y;
