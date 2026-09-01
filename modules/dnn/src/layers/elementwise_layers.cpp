@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/blocked_pointwise.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -3958,9 +3959,8 @@ private:
         // C0 the slopes are replicated across the vector and the contiguous
         // H*W*C0 block is walked in one flat loop.
         const bool vecChunk = C0 > VEC_SZ && (C0 % VEC_SZ) == 0;
-        const bool vecFlat  = C0 < VEC_SZ && (VEC_SZ % C0) == 0 &&
-                              inStep3  == (size_t)C0 && inStep2  == (size_t)W * C0 &&
-                              outStep3 == (size_t)C0 && outStep2 == (size_t)W * C0;
+        const bool vecFlat  = blockCanSpan(C0, VEC_SZ, W, inStep2, inStep3,
+                                           outStep2, outStep3);
 #endif
 
         parallel_for_(Range(0, N * C1), [&](const Range& r) {
@@ -4022,22 +4022,8 @@ private:
                     continue;
                 }
                 if (vecFlat) {
-                    for (int c = C0; c < VEC_SZ; ++c)
-                        slopes[c] = slopes[c - C0];
-                    v_float32 vslope = vx_load(slopes);
-                    v_float32 vzero  = vx_setzero_f32();
-                    const int64_t total = (int64_t)H * W * C0;
-                    int64_t idx = 0;
-                    for (; idx <= total - VEC_SZ; idx += VEC_SZ) {
-                        v_float32 v = vx_load(inbase + idx);
-                        v_float32 scaled = v_mul(v, vslope);
-                        v_float32 out = v_select(v_ge(v, vzero), v, scaled);
-                        vx_store(outbase + idx, out);
-                    }
-                    for (; idx < total; ++idx) {
-                        float v = inbase[idx];
-                        outbase[idx] = v >= 0.f ? v : slopes[idx % C0] * v;
-                    }
+                    blockedSpanApply(inbase, outbase, (int64_t)H * W * C0, C0, VEC_SZ,
+                                     slopes, slopes, BlockedPReLUOp());
                     continue;
                 }
 #endif

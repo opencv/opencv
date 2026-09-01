@@ -4,6 +4,7 @@
 
 #include "../../precomp.hpp"
 #include "fast_norm.hpp"
+#include "blocked_pointwise.hpp"
 #include <opencv2/core/hal/intrin.hpp>
 #include <type_traits>
 
@@ -328,32 +329,6 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
 }
 
 // InstanceNorm, BLOCK layout, CV_32F -- extracted verbatim, unchanged.
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-// Applies y = alpha[c]*x + beta[c] over one contiguous H*W*C0 block whose
-// coefficients repeat with period C0. Replicating them across the register lets
-// a vector wider than C0 span VEC_SZ/C0 pixels instead of leaving lanes idle.
-// alpha/beta must have room for VEC_SZ entries; entries [C0, VEC_SZ) are filled
-// here. Kept out of line: it must not be speculated into callers that only own
-// part of a block.
-static void fastNormApplySpanBlock(const float* inbase, float* outbase, int64_t total,
-                                   int C0, int VEC_SZ, float* alpha, float* beta)
-{
-    for (int c = C0; c < VEC_SZ; ++c) {
-        alpha[c] = alpha[c - C0];
-        beta[c]  = beta[c - C0];
-    }
-    v_float32 va = vx_load(alpha);
-    v_float32 vb = vx_load(beta);
-    int64_t idx = 0;
-    for (; idx <= total - VEC_SZ; idx += VEC_SZ)
-        vx_store(outbase + idx, v_fma(vx_load(inbase + idx), va, vb));
-    for (; idx < total; ++idx) {
-        int c = (int)(idx % C0);
-        outbase[idx] = inbase[idx] * alpha[c] + beta[c];
-    }
-}
-#endif
-
 static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon) {
     const auto input_shape = shape(input);
     size_t C = (size_t)input_shape.C;
@@ -390,9 +365,8 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
     // iteration. One register spans VEC_SZ/C0 pixels there: replicate the
     // C0-periodic coefficients across it and walk the contiguous H*W*C0 block
     // flat, folding the partial per-channel sums at the end of the reduction.
-    const bool vecSpan = C0 < VEC_SZ && (VEC_SZ % C0) == 0 &&
-                         inStep3  == (size_t)C0 && inStep2  == (size_t)W * C0 &&
-                         outStep3 == (size_t)C0 && outStep2 == (size_t)W * C0;
+    const bool vecSpan = blockCanSpan(C0, VEC_SZ, W, inStep2, inStep3,
+                                      outStep2, outStep3);
 #endif
 
     // Accumulators are double-precision
@@ -407,11 +381,13 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
         double* sqsum = sum + C0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int abLen = std::max(C0, VEC_SZ);
+#else
+        const int abLen = C0;
+#endif
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
         AutoBuffer<double> accBuf(VEC_SZ * 2);
         double* accSum   = accBuf.data();
         double* accSqsum = accSum + VEC_SZ;
-#else
-        const int abLen = C0;
 #endif
         AutoBuffer<float> abBuf(abLen * 2);
         float* alpha = abBuf.data();
@@ -429,7 +405,6 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             if (vecSpan) {
                 const int64_t total = (int64_t)H * W * C0;
-                const int reps = VEC_SZ / C0;
                 for (int c = 0; c < C0; ++c) {
                     sum[c] = 0.;
                     sqsum[c] = 0.;
@@ -438,6 +413,7 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
                 {
                     const int VEC_SZ_D = VTraits<v_float64>::vlanes();
+                    const int reps = VEC_SZ / C0;
                     CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
                     v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64();
                     v_float64 vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
@@ -481,7 +457,8 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
                     alpha[c] = 0.f;
                     beta[c]  = 0.f;
                 }
-                fastNormApplySpanBlock(inbase, outbase, total, C0, VEC_SZ, alpha, beta);
+                blockedSpanApply(inbase, outbase, total, C0, VEC_SZ,
+                                 alpha, beta, BlockedAffineOp());
                 continue;
             }
 #endif
@@ -797,8 +774,8 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
     // belongs to one group its H*W*C0 elements form a single contiguous run, which
     // lets the reduction stream it instead of walking one channel at a time, and
     // lets the affine pass span VEC_SZ/C0 pixels per register.
-    const bool blockContig = inStep3  == (size_t)C0 && inStep2  == (size_t)W * C0 &&
-                             outStep3 == (size_t)C0 && outStep2 == (size_t)W * C0;
+    const bool blockContig = blockIsContiguous(C0, W, inStep2, inStep3,
+                                               outStep2, outStep3);
     const bool vecSpan = blockContig && C0 < VEC_SZ && (VEC_SZ % C0) == 0;
 #endif
 
@@ -831,8 +808,6 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
                 if (blockContig && g_lo == 0 && g_hi == C0) {
                     // every element of the block is summed, so order does not matter
                     const int64_t total = (int64_t)H * W * C0;
-                    const int VEC_SZ_D = VTraits<v_float64>::vlanes();
-                    CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
                     v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64();
                     v_float64 vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
                     int64_t idx = 0;
@@ -891,8 +866,8 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
                 // extra lanes of a wider vector would otherwise reach into channels
                 // that belong to a neighbouring group, which another task is writing.
                 if (vecSpan && c0_lo == 0 && c0_hi == C0) {
-                    fastNormApplySpanBlock(inbase, outbase, (int64_t)H * W * C0,
-                                           C0, VEC_SZ, alpha, beta);
+                    blockedSpanApply(inbase, outbase, (int64_t)H * W * C0,
+                                     C0, VEC_SZ, alpha, beta, BlockedAffineOp());
                     continue;
                 }
 #endif
