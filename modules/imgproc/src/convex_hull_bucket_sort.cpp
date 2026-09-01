@@ -70,9 +70,11 @@ bool convex_hull_bucket_sort(const Point* data,
             continue;
 
         const Point* pmax = buckets[i].hi;
-        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y);
+        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y); // when filling buckets either both pmax and pmin are set or neither.
+
         out_points[out++] = const_cast<Point*>(pmin);
-        cur = out-1;
+        cur = out - 1;
+
         int y = out_points[cur]->y;
         if (out_points[ind_miny]->y > y) {
             ind_miny = cur;
@@ -80,10 +82,11 @@ bool convex_hull_bucket_sort(const Point* data,
         if (out_points[ind_maxy]->y < y) {
             ind_maxy = cur;
         }
+
         if (pmax != pmin) {
             out_points[out++] = const_cast<Point*>(pmax);
-            cur = out-1;
-            y=out_points[cur]->y;
+            cur = out - 1;
+            y = out_points[cur]->y;
             if (out_points[ind_maxy]->y < y)
                 ind_maxy = cur;
         }
