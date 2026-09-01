@@ -411,7 +411,7 @@ public:
         void operator()(const Range& r) const CV_OVERRIDE
         {
             const EltwiseOp op = self.op;
-            size_t total = dst->size[0]*planeSize;
+            size_t total = dst->total();
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
@@ -419,154 +419,94 @@ public:
             float* dstptr0 = dst->ptr<float>();
             int blockSize0 = 1 << 12;
 
+            size_t planeIdx = stripeStart / planeSize;
+            int delta = (int)(stripeStart - planeIdx * planeSize);
+            int sampleIdx = (int)(planeIdx / channels);
+            int c = (int)(planeIdx % channels);
+
             for (size_t ofs = stripeStart; ofs < stripeEnd; )
             {
-                int sampleIdx = (int)(ofs / planeSize);
-                int delta = (int)ofs - sampleIdx * planeSize;
                 int blockSize = std::min(blockSize0, std::min((int)(stripeEnd - ofs), (int)planeSize - delta));
                 if( blockSize <= 0 )
                     break;
+
+                size_t dstIdx = ofs;
+                float* dstptr = dstptr0 + dstIdx;
                 ofs += blockSize;
 
-                for (int c = 0; c < channels; c++)
                 {
-                    size_t dstIdx = delta + (sampleIdx*channels + c)*planeSize;
-                    float* dstptr = dstptr0 + dstIdx;
+                    const float* srcptr0 = srcs[0]->ptr<float>() + dstIdx;
 
-                    // process first two inputs
+                    const int inputIdx = 1;
+                    int src1_channels = srcNumChannels[inputIdx];
+                    if (c >= src1_channels)
                     {
-                        const float* srcptr0 = srcs[0]->ptr<float>() + dstIdx;
-
-                        const int inputIdx = 1;
-                        int src1_channels = srcNumChannels[inputIdx];
-                        if (c >= src1_channels)
+                        // no data from second input
+                        if (!coeffsptr || coeffsptr[0] == 1.0f)
                         {
-                            // no data from second input
-                            if (!coeffsptr || coeffsptr[0] == 1.0f)
+                            for (int j = 0; j < blockSize; j++)
                             {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j];
-                                }
-                            }
-                            else
-                            {
-                                float c0 = coeffsptr[0];
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = c0*srcptr0[j];
-                                }
+                                dstptr[j] = srcptr0[j];
                             }
                         }
                         else
                         {
-                            size_t srcIdx = delta + (sampleIdx * src1_channels + c) * planeSize;
-                            const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
-
-                            if (op == PROD)
+                            float c0 = coeffsptr[0];
+                            for (int j = 0; j < blockSize; j++)
                             {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j] * srcptrI[j];
-                                }
+                                dstptr[j] = c0*srcptr0[j];
                             }
-                            else if (op == DIV)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j] / srcptrI[j];
-                                }
-                            }
-                            else if (op == MAX)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
-                                }
-                            }
-                            else if (op == MIN)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
-                                }
-                            }
-                            else if (op == SUM)
-                            {
-                                if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
-                                {
-                                    for (int j = 0; j < blockSize; j++)
-                                    {
-                                        dstptr[j] = srcptr0[j] + srcptrI[j];
-                                    }
-                                }
-                                else
-                                {
-                                    float c0 = coeffsptr[0];
-                                    float c1 = coeffsptr[1];
-                                    for (int j = 0; j < blockSize; j++)
-                                    {
-                                        dstptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
-                                    }
-                                }
-                            }
-                            else
-                                CV_Error(Error::StsInternal, "");
                         }
                     }
-
-                    // aggregate other inputs (3+)
-                    for (size_t inputIdx = 2; inputIdx < nsrcs; inputIdx++)
+                    else
                     {
-                        int srcI_channels = srcNumChannels[inputIdx];
-                        if (c >= srcI_channels)
-                            continue;  // no data from second input
-                        size_t srcIdx = delta + (sampleIdx * srcI_channels + c) * planeSize;
+                        size_t srcIdx = delta + (sampleIdx * src1_channels + c) * planeSize;
                         const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
 
                         if (op == PROD)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] *= srcptrI[j];
+                                dstptr[j] = srcptr0[j] * srcptrI[j];
                             }
                         }
                         else if (op == DIV)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] /= srcptrI[j];
+                                dstptr[j] = srcptr0[j] / srcptrI[j];
                             }
                         }
                         else if (op == MAX)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] = std::max(dstptr[j], srcptrI[j]);
+                                dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
                             }
                         }
                         else if (op == MIN)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] = std::min(dstptr[j], srcptrI[j]);
+                                dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
                             }
                         }
                         else if (op == SUM)
                         {
-                            if (!coeffsptr || coeffsptr[inputIdx] == 1.0f)
+                            if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
                             {
                                 for (int j = 0; j < blockSize; j++)
                                 {
-                                    dstptr[j] += srcptrI[j];
+                                    dstptr[j] = srcptr0[j] + srcptrI[j];
                                 }
                             }
                             else
                             {
-                                float cI = coeffsptr[inputIdx];
+                                float c0 = coeffsptr[0];
+                                float c1 = coeffsptr[1];
                                 for (int j = 0; j < blockSize; j++)
                                 {
-                                    dstptr[j] += cI * srcptrI[j];
+                                    dstptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
                                 }
                             }
                         }
@@ -575,10 +515,79 @@ public:
                     }
                 }
 
+                // aggregate other inputs (3+)
+                for (size_t inputIdx = 2; inputIdx < nsrcs; inputIdx++)
+                {
+                    int srcI_channels = srcNumChannels[inputIdx];
+                    if (c >= srcI_channels)
+                        continue;  // no data from second input
+                    size_t srcIdx = delta + (sampleIdx * srcI_channels + c) * planeSize;
+                    const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
+
+                    if (op == PROD)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] *= srcptrI[j];
+                        }
+                    }
+                    else if (op == DIV)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] /= srcptrI[j];
+                        }
+                    }
+                    else if (op == MAX)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] = std::max(dstptr[j], srcptrI[j]);
+                        }
+                    }
+                    else if (op == MIN)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] = std::min(dstptr[j], srcptrI[j]);
+                        }
+                    }
+                    else if (op == SUM)
+                    {
+                        if (!coeffsptr || coeffsptr[inputIdx] == 1.0f)
+                        {
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] += srcptrI[j];
+                            }
+                        }
+                        else
+                        {
+                            float cI = coeffsptr[inputIdx];
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] += cI * srcptrI[j];
+                            }
+                        }
+                    }
+                    else
+                        CV_Error(Error::StsInternal, "");
+                }
+
                 if( activ )
                 {
-                    float* ptr = dstptr0 + delta + sampleIdx*channels*planeSize;
-                    activ->forwardSlice(ptr, ptr, blockSize, planeSize, 0, channels);
+                    activ->forwardSlice(dstptr, dstptr, blockSize, planeSize, c, c + 1);
+                }
+
+                delta += blockSize;
+                if (delta == (int)planeSize)
+                {
+                    delta = 0;
+                    if (++c == channels)
+                    {
+                        c = 0;
+                        sampleIdx++;
+                    }
                 }
             }
         }
