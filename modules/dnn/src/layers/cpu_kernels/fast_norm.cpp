@@ -328,6 +328,32 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
 }
 
 // InstanceNorm, BLOCK layout, CV_32F -- extracted verbatim, unchanged.
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Applies y = alpha[c]*x + beta[c] over one contiguous H*W*C0 block whose
+// coefficients repeat with period C0. Replicating them across the register lets
+// a vector wider than C0 span VEC_SZ/C0 pixels instead of leaving lanes idle.
+// alpha/beta must have room for VEC_SZ entries; entries [C0, VEC_SZ) are filled
+// here. Kept out of line: it must not be speculated into callers that only own
+// part of a block.
+static void fastNormApplySpanBlock(const float* inbase, float* outbase, int64_t total,
+                                   int C0, int VEC_SZ, float* alpha, float* beta)
+{
+    for (int c = C0; c < VEC_SZ; ++c) {
+        alpha[c] = alpha[c - C0];
+        beta[c]  = beta[c - C0];
+    }
+    v_float32 va = vx_load(alpha);
+    v_float32 vb = vx_load(beta);
+    int64_t idx = 0;
+    for (; idx <= total - VEC_SZ; idx += VEC_SZ)
+        vx_store(outbase + idx, v_fma(vx_load(inbase + idx), va, vb));
+    for (; idx < total; ++idx) {
+        int c = (int)(idx % C0);
+        outbase[idx] = inbase[idx] * alpha[c] + beta[c];
+    }
+}
+#endif
+
 static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon) {
     const auto input_shape = shape(input);
     size_t C = (size_t)input_shape.C;
@@ -359,6 +385,14 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VEC_SZ = VTraits<v_float32>::vlanes();
+    // C0 is the block-layout channel block (8 by default), so on targets whose
+    // vector is wider than C0 the per-channel loops below never take a single
+    // iteration. One register spans VEC_SZ/C0 pixels there: replicate the
+    // C0-periodic coefficients across it and walk the contiguous H*W*C0 block
+    // flat, folding the partial per-channel sums at the end of the reduction.
+    const bool vecSpan = C0 < VEC_SZ && (VEC_SZ % C0) == 0 &&
+                         inStep3  == (size_t)C0 && inStep2  == (size_t)W * C0 &&
+                         outStep3 == (size_t)C0 && outStep2 == (size_t)W * C0;
 #endif
 
     // Accumulators are double-precision
@@ -371,9 +405,17 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
         AutoBuffer<double> sumBuf(C0 * 2);
         double* sum   = sumBuf.data();
         double* sqsum = sum + C0;
-        AutoBuffer<float> abBuf(C0 * 2);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int abLen = std::max(C0, VEC_SZ);
+        AutoBuffer<double> accBuf(VEC_SZ * 2);
+        double* accSum   = accBuf.data();
+        double* accSqsum = accSum + VEC_SZ;
+#else
+        const int abLen = C0;
+#endif
+        AutoBuffer<float> abBuf(abLen * 2);
         float* alpha = abBuf.data();
-        float* beta  = alpha + C0;
+        float* beta  = alpha + abLen;
 
         for (int i = r.start; i < r.end; ++i) {
             int n  = i / C1;
@@ -383,6 +425,66 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
 
             const float* inbase  = inptr0  + n * inStep0 + c1 * inStep1;
             float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            if (vecSpan) {
+                const int64_t total = (int64_t)H * W * C0;
+                const int reps = VEC_SZ / C0;
+                for (int c = 0; c < C0; ++c) {
+                    sum[c] = 0.;
+                    sqsum[c] = 0.;
+                }
+                int64_t idx = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+                {
+                    const int VEC_SZ_D = VTraits<v_float64>::vlanes();
+                    CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
+                    v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64();
+                    v_float64 vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
+                    for (; idx <= total - VEC_SZ; idx += VEC_SZ) {
+                        v_float32 v = vx_load(inbase + idx);
+                        v_float64 vlo = v_cvt_f64(v);
+                        v_float64 vhi = v_cvt_f64_high(v);
+                        vsum_lo = v_add(vsum_lo, vlo);
+                        vsum_hi = v_add(vsum_hi, vhi);
+                        vsqsum_lo = v_fma(vlo, vlo, vsqsum_lo);
+                        vsqsum_hi = v_fma(vhi, vhi, vsqsum_hi);
+                    }
+                    vx_store(accSum,               vsum_lo);
+                    vx_store(accSum   + VEC_SZ_D,  vsum_hi);
+                    vx_store(accSqsum,             vsqsum_lo);
+                    vx_store(accSqsum + VEC_SZ_D,  vsqsum_hi);
+                    // each register lane group holds a partial sum for one channel
+                    for (int rp = 0; rp < reps; ++rp)
+                        for (int c = 0; c < C0; ++c) {
+                            sum[c]   += accSum[rp * C0 + c];
+                            sqsum[c] += accSqsum[rp * C0 + c];
+                        }
+                }
+#endif
+                for (; idx < total; ++idx) {
+                    double v = (double)inbase[idx];
+                    int c = (int)(idx % C0);
+                    sum[c]   += v;
+                    sqsum[c] += v * v;
+                }
+
+                for (int c = 0; c < validC0; ++c) {
+                    double mean = sum[c] * inv_norm_size_d;
+                    double var = std::max(0., sqsum[c] * inv_norm_size_d - mean * mean);
+                    float inv_stdev = 1.f / std::sqrt((float)var + epsilon);
+                    alpha[c] = scale_data[cbase + c] * inv_stdev;
+                    beta[c]  = bias_data[cbase + c] - alpha[c] * (float)mean;
+                }
+                // zero coefficients turn the padding channels into zeros in the same pass
+                for (int c = validC0; c < C0; ++c) {
+                    alpha[c] = 0.f;
+                    beta[c]  = 0.f;
+                }
+                fastNormApplySpanBlock(inbase, outbase, total, C0, VEC_SZ, alpha, beta);
+                continue;
+            }
+#endif
 
             int c0 = 0;
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
@@ -691,15 +793,27 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VEC_SZ = VTraits<v_float32>::vlanes();
+    // A block-layout plane is contiguous over (H, W, C0). Whenever a whole block
+    // belongs to one group its H*W*C0 elements form a single contiguous run, which
+    // lets the reduction stream it instead of walking one channel at a time, and
+    // lets the affine pass span VEC_SZ/C0 pixels per register.
+    const bool blockContig = inStep3  == (size_t)C0 && inStep2  == (size_t)W * C0 &&
+                             outStep3 == (size_t)C0 && outStep2 == (size_t)W * C0;
+    const bool vecSpan = blockContig && C0 < VEC_SZ && (VEC_SZ % C0) == 0;
 #endif
 
     parallel_for_(Range(0, N * (int)num_groups), [&](const Range& r) {
         const float* inptr = (const float*)input.data;
         float* outptr = (float*)output.data;
 
-        AutoBuffer<float> buf(C0 * 2);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int abLen = std::max(C0, VEC_SZ);
+#else
+        const int abLen = C0;
+#endif
+        AutoBuffer<float> buf(abLen * 2);
         float* alpha = buf.data();
-        float* beta  = alpha + C0;
+        float* beta  = alpha + abLen;
 
         for (int i = r.start; i < r.end; ++i) {
             int n = i / (int)num_groups;
@@ -708,16 +822,47 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
             int c_end   = c_start + channels_per_group;
 
             double group_sum = 0., group_sqsum = 0.;
-            for (int c = c_start; c < c_end; c++) {
-                int c1 = c / C0;
-                int c0 = c % C0;
+            for (int c1 = c_start / C0, c1_last = (c_end - 1) / C0 + 1; c1 < c1_last; ++c1) {
+                const int cbase = c1 * C0;
+                const int g_lo = std::max(0, c_start - cbase);
+                const int g_hi = std::min(C0, c_end - cbase);
                 const float* inbase = inptr + n * inStep0 + c1 * inStep1;
-                for (int h = 0; h < H; ++h) {
-                    const float* inrow = inbase + h * inStep2;
-                    for (int w = 0; w < W; ++w) {
-                        double v = (double)inrow[w * inStep3 + c0];
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+                if (blockContig && g_lo == 0 && g_hi == C0) {
+                    // every element of the block is summed, so order does not matter
+                    const int64_t total = (int64_t)H * W * C0;
+                    const int VEC_SZ_D = VTraits<v_float64>::vlanes();
+                    CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
+                    v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64();
+                    v_float64 vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
+                    int64_t idx = 0;
+                    for (; idx <= total - VEC_SZ; idx += VEC_SZ) {
+                        v_float32 v = vx_load(inbase + idx);
+                        v_float64 vlo = v_cvt_f64(v);
+                        v_float64 vhi = v_cvt_f64_high(v);
+                        vsum_lo = v_add(vsum_lo, vlo);
+                        vsum_hi = v_add(vsum_hi, vhi);
+                        vsqsum_lo = v_fma(vlo, vlo, vsqsum_lo);
+                        vsqsum_hi = v_fma(vhi, vhi, vsqsum_hi);
+                    }
+                    group_sum   += v_reduce_sum(vsum_lo)   + v_reduce_sum(vsum_hi);
+                    group_sqsum += v_reduce_sum(vsqsum_lo) + v_reduce_sum(vsqsum_hi);
+                    for (; idx < total; ++idx) {
+                        double v = (double)inbase[idx];
                         group_sum += v;
                         group_sqsum += v * v;
+                    }
+                    continue;
+                }
+#endif
+                for (int c0 = g_lo; c0 < g_hi; ++c0) {
+                    for (int h = 0; h < H; ++h) {
+                        const float* inrow = inbase + h * inStep2;
+                        for (int w = 0; w < W; ++w) {
+                            double v = (double)inrow[w * inStep3 + c0];
+                            group_sum += v;
+                            group_sqsum += v * v;
+                        }
                     }
                 }
             }
@@ -740,6 +885,17 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
 
                 const float* inbase  = inptr  + n * inStep0 + c1 * inStep1;
                 float*       outbase = outptr + n * outStep0 + c1 * outStep1;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                // Spanning is only safe when this group owns the whole block: the
+                // extra lanes of a wider vector would otherwise reach into channels
+                // that belong to a neighbouring group, which another task is writing.
+                if (vecSpan && c0_lo == 0 && c0_hi == C0) {
+                    fastNormApplySpanBlock(inbase, outbase, (int64_t)H * W * C0,
+                                           C0, VEC_SZ, alpha, beta);
+                    continue;
+                }
+#endif
 
                 int c0 = c0_lo;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
