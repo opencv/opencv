@@ -189,35 +189,40 @@ template<> int PyrDownVecH<uchar, int, 2>(const uchar* src, int* row, int width)
 }
 template<> int PyrDownVecH<uchar, int, 3>(const uchar* src, int* row, int width)
 {
-    int idx[VTraits<v_int8>::max_nlanes/2 + 4];
-    for (int i = 0; i < VTraits<v_int8>::vlanes()/4 + 2; i++)
-    {
-        idx[i] = 6*i;
-        idx[i + VTraits<v_int8>::vlanes()/4 + 2] = 6*i + 3;
-    }
-
     int x = 0;
-    v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
-    for (; x <= width - VTraits<v_int8>::vlanes(); x += 3*VTraits<v_int8>::vlanes()/4, src += 6*VTraits<v_int8>::vlanes()/4, row += 3*VTraits<v_int8>::vlanes()/4)
+    const int VU8  = VTraits<v_uint8>::vlanes();
+    const int VU32 = VTraits<v_uint32>::vlanes();
+    const int step = (VU8 / 2) * 3;
+    const v_uint16 lo_mask = vx_setall_u16(0x00FFu);
+    const v_uint16 w6      = vx_setall_u16(6u);
+
+    for (; x <= width - step - 3; x += step, src += VU8 * 3, row += step)
     {
-        v_uint16 r0l, r0h, r1l, r1h, r2l, r2h, r3l, r3h, r4l, r4h;
-        v_expand(vx_lut_quads(src, idx                       ), r0l, r0h);
-        v_expand(vx_lut_quads(src, idx + VTraits<v_int8>::vlanes()/4 + 2), r1l, r1h);
-        v_expand(vx_lut_quads(src, idx + 1                   ), r2l, r2h);
-        v_expand(vx_lut_quads(src, idx + VTraits<v_int8>::vlanes()/4 + 3), r3l, r3h);
-        v_expand(vx_lut_quads(src, idx + 2                   ), r4l, r4h);
+        v_uint8 s0R, s0G, s0B, scR, scG, scB, s4R, s4G, s4B;
+        v_load_deinterleave(src,      s0R, s0G, s0B);
+        v_load_deinterleave(src + 6,  scR, scG, scB);
+        v_load_deinterleave(src + 12, s4R, s4G, s4B);
 
-        v_zip(r2l, v_add(r1l, r3l), r1l, r3l);
-        v_zip(r2h, v_add(r1h, r3h), r1h, r3h);
-        r0l = v_add(r0l, r4l); r0h = v_add(r0h, r4h);
+        v_uint16 u0R = v_reinterpret_as_u16(s0R), ucR = v_reinterpret_as_u16(scR), up2R = v_reinterpret_as_u16(s4R);
+        v_uint16 u0G = v_reinterpret_as_u16(s0G), ucG = v_reinterpret_as_u16(scG), up2G = v_reinterpret_as_u16(s4G);
+        v_uint16 u0B = v_reinterpret_as_u16(s0B), ucB = v_reinterpret_as_u16(scB), up2B = v_reinterpret_as_u16(s4B);
 
-        v_store(row                      , v_pack_triplets(v_add(v_dotprod(v_reinterpret_as_s16(r1l), v_6_4), v_reinterpret_as_s32(v_expand_low(r0l)))));
-        v_store(row + 3*VTraits<v_int32>::vlanes()/4, v_pack_triplets(v_add(v_dotprod(v_reinterpret_as_s16(r3l), v_6_4), v_reinterpret_as_s32(v_expand_high(r0l)))));
-        v_store(row + 6*VTraits<v_int32>::vlanes()/4, v_pack_triplets(v_add(v_dotprod(v_reinterpret_as_s16(r1h), v_6_4), v_reinterpret_as_s32(v_expand_low(r0h)))));
-        v_store(row + 9*VTraits<v_int32>::vlanes()/4, v_pack_triplets(v_add(v_dotprod(v_reinterpret_as_s16(r3h), v_6_4), v_reinterpret_as_s32(v_expand_high(r0h)))));
+        // Five-tap [1,4,6,4,1] filter; max value 255×16 = 4080, fits uint16.
+        v_uint16 accR = v_add(v_add(v_and(u0R, lo_mask), v_and(up2R, lo_mask)),
+                        v_add(v_shl<2>(v_add(v_shr<8>(u0R), v_shr<8>(ucR))),
+                              v_mul(v_and(ucR, lo_mask), w6)));
+        v_uint16 accG = v_add(v_add(v_and(u0G, lo_mask), v_and(up2G, lo_mask)),
+                        v_add(v_shl<2>(v_add(v_shr<8>(u0G), v_shr<8>(ucG))),
+                              v_mul(v_and(ucG, lo_mask), w6)));
+        v_uint16 accB = v_add(v_add(v_and(u0B, lo_mask), v_and(up2B, lo_mask)),
+                        v_add(v_shl<2>(v_add(v_shr<8>(u0B), v_shr<8>(ucB))),
+                              v_mul(v_and(ucB, lo_mask), w6)));
+
+        unsigned* dst = reinterpret_cast<unsigned*>(row);
+        v_store_interleave(dst,          v_expand_low(accR),  v_expand_low(accG),  v_expand_low(accB));
+        v_store_interleave(dst + 3*VU32, v_expand_high(accR), v_expand_high(accG), v_expand_high(accB));
     }
     vx_cleanup();
-
     return x;
 }
 template<> int PyrDownVecH<uchar, int, 4>(const uchar* src, int* row, int width)
