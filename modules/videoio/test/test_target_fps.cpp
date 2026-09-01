@@ -10,7 +10,8 @@ using namespace std;
 
 namespace opencv_test { namespace {
 
-// target_fps drop-only frame-rate control, a VideoCapture constructor/open() parameter.
+// target_fps drop-only frame-rate control, set via CAP_PROP_TARGET_FPS in the `params` vector
+// passed to a VideoCapture constructor/open() call (open-only -- see its doc comment).
 // big_buck_bunny.mp4 is mpeg4, 24/1 fps, 125 frames, no B-frames, so its per-frame timestamps are
 // exact; findDataFile() throws SkipTestException itself if opencv_extra is unavailable.
 static string targetFpsTestVideoPath()
@@ -37,7 +38,7 @@ TEST_P(videoio_target_fps, keeps_expected_frame_count)
 
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG, target_fps);
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     int n = 0;
@@ -83,7 +84,7 @@ TEST(videoio_target_fps, last_frame_pos_msec_matches_its_own_timestamp)
     const double target_fps = 8.0;
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG, target_fps);
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     double lastPosMsec = -1.0;
@@ -110,7 +111,7 @@ TEST(videoio_target_fps, emitted_frames_evenly_spaced)
     const double target_fps = 8.0;
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG, target_fps);
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     vector<double> posMsec;
@@ -130,8 +131,8 @@ TEST(videoio_target_fps, emitted_frames_evenly_spaced)
     EXPECT_NEAR(expectedStepMs, *maxIt, 1.0);
 }
 
-// The default-argument path, guarding against declaration/definition signature drift breaking
-// existing non-target_fps call sites.
+// The plain no-params-at-all construction path, guarding against declaration/definition signature
+// drift breaking existing non-target_fps call sites.
 TEST(videoio_target_fps, default_argument_is_disabled)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -139,7 +140,7 @@ TEST(videoio_target_fps, default_argument_is_disabled)
 
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG); // no target_fps argument at all
+    VideoCapture cap(filename, CAP_FFMPEG); // no CAP_PROP_TARGET_FPS requested at all
     ASSERT_TRUE(cap.isOpened());
 
     int n = 0;
@@ -151,21 +152,21 @@ TEST(videoio_target_fps, default_argument_is_disabled)
     EXPECT_EQ(BBB_FRAME_COUNT, n);
 }
 
-// release() must reset fpsCtl, or a reopen through the params-vector overload inherits the previous
-// open's clock and buffers.
-TEST(videoio_target_fps, reopen_via_params_overload_resets_state)
+// release() must reset fpsCtl, or a reopen that doesn't request CAP_PROP_TARGET_FPS inherits the
+// previous open's clock and buffers.
+TEST(videoio_target_fps, reopen_without_target_fps_resets_state)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
 
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG, 8.0); // target_fps enabled, clock anchored to this open's PTS
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, 8}); // clock anchored to this open's PTS
     ASSERT_TRUE(cap.isOpened());
     Mat frame;
     ASSERT_TRUE(cap.read(frame)); // leave fpsCtl mid-schedule, not freshly reset
 
-    // This overload never calls enableFpsControl(), so it only behaves correctly if the release()
+    // No CAP_PROP_TARGET_FPS in this open's params, so it only behaves correctly if the release()
     // it triggers internally resets fpsCtl. Reopening the same file is enough here.
     ASSERT_TRUE(cap.open(filename, CAP_FFMPEG, std::vector<int>()));
     ASSERT_TRUE(cap.isOpened());
@@ -175,8 +176,8 @@ TEST(videoio_target_fps, reopen_via_params_overload_resets_state)
         n++;
     cap.release();
 
-    // target_fps isn't threaded through this overload by design, so the reopened capture should
-    // be a plain passthrough: every native frame (125), not the previous open's schedule (42).
+    // CAP_PROP_TARGET_FPS wasn't requested on this reopen, so it should be a plain passthrough:
+    // every native frame (125), not the previous open's schedule (42).
     EXPECT_EQ(BBB_FRAME_COUNT, n);
 }
 
@@ -188,7 +189,7 @@ TEST(videoio_target_fps, non_zero_channel_fails_under_fps_control)
 
     const string filename = targetFpsTestVideoPath();
 
-    VideoCapture cap(filename, CAP_FFMPEG, 8.0);
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, 8});
     ASSERT_TRUE(cap.isOpened());
     ASSERT_TRUE(cap.grab());
 
@@ -228,7 +229,8 @@ TEST(videoio_target_fps, gstreamer_pipeline_keeps_expected_frame_count)
                                     // same deliberate mid-tick-at-EOF coverage as the FFmpeg params.
 
     VideoCapture cap;
-    ASSERT_NO_THROW(cap.open(targetFpsGstreamerPipeline(srcFrameCount, srcFps), CAP_GSTREAMER, target_fps));
+    ASSERT_NO_THROW(cap.open(targetFpsGstreamerPipeline(srcFrameCount, srcFps), CAP_GSTREAMER,
+                              {CAP_PROP_TARGET_FPS, cvRound(target_fps)}));
     ASSERT_TRUE(cap.isOpened());
 
     int n = 0;
@@ -254,7 +256,8 @@ TEST(videoio_target_fps, gstreamer_pipeline_emitted_frames_evenly_spaced)
     const double target_fps = 5.0;
 
     VideoCapture cap;
-    ASSERT_NO_THROW(cap.open(targetFpsGstreamerPipeline(srcFrameCount, srcFps), CAP_GSTREAMER, target_fps));
+    ASSERT_NO_THROW(cap.open(targetFpsGstreamerPipeline(srcFrameCount, srcFps), CAP_GSTREAMER,
+                              {CAP_PROP_TARGET_FPS, cvRound(target_fps)}));
     ASSERT_TRUE(cap.isOpened());
 
     vector<double> posMsec;
@@ -285,7 +288,7 @@ TEST(videoio_target_fps, opencv_mjpeg_keeps_expected_frame_count)
     const string filename = findDataFile("video/big_buck_bunny.mjpg.avi");
 
     const double target_fps = 8.0; // ratio 3 -> emitted source indices 0, 3, ..., 123
-    VideoCapture cap(filename, CAP_OPENCV_MJPEG, target_fps);
+    VideoCapture cap(filename, CAP_OPENCV_MJPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
     ASSERT_EQ(CAP_OPENCV_MJPEG, static_cast<int>(cap.get(CAP_PROP_BACKEND)));
     EXPECT_EQ(target_fps, cap.get(CAP_PROP_FPS)) << "frame-rate control did not engage";
@@ -324,7 +327,8 @@ TEST(videoio_target_fps, unsupported_backend_falls_back_to_passthrough)
     }
 
     const double target_fps = 2.0; // would be a reduction, if this backend were allowed
-    VideoCapture cap(cv::format("%s/img%04d.png", dirname.c_str(), 0), CAP_IMAGES, target_fps);
+    VideoCapture cap(cv::format("%s/img%04d.png", dirname.c_str(), 0), CAP_IMAGES,
+                      {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
     ASSERT_EQ(CAP_IMAGES, static_cast<int>(cap.get(CAP_PROP_BACKEND)));
 
@@ -353,7 +357,7 @@ TEST(videoio_target_fps, position_properties_describe_the_emitted_frame)
 
     const double target_fps = 8.0; // ratio 3 -> emitted source indices 0, 3, 6, ...
     const int ratio = 3;
-    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, target_fps);
+    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     const double srcFrameDurationMs = 1000.0 / BBB_FPS;
@@ -388,7 +392,7 @@ TEST(videoio_target_fps, reports_effective_output_fps)
     const string filename = targetFpsTestVideoPath();
 
     {   // below native: the emitted rate is target_fps
-        VideoCapture cap(filename, CAP_FFMPEG, 8.0);
+        VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, 8});
         ASSERT_TRUE(cap.isOpened());
         EXPECT_EQ(8.0, cap.get(CAP_PROP_FPS)) << "before any read()";
         Mat frame;
@@ -397,7 +401,7 @@ TEST(videoio_target_fps, reports_effective_output_fps)
     }
     {   // above native: drop-only cannot emit faster than the source, so the native rate is the
         // honest answer -- reporting target_fps here would be a new inaccuracy, not a fix.
-        VideoCapture cap(filename, CAP_FFMPEG, BBB_FPS * 2);
+        VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(BBB_FPS * 2)});
         ASSERT_TRUE(cap.isOpened());
         EXPECT_EQ(BBB_FPS, cap.get(CAP_PROP_FPS));
     }
@@ -416,7 +420,7 @@ TEST(videoio_target_fps, bookmarked_frame_can_be_seeked_back_to)
         throw SkipTestException("FFmpeg backend was not found");
 
     const double target_fps = 8.0; // ratio 3 -> the 2nd emitted frame is source frame 3
-    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, target_fps);
+    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     Mat frame;
@@ -449,7 +453,7 @@ TEST(videoio_target_fps, seek_resets_schedule_and_lookahead)
     const double target_fps = 8.0; // ratio 3 -> 42 frames over the whole file
     const int expectedTotal = 42;
     const double srcFrameDurationMs = 1000.0 / BBB_FPS;
-    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, target_fps);
+    VideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     Mat frame;
@@ -507,7 +511,7 @@ TEST(videoio_target_fps, v4l2_vivid_respects_target_fps)
     // Well below vivid's default capture rate, leaving plenty of margin for real scheduling
     // jitter that a decoded-file/synthetic-pipeline PTS doesn't have to contend with.
     const double target_fps = 5.0;
-    VideoCapture cap(device, CAP_V4L2, target_fps);
+    VideoCapture cap(device, CAP_V4L2, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
 
     const int kFramesToRead = 5;
