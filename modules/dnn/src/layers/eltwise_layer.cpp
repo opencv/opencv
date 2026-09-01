@@ -430,149 +430,149 @@ public:
                 if( blockSize <= 0 )
                     break;
 
-                    size_t dstIdx = ofs;
-                    float* dstptr = dstptr0 + dstIdx;
-                    ofs += blockSize;
+                size_t dstIdx = ofs;
+                float* dstptr = dstptr0 + dstIdx;
+                ofs += blockSize;
 
+                {
+                    const float* srcptr0 = srcs[0]->ptr<float>() + dstIdx;
+
+                    const int inputIdx = 1;
+                    int src1_channels = srcNumChannels[inputIdx];
+                    if (c >= src1_channels)
                     {
-                        const float* srcptr0 = srcs[0]->ptr<float>() + dstIdx;
-
-                        const int inputIdx = 1;
-                        int src1_channels = srcNumChannels[inputIdx];
-                        if (c >= src1_channels)
+                        // no data from second input
+                        if (!coeffsptr || coeffsptr[0] == 1.0f)
                         {
-                            // no data from second input
-                            if (!coeffsptr || coeffsptr[0] == 1.0f)
+                            for (int j = 0; j < blockSize; j++)
                             {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j];
-                                }
-                            }
-                            else
-                            {
-                                float c0 = coeffsptr[0];
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = c0*srcptr0[j];
-                                }
+                                dstptr[j] = srcptr0[j];
                             }
                         }
                         else
                         {
-                            size_t srcIdx = delta + (sampleIdx * src1_channels + c) * planeSize;
-                            const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
-
-                            if (op == PROD)
+                            float c0 = coeffsptr[0];
+                            for (int j = 0; j < blockSize; j++)
                             {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j] * srcptrI[j];
-                                }
+                                dstptr[j] = c0*srcptr0[j];
                             }
-                            else if (op == DIV)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = srcptr0[j] / srcptrI[j];
-                                }
-                            }
-                            else if (op == MAX)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
-                                }
-                            }
-                            else if (op == MIN)
-                            {
-                                for (int j = 0; j < blockSize; j++)
-                                {
-                                    dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
-                                }
-                            }
-                            else if (op == SUM)
-                            {
-                                if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
-                                {
-                                    for (int j = 0; j < blockSize; j++)
-                                    {
-                                        dstptr[j] = srcptr0[j] + srcptrI[j];
-                                    }
-                                }
-                                else
-                                {
-                                    float c0 = coeffsptr[0];
-                                    float c1 = coeffsptr[1];
-                                    for (int j = 0; j < blockSize; j++)
-                                    {
-                                        dstptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
-                                    }
-                                }
-                            }
-                            else
-                                CV_Error(Error::StsInternal, "");
                         }
                     }
-
-                    // aggregate other inputs (3+)
-                    for (size_t inputIdx = 2; inputIdx < nsrcs; inputIdx++)
+                    else
                     {
-                        int srcI_channels = srcNumChannels[inputIdx];
-                        if (c >= srcI_channels)
-                            continue;  // no data from second input
-                        size_t srcIdx = delta + (sampleIdx * srcI_channels + c) * planeSize;
+                        size_t srcIdx = delta + (sampleIdx * src1_channels + c) * planeSize;
                         const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
 
                         if (op == PROD)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] *= srcptrI[j];
+                                dstptr[j] = srcptr0[j] * srcptrI[j];
                             }
                         }
                         else if (op == DIV)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] /= srcptrI[j];
+                                dstptr[j] = srcptr0[j] / srcptrI[j];
                             }
                         }
                         else if (op == MAX)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] = std::max(dstptr[j], srcptrI[j]);
+                                dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
                             }
                         }
                         else if (op == MIN)
                         {
                             for (int j = 0; j < blockSize; j++)
                             {
-                                dstptr[j] = std::min(dstptr[j], srcptrI[j]);
+                                dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
                             }
                         }
                         else if (op == SUM)
                         {
-                            if (!coeffsptr || coeffsptr[inputIdx] == 1.0f)
+                            if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
                             {
                                 for (int j = 0; j < blockSize; j++)
                                 {
-                                    dstptr[j] += srcptrI[j];
+                                    dstptr[j] = srcptr0[j] + srcptrI[j];
                                 }
                             }
                             else
                             {
-                                float cI = coeffsptr[inputIdx];
+                                float c0 = coeffsptr[0];
+                                float c1 = coeffsptr[1];
                                 for (int j = 0; j < blockSize; j++)
                                 {
-                                    dstptr[j] += cI * srcptrI[j];
+                                    dstptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
                                 }
                             }
                         }
                         else
                             CV_Error(Error::StsInternal, "");
                     }
+                }
+
+                // aggregate other inputs (3+)
+                for (size_t inputIdx = 2; inputIdx < nsrcs; inputIdx++)
+                {
+                    int srcI_channels = srcNumChannels[inputIdx];
+                    if (c >= srcI_channels)
+                        continue;  // no data from second input
+                    size_t srcIdx = delta + (sampleIdx * srcI_channels + c) * planeSize;
+                    const float* srcptrI = srcs[inputIdx]->ptr<float>() + srcIdx;
+
+                    if (op == PROD)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] *= srcptrI[j];
+                        }
+                    }
+                    else if (op == DIV)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] /= srcptrI[j];
+                        }
+                    }
+                    else if (op == MAX)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] = std::max(dstptr[j], srcptrI[j]);
+                        }
+                    }
+                    else if (op == MIN)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            dstptr[j] = std::min(dstptr[j], srcptrI[j]);
+                        }
+                    }
+                    else if (op == SUM)
+                    {
+                        if (!coeffsptr || coeffsptr[inputIdx] == 1.0f)
+                        {
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] += srcptrI[j];
+                            }
+                        }
+                        else
+                        {
+                            float cI = coeffsptr[inputIdx];
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] += cI * srcptrI[j];
+                            }
+                        }
+                    }
+                    else
+                        CV_Error(Error::StsInternal, "");
+                }
 
                 if( activ )
                 {
