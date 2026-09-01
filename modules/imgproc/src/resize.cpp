@@ -3178,6 +3178,94 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
     }
 }
 
+template <int CN, typename T, typename WT>
+inline void hresize(const T* S, WT* buf, int dx, int dst_width,
+                    const DecimateAlpha* xtab, const int* xtabofs) {
+    for (; dx < dst_width; ++dx) {
+        WT s[CN];
+        for (int c = 0; c < CN; ++c)
+            s[c] = (WT)0;
+        for (int k = xtabofs[dx], k1 = xtabofs[dx + 1]; k < k1; ++k) {
+            const int sxn = xtab[k].si;
+            const WT alpha = (WT)xtab[k].alpha;
+            for (int c = 0; c < CN; ++c)
+                s[c] += S[sxn + c]*alpha;
+        }
+        for (int c = 0; c < CN; ++c)
+            buf[dx*CN + c] = s[c];
+    }
+}
+
+template <typename T, typename WT>
+inline void hresize_n(const T* S, WT* buf, int dst_width, int cn,
+                      const DecimateAlpha* xtab, const int* xtabofs) {
+    for (int dx = 0; dx < dst_width; ++dx) {
+        WT* D = buf + dx*cn;
+        for (int c = 0; c < cn; ++c)
+            D[c] = (WT)0;
+        for (int k = xtabofs[dx], k1 = xtabofs[dx + 1]; k < k1; ++k) {
+            const int sxn = xtab[k].si;
+            const WT alpha = (WT)xtab[k].alpha;
+            for (int c = 0; c < cn; ++c)
+                D[c] += S[sxn + c]*alpha;
+        }
+    }
+}
+
+template <typename T, typename WT>
+struct AreaHResize {
+    template <int CN>
+    static void run(const T* S, WT* buf, int dst_width, int /*srcRowElems*/,
+                    const DecimateAlpha* xtab, const int* xtabofs) {
+        hresize<CN>(S, buf, 0, dst_width, xtab, xtabofs);
+    }
+};
+
+#if CV_SIMD128
+template <>
+struct AreaHResize<uchar, float> {
+    template <int CN>
+    static void run(const uchar* S, float* buf, int dst_width, int srcRowElems,
+                    const DecimateAlpha* xtab, const int* xtabofs) {
+        int dx = 0;
+        if (CN == 3 || CN == 4) {
+            int vec_width = dst_width;
+            while (vec_width > 0 && xtabofs[vec_width] > 0 &&
+                   xtab[xtabofs[vec_width] - 1].si + 4 > srcRowElems)
+                --vec_width;
+
+            for (; dx < vec_width; ++dx) {
+                v_float32x4 acc = v_setzero_f32();
+                for (int k = xtabofs[dx], k1 = xtabofs[dx + 1]; k < k1; ++k) {
+                    const v_float32x4 v =
+                        v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(S + xtab[k].si)));
+                    acc = v_add(acc, v_mul(v, v_setall_f32(xtab[k].alpha)));
+                }
+                if (CN == 4)
+                    v_store(buf + dx*4, acc);
+                else {
+                    v_store_low(buf + dx*3, acc);
+                    buf[dx*3 + 2] = v_extract_n<2>(acc);
+                }
+            }
+        }
+        hresize<CN>(S, buf, dx, dst_width, xtab, xtabofs);
+    }
+};
+#endif
+
+template <typename T, typename WT>
+inline void hresize_dispatch(const T* S, WT* buf, int dst_width, int cn, int srcRowElems,
+                             const DecimateAlpha* xtab, const int* xtabofs) {
+    switch (cn) {
+    case 1: AreaHResize<T, WT>::template run<1>(S, buf, dst_width, srcRowElems, xtab, xtabofs); break;
+    case 2: AreaHResize<T, WT>::template run<2>(S, buf, dst_width, srcRowElems, xtab, xtabofs); break;
+    case 3: AreaHResize<T, WT>::template run<3>(S, buf, dst_width, srcRowElems, xtab, xtabofs); break;
+    case 4: AreaHResize<T, WT>::template run<4>(S, buf, dst_width, srcRowElems, xtab, xtabofs); break;
+    default: hresize_n(S, buf, dst_width, cn, xtab, xtabofs); break;
+    }
+}
+
 }  // namespace inter_area
 
 template<typename T, typename WT> class ResizeArea_Invoker :
@@ -3196,20 +3284,34 @@ public:
         ytab = _ytab;
         ytab_size = _ytab_size;
         tabofs = _tabofs;
+
+        int dst_width = _dst.cols, cn = _dst.channels(), dx = 0;
+        _xtabofs.allocate(dst_width + 1);
+        int* xofs = _xtabofs.data();
+        for( int k = 0; k < _xtab_size; k++ )
+        {
+            int col = _xtab[k].di / cn;
+            while( dx <= col )
+                xofs[dx++] = k;
+        }
+        while( dx <= dst_width )
+            xofs[dx++] = _xtab_size;
+        xtabofs = xofs;
     }
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size dsize = dst->size();
         int cn = dst->channels();
-        dsize.width *= cn;
-        AutoBuffer<WT> _buffer(dsize.width*2);
+        int dst_width = dst->cols;
+        int width = dst_width*cn;
+        int srcRowElems = src->cols*cn;
+        AutoBuffer<WT> _buffer(width*2);
         const DecimateAlpha* xtab = xtab0;
-        int xtab_size = xtab_size0;
-        WT *buf = _buffer.data(), *sum = buf + dsize.width;
-        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
+        WT *buf = _buffer.data(), *sum = buf + width;
+        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, dx;
+        int prev_dy = ytab[j_start].di, prev_sy = -1;
 
-        for( dx = 0; dx < dsize.width; dx++ )
+        for( dx = 0; dx < width; dx++ )
             sum[dx] = (WT)0;
 
         for( j = j_start; j < j_end; j++ )
@@ -3218,80 +3320,26 @@ public:
             int dy = ytab[j].di;
             int sy = ytab[j].si;
 
+            if( sy != prev_sy )
             {
-                const T* S = src->template ptr<T>(sy);
-                for( dx = 0; dx < dsize.width; dx++ )
-                    buf[dx] = (WT)0;
-
-                if( cn == 1 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        buf[dxn] += S[xtab[k].si]*alpha;
-                    }
-                else if( cn == 2 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1;
-                    }
-                else if( cn == 3 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-                    }
-                else if( cn == 4 )
-                {
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1;
-                        t0 = buf[dxn+2] + S[sxn+2]*alpha;
-                        t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                        buf[dxn+2] = t0; buf[dxn+3] = t1;
-                    }
-                }
-                else
-                {
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        for( int c = 0; c < cn; c++ )
-                            buf[dxn + c] += S[sxn + c]*alpha;
-                    }
-                }
+                inter_area::hresize_dispatch(src->template ptr<T>(sy), buf,
+                                             dst_width, cn, srcRowElems, xtab, xtabofs);
+                prev_sy = sy;
             }
 
             if( dy != prev_dy )
             {
-                inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
-                inter_area::mul(buf, dsize.width, beta, sum);
+                inter_area::saturate_store(sum, width, dst->template ptr<T>(prev_dy));
+                inter_area::mul(buf, width, beta, sum);
                 prev_dy = dy;
             }
             else
             {
-                inter_area::muladd(buf, dsize.width, beta, sum);
+                inter_area::muladd(buf, width, beta, sum);
             }
         }
 
-        inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
+        inter_area::saturate_store(sum, width, dst->template ptr<T>(prev_dy));
     }
 
 private:
@@ -3301,6 +3349,8 @@ private:
     const DecimateAlpha* ytab;
     int xtab_size0, ytab_size;
     const int* tabofs;
+    const int* xtabofs;
+    AutoBuffer<int> _xtabofs;
 };
 
 
