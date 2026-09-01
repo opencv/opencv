@@ -4,6 +4,7 @@
 
 namespace cv {
 bool convex_hull_bucket_sort(const Point* data,
+                             bool require_monotonic_indices,
                              Point** out_points,
                              int& total,
                              int& ind_miny,
@@ -50,11 +51,19 @@ bool convex_hull_bucket_sort(const Point* data,
         const int idx = data[i].x - minX;
         const int y = data[i].y;
         XBucket& b = buckets[idx];
+
         if (b.lo == nullptr || y < b.lo->y) {
             b.lo = &data[i];
         }
+        else if (require_monotonic_indices && y == b.lo->y && !(data[i-1] == data[i])) {
+            return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
+        }
+
         if (b.hi == nullptr || y > b.hi->y) {
             b.hi = &data[i];
+        }
+        else if (require_monotonic_indices && y == b.hi->y && !(data[i-1] == data[i])) {
+            return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
         }
     }
 

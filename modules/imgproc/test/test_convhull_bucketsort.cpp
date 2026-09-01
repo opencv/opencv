@@ -212,6 +212,7 @@ static bool runBucketSort(std::vector<Point>& points,
     total = (int)points.size();
 
     bool ok = convex_hull_bucket_sort(points.data(),
+                                      /*require_monotonic_indices=*/false,
                                       out_ptrs.data(),
                                       total,
                                       miny_ind,
@@ -349,6 +350,7 @@ static double benchmarkBucketSortOnly(const std::vector<Point>& input_points,
 
         auto t0 = high_resolution_clock::now();
         bool ok = convex_hull_bucket_sort(points.data(),
+                                          /*require_monotonic_indices=*/false,
                                           ptrs.data(),
                                           total,
                                           miny_ind,
@@ -461,6 +463,7 @@ TEST(Imgproc_ConvexHullBucketSort, rejects_huge_rangeX)
     int maxy_ind = 0;
 
     bool ok = convex_hull_bucket_sort(points.data(),
+                                      /*require_monotonic_indices=*/false,
                                       ptrs.data(),
                                       total,
                                       miny_ind,

@@ -172,7 +172,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     // sort the point set by x-coordinate, find min and max y
     if( !is_float )
     {
-        if (!convex_hull_bucket_sort(data0, pointer, total,  miny_ind, maxy_ind))
+        bool require_monotonic_indices = !returnPoints;
+        if (!convex_hull_bucket_sort(data0, require_monotonic_indices,
+                                     pointer, total, miny_ind, maxy_ind))
         {
             std::sort(pointer, pointer + total, CHullCmpPoints<int>());
             for( i = 1; i < total; i++ )
@@ -182,7 +184,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                     miny_ind = i;
                 if( pointer[maxy_ind]->y < y )
                     maxy_ind = i;
-                }
+            }
         }
     }
     else
