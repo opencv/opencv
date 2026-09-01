@@ -9,7 +9,7 @@
 
 #include "../precomp.hpp"
 #include "frame.hpp"
-#include "../optimizer/pose_optimizer.hpp"
+#include "../optimizer/optimizer.hpp"
 
 namespace cv {
 namespace slam {
@@ -21,20 +21,21 @@ Stage logic is split across:
   - vo_tracking.cpp   : per-frame localisation (motion model, fallback 1/2, local map)
   - vo_keyframe.cpp   : keyframe promotion decision + covisibility helpers
   - vo_map_growth.cpp : triangulation of new map points at promotion time
-  - visual_odometry.cpp : factory, processFrame()
+  - visual_odometry.cpp : factory, processFrame(), finalizeMap()
 */
 class VisualOdometryImpl CV_FINAL : public VisualOdometry
 {
 public:
-    VisualOdometryImpl(const Ptr<Feature2D>& detector,
-                       const Ptr<DescriptorMatcher>& matcher,
-                       const Mat& cameraMatrix,
-                       const Mat& distCoeffs,
-                       const OdometryParams& params);
+    VisualOdometryImpl(const Ptr<Feature2D>& _detector,
+                       const Ptr<DescriptorMatcher>& _matcher,
+                       const Mat& _cameraMatrix,
+                       const Mat& _distCoeffs,
+                       const OdometryParams& _params);
 
     // --- VisualOdometry interface -------------------------------------------
 
     bool processFrame(InputArray image) CV_OVERRIDE;
+    bool finalizeMap() CV_OVERRIDE;
     void reset() CV_OVERRIDE;
 
     OdometryState getState() const CV_OVERRIDE { return state; }
@@ -43,21 +44,32 @@ public:
     int getNumKeyframes() const CV_OVERRIDE { return map.numKeyframes(); }
     int getNumMapPoints() const CV_OVERRIDE { return map.numMapPoints(); }
     const std::vector<Matx44d>& getTrajectory() const CV_OVERRIDE { return map.trajectory(); }
+    std::vector<Matx44d> getCorrectedTrajectory() const CV_OVERRIDE;
     const OdometryParams& getParams() const CV_OVERRIDE { return params; }
     void setParams(const OdometryParams& p) CV_OVERRIDE { params = p; }
 
     // --- Stage entry points -------------------------------------------------
 
-    bool bootstrap(Frame& cur);
-    bool track(Frame& cur);
+    bool bootstrap(Frame& currentFrame);
+    bool track(Frame& currentFrame);
 
-    bool trackWithMotionModel(Frame& cur); // motion model
-    bool trackWithReferenceKF(Frame& cur); // fallback 1
-    bool trackWithOpticalFlow(Frame& cur); // fallback 2
-    void trackLocalMap(Frame& cur);
+    bool trackWithMotionModel(Frame& currentFrame); // motion model
+    bool trackWithReferenceKF(Frame& currentFrame); // fallback 1
+    bool trackWithOpticalFlow(Frame& currentFrame); // fallback 2
+    void trackLocalMap(Frame& currentFrame);
 
     bool shouldPromoteKeyframe(int nInliers, const Matx44d& T_cw, String& reason) const;
-    void promoteKeyframeAndGrowMap(Frame& cur);
+    void promoteKeyframeAndGrowMap(Frame& currentFrame);
+    void finalizeKeyframe(KeyFrame* newKf, Frame& currentFrame);
+
+    // --- Loop detection / closure (loop/loop_detection.cpp, loop/loop_closing.cpp) ---
+
+    void buildVocabulary();
+    Mat  computeVlad(const Mat& descriptorsIn) const;
+    int  geometricVerify(const KeyFrame* q, const KeyFrame* c,
+                         const std::vector<DMatch>& matches) const;
+    void detectLoop(KeyFrame* query);
+    bool closeLoop(KeyFrame* Kc, KeyFrame* Km, const std::vector<DMatch>& matches);
 
     // --- Shared helpers (visual_odometry.cpp) --------------------------------
 
@@ -90,6 +102,18 @@ public:
     bool hasPrevFrame = false;
 
     String lastEvent;
+
+    // per-frame record for corrected trajectory: relative pose to refKf at tracking time
+    struct FrameRecord { Matx44d relPose; KeyFrame* refKf; };
+    std::vector<FrameRecord> frameRecords;
+
+    // Loop detection state
+    Mat  vocab;
+    bool vocabReady    = false;
+    Mat  hashProj;             // (loopHashBits, K*D) random projection for binary Hamming pre-filter
+    int  loopStreak    = 0;
+    KeyFrame* loopLastCand   = nullptr;
+    int  lastClosedKfId      = -1;
 
     Map map;
 };
