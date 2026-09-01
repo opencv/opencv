@@ -287,51 +287,6 @@ public:
         return false;
     }
 
-    virtual bool fuseTrailingScale(InputArray scale_arr) CV_OVERRIDE
-    {
-        // act(x)*s == act(x*s) only for s >= 0 and a positively homogeneous act; PReLU's slope and Clip's bounds break that.
-        if (activationFunc != nullptr || !activ.empty() || addResidual ||
-            (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
-             fastActivation != FAST_ACTIV_LEAKY_RELU))
-            return false;
-        if (wshape0.empty())
-            return false;
-
-        // Scalar only: a per-channel scale needs the same broadcast-axis check fuseBatchNormWeights() does.
-        Mat s = scale_arr.getMat();
-        if (s.empty() || s.total() != 1)
-            return false;
-        int stype = s.type();
-        if (stype != CV_32F && stype != CV_64F)
-            return false;
-
-        const float scalar = stype == CV_32F ? s.ptr<float>()[0] : (float)s.ptr<double>()[0];
-        if (!(scalar >= 0.f))  // also rejects NaN
-            return false;
-
-        const int K = wshape0[0];
-        if (!fusedBatchNorm) {
-            const float* bp = bias.empty() ? nullptr : bias.ptr<float>();
-            fusedScale.fit(1, &K, CV_32F);
-            fusedBias.fit(1, &K, CV_32F);
-            float* fs = fusedScale.ptr<float>();
-            float* fb = fusedBias.ptr<float>();
-            for (int k = 0; k < K; k++) {
-                fs[k] = scalar;
-                fb[k] = (bp ? bp[k] : 0.f) * scalar;
-            }
-            fusedBatchNorm = true;
-        } else {
-            float* fs = fusedScale.ptr<float>();
-            float* fb = fusedBias.ptr<float>();
-            for (int k = 0; k < K; k++) {
-                fs[k] *= scalar;
-                fb[k] *= scalar;
-            }
-        }
-        return true;
-    }
-
     static bool splitConstOperand(const std::vector<FusionNode>& nd, int node,
                              int& other, int& bufId, float& scalarVal)
     {
@@ -393,9 +348,9 @@ public:
             return false;
         if (expr->outputNode != (int)nd.size() - 1)
             return false;
-        if (fusedBatchNorm || addResidual || inputs.size() > 1)
+        if (addResidual || inputs.size() > 1)
             return false;
-        if (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr || !activ.empty())
+        if (activationFunc != nullptr || !activ.empty())
             return false;
         if (wshape0.empty() || wshape0.dims < 3)
             return false;
@@ -405,6 +360,25 @@ public:
             return false;
 
         int cur = expr->outputNode;
+
+        // act(x)*s == act(x*s) only for s >= 0 and a positively homogeneous act.
+        float postScale = 1.f;
+        {
+            int other = -1, bufId = -1;
+            float sv = 0.f;
+            if (nd[cur].op == FusionEltwiseOp::MUL &&
+                splitConstOperand(nd, cur, other, bufId, sv) && bufId < 0 && sv >= 0.f) {
+                postScale = sv;
+                cur = other;
+            }
+        }
+        const bool hasPostScale = cur != expr->outputNode;
+
+        if (fusedBatchNorm || fastActivation != FAST_ACTIV_NONE) {
+            if (!hasPostScale || cur != 0 ||
+                (fastActivation != FAST_ACTIV_RELU && fastActivation != FAST_ACTIV_LEAKY_RELU))
+                return false;
+        }
 
         FastActivation act = FAST_ACTIV_NONE;
         std::vector<float> ap;
@@ -419,6 +393,8 @@ public:
             act = FAST_ACTIV_RELU;
             cur = nd[cur].inputs[0];
         }
+        if (act == FAST_ACTIV_CLIP)
+            ap[1] *= postScale;
 
         std::vector<float> scale(K, 1.f), shift(K, 0.f);
         bool affine = false;
@@ -446,20 +422,29 @@ public:
 
         if (cur != 0)
             return false;
-        if (!affine && act == FAST_ACTIV_NONE)
+        if (!affine && !hasPostScale && act == FAST_ACTIV_NONE)
             return false;
 
-        if (affine) {
-            fusedScale.fit(1, &K, CV_32F);
-            fusedBias.fit(1, &K, CV_32F);
-            float* fs = fusedScale.ptr<float>();
-            float* fb = fusedBias.ptr<float>();
-            const float* b = bias.empty() ? nullptr : bias.ptr<float>();
-            for (int k = 0; k < K; k++) {
-                fs[k] = scale[k];
-                fb[k] = (b ? b[k] * scale[k] : 0.f) + shift[k];
+        if (affine || hasPostScale) {
+            if (fusedBatchNorm) {
+                float* fs = fusedScale.ptr<float>();
+                float* fb = fusedBias.ptr<float>();
+                for (int k = 0; k < K; k++) {
+                    fs[k] *= postScale;
+                    fb[k] *= postScale;
+                }
+            } else {
+                fusedScale.fit(1, &K, CV_32F);
+                fusedBias.fit(1, &K, CV_32F);
+                float* fs = fusedScale.ptr<float>();
+                float* fb = fusedBias.ptr<float>();
+                const float* b = bias.empty() ? nullptr : bias.ptr<float>();
+                for (int k = 0; k < K; k++) {
+                    fs[k] = postScale * scale[k];
+                    fb[k] = postScale * ((b ? b[k] * scale[k] : 0.f) + shift[k]);
+                }
+                fusedBatchNorm = true;
             }
-            fusedBatchNorm = true;
         }
         if (act != FAST_ACTIV_NONE) {
             fastActivation = act;
