@@ -1075,6 +1075,62 @@ TEST(Imgproc, morphologyEx_small_input_22893)
     ASSERT_EQ(0, cvtest::norm(result, gold, NORM_INF));
 }
 
+// See https://github.com/opencv/opencv/issues/29798
+// cv::Mat_<bool>::depth() returns CV_Bool in 5.0, where it was CV_8U in 4.x, so
+// morphological operations should keep accepting boolean masks as binary input.
+typedef TestWithParam< tuple<int, int, int> > Imgproc_Morphology_Bool;
+
+TEST_P(Imgproc_Morphology_Bool, bool_mask_29798)
+{
+    const int op         = get<0>(GetParam());
+    const int shape      = get<1>(GetParam());
+    const int borderType = get<2>(GetParam());
+
+    Mat_<bool> mask(7, 9, false);
+    mask(1, 1) = true;
+    mask(2, 2) = true;
+    mask(2, 3) = true;
+    mask(3, 3) = true;
+    mask(5, 6) = true;
+    mask(5, 7) = true;
+    mask(6, 7) = true;
+
+    Mat_<uchar> ref;
+    mask.convertTo(ref, CV_8U);
+
+    ASSERT_EQ(mask.depth(), CV_Bool);
+
+    Mat kernel = getStructuringElement(shape, Size(3, 3));
+
+    Mat result_bool, result_ref, result_8u;
+    ASSERT_NO_THROW(morphologyEx(mask, result_bool, op, kernel, Point(-1, -1), 1, borderType));
+    morphologyEx(ref, result_ref, op, kernel, Point(-1, -1), 1, borderType);
+
+    EXPECT_EQ(result_bool.depth(), CV_Bool);
+    result_bool.convertTo(result_8u, CV_8U);
+    EXPECT_EQ(0, cvtest::norm(result_8u, result_ref, NORM_INF));
+
+    // The issue reports cv::dilate directly, so cover it in-place and with several iterations too.
+    Mat_<bool> inplace = mask.clone();
+    Mat_<uchar> inplace_ref = ref.clone();
+    ASSERT_NO_THROW(cv::dilate(inplace, inplace, kernel, Point(-1, -1), 2, borderType));
+    cv::erode(inplace, inplace, kernel, Point(-1, -1), 2, borderType);
+    cv::dilate(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2, borderType);
+    cv::erode(inplace_ref, inplace_ref, kernel, Point(-1, -1), 2, borderType);
+
+    Mat inplace_8u;
+    inplace.convertTo(inplace_8u, CV_8U);
+    EXPECT_EQ(0, cvtest::norm(inplace_8u, inplace_ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Morphology_Bool,
+    Combine(
+        Values(MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE),
+        Values(MORPH_RECT, MORPH_CROSS, MORPH_ELLIPSE),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101)
+    )
+);
+
 TEST(Imgproc_sepFilter2D, identity)
 {
     std::vector<uint8_t> kernelX{0, 0, 0, 1, 0, 0, 0};
