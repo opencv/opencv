@@ -159,13 +159,13 @@ static int ZSTDDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         memset(op + out_buffer.pos, 0, out_buffer.size - out_buffer.pos);
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %lu (short %lu bytes)",
-                      (unsigned long)tif->tif_row,
+                      (unsigned long)tif->tif_dir.td_row,
                       (unsigned long)((size_t)occ - out_buffer.pos));
         return 0;
     }
 
     tif->tif_rawcp += in_buffer.pos;
-    tif->tif_rawcc -= in_buffer.pos;
+    tif->tif_rawcc -= (tmsize_t)in_buffer.pos;
 
     return 1;
 }
@@ -287,7 +287,7 @@ static int ZSTDPostEncode(TIFF *tif)
         }
         if (sp->out_buffer.pos > 0)
         {
-            tif->tif_rawcc = sp->out_buffer.pos;
+            tif->tif_rawcc = (tmsize_t)sp->out_buffer.pos;
             if (!TIFFFlushData1(tif))
                 return 0;
             sp->out_buffer.dst = tif->tif_rawcp;
@@ -367,6 +367,14 @@ static const TIFFField ZSTDFields[] = {
      FALSE, "ZSTD compression_level", NULL},
 };
 
+static uint64_t ZSTDGetMaxCompressionRatio(TIFF *tif)
+{
+    (void)tif;
+    /* Value from the issue #479 tile allocation guard that previously lived
+     * in _TIFFReadEncodedTileAndAllocBuffer(). */
+    return 33000;
+}
+
 int TIFFInitZSTD(TIFF *tif, int scheme)
 {
     static const char module[] = "TIFFInitZSTD";
@@ -425,6 +433,7 @@ int TIFFInitZSTD(TIFF *tif, int scheme)
     tif->tif_encodestrip = ZSTDEncode;
     tif->tif_encodetile = ZSTDEncode;
     tif->tif_cleanup = ZSTDCleanup;
+    tif->tif_getmaxcompressionratio = ZSTDGetMaxCompressionRatio;
     /*
      * Setup predictor setup.
      */

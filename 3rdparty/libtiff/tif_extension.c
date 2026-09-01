@@ -97,12 +97,18 @@ void TIFFSetClientInfo(TIFF *tif, void *data, const char *name)
     ** Create a new link.
     */
 
-    psLink =
-        (TIFFClientInfoLink *)_TIFFmallocExt(tif, sizeof(TIFFClientInfoLink));
-    assert(psLink != NULL);
+    psLink = (TIFFClientInfoLink *)_TIFFCheckMalloc(
+        tif, 1, sizeof(TIFFClientInfoLink), "client info link");
+    if (psLink == NULL)
+        return;
     psLink->next = tif->tif_clientinfo;
-    psLink->name = (char *)_TIFFmallocExt(tif, (tmsize_t)(strlen(name) + 1));
-    assert(psLink->name != NULL);
+    psLink->name = (char *)_TIFFCheckMalloc(tif, (tmsize_t)(strlen(name) + 1),
+                                            sizeof(char), "client info name");
+    if (psLink->name == NULL)
+    {
+        _TIFFfreeExt(tif, psLink);
+        return;
+    }
     strcpy(psLink->name, name);
     psLink->data = data;
 

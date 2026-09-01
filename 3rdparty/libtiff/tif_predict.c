@@ -30,7 +30,7 @@
 #include "tif_predict.h"
 #include "tiffiop.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || (defined(_M_X64) && !defined(_M_ARM64EC))
 #include <emmintrin.h>
 #endif
 
@@ -151,6 +151,8 @@ static int PredictorSetupDecode(TIFF *tif)
             case 64:
                 sp->decodepfunc = horAcc64;
                 break;
+            default:
+                break;
         }
         /*
          * Override default decoding method with one that does the
@@ -246,6 +248,8 @@ static int PredictorSetupEncode(TIFF *tif)
                 break;
             case 64:
                 sp->encodepfunc = horDiff64;
+                break;
+            default:
                 break;
         }
         /*
@@ -347,6 +351,96 @@ static int PredictorSetupEncode(TIFF *tif)
 /* - when storing into the byte stream, we explicitly mask with 0xff so */
 /*   as to make icc -check=conversions happy (not necessary by the standard) */
 
+/*
+ * Predictor accumulation works on native-order samples.  If the TIFF byte
+ * order differs from host byte order, the swab wrapper first swaps the byte
+ * stream explicitly.  These helpers only avoid unaligned typed dereferences.
+ * Use fixed-size memcpy() calls directly so optimizing compilers can expand
+ * them in this per-sample hot path.  _TIFFmemcpy() is an out-of-line wrapper
+ * in non-LTO builds.
+ */
+TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
+static void PredictorAccumulate16NativeUnaligned(uint8_t *current,
+                                                 const uint8_t *previous)
+{
+    uint16_t thisval;
+    uint16_t prevval;
+    memcpy(&thisval, current, sizeof(thisval));
+    memcpy(&prevval, previous, sizeof(prevval));
+    thisval =
+        (uint16_t)(((unsigned int)thisval + (unsigned int)prevval) & 0xffff);
+    memcpy(current, &thisval, sizeof(thisval));
+}
+
+TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
+static void PredictorAccumulate32NativeUnaligned(uint8_t *current,
+                                                 const uint8_t *previous)
+{
+    uint32_t thisval;
+    uint32_t prevval;
+    memcpy(&thisval, current, sizeof(thisval));
+    memcpy(&prevval, previous, sizeof(prevval));
+    thisval += prevval;
+    memcpy(current, &thisval, sizeof(thisval));
+}
+
+TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
+static void PredictorAccumulate64NativeUnaligned(uint8_t *current,
+                                                 const uint8_t *previous)
+{
+    uint64_t thisval;
+    uint64_t prevval;
+    memcpy(&thisval, current, sizeof(thisval));
+    memcpy(&prevval, previous, sizeof(prevval));
+    thisval += prevval;
+    memcpy(current, &thisval, sizeof(thisval));
+}
+
+static void PredictorSwabByteStream16(uint8_t *cp, tmsize_t n)
+{
+    while (n-- > 0)
+    {
+        uint8_t tmp = cp[0];
+        cp[0] = cp[1];
+        cp[1] = tmp;
+        cp += 2;
+    }
+}
+
+static void PredictorSwabByteStream32(uint8_t *cp, tmsize_t n)
+{
+    while (n-- > 0)
+    {
+        uint8_t tmp = cp[0];
+        cp[0] = cp[3];
+        cp[3] = tmp;
+        tmp = cp[1];
+        cp[1] = cp[2];
+        cp[2] = tmp;
+        cp += 4;
+    }
+}
+
+static void PredictorSwabByteStream64(uint8_t *cp, tmsize_t n)
+{
+    while (n-- > 0)
+    {
+        uint8_t tmp = cp[0];
+        cp[0] = cp[7];
+        cp[7] = tmp;
+        tmp = cp[1];
+        cp[1] = cp[6];
+        cp[6] = tmp;
+        tmp = cp[2];
+        cp[2] = cp[5];
+        cp[5] = tmp;
+        tmp = cp[3];
+        cp[3] = cp[4];
+        cp[4] = tmp;
+        cp += 8;
+    }
+}
+
 TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
 static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
@@ -425,10 +519,9 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 
 static int swabHorAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
-    uint16_t *wp = (uint16_t *)cp0;
     tmsize_t wc = cc / 2;
 
-    TIFFSwabArrayOfShort(wp, wc);
+    PredictorSwabByteStream16(cp0, wc);
     return horAcc16(tif, cp0, cc);
 }
 
@@ -436,7 +529,7 @@ TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
 static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
     tmsize_t stride = PredictorState(tif)->stride;
-    uint16_t *wp = (uint16_t *)cp0;
+    uint8_t *cp = cp0;
     tmsize_t wc = cc / 2;
 
     if ((cc % (2 * stride)) != 0)
@@ -450,10 +543,9 @@ static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         wc -= stride;
         do
         {
-            REPEAT4(stride, wp[stride] = (uint16_t)(((unsigned int)wp[stride] +
-                                                     (unsigned int)wp[0]) &
-                                                    0xffff);
-                    wp++)
+            REPEAT4(stride,
+                    PredictorAccumulate16NativeUnaligned(cp + 2 * stride, cp);
+                    cp += 2)
             wc -= stride;
         } while (wc > 0);
     }
@@ -462,10 +554,9 @@ static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 
 static int swabHorAcc32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
-    uint32_t *wp = (uint32_t *)cp0;
     tmsize_t wc = cc / 4;
 
-    TIFFSwabArrayOfLong(wp, wc);
+    PredictorSwabByteStream32(cp0, wc);
     return horAcc32(tif, cp0, cc);
 }
 
@@ -473,7 +564,7 @@ TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
 static int horAcc32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
     tmsize_t stride = PredictorState(tif)->stride;
-    uint32_t *wp = (uint32_t *)cp0;
+    uint8_t *cp = cp0;
     tmsize_t wc = cc / 4;
 
     if ((cc % (4 * stride)) != 0)
@@ -487,7 +578,9 @@ static int horAcc32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         wc -= stride;
         do
         {
-            REPEAT4(stride, wp[stride] += wp[0]; wp++)
+            REPEAT4(stride,
+                    PredictorAccumulate32NativeUnaligned(cp + 4 * stride, cp);
+                    cp += 4)
             wc -= stride;
         } while (wc > 0);
     }
@@ -496,10 +589,9 @@ static int horAcc32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 
 static int swabHorAcc64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
-    uint64_t *wp = (uint64_t *)cp0;
     tmsize_t wc = cc / 8;
 
-    TIFFSwabArrayOfLong8(wp, wc);
+    PredictorSwabByteStream64(cp0, wc);
     return horAcc64(tif, cp0, cc);
 }
 
@@ -507,7 +599,7 @@ TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
 static int horAcc64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
     tmsize_t stride = PredictorState(tif)->stride;
-    uint64_t *wp = (uint64_t *)cp0;
+    uint8_t *cp = cp0;
     tmsize_t wc = cc / 8;
 
     if ((cc % (8 * stride)) != 0)
@@ -521,7 +613,9 @@ static int horAcc64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         wc -= stride;
         do
         {
-            REPEAT4(stride, wp[stride] += wp[0]; wp++)
+            REPEAT4(stride,
+                    PredictorAccumulate64NativeUnaligned(cp + 8 * stride, cp);
+                    cp += 8)
             wc -= stride;
         } while (wc > 0);
     }
@@ -590,7 +684,7 @@ static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     cp = (uint8_t *)cp0;
     count = 0;
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || (defined(_M_X64) && !defined(_M_ARM64EC))
     if (bps == 4)
     {
         /* Optimization of general case */
@@ -972,7 +1066,7 @@ static int PredictorEncodeRow(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
                       (int64_t)cc);
         return 0;
     }
-    memcpy(working_copy, bp, cc);
+    memcpy(working_copy, bp, (size_t)cc);
 
     if (!(*sp->encodepfunc)(tif, working_copy, cc))
     {
@@ -1010,7 +1104,7 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
                       (int64_t)cc0);
         return 0;
     }
-    memcpy(working_copy, bp0, cc0);
+    memcpy(working_copy, bp0, (size_t)cc0);
     bp = working_copy;
 
     rowsize = sp->rowsize;
@@ -1098,8 +1192,10 @@ static void PredictorPrintDir(TIFF *tif, FILE *fd, long flags)
             case 3:
                 fprintf(fd, "floating point predictor ");
                 break;
+            default:
+                break;
         }
-        fprintf(fd, "%d (0x%x)\n", sp->predictor, sp->predictor);
+        fprintf(fd, "%d (0x%x)\n", sp->predictor, (unsigned)sp->predictor);
     }
     if (sp->printdir)
         (*sp->printdir)(tif, fd, flags);

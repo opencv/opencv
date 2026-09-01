@@ -125,13 +125,13 @@ typedef void *thandle_t; /* client data handle */
  */
 
 /* reference white */
-#define D65_X0 (95.0470F)
-#define D65_Y0 (100.0F)
-#define D65_Z0 (108.8827F)
+#define D65_X0 (95.0470f)
+#define D65_Y0 (100.0f)
+#define D65_Z0 (108.8827f)
 
-#define D50_X0 (96.4250F)
-#define D50_Y0 (100.0F)
-#define D50_Z0 (82.4680F)
+#define D50_X0 (96.4250f)
+#define D50_Y0 (100.0f)
+#define D50_Z0 (82.4680f)
 
 /* Structure for holding information about a display device. */
 
@@ -254,7 +254,7 @@ struct _TIFFRGBAImage
  * Macros for extracting components from the
  * packed ABGR form returned by TIFFReadRGBAImage.
  */
-#define TIFFGetR(abgr) ((abgr)&0xff)
+#define TIFFGetR(abgr) ((abgr) & 0xff)
 #define TIFFGetG(abgr) (((abgr) >> 8) & 0xff)
 #define TIFFGetB(abgr) (((abgr) >> 16) & 0xff)
 #define TIFFGetA(abgr) (((abgr) >> 24) & 0xff)
@@ -269,7 +269,7 @@ struct _TIFFRGBAImage
 typedef int (*TIFFInitMethod)(TIFF *, int);
 typedef struct
 {
-    char *name;
+    const char *name;
     uint16_t scheme;
     TIFFInitMethod init;
 } TIFFCodec;
@@ -584,6 +584,7 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
                                          tmsize_t cc);
     extern tmsize_t TIFFWriteRawTile(TIFF *tif, uint32_t tile, void *data,
                                      tmsize_t cc);
+    extern uint64_t TIFFGetMaxCompressionRatio(TIFF *tif);
     extern int TIFFDataWidth(
         TIFFDataType); /* table of tag datatype widths within TIFF file. */
     extern void TIFFSetWriteOffset(TIFF *tif, toff_t off);
@@ -659,7 +660,7 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
         unsigned short field_bit;       /* bit in fieldsset bit vector */
         unsigned char field_oktochange; /* if true, can change while writing */
         unsigned char field_passcount;  /* if true, pass dir count on set */
-        char *field_name;               /* ASCII name */
+        const char *field_name;         /* ASCII name */
     } TIFFFieldInfo;
 
     extern int TIFFMergeFieldInfo(TIFF *, const TIFFFieldInfo[], uint32_t);

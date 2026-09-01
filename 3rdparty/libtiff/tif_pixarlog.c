@@ -117,11 +117,42 @@ static float LogK1, LogK2;
         } while (i > 0);                                                       \
     }
 
-static void horizontalAccumulateF(uint16_t *wp, int n, int stride, float *op,
-                                  float *ToLinearF)
+/*
+ * PIXARLOGDATAFMT_* buffers are application-facing user data buffers in
+ * native byte order.  Use fixed-size memcpy() calls directly so optimizing
+ * compilers can expand them in these per-sample paths while callers remain
+ * free to provide unaligned public buffers.  _TIFFmemcpy() is an out-of-line
+ * wrapper in non-LTO builds.
+ */
+static float PixarLogLoadFloatNativeUnaligned(const uint8_t *cp)
 {
-    register unsigned int cr, cg, cb, ca, mask;
-    register float t0, t1, t2, t3;
+    float v;
+    memcpy(&v, cp, sizeof(v));
+    return v;
+}
+
+static void PixarLogStoreFloatNativeUnaligned(uint8_t *cp, float v)
+{
+    memcpy(cp, &v, sizeof(v));
+}
+
+static uint16_t PixarLogLoad16NativeUnaligned(const uint8_t *cp)
+{
+    uint16_t v;
+    memcpy(&v, cp, sizeof(v));
+    return v;
+}
+
+static void PixarLogStore16NativeUnaligned(uint8_t *cp, uint16_t v)
+{
+    memcpy(cp, &v, sizeof(v));
+}
+
+static void horizontalAccumulateF(uint16_t *wp, tmsize_t n, int stride,
+                                  uint8_t *op, float *ToLinearF)
+{
+    unsigned int cr, cg, cb, ca, mask;
+    float t0, t1, t2, t3;
 
     if (n >= stride)
     {
@@ -131,21 +162,21 @@ static void horizontalAccumulateF(uint16_t *wp, int n, int stride, float *op,
             t0 = ToLinearF[cr = (wp[0] & mask)];
             t1 = ToLinearF[cg = (wp[1] & mask)];
             t2 = ToLinearF[cb = (wp[2] & mask)];
-            op[0] = t0;
-            op[1] = t1;
-            op[2] = t2;
+            PixarLogStoreFloatNativeUnaligned(op, t0);
+            PixarLogStoreFloatNativeUnaligned(op + sizeof(float), t1);
+            PixarLogStoreFloatNativeUnaligned(op + 2 * sizeof(float), t2);
             n -= 3;
             while (n > 0)
             {
                 wp += 3;
-                op += 3;
+                op += 3 * sizeof(float);
                 n -= 3;
                 t0 = ToLinearF[(cr += wp[0]) & mask];
                 t1 = ToLinearF[(cg += wp[1]) & mask];
                 t2 = ToLinearF[(cb += wp[2]) & mask];
-                op[0] = t0;
-                op[1] = t1;
-                op[2] = t2;
+                PixarLogStoreFloatNativeUnaligned(op, t0);
+                PixarLogStoreFloatNativeUnaligned(op + sizeof(float), t1);
+                PixarLogStoreFloatNativeUnaligned(op + 2 * sizeof(float), t2);
             }
         }
         else if (stride == 4)
@@ -154,48 +185,52 @@ static void horizontalAccumulateF(uint16_t *wp, int n, int stride, float *op,
             t1 = ToLinearF[cg = (wp[1] & mask)];
             t2 = ToLinearF[cb = (wp[2] & mask)];
             t3 = ToLinearF[ca = (wp[3] & mask)];
-            op[0] = t0;
-            op[1] = t1;
-            op[2] = t2;
-            op[3] = t3;
+            PixarLogStoreFloatNativeUnaligned(op, t0);
+            PixarLogStoreFloatNativeUnaligned(op + sizeof(float), t1);
+            PixarLogStoreFloatNativeUnaligned(op + 2 * sizeof(float), t2);
+            PixarLogStoreFloatNativeUnaligned(op + 3 * sizeof(float), t3);
             n -= 4;
             while (n > 0)
             {
                 wp += 4;
-                op += 4;
+                op += 4 * sizeof(float);
                 n -= 4;
                 t0 = ToLinearF[(cr += wp[0]) & mask];
                 t1 = ToLinearF[(cg += wp[1]) & mask];
                 t2 = ToLinearF[(cb += wp[2]) & mask];
                 t3 = ToLinearF[(ca += wp[3]) & mask];
-                op[0] = t0;
-                op[1] = t1;
-                op[2] = t2;
-                op[3] = t3;
+                PixarLogStoreFloatNativeUnaligned(op, t0);
+                PixarLogStoreFloatNativeUnaligned(op + sizeof(float), t1);
+                PixarLogStoreFloatNativeUnaligned(op + 2 * sizeof(float), t2);
+                PixarLogStoreFloatNativeUnaligned(op + 3 * sizeof(float), t3);
             }
         }
         else
         {
-            REPEAT(stride, *op = ToLinearF[*wp & mask]; wp++; op++)
+            REPEAT(stride,
+                   PixarLogStoreFloatNativeUnaligned(op, ToLinearF[*wp & mask]);
+                   wp++; op += sizeof(float))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp; *op = ToLinearF[*wp & mask];
-                       wp++; op++)
+                REPEAT(stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                       PixarLogStoreFloatNativeUnaligned(op,
+                                                         ToLinearF[*wp & mask]);
+                       wp++; op += sizeof(float))
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalAccumulate12(uint16_t *wp, int n, int stride, int16_t *op,
-                                   float *ToLinearF)
+static void horizontalAccumulate12(uint16_t *wp, tmsize_t n, int stride,
+                                   uint8_t *op, float *ToLinearF)
 {
-    register unsigned int cr, cg, cb, ca, mask;
-    register float t0, t1, t2, t3;
+    unsigned int cr, cg, cb, ca, mask;
+    float t0, t1, t2, t3;
 
-#define SCALE12 2048.0F
-#define CLAMP12(t) (((t) < 3071) ? (uint16_t)(t) : 3071)
+#define SCALE12 2048.0f
+#define CLAMP12(t) (((t) < 3071) ? (int16_t)(uint16_t)(t) : (int16_t)3071)
 
     if (n >= stride)
     {
@@ -205,21 +240,25 @@ static void horizontalAccumulate12(uint16_t *wp, int n, int stride, int16_t *op,
             t0 = ToLinearF[cr = (wp[0] & mask)] * SCALE12;
             t1 = ToLinearF[cg = (wp[1] & mask)] * SCALE12;
             t2 = ToLinearF[cb = (wp[2] & mask)] * SCALE12;
-            op[0] = CLAMP12(t0);
-            op[1] = CLAMP12(t1);
-            op[2] = CLAMP12(t2);
+            PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                           (uint16_t)CLAMP12(t1));
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                           (uint16_t)CLAMP12(t2));
             n -= 3;
             while (n > 0)
             {
                 wp += 3;
-                op += 3;
+                op += 3 * sizeof(uint16_t);
                 n -= 3;
                 t0 = ToLinearF[(cr += wp[0]) & mask] * SCALE12;
                 t1 = ToLinearF[(cg += wp[1]) & mask] * SCALE12;
                 t2 = ToLinearF[(cb += wp[2]) & mask] * SCALE12;
-                op[0] = CLAMP12(t0);
-                op[1] = CLAMP12(t1);
-                op[2] = CLAMP12(t2);
+                PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+                PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                               (uint16_t)CLAMP12(t1));
+                PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                               (uint16_t)CLAMP12(t2));
             }
         }
         else if (stride == 4)
@@ -228,92 +267,120 @@ static void horizontalAccumulate12(uint16_t *wp, int n, int stride, int16_t *op,
             t1 = ToLinearF[cg = (wp[1] & mask)] * SCALE12;
             t2 = ToLinearF[cb = (wp[2] & mask)] * SCALE12;
             t3 = ToLinearF[ca = (wp[3] & mask)] * SCALE12;
-            op[0] = CLAMP12(t0);
-            op[1] = CLAMP12(t1);
-            op[2] = CLAMP12(t2);
-            op[3] = CLAMP12(t3);
+            PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                           (uint16_t)CLAMP12(t1));
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                           (uint16_t)CLAMP12(t2));
+            PixarLogStore16NativeUnaligned(op + 3 * sizeof(uint16_t),
+                                           (uint16_t)CLAMP12(t3));
             n -= 4;
             while (n > 0)
             {
                 wp += 4;
-                op += 4;
+                op += 4 * sizeof(uint16_t);
                 n -= 4;
                 t0 = ToLinearF[(cr += wp[0]) & mask] * SCALE12;
                 t1 = ToLinearF[(cg += wp[1]) & mask] * SCALE12;
                 t2 = ToLinearF[(cb += wp[2]) & mask] * SCALE12;
                 t3 = ToLinearF[(ca += wp[3]) & mask] * SCALE12;
-                op[0] = CLAMP12(t0);
-                op[1] = CLAMP12(t1);
-                op[2] = CLAMP12(t2);
-                op[3] = CLAMP12(t3);
+                PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+                PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                               (uint16_t)CLAMP12(t1));
+                PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                               (uint16_t)CLAMP12(t2));
+                PixarLogStore16NativeUnaligned(op + 3 * sizeof(uint16_t),
+                                               (uint16_t)CLAMP12(t3));
             }
         }
         else
         {
             REPEAT(stride, t0 = ToLinearF[*wp & mask] * SCALE12;
-                   *op = CLAMP12(t0); wp++; op++)
+                   PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+                   wp++; op += sizeof(uint16_t))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp;
-                       t0 = ToLinearF[wp[stride] & mask] * SCALE12;
-                       *op = CLAMP12(t0); wp++; op++)
+                REPEAT(
+                    stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                    t0 = ToLinearF[*wp & mask] * SCALE12;
+                    PixarLogStore16NativeUnaligned(op, (uint16_t)CLAMP12(t0));
+                    wp++; op += sizeof(uint16_t))
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalAccumulate16(uint16_t *wp, int n, int stride,
-                                   uint16_t *op, uint16_t *ToLinear16)
+static void horizontalAccumulate16(uint16_t *wp, tmsize_t n, int stride,
+                                   uint8_t *op, uint16_t *ToLinear16)
 {
-    register unsigned int cr, cg, cb, ca, mask;
+    unsigned int cr, cg, cb, ca, mask;
 
     if (n >= stride)
     {
         mask = CODE_MASK;
         if (stride == 3)
         {
-            op[0] = ToLinear16[cr = (wp[0] & mask)];
-            op[1] = ToLinear16[cg = (wp[1] & mask)];
-            op[2] = ToLinear16[cb = (wp[2] & mask)];
+            PixarLogStore16NativeUnaligned(op, ToLinear16[cr = (wp[0] & mask)]);
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                           ToLinear16[cg = (wp[1] & mask)]);
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                           ToLinear16[cb = (wp[2] & mask)]);
             n -= 3;
             while (n > 0)
             {
                 wp += 3;
-                op += 3;
+                op += 3 * sizeof(uint16_t);
                 n -= 3;
-                op[0] = ToLinear16[(cr += wp[0]) & mask];
-                op[1] = ToLinear16[(cg += wp[1]) & mask];
-                op[2] = ToLinear16[(cb += wp[2]) & mask];
+                PixarLogStore16NativeUnaligned(
+                    op, ToLinear16[(cr += wp[0]) & mask]);
+                PixarLogStore16NativeUnaligned(
+                    op + sizeof(uint16_t), ToLinear16[(cg += wp[1]) & mask]);
+                PixarLogStore16NativeUnaligned(
+                    op + 2 * sizeof(uint16_t),
+                    ToLinear16[(cb += wp[2]) & mask]);
             }
         }
         else if (stride == 4)
         {
-            op[0] = ToLinear16[cr = (wp[0] & mask)];
-            op[1] = ToLinear16[cg = (wp[1] & mask)];
-            op[2] = ToLinear16[cb = (wp[2] & mask)];
-            op[3] = ToLinear16[ca = (wp[3] & mask)];
+            PixarLogStore16NativeUnaligned(op, ToLinear16[cr = (wp[0] & mask)]);
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t),
+                                           ToLinear16[cg = (wp[1] & mask)]);
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t),
+                                           ToLinear16[cb = (wp[2] & mask)]);
+            PixarLogStore16NativeUnaligned(op + 3 * sizeof(uint16_t),
+                                           ToLinear16[ca = (wp[3] & mask)]);
             n -= 4;
             while (n > 0)
             {
                 wp += 4;
-                op += 4;
+                op += 4 * sizeof(uint16_t);
                 n -= 4;
-                op[0] = ToLinear16[(cr += wp[0]) & mask];
-                op[1] = ToLinear16[(cg += wp[1]) & mask];
-                op[2] = ToLinear16[(cb += wp[2]) & mask];
-                op[3] = ToLinear16[(ca += wp[3]) & mask];
+                PixarLogStore16NativeUnaligned(
+                    op, ToLinear16[(cr += wp[0]) & mask]);
+                PixarLogStore16NativeUnaligned(
+                    op + sizeof(uint16_t), ToLinear16[(cg += wp[1]) & mask]);
+                PixarLogStore16NativeUnaligned(
+                    op + 2 * sizeof(uint16_t),
+                    ToLinear16[(cb += wp[2]) & mask]);
+                PixarLogStore16NativeUnaligned(
+                    op + 3 * sizeof(uint16_t),
+                    ToLinear16[(ca += wp[3]) & mask]);
             }
         }
         else
         {
-            REPEAT(stride, *op = ToLinear16[*wp & mask]; wp++; op++)
+            REPEAT(stride,
+                   PixarLogStore16NativeUnaligned(op, ToLinear16[*wp & mask]);
+                   wp++; op += sizeof(uint16_t))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp; *op = ToLinear16[*wp & mask];
-                       wp++; op++)
+                REPEAT(
+                    stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                    PixarLogStore16NativeUnaligned(op, ToLinear16[*wp & mask]);
+                    wp++; op += sizeof(uint16_t))
                 n -= stride;
             }
         }
@@ -324,19 +391,19 @@ static void horizontalAccumulate16(uint16_t *wp, int n, int stride,
  * Returns the log encoded 11-bit values with the horizontal
  * differencing undone.
  */
-static void horizontalAccumulate11(uint16_t *wp, int n, int stride,
-                                   uint16_t *op)
+static void horizontalAccumulate11(uint16_t *wp, tmsize_t n, int stride,
+                                   uint8_t *op)
 {
-    register unsigned int cr, cg, cb, ca, mask;
+    unsigned int cr, cg, cb, ca, mask;
 
     if (n >= stride)
     {
         mask = CODE_MASK;
         if (stride == 3)
         {
-            op[0] = wp[0];
-            op[1] = wp[1];
-            op[2] = wp[2];
+            PixarLogStore16NativeUnaligned(op, wp[0]);
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t), wp[1]);
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t), wp[2]);
             cr = wp[0];
             cg = wp[1];
             cb = wp[2];
@@ -344,19 +411,23 @@ static void horizontalAccumulate11(uint16_t *wp, int n, int stride,
             while (n > 0)
             {
                 wp += 3;
-                op += 3;
+                op += 3 * sizeof(uint16_t);
                 n -= 3;
-                op[0] = (uint16_t)((cr += wp[0]) & mask);
-                op[1] = (uint16_t)((cg += wp[1]) & mask);
-                op[2] = (uint16_t)((cb += wp[2]) & mask);
+                PixarLogStore16NativeUnaligned(
+                    op, (uint16_t)((cr += wp[0]) & mask));
+                PixarLogStore16NativeUnaligned(
+                    op + sizeof(uint16_t), (uint16_t)((cg += wp[1]) & mask));
+                PixarLogStore16NativeUnaligned(
+                    op + 2 * sizeof(uint16_t),
+                    (uint16_t)((cb += wp[2]) & mask));
             }
         }
         else if (stride == 4)
         {
-            op[0] = wp[0];
-            op[1] = wp[1];
-            op[2] = wp[2];
-            op[3] = wp[3];
+            PixarLogStore16NativeUnaligned(op, wp[0]);
+            PixarLogStore16NativeUnaligned(op + sizeof(uint16_t), wp[1]);
+            PixarLogStore16NativeUnaligned(op + 2 * sizeof(uint16_t), wp[2]);
+            PixarLogStore16NativeUnaligned(op + 3 * sizeof(uint16_t), wp[3]);
             cr = wp[0];
             cg = wp[1];
             cb = wp[2];
@@ -365,31 +436,42 @@ static void horizontalAccumulate11(uint16_t *wp, int n, int stride,
             while (n > 0)
             {
                 wp += 4;
-                op += 4;
+                op += 4 * sizeof(uint16_t);
                 n -= 4;
-                op[0] = (uint16_t)((cr += wp[0]) & mask);
-                op[1] = (uint16_t)((cg += wp[1]) & mask);
-                op[2] = (uint16_t)((cb += wp[2]) & mask);
-                op[3] = (uint16_t)((ca += wp[3]) & mask);
+                PixarLogStore16NativeUnaligned(
+                    op, (uint16_t)((cr += wp[0]) & mask));
+                PixarLogStore16NativeUnaligned(
+                    op + sizeof(uint16_t), (uint16_t)((cg += wp[1]) & mask));
+                PixarLogStore16NativeUnaligned(
+                    op + 2 * sizeof(uint16_t),
+                    (uint16_t)((cb += wp[2]) & mask));
+                PixarLogStore16NativeUnaligned(
+                    op + 3 * sizeof(uint16_t),
+                    (uint16_t)((ca += wp[3]) & mask));
             }
         }
         else
         {
-            REPEAT(stride, *op = *wp & mask; wp++; op++)
+            REPEAT(stride,
+                   PixarLogStore16NativeUnaligned(op, (uint16_t)(*wp & mask));
+                   wp++; op += sizeof(uint16_t))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp; *op = *wp & mask; wp++; op++)
+                REPEAT(
+                    stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                    PixarLogStore16NativeUnaligned(op, (uint16_t)(*wp & mask));
+                    wp++; op += sizeof(uint16_t))
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalAccumulate8(uint16_t *wp, int n, int stride,
+static void horizontalAccumulate8(uint16_t *wp, tmsize_t n, int stride,
                                   unsigned char *op, unsigned char *ToLinear8)
 {
-    register unsigned int cr, cg, cb, ca, mask;
+    unsigned int cr, cg, cb, ca, mask;
 
     if (n >= stride)
     {
@@ -434,20 +516,20 @@ static void horizontalAccumulate8(uint16_t *wp, int n, int stride,
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp; *op = ToLinear8[*wp & mask];
-                       wp++; op++)
+                REPEAT(stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                       *op = ToLinear8[*wp & mask]; wp++; op++)
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalAccumulate8abgr(uint16_t *wp, int n, int stride,
+static void horizontalAccumulate8abgr(uint16_t *wp, tmsize_t n, int stride,
                                       unsigned char *op,
                                       unsigned char *ToLinear8)
 {
-    register unsigned int cr, cg, cb, ca, mask;
-    register unsigned char t0, t1, t2, t3;
+    unsigned int cr, cg, cb, ca, mask;
+    unsigned char t0, t1, t2, t3;
 
     if (n >= stride)
     {
@@ -508,8 +590,8 @@ static void horizontalAccumulate8abgr(uint16_t *wp, int n, int stride,
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride, wp[stride] += *wp; *op = ToLinear8[*wp & mask];
-                       wp++; op++)
+                REPEAT(stride, *wp = (uint16_t)(*wp + wp[-stride]);
+                       *op = ToLinear8[*wp & mask]; wp++; op++)
                 n -= stride;
             }
         }
@@ -577,7 +659,8 @@ static int PixarLogMakeTables(TIFF *tif, PixarLogState *sp)
     LogK1 = (float)(1. / c); /* if (v >= 2)  token = k1*log(v*k2) */
     LogK2 = (float)(1. / b);
     lt2size = (int)(2. / linstep) + 1;
-    FromLT2 = (uint16_t *)_TIFFmallocExt(tif, lt2size * sizeof(uint16_t));
+    FromLT2 = (uint16_t *)_TIFFmallocExt(
+        tif, (tmsize_t)((size_t)lt2size * sizeof(uint16_t)));
     From14 = (uint16_t *)_TIFFmallocExt(tif, 16384 * sizeof(uint16_t));
     From8 = (uint16_t *)_TIFFmallocExt(tif, 256 * sizeof(uint16_t));
     ToLinearF = (float *)_TIFFmallocExt(tif, TSIZEP1 * sizeof(float));
@@ -623,16 +706,17 @@ static int PixarLogMakeTables(TIFF *tif, PixarLogState *sp)
 
     for (i = 0; i < TSIZEP1; i++)
     {
-        v = ToLinearF[i] * 65535.0 + 0.5;
+        v = (double)ToLinearF[i] * 65535.0 + 0.5;
         ToLinear16[i] = (v > 65535.0) ? 65535 : (uint16_t)v;
-        v = ToLinearF[i] * 255.0 + 0.5;
+        v = (double)ToLinearF[i] * 255.0 + 0.5;
         ToLinear8[i] = (v > 255.0) ? 255 : (unsigned char)v;
     }
 
     j = 0;
     for (i = 0; i < lt2size; i++)
     {
-        if ((i * linstep) * (i * linstep) > ToLinearF[j] * ToLinearF[j + 1])
+        if ((i * linstep) * (i * linstep) >
+            (double)ToLinearF[j] * (double)ToLinearF[j + 1])
             j++;
         FromLT2[i] = (uint16_t)j;
     }
@@ -645,7 +729,8 @@ static int PixarLogMakeTables(TIFF *tif, PixarLogState *sp)
     j = 0;
     for (i = 0; i < 16384; i++)
     {
-        while ((i / 16383.) * (i / 16383.) > ToLinearF[j] * ToLinearF[j + 1])
+        while ((i / 16383.) * (i / 16383.) >
+               (double)ToLinearF[j] * (double)ToLinearF[j + 1])
             j++;
         From14[i] = (uint16_t)j;
     }
@@ -653,7 +738,8 @@ static int PixarLogMakeTables(TIFF *tif, PixarLogState *sp)
     j = 0;
     for (i = 0; i < 256; i++)
     {
-        while ((i / 255.) * (i / 255.) > ToLinearF[j] * ToLinearF[j + 1])
+        while ((i / 255.) * (i / 255.) >
+               (double)ToLinearF[j] * (double)ToLinearF[j + 1])
             j++;
         From8[i] = (uint16_t)j;
     }
@@ -707,6 +793,8 @@ static int PixarLogGuessDataFmt(TIFFDirectory *td)
         case 8:
             if (format == SAMPLEFORMAT_VOID || format == SAMPLEFORMAT_UINT)
                 guess = PIXARLOGDATAFMT_8BIT;
+            break;
+        default:
             break;
     }
 
@@ -769,7 +857,8 @@ static int PixarLogSetupDecode(TIFF *tif)
         multiply_ms(multiply_ms(sp->stride, td->td_imagewidth), strip_height),
         sizeof(uint16_t));
     /* add one more stride in case input ends mid-stride */
-    tbuf_size = add_ms(tbuf_size, sizeof(uint16_t) * sp->stride);
+    tbuf_size =
+        add_ms(tbuf_size, (tmsize_t)(sizeof(uint16_t) * (size_t)sp->stride));
     if (tbuf_size == 0)
         return (0); /* TODO: this is an error return without error report
                        through TIFFErrorExt */
@@ -838,18 +927,21 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     PixarLogState *sp = PixarLogDecoderState(tif);
     tmsize_t i;
     tmsize_t nsamples;
-    int llen;
+    tmsize_t llen;
     uint16_t *up;
 
     switch (sp->user_datafmt)
     {
         case PIXARLOGDATAFMT_FLOAT:
-            nsamples = occ / sizeof(float); /* XXX float == 32 bits */
+            nsamples = (tmsize_t)((uint64_t)occ /
+                                  sizeof(float)); /* XXX float == 32 bits */
             break;
         case PIXARLOGDATAFMT_16BIT:
         case PIXARLOGDATAFMT_12BITPICIO:
         case PIXARLOGDATAFMT_11BITLOG:
-            nsamples = occ / sizeof(uint16_t); /* XXX uint16_t == 16 bits */
+            nsamples =
+                (tmsize_t)((uint64_t)occ /
+                           sizeof(uint16_t)); /* XXX uint16_t == 16 bits */
             break;
         case PIXARLOGDATAFMT_8BIT:
         case PIXARLOGDATAFMT_8BITABGR:
@@ -863,7 +955,57 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             return 0;
     }
 
-    llen = sp->stride * td->td_imagewidth;
+    /* stride (≤ td_samplesperpixel, max 65535) × imagewidth: fits tmsize_t */
+    llen = (tmsize_t)sp->stride * td->td_imagewidth;
+
+    /* Fix: ABGR with stride=3 expands 3 samples to 4 output bytes per pixel */
+    if (sp->user_datafmt == PIXARLOGDATAFMT_8BITABGR && sp->stride == 3)
+    {
+        /* imagewidth × 4: fits tmsize_t (imagewidth is uint32) */
+        tmsize_t required = (tmsize_t)td->td_imagewidth * 4;
+        tmsize_t max_rows;
+        tmsize_t max_nsamples;
+
+        /*
+         * Ensure at least one expanded output row fits.
+         */
+        if (occ < required)
+        {
+            TIFFErrorExtR(tif, module,
+                          "Output buffer too small for PixarLog ABGR data");
+            memset(op, 0, (size_t)occ);
+            return (0);
+        }
+
+        /*
+         * The caller-provided output buffer size must represent a whole
+         * number of expanded ABGR scanlines.
+         */
+        if (occ % required)
+        {
+            TIFFErrorExtR(
+                tif, module,
+                "Fractional scanline not supported for PixarLog ABGR data");
+            memset(op, 0, (size_t)occ);
+            return (0);
+        }
+
+        /*
+         * PixarLogDecode() may process multiple rows per call
+         * (e.g. strip decoding). Limit nsamples so the total
+         * output written by the loop below never exceeds occ.
+         */
+        max_rows = occ / required;
+        max_nsamples = max_rows * llen;
+
+        if (nsamples > max_nsamples)
+        {
+            TIFFErrorExtR(tif, module,
+                          "Output buffer too small for PixarLog ABGR data");
+            memset(op, 0, (size_t)occ);
+            return (0);
+        }
+    }
 
     (void)s;
     assert(sp != NULL);
@@ -876,8 +1018,8 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
          we need to simplify this code to reflect a ZLib that is likely updated
          to deal with 8byte memory sizes, though this code will respond
          appropriately even before we simplify it */
-    sp->stream.avail_out = (uInt)(nsamples * sizeof(uint16_t));
-    if (sp->stream.avail_out != nsamples * sizeof(uint16_t))
+    sp->stream.avail_out = (uInt)((unsigned long)nsamples * sizeof(uint16_t));
+    if (sp->stream.avail_out != (unsigned long)nsamples * sizeof(uint16_t))
     {
         TIFFErrorExtR(tif, module, "ZLib cannot deal with buffers this size");
         memset(op, 0, (size_t)occ);
@@ -899,9 +1041,10 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         }
         if (state == Z_DATA_ERROR)
         {
-            TIFFErrorExtR(
-                tif, module, "Decoding error at scanline %" PRIu32 ", %s",
-                tif->tif_row, sp->stream.msg ? sp->stream.msg : "(null)");
+            TIFFErrorExtR(tif, module,
+                          "Decoding error at scanline %" PRIu32 ", %s",
+                          tif->tif_dir.td_row,
+                          sp->stream.msg ? sp->stream.msg : "(null)");
             memset(op, 0, (size_t)occ);
             return (0);
         }
@@ -920,7 +1063,7 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %" PRIu32
                       " (short %u bytes)",
-                      tif->tif_row, sp->stream.avail_out);
+                      tif->tif_dir.td_row, sp->stream.avail_out);
         memset(op, 0, (size_t)occ);
         return (0);
     }
@@ -941,7 +1084,8 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     if (nsamples % llen)
     {
         TIFFWarningExtR(tif, module,
-                        "stride %d is not a multiple of sample count, "
+                        "stride %" TIFF_SSIZE_FORMAT
+                        " is not a multiple of sample count, "
                         "%" TIFF_SSIZE_FORMAT ", data truncated.",
                         llen, nsamples);
         nsamples -= nsamples % llen;
@@ -952,33 +1096,37 @@ static int PixarLogDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         switch (sp->user_datafmt)
         {
             case PIXARLOGDATAFMT_FLOAT:
-                horizontalAccumulateF(up, llen, sp->stride, (float *)op,
-                                      sp->ToLinearF);
-                op += llen * sizeof(float);
+                horizontalAccumulateF(up, llen, sp->stride, op, sp->ToLinearF);
+                op += (unsigned long)llen * sizeof(float);
                 break;
             case PIXARLOGDATAFMT_16BIT:
-                horizontalAccumulate16(up, llen, sp->stride, (uint16_t *)op,
+                horizontalAccumulate16(up, llen, sp->stride, op,
                                        sp->ToLinear16);
-                op += llen * sizeof(uint16_t);
+                op += (unsigned long)llen * sizeof(uint16_t);
                 break;
             case PIXARLOGDATAFMT_12BITPICIO:
-                horizontalAccumulate12(up, llen, sp->stride, (int16_t *)op,
-                                       sp->ToLinearF);
-                op += llen * sizeof(int16_t);
+                horizontalAccumulate12(up, llen, sp->stride, op, sp->ToLinearF);
+                op += (unsigned long)llen * sizeof(int16_t);
                 break;
             case PIXARLOGDATAFMT_11BITLOG:
-                horizontalAccumulate11(up, llen, sp->stride, (uint16_t *)op);
-                op += llen * sizeof(uint16_t);
+                horizontalAccumulate11(up, llen, sp->stride, op);
+                op += (unsigned long)llen * sizeof(uint16_t);
                 break;
             case PIXARLOGDATAFMT_8BIT:
                 horizontalAccumulate8(up, llen, sp->stride, (unsigned char *)op,
                                       sp->ToLinear8);
-                op += llen * sizeof(unsigned char);
+                op += (unsigned long)llen * sizeof(unsigned char);
                 break;
             case PIXARLOGDATAFMT_8BITABGR:
                 horizontalAccumulate8abgr(up, llen, sp->stride,
                                           (unsigned char *)op, sp->ToLinear8);
-                op += llen * sizeof(unsigned char);
+
+                /* For stride == 3 (RGB), horizontalAccumulate8abgr expands to 4
+                 * bytes/pixel (ABGR) */
+                if (sp->stride == 3)
+                    op += (unsigned long)td->td_imagewidth * 4;
+                else
+                    op += (unsigned long)llen * sizeof(unsigned char);
                 break;
             default:
                 TIFFErrorExtR(tif, module, "Unsupported bits/sample: %" PRIu16,
@@ -1063,90 +1211,110 @@ static int PixarLogPreEncode(TIFF *tif, uint16_t s)
     return (deflateReset(&sp->stream) == Z_OK);
 }
 
-static void horizontalDifferenceF(float *ip, int n, int stride, uint16_t *wp,
-                                  uint16_t *FromLT2)
+static void horizontalDifferenceF(const uint8_t *ip, tmsize_t n, int stride,
+                                  uint16_t *wp, uint16_t *FromLT2)
 {
     int32_t r1, g1, b1, a1, r2, g2, b2, a2, mask;
     float fltsize = Fltsize;
 
 #define CLAMP(v)                                                               \
-    ((v < (float)0.)     ? 0                                                   \
-     : (v < (float)2.)   ? FromLT2[(int)(v * fltsize)]                         \
-     : (v > (float)24.2) ? 2047                                                \
-                         : LogK1 * log(v * LogK2) + 0.5)
+    ((v < (float)0.)   ? 0                                                     \
+     : (v < (float)2.) ? FromLT2[(int)(v * fltsize)]                           \
+     : (v > (float)24.2)                                                       \
+         ? 2047                                                                \
+         : (double)LogK1 * log((double)v * (double)LogK2) + 0.5)
 
     mask = CODE_MASK;
     if (n >= stride)
     {
         if (stride == 3)
         {
-            r2 = wp[0] = (uint16_t)CLAMP(ip[0]);
-            g2 = wp[1] = (uint16_t)CLAMP(ip[1]);
-            b2 = wp[2] = (uint16_t)CLAMP(ip[2]);
+            r2 = wp[0] = (uint16_t)CLAMP(PixarLogLoadFloatNativeUnaligned(ip));
+            g2 = wp[1] = (uint16_t)CLAMP(
+                PixarLogLoadFloatNativeUnaligned(ip + sizeof(float)));
+            b2 = wp[2] = (uint16_t)CLAMP(
+                PixarLogLoadFloatNativeUnaligned(ip + 2 * sizeof(float)));
             n -= 3;
             while (n > 0)
             {
                 n -= 3;
                 wp += 3;
-                ip += 3;
-                r1 = (int32_t)CLAMP(ip[0]);
+                ip += 3 * sizeof(float);
+                r1 = (int32_t)CLAMP(PixarLogLoadFloatNativeUnaligned(ip));
                 wp[0] = (uint16_t)((r1 - r2) & mask);
                 r2 = r1;
-                g1 = (int32_t)CLAMP(ip[1]);
+                g1 = (int32_t)CLAMP(
+                    PixarLogLoadFloatNativeUnaligned(ip + sizeof(float)));
                 wp[1] = (uint16_t)((g1 - g2) & mask);
                 g2 = g1;
-                b1 = (int32_t)CLAMP(ip[2]);
+                b1 = (int32_t)CLAMP(
+                    PixarLogLoadFloatNativeUnaligned(ip + 2 * sizeof(float)));
                 wp[2] = (uint16_t)((b1 - b2) & mask);
                 b2 = b1;
             }
         }
         else if (stride == 4)
         {
-            r2 = wp[0] = (uint16_t)CLAMP(ip[0]);
-            g2 = wp[1] = (uint16_t)CLAMP(ip[1]);
-            b2 = wp[2] = (uint16_t)CLAMP(ip[2]);
-            a2 = wp[3] = (uint16_t)CLAMP(ip[3]);
+            r2 = wp[0] = (uint16_t)CLAMP(PixarLogLoadFloatNativeUnaligned(ip));
+            g2 = wp[1] = (uint16_t)CLAMP(
+                PixarLogLoadFloatNativeUnaligned(ip + sizeof(float)));
+            b2 = wp[2] = (uint16_t)CLAMP(
+                PixarLogLoadFloatNativeUnaligned(ip + 2 * sizeof(float)));
+            a2 = wp[3] = (uint16_t)CLAMP(
+                PixarLogLoadFloatNativeUnaligned(ip + 3 * sizeof(float)));
             n -= 4;
             while (n > 0)
             {
                 n -= 4;
                 wp += 4;
-                ip += 4;
-                r1 = (int32_t)CLAMP(ip[0]);
+                ip += 4 * sizeof(float);
+                r1 = (int32_t)CLAMP(PixarLogLoadFloatNativeUnaligned(ip));
                 wp[0] = (uint16_t)((r1 - r2) & mask);
                 r2 = r1;
-                g1 = (int32_t)CLAMP(ip[1]);
+                g1 = (int32_t)CLAMP(
+                    PixarLogLoadFloatNativeUnaligned(ip + sizeof(float)));
                 wp[1] = (uint16_t)((g1 - g2) & mask);
                 g2 = g1;
-                b1 = (int32_t)CLAMP(ip[2]);
+                b1 = (int32_t)CLAMP(
+                    PixarLogLoadFloatNativeUnaligned(ip + 2 * sizeof(float)));
                 wp[2] = (uint16_t)((b1 - b2) & mask);
                 b2 = b1;
-                a1 = (int32_t)CLAMP(ip[3]);
+                a1 = (int32_t)CLAMP(
+                    PixarLogLoadFloatNativeUnaligned(ip + 3 * sizeof(float)));
                 wp[3] = (uint16_t)((a1 - a2) & mask);
                 a2 = a1;
             }
         }
         else
         {
-            REPEAT(stride, wp[0] = (uint16_t)CLAMP(ip[0]); wp++; ip++)
+            REPEAT(stride, wp[0] = (uint16_t)CLAMP(
+                               PixarLogLoadFloatNativeUnaligned(ip));
+                   wp++; ip += sizeof(float))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride,
-                       wp[0] = (uint16_t)(((int32_t)CLAMP(ip[0]) -
-                                           (int32_t)CLAMP(ip[-stride])) &
-                                          mask);
-                       wp++; ip++)
+                REPEAT(
+                    stride,
+                    wp[0] =
+                        (uint16_t)(((int32_t)CLAMP(
+                                        PixarLogLoadFloatNativeUnaligned(ip)) -
+                                    (int32_t)CLAMP(
+                                        PixarLogLoadFloatNativeUnaligned(
+                                            ip -
+                                            (tmsize_t)stride *
+                                                (tmsize_t)sizeof(float)))) &
+                                   mask);
+                    wp++; ip += sizeof(float))
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalDifference16(unsigned short *ip, int n, int stride,
+static void horizontalDifference16(const uint8_t *ip, tmsize_t n, int stride,
                                    unsigned short *wp, uint16_t *From14)
 {
-    register int r1, g1, b1, a1, r2, g2, b2, a2, mask;
+    int r1, g1, b1, a1, r2, g2, b2, a2, mask;
 
 /* assumption is unsigned pixel values */
 #undef CLAMP
@@ -1157,72 +1325,88 @@ static void horizontalDifference16(unsigned short *ip, int n, int stride,
     {
         if (stride == 3)
         {
-            r2 = wp[0] = CLAMP(ip[0]);
-            g2 = wp[1] = CLAMP(ip[1]);
-            b2 = wp[2] = CLAMP(ip[2]);
+            r2 = wp[0] = CLAMP(PixarLogLoad16NativeUnaligned(ip));
+            g2 = wp[1] =
+                CLAMP(PixarLogLoad16NativeUnaligned(ip + sizeof(uint16_t)));
+            b2 = wp[2] =
+                CLAMP(PixarLogLoad16NativeUnaligned(ip + 2 * sizeof(uint16_t)));
             n -= 3;
             while (n > 0)
             {
                 n -= 3;
                 wp += 3;
-                ip += 3;
-                r1 = CLAMP(ip[0]);
+                ip += 3 * sizeof(uint16_t);
+                r1 = CLAMP(PixarLogLoad16NativeUnaligned(ip));
                 wp[0] = (uint16_t)((r1 - r2) & mask);
                 r2 = r1;
-                g1 = CLAMP(ip[1]);
+                g1 =
+                    CLAMP(PixarLogLoad16NativeUnaligned(ip + sizeof(uint16_t)));
                 wp[1] = (uint16_t)((g1 - g2) & mask);
                 g2 = g1;
-                b1 = CLAMP(ip[2]);
+                b1 = CLAMP(
+                    PixarLogLoad16NativeUnaligned(ip + 2 * sizeof(uint16_t)));
                 wp[2] = (uint16_t)((b1 - b2) & mask);
                 b2 = b1;
             }
         }
         else if (stride == 4)
         {
-            r2 = wp[0] = CLAMP(ip[0]);
-            g2 = wp[1] = CLAMP(ip[1]);
-            b2 = wp[2] = CLAMP(ip[2]);
-            a2 = wp[3] = CLAMP(ip[3]);
+            r2 = wp[0] = CLAMP(PixarLogLoad16NativeUnaligned(ip));
+            g2 = wp[1] =
+                CLAMP(PixarLogLoad16NativeUnaligned(ip + sizeof(uint16_t)));
+            b2 = wp[2] =
+                CLAMP(PixarLogLoad16NativeUnaligned(ip + 2 * sizeof(uint16_t)));
+            a2 = wp[3] =
+                CLAMP(PixarLogLoad16NativeUnaligned(ip + 3 * sizeof(uint16_t)));
             n -= 4;
             while (n > 0)
             {
                 n -= 4;
                 wp += 4;
-                ip += 4;
-                r1 = CLAMP(ip[0]);
+                ip += 4 * sizeof(uint16_t);
+                r1 = CLAMP(PixarLogLoad16NativeUnaligned(ip));
                 wp[0] = (uint16_t)((r1 - r2) & mask);
                 r2 = r1;
-                g1 = CLAMP(ip[1]);
+                g1 =
+                    CLAMP(PixarLogLoad16NativeUnaligned(ip + sizeof(uint16_t)));
                 wp[1] = (uint16_t)((g1 - g2) & mask);
                 g2 = g1;
-                b1 = CLAMP(ip[2]);
+                b1 = CLAMP(
+                    PixarLogLoad16NativeUnaligned(ip + 2 * sizeof(uint16_t)));
                 wp[2] = (uint16_t)((b1 - b2) & mask);
                 b2 = b1;
-                a1 = CLAMP(ip[3]);
+                a1 = CLAMP(
+                    PixarLogLoad16NativeUnaligned(ip + 3 * sizeof(uint16_t)));
                 wp[3] = (uint16_t)((a1 - a2) & mask);
                 a2 = a1;
             }
         }
         else
         {
-            REPEAT(stride, wp[0] = CLAMP(ip[0]); wp++; ip++)
+            REPEAT(stride, wp[0] = CLAMP(PixarLogLoad16NativeUnaligned(ip));
+                   wp++; ip += sizeof(uint16_t))
             n -= stride;
             while (n > 0)
             {
-                REPEAT(stride,
-                       wp[0] = (uint16_t)((CLAMP(ip[0]) - CLAMP(ip[-stride])) &
-                                          mask);
-                       wp++; ip++)
+                REPEAT(
+                    stride,
+                    wp[0] =
+                        (uint16_t)((CLAMP(PixarLogLoad16NativeUnaligned(ip)) -
+                                    CLAMP(PixarLogLoad16NativeUnaligned(
+                                        ip - (tmsize_t)stride *
+                                                 (tmsize_t)sizeof(uint16_t)))) &
+                                   mask);
+                    wp++; ip += sizeof(uint16_t))
                 n -= stride;
             }
         }
     }
 }
 
-static void horizontalDifference8(unsigned char *ip, int n, int stride,
+static void horizontalDifference8(unsigned char *ip, tmsize_t n, int stride,
                                   unsigned short *wp, uint16_t *From8)
 {
-    register int r1, g1, b1, a1, r2, g2, b2, a2, mask;
+    int r1, g1, b1, a1, r2, g2, b2, a2, mask;
 
 #undef CLAMP
 #define CLAMP(v) (From8[(v)])
@@ -1304,7 +1488,7 @@ static int PixarLogEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
     PixarLogState *sp = PixarLogEncoderState(tif);
     tmsize_t i;
     tmsize_t n;
-    int llen;
+    tmsize_t llen;
     unsigned short *up;
 
     (void)s;
@@ -1312,12 +1496,14 @@ static int PixarLogEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
     switch (sp->user_datafmt)
     {
         case PIXARLOGDATAFMT_FLOAT:
-            n = cc / sizeof(float); /* XXX float == 32 bits */
+            n = (tmsize_t)((unsigned long)cc /
+                           sizeof(float)); /* XXX float == 32 bits */
             break;
         case PIXARLOGDATAFMT_16BIT:
         case PIXARLOGDATAFMT_12BITPICIO:
         case PIXARLOGDATAFMT_11BITLOG:
-            n = cc / sizeof(uint16_t); /* XXX uint16_t == 16 bits */
+            n = (tmsize_t)((unsigned long)cc /
+                           sizeof(uint16_t)); /* XXX uint16_t == 16 bits */
             break;
         case PIXARLOGDATAFMT_8BIT:
         case PIXARLOGDATAFMT_8BITABGR:
@@ -1330,9 +1516,12 @@ static int PixarLogEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
             return 0;
     }
 
-    llen = sp->stride * td->td_imagewidth;
+    /* stride (≤ td_samplesperpixel, max 65535) × imagewidth: fits tmsize_t */
+    llen = (tmsize_t)sp->stride * td->td_imagewidth;
     /* Check against the number of elements (of size uint16_t) of sp->tbuf */
-    if (n > ((tmsize_t)td->td_rowsperstrip * llen))
+    tmsize_t max_n =
+        _TIFFMultiplySSize(tif, (tmsize_t)td->td_rowsperstrip, llen, module);
+    if (max_n == 0 || n > max_n)
     {
         TIFFErrorExtR(tif, module, "Too many input bytes provided");
         return 0;
@@ -1343,19 +1532,17 @@ static int PixarLogEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         switch (sp->user_datafmt)
         {
             case PIXARLOGDATAFMT_FLOAT:
-                horizontalDifferenceF((float *)bp, llen, sp->stride, up,
-                                      sp->FromLT2);
-                bp += llen * sizeof(float);
+                horizontalDifferenceF(bp, llen, sp->stride, up, sp->FromLT2);
+                bp += (unsigned long)llen * sizeof(float);
                 break;
             case PIXARLOGDATAFMT_16BIT:
-                horizontalDifference16((uint16_t *)bp, llen, sp->stride, up,
-                                       sp->From14);
-                bp += llen * sizeof(uint16_t);
+                horizontalDifference16(bp, llen, sp->stride, up, sp->From14);
+                bp += (unsigned long)llen * sizeof(uint16_t);
                 break;
             case PIXARLOGDATAFMT_8BIT:
                 horizontalDifference8((unsigned char *)bp, llen, sp->stride, up,
                                       sp->From8);
-                bp += llen * sizeof(unsigned char);
+                bp += (unsigned long)llen * sizeof(unsigned char);
                 break;
             default:
                 TIFFErrorExtR(tif, module,
@@ -1370,8 +1557,8 @@ static int PixarLogEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
          we need to simplify this code to reflect a ZLib that is likely updated
          to deal with 8byte memory sizes, though this code will respond
          appropriately even before we simplify it */
-    sp->stream.avail_in = (uInt)(n * sizeof(uint16_t));
-    if ((sp->stream.avail_in / sizeof(uint16_t)) != (uInt)n)
+    sp->stream.avail_in = (uInt)((unsigned long)n * sizeof(uint16_t));
+    if ((sp->stream.avail_in / sizeof(uint16_t)) != (unsigned long)n)
     {
         TIFFErrorExtR(tif, module, "ZLib cannot deal with buffers this size");
         return (0);
@@ -1562,13 +1749,15 @@ static int PixarLogVSetField(TIFF *tif, uint32_t tag, va_list ap)
                     TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT,
                                  SAMPLEFORMAT_IEEEFP);
                     break;
+                default:
+                    break;
             }
             /*
              * Must recalculate sizes should bits/sample change.
              */
-            tif->tif_tilesize =
+            tif->tif_dir.td_tilesize =
                 isTiled(tif) ? TIFFTileSize(tif) : (tmsize_t)(-1);
-            tif->tif_scanlinesize = TIFFScanlineSize(tif);
+            tif->tif_dir.td_scanlinesize = TIFFScanlineSize(tif);
             result = 1; /* NB: pseudo tag */
             break;
         default:
@@ -1600,6 +1789,16 @@ static const TIFFField pixarlogFields[] = {
      FALSE, FALSE, "", NULL},
     {TIFFTAG_PIXARLOGQUALITY, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
      FALSE, FALSE, "", NULL}};
+
+static uint64_t PixarLogGetMaxCompressionRatio(TIFF *tif)
+{
+    (void)tif;
+    /* cf https://zlib.net/zlib_tech.html */
+    const uint64_t MAX_DEFLATE_RATIO = 1032;
+
+    /* security margin as I don't understand what this codec does */
+    return MAX_DEFLATE_RATIO * (uint64_t)4;
+}
 
 int TIFFInitPixarLog(TIFF *tif, int scheme)
 {
@@ -1648,6 +1847,7 @@ int TIFFInitPixarLog(TIFF *tif, int scheme)
     tif->tif_encodetile = PixarLogEncode;
     tif->tif_close = PixarLogClose;
     tif->tif_cleanup = PixarLogCleanup;
+    tif->tif_getmaxcompressionratio = PixarLogGetMaxCompressionRatio;
 
     /* Override SetField so we can handle our private pseudo-tag */
     sp->vgetparent = tif->tif_tagmethods.vgetfield;

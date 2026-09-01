@@ -622,7 +622,7 @@ typedef enum
 #define TIFFTAG_FORWARDMATRIX3 52532         /* &matrix to map white balanced camera colors to XYZ D50 */
 #define TIFFTAG_ILLUMINANTDATA1 52533        /* &data for the first calibration illuminant */
 #define TIFFTAG_ILLUMINANTDATA2 52534        /* &data for the second calibration illuminant */
-#define TIFFTAG_ILLUMINANTDATA3 53535        /* &data for the third calibration illuminant */
+#define TIFFTAG_ILLUMINANTDATA3 52535        /* &data for the third calibration illuminant */
 
 /* TIFF/EP */
 #define TIFFTAG_EP_CFAREPEATPATTERNDIM 33421      /* dimensions of CFA pattern */

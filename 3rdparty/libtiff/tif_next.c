@@ -38,21 +38,22 @@
                 op[0] = (unsigned char)((v) << 6);                             \
                 break;                                                         \
             case 1:                                                            \
-                op[0] |= (v) << 4;                                             \
+                op[0] |= (unsigned char)((v) << 4);                            \
                 break;                                                         \
             case 2:                                                            \
-                op[0] |= (v) << 2;                                             \
+                op[0] |= (unsigned char)((v) << 2);                            \
                 break;                                                         \
             case 3:                                                            \
-                *op++ |= (v);                                                  \
+                *op++ |= (unsigned char)(v);                                   \
                 op_offset++;                                                   \
+                break;                                                         \
+            default:                                                           \
                 break;                                                         \
         }                                                                      \
     }
 
 #define LITERALROW 0x00
 #define LITERALSPAN 0x40
-#define WHITE ((1 << 2) - 1)
 
 static int NeXTDecode(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
 {
@@ -73,7 +74,7 @@ static int NeXTDecode(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
 
     bp = (unsigned char *)tif->tif_rawcp;
     cc = tif->tif_rawcc;
-    scanline = tif->tif_scanlinesize;
+    scanline = tif->tif_dir.td_scanlinesize;
     if (occ % scanline)
     {
         TIFFErrorExtR(tif, module, "Fractional scanlines cannot be read");
@@ -146,7 +147,7 @@ static int NeXTDecode(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
                     {
                         TIFFErrorExtR(tif, module,
                                       "Invalid data for scanline %" PRIu32,
-                                      tif->tif_row);
+                                      tif->tif_dir.td_row);
                         return (0);
                     }
                     if (cc == 0)
@@ -163,7 +164,7 @@ static int NeXTDecode(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
     return (1);
 bad:
     TIFFErrorExtR(tif, module, "Not enough data for scanline %" PRIu32,
-                  tif->tif_row);
+                  tif->tif_dir.td_row);
     return (0);
 }
 
