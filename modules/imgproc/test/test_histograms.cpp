@@ -2137,23 +2137,6 @@ TEST(Imgproc_Hist_Compare, correl_regression_29706)
             << "near-constant histogram of " << n << " bins";
     }
 
-    // Comparing two different near-constant histograms must still land inside the
-    // range a correlation coefficient is defined on, and must never be NaN.
-    for (int n = 2; n <= 64; n++)
-    {
-        for (int shifted = 0; shifted < n; shifted++)
-        {
-            cv::Mat h1(n, 1, CV_32FC1, cv::Scalar(base));
-            cv::Mat h2 = h1.clone();
-            h1.at<float>(shifted, 0) = base + 1.f;
-
-            const double r = compareHist(h1, h2, cv::HISTCMP_CORREL);
-            ASSERT_FALSE(cvIsNaN(r)) << "n=" << n << " shifted=" << shifted;
-            ASSERT_LE(r, 1.0) << "n=" << n << " shifted=" << shifted;
-            ASSERT_GE(r, -1.0) << "n=" << n << " shifted=" << shifted;
-        }
-    }
-
     // The sparse overload shares the same computation.
     {
         const int n = 100;
@@ -2167,6 +2150,33 @@ TEST(Imgproc_Hist_Compare, correl_regression_29706)
 
 // See https://github.com/opencv/opencv/issues/29706
 //
+// Comparing two *different* near-constant histograms has to land inside the range
+// a correlation coefficient is defined on, and must never be NaN. What drives the
+// cancellation is the bin count, not which bin differs: under the single-pass form
+// a failing size failed at every shift, n=25 returning NaN and n>=38 returning
+// values below -1, so a few sizes cover both failure modes.
+TEST(Imgproc_Hist_Compare, correl_near_constant_pair_29706)
+{
+    const float base = 16777215.f;
+
+    for (int n : {25, 38, 64})
+    {
+        for (int shifted : {0, n / 2, n - 1})
+        {
+            cv::Mat h1(n, 1, CV_32FC1, cv::Scalar(base));
+            cv::Mat h2 = h1.clone();
+            h1.at<float>(shifted, 0) = base + 1.f;
+
+            const double r = compareHist(h1, h2, cv::HISTCMP_CORREL);
+            ASSERT_FALSE(cvIsNaN(r)) << "n=" << n << " shifted=" << shifted;
+            ASSERT_LE(r, 1.0) << "n=" << n << " shifted=" << shifted;
+            ASSERT_GE(r, -1.0) << "n=" << n << " shifted=" << shifted;
+        }
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/29706
+//
 // Accumulating about an assumed mean has to stay accurate where the textbook form
 // loses everything: a histogram varying by one part in a million about a large
 // mean. The reference values come from the exact rational correlation of the same
@@ -2174,7 +2184,7 @@ TEST(Imgproc_Hist_Compare, correl_regression_29706)
 TEST(Imgproc_Hist_Compare, correl_precision_29706)
 {
     const int n = 256;
-    cv::RNG rng(0x29706);
+    cv::RNG& rng = cv::theRNG();
 
     for (double spread : {1e-1, 1e-3, 1e-5, 1e-7})
     {
@@ -2214,7 +2224,7 @@ TEST(Imgproc_Hist_Compare, correl_precision_29706)
 TEST(Imgproc_Hist_Compare, correl_multichannel_13990)
 {
     const int rows = 64, chans = 8, n = rows*chans;
-    cv::RNG rng(0x13990);
+    cv::RNG& rng = cv::theRNG();
 
     cv::Mat flat1(n, 1, CV_32FC1), flat2(n, 1, CV_32FC1);
     rng.fill(flat1, cv::RNG::UNIFORM, 0.f, 1000.f);
