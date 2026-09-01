@@ -77,12 +77,26 @@ using namespace cv;
 //      CAP_PROP_FRAME_WIDTH
 //      CAP_PROP_FRAME_HEIGHT
 //
-//  Supported types of data:
-//      video/x-raw, fourcc:'GREY'  -> 8bit, 1 channel
-//      video/x-raw, fourcc:'Y800'  -> 8bit, 1 channel
-//      video/x-raw, fourcc:'Y12 '  -> 12bit, 1 channel
-//      video/x-raw, fourcc:'Y16 '  -> 16bit, 1 channel
-//      video/x-raw, fourcc:'GRBG'  -> 8bit, 1 channel
+//  On open() the highest priority pixel format supported by the camera is selected:
+//      1. true color: BGR/RGB and BGRa/RGBa, 8 or 16 bit per component,
+//      2. Bayer CFA: BayerRG/BayerBG/BayerGR/BayerGB, 8 or 16 bit per component,
+//      3. grayscale: Mono8/Mono10/Mono12/Mono14/Mono16.
+//  The format can be overridden afterwards with CAP_PROP_FOURCC.
+//
+//  Whatever the camera sends, retrieveFrame() always returns a BGR CV_8UC3 image:
+//  Bayer data is demosaiced, RGB data is swapped to BGR, grayscale is replicated to
+//  three channels, and formats deeper than 8 bit are scaled down to 8 bit.
+//
+//  Supported fourcc codes for CAP_PROP_FOURCC:
+//      'GREY', 'Y800'  -> Mono8
+//      'Y12 '          -> Mono12
+//      'Y16 '          -> Mono16
+//      'GRBG'          -> BayerGR8
+//      'RGGB'          -> BayerRG8
+//      'GBRG'          -> BayerGB8
+//      'BGGR'          -> BayerBG8
+//      'BGR3', 'RGB3'  -> BGR8, RGB8
+//      'BGR4', 'RGB4'  -> BGRa8, RGBa8
 //
 
 #define MODE_GREY   CV_FOURCC_MACRO('G','R','E','Y')
@@ -90,8 +104,100 @@ using namespace cv;
 #define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
 #define MODE_Y16    CV_FOURCC_MACRO('Y','1','6',' ')
 #define MODE_GRBG   CV_FOURCC_MACRO('G','R','B','G')
+#define MODE_RGGB   CV_FOURCC_MACRO('R','G','G','B')
+#define MODE_GBRG   CV_FOURCC_MACRO('G','B','R','G')
+#define MODE_BGGR   CV_FOURCC_MACRO('B','G','G','R')
+#define MODE_BGR3   CV_FOURCC_MACRO('B','G','R','3')
+#define MODE_RGB3   CV_FOURCC_MACRO('R','G','B','3')
+#define MODE_BGR4   CV_FOURCC_MACRO('B','G','R','4')
+#define MODE_RGB4   CV_FOURCC_MACRO('R','G','B','4')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
+
+namespace {
+
+// The data is BGR already, no color conversion is needed.
+const int CONVERSION_NONE = -1;
+
+// Description of a pixel format the backend is able to decode.
+struct PixelFormatInfo
+{
+    ArvPixelFormat  format;
+    int             fourcc;         // CAP_PROP_FOURCC representation, 0 if there is no common one
+    int             cvType;         // type of the Mat mapped over the raw frame buffer
+    int             bits;           // significant bits per component
+    int             conversion;     // cvtColor()/demosaicing() code producing BGR, see CONVERSION_NONE
+};
+
+// Note on the Bayer codes: Aravis follows the GenICam convention and names the pattern after
+// the top left 2x2 tile, while OpenCV names it after the second and third component of the
+// second row. The two namings are related by an R <-> B swap, hence BayerRG -> COLOR_BayerBG2BGR.
+//
+// The order of the entries defines the selection priority in selectPixelFormat():
+// color first, then Bayer, then grayscale, the least deep format first within each group.
+// Bit packed formats (Mono12Packed, BayerRG12p, ...) are intentionally not listed here,
+// their payload cannot be mapped to a Mat without unpacking it first.
+const PixelFormatInfo supportedPixelFormats[] =
+{
+    // 1st priority - true color
+    { ARV_PIXEL_FORMAT_BGR_8_PACKED,    MODE_BGR3,  CV_8UC3,   8, CONVERSION_NONE       },
+    { ARV_PIXEL_FORMAT_RGB_8_PACKED,    MODE_RGB3,  CV_8UC3,   8, COLOR_RGB2BGR         },
+    { ARV_PIXEL_FORMAT_BGRA_8_PACKED,   MODE_BGR4,  CV_8UC4,   8, COLOR_BGRA2BGR        },
+    { ARV_PIXEL_FORMAT_RGBA_8_PACKED,   MODE_RGB4,  CV_8UC4,   8, COLOR_RGBA2BGR        },
+    { ARV_PIXEL_FORMAT_BGR_10_PACKED,   0,          CV_16UC3, 10, CONVERSION_NONE       },
+    { ARV_PIXEL_FORMAT_RGB_10_PACKED,   0,          CV_16UC3, 10, COLOR_RGB2BGR         },
+    { ARV_PIXEL_FORMAT_BGR_12_PACKED,   0,          CV_16UC3, 12, CONVERSION_NONE       },
+    { ARV_PIXEL_FORMAT_RGB_12_PACKED,   0,          CV_16UC3, 12, COLOR_RGB2BGR         },
+
+    // 2nd priority - Bayer CFA
+    { ARV_PIXEL_FORMAT_BAYER_GR_8,      MODE_GRBG,  CV_8UC1,   8, COLOR_BayerGB2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_RG_8,      MODE_RGGB,  CV_8UC1,   8, COLOR_BayerBG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GB_8,      MODE_GBRG,  CV_8UC1,   8, COLOR_BayerGR2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_BG_8,      MODE_BGGR,  CV_8UC1,   8, COLOR_BayerRG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GR_10,     0,          CV_16UC1, 10, COLOR_BayerGB2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_RG_10,     0,          CV_16UC1, 10, COLOR_BayerBG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GB_10,     0,          CV_16UC1, 10, COLOR_BayerGR2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_BG_10,     0,          CV_16UC1, 10, COLOR_BayerRG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GR_12,     0,          CV_16UC1, 12, COLOR_BayerGB2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_RG_12,     0,          CV_16UC1, 12, COLOR_BayerBG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GB_12,     0,          CV_16UC1, 12, COLOR_BayerGR2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_BG_12,     0,          CV_16UC1, 12, COLOR_BayerRG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GR_16,     0,          CV_16UC1, 16, COLOR_BayerGB2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_RG_16,     0,          CV_16UC1, 16, COLOR_BayerBG2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_GB_16,     0,          CV_16UC1, 16, COLOR_BayerGR2BGR     },
+    { ARV_PIXEL_FORMAT_BAYER_BG_16,     0,          CV_16UC1, 16, COLOR_BayerRG2BGR     },
+
+    // 3rd priority - grayscale
+    { ARV_PIXEL_FORMAT_MONO_8,          MODE_Y800,  CV_8UC1,   8, COLOR_GRAY2BGR        },
+    { ARV_PIXEL_FORMAT_MONO_10,         0,          CV_16UC1, 10, COLOR_GRAY2BGR        },
+    { ARV_PIXEL_FORMAT_MONO_12,         MODE_Y12,   CV_16UC1, 12, COLOR_GRAY2BGR        },
+    { ARV_PIXEL_FORMAT_MONO_14,         0,          CV_16UC1, 14, COLOR_GRAY2BGR        },
+    { ARV_PIXEL_FORMAT_MONO_16,         MODE_Y16,   CV_16UC1, 16, COLOR_GRAY2BGR        },
+};
+
+const PixelFormatInfo* getPixelFormatInfo(ArvPixelFormat format)
+{
+    for(size_t i = 0; i < sizeof(supportedPixelFormats) / sizeof(supportedPixelFormats[0]); i++) {
+        if(supportedPixelFormats[i].format == format)
+            return &supportedPixelFormats[i];
+    }
+    return NULL;
+}
+
+const PixelFormatInfo* getPixelFormatInfoByFourcc(int fourcc)
+{
+    // 'GREY' is an alias of 'Y800' kept for backward compatibility
+    if(fourcc == MODE_GREY)
+        fourcc = MODE_Y800;
+
+    for(size_t i = 0; i < sizeof(supportedPixelFormats) / sizeof(supportedPixelFormats[0]); i++) {
+        if(supportedPixelFormats[i].fourcc != 0 && supportedPixelFormats[i].fourcc == fourcc)
+            return &supportedPixelFormats[i];
+    }
+    return NULL;
+}
+
+} // namespace
 
 /********************* Capturing video from camera via Aravis *********************/
 
@@ -126,6 +232,10 @@ protected:
     void stopCapture();
     bool startCapture();
 
+    bool selectPixelFormat();
+    bool applyPixelFormat(ArvPixelFormat format);
+    void updatePixelFormatInfo();
+
     bool getDeviceNameById(int id, std::string &device);
 
     void autoExposureControl(const Mat &);
@@ -135,6 +245,7 @@ protected:
     ArvCamera       *camera;                // Camera to control.
     ArvStream       *stream;                // Object for video stream reception.
     void            *framebuffer;           //
+    size_t          framebufferSize;        // Size of the payload of the last grabbed frame.
 
     unsigned int    payload;                // Width x height x Pixel width.
 
@@ -162,6 +273,10 @@ protected:
     int             num_buffers;            // number of payload transmission buffers
 
     ArvPixelFormat  pixelFormat;            // pixel format
+    bool            pixelFormatSupported;   // true if the backend is able to decode pixelFormat
+    int             srcType;                // OpenCV type of the raw frame buffer
+    int             srcBits;                // significant bits per component in the raw frame
+    int             conversionCode;         // color conversion producing BGR, see CONVERSION_NONE
 
     int             xoffset;                // current frame region x offset
     int             yoffset;                // current frame region y offset
@@ -183,8 +298,15 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     camera = NULL;
     stream = NULL;
     framebuffer = NULL;
+    framebufferSize = 0;
 
     payload = 0;
+
+    pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
+    pixelFormatSupported = true;
+    srcType = CV_8UC1;
+    srcBits = 8;
+    conversionCode = COLOR_GRAY2BGR;
 
     widthMin = widthMax = heightMin = heightMax = 0;
     xoffset = yoffset = width = height = 0;
@@ -272,6 +394,78 @@ bool CvCaptureCAM_Aravis::init_buffers()
     return false;
 }
 
+// Refresh the cached description of the pixel format the camera is currently set to.
+void CvCaptureCAM_Aravis::updatePixelFormatInfo()
+{
+    pixelFormat = arv_camera_get_pixel_format(camera, NULL);
+
+    const PixelFormatInfo *info = getPixelFormatInfo(pixelFormat);
+    pixelFormatSupported = (info != NULL);
+    if(info) {
+        srcType = info->cvType;
+        srcBits = info->bits;
+        conversionCode = info->conversion;
+    } else {
+        // retrieveFrame() has no way to decode this payload
+        CV_LOG_WARNING(NULL, cv::format("Aravis: pixel format '%s' is not supported by the backend.",
+                                        arv_camera_get_pixel_format_as_string(camera, NULL)));
+    }
+}
+
+bool CvCaptureCAM_Aravis::applyPixelFormat(ArvPixelFormat format)
+{
+    if(format != arv_camera_get_pixel_format(camera, NULL)) {
+        GError *error = NULL;
+        arv_camera_set_pixel_format(camera, format, &error);
+        if(error) {
+            CV_LOG_WARNING(NULL, cv::format("Aravis: failed to set pixel format: %s", error->message));
+            g_clear_error(&error);
+        }
+    }
+
+    updatePixelFormatInfo();
+
+    return pixelFormatSupported && pixelFormat == format;
+}
+
+// Query the pixel formats the camera offers and switch it to the most preferred one
+// this backend is able to convert to BGR, see supportedPixelFormats[] for the priorities.
+bool CvCaptureCAM_Aravis::selectPixelFormat()
+{
+    GError *error = NULL;
+    guint n_formats = 0;
+    gint64 *formats = arv_camera_dup_available_pixel_formats(camera, &n_formats, &error);
+    if(error) {
+        CV_LOG_WARNING(NULL, cv::format("Aravis: failed to enumerate pixel formats: %s", error->message));
+        g_clear_error(&error);
+    }
+
+    const PixelFormatInfo *selected = NULL;
+    if(formats) {
+        for(size_t i = 0; !selected && i < sizeof(supportedPixelFormats) / sizeof(supportedPixelFormats[0]); i++) {
+            for(guint j = 0; j < n_formats; j++) {
+                if((ArvPixelFormat)formats[j] == supportedPixelFormats[i].format) {
+                    selected = &supportedPixelFormats[i];
+                    break;
+                }
+            }
+        }
+        g_free(formats);
+    }
+
+    if(!selected) {
+        // the camera did not report anything usable, keep whatever it is set to
+        updatePixelFormatInfo();
+        if(!pixelFormatSupported) {
+            CV_LOG_WARNING(NULL, "Aravis: no supported pixel format found, falling back to Mono8.");
+            return applyPixelFormat(ARV_PIXEL_FORMAT_MONO_8);
+        }
+        return true;
+    }
+
+    return applyPixelFormat(selected->format);
+}
+
 void CvCaptureCAM_Aravis::configure()
 {
     // fetch properties bounds
@@ -286,18 +480,8 @@ void CvCaptureCAM_Aravis::configure()
     if( (exposureAvailable = arv_camera_is_exposure_time_available(camera, NULL)) )
         arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax, NULL);
 
-    // get initial values
-    pixelFormat = arv_camera_get_pixel_format(camera, NULL);
-
-    // If camera's pixel format is not one of the supported formats, set a default
-    if (pixelFormat != ARV_PIXEL_FORMAT_MONO_8 &&
-        pixelFormat != ARV_PIXEL_FORMAT_BAYER_GR_8 &&
-        pixelFormat != ARV_PIXEL_FORMAT_MONO_12 &&
-        pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
-        pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
-        arv_camera_set_pixel_format(camera, pixelFormat, NULL);
-        CV_LOG_WARNING(NULL, "Current camera pixel format is not supported. Failed back to MONO_8.");
-    }
+    // pick the best pixel format the camera and this backend have in common
+    selectPixelFormat();
 
     midGrey = getExpectedMidGrey(pixelFormat);
 
@@ -329,6 +513,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
 {
     // remove content of previous frame
     framebuffer = NULL;
+    framebufferSize = 0;
 
     if(stream) {
         ArvBuffer *arv_buffer = NULL;
@@ -344,8 +529,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
             } else break;
         }
         if(arv_buffer != NULL && tries < max_tries) {
-            size_t buffer_size;
-            framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
+            framebuffer = (void*)arv_buffer_get_data (arv_buffer, &framebufferSize);
 
             // retrieve image size properties
             arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
@@ -362,32 +546,36 @@ bool CvCaptureCAM_Aravis::grabFrame()
 
 bool CvCaptureCAM_Aravis::retrieveFrame(int, OutputArray arr)
 {
-    if(framebuffer) {
-        int depth = 0, channels = 0;
-        switch(pixelFormat) {
-            case ARV_PIXEL_FORMAT_MONO_8:
-            case ARV_PIXEL_FORMAT_BAYER_GR_8:
-                depth = CV_8U;
-                channels = 1;
-                break;
-            case ARV_PIXEL_FORMAT_MONO_12:
-            case ARV_PIXEL_FORMAT_MONO_16:
-                depth = CV_16U;
-                channels = 1;
-                break;
-            default:
-                return false;
-        }
-        Mat src(Size( width, height ), CV_MAKE_TYPE(depth, channels), framebuffer);
-        if(controlExposure && ((frameID - prevFrameID) >= 3)) {
-            // control exposure every third frame
-            // i.e. skip frame taken with previous exposure setup
-            autoExposureControl(src);
-        }
-        src.copyTo(arr);
-        return true;
+    if(!framebuffer || !pixelFormatSupported)
+        return false;
+
+    const size_t expectedSize = (size_t)width * (size_t)height * CV_ELEM_SIZE(srcType);
+    if(width <= 0 || height <= 0 || framebufferSize < expectedSize) {
+        CV_LOG_WARNING(NULL, "Aravis: payload is too small for the current pixel format.");
+        return false;
     }
-    return false;
+
+    Mat src(Size(width, height), srcType, framebuffer);
+    if(controlExposure && ((frameID - prevFrameID) >= 3)) {
+        // control exposure every third frame
+        // i.e. skip frame taken with previous exposure setup
+        autoExposureControl(src);
+    }
+
+    // Scale the deeper formats down to 8 bit. GenICam stores them right aligned in a
+    // 16 bit container, so the significant bits are the srcBits least significant ones.
+    Mat src8;
+    if(src.depth() != CV_8U)
+        src.convertTo(src8, CV_8U, 255. / ((1 << srcBits) - 1));
+    else
+        src8 = src;
+
+    if(conversionCode == CONVERSION_NONE)
+        src8.copyTo(arr);           // already BGR
+    else
+        cvtColor(src8, arr, conversionCode, 3);
+
+    return true;
 }
 
 void CvCaptureCAM_Aravis::autoExposureControl(const Mat & image)
@@ -503,17 +691,10 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 
         case CAP_PROP_FOURCC:
             {
-                ArvPixelFormat currFormat = arv_camera_get_pixel_format(camera, NULL);
-                switch( currFormat ) {
-                    case ARV_PIXEL_FORMAT_MONO_8:
-                        return MODE_Y800;
-                    case ARV_PIXEL_FORMAT_MONO_12:
-                        return MODE_Y12;
-                    case ARV_PIXEL_FORMAT_MONO_16:
-                        return MODE_Y16;
-                    case ARV_PIXEL_FORMAT_BAYER_GR_8:
-                        return MODE_GRBG;
-                }
+                const PixelFormatInfo *info =
+                    getPixelFormatInfo(arv_camera_get_pixel_format(camera, NULL));
+                if(info && info->fourcc != 0)
+                    return info->fourcc;
             }
             break;
 
@@ -537,22 +718,10 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 
 double CvCaptureCAM_Aravis::getExpectedMidGrey(ArvPixelFormat fmt) const
 {
-    double grey = 0.;
-    switch(fmt)
-    {
-        case ARV_PIXEL_FORMAT_MONO_8:
-        case ARV_PIXEL_FORMAT_BAYER_GR_8:
-            grey = 128.;
-            break;
-        case ARV_PIXEL_FORMAT_MONO_12:
-            grey = 2048.;
-            break;
-        case ARV_PIXEL_FORMAT_MONO_16:
-            grey = 32768.;
-            break;
-    }
+    // half of the range of the raw samples, i.e. 128 for 8 bit, 2048 for 12 bit, ...
+    const PixelFormatInfo *info = getPixelFormatInfo(fmt);
 
-    return grey;
+    return info ? (double)(1 << (info->bits - 1)) : 0.;
 }
 
 bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
@@ -566,9 +735,10 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 }
             }
             break;
-    case CAP_PROP_BRIGHTNESS:
-       exposureCompensation = CLIP(value, -3., 3.);
-       break;
+
+        case CAP_PROP_BRIGHTNESS:
+            exposureCompensation = CLIP(value, -3., 3.);
+            break;
 
         case CAP_PROP_EXPOSURE:
             if(exposureAvailable) {
@@ -596,28 +766,17 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 
         case CAP_PROP_FOURCC:
             {
-                ArvPixelFormat newFormat = pixelFormat;
-                switch((int)value) {
-                    case MODE_GREY:
-                    case MODE_Y800:
-                        newFormat = ARV_PIXEL_FORMAT_MONO_8;
-                        break;
-                    case MODE_Y12:
-                        newFormat = ARV_PIXEL_FORMAT_MONO_12;
-                        break;
-                    case MODE_Y16:
-                        newFormat = ARV_PIXEL_FORMAT_MONO_16;
-                        break;
-                    case MODE_GRBG:
-                        newFormat = ARV_PIXEL_FORMAT_BAYER_GR_8;
-                        break;
-                }
+                const PixelFormatInfo *info = getPixelFormatInfoByFourcc((int)value);
+                if(!info)
+                    return false;
 
-                if(newFormat != pixelFormat) {
+                if(info->format != pixelFormat) {
                     stopCapture();
-                    arv_camera_set_pixel_format(camera, pixelFormat = newFormat, NULL);
-                    midGrey = getExpectedMidGrey(newFormat);
+                    bool ok = applyPixelFormat(info->format);
+                    midGrey = getExpectedMidGrey(pixelFormat);
                     startCapture();
+                    if(!ok)
+                        return false;
                 }
             }
             break;
