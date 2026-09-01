@@ -114,6 +114,21 @@ static inline UnigramPrecompiledNormalizer buildUnigramPrecompiledNormalizer(con
     return UnigramPrecompiledNormalizer(unigramBase64Decode(b64));
 }
 
+struct UnigramNormalizerStep
+{
+    enum Kind
+    {
+        REPLACE,
+        LOWERCASE,
+        STRIP_ACCENTS,
+        PRECOMPILED
+    };
+
+    Kind kind = PRECOMPILED;
+    std::string from;
+    std::string to;
+};
+
 /**
  * @brief Core Unigram (SentencePiece-style) engine: Viterbi segmentation +
  * decode, text -> ids and ids -> text only.
@@ -136,12 +151,15 @@ public:
      * @param normalizer    Precompiled SentencePiece normalizer to apply before segmentation.
      * @param specialToId   Map from literal added/special-token text to vocab id.
      * @param eosId         Vocab id to append at the end of every encode() call (-1 to skip).
+     * @param normSteps     Normalizer chain from tokenizer.json, in declared order.
      */
     CoreUnigram(const std::vector<std::pair<std::string, float>>& vocab,
                 int unkId,
                 UnigramPrecompiledNormalizer normalizer,
                 const std::unordered_map<std::string, int>& specialToId,
-                int eosId);
+                int eosId,
+                const std::vector<UnigramNormalizerStep>& normSteps =
+                    std::vector<UnigramNormalizerStep>(1));
 
     std::vector<int> encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
     std::string decode(const std::vector<int>& tokens) const;
@@ -154,6 +172,8 @@ private:
     // Splits normalized text on whitespace; encodeChunk()s each word with a
     // leading UNIGRAM_METASPACE (SentencePiece "▁") marker.
     void pretokenizeAndEncode(const std::string& normalized, std::vector<int>& out) const;
+
+    std::string applyNormalizer(const std::string& text) const;
 
     std::vector<std::string> idToPiece_;
     std::vector<float> idToScore_;
@@ -168,6 +188,7 @@ private:
     size_t maxPieceCps_ = 1;
 
     UnigramPrecompiledNormalizer normalizer_;
+    std::vector<UnigramNormalizerStep> normSteps_;
 };
 
 CV__DNN_INLINE_NS_END

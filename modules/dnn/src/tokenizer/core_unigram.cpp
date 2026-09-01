@@ -80,9 +80,8 @@ void UnigramPrecompiledNormalizer::normalizePrefix(const std::string& text, size
         return;
     }
     size_t off2 = offset;
-    uint32_t cpt = unicode_cpt_from_utf8(text, off2);
-    if (off2 <= offset) off2 = offset + 1;
-    if (cpt == 0 && off2 == offset + 1 && (unsigned char)text[offset] >= 0x80) {
+    uint32_t cpt = unicode_cpt_from_utf8_lenient(text, off2);
+    if (cpt == 0xFFFD && off2 == offset + 1 && (unsigned char)text[offset] >= 0x80) {
         consumed = 1;
         replacement = "\xEF\xBF\xBD";
         return;
@@ -110,11 +109,13 @@ CoreUnigram::CoreUnigram(const std::vector<std::pair<std::string, float>>& vocab
                           int unkId,
                           UnigramPrecompiledNormalizer normalizer,
                           const std::unordered_map<std::string, int>& specialToId,
-                          int eosId)
+                          int eosId,
+                          const std::vector<UnigramNormalizerStep>& normSteps)
     : specialToId_(specialToId),
       unkId_(unkId),
       eosId_(eosId),
-      normalizer_(std::move(normalizer))
+      normalizer_(std::move(normalizer)),
+      normSteps_(normSteps)
 {
     idToPiece_.reserve(vocab.size());
     idToScore_.reserve(vocab.size());
@@ -148,9 +149,7 @@ void CoreUnigram::encodeChunk(const std::string& chunk, std::vector<int>& out) c
         while (p < chunk.size()) {
             offs.push_back(p);
             size_t p2 = p;
-            uint32_t cpt = unicode_cpt_from_utf8(chunk, p2);
-            (void)cpt;
-            if (p2 <= p) p2 = p + 1;
+            unicode_cpt_from_utf8_lenient(chunk, p2);
             p = p2;
         }
         offs.push_back(chunk.size());
@@ -224,8 +223,7 @@ void CoreUnigram::pretokenizeAndEncode(const std::string& normalized, std::vecto
     while (p < normalized.size()) {
         offs.push_back(p);
         size_t p2 = p;
-        uint32_t cpt = unicode_cpt_from_utf8(normalized, p2);
-        if (p2 <= p) { p2 = p + 1; cpt = 0xFFFD; }
+        uint32_t cpt = unicode_cpt_from_utf8_lenient(normalized, p2);
         cps.push_back(cpt);
         p = p2;
     }
@@ -244,10 +242,55 @@ void CoreUnigram::pretokenizeAndEncode(const std::string& normalized, std::vecto
     }
 }
 
+std::string CoreUnigram::applyNormalizer(const std::string& text) const {
+    std::string cur = text;
+    for (const UnigramNormalizerStep& step : normSteps_) {
+        switch (step.kind) {
+        case UnigramNormalizerStep::REPLACE: {
+            if (step.from.empty()) break;
+            std::string out;
+            out.reserve(cur.size());
+            size_t p = 0;
+            while (p < cur.size()) {
+                if (cur.compare(p, step.from.size(), step.from) == 0) {
+                    out += step.to;
+                    p += step.from.size();
+                } else {
+                    out += cur[p];
+                    ++p;
+                }
+            }
+            cur.swap(out);
+            break;
+        }
+        case UnigramNormalizerStep::LOWERCASE:
+        case UnigramNormalizerStep::STRIP_ACCENTS: {
+            const bool strip = step.kind == UnigramNormalizerStep::STRIP_ACCENTS;
+            std::string out;
+            out.reserve(cur.size());
+            for (uint32_t cpt : unicode_cpts_from_utf8(cur)) {
+                if (strip) {
+                    if (unicode_cpt_flags_from_cpt(cpt).is_accent_mark) continue;
+                    out += unicode_cpt_to_utf8(unicode_strip_accent_base(cpt));
+                } else {
+                    out += unicode_cpt_to_utf8(unicode_tolower(cpt));
+                }
+            }
+            cur.swap(out);
+            break;
+        }
+        case UnigramNormalizerStep::PRECOMPILED:
+            cur = normalizer_.normalize(cur);
+            break;
+        }
+    }
+    return cur;
+}
+
 std::vector<int> CoreUnigram::encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
     std::vector<int> ids;
     auto normalizeAndEncode = [&](const std::string& literal) {
-        std::string norm = normalizer_.normalize(literal);
+        std::string norm = applyNormalizer(literal);
         pretokenizeAndEncode(norm, ids);
     };
     if (allowedSpecial.empty()) {

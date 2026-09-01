@@ -444,6 +444,36 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsNullFollowsLowercase) {
     EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
 }
 
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_MalformedUtf8) {
+    Tokenizer tok = Tokenizer::load(_tf("bert/config.json"));
+    // Malformed bytes are dropped during clean-text normalization, the same
+    // way BertNormalizer already drops other control characters, not thrown --
+    // unicode_cpts_from_utf8() recovers with U+FFFD instead of propagating.
+    EXPECT_NO_THROW(tok.encode("\xff"));
+    EXPECT_EQ(tok.decode(tok.encode("a\xc3z")), "az");
+}
+
+// Valid codepoints sitting exactly on the range boundaries the strictness
+// checks test against. An off-by-one in any of those checks turns one of these
+// into U+FFFD, silently corrupting legitimate text, so they roundtrip here.
+TEST(Tokenizer_BPE, Tokenizer_Utf8BoundaryRoundtrip) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+    const std::vector<std::string> valid = {
+        "\x7F",                 // U+007F, 1-byte max
+        "\xC2\x80",             // U+0080, 2-byte min
+        "\xDF\xBF",             // U+07FF, 2-byte max
+        "\xE0\xA0\x80",         // U+0800, 3-byte min
+        "\xED\x9F\xBF",         // U+D7FF, just below the surrogate block
+        "\xEE\x80\x80",         // U+E000, just above the surrogate block
+        "\xEF\xBF\xBF",         // U+FFFF, 3-byte max
+        "\xEF\xBF\xBD",         // U+FFFD itself, must not be taken for recovery output
+        "\xF0\x90\x80\x80",     // U+10000, 4-byte min
+        "\xF4\x8F\xBF\xBF",     // U+10FFFF, last valid codepoint
+    };
+    for (const std::string& text : valid)
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+}
+
 TEST(Tokenizer_BPE, Tokenizer_EncodePair_Unsupported) {
     Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
     EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
@@ -461,8 +491,41 @@ TEST(Tokenizer_Unigram, Tokenizer_EncodePair_Unsupported) {
 
 TEST(Tokenizer_Unigram, Tokenizer_MalformedUtf8) {
     Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
-    EXPECT_THROW(tok.encode("\xff"), cv::Exception);          // invalid lead byte
-    EXPECT_THROW(tok.encode("\xc3"), cv::Exception);           // truncated 2-byte sequence
+    // Malformed sequences resolve to U+FFFD and encode like any other unknown
+    // text rather than throwing, so one bad byte cannot abort a whole prompt.
+    // Every family shares this behaviour via unicode_cpt_from_utf8_lenient().
+    EXPECT_NO_THROW(tok.encode("\xff"));           // invalid lead byte
+    EXPECT_NO_THROW(tok.encode("\xc3"));            // truncated 2-byte sequence
+}
+
+// T5's normalizer is a bare Precompiled node with no Lowercase step, so case
+// must survive here -- the ALBERT chain below must not be applied unconditionally.
+TEST(Tokenizer_Unigram, Tokenizer_T5_NormalizerKeepsCase) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
+}
+
+// ALBERT declares Sequence[Replace, Replace, NFKD, StripAccents, Lowercase,
+// Precompiled]. Reading only precompiled_charsmap skips the lowercase and
+// accent steps, so every capitalised or accented word mistokenizes.
+TEST(Tokenizer_Unigram, Tokenizer_Albert_SequenceNormalizer) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    EXPECT_EQ(tok.encode("Hello world"), tok.encode("hello world"));
+    EXPECT_EQ(tok.encode("The Quick BROWN Fox"), tok.encode("the quick brown fox"));
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), tok.encode("cafe"));
+    EXPECT_EQ(tok.decode(tok.encode("Hello world")), "hello world");
+}
+
+// Overlong encodings, surrogate halves and codepoints past U+10FFFF must not
+// decode to their shortest-form equivalents: accepting "\xC0\xAF" would let a
+// caller smuggle '/' past any check performed on the decoded text.
+TEST(Tokenizer_BPE, Tokenizer_Utf8Strictness) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+    const std::vector<int> slash = tok.encode("/");
+    EXPECT_NE(tok.encode("\xC0\xAF"), slash);
+    EXPECT_NE(tok.encode("\xE0\x80\xAF"), slash);
+    EXPECT_NO_THROW(tok.encode("\xED\xA0\x80"));       // UTF-16 surrogate half
+    EXPECT_NO_THROW(tok.encode("\xF7\xBF\xBF\xBF"));   // decodes past U+10FFFF
 }
 
 }}

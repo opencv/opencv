@@ -67,7 +67,7 @@ def encode(tokenizer, text):
         if i > 0:
             ids.append(MASK_ID)
         if part:
-            ids.extend(int(t) for t in tokenizer.encode(part.lower()))
+            ids.extend(int(t) for t in tokenizer.encode(part))
     ids.append(SEP_ID)
     return ids
 

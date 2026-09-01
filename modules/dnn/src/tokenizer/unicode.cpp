@@ -37,6 +37,8 @@ uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
             CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x1f) << 6) | (utf8[offset + 1] & 0x3f);
+        if (result < 0x80)
+            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
         offset += 2;
         return result;
     }
@@ -45,6 +47,10 @@ uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
             CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x0f) << 12) | ((utf8[offset + 1] & 0x3f) << 6) | (utf8[offset + 2] & 0x3f);
+        if (result < 0x800)
+            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
+        if (result >= 0xd800 && result <= 0xdfff)
+            CV_Error(cv::Error::StsBadArg, "utf8-encoded surrogate half");
         offset += 3;
         return result;
     }
@@ -53,6 +59,10 @@ uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
             CV_Error(cv::Error::StsBadArg, "invalid character");
         }
         auto result = ((utf8[offset + 0] & 0x07) << 18) | ((utf8[offset + 1] & 0x3f) << 12) | ((utf8[offset + 2] & 0x3f) << 6) | (utf8[offset + 3] & 0x3f);
+        if (result < 0x10000)
+            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
+        if (result > 0x10ffff)
+            CV_Error(cv::Error::StsBadArg, "utf8 sequence past U+10FFFF");
         offset += 4;
         return result;
     }
@@ -519,23 +529,27 @@ std::string unicode_cpt_to_utf8(uint32_t cpt) {
         return result;
     }
 
-    throw std::invalid_argument("invalid codepoint");
+    CV_Error(cv::Error::StsBadArg, "invalid codepoint");
+}
+
+uint32_t unicode_cpt_from_utf8_lenient(const std::string & utf8, size_t & offset) {
+    const size_t start = offset;
+    try {
+        return unicode_cpt_from_utf8(utf8, offset);
+    }
+    catch (const cv::Exception & /*ex*/) {
+        // Silently ignore invalid UTF-8 input to avoid leaking the exception beyond llama_tokenize
+        offset = start + 1;
+        return 0xFFFD; // replacement character
+    }
 }
 
 std::vector<uint32_t> unicode_cpts_from_utf8(const std::string & utf8) {
     std::vector<uint32_t> result;
     result.reserve(utf8.size());
     size_t offset = 0;
-    while (offset < utf8.size()) {
-        try {
-            result.push_back(unicode_cpt_from_utf8(utf8, offset));
-        }
-        catch (const std::invalid_argument & /*ex*/) {
-            // Silently ignore invalid UTF-8 input to avoid leaking the exception beyond llama_tokenize
-            ++offset;
-            result.emplace_back(0xFFFD); // replacement character
-        }
-    }
+    while (offset < utf8.size())
+        result.push_back(unicode_cpt_from_utf8_lenient(utf8, offset));
     return result;
 }
 

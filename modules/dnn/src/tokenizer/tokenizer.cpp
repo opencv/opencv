@@ -560,6 +560,53 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
     return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bos_token_id);
 }
 
+static void appendUnigramNormalizerStep(const cv::FileNode& node,
+                                        std::vector<UnigramNormalizerStep>& out)
+{
+    if (node.empty() || node.isNone())
+        return;
+
+    std::string type;
+    node["type"] >> type;
+
+    if (type == "Sequence") {
+        cv::FileNode seq = node["normalizers"];
+        for (auto it = seq.begin(); it != seq.end(); ++it)
+            appendUnigramNormalizerStep(*it, out);
+        return;
+    }
+
+    UnigramNormalizerStep step;
+    if (type == "Precompiled") {
+        step.kind = UnigramNormalizerStep::PRECOMPILED;
+    } else if (type == "Lowercase") {
+        step.kind = UnigramNormalizerStep::LOWERCASE;
+    } else if (type == "StripAccents") {
+        step.kind = UnigramNormalizerStep::STRIP_ACCENTS;
+    } else if (type == "Replace") {
+        cv::FileNode pattern = node["pattern"];
+        if (pattern.empty() || pattern["String"].empty())
+            return;
+        step.kind = UnigramNormalizerStep::REPLACE;
+        pattern["String"] >> step.from;
+        node["content"] >> step.to;
+        if (step.from.empty())
+            return;
+    } else {
+        return;
+    }
+    out.push_back(step);
+}
+
+static std::vector<UnigramNormalizerStep> readUnigramNormalizerSteps(const cv::FileNode& node)
+{
+    std::vector<UnigramNormalizerStep> steps;
+    appendUnigramNormalizerStep(node, steps);
+    if (steps.empty())
+        steps.resize(1);
+    return steps;
+}
+
 static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
         cv::FileStorage& fs, const std::string& charsmapB64,
         std::unordered_set<std::string>* outSpecial = nullptr)
@@ -618,7 +665,8 @@ static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
         }
     }
 
-    CoreUnigram unigram(vocab, unkId, buildUnigramPrecompiledNormalizer(charsmapB64), specialToId, eosId);
+    CoreUnigram unigram(vocab, unkId, buildUnigramPrecompiledNormalizer(charsmapB64),
+                        specialToId, eosId, readUnigramNormalizerSteps(fs["normalizer"]));
 
     return makePtr<UnigramTokenizerImpl>(std::move(unigram), std::move(special));
 }
