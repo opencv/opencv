@@ -42,8 +42,10 @@ int numpyTypeToCvDepth(int typenum)
     case NPY_SHORT:     return CV_16S;
     case NPY_UINT:      return CV_32U;
     case NPY_INT:       return CV_32S;
+    case NPY_LONGLONG:  return CV_64S;
     case NPY_ULONGLONG: return CV_64U;
     // 'long' is 64-bit on LP64 but 32-bit on LLP64, so decide by size, not by name.
+    case NPY_LONG:      return NPY_SIZEOF_LONG == 8 ? CV_64S : CV_32S;
     case NPY_ULONG:     return NPY_SIZEOF_LONG == 8 ? CV_64U : CV_32U;
     case NPY_HALF:      return CV_16F;
     case NPY_FLOAT:     return CV_32F;

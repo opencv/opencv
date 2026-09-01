@@ -216,17 +216,6 @@
 "test_training_dropout_mask",  // ---- same as above ---
 
 // ===== ONNX 1.22 additions: ops/dtypes not yet supported by the importer =====
-// BitCast op not supported by the ONNX importer
-"test_bitcast_2d_float32_to_int32",
-"test_bitcast_bool_to_uint8",
-"test_bitcast_float32_to_int32",
-"test_bitcast_float64_to_int64",
-"test_bitcast_int32_to_float32",
-"test_bitcast_int64_to_float64",
-"test_bitcast_int8_to_uint8",
-"test_bitcast_scalar_float32_to_int32",
-"test_bitcast_uint16_to_int16",
-"test_bitcast_uint32_to_int32",
 // INT2/UINT2 (2-bit) dtype not supported
 "test_cast_FLOAT16_to_INT2",
 "test_cast_FLOAT16_to_UINT2",
@@ -268,13 +257,6 @@
 "test_range_bfloat16_type_positive_delta_expanded",
 "test_range_float16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
-// MatMul with 1-D operand not supported (requires >=2D)
-"test_matmul_1d_1d",
-"test_matmul_1d_3d",
-"test_matmul_4d_1d",
-// DFT inverse RFFT not supported
-"test_dft_irfft",
-"test_dft_irfft_opset19",
 // Attention softcap accuracy
 "test_attention_4d_softcap_neginf_mask",
 "test_attention_4d_softcap_neginf_mask_poison",

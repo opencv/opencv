@@ -285,6 +285,16 @@ class Arguments(NewOpenCVTests):
         res9 = cv.utils.dumpInputArray(a)
         self.assertEqual(res9, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=1 dims(-1)=0 size(-1)=1x1 type(-1)=CV_32FC1")
 
+    def test_InputArray_int64(self):
+        """int64 is narrowed to CV_32S for backward compatibility, but only losslessly."""
+        int32_min, int32_max = np.iinfo(np.int32).min, np.iinfo(np.int32).max
+        for values in ([[1, 2], [3, 4]], [int32_min, int32_max]):
+            a = np.array(values, dtype=np.int64)
+            self.assertIn("type(-1)=CV_32SC1", cv.utils.dumpInputArray(a))
+        for values in ([[1, 2], [3, 1 << 40]], [int32_min - 1], [int32_max + 1]):
+            a = np.array(values, dtype=np.int64)
+            self.assertIn("type(-1)=CV_64SC1", cv.utils.dumpInputArray(a))
+
     def test_InputArrayOfArrays(self):
         res1 = cv.utils.dumpInputArrayOfArrays(None)
         # self.assertEqual(res1, "InputArray: noArray()")  # not supported
