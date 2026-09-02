@@ -2467,6 +2467,24 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
                           Size dsize, double fx = 0, double fy = 0,
                           int interpolation = INTER_LINEAR );
 
+/** @brief Resizes a 3D volume or 4D array with spatial (D, H, W) axes and channels C.
+
+The function resize3D resizes the 3D spatial dimensions (D, H, W) of the input volume to
+dsize (when non-zero) or using scale factors fx, fy, fz.
+
+@param src input volume (3D or 4D Mat/MatND).
+@param dst output volume of the same depth as src.
+@param dsize output spatial size (depth, height, width). If equal to (0,0,0), it is computed from fx, fy, fz.
+@param fx scale factor along the horizontal axis (W); when 0, computed as (double)dsize[2]/src_width
+@param fy scale factor along the vertical axis (H); when 0, computed as (double)dsize[1]/src_height
+@param fz scale factor along the depth axis (D); when 0, computed as (double)dsize[0]/src_depth
+@param interpolation interpolation method (INTER_NEAREST or INTER_LINEAR)
+ */
+CV_EXPORTS_W void resize3D( InputArray src, OutputArray dst,
+                            Vec3i dsize, double fx = 0, double fy = 0, double fz = 0,
+                            int interpolation = INTER_LINEAR );
+
+
 /** @brief Applies an affine transformation to an image.
 
 The function warpAffine transforms the source image using the specified matrix:
