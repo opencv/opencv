@@ -244,8 +244,6 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
 {
     CV_INSTRUMENT_REGION();
 
-    border_size = max(16, patch_size);
-
     I0s.resize(coarsest_scale + 1);
     I1s.resize(coarsest_scale + 1);
     I1s_ext.resize(coarsest_scale + 1);
@@ -820,10 +818,17 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     int i, j, dir;
     int start_is, end_is, start_js, end_js;
     int start_i, start_j;
-    float i_lower_limit = bsz - psz + 1.0f;
-    float i_upper_limit = bsz + dis->h - 1.0f;
-    float j_lower_limit = bsz - psz + 1.0f;
-    float j_upper_limit = bsz + dis->w - 1.0f;
+    // computeSSD()/computeSSDMeanNorm() read psz rows/columns (+1 for bilinear interpolation)
+    // starting at the clamped position below, so the position has to stay within the padded
+    // I1_ext buffer for that whole read, not just at the position itself: max(0, bsz - psz + 1)
+    // keeps it from going before the buffer's start, and subtracting the excess (psz - bsz) from
+    // the upper limit when patch_size exceeds the (fixed) border keeps the read from going past
+    // its end -- see #20185. For patch_size <= bsz (the common case, e.g. the default of 8) these
+    // are exactly the original bounds.
+    float i_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float i_upper_limit = std::min(bsz + dis->h - 1.0f, dis->h + 2.0f * bsz - 1.0f - psz);
+    float j_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float j_upper_limit = std::min(bsz + dis->w - 1.0f, dis->w + 2.0f * bsz - 1.0f - psz);
     float dUx, dUy, i_I1, j_I1, w00, w01, w10, w11, dx, dy;
 
 #define INIT_BILINEAR_WEIGHTS(Ux, Uy) \
