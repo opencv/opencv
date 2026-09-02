@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
@@ -106,6 +107,76 @@ TEST(blobFromImage, allocated)
     dnn::blobFromImage(img, blob, 1.0 / 255, Size(), Scalar(), false, false);
     ASSERT_EQ(blobData, blob.data);
 }
+
+// depth, channels, swapRB, blob depth. Non-contiguous 5x67 image to exercise SIMD tails.
+typedef testing::TestWithParam<tuple<int, int, bool, int> > blobFromImage_NCHW_SIMD;
+
+TEST_P(blobFromImage_NCHW_SIMD, TailsAndStrides)
+{
+    const int depth = get<0>(GetParam());
+    const int nch = get<1>(GetParam());
+    const bool swapRB = get<2>(GetParam());
+    const int ddepth = get<3>(GetParam());
+    const int rows = 5, cols = 67;
+    const Scalar mean = ddepth == CV_32F ? Scalar(1.25, 2.5, 3.75, 5.0) : Scalar();
+    const Scalar scale = ddepth == CV_32F ? Scalar(0.5, 0.25, 0.125, 0.0625) : Scalar::all(1.0);
+
+    Mat storage(rows + 2, cols + 3, CV_MAKETYPE(depth, nch));
+    randu(storage, depth == CV_8U ? Scalar::all(0) : Scalar::all(-10),
+                   depth == CV_8U ? Scalar::all(255) : Scalar::all(10));
+    Mat image = storage(Rect(1, 1, cols, rows));
+
+    Image2BlobParams param(scale, Size(), mean, swapRB, ddepth, DNN_LAYOUT_NCHW);
+    Mat blob = blobFromImageWithParams(image, param);
+
+    ASSERT_EQ(4, blob.dims);
+    ASSERT_EQ(nch, blob.size[1]);
+    ASSERT_EQ(ddepth, blob.depth());
+    for (int c = 0; c < nch; ++c)
+    {
+        const int srcChannel = swapRB && nch > 2 ? (c == 0 ? 2 : (c == 2 ? 0 : c)) : c;
+        for (int y = 0; y < rows; ++y)
+        {
+            for (int x = 0; x < cols; ++x)
+            {
+                const float value = depth == CV_8U
+                        ? (float)image.ptr<uchar>(y)[x * nch + srcChannel]
+                        : image.ptr<float>(y)[x * nch + srcChannel];
+                if (ddepth == CV_32F)
+                {
+                    const float expected = (value - (float)mean[c]) * (float)scale[c];
+                    ASSERT_FLOAT_EQ(expected, blob.ptr<float>(0, c)[y * cols + x])
+                            << "c=" << c << " y=" << y << " x=" << x;
+                }
+                else
+                {
+                    ASSERT_EQ((uchar)value, blob.ptr<uchar>(0, c)[y * cols + x])
+                            << "c=" << c << " y=" << y << " x=" << x;
+                }
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, blobFromImage_NCHW_SIMD,
+    testing::Values(
+        make_tuple(CV_8U, 1, false, CV_32F),
+        make_tuple(CV_8U, 3, false, CV_32F),
+        make_tuple(CV_8U, 3, true, CV_32F),
+        make_tuple(CV_8U, 4, false, CV_32F),
+        make_tuple(CV_8U, 4, true, CV_32F),
+        make_tuple(CV_32F, 1, false, CV_32F),
+        make_tuple(CV_32F, 3, false, CV_32F),
+        make_tuple(CV_32F, 3, true, CV_32F),
+        make_tuple(CV_32F, 4, false, CV_32F),
+        make_tuple(CV_32F, 4, true, CV_32F),
+        make_tuple(CV_8U, 1, false, CV_8U),
+        make_tuple(CV_8U, 3, false, CV_8U),
+        make_tuple(CV_8U, 3, true, CV_8U),
+        make_tuple(CV_8U, 4, false, CV_8U),
+        make_tuple(CV_8U, 4, true, CV_8U)
+    )
+);
 
 TEST(imagesFromBlob, Regression)
 {
