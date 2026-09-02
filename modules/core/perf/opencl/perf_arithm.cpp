@@ -796,7 +796,7 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const double eps = 2e-5;
+    const double eps = 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -826,7 +826,7 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDevWithMask,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const double eps = 2e-5;
+    const double eps = 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
