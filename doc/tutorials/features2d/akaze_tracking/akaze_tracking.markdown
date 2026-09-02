@@ -3,7 +3,7 @@ AKAZE and ORB planar tracking {#tutorial_akaze_tracking}
 
 @tableofcontents
 
-@prev_tutorial{tutorial_akaze_matching}
+@prev_tutorial{tutorial_simple_blob_detector}
 @next_tutorial{tutorial_homography}
 
 |    |    |
