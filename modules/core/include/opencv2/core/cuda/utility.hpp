@@ -115,7 +115,7 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ MaskCollection(PtrStepb* maskCollection_)
             : maskCollection(maskCollection_) {}
 
-        __device__ __forceinline__ MaskCollection(const MaskCollection& masks_)
+        __host__ __device__ __forceinline__ MaskCollection(const MaskCollection& masks_)
             : maskCollection(masks_.maskCollection), curMask(masks_.curMask){}
 
         __device__ __forceinline__ void next()
