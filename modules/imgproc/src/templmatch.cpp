@@ -431,16 +431,29 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
 static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
+    // The per-window denominator below is a variance-like quantity computed as a difference
+    // of two comparable-magnitude sums (E[X^2] - E[X]^2) pulled from the integral images --
+    // classic catastrophic-cancellation territory. At CV_32F, on realistic image sizes, the
+    // rounding error in that subtraction can dwarf a genuinely small-but-nonzero window
+    // variance, corrupting the ratio enough to spuriously hit the +-1 safety clamp in
+    // normAcc() for windows that are not actually degenerate (see #21788). The CPU path
+    // (common_matchTemplate) never has this problem because it always accumulates in double
+    // regardless of image depth. Do the same here when the device supports it; otherwise,
+    // fall through to the (correct) CPU path rather than serve a known-inaccurate result.
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (!doubleSupport)
+        return false;
+
     matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     UMat temp, image_sums, image_sqsums;
-    integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
+    integral(_image, image_sums, image_sqsums, CV_64F, CV_64F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
-        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d -D DOUBLE_SUPPORT", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
     if (k.empty())
         return false;
 
