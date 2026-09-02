@@ -144,7 +144,8 @@ def bootstrap():
         if DEBUG: print('OpenCV loader: PATH={}'.format(str(os.environ['PATH'])))
     else:
         # amending of LD_LIBRARY_PATH works for sub-processes only
-        os.environ['LD_LIBRARY_PATH'] = ':'.join(l_vars['BINARIES_PATHS']) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+         if not os.environ.get("OPENCV_SKIP_LD_LIBRARY_PATH"):
+             os.environ['LD_LIBRARY_PATH'] = ':'.join(l_vars['BINARIES_PATHS']) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
 
     if DEBUG: print("Relink everything from native cv2 module to cv2 package")
 
