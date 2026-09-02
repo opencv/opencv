@@ -274,7 +274,7 @@ private:
             return INT_MIN;
         }
 
-        Mat axis_tensor = netimpl_->argTensor(this->inputs[2]);
+        Mat axis_tensor = netimpl_->argTensor(this->inputs[2]).getMat(ACCESS_READ);
         if (axis_tensor.empty() || axis_tensor.total() != 1)
         {
             return INT_MIN;
