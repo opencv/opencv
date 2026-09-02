@@ -1830,6 +1830,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         DataLayout layout;
         int C0;
+        // Set by graph_fusion_transform_add.cpp when a following elementwise Add
+        // (same-shape, no broadcasting) has been folded into this layer's
+        // deinterleave pass: inputs then holds [data, residual] instead of [data].
+        bool fusedAdd = false;
         static Ptr<TransformLayoutLayer> create(const LayerParams& params);
     };
 

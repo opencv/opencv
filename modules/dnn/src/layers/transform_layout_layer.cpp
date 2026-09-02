@@ -346,6 +346,126 @@ void transformLayout(const Mat& inp, Mat& out,
     }, nstripes);
 }
 
+// Deinterleave (BLOCK/NHWC -> NCHW) fused with an elementwise add against a
+// same-shaped NCHW residual tensor -- e.g. a ConvTranspose2 block-layout
+// output meeting a plain-NCHW skip connection. Folds what would otherwise be
+// two full passes over the tensor (TransformLayout, then NaryEltwise Add)
+// into the one pass TransformLayout already has to make.
+//
+// Float32 only, and only for the exact-shape case (no broadcasting): the
+// fusion pass in graph_fusion_transform_add.cpp is the sole caller and only
+// fires when both operands match shape and dtype exactly, and when the
+// channel count divides evenly by C0 -- so every channel block is fully
+// populated (nzc == nc) and the partial-block tail below never has to run.
+static void transformLayoutDeinterleaveAddF32(const uint32_t* inp_base, const float* res_base,
+                                              float* out_base, size_t len,
+                                              int nc, int nzc, size_t dlen)
+{
+    CV_Assert(nzc == nc);  // guaranteed by the fusion pass (C % C0 == 0)
+    size_t i = 0;
+    for (; i + 7u < dlen; i += 8u)
+    {
+        int c = 0;
+        for (; c + 7u < nc; c += 8u)
+        {
+            float* dst = out_base + (size_t)c * len + i;
+            transpose8x8<uint32_t>(inp_base + i * nc + c, nc, (uint32_t*)dst, len);
+            for (int r = 0; r < 8; r++)
+            {
+                float* o = out_base + (size_t)(c + r) * len + i;
+                const float* rr = res_base + (size_t)(c + r) * len + i;
+                for (int j = 0; j < 8; j++)
+                    o[j] += rr[j];
+            }
+        }
+        // Unreached while nc is a multiple of 8 (true for the C0 values the
+        // block layout uses), kept only so this degrades safely instead of
+        // silently dropping channels if that ever changes.
+        for (; c < nc; ++c)
+        {
+            const uint32_t* inptr = inp_base + i * nc + c;
+            const float* rr = res_base + (size_t)c * len + i;
+            float* outptr = out_base + (size_t)c * len + i;
+            for (int j = 0; j < 8; j++)
+                outptr[j] = *(const float*)&inptr[j * nc] + rr[j];
+        }
+    }
+    for (; i < dlen; ++i)
+    {
+        const uint32_t* inptr = inp_base + i * nc;
+        for (int c = 0; c < nc; ++c)
+            out_base[(size_t)c * len + i] = *(const float*)&inptr[c] + res_base[(size_t)c * len + i];
+    }
+}
+
+// Mirrors transformLayout()'s chunking (same tuning: ~16K elems/chunk, capped
+// by thread count) but is specialized to the one case the fusion pass
+// produces: BLOCK or NHWC input, NCHW output, float32, exact shape match.
+static void transformLayoutAddF32(const Mat& inp, const Mat& residual, Mat& out,
+                                  DataLayout defaultLayout, int C0)
+{
+    CV_Assert(inp.type() == CV_32F && residual.type() == CV_32F);
+    MatShape inpshape = inp.size;
+    if (inpshape.layout == DATA_LAYOUT_UNKNOWN)
+        inpshape.layout = defaultLayout;
+    DataLayout inplayout = inpshape.layout;
+    CV_Assert(inplayout == DATA_LAYOUT_BLOCK || inplayout == DATA_LAYOUT_NHWC);
+
+    MatShape outshape = inferTransformLayoutShape(inpshape, DATA_LAYOUT_NCHW, defaultLayout, C0);
+    out.fit(outshape, CV_32F);
+    CV_Assert(residual.size == out.size);
+
+    if (inp.empty())
+        return;
+    CV_Assert_N(inp.isContinuous(), residual.isContinuous(), out.isContinuous());
+
+    int N = inpshape[0];
+    int C = inpshape.channels();
+    C0 = inplayout == DATA_LAYOUT_BLOCK ? inpshape.back() : C0;
+    int C1 = (C + C0 - 1) / C0;
+    CV_Assert(C % C0 == 0);  // guaranteed by the fusion pass; see kernel comment above
+
+    size_t planesize = 1;
+    int inp_sp0 = inplayout == DATA_LAYOUT_NHWC ? 1 : 2;
+    int inp_sp1 = inpshape.dims - 1;
+    for (int i = inp_sp0; i < inp_sp1; i++)
+        planesize *= (size_t)inpshape[i];
+
+    size_t total = (size_t)N * C1 * planesize * C0;
+    constexpr size_t min_elems_per_chunk = 1 << 14;
+    int nblocks = int((total + min_elems_per_chunk/2) / min_elems_per_chunk);
+    int nthreads = std::max(1, getNumThreads());
+    nblocks = clamp(nblocks, 1, std::max(N*C1, 1) * 16);
+    nblocks = (nblocks + N*C1 - 1)/(N*C1);
+    nblocks = std::min(nblocks, std::max(1, nthreads));
+
+    int total_chunks = N * C1 * nblocks;
+    double nstripes = std::min((double)total_chunks, (double)nthreads);
+    const uint32_t* inpdata = (const uint32_t*)inp.data;
+    const float* resdata = (const float*)residual.data;
+    float* outdata = (float*)out.data;
+    parallel_for_(Range(0, total_chunks), [&](const Range& range)
+    {
+        int dchunk = 1;
+        for (int chunk = range.start; chunk < range.end; chunk += dchunk)
+        {
+            int n = chunk/(C1*nblocks);
+            int c1 = (chunk % (C1*nblocks))/nblocks;
+            int block = chunk % nblocks;
+            int nc = C0;
+            dchunk = std::min(nblocks - block, range.end - chunk);
+            size_t block_start = block * planesize / nblocks;
+            size_t block_end = (block + dchunk) * planesize / nblocks;
+            size_t dlen = block_end - block_start;
+            size_t inpofs = ((size_t)(n * C1 + c1) * planesize + block_start) * nc;
+            size_t outofs = ((size_t)(n * C + c1 * C0) * planesize + block_start);
+
+            transformLayoutDeinterleaveAddF32(inpdata + inpofs, resdata + outofs, outdata + outofs,
+                                              planesize, nc, nc, dlen);
+        }
+    }, nstripes);
+}
+
 class TransformLayoutLayerImpl : public TransformLayoutLayer
 {
 public:
@@ -388,7 +508,7 @@ public:
                           std::vector<MatType>& temptypes) const CV_OVERRIDE
     {
         int ninputs = (int)inptypes.size();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2 : 1));
 
         outtypes.assign(1, inptypes[0]);
         temptypes.clear();
@@ -406,8 +526,12 @@ public:
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
         size_t ninputs = inpshapes.size();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2u : 1u));
 
+        // The residual (inpshapes[1], when fused) must already match the
+        // converted output shape exactly -- graph_fusion_transform_add.cpp
+        // only fuses when it has verified that statically; it isn't
+        // re-derived here.
         outshapes.assign(1, inferShape(inpshapes[0]));
         tempshapes.clear();
         return true;
@@ -422,7 +546,7 @@ public:
                  OutputArrayOfArrays) CV_OVERRIDE
     {
         size_t ninputs = inputs_arr.total();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2u : 1u));
 
         int inptype = inputs_arr.type(0);
         MatShape inpshape = inputs_arr.shape(0);
@@ -436,7 +560,10 @@ public:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outshape, inptype);
-            runOp(inp, outs[0]);
+            if (fusedAdd)
+                runOpAdd(inp, inputs_arr.getMat(1), outs[0]);
+            else
+                runOp(inp, outs[0]);
         } else {
             // [TODO] more efficient OpenCL implementation
             Mat inp = inputs_arr.getMat(0);
@@ -444,7 +571,10 @@ public:
             outs.resize(1);
             outs[0].fit(outshape, inptype);
             Mat temp(outshape, inptype);
-            runOp(inp, temp);
+            if (fusedAdd)
+                runOpAdd(inp, inputs_arr.getMat(1), temp);
+            else
+                runOp(inp, temp);
             temp.copyTo(outs[0]);
         }
     }
@@ -465,6 +595,23 @@ public:
         }
         CV_Assert(err == 0.);
 #endif
+    }
+
+    // graph_fusion_transform_add.cpp guarantees layout == DATA_LAYOUT_NCHW,
+    // float32, and an exact shape match between the residual and the
+    // converted output before it sets fusedAdd -- so none of that is
+    // re-checked against the graph here, only against the actual data.
+    void runOpAdd(const Mat& inp, const Mat& residual, Mat& out)
+    {
+        CV_Assert(layout == DATA_LAYOUT_NCHW);
+        // Buffers must be distinct: the kernel reads inp and residual while
+        // writing out at different strides, so any aliasing would corrupt
+        // the result rather than merely being redundant. alwaysSupportInplace()
+        // returning false is what's supposed to keep the buffer pool from
+        // handing us an aliased output; check it rather than trust it.
+        CV_Assert(out.data != inp.data && out.data != residual.data);
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        transformLayoutAddF32(inp, residual, out, origLayout, C0);
     }
 };
 

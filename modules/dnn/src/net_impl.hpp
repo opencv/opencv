@@ -551,6 +551,9 @@ struct Net::Impl : public detail::NetImplBase
     void fuseTransposeMatMul();
     // fold a scalar Mul/Div before Softmax into Softmax::scale (CPU only)
     void fuseScaleSoftmax();
+    // fold a same-shape NaryEltwise Add into a preceding TransformLayout's
+    // deinterleave pass (CPU only): see graph_fusion_transform_add.cpp
+    void fuseTransformLayoutAdd();
     // replace constant sub-expressions with their results
 
     // widen FP16/BF16 constants to execution precision while the engine lacks half kernels

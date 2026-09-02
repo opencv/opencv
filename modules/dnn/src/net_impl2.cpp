@@ -760,6 +760,14 @@ void Net::Impl::finalize()
     for (const Ptr<Graph>& g : allgraphs)
         finalizeGraph(g, useCUDA);
     useBlockLayout();
+    // TransformLayout nodes only exist from here on (useBlockLayout() just
+    // inserted them), so this can't run any earlier -- e.g. not from
+    // prepareForInference(), which runs before block-layout resolution and
+    // would only ever see a producer like ConvTranspose2 feeding Add
+    // directly, with no TransformLayout node yet to fuse into. Re-runs on
+    // every finalize() by design, same as useBlockLayout() itself: each
+    // fresh set of TransformLayout nodes needs re-fusing.
+    fuseTransformLayoutAdd();
     assignBuffers();
     totalLayers = updateGraphOfs(mainGraph, 0, true);
 
