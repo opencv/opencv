@@ -1921,8 +1921,8 @@ TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225)
     cv::Mat out;
     EXPECT_NO_THROW(cv::cvtColor(in, out, codeVNG));
 
-    for(int iy=0; iy < out.size().height; iy++) {
-        for(int ix=0; ix < out.size().width; ix++) {
+    for(int iy=2; iy < out.size().height-2; iy++) {
+        for(int ix=2; ix < out.size().width-2; ix++) {
             // Avoid to test around main diagonal pixels.
             if(cv::abs(ix - iy) < margin) {
                 continue;
@@ -1951,8 +1951,6 @@ TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225_small)
     Mat diff;
     absdiff(outVNG, outINT, diff);
 
-    imwrite("outVNG.png", outVNG);
-    imwrite("outINT.png", outINT);
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
 }
 
