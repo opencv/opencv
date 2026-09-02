@@ -114,7 +114,6 @@ CV_WRAP inline void fastNlMeansDenoising(const GpuMat& src, CV_OUT GpuMat& dst,
 {
     fastNlMeansDenoising(InputArray(src), OutputArray(dst), h, search_window, block_size, stream);
 }
-
 /** @brief Modification of fastNlMeansDenoising function for colored images
 
 @param src Input 8-bit 3-channel image.
