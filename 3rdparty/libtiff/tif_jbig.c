@@ -186,44 +186,10 @@ static void JBIGOutputBie(unsigned char *buffer, size_t len, void *userData)
 
 static int JBIGEncode(TIFF *tif, uint8_t *buffer, tmsize_t size, uint16_t s)
 {
-    static const char module[] = "JBIG";
     TIFFDirectory *dir = &tif->tif_dir;
     struct jbg_enc_state encoder;
-    uint64_t rowbytes64;
-    uint64_t required64;
-    tmsize_t required;
 
-    (void)s;
-
-    if (dir->td_bitspersample != 1 || dir->td_samplesperpixel != 1)
-    {
-        TIFFErrorExtR(tif, module,
-                      "JBIG encoder supports only single-sample 1-bit image "
-                      "planes");
-        return 0;
-    }
-
-    if (TIFFNumberOfStrips(tif) != 1)
-    {
-        TIFFErrorExtR(tif, module,
-                      "Multistrip images not supported in encoder");
-        return 0;
-    }
-
-    rowbytes64 = TIFFhowmany8_64(dir->td_imagewidth);
-    required64 = _TIFFMultiply64(tif, rowbytes64, dir->td_imagelength, module);
-    required = _TIFFCastUInt64ToSSize(tif, required64, module);
-    if (required == 0)
-        return 0;
-    if (size < required)
-    {
-        TIFFErrorExtR(tif, module,
-                      "Application buffer too small for JBIG source image "
-                      "plane: got %" TIFF_SSIZE_FORMAT
-                      " bytes, need %" TIFF_SSIZE_FORMAT,
-                      size, required);
-        return 0;
-    }
+    (void)size, (void)s;
 
     jbg_enc_init(&encoder, dir->td_imagewidth, dir->td_imagelength, 1, &buffer,
                  JBIGOutputBie, tif);

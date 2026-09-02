@@ -40,17 +40,10 @@
 /*
  * Convert color value from the CIE L*a*b* 1976 space to CIE XYZ.
  */
-TIFF_NOSANITIZE_UNSIGNED_INT_OVERFLOW
 void TIFFCIELabToXYZ(TIFFCIELabToRGB *cielab, uint32_t l, int32_t a, int32_t b,
                      float *X, float *Y, float *Z)
 {
-    /*
-     * Keep the historical signed a * 256 and b * 256 scaling. Out-of-range
-     * callers may trigger UBSan signed-overflow reports here, but this
-     * per-pixel path intentionally does not add extra handling; see !926 for
-     * details.
-     */
-    TIFFCIELab16ToXYZ(cielab, l * 257U, a * 256, b * 256, X, Y, Z);
+    TIFFCIELab16ToXYZ(cielab, l * 257, a * 256, b * 256, X, Y, Z);
 }
 
 /*

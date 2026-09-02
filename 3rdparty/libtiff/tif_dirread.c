@@ -1819,8 +1819,7 @@ TIFFReadDirEntryShortArray(TIFF *tif, TIFFDirEntry *direntry, uint16_t **value)
         default:
             break;
     }
-    data = (uint16_t *)_TIFFCheckMalloc(tif, count, sizeof(uint16_t),
-                                        "TIFFReadDirEntryShortArray");
+    data = (uint16_t *)_TIFFmallocExt(tif, count * 2);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -1997,8 +1996,7 @@ TIFFReadDirEntrySshortArray(TIFF *tif, TIFFDirEntry *direntry, int16_t **value)
         default:
             break;
     }
-    data = (int16_t *)_TIFFCheckMalloc(tif, count, sizeof(int16_t),
-                                       "TIFFReadDirEntrySshortArray");
+    data = (int16_t *)_TIFFmallocExt(tif, count * 2);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -2173,8 +2171,7 @@ TIFFReadDirEntryLongArray(TIFF *tif, TIFFDirEntry *direntry, uint32_t **value)
         default:
             break;
     }
-    data = (uint32_t *)_TIFFCheckMalloc(tif, count, sizeof(uint32_t),
-                                        "TIFFReadDirEntryLongArray");
+    data = (uint32_t *)_TIFFmallocExt(tif, count * 4);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -2349,8 +2346,7 @@ TIFFReadDirEntrySlongArray(TIFF *tif, TIFFDirEntry *direntry, int32_t **value)
         default:
             break;
     }
-    data = (int32_t *)_TIFFCheckMalloc(tif, count, sizeof(int32_t),
-                                       "TIFFReadDirEntrySlongArray");
+    data = (int32_t *)_TIFFmallocExt(tif, count * 4);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -2521,8 +2517,7 @@ TIFFReadDirEntryLong8ArrayWithLimit(TIFF *tif, TIFFDirEntry *direntry,
         default:
             break;
     }
-    data = (uint64_t *)_TIFFCheckMalloc(tif, count, sizeof(uint64_t),
-                                        "TIFFReadDirEntryLong8ArrayWithLimit");
+    data = (uint64_t *)_TIFFmallocExt(tif, count * 8);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -2701,8 +2696,7 @@ TIFFReadDirEntrySlong8Array(TIFF *tif, TIFFDirEntry *direntry, int64_t **value)
         default:
             break;
     }
-    data = (int64_t *)_TIFFCheckMalloc(tif, count, sizeof(int64_t),
-                                       "TIFFReadDirEntrySlong8Array");
+    data = (int64_t *)_TIFFmallocExt(tif, count * 8);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -2842,8 +2836,8 @@ TIFFReadDirEntryFloatArray(TIFF *tif, TIFFDirEntry *direntry, float **value)
         default:
             break;
     }
-    data = (float *)_TIFFCheckMalloc(tif, count, sizeof(float),
-                                     "TIFFReadDirEntryFloatArray");
+    data =
+        (float *)_TIFFmallocExt(tif, (tmsize_t)((size_t)count * sizeof(float)));
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -3309,8 +3303,7 @@ TIFFReadDirEntryIfd8Array(TIFF *tif, TIFFDirEntry *direntry, uint64_t **value)
         default:
             break;
     }
-    data = (uint64_t *)_TIFFCheckMalloc(tif, count, sizeof(uint64_t),
-                                        "TIFFReadDirEntryIfd8Array");
+    data = (uint64_t *)_TIFFmallocExt(tif, count * 8);
     if (data == 0)
     {
         _TIFFfreeExt(tif, origdata);
@@ -8458,13 +8451,6 @@ static uint64_t _TIFFGetStrileOffsetOrByteCountValue(TIFF *tif, uint32_t strile,
     if (pbErr)
         *pbErr = 0;
 
-    if (strile >= td->td_nstrips)
-    {
-        if (pbErr)
-            *pbErr = 1;
-        return 0;
-    }
-
     /* Avoid the "dirent->tdir_count <= 4" code path for one of
      * StripOffsets/StripByteCounts, and the other code path for the other one,
      * which will lead to inconsistencies and potential out-of-bounds reads.
@@ -8507,7 +8493,7 @@ static uint64_t _TIFFGetStrileOffsetOrByteCountValue(TIFF *tif, uint32_t strile,
             }
         }
     }
-    if (*parray == NULL)
+    if (*parray == NULL || strile >= td->td_nstrips)
     {
         if (pbErr)
             *pbErr = 1;

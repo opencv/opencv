@@ -1171,6 +1171,13 @@ static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         incount++;
         fcode = ((long)c << BITS_MAX) + ent;
         h = (c << HSHIFT) ^ ent; /* xor hashing */
+#ifdef _WINDOWS
+        /*
+         * Check hash index for an overflow.
+         */
+        if (h >= HSIZE)
+            h -= HSIZE;
+#endif
         hp = &sp->enc_hashtab[h];
         if (hp->hash == fcode)
         {

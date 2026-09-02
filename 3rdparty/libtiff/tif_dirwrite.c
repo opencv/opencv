@@ -1384,7 +1384,6 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
         goto bad;
     }
     _TIFFfreeExt(tif, dirmem);
-    dirmem = NULL;
 
     /* Increment tif_curdir if IFD wasn't already written to file and no error
      * occurred during IFD writing above. */
@@ -2503,8 +2502,8 @@ static int TIFFWriteDirectoryTagCheckedLongArray(TIFF *tif, uint32_t *ndir,
                                                  uint16_t tag, uint32_t count,
                                                  uint32_t *value)
 {
-    if (count > UINT32_MAX / 4)
-        return (0);
+    assert(count < 0x40000000);
+    assert(sizeof(uint32_t) == 4);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 4, ndir);
@@ -2521,8 +2520,8 @@ static int TIFFWriteDirectoryTagCheckedSlongArray(TIFF *tif, uint32_t *ndir,
                                                   uint16_t tag, uint32_t count,
                                                   int32_t *value)
 {
-    if (count > UINT32_MAX / 4)
-        return (0);
+    assert(count < 0x40000000);
+    assert(sizeof(int32_t) == 4);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 4, ndir);
@@ -2539,14 +2538,14 @@ static int TIFFWriteDirectoryTagCheckedLong8Array(TIFF *tif, uint32_t *ndir,
                                                   uint16_t tag, uint32_t count,
                                                   uint64_t *value)
 {
+    assert(count < 0x20000000);
+    assert(sizeof(uint64_t) == 8);
     if (!(tif->tif_flags & TIFF_BIGTIFF))
     {
         TIFFErrorExtR(tif, "TIFFWriteDirectoryTagCheckedLong8Array",
                       "LONG8 not allowed for ClassicTIFF");
         return (0);
     }
-    if (count > UINT32_MAX / 8)
-        return (0);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 8, ndir);
@@ -2563,14 +2562,14 @@ static int TIFFWriteDirectoryTagCheckedSlong8Array(TIFF *tif, uint32_t *ndir,
                                                    uint16_t tag, uint32_t count,
                                                    int64_t *value)
 {
+    assert(count < 0x20000000);
+    assert(sizeof(int64_t) == 8);
     if (!(tif->tif_flags & TIFF_BIGTIFF))
     {
         TIFFErrorExtR(tif, "TIFFWriteDirectoryTagCheckedSlong8Array",
                       "SLONG8 not allowed for ClassicTIFF");
         return (0);
     }
-    if (count > UINT32_MAX / 8)
-        return (0);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 8, ndir);
@@ -3069,9 +3068,8 @@ static int TIFFWriteDirectoryTagCheckedFloatArray(TIFF *tif, uint32_t *ndir,
                                                   uint16_t tag, uint32_t count,
                                                   float *value)
 {
+    assert(count < 0x40000000);
     assert(sizeof(float) == 4);
-    if (count > UINT32_MAX / 4)
-        return (0);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 4, ndir);
@@ -3089,9 +3087,8 @@ static int TIFFWriteDirectoryTagCheckedDoubleArray(TIFF *tif, uint32_t *ndir,
                                                    uint16_t tag, uint32_t count,
                                                    double *value)
 {
+    assert(count < 0x20000000);
     assert(sizeof(double) == 8);
-    if (count > UINT32_MAX / 8)
-        return (0);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 8, ndir);
@@ -3108,8 +3105,8 @@ static int TIFFWriteDirectoryTagCheckedIfdArray(TIFF *tif, uint32_t *ndir,
                                                 TIFFDirEntry *dir, uint16_t tag,
                                                 uint32_t count, uint32_t *value)
 {
-    if (count > UINT32_MAX / 4)
-        return (0);
+    assert(count < 0x40000000);
+    assert(sizeof(uint32_t) == 4);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 4, ndir);
@@ -3126,9 +3123,9 @@ static int TIFFWriteDirectoryTagCheckedIfd8Array(TIFF *tif, uint32_t *ndir,
                                                  uint16_t tag, uint32_t count,
                                                  uint64_t *value)
 {
+    assert(count < 0x20000000);
+    assert(sizeof(uint64_t) == 8);
     assert(tif->tif_flags & TIFF_BIGTIFF);
-    if (count > UINT32_MAX / 8)
-        return (0);
     if (dir == NULL) /* Just evaluate IFD data size and increment ndir. */
     {
         EvaluateIFDdatasizeWrite(tif, count, 8, ndir);

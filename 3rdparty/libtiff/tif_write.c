@@ -28,7 +28,6 @@
  * Scanline-oriented Write Support
  */
 #include "tiffiop.h"
-#include <assert.h>
 #include <stdio.h>
 
 #define NOSTRIP ((uint32_t)(-1)) /* undefined state */
@@ -178,11 +177,6 @@ int TIFFWriteScanline(TIFF *tif, void *buf, uint32_t row, uint16_t sample)
              * backup to the start and then decode
              * forward (below).
              */
-            /* Coverity Scan warns about a potential division by zero given
-             * an above check against zero, but I believe this is a false
-             * positive.
-             */
-            assert(td->td_stripsperimage != 0);
             tif->tif_dir.td_row =
                 (strip % td->td_stripsperimage) * td->td_rowsperstrip;
             tif->tif_rawcp = tif->tif_rawdata;

@@ -367,14 +367,6 @@ static const TIFFField ZSTDFields[] = {
      FALSE, "ZSTD compression_level", NULL},
 };
 
-static uint64_t ZSTDGetMaxCompressionRatio(TIFF *tif)
-{
-    (void)tif;
-    /* Value from the issue #479 tile allocation guard that previously lived
-     * in _TIFFReadEncodedTileAndAllocBuffer(). */
-    return 33000;
-}
-
 int TIFFInitZSTD(TIFF *tif, int scheme)
 {
     static const char module[] = "TIFFInitZSTD";
@@ -433,7 +425,6 @@ int TIFFInitZSTD(TIFF *tif, int scheme)
     tif->tif_encodestrip = ZSTDEncode;
     tif->tif_encodetile = ZSTDEncode;
     tif->tif_cleanup = ZSTDCleanup;
-    tif->tif_getmaxcompressionratio = ZSTDGetMaxCompressionRatio;
     /*
      * Setup predictor setup.
      */
