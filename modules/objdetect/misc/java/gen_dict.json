@@ -65,5 +65,8 @@
             "suffix": "Ljava_util_List",
             "v_type": "vector_NativeByteArray"
         }
+    },
+    "type_override": {
+        "aruco_DetectorParameters": "DetectorParameters"
     }
 }
