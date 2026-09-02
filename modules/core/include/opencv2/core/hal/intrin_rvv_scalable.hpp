@@ -555,6 +555,42 @@ template <> inline void v_store<8>(ushort* ptr, const v_uint16& a)
     ptr[4] = buf[4]; ptr[5] = buf[5]; ptr[6] = buf[6]; ptr[7] = buf[7];
 }
 
+template <int N = VTraits<v_uint32>::max_nlanes>
+inline void v_store(unsigned* ptr, const v_uint32& a)
+{
+    unsigned buf[VTraits<v_uint32>::max_nlanes];
+    v_store(buf, a);
+    for (int i = 0; i < N; i++) {
+        ptr[i] = buf[i];
+    }
+}
+
+template <> inline void v_store<4>(unsigned* ptr, const v_uint32& a)
+{
+    unsigned buf[VTraits<v_uint32>::max_nlanes];
+    v_store(buf, a);
+    ptr[0] = buf[0]; ptr[1] = buf[1];
+    ptr[2] = buf[2]; ptr[3] = buf[3];
+}
+
+template <int N = VTraits<v_int32>::max_nlanes>
+inline void v_store(int* ptr, const v_int32& a)
+{
+    int buf[VTraits<v_int32>::max_nlanes];
+    v_store(buf, a);
+    for (int i = 0; i < N; i++) {
+        ptr[i] = buf[i];
+    }
+}
+
+template <> inline void v_store<4>(int* ptr, const v_int32& a)
+{
+    int buf[VTraits<v_int32>::max_nlanes];
+    v_store(buf, a);
+    ptr[0] = buf[0]; ptr[1] = buf[1];
+    ptr[2] = buf[2]; ptr[3] = buf[3];
+}
+
 template <int N = VTraits<v_float32>::max_nlanes>
 inline void v_store(float* ptr, const v_float32& a)
 {
@@ -661,6 +697,21 @@ inline _Tpvec v_lut(const _Tp* tab, const v_int32& vidx) \
 OPENCV_HAL_IMPL_RVV_LUT_VEC(v_float32, float)
 OPENCV_HAL_IMPL_RVV_LUT_VEC(v_int32, int)
 OPENCV_HAL_IMPL_RVV_LUT_VEC(v_uint32, unsigned)
+
+inline v_uint32 v_lut_expand(const ushort* tab, const v_int32& vidx)
+{
+    const size_t vl = VTraits<v_int32>::vlanes();
+    v_uint32 byte_idx = __riscv_vmul(__riscv_vreinterpret_u32m2(vidx), sizeof(ushort), vl);
+    vuint16m1_t values = __riscv_vloxei32(tab, byte_idx, vl);
+    return __riscv_vwcvtu_x(values, vl);
+}
+
+inline v_uint32 v_lut_expand(const uchar* tab, const v_int32& byte_idx)
+{
+    const size_t vl = VTraits<v_int32>::vlanes();
+    vuint8mf2_t values = __riscv_vloxei32(tab, __riscv_vreinterpret_u32m2(byte_idx), vl);
+    return __riscv_vwcvtu_x(__riscv_vwcvtu_x(values, vl), vl);
+}
 
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
@@ -1725,6 +1776,42 @@ OPENCV_HAL_IMPL_RVV_EXPAND(ushort, v_uint32, vuint32m2_t, v_uint16, 16, u32, u16
 OPENCV_HAL_IMPL_RVV_EXPAND(short, v_int32, vint32m2_t, v_int16, 16, i32, i16, __riscv_vwcvt_x)
 OPENCV_HAL_IMPL_RVV_EXPAND(uint, v_uint64, vuint64m2_t, v_uint32, 32, u64, u32, __riscv_vwcvtu_x)
 OPENCV_HAL_IMPL_RVV_EXPAND(int, v_int64, vint64m2_t, v_int32, 32, i64, i32, __riscv_vwcvt_x)
+
+template <int N = VTraits<v_uint32>::max_nlanes>
+inline v_uint32 v_load(const unsigned* ptr)
+{
+    unsigned buf[VTraits<v_uint32>::max_nlanes];
+    v_store(buf, v_setzero_u32());
+    for (int i = 0; i < N; i++) {
+        buf[i] = ptr[i];
+    }
+    return v_load(buf);
+}
+template <> inline v_uint32 v_load<4>(const unsigned* ptr)
+{
+    unsigned buf[VTraits<v_uint32>::max_nlanes];
+    v_store(buf, v_setzero_u32());
+    buf[0] = ptr[0]; buf[1] = ptr[1]; buf[2] = ptr[2]; buf[3] = ptr[3];
+    return v_load(buf);
+}
+
+template <int N = VTraits<v_int32>::max_nlanes>
+inline v_int32 v_load(const int* ptr)
+{
+    int buf[VTraits<v_int32>::max_nlanes];
+    v_store(buf, v_setzero_s32());
+    for (int i = 0; i < N; i++) {
+        buf[i] = ptr[i];
+    }
+    return v_load(buf);
+}
+template <> inline v_int32 v_load<4>(const int* ptr)
+{
+    int buf[VTraits<v_int32>::max_nlanes];
+    v_store(buf, v_setzero_s32());
+    buf[0] = ptr[0]; buf[1] = ptr[1]; buf[2] = ptr[2]; buf[3] = ptr[3];
+    return v_load(buf);
+}
 
 template <int N = VTraits<v_float32>::max_nlanes>
 inline v_float32 v_load(const float* ptr)
