@@ -826,6 +826,9 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
  * non-zero pixels of gray-scale image.
  *
  * @param array Input gray-scale image or 2D point set, stored in std::vector or Mat.
+ *
+ * @note Point coordinates that the resulting Rect cannot represent - outside of the int range,
+ * or infinite - are saturated to INT_MIN / INT_MAX, and its sides are clamped to INT_MAX.
  */
 CV_EXPORTS_W Rect boundingRect( InputArray array );
 
