@@ -122,9 +122,6 @@
    restarting of LibJpeg decoding session.
 */
 
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-
 #include "tiffiop.h"
 #ifdef OJPEG_SUPPORT
 
@@ -209,18 +206,12 @@ static const TIFFField ojpegFields[] = {
 #include "jerror.h"
 #include "jpeglib.h"
 
-#ifndef TIFF_jpeg_source_mgr_defined
-#define TIFF_jpeg_source_mgr_defined
-typedef struct jpeg_source_mgr jpeg_source_mgr;
-#endif
+typedef struct jpeg_source_mgr tiff_ojpeg_source_mgr;
 
-#ifndef TIFF_jpeg_error_mgr_defined
-#define TIFF_jpeg_error_mgr_defined
-typedef struct jpeg_error_mgr jpeg_error_mgr;
-#endif
+typedef struct jpeg_error_mgr tiff_ojpeg_error_mgr;
 
-typedef struct jpeg_common_struct jpeg_common_struct;
-typedef struct jpeg_decompress_struct jpeg_decompress_struct;
+typedef struct jpeg_common_struct tiff_ojpeg_common_struct;
+typedef struct jpeg_decompress_struct tiff_ojpeg_decompress_struct;
 
 typedef enum
 {
@@ -316,9 +307,9 @@ typedef struct
     uint32_t write_curstrile;
     uint8_t libjpeg_session_active;
     uint8_t libjpeg_jpeg_query_style;
-    jpeg_error_mgr libjpeg_jpeg_error_mgr;
-    jpeg_decompress_struct libjpeg_jpeg_decompress_struct;
-    jpeg_source_mgr libjpeg_jpeg_source_mgr;
+    tiff_ojpeg_error_mgr libjpeg_jpeg_error_mgr;
+    tiff_ojpeg_decompress_struct libjpeg_jpeg_decompress_struct;
+    tiff_ojpeg_source_mgr libjpeg_jpeg_source_mgr;
     uint8_t subsampling_convert_log;
     uint32_t subsampling_convert_ylinelen;
     uint32_t subsampling_convert_ylines;
@@ -413,46 +404,51 @@ static void OJPEGWriteStreamEoi(TIFF *tif, void **mem, uint32_t *len);
 
 #ifdef LIBJPEG_ENCAP_EXTERNAL
 extern int jpeg_create_decompress_encap(OJPEGState *sp,
-                                        jpeg_decompress_struct *cinfo);
-extern int jpeg_read_header_encap(OJPEGState *sp, jpeg_decompress_struct *cinfo,
+                                        tiff_ojpeg_decompress_struct *cinfo);
+extern int jpeg_read_header_encap(OJPEGState *sp,
+                                  tiff_ojpeg_decompress_struct *cinfo,
                                   uint8_t require_image);
 extern int jpeg_start_decompress_encap(OJPEGState *sp,
-                                       jpeg_decompress_struct *cinfo);
+                                       tiff_ojpeg_decompress_struct *cinfo);
 extern int jpeg_read_scanlines_encap(OJPEGState *sp,
-                                     jpeg_decompress_struct *cinfo,
+                                     tiff_ojpeg_decompress_struct *cinfo,
                                      void *scanlines, uint32_t max_lines);
 extern int jpeg_read_raw_data_encap(OJPEGState *sp,
-                                    jpeg_decompress_struct *cinfo, void *data,
-                                    uint32_t max_lines);
+                                    tiff_ojpeg_decompress_struct *cinfo,
+                                    void *data, uint32_t max_lines);
 extern void jpeg_encap_unwind(TIFF *tif);
 #else
 static int jpeg_create_decompress_encap(OJPEGState *sp,
-                                        jpeg_decompress_struct *j);
-static int jpeg_read_header_encap(OJPEGState *sp, jpeg_decompress_struct *cinfo,
+                                        tiff_ojpeg_decompress_struct *j);
+static int jpeg_read_header_encap(OJPEGState *sp,
+                                  tiff_ojpeg_decompress_struct *cinfo,
                                   uint8_t require_image);
 static int jpeg_start_decompress_encap(OJPEGState *sp,
-                                       jpeg_decompress_struct *cinfo);
+                                       tiff_ojpeg_decompress_struct *cinfo);
 static int jpeg_read_scanlines_encap(OJPEGState *sp,
-                                     jpeg_decompress_struct *cinfo,
+                                     tiff_ojpeg_decompress_struct *cinfo,
                                      void *scanlines, uint32_t max_lines);
 static int jpeg_read_raw_data_encap(OJPEGState *sp,
-                                    jpeg_decompress_struct *cinfo, void *data,
-                                    uint32_t max_lines);
+                                    tiff_ojpeg_decompress_struct *cinfo,
+                                    void *data, uint32_t max_lines);
 static void jpeg_encap_unwind(TIFF *tif);
 #endif
 
-static void OJPEGLibjpegJpegErrorMgrOutputMessage(jpeg_common_struct *cinfo);
-static void OJPEGLibjpegJpegErrorMgrErrorExit(jpeg_common_struct *cinfo);
-static void OJPEGLibjpegJpegSourceMgrInitSource(jpeg_decompress_struct *cinfo);
-static boolean
-OJPEGLibjpegJpegSourceMgrFillInputBuffer(jpeg_decompress_struct *cinfo);
 static void
-OJPEGLibjpegJpegSourceMgrSkipInputData(jpeg_decompress_struct *cinfo,
+OJPEGLibjpegJpegErrorMgrOutputMessage(tiff_ojpeg_common_struct *cinfo);
+static void OJPEGLibjpegJpegErrorMgrErrorExit(tiff_ojpeg_common_struct *cinfo);
+static void
+OJPEGLibjpegJpegSourceMgrInitSource(tiff_ojpeg_decompress_struct *cinfo);
+static boolean
+OJPEGLibjpegJpegSourceMgrFillInputBuffer(tiff_ojpeg_decompress_struct *cinfo);
+static void
+OJPEGLibjpegJpegSourceMgrSkipInputData(tiff_ojpeg_decompress_struct *cinfo,
                                        long num_bytes);
 static boolean
-OJPEGLibjpegJpegSourceMgrResyncToRestart(jpeg_decompress_struct *cinfo,
+OJPEGLibjpegJpegSourceMgrResyncToRestart(tiff_ojpeg_decompress_struct *cinfo,
                                          int desired);
-static void OJPEGLibjpegJpegSourceMgrTermSource(jpeg_decompress_struct *cinfo);
+static void
+OJPEGLibjpegJpegSourceMgrTermSource(tiff_ojpeg_decompress_struct *cinfo);
 
 int TIFFInitOJPEG(TIFF *tif, int scheme)
 {
@@ -473,7 +469,7 @@ int TIFFInitOJPEG(TIFF *tif, int scheme)
     }
 
     /* state block */
-    sp = _TIFFmallocExt(tif, sizeof(OJPEGState));
+    sp = (OJPEGState *)_TIFFmallocExt(tif, sizeof(OJPEGState));
     if (sp == NULL)
     {
         TIFFErrorExtR(tif, module, "No space for OJPEG state block");
@@ -724,9 +720,9 @@ static int OJPEGPreDecode(TIFF *tif, uint16_t s)
             return (0);
     }
     if (isTiled(tif))
-        m = tif->tif_curtile;
+        m = tif->tif_dir.td_curtile;
     else
-        m = tif->tif_curstrip;
+        m = tif->tif_dir.td_curstrip;
     if ((sp->writeheader_done != 0) &&
         ((sp->write_cursample != s) || (sp->write_curstrile > m)))
     {
@@ -797,7 +793,7 @@ static int OJPEGPreDecodeSkipRaw(TIFF *tif)
     {
         if (jpeg_read_raw_data_encap(sp, &(sp->libjpeg_jpeg_decompress_struct),
                                      sp->subsampling_convert_ycbcrimage,
-                                     sp->subsampling_ver * 8) == 0)
+                                     (uint32_t)sp->subsampling_ver * 8) == 0)
             return (0);
         m -= sp->subsampling_convert_clines;
     }
@@ -805,7 +801,7 @@ static int OJPEGPreDecodeSkipRaw(TIFF *tif)
     {
         if (jpeg_read_raw_data_encap(sp, &(sp->libjpeg_jpeg_decompress_struct),
                                      sp->subsampling_convert_ycbcrimage,
-                                     sp->subsampling_ver * 8) == 0)
+                                     (uint32_t)sp->subsampling_ver * 8) == 0)
             return (0);
         sp->subsampling_convert_state = m;
     }
@@ -819,7 +815,7 @@ static int OJPEGPreDecodeSkipScanlines(TIFF *tif)
     uint32_t m;
     if (sp->skip_buffer == NULL)
     {
-        sp->skip_buffer = _TIFFmallocExt(tif, sp->bytes_per_line);
+        sp->skip_buffer = (uint8_t *)_TIFFmallocExt(tif, sp->bytes_per_line);
         if (sp->skip_buffer == NULL)
         {
             TIFFErrorExtR(tif, module, "Out of memory");
@@ -910,10 +906,10 @@ static int OJPEGDecodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc)
     {
         if (sp->subsampling_convert_state == 0)
         {
-            if (jpeg_read_raw_data_encap(sp,
-                                         &(sp->libjpeg_jpeg_decompress_struct),
-                                         sp->subsampling_convert_ycbcrimage,
-                                         sp->subsampling_ver * 8) == 0)
+            if (jpeg_read_raw_data_encap(
+                    sp, &(sp->libjpeg_jpeg_decompress_struct),
+                    sp->subsampling_convert_ycbcrimage,
+                    (uint32_t)sp->subsampling_ver * 8) == 0)
             {
                 sp->error_in_raw_data_decoding = 1;
                 return (0);
@@ -1225,7 +1221,7 @@ static int OJPEGReadHeaderInfo(TIFF *tif)
             TIFFErrorExtR(tif, module, "Invalid subsampling values");
             return (0);
         }
-        if (sp->strile_length % (sp->subsampling_ver * 8) != 0)
+        if (sp->strile_length % ((uint32_t)sp->subsampling_ver * 8) != 0)
         {
             TIFFErrorExtR(tif, module,
                           "Incompatible vertical subsampling and image "
@@ -1233,9 +1229,11 @@ static int OJPEGReadHeaderInfo(TIFF *tif)
             return (0);
         }
         sp->restart_interval =
-            (uint16_t)(((sp->strile_width + sp->subsampling_hor * 8 - 1) /
-                        (sp->subsampling_hor * 8)) *
-                       (sp->strile_length / (sp->subsampling_ver * 8)));
+            (uint16_t)(((sp->strile_width + (uint32_t)sp->subsampling_hor * 8 -
+                         1) /
+                        ((uint32_t)sp->subsampling_hor * 8)) *
+                       (sp->strile_length /
+                        ((uint32_t)sp->subsampling_ver * 8)));
     }
     if (OJPEGReadHeaderInfoSec(tif) == 0)
         return (0);
@@ -1358,20 +1356,43 @@ static int OJPEGWriteHeaderInfo(TIFF *tif)
             /* Check for division by zero. */
             if (sp->subsampling_hor == 0 || sp->subsampling_ver == 0)
                 return (0);
+            /* Check for potential overflow in subsampling_convert_ylinelen
+             * computation.
+             */
+            if (sp->strile_width >
+                UINT32_MAX - ((uint32_t)sp->subsampling_hor * 8 - 1))
+                return (0);
             sp->subsampling_convert_ylinelen =
-                ((sp->strile_width + sp->subsampling_hor * 8 - 1) /
-                 (sp->subsampling_hor * 8) * sp->subsampling_hor * 8);
-            sp->subsampling_convert_ylines = sp->subsampling_ver * 8;
+                ((sp->strile_width + (uint32_t)sp->subsampling_hor * 8 - 1) /
+                 ((uint32_t)sp->subsampling_hor * 8) *
+                 ((uint32_t)sp->subsampling_hor * 8));
+            sp->subsampling_convert_ylines = (uint32_t)sp->subsampling_ver * 8;
             sp->subsampling_convert_clinelen =
                 sp->subsampling_convert_ylinelen / sp->subsampling_hor;
             sp->subsampling_convert_clines = 8;
-            sp->subsampling_convert_ybuflen = sp->subsampling_convert_ylinelen *
-                                              sp->subsampling_convert_ylines;
-            sp->subsampling_convert_cbuflen = sp->subsampling_convert_clinelen *
-                                              sp->subsampling_convert_clines;
-            sp->subsampling_convert_ycbcrbuflen =
-                sp->subsampling_convert_ybuflen +
-                2 * sp->subsampling_convert_cbuflen;
+            /* Check for potential overflow in buffer length computations.
+             * Use 64-bit intermediates to detect uint32_t overflow in
+             * ylinelen * ylines, clinelen * clines, and their sum.
+             */
+            {
+                uint64_t ybuflen64 =
+                    (uint64_t)sp->subsampling_convert_ylinelen *
+                    sp->subsampling_convert_ylines;
+                uint64_t cbuflen64 =
+                    (uint64_t)sp->subsampling_convert_clinelen *
+                    sp->subsampling_convert_clines;
+                uint64_t ycbcrbuflen64 = ybuflen64 + 2 * cbuflen64;
+                if (ybuflen64 > UINT32_MAX || cbuflen64 > UINT32_MAX ||
+                    ycbcrbuflen64 > UINT32_MAX)
+                {
+                    TIFFErrorExtR(tif, module,
+                                  "Integer overflow in OJPEG buffer size");
+                    return (0);
+                }
+                sp->subsampling_convert_ybuflen = (uint32_t)ybuflen64;
+                sp->subsampling_convert_cbuflen = (uint32_t)cbuflen64;
+                sp->subsampling_convert_ycbcrbuflen = (uint32_t)ycbcrbuflen64;
+            }
             /* The calloc is not normally necessary, except in some edge/broken
              * cases */
             /* for example for a tiled image of height 1 with a tile height of 1
@@ -1383,8 +1404,8 @@ static int OJPEGWriteHeaderInfo(TIFF *tif)
             /* Even if this case is allowed (?), its handling is broken because
              * OJPEGPreDecode() should also likely */
             /* reset subsampling_convert_state to 0 when changing tile. */
-            sp->subsampling_convert_ycbcrbuf =
-                _TIFFcallocExt(tif, 1, sp->subsampling_convert_ycbcrbuflen);
+            sp->subsampling_convert_ycbcrbuf = (uint8_t *)_TIFFcallocExt(
+                tif, 1, sp->subsampling_convert_ycbcrbuflen);
             if (sp->subsampling_convert_ycbcrbuf == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -1398,8 +1419,9 @@ static int OJPEGWriteHeaderInfo(TIFF *tif)
             sp->subsampling_convert_ycbcrimagelen =
                 3 + sp->subsampling_convert_ylines +
                 2 * sp->subsampling_convert_clines;
-            sp->subsampling_convert_ycbcrimage = _TIFFmallocExt(
-                tif, sp->subsampling_convert_ycbcrimagelen * sizeof(uint8_t *));
+            sp->subsampling_convert_ycbcrimage = (uint8_t **)_TIFFmallocExt(
+                tif, (tmsize_t)((size_t)sp->subsampling_convert_ycbcrimagelen *
+                                sizeof(uint8_t *)));
             if (sp->subsampling_convert_ycbcrimage == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -1426,9 +1448,14 @@ static int OJPEGWriteHeaderInfo(TIFF *tif)
                 ((sp->strile_width % sp->subsampling_hor) != 0 ? 1 : 0);
             sp->subsampling_convert_state = 0;
             sp->error_in_raw_data_decoding = 0;
-            sp->bytes_per_line =
-                sp->subsampling_convert_clinelenout *
-                (sp->subsampling_ver * sp->subsampling_hor + 2);
+
+            const uint64_t bpl =
+                (uint64_t)sp->subsampling_convert_clinelenout *
+                ((uint64_t)sp->subsampling_ver * sp->subsampling_hor + 2);
+            if (bpl > UINT32_MAX)
+                return (0);
+            sp->bytes_per_line = (uint32_t)bpl;
+
             sp->lines_per_strile =
                 sp->strile_length / sp->subsampling_ver +
                 ((sp->strile_length % sp->subsampling_ver) != 0 ? 1 : 0);
@@ -1478,7 +1505,8 @@ static void OJPEGLibjpegSessionAbort(TIFF *tif)
 {
     OJPEGState *sp = (OJPEGState *)tif->tif_data;
     assert(sp->libjpeg_session_active != 0);
-    jpeg_destroy((jpeg_common_struct *)(&(sp->libjpeg_jpeg_decompress_struct)));
+    jpeg_destroy(
+        (tiff_ojpeg_common_struct *)(&(sp->libjpeg_jpeg_decompress_struct)));
     sp->libjpeg_session_active = 0;
 }
 
@@ -1560,7 +1588,7 @@ static int OJPEGReadHeaderInfoSec(TIFF *tif)
                     return (0);
                 }
                 if (n > 2)
-                    OJPEGReadSkip(sp, n - 2);
+                    OJPEGReadSkip(sp, (uint16_t)(n - 2));
                 break;
             case JPEG_MARKER_DRI:
                 if (OJPEGReadHeaderInfoSecStreamDri(tif) == 0)
@@ -1603,8 +1631,9 @@ static int OJPEGReadHeaderInfoSec(TIFF *tif)
             return (0);
         sp->sof_marker_id = JPEG_MARKER_SOF0;
         for (o = 0; o < sp->samples_per_pixel; o++)
-            sp->sof_c[o] = o;
-        sp->sof_hv[0] = ((sp->subsampling_hor << 4) | sp->subsampling_ver);
+            sp->sof_c[o] = (uint8_t)o;
+        sp->sof_hv[0] =
+            (uint8_t)((sp->subsampling_hor << 4) | sp->subsampling_ver);
         for (o = 1; o < sp->samples_per_pixel; o++)
             sp->sof_hv[o] = 17;
         sp->sof_x = sp->strile_width;
@@ -1659,10 +1688,10 @@ static int OJPEGReadHeaderInfoSecStreamDqt(TIFF *tif)
         return (0);
     }
     if (sp->subsamplingcorrect != 0)
-        OJPEGReadSkip(sp, m - 2);
+        OJPEGReadSkip(sp, (uint16_t)(m - 2));
     else
     {
-        m -= 2;
+        m = (uint16_t)(m - 2);
         do
         {
             if (m < 65)
@@ -1671,7 +1700,7 @@ static int OJPEGReadHeaderInfoSecStreamDqt(TIFF *tif)
                 return (0);
             }
             na = sizeof(uint32_t) + 69;
-            nb = _TIFFmallocExt(tif, na);
+            nb = (uint8_t *)_TIFFmallocExt(tif, na);
             if (nb == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -1697,7 +1726,7 @@ static int OJPEGReadHeaderInfoSecStreamDqt(TIFF *tif)
             if (sp->qtable[o] != 0)
                 _TIFFfreeExt(tif, sp->qtable[o]);
             sp->qtable[o] = nb;
-            m -= 65;
+            m = (uint16_t)(m - 65);
         } while (m > 0);
     }
     return (1);
@@ -1725,12 +1754,12 @@ static int OJPEGReadHeaderInfoSecStreamDht(TIFF *tif)
     }
     if (sp->subsamplingcorrect != 0)
     {
-        OJPEGReadSkip(sp, m - 2);
+        OJPEGReadSkip(sp, (uint16_t)(m - 2));
     }
     else
     {
-        na = sizeof(uint32_t) + 2 + m;
-        nb = _TIFFmallocExt(tif, na);
+        na = (uint32_t)(sizeof(uint32_t) + 2 + m);
+        nb = (uint8_t *)_TIFFmallocExt(tif, na);
         if (nb == 0)
         {
             TIFFErrorExtR(tif, module, "Out of memory");
@@ -1739,9 +1768,10 @@ static int OJPEGReadHeaderInfoSecStreamDht(TIFF *tif)
         *(uint32_t *)nb = na;
         nb[sizeof(uint32_t)] = 255;
         nb[sizeof(uint32_t) + 1] = JPEG_MARKER_DHT;
-        nb[sizeof(uint32_t) + 2] = (m >> 8);
-        nb[sizeof(uint32_t) + 3] = (m & 255);
-        if (OJPEGReadBlock(sp, m - 2, &nb[sizeof(uint32_t) + 4]) == 0)
+        nb[sizeof(uint32_t) + 2] = (uint8_t)(m >> 8);
+        nb[sizeof(uint32_t) + 3] = (uint8_t)(m & 255);
+        if (OJPEGReadBlock(sp, (uint16_t)(m - 2), &nb[sizeof(uint32_t) + 4]) ==
+            0)
         {
             _TIFFfreeExt(tif, nb);
             return (0);
@@ -1809,7 +1839,7 @@ static int OJPEGReadHeaderInfoSecStreamSof(TIFF *tif, uint8_t marker_id)
             TIFFErrorExtR(tif, module, "Corrupt SOF marker in JPEG data");
         return (0);
     }
-    m -= 8;
+    m = (uint16_t)(m - 8);
     if (m % 3 != 0)
     {
         if (sp->subsamplingcorrect == 0)
@@ -2030,7 +2060,7 @@ static int OJPEGReadHeaderInfoSecTablesQTable(TIFF *tif)
                 }
             }
             oa = sizeof(uint32_t) + 69;
-            ob = _TIFFmallocExt(tif, oa);
+            ob = (uint8_t *)_TIFFmallocExt(tif, oa);
             if (ob == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -2098,8 +2128,8 @@ static int OJPEGReadHeaderInfoSecTablesDcTable(TIFF *tif)
             q = 0;
             for (n = 0; n < 16; n++)
                 q += o[n];
-            ra = sizeof(uint32_t) + 21 + q;
-            rb = _TIFFmallocExt(tif, ra);
+            ra = (uint32_t)(sizeof(uint32_t) + 21 + q);
+            rb = (uint8_t *)_TIFFmallocExt(tif, ra);
             if (rb == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -2122,7 +2152,7 @@ static int OJPEGReadHeaderInfoSecTablesDcTable(TIFF *tif)
             if (sp->dctable[m] != 0)
                 _TIFFfreeExt(tif, sp->dctable[m]);
             sp->dctable[m] = rb;
-            sp->sos_tda[m] = (m << 4);
+            sp->sos_tda[m] = (uint8_t)(m << 4);
         }
         else
             sp->sos_tda[m] = sp->sos_tda[m - 1];
@@ -2168,8 +2198,8 @@ static int OJPEGReadHeaderInfoSecTablesAcTable(TIFF *tif)
             q = 0;
             for (n = 0; n < 16; n++)
                 q += o[n];
-            ra = sizeof(uint32_t) + 21 + q;
-            rb = _TIFFmallocExt(tif, ra);
+            ra = (uint32_t)(sizeof(uint32_t) + 21 + q);
+            rb = (uint8_t *)_TIFFmallocExt(tif, ra);
             if (rb == 0)
             {
                 TIFFErrorExtR(tif, module, "Out of memory");
@@ -2220,7 +2250,7 @@ static int OJPEGReadBufferFill(OJPEGState *sp)
             if ((uint64_t)m > sp->in_buffer_file_togo)
                 m = (uint16_t)sp->in_buffer_file_togo;
             n = TIFFReadFile(sp->tif, sp->in_buffer, (tmsize_t)m);
-            if (n == 0)
+            if (n <= 0)
                 return (0);
             assert(n > 0);
             assert(n <= OJPEG_BUFFER);
@@ -2286,6 +2316,7 @@ static int OJPEGReadBufferFill(OJPEGState *sp)
                     sp->in_buffer_next_strile++;
                 }
                 break;
+            case osibsEof:
             default:
                 return (0);
         }
@@ -2331,7 +2362,7 @@ static int OJPEGReadWord(OJPEGState *sp, uint16_t *word)
     uint8_t m;
     if (OJPEGReadByte(sp, &m) == 0)
         return (0);
-    *word = (m << 8);
+    *word = (uint16_t)(m << 8);
     if (OJPEGReadByte(sp, &m) == 0)
         return (0);
     *word |= m;
@@ -2345,7 +2376,7 @@ static int OJPEGReadBlock(OJPEGState *sp, uint16_t len, void *mem)
     uint16_t n;
     assert(len > 0);
     mlen = len;
-    mmem = mem;
+    mmem = (uint8_t *)mem;
     do
     {
         if (sp->in_buffer_togo == 0)
@@ -2359,8 +2390,8 @@ static int OJPEGReadBlock(OJPEGState *sp, uint16_t len, void *mem)
             n = sp->in_buffer_togo;
         _TIFFmemcpy(mmem, sp->in_buffer_cur, n);
         sp->in_buffer_cur += n;
-        sp->in_buffer_togo -= n;
-        mlen -= n;
+        sp->in_buffer_togo = (uint16_t)(sp->in_buffer_togo - n);
+        mlen = (uint16_t)(mlen - n);
         mmem += n;
     } while (mlen > 0);
     return (1);
@@ -2375,8 +2406,8 @@ static void OJPEGReadSkip(OJPEGState *sp, uint16_t len)
     if (n > sp->in_buffer_togo)
         n = sp->in_buffer_togo;
     sp->in_buffer_cur += n;
-    sp->in_buffer_togo -= n;
-    m -= n;
+    sp->in_buffer_togo = (uint16_t)(sp->in_buffer_togo - n);
+    m = (uint16_t)(m - n);
     if (m > 0)
     {
         assert(sp->in_buffer_togo == 0);
@@ -2462,6 +2493,8 @@ static int OJPEGWriteStream(TIFF *tif, void **mem, uint32_t *len)
             case ososEoi:
                 OJPEGWriteStreamEoi(tif, mem, len);
                 break;
+            default:
+                break;
         }
     } while (*len == 0);
     return (1);
@@ -2475,7 +2508,7 @@ static void OJPEGWriteStreamSoi(TIFF *tif, void **mem, uint32_t *len)
     sp->out_buffer[1] = JPEG_MARKER_SOI;
     *len = 2;
     *mem = (void *)sp->out_buffer;
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamQTable(TIFF *tif, uint8_t table_index, void **mem,
@@ -2485,9 +2518,10 @@ static void OJPEGWriteStreamQTable(TIFF *tif, uint8_t table_index, void **mem,
     if (sp->qtable[table_index] != 0)
     {
         *mem = (void *)(sp->qtable[table_index] + sizeof(uint32_t));
-        *len = *((uint32_t *)sp->qtable[table_index]) - sizeof(uint32_t);
+        *len = (uint32_t)(*((uint32_t *)sp->qtable[table_index]) -
+                          sizeof(uint32_t));
     }
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamDcTable(TIFF *tif, uint8_t table_index, void **mem,
@@ -2497,9 +2531,10 @@ static void OJPEGWriteStreamDcTable(TIFF *tif, uint8_t table_index, void **mem,
     if (sp->dctable[table_index] != 0)
     {
         *mem = (void *)(sp->dctable[table_index] + sizeof(uint32_t));
-        *len = *((uint32_t *)sp->dctable[table_index]) - sizeof(uint32_t);
+        *len = (uint32_t)(*((uint32_t *)sp->dctable[table_index]) -
+                          sizeof(uint32_t));
     }
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamAcTable(TIFF *tif, uint8_t table_index, void **mem,
@@ -2509,9 +2544,10 @@ static void OJPEGWriteStreamAcTable(TIFF *tif, uint8_t table_index, void **mem,
     if (sp->actable[table_index] != 0)
     {
         *mem = (void *)(sp->actable[table_index] + sizeof(uint32_t));
-        *len = *((uint32_t *)sp->actable[table_index]) - sizeof(uint32_t);
+        *len = (uint32_t)(*((uint32_t *)sp->actable[table_index]) -
+                          sizeof(uint32_t));
     }
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamDri(TIFF *tif, void **mem, uint32_t *len)
@@ -2524,12 +2560,12 @@ static void OJPEGWriteStreamDri(TIFF *tif, void **mem, uint32_t *len)
         sp->out_buffer[1] = JPEG_MARKER_DRI;
         sp->out_buffer[2] = 0;
         sp->out_buffer[3] = 4;
-        sp->out_buffer[4] = (sp->restart_interval >> 8);
-        sp->out_buffer[5] = (sp->restart_interval & 255);
+        sp->out_buffer[4] = (uint8_t)(sp->restart_interval >> 8);
+        sp->out_buffer[5] = (uint8_t)(sp->restart_interval & 255);
         *len = 6;
         *mem = (void *)sp->out_buffer;
     }
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamSof(TIFF *tif, void **mem, uint32_t *len)
@@ -2542,15 +2578,15 @@ static void OJPEGWriteStreamSof(TIFF *tif, void **mem, uint32_t *len)
     sp->out_buffer[1] = sp->sof_marker_id;
     /* Lf */
     sp->out_buffer[2] = 0;
-    sp->out_buffer[3] = 8 + sp->samples_per_pixel_per_plane * 3;
+    sp->out_buffer[3] = (uint8_t)(8 + sp->samples_per_pixel_per_plane * 3);
     /* P */
     sp->out_buffer[4] = 8;
     /* Y */
     sp->out_buffer[5] = (uint8_t)(sp->sof_y >> 8);
-    sp->out_buffer[6] = (sp->sof_y & 255);
+    sp->out_buffer[6] = (uint8_t)(sp->sof_y & 255);
     /* X */
     sp->out_buffer[7] = (uint8_t)(sp->sof_x >> 8);
-    sp->out_buffer[8] = (sp->sof_x & 255);
+    sp->out_buffer[8] = (uint8_t)(sp->sof_x & 255);
     /* Nf */
     sp->out_buffer[9] = sp->samples_per_pixel_per_plane;
     for (m = 0; m < sp->samples_per_pixel_per_plane; m++)
@@ -2564,9 +2600,9 @@ static void OJPEGWriteStreamSof(TIFF *tif, void **mem, uint32_t *len)
         sp->out_buffer[10 + m * 3 + 2] =
             sp->sof_tq[sp->plane_sample_offset + m];
     }
-    *len = 10 + sp->samples_per_pixel_per_plane * 3;
+    *len = 10 + (uint32_t)sp->samples_per_pixel_per_plane * 3;
     *mem = (void *)sp->out_buffer;
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static void OJPEGWriteStreamSos(TIFF *tif, void **mem, uint32_t *len)
@@ -2579,7 +2615,7 @@ static void OJPEGWriteStreamSos(TIFF *tif, void **mem, uint32_t *len)
     sp->out_buffer[1] = JPEG_MARKER_SOS;
     /* Ls */
     sp->out_buffer[2] = 0;
-    sp->out_buffer[3] = 6 + sp->samples_per_pixel_per_plane * 2;
+    sp->out_buffer[3] = (uint8_t)(6 + sp->samples_per_pixel_per_plane * 2);
     /* Ns */
     sp->out_buffer[4] = sp->samples_per_pixel_per_plane;
     for (m = 0; m < sp->samples_per_pixel_per_plane; m++)
@@ -2596,9 +2632,9 @@ static void OJPEGWriteStreamSos(TIFF *tif, void **mem, uint32_t *len)
     sp->out_buffer[5 + sp->samples_per_pixel_per_plane * 2 + 1] = 63;
     /* Ah and Al */
     sp->out_buffer[5 + sp->samples_per_pixel_per_plane * 2 + 2] = 0;
-    *len = 8 + sp->samples_per_pixel_per_plane * 2;
+    *len = 8 + (uint32_t)sp->samples_per_pixel_per_plane * 2;
     *mem = (void *)sp->out_buffer;
-    sp->out_state++;
+    sp->out_state = (OJPEGStateOutState)(sp->out_state + 1);
 }
 
 static int OJPEGWriteStreamCompressed(TIFF *tif, void **mem, uint32_t *len)
@@ -2626,6 +2662,8 @@ static int OJPEGWriteStreamCompressed(TIFF *tif, void **mem, uint32_t *len)
             case osibsEof:
                 sp->out_state = ososEoi;
                 break;
+            case osibsNotSetYet:
+            case osibsJpegInterchangeFormat:
             default:
                 break;
         }
@@ -2638,7 +2676,7 @@ static void OJPEGWriteStreamRst(TIFF *tif, void **mem, uint32_t *len)
     OJPEGState *sp = (OJPEGState *)tif->tif_data;
     assert(OJPEG_BUFFER >= 2);
     sp->out_buffer[0] = 255;
-    sp->out_buffer[1] = JPEG_MARKER_RST0 + sp->restart_index;
+    sp->out_buffer[1] = (uint8_t)(JPEG_MARKER_RST0 + sp->restart_index);
     sp->restart_index++;
     if (sp->restart_index == 8)
         sp->restart_index = 0;
@@ -2659,7 +2697,7 @@ static void OJPEGWriteStreamEoi(TIFF *tif, void **mem, uint32_t *len)
 
 #ifndef LIBJPEG_ENCAP_EXTERNAL
 static int jpeg_create_decompress_encap(OJPEGState *sp,
-                                        jpeg_decompress_struct *cinfo)
+                                        tiff_ojpeg_decompress_struct *cinfo)
 {
     if (SETJMP(sp->exit_jmpbuf))
         return 0;
@@ -2672,7 +2710,8 @@ static int jpeg_create_decompress_encap(OJPEGState *sp,
 #endif
 
 #ifndef LIBJPEG_ENCAP_EXTERNAL
-static int jpeg_read_header_encap(OJPEGState *sp, jpeg_decompress_struct *cinfo,
+static int jpeg_read_header_encap(OJPEGState *sp,
+                                  tiff_ojpeg_decompress_struct *cinfo,
                                   uint8_t require_image)
 {
     if (SETJMP(sp->exit_jmpbuf))
@@ -2687,7 +2726,7 @@ static int jpeg_read_header_encap(OJPEGState *sp, jpeg_decompress_struct *cinfo,
 
 #ifndef LIBJPEG_ENCAP_EXTERNAL
 static int jpeg_start_decompress_encap(OJPEGState *sp,
-                                       jpeg_decompress_struct *cinfo)
+                                       tiff_ojpeg_decompress_struct *cinfo)
 {
     if (SETJMP(sp->exit_jmpbuf))
         return 0;
@@ -2701,14 +2740,14 @@ static int jpeg_start_decompress_encap(OJPEGState *sp,
 
 #ifndef LIBJPEG_ENCAP_EXTERNAL
 static int jpeg_read_scanlines_encap(OJPEGState *sp,
-                                     jpeg_decompress_struct *cinfo,
+                                     tiff_ojpeg_decompress_struct *cinfo,
                                      void *scanlines, uint32_t max_lines)
 {
     if (SETJMP(sp->exit_jmpbuf))
         return 0;
     else
     {
-        jpeg_read_scanlines(cinfo, scanlines, max_lines);
+        jpeg_read_scanlines(cinfo, (JSAMPARRAY)scanlines, max_lines);
         return 1;
     }
 }
@@ -2716,14 +2755,14 @@ static int jpeg_read_scanlines_encap(OJPEGState *sp,
 
 #ifndef LIBJPEG_ENCAP_EXTERNAL
 static int jpeg_read_raw_data_encap(OJPEGState *sp,
-                                    jpeg_decompress_struct *cinfo, void *data,
-                                    uint32_t max_lines)
+                                    tiff_ojpeg_decompress_struct *cinfo,
+                                    void *data, uint32_t max_lines)
 {
     if (SETJMP(sp->exit_jmpbuf))
         return 0;
     else
     {
-        jpeg_read_raw_data(cinfo, data, max_lines);
+        jpeg_read_raw_data(cinfo, (JSAMPIMAGE)data, max_lines);
         return 1;
     }
 }
@@ -2737,14 +2776,15 @@ static void jpeg_encap_unwind(TIFF *tif)
 }
 #endif
 
-static void OJPEGLibjpegJpegErrorMgrOutputMessage(jpeg_common_struct *cinfo)
+static void
+OJPEGLibjpegJpegErrorMgrOutputMessage(tiff_ojpeg_common_struct *cinfo)
 {
     char buffer[JMSG_LENGTH_MAX];
     (*cinfo->err->format_message)(cinfo, buffer);
     TIFFWarningExtR(((TIFF *)(cinfo->client_data)), "LibJpeg", "%s", buffer);
 }
 
-static void OJPEGLibjpegJpegErrorMgrErrorExit(jpeg_common_struct *cinfo)
+static void OJPEGLibjpegJpegErrorMgrErrorExit(tiff_ojpeg_common_struct *cinfo)
 {
     char buffer[JMSG_LENGTH_MAX];
     (*cinfo->err->format_message)(cinfo, buffer);
@@ -2752,13 +2792,14 @@ static void OJPEGLibjpegJpegErrorMgrErrorExit(jpeg_common_struct *cinfo)
     jpeg_encap_unwind((TIFF *)(cinfo->client_data));
 }
 
-static void OJPEGLibjpegJpegSourceMgrInitSource(jpeg_decompress_struct *cinfo)
+static void
+OJPEGLibjpegJpegSourceMgrInitSource(tiff_ojpeg_decompress_struct *cinfo)
 {
     (void)cinfo;
 }
 
 static boolean
-OJPEGLibjpegJpegSourceMgrFillInputBuffer(jpeg_decompress_struct *cinfo)
+OJPEGLibjpegJpegSourceMgrFillInputBuffer(tiff_ojpeg_decompress_struct *cinfo)
 {
     TIFF *tif = (TIFF *)cinfo->client_data;
     OJPEGState *sp = (OJPEGState *)tif->tif_data;
@@ -2770,12 +2811,12 @@ OJPEGLibjpegJpegSourceMgrFillInputBuffer(jpeg_decompress_struct *cinfo)
         jpeg_encap_unwind(tif);
     }
     sp->libjpeg_jpeg_source_mgr.bytes_in_buffer = len;
-    sp->libjpeg_jpeg_source_mgr.next_input_byte = mem;
+    sp->libjpeg_jpeg_source_mgr.next_input_byte = (const JOCTET *)mem;
     return (1);
 }
 
 static void
-OJPEGLibjpegJpegSourceMgrSkipInputData(jpeg_decompress_struct *cinfo,
+OJPEGLibjpegJpegSourceMgrSkipInputData(tiff_ojpeg_decompress_struct *cinfo,
                                        long num_bytes)
 {
     TIFF *tif = (TIFF *)cinfo->client_data;
@@ -2789,7 +2830,7 @@ OJPEGLibjpegJpegSourceMgrSkipInputData(jpeg_decompress_struct *cinfo,
 #pragma warning(disable : 4702) /* unreachable code */
 #endif
 static boolean
-OJPEGLibjpegJpegSourceMgrResyncToRestart(jpeg_decompress_struct *cinfo,
+OJPEGLibjpegJpegSourceMgrResyncToRestart(tiff_ojpeg_decompress_struct *cinfo,
                                          int desired)
 {
     TIFF *tif = (TIFF *)cinfo->client_data;
@@ -2802,7 +2843,8 @@ OJPEGLibjpegJpegSourceMgrResyncToRestart(jpeg_decompress_struct *cinfo,
 #pragma warning(pop)
 #endif
 
-static void OJPEGLibjpegJpegSourceMgrTermSource(jpeg_decompress_struct *cinfo)
+static void
+OJPEGLibjpegJpegSourceMgrTermSource(tiff_ojpeg_decompress_struct *cinfo)
 {
     (void)cinfo;
 }

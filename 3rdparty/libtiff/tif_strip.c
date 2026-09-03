@@ -47,6 +47,8 @@ uint32_t TIFFComputeStrip(TIFF *tif, uint32_t row, uint16_t sample)
     strip = row / td->td_rowsperstrip;
     if (td->td_planarconfig == PLANARCONFIG_SEPARATE)
     {
+        uint64_t sample_offset;
+        uint64_t strip64;
         if (sample >= td->td_samplesperpixel)
         {
             TIFFErrorExtR(tif, module, "%lu: Sample out of range, max %lu",
@@ -54,7 +56,16 @@ uint32_t TIFFComputeStrip(TIFF *tif, uint32_t row, uint16_t sample)
                           (unsigned long)td->td_samplesperpixel);
             return (0);
         }
-        strip += (uint32_t)sample * td->td_stripsperimage;
+        sample_offset = _TIFFMultiply64(tif, sample, td->td_stripsperimage,
+                                        "TIFFComputeStrip");
+        if (sample_offset == 0 && sample != 0 && td->td_stripsperimage != 0)
+            return (0);
+        strip64 = _TIFFAdd64(tif, sample_offset, strip, "TIFFComputeStrip");
+        if (strip64 == 0 && (sample_offset != 0 || strip != 0))
+            return (0);
+        strip = _TIFFCastUInt64ToUInt32(tif, strip64, "TIFFComputeStrip");
+        if (strip == 0 && strip64 != 0)
+            return (0);
     }
     return (strip);
 }
@@ -83,14 +94,24 @@ uint32_t TIFFNumberOfStrips(TIFF *tif)
 }
 
 /*
- * Compute the # bytes in a variable height, row-aligned strip.
+ * Compute the # bytes in a variable height, row-aligned strip if isStrip is
+ * TRUE, or in a tile if isStrip is FALSE
  */
-uint64_t TIFFVStripSize64(TIFF *tif, uint32_t nrows)
+uint64_t _TIFFStrileSize64(TIFF *tif, uint32_t nrows, int isStrip)
 {
-    static const char module[] = "TIFFVStripSize64";
+    static const char module[] = "_TIFFStrileSize64";
     TIFFDirectory *td = &tif->tif_dir;
-    if (nrows == (uint32_t)(-1))
-        nrows = td->td_imagelength;
+    if (isStrip)
+    {
+        if (nrows == (uint32_t)(-1))
+            nrows = td->td_imagelength;
+    }
+    else
+    {
+        if (td->td_tilelength == 0 || td->td_tilewidth == 0 ||
+            td->td_tiledepth == 0)
+            return (0);
+    }
     if ((td->td_planarconfig == PLANARCONFIG_CONTIG) &&
         (td->td_photometric == PHOTOMETRIC_YCBCR) && (!isUpSampled(tif)))
     {
@@ -125,9 +146,10 @@ uint64_t TIFFVStripSize64(TIFF *tif, uint32_t nrows)
                           ycbcrsubsampling[0], ycbcrsubsampling[1]);
             return 0;
         }
-        samplingblock_samples = ycbcrsubsampling[0] * ycbcrsubsampling[1] + 2;
-        samplingblocks_hor =
-            TIFFhowmany_32(td->td_imagewidth, ycbcrsubsampling[0]);
+        samplingblock_samples =
+            (uint16_t)(ycbcrsubsampling[0] * ycbcrsubsampling[1] + 2);
+        const uint32_t width = isStrip ? td->td_imagewidth : td->td_tilewidth;
+        samplingblocks_hor = TIFFhowmany_32(width, ycbcrsubsampling[0]);
         samplingblocks_ver = TIFFhowmany_32(nrows, ycbcrsubsampling[1]);
         samplingrow_samples = _TIFFMultiply64(tif, samplingblocks_hor,
                                               samplingblock_samples, module);
@@ -137,8 +159,20 @@ uint64_t TIFFVStripSize64(TIFF *tif, uint32_t nrows)
             _TIFFMultiply64(tif, samplingrow_size, samplingblocks_ver, module));
     }
     else
-        return (_TIFFMultiply64(tif, nrows, TIFFScanlineSize64(tif), module));
+        return (_TIFFMultiply64(tif, nrows,
+                                isStrip ? TIFFScanlineSize64(tif)
+                                        : TIFFTileRowSize64(tif),
+                                module));
 }
+
+/*
+ * Compute the # bytes in a variable height, row-aligned strip.
+ */
+uint64_t TIFFVStripSize64(TIFF *tif, uint32_t nrows)
+{
+    return _TIFFStrileSize64(tif, nrows, /* isStrip = */ TRUE);
+}
+
 tmsize_t TIFFVStripSize(TIFF *tif, uint32_t nrows)
 {
     static const char module[] = "TIFFVStripSize";
@@ -286,7 +320,7 @@ uint64_t TIFFScanlineSize64(TIFF *tif)
                 return 0;
             }
             samplingblock_samples =
-                ycbcrsubsampling[0] * ycbcrsubsampling[1] + 2;
+                (uint16_t)(ycbcrsubsampling[0] * ycbcrsubsampling[1] + 2);
             samplingblocks_hor =
                 TIFFhowmany_32(td->td_imagewidth, ycbcrsubsampling[0]);
             samplingrow_samples = _TIFFMultiply64(

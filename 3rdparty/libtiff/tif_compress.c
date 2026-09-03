@@ -139,6 +139,18 @@ static int _TIFFtrue(TIFF *tif)
 }
 static void _TIFFvoid(TIFF *tif) { (void)tif; }
 
+static uint64_t _TIFFDefaultGetMaxCompressionRatio(TIFF *tif)
+{
+    (void)tif;
+    return 0; /* unknown */
+}
+
+static uint64_t _TIFFGetMaxCompressionRatioOne(TIFF *tif)
+{
+    (void)tif;
+    return 1; /* no compression */
+}
+
 void _TIFFSetDefaultCompressionState(TIFF *tif)
 {
     tif->tif_fixuptags = _TIFFNoFixupTags;
@@ -160,6 +172,7 @@ void _TIFFSetDefaultCompressionState(TIFF *tif)
     tif->tif_cleanup = _TIFFvoid;
     tif->tif_defstripsize = _TIFFDefaultStripSize;
     tif->tif_deftilesize = _TIFFDefaultTileSize;
+    tif->tif_getmaxcompressionratio = _TIFFDefaultGetMaxCompressionRatio;
     tif->tif_flags &= ~(TIFF_NOBITREV | TIFF_NOREADRAW);
 }
 
@@ -168,6 +181,8 @@ int TIFFSetCompressionScheme(TIFF *tif, int scheme)
     const TIFFCodec *c = TIFFFindCODEC((uint16_t)scheme);
 
     _TIFFSetDefaultCompressionState(tif);
+    if (scheme == COMPRESSION_NONE)
+        tif->tif_getmaxcompressionratio = _TIFFGetMaxCompressionRatioOne;
     /*
      * Don't treat an unknown compression scheme as an error.
      * This permits applications to open files with data that
@@ -175,6 +190,13 @@ int TIFFSetCompressionScheme(TIFF *tif, int scheme)
      * may still be meaningful.
      */
     return (c ? (*c->init)(tif, scheme) : 1);
+}
+
+uint64_t TIFFGetMaxCompressionRatio(TIFF *tif)
+{
+    if (tif->tif_getmaxcompressionratio)
+        return tif->tif_getmaxcompressionratio(tif);
+    return 0;
 }
 
 /*
@@ -200,7 +222,7 @@ const TIFFCodec *TIFFFindCODEC(uint16_t scheme)
     for (c = _TIFFBuiltinCODECS; c->name; c++)
         if (c->scheme == scheme)
             return (c);
-    return ((const TIFFCodec *)0);
+    return NULL;
 }
 
 TIFFCodec *TIFFRegisterCODEC(uint16_t scheme, const char *name,
@@ -212,9 +234,11 @@ TIFFCodec *TIFFRegisterCODEC(uint16_t scheme, const char *name,
 
     if (cd != NULL)
     {
+        char *codec_name;
         cd->info = (TIFFCodec *)((uint8_t *)cd + sizeof(codec_t));
-        cd->info->name = (char *)((uint8_t *)cd->info + sizeof(TIFFCodec));
-        strcpy(cd->info->name, name);
+        codec_name = (char *)((uint8_t *)cd->info + sizeof(TIFFCodec));
+        strcpy(codec_name, name);
+        cd->info->name = codec_name;
         cd->info->scheme = scheme;
         cd->info->init = init;
         cd->next = registeredCODECS;
@@ -247,7 +271,7 @@ void TIFFUnRegisterCODEC(TIFFCodec *c)
 }
 
 /************************************************************************/
-/*                       TIFFGetConfisuredCODECs()                      */
+/*                      TIFFGetConfiguredCODECs()                       */
 /************************************************************************/
 
 /**
@@ -258,7 +282,7 @@ void TIFFUnRegisterCODEC(TIFFCodec *c)
  * or NULL if function failed.
  */
 
-TIFFCodec *TIFFGetConfiguredCODECs()
+TIFFCodec *TIFFGetConfiguredCODECs(void)
 {
     int i = 1;
     codec_t *cd;
@@ -268,8 +292,8 @@ TIFFCodec *TIFFGetConfiguredCODECs()
 
     for (cd = registeredCODECS; cd; cd = cd->next)
     {
-        new_codecs =
-            (TIFFCodec *)_TIFFreallocExt(NULL, codecs, i * sizeof(TIFFCodec));
+        new_codecs = (TIFFCodec *)_TIFFreallocExt(
+            NULL, codecs, (tmsize_t)((size_t)i * sizeof(TIFFCodec)));
         if (!new_codecs)
         {
             _TIFFfreeExt(NULL, codecs);
@@ -283,21 +307,21 @@ TIFFCodec *TIFFGetConfiguredCODECs()
     {
         if (TIFFIsCODECConfigured(c->scheme))
         {
-            new_codecs = (TIFFCodec *)_TIFFreallocExt(NULL, codecs,
-                                                      i * sizeof(TIFFCodec));
+            new_codecs = (TIFFCodec *)_TIFFreallocExt(
+                NULL, codecs, (tmsize_t)((size_t)i * sizeof(TIFFCodec)));
             if (!new_codecs)
             {
                 _TIFFfreeExt(NULL, codecs);
                 return NULL;
             }
             codecs = new_codecs;
-            _TIFFmemcpy(codecs + i - 1, (const void *)c, sizeof(TIFFCodec));
+            _TIFFmemcpy(codecs + i - 1, c, sizeof(TIFFCodec));
             i++;
         }
     }
 
-    new_codecs =
-        (TIFFCodec *)_TIFFreallocExt(NULL, codecs, i * sizeof(TIFFCodec));
+    new_codecs = (TIFFCodec *)_TIFFreallocExt(
+        NULL, codecs, (tmsize_t)((size_t)i * sizeof(TIFFCodec)));
     if (!new_codecs)
     {
         _TIFFfreeExt(NULL, codecs);
