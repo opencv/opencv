@@ -5,14 +5,18 @@
 
 namespace opencv_test { namespace {
 
+// Batch factor for TEST_CYCLE_MULTIRUN: keeps work per timed sample roughly constant (~100k point-ops) so small-n rows clear the timer floor.
+// The perf framework divides the reported time by the run count, so results stay per-call.
+static int multirun_count(int total) { return std::max(1, 100000 / total); }
+
 // (points count, sparsity S = x-range / points count)
 typedef tuple<int, double> ConvHullParams;
 typedef TestBaseWithParam<ConvHullParams> ConvexHullPerfTest;
 
 PERF_TEST_P(ConvexHullPerfTest, convexHull,
     testing::Combine(
-        testing::Values(100, 1000, 10000, 50000),  // total points
-        testing::Values(0.125, 0.5, 2.0)           // sparsity S = rangeX / total
+        testing::Values(100, 300, 1000, 10000, 50000),  // total points
+        testing::Values(0.125, 0.5, 2.0)                // sparsity S = rangeX / total
         // S = 0.125 : dense, ~8 points per x-column, strong lo/hi pruning
         // S = 0.5   : typical contour density (circle-ish contour has S ~ 1/pi)
         // S = 2     : sparse but below MAX_SPARSITY_FACTOR(4) 
@@ -28,7 +32,7 @@ PERF_TEST_P(ConvexHullPerfTest, convexHull,
         points[i] = Point(rng.uniform(0, rangeX), rng.uniform(-100000, 100000));
 
     std::vector<Point> hull_pts;
-    TEST_CYCLE() convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
+    TEST_CYCLE_MULTIRUN(multirun_count(total)) convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
 
     SANITY_CHECK_NOTHING();
 }
@@ -37,7 +41,7 @@ PERF_TEST_P(ConvexHullPerfTest, convexHull,
 typedef TestBaseWithParam<int> ConvexHullContourPerfTest;
 
 PERF_TEST_P(ConvexHullContourPerfTest, convexHull,
-    testing::Values(100, 1000, 10000, 50000))   // contour points
+    testing::Values(100, 300, 1000, 10000, 50000))   // contour points
 {
     const int total = GetParam();
 
@@ -54,7 +58,7 @@ PERF_TEST_P(ConvexHullContourPerfTest, convexHull,
     }
 
     std::vector<Point> hull_pts;
-    TEST_CYCLE() convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
+    TEST_CYCLE_MULTIRUN(multirun_count(total)) convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
 
     SANITY_CHECK_NOTHING();
 }
