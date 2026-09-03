@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
+#include "opencv2/videoio/registry.hpp"
 
 namespace opencv_test
 {
@@ -42,6 +43,33 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   TEST_CYCLE_N(100) { writer << image; }
   SANITY_CHECK_NOTHING();
   remove(outfile.c_str());
+}
+
+typedef tuple<Size, bool> VideoWriter_OpenCV_MJPEG_t;
+typedef perf::TestBaseWithParam<VideoWriter_OpenCV_MJPEG_t> VideoWriter_OpenCV_MJPEG;
+
+PERF_TEST_P(VideoWriter_OpenCV_MJPEG, WriteFrame,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p),
+                testing::Bool()))
+{
+    if (!videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
+        throw SkipTestException("CAP_OPENCV_MJPEG is not available");
+
+    const Size sz = get<0>(GetParam());
+    const bool isColor = get<1>(GetParam());
+    Mat image(sz, isColor ? CV_8UC3 : CV_8UC1);
+    randu(image, 0, 256);
+
+    const string outfile = cv::tempfile(".avi");
+    const int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
+    VideoWriter writer(outfile, CAP_OPENCV_MJPEG, fourcc, 25, sz, isColor);
+    if (!writer.isOpened())
+        throw SkipTestException("OpenCV Motion JPEG writer can not be opened");
+
+    TEST_CYCLE() { writer << image; }
+    SANITY_CHECK_NOTHING();
+    remove(outfile.c_str());
 }
 
 } // namespace
