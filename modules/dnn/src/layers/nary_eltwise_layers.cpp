@@ -195,6 +195,8 @@ public:
 
         if (operation == "equal")
             op = OPERATION::EQUAL;
+        else if (operation == "not_equal")
+            op = OPERATION::NOT_EQUAL;
         else if (operation == "greater")
             op = OPERATION::GREATER;
         else if (operation == "greaterorequal")
@@ -438,7 +440,7 @@ public:
                 CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
 
-        if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
+        if (op == OPERATION::EQUAL || op == OPERATION::NOT_EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
             outputs.assign(1, CV_Bool);
         else
             outputs.assign(requiredOutputs, inputs[0]);
@@ -997,6 +999,11 @@ public:
                     binary_forward<T, bool>(equal, std::forward<Args>(args)...);
                     break;
                 }
+                case OPERATION::NOT_EQUAL: {
+                    auto not_equal = [](const T &a, const T &b) { return a != b; };
+                    binary_forward<T, bool>(not_equal, std::forward<Args>(args)...);
+                    break;
+                }
                 case OPERATION::GREATER: {
                     auto greater = [](const T &a, const T &b) { return a > b; };
                     binary_forward<T, bool>(greater, std::forward<Args>(args)...);
@@ -1130,6 +1137,11 @@ public:
                 case OPERATION::EQUAL: {
                     auto equal = [](const T &a, const T &b) { return a == b; };
                     binary_forward<T, bool>(equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::NOT_EQUAL: {
+                    auto not_equal = [](const T &a, const T &b) { return a != b; };
+                    binary_forward<T, bool>(not_equal, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::GREATER: {

@@ -156,9 +156,6 @@ TEST_P(Test_TFLite, max_unpooling)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    if (net.getMainGraph())
-        throw SkipTestException("The new dnn engine doesn't support forward to specified layers"); // https://github.com/opencv/opencv/issues/26349
-
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     cvtColor(input, input, COLOR_BGR2RGBA);
     input = input.mul(Scalar(1, 1, 1, 0));
@@ -283,6 +280,44 @@ TEST_P(Test_TFLite, StridedSlice) {
     testLayer("strided_slice");
 }
 
+// shrink_axis_mask: single and multiple shrunk axes.
+TEST_P(Test_TFLite, StridedSliceShrink) {
+    testLayer("strided_slice_shrink_1");
+    testLayer("strided_slice_shrink_2");
+}
+
+TEST_P(Test_TFLite, Slice) {
+    testLayer("slice");
+}
+
+TEST_P(Test_TFLite, Sign) {
+    testLayer("sign");
+}
+
+TEST_P(Test_TFLite, BatchMatMul) {
+    testLayer("batch_matmul", 1e-5, 1e-4);
+}
+
+TEST_P(Test_TFLite, Select) {
+    testLayer("select");
+}
+
+TEST_P(Test_TFLite, TopK) {
+    testLayer("top_k");
+}
+
+TEST_P(Test_TFLite, Less) {
+    testLayer("less");
+}
+
+TEST_P(Test_TFLite, NotEqual) {
+    testLayer("not_equal");
+}
+
+TEST_P(Test_TFLite, LogicalAnd) {
+    testLayer("logical_and");
+}
+
 TEST_P(Test_TFLite, face_blendshapes)
 {
     Mat inp = blobFromNPY(findDataFile("dnn/tflite/face_blendshapes_inp.npy"));
@@ -343,6 +378,197 @@ TEST_P(Test_TFLite, minimum)
     }
 
     normAssert(ref, out, "", l1, lInf);
+}
+
+// A multi-output model must keep all declared outputs, not just the last operator's.
+TEST_P(Test_TFLite, multi_output_names)
+{
+    Net net = readNetFromTFLite(findDataFile("dnn/tflite/face_detection_short_range.tflite", false));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::sort(outNames.begin(), outNames.end());
+    ASSERT_EQ(outNames, (std::vector<String>{"classificators", "regressors"}));
+}
+
+// end2end head [1,300,C] rows -> Nx7 [batch,cls,conf,x1,y1,x2,y2] for normAssertDetections
+static Mat decodeYoloEnd2End(const Mat& out, float confThr = 0.25f)
+{
+    int n = out.size[out.dims - 2];
+    Mat d = out.reshape(1, n);
+    std::vector<float> rows;
+    for (int i = 0; i < n; ++i)
+    {
+        const float* r = d.ptr<float>(i);
+        if (r[4] < confThr)
+            continue;
+        float v[7] = {0.f, r[5], r[4], r[0], r[1], r[2], r[3]};
+        rows.insert(rows.end(), v, v + 7);
+    }
+    return Mat((int)(rows.size() / 7), 7, CV_32F, rows.data()).clone();
+}
+
+// classic head [1, 4+numClasses, numAnchors] -> Nx7 [batch,cls,conf,x1,y1,x2,y2] after NMS
+static Mat decodeYoloClassic(const Mat& out, float confThr = 0.25f, float nmsThr = 0.45f)
+{
+    Mat t;
+    cv::transpose(out.reshape(1, out.size[1]), t);   // [numAnchors, 4+numClasses]
+    int nc = t.cols - 4;
+    std::vector<Rect2d> boxes;
+    std::vector<float> scores;
+    std::vector<int> ids;
+    for (int i = 0; i < t.rows; ++i)
+    {
+        const float* r = t.ptr<float>(i);
+        Point maxLoc;
+        double conf;
+        minMaxLoc(Mat(1, nc, CV_32F, (void*)(r + 4)), 0, &conf, 0, &maxLoc);
+        if (conf < confThr)
+            continue;
+        boxes.push_back(Rect2d(r[0] - r[2] / 2, r[1] - r[3] / 2, r[2], r[3]));
+        scores.push_back((float)conf);
+        ids.push_back(maxLoc.x);
+    }
+    std::vector<int> keep;
+    cv::dnn::NMSBoxes(boxes, scores, confThr, nmsThr, keep);
+    std::vector<float> rows;
+    for (int j : keep)
+    {
+        const Rect2d& b = boxes[j];
+        float v[7] = {0.f, (float)ids[j], scores[j], (float)b.x, (float)b.y,
+                      (float)(b.x + b.width), (float)(b.y + b.height)};
+        rows.insert(rows.end(), v, v + 7);
+    }
+    return Mat((int)(rows.size() / 7), 7, CV_32F, rows.data()).clone();
+}
+
+TEST_P(Test_TFLite, yolov8n)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolov8n.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    Mat out = net.forward();
+    // reference detections from the real TFLite runtime
+    float refData[] = {
+        0, 16, 0.829000f, 0.171249f, 0.385993f, 0.403052f, 0.938615f,
+        0, 1,  0.806363f, 0.161169f, 0.236250f, 0.738703f, 0.730268f,
+        0, 7,  0.576536f, 0.607749f, 0.130276f, 0.900613f, 0.297468f,
+    };
+    normAssertDetections(Mat(3, 7, CV_32F, refData), decodeYoloClassic(out), "", 0.25, 0.01, 0.02);
+}
+
+TEST_P(Test_TFLite, yolov5nu)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolov5nu.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    Mat out = net.forward();
+    float refData[] = {
+        0, 16, 0.840335f, 0.171856f, 0.382436f, 0.406565f, 0.921805f,
+        0, 7,  0.647125f, 0.607092f, 0.128508f, 0.902305f, 0.299463f,
+        0, 1,  0.494057f, 0.160287f, 0.242356f, 0.740009f, 0.736629f,
+    };
+    normAssertDetections(Mat(3, 7, CV_32F, refData), decodeYoloClassic(out), "", 0.25, 0.01, 0.02);
+}
+
+TEST_P(Test_TFLite, yolo26n)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/dog416.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(findDataFile("dnn/tflite/yolo26n_out_serving_default_output_0_output.npy"));
+    normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(out), "", 0.5, 0.01, 0.02);
+}
+
+TEST_P(Test_TFLite, yolo26n_seg)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yolo26n-seg.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/street.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+    for (size_t i = 0; i < outNames.size(); ++i)
+    {
+        // validate only the detection head; the mask-proto tensor is intermediate
+        if (outs[i].size[outs[i].dims - 2] != 300)
+            continue;
+        Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/yolo26n-seg_out_%s.npy", outNames[i].c_str())));
+        normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(outs[i]), "", 0.5, 0.01, 0.02);
+    }
+}
+
+TEST_P(Test_TFLite, resnet18)
+{
+    Net net = readNet(findDataFile("dnn/tflite/resnet18.tflite", false));
+    Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
+    testModel(net, "resnet18", input, 0.05, 0.2);
+}
+
+TEST_P(Test_TFLite, mobilenet_v2)
+{
+    Net net = readNet(findDataFile("dnn/tflite/mobilenet_v2.tflite", false));
+    Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
+    testModel(net, "mobilenet_v2", input, 0.05, 0.15);
+}
+
+TEST_P(Test_TFLite, squeezenet1_1)
+{
+    Net net = readNet(findDataFile("dnn/tflite/squeezenet1_1.tflite", false));
+    Mat input = blobFromImage(imread(findDataFile("dnn/space_shuttle.jpg")), 1.0 / 255, Size(224, 224), Scalar(), true, false);
+    testModel(net, "squeezenet1_1", input, 0.05, 0.15);
+}
+
+TEST_P(Test_TFLite, yunet)
+{
+    Net net = readNet(findDataFile("dnn/tflite/yunet_float32.tflite", false));
+    Mat input = blobFromImage(imread(findDataFile("cv/shared/lena.png")), 1.0 / 255, Size(160, 120), Scalar(), true, false);
+    testModel(net, "yunet_float32", input, 1e-4, 1e-2);
+}
+
+TEST_P(Test_TFLite, hand_landmark)
+{
+    Net net = readNet(findDataFile("dnn/tflite/hand_landmark_lite.tflite", false));
+    Mat hand = imread(findDataFile("dnn/pose.png"))(Rect(0, 138, 140, 140));
+    Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false);
+    testModel(net, "hand_landmark_lite", input, 1e-4, 1e-2);
+}
+
+TEST_P(Test_TFLite, pose_landmark)
+{
+    Net net = readNet(findDataFile("dnn/tflite/pose_landmark_lite.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat input = blobFromImage(imread(findDataFile("dnn/pose.png")), 1.0 / 255, Size(256, 256), Scalar(), true, false);
+    testInputShapes(net, {input});
+    net.setInput(input);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+    // The reference stores 4D outputs as NHWC; compare the 2D outputs only.
+    for (size_t i = 0; i < outNames.size(); ++i)
+    {
+        if (outs[i].dims > 2)
+            continue;
+        std::replace(outNames[i].begin(), outNames[i].end(), ':', '_');
+        Mat ref = blobFromNPY(findDataFile("dnn/tflite/pose_landmark_lite_out_" + outNames[i] + ".npy"));
+        normAssert(ref, outs[i], outNames[i].c_str(), 0.15, 1.5);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());

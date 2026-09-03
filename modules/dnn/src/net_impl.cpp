@@ -1197,17 +1197,8 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
         CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-    if (mainGraph)
-    {
-        // In the new engine every requested name maps to a single graph output tensor,
-        // so each nested list holds exactly one blob.
-        std::vector<std::string> names(outBlobNames.begin(), outBlobNames.end());
-        std::vector<Mat> flat;
-        forwardWithMultipleOutputs(flat, names);
-        CV_Assert(flat.size() == outBlobNames.size());
-        outputBlobs.resize(outBlobNames.size());
-        for (size_t i = 0; i < outBlobNames.size(); i++)
-            outputBlobs[i].assign(1, flat[i]);
+    if (mainGraph) {
+        forwardWithMultipleOutputsPerLayer(outputBlobs, outBlobNames);
         return;
     }
 
