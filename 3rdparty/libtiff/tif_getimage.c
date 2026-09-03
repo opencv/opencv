@@ -29,6 +29,7 @@
  */
 #include "tiffiop.h"
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 
 static int gtTileContig(TIFFRGBAImage *, uint32_t *, uint32_t, uint32_t);
@@ -57,21 +58,21 @@ static const char photoTag[] = "PhotometricInterpretation";
 
 static const TIFFDisplay display_sRGB = {
     {/* XYZ -> luminance matrix */
-     {3.2410F, -1.5374F, -0.4986F},
-     {-0.9692F, 1.8760F, 0.0416F},
-     {0.0556F, -0.2040F, 1.0570F}},
-    100.0F,
-    100.0F,
-    100.0F, /* Light o/p for reference white */
+     {3.2410f, -1.5374f, -0.4986f},
+     {-0.9692f, 1.8760f, 0.0416f},
+     {0.0556f, -0.2040f, 1.0570f}},
+    100.0f,
+    100.0f,
+    100.0f, /* Light o/p for reference white */
     255,
     255,
     255, /* Pixel values for ref. white */
-    1.0F,
-    1.0F,
-    1.0F, /* Residual light o/p for black pixel */
-    2.4F,
-    2.4F,
-    2.4F, /* Gamma values for the three guns */
+    1.0f,
+    1.0f,
+    1.0f, /* Residual light o/p for black pixel */
+    2.4f,
+    2.4f,
+    2.4f, /* Gamma values for the three guns */
 };
 
 /*
@@ -316,7 +317,7 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
     uint16_t compress;
     int colorchannels;
     uint16_t *red_orig, *green_orig, *blue_orig;
-    int n_color;
+    uint32_t n_color;
 
     if (!TIFFRGBAImageOK(tif, emsg))
         return 0;
@@ -372,6 +373,8 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
             case EXTRASAMPLE_UNASSALPHA: /* data is not pre-multiplied */
                 img->alpha = sampleinfo[0];
                 break;
+            default:
+                break;
         }
     }
 
@@ -421,13 +424,13 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
             }
 
             /* copy the colormaps so we can modify them */
-            n_color = (1U << img->bitspersample);
-            img->redcmap =
-                (uint16_t *)_TIFFmallocExt(tif, sizeof(uint16_t) * n_color);
-            img->greencmap =
-                (uint16_t *)_TIFFmallocExt(tif, sizeof(uint16_t) * n_color);
-            img->bluecmap =
-                (uint16_t *)_TIFFmallocExt(tif, sizeof(uint16_t) * n_color);
+            n_color = (uint32_t)(1U << img->bitspersample);
+            img->redcmap = (uint16_t *)_TIFFmallocExt(
+                tif, (tmsize_t)(sizeof(uint16_t) * (size_t)n_color));
+            img->greencmap = (uint16_t *)_TIFFmallocExt(
+                tif, (tmsize_t)(sizeof(uint16_t) * (size_t)n_color));
+            img->bluecmap = (uint16_t *)_TIFFmallocExt(
+                tif, (tmsize_t)(sizeof(uint16_t) * (size_t)n_color));
             if (!img->redcmap || !img->greencmap || !img->bluecmap)
             {
                 snprintf(emsg, EMSG_BUF_SIZE,
@@ -604,7 +607,7 @@ int TIFFRGBAImageGet(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
      * Width is checked in img->get() function individually. */
     if (0 <= img->row_offset && (uint32_t)img->row_offset < img->height)
     {
-        uint32_t hx = img->height - img->row_offset;
+        uint32_t hx = img->height - (uint32_t)img->row_offset;
         if (h > hx)
         {
             /* Adapt parameters to read only available lines and put image
@@ -617,7 +620,7 @@ int TIFFRGBAImageGet(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     {
         TIFFErrorExtR(img->tif, TIFFFileName(img->tif),
                       "Error in TIFFRGBAImageGet: row offset %d exceeds "
-                      "image height %d",
+                      "image height %u",
                       img->row_offset, img->height);
         return 0;
     }
@@ -751,13 +754,13 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
     if (0 <= img->col_offset && (uint32_t)img->col_offset < img->width)
     {
-        wmin = TIFFmin(w, img->width - img->col_offset);
+        wmin = TIFFmin(w, img->width - (uint32_t)img->col_offset);
     }
     else
     {
         TIFFErrorExtR(tif, TIFFFileName(tif),
                       "Error in gtTileContig: column offset %d exceeds "
-                      "image width %d",
+                      "image width %u",
                       img->col_offset, img->width);
         return 0;
     }
@@ -785,7 +788,7 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
     else
     {
-        if (tw > ((int64_t)INT_MAX + w))
+        if (tw > ((int64_t)INT_MAX + w) || w > ((int64_t)INT_MAX + tw))
         {
             TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
                           "unsupported tile size (too wide)");
@@ -804,9 +807,9 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     /*
      *	Leftmost tile is clipped on left side if col_offset > 0.
      */
-    leftmost_fromskew = img->col_offset % tw;
-    leftmost_tw = tw - leftmost_fromskew;
-    int64_t skew_i64 = (int64_t)toskew + leftmost_fromskew;
+    leftmost_fromskew = (int32_t)((uint32_t)img->col_offset % tw);
+    leftmost_tw = (uint32_t)((int32_t)tw - leftmost_fromskew);
+    int64_t skew_i64 = (int64_t)toskew + (int64_t)(int32_t)leftmost_fromskew;
     if (skew_i64 > INT_MAX || skew_i64 < INT_MIN)
     {
         TIFFErrorExtR(tif, TIFFFileName(tif), "%s %" PRId64, "Invalid skew",
@@ -816,34 +819,36 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     leftmost_toskew = (int32_t)skew_i64;
     for (row = 0; ret != 0 && row < h; row += nrow)
     {
-        rowstoread = th - (row + img->row_offset) % th;
+        rowstoread = th - ((uint32_t)row + (uint32_t)img->row_offset) % th;
         nrow = (row + rowstoread > h ? h - row : rowstoread);
         fromskew = leftmost_fromskew;
         this_tw = leftmost_tw;
         this_toskew = leftmost_toskew;
         tocol = 0;
-        col = img->col_offset;
+        col = (uint32_t)img->col_offset;
         /* wmin: only write imagewidth if raster is bigger. */
         while (tocol < wmin)
         {
             if (_TIFFReadTileAndAllocBuffer(tif, (void **)&buf, bufsize, col,
-                                            row + img->row_offset, 0,
-                                            0) == (tmsize_t)(-1) &&
+                                            (uint32_t)row +
+                                                (uint32_t)img->row_offset,
+                                            0, 0) == (tmsize_t)(-1) &&
                 (buf == NULL || img->stoponerr))
             {
                 ret = 0;
                 break;
             }
-            pos = ((row + img->row_offset) % th) * TIFFTileRowSize(tif) +
+            pos = (((uint32_t)row + (uint32_t)img->row_offset) % th) *
+                      TIFFTileRowSize(tif) +
                   ((tmsize_t)fromskew * img->samplesperpixel);
             if (tocol + this_tw > wmin)
             {
                 /*
                  * Rightmost tile is clipped on right side.
                  */
-                fromskew = tw - (wmin - tocol);
-                this_tw = tw - fromskew;
-                this_toskew = toskew + fromskew;
+                fromskew = (int32_t)(tw - (wmin - tocol));
+                this_tw = (uint32_t)((int32_t)tw - fromskew);
+                this_toskew = (int32_t)(toskew + (int32_t)(uint32_t)fromskew);
             }
             tmsize_t roffset = (tmsize_t)y * w + tocol;
             (*put)(img, raster + roffset, tocol, y, this_tw, nrow, fromskew,
@@ -859,7 +864,8 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             this_toskew = toskew;
         }
 
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += (uint32_t)((flip & FLIP_VERTICALLY) ? -(int32_t)nrow
+                                                 : (int32_t)nrow);
     }
     _TIFFfreeExt(img->tif, buf);
 
@@ -869,7 +875,7 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         for (line = 0; line < h; line++)
         {
-            uint32_t *left = raster + (line * w);
+            uint32_t *left = raster + (size_t)line * w;
             /* Use wmin to only flip horizontally data in place and not complete
              * raster-row. */
             uint32_t *right = left + wmin - 1;
@@ -924,13 +930,13 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     uint32_t wmin;
     if (0 <= img->col_offset && (uint32_t)img->col_offset < img->width)
     {
-        wmin = TIFFmin(w, img->width - img->col_offset);
+        wmin = TIFFmin(w, img->width - (uint32_t)img->col_offset);
     }
     else
     {
         TIFFErrorExtR(tif, TIFFFileName(tif),
                       "Error in gtTileSeparate: column offset %d exceeds "
-                      "image width %d",
+                      "image width %u",
                       img->col_offset, img->width);
         return 0;
     }
@@ -960,7 +966,7 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
     else
     {
-        if (tw > ((int64_t)INT_MAX + w))
+        if (tw > ((int64_t)INT_MAX + w) || w > ((int64_t)INT_MAX + tw))
         {
             TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
                           "unsupported tile size (too wide)");
@@ -992,9 +998,9 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     /*
      *	Leftmost tile is clipped on left side if col_offset > 0.
      */
-    leftmost_fromskew = img->col_offset % tw;
-    leftmost_tw = tw - leftmost_fromskew;
-    int64_t skew_i64 = (int64_t)toskew + leftmost_fromskew;
+    leftmost_fromskew = (int32_t)((uint32_t)img->col_offset % tw);
+    leftmost_tw = (uint32_t)((int32_t)tw - leftmost_fromskew);
+    int64_t skew_i64 = (int64_t)toskew + (int64_t)(int32_t)leftmost_fromskew;
     if (skew_i64 > INT_MAX || skew_i64 < INT_MIN)
     {
         TIFFErrorExtR(tif, TIFFFileName(tif), "%s %" PRId64, "Invalid skew",
@@ -1004,21 +1010,22 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     leftmost_toskew = (int32_t)skew_i64;
     for (row = 0; ret != 0 && row < h; row += nrow)
     {
-        rowstoread = th - (row + img->row_offset) % th;
+        rowstoread = th - ((uint32_t)row + (uint32_t)img->row_offset) % th;
         nrow = (row + rowstoread > h ? h - row : rowstoread);
         fromskew = leftmost_fromskew;
         this_tw = leftmost_tw;
         this_toskew = leftmost_toskew;
         tocol = 0;
-        col = img->col_offset;
+        col = (uint32_t)img->col_offset;
         /* wmin: only write imagewidth if raster is bigger. */
         while (tocol < wmin)
         {
             if (buf == NULL)
             {
-                if (_TIFFReadTileAndAllocBuffer(tif, (void **)&buf, bufsize,
-                                                col, row + img->row_offset, 0,
-                                                0) == (tmsize_t)(-1) &&
+                if (_TIFFReadTileAndAllocBuffer(
+                        tif, (void **)&buf, bufsize, col,
+                        (uint32_t)((int32_t)row + img->row_offset), 0,
+                        0) == (tmsize_t)(-1) &&
                     (buf == NULL || img->stoponerr))
                 {
                     ret = 0;
@@ -1037,32 +1044,36 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
                     pa = (alpha ? (p2 + tilesize) : NULL);
                 }
             }
-            else if (TIFFReadTile(tif, p0, col, row + img->row_offset, 0, 0) ==
-                         (tmsize_t)(-1) &&
+            else if (TIFFReadTile(tif, p0, col,
+                                  (uint32_t)((int32_t)row + img->row_offset), 0,
+                                  0) == (tmsize_t)(-1) &&
                      img->stoponerr)
             {
                 ret = 0;
                 break;
             }
             if (colorchannels > 1 &&
-                TIFFReadTile(tif, p1, col, row + img->row_offset, 0, 1) ==
-                    (tmsize_t)(-1) &&
+                TIFFReadTile(tif, p1, col,
+                             (uint32_t)((int32_t)row + img->row_offset), 0,
+                             (uint16_t)1) == (tmsize_t)(-1) &&
                 img->stoponerr)
             {
                 ret = 0;
                 break;
             }
             if (colorchannels > 1 &&
-                TIFFReadTile(tif, p2, col, row + img->row_offset, 0, 2) ==
-                    (tmsize_t)(-1) &&
+                TIFFReadTile(tif, p2, col,
+                             (uint32_t)((int32_t)row + img->row_offset), 0,
+                             (uint16_t)2) == (tmsize_t)(-1) &&
                 img->stoponerr)
             {
                 ret = 0;
                 break;
             }
             if (alpha &&
-                TIFFReadTile(tif, pa, col, row + img->row_offset, 0,
-                             colorchannels) == (tmsize_t)(-1) &&
+                TIFFReadTile(tif, pa, col,
+                             (uint32_t)((int32_t)row + img->row_offset), 0,
+                             (uint16_t)colorchannels) == (tmsize_t)(-1) &&
                 img->stoponerr)
             {
                 ret = 0;
@@ -1071,16 +1082,17 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
             /* For SEPARATE the pos-offset is per sample and should not be
              * multiplied by img->samplesperpixel. */
-            pos = ((row + img->row_offset) % th) * TIFFTileRowSize(tif) +
+            pos = (tmsize_t)((uint32_t)((int32_t)row + img->row_offset) % th) *
+                      TIFFTileRowSize(tif) +
                   (tmsize_t)fromskew;
             if (tocol + this_tw > wmin)
             {
                 /*
                  * Rightmost tile is clipped on right side.
                  */
-                fromskew = tw - (wmin - tocol);
-                this_tw = tw - fromskew;
-                this_toskew = toskew + fromskew;
+                fromskew = (int32_t)(tw - (wmin - tocol));
+                this_tw = (uint32_t)((int32_t)tw - fromskew);
+                this_toskew = (int32_t)(toskew + (int32_t)(uint32_t)fromskew);
             }
             tmsize_t roffset = (tmsize_t)y * w + tocol;
             (*put)(img, raster + roffset, tocol, y, this_tw, nrow, fromskew,
@@ -1097,7 +1109,8 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             this_toskew = toskew;
         }
 
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += (uint32_t)((flip & FLIP_VERTICALLY) ? -(int32_t)nrow
+                                                 : (int32_t)nrow);
     }
 
     if (flip & FLIP_HORIZONTALLY)
@@ -1106,7 +1119,7 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         for (line = 0; line < h; line++)
         {
-            uint32_t *left = raster + (line * w);
+            uint32_t *left = raster + (size_t)line * w;
             /* Use wmin to only flip horizontally data in place and not complete
              * raster-row. */
             uint32_t *right = left + wmin - 1;
@@ -1155,13 +1168,13 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     uint32_t wmin;
     if (0 <= img->col_offset && (uint32_t)img->col_offset < imagewidth)
     {
-        wmin = TIFFmin(w, imagewidth - img->col_offset);
+        wmin = TIFFmin(w, imagewidth - (uint32_t)img->col_offset);
     }
     else
     {
         TIFFErrorExtR(tif, TIFFFileName(tif),
                       "Error in gtStripContig: column offset %d exceeds "
-                      "image width %d",
+                      "image width %u",
                       img->col_offset, imagewidth);
         return 0;
     }
@@ -1195,7 +1208,7 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
         y = 0;
         /* Skew forward to the end of the raster width of the row currently
          * copied. */
-        toskew = w - wmin;
+        toskew = (int32_t)(w - wmin);
     }
 
     TIFFGetFieldDefaulted(tif, TIFFTAG_ROWSPERSTRIP, &rowsperstrip);
@@ -1206,16 +1219,18 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     scanline = TIFFScanlineSize(tif);
-    fromskew = (w < imagewidth ? imagewidth - w : 0);
+    fromskew = (int32_t)(w < imagewidth ? imagewidth - w : 0);
     for (row = 0; row < h; row += nrow)
     {
         uint32_t temp;
-        rowstoread = rowsperstrip - (row + img->row_offset) % rowsperstrip;
+        rowstoread = rowsperstrip -
+                     (uint32_t)((int32_t)row + img->row_offset) % rowsperstrip;
         nrow = (row + rowstoread > h ? h - row : rowstoread);
         nrowsub = nrow;
         if ((nrowsub % subsamplingver) != 0)
             nrowsub += subsamplingver - nrowsub % subsamplingver;
-        temp = (row + img->row_offset) % rowsperstrip + nrowsub;
+        temp =
+            (uint32_t)((int32_t)row + img->row_offset) % rowsperstrip + nrowsub;
         if (scanline > 0 && temp > (size_t)(TIFF_TMSIZE_T_MAX / scanline))
         {
             TIFFErrorExtR(tif, TIFFFileName(tif),
@@ -1223,21 +1238,27 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             return 0;
         }
         if (_TIFFReadEncodedStripAndAllocBuffer(
-                tif, TIFFComputeStrip(tif, row + img->row_offset, 0),
+                tif,
+                TIFFComputeStrip(tif,
+                                 (uint32_t)((int32_t)row + img->row_offset), 0),
                 (void **)(&buf), maxstripsize,
-                temp * scanline) == (tmsize_t)(-1) &&
+                (tmsize_t)((size_t)temp * (size_t)scanline)) ==
+                (tmsize_t)(-1) &&
             (buf == NULL || img->stoponerr))
         {
             ret = 0;
             break;
         }
 
-        pos = ((row + img->row_offset) % rowsperstrip) * scanline +
+        pos = (tmsize_t)((uint32_t)((int32_t)row + img->row_offset) %
+                         rowsperstrip) *
+                  scanline +
               ((tmsize_t)img->col_offset * img->samplesperpixel);
         tmsize_t roffset = (tmsize_t)y * w;
         (*put)(img, raster + roffset, 0, y, wmin, nrow, fromskew, toskew,
                buf + pos);
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += (uint32_t)((flip & FLIP_VERTICALLY) ? -(int32_t)nrow
+                                                 : (int32_t)nrow);
     }
 
     if (flip & FLIP_HORIZONTALLY)
@@ -1250,7 +1271,7 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         for (line = 0; line < h; line++)
         {
-            uint32_t *left = raster + (line * w);
+            uint32_t *left = raster + (size_t)line * w;
             /* Use wmin to only flip horizontally data in place and not complete
              * raster-row. */
             uint32_t *right = left + wmin - 1;
@@ -1300,13 +1321,13 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     uint32_t wmin;
     if (0 <= img->col_offset && (uint32_t)img->col_offset < imagewidth)
     {
-        wmin = TIFFmin(w, imagewidth - img->col_offset);
+        wmin = TIFFmin(w, imagewidth - (uint32_t)img->col_offset);
     }
     else
     {
         TIFFErrorExtR(tif, TIFFFileName(tif),
                       "Error in gtStripSeparate: column offset %d exceeds "
-                      "image width %d",
+                      "image width %u",
                       img->col_offset, imagewidth);
         return 0;
     }
@@ -1337,7 +1358,7 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
         y = 0;
         /* Skew forward to the end of the raster width of the row currently
          * written. */
-        toskew = w - wmin;
+        toskew = (int32_t)(w - wmin);
     }
 
     switch (img->photometric)
@@ -1361,14 +1382,16 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     scanline = TIFFScanlineSize(tif);
-    fromskew = (w < imagewidth ? imagewidth - w : 0);
+    fromskew = (int32_t)(w < imagewidth ? imagewidth - w : 0);
     for (row = 0; row < h; row += nrow)
     {
         uint32_t temp;
-        rowstoread = rowsperstrip - (row + img->row_offset) % rowsperstrip;
+        rowstoread =
+            rowsperstrip -
+            ((uint32_t)((int32_t)row + img->row_offset) % rowsperstrip);
         nrow = (row + rowstoread > h ? h - row : rowstoread);
-        offset_row = row + img->row_offset;
-        temp = (row + img->row_offset) % rowsperstrip + nrow;
+        offset_row = (uint32_t)((int32_t)row + img->row_offset);
+        temp = (uint32_t)((int32_t)row + img->row_offset) % rowsperstrip + nrow;
         if (scanline > 0 && temp > (size_t)(TIFF_TMSIZE_T_MAX / scanline))
         {
             TIFFErrorExtR(tif, TIFFFileName(tif),
@@ -1435,12 +1458,15 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         /* For SEPARATE the pos-offset is per sample and should not be
          * multiplied by img->samplesperpixel. */
-        pos = ((row + img->row_offset) % rowsperstrip) * scanline +
+        pos = (tmsize_t)((uint32_t)((int32_t)row + img->row_offset) %
+                         rowsperstrip) *
+                  scanline +
               (tmsize_t)img->col_offset;
         tmsize_t roffset = (tmsize_t)y * w;
         (*put)(img, raster + roffset, 0, y, wmin, nrow, fromskew, toskew,
                p0 + pos, p1 + pos, p2 + pos, (alpha ? (pa + pos) : NULL));
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += (uint32_t)((flip & FLIP_VERTICALLY) ? -(int32_t)nrow
+                                                 : (int32_t)nrow);
     }
 
     if (flip & FLIP_HORIZONTALLY)
@@ -1449,7 +1475,7 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         for (line = 0; line < h; line++)
         {
-            uint32_t *left = raster + (line * w);
+            uint32_t *left = raster + (size_t)line * w;
             /* Use wmin to only flip horizontally data in place and not complete
              * raster-row. */
             uint32_t *right = left + wmin - 1;
@@ -1505,6 +1531,9 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             op; /*-fallthrough*/                                               \
         case 1:                                                                \
             op;                                                                \
+            break;                                                             \
+        default:                                                               \
+            break;                                                             \
     }
 #define CASE4(x, op)                                                           \
     switch (x)                                                                 \
@@ -1515,6 +1544,9 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             op; /*-fallthrough*/                                               \
         case 1:                                                                \
             op;                                                                \
+            break;                                                             \
+        default:                                                               \
+            break;                                                             \
     }
 #define NOP
 
@@ -1581,13 +1613,6 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 #define PACK4(r, g, b, a)                                                      \
     ((uint32_t)(r) | ((uint32_t)(g) << 8) | ((uint32_t)(b) << 16) |            \
      ((uint32_t)(a) << 24))
-#define W2B(v) (((v) >> 8) & 0xff)
-/* TODO: PACKW should have be made redundant in favor of Bitdepth16To8 LUT */
-#define PACKW(r, g, b)                                                         \
-    ((uint32_t)W2B(r) | ((uint32_t)W2B(g) << 8) | ((uint32_t)W2B(b) << 16) | A1)
-#define PACKW4(r, g, b, a)                                                     \
-    ((uint32_t)W2B(r) | ((uint32_t)W2B(g) << 8) | ((uint32_t)W2B(b) << 16) |   \
-     ((uint32_t)W2B(a) << 24))
 
 #define DECLAREContigPutFunc(name)                                             \
     static void name(TIFFRGBAImage *img, uint32_t *cp, uint32_t x, uint32_t y, \
@@ -1706,7 +1731,7 @@ DECLAREContigPutFunc(putagreytile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = BWmap[*pp][0] & ((uint32_t) * (pp + 1) << 24 | ~A1);
+            *cp++ = BWmap[*pp][0] & ((uint32_t)*(pp + 1) << 24 | ~A1);
             pp += samplesperpixel;
         }
         cp += toskew;
@@ -1721,6 +1746,9 @@ DECLAREContigPutFunc(put16bitbwtile)
 {
     int samplesperpixel = img->samplesperpixel;
     uint32_t **BWmap = img->BWmap;
+    /* Convert pixel skew to byte skew (16-bit samples) */
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)(2 * samplesperpixel);
 
     (void)y;
     for (; h > 0; --h)
@@ -1736,7 +1764,7 @@ DECLAREContigPutFunc(put16bitbwtile)
             wp += samplesperpixel;
         }
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -1806,13 +1834,14 @@ DECLAREContigPutFunc(putRGBcontig8bittile)
 
     (void)x;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         UNROLL8(w, NOP, *cp++ = PACK(pp[0], pp[1], pp[2]);
                 pp += samplesperpixel);
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -1826,13 +1855,14 @@ DECLAREContigPutFunc(putRGBAAcontig8bittile)
 
     (void)x;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         UNROLL8(w, NOP, *cp++ = PACK4(pp[0], pp[1], pp[2], pp[3]);
                 pp += samplesperpixel);
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -1844,7 +1874,8 @@ DECLAREContigPutFunc(putRGBUAcontig8bittile)
 {
     int samplesperpixel = img->samplesperpixel;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         uint32_t r, g, b, a;
@@ -1860,7 +1891,7 @@ DECLAREContigPutFunc(putRGBUAcontig8bittile)
             pp += samplesperpixel;
         }
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -1872,7 +1903,8 @@ DECLAREContigPutFunc(putRGBcontig16bittile)
     int samplesperpixel = img->samplesperpixel;
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
@@ -1882,7 +1914,7 @@ DECLAREContigPutFunc(putRGBcontig16bittile)
             wp += samplesperpixel;
         }
         cp += toskew;
-        wp += fromskew;
+        wp += fromskewLocal;
     }
 }
 
@@ -1895,7 +1927,8 @@ DECLAREContigPutFunc(putRGBAAcontig16bittile)
     int samplesperpixel = img->samplesperpixel;
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
@@ -1905,7 +1938,7 @@ DECLAREContigPutFunc(putRGBAAcontig16bittile)
             wp += samplesperpixel;
         }
         cp += toskew;
-        wp += fromskew;
+        wp += fromskewLocal;
     }
 }
 
@@ -1918,7 +1951,8 @@ DECLAREContigPutFunc(putRGBUAcontig16bittile)
     int samplesperpixel = img->samplesperpixel;
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         uint32_t r, g, b, a;
@@ -1934,7 +1968,7 @@ DECLAREContigPutFunc(putRGBUAcontig16bittile)
             wp += samplesperpixel;
         }
         cp += toskew;
-        wp += fromskew;
+        wp += fromskewLocal;
     }
 }
 
@@ -1950,14 +1984,17 @@ DECLAREContigPutFunc(putRGBcontig8bitCMYKtile)
 
     (void)x;
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, k = 255 - pp[3]; r = (k * (255 - pp[0])) / 255;
-                g = (k * (255 - pp[1])) / 255; b = (k * (255 - pp[2])) / 255;
+        UNROLL8(w, NOP, k = (uint16_t)(255 - pp[3]);
+                r = (uint16_t)((k * (uint16_t)(255 - pp[0])) / 255);
+                g = (uint16_t)((k * (uint16_t)(255 - pp[1])) / 255);
+                b = (uint16_t)((k * (uint16_t)(255 - pp[2])) / 255);
                 *cp++ = PACK(r, g, b); pp += samplesperpixel);
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -1970,22 +2007,23 @@ DECLAREContigPutFunc(putRGBcontig8bitCMYKMaptile)
 {
     int samplesperpixel = img->samplesperpixel;
     TIFFRGBValue *Map = img->Map;
-    uint16_t r, g, b, k;
+    unsigned int r, g, b, k;
 
     (void)y;
-    fromskew *= samplesperpixel;
+    const tmsize_t fromskewLocal =
+        (tmsize_t)fromskew * (tmsize_t)samplesperpixel;
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
         {
-            k = 255 - pp[3];
-            r = (k * (255 - pp[0])) / 255;
-            g = (k * (255 - pp[1])) / 255;
-            b = (k * (255 - pp[2])) / 255;
+            k = 255U - pp[3];
+            r = (k * (255U - pp[0])) / 255U;
+            g = (k * (255U - pp[1])) / 255U;
+            b = (k * (255U - pp[2])) / 255U;
             *cp++ = PACK(Map[r], Map[g], Map[b]);
             pp += samplesperpixel;
         }
-        pp += fromskew;
+        pp += fromskewLocal;
         cp += toskew;
     }
 }
@@ -2038,13 +2076,13 @@ DECLARESepPutFunc(putCMYKseparate8bittile)
     (void)y;
     for (; h > 0; --h)
     {
-        uint32_t rv, gv, bv, kv;
+        unsigned int rv, gv, bv, kv;
         for (x = w; x > 0; --x)
         {
-            kv = 255 - *a++;
-            rv = (kv * (255 - *r++)) / 255;
-            gv = (kv * (255 - *g++)) / 255;
-            bv = (kv * (255 - *b++)) / 255;
+            kv = 255U - *a++;
+            rv = (kv * (255U - *r++)) / 255U;
+            gv = (kv * (255U - *g++)) / 255U;
+            bv = (kv * (255U - *b++)) / 255U;
             *cp++ = PACK4(rv, gv, bv, 255);
         }
         SKEW4(r, g, b, a, fromskew);
@@ -2156,7 +2194,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab8)
     float X, Y, Z;
     uint32_t r, g, b;
     (void)y;
-    fromskew *= 3;
+    const tmsize_t fromskewLocal = (tmsize_t)fromskew * (tmsize_t)3;
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
@@ -2168,7 +2206,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab8)
             pp += 3;
         }
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     }
 }
 
@@ -2181,7 +2219,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
     uint32_t r, g, b;
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
-    fromskew *= 3;
+    const tmsize_t fromskewLocal = (tmsize_t)fromskew * (tmsize_t)3;
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
@@ -2193,7 +2231,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
             wp += 3;
         }
         cp += toskew;
-        wp += fromskew;
+        wp += fromskewLocal;
     }
 }
 
@@ -2204,7 +2242,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
 #define YCbCrtoRGB(dst, Y)                                                     \
     {                                                                          \
         uint32_t r, g, b;                                                      \
-        TIFFYCbCrtoRGB(img->ycbcr, (Y), Cb, Cr, &r, &g, &b);                   \
+        TIFFYCbCrtoRGB(img->ycbcr, (Y), (int32_t)Cb, (int32_t)Cr, &r, &g, &b); \
         dst = PACK(r, g, b);                                                   \
     }
 
@@ -2216,11 +2254,12 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
     uint32_t *cp1 = cp + w + toskew;
     uint32_t *cp2 = cp1 + w + toskew;
     uint32_t *cp3 = cp2 + w + toskew;
-    int32_t incr = 3 * w + 4 * toskew;
+    const tmsize_t incr = 3 * (tmsize_t)w + 4 * (tmsize_t)toskew;
 
     (void)y;
     /* adjust fromskew */
-    fromskew = (fromskew / 4) * (4 * 2 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 4) * (tmsize_t)(4 * 4 + 2);
     if ((h & 3) == 0 && (w & 3) == 0)
     {
         for (; h >= 4; h -= 4)
@@ -2258,7 +2297,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
             cp1 += incr;
             cp2 += incr;
             cp3 += incr;
-            pp += fromskew;
+            pp += fromskewLocal;
         }
     }
     else
@@ -2282,7 +2321,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
                                 YCbCrtoRGB(cp1[3], pp[7]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[3], pp[3]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 3:
                         switch (h)
                         {
@@ -2294,7 +2333,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
                                 YCbCrtoRGB(cp1[2], pp[6]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[2], pp[2]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 2:
                         switch (h)
                         {
@@ -2306,7 +2345,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
                                 YCbCrtoRGB(cp1[1], pp[5]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[1], pp[1]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 1:
                         switch (h)
                         {
@@ -2318,7 +2357,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
                                 YCbCrtoRGB(cp1[0], pp[4]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[0], pp[0]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                 }
                 if (x < 4)
                 {
@@ -2345,7 +2384,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
             cp1 += incr;
             cp2 += incr;
             cp3 += incr;
-            pp += fromskew;
+            pp += fromskewLocal;
         }
     }
 }
@@ -2356,10 +2395,11 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
 {
     uint32_t *cp1 = cp + w + toskew;
-    int32_t incr = 2 * toskew + w;
+    const tmsize_t incr = 2 * (tmsize_t)toskew + (tmsize_t)w;
 
     (void)y;
-    fromskew = (fromskew / 4) * (4 * 2 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 4) * (tmsize_t)(4 * 2 + 2);
     if ((w & 3) == 0 && (h & 1) == 0)
     {
         for (; h >= 2; h -= 2)
@@ -2385,7 +2425,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
             } while (--x);
             cp += incr;
             cp1 += incr;
-            pp += fromskew;
+            pp += fromskewLocal;
         }
     }
     else
@@ -2405,7 +2445,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
                                 YCbCrtoRGB(cp1[3], pp[7]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[3], pp[3]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 3:
                         switch (h)
                         {
@@ -2413,7 +2453,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
                                 YCbCrtoRGB(cp1[2], pp[6]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[2], pp[2]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 2:
                         switch (h)
                         {
@@ -2421,7 +2461,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
                                 YCbCrtoRGB(cp1[1], pp[5]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[1], pp[1]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                     case 1:
                         switch (h)
                         {
@@ -2429,7 +2469,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
                                 YCbCrtoRGB(cp1[0], pp[4]); /* FALLTHROUGH */
                             case 1:
                                 YCbCrtoRGB(cp[0], pp[0]); /* FALLTHROUGH */
-                        }                                 /* FALLTHROUGH */
+                        } /* FALLTHROUGH */
                 }
                 if (x < 4)
                 {
@@ -2450,7 +2490,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
             h -= 2;
             cp += incr;
             cp1 += incr;
-            pp += fromskew;
+            pp += fromskewLocal;
         }
     }
 }
@@ -2461,7 +2501,8 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
 {
     (void)y;
-    fromskew = (fromskew / 4) * (4 * 1 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 4) * (tmsize_t)(4 * 1 + 2);
     do
     {
         x = w >> 2;
@@ -2495,6 +2536,8 @@ DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
                     YCbCrtoRGB(cp[0], pp[0]); /*-fallthrough*/
                 case 0:
                     break;
+                default:
+                    break;
             }
 
             cp += (w & 3);
@@ -2502,7 +2545,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
         }
 
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     } while (--h);
 }
 
@@ -2512,9 +2555,10 @@ DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr22tile)
 {
     uint32_t *cp2;
-    int32_t incr = 2 * toskew + w;
+    const tmsize_t incr = 2 * (tmsize_t)toskew + (tmsize_t)w;
     (void)y;
-    fromskew = (fromskew / 2) * (2 * 2 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 2) * (tmsize_t)(2 * 2 + 2);
     cp2 = cp + w + toskew;
     while (h >= 2)
     {
@@ -2544,7 +2588,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr22tile)
         }
         cp += incr;
         cp2 += incr;
-        pp += fromskew;
+        pp += fromskewLocal;
         h -= 2;
     }
     if (h == 1)
@@ -2576,7 +2620,8 @@ DECLAREContigPutFunc(putcontig8bitYCbCr22tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr21tile)
 {
     (void)y;
-    fromskew = (fromskew / 2) * (2 * 1 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 2) * (tmsize_t)(2 * 1 + 2);
     do
     {
         x = w >> 1;
@@ -2605,7 +2650,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr21tile)
         }
 
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     } while (--h);
 }
 
@@ -2615,9 +2660,10 @@ DECLAREContigPutFunc(putcontig8bitYCbCr21tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr12tile)
 {
     uint32_t *cp2;
-    int32_t incr = 2 * toskew + w;
+    const tmsize_t incr = 2 * (tmsize_t)toskew + (tmsize_t)w;
     (void)y;
-    fromskew = (fromskew / 1) * (1 * 2 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 1) * (tmsize_t)(1 * 2 + 2);
     cp2 = cp + w + toskew;
     while (h >= 2)
     {
@@ -2634,7 +2680,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr12tile)
         } while (--x);
         cp += incr;
         cp2 += incr;
-        pp += fromskew;
+        pp += fromskewLocal;
         h -= 2;
     }
     if (h == 1)
@@ -2657,7 +2703,8 @@ DECLAREContigPutFunc(putcontig8bitYCbCr12tile)
 DECLAREContigPutFunc(putcontig8bitYCbCr11tile)
 {
     (void)y;
-    fromskew = (fromskew / 1) * (1 * 1 + 2);
+    const tmsize_t fromskewLocal =
+        (tmsize_t)(fromskew / 1) * (tmsize_t)(1 * 1 + 2);
     do
     {
         x = w; /* was x = w>>1; patched 2000/09/25 warmerda@home.com */
@@ -2671,7 +2718,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr11tile)
             pp += 3;
         } while (--x);
         cp += toskew;
-        pp += fromskew;
+        pp += fromskewLocal;
     } while (--h);
 }
 
@@ -2730,8 +2777,8 @@ static int initYCbCrConversion(TIFFRGBAImage *img)
 
     /* Do some validation to avoid later issues. Detect NaN for now */
     /* and also if lumaGreen is zero since we divide by it later */
-    if (luma[0] != luma[0] || luma[1] != luma[1] || luma[1] == 0.0 ||
-        luma[2] != luma[2])
+    if (isnan(luma[0]) || isnan(luma[1]) || TIFF_FLOAT_EQ(luma[1], 0.0f) ||
+        isnan(luma[2]))
     {
         TIFFErrorExtR(img->tif, module,
                       "Invalid values for YCbCrCoefficients tag");
@@ -2763,7 +2810,7 @@ static tileContigRoutine initCIELabConversion(TIFFRGBAImage *img)
     float refWhite[3];
 
     TIFFGetFieldDefaulted(img->tif, TIFFTAG_WHITEPOINT, &whitePoint);
-    if (whitePoint[1] == 0.0f)
+    if (TIFF_FLOAT_EQ(whitePoint[1], 0.0f))
     {
         TIFFErrorExtR(img->tif, module, "Invalid value for WhitePoint tag.");
         return NULL;
@@ -2781,10 +2828,10 @@ static tileContigRoutine initCIELabConversion(TIFFRGBAImage *img)
         }
     }
 
-    refWhite[1] = 100.0F;
+    refWhite[1] = 100.0f;
     refWhite[0] = whitePoint[0] / whitePoint[1] * refWhite[1];
     refWhite[2] =
-        (1.0F - whitePoint[0] - whitePoint[1]) / whitePoint[1] * refWhite[1];
+        (1.0f - whitePoint[0] - whitePoint[1]) / whitePoint[1] * refWhite[1];
     if (TIFFCIELabToRGBInit(img->cielab, &display_sRGB, refWhite) < 0)
     {
         TIFFErrorExtR(img->tif, module,
@@ -2820,7 +2867,8 @@ static int makebwmap(TIFFRGBAImage *img)
 
     img->BWmap = (uint32_t **)_TIFFmallocExt(
         img->tif,
-        256 * sizeof(uint32_t *) + (256 * nsamples * sizeof(uint32_t)));
+        (tmsize_t)((size_t)256 * sizeof(uint32_t *) +
+                   ((size_t)256 * (size_t)nsamples * sizeof(uint32_t))));
     if (img->BWmap == NULL)
     {
         TIFFErrorExtR(img->tif, TIFFFileName(img->tif),
@@ -2861,6 +2909,8 @@ static int makebwmap(TIFFRGBAImage *img)
             case 16:
                 GREY(i);
                 break;
+            default:
+                break;
         }
 #undef GREY
     }
@@ -2876,14 +2926,14 @@ static int setupMap(TIFFRGBAImage *img)
 {
     int32_t x, range;
 
-    range = (int32_t)((1L << img->bitspersample) - 1);
+    range = (int32_t)((1U << img->bitspersample) - 1U);
 
     /* treat 16 bit the same as eight bit */
     if (img->bitspersample == 16)
-        range = (int32_t)255;
+        range = 255;
 
     img->Map = (TIFFRGBValue *)_TIFFmallocExt(
-        img->tif, (range + 1) * sizeof(TIFFRGBValue));
+        img->tif, (tmsize_t)((size_t)(range + 1) * sizeof(TIFFRGBValue)));
     if (img->Map == NULL)
     {
         TIFFErrorExtR(img->tif, TIFFFileName(img->tif),
@@ -2966,7 +3016,8 @@ static int makecmap(TIFFRGBAImage *img)
 
     img->PALmap = (uint32_t **)_TIFFmallocExt(
         img->tif,
-        256 * sizeof(uint32_t *) + (256 * nsamples * sizeof(uint32_t)));
+        (tmsize_t)((size_t)256 * sizeof(uint32_t *) +
+                   ((size_t)256 * (size_t)nsamples * sizeof(uint32_t))));
     if (img->PALmap == NULL)
     {
         TIFFErrorExtR(img->tif, TIFFFileName(img->tif),
@@ -3005,6 +3056,8 @@ static int makecmap(TIFFRGBAImage *img)
                 break;
             case 8:
                 CMAP(i);
+                break;
+            default:
                 break;
         }
 #undef CMAP
@@ -3047,6 +3100,8 @@ static int buildMap(TIFFRGBAImage *img)
              */
             if (img->bitspersample <= 8 && !makecmap(img))
                 return (0);
+            break;
+        default:
             break;
     }
     return (1);
@@ -3096,6 +3151,8 @@ static int PickContigCase(TIFFRGBAImage *img)
                             img->put.contig = putRGBcontig16bittile;
                     }
                     break;
+                default:
+                    break;
             }
             break;
         case PHOTOMETRIC_SEPARATED:
@@ -3127,6 +3184,8 @@ static int PickContigCase(TIFFRGBAImage *img)
                     case 1:
                         img->put.contig = put1bitcmaptile;
                         break;
+                    default:
+                        break;
                 }
             }
             break;
@@ -3154,6 +3213,8 @@ static int PickContigCase(TIFFRGBAImage *img)
                     case 1:
                         img->put.contig = put1bitbwtile;
                         break;
+                    default:
+                        break;
                 }
             }
             break;
@@ -3175,6 +3236,19 @@ static int PickContigCase(TIFFRGBAImage *img)
                     uint16_t SubsamplingVer;
                     TIFFGetFieldDefaulted(img->tif, TIFFTAG_YCBCRSUBSAMPLING,
                                           &SubsamplingHor, &SubsamplingVer);
+                    /* Validate that the image dimensions are compatible with
+                    the subsampling block. All putcontig8bitYCbCrXYtile routines
+                    assume width >= X and height >= Y. */
+                    if (img->width < SubsamplingHor ||
+                        img->height < SubsamplingVer)
+                    {
+                        TIFFErrorExtR(img->tif, TIFFFileName(img->tif),
+                                      "YCbCr subsampling (%u,%u) incompatible "
+                                      "with image size %ux%u",
+                                      SubsamplingHor, SubsamplingVer,
+                                      img->width, img->height);
+                        return (0);
+                    }
                     switch ((SubsamplingHor << 4) | SubsamplingVer)
                     {
                         case 0x44:
@@ -3198,6 +3272,8 @@ static int PickContigCase(TIFFRGBAImage *img)
                         case 0x11:
                             img->put.contig = putcontig8bitYCbCr11tile;
                             break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -3209,6 +3285,9 @@ static int PickContigCase(TIFFRGBAImage *img)
                     img->put.contig = initCIELabConversion(img);
                 break;
             }
+            break;
+        default:
+            break;
     }
     return ((img->get != NULL) && (img->put.contig != NULL));
 }
@@ -3260,6 +3339,8 @@ static int PickSeparateCase(TIFFRGBAImage *img)
                             img->put.separate = putRGBseparate16bittile;
                     }
                     break;
+                default:
+                    break;
             }
             break;
         case PHOTOMETRIC_SEPARATED:
@@ -3284,9 +3365,13 @@ static int PickSeparateCase(TIFFRGBAImage *img)
                             img->put.separate = putseparate8bitYCbCr11tile;
                             break;
                             /* TODO: add other cases here */
+                        default:
+                            break;
                     }
                 }
             }
+            break;
+        default:
             break;
     }
     return ((img->get != NULL) && (img->put.separate != NULL));
@@ -3298,7 +3383,7 @@ static int BuildMapUaToAa(TIFFRGBAImage *img)
     uint8_t *m;
     uint16_t na, nv;
     assert(img->UaToAa == NULL);
-    img->UaToAa = _TIFFmallocExt(img->tif, 65536);
+    img->UaToAa = (uint8_t *)_TIFFmallocExt(img->tif, 65536);
     if (img->UaToAa == NULL)
     {
         TIFFErrorExtR(img->tif, module, "Out of memory");
@@ -3319,7 +3404,7 @@ static int BuildMapBitdepth16To8(TIFFRGBAImage *img)
     uint8_t *m;
     uint32_t n;
     assert(img->Bitdepth16To8 == NULL);
-    img->Bitdepth16To8 = _TIFFmallocExt(img->tif, 65536);
+    img->Bitdepth16To8 = (uint8_t *)_TIFFmallocExt(img->tif, 65536);
     if (img->Bitdepth16To8 == NULL)
     {
         TIFFErrorExtR(img->tif, module, "Out of memory");
@@ -3386,7 +3471,7 @@ int TIFFReadRGBAStripExt(TIFF *tif, uint32_t row, uint32_t *raster,
             return (0);
         }
 
-        img.row_offset = row;
+        img.row_offset = (int)row;
         img.col_offset = 0;
 
         if (row + rowsperstrip > img.height)
@@ -3497,8 +3582,8 @@ int TIFFReadRGBATileExt(TIFF *tif, uint32_t col, uint32_t row, uint32_t *raster,
      * Read the chunk of imagery.
      */
 
-    img.row_offset = row;
-    img.col_offset = col;
+    img.row_offset = (int)row;
+    img.col_offset = (int)col;
 
     ok = TIFFRGBAImageGet(&img, raster, read_xsize, read_ysize);
 
@@ -3520,15 +3605,16 @@ int TIFFReadRGBATileExt(TIFF *tif, uint32_t col, uint32_t row, uint32_t *raster,
         memmove(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize,
                 raster + (size_t)(read_ysize - i_row - 1) * read_xsize,
                 read_xsize * sizeof(uint32_t));
-        _TIFFmemset(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize +
-                        read_xsize,
-                    0, sizeof(uint32_t) * (tile_xsize - read_xsize));
+        _TIFFmemset(
+            raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize + read_xsize,
+            0,
+            (tmsize_t)(sizeof(uint32_t) * (size_t)(tile_xsize - read_xsize)));
     }
 
     for (i_row = read_ysize; i_row < tile_ysize; i_row++)
     {
         _TIFFmemset(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize, 0,
-                    sizeof(uint32_t) * tile_xsize);
+                    (tmsize_t)(sizeof(uint32_t) * (size_t)tile_xsize));
     }
 
     return (ok);

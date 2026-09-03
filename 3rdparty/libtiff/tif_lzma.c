@@ -95,6 +95,17 @@ static const char *LZMAStrerror(lzma_ret ret)
             return "no progress is possible (stream is truncated or corrupt)";
         case LZMA_PROG_ERROR:
             return "programming error";
+#if LZMA_VERSION >= 50040000 /* 5.4.0 */
+        case LZMA_SEEK_NEEDED:
+        case LZMA_RET_INTERNAL1:
+        case LZMA_RET_INTERNAL2:
+        case LZMA_RET_INTERNAL3:
+        case LZMA_RET_INTERNAL4:
+        case LZMA_RET_INTERNAL5:
+        case LZMA_RET_INTERNAL6:
+        case LZMA_RET_INTERNAL7:
+        case LZMA_RET_INTERNAL8:
+#endif
         default:
             return "unidentified liblzma error";
     }
@@ -179,7 +190,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         TIFFErrorExtR(tif, module,
                       "LZMADecode: Scanline %" PRIu32 " cannot be read due to "
                       "previous error",
-                      tif->tif_row);
+                      tif->tif_dir.td_row);
         return 0;
     }
 
@@ -231,7 +242,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         {
             TIFFErrorExtR(tif, module,
                           "Decoding error at scanline %" PRIu32 ", %s",
-                          tif->tif_row, LZMAStrerror(ret));
+                          tif->tif_dir.td_row, LZMAStrerror(ret));
             break;
         }
     } while (sp->stream.avail_out > 0);
@@ -242,12 +253,12 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %" PRIu32
                       " (short %" TIFF_SIZE_FORMAT " bytes)",
-                      tif->tif_row, sp->stream.avail_out);
+                      tif->tif_dir.td_row, sp->stream.avail_out);
         return 0;
     }
 
     tif->tif_rawcp = (uint8_t *)sp->stream.next_in; /* cast away const */
-    tif->tif_rawcc = sp->stream.avail_in;
+    tif->tif_rawcc = (tmsize_t)sp->stream.avail_in;
 
     return 1;
 }
@@ -326,7 +337,7 @@ static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         {
             TIFFErrorExtR(tif, module,
                           "Encoding error at scanline %" PRIu32 ", %s",
-                          tif->tif_row, LZMAStrerror(ret));
+                          tif->tif_dir.td_row, LZMAStrerror(ret));
             return 0;
         }
         if (sp->stream.avail_out == 0)
@@ -365,7 +376,7 @@ static int LZMAPostEncode(TIFF *tif)
                 if ((tmsize_t)sp->stream.avail_out != tif->tif_rawdatasize)
                 {
                     tif->tif_rawcc =
-                        tif->tif_rawdatasize - sp->stream.avail_out;
+                        tif->tif_rawdatasize - (tmsize_t)sp->stream.avail_out;
                     if (!TIFFFlushData1(tif))
                         return 0;
                     sp->stream.next_out = tif->tif_rawdata;
@@ -376,6 +387,27 @@ static int LZMAPostEncode(TIFF *tif)
                                                      ZIPPreEncode */
                 }
                 break;
+            case LZMA_NO_CHECK:
+            case LZMA_UNSUPPORTED_CHECK:
+            case LZMA_GET_CHECK:
+            case LZMA_MEM_ERROR:
+            case LZMA_MEMLIMIT_ERROR:
+            case LZMA_FORMAT_ERROR:
+            case LZMA_OPTIONS_ERROR:
+            case LZMA_DATA_ERROR:
+            case LZMA_BUF_ERROR:
+            case LZMA_PROG_ERROR:
+#if LZMA_VERSION >= 50040000 /* 5.4.0 */
+            case LZMA_SEEK_NEEDED:
+            case LZMA_RET_INTERNAL1:
+            case LZMA_RET_INTERNAL2:
+            case LZMA_RET_INTERNAL3:
+            case LZMA_RET_INTERNAL4:
+            case LZMA_RET_INTERNAL5:
+            case LZMA_RET_INTERNAL6:
+            case LZMA_RET_INTERNAL7:
+            case LZMA_RET_INTERNAL8:
+#endif
             default:
                 TIFFErrorExtR(tif, module, "Liblzma error: %s",
                               LZMAStrerror(ret));
@@ -416,7 +448,7 @@ static int LZMAVSetField(TIFF *tif, uint32_t tag, va_list ap)
     {
         case TIFFTAG_LZMAPRESET:
             sp->preset = (int)va_arg(ap, int);
-            lzma_lzma_preset(&sp->opt_lzma, sp->preset);
+            lzma_lzma_preset(&sp->opt_lzma, (uint32_t)sp->preset);
             if (sp->state & LSTATE_INIT_ENCODE)
             {
                 lzma_ret ret =
@@ -453,6 +485,21 @@ static const TIFFField lzmaFields[] = {
     {TIFFTAG_LZMAPRESET, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO, TRUE,
      FALSE, "LZMA2 Compression Preset", NULL},
 };
+
+static uint64_t LZMAGetMaxCompressionRatio(TIFF *tif)
+{
+    (void)tif;
+
+    /* See README_for_libtiff_developpers.md for raw data used to estimate
+     * the maximum compression rate. */
+
+    /* 1024x1024: 3800 */
+    /* 4096x4096: 6534 */
+    /* 16383x16383: 6846 */
+    /* 65536x65536: 6874 */
+
+    return 7000;
+}
 
 int TIFFInitLZMA(TIFF *tif, int scheme)
 {
@@ -506,7 +553,7 @@ int TIFFInitLZMA(TIFF *tif, int scheme)
     sp->filters[0].id = LZMA_FILTER_DELTA;
     sp->filters[0].options = &sp->opt_delta;
 
-    lzma_lzma_preset(&sp->opt_lzma, sp->preset);
+    lzma_lzma_preset(&sp->opt_lzma, (uint32_t)sp->preset);
     sp->filters[1].id = LZMA_FILTER_LZMA2;
     sp->filters[1].options = &sp->opt_lzma;
 
@@ -529,6 +576,8 @@ int TIFFInitLZMA(TIFF *tif, int scheme)
     tif->tif_encodestrip = LZMAEncode;
     tif->tif_encodetile = LZMAEncode;
     tif->tif_cleanup = LZMACleanup;
+    tif->tif_getmaxcompressionratio = LZMAGetMaxCompressionRatio;
+
     /*
      * Setup predictor setup.
      */
