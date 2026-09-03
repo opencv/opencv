@@ -2479,8 +2479,9 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
         if(!me || !me->data) return 0;  // no native object behind
         std::vector<int> idx = convertJintArrayToVector(env, idxArray);
         if (!check_idx_access(me, idx)) return 0; // indexes out of range
-        int rest = (int)((me->total() - idx2Offset(me, idx)) * me->channels());
-        if(count>rest) count = rest;
+        if (count <= 0) return 0;
+        size_t rest = (me->total() - idx2Offset(me, idx)) * (size_t)me->channels();
+        if ((size_t)count > rest) count = (jint)rest;
         int res = count;
         double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
         double* src = values;
