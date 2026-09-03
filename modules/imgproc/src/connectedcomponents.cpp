@@ -5650,6 +5650,7 @@ namespace cv{
     template<typename StatsOp>
     static
     int connectedComponents_sub1(const cv::Mat& I, cv::Mat& L, int connectivity, int ccltype, StatsOp& sop){
+        CV_Assert(!I.empty());
         CV_Assert(L.channels() == 1 && I.channels() == 1);
         CV_Assert(connectivity == 8 || connectivity == 4);
         CV_Assert(ccltype == CCL_SPAGHETTI || ccltype == CCL_BBDT || ccltype == CCL_SAUF || ccltype == CCL_BOLELLI || ccltype == CCL_GRANA || ccltype == CCL_WU || ccltype == CCL_DEFAULT);
