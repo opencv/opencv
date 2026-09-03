@@ -81,6 +81,47 @@ TEST(Test_ONNX_ORT_Wrapper, SingleInputMultipleOutput)
     normAssert(ref_ind, outputs[1], "ORT top_k indices", 0.0, 0.0);
 }
 
+// SSD detectors carry TF's dynamic post-processing (NMS/TopK/control-flow) in-graph,
+// which only the ORT engine can run.
+static void runSSDDetectorORT(const std::string& model)
+{
+    cv::Mat img = imread(findDataFile("dnn/street.png"));
+    ASSERT_FALSE(img.empty());
+    cv::Mat rgb;
+    cv::cvtColor(img, rgb, cv::COLOR_BGR2RGB);
+    cv::resize(rgb, rgb, cv::Size(300, 300));
+    if (!rgb.isContinuous()) rgb = rgb.clone();
+    int s[] = {1, 300, 300, 3};
+    cv::Mat blob(4, s, CV_8U, rgb.data);
+
+    cv::dnn::Net net = readNetFromONNX_ORT(_tf("models/" + model));
+    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    net.setInput(blob);
+
+    std::vector<cv::Mat> outs;
+    net.forward(outs, std::vector<std::string>{
+        "detection_boxes:0", "detection_scores:0", "detection_classes:0", "num_detections:0"});
+    ASSERT_EQ(outs.size(), 4u);
+    int nd = static_cast<int>(outs[3].ptr<float>()[0]);
+    EXPECT_GE(nd, 1);
+}
+
+TEST(Test_ONNX_ORT_Wrapper, SSD_MobileNet_v1)
+{
+    runSSDDetectorORT("ssd_mobilenet_v1_coco.onnx");
+}
+
+TEST(Test_ONNX_ORT_Wrapper, SSD_MobileNet_v2)
+{
+    runSSDDetectorORT("ssd_mobilenet_v2_coco_2018_03_29.onnx");
+}
+
+TEST(Test_ONNX_ORT_Wrapper, SSD_Inception_v2)
+{
+    runSSDDetectorORT("ssd_inception_v2_coco_2017_11_17.onnx");
+}
+
 #else  // HAVE_ONNXRUNTIME
 
 TEST(Test_ONNX_ORT_Wrapper, DISABLED_NoONNXRuntime) {}
