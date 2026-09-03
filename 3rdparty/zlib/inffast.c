@@ -7,6 +7,7 @@
 #include "inftrees.h"
 #include "inflate.h"
 #include "inffast.h"
+#include "zarm.h"
 
 #ifdef ASMINF
 #  pragma message("Assembler code may have bugs -- use at your own risk")
@@ -199,9 +200,13 @@ void ZLIB_INTERNAL inflate_fast(z_streamp strm, unsigned start) {
                         from += wsize - op;
                         if (op < len) {         /* some from window */
                             len -= op;
+#ifdef Z_ARM64_NEON
+                            out = neon_copy_disjoint(out, from, op);
+#else
                             do {
                                 *out++ = *from++;
                             } while (--op);
+#endif
                             from = out - dist;  /* rest from output */
                         }
                     }
@@ -210,16 +215,24 @@ void ZLIB_INTERNAL inflate_fast(z_streamp strm, unsigned start) {
                         op -= wnext;
                         if (op < len) {         /* some from end of window */
                             len -= op;
+#ifdef Z_ARM64_NEON
+                            out = neon_copy_disjoint(out, from, op);
+#else
                             do {
                                 *out++ = *from++;
                             } while (--op);
+#endif
                             from = window;
                             if (wnext < len) {  /* some from start of window */
                                 op = wnext;
                                 len -= op;
+#ifdef Z_ARM64_NEON
+                                out = neon_copy_disjoint(out, from, op);
+#else
                                 do {
                                     *out++ = *from++;
                                 } while (--op);
+#endif
                                 from = out - dist;      /* rest from output */
                             }
                         }
@@ -228,9 +241,13 @@ void ZLIB_INTERNAL inflate_fast(z_streamp strm, unsigned start) {
                         from += wnext - op;
                         if (op < len) {         /* some from window */
                             len -= op;
+#ifdef Z_ARM64_NEON
+                            out = neon_copy_disjoint(out, from, op);
+#else
                             do {
                                 *out++ = *from++;
                             } while (--op);
+#endif
                             from = out - dist;  /* rest from output */
                         }
                     }
@@ -247,6 +264,9 @@ void ZLIB_INTERNAL inflate_fast(z_streamp strm, unsigned start) {
                     }
                 }
                 else {
+#ifdef Z_ARM64_NEON
+                    out = neon_copy_lz77(out, dist, len);
+#else
                     from = out - dist;          /* copy direct from output */
                     do {                        /* minimum length is three */
                         *out++ = *from++;
@@ -259,6 +279,7 @@ void ZLIB_INTERNAL inflate_fast(z_streamp strm, unsigned start) {
                         if (len > 1)
                             *out++ = *from++;
                     }
+#endif
                 }
             }
             else if ((op & 64) == 0) {          /* 2nd level distance code */
