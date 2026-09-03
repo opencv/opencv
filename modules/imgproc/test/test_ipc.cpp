@@ -24,6 +24,17 @@ Mat GenerateTestImage(Size size)
     return image;
 }
 
+Mat GenerateGaussianImage(Size size, Point2d center)
+{
+    Mat image(size, CV_32F);
+    for (int row = 0; row < size.height; ++row)
+        for (int col = 0; col < size.width; ++col)
+            image.at<float>(row, col) = static_cast<float>(std::exp(
+                -((col - center.x) * (col - center.x) + (row - center.y) * (row - center.y)) /
+                32.));
+    return image;
+}
+
 void TestPhaseCorrelationIterative(const Size& size, const double maxShift)
 {
     const auto iters = std::max(201., maxShift * 10 + 1);
@@ -112,6 +123,19 @@ TEST(Imgproc_PhaseCorrelationIterative, accuracy_real_img)
 
     ASSERT_NEAR(ipcShift.x, (double)xShift, 1.);
     ASSERT_NEAR(ipcShift.y, (double)yShift, 1.);
+}
+
+TEST(Imgproc_PhaseCorrelationIterative, accuracy_32f_smooth_img)
+{
+    const Point2d center(30., 28.);
+    const Point2d shift(-3., 2.);
+    const Mat image1 = GenerateGaussianImage(Size(64, 64), center);
+    const Mat image2 = GenerateGaussianImage(Size(64, 64), center + shift);
+
+    const Point2d ipcShift = phaseCorrelateIterative(image1, image2);
+
+    ASSERT_NEAR(ipcShift.x, shift.x, 1.);
+    ASSERT_NEAR(ipcShift.y, shift.y, 1.);
 }
 
 }}  // namespace opencv_test
