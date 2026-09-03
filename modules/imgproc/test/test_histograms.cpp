@@ -2150,16 +2150,22 @@ TEST(Imgproc_Hist_Compare, correl_regression_29706)
 
 // See https://github.com/opencv/opencv/issues/29706
 //
-// Comparing two *different* near-constant histograms has to land inside the range
-// a correlation coefficient is defined on, and must never be NaN. What drives the
-// cancellation is the bin count, not which bin differs: under the single-pass form
-// a failing size failed at every shift, n=25 returning NaN and n>=38 returning
-// values below -1, so a few sizes cover both failure modes.
-TEST(Imgproc_Hist_Compare, correl_near_constant_pair_29706)
+// Comparing two different near-constant histograms must still land inside the
+// range a correlation coefficient is defined on, and must never be NaN. The bin
+// that differs is placed at the ends and the middle of the histogram, since the
+// lost variance depends on where the outlier falls in the running sums.
+//
+// The bin counts are the ones that actually exercised the two failure modes
+// before the fix, rather than a round sample: at 25 bins the old code produced
+// NaN, because only one of the two variance terms was pushed below zero and the
+// square root was then taken of a negative denominator, while at 38, 44 and 64
+// both terms went negative together and it returned about -1.03 to -1.15. Sizes
+// small enough to keep the sums exact, such as 2 or 17, never reproduced either.
+TEST(Imgproc_Hist_Compare, correl_near_constant_range_29706)
 {
     const float base = 16777215.f;
 
-    for (int n : {25, 38, 64})
+    for (int n : {25, 38, 44, 64})
     {
         for (int shifted : {0, n / 2, n - 1})
         {
@@ -2184,7 +2190,7 @@ TEST(Imgproc_Hist_Compare, correl_near_constant_pair_29706)
 TEST(Imgproc_Hist_Compare, correl_precision_29706)
 {
     const int n = 256;
-    cv::RNG& rng = cv::theRNG();
+    cv::RNG& rng = theRNG();
 
     for (double spread : {1e-1, 1e-3, 1e-5, 1e-7})
     {
@@ -2192,8 +2198,16 @@ TEST(Imgproc_Hist_Compare, correl_precision_29706)
         cv::Mat h1(n, 1, CV_32FC1), h2(n, 1, CV_32FC1);
         for (int i = 0; i < n; i++)
         {
-            h1.at<float>(i, 0) = (float)(mean + mean*spread*rng.gaussian(1.0));
-            h2.at<float>(i, 0) = (float)(mean + mean*spread*rng.gaussian(1.0));
+            // The deterministic shapes carry the spread on their own, so neither
+            // histogram can come out constant however the generator is seeded; the
+            // noise on top is what differs from run to run. A constant histogram
+            // has no correlation to measure and would leave the reference at 0/0.
+            // One shape is odd and the other even, so they are not a scaled copy of
+            // each other and the correlation stays away from +/-1, where the errors
+            // in the numerator and denominator would cancel in the ratio.
+            const double t = 2.0*i/(n - 1) - 1.0;
+            h1.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*t));
+            h2.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*(2.0*t*t - 1.0)));
         }
 
         // Reference correlation, accumulated about the sample means in long double.
@@ -2207,6 +2221,8 @@ TEST(Imgproc_Hist_Compare, correl_precision_29706)
             long double db = (long double)h2.at<float>(i,0) - m2;
             cov += da*db; v1 += da*da; v2 += db*db;
         }
+        ASSERT_GT((double)v1, 0.0) << "relative spread " << spread;
+        ASSERT_GT((double)v2, 0.0) << "relative spread " << spread;
         const double expected = (double)(cov / std::sqrt(v1*v2));
         const double got = compareHist(h1, h2, cv::HISTCMP_CORREL);
 
@@ -2224,11 +2240,19 @@ TEST(Imgproc_Hist_Compare, correl_precision_29706)
 TEST(Imgproc_Hist_Compare, correl_multichannel_13990)
 {
     const int rows = 64, chans = 8, n = rows*chans;
-    cv::RNG& rng = cv::theRNG();
+    cv::RNG& rng = theRNG();
 
     cv::Mat flat1(n, 1, CV_32FC1), flat2(n, 1, CV_32FC1);
     rng.fill(flat1, cv::RNG::UNIFORM, 0.f, 1000.f);
     rng.fill(flat2, cv::RNG::UNIFORM, 0.f, 1000.f);
+    // Both layouts are read from the same bytes, so the comparison holds for any
+    // content; the ramp only keeps it from degenerating into constant histograms,
+    // whose correlation is undefined and reported as 1 either way.
+    for (int i = 0; i < n; i++)
+    {
+        flat1.at<float>(i, 0) += (float)i;
+        flat2.at<float>(i, 0) += (float)(n - i);
+    }
 
     // The very same bytes, seen as rows x 1 with `chans` channels.
     cv::Mat multi1(rows, 1, CV_MAKETYPE(CV_32F, chans), flat1.data);
