@@ -16,9 +16,6 @@
 // Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
 #define IPP_DISABLE_FILTER2D_BIG_MASK 1
 
-// IPP Hough integration is disabled in main OpenCV (improper integration/results); kept behind a macro
-#define DISABLE_IPP_HOUGH 1
-
 // IPP morphology integration is disabled in main OpenCV (different results); kept behind a macro
 #define DISABLE_IPP_MORPH 1
 
@@ -54,27 +51,6 @@ int ipp_hal_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_
 #define cv_hal_laplacian_offset ipp_hal_laplacian_offset
 
 #endif
-
-#if !DISABLE_IPP_HOUGH
-int ipp_hal_houghLines(const uchar* src_data, size_t src_step, int width, int height,
-                       float rho, float theta, int threshold, int numangle,
-                       double min_theta, double max_theta,
-                       int lines_max, float** out_lines, int* out_count);
-#undef cv_hal_houghLines
-#define cv_hal_houghLines ipp_hal_houghLines
-
-int ipp_hal_houghLinesProbabilistic(const uchar* src_data, size_t src_step, int width, int height,
-                                    float rho, float theta, int threshold,
-                                    int line_length, int line_gap,
-                                    int numangle, int numrho,
-                                    int lines_max, int** out_lines, int* out_count);
-#undef cv_hal_houghLinesProbabilistic
-#define cv_hal_houghLinesProbabilistic ipp_hal_houghLinesProbabilistic
-
-void ipp_hal_houghLinesFree(void* lines);
-#undef cv_hal_houghLinesFree
-#define cv_hal_houghLinesFree ipp_hal_houghLinesFree
-#endif // !DISABLE_IPP_HOUGH
 
 #if IPP_VERSION_X100 >= 202600
 
@@ -246,32 +222,6 @@ int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, 
                           double center_x, double center_y);
 #undef cv_hal_getRectSubPix
 #define cv_hal_getRectSubPix ipp_hal_getRectSubPix
-
-int ipp_hal_accumulate(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                       const uchar* mask_data, size_t mask_step, int width, int height,
-                       int src_type, int dst_type);
-#undef cv_hal_accumulate
-#define cv_hal_accumulate ipp_hal_accumulate
-
-int ipp_hal_accumulateSquare(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                             const uchar* mask_data, size_t mask_step, int width, int height,
-                             int src_type, int dst_type);
-#undef cv_hal_accumulateSquare
-#define cv_hal_accumulateSquare ipp_hal_accumulateSquare
-
-int ipp_hal_accumulateProduct(const uchar* src1_data, size_t src1_step,
-                              const uchar* src2_data, size_t src2_step,
-                              uchar* dst_data, size_t dst_step,
-                              const uchar* mask_data, size_t mask_step, int width, int height,
-                              int src_type, int dst_type);
-#undef cv_hal_accumulateProduct
-#define cv_hal_accumulateProduct ipp_hal_accumulateProduct
-
-int ipp_hal_accumulateWeighted(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                               const uchar* mask_data, size_t mask_step, int width, int height,
-                               int src_type, int dst_type, double alpha);
-#undef cv_hal_accumulateWeighted
-#define cv_hal_accumulateWeighted ipp_hal_accumulateWeighted
 
 int ipp_hal_integral(int depth, int sdepth, int sqdepth, const uchar * src_data, size_t src_step, uchar * sum_data, size_t sum_step, uchar * sqsum_data, size_t sqsum_step, uchar * tilted_data, size_t tilted_step, int width, int height, int cn);
 #undef cv_hal_integral

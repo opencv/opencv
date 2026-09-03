@@ -29,8 +29,6 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/distancetransform_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/histogram_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/samplers_ipp.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/hough_ipp.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/accum_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/corner_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/morph_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/median_blur_ipp.cpp"

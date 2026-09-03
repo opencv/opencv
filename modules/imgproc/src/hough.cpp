@@ -146,21 +146,6 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
     int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
 
-    if (type == CV_32FC2)
-    {
-        float* hough_lines = NULL;
-        int hough_count = 0;
-        int res = cv_hal_houghLines(image, step, width, height, rho, theta, threshold, numangle,
-                                    min_theta, max_theta, linesMax, &hough_lines, &hough_count);
-        if (res == CV_HAL_ERROR_OK)
-        {
-            Mat(hough_count, 1, CV_32FC2, hough_lines).copyTo(lines);
-            cv_hal_houghLinesFree(hough_lines);
-            return;
-        }
-    }
-
-
     Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
     std::vector<int> _sort_buf;
     AutoBuffer<float> _tabSin(numangle);
@@ -543,21 +528,6 @@ HoughLinesProbabilistic( Mat& image,
 
     int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
-
-    {
-        int* hough_lines = NULL;
-        int hough_count = 0;
-        int res = cv_hal_houghLinesProbabilistic(image.data, image.step, width, height, rho, theta,
-                                                 threshold, lineLength, lineGap, numangle, numrho,
-                                                 linesMax, &hough_lines, &hough_count);
-        if (res == CV_HAL_ERROR_OK)
-        {
-            lines.assign((Vec4i*)hough_lines, (Vec4i*)hough_lines + hough_count);
-            cv_hal_houghLinesFree(hough_lines);
-            return;
-        }
-        lines.clear();
-    }
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );

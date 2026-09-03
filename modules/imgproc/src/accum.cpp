@@ -252,25 +252,6 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
 
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
-        {
-            Size size = src.size();
-            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = src.total() * src.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src.total();
-                size.height = 1;
-            }
-            CALL_HAL(accumulate, cv_hal_accumulate, src.data, srcstep, dst.data, dststep,
-                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
-        }
-    }
-
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_OP))
 
@@ -302,25 +283,6 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
-
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
-        {
-            Size size = src.size();
-            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = src.total() * src.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src.total();
-                size.height = 1;
-            }
-            CALL_HAL(accumulateSquare, cv_hal_accumulateSquare, src.data, srcstep, dst.data, dststep,
-                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
-        }
-    }
 
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_SQUARE_OP))
@@ -357,26 +319,6 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
 
-    {
-        Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-        if (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && dst.isContinuous()))
-        {
-            Size size = src1.size();
-            size_t src1step = src1.step, src2step = src2.step, dststep = dst.step, maskstep = mask.step;
-            if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                src1step = src1.total() * src1.elemSize();
-                src2step = src2.total() * src2.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src1.total();
-                size.height = 1;
-            }
-            CALL_HAL(accumulateProduct, cv_hal_accumulateProduct, src1.data, src1step, src2.data, src2step,
-                     dst.data, dststep, mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype);
-        }
-    }
-
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
@@ -405,25 +347,6 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))
-
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && mask.isContinuous()))
-        {
-            Size size = src.size();
-            size_t srcstep = src.step, dststep = dst.step, maskstep = mask.step;
-            if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
-            {
-                srcstep = src.total() * src.elemSize();
-                dststep = dst.total() * dst.elemSize();
-                maskstep = mask.total() * mask.elemSize();
-                size.width = (int)src.total();
-                size.height = 1;
-            }
-            CALL_HAL(accumulateWeighted, cv_hal_accumulateWeighted, src.data, srcstep, dst.data, dststep,
-                     mask.empty() ? nullptr : mask.data, maskstep, size.width, size.height, stype, dtype, alpha);
-        }
-    }
 
     CV_OVX_RUN(_src.dims() <= 2,
                openvx_accumulate(_src, _dst, _mask, alpha, VX_ACCUMULATE_WEIGHTED_OP))
