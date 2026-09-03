@@ -205,6 +205,7 @@ enum VideoCaptureProperties {
        CAP_PROP_PTS = 71, //!<  (read-only) FFmpeg back-end only - presentation timestamp of the most recently read frame using the FPS time base.  e.g. fps = 25, VideoCapture::get(\ref CAP_PROP_PTS) = 3, presentation time = 3/25 seconds.
        CAP_PROP_DTS_DELAY = 72, //!<  (read-only) FFmpeg back-end only - maximum difference between presentation (pts) and decompression timestamps (dts) using FPS time base.  e.g. delay is maximum when frame_num = 0, if true, VideoCapture::get(\ref CAP_PROP_PTS) = 0 and VideoCapture::get(\ref CAP_PROP_DTS_DELAY) = 2, dts = -2.  Non zero values usually imply the stream is encoded using B-frames which are not decoded in presentation order.
        CAP_PROP_IMAGE_SEQ_START = 73, //!< (**open-only**) Start number for image sequences opened with a printf-style pattern (e.g. `frame_%05d.dpx`). Sets the initial frame number and disables automatic first-frame detection. Applicable to \ref CAP_FFMPEG (passed as the image2 demuxer `start_number`) and \ref CAP_IMAGES backends. Default: not set (automatic detection).
+       CAP_PROP_TARGET_FPS = 74, //!< (**open-only**, via `params`) Drops frames so VideoCapture::read() emits at this rate instead of the source's native rate; supported on \ref CAP_FFMPEG, \ref CAP_GSTREAMER, \ref CAP_V4L2 and \ref CAP_OPENCV_MJPEG, ignored (with a warning) elsewhere.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -814,7 +815,7 @@ public:
     @brief Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
+    See cv::VideoCaptureProperties (this includes \ref CAP_PROP_TARGET_FPS for drop-only frame-rate control)
     */
     CV_WRAP explicit VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params);
 
@@ -834,7 +835,7 @@ public:
     @brief Opens a camera for video capturing with API Preference and parameters
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
+    See cv::VideoCaptureProperties (this includes \ref CAP_PROP_TARGET_FPS for drop-only frame-rate control)
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
@@ -868,7 +869,7 @@ public:
     @overload
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
+    See cv::VideoCaptureProperties (this includes \ref CAP_PROP_TARGET_FPS for drop-only frame-rate control)
 
     @return `true` if the file has been successfully opened
 
@@ -892,7 +893,7 @@ public:
     @overload
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
+    See cv::VideoCaptureProperties (this includes \ref CAP_PROP_TARGET_FPS for drop-only frame-rate control)
 
     @return `true` if the camera has been successfully opened.
 
@@ -1055,6 +1056,33 @@ public:
 protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+
+    // Drop-only frame-rate control set via CAP_PROP_TARGET_FPS in the `params` vector passed to a
+    // constructor/open() call; see fpsControlGrab() in cap.cpp for the algorithm.
+
+    // Tolerance for backend timestamp rounding noise at an exact schedule boundary.
+    static const double kFpsControlEpsMs;
+
+    struct FpsControlState
+    {
+        bool enabled = false;
+        double targetFps = 0.0;            // requested output fps, for get(CAP_PROP_FPS)
+        double outFrameDurationMs = 0.0;   // 1000 / requested output fps
+        double nextOutPts = -1.0;          // output clock; unset (<0) until first frame anchors it
+
+        // Set by fpsControlGrab() when it finds the frame due for the current tick. Its pixel data
+        // is deliberately left un-retrieved in the backend's own internal buffer -- retrieve()
+        // fetches it directly from there, exactly like the disabled path, so a dropped frame is
+        // never decoded/copied and the kept frame is never copied more than once.
+        bool pendingValid = false;
+        double pendingPosMsec = -1.0;
+        double pendingPosFrames = -1.0;
+        double pendingPosAviRatio = -1.0;
+    } fpsCtl;
+
+    void enableFpsControl(double target_fps);
+    bool fpsControlGrab();
+    void fpsControlResetClock();
 
     friend class internal::VideoCapturePrivateAccessor;
 };
