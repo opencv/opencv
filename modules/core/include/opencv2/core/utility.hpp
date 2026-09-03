@@ -652,7 +652,7 @@ retrieved using useOptimized.
 @param onoff The boolean flag specifying whether the optimized code should be used (onoff=true)
 or not (onoff=false).
  */
-CV_EXPORTS_W void setUseOptimized(bool onoff);
+CV_DEPRECATED_EXTERNAL CV_EXPORTS void setUseOptimized(bool onoff);
 
 /** @brief Returns the status of optimized code usage.
 
