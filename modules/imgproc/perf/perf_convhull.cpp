@@ -33,4 +33,30 @@ PERF_TEST_P(ConvexHullPerfTest, convexHull,
     SANITY_CHECK_NOTHING();
 }
 
+// a noisy closed contour (simulate output of findContours), points ordered along the boundary.
+typedef TestBaseWithParam<int> ConvexHullContourPerfTest;
+
+PERF_TEST_P(ConvexHullContourPerfTest, convexHull,
+    testing::Values(100, 1000, 10000, 50000))   // contour points
+{
+    const int total = GetParam();
+
+    // polar form r(theta) = R * (1 + noise); R ~ total/(2*pi)
+    const double R = total / (2.0 * CV_PI);
+
+    RNG rng(0x12345678);      // fixed seed => identical input for both cases - bucketsort / std::sort
+    std::vector<Point> points(total);
+    for (int i = 0; i < total; ++i)
+    {
+        const double theta = 2.0 * CV_PI * i / total;
+        const double r = R * rng.uniform(0.9, 1.1);   // +-10% radial noise
+        points[i] = Point(cvRound(r * std::cos(theta)), cvRound(r * std::sin(theta)));
+    }
+
+    std::vector<Point> hull_pts;
+    TEST_CYCLE() convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
+
+    SANITY_CHECK_NOTHING();
+}
+
 }} // namespace
