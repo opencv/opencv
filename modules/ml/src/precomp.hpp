@@ -151,8 +151,8 @@ namespace ml
                           "or n>0 (tree is pruned using n-fold cross-validation)" );
             if(val > 1)
                 CV_Error( cv::Error::StsNotImplemented,
-                          "tree pruning using cross-validation is not implemented."
-                          "Set CVFolds to 1");
+                          "tree pruning using cross-validation is not implemented. "
+                          "Set CVFolds to 0 or 1");
 
             if( val == 1 )
                 val = 0;
