@@ -418,6 +418,8 @@ PERF_TEST_P_(DNNTestNetwork, VIT_B_32)
 
 PERF_TEST_P_(DNNTestNetwork, BERT)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     const int seq_len = 9;
     int64_t input_ids_data[seq_len] = {101, 1996, 103, 2938, 2006, 1996, 13523, 1012, 102};
     int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 1, 1, 1, 1, 1};

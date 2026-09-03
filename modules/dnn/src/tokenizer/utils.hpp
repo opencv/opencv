@@ -6,8 +6,42 @@
 #define __OPENCV_DNN_TOKENIZER_UTILS_HPP__
 
 #include <string>
+#include <unordered_map>
 
 namespace cv { namespace dnn {
+
+// Splits 'text' on the longest-matching entries of 'specialToId' that pass
+// 'isAllowed', calling 'onLiteral' for each in-between run and 'onSpecialId'
+// for each match, left to right. Shared by WordPiece and Unigram, whose
+// special-token pre-splitting is otherwise identical.
+template <typename AllowedFn, typename LiteralFn, typename SpecialFn>
+static void splitOnSpecialTokens(const std::string& text,
+                                  const std::unordered_map<std::string, int>& specialToId,
+                                  AllowedFn isAllowed, LiteralFn onLiteral, SpecialFn onSpecialId)
+{
+    size_t chunkStart = 0;
+    size_t pos = 0;
+    while (pos < text.size()) {
+        std::string matched;
+        int matchedId = -1;
+        for (const auto& kv : specialToId) {
+            const std::string& sp = kv.first;
+            if (sp.empty() || !isAllowed(sp)) continue;
+            if (pos + sp.size() > text.size()) continue;
+            if (text.compare(pos, sp.size(), sp) != 0) continue;
+            if (sp.size() > matched.size()) { matched = sp; matchedId = kv.second; }
+        }
+        if (matchedId >= 0) {
+            if (pos > chunkStart) onLiteral(text.substr(chunkStart, pos - chunkStart));
+            onSpecialId(matchedId);
+            pos += matched.size();
+            chunkStart = pos;
+        } else {
+            ++pos;
+        }
+    }
+    if (chunkStart < text.size()) onLiteral(text.substr(chunkStart));
+}
 
 // R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K"
 static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)";
