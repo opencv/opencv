@@ -199,6 +199,12 @@ int ipp_hal_distanceTransform(const uchar* src_data, size_t src_step, uchar* dst
 #undef cv_hal_distanceTransform
 #define cv_hal_distanceTransform ipp_hal_distanceTransform
 
+int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                          int patch_type, uchar* patch_data, size_t patch_step, int patch_width, int patch_height,
+                          double center_x, double center_y);
+#undef cv_hal_getRectSubPix
+#define cv_hal_getRectSubPix ipp_hal_getRectSubPix
+
 #endif // IPP_VERSION_X100 >= 700
 
 #define IPP_DISABLE_PERF_CANNY_MT 1 // cv::Canny OpenCV MT performance is better
