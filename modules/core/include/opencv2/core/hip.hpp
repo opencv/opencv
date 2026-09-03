@@ -157,4 +157,3 @@ namespace cv{
 }
 
 #endif /*for OPENCV_CORE_HIP_HPP*/
-

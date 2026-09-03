@@ -58,7 +58,7 @@ namespace cv {
 
             size_t step;
             __CV_HIP_HOST_DEVICE__ const T* ptr(int y) const { return (const T*)((const uchar*)this->data + y * step); }
-            __CV_HIP_HOST_DEVICE__       T* ptr(int y)       { return (     T*)((      uchar*)this->data + y * step); }     
+            __CV_HIP_HOST_DEVICE__       T* ptr(int y)       { return (     T*)((      uchar*)this->data + y * step); }
             __CV_HIP_HOST_DEVICE__       T& operator ()(int y, int x)       { return ptr(y)[x]; }
             __CV_HIP_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
         };

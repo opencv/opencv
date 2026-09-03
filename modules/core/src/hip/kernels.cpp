@@ -181,7 +181,8 @@ void cv::hip::device::setToWithoutMask(void* data_, size_t step, int rows, int c
     const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     const size_t elemSize = CV_ELEM_SIZE(type);
     const hipStream_t s = 0;  // UMat T-API has no stream concept; use the default stream
-    CV_DbgAssert(data && depth <= CV_64F && cn <= 4);
+    // Not CV_DbgAssert: funcs[] below is [7][4], so a bad depth would call a garbage pointer in Release.
+    CV_Assert(data && depth <= CV_64F && cn <= 4);
 
     if (val[0] == 0.0 && val[1] == 0.0 && val[2] == 0.0 && val[3] == 0.0) {
         CV_HIP_SAFE_CALL(hipMemset2D(data, step, 0, cols * elemSize, rows));
@@ -247,7 +248,8 @@ void cv::hip::device::setToWithMask(void* data_, size_t step, int rows, int cols
     const uchar* mask = static_cast<const uchar*>(mask_);
     const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     const hipStream_t s = 0;  // UMat T-API has no stream concept; use the default stream
-    CV_DbgAssert(data && mask && depth <= CV_64F && cn <= 4);
+    // Not CV_DbgAssert: funcs[] below is [7][4], so a bad depth would call a garbage pointer in Release.
+    CV_Assert(data && mask && depth <= CV_64F && cn <= 4);
 
     typedef void (*func_t)(uchar*, size_t, const uchar*, size_t, int, int, const Scalar&, hipStream_t);
     static const func_t funcs[7][4] = {
@@ -302,8 +304,8 @@ void cv::hip::device::copyToWithMask(const void* src_, size_t srcStep,
     const int    cn   = CV_MAT_CN(type);
     const size_t esz1 = CV_ELEM_SIZE1(type);
     const hipStream_t s = 0;  // UMat T-API has no stream concept; use the default stream
-    CV_DbgAssert(src && CV_MAT_DEPTH(type) <= CV_64F && cn <= 4 &&
-                 (maskCn == 1 || maskCn == cn));
+    // Indexed by element width, not depth, so every 5.x depth is covered; esz1 gates the table.
+    CV_Assert(src && esz1 <= 8 && cn <= 4 && (maskCn == 1 || maskCn == cn));
 
     // funcs indexed by [byte-width-of-one-channel][cn-1]; copy ignores signedness.
     typedef void (*func_t)(const uchar*, size_t, uchar*, size_t,
@@ -323,12 +325,12 @@ void cv::hip::device::copyToWithMask(const void* src_, size_t srcStep,
     if (maskCn == cn) {
         // Per-channel mask: flatten channels into the width and copy single elements.
         const func_t func = funcs[esz1][0];
-        CV_DbgAssert(func);
+        CV_Assert(func);
         func(src, srcStep, dst, dstStep, mask, maskStep, rows, cols * cn, s);
     } else {
         // Single-channel mask gates whole pixels: use the cn-wide vector copy.
         const func_t func = funcs[esz1][cn - 1];
-        CV_DbgAssert(func);
+        CV_Assert(func);
         func(src, srcStep, dst, dstStep, mask, maskStep, rows, cols, s);
     }
     CV_HIP_SAFE_CALL(hipGetLastError());
@@ -398,4 +400,3 @@ void cv::hip::device::convertToScale(const void* src_, size_t srcStep, int stype
     CV_HIP_SAFE_CALL(hipGetLastError());
     CV_HIP_SAFE_CALL(hipStreamSynchronize(s));
 }
-

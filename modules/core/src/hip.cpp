@@ -117,10 +117,17 @@ public:
         if (!u) return;
         CV_Assert(u->urefcount == 0 && u->refcount == 0);
 
-        // Borrowed from another allocator (Mat::getUMat): free the device handle,
-        // restore the original allocator + host buffer, and let it finish cleanup.
+        // Borrowed from another allocator (Mat::getUMat): flush the device result back into
+        // the borrowed host buffer, free the device handle, restore the original allocator
+        // + host buffer, and let it finish cleanup.
         if (u->prevAllocator) {
             if (u->handle) {
+                // The Mat we borrowed from owns origdata and outlives us; without this the
+                // kernel's writes are dropped (matches OpenCLAllocator::deallocate_ tempUMat).
+                if (u->hostCopyObsolete() && u->origdata) {
+                    hipSafeCall(hipMemcpy(u->origdata, u->handle, u->size, hipMemcpyDeviceToHost));
+                    u->markHostCopyObsolete(false);
+                }
                 hipSafeCall(hipFree(u->handle));
                 u->handle = nullptr;
             }
@@ -176,40 +183,74 @@ public:
         }
     }
 
+    // sz/steps follow the MatAllocator convention: the last dim carries element bytes,
+    // earlier dims count elements, so an offset scales by its own step except on the last.
+    // Mirrors cv::cuda::CudaUMatAllocator::copyPlanes (opencv/opencv#29451).
+    static void copyPlanes(uchar* srcbase, const size_t srcofs[], const size_t srcstep[],
+                           uchar* dstbase, const size_t dstofs[], const size_t dststep[],
+                           int dims, const size_t sz[], hipMemcpyKind kind, bool async)
+    {
+        int isz[CV_MAX_DIM];
+        uchar* srcptr = srcbase;
+        uchar* dstptr = dstbase;
+
+        for (int i = 0; i < dims; i++)
+        {
+            CV_Assert(sz[i] <= (size_t)INT_MAX);
+            if (sz[i] == 0)
+                return;
+            if (srcofs) srcptr += srcofs[i] * (i <= dims - 2 ? srcstep[i] : 1);
+            if (dstofs) dstptr += dstofs[i] * (i <= dims - 2 ? dststep[i] : 1);
+            isz[i] = (int)sz[i];
+        }
+
+        // Fast path: one 2-D transfer instead of a row loop. hipMemcpy2D takes independent
+        // src/dst pitches, so a strided ROI to a packed buffer is still a single call.
+        if (dims == 2)
+        {
+            if (async)
+                hipSafeCall(hipMemcpy2DAsync(dstptr, dststep[0], srcptr, srcstep[0],
+                                             sz[1], sz[0], kind, 0));
+            else
+                hipSafeCall(hipMemcpy2D(dstptr, dststep[0], srcptr, srcstep[0],
+                                        sz[1], sz[0], kind));
+            return;
+        }
+
+        // Headers over device memory: NAryMatIterator only walks strides, it never dereferences.
+        Mat src(dims, isz, CV_8U, srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2] = {};
+        NAryMatIterator it(arrays, ptrs, 2);
+        const size_t planesz = it.size;
+
+        for (size_t j = 0; j < it.nplanes; j++, ++it)
+        {
+            if (async)
+                hipSafeCall(hipMemcpyAsync(ptrs[1], ptrs[0], planesz, kind, 0));
+            else
+                hipSafeCall(hipMemcpy(ptrs[1], ptrs[0], planesz, kind));
+        }
+    }
+
     void download(UMatData* u, void* dst, int dims, const size_t sz[],
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dststep[]) const CV_OVERRIDE
     {
-        if (!u || !u->handle) return;
-        if (dims <= 2) {
-            const uchar* src = (const uchar*)u->handle;
-            if (dims == 2)
-                src += srcofs[0] * srcstep[0] + srcofs[1];
-            hipSafeCall(hipMemcpy2D(dst, dststep[0],
-                                    src, srcstep[0],
-                                    sz[dims - 1], sz[0],
-                                    hipMemcpyDeviceToHost));
-        } else {
-            hipSafeCall(hipMemcpy(dst, u->handle, u->size, hipMemcpyDeviceToHost));
-        }
+        if (!u || !u->handle || !dst) return;
+        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dst, nullptr, dststep,
+                   dims, sz, hipMemcpyDeviceToHost, false);
     }
 
     void upload(UMatData* u, const void* src, int dims, const size_t sz[],
                 const size_t dstofs[], const size_t dststep[],
                 const size_t srcstep[]) const CV_OVERRIDE
     {
-        if (!u || !u->handle) return;
-        if (dims <= 2) {
-            uchar* dst = (uchar*)u->handle;
-            if (dims == 2)
-                dst += dstofs[0] * dststep[0] + dstofs[1];
-            hipSafeCall(hipMemcpy2D(dst, dststep[0],
-                                    src, srcstep[0],
-                                    sz[dims - 1], sz[0],
-                                    hipMemcpyHostToDevice));
-        } else {
-            hipSafeCall(hipMemcpy(u->handle, src, u->size, hipMemcpyHostToDevice));
-        }
+        if (!u || !u->handle || !src) return;
+        copyPlanes((uchar*)src, nullptr, srcstep, (uchar*)u->handle, dstofs, dststep,
+                   dims, sz, hipMemcpyHostToDevice, false);
         // upload writes only the device buffer; host copy is now stale (matches OpenCLAllocator::upload).
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
@@ -246,22 +287,9 @@ public:
 
         if (!rawSrc || !rawDst) return;
 
-        if (dims <= 2) {
-            const uchar* src = (const uchar*)rawSrc;
-            uchar*       dst = (uchar*)rawDst;
-            if (dims == 2) {
-                src += srcofs[0] * srcstep[0] + srcofs[1];
-                dst += dstofs[0] * dststep[0] + dstofs[1];
-            }
-            if (sync || kind != hipMemcpyDeviceToDevice)
-                hipSafeCall(hipMemcpy2D(dst, dststep[0], src, srcstep[0],
-                                        sz[dims - 1], sz[0], kind));
-            else
-                hipSafeCall(hipMemcpy2DAsync(dst, dststep[0], src, srcstep[0],
-                                             sz[dims - 1], sz[0], kind, 0));
-        } else {
-            hipSafeCall(hipMemcpy(rawDst, rawSrc, srcdata->size, kind));
-        }
+        const bool async = !sync && kind == hipMemcpyDeviceToDevice;
+        copyPlanes((uchar*)rawSrc, srcofs, srcstep, (uchar*)rawDst, dstofs, dststep,
+                   dims, sz, kind, async);
 
         dstdata->markHostCopyObsolete(dstOnDevice);
         dstdata->markDeviceCopyObsolete(!dstOnDevice);

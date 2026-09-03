@@ -1322,12 +1322,13 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
             UMat dst = _dst.getUMat();
             // Zero a freshly allocated dst first (the kernel writes only masked pixels), matching
             // Mat::copyTo / OpenCL HAVE_DST_UNINIT. Skip when dst is reused, to keep its pixels.
+            // Each handle is the base of its parent allocation; offset selects the ROI.
             if (prevu != dst.u)
-                cv::hip::device::setToWithoutMask(dst.u->handle, dst.step[0],
+                cv::hip::device::setToWithoutMask((uchar*)dst.u->handle + dst.offset, dst.step[0],
                                                   rows, cols, type(), Scalar::all(0));
-            cv::hip::device::copyToWithMask(u->handle, step[0],
-                                            dst.u->handle, dst.step[0],
-                                            mask.u->handle, mask.step[0],
+            cv::hip::device::copyToWithMask((uchar*)u->handle + offset, step[0],
+                                            (uchar*)dst.u->handle + dst.offset, dst.step[0],
+                                            (uchar*)mask.u->handle + mask.offset, mask.step[0],
                                             rows, cols, type(), mask.channels());
             dst.u->markHostCopyObsolete(true);
             return;
@@ -1385,7 +1386,9 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 
     bool haveMask = !_mask.empty();
 #ifdef HAVE_HIP
-    if (dims <= 2 && cv::hip::isHipUMat(*this) && CV_MAT_CN(type()) <= 4)
+    // HIP kernel tables cover CV_8U..CV_64F only; newer 5.x depths fall through to OpenCL/CPU.
+    if (dims <= 2 && cv::hip::isHipUMat(*this) && CV_MAT_CN(type()) <= 4 &&
+        CV_MAT_DEPTH(type()) <= CV_64F)
     {
         Mat value = _value.getMat();
         CV_Assert(checkScalar(value, type(), _value.kind(), _InputArray::UMAT));
@@ -1403,8 +1406,8 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             UMat mask = _mask.getUMat();
             if (cv::hip::isHipUMat(mask))
             {
-                cv::hip::device::setToWithMask(u->handle, step[0], rows, cols, type(),
-                                               mask.u->handle, mask.step[0],
+                cv::hip::device::setToWithMask((uchar*)u->handle + offset, step[0], rows, cols, type(),
+                                               (uchar*)mask.u->handle + mask.offset, mask.step[0],
                                                s);
                 u->markHostCopyObsolete(true);
                 return *this;
@@ -1413,7 +1416,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
         }
         else
         {
-            cv::hip::device::setToWithoutMask(u->handle, step[0], rows, cols, type(),
+            cv::hip::device::setToWithoutMask((uchar*)u->handle + offset, step[0], rows, cols, type(),
                                               s);
             u->markHostCopyObsolete(true);
             return *this;

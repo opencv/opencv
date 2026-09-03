@@ -237,17 +237,23 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
             copyTo(dst);
             return;
         }
-        int dtype = CV_MAKE_TYPE(ddepth, CV_MAT_CN(stype));
-        dst.create(size(), dtype);
-        UMat dstUMat = dst.getUMat();
-        if (cv::hip::isHipUMat(dstUMat))
+        // HIP kernel tables cover CV_8U..CV_64F only; newer 5.x depths fall through to OpenCL/CPU.
+        if (sdepth <= CV_64F && ddepth <= CV_64F)
         {
-            // Apply alpha*x + beta on the device (the no-scale case returned above).
-            cv::hip::device::convertToScale(u->handle, step[0], stype,
-                                            dstUMat.u->handle, dstUMat.step[0], dtype,
-                                            rows, cols, alpha, beta);
-            dstUMat.u->markHostCopyObsolete(true);
-            return;
+            int dtype = CV_MAKE_TYPE(ddepth, CV_MAT_CN(stype));
+            dst.create(size(), dtype);
+            UMat dstUMat = dst.getUMat();
+            if (cv::hip::isHipUMat(dstUMat))
+            {
+                // Apply alpha*x + beta on the device (the no-scale case returned above).
+                // Each handle is the base of its parent allocation; offset selects the ROI.
+                cv::hip::device::convertToScale((uchar*)u->handle + offset, step[0], stype,
+                                                (uchar*)dstUMat.u->handle + dstUMat.offset,
+                                                dstUMat.step[0], dtype,
+                                                rows, cols, alpha, beta);
+                dstUMat.u->markHostCopyObsolete(true);
+                return;
+            }
         }
     }
 #endif
