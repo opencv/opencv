@@ -59,6 +59,7 @@
 #include "fixedpoint.inl.hpp"
 
 #include <iostream>
+#include <array>
 
 using namespace cv;
 
@@ -4018,6 +4019,20 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 {
     CV_INSTRUMENT_REGION();
 
+    // Batch input (N-D tensor or vector<Mat>/<UMat>): delegate to the ResizeParams overload.
+    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() > 2)
+    {
+        ResizeParams params;
+        params.interpolation = interpolation;
+        if (interpolation == INTER_LINEAR_EXACT || interpolation == INTER_NEAREST_EXACT)
+        {
+            params.interpolation = interpolation == INTER_LINEAR_EXACT ? INTER_LINEAR : INTER_NEAREST;
+            params.bitExact = true;
+        }
+        cv::resize(_src, _dst, dsize, params, inv_scale_x, inv_scale_y);
+        return;
+    }
+
     Size ssize = _src.size();
 
     CV_Assert( !ssize.empty() );
@@ -4058,4 +4073,477 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     }
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
+}
+
+//==================================================================================================
+
+cv::ResizeParams::ResizeParams()
+    : interpolation(INTER_LINEAR), bitExact(false), coordMode(ResizeCoordMode::PIXEL_CENTER),
+      nearestMode(ResizeNearestMode::ROUND_PREFER_FLOOR), cubicCoeffA(-0.75f), excludeOutside(false),
+      antialias(false), hint(cv::ALGO_HINT_DEFAULT)
+{
+}
+
+namespace {
+
+// Folds ResizeParams into the legacy interpolation int classic cv::resize() understands.
+int resolveLegacyInterpolation(const cv::ResizeParams& params)
+{
+    CV_Assert(params.coordMode == cv::ResizeCoordMode::PIXEL_CENTER);
+
+    if (params.interpolation == cv::INTER_LINEAR_EXACT || params.interpolation == cv::INTER_NEAREST_EXACT)
+        CV_Error(cv::Error::StsBadArg,
+                 "ResizeParams::interpolation must not be INTER_LINEAR_EXACT/INTER_NEAREST_EXACT; use bitExact");
+    if (params.antialias)
+        CV_Error(cv::Error::StsNotImplemented, "ResizeParams::antialias is not yet implemented");
+
+    if (!params.bitExact)
+        return params.interpolation;
+
+    if (params.interpolation == cv::INTER_LINEAR)
+        return cv::INTER_LINEAR_EXACT;
+    if (params.interpolation == cv::INTER_NEAREST)
+        return cv::INTER_NEAREST_EXACT;
+    CV_Error(cv::Error::StsNotImplemented, "ResizeParams::bitExact is only supported with INTER_NEAREST and INTER_LINEAR");
+}
+
+// ---- ResizeCoordMode != PIXEL_CENTER: ONNX Resize coordinate-transform conventions ----
+// Ports resize2_layer.cpp's ONNX math instead of risking the PIXEL_CENTER bit-exact path.
+
+// Validates a coordMode-aware ResizeParams combination; throws on anything not yet supported.
+void checkGenericCoordModeSupported(const cv::ResizeParams& params)
+{
+    CV_Assert(params.coordMode != cv::ResizeCoordMode::PIXEL_CENTER);
+    if (params.interpolation != cv::INTER_NEAREST && params.interpolation != cv::INTER_LINEAR && params.interpolation != cv::INTER_CUBIC)
+        CV_Error(cv::Error::StsNotImplemented,
+                 "ResizeParams::coordMode other than PIXEL_CENTER needs INTER_NEAREST/LINEAR/CUBIC");
+    if (params.bitExact)
+        CV_Error(cv::Error::StsNotImplemented, "ResizeParams::bitExact is only supported with ResizeCoordMode::PIXEL_CENTER");
+    if (params.antialias)
+        CV_Error(cv::Error::StsNotImplemented, "ResizeParams::antialias is not yet implemented");
+}
+
+// HALF_PIXEL_SYMMETRIC needs its own offset -- a true pre-floor fx/fy can break the HALF_PIXEL shortcut.
+float computeSrcCoordGeneric(int dst, double scale, int inLen, int outLen, cv::ResizeCoordMode coordMode)
+{
+    switch (coordMode)
+    {
+    case cv::ResizeCoordMode::PYTORCH_HALF_PIXEL:
+        return outLen > 1 ? (float)((dst + 0.5) * scale - 0.5) : 0.f;
+    case cv::ResizeCoordMode::TF_HALF_PIXEL_FOR_NN:
+        return (float)((dst + 0.5) * scale);
+    case cv::ResizeCoordMode::ASYMMETRIC:
+    case cv::ResizeCoordMode::ALIGN_CORNERS: // scale is computed specially by the caller for this mode
+        return (float)(dst * scale);
+    case cv::ResizeCoordMode::HALF_PIXEL_SYMMETRIC:
+    {
+        const double offset = inLen * 0.5 - outLen * scale * 0.5;
+        return (float)(offset + (dst + 0.5) * scale - 0.5);
+    }
+    case cv::ResizeCoordMode::HALF_PIXEL:
+    default:
+        return (float)((dst + 0.5) * scale - 0.5);
+    }
+}
+
+// Applies a ResizeNearestMode rounding rule to a fractional source coordinate.
+int nearestIndexGeneric(float src, int inLen, cv::ResizeNearestMode mode)
+{
+    const int f = cvFloor(src);
+    const float frac = src - f;
+    const float eps = 1e-6f;
+    int idx;
+    switch (mode)
+    {
+    case cv::ResizeNearestMode::FLOOR: idx = f; break;
+    case cv::ResizeNearestMode::CEIL: idx = cvCeil(src); break;
+    case cv::ResizeNearestMode::ROUND_PREFER_CEIL:
+        idx = (std::abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src); break;
+    default: // ROUND_PREFER_FLOOR
+        idx = (std::abs(frac - 0.5f) <= eps) ? f : cvRound(src); break;
+    }
+    return std::min(std::max(idx, 0), inLen - 1);
+}
+
+// Precomputes the per-axis nearest-neighbor source index for each output coordinate.
+void buildGenericNearestMap(std::vector<int>& map, int outLen, int inLen, double scale,
+                            cv::ResizeCoordMode coordMode, cv::ResizeNearestMode nearestMode)
+{
+    map.resize(outLen);
+    for (int i = 0; i < outLen; i++)
+    {
+        float src = computeSrcCoordGeneric(i, scale, inLen, outLen, coordMode);
+        src = std::min(std::max(src, 0.f), (float)(inLen - 1));
+        map[i] = nearestIndexGeneric(src, inLen, nearestMode);
+    }
+}
+
+// Precomputes the per-axis bilinear source index pair + fraction for each output coordinate.
+void buildGenericLinearMap(std::vector<int>& i0, std::vector<int>& i1, std::vector<float>& frac,
+                           int outLen, int inLen, double scale, cv::ResizeCoordMode coordMode)
+{
+    i0.resize(outLen); i1.resize(outLen); frac.resize(outLen);
+    for (int o = 0; o < outLen; o++)
+    {
+        float src = computeSrcCoordGeneric(o, scale, inLen, outLen, coordMode);
+        src = std::min(std::max(src, 0.f), std::max(0.f, (float)(inLen - 1) - 1e-6f));
+        int base = cvFloor(src);
+        i0[o] = std::min(std::max(base, 0), inLen - 1);
+        i1[o] = std::min(std::max(base + 1, 0), inLen - 1);
+        frac[o] = src - (float)base;
+    }
+}
+
+// Nearest-neighbor resize for coordMode != PIXEL_CENTER; src/dst fold numPlanes batch rows, one shared table.
+template <typename T>
+void resizeNearestGeneric(const cv::Mat& src, cv::Mat& dst, int numPlanes, double scaleY, double scaleX,
+                          cv::ResizeCoordMode coordMode, cv::ResizeNearestMode nearestMode)
+{
+    using namespace cv;
+    const int cn = src.channels();
+    const int inH = src.rows / numPlanes, outH = dst.rows / numPlanes;
+    std::vector<int> mapX; buildGenericNearestMap(mapX, dst.cols, src.cols, scaleX, coordMode, nearestMode);
+    std::vector<int> mapY; buildGenericNearestMap(mapY, outH, inH, scaleY, coordMode, nearestMode);
+
+    parallel_for_(Range(0, numPlanes * outH), [&](const Range& r) {
+        for (int row = r.start; row < r.end; row++)
+        {
+            const int plane = row / outH, oy = row % outH;
+            const T* srcRow = src.ptr<T>(plane * inH + mapY[oy]);
+            T* dstRow = dst.ptr<T>(plane * outH + oy);
+            for (int ox = 0; ox < dst.cols; ox++)
+                memcpy(dstRow + (size_t)ox * cn, srcRow + (size_t)mapX[ox] * cn, sizeof(T) * cn);
+        }
+    });
+}
+
+// Separable bilinear resize for coordMode != PIXEL_CENTER; see resizeNearestGeneric for numPlanes.
+template <typename T>
+void resizeLinearGeneric(const cv::Mat& src, cv::Mat& dst, int numPlanes, double scaleY, double scaleX, cv::ResizeCoordMode coordMode)
+{
+    using namespace cv;
+    const int cn = src.channels();
+    const int inH = src.rows / numPlanes, outH = dst.rows / numPlanes;
+    std::vector<int> x0, x1; std::vector<float> lx;
+    buildGenericLinearMap(x0, x1, lx, dst.cols, src.cols, scaleX, coordMode);
+    std::vector<int> y0, y1; std::vector<float> ly;
+    buildGenericLinearMap(y0, y1, ly, outH, inH, scaleY, coordMode);
+
+    parallel_for_(Range(0, numPlanes * outH), [&](const Range& r) {
+        std::vector<float> hbuf((size_t)src.cols * cn);
+        for (int row = r.start; row < r.end; row++)
+        {
+            const int plane = row / outH, oy = row % outH;
+            const T* row0 = src.ptr<T>(plane * inH + y0[oy]);
+            const T* row1 = src.ptr<T>(plane * inH + y1[oy]);
+            const float fy = ly[oy];
+
+            size_t x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // Vertical AXPY blend; only for T=float, where row0/row1 are directly vector-loadable.
+            if constexpr (std::is_same<T, float>::value)
+            {
+                const v_float32 vfy = vx_setall_f32(fy);
+                const int step = VTraits<v_float32>::vlanes();
+                for (; x + step <= hbuf.size(); x += step)
+                    v_store(hbuf.data() + x, v_fma(vfy, v_sub(vx_load(row1 + x), vx_load(row0 + x)), vx_load(row0 + x)));
+            }
+#endif
+            for (; x < hbuf.size(); x++)
+                hbuf[x] = (float)row0[x] + fy * ((float)row1[x] - (float)row0[x]);
+
+            T* outRow = dst.ptr<T>(plane * outH + oy);
+            int ox = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // Horizontal gather+lerp; only for T=float, cn=1 (the folded-tensor batch case).
+            if constexpr (std::is_same<T, float>::value)
+            {
+                if (cn == 1)
+                {
+                    const int step = VTraits<v_float32>::vlanes();
+                    for (; ox + step <= dst.cols; ox += step)
+                    {
+                        v_float32 p0 = v_lut(hbuf.data(), vx_load(&x0[ox]));
+                        v_float32 p1 = v_lut(hbuf.data(), vx_load(&x1[ox]));
+                        v_store(outRow + ox, v_fma(vx_load(&lx[ox]), v_sub(p1, p0), p0));
+                    }
+                }
+            }
+#endif
+            for (; ox < dst.cols; ox++)
+            {
+                const float fx = lx[ox];
+                const float* p0 = &hbuf[(size_t)x0[ox] * cn];
+                const float* p1 = &hbuf[(size_t)x1[ox] * cn];
+                for (int c = 0; c < cn; c++)
+                    outRow[(size_t)ox * cn + c] = saturate_cast<T>(p0[c] + fx * (p1[c] - p0[c]));
+            }
+        }
+    });
+}
+
+// Keys cubic convolution weights, matching resize.cpp's own interpolateCubic() shape.
+void interpolateCubicGeneric(float x, float A, float* coeffs)
+{
+    coeffs[0] = ((A * (x + 1) - 5 * A) * (x + 1) + 8 * A) * (x + 1) - 4 * A;
+    coeffs[1] = ((A + 2) * x - (A + 3)) * x * x + 1;
+    coeffs[2] = ((A + 2) * (1 - x) - (A + 3)) * (1 - x) * (1 - x) + 1;
+    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
+}
+
+// Builds the 4-tap index+weight map for one axis, mirroring dnn's resize2_layer.cpp.
+void buildGenericCubicWeights(std::vector<std::array<int, 4>>& ids, std::vector<std::array<float, 4>>& weights,
+                              int outLen, int inLen, double scale, cv::ResizeCoordMode coordMode,
+                              bool excludeOutside, float cubicA)
+{
+    ids.resize(outLen);
+    weights.resize(outLen);
+
+    for (int o = 0; o < outLen; o++)
+    {
+        float src = computeSrcCoordGeneric(o, scale, inLen, outLen, coordMode);
+        int i = cvFloor(src);
+        float d = src - i;
+        float sw = 0.f;
+        interpolateCubicGeneric(d, cubicA, weights[o].data());
+
+        // Indices stay clamped even when excludeOutside zeroes their weight (0-weight is inert).
+        for (int k = -1; k <= 2; k++)
+        {
+            int idx = i + k;
+            bool valid = (unsigned)idx < (unsigned)inLen;
+            if (excludeOutside && !valid)
+                weights[o][k + 1] = 0.f;
+            ids[o][k + 1] = std::min(std::max(idx, 0), inLen - 1);
+            sw += weights[o][k + 1];
+        }
+        if (sw != 0.f)
+            for (int k = 0; k < 4; k++)
+                weights[o][k] /= sw;
+    }
+}
+
+// Separable 4-tap cubic resize, mirroring resize2_layer.cpp; see resizeNearestGeneric for numPlanes.
+template <typename T>
+void resizeCubicGeneric(const cv::Mat& src, cv::Mat& dst, int numPlanes, double scaleY, double scaleX,
+                        cv::ResizeCoordMode coordMode, bool excludeOutside, float cubicA)
+{
+    using namespace cv;
+    const int cn = src.channels();
+    const int inH = src.rows / numPlanes, outH = dst.rows / numPlanes;
+    std::vector<std::array<int, 4>> xids, yids;
+    std::vector<std::array<float, 4>> xw, yw;
+    buildGenericCubicWeights(xids, xw, dst.cols, src.cols, scaleX, coordMode, excludeOutside, cubicA);
+    buildGenericCubicWeights(yids, yw, outH, inH, scaleY, coordMode, excludeOutside, cubicA);
+
+    parallel_for_(Range(0, numPlanes * outH), [&](const Range& r) {
+        std::vector<float> hbuf((size_t)src.cols * cn * 4);
+        for (int row = r.start; row < r.end; row++)
+        {
+            const int plane = row / outH, oy = row % outH;
+            const auto& yi = yids[oy];
+            const auto& ywc = yw[oy];
+            for (int k = 0; k < 4; k++)
+            {
+                const T* srcRow = src.ptr<T>(plane * inH + yi[k]);
+                float* dstBuf = &hbuf[(size_t)k * src.cols * cn];
+                for (int x = 0; x < src.cols * cn; x++)
+                    dstBuf[x] = (float)srcRow[x];
+            }
+
+            T* outRow = dst.ptr<T>(plane * outH + oy);
+            for (int ox = 0; ox < dst.cols; ox++)
+            {
+                const auto& xi = xids[ox];
+                const auto& xwc = xw[ox];
+                for (int c = 0; c < cn; c++)
+                {
+                    float acc = 0.f;
+                    for (int ky = 0; ky < 4; ky++)
+                    {
+                        float rowAcc = 0.f;
+                        for (int kx = 0; kx < 4; kx++)
+                            rowAcc += hbuf[(size_t)ky * src.cols * cn + (size_t)xi[kx] * cn + c] * xwc[kx];
+                        acc += rowAcc * ywc[ky];
+                    }
+                    outRow[(size_t)ox * cn + c] = saturate_cast<T>(acc);
+                }
+            }
+        }
+    });
+}
+
+// fx/fy give the true scale explicitly; re-deriving from a floored dsize can differ.
+// src/dst may fold numPlanes batch rows; fx/fy/dsize stay per-plane.
+void resizeGenericCoordMode(const cv::Mat& src, cv::Mat& dst, int numPlanes, const cv::ResizeParams& params, double fx, double fy)
+{
+    using namespace cv;
+    const int inH = src.rows / numPlanes, outH = dst.rows / numPlanes;
+    double scaleY = fy > 0 ? 1.0 / fy : (double)inH / outH;
+    double scaleX = fx > 0 ? 1.0 / fx : (double)src.cols / dst.cols;
+    if (params.coordMode == ResizeCoordMode::ALIGN_CORNERS)
+    {
+        // Needs the true (unfloored) length: outH/dst.cols may already be floor(src*fy/fx).
+        double trueDstRows = fy > 0 ? inH * fy : (double)outH;
+        double trueDstCols = fx > 0 ? src.cols * fx : (double)dst.cols;
+        if (trueDstRows > 1) scaleY = (double)(inH - 1) / (trueDstRows - 1);
+        if (trueDstCols > 1) scaleX = (double)(src.cols - 1) / (trueDstCols - 1);
+    }
+
+    const int depth = src.depth();
+    if (params.interpolation == INTER_NEAREST)
+    {
+        switch (depth)
+        {
+        case CV_8U:  resizeNearestGeneric<uchar>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        case CV_16U: resizeNearestGeneric<ushort>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        case CV_16S: resizeNearestGeneric<short>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        case CV_32S: resizeNearestGeneric<int>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        case CV_32F: resizeNearestGeneric<float>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        case CV_64F: resizeNearestGeneric<double>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.nearestMode); break;
+        default: CV_Error(Error::StsUnsupportedFormat, "resize: unsupported depth for coordMode-aware INTER_NEAREST");
+        }
+    }
+    else if (params.interpolation == INTER_LINEAR)
+    {
+        switch (depth)
+        {
+        case CV_8U:  resizeLinearGeneric<uchar>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        case CV_16U: resizeLinearGeneric<ushort>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        case CV_16S: resizeLinearGeneric<short>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        case CV_32S: resizeLinearGeneric<int>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        case CV_32F: resizeLinearGeneric<float>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        case CV_64F: resizeLinearGeneric<double>(src, dst, numPlanes, scaleY, scaleX, params.coordMode); break;
+        default: CV_Error(Error::StsUnsupportedFormat, "resize: unsupported depth for coordMode-aware INTER_LINEAR");
+        }
+    }
+    else // INTER_CUBIC, enforced by checkGenericCoordModeSupported()
+    {
+        switch (depth)
+        {
+        case CV_8U:  resizeCubicGeneric<uchar>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        case CV_16U: resizeCubicGeneric<ushort>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        case CV_16S: resizeCubicGeneric<short>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        case CV_32S: resizeCubicGeneric<int>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        case CV_32F: resizeCubicGeneric<float>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        case CV_64F: resizeCubicGeneric<double>(src, dst, numPlanes, scaleY, scaleX, params.coordMode, params.excludeOutside, params.cubicCoeffA); break;
+        default: CV_Error(Error::StsUnsupportedFormat, "resize: unsupported depth for coordMode-aware INTER_CUBIC");
+        }
+    }
+}
+
+} // namespace
+
+void cv::resize( InputArray _src, OutputArray _dst, Size dsize, const ResizeParams& params, double fx, double fy )
+{
+    CV_INSTRUMENT_REGION();
+
+    if (_src.isMatVector() || _src.isUMatVector())
+    {
+        // Ragged batch: each element resized independently, no shared coefficient table.
+        CV_Assert(!dsize.empty());
+        if (params.coordMode == ResizeCoordMode::PIXEL_CENTER)
+            resolveLegacyInterpolation(params);
+        else
+            checkGenericCoordModeSupported(params);
+
+        const bool useUMat = _src.isUMatVector();
+        std::vector<Mat> srcMats;
+        std::vector<UMat> srcUMats;
+        size_t n;
+        if (useUMat)
+        {
+            _src.getUMatVector(srcUMats);
+            n = srcUMats.size();
+        }
+        else
+        {
+            _src.getMatVector(srcMats);
+            n = srcMats.size();
+        }
+        CV_Assert(n > 0);
+
+        const int type = useUMat ? srcUMats[0].type() : srcMats[0].type();
+        for (size_t i = 1; i < n; i++)
+            CV_Assert((useUMat ? srcUMats[i].type() : srcMats[i].type()) == type);
+
+        _dst.create((int)n, 1, 0);
+
+        parallel_for_(Range(0, (int)n), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++)
+            {
+                if (useUMat)
+                    cv::resize(srcUMats[i], _dst.getUMatRef(i), dsize, params, fx, fy);
+                else
+                    cv::resize(srcMats[i], _dst.getMatRef(i), dsize, params, fx, fy);
+            }
+        });
+        return;
+    }
+
+    if (_src.dims() > 2)
+    {
+        // Batch tensor: leading dims are batch axes, last two are H,W.
+        CV_Assert(!dsize.empty());
+        Mat src = _src.getMat();
+        const int D = src.dims;
+        const int inH = src.size[D - 2];
+        int numPlanes = 1;
+        for (int i = 0; i < D - 2; i++)
+            numPlanes *= src.size[i];
+
+        std::vector<int> dstShape(D);
+        for (int i = 0; i < D; i++)
+            dstShape[i] = src.size[i];
+        dstShape[D - 2] = dsize.height;
+        dstShape[D - 1] = dsize.width;
+        _dst.create(D, dstShape.data(), src.type());
+        Mat dst = _dst.getMat();
+
+        Mat src2D = src.reshape(1, numPlanes * inH);
+        Mat dst2D = dst.reshape(1, numPlanes * dsize.height);
+
+        if (params.coordMode == ResizeCoordMode::PIXEL_CENTER)
+        {
+            const int interpolation = resolveLegacyInterpolation(params);
+            parallel_for_(Range(0, numPlanes), [&](const Range& r) {
+                for (int p = r.start; p < r.end; p++)
+                {
+                    Mat srcPlane = src2D.rowRange(p * inH, (p + 1) * inH);
+                    Mat dstPlane = dst2D.rowRange(p * dsize.height, (p + 1) * dsize.height);
+                    cv::resize(srcPlane, dstPlane, dsize, fx, fy, interpolation);
+                }
+            });
+        }
+        else
+        {
+            checkGenericCoordModeSupported(params);
+            resizeGenericCoordMode(src2D, dst2D, numPlanes, params, fx, fy);
+        }
+        return;
+    }
+
+    if (params.coordMode == ResizeCoordMode::PIXEL_CENTER)
+    {
+        cv::resize(_src, _dst, dsize, fx, fy, resolveLegacyInterpolation(params));
+        return;
+    }
+
+    checkGenericCoordModeSupported(params);
+
+    Size ssize = _src.size();
+    CV_Assert(!ssize.empty());
+    if (dsize.empty())
+    {
+        CV_Assert(fx > 0 && fy > 0);
+        dsize = Size(saturate_cast<int>(ssize.width * fx), saturate_cast<int>(ssize.height * fy));
+        CV_Assert(!dsize.empty());
+    }
+
+    Mat src = _src.getMat();
+    _dst.create(dsize, src.type());
+    Mat dst = _dst.getMat();
+
+    // No equal-size shortcut here: unlike PIXEL_CENTER, most modes aren't identity at scale 1.
+    resizeGenericCoordMode(src, dst, 1, params, fx, fy);
 }
