@@ -210,6 +210,9 @@ Platform& Platform::getDefault()
 
 void attachContext(const String& platformName, void* platformID, void* context, void* deviceID) { OCL_NOT_AVAILABLE(); }
 void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst) { OCL_NOT_AVAILABLE(); }
+UMat createUMatFromDmaBuf(int fd, size_t size, size_t step, int rows, int cols, int type) { OCL_NOT_AVAILABLE(); }
+void acquireExternalMemory(const UMat& src) { OCL_NOT_AVAILABLE(); }
+void releaseExternalMemory(const UMat& src) { OCL_NOT_AVAILABLE(); }
 void convertFromImage(void* cl_mem_image, UMat& dst) { OCL_NOT_AVAILABLE(); }
 
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device) { OCL_NOT_AVAILABLE(); }
