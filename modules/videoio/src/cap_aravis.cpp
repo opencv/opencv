@@ -72,12 +72,15 @@ using namespace cv;
 //      CAP_PROP_FPS(f)
 //      CAP_PROP_FOURCC(type)
 //      CAP_PROP_BUFFERSIZE(n)
+//      CAP_PROP_FRAME_WIDTH(w)
+//      CAP_PROP_FRAME_HEIGHT(h)
 //  read only:
 //      CAP_PROP_POS_MSEC
-//      CAP_PROP_FRAME_WIDTH
-//      CAP_PROP_FRAME_HEIGHT
 //
-//  On open() the highest priority pixel format supported by the camera is selected:
+// The capture is set up for 640x480 @ 30 Hz on open(), clipped to the range the camera
+// supports. Both the region and the frame rate can be changed afterwards with
+// CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT and CAP_PROP_FPS.
+// On open() the highest priority pixel format supported by the camera is selected:
 //      1. true color: BGR/RGB and BGRa/RGBa, 8 or 16 bit per component,
 //      2. Bayer CFA: BayerRG/BayerBG/BayerGR/BayerGB, 8 or 16 bit per component,
 //      3. grayscale: Mono8/Mono10/Mono12/Mono14/Mono16.
@@ -113,6 +116,14 @@ using namespace cv;
 #define MODE_RGB4   CV_FOURCC_MACRO('R','G','B','4')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
+
+// Capture setup applied on open(). Cameras usually come up with the full sensor
+// region and whatever frame rate was left over from the previous session, which
+// makes the default VideoCapture behaviour depend on the camera state. Request a
+// commonly supported VGA @ 30 Hz instead, clipped to what the camera can do.
+static const int    DEFAULT_FRAME_WIDTH  = 640;
+static const int    DEFAULT_FRAME_HEIGHT = 480;
+static const double DEFAULT_FPS          = 30.;
 
 namespace {
 
@@ -235,6 +246,8 @@ protected:
     bool selectPixelFormat();
     bool applyPixelFormat(ArvPixelFormat format);
     void updatePixelFormatInfo();
+    bool setRegionSize(int newWidth, int newHeight);
+    bool setFrameRate(double newFps);
 
     bool getDeviceNameById(int id, std::string &device);
 
@@ -282,6 +295,8 @@ protected:
     int             yoffset;                // current frame region y offset
     int             width;                  // current frame width of frame
     int             height;                 // current frame height of image
+    int             widthSet;               // last frame width set by user
+    int             heightSet;              // last frame height set by user
 
     double          fps;                    // current value of fps
     double          exposure;               // current value of exposure time
@@ -311,6 +326,10 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     widthMin = widthMax = heightMin = heightMax = 0;
     xoffset = yoffset = width = height = 0;
     fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
+    fpsAvailable = gainAvailable = exposureAvailable = false;
+    fps = exposure = gain = midGrey = 0;
+    autoGain = false;
+    softwareTriggered = false;
     controlExposure = false;
     exposureCompensation = 0;
     targetGrey = 0;
@@ -466,13 +485,93 @@ bool CvCaptureCAM_Aravis::selectPixelFormat()
     return applyPixelFormat(selected->format);
 }
 
+// Change the size of the captured region. The payload size changes with it, so the
+// stream has to be recreated if the acquisition is already running.
+bool CvCaptureCAM_Aravis::setRegionSize(int newWidth, int newHeight)
+{
+    if (newWidth > 0)
+        widthSet = newWidth;
+
+    if (newHeight > 0)
+        heightSet = newHeight;
+
+    /* two subsequent calls setting WIDTH and HEIGHT will change
+     *      the video size */
+    if (widthSet <= 0 || heightSet <= 0)
+    {
+        return true;
+    }
+
+    newWidth = CLIP(widthSet, widthMin, widthMax);
+    newHeight = CLIP(heightSet, heightMin, heightMax);
+
+    widthSet = heightSet = 0;
+
+    const bool capturing = (stream != NULL);
+    if(capturing)
+        stopCapture();
+
+    GError *error = NULL;
+    // the offset is reset to 0 first, a large one left over from a previous region
+    // would not leave enough room for the requested width or height
+    arv_camera_set_region(camera, 0, 0, newWidth, newHeight, &error);
+    if(error) {
+        CV_LOG_WARNING(NULL, cv::format("Aravis: failed to set region to %dx%d: %s",
+                                        newWidth, newHeight, error->message));
+        g_clear_error(&error);
+    }
+
+    // the camera is free to round the request to a size it supports
+    arv_camera_get_region(camera, &xoffset, &yoffset, &width, &height, NULL);
+    if(width != newWidth || height != newHeight) {
+        CV_LOG_INFO(NULL, cv::format("Aravis: %dx%d requested, camera applied %dx%d.",
+                                     newWidth, newHeight, width, height));
+    }
+
+    // both the achievable frame rate range and the current frame rate depend on
+    // the region size, the camera clamps the latter on its own
+    if(fpsAvailable) {
+        arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax, NULL);
+        fps = arv_camera_get_frame_rate(camera, NULL);
+    }
+
+    if(capturing && !startCapture())
+        return false;
+
+    return width == newWidth && height == newHeight;
+}
+
+bool CvCaptureCAM_Aravis::setFrameRate(double newFps)
+{
+    if(!fpsAvailable)
+        return false;
+
+    GError *error = NULL;
+    arv_camera_set_frame_rate(camera, CLIP(newFps, fpsMin, fpsMax), &error);
+
+    const bool ok = (error == NULL);
+    if(error) {
+        CV_LOG_WARNING(NULL, cv::format("Aravis: failed to set frame rate to %g: %s",
+                                        newFps, error->message));
+        g_clear_error(&error);
+    }
+
+    // the camera may quantize the request, keep the value actually in effect
+    fps = arv_camera_get_frame_rate(camera, NULL);
+
+    return ok;
+}
+
 void CvCaptureCAM_Aravis::configure()
 {
+    widthSet = heightSet = 0;
+
     // fetch properties bounds
     arv_camera_get_width_bounds(camera, &widthMin, &widthMax, NULL);
     arv_camera_get_height_bounds(camera, &heightMin, &heightMax, NULL);
-    arv_camera_set_region(camera, 0, 0, widthMax, heightMax, NULL);
+    setRegionSize(DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT);
 
+    // the frame rate bounds depend on the region, query them once it is set
     if( (fpsAvailable = arv_camera_is_frame_rate_available(camera, NULL)) )
         arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax, NULL);
     if( (gainAvailable = arv_camera_is_gain_available(camera, NULL)) )
@@ -487,8 +586,14 @@ void CvCaptureCAM_Aravis::configure()
 
     exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
     gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
+
+    setFrameRate(DEFAULT_FPS);
     fps = arv_camera_get_frame_rate(camera, NULL);
-    softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera, NULL), "Software") == 0);
+
+    // arv_camera_set_frame_rate() may have switched the trigger off, so the trigger
+    // source has to be read after it. It is not implemented by every camera.
+    const char *triggerSource = arv_camera_get_trigger_source(camera, NULL);
+    softwareTriggered = (triggerSource != NULL) && (strcmp(triggerSource, "Software") == 0);
 }
 
 bool CvCaptureCAM_Aravis::open( int index )
@@ -749,11 +854,18 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 break;
             } else return false;
 
+        case CAP_PROP_FRAME_WIDTH:
+        {
+            return setRegionSize((int)value, 0);
+        }
+
+        case CAP_PROP_FRAME_HEIGHT:
+        {
+            return setRegionSize(0, (int)value);
+        }
+
         case CAP_PROP_FPS:
-            if(fpsAvailable) {
-                arv_camera_set_frame_rate(camera, fps = CLIP(value, fpsMin, fpsMax), NULL);
-                break;
-            } else return false;
+            return setFrameRate(value);
 
         case CAP_PROP_GAIN:
             if(gainAvailable) {
