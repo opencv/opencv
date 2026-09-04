@@ -19,7 +19,7 @@ PERF_TEST_P(ConvexHullPerfTest, convexHull,
         testing::Values(0.125, 0.5, 2.0)                // sparsity S = rangeX / total
         // S = 0.125 : dense, ~8 points per x-column, strong lo/hi pruning
         // S = 0.5   : typical contour density (circle-ish contour has S ~ 1/pi)
-        // S = 2     : sparse but below MAX_SPARSITY_FACTOR(4) 
+        // S = 2     : sparse but below MAX_SPARSITY_FACTOR(4)
     ))
 {
     const int total  = get<0>(GetParam());
