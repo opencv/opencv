@@ -724,7 +724,7 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphRowFilter<MinOp<uchar>,
                                       ErodeRowVec8u> >(ksize, anchor);
         if( depth == CV_16U )
@@ -742,7 +742,7 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
     }
     else
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphRowFilter<MaxOp<uchar>,
                                       DilateRowVec8u> >(ksize, anchor);
         if( depth == CV_16U )
@@ -772,7 +772,7 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphColumnFilter<MinOp<uchar>,
                                          ErodeColumnVec8u> >(ksize, anchor);
         if( depth == CV_16U )
@@ -790,7 +790,7 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
     }
     else
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphColumnFilter<MaxOp<uchar>,
                                          DilateColumnVec8u> >(ksize, anchor);
         if( depth == CV_16U )
@@ -819,7 +819,7 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphFilter<MinOp<uchar>, ErodeVec8u> >(kernel, anchor);
         if( depth == CV_16U )
             return makePtr<MorphFilter<MinOp<ushort>, ErodeVec16u> >(kernel, anchor);
@@ -832,7 +832,7 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
     }
     else
     {
-        if( depth == CV_8U )
+        if( depth == CV_8U || depth == CV_Bool )
             return makePtr<MorphFilter<MaxOp<uchar>, DilateVec8u> >(kernel, anchor);
         if( depth == CV_16U )
             return makePtr<MorphFilter<MaxOp<ushort>, DilateVec16u> >(kernel, anchor);
