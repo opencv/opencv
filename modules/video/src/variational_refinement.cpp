@@ -633,25 +633,26 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
 #undef INIT_ROW_POINTERS
 
         int j = 0;
-#if CV_SIMD128
-        v_float32x4 zeta_vec = v_setall_f32(zeta_squared);
-        v_float32x4 eps_vec = v_setall_f32(epsilon_squared);
-        v_float32x4 delta_vec = v_setall_f32(delta2);
-        v_float32x4 gamma_vec = v_setall_f32(gamma2);
-        v_float32x4 zero_vec = v_setall_f32(0.0f);
-        v_float32x4 pIx_vec, pIy_vec, pIz_vec, pdU_vec, pdV_vec;
-        v_float32x4 pIxx_vec, pIxy_vec, pIyy_vec, pIxz_vec, pIyz_vec;
-        v_float32x4 derivNorm_vec, derivNorm2_vec, weight_vec;
-        v_float32x4 Ik1z_vec, Ik1zx_vec, Ik1zy_vec;
-        v_float32x4 pa11_vec, pa12_vec, pa22_vec, pb1_vec, pb2_vec;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlanes = VTraits<v_float32>::vlanes();
+        v_float32 zeta_vec = vx_setall_f32(zeta_squared);
+        v_float32 eps_vec = vx_setall_f32(epsilon_squared);
+        v_float32 delta_vec = vx_setall_f32(delta2);
+        v_float32 gamma_vec = vx_setall_f32(gamma2);
+        v_float32 zero_vec = vx_setall_f32(0.0f);
+        v_float32 pIx_vec, pIy_vec, pIz_vec, pdU_vec, pdV_vec;
+        v_float32 pIxx_vec, pIxy_vec, pIyy_vec, pIxz_vec, pIyz_vec;
+        v_float32 derivNorm_vec, derivNorm2_vec, weight_vec;
+        v_float32 Ik1z_vec, Ik1zx_vec, Ik1zy_vec;
+        v_float32 pa11_vec, pa12_vec, pa22_vec, pb1_vec, pb2_vec;
 
-        for (; j < len - 3; j += 4)
+        for (; j <= len - vlanes; j += vlanes)
         {
-            pIx_vec = v_load(pIx + j);
-            pIy_vec = v_load(pIy + j);
-            pIz_vec = v_load(pIz + j);
-            pdU_vec = v_load(pdU + j);
-            pdV_vec = v_load(pdV + j);
+            pIx_vec = vx_load(pIx + j);
+            pIy_vec = vx_load(pIy + j);
+            pIz_vec = vx_load(pIz + j);
+            pdU_vec = vx_load(pdU + j);
+            pdV_vec = vx_load(pdV + j);
 
             derivNorm_vec = v_add(v_add(v_mul(pIx_vec, pIx_vec), v_mul(pIy_vec, pIy_vec)), zeta_vec);
             Ik1z_vec = v_add(v_add(pIz_vec, v_mul(pIx_vec, pdU_vec)), v_mul(pIy_vec, pdV_vec));
@@ -663,11 +664,11 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
             pb1_vec = v_sub(zero_vec, v_mul(weight_vec, v_mul(pIz_vec, pIx_vec)));
             pb2_vec = v_sub(zero_vec, v_mul(weight_vec, v_mul(pIz_vec, pIy_vec)));
 
-            pIxx_vec = v_load(pIxx + j);
-            pIxy_vec = v_load(pIxy + j);
-            pIyy_vec = v_load(pIyy + j);
-            pIxz_vec = v_load(pIxz + j);
-            pIyz_vec = v_load(pIyz + j);
+            pIxx_vec = vx_load(pIxx + j);
+            pIxy_vec = vx_load(pIxy + j);
+            pIyy_vec = vx_load(pIyy + j);
+            pIxz_vec = vx_load(pIxz + j);
+            pIyz_vec = vx_load(pIyz + j);
 
             derivNorm_vec = v_add(v_add(v_mul(pIxx_vec, pIxx_vec), v_mul(pIxy_vec, pIxy_vec)), zeta_vec);
             derivNorm2_vec = v_add(v_add(v_mul(pIyy_vec, pIyy_vec), v_mul(pIxy_vec, pIxy_vec)), zeta_vec);
@@ -687,6 +688,7 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
             v_store(pb1 + j, pb1_vec);
             v_store(pb2 + j, pb2_vec);
         }
+        vx_cleanup();
 #endif
         for (; j < len; j++)
         {
@@ -840,38 +842,40 @@ void VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::operator()
     pA_v_next[j] += pWeight[j];
 
         int j = 0;
-#if CV_SIMD128
-        v_float32x4 alpha2_vec = v_setall_f32(alpha2);
-        v_float32x4 eps_vec = v_setall_f32(epsilon_squared);
-        v_float32x4 cW_u_vec, cW_v_vec;
-        v_float32x4 pWeight_vec, ux_vec, vx_vec, uy_vec, vy_vec;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlanes = VTraits<v_float32>::vlanes();
+        v_float32 alpha2_vec = vx_setall_f32(alpha2);
+        v_float32 eps_vec = vx_setall_f32(epsilon_squared);
+        v_float32 cW_u_vec, cW_v_vec;
+        v_float32 pWeight_vec, ux_vec, vx_vec, uy_vec, vy_vec;
 
-        for (; j < len - 4; j += 4)
+        for (; j < len - vlanes; j += vlanes)   // leave the rightmost element to the scalar code below (no UPDATE across the right border)
         {
-            cW_u_vec = v_load(cW_u + j);
-            cW_v_vec = v_load(cW_v + j);
+            cW_u_vec = vx_load(cW_u + j);
+            cW_v_vec = vx_load(cW_v + j);
 
-            ux_vec = v_sub(v_load(cW_u_next + j), cW_u_vec);
-            vx_vec = v_sub(v_load(cW_v_next + j), cW_v_vec);
-            uy_vec = v_sub(v_load(cW_u_next_row + j), cW_u_vec);
-            vy_vec = v_sub(v_load(cW_v_next_row + j), cW_v_vec);
+            ux_vec = v_sub(vx_load(cW_u_next + j), cW_u_vec);
+            vx_vec = v_sub(vx_load(cW_v_next + j), cW_v_vec);
+            uy_vec = v_sub(vx_load(cW_u_next_row + j), cW_u_vec);
+            vy_vec = v_sub(vx_load(cW_v_next_row + j), cW_v_vec);
             pWeight_vec =
               v_div(alpha2_vec, v_sqrt(v_add(v_add(v_add(v_add(v_mul(ux_vec, ux_vec), v_mul(vx_vec, vx_vec)), v_mul(uy_vec, uy_vec)), v_mul(vy_vec, vy_vec)), eps_vec)));
             v_store(pWeight + j, pWeight_vec);
 
-            ux_vec = v_mul(pWeight_vec, v_sub(v_load(pW_u_next + j), v_load(pW_u + j)));
-            vx_vec = v_mul(pWeight_vec, v_sub(v_load(pW_v_next + j), v_load(pW_v + j)));
+            ux_vec = v_mul(pWeight_vec, v_sub(vx_load(pW_u_next + j), vx_load(pW_u + j)));
+            vx_vec = v_mul(pWeight_vec, v_sub(vx_load(pW_v_next + j), vx_load(pW_v + j)));
 
-            v_store(pA_u + j, v_add(v_load(pA_u + j), pWeight_vec));
-            v_store(pA_v + j, v_add(v_load(pA_v + j), pWeight_vec));
-            v_store(pB_u + j, v_add(v_load(pB_u + j), ux_vec));
-            v_store(pB_v + j, v_add(v_load(pB_v + j), vx_vec));
+            v_store(pA_u + j, v_add(vx_load(pA_u + j), pWeight_vec));
+            v_store(pA_v + j, v_add(vx_load(pA_v + j), pWeight_vec));
+            v_store(pB_u + j, v_add(vx_load(pB_u + j), ux_vec));
+            v_store(pB_v + j, v_add(vx_load(pB_v + j), vx_vec));
 
-            v_store(pA_u_next + j, v_add(v_load(pA_u_next + j), pWeight_vec));
-            v_store(pA_v_next + j, v_add(v_load(pA_v_next + j), pWeight_vec));
-            v_store(pB_u_next + j, v_sub(v_load(pB_u_next + j), ux_vec));
-            v_store(pB_v_next + j, v_sub(v_load(pB_v_next + j), vx_vec));
+            v_store(pA_u_next + j, v_add(vx_load(pA_u_next + j), pWeight_vec));
+            v_store(pA_v_next + j, v_add(vx_load(pA_v_next + j), pWeight_vec));
+            v_store(pB_u_next + j, v_sub(vx_load(pB_u_next + j), ux_vec));
+            v_store(pB_v_next + j, v_sub(vx_load(pB_v_next + j), vx_vec));
         }
+        vx_cleanup();
 #endif
         for (; j < len - 1; j++)
         {
@@ -952,24 +956,26 @@ void VariationalRefinementImpl::ComputeSmoothnessTermVertPass_ParBody::operator(
 #undef INIT_ROW_POINTERS
 
         int j = 0;
-#if CV_SIMD128
-        v_float32x4 pWeight_vec, uy_vec, vy_vec;
-        for (; j < len - 3; j += 4)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlanes = VTraits<v_float32>::vlanes();
+        v_float32 pWeight_vec, uy_vec, vy_vec;
+        for (; j <= len - vlanes; j += vlanes)
         {
-            pWeight_vec = v_load(pWeight + j);
-            uy_vec = v_mul(pWeight_vec, v_sub(v_load(pW_u_next_row + j), v_load(pW_u + j)));
-            vy_vec = v_mul(pWeight_vec, v_sub(v_load(pW_v_next_row + j), v_load(pW_v + j)));
+            pWeight_vec = vx_load(pWeight + j);
+            uy_vec = v_mul(pWeight_vec, v_sub(vx_load(pW_u_next_row + j), vx_load(pW_u + j)));
+            vy_vec = v_mul(pWeight_vec, v_sub(vx_load(pW_v_next_row + j), vx_load(pW_v + j)));
 
-            v_store(pA_u + j, v_add(v_load(pA_u + j), pWeight_vec));
-            v_store(pA_v + j, v_add(v_load(pA_v + j), pWeight_vec));
-            v_store(pB_u + j, v_add(v_load(pB_u + j), uy_vec));
-            v_store(pB_v + j, v_add(v_load(pB_v + j), vy_vec));
+            v_store(pA_u + j, v_add(vx_load(pA_u + j), pWeight_vec));
+            v_store(pA_v + j, v_add(vx_load(pA_v + j), pWeight_vec));
+            v_store(pB_u + j, v_add(vx_load(pB_u + j), uy_vec));
+            v_store(pB_v + j, v_add(vx_load(pB_v + j), vy_vec));
 
-            v_store(pA_u_next_row + j, v_add(v_load(pA_u_next_row + j), pWeight_vec));
-            v_store(pA_v_next_row + j, v_add(v_load(pA_v_next_row + j), pWeight_vec));
-            v_store(pB_u_next_row + j, v_sub(v_load(pB_u_next_row + j), uy_vec));
-            v_store(pB_v_next_row + j, v_sub(v_load(pB_v_next_row + j), vy_vec));
+            v_store(pA_u_next_row + j, v_add(vx_load(pA_u_next_row + j), pWeight_vec));
+            v_store(pA_v_next_row + j, v_add(vx_load(pA_v_next_row + j), pWeight_vec));
+            v_store(pB_u_next_row + j, v_sub(vx_load(pB_u_next_row + j), uy_vec));
+            v_store(pB_v_next_row + j, v_sub(vx_load(pB_v_next_row + j), vy_vec));
         }
+        vx_cleanup();
 #endif
         for (; j < len; j++)
         {
@@ -1056,49 +1062,40 @@ void VariationalRefinementImpl::RedBlackSOR_ParBody::operator()(const Range &ran
 #undef INIT_ROW_POINTERS
 
         j = 0;
-#if CV_SIMD128
-        v_float32x4 pW_prev_vec = v_setall_f32(pW_next[-1]);
-        v_float32x4 pdu_prev_vec = v_setall_f32(pdu_next[-1]);
-        v_float32x4 pdv_prev_vec = v_setall_f32(pdv_next[-1]);
-        v_float32x4 omega_vec = v_setall_f32(var->omega);
-        v_float32x4 pW_vec, pW_next_vec, pW_prev_row_vec;
-        v_float32x4 pdu_next_vec, pdu_prev_row_vec, pdu_next_row_vec;
-        v_float32x4 pdv_next_vec, pdv_prev_row_vec, pdv_next_row_vec;
-        v_float32x4 pW_shifted_vec, pdu_shifted_vec, pdv_shifted_vec;
-        v_float32x4 pa12_vec, sigmaU_vec, sigmaV_vec, pdu_vec, pdv_vec;
-        for (; j < len - 3; j += 4)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlanes = VTraits<v_float32>::vlanes();
+        v_float32 omega_vec = vx_setall_f32(var->omega);
+        v_float32 pW_vec, pW_prev_row_vec;
+        v_float32 pdu_next_vec, pdu_prev_row_vec, pdu_next_row_vec;
+        v_float32 pdv_next_vec, pdv_prev_row_vec, pdv_next_row_vec;
+        v_float32 pW_shifted_vec, pdu_shifted_vec, pdv_shifted_vec;
+        v_float32 pa12_vec, sigmaU_vec, sigmaV_vec, pdu_vec, pdv_vec;
+        for (; j <= len - vlanes; j += vlanes)
         {
-            pW_vec = v_load(pW + j);
-            pW_next_vec = v_load(pW_next + j);
-            pW_prev_row_vec = v_load(pW_prev_row + j);
-            pdu_next_vec = v_load(pdu_next + j);
-            pdu_prev_row_vec = v_load(pdu_prev_row + j);
-            pdu_next_row_vec = v_load(pdu_next_row + j);
-            pdv_next_vec = v_load(pdv_next + j);
-            pdv_prev_row_vec = v_load(pdv_prev_row + j);
-            pdv_next_row_vec = v_load(pdv_next_row + j);
-            pa12_vec = v_load(pa12 + j);
-            pW_shifted_vec = v_reinterpret_as_f32(
-              v_extract<3>(v_reinterpret_as_s32(pW_prev_vec), v_reinterpret_as_s32(pW_next_vec)));
-            pdu_shifted_vec = v_reinterpret_as_f32(
-              v_extract<3>(v_reinterpret_as_s32(pdu_prev_vec), v_reinterpret_as_s32(pdu_next_vec)));
-            pdv_shifted_vec = v_reinterpret_as_f32(
-              v_extract<3>(v_reinterpret_as_s32(pdv_prev_vec), v_reinterpret_as_s32(pdv_next_vec)));
+            pW_vec = vx_load(pW + j);
+            pW_prev_row_vec = vx_load(pW_prev_row + j);
+            pdu_next_vec = vx_load(pdu_next + j);
+            pdu_prev_row_vec = vx_load(pdu_prev_row + j);
+            pdu_next_row_vec = vx_load(pdu_next_row + j);
+            pdv_next_vec = vx_load(pdv_next + j);
+            pdv_prev_row_vec = vx_load(pdv_prev_row + j);
+            pdv_next_row_vec = vx_load(pdv_next_row + j);
+            pa12_vec = vx_load(pa12 + j);
+            pW_shifted_vec = vx_load(pW_next + j - 1);
+            pdu_shifted_vec = vx_load(pdu_next + j - 1);
+            pdv_shifted_vec = vx_load(pdv_next + j - 1);
 
             sigmaU_vec = v_add(v_add(v_add(v_mul(pW_shifted_vec, pdu_shifted_vec), v_mul(pW_vec, pdu_next_vec)), v_mul(pW_prev_row_vec, pdu_prev_row_vec)), v_mul(pW_vec, pdu_next_row_vec));
             sigmaV_vec = v_add(v_add(v_add(v_mul(pW_shifted_vec, pdv_shifted_vec), v_mul(pW_vec, pdv_next_vec)), v_mul(pW_prev_row_vec, pdv_prev_row_vec)), v_mul(pW_vec, pdv_next_row_vec));
 
-            pdu_vec = v_load(pdu + j);
-            pdv_vec = v_load(pdv + j);
-            pdu_vec = v_add(pdu_vec, v_mul(omega_vec, v_sub(v_div(v_sub(v_add(sigmaU_vec, v_load(pb1 + j)), v_mul(pdv_vec, pa12_vec)), v_load(pa11 + j)), pdu_vec)));
-            pdv_vec = v_add(pdv_vec, v_mul(omega_vec, v_sub(v_div(v_sub(v_add(sigmaV_vec, v_load(pb2 + j)), v_mul(pdu_vec, pa12_vec)), v_load(pa22 + j)), pdv_vec)));
+            pdu_vec = vx_load(pdu + j);
+            pdv_vec = vx_load(pdv + j);
+            pdu_vec = v_add(pdu_vec, v_mul(omega_vec, v_sub(v_div(v_sub(v_add(sigmaU_vec, vx_load(pb1 + j)), v_mul(pdv_vec, pa12_vec)), vx_load(pa11 + j)), pdu_vec)));
+            pdv_vec = v_add(pdv_vec, v_mul(omega_vec, v_sub(v_div(v_sub(v_add(sigmaV_vec, vx_load(pb2 + j)), v_mul(pdu_vec, pa12_vec)), vx_load(pa22 + j)), pdv_vec)));
             v_store(pdu + j, pdu_vec);
             v_store(pdv + j, pdv_vec);
-
-            pW_prev_vec = pW_next_vec;
-            pdu_prev_vec = pdu_next_vec;
-            pdv_prev_vec = pdv_next_vec;
         }
+        vx_cleanup();
 #endif
         for (; j < len; j++)
         {
