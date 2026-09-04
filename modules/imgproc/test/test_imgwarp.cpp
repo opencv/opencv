@@ -1253,5 +1253,15 @@ TEST(Imgproc_Warping, infinite_loop)
         << "cv::warpAffine hung in an infinite loop!";
 }
 
+TEST(Imgproc_Warping, interpolate_loop)
+{
+    // 1000x1000 destination image with out-of-bounds coordinates:
+    cv::Mat src(2, 2, CV_8UC1, cv::Scalar(42));
+    cv::Mat dst;
+    // A perspective or affine transform mapping pixels to large coordinates:
+    cv::Matx23d M(1, 0, 1e7, 0, 1, 1e7);
+    cv::warpAffine(src, dst, M, cv::Size(50, 50), cv::INTER_NEAREST, cv::BORDER_REFLECT_101);
+}
+
 }} // namespace
 /* End of file. */
