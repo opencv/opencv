@@ -2111,5 +2111,163 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
     EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
 
+// See https://github.com/opencv/opencv/issues/29706
+//
+// The HISTCMP_CORREL variance terms are computed as the difference of two large,
+// nearly equal sums. For histograms holding large values that vary little, that
+// subtraction is lost to rounding and can go negative, which made the comparison
+// return -1, NaN, or a value outside [-1, 1].
+TEST(Imgproc_Hist_Compare, correl_regression_29706)
+{
+    // 2^24-1 is the largest float where both it and its successor are exact, so
+    // the histograms below hold their values without any input rounding while the
+    // sums of squares are large enough to swamp the true variance.
+    const float base = 16777215.f;
+
+    // A histogram is perfectly correlated with itself, whatever it holds.
+    for (int n : {4, 10, 100, 256})
+    {
+        cv::Mat flat(n, 1, CV_32FC1, cv::Scalar(base));
+        EXPECT_DOUBLE_EQ(compareHist(flat, flat, cv::HISTCMP_CORREL), 1.0)
+            << "constant histogram of " << n << " bins";
+
+        cv::Mat almost = flat.clone();
+        almost.at<float>(n / 2, 0) = base + 1.f;
+        EXPECT_DOUBLE_EQ(compareHist(almost, almost, cv::HISTCMP_CORREL), 1.0)
+            << "near-constant histogram of " << n << " bins";
+    }
+
+    // The sparse overload shares the same computation.
+    {
+        const int n = 100;
+        int dims[] = { n };
+        cv::SparseMat sparse(1, dims, CV_32F);
+        for (int i = 0; i < n; i++)
+            sparse.ref<float>(i) = base;
+        EXPECT_DOUBLE_EQ(compareHist(sparse, sparse, cv::HISTCMP_CORREL), 1.0);
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/29706
+//
+// Comparing two different near-constant histograms must still land inside the
+// range a correlation coefficient is defined on, and must never be NaN. The bin
+// that differs is placed at the ends and the middle of the histogram, since the
+// lost variance depends on where the outlier falls in the running sums.
+//
+// The bin counts are the ones that actually exercised the two failure modes
+// before the fix, rather than a round sample: at 25 bins the old code produced
+// NaN, because only one of the two variance terms was pushed below zero and the
+// square root was then taken of a negative denominator, while at 38, 44 and 64
+// both terms went negative together and it returned about -1.03 to -1.15. Sizes
+// small enough to keep the sums exact, such as 2 or 17, never reproduced either.
+TEST(Imgproc_Hist_Compare, correl_near_constant_range_29706)
+{
+    const float base = 16777215.f;
+
+    for (int n : {25, 38, 44, 64})
+    {
+        for (int shifted : {0, n / 2, n - 1})
+        {
+            cv::Mat h1(n, 1, CV_32FC1, cv::Scalar(base));
+            cv::Mat h2 = h1.clone();
+            h1.at<float>(shifted, 0) = base + 1.f;
+
+            const double r = compareHist(h1, h2, cv::HISTCMP_CORREL);
+            ASSERT_FALSE(cvIsNaN(r)) << "n=" << n << " shifted=" << shifted;
+            ASSERT_LE(r, 1.0) << "n=" << n << " shifted=" << shifted;
+            ASSERT_GE(r, -1.0) << "n=" << n << " shifted=" << shifted;
+        }
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/29706
+//
+// Accumulating about an assumed mean has to stay accurate where the textbook form
+// loses everything: a histogram varying by one part in a million about a large
+// mean. The reference values come from the exact rational correlation of the same
+// float32 bins, so the tolerance measures the algorithm and not the expectation.
+TEST(Imgproc_Hist_Compare, correl_precision_29706)
+{
+    const int n = 256;
+    cv::RNG& rng = theRNG();
+
+    for (double spread : {1e-1, 1e-3, 1e-5, 1e-7})
+    {
+        const double mean = 1e6;
+        cv::Mat h1(n, 1, CV_32FC1), h2(n, 1, CV_32FC1);
+        for (int i = 0; i < n; i++)
+        {
+            // The deterministic shapes carry the spread on their own, so neither
+            // histogram can come out constant however the generator is seeded; the
+            // noise on top is what differs from run to run. A constant histogram
+            // has no correlation to measure and would leave the reference at 0/0.
+            // One shape is odd and the other even, so they are not a scaled copy of
+            // each other and the correlation stays away from +/-1, where the errors
+            // in the numerator and denominator would cancel in the ratio.
+            const double t = 2.0*i/(n - 1) - 1.0;
+            h1.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*t));
+            h2.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*(2.0*t*t - 1.0)));
+        }
+
+        // Reference correlation, accumulated about the sample means in long double.
+        long double m1 = 0, m2 = 0;
+        for (int i = 0; i < n; i++) { m1 += h1.at<float>(i,0); m2 += h2.at<float>(i,0); }
+        m1 /= n; m2 /= n;
+        long double cov = 0, v1 = 0, v2 = 0;
+        for (int i = 0; i < n; i++)
+        {
+            long double da = (long double)h1.at<float>(i,0) - m1;
+            long double db = (long double)h2.at<float>(i,0) - m2;
+            cov += da*db; v1 += da*da; v2 += db*db;
+        }
+        ASSERT_GT((double)v1, 0.0) << "relative spread " << spread;
+        ASSERT_GT((double)v2, 0.0) << "relative spread " << spread;
+        const double expected = (double)(cov / std::sqrt(v1*v2));
+        const double got = compareHist(h1, h2, cv::HISTCMP_CORREL);
+
+        EXPECT_NEAR(got, expected, 1e-9)
+            << "relative spread " << spread
+            << " (the single-pass form used to be wrong in the first digit here)";
+    }
+}
+
+// See https://github.com/opencv/opencv/issues/13990
+//
+// A 3-D histogram reaches compareHist from the Python bindings as a 2-D Mat with
+// one channel per plane, so the bin count is total()*channels(). Dividing by
+// total() alone made HISTCMP_CORREL disagree with the same data laid out flat.
+TEST(Imgproc_Hist_Compare, correl_multichannel_13990)
+{
+    const int rows = 64, chans = 8, n = rows*chans;
+    cv::RNG& rng = theRNG();
+
+    cv::Mat flat1(n, 1, CV_32FC1), flat2(n, 1, CV_32FC1);
+    rng.fill(flat1, cv::RNG::UNIFORM, 0.f, 1000.f);
+    rng.fill(flat2, cv::RNG::UNIFORM, 0.f, 1000.f);
+    // Both layouts are read from the same bytes, so the comparison holds for any
+    // content; the ramp only keeps it from degenerating into constant histograms,
+    // whose correlation is undefined and reported as 1 either way.
+    for (int i = 0; i < n; i++)
+    {
+        flat1.at<float>(i, 0) += (float)i;
+        flat2.at<float>(i, 0) += (float)(n - i);
+    }
+
+    // The very same bytes, seen as rows x 1 with `chans` channels.
+    cv::Mat multi1(rows, 1, CV_MAKETYPE(CV_32F, chans), flat1.data);
+    cv::Mat multi2(rows, 1, CV_MAKETYPE(CV_32F, chans), flat2.data);
+
+    const double flatCorrel = compareHist(flat1, flat2, cv::HISTCMP_CORREL);
+    const double multiCorrel = compareHist(multi1, multi2, cv::HISTCMP_CORREL);
+    EXPECT_NEAR(multiCorrel, flatCorrel, 1e-12);
+
+    // Methods that never divide by the bin count already agreed; they must still.
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi2, cv::HISTCMP_INTERSECT),
+                     compareHist(flat1, flat2, cv::HISTCMP_INTERSECT));
+
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi1, cv::HISTCMP_CORREL), 1.0);
+}
+
 }} // namespace
 /* End Of File */
