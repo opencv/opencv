@@ -128,6 +128,48 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 MatchTemplType::all(),
                                 Bool())
                            );
+
+// Regression test for https://github.com/opencv/opencv/issues/21788: the OpenCL
+// TM_CCOEFF_NORMED kernel computes each window's variance-like denominator as a difference of
+// two comparable-magnitude sums pulled from CV_32F integral images -- classic
+// catastrophic-cancellation territory. On a realistic-sized image the rounding error in that
+// subtraction can dwarf a genuinely small-but-nonzero window variance, corrupting the ratio
+// enough to spuriously hit the +-1 safety clamp for windows that are not actually degenerate.
+// The parameterized MatchTemplate case above never reaches this: it only exercises small
+// (<=100x100) images of uniformly random full-range noise, where windows have large variance
+// and integral sums never accumulate far enough to lose the precision this needs.
+TEST(MatchTemplate, ccoeff_normed_large_low_contrast_image)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    Mat image(1080, 1920, CV_8UC1);
+    cv::theRNG().fill(image, RNG::UNIFORM, 178, 183);
+
+    Mat templ = image(Rect(5, 5, 32, 32)).clone();
+
+    bool useOCL = cv::ocl::useOpenCL();
+    Mat cpuResult;
+    cv::ocl::setUseOpenCL(false);
+    cv::matchTemplate(image, templ, cpuResult, TM_CCOEFF_NORMED);
+
+    UMat gpuResultU;
+    cv::ocl::setUseOpenCL(true);
+    cv::matchTemplate(image.getUMat(ACCESS_READ), templ.getUMat(ACCESS_READ), gpuResultU, TM_CCOEFF_NORMED);
+    cv::ocl::setUseOpenCL(useOCL);
+    Mat gpuResult = gpuResultU.getMat(ACCESS_READ);
+
+    ASSERT_EQ(cpuResult.size(), gpuResult.size());
+
+    double minCpu = 0, maxCpu = 0, minGpu = 0, maxGpu = 0;
+    cv::minMaxLoc(cpuResult, &minCpu, &maxCpu);
+    cv::minMaxLoc(gpuResult, &minGpu, &maxGpu);
+
+    EXPECT_NEAR(minCpu, minGpu, 5e-2) << "CPU minVal=" << minCpu << " GPU minVal=" << minGpu;
+    EXPECT_NEAR(maxCpu, maxGpu, 5e-2) << "CPU maxVal=" << maxCpu << " GPU maxVal=" << maxGpu;
+    EXPECT_LE(cv::norm(cpuResult, gpuResult, NORM_INF), 5e-2);
+}
+
 } } // namespace opencv_test::ocl
 
 #endif
