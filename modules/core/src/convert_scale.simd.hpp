@@ -526,17 +526,34 @@ cvtScaleF32ToFp8(const uchar* src_, size_t sstep, const uchar*, size_t,
         float scaled[VTraits<v_float32>::max_nlanes * 4];
         for (; j <= size.width - VECSZ; j += VECSZ)
         {
-            v_float32 vf[4];
-            for (int g = 0; g < 4; g++)
-            {
-                v_float64 d0, d1;
-                vx_load_pair_as(src + j + g * LANES32, d0, d1);
-                d0 = v_add(v_mul(d0, va), vb);
-                d1 = v_add(v_mul(d1, va), vb);
-                vf[g] = v_cvt_f32(d0, d1);
-                v_store(scaled + g * LANES32, vf[g]);
-            }
-            encodeFp8Vec4<bias, fnuz>(vf[0], vf[1], vf[2], vf[3], scaled, VECSZ, dst + j);
+            v_float32 vf0, vf1, vf2, vf3;
+            v_float64 d0, d1;
+
+            vx_load_pair_as(src + j + 0 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf0 = v_cvt_f32(d0, d1);
+            v_store(scaled + 0 * LANES32, vf0);
+
+            vx_load_pair_as(src + j + 1 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf1 = v_cvt_f32(d0, d1);
+            v_store(scaled + 1 * LANES32, vf1);
+
+            vx_load_pair_as(src + j + 2 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf2 = v_cvt_f32(d0, d1);
+            v_store(scaled + 2 * LANES32, vf2);
+
+            vx_load_pair_as(src + j + 3 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf3 = v_cvt_f32(d0, d1);
+            v_store(scaled + 3 * LANES32, vf3);
+
+            encodeFp8Vec4<bias, fnuz>(vf0, vf1, vf2, vf3, scaled, VECSZ, dst + j);
         }
         vx_cleanup();
 #endif
