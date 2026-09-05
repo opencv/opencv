@@ -290,11 +290,39 @@ TEST(PointCloud, LoadBadExtension)
 
 TEST(PointCloud, SaveBadExtension)
 {
+    // Non-empty: savePointCloud() returns at its empty-input guard before it ever reaches
+    // findEncoder(), so an empty vector would exercise that guard instead of this path.
+    std::vector<cv::Point3f> points { cv::Point3f(1.f, 2.f, 3.f) };
+    std::vector<cv::Point3f> normals;
+
+    // tempfile(), not get_data_path(): this call reaches the writing code.
+    std::string new_path = tempfile("new.fake");
+
+    cv::savePointCloud(new_path, points, normals);
+
+    // findEncoder() only recognises obj and ply, so nothing may be written.
+    std::ifstream f(new_path.c_str());
+    EXPECT_FALSE(f.good())
+        << "savePointCloud() created a file for an unsupported extension: " << new_path;
+    f.close();
+    std::remove(new_path.c_str());
+}
+
+TEST(PointCloud, SaveEmptyVertices)
+{
+    // An empty vertex set is a no-op even when the extension is supported.
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    auto folder = cvtest::TS::ptr()->get_data_path();
-    cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals);
+    std::string new_path = tempfile("new_empty.ply");
+
+    cv::savePointCloud(new_path, points, normals);
+
+    std::ifstream f(new_path.c_str());
+    EXPECT_FALSE(f.good())
+        << "savePointCloud() created a file for an empty vertex set: " << new_path;
+    f.close();
+    std::remove(new_path.c_str());
 }
 
 TEST(PointCloud, LoadPlyEmptyFormatLine)

@@ -732,9 +732,34 @@ void hugeSceneGrowthTest(VolumeType volumeType)
         debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
     }
 
+    // The scene is sized to exceed the initial capacity of VOLUMES_SIZE (8192) volume
+    // units, which is what distinguishes this from boundingBoxGrowthTest. 8192 is
+    // spelled out because VOLUMES_SIZE lives in the private hash_tsdf_functions.hpp.
+    //
+    // ColorHashTSDF only: HashTsdfVolume::getTotalVolumeUnits() is a hardcoded
+    // "return 1" (src/volume_impl.cpp).
+    if (volumeType == VolumeType::ColorHashTSDF)
+    {
+        EXPECT_GT(volume.getTotalVolumeUnits(), size_t(8192))
+            << "the scene no longer exceeds the initial volume unit capacity, so this "
+               "test no longer covers hash volume growth";
+    }
+
+    // The exact box is deliberately not asserted: it follows from the scene geometry and
+    // cannot be derived independently, so pinning it would only record current behaviour.
+    Vec6f bb;
+    volume.getBoundingBox(bb, Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    EXPECT_GT(bb[3], bb[0]) << "bounding box = " << bb;
+    EXPECT_GT(bb[4], bb[1]) << "bounding box = " << bb;
+    EXPECT_GT(bb[5], bb[2]) << "bounding box = " << bb;
+
     // Reset check
 
     volume.reset();
+    Vec6f bbReset;
+    volume.getBoundingBox(bbReset, Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    EXPECT_LE(std::sqrt(bbReset.ddot(bbReset)), std::numeric_limits<double>::epsilon())
+        << "bounding box after reset() = " << bbReset;
 }
 
 

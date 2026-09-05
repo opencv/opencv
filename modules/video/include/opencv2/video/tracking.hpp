@@ -237,38 +237,6 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
                                             int iterations, int poly_n, double poly_sigma,
                                             int flags );
 
-/** @brief Computes an optimal affine transformation between two 2D point sets.
-
-@param src First input 2D point set stored in std::vector or Mat, or an image stored in Mat.
-@param dst Second input 2D point set of the same size and the same type as A, or another image.
-@param fullAffine If true, the function finds an optimal affine transformation with no additional
-restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
-limited to combinations of translation, rotation, and uniform scaling (4 degrees of freedom).
-
-The function finds an optimal affine transform *[A|b]* (a 2 x 3 floating-point matrix) that
-approximates best the affine transformation between:
-
-*   Two point sets
-*   Two raster images. In this case, the function first finds some features in the src image and
-    finds the corresponding features in dst image. After that, the problem is reduced to the first
-    case.
-In case of point sets, the problem is formulated as follows: you need to find a 2x2 matrix *A* and
-2x1 vector *b* so that:
-
-\f[[A^*|b^*] = arg  \min _{[A|b]}  \sum _i  \| \texttt{dst}[i] - A { \texttt{src}[i]}^T - b  \| ^2\f]
-where src[i] and dst[i] are the i-th points in src and dst, respectively
-\f$[A|b]\f$ can be either arbitrary (when fullAffine=true ) or have a form of
-\f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}\f]
-when fullAffine=false.
-
-@deprecated Use cv::estimateAffine2D, cv::estimateAffinePartial2D instead. If you are using this function
-with images, extract points using cv::calcOpticalFlowPyrLK and then use the estimation functions.
-
-@sa
-estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
- */
-CV_DEPRECATED CV_EXPORTS Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
-
 enum
 {
     MOTION_TRANSLATION = 0,
@@ -357,7 +325,7 @@ correlation coefficient, that is the correlation coefficient between the templat
 final warped input image. When a \f$3\times 3\f$ matrix is given with motionType =0, 1 or 2, the third
 row is ignored.
 
-Unlike findHomography and estimateRigidTransform, the function findTransformECC implements an
+Unlike findHomography, the function findTransformECC implements an
 area-based alignment that builds on intensity similarities. In essence, the function updates the
 initial transformation that roughly aligns the images. If this information is missing, the identity
 warp (unity matrix) is used as an initialization. Note that if images undergo strong
@@ -486,7 +454,7 @@ correlation coefficient, that is the correlation coefficient between the templat
 final warped input image. When a \f$3\times 3\f$ matrix is given with motionType =0, 1 or 2, the third
 row is ignored.
 
-Unlike findHomography and estimateRigidTransform, the function findTransformECCMultiScale implements
+Unlike findHomography, the function findTransformECCMultiScale implements
 an area-based alignment that builds on intensity similarities. In essence, the function updates the
 initial transformation that roughly aligns the images. If this information is missing, the identity
 warp (unity matrix) is used as an initialization. Note that if images undergo strong

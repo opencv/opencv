@@ -175,7 +175,7 @@ pixel neighborhood. See cornerEigenValsAndVecs .
 or #cornerMinEigenVal.
 @param k Free parameter of the Harris detector.
 
-@sa  cornerMinEigenVal, cornerHarris, calcOpticalFlowPyrLK, estimateRigidTransform,
+@sa  cornerMinEigenVal, cornerHarris, calcOpticalFlowPyrLK,
  */
 
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
