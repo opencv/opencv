@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/blocked_pointwise.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -3949,14 +3950,27 @@ private:
         const size_t outStep2 = dst.step.p[2] / sizeof(float);
         const size_t outStep3 = dst.step.p[3] / sizeof(float);
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VEC_SZ = VTraits<v_float32>::vlanes();
+        // C0 is the block-layout channel block (8 by default); VEC_SZ is whatever
+        // the target's float vector holds, so the two coincide only on 8-lane
+        // targets. Cover both directions instead: when C0 is a multiple of VEC_SZ
+        // each pixel is walked in VEC_SZ chunks, and when VEC_SZ is a multiple of
+        // C0 the slopes are replicated across the vector and the contiguous
+        // H*W*C0 block is walked in one flat loop.
+        const bool vecChunk = C0 > VEC_SZ && (C0 % VEC_SZ) == 0;
+        const bool vecFlat  = blockCanSpan(C0, VEC_SZ, W, inStep2, inStep3,
+                                           outStep2, outStep3);
 #endif
 
         parallel_for_(Range(0, N * C1), [&](const Range& r) {
             const float* inptr0 = src.ptr<float>();
             float* outptr0 = dst.ptr<float>();
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            AutoBuffer<float> slopeBuf(std::max(C0, VEC_SZ));
+#else
             AutoBuffer<float> slopeBuf(C0);
+#endif
             float* slopes = slopeBuf.data();
 
             for (int i = r.start; i < r.end; ++i) {
@@ -3973,7 +3987,7 @@ private:
                 const float* inbase  = inptr0  + n * inStep0 + c1 * inStep1;
                 float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (C0 == VEC_SZ) {
                     v_float32 vslope = vx_load(slopes);
                     v_float32 vzero  = vx_setzero_f32();
@@ -3987,6 +4001,29 @@ private:
                             vx_store(outrow + w * outStep3, out);
                         }
                     }
+                    continue;
+                }
+                if (vecChunk) {
+                    v_float32 vzero = vx_setzero_f32();
+                    for (int h = 0; h < H; ++h) {
+                        const float* inrow  = inbase  + h * inStep2;
+                        float*       outrow = outbase + h * outStep2;
+                        for (int w = 0; w < W; ++w) {
+                            const float* in_pos  = inrow  + w * inStep3;
+                            float*       out_pos = outrow + w * outStep3;
+                            for (int c0 = 0; c0 < C0; c0 += VEC_SZ) {
+                                v_float32 v = vx_load(in_pos + c0);
+                                v_float32 scaled = v_mul(v, vx_load(slopes + c0));
+                                v_float32 out = v_select(v_ge(v, vzero), v, scaled);
+                                vx_store(out_pos + c0, out);
+                            }
+                        }
+                    }
+                    continue;
+                }
+                if (vecFlat) {
+                    blockedSpanApply(inbase, outbase, (int64_t)H * W * C0, C0, VEC_SZ,
+                                     slopes, slopes, BlockedPReLUOp());
                     continue;
                 }
 #endif
