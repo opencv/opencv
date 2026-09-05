@@ -1,3 +1,4 @@
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test
@@ -11,7 +12,7 @@ PERF_TEST_P( Size_Depth_Channels, split,
              testing::Combine
              (
                  testing::Values(TYPICAL_MAT_SIZES),
-                 testing::Values(CV_8U, CV_16S, CV_32F, CV_64F),
+                 testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                  testing::Values(2, 3, 4)
              )
            )

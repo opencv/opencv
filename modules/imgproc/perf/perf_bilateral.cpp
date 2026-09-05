@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
@@ -12,7 +13,7 @@ typedef TestBaseWithParam< tuple<Size, int, Mat_Type, double> > TestBilateralFil
 PERF_TEST_P( TestBilateralFilter, BilateralFilter,
              Combine(
                 Values( szVGA, sz1080p ), // image size
-                Values( 3, 5 ), // d
+                Values( 3, 5, 7, 21 ), // d
                 Mat_Type::all(), // image type
                 Values(1., 5.)
              )

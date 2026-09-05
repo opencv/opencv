@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 #include <numeric>
 #include "opencv2/core/softfloat.hpp"
@@ -5,6 +9,14 @@
 namespace opencv_test
 {
 using namespace perf;
+
+// Shared BinaryOpTest coverage.
+#define BINARY_OP_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, \
+                        CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1
+// Integer types accepting a scale factor.
+#define ARITHM_SCALE_TYPES (perf::MatType)CV_8UC1, (perf::MatType)CV_16UC1, (perf::MatType)CV_16SC1
+// Floating-point-only ops (cv::pow / sqrt).
+#define ARITHM_FLOAT_TYPES CV_32FC1, CV_64FC1
 
 using BroadcastTest = perf::TestBaseWithParam<std::tuple<std::vector<int>, perf::MatType, std::vector<int>>>;
 typedef Size_MatType BinaryOpTest;
@@ -394,6 +406,25 @@ PERF_TEST_P_(BinaryOpTest, multiplyScale)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(BinaryOpTest, multiplyScalar)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a(sz, type), c(sz, type);
+    cv::Scalar s = 1.333;
+
+    declare.in(a, WARMUP_RNG).out(c);
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        a /= (2 << 16);
+        s = 2.0;
+    }
+
+    TEST_CYCLE() cv::multiply(a, s, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P_(BinaryOpTest, divide)
 {
     Size sz = get<0>(GetParam());
@@ -435,6 +466,59 @@ PERF_TEST_P_(BinaryOpTest, transpose2d)
 
     SANITY_CHECK_NOTHING();
 }
+
+#define TRANSPOSE_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4
+
+typedef Size_MatType TransposeMultiChannelTest;
+
+PERF_TEST_P_(TransposeMultiChannelTest, transpose2d_multichannel)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    Size tsz = Size(sz.height, sz.width);
+    cv::Mat a(sz, type), b(tsz, type);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transpose(a, b);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeMultiChannelTest,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values(TRANSPOSE_TYPES)
+    )
+);
+
+typedef Size_MatType TransposeInplaceTest;
+
+PERF_TEST_P_(TransposeInplaceTest, transpose2d_inplace)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a(sz, type), b(sz, type);
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    while (next())
+    {
+        a.copyTo(b);
+        startTimer();
+        cv::transpose(b, b);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , TransposeInplaceTest,
+    testing::Combine(
+        testing::Values(cv::Size(1280, 1280), cv::Size(1920, 1920)),
+        testing::Values(TRANSPOSE_TYPES)
+    )
+);
 
 static cv::Mat makeTransposeNDOutput(const cv::Mat& src, const std::vector<int>& order)
 {
@@ -526,7 +610,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
+        testing::Values(BINARY_OP_TYPES)
     )
 );
 
@@ -784,6 +868,43 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
     )
 );
 
+typedef perf::TestBaseWithParam<std::tuple<cv::Size, perf::MatType>> ArithmScaleTest;
+
+PERF_TEST_P_(ArithmScaleTest, add_scale)
+{
+    auto p = GetParam();
+    Size sz = get<0>(p);
+    int src1Type = get<1>(p);
+
+    cv::Mat a(sz, src1Type), b(sz, CV_16UC1), c(sz, CV_32FC1);
+    declare.in(a, b, WARMUP_RNG).out(c);
+
+    TEST_CYCLE() cv::add(a, b, c, noArray(), CV_32F);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(ArithmScaleTest, subtract_scale)
+{
+    auto p = GetParam();
+    Size sz = get<0>(p);
+    int src1Type = get<1>(p);
+
+    cv::Mat a(sz, src1Type), b(sz, CV_16UC1), c(sz, CV_32FC1);
+    declare.in(a, b, WARMUP_RNG).out(c);
+
+    TEST_CYCLE() cv::subtract(a, b, c, noArray(), CV_32F);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmScaleTest,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p),
+        testing::Values(ARITHM_SCALE_TYPES)
+    )
+);
+
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, bool>> SqrtFixture;
 PERF_TEST_P_(SqrtFixture, Sqrt) {
     Size sz = get<0>(GetParam());
@@ -801,8 +922,31 @@ PERF_TEST_P_(SqrtFixture, Sqrt) {
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , SqrtFixture,
     testing::Combine(
         testing::Values(TYPICAL_MAT_SIZES),
-        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(ARITHM_FLOAT_TYPES),
         testing::Bool()
+    )
+);
+
+typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, double>> PowFixture;
+PERF_TEST_P_(PowFixture, Pow) {
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    double power = get<2>(GetParam());
+
+    Mat src(sz, type), dst(sz, type);
+    randu(src, FLT_EPSILON, 1000);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() cv::pow(src, power, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , PowFixture,
+    testing::Combine(
+        testing::Values(sz1080p),
+        testing::Values(ARITHM_FLOAT_TYPES),
+        testing::Values(-6.0, -5.0, -4.5, -4.0, -3.0, -2.0, -1.0, -0.7, -0.5, 0.0,
+                        0.5, 0.7, 1.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0)
     )
 );
 
