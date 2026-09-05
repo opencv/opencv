@@ -2489,6 +2489,14 @@ borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination imag
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
 
+@note The interpolation coordinates are rounded to a fixed-point grid of INTER_BITS
+fractional bits, that is to 1/32 of a pixel, before the source is sampled, so the
+interpolation weights are quantized to 32 steps. This is usually invisible, but it shows
+up as banding when the source is strongly upscaled, and it bounds the accuracy of the
+result: for an 8-bit image the output can differ by up to 8 levels from an
+implementation that interpolates at full precision, so a HAL replacing this function may
+legitimately return slightly different values.
+
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
 CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
@@ -2520,6 +2528,14 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
 @param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
 @param borderValue value used in case of a constant border; by default, it equals 0.
+
+@note The interpolation coordinates are rounded to a fixed-point grid of INTER_BITS
+fractional bits, that is to 1/32 of a pixel, before the source is sampled, so the
+interpolation weights are quantized to 32 steps. This is usually invisible, but it shows
+up as banding when the source is strongly upscaled, and it bounds the accuracy of the
+result: for an 8-bit image the output can differ by up to 8 levels from an
+implementation that interpolates at full precision, so a HAL replacing this function may
+legitimately return slightly different values.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2568,6 +2584,14 @@ corresponds to the "outliers" in the source image are not modified by the functi
 @param borderValue Value used in case of a constant border. By default, it is 0.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
+
+@note The interpolation coordinates are rounded to a fixed-point grid of INTER_BITS
+fractional bits, that is to 1/32 of a pixel, before the source is sampled, so the
+interpolation weights are quantized to 32 steps. This is usually invisible, but it shows
+up as banding when the source is strongly upscaled, and it bounds the accuracy of the
+result: for an 8-bit image the output can differ by up to 8 levels from an
+implementation that interpolates at full precision, so a HAL replacing this function may
+legitimately return slightly different values.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
