@@ -43,6 +43,10 @@
 #include "opencv2/ts/ts_gtest.h"
 #include "test_precomp.hpp"
 
+#include <chrono>
+#include <future>
+#include <thread>
+
 namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
@@ -1197,6 +1201,32 @@ TEST(Imgproc_Warping, DISABLED_playground)
         if ((waitKey() & 255) == 27)
             break;
     }
+}
+
+TEST(Imgproc_Warping, infinite_loop)
+{
+    std::promise<void> promise;
+    auto future = promise.get_future();
+
+    std::thread worker([&promise]() {
+        cv::Mat src(1, 10, CV_8UC1, cv::Scalar(128));
+        cv::Mat dst;
+        cv::Matx23f M(1.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+
+        cv::warpAffine(src, dst, M, cv::Size(10, 10), cv::INTER_CUBIC,
+                       cv::BORDER_REFLECT_101);
+        promise.set_value();
+    });
+
+    auto status = future.wait_for(std::chrono::seconds(1));
+    if (status == std::future_status::ready) {
+        worker.join();
+    } else {
+        worker.detach();
+    }
+
+    EXPECT_EQ(status, std::future_status::ready)
+        << "cv::warpAffine hung in an infinite loop!";
 }
 
 }} // namespace
