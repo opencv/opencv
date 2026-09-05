@@ -384,7 +384,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     int step = (int)(src.step / CV_ELEM_SIZE(depth));
     int delta;
 
-    if( interpolation != cv::INTER_CUBIC )
+    if( interpolation != cv::INTER_CUBIC && interpolation != cv::INTER_LINEAR_EXACT )
     {
         delta = 0;
         scols -= 1; srows -= 1;
@@ -760,9 +760,10 @@ CV_RemapTest::CV_RemapTest() : CV_ImgWarpBaseTest( false )
 
 void CV_RemapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
+    RNG& rng = ts->get_rng();
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     types[INPUT][1] = types[INPUT][2] = CV_32FC1;
-    interpolation = cv::INTER_LINEAR;
+    interpolation = (cvtest::randInt(rng) % 2) ? cv::INTER_LINEAR : cv::INTER_LINEAR_EXACT;
 }
 
 
@@ -1928,6 +1929,32 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     hconcat(dst_points, ones, expected_homogeneous_dst_points);
 
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
+}
+
+////////////////////////////// RemapExact /////////////////////////////////
+
+TEST(Imgproc_RemapExact, accuracy)
+{
+    cv::Mat src(100, 100, CV_8UC3);
+    cv::randu(src, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::Mat mapX(src.size(), CV_32FC1);
+    cv::Mat mapY(src.size(), CV_32FC1);
+    for (int y = 0; y < src.rows; ++y)
+    {
+        for (int x = 0; x < src.cols; ++x)
+        {
+            mapX.at<float>(y, x) = x + 0.333f;
+            mapY.at<float>(y, x) = y + 0.333f;
+        }
+    }
+
+    cv::Mat dst;
+    cv::remap(src, dst, mapX, mapY, cv::INTER_LINEAR_EXACT, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    EXPECT_EQ(dst.size(), src.size());
+    EXPECT_EQ(dst.type(), src.type());
+    EXPECT_FALSE(dst.empty());
 }
 
 }} // namespace
