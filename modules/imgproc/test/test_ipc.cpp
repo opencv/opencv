@@ -83,6 +83,36 @@ TEST(Imgproc_PhaseCorrelationIterative, 64x64_accuracy_shift_16)
     TestPhaseCorrelationIterative(Size(64, 64), 16);
 }
 
+TEST(Imgproc_PhaseCorrelationIterative, 64x64_float32_accuracy)
+{
+    // regression: smooth float32 inputs can produce frequency bins with exactly zero
+    // magnitude in the cross power spectrum, NaN results reported in issue #29849
+    Mat image(64, 64, CV_32FC1);
+    for (int y = 0; y < image.rows; ++y)
+    {
+        for (int x = 0; x < image.cols; ++x)
+        {
+            const double dx = x - 30., dy = y - 28.;
+            image.at<float>(y, x) = static_cast<float>(std::exp(-(dx * dx + dy * dy) / 32.));
+        }
+    }
+
+    const int xShift = -3;
+    const int yShift = 2;
+    Mat shifted = Mat::zeros(image.size(), CV_32FC1);
+    for (int y = 0; y < image.rows; ++y)
+        for (int x = 0; x < image.cols; ++x)
+        {
+            const int sx = x - xShift, sy = y - yShift;
+            if (sx >= 0 && sx < image.cols && sy >= 0 && sy < image.rows)
+                shifted.at<float>(y, x) = image.at<float>(sy, sx);
+        }
+
+    const Point2d ipcShift = phaseCorrelateIterative(image, shifted);
+    EXPECT_NEAR(ipcShift.x, xShift, 0.1);
+    EXPECT_NEAR(ipcShift.y, yShift, 0.1);
+}
+
 TEST(Imgproc_PhaseCorrelationIterative, 0x0_image)
 {
     ASSERT_ANY_THROW(TestPhaseCorrelationIterative(Size(0, 0), 1));
