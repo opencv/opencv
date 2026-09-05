@@ -1519,8 +1519,8 @@ Rect getTextSize(Size, const String&, Point, FontFace&, int, int, PutTextFlags, 
 
 #endif // HAVE_HARFBUZZ
 
+#ifdef HAVE_HARFBUZZ
 //////////////////////////// text drawing functions for backward compatibility ///////////////////////////
-
 namespace cv
 {
 
@@ -1617,3 +1617,5 @@ double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const i
 }
 
 } // namespace cv
+
+#endif // HAVE_HARFBUZZ

@@ -73,3 +73,7 @@ if(HAVE_HARFBUZZ)
     ocv_install_3rdparty_licenses(harfbuzz "${OpenCV_SOURCE_DIR}/3rdparty/harfbuzz/COPYING")
   endif()
 endif()
+
+if(TARGET opencv_test_imgproc AND HAVE_HARFBUZZ)
+  ocv_target_compile_definitions(opencv_test_imgproc PRIVATE OPENCV_IMGPROC_HAVE_HARFBUZZ=1)
+endif()

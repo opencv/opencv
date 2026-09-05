@@ -60,7 +60,11 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
+#ifdef OPENCV_IMGPROC_HAVE_HARFBUZZ
     const string fname = "../highgui/drawing/image.png";
+#else
+    const string fname = "../highgui/drawing/image_hershey.png";
+#endif
     string path = ts->get_data_path(), filename;
     filename = path + fname;
 
@@ -621,10 +625,17 @@ TEST(Drawing, putText_no_garbage)
     mat = Scalar::all(0);
     putText(mat, "029", Point(10, 350), 0, 10, Scalar(128), 15);
 
+#ifdef OPENCV_IMGPROC_HAVE_HARFBUZZ
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(0, 0,           10, sz.height))));
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(sz.width-10, 0, 10, sz.height))));
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(190, 0,         10, sz.height))));
     EXPECT_EQ(0, cv::countNonZero(mat(Rect(380, 0,         10, sz.height))));
+#else // HERSHEY
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(0, 0,           10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(sz.width-10, 0, 10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(205, 0,         10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(405, 0,         10, sz.height))));
+#endif
 
 #if 0
     rectangle(mat, Rect(0, 0,           10, sz.height), Scalar::all(255), 1, LINE_8);
@@ -714,9 +725,16 @@ TEST(Drawing, fromJava_getTextSize)
 
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
+
+#ifdef OPENCV_IMGPROC_HAVE_HARFBUZZ
     EXPECT_NEAR(494, res.width, 3.0);
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
+#else // HERSHEY
+    EXPECT_NEAR(543, res.width, 3.0);
+    EXPECT_NEAR(44, res.height, 3.0);
+    EXPECT_NEAR(20, baseLine, 3.0);
+#endif
 }
 
 TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
