@@ -96,4 +96,42 @@ TEST(Imgproc_BoundingRect, bug_24217)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/29837
+// A CV_32F coordinate outside of the int range used to reach cvFloor(), which is undefined
+// there: points spanning 1e10 collapsed to a 1x1 rect at INT_MIN, and +inf/-inf gave
+// INT_MIN/INT_MAX, an inverted rectangle. They are saturated to the representable bounds now.
+TEST(Imgproc_BoundingRect, out_of_int_range_29837)
+{
+    const int imin = std::numeric_limits<int>::min();
+    const int imax = std::numeric_limits<int>::max();
+    const float inf = std::numeric_limits<float>::infinity();
+
+    // in-range point sets are unaffected
+    std::vector<Point2f> in_range { Point2f(1e4f, 1e4f), Point2f(2e4f, 2e4f) };
+    EXPECT_EQ(boundingRect(in_range), Rect(10000, 10000, 10001, 10001));
+
+    // out of range: saturated, orientation preserved
+    std::vector<Point2f> above { Point2f(1e10f, 1e10f), Point2f(2e10f, 2e10f) };
+    EXPECT_EQ(boundingRect(above), Rect(imax, imax, 1, 1));
+
+    std::vector<Point2f> below { Point2f(-1e10f, -1e10f), Point2f(-2e10f, -2e10f) };
+    EXPECT_EQ(boundingRect(below), Rect(imin, imin, 1, 1));
+
+    // infinities saturate the same way, and the sides are clamped instead of overflowing
+    std::vector<Point2f> plus_inf { Point2f(inf, 0.f), Point2f(1.f, 1.f), Point2f(2.f, 0.f) };
+    EXPECT_EQ(boundingRect(plus_inf), Rect(1, 0, imax, 2));
+
+    std::vector<Point2f> minus_inf { Point2f(-inf, 0.f), Point2f(1.f, 1.f), Point2f(2.f, 0.f) };
+    EXPECT_EQ(boundingRect(minus_inf), Rect(imin, 0, imax, 2));
+
+    // long enough to go through the SIMD path as well
+    std::vector<Point2f> simd(64, Point2f(5.f, 5.f));
+    simd[37] = Point2f(1e10f, -1e10f);
+    EXPECT_EQ(boundingRect(simd), Rect(5, imin, imax - 4, imax));
+
+    // CV_32S needs no conversion, but its sides can overflow int just the same
+    std::vector<Point> ints { Point(imin, imin), Point(imax, imax) };
+    EXPECT_EQ(boundingRect(ints), Rect(imin, imin, imax, imax));
+}
+
 }} // namespace

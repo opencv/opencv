@@ -703,6 +703,24 @@ static Rect maskBoundingRect( const Mat& img )
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
+// Converts an extremum of a CV_32F point set to an int coordinate of a Rect, flooring it and
+// clamping it to the range a Rect can represent. cvFloor() is undefined outside of that range, so
+// a coordinate beyond it used to leak the raw conversion result into the rectangle: 1e10 floored
+// to INT_MIN, and +inf/-inf gave INT_MIN and INT_MAX, inverting it.
+// See https://github.com/opencv/opencv/issues/29837
+static inline int floorSaturate( float value )
+{
+    // the clamp is in double, where the bounds are exact - INT_MAX is not representable in float -
+    // and it cannot be left to saturate_cast<int>(), which rounds but does not clip 32-bit
+    // integers. Reversing the first comparison keeps a NaN out of the undefined conversion too.
+    const double v = std::floor((double)value);
+    if( !(v > (double)INT_MIN) )
+        return INT_MIN;
+    if( v >= (double)INT_MAX )
+        return INT_MAX;
+    return saturate_cast<int>(v);
+}
+
 // Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
@@ -767,8 +785,9 @@ static Rect pointSetBoundingRect( const Mat& points )
         const float* pts = points.ptr<float>();
         int64_t firstval = 0;
         std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
-        xmin = xmax = cvFloor(pts[0]);
-        ymin = ymax = cvFloor(pts[1]);
+        // the extrema are searched for in floats and converted to int once, below
+        float xmin_f = pts[0], xmax_f = pts[0];
+        float ymin_f = pts[1], ymax_f = pts[1];
 #if CV_SIMD || CV_SIMD_SCALABLE
         v_float32 minval, maxval;
         minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
@@ -791,29 +810,35 @@ static Rect pointSetBoundingRect( const Mat& points )
         vx_store(arr_maxval, maxval);
         for (int j = 0; j < nlanes; j++)
         {
-            int _xmin = cvFloor(arr_minval[2*j]), _ymin = cvFloor(arr_minval[2*j+1]);
-            int _xmax = cvFloor(arr_maxval[2*j]), _ymax = cvFloor(arr_maxval[2*j+1]);
-            xmin = std::min(xmin, _xmin);
-            ymin = std::min(ymin, _ymin);
-            xmax = std::max(xmax, _xmax);
-            ymax = std::max(ymax, _ymax);
+            xmin_f = std::min(xmin_f, arr_minval[2*j]);
+            ymin_f = std::min(ymin_f, arr_minval[2*j+1]);
+            xmax_f = std::max(xmax_f, arr_maxval[2*j]);
+            ymax_f = std::max(ymax_f, arr_maxval[2*j+1]);
         }
 #endif
         for( ; i < npoints; i++ )
         {
-            // because right and bottom sides of the bounding rectangle are not inclusive
-            // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-            int pt_x = cvFloor(pts[2*i]);
-            int pt_y = cvFloor(pts[2*i+1]);
+            float pt_x = pts[2*i];
+            float pt_y = pts[2*i+1];
 
-            xmin = std::min(xmin, pt_x);
-            xmax = std::max(xmax, pt_x);
-            ymin = std::min(ymin, pt_y);
-            ymax = std::max(ymax, pt_y);
+            xmin_f = std::min(xmin_f, pt_x);
+            xmax_f = std::max(xmax_f, pt_x);
+            ymin_f = std::min(ymin_f, pt_y);
+            ymax_f = std::max(ymax_f, pt_y);
         }
+
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), the extrema are floored, not rounded
+        xmin = floorSaturate(xmin_f);
+        xmax = floorSaturate(xmax_f);
+        ymin = floorSaturate(ymin_f);
+        ymax = floorSaturate(ymax_f);
     }
 
-    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+    // xmax - xmin overflows int once the extrema saturate, so the sides are computed in int64
+    const int64_t width  = (int64_t)xmax - (int64_t)xmin + 1;
+    const int64_t height = (int64_t)ymax - (int64_t)ymin + 1;
+    return Rect(xmin, ymin, (int)std::min<int64_t>(width, INT_MAX), (int)std::min<int64_t>(height, INT_MAX));
 }
 
 
