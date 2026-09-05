@@ -492,7 +492,7 @@ static void cvtScale##suffix( const uchar* src_, size_t sstep, const uchar*, siz
     DEF_CVT_SCALE_SCALAR_FUNC(S##16s,  T, short, double)     DEF_CVT_SCALE_SCALAR_FUNC(16s##S,  short, T, double) \
     DEF_CVT_SCALE_SCALAR_FUNC(S##32u,  T, unsigned, double)  DEF_CVT_SCALE_SCALAR_FUNC(32u##S,  unsigned, T, double) \
     DEF_CVT_SCALE_SCALAR_FUNC(S##32s,  T, int, double)       DEF_CVT_SCALE_SCALAR_FUNC(32s##S,  int, T, double) \
-    DEF_CVT_SCALE_SCALAR_FUNC(S##32f,  T, float, double)     DEF_CVT_SCALE_SCALAR_FUNC(32f##S,  float, T, double) \
+    DEF_CVT_SCALE_SCALAR_FUNC(S##32f,  T, float, double) \
     DEF_CVT_SCALE_SCALAR_FUNC(S##64f,  T, double, double)    DEF_CVT_SCALE_SCALAR_FUNC(64f##S,  double, T, double) \
     DEF_CVT_SCALE_SCALAR_FUNC(S##16f,  T, hfloat, double)    DEF_CVT_SCALE_SCALAR_FUNC(16f##S,  hfloat, T, double) \
     DEF_CVT_SCALE_SCALAR_FUNC(S##16bf, T, bfloat, double)    DEF_CVT_SCALE_SCALAR_FUNC(16bf##S, bfloat, T, double) \
@@ -503,6 +503,68 @@ static void cvtScale##suffix( const uchar* src_, size_t sstep, const uchar*, siz
 
 DEF_CVT_SCALE_FP8(8fe4m3,  fp8_t)
 DEF_CVT_SCALE_FP8(8fe4m3u, fp8a_t)
+
+// convertTo(dst, depth, alpha, beta) path -- real quantization. Reuses convert.hpp's fast path.
+// Double precision here matches the scalar reference (wtype)x*a+b bit-for-bit.
+template<int bias, bool fnuz> static void
+cvtScaleF32ToFp8(const uchar* src_, size_t sstep, const uchar*, size_t,
+                 uchar* dst, size_t dstep, Size size, void* scale_)
+{
+    CV_INSTRUMENT_REGION();
+    const float* src = (const float*)src_;
+    const double* scale = (const double*)scale_;
+    double a = scale[0], b = scale[1];
+    sstep /= sizeof(src[0]);
+
+    for (int i = 0; i < size.height; i++, src += sstep, dst += dstep)
+    {
+        int j = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        v_float64 va = vx_setall_f64(a), vb = vx_setall_f64(b);
+        const int LANES32 = VTraits<v_float32>::vlanes();
+        const int VECSZ = LANES32 * 4;
+        float scaled[VTraits<v_float32>::max_nlanes * 4];
+        for (; j <= size.width - VECSZ; j += VECSZ)
+        {
+            v_float32 vf0, vf1, vf2, vf3;
+            v_float64 d0, d1;
+
+            vx_load_pair_as(src + j + 0 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf0 = v_cvt_f32(d0, d1);
+            v_store(scaled + 0 * LANES32, vf0);
+
+            vx_load_pair_as(src + j + 1 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf1 = v_cvt_f32(d0, d1);
+            v_store(scaled + 1 * LANES32, vf1);
+
+            vx_load_pair_as(src + j + 2 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf2 = v_cvt_f32(d0, d1);
+            v_store(scaled + 2 * LANES32, vf2);
+
+            vx_load_pair_as(src + j + 3 * LANES32, d0, d1);
+            d0 = v_add(v_mul(d0, va), vb);
+            d1 = v_add(v_mul(d1, va), vb);
+            vf3 = v_cvt_f32(d0, d1);
+            v_store(scaled + 3 * LANES32, vf3);
+
+            encodeFp8Vec4<bias, fnuz>(vf0, vf1, vf2, vf3, scaled, VECSZ, dst + j);
+        }
+        vx_cleanup();
+#endif
+        for (; j < size.width; j++)
+            dst[j] = fp8_detail::encodeE4M3((float)((double)src[j]*a + b), bias, fnuz);
+    }
+}
+static void cvtScale32f8fe4m3(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtScaleF32ToFp8<7, false>(s, ss, p, ps, d, ds, sz, x); }
+static void cvtScale32f8fe4m3u(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtScaleF32ToFp8<8, true>(s, ss, p, ps, d, ds, sz, x); }
 
 BinaryFunc getConvertScaleFunc(int sdepth_, int ddepth_)
 {

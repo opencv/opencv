@@ -517,7 +517,6 @@ static void cvt64s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* 
     DEF_CVT_SCALAR_FUNC(S##16s,  T, short)     DEF_CVT_SCALAR_FUNC(16s##S,  short, T) \
     DEF_CVT_SCALAR_FUNC(S##32u,  T, unsigned)  DEF_CVT_SCALAR_FUNC(32u##S,  unsigned, T) \
     DEF_CVT_SCALAR_FUNC(S##32s,  T, int)       DEF_CVT_SCALAR_FUNC(32s##S,  int, T) \
-    DEF_CVT_SCALAR_FUNC(32f##S,  float, T) \
     DEF_CVT_SCALAR_FUNC(S##64f,  T, double)    DEF_CVT_SCALAR_FUNC(64f##S,  double, T) \
     DEF_CVT_SCALAR_FUNC(S##16f,  T, hfloat)    DEF_CVT_SCALAR_FUNC(16f##S,  hfloat, T) \
     DEF_CVT_SCALAR_FUNC(S##16bf, T, bfloat)    DEF_CVT_SCALAR_FUNC(16bf##S, bfloat, T) \
@@ -531,6 +530,40 @@ DEF_CVT_FP8(8fe4m3u, fp8a_t)
 // FP8 -> FP8, cross-format only (identity uses the 1-byte copy cvt8u, like 16f->16f uses cvt16u)
 DEF_CVT_SCALAR_FUNC(8fe4m38fe4m3u, fp8_t,   fp8a_t)
 DEF_CVT_SCALAR_FUNC(8fe4m3u8fe4m3, fp8a_t, fp8_t)
+
+// float32 -> FP8 encode via the shared building blocks in convert.hpp.
+template<int bias, bool fnuz> static void
+cvtF32ToFp8(const uchar* src_, size_t sstep, const uchar*, size_t,
+            uchar* dst, size_t dstep, Size size, void*)
+{
+    CV_INSTRUMENT_REGION();
+    const float* src = (const float*)src_;
+    sstep /= sizeof(src[0]);
+
+    for (int i = 0; i < size.height; i++, src += sstep, dst += dstep)
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int LANES32 = VTraits<v_int32>::vlanes();
+        const int VECSZ = LANES32 * 4;
+        for (; j <= size.width - VECSZ; j += VECSZ)
+        {
+            v_float32 vf0 = vx_load(src + j);
+            v_float32 vf1 = vx_load(src + j + LANES32);
+            v_float32 vf2 = vx_load(src + j + 2 * LANES32);
+            v_float32 vf3 = vx_load(src + j + 3 * LANES32);
+            encodeFp8Vec4<bias, fnuz>(vf0, vf1, vf2, vf3, src + j, VECSZ, dst + j);
+        }
+        vx_cleanup();
+#endif
+        for (; j < size.width; j++)
+            dst[j] = fp8_detail::encodeE4M3(src[j], bias, fnuz);
+    }
+}
+static void cvt32f8fe4m3(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtF32ToFp8<7, false>(s, ss, p, ps, d, ds, sz, x); }
+static void cvt32f8fe4m3u(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtF32ToFp8<8, true>(s, ss, p, ps, d, ds, sz, x); }
 
 // FP8 -> float32: 256-entry decode table gathered via universal intrinsics (same table as scalar)
 template<typename FP8>

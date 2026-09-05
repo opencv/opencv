@@ -38,4 +38,51 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
     SANITY_CHECK(dst, eps);
 }
 
+// alpha param covers both the identity and scale FP8 kernels.
+// Two distributions tracked: well-scaled (fast path) vs near-zero (fallback path).
+typedef tuple<Size, MatType, double> Size_Fp8Depth_Alpha_t;
+typedef perf::TestBaseWithParam<Size_Fp8Depth_Alpha_t> Size_Fp8Depth_Alpha;
+
+PERF_TEST_P( Size_Fp8Depth_Alpha, convertToFp8_wellScaled,
+             testing::Combine
+             (
+                 testing::Values(szVGA, sz1080p),
+                 testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+                 testing::Values(1.0, 0.1)
+             )
+           )
+{
+    Size sz = get<0>(GetParam());
+    int fp8depth = get<1>(GetParam());
+    double alpha = get<2>(GetParam());
+
+    Mat src(sz, CV_32FC1);
+    randu(src, -8.0, 8.0);   // mostly normal-range -> mostly the fast path
+    Mat dst(sz, fp8depth);
+
+    TEST_CYCLE() src.convertTo(dst, fp8depth, alpha, 0.0);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P( Size_Fp8Depth_Alpha, convertToFp8_nearZero,
+             testing::Combine
+             (
+                 testing::Values(szVGA, sz1080p),
+                 testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+                 testing::Values(1.0, 0.1)
+             )
+           )
+{
+    Size sz = get<0>(GetParam());
+    int fp8depth = get<1>(GetParam());
+    double alpha = get<2>(GetParam());
+
+    Mat src(sz, CV_32FC1);
+    randu(src, -0.006, 0.006);   // below E4M3's smallest normal (2^-6) -> mostly the fallback path
+    Mat dst(sz, fp8depth);
+
+    TEST_CYCLE() src.convertTo(dst, fp8depth, alpha, 0.0);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
