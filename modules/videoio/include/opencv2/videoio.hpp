@@ -738,6 +738,20 @@ enum VideoCaptureOBSensorProperties{
 
 //! @} videoio_flags_others
 
+/** @brief Camera device reported by a videoio backend
+ */
+struct CV_EXPORTS_W_SIMPLE VideoDeviceInfo
+{
+    CV_WRAP VideoDeviceInfo() : cam_idx(-1), backend(CAP_ANY) {}
+
+    //! Index to pass to cv::VideoCapture to open this device
+    CV_PROP_RW int cam_idx;
+    //! Device name reported by the backend, or "cam: <index>" if unavailable
+    CV_PROP_RW std::string cam_name;
+    //! Backend that reported this device
+    CV_PROP_RW VideoCaptureAPIs backend;
+};
+
 /** @brief Read data stream interface
  */
 class CV_EXPORTS_W IStreamReader
