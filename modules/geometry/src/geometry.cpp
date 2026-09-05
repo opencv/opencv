@@ -591,6 +591,18 @@ static Rect maskBoundingRect( const Mat& img )
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
+// cvFloor() is undefined outside of the INT_MIN..INT_MAX range, so a coordinate that a Rect
+// cannot represent used to leak the raw conversion result into it: 1e10 floored to INT_MIN,
+// and +inf/-inf to INT_MIN/INT_MAX, inverting the rectangle. Saturate instead.
+// See https://github.com/opencv/opencv/issues/29837
+static inline int floorSaturate( float value )
+{
+    // 2147483648.f is INT_MAX + 1: the smallest float above the representable range
+    if( value >= -2147483648.f && value < 2147483648.f )
+        return cvFloor(value);
+    return value > 0 ? INT_MAX : INT_MIN; // NaN lands here too, on INT_MIN
+}
+
 // Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
@@ -655,8 +667,8 @@ static Rect pointSetBoundingRect( const Mat& points )
         const float* pts = points.ptr<float>();
         int64_t firstval = 0;
         std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
-        xmin = xmax = cvFloor(pts[0]);
-        ymin = ymax = cvFloor(pts[1]);
+        xmin = xmax = floorSaturate(pts[0]);
+        ymin = ymax = floorSaturate(pts[1]);
         #if CV_SIMD || CV_SIMD_SCALABLE
         v_float32 minval, maxval;
         minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
@@ -679,8 +691,8 @@ static Rect pointSetBoundingRect( const Mat& points )
         vx_store(arr_maxval, maxval);
         for (int j = 0; j < nlanes; j++)
         {
-            int _xmin = cvFloor(arr_minval[2*j]), _ymin = cvFloor(arr_minval[2*j+1]);
-            int _xmax = cvFloor(arr_maxval[2*j]), _ymax = cvFloor(arr_maxval[2*j+1]);
+            int _xmin = floorSaturate(arr_minval[2*j]), _ymin = floorSaturate(arr_minval[2*j+1]);
+            int _xmax = floorSaturate(arr_maxval[2*j]), _ymax = floorSaturate(arr_maxval[2*j+1]);
             xmin = std::min(xmin, _xmin);
             ymin = std::min(ymin, _ymin);
             xmax = std::max(xmax, _xmax);
@@ -691,8 +703,8 @@ static Rect pointSetBoundingRect( const Mat& points )
         {
             // because right and bottom sides of the bounding rectangle are not inclusive
             // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-            int pt_x = cvFloor(pts[2*i]);
-            int pt_y = cvFloor(pts[2*i+1]);
+            int pt_x = floorSaturate(pts[2*i]);
+            int pt_y = floorSaturate(pts[2*i+1]);
 
             xmin = std::min(xmin, pt_x);
             xmax = std::max(xmax, pt_x);
@@ -701,7 +713,10 @@ static Rect pointSetBoundingRect( const Mat& points )
         }
     }
 
-    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+    // xmax - xmin overflows int once the extrema saturate, so the sides are computed in int64
+    const int64_t width  = (int64_t)xmax - (int64_t)xmin + 1;
+    const int64_t height = (int64_t)ymax - (int64_t)ymin + 1;
+    return Rect(xmin, ymin, (int)std::min<int64_t>(width, INT_MAX), (int)std::min<int64_t>(height, INT_MAX));
 }
 
 cv::Rect boundingRect(InputArray array)
