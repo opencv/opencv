@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../adjacency_graph.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -413,6 +414,16 @@ public:
         return func.getActivationFunc(depth, activParams);
     }
 
+    bool unfoldOp(LayerMath& out, const ConstOperand& side) const CV_OVERRIDE
+    {
+        if (!func.unfoldOp(out, side))
+            return false;
+        std::vector<float> params;
+        if (ActivationFunc fn = func.getActivationFunc(CV_32F, params))
+            out.setKernel(fn, params);
+        return true;
+    }
+
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
@@ -461,6 +472,8 @@ struct BaseFunctor
 
     ActivationFunc getActivationFunc(int /*depth*/, std::vector<float>& /*activParams*/) const
     { return nullptr; }
+
+    bool unfoldOp(LayerMath&, const ConstOperand&) const { return false; }
 };
 
 struct ReLUFunctor : public BaseFunctor
@@ -475,6 +488,14 @@ struct ReLUFunctor : public BaseFunctor
         if (depth != CV_32F) return nullptr;
         activParams = {slope};
         return cv::dnn::getActivationFunc(ACTIV_RELU);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        if (slope != 0.f) return false;
+        const int zero = r.constant(0.f);
+        r.binary(FusionEltwiseOp::MAX, LayerMath::INPUT_VALUE, zero);
+        return true;
     }
 
     bool supportBackend(int backendId, int)
@@ -654,6 +675,12 @@ struct ReLU6Functor : public BaseFunctor
         if (depth != CV_32F) return nullptr;
         activParams = {minValue, maxValue};
         return cv::dnn::getActivationFunc(ACTIV_CLIP);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        r.clamp(LayerMath::INPUT_VALUE, minValue, maxValue);
+        return true;
     }
 
     bool supportBackend(int backendId, int)
@@ -915,6 +942,12 @@ struct GeluFunctor : public BaseFunctor {
         return cv::dnn::getActivationFunc(ACTIV_GELU);
     }
 
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        fusion::gelu(r);
+        return true;
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
@@ -1107,6 +1140,12 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         if (depth != CV_32F) return nullptr;
         activParams.clear();
         return cv::dnn::getActivationFunc(ACTIV_TANH);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        r.unary(FusionEltwiseOp::TANH, LayerMath::INPUT_VALUE);
+        return true;
     }
 
     bool supportBackend(int backendId, int)
@@ -1411,6 +1450,12 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
         if (depth != CV_32F) return nullptr;
         activParams.clear();
         return cv::dnn::getActivationFunc(ACTIV_SIGMOID);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        fusion::sigmoid(r);
+        return true;
     }
 
     bool supportBackend(int backendId, int)
@@ -1943,6 +1988,12 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
         return sqrt(x);
     }
 
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        r.unary(FusionEltwiseOp::SQRT, LayerMath::INPUT_VALUE);
+        return true;
+    }
+
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
@@ -2330,6 +2381,12 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
             return nullptr;
         activParams.clear();
         return cv::dnn::getActivationFunc(ACTIV_ERF);
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        r.unary(FusionEltwiseOp::ERF, LayerMath::INPUT_VALUE);
+        return true;
     }
 
     bool supportBackend(int backendId, int)
@@ -3160,6 +3217,22 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
         activParams = {normScale, normShift};
         return cv::dnn::getActivationFunc(ACTIV_EXP);
     }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        int x = LayerMath::INPUT_VALUE;
+        if (normScale != 1.f) {
+            const int s = r.constant(normScale);
+            x = r.binary(FusionEltwiseOp::MUL, x, s);
+        }
+        if (normShift != 0.f) {
+            const int s = r.constant(normShift);
+            x = r.binary(FusionEltwiseOp::ADD, x, s);
+        }
+        r.unary(FusionEltwiseOp::EXP, x);
+        return true;
+    }
+
     float base, scale, shift;
     float normScale, normShift;
 
@@ -3545,6 +3618,12 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
     inline float calculate(float x) const
     {
         return 1.f/x;
+    }
+
+    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    {
+        r.unary(FusionEltwiseOp::RECIP, LayerMath::INPUT_VALUE);
+        return true;
     }
 
 #ifdef HAVE_CUDA
