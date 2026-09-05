@@ -60,7 +60,6 @@ namespace cv {
 static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
                                    Size ksize, Point anchor, int borderType, bool normalize )
 {
-    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if (ddepth < 0)
@@ -71,7 +70,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     if (anchor.y < 0)
         anchor.y = ksize.height / 2;
 
-    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+    if ( !(type == CV_8UC1 &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
          (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
          (anchor.x == 1) && (anchor.y == 1) &&
@@ -159,7 +158,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     ocl::Kernel kernel;
 
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+    if (!(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
