@@ -724,7 +724,6 @@ public:
                 double old_alpha_i, old_alpha_j, alpha_i, alpha_j;
                 double delta_alpha_i, delta_alpha_j;
 
-        #ifdef _DEBUG
                 for( i = 0; i < alpha_count; i++ )
                 {
                     if( fabs(G[i]) > 1e+300 )
@@ -733,9 +732,11 @@ public:
                     if( fabs(alpha[i]) > 1e16 )
                         return false;
                 }
-        #endif
 
                 if( (this->*select_working_set_func)( i, j ) != 0 || iter++ >= max_iter )
+                    break;
+
+                if( i < 0 || j < 0 )
                     break;
 
                 Q_i = get_row( i, &buf[0][0] );
