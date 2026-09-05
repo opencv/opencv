@@ -39,7 +39,9 @@ struct ConstFolding
     {
         CV_Assert(usecounts[inp.idx] > 0);
         if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
-            netimpl->__tensors__[inp.idx] = Mat(); // deallocate unused tensor
+            UMat& t = netimpl->__tensors__[inp.idx];
+            if (!t.u || t.u->refcount == 0)
+                t.release(); // deallocate unused tensor
         }
     }
 
@@ -56,6 +58,9 @@ struct ConstFolding
         std::vector<MatShape> inpShapes, outShapes, tempShapes;
 
         for (i = 0; i < nops; i++) {
+            // drop stale Mat views before the subgraph 'continue' below skips the per-op reset
+            inpMats.clear();
+            tempMats.clear();
             const Ptr<LayerInfo>& layer = prog[i];
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
@@ -79,7 +84,7 @@ struct ConstFolding
                 if (!const_arg)
                     all_const = false;
                 if (all_const) {
-                    const Mat& m = netimpl->argTensor(inp);
+                    const Mat& m = netimpl->argTensor(inp).getMat(ACCESS_READ);
                     inpMats[j] = m;
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
@@ -97,7 +102,7 @@ struct ConstFolding
                 if (!layer->dynamicOutputShapes())
                     netimpl->allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes,
                                                   outShapes, outOrigData, outMats, tempTypes, tempShapes, tempMats,
-                                                  netimpl->scratchBufs, false);
+                                                  netimpl->scratchBufs, false, DNN_BACKEND_OPENCV);
                 Ptr<Layer> execLayer = layer.dynamicCast<Layer>();
                 CV_Assert(execLayer);  // const-folded ops are CPU-executable (monolithic) layers
                 execLayer->finalize(inpMats, outMats);
@@ -110,10 +115,14 @@ struct ConstFolding
                     out_data.type = m.type();
                     out_data.shape = m.shape();
                     out_data.kind = DNN_ARG_CONST; // re-classify each output as constant
-                    netimpl->__tensors__.at(out.idx) = m;
+                    netimpl->__tensors__.at(out.idx) = netimpl->toArgTensor(m);
                 }
 
                 modified = true;
+                // release all Mat views before unuse() may deallocate the underlying constant tensors
+                inpMats.clear();
+                outMats.clear();
+                tempMats.clear();
                 for (size_t i = 0; i < ninputs; i++)
                     unuse(inputs[i]);
                 //printf("folded %s: %s\n", op->name().data(), node->name().data());

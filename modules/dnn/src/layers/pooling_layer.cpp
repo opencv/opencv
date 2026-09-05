@@ -381,10 +381,10 @@ public:
         if (type == ROI)
             return make_cuda_node<cuda4dnn::ROIPoolingOp>(preferableTarget, std::move(context->stream), spatialScale);
 
-        std::vector<cuda::GpuMatND> inputs, outputs;
-        inputs_.getGpuMatNDVector(inputs);
-        outputs_.getGpuMatNDVector(outputs);
-        MatShape input_shape = inputs[0].size;
+        std::vector<UMat> inputs, outputs;
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        MatShape input_shape = cv::dnn::shape(inputs[0]);
 
         /* storing max indices is a special case and we deal with it separately */
         if (computeMaxIdx) {
@@ -424,19 +424,6 @@ public:
 
             CV_Error(Error::BadDepth, "Unsupported indices type");
             return Ptr<BackendNode>();
-        }
-
-        if (input_shape.size() == 3)
-        {
-            // Pool1D
-            // We add an extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
-            input_shape.insert(std::end(input_shape) - 1, 1);
-
-            // Do the similar thing for the other parameters
-            pads_begin.insert(std::begin(pads_begin), 0);
-            pads_end.insert(std::begin(pads_end), 0);
-            strides.insert(std::begin(strides), 1);
-            kernel_size.insert(std::begin(kernel_size), 1);
         }
 
         PoolingConfiguration config;

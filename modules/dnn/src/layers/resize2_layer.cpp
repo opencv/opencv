@@ -1085,11 +1085,11 @@ public:
             std::vector<int> sizes;
             std::vector<float> scales;
             if (ninputs >= 4) {
-                Mat sizesTensor = netimpl_->argTensor(this->inputs[3]);
+                Mat sizesTensor = netimpl_->argTensor(this->inputs[3]).getMat(ACCESS_READ);
                 tensorToIntVec(sizesTensor, sizes);
             }
 
-            Mat scalesTensor = netimpl_->argTensor(this->inputs[(ninputs == 2) ? 1 : 2]);
+            Mat scalesTensor = netimpl_->argTensor(this->inputs[(ninputs == 2) ? 1 : 2]).getMat(ACCESS_READ);
             tensorToFloatVec(scalesTensor, scales);
             outputs[0] = getOutShape(inputs[0], sizes, scales);
         }
