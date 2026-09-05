@@ -1127,6 +1127,30 @@ static void rotation2affine(float scale, float angle, float cx, float cy, float*
     M[3] = -scale*sa; M[4] = scale*ca; M[5] = scale*(cx*sa - cy*ca) + cy;
 }
 
+TEST(Imgproc_Warping, Bicubic64F) {
+    // 1. Values exceeding INT_MAX: triggers UBSan float-cast-overflow if buftype is int
+    {
+        cv::Mat src(10, 10, CV_64FC1, cv::Scalar(1e100));
+        cv::Mat dst;
+        cv::Matx23f M(1.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+        EXPECT_NO_THROW(cv::warpAffine(src, dst, M, cv::Size(20, 20),
+                                       cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0.0)));
+        ASSERT_EQ(dst.type(), CV_64FC1);
+        EXPECT_DOUBLE_EQ(dst.at<double>(5, 5), 1e100);
+    }
+    // 2. Fractional double values: ensures boundary pixels are not truncated to int
+    {
+        cv::Mat src(10, 10, CV_64FC1, cv::Scalar(1.5));
+        cv::Mat dst;
+        cv::Matx23f M(1.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+        cv::warpAffine(src, dst, M, cv::Size(20, 20),
+                       cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(1.5));
+        ASSERT_EQ(dst.type(), CV_64FC1);
+        // Boundary pixels (x=9, y=9) previously truncated (int)1.5 -> 1.0; now they preserve 1.5:
+        EXPECT_DOUBLE_EQ(dst.at<double>(9, 9), 1.5);
+    }
+}
+
 TEST(Imgproc_Warping, DISABLED_playground)
 {
     int imgtype = CV_32F;
