@@ -54,12 +54,50 @@ uint32_t TIFFComputeTile(TIFF *tif, uint32_t x, uint32_t y, uint32_t z,
         uint32_t xpt = TIFFhowmany_32(td->td_imagewidth, dx);
         uint32_t ypt = TIFFhowmany_32(td->td_imagelength, dy);
         uint32_t zpt = TIFFhowmany_32(td->td_imagedepth, dz);
+        uint32_t xpt_ypt = _TIFFMultiply32(tif, xpt, ypt, "TIFFComputeTile");
+        uint32_t xpt_ypt_zpt =
+            _TIFFMultiply32(tif, xpt_ypt, zpt, "TIFFComputeTile");
+        uint64_t z_offset;
+        uint64_t y_offset;
+        uint64_t tile64;
 
+        if ((xpt_ypt == 0 && xpt != 0 && ypt != 0) ||
+            (xpt_ypt_zpt == 0 && xpt_ypt != 0 && zpt != 0))
+            return (0);
+
+        z_offset = _TIFFMultiply64(tif, xpt_ypt, z / dz, "TIFFComputeTile");
+        y_offset = _TIFFMultiply64(tif, xpt, y / dy, "TIFFComputeTile");
+        if ((z_offset == 0 && xpt_ypt != 0 && (z / dz) != 0) ||
+            (y_offset == 0 && xpt != 0 && (y / dy) != 0))
+            return (0);
+        tile64 = _TIFFAdd64(tif, z_offset, y_offset, "TIFFComputeTile");
+        if (tile64 == 0 && (z_offset != 0 || y_offset != 0))
+            return (0);
+        tile64 = _TIFFAdd64(tif, tile64, x / dx, "TIFFComputeTile");
+        if (tile64 == 0 && (z_offset != 0 || y_offset != 0 || (x / dx) != 0))
+            return (0);
         if (td->td_planarconfig == PLANARCONFIG_SEPARATE)
-            tile = (xpt * ypt * zpt) * s + (xpt * ypt) * (z / dz) +
-                   xpt * (y / dy) + x / dx;
-        else
-            tile = (xpt * ypt) * (z / dz) + xpt * (y / dy) + x / dx;
+        {
+            uint64_t sample_offset;
+            if (s >= td->td_samplesperpixel)
+            {
+                TIFFErrorExtR(
+                    tif, "TIFFComputeTile", "%lu: Sample out of range, max %lu",
+                    (unsigned long)s, (unsigned long)td->td_samplesperpixel);
+                return (0);
+            }
+            sample_offset =
+                _TIFFMultiply64(tif, xpt_ypt_zpt, s, "TIFFComputeTile");
+            if (sample_offset == 0 && xpt_ypt_zpt != 0 && s != 0)
+                return (0);
+            tile64 = _TIFFAdd64(tif, sample_offset, tile64, "TIFFComputeTile");
+            if (tile64 == 0 && (sample_offset != 0 || z_offset != 0 ||
+                                y_offset != 0 || (x / dx) != 0))
+                return (0);
+        }
+        tile = _TIFFCastUInt64ToUInt32(tif, tile64, "TIFFComputeTile");
+        if (tile == 0 && tile64 != 0)
+            return (0);
     }
     return (tile);
 }
@@ -187,54 +225,9 @@ tmsize_t TIFFTileRowSize(TIFF *tif)
  */
 uint64_t TIFFVTileSize64(TIFF *tif, uint32_t nrows)
 {
-    static const char module[] = "TIFFVTileSize64";
-    TIFFDirectory *td = &tif->tif_dir;
-    if (td->td_tilelength == 0 || td->td_tilewidth == 0 ||
-        td->td_tiledepth == 0)
-        return (0);
-    if ((td->td_planarconfig == PLANARCONFIG_CONTIG) &&
-        (td->td_photometric == PHOTOMETRIC_YCBCR) &&
-        (td->td_samplesperpixel == 3) && (!isUpSampled(tif)))
-    {
-        /*
-         * Packed YCbCr data contain one Cb+Cr for every
-         * HorizontalSampling*VerticalSampling Y values.
-         * Must also roundup width and height when calculating
-         * since images that are not a multiple of the
-         * horizontal/vertical subsampling area include
-         * YCbCr data for the extended image.
-         */
-        uint16_t ycbcrsubsampling[2];
-        uint16_t samplingblock_samples;
-        uint32_t samplingblocks_hor;
-        uint32_t samplingblocks_ver;
-        uint64_t samplingrow_samples;
-        uint64_t samplingrow_size;
-        TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRSUBSAMPLING,
-                              ycbcrsubsampling + 0, ycbcrsubsampling + 1);
-        if ((ycbcrsubsampling[0] != 1 && ycbcrsubsampling[0] != 2 &&
-             ycbcrsubsampling[0] != 4) ||
-            (ycbcrsubsampling[1] != 1 && ycbcrsubsampling[1] != 2 &&
-             ycbcrsubsampling[1] != 4))
-        {
-            TIFFErrorExtR(tif, module, "Invalid YCbCr subsampling (%dx%d)",
-                          ycbcrsubsampling[0], ycbcrsubsampling[1]);
-            return 0;
-        }
-        samplingblock_samples = ycbcrsubsampling[0] * ycbcrsubsampling[1] + 2;
-        samplingblocks_hor =
-            TIFFhowmany_32(td->td_tilewidth, ycbcrsubsampling[0]);
-        samplingblocks_ver = TIFFhowmany_32(nrows, ycbcrsubsampling[1]);
-        samplingrow_samples = _TIFFMultiply64(tif, samplingblocks_hor,
-                                              samplingblock_samples, module);
-        samplingrow_size = TIFFhowmany8_64(_TIFFMultiply64(
-            tif, samplingrow_samples, td->td_bitspersample, module));
-        return (
-            _TIFFMultiply64(tif, samplingrow_size, samplingblocks_ver, module));
-    }
-    else
-        return (_TIFFMultiply64(tif, nrows, TIFFTileRowSize64(tif), module));
+    return _TIFFStrileSize64(tif, nrows, /* isStrip = */ FALSE);
 }
+
 tmsize_t TIFFVTileSize(TIFF *tif, uint32_t nrows)
 {
     static const char module[] = "TIFFVTileSize";

@@ -30,7 +30,7 @@
 #include "tif_predict.h"
 #include "tiffiop.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || (defined(_M_X64) && !defined(_M_ARM64EC))
 #include <emmintrin.h>
 #endif
 
@@ -151,6 +151,8 @@ static int PredictorSetupDecode(TIFF *tif)
             case 64:
                 sp->decodepfunc = horAcc64;
                 break;
+            default:
+                break;
         }
         /*
          * Override default decoding method with one that does the
@@ -246,6 +248,8 @@ static int PredictorSetupEncode(TIFF *tif)
                 break;
             case 64:
                 sp->encodepfunc = horDiff64;
+                break;
+            default:
                 break;
         }
         /*
@@ -590,7 +594,7 @@ static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     cp = (uint8_t *)cp0;
     count = 0;
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || (defined(_M_X64) && !defined(_M_ARM64EC))
     if (bps == 4)
     {
         /* Optimization of general case */
@@ -972,7 +976,7 @@ static int PredictorEncodeRow(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
                       (int64_t)cc);
         return 0;
     }
-    memcpy(working_copy, bp, cc);
+    memcpy(working_copy, bp, (size_t)cc);
 
     if (!(*sp->encodepfunc)(tif, working_copy, cc))
     {
@@ -1010,7 +1014,7 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
                       (int64_t)cc0);
         return 0;
     }
-    memcpy(working_copy, bp0, cc0);
+    memcpy(working_copy, bp0, (size_t)cc0);
     bp = working_copy;
 
     rowsize = sp->rowsize;
@@ -1098,8 +1102,10 @@ static void PredictorPrintDir(TIFF *tif, FILE *fd, long flags)
             case 3:
                 fprintf(fd, "floating point predictor ");
                 break;
+            default:
+                break;
         }
-        fprintf(fd, "%d (0x%x)\n", sp->predictor, sp->predictor);
+        fprintf(fd, "%d (0x%x)\n", sp->predictor, (unsigned)sp->predictor);
     }
     if (sp->printdir)
         (*sp->printdir)(tif, fd, flags);
