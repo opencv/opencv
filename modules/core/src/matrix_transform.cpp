@@ -1335,6 +1335,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
             #undef OPENCV_CORE_BROADCAST_LOOP
         }
     } else {
+        if (dst.total() == 0)
+            return;
         // initial copy (src to dst)
         std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
         if (step_src.size() < static_cast<size_t>(dims_shape)) {
