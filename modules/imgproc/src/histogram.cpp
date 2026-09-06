@@ -1897,25 +1897,21 @@ static double finalizeCorrel( double s1, double s11, double s2, double s22, doub
 
 namespace cv {
 
-// HISTCMP_CORREL, accumulated about an assumed mean.
+// HISTCMP_CORREL, accumulated in two passes: the bin means first, then the
+// mean-centred sums of squares and cross products.
 //
 // The textbook "computational" form - sum(a*a) - sum(a)^2/n for a variance, and
 // the matching expression for the covariance - subtracts two large and nearly
 // equal quantities. Its relative error grows in proportion to mean^2/variance, so
 // a histogram whose values vary little about a large mean loses roughly two
-// decimal digits for every decade of relative spread: at a spread of 1e-7 barely
-// one correct digit survives. Worse, once the rounding error swamps the true
-// variance that term can come out negative, which left the comparison NaN (the
-// denominator is the product of the two variances and its square root is taken),
-// sign-flipped, or outside the [-1, 1] range a correlation coefficient is defined
-// on - so comparing a histogram with itself could return -1.
+// decimal digits for every decade of relative spread, and once the rounding error
+// swamps the true variance that term can come out negative, leaving the result
+// NaN, sign-flipped, or outside the [-1, 1] range a correlation coefficient is
+// defined on.
 //
-// Shifting each histogram by an assumed mean before accumulating (Chan, Golub &
-// LeVeque, 1983) makes the sums proportional to the spread instead of to the mean
-// squared, which removes the cancellation without a second pass over the data.
-// The first bin serves as the estimate; it only has to be close enough that the
-// residuals are comparable to the spread, and even a poor choice leaves the
-// conditioning bounded by the bin count rather than by the mean.
+// Centring on the actual means removes the cancellation: the accumulated
+// variances are sums of squares, so they cannot go negative whatever the bins
+// hold, and the accuracy no longer depends on how large the mean is.
 //
 // See https://github.com/opencv/opencv/issues/29706
 static double compareHistCorrel( const Mat& H1, const Mat& H2 )
@@ -1923,75 +1919,99 @@ static double compareHistCorrel( const Mat& H1, const Mat& H2 )
     const Mat* arrays[] = {&H1, &H2, 0};
     Mat planes[2];
 
+    // Every element of every channel takes part in the comparison. A 3-D histogram
+    // handed to us as a 2-D multi-channel Mat - which is what the Python bindings
+    // produce for an i x j x k array - therefore has total()*channels() bins, not
+    // total(). See https://github.com/opencv/opencv/issues/13990
     const double total = (double)H1.total()*H1.channels();
     if( !(total > 0) )
         return 1.;
 
-    NAryMatIterator it(arrays, planes);
-    if( it.nplanes == 0 )
-        return 1.;
-
-    // Assumed means: the first bin of each histogram. Accumulating about them keeps
-    // the sums proportional to the spread rather than to the mean squared.
-    const double K1 = it.planes[0].ptr<float>()[0];
-    const double K2 = it.planes[1].ptr<float>()[0];
-
-    double d1 = 0, d2 = 0, q11 = 0, q22 = 0, q12 = 0;
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    double s1 = 0, s2 = 0;
     {
-        const float* h1 = it.planes[0].ptr<float>();
-        const float* h2 = it.planes[1].ptr<float>();
-        const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
-        int j = 0;
+        NAryMatIterator it(arrays, planes);
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            const float* h1 = it.planes[0].ptr<float>();
+            const float* h2 = it.planes[1].ptr<float>();
+            const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
+            int j = 0;
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-        v_float64 v_K1 = vx_setall_f64(K1);
-        v_float64 v_K2 = vx_setall_f64(K2);
-        v_float64 v_d1 = vx_setzero_f64();
-        v_float64 v_d2 = vx_setzero_f64();
-        v_float64 v_q11 = vx_setzero_f64();
-        v_float64 v_q22 = vx_setzero_f64();
-        v_float64 v_q12 = vx_setzero_f64();
-        for( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes() )
-        {
-            v_float32 v_a = vx_load(h1 + j);
-            v_float32 v_b = vx_load(h2 + j);
-
-            // 0-1
-            v_float64 v_u = v_sub(v_cvt_f64(v_a), v_K1);
-            v_float64 v_v = v_sub(v_cvt_f64(v_b), v_K2);
-            v_d1 = v_add(v_d1, v_u);
-            v_d2 = v_add(v_d2, v_v);
-            v_q12 = v_muladd(v_u, v_v, v_q12);
-            v_q11 = v_muladd(v_u, v_u, v_q11);
-            v_q22 = v_muladd(v_v, v_v, v_q22);
-
-            // 2-3
-            v_u = v_sub(v_cvt_f64_high(v_a), v_K1);
-            v_v = v_sub(v_cvt_f64_high(v_b), v_K2);
-            v_d1 = v_add(v_d1, v_u);
-            v_d2 = v_add(v_d2, v_v);
-            v_q12 = v_muladd(v_u, v_v, v_q12);
-            v_q11 = v_muladd(v_u, v_u, v_q11);
-            v_q22 = v_muladd(v_v, v_v, v_q22);
-        }
-        d1 += v_reduce_sum(v_d1);
-        d2 += v_reduce_sum(v_d2);
-        q11 += v_reduce_sum(v_q11);
-        q22 += v_reduce_sum(v_q22);
-        q12 += v_reduce_sum(v_q12);
+            v_float64 v_s1 = vx_setzero_f64();
+            v_float64 v_s2 = vx_setzero_f64();
+            for( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes() )
+            {
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
+                v_s1 = v_add(v_s1, v_cvt_f64(v_a));
+                v_s2 = v_add(v_s2, v_cvt_f64(v_b));
+                v_s1 = v_add(v_s1, v_cvt_f64_high(v_a));
+                v_s2 = v_add(v_s2, v_cvt_f64_high(v_b));
+            }
+            s1 += v_reduce_sum(v_s1);
+            s2 += v_reduce_sum(v_s2);
 #endif
-        for( ; j < len; j++ )
-        {
-            double u = h1[j] - K1, v = h2[j] - K2;
-            d1 += u; d2 += v;
-            q12 += u*v; q11 += u*u; q22 += v*v;
+            for( ; j < len; j++ )
+            {
+                s1 += h1[j];
+                s2 += h2[j];
+            }
         }
     }
 
-    const double cov = q12 - d1*d2/total;
-    const double var1 = std::max(q11 - d1*d1/total, 0.);
-    const double var2 = std::max(q22 - d2*d2/total, 0.);
+    const double m1 = s1/total, m2 = s2/total;
 
+    double cov = 0, var1 = 0, var2 = 0;
+    {
+        NAryMatIterator it(arrays, planes);
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            const float* h1 = it.planes[0].ptr<float>();
+            const float* h2 = it.planes[1].ptr<float>();
+            const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
+            int j = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+            v_float64 v_m1 = vx_setall_f64(m1);
+            v_float64 v_m2 = vx_setall_f64(m2);
+            v_float64 v_cov = vx_setzero_f64();
+            v_float64 v_var1 = vx_setzero_f64();
+            v_float64 v_var2 = vx_setzero_f64();
+            for( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes() )
+            {
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
+
+                // 0-1
+                v_float64 v_da = v_sub(v_cvt_f64(v_a), v_m1);
+                v_float64 v_db = v_sub(v_cvt_f64(v_b), v_m2);
+                v_cov = v_muladd(v_da, v_db, v_cov);
+                v_var1 = v_muladd(v_da, v_da, v_var1);
+                v_var2 = v_muladd(v_db, v_db, v_var2);
+
+                // 2-3
+                v_da = v_sub(v_cvt_f64_high(v_a), v_m1);
+                v_db = v_sub(v_cvt_f64_high(v_b), v_m2);
+                v_cov = v_muladd(v_da, v_db, v_cov);
+                v_var1 = v_muladd(v_da, v_da, v_var1);
+                v_var2 = v_muladd(v_db, v_db, v_var2);
+            }
+            cov += v_reduce_sum(v_cov);
+            var1 += v_reduce_sum(v_var1);
+            var2 += v_reduce_sum(v_var2);
+#endif
+            for( ; j < len; j++ )
+            {
+                double da = h1[j] - m1, db = h2[j] - m2;
+                cov += da*db;
+                var1 += da*da;
+                var2 += db*db;
+            }
+        }
+    }
+
+    // A zero variance means one histogram is constant and the correlation is
+    // undefined, reported as 1 the way it always has been. Cauchy-Schwarz bounds
+    // the quotient by 1; the clamp absorbs the last ulp of rounding.
     const double denom2 = var1*var2;
     if( !(denom2 > 0) )
         return 1.;
