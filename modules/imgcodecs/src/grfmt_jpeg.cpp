@@ -939,6 +939,19 @@ _exit_:
 
     jpeg_destroy_compress( &cinfo );
 
+    if( fw.f )
+    {
+        const int stream_error = ferror(fw.f);
+        const int close_result = fclose(fw.f);
+        fw.f = 0;
+        if( stream_error != 0 || close_result != 0 )
+        {
+            if( result )
+                m_last_error = "Failed to write or close JPEG output file";
+            result = false;
+        }
+    }
+
     return result;
 }
 
