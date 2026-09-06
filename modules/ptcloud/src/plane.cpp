@@ -475,12 +475,6 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The plane search works on Vec4f internally (only x, y, z are read; the 4th slot is
-// padding), while the documented input is 3-channel. Assigning a CV_32FC3 Mat straight
-// into a Mat_<Vec4f> does not repack it: the depths match, so Mat_<>::operator= reshapes
-// instead of converting, and W columns of 3 channels silently become W*3/4 columns of 4.
-// That both shrank the reported size and made every point a mix of neighbouring points.
-// Convert explicitly so 3- and 4-channel inputs describe the same geometry.
 static void toPaddedVec4f(const Mat& src, Mat_<Vec4f>& dst)
 {
     Mat src32;
@@ -493,7 +487,7 @@ static void toPaddedVec4f(const Mat& src, Mat_<Vec4f>& dst)
 
     if (src32.channels() == 4)
     {
-        dst = src32;  // exact type match: plain shallow assignment, no copy
+        dst = src32;
         return;
     }
 

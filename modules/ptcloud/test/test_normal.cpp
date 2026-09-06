@@ -722,14 +722,10 @@ TEST(RGBD_Plane, regression2309ValgrindCheck)
     findPlanes(points, noArray(), mask, planes, blockSize);
 }
 
-// The other findPlanes() tests all feed CV_32FC4, leaving the documented 3-channel input
-// uncovered. Both representations describe the same geometry, so both must agree.
-// See toPaddedVec4f() in src/plane.cpp for what used to go wrong.
 TEST(RGBD_Plane, regression_3channel_matches_4channel)
 {
     const int rows = 240, cols = 320;
 
-    // A single tilted plane, z = 2 + 0.001*u + 0.002*v, so the result is not degenerate.
     Mat points3(rows, cols, CV_32FC3);
     Mat points4(rows, cols, CV_32FC4);
     for (int v = 0; v < rows; v++)
@@ -748,7 +744,6 @@ TEST(RGBD_Plane, regression_3channel_matches_4channel)
     findPlanes(points3, noArray(), mask3, planes3);
     findPlanes(points4, noArray(), mask4, planes4);
 
-    // The documented contract: one label per input pixel.
     EXPECT_EQ(points3.size(), mask3.size());
     EXPECT_EQ(CV_8U, mask3.type());
 
