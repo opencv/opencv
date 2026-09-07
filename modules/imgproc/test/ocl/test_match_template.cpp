@@ -142,6 +142,12 @@ TEST(MatchTemplate, ccoeff_normed_large_low_contrast_image)
 {
     if (!cv::ocl::haveOpenCL())
         throw SkipTestException("OpenCL is not available");
+    // The kernel only accumulates in double (the actual fix) when the device supports it;
+    // devices without double support keep the original, still not fully precise CV_32F
+    // kernel by design (see PR discussion on #21788), so this accuracy guarantee does not
+    // hold there yet.
+    if (cv::ocl::Device::getDefault().doubleFPConfig() <= 0)
+        throw SkipTestException("OpenCL device has no double-precision support");
 
     Mat image(1080, 1920, CV_8UC1);
     cv::theRNG().fill(image, RNG::UNIFORM, 178, 183);

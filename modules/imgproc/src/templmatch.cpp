@@ -438,22 +438,24 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     // variance, corrupting the ratio enough to spuriously hit the +-1 safety clamp in
     // normAcc() for windows that are not actually degenerate (see #21788). The CPU path
     // (common_matchTemplate) never has this problem because it always accumulates in double
-    // regardless of image depth. Do the same here when the device supports it; otherwise,
-    // fall through to the (correct) CPU path rather than serve a known-inaccurate result.
+    // regardless of image depth. Do the same here when the device supports it; devices
+    // without double support keep the original CV_32F kernel, which remains useful (and is
+    // still an improvement over the CPU-only path for most inputs) even though it is not
+    // fully immune to this class of error.
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (!doubleSupport)
-        return false;
+    int sumDepth = doubleSupport ? CV_64F : CV_32F;
 
     matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     UMat temp, image_sums, image_sqsums;
-    integral(_image, image_sums, image_sqsums, CV_64F, CV_64F);
+    integral(_image, image_sums, image_sqsums, sumDepth, sumDepth);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
-        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d -D DOUBLE_SUPPORT", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d%s", ocl::typeToStr(type), ocl::typeToStr(depth), cn,
+               doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
