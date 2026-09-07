@@ -45,21 +45,37 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   remove(outfile.c_str());
 }
 
-typedef tuple<Size, bool> VideoWriter_OpenCV_MJPEG_t;
+typedef tuple<Size, std::string, bool> VideoWriter_OpenCV_MJPEG_t;
 typedef perf::TestBaseWithParam<VideoWriter_OpenCV_MJPEG_t> VideoWriter_OpenCV_MJPEG;
+
+const string mjpeg_images[] = {
+    "lena.jpg",
+    "baboon.jpg",
+    "fruits.jpg",
+    "board.jpg"
+};
 
 PERF_TEST_P(VideoWriter_OpenCV_MJPEG, WriteFrame,
             testing::Combine(
                 testing::Values(szVGA, sz720p, sz1080p),
+                testing::ValuesIn(mjpeg_images),
                 testing::Bool()))
 {
     if (!videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
         throw SkipTestException("CAP_OPENCV_MJPEG is not available");
 
     const Size sz = get<0>(GetParam());
-    const bool isColor = get<1>(GetParam());
-    Mat image(sz, isColor ? CV_8UC3 : CV_8UC1);
-    randu(image, 0, 256);
+    const string image_name = get<1>(GetParam());
+    const bool isColor = get<2>(GetParam());
+    const int flags = isColor ? IMREAD_COLOR : IMREAD_GRAYSCALE;
+    Mat src = imread(cv::samples::findFile(image_name, false, true), flags);
+    if (src.empty() && image_name == "lena.jpg")
+        src = imread(getDataPath("cv/shared/lena.png"), flags);
+    if (src.empty())
+        throw SkipTestException("Could not load test image: " + image_name);
+
+    Mat image;
+    resize(src, image, sz);
 
     const string outfile = cv::tempfile(".avi");
     const int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
