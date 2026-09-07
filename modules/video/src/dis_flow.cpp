@@ -818,13 +818,8 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     int i, j, dir;
     int start_is, end_is, start_js, end_js;
     int start_i, start_j;
-    // computeSSD()/computeSSDMeanNorm() read psz rows/columns (+1 for bilinear interpolation)
-    // starting at the clamped position below, so the position has to stay within the padded
-    // I1_ext buffer for that whole read, not just at the position itself: max(0, bsz - psz + 1)
-    // keeps it from going before the buffer's start, and subtracting the excess (psz - bsz) from
-    // the upper limit when patch_size exceeds the (fixed) border keeps the read from going past
-    // its end -- see #20185. For patch_size <= bsz (the common case, e.g. the default of 8) these
-    // are exactly the original bounds.
+    // Clamp so the psz+1 (bilinear) read stays inside the padded I1_ext buffer even when
+    // psz > bsz; unchanged for psz <= bsz (the common case). See #20185.
     float i_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
     float i_upper_limit = std::min(bsz + dis->h - 1.0f, dis->h + 2.0f * bsz - 1.0f - psz);
     float j_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
