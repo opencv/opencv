@@ -46,7 +46,11 @@ endif()
 
 if(HAVE_IPP_IW)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
-  target_compile_definitions(ipphal PRIVATE ENABLE_IPP_GAUSSIAN_BLUR=1)
+  # OPENCV_IPP_ENABLE_ALL is defined in modules/core/CMakeList.txt
+  OCV_OPTION(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OPENCV_IPP_ENABLE_ALL)
+  if(OPENCV_IPP_GAUSSIAN_BLUR)
+    target_compile_definitions(ipphal PRIVATE ENABLE_IPP_GAUSSIAN_BLUR=1)
+  endif()
 endif()
 
 if(WITH_IPP_CALLS_ENFORCED)
