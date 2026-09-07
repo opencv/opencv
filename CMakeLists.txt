@@ -83,7 +83,7 @@ endif()
 
 include(CheckLanguage)
 check_language(ASM)
-if(CMAKE_ASM_COMPILER AND (NOT MSVC OR CMAKE_ASM_COMPILER MATCHES "(armasm64|armasm|ml64|ml)(\\.exe)?$"))
+if(CMAKE_ASM_COMPILER)
   enable_language(ASM)
 endif()
 
