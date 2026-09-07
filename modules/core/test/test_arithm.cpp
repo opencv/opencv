@@ -2833,12 +2833,12 @@ TEST(BroadcastTo, basic) {
     {
         std::vector<int> shape{1, 0};
         std::vector<int> data;
-        Mat src(static_cast<int>(shape.size()), shape.data(), CV_32FC1, data.data());
+        Mat zero_src(static_cast<int>(shape.size()), shape.data(), CV_32FC1, data.data());
 
         std::vector<int> target_shape{3, 0};
         Mat dst;
 
-        broadcast(src, target_shape, dst);
+        broadcast(zero_src, target_shape, dst);
 
         EXPECT_EQ(dst.dims, 2);
         EXPECT_EQ(dst.size[0], 3);
