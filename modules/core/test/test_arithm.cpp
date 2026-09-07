@@ -4276,6 +4276,28 @@ TEST(Core_Arithm, DISABLED_mul_overflow_28557)
 }
 
 
+// https://github.com/opencv/opencv/issues/29880
+TEST(Core_Arithm, addWeighted_dtype_29880)
+{
+    const int sdepths[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_16F, CV_16BF, CV_32F, CV_Bool };
+    const int ddepths[] = { -1, CV_8U, CV_32F, CV_64F, CV_Bool };
+
+    for (size_t i = 0; i < sizeof(sdepths)/sizeof(sdepths[0]); i++)
+    {
+        for (size_t j = 0; j < sizeof(ddepths)/sizeof(ddepths[0]); j++)
+        {
+            SCOPED_TRACE(cv::format("sdepth=%d ddepth=%d", sdepths[i], ddepths[j]));
+            const int ddepth = ddepths[j] < 0 ? sdepths[i] : ddepths[j];
+            cv::Mat src(4, 4, CV_MAKETYPE(sdepths[i], 1), cv::Scalar::all(1)), dst, dst64f;
+            cv::addWeighted(src, 2.0, src, 3.0, 4.0, dst, ddepths[j]);
+            ASSERT_EQ(ddepth, dst.depth());
+            dst.convertTo(dst64f, CV_64F);
+            EXPECT_EQ(0, cv::countNonZero(dst64f != (ddepth == CV_Bool ? 1.0 : 9.0)));
+        }
+    }
+}
+
+
 TEST(Core_Arithm, min_empty)
 {
   cv::Mat A, B, C;
