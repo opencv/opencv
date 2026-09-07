@@ -2023,6 +2023,22 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
                    "DNN/ONNX: tensor payload is smaller than its declared shape");
     };
 
+    // The sub-byte and FP8 dtypes below are stored either in raw_data or, one byte's
+    // worth per entry, in int32_data. Narrow int32_data to bytes so both spellings
+    // reach the decode loops as the same buffer.
+    std::vector<uchar> narrowed;
+    const uchar* payload = reinterpret_cast<const uchar*>(rawdata);
+    size_t payload_bytes = raw_data_size;
+    if (!tensor_proto.int32_data().empty())
+    {
+        const auto& i32 = tensor_proto.int32_data();
+        narrowed.resize(i32.size());
+        for (int i = 0; i < i32.size(); i++)
+            narrowed[i] = static_cast<uchar>(i32[i] & 0xFF);
+        payload = narrowed.data();
+        payload_bytes = narrowed.size();
+    }
+
     if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
         if (!tensor_proto.float_data().empty()) {
             checkPayloadSize(tensor_proto.float_data().size());
@@ -2236,50 +2252,55 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ)
     {
         // E4M3FN/E4M3FNUZ have a native depth: keep the raw FP8 bytes.
-        checkPayloadSize(raw_data_size);
+        checkPayloadSize(payload_bytes);
         blob.create((int)sizes.size(), sizes.data(),
                     CV_MAKETYPE(onnx_dtype::fp8NativeDepth(datatype), 1));
-        memcpy(blob.data, rawdata, (size_t)blob.total() * blob.elemSize());
+        memcpy(blob.data, payload, (size_t)blob.total() * blob.elemSize());
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2 ||
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2FNUZ)
     {
         // E5M2/E5M2FNUZ have no native depth: decode losslessly into CV_16F.
         const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(datatype);
+        checkPayloadSize(payload_bytes);
         blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
-        const uchar* src = (const uchar*)rawdata;
+        const uchar* src = payload;
         hfloat* dst = blob.ptr<hfloat>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = hfloat(onnx_dtype::fp8ToF32(src[i], fmt));
     }
     else if (datatype == onnx_dtype::ONNX_FLOAT8E8M0)
     {
+        checkPayloadSize(payload_bytes);
         blob.create((int)sizes.size(), sizes.data(), CV_32FC1);
-        const uchar* src = (const uchar*)rawdata;
+        const uchar* src = payload;
         float* dst = blob.ptr<float>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = onnx_dtype::e8m0ToF32(src[i]);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT4E2M1)
     {
+        checkPayloadSize(payload_bytes * 2);  // two 4-bit elements per byte
         blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
-        const uchar* src = (const uchar*)rawdata;
+        const uchar* src = payload;
         hfloat* dst = blob.ptr<hfloat>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = hfloat(onnx_dtype::fp4ToF32(onnx_dtype::unpackNibble(src, i)));
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT4)
     {
+        checkPayloadSize(payload_bytes * 2);  // two 4-bit elements per byte
         blob.create((int)sizes.size(), sizes.data(), CV_8SC1);
-        const uchar* src = (const uchar*)rawdata;
+        const uchar* src = payload;
         schar* dst = blob.ptr<schar>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = onnx_dtype::int4SignExtend(onnx_dtype::unpackNibble(src, i));
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_UINT4)
     {
+        checkPayloadSize(payload_bytes * 2);  // two 4-bit elements per byte
         blob.create((int)sizes.size(), sizes.data(), CV_8UC1);
-        const uchar* src = (const uchar*)rawdata;
+        const uchar* src = payload;
         uchar* dst = blob.ptr<uchar>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = onnx_dtype::unpackNibble(src, i);

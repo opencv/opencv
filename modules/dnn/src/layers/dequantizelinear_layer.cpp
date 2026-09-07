@@ -182,9 +182,10 @@ static void dequantizeLinearFp8Native(const uchar* inp, const _ScaleTp* scale, c
     });
 }
 
-// E5M2 has no native depth; already decoded to real CV_16F values upstream.
-template <typename _ScaleTp, typename _OutTp>
-static void dequantizeLinearFp8Wide(const hfloat* inp, const _ScaleTp* scale, const hfloat* zp,
+// E5M2 has no native depth; already decoded to real values upstream, held in
+// CV_16F, or in CV_32F once setInput has widened a graph input.
+template <typename _InpTp, typename _ScaleTp, typename _OutTp>
+static void dequantizeLinearFp8Wide(const _InpTp* inp, const _ScaleTp* scale, const _InpTp* zp,
                                      _OutTp* out, int64_t nslices, int sz_a, int64_t slice_size)
 {
     parallel_for_(Range(0, (int)nslices), [&](const Range& r) {
@@ -222,10 +223,12 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
     int64_t nslices = 1, slice_size = 1;
 
     CV_Assert(inptype == CV_8U || inptype == CV_8S || inptype == CV_32S ||
-              inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ || inptype == CV_16F);
+              inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ ||
+              inptype == CV_16F || inptype == CV_32F);
     CV_Assert(sctype == CV_32F || sctype == CV_16F);
     CV_Assert(outtype == CV_32F || outtype == CV_16F);
-    if (inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ || inptype == CV_16F)
+    if (inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ ||
+        inptype == CV_16F || inptype == CV_32F)
         CV_Assert(block_size == 0);  // block-wise FP8 dequantization not yet supported
 
     if (!zp.empty()) {
@@ -391,6 +394,21 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                                      zpdata, reinterpret_cast<hfloat*>(out.data), nslices, sz_a, slice_size);
         else
             dequantizeLinearFp8Wide(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, reinterpret_cast<hfloat*>(out.data), nslices, sz_a, slice_size);
+    }
+    else if (inptype == CV_32F) {
+        const float* zpdata = zp.empty() ? nullptr : reinterpret_cast<const float*>(zp.data);
+        if (sctype == CV_32F && outtype == CV_32F)
+            dequantizeLinearFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, reinterpret_cast<float*>(out.data), nslices, sz_a, slice_size);
+        else if (sctype == CV_16F && outtype == CV_32F)
+            dequantizeLinearFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, reinterpret_cast<float*>(out.data), nslices, sz_a, slice_size);
+        else if (sctype == CV_32F && outtype == CV_16F)
+            dequantizeLinearFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, reinterpret_cast<hfloat*>(out.data), nslices, sz_a, slice_size);
+        else
+            dequantizeLinearFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
                                      zpdata, reinterpret_cast<hfloat*>(out.data), nslices, sz_a, slice_size);
     }
     else {
