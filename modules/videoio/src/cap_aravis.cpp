@@ -511,10 +511,25 @@ bool CvCaptureCAM_Aravis::setRegionSize(int newWidth, int newHeight)
     if(capturing)
         stopCapture();
 
+    printf("Max resolution: %dx%d\n", widthMax, heightMax);
+
+    // use sensor center as ROI
+    xoffset = (widthMax - newWidth) / 2;
+    yoffset = (heightMax - newHeight) / 2;
+
+    printf("new offset: %dx%d\n", xoffset, yoffset);
+
+    int minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+    arv_camera_get_x_offset_bounds(camera, &minOffsetX, &maxOffsetX, NULL);
+    printf("X offset range: %d..%d\n", minOffsetX, maxOffsetX);
+
+    arv_camera_get_y_offset_bounds(camera, &minOffsetY, &maxOffsetY, NULL);
+    printf("Y offset range: %d..%d\n", minOffsetY, maxOffsetY);
+
     GError *error = NULL;
     // the offset is reset to 0 first, a large one left over from a previous region
     // would not leave enough room for the requested width or height
-    arv_camera_set_region(camera, 0, 0, newWidth, newHeight, &error);
+    arv_camera_set_region(camera, xoffset, yoffset, newWidth, newHeight, &error);
     if(error) {
         CV_LOG_WARNING(NULL, cv::format("Aravis: failed to set region to %dx%d: %s",
                                         newWidth, newHeight, error->message));
