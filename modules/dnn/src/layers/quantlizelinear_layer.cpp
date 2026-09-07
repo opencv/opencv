@@ -173,10 +173,11 @@ static void quantizeLinearToFp8Native(const _InpTp* inp, const _ScaleTp* scale, 
     });
 }
 
-// E5M2/E5M2FNUZ have no native depth; store the grid-snapped value as CV_16F.
-template <typename _InpTp, typename _ScaleTp>
-static void quantizeLinearToFp8Wide(const _InpTp* inp, const _ScaleTp* scale, const hfloat* zp,
-                                     hfloat* out, const onnx_dtype::Fp8Fmt& fmt, bool saturate,
+// E5M2/E5M2FNUZ have no native depth; store the grid-snapped value in CV_16F, or
+// in CV_32F when setInput has widened the graph's zero_point and output.
+template <typename _InpTp, typename _ScaleTp, typename _OutTp>
+static void quantizeLinearToFp8Wide(const _InpTp* inp, const _ScaleTp* scale, const _OutTp* zp,
+                                     _OutTp* out, const onnx_dtype::Fp8Fmt& fmt, bool saturate,
                                      int64_t nslices, int sz_a, int64_t slice_size)
 {
     parallel_for_(Range(0, (int)nslices), [&](const Range& r) {
@@ -188,7 +189,7 @@ static void quantizeLinearToFp8Wide(const _InpTp* inp, const _ScaleTp* scale, co
                 for (int64_t j = 0; j < slice_size; j++) {
                     size_t idx = base + (size_t)a * slice_size + j;
                     uint8_t code = onnx_dtype::f32ToFp8((float)inp[idx] / sc + zpv, fmt, saturate);
-                    out[idx] = hfloat(onnx_dtype::fp8ToF32(code, fmt));
+                    out[idx] = _OutTp(onnx_dtype::fp8ToF32(code, fmt));
                 }
             }
         }
@@ -216,9 +217,19 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
 
     CV_Assert(inptype == CV_32F || inptype == CV_16F);
     CV_Assert(sctype == CV_32F || sctype == CV_16F);
+    // E5M2/E5M2FNUZ have no native depth, so they travel in CV_16F, or in CV_32F
+    // once setInput has widened a graph tensor. Both are ambiguous on their own -
+    // FLOAT4E2M1 and FLOAT8E8M0 map onto the same depths - so the raw ONNX dtype
+    // has to confirm this really is an FP8 request.
+    const bool wideFp8Out = (outtype == CV_16F || outtype == CV_32F) &&
+                            onnx_dtype::isFp8(outputOnnxDtype);
+    // CV_16F/CV_32F are let through here so an unsupported request (FLOAT4E2M1,
+    // FLOAT8E8M0, plain fp16) reaches the descriptive error below instead of
+    // tripping a bare assertion.
     CV_Assert(outtype == CV_8U || outtype == CV_8S ||
-              outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || outtype == CV_16F);
-    if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || outtype == CV_16F)
+              outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ ||
+              outtype == CV_16F || outtype == CV_32F);
+    if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || wideFp8Out)
         CV_Assert(block_size == 0);  // block-wise FP8 quantization not yet supported
 
     if (!zp.empty()) {
@@ -353,11 +364,27 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
             quantizeLinearToFp8Native(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
                                        zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
     }
-    else if (outtype == CV_16F) {
-        // Default to E5M2 if the importer couldn't resolve E5M2 vs E5M2FNUZ.
-        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outputOnnxDtype == 20 ? 20 : 19);
+    else if (wideFp8Out && outtype == CV_16F) {
+        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outputOnnxDtype);
         const hfloat* zpdata = zp.empty() ? nullptr : reinterpret_cast<const hfloat*>(zp.data);
         hfloat* d = reinterpret_cast<hfloat*>(out.data);
+        if (inptype == CV_32F && sctype == CV_32F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_32F && sctype == CV_16F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else if (inptype == CV_16F && sctype == CV_32F)
+            quantizeLinearToFp8Wide(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const float*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+        else
+            quantizeLinearToFp8Wide(reinterpret_cast<const hfloat*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
+                                     zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
+    }
+    else if (wideFp8Out) {
+        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outputOnnxDtype);
+        const float* zpdata = zp.empty() ? nullptr : reinterpret_cast<const float*>(zp.data);
+        float* d = reinterpret_cast<float*>(out.data);
         if (inptype == CV_32F && sctype == CV_32F)
             quantizeLinearToFp8Wide(reinterpret_cast<const float*>(inp.data), reinterpret_cast<const float*>(scale.data),
                                      zpdata, d, fmt, saturate, nslices, sz_a, slice_size);
@@ -374,10 +401,11 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
     else {
         CV_Error_(Error::StsNotImplemented,
                   ("the following combination of types is not supported in "
-                   "QuantizeLinear: inp=%s, scale=%s, out=%s",
+                   "QuantizeLinear: inp=%s, scale=%s, out=%s, onnx_output_dtype=%d",
                    typeToString(inptype).c_str(),
                    typeToString(sctype).c_str(),
-                   typeToString(outtype).c_str()));
+                   typeToString(outtype).c_str(),
+                   outputOnnxDtype));
     }
 }
 
@@ -394,7 +422,6 @@ public:
         output_dtype = params.get<int>("output_dtype", -1);
         output_onnx_dtype = params.get<int>("output_onnx_dtype", -1);
         CV_Assert(block_size >= 0);
-        CV_Assert(saturate);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
