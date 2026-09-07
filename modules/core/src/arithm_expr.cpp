@@ -314,9 +314,9 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
 {
     // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}): ONE fused kernel (two v_fma).
     // Inputs are the same type T (cast to a common type if not). The kernel outputs T/f32 (small ints,
-    // f16/bf16, f32) or f64 directly; for any other requested rdepth it computes in the work type W and a
-    // final cast narrows it. When T has no kernel into W either (u8..f32 with dtype=f64, bool with any
-    // dtype), the inputs are cast to W first and the f64/f32 kernel runs on them.
+    // f16/bf16, f32) or f64 directly, at its own natural work precision; for any other requested rdepth
+    // it computes at that natural precision and casts the RESULT to rdepth afterward (never the inputs
+    // up before the op, that would spend an extra cast and run the op at needlessly high precision).
     if (op == OP_ADDW)
     {
         int Tt = arginfo[a].depth;
@@ -325,19 +325,16 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
             Tt = promoteArith(arginfo[a].depth, arginfo[b].depth);
             a = maybeAddCast(a, Tt); b = maybeAddCast(b, Tt);
         }
+        if (Tt == CV_Bool)
+            CV_Error(Error::StsNotImplemented, "addWeighted: CV_Bool inputs are not supported, cast explicitly "
+                     "first, e.g. cv::texpr(\"uint8({0})*{1} + uint8({2})*{3}\", {a, alpha, b, beta})");
         if (rdepth == EW_DEPTH_NONE) rdepth = Tt;              // default dtype = input depth
         TKernel k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, rdepth);
         int outD = rdepth;
-        if (!k.fptr)                                          // no direct T->rdepth kernel: compute in W, cast
+        if (!k.fptr)                                          // no direct T->rdepth kernel: compute at T's natural work depth, cast after
         {
-            outD = (Tt==CV_32U || Tt==CV_32S || Tt==CV_64U || Tt==CV_64S || Tt==CV_64F || rdepth==CV_64F)
-                 ? CV_64F : CV_32F;
+            outD = (Tt==CV_32U || Tt==CV_32S || Tt==CV_64U || Tt==CV_64S || Tt==CV_64F) ? CV_64F : CV_32F;
             k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, outD);
-            if (!k.fptr)                                      // no T->W kernel either: widen the inputs to W
-            {
-                a = maybeAddCast(a, outD); b = maybeAddCast(b, outD);
-                k = getElemwiseFunc(OP_ADDW, outD, outD, EW_DEPTH_NONE, outD);
-            }
             CV_Assert(k.fptr && "ew: no kernel for this op/type combination");
         }
         const int out = addTemp(outD);
