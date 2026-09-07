@@ -431,17 +431,7 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
 static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    // The per-window denominator below is a variance-like quantity computed as a difference
-    // of two comparable-magnitude sums (E[X^2] - E[X]^2) pulled from the integral images --
-    // classic catastrophic-cancellation territory. At CV_32F, on realistic image sizes, the
-    // rounding error in that subtraction can dwarf a genuinely small-but-nonzero window
-    // variance, corrupting the ratio enough to spuriously hit the +-1 safety clamp in
-    // normAcc() for windows that are not actually degenerate (see #21788). The CPU path
-    // (common_matchTemplate) never has this problem because it always accumulates in double
-    // regardless of image depth. Do the same here when the device supports it; devices
-    // without double support keep the original CV_32F kernel, which remains useful (and is
-    // still an improvement over the CPU-only path for most inputs) even though it is not
-    // fully immune to this class of error.
+    // Try to use double if supported to improve accuracy if integral images
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     int sumDepth = doubleSupport ? CV_64F : CV_32F;
 

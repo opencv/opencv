@@ -129,16 +129,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 Bool())
                            );
 
-// Regression test for https://github.com/opencv/opencv/issues/21788: the OpenCL
-// TM_CCOEFF_NORMED kernel computes each window's variance-like denominator as a difference of
-// two comparable-magnitude sums pulled from CV_32F integral images -- classic
-// catastrophic-cancellation territory. On a realistic-sized image the rounding error in that
-// subtraction can dwarf a genuinely small-but-nonzero window variance, corrupting the ratio
-// enough to spuriously hit the +-1 safety clamp for windows that are not actually degenerate.
-// The parameterized MatchTemplate case above never reaches this: it only exercises small
-// (<=100x100) images of uniformly random full-range noise, where windows have large variance
-// and integral sums never accumulate far enough to lose the precision this needs.
-TEST(MatchTemplate, ccoeff_normed_large_low_contrast_image)
+TEST(MatchTemplate, ccoeff_normed_large_low_contrast_image_21788)
 {
     if (!cv::ocl::haveOpenCL())
         throw SkipTestException("OpenCL is not available");
