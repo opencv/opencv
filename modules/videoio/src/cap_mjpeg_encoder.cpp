@@ -78,6 +78,15 @@ static const unsigned bit_mask[] =
 
 static const uchar huff_val_shift = 20;
 static const int huff_code_mask = (1 << huff_val_shift) - 1;
+
+// Native 64-bit ALU (LP64 / LL64). 32-bit ABIs keep a 32-bit packer so
+// put_bits does not expand to compiler-emulated uint64 shifts.
+#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(_M_ARM64) || \
+    defined(__x86_64__) || defined(__aarch64__)
+#  define MJPEG_BIT_BUF_64 1
+#else
+#  define MJPEG_BIT_BUF_64 0
+#endif
 static const int MJPEG_CAT_TAB_SIZE = 4096;
 
 // JPEG DC amplitude uses at most 11 bits, AC at most 10. Gray's *4 sample
@@ -201,19 +210,41 @@ public:
 
     inline void put_bits(unsigned bits, int len)
     {
-        CV_Assert(len >=0 && len < 32);
-        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
-        {
+        CV_Assert(len >= 0 && len <= 32);
+        if( len == 0 )
+            return;
+
+#if MJPEG_BIT_BUF_64
+        if( m_pos + 2 >= data.size() )
             resize(int(2*data.size()));
+
+        bits_free -= len;
+        const uint64_t payload = (uint64_t)(bits & (len >= 32 ? 0xffffffffu : ((1u << len) - 1)));
+        if( bits_free > 0 )
+        {
+            accum |= payload << bits_free;
         }
+        else
+        {
+            // Buffer is full (or overfull): dump 64 bits as two unsigned words.
+            if( bits_free == 0 )
+                accum |= payload;
+            else
+                accum |= payload >> -bits_free;
+            data[m_pos++] = (unsigned)(accum >> 32);
+            data[m_pos++] = (unsigned)accum;
+            bits_free += 64;
+            accum = (bits_free == 64) ? 0 : (payload << bits_free);
+        }
+#else
+        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
+            resize(int(2*data.size()));
 
-        bits_free -= (len);
-        unsigned int tempval = (bits) & bit_mask[(len)];
-
+        bits_free -= len;
+        unsigned tempval = bits & bit_mask[len];
         if( bits_free <= 0 )
         {
             data[m_pos] |= ((unsigned)tempval >> -bits_free);
-
             bits_free += 32;
             ++m_pos;
             data[m_pos] = bits_free < 32 ? (tempval << bits_free) : 0;
@@ -222,6 +253,7 @@ public:
         {
             data[m_pos] |= (bits_free == 32) ? tempval : (tempval << bits_free);
         }
+#endif
     }
 
     inline void put_val(int val, const unsigned * table)
@@ -230,8 +262,41 @@ public:
         put_bits(code >> 8, (int)(code & 255));
     }
 
+    // Huffman symbol plus extra amplitude bits in one insert (JPEG max ~27 bits).
+    inline void put_val_bits(int val, const unsigned * table, unsigned extra, int extra_len)
+    {
+        unsigned code = table[(val) + 2];
+        int n = (int)(code & 255);
+        if( extra_len == 0 )
+            put_bits(code >> 8, n);
+        else
+            put_bits((unsigned)(((code >> 8) << extra_len) | (extra & bit_mask[extra_len])), n + extra_len);
+    }
+
     void finish()
     {
+#if MJPEG_BIT_BUF_64
+        if(bits_free == 64)
+        {
+            bits_free = 0;
+            m_data_len = m_pos;
+        }
+        else
+        {
+            if( m_pos + 2 >= data.size() )
+                resize(int(2*data.size()));
+            data[m_pos++] = (unsigned)(accum >> 32);
+            if( bits_free < 32 )
+            {
+                data[m_pos++] = (unsigned)accum;
+            }
+            else
+            {
+                bits_free -= 32;
+            }
+            m_data_len = m_pos;
+        }
+#else
         if(bits_free == 32)
         {
             bits_free = 0;
@@ -241,11 +306,17 @@ public:
         {
             m_data_len = m_pos + 1;
         }
+#endif
     }
 
     void reset()
     {
+#if MJPEG_BIT_BUF_64
+        accum = 0;
+        bits_free = 64;
+#else
         bits_free = 32;
+#endif
         m_pos = 0;
         m_data_len = 0;
     }
@@ -273,6 +344,9 @@ public:
 
 private:
     std::vector<unsigned> data;
+#if MJPEG_BIT_BUF_64
+    uint64_t accum;
+#endif
     int bits_free;
     unsigned m_pos;
     unsigned m_data_len;
@@ -1137,8 +1211,8 @@ public:
 
                         {
                             int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 11);
-                            output_buffer.put_val(cat, huff_dc_tab[is_chroma] );
-                            output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
+                            output_buffer.put_val_bits(cat, huff_dc_tab[is_chroma],
+                                                       (unsigned)(val - (val < 0 ? 1 : 0)), cat);
                         }
 
                         for( j = 1; j < 64; j++ )
@@ -1159,8 +1233,8 @@ public:
 
                                 {
                                     int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 10);
-                                    output_buffer.put_val( cat + run*16, htable );
-                                    output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
+                                    output_buffer.put_val_bits(cat + run*16, htable,
+                                                               (unsigned)(val - (val < 0 ? 1 : 0)), cat);
                                 }
 
                                 run = 0;
