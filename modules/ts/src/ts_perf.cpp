@@ -39,6 +39,10 @@ static double       param_max_outliers;
 static double       param_max_deviation;
 static unsigned int param_min_samples;
 static unsigned int param_force_samples;
+// Whether the user passed the option explicitly. A value requested on the command line
+// must win over both the built-in default and the per-test declare.iterations() value.
+static bool         param_min_samples_specified = false;
+static bool         param_force_samples_specified = false;
 static double       param_time_limit;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
@@ -952,6 +956,27 @@ void InstumentData::printTree()
 *                                   ::perf::TestBase
 \*****************************************************************************************/
 
+// cv::CommandLineParser::has() can't be used to tell an explicitly passed option from its
+// default value, so scan the raw arguments the same way the parser does.
+static bool isCmdLineArgSpecified(int argc, const char* const argv[], const char* name)
+{
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i] == NULL)
+            continue;
+        std::string s(argv[i]);
+        if (s.length() < 2 || s[0] != '-')
+            continue;
+        bool hasDoubleDash = s.length() > 2 && s[1] == '-';
+        std::string key = s.substr(hasDoubleDash ? 2 : 1);
+        size_t equalsPos = key.find('=');
+        if (equalsPos != std::string::npos)
+            key = key.substr(0, equalsPos);
+        if (key == name)
+            return true;
+    }
+    return false;
+}
 
 void TestBase::Init(int argc, const char* const argv[])
 {
@@ -1043,6 +1068,21 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
+
+    param_min_samples_specified   = isCmdLineArgSpecified(argc, argv, "perf_min_samples");
+    param_force_samples_specified = isCmdLineArgSpecified(argc, argv, "perf_force_samples");
+
+    // perf_min_samples is a floor and perf_force_samples a ceiling, so a requested minimum
+    // above the maximum is contradictory. Resolve it in favour of the explicitly passed
+    // option; otherwise an explicit --perf_min_samples would be silently truncated by the
+    // default --perf_force_samples value.
+    if (param_force_samples != 0 && param_force_samples < param_min_samples)
+    {
+        if (param_min_samples_specified && !param_force_samples_specified)
+            param_force_samples = param_min_samples;
+        else
+            param_min_samples = param_force_samples;
+    }
     param_write_sanity  = args.get<bool>("perf_write_sanity");
     param_verify_sanity = args.get<bool>("perf_verify_sanity");
 
@@ -1984,9 +2024,15 @@ void TestBase::RunPerfTestBody()
 \*****************************************************************************************/
 TestBase::_declareHelper& TestBase::_declareHelper::iterations(unsigned int n)
 {
-    test->times.clear();
-    test->times.reserve(n);
     test->nIters = std::min(n, TestBase::iterationsLimitDefault);
+    // A minimum requested on the command line outranks the number of iterations hardcoded
+    // in the test, otherwise --perf_min_samples has no effect at all on tests using
+    // TEST_CYCLE_N()/declare.iterations() (the loop in next() stops at nIters).
+    if (param_min_samples_specified)
+        test->nIters = std::max(test->nIters, param_min_samples);
+
+    test->times.clear();
+    test->times.reserve(test->nIters);
     test->currentIter = (unsigned int)-1;
     test->metrics.clear();
     return *this;
