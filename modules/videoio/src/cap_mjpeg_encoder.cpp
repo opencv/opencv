@@ -43,6 +43,9 @@
 #include "opencv2/videoio/container_avi.private.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "cap_mjpeg_cvtcolor.simd.hpp"
+#include "cap_mjpeg_cvtcolor.simd_declarations.hpp"
+
 #include <vector>
 #include <deque>
 #include <iostream>
@@ -50,6 +53,15 @@
 
 namespace cv
 {
+
+static inline void mjpeg_convertToYUV_dispatch(int colorspace, int channels, int input_channels,
+        short* UV_data, short* Y_data, const uchar* pix_data,
+        int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
+{
+    CV_CPU_DISPATCH(mjpeg_convertToYUV, (colorspace, channels, input_channels, UV_data, Y_data, pix_data,
+                                         y_limit, x_limit, step, u_plane_ofs, v_plane_ofs),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
 
 static const unsigned bit_mask[] =
 {
@@ -66,6 +78,36 @@ static const unsigned bit_mask[] =
 
 static const uchar huff_val_shift = 20;
 static const int huff_code_mask = (1 << huff_val_shift) - 1;
+static const int MJPEG_CAT_TAB_SIZE = 4096;
+
+// JPEG DC amplitude uses at most 11 bits, AC at most 10. Gray's *4 sample
+// scale plus a less-rounded SIMD FDCT can produce |coeff| > 2047 (category 12+).
+// The Huffman tables only define symbols 0..11, and cat_table only covers
+// [-4096, 4096] — larger values were an OOB read that showed up as
+// put_bits(len>=32) on some platforms (Mac M5).
+static inline int mjpeg_coeff_category(int val, const uchar* cat_table)
+{
+    int idx = val;
+    if( idx < -MJPEG_CAT_TAB_SIZE )
+        idx = -MJPEG_CAT_TAB_SIZE;
+    else if( idx > MJPEG_CAT_TAB_SIZE )
+        idx = MJPEG_CAT_TAB_SIZE;
+    return (int)cat_table[idx + MJPEG_CAT_TAB_SIZE];
+}
+
+static inline int mjpeg_clamp_category(int& val, int cat, int max_cat)
+{
+    if( cat > max_cat )
+    {
+        cat = max_cat;
+        const int lim = (1 << max_cat) - 1;
+        if( val > lim )
+            val = lim;
+        else if( val < -lim )
+            val = -lim;
+    }
+    return cat;
+}
 
 static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_size )
 {
@@ -95,7 +137,9 @@ static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_s
         CV_Error(cv::Error::StsOutOfRange, "too big maximum Huffman code size");
     }
 
-    memset( table, 0, size*sizeof(table[0]));
+    // Zero the whole destination table. Categories outside the JPEG DC/AC
+    // symbol set (0..11 / 0..10) must not see leftover stack bytes as bit lengths.
+    memset( table, 0, max_size*sizeof(table[0]));
 
     table[0] = min_val;
     table[1] = size - 2;
@@ -560,18 +604,6 @@ static const int C0_541 = fix(0.541196100f, fixb);
 static const int C0_382 = fix(0.382683432f, fixb);
 static const int C1_306 = fix(1.306562965f, fixb);
 
-static const int y_r = fix(0.299, fixc);
-static const int y_g = fix(0.587, fixc);
-static const int y_b = fix(0.114, fixc);
-
-static const int cb_r = -fix(0.1687, fixc);
-static const int cb_g = -fix(0.3313, fixc);
-static const int cb_b = fix(0.5, fixc);
-
-static const int cr_r = fix(0.5, fixc);
-static const int cr_g = -fix(0.4187, fixc);
-static const int cr_b = -fix(0.0813, fixc);
-
 // Standard JPEG quantization tables
 static const uchar jpegTableK1_T[] =
 {
@@ -939,120 +971,8 @@ static void aan_fdct8x8( const short *src, short *dst,
 
 inline void convertToYUV(int colorspace, int channels, int input_channels, short* UV_data, short* Y_data, const uchar* pix_data, int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
 {
-    int i, j;
-    const int UV_step = 16;
-    int  x_scale = channels > 1 ? 2 : 1, y_scale = x_scale;
-    int  Y_step = x_scale*8;
-
-    if( channels > 1 )
-    {
-        if( colorspace == COLORSPACE_YUV444P && y_limit == 16 && x_limit == 16 )
-        {
-            for( i = 0; i < y_limit; i += 2, pix_data += step*2, Y_data += Y_step*2, UV_data += UV_step )
-            {
-#if CV_SIMD128
-                {
-                    v_uint16x8 masklo(255, 255, 255, 255, 255, 255, 255, 255);
-                    v_int16x8 bias(128 * 4, 128 * 4, 128 * 4, 128 * 4, 128 * 4, 128 * 4, 128 * 4, 128 * 4);
-                    v_uint16x8 lane = v_load((const ushort*)(pix_data + v_plane_ofs));
-                    v_uint16x8 t1 = v_add(v_shr<8>(lane), v_and(lane, masklo));
-                    lane = v_load((const ushort*)(pix_data + v_plane_ofs + step));
-                    v_uint16x8 t2 = v_add(v_shr<8>(lane), v_and(lane, masklo));
-                    t1 = v_add(t1, t2);
-                    v_store(UV_data, v_sub(v_reinterpret_as_s16(t1), bias));
-
-                    lane = v_load((const ushort*)(pix_data + u_plane_ofs));
-                    t1 = v_add(v_shr<8>(lane), v_and(lane, masklo));
-                    lane = v_load((const ushort*)(pix_data + u_plane_ofs + step));
-                    t2 = v_add(v_shr<8>(lane), v_and(lane, masklo));
-                    t1 = v_add(t1, t2);
-                    v_store(UV_data + 8, v_sub(v_reinterpret_as_s16(t1), bias));
-                }
-
-                {
-                    v_int16x8 delta(128, 128, 128, 128, 128, 128, 128, 128);
-                    v_store(Y_data, v_sub(v_reinterpret_as_s16(v_load_expand(pix_data)), delta));
-                    v_store(Y_data + 8, v_sub(v_reinterpret_as_s16(v_load_expand(pix_data + 8)), delta));
-                    v_store(Y_data + Y_step, v_sub(v_reinterpret_as_s16(v_load_expand(pix_data + step)), delta));
-                    v_store(Y_data + Y_step + 8, v_sub(v_reinterpret_as_s16(v_load_expand(pix_data + step + 8)), delta));
-                }
-#else
-                for( j = 0; j < x_limit; j += 2, pix_data += 2 )
-                {
-                    Y_data[j] = pix_data[0] - 128;
-                    Y_data[j+1] = pix_data[1] - 128;
-                    Y_data[j+Y_step] = pix_data[step] - 128;
-                    Y_data[j+Y_step+1] = pix_data[step+1] - 128;
-
-                    UV_data[j>>1] = pix_data[v_plane_ofs] + pix_data[v_plane_ofs+1] +
-                        pix_data[v_plane_ofs+step] + pix_data[v_plane_ofs+step+1] - 128*4;
-                    UV_data[(j>>1)+8] = pix_data[u_plane_ofs] + pix_data[u_plane_ofs+1] +
-                        pix_data[u_plane_ofs+step] + pix_data[u_plane_ofs+step+1] - 128*4;
-
-                }
-
-                pix_data -= x_limit*input_channels;
-#endif
-            }
-        }
-        else
-        {
-            for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-            {
-                for( j = 0; j < x_limit; j++, pix_data += input_channels )
-                {
-                    int Y, U, V;
-
-                    if( colorspace == COLORSPACE_BGR )
-                    {
-                        int r = pix_data[2];
-                        int g = pix_data[1];
-                        int b = pix_data[0];
-
-                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                    }
-                    else if( colorspace == COLORSPACE_RGBA )
-                    {
-                        int r = pix_data[0];
-                        int g = pix_data[1];
-                        int b = pix_data[2];
-
-                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                    }
-                    else
-                    {
-                        Y = pix_data[0] - 128;
-                        U = pix_data[v_plane_ofs] - 128;
-                        V = pix_data[u_plane_ofs] - 128;
-                    }
-
-                    int j2 = j >> (x_scale - 1);
-                    Y_data[j] = (short)Y;
-                    UV_data[j2] = (short)(UV_data[j2] + U);
-                    UV_data[j2 + 8] = (short)(UV_data[j2 + 8] + V);
-                }
-
-                pix_data -= x_limit*input_channels;
-                if( ((i+1) & (y_scale - 1)) == 0 )
-                {
-                    UV_data += UV_step;
-                }
-            }
-        }
-
-    }
-    else
-    {
-        for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-        {
-            for( j = 0; j < x_limit; j++ )
-                Y_data[j] = (short)(pix_data[j]*4 - 128*4);
-        }
-    }
+    mjpeg_convertToYUV_dispatch(colorspace, channels, input_channels, UV_data, Y_data, pix_data,
+                                y_limit, x_limit, step, u_plane_ofs, v_plane_ofs);
 }
 
 class MjpegEncoder : public ParallelLoopBody
@@ -1115,8 +1035,6 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        const int CAT_TAB_SIZE = 4096;
-
         int x, y;
         int i, j;
 
@@ -1218,9 +1136,7 @@ public:
                         dc_pred[j] = buffer[0];
 
                         {
-                            int cat = cat_table[val + CAT_TAB_SIZE];
-
-                            //CV_Assert( cat <= 11 );
+                            int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 11);
                             output_buffer.put_val(cat, huff_dc_tab[is_chroma] );
                             output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
                         }
@@ -1242,8 +1158,7 @@ public:
                                 }
 
                                 {
-                                    int cat = cat_table[val + CAT_TAB_SIZE];
-                                    //CV_Assert( cat <= 10 );
+                                    int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 10);
                                     output_buffer.put_val( cat + run*16, htable );
                                     output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
                                 }
@@ -1295,15 +1210,14 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 {
     //double total_cvt = 0, total_dct = 0;
     static bool init_cat_table = false;
-    const int CAT_TAB_SIZE = 4096;
-    static uchar cat_table[CAT_TAB_SIZE*2+1];
+    static uchar cat_table[MJPEG_CAT_TAB_SIZE*2+1];
     if( !init_cat_table )
     {
-        for( int i = -CAT_TAB_SIZE; i <= CAT_TAB_SIZE; i++ )
+        for( int i = -MJPEG_CAT_TAB_SIZE; i <= MJPEG_CAT_TAB_SIZE; i++ )
         {
             Cv32suf a;
             a.f = (float)i;
-            cat_table[i+CAT_TAB_SIZE] = ((a.i >> 23) & 255) - (126 & (i ? -1 : 0));
+            cat_table[i+MJPEG_CAT_TAB_SIZE] = ((a.i >> 23) & 255) - (126 & (i ? -1 : 0));
         }
         init_cat_table = true;
     }
