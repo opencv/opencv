@@ -184,6 +184,7 @@ namespace cv { namespace dnn {
         TensorView<T> viewOf(const UMat& u) {
             using const_ptr = typename TensorView<T>::const_pointer;
             CV_Assert(u.u && u.u->handle);
+            CV_CheckEQ(u.elemSize1(), sizeof(T), "UMat element type must match the tensor element type");
             MatShape shape = cv::dnn::shape(u);
             return TensorView<T>(const_ptr(reinterpret_cast<const T*>(u.u->handle) + u.offset / sizeof(T)),
                                  std::begin(shape), std::end(shape));
@@ -194,6 +195,7 @@ namespace cv { namespace dnn {
         TensorSpan<T> spanOf(const UMat& u) {
             using ptr = typename TensorSpan<T>::pointer;
             CV_Assert(u.u && u.u->handle);
+            CV_CheckEQ(u.elemSize1(), sizeof(T), "UMat element type must match the tensor element type");
             MatShape shape = cv::dnn::shape(u);
             return TensorSpan<T>(ptr(reinterpret_cast<T*>(u.u->handle) + u.offset / sizeof(T)),
                                  std::begin(shape), std::end(shape));
@@ -491,6 +493,7 @@ namespace cv { namespace dnn {
             : CUDABackendWrapper(TargetID)
         {
             CV_Assert(m.allocator == cv::cuda::getCudaAllocator());
+            CV_CheckEQ(m.elemSize1(), sizeof(DEVICE_T), "UMat depth must match the wrapper's device element type");
             shape = cv::dnn::shape(m);
             hostMatDepth = m.depth();
             offset = 0;
