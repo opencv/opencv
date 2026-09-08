@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/dnn/dnn.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include "utils.hpp"
 #include "unicode.hpp"
 #include "core_bpe.hpp"
@@ -354,12 +355,26 @@ static std::string expandCaseInsensitiveGroups(const std::string& in)
             }
             std::string inner = in.substr(i + 4, j - (i + 4));
             out += "(?:";
-            for (char c : inner) {
-                if (std::isalpha(static_cast<unsigned char>(c))) {
-                    out += '[';
-                    out += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    out += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                    out += ']';
+            bool inClass = false;
+            int braceDepth = 0;
+            for (size_t k = 0; k < inner.size(); ++k) {
+                const char c = inner[k];
+                if (c == '\\' && k + 1 < inner.size()) {  // copy escapes verbatim
+                    out += c;
+                    out += inner[++k];
+                    continue;
+                }
+                if (c == '{') ++braceDepth;
+                else if (c == '}') --braceDepth;
+                else if (c == '[') inClass = true;
+                else if (c == ']') inClass = false;
+                // Never emit a nested [..]: inside a class the two cases belong in
+                // the class itself. Never expand inside \p{...} or {m,n}.
+                if (braceDepth == 0 && std::isalpha(static_cast<unsigned char>(c))) {
+                    const char lo = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    const char up = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                    if (inClass) { out += lo; out += up; }
+                    else { out += '['; out += lo; out += up; out += ']'; }
                 } else {
                     out += c;
                 }
@@ -465,13 +480,24 @@ static bool hasByteLevelPreTokenizer(const cv::FileNode& preTok)
 static std::string detectSplitPattern(const cv::FileStorage& fs, const std::string& modelType)
 {
     std::string raw;
-    if (findEmbeddedSplitRegex(fs["pre_tokenizer"], raw))
+    cv::FileNode preTok = fs["pre_tokenizer"];
+    if (findEmbeddedSplitRegex(preTok, raw))
         return adaptHfPreTokenizerRegex(raw);
-    if (modelType.empty() || modelType == "BPE")
+    // A bare ByteLevel pre_tokenizer (GPT-2 shape) carries no regex of its own and is
+    // the only case R50K is right for. cl100k/o200k split differently and must not
+    // silently inherit GPT-2's pattern.
+    if ((preTok.empty() || hasByteLevelPreTokenizer(preTok)) &&
+        (modelType.empty() || modelType == "BPE"))
         return R50K_UTF8;
+    std::string preTokType;
+    if (!preTok.empty())
+        preTok["type"] >> preTokType;
+    if (preTokType.empty())
+        preTokType = "(none)";
     CV_Error(cv::Error::StsError,
-        "No pre_tokenizer split regex found in tokenizer.json and no default split "
-        "pattern is defined for model type: " + modelType);
+        "No pre_tokenizer split regex in tokenizer.json and no default split pattern for "
+        "pre_tokenizer '" + preTokType + "' / model type '" +
+        (modelType.empty() ? std::string("(none)") : modelType) + "'");
 }
 
 static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
@@ -506,12 +532,8 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
     for (const auto& kv : gemma.pieceToId)
         gemma.idToPiece[kv.second] = kv.first;
 
-    bool merges_are_string_format = false;
     cv::FileNode merges_node = model_node["merges"];
     if (merges_node.size() > 0) {
-        cv::FileNode first_entry = *merges_node.begin();
-        merges_are_string_format = first_entry.isString();
-
         uint32_t rank = 0;
         for (auto it = merges_node.begin(); it != merges_node.end(); ++it) {
             cv::FileNode entry = *it;
@@ -556,7 +578,22 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
         }
     }
 
-    int bos_token_id = (merges_are_string_format && bos_id >= 0) ? bos_id : -1;
+    // Whether the model auto-prepends <bos> is declared by the post_processor, not by
+    // how 'merges' happens to be serialized.
+    int bos_token_id = -1;
+    cv::FileNode postProc = fs["post_processor"];
+    if (bos_id >= 0 && !postProc.empty()) {
+        std::string postType;
+        postProc["type"] >> postType;
+        if (postType == "TemplateProcessing") {
+            cv::FileNode single = postProc["single"];
+            for (auto it = single.begin(); it != single.end(); ++it) {
+                std::string tokId;
+                (*it)["SpecialToken"]["id"] >> tokId;
+                if (tokId == "<bos>") { bos_token_id = bos_id; break; }
+            }
+        }
+    }
     return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bos_token_id);
 }
 
@@ -585,14 +622,20 @@ static void appendUnigramNormalizerStep(const cv::FileNode& node,
         step.kind = UnigramNormalizerStep::STRIP_ACCENTS;
     } else if (type == "Replace") {
         cv::FileNode pattern = node["pattern"];
-        if (pattern.empty() || pattern["String"].empty())
+        if (pattern.empty() || pattern["String"].empty()) {
+            CV_LOG_WARNING(NULL, "tokenizer.json: 'Replace' normalizer with a non-String "
+                "pattern is not supported and will be skipped; token ids may differ "
+                "from the reference tokenizer");
             return;
+        }
         step.kind = UnigramNormalizerStep::REPLACE;
         pattern["String"] >> step.from;
         node["content"] >> step.to;
         if (step.from.empty())
             return;
     } else {
+        CV_LOG_WARNING(NULL, "tokenizer.json: unsupported normalizer step '" << type
+            << "' will be skipped; token ids may differ from the reference tokenizer");
         return;
     }
     out.push_back(step);
