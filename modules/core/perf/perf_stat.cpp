@@ -4,7 +4,13 @@ namespace opencv_test
 {
 using namespace perf;
 
-PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
+// Masked variants: 8U/16U/32F x C1/C3/C4.
+#define TYPICAL_MAT_TYPES_STAT_MASK CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4
+// sum/mean/meanStdDev additionally cover 16S.
+#define TYPICAL_MAT_TYPES_STAT      TYPICAL_MAT_TYPES_STAT_MASK, CV_16SC1, CV_16SC3, CV_16SC4
+
+PERF_TEST_P(Size_MatType, sum, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( TYPICAL_MAT_TYPES_STAT ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -19,7 +25,8 @@ PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
     SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
 }
 
-PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, mean, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( TYPICAL_MAT_TYPES_STAT ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -34,7 +41,8 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
     SANITY_CHECK(s, 1e-5);
 }
 
-PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, mean_mask, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( TYPICAL_MAT_TYPES_STAT_MASK ) ))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -50,7 +58,8 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
     SANITY_CHECK(s, 5e-5);
 }
 
-PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, meanStdDev, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( TYPICAL_MAT_TYPES_STAT_MASK ) ))
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
@@ -67,7 +76,8 @@ PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
     SANITY_CHECK(dev, 1e-5, ERROR_RELATIVE);
 }
 
-PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
+PERF_TEST_P(Size_MatType, meanStdDev_mask, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
+                testing::Values( TYPICAL_MAT_TYPES_STAT_MASK ) ))
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
