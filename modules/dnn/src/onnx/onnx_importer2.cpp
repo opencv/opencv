@@ -1518,19 +1518,15 @@ void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::Node
     CV_Assert(node_inputs.size() == 2);
     if (net.isConstArg(node_inputs[1]))
     {
-        Mat slope = net.argTensor(node_inputs[1]);
-        const MatShape& xshape = netimpl->args.at(node_inputs[0].idx).shape;
-        if (isPerChannelSlope(shape(slope), xshape))
-        {
-            layerParams.type = "PReLU";
-            layerParams.blobs.push_back(slope);
-            addLayer(layerParams, node_proto, 1);
-            return;
-        }
+        layerParams.blobs.push_back(net.argTensor(node_inputs[1]).clone());
+        addLayer(layerParams, node_proto, 1);
     }
-    layerParams.type = "NaryEltwise";
-    layerParams.set("operation", "prelu");
-    addLayer(layerParams, node_proto);
+    else
+    {
+        // Slope produced by a foldable subgraph (e.g. Reshape of an initializer):
+        // keep it as a second input for constFold()/constArgs() to resolve.
+        addLayer(layerParams, node_proto);
+    }
 }
 
 void ONNXImporter2::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1564,11 +1560,11 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
+        Mat B = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(B);
         layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
             layerParams.set("have_bias", true);
             layerParams.set("constC", true);
@@ -1584,10 +1580,10 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
+        Mat B = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(B);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
         }
         n_inputs = 1;
@@ -1601,7 +1597,7 @@ void ONNXImporter2::parseMatMulNBits(LayerParams& layerParams, const opencv_onnx
     CV_CheckTrue(net.isConstArg(node_inputs[1]) && net.isConstArg(node_inputs[2]),
                  "DNN/MatMulNBits: packed weights and scales must be constants");
 
-    layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
+    layerParams.blobs.push_back(net.argTensor(node_inputs[1]).clone());
     Mat scales;
     net.argTensor(node_inputs[2]).convertTo(scales, CV_32F);
     layerParams.blobs.push_back(scales);
@@ -2385,10 +2381,10 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat scale = net.argTensor(node_inputs[1]);
+        Mat scale = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(scale);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
         }
         n_inputs = 1;
@@ -2809,7 +2805,7 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
@@ -2833,7 +2829,7 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
@@ -2852,7 +2848,7 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
