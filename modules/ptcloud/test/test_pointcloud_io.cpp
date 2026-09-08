@@ -5,6 +5,7 @@
 #include <opencv2/core.hpp>
 #include <vector>
 #include <cstdio>
+#include <fstream>
 
 #include "test_precomp.hpp"
 #include "opencv2/ts.hpp"
@@ -294,6 +295,45 @@ TEST(PointCloud, SaveBadExtension)
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals);
+}
+
+TEST(PointCloud, LoadPlyEmptyFormatLine)
+{
+    std::string path = tempfile("empty_format.ply");
+    std::ofstream file(path, std::ios::binary);
+    file << "ply\n\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    cv::loadPointCloud(path, points, normals, rgb);
+    EXPECT_TRUE(points.empty());
+    std::remove(path.c_str());
+}
+
+TEST(PointCloud, LoadPlyFormatLineNoSeparator)
+{
+    std::string path = tempfile("no_separator_format.ply");
+    std::ofstream file(path, std::ios::binary);
+    file << "ply\nformat\r\r\r\r\r\r\r\r\r\r\r\r\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    cv::loadPointCloud(path, points, normals, rgb);
+    EXPECT_TRUE(points.empty());
+    std::remove(path.c_str());
+}
+
+TEST(PointCloud, LoadPlyMalformedElementLine)
+{
+    std::string path = tempfile("malformed_element.ply");
+    std::ofstream file(path, std::ios::binary);
+    file << "ply\nformat ascii 1.0\nelement\nend_header\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    cv::loadPointCloud(path, points, normals, rgb);
+    EXPECT_TRUE(points.empty());
+    std::remove(path.c_str());
 }
 
 }} /* namespace opencv_test */

@@ -3732,6 +3732,36 @@ CASE(test_matmul_bcast)
     SKIP;
 CASE(test_scatter_elements_with_reduction_mul)
     SKIP;
+CASE(test_bitcast_2d_float32_to_int32)
+    SKIP;
+CASE(test_bitcast_bool_to_uint8)
+    SKIP;
+CASE(test_bitcast_float32_to_int32)
+    SKIP;
+CASE(test_bitcast_float64_to_int64)
+    SKIP;
+CASE(test_bitcast_int32_to_float32)
+    SKIP;
+CASE(test_bitcast_int64_to_float64)
+    SKIP;
+CASE(test_bitcast_int8_to_uint8)
+    SKIP;
+CASE(test_bitcast_scalar_float32_to_int32)
+    SKIP;
+CASE(test_bitcast_uint16_to_int16)
+    SKIP;
+CASE(test_bitcast_uint32_to_int32)
+    SKIP;
+CASE(test_matmul_1d_1d)
+    SKIP;
+CASE(test_matmul_1d_3d)
+    SKIP;
+CASE(test_matmul_4d_1d)
+    SKIP;
+CASE(test_dft_irfft)
+    SKIP;
+CASE(test_dft_irfft_opset19)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH

@@ -461,6 +461,28 @@ inline int hal_ni_warpPerspectiveBlockline(const double *M, short* xy, short* al
 //! @endcond
 
 /**
+   @brief hal_getRectSubPix extract a rectangle from an image with sub-pixel accuracy
+   @param src_type source image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   @param src_height source image height
+   @param patch_type extracted patch type
+   @param patch_data extracted patch data
+   @param patch_step extracted patch step
+   @param patch_width extracted patch width
+   @param patch_height extracted patch height
+   @param center_x x-coordinate of the rectangle center (sub-pixel)
+   @param center_y y-coordinate of the rectangle center (sub-pixel)
+   @sa cv::getRectSubPix
+ */
+inline int hal_ni_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height, int patch_type, uchar* patch_data, size_t patch_step, int patch_width, int patch_height, double center_x, double center_y) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_getRectSubPix hal_ni_getRectSubPix
+//! @endcond
+
+/**
    @brief hal_remap with floating point maps
    @param src_type source and destination image type
    @param src_data source image data

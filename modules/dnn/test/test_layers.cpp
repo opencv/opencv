@@ -2832,4 +2832,33 @@ TEST(Test_MatMul, FastGemmBatchDynamicAndPackedBroadcast)
     normAssert(packedOutputs[0], packedExpected, "fastGemm packed broadcast batch mismatch", 1e-4, 1e-4);
 }
 
+TEST(Test_MatMul, ConstantRank1WeightPacking)
+{
+    // [M, K] @ [K] -> [M] with a constant rank-1 weight, as seen in DEIMv2-style graphs.
+    const int M = 4960, K = 33;
+    Mat A(M, K, CV_32F);
+    Mat B(std::vector<int>{K}, CV_32F);  // genuinely rank-1, not [K, 1]
+    randu(A, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_constant_rank1_B";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.blobs.push_back(B);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {A}, outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+
+    Mat b2d = B.reshape(1, std::vector<int>{K, 1});
+    Mat expected2d;
+    gemm(A, b2d, 1., noArray(), 0., expected2d);
+    Mat expected = expected2d.reshape(1, std::vector<int>{M});
+    normAssert(outputs[0], expected, "MatMul constant rank-1 weight packing mismatch", 1e-4, 1e-4);
+}
+
 }} // namespace

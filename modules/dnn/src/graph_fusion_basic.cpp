@@ -131,6 +131,24 @@ struct ModelFusionBasic
                     }
                 }
 
+                // fold a trailing scalar multiply into 'conv' (e.g. exported "Conv -> ReLU -> Mul(scale)"); safety is checked inside fuseTrailingScale().
+                if (elemwise && elemwise->op == NaryEltwiseLayer::OPERATION::PROD &&
+                    ninputs == 2) {
+                    int const_idx = netimpl->isConstArg(inputs[0]) ? 0 :
+                                     netimpl->isConstArg(inputs[1]) ? 1 : -1;
+                    if (const_idx >= 0) {
+                        Arg conv_out = inputs[1 - const_idx];
+                        int conv_layer_idx = producer_of.at(conv_out.idx);
+                        Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
+                        if (conv && usecounts.at(conv_out.idx) == 1 &&
+                            conv->fuseTrailingScale(netimpl->argTensor(inputs[const_idx]))) {
+                            fused_layer_idx = conv_layer_idx;
+                            removed_args.push_back(conv_out);
+                            break;
+                        }
+                    }
+                }
+
                 // fuse Reshape + InstanceNorm(scale=ones,bias=zeros) + Reshape + Mul + Add
                 if (elemwise && elemwise->op == NaryEltwiseLayer::OPERATION::ADD &&
                     ninputs == 2) {

@@ -131,6 +131,82 @@ static void runTypedDFT(const Mat& src,
     }
 }
 
+// Offset of the pos-th signal, walking the dims that are not transformed.
+static inline size_t dftSignalOffset(int pos,
+                                     const std::vector<int>& iterDims,
+                                     const std::vector<int>& outerSizes,
+                                     const std::vector<size_t>& outerStep,
+                                     const std::vector<size_t>& strides)
+{
+    size_t base = 0;
+    for (size_t t = 0; t < iterDims.size(); ++t)
+    {
+        int idxVal = outerStep.empty() ? 0 : (int)((pos / outerStep[t]) % (size_t)outerSizes[t]);
+        base += (size_t)idxVal * strides[iterDims[t]];
+    }
+    return base;
+}
+
+// Inverse real DFT: cv::dft() takes the one-sided spectrum in CCS layout directly.
+template<typename T>
+static void runIRFFT(const Mat& src, Mat& dst,
+                     const std::vector<size_t>& stridesSrc,
+                     const std::vector<size_t>& stridesDst,
+                     const std::vector<int>& iterDims,
+                     const std::vector<int>& outerSizes,
+                     const std::vector<size_t>& outerStep,
+                     const size_t totalOuter,
+                     const int N, const int L,
+                     const size_t strideAxisSrc, const size_t strideAxisDst)
+{
+    const int matTypeReal = std::is_same<T, float>::value ? CV_32F : CV_64F;
+    const T* sp = src.ptr<T>();
+    T* dp = dst.ptr<T>();
+
+    // Innermost axis: dst rows are already the N-element rows cv::dft() wants.
+    const bool inPlaceOnDst = (strideAxisDst == 1);
+    Mat rows = inPlaceOnDst ? Mat((int)totalOuter, N, matTypeReal, dp)
+                            : Mat((int)totalOuter, N, matTypeReal);
+
+    const int nbins = std::min(L, N / 2 + 1);   // bins a CCS row can hold
+    const bool zeroPad = nbins < N / 2 + 1;
+
+    // One DFT_ROWS call per stripe: cv::dft() rebuilds its tables on every call.
+    const double nstripes = std::min<double>((double)totalOuter, std::max(getNumThreads(), 1));
+    parallel_for_(Range(0, (int)totalOuter), [&](const Range& r)
+    {
+        for (int pos = r.start; pos < r.end; ++pos)
+        {
+            const T* in = sp + dftSignalOffset(pos, iterDims, outerSizes, outerStep, stridesSrc);
+            T* ccs = rows.ptr<T>(pos);
+            if (zeroPad)
+                std::fill(ccs, ccs + N, T(0));
+            // CCS: [Re0, Re1, Im1, ...] plus a trailing Re(N/2) for even N.
+            ccs[0] = in[0];
+            for (int k = 1; k < nbins; ++k)
+            {
+                const size_t o = (size_t)k * strideAxisSrc;
+                ccs[2 * k - 1] = in[o];
+                if (2 * k < N)
+                    ccs[2 * k] = in[o + 1];
+            }
+        }
+
+        Mat stripe = rows.rowRange(r.start, r.end);
+        cv::dft(stripe, stripe, DFT_INVERSE | DFT_SCALE | DFT_ROWS);
+
+        if (inPlaceOnDst)
+            return;   // dst already holds the result
+        for (int pos = r.start; pos < r.end; ++pos)
+        {
+            const T* res = rows.ptr<T>(pos);
+            T* out = dp + dftSignalOffset(pos, iterDims, outerSizes, outerStep, stridesDst);
+            for (int n = 0; n < N; ++n)
+                out[(size_t)n * strideAxisDst] = res[n];
+        }
+    }, nstripes);
+}
+
 class DFTLayerImpl CV_FINAL : public DFTLayer {
 public:
     DFTLayerImpl(const LayerParams &params)
@@ -143,13 +219,14 @@ public:
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
-        if (this->inputs.size() >= 2)
+        // Non-const dft_length/axis inputs make the output shape known only at forward time.
+        Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
+        for (size_t i = 1; i < this->inputs.size(); ++i)
         {
-            Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
-            if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
-            {
+            if (this->inputs[i].idx <= 0)
+                continue;   // empty optional input
+            if (!netimpl_ || !netimpl_->isConstArg(this->inputs[i]))
                 return true;
-            }
         }
         return false;
     }
@@ -183,6 +260,31 @@ private:
         return -1;
     }
 
+    // Read the opset-20 axis input when it is a constant.
+    int getAxisFromConstant() const
+    {
+        if (this->inputs.size() < 3 || this->inputs[2].idx <= 0)
+        {
+            return INT_MIN;   // no axis input, or empty optional input
+        }
+
+        Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
+        if (!netimpl_ || !netimpl_->isConstArg(this->inputs[2]))
+        {
+            return INT_MIN;
+        }
+
+        Mat axis_tensor = netimpl_->argTensor(this->inputs[2]);
+        if (axis_tensor.empty() || axis_tensor.total() != 1)
+        {
+            return INT_MIN;
+        }
+
+        int64_t axis64 = 0;
+        tensorToScalar(axis_tensor, CV_64S, &axis64);
+        return static_cast<int>(axis64);
+    }
+
 public:
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int /*requiredOutputs*/,
@@ -194,12 +296,6 @@ public:
         CV_Assert(!inshape.empty());
         MatShape out = inshape;
 
-        int last = out.back();
-        if (last == 1)
-            out.back() = 2;
-        else if (last != 2)
-            out.push_back(2);
-
         int ndims_in = (int)inshape.size();
         int ax = axis_attr;
         if (ax == INT_MIN)
@@ -207,6 +303,33 @@ public:
             ax = (inshape.back() == 2 || inshape.back() == 1) ? ndims_in - 2 : ndims_in - 1;
         }
         if (ax < 0) ax += ndims_in;
+
+        // A constant opset-20 axis input overrides the attribute (matches forward()).
+        int ax_const = getAxisFromConstant();
+        if (ax_const != INT_MIN)
+        {
+            ax = ax_const < 0 ? ax_const + ndims_in : ax_const;
+        }
+
+        // Inverse real DFT (irfft): real output, axis restored to full length N.
+        if (inverse && onesided)
+        {
+            out.back() = 1;
+            if (ax >= 0 && ax < (int)out.size() - 1)
+            {
+                int dft_length = getDftLengthFromConstant();
+                out[ax] = dft_length > 0 ? dft_length : 2 * (inshape[ax] - 1);
+            }
+            outputs.assign(1, out);
+            return false;
+        }
+
+        int last = out.back();
+        if (last == 1)
+            out.back() = 2;
+        else if (last != 2)
+            out.push_back(2);
+
         if (ax >= 0 && ax < (int)out.size() - 1)
         {
             int dft_length = getDftLengthFromConstant();
@@ -243,12 +366,25 @@ public:
             axis = axes[0];
             if (axis < 0) axis += ndims;
         }
+        // opset-20 provides the axis as the 3rd input tensor.
+        if (inputs.size() >= 3 && !inputs[2].empty())
+        {
+            CV_Assert(inputs[2].total() == 1);
+            int64_t ax64 = 0;
+            tensorToScalar(inputs[2], CV_64S, &ax64);
+            axis = static_cast<int>(ax64);
+            if (axis < 0) axis += ndims;
+        }
         CV_Assert(axis >= 0 && axis < (srcHasComplex ? ndims - 1 : ndims));
-        if (onesided)
+
+        const bool irfft = inverse && onesided;
+        if (onesided && !irfft)
         {
             CV_Assert(!srcHasComplex);
             CV_Assert(!inverse);
         }
+        if (irfft)
+            CV_Assert(srcHasComplex);
 
         int dft_length = -1;
         if (inputs.size() >= 2 && !inputs[1].empty())
@@ -257,6 +393,48 @@ public:
             int64_t dft_length64 = -1;
             tensorToScalar(inputs[1], CV_64S, &dft_length64);
             dft_length = static_cast<int>(dft_length64);
+        }
+
+        if (irfft)
+        {
+            const int L = src.size[axis];
+            const int N = dft_length > 0 ? dft_length : 2 * (L - 1);
+
+            std::vector<int> outSizesVec(ndims);
+            for (int i = 0; i < ndims; ++i) outSizesVec[i] = src.size[i];
+            outSizesVec[ndims - 1] = 1;   // real output
+            outSizesVec[axis] = N;
+
+            MatShape outShape(outSizesVec.begin(), outSizesVec.end());
+            if (outputs_arr.kind() == _InputArray::STD_VECTOR_MAT)
+                outputs_arr.getMatVecRef()[0].fit(outShape, src.type());
+            else
+                outputs_arr.getUMatVecRef()[0].fit(outShape, src.type());
+            outputs_arr.getMatVector(outputs);
+            Mat &dst = outputs[0];
+
+            std::vector<size_t> stridesSrc(ndims, 1), stridesDst(ndims, 1);
+            for (int i = ndims - 2; i >= 0; --i) stridesSrc[i] = stridesSrc[i + 1] * (size_t)src.size[i + 1];
+            for (int i = ndims - 2; i >= 0; --i) stridesDst[i] = stridesDst[i + 1] * (size_t)outSizesVec[i + 1];
+
+            std::vector<int> iterDims;
+            for (int i = 0; i < ndims - 1; ++i) if (i != axis) iterDims.push_back(i);
+            std::vector<int> outerSizes(iterDims.size());
+            for (size_t j = 0; j < iterDims.size(); ++j) outerSizes[j] = src.size[iterDims[j]];
+            std::vector<size_t> outerStep(iterDims.size(), 1);
+            for (int j = (int)iterDims.size() - 2; j >= 0; --j) outerStep[j] = outerStep[j + 1] * (size_t)outerSizes[j + 1];
+            size_t totalOuter = 1;
+            for (int s : outerSizes) totalOuter *= (size_t)s;
+
+            const size_t strideAxisSrc = stridesSrc[axis];
+            const size_t strideAxisDst = stridesDst[axis];
+            if (src.depth() == CV_32F)
+                runIRFFT<float>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
+            else if (src.depth() == CV_64F)
+                runIRFFT<double>(src, dst, stridesSrc, stridesDst, iterDims, outerSizes, outerStep, totalOuter, N, L, strideAxisSrc, strideAxisDst);
+            else
+                CV_Error(Error::StsNotImplemented, "DFT supports float32/float64 only");
+            return;
         }
 
         std::vector<int> outSizesVec;
