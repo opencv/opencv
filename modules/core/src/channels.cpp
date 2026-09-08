@@ -418,6 +418,35 @@ static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 }
 #endif
 
+namespace cv
+{
+template<int channel> static void extractChannel8uC2_(const Mat& src, Mat& dst)
+{
+    for (int row = 0; row < src.rows; ++row)
+    {
+        const uchar* source = src.ptr<uchar>(row);
+        uchar* destination = dst.ptr<uchar>(row);
+        int column = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int lanes = VTraits<v_uint8>::vlanes();
+        for (; column <= src.cols - lanes; column += lanes)
+        {
+            v_uint8 channel0, channel1;
+            v_load_deinterleave(source + column * 2, channel0, channel1);
+            v_store(destination + column, channel == 0 ? channel0 : channel1);
+        }
+#endif
+        for (; column < src.cols; ++column)
+            destination[column] = source[column * 2 + channel];
+    }
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    vx_cleanup();
+#endif
+}
+}
+
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
     CV_INSTRUMENT_REGION();
@@ -442,6 +471,15 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
     Mat dst = _dst.getMat();
 
     CV_IPP_RUN_FAST(ipp_extractChannel(src, dst, coi))
+
+    if (src.dims <= 2 && src.type() == CV_8UC2)
+    {
+        if (coi == 0)
+            extractChannel8uC2_<0>(src, dst);
+        else
+            extractChannel8uC2_<1>(src, dst);
+        return;
+    }
 
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }

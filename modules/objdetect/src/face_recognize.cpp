@@ -61,9 +61,10 @@ public:
     }
     double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
-        Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
-        normalize(face_feature1, face_feature1);
-        normalize(face_feature2, face_feature2);
+        // match() is const and takes InputArray: never write through to the caller's buffers.
+        Mat face_feature1, face_feature2;
+        normalize(_face_feature1, face_feature1);
+        normalize(_face_feature2, face_feature2);
 
         if(dis_type == DisType::FR_COSINE){
             return sum(face_feature1.mul(face_feature2))[0];

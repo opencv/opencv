@@ -66,6 +66,16 @@ int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, s
 #define cv_hal_boxFilter ipp_hal_boxFilter
 #endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER
 
+#if defined(HAVE_IPP_IW)
+
+int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                   int width, int height, int depth, int cn,
+                                   int margin_left, int margin_top, int margin_right, int margin_bottom,
+                                   int d, double sigma_color, double sigma_space, int border_type);
+#undef  cv_hal_bilateralFilter_offset
+#define cv_hal_bilateralFilter_offset ipp_hal_bilateralFilter_offset
+#endif // HAVE_IPP_IW
+
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
@@ -158,6 +168,12 @@ int ipp_hal_calcHist(const uchar* src_data, size_t src_step, int src_type, int s
                      float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate);
 #undef cv_hal_calcHist
 #define cv_hal_calcHist ipp_hal_calcHist
+
+int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                          int patch_type, uchar* patch_data, size_t patch_step, int patch_width, int patch_height,
+                          double center_x, double center_y);
+#undef cv_hal_getRectSubPix
+#define cv_hal_getRectSubPix ipp_hal_getRectSubPix
 
 #endif // IPP_VERSION_X100 >= 700
 

@@ -682,6 +682,56 @@ TEST(Imgcodecs_APNG, animation_imread_preview)
     EXPECT_EQ(0, cv::norm(animation.still_image, imread_result, cv::NORM_INF));
 }
 
+TEST(Imgcodecs_APNG, decode_dispose_background_gray)
+{
+    Animation animation;
+    Mat frame(8, 64, CV_8UC1, Scalar(192));
+    frame(Rect(0, 0, 32, 8)).setTo(Scalar(64));
+    animation.frames.push_back(frame.clone());
+    animation.durations.push_back(100);
+    frame.setTo(Scalar(192));
+    animation.frames.push_back(frame.clone());
+    animation.durations.push_back(100);
+    frame.at<uchar>(0, 0) = 255;
+    animation.frames.push_back(frame.clone());
+    animation.durations.push_back(100);
+
+    std::vector<unsigned char> buf;
+    ASSERT_TRUE(imencodeanimation(".png", animation, buf));
+
+    // Give the second frame APNG_DISPOSE_OP_BACKGROUND, which the encoder does not
+    // pick for these frames. dispose_op is the 25th byte of the fcTL payload.
+    int fcTL_count = 0;
+    for (size_t i = 8; i + 12 <= buf.size(); )
+    {
+        const size_t len = ((size_t)buf[i] << 24) | ((size_t)buf[i + 1] << 16) |
+                           ((size_t)buf[i + 2] << 8) | (size_t)buf[i + 3];
+        if (buf[i + 4] == 'f' && buf[i + 5] == 'c' && buf[i + 6] == 'T' && buf[i + 7] == 'L')
+        {
+            if (fcTL_count == 1)
+                buf[i + 8 + 24] = 1;
+            fcTL_count++;
+        }
+        i += len + 12;
+    }
+    ASSERT_EQ(3, fcTL_count);
+
+    // The disposed region is the one named by fcTL, whatever the caller asked the
+    // decoder to convert the frames to.
+    std::vector<Mat> gray, color;
+    ASSERT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, gray));
+    ASSERT_TRUE(imdecodemulti(buf, IMREAD_COLOR, color));
+    ASSERT_EQ(animation.frames.size(), gray.size());
+    ASSERT_EQ(gray.size(), color.size());
+
+    for (size_t i = 0; i < gray.size(); i++)
+    {
+        Mat expected;
+        cvtColor(gray[i], expected, COLOR_GRAY2BGR);
+        EXPECT_EQ(0, cvtest::norm(expected, color[i], NORM_INF)) << "frame " << i;
+    }
+}
+
 #endif // HAVE_PNG
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)

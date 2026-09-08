@@ -10,7 +10,7 @@
 
 #include <riscv_vector.h>
 
-#ifdef __THEAD_VERSION__
+#if defined(__THEAD_VERSION__) && (defined(__riscv_v) && __riscv_v == 7000)
 int test()
 {
     const float src[] = { 0.0f, 0.0f, 0.0f, 0.0f };

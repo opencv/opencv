@@ -99,14 +99,17 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
+    // NEAREST column kept 0 for all types: IPP's iwiWarpAffine rounds source coords at the
+    // half-pixel boundary unlike the native kernel (warpAffineBlocklineNN), so its NN output
+    // is not bit-exact. Forces fallback to native. See https://github.com/opencv/opencv/issues/29279
                                      /* C1         C2         C3         C4 */
     char impl[CV_DEPTH_MAX][4][3]={{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8U
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //16U
-                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16U
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
-                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}}};  //64F
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
 #endif
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)

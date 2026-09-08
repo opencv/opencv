@@ -750,14 +750,14 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         Mat params(6, 1, CV_64FC1);
         for (int i = 0; i < 3; i++)
         {
-            params.at<double>(i,0) = rvec.at<double>(i,0);
-            params.at<double>(i+3,0) = tvec.at<double>(i,0);
+            params.at<double>(i,0) = rvec.at<double>(i);
+            params.at<double>(i+3,0) = tvec.at<double>(i);
         }
 
         LMSolver::create(makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs), _criteria.maxCount, _criteria.epsilon)->run(params);
 
-        params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
-        params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());
+        params.rowRange(0, 3).reshape(1, rvec0.rows).convertTo(rvec0, rvec0.depth());
+        params.rowRange(3, 6).reshape(1, tvec0.rows).convertTo(tvec0, tvec0.depth());
     }
     else if (_flags == SOLVEPNP_REFINE_VVS)
     {
@@ -765,6 +765,10 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         Mat rvec, tvec;
         rvec0.convertTo(rvec, CV_64F);
         tvec0.convertTo(tvec, CV_64F);
+        // tvec is used in matrix arithmetic below (R1 * tvec) which requires
+        // a Size(3,1) column vector; rvec0/tvec0 (and hence rvec/tvec) may
+        // be Size(1,3) row vectors per this function's own precondition check.
+        tvec = tvec.reshape(1, 3);
 
         std::vector<Point2d> ipoints_normalized;
         undistortPoints(ipoints, ipoints_normalized, cameraMatrix, distCoeffs);
@@ -799,8 +803,8 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         }
 
         Rodrigues(R, rvec);
-        rvec.convertTo(rvec0, rvec0.depth());
-        tvec.convertTo(tvec0, tvec0.depth());
+        rvec.reshape(1, rvec0.rows).convertTo(rvec0, rvec0.depth());
+        tvec.reshape(1, tvec0.rows).convertTo(tvec0, tvec0.depth());
     }
 }
 

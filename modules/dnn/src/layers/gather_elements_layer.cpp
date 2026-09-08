@@ -52,7 +52,8 @@ public:
         CV_CheckLT(normalized_axis, static_cast<int>(data.size()), "GatherElements: axis out of range");
         for (size_t i = 0; i < data.size(); i++) {
             if (i != normalized_axis) {
-                CV_CheckEQ(data[i], indices[i], "GatherElements: shape mismatched");
+                CV_CheckLE(indices[i], data[i],
+                           "GatherElements: indices shape must not exceed data shape outside axis");
             }
         }
 

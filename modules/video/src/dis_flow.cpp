@@ -818,10 +818,12 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     int i, j, dir;
     int start_is, end_is, start_js, end_js;
     int start_i, start_j;
-    float i_lower_limit = bsz - psz + 1.0f;
-    float i_upper_limit = bsz + dis->h - 1.0f;
-    float j_lower_limit = bsz - psz + 1.0f;
-    float j_upper_limit = bsz + dis->w - 1.0f;
+    // Clamp so the psz+1 (bilinear) read stays inside the padded I1_ext buffer even when
+    // psz > bsz; unchanged for psz <= bsz (the common case). See #20185.
+    float i_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float i_upper_limit = std::min(bsz + dis->h - 1.0f, dis->h + 2.0f * bsz - 1.0f - psz);
+    float j_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float j_upper_limit = std::min(bsz + dis->w - 1.0f, dis->w + 2.0f * bsz - 1.0f - psz);
     float dUx, dUy, i_I1, j_I1, w00, w01, w10, w11, dx, dy;
 
 #define INIT_BILINEAR_WEIGHTS(Ux, Uy) \

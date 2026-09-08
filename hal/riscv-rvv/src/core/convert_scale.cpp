@@ -221,6 +221,53 @@ inline int convertScale_16U32F(const uchar* src, size_t src_step, uchar* dst, si
     return CV_HAL_ERROR_OK;
 }
 
+inline int convertScale_16S8U(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
+{
+    if (alpha == 1.0 && beta == 0.0)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            const short* src_row = reinterpret_cast<const short*>(src + i * src_step);
+            uchar* dst_row = dst + i * dst_step;
+            int vl;
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e16m4(width - j);
+                auto vec_src = __riscv_vle16_v_i16m4(src_row + j, vl);
+                // clamp the negative half to zero first: vnclipu would wrap it to 255
+                auto vec_src_u16 = __riscv_vreinterpret_v_i16m4_u16m4(__riscv_vmax(vec_src, 0, vl));
+                auto vec_dst = __riscv_vnclipu(vec_src_u16, 0, __RISCV_VXRM_RNU, vl);
+                __riscv_vse8_v_u8m2(dst_row + j, vec_dst, vl);
+            }
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    int vlmax = __riscv_vsetvlmax_e32m8();
+    auto vec_b = __riscv_vfmv_v_f_f32m8(beta, vlmax);
+    float a = alpha;
+
+    for (int i = 0; i < height; i++)
+    {
+        const short* src_row = reinterpret_cast<const short*>(src + i * src_step);
+        uchar* dst_row = dst + i * dst_step;
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e16m4(width - j);
+            auto vec_src = __riscv_vle16_v_i16m4(src_row + j, vl);
+            auto vec_src_f32 = __riscv_vfwcvt_f(vec_src, vl);
+            auto vec_fma = __riscv_vfmadd(vec_src_f32, a, vec_b, vl);
+            auto vec_dst_u16 = __riscv_vfncvt_xu(vec_fma, vl);
+            auto vec_dst = __riscv_vnclipu(vec_dst_u16, 0, __RISCV_VXRM_RNU, vl);
+            __riscv_vse8_v_u8m2(dst_row + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 inline int convertScale_16S32F(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
 {
     int vlmax = __riscv_vsetvlmax_e32m8();
@@ -333,6 +380,8 @@ int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
     case CV_16S:
         switch (ddepth)
         {
+        case CV_8U:
+            return convertScale_16S8U(src, src_step, dst, dst_step, width, height, alpha, beta);
         case CV_32F:
             return convertScale_16S32F(src, src_step, dst, dst_step, width, height, alpha, beta);
         }

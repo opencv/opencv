@@ -36,7 +36,7 @@ GStreamerEnv::GStreamerEnv()
         if (err)
         {
             cv::util::throw_error(
-                std::runtime_error(std::string("GStreamer initializaton error! Details: ") +
+                std::runtime_error(std::string("GStreamer initialization error! Details: ") +
                                    err->message));
         }
     }

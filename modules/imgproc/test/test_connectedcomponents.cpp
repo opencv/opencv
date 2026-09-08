@@ -795,5 +795,25 @@ TEST(Imgproc_ConnectedComponents, regression_27568)
     }
 }
 
+TEST(Imgproc_ConnectedComponents, regression_29854)
+{
+    for (const Size& size : {Size(400, 0), Size(0, 400), Size(0, 0)})
+    {
+        Mat image = Mat::zeros(size, CV_8UC1);
+
+        for (const int connectivity : {4, 8})
+        {
+            for (const int ccltype : {CCL_DEFAULT, CCL_WU, CCL_GRANA, CCL_BOLELLI, CCL_SAUF, CCL_BBDT, CCL_SPAGHETTI})
+            {
+                Mat labels, stats, centroids;
+                EXPECT_THROW(connectedComponents(
+                    image, labels, connectivity, CV_32S, ccltype), Exception);
+                EXPECT_THROW(connectedComponentsWithStats(
+                    image, labels, stats, centroids, connectivity, CV_32S, ccltype), Exception);
+            }
+        }
+    }
+}
+
 }
 } // namespace

@@ -213,4 +213,25 @@ TEST(Objdetect_face_recognition, regression)
     }
 }
 
+TEST(Objdetect_face_recognition, match_does_not_modify_input)
+{
+    std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
+    Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
+
+    // match() is declared const and takes both features as InputArray, so it must leave
+    // the caller's data untouched.
+    Mat feature1(1, 128, CV_32F), feature2(1, 128, CV_32F);
+    randu(feature1, Scalar::all(-10), Scalar::all(10));
+    randu(feature2, Scalar::all(-10), Scalar::all(10));
+    Mat expected1 = feature1.clone(), expected2 = feature2.clone();
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_COSINE);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_COSINE changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_COSINE changed input 2";
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_NORM_L2);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_NORM_L2 changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_NORM_L2 changed input 2";
+}
+
 }} // namespace

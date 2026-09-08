@@ -490,8 +490,11 @@ bool  PngDecoder::readData( Mat& img )
                             {
                                 memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
                                 if (dop == 1)
+                                {
+                                    const size_t elem_size = mat_cur.elemSize();
                                     for (j = 0; j < h0; j++)
-                                        memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
+                                        memset(frameNext.getRows()[y0 + j] + x0 * elem_size, 0, w0 * elem_size);
+                                }
                             }
                         }
                         else

@@ -384,6 +384,7 @@ Ptr<IVideoCapture> create_XIMEA_capture_file( const std::string &serialNumber );
 Ptr<IVideoCapture> create_ueye_camera(int camera);
 
 Ptr<IVideoCapture> create_Aravis_capture( int index );
+Ptr<IVideoCapture> create_Aravis_capture_by_name( const std::string &deviceName );
 
 Ptr<IVideoCapture> createMotionJpegCapture(const std::string& filename);
 Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc,

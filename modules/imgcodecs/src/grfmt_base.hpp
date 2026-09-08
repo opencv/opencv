@@ -119,7 +119,7 @@ public:
      * during image decoding. The flags can be combined using bitwise OR to enable
      * multiple options simultaneously.
      *
-     * @param options Bitwise OR of read option flags to enable.
+     * @param read_options Bitwise OR of read option flags to enable.
      *
      * @return The previous value of the read options flags.
      *

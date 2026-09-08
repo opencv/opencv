@@ -71,8 +71,7 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
                         (size_t)imgSize.width >= localsize[0] * 8  &&
                         (size_t)imgSize.height >= localsize[1] * 8 &&
                         imgSize.width % 4 == 0 &&
-                        imgSize.height % 4 == 0 &&
-                        (ocl::Device::getDefault().isIntel());
+                        imgSize.height % 4 == 0;
 
     cv::String kname = format( useOptimized ? "medianFilter%d_u" : "medianFilter%d", m) ;
     cv::String kdefs = useOptimized ?
@@ -194,6 +193,30 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     if( ksize <= 1 || _src0.empty() )
     {
         _src0.copyTo(_dst);
+        return;
+    }
+
+    int cn = _src0.channels();
+    if( ksize > 5 && cn != 1 && cn != 3 && cn != 4 )
+    {
+        // ksize == 3 and ksize == 5 go through the generic "sort net" path,
+        // which already supports any channel count. Only the large-kernel
+        // path (ksize > 5) hard-codes support for 1, 3 or 4 channels. Median
+        // filtering is channel-independent, so any other channel count
+        // (2, 5, 6,...) is handled by filtering each channel on its own --
+        // always supported, since cn == 1 -- and merging the results back
+        // together.
+        std::vector<Mat> srcChannels;
+        cv::split(_src0, srcChannels);
+
+        std::vector<Mat> dstChannels(srcChannels.size());
+        parallel_for_(Range(0, (int)srcChannels.size()), [&](const Range& range)
+        {
+            for( int i = range.start; i < range.end; i++ )
+                medianBlur(srcChannels[i], dstChannels[i], ksize);
+        });
+
+        cv::merge(dstChannels, _dst);
         return;
     }
 

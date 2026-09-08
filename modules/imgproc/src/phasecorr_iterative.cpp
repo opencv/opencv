@@ -1,11 +1,13 @@
 #include "precomp.hpp"
 #include <cmath>
+#include <limits>
 
 namespace {
 
 template <typename T>
 void calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2, cv::Mat& cps)
 {
+    const T eps = std::numeric_limits<T>::epsilon();  // prevent div0 problems
     for (int row = 0; row < dft1.rows; ++row)
     {
         auto* cpsp = cps.ptr<cv::Vec<T, 2>>(row);
@@ -15,7 +17,7 @@ void calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2, cv::M
         {
             const T re = dft1p[col][0] * dft2p[col][0] + dft1p[col][1] * dft2p[col][1];
             const T im = dft1p[col][0] * dft2p[col][1] - dft1p[col][1] * dft2p[col][0];
-            const T mag = std::sqrt(re * re + im * im);
+            const T mag = std::sqrt(re * re + im * im) + eps;
             cpsp[col][0] = re / mag;
             cpsp[col][1] = im / mag;
         }

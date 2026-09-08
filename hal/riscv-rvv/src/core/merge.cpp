@@ -28,6 +28,12 @@
 #define __riscv_vcreate_v_u16m4x2(v0, v1) OPENCV_HAL_IMPL_RVV_VCREATE_x2(u16, 4, v0, v1)
 #define __riscv_vcreate_v_u16m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u16, 2, v0, v1, v2)
 #define __riscv_vcreate_v_u16m2x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(u16, 2, v0, v1, v2, v3)
+#define __riscv_vcreate_v_i32m4x2(v0, v1) OPENCV_HAL_IMPL_RVV_VCREATE_x2(i32, 4, v0, v1)
+#define __riscv_vcreate_v_i32m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(i32, 2, v0, v1, v2)
+#define __riscv_vcreate_v_i32m2x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(i32, 2, v0, v1, v2, v3)
+#define __riscv_vcreate_v_i64m4x2(v0, v1) OPENCV_HAL_IMPL_RVV_VCREATE_x2(i64, 4, v0, v1)
+#define __riscv_vcreate_v_i64m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(i64, 2, v0, v1, v2)
+#define __riscv_vcreate_v_i64m2x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(i64, 2, v0, v1, v2, v3)
 #endif  // clang < 18
 
 namespace cv { namespace rvv_hal { namespace core {
@@ -204,145 +210,176 @@ int merge16u(const ushort** src, ushort* dst, int len, int cn ) {
     return CV_HAL_ERROR_OK;
 }
 
-#if defined __GNUC__ && !defined(__clang__)
-__attribute__((optimize("no-tree-vectorize")))
-#endif
 int merge32s(const int** src, int* dst, int len, int cn ) {
-    int k = cn % 4 ? cn % 4 : 4;
-    int i, j;
-    if( k == 1 )
+    int vl = 0;
+    if (cn == 1)
     {
         const int* src0 = src[0];
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( i = j = 0; i < len; i++, j += cn )
-            dst[j] = src0[i];
-    }
-    else if( k == 2 )
-    {
-        const int *src0 = src[0], *src1 = src[1];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        for (int i = 0; i < len; i += vl)
         {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
+            vl = __riscv_vsetvl_e32m8(len - i);
+            __riscv_vse32_v_i32m8(dst + i, __riscv_vle32_v_i32m8(src0 + i, vl), vl);
         }
     }
-    else if( k == 3 )
+    else if (cn == 2)
+    {
+        const int *src0 = src[0], *src1 = src[1];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m4(len - i);
+            vint32m4x2_t seg = __riscv_vcreate_v_i32m4x2(
+                __riscv_vle32_v_i32m4(src0 + i, vl),
+                __riscv_vle32_v_i32m4(src1 + i, vl)
+            );
+            __riscv_vsseg2e32_v_i32m4x2(dst + i * cn, seg, vl);
+        }
+    }
+    else if (cn == 3)
     {
         const int *src0 = src[0], *src1 = src[1], *src2 = src[2];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        for (int i = 0; i < len; i += vl)
         {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
-            dst[j+2] = src2[i];
+            vl = __riscv_vsetvl_e32m2(len - i);
+            vint32m2x3_t seg = __riscv_vcreate_v_i32m2x3(
+                __riscv_vle32_v_i32m2(src0 + i, vl),
+                __riscv_vle32_v_i32m2(src1 + i, vl),
+                __riscv_vle32_v_i32m2(src2 + i, vl)
+            );
+            __riscv_vsseg3e32_v_i32m2x3(dst + i * cn, seg, vl);
+        }
+    }
+    else if (cn == 4)
+    {
+        const int *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e32m2(len - i);
+            vint32m2x4_t seg = __riscv_vcreate_v_i32m2x4(
+                __riscv_vle32_v_i32m2(src0 + i, vl),
+                __riscv_vle32_v_i32m2(src1 + i, vl),
+                __riscv_vle32_v_i32m2(src2 + i, vl),
+                __riscv_vle32_v_i32m2(src3 + i, vl)
+            );
+            __riscv_vsseg4e32_v_i32m2x4(dst + i * cn, seg, vl);
         }
     }
     else
     {
-        const int *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
         {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
+            const int *src0 = src[k], *src1 = src[k + 1], *src2 = src[k + 2], *src3 = src[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e32m2(len - i);
+                vint32m2x4_t seg = __riscv_vcreate_v_i32m2x4(
+                    __riscv_vle32_v_i32m2(src0 + i, vl),
+                    __riscv_vle32_v_i32m2(src1 + i, vl),
+                    __riscv_vle32_v_i32m2(src2 + i, vl),
+                    __riscv_vle32_v_i32m2(src3 + i, vl)
+                );
+                __riscv_vssseg4e32_v_i32m2x4(dst + k + i * cn, cn * sizeof(int), seg, vl);
+            }
         }
-    }
-    #if defined(__clang__)
-    #pragma clang loop vectorize(disable)
-    #endif
-    for( ; k < cn; k += 4 )
-    {
-        const int *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
-        for( i = 0, j = k; i < len; i++, j += cn )
+        for (; k < cn; ++k)
         {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
+            const int* srcK = src[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e32m2(len - i);
+                vint32m2_t seg = __riscv_vle32_v_i32m2(srcK + i, vl);
+                __riscv_vsse32_v_i32m2(dst + k + i * cn, cn * sizeof(int), seg, vl);
+            }
         }
     }
     return CV_HAL_ERROR_OK;
 }
 
-#if defined __GNUC__ && !defined(__clang__)
-__attribute__((optimize("no-tree-vectorize")))
-#endif
 int merge64s(const int64** src, int64* dst, int len, int cn ) {
-    int k = cn % 4 ? cn % 4 : 4;
-    int i, j;
-    if( k == 1 )
+    int vl = 0;
+    if (cn == 1)
     {
         const int64* src0 = src[0];
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( i = j = 0; i < len; i++, j += cn )
-            dst[j] = src0[i];
-    }
-    else if( k == 2 )
-    {
-        const int64 *src0 = src[0], *src1 = src[1];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        for (int i = 0; i < len; i += vl)
         {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
+            vl = __riscv_vsetvl_e64m8(len - i);
+            __riscv_vse64_v_i64m8(dst + i, __riscv_vle64_v_i64m8(src0 + i, vl), vl);
         }
     }
-    else if( k == 3 )
+    else if (cn == 2)
+    {
+        const int64 *src0 = src[0], *src1 = src[1];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m4(len - i);
+            vint64m4x2_t seg = __riscv_vcreate_v_i64m4x2(
+                __riscv_vle64_v_i64m4(src0 + i, vl),
+                __riscv_vle64_v_i64m4(src1 + i, vl)
+            );
+            __riscv_vsseg2e64_v_i64m4x2(dst + i * cn, seg, vl);
+        }
+    }
+    else if (cn == 3)
     {
         const int64 *src0 = src[0], *src1 = src[1], *src2 = src[2];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        for (int i = 0; i < len; i += vl)
         {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
-            dst[j+2] = src2[i];
+            vl = __riscv_vsetvl_e64m2(len - i);
+            vint64m2x3_t seg = __riscv_vcreate_v_i64m2x3(
+                __riscv_vle64_v_i64m2(src0 + i, vl),
+                __riscv_vle64_v_i64m2(src1 + i, vl),
+                __riscv_vle64_v_i64m2(src2 + i, vl)
+            );
+            __riscv_vsseg3e64_v_i64m2x3(dst + i * cn, seg, vl);
+        }
+    }
+    else if (cn == 4)
+    {
+        const int64 *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
+        for (int i = 0; i < len; i += vl)
+        {
+            vl = __riscv_vsetvl_e64m2(len - i);
+            vint64m2x4_t seg = __riscv_vcreate_v_i64m2x4(
+                __riscv_vle64_v_i64m2(src0 + i, vl),
+                __riscv_vle64_v_i64m2(src1 + i, vl),
+                __riscv_vle64_v_i64m2(src2 + i, vl),
+                __riscv_vle64_v_i64m2(src3 + i, vl)
+            );
+            __riscv_vsseg4e64_v_i64m2x4(dst + i * cn, seg, vl);
         }
     }
     else
     {
-        const int64 *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
-        i = j = 0;
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++, j += cn )
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
         {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
+            const int64 *src0 = src[k], *src1 = src[k + 1], *src2 = src[k + 2], *src3 = src[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e64m2(len - i);
+                vint64m2x4_t seg = __riscv_vcreate_v_i64m2x4(
+                    __riscv_vle64_v_i64m2(src0 + i, vl),
+                    __riscv_vle64_v_i64m2(src1 + i, vl),
+                    __riscv_vle64_v_i64m2(src2 + i, vl),
+                    __riscv_vle64_v_i64m2(src3 + i, vl)
+                );
+                __riscv_vssseg4e64_v_i64m2x4(dst + k + i * cn, cn * sizeof(int64), seg, vl);
+            }
         }
-    }
-    #if defined(__clang__)
-    #pragma clang loop vectorize(disable)
-    #endif
-    for( ; k < cn; k += 4 )
-    {
-        const int64 *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
-        for( i = 0, j = k; i < len; i++, j += cn )
+        for (; k < cn; ++k)
         {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
+            const int64* srcK = src[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e64m2(len - i);
+                vint64m2_t seg = __riscv_vle64_v_i64m2(srcK + i, vl);
+                __riscv_vsse64_v_i64m2(dst + k + i * cn, cn * sizeof(int64), seg, vl);
+            }
         }
     }
     return CV_HAL_ERROR_OK;
 }
+
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 

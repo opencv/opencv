@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -57,6 +58,9 @@
 #  endif
 #  include "opencv2/core/eigen.hpp"
 #endif
+
+#include "lapack.simd.hpp"
+#include "lapack.simd_declarations.hpp"
 
 #if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
 #pragma float_control(precise, on)
@@ -270,274 +274,6 @@ static bool Jacobi( double* S, size_t sstep, double* e, double* E, size_t estep,
 }
 
 
-template<typename T> struct VBLAS
-{
-    int dot(const T*, const T*, int, T*) const { return 0; }
-    int givens(T*, T*, int, T, T) const { return 0; }
-};
-
-#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
-template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
-{
-    if( n < 2*VTraits<v_float32>::vlanes() )
-        return 0;
-    int k = 0;
-    v_float32 s0 = vx_setzero_f32();
-    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
-    {
-        v_float32 a0 = vx_load(a + k);
-        v_float32 b0 = vx_load(b + k);
-
-        s0 = v_add(s0, v_mul(a0, b0));
-    }
-    *result = v_reduce_sum(s0);
-    vx_cleanup();
-    return k;
-}
-
-
-template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
-{
-    if( n < VTraits<v_float32>::vlanes())
-        return 0;
-    int k = 0;
-    v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
-    v_float32 ns4 = vx_setall_f32(-s);
-    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
-    {
-        v_float32 a0 = vx_load(a + k);
-        v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = v_fma(a0, c4, v_mul(b0, s4));
-        v_float32 t1 = v_fma(a0, ns4, v_mul(b0, c4));
-        v_store(a + k, t0);
-        v_store(b + k, t1);
-    }
-    vx_cleanup();
-    return k;
-}
-
-
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n, double* result) const
-{
-    if( n < 2*VTraits<v_float64>::vlanes() )
-        return 0;
-    int k = 0;
-    v_float64 s0 = vx_setzero_f64();
-    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
-    {
-        v_float64 a0 = vx_load(a + k);
-        v_float64 b0 = vx_load(b + k);
-
-        s0 = v_add(s0, v_mul(a0, b0));
-    }
-    *result = v_reduce_sum(s0);
-    vx_cleanup();
-    return k;
-}
-
-
-template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
-{
-    int k = 0;
-    v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
-    v_float64 ns2 = vx_setall_f64(-s);
-    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
-    {
-        v_float64 a0 = vx_load(a + k);
-        v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = v_fma(a0, c2, v_mul(b0, s2));
-        v_float64 t1 = v_fma(a0, ns2, v_mul(b0, c2));
-        v_store(a + k, t0);
-        v_store(b + k, t1);
-    }
-    vx_cleanup();
-    return k;
-}
-
-
-#endif //CV_SIMD_64F
-#endif //CV_SIMD
-
-template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
-               int m, int n, int n1, double minval, _Tp eps)
-{
-    VBLAS<_Tp> vblas;
-    AutoBuffer<double> Wbuf(n);
-    double* W = Wbuf.data();
-    int i, j, k, iter, max_iter = std::max(m, 30);
-    _Tp c, s;
-    double sd;
-    astep /= sizeof(At[0]);
-    vstep /= sizeof(Vt[0]);
-
-    for( i = 0; i < n; i++ )
-    {
-        for( k = 0, sd = 0; k < m; k++ )
-        {
-            _Tp t = At[i*astep + k];
-            sd += (double)t*t;
-        }
-        W[i] = sd;
-
-        if( Vt )
-        {
-            for( k = 0; k < n; k++ )
-                Vt[i*vstep + k] = 0;
-            Vt[i*vstep + i] = 1;
-        }
-    }
-
-    for( iter = 0; iter < max_iter; iter++ )
-    {
-        bool changed = false;
-
-        for( i = 0; i < n-1; i++ )
-            for( j = i+1; j < n; j++ )
-            {
-                _Tp *Ai = At + i*astep, *Aj = At + j*astep;
-                double a = W[i], p = 0, b = W[j];
-
-                for( k = 0; k < m; k++ )
-                    p += (double)Ai[k]*Aj[k];
-
-                if( std::abs(p) <= eps*std::sqrt((double)a*b) )
-                    continue;
-
-                p *= 2;
-                double beta = a - b, gamma = hypot((double)p, beta);
-                if( beta < 0 )
-                {
-                    double delta = (gamma - beta)*0.5;
-                    s = (_Tp)std::sqrt(delta/gamma);
-                    c = (_Tp)(p/(gamma*s*2));
-                }
-                else
-                {
-                    c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
-                    s = (_Tp)(p/(gamma*c*2));
-                }
-
-                a = b = 0;
-                for( k = 0; k < m; k++ )
-                {
-                    _Tp t0 = c*Ai[k] + s*Aj[k];
-                    _Tp t1 = -s*Ai[k] + c*Aj[k];
-                    Ai[k] = t0; Aj[k] = t1;
-
-                    a += (double)t0*t0; b += (double)t1*t1;
-                }
-                W[i] = a; W[j] = b;
-
-                changed = true;
-
-                if( Vt )
-                {
-                    _Tp *Vi = Vt + i*vstep, *Vj = Vt + j*vstep;
-                    k = vblas.givens(Vi, Vj, n, c, s);
-
-                    for( ; k < n; k++ )
-                    {
-                        _Tp t0 = c*Vi[k] + s*Vj[k];
-                        _Tp t1 = -s*Vi[k] + c*Vj[k];
-                        Vi[k] = t0; Vj[k] = t1;
-                    }
-                }
-            }
-        if( !changed )
-            break;
-    }
-
-    for( i = 0; i < n; i++ )
-    {
-        for( k = 0, sd = 0; k < m; k++ )
-        {
-            _Tp t = At[i*astep + k];
-            sd += (double)t*t;
-        }
-        W[i] = std::sqrt(sd);
-    }
-
-    for( i = 0; i < n-1; i++ )
-    {
-        j = i;
-        for( k = i+1; k < n; k++ )
-        {
-            if( W[j] < W[k] )
-                j = k;
-        }
-        if( i != j )
-        {
-            std::swap(W[i], W[j]);
-            if( Vt )
-            {
-                for( k = 0; k < m; k++ )
-                    std::swap(At[i*astep + k], At[j*astep + k]);
-
-                for( k = 0; k < n; k++ )
-                    std::swap(Vt[i*vstep + k], Vt[j*vstep + k]);
-            }
-        }
-    }
-
-    for( i = 0; i < n; i++ )
-        _W[i] = (_Tp)W[i];
-
-    if( !Vt )
-        return;
-
-    RNG rng(0x12345678);
-    for( i = 0; i < n1; i++ )
-    {
-        sd = i < n ? W[i] : 0;
-
-        for( int ii = 0; ii < 100 && sd <= minval; ii++ )
-        {
-            // if we got a zero singular value, then in order to get the corresponding left singular vector
-            // we generate a random vector, project it to the previously computed left singular vectors,
-            // subtract the projection and normalize the difference.
-            const _Tp val0 = (_Tp)(1./m);
-            for( k = 0; k < m; k++ )
-            {
-                _Tp val = (rng.next() & 256) != 0 ? val0 : -val0;
-                At[i*astep + k] = val;
-            }
-            for( iter = 0; iter < 2; iter++ )
-            {
-                for( j = 0; j < i; j++ )
-                {
-                    sd = 0;
-                    for( k = 0; k < m; k++ )
-                        sd += At[i*astep + k]*At[j*astep + k];
-                    _Tp asum = 0;
-                    for( k = 0; k < m; k++ )
-                    {
-                        _Tp t = (_Tp)(At[i*astep + k] - sd*At[j*astep + k]);
-                        At[i*astep + k] = t;
-                        asum += std::abs(t);
-                    }
-                    asum = asum > eps*100 ? 1/asum : 0;
-                    for( k = 0; k < m; k++ )
-                        At[i*astep + k] *= asum;
-                }
-            }
-            sd = 0;
-            for( k = 0; k < m; k++ )
-            {
-                _Tp t = At[i*astep + k];
-                sd += (double)t*t;
-            }
-            sd = std::sqrt(sd);
-        }
-
-        s = (_Tp)(sd > minval ? 1/sd : 0.);
-        for( k = 0; k < m; k++ )
-            At[i*astep + k] *= s;
-    }
-}
-
-
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
     hal::SVD32f(At, astep, W, NULL, astep, Vt, vstep, m, n, n1);
@@ -569,16 +305,29 @@ decodeSVDParameters(const fptype* U, const fptype* Vt, int m, int n, int n1)
     return halSVDFlag;
 }
 
+// The float kernels enter their SIMD loops only once a row holds two full
+// vectors, which is 32 elements on the 512-bit dispatch targets. Shorter rows
+// would compute their dot products scalar there, while the baseline path still
+// vectorizes them, so keep those on the baseline.
+static const int JacobiSVD32f_min_m = 32;
+
 void hal::SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int n1)
 {
     CALL_HAL(SVD32f, cv_hal_SVD32f, At, astep, W, U, ustep, Vt, vstep, m, n, decodeSVDParameters(U, Vt, m, n, n1))
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
+    n1 = !Vt ? 0 : n1 < 0 ? n : n1;
+    if( m < JacobiSVD32f_min_m )
+        CV_CPU_CALL_BASELINE(JacobiSVD32f, (At, astep, W, Vt, vstep, m, n, n1));
+    CV_CPU_DISPATCH(JacobiSVD32f, (At, astep, W, Vt, vstep, m, n, n1),
+        CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void hal::SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int n1)
 {
     CALL_HAL(SVD64f, cv_hal_SVD64f, At, astep, W, U, ustep, Vt, vstep, m, n, decodeSVDParameters(U, Vt, m, n, n1))
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
+    // No size gate here: the double kernels are faster at every m, since their
+    // Givens rotations already vectorize from one full vector upwards.
+    CV_CPU_DISPATCH(JacobiSVD64f, (At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1),
+        CV_CPU_DISPATCH_MODES_ALL);
 }
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */

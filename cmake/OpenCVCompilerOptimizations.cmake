@@ -872,20 +872,24 @@ macro(ocv_compiler_optimization_fill_cpu_config)
 #  define CV_CPU_HAS_SUPPORT_${OPT} 1
 #  define CV_CPU_CALL_${OPT}(fn, args) return (cpu_baseline::fn args)
 #  define CV_CPU_CALL_${OPT}_(fn, args) return (opt_${OPT}::fn args)
+#  define CV_CPU_GET_FN_PTR_${OPT}(fn) return (cpu_baseline::fn)
 #elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_${OPT}
 #  define CV_TRY_${OPT} 1
 #  define CV_CPU_FORCE_${OPT} 0
 #  define CV_CPU_HAS_SUPPORT_${OPT} (cv::checkHardwareSupport(CV_CPU_${OPT}))
 #  define CV_CPU_CALL_${OPT}(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
 #  define CV_CPU_CALL_${OPT}_(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
+#  define CV_CPU_GET_FN_PTR_${OPT}(fn) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn)
 #else
 #  define CV_TRY_${OPT} 0
 #  define CV_CPU_FORCE_${OPT} 0
 #  define CV_CPU_HAS_SUPPORT_${OPT} 0
 #  define CV_CPU_CALL_${OPT}(fn, args)
 #  define CV_CPU_CALL_${OPT}_(fn, args)
+#  define CV_CPU_GET_FN_PTR_${OPT}(fn)
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_${OPT}(fn, args, mode, ...)  CV_CPU_CALL_${OPT}(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+#define __CV_CPU_DISPATCH_CHAIN_FN_${OPT}(fn, mode, ...)  CV_CPU_GET_FN_PTR_${OPT}(fn); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_FN_ ## mode(fn, __VA_ARGS__))
 ")
     endif()
   endforeach()
@@ -893,6 +897,8 @@ macro(ocv_compiler_optimization_fill_cpu_config)
   set(OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}
 #define CV_CPU_CALL_BASELINE(fn, args) return (cpu_baseline::fn args)
 #define __CV_CPU_DISPATCH_CHAIN_BASELINE(fn, args, mode, ...)  CV_CPU_CALL_BASELINE(fn, args) /* last in sequence */
+#define CV_CPU_GET_FN_PTR_BASELINE(fn) return (cpu_baseline::fn)
+#define __CV_CPU_DISPATCH_CHAIN_FN_BASELINE(fn, mode, ...)  CV_CPU_GET_FN_PTR_BASELINE(fn) /* last in sequence */
 ")
 
 

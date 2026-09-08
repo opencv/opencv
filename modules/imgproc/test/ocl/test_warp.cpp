@@ -52,7 +52,11 @@
 //M*/
 
 #include "../test_precomp.hpp"
+#include "opencv2/core/types.hpp"
 #include "opencv2/ts/ocl_test.hpp"
+
+#include <cmath>
+#include <limits>
 
 #ifdef HAVE_OPENCL
 
@@ -456,6 +460,279 @@ OCL_TEST_P(Remap_INTER_LINEAR, Mat)
 
         OCL_EXPECT_MAT_N_DIFF(dst, eps);
     }
+}
+
+template <typename T>
+class RemapBorderConstant : public ::testing::Test
+{
+public:
+    RemapBorderConstant()
+    {
+        constexpr float k1 = -0.08f;
+        constexpr float coordinate_offset = -0.03f;
+
+        undistortedCanvas = calculateUndistortedCanvas(source_size, k1);
+        mapx.create(undistortedCanvas.size());
+        mapy.create(undistortedCanvas.size());
+
+        for (int y = 0; y < undistortedCanvas.height; ++y)
+        {
+            for (int x = 0; x < undistortedCanvas.width; ++x)
+            {
+                const Point2f undistorted(undistortedCanvas.tl() + cv::Point2i(x, y));
+                const Point2f distorted = barrelDistort(undistorted, source_size,
+                                                        k1);
+                mapx.at<float>(y, x) = x == 0 ? coordinate_offset : distorted.x;
+                mapy.at<float>(y, x) = y == 0 ? coordinate_offset : distorted.y;
+            }
+        }
+    }
+
+protected:
+    void runTensorProductTest()
+    {
+        const Mat_<T> source = createTensorProductImage(source_size);
+        runTest(createBarrelDistortedImage(source, barrel_coefficient));
+    }
+
+    void runCheckerboardTest()
+    {
+        const Mat_<T> source = createCheckerboardImage(source_size);
+        runTest(createBarrelDistortedImage(source, barrel_coefficient));
+    }
+
+private:
+    static const Size source_size;
+    static constexpr float barrel_coefficient = -0.08f;
+
+    void runTest(const Mat_<T>& src)
+    {
+        constexpr float border_value = 2.0f;
+        constexpr float epsilon = 0.02f;
+        const Mat_<T> expected = remapReference(src, mapx, mapy,
+                                                   border_value);
+
+        Mat_<T> cpuResult;
+        OCL_OFF(cv::remap(src, cpuResult, mapx, mapy, INTER_LINEAR,
+                          BORDER_CONSTANT, Scalar::all(border_value)));
+
+        UMat usrc, umapx, umapy, uResult;
+        OCL_ON(src.copyTo(usrc));
+        OCL_ON(mapx.copyTo(umapx));
+        OCL_ON(mapy.copyTo(umapy));
+        OCL_ON(cv::remap(usrc, uResult, umapx, umapy, INTER_LINEAR,
+                         BORDER_CONSTANT, Scalar::all(border_value)));
+        Mat_<T> oclResult;
+        uResult.copyTo(oclResult);
+
+        EXPECT_MAT_NEAR(expected, cpuResult, epsilon);
+        EXPECT_MAT_NEAR(expected, oclResult, epsilon);
+        EXPECT_MAT_NEAR(cpuResult, oclResult, epsilon);
+    }
+
+    static Mat_<T> createTensorProductImage(const Size& image_size)
+    {
+        constexpr float first_coordinate = 0.0f;
+        constexpr float last_coordinate = 1.0f;
+        Mat_<T> image(image_size);
+
+        for (int y = 0; y < image.rows; ++y)
+        {
+            const T yValue = first_coordinate +
+                static_cast<T>(y) * (last_coordinate - first_coordinate) /
+                static_cast<T>(image.rows - 1);
+
+            for (int x = 0; x < image.cols; ++x)
+            {
+                const T xValue = first_coordinate +
+                    static_cast<T>(x) * (last_coordinate - first_coordinate) /
+                    static_cast<T>(image.cols - 1);
+                image.template at<T>(y, x) = xValue * yValue;
+            }
+        }
+
+        return image;
+    }
+
+    static Mat_<T> createCheckerboardImage(const Size& image_size)
+    {
+        constexpr int checkerboard_period = 2;
+        constexpr float first_coordinate = 0.0f;
+        constexpr float last_coordinate = 1.0f;
+
+        Mat_<T> image(image_size);
+
+        for (int y = 0; y < image.rows; ++y)
+        {
+            for (int x = 0; x < image.cols; ++x)
+            {
+                image.template at<T>(y, x) = (x + y) % checkerboard_period == 0 ?
+                    first_coordinate : last_coordinate;
+            }
+        }
+
+        return image;
+    }
+
+    static Mat_<T> remapReference(const Mat_<T>& src, const Mat1f& mapx,
+                           const Mat1f& mapy, T borderValue)
+    {
+        CV_Assert(src.type() == DataType<T>::type);
+        CV_Assert(mapx.size() == mapy.size());
+
+        Mat_<T> dst(mapx.size());
+
+        for (int y = 0; y < dst.rows; ++y)
+        {
+            for (int x = 0; x < dst.cols; ++x)
+            {
+                const float fx = mapx.at<float>(y, x);
+                const float fy = mapy.at<float>(y, x);
+                const int scaledX = static_cast<int>(std::floor(fx * INTER_TAB_SIZE + 0.5f));
+                const int scaledY = static_cast<int>(std::floor(fy * INTER_TAB_SIZE + 0.5f));
+                const int sx = scaledX >> INTER_BITS;
+                const int sy = scaledY >> INTER_BITS;
+                const T wx = static_cast<T>(scaledX & (INTER_TAB_SIZE - 1)) /
+                    static_cast<T>(INTER_TAB_SIZE);
+                const T wy = static_cast<T>(scaledY & (INTER_TAB_SIZE - 1)) /
+                    static_cast<T>(INTER_TAB_SIZE);
+
+                T value = 0;
+
+                for (int yp = 0; yp < 2; ++yp)
+                {
+                    for (int xp = 0; xp < 2; ++xp)
+                    {
+                        const int sourceX = sx + xp;
+                        const int sourceY = sy + yp;
+                        const bool inBounds = sourceX >= 0 && sourceX < src.cols &&
+                                              sourceY >= 0 && sourceY < src.rows;
+                        const T sourceValue = inBounds ? src.template at<T>(sourceY, sourceX) : borderValue;
+                        const T xWeight = xp == 0 ? 1 - wx : wx;
+                        const T yWeight = yp == 0 ? 1 - wy : wy;
+                        value += sourceValue * xWeight * yWeight;
+                    }
+                }
+
+                dst.template at<T>(y, x) = value;
+            }
+        }
+
+        return dst;
+    }
+
+    static Point2f barrelDistort(const Point2f& point, const Size& imageSize, float k1)
+    {
+        const Point2f center = cv::Point2i(imageSize - cv::Size(1, 1)) / 2.0f;
+        const float scale = std::max(center.x, center.y);
+        const Point2f normalized = (point - center) / scale;
+        const float radiusSquared = normalized.dot(normalized);
+        const float factor = 1.0f + k1 * radiusSquared;
+
+        return center + normalized * scale * factor;
+    }
+
+    static Point2f barrelUndistort(const Point2f& point, const Size& imageSize, float k1)
+    {
+        const Point2f center = cv::Point2i(imageSize - cv::Size(1, 1)) / 2.0f;
+        const float scale = std::max(center.x, center.y);
+        const Point2f normalized = (point - center) / scale;
+        const float distortedRadius = std::hypot(normalized.x, normalized.y);
+
+        if (std::fpclassify(distortedRadius) == FP_ZERO)
+            return point;
+
+        float undistortedRadius = distortedRadius;
+        constexpr int inverse_iterations = 8;
+
+        for (int i = 0; i < inverse_iterations; ++i)
+        {
+            const float radiusSquared = undistortedRadius * undistortedRadius;
+            const float function = undistortedRadius * (1.0f + k1 * radiusSquared) -
+                                   distortedRadius;
+            const float derivative = 1.0f + 3.0f * k1 * radiusSquared;
+            undistortedRadius -= function / derivative;
+        }
+
+        const float radialScale = undistortedRadius / distortedRadius;
+        return center + normalized * radialScale * scale;
+    }
+
+    static Rect calculateUndistortedCanvas(const Size& sourceSize, float k1)
+    {
+        const Point2f corners[] = {
+            Point2f(0.0f, 0.0f),
+            Point2f(static_cast<float>(sourceSize.width - 1), 0.0f),
+            Point2f(0.0f, static_cast<float>(sourceSize.height - 1)),
+            Point2f(static_cast<float>(sourceSize.width - 1),
+                    static_cast<float>(sourceSize.height - 1))
+        };
+
+        float minX = std::numeric_limits<float>::max();
+        float minY = std::numeric_limits<float>::max();
+        float maxX = std::numeric_limits<float>::lowest();
+        float maxY = std::numeric_limits<float>::lowest();
+
+        for (const Point2f& corner : corners)
+        {
+            const Point2f undistortedCorner = barrelUndistort(corner, sourceSize, k1);
+            minX = std::min(minX, undistortedCorner.x);
+            minY = std::min(minY, undistortedCorner.y);
+            maxX = std::max(maxX, undistortedCorner.x);
+            maxY = std::max(maxY, undistortedCorner.y);
+        }
+
+        const int left = static_cast<int>(std::floor(minX));
+        const int top = static_cast<int>(std::floor(minY));
+        const int right = static_cast<int>(std::ceil(maxX));
+        const int bottom = static_cast<int>(std::ceil(maxY));
+
+        return Rect(left, top, right - left + 1, bottom - top + 1);
+    }
+
+    static Mat_<T> createBarrelDistortedImage(const Mat_<T>& image, float k1)
+    {
+        Mat1f mapx(image.size());
+        Mat1f mapy(image.size());
+
+        for (int y = 0; y < image.rows; ++y)
+        {
+            for (int x = 0; x < image.cols; ++x)
+            {
+                const Point2f undistorted = barrelUndistort(Point2i(x, y),
+                                                            image.size(), k1);
+                mapx.at<float>(y, x) = undistorted.x;
+                mapy.at<float>(y, x) = undistorted.y;
+            }
+        }
+
+        constexpr float first_coordinate = 0.0f;
+        return remapReference(image, mapx, mapy, first_coordinate);
+    }
+
+    Mat1f mapx;
+    Mat1f mapy;
+    Rect undistortedCanvas;
+};
+
+template<class T>
+const Size RemapBorderConstant<T>::source_size{30, 20};
+template<class T>
+constexpr float RemapBorderConstant<T>::barrel_coefficient;
+
+using RemapBorderConstantTypes = ::testing::Types<float, double>;
+TYPED_TEST_CASE(RemapBorderConstant, RemapBorderConstantTypes);
+
+// The smooth tensor-product image exposes artifacts at the image edges.
+TYPED_TEST(RemapBorderConstant, tensor_product)
+{
+    this->runTensorProductTest();
+}
+
+// The checkerboard image exposes interpolation artifacts within the image.
+TYPED_TEST(RemapBorderConstant, checkerboard)
+{
+    this->runCheckerboardTest();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

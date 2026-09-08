@@ -1364,4 +1364,22 @@ TEST(Objdetect_CascadeDetector, small_img)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/23580
+// HOGDescriptor::compute() overflowed the gaussian weights buffer when the block
+// was taller than it was wide: the SIMD store loop for the width buffer (_dj) was
+// bounded by blockSize.height instead of blockSize.width. The block is chosen wide
+// enough that the buffer is heap allocated, so the overflow is a real out-of-bounds
+// write. "Done" is simply that compute() runs without crashing.
+TEST(Objdetect_HOGDescriptor, issue_23580_tall_block_no_overflow)
+{
+    Size winSize(272, 2048); // height > width, width > AutoBuffer stack size
+    HOGDescriptor hog(winSize, /*blockSize*/ winSize, /*blockStride*/ Size(8, 8),
+                      /*cellSize*/ Size(8, 8), /*nbins*/ 9);
+
+    Mat src(winSize, CV_8UC1, Scalar::all(0));
+    std::vector<float> descriptors;
+    ASSERT_NO_THROW(hog.compute(src, descriptors));
+    EXPECT_FALSE(descriptors.empty());
+}
+
 }} // namespace

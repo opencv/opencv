@@ -461,6 +461,28 @@ inline int hal_ni_warpPerspectiveBlockline(const double *M, short* xy, short* al
 //! @endcond
 
 /**
+   @brief hal_getRectSubPix extract a rectangle from an image with sub-pixel accuracy
+   @param src_type source image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   @param src_height source image height
+   @param patch_type extracted patch type
+   @param patch_data extracted patch data
+   @param patch_step extracted patch step
+   @param patch_width extracted patch width
+   @param patch_height extracted patch height
+   @param center_x x-coordinate of the rectangle center (sub-pixel)
+   @param center_y y-coordinate of the rectangle center (sub-pixel)
+   @sa cv::getRectSubPix
+ */
+inline int hal_ni_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height, int patch_type, uchar* patch_data, size_t patch_step, int patch_width, int patch_height, double center_x, double center_y) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_getRectSubPix hal_ni_getRectSubPix
+//! @endcond
+
+/**
    @brief hal_remap with floating point maps
    @param src_type source and destination image type
    @param src_data source image data
@@ -1180,6 +1202,35 @@ inline int hal_ni_bilateralFilter(const uchar* src_data, size_t src_step, uchar*
 
 //! @cond IGNORED
 #define cv_hal_bilateralFilter hal_ni_bilateralFilter
+//! @endcond
+
+/**
+   @brief Calculate bilateral filter for input tile with optional margins for submatrix. See https://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depths of source and destination image. Should support CV_8U and CV_32F
+   @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
+   @param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace
+   @param sigma_color Filter sigma in the color space
+   @param sigma_space Filter sigma in the coordinate space. When d>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace
+   @param border_type border mode used to extrapolate pixels outside of the image
+*/
+inline int hal_ni_bilateralFilter_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                         int width, int height, int depth, int cn,
+                                         int margin_left, int margin_top, int margin_right, int margin_bottom,
+                                         int d, double sigma_color, double sigma_space, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_bilateralFilter_offset hal_ni_bilateralFilter_offset
 //! @endcond
 
 /**

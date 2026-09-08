@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1809,28 +1810,40 @@ CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
 
-/** @brief Calculates the first order image derivative in both x and y using a Sobel operator
+/** @brief Calculates the first order image derivatives in both x and y using a Sobel operator,
+computing them together in a single pass.
 
-Equivalent to calling:
-
+This is a fused variant of #Sobel: instead of two separate calls
 @code
-Sobel( src, dx, CV_16SC1, 1, 0, 3 );
-Sobel( src, dy, CV_16SC1, 0, 1, 3 );
+Sobel( src, dx, ddepth, 1, 0, ksize, scale );
+Sobel( src, dy, ddepth, 0, 1, ksize, scale );
 @endcode
+it produces both first-order derivatives in one traversal of the source. The fused single-pass
+kernels apply to an 8-bit single-channel (CV_8UC1) source with @p ksize = 3 or 5 and a
+reflect/replicate border (#BORDER_DEFAULT / #BORDER_REFLECT_101, #BORDER_REFLECT, #BORDER_REPLICATE),
+for both @p ddepth = CV_16S (unit @p scale) and @p ddepth = CV_32F (any @p scale); full-width
+row-range ROIs are supported as well. In these cases each source sample is read once and shared
+between the dx and dy computations, and the result is bit-identical to the two #Sobel calls above.
+The remaining cases (scaled int16 output, floating-point source, #BORDER_CONSTANT/#BORDER_WRAP, or a
+column-offset/partial-width ROI) fall back to the two equivalent #Sobel passes.
 
-@param src input image.
-@param dx output image with first-order derivative in x.
-@param dy output image with first-order derivative in y.
-@param ksize size of Sobel kernel. It must be 3.
-@param borderType pixel extrapolation method, see #BorderTypes.
-                  Only #BORDER_DEFAULT=#BORDER_REFLECT_101 and #BORDER_REPLICATE are supported.
+@param src input image; single-channel, 8-bit (CV_8UC1) for the fused fast paths (CV_32FC1 is
+            accepted via the fallback).
+@param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
+@param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
+@param ksize size of the Sobel kernel; fused fast paths require 3 or 5 (other sizes use the Sobel
+            fallback). Also accepts 1, -1 (Scharr), and 7 for Sobel-compatible callers such as
+            #HoughCircles and #cv::segmentation::IntelligentScissorsMB.
+@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param ddepth output image depth; CV_16S or CV_32F.
+@param scale optional scale factor applied to the computed derivatives.
 
 @sa Sobel
  */
-
 CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
                                    OutputArray dy, int ksize = 3,
-                                   int borderType = BORDER_DEFAULT );
+                                   int borderType = BORDER_DEFAULT,
+                                   int ddepth = CV_16S, double scale = 1 );
 
 /** @brief Calculates the first x- or y- image derivative using Scharr operator.
 
@@ -3793,14 +3806,15 @@ If conversion adds the alpha channel, its value will set to the maximum of corre
 range: 255 for CV_8U, 65535 for CV_16U, 1 for CV_32F.
 
 @param src input image: 8-bit unsigned, 16-bit unsigned ( CV_16UC... ), or single-precision
-floating-point.
+floating-point. The accepted depths differ between conversions and are listed with each code in
+#ColorConversionCodes: for example #COLOR_BGR2GRAY is marked `[8U/16U/32F]`, while
+#COLOR_BGR2HSV is marked `[8U/32F]` and rejects `CV_16U`.
 @param dst output image of the same size and depth as src.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
 @param hint Implementation modfication flags. See #AlgorithmHint
 
-@note The source image (src) must be of an appropriate type for the desired color conversion. see ColorConversionCodes
 @see @ref imgproc_color_conversions
  */
 CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
@@ -3828,7 +3842,10 @@ CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArra
 
 /** @brief main function for all demosaicing processes
 
-@param src input image: 8-bit unsigned or 16-bit unsigned.
+@param src input image: 8-bit unsigned or 16-bit unsigned. The accepted depths differ between
+codes and are listed with each code in #ColorConversionCodes: the Variable Number of Gradients
+codes such as #COLOR_BayerBG2BGR_VNG are marked `[8U]` and reject `CV_16U`, while for example
+#COLOR_BayerBG2BGR is marked `[8U/16U]`.
 @param dst output image of the same size and depth as src.
 @param code Color space conversion code (see the description below).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
@@ -3854,7 +3871,6 @@ The function can do the following transformations:
 
     #COLOR_BayerBG2BGRA , #COLOR_BayerGB2BGRA , #COLOR_BayerRG2BGRA , #COLOR_BayerGR2BGRA
 
-@note The source image (src) must be of an appropriate type for the desired color conversion. see ColorConversionCodes
 @sa cvtColor
 */
 CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dstCn = 0);

@@ -566,6 +566,8 @@ private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
     {
+        if (m_hEvent)
+            CloseHandle(m_hEvent);
         CV_LOG_INFO(NULL, "terminating async callback");
     }
 

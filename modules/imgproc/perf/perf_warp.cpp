@@ -16,6 +16,8 @@ typedef TestBaseWithParam< tuple<MatType, Size, InterType, BorderMode> > TestWar
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, int> > TestWarpPerspective;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
 typedef TestBaseWithParam< tuple<MatType, Size, InterTypeExtended, BorderMode, RemapMode> > TestRemap;
+typedef TestBaseWithParam< tuple<MatType, Size, InterType> > TestWarpAffineSmallSrc;
+typedef TestBaseWithParam< tuple<MatType, Size, InterType> > TestWarpPerspectiveSmallSrc;
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode, bool relative = false );
 
@@ -303,6 +305,63 @@ PERF_TEST(Transform, getPerspectiveTransform_QR_1000)
         transformCoefficient = getPerspectiveTransform(source, destination, DECOMP_QR);
     }
     PERF_SAMPLE_END()
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P( TestWarpAffineSmallSrc, WarpAffine_SmallSrc,
+             Combine(
+                Values(CV_8UC1, CV_8UC4),
+                Values( Size(512, 512) ),
+                InterType::all()
+             )
+)
+{
+    const Size   szSrc(64, 64);
+    const int    dataType   = get<0>(GetParam());
+    const Size   sz         = get<1>(GetParam());
+    const int    interType  = get<2>(GetParam());
+    const int    borderMode = BORDER_TRANSPARENT;
+
+    Mat src(szSrc, dataType), dst(sz, dataType, Scalar::all(0));
+    cvtest::fillGradient(src);
+
+    const double offset = (sz.width - szSrc.width) / 2.0;
+    const Mat warpMat = (Mat_<double>(2, 3) << 1, 0, offset,
+                                               0, 1, offset);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode );
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P( TestWarpPerspectiveSmallSrc, WarpPerspective_SmallSrc,
+             Combine(
+                Values(CV_8UC1, CV_8UC4),
+                Values( Size(512, 512) ),
+                InterType::all()
+             )
+)
+{
+    const Size   szSrc(64, 64);
+    const int    dataType   = get<0>(GetParam());
+    const Size   sz         = get<1>(GetParam());
+    const int    interType  = get<2>(GetParam());
+    const int    borderMode = BORDER_TRANSPARENT;
+
+    Mat src(szSrc, dataType), dst(sz, dataType, Scalar::all(0));
+    cvtest::fillGradient(src);
+
+    const float w = (float)szSrc.width, h = (float)szSrc.height;
+    const float off = (sz.width - szSrc.width) / 2.0f;
+    const Point2f sp[] = { Point2f(0, 0), Point2f(w, 0), Point2f(0, h), Point2f(w, h) };
+    const Point2f dp[] = { Point2f(off,     off),     Point2f(off + w, off),
+                           Point2f(off,     off + h), Point2f(off + w, off + h) };
+    const Mat warpMat = getPerspectiveTransform(sp, dp);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode );
 
     SANITY_CHECK_NOTHING();
 }

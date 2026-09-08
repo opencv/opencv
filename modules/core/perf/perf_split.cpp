@@ -30,4 +30,28 @@ PERF_TEST_P( Size_Depth_Channels, split,
     SANITY_CHECK(mv, 2e-5);
 }
 
+typedef tuple<Size, int> Size_Channel_t;
+typedef perf::TestBaseWithParam<Size_Channel_t> Size_Channel;
+
+PERF_TEST_P( Size_Channel, extractChannel,
+             testing::Combine
+             (
+                 testing::Values(TYPICAL_MAT_SIZES),
+                 testing::Values(0, 1)
+             )
+           )
+{
+    Size sz = get<0>(GetParam());
+    int channel = get<1>(GetParam());
+
+    Mat src(sz, CV_8UC2);
+    Mat dst(sz, CV_8UC1);
+    randu(src, 0, 255);
+
+    int runs = (sz.width <= 640) ? 8 : 1;
+    TEST_CYCLE_MULTIRUN(runs) extractChannel(src, dst, channel);
+
+    SANITY_CHECK(dst);
+}
+
 } // namespace

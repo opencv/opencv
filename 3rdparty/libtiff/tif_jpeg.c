@@ -22,9 +22,6 @@
  * OF THIS SOFTWARE.
  */
 
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-
 #include "tiffiop.h"
 #include <stdlib.h>
 
@@ -146,20 +143,9 @@ int TIFFJPEGIsFullStripRequired_12(TIFF *tif);
 #define LONGJMP(jbuf, code) longjmp(jbuf, code)
 #define JMP_BUF jmp_buf
 
-#ifndef TIFF_jpeg_destination_mgr_defined
-#define TIFF_jpeg_destination_mgr_defined
-typedef struct jpeg_destination_mgr jpeg_destination_mgr;
-#endif
-
-#ifndef TIFF_jpeg_source_mgr_defined
-#define TIFF_jpeg_source_mgr_defined
-typedef struct jpeg_source_mgr jpeg_source_mgr;
-#endif
-
-#ifndef TIFF_jpeg_error_mgr_defined
-#define TIFF_jpeg_error_mgr_defined
-typedef struct jpeg_error_mgr jpeg_error_mgr;
-#endif
+typedef struct jpeg_destination_mgr tiff_jpeg_destination_mgr;
+typedef struct jpeg_source_mgr tiff_jpeg_source_mgr;
+typedef struct jpeg_error_mgr tiff_jpeg_error_mgr;
 
 /*
  * State block for each open TIFF file using
@@ -174,6 +160,10 @@ typedef struct jpeg_error_mgr jpeg_error_mgr;
  *     so we can safely cast JPEGState* -> jpeg_xxx_struct*
  *     and vice versa!
  */
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) /* structure padding due to alignment */
+#endif
 typedef struct
 {
     union
@@ -184,22 +174,24 @@ typedef struct
     } cinfo; /* NB: must be first */
     int cinfo_initialized;
 
-    jpeg_error_mgr err;  /* libjpeg error manager */
-    JMP_BUF exit_jmpbuf; /* for catching libjpeg failures */
+    tiff_jpeg_error_mgr err; /* libjpeg error manager */
+    JMP_BUF exit_jmpbuf;     /* for catching libjpeg failures */
 
     struct jpeg_progress_mgr progress;
     /*
      * The following two members could be a union, but
      * they're small enough that it's not worth the effort.
      */
-    jpeg_destination_mgr dest; /* data dest for compression */
-    jpeg_source_mgr src;       /* data source for decompression */
-                               /* private state */
-    TIFF *tif;                 /* back link needed by some code */
-    uint16_t photometric;      /* copy of PhotometricInterpretation */
-    uint16_t h_sampling;       /* luminance sampling factors */
+    tiff_jpeg_destination_mgr dest; /* data dest for compression */
+    tiff_jpeg_source_mgr src;       /* data source for decompression */
+                                    /* private state */
+    TIFF *tif;                      /* back link needed by some code */
+    uint16_t photometric;           /* copy of PhotometricInterpretation */
+    uint16_t h_sampling;            /* luminance sampling factors */
     uint16_t v_sampling;
     tmsize_t bytesperline; /* decompressed bytes per scanline */
+    uint32_t strile_width;
+    uint32_t strile_height;
     /* pointers to intermediate buffers when processing downsampled data */
     TIFF_JSAMPARRAY ds_buffer[MAX_COMPONENTS];
     int scancount; /* number of "scanlines" accumulated */
@@ -209,6 +201,9 @@ typedef struct
 
     int encode_raw_error;
 } JPEGState;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #define JState(tif) ((JPEGState *)(tif)->tif_data)
 
@@ -559,7 +554,7 @@ static boolean tables_empty_output_buffer(j_compress_ptr cinfo)
     /* the entire buffer has been filled; enlarge it by 1000 bytes */
     newbuf =
         _TIFFreallocExt(sp->tif, (void *)sp->otherSettings.jpegtables,
-                        (tmsize_t)(sp->otherSettings.jpegtables_length + 1000));
+                        (tmsize_t)sp->otherSettings.jpegtables_length + 1000);
     if (newbuf == NULL)
         ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 100);
     sp->dest.next_output_byte =
@@ -912,7 +907,7 @@ JPEGFixupTagsSubsamplingSec(struct JPEGFixupTagsSubsamplingData *data)
                         return (0);
                     if (n < 2)
                         return (0);
-                    n -= 2;
+                    n = (uint16_t)(n - 2);
                     if (n > 0)
                         JPEGFixupTagsSubsamplingSkip(data, n);
                 }
@@ -1016,7 +1011,7 @@ JPEGFixupTagsSubsamplingReadByte(struct JPEGFixupTagsSubsamplingData *data,
         assert(m < 0x80000000UL);
         if (TIFFReadFile(data->tif, data->buffer, (tmsize_t)m) != (tmsize_t)m)
             return (0);
-        data->buffercurrentbyte = data->buffer;
+        data->buffercurrentbyte = (uint8_t *)data->buffer;
         data->bufferbytesleft = m;
         data->fileoffset += m;
         data->filebytesleft -= m;
@@ -1037,7 +1032,7 @@ JPEGFixupTagsSubsamplingReadWord(struct JPEGFixupTagsSubsamplingData *data,
         return (0);
     if (!JPEGFixupTagsSubsamplingReadByte(data, &mb))
         return (0);
-    *result = (ma << 8) | mb;
+    *result = (uint16_t)((ma << 8) | mb);
     return (1);
 }
 
@@ -1159,6 +1154,47 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
     return ret;
 }
 
+static int JPEGComputeStrileWidthHeightBytesPerLine(TIFF *tif, uint16_t s)
+{
+    JPEGState *sp = JState(tif);
+    TIFFDirectory *td = &tif->tif_dir;
+
+    /*
+     * Check image parameters and set decompression parameters.
+     */
+    if (isTiled(tif))
+    {
+        sp->strile_width = td->td_tilewidth;
+        sp->strile_height = td->td_tilelength;
+        sp->bytesperline = TIFFTileRowSize(tif);
+    }
+    else
+    {
+        sp->strile_width = td->td_imagewidth;
+        sp->strile_height = td->td_imagelength - tif->tif_dir.td_row;
+        if (sp->strile_height > td->td_rowsperstrip)
+            sp->strile_height = td->td_rowsperstrip;
+        sp->bytesperline = TIFFScanlineSize(tif);
+    }
+    if (td->td_planarconfig == PLANARCONFIG_SEPARATE && s > 0)
+    {
+        /*
+         * For PC 2, scale down the expected strip/tile size
+         * to match a downsampled component
+         */
+        if (sp->h_sampling == 0 || sp->v_sampling == 0)
+        {
+            TIFFErrorExtR(tif, "JPEGComputeStrileWidthHeightBytesPerLine",
+                          "JPEG horizontal or vertical sampling is zero");
+            return (0);
+        }
+        sp->strile_width = TIFFhowmany_32(sp->strile_width, sp->h_sampling);
+        sp->strile_height = TIFFhowmany_32(sp->strile_height, sp->v_sampling);
+    }
+
+    return 1;
+}
+
 /*
  * Set up for decoding a strip or tile.
  */
@@ -1167,7 +1203,6 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
     JPEGState *sp = JState(tif);
     TIFFDirectory *td = &tif->tif_dir;
     static const char module[] = "JPEGPreDecode";
-    uint32_t segment_width, segment_height;
     int downsampled_output;
     int ci;
 
@@ -1193,52 +1228,24 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
         return (0);
 
     tif->tif_rawcp = (uint8_t *)sp->src.next_input_byte;
-    tif->tif_rawcc = sp->src.bytes_in_buffer;
+    tif->tif_rawcc = (tmsize_t)sp->src.bytes_in_buffer;
 
-    /*
-     * Check image parameters and set decompression parameters.
-     */
-    if (isTiled(tif))
-    {
-        segment_width = td->td_tilewidth;
-        segment_height = td->td_tilelength;
-        sp->bytesperline = TIFFTileRowSize(tif);
-    }
-    else
-    {
-        segment_width = td->td_imagewidth;
-        segment_height = td->td_imagelength - tif->tif_row;
-        if (segment_height > td->td_rowsperstrip)
-            segment_height = td->td_rowsperstrip;
-        sp->bytesperline = TIFFScanlineSize(tif);
-    }
-    if (td->td_planarconfig == PLANARCONFIG_SEPARATE && s > 0)
-    {
-        /*
-         * For PC 2, scale down the expected strip/tile size
-         * to match a downsampled component
-         */
-        if (sp->h_sampling == 0 || sp->v_sampling == 0)
-        {
-            TIFFErrorExtR(tif, module,
-                          "JPEG horizontal or vertical sampling is zero");
-            return (0);
-        }
-        segment_width = TIFFhowmany_32(segment_width, sp->h_sampling);
-        segment_height = TIFFhowmany_32(segment_height, sp->v_sampling);
-    }
-    if (sp->cinfo.d.image_width < segment_width ||
-        sp->cinfo.d.image_height < segment_height)
+    if (!JPEGComputeStrileWidthHeightBytesPerLine(tif, s))
+        return 0;
+
+    if (sp->cinfo.d.image_width < sp->strile_width ||
+        sp->cinfo.d.image_height < sp->strile_height)
     {
         TIFFWarningExtR(tif, module,
                         "Improper JPEG strip/tile size, "
                         "expected %" PRIu32 "x%" PRIu32 ", got %ux%u",
-                        segment_width, segment_height, sp->cinfo.d.image_width,
-                        sp->cinfo.d.image_height);
+                        sp->strile_width, sp->strile_height,
+                        sp->cinfo.d.image_width, sp->cinfo.d.image_height);
     }
-    if (sp->cinfo.d.image_width == segment_width &&
-        sp->cinfo.d.image_height > segment_height &&
-        tif->tif_row + segment_height == td->td_imagelength && !isTiled(tif))
+    if (sp->cinfo.d.image_width == sp->strile_width &&
+        sp->cinfo.d.image_height > sp->strile_height &&
+        tif->tif_dir.td_row + sp->strile_height == td->td_imagelength &&
+        !isTiled(tif))
     {
         /* Some files have a last strip, that should be truncated, */
         /* but their JPEG codestream has still the maximum strip */
@@ -1247,11 +1254,11 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
         TIFFWarningExtR(tif, module,
                         "JPEG strip size exceeds expected dimensions,"
                         " expected %" PRIu32 "x%" PRIu32 ", got %ux%u",
-                        segment_width, segment_height, sp->cinfo.d.image_width,
-                        sp->cinfo.d.image_height);
+                        sp->strile_width, sp->strile_height,
+                        sp->cinfo.d.image_width, sp->cinfo.d.image_height);
     }
-    else if (sp->cinfo.d.image_width > segment_width ||
-             sp->cinfo.d.image_height > segment_height)
+    else if (sp->cinfo.d.image_width > sp->strile_width ||
+             sp->cinfo.d.image_height > sp->strile_height)
     {
         /*
          * This case could be dangerous, if the strip or tile size has
@@ -1262,8 +1269,8 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
         TIFFErrorExtR(tif, module,
                       "JPEG strip/tile size exceeds expected dimensions,"
                       " expected %" PRIu32 "x%" PRIu32 ", got %ux%u",
-                      segment_width, segment_height, sp->cinfo.d.image_width,
-                      sp->cinfo.d.image_height);
+                      sp->strile_width, sp->strile_height,
+                      sp->cinfo.d.image_width, sp->cinfo.d.image_height);
         return (0);
     }
     if (sp->cinfo.d.num_components !=
@@ -1282,7 +1289,8 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
     sp->cinfo.d.data_precision = td->td_bitspersample;
     sp->cinfo.d.bits_in_jsample = td->td_bitspersample;
 #else
-    if (sp->cinfo.d.data_precision != td->td_bitspersample)
+    if (td->td_bitspersample != BITS_IN_JSAMPLE ||
+        sp->cinfo.d.data_precision != td->td_bitspersample)
     {
         TIFFErrorExtR(tif, module, "Improper JPEG data precision");
         return (0);
@@ -1319,11 +1327,12 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
             if (compptr->h_samp_factor > 0 && compptr->v_samp_factor > 0)
             {
                 nRequiredMemory +=
-                    (toff_t)(((compptr->width_in_blocks +
-                               compptr->h_samp_factor - 1) /
-                              compptr->h_samp_factor)) *
-                    ((compptr->height_in_blocks + compptr->v_samp_factor - 1) /
-                     compptr->v_samp_factor) *
+                    (toff_t)((JDIMENSION)(((int)compptr->width_in_blocks +
+                                           compptr->h_samp_factor - 1) /
+                                          compptr->h_samp_factor)) *
+                    (JDIMENSION)(((int)compptr->height_in_blocks +
+                                  compptr->v_samp_factor - 1) /
+                                 compptr->v_samp_factor) *
                     sizeof(JBLOCK);
             }
         }
@@ -1439,7 +1448,7 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
  * Decode a chunk of pixels.
  * "Standard" case: returned data is not downsampled.
  */
-#if !JPEG_LIB_MK1_OR_12BIT
+#if !defined(JPEG_LIB_MK1_OR_12BIT)
 static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 {
     JPEGState *sp = JState(tif);
@@ -1464,7 +1473,18 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         TIFFWarningExtR(tif, tif->tif_name, "fractional scanline not read");
 
     if (nrows > (tmsize_t)sp->cinfo.d.image_height)
+    {
+        /* Initialize the output buffer if the JPEG image is smaller than the
+         * strile height. */
+        memset(buf, 0, (size_t)cc);
         nrows = sp->cinfo.d.image_height;
+    }
+    else if (sp->strile_width > sp->cinfo.d.image_width)
+    {
+        /* Initialize the output buffer if the JPEG image is smaller than the
+         * strile width. */
+        memset(buf, 0, (size_t)cc);
+    }
 
     /* data is expected to be read in multiples of a scanline */
     if (nrows)
@@ -1483,7 +1503,7 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 return (0);
             }
 
-            ++tif->tif_row;
+            ++tif->tif_dir.td_row;
             buf += sp->bytesperline;
             cc -= sp->bytesperline;
         } while (--nrows > 0);
@@ -1491,15 +1511,15 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 
     /* Update information on consumed data */
     tif->tif_rawcp = (uint8_t *)sp->src.next_input_byte;
-    tif->tif_rawcc = sp->src.bytes_in_buffer;
+    tif->tif_rawcc = (tmsize_t)sp->src.bytes_in_buffer;
 
     /* Close down the decompressor if we've finished the strip or tile. */
     return sp->cinfo.d.output_scanline < sp->cinfo.d.output_height ||
            TIFFjpeg_finish_decompress(sp);
 }
-#endif /* !JPEG_LIB_MK1_OR_12BIT */
+#endif /* !defined(JPEG_LIB_MK1_OR_12BIT) */
 
-#if JPEG_LIB_MK1_OR_12BIT
+#if defined(JPEG_LIB_MK1_OR_12BIT)
 /*ARGSUSED*/ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc,
                                    uint16_t s)
 {
@@ -1525,7 +1545,18 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         TIFFWarningExtR(tif, tif->tif_name, "fractional scanline not read");
 
     if (nrows > (tmsize_t)sp->cinfo.d.image_height)
+    {
+        /* Initialize the output buffer if the JPEG image is smaller than the
+         * strile height. */
+        memset(buf, 0, (size_t)cc);
         nrows = sp->cinfo.d.image_height;
+    }
+    else if (sp->strile_width > sp->cinfo.d.image_width)
+    {
+        /* Initialize the output buffer if the JPEG image is smaller than the
+         * strile width. */
+        memset(buf, 0, (size_t)cc);
+    }
 
     /* data is expected to be read in multiples of a scanline */
     if (nrows)
@@ -1539,8 +1570,9 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         if (sp->cinfo.d.data_precision == 12)
         {
             line_work_buf = (TIFF_JSAMPROW)_TIFFmallocExt(
-                tif, sizeof(short) * sp->cinfo.d.output_width *
-                         sp->cinfo.d.num_components);
+                tif, (tmsize_t)((size_t)sizeof(short) *
+                                (size_t)sp->cinfo.d.output_width *
+                                (size_t)sp->cinfo.d.num_components));
         }
 
         do
@@ -1556,14 +1588,16 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 if (TIFFjpeg_read_scanlines(sp, &line_work_buf, 1) != 1)
                 {
                     memset(buf, 0, (size_t)cc);
+                    _TIFFfreeExt(tif, line_work_buf);
                     return (0);
                 }
 
                 if (sp->cinfo.d.data_precision == 12)
                 {
-                    int value_pairs = (sp->cinfo.d.output_width *
-                                       sp->cinfo.d.num_components) /
-                                      2;
+                    int value_pairs =
+                        (int)((JDIMENSION)sp->cinfo.d.output_width *
+                              (JDIMENSION)sp->cinfo.d.num_components) /
+                        2;
                     int iPair;
 
                     for (iPair = 0; iPair < value_pairs; iPair++)
@@ -1582,18 +1616,19 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 else if (sp->cinfo.d.data_precision == 8)
                 {
                     int value_count =
-                        (sp->cinfo.d.output_width * sp->cinfo.d.num_components);
+                        (int)((JDIMENSION)sp->cinfo.d.output_width *
+                              (JDIMENSION)sp->cinfo.d.num_components);
                     int iValue;
 
                     for (iValue = 0; iValue < value_count; iValue++)
                     {
                         ((unsigned char *)buf)[iValue] =
-                            line_work_buf[iValue] & 0xff;
+                            (unsigned char)(line_work_buf[iValue] & 0xff);
                     }
                 }
             }
 
-            ++tif->tif_row;
+            ++tif->tif_dir.td_row;
             buf += sp->bytesperline;
             cc -= sp->bytesperline;
         } while (--nrows > 0);
@@ -1604,13 +1639,13 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 
     /* Update information on consumed data */
     tif->tif_rawcp = (uint8_t *)sp->src.next_input_byte;
-    tif->tif_rawcc = sp->src.bytes_in_buffer;
+    tif->tif_rawcc = (tmsize_t)sp->src.bytes_in_buffer;
 
     /* Close down the decompressor if we've finished the strip or tile. */
     return sp->cinfo.d.output_scanline < sp->cinfo.d.output_height ||
            TIFFjpeg_finish_decompress(sp);
 }
-#endif /* JPEG_LIB_MK1_OR_12BIT */
+#endif /* defined(JPEG_LIB_MK1_OR_12BIT) */
 
 /*ARGSUSED*/ static int DecodeRowError(TIFF *tif, uint8_t *buf, tmsize_t cc,
                                        uint16_t s)
@@ -1644,8 +1679,16 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
     /* For last strip, limit number of rows to its truncated height */
     /* even if the codestream height is larger (which is not compliant, */
     /* but that we tolerate) */
-    if ((uint32_t)nrows > td->td_imagelength - tif->tif_row && !isTiled(tif))
-        nrows = td->td_imagelength - tif->tif_row;
+    if ((uint32_t)nrows > td->td_imagelength - tif->tif_dir.td_row &&
+        !isTiled(tif))
+        nrows = td->td_imagelength - tif->tif_dir.td_row;
+
+    /* The downsampled-data decode loop below only writes up to the JPEG
+     * codestream dimensions (and, due to the clump stride, may not cover the
+     * full caller buffer even for compliant files). Zero the whole buffer so
+     * no uninitialised heap is ever returned, mirroring the guard JPEGDecode
+     * received in 65759931ab6e (#826). */
+    memset(buf, 0, (size_t)cc);
 
 #if defined(JPEG_LIB_MK1_OR_12BIT)
     unsigned short *tmpbuf = NULL;
@@ -1660,9 +1703,10 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         int samples_per_clump = sp->samplesperclump;
 
 #if defined(JPEG_LIB_MK1_OR_12BIT)
-        tmpbuf = _TIFFmallocExt(tif, sizeof(unsigned short) *
-                                         sp->cinfo.d.output_width *
-                                         sp->cinfo.d.num_components);
+        tmpbuf = (unsigned short *)_TIFFmallocExt(
+            tif, (tmsize_t)((size_t)sizeof(unsigned short) *
+                            (size_t)sp->cinfo.d.output_width *
+                            (size_t)sp->cinfo.d.num_components));
         if (tmpbuf == NULL)
         {
             TIFFErrorExtR(tif, "JPEGDecodeRaw", "Out of memory");
@@ -1755,18 +1799,20 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 if (sp->cinfo.d.data_precision == 8)
                 {
                     int i = 0;
-                    int len =
-                        sp->cinfo.d.output_width * sp->cinfo.d.num_components;
+                    int len = (int)((JDIMENSION)sp->cinfo.d.output_width *
+                                    (JDIMENSION)sp->cinfo.d.num_components);
                     for (i = 0; i < len; i++)
                     {
-                        ((unsigned char *)buf)[i] = tmpbuf[i] & 0xff;
+                        ((unsigned char *)buf)[i] =
+                            (unsigned char)(tmpbuf[i] & 0xff);
                     }
                 }
                 else
                 { /* 12-bit */
-                    int value_pairs = (sp->cinfo.d.output_width *
-                                       sp->cinfo.d.num_components) /
-                                      2;
+                    int value_pairs =
+                        (int)((JDIMENSION)sp->cinfo.d.output_width *
+                              (JDIMENSION)sp->cinfo.d.num_components) /
+                        2;
                     int iPair;
                     for (iPair = 0; iPair < value_pairs; iPair++)
                     {
@@ -1785,7 +1831,7 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 #endif
 
             sp->scancount++;
-            tif->tif_row += sp->v_sampling;
+            tif->tif_dir.td_row += sp->v_sampling;
 
             buf += sp->bytesperline;
             cc -= sp->bytesperline;
@@ -2024,9 +2070,9 @@ static int JPEGSetupEncode(TIFF *tif)
                 if (!TIFFGetField(tif, TIFFTAG_REFERENCEBLACKWHITE, &ref))
                 {
                     float refbw[6];
-                    long top = 1L << td->td_bitspersample;
+                    uint32_t top = 1U << td->td_bitspersample;
                     refbw[0] = 0;
-                    refbw[1] = (float)(top - 1L);
+                    refbw[1] = (float)(top - 1);
                     refbw[2] = (float)(top >> 1);
                     refbw[3] = refbw[1];
                     refbw[4] = refbw[2];
@@ -2074,30 +2120,30 @@ static int JPEGSetupEncode(TIFF *tif)
 #endif
     if (isTiled(tif))
     {
-        if ((td->td_tilelength % (sp->v_sampling * DCTSIZE)) != 0)
+        if ((td->td_tilelength % ((uint32_t)sp->v_sampling * DCTSIZE)) != 0)
         {
             TIFFErrorExtR(tif, module,
                           "JPEG tile height must be multiple of %" PRIu32,
-                          (uint32_t)(sp->v_sampling * DCTSIZE));
+                          (uint32_t)sp->v_sampling * DCTSIZE);
             return (0);
         }
-        if ((td->td_tilewidth % (sp->h_sampling * DCTSIZE)) != 0)
+        if ((td->td_tilewidth % ((uint32_t)sp->h_sampling * DCTSIZE)) != 0)
         {
             TIFFErrorExtR(tif, module,
                           "JPEG tile width must be multiple of %" PRIu32,
-                          (uint32_t)(sp->h_sampling * DCTSIZE));
+                          (uint32_t)sp->h_sampling * DCTSIZE);
             return (0);
         }
     }
     else
     {
         if (td->td_rowsperstrip < td->td_imagelength &&
-            (td->td_rowsperstrip % (sp->v_sampling * DCTSIZE)) != 0)
+            (td->td_rowsperstrip % ((uint32_t)sp->v_sampling * DCTSIZE)) != 0)
         {
             TIFFErrorExtR(tif, module,
                           "RowsPerStrip must be multiple of %" PRIu32
                           " for JPEG",
-                          (uint32_t)(sp->v_sampling * DCTSIZE));
+                          (uint32_t)sp->v_sampling * DCTSIZE);
             return (0);
         }
     }
@@ -2153,7 +2199,6 @@ static int JPEGPreEncode(TIFF *tif, uint16_t s)
     JPEGState *sp = JState(tif);
     TIFFDirectory *td = &tif->tif_dir;
     static const char module[] = "JPEGPreEncode";
-    uint32_t segment_width, segment_height;
     int downsampled_input;
 
     assert(sp != NULL);
@@ -2164,47 +2209,20 @@ static int JPEGPreEncode(TIFF *tif, uint16_t s)
     }
 
     assert(!sp->cinfo.comm.is_decompressor);
-    /*
-     * Set encoding parameters for this strip/tile.
-     */
-    if (isTiled(tif))
-    {
-        segment_width = td->td_tilewidth;
-        segment_height = td->td_tilelength;
-        sp->bytesperline = TIFFTileRowSize(tif);
-    }
-    else
-    {
-        segment_width = td->td_imagewidth;
-        segment_height = td->td_imagelength - tif->tif_row;
-        if (segment_height > td->td_rowsperstrip)
-            segment_height = td->td_rowsperstrip;
-        sp->bytesperline = TIFFScanlineSize(tif);
-    }
-    if (td->td_planarconfig == PLANARCONFIG_SEPARATE && s > 0)
-    {
-        /* for PC 2, scale down the strip/tile size
-         * to match a downsampled component
-         */
-        if (sp->h_sampling == 0 || sp->v_sampling == 0)
-        {
-            TIFFErrorExtR(tif, module,
-                          "JPEG horizontal or vertical sampling is zero");
-            return (0);
-        }
-        segment_width = TIFFhowmany_32(segment_width, sp->h_sampling);
-        segment_height = TIFFhowmany_32(segment_height, sp->v_sampling);
-    }
-    if (segment_width > (uint32_t)JPEG_MAX_DIMENSION ||
-        segment_height > (uint32_t)JPEG_MAX_DIMENSION)
+
+    if (!JPEGComputeStrileWidthHeightBytesPerLine(tif, s))
+        return 0;
+
+    if (sp->strile_width > (uint32_t)JPEG_MAX_DIMENSION ||
+        sp->strile_height > (uint32_t)JPEG_MAX_DIMENSION)
     {
         TIFFErrorExtR(tif, module,
                       "Strip/tile too large for JPEG. Maximum dimension is %d",
                       (int)JPEG_MAX_DIMENSION);
         return (0);
     }
-    sp->cinfo.c.image_width = segment_width;
-    sp->cinfo.c.image_height = segment_height;
+    sp->cinfo.c.image_width = sp->strile_width;
+    sp->cinfo.c.image_height = sp->strile_height;
     downsampled_input = FALSE;
     if (td->td_planarconfig == PLANARCONFIG_CONTIG)
     {
@@ -2276,7 +2294,13 @@ static int JPEGPreEncode(TIFF *tif, uint16_t s)
         /* an existing file */
         suppress_huff_table(sp, 0);
         suppress_huff_table(sp, 1);
-        sp->cinfo.c.optimize_coding = FALSE;
+
+        /* We want to keep optimize_coding = TRUE for 12-bit JPEG */
+        /* See lengthy explanation at
+         * https://gitlab.com/libtiff/libtiff/-/work_items/773#note_3009836854
+         */
+        if (sp->cinfo.c.data_precision == 8)
+            sp->cinfo.c.optimize_coding = FALSE;
     }
     else
         sp->cinfo.c.optimize_coding = TRUE;
@@ -2332,13 +2356,15 @@ static int JPEGEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         TIFFWarningExtR(tif, tif->tif_name, "fractional scanline discarded");
 
     /* The last strip will be limited to image size */
-    if (!isTiled(tif) && tif->tif_row + nrows > tif->tif_dir.td_imagelength)
-        nrows = tif->tif_dir.td_imagelength - tif->tif_row;
+    if (!isTiled(tif) &&
+        tif->tif_dir.td_row + nrows > tif->tif_dir.td_imagelength)
+        nrows = tif->tif_dir.td_imagelength - tif->tif_dir.td_row;
 
     if (sp->cinfo.c.data_precision == 12)
     {
         line16_count = (int)((sp->bytesperline * 2) / 3);
-        line16 = (short *)_TIFFmallocExt(tif, sizeof(short) * line16_count);
+        line16 = (short *)_TIFFmallocExt(
+            tif, (tmsize_t)(sizeof(short) * (size_t)line16_count));
         if (!line16)
         {
             TIFFErrorExtR(tif, "JPEGEncode", "Failed to allocate memory");
@@ -2363,8 +2389,10 @@ static int JPEGEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 unsigned char *in_ptr = ((unsigned char *)buf) + iPair * 3;
                 TIFF_JSAMPLE *out_ptr = (TIFF_JSAMPLE *)(line16 + iPair * 2);
 
-                out_ptr[0] = (in_ptr[0] << 4) | ((in_ptr[1] & 0xf0) >> 4);
-                out_ptr[1] = ((in_ptr[1] & 0x0f) << 8) | in_ptr[2];
+                out_ptr[0] = (TIFF_JSAMPLE)((in_ptr[0] << 4) |
+                                            ((in_ptr[1] & 0xf0) >> 4));
+                out_ptr[1] =
+                    (TIFF_JSAMPLE)(((in_ptr[1] & 0x0f) << 8) | in_ptr[2]);
             }
         }
         else
@@ -2374,7 +2402,7 @@ static int JPEGEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         if (TIFFjpeg_write_scanlines(sp, bufptr, 1) != 1)
             return (0);
         if (nrows > 0)
-            tif->tif_row++;
+            tif->tif_dir.td_row++;
         buf += sp->bytesperline;
     }
 
@@ -2443,8 +2471,9 @@ static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         {
             int hsamp = compptr->h_samp_factor;
             int vsamp = compptr->v_samp_factor;
-            int padding = (int)(compptr->width_in_blocks * DCTSIZE -
-                                clumps_per_line * hsamp);
+            int padding =
+                (int)(compptr->width_in_blocks * DCTSIZE -
+                      (JDIMENSION)clumps_per_line * (JDIMENSION)hsamp);
             for (ypos = 0; ypos < vsamp; ypos++)
             {
                 inptr = ((TIFF_JSAMPLE *)buf) + clumpoffset;
@@ -2488,7 +2517,7 @@ static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
             }
             sp->scancount = 0;
         }
-        tif->tif_row += sp->v_sampling;
+        tif->tif_dir.td_row += sp->v_sampling;
         buf += bytesperclumpline;
         nrows -= sp->v_sampling;
     }
@@ -2582,10 +2611,11 @@ static void JPEGResetUpsampled(TIFF *tif)
      * Must recalculate cached tile size in case sampling state changed.
      * Should we really be doing this now if image size isn't set?
      */
-    if (tif->tif_tilesize > 0)
-        tif->tif_tilesize = isTiled(tif) ? TIFFTileSize(tif) : (tmsize_t)(-1);
-    if (tif->tif_scanlinesize > 0)
-        tif->tif_scanlinesize = TIFFScanlineSize(tif);
+    if (tif->tif_dir.td_tilesize > 0)
+        tif->tif_dir.td_tilesize =
+            isTiled(tif) ? TIFFTileSize(tif) : (tmsize_t)(-1);
+    if (tif->tif_dir.td_scanlinesize > 0)
+        tif->tif_dir.td_scanlinesize = TIFFScanlineSize(tif);
 }
 
 static int JPEGVSetField(TIFF *tif, uint32_t tag, va_list ap)
@@ -2793,6 +2823,33 @@ static int JPEGInitializeLibJPEG(TIFF *tif, int decompress)
     return 1;
 }
 
+static uint64_t JPEGGetMaxCompressionRatio(TIFF *tif)
+{
+    /* See README_for_libtiff_developpers.md for raw data used to estimate
+     * the maximum compression rate. */
+
+    const JPEGState *sp = JState(tif);
+    if ((tif->tif_dir.td_photometric == PHOTOMETRIC_YCBCR) &&
+        (tif->tif_dir.td_planarconfig == PLANARCONFIG_CONTIG) &&
+        (tif->tif_dir.td_samplesperpixel == 3))
+    {
+        if (sp->h_sampling == 2 && sp->v_sampling == 2)
+        {
+            if (tif->tif_dir.td_bitspersample == 12)
+                return 768;
+            else
+                return 512;
+        }
+
+        return 0; /* unknown */
+    }
+
+    if (tif->tif_dir.td_bitspersample == 12)
+        return 384;
+    else
+        return 256;
+}
+
 /* Common to tif_jpeg.c and tif_jpeg_12.c */
 static void TIFFInitJPEGCommon(TIFF *tif)
 {
@@ -2829,6 +2886,7 @@ static void TIFFInitJPEGCommon(TIFF *tif)
     tif->tif_encoderow = JPEGEncode;
     tif->tif_encodestrip = JPEGEncode;
     tif->tif_encodetile = JPEGEncode;
+    tif->tif_getmaxcompressionratio = JPEGGetMaxCompressionRatio;
     tif->tif_cleanup = JPEGCleanup;
 
     tif->tif_defstripsize = JPEGDefaultStripSize;

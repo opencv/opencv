@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -254,16 +255,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
     Mat Dx, Dy;
-    if( aperture_size > 0 )
-    {
-        Sobel( src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
-        Sobel( src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
-    }
-    else
-    {
-        Scharr( src, Dx, CV_32F, 1, 0, scale, 0, borderType );
-        Scharr( src, Dy, CV_32F, 0, 1, scale, 0, borderType );
-    }
+    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
 
     Size size = src.size();
     Mat cov( size, CV_32FC3 );
@@ -366,18 +358,7 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
         return k.run(2, globalsize, localsize, false);
     }
     else
-    {
-        if (aperture_size > 0)
-        {
-            Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
-            Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
-        }
-        else
-        {
-            Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
-            Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
-        }
-    }
+        spatialGradient(_src, Dx, Dy, aperture_size, borderType, CV_32F, scale);
 
     return true;
 }

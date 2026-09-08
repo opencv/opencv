@@ -2609,9 +2609,8 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
     for (int j = 0; j < count; j++) {
       if (samples(j, 0) == fullcopy(k, 0) && samples(j, 1) == fullcopy(k, 1) && samples(j, 2) == fullcopy(k, 2)) {
         n = false;
-        comps(i*nchannels, 0) = nchannels*j;
-        comps(i*nchannels + 1, 0) = nchannels*j + 1;
-        comps(i*nchannels + 2, 0) = nchannels*j + 2;
+        for (int ch = 0; ch < nchannels; ch++)
+          comps(i*nchannels + ch, 0) = nchannels*j + ch;
         break;
       }
     }
@@ -2620,9 +2619,8 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
       samples(count, 0) = fullcopy(k, 0);
       samples(count, 1) = fullcopy(k, 1);
       samples(count, 2) = fullcopy(k, 2);
-      comps(i*nchannels, 0) = nchannels*count;
-      comps(i*nchannels + 1, 0) = nchannels*count + 1;
-      comps(i*nchannels + 2, 0) = nchannels*count + 2;
+      for (int ch = 0; ch < nchannels; ch++)
+        comps(i*nchannels + ch, 0) = nchannels*count + ch;
       count++;
     }
 
@@ -2630,9 +2628,8 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
     for (int j = 0; j < count; j++) {
       if (samples(j, 0) == fullcopy(k, 0) && samples(j, 1) == fullcopy(k, 3) && samples(j, 2) == fullcopy(k, 4)) {
         n = false;
-        comps(i*nchannels, 1) = nchannels*j;
-        comps(i*nchannels + 1, 1) = nchannels*j + 1;
-        comps(i*nchannels + 2, 1) = nchannels*j + 2;
+        for (int ch = 0; ch < nchannels; ch++)
+          comps(i*nchannels + ch, 1) = nchannels*j + ch;
         break;
       }
     }
@@ -2641,9 +2638,8 @@ void generateDescriptorSubsample(Mat& sampleList, Mat& comparisons, int nbits,
       samples(count, 0) = fullcopy(k, 0);
       samples(count, 1) = fullcopy(k, 3);
       samples(count, 2) = fullcopy(k, 4);
-      comps(i*nchannels, 1) = nchannels*count;
-      comps(i*nchannels + 1, 1) = nchannels*count + 1;
-      comps(i*nchannels + 2, 1) = nchannels*count + 2;
+      for (int ch = 0; ch < nchannels; ch++)
+        comps(i*nchannels + ch, 1) = nchannels*count + ch;
       count++;
     }
 

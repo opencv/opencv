@@ -287,4 +287,45 @@ TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
     }
 }
 
+typedef testing::tuple<MatType, MatType, Scalar> ConstantTemplateParams;
+
+typedef testing::TestWithParam<ConstantTemplateParams> ConstantTemplateWithMask;
+
+TEST_P(ConstantTemplateWithMask, regression_23257)
+{
+    int type = std::get<0>(GetParam());
+    int maskType = std::get<1>(GetParam());
+    Scalar templValue = std::get<2>(GetParam());
+
+    Mat image(Size(16, 16), type);
+    randu(image, 0, 255);
+
+    const Mat templ(Size(3, 3), type, templValue);
+    Mat mask = Mat::ones(templ.size(), maskType);
+    mask(Rect(1, 0, 1, 3)) = Scalar::all(0);
+
+    Mat result;
+    matchTemplate(image, templ, result, TM_CCOEFF_NORMED, mask);
+
+    for (int y = 0; y < result.rows; ++y)
+    {
+        for (int x = 0; x < result.cols; ++x)
+        {
+            const float value = result.at<float>(y, x);
+            EXPECT_FALSE(cvIsNaN(value));
+            EXPECT_FALSE(cvIsInf(value));
+            EXPECT_EQ(1.0f, value);
+        }
+    }
+}
+
+std::vector<ConstantTemplateParams> ctparams = {
+    {CV_8UC1, CV_8UC1, Scalar::all(1)},
+    {CV_32FC1, CV_32FC1, Scalar::all(3.5)},
+    {CV_8UC3, CV_8UC1, Scalar(1, 2, 3)},
+    {CV_32FC3, CV_32FC3, Scalar(1.5, 2.5, 3.5)}
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, ConstantTemplateWithMask, testing::ValuesIn(ctparams));
+
 }} // namespace
