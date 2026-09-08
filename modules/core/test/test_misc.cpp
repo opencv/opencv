@@ -950,6 +950,58 @@ TEST(Core_Types, trivially_copyable_extra)
 }
 #endif
 
+TEST(Core_KeyPoint, convert_rejects_negative_index)
+{
+    const std::vector<KeyPoint> keypoints(1, KeyPoint(1, 2, 1));
+    const std::vector<int> indexes(1, -1);
+    std::vector<Point2f> points;
+
+    EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+}
+
+TEST(Core_KeyPoint, convert_rejects_index_for_empty_input)
+{
+    const std::vector<KeyPoint> keypoints;
+    const std::vector<int> indexes(1, 0);
+    std::vector<Point2f> points;
+
+    EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+}
+
+TEST(Core_KeyPoint, convert_rejects_out_of_range_indexes)
+{
+    const std::vector<KeyPoint> keypoints(1, KeyPoint(1, 2, 1));
+    std::vector<Point2f> points;
+
+    const int invalidIndexes[] = { 1, 100 };
+    for( size_t i = 0; i < sizeof(invalidIndexes) / sizeof(invalidIndexes[0]); i++ )
+    {
+        const std::vector<int> indexes(1, invalidIndexes[i]);
+        EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+    }
+}
+
+TEST(Core_KeyPoint, convert_preserves_index_order_and_duplicates)
+{
+    const std::vector<KeyPoint> keypoints = {
+        KeyPoint(1, 2, 1), KeyPoint(3, 4, 1), KeyPoint(5, 6, 1)
+    };
+    const std::vector<int> indexes = { 2, 0, 2, 1 };
+    std::vector<Point2f> points;
+
+    KeyPoint::convert(keypoints, points, indexes);
+
+    const Point2f expected[] = { Point2f(5, 6), Point2f(1, 2), Point2f(5, 6), Point2f(3, 4) };
+    ASSERT_EQ(sizeof(expected) / sizeof(expected[0]), points.size());
+    for( size_t i = 0; i < points.size(); i++ )
+        EXPECT_EQ(expected[i], points[i]);
+
+    KeyPoint::convert(keypoints, points);
+    ASSERT_EQ(keypoints.size(), points.size());
+    for( size_t i = 0; i < points.size(); i++ )
+        EXPECT_EQ(keypoints[i].pt, points[i]);
+}
+
 template <typename T> class Rect_Test : public testing::Test {};
 
 TYPED_TEST_CASE_P(Rect_Test);
