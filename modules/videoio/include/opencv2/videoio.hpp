@@ -1057,8 +1057,7 @@ protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 
-    // Drop-only frame-rate control set via CAP_PROP_TARGET_FPS in the `params` vector passed to a
-    // constructor/open() call; see fpsControlGrab() in cap.cpp for the algorithm.
+    // Drop-only frame-rate control set via CAP_PROP_TARGET_FPS; see fpsControlGrab() in cap.cpp.
 
     // Tolerance for backend timestamp rounding noise at an exact schedule boundary.
     static const double kFpsControlEpsMs;
@@ -1070,10 +1069,7 @@ protected:
         double outFrameDurationMs = 0.0;   // 1000 / requested output fps
         double nextOutPts = -1.0;          // output clock; unset (<0) until first frame anchors it
 
-        // Set by fpsControlGrab() when it finds the frame due for the current tick. Its pixel data
-        // is deliberately left un-retrieved in the backend's own internal buffer -- retrieve()
-        // fetches it directly from there, exactly like the disabled path, so a dropped frame is
-        // never decoded/copied and the kept frame is never copied more than once.
+        // Set by fpsControlGrab(); pixel data stays un-retrieved until retrieve() fetches it.
         bool pendingValid = false;
         double pendingPosMsec = -1.0;
         double pendingPosFrames = -1.0;

@@ -8,15 +8,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-// target_fps <= 0 must show zero measurable overhead vs. not requesting CAP_PROP_TARGET_FPS at
-// all -- that path bypasses fpsControlGrab() entirely (see VideoCapture::grab()). Enabling it, by
-// contrast, still decodes every source frame via grabFrame(), but a dropped frame is never handed
-// to retrieveFrame() (see fpsControlGrab()'s comment), so it never pays for color conversion or
-// the output Mat's allocation/copy -- only the frame actually kept each tick does. Throughput is
-// therefore expected to be at or below the disabled path's, improving as target_fps drops further
-// below the source's native rate -- this perf test exists to catch a regression in either
-// direction (disabled path picking up overhead it shouldn't, or the enabled path's saving eroding
-// or reversing unexpectedly).
+// Catches a regression in either direction: disabled-path overhead, or enabled-path savings eroding.
 
 typedef tuple<string, double> VideoCapture_TargetFpsParams;
 typedef perf::TestBaseWithParam<VideoCapture_TargetFpsParams> VideoCapture_TargetFps;

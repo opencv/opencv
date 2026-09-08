@@ -10,21 +10,17 @@ using namespace std;
 
 namespace opencv_test { namespace {
 
-// target_fps drop-only frame-rate control, set via CAP_PROP_TARGET_FPS in the `params` vector
-// passed to a VideoCapture constructor/open() call (open-only -- see its doc comment).
-// big_buck_bunny.mp4 is mpeg4, 24/1 fps, 125 frames, no B-frames, so its per-frame timestamps are
-// exact; findDataFile() throws SkipTestException itself if opencv_extra is unavailable.
+// target_fps is set via CAP_PROP_TARGET_FPS in the `params` vector (open-only, see its doc comment).
 static string targetFpsTestVideoPath()
 {
+    // big_buck_bunny.mp4 is mpeg4, 24fps, 125 frames, no B-frames: exact per-frame timestamps.
     return findDataFile("video/big_buck_bunny.mp4");
 }
 
 static const double BBB_FPS = 24.0;
 static const int BBB_FRAME_COUNT = 125;
 
-// (target_fps, ratio) -- source frames between each kept frame. ratio=1 covers disabled, exactly
-// native, and above native. 4.0/8.0 divide 24fps exactly but leave the last index (124) unaligned,
-// so the end-of-stream path is reached mid-tick rather than on the last frame.
+// (target_fps, ratio); ratio=1 covers disabled/native/above-native, 4.0/8.0 leave frame 124 mid-tick.
 typedef tuple<double, int> TargetFps_Ratio;
 typedef testing::TestWithParam<TargetFps_Ratio> videoio_target_fps;
 
@@ -74,8 +70,7 @@ inline static std::string videoio_target_fps_name_printer(const testing::TestPar
 
 INSTANTIATE_TEST_CASE_P(videoio, videoio_target_fps, testing::ValuesIn(videoio_target_fps_params), videoio_target_fps_name_printer);
 
-// End-of-stream reached mid-tick: get(CAP_PROP_POS_MSEC) must be the last emitted frame's own
-// timestamp, not a backend-internal value unrelated to it.
+// End-of-stream mid-tick: POS_MSEC must be the last emitted frame's own timestamp.
 TEST(videoio_target_fps, last_frame_pos_msec_matches_its_own_timestamp)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -131,8 +126,7 @@ TEST(videoio_target_fps, emitted_frames_evenly_spaced)
     EXPECT_NEAR(expectedStepMs, *maxIt, 1.0);
 }
 
-// The plain no-params-at-all construction path, guarding against declaration/definition signature
-// drift breaking existing non-target_fps call sites.
+// Guards the plain no-params construction path against signature drift breaking old call sites.
 TEST(videoio_target_fps, default_argument_is_disabled)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -152,8 +146,7 @@ TEST(videoio_target_fps, default_argument_is_disabled)
     EXPECT_EQ(BBB_FRAME_COUNT, n);
 }
 
-// release() must reset fpsCtl, or a reopen that doesn't request CAP_PROP_TARGET_FPS inherits the
-// previous open's clock and buffers.
+// release() must reset fpsCtl, or a plain reopen inherits the previous open's clock/buffers.
 TEST(videoio_target_fps, reopen_without_target_fps_resets_state)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -166,8 +159,7 @@ TEST(videoio_target_fps, reopen_without_target_fps_resets_state)
     Mat frame;
     ASSERT_TRUE(cap.read(frame)); // leave fpsCtl mid-schedule, not freshly reset
 
-    // No CAP_PROP_TARGET_FPS in this open's params, so it only behaves correctly if the release()
-    // it triggers internally resets fpsCtl. Reopening the same file is enough here.
+    // Only correct if the internal release() this open() triggers resets fpsCtl.
     ASSERT_TRUE(cap.open(filename, CAP_FFMPEG, std::vector<int>()));
     ASSERT_TRUE(cap.isOpened());
 
@@ -176,8 +168,7 @@ TEST(videoio_target_fps, reopen_without_target_fps_resets_state)
         n++;
     cap.release();
 
-    // CAP_PROP_TARGET_FPS wasn't requested on this reopen, so it should be a plain passthrough:
-    // every native frame (125), not the previous open's schedule (42).
+    // Not requested on this reopen, so expect plain passthrough (125), not the old schedule (42).
     EXPECT_EQ(BBB_FRAME_COUNT, n);
 }
 
@@ -204,11 +195,9 @@ TEST(videoio_target_fps, non_zero_channel_fails_under_fps_control)
     cap.release();
 }
 
-// Backend coverage beyond CAP_FFMPEG: the algorithm is backend-agnostic, so these only confirm each
-// allow-listed backend's CAP_PROP_POS_MSEC is usable per-frame.
+// Backend-agnostic algorithm; these just confirm each allow-listed backend's POS_MSEC is usable.
 
-// A synthetic videotestsrc pipeline, as in test_gstreamer.cpp: num-buffers bounds it to a known
-// count and the framerate caps give its buffer timestamps exact millisecond spacing.
+// Synthetic videotestsrc pipeline (as in test_gstreamer.cpp): bounded count, exact ms timestamps.
 static std::string targetFpsGstreamerPipeline(int srcFrameCount, double srcFps)
 {
     std::ostringstream pipeline;
@@ -224,9 +213,7 @@ TEST(videoio_target_fps, gstreamer_pipeline_keeps_expected_frame_count)
 
     const int srcFrameCount = 20;
     const double srcFps = 20.0;
-    const double target_fps = 5.0; // ratio 4 -> keep indices 0,4,8,12,16 (5 kept); 20 % 4 == 0 but
-                                    // the source's own last index (19) is unaligned to the ratio,
-                                    // same deliberate mid-tick-at-EOF coverage as the FFmpeg params.
+    const double target_fps = 5.0; // ratio 4 -> keeps 0,4,8,12,16; last index 19 is mid-tick at EOF.
 
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open(targetFpsGstreamerPipeline(srcFrameCount, srcFps), CAP_GSTREAMER,
@@ -272,8 +259,7 @@ TEST(videoio_target_fps, gstreamer_pipeline_emitted_frames_evenly_spaced)
     const double expectedStepMs = 1000.0 / target_fps;
     auto minIt = min_element(diffs.begin() + 1, diffs.end());
     auto maxIt = max_element(diffs.begin() + 1, diffs.end());
-    // Looser than the FFmpeg test's 1ms since the appsink handoff precision is unverified here,
-    // but still tight enough to catch an off-by-one-tick error.
+    // Looser than the FFmpeg test's 1ms (appsink handoff precision unverified), still catches off-by-one.
     EXPECT_NEAR(expectedStepMs, *minIt, expectedStepMs * 0.01);
     EXPECT_NEAR(expectedStepMs, *maxIt, expectedStepMs * 0.01);
 }
@@ -293,8 +279,7 @@ TEST(videoio_target_fps, opencv_mjpeg_keeps_expected_frame_count)
     ASSERT_EQ(CAP_OPENCV_MJPEG, static_cast<int>(cap.get(CAP_PROP_BACKEND)));
     EXPECT_EQ(target_fps, cap.get(CAP_PROP_FPS)) << "frame-rate control did not engage";
 
-    // Timestamps are not asserted here: this backend derives CAP_PROP_POS_MSEC from the next
-    // frame's index, so it reads one source frame ahead of the frame actually returned.
+    // Timestamps aren't asserted: this backend's POS_MSEC runs one source frame ahead of POS_FRAMES.
     int n = 0;
     Mat frame;
     while (cap.read(frame))
@@ -307,8 +292,7 @@ TEST(videoio_target_fps, opencv_mjpeg_keeps_expected_frame_count)
     EXPECT_EQ(42, n);
 }
 
-// The allow-list in its refusing direction: CAP_IMAGES reports a constant CAP_PROP_POS_MSEC, which
-// would make every drop comparison read as stale and emit only the last frame if it got through.
+// CAP_IMAGES's constant POS_MSEC would make every drop comparison stale, so it must be refused.
 TEST(videoio_target_fps, unsupported_backend_falls_back_to_passthrough)
 {
     if (!videoio_registry::hasBackend(CAP_IMAGES))
@@ -320,8 +304,7 @@ TEST(videoio_target_fps, unsupported_backend_falls_back_to_passthrough)
     const int srcFrameCount = 5;
     for (int i = 0; i < srcFrameCount; i++)
     {
-        // Distinct uniform brightness per image, so a dropped or reordered frame shows up as a
-        // wrong index rather than only as a wrong count.
+        // Distinct brightness per image: a dropped/reordered frame shows up as a wrong index, not just a count.
         const Mat img(32, 32, CV_8UC3, Scalar::all(i * 40));
         ASSERT_TRUE(imwrite(cv::format("%s/img%04d.png", dirname.c_str(), i), img));
     }
@@ -348,8 +331,7 @@ TEST(videoio_target_fps, unsupported_backend_falls_back_to_passthrough)
         EXPECT_NEAR(i * 40, brightness[i], 5) << "image " << i;
 }
 
-// Every emitted frame, all position properties at once: POS_FRAMES - 1 must identify the frame just
-// returned, POS_MSEC must be its own time, and the two must agree with each other.
+// Every emitted frame: POS_FRAMES-1 names it, POS_MSEC is its time, and the two must agree.
 TEST(videoio_target_fps, position_properties_describe_the_emitted_frame)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -382,8 +364,7 @@ TEST(videoio_target_fps, position_properties_describe_the_emitted_frame)
     ASSERT_EQ(42, n);
 }
 
-// get(CAP_PROP_FPS) must be the emitted rate, since callers pass it straight to VideoWriter -- and
-// must answer before the first read(), which is when a VideoWriter is normally constructed.
+// Must be the emitted rate (for VideoWriter) and correct before the first read(), not just after.
 TEST(videoio_target_fps, reports_effective_output_fps)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -399,8 +380,7 @@ TEST(videoio_target_fps, reports_effective_output_fps)
         ASSERT_TRUE(cap.read(frame));
         EXPECT_EQ(8.0, cap.get(CAP_PROP_FPS)) << "after read()";
     }
-    {   // above native: drop-only cannot emit faster than the source, so the native rate is the
-        // honest answer -- reporting target_fps here would be a new inaccuracy, not a fix.
+    {   // above native: drop-only can't emit faster than the source, so native is the honest answer.
         VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(BBB_FPS * 2)});
         ASSERT_TRUE(cap.isOpened());
         EXPECT_EQ(BBB_FPS, cap.get(CAP_PROP_FPS));
@@ -412,8 +392,7 @@ TEST(videoio_target_fps, reports_effective_output_fps)
     }
 }
 
-// The get()->set() round trip POS_FRAMES exists for. Identity is checked on the pixels rather than
-// by reading the position back, which would validate those values against themselves.
+// The get()->set() round trip POS_FRAMES exists for; checked on pixels, not position readback.
 TEST(videoio_target_fps, bookmarked_frame_can_be_seeked_back_to)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -443,8 +422,7 @@ TEST(videoio_target_fps, bookmarked_frame_can_be_seeked_back_to)
     cap.release();
 }
 
-// A seek must discard the clock and lookahead, or pre-seek frames get emitted and a backward seek
-// drops frames until the source catches up to the stale clock.
+// A seek must discard the clock, or pre-seek frames get emitted and backward seeks drop until caught up.
 TEST(videoio_target_fps, seek_resets_schedule_and_lookahead)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -465,8 +443,7 @@ TEST(videoio_target_fps, seek_resets_schedule_and_lookahead)
     if (!cap.set(CAP_PROP_POS_FRAMES, 0))
         throw SkipTestException("backend does not support seeking on this file");
 
-    // First frame after the seek must be the seek target itself, not a leftover pre-seek frame,
-    // and not the result of burning frames to catch up to the stale clock.
+    // Must be the seek target itself, not a leftover pre-seek frame or a stale-clock catch-up burn.
     ASSERT_TRUE(cap.read(frame));
     ASSERT_FALSE(frame.empty());
     EXPECT_NEAR(0.0, cap.get(CAP_PROP_POS_MSEC), 1.0);
@@ -478,8 +455,7 @@ TEST(videoio_target_fps, seek_resets_schedule_and_lookahead)
         n++;
     EXPECT_EQ(expectedTotal, n);
 
-    // A forward seek re-anchors the same way: the clock starts from the new position, so the
-    // remaining count follows the schedule from there rather than from the start of the file.
+    // A forward seek re-anchors the same way: the schedule restarts from the new position.
     ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
     ASSERT_TRUE(cap.read(frame));
     const int midIndex = 60;
@@ -496,8 +472,41 @@ TEST(videoio_target_fps, seek_resets_schedule_and_lookahead)
     cap.release();
 }
 
-// Same vivid virtual-device convention as test_v4l2.cpp. Being a live, unbounded capture there is no
-// expected frame count -- what is tested is that a real kernel timestamp holds up against jitter.
+// fpsCtl is protected; exists only so the test below can force a stalled-clock state directly.
+struct TestableVideoCapture : public VideoCapture
+{
+    using VideoCapture::VideoCapture;
+    using VideoCapture::fpsCtl;
+};
+
+TEST(videoio_target_fps, clock_recovers_after_falling_behind)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const double target_fps = 8.0;
+    const int ratio = 3; // BBB_FPS(24) / target_fps(8)
+    TestableVideoCapture cap(targetFpsTestVideoPath(), CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
+    ASSERT_TRUE(cap.isOpened());
+
+    Mat frame;
+    for (int i = 0; i < 10; i++)
+        ASSERT_TRUE(cap.read(frame)) << "priming read " << i;
+    ASSERT_GT(cap.get(CAP_PROP_POS_MSEC), 1000.0); // clock is ~10 ticks into the file
+
+    // Forces the clock behind the source's real position, simulating a source timestamp gap.
+    cap.fpsCtl.nextOutPts = 0.0;
+
+    ASSERT_TRUE(cap.read(frame));
+    const int firstAfterGap = cvRound(cap.get(CAP_PROP_POS_FRAMES)) - 1; // "next" index -> emitted index
+    ASSERT_TRUE(cap.read(frame));
+    const int secondAfterGap = cvRound(cap.get(CAP_PROP_POS_FRAMES)) - 1;
+
+    // Resynced: next emitted frame is `ratio` frames later, not 1 (which is what the bug produces).
+    EXPECT_EQ(ratio, secondAfterGap - firstAfterGap);
+}
+
+// Same vivid convention as test_v4l2.cpp; unbounded live capture, so tests jitter not frame count.
 TEST(videoio_target_fps, v4l2_vivid_respects_target_fps)
 {
     if (!videoio_registry::hasBackend(CAP_V4L2))
@@ -508,8 +517,7 @@ TEST(videoio_target_fps, v4l2_vivid_respects_target_fps)
         throw SkipTestException("OPENCV_TEST_V4L2_VIVID_DEVICE is not set");
     const string device = devs[0];
 
-    // Well below vivid's default capture rate, leaving plenty of margin for real scheduling
-    // jitter that a decoded-file/synthetic-pipeline PTS doesn't have to contend with.
+    // Well below vivid's default rate, leaving margin for real scheduling jitter.
     const double target_fps = 5.0;
     VideoCapture cap(device, CAP_V4L2, {CAP_PROP_TARGET_FPS, cvRound(target_fps)});
     ASSERT_TRUE(cap.isOpened());
@@ -529,10 +537,7 @@ TEST(videoio_target_fps, v4l2_vivid_respects_target_fps)
     for (size_t i = 1; i < posMsec.size(); i++)
     {
         const double stepMs = posMsec[i] - posMsec[i - 1];
-        // 50% tolerance, vs. the file-based tests' ~1%: a live kernel capture-buffer timestamp is
-        // subject to genuine scheduling jitter a decoded/synthetic PTS doesn't have. What matters
-        // here is that frames are actually being dropped to hit ~200ms spacing, not sub-frame
-        // precision.
+        // 50% tolerance (vs ~1% for file-based tests): real kernel jitter, not sub-frame precision, is what matters.
         EXPECT_NEAR(expectedStepMs, stepMs, expectedStepMs * 0.5)
             << "step " << i << ": " << posMsec[i - 1] << " -> " << posMsec[i];
     }
