@@ -79,12 +79,11 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
         for( size_t i = 0; i < keypointIndexes.size(); i++ )
         {
             int idx = keypointIndexes[i];
-            if( idx >= 0 )
+            if( idx >= 0 && static_cast<size_t>(idx) < keypoints.size() )
                 points2f[i] = keypoints[idx].pt;
             else
             {
-                CV_Error( cv::Error::StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
-                //points2f[i] = Point2f(-1, -1);
+                CV_Error( cv::Error::StsBadArg, "keypointIndexes has element out of range" );
             }
         }
     }
