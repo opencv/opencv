@@ -159,7 +159,8 @@ static int ZIPPreDecode(TIFF *tif, uint16_t s)
          we need to simplify this code to reflect a ZLib that is likely updated
          to deal with 8byte memory sizes, though this code will respond
          appropriately even before we simplify it */
-    sp->stream.avail_in = TIFF_CLAMP_UINT64_TO_INT32_MAX(tif->tif_rawcc);
+    sp->stream.avail_in =
+        TIFF_CLAMP_UINT64_TO_INT32_MAX((uint64_t)tif->tif_rawcc);
     if (inflateReset(&sp->stream) == Z_OK)
     {
         sp->read_error = 0;
@@ -183,7 +184,7 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         TIFFErrorExtR(tif, module,
                       "ZIPDecode: Scanline %" PRIu32 " cannot be read due to "
                       "previous error",
-                      tif->tif_row);
+                      tif->tif_dir.td_row);
         return 0;
     }
 
@@ -210,7 +211,7 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         }
         else
         {
-            uint32_t strip_height = td->td_imagelength - tif->tif_row;
+            uint32_t strip_height = td->td_imagelength - tif->tif_dir.td_row;
             if (strip_height > td->td_rowsperstrip)
                 strip_height = td->td_rowsperstrip;
             if (TIFFVStripSize64(tif, strip_height) != (uint64_t)occ)
@@ -254,7 +255,7 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             {
                 memset(op, 0, (size_t)occ);
                 TIFFErrorExtR(tif, module, "Decoding error at scanline %lu",
-                              (unsigned long)tif->tif_row);
+                              (unsigned long)tif->tif_dir.td_row);
                 sp->read_error = 1;
                 return 0;
             }
@@ -275,8 +276,9 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     do
     {
         int state;
-        uInt avail_in_before = TIFF_CLAMP_UINT64_TO_INT32_MAX(tif->tif_rawcc);
-        uInt avail_out_before = TIFF_CLAMP_UINT64_TO_INT32_MAX(occ);
+        uInt avail_in_before =
+            TIFF_CLAMP_UINT64_TO_INT32_MAX((uint64_t)tif->tif_rawcc);
+        uInt avail_out_before = TIFF_CLAMP_UINT64_TO_INT32_MAX((uint64_t)occ);
         sp->stream.avail_in = avail_in_before;
         sp->stream.avail_out = avail_out_before;
         state = inflate(&sp->stream, Z_PARTIAL_FLUSH);
@@ -288,7 +290,7 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         {
             memset(sp->stream.next_out, 0, (size_t)occ);
             TIFFErrorExtR(tif, module, "Decoding error at scanline %lu, %s",
-                          (unsigned long)tif->tif_row, SAFE_MSG(sp));
+                          (unsigned long)tif->tif_dir.td_row, SAFE_MSG(sp));
             sp->read_error = 1;
             return (0);
         }
@@ -305,7 +307,7 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %lu (short %" PRIu64
                       " bytes)",
-                      (unsigned long)tif->tif_row, (uint64_t)occ);
+                      (unsigned long)tif->tif_dir.td_row, (uint64_t)occ);
         memset(sp->stream.next_out, 0, (size_t)occ);
         sp->read_error = 1;
         return (0);
@@ -411,7 +413,7 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         }
         else
         {
-            uint32_t strip_height = td->td_imagelength - tif->tif_row;
+            uint32_t strip_height = td->td_imagelength - tif->tif_dir.td_row;
             if (strip_height > td->td_rowsperstrip)
                 strip_height = td->td_rowsperstrip;
             if (TIFFVStripSize64(tif, strip_height) != (uint64_t)cc)
@@ -463,11 +465,11 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
             if (nCompressedBytes == 0)
             {
                 TIFFErrorExtR(tif, module, "Encoder error at scanline %lu",
-                              (unsigned long)tif->tif_row);
+                              (unsigned long)tif->tif_dir.td_row);
                 return 0;
             }
 
-            tif->tif_rawcc = nCompressedBytes;
+            tif->tif_rawcc = (tmsize_t)nCompressedBytes;
 
             if (!TIFFFlushData1(tif))
                 return 0;
@@ -485,7 +487,7 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
          appropriately even before we simplify it */
     do
     {
-        uInt avail_in_before = TIFF_CLAMP_UINT64_TO_INT32_MAX(cc);
+        uInt avail_in_before = TIFF_CLAMP_UINT64_TO_INT32_MAX((uint64_t)cc);
         sp->stream.avail_in = avail_in_before;
         if (deflate(&sp->stream, Z_NO_FLUSH) != Z_OK)
         {
@@ -499,7 +501,7 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
                 return 0;
             sp->stream.next_out = tif->tif_rawdata;
             sp->stream.avail_out =
-                TIFF_CLAMP_UINT64_TO_INT32_MAX(tif->tif_rawdatasize);
+                TIFF_CLAMP_UINT64_TO_INT32_MAX((uint64_t)tif->tif_rawdatasize);
         }
         cc -= (avail_in_before - sp->stream.avail_in);
     } while (cc > 0);
@@ -682,7 +684,7 @@ static const TIFFField zipFields[] = {
 static void *TIFF_zalloc(void *opaque, unsigned int items, unsigned int size)
 {
     static const char module[] = "TIFF_zalloc";
-    TIFF *tif = opaque;
+    TIFF *tif = (TIFF *)opaque;
 
     if (items > ~(size_t)0 / size)
     {
@@ -696,6 +698,13 @@ static void *TIFF_zalloc(void *opaque, unsigned int items, unsigned int size)
 static void TIFF_zfree(void *opaque, void *ptr)
 {
     _TIFFfreeExt((TIFF *)opaque, ptr);
+}
+
+static uint64_t ZIPGetMaxCompressionRatio(TIFF *tif)
+{
+    (void)tif;
+    /* cf https://zlib.net/zlib_tech.html */
+    return 1032;
 }
 
 int TIFFInitZIP(TIFF *tif, int scheme)
@@ -764,6 +773,7 @@ int TIFFInitZIP(TIFF *tif, int scheme)
     tif->tif_encodestrip = ZIPEncode;
     tif->tif_encodetile = ZIPEncode;
     tif->tif_cleanup = ZIPCleanup;
+    tif->tif_getmaxcompressionratio = ZIPGetMaxCompressionRatio;
     /*
      * Setup predictor setup.
      */

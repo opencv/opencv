@@ -118,10 +118,10 @@ static void _TIFFPrintField(FILE *fd, const TIFFField *fip,
             if (tv_size == 8)
                 fprintf(fd, "%lf", ((double *)raw_data)[j]);
             else
-                fprintf(fd, "%f", ((float *)raw_data)[j]);
+                fprintf(fd, "%f", (double)((float *)raw_data)[j]);
         }
         else if (fip->field_type == TIFF_FLOAT)
-            fprintf(fd, "%f", ((float *)raw_data)[j]);
+            fprintf(fd, "%f", (double)((float *)raw_data)[j]);
         else if (fip->field_type == TIFF_LONG8)
             fprintf(fd, "%" PRIu64, ((uint64_t *)raw_data)[j]);
         else if (fip->field_type == TIFF_SLONG8)
@@ -193,8 +193,9 @@ static int _TIFFPrettyPrintField(TIFF *tif, const TIFFField *fip, FILE *fd,
         case TIFFTAG_WHITEPOINT:
             if (value_count == 2 && fip->field_type == TIFF_RATIONAL)
             {
-                fprintf(fd, "  White Point: %g-%g\n", ((float *)raw_data)[0],
-                        ((float *)raw_data)[1]);
+                fprintf(fd, "  White Point: %g-%g\n",
+                        (double)((float *)raw_data)[0],
+                        (double)((float *)raw_data)[1]);
                 return 1;
             }
             return 0;
@@ -232,6 +233,9 @@ static int _TIFFPrettyPrintField(TIFF *tif, const TIFFField *fip, FILE *fd,
                 return 1;
             }
             return 0;
+
+        default:
+            break;
     }
 
     return 0;
@@ -244,8 +248,7 @@ static int _TIFFPrettyPrintField(TIFF *tif, const TIFFField *fip, FILE *fd,
 void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
 {
     TIFFDirectory *td = &tif->tif_dir;
-    char *sep;
-    long l, n;
+    const char *sep;
 
     fprintf(fd, "TIFF Directory at offset 0x%" PRIx64 " (%" PRIu64 ")\n",
             tif->tif_diroff, tif->tif_diroff);
@@ -286,8 +289,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
     }
     if (TIFFFieldSet(tif, FIELD_RESOLUTION))
     {
-        fprintf(fd, "  Resolution: %g, %g", td->td_xresolution,
-                td->td_yresolution);
+        fprintf(fd, "  Resolution: %g, %g", (double)td->td_xresolution,
+                (double)td->td_yresolution);
         if (TIFFFieldSet(tif, FIELD_RESOLUTIONUNIT))
         {
             switch (td->td_resolutionunit)
@@ -310,7 +313,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
         fprintf(fd, "\n");
     }
     if (TIFFFieldSet(tif, FIELD_POSITION))
-        fprintf(fd, "  Position: %g, %g\n", td->td_xposition, td->td_yposition);
+        fprintf(fd, "  Position: %g, %g\n", (double)td->td_xposition,
+                (double)td->td_yposition);
     if (TIFFFieldSet(tif, FIELD_BITSPERSAMPLE))
         fprintf(fd, "  Bits/Sample: %" PRIu16 "\n", td->td_bitspersample);
     if (TIFFFieldSet(tif, FIELD_SAMPLEFORMAT))
@@ -374,7 +378,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
             }
         }
     }
-    if (TIFFFieldSet(tif, FIELD_EXTRASAMPLES) && td->td_extrasamples)
+    if (TIFFFieldSet(tif, FIELD_EXTRASAMPLES) && td->td_extrasamples &&
+        td->td_sampleinfo)
     {
         uint16_t i;
         fprintf(fd, "  Extra Samples: %" PRIu16 "<", td->td_extrasamples);
@@ -412,7 +417,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
              i > 0 && cp < td->td_inknames + td->td_inknameslen;
              cp = strchr(cp, '\0') + 1, i--)
         {
-            size_t max_chars = td->td_inknameslen - (cp - td->td_inknames);
+            size_t max_chars =
+                (size_t)(td->td_inknameslen - (cp - td->td_inknames));
             fputs(sep, fd);
             _TIFFprintAsciiBounded(fd, cp, max_chars);
             sep = ", ";
@@ -548,17 +554,25 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
     if (TIFFFieldSet(tif, FIELD_PAGENUMBER))
         fprintf(fd, "  Page Number: %" PRIu16 "-%" PRIu16 "\n",
                 td->td_pagenumber[0], td->td_pagenumber[1]);
-    if (TIFFFieldSet(tif, FIELD_COLORMAP))
+    if (TIFFFieldSet(tif, FIELD_COLORMAP) && td->td_colormap[0] &&
+        td->td_colormap[1] && td->td_colormap[2])
     {
         fprintf(fd, "  Color Map: ");
         if (flags & TIFFPRINT_COLORMAP)
         {
             fprintf(fd, "\n");
-            n = 1L << td->td_bitspersample;
-            for (l = 0; l < n; l++)
-                fprintf(fd, "   %5ld: %5" PRIu16 " %5" PRIu16 " %5" PRIu16 "\n",
-                        l, td->td_colormap[0][l], td->td_colormap[1][l],
-                        td->td_colormap[2][l]);
+            if (td->td_bitspersample >= 64)
+                fprintf(fd, "   (BitsPerSample too large to print safely)\n");
+            else
+            {
+                uint64_t n = 1ULL << td->td_bitspersample;
+                for (uint64_t l = 0u; l < n; l++)
+                    fprintf(fd,
+                            "   %5" PRIu64 ": %5" PRIu16 " %5" PRIu16
+                            " %5" PRIu16 "\n",
+                            l, td->td_colormap[0][l], td->td_colormap[1][l],
+                            td->td_colormap[2][l]);
+            }
         }
         else
             fprintf(fd, "(present)\n");
@@ -569,26 +583,37 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
         fprintf(fd, "  Reference Black/White:\n");
         for (i = 0; i < 3; i++)
             fprintf(fd, "    %2d: %5g %5g\n", i,
-                    td->td_refblackwhite[2 * i + 0],
-                    td->td_refblackwhite[2 * i + 1]);
+                    (double)td->td_refblackwhite[2 * i + 0],
+                    (double)td->td_refblackwhite[2 * i + 1]);
     }
-    if (TIFFFieldSet(tif, FIELD_TRANSFERFUNCTION))
+    if (TIFFFieldSet(tif, FIELD_TRANSFERFUNCTION) &&
+        td->td_transferfunction[0] &&
+        ((td->td_samplesperpixel - td->td_extrasamples > 1 &&
+          td->td_transferfunction[1] && td->td_transferfunction[2]) ||
+         td->td_samplesperpixel - td->td_extrasamples <= 1))
     {
         fprintf(fd, "  Transfer Function: ");
         if (flags & TIFFPRINT_CURVES)
         {
             fprintf(fd, "\n");
-            n = 1L << td->td_bitspersample;
-            for (l = 0; l < n; l++)
+            if (td->td_bitspersample >= 64)
+                fprintf(fd, "    (BitsPerSample too large to print safely)\n");
+            else
             {
-                uint16_t i;
-                fprintf(fd, "    %2ld: %5" PRIu16, l,
-                        td->td_transferfunction[0][l]);
-                for (i = 1;
-                     i < td->td_samplesperpixel - td->td_extrasamples && i < 3;
-                     i++)
-                    fprintf(fd, " %5" PRIu16, td->td_transferfunction[i][l]);
-                fputc('\n', fd);
+                uint64_t n = 1ULL << td->td_bitspersample;
+                for (uint64_t l = 0; l < n; l++)
+                {
+                    uint16_t i;
+                    fprintf(fd, "    %2" PRIu64 ": %5" PRIu16, l,
+                            td->td_transferfunction[0][l]);
+                    for (i = 1;
+                         i < td->td_samplesperpixel - td->td_extrasamples &&
+                         i < 3;
+                         i++)
+                        fprintf(fd, " %5" PRIu16,
+                                td->td_transferfunction[i][l]);
+                    fputc('\n', fd);
+                }
             }
         }
         else
@@ -655,7 +680,7 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
                 else if (fip->field_readcount == TIFF_SPP)
                     value_count = td->td_samplesperpixel;
                 else
-                    value_count = fip->field_readcount;
+                    value_count = (uint32_t)fip->field_readcount;
                 if (fip->field_tag == TIFFTAG_DOTRANGE &&
                     strcmp(fip->field_name, "DotRange") == 0)
                 {
@@ -680,7 +705,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
                      * "set_get_field_type" to determine internal storage size.
                      */
                     int tv_size = TIFFFieldSetGetSize(fip);
-                    raw_data = _TIFFmallocExt(tif, tv_size * value_count);
+                    raw_data = _TIFFCheckMalloc(tif, value_count, tv_size,
+                                                "for tag data");
                     mem_alloc = 1;
                     if (TIFFGetField(tif, tag, raw_data) != 1)
                     {
@@ -744,7 +770,7 @@ static void _TIFFprintAsciiBounded(FILE *fd, const char *cp, size_t max_chars)
         if (*tp)
             fprintf(fd, "\\%c", *tp);
         else
-            fprintf(fd, "\\%03o", *cp & 0xff);
+            fprintf(fd, "\\%03o", (unsigned int)(*cp & 0xff));
     }
 }
 
