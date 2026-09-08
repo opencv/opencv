@@ -91,9 +91,7 @@ struct ConstFolding
     {
         CV_Assert(usecounts[inp.idx] > 0);
         if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
-            UMat& t = netimpl->__tensors__[inp.idx];
-            if (!t.u || t.u->refcount == 0)
-                t.release(); // deallocate unused tensor
+            netimpl->__tensors__[inp.idx] = UMat(); // deallocate unused tensor
         }
     }
 
