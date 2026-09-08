@@ -65,6 +65,75 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
 \****************************************************************************************/
 
 namespace {
+#if CV_SIMD128_64F
+template<typename T, typename ST>
+struct RowSumCn1SIMD128
+{
+    static CV_ALWAYS_INLINE bool apply(const T*, ST*, int, int)
+    {
+        return false;
+    }
+};
+
+template<>
+struct RowSumCn1SIMD128<float, double>
+{
+    static CV_ALWAYS_INLINE bool apply(const float* S, double* D, int width, int ksz_cn)
+    {
+        double s = 0;
+        int i = 0;
+        {
+            v_float64x2 vsum0 = v_setzero_f64();
+            v_float64x2 vsum1 = v_setzero_f64();
+            for( ; i <= ksz_cn - 2*VTraits<v_float32x4>::nlanes; i += 2*VTraits<v_float32x4>::nlanes )
+            {
+                v_float32x4 va = v_load(S + i);
+                v_float32x4 vb = v_load(S + i + VTraits<v_float32x4>::nlanes);
+                vsum0 = v_add(vsum0, v_cvt_f64(va));
+                vsum0 = v_add(vsum0, v_cvt_f64_high(va));
+                vsum1 = v_add(vsum1, v_cvt_f64(vb));
+                vsum1 = v_add(vsum1, v_cvt_f64_high(vb));
+            }
+            for( ; i <= ksz_cn - VTraits<v_float32x4>::nlanes; i += VTraits<v_float32x4>::nlanes )
+            {
+                v_float32x4 v = v_load(S + i);
+                vsum0 = v_add(vsum0, v_cvt_f64(v));
+                vsum0 = v_add(vsum0, v_cvt_f64_high(v));
+            }
+            vsum0 = v_add(vsum0, vsum1);
+            s = v_reduce_sum(vsum0);
+            for( ; i < ksz_cn; i++ )
+                s += (double)S[i];
+        }
+        D[0] = s;
+
+        int j = 0;
+        for( ; j <= width - VTraits<v_float32x4>::nlanes; j += VTraits<v_float32x4>::nlanes )
+        {
+            v_float32x4 vnew = v_load(S + j + ksz_cn);
+            v_float32x4 vold = v_load(S + j);
+            v_float64x2 vd0 = v_sub(v_cvt_f64(vnew), v_cvt_f64(vold));
+            v_float64x2 vd1 = v_sub(v_cvt_f64_high(vnew), v_cvt_f64_high(vold));
+            v_float64x2 vp0 = v_add(vd0, v_rotate_left<1>(vd0));
+            v_float64x2 vp1 = v_add(vd1, v_rotate_left<1>(vd1));
+            double pair0_sum = v_extract_n<1>(vp0);
+            v_float64x2 vp1off = v_add(vp1, v_setall_f64(pair0_sum));
+            v_float64x2 vc = v_setall_f64(s);
+            v_store(D + j + 1, v_add(vp0, vc));
+            v_float64x2 vr2 = v_add(vp1off, vc);
+            v_store(D + j + 1 + VTraits<v_float64x2>::nlanes, vr2);
+            s = v_extract_n<1>(vr2);
+        }
+        for( ; j < width; j++ )
+        {
+            s += (double)S[j + ksz_cn] - (double)S[j];
+            D[j + 1] = s;
+        }
+        return true;
+    }
+};
+#endif // CV_SIMD128_64F
+
 template<typename T, typename ST>
 struct RowSum :
         public BaseRowFilter
@@ -102,14 +171,19 @@ struct RowSum :
         }
         else if( cn == 1 )
         {
-            ST s = 0;
-            for( i = 0; i < ksz_cn; i++ )
-                s += (ST)S[i];
-            D[0] = s;
-            for( i = 0; i < width; i++ )
+#if CV_SIMD128_64F
+            if (!RowSumCn1SIMD128<T, ST>::apply(S, D, width, ksz_cn))
+#endif
             {
-                s += (ST)S[i + ksz_cn] - (ST)S[i];
-                D[i+1] = s;
+                ST s = 0;
+                for( i = 0; i < ksz_cn; i++ )
+                    s += (ST)S[i];
+                D[0] = s;
+                for( i = 0; i < width; i++ )
+                {
+                    s += (ST)S[i + ksz_cn] - (ST)S[i];
+                    D[i + 1] = s;
+                }
             }
         }
         else if( cn == 3 )
