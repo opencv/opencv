@@ -4276,6 +4276,57 @@ TEST(Core_Arithm, DISABLED_mul_overflow_28557)
 }
 
 
+// https://github.com/opencv/opencv/issues/29880
+typedef testing::TestWithParam< tuple<perf::MatDepth, int> > Core_AddWeighted_regression29880;
+
+TEST_P(Core_AddWeighted_regression29880, dtype)
+{
+    const int sdepth = get<0>(GetParam());
+    const int dtype = get<1>(GetParam());
+    const int ddepth = dtype < 0 ? sdepth : dtype;
+
+    cv::Mat src(4, 4, CV_MAKETYPE(sdepth, 1), cv::Scalar::all(1)), dst, dst64f;
+    cv::addWeighted(src, 2.0, src, 3.0, 4.0, dst, dtype);
+    ASSERT_EQ(ddepth, dst.depth());
+    dst.convertTo(dst64f, CV_64F);
+    EXPECT_EQ(0, cv::countNonZero(dst64f != (ddepth == CV_Bool ? 1.0 : 9.0)));
+}
+
+// sdepth excludes CV_Bool: addWeighted now rejects Bool sources outright, see below.
+INSTANTIATE_TEST_CASE_P(/**/, Core_AddWeighted_regression29880, testing::Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_16F, CV_16BF, CV_32F),
+    testing::Values(-1, CV_8U, CV_32F, CV_64F, CV_Bool)));
+
+// CV_Bool sources are disabled per https://github.com/opencv/opencv/pull/29883#issuecomment-5569942015:
+// the user should cast explicitly instead.
+typedef testing::TestWithParam<int> Core_AddWeighted_boolInput_29880;
+
+TEST_P(Core_AddWeighted_boolInput_29880, throws)
+{
+    const int dtype = GetParam();
+    cv::Mat src(4, 4, CV_MAKETYPE(CV_Bool, 1), cv::Scalar::all(1)), dst;
+    ASSERT_THROW(cv::addWeighted(src, 2.0, src, 3.0, 4.0, dst, dtype), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_AddWeighted_boolInput_29880,
+    testing::Values(-1, CV_8U, CV_32F, CV_64F, CV_Bool));
+
+// The dtype=CV_64F path computes at fp32 (addWeighted's native work precision for 8U..32F sources)
+// and casts the RESULT up to fp64, rather than widening the sources to fp64 before the op; the two
+// give different bit patterns for a generic alpha, so this pins down which one actually runs.
+TEST(Core_Arithm, addWeighted_fp64_uses_fp32_intermediate_29880)
+{
+    const float srcVal = 100.f, alpha = 1.f/3, beta = 0.f, gamma = 0.f;
+    cv::Mat src(1, 1, CV_8UC1, cv::Scalar(srcVal)), dst;
+    cv::addWeighted(src, (double)alpha, src, (double)beta, (double)gamma, dst, CV_64F);
+
+    const double fp32Then64 = (double)cv::saturate_cast<float>(srcVal*alpha + srcVal*beta + gamma);
+    const double fp64Only = (double)srcVal*(double)alpha + (double)srcVal*(double)beta + (double)gamma;
+    ASSERT_NE(fp32Then64, fp64Only) << "chosen alpha does not distinguish the two code paths";
+    EXPECT_EQ(fp32Then64, dst.at<double>(0, 0));
+}
+
+
 TEST(Core_Arithm, min_empty)
 {
   cv::Mat A, B, C;
