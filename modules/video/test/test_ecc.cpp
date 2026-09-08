@@ -459,6 +459,106 @@ TEST(Video_ECC_Test_Compute, bug_14657) {
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
+// Render both images as direct samples of one band-limited scene so that any
+// drift from the known warp is caused by findTransformECC itself.
+class EccAnalyticScene {
+   public:
+    EccAnalyticScene() {
+        RNG rng(7);
+        for (int i = 0; i < components; i++) {
+            const double frequency = 0.22 * std::sqrt(rng.uniform(0.02, 1.0));
+            const double direction = rng.uniform(0.0, CV_PI);
+            frequencyX.push_back(frequency * std::cos(direction));
+            frequencyY.push_back(frequency * std::sin(direction));
+            phase.push_back(rng.uniform(0.0, 2 * CV_PI));
+        }
+    }
+
+    // image(x, y) = scene(imageToScene * (x, y, 1))
+    void render(Mat& image, Size size, const Matx33d& imageToScene) const {
+        image.create(size, CV_32F);
+        for (int y = 0; y < size.height; y++)
+            for (int x = 0; x < size.width; x++) {
+                const double sceneX = imageToScene(0, 0) * x + imageToScene(0, 1) * y + imageToScene(0, 2);
+                const double sceneY = imageToScene(1, 0) * x + imageToScene(1, 1) * y + imageToScene(1, 2);
+                double sum = 0;
+                for (int i = 0; i < components; i++)
+                    sum += std::cos(2 * CV_PI * (frequencyX[i] * sceneX + frequencyY[i] * sceneY) + phase[i]);
+                image.at<float>(y, x) = (float)(128.0 + 120.0 / components * sum);
+            }
+    }
+
+   private:
+    static const int components = 16;
+    std::vector<double> frequencyX, frequencyY, phase;
+};
+
+static void testEccPrefilterBorder(int motionType) {
+    // A smaller window makes the fixed-width fabricated border ring more visible.
+    const EccAnalyticScene scene;
+    const int templateSize = 128, margin = 8, inputSize = templateSize + 2 * margin, trials = 20;
+    const TermCriteria criteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+    const std::vector<Point2f> templateCorners = {
+        Point2f(0, 0), Point2f((float)templateSize, 0),
+        Point2f(0, (float)templateSize), Point2f((float)templateSize, (float)templateSize)};
+
+    RNG rng(12345);
+    double scaleErrorSum = 0, cornerErrorSum = 0;
+
+    for (int k = 0; k < trials; k++) {
+        const double angle = rng.uniform(-2.0, 2.0) * CV_PI / 180;
+        const double scale = rng.uniform(-0.02, 0.02);
+        const double shear = rng.uniform(-0.01, 0.01);
+        const Matx22d rotation(std::cos(angle), -std::sin(angle), std::sin(angle), std::cos(angle));
+        const Matx22d linearPart = rotation * Matx22d(1 + scale, shear, shear, 1 - scale);
+        const Matx33d groundMap(linearPart(0, 0), linearPart(0, 1), margin + rng.uniform(-3.0, 3.0),
+                                linearPart(1, 0), linearPart(1, 1), margin + rng.uniform(-3.0, 3.0),
+                                0, 0, 1);
+        const Matx33d sceneOffset(1, 0, rng.uniform(0.0, 997.0),
+                                  0, 1, rng.uniform(0.0, 991.0), 0, 0, 1);
+
+        Mat templateImage, inputImage;
+        scene.render(templateImage, Size(templateSize, templateSize), sceneOffset);
+        scene.render(inputImage, Size(inputSize, inputSize), sceneOffset * groundMap.inv());
+
+        Mat groundMatrix;
+        if (motionType == MOTION_HOMOGRAPHY)
+            groundMatrix = (Mat_<float>(3, 3) << groundMap(0, 0), groundMap(0, 1), groundMap(0, 2),
+                                                   groundMap(1, 0), groundMap(1, 1), groundMap(1, 2),
+                                                   groundMap(2, 0), groundMap(2, 1), groundMap(2, 2));
+        else
+            groundMatrix = (Mat_<float>(2, 3) << groundMap(0, 0), groundMap(0, 1), groundMap(0, 2),
+                                                   groundMap(1, 0), groundMap(1, 1), groundMap(1, 2));
+        Mat foundMatrix = groundMatrix.clone();
+        findTransformECC(templateImage, inputImage, foundMatrix, motionType, criteria);
+
+        const Matx22d foundLinearPart(foundMatrix.at<float>(0, 0), foundMatrix.at<float>(0, 1),
+                                      foundMatrix.at<float>(1, 0), foundMatrix.at<float>(1, 1));
+        scaleErrorSum += std::sqrt(std::abs(determinant(foundLinearPart * linearPart.inv()))) - 1.0;
+
+        std::vector<Point2f> expectedCorners, foundCorners;
+        if (motionType == MOTION_HOMOGRAPHY) {
+            cv::perspectiveTransform(templateCorners, expectedCorners, groundMatrix);
+            cv::perspectiveTransform(templateCorners, foundCorners, foundMatrix);
+        } else {
+            cv::transform(templateCorners, expectedCorners, groundMatrix);
+            cv::transform(templateCorners, foundCorners, foundMatrix);
+        }
+        cornerErrorSum += cv::norm(foundCorners, expectedCorners, NORM_L2) / 2;
+    }
+
+    EXPECT_LT(std::abs(scaleErrorSum / trials), 1e-4);  // no systematic scale bias
+    EXPECT_LT(cornerErrorSum / trials, 0.02);           // sub-pixel registration
+}
+
+TEST(Video_ECC_Affine, prefilter_border_does_not_bias_scale) {
+    testEccPrefilterBorder(MOTION_AFFINE);
+}
+
+TEST(Video_ECC_Homography, prefilter_border_does_not_bias_scale) {
+    testEccPrefilterBorder(MOTION_HOMOGRAPHY);
+}
+
 TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();
