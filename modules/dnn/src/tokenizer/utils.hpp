@@ -24,12 +24,15 @@ static void splitOnSpecialTokens(const std::string& text,
     while (pos < text.size()) {
         std::string matched;
         int matchedId = -1;
+        const char head = text[pos];
         for (const auto& kv : specialToId) {
             const std::string& sp = kv.first;
-            if (sp.empty() || !isAllowed(sp)) continue;
+            if (sp.empty() || sp[0] != head) continue;
             if (pos + sp.size() > text.size()) continue;
+            if (sp.size() <= matched.size()) continue;
+            if (!isAllowed(sp)) continue;
             if (text.compare(pos, sp.size(), sp) != 0) continue;
-            if (sp.size() > matched.size()) { matched = sp; matchedId = kv.second; }
+            matched = sp; matchedId = kv.second;
         }
         if (matchedId >= 0) {
             if (pos > chunkStart) onLiteral(text.substr(chunkStart, pos - chunkStart));

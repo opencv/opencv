@@ -164,6 +164,7 @@ void CoreUnigram::encodeChunk(const std::string& chunk, std::vector<int>& out) c
     std::vector<char> backIsUnk(n + 1, 0);
     best[0] = 0.0f;
 
+    std::string sub;
     for (size_t i = 0; i < n; ++i) {
         if (best[i] == NEG_INF) continue;
 
@@ -180,7 +181,7 @@ void CoreUnigram::encodeChunk(const std::string& chunk, std::vector<int>& out) c
         size_t maxLen = std::min(maxPieceCps_, n - i);
         for (size_t len = 1; len <= maxLen; ++len) {
             size_t j = i + len;
-            std::string sub = chunk.substr(offs[i], offs[j] - offs[i]);
+            sub.assign(chunk, offs[i], offs[j] - offs[i]);
             auto it = pieceToId_.find(sub);
             if (it == pieceToId_.end()) continue;
             int id = it->second;
