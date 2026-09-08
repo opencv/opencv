@@ -2843,7 +2843,7 @@ TEST(BroadcastTo, basic) {
         EXPECT_EQ(dst.dims, 2);
         EXPECT_EQ(dst.size[0], 3);
         EXPECT_EQ(dst.size[1], 0);
-        EXPECT_EQ(dst.total(), 0);
+        EXPECT_EQ(dst.total(), 0u);
     }
 
 }
