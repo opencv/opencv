@@ -128,6 +128,45 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MatchTemplate, Combine(
                                 MatchTemplType::all(),
                                 Bool())
                            );
+
+TEST(MatchTemplate, ccoeff_normed_large_low_contrast_image_21788)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    // The kernel only accumulates in double (the actual fix) when the device supports it;
+    // devices without double support keep the original, still not fully precise CV_32F
+    // kernel by design (see PR discussion on #21788), so this accuracy guarantee does not
+    // hold there yet.
+    if (cv::ocl::Device::getDefault().doubleFPConfig() <= 0)
+        throw SkipTestException("OpenCL device has no double-precision support");
+
+    Mat image(1080, 1920, CV_8UC1);
+    cv::theRNG().fill(image, RNG::UNIFORM, 178, 183);
+
+    Mat templ = image(Rect(5, 5, 32, 32)).clone();
+
+    bool useOCL = cv::ocl::useOpenCL();
+    Mat cpuResult;
+    cv::ocl::setUseOpenCL(false);
+    cv::matchTemplate(image, templ, cpuResult, TM_CCOEFF_NORMED);
+
+    UMat gpuResultU;
+    cv::ocl::setUseOpenCL(true);
+    cv::matchTemplate(image.getUMat(ACCESS_READ), templ.getUMat(ACCESS_READ), gpuResultU, TM_CCOEFF_NORMED);
+    cv::ocl::setUseOpenCL(useOCL);
+    Mat gpuResult = gpuResultU.getMat(ACCESS_READ);
+
+    ASSERT_EQ(cpuResult.size(), gpuResult.size());
+
+    double minCpu = 0, maxCpu = 0, minGpu = 0, maxGpu = 0;
+    cv::minMaxLoc(cpuResult, &minCpu, &maxCpu);
+    cv::minMaxLoc(gpuResult, &minGpu, &maxGpu);
+
+    EXPECT_NEAR(minCpu, minGpu, 5e-2) << "CPU minVal=" << minCpu << " GPU minVal=" << minGpu;
+    EXPECT_NEAR(maxCpu, maxGpu, 5e-2) << "CPU maxVal=" << maxCpu << " GPU maxVal=" << maxGpu;
+    EXPECT_LE(cv::norm(cpuResult, gpuResult, NORM_INF), 5e-2);
+}
+
 } } // namespace opencv_test::ocl
 
 #endif
