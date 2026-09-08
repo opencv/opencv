@@ -526,7 +526,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1, CV_64FC1)
     )
 );
 
