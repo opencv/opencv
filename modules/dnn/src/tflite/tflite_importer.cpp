@@ -30,7 +30,7 @@ public:
 
 private:
     bool newEngine;
-    // true when metadata has "keep_stablehlo_constant": graph input is NCHW, not TFLite's usual NHWC.
+    // true when the 4D graph input is channels-first (NCHW) rather than TFLite's usual NHWC.
     bool preferNCHWInput;
     const opencv_tflite::Model* model;
     const flatbuffers::Vector<flatbuffers::Offset<opencv_tflite::Tensor> >* modelTensors;
@@ -50,6 +50,10 @@ private:
 
     // Wrap TFLite Tensor to OpenCV Mat without data copying
     Mat parseTensor(const Tensor& tensor);
+
+    // TFLite ops run NHWC only, so a channels-first graph input is always transposed to NHWC
+    // before use. True when the input's first consumer is that NCHW->NHWC transpose.
+    bool graphInputIsNCHW();
 
     typedef void (TFLiteImporter::*TFLiteImporterNodeParser)(const Operator&, const std::string&, LayerParams&);
     typedef std::map<std::string, TFLiteImporterNodeParser> DispatchMap;
@@ -167,25 +171,7 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
     CV_Assert(model->buffers());
     CV_CheckEQ((size_t)model->subgraphs()->size(), 1u, "");
 
-    preferNCHWInput = false;
-    if (model->metadata()) {
-        for (int i = 0; i < model->metadata()->size(); ++i) {
-            if (model->metadata()->Get(i)->name()->str() == "keep_stablehlo_constant") {
-                preferNCHWInput = true;
-                break;
-            }
-        }
-    }
-    // Fallback for channels-first inputs lacking the metadata marker: dim1 is a channel count, last dim is not.
-    if (!preferNCHWInput) {
-        const auto* sg0 = model->subgraphs()->Get(0);
-        if (sg0->inputs() && sg0->inputs()->size() > 0) {
-            const auto* shp = sg0->tensors()->Get(sg0->inputs()->Get(0))->shape();
-            auto isChannels = [](int v) { return v == 1 || v == 3 || v == 4; };
-            if (shp && shp->size() == 4 && isChannels(shp->Get(1)) && !isChannels(shp->Get(3)))
-                preferNCHWInput = true;
-        }
-    }
+    preferNCHWInput = graphInputIsNCHW();
 
     modelTensors = model->subgraphs()->Get(0)->tensors();
     CV_Assert(modelTensors);
@@ -204,6 +190,44 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
 static BuiltinOperator getBuiltinCode(const opencv_tflite::OperatorCode* opCode)
 {
     return std::max(opCode->builtin_code(), BuiltinOperator(opCode->deprecated_builtin_code()));
+}
+
+bool TFLiteImporter::graphInputIsNCHW()
+{
+    const auto* subgraph = model->subgraphs()->Get(0);
+    const auto* sgInputs = subgraph->inputs();
+    const auto* sgOps = subgraph->operators();
+    if (!sgInputs || sgInputs->size() == 0 || !sgOps)
+        return false;
+
+    const int inpIdx = sgInputs->Get(0);
+    for (int i = 0; i < (int)sgOps->size(); ++i)
+    {
+        const auto* op = sgOps->Get(i);
+        const auto* op_inputs = op->inputs();
+        bool consumesInput = false;
+        for (int j = 0; op_inputs && j < (int)op_inputs->size(); ++j)
+        {
+            if (op_inputs->Get(j) == inpIdx)
+            {
+                consumesInput = true;
+                break;
+            }
+        }
+        if (!consumesInput)
+            continue;
+
+        // The first op reading the input decides the layout: NCHW if it is an NCHW->NHWC transpose.
+        if (op_inputs->size() < 2 ||
+            getBuiltinCode(model->operator_codes()->Get(op->opcode_index())) != BuiltinOperator_TRANSPOSE)
+            return false;
+        const Mat perm = parseTensor(*subgraph->tensors()->Get(op_inputs->Get(1)));
+        if (perm.total() != 4 || perm.type() != CV_32S)
+            return false;
+        return perm.at<int>(0) == 0 && perm.at<int>(1) == 2 &&
+               perm.at<int>(2) == 3 && perm.at<int>(3) == 1;
+    }
+    return false;
 }
 
 DataLayout estimateLayout(const Tensor& t, bool preferNCHW = false)
@@ -228,7 +252,7 @@ static int tfliteTypeToCvDepth(TensorType t)
     case TensorType_INT64:   return CV_64S;
     case TensorType_INT8:    return CV_8S;
     case TensorType_BOOL:    return CV_Bool;
-    default: CV_Error(Error::StsNotImplemented, format("Unsupported CAST target type %s", EnumNameTensorType(t)));
+    default: CV_Error(Error::StsNotImplemented, format("Unsupported TFLite target type %s", EnumNameTensorType(t)));
     }
 }
 
@@ -1289,7 +1313,8 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
 void TFLiteImporter::parseBatchMatMul(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "MatMul";
     auto options = op.builtin_options_as_BatchMatMulOptions();
-    if (options && (options->adj_x() || options->adj_y()))
+    CV_Assert(options);
+    if (options->adj_x() || options->adj_y())
         CV_Error(Error::StsNotImplemented, "TFLite BATCH_MATMUL with adj_x/adj_y not supported");
     // MatMul layer handles batched >2D inputs and two dynamic inputs itself.
     addLayer(layerParams, op);
@@ -1297,8 +1322,10 @@ void TFLiteImporter::parseBatchMatMul(const Operator& op, const std::string& opc
 
 void TFLiteImporter::parseTopK(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "TopK";
-    int k = allTensors[op.inputs()->Get(1)].at<int>(0);
-    layerParams.set("k", k);
+    Mat kTensor = allTensors[op.inputs()->Get(1)];
+    if (kTensor.type() == CV_64SC1) kTensor.convertTo(kTensor, CV_32S);
+    CV_CheckTypeEQ(kTensor.type(), CV_32SC1, "");
+    layerParams.set("k", kTensor.at<int>(0));
     layerParams.set("axis", -1);
     layerParams.set("largest", 1);
     layerParams.set("sorted", 1);
@@ -1337,7 +1364,13 @@ void TFLiteImporter::parseNaryEltwise(const Operator& op, const std::string& opc
     else if (opcode == "LOGICAL_AND")
         layerParams.set("operation", "and");
     else if (opcode == "FLOOR_MOD")
+    {
+        // the "mod" kernel is integer-only; float inputs would be truncated to int
+        int inDepth = tfliteTypeToCvDepth(modelTensors->Get(op.inputs()->Get(0))->type());
+        if (inDepth == CV_32F || inDepth == CV_16F)
+            CV_Error(Error::StsNotImplemented, "TFLite FLOOR_MOD on floating-point inputs is not supported");
         layerParams.set("operation", "mod");
+    }
     else if (opcode == "NOT_EQUAL")
         layerParams.set("operation", "not_equal");
     else
