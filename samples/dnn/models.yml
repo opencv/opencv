@@ -284,6 +284,24 @@ sam:
   sample: "segmentation"
 
 ################################################################################
+# Instance segmentation models.
+################################################################################
+
+# Mask R-CNN from the ONNX Model Zoo, converted from facebookresearch/maskrcnn-benchmark.
+# Expects BGR input scaled so the short side is 800 and the long side at most 1333,
+# then zero-padded to a multiple of 32. The sample handles that resize itself.
+mask_rcnn:
+  load_info:
+    url: "https://huggingface.co/onnxmodelzoo/MaskRCNN-10/resolve/main/MaskRCNN-10.onnx"
+    sha1: "728c2308a9224aa84344331bdca0edf7e13c1271"
+  model: "MaskRCNN-10.onnx"
+  mean: [102.9801, 115.9465, 122.7717]
+  scale: 1.0
+  rgb: false
+  labels: "object_detection_classes_yolo.txt"
+  sample: "mask_rcnn"
+
+################################################################################
 # Text detection models.
 ################################################################################
 

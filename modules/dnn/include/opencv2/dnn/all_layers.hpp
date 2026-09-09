@@ -57,7 +57,7 @@ CV__DNN_INLINE_NS_BEGIN
   In addition to this way of layers instantiation, there is a more common factory API (see @ref dnnLayerFactory), it allows to create layers dynamically (by name) and register new ones.
   You can use both API, but factory API is less convenient for native C++ programming and basically designed for use inside importers (see @ref readNetFromONNX()).
 
-  Built-in layers reproduce the functionality of the corresponding ONNX and TensorFlow operators.
+  Built-in layers reproduce the functionality of the corresponding ONNX operators.
   The following layers are among the core building blocks used to assemble imported networks:
   - Convolution
   - Deconvolution

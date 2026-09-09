@@ -22,7 +22,7 @@ The engine performs automatic attention fusion: the `MatMul` → `Softmax` → `
 
 In OpenCV 5.0, `ENGINE_OPENCV` runs on CPU only. Support for CUDA and other non-CPU backends is planned for a subsequent release. Users requiring GPU acceleration should use `ENGINE_ORT`.
 
-@note The Darknet and Caffe parsers have been removed in OpenCV 5; ONNX is the recommended format. TFLite and TensorFlow models are still supported and are executed via `ENGINE_OPENCV`.
+@note The Darknet, Caffe and TensorFlow parsers have been removed in OpenCV 5; ONNX is the recommended format. TFLite models are still supported and are executed via `ENGINE_OPENCV`.
 
 ### ENGINE_ORT
 
