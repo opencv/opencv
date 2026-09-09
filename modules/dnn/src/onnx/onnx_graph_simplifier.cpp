@@ -2029,7 +2029,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     std::vector<uchar> narrowed;
     const uchar* payload = reinterpret_cast<const uchar*>(rawdata);
     size_t payload_bytes = raw_data_size;
-    if (!tensor_proto.int32_data().empty())
+    if (!tensor_proto.int32_data().empty() && onnx_dtype::isExotic(datatype))
     {
         const auto& i32 = tensor_proto.int32_data();
         narrowed.resize(i32.size());
