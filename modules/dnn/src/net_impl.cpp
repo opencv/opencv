@@ -140,6 +140,7 @@ void Net::Impl::clear()
     __tensors__ = std::vector<Mat>();
     bufidxs = std::vector<int>();
     buffers = std::vector<Mat>();
+    pinnedArgs = std::vector<Arg>();
 
     mainGraph = Ptr<Graph>();
 

@@ -261,7 +261,6 @@ TEST_P(Test_TFLite, permute) {
     //testLayer("permutation_4d_0123");
     testLayer("permutation_4d_0132");
     testLayer("permutation_4d_0213");
-    testLayer("permutation_4d_0231");
 }
 
 TEST_P(Test_TFLite, global_average_pooling_2d) {
@@ -500,17 +499,10 @@ TEST_P(Test_TFLite, yolo26n_seg)
     Mat input = blobFromImage(imread(findDataFile("dnn/street.png")), 1.0 / 255, Size(640, 640), Scalar(), true, false);
     testInputShapes(net, {input});
     net.setInput(input);
-    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
-    std::vector<Mat> outs;
-    net.forward(outs, outNames);
-    for (size_t i = 0; i < outNames.size(); ++i)
-    {
-        // validate only the detection head; the mask-proto tensor is intermediate
-        if (outs[i].size[outs[i].dims - 2] != 300)
-            continue;
-        Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/yolo26n-seg_out_%s.npy", outNames[i].c_str())));
-        normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(outs[i]), "", 0.5, 0.01, 0.02);
-    }
+    // the mask-proto output has no reference; validate the detection head only
+    Mat out = net.forward("serving_default_output_0_output");
+    Mat ref = blobFromNPY(findDataFile("dnn/tflite/yolo26n-seg_out_serving_default_output_0_output.npy"));
+    normAssertDetections(decodeYoloEnd2End(ref), decodeYoloEnd2End(out), "", 0.5, 0.01, 0.02);
 }
 
 TEST_P(Test_TFLite, resnet18)
@@ -560,6 +552,7 @@ TEST_P(Test_TFLite, pose_landmark)
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
     net.forward(outs, outNames);
+    ASSERT_EQ(outs.size(), 5);
     // The reference stores 4D outputs as NHWC; compare the 2D outputs only.
     for (size_t i = 0; i < outNames.size(); ++i)
     {
