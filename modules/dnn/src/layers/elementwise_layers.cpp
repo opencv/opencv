@@ -254,7 +254,11 @@ public:
         }
     };
 
-    ElementWiseLayer(const Func &f=Func()) { func = f; }
+    ElementWiseLayer(const Func &f=Func())
+    {
+        registerFusionOpsOnce<ElementWiseLayer<Func> >({ &ElementWiseLayer<Func>::unfoldOp, nullptr });
+        func = f;
+    }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
@@ -415,7 +419,12 @@ public:
         return func.getActivationFunc(depth, activParams);
     }
 
-    bool unfoldOp(LayerMath& out, const ConstOperand& side) const CV_OVERRIDE
+    static bool unfoldOp(const Layer* self, LayerMath& out, const ConstOperand& side)
+    {
+        return static_cast<const ElementWiseLayer<Func>*>(self)->unfoldMath(out, side);
+    }
+
+    bool unfoldMath(LayerMath& out, const ConstOperand& side) const
     {
         if (!func.unfoldOp(out, side))
             return false;
@@ -945,7 +954,7 @@ struct GeluFunctor : public BaseFunctor {
 
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
-        fusion::gelu(r);
+        fusion::detail::gelu(r);
         return true;
     }
 
@@ -1455,7 +1464,7 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
-        fusion::sigmoid(r);
+        fusion::detail::sigmoid(r);
         return true;
     }
 

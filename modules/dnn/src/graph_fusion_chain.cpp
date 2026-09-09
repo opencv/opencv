@@ -140,10 +140,13 @@ private:
 
     static bool isAbsorbableMath(Layer* l)
     {
+        const FusionOps* ops = fusionOpsFor(l);
+        if (!ops || !ops->unfold)
+            return false;
         LayerMath r;
         ConstOperand anyConstant;
         anyConstant.hasValue = true;
-        return l->unfoldOp(r, anyConstant);
+        return ops->unfold(l, r, anyConstant);
     }
 
     void growChain(size_t anchor, ChainCandidate& c)
@@ -173,10 +176,14 @@ private:
                 break;
             }
 
+            const FusionOps* ops = fusionOpsFor(l);
+            if (!ops || !ops->unfold)
+                break;
+
             const size_t savedSlots = c.constArgs.size();
             ConstOperand side;
             LayerMath r;
-            if (!readConstOperand(L, curArg, c, side) || !l->unfoldOp(r, side)) {
+            if (!readConstOperand(L, curArg, c, side) || !ops->unfold(l, r, side)) {
                 c.constArgs.resize(savedSlots);
                 break;
             }
@@ -249,6 +256,10 @@ private:
             if (!sink)
                 continue;
 
+            const FusionOps* sinkOps = fusionOpsFor(sink);
+            if (!sinkOps || !sinkOps->absorb)
+                continue;
+
             size_t accepted = 0;
             for (size_t n = c.rootAfterStep.size(); n >= 1; n--) {
                 Ptr<AdjacencyGraph> expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1], c.constBufs);
@@ -260,7 +271,7 @@ private:
                     for (int q = 0; q < c.singleStepKernelParamCount; q++)
                         expr->kernelParams[q] = c.singleStepKernelParams[q];
                 }
-                if (sink->absorbMath(expr)) {
+                if (sinkOps->absorb(sink, expr)) {
                     accepted = n;
                     break;
                 }

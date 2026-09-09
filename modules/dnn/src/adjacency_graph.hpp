@@ -166,10 +166,7 @@ private:
     LayerMathNode nodes_[FUSION_MAX_MATH_NODES];
 };
 
-// Sigmoid and Gelu are each built twice - by their own layer, and by the
-// reference table matchKnownActivation compares against - and the two have to
-// emit nodes in the same order, so they share one definition.
-namespace fusion {
+namespace fusion { namespace detail {
 
 inline void sigmoid(LayerMath& r)
 {
@@ -193,7 +190,7 @@ inline void gelu(LayerMath& r)
     r.binary(FusionEltwiseOp::MUL, halfX, gate);
 }
 
-} // namespace fusion
+}} // namespace fusion::detail
 
 struct FusionNode
 {
@@ -444,6 +441,54 @@ inline Ptr<AdjacencyGraph> extract(const AdjacencyGraph& arena, int root,
 
 
 } // namespace fusion
+
+/** @brief What one layer class contributes to fusion. A layer opts in by registering
+ *  a table for its own concrete type; the pass looks the table up, so nothing about
+ *  fusion has to appear on Layer itself. Either slot may be null.
+ */
+struct FusionOps
+{
+    /** @brief States the layer's math as a small expression, so a fusion pass can
+     *  absorb it into whatever produces its input.
+     *
+     *  @param self the layer, known to be of the registered type.
+     *  @param out receives the expression, built through LayerMath's emitters.
+     *  @param side describes the layer's non-flowing inputs when it has any, e.g.
+     *         the constant operand of an Add. Empty for a plain unary op.
+     *  @return false if the layer cannot be expressed, which also means it can
+     *          never be absorbed. A null slot means the layer never can.
+     */
+    bool (*unfold)(const Layer* self, LayerMath& out, const ConstOperand& side);
+
+    /** @brief Offers a trailing expression for this layer to absorb into its own
+     *  computation. The layer decides; refusing is always safe.
+     *
+     *  The pass offers the longest chain first and retries with shorter ones, so
+     *  an implementation must finish validating before it mutates any state.
+     *  @return true if the expression was taken on, in which case the layer is now
+     *          responsible for computing it. A null slot means it never takes one.
+     */
+    bool (*absorb)(Layer* self, const Ptr<AdjacencyGraph>& expr);
+};
+
+/** @brief Binds @p ops to one concrete layer class. Last registration for a type wins. */
+CV_EXPORTS void registerFusionOps(const std::type_info& layerType, const FusionOps& ops);
+
+/** @brief The table registered for @p layer's most-derived type, or null if it has none. */
+CV_EXPORTS const FusionOps* fusionOpsFor(const Layer* layer);
+
+/** @brief Registers @p ops for LayerT the first time it is called for that type.
+ *
+ * Call it from LayerT's constructor: registration then costs one guarded branch per
+ * construction, needs no list of participating types to keep in step, and cannot run
+ * before main() the way a namespace-scope registrar object would.
+ */
+template<typename LayerT>
+inline void registerFusionOpsOnce(const FusionOps& ops)
+{
+    static const bool registered = (registerFusionOps(typeid(LayerT), ops), true);
+    CV_UNUSED(registered);
+}
 
 CV__DNN_INLINE_NS_END
 }} // namespace cv::dnn

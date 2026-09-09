@@ -32,16 +32,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #ifdef HAVE_OPENCL
     UMat weight_umat, bias_umat;
 #endif
-
- public:
     PreparedFusion fusion;
 
-    virtual bool absorbMath(const Ptr<AdjacencyGraph>& expr) CV_OVERRIDE
+ public:
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
     {
-        return fusion.take(expr);
+        return static_cast<MatMulLayerImpl*>(self)->fusion.take(expr);
     }
 
     MatMulLayerImpl(const LayerParams& params) {
+        registerFusionOpsOnce<MatMulLayerImpl>({ nullptr, &MatMulLayerImpl::absorbOp });
         setParamsFrom(params);
 
         trans_a = params.get<bool>("transA", false);

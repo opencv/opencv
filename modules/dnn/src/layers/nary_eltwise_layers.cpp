@@ -189,7 +189,12 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 public:
     std::string operation;
 
-    bool unfoldOp(LayerMath& r, const ConstOperand& side) const CV_OVERRIDE
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const NaryEltwiseLayerImpl*>(self)->unfoldMath(r, side);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
     {
         if (!side.hasValue) return false;
         if (inputs.size() != 2) return false;
@@ -217,6 +222,7 @@ public:
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<NaryEltwiseLayerImpl>({ &NaryEltwiseLayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         operation = toLowerCase(params.get<String>("operation", "sum"));
 

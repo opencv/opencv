@@ -52,17 +52,18 @@ bool constC(LayerGemmOpMode mode){
 
 // Y = alpha * A’ * B’ + beta * C
 class GemmLayerImpl CV_FINAL : public GemmLayer {
+    PreparedFusion fusion;
+
 public:
     mutable int inpType = -1;
 
-    PreparedFusion fusion;
-
-    virtual bool absorbMath(const Ptr<AdjacencyGraph>& expr) CV_OVERRIDE
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
     {
-        return fusion.take(expr);
+        return static_cast<GemmLayerImpl*>(self)->fusion.take(expr);
     }
 
     GemmLayerImpl(const LayerParams& params) {
+        registerFusionOpsOnce<GemmLayerImpl>({ nullptr, &GemmLayerImpl::absorbOp });
         setParamsFrom(params);
 
         trans_a = params.get<bool>("transA", false);

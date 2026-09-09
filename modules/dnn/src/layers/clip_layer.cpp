@@ -72,8 +72,14 @@ public:
     float minValue, maxValue;
     bool  hasMin,   hasMax;
 
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const ClipLayerImpl*>(self)->unfoldMath(r, side);
+    }
+
     ClipLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<ClipLayerImpl>({ &ClipLayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         hasMin = params.has("min");
         hasMax = params.has("max");
@@ -83,7 +89,7 @@ public:
             CV_Assert(minValue <= maxValue);
     }
 
-    bool unfoldOp(LayerMath& r, const ConstOperand& side) const CV_OVERRIDE
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
     {
         float lo = -FLT_MAX, hi = FLT_MAX;
         if (hasMin) lo = minValue;

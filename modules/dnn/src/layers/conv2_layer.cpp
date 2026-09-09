@@ -36,6 +36,7 @@ class Conv2LayerImpl : public Conv2Layer
 public:
     Conv2LayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<Conv2LayerImpl>({ nullptr, &Conv2LayerImpl::absorbOp });
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
         ceil_mode = params.get<bool>("ceil_mode", false);
@@ -287,6 +288,7 @@ public:
         return false;
     }
 
+private:
     static bool splitConstOperand(const std::vector<FusionNode>& nd, int node,
                              int& other, int& bufId, float& scalarVal)
     {
@@ -339,7 +341,13 @@ public:
         return true;
     }
 
-    virtual bool absorbMath(const Ptr<AdjacencyGraph>& expr) CV_OVERRIDE
+public:
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
+    {
+        return static_cast<Conv2LayerImpl*>(self)->absorbMath(expr);
+    }
+
+    bool absorbMath(const Ptr<AdjacencyGraph>& expr)
     {
         if (!expr || expr->size() == 0)
             return false;
