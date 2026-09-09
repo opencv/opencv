@@ -67,6 +67,28 @@ IStreamReader::~IStreamReader()
     // nothing
 }
 
+// Strip CAP_PROP_TARGET_FPS before VideoCaptureParameters exists: plugin backends rebuild their own copy across the ABI boundary, so marking it "consumed" here wouldn't stop them rejecting it.
+static double extractTargetFps(const std::vector<int>& params, std::vector<int>& backendParams)
+{
+    double target_fps = 0.0;
+    backendParams.clear();
+    backendParams.reserve(params.size());
+    size_t i = 0;
+    for (; i + 1 < params.size(); i += 2)
+    {
+        if (params[i] == CAP_PROP_TARGET_FPS)
+            target_fps = params[i + 1];
+        else
+        {
+            backendParams.push_back(params[i]);
+            backendParams.push_back(params[i + 1]);
+        }
+    }
+    if (i < params.size())  // odd-length input; keep the leftover so VideoCaptureParameters still rejects it
+        backendParams.push_back(params[i]);
+    return target_fps;
+}
+
 VideoCapture::VideoCapture() : throwOnFail(false)
 {}
 
@@ -124,9 +146,9 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
         release();
     }
 
-    const VideoCaptureParameters parameters(params);
-    // Consumed here, before backend open() can reject it as an unrecognized parameter.
-    const double target_fps = parameters.get<double>(CAP_PROP_TARGET_FPS, 0.0);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -256,9 +278,9 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
         release();
     }
 
-    const VideoCaptureParameters parameters(params);
-    // See the filename-based open() overload above for why this is consumed before createCapture().
-    const double target_fps = parameters.get<double>(CAP_PROP_TARGET_FPS, 0.0);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByStream();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -396,9 +418,9 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
         }
     }
 
-    const VideoCaptureParameters parameters(params);
-    // See the filename-based open() overload above for why this is consumed before createCapture().
-    const double target_fps = parameters.get<double>(CAP_PROP_TARGET_FPS, 0.0);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
