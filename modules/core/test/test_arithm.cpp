@@ -2628,6 +2628,23 @@ TEST(BroadcastTo, basic) {
         broadcast(_src, shape, dst);
         fn_verify(ref, dst);
     }
+
+    {
+        std::vector<int> shape{1, 0};
+        std::vector<int> data;
+        Mat zero_src(static_cast<int>(shape.size()), shape.data(), CV_32FC1, data.data());
+
+        std::vector<int> target_shape{3, 0};
+        Mat dst;
+
+        broadcast(zero_src, target_shape, dst);
+
+        EXPECT_EQ(dst.dims, 2);
+        EXPECT_EQ(dst.size[0], 3);
+        EXPECT_EQ(dst.size[1], 0);
+        EXPECT_EQ(dst.total(), 0u);
+    }
+
 }
 
 TEST(Core_minMaxIdx, regression_9207_2)
