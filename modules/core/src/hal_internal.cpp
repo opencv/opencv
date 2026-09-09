@@ -56,8 +56,6 @@
 #include <complex>
 #include <vector>
 
-#define HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH 100
-#define HAL_GEMM_SMALL_MATRIX_THRESH 100
 #define HAL_SVD_SMALL_MATRIX_THRESH 25
 #define HAL_QR_SMALL_MATRIX_THRESH 30
 #define HAL_LU_SMALL_MATRIX_THRESH 100
@@ -689,10 +687,34 @@ int lapack_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* sr
     return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
 }
 
+static inline bool shouldUseLapackGemm(int m, int n, int k, int flags)
+{
+    // Compute effective dimensions:
+    // M = rows of result D
+    // K = contraction (inner) dimension
+    // N = cols of result D
+    const int M = (flags & CV_HAL_GEMM_1_T) ? n : m;
+    const int K = (flags & CV_HAL_GEMM_1_T) ? m : n;
+    const int N = k;
+    // 1. Never call Level-3 GEMM for vectors or degenerate thin slices.
+    // Matrix-vector products (N <= 4 or M <= 4) have zero packing cache reuse.
+    if (M <= 4 || N <= 4)
+        return false;
+    // 2. Minimum dimension threshold.
+    // SIMD microkernels (4x8 or 8x8) need at least 16 elements to amortize boundary checks.
+    if (M < 16 || N < 16 || K < 16)
+        return false;
+    // 3. Operational volume cutoff (equivalent to ~32x32x32).
+    // Below ~32,000 operations, OpenCV's direct loops without packing are faster.
+    if (static_cast<int64_t>(M) * N * K < 32768)
+        return false;
+    return true;
+}
+
 int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
                    const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
@@ -700,7 +722,7 @@ int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_
 int lapack_gemm64f(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
                    const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
@@ -708,14 +730,14 @@ int lapack_gemm64f(const double *src1, size_t src1_step, const double *src2, siz
 int lapack_gemm32fc(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
                    const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
 int lapack_gemm64fc(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
                    const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
