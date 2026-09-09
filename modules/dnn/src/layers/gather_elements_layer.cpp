@@ -68,7 +68,8 @@ public:
     {
         CV_CheckEQ(inputs.size(), (size_t)2, "");
         CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool ||
-                                inputs[0] == CV_64F || inputs[0] == CV_16U || inputs[0] == CV_16S || inputs[0] == CV_32U || inputs[0] == CV_64U, "");
+                                inputs[0] == CV_64F || inputs[0] == CV_16U || inputs[0] == CV_16S || inputs[0] == CV_32U || inputs[0] == CV_64U ||
+                                inputs[0] == CV_8F_E4M3FN || inputs[0] == CV_8F_E4M3FNUZ, "");
         CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
         outputs.assign(1, inputs[0]);
     }
