@@ -280,9 +280,11 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
  *               each point is itself. Support vector<vector<int>>, vector<Mat> and Mat of size NxK.
  *               If the information in a row is [0, 2, 1, -5, -1, 4, 7 ... negative number], it will
  *               use only non-negative indexes until it meets a negative number or bound of this row
- *               i.e. [0, 2, 1].
+ *               i.e. [0, 2, 1]. If left empty (noArray()), the neighbors are computed internally with
+ *               a kd-tree and @p max_neighbor_num is used as the number of neighbors k (must be >= 2).
  * @param max_neighbor_num The maximum number of neighbors want to use including itself. Setting to
- *               a non-positive number or default will use the information from nn_idx.
+ *               a non-positive number or default will use the information from nn_idx. When @p nn_idx
+ *               is empty this is the number of neighbors k to search for and must be >= 2.
  */
 
 CV_EXPORTS void normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts,
