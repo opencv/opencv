@@ -102,6 +102,14 @@ bool Net::Impl::empty() const
 }
 
 
+void Net::Impl::checkModelOutputs() const
+{
+    const bool haveOutputs = mainGraph ? !mainGraph->outputs().empty() : !empty();
+    if (!haveOutputs)
+        CV_Error(Error::StsError, "DNN: the model does not contain any outputs");
+}
+
+
 void Net::Impl::clear()
 {
     CV_TRACE_FUNCTION();

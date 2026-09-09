@@ -585,6 +585,8 @@ void Net::Impl::prepareForInference()
     }
 #endif
 
+    checkModelOutputs();
+
     if (!prepared) {
         widenHalfConstants();
         fuseQDQ();
