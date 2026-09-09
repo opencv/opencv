@@ -498,6 +498,7 @@ struct ImplCollector
 struct CoreTLSData
 {
     CoreTLSData() :
+        rng(makePtr<RNG>()),
 //#ifdef HAVE_OPENCL
         oclExecutionContextInitialized(false), useOpenCL(-1),
 //#endif
@@ -505,7 +506,9 @@ struct CoreTLSData
         useIPP_NE(-1)
     {}
 
-    RNG rng;
+    // the generator is heap-allocated, so that cv::theRNGPtr() can share its ownership
+    // and keep it alive even after the owning thread has finished
+    Ptr<RNG> rng;
 //#ifdef HAVE_OPENCL
     ocl::OpenCLExecutionContext oclExecutionContext;
     bool oclExecutionContextInitialized;

@@ -6,7 +6,8 @@
         "FileStorage",
         "KDTree",
         "KeyPoint",
-        "DMatch"
+        "DMatch",
+        "RNG"
     ],
     "missing_consts" : {
         "Core" : {

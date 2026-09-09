@@ -33,7 +33,7 @@ else:
 
 forbidden_arg_types = ["void*"]
 
-ignored_arg_types = ["RNG*"]
+ignored_arg_types = []
 
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
 
