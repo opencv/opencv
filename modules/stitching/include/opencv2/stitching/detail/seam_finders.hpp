@@ -117,6 +117,8 @@ private:
 };
 
 
+/** @brief Dynamic programming-based seam estimator. See @cite MillsD09 for a related approach.
+ */
 class CV_EXPORTS_W DpSeamFinder : public SeamFinder
 {
 public:
