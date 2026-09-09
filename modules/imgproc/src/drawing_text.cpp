@@ -265,15 +265,20 @@ struct FontFace::Impl {
 #endif
     }
 
+    bool isFaceAvailable()
+    {
+#ifdef HAVE_HARFBUZZ
+        return hb_font != 0;
+#else
+        return ttface != 0;
+#endif
+    }
+
     bool setStd(const BuiltinFontData& fontdata)
     {
         if(fontdata.size <= 1)
             return false;
-#ifdef HAVE_HARFBUZZ
-        if(hb_font == 0 || currname != fontdata.name)
-#else
-        if(ttface == 0 || currname != fontdata.name)
-#endif
+        if( !isFaceAvailable() || currname != fontdata.name)
         {
             deleteFont();
             if(!inflate(fontdata.gzdata, fontdata.size, fontbuf))
@@ -299,13 +304,8 @@ struct FontFace::Impl {
     {
         CV_Assert(!fontname.empty());
 
-#ifdef HAVE_HARFBUZZ
-        if(hb_font != 0 && fontname == currname)
+        if(isFaceAvailable() && fontname == currname)
             return true;
-#else
-        if(ttface != 0 && fontname == currname)
-            return true;
-#endif
 
         deleteFont();
 
@@ -335,6 +335,7 @@ struct FontFace::Impl {
             fontbuf.resize(srcdata.size());
             std::copy(srcdata.begin(), srcdata.end(), fontbuf.begin());
         }
+
 #ifdef HAVE_HARFBUZZ
         createHbFont();
         if (!hb_font)
@@ -351,13 +352,9 @@ struct FontFace::Impl {
 
     bool setParams(int size, int weight)
     {
-#ifdef HAVE_HARFBUZZ
-        if (!hb_font)
+        if (!isFaceAvailable())
             return false;
-#else
-        if (ttface == 0)
-            return false;
-#endif
+
         if (std::abs(size - currsize) < 1e-3 &&
             (weight == currweight || weight == 0))
             return true;
@@ -395,13 +392,11 @@ struct FontFace::Impl {
     int currweight;
 #ifdef HAVE_HARFBUZZ
     hb_font_t* hb_font;
+    unsigned hb_upem;   // units per em (HarfBuzz)
+    int hb_ascent;      // unscaled hhea ascender, for stb-compatible text sizing
 #else
     float scale;
     stbtt_fontinfo* ttface;
-#endif
-#ifdef HAVE_HARFBUZZ
-    unsigned hb_upem;   // units per em (HarfBuzz)
-    int hb_ascent;      // unscaled hhea ascender, for stb-compatible text sizing
 #endif
     std::vector<uchar> fontbuf;
 };
@@ -410,21 +405,14 @@ struct GlyphCacheKey
 {
     GlyphCacheKey()
     {
-#ifdef HAVE_HARFBUZZ
         face = 0;
         glyph_index = 0;
-#else
-        ttface = 0;
-#endif
         size = 0;
         weight = 0;
-#ifdef HAVE_HARFBUZZ
         scale = 1.f;
-#endif
     }
     // 'face' is an opaque per-font identity: the stb font in the stb path,
     // the hb_font in the HarfBuzz path.
-#ifdef HAVE_HARFBUZZ
     GlyphCacheKey(const void* face_, int index_, double size_, int weight_, float scale_ = 1.f)
     {
         face = face_;
@@ -433,41 +421,19 @@ struct GlyphCacheKey
         weight = weight_;
         scale = scale_;
     }
-#else
-    GlyphCacheKey(font_t* ttface_, int index_, double size_, int weight_, float scale_)
-    {
-        ttface = ttface_;
-        glyph_index = index_;
-        size = cvRound(size_*256);
-        weight = weight_;
-        scale = scale_;
-    }
-#endif
 
-#ifdef HAVE_HARFBUZZ
     const void* face;
-#else
-    font_t* ttface;
-#endif
     int glyph_index;
     int size;
     int weight;
     float scale;
 };
 
-#ifdef HAVE_HARFBUZZ
 static bool operator == (const GlyphCacheKey& k1, const GlyphCacheKey& k2)
 {
     return k1.face == k2.face && k1.glyph_index == k2.glyph_index &&
            k1.size == k2.size && k1.weight == k2.weight && k1.scale == k2.scale;
 }
-#else
-static bool operator == (const GlyphCacheKey& k1, const GlyphCacheKey& k2)
-{
-    return k1.ttface == k2.ttface && k1.glyph_index == k2.glyph_index &&
-           k1.size == k2.size && k1.weight == k2.weight && k1.scale == k2.scale;
-}
-#endif
 
 static size_t hash_seq(const size_t* hashvals, size_t n)
 {
@@ -480,7 +446,6 @@ static size_t hash_seq(const size_t* hashvals, size_t n)
     return h;
 }
 
-#ifdef HAVE_HARFBUZZ
 struct GlyphCacheHash
 {
     size_t operator()(const GlyphCacheKey& key) const noexcept
@@ -490,17 +455,6 @@ struct GlyphCacheHash
         return hash_seq(hs, sizeof(hs)/sizeof(hs[0]));
     }
 };
-#else
-struct GlyphCacheHash
-{
-    size_t operator()(const GlyphCacheKey& key) const noexcept
-    {
-        size_t hs[] = {(size_t)(void*)key.ttface, (size_t)key.glyph_index,
-            (size_t)key.size, (size_t)key.weight}; // do not include scale, because it's completely defined by size
-        return hash_seq(hs, sizeof(hs)/sizeof(hs[0]));
-    }
-};
-#endif
 
 struct GlyphCacheVal
 {
@@ -536,21 +490,29 @@ struct TextSegment
         script = HB_SCRIPT_UNKNOWN;
         dir = HB_DIRECTION_LTR;
     }
-#ifdef HAVE_HARFBUZZ
-    TextSegment(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
-#else
-    TextSegment(font_t* ttface_, int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
-#endif
+
+    void init(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
     {
-#ifndef HAVE_HARFBUZZ
-        ttface = ttface_;
-#endif
         fontidx = fontidx_;
         start = start_;
         end = end_;
         script = script_;
         dir = dir_;
     }
+
+#ifdef HAVE_HARFBUZZ
+    TextSegment(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+    {
+        init(fontidx_, start_, end_, script_, dir_);
+    }
+#else
+    TextSegment(font_t* ttface_, int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+        : ttface(ttface_)
+    {
+        init(fontidx_, start_, end_, script_, dir_);
+    }
+#endif
+
 #ifndef HAVE_HARFBUZZ
     font_t* ttface;
 #endif
@@ -708,13 +670,9 @@ bool FontFace::set(const String& fontname_)
     if(fontname.empty())
         fontname = "sans";
 
-#ifdef HAVE_HARFBUZZ
-    if(impl->hb_font != 0 && impl->currname == fontname)
+    if(impl->isFaceAvailable() && impl->currname == fontname)
         return true;
-#else
-    if(impl->ttface != 0 && impl->currname == fontname)
-        return true;
-#endif
+
     int i = 0;
     for( ; i < BUILTIN_FONTS_NUM; i++ )
     {
@@ -730,11 +688,7 @@ bool FontFace::set(const String& fontname_)
     if( i >= 0 )
     {
         FontFace& builtin_fface = engine.getStdFontFace(i);
-#ifdef HAVE_HARFBUZZ
-        if(builtin_fface.impl->hb_font)
-#else
-        if(builtin_fface.impl->ttface)
-#endif
+        if(builtin_fface.impl->isFaceAvailable())
         {
             impl = builtin_fface.impl;
             ok = true;
@@ -742,13 +696,8 @@ bool FontFace::set(const String& fontname_)
     }
     else
     {
-#ifdef HAVE_HARFBUZZ
-        if(impl->hb_font != 0)
+        if(impl->isFaceAvailable())
             impl = makePtr<Impl>();
-#else
-        if(impl->ttface != 0)
-            impl = makePtr<Impl>();
-#endif
         ok = impl->set(fontname);
     }
     return ok;
@@ -767,11 +716,7 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
         if(builtinFontData[i].name == fontname && builtinFontData[i].size > 1)
         {
             FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
-#ifdef HAVE_HARFBUZZ
-            if( builtin_fface.impl->hb_font )
-#else
-            if( builtin_fface.impl->ttface )
-#endif
+            if( builtin_fface.impl->isFaceAvailable() )
             {
                 std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
                 size = fbuf.size();
@@ -1255,15 +1200,12 @@ Point FontRenderEngine::putText_(
         FontFace& fface = builtin_ffaces[j];
         if(!builtin_ffaces_initialized)
             fface.set(builtinFontData[j].name);
-#ifdef HAVE_HARFBUZZ
-        if (fface->hb_font)
-            fface->setParams(size, weight);
-#else
-        if (fface->ttface) {
+        if (fface->isFaceAvailable()) {
+#ifndef HAVE_HARFBUZZ
             saved_weights[j] = stbtt_GetWeight(fface->ttface);
+#endif
             fface->setParams(size, weight);
         }
-#endif
     }
     builtin_ffaces_initialized = true;
 
@@ -1725,7 +1667,7 @@ Point FontRenderEngine::putText_(
                                 glyph.index, &w, &h, &bitmap_step, &xoff, &yoff, &advx, &glyph_buf, &glyph_bufsz);
                 if(!bitmap_buf)
                     continue;
-                printf("j=%d. bw=%d, bh=%d, step=%d, xoff=%d, yoff=%d, advx=%.1f, glyph_bufsz=%d\n", j, w, h, bitmap_step, xoff, yoff, advx, glyph_bufsz);
+                // printf("j=%d. bw=%d, bh=%d, step=%d, xoff=%d, yoff=%d, advx=%.1f, glyph_bufsz=%d\n", j, w, h, bitmap_step, xoff, yoff, advx, glyph_bufsz);
 
                 cached->width = w;
                 cached->height = h;
