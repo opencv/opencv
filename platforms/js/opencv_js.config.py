@@ -43,7 +43,6 @@ imgproc = {
         'cornerMinEigenVal',
         'createCLAHE',
         'createHanningWindow',
-        'createLineSegmentDetector',
         'cvtColor',
         'demosaicing',
         'dilate',
