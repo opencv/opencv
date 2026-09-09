@@ -93,12 +93,8 @@ TEST(videoio_images, basic_read)
     VideoCapture cap(col.getFirstFilename(), CAP_IMAGES);
     ASSERT_TRUE(cap.isOpened());
     size_t idx = 0;
-    while (cap.isOpened()) // TODO: isOpened is always true, even if there are no more images
+    while (cap.read(img)) // Fixed logic: read() returns false when no more frames
     {
-        Mat img;
-        const bool read_res = cap.read(img);
-        if (!read_res)
-            break;
         EXPECT_MAT_N_DIFF(img, col.getFrame(idx), 0);
         ++idx;
     }
