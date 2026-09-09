@@ -31,73 +31,103 @@ PERF_TEST_P(ResizeParams_CoordMode, resize_HalfPixel,
     cvtest::fillGradient<float>(src);
     declare.in(src).out(dst);
 
-    ResizeParams params;
-    params.interpolation = interp;
-    params.coordMode = ResizeCoordMode::HALF_PIXEL;
+    ResizeParams params(to, 0, 0, interp);
+    params.coordMode = ResizeCoord::HALF_PIXEL;
 
-    TEST_CYCLE() resize(src, dst, to, params);
+    TEST_CYCLE() resize(src, dst, params);
 
     SANITY_CHECK_NOTHING();
 }
 
-typedef tuple<MatType, int, Size, Size> MatInfo_N_Size_Size_t;
-typedef TestBaseWithParam<MatInfo_N_Size_Size_t> ResizeParams_Batch;
+// Each case runs twice: today's per-image loop, then the batched cv::resize.
+typedef tuple<MatType, int, Size, Size, int> BatchCase_t;
 
-// cv::resize's vector<Mat> batch kind: N single-channel planes to one common size, DNN-style.
-PERF_TEST_P(ResizeParams_Batch, resize_VectorMat_Linear,
-            testing::Values(
-                MatInfo_N_Size_Size_t(CV_32FC1, 8, sz720p, Size(224, 224)),
-                MatInfo_N_Size_Size_t(CV_32FC1, 32, sz720p, Size(224, 224))
-                )
-            )
+#define RESIZE_BATCH_CASES                                                           \
+    testing::Values(                                                                 \
+        BatchCase_t(CV_8UC3,  4096, Size(16, 16),   Size(8, 8),     INTER_LINEAR),   \
+        BatchCase_t(CV_8UC3,  1024, Size(64, 64),   Size(32, 32),   INTER_LINEAR),   \
+        BatchCase_t(CV_8UC3,  256,  Size(224, 224), Size(112, 112), INTER_LINEAR),   \
+        BatchCase_t(CV_8UC3,  16,   sz1080p,        szVGA,          INTER_LINEAR),   \
+        BatchCase_t(CV_32FC1, 512,  Size(128, 128), Size(64, 64),   INTER_LINEAR),   \
+        BatchCase_t(CV_32FC1, 8,    sz1080p,        szVGA,          INTER_LINEAR),   \
+        BatchCase_t(CV_8UC3,  256,  Size(224, 224), Size(112, 112), INTER_NEAREST),  \
+        BatchCase_t(CV_8UC3,  256,  Size(224, 224), Size(112, 112), INTER_CUBIC),    \
+        BatchCase_t(CV_8UC3,  256,  Size(224, 224), Size(112, 112), INTER_AREA)      \
+    )
+
+static void fillBatch(std::vector<Mat>& planes, int matType, Size from)
+{
+    RNG rng(0x5eed);
+    for (size_t i = 0; i < planes.size(); i++)
+    {
+        planes[i].create(from, matType);
+        rng.fill(planes[i], RNG::UNIFORM, 0, 255);
+    }
+}
+
+typedef TestBaseWithParam<BatchCase_t> ResizeBatch;
+
+// Baseline: what callers write today -- one cv::resize per image, spread over the threads.
+PERF_TEST_P(ResizeBatch, parallel_for_single_resize, RESIZE_BATCH_CASES)
 {
     int matType = get<0>(GetParam());
     int n = get<1>(GetParam());
     Size from = get<2>(GetParam());
     Size to = get<3>(GetParam());
+    int interp = get<4>(GetParam());
 
-    std::vector<Mat> src(n), dst;
+    std::vector<Mat> src(n), dst(n);
+    fillBatch(src, matType, from);
     for (int i = 0; i < n; i++)
+        dst[i].create(to, matType);
+
+    TEST_CYCLE()
     {
-        src[i] = Mat(from, matType);
-        cvtest::fillGradient<float>(src[i]);
+        parallel_for_(Range(0, n), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++)
+                resize(src[i], dst[i], to, 0, 0, interp);
+        });
     }
 
-    ResizeParams params;
-    params.interpolation = INTER_LINEAR;
-
-    TEST_CYCLE() resize(src, dst, to, params);
-
     SANITY_CHECK_NOTHING();
 }
 
-typedef TestBaseWithParam<MatInfo_N_Size_Size_t> ResizeParams_NDTensor;
-
-// cv::resize's other batch kind: one NCHW tensor, one shared table. Compare against
-// resize_VectorMat_Linear above.
-PERF_TEST_P(ResizeParams_NDTensor, resize_NCHW_Linear,
-            testing::Values(
-                MatInfo_N_Size_Size_t(CV_32FC1, 8, sz720p, Size(224, 224)),
-                MatInfo_N_Size_Size_t(CV_32FC1, 32, sz720p, Size(224, 224)),
-                MatInfo_N_Size_Size_t(CV_32FC1, 128, Size(16, 16), Size(8, 8))
-                )
-            )
+// The batched overload on a std::vector<Mat>: one plan per distinct geometry, one parallel loop.
+PERF_TEST_P(ResizeBatch, batched_vector, RESIZE_BATCH_CASES)
 {
     int matType = get<0>(GetParam());
     int n = get<1>(GetParam());
     Size from = get<2>(GetParam());
     Size to = get<3>(GetParam());
+    int interp = get<4>(GetParam());
 
-    int srcSizes[] = { n, 1, from.height, from.width };
-    Mat src(4, srcSizes, matType);
-    Mat srcView = src.reshape(1, n * from.height);
-    cvtest::fillGradient<float>(srcView);
+    std::vector<Mat> src(n), dst;
+    fillBatch(src, matType, from);
 
-    ResizeParams params;
-    params.interpolation = INTER_LINEAR;
+    ResizeParams params(to, 0, 0, interp);
+
+    TEST_CYCLE() resize(src, dst, params);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// The same batch as one N-D tensor, the shape a DNN pipeline holds.
+PERF_TEST_P(ResizeBatch, batched_tensor, RESIZE_BATCH_CASES)
+{
+    int matType = get<0>(GetParam());
+    int n = get<1>(GetParam());
+    Size from = get<2>(GetParam());
+    Size to = get<3>(GetParam());
+    int interp = get<4>(GetParam());
+
+    int srcSizes[] = { n, from.height, from.width };
+    Mat src(3, srcSizes, matType);
+    RNG(0x5eed).fill(src, RNG::UNIFORM, 0, 255);
+
+    ResizeParams params(to, 0, 0, interp);
 
     Mat dst;
-    TEST_CYCLE() resize(src, dst, to, params);
+    TEST_CYCLE() resize(src, dst, params);
 
     SANITY_CHECK_NOTHING();
 }

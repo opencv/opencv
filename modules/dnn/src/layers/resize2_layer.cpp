@@ -73,28 +73,26 @@ static inline NearestMode parseNearestMode(const String& s)
     return NearestMode::ROUND_PREFER_FLOOR;
 }
 
-// Maps this layer's CoordTransMode/NearestMode onto imgproc's cv::ResizeParams equivalents.
-static inline ResizeCoordMode toResizeCoordMode(CoordTransMode m, bool alignCorners)
+static inline ResizeCoord toResizeCoord(CoordTransMode m, bool alignCorners)
 {
     if (alignCorners)
-        return ResizeCoordMode::ALIGN_CORNERS; // caller already checked coordTransMode is asymmetric
+        return ResizeCoord::ALIGN_CORNERS; // caller already checked coordTransMode is asymmetric
     switch (m) {
-    case CoordTransMode::HALF_PIXEL: return ResizeCoordMode::HALF_PIXEL;
-    case CoordTransMode::PYTORCH_HALF_PIXEL: return ResizeCoordMode::PYTORCH_HALF_PIXEL;
-    case CoordTransMode::TF_HALF_PIXEL_FOR_NN: return ResizeCoordMode::TF_HALF_PIXEL_FOR_NN;
-    case CoordTransMode::HALF_PIXEL_SYMMETRIC: return ResizeCoordMode::HALF_PIXEL_SYMMETRIC;
-    default: return ResizeCoordMode::ASYMMETRIC;
+    case CoordTransMode::HALF_PIXEL: return ResizeCoord::HALF_PIXEL;
+    case CoordTransMode::PYTORCH_HALF_PIXEL: return ResizeCoord::PYTORCH_HALF_PIXEL;
+    case CoordTransMode::TF_HALF_PIXEL_FOR_NN: return ResizeCoord::TF_HALF_PIXEL_FOR_NN;
+    case CoordTransMode::HALF_PIXEL_SYMMETRIC: return ResizeCoord::HALF_PIXEL_SYMMETRIC;
+    default: return ResizeCoord::ASYMMETRIC;
     }
 }
 
-// Maps this layer's NearestMode onto imgproc's cv::ResizeNearestMode.
-static inline ResizeNearestMode toResizeNearestMode(NearestMode m)
+static inline ResizeNearest toResizeNearest(NearestMode m)
 {
     switch (m) {
-    case NearestMode::FLOOR: return ResizeNearestMode::FLOOR;
-    case NearestMode::CEIL: return ResizeNearestMode::CEIL;
-    case NearestMode::ROUND_PREFER_CEIL: return ResizeNearestMode::ROUND_PREFER_CEIL;
-    default: return ResizeNearestMode::ROUND_PREFER_FLOOR;
+    case NearestMode::FLOOR: return ResizeNearest::FLOOR;
+    case NearestMode::CEIL: return ResizeNearest::CEIL;
+    case NearestMode::ROUND_PREFER_CEIL: return ResizeNearest::ROUND_PREFER_CEIL;
+    default: return ResizeNearest::ROUND_PREFER_FLOOR;
     }
 }
 
@@ -1360,8 +1358,8 @@ public:
             ResizeParams params;
             params.interpolation = (interpolation == "nearest") ? INTER_NEAREST
                                   : (interpolation == "cubic") ? INTER_CUBIC : INTER_LINEAR;
-            params.coordMode = toResizeCoordMode(coordTransModeE, alignCorners);
-            params.nearestMode = toResizeNearestMode(nearestModeE);
+            params.coordMode = toResizeCoord(coordTransModeE, alignCorners);
+            params.nearestMode = toResizeNearest(nearestModeE);
             params.excludeOutside = excludeOutside;
             params.cubicCoeffA = cubicCoeffA;
 
@@ -1374,7 +1372,10 @@ public:
                 trueFx = scales[wIdx];
             }
 
-            resize(inp, out, Size(out.size[3], out.size[2]), params, trueFx, trueFy);
+            params.dsize = Size(out.size[3], out.size[2]);
+            params.fx = trueFx;
+            params.fy = trueFy;
+            resize(inp, out, params);
         }
         else if(interpolation=="nearest"){
             switch(depth){
