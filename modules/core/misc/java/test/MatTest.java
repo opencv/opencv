@@ -994,6 +994,88 @@ public class MatTest extends OpenCVTestCase {
         }
     }
 
+    public void testGetPut0DMat() {
+        Mat m = new Mat(new int[]{}, CvType.CV_64F);
+        assertEquals(0, m.dims());
+        assertEquals(1, m.total());
+
+        double[] buf = new double[1];
+        assertEquals(1, m.put(new int[]{}, 42.0));
+        assertEquals(8, m.get(new int[]{}, buf));
+        assertEquals(42.0, buf[0], EPS);
+        assertArrayEquals(new double[]{42.0}, m.get(new int[]{}), EPS);
+
+        assertEquals(1, m.put(0, 0, 99.0));
+        assertArrayEquals(new double[]{99.0}, m.get(0, 0), EPS);
+
+        try {
+            m.get(new int[]{0}, buf);
+            fail("Expected IllegalArgumentException (Incorrect number of indices)");
+        } catch (IllegalArgumentException e) {
+            // expected
+        }
+    }
+
+    public void testGetPut1DMat() {
+        Mat m = new Mat(new int[]{5}, CvType.CV_32F);
+        assertEquals(1, m.dims());
+        assertEquals(5, m.total());
+        assertEquals(1, m.rows());
+        assertEquals(5, m.cols());
+
+        float[] data = new float[]{10, 20, 30, 40, 50};
+        assertEquals(20, m.put(new int[]{0}, data));
+        float[] read = new float[5];
+        assertEquals(20, m.get(new int[]{0}, read));
+        assertTrue(Arrays.equals(data, read));
+
+        assertEquals(1, m.put(new int[]{2}, 99.0f));
+        assertArrayEquals(new double[]{99.0}, m.get(new int[]{2}), EPS);
+
+        assertEquals(1, m.put(0, 1, 77.0f));
+        assertArrayEquals(new double[]{77.0}, m.get(0, 1), EPS);
+
+        float[] single = new float[1];
+        assertEquals(4, m.get(0, 3, single));
+        assertEquals(40.0f, single[0], EPS);
+
+        assertEquals(20, m.put(0, 0, data));
+        assertEquals(20, m.get(0, 0, read));
+        assertTrue(Arrays.equals(data, read));
+
+        try {
+            m.get(new int[]{0, 0}, new float[1]);
+            fail("Expected IllegalArgumentException (Incorrect number of indices)");
+        } catch (IllegalArgumentException e) {
+            // expected
+        }
+    }
+
+    public void testGetPut1DMatDoubleArray() {
+        Mat m = new Mat(new int[]{4}, CvType.CV_64F);
+        assertEquals(1, m.dims());
+
+        assertEquals(3, m.put(new int[]{1}, 1.0, 2.0, 3.0));
+        double[] buf = new double[3];
+        assertEquals(24, m.get(new int[]{1}, buf));
+        assertArrayEquals(new double[]{1.0, 2.0, 3.0}, buf, EPS);
+    }
+
+    public void testGetPut3DMat() {
+        Mat m = new Mat(new int[]{2, 2, 2}, CvType.CV_32F, new Scalar(0));
+        assertEquals(3, m.dims());
+
+        float[] buf = new float[1];
+        assertEquals(0, m.put(0, 0, 1.0f));
+        assertEquals(0, m.get(0, 0, buf));
+        assertNull(m.get(0, 0));
+
+        assertEquals(4, m.put(new int[]{1, 0, 1}, new float[]{3.14f}));
+        assertEquals(4, m.get(new int[]{1, 0, 1}, buf));
+        assertEquals(3.14f, buf[0], EPS);
+        assertArrayEquals(new double[]{3.14}, m.get(new int[]{1, 0, 1}), EPS);
+    }
+
     public void testRelease() {
         assertFalse(gray0.empty());
         assertTrue(gray0.rows() > 0);
