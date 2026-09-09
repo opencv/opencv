@@ -290,11 +290,34 @@ TEST(PointCloud, LoadBadExtension)
 
 TEST(PointCloud, SaveBadExtension)
 {
+    std::vector<cv::Point3f> points { cv::Point3f(1.f, 2.f, 3.f) };
+    std::vector<cv::Point3f> normals;
+
+    std::string new_path = tempfile("new.fake");
+
+    cv::savePointCloud(new_path, points, normals);
+
+    std::ifstream f(new_path.c_str());
+    EXPECT_FALSE(f.good())
+        << "savePointCloud() created a file for an unsupported extension: " << new_path;
+    f.close();
+    std::remove(new_path.c_str());
+}
+
+TEST(PointCloud, SaveEmptyVertices)
+{
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    auto folder = cvtest::TS::ptr()->get_data_path();
-    cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals);
+    std::string new_path = tempfile("new_empty.ply");
+
+    cv::savePointCloud(new_path, points, normals);
+
+    std::ifstream f(new_path.c_str());
+    EXPECT_FALSE(f.good())
+        << "savePointCloud() created a file for an empty vertex set: " << new_path;
+    f.close();
+    std::remove(new_path.c_str());
 }
 
 TEST(PointCloud, LoadPlyEmptyFormatLine)
