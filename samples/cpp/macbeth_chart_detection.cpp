@@ -133,11 +133,7 @@ int main(int argc, char *argv[])
     Ptr<CCheckerDetector> detector;
 #ifdef HAVE_OPENCV_DNN
     if (model_path != ""){
-        EngineType engine = ENGINE_AUTO;
-        if (backend != "default" || target != "cpu"){
-            engine = ENGINE_OPENCV;
-        }
-        Net net = readNetFromONNX(model_path, engine);
+        Net net = readNetFromONNX(model_path);
         net.setPreferableBackend(getBackendID(backend));
         net.setPreferableTarget(getTargetID(target));
 
