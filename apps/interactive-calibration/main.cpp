@@ -122,8 +122,11 @@ int main(int argc, char** argv)
     std::cout << consoleHelp << std::endl;
     parametersController paramsController;
 
-    if(!paramsController.loadFromParser(parser))
+    if(!paramsController.loadFromParser(parser) || !parser.check())
+    {
+        parser.printErrors();
         return 0;
+    }
 
     captureParameters capParams = paramsController.getCaptureParameters();
     internalParameters intParams = paramsController.getInternalParameters();
