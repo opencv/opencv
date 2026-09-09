@@ -81,8 +81,7 @@ TEST(Test_ONNX_ORT_Wrapper, SingleInputMultipleOutput)
     normAssert(ref_ind, outputs[1], "ORT top_k indices", 0.0, 0.0);
 }
 
-// SSD detectors carry TF's dynamic post-processing (NMS/TopK/control-flow) in-graph,
-// which only the ORT engine can run.
+// Covers the ORT wrapper's multi-output path: four named detection tensors per graph.
 static void runSSDDetectorORT(const std::string& model)
 {
     cv::Mat img = imread(findDataFile("dnn/street.png"));

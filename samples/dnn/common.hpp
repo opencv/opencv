@@ -164,11 +164,11 @@ std::string findFile(const std::string& filename)
 std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile, const std::string& prefix="")
 {
     return genArgument(prefix + "model", "Path to a binary file of model contains trained weights. "
-                                "It could be a file with extensions .caffemodel (Caffe), "
-                                ".pb (TensorFlow), .bin (OpenVINO).",
+                                "It could be a file with extensions .onnx (ONNX), "
+                                ".tflite (TFLite), .bin (OpenVINO).",
                        modelName, zooFile, 'm') +
            genArgument(prefix + "config", "Path to a text file of model contains network configuration. "
-                                 "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .xml (OpenVINO).",
+                                 "It could be a file with extension .xml (OpenVINO).",
                        modelName, zooFile, 'c') +
            genArgument(prefix + "mean", "Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces.",
                        modelName, zooFile) +

@@ -119,10 +119,7 @@ def main(func_args=None):
         # Create color checker detector
         if args.model:
             # Load the DNN from ONNX model
-            engine = cv.dnn.ENGINE_AUTO
-            if args.backend != "default" or args.target != "cpu":
-                engine = cv.dnn.ENGINE_OPENCV
-            net = cv.dnn.readNetFromONNX(args.model, engine)
+            net = cv.dnn.readNetFromONNX(args.model)
             net.setPreferableBackend(get_backend_id(args.backend))
             net.setPreferableTarget(get_target_id(args.target))
 
