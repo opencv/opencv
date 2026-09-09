@@ -39,6 +39,13 @@ struct ConstFolding
         size_t nargs = netimpl->args.size();
         netimpl->__tensors__.resize(nargs);
         netimpl->useCounts(usecounts);
+        for (size_t i = 1; i < nargs; i++) {
+            if (usecounts[i] == 0 && netimpl->args[i].kind == DNN_ARG_CONST) {
+                const UMat& t = netimpl->__tensors__[i];
+                if (t.u && t.u->refcount == 0)
+                    netimpl->__tensors__[i] = UMat();
+            }
+        }
         knownShapes.assign(nargs, MatShape());
         knownTypes.assign(nargs, -1);
         const std::vector<Arg>& graphInputs = netimpl->mainGraph->inputs();
