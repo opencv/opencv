@@ -904,6 +904,78 @@ TEST(Calib3d_SolvePnPRansac, bad_input_points_19253)
     EXPECT_TRUE(result);
 }
 
+TEST(Calib3d_SolvePnPRansac, inliers_consistent_with_returned_pose_29573)
+{
+    // The returned pose is refined using the consensus set, so the inlier
+    // indices must be recomputed against the returned pose: every returned
+    // inlier reprojects within the threshold and every point within the
+    // threshold is returned as an inlier.
+
+    Matx33d intrinsics(800.0, 0.0, 640.0,
+                       0.0, 800.0, 480.0,
+                       0.0, 0.0, 1.0);
+    const double threshold = 4.0;
+    RNG rng(20260722);
+
+    for (int iter = 0; iter < 100; iter++)
+    {
+        const int npoints = rng.uniform(6, 10);
+        const int noutliers = rng.uniform(1, 3);
+
+        vector<Point3d> p3d;
+        for (int i = 0; i < npoints; i++)
+            p3d.push_back(Point3d(rng.uniform(-400.0, 400.0), rng.uniform(-400.0, 400.0), rng.uniform(-100.0, 100.0)));
+
+        Mat rvec_gt(3, 1, CV_64FC1), tvec_gt(3, 1, CV_64FC1);
+        for (int i = 0; i < 3; i++)
+            rvec_gt.at<double>(i) = rng.uniform(-0.4, 0.4);
+        tvec_gt.at<double>(0) = rng.uniform(-100.0, 100.0);
+        tvec_gt.at<double>(1) = rng.uniform(-100.0, 100.0);
+        tvec_gt.at<double>(2) = rng.uniform(1200.0, 2000.0);
+
+        vector<Point2d> p2d;
+        projectPoints(p3d, rvec_gt, tvec_gt, intrinsics, noArray(), p2d);
+        for (int i = 0; i < npoints; i++)
+        {
+            p2d[i].x += rng.gaussian(2.0);
+            p2d[i].y += rng.gaussian(2.0);
+        }
+        for (int i = 0; i < noutliers; i++)
+        {
+            int idx = rng.uniform(0, npoints);
+            p2d[idx].x += rng.uniform(30.0, 80.0) * (rng.uniform(0, 2) ? 1 : -1);
+            p2d[idx].y += rng.uniform(30.0, 80.0) * (rng.uniform(0, 2) ? 1 : -1);
+        }
+
+        Mat rvec, tvec;
+        vector<int> inliers;
+        bool result = solvePnPRansac(p3d, p2d, intrinsics, noArray(), rvec, tvec, false,
+                                     100, (float)threshold, 0.999, inliers, SOLVEPNP_ITERATIVE);
+        if (!result)
+            continue;
+
+        vector<Point2d> projected;
+        projectPoints(p3d, rvec, tvec, intrinsics, noArray(), projected);
+        vector<int> expected_inliers;
+        bool near_threshold = false;
+        for (int i = 0; i < npoints; i++)
+        {
+            double err = cv::norm(p2d[i] - projected[i]);
+            // skip borderline scenes: the implementation computes reprojection
+            // errors in single precision, so points essentially on the threshold
+            // may legitimately fall on either side
+            if (std::abs(err - threshold) < 0.05)
+                near_threshold = true;
+            if (err <= threshold)
+                expected_inliers.push_back(i);
+        }
+        if (near_threshold)
+            continue;
+
+        EXPECT_EQ(expected_inliers, inliers) << "iteration " << iter;
+    }
+}
+
 TEST(Calib3d_SolvePnP, input_type)
 {
     Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,

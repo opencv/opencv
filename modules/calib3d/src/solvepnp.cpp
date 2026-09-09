@@ -384,10 +384,19 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if(_inliers.needed())
     {
+        // The returned pose is refined on the consensus set, so the RANSAC-stage
+        // inlier mask may disagree with it. Recompute the mask w.r.t. the returned
+        // pose, using the same error metric as the RANSAC stage (see issue #29573).
+        Mat final_model, err;
+        hconcat(rvec, tvec, final_model);
+        cb->computeError(opoints, ipoints, final_model, err);
+        CV_Assert( err.isContinuous() && err.type() == CV_32F && (int)err.total() == npoints );
+        const float* errptr = err.ptr<float>();
+        const float thresh = (float)(param1*param1); // computeError() returns squared distances
         Mat _local_inliers;
         for (int i = 0; i < npoints; ++i)
         {
-            if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
+            if(errptr[i] <= thresh)
                 _local_inliers.push_back(i);    // output inliers vector
         }
         _local_inliers.copyTo(_inliers);
