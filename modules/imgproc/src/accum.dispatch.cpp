@@ -9,12 +9,12 @@
 
 namespace cv {
 
-DEF_ACC_INT_FUNCS(8u32f, uchar, float)
-DEF_ACC_INT_FUNCS(8u64f, uchar, double)
-DEF_ACC_INT_FUNCS(16u32f, ushort, float)
-DEF_ACC_INT_FUNCS(16u64f, ushort, double)
-DEF_ACC_FLT_FUNCS(32f, float, float)
-DEF_ACC_FLT_FUNCS(32f64f, float, double)
-DEF_ACC_FLT_FUNCS(64f, double, double)
+DEF_ACC_FUNCS(8u32f, uchar, float)
+DEF_ACC_FUNCS(8u64f, uchar, double)
+DEF_ACC_FUNCS(16u32f, ushort, float)
+DEF_ACC_FUNCS(16u64f, ushort, double)
+DEF_ACC_FUNCS(32f, float, float)
+DEF_ACC_FUNCS(32f64f, float, double)
+DEF_ACC_FUNCS(64f, double, double)
 
 } //cv::hal

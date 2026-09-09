@@ -507,12 +507,13 @@ struct MinMax8u
     }
 };
 
-struct MinMax16u
+template<typename T, typename WT>
+struct MinMax
 {
-    typedef ushort value_type;
-    typedef int arg_type;
-    arg_type load(const ushort* ptr) { return *ptr; }
-    void store(ushort* ptr, arg_type val) { *ptr = (ushort)val; }
+    typedef T value_type;
+    typedef WT arg_type;
+    arg_type load(const T* ptr) { return *ptr; }
+    void store(T* ptr, arg_type val) { *ptr = (T)val; }
     void operator()(arg_type& a, arg_type& b) const
     {
         arg_type t = a;
@@ -521,42 +522,19 @@ struct MinMax16u
     }
 };
 
-struct MinMax16s
-{
-    typedef short value_type;
-    typedef int arg_type;
-    arg_type load(const short* ptr) { return *ptr; }
-    void store(short* ptr, arg_type val) { *ptr = (short)val; }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = std::min(a, b);
-        b = std::max(b, t);
-    }
-};
-
-struct MinMax32f
-{
-    typedef float value_type;
-    typedef float arg_type;
-    arg_type load(const float* ptr) { return *ptr; }
-    void store(float* ptr, arg_type val) { *ptr = val; }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = std::min(a, b);
-        b = std::max(b, t);
-    }
-};
+typedef MinMax<ushort, int>  MinMax16u;
+typedef MinMax<short, int>   MinMax16s;
+typedef MinMax<float, float> MinMax32f;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-struct MinMaxVec8u
+template<typename T, typename VT>
+struct MinMaxVec
 {
-    typedef uchar value_type;
-    typedef v_uint8 arg_type;
-    arg_type load(const uchar* ptr) { return vx_load(ptr); }
-    void store(uchar* ptr, const arg_type &val) { v_store(ptr, val); }
+    typedef T value_type;
+    typedef VT arg_type;
+    arg_type load(const T* ptr) { return vx_load(ptr); }
+    void store(T* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
     {
         arg_type t = a;
@@ -565,50 +543,10 @@ struct MinMaxVec8u
     }
 };
 
-
-struct MinMaxVec16u
-{
-    typedef ushort value_type;
-    typedef v_uint16 arg_type;
-    arg_type load(const ushort* ptr) { return vx_load(ptr); }
-    void store(ushort* ptr, const arg_type &val) { v_store(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = v_min(a, b);
-        b = v_max(b, t);
-    }
-};
-
-
-struct MinMaxVec16s
-{
-    typedef short value_type;
-    typedef v_int16 arg_type;
-    arg_type load(const short* ptr) { return vx_load(ptr); }
-    void store(short* ptr, const arg_type &val) { v_store(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = v_min(a, b);
-        b = v_max(b, t);
-    }
-};
-
-
-struct MinMaxVec32f
-{
-    typedef float value_type;
-    typedef v_float32 arg_type;
-    arg_type load(const float* ptr) { return vx_load(ptr); }
-    void store(float* ptr, const arg_type &val) { v_store(ptr, val); }
-    void operator()(arg_type& a, arg_type& b) const
-    {
-        arg_type t = a;
-        a = v_min(a, b);
-        b = v_max(b, t);
-    }
-};
+typedef MinMaxVec<uchar, v_uint8>   MinMaxVec8u;
+typedef MinMaxVec<ushort, v_uint16> MinMaxVec16u;
+typedef MinMaxVec<short, v_int16>   MinMaxVec16s;
+typedef MinMaxVec<float, v_float32> MinMaxVec32f;
 
 #else
 
