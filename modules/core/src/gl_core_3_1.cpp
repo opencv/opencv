@@ -41,7 +41,9 @@
 //M*/
 
 #include "precomp.hpp"
+#include <mutex>
 #include "gl_core_3_1.hpp"
+
 
 #ifdef HAVE_OPENGL
 
@@ -777,140 +779,232 @@ namespace gl
     // Extension: 1.1
 
     static void CODEGEN_FUNCPTR Switch_CullFace(GLenum mode)
+
     {
-        CullFace = (PFNCULLFACEPROC)IntGetProcAddress("glCullFace");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CullFace = (PFNCULLFACEPROC)IntGetProcAddress("glCullFace");
+        });
         CullFace(mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_FrontFace(GLenum mode)
+
     {
-        FrontFace = (PFNFRONTFACEPROC)IntGetProcAddress("glFrontFace");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FrontFace = (PFNFRONTFACEPROC)IntGetProcAddress("glFrontFace");
+        });
         FrontFace(mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_Hint(GLenum target, GLenum mode)
+
     {
-        Hint = (PFNHINTPROC)IntGetProcAddress("glHint");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Hint = (PFNHINTPROC)IntGetProcAddress("glHint");
+        });
         Hint(target, mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_LineWidth(GLfloat width)
+
     {
-        LineWidth = (PFNLINEWIDTHPROC)IntGetProcAddress("glLineWidth");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            LineWidth = (PFNLINEWIDTHPROC)IntGetProcAddress("glLineWidth");
+        });
         LineWidth(width);
     }
 
     static void CODEGEN_FUNCPTR Switch_PointSize(GLfloat size)
+
     {
-        PointSize = (PFNPOINTSIZEPROC)IntGetProcAddress("glPointSize");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PointSize = (PFNPOINTSIZEPROC)IntGetProcAddress("glPointSize");
+        });
         PointSize(size);
     }
 
     static void CODEGEN_FUNCPTR Switch_PolygonMode(GLenum face, GLenum mode)
+
     {
-        PolygonMode = (PFNPOLYGONMODEPROC)IntGetProcAddress("glPolygonMode");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PolygonMode = (PFNPOLYGONMODEPROC)IntGetProcAddress("glPolygonMode");
+        });
         PolygonMode(face, mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_Scissor(GLint x, GLint y, GLsizei width, GLsizei height)
+
     {
-        Scissor = (PFNSCISSORPROC)IntGetProcAddress("glScissor");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Scissor = (PFNSCISSORPROC)IntGetProcAddress("glScissor");
+        });
         Scissor(x, y, width, height);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterf(GLenum target, GLenum pname, GLfloat param)
+
     {
-        TexParameterf = (PFNTEXPARAMETERFPROC)IntGetProcAddress("glTexParameterf");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameterf = (PFNTEXPARAMETERFPROC)IntGetProcAddress("glTexParameterf");
+        });
         TexParameterf(target, pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterfv(GLenum target, GLenum pname, const GLfloat *params)
+
     {
-        TexParameterfv = (PFNTEXPARAMETERFVPROC)IntGetProcAddress("glTexParameterfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameterfv = (PFNTEXPARAMETERFVPROC)IntGetProcAddress("glTexParameterfv");
+        });
         TexParameterfv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameteri(GLenum target, GLenum pname, GLint param)
+
     {
-        TexParameteri = (PFNTEXPARAMETERIPROC)IntGetProcAddress("glTexParameteri");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameteri = (PFNTEXPARAMETERIPROC)IntGetProcAddress("glTexParameteri");
+        });
         TexParameteri(target, pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
+
     {
-        TexParameteriv = (PFNTEXPARAMETERIVPROC)IntGetProcAddress("glTexParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameteriv = (PFNTEXPARAMETERIVPROC)IntGetProcAddress("glTexParameteriv");
+        });
         TexParameteriv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexImage1D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
+
     {
-        TexImage1D = (PFNTEXIMAGE1DPROC)IntGetProcAddress("glTexImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexImage1D = (PFNTEXIMAGE1DPROC)IntGetProcAddress("glTexImage1D");
+        });
         TexImage1D(target, level, internalformat, width, border, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
+
     {
-        TexImage2D = (PFNTEXIMAGE2DPROC)IntGetProcAddress("glTexImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexImage2D = (PFNTEXIMAGE2DPROC)IntGetProcAddress("glTexImage2D");
+        });
         TexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawBuffer(GLenum mode)
+
     {
-        DrawBuffer = (PFNDRAWBUFFERPROC)IntGetProcAddress("glDrawBuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawBuffer = (PFNDRAWBUFFERPROC)IntGetProcAddress("glDrawBuffer");
+        });
         DrawBuffer(mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_Clear(GLbitfield mask)
+
     {
-        Clear = (PFNCLEARPROC)IntGetProcAddress("glClear");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Clear = (PFNCLEARPROC)IntGetProcAddress("glClear");
+        });
         Clear(mask);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
+
     {
-        ClearColor = (PFNCLEARCOLORPROC)IntGetProcAddress("glClearColor");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearColor = (PFNCLEARCOLORPROC)IntGetProcAddress("glClearColor");
+        });
         ClearColor(red, green, blue, alpha);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearStencil(GLint s)
+
     {
-        ClearStencil = (PFNCLEARSTENCILPROC)IntGetProcAddress("glClearStencil");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearStencil = (PFNCLEARSTENCILPROC)IntGetProcAddress("glClearStencil");
+        });
         ClearStencil(s);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearDepth(GLdouble depth)
+
     {
-        ClearDepth = (PFNCLEARDEPTHPROC)IntGetProcAddress("glClearDepth");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearDepth = (PFNCLEARDEPTHPROC)IntGetProcAddress("glClearDepth");
+        });
         ClearDepth(depth);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilMask(GLuint mask)
+
     {
-        StencilMask = (PFNSTENCILMASKPROC)IntGetProcAddress("glStencilMask");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilMask = (PFNSTENCILMASKPROC)IntGetProcAddress("glStencilMask");
+        });
         StencilMask(mask);
     }
 
     static void CODEGEN_FUNCPTR Switch_ColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
+
     {
-        ColorMask = (PFNCOLORMASKPROC)IntGetProcAddress("glColorMask");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ColorMask = (PFNCOLORMASKPROC)IntGetProcAddress("glColorMask");
+        });
         ColorMask(red, green, blue, alpha);
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthMask(GLboolean flag)
+
     {
-        DepthMask = (PFNDEPTHMASKPROC)IntGetProcAddress("glDepthMask");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DepthMask = (PFNDEPTHMASKPROC)IntGetProcAddress("glDepthMask");
+        });
         DepthMask(flag);
     }
 
     static void CODEGEN_FUNCPTR Switch_Disable(GLenum cap)
+
     {
-        Disable = (PFNDISABLEPROC)IntGetProcAddress("glDisable");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Disable = (PFNDISABLEPROC)IntGetProcAddress("glDisable");
+        });
         Disable(cap);
     }
 
     static void CODEGEN_FUNCPTR Switch_Enable(GLenum cap)
+
     {
-        Enable = (PFNENABLEPROC)IntGetProcAddress("glEnable");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Enable = (PFNENABLEPROC)IntGetProcAddress("glEnable");
+        });
         Enable(cap);
     }
 
@@ -927,68 +1021,112 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BlendFunc(GLenum sfactor, GLenum dfactor)
+
     {
-        BlendFunc = (PFNBLENDFUNCPROC)IntGetProcAddress("glBlendFunc");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlendFunc = (PFNBLENDFUNCPROC)IntGetProcAddress("glBlendFunc");
+        });
         BlendFunc(sfactor, dfactor);
     }
 
     static void CODEGEN_FUNCPTR Switch_LogicOp(GLenum opcode)
+
     {
-        LogicOp = (PFNLOGICOPPROC)IntGetProcAddress("glLogicOp");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            LogicOp = (PFNLOGICOPPROC)IntGetProcAddress("glLogicOp");
+        });
         LogicOp(opcode);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilFunc(GLenum func, GLint ref, GLuint mask)
+
     {
-        StencilFunc = (PFNSTENCILFUNCPROC)IntGetProcAddress("glStencilFunc");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilFunc = (PFNSTENCILFUNCPROC)IntGetProcAddress("glStencilFunc");
+        });
         StencilFunc(func, ref, mask);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
+
     {
-        StencilOp = (PFNSTENCILOPPROC)IntGetProcAddress("glStencilOp");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilOp = (PFNSTENCILOPPROC)IntGetProcAddress("glStencilOp");
+        });
         StencilOp(fail, zfail, zpass);
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthFunc(GLenum func)
+
     {
-        DepthFunc = (PFNDEPTHFUNCPROC)IntGetProcAddress("glDepthFunc");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DepthFunc = (PFNDEPTHFUNCPROC)IntGetProcAddress("glDepthFunc");
+        });
         DepthFunc(func);
     }
 
     static void CODEGEN_FUNCPTR Switch_PixelStoref(GLenum pname, GLfloat param)
+
     {
-        PixelStoref = (PFNPIXELSTOREFPROC)IntGetProcAddress("glPixelStoref");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PixelStoref = (PFNPIXELSTOREFPROC)IntGetProcAddress("glPixelStoref");
+        });
         PixelStoref(pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_PixelStorei(GLenum pname, GLint param)
+
     {
-        PixelStorei = (PFNPIXELSTOREIPROC)IntGetProcAddress("glPixelStorei");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PixelStorei = (PFNPIXELSTOREIPROC)IntGetProcAddress("glPixelStorei");
+        });
         PixelStorei(pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_ReadBuffer(GLenum mode)
+
     {
-        ReadBuffer = (PFNREADBUFFERPROC)IntGetProcAddress("glReadBuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ReadBuffer = (PFNREADBUFFERPROC)IntGetProcAddress("glReadBuffer");
+        });
         ReadBuffer(mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels)
+
     {
-        ReadPixels = (PFNREADPIXELSPROC)IntGetProcAddress("glReadPixels");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ReadPixels = (PFNREADPIXELSPROC)IntGetProcAddress("glReadPixels");
+        });
         ReadPixels(x, y, width, height, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBooleanv(GLenum pname, GLboolean *params)
+
     {
-        GetBooleanv = (PFNGETBOOLEANVPROC)IntGetProcAddress("glGetBooleanv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetBooleanv = (PFNGETBOOLEANVPROC)IntGetProcAddress("glGetBooleanv");
+        });
         GetBooleanv(pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetDoublev(GLenum pname, GLdouble *params)
+
     {
-        GetDoublev = (PFNGETDOUBLEVPROC)IntGetProcAddress("glGetDoublev");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetDoublev = (PFNGETDOUBLEVPROC)IntGetProcAddress("glGetDoublev");
+        });
         GetDoublev(pname, params);
     }
 
@@ -999,14 +1137,22 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetFloatv(GLenum pname, GLfloat *params)
+
     {
-        GetFloatv = (PFNGETFLOATVPROC)IntGetProcAddress("glGetFloatv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetFloatv = (PFNGETFLOATVPROC)IntGetProcAddress("glGetFloatv");
+        });
         GetFloatv(pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetIntegerv(GLenum pname, GLint *params)
+
     {
-        GetIntegerv = (PFNGETINTEGERVPROC)IntGetProcAddress("glGetIntegerv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetIntegerv = (PFNGETINTEGERVPROC)IntGetProcAddress("glGetIntegerv");
+        });
         GetIntegerv(pname, params);
     }
 
@@ -1017,32 +1163,52 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexImage(GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels)
+
     {
-        GetTexImage = (PFNGETTEXIMAGEPROC)IntGetProcAddress("glGetTexImage");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexImage = (PFNGETTEXIMAGEPROC)IntGetProcAddress("glGetTexImage");
+        });
         GetTexImage(target, level, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterfv(GLenum target, GLenum pname, GLfloat *params)
+
     {
-        GetTexParameterfv = (PFNGETTEXPARAMETERFVPROC)IntGetProcAddress("glGetTexParameterfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexParameterfv = (PFNGETTEXPARAMETERFVPROC)IntGetProcAddress("glGetTexParameterfv");
+        });
         GetTexParameterfv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameteriv(GLenum target, GLenum pname, GLint *params)
+
     {
-        GetTexParameteriv = (PFNGETTEXPARAMETERIVPROC)IntGetProcAddress("glGetTexParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexParameteriv = (PFNGETTEXPARAMETERIVPROC)IntGetProcAddress("glGetTexParameteriv");
+        });
         GetTexParameteriv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexLevelParameterfv(GLenum target, GLint level, GLenum pname, GLfloat *params)
+
     {
-        GetTexLevelParameterfv = (PFNGETTEXLEVELPARAMETERFVPROC)IntGetProcAddress("glGetTexLevelParameterfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexLevelParameterfv = (PFNGETTEXLEVELPARAMETERFVPROC)IntGetProcAddress("glGetTexLevelParameterfv");
+        });
         GetTexLevelParameterfv(target, level, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint *params)
+
     {
-        GetTexLevelParameteriv = (PFNGETTEXLEVELPARAMETERIVPROC)IntGetProcAddress("glGetTexLevelParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexLevelParameteriv = (PFNGETTEXLEVELPARAMETERIVPROC)IntGetProcAddress("glGetTexLevelParameteriv");
+        });
         GetTexLevelParameteriv(target, level, pname, params);
     }
 
@@ -1053,92 +1219,152 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthRange(GLdouble ren_near, GLdouble ren_far)
+
     {
-        DepthRange = (PFNDEPTHRANGEPROC)IntGetProcAddress("glDepthRange");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DepthRange = (PFNDEPTHRANGEPROC)IntGetProcAddress("glDepthRange");
+        });
         DepthRange(ren_near, ren_far);
     }
 
     static void CODEGEN_FUNCPTR Switch_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
+
     {
-        Viewport = (PFNVIEWPORTPROC)IntGetProcAddress("glViewport");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Viewport = (PFNVIEWPORTPROC)IntGetProcAddress("glViewport");
+        });
         Viewport(x, y, width, height);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawArrays(GLenum mode, GLint first, GLsizei count)
+
     {
-        DrawArrays = (PFNDRAWARRAYSPROC)IntGetProcAddress("glDrawArrays");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawArrays = (PFNDRAWARRAYSPROC)IntGetProcAddress("glDrawArrays");
+        });
         DrawArrays(mode, first, count);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
+
     {
-        DrawElements = (PFNDRAWELEMENTSPROC)IntGetProcAddress("glDrawElements");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawElements = (PFNDRAWELEMENTSPROC)IntGetProcAddress("glDrawElements");
+        });
         DrawElements(mode, count, type, indices);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetPointerv(GLenum pname, GLvoid* *params)
+
     {
-        GetPointerv = (PFNGETPOINTERVPROC)IntGetProcAddress("glGetPointerv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetPointerv = (PFNGETPOINTERVPROC)IntGetProcAddress("glGetPointerv");
+        });
         GetPointerv(pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_PolygonOffset(GLfloat factor, GLfloat units)
+
     {
-        PolygonOffset = (PFNPOLYGONOFFSETPROC)IntGetProcAddress("glPolygonOffset");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PolygonOffset = (PFNPOLYGONOFFSETPROC)IntGetProcAddress("glPolygonOffset");
+        });
         PolygonOffset(factor, units);
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexImage1D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border)
+
     {
-        CopyTexImage1D = (PFNCOPYTEXIMAGE1DPROC)IntGetProcAddress("glCopyTexImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyTexImage1D = (PFNCOPYTEXIMAGE1DPROC)IntGetProcAddress("glCopyTexImage1D");
+        });
         CopyTexImage1D(target, level, internalformat, x, y, width, border);
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexImage2D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
+
     {
-        CopyTexImage2D = (PFNCOPYTEXIMAGE2DPROC)IntGetProcAddress("glCopyTexImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyTexImage2D = (PFNCOPYTEXIMAGE2DPROC)IntGetProcAddress("glCopyTexImage2D");
+        });
         CopyTexImage2D(target, level, internalformat, x, y, width, height, border);
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage1D(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
+
     {
-        CopyTexSubImage1D = (PFNCOPYTEXSUBIMAGE1DPROC)IntGetProcAddress("glCopyTexSubImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyTexSubImage1D = (PFNCOPYTEXSUBIMAGE1DPROC)IntGetProcAddress("glCopyTexSubImage1D");
+        });
         CopyTexSubImage1D(target, level, xoffset, x, y, width);
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
+
     {
-        CopyTexSubImage2D = (PFNCOPYTEXSUBIMAGE2DPROC)IntGetProcAddress("glCopyTexSubImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyTexSubImage2D = (PFNCOPYTEXSUBIMAGE2DPROC)IntGetProcAddress("glCopyTexSubImage2D");
+        });
         CopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage1D(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels)
+
     {
-        TexSubImage1D = (PFNTEXSUBIMAGE1DPROC)IntGetProcAddress("glTexSubImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexSubImage1D = (PFNTEXSUBIMAGE1DPROC)IntGetProcAddress("glTexSubImage1D");
+        });
         TexSubImage1D(target, level, xoffset, width, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels)
+
     {
-        TexSubImage2D = (PFNTEXSUBIMAGE2DPROC)IntGetProcAddress("glTexSubImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexSubImage2D = (PFNTEXSUBIMAGE2DPROC)IntGetProcAddress("glTexSubImage2D");
+        });
         TexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_BindTexture(GLenum target, GLuint texture)
+
     {
-        BindTexture = (PFNBINDTEXTUREPROC)IntGetProcAddress("glBindTexture");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindTexture = (PFNBINDTEXTUREPROC)IntGetProcAddress("glBindTexture");
+        });
         BindTexture(target, texture);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteTextures(GLsizei n, const GLuint *textures)
+
     {
-        DeleteTextures = (PFNDELETETEXTURESPROC)IntGetProcAddress("glDeleteTextures");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteTextures = (PFNDELETETEXTURESPROC)IntGetProcAddress("glDeleteTextures");
+        });
         DeleteTextures(n, textures);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenTextures(GLsizei n, GLuint *textures)
+
     {
-        GenTextures = (PFNGENTEXTURESPROC)IntGetProcAddress("glGenTextures");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenTextures = (PFNGENTEXTURESPROC)IntGetProcAddress("glGenTextures");
+        });
         GenTextures(n, textures);
     }
 
@@ -1149,160 +1375,260 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Indexub(GLubyte c)
+
     {
-        Indexub = (PFNINDEXUBPROC)IntGetProcAddress("glIndexub");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Indexub = (PFNINDEXUBPROC)IntGetProcAddress("glIndexub");
+        });
         Indexub(c);
     }
 
     static void CODEGEN_FUNCPTR Switch_Indexubv(const GLubyte *c)
+
     {
-        Indexubv = (PFNINDEXUBVPROC)IntGetProcAddress("glIndexubv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Indexubv = (PFNINDEXUBVPROC)IntGetProcAddress("glIndexubv");
+        });
         Indexubv(c);
     }
 
     // Extension: 1.2
 
     static void CODEGEN_FUNCPTR Switch_BlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
+
     {
-        BlendColor = (PFNBLENDCOLORPROC)IntGetProcAddress("glBlendColor");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlendColor = (PFNBLENDCOLORPROC)IntGetProcAddress("glBlendColor");
+        });
         BlendColor(red, green, blue, alpha);
     }
 
     static void CODEGEN_FUNCPTR Switch_BlendEquation(GLenum mode)
+
     {
-        BlendEquation = (PFNBLENDEQUATIONPROC)IntGetProcAddress("glBlendEquation");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlendEquation = (PFNBLENDEQUATIONPROC)IntGetProcAddress("glBlendEquation");
+        });
         BlendEquation(mode);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawRangeElements(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices)
+
     {
-        DrawRangeElements = (PFNDRAWRANGEELEMENTSPROC)IntGetProcAddress("glDrawRangeElements");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawRangeElements = (PFNDRAWRANGEELEMENTSPROC)IntGetProcAddress("glDrawRangeElements");
+        });
         DrawRangeElements(mode, start, end, count, type, indices);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels)
+
     {
-        TexSubImage3D = (PFNTEXSUBIMAGE3DPROC)IntGetProcAddress("glTexSubImage3D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexSubImage3D = (PFNTEXSUBIMAGE3DPROC)IntGetProcAddress("glTexSubImage3D");
+        });
         TexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height)
+
     {
-        CopyTexSubImage3D = (PFNCOPYTEXSUBIMAGE3DPROC)IntGetProcAddress("glCopyTexSubImage3D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyTexSubImage3D = (PFNCOPYTEXSUBIMAGE3DPROC)IntGetProcAddress("glCopyTexSubImage3D");
+        });
         CopyTexSubImage3D(target, level, xoffset, yoffset, zoffset, x, y, width, height);
     }
 
     // Extension: 1.3
 
     static void CODEGEN_FUNCPTR Switch_ActiveTexture(GLenum texture)
+
     {
-        ActiveTexture = (PFNACTIVETEXTUREPROC)IntGetProcAddress("glActiveTexture");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ActiveTexture = (PFNACTIVETEXTUREPROC)IntGetProcAddress("glActiveTexture");
+        });
         ActiveTexture(texture);
     }
 
     static void CODEGEN_FUNCPTR Switch_SampleCoverage(GLfloat value, GLboolean invert)
+
     {
-        SampleCoverage = (PFNSAMPLECOVERAGEPROC)IntGetProcAddress("glSampleCoverage");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            SampleCoverage = (PFNSAMPLECOVERAGEPROC)IntGetProcAddress("glSampleCoverage");
+        });
         SampleCoverage(value, invert);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexImage3D = (PFNCOMPRESSEDTEXIMAGE3DPROC)IntGetProcAddress("glCompressedTexImage3D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexImage3D = (PFNCOMPRESSEDTEXIMAGE3DPROC)IntGetProcAddress("glCompressedTexImage3D");
+        });
         CompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexImage2D = (PFNCOMPRESSEDTEXIMAGE2DPROC)IntGetProcAddress("glCompressedTexImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexImage2D = (PFNCOMPRESSEDTEXIMAGE2DPROC)IntGetProcAddress("glCompressedTexImage2D");
+        });
         CompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage1D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexImage1D = (PFNCOMPRESSEDTEXIMAGE1DPROC)IntGetProcAddress("glCompressedTexImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexImage1D = (PFNCOMPRESSEDTEXIMAGE1DPROC)IntGetProcAddress("glCompressedTexImage1D");
+        });
         CompressedTexImage1D(target, level, internalformat, width, border, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexSubImage3D = (PFNCOMPRESSEDTEXSUBIMAGE3DPROC)IntGetProcAddress("glCompressedTexSubImage3D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexSubImage3D = (PFNCOMPRESSEDTEXSUBIMAGE3DPROC)IntGetProcAddress("glCompressedTexSubImage3D");
+        });
         CompressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexSubImage2D = (PFNCOMPRESSEDTEXSUBIMAGE2DPROC)IntGetProcAddress("glCompressedTexSubImage2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexSubImage2D = (PFNCOMPRESSEDTEXSUBIMAGE2DPROC)IntGetProcAddress("glCompressedTexSubImage2D");
+        });
         CompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage1D(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const GLvoid *data)
+
     {
-        CompressedTexSubImage1D = (PFNCOMPRESSEDTEXSUBIMAGE1DPROC)IntGetProcAddress("glCompressedTexSubImage1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompressedTexSubImage1D = (PFNCOMPRESSEDTEXSUBIMAGE1DPROC)IntGetProcAddress("glCompressedTexSubImage1D");
+        });
         CompressedTexSubImage1D(target, level, xoffset, width, format, imageSize, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetCompressedTexImage(GLenum target, GLint level, GLvoid *img)
+
     {
-        GetCompressedTexImage = (PFNGETCOMPRESSEDTEXIMAGEPROC)IntGetProcAddress("glGetCompressedTexImage");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetCompressedTexImage = (PFNGETCOMPRESSEDTEXIMAGEPROC)IntGetProcAddress("glGetCompressedTexImage");
+        });
         GetCompressedTexImage(target, level, img);
     }
 
     // Extension: 1.4
 
     static void CODEGEN_FUNCPTR Switch_BlendFuncSeparate(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha)
+
     {
-        BlendFuncSeparate = (PFNBLENDFUNCSEPARATEPROC)IntGetProcAddress("glBlendFuncSeparate");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlendFuncSeparate = (PFNBLENDFUNCSEPARATEPROC)IntGetProcAddress("glBlendFuncSeparate");
+        });
         BlendFuncSeparate(sfactorRGB, dfactorRGB, sfactorAlpha, dfactorAlpha);
     }
 
     static void CODEGEN_FUNCPTR Switch_MultiDrawArrays(GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount)
+
     {
-        MultiDrawArrays = (PFNMULTIDRAWARRAYSPROC)IntGetProcAddress("glMultiDrawArrays");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            MultiDrawArrays = (PFNMULTIDRAWARRAYSPROC)IntGetProcAddress("glMultiDrawArrays");
+        });
         MultiDrawArrays(mode, first, count, drawcount);
     }
 
     static void CODEGEN_FUNCPTR Switch_MultiDrawElements(GLenum mode, const GLsizei *count, GLenum type, const GLvoid* const *indices, GLsizei drawcount)
+
     {
-        MultiDrawElements = (PFNMULTIDRAWELEMENTSPROC)IntGetProcAddress("glMultiDrawElements");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            MultiDrawElements = (PFNMULTIDRAWELEMENTSPROC)IntGetProcAddress("glMultiDrawElements");
+        });
         MultiDrawElements(mode, count, type, indices, drawcount);
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameterf(GLenum pname, GLfloat param)
+
     {
-        PointParameterf = (PFNPOINTPARAMETERFPROC)IntGetProcAddress("glPointParameterf");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PointParameterf = (PFNPOINTPARAMETERFPROC)IntGetProcAddress("glPointParameterf");
+        });
         PointParameterf(pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameterfv(GLenum pname, const GLfloat *params)
+
     {
-        PointParameterfv = (PFNPOINTPARAMETERFVPROC)IntGetProcAddress("glPointParameterfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PointParameterfv = (PFNPOINTPARAMETERFVPROC)IntGetProcAddress("glPointParameterfv");
+        });
         PointParameterfv(pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameteri(GLenum pname, GLint param)
+
     {
-        PointParameteri = (PFNPOINTPARAMETERIPROC)IntGetProcAddress("glPointParameteri");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PointParameteri = (PFNPOINTPARAMETERIPROC)IntGetProcAddress("glPointParameteri");
+        });
         PointParameteri(pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameteriv(GLenum pname, const GLint *params)
+
     {
-        PointParameteriv = (PFNPOINTPARAMETERIVPROC)IntGetProcAddress("glPointParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PointParameteriv = (PFNPOINTPARAMETERIVPROC)IntGetProcAddress("glPointParameteriv");
+        });
         PointParameteriv(pname, params);
     }
 
     // Extension: 1.5
 
     static void CODEGEN_FUNCPTR Switch_GenQueries(GLsizei n, GLuint *ids)
+
     {
-        GenQueries = (PFNGENQUERIESPROC)IntGetProcAddress("glGenQueries");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenQueries = (PFNGENQUERIESPROC)IntGetProcAddress("glGenQueries");
+        });
         GenQueries(n, ids);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteQueries(GLsizei n, const GLuint *ids)
+
     {
-        DeleteQueries = (PFNDELETEQUERIESPROC)IntGetProcAddress("glDeleteQueries");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteQueries = (PFNDELETEQUERIESPROC)IntGetProcAddress("glDeleteQueries");
+        });
         DeleteQueries(n, ids);
     }
 
@@ -1313,50 +1639,82 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginQuery(GLenum target, GLuint id)
+
     {
-        BeginQuery = (PFNBEGINQUERYPROC)IntGetProcAddress("glBeginQuery");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BeginQuery = (PFNBEGINQUERYPROC)IntGetProcAddress("glBeginQuery");
+        });
         BeginQuery(target, id);
     }
 
     static void CODEGEN_FUNCPTR Switch_EndQuery(GLenum target)
+
     {
-        EndQuery = (PFNENDQUERYPROC)IntGetProcAddress("glEndQuery");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            EndQuery = (PFNENDQUERYPROC)IntGetProcAddress("glEndQuery");
+        });
         EndQuery(target);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryiv(GLenum target, GLenum pname, GLint *params)
+
     {
-        GetQueryiv = (PFNGETQUERYIVPROC)IntGetProcAddress("glGetQueryiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetQueryiv = (PFNGETQUERYIVPROC)IntGetProcAddress("glGetQueryiv");
+        });
         GetQueryiv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryObjectiv(GLuint id, GLenum pname, GLint *params)
+
     {
-        GetQueryObjectiv = (PFNGETQUERYOBJECTIVPROC)IntGetProcAddress("glGetQueryObjectiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetQueryObjectiv = (PFNGETQUERYOBJECTIVPROC)IntGetProcAddress("glGetQueryObjectiv");
+        });
         GetQueryObjectiv(id, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
+
     {
-        GetQueryObjectuiv = (PFNGETQUERYOBJECTUIVPROC)IntGetProcAddress("glGetQueryObjectuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetQueryObjectuiv = (PFNGETQUERYOBJECTUIVPROC)IntGetProcAddress("glGetQueryObjectuiv");
+        });
         GetQueryObjectuiv(id, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBuffer(GLenum target, GLuint buffer)
+
     {
-        BindBuffer = (PFNBINDBUFFERPROC)IntGetProcAddress("glBindBuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindBuffer = (PFNBINDBUFFERPROC)IntGetProcAddress("glBindBuffer");
+        });
         BindBuffer(target, buffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteBuffers(GLsizei n, const GLuint *buffers)
+
     {
-        DeleteBuffers = (PFNDELETEBUFFERSPROC)IntGetProcAddress("glDeleteBuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteBuffers = (PFNDELETEBUFFERSPROC)IntGetProcAddress("glDeleteBuffers");
+        });
         DeleteBuffers(n, buffers);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenBuffers(GLsizei n, GLuint *buffers)
+
     {
-        GenBuffers = (PFNGENBUFFERSPROC)IntGetProcAddress("glGenBuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenBuffers = (PFNGENBUFFERSPROC)IntGetProcAddress("glGenBuffers");
+        });
         GenBuffers(n, buffers);
     }
 
@@ -1367,20 +1725,32 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BufferData(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage)
+
     {
-        BufferData = (PFNBUFFERDATAPROC)IntGetProcAddress("glBufferData");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BufferData = (PFNBUFFERDATAPROC)IntGetProcAddress("glBufferData");
+        });
         BufferData(target, size, data, usage);
     }
 
     static void CODEGEN_FUNCPTR Switch_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data)
+
     {
-        BufferSubData = (PFNBUFFERSUBDATAPROC)IntGetProcAddress("glBufferSubData");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BufferSubData = (PFNBUFFERSUBDATAPROC)IntGetProcAddress("glBufferSubData");
+        });
         BufferSubData(target, offset, size, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, GLvoid *data)
+
     {
-        GetBufferSubData = (PFNGETBUFFERSUBDATAPROC)IntGetProcAddress("glGetBufferSubData");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetBufferSubData = (PFNGETBUFFERSUBDATAPROC)IntGetProcAddress("glGetBufferSubData");
+        });
         GetBufferSubData(target, offset, size, data);
     }
 
@@ -1397,64 +1767,104 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferParameteriv(GLenum target, GLenum pname, GLint *params)
+
     {
-        GetBufferParameteriv = (PFNGETBUFFERPARAMETERIVPROC)IntGetProcAddress("glGetBufferParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetBufferParameteriv = (PFNGETBUFFERPARAMETERIVPROC)IntGetProcAddress("glGetBufferParameteriv");
+        });
         GetBufferParameteriv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferPointerv(GLenum target, GLenum pname, GLvoid* *params)
+
     {
-        GetBufferPointerv = (PFNGETBUFFERPOINTERVPROC)IntGetProcAddress("glGetBufferPointerv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetBufferPointerv = (PFNGETBUFFERPOINTERVPROC)IntGetProcAddress("glGetBufferPointerv");
+        });
         GetBufferPointerv(target, pname, params);
     }
 
     // Extension: 2.0
 
     static void CODEGEN_FUNCPTR Switch_BlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
+
     {
-        BlendEquationSeparate = (PFNBLENDEQUATIONSEPARATEPROC)IntGetProcAddress("glBlendEquationSeparate");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlendEquationSeparate = (PFNBLENDEQUATIONSEPARATEPROC)IntGetProcAddress("glBlendEquationSeparate");
+        });
         BlendEquationSeparate(modeRGB, modeAlpha);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawBuffers(GLsizei n, const GLenum *bufs)
+
     {
-        DrawBuffers = (PFNDRAWBUFFERSPROC)IntGetProcAddress("glDrawBuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawBuffers = (PFNDRAWBUFFERSPROC)IntGetProcAddress("glDrawBuffers");
+        });
         DrawBuffers(n, bufs);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilOpSeparate(GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass)
+
     {
-        StencilOpSeparate = (PFNSTENCILOPSEPARATEPROC)IntGetProcAddress("glStencilOpSeparate");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilOpSeparate = (PFNSTENCILOPSEPARATEPROC)IntGetProcAddress("glStencilOpSeparate");
+        });
         StencilOpSeparate(face, sfail, dpfail, dppass);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
+
     {
-        StencilFuncSeparate = (PFNSTENCILFUNCSEPARATEPROC)IntGetProcAddress("glStencilFuncSeparate");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilFuncSeparate = (PFNSTENCILFUNCSEPARATEPROC)IntGetProcAddress("glStencilFuncSeparate");
+        });
         StencilFuncSeparate(face, func, ref, mask);
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilMaskSeparate(GLenum face, GLuint mask)
+
     {
-        StencilMaskSeparate = (PFNSTENCILMASKSEPARATEPROC)IntGetProcAddress("glStencilMaskSeparate");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            StencilMaskSeparate = (PFNSTENCILMASKSEPARATEPROC)IntGetProcAddress("glStencilMaskSeparate");
+        });
         StencilMaskSeparate(face, mask);
     }
 
     static void CODEGEN_FUNCPTR Switch_AttachShader(GLuint program, GLuint shader)
+
     {
-        AttachShader = (PFNATTACHSHADERPROC)IntGetProcAddress("glAttachShader");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            AttachShader = (PFNATTACHSHADERPROC)IntGetProcAddress("glAttachShader");
+        });
         AttachShader(program, shader);
     }
 
     static void CODEGEN_FUNCPTR Switch_BindAttribLocation(GLuint program, GLuint index, const GLchar *name)
+
     {
-        BindAttribLocation = (PFNBINDATTRIBLOCATIONPROC)IntGetProcAddress("glBindAttribLocation");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindAttribLocation = (PFNBINDATTRIBLOCATIONPROC)IntGetProcAddress("glBindAttribLocation");
+        });
         BindAttribLocation(program, index, name);
     }
 
     static void CODEGEN_FUNCPTR Switch_CompileShader(GLuint shader)
+
     {
-        CompileShader = (PFNCOMPILESHADERPROC)IntGetProcAddress("glCompileShader");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CompileShader = (PFNCOMPILESHADERPROC)IntGetProcAddress("glCompileShader");
+        });
         CompileShader(shader);
     }
 
@@ -1471,50 +1881,81 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteProgram(GLuint program)
+
     {
-        DeleteProgram = (PFNDELETEPROGRAMPROC)IntGetProcAddress("glDeleteProgram");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteProgram = (PFNDELETEPROGRAMPROC)IntGetProcAddress("glDeleteProgram");
+        });
         DeleteProgram(program);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteShader(GLuint shader)
     {
-        DeleteShader = (PFNDELETESHADERPROC)IntGetProcAddress("glDeleteShader");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteShader = (PFNDELETESHADERPROC)IntGetProcAddress("glDeleteShader");
+        });
         DeleteShader(shader);
     }
 
     static void CODEGEN_FUNCPTR Switch_DetachShader(GLuint program, GLuint shader)
+
     {
-        DetachShader = (PFNDETACHSHADERPROC)IntGetProcAddress("glDetachShader");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DetachShader = (PFNDETACHSHADERPROC)IntGetProcAddress("glDetachShader");
+        });
         DetachShader(program, shader);
     }
 
     static void CODEGEN_FUNCPTR Switch_DisableVertexAttribArray(GLuint index)
+
     {
-        DisableVertexAttribArray = (PFNDISABLEVERTEXATTRIBARRAYPROC)IntGetProcAddress("glDisableVertexAttribArray");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DisableVertexAttribArray = (PFNDISABLEVERTEXATTRIBARRAYPROC)IntGetProcAddress("glDisableVertexAttribArray");
+        });
         DisableVertexAttribArray(index);
     }
 
     static void CODEGEN_FUNCPTR Switch_EnableVertexAttribArray(GLuint index)
+
     {
-        EnableVertexAttribArray = (PFNENABLEVERTEXATTRIBARRAYPROC)IntGetProcAddress("glEnableVertexAttribArray");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            EnableVertexAttribArray = (PFNENABLEVERTEXATTRIBARRAYPROC)IntGetProcAddress("glEnableVertexAttribArray");
+        });
         EnableVertexAttribArray(index);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveAttrib(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name)
+
     {
-        GetActiveAttrib = (PFNGETACTIVEATTRIBPROC)IntGetProcAddress("glGetActiveAttrib");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveAttrib = (PFNGETACTIVEATTRIBPROC)IntGetProcAddress("glGetActiveAttrib");
+        });
         GetActiveAttrib(program, index, bufSize, length, size, type, name);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniform(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name)
+
     {
-        GetActiveUniform = (PFNGETACTIVEUNIFORMPROC)IntGetProcAddress("glGetActiveUniform");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveUniform = (PFNGETACTIVEUNIFORMPROC)IntGetProcAddress("glGetActiveUniform");
+        });
         GetActiveUniform(program, index, bufSize, length, size, type, name);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetAttachedShaders(GLuint program, GLsizei maxCount, GLsizei *count, GLuint *obj)
+
     {
-        GetAttachedShaders = (PFNGETATTACHEDSHADERSPROC)IntGetProcAddress("glGetAttachedShaders");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetAttachedShaders = (PFNGETATTACHEDSHADERSPROC)IntGetProcAddress("glGetAttachedShaders");
+        });
         GetAttachedShaders(program, maxCount, count, obj);
     }
 
@@ -1525,32 +1966,52 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetProgramiv(GLuint program, GLenum pname, GLint *params)
+
     {
-        GetProgramiv = (PFNGETPROGRAMIVPROC)IntGetProcAddress("glGetProgramiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetProgramiv = (PFNGETPROGRAMIVPROC)IntGetProcAddress("glGetProgramiv");
+        });
         GetProgramiv(program, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetProgramInfoLog(GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog)
+
     {
-        GetProgramInfoLog = (PFNGETPROGRAMINFOLOGPROC)IntGetProcAddress("glGetProgramInfoLog");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetProgramInfoLog = (PFNGETPROGRAMINFOLOGPROC)IntGetProcAddress("glGetProgramInfoLog");
+        });
         GetProgramInfoLog(program, bufSize, length, infoLog);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderiv(GLuint shader, GLenum pname, GLint *params)
+
     {
-        GetShaderiv = (PFNGETSHADERIVPROC)IntGetProcAddress("glGetShaderiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetShaderiv = (PFNGETSHADERIVPROC)IntGetProcAddress("glGetShaderiv");
+        });
         GetShaderiv(shader, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog)
+
     {
-        GetShaderInfoLog = (PFNGETSHADERINFOLOGPROC)IntGetProcAddress("glGetShaderInfoLog");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetShaderInfoLog = (PFNGETSHADERINFOLOGPROC)IntGetProcAddress("glGetShaderInfoLog");
+        });
         GetShaderInfoLog(shader, bufSize, length, infoLog);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderSource(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source)
+
     {
-        GetShaderSource = (PFNGETSHADERSOURCEPROC)IntGetProcAddress("glGetShaderSource");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetShaderSource = (PFNGETSHADERSOURCEPROC)IntGetProcAddress("glGetShaderSource");
+        });
         GetShaderSource(shader, bufSize, length, source);
     }
 
@@ -1561,38 +2022,62 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformfv(GLuint program, GLint location, GLfloat *params)
+
     {
-        GetUniformfv = (PFNGETUNIFORMFVPROC)IntGetProcAddress("glGetUniformfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetUniformfv = (PFNGETUNIFORMFVPROC)IntGetProcAddress("glGetUniformfv");
+        });
         GetUniformfv(program, location, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformiv(GLuint program, GLint location, GLint *params)
+
     {
-        GetUniformiv = (PFNGETUNIFORMIVPROC)IntGetProcAddress("glGetUniformiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetUniformiv = (PFNGETUNIFORMIVPROC)IntGetProcAddress("glGetUniformiv");
+        });
         GetUniformiv(program, location, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params)
+
     {
-        GetVertexAttribdv = (PFNGETVERTEXATTRIBDVPROC)IntGetProcAddress("glGetVertexAttribdv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribdv = (PFNGETVERTEXATTRIBDVPROC)IntGetProcAddress("glGetVertexAttribdv");
+        });
         GetVertexAttribdv(index, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribfv(GLuint index, GLenum pname, GLfloat *params)
+
     {
-        GetVertexAttribfv = (PFNGETVERTEXATTRIBFVPROC)IntGetProcAddress("glGetVertexAttribfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribfv = (PFNGETVERTEXATTRIBFVPROC)IntGetProcAddress("glGetVertexAttribfv");
+        });
         GetVertexAttribfv(index, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribiv(GLuint index, GLenum pname, GLint *params)
+
     {
-        GetVertexAttribiv = (PFNGETVERTEXATTRIBIVPROC)IntGetProcAddress("glGetVertexAttribiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribiv = (PFNGETVERTEXATTRIBIVPROC)IntGetProcAddress("glGetVertexAttribiv");
+        });
         GetVertexAttribiv(index, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid* *pointer)
+
     {
-        GetVertexAttribPointerv = (PFNGETVERTEXATTRIBPOINTERVPROC)IntGetProcAddress("glGetVertexAttribPointerv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribPointerv = (PFNGETVERTEXATTRIBPOINTERVPROC)IntGetProcAddress("glGetVertexAttribPointerv");
+        });
         GetVertexAttribPointerv(index, pname, pointer);
     }
 
@@ -1609,204 +2094,336 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_LinkProgram(GLuint program)
+
     {
-        LinkProgram = (PFNLINKPROGRAMPROC)IntGetProcAddress("glLinkProgram");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            LinkProgram = (PFNLINKPROGRAMPROC)IntGetProcAddress("glLinkProgram");
+        });
         LinkProgram(program);
     }
 
     static void CODEGEN_FUNCPTR Switch_ShaderSource(GLuint shader, GLsizei count, const GLchar* const *string, const GLint *length)
+
     {
-        ShaderSource = (PFNSHADERSOURCEPROC)IntGetProcAddress("glShaderSource");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ShaderSource = (PFNSHADERSOURCEPROC)IntGetProcAddress("glShaderSource");
+        });
         ShaderSource(shader, count, string, length);
     }
 
     static void CODEGEN_FUNCPTR Switch_UseProgram(GLuint program)
+
     {
-        UseProgram = (PFNUSEPROGRAMPROC)IntGetProcAddress("glUseProgram");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UseProgram = (PFNUSEPROGRAMPROC)IntGetProcAddress("glUseProgram");
+        });
         UseProgram(program);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1f(GLint location, GLfloat v0)
+
     {
-        Uniform1f = (PFNUNIFORM1FPROC)IntGetProcAddress("glUniform1f");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1f = (PFNUNIFORM1FPROC)IntGetProcAddress("glUniform1f");
+        });
         Uniform1f(location, v0);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2f(GLint location, GLfloat v0, GLfloat v1)
+
     {
-        Uniform2f = (PFNUNIFORM2FPROC)IntGetProcAddress("glUniform2f");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2f = (PFNUNIFORM2FPROC)IntGetProcAddress("glUniform2f");
+        });
         Uniform2f(location, v0, v1);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
+
     {
-        Uniform3f = (PFNUNIFORM3FPROC)IntGetProcAddress("glUniform3f");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3f = (PFNUNIFORM3FPROC)IntGetProcAddress("glUniform3f");
+        });
         Uniform3f(location, v0, v1, v2);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
+
     {
-        Uniform4f = (PFNUNIFORM4FPROC)IntGetProcAddress("glUniform4f");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4f = (PFNUNIFORM4FPROC)IntGetProcAddress("glUniform4f");
+        });
         Uniform4f(location, v0, v1, v2, v3);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1i(GLint location, GLint v0)
+
     {
-        Uniform1i = (PFNUNIFORM1IPROC)IntGetProcAddress("glUniform1i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1i = (PFNUNIFORM1IPROC)IntGetProcAddress("glUniform1i");
+        });
         Uniform1i(location, v0);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2i(GLint location, GLint v0, GLint v1)
+
     {
-        Uniform2i = (PFNUNIFORM2IPROC)IntGetProcAddress("glUniform2i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2i = (PFNUNIFORM2IPROC)IntGetProcAddress("glUniform2i");
+        });
         Uniform2i(location, v0, v1);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3i(GLint location, GLint v0, GLint v1, GLint v2)
+
     {
-        Uniform3i = (PFNUNIFORM3IPROC)IntGetProcAddress("glUniform3i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3i = (PFNUNIFORM3IPROC)IntGetProcAddress("glUniform3i");
+        });
         Uniform3i(location, v0, v1, v2);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
+
     {
-        Uniform4i = (PFNUNIFORM4IPROC)IntGetProcAddress("glUniform4i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4i = (PFNUNIFORM4IPROC)IntGetProcAddress("glUniform4i");
+        });
         Uniform4i(location, v0, v1, v2, v3);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1fv(GLint location, GLsizei count, const GLfloat *value)
+
     {
-        Uniform1fv = (PFNUNIFORM1FVPROC)IntGetProcAddress("glUniform1fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1fv = (PFNUNIFORM1FVPROC)IntGetProcAddress("glUniform1fv");
+        });
         Uniform1fv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2fv(GLint location, GLsizei count, const GLfloat *value)
+
     {
-        Uniform2fv = (PFNUNIFORM2FVPROC)IntGetProcAddress("glUniform2fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2fv = (PFNUNIFORM2FVPROC)IntGetProcAddress("glUniform2fv");
+        });
         Uniform2fv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3fv(GLint location, GLsizei count, const GLfloat *value)
+
     {
-        Uniform3fv = (PFNUNIFORM3FVPROC)IntGetProcAddress("glUniform3fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3fv = (PFNUNIFORM3FVPROC)IntGetProcAddress("glUniform3fv");
+        });
         Uniform3fv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4fv(GLint location, GLsizei count, const GLfloat *value)
+
     {
-        Uniform4fv = (PFNUNIFORM4FVPROC)IntGetProcAddress("glUniform4fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4fv = (PFNUNIFORM4FVPROC)IntGetProcAddress("glUniform4fv");
+        });
         Uniform4fv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1iv(GLint location, GLsizei count, const GLint *value)
+
     {
-        Uniform1iv = (PFNUNIFORM1IVPROC)IntGetProcAddress("glUniform1iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1iv = (PFNUNIFORM1IVPROC)IntGetProcAddress("glUniform1iv");
+        });
         Uniform1iv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2iv(GLint location, GLsizei count, const GLint *value)
+
     {
-        Uniform2iv = (PFNUNIFORM2IVPROC)IntGetProcAddress("glUniform2iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2iv = (PFNUNIFORM2IVPROC)IntGetProcAddress("glUniform2iv");
+        });
         Uniform2iv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3iv(GLint location, GLsizei count, const GLint *value)
+
     {
-        Uniform3iv = (PFNUNIFORM3IVPROC)IntGetProcAddress("glUniform3iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3iv = (PFNUNIFORM3IVPROC)IntGetProcAddress("glUniform3iv");
+        });
         Uniform3iv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4iv(GLint location, GLsizei count, const GLint *value)
+
     {
-        Uniform4iv = (PFNUNIFORM4IVPROC)IntGetProcAddress("glUniform4iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4iv = (PFNUNIFORM4IVPROC)IntGetProcAddress("glUniform4iv");
+        });
         Uniform4iv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix2fv = (PFNUNIFORMMATRIX2FVPROC)IntGetProcAddress("glUniformMatrix2fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix2fv = (PFNUNIFORMMATRIX2FVPROC)IntGetProcAddress("glUniformMatrix2fv");
+        });
         UniformMatrix2fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix3fv = (PFNUNIFORMMATRIX3FVPROC)IntGetProcAddress("glUniformMatrix3fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix3fv = (PFNUNIFORMMATRIX3FVPROC)IntGetProcAddress("glUniformMatrix3fv");
+        });
         UniformMatrix3fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix4fv = (PFNUNIFORMMATRIX4FVPROC)IntGetProcAddress("glUniformMatrix4fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix4fv = (PFNUNIFORMMATRIX4FVPROC)IntGetProcAddress("glUniformMatrix4fv");
+        });
         UniformMatrix4fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_ValidateProgram(GLuint program)
+
     {
-        ValidateProgram = (PFNVALIDATEPROGRAMPROC)IntGetProcAddress("glValidateProgram");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ValidateProgram = (PFNVALIDATEPROGRAMPROC)IntGetProcAddress("glValidateProgram");
+        });
         ValidateProgram(program);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer)
+
     {
-        VertexAttribPointer = (PFNVERTEXATTRIBPOINTERPROC)IntGetProcAddress("glVertexAttribPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribPointer = (PFNVERTEXATTRIBPOINTERPROC)IntGetProcAddress("glVertexAttribPointer");
+        });
         VertexAttribPointer(index, size, type, normalized, stride, pointer);
     }
 
     // Extension: 2.1
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2x3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix2x3fv = (PFNUNIFORMMATRIX2X3FVPROC)IntGetProcAddress("glUniformMatrix2x3fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix2x3fv = (PFNUNIFORMMATRIX2X3FVPROC)IntGetProcAddress("glUniformMatrix2x3fv");
+        });
         UniformMatrix2x3fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3x2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix3x2fv = (PFNUNIFORMMATRIX3X2FVPROC)IntGetProcAddress("glUniformMatrix3x2fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix3x2fv = (PFNUNIFORMMATRIX3X2FVPROC)IntGetProcAddress("glUniformMatrix3x2fv");
+        });
         UniformMatrix3x2fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix2x4fv = (PFNUNIFORMMATRIX2X4FVPROC)IntGetProcAddress("glUniformMatrix2x4fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix2x4fv = (PFNUNIFORMMATRIX2X4FVPROC)IntGetProcAddress("glUniformMatrix2x4fv");
+        });
         UniformMatrix2x4fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4x2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix4x2fv = (PFNUNIFORMMATRIX4X2FVPROC)IntGetProcAddress("glUniformMatrix4x2fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix4x2fv = (PFNUNIFORMMATRIX4X2FVPROC)IntGetProcAddress("glUniformMatrix4x2fv");
+        });
         UniformMatrix4x2fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix3x4fv = (PFNUNIFORMMATRIX3X4FVPROC)IntGetProcAddress("glUniformMatrix3x4fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix3x4fv = (PFNUNIFORMMATRIX3X4FVPROC)IntGetProcAddress("glUniformMatrix3x4fv");
+        });
         UniformMatrix3x4fv(location, count, transpose, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4x3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
+
     {
-        UniformMatrix4x3fv = (PFNUNIFORMMATRIX4X3FVPROC)IntGetProcAddress("glUniformMatrix4x3fv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformMatrix4x3fv = (PFNUNIFORMMATRIX4X3FVPROC)IntGetProcAddress("glUniformMatrix4x3fv");
+        });
         UniformMatrix4x3fv(location, count, transpose, value);
     }
 
     // Extension: ARB_vertex_array_object
 
     static void CODEGEN_FUNCPTR Switch_BindVertexArray(GLuint ren_array)
+
     {
-        BindVertexArray = (PFNBINDVERTEXARRAYPROC)IntGetProcAddress("glBindVertexArray");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindVertexArray = (PFNBINDVERTEXARRAYPROC)IntGetProcAddress("glBindVertexArray");
+        });
         BindVertexArray(ren_array);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteVertexArrays(GLsizei n, const GLuint *arrays)
+
     {
-        DeleteVertexArrays = (PFNDELETEVERTEXARRAYSPROC)IntGetProcAddress("glDeleteVertexArrays");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteVertexArrays = (PFNDELETEVERTEXARRAYSPROC)IntGetProcAddress("glDeleteVertexArrays");
+        });
         DeleteVertexArrays(n, arrays);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenVertexArrays(GLsizei n, GLuint *arrays)
+
     {
-        GenVertexArrays = (PFNGENVERTEXARRAYSPROC)IntGetProcAddress("glGenVertexArrays");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenVertexArrays = (PFNGENVERTEXARRAYSPROC)IntGetProcAddress("glGenVertexArrays");
+        });
         GenVertexArrays(n, arrays);
     }
 
@@ -1825,8 +2442,12 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
+
     {
-        FlushMappedBufferRange = (PFNFLUSHMAPPEDBUFFERRANGEPROC)IntGetProcAddress("glFlushMappedBufferRange");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FlushMappedBufferRange = (PFNFLUSHMAPPEDBUFFERRANGEPROC)IntGetProcAddress("glFlushMappedBufferRange");
+        });
         FlushMappedBufferRange(target, offset, length);
     }
 
@@ -1839,32 +2460,52 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindRenderbuffer(GLenum target, GLuint renderbuffer)
+
     {
-        BindRenderbuffer = (PFNBINDRENDERBUFFERPROC)IntGetProcAddress("glBindRenderbuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindRenderbuffer = (PFNBINDRENDERBUFFERPROC)IntGetProcAddress("glBindRenderbuffer");
+        });
         BindRenderbuffer(target, renderbuffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers)
+
     {
-        DeleteRenderbuffers = (PFNDELETERENDERBUFFERSPROC)IntGetProcAddress("glDeleteRenderbuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteRenderbuffers = (PFNDELETERENDERBUFFERSPROC)IntGetProcAddress("glDeleteRenderbuffers");
+        });
         DeleteRenderbuffers(n, renderbuffers);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
+
     {
-        GenRenderbuffers = (PFNGENRENDERBUFFERSPROC)IntGetProcAddress("glGenRenderbuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenRenderbuffers = (PFNGENRENDERBUFFERSPROC)IntGetProcAddress("glGenRenderbuffers");
+        });
         GenRenderbuffers(n, renderbuffers);
     }
 
     static void CODEGEN_FUNCPTR Switch_RenderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
+
     {
-        RenderbufferStorage = (PFNRENDERBUFFERSTORAGEPROC)IntGetProcAddress("glRenderbufferStorage");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            RenderbufferStorage = (PFNRENDERBUFFERSTORAGEPROC)IntGetProcAddress("glRenderbufferStorage");
+        });
         RenderbufferStorage(target, internalformat, width, height);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params)
+
     {
-        GetRenderbufferParameteriv = (PFNGETRENDERBUFFERPARAMETERIVPROC)IntGetProcAddress("glGetRenderbufferParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetRenderbufferParameteriv = (PFNGETRENDERBUFFERPARAMETERIVPROC)IntGetProcAddress("glGetRenderbufferParameteriv");
+        });
         GetRenderbufferParameteriv(target, pname, params);
     }
 
@@ -1875,20 +2516,32 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindFramebuffer(GLenum target, GLuint framebuffer)
+
     {
-        BindFramebuffer = (PFNBINDFRAMEBUFFERPROC)IntGetProcAddress("glBindFramebuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindFramebuffer = (PFNBINDFRAMEBUFFERPROC)IntGetProcAddress("glBindFramebuffer");
+        });
         BindFramebuffer(target, framebuffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
+
     {
-        DeleteFramebuffers = (PFNDELETEFRAMEBUFFERSPROC)IntGetProcAddress("glDeleteFramebuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteFramebuffers = (PFNDELETEFRAMEBUFFERSPROC)IntGetProcAddress("glDeleteFramebuffers");
+        });
         DeleteFramebuffers(n, framebuffers);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenFramebuffers(GLsizei n, GLuint *framebuffers)
+
     {
-        GenFramebuffers = (PFNGENFRAMEBUFFERSPROC)IntGetProcAddress("glGenFramebuffers");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenFramebuffers = (PFNGENFRAMEBUFFERSPROC)IntGetProcAddress("glGenFramebuffers");
+        });
         GenFramebuffers(n, framebuffers);
     }
 
@@ -1899,88 +2552,144 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture1D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+
     {
-        FramebufferTexture1D = (PFNFRAMEBUFFERTEXTURE1DPROC)IntGetProcAddress("glFramebufferTexture1D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FramebufferTexture1D = (PFNFRAMEBUFFERTEXTURE1DPROC)IntGetProcAddress("glFramebufferTexture1D");
+        });
         FramebufferTexture1D(target, attachment, textarget, texture, level);
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+
     {
-        FramebufferTexture2D = (PFNFRAMEBUFFERTEXTURE2DPROC)IntGetProcAddress("glFramebufferTexture2D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FramebufferTexture2D = (PFNFRAMEBUFFERTEXTURE2DPROC)IntGetProcAddress("glFramebufferTexture2D");
+        });
         FramebufferTexture2D(target, attachment, textarget, texture, level);
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
+
     {
-        FramebufferTexture3D = (PFNFRAMEBUFFERTEXTURE3DPROC)IntGetProcAddress("glFramebufferTexture3D");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FramebufferTexture3D = (PFNFRAMEBUFFERTEXTURE3DPROC)IntGetProcAddress("glFramebufferTexture3D");
+        });
         FramebufferTexture3D(target, attachment, textarget, texture, level, zoffset);
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferRenderbuffer(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
+
     {
-        FramebufferRenderbuffer = (PFNFRAMEBUFFERRENDERBUFFERPROC)IntGetProcAddress("glFramebufferRenderbuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FramebufferRenderbuffer = (PFNFRAMEBUFFERRENDERBUFFERPROC)IntGetProcAddress("glFramebufferRenderbuffer");
+        });
         FramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLenum pname, GLint *params)
+
     {
-        GetFramebufferAttachmentParameteriv = (PFNGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)IntGetProcAddress("glGetFramebufferAttachmentParameteriv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetFramebufferAttachmentParameteriv = (PFNGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)IntGetProcAddress("glGetFramebufferAttachmentParameteriv");
+        });
         GetFramebufferAttachmentParameteriv(target, attachment, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GenerateMipmap(GLenum target)
+
     {
-        GenerateMipmap = (PFNGENERATEMIPMAPPROC)IntGetProcAddress("glGenerateMipmap");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GenerateMipmap = (PFNGENERATEMIPMAPPROC)IntGetProcAddress("glGenerateMipmap");
+        });
         GenerateMipmap(target);
     }
 
     static void CODEGEN_FUNCPTR Switch_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
+
     {
-        BlitFramebuffer = (PFNBLITFRAMEBUFFERPROC)IntGetProcAddress("glBlitFramebuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BlitFramebuffer = (PFNBLITFRAMEBUFFERPROC)IntGetProcAddress("glBlitFramebuffer");
+        });
         BlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
     }
 
     static void CODEGEN_FUNCPTR Switch_RenderbufferStorageMultisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
+
     {
-        RenderbufferStorageMultisample = (PFNRENDERBUFFERSTORAGEMULTISAMPLEPROC)IntGetProcAddress("glRenderbufferStorageMultisample");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            RenderbufferStorageMultisample = (PFNRENDERBUFFERSTORAGEMULTISAMPLEPROC)IntGetProcAddress("glRenderbufferStorageMultisample");
+        });
         RenderbufferStorageMultisample(target, samples, internalformat, width, height);
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)
+
     {
-        FramebufferTextureLayer = (PFNFRAMEBUFFERTEXTURELAYERPROC)IntGetProcAddress("glFramebufferTextureLayer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            FramebufferTextureLayer = (PFNFRAMEBUFFERTEXTURELAYERPROC)IntGetProcAddress("glFramebufferTextureLayer");
+        });
         FramebufferTextureLayer(target, attachment, texture, level, layer);
     }
 
     // Extension: 3.0
 
     static void CODEGEN_FUNCPTR Switch_ColorMaski(GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a)
+
     {
-        ColorMaski = (PFNCOLORMASKIPROC)IntGetProcAddress("glColorMaski");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ColorMaski = (PFNCOLORMASKIPROC)IntGetProcAddress("glColorMaski");
+        });
         ColorMaski(index, r, g, b, a);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBooleani_v(GLenum target, GLuint index, GLboolean *data)
+
     {
-        GetBooleani_v = (PFNGETBOOLEANI_VPROC)IntGetProcAddress("glGetBooleani_v");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetBooleani_v = (PFNGETBOOLEANI_VPROC)IntGetProcAddress("glGetBooleani_v");
+        });
         GetBooleani_v(target, index, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetIntegeri_v(GLenum target, GLuint index, GLint *data)
+
     {
-        GetIntegeri_v = (PFNGETINTEGERI_VPROC)IntGetProcAddress("glGetIntegeri_v");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetIntegeri_v = (PFNGETINTEGERI_VPROC)IntGetProcAddress("glGetIntegeri_v");
+        });
         GetIntegeri_v(target, index, data);
     }
 
     static void CODEGEN_FUNCPTR Switch_Enablei(GLenum target, GLuint index)
+
     {
-        Enablei = (PFNENABLEIPROC)IntGetProcAddress("glEnablei");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Enablei = (PFNENABLEIPROC)IntGetProcAddress("glEnablei");
+        });
         Enablei(target, index);
     }
 
     static void CODEGEN_FUNCPTR Switch_Disablei(GLenum target, GLuint index)
+
     {
-        Disablei = (PFNDISABLEIPROC)IntGetProcAddress("glDisablei");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Disablei = (PFNDISABLEIPROC)IntGetProcAddress("glDisablei");
+        });
         Disablei(target, index);
     }
 
@@ -1991,8 +2700,12 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginTransformFeedback(GLenum primitiveMode)
+
     {
-        BeginTransformFeedback = (PFNBEGINTRANSFORMFEEDBACKPROC)IntGetProcAddress("glBeginTransformFeedback");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BeginTransformFeedback = (PFNBEGINTRANSFORMFEEDBACKPROC)IntGetProcAddress("glBeginTransformFeedback");
+        });
         BeginTransformFeedback(primitiveMode);
     }
 
@@ -2003,38 +2716,62 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBufferRange(GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size)
+
     {
-        BindBufferRange = (PFNBINDBUFFERRANGEPROC)IntGetProcAddress("glBindBufferRange");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindBufferRange = (PFNBINDBUFFERRANGEPROC)IntGetProcAddress("glBindBufferRange");
+        });
         BindBufferRange(target, index, buffer, offset, size);
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
+
     {
-        BindBufferBase = (PFNBINDBUFFERBASEPROC)IntGetProcAddress("glBindBufferBase");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindBufferBase = (PFNBINDBUFFERBASEPROC)IntGetProcAddress("glBindBufferBase");
+        });
         BindBufferBase(target, index, buffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_TransformFeedbackVaryings(GLuint program, GLsizei count, const GLchar* const *varyings, GLenum bufferMode)
+
     {
-        TransformFeedbackVaryings = (PFNTRANSFORMFEEDBACKVARYINGSPROC)IntGetProcAddress("glTransformFeedbackVaryings");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TransformFeedbackVaryings = (PFNTRANSFORMFEEDBACKVARYINGSPROC)IntGetProcAddress("glTransformFeedbackVaryings");
+        });
         TransformFeedbackVaryings(program, count, varyings, bufferMode);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTransformFeedbackVarying(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLsizei *size, GLenum *type, GLchar *name)
+
     {
-        GetTransformFeedbackVarying = (PFNGETTRANSFORMFEEDBACKVARYINGPROC)IntGetProcAddress("glGetTransformFeedbackVarying");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTransformFeedbackVarying = (PFNGETTRANSFORMFEEDBACKVARYINGPROC)IntGetProcAddress("glGetTransformFeedbackVarying");
+        });
         GetTransformFeedbackVarying(program, index, bufSize, length, size, type, name);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClampColor(GLenum target, GLenum clamp)
+
     {
-        ClampColor = (PFNCLAMPCOLORPROC)IntGetProcAddress("glClampColor");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClampColor = (PFNCLAMPCOLORPROC)IntGetProcAddress("glClampColor");
+        });
         ClampColor(target, clamp);
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginConditionalRender(GLuint id, GLenum mode)
+
     {
-        BeginConditionalRender = (PFNBEGINCONDITIONALRENDERPROC)IntGetProcAddress("glBeginConditionalRender");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BeginConditionalRender = (PFNBEGINCONDITIONALRENDERPROC)IntGetProcAddress("glBeginConditionalRender");
+        });
         BeginConditionalRender(id, mode);
     }
 
@@ -2045,152 +2782,252 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribIPointer(GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+
     {
-        VertexAttribIPointer = (PFNVERTEXATTRIBIPOINTERPROC)IntGetProcAddress("glVertexAttribIPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribIPointer = (PFNVERTEXATTRIBIPOINTERPROC)IntGetProcAddress("glVertexAttribIPointer");
+        });
         VertexAttribIPointer(index, size, type, stride, pointer);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribIiv(GLuint index, GLenum pname, GLint *params)
+
     {
-        GetVertexAttribIiv = (PFNGETVERTEXATTRIBIIVPROC)IntGetProcAddress("glGetVertexAttribIiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribIiv = (PFNGETVERTEXATTRIBIIVPROC)IntGetProcAddress("glGetVertexAttribIiv");
+        });
         GetVertexAttribIiv(index, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribIuiv(GLuint index, GLenum pname, GLuint *params)
+
     {
-        GetVertexAttribIuiv = (PFNGETVERTEXATTRIBIUIVPROC)IntGetProcAddress("glGetVertexAttribIuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetVertexAttribIuiv = (PFNGETVERTEXATTRIBIUIVPROC)IntGetProcAddress("glGetVertexAttribIuiv");
+        });
         GetVertexAttribIuiv(index, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1i(GLuint index, GLint x)
+
     {
-        VertexAttribI1i = (PFNVERTEXATTRIBI1IPROC)IntGetProcAddress("glVertexAttribI1i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI1i = (PFNVERTEXATTRIBI1IPROC)IntGetProcAddress("glVertexAttribI1i");
+        });
         VertexAttribI1i(index, x);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2i(GLuint index, GLint x, GLint y)
+
     {
-        VertexAttribI2i = (PFNVERTEXATTRIBI2IPROC)IntGetProcAddress("glVertexAttribI2i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI2i = (PFNVERTEXATTRIBI2IPROC)IntGetProcAddress("glVertexAttribI2i");
+        });
         VertexAttribI2i(index, x, y);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3i(GLuint index, GLint x, GLint y, GLint z)
+
     {
-        VertexAttribI3i = (PFNVERTEXATTRIBI3IPROC)IntGetProcAddress("glVertexAttribI3i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI3i = (PFNVERTEXATTRIBI3IPROC)IntGetProcAddress("glVertexAttribI3i");
+        });
         VertexAttribI3i(index, x, y, z);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4i(GLuint index, GLint x, GLint y, GLint z, GLint w)
+
     {
-        VertexAttribI4i = (PFNVERTEXATTRIBI4IPROC)IntGetProcAddress("glVertexAttribI4i");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4i = (PFNVERTEXATTRIBI4IPROC)IntGetProcAddress("glVertexAttribI4i");
+        });
         VertexAttribI4i(index, x, y, z, w);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1ui(GLuint index, GLuint x)
+
     {
-        VertexAttribI1ui = (PFNVERTEXATTRIBI1UIPROC)IntGetProcAddress("glVertexAttribI1ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI1ui = (PFNVERTEXATTRIBI1UIPROC)IntGetProcAddress("glVertexAttribI1ui");
+        });
         VertexAttribI1ui(index, x);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2ui(GLuint index, GLuint x, GLuint y)
+
     {
-        VertexAttribI2ui = (PFNVERTEXATTRIBI2UIPROC)IntGetProcAddress("glVertexAttribI2ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI2ui = (PFNVERTEXATTRIBI2UIPROC)IntGetProcAddress("glVertexAttribI2ui");
+        });
         VertexAttribI2ui(index, x, y);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3ui(GLuint index, GLuint x, GLuint y, GLuint z)
+
     {
-        VertexAttribI3ui = (PFNVERTEXATTRIBI3UIPROC)IntGetProcAddress("glVertexAttribI3ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI3ui = (PFNVERTEXATTRIBI3UIPROC)IntGetProcAddress("glVertexAttribI3ui");
+        });
         VertexAttribI3ui(index, x, y, z);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4ui(GLuint index, GLuint x, GLuint y, GLuint z, GLuint w)
+
     {
-        VertexAttribI4ui = (PFNVERTEXATTRIBI4UIPROC)IntGetProcAddress("glVertexAttribI4ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4ui = (PFNVERTEXATTRIBI4UIPROC)IntGetProcAddress("glVertexAttribI4ui");
+        });
         VertexAttribI4ui(index, x, y, z, w);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1iv(GLuint index, const GLint *v)
+
     {
-        VertexAttribI1iv = (PFNVERTEXATTRIBI1IVPROC)IntGetProcAddress("glVertexAttribI1iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI1iv = (PFNVERTEXATTRIBI1IVPROC)IntGetProcAddress("glVertexAttribI1iv");
+        });
         VertexAttribI1iv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2iv(GLuint index, const GLint *v)
+
     {
-        VertexAttribI2iv = (PFNVERTEXATTRIBI2IVPROC)IntGetProcAddress("glVertexAttribI2iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI2iv = (PFNVERTEXATTRIBI2IVPROC)IntGetProcAddress("glVertexAttribI2iv");
+        });
         VertexAttribI2iv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3iv(GLuint index, const GLint *v)
+
     {
-        VertexAttribI3iv = (PFNVERTEXATTRIBI3IVPROC)IntGetProcAddress("glVertexAttribI3iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI3iv = (PFNVERTEXATTRIBI3IVPROC)IntGetProcAddress("glVertexAttribI3iv");
+        });
         VertexAttribI3iv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4iv(GLuint index, const GLint *v)
+
     {
-        VertexAttribI4iv = (PFNVERTEXATTRIBI4IVPROC)IntGetProcAddress("glVertexAttribI4iv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4iv = (PFNVERTEXATTRIBI4IVPROC)IntGetProcAddress("glVertexAttribI4iv");
+        });
         VertexAttribI4iv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1uiv(GLuint index, const GLuint *v)
+
     {
-        VertexAttribI1uiv = (PFNVERTEXATTRIBI1UIVPROC)IntGetProcAddress("glVertexAttribI1uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI1uiv = (PFNVERTEXATTRIBI1UIVPROC)IntGetProcAddress("glVertexAttribI1uiv");
+        });
         VertexAttribI1uiv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2uiv(GLuint index, const GLuint *v)
+
     {
-        VertexAttribI2uiv = (PFNVERTEXATTRIBI2UIVPROC)IntGetProcAddress("glVertexAttribI2uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI2uiv = (PFNVERTEXATTRIBI2UIVPROC)IntGetProcAddress("glVertexAttribI2uiv");
+        });
         VertexAttribI2uiv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3uiv(GLuint index, const GLuint *v)
+
     {
-        VertexAttribI3uiv = (PFNVERTEXATTRIBI3UIVPROC)IntGetProcAddress("glVertexAttribI3uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI3uiv = (PFNVERTEXATTRIBI3UIVPROC)IntGetProcAddress("glVertexAttribI3uiv");
+        });
         VertexAttribI3uiv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4uiv(GLuint index, const GLuint *v)
+
     {
-        VertexAttribI4uiv = (PFNVERTEXATTRIBI4UIVPROC)IntGetProcAddress("glVertexAttribI4uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4uiv = (PFNVERTEXATTRIBI4UIVPROC)IntGetProcAddress("glVertexAttribI4uiv");
+        });
         VertexAttribI4uiv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4bv(GLuint index, const GLbyte *v)
+
     {
-        VertexAttribI4bv = (PFNVERTEXATTRIBI4BVPROC)IntGetProcAddress("glVertexAttribI4bv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4bv = (PFNVERTEXATTRIBI4BVPROC)IntGetProcAddress("glVertexAttribI4bv");
+        });
         VertexAttribI4bv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4sv(GLuint index, const GLshort *v)
+
     {
-        VertexAttribI4sv = (PFNVERTEXATTRIBI4SVPROC)IntGetProcAddress("glVertexAttribI4sv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4sv = (PFNVERTEXATTRIBI4SVPROC)IntGetProcAddress("glVertexAttribI4sv");
+        });
         VertexAttribI4sv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4ubv(GLuint index, const GLubyte *v)
+
     {
-        VertexAttribI4ubv = (PFNVERTEXATTRIBI4UBVPROC)IntGetProcAddress("glVertexAttribI4ubv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4ubv = (PFNVERTEXATTRIBI4UBVPROC)IntGetProcAddress("glVertexAttribI4ubv");
+        });
         VertexAttribI4ubv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4usv(GLuint index, const GLushort *v)
+
     {
-        VertexAttribI4usv = (PFNVERTEXATTRIBI4USVPROC)IntGetProcAddress("glVertexAttribI4usv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexAttribI4usv = (PFNVERTEXATTRIBI4USVPROC)IntGetProcAddress("glVertexAttribI4usv");
+        });
         VertexAttribI4usv(index, v);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformuiv(GLuint program, GLint location, GLuint *params)
+
     {
-        GetUniformuiv = (PFNGETUNIFORMUIVPROC)IntGetProcAddress("glGetUniformuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetUniformuiv = (PFNGETUNIFORMUIVPROC)IntGetProcAddress("glGetUniformuiv");
+        });
         GetUniformuiv(program, location, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_BindFragDataLocation(GLuint program, GLuint color, const GLchar *name)
+
     {
-        BindFragDataLocation = (PFNBINDFRAGDATALOCATIONPROC)IntGetProcAddress("glBindFragDataLocation");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            BindFragDataLocation = (PFNBINDFRAGDATALOCATIONPROC)IntGetProcAddress("glBindFragDataLocation");
+        });
         BindFragDataLocation(program, color, name);
     }
 
@@ -2201,98 +3038,162 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1ui(GLint location, GLuint v0)
+
     {
-        Uniform1ui = (PFNUNIFORM1UIPROC)IntGetProcAddress("glUniform1ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1ui = (PFNUNIFORM1UIPROC)IntGetProcAddress("glUniform1ui");
+        });
         Uniform1ui(location, v0);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2ui(GLint location, GLuint v0, GLuint v1)
+
     {
-        Uniform2ui = (PFNUNIFORM2UIPROC)IntGetProcAddress("glUniform2ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2ui = (PFNUNIFORM2UIPROC)IntGetProcAddress("glUniform2ui");
+        });
         Uniform2ui(location, v0, v1);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
+
     {
-        Uniform3ui = (PFNUNIFORM3UIPROC)IntGetProcAddress("glUniform3ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3ui = (PFNUNIFORM3UIPROC)IntGetProcAddress("glUniform3ui");
+        });
         Uniform3ui(location, v0, v1, v2);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3)
+
     {
-        Uniform4ui = (PFNUNIFORM4UIPROC)IntGetProcAddress("glUniform4ui");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4ui = (PFNUNIFORM4UIPROC)IntGetProcAddress("glUniform4ui");
+        });
         Uniform4ui(location, v0, v1, v2, v3);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1uiv(GLint location, GLsizei count, const GLuint *value)
+
     {
-        Uniform1uiv = (PFNUNIFORM1UIVPROC)IntGetProcAddress("glUniform1uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform1uiv = (PFNUNIFORM1UIVPROC)IntGetProcAddress("glUniform1uiv");
+        });
         Uniform1uiv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2uiv(GLint location, GLsizei count, const GLuint *value)
+
     {
-        Uniform2uiv = (PFNUNIFORM2UIVPROC)IntGetProcAddress("glUniform2uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform2uiv = (PFNUNIFORM2UIVPROC)IntGetProcAddress("glUniform2uiv");
+        });
         Uniform2uiv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3uiv(GLint location, GLsizei count, const GLuint *value)
+
     {
-        Uniform3uiv = (PFNUNIFORM3UIVPROC)IntGetProcAddress("glUniform3uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform3uiv = (PFNUNIFORM3UIVPROC)IntGetProcAddress("glUniform3uiv");
+        });
         Uniform3uiv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4uiv(GLint location, GLsizei count, const GLuint *value)
+
     {
-        Uniform4uiv = (PFNUNIFORM4UIVPROC)IntGetProcAddress("glUniform4uiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Uniform4uiv = (PFNUNIFORM4UIVPROC)IntGetProcAddress("glUniform4uiv");
+        });
         Uniform4uiv(location, count, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterIiv(GLenum target, GLenum pname, const GLint *params)
+
     {
-        TexParameterIiv = (PFNTEXPARAMETERIIVPROC)IntGetProcAddress("glTexParameterIiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameterIiv = (PFNTEXPARAMETERIIVPROC)IntGetProcAddress("glTexParameterIiv");
+        });
         TexParameterIiv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterIuiv(GLenum target, GLenum pname, const GLuint *params)
+
     {
-        TexParameterIuiv = (PFNTEXPARAMETERIUIVPROC)IntGetProcAddress("glTexParameterIuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexParameterIuiv = (PFNTEXPARAMETERIUIVPROC)IntGetProcAddress("glTexParameterIuiv");
+        });
         TexParameterIuiv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterIiv(GLenum target, GLenum pname, GLint *params)
+
     {
-        GetTexParameterIiv = (PFNGETTEXPARAMETERIIVPROC)IntGetProcAddress("glGetTexParameterIiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexParameterIiv = (PFNGETTEXPARAMETERIIVPROC)IntGetProcAddress("glGetTexParameterIiv");
+        });
         GetTexParameterIiv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterIuiv(GLenum target, GLenum pname, GLuint *params)
+
     {
-        GetTexParameterIuiv = (PFNGETTEXPARAMETERIUIVPROC)IntGetProcAddress("glGetTexParameterIuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetTexParameterIuiv = (PFNGETTEXPARAMETERIUIVPROC)IntGetProcAddress("glGetTexParameterIuiv");
+        });
         GetTexParameterIuiv(target, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
+
     {
-        ClearBufferiv = (PFNCLEARBUFFERIVPROC)IntGetProcAddress("glClearBufferiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearBufferiv = (PFNCLEARBUFFERIVPROC)IntGetProcAddress("glClearBufferiv");
+        });
         ClearBufferiv(buffer, drawbuffer, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferuiv(GLenum buffer, GLint drawbuffer, const GLuint *value)
+
     {
-        ClearBufferuiv = (PFNCLEARBUFFERUIVPROC)IntGetProcAddress("glClearBufferuiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearBufferuiv = (PFNCLEARBUFFERUIVPROC)IntGetProcAddress("glClearBufferuiv");
+        });
         ClearBufferuiv(buffer, drawbuffer, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *value)
+
     {
-        ClearBufferfv = (PFNCLEARBUFFERFVPROC)IntGetProcAddress("glClearBufferfv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearBufferfv = (PFNCLEARBUFFERFVPROC)IntGetProcAddress("glClearBufferfv");
+        });
         ClearBufferfv(buffer, drawbuffer, value);
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferfi(GLenum buffer, GLint drawbuffer, GLfloat depth, GLint stencil)
+
     {
-        ClearBufferfi = (PFNCLEARBUFFERFIPROC)IntGetProcAddress("glClearBufferfi");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ClearBufferfi = (PFNCLEARBUFFERFIPROC)IntGetProcAddress("glClearBufferfi");
+        });
         ClearBufferfi(buffer, drawbuffer, depth, stencil);
     }
 
@@ -2305,20 +3206,32 @@ namespace gl
     // Extension: ARB_uniform_buffer_object
 
     static void CODEGEN_FUNCPTR Switch_GetUniformIndices(GLuint program, GLsizei uniformCount, const GLchar* const *uniformNames, GLuint *uniformIndices)
+
     {
-        GetUniformIndices = (PFNGETUNIFORMINDICESPROC)IntGetProcAddress("glGetUniformIndices");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetUniformIndices = (PFNGETUNIFORMINDICESPROC)IntGetProcAddress("glGetUniformIndices");
+        });
         GetUniformIndices(program, uniformCount, uniformNames, uniformIndices);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformsiv(GLuint program, GLsizei uniformCount, const GLuint *uniformIndices, GLenum pname, GLint *params)
+
     {
-        GetActiveUniformsiv = (PFNGETACTIVEUNIFORMSIVPROC)IntGetProcAddress("glGetActiveUniformsiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveUniformsiv = (PFNGETACTIVEUNIFORMSIVPROC)IntGetProcAddress("glGetActiveUniformsiv");
+        });
         GetActiveUniformsiv(program, uniformCount, uniformIndices, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformName(GLuint program, GLuint uniformIndex, GLsizei bufSize, GLsizei *length, GLchar *uniformName)
+
     {
-        GetActiveUniformName = (PFNGETACTIVEUNIFORMNAMEPROC)IntGetProcAddress("glGetActiveUniformName");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveUniformName = (PFNGETACTIVEUNIFORMNAMEPROC)IntGetProcAddress("glGetActiveUniformName");
+        });
         GetActiveUniformName(program, uniformIndex, bufSize, length, uniformName);
     }
 
@@ -2329,104 +3242,168 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformBlockiv(GLuint program, GLuint uniformBlockIndex, GLenum pname, GLint *params)
+
     {
-        GetActiveUniformBlockiv = (PFNGETACTIVEUNIFORMBLOCKIVPROC)IntGetProcAddress("glGetActiveUniformBlockiv");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveUniformBlockiv = (PFNGETACTIVEUNIFORMBLOCKIVPROC)IntGetProcAddress("glGetActiveUniformBlockiv");
+        });
         GetActiveUniformBlockiv(program, uniformBlockIndex, pname, params);
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformBlockName(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei *length, GLchar *uniformBlockName)
+
     {
-        GetActiveUniformBlockName = (PFNGETACTIVEUNIFORMBLOCKNAMEPROC)IntGetProcAddress("glGetActiveUniformBlockName");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            GetActiveUniformBlockName = (PFNGETACTIVEUNIFORMBLOCKNAMEPROC)IntGetProcAddress("glGetActiveUniformBlockName");
+        });
         GetActiveUniformBlockName(program, uniformBlockIndex, bufSize, length, uniformBlockName);
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformBlockBinding(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding)
+
     {
-        UniformBlockBinding = (PFNUNIFORMBLOCKBINDINGPROC)IntGetProcAddress("glUniformBlockBinding");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            UniformBlockBinding = (PFNUNIFORMBLOCKBINDINGPROC)IntGetProcAddress("glUniformBlockBinding");
+        });
         UniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding);
     }
 
     // Extension: ARB_copy_buffer
 
     static void CODEGEN_FUNCPTR Switch_CopyBufferSubData(GLenum readTarget, GLenum writeTarget, GLintptr readOffset, GLintptr writeOffset, GLsizeiptr size)
+
     {
-        CopyBufferSubData = (PFNCOPYBUFFERSUBDATAPROC)IntGetProcAddress("glCopyBufferSubData");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            CopyBufferSubData = (PFNCOPYBUFFERSUBDATAPROC)IntGetProcAddress("glCopyBufferSubData");
+        });
         CopyBufferSubData(readTarget, writeTarget, readOffset, writeOffset, size);
     }
 
     // Extension: 3.1
 
     static void CODEGEN_FUNCPTR Switch_DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount)
+
     {
-        DrawArraysInstanced = (PFNDRAWARRAYSINSTANCEDPROC)IntGetProcAddress("glDrawArraysInstanced");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawArraysInstanced = (PFNDRAWARRAYSINSTANCEDPROC)IntGetProcAddress("glDrawArraysInstanced");
+        });
         DrawArraysInstanced(mode, first, count, instancecount);
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices, GLsizei instancecount)
+
     {
-        DrawElementsInstanced = (PFNDRAWELEMENTSINSTANCEDPROC)IntGetProcAddress("glDrawElementsInstanced");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DrawElementsInstanced = (PFNDRAWELEMENTSINSTANCEDPROC)IntGetProcAddress("glDrawElementsInstanced");
+        });
         DrawElementsInstanced(mode, count, type, indices, instancecount);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexBuffer(GLenum target, GLenum internalformat, GLuint buffer)
+
     {
-        TexBuffer = (PFNTEXBUFFERPROC)IntGetProcAddress("glTexBuffer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexBuffer = (PFNTEXBUFFERPROC)IntGetProcAddress("glTexBuffer");
+        });
         TexBuffer(target, internalformat, buffer);
     }
 
     static void CODEGEN_FUNCPTR Switch_PrimitiveRestartIndex(GLuint index)
+
     {
-        PrimitiveRestartIndex = (PFNPRIMITIVERESTARTINDEXPROC)IntGetProcAddress("glPrimitiveRestartIndex");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            PrimitiveRestartIndex = (PFNPRIMITIVERESTARTINDEXPROC)IntGetProcAddress("glPrimitiveRestartIndex");
+        });
         PrimitiveRestartIndex(index);
     }
 
     // Legacy
 
     static void CODEGEN_FUNCPTR Switch_EnableClientState(GLenum cap)
+
     {
-        EnableClientState = (PFNENABLECLIENTSTATEPROC)IntGetProcAddress("glEnableClientState");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            EnableClientState = (PFNENABLECLIENTSTATEPROC)IntGetProcAddress("glEnableClientState");
+        });
         EnableClientState(cap);
     }
 
     static void CODEGEN_FUNCPTR Switch_DisableClientState(GLenum cap)
+
     {
-        DisableClientState = (PFNDISABLECLIENTSTATEPROC)IntGetProcAddress("glDisableClientState");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DisableClientState = (PFNDISABLECLIENTSTATEPROC)IntGetProcAddress("glDisableClientState");
+        });
         DisableClientState(cap);
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
+
     {
-        VertexPointer = (PFNVERTEXPOINTERPROC)IntGetProcAddress("glVertexPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            VertexPointer = (PFNVERTEXPOINTERPROC)IntGetProcAddress("glVertexPointer");
+        });
         VertexPointer(size, type, stride, ptr);
     }
 
     static void CODEGEN_FUNCPTR Switch_NormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr)
+
     {
-        NormalPointer = (PFNNORMALPOINTERPROC)IntGetProcAddress("glNormalPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            NormalPointer = (PFNNORMALPOINTERPROC)IntGetProcAddress("glNormalPointer");
+        });
         NormalPointer(type, stride, ptr);
     }
 
     static void CODEGEN_FUNCPTR Switch_ColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
+
     {
-        ColorPointer = (PFNCOLORPOINTERPROC)IntGetProcAddress("glColorPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            ColorPointer = (PFNCOLORPOINTERPROC)IntGetProcAddress("glColorPointer");
+        });
         ColorPointer(size, type, stride, ptr);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
+
     {
-        TexCoordPointer = (PFNTEXCOORDPOINTERPROC)IntGetProcAddress("glTexCoordPointer");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexCoordPointer = (PFNTEXCOORDPOINTERPROC)IntGetProcAddress("glTexCoordPointer");
+        });
         TexCoordPointer(size, type, stride, ptr);
     }
 
     static void CODEGEN_FUNCPTR Switch_TexEnvi(GLenum target, GLenum pname, GLint param)
+
     {
-        TexEnvi = (PFNTEXENVIPROC)IntGetProcAddress("glTexEnvi");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            TexEnvi = (PFNTEXENVIPROC)IntGetProcAddress("glTexEnvi");
+        });
         TexEnvi(target, pname, param);
     }
 
     static void CODEGEN_FUNCPTR Switch_MatrixMode(GLenum mode)
+
     {
-        MatrixMode = (PFNMATRIXMODEPROC)IntGetProcAddress("glMatrixMode");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            MatrixMode = (PFNMATRIXMODEPROC)IntGetProcAddress("glMatrixMode");
+        });
         MatrixMode(mode);
     }
 
@@ -2437,14 +3414,22 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Ortho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val)
+
     {
-        Ortho = (PFNORTHOPROC)IntGetProcAddress("glOrtho");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Ortho = (PFNORTHOPROC)IntGetProcAddress("glOrtho");
+        });
         Ortho(left, right, bottom, top, near_val, far_val);
     }
 
     static void CODEGEN_FUNCPTR Switch_Color3d(GLdouble red, GLdouble green, GLdouble blue)
+
     {
-        Color3d = (PFNCOLOR3DPROC)IntGetProcAddress("glColor3d");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            Color3d = (PFNCOLOR3DPROC)IntGetProcAddress("glColor3d");
+        });
         Color3d(red, green, blue);
     }
 
