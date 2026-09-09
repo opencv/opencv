@@ -11,5 +11,6 @@
 -   @subpage tutorial_feature_homography
 -   @subpage tutorial_detection_of_planar_objects
 -   @subpage tutorial_akaze_matching
+-   @subpage tutorial_simple_blob_detector
 -   @subpage tutorial_akaze_tracking
 -   @subpage tutorial_homography
