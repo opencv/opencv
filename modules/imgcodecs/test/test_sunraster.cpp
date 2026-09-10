@@ -50,36 +50,6 @@ static std::vector<uint8_t> makeSunRasHeader(
     return buf;
 }
 
-static void expectSunRasDecode(const String& filename, int flags, const cv::Mat& expected)
-{
-    cv::Mat result;
-    ASSERT_NO_THROW(result = cv::imread(filename, flags));
-    ASSERT_FALSE(result.empty());
-    ASSERT_EQ(expected.size(), result.size());
-    ASSERT_EQ(expected.type(), result.type());
-    EXPECT_EQ(0, cv::norm(expected, result, cv::NORM_INF));
-}
-
-static void checkColorSunRas(const String& filename)
-{
-    uint8_t bgr_data[] = {
-        30, 20, 10, 60, 50, 40, 0, 0, 255, 0, 255, 0,
-        255, 0, 0, 0, 255, 255, 255, 0, 255, 255, 255, 0
-    };
-    uint8_t rgb_data[] = {
-        10, 20, 30, 40, 50, 60, 255, 0, 0, 0, 255, 0,
-        0, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 255
-    };
-    uint8_t gray_data[] = { 18, 48, 76, 150, 29, 226, 105, 179 };
-    const cv::Mat expected_bgr(2, 4, CV_8UC3, bgr_data);
-    const cv::Mat expected_rgb(2, 4, CV_8UC3, rgb_data);
-    const cv::Mat expected_gray(2, 4, CV_8UC1, gray_data);
-
-    expectSunRasDecode(filename, cv::IMREAD_COLOR, expected_bgr);
-    expectSunRasDecode(filename, cv::IMREAD_COLOR_RGB, expected_rgb);
-    expectSunRasDecode(filename, cv::IMREAD_GRAYSCALE, expected_gray);
-}
-
 // ---------------------------------------------------------------------------
 // Crash / UBSan regression — issue #29150
 // Feeding an invalid maptype value (34077 / 0x851d) must NOT trigger UB;
@@ -190,7 +160,13 @@ TEST(Imgcodecs_SunRaster, byte_encoded_8bpp_decodes)
           0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
     };
     const cv::Mat expected(8, 16, CV_8UC1, expected_data);
-    expectSunRasDecode(filename, cv::IMREAD_GRAYSCALE, expected);
+
+    cv::Mat result;
+    ASSERT_NO_THROW(result = cv::imread(filename, cv::IMREAD_GRAYSCALE));
+    ASSERT_FALSE(result.empty());
+    ASSERT_EQ(expected.size(), result.size());
+    ASSERT_EQ(expected.type(), result.type());
+    EXPECT_EQ(0, cv::norm(expected, result, cv::NORM_INF));
 }
 
 TEST(Imgcodecs_SunRaster, truncated_byte_encoded_8bpp_returns_empty)
@@ -209,16 +185,49 @@ TEST(Imgcodecs_SunRaster, truncated_byte_encoded_8bpp_returns_empty)
     EXPECT_TRUE(result.empty());
 }
 
-TEST(Imgcodecs_SunRaster, rgb_format_24bpp_decodes)
+typedef tuple<string, int> SunRasterColorParams;
+typedef testing::TestWithParam<SunRasterColorParams> Imgcodecs_SunRaster_Color;
+
+TEST_P(Imgcodecs_SunRaster_Color, decodes)
 {
-    // Generated with ImageMagick's SUN encoder.
-    checkColorSunRas(findDataFile("readwrite/sunraster/rgb_format_24bpp.ras"));
+    const String filename = findDataFile(get<0>(GetParam()));
+    const int flags = get<1>(GetParam());
+
+    uint8_t bgr_data[] = {
+        30, 20, 10, 60, 50, 40, 0, 0, 255, 0, 255, 0,
+        255, 0, 0, 0, 255, 255, 255, 0, 255, 255, 255, 0
+    };
+    uint8_t rgb_data[] = {
+        10, 20, 30, 40, 50, 60, 255, 0, 0, 0, 255, 0,
+        0, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 255
+    };
+    uint8_t gray_data[] = { 18, 48, 76, 150, 29, 226, 105, 179 };
+
+    cv::Mat expected;
+    if( flags == cv::IMREAD_COLOR )
+        expected = cv::Mat(2, 4, CV_8UC3, bgr_data);
+    else if( flags == cv::IMREAD_COLOR_RGB )
+        expected = cv::Mat(2, 4, CV_8UC3, rgb_data);
+    else
+        expected = cv::Mat(2, 4, CV_8UC1, gray_data);
+
+    cv::Mat result;
+    ASSERT_NO_THROW(result = cv::imread(filename, flags));
+    ASSERT_FALSE(result.empty());
+    ASSERT_EQ(expected.size(), result.size());
+    ASSERT_EQ(expected.type(), result.type());
+    EXPECT_EQ(0, cv::norm(expected, result, cv::NORM_INF));
 }
 
-TEST(Imgcodecs_SunRaster, rgb_format_32bpp_decodes)
-{
-    // Generated with ImageMagick's SUN encoder.
-    checkColorSunRas(findDataFile("readwrite/sunraster/rgb_format_32bpp.ras"));
-}
+// Generated with ImageMagick's SUN encoder.
+INSTANTIATE_TEST_CASE_P(RgbFormat, Imgcodecs_SunRaster_Color,
+                        testing::Combine(
+                            testing::Values(
+                                "readwrite/sunraster/rgb_format_24bpp.ras",
+                                "readwrite/sunraster/rgb_format_32bpp.ras"),
+                            testing::Values(
+                                cv::IMREAD_COLOR,
+                                cv::IMREAD_COLOR_RGB,
+                                cv::IMREAD_GRAYSCALE)));
 
 }} // namespace opencv_test
