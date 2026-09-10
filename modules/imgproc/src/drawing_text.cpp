@@ -278,7 +278,7 @@ struct FontFace::Impl {
     {
         if(fontdata.size <= 1)
             return false;
-        if( !isFaceAvailable() || currname != fontdata.name)
+        if(!isFaceAvailable() || currname != fontdata.name)
         {
             deleteFont();
             if(!inflate(fontdata.gzdata, fontdata.size, fontbuf))
@@ -1714,8 +1714,8 @@ Point FontRenderEngine::putText_(
             int dx = roundFixPt(pos.x_advance, FRAC_BITS);
             int dy = roundFixPt(pos.y_advance, FRAC_BITS);
 #else
-            int dx = cached->advance.x >> 6;
-            int dy = cached->advance.y >> 6;
+            int dx = roundFixPt(cached->advance.x, FRAC_BITS);
+            int dy = roundFixPt(cached->advance.y, FRAC_BITS);
 #endif
             int new_pen_x = pen.x + dx*alignSign;
             nextline_dy = max(nextline_dy, cached->linegap);

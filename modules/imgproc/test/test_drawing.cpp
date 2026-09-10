@@ -60,7 +60,11 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
+#ifdef OPENCV_IMGPROC_HAVE_HARFBUZZ
     const string fname = "../highgui/drawing/image.png";
+#else
+    const string fname = "../highgui/drawing/image.stb.png";
+#endif
     string path = ts->get_data_path(), filename;
     filename = path + fname;
 
@@ -427,6 +431,7 @@ void CV_DrawingTest_Far::draw(Mat& img)
     putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 
     img = img(Rect(32768, 0, 600, 400)).clone();
+
 }
 
 TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
