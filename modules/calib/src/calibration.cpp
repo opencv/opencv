@@ -2933,7 +2933,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     Mat cameraMatrix = _cameraMatrix.getMat();
     cameraMatrix = prepareCameraMatrix(cameraMatrix, rtype, flags);
     Mat distCoeffs = _distCoeffs.getMat();
-    int dist_total = distCoeffs.total();
+    int dist_total = (int)distCoeffs.total();
     distCoeffs =
         (flags & CALIB_THIN_PRISM_MODEL) &&
         !(flags & CALIB_TILTED_MODEL) ?
@@ -3120,8 +3120,8 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     Mat cameraMatrix2 = _cameraMatrix2.getMat();
     Mat distCoeffs1 = _distCoeffs1.getMat();
     Mat distCoeffs2 = _distCoeffs2.getMat();
-    int dist1_total = distCoeffs1.total();
-    int dist2_total = distCoeffs2.total();
+    int dist1_total = (int)distCoeffs1.total();
+    int dist2_total = (int)distCoeffs2.total();
     cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
     distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, 14);
