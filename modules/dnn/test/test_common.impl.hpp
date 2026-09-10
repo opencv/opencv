@@ -40,6 +40,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
     case DNN_BACKEND_TIMVX: *os << "TIMVX"; return;
     case DNN_BACKEND_CANN: *os << "CANN"; return;
+    case DNN_BACKEND_MIGRAPHX: *os << "MIGRAPHX"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }

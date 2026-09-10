@@ -41,6 +41,8 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+class MIGraphXNet;  // fwd decl (op_migraphx.hpp)
+
 using std::make_pair;
 using std::string;
 
@@ -488,6 +490,13 @@ struct Net::Impl : public detail::NetImplBase
     // run graph or subgraph.
     void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
     // run the whole model
+#ifdef HAVE_MIGRAPHX
+    // Whole-model MIGraphX (ROCm) offload for ONNX models (new graph engine).
+    std::vector<uchar> onnxModelBuffer;   // retained ONNX bytes for MIGraphX handoff
+    Ptr<MIGraphXNet> migraphxNet;         // compiled MIGraphX program (lazy)
+    bool finalizeMIGraphX();
+    void runMIGraphX(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+#endif
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
 #ifdef HAVE_ONNXRUNTIME
     // Run inference through ONNX Runtime session (if configured).

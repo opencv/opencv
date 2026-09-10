@@ -41,6 +41,10 @@ if(HAVE_CANN)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_CANN=1")
 endif()
 
+if(HAVE_MIGRAPHX)
+  ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_MIGRAPHX=1")
+endif()
+
 if(MSVC)
   ocv_target_compile_options(${the_module} PRIVATE "/fp:fast")
 elseif(CV_GCC OR CV_CLANG)
@@ -489,6 +493,11 @@ endif()
 if(HAVE_CANN)
   list(APPEND include_dirs ${CANN_INCLUDE_DIRS})
   list(APPEND libs -Wl,--whole-archive ${CANN_LIBRARIES} -Wl,--no-whole-archive)
+endif()
+
+if(HAVE_MIGRAPHX)
+  list(APPEND include_dirs ${MIGRAPHX_INCLUDE_DIRS})
+  list(APPEND libs ${MIGRAPHX_LIBRARIES})
 endif()
 
 set(webnn_srcs "")
