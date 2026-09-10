@@ -466,38 +466,37 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                         Complex<T> s0 = v_0, s1 = v_0;
                         dd = dw_f*p;
 
-                        vl = __riscv_vsetvlmax_e32mf2();
-                        auto vec_dd = __riscv_vid_v_u32mf2(vl);
-                        vec_dd = __riscv_vmul(vec_dd, dd, vl);
-                        vec_dd = __riscv_vremu(vec_dd, tab_size, vl);
-
-                        for( q = 0; q < factor2; q += vl )
+                        for( q = 0; q < factor2; )
                         {
-                            vl = rvv<T>::setvl(factor2 - q);
+                            const int qvl = rvv<T>::setvl(factor2 - q);
 
-                            auto vec_d = __riscv_vadd(vec_dd, (q + 1) * dd % tab_size, vl);
-                            auto vmask = __riscv_vmsgeu(vec_d, tab_size, vl);
-                            vec_d = __riscv_vsub_mu(vmask, vec_d, vec_d, tab_size, vl);
-                            vec_d = __riscv_vmul(vec_d, sizeof(T) * 2, vl);
+                            auto vec_d = __riscv_vid_v_u32mf2(qvl);
+                            vec_d = __riscv_vmul(vec_d, dd, qvl);
+                            vec_d = __riscv_vremu(vec_d, tab_size, qvl);
+                            vec_d = __riscv_vadd(vec_d, (q + 1) * dd % tab_size, qvl);
+                            auto vmask = __riscv_vmsgeu(vec_d, tab_size, qvl);
+                            vec_d = __riscv_vsub_mu(vmask, vec_d, vec_d, tab_size, qvl);
+                            vec_d = __riscv_vmul(vec_d, sizeof(T) * 2, qvl);
 
-                            auto vec_w = __riscv_vloxei32(reinterpret_cast<const T*>(wave), vec_d, vl);
+                            auto vec_w = __riscv_vloxei32(reinterpret_cast<const T*>(wave), vec_d, qvl);
                             VT vec_a_re, vec_a_im, vec_b_re, vec_b_im;
-                            rvv<T>::vlsseg(reinterpret_cast<const T*>(a + q), sizeof(T) * 2, vec_a_re, vec_a_im, vl);
-                            rvv<T>::vlsseg(reinterpret_cast<const T*>(b + q), sizeof(T) * 2, vec_b_re, vec_b_im, vl);
-                            auto vec_r0 = __riscv_vfmul(vec_w, vec_a_re, vl);
-                            auto vec_r1 = __riscv_vfmul(vec_w, vec_b_im, vl);
+                            rvv<T>::vlsseg(reinterpret_cast<const T*>(a + q), sizeof(T) * 2, vec_a_re, vec_a_im, qvl);
+                            rvv<T>::vlsseg(reinterpret_cast<const T*>(b + q), sizeof(T) * 2, vec_b_re, vec_b_im, qvl);
+                            auto vec_r0 = __riscv_vfmul(vec_w, vec_a_re, qvl);
+                            auto vec_r1 = __riscv_vfmul(vec_w, vec_b_im, qvl);
 
-                            vec_w = __riscv_vloxei32(reinterpret_cast<const T*>(wave) + 1, vec_d, vl);
-                            auto vec_i0 = __riscv_vfmul(vec_w, vec_a_im, vl);
-                            auto vec_i1 = __riscv_vfmul(vec_w, vec_b_re, vl);
+                            vec_w = __riscv_vloxei32(reinterpret_cast<const T*>(wave) + 1, vec_d, qvl);
+                            auto vec_i0 = __riscv_vfmul(vec_w, vec_a_im, qvl);
+                            auto vec_i1 = __riscv_vfmul(vec_w, vec_b_re, qvl);
 
-                            T r0 = __riscv_vfmv_f(__riscv_vfredosum(vec_r0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
-                            T i0 = __riscv_vfmv_f(__riscv_vfredosum(vec_i0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
-                            T r1 = __riscv_vfmv_f(__riscv_vfredosum(vec_r1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
-                            T i1 = __riscv_vfmv_f(__riscv_vfredosum(vec_i1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            T r0 = __riscv_vfmv_f(__riscv_vfredosum(vec_r0, RVV<T, LMUL_1>::vmv_s(0, qvl), qvl));
+                            T i0 = __riscv_vfmv_f(__riscv_vfredosum(vec_i0, RVV<T, LMUL_1>::vmv_s(0, qvl), qvl));
+                            T r1 = __riscv_vfmv_f(__riscv_vfredosum(vec_r1, RVV<T, LMUL_1>::vmv_s(0, qvl), qvl));
+                            T i1 = __riscv_vfmv_f(__riscv_vfredosum(vec_i1, RVV<T, LMUL_1>::vmv_s(0, qvl), qvl));
 
                             s1.re += r0 + i0; s0.re += r0 - i0;
                             s1.im += r1 - i1; s0.im += r1 + i1;
+                            q += qvl;
                         }
 
                         v[k] = s0;
