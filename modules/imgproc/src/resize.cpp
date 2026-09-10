@@ -762,7 +762,7 @@ void resize_bitExact_build(int src_width, int src_height, int dst_width, int dst
 template <typename ET, typename interpolation>
 void resize_bitExact_run(const uchar* src, size_t src_step, int src_width, int src_height,
                          uchar* dst, size_t dst_step, int dst_width, int dst_height, int cn,
-                         const BitExactTabs& tabs, const Range& range)
+                         const BitExactTabs& tabs, const Range& range, double nstripes)
 {
     typedef typename fixedtype<ET, interpolation::needsign>::type fixedpoint;
     typedef void(*hResizeFunc)(ET* src, int cn, int *ofst, fixedpoint* m,
@@ -772,7 +772,7 @@ void resize_bitExact_run(const uchar* src, size_t src_step, int src_width, int s
         src, src_step, src_width, src_height, dst, dst_step, dst_width, dst_height, cn,
         tabs.xoffsets, tabs.yoffsets, (fixedpoint*)tabs.xcoeffs, (fixedpoint*)tabs.ycoeffs,
         tabs.min_x, tabs.max_x, tabs.min_y, tabs.max_y, (hResizeFunc)tabs.hResize);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 }
 
 typedef void(*be_build_func)(int src_width, int src_height, int dst_width, int dst_height, int cn,
@@ -781,7 +781,7 @@ typedef void(*be_build_func)(int src_width, int src_height, int dst_width, int d
 
 typedef void(*be_run_func)(const uchar* src, size_t src_step, int src_width, int src_height,
                            uchar* dst, size_t dst_step, int dst_width, int dst_height, int cn,
-                           const BitExactTabs& tabs, const Range& range);
+                           const BitExactTabs& tabs, const Range& range, double nstripes);
 
 }
 
@@ -961,7 +961,7 @@ static void resizeNN_tab( int src_width, int dst_width, int pix_size, double fx,
 }
 
 static void
-resizeNN( const Mat& src, Mat& dst, int* x_ofs, double ify, const Range& range )
+resizeNN( const Mat& src, Mat& dst, int* x_ofs, double ify, const Range& range, double nstripes )
 {
     int pix_size = (int)src.elemSize();
 #if CV_TRY_AVX2
@@ -996,7 +996,7 @@ resizeNN( const Mat& src, Mat& dst, int* x_ofs, double ify, const Range& range )
 #endif
     {
         resizeNNInvoker invoker(src, dst, x_ofs, ify);
-        invoker(range);
+        parallel_for_(range, invoker, nstripes);
     }
 }
 
@@ -1105,10 +1105,11 @@ static void resizeNN_bitexact_tab(int src_dim, int dst_dim, int* ofse)
     }
 }
 
-static void resizeNN_bitexact( const Mat& src, Mat& dst, int* x_ofse, int* y_ofse, const Range& range )
+static void resizeNN_bitexact( const Mat& src, Mat& dst, int* x_ofse, int* y_ofse,
+                               const Range& range, double nstripes )
 {
     resizeNN_bitexactInvoker invoker(src, dst, x_ofse, y_ofse);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 }
 
 struct VResizeNoVec
@@ -1880,7 +1881,7 @@ template<class HResize, class VResize>
 static void resizeGeneric_( const Mat& src, Mat& dst,
                             const int* xofs, const void* _alpha,
                             const int* yofs, const void* _beta,
-                            int xmin, int xmax, int ksize, const Range& range )
+                            int xmin, int xmax, int ksize, const Range& range, double nstripes )
 {
     typedef typename HResize::alpha_type AT;
 
@@ -1895,7 +1896,7 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
 
     resizeGeneric_Invoker<HResize, VResize> invoker(src, dst, xofs, yofs, (const AT*)_alpha, beta,
         ssize, dsize, ksize, xmin, xmax);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 }
 
 template <typename T, typename WT>
@@ -2666,11 +2667,11 @@ private:
 
 template<typename T, typename WT, typename VecOp>
 static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int* xofs,
-                             int scale_x, int scale_y, const Range& range )
+                             int scale_x, int scale_y, const Range& range, double nstripes )
 {
     resizeAreaFast_Invoker<T, WT, VecOp> invoker(src, dst, scale_x,
         scale_y, ofs, xofs);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 }
 
 struct DecimateAlpha
@@ -2913,26 +2914,26 @@ template <typename T, typename WT>
 static void resizeArea_( const Mat& src, Mat& dst,
                          const DecimateAlpha* xtab, int xtab_size,
                          const DecimateAlpha* ytab, int ytab_size,
-                         const int* tabofs, const Range& range )
+                         const int* tabofs, const Range& range, double nstripes )
 {
     ResizeArea_Invoker<T, WT> invoker(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 }
 
 
 typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
                             const int* xofs, const void* alpha,
                             const int* yofs, const void* beta,
-                            int xmin, int xmax, int ksize, const Range& range );
+                            int xmin, int xmax, int ksize, const Range& range, double nstripes );
 
 typedef void (*ResizeAreaFastFunc)( const Mat& src, Mat& dst,
                                     const int* ofs, const int *xofs,
-                                    int scale_x, int scale_y, const Range& range );
+                                    int scale_x, int scale_y, const Range& range, double nstripes );
 
 typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const DecimateAlpha* xtab, int xtab_size,
                                 const DecimateAlpha* ytab, int ytab_size,
-                                const int* yofs, const Range& range);
+                                const int* yofs, const Range& range, double nstripes);
 
 
 // Shared resize-area coefficient-table math for the CPU and OpenCL callers; the
@@ -3243,6 +3244,7 @@ public:
     Size dstSize() const { return dsize; }
     int rowsPerImage() const { return dsize.height; }
 
+    // Fills dst rows [rows.start,rows.end); the kernel's parallel_for_ goes serial when nested.
     void run(const uchar* src_data, size_t src_step,
              uchar* dst_data, size_t dst_step, const Range& rows) const;
 
@@ -3689,29 +3691,31 @@ void ResizePlan::run(const uchar* src_data, size_t src_step,
     Mat src(ssize, type, const_cast<uchar*>(src_data), src_step);
     Mat dst(dsize, type, dst_data, dst_step);
 
+    const double nstripes = dsize.area()/(double)(1 << 16);
+
     switch (kind)
     {
     case KIND_COPY:
         src.rowRange(rows).copyTo(dst.rowRange(rows));
         break;
     case KIND_NEAREST:
-        resizeNN(src, dst, nnXofs, nnIfy, rows);
+        resizeNN(src, dst, nnXofs, nnIfy, rows, nstripes);
         break;
     case KIND_NEAREST_EXACT:
-        resizeNN_bitexact(src, dst, nnBeX, nnBeY, rows);
+        resizeNN_bitexact(src, dst, nnBeX, nnBeY, rows, nstripes);
         break;
     case KIND_LINEAR_EXACT:
         beRun(src_data, src_step, ssize.width, ssize.height,
-              dst_data, dst_step, dsize.width, dsize.height, cn, beTabs, rows);
+              dst_data, dst_step, dsize.width, dsize.height, cn, beTabs, rows, nstripes);
         break;
     case KIND_AREA_FAST:
-        areaFastFunc(src, dst, afOfs, afXofs, iscale_x, iscale_y, rows);
+        areaFastFunc(src, dst, afOfs, afXofs, iscale_x, iscale_y, rows, nstripes);
         break;
     case KIND_AREA:
-        areaFunc(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, rows);
+        areaFunc(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, rows, nstripes);
         break;
     case KIND_GENERIC:
-        func(src, dst, xofs, alpha, yofs, beta, xmin, xmax, ksize, rows);
+        func(src, dst, xofs, alpha, yofs, beta, xmin, xmax, ksize, rows, nstripes);
         break;
     default:
         CV_Error(cv::Error::StsInternal, "resize: the plan was never built");
@@ -3744,10 +3748,7 @@ void resize(int src_type,
 
     ResizePlan plan;
     plan.build(src_type, Size(src_width, src_height), src_step, dsize, inv_scale_x, inv_scale_y, interpolation);
-
-    parallel_for_(Range(0, plan.rowsPerImage()),
-                  [&](const Range& rows) { plan.run(src_data, src_step, dst_data, dst_step, rows); },
-                  dsize.area()/(double)(1<<16));
+    plan.run(src_data, src_step, dst_data, dst_step, Range(0, plan.rowsPerImage()));
 }
 
 
