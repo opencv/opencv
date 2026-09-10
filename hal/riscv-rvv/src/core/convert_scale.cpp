@@ -293,6 +293,76 @@ inline int convertScale_32F32F(const uchar* src, size_t src_step, uchar* dst, si
     return CV_HAL_ERROR_OK;
 }
 
+inline int convertScale_32F16S(const uchar* src, size_t src_step,
+                               uchar* dst, size_t dst_step,
+                               int width, int height,
+                               double alpha, double beta)
+{
+    if (alpha == 1.0 && beta == 0.0)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            const float* src_row =
+                reinterpret_cast<const float*>(src + i * src_step);
+
+            short* dst_row =
+                reinterpret_cast<short*>(dst + i * dst_step);
+
+            int vl;
+
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e32m8(width - j);
+
+                auto vec_src =
+                    __riscv_vle32_v_f32m8(src_row + j, vl);
+
+                auto vec_dst =
+                    __riscv_vfncvt_x(vec_src, vl);
+
+                __riscv_vse16_v_i16m4(
+                    dst_row + j, vec_dst, vl);
+            }
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    int vlmax = __riscv_vsetvlmax_e32m8();
+    auto vec_b = __riscv_vfmv_v_f_f32m8(beta, vlmax);
+    float a = alpha;
+
+    for (int i = 0; i < height; i++)
+    {
+        const float* src_row =
+            reinterpret_cast<const float*>(src + i * src_step);
+
+        short* dst_row =
+            reinterpret_cast<short*>(dst + i * dst_step);
+
+        int vl;
+
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e32m8(width - j);
+
+            auto vec_src =
+                __riscv_vle32_v_f32m8(src_row + j, vl);
+
+            auto vec_fma =
+                __riscv_vfmadd(vec_src, a, vec_b, vl);
+
+            auto vec_dst =
+                __riscv_vfncvt_x(vec_fma, vl);
+
+            __riscv_vse16_v_i16m4(
+                dst_row + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
                  int width, int height, int sdepth, int ddepth, double alpha, double beta)
 {
@@ -342,6 +412,8 @@ int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
         {
         case CV_8U:
             return convertScale_32F8U(src, src_step, dst, dst_step, width, height, alpha, beta);
+        case CV_16S:
+            return convertScale_32F16S(src, src_step, dst, dst_step, width, height, alpha, beta);
         case CV_32F:
             return convertScale_32F32F(src, src_step, dst, dst_step, width, height, alpha, beta);
         }
