@@ -2102,7 +2102,7 @@ TEST_P(Imgproc_Filter2D_IntegerKernel, accuracy)
     const int srcType = get<2>(GetParam());
     const int dstDepth = CV_MAT_DEPTH(srcType) == CV_64F ? CV_64F : CV_32F;
 
-    RNG rng(22243);
+    RNG& rng = theRNG();
     Mat src(47, 53, srcType);
     rng.fill(src, RNG::UNIFORM, 0, 16);
 
