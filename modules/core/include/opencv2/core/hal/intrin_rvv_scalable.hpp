@@ -1716,7 +1716,8 @@ inline _Tpwvec v_expand_high(const _Tpvec& a) \
 } \
 inline _Tpwvec v_load_expand(const _Tp* ptr) \
 { \
-    return cvt(__riscv_vle##width##_v_##suffix2##mf2(ptr, VTraits<_Tpvec>::vlanes()), VTraits<_Tpvec>::vlanes()); \
+    const size_t vl = VTraits<_Tpwvec>::vlanes(); \
+    return cvt(__riscv_vle##width##_v_##suffix2##mf2(ptr, vl), vl); \
 }
 
 OPENCV_HAL_IMPL_RVV_EXPAND(uchar, v_uint16, vuint16m2_t, v_uint8, 8, u16, u8, __riscv_vwcvtu_x)
