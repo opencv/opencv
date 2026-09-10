@@ -2861,9 +2861,10 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize)
     int n = sz.area();
     if (n > 0)
         CV_Assert(sz.width == 1 || sz.height == 1);
+    CV_Assert(n == 0 || n == 4 || n == 5 || n == 8 || n == 12 || n == 14);
     CV_Assert((int)distCoeffs0.total() <= outputSize);
     Mat distCoeffs = Mat::zeros(sz.width == 1 ? Size(1, outputSize) : Size(outputSize, 1), rtype);
-    if( n ==  4 || n ==  5 || n ==  8 || n == 12 || n == 14 )
+    if( n > 0 )
     {
         distCoeffs0.convertTo(distCoeffs(Rect(Point(), sz)), rtype);
     }
@@ -2932,6 +2933,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     Mat cameraMatrix = _cameraMatrix.getMat();
     cameraMatrix = prepareCameraMatrix(cameraMatrix, rtype, flags);
     Mat distCoeffs = _distCoeffs.getMat();
+    int dist_total = distCoeffs.total();
     distCoeffs =
         (flags & CALIB_THIN_PRISM_MODEL) &&
         !(flags & CALIB_TILTED_MODEL) ?
@@ -2940,7 +2942,10 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     if( !(flags & CALIB_RATIONAL_MODEL) &&
     (!(flags & CALIB_THIN_PRISM_MODEL)) &&
     (!(flags & CALIB_TILTED_MODEL)))
-        distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
+    {
+        int out_size = (dist_total == 0) ? 5 : std::min(5, dist_total);
+        distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, out_size) : distCoeffs.rowRange(0, out_size);
+    }
 
     int nimages = int(_objectPoints.total());
     CV_Assert( nimages > 0 );
@@ -3115,6 +3120,8 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     Mat cameraMatrix2 = _cameraMatrix2.getMat();
     Mat distCoeffs1 = _distCoeffs1.getMat();
     Mat distCoeffs2 = _distCoeffs2.getMat();
+    int dist1_total = distCoeffs1.total();
+    int dist2_total = distCoeffs2.total();
     cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
     distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, 14);
@@ -3124,8 +3131,10 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     (!(flags & CALIB_THIN_PRISM_MODEL)) &&
     (!(flags & CALIB_TILTED_MODEL)))
     {
-        distCoeffs1 = distCoeffs1.rows == 1 ? distCoeffs1.colRange(0, 5) : distCoeffs1.rowRange(0, 5);
-        distCoeffs2 = distCoeffs2.rows == 1 ? distCoeffs2.colRange(0, 5) : distCoeffs2.rowRange(0, 5);
+        int out_size1 = (dist1_total == 0) ? 5 : std::min(5, dist1_total);
+        int out_size2 = (dist2_total == 0) ? 5 : std::min(5, dist2_total);
+        distCoeffs1 = distCoeffs1.rows == 1 ? distCoeffs1.colRange(0, out_size1) : distCoeffs1.rowRange(0, out_size1);
+        distCoeffs2 = distCoeffs2.rows == 1 ? distCoeffs2.colRange(0, out_size2) : distCoeffs2.rowRange(0, out_size2);
     }
 
     if((flags & CALIB_USE_EXTRINSIC_GUESS) == 0)

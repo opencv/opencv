@@ -1898,4 +1898,51 @@ TEST(Calib_StereoCalibrate, regression_22421)
     EXPECT_LE(terr, 0.0000001);
 }
 
+TEST(Calib_CalibrateCamera, size4DistortionCoeffs)
+{
+    std::vector<std::vector<cv::Point3f>> objectPoints(3);
+    std::vector<std::vector<cv::Point2f>> imagePoints(3);
+    cv::Size boardSize(9, 6);
+    for (int i = 0; i < 3; i++) {
+        for (int y = 0; y < boardSize.height; y++) {
+            for (int x = 0; x < boardSize.width; x++) {
+                objectPoints[i].push_back(cv::Point3f(x * 0.1f, y * 0.1f, 0.f));
+            }
+        }
+    }
+
+    cv::Matx33d cameraMatrix(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    cv::Vec4d distCoeffs(0.1, -0.05, 0.001, -0.002);
+    for (int i = 0; i < 3; i++) {
+        cv::Vec3d rvec(0.1 * i, -0.2 * i, 0.05 * i);
+        cv::Vec3d tvec(-0.1 * i, 0.05 * i, 1.0 + 0.1 * i);
+        cv::projectPoints(objectPoints[i], rvec, tvec, cameraMatrix, distCoeffs, imagePoints[i]);
+    }
+
+    // 1. Test calibrateCamera
+    cv::Matx33d cameraMatrix_est = cameraMatrix;
+    cv::Mat1d distCoeffs_est = cv::Mat1d::zeros(1, 4);
+    std::vector<cv::Mat> rvecs, tvecs;
+    double rms = cv::calibrateCamera(objectPoints, imagePoints, cv::Size(640, 480),
+                                     cameraMatrix_est, distCoeffs_est, rvecs, tvecs,
+                                     cv::CALIB_USE_INTRINSIC_GUESS);
+
+    EXPECT_LT(rms, 1e-4);
+    EXPECT_LE(cv::norm(cv::Vec4d(distCoeffs_est), distCoeffs, NORM_INF), 1e-4);
+
+    // 2. Test stereoCalibrate
+    cv::Matx33d K1 = cameraMatrix;
+    cv::Matx33d K2 = cameraMatrix;
+    cv::Mat1d D1 = cv::Mat1d::zeros(1, 4);
+    cv::Mat1d D2 = cv::Mat1d::zeros(1, 4);
+    cv::Mat R, T, E, F;
+    double stereo_rms = cv::stereoCalibrate(objectPoints, imagePoints, imagePoints,
+                                            K1, D1, K2, D2, cv::Size(640, 480),
+                                            R, T, E, F, cv::CALIB_USE_INTRINSIC_GUESS);
+
+    EXPECT_LT(stereo_rms, 1e-4);
+    EXPECT_LE(cv::norm(cv::Vec4d(D1), distCoeffs, NORM_INF), 1e-4);
+    EXPECT_LE(cv::norm(cv::Vec4d(D2), distCoeffs, NORM_INF), 1e-4);
+}
+
 }} // namespace
