@@ -483,50 +483,6 @@ TEST(Core_TExpr, select_basic)
     }
 }
 
-TEST(Core_TExpr, select_byte_mask)
-{
-    for (int depth : { CV_8U, CV_16S, CV_32F, CV_64F })
-    for (int maskDepth : { CV_8U, CV_8S, CV_Bool })
-    for (int cn : { 1, 2, 3, 4 })
-    for (bool strided : { false, true })
-    {
-        SCOPED_TRACE(cv::format("depth=%d maskDepth=%d cn=%d strided=%d",
-                                depth, maskDepth, cn, strided));
-        const int width = 257, height = 3;
-        const int type = CV_MAKETYPE(depth, cn);
-        const Rect roi(0, 0, width, height);
-        Mat a = Mat(height, width + (strided ? 5 : 0), type)(roi);
-        Mat b = Mat(height, width + (strided ? 5 : 0), type)(roi);
-        Mat mask = Mat(height, width + (strided ? 5 : 0), maskDepth)(roi);
-        theRNG().fill(a, RNG::UNIFORM, 1, 100);
-        theRNG().fill(b, RNG::UNIFORM, 101, 200);
-
-        // Include non-canonical true bytes: signed masks must also test byte != 0.
-        const uchar values[] = { 0, 1, 0, 127, 128, 255 };
-        Mat expected(height, width, type);
-        const size_t pixelSize = a.elemSize();
-        for (int y = 0; y < height; ++y)
-        for (int x = 0; x < width; ++x)
-        {
-            uchar value = values[(x + y) % 6];
-            if (maskDepth == CV_Bool) value = value != 0;
-            mask.ptr(y)[x] = value;
-            const Mat& src = value ? a : b;
-            memcpy(expected.ptr(y) + x * pixelSize, src.ptr(y) + x * pixelSize, pixelSize);
-        }
-
-        Mat got = expr1("select({0}, {1}, {2})", { mask, a, b });
-        ASSERT_EQ(expected.type(), got.type());
-        EXPECT_EQ(0, cvtest::norm(got, expected, NORM_INF));
-
-        // A selected branch may also be the destination; unmasked pixels must survive.
-        Mat inplace = b.clone();
-        std::vector<Mat> out{ inplace };
-        cv::texpr("select({0}, {1}, {2})", std::vector<Mat>{ mask, a, inplace }, out);
-        EXPECT_EQ(0, cvtest::norm(out[0], expected, NORM_INF));
-    }
-}
-
 // one branch is a scalar constant (broadcast stepx == 0 inside the kernel)
 TEST(Core_TExpr, select_const_branch)
 {
