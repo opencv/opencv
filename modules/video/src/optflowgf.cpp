@@ -582,13 +582,37 @@ namespace cv
 {
 namespace
 {
+
+// Exact comparison of the pixels, row by row so a non-continuous ROI is handled.
+//
+// This is the only thing tying a kept expansion to the image it was computed from.  A
+// digest is wrong whenever it collides; a check on size, type or data pointer is wrong
+// on ordinary input, since callers refill or alternate frame buffers.  Either way an
+// image is handed a stranger's expansion and the flow is quietly wrong, never an error.
+static bool sameImageContent(const Mat& a, const Mat& b)
+{
+    if( a.empty() || b.empty() || a.dims != 2 || b.dims != 2 ||
+        a.size() != b.size() || a.type() != b.type() )
+        return false;
+
+    const size_t rowBytes = (size_t)a.cols * a.elemSize();
+    for( int y = 0; y < a.rows; y++ )
+    {
+        if( memcmp(a.ptr(y), b.ptr(y), rowBytes) != 0 )
+            return false;
+    }
+    return true;
+}
+
 class FarnebackOpticalFlowImpl : public FarnebackOpticalFlow
 {
 public:
     FarnebackOpticalFlowImpl(int numLevels=5, double pyrScale=0.5, bool fastPyramids=false, int winSize=13,
-                             int numIters=10, int polyN=5, double polySigma=1.1, int flags=0) :
+                             int numIters=10, int polyN=5, double polySigma=1.1, int flags=0,
+                             bool cacheExpansion=true) :
         numLevels_(numLevels), pyrScale_(pyrScale), fastPyramids_(fastPyramids), winSize_(winSize),
-        numIters_(numIters), polyN_(polyN), polySigma_(polySigma), flags_(flags)
+        numIters_(numIters), polyN_(polyN), polySigma_(polySigma), flags_(flags),
+        cacheExpansion_(cacheExpansion)
     {
     }
 
@@ -629,6 +653,48 @@ private:
     int polyN_;
     double polySigma_;
     int flags_;
+
+    // Whether calc() keeps the expansion of its second image for the next call.  Only an
+    // instance that outlives a call can hit it, so calcOpticalFlowFarneback(), which
+    // builds one per call, turns it off rather than pay the copy.
+    const bool cacheExpansion_;
+
+    // Polynomial expansion of the second image of the previous calc(), one entry per
+    // pyramid level.  Walking a video, frame k arrives as the second image and then as the
+    // first image of the next call, so half the expansion work per call is a repeat.
+    //
+    // The key is complete: level k is built from the image alone at size*pyrScale^k, so an
+    // equal frame and an equal pyrScale pin every level's geometry and R.size() pins the
+    // depth reached after min_size truncation.  winSize_, numIters_ and flags_ steer the
+    // update step, not the expansion; fastPyramids_ is read only by the OpenCL path.
+    struct PolyExpCache
+    {
+        PolyExpCache() : pyrScale(0), polySigma(0), polyN(0) {}
+
+        void release()
+        {
+            frame.release();
+            R.clear();
+        }
+
+        Mat frame;           // the image the expansion belongs to, deep-copied
+        std::vector<Mat> R;  // its expansion, indexed by pyramid level
+        double pyrScale;
+        double polySigma;
+        int polyN;
+    };
+    PolyExpCache expCache_;
+
+    // The expansion is the only state a call on this path leaves behind; the rest are
+    // locals.  Snapshotting under this lock and publishing under it again keeps concurrent
+    // calls on one instance independent: each may miss, none reads a half-replaced cache.
+    Mutex expCacheMutex_;
+
+    void releaseExpansion()
+    {
+        AutoLock lock(expCacheMutex_);
+        expCache_.release();
+    }
 
 #ifdef HAVE_OPENCL
     bool operator ()(const UMat &frame0, const UMat &frame1, UMat &flowx, UMat &flowy)
@@ -797,6 +863,7 @@ private:
     }
     virtual void collectGarbage() CV_OVERRIDE {
         releaseMemory();
+        releaseExpansion();
     }
     void releaseMemory()
     {
@@ -1091,7 +1158,7 @@ private:
         return true;
     }
 #else // HAVE_OPENCL
-    virtual void collectGarbage() CV_OVERRIDE {}
+    virtual void collectGarbage() CV_OVERRIDE { releaseExpansion(); }
 #endif
 };
 
@@ -1109,11 +1176,18 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
     int i, k;
     double scale;
+
+    // Read once: a setter running against a call would otherwise be able to label the
+    // cache with parameters other than the ones its expansion was built from.
+    const double pyrScale = pyrScale_;
+    const int polyN = polyN_;
+    const double polySigma = polySigma_;
+
     Mat prevFlow, flow, fimg;
     int levels = numLevels_;
 
     CV_Assert( prev0.size() == next0.size() && prev0.channels() == next0.channels() &&
-               prev0.channels() == 1 && pyrScale_ < 1 );
+               prev0.channels() == 1 && pyrScale < 1 );
 
     // If flag is set, check for integrity; if not set, allocate memory space
     if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
@@ -1126,17 +1200,49 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
     for( k = 0, scale = 1; k < levels; k++ )
     {
-        scale *= pyrScale_;
+        scale *= pyrScale;
         if( prev0.cols*scale < min_size || prev0.rows*scale < min_size )
             break;
     }
 
     levels = k;
 
+    PolyExpCache cached;
+    if( cacheExpansion_ )
+    {
+        // By value: the planes are read-only and reference counted, so this keeps them
+        // alive whatever a concurrent call publishes.
+        AutoLock lock(expCacheMutex_);
+        cached = expCache_;
+    }
+
+    const bool reuseExpansion =
+        cacheExpansion_ && cached.R.size() == (size_t)(levels + 1) &&
+        cached.pyrScale == pyrScale && cached.polySigma == polySigma &&
+        cached.polyN == polyN &&
+        // Last because it is the dearest, and the only term tying the kept expansion to
+        // this image rather than to the way it was built.  Read sameImageContent()
+        // before making it cheaper.
+        sameImageContent(cached.frame, prev0);
+
+    Mat retained;
+    PolyExpCache newCache;
+    if( cacheExpansion_ )
+    {
+        newCache.R.resize(levels + 1);
+        newCache.pyrScale = pyrScale;
+        newCache.polySigma = polySigma;
+        newCache.polyN = polyN;
+        // Expanded from this copy, so the bytes a later call compares are the bytes that
+        // were expanded.
+        next0.copyTo(retained);
+        img[1] = &retained;
+    }
+
     for( k = levels; k >= 0; k-- )
     {
         for( i = 0, scale = 1; i < k; i++ )
-            scale *= pyrScale_;
+            scale *= pyrScale;
 
         double sigma = (1./scale-1)*0.5;
         int smooth_sz = cvRound(sigma*5)|1;
@@ -1163,16 +1269,27 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
         else
         {
             resize( prevFlow, flow, Size(width, height), 0, 0, INTER_LINEAR );
-            flow *= 1./pyrScale_;
+            flow *= 1./pyrScale;
         }
 
         Mat R[2], I, M;
         for( i = 0; i < 2; i++ )
         {
+            if( i == 0 && reuseExpansion )
+            {
+                // The update step walks these planes by row pointer, so check the shape
+                // before trusting one.
+                CV_Assert( cached.R[k].size() == Size(width, height) &&
+                           cached.R[k].type() == CV_32FC(5) );
+                R[0] = cached.R[k];  // shared, not copied: consumers take const Mat&
+                continue;
+            }
             img[i]->convertTo(fimg, CV_32F);
             GaussianBlur(fimg, fimg, Size(smooth_sz, smooth_sz), sigma, sigma);
             resize( fimg, I, Size(width, height), INTER_LINEAR );
-            FarnebackPolyExp( I, R[i], polyN_, polySigma_ );
+            FarnebackPolyExp( I, R[i], polyN, polySigma );
+            if( i == 1 && cacheExpansion_ )
+                newCache.R[k] = R[1];
         }
 
         FarnebackUpdateMatrices( R[0], R[1], flow, M, 0, flow.rows );
@@ -1187,6 +1304,20 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
         prevFlow = flow;
     }
+
+    if( cacheExpansion_ )
+    {
+        // Published last, so a throw above leaves the previous cache in place rather than
+        // a half-filled one.  Swapped rather than assigned so the replaced planes are
+        // freed outside the lock.
+        newCache.frame = retained;
+        AutoLock lock(expCacheMutex_);
+        expCache_.R.swap(newCache.R);
+        std::swap(expCache_.frame, newCache.frame);
+        expCache_.pyrScale = newCache.pyrScale;
+        expCache_.polySigma = newCache.polySigma;
+        expCache_.polyN = newCache.polyN;
+    }
 }
 } // namespace
 } // namespace cv
@@ -1198,7 +1329,9 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
     CV_INSTRUMENT_REGION();
 
     Ptr<cv::FarnebackOpticalFlow> optflow;
-    optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
+    optflow = makePtr<FarnebackOpticalFlowImpl>(levels, pyr_scale, false, winsize, iterations,
+                                                poly_n, poly_sigma, flags,
+                                                /*cacheExpansion=*/false);
     optflow->calc(_prev0,_next0,_flow0);
 }
 
@@ -1207,5 +1340,6 @@ cv::Ptr<cv::FarnebackOpticalFlow> cv::FarnebackOpticalFlow::create(int numLevels
                                                                int numIters, int polyN, double polySigma, int flags)
 {
     return makePtr<FarnebackOpticalFlowImpl>(numLevels, pyrScale, fastPyramids, winSize,
-                                             numIters, polyN, polySigma, flags);
+                                             numIters, polyN, polySigma, flags,
+                                             /*cacheExpansion=*/true);
 }

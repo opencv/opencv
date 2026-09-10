@@ -231,6 +231,10 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
     opencv_source_code/samples/cpp/fback.cpp
 -   (Python) An example using the optical flow algorithm described by Gunnar Farneback can be
     found at opencv_source_code/samples/python/opt_flow.py
+
+@note This function creates a FarnebackOpticalFlow instance per call. To process a video, keep
+one instance from FarnebackOpticalFlow::create() and call its calc() per frame pair instead: it
+reuses the previous frame's polynomial expansion, for the same result at a lower cost.
  */
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, InputOutputArray flow,
                                             double pyr_scale, int levels, int winsize,
@@ -649,6 +653,22 @@ public:
 
 
 /** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
+
+Reuse one instance across the frames of a video: calc() keeps the polynomial expansion of its
+second image and reuses it when the next call is handed that image first, saving of the order
+of a tenth of a call. Reuse needs that image equal pixel for pixel to the one kept, with
+pyrScale, polyN, polySigma and the pyramid depth unchanged. A hit replays the same arithmetic,
+so the flow matches a fresh instance bit for bit, unless setUseOptimized() or
+ipp::setUseIPP() changed in between what that arithmetic is.
+
+It keeps about 28 bytes per pixel of 8-bit input at the default pyrScale, twice that while a
+call builds the replacement, and collectGarbage() releases it. calcOpticalFlowFarneback() keeps
+nothing, nor does the OpenCL implementation that a UMat flow argument selects when polyN is 5
+or 7.
+
+@note calc() may be called on one instance from several threads: whether a call finds the
+kept expansion is a race, what it returns is not. The setters are not synchronized with it,
+so retune an instance between calls rather than during one.
  */
 class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
 {
