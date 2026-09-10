@@ -1721,8 +1721,35 @@ OCL_TEST_P(ScaleAdd, Mat)
 
 //////////////////////////////// PatchNans ////////////////////////////////////////////////
 
-PARAM_TEST_CASE(PatchNaNs, Channels, bool)
+template<typename _Tp>
+static _Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
 {
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
+{
+    int depth;
     int cn;
     bool use_roi;
     double value;
@@ -1731,13 +1758,14 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
 
     virtual void SetUp()
     {
-        cn = GET_PARAM(0);
-        use_roi = GET_PARAM(1);
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
     }
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(CV_32F, cn);
+        const int type = CV_MAKE_TYPE(depth, cn);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1747,9 +1775,15 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
         roiSize.width *= cn;
         for (int y = 0; y < roiSize.height; ++y)
         {
-            float * const ptr = src_roi.ptr<float>(y);
             for (int x = 0; x < roiSize.width; ++x)
-                ptr[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+            {
+                if (randomInt(-1, 1) != 0)
+                    continue;
+                if (depth == CV_32F)
+                    src_roi.ptr<float>(y)[x] = randomNan<float>(rng);
+                else
+                    src_roi.ptr<double>(y)[x] = randomNan<double>(rng);
+            }
         }
 
         value = randomDouble(-100, 100);
@@ -1950,7 +1984,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHA
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 

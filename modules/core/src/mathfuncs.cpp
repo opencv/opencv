@@ -1360,20 +1360,32 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_patchNaNs( InputOutputArray _a, float value )
+static bool ocl_patchNaNs( InputOutputArray _a, double value )
 {
+    int ftype = _a.depth();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if (!doubleSupport && ftype == CV_64F)
+        return false;
+
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            CV_32F, rowsPerWI));
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d %s",
+                            ftype == CV_64F ? "double" : "float", ftype, rowsPerWI,
+                            doubleSupport ? "-D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
     UMat a = _a.getUMat();
     int cn = a.channels();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a, cn), (float)value);
+    // the value is passed with the same type as the kernel operates on
+    if (ftype == CV_64F)
+        k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+               ocl::KernelArg::WriteOnly(a, cn), value);
+    else
+        k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+               ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
     size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
@@ -1381,55 +1393,99 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 
 #endif
 
+static void patchNaNs_32f( uchar* ptr, size_t ulen, double newVal )
+{
+    int* tptr = (int*)ptr;
+    int len = (int)ulen;
+    int j = 0;
+    Cv32suf val;
+    val.f = (float)newVal;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
+    v_int32 v_val = vx_setall_s32(val.i);
+
+    int cWidth = VTraits<v_int32>::vlanes();
+    for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
+    {
+        v_int32 v_src0 = vx_load(tptr + j);
+        v_int32 v_src1 = vx_load(tptr + j + cWidth);
+
+        v_int32 v_cmp_mask0 = v_lt(v_exp_mask, v_and(v_src0, v_pos_mask));
+        v_int32 v_cmp_mask1 = v_lt(v_exp_mask, v_and(v_src1, v_pos_mask));
+
+        if (v_check_any(v_or(v_cmp_mask0, v_cmp_mask1)))
+        {
+            v_int32 v_dst0 = v_select(v_cmp_mask0, v_val, v_src0);
+            v_int32 v_dst1 = v_select(v_cmp_mask1, v_val, v_src1);
+
+            v_store(tptr + j, v_dst0);
+            v_store(tptr + j + cWidth, v_dst1);
+        }
+    }
+#endif
+
+    for( ; j < len; j++ )
+        if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
+            tptr[j] = val.i;
+}
+
+static void patchNaNs_64f( uchar* ptr, size_t ulen, double newVal )
+{
+    double* tptr = (double*)ptr;
+    int len = (int)ulen;
+    int j = 0;
+
+    // universal intrinsics have no ordering comparison for 64-bit integers,
+    // so NaNs are detected with v_not_nan() rather than with the
+    // exponent/mantissa trick used for CV_32F above
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    v_float64 v_val = vx_setall_f64(newVal);
+
+    int cWidth = VTraits<v_float64>::vlanes();
+    for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
+    {
+        v_float64 v_src0 = vx_load(tptr + j);
+        v_float64 v_src1 = vx_load(tptr + j + cWidth);
+
+        v_float64 v_ok_mask0 = v_not_nan(v_src0);
+        v_float64 v_ok_mask1 = v_not_nan(v_src1);
+
+        if (!v_check_all(v_ok_mask0) || !v_check_all(v_ok_mask1))
+        {
+            v_store(tptr + j, v_select(v_ok_mask0, v_src0, v_val));
+            v_store(tptr + j + cWidth, v_select(v_ok_mask1, v_src1, v_val));
+        }
+    }
+#endif
+
+    for( ; j < len; j++ )
+        if( cvIsNaN(tptr[j]) )
+            tptr[j] = newVal;
+}
+
 void patchNaNs( InputOutputArray _a, double _val )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _a.depth() == CV_32F );
+    int depth = _a.depth();
+    CV_Assert( depth == CV_32F || depth == CV_64F );
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
-               ocl_patchNaNs(_a, (float)_val))
+               ocl_patchNaNs(_a, _val))
 
     Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
-    int* ptrs[1] = {};
-    NAryMatIterator it(arrays, (uchar**)ptrs);
-    int len = (int)(it.size*a.channels());
-    Cv32suf val;
-    val.f = (float)_val;
+    uchar* ptrs[1] = {};
+    NAryMatIterator it(arrays, ptrs);
+    size_t len = it.size*a.channels();
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        int* tptr = ptrs[0];
-        int j = 0;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
-        v_int32 v_val = vx_setall_s32(val.i);
-
-        int cWidth = VTraits<v_int32>::vlanes();
-        for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
-        {
-            v_int32 v_src0 = vx_load(tptr + j);
-            v_int32 v_src1 = vx_load(tptr + j + cWidth);
-
-            v_int32 v_cmp_mask0 = v_lt(v_exp_mask, v_and(v_src0, v_pos_mask));
-            v_int32 v_cmp_mask1 = v_lt(v_exp_mask, v_and(v_src1, v_pos_mask));
-
-            if (v_check_any(v_or(v_cmp_mask0, v_cmp_mask1)))
-            {
-                v_int32 v_dst0 = v_select(v_cmp_mask0, v_val, v_src0);
-                v_int32 v_dst1 = v_select(v_cmp_mask1, v_val, v_src1);
-
-                v_store(tptr + j, v_dst0);
-                v_store(tptr + j + cWidth, v_dst1);
-            }
-        }
-#endif
-
-        for( ; j < len; j++ )
-            if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
-                tptr[j] = val.i;
+        if( depth == CV_64F )
+            patchNaNs_64f(ptrs[0], len, _val);
+        else
+            patchNaNs_32f(ptrs[0], len, _val);
     }
 }
 

@@ -4488,5 +4488,109 @@ testing::Values(
                       INT_MIN)
 ));
 
+///////////////////////////////////////////////////////////////////////////////////////////
+
+typedef testing::TestWithParam<MatDepth> Core_PatchNaNs;
+
+static float randomNanFlt(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+static double randomNanDbl(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double val, cv::Mat& in, cv::Mat& gold)
+{
+    in.create(sz, type);
+    gold.create(sz, type);
+
+    for( int i = 0; i < in.rows; i++ )
+    {
+        for( int j = 0; j < in.cols; j++ )
+        {
+            if (CV_MAT_DEPTH(type) == CV_64F)
+            {
+                switch( rng.uniform(0, 4) )
+                {
+                    case 0:
+                        in.at<double>(i, j) =  randomNanDbl(rng);
+                        gold.at<double>(i, j) =  val;
+                        break;
+                    case 1:
+                        in.at<double>(i, j) =  std::numeric_limits<double>::infinity();
+                        gold.at<double>(i, j) =  in.at<double>(i, j);
+                        break;
+                    case 2:
+                        in.at<double>(i, j) = -std::numeric_limits<double>::infinity();
+                        gold.at<double>(i, j) = in.at<double>(i, j);
+                        break;
+
+                    default:
+                        in.at<double>(i, j) =  rng.uniform(-100.0, 100.0);
+                        gold.at<double>(i, j) = in.at<double>(i, j);
+                        break;
+                }
+            }
+            if (CV_MAT_DEPTH(type) == CV_32F)
+            {
+                switch( rng.uniform(0, 4) )
+                {
+                    case 0:
+                        in.at<float>(i, j) =  randomNanFlt(rng);
+                        gold.at<float>(i, j) =  val;
+                        break;
+                    case 1:
+                        in.at<float>(i, j) =  std::numeric_limits<float>::infinity();
+                        gold.at<float>(i, j) =  in.at<float>(i, j);
+                        break;
+                    case 2:
+                        in.at<float>(i, j) = -std::numeric_limits<float>::infinity();
+                        gold.at<float>(i, j) = in.at<float>(i, j);
+                        break;
+
+                    default:
+                        in.at<float>(i, j) =  rng.uniform(-100.0, 100.0);
+                        gold.at<float>(i, j) = in.at<float>(i, j);
+                        break;
+                }
+            }
+        }
+    }
+}
+
+TEST_P(Core_PatchNaNs, accuracy)
+{
+    const int depth = GetParam();
+    cv::Mat in, out, gold;
+    fillReferenceWithNans(theRNG(), cv::Size(127, 71), CV_MAKE_TYPE(depth, 1), 142., in, gold);
+    cv::patchNaNs(in, 142.);
+    // bit-exact check independant from
+    cv::Mat in_bin(in.rows, in.cols*in.elemSize(), CV_8UC1, in.data);
+    cv::Mat gold_bin(gold.rows, gold.cols*gold.elemSize(), CV_8UC1, gold.data);
+    EXPECT_EQ(0, cvtest::norm(gold_bin, in_bin, cv::NORM_INF));
+}
+
+TEST(Core_PatchNaNs_UnsupportedDepth, accuracy)
+{
+    Mat src(3, 3, CV_16F);
+    EXPECT_THROW(patchNaNs(src, 0), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_PatchNaNs, testing::Values(CV_32F, CV_64F));
+
 }} // namespace
 /* End of file. */
