@@ -1175,10 +1175,12 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             // scratch is totalEsz*wf0 (<= ~16KB).
             const int totalEsz = bufEszPrefix[nbuffers];
             const int wf0 = std::min((int)total, capElems);
+
+            const size_t region = alignSize((size_t)wf0, 8);
             // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
             // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
             // the rare larger case.
-            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * (size_t)wf0);
+            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * region);
             uchar* scratch = scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
@@ -1191,7 +1193,7 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
                     if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
                     if (ai.kind != TEMP)   return nullptr;                                    // NONE: moved-from
                     const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
-                    return scratch + (size_t)bufEszPrefix[b] * (size_t)wf0;                   // fragment-local
+                    return scratch + (size_t)bufEszPrefix[b] * region;                        // fragment-local
                 };
                 for (int n = 0; n < ninsn; n++)
                 {
