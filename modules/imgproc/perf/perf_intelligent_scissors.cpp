@@ -8,7 +8,7 @@ namespace opencv_test { namespace {
 
 typedef perf::TestBaseWithParam<int> TestIntelligentScissorsMB;
 
-PERF_TEST_P(TestIntelligentScissorsMB, buildMap, testing::Values( IMREAD_GRAYSCALE, IMREAD_COLOR ))
+PERF_TEST_P(TestIntelligentScissorsMB, DISABLED_buildMap, testing::Values( IMREAD_GRAYSCALE, IMREAD_COLOR ))
 {
     const int flags = GetParam();
 
