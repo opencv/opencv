@@ -71,7 +71,26 @@ set(mlas_platform_srcs)
 set(OPENCV_DNN_MLAS_ENABLED     0  CACHE INTERNAL "" FORCE)
 set(OPENCV_DNN_MLAS_SKIP_REASON "" CACHE INTERNAL "" FORCE)
 
-if(WIN32)
+set(_MLAS_MSVC_FRONTEND FALSE)
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR
+   (NOT DEFINED CMAKE_CXX_COMPILER_FRONTEND_VARIANT AND MSVC))
+  set(_MLAS_MSVC_FRONTEND TRUE)
+endif()
+
+if(_MLAS_MSVC_FRONTEND AND (MLAS_X86_64 OR MLAS_X86))
+  set(OPENCV_DNN_MLAS_SKIP_REASON
+    "GNU-syntax .S kernels unsupported by the MSVC driver on ${CMAKE_SYSTEM_PROCESSOR}"
+    CACHE INTERNAL "" FORCE)
+  message(STATUS "MLAS: disabled on MSVC/${CMAKE_SYSTEM_PROCESSOR} "
+                 "(DNN will use its built-in SGEMM)")
+  return()
+endif()
+
+# The vendored sources for other Windows architectures are not wired up yet.
+if(WIN32 AND NOT (MLAS_X86_64 OR MLAS_X86))
+  set(OPENCV_DNN_MLAS_SKIP_REASON
+    "MLAS unsupported on Windows/${CMAKE_SYSTEM_PROCESSOR}"
+    CACHE INTERNAL "" FORCE)
   return()
 endif()
 
@@ -246,7 +265,11 @@ target_compile_definitions(opencv_dnn_mlas PRIVATE
   MLAS_GEMM_ONLY=1
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if(_MLAS_MSVC_FRONTEND)
+  target_compile_options(opencv_dnn_mlas PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:/FIcstring>"
+  )
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(opencv_dnn_mlas PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:-w>"
     "$<$<COMPILE_LANGUAGE:CXX>:-include>"
