@@ -860,6 +860,9 @@ macro(ocv_glob_module_sources)
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.hpp"
     )
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    if(HAVE_HIP AND lib_cuda_srcs)
+      set_source_files_properties(${lib_cuda_srcs} PROPERTIES LANGUAGE HIP)
+    endif()
   endif()
 
   file(GLOB cl_kernels
@@ -993,8 +996,14 @@ macro(_ocv_create_module)
                                           INTERFACE ${OPENCV_MODULE_${the_module}_DEPS_EXT}
   )
   ocv_target_link_libraries(${the_module} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${ARGN})
-  if (NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
+  if (NOT HAVE_HIP AND NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
     ocv_target_link_libraries(${the_module} PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  endif()
+  if (HAVE_HIP)
+    # Only the host runtime; hip::device would inject -x hip / --offload-arch
+    # into every source of the target including the plain C++ ones. The .cu
+    # device sources are compiled via their per source LANGUAGE HIP property.
+    ocv_target_link_libraries(${the_module} PRIVATE hip::host)
   endif()
 
   if(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS)
@@ -1320,6 +1329,12 @@ function(ocv_add_accuracy_tests)
         ocv_target_include_directories(${the_target} "${CMAKE_CURRENT_BINARY_DIR}/test")
       endif()
       ocv_target_link_libraries(${the_target} PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_TEST_${the_module}_DEPS})
+      if(HAVE_HIP)
+        # Some module public headers (e.g. cudalegacy NCV) include hip/hip_runtime.h
+        # for the runtime types; the test sources are plain C++ so they need the
+        # ROCm include path that hip::host carries.
+        ocv_target_link_libraries(${the_target} PRIVATE hip::host)
+      endif()
       add_dependencies(opencv_tests ${the_target})
 
       if(TARGET opencv_videoio_plugins)

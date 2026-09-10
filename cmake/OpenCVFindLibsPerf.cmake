@@ -68,6 +68,16 @@ To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
   endif()
 endif(WITH_CUDA)
 
+# --- HIP (AMD ROCm) ---
+if(WITH_HIP)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectHIP.cmake")
+  if(NOT HAVE_HIP)
+    message(FATAL_ERROR "WITH_HIP=ON but OpenCV could not find/configure ROCm/HIP.
+Ensure the ROCm toolkit is installed and discoverable by CMake: pass -DCMAKE_PREFIX_PATH=/opt/rocm (or put /opt/rocm/bin on PATH) so find_package(hip) succeeds.
+To build without AMD GPU support instead, reconfigure with -DWITH_HIP=OFF.")
+  endif()
+endif(WITH_HIP)
+
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
   if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG
