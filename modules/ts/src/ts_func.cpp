@@ -879,7 +879,8 @@ static int borderInterpolate( int p, int len, int borderType )
     else if( borderType == BORDER_WRAP )
     {
         if( p < 0 )
-            p -= ((p-len+1)/len)*len;
+            // Use int64 to avoid signed integer overflow when p is close to INT_MIN
+            p = (int)((int64)p - (((int64)p - len + 1) / len) * (int64)len);
         if( p >= len )
             p %= len;
     }
