@@ -903,6 +903,11 @@ namespace
             CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context is not initialized");
             return FALSE;
         }
+        const int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));
+        glViewport(0, 0,
+                   gtk_widget_get_allocated_width(GTK_WIDGET(area)) * scale,
+                   gtk_widget_get_allocated_height(GTK_WIDGET(area)) * scale);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if(window->glDrawCallback) {
             window->glDrawCallback(window->glDrawData);
         }

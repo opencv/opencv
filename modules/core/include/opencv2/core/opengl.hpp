@@ -86,7 +86,8 @@ public:
         ARRAY_BUFFER         = 0x8892, //!< The buffer will be used as a source for vertex data
         ELEMENT_ARRAY_BUFFER = 0x8893, //!< The buffer will be used for indices (in glDrawElements, for example)
         PIXEL_PACK_BUFFER    = 0x88EB, //!< The buffer will be used for reading from OpenGL textures
-        PIXEL_UNPACK_BUFFER  = 0x88EC  //!< The buffer will be used for writing to OpenGL textures
+        PIXEL_UNPACK_BUFFER  = 0x88EC, //!< The buffer will be used for writing to OpenGL textures
+        TEXTURE_BUFFER       = 0x8C2A  //!< The buffer will be sampled by a shader through ogl::TextureBuffer
     };
 
     enum Access
@@ -399,6 +400,102 @@ private:
     Format format_;
 };
 
+/** @brief Smart pointer for an OpenGL buffer texture with reference counting.
+
+A buffer texture is a read-only, one-dimensional view of an ogl::Buffer that a shader samples with
+`samplerBuffer` (float formats) or `isamplerBuffer` (integer formats). Unlike ogl::Texture2D it has
+no filtering, no mipmaps and no normalized coordinates: the shader indexes it by element with
+`texelFetch`. It is the way to feed a shader more data than uniforms can hold.
+
+The object keeps a reference to the source buffer, so the buffer stays alive as long as the texture
+does. The attachment records the buffer's id at create() time, so re-creating or resizing the source
+buffer needs a matching create() call to re-attach.
+
+Requires OpenGL 3.1 or later.
+ */
+class CV_EXPORTS TextureBuffer
+{
+public:
+    /** @brief The internal format the shader sees, i.e. component count and type per element.
+    */
+    enum Format
+    {
+        NONE    = 0,
+        R32F    = 0x822E, //!< 1 x 32-bit float
+        RG32F   = 0x8230, //!< 2 x 32-bit float
+        RGBA32F = 0x8814, //!< 4 x 32-bit float
+        R32I    = 0x8235, //!< 1 x 32-bit signed int
+        RG32I   = 0x823B, //!< 2 x 32-bit signed int
+        RGBA32I = 0x8D82  //!< 4 x 32-bit signed int
+    };
+
+    /** @brief The constructors.
+
+    Creates an empty ogl::TextureBuffer object or attaches one to an existing buffer.
+     */
+    TextureBuffer();
+
+    /** @overload
+    @param buf Source buffer, must be non-empty. Should have been created with the
+    ogl::Buffer::TEXTURE_BUFFER target.
+    @param aformat Element format. See cv::ogl::TextureBuffer::Format .
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+    */
+    TextureBuffer(const Buffer& buf, Format aformat, bool autoRelease = false);
+
+    /** @brief Attaches the texture to an OpenGL buffer.
+
+    @param buf Source buffer, must be non-empty. Should have been created with the
+    ogl::Buffer::TEXTURE_BUFFER target.
+    @param aformat Element format, must not be NONE. See cv::ogl::TextureBuffer::Format .
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+
+    No data is copied - the texture reads whatever the buffer holds at draw time, so writing to the
+    buffer is enough to update what the shader samples.
+     */
+    void create(const Buffer& buf, Format aformat, bool autoRelease = false);
+
+    /** @brief Detaches from the buffer and destroys the texture object if needed.
+
+    The function will call setAutoRelease(true) .
+     */
+    void release();
+
+    /** @brief Sets auto release mode.
+
+    @param flag Auto release mode (if true, release will be called in object's destructor).
+
+    The lifetime of the OpenGL object is tied to the lifetime of the context, so ogl::TextureBuffer
+    doesn't destroy the OpenGL object in its destructor by default. See
+    ogl::Texture2D::setAutoRelease for the full rationale.
+     */
+    void setAutoRelease(bool flag);
+
+    /** @brief Binds the texture to a texture unit for the GL_TEXTURE_BUFFER target.
+
+    @param unit Texture unit index to bind to, must be non-negative. Pass the same index to the
+    shader's sampler uniform.
+
+    Leaves that unit active, so bind the unit a caller expects to stay current last.
+     */
+    void bind(int unit = 0) const;
+
+    //! element format, NONE if not attached
+    Format format() const;
+    //! true if the texture is not attached to any buffer
+    bool empty() const;
+
+    //! get OpenGL object id
+    unsigned int texId() const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+    Buffer buf_;
+    Format format_;
+};
+
 /** @brief Wrapper for OpenGL Client-Side Vertex arrays.
 
 ogl::Arrays stores vertex data in ogl::Buffer objects.
@@ -695,11 +792,35 @@ public:
      */
     static void setUniformVec3(int location, Vec3f vec);
 
+    /** @brief Sets a uniform vector value.
+     @param location Uniform location.
+     @param vec Vector value.
+     */
+    static void setUniformVec2(int location, Vec2f vec);
+
+    /** @brief Sets a uniform vector value.
+     @param location Uniform location.
+     @param vec Vector value.
+     */
+    static void setUniformVec4(int location, Vec4f vec);
+
     /** @brief Sets a uniform matrix value.
      @param location Uniform location.
      @param mat Matrix value.
      */
     static void setUniformMat4x4(int location, Matx44f mat);
+
+    /** @brief Sets a uniform scalar value.
+     @param location Uniform location.
+     @param value Float value.
+     */
+    static void setUniform1f(int location, float value);
+
+    /** @brief Sets a uniform scalar value.
+     @param location Uniform location.
+     @param value Integer value. Also used for sampler uniforms, where it is the texture unit index.
+     */
+    static void setUniform1i(int location, int value);
 
     //! get OpenGL object id
     unsigned int programId() const;
@@ -736,6 +857,22 @@ enum IndexType {
 //! capability
 enum Capability {
     DEPTH_TEST     = 0x0B71,
+    CULL_FACE      = 0x0B44,
+    BLEND          = 0x0BE2,
+};
+
+//! blend factor
+enum BlendFactor {
+    BLEND_ZERO                = 0,
+    BLEND_ONE                 = 1,
+    BLEND_SRC_COLOR           = 0x0300,
+    BLEND_ONE_MINUS_SRC_COLOR = 0x0301,
+    BLEND_SRC_ALPHA           = 0x0302,
+    BLEND_ONE_MINUS_SRC_ALPHA = 0x0303,
+    BLEND_DST_ALPHA           = 0x0304,
+    BLEND_ONE_MINUS_DST_ALPHA = 0x0305,
+    BLEND_DST_COLOR           = 0x0306,
+    BLEND_ONE_MINUS_DST_COLOR = 0x0307,
 };
 
 /** @brief Render OpenGL texture or primitives.
@@ -786,6 +923,26 @@ CV_EXPORTS void drawArrays(int first, int count, int mode);
 @param mode Rendering mode. See cv::ogl::RenderModes.
 */
 CV_EXPORTS void drawElements(int first, int count, int type, int mode);
+
+/** @brief Renders multiple instances of primitives from array data with index buffer set.
+@param first Byte offset of the first index in the bound element buffer.
+@param count Number of indices to draw.
+@param type Index type. See cv::ogl::IndexType.
+@param mode Rendering mode. See cv::ogl::RenderModes.
+@param instanceCount Number of instances to draw. Each instance sees its own gl_InstanceID.
+*/
+CV_EXPORTS void drawElementsInstanced(int first, int count, int type, int mode, int instanceCount);
+
+/** @brief Sets the blend function for the current target.
+@param sfactor Source blend factor. See cv::ogl::BlendFactor.
+@param dfactor Destination blend factor. See cv::ogl::BlendFactor.
+*/
+CV_EXPORTS void blendFunc(int sfactor, int dfactor);
+
+/** @brief Enables or disables writing to the depth buffer.
+@param flag If false, depth testing still happens but no depth value is written.
+*/
+CV_EXPORTS void depthMask(bool flag);
 
 /** @brief Enable server-side GL capabilities.
 @param cap The capability to enable.
