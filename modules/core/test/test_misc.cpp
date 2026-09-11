@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include <cmath>
+#include <climits>
 
 #include "opencv2/core/utils/logger.hpp"
 
@@ -218,6 +219,16 @@ TEST(Core_Copy, repeat_regression_8972)
                      });
 }
 
+TEST(Core_BorderInterpolate, wrap_no_overflow_29232)
+{
+    EXPECT_NO_THROW({
+        EXPECT_EQ(cv::borderInterpolate(INT_MIN, 5, cv::BORDER_WRAP), 2);
+        EXPECT_EQ(cv::borderInterpolate(INT_MAX, 5, cv::BORDER_WRAP), 2);
+        int r = cv::borderInterpolate(INT_MIN, 5, cv::BORDER_WRAP);
+        EXPECT_GE(r, 0);
+        EXPECT_LT(r, 5);
+    });
+}
 
 class ThrowErrorParallelLoopBody : public cv::ParallelLoopBody
 {
