@@ -274,6 +274,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LSTM2,          LSTM2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(RNN2,           RNN2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CumProd,        CumProdLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Einsum,         EinsumLayer);

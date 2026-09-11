@@ -27,16 +27,17 @@ AutoPadding getAutoPadding(const LayerParams& params)
 {
     std::string auto_pad = params.get<std::string>("auto_pad", "NOTSET");
     std::string pad_mode = params.get<std::string>("pad_mode", "");
+    // auto_pad distinguishes SAME_UPPER from SAME_LOWER, pad_mode does not, so it wins.
+    if (auto_pad == "SAME_UPPER")
+        return AUTO_PAD_SAME_UPPER;
+    if (auto_pad == "SAME_LOWER")
+        return AUTO_PAD_SAME_LOWER;
     if (pad_mode == "SAME")
         return AUTO_PAD_SAME_UPPER;
     if (pad_mode == "VALID")
         return AUTO_PAD_VALID;
     if (auto_pad == "NOTSET")
         return AUTO_PAD_NONE;
-    if (auto_pad == "SAME_UPPER")
-        return AUTO_PAD_SAME_UPPER;
-    if (auto_pad == "SAME_LOWER")
-        return AUTO_PAD_SAME_LOWER;
     if (auto_pad != "VALID") {
         CV_Error_(Error::StsBadArg, ("invalid auto_pad value '%s'", auto_pad.c_str()));
     }
@@ -121,7 +122,8 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
 
 static inline void getPadding(const std::vector<int>& pads,
                               int dim, int nspatialdims, AutoPadding autoPad,
-                              int ksize, int& pad0, int& pad1)
+                              int ksize, int inpsz, int stride, int dilation,
+                              int& pad0, int& pad1)
 {
     CV_Assert(0 <= dim && dim < nspatialdims);
 
@@ -134,11 +136,11 @@ static inline void getPadding(const std::vector<int>& pads,
         }
     } else {
         CV_Assert(autoPad == AUTO_PAD_SAME_LOWER || autoPad == AUTO_PAD_SAME_UPPER);
-        pad0 = pad1 = ksize/2;
-        if (pad0*2 == ksize) {
-            pad0 -= autoPad == AUTO_PAD_SAME_UPPER;
-            pad1 -= autoPad == AUTO_PAD_SAME_LOWER;
-        }
+        // ONNX SAME_*: pad so output == ceil(input/stride); odd pixel last for SAME_UPPER.
+        int outsz = (inpsz - 1)/stride + 1;
+        int total = std::max((outsz - 1)*stride + (ksize - 1)*dilation + 1 - inpsz, 0);
+        pad0 = autoPad == AUTO_PAD_SAME_UPPER ? total/2 : total - total/2;
+        pad1 = total - pad0;
     }
 }
 
@@ -233,7 +235,8 @@ void ConvState::initConv(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[j], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad, kshape[j],
+                   inpshape[i+2], strides[j], dilations[j], pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;
@@ -351,7 +354,8 @@ void ConvState::initPooling(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[j], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad, kshape[j],
+                   inpshape[i+2], strides[j], dilations[j], pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;
@@ -439,7 +443,8 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
                 pad_total = pads[i] + pads[i + nspatialdims];
             outsz = (inpsz - 1) * stride - pad_total + dilation * (k_i - 1) + 1 + adj;
         } else {
-            outsz = (inpsz - 1) * stride + 1 + adj;
+            // ONNX: SAME_UPPER/SAME_LOWER pad the input so that output == input * stride.
+            outsz = inpsz * stride;
         }
         outshape[i + 2] = outsz;
     }
