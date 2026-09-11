@@ -32,24 +32,27 @@ for imgName in os.listdir(args.images):
     inp = cv.imread(cv.samples.findFile(os.path.join(args.images, imgName)))
     rows = inp.shape[0]
     cols = inp.shape[1]
-    inp = cv.resize(inp, (300, 300))
+    resized = cv.resize(inp, (300, 300))
 
-    net.setInput(cv.dnn.blobFromImage(inp, 1.0/127.5, (300, 300), (127.5, 127.5, 127.5), True))
-    out = net.forward()
+    # image_tensor input is NHWC uint8 RGB
+    blob = cv.cvtColor(resized, cv.COLOR_BGR2RGB).reshape(1, 300, 300, 3)
+    net.setInput(blob)
+    boxes, scores, classes, num = net.forward(
+        ['detection_boxes:0', 'detection_scores:0', 'detection_classes:0', 'num_detections:0'])
 
-    for i in range(out.shape[2]):
-        score = float(out[0, 0, i, 2])
-        classId = int(out[0, 0, i, 1])
-
-        x = out[0, 0, i, 3] * cols
-        y = out[0, 0, i, 4] * rows
-        w = out[0, 0, i, 5] * cols - x
-        h = out[0, 0, i, 6] * rows - y
+    boxes = boxes.reshape(-1, 4)
+    scores = scores.reshape(-1)
+    classes = classes.reshape(-1)
+    for i in range(int(num.reshape(-1)[0])):
+        y = boxes[i][0] * rows
+        x = boxes[i][1] * cols
+        h = boxes[i][2] * rows - y
+        w = boxes[i][3] * cols - x
         detections.append({
           "image_id": int(imgName.rstrip('0')[:imgName.rfind('.')]),
-          "category_id": classId,
+          "category_id": int(classes[i]),
           "bbox": [x, y, w, h],
-          "score": score
+          "score": float(scores[i])
         })
 
 with open('cv_result.json', 'wt') as f:
