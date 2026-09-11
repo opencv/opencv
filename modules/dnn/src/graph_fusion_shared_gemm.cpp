@@ -252,10 +252,10 @@ struct ModelFusionSharedGemm
                 Mat axes  (1, 1, CV_32S); axes.at<int>(0)   = -1;  // last axis
                 Mat steps (1, 1, CV_32S); steps.at<int>(0)  = 1;
 
-                Arg starts_arg = netimpl->newConstArg(sp.name + "_starts", starts);
-                Arg ends_arg   = netimpl->newConstArg(sp.name + "_ends",   ends);
-                Arg axes_arg   = netimpl->newConstArg(sp.name + "_axes",   axes);
-                Arg steps_arg  = netimpl->newConstArg(sp.name + "_steps",  steps);
+                Arg starts_arg = netimpl->newConstArg(sp.name + "_starts", netimpl->toArgTensor(starts));
+                Arg ends_arg   = netimpl->newConstArg(sp.name + "_ends",   netimpl->toArgTensor(ends));
+                Arg axes_arg   = netimpl->newConstArg(sp.name + "_axes",   netimpl->toArgTensor(axes));
+                Arg steps_arg  = netimpl->newConstArg(sp.name + "_steps",  netimpl->toArgTensor(steps));
 
                 Ptr<LayerInfo> slice = LayerFactory::createLayerInstance("Slice2", sp);
                 if (!slice) { uniform = false; break; }

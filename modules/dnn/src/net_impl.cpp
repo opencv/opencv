@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
@@ -73,8 +74,8 @@ Net::Impl::Impl()
     // onnx_opset = 0;
 
     accuracy = CV_32F;
-    // The block size is a network-wide memory-layout contract, so it must not depend
-    // on the SIMD width of the host: C0 == 8 is the mainstream, well-tested setting.
+    // CPU only: the block size is a network-wide memory-layout contract, so it must not
+    // depend on the SIMD width of the host: C0 == 8 is the mainstream, well-tested setting.
     // (Deriving it from vlanes() made the layout hardware-dependent; see the #29493 discussion.)
     defaultC0 = DEFAULT_C0;
     enableFP16 = haveFP16 = false;
@@ -137,9 +138,9 @@ void Net::Impl::clear()
     args = std::vector<ArgData>();
     argnames = NamesHash();
 
-    __tensors__ = std::vector<Mat>();
+    __tensors__ = std::vector<UMat>();
     bufidxs = std::vector<int>();
-    buffers = std::vector<Mat>();
+    buffers = std::vector<UMat>();
 
     mainGraph = Ptr<Graph>();
 
@@ -149,7 +150,7 @@ void Net::Impl::clear()
 
     args.push_back(adata);
     argnames.insert(std::make_pair(std::string(""), 0));
-    __tensors__.push_back(Mat());
+    __tensors__.push_back(UMat());
     bufidxs.push_back(-1);
 
     prepared = false;
@@ -887,12 +888,6 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 CV_Assert(!cudaNode.empty());
 
                 cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
-
-                for (auto id : ld.cudaD2HBackgroundTransfers)
-                {
-                    auto wrapper = ld.outputBlobsWrappers[id].dynamicCast<CUDABackendWrapper>();
-                    wrapper->copyToHostInBackground();
-                }
 #endif
             }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)

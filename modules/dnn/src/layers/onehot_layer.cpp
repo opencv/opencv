@@ -42,7 +42,7 @@ private:
 
         try
         {
-            Mat depthTensor = netimpl_->argTensor(this->inputs[1]);
+            Mat depthTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             if (!depthTensor.empty() && depthTensor.total() == 1)
             {
                 int64_t depth64 = 0;

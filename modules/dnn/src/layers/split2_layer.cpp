@@ -161,7 +161,7 @@ public:
 
         if (ninputs == 2) {
             Net::Impl* netimpl_ = getNetImpl(this);
-            Mat splitTensor = netimpl_->argTensor(this->inputs[1]);
+            Mat splitTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             tensorToIntVec(splitTensor, tempSplit);
             split_ = &tempSplit;
         }

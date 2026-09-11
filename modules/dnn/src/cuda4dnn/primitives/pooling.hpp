@@ -64,8 +64,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class PoolingOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         PoolingOp(csl::cudnn::Handle handle, const PoolingConfiguration& config)
             : cudnnHandle(std::move(handle))
         {
@@ -224,8 +222,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cuda::GpuMatND>& inputs,
-            const std::vector<cuda::GpuMatND>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(inputs.size() == 1 && outputs.size() == 1);

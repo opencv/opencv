@@ -914,7 +914,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     for (int i = 0; i < n_consts; i++) {
         opencv_onnx::TensorProto* const_i = graph_proto->mutable_initializer(i);
         Mat t = parseTensor(*const_i);
-        netimpl->newConstArg(remap(const_i->name()), t);
+        netimpl->newConstArg(remap(const_i->name()), netimpl->toArgTensor(t));
         releaseONNXTensor(*const_i);
     }
 
@@ -957,6 +957,8 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
            popRenames(local_renames);
            return Ptr<Graph>();
         }
+        if (mainGraph_ && netimpl->args.at(arg.idx).type >= 0)
+            netimpl->declaredOutputTypes[arg.idx] = netimpl->args.at(arg.idx).type;
         outputs.push_back(arg);
     }
 
@@ -1333,7 +1335,7 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
     data.kind = DNN_ARG_CONST;
     data.type = m.type();
     data.shape = m.shape();
-    netimpl->__tensors__.at(out.idx) = m;
+    netimpl->__tensors__.at(out.idx) = netimpl->toArgTensor(m);
 }
 
 // BUG: https://github.com/opencv/opencv/issues/26308
@@ -1481,7 +1483,7 @@ void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::Node
     CV_Assert(node_inputs.size() == 2);
     if (net.isConstArg(node_inputs[1]))
     {
-        layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
+        layerParams.blobs.push_back(net.argTensor(node_inputs[1]).clone());
         addLayer(layerParams, node_proto, 1);
     }
     else
@@ -1523,11 +1525,11 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
+        Mat B = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(B);
         layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
             layerParams.set("have_bias", true);
             layerParams.set("constC", true);
@@ -1543,10 +1545,10 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
+        Mat B = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(B);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
         }
         n_inputs = 1;
@@ -1560,7 +1562,7 @@ void ONNXImporter2::parseMatMulNBits(LayerParams& layerParams, const opencv_onnx
     CV_CheckTrue(net.isConstArg(node_inputs[1]) && net.isConstArg(node_inputs[2]),
                  "DNN/MatMulNBits: packed weights and scales must be constants");
 
-    layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
+    layerParams.blobs.push_back(net.argTensor(node_inputs[1]).clone());
     Mat scales;
     net.argTensor(node_inputs[2]).convertTo(scales, CV_32F);
     layerParams.blobs.push_back(scales);
@@ -1922,7 +1924,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     Arg scalesArg = node_inputs[scalesInputId];
     Mat scales;
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
-        scales = netimpl->argTensor(scalesArg);
+        scales = netimpl->argTensor(scalesArg).getMat(ACCESS_READ);
 
     if (interp_mode == "tf_crop_and_resize")
     {
@@ -1936,7 +1938,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
 
         if (staticRoi && (!hasSizes || staticSizes))
         {
-            Mat roiMat = netimpl->argTensor(roiArg), roiF;
+            Mat roiMat = netimpl->argTensor(roiArg).getMat(ACCESS_READ), roiF;
             CV_CheckEQ(roiMat.total(), (size_t)4,
                       "ONNX/Resize: ROI must have 4 values [y1,x1,y2,x2]");
             roiMat.convertTo(roiF, CV_32F);
@@ -1947,7 +1949,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
 
             if (hasSizes && staticSizes)
             {
-                Mat szMat = netimpl->argTensor(sizesArg), sz;
+                Mat szMat = netimpl->argTensor(sizesArg).getMat(ACCESS_READ), sz;
                 CV_CheckEQ(szMat.total(), (size_t)4,
                           "ONNX/Resize: sizes must have 4 values [N,C,H,W]");
                 szMat.convertTo(sz, CV_32S);
@@ -1980,7 +1982,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
         }
         if (netimpl->isConstArg(sizesArg))
         {
-            Mat shapes_ = netimpl->argTensor(sizesArg), shapes;
+            Mat shapes_ = netimpl->argTensor(sizesArg).getMat(ACCESS_READ), shapes;
             size_t nsz = shapes_.total();
             CV_Check(nsz, nsz == 4 || nsz == 3, "ONNX/Resize: sizes must be NCHW (4) or NCW (3)");
             shapes_.convertTo(shapes, CV_32S);
@@ -2361,10 +2363,10 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat scale = net.argTensor(node_inputs[1]);
+        Mat scale = net.argTensor(node_inputs[1]).clone();
         layerParams.blobs.push_back(scale);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
+            Mat bias = net.argTensor(node_inputs[2]).clone();
             layerParams.blobs.push_back(bias);
         }
         n_inputs = 1;
@@ -2531,7 +2533,7 @@ void ONNXImporter2::parseQConv(LayerParams& layerParams, const opencv_onnx::Node
                 for (int i = 0; i < (int)w_scale_mat.total(); i++)
                     bias_float.at<float>(i) *= x_sc * w_scale_mat.at<float>(i);
 
-            bias_arg = netimpl->newConstArg(bn + "/bias_float", bias_float);
+            bias_arg = netimpl->newConstArg(bn + "/bias_float", netimpl->toArgTensor(bias_float));
         }
         else
         {
@@ -2785,7 +2787,7 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
@@ -2809,7 +2811,7 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
@@ -2828,7 +2830,7 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
 
     if (i == n_inputs) {
         for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
+            Mat blob = net.argTensor(node_inputs[i]).clone();
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
@@ -3083,7 +3085,7 @@ std::string ONNXImporter2::inlineSubgraph(const opencv_onnx::GraphProto& g,
             recordSubgraphRename(g.node(i).output(j), prefix, undos);
 
     for (int i = 0; i < g.initializer_size(); i++)
-        netimpl->newConstArg(remap(g.initializer(i).name()), parseTensor(g.initializer(i)));
+        netimpl->newConstArg(remap(g.initializer(i).name()), netimpl->toArgTensor(parseTensor(g.initializer(i))));
     for (int i = 0; i < g.node_size(); i++)
         parseNode(g.node(i));
 

@@ -339,6 +339,7 @@ private:
 
 
 Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m);
+Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::UMat& m);
 
 
 }  // namespace detail

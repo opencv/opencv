@@ -149,7 +149,7 @@ public:
         std::vector<int> resolvedAxes = axes;
         if (resolvedAxes.empty() && this->inputs.size() > 3 &&
             netimpl_->isConstArg(this->inputs[3])) {
-            Mat axesT = netimpl_->argTensor(this->inputs[3]);
+            Mat axesT = netimpl_->argTensor(this->inputs[3]).getMat(ACCESS_READ);
             tensorToIntVec(axesT, resolvedAxes);
         }
         bool axesOK = !resolvedAxes.empty();
@@ -181,19 +181,19 @@ public:
 
         if (ninputs > 1) {
             Net::Impl* netimpl_ = getNetImpl(this);
-            Mat startsTensor = netimpl_->argTensor(this->inputs[1]);
+            Mat startsTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
             tensorToIntVec(startsTensor, tempStarts);
             starts_ = &tempStarts;
-            Mat endsTensor = netimpl_->argTensor(this->inputs[2]);
+            Mat endsTensor = netimpl_->argTensor(this->inputs[2]).getMat(ACCESS_READ);
             tensorToIntVec(endsTensor, tempEnds);
             ends_ = &tempEnds;
             if (ninputs > 3) {
-                Mat axesTensor = netimpl_->argTensor(this->inputs[3]);
+                Mat axesTensor = netimpl_->argTensor(this->inputs[3]).getMat(ACCESS_READ);
                 tensorToIntVec(axesTensor, tempAxes);
                 axes_ = &tempAxes;
             }
             if (ninputs > 4) {
-                Mat stepsTensor = netimpl_->argTensor(this->inputs[4]);
+                Mat stepsTensor = netimpl_->argTensor(this->inputs[4]).getMat(ACCESS_READ);
                 tensorToIntVec(stepsTensor, steps);
             }
         }

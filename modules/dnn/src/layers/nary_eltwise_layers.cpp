@@ -928,6 +928,9 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        if (outputs[0].total() == 0)
+            return;
+
         if (inputs.size() == 1) {
             inputs[0].copyTo(outputs[0]);
             return;
@@ -1325,8 +1328,8 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        std::vector<cuda::GpuMatND> inputs;
-        inputs_.getGpuMatNDVector(inputs);
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
