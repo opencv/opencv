@@ -459,6 +459,104 @@ TEST(Video_ECC_Test_Compute, bug_14657) {
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
+// A band-limited analytic scene.  Both images rendered from it below are direct
+// samples of the same continuous function, related by a known warp, so nothing
+// resamples the data before the estimator sees it: the only interpolation in the
+// experiment is the one findTransformECC performs itself.  That makes a drift
+// away from the known warp attributable to the estimator.
+class EccAnalyticScene {
+   public:
+    EccAnalyticScene() {
+        RNG rng(7);
+        for (int i = 0; i < components; i++) {
+            const double frequency = 0.22 * std::sqrt(rng.uniform(0.02, 1.0));  // below Nyquist
+            const double direction = rng.uniform(0.0, CV_PI);
+            frequencyX.push_back(frequency * std::cos(direction));
+            frequencyY.push_back(frequency * std::sin(direction));
+            phase.push_back(rng.uniform(0.0, 2 * CV_PI));
+        }
+    }
+
+    // image(x, y) = scene(imageToScene * (x, y, 1))
+    void render(Mat& image, Size size, const Matx33d& imageToScene) const {
+        image.create(size, CV_32F);
+        for (int y = 0; y < size.height; y++)
+            for (int x = 0; x < size.width; x++) {
+                const double sceneX = imageToScene(0, 0) * x + imageToScene(0, 1) * y + imageToScene(0, 2);
+                const double sceneY = imageToScene(1, 0) * x + imageToScene(1, 1) * y + imageToScene(1, 2);
+                double sum = 0;
+                for (int i = 0; i < components; i++)
+                    sum += std::cos(2 * CV_PI * (frequencyX[i] * sceneX + frequencyY[i] * sceneY) +
+                                    phase[i]);
+                image.at<float>(y, x) = (float)(128.0 + 120.0 / components * sum);
+            }
+    }
+
+   private:
+    static const int components = 16;
+    std::vector<double> frequencyX, frequencyY, phase;
+};
+
+// The Gaussian pre-filter extrapolates the template border (BORDER_REFLECT_101),
+// so a ring of gaussFiltSize/2 px of the smoothed template is fabricated rather
+// than measured.  Weighting that ring like real data biases the estimated linear
+// part, because the Jacobian columns of the linear parameters carry the window
+// coordinate and the opposite rings therefore do not cancel.  The translation
+// columns carry no such weight, so a check on the recovered shift stays blind to
+// it; this test starts at the known warp and watches the linear part instead.
+// The bias grows as the template shrinks, so a small window is both the cheaper
+// and the more sensitive choice here.
+TEST(Video_ECC_Affine, prefilter_border_does_not_bias_scale) {
+    const EccAnalyticScene scene;
+    const int templateSize = 128, margin = 8, inputSize = templateSize + 2 * margin, trials = 20;
+    const TermCriteria criteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+    const std::vector<Point2f> templateCorners = {
+        Point2f(0, 0), Point2f((float)templateSize, 0),
+        Point2f(0, (float)templateSize), Point2f((float)templateSize, (float)templateSize)};
+
+    RNG rng(12345);
+    double scaleErrorSum = 0, cornerErrorSum = 0;
+
+    for (int k = 0; k < trials; k++) {
+        const double angle = rng.uniform(-2.0, 2.0) * CV_PI / 180;
+        const double scale = rng.uniform(-0.02, 0.02);
+        const double shear = rng.uniform(-0.01, 0.01);
+        const Matx22d rotation(std::cos(angle), -std::sin(angle), std::sin(angle), std::cos(angle));
+        const Matx22d linearPart = rotation * Matx22d(1 + scale, shear, shear, 1 - scale);
+        const Matx33d groundMap(linearPart(0, 0), linearPart(0, 1), margin + rng.uniform(-3.0, 3.0),
+                                linearPart(1, 0), linearPart(1, 1), margin + rng.uniform(-3.0, 3.0),
+                                0, 0, 1);
+        const Matx33d sceneOffset(1, 0, rng.uniform(0.0, 997.0),
+                                  0, 1, rng.uniform(0.0, 991.0), 0, 0, 1);
+
+        // templateImage(x) and inputImage(groundMap * x) sample the same scene point
+        Mat templateImage, inputImage;
+        scene.render(templateImage, Size(templateSize, templateSize), sceneOffset);
+        scene.render(inputImage, Size(inputSize, inputSize), sceneOffset * groundMap.inv());
+
+        // start at the known warp, so any movement is the estimator's own doing
+        const Mat groundMatrix = (Mat_<float>(2, 3) << groundMap(0, 0), groundMap(0, 1), groundMap(0, 2),
+                                                       groundMap(1, 0), groundMap(1, 1), groundMap(1, 2));
+        Mat foundMatrix = groundMatrix.clone();
+        findTransformECC(templateImage, inputImage, foundMatrix, MOTION_AFFINE, criteria);
+
+        const Matx22d foundLinearPart(foundMatrix.at<float>(0, 0), foundMatrix.at<float>(0, 1),
+                                      foundMatrix.at<float>(1, 0), foundMatrix.at<float>(1, 1));
+        scaleErrorSum += std::sqrt(std::abs(determinant(foundLinearPart * linearPart.inv()))) - 1.0;
+
+        std::vector<Point2f> expectedCorners, foundCorners;
+        cv::transform(templateCorners, expectedCorners, groundMatrix);
+        cv::transform(templateCorners, foundCorners, foundMatrix);
+        // NORM_L2 over four points, so dividing by sqrt(4) gives the RMS displacement
+        cornerErrorSum += cv::norm(foundCorners, expectedCorners, NORM_L2) / 2;
+    }
+
+    // the recovered scale must carry no systematic offset ...
+    EXPECT_LT(std::abs(scaleErrorSum / trials), 1e-4);
+    // ... and the window must land well inside a tenth of a pixel
+    EXPECT_LT(cornerErrorSum / trials, 0.02);
+}
+
 TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();
