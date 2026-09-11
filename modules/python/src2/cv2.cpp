@@ -51,6 +51,7 @@ typedef std::vector<MSTEdge> vector_MSTEdge;
 #endif // HAVE_OPENCV_GEOMETRY
 
 typedef std::vector<std::vector<char> > vector_vector_char;
+typedef std::vector<std::vector<uchar> > vector_vector_uchar;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
