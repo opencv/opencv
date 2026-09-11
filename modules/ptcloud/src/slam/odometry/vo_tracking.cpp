@@ -82,43 +82,43 @@ int runPnP(const std::vector<Point3f>& obj, const std::vector<Point2f>& img,
 } // anonymous namespace
 
 // Motion model: constant-velocity pose prediction + projected map point search
-bool VisualOdometryImpl::trackWithMotionModel(Frame& cur)
+bool VisualOdometryImpl::trackWithMotionModel(Frame& currentFrame)
 {
     if (!lastKf) return false;
 
-    cur.poseCw = velocity * lastPoseCw;
+    currentFrame.poseCw = velocity * lastPoseCw;
 
     std::set<MapPoint*> localMps;
     buildLocalMapPoints(lastKf, params.localMapTopK, localMps);
 
-    std::fill(cur.mapPoints.begin(), cur.mapPoints.end(), nullptr);
-    std::fill(cur.outliers.begin(), cur.outliers.end(), false);
+    std::fill(currentFrame.mapPoints.begin(), currentFrame.mapPoints.end(), nullptr);
+    std::fill(currentFrame.outliers.begin(), currentFrame.outliers.end(), false);
 
     auto doSearch = [&](float radius) -> int {
         int n = 0;
         for (MapPoint* mp : localMps)
         {
             double u, v;
-            if (!projectPoint(cur.poseCw, K, mp->pos.x, mp->pos.y, mp->pos.z, u, v))
+            if (!projectPoint(currentFrame.poseCw, K, mp->pos.x, mp->pos.y, mp->pos.z, u, v))
                 continue;
-            if (u < 0 || u >= cur.imageSize.width ||
-                v < 0 || v >= cur.imageSize.height) continue;
+            if (u < 0 || u >= currentFrame.imageSize.width ||
+                v < 0 || v >= currentFrame.imageSize.height) continue;
 
             mp->visibleCount++;
 
-            auto cands = cur.getKeypointsInRadius((float)u, (float)v, radius);
+            auto cands = currentFrame.getKeypointsInRadius((float)u, (float)v, radius);
             double bestD = std::numeric_limits<double>::max();
             size_t bestI = std::numeric_limits<size_t>::max();
             for (size_t idx : cands)
             {
-                if (cur.mapPoints[idx]) continue;
-                double d = descDist(mp->refDesc, cur.descriptors.row((int)idx));
+                if (currentFrame.mapPoints[idx]) continue;
+                double d = descDist(mp->refDesc, currentFrame.descriptors.row((int)idx));
                 if (d < bestD) { bestD = d; bestI = idx; }
             }
             if (bestI != std::numeric_limits<size_t>::max() &&
                 bestD < params.descProjThresh)
             {
-                cur.mapPoints[bestI] = mp;
+                currentFrame.mapPoints[bestI] = mp;
                 mp->foundCount++;
                 ++n;
             }
@@ -129,7 +129,7 @@ bool VisualOdometryImpl::trackWithMotionModel(Frame& cur)
     int n = doSearch((float)params.motionModelRadius);
     if (n < params.motionModelMinMatches)
     {
-        std::fill(cur.mapPoints.begin(), cur.mapPoints.end(), nullptr);
+        std::fill(currentFrame.mapPoints.begin(), currentFrame.mapPoints.end(), nullptr);
         n = doSearch((float)params.motionModelRadiusWide);
     }
 
@@ -137,36 +137,36 @@ bool VisualOdometryImpl::trackWithMotionModel(Frame& cur)
 
     std::vector<Point3f> obj; std::vector<Point2f> img;
     obj.reserve(n); img.reserve(n);
-    for (size_t i = 0; i < cur.mapPoints.size(); ++i)
+    for (size_t i = 0; i < currentFrame.mapPoints.size(); ++i)
     {
-        if (!cur.mapPoints[i]) continue;
-        const MapPoint* mp = cur.mapPoints[i];
+        if (!currentFrame.mapPoints[i]) continue;
+        const MapPoint* mp = currentFrame.mapPoints[i];
         obj.push_back(Point3f((float)mp->pos.x,(float)mp->pos.y,(float)mp->pos.z));
-        img.push_back(cur.undistKpts[i]);
+        img.push_back(currentFrame.undistKpts[i]);
     }
 
-    int nInliers = runPnP(obj, img, cur, K,
+    int nInliers = runPnP(obj, img, currentFrame, K,
                            params.pnpReprojThresh,
                            params.pnpRansacIters,
                            params.pnpConfidence,
                            params.pnpMinInliers);
     if (nInliers < 0) return false;
 
-    int nOpt = poseInlierCheck(cur, K, params.pnpReprojThresh);
+    int nOpt = Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
 // Fallback 1: descriptor match against the reference keyframe
-bool VisualOdometryImpl::trackWithReferenceKF(Frame& cur)
+bool VisualOdometryImpl::trackWithReferenceKF(Frame& currentFrame)
 {
     if (!lastKf) return false;
 
-    std::fill(cur.mapPoints.begin(), cur.mapPoints.end(), nullptr);
-    std::fill(cur.outliers.begin(), cur.outliers.end(), false);
+    std::fill(currentFrame.mapPoints.begin(), currentFrame.mapPoints.end(), nullptr);
+    std::fill(currentFrame.outliers.begin(), currentFrame.outliers.end(), false);
 
     std::vector<DMatch> matches;
     matchFrames(lastKf->keypoints, lastKf->descriptors, lastKf->imageSize,
-                cur.keypoints, cur.descriptors, cur.imageSize, matches);
+                currentFrame.keypoints, currentFrame.descriptors, currentFrame.imageSize, matches);
 
     std::vector<Point3f> obj;
     std::vector<Point2f> img;
@@ -181,7 +181,7 @@ bool VisualOdometryImpl::trackWithReferenceKF(Frame& cur)
         MapPoint* mp = lastKf->mapPoints[m.queryIdx];
         if (!mp || mp->bad) continue;
         obj.push_back(Point3f((float)mp->pos.x,(float)mp->pos.y,(float)mp->pos.z));
-        img.push_back(cur.undistKpts[m.trainIdx]);
+        img.push_back(currentFrame.undistKpts[m.trainIdx]);
         corrMps.push_back(mp);
         corrKp.push_back(m.trainIdx);
     }
@@ -192,7 +192,7 @@ bool VisualOdometryImpl::trackWithReferenceKF(Frame& cur)
         return false;
     }
 
-    int nInliers = runPnP(obj, img, cur, K,
+    int nInliers = runPnP(obj, img, currentFrame, K,
                            params.pnpReprojThresh, params.pnpRansacIters,
                            params.pnpConfidence, params.pnpMinInliers);
     if (nInliers < 0)
@@ -204,23 +204,22 @@ bool VisualOdometryImpl::trackWithReferenceKF(Frame& cur)
     for (size_t k = 0; k < corrMps.size(); ++k)
     {
         int kpIdx = corrKp[k];
-        if ((size_t)kpIdx < cur.mapPoints.size() && !cur.mapPoints[kpIdx])
-            cur.mapPoints[kpIdx] = corrMps[k];
+        if ((size_t)kpIdx < currentFrame.mapPoints.size() && !currentFrame.mapPoints[kpIdx])
+            currentFrame.mapPoints[kpIdx] = corrMps[k];
     }
 
-    int nOpt = poseInlierCheck(cur, K, params.pnpReprojThresh);
+    int nOpt = Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
     return nOpt >= params.pnpMinInliers;
 }
 
 // Fallback 2: optical flow when descriptor match also fails
-bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
+bool VisualOdometryImpl::trackWithOpticalFlow(Frame& currentFrame)
 {
     if (!hasPrevFrame || prevFrame.image.empty()) return false;
 
     const Frame& prev = prevFrame;
     if (prev.keypoints.empty()) return false;
 
-    // LK runs on the raw imgs
     std::vector<Point2f> prevPts;
     prevPts.reserve(prev.keypoints.size());
     for (const auto& kp : prev.keypoints) prevPts.push_back(kp.pt);
@@ -229,11 +228,10 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
     std::vector<uchar> status;
     std::vector<float> err;
 
-    calcOpticalFlowPyrLK(prev.image, cur.image, prevPts, curPts,
+    calcOpticalFlowPyrLK(prev.image, currentFrame.image, prevPts, curPts,
                          status, err, Size(21, 21), 3,
                          TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.01));
 
-    // PnP uses K with no distortion
     std::vector<Point2f> curUndist;
     if (!dist.empty())
         undistortPoints(curPts, curUndist, K, dist, noArray(), K);
@@ -259,7 +257,7 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
         return false;
     }
 
-    int nInliers = runPnP(obj, img, cur, K,
+    int nInliers = runPnP(obj, img, currentFrame, K,
                             params.pnpReprojThresh, params.pnpRansacIters,
                             params.pnpConfidence, params.opticalFlowMinInliers);
     if (nInliers < 0)
@@ -272,7 +270,7 @@ bool VisualOdometryImpl::trackWithOpticalFlow(Frame& cur)
 }
 
 // Local map refinement: expand coverage + recheck inliers
-void VisualOdometryImpl::trackLocalMap(Frame& cur)
+void VisualOdometryImpl::trackLocalMap(Frame& currentFrame)
 {
     if (!lastKf) return;
 
@@ -293,7 +291,7 @@ void VisualOdometryImpl::trackLocalMap(Frame& cur)
     }
 
     std::set<MapPoint*> alreadyMatched;
-    for (MapPoint* mp : cur.mapPoints)
+    for (MapPoint* mp : currentFrame.mapPoints)
         if (mp) alreadyMatched.insert(mp);
 
     bool anyNew = false;
@@ -304,27 +302,27 @@ void VisualOdometryImpl::trackLocalMap(Frame& cur)
         if (alreadyMatched.count(mp)) continue;
 
         double u, v;
-        if (!projectPoint(cur.poseCw, K, mp->pos.x, mp->pos.y, mp->pos.z, u, v))
+        if (!projectPoint(currentFrame.poseCw, K, mp->pos.x, mp->pos.y, mp->pos.z, u, v))
             continue;
-        if (u < 0 || u >= cur.imageSize.width ||
-            v < 0 || v >= cur.imageSize.height) continue;
+        if (u < 0 || u >= currentFrame.imageSize.width ||
+            v < 0 || v >= currentFrame.imageSize.height) continue;
 
         mp->visibleCount++;
 
-        auto cands = cur.getKeypointsInRadius((float)u, (float)v, r);
+        auto cands = currentFrame.getKeypointsInRadius((float)u, (float)v, r);
         double bestD = std::numeric_limits<double>::max();
         size_t bestI = std::numeric_limits<size_t>::max();
         for (size_t idx : cands)
         {
-            if (cur.mapPoints[idx]) continue;
-            double d = descDist(mp->refDesc, cur.descriptors.row((int)idx));
+            if (currentFrame.mapPoints[idx]) continue;
+            double d = descDist(mp->refDesc, currentFrame.descriptors.row((int)idx));
             if (d < bestD) { bestD = d; bestI = idx; }
         }
         if (bestI != std::numeric_limits<size_t>::max() &&
             bestD < params.descProjThresh)
         {
-            cur.mapPoints[bestI] = mp;
-            cur.outliers[bestI] = false;
+            currentFrame.mapPoints[bestI] = mp;
+            currentFrame.outliers[bestI] = false;
             mp->foundCount++;
             alreadyMatched.insert(mp);
             anyNew = true;
@@ -332,68 +330,72 @@ void VisualOdometryImpl::trackLocalMap(Frame& cur)
     }
 
     if (anyNew)
-        poseInlierCheck(cur, K, params.pnpReprojThresh);
+        Optimizer::poseOptimization(currentFrame, K, params.pnpReprojThresh, params.poseOptEnable);
 }
 
-bool VisualOdometryImpl::track(Frame& cur)
+bool VisualOdometryImpl::track(Frame& currentFrame)
 {
     if (!lastKf)
     {
-        refFrame = cur;
+        refFrame = currentFrame;
         state = INITIALIZING;
         return false;
     }
 
-    // motion model tracking
     bool ok = false;
     if (hasVelocity)
-        ok = trackWithMotionModel(cur);
-
-    // fallback 1: descriptor match against reference keyframe
+        ok = trackWithMotionModel(currentFrame);
     if (!ok)
-        ok = trackWithReferenceKF(cur);
-
-    // fallback 2: optical flow
+        ok = trackWithReferenceKF(currentFrame);
     if (!ok)
-        ok = trackWithOpticalFlow(cur);
+        ok = trackWithOpticalFlow(currentFrame);
 
     if (!ok)
     {
         lastEvent = "track lost: all stages failed";
-        refFrame = cur;
+        refFrame = currentFrame;
         state = INITIALIZING;
         return false;
     }
 
-    trackLocalMap(cur);
+    trackLocalMap(currentFrame);
 
     int nInliers = 0;
-    for (size_t i = 0; i < cur.mapPoints.size(); ++i)
-        if (cur.mapPoints[i] && !cur.outliers[i]) ++nInliers;
+    for (size_t i = 0; i < currentFrame.mapPoints.size(); ++i)
+        if (currentFrame.mapPoints[i] && !currentFrame.outliers[i]) ++nInliers;
 
     {
         Matx44d Tcw_last_inv = lastPoseCw.inv();
-        velocity = cur.poseCw * Tcw_last_inv;
+        velocity = currentFrame.poseCw * Tcw_last_inv;
         hasVelocity = true;
     }
 
-    lastPoseCw = cur.poseCw;
-    map.appendPose(cur.poseCw);
+    lastPoseCw = currentFrame.poseCw;
+    map.appendPose(currentFrame.poseCw);
+    frameRecords.push_back({ currentFrame.poseCw * lastKf->poseCw.inv(), lastKf });
     ++framesSinceKf;
 
-    prevFrame = cur;
-    hasPrevFrame = true;
-
     String kf_reason;
-    if (shouldPromoteKeyframe(nInliers, cur.poseCw, kf_reason))
+    if (shouldPromoteKeyframe(nInliers, currentFrame.poseCw, kf_reason))
     {
         int mpBefore = map.numMapPoints();
-        promoteKeyframeAndGrowMap(cur);
+        promoteKeyframeAndGrowMap(currentFrame); // also runs local BA + detectLoop/closeLoop
         lastPoseCw = lastKf->poseCw;
-        lastEvent = format("keyframe: %s, +%d mp",
+        frameRecords.back() = { Matx44d::eye(), lastKf };
+
+        String kfEv = format("keyframe: %s, +%d mp%s",
                              kf_reason.c_str(),
-                             map.numMapPoints() - mpBefore);
+                             map.numMapPoints() - mpBefore,
+#ifdef HAVE_G2O
+                             params.localBaEnable ? " (LocalBA)" : "");
+#else
+                             "");
+#endif
+        lastEvent = lastEvent.empty() ? kfEv : (kfEv + " | " + lastEvent);
     }
+
+    prevFrame = currentFrame;
+    hasPrevFrame = true;
 
     return true;
 }
