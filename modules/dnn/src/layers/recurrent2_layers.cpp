@@ -685,16 +685,17 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             if (!hasP)
                 return;
 
+            // ONNX stores P as Pi, Po, Pf; the gate loop wants pI, pF, pO.
             Mat P = weightBlobs[3];
             weightBlobs[3] = P.colRange(0, numHidden);
             weightBlobs[3] = weightBlobs[3].clone().reshape(1, weightBlobs[3].total());  // Single column.
             weightBlobs[3] = Mat::diag(weightBlobs[3]);
 
-            weightBlobs.push_back(P.colRange(numHidden, 2 * numHidden));
+            weightBlobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));  // Pf
             weightBlobs[4] = weightBlobs[4].clone().reshape(1, weightBlobs[4].total());  // Single column.
             weightBlobs[4] = Mat::diag(weightBlobs[4]);
 
-            weightBlobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));
+            weightBlobs.push_back(P.colRange(numHidden, 2 * numHidden));      // Po
             weightBlobs[5] = weightBlobs[5].clone().reshape(1, weightBlobs[5].total());  // Single column.
             weightBlobs[5] = Mat::diag(weightBlobs[5]);
         }

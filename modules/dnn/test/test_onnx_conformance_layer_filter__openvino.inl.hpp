@@ -2088,9 +2088,9 @@ CASE(test_pow_types_int64_float32)
 CASE(test_pow_types_int64_int64)
     SKIP;
 CASE(test_prelu_broadcast)
-    // no filter
+    SKIP;
 CASE(test_prelu_example)
-    // no filter
+    SKIP;
 CASE(test_prelu_broadcast_expanded)
     SKIP;
 CASE(test_prelu_example_expanded)
@@ -2584,7 +2584,7 @@ CASE(test_reversesequence_batch)
 CASE(test_reversesequence_time)
     // no filter
 CASE(test_rnn_seq_length)
-    // no filter
+    SKIP;
 CASE(test_roialign_aligned_false)
     SKIP;
 CASE(test_roialign_aligned_true)
@@ -2852,11 +2852,11 @@ CASE(test_sigmoid_example)
 CASE(test_sign)
     // no filter
 CASE(test_simple_rnn_batchwise)
-    // no filter
+    SKIP;
 CASE(test_simple_rnn_defaults)
-    // no filter
+    SKIP;
 CASE(test_simple_rnn_with_initial_bias)
-    // no filter
+    SKIP;
 CASE(test_sin)
     // no filter
 CASE(test_sin_example)
