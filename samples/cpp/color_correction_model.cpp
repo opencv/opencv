@@ -23,7 +23,7 @@ const string about =
     "\t ./example_cpp_color_correction_model mcc --input=path/to/your/input/image --query=path/to/your/query/image\n\n"
     "Using pre-computed CCM:\n"
     "\t ./example_cpp_color_correction_model mcc --ccm_file=path/to/ccm_output.yaml --query=path/to/your/query/image\n\n"
-    "Model path can also be specified using --model argument. And config path can be specified using --config. Download it using python download_models.py mcc from dnn samples directory\n\n";
+    "Model path can also be specified using --model argument. Download it using python download_models.py mcc from dnn samples directory\n\n";
 
 const string param_keys =
     "{ help h          |                   | Print help message. }"
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
         zooFile = findFile(zooFile);
     }
     else{
-        cout<<"[WARN] set the environment variables or pass the arguments --model, --config and models.yml file using --zoo for using dnn based detector. Continuing with default detector.\n\n";
+        cout<<"[WARN] set the environment variables or pass the argument --model and models.yml file using --zoo for using dnn based detector. Continuing with default detector.\n\n";
     }
     keys += genPreprocArguments(modelName, zooFile);
     parser = CommandLineParser(argc, argv, keys);

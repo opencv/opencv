@@ -2,7 +2,7 @@
 // this sample demonstrates parsing (segmenting) human body parts from an image using opencv's dnn,
 // based on https://github.com/Engineering-Course/LIP_JPPNet
 //
-// get the pretrained model from: https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
+// get the pretrained model from: https://huggingface.co/opencv/opencv_contribution/tree/main/human_parsing_jppnet
 //
 
 #include <opencv2/dnn.hpp>
@@ -13,14 +13,15 @@ using namespace cv;
 
 static Mat parse_human(const Mat &image, const std::string &model, int backend=dnn::DNN_BACKEND_DEFAULT, int target=dnn::DNN_TARGET_CPU) {
     // this network expects an image and a flipped copy as input
-    Mat flipped;
-    flip(image, flipped, 1);
+    Mat resized, flipped;
+    resize(image, resized, Size(384, 384));
+    flip(resized, flipped, 1);
     std::vector<Mat> batch;
-    batch.push_back(image);
+    batch.push_back(resized);
     batch.push_back(flipped);
     Mat blob = dnn::blobFromImages(batch, 1.0, Size(), Scalar(104.00698793, 116.66876762, 122.67891434));
 
-    dnn::Net net = dnn::readNet(model);
+    dnn::Net net = dnn::readNetFromONNX(model);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     net.setInput(blob);
@@ -73,7 +74,7 @@ int main(int argc, char**argv)
     std::string param_keys =
         "{help    h |                 | show help screen / args}"
         "{image   i |                 | person image to process }"
-        "{model   m |lip_jppnet_384.pb| network model}";
+        "{model   m |human_parsing_jppnet_2026sep.onnx| network model}";
     std::string backend_keys = cv::format(
         "{ backend  | 0 | Choose one of computation backends: "
                           "%d: automatically (by default), "

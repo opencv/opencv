@@ -283,6 +283,22 @@ sam:
   rgb: true
   sample: "segmentation"
 
+# ONNX conversion of the TensorFlow JPPNet human parsing model from https://github.com/Engineering-Course/LIP_JPPNet
+# Labels every pixel of a single person as one of 20 LIP classes. The graph is frozen at
+# 384x384 and always takes two pictures at once, the image and its horizontal mirror, so
+# human_parsing.py builds that batch itself instead of reading these preprocessing values.
+human_parsing:
+  load_info:
+    url: "https://huggingface.co/opencv/opencv_contribution/resolve/main/human_parsing_jppnet/human_parsing_jppnet_2026sep.onnx?download=true"
+    sha1: "4814853d38e85f6caaeaff109a264a49ef2bcff3"
+  model: "human_parsing_jppnet_2026sep.onnx"
+  mean: [104.00698793, 116.66876762, 122.67891434]
+  scale: 1.0
+  width: 384
+  height: 384
+  rgb: false
+  sample: "human_parsing"
+
 ################################################################################
 # Instance segmentation models.
 ################################################################################
@@ -461,15 +477,15 @@ ldm_inpainting:
 # Macbeth chart detection model.
 ################################################################################
 
+# ONNX conversion of the TensorFlow Macbeth chart detector from https://github.com/gursimarsingh/opencv_zoo/tree/mcc_model/models/macbeth_chart_detector
+# Faster R-CNN Inception V2, single class. Takes raw uint8 RGB in NHWC at the image's own
+# resolution and returns the four TensorFlow Object Detection API heads, so it is driven
+# directly by CCheckerDetector rather than through blobFromImage.
 mcc:
   load_info:
-    url: "https://github.com/gursimarsingh/opencv_zoo/raw/refs/heads/mcc_model/models/macbeth_chart_detector/frozen_inference_graph.pb?download="
-    sha1: "fae7dbef14c4ae1fca76f3662220fbd460ed5ed6"
-  model: "frozen_inference_graph.pb"
-  config_load_info:
-    url: "https://github.com/gursimarsingh/opencv_zoo/raw/refs/heads/mcc_model/models/macbeth_chart_detector/graph.pbtxt?download="
-    sha1: "8350cb8f078ecefa1cd566e89930ede25a192310"
-  config: "graph.pbtxt"
+    url: "https://huggingface.co/opencv/opencv_contribution/resolve/main/macbeth_chart_detector/macbeth_chart_detector_2026sep.onnx?download=true"
+    sha1: "25c82db754ebaff60ade7fa87b53c5f98795e10c"
+  model: "macbeth_chart_detector_2026sep.onnx"
   sample: "mcc"
 
 ################################################################################
