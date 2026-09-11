@@ -976,6 +976,7 @@ void PngEncoder::flushBuf(void*)
 
 bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
+    m_last_error.clear();
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;
     FILE * volatile f = 0;
@@ -1179,7 +1180,18 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     }
 
     png_destroy_write_struct( &png_ptr, &info_ptr );
-    if(f) fclose( (FILE*)f );
+    if( f )
+    {
+        const int stream_error = ferror(f);
+        const int close_result = fclose(f);
+        f = 0;
+        if( stream_error != 0 || close_result != 0 )
+        {
+            if( result )
+                m_last_error = "Failed to write or close PNG output file";
+            result = false;
+        }
+    }
 
     return result;
 }
