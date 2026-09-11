@@ -4,8 +4,87 @@
 
 #include "../../precomp.hpp"
 #include "fast_norm.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv { namespace dnn {
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// SIMD reduction: computes mean and mean_square for a float array
+static inline void reduceMeanSqr(const float* x, int n, float& mean, float& mean_square) {
+    int j = 0;
+    int vstep = VTraits<v_float32>::vlanes();
+    v_float32 v_mean = vx_setzero_f32();
+    v_float32 v_msq = vx_setzero_f32();
+
+    for (; j <= n - vstep; j += vstep) {
+        v_float32 v = vx_load(x + j);
+        v_mean = v_add(v_mean, v);
+        v_msq = v_add(v_msq, v_mul(v, v));
+    }
+
+    mean = v_reduce_sum(v_mean);
+    mean_square = v_reduce_sum(v_msq);
+
+    for (; j < n; j++) {
+        float v = x[j];
+        mean += v;
+        mean_square += v * v;
+    }
+}
+
+// SIMD element-wise: y[j] = (x[j] - mean) * inv_stdev
+static inline void normalizeKernel(const float* x, float* y, int n, float mean, float inv_stdev) {
+    int j = 0;
+    int vstep = VTraits<v_float32>::vlanes();
+    v_float32 v_mean = vx_setall_f32(mean);
+    v_float32 v_inv = vx_setall_f32(inv_stdev);
+
+    for (; j <= n - vstep; j += vstep) {
+        v_float32 v_x = vx_load(x + j);
+        v_store(y + j, v_mul(v_sub(v_x, v_mean), v_inv));
+    }
+
+    for (; j < n; j++)
+        y[j] = (x[j] - mean) * inv_stdev;
+}
+
+// SIMD element-wise with scale: y[j] = scale_data[j] * (x[j] - mean) * inv_stdev
+static inline void normalizeKernelS(const float* x, float* y, int n, float mean, float inv_stdev,
+                                     const float* scale_data) {
+    int j = 0;
+    int vstep = VTraits<v_float32>::vlanes();
+    v_float32 v_mean = vx_setall_f32(mean);
+    v_float32 v_inv = vx_setall_f32(inv_stdev);
+
+    for (; j <= n - vstep; j += vstep) {
+        v_float32 v_x = vx_load(x + j);
+        v_float32 v_s = vx_load(scale_data + j);
+        v_store(y + j, v_mul(v_s, v_mul(v_sub(v_x, v_mean), v_inv)));
+    }
+
+    for (; j < n; j++)
+        y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
+}
+
+// SIMD element-wise with scale/bias: y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j]
+static inline void normalizeKernelSB(const float* x, float* y, int n, float mean, float inv_stdev,
+                                      const float* scale_data, const float* bias_data) {
+    int j = 0;
+    int vstep = VTraits<v_float32>::vlanes();
+    v_float32 v_mean = vx_setall_f32(mean);
+    v_float32 v_inv = vx_setall_f32(inv_stdev);
+
+    for (; j <= n - vstep; j += vstep) {
+        v_float32 v_x = vx_load(x + j);
+        v_float32 v_s = vx_load(scale_data + j);
+        v_float32 v_b = vx_load(bias_data + j);
+        v_store(y + j, v_add(v_mul(v_s, v_mul(v_sub(v_x, v_mean), v_inv)), v_b));
+    }
+
+    for (; j < n; j++)
+        y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
+}
+#endif
 
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
     const auto input_shape = shape(input);
@@ -22,20 +101,29 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            float mean, mean_square;
+            reduceMeanSqr(x, static_cast<int>(norm_size), mean, mean_square);
+#else
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normalizeKernel(x, y, static_cast<int>(norm_size), mean, inv_stdev);
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = (x[j] - mean) * inv_stdev;
             }
+#endif
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -58,20 +146,29 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            float mean, mean_square;
+            reduceMeanSqr(x, static_cast<int>(norm_size), mean, mean_square);
+#else
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normalizeKernelS(x, y, static_cast<int>(norm_size), mean, inv_stdev, scale_data);
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
             }
+#endif
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -96,20 +193,29 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            float mean, mean_square;
+            reduceMeanSqr(x, static_cast<int>(norm_size), mean, mean_square);
+#else
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            normalizeKernelSB(x, y, static_cast<int>(norm_size), mean, inv_stdev, scale_data, bias_data);
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
             }
+#endif
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -136,12 +242,17 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            float mean, mean_square;
+            reduceMeanSqr(x, static_cast<int>(norm_size), mean, mean_square);
+#else
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
@@ -149,9 +260,26 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            {
+                int j = 0;
+                int vstep = VTraits<v_float32>::vlanes();
+                v_float32 v_s = vx_setall_f32(s);
+                v_float32 v_b = vx_setall_f32(b);
+                v_float32 v_mean = vx_setall_f32(mean);
+                for (; j <= static_cast<int>(norm_size) - vstep; j += vstep)
+                {
+                    v_float32 v_x = vx_load(x + j);
+                    v_store(y + j, v_add(v_mul(v_s, v_sub(v_x, v_mean)), v_b));
+                }
+                for (; j < static_cast<int>(norm_size); j++)
+                    y[j] = s * (x[j] - mean) + b;
+            }
+#else
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = s * (x[j] - mean) + b;
             }
+#endif
         }
     };
     double nstripes = loops * norm_size * (1 / 1024.0);
@@ -181,12 +309,17 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            float mean, mean_square;
+            reduceMeanSqr(x, static_cast<int>(norm_size), mean, mean_square);
+#else
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
                 mean += v;
                 mean_square += v * v;
             }
+#endif
 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
