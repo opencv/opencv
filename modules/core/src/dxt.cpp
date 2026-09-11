@@ -3022,7 +3022,31 @@ public:
             return;
         }
 #endif
+        uchar* work = dst;
+        size_t work_step = dst_step;
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+        // Fix for CPU cache thrashing on Windows-ARM64 when stride is a power of 2.
+        // Column-wise access with power-of-2 stride maps to very few cache sets,
+        // causing ~97% cache miss rate. Adding one cache line (64 bytes) to the
+        // stride distributes accesses across all cache sets.
+        static const size_t DFT_CACHE_LINE_PAD = 64;
+        static const size_t DFT_PAD_THRESHOLD = 96 * 1024;
 
+        AutoBuffer<uchar> padded_buf;
+
+        if (stages.size() == 2 &&
+            dst_step > 0 && (dst_step & (dst_step - 1)) == 0 &&
+            dst_step * (size_t)height > DFT_PAD_THRESHOLD)
+        {
+            work_step = dst_step + DFT_CACHE_LINE_PAD;
+            if ((work_step & (work_step - 1)) == 0)
+                work_step += DFT_CACHE_LINE_PAD;
+            padded_buf.allocate(work_step * height);
+            work = padded_buf.data();
+        }
+#endif
+
+        bool prevInWork = false;
         for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
         {
             int stage_src_channels = src_channels;
@@ -3030,19 +3054,30 @@ public:
 
             if (stageIndex == 1)
             {
-                src = dst;
-                src_step = dst_step;
+                src = prevInWork ? work : dst;
+                src_step = prevInWork ? work_step : dst_step;
                 stage_src_channels = stage_dst_channels;
             }
 
             int stage = stages[stageIndex];
             bool isLastStage = (stageIndex + 1 == stages.size());
             bool isComplex = stage_src_channels != stage_dst_channels;
+            bool needsWorkBuffer = (stage == 1) || (!isLastStage && stages[stageIndex + 1] == 1);
+            uchar* out = needsWorkBuffer ? work : dst;
+            size_t out_step = needsWorkBuffer ? work_step : dst_step;
 
             if( stage == 0 )
-                rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
+                rowDft(src, src_step, out, out_step, isComplex, isLastStage);
             else
-                colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
+                colDft(src, src_step, out, out_step, stage_src_channels, stage_dst_channels, isLastStage);
+
+            prevInWork = needsWorkBuffer;
+        }
+
+        if (prevInWork && work != dst)
+        {
+            for (int i = 0; i < height; i++)
+                memcpy(dst + dst_step * i, work + work_step * i, dst_step);
         }
     }
 
