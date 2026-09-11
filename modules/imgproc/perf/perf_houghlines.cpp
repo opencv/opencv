@@ -112,4 +112,63 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines3f,
     SANITY_CHECK_NOTHING();
 }
 
+std::vector<Vec2f> getLines(UMat& u_lines) {
+    cv::Mat m_lines = u_lines.getMat(cv::ACCESS_READ);
+    std::vector<Vec2f> lines;
+    for (int ln = 0; ln < m_lines.rows; ln++) {
+        auto &lv = m_lines.at<cv::Vec2f>(ln);
+        lines.push_back(lv);
+    }
+    std::sort(lines.begin(), lines.end(), [](const Vec2f& a, const Vec2f& b) {
+        return a[1] < b[1];
+    });
+    return lines;
+}
+
+TEST(HoughLines, nearly_horizontal_lines)
+{
+    Mat img(200, 1000, CV_8UC1, Scalar(0));
+    for (int i=0; i <= 10; i++) {
+        double a = (2*i-10)*CV_PI/180;
+        Point2d p0(500,100);
+        Point2d p1(-600*cos(a),-600*sin(a));
+        Point2d p2(+600*cos(a),+600*sin(a));
+        cv::line(img, p0+p1, p0+p2, Scalar(255), 1, LINE_AA);
+    }
+    cv::threshold(img, img, 127, 255, THRESH_BINARY);
+    UMat u_img = img.getUMat(ACCESS_READ);
+    UMat u_lines;
+    HoughLines(u_img, u_lines, 1, 0.5*CV_PI/180, 700, 0, 0, (90-10)*CV_PI/180, (90+10)*CV_PI/180);
+    std::vector<Vec2f> lines = getLines(u_lines);
+    ASSERT_EQ(lines.size(), 11U);
+    for (int i=0; i <= 10; i++) {
+        double a = (90+2*i-10)*CV_PI/180;
+        EXPECT_NEAR(lines[i][1], a, 1e-4);
+    }
+}
+
+TEST(HoughLines, nearly_vertical_lines)
+{
+    Mat img(1000, 200, CV_8UC1, Scalar(0));
+    for (int i=0; i <= 10; i++) {
+        double a = (90+2*i-10)*CV_PI/180;
+        Point2d p0(100,500);
+        Point2d p1(-600*cos(a),-600*sin(a));
+        Point2d p2(+600*cos(a),+600*sin(a));
+        cv::line(img, p0+p1, p0+p2, Scalar(255), 1, LINE_AA);
+    }
+    cv::threshold(img, img, 127, 255, THRESH_BINARY);
+    UMat u_img = img.getUMat(ACCESS_READ);
+    UMat u_lines;
+    HoughLines(u_img, u_lines, 1, 0.5*CV_PI/180, 700, 0, 0, -10*CV_PI/180, +10*CV_PI/180);
+    std::vector<Vec2f> lines = getLines(u_lines);
+    ASSERT_EQ(lines.size(), 11U);
+    for (int i=0; i <= 10; i++) {
+        double a = (2*i-10)*CV_PI/180;
+        EXPECT_NEAR(lines[i][1], a, 1e-4);
+    }
+}
+
+
+
 } // namespace
