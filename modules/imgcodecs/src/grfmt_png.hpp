@@ -144,7 +144,7 @@ private:
      * @return true if the operation is successful, false otherwise.
      */
     CV_NODISCARD_STD bool readFromStreamOrBuffer(void* buffer, size_t num_bytes);
-    uint32_t  read_chunk(Chunk& chunk);
+    uint32_t  read_chunk(Chunk& chunk, bool skipIDATPayload = false);
     CV_NODISCARD_STD bool InitPngPtr();
     void ClearPngPtr();
 
