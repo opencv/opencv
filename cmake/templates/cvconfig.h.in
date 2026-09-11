@@ -28,6 +28,9 @@
 /* Clp support */
 #cmakedefine HAVE_CLP
 
+/* AMD ROCm/HIP Runtime API */
+#cmakedefine HAVE_HIP
+
 /* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
 
