@@ -6,6 +6,7 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX NEON SVE)
 ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX NEON)
+ocv_add_dispatched_file("int8layers/layers_common_vnni" AVX_VNNI)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON NEON_FP16 RVV)
@@ -13,6 +14,7 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("int8layers/conv2_int8_kernels" AVX2 RVV)
+ocv_add_dispatched_file("int8layers/conv2_int8_vnni_kernels" AVX_VNNI)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/reduce2_kernels" AVX AVX2 NEON RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/transpose_kernels" AVX AVX2 NEON RVV LASX)
@@ -22,14 +24,6 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/nary_eltwise_kernels" AVX 
 ocv_add_module(dnn opencv_core opencv_imgproc opencv_geometry OPTIONAL opencv_imgcodecs WRAP python java objc js)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
-
-# Compiler version alone doesn't guarantee the assembler supports AVX-VNNI. See #29840.
-if((CV_GCC OR CV_CLANG) AND (X86 OR X86_64))
-  ocv_check_compiler_flag(CXX "" OPENCV_DNN_CHECK_AVXVNNI_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avxvnni_asm.cpp")
-  if(NOT OPENCV_DNN_CHECK_AVXVNNI_ASM)
-    ocv_target_compile_definitions(${the_module} PRIVATE "CV_AVXVNNI_AVAILABLE=0")
-  endif()
-endif()
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
 

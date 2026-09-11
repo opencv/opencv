@@ -9,6 +9,7 @@
 #include "../layers/conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "int8_vnni.hpp"
 #include "conv2_int8_kernels.simd.hpp"
 #include "int8layers/conv2_int8_kernels.simd_declarations.hpp"
 
@@ -153,6 +154,13 @@ static void convInt8Block(const void* inp_, const void* residual_,
                           const int8_t* activLUT,
                           bool inputIsU8)
 {
+    // AVX-VNNI kernels are dispatched separately (conv2_int8_vnni_kernels), so the
+    // whole path disappears when the toolchain cannot encode AVX-VNNI.
+    if (CV_CPU_HAS_SUPPORT_AVX_VNNI && !cs.depthwise && weightsVNNI_ && biasVNNI_) {
+        convInt8BlockVNNI(inp_, residual_, out_, cs, weightsVNNI_,
+                          biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        return;
+    }
 #if CV_TRY_RVV && CV_RVV
     if (cv::checkHardwareSupport(CV_CPU_RVV)) {
         opt_RVV::convInt8Block(inp_, residual_, out_, cs, weights_,
