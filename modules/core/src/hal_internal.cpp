@@ -56,8 +56,6 @@
 #include <complex>
 #include <vector>
 
-#define HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH 100
-#define HAL_GEMM_SMALL_MATRIX_THRESH 100
 #define HAL_SVD_SMALL_MATRIX_THRESH 25
 #define HAL_QR_SMALL_MATRIX_THRESH 30
 #define HAL_LU_SMALL_MATRIX_THRESH 100
@@ -689,10 +687,69 @@ int lapack_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* sr
     return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
 }
 
+static inline bool shouldUseLapackGemm(int m, int n, int k, int flags)
+{
+    // Compute effective dimensions:
+    // M = rows of result D
+    // K = contraction (inner) dimension
+    // N = cols of result D
+    const int M = (flags & CV_HAL_GEMM_1_T) ? n : m;
+    const int K = (flags & CV_HAL_GEMM_1_T) ? m : n;
+    const int N = k;
+
+    // 1. Column-vector-like results (N <= 4) have sequential memory accesses
+    // and fit nicely in cache. OpenCV's fallback loops are faster for small sizes,
+    // but LAPACK is significantly faster for larger matrix-vector products (e.g. M >= 128 and K >= 128).
+    if (N <= 4)
+    {
+        return M >= 128 && K >= 128;
+    }
+
+    // 2. Row-vector-like results (M <= 4) have strided memory accesses to B.
+    // OpenCV's fallback is slow, so we should use LAPACK if K is large
+    // enough to amortize call overhead and N is reasonable.
+    if (M <= 4)
+    {
+        return K >= 512 && N >= 16;
+    }
+
+    // 3. Minimum dimension threshold.
+    // SIMD microkernels need at least 16 elements to amortize boundary checks.
+    if (M < 16 || N < 16)
+        return false;
+
+    // For small matrices (M, N, K <= 32), OpenCV's contiguous fallback loops
+    // are extremely fast and avoid LAPACK call overhead if there are no transposes.
+    // However, if there are transpose flags, OpenCV fallback suffers from strided
+    // memory accesses, whereas LAPACK's transpose loaders are much faster.
+    if (M <= 32 && N <= 32 && K <= 32)
+    {
+        return (flags & (CV_HAL_GEMM_1_T | CV_HAL_GEMM_2_T)) != 0;
+    }
+
+    // Outer products and thin contraction dimensions (K < 16):
+    // LAPACK is highly optimized for vector-vector outer products.
+    // If K is very small, we should use LAPACK if M and N are large (>= 64),
+    // and we should bypass the operational volume cutoff for these shapes.
+    if (K < 16)
+    {
+        if (M >= 64 && N >= 64)
+            return true;
+        return false;
+    }
+
+    // 4. Operational volume cutoff (equivalent to ~32x32x32).
+    // Below ~32,000 operations, OpenCV's direct loops without packing are faster.
+    if (static_cast<int64_t>(M) * N * K < 32768)
+        return false;
+
+    return true;
+}
+
 int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
                    const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
@@ -700,7 +757,7 @@ int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_
 int lapack_gemm64f(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
                    const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
@@ -708,14 +765,14 @@ int lapack_gemm64f(const double *src1, size_t src1_step, const double *src2, siz
 int lapack_gemm32fc(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
                    const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
 int lapack_gemm64fc(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
                    const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step, int m, int n, int k, int flags)
 {
-    if(m < HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH)
+    if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
