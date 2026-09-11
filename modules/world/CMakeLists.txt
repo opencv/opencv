@@ -95,9 +95,11 @@ if (WITH_QT AND QT_VERSION_MAJOR GREATER 5)
   qt_disable_unicode_defines(${the_module})
 endif()
 
-if(BUILD_opencv_imgcodecs AND OPENCV_MODULE_opencv_imgcodecs_IS_PART_OF_WORLD)
+if(COMMAND ocv_imgcodecs_configure_target AND
+    BUILD_opencv_imgcodecs AND OPENCV_MODULE_opencv_imgcodecs_IS_PART_OF_WORLD)
   ocv_imgcodecs_configure_target()
 endif()
-if(BUILD_opencv_highgui AND OPENCV_MODULE_opencv_highgui_IS_PART_OF_WORLD)
+if(COMMAND ocv_highgui_configure_target AND
+    BUILD_opencv_highgui AND OPENCV_MODULE_opencv_highgui_IS_PART_OF_WORLD)
   ocv_highgui_configure_target()
 endif()
