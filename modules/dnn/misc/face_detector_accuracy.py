@@ -15,8 +15,7 @@ from pycocotools.cocoeval import COCOeval
 parser = argparse.ArgumentParser(
         description='Evaluate OpenCV face detection algorithms '
                     'using COCO evaluation tool, http://cocodataset.org/#detections-eval')
-parser.add_argument('--proto', help='Path to .pbtxt of TensorFlow graph')
-parser.add_argument('--model', help='Path to .onnx of ONNX model or .pb from TensorFlow')
+parser.add_argument('--model', help='Path to .onnx of ONNX model')
 parser.add_argument('--cascade', help='Optional path to trained Haar cascade as '
                                       'an additional model for evaluation')
 parser.add_argument('--ann', help='Path to text file with ground truth annotations')
@@ -139,30 +138,7 @@ with open('annotations.json', 'wt') as f:
 
 ### Obtain detections ##########################################################
 detections = []
-if args.proto and args.model and args.model.endswith('.pb'):
-    net = cv.dnn.readNet(args.proto, args.model)
-
-    def detect(img, imageId):
-        imgWidth = img.shape[1]
-        imgHeight = img.shape[0]
-        net.setInput(cv.dnn.blobFromImage(img, 1.0, (300, 300), (104., 177., 123.), False, False))
-        out = net.forward()
-
-        for i in range(out.shape[2]):
-            confidence = out[0, 0, i, 2]
-            left = int(out[0, 0, i, 3] * img.shape[1])
-            top = int(out[0, 0, i, 4] * img.shape[0])
-            right = int(out[0, 0, i, 5] * img.shape[1])
-            bottom = int(out[0, 0, i, 6] * img.shape[0])
-
-            x = max(0, min(left, img.shape[1] - 1))
-            y = max(0, min(top, img.shape[0] - 1))
-            w = max(0, min(right - x + 1, img.shape[1] - x))
-            h = max(0, min(bottom - y + 1, img.shape[0] - y))
-
-            addDetection(detections, imageId, x, y, w, h, score=confidence)
-
-elif args.model and args.model.endswith('.onnx'):
+if args.model and args.model.endswith('.onnx'):
     net = cv.FaceDetectorYN.create(args.model, "", (320, 320), 0.3, 0.45, 5000)
 
     def detect(img, imageId):

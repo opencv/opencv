@@ -21,7 +21,7 @@ class OpticalFlow(object):
     def __init__(self, model, height, width, proto=""):
         if proto:
             raise cv.error("Caffe support has been removed. Please provide a single ONNX model path (e.g. RAFT).")
-        self.net = cv.dnn.readNet(model)
+        self.net = cv.dnn.readNetFromONNX(model)
         self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
         self.height = height
         self.width = width

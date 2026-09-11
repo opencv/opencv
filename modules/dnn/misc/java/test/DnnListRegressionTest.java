@@ -49,7 +49,7 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         }
 
         File dnnTestDataPath = new File(envDnnTestDataPath);
-        modelFileName =  new File(dnnTestDataPath, "dnn/tensorflow_inception_graph.pb").toString();
+        modelFileName =  new File(dnnTestDataPath, "dnn/onnx/models/tensorflow_inception_graph.onnx").toString();
 
         String envTestDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
 
@@ -61,7 +61,7 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         sourceImageFile = f.toString();
         if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
 
-        net = Dnn.readNetFromTensorflow(modelFileName);
+        net = Dnn.readNetFromONNX(modelFileName);
 
         Mat image = Imgcodecs.imread(sourceImageFile);
         assertNotNull("Loading image from file failed!", image);

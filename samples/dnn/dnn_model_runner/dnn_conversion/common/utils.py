@@ -5,7 +5,6 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 import torch
 
 from .test.configs.test_config import CommonConfig
@@ -65,20 +64,6 @@ def set_pytorch_env():
         torch.cuda.manual_seed_all(SEED_VAL)
         torch.backends.cudnn_benchmark_enabled = False
         torch.backends.cudnn.deterministic = True
-
-
-def set_tf_env(is_use_gpu=True):
-    set_common_reproducibility()
-    tf.random.set_seed(SEED_VAL)
-    os.environ["TF_DETERMINISTIC_OPS"] = "1"
-
-    if tf.config.list_physical_devices("GPU") and is_use_gpu:
-        gpu_devices = tf.config.list_physical_devices("GPU")
-        tf.config.experimental.set_visible_devices(gpu_devices[0], "GPU")
-        tf.config.experimental.set_memory_growth(gpu_devices[0], True)
-        os.environ["TF_USE_CUDNN"] = "1"
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 def str_bool(input_val):

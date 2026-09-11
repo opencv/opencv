@@ -24,9 +24,7 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     }
     if (framework == "tensorflow" || modelExt == "pb" || configExt == "pb" || modelExt == "pbtxt" || configExt == "pbtxt")
     {
-        if (modelExt == "pbtxt" || configExt == "pb")
-            std::swap(model, config);
-        return readNetFromTensorflow(model, config, engine);
+        CV_Error(Error::StsError, "TensorFlow importer has been removed. Please use ONNX-converted models or use an older OpenCV version.");
     }
     if (framework == "tflite" || modelExt == "tflite")
     {
@@ -62,7 +60,7 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
     if (framework == "onnx")
         return readNetFromONNX(bufferModel, engine);
     else if (framework == "tensorflow")
-        return readNetFromTensorflow(bufferModel, bufferConfig, engine);
+        CV_Error(Error::StsError, "TensorFlow importer has been removed. Please use ONNX-converted models or use an older OpenCV version.");
     else if (framework == "darknet")
         CV_Error(Error::StsError, "Darknet importer has been removed. Please use ONNX-converted models or use an older OpenCV version.");
     else if (framework == "dldt" || framework == "openvino")

@@ -180,84 +180,9 @@ TEST_P(DNNTestNetwork, Inception_5h)
         l1 = 1.72e-5;
         lInf = 8e-4;
     }
-    processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2", l1, lInf);
+    processNet("dnn/onnx/models/tensorflow_inception_graph.onnx", "", Size(224, 224), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
-}
-
-TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
-{
-    applyTestTag((target == DNN_TARGET_CPU || target == DNN_TARGET_CPU_FP16) ? "" : CV_TEST_TAG_MEMORY_512MB);
-
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.216 : 0.2;
-    float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 0.095;
-        iouDiff = 0.09;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.007;
-        iouDiff = 0.08;
-    }
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff, detectionConfThresh);
-    expectNoFallbacksFromIE(net);
-}
-
-TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
-{
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
-        target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
-    float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 0.013;
-        iouDiff = 0.06;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.007;
-        iouDiff = 0.06;
-    }
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff);
-    expectNoFallbacksFromIE(net);
-}
-
-TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
-{
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float scoreDiff = 2e-5, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 0.013;
-        iouDiff = 0.062;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.02;
-        iouDiff = 0.07;
-    }
-    processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff, 0.25);
-    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, SSD_VGG16)
@@ -360,39 +285,6 @@ TEST_P(DNNTestNetwork, YuNet)
         lInf = 0.05;
     }
     processNet("dnn/onnx/models/yunet-202605.onnx", "", Size(320, 320), "", l1, lInf);
-    expectNoFallbacksFromIE(net);
-}
-
-TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
-{
-    applyTestTag(
-        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 0.02;
-        iouDiff = 0.1;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.015;
-        iouDiff = 0.08;
-    }
-    processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
 

@@ -90,7 +90,7 @@ function loadModels(callback) {
     utils.createFileFromUrl('face_recognition_sface_2021dec.onnx', recognModel, () => {
       document.getElementById('status').innerHTML = '';
       netDet = new cv.FaceDetectorYN("face_detection_yunet_2023mar.onnx", "", new cv.Size(320, 320), 0.9, 0.3, 5000);
-      netRecogn = cv.readNet('face_recognition_sface_2021dec.onnx');
+      netRecogn = cv.readNetFromONNX('face_recognition_sface_2021dec.onnx');
       callback();
     });
   });

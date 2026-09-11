@@ -247,8 +247,7 @@ TEST(readNet, Regression)
 {
     Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx", false));
     EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
-                  findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
+    net = readNet(findDataFile("dnn/onnx/models/ssd_mobilenet_v1_coco.onnx", false));
     EXPECT_FALSE(net.empty());
 }
 
