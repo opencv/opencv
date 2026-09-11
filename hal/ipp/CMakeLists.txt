@@ -29,6 +29,11 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/distancetransform_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/histogram_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/samplers_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/corner_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/morph_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/median_blur_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/gaussian_blur_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/integral_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
@@ -41,6 +46,11 @@ endif()
 
 if(HAVE_IPP_IW)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
+  # OPENCV_IPP_ENABLE_ALL is defined in modules/core/CMakeList.txt
+  OCV_OPTION(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OPENCV_IPP_ENABLE_ALL)
+  if(OPENCV_IPP_GAUSSIAN_BLUR)
+    target_compile_definitions(ipphal PRIVATE ENABLE_IPP_GAUSSIAN_BLUR=1)
+  endif()
 endif()
 
 if(WITH_IPP_CALLS_ENFORCED)

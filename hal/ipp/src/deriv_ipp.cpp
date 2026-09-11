@@ -242,6 +242,66 @@ int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size
                      dx, dy, 0, scale, delta, border_type, true);
 }
 
+int ipp_hal_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                             int width, int height, int src_depth, int dst_depth, int cn,
+                             int margin_left, int margin_top, int margin_right, int margin_bottom,
+                             int ksize, double scale, double delta, int border_type)
+{
+    CV_HAL_CHECK_USE_IPP();
+
+    IppDataType srcType  = ippiGetDataType(src_depth);
+    IppDataType dstType  = ippiGetDataType(dst_depth);
+    bool        useScale = false;
+
+    if(cn != 1)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    if(fabs(delta) > FLT_EPSILON || fabs(scale-1) > FLT_EPSILON)
+        useScale = true;
+
+    IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
+    if((int)maskSize < 0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        ::ipp::IwiImage iwSrc      = ippiGetImage(src_depth, cn, src_data, src_step, width, height,
+                                                  margin_left, margin_top, margin_right, margin_bottom);
+        ::ipp::IwiImage iwDst      = ippiGetImage(dst_depth, cn, dst_data, dst_step, width, height,
+                                                  0, 0, 0, 0);
+        ::ipp::IwiImage iwSrcProc  = iwSrc;
+        ::ipp::IwiImage iwDstProc  = iwDst;
+        ::ipp::IwiBorderSize  borderSize(maskSize);
+        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, border_type, borderSize));
+        if(!ippBorder)
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        if(srcType == ipp8u && dstType == ipp8u)
+        {
+            iwDstProc.Alloc(iwDst.m_size, ipp16s, cn);
+            useScale = true;
+        }
+        else if(srcType == ipp8u && dstType == ipp32f)
+        {
+            iwSrc -= borderSize;
+            iwSrcProc.Alloc(iwSrc.m_size, ipp32f, cn);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0);
+            iwSrcProc += borderSize;
+        }
+
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, iwSrcProc, iwDstProc, maskSize, ::ipp::IwDefault(), ippBorder);
+
+        if(useScale)
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta);
+    }
+    catch (const ::ipp::IwException &)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 #endif // HAVE_IPP_IW
 
 #endif // IPP_VERSION_X100 >= 810
