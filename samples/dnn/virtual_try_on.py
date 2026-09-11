@@ -2,7 +2,7 @@
 '''
 You can download the Geometric Matching Module model from https://www.dropbox.com/s/tyhc73xa051grjp/cp_vton_gmm.onnx?dl=0
 You can download the Try-On Module model from https://www.dropbox.com/s/q2x97ve2h53j66k/cp_vton_tom.onnx?dl=0
-You can download the cloth segmentation model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
+You can download the cloth segmentation model from https://huggingface.co/opencv/opencv_contribution/tree/main/human_parsing_jppnet
 You can find the OpenPose proto in opencv_extra/testdata/dnn/openpose_pose_coco.prototxt
 and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
 '''
@@ -27,7 +27,7 @@ parser.add_argument('--input_image', '-i', required=True, help='Path to image wi
 parser.add_argument('--input_cloth', '-c', required=True, help='Path to target cloth image')
 parser.add_argument('--gmm_model', '-gmm', default='cp_vton_gmm.onnx', help='Path to Geometric Matching Module .onnx model.')
 parser.add_argument('--tom_model', '-tom', default='cp_vton_tom.onnx', help='Path to Try-On Module .onnx model.')
-parser.add_argument('--segmentation_model', default='lip_jppnet_384.pb', help='Path to cloth segmentation .pb model.')
+parser.add_argument('--segmentation_model', default='human_parsing_jppnet_2026sep.onnx', help='Path to cloth segmentation .onnx model.')
 parser.add_argument('--openpose_proto', default='openpose_pose_coco.prototxt', help='Path to OpenPose .prototxt model was trained on COCO dataset.')
 parser.add_argument('--openpose_model', default='openpose_pose_coco.caffemodel', help='Path to OpenPose .caffemodel model was trained on COCO dataset.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
