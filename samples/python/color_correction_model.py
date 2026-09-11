@@ -50,7 +50,7 @@ def get_args_parser(func_args):
             Using pre-computed CCM:
                 python color_correction_model.py --ccm_file=path/to/ccm_output.yaml --query=path/to/query/image
 
-        Model path can also be specified using --model argument. And config path can be specified using --config.
+        Model path can also be specified using --model argument.
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 

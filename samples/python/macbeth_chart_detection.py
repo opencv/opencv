@@ -48,7 +48,7 @@ def get_args_parser(func_args):
             DNN model:
                 python macbeth_chart_detection.py mcc --input=path/to/your/input/image/or/video
 
-        Model path can also be specified using --model argument. And config path can be specified using --config.
+        Model path can also be specified using --model argument.
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 

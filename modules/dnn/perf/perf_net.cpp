@@ -322,12 +322,10 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
 #endif
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         throw SkipTestException("");
-    if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("Faster R-CNN Inception v2: dynamic-shape ReduceMax in the TF "
-                               "Preprocessor/ResizeToRange subgraph is not yet supported by the new DNN graph engine");
     // image_tensor input is NHWC uint8
-    Mat img(cv::Size(800, 600), CV_8UC3);
-    randu(img, 0, 255);
+    Mat img = imread(findDataFile("dnn/dog416.png"));
+    cv::resize(img, img, Size(800, 600));
+    cvtColor(img, img, COLOR_BGR2RGB);
     int s[] = {1, 600, 800, 3};
     Mat inp(4, s, CV_8U, img.data);
     processNet("dnn/onnx/models/faster_rcnn_inception_v2_coco_2018_01_28.onnx", "", inp);

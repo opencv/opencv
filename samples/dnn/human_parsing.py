@@ -1,42 +1,16 @@
 #!/usr/bin/env python
 '''
-You can download the converted pb model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
-or convert the model yourself.
+Human parsing (segmenting human body parts) with JPPNet, based on
+https://github.com/Engineering-Course/LIP_JPPNet
 
-Follow these steps if you want to convert the original model yourself:
-    To get original .meta pre-trained model download https://drive.google.com/file/d/1BFVXgeln-bek8TCbRjN6utPAgRE0LJZg/view
-    For correct convert .meta to .pb model download original repository https://github.com/Engineering-Course/LIP_JPPNet
-    Change script evaluate_parsing_JPPNet-s2.py for human parsing
-    1. Remove preprocessing to create image_batch_origin:
-        with tf.name_scope("create_inputs"):
-        ...
-    Add
-        image_batch_origin = tf.placeholder(tf.float32, shape=(2, None, None, 3), name='input')
+Download the ONNX model from
+https://huggingface.co/opencv/opencv_contribution/tree/main/human_parsing_jppnet
+or convert the original TensorFlow graph yourself with the convert_to_onnx.py
+script published next to it.
 
-    2. Create input
-        image = cv2.imread(path/to/image)
-        image_rev = np.flip(image, axis=1)
-        input = np.stack([image, image_rev], axis=0)
-
-    3. Hardcode image_h and image_w shapes to determine output shapes.
-       We use default INPUT_SIZE = (384, 384) from evaluate_parsing_JPPNet-s2.py.
-        parsing_out1 = tf.reduce_mean(tf.stack([tf.image.resize_images(parsing_out1_100, INPUT_SIZE),
-                                                tf.image.resize_images(parsing_out1_075, INPUT_SIZE),
-                                                tf.image.resize_images(parsing_out1_125, INPUT_SIZE)]), axis=0)
-       Do similarly with parsing_out2, parsing_out3
-    4. Remove postprocessing. Last net operation:
-        raw_output = tf.reduce_mean(tf.stack([parsing_out1, parsing_out2, parsing_out3]), axis=0)
-       Change:
-        parsing_ = sess.run(raw_output, feed_dict={'input:0': input})
-
-    5. To save model after sess.run(...) add:
-        input_graph_def = tf.get_default_graph().as_graph_def()
-        output_node = "Mean_3"
-        output_graph_def = tf.graph_util.convert_variables_to_constants(sess, input_graph_def, output_node)
-
-        output_graph = "LIP_JPPNet.pb"
-        with tf.gfile.GFile(output_graph, "wb") as f:
-            f.write(output_graph_def.SerializeToString())'
+The graph is frozen at 384x384 and always takes two pictures at once: the image
+and its horizontal mirror. The two predictions are averaged, with the left/right
+body part channels of the mirrored half swapped back first.
 '''
 
 import argparse
@@ -56,8 +30,9 @@ def preprocess(image):
     Create 4-dimensional blob from image and flip image
     :param image: input image
     """
-    image_rev = np.flip(image, axis=1)
-    input = cv.dnn.blobFromImages([image, image_rev], mean=(104.00698793, 116.66876762, 122.67891434))
+    resized = cv.resize(image, (384, 384))
+    image_rev = np.flip(resized, axis=1)
+    input = cv.dnn.blobFromImages([resized, image_rev], mean=(104.00698793, 116.66876762, 122.67891434))
     return input
 
 
@@ -68,7 +43,7 @@ def run_net(input, model_path, backend, target):
     :param backend: computation backend
     :param target: computation device
     """
-    net = cv.dnn.readNet(model_path)
+    net = cv.dnn.readNetFromONNX(model_path)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
     net.setInput(input)
@@ -148,9 +123,8 @@ def parse_human(image, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.
     :param target: name of computation target
     """
     input = preprocess(image)
-    input_h, input_w = input.shape[2:]
     output = run_net(input, model_path, backend, target)
-    grayscale_out = postprocess(output, (input_w, input_h))
+    grayscale_out = postprocess(output, (image.shape[1], image.shape[0]))
     segmentation = decode_labels(grayscale_out)
     return segmentation
 
@@ -159,7 +133,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input', '-i', required=True, help='Path to input image.')
-    parser.add_argument('--model', '-m', default='lip_jppnet_384.pb', help='Path to pb model.')
+    parser.add_argument('--model', '-m', default='human_parsing_jppnet_2026sep.onnx', help='Path to onnx model.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
