@@ -32,7 +32,7 @@ PERF_TEST_P(DenseOpticalFlow_DIS, perf,
 
     MakeArtificialExample(frame1, frame2);
 
-    TEST_CYCLE_N(10)
+    TEST_CYCLE()
     {
         Ptr<DenseOpticalFlow> algo = DISOpticalFlow::create(preset);
         algo->calc(frame1, frame2, flow);
