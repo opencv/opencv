@@ -43,10 +43,35 @@ class TokenizerBindingTest(NewOpenCVTests):
     def test_tokenizer_gpt4(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt4/config.json"))
         tokens = tok.encode("hello world")
-        # expects {15339, 1917}
         self.assertEqual(list(tokens), [15339, 1917])
         sent = tok.decode([15339, 1917])
         self.assertEqual(sent, "hello world")
+
+    def test_tokenizer_bert_encode_pair(self):
+        tok = cv.dnn.Tokenizer.load(_tf("bert/config.json"))
+        a = list(tok.encode("hello world"))
+        b = list(tok.encode("OpenCV is Great"))
+        pair = list(tok.encodePair("hello world", "OpenCV is Great"))
+        self.assertEqual(pair, a + b[1:])
+        self.assertEqual(pair, [101, 7592, 2088, 102, 2330, 2278, 2615, 2003, 2307, 102])
+
+    def test_tokenizer_encode_pair_unsupported(self):
+        for cfg in ["gpt2/config.json", "gemma2/config.json", "t5/config.json"]:
+            tok = cv.dnn.Tokenizer.load(_tf(cfg))
+            with self.assertRaises(cv.error):
+                tok.encodePair("hello", "world")
+
+    def test_tokenizer_malformed_utf8(self):
+        # Malformed sequences resolve to U+FFFD rather than raising, so a single
+        # bad byte cannot abort a whole prompt.
+        tok = cv.dnn.Tokenizer.load(_tf("t5/config.json"))
+        self.assertGreater(len(tok.encode(b"\xff")), 0)
+        self.assertGreater(len(tok.encode(b"\xc3")), 0)
+
+    def test_tokenizer_albert_sequence_normalizer(self):
+        tok = cv.dnn.Tokenizer.load(_tf("albert/config.json"))
+        self.assertEqual(list(tok.encode("Hello world")), list(tok.encode("hello world")))
+        self.assertEqual(list(tok.encode("café")), list(tok.encode("cafe")))
 
     def test_with_hf_tiktoken(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt2/config.json"))

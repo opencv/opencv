@@ -139,9 +139,12 @@ static void activationTanH(const void* input, void* output,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int vlanes = VTraits<v_float32>::vlanes();
     v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f);
+    // Clamp prevents v_exp overflow turning (inf-1)/(inf+1) into NaN.
+    v_float32 min_val = vx_setall_f32(-80.f), max_val = vx_setall_f32(88.f);
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
-        v_float32 e2x = v_exp(v_mul(two, x));
+        v_float32 z = v_min(v_max(v_mul(two, x), min_val), max_val);
+        v_float32 e2x = v_exp(z);
         v_float32 t = v_div(v_sub(e2x, one), v_add(e2x, one));
         vx_store(out + i, t);
     }
@@ -260,7 +263,7 @@ static void activationGELUApprox(const void* input, void* output,
     v_float32 half = vx_setall_f32(0.5f), one = vx_setall_f32(1.f);
     v_float32 v_s2pi = vx_setall_f32(sqrt2_pi), v_coeff = vx_setall_f32(coeff);
     v_float32 two = vx_setall_f32(2.f);
-    // Clamp to [-9, 9] to prevent overflow in exp(2*inner); tanh saturates here anyway
+    // Clamp prevents overflow in exp(2*inner); tanh saturates anyway.
     v_float32 clamp_hi = vx_setall_f32(9.f), clamp_lo = vx_setall_f32(-9.f);
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
