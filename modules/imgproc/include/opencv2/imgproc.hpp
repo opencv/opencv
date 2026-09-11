@@ -2213,6 +2213,35 @@ CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          const Scalar& borderValue = Scalar(),
                          AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
+/** @brief Resamples a volume using a dense map of source coordinates.
+
+For each destination voxel `(z, y, x)`, map contains the absolute source coordinate
+`(x_src, y_src, z_src)`. Both src and map are three-dimensional Mat objects with
+spatial dimensions ordered as `(depth, height, width)`; channels are interleaved
+within each voxel, not represented by a fourth Mat dimension.
+
+#INTER_LINEAR performs trilinear interpolation using the eight neighboring voxels
+and the floating-point fractional coordinates (without interpolation-table quantization).
+#INTER_NEAREST rounds each coordinate to the nearest integer, with halfway values
+rounded toward positive infinity. #BORDER_CONSTANT substitutes borderValue for each
+out-of-bounds neighbor; #BORDER_REPLICATE clamps coordinates to the volume boundary.
+Destination storage must not overlap the source or the map.
+
+@param src Nonempty 3D volume of depth CV_8U or CV_32F, with one to four channels.
+@param dst Output volume with the spatial dimensions of map and the type of src.
+@param map Nonempty 3D CV_32FC3 map containing finite `(x, y, z)` coordinates.
+@param interpolation Either #INTER_NEAREST or #INTER_LINEAR.
+@param borderMode Either #BORDER_CONSTANT or #BORDER_REPLICATE.
+@param borderValue Per-channel constant border value, converted to the source type.
+
+@note In Python, use `cv.Mat(volume, wrap_channels=False)` for a `(D, H, W)`
+single-channel volume, `cv.Mat(volume, wrap_channels=True)` for a `(D, H, W, C)`
+volume, and `cv.Mat(map, wrap_channels=True)` for the `(D, H, W, 3)` map.
+*/
+CV_EXPORTS_W void remap3D(InputArray src, OutputArray dst, InputArray map,
+                         int interpolation, int borderMode = BORDER_CONSTANT,
+                         const Scalar& borderValue = Scalar());
+
 /** @brief Converts image transformation maps from one representation to another.
 
 The function converts a pair of maps for remap from one representation to another. The following
