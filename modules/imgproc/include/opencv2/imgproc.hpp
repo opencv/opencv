@@ -2091,11 +2091,138 @@ src.size(), fx, and fy; the type of dst is the same as of src.
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see #InterpolationFlags
 
+@note `src` may also be an N-D tensor or `std::vector<Mat>`/`std::vector<UMat>` -- see the
+@ref resize(InputArray,OutputArray,const ResizeParams&) overload below.
+
 @sa  warpAffine, warpPerspective, remap
  */
 CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
                           Size dsize, double fx = 0, double fy = 0,
                           int interpolation = INTER_LINEAR );
+
+/** @brief Coordinate mapping convention used to align source and destination samples during resize.
+
+#ResizeCoord::PIXEL_CENTER is classic #resize's convention; the others are ONNX Resize's
+`coordinate_transformation_mode` values. Only #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC support
+modes other than #ResizeCoord::PIXEL_CENTER.
+
+@note #ResizeCoord::HALF_PIXEL_SYMMETRIC and #ResizeCoord::ALIGN_CORNERS need the true scale --
+pass it via #ResizeParams::fx / #ResizeParams::fy.
+*/
+enum class ResizeCoord
+{
+    PIXEL_CENTER = 0,       //!< OpenCV's fixed pixel-center formula (default, matches classic #resize)
+    HALF_PIXEL,             //!< ONNX Resize "half_pixel": `src = (dst + 0.5) * scale - 0.5`
+    PYTORCH_HALF_PIXEL,     //!< ONNX Resize "pytorch_half_pixel": #ResizeCoord::HALF_PIXEL, but `src = 0` when the output axis has length 1
+    ALIGN_CORNERS,          //!< ONNX Resize "align_corners": `src = dst * (srcLen-1)/(dstLen-1)`; see @ref ResizeCoord note
+    ASYMMETRIC,             //!< ONNX Resize "asymmetric": `src = dst * scale`
+    TF_HALF_PIXEL_FOR_NN,   //!< ONNX Resize "tf_half_pixel_for_nn": `src = (dst + 0.5) * scale`
+    HALF_PIXEL_SYMMETRIC    //!< ONNX Resize "half_pixel_symmetric"; see @ref ResizeCoord note
+};
+
+/** @brief Index-rounding rule used by #INTER_NEAREST in non-default coordinate modes.
+
+Applies when #ResizeParams::coordMode is not #ResizeCoord::PIXEL_CENTER; matches ONNX
+Resize's `nearest_mode` attribute. No effect for #ResizeCoord::PIXEL_CENTER.
+*/
+enum class ResizeNearest
+{
+    FLOOR = 0,          //!< always round down
+    CEIL,               //!< always round up
+    ROUND_PREFER_CEIL,  //!< round to nearest, ties go up
+    ROUND_PREFER_FLOOR  //!< round to nearest, ties go down (ONNX Resize's default)
+};
+
+/** @brief Parameters of the struct-based and batched #resize overload.
+
+Collects the output geometry and every interpolation flag in one place, like
+@ref cv::dnn::Image2BlobParams, so that the batched #resize does not need a growing argument list.
+
+@sa resize
+*/
+struct CV_EXPORTS_W_SIMPLE ResizeParams
+{
+    CV_WRAP ResizeParams();
+
+    /** @brief Constructs the parameters from the output geometry.
+    @param dsize output spatial size, see #ResizeParams::dsize.
+    @param fx horizontal scale factor, see #ResizeParams::fx.
+    @param fy vertical scale factor, see #ResizeParams::fy.
+    @param interpolation interpolation method, see #ResizeParams::interpolation.
+    */
+    CV_WRAP ResizeParams(Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+
+    //! output spatial size: the height/width of the last two dimensions for a batch, or of the whole
+    //! image for a single 2D input. When empty, it is computed from #fx and #fy, which then must be
+    //! positive.
+    CV_PROP_RW Size dsize;
+
+    //! scale factor along the horizontal axis; when it equals 0, it is computed as
+    //! `(double)dsize.width/src.cols`. For a #coordMode other than #ResizeCoord::PIXEL_CENTER pass
+    //! it explicitly whenever #dsize was obtained by flooring/rounding a scale you already know,
+    //! e.g. an ONNX Resize node's "scales" input: re-deriving the scale from #dsize and the input
+    //! size alone is exact only when #dsize was itself computed as `round(srcSize * scale)`.
+    CV_PROP_RW double fx;
+
+    //! scale factor along the vertical axis; see #ResizeParams::fx.
+    CV_PROP_RW double fy;
+
+    //! interpolation method: #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC/#INTER_AREA/#INTER_LANCZOS4.
+    //! Use #bitExact instead of the _EXACT variants.
+    CV_PROP_RW int interpolation;
+
+    //! bit-exact output; only #INTER_NEAREST/#INTER_LINEAR with #ResizeCoord::PIXEL_CENTER.
+    //! Replaces #INTER_NEAREST_EXACT/#INTER_LINEAR_EXACT.
+    CV_PROP_RW bool bitExact;
+
+    //! coordinate mapping convention; see #ResizeCoord
+    CV_PROP_RW ResizeCoord coordMode;
+
+    //! index-rounding rule for #INTER_NEAREST when #coordMode is not
+    //! #ResizeCoord::PIXEL_CENTER; see #ResizeNearest
+    CV_PROP_RW ResizeNearest nearestMode;
+
+    //! Keys cubic coefficient for #INTER_CUBIC when #coordMode isn't #ResizeCoord::PIXEL_CENTER.
+    //! Default -0.75.
+    CV_PROP_RW float cubicCoeffA;
+
+    //! For a non-#ResizeCoord::PIXEL_CENTER #INTER_CUBIC: zero-weight out-of-bounds taps instead of
+    //! clamping (ONNX `exclude_outside`).
+    CV_PROP_RW bool excludeOutside;
+
+    //! apply antialiasing filter when downscaling (not yet implemented)
+    CV_PROP_RW bool antialias;
+
+    //! precision/speed hint, consistent with #warpAffine/#warpPerspective/#remap/#cvtColor.
+    //! Reserved -- resize has no approximate path yet.
+    CV_PROP_RW AlgorithmHint hint;
+};
+
+/** @overload
+
+Accepts the same three `src` kinds, picked at runtime from `src.kind()`:
+
+- a single 2D image;
+- an N-D tensor (`dims >= 3`): the leading dimensions are batch axes and the last two are height and
+  width. Every plane is resized to the same size, so the interpolation tables are computed once and
+  shared by the whole batch;
+- a `std::vector<Mat>`/`std::vector<UMat>`, whose elements may differ in size. Tables are shared
+  between the elements that happen to have the same size. C++ only, not usable from Python.
+
+For a batch, the rows of all the images are enumerated as a single list of stripes and processed by
+one parallel loop, so the work is spread evenly over the threads whether the batch holds two large
+images or hundreds of small ones.
+
+@note A batch always runs OpenCV's own interpolation kernels. It does not offer the work to a
+custom HAL, which takes whole images only and would therefore give up both the shared tables and
+the balanced split. With such a HAL installed (IPP, for instance) a batch can consequently differ
+from the same images resized one at a time, by however much the two kernels round differently.
+
+@param src input image, N-D batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
+@param dst output image or batch, matching `src`'s kind; see #resize.
+@param params output geometry and interpolation parameters, see @ref ResizeParams.
+*/
+CV_EXPORTS_W void resize( InputArray src, OutputArray dst, const ResizeParams& params );
 
 /** @brief Applies an affine transformation to an image.
 
