@@ -737,6 +737,24 @@ TEST(Imgproc_Morphology, iterated)
     }
 }
 
+TEST(Imgproc_Morphology, bool_dilate)
+{
+    Mat_<bool> src = (Mat_<bool>(3, 3) <<
+        false, true, false,
+        false, false, false,
+        false, false, false);
+    Mat_<bool> dst;
+
+    cv::dilate(src, dst, Mat(), Point(-1, -1), 1);
+
+    Mat_<bool> expected = (Mat_<bool>(3, 3) <<
+        true, true, true,
+        true, true, true,
+        false, false, false);
+    EXPECT_EQ(expected.type(), dst.type());
+    EXPECT_EQ(0.0, cvtest::norm(expected, dst, NORM_INF));
+}
+
 TEST(Imgproc_Sobel, borderTypes)
 {
     int kernelSize = 3;
