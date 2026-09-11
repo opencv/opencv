@@ -145,7 +145,12 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     CV_Assert( 0 <= anchor.x && anchor.x < ksize.width &&
                0 <= anchor.y && anchor.y < ksize.height );
 
-    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);
+    // borderTab keeps the source offsets of the border elements of one row. FilterEngine__proceed()
+    // reads them as int offsets when borderElemSize*sizeof(int) is the element size, and as byte
+    // offsets in all other cases. An element whose channel type is smaller than int uses the byte
+    // form, so borderElemSize is the full element size in bytes there.
+    borderElemSize = CV_ELEM_SIZE1(srcType) >= (int)sizeof(int) ?
+                     srcElemSize/(int)sizeof(int) : srcElemSize;
     int borderLength = std::max(ksize.width - 1, 1);
     borderTab.resize(borderLength*borderElemSize);
 
