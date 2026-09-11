@@ -799,6 +799,7 @@ CV__DNN_INLINE_NS_BEGIN
         int axis;
         int block_size;
         int output_dtype;
+        int output_onnx_dtype;  // raw ONNX dtype; disambiguates E5M2 vs E5M2FNUZ
         bool saturate;
 
         static Ptr<QuantizeLinearLayer> create(const LayerParams& params);
