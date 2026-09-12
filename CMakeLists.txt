@@ -518,6 +518,8 @@ OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"   
 
 OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              (NOT BUILD_opencv_js)
            VERIFY HAVE_UNIFONT)
+OCV_OPTION(WITH_RUBIK_SANS            "Build Rubik font (sans) into OpenCV"                      (NOT BUILD_opencv_js) )
+OCV_OPTION(WITH_RUBIK_ITALIC          "Build Rubik font (italic) into OpenCV"                    (NOT BUILD_opencv_js) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -1454,6 +1456,16 @@ endif()
 
 if(WITH_UNIFONT OR HAVE_UNIFONT)
   status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_RUBIK_SANS AND WITH_RUBIK_ITALIC)
+  status("    Built-in Rubik font:" "YES (sans, italic)")
+elseif(WITH_RUBIK_SANS)
+  status("    Built-in Rubik font:" "YES (sans)")
+elseif(WITH_RUBIK_ITALIC)
+  status("    Built-in Rubik font:" "YES (italic)")
+else()
+  status("    Built-in Rubik font:" "NO")
 endif()
 
 # ========================== MEDIA IO ==========================

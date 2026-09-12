@@ -27,6 +27,21 @@ if(HAVE_IPP)
   endif()
 endif()
 
+## Rubik font
+set(HAVE_RUBIK_SANS    "${WITH_RUBIK_SANS}"    CACHE INTERNAL "")
+set(HAVE_RUBIK_ITALIC  "${WITH_RUBIK_ITALIC}"  CACHE INTERNAL "")
+
+if(HAVE_RUBIK_SANS)
+  ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_sans.h" OcvBuiltinFontSans)
+endif()
+if(HAVE_RUBIK_ITALIC)
+  ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik-Italic.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_italic.h" OcvBuiltinFontItalic)
+endif()
+if(HAVE_RUBIK_SANS OR HAVE_RUBIK_ITALIC)
+  ocv_install_3rdparty_licenses(fonts fonts/Rubik_OFL.txt)
+endif()
+
+## Uni font
 set(UNIFONT_MD5 "fb79cf5b4f4c89414f1233f14c2eb273")
 set(UNIFONT_NAME "WenQuanYiMicroHei.ttf.gz")
 set(UNIFONT_COMMIT "cc7d85179d69a704bee209aa37ce8a657f2f8b34")
@@ -57,14 +72,12 @@ else()
     set(HAVE_UNIFONT OFF CACHE INTERNAL "")
 endif()
 
-ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_sans.h" OcvBuiltinFontSans)
-ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Rubik-Italic.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_italic.h" OcvBuiltinFontItalic)
 if (HAVE_UNIFONT)
     ocv_blob2hdr("${CMAKE_CURRENT_BINARY_DIR}/${UNIFONT_NAME}" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_uni.h" OcvBuiltinFontUni)
 endif()
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${ZLIB_LIBRARIES})
-ocv_install_3rdparty_licenses(fonts fonts/Rubik_OFL.txt)
 
 if(HAVE_HARFBUZZ)
   ocv_module_include_directories(opencv_imgproc ${HARFBUZZ_INCLUDE_DIR})
@@ -72,8 +85,4 @@ if(HAVE_HARFBUZZ)
   if(HARFBUZZ_IS_BUNDLED)
     ocv_install_3rdparty_licenses(harfbuzz "${OpenCV_SOURCE_DIR}/3rdparty/harfbuzz/COPYING")
   endif()
-endif()
-
-if(TARGET opencv_test_imgproc AND HAVE_HARFBUZZ)
-  ocv_target_compile_definitions(opencv_test_imgproc PRIVATE OPENCV_IMGPROC_HAVE_HARFBUZZ=1)
 endif()

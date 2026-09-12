@@ -54,8 +54,12 @@
 
 #endif // HAVE_HARFBUZZ
 
+#ifdef HAVE_RUBIK_SANS
 #include "builtin_font_sans.h"
+#endif
+#ifdef HAVE_RUBIK_ITALIC
 #include "builtin_font_italic.h"
+#endif
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
 #endif
@@ -147,7 +151,13 @@ typedef struct BuiltinFontData
 
 enum
 {
-    BUILTIN_FONTS_NUM = 2
+    BUILTIN_FONTS_NUM = 0
+#ifdef HAVE_RUBIK_SANS
+        +1
+#endif
+#ifdef HAVE_RUBIK_ITALIC
+        +1
+#endif
 #ifdef HAVE_UNIFONT
         +1
 #endif
@@ -155,8 +165,12 @@ enum
 
 static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
+#ifdef HAVE_RUBIK_SANS
     {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
+#endif
+#ifdef HAVE_RUBIK_ITALIC
     {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
+#endif
 #ifdef HAVE_UNIFONT
     {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
 #endif
@@ -1154,13 +1168,8 @@ Point FontRenderEngine::putText_(
     if(fontface.getName().empty())
         fontface.set("sans");
 
-#ifdef HAVE_HARFBUZZ
-    if(!fontface->hb_font)
+    if(!fontface->isFaceAvailable())
         CV_Error(Error::StsError, "No available fonts for putText()");
-#else
-    if(!fontface->ttface)
-        CV_Error(Error::StsError, "No available fonts for putText()");
-#endif
 
     Point pen = org;
     int i, j, len = (int)str_.size();
@@ -1476,7 +1485,8 @@ Point FontRenderEngine::putText_(
         {
             const TextSegment& seg = segments[j];
             int fontidx = seg.fontidx;
-            FontFace& fface = fontidx < 0 ? fontface : builtin_ffaces[fontidx];
+            const bool is_builtin = (fontidx >= 0 && fontidx < BUILTIN_FONTS_NUM);
+            FontFace& fface = is_builtin ? builtin_ffaces[fontidx] : fontface;
             hb_font_t* hb_font = fface->hb_font;
             hb_buffer_reset(hb_buf);
             hb_buffer_add_utf32(hb_buf, chars, len, seg.start, seg.end - seg.start);
@@ -1833,6 +1843,11 @@ namespace cv
 static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
                               String& ttname, int& ttsize, int& ttweight)
 {
+#ifdef HAVE_RUBIK_ITALIC
+    const String bundledItalicTTName("italic");
+#else
+    const String bundledItalicTTName("sans");
+#endif
     double sf = 0;
     switch(fontFace & ~FONT_ITALIC)
     {
@@ -1867,12 +1882,12 @@ static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
         ttweight = thickness <= 1 ? 400 : 800;
         break;
     case FONT_HERSHEY_SCRIPT_COMPLEX:
-        ttname = "italic";
+        ttname = bundledItalicTTName; // "italic"
         sf = 4.0;
         ttweight = thickness <= 1 ? 400 : 600;
         break;
     case FONT_HERSHEY_SCRIPT_SIMPLEX:
-        ttname = "italic";
+        ttname = bundledItalicTTName; // "italic"
         sf = 4.0;
         ttweight = thickness <= 1 ? 300 : 500;
         break;
