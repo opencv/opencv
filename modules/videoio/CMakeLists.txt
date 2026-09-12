@@ -22,6 +22,7 @@ else()
 endif()
 
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
+ocv_add_dispatched_file(cap_mjpeg_cvtcolor AVX2 AVX512_SKX AVX512_ICL)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
 
