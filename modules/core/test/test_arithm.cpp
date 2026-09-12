@@ -4279,8 +4279,7 @@ TEST_P(Core_MaskTypeTest, MeanStdDev)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MaskTypeTest, MaskType::all());
 
-// Still fails in 5.x: https://github.com/opencv/opencv/issues/28557
-TEST(Core_Arithm, DISABLED_mul_overflow_28557)
+TEST(Core_Arithm, mul_overflow_28557)
 {
     uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
     cv::Mat m(1, 6, CV_16U, data);
@@ -4290,6 +4289,54 @@ TEST(Core_Arithm, DISABLED_mul_overflow_28557)
     {
         EXPECT_EQ(65535, res.at<uint16_t>(0, i));
     }
+}
+
+// multiply / pow(x, 2) on 8- and 16-bit integer arrays whose products overflow the element type
+// (and, for 16U, int): every length from 1 to 70 - below and above the 16-bit vector threshold
+// (4 * the destination's native lane count: 32 with 128-bit registers, 64 with 256-bit; the 8-bit
+// thresholds are 64 and 128, above this loop's range) - out of place and in place. Rows shorter
+// than the threshold and the in-place remainder (n % 32 or n % 64 elements) go through the kernels'
+// scalar tail, whose narrowing did not saturate past INT_MAX (#28557). Only the 16U rows can
+// overflow int; the other depths are regression armour.
+template<typename T> static void checkMulOverflow(int depth, const std::vector<T>& vals)
+{
+    const int nvals = (int)vals.size();
+    for (int n = 1; n <= 70; n++)
+    {
+        Mat a(1, n, depth), b(1, n, depth), ref_ab(1, n, depth), ref_aa(1, n, depth);
+        for (int i = 0; i < n; i++)
+        {
+            T x = vals[i % nvals], y = vals[(i * 7 + 3) % nvals];
+            a.at<T>(0, i) = x;
+            b.at<T>(0, i) = y;
+            ref_ab.at<T>(0, i) = saturate_cast<T>((int64)x * (int64)y);
+            ref_aa.at<T>(0, i) = saturate_cast<T>((int64)x * (int64)x);
+        }
+        Mat c;
+        cv::multiply(a, b, c);
+        EXPECT_EQ(0, cvtest::norm(c, ref_ab, NORM_INF)) << "multiply(a, b, c), depth=" << depth << ", n=" << n;
+        cv::pow(a, 2, c);
+        EXPECT_EQ(0, cvtest::norm(c, ref_aa, NORM_INF)) << "pow(a, 2, c), depth=" << depth << ", n=" << n;
+
+        Mat d = a.clone();
+        cv::multiply(d, b, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_ab, NORM_INF)) << "multiply(a, b, a), depth=" << depth << ", n=" << n;
+        d = a.clone();
+        cv::multiply(b, d, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_ab, NORM_INF)) << "multiply(b, a, a), depth=" << depth << ", n=" << n;
+        d = a.clone();
+        cv::pow(d, 2, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_aa, NORM_INF)) << "pow(a, 2, a), depth=" << depth << ", n=" << n;
+    }
+}
+
+TEST(Core_Arithm, mul_overflow_tail_and_inplace)
+{
+    checkMulOverflow<uchar>(CV_8U, {0, 1, 2, 15, 16, 17, 100, 128, 200, 254, 255});
+    checkMulOverflow<schar>(CV_8S, {-128, -127, -100, -12, -11, -1, 0, 1, 11, 12, 100, 127});
+    // 46341^2 and 65535^2 exceed INT_MAX, 46340^2 does not
+    checkMulOverflow<ushort>(CV_16U, {0, 1, 2, 255, 256, 257, 300, 46340, 46341, 50000, 65534, 65535});
+    checkMulOverflow<short>(CV_16S, {-32768, -32767, -256, -182, -181, -1, 0, 1, 181, 182, 256, 32767});
 }
 
 
