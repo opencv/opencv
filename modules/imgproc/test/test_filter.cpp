@@ -2092,6 +2092,44 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_FilterSupportedFormats,
     )
 );
 
+typedef tuple<perf::MatDepth, int, perf::MatType> Filter2DIntegerKernelParams;
+typedef testing::TestWithParam<Filter2DIntegerKernelParams> Imgproc_Filter2D_IntegerKernel;
+
+TEST_P(Imgproc_Filter2D_IntegerKernel, accuracy)
+{
+    const int kernelDepth = get<0>(GetParam());
+    const int kernelSize = get<1>(GetParam());
+    const int srcType = get<2>(GetParam());
+    const int dstDepth = CV_MAT_DEPTH(srcType) == CV_64F ? CV_64F : CV_32F;
+
+    RNG& rng = theRNG();
+    Mat src(47, 53, srcType);
+    rng.fill(src, RNG::UNIFORM, 0, 16);
+
+    Mat coefficients(kernelSize, kernelSize, CV_32S), kernel, referenceKernel;
+    const bool unsignedKernel = kernelDepth == CV_8U || kernelDepth == CV_16U;
+    rng.fill(coefficients, RNG::UNIFORM, unsignedKernel ? 0 : -4, 5);
+    coefficients.convertTo(kernel, kernelDepth);
+    coefficients.convertTo(referenceKernel, CV_64F);
+
+    Mat actual, expected;
+    cv::filter2D(src, actual, dstDepth, kernel, Point(-1, -1), 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, expected, dstDepth, referenceKernel, Point(-1, -1), 0,
+                     BORDER_REPLICATE);
+
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_LE(cvtest::norm(actual, expected, NORM_INF), dstDepth == CV_64F ? 1e-9 : 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Filter2D_IntegerKernel,
+    testing::Combine(
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(3, 13),
+        testing::Values(CV_8UC1, CV_32FC1, CV_32FC3, CV_64FC1)
+    )
+);
+
 TEST(Imgproc_Blur, borderTypes)
 {
     Size kernelSize(3, 3);
