@@ -48,8 +48,18 @@
 #include <hb-ot.h>
 #include <hb-raster.h>
 
+#else
+
+#include "stb_truetype.hpp"
+
+#endif // HAVE_HARFBUZZ
+
+#ifdef HAVE_RUBIK_SANS
 #include "builtin_font_sans.h"
+#endif
+#ifdef HAVE_RUBIK_ITALIC
 #include "builtin_font_italic.h"
+#endif
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
 #endif
@@ -58,6 +68,77 @@
 
 namespace cv
 {
+
+#ifndef HAVE_HARFBUZZ
+
+typedef stbtt_fontinfo font_t;
+
+/////////////////////// Some temporary stub for Harfbuzz API /////////////////////////
+
+typedef struct hb_glyph_position_t
+{
+    int x_advance;
+    int y_advance;
+    int x_offset;
+    int y_offset;
+} hb_glyph_position_t;
+
+
+typedef struct hb_font_t
+{
+    int font_data;
+} hb_font_t;
+
+
+typedef struct hb_buffer_t
+{
+    int buf_data;
+} hb_buffer_t;
+
+
+typedef enum hb_direction_t
+{
+    HB_DIRECTION_INVALID = 0,
+    HB_DIRECTION_LTR = 1,
+    HB_DIRECTION_RTL = 2
+} hb_direction_t;
+
+
+typedef enum hb_script_t
+{
+    HB_SCRIPT_INVALID = -1,
+    HB_SCRIPT_UNKNOWN = 0,
+    HB_SCRIPT_COMMON = 1,
+    HB_SCRIPT_INHERITED,
+    HB_SCRIPT_LATIN,
+    HB_SCRIPT_CYRILLIC,
+    HB_SCRIPT_GREEK,
+
+
+    HB_SCRIPT_HAN,
+    HB_SCRIPT_HIRAGANA,
+
+
+    HB_SCRIPT_ARABIC,
+    HB_SCRIPT_HEBREW,
+    HB_SCRIPT_SYRIAC,
+    HB_SCRIPT_THAANA
+} hb_script_t;
+
+
+typedef struct hb_unicode_funcs_t
+{
+    int funcs_data;
+} hb_unicode_funcs_t;
+
+
+static hb_buffer_t* hb_buffer_create() { return 0; }
+static void hb_buffer_destroy(hb_buffer_t*) {}
+static void hb_buffer_guess_segment_properties(hb_buffer_t *) {}
+static hb_unicode_funcs_t* hb_unicode_funcs_get_default() { return 0; }
+
+#endif // ! HAVE_HARFBUZZ
+
 
 typedef struct BuiltinFontData
 {
@@ -70,7 +151,13 @@ typedef struct BuiltinFontData
 
 enum
 {
-    BUILTIN_FONTS_NUM = 2
+    BUILTIN_FONTS_NUM = 0
+#ifdef HAVE_RUBIK_SANS
+        +1
+#endif
+#ifdef HAVE_RUBIK_ITALIC
+        +1
+#endif
 #ifdef HAVE_UNIFONT
         +1
 #endif
@@ -78,8 +165,12 @@ enum
 
 static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
+#ifdef HAVE_RUBIK_SANS
     {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
+#endif
+#ifdef HAVE_RUBIK_ITALIC
     {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
+#endif
 #ifdef HAVE_UNIFONT
     {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
 #endif
@@ -124,9 +215,13 @@ struct FontFace::Impl {
     Impl()
     {
         initParams();
+#ifdef HAVE_HARFBUZZ
         hb_font = 0;
         hb_upem = 0;
         hb_ascent = 0;
+#else
+        ttface = 0;
+#endif
         scalefactor = 1.0;
         italic = false;
     }
@@ -138,13 +233,18 @@ struct FontFace::Impl {
 
     void deleteFont()
     {
+#ifdef HAVE_HARFBUZZ
         if (hb_font)
             hb_font_destroy(hb_font);
         hb_font = 0;
+#else
+        stbtt_ReleaseFont(&ttface);
+#endif
         currname.clear();
         initParams();
     }
 
+#ifdef HAVE_HARFBUZZ
     // hb_font references fontbuf read-only, so fontbuf must outlive it;
     // deleteFont() always runs before fontbuf changes.
     void createHbFont()
@@ -168,25 +268,44 @@ struct FontFace::Impl {
         hb_ascent = hb_font_get_h_extents(hb_font, &fe) && fe.ascender > 0 ?
                     (int)fe.ascender : (int)hb_upem;
     }
+#endif
 
     void initParams()
     {
         currweight = -1;
         currsize = -1;
+#ifndef HAVE_HARFBUZZ
+        scale = 1;
+#endif
+    }
+
+    bool isFaceAvailable()
+    {
+#ifdef HAVE_HARFBUZZ
+        return hb_font != 0;
+#else
+        return ttface != 0;
+#endif
     }
 
     bool setStd(const BuiltinFontData& fontdata)
     {
         if(fontdata.size <= 1)
             return false;
-        if(hb_font == 0 || currname != fontdata.name)
+        if(!isFaceAvailable() || currname != fontdata.name)
         {
             deleteFont();
             if(!inflate(fontdata.gzdata, fontdata.size, fontbuf))
                 return false;
+#ifdef HAVE_HARFBUZZ
             createHbFont();
             if (!hb_font)
                 return false;
+#else
+            ttface = stbtt_CreateFont(&fontbuf[0], (unsigned)fontbuf.size(), stbtt_GetFontOffsetForIndex(&fontbuf[0],0));
+            if (!ttface)
+                return false;
+#endif
         }
         currname = fontdata.name;
         scalefactor = fontdata.sf;
@@ -199,7 +318,7 @@ struct FontFace::Impl {
     {
         CV_Assert(!fontname.empty());
 
-        if(hb_font != 0 && fontname == currname)
+        if(isFaceAvailable() && fontname == currname)
             return true;
 
         deleteFont();
@@ -230,9 +349,16 @@ struct FontFace::Impl {
             fontbuf.resize(srcdata.size());
             std::copy(srcdata.begin(), srcdata.end(), fontbuf.begin());
         }
+
+#ifdef HAVE_HARFBUZZ
         createHbFont();
         if (!hb_font)
             return false;
+#else
+        ttface = stbtt_CreateFont(&fontbuf[0], (unsigned)fontbuf.size(), stbtt_GetFontOffsetForIndex(&fontbuf[0],0));
+        if (!ttface)
+            return false;
+#endif
         currname = fontname;
         initParams();
         return true;
@@ -240,11 +366,13 @@ struct FontFace::Impl {
 
     bool setParams(int size, int weight)
     {
-        if (!hb_font)
+        if (!isFaceAvailable())
             return false;
         if (std::abs(size - currsize) < 1e-3 &&
             (weight == currweight || weight == 0))
             return true;
+
+#ifdef HAVE_HARFBUZZ
         int hbscale = (hb_ascent > 0)
                     ? cvRound((double)size * 64.0 * hb_upem / hb_ascent)
                     : size*64;
@@ -255,6 +383,17 @@ struct FontFace::Impl {
             hb_font_set_variations(hb_font, &var, 1);
             currweight = weight;
         }
+#else
+        if (weight != currweight && weight != 0) {
+            int params[] = {STBTT_FOURCC('w','g','h','t'), weight};
+            if (!stbtt_SetInstance(ttface, params, 1, 0))
+                return false;
+            currweight = weight;
+        }
+
+        if(size != currsize)
+            scale = stbtt_ScaleForPixelHeightNoDesc(ttface, (float)size);
+#endif
         currsize = size;
         return true;
     }
@@ -264,9 +403,14 @@ struct FontFace::Impl {
     bool italic;
     int currsize;
     int currweight;
+#ifdef HAVE_HARFBUZZ
     hb_font_t* hb_font;
     unsigned hb_upem;   // units per em (HarfBuzz)
     int hb_ascent;      // unscaled hhea ascender, for stb-compatible text sizing
+#else
+    float scale;
+    stbtt_fontinfo* ttface;
+#endif
     std::vector<uchar> fontbuf;
 };
 
@@ -351,12 +495,16 @@ struct TextSegment
 {
     TextSegment()
     {
+#ifndef HAVE_HARFBUZZ
+        ttface = 0;
+#endif
         fontidx = 0;
         start = end = 0;
         script = HB_SCRIPT_UNKNOWN;
         dir = HB_DIRECTION_LTR;
     }
-    TextSegment(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+
+    void init(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
     {
         fontidx = fontidx_;
         start = start_;
@@ -364,12 +512,30 @@ struct TextSegment
         script = script_;
         dir = dir_;
     }
+
+#ifdef HAVE_HARFBUZZ
+    TextSegment(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+    {
+        init(fontidx_, start_, end_, script_, dir_);
+    }
+#else
+    TextSegment(font_t* ttface_, int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+        : ttface(ttface_)
+    {
+        init(fontidx_, start_, end_, script_, dir_);
+    }
+#endif
+
+#ifndef HAVE_HARFBUZZ
+    font_t* ttface;
+#endif
     int fontidx;
     int start, end;
     hb_script_t script;
     hb_direction_t dir;
 };
 
+#ifdef HAVE_HARFBUZZ
 struct FontGlyph
 {
     FontGlyph() { hb_font = 0; index = -1; }
@@ -384,6 +550,23 @@ struct FontGlyph
     int index;
     hb_glyph_position_t pos;
 };
+#else
+struct FontGlyph
+{
+    FontGlyph() { ttface = 0; index = -1; scale = 1.f; }
+    FontGlyph(font_t* ttface_, int glyph_index_, const hb_glyph_position_t& pos_, float scale_)
+    {
+        ttface = ttface_;
+        index = glyph_index_;
+        pos = pos_;
+        scale = scale_;
+    }
+    font_t* ttface;
+    int index;
+    float scale;
+    hb_glyph_position_t pos;
+};
+#endif
 
 
 class FontRenderEngine
@@ -396,16 +579,29 @@ public:
         hb_buffer_guess_segment_properties(hb_buf);
         hb_uni_funcs = hb_unicode_funcs_get_default();
         max_cache_size = (size_t)MAX_CACHE_SIZE;
+#ifdef HAVE_HARFBUZZ
         raster_draw = 0;
+#else
+        glyph_buf = 0;
+        glyph_bufsz = 0;
+#endif
     }
 
     ~FontRenderEngine()
     {
         hb_buffer_destroy(hb_buf);
+#ifdef HAVE_HARFBUZZ
         if(raster_draw)
             hb_raster_draw_destroy(raster_draw);  // also frees its recycled image
+#endif
         for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
             builtin_ffaces[i] = FontFace();
+#ifndef HAVE_HARFBUZZ
+        if (glyph_buf)
+            free(glyph_buf);
+        glyph_buf = 0;
+        glyph_bufsz = 0;
+#endif
     }
 
     void addToCache(const GlyphCacheKey& key, const GlyphCacheVal& val)
@@ -457,12 +653,19 @@ protected:
     size_t max_cache_size;
 
     hb_buffer_t* hb_buf;
+#ifdef HAVE_HARFBUZZ
     hb_raster_draw_t* raster_draw;  // reused across glyphs (thread_local engine)
+#endif
     std::vector<unsigned> u32buf;
     std::vector<TextSegment> segments;
     std::vector<FontGlyph> glyphs;
     std::vector<uchar> pixbuf;
+#ifdef HAVE_HARFBUZZ
     std::vector<uchar> glyph_buf;
+#else
+    uchar* glyph_buf;
+    int glyph_bufsz;
+#endif
 };
 
 thread_local FontRenderEngine fontRenderEngine;
@@ -479,8 +682,9 @@ bool FontFace::set(const String& fontname_)
     String fontname = fontname_;
     if(fontname.empty())
         fontname = "sans";
-    if(impl->hb_font != 0 && impl->currname == fontname)
+    if(impl->isFaceAvailable() && impl->currname == fontname)
         return true;
+
     int i = 0;
     for( ; i < BUILTIN_FONTS_NUM; i++ )
     {
@@ -496,7 +700,7 @@ bool FontFace::set(const String& fontname_)
     if( i >= 0 )
     {
         FontFace& builtin_fface = engine.getStdFontFace(i);
-        if(builtin_fface.impl->hb_font)
+        if(builtin_fface.impl->isFaceAvailable())
         {
             impl = builtin_fface.impl;
             ok = true;
@@ -504,7 +708,7 @@ bool FontFace::set(const String& fontname_)
     }
     else
     {
-        if(impl->hb_font != 0)
+        if(impl->isFaceAvailable())
             impl = makePtr<Impl>();
         ok = impl->set(fontname);
     }
@@ -524,7 +728,7 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
         if(builtinFontData[i].name == fontname && builtinFontData[i].size > 1)
         {
             FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
-            if( builtin_fface.impl->hb_font )
+            if( builtin_fface.impl->isFaceAvailable() )
             {
                 std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
                 size = fbuf.size();
@@ -546,6 +750,7 @@ bool FontFace::setInstance(const std::vector<int>& params)
     if (params.empty())
         return true;
     CV_Assert(params.size() % 2 == 0);
+#ifdef HAVE_HARFBUZZ
     if (!impl->hb_font)
         return false;
     int n = (int)(params.size()/2);
@@ -564,10 +769,17 @@ bool FontFace::setInstance(const std::vector<int>& params)
     // override this instance).
     impl->currweight = -1;
     return true;
+#else
+    if (!impl->ttface)
+        return false;
+    CV_Assert(params.size() % 2 == 0);
+    return stbtt_SetInstance(impl->ttface, &params[0], (int)(params.size()/2), 1) > 0;
+#endif
 }
 
 bool FontFace::getInstance(std::vector<int>& params) const
 {
+#ifdef HAVE_HARFBUZZ
     if (!impl->hb_font)
         return false;
 
@@ -592,6 +804,22 @@ bool FontFace::getInstance(std::vector<int>& params) const
         params[i*2+1] = cvRound(v * 65536.0);
     }
     return true;
+#else
+    if (!impl->ttface)
+        return false;
+
+    stbtt_axisinfo axes[STBTT_MAX_AXES];
+    int i, naxes = stbtt_GetInstance(impl->ttface, axes, STBTT_MAX_AXES);
+    params.resize(naxes*2);
+
+    for( i = 0; i < naxes; i++ )
+    {
+        int tag = axes[i].tag;
+        params[i*2] = CV_FOURCC((char)(tag >> 24), (char)(tag >> 16), (char)(tag >> 8), (char)tag);
+        params[i*2+1] = axes[i].currval;
+    }
+    return naxes > 0;
+#endif
 }
 
 static unsigned calccrc(const std::vector<uchar>& buf)
@@ -867,6 +1095,7 @@ static void drawCharacter(
     }
 }
 
+#ifdef HAVE_HARFBUZZ
 //by amarullz from https://stackoverflow.com/questions/5423960/how-can-i-recognize-rtl-strings-in-c
 static bool isRightToLeft(unsigned c)
 {
@@ -910,6 +1139,7 @@ static int hbGlyphIndex(hb_font_t* font, unsigned c)
     hb_codepoint_t g = 0;
     return font && hb_font_get_nominal_glyph(font, c, &g) ? (int)g : 0;
 }
+#endif
 
 // Round fixed-point value to the nearest whole pixel.
 static inline int roundFixPt(int64_t v, int n) {
@@ -926,11 +1156,14 @@ Point FontRenderEngine::putText_(
 {
     constexpr int FRAC_BITS = 6;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
+#ifndef HAVE_HARFBUZZ
+    int saved_weights[BUILTIN_FONTS_NUM+1]={0};
+#endif
     int weight = weight_*65536;
 
     if(fontface.getName().empty())
         fontface.set("sans");
-    if(!fontface->hb_font)
+    if(!fontface->isFaceAvailable())
         CV_Error(Error::StsError, "No available fonts for putText()");
 
     Point pen = org;
@@ -961,6 +1194,9 @@ Point FontRenderEngine::putText_(
         return org;
     }
 
+#ifndef HAVE_HARFBUZZ
+    saved_weights[BUILTIN_FONTS_NUM] = stbtt_GetWeight(fontface->ttface);
+#endif
     fontface->setParams(size, weight);
 
     for(j = 0; j < BUILTIN_FONTS_NUM; j++)
@@ -968,8 +1204,13 @@ Point FontRenderEngine::putText_(
         FontFace& fface = builtin_ffaces[j];
         if(!builtin_ffaces_initialized)
             fface.set(builtinFontData[j].name);
-        if (fface->hb_font)
+        if (fface->isFaceAvailable())
+        {
+#ifndef HAVE_HARFBUZZ
+            saved_weights[j] = stbtt_GetWeight(fface->ttface);
+#endif
             fface->setParams(size, weight);
+        }
     }
     builtin_ffaces_initialized = true;
 
@@ -1020,15 +1261,23 @@ Point FontRenderEngine::putText_(
     unsigned* chars = &u32buf[0];
     int prev_dy = 0;
 
+#ifdef HAVE_HARFBUZZ
     hb_direction_t glob_dir = HB_DIRECTION_INVALID;
+#endif
 
     while(len > 0)
     {
         int nextline_dy = 0;
+#ifndef HAVE_HARFBUZZ
+        font_t* ttface0 = fontface->ttface;
+        float scale0 = fontface->scale;
+        font_t* curr_ttface = ttface0;
+#endif
 
         segments.clear();
         glyphs.clear();
 
+#ifdef HAVE_HARFBUZZ
         hb_script_t curr_script = HB_SCRIPT_UNKNOWN;
         hb_direction_t curr_dir = HB_DIRECTION_INVALID;
         int curr_fontidx = -1;
@@ -1232,7 +1481,8 @@ Point FontRenderEngine::putText_(
         {
             const TextSegment& seg = segments[j];
             int fontidx = seg.fontidx;
-            FontFace& fface = fontidx < 0 ? fontface : builtin_ffaces[fontidx];
+            const bool is_builtin = (fontidx >= 0 && fontidx < BUILTIN_FONTS_NUM);
+            FontFace& fface = is_builtin ? builtin_ffaces[fontidx] : fontface;
             hb_font_t* hb_font = fface->hb_font;
             hb_buffer_reset(hb_buf);
             hb_buffer_add_utf32(hb_buf, chars, len, seg.start, seg.end - seg.start);
@@ -1250,6 +1500,41 @@ Point FontRenderEngine::putText_(
                 glyphs.push_back(glyph);
             }
         }
+#else
+        for(i = 0; i < len; i++)
+        {
+            int c = chars[i];
+            if(c == '\n')
+                break;
+            font_t* ttface = ttface0;
+            float scale = scale0;
+            int q_glyph_index = stbtt_FindGlyphIndex(ttface0, '?');
+            for(j = -1; j < BUILTIN_FONTS_NUM; j++)
+            {
+                if (j >= 0)
+                {
+                    ttface = builtin_ffaces[j]->ttface;
+                    scale = builtin_ffaces[j]->scale;
+                }
+                int glyph_index = ttface ? stbtt_FindGlyphIndex(ttface, c) : 0;
+                if(glyph_index == 0)
+                {
+                    if (j+1 < BUILTIN_FONTS_NUM)
+                        continue;
+                    ttface = ttface0;
+                    scale = scale0;
+                    glyph_index = q_glyph_index;
+                }
+                hb_glyph_position_t pos;
+                pos.x_advance = pos.y_advance = 0;
+                pos.x_offset = pos.y_offset = 0;
+                glyphs.push_back(FontGlyph(ttface, glyph_index, pos, scale));
+                break;
+            }
+        }
+        if (i == 0)
+            nextline_dy = prev_dy;
+#endif
 
         chars += i;
         len -= i;
@@ -1267,11 +1552,17 @@ Point FontRenderEngine::putText_(
         min_x = std::min(min_x, pen.x);
         max_x = std::max(max_x, pen.x);
 
+#ifdef HAVE_HARFBUZZ
         curr_hb_font = 0;
+#else
+        curr_ttface = 0;
+#endif
         int ascent = 0, descent = 0, linegap = 0;
         for(j = 0; j < nglyphs; j++)
         {
             const FontGlyph& glyph = glyphs[alignment == PUT_TEXT_ALIGN_RIGHT ? nglyphs - j - 1 : j];
+
+#ifdef HAVE_HARFBUZZ
             hb_font_t* hbf = glyph.hb_font;
             if(hbf != curr_hb_font)
             {
@@ -1285,7 +1576,23 @@ Point FontRenderEngine::putText_(
                 linegap = fext.line_gap;
                 if (linegap == 0) linegap = ascent - descent;
             }
+#else
+            font_t* ttface = glyph.ttface;
+            if(ttface != curr_ttface)
+            {
+                curr_ttface = ttface;
+                space_glyph = stbtt_FindGlyphIndex(ttface, ' ');
+                stbtt_GetFontVMetrics(ttface, &ascent, &descent, &linegap);
+                if (linegap == 0) linegap = ascent - descent;
+            }
+#endif
+
+#ifdef HAVE_HARFBUZZ
             GlyphCacheKey key(hbf, glyph.index, size, weight);
+#else
+            float scale = glyph.scale;
+            GlyphCacheKey key(curr_ttface, glyph.index, size, weight, scale);
+#endif
             GlyphCacheVal* cached = findCachedGlyph(key);
             const uchar* bitmap_buf = 0;
             int bitmap_step = 0;
@@ -1293,6 +1600,7 @@ Point FontRenderEngine::putText_(
 
             if(!cached)
             {
+#ifdef HAVE_HARFBUZZ
                 cached = &new_cached;
                 int w=0, h=0;
                 // One rasterizer per thread_local engine: its internal scratch
@@ -1356,7 +1664,26 @@ Point FontRenderEngine::putText_(
                 // extents are whole pixels (scale factor 64); bearings are 1/64 px
                 cached->horiBearingX = rext.x_origin * (1 << FRAC_BITS);
                 cached->horiBearingY = (rext.y_origin + h) * (1 << FRAC_BITS);
+#else
+                cached = &new_cached;
 
+                int w=0, h=0, xoff=0, yoff=0;
+                float advx = 0.f;
+                bitmap_buf = stbtt_GetGlyphBitmapSubpixelRealloc(ttface, scale, scale, 0.f, 0.f,
+                                glyph.index, &w, &h, &bitmap_step, &xoff, &yoff, &advx, &glyph_buf, &glyph_bufsz);
+                if(!bitmap_buf)
+                    continue;
+                // printf("j=%d. bw=%d, bh=%d, step=%d, xoff=%d, yoff=%d, advx=%.1f, glyph_bufsz=%d\n", j, w, h, bitmap_step, xoff, yoff, advx, glyph_bufsz);
+
+                cached->width = w;
+                cached->height = h;
+                cached->advance.x = cvRound(advx*64);
+                cached->advance.y = 0;
+                cached->ascent = cvRound(ascent*glyph.scale);
+                cached->linegap = cvRound(linegap*glyph.scale);
+                cached->horiBearingX = (int)(xoff*64);
+                cached->horiBearingY = (int)(-yoff*64);
+#endif
                 bbox = Rect(0, 0, w, h);
 
                 if(w <= MAX_CACHED_GLYPH_SIZE && h <= MAX_CACHED_GLYPH_SIZE)
@@ -1388,10 +1715,17 @@ Point FontRenderEngine::putText_(
             // sub-pixel pen would only add jitter to the inter-glyph gaps, while
             // flooring every advance systematically tightens the spacing. Rounding
             // the advance keeps the gaps even and removes that bias.
+
+#ifdef HAVE_HARFBUZZ
             int dx = roundFixPt(pos.x_advance, FRAC_BITS);
             int dy = roundFixPt(pos.y_advance, FRAC_BITS);
+#else
+            int dx = roundFixPt(cached->advance.x, FRAC_BITS);
+            int dy = roundFixPt(cached->advance.y, FRAC_BITS);
+#endif
             int new_pen_x = pen.x + dx*alignSign;
             nextline_dy = max(nextline_dy, cached->linegap);
+
             // TODO: this wrapping algorithm is quite dumb,
             // preferably should split text at word boundary
             if( wrap && imgsize.width > 0 && new_pen_x*alignSign > x1*alignSign )
@@ -1445,6 +1779,19 @@ Point FontRenderEngine::putText_(
             *bbox_ = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
     }
 
+#ifndef HAVE_HARFBUZZ
+    // restore the weights
+    if (weight != 0)
+        for(j = 0; j <= BUILTIN_FONTS_NUM; j++)
+        {
+            font_t* ttface = (j < BUILTIN_FONTS_NUM ? builtin_ffaces[j] : fontface)->ttface;
+            if (!ttface || stbtt_GetWeight(ttface) == saved_weights[j])
+                continue;
+            int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
+            stbtt_SetInstance(ttface, params, 1, 0);
+        }
+#endif
+
     return pen;
 }
 
@@ -1482,43 +1829,6 @@ Rect getTextSize(Size imgsize, const String& str, Point org,
 
 } // namespace cv
 
-#else // HAVE_HARFBUZZ
-
-namespace cv
-{
-
-// Text rendering is implemented entirely on top of HarfBuzz. When OpenCV is
-// built without it, the public text API is present but throws.
-struct FontFace::Impl {};
-
-FontFace::FontFace() {}
-FontFace::FontFace(const String&) {}
-bool FontFace::set(const String&) { return false; }
-String FontFace::getName() const { return String(); }
-FontFace::Impl* FontFace::operator -> () { return impl.get(); }
-FontFace::~FontFace() {}
-bool FontFace::setInstance(const std::vector<int>&) { return false; }
-bool FontFace::getInstance(std::vector<int>&) const { return false; }
-bool FontFace::getBuiltinFontData(const String&, const uchar*&, size_t&) { return false; }
-
-#define OPENCV_NO_TEXT_RENDERING_MSG \
-    "Text rendering is not supported. Compile OpenCV with WITH_HARFBUZZ=ON."
-
-Point putText(InputOutputArray, const String&, Point, Scalar,
-              FontFace&, int, int, PutTextFlags, Range)
-{
-    CV_Error(Error::StsNotImplemented, OPENCV_NO_TEXT_RENDERING_MSG);
-}
-
-Rect getTextSize(Size, const String&, Point, FontFace&, int, int, PutTextFlags, Range)
-{
-    CV_Error(Error::StsNotImplemented, OPENCV_NO_TEXT_RENDERING_MSG);
-}
-
-} // namespace cv
-
-#endif // HAVE_HARFBUZZ
-
 //////////////////////////// text drawing functions for backward compatibility ///////////////////////////
 
 namespace cv
@@ -1527,6 +1837,11 @@ namespace cv
 static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
                               String& ttname, int& ttsize, int& ttweight)
 {
+#ifdef HAVE_RUBIK_ITALIC
+    const String bundledItalicTTName = "italic";
+#else
+    const String bundledItalicTTName = "sans";
+#endif
     double sf = 0;
     switch(fontFace & ~FONT_ITALIC)
     {
@@ -1561,12 +1876,12 @@ static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
         ttweight = thickness <= 1 ? 400 : 800;
         break;
     case FONT_HERSHEY_SCRIPT_COMPLEX:
-        ttname = "italic";
+        ttname = bundledItalicTTName; // "italic"
         sf = 4.0;
         ttweight = thickness <= 1 ? 400 : 600;
         break;
     case FONT_HERSHEY_SCRIPT_SIMPLEX:
-        ttname = "italic";
+        ttname = bundledItalicTTName; // "italic"
         sf = 4.0;
         ttweight = thickness <= 1 ? 300 : 500;
         break;

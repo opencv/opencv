@@ -150,4 +150,10 @@
 /* The font "uni" (WQY MicroHei) is available */
 #cmakedefine HAVE_UNIFONT
 
+/* The Rubik font (sans) is available */
+#cmakedefine HAVE_RUBIK_SANS
+
+/* The Rubik font (italic) is available */
+#cmakedefine HAVE_RUBIK_ITALIC
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED
