@@ -18,53 +18,81 @@ struct CvNThreadScope{
     }
 };
 
-// Order-independent contour-set comparison
+// Ignore contour order, but preserve multiplicity and the point order within each contour.
 static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
 {
-        //order senstive hash
-    auto Hash=[](const std::vector<cv::Point>& contour) {
-        // FNV-1a 64-bit hash constants
-        constexpr uint64_t FNV_OFFSET = 1469598103934665603ULL;
-        constexpr uint64_t FNV_PRIME  = 1099511628211ULL;
+    if (cont1.size() != cont2.size())
+        return false;
 
-        uint64_t hash = FNV_OFFSET;
+    // Sort references so that large contour point buffers do not need to be copied.
+    vector<const vector<Point>*> sorted1, sorted2;
+    sorted1.reserve(cont1.size());
+    sorted2.reserve(cont2.size());
+    for (const auto& contour : cont1)
+        sorted1.push_back(&contour);
+    for (const auto& contour : cont2)
+        sorted2.push_back(&contour);
 
-        // Mix in the size so that contours with different lengths
-        // but same prefix produce different hashes
-        uint64_t size = static_cast<uint64_t>(contour.size());
-        for (int i = 0; i < 8; ++i) {
-            hash ^= (size >> (i * 8)) & 0xFF;
-            hash *= FNV_PRIME;
-        }
-
-        // Mix in each point's x and y coordinates byte by byte
-        for (const cv::Point& p : contour) {
-            uint32_t x = static_cast<uint32_t>(p.x);
-            uint32_t y = static_cast<uint32_t>(p.y);
-
-            for (int i = 0; i < 4; ++i) {
-                hash ^= (x >> (i * 8)) & 0xFF;
-                hash *= FNV_PRIME;
-            }
-            for (int i = 0; i < 4; ++i) {
-                hash ^= (y >> (i * 8)) & 0xFF;
-                hash *= FNV_PRIME;
-            }
-        }
-        return hash;
+    const auto pointLess = [](const Point& a, const Point& b) {
+        return a.x < b.x || (a.x == b.x && a.y < b.y);
     };
-    std::set<uint64> hashes1,hashes2;
-    for(auto &contour:cont1){
-        hashes1.insert( Hash(contour));
-    }
-    for(auto &contour:cont2){
-        hashes2.insert( Hash(contour));
-    }
-
-    for(auto &h1:hashes1){//element in cont and not in cont2
-        if( hashes2.find(h1) ==hashes2.end()) return false;
+    const auto contourLess = [&](const vector<Point>* a, const vector<Point>* b) {
+        return std::lexicographical_compare(a->begin(), a->end(), b->begin(), b->end(), pointLess);
+    };
+    std::sort(sorted1.begin(), sorted1.end(), contourLess);
+    std::sort(sorted2.begin(), sorted2.end(), contourLess);
+    for (size_t i = 0; i < sorted1.size(); ++i)
+    {
+        if (*sorted1[i] != *sorted2[i])
+            return false;
     }
     return true;
+}
+
+TEST(Imgproc_FindTRUContoursComparison, empty_inputs)
+{
+    const vector<vector<Point>> empty;
+    const vector<vector<Point>> contour = {{Point(1, 2)}};
+    EXPECT_TRUE(trucoContoursMatch(empty, empty));
+    EXPECT_FALSE(trucoContoursMatch(empty, contour));
+    EXPECT_FALSE(trucoContoursMatch(contour, empty));
+}
+
+TEST(Imgproc_FindTRUContoursComparison, contour_order)
+{
+    const vector<Point> a = {Point(1, 2), Point(3, 4)};
+    const vector<Point> b = {Point(-1, 5)};
+    EXPECT_TRUE(trucoContoursMatch({a, b}, {b, a}));
+    EXPECT_TRUE(trucoContoursMatch({a, a, b}, {b, a, a}));
+}
+
+TEST(Imgproc_FindTRUContoursComparison, missing_or_extra_contours)
+{
+    const vector<Point> a = {Point(1, 2)};
+    const vector<Point> b = {Point(3, 4)};
+    EXPECT_FALSE(trucoContoursMatch({a}, {a, b}));
+    EXPECT_FALSE(trucoContoursMatch({a, b}, {a}));
+}
+
+TEST(Imgproc_FindTRUContoursComparison, multiplicity)
+{
+    const vector<Point> a = {Point(1, 2)};
+    const vector<Point> b = {Point(3, 4)};
+    EXPECT_FALSE(trucoContoursMatch({a}, {a, a}));
+    EXPECT_FALSE(trucoContoursMatch({a, a}, {a}));
+    EXPECT_FALSE(trucoContoursMatch({a, a, b}, {a, b, b}));
+    EXPECT_FALSE(trucoContoursMatch({a, b, b}, {a, a, b}));
+}
+
+TEST(Imgproc_FindTRUContoursComparison, point_sequences)
+{
+    const vector<Point> a = {Point(1, 2), Point(3, 4)};
+    const vector<Point> reversed = {Point(3, 4), Point(1, 2)};
+    const vector<Point> different = {Point(1, 2), Point(3, 5)};
+    EXPECT_TRUE(trucoContoursMatch({a}, {a}));
+    EXPECT_FALSE(trucoContoursMatch({a}, {reversed}));
+    EXPECT_FALSE(trucoContoursMatch({a}, {different}));
+    EXPECT_FALSE(trucoContoursMatch({a}, {{Point(1, 2)}}));
 }
 
 typedef testing::TestWithParam<ContourApproximationModes> Imgproc_FindTRUContours;
