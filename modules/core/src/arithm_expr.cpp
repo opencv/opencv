@@ -574,7 +574,7 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
         // "don't notice" the difference and hand out the useful semantics. The sub is necessarily
         // the last instruction and its result the last temp (abs is emitted right after its
         // argument) - retire both, the moveToOutput manoeuvre.
-        if (!prog.empty() && arginfo[a].kind == TEMP &&
+        if (!prog.empty() && arginfo[a].kind == TEMP && !arginfo[a].pinned &&
             prog.back().op == OP_SUB && prog.back().result == a &&
             arginfo[a].index == ntemps - 1)
         {
@@ -695,7 +695,7 @@ int TExpr::moveToOutput(int temp, int out)
         if (ins.result == temp) producer = i;
         if (ins.arg0 == temp || ins.arg1 == temp || ins.arg2 == temp) usedAsArg = true;
     }
-    if (arginfo[temp].kind == TEMP && producer >= 0 && !usedAsArg &&
+    if (arginfo[temp].kind == TEMP && producer >= 0 && !usedAsArg && !arginfo[temp].pinned &&
         arginfo[temp].depth == arginfo[out].depth)
     {
         // MOVE semantics: redirect `temp`'s single producer to write `out` directly, then leave the
@@ -1778,7 +1778,12 @@ struct Parser
                 if (cur.type == T_ASSIGN)
                 {
                     advance();
-                    env[name] = parseTernary();
+                    const int slot = parseTernary();
+                    // The name can be used any number of times below (including not at all), so the
+                    // value must outlive the expression that produced it: pin the slot so the
+                    // retire-the-temp optimizations skip it.
+                    e.arginfo[slot].pinned = true;
+                    env[name] = slot;
                     expect(T_SEMI, "expected ';' after assignment");
                     continue;
                 }
