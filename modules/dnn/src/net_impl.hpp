@@ -537,6 +537,7 @@ struct Net::Impl : public detail::NetImplBase
     void assignBuffers();
     // fuse batch norm, add bias and activation to convolution
     void fuseBasic();
+    void fuseChains();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
     // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style
