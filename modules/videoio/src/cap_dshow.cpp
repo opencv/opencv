@@ -1381,13 +1381,11 @@ int videoInput::listDevices(bool silent){
                 if (FAILED(hr)) hr = pPropBag->Read(L"Description", &varName, 0);
 
                 if (SUCCEEDED(hr)){
-                    int count = 0;
-                    int maxLen = sizeof(deviceNames[0])/sizeof(deviceNames[0][0]) - 2;
-                    while( varName.bstrVal[count] != 0x00 && count < maxLen) {
-                        deviceNames[deviceCounter][count] = (char)varName.bstrVal[count];
-                        count++;
-                    }
-                    deviceNames[deviceCounter][count] = 0;
+                    if (::WideCharToMultiByte(CP_UTF8, 0, varName.bstrVal, -1,
+                                              deviceNames[deviceCounter],
+                                              sizeof(deviceNames[0])/sizeof(deviceNames[0][0]),
+                                              NULL, NULL) == 0)
+                        deviceNames[deviceCounter][0] = 0;
 
                     if(!silent) DebugPrintOut("SETUP: %i) %s\n",deviceCounter, deviceNames[deviceCounter]);
                 }
@@ -3694,6 +3692,19 @@ void VideoCapture_DShow::close()
 Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params)
 {
     return makePtr<VideoCapture_DShow>(index, params);
+}
+
+std::vector<VideoDeviceInfo> enumerate_DShow_devices()
+{
+    std::vector<VideoDeviceInfo> result;
+    const int count = videoInput::listDevices(true);
+
+    for (int i = 0; i < count; i++)
+    {
+        const char* name = videoInput::getDeviceName(i);
+        result.push_back(makeVideoDeviceInfo(i, CAP_DSHOW, name ? name : ""));
+    }
+    return result;
 }
 
 
