@@ -845,6 +845,18 @@ static void reduceRowSum_8u32s(const Mat& srcmat, Mat& dstmat)
             }
 #else
             const int vlanes8 = VTraits<v_uint8>::vlanes();
+#if defined(__riscv_v) && __riscv_v >= 1000000
+            // RISC-V RVV: accumulate u8m1 directly into the u16m2 accumulator.
+            // vwaddu.wv performs u16m2 += u8m1 in one widening-add operation.
+            // flush_at=256 guarantees 256*255=65280, so u16 accumulation cannot overflow.
+            for (; i <= len - vlanes8; i += vlanes8)
+            {
+                vuint8m1_t vs = __riscv_vle8_v_u8m1(src + i, vlanes8);
+                vuint16m2_t va = __riscv_vle16_v_u16m2(buf16 + i, vlanes8);
+                va = __riscv_vwaddu_wv_u16m2(va, vs, vlanes8);
+                __riscv_vse16_v_u16m2(buf16 + i, va, vlanes8);
+            }
+#else
             for (; i <= len - vlanes8; i += vlanes8)
             {
                 v_uint16 lo, hi;
@@ -852,6 +864,7 @@ static void reduceRowSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 v_store(buf16 + i, v_add(vx_load(buf16 + i), lo));
                 v_store(buf16 + i + vlanes16, v_add(vx_load(buf16 + i + vlanes16), hi));
             }
+#endif
 #endif
             for (; i < len; i++)
                 buf16[i] += (ushort)src[i];
