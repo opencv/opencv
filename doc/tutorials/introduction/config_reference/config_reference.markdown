@@ -302,6 +302,48 @@ At the build time this feature does not have any prerequisites. During runtime a
 
 TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS`, `WITH_OPENCL_D3D11_NV`, `WITH_VA_INTEL`
 
+## Image Processing (imgproc module) {#tutorial_config_reference_func_imgproc}
+
+### Use HarfBuzz as Font Engine
+
+`WITH_HARFBUZZ` (default: _ON_)
+
+Enables complex text shaping and rendering via the HarfBuzz library.
+
+If disabled, OpenCV falls back to STB TrueType, which may change the visual appearance and layout of rendered text.
+
+### Build HarfBuzz library
+
+`BUILD_HARFBUZZ` (default: _ON_)
+
+Builds the bundled HarfBuzz library.
+
+If disabled while `WITH_HARFBUZZ` is enabled, OpenCV searches for and uses a system-installed HarfBuzz library.
+
+@note OpenCV requires rendering features from HarfBuzz, which are optional in some HarfBuzz builds.
+If the system-installed HarfBuzz lacks rendering support, OpenCV will fail to detect it and fall back to building the bundled HarfBuzz library.
+
+| `WITH_HARFBUZZ` | `BUILD_HARFBUZZ` | Can HarfBuzz draw text? | What renderer backend is used |
+| :---: | :---: | :---: | :--- |
+| _ON_ | _ON_ | (Any) | Bundled HarfBuzz (Default) |
+| _ON_ | _OFF_ | Yes | System-installed HarfBuzz |
+| _ON_ | _OFF_ | No | Bundled HarfBuzz (Fallback) |
+| _OFF_ | _OFF_ | (Any) | STB TrueType |
+
+### Built-in fonts
+
+The following built-in fonts are used for rendering text in OpenCV (e.g. `cv::putText()`).
+
+| Fonts | Option | Default | Supported glyphs |
+| :--- | :--- | :--- | :--- |
+| Rubik sans | `WITH_RUBIK_SANS` | _ON_ | Latin, Cyrillic, Hebrew, numbers, and basic symbols |
+| Rubik italic | `WITH_RUBIK_ITALIC` | _ON_ | Latin, Cyrillic, Hebrew, numbers, and basic symbols (Italic) |
+| Unifont (WenQuanYi Micro Hei) | `WITH_UNIFONT` | _ON_ | Wide Unicode coverage including CJK (Chinese, Japanese, Korean) |
+
+@note **[Unifont]** If you do not require CJK support, you can disable `WITH_UNIFONT` to reduce binary size.
+@note **[Rubik italic]** If `WITH_RUBIK_ITALIC` is disabled, OpenCV will fall back to Rubik sans (if available), which may affect the visual appearance.
+@note **[All fonts]** If all built-in fonts are disabled, external fonts must be provided when calling text rendering functions.
+
 ## Image reading and writing (imgcodecs module)  {#tutorial_config_reference_func_imgcodecs}
 
 ### Built-in formats
