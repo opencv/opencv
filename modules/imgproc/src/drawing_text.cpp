@@ -368,7 +368,6 @@ struct FontFace::Impl {
     {
         if (!isFaceAvailable())
             return false;
-
         if (std::abs(size - currsize) < 1e-3 &&
             (weight == currweight || weight == 0))
             return true;
@@ -683,7 +682,6 @@ bool FontFace::set(const String& fontname_)
     String fontname = fontname_;
     if(fontname.empty())
         fontname = "sans";
-
     if(impl->isFaceAvailable() && impl->currname == fontname)
         return true;
 
@@ -810,11 +808,9 @@ bool FontFace::getInstance(std::vector<int>& params) const
     if (!impl->ttface)
         return false;
 
-
     stbtt_axisinfo axes[STBTT_MAX_AXES];
     int i, naxes = stbtt_GetInstance(impl->ttface, axes, STBTT_MAX_AXES);
     params.resize(naxes*2);
-
 
     for( i = 0; i < naxes; i++ )
     {
@@ -1167,7 +1163,6 @@ Point FontRenderEngine::putText_(
 
     if(fontface.getName().empty())
         fontface.set("sans");
-
     if(!fontface->isFaceAvailable())
         CV_Error(Error::StsError, "No available fonts for putText()");
 
@@ -1209,7 +1204,8 @@ Point FontRenderEngine::putText_(
         FontFace& fface = builtin_ffaces[j];
         if(!builtin_ffaces_initialized)
             fface.set(builtinFontData[j].name);
-        if (fface->isFaceAvailable()) {
+        if (fface->isFaceAvailable())
+        {
 #ifndef HAVE_HARFBUZZ
             saved_weights[j] = stbtt_GetWeight(fface->ttface);
 #endif
@@ -1539,6 +1535,7 @@ Point FontRenderEngine::putText_(
         if (i == 0)
             nextline_dy = prev_dy;
 #endif
+
         chars += i;
         len -= i;
 
@@ -1605,7 +1602,6 @@ Point FontRenderEngine::putText_(
             {
 #ifdef HAVE_HARFBUZZ
                 cached = &new_cached;
-
                 int w=0, h=0;
                 // One rasterizer per thread_local engine: its internal scratch
                 // (edges, row buffers, edge buckets) and the output image are
@@ -1761,7 +1757,6 @@ Point FontRenderEngine::putText_(
                 drawCharacter(img, color, bitmap_buf, bitmap_step, bbox.size(), x, y, bottom_left);
             }
 
-
             pen.x = new_pen_x;
             pen.y += dy;
             min_x = std::min(min_x, pen.x);
@@ -1795,7 +1790,6 @@ Point FontRenderEngine::putText_(
             int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
             stbtt_SetInstance(ttface, params, 1, 0);
         }
-
 #endif
 
     return pen;
@@ -1844,9 +1838,9 @@ static void hersheyToTruetype(int fontFace, double fontScale, int thickness,
                               String& ttname, int& ttsize, int& ttweight)
 {
 #ifdef HAVE_RUBIK_ITALIC
-    const String bundledItalicTTName("italic");
+    const String bundledItalicTTName = "italic";
 #else
-    const String bundledItalicTTName("sans");
+    const String bundledItalicTTName = "sans";
 #endif
     double sf = 0;
     switch(fontFace & ~FONT_ITALIC)
