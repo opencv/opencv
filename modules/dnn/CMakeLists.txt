@@ -23,6 +23,14 @@ ocv_add_module(dnn opencv_core opencv_imgproc opencv_geometry OPTIONAL opencv_im
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
+# Compiler version alone doesn't guarantee the assembler supports AVX-VNNI. See #29840.
+if((CV_GCC OR CV_CLANG) AND (X86 OR X86_64))
+  ocv_check_compiler_flag(CXX "" OPENCV_DNN_CHECK_AVXVNNI_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avxvnni_asm.cpp")
+  if(NOT OPENCV_DNN_CHECK_AVXVNNI_ASM)
+    ocv_target_compile_definitions(${the_module} PRIVATE "CV_AVXVNNI_AVAILABLE=0")
+  endif()
+endif()
+
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
