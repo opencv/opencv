@@ -2552,4 +2552,61 @@ TEST(SolvePnP, illConditionedEPnPWorldFrame)
     }
 }
 
+TEST(SolvePnP, illConditionedIPPEHomography)
+{
+    constexpr int pointCount = 20;
+    constexpr double cameraFocalLength = 1000.0;
+    constexpr double cameraCenterX = 320.0;
+    constexpr double cameraCenterY = 240.0;
+    constexpr double coordinateScale = 1e-11;
+    constexpr double objectDepth = 10.0;
+    constexpr double imageNoise = 1e-12;
+    constexpr double poseTolerance = 1e-2;
+    const Mat cameraMatrix = (Mat_<double>(3, 3) <<
+        cameraFocalLength, 0.0, cameraCenterX,
+        0.0, cameraFocalLength, cameraCenterY,
+        0.0, 0.0, 1.0);
+    const Mat expectedRvec = (Mat_<double>(3, 1) << 0.1, -0.2, 0.3);
+    const Mat expectedTvec = (Mat_<double>(3, 1) << 0.2, -0.1, objectDepth);
+    std::vector<Point3d> objectPoints;
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * (point % 5) / 4.0;
+        const double y = coordinateScale * (-1.0 + 2.0 * (point / 5) / 3.0);
+        objectPoints.emplace_back(x, y, 0.0);
+    }
+
+    std::vector<Point2d> imagePoints;
+    projectPoints(objectPoints, expectedRvec, expectedTvec, cameraMatrix,
+                  noArray(), imagePoints);
+    for (int point = 0; point < pointCount; ++point)
+    {
+        imagePoints[point].x += imageNoise * (point % 3 - 1);
+        imagePoints[point].y += imageNoise * (2.0 * (point % 2) - 1.0);
+    }
+
+    Mat estimatedRvec;
+    Mat estimatedTvec;
+    const bool success = solvePnP(objectPoints, imagePoints, cameraMatrix,
+                                  noArray(), estimatedRvec, estimatedTvec,
+                                  false, SOLVEPNP_IPPE);
+
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(checkRange(estimatedRvec));
+    ASSERT_TRUE(checkRange(estimatedTvec));
+    Matx33d estimatedRotation;
+    Matx33d expectedRotation;
+    cv::Rodrigues(estimatedRvec, estimatedRotation);
+    cv::Rodrigues(expectedRvec, expectedRotation);
+    RecordProperty("rotation_error_rad", cv::format("%.17g",
+        angularDistance(estimatedRotation, expectedRotation)));
+    RecordProperty("translation_error", cv::format("%.17g",
+        cv::norm(estimatedTvec - expectedTvec, NORM_L2)));
+    EXPECT_NEAR(cv::norm(estimatedRvec - expectedRvec, NORM_INF), 0.0,
+                poseTolerance);
+    EXPECT_NEAR(cv::norm(estimatedTvec - expectedTvec, NORM_INF), 0.0,
+                poseTolerance);
+}
+
 }} // namespace
