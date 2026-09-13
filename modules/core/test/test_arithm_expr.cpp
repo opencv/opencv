@@ -573,4 +573,73 @@ TEST(Core_TExpr, named_value_single_use_still_correct)
     EXPECT_LE(cvtest::norm(got2, exp2, NORM_INF), 1e-3);
 }
 
+
+// a*alpha + b*beta [+ gamma] is folded into the single fused OP_ADDW kernel. The fused form
+// evaluates the whole expression at the kernel's own work precision, so on integer types it does
+// NOT saturate at each intermediate step the way the written-out multiplies do - it agrees with
+// cv::addWeighted, which is what the expression means. These check exactly that agreement.
+typedef testing::TestWithParam< tuple<int, int> > Core_TExpr_AddW;
+
+TEST_P(Core_TExpr_AddW, matches_addWeighted)
+{
+    const int depth = get<0>(GetParam());
+    const int which = get<1>(GetParam());
+    static const double A[] = { 2.0,  2.5, -1.5, 0.25 };
+    static const double B[] = { 3.0, -1.5,  0.5, 0.75 };
+    static const double G[] = { 1.0,  7.0,  0.0, -3.5 };
+    const double alpha = A[which], beta = B[which], gamma = G[which];
+
+    Mat a(17, 23, depth), b(17, 23, depth);
+    theRNG().fill(a, RNG::UNIFORM, 0, 50);
+    theRNG().fill(b, RNG::UNIFORM, 0, 50);
+
+    const String e = cv::format("{0} * %.17g + {1} * %.17g + %.17g", alpha, beta, gamma);
+    Mat got = expr1(e, { a, b });
+
+    Mat exp; cv::addWeighted(a, alpha, b, beta, gamma, exp);
+    ASSERT_EQ(exp.type(), got.type());
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3) << e << " on depth " << depth;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_TExpr_AddW,
+    testing::Combine(testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                     testing::Values(0, 1, 2, 3)));
+
+// gamma may be absent, and either operand order of the scalar is the same expression.
+TEST(Core_TExpr, addweighted_fusion_variants)
+{
+    Mat a(12, 15, CV_32F), b(12, 15, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    Mat exp; cv::addWeighted(a, 2.0, b, 3.0, 0.0, exp);
+    EXPECT_LE(cvtest::norm(expr1("{0}*2.0 + {1}*3.0", { a, b }), exp, NORM_INF), 1e-3) << "no gamma";
+    EXPECT_LE(cvtest::norm(expr1("2.0*{0} + 3.0*{1}", { a, b }), exp, NORM_INF), 1e-3) << "scalar first";
+
+    Mat expg; cv::addWeighted(a, 2.0, b, 3.0, 5.0, expg);
+    EXPECT_LE(cvtest::norm(expr1("5.0 + {0}*2.0 + {1}*3.0", { a, b }), expg, NORM_INF), 1e-3) << "leading gamma";
+}
+
+// Shapes that look similar but are NOT an addWeighted must keep their own meaning.
+TEST(Core_TExpr, addweighted_fusion_declined)
+{
+    Mat a(10, 14, CV_32F), b(10, 14, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    // a*b is not a scaled input - the first term has no scalar factor.
+    Mat got = expr1("{0}*{1} + {1}*2.0", { a, b });
+    Mat ab, b2, exp; cv::multiply(a, b, ab); cv::multiply(b, 2.0, b2); cv::add(ab, b2, exp);
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3) << "array * array term";
+
+    // A named term is used again below, so its multiply cannot be folded away.
+    std::vector<Mat> out;
+    cv::texpr("u = {0}*2.0; v = {1}*3.0; (u + v, u)", std::vector<Mat>{ a, b }, out);
+    ASSERT_EQ(out.size(), 2u);
+    Mat sum; cv::addWeighted(a, 2.0, b, 3.0, 0.0, sum);
+    Mat u; cv::multiply(a, 2.0, u);
+    EXPECT_LE(cvtest::norm(out[0], sum, NORM_INF), 1e-3) << "u + v";
+    EXPECT_LE(cvtest::norm(out[1], u,   NORM_INF), 1e-3) << "u reused";
+}
+
 }} // namespace
