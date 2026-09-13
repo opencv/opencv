@@ -2405,7 +2405,8 @@ TEST(AP3P, ctheta1p_nan_23607)
     }
 }
 
-static void checkEPnPWithPixelNoise(int seed, double thickness = 0.0)
+static void checkEPnPWithPixelNoise(int seed, double thickness = 0.0,
+                                  bool alignWithAxes = false)
 {
     constexpr int pointCount = 40;
     constexpr int noiseSeedOffset = 1000;
@@ -2420,7 +2421,7 @@ static void checkEPnPWithPixelNoise(int seed, double thickness = 0.0)
     const Matx33d camera(focalLengthPixels, 0.0, centerXPixels,
                         0.0, focalLengthPixels, centerYPixels,
                         0.0, 0.0, 1.0);
-    const Vec3d worldRvec(0.3, -0.2, 0.4);
+    const Vec3d worldRvec = alignWithAxes ? Vec3d::all(0.0) : Vec3d(0.3, -0.2, 0.4);
     const Vec3d expectedRvec(0.1, -0.2, 0.3);
     const Vec3d expectedTranslation(0.2, -0.1, 6.0);
     Matx33d worldRotation;
@@ -2475,6 +2476,15 @@ static void checkEPnPWithPixelNoise(int seed, double thickness = 0.0)
     EXPECT_NEAR(reprojectionError, 0.0, reprojectionTolerancePixels);
 }
 
+TEST(SolvePnP, illConditionedEPnPPoseSystem)
+{
+    constexpr int seed = 25;
+    constexpr int axisAlignedSeed = 19;
+    constexpr double planarThickness = 0.0;
+    checkEPnPWithPixelNoise(seed);
+    checkEPnPWithPixelNoise(axisAlignedSeed, planarThickness, true);
+}
+
 TEST(SolvePnP, illConditionedEPnPControlPoints)
 {
     constexpr int planarSeed = 33;
@@ -2483,5 +2493,59 @@ TEST(SolvePnP, illConditionedEPnPControlPoints)
     checkEPnPWithPixelNoise(planarSeed);
     checkEPnPWithPixelNoise(nearlyPlanarSeed, thickness);
 }
+
+TEST(SolvePnP, illConditionedEPnPWorldFrame)
+{
+    constexpr int pointCount = 20;
+    constexpr int columns = 5;
+    constexpr int rows = pointCount / columns;
+    constexpr int depthLevels = 3;
+    constexpr double coordinateScale = 7e-11;
+    constexpr double focalLength = 1000.0;
+    constexpr double centerX = 320.0;
+    constexpr double centerY = 240.0;
+    constexpr double objectDepth = 10.0;
+    constexpr double poseTolerance = 1e-3;
+    const Matx33d camera(focalLength, 0.0, centerX,
+                        0.0, focalLength, centerY,
+                        0.0, 0.0, 1.0);
+    const Vec3d expectedTranslation(0.0, 0.0, objectDepth);
+    std::vector<Point3d> referencePoints;
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * (point % columns) / (columns - 1);
+        const double y = coordinateScale * (-1.0 + 2.0 * (point / columns) / (rows - 1));
+        const double z = coordinateScale * (point % depthLevels);
+        referencePoints.emplace_back(x, y, z);
+    }
+    std::vector<Point2d> imagePoints;
+    projectPoints(referencePoints, Vec3d::all(0.0), expectedTranslation,
+                  camera, noArray(), imagePoints);
+    // Half-turns change the world frame without changing the observed scene.
+    for (double xSign : {-1.0, 1.0})
+    {
+        for (double ySign : {-1.0, 1.0})
+        {
+            SCOPED_TRACE(cv::format("xSign=%g ySign=%g", xSign, ySign));
+            const Matx33d expectedRotation(xSign, 0.0, 0.0,
+                                          0.0, ySign, 0.0,
+                                          0.0, 0.0, xSign * ySign);
+            std::vector<Point3d> objectPoints;
+            transform(referencePoints, objectPoints, expectedRotation);
+            Mat rvec;
+            Mat tvec;
+            ASSERT_TRUE(solvePnP(objectPoints, imagePoints, camera, noArray(),
+                                rvec, tvec, false, SOLVEPNP_EPNP));
+            ASSERT_TRUE(checkRange(rvec));
+            ASSERT_TRUE(checkRange(tvec));
+            Matx33d rotation;
+            cv::Rodrigues(rvec, rotation);
+            EXPECT_NEAR(angularDistance(rotation, expectedRotation), 0.0, poseTolerance);
+            EXPECT_NEAR(cv::norm(tvec, Mat(expectedTranslation), NORM_INF), 0.0, poseTolerance);
+        }
+    }
+}
+
+
 
 }} // namespace
