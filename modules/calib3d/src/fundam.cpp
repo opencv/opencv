@@ -729,36 +729,46 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     scale1 = std::sqrt(2.)/scale1;
     scale2 = std::sqrt(2.)/scale2;
 
-    Matx<double, 9, 9> A;
+    Mat A(count, 9, CV_64F);
 
     // form a linear system Ax=0: for each selected pair of points m1 & m2,
     // the row of A(=a) represents the coefficients of equation: (m2, 1)'*F*(m1, 1) = 0
-    // to save computation time, we compute (At*A) instead of A and then solve (At*A)x=0.
     for( i = 0; i < count; i++ )
     {
-        double x1 = (m1[i].x - m1c.x)*scale1;
-        double y1 = (m1[i].y - m1c.y)*scale1;
-        double x2 = (m2[i].x - m2c.x)*scale2;
-        double y2 = (m2[i].y - m2c.y)*scale2;
-        Vec<double, 9> r( x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1 );
-        A += r*r.t();
+        const double x1 = (m1[i].x - m1c.x)*scale1;
+        const double y1 = (m1[i].y - m1c.y)*scale1;
+        const double x2 = (m2[i].x - m2c.x)*scale2;
+        const double y2 = (m2[i].y - m2c.y)*scale2;
+        double* const row = A.ptr<double>(i);
+        row[0] = x2*x1;
+        row[1] = x2*y1;
+        row[2] = x2;
+        row[3] = y2*x1;
+        row[4] = y2*y1;
+        row[5] = y2;
+        row[6] = x1;
+        row[7] = y1;
+        row[8] = 1;
     }
 
-    Vec<double, 9> W;
-    Matx<double, 9, 9> V;
+    Mat W;
+    Mat VtLinear;
 
-    eigen(A, W, V);
+    // Decompose the source matrix directly to preserve its condition number.
+    // Retain the full right nullspace only for an underdetermined system.
+    const int flags = SVD::MODIFY_A | (A.rows < A.cols ? SVD::FULL_UV : 0);
+    SVDecomp(A, W, noArray(), VtLinear, flags);
 
-    for( i = 0; i < 9; i++ )
+    for( i = 0; i < W.rows; i++ )
     {
-        if( fabs(W[i]) < DBL_EPSILON )
+        if( fabs(W.at<double>(i)) < std::numeric_limits<double>::epsilon() )
             break;
     }
 
     if( i < 8 )
         return 0;
 
-    Matx33d F0( V.val + 9*8 ); // take the last column of v as a solution of Af = 0
+    Matx33d F0(VtLinear.ptr<double>(8)); // take the last row of Vt as a solution of Af = 0
 
     // make F0 singular (of rank 2) by decomposing it with SVD,
     // zeroing the last diagonal element of W and then composing the matrices back.
