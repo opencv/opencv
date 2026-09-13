@@ -73,9 +73,16 @@ class HomographyEstimatorCallback CV_FINAL : public PointSetRegistrator::Callbac
 public:
     bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
-        Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
-        if( haveCollinearPoints(ms1, count) || haveCollinearPoints(ms2, count) )
-            return false;
+        Mat ms1 = _ms1.getMat();
+        Mat ms2 = _ms2.getMat();
+        // Subsets arrive complete, while each check examines only its last point.
+        for (int prefix = 3; prefix <= count; ++prefix)
+        {
+            if (haveCollinearPoints(ms1, prefix) || haveCollinearPoints(ms2, prefix))
+            {
+                return false;
+            }
+        }
 
         // We check whether the minimal set of points for the homography estimation
         // are geometrically consistent. We check if every 3 correspondences sets
@@ -129,12 +136,6 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
 
-        double LtL[9][9], W[9][1], V[9][9];
-        Mat _LtL( 9, 9, CV_64F, &LtL[0][0] );
-        Mat matW( 9, 1, CV_64F, W );
-        Mat matV( 9, 9, CV_64F, V );
-        Mat _H0( 3, 3, CV_64F, V[8] );
-        Mat _Htemp( 3, 3, CV_64F, V[7] );
         Point2d cM(0,0), cm(0,0), sM(0,0), sm(0,0);
 
         for( i = 0; i < count; i++ )
@@ -156,8 +157,9 @@ public:
             sM.y += fabs(M[i].y - cM.y);
         }
 
-        if( fabs(sm.x) < DBL_EPSILON || fabs(sm.y) < DBL_EPSILON ||
-            fabs(sM.x) < DBL_EPSILON || fabs(sM.y) < DBL_EPSILON )
+        const double epsilon = std::numeric_limits<double>::epsilon();
+        if( fabs(sm.x) < epsilon || fabs(sm.y) < epsilon ||
+            fabs(sM.x) < epsilon || fabs(sM.y) < epsilon )
             return 0;
         sm.x = count/sm.x; sm.y = count/sm.y;
         sM.x = count/sM.x; sM.y = count/sM.y;
@@ -167,21 +169,42 @@ public:
         Mat _invHnorm( 3, 3, CV_64FC1, invHnorm );
         Mat _Hnorm2( 3, 3, CV_64FC1, Hnorm2 );
 
-        _LtL.setTo(Scalar::all(0));
+        Mat A(2 * count, 9, CV_64F);
         for( i = 0; i < count; i++ )
         {
-            double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
-            double X = (M[i].x - cM.x)*sM.x, Y = (M[i].y - cM.y)*sM.y;
-            double Lx[] = { X, Y, 1, 0, 0, 0, -x*X, -x*Y, -x };
-            double Ly[] = { 0, 0, 0, X, Y, 1, -y*X, -y*Y, -y };
-            int j, k;
-            for( j = 0; j < 9; j++ )
-                for( k = j; k < 9; k++ )
-                    LtL[j][k] += Lx[j]*Lx[k] + Ly[j]*Ly[k];
+            const double x = (m[i].x - cm.x)*sm.x;
+            const double y = (m[i].y - cm.y)*sm.y;
+            const double X = (M[i].x - cM.x)*sM.x;
+            const double Y = (M[i].y - cM.y)*sM.y;
+            double* const rowX = A.ptr<double>(2 * i);
+            double* const rowY = A.ptr<double>(2 * i + 1);
+            rowX[0] = X;
+            rowX[1] = Y;
+            rowX[2] = 1;
+            rowX[3] = 0;
+            rowX[4] = 0;
+            rowX[5] = 0;
+            rowX[6] = -x*X;
+            rowX[7] = -x*Y;
+            rowX[8] = -x;
+            rowY[0] = 0;
+            rowY[1] = 0;
+            rowY[2] = 0;
+            rowY[3] = X;
+            rowY[4] = Y;
+            rowY[5] = 1;
+            rowY[6] = -y*X;
+            rowY[7] = -y*Y;
+            rowY[8] = -y;
         }
-        completeSymm( _LtL );
 
-        eigen( _LtL, matW, matV );
+        Mat W;
+        Mat Vt;
+        // Retain the full right nullspace only for an underdetermined system.
+        const int flags = SVD::MODIFY_A | (A.rows < A.cols ? SVD::FULL_UV : 0);
+        SVD::compute(A, W, noArray(), Vt, flags);
+        Mat _H0(3, 3, CV_64F, Vt.ptr<double>(8));
+        Mat _Htemp(3, 3, CV_64F, Vt.ptr<double>(7));
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
         _H0.convertTo(_model, _H0.type(), scaleFor(_H0.at<double>(2,2)));
