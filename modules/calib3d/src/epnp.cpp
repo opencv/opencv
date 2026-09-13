@@ -5,6 +5,7 @@
 #include <iostream>
 #include "precomp.hpp"
 #include "epnp.h"
+#include "right_svd.hpp"
 
 namespace cv {
 
@@ -78,8 +79,22 @@ void epnp::choose_control_points(void)
   SVDecomp(PW0tPW0, DC, UCt, noArray(), SVD::MODIFY_A);
   transpose(UCt, UCt);
 
+  // The normal matrix squares the condition number and loses the extent of
+  // nearly planar and collinear points.
+  if (!cv::internal::isNormalMatrixResolved(dc[2], dc[0]))
+  {
+    cv::internal::SVDecompRight(PW0, DC, UCt);
+    for (double& value : dc)
+    {
+      value *= value;
+    }
+  }
+
+  // Equalize nearly collinear controls to retain their shorter distance constraints.
+  // Preserve the in-plane control scales of planar point sets.
+  const bool equalizeAxes = dc[1] <= dc[0] * std::numeric_limits<double>::epsilon();
   for(int i = 1; i < 4; i++) {
-    double k = sqrt(dc[i - 1] / number_of_correspondences);
+    double k = sqrt((equalizeAxes ? dc[0] : dc[i - 1]) / number_of_correspondences);
     for(int j = 0; j < 3; j++)
       cws[i][j] = cws[0][j] + k * uct[3 * (i - 1) + j];
   }
@@ -269,9 +284,10 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
   const double det = determinant(mR);
 
   if (det < 0) {
-    R[2][0] = -R[2][0];
-    R[2][1] = -R[2][1];
-    R[2][2] = -R[2][2];
+    // Correct the least constrained singular direction to obtain a proper rotation.
+    constexpr int leastConstrainedAxis = 2;
+    ABt_U.col(leastConstrainedAxis) *= -1.0;
+    gemm(ABt_U, ABt_Vt, 1, noArray(), 0, mR);
   }
 
   t[0] = pc0[0] - dot(R[0], pw0);
