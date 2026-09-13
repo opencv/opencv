@@ -2452,10 +2452,10 @@ TEST(SolvePnP, illConditionedEPnPSystem)
     constexpr double cameraFocalLength = 1000.0;
     constexpr double cameraCenterX = 320.0;
     constexpr double cameraCenterY = 240.0;
-    constexpr double coordinateScale = 1e-10;
     constexpr double objectDepth = 10.0;
+    constexpr double coordinateScale = 7e-11;
     constexpr double imageNoise = 1e-14;
-    constexpr double poseTolerance = 4e-3;
+    constexpr double poseTolerance = 1e-3;
     const Mat cameraMatrix = (Mat_<double>(3, 3) <<
         cameraFocalLength, 0.0, cameraCenterX,
         0.0, cameraFocalLength, cameraCenterY,
