@@ -1,8 +1,19 @@
 #include "perf_precomp.hpp"
+#include "../test/test_rotation_distance.hpp"
 
 namespace opencv_test
 {
 using namespace perf;
+
+static double angularDistance(const Mat& estimatedRvec,
+                              const Mat& expectedRvec)
+{
+    Matx33f estimatedRotation;
+    Matx33f expectedRotation;
+    Rodrigues(estimatedRvec, estimatedRotation);
+    Rodrigues(expectedRvec, expectedRotation);
+    return angularDistance(estimatedRotation, expectedRotation);
+}
 
 CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
 
@@ -33,11 +44,19 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     intrinsics.at<float> (0, 2) = 640 / 2;
     intrinsics.at<float> (1, 2) = 480 / 2;
 
-    warmup(points3d, WARMUP_RNG);
-    warmup(rvec, WARMUP_RNG);
-    warmup(tvec, WARMUP_RNG);
+    constexpr float worldPointRange = 1.0f;
+    constexpr float rotationRange = 0.5f;
+    constexpr float lateralTranslationRange = 0.5f;
+    constexpr float cameraDistance = 5.0f;
+    randu(points3d, -worldPointRange, worldPointRange);
+    randu(rvec, -rotationRange, rotationRange);
+    randu(tvec, -lateralTranslationRange, lateralTranslationRange);
+    tvec.at<float>(2) = cameraDistance;
 
     projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
+
+    const Mat expectedRvec = rvec.clone();
+    const Mat expectedTvec = tvec.clone();
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
@@ -52,8 +71,11 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
         cv::solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
-    SANITY_CHECK(rvec, 1e-4);
-    SANITY_CHECK(tvec, 1e-4);
+    constexpr double rotationTolerance = 2e-4;
+    constexpr double translationTolerance = 3e-4;
+    EXPECT_LE(angularDistance(rvec, expectedRvec), rotationTolerance);
+    EXPECT_LE(cv::norm(tvec, expectedTvec, NORM_L2), translationTolerance);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
@@ -80,9 +102,14 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     intrinsics.at<float> (0, 2) = 640 / 2;
     intrinsics.at<float> (1, 2) = 480 / 2;
 
-    warmup(points3d, WARMUP_RNG);
-    warmup(rvec, WARMUP_RNG);
-    warmup(tvec, WARMUP_RNG);
+    constexpr float worldPointRange = 1.0f;
+    constexpr float rotationRange = 0.5f;
+    constexpr float lateralTranslationRange = 0.5f;
+    constexpr float cameraDistance = 5.0f;
+    randu(points3d, -worldPointRange, worldPointRange);
+    randu(rvec, -rotationRange, rotationRange);
+    randu(tvec, -lateralTranslationRange, lateralTranslationRange);
+    tvec.at<float>(2) = cameraDistance;
 
     // normalize Rodrigues vector
     Mat rvec_tmp = Mat::eye(3, 3, CV_32F);
@@ -90,6 +117,9 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     cv::Rodrigues(rvec_tmp, rvec);
 
     cv::projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
+
+    const Mat expectedRvec = rvec.clone();
+    const Mat expectedTvec = tvec.clone();
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
@@ -104,8 +134,11 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
         cv::solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
-    SANITY_CHECK(rvec, 1e-1);
-    SANITY_CHECK(tvec, 1e-2);
+    constexpr double rotationTolerance = 2e-4;
+    constexpr double translationTolerance = 3e-4;
+    EXPECT_LE(angularDistance(rvec, expectedRvec), rotationTolerance);
+    EXPECT_LE(cv::norm(tvec, expectedTvec, NORM_L2), translationTolerance);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))

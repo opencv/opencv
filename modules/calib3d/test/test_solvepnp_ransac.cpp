@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "test_rotation_distance.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
@@ -2402,6 +2403,119 @@ TEST(AP3P, ctheta1p_nan_23607)
         }
         EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3.34e-16);
     }
+}
+
+template<typename T>
+class RotationDistanceTest : public testing::Test {};
+typedef testing::Types<float, double> RotationDistanceTypes;
+TYPED_TEST_CASE(RotationDistanceTest, RotationDistanceTypes);
+
+TYPED_TEST(RotationDistanceTest, principalAngle)
+{
+    using T = TypeParam;
+    using std::acos;
+    using std::cos;
+    using std::sin;
+    const T pi = acos(T(-1));
+    constexpr T smallAngle = T(1e-7);
+    constexpr T tolerance = T(8) * std::numeric_limits<T>::epsilon();
+    const T angles[] = {T(0), smallAngle, T(0.5), pi - smallAngle, pi};
+    for (T angle : angles)
+    {
+        const T c = cos(angle);
+        const T s = sin(angle);
+        const cv::Matx<T, 3, 3> rotation(c, -s, T(0), s, c, T(0), T(0), T(0), T(1));
+        const T angleTolerance = tolerance * angle;
+        EXPECT_NEAR(angularDistance(rotation, cv::Matx<T, 3, 3>::eye()), angle, angleTolerance);
+        EXPECT_NEAR(angularDistance(cv::Matx<T, 3, 3>::eye(), rotation), angle, angleTolerance);
+        EXPECT_NEAR(angularDistance(rotation, rotation), T(0), tolerance);
+    }
+    const cv::Vec<T, 3> positive(pi, T(0), T(0));
+    const cv::Vec<T, 3> negative(-pi, T(0), T(0));
+    cv::Matx<T, 3, 3> first;
+    cv::Matx<T, 3, 3> second;
+    cv::Rodrigues(positive, first);
+    cv::Rodrigues(negative, second);
+    EXPECT_NEAR(angularDistance(first, second), T(0), tolerance);
+}
+
+static void checkEPnPWithPixelNoise(int seed, double thickness = 0.0)
+{
+    constexpr int pointCount = 40;
+    constexpr int noiseSeedOffset = 1000;
+    constexpr double coordinateRange = 1.0;
+    constexpr double focalLengthPixels = 1000.0;
+    constexpr double centerXPixels = 320.0;
+    constexpr double centerYPixels = 240.0;
+    constexpr double noiseStandardDeviationPixels = 0.5;
+    constexpr double rotationTolerance = 0.02;
+    constexpr double translationTolerance = 0.05;
+    constexpr double reprojectionTolerancePixels = 1.0;
+    const Matx33d camera(focalLengthPixels, 0.0, centerXPixels,
+                        0.0, focalLengthPixels, centerYPixels,
+                        0.0, 0.0, 1.0);
+    const Vec3d worldRvec(0.3, -0.2, 0.4);
+    const Vec3d expectedRvec(0.1, -0.2, 0.3);
+    const Vec3d expectedTranslation(0.2, -0.1, 6.0);
+    Matx33d worldRotation;
+    Matx33d expectedRotation;
+    cv::Rodrigues(worldRvec, worldRotation);
+    cv::Rodrigues(expectedRvec, expectedRotation);
+    RNG pointGenerator(seed);
+    RNG noiseGenerator(seed + noiseSeedOffset);
+    std::vector<Point3d> objectPoints;
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = pointGenerator.uniform(-coordinateRange, coordinateRange);
+        const double y = pointGenerator.uniform(-coordinateRange, coordinateRange);
+        const double z = std::fpclassify(thickness) == FP_ZERO ? 0.0 :
+                         thickness * pointGenerator.uniform(-coordinateRange, coordinateRange);
+        objectPoints.emplace_back(worldRotation * Vec3d(x, y, z));
+    }
+    std::vector<Point2d> expectedImagePoints;
+    projectPoints(objectPoints, expectedRvec, expectedTranslation, camera,
+                  noArray(), expectedImagePoints);
+    std::vector<Point2d> imagePoints = expectedImagePoints;
+    for (Point2d& point : imagePoints)
+    {
+        const Point2d original = point;
+        point.x += noiseGenerator.gaussian(noiseStandardDeviationPixels);
+        point.y += noiseGenerator.gaussian(noiseStandardDeviationPixels);
+        ASSERT_NE(point.x, original.x);
+        ASSERT_NE(point.y, original.y);
+    }
+    Mat rvec;
+    Mat tvec;
+    ASSERT_TRUE(solvePnP(objectPoints, imagePoints, camera, noArray(), rvec, tvec,
+                        false, SOLVEPNP_EPNP));
+    ASSERT_TRUE(checkRange(rvec));
+    ASSERT_TRUE(checkRange(tvec));
+    Matx33d rotation;
+    cv::Rodrigues(rvec, rotation);
+    std::vector<Point2d> reprojected;
+    projectPoints(objectPoints, rvec, tvec, camera, noArray(), reprojected);
+    const double rotationError = angularDistance(rotation, expectedRotation);
+    const double translationError = cv::norm(tvec, Mat(expectedTranslation), NORM_L2);
+    const double reprojectionError = cv::norm(reprojected, expectedImagePoints, NORM_L2) /
+                                     std::sqrt(static_cast<double>(pointCount));
+    const double noiseRms = cv::norm(imagePoints, expectedImagePoints, NORM_L2) /
+                            std::sqrt(static_cast<double>(pointCount));
+    testing::Test::RecordProperty("rotation_error_rad", cv::format("%.17g", rotationError));
+    testing::Test::RecordProperty("translation_error", cv::format("%.17g", translationError));
+    testing::Test::RecordProperty("reprojection_rms_px", cv::format("%.17g", reprojectionError));
+    testing::Test::RecordProperty("noise_rms_px", cv::format("%.17g", noiseRms));
+    EXPECT_NEAR(rotationError, 0.0, rotationTolerance);
+    EXPECT_NEAR(translationError, 0.0, translationTolerance);
+    EXPECT_NEAR(reprojectionError, 0.0, reprojectionTolerancePixels);
+}
+
+TEST(SolvePnP, illConditionedEPnPControlPoints)
+{
+    constexpr int planarSeed = 33;
+    constexpr int nearlyPlanarSeed = 3;
+    constexpr double thickness = 1e-9;
+    checkEPnPWithPixelNoise(planarSeed);
+    checkEPnPWithPixelNoise(nearlyPlanarSeed, thickness);
 }
 
 }} // namespace
