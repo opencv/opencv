@@ -169,12 +169,16 @@ public:
         Mat _Hnorm2( 3, 3, CV_64FC1, Hnorm2 );
 
         _LtL.setTo(Scalar::all(0));
+        AutoBuffer<double> rows(2 * count * 9);
+        Mat A(2 * count, 9, CV_64F, rows.data());
         for( i = 0; i < count; i++ )
         {
             double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
             double X = (M[i].x - cM.x)*sM.x, Y = (M[i].y - cM.y)*sM.y;
             double Lx[] = { X, Y, 1, 0, 0, 0, -x*X, -x*Y, -x };
             double Ly[] = { 0, 0, 0, X, Y, 1, -y*X, -y*Y, -y };
+            std::copy(Lx, Lx + 9, A.ptr<double>(2 * i));
+            std::copy(Ly, Ly + 9, A.ptr<double>(2 * i + 1));
             int j, k;
             for( j = 0; j < 9; j++ )
                 for( k = j; k < 9; k++ )
@@ -183,6 +187,12 @@ public:
         completeSymm( _LtL );
 
         eigen( _LtL, matW, matV );
+        // The normal matrix squares the condition number and may lose the nullspace.
+        if (!cv::internal::isNormalMatrixResolved(W[7][0], W[0][0]))
+        {
+            Mat singularValues;
+            cv::internal::SVDecompRight(A, singularValues, matV);
+        }
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
         _H0.convertTo(_model, _H0.type(), scaleFor(_H0.at<double>(2,2)));
