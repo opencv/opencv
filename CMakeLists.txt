@@ -520,6 +520,8 @@ OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into Open
            VERIFY HAVE_UNIFONT)
 OCV_OPTION(WITH_RUBIK_SANS            "Build Rubik font (sans) into OpenCV"                      (NOT BUILD_opencv_js) )
 OCV_OPTION(WITH_RUBIK_ITALIC          "Build Rubik font (italic) into OpenCV"                    (NOT BUILD_opencv_js) )
+OCV_OPTION(WITH_MANROPE_SANS          "Build Manrope font (sans) into OpenCV"                    OFF
+           VERIFY HAVE_MANROPE_SANS)
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -1458,14 +1460,20 @@ if(WITH_UNIFONT OR HAVE_UNIFONT)
   status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
 endif()
 
-if(WITH_RUBIK_SANS AND WITH_RUBIK_ITALIC)
-  status("    Built-in Rubik font:" "YES (sans, italic)")
-elseif(WITH_RUBIK_SANS)
-  status("    Built-in Rubik font:" "YES (sans)")
-elseif(WITH_RUBIK_ITALIC)
-  status("    Built-in Rubik font:" "YES (italic)")
-else()
-  status("    Built-in Rubik font:" "NO")
+if(WITH_RUBIK_SANS OR HAVE_RUBIK_SANS OR WITH_RUBIK_ITALIC OR HAVE_RUBIK_ITALIC)
+  if(HAVE_RUBIK_SANS AND HAVE_RUBIK_ITALIC)
+    status("    Built-in Rubik font:" "YES (sans, italic)")
+  elseif(HAVE_RUBIK_SANS)
+    status("    Built-in Rubik font:" "YES (sans)")
+  elseif(HAVE_RUBIK_ITALIC)
+    status("    Built-in Rubik font:" "YES (italic)")
+  else()
+    status("    Built-in Rubik font:" "NO")
+  endif()
+endif()
+
+if(WITH_MANROPE_SANS OR HAVE_MANROPE_SANS)
+  status("    Built-in Manrope font:" HAVE_MANROPE_SANS THEN "YES (sans)" ELSE "NO")
 endif()
 
 # ========================== MEDIA IO ==========================

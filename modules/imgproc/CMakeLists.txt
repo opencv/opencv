@@ -41,6 +41,13 @@ if(HAVE_RUBIK_SANS OR HAVE_RUBIK_ITALIC)
   ocv_install_3rdparty_licenses(fonts fonts/Rubik_OFL.txt)
 endif()
 
+## Manrope font
+set(HAVE_MANROPE_SANS  "${WITH_MANROPE_SANS}"  CACHE INTERNAL "")
+if(HAVE_MANROPE_SANS)
+  ocv_blob2hdr("${CMAKE_CURRENT_SOURCE_DIR}/fonts/Manrope-Regular.ttf.gz" "${CMAKE_CURRENT_BINARY_DIR}/builtin_font_manrope_sans.h" OcvBuiltinFontManropeSans)
+  ocv_install_3rdparty_licenses(fonts fonts/Manrope_OFL.txt)
+endif()
+
 ## Uni font
 set(UNIFONT_MD5 "fb79cf5b4f4c89414f1233f14c2eb273")
 set(UNIFONT_NAME "WenQuanYiMicroHei.ttf.gz")

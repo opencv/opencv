@@ -156,4 +156,7 @@
 /* The Rubik font (italic) is available */
 #cmakedefine HAVE_RUBIK_ITALIC
 
+/* The Manrope font (sans) is available */
+#cmakedefine HAVE_MANROPE_SANS
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED

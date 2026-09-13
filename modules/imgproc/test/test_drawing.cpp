@@ -44,7 +44,15 @@
 
 namespace opencv_test { namespace {
 
+// To reduce reference image maintenance costs, pixel-by-pixel comparison
+// is limited to specific standard font combinations.
+#if defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC) && defined(HAVE_UNIFONT) && !defined(HAVE_MANROPE_SANS)
+  #define TEST_TO_COMPARE_DRAWN_GLYPHS
+#endif
+
 //#define DRAW_TEST_IMAGE
+
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 
 class CV_DrawingTest : public cvtest::BaseTest
 {
@@ -60,31 +68,9 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
-
-#if   defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC)
     const string fname = "../highgui/drawing/image.png";
-#elif defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && !defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/image.hb.sans.png";
-#elif !defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/image.stb.png";
-#elif !defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && !defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/image.stb.sans.png";
-#else
-    const string fname = "";
-#endif
-
-#if !defined(HAVE_RUBIK_SANS)
-    if( fname.empty() )
-    {
-        ts->printf( ts->LOG, "Required Rubik (sans) font is not available, skipping test.\n");
-        ts->set_failed_test_info(cvtest::TS::OK);
-        return;
-    }
-#endif
-
     string path = ts->get_data_path(), filename;
     filename = path + fname;
-
 
     draw( testImg );
 
@@ -121,7 +107,6 @@ void CV_DrawingTest::run( int )
     }
     ts->set_failed_test_info(checkLineVirtualIterator());
     ts->set_failed_test_info(cvtest::TS::OK);
-
 }
 
 class CV_DrawingTest_CPP : public CV_DrawingTest
@@ -450,11 +435,12 @@ void CV_DrawingTest_Far::draw(Mat& img)
     putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 
     img = img(Rect(32768, 0, 600, 400)).clone();
-
 }
 
 TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
 TEST(Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
+
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
 {
@@ -490,7 +476,7 @@ protected:
 
 TEST(Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
 
-#ifdef HAVE_RUBIK_SANS // this test requires rubik sans.
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 class CV_DrawingTest_UTF8 : public cvtest::BaseTest
 {
 public:
@@ -569,7 +555,8 @@ protected:
 };
 
 TEST(Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
-#endif
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
+
 
 TEST(Drawing, _914)
 {
@@ -638,7 +625,7 @@ TEST(Drawing, longline)
 }
 
 
-#ifdef HAVE_RUBIK_SANS // this test requires rubik sans.
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, putText_no_garbage)
 {
     Size sz(640, 480);
@@ -661,7 +648,7 @@ TEST(Drawing, putText_no_garbage)
     waitKey();
 #endif
 }
-#endif // HAVE_RUBIK_SANS
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 
 TEST(Drawing, line)
@@ -720,7 +707,7 @@ TEST(Drawing, fillpoly_circle)
 }
 
 
-#ifdef HAVE_RUBIK_SANS // This test requires rubik sans
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, fromJava_getTextSize)
 {
     String text = "Android all the way";
@@ -742,22 +729,13 @@ TEST(Drawing, fromJava_getTextSize)
 
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
-
-#if defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_ITALIC)
-    EXPECT_NEAR(494, res.width, 3.0); // Rubic-italic with Harfbuzz
-#elif defined(HAVE_HARFBUZZ) && !defined(HAVE_RUBIK_ITALIC)
-    EXPECT_NEAR(490, res.width, 3.0); // Rubic-sans with Harfbuzz
-#elif !defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_ITALIC)
-    EXPECT_NEAR(502, res.width, 3.0); // Rubic-italic with STB
-#elif !defined(HAVE_HARFBUZZ) && !defined(HAVE_RUBIK_ITALIC)
-    EXPECT_NEAR(498, res.width, 3.0); // Rubic-sans with STB
-#endif
+    EXPECT_NEAR(494, res.width, 3.0);
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
-#endif // HAVE_RUBIK_SANS
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
-#ifdef HAVE_RUBIK_SANS // This test requires rubik sans
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
 {
     String text = "Hello World";
@@ -785,7 +763,7 @@ TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
     rectangle(img, Point(10, 10), Point(labelSize.width + 10, labelSize.height + 10), Scalar::all(0), -1);
     EXPECT_EQ(0, countNonZero(img));
 }
-#endif // HAVE_RUBIK_SANS
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 typedef struct TextProp
 {
@@ -795,7 +773,7 @@ typedef struct TextProp
     bool italic;
 } TextProp;
 
-#ifdef HAVE_RUBIK_SANS // This test requires rubik sans
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 #ifdef HAVE_UNIFONT // there are other tests for text drawing, so the functionality is tested anyway,
                     // but this test needs concrete unicode font to compare the printed text
                     // (including CJK characters) with the reference picture from the database
@@ -889,25 +867,7 @@ TEST(Drawing, ttf_text)
 #else
     // Always dump the rendered image for visual inspection (HarfBuzz engine bring-up).
     //imwrite("ttf_text_actual.png", img);
-
-#if defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/text_test.png";
-#elif defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && !defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/text_test.hb.sans.png";
-#elif !defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/text_test.stb.png";
-#elif !defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && !defined(HAVE_RUBIK_ITALIC)
-    const string fname = "../highgui/drawing/text_test.stb.sans.png";
-#else
-    const string fname = "";
-#endif
-
-    if( fname.empty() )
-    {
-        throw SkipTestException("Required Rubik (sans) font is not available");
-    }
-
-    Mat refimg = imread(ts_data_path + fname, IMREAD_UNCHANGED);
+    Mat refimg = imread(ts_data_path + "../highgui/drawing/text_test.png", IMREAD_UNCHANGED);
     //imshow("ref", refimg);
     //imshow("actual", img);
     //absdiff(refimg, img, refimg);
@@ -917,8 +877,8 @@ TEST(Drawing, ttf_text)
     EXPECT_LT(cv::norm(refimg, img, NORM_L1), 6500);
 #endif
 }
-#endif // HAVE_UNIFONT
-#endif // HAVE_RUBIK_SANS
+#endif
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 // Experiment (not a regression test): render Arabic + Devanagari with FiraGO,
 // which covers both scripts, and dump a PNG for visual inspection.

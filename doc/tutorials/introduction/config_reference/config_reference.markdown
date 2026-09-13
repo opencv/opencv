@@ -310,7 +310,9 @@ TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS
 
 Enables complex text shaping and rendering via the HarfBuzz library.
 
-If disabled, OpenCV falls back to STB TrueType, which may change the visual appearance and layout of rendered text.
+If disabled (`WITH_HARFBUZZ=OFF`), OpenCV falls back to the STB TrueType renderer, which may affect the visual appearance and layout of rendered text.
+
+@note The STB TrueType backend does not support Right-To-Left (RTL) text shaping. For proper rendering of RTL scripts (such as Hebrew or Arabic), `WITH_HARFBUZZ=ON` is required.
 
 ### Build HarfBuzz library
 
@@ -338,11 +340,27 @@ The following built-in fonts are used for rendering text in OpenCV (e.g. `cv::pu
 | :--- | :--- | :--- | :--- |
 | Rubik sans | `WITH_RUBIK_SANS` | _ON_ | Latin, Cyrillic, Hebrew, numbers, and basic symbols |
 | Rubik italic | `WITH_RUBIK_ITALIC` | _ON_ | Latin, Cyrillic, Hebrew, numbers, and basic symbols (Italic) |
+| Manrope sans | `WITH_MANROPE_SANS` | _OFF_ | Latin, Cyrillic, Greek, numbers, and basic symbols |
 | Unifont (WenQuanYi Micro Hei) | `WITH_UNIFONT` | _ON_ | Wide Unicode coverage including CJK (Chinese, Japanese, Korean) |
 
 @note **[Unifont]** If you do not require CJK support, you can disable `WITH_UNIFONT` to reduce binary size.
+@note **[Rubik sans]** If `WITH_RUBIK_SANS` is disabled, OpenCV will fall back "sans" to Manrope sans (if available), which may affect the visual appearance.
 @note **[Rubik italic]** If `WITH_RUBIK_ITALIC` is disabled, OpenCV will fall back to Rubik sans (if available), which may affect the visual appearance.
+@note **[Manrope sans]** Manrope does not have a native Italic style. Consequently, Greek text (and other Manrope-only glyphs) cannot be rendered in Italic.
 @note **[All fonts]** If all built-in fonts are disabled, external fonts must be provided when calling text rendering functions.
+
+Recommended configurations
+
+| `WITH_RUBIK_SANS` | `WITH_RUBIK_ITALIC` | `WITH_MANROPE_SANS` | `WITH_UNIFONT` | Purpose |
+| :---: | :---: | :---: | :---: | :--- |
+| _ON_  | _ON_  | _OFF_ | _ON_  | Default (with CJK, no Greek) |
+| _ON_  | _ON_  | _ON_  | _ON_  | Full set build (Italic, Greek, Hebrew, and CJK) |
+| _ON_  | _ON_  | _OFF_ | _OFF_ | Standard build without Greek and CJK |
+| _ON_  | _ON_  | _ON_  | _OFF_ | Advanced build (both Greek and Hebrew, no CJK) |
+| _ON_  | _OFF_ | _OFF_ | _OFF_ | Compact build with Hebrew support (no Italic/Greek/CJK) |
+| _OFF_ | _OFF_ | _ON_  | _OFF_ | Compact build with Greek support (no Italic/Hebrew/CJK) |
+| _OFF_ | _OFF_ | _OFF_ | _OFF_ | Minimal build (External fonts only) |
+
 
 ## Image reading and writing (imgcodecs module)  {#tutorial_config_reference_func_imgcodecs}
 

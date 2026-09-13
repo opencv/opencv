@@ -60,6 +60,9 @@
 #ifdef HAVE_RUBIK_ITALIC
 #include "builtin_font_italic.h"
 #endif
+#ifdef HAVE_MANROPE_SANS
+#include "builtin_font_manrope_sans.h"
+#endif
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
 #endif
@@ -158,6 +161,12 @@ enum
 #ifdef HAVE_RUBIK_ITALIC
         +1
 #endif
+#ifdef HAVE_MANROPE_SANS
+        +1
+#ifndef HAVE_RUBIK_SANS
+        +1 // fallback to sans
+#endif
+#endif
 #ifdef HAVE_UNIFONT
         +1
 #endif
@@ -171,6 +180,14 @@ static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 #ifdef HAVE_RUBIK_ITALIC
     {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
 #endif
+
+#ifdef HAVE_MANROPE_SANS
+    {OcvBuiltinFontManropeSans, sizeof(OcvBuiltinFontManropeSans), "manrope-sans", 1.0, false},
+  #ifndef HAVE_RUBIK_SANS
+    {OcvBuiltinFontManropeSans, sizeof(OcvBuiltinFontManropeSans), "sans", 1.0, false}, // fallback to sans
+  #endif
+#endif
+
 #ifdef HAVE_UNIFONT
     {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
 #endif
