@@ -167,14 +167,14 @@ void epnp::compute_pose(Mat& R, Mat& t)
   for(int i = 0; i < number_of_correspondences; i++)
     fill_M(M, 2 * i, &alphas[0] + 4 * i, us[2 * i], us[2 * i + 1]);
 
-  double mtm[12 * 12] = {}, d[12] = {}, ut[12 * 12] = {};
-  Mat MtM(12, 12, CV_64F, mtm);
+  double d[12] = {};
+  double ut[12 * 12] = {};
   Mat D(12,  1, CV_64F, d);
   Mat Ut(12, 12, CV_64F, ut);
 
-  mulTransposed(M, MtM, true);
-  SVDecomp(MtM, D, Ut, noArray(), SVD::MODIFY_A);
-  transpose(Ut, Ut);
+  // Retain the full right nullspace only for an underdetermined system.
+  const int flags = SVD::MODIFY_A | (M.rows < M.cols ? SVD::FULL_UV : 0);
+  SVDecomp(M, D, noArray(), Ut, flags);
 
   double l_6x10[6 * 10] = {}, rho[6] = {};
   Mat L_6x10(6, 10, CV_64F, l_6x10);
