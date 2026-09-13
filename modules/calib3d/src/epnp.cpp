@@ -185,6 +185,15 @@ void epnp::compute_pose(Mat& R, Mat& t)
   SVDecomp(MtM, D, Ut, noArray(), SVD::MODIFY_A);
   transpose(Ut, Ut);
 
+  // The pose combines the trailing right singular vectors individually. The
+  // normal matrix squares the condition number and must resolve all but the
+  // last of them unless the system is underdetermined.
+  const int resolvedIndex = std::min(M.rows, M.cols - 1) - 1;
+  if (!cv::internal::isNormalMatrixResolved(d[resolvedIndex], d[0]))
+  {
+    cv::internal::SVDecompRight(M, D, Ut);
+  }
+
   double l_6x10[6 * 10] = {}, rho[6] = {};
   Mat L_6x10(6, 10, CV_64F, l_6x10);
   Mat Rho(6,  1, CV_64F, rho);
