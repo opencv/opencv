@@ -1673,6 +1673,48 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
     cout << np2 << endl;
 }
 
+TEST(Calib3d_FindFundamentalMat, illConditionedEightPointSystem)
+{
+    constexpr int pointCount = 8;
+    constexpr double baseline = 0.2;
+    constexpr double narrowWidth = 1e-4;
+    const double expectedScale = 1.0 / std::sqrt(2.0);
+    constexpr double imageNoise = 1e-14;
+    constexpr double fundamentalTolerance = 1e-3;
+    const Matx33d expectedFundamental(0.0, 0.0, 0.0,
+                                     0.0, 0.0, -expectedScale,
+                                     0.0, expectedScale, 0.0);
+    std::vector<Point2d> points1;
+    std::vector<Point2d> points2;
+    constexpr int seed = 42;
+    RNG random(seed);
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        // Independent coordinates avoid a planar ambiguity in the fundamental matrix.
+        const double x = random.uniform(-1.0, 1.0);
+        const double y = narrowWidth * random.uniform(-1.0, 1.0);
+        const double depth = random.uniform(4.0, 6.0);
+        const double noiseX = imageNoise * (point % 3 - 1);
+        const double noiseY = imageNoise * (2.0 * (point % 2) - 1.0);
+        points1.emplace_back((x + noiseX) / depth, (y + noiseY) / depth);
+        points2.emplace_back((x - baseline - noiseX) / depth,
+                             (y - noiseY) / depth);
+    }
+
+    Mat estimatedFundamental = findFundamentalMat(points1, points2, FM_8POINT);
+    RecordProperty("solution_available", estimatedFundamental.empty() ? "false" : "true");
+    ASSERT_FALSE(estimatedFundamental.empty());
+    estimatedFundamental /= cv::norm(estimatedFundamental, NORM_L2);
+
+    const double orientation = estimatedFundamental.dot(Mat(expectedFundamental));
+    estimatedFundamental *= std::copysign(1.0, orientation);
+    RecordProperty("normalized_matrix_error", cv::format("%.17g",
+        cv::norm(estimatedFundamental - Mat(expectedFundamental), NORM_INF)));
+    EXPECT_NEAR(cv::norm(estimatedFundamental - Mat(expectedFundamental), NORM_INF),
+                0.0, fundamentalTolerance);
+}
+
 TEST(Calib3d_FindFundamentalMat, Crash)
 {
     vector<Point2f> m1 = {{245, 128},{284, 226},{140, 60},{133, 127},{71, 218},{152, 138},{181, 106}};
