@@ -704,6 +704,39 @@ TEST(Calib3d_Homography, minPoints)
     EXPECT_THROW(findHomography(p1, p2, RANSAC, 0.01, mask), cv::Exception);
 }
 
+TEST(Calib3d_Homography, illConditionedLinearSystem)
+{
+    constexpr int pointCount = 4;
+    constexpr double translation = 0.2;
+    constexpr double slope = 1.5;
+    constexpr double narrowWidth = 2e-4;
+    constexpr double pointNoise = 1e-12;
+    constexpr double homographyTolerance = 0.25;
+    const Matx33d expectedHomography(1.0, 0.0, translation,
+                                    0.0, 1.0, 0.0,
+                                    0.0, 0.0, 1.0);
+    std::vector<Point2d> points1;
+    std::vector<Point2d> points2;
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * point / (pointCount - 1);
+        const double ySign = 2.0 * (point % 2) - 1.0;
+        const double y = slope * x + std::copysign(narrowWidth, ySign);
+        const double noiseX = pointNoise * (point % 3 - 1);
+        const double noiseY = pointNoise * (2.0 * (point % 2) - 1.0);
+        points1.emplace_back(x + noiseX, y + noiseY);
+        points2.emplace_back(x + translation - noiseX, y - noiseY);
+    }
+
+    const Mat estimatedHomography = findHomography(points1, points2, 0);
+    ASSERT_FALSE(estimatedHomography.empty());
+    RecordProperty("matrix_error", cv::format("%.17g",
+        cv::norm(estimatedHomography - Mat(expectedHomography), NORM_INF)));
+    EXPECT_NEAR(cv::norm(estimatedHomography - Mat(expectedHomography), NORM_INF),
+                0.0, homographyTolerance);
+}
+
 TEST(Calib3d_Homography, not_normalized)
 {
     Mat_<double> p1({5, 2}, {-1, -1, -2, -2, -1, 1, -2, 2, -1, 0});
@@ -725,6 +758,41 @@ TEST(Calib3d_Homography, not_normalized)
         }
         ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << cv::format("method %d\nResult:\n", method) << h;
     }
+}
+
+TEST(Calib3d_Homography, collinearSubsetPermutations)
+{
+    const std::vector<Point2d> source = {
+        {-1.0, -1.0}, {-2.0, -2.0}, {-1.0, 1.0}, {-2.0, 2.0}, {-1.0, 0.0}};
+    const Matx33d expectedHomography(4.0, 0.0, 4.0,
+                                    1.0, 1.0, 0.0,
+                                    -2.0, 0.0, 0.0);
+    constexpr double projectionTolerance = 1e-6;
+    std::vector<Point2d> destination;
+    perspectiveTransform(source, destination, expectedHomography);
+    std::vector<int> order = {0, 1, 2, 3, 4};
+    do
+    {
+        std::vector<Point2d> permutedSource;
+        std::vector<Point2d> permutedDestination;
+        for (int index : order)
+        {
+            permutedSource.push_back(source[index]);
+            permutedDestination.push_back(destination[index]);
+        }
+        for (int method : {RANSAC, LMEDS})
+        {
+            SCOPED_TRACE(cv::format("method=%d order=%d,%d,%d,%d,%d",
+                method, order[0], order[1], order[2], order[3], order[4]));
+            const Mat estimated = findHomography(permutedSource, permutedDestination, method);
+            ASSERT_FALSE(estimated.empty());
+            ASSERT_TRUE(checkRange(estimated));
+            std::vector<Point2d> projected;
+            perspectiveTransform(source, projected, estimated);
+            EXPECT_NEAR(cv::norm(projected, destination, NORM_INF), 0.0, projectionTolerance);
+        }
+    }
+    while (std::next_permutation(order.begin(), order.end()));
 }
 
 TEST(Calib3d_Homography, Refine)
