@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "right_svd.hpp"
 #include "rho.h"
 #include <iostream>
 
@@ -730,6 +731,8 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     scale2 = std::sqrt(2.)/scale2;
 
     Matx<double, 9, 9> A;
+    AutoBuffer<double> rowBuffer(count * 9);
+    Mat rows(count, 9, CV_64F, rowBuffer.data());
 
     // form a linear system Ax=0: for each selected pair of points m1 & m2,
     // the row of A(=a) represents the coefficients of equation: (m2, 1)'*F*(m1, 1) = 0
@@ -742,6 +745,7 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
         double y2 = (m2[i].y - m2c.y)*scale2;
         Vec<double, 9> r( x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1 );
         A += r*r.t();
+        std::copy(r.val, r.val + 9, rows.ptr<double>(i));
     }
 
     Vec<double, 9> W;
@@ -749,14 +753,22 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 
     eigen(A, W, V);
 
-    for( i = 0; i < 9; i++ )
+    // A resolved normal matrix has rank eight. Otherwise, it squares the
+    // condition number and may lose the nullspace.
+    if (!cv::internal::isNormalMatrixResolved(W[7], W[0]))
     {
-        if( fabs(W[i]) < DBL_EPSILON )
-            break;
-    }
+        Mat singularValues;
+        Mat rightSingularVectors(9, 9, CV_64F, V.val);
+        cv::internal::SVDecompRight(rows, singularValues, rightSingularVectors);
 
-    if( i < 8 )
-        return 0;
+        constexpr int rank = 8;
+        const double rankTolerance = std::max(rows.rows, rows.cols) * DBL_EPSILON *
+                                     singularValues.at<double>(0);
+        if (singularValues.at<double>(rank - 1) <= rankTolerance)
+        {
+            return 0;
+        }
+    }
 
     Matx33d F0( V.val + 9*8 ); // take the last column of v as a solution of Af = 0
 
