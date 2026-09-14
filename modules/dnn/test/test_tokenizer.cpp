@@ -556,7 +556,8 @@ TEST(Tokenizer_BPE, Tokenizer_MalformedUtf8DoesNotRaise) {
             ++*static_cast<int*>(counter);
             return 0;
         }, &errors, &prevUserdata);
-    std::vector<int> ids = tok.encode("a\xffb\xc3z");
+    // Split literals: a hex escape is greedy and would swallow the next hex digit.
+    std::vector<int> ids = tok.encode("a\xff" "b\xc3" "z");
     redirectError(prev, prevUserdata);
 
     EXPECT_EQ(errors, 0) << "invalid UTF-8 must not construct a cv::Exception";
