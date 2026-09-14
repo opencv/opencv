@@ -529,6 +529,7 @@ public:
                float _fTau,
                bool _bShadowDetection,
                uchar _nShadowDetection,
+               bool _updateModel,
                const Mat& _knownForegroundMask)
             :  knownForegroundMask(_knownForegroundMask)
     {
@@ -550,6 +551,7 @@ public:
         m_nkNN = _nkNN;
         m_bShadowDetection = _bShadowDetection;
         m_nShadowDetection = _nShadowDetection;
+        m_updateModel = _updateModel;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -578,19 +580,22 @@ public:
                 int result= _cvCheckPixelBackgroundNP(data, nchannels,
                         m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
 
-                _cvUpdatePixelBackgroundNP(x,data,nchannels,
-                        m_nN, m_aModel,
-                        m_nNextLongUpdate,
-                        m_nNextMidUpdate,
-                        m_nNextShortUpdate,
-                        m_aModelIndexLong,
-                        m_aModelIndexMid,
-                        m_aModelIndexShort,
-                        m_nLongCounter,
-                        m_nMidCounter,
-                        m_nShortCounter,
-                        include
-                        );
+                if (m_updateModel)
+                {
+                    _cvUpdatePixelBackgroundNP(x,data,nchannels,
+                            m_nN, m_aModel,
+                            m_nNextLongUpdate,
+                            m_nNextMidUpdate,
+                            m_nNextShortUpdate,
+                            m_aModelIndexLong,
+                            m_aModelIndexMid,
+                            m_aModelIndexShort,
+                            m_nLongCounter,
+                            m_nMidCounter,
+                            m_nShortCounter,
+                            include
+                            );
+                }
                 // Check that foreground mask exists
                 if (!knownForegroundMask.empty()) {
                     // If input mask states pixel is foreground
@@ -641,6 +646,7 @@ public:
     int m_nkNN;
     bool m_bShadowDetection;
     uchar m_nShadowDetection;
+    bool m_updateModel;
     const Mat& knownForegroundMask;
 };
 
@@ -655,6 +661,7 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
+    const bool updateModel = learningRate > 0;
 
     _fgmask.create(_image.size(), CV_8U);
     UMat fgmask = _fgmask.getUMat();
@@ -663,16 +670,20 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
 
     //recalculate update rates - in case alpha is changed
     // calculate update parameters (using alpha)
-    int Kshort,Kmid,Klong;
-    //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    int nShortUpdate = 0, nMidUpdate = 0, nLongUpdate = 0;
+    if (updateModel)
+    {
+        int Kshort,Kmid,Klong;
+        //approximate exponential learning curve
+        Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+        Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+        Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
 
-    //refresh rates
-    int nShortUpdate = (Kshort/nN)+1;
-    int nMidUpdate = (Kmid/nN)+1;
-    int nLongUpdate = (Klong/nN)+1;
+        //refresh rates
+        nShortUpdate = (Kshort/nN)+1;
+        nMidUpdate = (Kmid/nN)+1;
+        nLongUpdate = (Klong/nN)+1;
+    }
 
     int idxArg = 0;
     idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadOnly(frame));
@@ -692,6 +703,7 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     idxArg = kernel_apply.set(idxArg, fTb);
     idxArg = kernel_apply.set(idxArg, nkNN);
     idxArg = kernel_apply.set(idxArg, fTau);
+    idxArg = kernel_apply.set(idxArg, (uchar)updateModel);
     if (bShadowDetection)
         kernel_apply.set(idxArg, nShadowDetection);
 
@@ -699,23 +711,26 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     if(!kernel_apply.run(2, globalsize, NULL, true))
         return false;
 
-    nShortCounter++;//0,1,...,nShortUpdate-1
-    nMidCounter++;
-    nLongCounter++;
-    if (nShortCounter >= nShortUpdate)
+    if (updateModel)
     {
-        nShortCounter = 0;
-        randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
-    }
-    if (nMidCounter >= nMidUpdate)
-    {
-        nMidCounter = 0;
-        randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
-    }
-    if (nLongCounter >= nLongUpdate)
-    {
-        nLongCounter = 0;
-        randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        nShortCounter++;//0,1,...,nShortUpdate-1
+        nMidCounter++;
+        nLongCounter++;
+        if (nShortCounter >= nShortUpdate)
+        {
+            nShortCounter = 0;
+            randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+        }
+        if (nMidCounter >= nMidUpdate)
+        {
+            nMidCounter = 0;
+            randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+        }
+        if (nLongCounter >= nLongUpdate)
+        {
+            nLongCounter = 0;
+            randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        }
     }
     return true;
 }
@@ -789,19 +804,24 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, InputArray _knownFore
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
+    const bool updateModel = learningRate > 0;
 
     //recalculate update rates - in case alpha is changed
     // calculate update parameters (using alpha)
-    int Kshort,Kmid,Klong;
-    //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    int nShortUpdate = 0, nMidUpdate = 0, nLongUpdate = 0;
+    if (updateModel)
+    {
+        int Kshort,Kmid,Klong;
+        //approximate exponential learning curve
+        Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+        Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+        Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
 
-    //refresh rates
-    int nShortUpdate = (Kshort/nN)+1;
-    int nMidUpdate = (Kmid/nN)+1;
-    int nLongUpdate = (Klong/nN)+1;
+        //refresh rates
+        nShortUpdate = (Kshort/nN)+1;
+        nMidUpdate = (Kmid/nN)+1;
+        nLongUpdate = (Klong/nN)+1;
+    }
 
     parallel_for_(Range(0, image.rows),
                   KNNInvoker(image, fgmask,
@@ -821,26 +841,30 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, InputArray _knownFore
                              fTau,
                              bShadowDetection,
                              nShadowDetection,
+                             updateModel,
                              knownForegroundMask),
                              image.total()/(double)(1 << 16));
 
-    nShortCounter++;//0,1,...,nShortUpdate-1
-    nMidCounter++;
-    nLongCounter++;
-    if (nShortCounter >= nShortUpdate)
+    if (updateModel)
     {
-        nShortCounter = 0;
-        randu(nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
-    }
-    if (nMidCounter >= nMidUpdate)
-    {
-        nMidCounter = 0;
-        randu(nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
-    }
-    if (nLongCounter >= nLongUpdate)
-    {
-        nLongCounter = 0;
-        randu(nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        nShortCounter++;//0,1,...,nShortUpdate-1
+        nMidCounter++;
+        nLongCounter++;
+        if (nShortCounter >= nShortUpdate)
+        {
+            nShortCounter = 0;
+            randu(nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+        }
+        if (nMidCounter >= nMidUpdate)
+        {
+            nMidCounter = 0;
+            randu(nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+        }
+        if (nLongCounter >= nLongUpdate)
+        {
+            nLongCounter = 0;
+            randu(nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        }
     }
 }
 
