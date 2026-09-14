@@ -187,7 +187,13 @@ public:
             input[4].convertTo(seqLens, CV_32S);
         Mat H0;
         if (input.size() > 5 && !input[5].empty())
-            H0 = input[5].reshape(1, D * N);
+        {
+            Mat h0 = input[5];
+            // layout=1 gives initial_h as [N, D, H]; the loop slices it direction-major.
+            if (layout == BATCH_SEQ_HID)
+                cv::transposeND(h0.clone(), {1, 0, 2}, h0);
+            H0 = h0.isContinuous() ? h0.reshape(1, D * N) : h0.clone().reshape(1, D * N);
+        }
 
         Mat y, yh;
         resolveOutputs(output, D, N, y, yh);

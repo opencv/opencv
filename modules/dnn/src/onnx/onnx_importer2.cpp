@@ -1491,24 +1491,29 @@ void ONNXImporter2::parseAbs(LayerParams& layerParams, const opencv_onnx::NodePr
 
 // The PReLU layer is per-channel only; [C,1,..,1] right-aligns onto that axis.
 // Any other slope, and every non-const one, needs NaryEltwise broadcasting.
-static bool isPerChannelSlope(const Mat& slope)
+static int countNonUnitDims(const MatShape& s)
 {
-    MatShape s = shape(slope);
-    if (s.dims < 2 || s[0] <= 1)
-        return false;
-    for (int i = 1; i < s.dims; i++)
-        if (s[i] != 1)
-            return false;
-    return true;
+    int n = 0;
+    for (int i = 0; i < s.dims; i++)
+        n += s[i] != 1;
+    return n;
 }
 
 void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_inputs.size() == 2);
+    // A constant slope with at most one non-unit dim is the per-channel form real
+    // models emit; it keeps the fusable activation layer. Everything else, including
+    // every runtime slope, needs the general broadcasting of NaryEltwise.
     if (net.isConstArg(node_inputs[1]))
     {
         Mat slope = net.argTensor(node_inputs[1]);
-        if (slope.total() == 1 || isPerChannelSlope(slope))
+        const MatShape& xshape = netimpl->args.at(node_inputs[0].idx).shape;
+        // When the input shape is known it settles whether a flat slope is per-channel.
+        bool perChannel = countNonUnitDims(shape(slope)) <= 1 &&
+                          (xshape.dims < 2 || slope.total() == 1 ||
+                           (int)slope.total() == xshape[1]);
+        if (perChannel)
         {
             layerParams.type = "PReLU";
             layerParams.blobs.push_back(slope);
@@ -1613,21 +1618,19 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     if (layerParams.has("output_shape"))
     {
         const DictValue& outShape = layerParams.get("output_shape");
-        DictValue strides = layerParams.get("stride");
 
-        // Infer kernel_size from weight shape if not provided
-        if (!layerParams.has("kernel_size"))
+        // strides is optional, so the spatial rank comes from the weights instead.
+        const ArgData& wdata = netimpl->args.at(node_inputs[1].idx);
+        const bool haveWShape = wdata.shape.size() >= 3;
+        const int nspatial = haveWShape ? (int)wdata.shape.size() - 2 : outShape.size();
+        CV_CheckGE(outShape.size(), nspatial, "ConvTranspose: output_shape is too short");
+
+        if (!layerParams.has("kernel_size") && haveWShape)
         {
-            const Arg& warg = node_inputs[1];
-            const ArgData& wdata = netimpl->args.at(warg.idx);
-            if (wdata.shape.size() >= 3)
-            {
-                int kdims = (int)wdata.shape.size() - 2;
-                std::vector<int> kshape(kdims);
-                for (int i = 0; i < kdims; ++i)
-                    kshape[i] = wdata.shape[2 + i];
-                layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), kdims));
-            }
+            std::vector<int> kshape(nspatial);
+            for (int i = 0; i < nspatial; ++i)
+                kshape[i] = wdata.shape[2 + i];
+            layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), nspatial));
         }
 
         if (layerParams.has("pad_mode"))
@@ -1637,12 +1640,11 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
                 CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
         }
 
-        // Take the trailing dims; output_shape also carries batch and channel.
-        std::vector<int> out_spatial;
-        for (int i = 0; i < strides.size(); i++)
-            out_spatial.push_back(outShape.get<int>(outShape.size() - strides.size() + i));
-        layerParams.set("output_shape_spatial",
-                        DictValue::arrayInt(out_spatial.data(), (int)out_spatial.size()));
+        // ONNX says output_shape is spatial-only, but some exporters prepend N and C.
+        std::vector<int> out_spatial(nspatial);
+        for (int i = 0; i < nspatial; i++)
+            out_spatial[i] = outShape.get<int>(outShape.size() - nspatial + i);
+        layerParams.set("output_shape_spatial", DictValue::arrayInt(out_spatial.data(), nspatial));
     }
     else if (layerParams.has("output_padding"))
     {

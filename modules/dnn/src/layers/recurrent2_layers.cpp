@@ -687,17 +687,23 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             // ONNX stores P as Pi, Po, Pf; the gate loop wants pI, pF, pO.
             Mat P = weightBlobs[3];
-            weightBlobs[3] = P.colRange(0, numHidden);
-            weightBlobs[3] = weightBlobs[3].clone().reshape(1, weightBlobs[3].total());  // Single column.
-            weightBlobs[3] = Mat::diag(weightBlobs[3]);
+            weightBlobs[3] = packPeephole(P, 0, numHidden);                // Pi
+            weightBlobs.push_back(packPeephole(P, 2 * numHidden, numHidden));  // Pf
+            weightBlobs.push_back(packPeephole(P, numHidden, numHidden));      // Po
+        }
 
-            weightBlobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));  // Pf
-            weightBlobs[4] = weightBlobs[4].clone().reshape(1, weightBlobs[4].total());  // Single column.
-            weightBlobs[4] = Mat::diag(weightBlobs[4]);
-
-            weightBlobs.push_back(P.colRange(numHidden, 2 * numHidden));      // Po
-            weightBlobs[5] = weightBlobs[5].clone().reshape(1, weightBlobs[5].total());  // Single column.
-            weightBlobs[5] = Mat::diag(weightBlobs[5]);
+        // One numHidden x numHidden diagonal per direction, stacked vertically, so the
+        // gate loop's per-direction rowRange yields a square matrix.
+        static Mat packPeephole(const Mat& P, int col0, int numHidden)
+        {
+            const int numDirs = P.rows;
+            Mat packed = Mat::zeros(numDirs * numHidden, numHidden, P.type());
+            for (int d = 0; d < numDirs; d++)
+            {
+                Mat vals = P.row(d).colRange(col0, col0 + numHidden).clone().reshape(1, numHidden);
+                Mat::diag(vals).copyTo(packed.rowRange(d * numHidden, (d + 1) * numHidden));
+            }
+            return packed;
         }
 };
 
