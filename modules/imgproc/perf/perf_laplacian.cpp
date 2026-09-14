@@ -8,7 +8,6 @@ namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
 CV_ENUM(TargetDepth, CV_8U, CV_16S, CV_32F)
-CV_ENUM(SrcDepth, CV_8U, CV_32F)
 
 typedef tuple<Size, int, TargetDepth, BorderMode> LaplacianParams;
 typedef perf::TestBaseWithParam<LaplacianParams> Perf_Laplacian;
