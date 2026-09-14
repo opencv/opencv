@@ -69,9 +69,20 @@ class TokenizerBindingTest(NewOpenCVTests):
         self.assertGreater(len(tok.encode(b"\xc3")), 0)
 
     def test_tokenizer_albert_sequence_normalizer(self):
+        # ALBERT wraps with [CLS]=2 / [SEP]=3 and folds case and accents.
         tok = cv.dnn.Tokenizer.load(_tf("albert/config.json"))
+        self.assertEqual(list(tok.encode("Hello world")), [2, 10975, 126, 3])
+        self.assertEqual(list(tok.encode("café")), [2, 6241, 3])
         self.assertEqual(list(tok.encode("Hello world")), list(tok.encode("hello world")))
-        self.assertEqual(list(tok.encode("café")), list(tok.encode("cafe")))
+
+    def test_tokenizer_strip_accents_keeps_non_mark_decompositions(self):
+        # Stripping accents must not delete a spacing mark or half a Hangul syllable.
+        tok = cv.dnn.Tokenizer.load(_tf("bert/config.json"))
+        self.assertEqual(list(tok.encode("हिन्दी")),
+                         [101, 1339, 29877, 29863, 29861, 29878, 102])
+        for text in ("মৌশল", "தமிழ்", "ଓଡ଼ିଆ", "안녕하세요"):
+            self.assertEqual(list(tok.encode(text)), [101, 100, 102], text)
+        self.assertEqual(list(tok.encode("café")), [101, 7668, 102])
 
     def test_with_hf_tiktoken(self):
         tok = cv.dnn.Tokenizer.load(_tf("gpt2/config.json"))

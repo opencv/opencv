@@ -109,11 +109,13 @@ CoreUnigram::CoreUnigram(const std::vector<std::pair<std::string, float>>& vocab
                           int unkId,
                           UnigramPrecompiledNormalizer normalizer,
                           const std::unordered_map<std::string, int>& specialToId,
-                          int eosId,
+                          const std::vector<int>& prefixIds,
+                          const std::vector<int>& suffixIds,
                           const std::vector<UnigramNormalizerStep>& normSteps)
     : specialToId_(specialToId),
       unkId_(unkId),
-      eosId_(eosId),
+      prefixIds_(prefixIds),
+      suffixIds_(suffixIds),
       normalizer_(std::move(normalizer)),
       normSteps_(normSteps)
 {
@@ -137,7 +139,7 @@ CoreUnigram::CoreUnigram(const std::vector<std::pair<std::string, float>>& vocab
 
     maxPieceCps_ = 1;
     for (const auto& kv : pieceToId_) {
-        maxPieceCps_ = std::max(maxPieceCps_, unicode_cpts_from_utf8(kv.first).size());
+        maxPieceCps_ = std::max(maxPieceCps_, utf8CodepointCount(kv.first));
     }
 }
 
@@ -198,8 +200,12 @@ void CoreUnigram::encodeChunk(const std::string& chunk, std::vector<int>& out) c
     std::vector<std::pair<int, bool>> segs;
     size_t cur = n;
     while (cur > 0) {
+        // backPos is -1 where unreached; stop rather than wrapping to SIZE_MAX.
+        const int prev = backPos[cur];
+        if (prev < 0 || (size_t)prev >= cur)
+            break;
         segs.emplace_back(backId[cur], backIsUnk[cur] != 0);
-        cur = (size_t)backPos[cur];
+        cur = (size_t)prev;
     }
     std::reverse(segs.begin(), segs.end());
 
@@ -271,7 +277,9 @@ std::string CoreUnigram::applyNormalizer(const std::string& text) const {
             out.reserve(cur.size());
             for (uint32_t cpt : unicode_cpts_from_utf8(cur)) {
                 if (strip) {
-                    if (unicode_cpt_flags_from_cpt(cpt).is_accent_mark) continue;
+                    // Spacing/enclosing marks are required vowels, not accents.
+                    if (unicode_cpt_flags_from_cpt(cpt).is_accent_mark &&
+                        !unicode_cpt_is_spacing_mark(cpt)) continue;
                     out += unicode_cpt_to_utf8(unicode_strip_accent_base(cpt));
                 } else {
                     out += unicode_cpt_to_utf8(unicode_tolower(cpt));
@@ -290,6 +298,7 @@ std::string CoreUnigram::applyNormalizer(const std::string& text) const {
 
 std::vector<int> CoreUnigram::encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
     std::vector<int> ids;
+    ids.insert(ids.end(), prefixIds_.begin(), prefixIds_.end());
     auto normalizeAndEncode = [&](const std::string& literal) {
         std::string norm = applyNormalizer(literal);
         pretokenizeAndEncode(norm, ids);
@@ -302,7 +311,7 @@ std::vector<int> CoreUnigram::encode(const std::string& text, const std::unorder
             normalizeAndEncode,
             [&](int id) { ids.push_back(id); });
     }
-    if (eosId_ >= 0) ids.push_back(eosId_);
+    ids.insert(ids.end(), suffixIds_.begin(), suffixIds_.end());
     return ids;
 }
 

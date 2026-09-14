@@ -22,51 +22,74 @@
 
 namespace cv { namespace dnn {
 
-uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
-    CV_CheckLT(offset, utf8.size(), "unicode_cpt_from_utf8: offset out of range");
-    if (!(utf8[offset + 0] & 0x80)) {
-        auto result = utf8[offset + 0];
-        offset += 1;
-        return result;
+// Non-throwing decode shared by the strict and lenient entry points.
+static bool unicode_cpt_from_utf8_try(const std::string & utf8, size_t & offset, uint32_t & cpt) {
+    if (offset >= utf8.size()) {
+        return false;
     }
-    if (!(utf8[offset + 0] & 0x40)) {
-        CV_Error(cv::Error::StsBadArg, "invalid character");
+    if (!(utf8[offset + 0] & 0x80)) {
+        cpt = (uint32_t) (uint8_t) utf8[offset + 0];
+        offset += 1;
+        return true;
+    }
+    if (!(utf8[offset + 0] & 0x40)) {           // stray continuation byte
+        return false;
     }
     if (!(utf8[offset + 0] & 0x20)) {
         if (offset + 1 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80)) {
-            CV_Error(cv::Error::StsBadArg, "invalid character");
+            return false;
         }
-        auto result = ((utf8[offset + 0] & 0x1f) << 6) | (utf8[offset + 1] & 0x3f);
-        if (result < 0x80)
-            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
+        uint32_t result = ((utf8[offset + 0] & 0x1f) << 6) | (utf8[offset + 1] & 0x3f);
+        if (result < 0x80) {                    // overlong
+            return false;
+        }
         offset += 2;
-        return result;
+        cpt = result;
+        return true;
     }
     if (!(utf8[offset + 0] & 0x10)) {
-        if (offset + 2 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) || ! ((utf8[offset + 2] & 0xc0) == 0x80)) {
-            CV_Error(cv::Error::StsBadArg, "invalid character");
+        if (offset + 2 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) ||
+            ! ((utf8[offset + 2] & 0xc0) == 0x80)) {
+            return false;
         }
-        auto result = ((utf8[offset + 0] & 0x0f) << 12) | ((utf8[offset + 1] & 0x3f) << 6) | (utf8[offset + 2] & 0x3f);
-        if (result < 0x800)
-            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
-        if (result >= 0xd800 && result <= 0xdfff)
-            CV_Error(cv::Error::StsBadArg, "utf8-encoded surrogate half");
+        uint32_t result = ((utf8[offset + 0] & 0x0f) << 12) |
+                          ((utf8[offset + 1] & 0x3f) << 6) | (utf8[offset + 2] & 0x3f);
+        if (result < 0x800) {                   // overlong
+            return false;
+        }
+        if (result >= 0xd800 && result <= 0xdfff) {  // utf8-encoded surrogate half
+            return false;
+        }
         offset += 3;
-        return result;
+        cpt = result;
+        return true;
     }
     if (!(utf8[offset + 0] & 0x08)) {
-        if (offset + 3 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) || ! ((utf8[offset + 2] & 0xc0) == 0x80) || !((utf8[offset + 3] & 0xc0) == 0x80)) {
-            CV_Error(cv::Error::StsBadArg, "invalid character");
+        if (offset + 3 >= utf8.size() || ! ((utf8[offset + 1] & 0xc0) == 0x80) ||
+            ! ((utf8[offset + 2] & 0xc0) == 0x80) || !((utf8[offset + 3] & 0xc0) == 0x80)) {
+            return false;
         }
-        auto result = ((utf8[offset + 0] & 0x07) << 18) | ((utf8[offset + 1] & 0x3f) << 12) | ((utf8[offset + 2] & 0x3f) << 6) | (utf8[offset + 3] & 0x3f);
-        if (result < 0x10000)
-            CV_Error(cv::Error::StsBadArg, "overlong utf8 sequence");
-        if (result > 0x10ffff)
-            CV_Error(cv::Error::StsBadArg, "utf8 sequence past U+10FFFF");
+        uint32_t result = ((utf8[offset + 0] & 0x07) << 18) | ((utf8[offset + 1] & 0x3f) << 12) |
+                          ((utf8[offset + 2] & 0x3f) << 6) | (utf8[offset + 3] & 0x3f);
+        if (result < 0x10000) {                 // overlong
+            return false;
+        }
+        if (result > 0x10ffff) {                // past the last valid codepoint
+            return false;
+        }
         offset += 4;
-        return result;
+        cpt = result;
+        return true;
     }
-    CV_Error(cv::Error::StsBadArg, "failed to convert utf8 to codepoint");
+    return false;
+}
+
+uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
+    CV_CheckLT(offset, utf8.size(), "unicode_cpt_from_utf8: offset out of range");
+    uint32_t cpt = 0;
+    if (!unicode_cpt_from_utf8_try(utf8, offset, cpt))
+        CV_Error(cv::Error::StsBadArg, "invalid utf8 sequence");
+    return cpt;
 }
 
 static std::vector<unicode_cpt_flags> unicode_cpt_flags_array() {
@@ -188,31 +211,6 @@ static std::vector<std::string> unicode_byte_encoding_process(const std::vector<
     return bpe_encoded_words;
 }
 
-static const uint32_t UNICODE_CUSTOM_SPLIT_OUT_OF_RANGE = 0xFFFFFFFF;
-
-// Free functions (no lambdas, no functors) that read/emit tokens within [offset_ini, offset_end).
-// Shared by unicode_regex_split_custom_gpt2() and unicode_regex_split_custom_llama3().
-static uint32_t unicode_custom_split_get_cpt(const std::vector<uint32_t> & cpts,
-                                              size_t offset_ini, size_t offset_end, size_t pos) {
-    return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : UNICODE_CUSTOM_SPLIT_OUT_OF_RANGE;
-}
-
-static unicode_cpt_flags unicode_custom_split_get_flags(const std::vector<uint32_t> & cpts,
-                                                         size_t offset_ini, size_t offset_end, size_t pos) {
-    return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
-}
-
-static size_t unicode_custom_split_add_token(std::vector<size_t> & bpe_offsets,
-                                              size_t & prev_end, size_t offset_end, size_t end) {
-    assert(prev_end <= end && end <= offset_end);
-    size_t len = end - prev_end;
-    if (len > 0) {
-        bpe_offsets.push_back(len);
-    }
-    prev_end = end;
-    return len;
-}
-
 // GPT2 system regex:  's|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+
 static std::vector<size_t> unicode_regex_split_custom_gpt2(const std::string & text, const std::vector<size_t> & offsets) {
     std::vector<size_t> bpe_offsets; // store the offset of each word
@@ -227,80 +225,104 @@ static std::vector<size_t> unicode_regex_split_custom_gpt2(const std::string & t
         assert(offset_end <= cpts.size());
         start = offset_end;
 
+        static const uint32_t OUT_OF_RANGE = 0xFFFFFFFF;
+        auto _get_cpt = [&] (const size_t pos) -> uint32_t {
+            return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
+        };
+
+        auto _get_flags = [&] (const size_t pos) -> unicode_cpt_flags {
+            return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
+        };
+
         size_t _prev_end = offset_ini;
+        auto _add_token = [&] (const size_t end) -> size_t {
+            assert(_prev_end <= end && end <= offset_end);
+            size_t len = end - _prev_end;
+            if (len > 0) {
+                bpe_offsets.push_back(len);
+            }
+            _prev_end = end;
+            //if (len > 0) {
+            //    std::string s = "";
+            //    for(size_t p = end-len; p < end; p++)
+            //        s += unicode_cpt_to_utf8(cpts[p]);
+            //    printf(">>> '%s'\n", s.c_str());
+            //}
+            return len;
+        };
 
         for (size_t pos = offset_ini; pos < offset_end; /*pos++*/ ) {
-            const uint32_t cpt = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos);
-            const auto flags = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos);
+            const uint32_t cpt = _get_cpt(pos);
+            const auto flags = _get_flags(pos);
 
             // regex: 's|'t|'re|'ve|'m|'ll|'d
             if (cpt == '\'' && pos+1 < offset_end) {
-                uint32_t cpt_next = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+1);
+                uint32_t cpt_next = _get_cpt(pos+1);
                 if (cpt_next == 's' || cpt_next == 't' || cpt_next == 'm' || cpt_next == 'd') {
-                    pos += unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos+2);
+                    pos += _add_token(pos+2);
                     continue;
                 }
                 if (pos+2 < offset_end) {
-                    uint32_t cpt_next_next = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+2);
+                    uint32_t cpt_next_next = _get_cpt(pos+2);
                     if ((cpt_next == 'r' && cpt_next_next == 'e') ||
                         (cpt_next == 'v' && cpt_next_next == 'e') ||
                         (cpt_next == 'l' && cpt_next_next == 'l')) {
-                        pos += unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos+3);
+                        pos += _add_token(pos+3);
                         continue;
                     }
                 }
             }
 
-            auto flags2 = (cpt == ' ' ? unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos+1) : flags);
+            auto flags2 = (cpt == ' ' ? _get_flags(pos+1) : flags);
             // regex: <space>?\p{L}+
             if (flags2.is_letter) {
                 pos += (cpt == ' ');
                 while (flags2.is_letter) {
-                    flags2 = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, ++pos);
+                    flags2 = _get_flags(++pos);
                 }
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
             // regex: <space>?\p{N}+
             if (flags2.is_number) {
                 pos += (cpt == ' ');
                 while (flags2.is_number) {
-                    flags2 = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, ++pos);
+                    flags2 = _get_flags(++pos);
                 }
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
             // regex: <space>?[^\s\p{L}\p{N}]+
             if (!(flags2.is_whitespace | flags2.is_letter | flags2.is_number) && flags2.as_uint()) {
                 pos += (cpt == ' ');
                 while (!(flags2.is_whitespace | flags2.is_letter | flags2.is_number) && flags2.as_uint()) {
-                    flags2 = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, ++pos);
+                    flags2 = _get_flags(++pos);
                 }
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             size_t num_whitespaces = 0;
-            while (unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos+num_whitespaces).is_whitespace) {
+            while (_get_flags(pos+num_whitespaces).is_whitespace) {
                 num_whitespaces++;
             }
 
             // regex: \s+(?!\S)
-            if (num_whitespaces > 1 && unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+num_whitespaces) != UNICODE_CUSTOM_SPLIT_OUT_OF_RANGE) {
+            if (num_whitespaces > 1 && _get_cpt(pos+num_whitespaces) != OUT_OF_RANGE) {
                 pos += num_whitespaces - 1;
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // regex: \s+
             if (num_whitespaces > 0) {
                 pos += num_whitespaces;
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // no matches
-            unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, ++pos);
+            _add_token(++pos);
         }
     }
 
@@ -321,25 +343,49 @@ static std::vector<size_t> unicode_regex_split_custom_llama3(const std::string &
         assert(offset_end <= cpts.size());
         start = offset_end;
 
+        static const uint32_t OUT_OF_RANGE = 0xFFFFFFFF;
+        auto _get_cpt = [&] (const size_t pos) -> uint32_t {
+            return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
+        };
+
+        auto _get_flags = [&] (const size_t pos) -> unicode_cpt_flags {
+            return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
+        };
+
         size_t _prev_end = offset_ini;
+        auto _add_token = [&] (const size_t end) -> size_t {
+            assert(_prev_end <= end && end <= offset_end);
+            size_t len = end - _prev_end;
+            if (len > 0) {
+                bpe_offsets.push_back(len);
+            }
+            _prev_end = end;
+            //if (len > 0) {
+            //    std::string s = "";
+            //    for(size_t p = end-len; p < end; p++)
+            //        s += unicode_cpt_to_utf8(cpts[p]);
+            //    printf(">>> '%s'\n", s.c_str());
+            //}
+            return len;
+        };
 
         for (size_t pos = offset_ini; pos < offset_end; /*pos++*/ ) {
-            const uint32_t cpt = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos);
-            const auto flags = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos);
+            const uint32_t cpt = _get_cpt(pos);
+            const auto flags = _get_flags(pos);
 
             // regex: (?i:'s|'t|'re|'ve|'m|'ll|'d) // case insensitive
             if (cpt == '\'' && pos+1 < offset_end) {
-                uint32_t cpt_next = unicode_tolower(unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+1));
+                uint32_t cpt_next = unicode_tolower(_get_cpt(pos+1));
                 if (cpt_next == 's' || cpt_next == 't' || cpt_next == 'm' || cpt_next == 'd') {
-                    pos += unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos+2);
+                    pos += _add_token(pos+2);
                     continue;
                 }
                 if (pos+2 < offset_end) {
-                    uint32_t cpt_next_next = unicode_tolower(unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+2));
+                    uint32_t cpt_next_next = unicode_tolower(_get_cpt(pos+2));
                     if ((cpt_next == 'r' && cpt_next_next == 'e') ||
                         (cpt_next == 'v' && cpt_next_next == 'e') ||
                         (cpt_next == 'l' && cpt_next_next == 'l')) {
-                        pos += unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos+3);
+                        pos += _add_token(pos+3);
                         continue;
                     }
                 }
@@ -347,12 +393,12 @@ static std::vector<size_t> unicode_regex_split_custom_llama3(const std::string &
 
             // regex: [^\r\n\p{L}\p{N}]?\p{L}+
             if (!(cpt == '\r' || cpt == '\n' || flags.is_number)) {
-                if (flags.is_letter || unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos+1).is_letter) {  // one or more letters
+                if (flags.is_letter || _get_flags(pos+1).is_letter) {  // one or more letters
                     pos++;
-                    while (unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos).is_letter) {
+                    while (_get_flags(pos).is_letter) {
                         pos++;
                     }
-                    unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                    _add_token(pos);
                     continue;
                 }
             }
@@ -360,35 +406,35 @@ static std::vector<size_t> unicode_regex_split_custom_llama3(const std::string &
             // regex: \p{N}{1,3}
             if (flags.is_number) {
                 size_t ini = pos;
-                while (unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos).is_number) {
+                while (_get_flags(pos).is_number) {
                     if (++pos - ini >= 3 ) {
-                        unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                        _add_token(pos);
                         ini = pos;
                     }
                 }
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // regex: <space>?[^\s\p{L}\p{N}]+[\r\n]*
-            auto flags2 = (cpt == ' ' ? unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos+1) : flags);
+            auto flags2 = (cpt == ' ' ? _get_flags(pos+1) : flags);
             if (!(flags2.is_whitespace | flags2.is_letter | flags2.is_number) && flags.as_uint()) {
                 pos += (cpt == ' ');
                 while (!(flags2.is_whitespace | flags2.is_letter | flags2.is_number) && flags2.as_uint()) {
-                    flags2 = unicode_custom_split_get_flags(cpts, offset_ini, offset_end, ++pos);
+                    flags2 = _get_flags(++pos);
                 }
-                uint32_t cpt2 = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos);
+                uint32_t cpt2 = _get_cpt(pos);
                 while (cpt2 == '\r' || cpt2 == '\n') {
-                    cpt2 = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, ++pos);
+                    cpt2 = _get_cpt(++pos);
                 }
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             size_t num_whitespaces = 0;
             size_t last_end_r_or_n = 0;
-            while (unicode_custom_split_get_flags(cpts, offset_ini, offset_end, pos+num_whitespaces).is_whitespace) {
-                uint32_t cpt2 = unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+num_whitespaces);
+            while (_get_flags(pos+num_whitespaces).is_whitespace) {
+                uint32_t cpt2 = _get_cpt(pos+num_whitespaces);
                 if (cpt2 == '\r' || cpt2 == '\n') {
                     last_end_r_or_n = pos + num_whitespaces + 1;
                 }
@@ -398,26 +444,26 @@ static std::vector<size_t> unicode_regex_split_custom_llama3(const std::string &
             // regex: \s*[\r\n]+
             if (last_end_r_or_n > 0) {
                 pos = last_end_r_or_n;
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // regex: \s+(?!\S)
-            if (num_whitespaces > 1 && unicode_custom_split_get_cpt(cpts, offset_ini, offset_end, pos+num_whitespaces) != UNICODE_CUSTOM_SPLIT_OUT_OF_RANGE) {
+            if (num_whitespaces > 1 && _get_cpt(pos+num_whitespaces) != OUT_OF_RANGE) {
                 pos += num_whitespaces - 1;
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // regex: \s+
             if (num_whitespaces > 0) {
                 pos += num_whitespaces;
-                unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, pos);
+                _add_token(pos);
                 continue;
             }
 
             // no matches
-            unicode_custom_split_add_token(bpe_offsets, _prev_end, offset_end, ++pos);
+            _add_token(++pos);
         }
     }
 
@@ -532,16 +578,14 @@ std::string unicode_cpt_to_utf8(uint32_t cpt) {
     CV_Error(cv::Error::StsBadArg, "invalid codepoint");
 }
 
+// Recovers with U+FFFD instead of throwing: cv::error() dumps and can terminate.
 uint32_t unicode_cpt_from_utf8_lenient(const std::string & utf8, size_t & offset) {
     const size_t start = offset;
-    try {
-        return unicode_cpt_from_utf8(utf8, offset);
-    }
-    catch (const cv::Exception & /*ex*/) {
-        // Silently ignore invalid UTF-8 input to avoid leaking the exception beyond llama_tokenize
-        offset = start + 1;
-        return 0xFFFD; // replacement character
-    }
+    uint32_t cpt = 0;
+    if (unicode_cpt_from_utf8_try(utf8, offset, cpt))
+        return cpt;
+    offset = start + 1;
+    return 0xFFFD; // replacement character
 }
 
 std::vector<uint32_t> unicode_cpts_from_utf8(const std::string & utf8) {
@@ -574,17 +618,64 @@ static bool nfd_range_first_greater(uint32_t value, const range_nfd & range) {
 }
 
 uint32_t unicode_tolower(uint32_t cpt) {
-    // binary search; std::pair::operator< compares .first first, and since .second
-    // is unsigned, (a, b) < (cpt, 0) reduces exactly to a < cpt.
-    auto it = std::lower_bound(unicode_map_lowercase.begin(), unicode_map_lowercase.end(),
-        std::make_pair(cpt, (uint32_t) 0));
+    // binary search
+    auto it = std::lower_bound(unicode_map_lowercase.begin(), unicode_map_lowercase.end(), cpt,
+        [](const std::pair<uint32_t, uint32_t> & pair, uint32_t value) {
+            return pair.first < value;
+        });
     if (it != unicode_map_lowercase.end() && it->first == cpt) {
         return it->second;
     }
     return cpt;  // Return the original code point if no lowercase mapping is found
 }
 
+// unicode_ranges_nfd holds only the first decomposition codepoint; the
+// discarded remainder must be combining marks.
+static bool nfd_tail_is_all_marks(uint32_t cpt) {
+    static const std::pair<uint32_t, uint32_t> unsafe[] = {
+        {0x0009CB, 0x0009CC},  // Bengali vowel signs O, AU
+        {0x000B4B, 0x000B4C},  // Oriya vowel signs O, AU
+        {0x000B94, 0x000B94},  // Tamil letter AU
+        {0x000BCA, 0x000BCC},  // Tamil vowel signs O, OO, AU
+        {0x000CC0, 0x000CC0}, {0x000CC7, 0x000CC8}, {0x000CCA, 0x000CCB},  // Kannada
+        {0x000D4A, 0x000D4C},  // Malayalam vowel signs O, OO, AU
+        {0x000DDC, 0x000DDE},  // Sinhala vowel signs
+        {0x001B06, 0x001B06}, {0x001B08, 0x001B08}, {0x001B0A, 0x001B0A},  // Balinese
+        {0x001B0C, 0x001B0C}, {0x001B0E, 0x001B0E}, {0x001B12, 0x001B12},
+        {0x001B3B, 0x001B3B}, {0x001B3D, 0x001B3D}, {0x001B40, 0x001B41},
+        {0x001B43, 0x001B43},
+        {0x00AC00, 0x00D7A3},  // Hangul syllables
+        {0x01134B, 0x01134C},  // Grantha
+        {0x0114BC, 0x0114BC}, {0x0114BE, 0x0114BE},  // Tirhuta
+        {0x0115BA, 0x0115BB},  // Siddham
+        {0x011938, 0x011938},  // Dives Akuru
+        {0x01D15E, 0x01D164}, {0x01D1BB, 0x01D1C0},  // Musical symbols
+    };
+    for (const auto & range : unsafe) {
+        if (cpt >= range.first && cpt <= range.second) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool unicode_cpt_is_spacing_mark(uint32_t cpt) {
+    auto it = std::upper_bound(unicode_ranges_spacing_mark.begin(),
+        unicode_ranges_spacing_mark.end(), cpt,
+        [](uint32_t value, const std::pair<uint32_t, uint32_t> & range) {
+            return value < range.first;
+        });
+    if (it == unicode_ranges_spacing_mark.begin()) {
+        return false;
+    }
+    --it;
+    return cpt >= it->first && cpt <= it->second;
+}
+
 uint32_t unicode_strip_accent_base(uint32_t cpt) {
+    if (!nfd_tail_is_all_marks(cpt)) {
+        return cpt;
+    }
     // unicode_ranges_nfd is sorted and non-overlapping by 'first'; binary search
     // for the range whose [first, last] interval contains cpt.
     auto it = std::upper_bound(unicode_ranges_nfd.begin(), unicode_ranges_nfd.end(), cpt,
@@ -600,29 +691,38 @@ uint32_t unicode_strip_accent_base(uint32_t cpt) {
 
 // unicode categories used by unicode_regex_split() to build a "collapsed" single-byte
 // representation of the text (see collapse_codepoint() below) and of the regex patterns.
-static const std::map<std::string, int> k_ucat_enum = {
+static const std::map<std::string, int> & k_ucat_enum() {
+    static const std::map<std::string, int> m = {
     { "\\p{N}", unicode_cpt_flags::NUMBER },
     { "\\p{L}", unicode_cpt_flags::LETTER },
     { "\\p{P}", unicode_cpt_flags::PUNCTUATION },
     { "\\p{M}", unicode_cpt_flags::ACCENT_MARK },
     { "\\p{S}", unicode_cpt_flags::SYMBOL },
 };
+    return m;
+}
 
-static const std::map<int, int> k_ucat_cpt = {
+static const std::map<int, int> & k_ucat_cpt() {
+    static const std::map<int, int> m = {
     { unicode_cpt_flags::NUMBER,      0xD1 },
     { unicode_cpt_flags::LETTER,      0xD2 },
     { unicode_cpt_flags::PUNCTUATION, 0xD3 },
     { unicode_cpt_flags::ACCENT_MARK, 0xD4 },
     { unicode_cpt_flags::SYMBOL,      0xD5 },
 };
+    return m;
+}
 
-static const std::map<int, std::string> k_ucat_map = {
+static const std::map<int, std::string> & k_ucat_map() {
+    static const std::map<int, std::string> m = {
     { unicode_cpt_flags::NUMBER,      "\x30-\x39" }, // 0-9
     { unicode_cpt_flags::LETTER,      "\x41-\x5A\x61-\x7A" }, // A-Za-z
     { unicode_cpt_flags::PUNCTUATION, "\x21-\x23\x25-\x2A\x2C-\x2F\x3A-\x3B\x3F-\x40\\\x5B-\\\x5D\x5F\\\x7B\\\x7D" }, // !-#%-*,-/:-;?-@\[-\]_\{\}
     { unicode_cpt_flags::ACCENT_MARK, "" }, // no sub-128 codepoints
     { unicode_cpt_flags::SYMBOL,      "\\\x24\\\x2B\x3C-\x3E\x5E\x60\\\x7C" }, // $+<=>^`|
 };
+    return m;
+}
 
 // Collapse a single codepoint into the one-byte representation used by the "collapsed" text.
 static char collapse_codepoint(uint32_t cpt) {
@@ -636,8 +736,8 @@ static char collapse_codepoint(uint32_t cpt) {
     if (flags.is_whitespace) {
         // std::regex \s doesn't match 0x85; use vertical tab instead.
         return (char) 0x0B;
-    } else if (k_ucat_cpt.find(flags.category_flag()) != k_ucat_cpt.end()) {
-        return (char) k_ucat_cpt.at(flags.category_flag());
+    } else if (k_ucat_cpt().find(flags.category_flag()) != k_ucat_cpt().end()) {
+        return (char) k_ucat_cpt().at(flags.category_flag());
     } else {
         return (char) 0xD0; // fallback
     }
@@ -645,7 +745,7 @@ static char collapse_codepoint(uint32_t cpt) {
 
 // True if any of the known unicode-category placeholders (e.g. "\p{N}") appears in regex_expr.
 static bool regex_uses_unicode_category(const std::string & regex_expr) {
-    for (const auto & ucat : k_ucat_enum) {
+    for (const auto & ucat : k_ucat_enum()) {
         if (std::string::npos != regex_expr.find(ucat.first)) {
             return true;
         }
@@ -697,7 +797,8 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
                 const auto cpts_regex = unicode_cpts_from_utf8(regex_expr);
                 for (uint32_t cpt : cpts_regex) {
                     if (cpt >= 128) {
-                        throw std::runtime_error("Regex includes both unicode categories and non-ASCII characters - not supported");
+                        CV_Error(cv::Error::StsNotImplemented, "Regex includes both unicode "
+                            "categories and non-ASCII characters - not supported");
                     }
                 }
 
@@ -724,12 +825,12 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
                         regex_expr[i + 2] == '{' &&
                         regex_expr[i + 4] == '}') {
                         const std::string pat = regex_expr.substr(i, 5);
-                        if (k_ucat_enum.find(pat) != k_ucat_enum.end()) {
+                        if (k_ucat_enum().find(pat) != k_ucat_enum().end()) {
                             if (!inside) {
                                 regex_expr_collapsed += '[';
                             }
-                            regex_expr_collapsed += k_ucat_cpt.at(k_ucat_enum.at(pat));
-                            regex_expr_collapsed += k_ucat_map.at(k_ucat_enum.at(pat));
+                            regex_expr_collapsed += k_ucat_cpt().at(k_ucat_enum().at(pat));
+                            regex_expr_collapsed += k_ucat_map().at(k_ucat_enum().at(pat));
                             if (!inside) {
                                 regex_expr_collapsed += ']';
                             }
@@ -760,10 +861,9 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
                 //printf("regex_expr: %s\n", regex_expr.c_str());
                 bpe_offsets = unicode_regex_split_stl(wtext, wregex_expr, bpe_offsets);
             }
-        } catch (std::regex_error & e) {
-            fprintf(stderr, "Failed to process regex: '%s'\n", regex_expr.c_str());
-            fprintf(stderr, "Regex error: %s\n", e.what());
-            throw std::runtime_error("Failed to process regex");
+        } catch (const std::regex_error & e) {
+            CV_Error(cv::Error::StsParseError,
+                "Failed to process regex '" + regex_expr + "': " + e.what());
         }
     }
 

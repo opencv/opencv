@@ -10,6 +10,15 @@
 
 namespace cv { namespace dnn {
 
+// Counts codepoints without decoding; continuation bytes are 0b10xxxxxx.
+static inline size_t utf8CodepointCount(const std::string& s)
+{
+    size_t n = 0;
+    for (char c : s)
+        n += ((unsigned char)c & 0xC0) != 0x80;
+    return n;
+}
+
 // Splits 'text' on the longest-matching entries of 'specialToId' that pass
 // 'isAllowed', calling 'onLiteral' for each in-between run and 'onSpecialId'
 // for each match, left to right. Shared by WordPiece and Unigram, whose
@@ -49,24 +58,34 @@ static void splitOnSpecialTokens(const std::string& text,
 // R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K"
 static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)";
 
-// GPT-4’s cl100k_base split pattern
-// NOTE: This pattern is adapted from the original Python regex used for GPT-4's cl100k_base BPE split.
-// The original Python pattern is:
-//   r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}++|\p{N}{1,3}+| ?[^\s\p{L}\p{N}]++[\r\n]*+|\s++$|\s*[\r\n]|\s+(?!\S)|\s"""
-//
-// This C++ version differs in the following ways:
-//   1. Possessive quantifiers (`++`, `*+`, `?+`) are replaced with standard quantifiers (`+`, `*`, `?`)
-//      because C++ std::regex does not support possessive quantifiers.
-//   2. Inline case-insensitive group `(?i:...)` is replaced with a non-capturing group `(?:...)`
-//      because C++ std::regex does not support inline flags. Case-insensitivity must be handled separately.
-//   3. The `$` anchor at the end of `\s++$` is omitted because it's not needed for splitting and may cause issues.
-//   4. Unicode classes (`\p{L}`, `\p{N}`) are kept because the tokenizer's implementation handles them via custom llama.cpp logic.
-//
-// The resulting C++ pattern is compatible with std::regex and the tokenizer's Unicode handling logic.
-static const std::string CL100K_BASE = R"CL100K('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
+// Extracts and erases a JSON string field FileStorage would overflow on.
+static inline std::string extractAndStripBase64Field(std::string& jsonText,
+                                                     const std::string& fieldKey)
+{
+    std::string extracted;
+    const std::string needle = "\"" + fieldKey + "\"";
+    size_t keyPos = jsonText.find(needle);
+    if (keyPos == std::string::npos)
+        return extracted;
 
-// Qwen2.5 pre-tokenizer split pattern (from tokenizer.json)
-static const std::string QWEN2_5 = R"QWEN('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+)QWEN";
+    size_t colon = jsonText.find(':', keyPos + needle.size());
+    if (colon == std::string::npos)
+        return extracted;
+
+    size_t valueStart = jsonText.find('"', colon + 1);
+    if (valueStart == std::string::npos)
+        return extracted;
+
+    ++valueStart;
+
+    size_t valueEnd = jsonText.find('"', valueStart);
+    if (valueEnd == std::string::npos)
+        return extracted;
+
+    extracted = jsonText.substr(valueStart, valueEnd - valueStart);
+    jsonText.erase(valueStart, valueEnd - valueStart);
+    return extracted;
+}
 
 }}
 #endif

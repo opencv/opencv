@@ -2101,16 +2101,16 @@ public:
     /**
      * @brief Load a tokenizer from a model directory.
      *
-     * `modelConfig` is the path to `config.json`. Its parent directory must
+     * `model_config` is the path to `config.json`. Its parent directory must
      * also contain:
      *  - `config.json` with field `method` (one of: BPE, Gemma, SentencePiece, Unigram, WordPiece).
      *    `encodePair` is supported only for WordPiece; other methods throw.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
-     * @param modelConfig  Path to config.json for model.
+     * @param model_config  Path to config.json for model.
      * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& modelConfig);
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
@@ -2125,7 +2125,10 @@ public:
     CV_WRAP std::vector<int> encode(const std::string& text);
 
     /**
-     * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`. WordPiece only.
+     * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`.
+     *
+     * Supported only by WordPiece (BERT-family) tokenizers, which are the only ones that
+     * define a paired-sequence template; every other method throws cv::Exception.
      * @param text  UTF-8 first input string.
      * @param textPair  UTF-8 second input string.
      * @return Vector of token ids. Throws cv::Exception if unsupported by the loaded tokenizer.

@@ -5,6 +5,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "unicode.hpp"
+#include "utils.hpp"
 #include "core_wordpiece.hpp"
 
 #include <algorithm>
@@ -19,7 +20,7 @@ void CoreWordPiece::addPiece(const std::string& piece, int id) {
     if ((size_t)id >= idToPiece_.size())
         idToPiece_.resize(id + 1);
     idToPiece_[id] = piece;
-    maxPieceCps_ = std::max(maxPieceCps_, unicode_cpts_from_utf8(piece).size());
+    maxPieceCps_ = std::max(maxPieceCps_, utf8CodepointCount(piece));
 }
 
 CoreWordPiece::CoreWordPiece(const std::unordered_map<std::string, int>& vocab,
@@ -55,14 +56,18 @@ void CoreWordPiece::encodeWord(const std::string& word, std::vector<int>& out) c
     }
     byteOffset[cps.size()] = off;
 
-    std::vector<int> sub;
+    // One buffer per probe; ids staged into `out`, rolled back on failure.
+    const size_t outBase = out.size();
+    std::string candidate;
+    candidate.reserve(continuingSubwordPrefix_.size() + word.size());
     size_t start = 0;
     while (start < cps.size()) {
         size_t end = maxPieceCps_ > 0 ? std::min(cps.size(), start + maxPieceCps_) : cps.size();
+        const size_t prefixLen = (start > 0) ? continuingSubwordPrefix_.size() : 0;
         int matchedId = -1;
         while (end > start) {
-            std::string substr = word.substr(byteOffset[start], byteOffset[end] - byteOffset[start]);
-            std::string candidate = (start > 0) ? (continuingSubwordPrefix_ + substr) : substr;
+            candidate.assign(continuingSubwordPrefix_, 0, prefixLen);
+            candidate.append(word, byteOffset[start], byteOffset[end] - byteOffset[start]);
             auto it = pieceToId_.find(candidate);
             if (it != pieceToId_.end()) {
                 matchedId = it->second;
@@ -71,13 +76,13 @@ void CoreWordPiece::encodeWord(const std::string& word, std::vector<int>& out) c
             --end;
         }
         if (matchedId < 0) {
+            out.resize(outBase);
             out.push_back(unkId_);
             return;
         }
-        sub.push_back(matchedId);
+        out.push_back(matchedId);
         start = end;
     }
-    out.insert(out.end(), sub.begin(), sub.end());
 }
 
 std::vector<int> CoreWordPiece::encode(const std::string& word) const {

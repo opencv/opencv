@@ -104,6 +104,9 @@ uint32_t unicode_tolower(uint32_t cpt);
 // unicode_ranges_nfd's precomposed->base entries; returns `cpt` if not found.
 uint32_t unicode_strip_accent_base(uint32_t cpt);
 
+// True for a spacing (Mc) or enclosing (Me) mark; accent stripping drops only Mn.
+bool unicode_cpt_is_spacing_mark(uint32_t cpt);
+
 std::vector<std::string> unicode_regex_split(const std::string & text, const std::vector<std::string> & regex_exprs);
 }}
 #endif

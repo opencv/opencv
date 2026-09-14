@@ -28,12 +28,7 @@ enum class TokenizerFamily { Auto, BPE, SentencePiece, Unigram, WordPiece };
 static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
                           std::unordered_set<std::string>* outSpecial = nullptr);
 
-static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs, const std::string& dir);
-
-// "precompiled_charsmap" carries a base64 SentencePiece normalizer blob that
-// can run to several MB; FileStorage's JSON parser overflows on a field that
-// large, so it is located and erased from the raw text before FileStorage
-// ever sees it. outCharsmap optionally receives the stripped value.
+// Strips the multi-MB base64 "precompiled_charsmap" before FileStorage parses it.
 static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
     std::string* outCharsmap = nullptr)
 {
@@ -45,7 +40,7 @@ static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
     ss << in.rdbuf();
     std::string text = ss.str();
 
-    std::string charsmap = extractAndStripLongStringField(text, "precompiled_charsmap");
+    std::string charsmap = extractAndStripBase64Field(text, "precompiled_charsmap");
     if (outCharsmap)
         *outCharsmap = std::move(charsmap);
 
@@ -99,7 +94,8 @@ class SentencePieceTokenizerImpl : public Tokenizer::Impl {
 public:
     SentencePieceTokenizerImpl(CoreGemmaBPE model,
                                 std::unordered_set<std::string> special = {},
-                                int bos = -1);
+                                std::vector<int> prefixIds = {},
+                                std::vector<int> suffixIds = {});
 
     std::vector<int> encode(const std::string& text) override;
     std::string decode(const std::vector<int>& tokens) override;
@@ -107,28 +103,37 @@ public:
 private:
     CoreGemmaBPE model_;
     std::unordered_set<std::string> allowedSpecial_;
-    int bosTokenId_;
+    std::vector<int> prefixIds_;
+    std::vector<int> suffixIds_;
 };
 
 SentencePieceTokenizerImpl::SentencePieceTokenizerImpl(CoreGemmaBPE model,
                                                         std::unordered_set<std::string> special,
-                                                        int bos)
-    : model_(std::move(model)), allowedSpecial_(std::move(special)), bosTokenId_(bos) {}
+                                                        std::vector<int> prefixIds,
+                                                        std::vector<int> suffixIds)
+    : model_(std::move(model)), allowedSpecial_(std::move(special)),
+      prefixIds_(std::move(prefixIds)), suffixIds_(std::move(suffixIds)) {}
 
 std::vector<int> SentencePieceTokenizerImpl::encode(const std::string& text) {
-    std::vector<int> ids = model_.encode(text, allowedSpecial_);
-    if (bosTokenId_ >= 0) {
-        ids.insert(ids.begin(), bosTokenId_);
-    }
+    std::vector<int> ids = prefixIds_;
+    std::vector<int> body = model_.encode(text, allowedSpecial_);
+    ids.insert(ids.end(), body.begin(), body.end());
+    ids.insert(ids.end(), suffixIds_.begin(), suffixIds_.end());
     return ids;
 }
 
 std::string SentencePieceTokenizerImpl::decode(const std::vector<int>& tokens) {
-    if (bosTokenId_ >= 0 && !tokens.empty() && tokens.front() == bosTokenId_) {
-        std::vector<int> stripped(tokens.begin() + 1, tokens.end());
-        return model_.decode(stripped);
-    }
-    return model_.decode(tokens);
+    // Strip only the wrap added here; CoreGemmaBPE handles the rest.
+    size_t begin = 0, end = tokens.size();
+    if (end - begin >= prefixIds_.size() &&
+        std::equal(prefixIds_.begin(), prefixIds_.end(), tokens.begin()))
+        begin += prefixIds_.size();
+    if (end - begin >= suffixIds_.size() &&
+        std::equal(suffixIds_.rbegin(), suffixIds_.rend(), tokens.rbegin()))
+        end -= suffixIds_.size();
+    if (begin == 0 && end == tokens.size())
+        return model_.decode(tokens);
+    return model_.decode(std::vector<int>(tokens.begin() + begin, tokens.begin() + end));
 }
 
 // CoreUnigram already adds eos/strips specials; don't redo here.
@@ -256,8 +261,8 @@ std::string WordPieceTokenizerImpl::normalize(const std::string& text) const {
             out += ' ';
             continue;
         }
-        if (stripAccents_ && flags.is_accent_mark) {
-            // Standalone combining mark (already-decomposed input): drop it.
+        // Drop a standalone nonspacing mark; a spacing mark is a vowel, not an accent.
+        if (stripAccents_ && flags.is_accent_mark && !unicode_cpt_is_spacing_mark(cpt)) {
             continue;
         }
         uint32_t effective = stripAccents_ ? unicode_strip_accent_base(cpt) : cpt;
@@ -339,93 +344,76 @@ bool WordPieceTokenizerImpl::isSpecialId(int id) const {
                         [id](const std::pair<const std::string, int>& kv) { return kv.second == id; });
 }
 
+// Rewrites (?i:...) for std::regex. Only flat ASCII alternations translate;
+// anything else is rejected.
 static std::string expandCaseInsensitiveGroups(const std::string& in)
 {
     std::string out;
     out.reserve(in.size());
     size_t i = 0;
     while (i < in.size()) {
-        if (in.compare(i, 4, "(?i:") == 0) {
-            size_t j = i + 4;
-            int depth = 1;
-            while (j < in.size() && depth > 0) {
-                if (in[j] == '(') depth++;
-                else if (in[j] == ')') depth--;
-                if (depth > 0) j++;
-            }
-            std::string inner = in.substr(i + 4, j - (i + 4));
-            out += "(?:";
-            bool inClass = false;
-            int braceDepth = 0;
-            for (size_t k = 0; k < inner.size(); ++k) {
-                const char c = inner[k];
-                if (c == '\\' && k + 1 < inner.size()) {  // copy escapes verbatim
-                    out += c;
-                    out += inner[++k];
-                    continue;
-                }
-                if (c == '{') ++braceDepth;
-                else if (c == '}') --braceDepth;
-                else if (c == '[') inClass = true;
-                else if (c == ']') inClass = false;
-                // Never emit a nested [..]: inside a class the two cases belong in
-                // the class itself. Never expand inside \p{...} or {m,n}.
-                if (braceDepth == 0 && std::isalpha(static_cast<unsigned char>(c))) {
-                    const char lo = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    const char up = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                    if (inClass) { out += lo; out += up; }
-                    else { out += '['; out += lo; out += up; out += ']'; }
-                } else {
-                    out += c;
-                }
-            }
-            out += ")";
-            i = (j < in.size()) ? j + 1 : j;
-        } else {
+        if (in.compare(i, 4, "(?i:") != 0) {
             out += in[i++];
+            continue;
         }
-    }
-    return out;
-}
+        size_t j = i + 4;
+        int depth = 1;
+        bool inClass = false;
+        while (j < in.size() && depth > 0) {
+            const char c = in[j];
+            if (c == '\\' && j + 1 < in.size()) { j += 2; continue; }  // escapes are opaque
+            if (inClass) {
+                if (c == ']') inClass = false;
+            } else if (c == '[') {
+                inClass = true;
+            } else if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+            }
+            if (depth > 0) j++;
+        }
+        if (depth != 0)
+            CV_Error(cv::Error::StsParseError,
+                "tokenizer.json: unterminated '(?i:' group in the pre_tokenizer regex");
 
-static std::string stripPossessiveQuantifiers(const std::string& in)
-{
-    std::string out;
-    out.reserve(in.size());
-    for (char c : in) {
-        if (c == '+' && !out.empty()) {
-            char prev = out.back();
-            if (prev == '+' || prev == '*' || prev == '?') {
+        const std::string inner = in.substr(i + 4, j - (i + 4));
+        if (inner.find('[') != std::string::npos || inner.find('(') != std::string::npos)
+            CV_Error(cv::Error::StsNotImplemented,
+                "tokenizer.json: character classes and nested groups inside '(?i:...)' are "
+                "not supported in the pre_tokenizer regex, only flat literal alternations: "
+                + inner);
+
+        out += "(?:";
+        int braceDepth = 0;
+        for (size_t k = 0; k < inner.size(); ++k) {
+            const char c = inner[k];
+            if (c == '\\' && k + 1 < inner.size()) {  // copy escapes verbatim
+                out += c;
+                out += inner[++k];
                 continue;
             }
-            if (prev == '}') {
-                // '}' may end {m,n} or \p{...}; walk back to disambiguate.
-                int depth = 1;
-                size_t j = out.size() - 1;
-                while (j > 0 && depth > 0) {
-                    --j;
-                    if (out[j] == '}') ++depth;
-                    else if (out[j] == '{') --depth;
-                }
-                bool isPropertyEscape = (depth == 0 && out[j] == '{' &&
-                    j >= 2 && out[j - 1] == 'p' && out[j - 2] == '\\');
-                if (!isPropertyEscape) {
-                    isPropertyEscape = (depth == 0 && out[j] == '{' &&
-                        j >= 2 && out[j - 1] == 'P' && out[j - 2] == '\\');
-                }
-                if (depth == 0 && out[j] == '{' && !isPropertyEscape) {
-                    continue;
-                }
+            if (c == '{') ++braceDepth;
+            else if (c == '}') --braceDepth;
+            // Never expand inside \p{...} or a {m,n} quantifier.
+            if (braceDepth == 0 && std::isalpha(static_cast<unsigned char>(c))) {
+                out += '[';
+                out += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                out += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                out += ']';
+            } else {
+                out += c;
             }
         }
-        out.push_back(c);
+        out += ")";
+        i = (j < in.size()) ? j + 1 : j;
     }
     return out;
 }
 
 static std::string adaptHfPreTokenizerRegex(const std::string& raw)
 {
-    return stripPossessiveQuantifiers(expandCaseInsensitiveGroups(raw));
+    return expandCaseInsensitiveGroups(raw);
 }
 
 static bool findEmbeddedSplitRegex(const cv::FileNode& preTok, std::string& outRegex)
@@ -500,6 +488,43 @@ static std::string detectSplitPattern(const cv::FileStorage& fs, const std::stri
         (modelType.empty() ? std::string("(none)") : modelType) + "'");
 }
 
+// Splits a TemplateProcessing template's SpecialToken ids into those before
+// and after the sequence.
+static void readTemplateProcessingWrap(const cv::FileNode& postProc,
+                                       const std::unordered_map<std::string, int>& specialToId,
+                                       std::vector<int>& prefixIds,
+                                       std::vector<int>& suffixIds)
+{
+    if (postProc.empty())
+        return;
+    std::string postType;
+    postProc["type"] >> postType;
+    if (postType != "TemplateProcessing")
+        return;
+
+    bool seenSequence = false;
+    cv::FileNode single = postProc["single"];
+    for (auto it = single.begin(); it != single.end(); ++it) {
+        cv::FileNode entry = *it;
+        if (!entry["Sequence"].empty()) {
+            seenSequence = true;
+            continue;
+        }
+        cv::FileNode special = entry["SpecialToken"];
+        if (special.empty())
+            continue;
+        std::string tokId;
+        special["id"] >> tokId;
+        auto found = specialToId.find(tokId);
+        if (found == specialToId.end()) {
+            CV_LOG_WARNING(NULL, "tokenizer.json: post_processor references special token '"
+                << tokId << "' that is not in 'added_tokens'; it will not be emitted");
+            continue;
+        }
+        (seenSequence ? suffixIds : prefixIds).push_back(found->second);
+    }
+}
+
 static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
         cv::FileStorage& fs,
         std::unordered_set<std::string>* outSpecial = nullptr)
@@ -524,6 +549,9 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
         cv::FileNode entry = *it;
         std::string piece = entry.name();
         int id = (int)entry;
+        if (id < 0)
+            CV_Error(cv::Error::StsBadArg,
+                "tokenizer.json: vocab entry '" + piece + "' has a negative id");
         if (id > maxId) maxId = id;
         gemma.pieceToId[piece] = id;
     }
@@ -533,7 +561,7 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
         gemma.idToPiece[kv.second] = kv.first;
 
     cv::FileNode merges_node = model_node["merges"];
-    if (merges_node.size() > 0) {
+    if (!merges_node.empty()) {
         uint32_t rank = 0;
         for (auto it = merges_node.begin(); it != merges_node.end(); ++it) {
             cv::FileNode entry = *it;
@@ -561,7 +589,7 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
     }
 
     std::unordered_set<std::string> special;
-    int bos_id = -1;
+    std::unordered_map<std::string, int> specialToId;
     cv::FileNode added = fs["added_tokens"];
     if (!added.empty()) {
         for (auto it = added.begin(); it != added.end(); ++it) {
@@ -571,34 +599,24 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
             if (id >= 0 && !content.empty()) {
                 gemma.specialToId[content] = id;
                 gemma.idToSpecial[id]      = content;
+                specialToId[content]       = id;
                 special.insert(content);
                 if (outSpecial) outSpecial->insert(content);
-                if (content == "<bos>") bos_id = id;
             }
         }
     }
 
-    // Whether the model auto-prepends <bos> is declared by the post_processor, not by
-    // how 'merges' happens to be serialized.
-    int bos_token_id = -1;
-    cv::FileNode postProc = fs["post_processor"];
-    if (bos_id >= 0 && !postProc.empty()) {
-        std::string postType;
-        postProc["type"] >> postType;
-        if (postType == "TemplateProcessing") {
-            cv::FileNode single = postProc["single"];
-            for (auto it = single.begin(); it != single.end(); ++it) {
-                std::string tokId;
-                (*it)["SpecialToken"]["id"] >> tokId;
-                if (tokId == "<bos>") { bos_token_id = bos_id; break; }
-            }
-        }
-    }
-    return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special), bos_token_id);
+    // The post_processor declares the wrap, not how 'merges' is serialized.
+    std::vector<int> prefixIds, suffixIds;
+    readTemplateProcessingWrap(fs["post_processor"], specialToId, prefixIds, suffixIds);
+
+    return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special),
+                                               std::move(prefixIds), std::move(suffixIds));
 }
 
 static void appendUnigramNormalizerStep(const cv::FileNode& node,
-                                        std::vector<UnigramNormalizerStep>& out)
+                                        std::vector<UnigramNormalizerStep>& out,
+                                        std::string& unhandledNormalization)
 {
     if (node.empty() || node.isNone())
         return;
@@ -609,7 +627,7 @@ static void appendUnigramNormalizerStep(const cv::FileNode& node,
     if (type == "Sequence") {
         cv::FileNode seq = node["normalizers"];
         for (auto it = seq.begin(); it != seq.end(); ++it)
-            appendUnigramNormalizerStep(*it, out);
+            appendUnigramNormalizerStep(*it, out, unhandledNormalization);
         return;
     }
 
@@ -633,6 +651,10 @@ static void appendUnigramNormalizerStep(const cv::FileNode& node,
         node["content"] >> step.to;
         if (step.from.empty())
             return;
+    } else if (type == "NFKD" || type == "NFKC" || type == "NFD" || type == "NFC") {
+        // Reported once the whole chain is known; a Precompiled charsmap subsumes it.
+        unhandledNormalization = type;
+        return;
     } else {
         CV_LOG_WARNING(NULL, "tokenizer.json: unsupported normalizer step '" << type
             << "' will be skipped; token ids may differ from the reference tokenizer");
@@ -644,7 +666,22 @@ static void appendUnigramNormalizerStep(const cv::FileNode& node,
 static std::vector<UnigramNormalizerStep> readUnigramNormalizerSteps(const cv::FileNode& node)
 {
     std::vector<UnigramNormalizerStep> steps;
-    appendUnigramNormalizerStep(node, steps);
+    std::string unhandledNormalization;
+    appendUnigramNormalizerStep(node, steps, unhandledNormalization);
+    if (!unhandledNormalization.empty()) {
+        const bool subsumed = std::any_of(steps.begin(), steps.end(),
+            [](const UnigramNormalizerStep& s) {
+                return s.kind == UnigramNormalizerStep::PRECOMPILED;
+            });
+        if (subsumed)
+            CV_LOG_DEBUG(NULL, "tokenizer.json: normalizer step '" << unhandledNormalization
+                << "' is subsumed by the Precompiled charsmap; skipping");
+        else
+            CV_LOG_WARNING(NULL, "tokenizer.json: normalizer step '" << unhandledNormalization
+                << "' is not implemented and no Precompiled charsmap covers it; token ids "
+                   "may differ from the reference tokenizer");
+    }
+    // An absent normalizer still runs the default PRECOMPILED step.
     if (steps.empty())
         steps.resize(1);
     return steps;
@@ -691,7 +728,6 @@ static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
 
     std::unordered_set<std::string> special;
     std::unordered_map<std::string, int> specialToId;
-    int eosId = -1;
     cv::FileNode added = fs["added_tokens"];
     if (!added.empty()) {
         for (auto it = added.begin(); it != added.end(); ++it) {
@@ -703,18 +739,22 @@ static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
                 specialToId[content] = tid;
                 special.insert(content);
                 if (outSpecial) outSpecial->insert(content);
-                if (content == "</s>") eosId = tid;
             }
         }
     }
 
+    // The post_processor declares the wrap, not the name of any one added token.
+    std::vector<int> prefixIds, suffixIds;
+    readTemplateProcessingWrap(fs["post_processor"], specialToId, prefixIds, suffixIds);
+
     CoreUnigram unigram(vocab, unkId, buildUnigramPrecompiledNormalizer(charsmapB64),
-                        specialToId, eosId, readUnigramNormalizerSteps(fs["normalizer"]));
+                        specialToId, prefixIds, suffixIds,
+                        readUnigramNormalizerSteps(fs["normalizer"]));
 
     return makePtr<UnigramTokenizerImpl>(std::move(unigram), std::move(special));
 }
 
-static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs, const std::string& /*dir*/)
+static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs)
 {
     cv::FileNode modelNode = fs["model"];
     CV_CheckFalse(modelNode.empty(), "tokenizer.json missing 'model'");
@@ -811,7 +851,7 @@ static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir,
     if (familyOverride == TokenizerFamily::Unigram)
         return buildUnigramTokenizerImpl(fs, charsmapB64);
     if (familyOverride == TokenizerFamily::WordPiece)
-        return buildWordPieceTokenizerImpl(fs, dir);
+        return buildWordPieceTokenizerImpl(fs);
     if (familyOverride == TokenizerFamily::SentencePiece)
         return buildSentencePieceTokenizerImpl(fs);
     if (familyOverride == TokenizerFamily::BPE)
@@ -835,7 +875,7 @@ static Ptr<Tokenizer::Impl> buildFromTokenizerDir(const std::string& dir,
          !model["continuing_subword_prefix"].empty() &&
          model["merges"].empty());
     if (looksLikeWordPiece)
-        return buildWordPieceTokenizerImpl(fs, dir);
+        return buildWordPieceTokenizerImpl(fs);
 
     bool byteFallback = false;
     model["byte_fallback"] >> byteFallback;
@@ -952,13 +992,13 @@ static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), pattern);
 }
 
-Tokenizer Tokenizer::load(const std::string& modelConfig)
+Tokenizer Tokenizer::load(const std::string& model_config)
 {
-    cv::FileStorage cfg(modelConfig, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened())
-        CV_Error(cv::Error::StsError, "Could not open config.json: " + modelConfig);
+        CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
 
-    std::string dir = modelConfig;
+    std::string dir = model_config;
     size_t pos = dir.find_last_of("/\\");
     dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
 

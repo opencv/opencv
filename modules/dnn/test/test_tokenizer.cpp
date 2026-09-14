@@ -158,6 +158,8 @@ TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
     }
 }
 
+// Gemma3's post_processor prepends <bos> (id 2), which method:"Gemma" used to skip.
+// Ground truth: tokenizers.Tokenizer.from_file("gemma3/tokenizer.json").encode(t).ids
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_English) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
@@ -440,7 +442,8 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodePair) {
 TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsNullFollowsLowercase) {
     std::string model = _tf("bert-cased/config.json");
     Tokenizer tok = Tokenizer::load(model);
-    EXPECT_EQ(tok.decode(tok.encode("café")), "café");
+    // Hex-escaped: a raw UTF-8 literal is re-encoded by MSVC without /utf-8.
+    EXPECT_EQ(tok.decode(tok.encode("caf\xc3\xa9")), "caf\xc3\xa9");
     EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
 }
 
@@ -513,6 +516,60 @@ TEST(Tokenizer_Unigram, Tokenizer_Albert_SequenceNormalizer) {
     EXPECT_EQ(tok.encode("Hello world"), tok.encode("hello world"));
     EXPECT_EQ(tok.encode("The Quick BROWN Fox"), tok.encode("the quick brown fox"));
     EXPECT_EQ(tok.encode("caf\xc3\xa9"), tok.encode("cafe"));
+    EXPECT_EQ(tok.decode(tok.encode("Hello world")), "hello world");
+}
+
+// Accent stripping must not delete a spacing mark or Hangul syllable.
+// Ground truth: tokenizers.Tokenizer.from_file("bert/tokenizer.json").encode(t).ids
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsKeepsNonMarkDecompositions) {
+    Tokenizer tok = Tokenizer::load(_tf("bert/config.json"));
+
+    // Devanagari "hindi" survives intact and matches the reference id for id
+    const std::string devanagari =
+        "\xe0\xa4\xb9\xe0\xa4\xbf\xe0\xa4\xa8\xe0\xa5\x8d\xe0\xa4\xa6\xe0\xa5\x80";
+    EXPECT_EQ(tok.encode(devanagari),
+              (std::vector<int>{101, 1339, 29877, 29863, 29861, 29878, 102}));
+
+    // Uncovered scripts (Bengali, Tamil, Oriya, Hangul) fall back to one [UNK] (100).
+    const std::vector<std::string> unsupported = {
+        "\xe0\xa6\xae\xe0\xa7\x8c\xe0\xa6\xb6\xe0\xa6\xb2",
+        "\xe0\xae\xa4\xe0\xae\xae\xe0\xae\xbf\xe0\xae\xb4\xe0\xaf\x8d",
+        "\xe0\xac\x93\xe0\xac\xa1\xe0\xac\xbc\xe0\xac\xbf\xe0\xac\x86",
+        "\xec\x95\x88\xeb\x85\x95\xed\x95\x98\xec\x84\xb8\xec\x9a\x94",
+    };
+    for (const std::string& text : unsupported)
+        EXPECT_EQ(tok.encode(text), (std::vector<int>{101, 100, 102})) << "text: " << text;
+
+    // accented Latin still folds to its base
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), (std::vector<int>{101, 7668, 102}));
+}
+
+// Malformed UTF-8 must not reach cv::error(), which dumps and can terminate.
+TEST(Tokenizer_BPE, Tokenizer_MalformedUtf8DoesNotRaise) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+
+    // opencv_ts's handler has a non-null userdata; restore both or it reads null.
+    int errors = 0;
+    void* prevUserdata = NULL;
+    ErrorCallback prev = redirectError(
+        [](int, const char*, const char*, const char*, int, void* counter) -> int {
+            ++*static_cast<int*>(counter);
+            return 0;
+        }, &errors, &prevUserdata);
+    std::vector<int> ids = tok.encode("a\xffb\xc3z");
+    redirectError(prev, prevUserdata);
+
+    EXPECT_EQ(errors, 0) << "invalid UTF-8 must not construct a cv::Exception";
+    EXPECT_FALSE(ids.empty());
+}
+
+// ALBERT wraps with [CLS]/[SEP] and folds case and accents.
+// Ground truth: tokenizers.Tokenizer.from_file("albert/tokenizer.json").encode(t).ids
+TEST(Tokenizer_Unigram, Tokenizer_Albert_GroundTruth) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{2, 10975, 126, 3}));
+    EXPECT_EQ(tok.encode("The Quick BROWN Fox"), (std::vector<int>{2, 14, 2231, 886, 2385, 3}));
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), (std::vector<int>{2, 6241, 3}));
     EXPECT_EQ(tok.decode(tok.encode("Hello world")), "hello world");
 }
 

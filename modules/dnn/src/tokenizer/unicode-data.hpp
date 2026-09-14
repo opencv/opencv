@@ -60,6 +60,8 @@ extern const std::unordered_set<uint32_t> unicode_set_whitespace;
 extern const std::initializer_list<std::pair<uint32_t, uint32_t>> unicode_map_lowercase;
 extern const std::initializer_list<std::pair<uint32_t, uint32_t>> unicode_map_uppercase;
 extern const std::initializer_list<range_nfd> unicode_ranges_nfd;
+// Spacing (Mc) and enclosing (Me) marks, i.e. \p{M} minus \p{Mn}.
+extern const std::initializer_list<std::pair<uint32_t, uint32_t>> unicode_ranges_spacing_mark;
 
 }}
 #endif

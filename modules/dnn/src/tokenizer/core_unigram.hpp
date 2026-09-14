@@ -8,6 +8,7 @@
 #define __OPENCV_DNN_TOKENIZER_CORE_UNIGRAM_HPP__
 
 #include "unicode.hpp"
+#include "utils.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/dnn/dnn.hpp>
@@ -21,34 +22,6 @@
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
-
-static inline std::string extractAndStripLongStringField(std::string& jsonText,
-                                                    const std::string& fieldKey)
-{
-    std::string extracted;
-    const std::string needle = "\"" + fieldKey + "\"";
-    size_t keyPos = jsonText.find(needle);
-    if (keyPos == std::string::npos)
-        return extracted;
-
-    size_t colon = jsonText.find(':', keyPos + needle.size());
-    if (colon == std::string::npos)
-        return extracted;
-
-    size_t valueStart = jsonText.find('"', colon + 1);
-    if (valueStart == std::string::npos)
-        return extracted;
-
-    ++valueStart;
-
-    size_t valueEnd = jsonText.find('"', valueStart);
-    if (valueEnd == std::string::npos)
-        return extracted;
-
-    extracted = jsonText.substr(valueStart, valueEnd - valueStart);
-    jsonText.erase(valueStart, valueEnd - valueStart);
-    return extracted;
-}
 
 static const std::string UNIGRAM_METASPACE = "\xE2\x96\x81";
 
@@ -150,14 +123,16 @@ public:
      * @param unkId         Vocab id of the unknown-token piece (-1 if none).
      * @param normalizer    Precompiled SentencePiece normalizer to apply before segmentation.
      * @param specialToId   Map from literal added/special-token text to vocab id.
-     * @param eosId         Vocab id to append at the end of every encode() call (-1 to skip).
+     * @param prefixIds     Ids the post_processor prepends to every encode() (may be empty).
+     * @param suffixIds     Ids the post_processor appends to every encode() (may be empty).
      * @param normSteps     Normalizer chain from tokenizer.json, in declared order.
      */
     CoreUnigram(const std::vector<std::pair<std::string, float>>& vocab,
                 int unkId,
                 UnigramPrecompiledNormalizer normalizer,
                 const std::unordered_map<std::string, int>& specialToId,
-                int eosId,
+                const std::vector<int>& prefixIds,
+                const std::vector<int>& suffixIds,
                 const std::vector<UnigramNormalizerStep>& normSteps =
                     std::vector<UnigramNormalizerStep>(1));
 
@@ -183,7 +158,8 @@ private:
     std::unordered_map<int, std::string> idToSpecial_;
 
     int unkId_ = -1;
-    int eosId_ = -1;
+    std::vector<int> prefixIds_;
+    std::vector<int> suffixIds_;
     float unkScore_ = -10.0f;
     size_t maxPieceCps_ = 1;
 
