@@ -41,9 +41,7 @@ import argparse
 import os
 import cv2 as cv
 
-CLS_ID = 2
-SEP_ID = 3
-MASK_ID = 4
+MASK_TOKEN = '[MASK]'
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run ALBERT masked-LM inference in OpenCV',
@@ -60,16 +58,13 @@ def find_file(model_dir, filename):
             return os.path.join(root, filename)
     raise FileNotFoundError(f'{filename} not found under {model_dir}')
 
-def encode(tokenizer, text):
-    ids = [CLS_ID]
-    parts = text.split('[MASK]')
-    for i, part in enumerate(parts):
-        if i > 0:
-            ids.append(MASK_ID)
-        if part:
-            ids.extend(int(t) for t in tokenizer.encode(part))
-    ids.append(SEP_ID)
-    return ids
+def encode_with_mask(tokenizer, text):
+    if text.count(MASK_TOKEN) != 1:
+        raise ValueError('expected exactly one [MASK] token')
+    mask_id = tokenizer.encode(MASK_TOKEN)[1]
+    ids = list(tokenizer.encode(text))
+    mask_pos = ids.index(mask_id)
+    return ids, mask_pos
 
 def softmax(x):
     e = np.exp(x - np.max(x))
@@ -79,14 +74,7 @@ def albert_inference(net, tokenizer, text, topk):
 
     print("Inferencing ALBERT model...")
 
-    if '[MASK]' not in text:
-        raise ValueError('--text must contain a single [MASK] token')
-
-    ids = encode(tokenizer, text)
-    if ids.count(MASK_ID) != 1:
-        raise ValueError(f'expected exactly one [MASK] token, got {ids.count(MASK_ID)}')
-    mask_pos = ids.index(MASK_ID)
-
+    ids, mask_pos = encode_with_mask(tokenizer, text)
     n = len(ids)
     input_ids = np.array([ids], dtype=np.int64)
     attention_mask = np.ones((1, n), dtype=np.int64)

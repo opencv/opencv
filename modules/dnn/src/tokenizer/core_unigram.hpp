@@ -37,7 +37,9 @@ static inline std::string unigramBase64Decode(const std::string& in)
     }();
     std::string out;
     out.reserve(in.size() / 4 * 3 + 3);
-    int val = 0, valb = -8;
+    // Unsigned: the accumulator is never masked, so a signed shift would overflow.
+    uint32_t val = 0;
+    int valb = -8;
     for (unsigned char c : in) {
         if (c == '=' || T[c] == -1) continue;
         val = (val << 6) + T[c];

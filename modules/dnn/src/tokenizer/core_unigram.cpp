@@ -75,9 +75,14 @@ void UnigramPrecompiledNormalizer::normalizePrefix(const std::string& text, size
     }
     size_t stringsStart = 4 + (size_t)trieSize_;
     if (longestLen > 0 && stringsStart + (size_t)longestOff < blob_.size()) {
-        consumed = longestLen;
-        replacement.assign(blob_.data() + stringsStart + longestOff);
-        return;
+        // Bound to the terminator; a corrupt map could otherwise take the whole tail.
+        const size_t from = stringsStart + (size_t)longestOff;
+        const size_t nul = blob_.find('\0', from);
+        if (nul != std::string::npos) {
+            consumed = longestLen;
+            replacement.assign(blob_, from, nul - from);
+            return;
+        }
     }
     size_t off2 = offset;
     uint32_t cpt = unicode_cpt_from_utf8_lenient(text, off2);

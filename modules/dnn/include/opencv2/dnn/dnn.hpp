@@ -2103,8 +2103,9 @@ public:
      *
      * `model_config` is the path to `config.json`. Its parent directory must
      * also contain:
-     *  - `config.json` with field `method` (one of: BPE, Gemma, SentencePiece, Unigram, WordPiece).
-     *    `encodePair` is supported only for WordPiece; other methods throw.
+     *  - `config.json`. An optional `method` field (one of: BPE, Gemma, SentencePiece,
+     *    Unigram, WordPiece) selects the family; without it the family is detected from
+     *    `tokenizer.json`, so a stock Hugging Face config works unmodified.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
      * @param model_config  Path to config.json for model.
@@ -2113,11 +2114,11 @@ public:
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
-     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
+     * @brief Encode UTF-8 text to token ids.
      *
-     * For BPE-family models this calls `CoreBPE::encode` with an empty
-     * allowed-special set, so special-token text in `text` is encoded as
-     * ordinary text rather than recognized as a special token.
+     * Special-token text in @p text is recognized and mapped to its own id, and any
+     * wrapper the model's post_processor declares (e.g. BERT's `[CLS]`/`[SEP]`) is
+     * applied.
      *
      * @param text  UTF-8 input string.
      * @return Vector of token ids (32-bit ids narrowed to int for convenience).
