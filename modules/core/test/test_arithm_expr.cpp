@@ -509,4 +509,68 @@ TEST(Core_TExpr, select_float_mask)
     EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF));
 }
 
+
+// A value bound to a name may be referenced again after the expression that produced it has been
+// folded away. Both retire-the-slot optimizations used to reclassify that slot to NONE, so the
+// later reference silently read the reserved empty operand instead of the value.
+TEST(Core_TExpr, named_value_reused_after_abs_peephole)
+{
+    Mat a(12, 15, CV_32F), b(12, 15, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    // abs(t) folds the subtraction into absdiff; 't' is still live afterwards.
+    Mat got = expr1("t = {0} - {1}; abs(t) + t", { a, b });
+    Mat adiff, diff; cv::absdiff(a, b, adiff); cv::subtract(a, b, diff);
+    Mat exp; cv::add(adiff, diff, exp);
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
+}
+
+TEST(Core_TExpr, named_value_reused_in_tuple_after_abs_peephole)
+{
+    Mat a(9, 11, CV_32F), b(9, 11, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    std::vector<Mat> out;
+    cv::texpr("t = {0} - {1}; (abs(t), t)", std::vector<Mat>{ a, b }, out);
+    ASSERT_EQ(out.size(), 2u);
+    Mat adiff, diff; cv::absdiff(a, b, adiff); cv::subtract(a, b, diff);
+    EXPECT_LE(cvtest::norm(out[0], adiff, NORM_INF), 1e-3) << "abs(t)";
+    EXPECT_LE(cvtest::norm(out[1], diff,  NORM_INF), 1e-3) << "t";
+}
+
+// The same slot feeding two outputs: the first output used to MOVE (retire) the named slot,
+// leaving the second reading an empty operand.
+TEST(Core_TExpr, named_value_used_by_two_outputs)
+{
+    Mat a(13, 8, CV_32F), b(13, 8, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    std::vector<Mat> out;
+    cv::texpr("t = {0} + {1}; (t, t)", std::vector<Mat>{ a, b }, out);
+    ASSERT_EQ(out.size(), 2u);
+    Mat exp; cv::add(a, b, exp);
+    EXPECT_LE(cvtest::norm(out[0], exp, NORM_INF), 1e-3) << "first";
+    EXPECT_LE(cvtest::norm(out[1], exp, NORM_INF), 1e-3) << "second";
+}
+
+// A named value that is NOT reused must still take the cheap paths (this is the case the
+// retire-the-slot optimizations exist for) - guard against fixing the bug by disabling them.
+TEST(Core_TExpr, named_value_single_use_still_correct)
+{
+    Mat a(10, 10, CV_32F), b(10, 10, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    Mat got = expr1("t = {0} - {1}; abs(t)", { a, b });
+    Mat exp; cv::absdiff(a, b, exp);
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
+
+    Mat got2 = expr1("t = {0} + {1}; t", { a, b });
+    Mat exp2; cv::add(a, b, exp2);
+    EXPECT_LE(cvtest::norm(got2, exp2, NORM_INF), 1e-3);
+}
+
 }} // namespace
