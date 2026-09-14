@@ -189,6 +189,56 @@ TEST(videoio_images, seek)
     }
 }
 
+TEST(videoio_images, seek_pos_frames_is_exact)
+{
+    // CAP_PROP_POS_FRAMES_IS_EXACT reports whether set(CAP_PROP_POS_FRAMES, n) actually landed on frame n.
+    // The images backend seeks by index and is always exact for in-range positions; out-of-range positions
+    // get clamped by the backend and then can't be reached by the generic layer's decode-forward fallback,
+    // so they must be reported as approximate (0) rather than exact (1).
+    const int count = 20;
+    ImageCollection col;
+    col.generate(count, 5);
+    VideoCapture cap(col.getFirstFilename(), CAP_IMAGES);
+    ASSERT_TRUE(cap.isOpened());
+
+    // No seek has happened yet: exactness is unknown/not applicable.
+    EXPECT_EQ(-1, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+
+    // `count` itself is a reachable position: it's the natural end-of-stream state after decoding forward
+    // past the last valid frame (count - 1), the same way a frame counter lands on total_frames once a
+    // stream is exhausted. It belongs with the exact positions, not the out-of-range ones below.
+    for (int pos : {0, 1, count / 2, count - 1, count})
+    {
+        EXPECT_TRUE(cap.set(CAP_PROP_POS_FRAMES, pos));
+        EXPECT_EQ(pos, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES)));
+        EXPECT_EQ(1, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+    }
+
+    // Genuinely out-of-range: decoding forward runs out of frames before reaching the target.
+    cap.set(CAP_PROP_POS_FRAMES, count + 100);
+    EXPECT_EQ(0, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+}
+
+TEST(videoio_images, release_resets_pos_frames_is_exact)
+{
+    // A stale exactness verdict from a previous source/seek must not leak into a reused VideoCapture:
+    // release() (and open() reusing the same object, which calls it internally) has to put exactness
+    // back to unknown, the same state a freshly constructed VideoCapture starts in.
+    ImageCollection col;
+    col.generate(20, 5);
+    VideoCapture cap(col.getFirstFilename(), CAP_IMAGES);
+    ASSERT_TRUE(cap.isOpened());
+
+    ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 5));
+    ASSERT_EQ(1, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+
+    cap.release();
+    EXPECT_EQ(-1, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+
+    ASSERT_TRUE(cap.open(col.getFirstFilename(), CAP_IMAGES));
+    EXPECT_EQ(-1, static_cast<int>(cap.get(CAP_PROP_POS_FRAMES_IS_EXACT)));
+}
+
 TEST(videoio_images, pattern_overflow)
 {
     // check files: test0.png, ..., test11.png

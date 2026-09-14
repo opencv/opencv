@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+#include <cmath>
+
 #include "opencv2/videoio/registry.hpp"
 #include "videoio_registry.hpp"
 
@@ -519,6 +521,7 @@ void VideoCapture::release()
 {
     CV_TRACE_FUNCTION();
     icap.release();
+    lastPosFramesSeekExactness = -1;
 }
 
 bool VideoCapture::grab()
@@ -597,10 +600,122 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
     return *this;
 }
 
+// Generic-layer fallback for the CAP_PROP_POS_FRAMES seek contract: seek to the nearest key frame k <= n
+// (delegated to the backend), then decode forward until frame n is reached, for any backend that doesn't
+// already guarantee frame-accurate seeking on its own. Records the outcome in lastPosFramesSeekExactness,
+// queryable via get(CAP_PROP_POS_FRAMES_IS_EXACT). See the contract documented on CAP_PROP_POS_FRAMES.
+bool VideoCapture::seekPosFramesExact(double value)
+{
+    lastPosFramesSeekExactness = -1;
+
+    bool ret = icap->setProperty(CAP_PROP_POS_FRAMES, value);
+    if (!ret)
+    {
+        // A frame-index seek can fail for reasons that have nothing to do with format support --
+        // CAP_PROP_POS_MSEC takes a different path in most backends, so retry through it before
+        // giving up. GStreamer is deliberately excluded: its own CAP_PROP_POS_FRAMES path stops the
+        // pipeline before seeking whenever it was left playing by a prior read, which can fail
+        // outright and leave the pipeline in GST_STATE_NULL with no state transition back before
+        // the seek is issued -- and a "successful" CAP_PROP_POS_MSEC call made against that dead
+        // pipeline has its own confirmed side effect: it permanently disables this backend's
+        // internal "seeking to frame 0 always works" special case for the rest of this capture's
+        // lifetime, breaking a later, unrelated seek to frame 0 that would otherwise have worked.
+        // That side effect happens the moment the call succeeds, regardless of what use we'd make
+        // of the result, so the only way to avoid it is to never make the call on this backend.
+        if (icap->getCaptureDomain() == CAP_GSTREAMER)
+            return false;
+        const double fps = icap->getProperty(CAP_PROP_FPS);
+        if (fps <= 0 || !icap->setProperty(CAP_PROP_POS_MSEC, value * 1000.0 / fps))
+            return false;
+        // Some backends report this optimistically even when the underlying seek did nothing, so
+        // the verification below must never trust this on its own: "no confirmed forward progress"
+        // is treated as failure, not as an unverifiable-but-real seek.
+    }
+
+    const double target = std::floor(value);
+
+    // RAW mode (FFmpeg-only): there is no codec to decode forward with, so the backend's own key-frame
+    // seek is final -- but check where it actually landed rather than assume, since it's still exact
+    // whenever the requested frame is itself a key frame. CAP_PROP_FORMAT == CAP_PROP_UNKNOWN is
+    // otherwise ambiguous -- most backends return that same sentinel simply because they don't support
+    // querying CAP_PROP_FORMAT at all -- so this is scoped to the one backend that implements RAW mode.
+    if (icap->getCaptureDomain() == CAP_FFMPEG &&
+        icap->getProperty(CAP_PROP_FORMAT) == static_cast<double>(CAP_PROP_UNKNOWN))
+    {
+        double landedRaw = icap->getProperty(CAP_PROP_POS_FRAMES);
+        if (landedRaw != static_cast<double>(CAP_PROP_UNKNOWN))
+            lastPosFramesSeekExactness = (landedRaw == target) ? 1 : 0;
+        return true;
+    }
+
+    // Unbounded/live source: FFmpeg silently clamps an out-of-range seek to frame 0 on a
+    // duration-unknown stream and still reports success, so a target far ahead would otherwise send
+    // the loop below chasing frames that may never arrive. There is no reliable target to correct
+    // toward here, so accept wherever the backend's own seek landed instead of decoding forward.
+    const double frameCount = icap->getProperty(CAP_PROP_FRAME_COUNT);
+    if (frameCount == static_cast<double>(CAP_PROP_UNKNOWN) || frameCount <= 0)
+    {
+        double landedUnbounded = icap->getProperty(CAP_PROP_POS_FRAMES);
+        if (landedUnbounded != static_cast<double>(CAP_PROP_UNKNOWN))
+            lastPosFramesSeekExactness = (landedUnbounded == target) ? 1 : 0;
+        return true;
+    }
+
+    double landed = icap->getProperty(CAP_PROP_POS_FRAMES);
+    if (landed == static_cast<double>(CAP_PROP_UNKNOWN))
+    {
+        // Some backends (e.g. GStreamer) can't answer a frame-count position query until a fresh
+        // buffer has actually arrived at the sink following a seek; grab once before giving up --
+        // the loop below will keep decoding forward from there like any other landed-short seek.
+        // A backend that simply never answers this query, however many times it's asked, gives us
+        // no way to confirm the seek actually landed anywhere near the target -- observed directly:
+        // for such backends the preceding CAP_PROP_POS_MSEC fallback's own "success" can still be
+        // wrong (decoded content confirmed to not match the requested frame), so treat it as failed
+        // rather than optimistically trusting it, the same as an outright decode-forward failure below.
+        if (!icap->grabFrame())
+            return false;
+        landed = icap->getProperty(CAP_PROP_POS_FRAMES);
+        if (landed == static_cast<double>(CAP_PROP_UNKNOWN))
+            return false;
+    }
+
+    // Tracks whether decoding forward ever actually moved the position at all. A give-up below
+    // with zero confirmed movement means nothing this function did can be trusted to have taken
+    // effect -- e.g. grabFrame() silently restarting a dead pipeline from frame 0 and then getting
+    // stuck reporting that same frame 0 forever -- so that case must fail, not report success.
+    const double startLanded = landed;
+
+    while (landed < target)
+    {
+        if (!icap->grabFrame())
+        {
+            lastPosFramesSeekExactness = 0; // ran out of frames before reaching the target
+            return true;
+        }
+        double next = icap->getProperty(CAP_PROP_POS_FRAMES);
+        if (next == static_cast<double>(CAP_PROP_UNKNOWN) || next <= landed)
+        {
+            // Position reporting is unreliable/non-monotonic; stop rather than loop indefinitely.
+            bool madeProgress = landed > startLanded;
+            if (madeProgress)
+                lastPosFramesSeekExactness = 0;
+            return madeProgress;
+        }
+        landed = next;
+    }
+
+    lastPosFramesSeekExactness = (landed == target) ? 1 : 0;
+    return true;
+}
+
 bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
-    bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    bool ret = false;
+    if (!icap.empty())
+    {
+        ret = (propId == CAP_PROP_POS_FRAMES) ? seekPosFramesExact(value) : icap->setProperty(propId, value);
+    }
     if (!ret && throwOnFail)
     {
         CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
@@ -622,6 +737,10 @@ double VideoCapture::get(int propId) const
             return CAP_PROP_UNKNOWN;
         }
         return static_cast<double>(api);
+    }
+    if (propId == CAP_PROP_POS_FRAMES_IS_EXACT)
+    {
+        return static_cast<double>(lastPosFramesSeekExactness);
     }
     return !icap.empty() ? icap->getProperty(propId) : static_cast<double>(CAP_PROP_UNKNOWN);
 }

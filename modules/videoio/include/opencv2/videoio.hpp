@@ -131,7 +131,17 @@ enum VideoCaptureAPIs {
 enum VideoCaptureProperties {
        CAP_PROP_UNKNOWN        =-1, //!< Returned by VideoCapture::get if the requested property is unknown or unsupported
        CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
-       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next. When the index i is set in RAW mode (CAP_PROP_FORMAT == -1) this will seek to the key frame k, where k <= i.
+       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
+                                   //!< @anchor CAP_PROP_POS_FRAMES_seek_contract
+                                   //!< **Seek contract**: `VideoCapture::set(CAP_PROP_POS_FRAMES, i)` seeks to the nearest key frame k, where k <= i,
+                                   //!< then decodes forward to land exactly on frame i. This applies uniformly across backends: the generic
+                                   //!< VideoCapture layer performs the decode-forward step itself whenever the active backend doesn't already
+                                   //!< guarantee it, so frame-accuracy does not depend on which backend happens to be in use.
+                                   //!< After the call, use @ref CAP_PROP_POS_FRAMES_IS_EXACT to find out whether the seek actually landed on
+                                   //!< frame i (`1`), only reached the key frame k (`0`), or could not be verified (`-1`, e.g. the backend
+                                   //!< cannot report its own position).
+                                   //!< In RAW mode (CAP_PROP_FORMAT == -1, FFmpeg backend only) decoding forward is impossible without a
+                                   //!< codec, so the seek always stops at the key frame k <= i and is reported as approximate.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
        CAP_PROP_FRAME_WIDTH    =3, //!< Width of the frames in the video stream.
        CAP_PROP_FRAME_HEIGHT   =4, //!< Height of the frames in the video stream.
@@ -205,6 +215,11 @@ enum VideoCaptureProperties {
        CAP_PROP_PTS = 71, //!<  (read-only) FFmpeg back-end only - presentation timestamp of the most recently read frame using the FPS time base.  e.g. fps = 25, VideoCapture::get(\ref CAP_PROP_PTS) = 3, presentation time = 3/25 seconds.
        CAP_PROP_DTS_DELAY = 72, //!<  (read-only) FFmpeg back-end only - maximum difference between presentation (pts) and decompression timestamps (dts) using FPS time base.  e.g. delay is maximum when frame_num = 0, if true, VideoCapture::get(\ref CAP_PROP_PTS) = 0 and VideoCapture::get(\ref CAP_PROP_DTS_DELAY) = 2, dts = -2.  Non zero values usually imply the stream is encoded using B-frames which are not decoded in presentation order.
        CAP_PROP_IMAGE_SEQ_START = 73, //!< (**open-only**) Start number for image sequences opened with a printf-style pattern (e.g. `frame_%05d.dpx`). Sets the initial frame number and disables automatic first-frame detection. Applicable to \ref CAP_FFMPEG (passed as the image2 demuxer `start_number`) and \ref CAP_IMAGES backends. Default: not set (automatic detection).
+       CAP_PROP_POS_FRAMES_IS_EXACT = 74, //!< (read-only) Tells whether the most recent `set(\ref CAP_PROP_POS_FRAMES, ...)` seek landed exactly
+                                           //!< on the requested frame. See the seek contract documented under \ref CAP_PROP_POS_FRAMES_seek_contract "CAP_PROP_POS_FRAMES".
+                                           //!< Returns `1` if the seek was exact, `0` if it was only approximate (e.g. RAW mode, or the backend ran
+                                           //!< out of frames before reaching the target), or `-1` if exactness could not be determined (e.g. no seek
+                                           //!< has happened yet, or the backend cannot report its own frame position).
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -1055,6 +1070,15 @@ public:
 protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+
+    // Exactness of the most recent CAP_PROP_POS_FRAMES seek: 1 = exact, 0 = approximate, -1 = unknown/not applicable.
+    // Queried via get(CAP_PROP_POS_FRAMES_IS_EXACT). See the seek contract documented on CAP_PROP_POS_FRAMES.
+    int lastPosFramesSeekExactness = -1;
+
+    // Implements the CAP_PROP_POS_FRAMES seek contract in the generic layer: delegates the key-frame seek to
+    // icap, then decodes forward with icap->grabFrame() until frame `value` is reached, updating
+    // lastPosFramesSeekExactness with the outcome. Requires icap to be non-empty.
+    bool seekPosFramesExact(double value);
 
     friend class internal::VideoCapturePrivateAccessor;
 };
