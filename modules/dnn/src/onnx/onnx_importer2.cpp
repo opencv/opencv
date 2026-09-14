@@ -1394,7 +1394,6 @@ void ONNXImporter2::parseRNN(LayerParams& layerParams, const opencv_onnx::NodePr
     layerParams.type = "RNN2";
     // An empty output name means absent; a lone slot could be Y or Y_h.
     layerParams.set("produce_y", node_proto.output_size() > 0 && !node_proto.output(0).empty());
-    layerParams.set("produce_yh", node_proto.output_size() > 1 && !node_proto.output(1).empty());
     addLayer(layerParams, node_proto);
 }
 
@@ -1502,14 +1501,14 @@ static int countNonUnitDims(const MatShape& s)
 void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_inputs.size() == 2);
-    // A constant slope with at most one non-unit dim is the per-channel form real
-    // models emit; it keeps the fusable activation layer. Everything else, including
-    // every runtime slope, needs the general broadcasting of NaryEltwise.
+    // A flat slope reads two ways: per channel in MXNet/Caffe-derived exports,
+    // trailing-axis broadcast under strict ONNX. A known input shape breaks the tie.
+    // Otherwise per channel wins, as SFace and face_recognizer_fast intend.
+    // Per channel keeps the fusable layer; all else needs NaryEltwise broadcasting.
     if (net.isConstArg(node_inputs[1]))
     {
         Mat slope = net.argTensor(node_inputs[1]);
         const MatShape& xshape = netimpl->args.at(node_inputs[0].idx).shape;
-        // When the input shape is known it settles whether a flat slope is per-channel.
         bool perChannel = countNonUnitDims(shape(slope)) <= 1 &&
                           (xshape.dims < 2 || slope.total() == 1 ||
                            (int)slope.total() == xshape[1]);

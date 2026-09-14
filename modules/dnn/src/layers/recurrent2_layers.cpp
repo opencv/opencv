@@ -692,8 +692,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             weightBlobs.push_back(packPeephole(P, numHidden, numHidden));      // Po
         }
 
-        // One numHidden x numHidden diagonal per direction, stacked vertically, so the
-        // gate loop's per-direction rowRange yields a square matrix.
+        // One H x H diagonal per direction, so the per-direction rowRange stays square.
         static Mat packPeephole(const Mat& P, int col0, int numHidden)
         {
             const int numDirs = P.rows;

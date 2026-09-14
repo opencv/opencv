@@ -120,10 +120,11 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
     return outshape;
 }
 
+struct SpatialDim { int ksize, inpsz, stride, dilation; };
+
 static inline void getPadding(const std::vector<int>& pads,
                               int dim, int nspatialdims, AutoPadding autoPad,
-                              int ksize, int inpsz, int stride, int dilation,
-                              int& pad0, int& pad1)
+                              const SpatialDim& d, int& pad0, int& pad1)
 {
     CV_Assert(0 <= dim && dim < nspatialdims);
 
@@ -137,8 +138,8 @@ static inline void getPadding(const std::vector<int>& pads,
     } else {
         CV_Assert(autoPad == AUTO_PAD_SAME_LOWER || autoPad == AUTO_PAD_SAME_UPPER);
         // ONNX SAME_*: pad so output == ceil(input/stride); odd pixel last for SAME_UPPER.
-        int outsz = (inpsz - 1)/stride + 1;
-        int total = std::max((outsz - 1)*stride + (ksize - 1)*dilation + 1 - inpsz, 0);
+        int outsz = (d.inpsz - 1)/d.stride + 1;
+        int total = std::max((outsz - 1)*d.stride + (d.ksize - 1)*d.dilation + 1 - d.inpsz, 0);
         pad0 = autoPad == AUTO_PAD_SAME_UPPER ? total/2 : total - total/2;
         pad1 = total - pad0;
     }
@@ -235,8 +236,8 @@ void ConvState::initConv(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[j],
-                   inpshape[i+2], strides[j], dilations[j], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad,
+                   {kshape[j], inpshape[i+2], strides[j], dilations[j]}, pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;
@@ -354,8 +355,8 @@ void ConvState::initPooling(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[j],
-                   inpshape[i+2], strides[j], dilations[j], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad,
+                   {kshape[j], inpshape[i+2], strides[j], dilations[j]}, pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;

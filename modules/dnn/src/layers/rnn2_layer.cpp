@@ -6,19 +6,22 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/recurrent_activations.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv {
 namespace dnn {
 
-// ONNX RNN operator: Ht = f(Xt * Wi^T + Ht-1 * Ri^T + Wbi + Rbi)
+// ONNX RNN: Ht = f(Xt*Wi^T + Ht-1*Ri^T + Wbi + Rbi)
 // Spec: https://onnx.ai/onnx/operators/onnx__RNN.html
-// Supported opsets: 7-22 (opset 1 output_sequence is not handled)
-// W is [D, H, I], R is [D, H, H], B is [D, 2H] (Wb then Rb).
+// Supported opsets: 7-22 (opset 1 output_sequence is not handled); FP32 only.
+// W [D,H,I], R [D,H,H], B [D,2H] (Wb then Rb).
+
+namespace {
 
 enum RNNActivation { RNN_TANH = 0, RNN_RELU, RNN_SIGMOID };
 
-static RNNActivation parseRNNActivation(const String& name)
+RNNActivation parseRNNActivation(const String& name)
 {
     if (name == "Tanh")    return RNN_TANH;
     if (name == "Relu")    return RNN_RELU;
@@ -27,37 +30,24 @@ static RNNActivation parseRNNActivation(const String& name)
              cv::format("Activation function [%s] is not supported by RNN", name.c_str()));
 }
 
-static void applyRNNActivation(Mat& m, RNNActivation kind, float clip)
+void applyRNNActivation(Mat& m, RNNActivation kind, float clip)
 {
     CV_Assert(m.type() == CV_32F);
-    const int cols = m.cols;
-    parallel_for_(Range(0, m.rows), [&](const Range& range) {
-        for (int row = range.start; row < range.end; ++row)
-        {
-            float* ptr = m.ptr<float>(row);
-            if (clip > 0.f)
-            {
-                for (int i = 0; i < cols; ++i)
-                    ptr[i] = std::min(std::max(ptr[i], -clip), clip);
-            }
-            if (kind == RNN_RELU)
-            {
-                for (int i = 0; i < cols; ++i)
-                    ptr[i] = std::max(ptr[i], 0.f);
-            }
-            else if (kind == RNN_SIGMOID)
-            {
-                for (int i = 0; i < cols; ++i)
-                    ptr[i] = 1.f / (1.f + std::exp(-ptr[i]));
-            }
-            else
-            {
-                for (int i = 0; i < cols; ++i)
-                    ptr[i] = std::tanh(ptr[i]);
-            }
-        }
-    });
+    // ONNX clips the activation input, not its result.
+    if (clip > 0.f)
+    {
+        cv::min(m, clip, m);
+        cv::max(m, -clip, m);
+    }
+    switch (kind)
+    {
+    case RNN_RELU:    cv::max(m, 0.f, m); break;
+    case RNN_SIGMOID: recurrent::sigmoid(m, m); break;
+    default:          recurrent::tanh(m, m); break;
+    }
 }
+
+} // namespace
 
 class RNN2LayerImpl CV_FINAL : public RNN2Layer
 {
@@ -68,14 +58,14 @@ class RNN2LayerImpl CV_FINAL : public RNN2Layer
 
     layout_t layout;
     bool bidirectional, reverseOnly;
-    bool produceY, produceYh;
+    bool produceY;
     float clip;
     std::vector<RNNActivation> activations;
     int numTimeStamps, numSamples;
 
 public:
     RNN2LayerImpl(const LayerParams& params)
-        : bidirectional(false), reverseOnly(false), produceY(true), produceYh(false),
+        : bidirectional(false), reverseOnly(false), produceY(true),
           clip(0.f), numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
@@ -85,7 +75,6 @@ public:
         layout = (layout_t)params.get<int>("layout", SEQ_BATCH_HID);
         clip = params.get<float>("clip", 0.f);
         produceY = params.get<bool>("produce_y", true);
-        produceYh = params.get<bool>("produce_yh", false);
 
         const int numDirs = 1 + (int)bidirectional;
         activations.assign(numDirs, RNN_TANH);

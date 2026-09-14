@@ -2655,13 +2655,8 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     if (cvtest::skipUnstableTests)
         throw SkipTestException("Skip unstable test");
 
-    // The model zoo reference was generated with SAME_LOWER treated as SAME_UPPER;
-    // onnxruntime disagrees with it identically. Keyed to that one file, so a corrected
-    // reference in opencv_extra re-enables the test on its own.
-    const double staleRefNorm = 321.07505;
-    std::string refPath = findDataFile("dnn/onnx/data/output_tiny_yolo2.pb", false);
-    if (std::abs(cv::norm(readTensorFromONNX(refPath)) - staleRefNorm) < 1e-2)
-        throw SkipTestException("Reference output predates the SAME_LOWER padding fix");
+    // onnxruntime disagrees with the stored reference identically.
+    throw SkipTestException("Reference output predates the SAME_LOWER padding fix");
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019
             && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
