@@ -446,10 +446,13 @@ public:
         return ptr;
     }
 
-    char* parseValue( char* ptr, FileNode& node, int min_indent, bool is_parent_flow )
+    char* parseValue( char* ptr, FileNode& node, int min_indent, bool is_parent_flow, int depth = 0 )
     {
         if (!ptr)
             CV_PARSE_ERROR_CPP("Invalid input");
+
+        if( depth > CV_PERSISTENCE_MAX_DEPTH )
+            CV_PARSE_ERROR_CPP("Too many nested collections");
 
         char* endptr = 0;
         char c = ptr[0], d = ptr[1];
@@ -695,7 +698,7 @@ public:
                         break;
                     elem = fs->addNode(node, std::string(), FileNode::NONE);
                 }
-                ptr = parseValue( ptr, elem, new_min_indent, true );
+                ptr = parseValue( ptr, elem, new_min_indent, true, depth + 1 );
             }
             fs->finalizeCollection(node);
         }
@@ -781,7 +784,7 @@ public:
                     elem = fs->addNode(node, std::string(), FileNode::NONE);
                 }
                 ptr = skipSpaces( ptr, indent + 1, INT_MAX );
-                ptr = parseValue( ptr, elem, indent + 1, false );
+                ptr = parseValue( ptr, elem, indent + 1, false, depth + 1 );
                 ptr = skipSpaces( ptr, 0, INT_MAX );
                 if( ptr - fs->bufferStart() != indent )
                 {

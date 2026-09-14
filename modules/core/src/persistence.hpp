@@ -27,6 +27,7 @@ typedef void* gzFile;
 //=====================================================================================
 
 static const size_t PARSER_BASE64_BUFFER_SIZE = 1024U * 1024U / 8U;
+static const int CV_PERSISTENCE_MAX_DEPTH = 1024;
 
 namespace base64 {
 
