@@ -3855,6 +3855,11 @@ map_y(u,v)  \leftarrow y''' f_y + c_y
 where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 are the distortion coefficients.
 
+@note The rational distortion model used by OpenCV can be seen as a
+combination of the Brown-Conrady Model and the Division Model @cite Fitzgibbon01.
+It should not be confused with the Rational Function Model @cite Claus05a, which
+uses conics to represent lens distortion.
+
 In case of a stereo camera, this function is called twice: once for each camera head, after
 #stereoRectify, which in its turn is called after #stereoCalibrate. But if the stereo camera
 was not calibrated, it is still possible to compute the rectification transformations directly from
