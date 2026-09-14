@@ -147,25 +147,31 @@ bool CV_ECC_Test::test(const Mat img)
         switch(motionType)
         {
             case MOTION_TRANSLATION:
-                groundMap = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
+                groundMap = Mat_<float>({2, 3}, {1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f))});
                 break;
             case MOTION_EUCLIDEAN:
             {
                 double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
-                groundMap = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
-                            cos(angle), (rng.uniform(10.f, 20.f)));
+                groundMap = Mat_<float>({2, 3}, {
+                        (float)cos(angle), (float)-sin(angle), (rng.uniform(10.f, 20.f)), (float)sin(angle),
+                        (float)cos(angle), (rng.uniform(10.f, 20.f))
+                });
                 break;
             }
             case MOTION_AFFINE:
-                groundMap = (Mat_<float>(2, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
-                            (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
-                            (rng.uniform(10.f, 20.f)));
+                groundMap = Mat_<float>({2, 3}, {
+                        (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+                        (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+                        (rng.uniform(10.f, 20.f))
+                });
                 break;
             case MOTION_HOMOGRAPHY:
                 groundMap =
-                    (Mat_<float>(3, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
-                    (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
-                    (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
+                    Mat_<float>({3, 3}, {
+                            (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+                            (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+                            (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f
+                    });
                 break;
             default:
                 CV_Error(Error::StsBadArg, "Incorrect motion type");
@@ -183,7 +189,7 @@ bool CV_ECC_Test::test(const Mat img)
         else
         {
             warpAffine(img, warpedImage, groundMap, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
-            foundMap = Mat((Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0));
+            foundMap = Mat(Mat_<float>({2, 3}, {1, 0, 0, 0, 1, 0}));
         }
 
 
@@ -277,13 +283,13 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
         ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        Mat translationGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
+        Mat translationGround = Mat_<float>({2, 3}, {1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f))});
 
         Mat warpedImage;
 
         warpAffine(testImg, warpedImage, translationGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
+        Mat mapTranslation = Mat_<float>({2, 3}, {1, 0, 0, 0, 1, 0});
 
         Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
         Rect region(testImg.cols * 2 / 3, testImg.rows * 2 / 3, testImg.cols / 3, testImg.rows / 3);
@@ -348,13 +354,13 @@ void CV_ECC_BigPictureTest::run(int)
         roiMask0 = imread(string(ts->get_data_path()) + "shared/halmosh0mask.png", IMREAD_GRAYSCALE);
         roiMask1 = imread(string(ts->get_data_path()) + "shared/halmosh2mask.png", IMREAD_GRAYSCALE);
         readError = largeGray0.empty() || largeGray1.empty() || roiMask0.empty() || roiMask1.empty();
-        expectedRes = (Mat_<float>(3, 3) << 1.0225, 0.0606, -28.6452, -0.0475, 1.0314, 11.819, 8.21e-06, -3.65e-07, 1);
+        Mat_<double>({3, 3}, {1.0225, 0.0606, -28.6452, -0.0475, 1.0314, 11.819, 8.21e-06, -3.65e-07, 1}).convertTo(expectedRes, CV_32F);
     }
     else
     {
         largeGray1 = imread(string(ts->get_data_path()) + "shared/halmosh1.jpg", IMREAD_GRAYSCALE);
         readError = largeGray0.empty() || largeGray1.empty();
-        expectedRes = (Mat_<float>(3, 3) << 0.9756, -0.0319, 24.685, 0.013, 0.9808, 7.7453, -2.35e-05, -9.12e-06, 1);
+        Mat_<double>({3, 3}, {0.9756, -0.0319, 24.685, 0.013, 0.9808, 7.7453, -2.35e-05, -9.12e-06, 1}).convertTo(expectedRes, CV_32F);
     }
 
     if(readError)
@@ -441,8 +447,8 @@ TEST(Video_ECC_Test_Compute, properties) {
 }
 
 TEST(Video_ECC_Test_Compute, accuracy) {
-    Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
-    Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
+    Mat testImg = Mat_<float>({3, 3}, {1, 0, 0, 1, 0, 0, 1, 0, 0});
+    Mat warpedImage = Mat_<float>({3, 3}, {0, 1, 0, 0, 1, 0, 0, 1, 0});
     Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
     double ecc = computeECC(warpedImage, testImg, mask);
 
@@ -455,7 +461,7 @@ TEST(Video_ECC_Test_Compute, bug_14657) {
      * it results in 1, 1, 1, 0 for the unsigned int case - compare to  1, 1, 1, -3 in the signed case.
      * For this reason, when the same matrix was provided as the input and the template, we didn't get 1 as expected.
      */
-    Mat img = (Mat_<uint8_t>(2, 2) << 10, 10, 10, 6);
+    Mat img = Mat_<uint8_t>({2, 2}, {10, 10, 10, 6});
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
@@ -480,7 +486,7 @@ TEST(Video_ECC_BoolMask, matches_uchar_mask) {
                 templateImage(Rect(j * 8, i * 8, 8, 8)) = 200;
     GaussianBlur(templateImage, templateImage, Size(5, 5), 0);
 
-    Mat shift = (Mat_<float>(2, 3) << 1, 0, 2, 0, 1, 1);
+    Mat shift = Mat_<float>({2, 3}, {1, 0, 2, 0, 1, 1});
     Mat inputImage;
     warpAffine(templateImage, inputImage, shift, templateImage.size());
 

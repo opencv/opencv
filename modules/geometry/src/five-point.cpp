@@ -493,7 +493,7 @@ Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Po
 {
     CV_INSTRUMENT_REGION();
 
-    Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
+    Matx33d cameraMatrix(focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
     return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, maxIters, _mask);
 }
 
@@ -728,7 +728,7 @@ int recoverPose( InputArray E, InputArray _points1, InputArray _points2, InputAr
 int recoverPose( InputArray E, InputArray _points1, InputArray _points2, OutputArray _R,
                      OutputArray _t, double focal, Point2d pp, InputOutputArray _mask)
 {
-    Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
+    Matx33d cameraMatrix(focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
     return recoverPose(E, _points1, _points2, cameraMatrix, _R, _t, _mask);
 }
 
@@ -745,7 +745,7 @@ void decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2, Out
     if (determinant(U) < 0) U *= -1.;
     if (determinant(Vt) < 0) Vt *= -1.;
 
-    Mat W = (Mat_<double>(3, 3) << 0, 1, 0, -1, 0, 0, 0, 0, 1);
+    Mat W = Mat_<double>({3, 3}, {0, 1, 0, -1, 0, 0, 0, 0, 1});
     W.convertTo(W, E.type());
 
     Mat R1, R2, t;

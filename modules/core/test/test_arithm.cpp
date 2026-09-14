@@ -2059,10 +2059,10 @@ TEST(Multiply, FloatingPointRounding)
 
 TEST(Core_Add, AddToColumnWhen3Rows)
 {
-    cv::Mat m1 = (cv::Mat_<double>(3, 2) << 1, 2, 3, 4, 5, 6);
+    cv::Mat m1 = cv::Mat_<double>({3, 2}, {1, 2, 3, 4, 5, 6});
     m1.col(1) += 10;
 
-    cv::Mat m2 = (cv::Mat_<double>(3, 2) << 1, 12, 3, 14, 5, 16);
+    cv::Mat m2 = cv::Mat_<double>({3, 2}, {1, 12, 3, 14, 5, 16});
     cv::MatExpr diff = m1 - m2;
     int nz = countNonZero(diff);
 
@@ -2071,10 +2071,10 @@ TEST(Core_Add, AddToColumnWhen3Rows)
 
 TEST(Core_Add, AddToColumnWhen4Rows)
 {
-    cv::Mat m1 = (cv::Mat_<double>(4, 2) << 1, 2, 3, 4, 5, 6, 7, 8);
+    cv::Mat m1 = cv::Mat_<double>({4, 2}, {1, 2, 3, 4, 5, 6, 7, 8});
     m1.col(1) += 10;
 
-    cv::Mat m2 = (cv::Mat_<double>(4, 2) << 1, 12, 3, 14, 5, 16, 7, 18);
+    cv::Mat m2 = cv::Mat_<double>({4, 2}, {1, 12, 3, 14, 5, 16, 7, 18});
 
     ASSERT_EQ(0, countNonZero(m1 - m2));
 }
@@ -2516,11 +2516,11 @@ TEST(Compare, regression_8999)
 {
     // Issue #8999 predates broadcasting element-wise ops: comparing a 4x1 array against a 1x1 operand
     // used to throw (both look like a Scalar). It now broadcasts the 1x1 operand across the 4x1 array.
-    Mat_<double> A(4,1); A << 1, 3, 2, 4;
-    Mat_<double> B(1,1); B << 2;
+    Mat_<double> A({4,1}, {1, 3, 2, 4});
+    Mat_<double> B({1,1}, {2});
     Mat C;
     cv::compare(A, B, C, CMP_LT);
-    Mat expected = (Mat_<uchar>(4,1) << 255, 0, 0, 0);   // A < 2
+    Mat expected = Mat_<uchar>({4,1}, {255, 0, 0, 0});   // A < 2
     EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 

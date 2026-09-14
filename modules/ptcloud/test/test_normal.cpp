@@ -17,7 +17,7 @@ float focal_length = 525;
 float cx = W / 2.f + 0.5f;
 float cy = H / 2.f + 0.5f;
 
-static Mat K() { static Mat res = (Mat_<double>(3, 3) << focal_length, 0, cx, 0, focal_length, cy, 0, 0, 1); return res; }
+static Mat K() { static Mat res = Mat_<double>({3, 3}, {focal_length, 0, cx, 0, focal_length, cy, 0, 0, 1}); return res; }
 static Mat Kinv() { static Mat res = K().inv(); return res; }
 
 void points3dToDepth16U(const Mat_<Vec4f>& points3d, Mat& depthMap);

@@ -82,17 +82,18 @@ TEST_F(fisheyeTest, projectPoints)
 
 TEST_F(fisheyeTest, distortUndistortPoints)
 {
-    int width = imageSize.width;
-    int height = imageSize.height;
+    double width = imageSize.width;
+    double height = imageSize.height;
 
     /* Create test points */
-    cv::Mat principalPoints = (cv::Mat_<double>(5, 2) << K(0, 2), K(1, 2), // (cx, cy)
-                                                                    /* Image corners */
-                                                                    0, 0,
-                                                                    0, height,
-                                                                    width, 0,
-                                                                    width, height
-                                                                    );
+    cv::Mat principalPoints = cv::Mat_<double>({5, 2}, {
+            K(0, 2), K(1, 2), // (cx, cy)
+            /* Image corners */
+            0, 0,
+            0, height,
+            width, 0,
+            width, height
+    });
 
     /* Random points inside image */
     cv::Mat xy[2] = {};
@@ -130,8 +131,8 @@ TEST_F(fisheyeTest, distortUndistortPoints)
 
 TEST_F(fisheyeTest, distortUndistortPointsNewCameraFixed)
 {
-    int width = imageSize.width;
-    int height = imageSize.height;
+    double width = imageSize.width;
+    double height = imageSize.height;
 
     /* Random points inside image */
     cv::Mat xy[2] = {};
@@ -166,18 +167,19 @@ TEST_F(fisheyeTest, distortUndistortPointsNewCameraFixed)
 
 TEST_F(fisheyeTest, distortUndistortPointsNewCameraRandom)
 {
-    int width = imageSize.width;
-    int height = imageSize.height;
+    double width = imageSize.width;
+    double height = imageSize.height;
 
     /* Create test points */
     std::vector<cv::Point2d> points0Vector;
-    cv::Mat principalPoints = (cv::Mat_<double>(5, 2) << K(0, 2), K(1, 2), // (cx, cy)
-                                                                    /* Image corners */
-                                                                    0, 0,
-                                                                    0, height,
-                                                                    width, 0,
-                                                                    width, height
-                                                                    );
+    cv::Mat principalPoints = cv::Mat_<double>({5, 2}, {
+            K(0, 2), K(1, 2), // (cx, cy)
+            /* Image corners */
+            0, 0,
+            0, height,
+            width, 0,
+            width, height
+    });
 
     /* Random points inside image */
     cv::Mat xy[2] = {};

@@ -1320,7 +1320,7 @@ Vec2d estimateTranslation2D(InputArray _from, InputArray _to,
 
             if (refineIters > 0) {
                 if (T.empty())
-                    T = (Mat_<double>(2,3) << 1,0,0, 0,1,0);
+                    T = Mat_<double>({2,3}, {1,0,0, 0,1,0});
                 // LM refine on translation only.
                 // T is:
                 //   [1 0 tx]
@@ -1392,7 +1392,7 @@ Vec2d estimateTranslation2D(InputArray _from, InputArray _to,
                     sy += (double)t[i].y - (double)f[i].y;
                 }
                 if (T.empty())
-                    T = (Mat_<double>(2,3) << 1,0,0, 0,1,0);
+                    T = Mat_<double>({2,3}, {1,0,0, 0,1,0});
                 double* H = T.ptr<double>();
                 H[2] = sx / nin;  // t_x
                 H[5] = sy / nin;  // t_y

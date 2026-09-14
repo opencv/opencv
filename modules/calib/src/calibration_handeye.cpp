@@ -61,7 +61,7 @@ static Mat rot2quatMinimal(const Mat& R)
         qz = 0.25 * S;
     }
 
-    return (Mat_<double>(3,1) << qx, qy, qz);
+    return Mat_<double>({3,1}, {qx, qy, qz});
 }
 
 static Mat skew(const Mat& v)
@@ -71,9 +71,9 @@ static Mat skew(const Mat& v)
     double vx = v.at<double>(0,0);
     double vy = v.at<double>(1,0);
     double vz = v.at<double>(2,0);
-    return (Mat_<double>(3,3) << 0, -vz, vy,
+    return Mat_<double>({3,3}, {0, -vz, vy,
                                 vz, 0, -vx,
-                                -vy, vx, 0);
+                                -vy, vx, 0});
 }
 
 // R = quatMinimal2rot(q)
@@ -135,7 +135,7 @@ static Mat rot2quat(const Mat& R)
         qz = 0.25 * S;
     }
 
-    return (Mat_<double>(4,1) << qw, qx, qy, qz);
+    return Mat_<double>({4,1}, {qw, qx, qy, qz});
 }
 
 // R = quat2rot(q)

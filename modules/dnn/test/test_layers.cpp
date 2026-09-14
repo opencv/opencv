@@ -614,8 +614,8 @@ TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
     // 4 5 | 6
     // ----+--
     // 7 8 | 9
-    Mat inp = (Mat_<float>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9);
-    Mat ref = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
+    Mat inp = Mat_<float>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9});
+    Mat ref = Mat_<float>({2, 2}, {(1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9});
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
     net.setPreferableBackend(backend);
@@ -652,10 +652,12 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
     net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    Mat ref = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
-                                       0.25, 0.0, 1.0, 1.0,
-                                       0.1f, 0.1f, 0.2f, 0.2f,
-                                       0.1f, 0.1f, 0.2f, 0.2f);
+    Mat ref = Mat_<float>({4, 4}, {
+            0.0, 0.0, 0.75, 1.0,
+            0.25, 0.0, 1.0, 1.0,
+            0.1f, 0.1f, 0.2f, 0.2f,
+            0.1f, 0.1f, 0.2f, 0.2f
+    });
     double l1 = 1e-5;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
         l1 = 2e-5;

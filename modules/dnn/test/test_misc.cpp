@@ -574,7 +574,7 @@ TEST(Net, forwardAndRetrieve)
     lpSlice.name = "testLayer";
     lpSlice.type = "Slice";
     lpSlice.set("axis", 0);
-    Mat slicePoint = (Mat_<int>(1, 1) << 2);
+    Mat slicePoint = Mat_<int>({1, 1}, {2});
     lpSlice.set("slice_point", DictValue::arrayInt<int*>((int*)slicePoint.data, 1));
 
     Net net;

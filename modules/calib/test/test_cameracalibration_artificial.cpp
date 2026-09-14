@@ -387,8 +387,7 @@ protected:
             double cx = bg.cols/2 + (40 * (double)rng - 20);
             double cy = bg.rows/2 + (40 * (double)rng - 20);
 
-            Mat_<double> camMat(3, 3);
-            camMat << fx, 0., cx, 0, fy, cy, 0., 0., 1.;
+            Mat_<double> camMat({3, 3}, {fx, 0., cx, 0, fy, cy, 0., 0., 1.});
 
             double k1 = 0.5 + (double)rng/5;
             double k2 = (double)rng/5;
@@ -397,8 +396,7 @@ protected:
             double p1 = 0.001 + (double)rng/10;
             double p2 = 0.001 + (double)rng/10;
 
-            Mat_<double> distCoeffs(1, 5, 0.0);
-            distCoeffs << k1, k2, p1, p2, k3;
+            Mat_<double> distCoeffs({1, 5}, {k1, k2, p1, p2, k3});
 
             ChessBoardGenerator cbg(Size(9, 8));
             cbg.min_cos = 0.9;

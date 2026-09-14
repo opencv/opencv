@@ -84,7 +84,7 @@ TEST(Flann_Index, empty_data_build_and_search)
     cv::Mat data(0, 2, CV_32F);
     cv::flann::Index index(data, indexParams);
 
-    cv::Mat query = (cv::Mat_<float>(1, 2) << 1.0f, 2.0f);
+    cv::Matx12f query(1.0f, 2.0f);
     std::vector<int> indices;
     std::vector<float> dists;
     int nn = index.radiusSearch(query, indices, dists, 100, 4);
