@@ -35,7 +35,7 @@ void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, 
 }
 
 void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
-                                 Size imageSize, int normalizationType)
+                                 Size imageSize, int type)
 {
     CV_INSTRUMENT_REGION();
 
@@ -43,32 +43,24 @@ void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedK
     CV_CheckTypeEQ(keypoints.type(), CV_32FC1, "LightGlue keypoints must be an Nx2 CV_32F matrix");
     CV_CheckEQ(keypoints.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
 
-    if (normalizationType == LG_KEYPOINTS_AS_IS)
-    {
-        keypoints.copyTo(_normalizedKeypoints);
-        return;
-    }
-
     float sx = 0.0f, sy = 0.0f, ox = 0.0f, oy = 0.0f;
-    switch (normalizationType)
+    switch (type)
     {
-    case LG_KEYPOINTS_ALIKED:
+    case LG_ALIKED:
         CV_CheckGT(imageSize.width, 0, "LightGlue keypoint normalization requires a valid image width");
         CV_CheckGT(imageSize.height, 0, "LightGlue keypoint normalization requires a valid image height");
         sx = 2.0f / (float)imageSize.width;
         sy = 2.0f / (float)imageSize.height;
         ox = oy = -1.0f;
         break;
-    case LG_KEYPOINTS_DISK:
+    case LG_DISK:
         CV_CheckGT(imageSize.width, 1, "DISK LightGlue: image width must be >= 2 for [0,1] normalization");
         CV_CheckGT(imageSize.height, 1, "DISK LightGlue: image height must be >= 2 for [0,1] normalization");
         sx = 1.0f / (float)(imageSize.width - 1);
         sy = 1.0f / (float)(imageSize.height - 1);
         break;
-    case LG_KEYPOINTS_AUTO:
-        CV_Error(Error::StsBadArg, "LG_KEYPOINTS_AUTO can only be resolved by LightGlueMatcher");
     default:
-        CV_Error(Error::StsBadArg, "Unsupported LightGlue keypoint normalization type");
+        CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
     }
 
     _normalizedKeypoints.create(keypoints.rows, 2, CV_32F);
@@ -85,13 +77,18 @@ void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedK
 #ifdef HAVE_OPENCV_DNN
 
 static void normalizeMatcherKeypoints(InputArray keypoints, OutputArray normalizedKeypoints,
-                                      Size imageSize, int normalizationType,
-                                      int autoNormalizationType)
+                                      Size imageSize, int type)
 {
-    int resolvedType = (normalizationType == LG_KEYPOINTS_AUTO) ? autoNormalizationType : normalizationType;
-    if (normalizationType == LG_KEYPOINTS_AUTO && (imageSize.width <= 0 || imageSize.height <= 0))
-        resolvedType = LG_KEYPOINTS_AS_IS;
-    normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, resolvedType);
+    if (imageSize.width > 0 && imageSize.height > 0)
+        normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, type);
+    else
+    {
+        // Preserve the existing convention for already-normalized coordinates.
+        Mat kpts = keypoints.getMat();
+        CV_CheckTypeEQ(kpts.type(), CV_32FC1, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+        CV_CheckEQ(kpts.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+        kpts.copyTo(normalizedKeypoints);
+    }
 }
 
 struct LightGluePairContext
@@ -100,10 +97,9 @@ struct LightGluePairContext
     Mat trainKeypoints;   // Mx2 float
     Size queryImageSize;
     Size trainImageSize;
-    int keypointNormalization;
     bool valid;
 
-    LightGluePairContext() : keypointNormalization(LG_KEYPOINTS_AUTO), valid(false) {}
+    LightGluePairContext() : valid(false) {}
 
     void clear()
     {
@@ -111,7 +107,6 @@ struct LightGluePairContext
         trainKeypoints.release();
         queryImageSize = Size();
         trainImageSize = Size();
-        keypointNormalization = LG_KEYPOINTS_AUTO;
         valid = false;
     }
 };
@@ -146,8 +141,7 @@ public:
 
     // LightGlueMatcher interface
     void setPairInfo(InputArray queryKpts, InputArray trainKpts,
-                     Size queryImageSize = Size(), Size trainImageSize = Size(),
-                     int keypointNormalization = LG_KEYPOINTS_AUTO) CV_OVERRIDE;
+                     Size queryImageSize = Size(), Size trainImageSize = Size()) CV_OVERRIDE;
     void clearPairInfo() CV_OVERRIDE;
 
 protected:
@@ -163,18 +157,15 @@ protected:
     void setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
                             const Mat& queryKpts, const Mat& trainKpts,
                             Size queryImgSize, Size trainImgSize,
-                            int keypointNormalization,
-                            int autoNormalizationType);
+                            int type);
 
     virtual void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                 const Mat& queryKpts, const Mat& trainKpts,
                                 Size queryImgSize, Size trainImgSize,
-                                int keypointNormalization,
                                 std::vector<DMatch>& matches) = 0;
 
     bool resolveContext(Mat& queryKpts, Mat& trainKpts,
-                        Size& queryImgSize, Size& trainImgSize,
-                        int& keypointNormalization);
+                        Size& queryImgSize, Size& trainImgSize);
 
     dnn::Net net;
     float scoreThreshold;
@@ -182,14 +173,12 @@ protected:
 };
 
 void LightGlueMatcherImpl::setPairInfo(InputArray _queryKpts, InputArray _trainKpts,
-                                        Size _queryImageSize, Size _trainImageSize,
-                                        int _keypointNormalization)
+                                        Size _queryImageSize, Size _trainImageSize)
 {
     pairContext.queryKeypoints = _queryKpts.getMat().clone();
     pairContext.trainKeypoints = _trainKpts.getMat().clone();
     pairContext.queryImageSize = _queryImageSize;
     pairContext.trainImageSize = _trainImageSize;
-    pairContext.keypointNormalization = _keypointNormalization;
     pairContext.valid = true;
 }
 
@@ -199,8 +188,7 @@ void LightGlueMatcherImpl::clearPairInfo()
 }
 
 bool LightGlueMatcherImpl::resolveContext(Mat& queryKpts, Mat& trainKpts,
-                                           Size& queryImgSize, Size& trainImgSize,
-                                           int& keypointNormalization)
+                                           Size& queryImgSize, Size& trainImgSize)
 {
     if (pairContext.valid)
     {
@@ -208,7 +196,6 @@ bool LightGlueMatcherImpl::resolveContext(Mat& queryKpts, Mat& trainKpts,
         trainKpts = pairContext.trainKeypoints;
         queryImgSize = pairContext.queryImageSize;
         trainImgSize = pairContext.trainImageSize;
-        keypointNormalization = pairContext.keypointNormalization;
         return true;
     }
     return false;
@@ -217,17 +204,14 @@ bool LightGlueMatcherImpl::resolveContext(Mat& queryKpts, Mat& trainKpts,
 void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
                                                const Mat& queryKpts, const Mat& trainKpts,
                                                Size queryImgSize, Size trainImgSize,
-                                               int keypointNormalization,
-                                               int autoNormalizationType)
+                                               int type)
 {
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
     Mat kpts0, kpts1;
-    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize,
-                              keypointNormalization, autoNormalizationType);
-    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize,
-                              keypointNormalization, autoNormalizationType);
+    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);
+    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, type);
 
     // Prepare blobs: [1, N, 2] and [1, N, D]
     int descDim = queryDesc.cols;
@@ -257,8 +241,7 @@ void LightGlueMatcherImpl::knnMatchImpl(InputArray _queryDescriptors,
 
     Mat queryKpts, trainKpts;
     Size queryImgSize, trainImgSize;
-    int keypointNormalization;
-    if (!resolveContext(queryKpts, trainKpts, queryImgSize, trainImgSize, keypointNormalization))
+    if (!resolveContext(queryKpts, trainKpts, queryImgSize, trainImgSize))
     {
         CV_Error(cv::Error::StsBadArg,
                  "LightGlueMatcher: no valid context. Call setPairInfo() before matching.");
@@ -270,7 +253,7 @@ void LightGlueMatcherImpl::knnMatchImpl(InputArray _queryDescriptors,
 
     std::vector<DMatch> flatMatches;
     lightglueMatch(queryDesc, trainDesc, queryKpts, trainKpts,
-                   queryImgSize, trainImgSize, keypointNormalization, flatMatches);
+                   queryImgSize, trainImgSize, flatMatches);
 
     matches.clear();
     matches.resize(queryDesc.rows);
@@ -301,7 +284,6 @@ protected:
     void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                         const Mat& queryKpts, const Mat& trainKpts,
                         Size queryImgSize, Size trainImgSize,
-                        int keypointNormalization,
                         std::vector<DMatch>& matches) CV_OVERRIDE;
 };
 
@@ -321,15 +303,13 @@ Ptr<DescriptorMatcher> ALIKEDLightGlueMatcherImpl::clone(bool emptyTrainData) co
 void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                                   const Mat& queryKpts, const Mat& trainKpts,
                                                   Size queryImgSize, Size trainImgSize,
-                                                  int keypointNormalization,
                                                   std::vector<DMatch>& matches)
 {
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
     setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
-                       queryImgSize, trainImgSize, keypointNormalization,
-                       LG_KEYPOINTS_ALIKED);
+                       queryImgSize, trainImgSize, LG_ALIKED);
 
     std::vector<String> outNames = {"matches0", "mscores0"};
     std::vector<Mat> outs;
@@ -373,7 +353,6 @@ protected:
     void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                         const Mat& queryKpts, const Mat& trainKpts,
                         Size queryImgSize, Size trainImgSize,
-                        int keypointNormalization,
                         std::vector<DMatch>& matches) CV_OVERRIDE;
 };
 
@@ -393,15 +372,13 @@ Ptr<DescriptorMatcher> DISKLightGlueMatcherImpl::clone(bool emptyTrainData) cons
 void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                                 const Mat& queryKpts, const Mat& trainKpts,
                                                 Size queryImgSize, Size trainImgSize,
-                                                int keypointNormalization,
                                                 std::vector<DMatch>& matches)
 {
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
     setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
-                       queryImgSize, trainImgSize, keypointNormalization,
-                       LG_KEYPOINTS_DISK);
+                       queryImgSize, trainImgSize, LG_DISK);
 
     // DISK LightGlue has 4 outputs (bidirectional matches + scores)
     std::vector<String> outNames = {"matches0", "matches1", "mscores0", "mscores1"};
@@ -450,8 +427,9 @@ Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
 {
     if (type == LG_DISK)
         return makePtr<DISKLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
-    else
+    else if (type == LG_ALIKED)
         return makePtr<ALIKEDLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
+    CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
 }
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelData,
@@ -460,8 +438,9 @@ Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelDa
 {
     if (type == LG_DISK)
         return makePtr<DISKLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
-    else
+    else if (type == LG_ALIKED)
         return makePtr<ALIKEDLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
+    CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
 }
 
 #else  // !HAVE_OPENCV_DNN
