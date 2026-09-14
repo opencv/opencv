@@ -156,7 +156,51 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_RVV
+    const int vl = (int)__riscv_vsetvlmax_e32m2();
+    vfloat32m2_t v_d0 = __riscv_vfmv_v_f_f32m2(0.f, vl);
+    vfloat32m2_t v_d1 = __riscv_vfmv_v_f_f32m2(0.f, vl);
+    vfloat32m2_t v_d2 = __riscv_vfmv_v_f_f32m2(0.f, vl);
+    vfloat32m2_t v_d3 = __riscv_vfmv_v_f_f32m2(0.f, vl);
+
+    for (; j <= n - 4 * vl; j += 4 * vl)
+    {
+        vfloat32m2_t t0 = __riscv_vfsub_vv_f32m2(
+                __riscv_vle32_v_f32m2(a + j, vl),
+                __riscv_vle32_v_f32m2(b + j, vl), vl);
+        vfloat32m2_t t1 = __riscv_vfsub_vv_f32m2(
+                __riscv_vle32_v_f32m2(a + j + vl, vl),
+                __riscv_vle32_v_f32m2(b + j + vl, vl), vl);
+        v_d0 = __riscv_vfmacc_vv_f32m2(v_d0, t0, t0, vl);
+
+        vfloat32m2_t t2 = __riscv_vfsub_vv_f32m2(
+                __riscv_vle32_v_f32m2(a + j + 2 * vl, vl),
+                __riscv_vle32_v_f32m2(b + j + 2 * vl, vl), vl);
+        v_d1 = __riscv_vfmacc_vv_f32m2(v_d1, t1, t1, vl);
+
+        vfloat32m2_t t3 = __riscv_vfsub_vv_f32m2(
+                __riscv_vle32_v_f32m2(a + j + 3 * vl, vl),
+                __riscv_vle32_v_f32m2(b + j + 3 * vl, vl), vl);
+        v_d2 = __riscv_vfmacc_vv_f32m2(v_d2, t2, t2, vl);
+        v_d3 = __riscv_vfmacc_vv_f32m2(v_d3, t3, t3, vl);
+    }
+
+    v_d0 = __riscv_vfadd_vv_f32m2(
+            __riscv_vfadd_vv_f32m2(v_d0, v_d1, vl),
+            __riscv_vfadd_vv_f32m2(v_d2, v_d3, vl), vl);
+
+    for (; j <= n - vl; j += vl)
+    {
+        vfloat32m2_t t0 = __riscv_vfsub_vv_f32m2(
+                __riscv_vle32_v_f32m2(a + j, vl),
+                __riscv_vle32_v_f32m2(b + j, vl), vl);
+        v_d0 = __riscv_vfmacc_vv_f32m2(v_d0, t0, t0, vl);
+    }
+
+    vfloat32m1_t zero = __riscv_vfmv_v_f_f32m1(0.f, 1);
+    d = __riscv_vfmv_f_s_f32m1_f32(
+            __riscv_vfredusum_vs_f32m2_f32m1(v_d0, zero, vl));
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     const int vl = VTraits<v_float32>::vlanes();
     v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
     v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
