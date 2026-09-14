@@ -898,8 +898,8 @@ void QRCodeEncoderImpl::findAutoMaskType()
             }
         }
         Mat penalty_pattern[2];
-        penalty_pattern[0] = (Mat_<uint8_t >(1, 11) << 255, 255, 255, 255, 0, 255, 0, 0, 0, 255, 0);
-        penalty_pattern[1] = (Mat_<uint8_t >(1, 11) << 0, 255, 0, 0, 0, 255, 0, 255, 255, 255, 255);
+        penalty_pattern[0] = Mat_<uint8_t >({1, 11}, {255, 255, 255, 255, 0, 255, 0, 0, 0, 255, 0});
+        penalty_pattern[1] = Mat_<uint8_t >({1, 11}, {0, 255, 0, 0, 0, 255, 0, 255, 255, 255, 255});
         for (int direction = 0; direction < 2; direction++)
         {
             if (direction != 0)

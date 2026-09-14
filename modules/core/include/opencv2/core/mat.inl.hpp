@@ -722,14 +722,6 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     }
 }
 
-template<typename _Tp> inline
-Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
-    : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
-      datastart(0), dataend(0), allocator(0), u(0)
-{
-    *this = commaInitializer.operator Mat_<_Tp>();
-}
-
 inline
 Mat Mat::row(int y) const
 {
@@ -1584,11 +1576,6 @@ Mat_<_Tp>::Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool co
     if( copyData )
         *this = clone();
 }
-
-template<typename _Tp> inline
-Mat_<_Tp>::Mat_(const MatCommaInitializer_<_Tp>& commaInitializer)
-    : Mat(commaInitializer)
-{}
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
@@ -3179,39 +3166,6 @@ SparseMatIterator_<_Tp> SparseMatIterator_<_Tp>::operator ++(int)
     SparseMatIterator_<_Tp> it = *this;
     SparseMatConstIterator::operator ++();
     return it;
-}
-
-
-
-//////////////////////// MatCommaInitializer_ ///////////////////////
-
-template<typename _Tp> inline
-MatCommaInitializer_<_Tp>::MatCommaInitializer_(Mat_<_Tp>* _m)
-    : it(_m)
-{}
-
-template<typename _Tp> template<typename T2> inline
-MatCommaInitializer_<_Tp>& MatCommaInitializer_<_Tp>::operator , (T2 v)
-{
-    CV_DbgAssert( this->it < ((const Mat_<_Tp>*)this->it.m)->end() );
-    *this->it = _Tp(v);
-    ++this->it;
-    return *this;
-}
-
-template<typename _Tp> inline
-MatCommaInitializer_<_Tp>::operator Mat_<_Tp>() const
-{
-    CV_DbgAssert( this->it == ((const Mat_<_Tp>*)this->it.m)->end() );
-    return Mat_<_Tp>(*this->it.m);
-}
-
-
-template<typename _Tp, typename T2> CV_DEPRECATED_EXTERNAL static inline
-MatCommaInitializer_<_Tp> operator << (const Mat_<_Tp>& m, T2 val)
-{
-    MatCommaInitializer_<_Tp> commaInitializer((Mat_<_Tp>*)&m);
-    return (commaInitializer, val);
 }
 
 

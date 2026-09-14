@@ -2004,14 +2004,14 @@ bool Chessboard::Board::estimatePoint(const cv::Point2f &p0,const cv::Point2f &p
     // use 1D homography to find fith point minimizing square error
     if(p0 == p1 || p0 == p2 || p0 == p3 || p1 == p2 || p1 == p3 || p2 == p3 )
         return false;
-    static const cv::Mat src = (cv::Mat_<double>(1,4) << 0,10,20,30);
+    static const cv::Mat src = cv::Mat_<double>({1, 4}, {0,10,20,30});
     cv::Point2f p01 = p1-p0;
     cv::Point2f p02 = p2-p0;
     cv::Point2f p03 = p3-p0;
     float a = float(cv::norm(p01));
     float b = float(cv::norm(p02));
     float c = float(cv::norm(p03));
-    cv::Mat dst = (cv::Mat_<double>(1,4) << 0,a,b,c);
+    cv::Mat dst = cv::Mat_<double>({1, 4}, {0,a,b,c});
     cv::Mat h = findHomography1D(src,dst);
     float d = float((h.at<double>(0,0)*40+h.at<double>(0,1))/(h.at<double>(1,0)*40+h.at<double>(1,1)));
     cv::Point2f p12 = p2-p1;

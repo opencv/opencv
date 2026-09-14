@@ -106,8 +106,8 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     Mat_<float> camMat(3, 3);
     Mat_<float> distCoeffs0(1, 5);
 
-    camMat << 300.f, 0.f, imgSize.width/2.f, 0, 300.f, imgSize.height/2.f, 0.f, 0.f, 1.f;
-    distCoeffs0 << 1.2f, 0.2f, 0.f, 0.f, 0.f;
+    camMat = Mat_<float>({3, 3}, {300.f, 0.f, imgSize.width/2.f, 0, 300.f, imgSize.height/2.f, 0.f, 0.f, 1.f});
+    distCoeffs0 = Mat_<float>({1, 5}, {1.2f, 0.2f, 0.f, 0.f, 0.f});
 
     ChessBoardGenerator cbg(Size(8,6));
     Size corSize = cbg.cornersSize();
@@ -267,8 +267,8 @@ public:
     CV_ProjectPoints2BadArgTest() : camMat(3, 3), distCoeffs(1, 5)
     {
         Size imsSize(800, 600);
-        camMat << 300.f, 0.f, imsSize.width/2.f, 0, 300.f, imsSize.height/2.f, 0.f, 0.f, 1.f;
-        distCoeffs << 1.2f, 0.2f, 0.f, 0.f, 0.f;
+        camMat = Mat_<float>({3, 3}, {300.f, 0.f, imsSize.width/2.f, 0, 300.f, imsSize.height/2.f, 0.f, 0.f, 1.f});
+        distCoeffs = Mat_<float>({1, 5}, {1.2f, 0.2f, 0.f, 0.f, 0.f});
     }
     ~CV_ProjectPoints2BadArgTest() {}
 protected:

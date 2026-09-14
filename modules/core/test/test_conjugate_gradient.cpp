@@ -88,8 +88,8 @@ TEST(Core_ConjGradSolver, regression_basic){
 #if 1
     {
         cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new SphereF_CG());
-        cv::Mat x=(cv::Mat_<double>(4,1)<<50.0,10.0,1.0,-10.0),
-            etalon_x=(cv::Mat_<double>(1,4)<<0.0,0.0,0.0,0.0);
+        cv::Mat x=cv::Mat_<double>({4,1},{50.0,10.0,1.0,-10.0}),
+            etalon_x=cv::Mat_<double>({1,4},{0.0,0.0,0.0,0.0});
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,etalon_x,etalon_res);
     }
@@ -97,8 +97,8 @@ TEST(Core_ConjGradSolver, regression_basic){
 #if 1
     {
         cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new RosenbrockF_CG());
-        cv::Mat x=(cv::Mat_<double>(2,1)<<0.0,0.0),
-            etalon_x=(cv::Mat_<double>(2,1)<<1.0,1.0);
+        cv::Mat x=cv::Mat_<double>({2,1},{0.0,0.0}),
+            etalon_x=cv::Mat_<double>({2,1},{1.0,1.0});
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,etalon_x,etalon_res);
     }

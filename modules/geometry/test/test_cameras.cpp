@@ -75,10 +75,12 @@ void CV_ProjectPointsTest::run(int)
     RNG rng = ts->get_rng();
 
     // generate data
-    cameraMatrix << 300.f,  0.f,    imgSize.width/2.f,
-    0.f,    300.f,  imgSize.height/2.f,
-    0.f,    0.f,    1.f;
-    distCoeffs << 0.1, 0.01, 0.001, 0.001;
+    cameraMatrix = cv::Mat_<float>({3, 3}, {
+            300.f,  0.f,    imgSize.width/2.f,
+            0.f,    300.f,  imgSize.height/2.f,
+            0.f,    0.f,    1.f
+    });
+    distCoeffs = cv::Mat_<float>({1, 4}, {0.1f, 0.01f, 0.001f, 0.001f});
 
     rvec(0,0) = rng.uniform( rMinVal, rMaxVal );
     rvec(0,1) = rng.uniform( rMinVal, rMaxVal );
@@ -285,9 +287,11 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
     const float L = 0.1f;
     {
         //3xN 1-channel
-        Mat objectPoints = (Mat_<float>(3, 2) << -L,  L,
-                            L,  L,
-                            0,  0);
+        Mat objectPoints = Mat_<float>({3, 2}, {
+                -L,  L,
+                L,  L,
+                0,  0
+        });
         vector<Point2f> imagePoints;
         projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.cols, static_cast<int>(imagePoints.size()));
@@ -298,8 +302,10 @@ TEST(Calib3d_ProjectPoints_CPP, inputShape)
     }
     {
         //Nx2 1-channel
-        Mat objectPoints = (Mat_<float>(2, 3) << -L,  L, 0,
-                            L,  L, 0);
+        Mat objectPoints = Mat_<float>({2, 3}, {
+                -L,  L, 0,
+                L,  L, 0
+        });
         vector<Point2f> imagePoints;
         projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
         EXPECT_EQ(objectPoints.rows, static_cast<int>(imagePoints.size()));

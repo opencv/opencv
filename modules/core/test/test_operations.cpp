@@ -894,8 +894,8 @@ bool CV_OperationsTest::TestMatMatxCastSum()
 {
     try
     {
-        Mat ref1 = (Mat_<double>(3, 1) << 1, 2, 3);
-        Mat ref2 = (Mat_<double>(3, 1) << 3, 4, 5);
+        Mat ref1 = Mat_<double>({3, 1}, {1, 2, 3});
+        Mat ref2 = Mat_<double>({3, 1}, {3, 4, 5});
         Mat ref3 = Mat::ones(3, 1, CV_64FC1);
 
         Mat mat = Mat::zeros(3, 1, CV_64FC1);
@@ -1179,7 +1179,7 @@ bool CV_OperationsTest::TestSVD()
 {
     try
     {
-        Mat A = (Mat_<double>(3,4) << 1, 2, -1, 4, 2, 4, 3, 5, -1, -2, 6, 7);
+        Mat A = Mat_<double>({3, 4}, {1, 2, -1, 4, 2, 4, 3, 5, -1, -2, 6, 7});
         Mat x;
         SVD::solveZ(A,x);
         if( cvtest::norm(A*x, NORM_INF) > FLT_EPSILON )
@@ -1506,16 +1506,16 @@ INSTANTIATE_TEST_CASE_P(Core, sortIdx, Combine(
 
 TEST(Core_sortIdx, regression_8941)
 {
-    cv::Mat src = (cv::Mat_<int>(3, 3) <<
-        1, 2, 3,
-        0, 9, 5,
-        8, 1, 6
-    );
-    cv::Mat expected = (cv::Mat_<int>(3, 1) <<
-        1,
-        0,
-        2
-    );
+    cv::Mat src = cv::Mat_<int>({3, 3}, {
+            1, 2, 3,
+            0, 9, 5,
+            8, 1, 6
+    });
+    cv::Mat expected = cv::Mat_<int>({3, 1}, {
+            1,
+            0,
+            2
+    });
 
     cv::Mat result;
     cv::sortIdx(src.col(0), result, cv::SORT_EVERY_COLUMN | cv::SORT_ASCENDING);

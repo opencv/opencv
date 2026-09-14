@@ -117,8 +117,8 @@ return x[0] * x[0] + x[1] * x[1];
 }
 };
 
-Mat P = (Mat_<double>(1, 2) << 1.0, 1.0);
-Mat step = (Mat_<double>(2, 1) << -0.5, 0.5);
+Mat P = Mat_<double>({1, 2}, {1.0, 1.0});
+Mat step = Mat_<double>({2, 1}, {-0.5, 0.5});
 
 Ptr<optim::MinProblemSolver::Function> ptr_F(new DistanceToLines());
 Ptr<optim::DownhillSolver> MinProblemSolver = optim::createDownhillSolver();
