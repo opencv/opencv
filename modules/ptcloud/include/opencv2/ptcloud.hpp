@@ -62,6 +62,72 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
  */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
+/** @brief Column layout of a decoded 3D Gaussian Splatting scene.
+ *
+ * A decoded scene is a CV_32F matrix with one row per Gaussian and #GAUSSIAN_SPLAT_STRIDE columns.
+ */
+enum GaussianSplatLayout
+{
+    GAUSSIAN_SPLAT_STRIDE = 13, //!< Floats per Gaussian, i.e. the width of a decoded scene.
+    GAUSSIAN_SPLAT_POS    = 0,  //!< First column of the position, 3 floats: x, y, z.
+    GAUSSIAN_SPLAT_COV    = 3,  //!< First column of the covariance upper triangle, 6 floats: xx, xy, xz, yy, yz, zz.
+    GAUSSIAN_SPLAT_RGB    = 9,  //!< First column of the color, 3 floats in [0, 1].
+    GAUSSIAN_SPLAT_ALPHA  = 12  //!< Column of the opacity, 1 float in [0, 1].
+};
+
+/** @brief Returns the PLY vertex property names cv::loadGaussianSplats reads by default.
+ *
+ * The order of the names is the column order cv::decodeGaussianSplats expects. Pass a renamed copy
+ * of this list to cv::loadGaussianSplats to read a scene whose exporter spells the properties
+ * differently, keeping the same order.
+ */
+CV_EXPORTS_W std::vector<String> getGaussianSplatPlyPropNames();
+
+/** @brief Decodes 3D Gaussian Splatting attributes into a renderable scene.
+ *
+ * Scales are exponentiated, opacity is put through a sigmoid, the quaternion and scales are
+ * combined into a 3D covariance, and the zeroth order harmonic is evaluated to an RGB color.
+ *
+ * Use this when the attributes do not come from a file cv::loadGaussianSplats can open, for
+ * instance when they are held in memory, arrive from a training run, or are read from a resource
+ * on a platform without filesystem access.
+ *
+ * @param attributes CV_32F matrix with one row per Gaussian and one column per name of
+ * cv::getGaussianSplatPlyPropNames, in that order.
+ * @param splats Decoded scene, see #GaussianSplatLayout.
+ */
+CV_EXPORTS_W void decodeGaussianSplats(InputArray attributes, OutputArray splats);
+
+/** @brief Decodes the contents of a `.splat` file into a renderable scene.
+ *
+ * A `.splat` file is a headerless array of 32 byte records, one per Gaussian, holding position,
+ * scale, color and rotation. The values are already activated, so only the covariance is built.
+ * Being headerless makes this the in memory counterpart of cv::loadGaussianSplats for platforms
+ * without filesystem access, or for scenes shipped as application resources.
+ *
+ * @param buf CV_8U buffer holding the bytes of a `.splat` file.
+ * @param splats Decoded scene, see #GaussianSplatLayout.
+ */
+CV_EXPORTS_W void decodeGaussianSplatsPacked(InputArray buf, OutputArray splats);
+
+/** @brief Loads a 3D Gaussian Splatting scene from a PLY or `.splat` file.
+ *
+ * Requires a trained scene, i.e. a PLY whose vertices carry `f_dc_0..2`, `opacity`, `scale_0..2`
+ * and `rot_0..3` alongside `x`, `y`, `z`, or a `.splat` file of 32 byte records. Higher order
+ * `f_rest_*` harmonics are ignored.
+ *
+ * The attributes are decoded on load, see cv::decodeGaussianSplats and
+ * cv::decodeGaussianSplatsPacked.
+ *
+ * @param filename Name of the file, the format is chosen from its extension.
+ * @param splats Decoded scene in the layout cv::viz3d::showGaussianSplats expects, see
+ * #GaussianSplatLayout, or empty on failure.
+ * @param ply_properties Vertex property names to read from a PLY file, in the column order of
+ * cv::getGaussianSplatPlyPropNames. Empty selects that default list. Unused for `.splat` files.
+ */
+CV_EXPORTS_W void loadGaussianSplats(const String &filename, OutputArray splats,
+                                     const std::vector<String> &ply_properties = std::vector<String>());
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.
