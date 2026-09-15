@@ -24,7 +24,7 @@ public:
         // Test sentinel value handling, occlusion, and dilation
         {
             // K from a VGA Kinect
-            Mat K = (Mat_<float>(3, 3) << 525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.);
+            Mat K = Mat_<float>({3, 3}, {525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.});
 
             int width = 640, height = 480;
 
@@ -54,7 +54,7 @@ public:
     void noOpRandomRegistrationTest(DepthDepth minDepth, DepthDepth maxDepth)
     {
         // K from a VGA Kinect
-        Mat K = (Mat_<float>(3, 3) << 525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.);
+        Mat K = Mat_<float>({3, 3}, {525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.});
 
         // Create a random depth image
         RNG rng;

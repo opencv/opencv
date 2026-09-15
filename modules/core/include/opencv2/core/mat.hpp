@@ -668,42 +668,6 @@ public:
 };
 
 
-//////////////////////////////// MatCommaInitializer //////////////////////////////////
-
-/** @brief  Comma-separated Matrix Initializer
-
- The class instances are usually not created explicitly.
- Instead, they are created on "matrix << firstValue" operator.
-
- The sample below initializes 2x2 rotation matrix:
-
- \code
- double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
- Mat R = (Mat_<double>(2,2) << a, -b, b, a);
- \endcode
-
- \deprecated Use constructors with std::initializer_list instead:
- \code
- Mat_<int> m1({1, 2, 3, 4}); // 4x1 Mat
- Mat_<uchar> m2({2, 3}, {1, 2, 3, 4, 5, 6}); // 2x3 Mat
-
- Mat_<double> R({2, 2}, {a, -b, b, a}); // from example
- \endcode
-*/
-template<typename _Tp> class MatCommaInitializer_
-{
-public:
-    //! the constructor, created by "matrix << firstValue" operator, where matrix is cv::Mat
-    MatCommaInitializer_(Mat_<_Tp>* _m);
-    //! the operator that takes the next value and put it to the matrix
-    template<typename T2> MatCommaInitializer_<_Tp>& operator , (T2 v);
-    //! another form of conversion operator
-    operator Mat_<_Tp>() const;
-protected:
-    MatIterator_<_Tp> it;
-};
-
-
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
 // note that umatdata might be allocated together
@@ -890,7 +854,7 @@ sub-matrices.
 - Use a comma-separated initializer:
 @code
     // create a 3x3 double-precision identity matrix
-    Mat M = (Mat_<double>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
+    Mat M = Mat_<double>({3,3}, {1, 0, 0, 0, 1, 0, 0, 0, 1});
 @endcode
 With this approach, you first call a constructor of the Mat class with the proper parameters, and
 then you just put `<< operator` followed by comma-separated values that can be constants,
@@ -1268,10 +1232,6 @@ public:
     */
     template<typename _Tp> explicit Mat(const Point3_<_Tp>& pt, bool copyData=true);
 
-    /** @overload
-    */
-    template<typename _Tp> CV_DEPRECATED_EXTERNAL explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
-
     //! download data from GpuMat
     explicit Mat(const cuda::GpuMat& m);
 
@@ -1384,10 +1344,10 @@ public:
       immediately above the main one.
     For example:
     @code
-        Mat m = (Mat_<int>(3,3) <<
+        Mat m = Mat_<int>({3,3}, {
                     1,2,3,
                     4,5,6,
-                    7,8,9);
+                    7,8,9});
         Mat d0 = m.diag(0);
         Mat d1 = m.diag(1);
         Mat d_1 = m.diag(-1);
@@ -2627,7 +2587,6 @@ public:
     template<int m, int n> explicit Mat_(const Matx<typename DataType<_Tp>::channel_type, m, n>& mtx, bool copyData=true);
     explicit Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
-    CV_DEPRECATED_EXTERNAL explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
     Mat_(std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);

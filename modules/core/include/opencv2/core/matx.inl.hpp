@@ -103,45 +103,6 @@ struct Type< Matx<_Tp, m, n> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, n
 } // namespace
 
 
-//! @brief  Comma-separated Matrix Initializer
-template<typename _Tp, int m, int n> class MatxCommaInitializer
-{
-public:
-    MatxCommaInitializer(Matx<_Tp, m, n>* _mtx);
-    template<typename T2> MatxCommaInitializer<_Tp, m, n>& operator , (T2 val);
-    Matx<_Tp, m, n> operator *() const;
-
-    Matx<_Tp, m, n>* dst;
-    int idx;
-};
-
-template<typename _Tp, typename _T2, int m, int n> CV_DEPRECATED_EXTERNAL static inline
-MatxCommaInitializer<_Tp, m, n> operator << (const Matx<_Tp, m, n>& mtx, _T2 val)
-{
-    MatxCommaInitializer<_Tp, m, n> commaInitializer((Matx<_Tp, m, n>*)&mtx);
-    return (commaInitializer, val);
-}
-
-template<typename _Tp, int m, int n> inline
-MatxCommaInitializer<_Tp, m, n>::MatxCommaInitializer(Matx<_Tp, m, n>* _mtx)
-    : dst(_mtx), idx(0)
-{}
-
-template<typename _Tp, int m, int n> template<typename _T2> inline
-MatxCommaInitializer<_Tp, m, n>& MatxCommaInitializer<_Tp, m, n>::operator , (_T2 value)
-{
-    CV_DbgAssert( idx < m*n );
-    dst->val[idx++] = saturate_cast<_Tp>(value);
-    return *this;
-}
-
-template<typename _Tp, int m, int n> inline
-Matx<_Tp, m, n> MatxCommaInitializer<_Tp, m, n>::operator *() const
-{
-    CV_DbgAssert( idx == n*m );
-    return *dst;
-}
-
 ////////////////////////////////// Matx Implementation ///////////////////////////////////
 
 template<typename _Tp, int m, int n> inline
@@ -727,44 +688,6 @@ struct Depth< Vec<_Tp, cn> > { enum { value = Depth<_Tp>::value }; };
 template<typename _Tp, int cn>
 struct Type< Vec<_Tp, cn> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, cn) }; };
 } // namespace
-
-/** @brief  Comma-separated Vec Initializer
-*/
-template<typename _Tp, int m> class VecCommaInitializer : public MatxCommaInitializer<_Tp, m, 1>
-{
-public:
-    VecCommaInitializer(Vec<_Tp, m>* _vec);
-    template<typename T2> VecCommaInitializer<_Tp, m>& operator , (T2 val);
-    Vec<_Tp, m> operator *() const;
-};
-
-template<typename _Tp, typename _T2, int cn> CV_DEPRECATED_EXTERNAL static inline
-VecCommaInitializer<_Tp, cn> operator << (const Vec<_Tp, cn>& vec, _T2 val)
-{
-    VecCommaInitializer<_Tp, cn> commaInitializer((Vec<_Tp, cn>*)&vec);
-    return (commaInitializer, val);
-}
-
-template<typename _Tp, int cn> inline
-VecCommaInitializer<_Tp, cn>::VecCommaInitializer(Vec<_Tp, cn>* _vec)
-    : MatxCommaInitializer<_Tp, cn, 1>(_vec)
-{}
-
-template<typename _Tp, int cn> template<typename _T2> inline
-VecCommaInitializer<_Tp, cn>& VecCommaInitializer<_Tp, cn>::operator , (_T2 value)
-{
-    CV_DbgAssert( this->idx < cn );
-    this->dst->val[this->idx++] = saturate_cast<_Tp>(value);
-    return *this;
-}
-
-template<typename _Tp, int cn> inline
-Vec<_Tp, cn> VecCommaInitializer<_Tp, cn>::operator *() const
-{
-    CV_DbgAssert( this->idx == cn );
-    return *this->dst;
-}
-
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec() {}

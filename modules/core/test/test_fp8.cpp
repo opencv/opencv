@@ -119,7 +119,7 @@ TEST(Core_FP8, cross_fp8_conversion)
 
 TEST(Core_FP8, convert_scale)
 {
-    Mat f = (Mat_<float>(1, 4) << 1.f, 2.f, 3.f, 4.f);
+    Mat f = Mat_<float>({1, 4}, {1.f, 2.f, 3.f, 4.f});
     Mat q, back;
     f.convertTo(q, CV_8F_E4M3FN, 2.0, 1.0);   // 2x+1 -> {3,5,7,9}
     q.convertTo(back, CV_32F);

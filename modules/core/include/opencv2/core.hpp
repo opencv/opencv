@@ -1183,12 +1183,12 @@ The function horizontally concatenates two or more cv::Mat matrices (with the sa
 CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, OutputArray dst);
 /** @overload
  @code{.cpp}
-    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 4,
+    cv::Mat_<float> A = cv::Mat_<float>({3, 2}, { 1, 4,
                                                   2, 5,
-                                                  3, 6);
-    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 7, 10,
+                                                  3, 6 });
+    cv::Mat_<float> B = cv::Mat_<float>({3, 2}, { 7, 10,
                                                   8, 11,
-                                                  9, 12);
+                                                  9, 12 });
 
     cv::Mat C;
     cv::hconcat(A, B, C);
@@ -1245,12 +1245,12 @@ The function vertically concatenates two or more cv::Mat matrices (with the same
 CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, OutputArray dst);
 /** @overload
  @code{.cpp}
-    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 7,
+    cv::Mat_<float> A = cv::Mat_<float>({3, 2}, { 1, 7,
                                                   2, 8,
-                                                  3, 9);
-    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 4, 10,
+                                                  3, 9 });
+    cv::Mat_<float> B = cv::Mat_<float>({3, 2}, { 4, 10,
                                                   5, 11,
-                                                  6, 12);
+                                                  6, 12 });
 
     cv::Mat C;
     cv::vconcat(A, B, C);

@@ -234,8 +234,8 @@ void CV_ChessboardSubpixelTest::generateIntrinsicParams()
     double p2 = 0.05*cvtest::randReal(rng);
     double k3 = 0.0;
 
-    intrinsic_matrix_ = (Mat_<double>(3, 3) << fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0);
-    distortion_coeffs_ = (Mat_<double>(1, 5) << k1, k2, p1, p2, k3);
+    intrinsic_matrix_ = Mat_<double>({3, 3}, {fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0});
+    distortion_coeffs_ = Mat_<double>({1, 5}, {k1, k2, p1, p2, k3});
 }
 
 TEST(Calib3d_ChessboardSubPixDetector, accuracy) { CV_ChessboardSubpixelTest test; test.safe_run(); }

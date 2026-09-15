@@ -121,17 +121,18 @@ PERF_TEST_P( ImgProc_ParallelFilter_Perf, filter2D_parallel,
 
     if (isSep)
     {
-        Mat kx = (Mat_<float>(1, 3) << 0.25f, 0.5f, 0.25f);
-        Mat ky = (Mat_<float>(3, 1) << 0.25f, 0.5f, 0.25f);
+        Mat kx = Mat_<float>({1, 3}, {0.25f, 0.5f, 0.25f});
+        Mat ky = Mat_<float>({3, 1}, {0.25f, 0.5f, 0.25f});
         TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kx, ky,
                                      Point(-1, -1), 0, borderMode);
     }
     else
     {
-        Mat kernel = (Mat_<float>(3, 3) <<
-            1/16.f, 2/16.f, 1/16.f,
-            2/16.f, 4/16.f, 2/16.f,
-            1/16.f, 2/16.f, 1/16.f);
+        Mat kernel = Mat_<float>({3, 3}, {
+                1/16.f, 2/16.f, 1/16.f,
+                2/16.f, 4/16.f, 2/16.f,
+                1/16.f, 2/16.f, 1/16.f
+        });
         TEST_CYCLE() cv::filter2D(src, dst, -1, kernel,
                                   Point(-1, -1), 0, borderMode);
     }

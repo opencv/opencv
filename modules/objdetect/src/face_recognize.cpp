@@ -113,7 +113,7 @@ private:
         for (int i = 0; i < 5; i++)
             A11 += dst_demean[i][1] * src_demean[i][1];
         A11 = A11 / 5;
-        Mat A = (Mat_<double>(2, 2) << A00, A01, A10, A11);
+        Mat A = Mat_<double>({2, 2}, {A00, A01, A10, A11});
         double d[2] = { 1.0, 1.0 };
         double detA = A00 * A11 - A01 * A10;
         if (detA < 0)
@@ -146,7 +146,7 @@ private:
             {
                 double temp = d[1];
                 d[1] = -1;
-                Mat D = (Mat_<double>(2, 2) << d[0], 0.0, 0.0, d[1]);
+                Mat D = Mat_<double>({2, 2}, {d[0], 0.0, 0.0, d[1]});
                 Mat Dvt = D*vt;
                 Mat uDvt = u*Dvt;
                 T[0][0] = uDvt.ptr<double>(0)[0];
@@ -158,7 +158,7 @@ private:
         }
         else
         {
-            Mat D = (Mat_<double>(2, 2) << d[0], 0.0, 0.0, d[1]);
+            Mat D = Mat_<double>({2, 2}, {d[0], 0.0, 0.0, d[1]});
             Mat Dvt = D*vt;
             Mat uDvt = u*Dvt;
             T[0][0] = uDvt.ptr<double>(0)[0];
@@ -184,7 +184,7 @@ private:
         T[0][1] *= scale;
         T[1][0] *= scale;
         T[1][1] *= scale;
-        Mat transform_mat = (Mat_<double>(2, 3) << T[0][0], T[0][1], T[0][2], T[1][0], T[1][1], T[1][2]);
+        Mat transform_mat = Mat_<double>({2, 3}, {T[0][0], T[0][1], T[0][2], T[1][0], T[1][1], T[1][2]});
         return transform_mat;
     }
 private:
