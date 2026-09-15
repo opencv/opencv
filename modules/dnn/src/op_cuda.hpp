@@ -529,7 +529,7 @@ namespace cv { namespace dnn {
                 converted.copyTo(u);
             }
             shared_block->boundUMat = u;
-            hostMat = &m;
+            hostMat = m;
         }
 
         GenericCUDABackendWrapper(const Ptr<BackendWrapper>& base_, Mat& m)
@@ -541,7 +541,7 @@ namespace cv { namespace dnn {
             shape = cv::dnn::shape(m);
             hostMatDepth = m.depth();
             offset = 0;
-            hostMat = &m;
+            hostMat = m;
             shared_block = base->shared_block;
 
             auto numel = total(shape);
@@ -569,25 +569,26 @@ namespace cv { namespace dnn {
             if (!u || !u->hostCopyObsolete())
                 return;
 
-            if (hostMat)
+            if (!hostMat.empty())
             {
                 CV_Assert(offset == 0);
 
-                Mat& host = *hostMat;
+                Mat& host = hostMat;
                 CV_Assert(host.isContinuous() && host.total() >= shape.total());
 
                 UMat device = sliceUMat(shared_block->boundUMat, shape, offset);
                 CV_Assert(device.total() == shape.total());
-
-                Mat src = device.getMat(ACCESS_READ);
-                CV_Assert(src.isContinuous());
-                src = src.reshape(1, shape);
+                device = device.reshape(1, shape);
 
                 Mat dst(shape, host.depth(), host.data);
-                if (src.depth() == dst.depth())
-                    src.copyTo(dst);
+                if (device.depth() == dst.depth())
+                    device.copyTo(dst);
                 else
-                    src.convertTo(dst, dst.depth());
+                {
+                    Mat staged;
+                    device.copyTo(staged);
+                    staged.convertTo(dst, dst.depth());
+                }
             }
         }
 
@@ -603,11 +604,11 @@ namespace cv { namespace dnn {
             if (u && u->deviceCopyObsolete())
             {
                 shared_block->stream.synchronize();
-                if (hostMat)
+                if (!hostMat.empty())
                 {
                     CV_Assert(offset == 0);
 
-                    const Mat& host = *hostMat;
+                    const Mat& host = hostMat;
                     CV_Assert(host.isContinuous() && host.total() >= shape.total());
 
                     Mat src(shape, host.depth(), host.data);
@@ -680,13 +681,13 @@ namespace cv { namespace dnn {
             CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
             copyToHost();
             setHostDirty();
-            return shared_block->boundUMat.getMat(ACCESS_RW);
+            return hostMat;
         }
 
         const cv::Mat getImmutableHostMat() const noexcept {
             CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
             copyToHost();
-            return shared_block->boundUMat.getMat(ACCESS_READ);
+            return hostMat;
         }
 
         /* Optimization Note: use getSpan() and getView() judiciously
@@ -733,7 +734,7 @@ namespace cv { namespace dnn {
 
         MatShape shape;
         std::size_t offset;
-        cv::Mat* hostMat = nullptr;
+        cv::Mat hostMat;
 
         struct shared_block_type {
             cuda4dnn::csl::Stream stream;
