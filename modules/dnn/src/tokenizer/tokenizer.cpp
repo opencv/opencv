@@ -673,13 +673,15 @@ static std::vector<UnigramNormalizerStep> readUnigramNormalizerSteps(const cv::F
             [](const UnigramNormalizerStep& s) {
                 return s.kind == UnigramNormalizerStep::PRECOMPILED;
             });
-        if (subsumed)
+        // Braces required: CV_LOG_DEBUG expands to a for-loop unless NDEBUG strips it.
+        if (subsumed) {
             CV_LOG_DEBUG(NULL, "tokenizer.json: normalizer step '" << unhandledNormalization
                 << "' is subsumed by the Precompiled charsmap; skipping");
-        else
+        } else {
             CV_LOG_WARNING(NULL, "tokenizer.json: normalizer step '" << unhandledNormalization
                 << "' is not implemented and no Precompiled charsmap covers it; token ids "
                    "may differ from the reference tokenizer");
+        }
     }
     // An absent normalizer still runs the default PRECOMPILED step.
     if (steps.empty())
