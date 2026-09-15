@@ -672,6 +672,10 @@ The function returns true if the optimized code is enabled. Otherwise, it return
  */
 CV_EXPORTS_W bool useOptimized();
 
+/** @brief Returns matrix element size.
+ * Returns matrix element size including channels. Analog of CV_ELEM_SIZE macro. Example: getElemSize(CV_32SC3) returns 12.
+ * @param type Matrix data type, e.g. CV_8UC3.
+ */
 inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); }
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
