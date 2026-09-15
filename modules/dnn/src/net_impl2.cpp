@@ -505,10 +505,10 @@ bool Net::Impl::haveArg(const std::string& name) const
 
 UMat Net::Impl::toArgTensor(const Mat& m) const
 {
-    UMat u;
-    u.allocator = Mat::getDefaultAllocator();
-    m.copyTo(u);
-    return u;
+    if (m.empty())
+        return UMat();
+    CV_Assert(m.isContinuous());
+    return m.getUMat(ACCESS_READ);
 }
 
 Arg Net::Impl::newConstArg(const std::string& name, const UMat& m)
