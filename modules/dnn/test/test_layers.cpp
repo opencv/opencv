@@ -1409,6 +1409,32 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_unequal, Combine(
 ));
 
 
+static Mat runEltwise(const String& op, const std::vector<Mat>& inputs,
+                      int backend = DNN_BACKEND_OPENCV, int target = DNN_TARGET_CPU)
+{
+    Net net;
+    LayerParams lp;
+    lp.type = "NaryEltwise";
+    lp.name = "testLayer";
+    lp.set("operation", op);
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+
+    std::vector<String> names(inputs.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        names[i] = cv::format("input%d", (int)i);
+        if (i > 0)
+            net.connect(0, (int)i, id, (int)i);
+    }
+    net.setInputsNames(names);
+    for (size_t i = 0; i < inputs.size(); i++)
+        net.setInput(inputs[i], names[i]);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    return net.forward().clone();
+}
+
 struct Layer_Test_Eltwise_bcast : testing::TestWithParam<tuple<string, int, tuple<Backend, Target>>>
 {
 public:
@@ -1474,26 +1500,7 @@ private:
         Mat a = Mat::zeros((int) a_shape.size(), a_shape.data(), CV_32FC1);
         Mat b = Mat::ones((int) b_shape.size(), b_shape.data(), CV_32FC1);
 
-        Net net;
-        LayerParams lp;
-        lp.type = "NaryEltwise";
-        lp.name = "testLayer";
-        lp.set("operation", op);
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 1, id, 1);
-
-        vector<String> inpNames(2);
-        inpNames[0] = "a";
-        inpNames[1] = "b";
-        net.setInputsNames(inpNames);
-        net.setInput(a, inpNames[0]);
-        net.setInput(b, inpNames[1]);
-
-        net.setPreferableBackend(backend);
-        net.setPreferableTarget(target);
-
-        Mat re;
-        re = net.forward();
+        Mat re = runEltwise(op, {a, b}, backend, target);
         auto ptr_re = (float *) re.data;
         for (int i = 0; i < re.total(); i++)
             if (op == "sum"){
@@ -1521,6 +1528,122 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_bcast, Combine(
         Values(1, 2, 3, 4, 5),
         dnnBackendsAndTargets()
 ));
+
+// One operator suffices: promotion is a shared helper, not per-operator code.
+typedef testing::TestWithParam<tuple<tuple<int, int, int>, tuple<Backend, Target> > >
+        Layer_Test_Eltwise_promote;
+TEST_P(Layer_Test_Eltwise_promote, matches_widened_reference)
+{
+    int matType0 = get<0>(get<0>(GetParam()));
+    int matType1 = get<1>(get<0>(GetParam()));
+    int commonType = get<2>(get<0>(GetParam()));
+    Backend backend = get<0>(get<1>(GetParam()));
+    Target target = get<1>(get<1>(GetParam()));
+
+    // Only the OpenCV backend promotes; initCUDA and the OpenVINO graph reject mixed input types.
+    if (backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Mixed input types are supported on the OpenCV backend only");
+
+    const std::vector<int> shape{2, 3, 4, 5};
+    Mat a(shape, matType0), b(shape, matType1), aWide, bWide;
+    cv::randu(a, -100, 100);   // RNG::fill clamps the low bound for unsigned types
+    cv::randu(b, -100, 100);
+    a.convertTo(aWide, commonType);
+    b.convertTo(bWide, commonType);
+
+    Mat reference = runEltwise("add", {aWide, bWide}, backend, target);
+    Mat promoted = runEltwise("add", {a, b}, backend, target);
+    normAssert(reference, promoted, "", 0, 0);
+    EXPECT_EQ(promoted.type(), commonType);
+}
+
+// Both operand orders are listed: the output type used to be taken from inputs[0].
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_promote, Combine(
+    Values(std::make_tuple(CV_32S, CV_64S, CV_64S),  // same family, the pair importers produce
+           std::make_tuple(CV_64S, CV_32S, CV_64S),
+           std::make_tuple(CV_8U, CV_8S, CV_16S),  // mixed sign
+           std::make_tuple(CV_8S, CV_8U, CV_16S),
+           std::make_tuple(CV_32F, CV_64F, CV_64F),  // float widening
+           std::make_tuple(CV_64F, CV_32F, CV_64F),
+           std::make_tuple(CV_8U, CV_32F, CV_32F),  // int with float, fp32 is exact to 2^24
+           std::make_tuple(CV_32F, CV_8U, CV_32F),
+           std::make_tuple(CV_32S, CV_32F, CV_64F),  // int32 needs 31 bits, so the float widens
+           std::make_tuple(CV_32F, CV_32S, CV_64F)),
+    dnnBackendsAndTargets()
+));
+
+// A value outside the narrower operand's range must survive: promotion widens, never narrows.
+TEST(Layer_Eltwise_promote, preserves_wide_values)
+{
+    const int64_t big = (int64_t)INT32_MAX + 1;
+    const int64_t values[] = { big, -big, (int64_t)1 << 40 };
+    const int n = (int)(sizeof(values) / sizeof(values[0]));
+
+    Mat narrow(std::vector<int>{1, n}, CV_32S), wide(std::vector<int>{1, n}, CV_64S);
+    narrow.setTo(1);
+    for (int i = 0; i < n; i++)
+        wide.ptr<int64_t>()[i] = values[i];
+
+    Mat sum = runEltwise("add", {narrow, wide});
+    ASSERT_EQ(sum.type(), CV_64S);
+    for (int i = 0; i < n; i++)
+        EXPECT_EQ(sum.ptr<int64_t>()[i], values[i] + 1);
+
+    // Neither candidate holds every value: fp64 is exact only to 2^53, and CV_64S has no fractions.
+    Mat asFloat(std::vector<int>{1, n}, CV_64F);
+    asFloat.setTo(1);
+    EXPECT_ANY_THROW(runEltwise("add", {wide, asFloat}));
+}
+
+// Sum/Mean/Max/Min are variadic, and the common type must not depend on operand order: resolving
+// two integers first would build a wider integer that no float covers exactly.
+TEST(Layer_Eltwise_promote, order_independent)
+{
+    const std::vector<int> shape{2, 3};
+    Mat i32(shape, CV_32S), u32(shape, CV_32U), f32(shape, CV_32F);
+    cv::randu(i32, 0, 100);
+    cv::randu(u32, 0, 100);
+    cv::randu(f32, -100, 100);
+
+    Mat intsFirst = runEltwise("sum", {i32, u32, f32});
+    Mat floatFirst = runEltwise("sum", {f32, i32, u32});
+    EXPECT_EQ(intsFirst.type(), CV_64F);
+    EXPECT_EQ(floatFirst.type(), CV_64F);
+    normAssert(intsFirst, floatFirst, "", 0, 0);
+}
+
+// where promotes its two value operands and leaves the CV_Bool condition alone; comparisons
+// promote for the computation but keep a CV_Bool output; bitwise ops promote across signedness.
+TEST(Layer_Eltwise_promote, where_comparison_bitwise)
+{
+    const std::vector<int> shape{2, 3, 4, 5};
+    Mat condition(shape, CV_Bool), x(shape, CV_32S), y(shape, CV_64S), xw;
+    cv::randu(condition, 0, 2);
+    cv::randu(x, -100, 100);
+    cv::randu(y, -100, 100);
+    x.convertTo(xw, CV_64S);
+
+    Mat selected = runEltwise("where", {condition, x, y});
+    normAssert(runEltwise("where", {condition, xw, y}), selected, "", 0, 0);
+    EXPECT_EQ(selected.type(), CV_64S);
+
+    Mat compared = runEltwise("less", {x, y});
+    normAssert(runEltwise("less", {xw, y}), compared, "", 0, 0);
+    EXPECT_EQ(compared.type(), CV_Bool);
+
+    // Assigned rather than randomised: a -100..100 uchar never sets the bit sign extension copies.
+    Mat u(std::vector<int>{1, 2}, CV_8U), s(std::vector<int>{1, 2}, CV_8S), uw, sw;
+    u.ptr<uchar>()[0] = 0x80;
+    u.ptr<uchar>()[1] = 0xff;
+    s.ptr<schar>()[0] = -1;
+    s.ptr<schar>()[1] = -128;
+    u.convertTo(uw, CV_16S);
+    s.convertTo(sw, CV_16S);
+
+    Mat masked = runEltwise("bitwise_and", {u, s});
+    normAssert(runEltwise("bitwise_and", {uw, sw}), masked, "", 0, 0);
+    EXPECT_EQ(masked.type(), CV_16S);
+}
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Resize;
 TEST_P(Layer_Test_Resize, change_input)
