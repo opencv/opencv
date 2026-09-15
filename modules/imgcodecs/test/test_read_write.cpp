@@ -322,6 +322,34 @@ TEST(Imgcodecs_SunRaster, imread_grayscale_roundtrip)
 }
 #endif
 
+#if !defined(HAVE_JASPER) && defined(HAVE_OPENJPEG)
+// Regression test: the OpenJPEG encoder kept opj_cparameters::numresolution at
+// the library default of 6. OpenJPEG rejects that unless every tile - the whole
+// image here, because no tiling is configured - is at least 2^(6-1) = 32 pixels
+// in both directions, so encoding any smaller image failed with "Number of
+// resolutions is too high in comparison to the size of tiles".
+TEST(Imgcodecs_Jpeg2000, encode_small_image)
+{
+    const Size sizes[] = { Size(1, 1), Size(8, 8), Size(31, 31), Size(64, 8), Size(8, 64), Size(32, 32) };
+    for (size_t i = 0; i < sizeof(sizes)/sizeof(sizes[0]); i++)
+    {
+        SCOPED_TRACE(cv::format("%dx%d", sizes[i].width, sizes[i].height));
+
+        Mat src(sizes[i], CV_8UC3, Scalar(40, 80, 120));
+
+        vector<uchar> buf;
+        ASSERT_TRUE(imencode(".jp2", src, buf)) << "imencode() failed for .jp2";
+        ASSERT_FALSE(buf.empty());
+
+        Mat dst = imdecode(buf, IMREAD_UNCHANGED);
+        ASSERT_FALSE(dst.empty());
+        EXPECT_EQ(src.size(), dst.size());
+        EXPECT_EQ(src.type(), dst.type());
+        EXPECT_EQ(0, cvtest::norm(src, dst, NORM_INF));
+    }
+}
+#endif
+
 TEST(Imgcodecs_Image, regression_9376)
 {
     String path = findDataFile("readwrite/regression_9376.bmp");
