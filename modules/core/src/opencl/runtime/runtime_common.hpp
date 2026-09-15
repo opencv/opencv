@@ -50,6 +50,8 @@ struct DynamicFnEntry
     void** ppFn; // &clCreateContext_pfn
 };
 
+void* getOpenCLFunctionAddress(const char* name);
+
 } } } // namespace cv::ocl::runtime
 
 using namespace cv::ocl::runtime;
