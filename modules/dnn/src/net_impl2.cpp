@@ -828,8 +828,6 @@ void Net::Impl::finalize()
             UMat& t = __tensors__.at(i);
             if (t.empty() || !t.u || t.u->currAllocator == cudaAlloc)
                 continue;
-            if (t.u->refcount != 0)
-                continue;
             UMat cudaT;
             cudaT.allocator = cudaAlloc;
             t.getMat(ACCESS_READ).copyTo(cudaT);
