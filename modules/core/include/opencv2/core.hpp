@@ -1719,9 +1719,27 @@ from the corresponding elements of x and y arrays:
 @param y floating-point array of y-coordinates of the vectors; it must
 have the same size as x.
 @param magnitude output array of the same size and type as x.
-@sa cartToPolar, polarToCart, phase, sqrt
+@sa cartToPolar, polarToCart, phase, sqrt, hypot
 */
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
+
+/** @brief Computes the Euclidean norm of 2D vectors.
+
+The function cv::hypot computes
+@f$\sqrt{x^2 + y^2}@f$ for every corresponding pair of
+elements in @p x and @p y. Scaling avoids intermediate overflow and underflow,
+and a Newton correction improves the accuracy of the result.
+
+The implementation follows the algorithm described in @cite Borges20. For
+finite inputs, the result is typically accurate to within 1 ULP for both
+single- and double-precision arrays.
+
+@param x single- or double-precision floating-point array of x-coordinates.
+@param y array of y-coordinates; it must have the same size and type as @p x.
+@param dst output array of the same size and type as @p x.
+@sa magnitude
+*/
+CV_EXPORTS_W void hypot(InputArray x, InputArray y, OutputArray dst);
 
 /** @brief Checks every element of an input array for invalid values.
 

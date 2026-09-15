@@ -58,6 +58,119 @@ typedef void (*MathFunc)(const void* src, void* dst, int len);
 namespace {
 
 template <typename T>
+struct HypotTraits
+{
+    static T cutoffRatio()
+    {
+        using std::scalbn;
+        using std::sqrt;
+        return scalbn(sqrt(T(2)) / T(2),
+                      (1 - std::numeric_limits<T>::digits) / 2);
+    }
+
+    static T huge()
+    {
+        using std::scalbn;
+        using std::sqrt;
+        return scalbn(sqrt(T(2)) / T(2),
+                      std::numeric_limits<T>::max_exponent / 2);
+    }
+
+    static T tiny()
+    {
+        using std::scalbn;
+        return scalbn(T(1),
+                      (std::numeric_limits<T>::min_exponent - 1) / 2);
+    }
+
+    static int scaleExponent()
+    {
+        return (std::numeric_limits<T>::min_exponent - 1) / 2 -
+               std::numeric_limits<T>::digits + 1;
+    }
+};
+
+template <typename T>
+std::pair<T, T> accurateHypotTwoSum(T x, T y)
+{
+    const T sum = x + y;
+    const T xPrime = sum - y;
+    const T yPrime = sum - xPrime;
+    return std::make_pair(sum, (x - xPrime) + (y - yPrime));
+}
+
+template <typename T>
+T accurateHypotUnscaled(T x, T y)
+{
+    using std::fma;
+    using std::sqrt;
+
+    const T xSquared = x * x;
+    const T ySquared = y * y;
+    const std::pair<T, T> squareSum = accurateHypotTwoSum(xSquared, ySquared);
+    const T xError = fma(x, x, -xSquared);
+    const T yError = fma(y, y, -ySquared);
+    const std::pair<T, T> squareError = accurateHypotTwoSum(xError, yError);
+    const std::pair<T, T> errorSum = accurateHypotTwoSum(
+        squareError.first, squareSum.second);
+    const T sigma = squareSum.first;
+    const T sigmaError = squareError.second + errorSum.first + errorSum.second;
+    const T h = sqrt(sigma);
+    const T tau = sigmaError + fma(-h, h, sigma);
+    return fma(tau / h, T(0.5), h);
+}
+
+template <typename T>
+T accurateHypot(T x, T y)
+{
+    using std::abs;
+    using std::fpclassify;
+    using std::minmax;
+    using std::scalbn;
+
+    const T ax = abs(x);
+    const T ay = abs(y);
+    const int axClass = fpclassify(ax);
+    const int ayClass = fpclassify(ay);
+    if (axClass == FP_INFINITE || ayClass == FP_INFINITE)
+    {
+        return std::numeric_limits<T>::infinity();
+    }
+    if (axClass == FP_NAN || ayClass == FP_NAN)
+    {
+        return x + y;
+    }
+
+    const auto magnitudeRange = minmax(ax, ay);
+    const T mn = magnitudeRange.first;
+    const T mx = magnitudeRange.second;
+    if (fpclassify(mx) == FP_ZERO)
+    {
+        return mx;
+    }
+
+    if (mn <= mx * HypotTraits<T>::cutoffRatio())
+    {
+        return mx;
+    }
+
+    const int scaleExponent = HypotTraits<T>::scaleExponent();
+    if (mx > HypotTraits<T>::huge())
+    {
+        return scalbn(accurateHypotUnscaled(scalbn(mx, scaleExponent),
+                                            scalbn(mn, scaleExponent)),
+                      -scaleExponent);
+    }
+    if (mn < HypotTraits<T>::tiny())
+    {
+        return scalbn(accurateHypotUnscaled(scalbn(mx, -scaleExponent),
+                                            scalbn(mn, -scaleExponent)),
+                      scaleExponent);
+    }
+    return accurateHypotUnscaled(mx, mn);
+}
+
+template <typename T>
 using UnaryMathFunction = T (*)(T);
 
 template <typename T>
@@ -171,13 +284,34 @@ void log1pImpl(const Mat& src, Mat& dst)
     unaryMathImpl(src, dst, accurateLog1p<T>);
 }
 
+template <typename T>
+void hypotImpl(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    const int channels = src1.channels();
+    const Mat* arrays[] = {&src1, &src2, &dst, 0};
+    uchar* ptrs[3] = {};
+    NAryMatIterator it(arrays, ptrs);
+    const int length = static_cast<int>(it.size * channels);
+
+    for (size_t i = 0; i < it.nplanes; ++i, ++it)
+    {
+        const T* src1Ptr = reinterpret_cast<const T*>(ptrs[0]);
+        const T* src2Ptr = reinterpret_cast<const T*>(ptrs[1]);
+        T* dstPtr = reinterpret_cast<T*>(ptrs[2]);
+        for (int j = 0; j < length; ++j)
+        {
+            dstPtr[j] = accurateHypot(src1Ptr[j], src2Ptr[j]);
+        }
+    }
+}
+
 } // namespace
 
 #ifdef HAVE_OPENCL
 
-enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
+enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4, OCL_OP_EXPM1=5, OCL_OP_LOG1P=6, OCL_OP_HYPOT=7 };
 
-static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGREES", "OP_PHASE_RADIANS", 0 };
+static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGREES", "OP_PHASE_RADIANS", "OP_EXPM1", "OP_LOG1P", "OP_HYPOT", 0 };
 
 static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
 {
@@ -297,6 +431,39 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
             double *mag = (double*)ptrs[2];
             hal::magnitude64f( x, y, mag, len );
         }
+    }
+}
+
+void hypot(InputArray _src1, InputArray _src2, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int type = _src1.type();
+    const int depth = _src1.depth();
+    CV_CheckEQ(_src1.size(), _src2.size(), "Input arrays must have the same size");
+    CV_CheckTypeEQ(type, _src2.type(), "Input arrays must have the same type");
+    CV_CheckDepth(depth, depth == CV_32F || depth == CV_64F,
+                  "Input arrays must have CV_32F or CV_64F depth");
+
+    CV_OCL_RUN(_dst.isUMat() && _src1.dims() <= 2 && _src2.dims() <= 2,
+               ocl_math_op(_src1, _src2, _dst, OCL_OP_HYPOT))
+
+    const Mat src1 = _src1.getMat();
+    const Mat src2 = _src2.getMat();
+    _dst.create(src1.dims, src1.size, type);
+    Mat dst = _dst.getMat();
+
+    switch (depth)
+    {
+    case CV_32F:
+        hypotImpl<float>(src1, src2, dst);
+        break;
+    case CV_64F:
+        hypotImpl<double>(src1, src2, dst);
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat,
+                 "cv::hypot supports only CV_32F and CV_64F arrays");
     }
 }
 
@@ -590,6 +757,10 @@ void expm1(InputArray _src, OutputArray _dst)
     const int depth = _src.depth();
     CV_CheckDepth(depth, depth == CV_32F || depth == CV_64F,
                   "Input array must have CV_32F or CV_64F depth");
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_math_op(_src, noArray(), _dst, OCL_OP_EXPM1))
+
     const Mat src = _src.getMat();
     _dst.create(src.dims, src.size, type);
     Mat dst = _dst.getMat();
@@ -649,6 +820,9 @@ void log1p(InputArray _src, OutputArray _dst)
     const int depth = _src.depth();
     CV_CheckDepth(depth, depth == CV_32F || depth == CV_64F,
                   "Input array must have CV_32F or CV_64F depth");
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG1P))
 
     const Mat src = _src.getMat();
     _dst.create(src.dims, src.size, type);

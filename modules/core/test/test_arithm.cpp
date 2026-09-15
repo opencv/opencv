@@ -3277,6 +3277,76 @@ struct Core_Log1pExpectedValues<double>
     }
 };
 
+template <typename T>
+struct Core_HypotLostBitInput;
+
+template <>
+struct Core_HypotLostBitInput<float>
+{
+    static float value()
+    {
+        // This is the exact value written as 0x1.a29c86p-12f.
+        return std::scalbn(0xD14E43, -35);
+    }
+};
+
+template <>
+struct Core_HypotLostBitInput<double>
+{
+    static double value()
+    {
+        // This is the exact value written as 0x1.07ea128b86bdfp-26.
+        return std::scalbn(0x107EA128B86BDF, -78);
+    }
+};
+
+template <typename T>
+struct Core_HypotScaledValues;
+
+template <>
+struct Core_HypotScaledValues<float>
+{
+    static float x()
+    {
+        // This is the exact value written as 0x1.8p-126f.
+        return std::scalbn(0x18, -130);
+    }
+
+    static float y()
+    {
+        // This is the exact value written as 0x1.4p-129f.
+        return std::scalbn(0x14, -133);
+    }
+
+    static float expected()
+    {
+        // This is the exact value written as 0x1.8213e4p-126f.
+        return std::scalbn(0x18213e4, -150);
+    }
+};
+
+template <>
+struct Core_HypotScaledValues<double>
+{
+    static double x()
+    {
+        // This is the exact value written as 0x1.8p-1008.
+        return std::scalbn(0x18, -1012);
+    }
+
+    static double y()
+    {
+        // This is the exact value written as 0x1.4p-1011.
+        return std::scalbn(0x14, -1015);
+    }
+
+    static double expected()
+    {
+        // This is the exact value written as 0x1.8213e4f575a6ap-1008.
+        return std::scalbn(0x18213e4f575a6a, -1060);
+    }
+};
+
 TYPED_TEST(Core_MathTest, log1p_matches_expected_values)
 {
     using Scalar = TypeParam;
@@ -3435,6 +3505,103 @@ TYPED_TEST(Core_MathTest, expm1_log1p_identity)
         cv::expm1(log1pResult, expm1Result);
 
         expectWithinOneUlp(expm1Result.at<Scalar>(0, 0), value);
+    }
+}
+
+TYPED_TEST(Core_MathTest, hypot_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    const Scalar xValues[] = {Scalar(3), Scalar(-3), Scalar(0), Scalar(5)};
+    const Scalar yValues[] = {Scalar(4), Scalar(4), Scalar(0), Scalar(-12)};
+    const Scalar expectedValues[] = {Scalar(5), Scalar(5), Scalar(0),
+                                     Scalar(13)};
+    const int type = DataType<Scalar>::type;
+
+    const int valueCount = static_cast<int>(sizeof(xValues) / sizeof(xValues[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat x(1, 1, type);
+        x.at<Scalar>(0, 0) = xValues[i];
+        Mat y(1, 1, type);
+        y.at<Scalar>(0, 0) = yValues[i];
+        Mat dst;
+
+        cv::hypot(x, y, dst);
+
+        EXPECT_EQ(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, hypot_avoids_overflow)
+{
+    using Scalar = TypeParam;
+    const Scalar large = std::numeric_limits<Scalar>::max() / Scalar(2);
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = large;
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = large;
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    // This is the exact value written as 0x1.6a09e667f3bcdp+0.
+    const Scalar expected =
+        large * std::scalbn(Scalar(0x16a09e667f3bcd), -52);
+    EXPECT_EQ(dst.at<Scalar>(0, 0), expected);
+}
+
+TYPED_TEST(Core_MathTest, hypot_newton_correction_recovers_lost_bit)
+{
+    using Scalar = TypeParam;
+    const Scalar xValue = Scalar(1);
+    const Scalar yValue = Core_HypotLostBitInput<Scalar>::value();
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = xValue;
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = yValue;
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), std::nextafter(xValue, Scalar(2)));
+}
+
+TYPED_TEST(Core_MathTest, hypot_scales_before_squaring)
+{
+    using Scalar = TypeParam;
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = Core_HypotScaledValues<Scalar>::x();
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = Core_HypotScaledValues<Scalar>::y();
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), Core_HypotScaledValues<Scalar>::expected());
+}
+
+TYPED_TEST(Core_MathTest, hypot_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar infinity = std::numeric_limits<Scalar>::infinity();
+    const Scalar nan = std::numeric_limits<Scalar>::quiet_NaN();
+    const Scalar xValues[] = {infinity, infinity, nan, Scalar(0), -Scalar(0)};
+    const Scalar yValues[] = {nan, Scalar(1), Scalar(1), -Scalar(0), Scalar(0)};
+    const Scalar expectedValues[] = {infinity, infinity, nan, Scalar(0), Scalar(0)};
+
+    constexpr int valueCount = static_cast<int>(sizeof(xValues) /
+                                                 sizeof(xValues[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat x(1, 1, DataType<Scalar>::type);
+        x.at<Scalar>(0, 0) = xValues[i];
+        Mat y(1, 1, DataType<Scalar>::type);
+        y.at<Scalar>(0, 0) = yValues[i];
+        Mat dst;
+
+        cv::hypot(x, y, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
     }
 }
 
