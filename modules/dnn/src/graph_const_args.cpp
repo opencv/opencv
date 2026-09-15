@@ -29,9 +29,8 @@ struct ConstArgs
     void unuse(Arg inp)
     {
         CV_Assert(usecounts[inp.idx] > 0);
-        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
-            netimpl->__tensors__[inp.idx] = UMat(); // deallocate unused tensor
-        }
+        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp))
+            netimpl->__tensors__[inp.idx].release();
     }
 
     void processGraph(Ptr<Graph>& graph)

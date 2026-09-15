@@ -381,7 +381,7 @@ void UMat::addref()
 
 void UMat::release()
 {
-    if( u && CV_XADD(&(u->urefcount), -1) == 1 )
+    if( u && CV_XADD(&(u->urefcount), -1) == 1 && u->refcount == 0 )
         deallocate();
     u = 0;
     size.clear();
