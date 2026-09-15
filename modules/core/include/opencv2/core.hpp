@@ -1600,9 +1600,23 @@ converts denormalized values to zeros on output. Special values (NaN,
 Inf) are not handled.
 @param src input array.
 @param dst output array of the same size and type as src.
-@sa log, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
+@sa log, log1p, expm1, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
 */
 CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
+
+/** @brief Computes @f$e^x - 1@f$ element-wise.
+
+The function cv::expm1 computes @f$e^x - 1@f$ for every element of the input
+array. It is more accurate than using @ref exp for input values close to zero.
+
+The implementation follows the stable transformation described in @cite
+Higham02, Section 1.14.1, pages 19-21.
+
+@param src input single- or double-precision floating-point array.
+@param dst output array of the same size and type as @p src.
+@sa exp, log1p
+*/
+CV_EXPORTS_W void expm1(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 

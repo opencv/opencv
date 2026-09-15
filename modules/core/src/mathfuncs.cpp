@@ -55,6 +55,90 @@ namespace cv
 
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
+namespace {
+
+template <typename T>
+using UnaryMathFunction = T (*)(T);
+
+template <typename T>
+void unaryMathImpl(const Mat& src, Mat& dst, UnaryMathFunction<T> function)
+{
+    const int channels = src.channels();
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2] = {};
+    NAryMatIterator it(arrays, ptrs);
+    const int length = static_cast<int>(it.size * channels);
+
+    for (size_t i = 0; i < it.nplanes; ++i, ++it)
+    {
+        const T* srcPtr = reinterpret_cast<const T*>(ptrs[0]);
+        T* dstPtr = reinterpret_cast<T*>(ptrs[1]);
+        for (int j = 0; j < length; ++j)
+        {
+            dstPtr[j] = function(srcPtr[j]);
+        }
+    }
+}
+
+template <typename T>
+struct Expm1Operation
+{
+    static T transform(T x)
+    {
+        using std::exp;
+        return exp(x);
+    }
+
+    static T special(T, T transformed, int transformedClass)
+    {
+        return transformedClass == FP_ZERO ? T(-1) : transformed;
+    }
+
+    static T finite(T x, T transformed)
+    {
+        using std::log;
+        return (transformed - T(1)) * x / log(transformed);
+    }
+};
+
+template <typename T, typename Operation>
+T accurateTransformed(T x)
+{
+    using std::fpclassify;
+
+    if (fpclassify(x) == FP_NAN)
+    {
+        return x;
+    }
+
+    const T transformed = Operation::transform(x);
+    const int transformedClass = fpclassify(transformed);
+    if (transformedClass == FP_INFINITE || transformedClass == FP_ZERO)
+    {
+        return Operation::special(x, transformed, transformedClass);
+    }
+    if (transformed == T(1))
+    {
+        return x;
+    }
+
+    return Operation::finite(x, transformed);
+}
+
+template <typename T>
+T accurateExpm1(T x)
+{
+    return accurateTransformed<T, Expm1Operation<T>>(x);
+}
+
+template <typename T>
+void expm1Impl(const Mat& src, Mat& dst)
+{
+    unaryMathImpl(src, dst, accurateExpm1<T>);
+}
+
+} // namespace
+
 #ifdef HAVE_OPENCL
 
 enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
@@ -461,6 +545,32 @@ void exp( InputArray _src, OutputArray _dst )
             hal::exp32f((const float*)ptrs[0], (float*)ptrs[1], len);
         else
             hal::exp64f((const double*)ptrs[0], (double*)ptrs[1], len);
+    }
+}
+
+void expm1(InputArray _src, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int type = _src.type();
+    const int depth = _src.depth();
+    CV_CheckDepth(depth, depth == CV_32F || depth == CV_64F,
+                  "Input array must have CV_32F or CV_64F depth");
+    const Mat src = _src.getMat();
+    _dst.create(src.dims, src.size, type);
+    Mat dst = _dst.getMat();
+
+    switch (depth)
+    {
+    case CV_32F:
+        expm1Impl<float>(src, dst);
+        break;
+    case CV_64F:
+        expm1Impl<double>(src, dst);
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat,
+                 "cv::expm1 supports only CV_32F and CV_64F arrays");
     }
 }
 
