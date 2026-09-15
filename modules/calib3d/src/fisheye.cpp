@@ -55,6 +55,71 @@ namespace cv { namespace
     };
 }}
 
+namespace cv { namespace
+{
+
+class ExtrinsicsCallback : public LMSolver::Callback
+{
+public:
+    ExtrinsicsCallback(Mat imagePoints, Mat objectPoints,
+                       internal::IntrinsicParams params,
+                       const double translationScale)
+        : imagePoints_(imagePoints)
+        , objectPoints_(objectPoints)
+        , params_(params)
+        , translationScale_(translationScale)
+    {
+    }
+
+    bool compute(InputArray extrinsics, OutputArray residuals,
+                 OutputArray J) const override
+    {
+        Vec6d rtvec;
+        extrinsics.copyTo(rtvec);
+
+        const Vec3d rvec(rtvec.val);
+        Vec3d tvec(rtvec.val + 3);
+        tvec *= translationScale_;
+
+        Mat expected;
+
+        if (J.needed())
+        {
+            Mat jacobians;
+            internal::projectPoints(objectPoints_, expected, rvec, tvec,
+                                     params_, jacobians);
+
+            jacobians.colRange(8, 14).copyTo(J);
+            J.getMat().colRange(3, 6) *= translationScale_;
+        }
+        else
+        {
+            internal::projectPoints(objectPoints_, expected, rvec, tvec,
+                                    params_, noArray());
+        }
+
+        if (residuals.needed())
+        {
+            Mat residualDifference;
+            // LMSolver expects the Jacobian of the ideal projection.
+            subtract(expected, imagePoints_, residualDifference);
+
+            residualDifference = residualDifference.reshape(1);
+            transpose(residualDifference, residuals);
+        }
+
+        return true;
+    }
+
+private:
+    Mat imagePoints_;
+    Mat objectPoints_;
+    internal::IntrinsicParams params_;
+    double translationScale_;
+};
+
+}}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::projectPoints
 
@@ -1264,46 +1329,38 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
 
 void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
                             Mat&  tvec, Mat& J, const int MaxIter,
-                            const IntrinsicParams& param, const double thresh_cond)
+                            const IntrinsicParams& param)
 {
     CV_Assert(!objectPoints.empty() && objectPoints.type() == CV_64FC3);
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
     CV_Assert(rvec.total() > 2 && tvec.total() > 2);
+    // Normalize translation parameters so convergence is independent of the
+    // object-point measurement units.
+    const double translationScale = std::max(
+        cv::norm(objectPoints, NORM_INF), std::numeric_limits<double>::epsilon());
     Vec6d extrinsics(rvec.at<double>(0), rvec.at<double>(1), rvec.at<double>(2),
-                    tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
-    double change = 1;
-    int iter = 0;
+                    tvec.at<double>(0) / translationScale,
+                    tvec.at<double>(1) / translationScale,
+                    tvec.at<double>(2) / translationScale);
 
-    while (change > 1e-10 && iter < MaxIter)
-    {
-        std::vector<Point2d> x;
-        Mat jacobians;
-        projectPoints(objectPoints, x, rvec, tvec, param, jacobians);
+    auto callback =
+        cv::makePtr<ExtrinsicsCallback>(imagePoints, objectPoints, param,
+                                         translationScale);
+    const double solverEpsilon = std::numeric_limits<double>::epsilon();
+    auto solver = LMSolver::create(callback, MaxIter, solverEpsilon);
+    solver->run(extrinsics);
 
-        Mat ex = imagePoints - Mat(x).t();
-        ex = ex.reshape(1, 2);
+    // Copy back refined parameters
+    const cv::Vec3d r(extrinsics.val);
+    cv::Vec3d t(extrinsics.val + 3);
+    t *= translationScale;
 
-        J = jacobians.colRange(8, 14).clone();
+    cv::copyTo(r, rvec, cv::noArray());
+    cv::copyTo(t, tvec, cv::noArray());
 
-        SVD svd(J, SVD::NO_UV);
-        double condJJ = svd.w.at<double>(0)/svd.w.at<double>(5);
-
-        if (condJJ > thresh_cond)
-            change = 0;
-        else
-        {
-            Vec6d param_innov;
-            solve(J, ex.reshape(1, (int)ex.total()), param_innov, DECOMP_SVD + DECOMP_NORMAL);
-
-            Vec6d param_up = extrinsics + param_innov;
-            change = norm(param_innov)/norm(param_up);
-            extrinsics = param_up;
-            iter = iter + 1;
-
-            rvec = Mat(Vec3d(extrinsics.val));
-            tvec = Mat(Vec3d(extrinsics.val+3));
-        }
-    }
+    // Avoid caching, which would require mutable state, at the expense of
+    // one final recomputation.
+    callback->compute(extrinsics, noArray(), J);
 }
 
 cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
@@ -1493,7 +1550,7 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
 
         InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
 
-        ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param, thresh_cond);
+        ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param);
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
