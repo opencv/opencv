@@ -10,6 +10,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
 ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
 ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -1085,6 +1086,72 @@ static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
+#if CV_RVV
+// dim=0, REDUCE_SUM2: accumulate each column in source-row order.
+// LMUL=4 processes 32 floats per iteration at VLEN=256, with dynamic
+// vector lengths for tails and other hardware vector lengths.
+static void reduceRowSum2_32f32f(const Mat& srcmat, Mat& dstmat)
+{
+    const int width = srcmat.cols * srcmat.channels();
+    AutoBuffer<float> buffer(width);
+    float* buf = buffer.data();
+
+    auto body = [&](const Range& range) {
+        const float* src = srcmat.ptr<float>(0);
+        for (int i = range.start; i < range.end; )
+        {
+            const size_t vl = __riscv_vsetvl_e32m4(range.end - i);
+            const vfloat32m4_t value = __riscv_vle32_v_f32m4(src + i, vl);
+            __riscv_vse32_v_f32m4(buf + i, __riscv_vfmul_vv_f32m4(value, value, vl), vl);
+            i += (int)vl;
+        }
+        int row = 1;
+        // Fuse four source rows to share the buffer load/store and vector
+        // length setup. Keep the FMA chain in source-row order.
+        for (; row <= srcmat.rows - 4; row += 4)
+        {
+            const float* src0 = srcmat.ptr<float>(row);
+            const float* src1 = srcmat.ptr<float>(row + 1);
+            const float* src2 = srcmat.ptr<float>(row + 2);
+            const float* src3 = srcmat.ptr<float>(row + 3);
+            for (int i = range.start; i < range.end; )
+            {
+                const size_t vl = __riscv_vsetvl_e32m4(range.end - i);
+                vfloat32m4_t sum = __riscv_vle32_v_f32m4(buf + i, vl);
+                vfloat32m4_t value = __riscv_vle32_v_f32m4(src0 + i, vl);
+                sum = __riscv_vfmacc_vv_f32m4(sum, value, value, vl);
+                value = __riscv_vle32_v_f32m4(src1 + i, vl);
+                sum = __riscv_vfmacc_vv_f32m4(sum, value, value, vl);
+                value = __riscv_vle32_v_f32m4(src2 + i, vl);
+                sum = __riscv_vfmacc_vv_f32m4(sum, value, value, vl);
+                value = __riscv_vle32_v_f32m4(src3 + i, vl);
+                sum = __riscv_vfmacc_vv_f32m4(sum, value, value, vl);
+                __riscv_vse32_v_f32m4(buf + i, sum, vl);
+                i += (int)vl;
+            }
+        }
+        for (; row < srcmat.rows; row++)
+        {
+            src = srcmat.ptr<float>(row);
+            for (int i = range.start; i < range.end; )
+            {
+                const size_t vl = __riscv_vsetvl_e32m4(range.end - i);
+                const vfloat32m4_t value = __riscv_vle32_v_f32m4(src + i, vl);
+                vfloat32m4_t sum = __riscv_vle32_v_f32m4(buf + i, vl);
+                sum = __riscv_vfmacc_vv_f32m4(sum, value, value, vl);
+                __riscv_vse32_v_f32m4(buf + i, sum, vl);
+                i += (int)vl;
+            }
+        }
+    };
+
+    // Ranges own disjoint buffer elements. Delay writing the output until
+    // all source rows have been read, including when src and dst alias.
+    parallel_for_(Range(0, width), body, width * sizeof(float) / 64);
+    memcpy(dstmat.ptr<float>(), buf, width * sizeof(float));
+}
+#endif
+
 // =====================================================================
 //  Dispatchers
 // =====================================================================
@@ -1120,6 +1187,17 @@ ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceRowSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceRowSum_64f64f;
 #endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
+#endif
+    return nullptr;
+}
+
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth)
+{
+#if CV_RVV
+    if (sdepth == CV_32F && ddepth == CV_32F) return reduceRowSum2_32f32f;
 #else
     CV_UNUSED(sdepth);
     CV_UNUSED(ddepth);

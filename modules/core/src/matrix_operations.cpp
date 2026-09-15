@@ -327,6 +327,7 @@ namespace cv
 typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
 ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
 ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth);
 
 template <typename T, typename WT, typename Op>
 struct ReduceR_SIMD
@@ -865,7 +866,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if( op == REDUCE_SUM2 )
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceRSum2Func(sdepth, ddepth);
+            if(simd_func)
+                func = simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSum2R8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSum2R8u32f;
