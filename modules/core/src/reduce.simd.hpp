@@ -843,6 +843,15 @@ static void reduceRowSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 vst1q_u16(buf16 + i,     vaddw_u8(acc_lo, vget_low_u8(v)));
                 vst1q_u16(buf16 + i + 8, vaddw_high_u8(acc_hi, v));
             }
+#elif CV_RVV
+            const int vl = (int)__riscv_vsetvlmax_e8m2();
+            for (; i <= len - vl; i += vl)
+            {
+                vuint8m2_t vs = __riscv_vle8_v_u8m2(src + i, vl);
+                vuint16m4_t va = __riscv_vle16_v_u16m4(buf16 + i, vl);
+                va = __riscv_vwaddu_wv_u16m4(va, vs, vl);
+                __riscv_vse16_v_u16m4(buf16 + i, va, vl);
+            }
 #else
             const int vlanes8 = VTraits<v_uint8>::vlanes();
             for (; i <= len - vlanes8; i += vlanes8)
