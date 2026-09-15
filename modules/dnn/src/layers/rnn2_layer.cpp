@@ -229,9 +229,9 @@ public:
                 gate.copyTo(h);
                 // Past its sequence length a row keeps its state and writes zeros to Y.
                 if (!seqLens.empty())
-                    holdFinishedRows(seqLens, ts, backward, T, hPrev, h);
+                    holdFinishedRows(seqLens, ts, hPrev, h);
 
-                writeYStep(y2d, ts, dir, D, T, h, seqLens, backward);
+                writeYStep(y2d, ts, dir, D, T, h, seqLens);
             }
             writeYhDir(yh2d, dir, D, h);
         }
@@ -254,21 +254,19 @@ private:
         CV_UNUSED(D); CV_UNUSED(N);
     }
 
-    static void holdFinishedRows(const Mat& seqLens, int ts, bool backward, int T,
-                                 const Mat& hPrev, Mat& h)
+    static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)
     {
         const int* lens = seqLens.ptr<int>();
         for (int n = 0; n < h.rows; n++)
         {
-            const bool active = backward ? (ts >= T - lens[n]) : (ts < lens[n]);
-            if (!active)
+            if (ts >= lens[n])
                 hPrev.row(n).copyTo(h.row(n));
         }
     }
 
     // Y is [T,D,N,H], or [N,T,D,H] batchwise; both contiguous in H.
     void writeYStep(Mat& y2d, int ts, int dir, int D, int T, const Mat& h,
-                    const Mat& seqLens, bool backward) const
+                    const Mat& seqLens) const
     {
         if (y2d.empty())
             return;
@@ -277,12 +275,7 @@ private:
         {
             const int row = (layout == BATCH_SEQ_HID) ? ((n * T + ts) * D + dir)
                                                       : ((ts * D + dir) * N + n);
-            bool active = true;
-            if (!seqLens.empty())
-            {
-                const int len = seqLens.ptr<int>()[n];
-                active = backward ? (ts >= T - len) : (ts < len);
-            }
+            const bool active = seqLens.empty() || ts < seqLens.ptr<int>()[n];
             if (active) h.row(n).copyTo(y2d.row(row));
             else        y2d.row(row).setTo(0);
         }
