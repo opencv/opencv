@@ -314,8 +314,9 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
 {
     // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}): ONE fused kernel (two v_fma).
     // Inputs are the same type T (cast to a common type if not). The kernel outputs T/f32 (small ints,
-    // f16/bf16, f32) or f64 directly; for any other requested rdepth it computes in the work type W and a
-    // final cast narrows it.
+    // f16/bf16, f32) or f64 directly, at its own natural work precision; for any other requested rdepth
+    // it computes at that natural precision and casts the RESULT to rdepth afterward (never the inputs
+    // up before the op, that would spend an extra cast and run the op at needlessly high precision).
     if (op == OP_ADDW)
     {
         int Tt = arginfo[a].depth;
@@ -324,14 +325,17 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
             Tt = promoteArith(arginfo[a].depth, arginfo[b].depth);
             a = maybeAddCast(a, Tt); b = maybeAddCast(b, Tt);
         }
+        if (Tt == CV_Bool)
+            CV_Error(Error::StsNotImplemented, "addWeighted: CV_Bool inputs are not supported, cast explicitly "
+                     "first, e.g. cv::texpr(\"uint8({0})*{1} + uint8({2})*{3}\", {a, alpha, b, beta})");
         if (rdepth == EW_DEPTH_NONE) rdepth = Tt;              // default dtype = input depth
         TKernel k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, rdepth);
         int outD = rdepth;
-        if (!k.fptr)                                          // no direct T->rdepth kernel: compute in W, cast
+        if (!k.fptr)                                          // no direct T->rdepth kernel: compute at T's natural work depth, cast after
         {
-            outD = (Tt==CV_32U || Tt==CV_32S || Tt==CV_64U || Tt==CV_64S || Tt==CV_64F || rdepth==CV_64F)
-                 ? CV_64F : CV_32F;
+            outD = (Tt==CV_32U || Tt==CV_32S || Tt==CV_64U || Tt==CV_64S || Tt==CV_64F) ? CV_64F : CV_32F;
             k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, outD);
+            CV_Assert(k.fptr && "ew: no kernel for this op/type combination");
         }
         const int out = addTemp(outD);
         addInsn(OP_ADDW, a, b, 0, out, k, Scalar(params[0], params[1], params[2]));
@@ -570,7 +574,7 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
         // "don't notice" the difference and hand out the useful semantics. The sub is necessarily
         // the last instruction and its result the last temp (abs is emitted right after its
         // argument) - retire both, the moveToOutput manoeuvre.
-        if (!prog.empty() && arginfo[a].kind == TEMP &&
+        if (!prog.empty() && arginfo[a].kind == TEMP && !arginfo[a].pinned &&
             prog.back().op == OP_SUB && prog.back().result == a &&
             arginfo[a].index == ntemps - 1)
         {
@@ -691,7 +695,7 @@ int TExpr::moveToOutput(int temp, int out)
         if (ins.result == temp) producer = i;
         if (ins.arg0 == temp || ins.arg1 == temp || ins.arg2 == temp) usedAsArg = true;
     }
-    if (arginfo[temp].kind == TEMP && producer >= 0 && !usedAsArg &&
+    if (arginfo[temp].kind == TEMP && producer >= 0 && !usedAsArg && !arginfo[temp].pinned &&
         arginfo[temp].depth == arginfo[out].depth)
     {
         // MOVE semantics: redirect `temp`'s single producer to write `out` directly, then leave the
@@ -1171,10 +1175,12 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             // scratch is totalEsz*wf0 (<= ~16KB).
             const int totalEsz = bufEszPrefix[nbuffers];
             const int wf0 = std::min((int)total, capElems);
+
+            const size_t region = alignSize((size_t)wf0, 8);
             // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
             // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
             // the rare larger case.
-            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * (size_t)wf0);
+            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * region);
             uchar* scratch = scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
@@ -1187,7 +1193,7 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
                     if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
                     if (ai.kind != TEMP)   return nullptr;                                    // NONE: moved-from
                     const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
-                    return scratch + (size_t)bufEszPrefix[b] * (size_t)wf0;                   // fragment-local
+                    return scratch + (size_t)bufEszPrefix[b] * region;                        // fragment-local
                 };
                 for (int n = 0; n < ninsn; n++)
                 {
@@ -1774,7 +1780,12 @@ struct Parser
                 if (cur.type == T_ASSIGN)
                 {
                     advance();
-                    env[name] = parseTernary();
+                    const int slot = parseTernary();
+                    // The name can be used any number of times below (including not at all), so the
+                    // value must outlive the expression that produced it: pin the slot so the
+                    // retire-the-temp optimizations skip it.
+                    e.arginfo[slot].pinned = true;
+                    env[name] = slot;
                     expect(T_SEMI, "expected ';' after assignment");
                     continue;
                 }

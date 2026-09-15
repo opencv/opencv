@@ -210,6 +210,12 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         const int32x4_t q11 = vdupq_n_s32((int32_t)shifter1);
         const int32x4_t q12 = vdupq_n_s32((int32_t)shifter2);
 
+#elif CV_RVV
+        const size_t rvv_lanes_A = __riscv_vsetvlmax_e16m1();
+        vfloat32m2_t rvvA11 = __riscv_vfmv_v_f_f32m2(0.f, rvv_lanes_A);
+        vfloat32m2_t rvvA12 = __riscv_vfmv_v_f_f32m2(0.f, rvv_lanes_A);
+        vfloat32m2_t rvvA22 = __riscv_vfmv_v_f_f32m2(0.f, rvv_lanes_A);
+
 #endif
 
         // extract the patch from the first image, compute covariation matrix of derivatives
@@ -378,6 +384,96 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 d8d12.val[0] = d8; d8d12.val[1] = d12;
                 vst2_s16(dIptr, d8d12);
             }
+#elif CV_RVV
+            for( ; x < winSize.width*cn; )
+            {
+                const size_t vl = __riscv_vsetvl_e16m1(winSize.width*cn - x);
+
+                // Bilinear interpolation of the source image. Keep only one widened
+                // pixel vector live at a time to limit vector register pressure.
+                vuint16m1_t pix = __riscv_vwcvtu_x_x_v_u16m1(
+                        __riscv_vle8_v_u8mf2(src + x, vl), vl);
+                vint32m2_t interp = __riscv_vwmul_vx_i32m2(
+                        __riscv_vreinterpret_i16m1(pix), (int16_t)iw00, vl);
+
+                pix = __riscv_vwcvtu_x_x_v_u16m1(
+                        __riscv_vle8_v_u8mf2(src + x + cn, vl), vl);
+                interp = __riscv_vwmacc_vx_i32m2(
+                        interp, (int16_t)iw01, __riscv_vreinterpret_i16m1(pix), vl);
+
+                pix = __riscv_vwcvtu_x_x_v_u16m1(
+                        __riscv_vle8_v_u8mf2(src + x + stepI, vl), vl);
+                interp = __riscv_vwmacc_vx_i32m2(
+                        interp, (int16_t)iw10, __riscv_vreinterpret_i16m1(pix), vl);
+
+                pix = __riscv_vwcvtu_x_x_v_u16m1(
+                        __riscv_vle8_v_u8mf2(src + x + stepI + cn, vl), vl);
+                interp = __riscv_vwmacc_vx_i32m2(
+                        interp, (int16_t)iw11, __riscv_vreinterpret_i16m1(pix), vl);
+
+                interp = __riscv_vsra_vx_i32m2(
+                        __riscv_vadd_vx_i32m2(
+                                interp, 1 << (W_BITS1 - 5 - 1), vl),
+                        W_BITS1 - 5, vl);
+                __riscv_vse16_v_i16m1(
+                        Iptr + x, __riscv_vncvt_x_x_w_i16m1(interp, vl), vl);
+
+                // Interpolate Ix/Iy together. m1 inputs widen to m2 accumulators;
+                // reusing the segment-load temporaries keeps the live register set small.
+                vint16m1x2_t grad = __riscv_vlseg2e16_v_i16m1x2(dsrc, vl);
+                vint16m1_t gx = __riscv_vget_v_i16m1x2_i16m1(grad, 0);
+                vint16m1_t gy = __riscv_vget_v_i16m1x2_i16m1(grad, 1);
+                vint32m2_t ix = __riscv_vwmul_vx_i32m2(gx, (int16_t)iw00, vl);
+                vint32m2_t iy = __riscv_vwmul_vx_i32m2(gy, (int16_t)iw00, vl);
+
+                grad = __riscv_vlseg2e16_v_i16m1x2(dsrc + cn2, vl);
+                gx = __riscv_vget_v_i16m1x2_i16m1(grad, 0);
+                gy = __riscv_vget_v_i16m1x2_i16m1(grad, 1);
+                ix = __riscv_vwmacc_vx_i32m2(ix, (int16_t)iw01, gx, vl);
+                iy = __riscv_vwmacc_vx_i32m2(iy, (int16_t)iw01, gy, vl);
+
+                grad = __riscv_vlseg2e16_v_i16m1x2(dsrc + dstep, vl);
+                gx = __riscv_vget_v_i16m1x2_i16m1(grad, 0);
+                gy = __riscv_vget_v_i16m1x2_i16m1(grad, 1);
+                ix = __riscv_vwmacc_vx_i32m2(ix, (int16_t)iw10, gx, vl);
+                iy = __riscv_vwmacc_vx_i32m2(iy, (int16_t)iw10, gy, vl);
+
+                grad = __riscv_vlseg2e16_v_i16m1x2(dsrc + dstep + cn2, vl);
+                gx = __riscv_vget_v_i16m1x2_i16m1(grad, 0);
+                gy = __riscv_vget_v_i16m1x2_i16m1(grad, 1);
+                ix = __riscv_vwmacc_vx_i32m2(ix, (int16_t)iw11, gx, vl);
+                iy = __riscv_vwmacc_vx_i32m2(iy, (int16_t)iw11, gy, vl);
+
+                ix = __riscv_vsra_vx_i32m2(
+                        __riscv_vadd_vx_i32m2(ix, 1 << (W_BITS1 - 1), vl),
+                        W_BITS1, vl);
+                iy = __riscv_vsra_vx_i32m2(
+                        __riscv_vadd_vx_i32m2(iy, 1 << (W_BITS1 - 1), vl),
+                        W_BITS1, vl);
+
+                {
+                    vint16m1_t ix16 = __riscv_vncvt_x_x_w_i16m1(ix, vl);
+                    vint16m1_t iy16 = __riscv_vncvt_x_x_w_i16m1(iy, vl);
+                    vint16m1x2_t out =
+                            __riscv_vset_v_i16m1_i16m1x2(grad, 0, ix16);
+                    out = __riscv_vset_v_i16m1_i16m1x2(out, 1, iy16);
+                    __riscv_vsseg2e16_v_i16m1x2(dIptr, out, vl);
+                }
+
+                vint32m2_t prod = __riscv_vmul_vv_i32m2(ix, ix, vl);
+                rvvA11 = __riscv_vfadd_tu(
+                        rvvA11, rvvA11, __riscv_vfcvt_f_x_v_f32m2(prod, vl), vl);
+                prod = __riscv_vmul_vv_i32m2(ix, iy, vl);
+                rvvA12 = __riscv_vfadd_tu(
+                        rvvA12, rvvA12, __riscv_vfcvt_f_x_v_f32m2(prod, vl), vl);
+                prod = __riscv_vmul_vv_i32m2(iy, iy, vl);
+                rvvA22 = __riscv_vfadd_tu(
+                        rvvA22, rvvA22, __riscv_vfcvt_f_x_v_f32m2(prod, vl), vl);
+
+                x += (int)vl;
+                dsrc += vl*2;
+                dIptr += vl*2;
+            }
 #endif
 
             for( ; x < winSize.width*cn; x++, dsrc += 2, dIptr += 2 )
@@ -409,6 +505,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         iA11 += nA11[0] + nA11[1] + nA11[2] + nA11[3];
         iA12 += nA12[0] + nA12[1] + nA12[2] + nA12[3];
         iA22 += nA22[0] + nA22[1] + nA22[2] + nA22[3];
+#elif CV_RVV
+        vfloat32m1_t rvvZeroA = __riscv_vfmv_v_f_f32m1(0.f, 1);
+        iA11 += __riscv_vfmv_f_s_f32m1_f32(
+                __riscv_vfredusum_vs_f32m2_f32m1(rvvA11, rvvZeroA, rvv_lanes_A));
+        iA12 += __riscv_vfmv_f_s_f32m1_f32(
+                __riscv_vfredusum_vs_f32m2_f32m1(rvvA12, rvvZeroA, rvv_lanes_A));
+        iA22 += __riscv_vfmv_f_s_f32m1_f32(
+                __riscv_vfredusum_vs_f32m2_f32m1(rvvA22, rvvZeroA, rvv_lanes_A));
 #endif
 
         A11 = iA11*FLT_SCALE;

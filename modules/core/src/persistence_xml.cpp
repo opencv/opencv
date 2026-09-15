@@ -458,10 +458,13 @@ public:
         return true;
     }
 
-    char* parseValue( char* ptr, FileNode& node )
+    char* parseValue( char* ptr, FileNode& node, int depth = 0 )
     {
         if (!ptr)
             CV_PARSE_ERROR_CPP("Invalid input");
+
+        if( depth > CV_PERSISTENCE_MAX_DEPTH )
+            CV_PARSE_ERROR_CPP("Too many nested collections");
 
         FileNode new_elem;
         bool have_space = true;
@@ -521,7 +524,7 @@ public:
 
                 new_elem = fs->addNode(node, key, elem_type, 0);
                 if (!binary_string)
-                    ptr = parseValue(ptr, new_elem);
+                    ptr = parseValue(ptr, new_elem, depth + 1);
                 else
                 {
                     ptr = fs->parseBase64( ptr, 0, new_elem);

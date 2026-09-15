@@ -431,16 +431,21 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
 static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
+    // Try to use double if supported to improve accuracy if integral images
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    int sumDepth = doubleSupport ? CV_64F : CV_32F;
+
     matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     UMat temp, image_sums, image_sqsums;
-    integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
+    integral(_image, image_sums, image_sqsums, sumDepth, sumDepth);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
-        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+        format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d%s", ocl::typeToStr(type), ocl::typeToStr(depth), cn,
+               doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -734,7 +739,7 @@ static Mat sumChannels( const Mat& e, int rows )
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_32F);
+    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_Bool || _mask.depth() == CV_32F);
     CV_Assert(_mask.channels() == _templ.channels() || _mask.channels() == 1);
     CV_Assert(_templ.size() == _mask.size());
     CV_Assert(_img.size().height >= _templ.size().height &&
@@ -750,7 +755,11 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     {
         templ.convertTo(templ, CV_32F);
     }
-    if (mask.depth() == CV_8U)
+    if (mask.depth() == CV_Bool)
+    {
+        mask.convertTo(mask, CV_32F);
+    }
+    else if (mask.depth() == CV_8U)
     {
         Mat maskBin;
         threshold(mask, maskBin, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);

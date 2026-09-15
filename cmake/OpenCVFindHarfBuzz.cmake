@@ -37,8 +37,15 @@ if(WITH_HARFBUZZ)
         set(_hb_libs "${HARFBUZZ_LIBRARIES}")
       endif()
 
-      # Verify the header and symbol actually compile and link with the chosen
+      # Verify the header and symbols actually compile and link with the chosen
       # libraries; otherwise fall back to the bundled copy.
+      # Reference every hb_raster_* entry point used by
+      # modules/imgproc/src/drawing_text.cpp: a system HarfBuzz may declare the
+      # whole hb-raster API in its header while exporting only part of it, which
+      # passes a narrower probe and then fails at link time. The array is
+      # volatile so the initializers are not optimized away at -O3 (a function
+      # address is never null, so the compiler would otherwise fold the test
+      # away and emit no relocations, letting a partial library pass).
       ocv_clear_vars(HAVE_HARFBUZZ)
       set(CMAKE_REQUIRED_INCLUDES "${_hb_inc}")
       set(CMAKE_REQUIRED_LIBRARIES "${_hb_libs}")
@@ -46,9 +53,19 @@ if(WITH_HARFBUZZ)
         #include <hb.h>
         #include <hb-raster.h>
         int main() {
-          hb_raster_draw_t* rd = hb_raster_draw_create_or_fail();
-          hb_raster_draw_render(rd);
-          return rd ? 0 : 1;
+          void (*volatile fns[])() = {
+            (void(*)())&hb_raster_draw_create_or_fail,
+            (void(*)())&hb_raster_draw_destroy,
+            (void(*)())&hb_raster_draw_set_scale_factor,
+            (void(*)())&hb_raster_draw_set_extents,
+            (void(*)())&hb_raster_draw_set_glyph_extents,
+            (void(*)())&hb_raster_draw_glyph,
+            (void(*)())&hb_raster_draw_render,
+            (void(*)())&hb_raster_draw_recycle_image,
+            (void(*)())&hb_raster_image_get_extents,
+            (void(*)())&hb_raster_image_get_buffer,
+          };
+          return fns[0] ? 0 : 1;
         }" HARFBUZZ_HAS_RASTER)
       unset(CMAKE_REQUIRED_INCLUDES)
       unset(CMAKE_REQUIRED_LIBRARIES)

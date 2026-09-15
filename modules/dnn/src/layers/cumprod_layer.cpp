@@ -42,7 +42,8 @@ public:
                   std::vector<MatType>& outputs, std::vector<MatType>&) const CV_OVERRIDE
     {
         CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F ||
-                     inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F, "");
+                     inputs[0] == CV_32S || inputs[0] == CV_64S ||
+                     inputs[0] == CV_32U || inputs[0] == CV_64U || inputs[0] == CV_16F, "");
         outputs.assign(1, inputs[0]);
     }
 
@@ -64,6 +65,8 @@ public:
             case CV_32S: forwardImpl<int32_t>(inputs, outputs); break;
             case CV_64S: forwardImpl<int64_t>(inputs, outputs); break;
             case CV_64F: forwardImpl<double>(inputs, outputs); break;
+            case CV_32U: forwardImpl<uint32_t>(inputs, outputs); break;
+            case CV_64U: forwardImpl<uint64_t>(inputs, outputs); break;
             default: CV_Error(Error::BadDepth, "");
         }
     }

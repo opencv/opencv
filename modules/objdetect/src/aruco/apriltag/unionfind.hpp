@@ -26,7 +26,7 @@ struct UnionFind {
             data[i].size = 1;
             data[i].parent = i;
         }
-    };
+    }
 
     inline uint32_t get_representative(uint32_t id) {
         uint32_t root = id;

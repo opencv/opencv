@@ -18,7 +18,9 @@ const string about =
         "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
         "\t ./example_dnn_classification modelName(e.g. u2netp) --input=$OPENCV_SAMPLES_DATA_PATH/butterfly.jpg (or ignore this argument to use device camera)\n"
-        "Model path can also be specified using --model argument.";
+        "Model path can also be specified using --model argument.\n"
+        "For promptable segmentation, pass a foreground point with --point=x,y (defaults to the image centre):\n"
+        "\t ./example_dnn_segmentation sam --input=$OPENCV_SAMPLES_DATA_PATH/butterfly.jpg (or ignore this argument to use device camera) --point=320,240\n";
 
 const string param_keys =
     "{ help  h    |                   | Print help message. }"
@@ -27,7 +29,9 @@ const string param_keys =
     "{ device     |         0         | camera device number. }"
     "{ input i    |                   | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ colors     |                   | Optional path to a text file with colors for an every class. "
-    "Every color is represented with three values from 0 to 255 in BGR channels order. }";
+    "Every color is represented with three values from 0 to 255 in BGR channels order. }"
+    "{ point      |                   | Foreground point prompt as 'x,y' in input image coordinates, "
+    "used by promptable models (sam). Defaults to the image centre. }";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -52,6 +56,34 @@ string keys = param_keys + backend_keys + target_keys;
 vector<string> labels;
 vector<Vec3b> colors;
 
+
+// SAM input: longest edge scaled to target, per-channel normalized, zero-padded to a square.
+// Not expressible with blobFromImage; newH/newW report the unpadded extent for mask cropping.
+static Mat samPreprocess(const Mat &bgr, int target, int &newH, int &newW)
+{
+    static const float samMean[3] = {0.485f, 0.456f, 0.406f};
+    static const float samStd[3] = {0.229f, 0.224f, 0.225f};
+
+    const double s = (double)target / max(bgr.rows, bgr.cols);
+    newH = (int)(bgr.rows * s + 0.5);
+    newW = (int)(bgr.cols * s + 0.5);
+
+    Mat rgb, img;
+    cvtColor(bgr, rgb, COLOR_BGR2RGB);
+    resize(rgb, img, Size(newW, newH), 0, 0, INTER_LINEAR);
+    img.convertTo(img, CV_32F, 1.0 / 255.0);
+
+    const int sizes[4] = {1, 3, target, target};
+    Mat blob(4, sizes, CV_32F, Scalar(0));
+    for (int y = 0; y < newH; y++)
+    {
+        const float *srow = img.ptr<float>(y);
+        for (int x = 0; x < newW; x++)
+            for (int ch = 0; ch < 3; ch++)
+                blob.ptr<float>(0, ch, y)[x] = (srow[x * 3 + ch] - samMean[ch]) / samStd[ch];
+    }
+    return blob;
+}
 
 static void colorizeSegmentation(const Mat &score, Mat &segm)
 {
@@ -148,6 +180,7 @@ int main(int argc, char **argv)
     const string zooFile = findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
+    keys += genPreprocArguments(modelName, zooFile, "decoder_");
 
     parser = CommandLineParser(argc, argv, keys);
     parser.about(about);
@@ -158,8 +191,9 @@ int main(int argc, char **argv)
     }
 
     string sha1 = parser.get<String>("sha1");
-    float scale = parser.get<float>("scale");
-    Scalar mean = parser.get<Scalar>("mean");
+    // Models that build their own blob (sam) carry no mean/scale in models.yml.
+    float scale = parser.has("scale") ? parser.get<float>("scale") : 1.f;
+    Scalar mean = parser.has("mean") ? parser.get<Scalar>("mean") : Scalar();
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
@@ -206,6 +240,16 @@ int main(int argc, char **argv)
         }
     }
 
+    Point promptPoint(-1, -1); // negative = fall back to the image centre
+    if (parser.has("point"))
+    {
+        stringstream ss(parser.get<String>("point"));
+        string xs, ys;
+        if (!getline(ss, xs, ',') || !getline(ss, ys, ','))
+            CV_Error(Error::StsBadArg, "Point prompt must be given as 'x,y'");
+        promptPoint = Point(stoi(xs), stoi(ys));
+    }
+
     if (!parser.check())
     {
         parser.printErrors();
@@ -220,6 +264,16 @@ int main(int argc, char **argv)
     net.setPreferableTarget(getTargetID(target));
     net.setProfilingMode(DNN_PROFILE_SUMMARY);
      //! [Read and initialize network]
+    // Promptable models split into an image encoder (the primary model) and a prompt/mask decoder.
+    Net decoder;
+    if (modelName == "sam")
+    {
+        String decoderModel = findModel(parser.get<String>("decoder_model"), parser.get<String>("decoder_sha1"));
+        CV_Assert(!decoderModel.empty());
+        decoder = readNetFromONNX(decoderModel, engine);
+        decoder.setPreferableBackend(getBackendID(backend));
+        decoder.setPreferableTarget(getTargetID(target));
+    }
     // Create a window
     static const string kWinName = "Deep learning semantic segmentation in OpenCV";
     namedWindow(kWinName, WINDOW_AUTOSIZE);
@@ -253,14 +307,66 @@ int main(int argc, char **argv)
             fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
         }
         imshow("Original Image", frame);
+        const bool promptable = (modelName == "sam"); // builds its own blob and uses named inputs
         //! [Create a 4D blob from a frame]
-        blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
+        if (!promptable)
+            blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
         //! [Set input blob]
-        net.setInput(blob);
+        if (!promptable)
+            net.setInput(blob);
         //! [Set input blob]
         int64 t0 = getTickCount();
 
-        if (modelName == "u2netp")
+        if (modelName == "sam")
+        {
+            int newH = 0, newW = 0;
+            net.setInput(samPreprocess(frame, inpWidth, newH, newW), "pixel_values");
+            vector<Mat> encOuts;
+            net.forward(encOuts, vector<String>{"image_embeddings", "image_positional_embeddings"});
+            net.printPerfProfile();
+
+            // The prompt is given in input image coordinates, so scale it into the padded frame.
+            Point pt = promptPoint.x < 0 ? Point(frame.cols / 2, frame.rows / 2) : promptPoint;
+            const double s = (double)inpWidth / max(frame.rows, frame.cols);
+            const float ptData[2] = {(float)(pt.x * s), (float)(pt.y * s)};
+            const int ptSizes[4] = {1, 1, 1, 2};
+            Mat inputPoints(4, ptSizes, CV_32F);
+            memcpy(inputPoints.ptr<float>(), ptData, sizeof(ptData));
+            const int lbSizes[3] = {1, 1, 1};
+            Mat inputLabels(3, lbSizes, CV_64S, Scalar(1)); // 1 = foreground point
+
+            decoder.setInput(inputPoints, "input_points");
+            decoder.setInput(inputLabels, "input_labels");
+            decoder.setInput(encOuts[0], "image_embeddings");
+            decoder.setInput(encOuts[1], "image_positional_embeddings");
+            vector<Mat> decOuts;
+            decoder.forward(decOuts, vector<String>{"iou_scores", "pred_masks"});
+
+            // The decoder proposes several masks per prompt; keep the highest scoring one.
+            const Mat &iouScores = decOuts[0], &predMasks = decOuts[1];
+            const float *scorePtr = iouScores.ptr<float>();
+            const int numMasks = iouScores.size[iouScores.dims - 1];
+            int best = 0;
+            for (int i = 1; i < numMasks; i++)
+            {
+                if (scorePtr[i] > scorePtr[best])
+                    best = i;
+            }
+
+            // Mask logits cover the padded square: upsample, crop the unpadded extent, then
+            // resize to the frame. A logit above zero belongs to the object.
+            const int maskH = predMasks.size[predMasks.dims - 2];
+            const int maskW = predMasks.size[predMasks.dims - 1];
+            Mat lowRes(maskH, maskW, CV_32F, (void*)predMasks.ptr<float>(0, 0, best)), padded, logits;
+            resize(lowRes, padded, Size(inpWidth, inpHeight), 0, 0, INTER_LINEAR);
+            resize(padded(Rect(0, 0, newW, newH)), logits, frame.size(), 0, 0, INTER_LINEAR);
+
+            Mat overlay = Mat::zeros(frame.size(), CV_8UC3);
+            overlay.setTo(Scalar(0, 0, 255), logits > 0.f);
+            addWeighted(frame, 0.6, overlay, 0.4, 0.0, frame);
+            circle(frame, pt, 5, Scalar(0, 255, 0), FILLED);
+        }
+        else if (modelName == "u2netp")
         {
             vector<Mat> output;
             net.forward(output, net.getUnconnectedOutLayersNames());

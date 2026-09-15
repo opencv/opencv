@@ -20,6 +20,14 @@ except ImportError:
 # is_x64 = sys.maxsize > 2**32
 
 
+def _prepend_env_paths(env_key, paths, sep):
+    extra = [p for p in paths if p]
+    if not extra:
+        return
+    old = os.environ.get(env_key)
+    os.environ[env_key] = sep.join(extra) + ((sep + old) if old else '')
+
+
 def __load_extra_py_code_for_module(base, name, enable_debug_print=False):
     module_name = "{}.{}".format(__name__, name)
     export_module_name = "{}.{}".format(base, name)
@@ -140,11 +148,11 @@ def bootstrap():
                 except Exception as e:
                     if DEBUG: print('Failed os.add_dll_directory(): '+ str(e))
                     pass
-        os.environ['PATH'] = ';'.join(l_vars['BINARIES_PATHS']) + ';' + os.environ.get('PATH', '')
-        if DEBUG: print('OpenCV loader: PATH={}'.format(str(os.environ['PATH'])))
+        _prepend_env_paths('PATH', l_vars['BINARIES_PATHS'], ';')
+        if DEBUG: print('OpenCV loader: PATH={}'.format(str(os.environ.get('PATH'))))
     else:
         # amending of LD_LIBRARY_PATH works for sub-processes only
-        os.environ['LD_LIBRARY_PATH'] = ':'.join(l_vars['BINARIES_PATHS']) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+        _prepend_env_paths('LD_LIBRARY_PATH', l_vars['BINARIES_PATHS'], ':')
 
     if DEBUG: print("Relink everything from native cv2 module to cv2 package")
 

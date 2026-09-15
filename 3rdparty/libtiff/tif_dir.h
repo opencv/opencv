@@ -104,6 +104,16 @@ typedef struct
     uint16_t td_halftonehints[2];
     uint16_t td_extrasamples;
     uint16_t *td_sampleinfo;
+    /* strip support */
+    uint32_t td_row;             /* current scanline */
+    uint32_t td_curstrip;        /* current strip for read/write */
+    tmsize_t td_scanlinesize;    /* # of bytes in a scanline */
+#define NOSTRIP ((uint32_t)(-1)) /* undefined state */
+    /* tiling support */
+    uint32_t td_col;            /* current column (offset by row too) */
+    uint32_t td_curtile;        /* current tile for read/write */
+    tmsize_t td_tilesize;       /* # of bytes in a tile */
+#define NOTILE ((uint32_t)(-1)) /* undefined state */
     /* even though the name is misleading, td_stripsperimage is the number
      * of striles (=strips or tiles) per plane, and td_nstrips the total
      * number of striles */
@@ -163,6 +173,8 @@ typedef struct
                                     entries with data outside the IFD tag
                                     entries. */
 } TIFFDirectory;
+
+extern void _TIFFResetTifDirAndInitStrileCounters(TIFFDirectory *td);
 
 /*
  * Field flags used to indicate fields that have been set in a directory, and
@@ -231,7 +243,7 @@ typedef struct
 
 #define FIELD_LAST (32 * FIELDSET_ITEMS - 1)
 
-#define BITn(n) (((uint32_t)1L) << ((n)&0x1f))
+#define BITn(n) (1U << ((n) & 0x1f))
 #define BITFIELDn(tif, n) ((tif)->tif_dir.td_fieldsset[(n) / 32])
 #define TIFFFieldSet(tif, field) (BITFIELDn(tif, field) & BITn(field))
 #define TIFFSetFieldBit(tif, field) (BITFIELDn(tif, field) |= BITn(field))
@@ -340,7 +352,7 @@ extern "C"
         unsigned short field_bit;        /* bit in fieldsset bit vector */
         unsigned char field_oktochange;  /* if true, can change while writing */
         unsigned char field_passcount;   /* if true, pass dir count on set */
-        char *field_name;                /* ASCII name */
+        const char *field_name;          /* ASCII name */
         TIFFFieldArray *field_subfields; /* if field points to child ifds, child
                                             ifd field definition array */
     };

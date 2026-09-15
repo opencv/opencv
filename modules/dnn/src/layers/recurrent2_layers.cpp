@@ -3,10 +3,10 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include <iostream>
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "layers_common.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
 #include "../net_impl.hpp"
 
 namespace cv
@@ -39,6 +39,24 @@ static void sigmoid(const Mat &src, Mat &dst)
 {
     cv::exp(-src, dst);
     cv::pow(1 + dst, -1, dst);
+}
+
+// ONNX gate order is I,O,F,C but the recurrence wants I,F,O,C: swap the O/F blocks.
+template<typename T>
+static void reorderGatesIOFCtoIFOC_(Mat& in)
+{
+    int first = in.size[0];
+    int rest = in.total() / first / 4;
+    Mat m = in.reshape(1, {first, 4, rest});
+    Mat outputGate = m.col(1), forgetGate = m.col(2);
+    std::swap_ranges(outputGate.begin<T>(), outputGate.end<T>(), forgetGate.begin<T>());
+}
+static void reorderGatesIOFCtoIFOC(Mat& in)
+{
+    if (in.depth() == CV_64F)
+        reorderGatesIOFCtoIFOC_<double>(in);
+    else
+        reorderGatesIOFCtoIFOC_<float>(in);
 }
 
 typedef void (*ActivationFunction)(const Mat &src, Mat &dst);
@@ -78,6 +96,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     ActivationFunction g_activation;
     ActivationFunction h_activation;
 
+    bool useAVX, useAVX2, useSVE, useNEON;
+    bool constWeights;              // W/R/B are graph constants -> transform them once
+    bool weightsPacked;             // whether the cached transform has been built
+    std::vector<Mat> weightBlobs;   // cached transformed weights: [Wx, Wh, bias, (pI,pF,pO)]
+    FastGemmOpt gemmOpt;            // MLAS GEMM options for the batched input projection
+    std::vector<std::vector<float>> packedWx;  // per-direction prepacked Wx (fp32) for fastGemm
+
     public:
         LSTM2LayerImpl(const LayerParams& params)
         {
@@ -111,6 +136,14 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 g_activation = get_activation_function(activations.getStringValue(1));
                 h_activation = get_activation_function(activations.getStringValue(2));
             }
+
+            constWeights = params.get<bool>("const_weights", false);
+            weightsPacked = false;
+            useAVX  = checkHardwareSupport(CPU_AVX);
+            useAVX2 = checkHardwareSupport(CPU_AVX2);
+            useSVE  = checkHardwareSupport(CPU_SVE);
+            useNEON = checkHardwareSupport(CPU_NEON);
+            gemmOpt.init();
 
             outTailShape.clear();
         }
@@ -184,11 +217,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 outputs.push_back(newShape);
             }
 
-            // internal shapes need during forward pass
-            internals.assign(1, shape(_batchSize, _hidSize)); // hInternal
-            internals.push_back(shape(_batchSize, _hidSize)); // cInternal
-            internals.push_back(shape(_batchSize, 1)); // dummyOnes
-            internals.push_back(shape(_batchSize, 4*_hidSize)); // gates
+            // forward() allocates its own per-direction scratch, so no engine internals are needed
+            internals.clear();
 
             return false;
         }
@@ -201,7 +231,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         {
             CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_64F);  // Only floating-point types are supported currently
             outputs.assign(requiredOutputs, inputs[0]);
-            internals.assign(4, inputs[0]);
+            internals.clear();
         }
 
         virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -223,19 +253,195 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             return (int64)numDirs * _seqLen * _batchSize * flopsPerStep;
         }
 
+        // Run one direction's recurrence into its own scratch so both directions run concurrently.
+        // Writes hOutAll columns [i*H, (i+1)*H) and the matching cOut slice.
+        void forwardDirection(int i, int numDirs, const Mat& xTs, const Mat& h0All, const Mat& c0All,
+                              Mat& hOutAll, Mat& cOut) const
+        {
+            const int batchSizeTotal = seqLenth * batchSize;
+            const int dtype = xTs.type();
+
+            Mat Wx = weightBlobs[0].rowRange(i * weightBlobs[0].rows / numDirs, (i + 1) * weightBlobs[0].rows / numDirs);
+            Mat Wh = weightBlobs[1].rowRange(i * weightBlobs[1].rows / numDirs, (i + 1) * weightBlobs[1].rows / numDirs);
+            Mat bias = weightBlobs[2].colRange(i * weightBlobs[2].cols / numDirs, (i + 1) * weightBlobs[2].cols / numDirs);
+            Mat pI, pF, pO;
+            if (usePeephole)
+            {
+                pI = weightBlobs[3].rowRange(i * weightBlobs[3].rows / numDirs, (i + 1) * weightBlobs[3].rows / numDirs);
+                pF = weightBlobs[4].rowRange(i * weightBlobs[4].rows / numDirs, (i + 1) * weightBlobs[4].rows / numDirs);
+                pO = weightBlobs[5].rowRange(i * weightBlobs[5].rows / numDirs, (i + 1) * weightBlobs[5].rows / numDirs);
+            }
+
+            Mat hInternal(batchSize, numHidden, dtype);
+            Mat cInternal(batchSize, numHidden, dtype);
+            h0All.rowRange(i * batchSize, (i + 1) * batchSize).copyTo(hInternal);
+            c0All.rowRange(i * batchSize, (i + 1) * batchSize).copyTo(cInternal);
+
+            Mat hOutTs(batchSizeTotal, numHidden, dtype);
+            Mat cOutTs;
+            if (produceCellOutput)
+            {
+                cOutTs = cOut.reshape(1, batchSizeTotal);
+                cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
+            }
+
+            // Batched projection: gatesAll = Wx*x + bias for the whole sequence.
+            const int gateN = 4 * numHidden, projK = xTs.cols;
+            Mat gatesAll;
+            if (dtype == CV_32F && (int)packedWx.size() == numDirs && !packedWx[i].empty())
+            {
+                FastGemmOpt opt = gemmOpt;
+                opt.multi_thread = (numDirs == 1);  // directions are parallelized when bidirectional
+                repeat(bias, batchSizeTotal, 1, gatesAll);   // each row starts as the bias
+                fastGemm(false, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
+                         packedWx[i].data(), 1.f, gatesAll.ptr<float>(), gateN, opt);
+            }
+            else  // fp64 / unpacked fallback
+            {
+                Mat onesCol(batchSizeTotal, 1, dtype, Scalar(1));
+                gatesAll.create(batchSizeTotal, gateN, dtype);
+                gemm(onesCol, bias, 1.0, noArray(), 0.0, gatesAll);
+                gemm(xTs, Wx, 1.0, gatesAll, 1.0, gatesAll, GEMM_2_T);
+            }
+
+            // fastGEMM1T (recurrent step) needs contiguous fp32 operands
+#if CV_TRY_AVX2 || CV_TRY_AVX
+            bool canUseAvxH = hInternal.isContinuous() && gatesAll.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F && Wh.cols >= 8;
+#endif
+#if CV_TRY_SVE
+            bool canUseSveH = hInternal.isContinuous() && gatesAll.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F;
+#endif
+#if CV_TRY_NEON
+            bool canUseNeonH = hInternal.isContinuous() && gatesAll.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F && Wh.cols >= 4;
+#endif
+
+            int tsStart, tsEnd, tsInc;
+            if (reverse || i == 1) {
+                tsStart = seqLenth - 1;
+                tsEnd = -1;
+                tsInc = -1;
+            }
+            else {
+                tsStart = 0;
+                tsEnd = seqLenth;
+                tsInc = 1;
+            }
+
+            for (int ts = tsStart; ts != tsEnd; ts += tsInc)
+            {
+                Range curRowRange(ts*batchSize, (ts + 1)*batchSize);
+                Mat gates = gatesAll.rowRange(curRowRange);  // already holds Wx * x_t + b
+
+                // gates += Wh * h_{t-1}
+#if CV_TRY_AVX2
+                if (useAVX2 && canUseAvxH)
+                {
+                    for (int n = 0; n < hInternal.rows; n++)
+                        opt_AVX2::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
+                                             gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
+                }
+                else
+#endif
+#if CV_TRY_AVX
+                if (useAVX && canUseAvxH)
+                {
+                    for (int n = 0; n < hInternal.rows; n++)
+                        opt_AVX::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
+                                            gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
+                }
+                else
+#endif
+#if CV_TRY_SVE
+                if (useSVE && canUseSveH)
+                {
+                    for (int n = 0; n < hInternal.rows; n++)
+                        opt_SVE::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
+                                            gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
+                }
+                else
+#endif
+#if CV_TRY_NEON
+                if (useNEON && canUseNeonH)
+                {
+                    for (int n = 0; n < hInternal.rows; n++)
+                        opt_NEON::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
+                                             gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
+                }
+                else
+#endif
+                {
+                    gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);
+                }
+
+                Mat gateI = gates.colRange(0*numHidden, 1*numHidden);
+                Mat gateF = gates.colRange(1*numHidden, 2*numHidden);
+                Mat gateO = gates.colRange(2*numHidden, 3*numHidden);
+                Mat gateG = gates.colRange(3*numHidden, 4*numHidden);
+
+                if (forgetBias){
+                    add(gateF, forgetBias, gateF);
+                }
+
+                if (usePeephole)
+                {
+                    Mat gatesIF = gates.colRange(0, 2*numHidden);
+                    gemm(cInternal, pI, 1, gateI, 1, gateI);
+                    gemm(cInternal, pF, 1, gateF, 1, gateF);
+                    f_activation(gatesIF, gatesIF);
+                }
+                else
+                {
+                    Mat gatesIFO = gates.colRange(0, 3*numHidden);
+                    f_activation(gatesIFO, gatesIFO);
+                }
+
+                g_activation(gateG, gateG);
+
+                //compute c_t
+                multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
+                multiply(gateI, gateG, gateI);      // i_t (*) g_t
+                add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
+
+                if (useCellClip)
+                {
+                    min(cInternal, cellClip, cInternal);
+                    max(cInternal, -cellClip, cInternal);
+                }
+
+                if (usePeephole)
+                {
+                    gemm(cInternal, pO, 1, gateO, 1, gateO);
+                    f_activation(gateO, gateO);
+                }
+
+                //compute h_t
+                h_activation(cInternal, hInternal);
+                multiply(gateO, hInternal, hInternal);
+
+                hInternal.copyTo(hOutTs.rowRange(curRowRange));
+
+                if (produceCellOutput)
+                    cInternal.copyTo(cOutTs.rowRange(curRowRange));
+            }
+
+            // slice this direction's result into the assembly buffer
+            hOutTs.copyTo(hOutAll.colRange(i * numHidden, (i + 1) * numHidden));
+        }
+
         void forward(InputArrayOfArrays inputs_arr,
                      OutputArrayOfArrays outputs_arr,
                      OutputArrayOfArrays internals_arr) CV_OVERRIDE
         {
 
-            std::vector<Mat> input, output, internals;
+            std::vector<Mat> input, output;
             inputs_arr.getMatVector(input);
             outputs_arr.getMatVector(output);
-            internals_arr.getMatVector(internals);
 
             int numInputs = input.size();
             int inpSize = input[0].size[2];
-            int hidSize = numHidden;
 
             // determine seqLen and batchSize
             if (useTimestampDim)
@@ -254,177 +460,65 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 batchSize = input[0].size[0];
             }
 
-            // ONNX LSTM inputs: X(0), W(1), R(2), B(3), sequence_lens(4),
-            // initial_h(5), initial_c(6), P(7). Inputs 3..7 are optional and
-            // may be present-but-empty (e.g. CNTK exports keep all 8 slots with
-            // empties for unused ones). Gather by presence/non-emptiness rather
-            // than by the raw input count so optional/empty inputs are ignored.
+            // ONNX LSTM inputs 0..7: X,W,R,B,sequence_lens,initial_h,initial_c,P; slots 3..7 optional.
+            // Test non-emptiness, not count: some exports keep empty slots for unused inputs.
             auto hasInput = [&](int idx) {
                 return idx < numInputs && !input[idx].empty();
             };
 
-            std::vector<Mat> blobs_;
-            int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
-            int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
-
             CV_Assert(numInputs >= 3);  // X, W, R are mandatory
-            blobs_.push_back(input[1].clone());  // W
-            blobs_.push_back(input[2].clone());  // R
-            // B
-            blobs_.push_back(hasInput(3) ? input[3] : Mat::zeros(2, biasShape, input[0].type()));
-            // initial_h
-            blobs_.push_back(hasInput(5) ? input[5] : Mat::zeros(3, hidShape, input[0].type()));
-            // initial_c
-            blobs_.push_back(hasInput(6) ? input[6] : Mat::zeros(3, hidShape, input[0].type()));
-            // P (peephole) - only when the layer was configured to use it and the input is present
-            if (usePeephole && hasInput(7))
-                blobs_.push_back(input[7]);
+
+            const int numDirs = 1 + static_cast<int>(bidirectional);
+            const int batchSizeTotal = seqLenth * batchSize;
+
+            // Weight transform is shape-independent: once for const weights, else every forward.
+            if (!constWeights || !weightsPacked)
+            {
+                packWeights(input);
+                weightsPacked = true;
+            }
+
+            // Initial states are shape dependent, so (re)build them every forward.
+            Mat h0All = hasInput(5) ? input[5].reshape(1, input[5].size[0] * input[5].size[1])
+                                    : Mat::zeros(numDirs * batchSize, numHidden, input[0].type());
+            Mat c0All = hasInput(6) ? input[6].reshape(1, input[6].size[0] * input[6].size[1])
+                                    : Mat::zeros(numDirs * batchSize, numHidden, input[0].type());
 
             // set outputs to 0
             for (auto& out : output)
                 out.setTo(0);
 
-
-            // convert weights to 2d matrices ease of use later in the forward pass
-            transformBlobs(blobs_);
-
-            const int numDirs = 1 + static_cast<int>(bidirectional);
-            const int batchSizeTotal = seqLenth * batchSize;
-
-            Mat hInternal = internals[0],
-                cInternal = internals[1],
-                dummyOnes = internals[2],
-                gates = internals[3];
-
-
-            Mat cOutTs;
-            // seq-major scratch for the cell states, (seq, batch, dirs, hid) like the recurrence writes
+            // seq-major cell-state scratch: (seq, batch, dirs, hid), matching the recurrence.
             int cOutShape[] = {seqLenth, batchSize, numDirs, numHidden};
             Mat cOut = produceCellOutput ? Mat::zeros(4, cOutShape, output[0].type()) : Mat();
-            Mat hOutTs = Mat::zeros(seqLenth * batchSize, hidSize, output[0].type());
-            Mat xTs = input[0].reshape(1, batchSizeTotal);
 
-            // seq-major assembly buffer for Y. The final result is transposed from it INTO output[0]:
-            // the preallocated output tensor must never be reallocated or get its header replaced,
-            // or the result would silently detach from the graph.
+            // the recurrence below slices X by timestep, so it needs the seq-major order;
+            // under ONNX layout=1 the input arrives as (batch, seq, ...)
+            Mat xSeqFirst = input[0];
+            if (layout == BATCH_SEQ_HID)
+            {
+                std::vector<int> perm(input[0].dims);
+                std::iota(perm.begin(), perm.end(), 0);
+                std::swap(perm[0], perm[1]);
+                cv::transposeND(input[0], perm, xSeqFirst);
+            }
+            Mat xTs = xSeqFirst.reshape(1, batchSizeTotal);
+
+            // seq-major Y assembly buffer; transposed into output[0] below.
+            // Never reallocate output[0]'s header or it detaches from the graph.
             Mat hOutAll(batchSizeTotal, numDirs * numHidden, output[0].type());
 
-            // Initialize Wx, Wh, bias, h_0, c_0, pI, pF, pO
-            Mat Wx, Wh, bias, h_0, c_0, pI, pF, pO;
-
-            for (int i = 0; i < numDirs; i++)
+            // Directions are independent (disjoint output columns): run them in parallel.
+            parallel_for_(Range(0, numDirs), [&](const Range& r)
             {
-                // slice required weights for each direction
-                Wx = blobs_[0].rowRange(i * blobs_[0].rows / numDirs, (i + 1) * blobs_[0].rows / numDirs);
-                Wh = blobs_[1].rowRange(i * blobs_[1].rows / numDirs, (i + 1) * blobs_[1].rows / numDirs);
-                bias = blobs_[2].colRange(i * blobs_[2].cols / numDirs, (i + 1) * blobs_[2].cols / numDirs);
-                h_0 = blobs_[3].rowRange(i * blobs_[3].rows / numDirs, (i + 1) * blobs_[3].rows / numDirs);
-                c_0 = blobs_[4].rowRange(i * blobs_[4].rows / numDirs, (i + 1) * blobs_[4].rows / numDirs);
+                for (int i = r.start; i < r.end; i++)
+                    forwardDirection(i, numDirs, xTs, h0All, c0All, hOutAll, cOut);
+            }, numDirs);
 
-                if (usePeephole)
-                {
-                    // slice required weights for each direction
-                    pI = blobs_[5].rowRange(i * blobs_[5].rows / numDirs, (i + 1) * blobs_[5].rows / numDirs);
-                    pF = blobs_[6].rowRange(i * blobs_[6].rows / numDirs, (i + 1) * blobs_[6].rows / numDirs);
-                    pO = blobs_[7].rowRange(i * blobs_[7].rows / numDirs, (i + 1) * blobs_[7].rows / numDirs);
-                }
-
-                h_0.copyTo(hInternal);
-                c_0.copyTo(cInternal);
-                dummyOnes.setTo(1.);
-                gates.setTo(0.);
-
-                if (produceCellOutput)
-                {
-                    cOutTs = cOut.reshape(1, batchSizeTotal);
-                    cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
-                }
-
-                int tsStart, tsEnd, tsInc;
-                if (reverse || i == 1) {
-                    tsStart = seqLenth - 1;
-                    tsEnd = -1;
-                    tsInc = -1;
-                }
-                else {
-                    tsStart = 0;
-                    tsEnd = seqLenth;
-                    tsInc = 1;
-                }
-
-                // main loop of LSTM forward pass
-                for (int ts = tsStart; ts != tsEnd; ts += tsInc)
-                {
-                    Range curRowRange(ts*batchSize, (ts + 1)*batchSize);
-                    Mat xCurr = xTs.rowRange(curRowRange);
-
-                    gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
-                    gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
-                    gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
-
-                    Mat gateI = gates.colRange(0*hidSize, 1*hidSize);
-                    Mat gateF = gates.colRange(1*hidSize, 2*hidSize);
-                    Mat gateO = gates.colRange(2*hidSize, 3*hidSize);
-                    Mat gateG = gates.colRange(3*hidSize, 4*hidSize);
-
-                    if (forgetBias){
-                        add(gateF, forgetBias, gateF);
-                    }
-
-                    if (usePeephole)
-                    {
-                        Mat gatesIF = gates.colRange(0, 2*hidSize);
-                        gemm(cInternal, pI, 1, gateI, 1, gateI);
-                        gemm(cInternal, pF, 1, gateF, 1, gateF);
-                        f_activation(gatesIF, gatesIF);
-                    }
-                    else
-                    {
-                        Mat gatesIFO = gates.colRange(0, 3*hidSize);
-                        f_activation(gatesIFO, gatesIFO);
-                    }
-
-                    g_activation(gateG, gateG);
-
-                    //compute c_t
-                    multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
-                    multiply(gateI, gateG, gateI);      // i_t (*) g_t
-                    add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
-
-                    if (useCellClip)
-                    {
-                        min(cInternal, cellClip, cInternal);
-                        max(cInternal, -cellClip, cInternal);
-                    }
-
-                    if (usePeephole)
-                    {
-                        gemm(cInternal, pO, 1, gateO, 1, gateO);
-                        f_activation(gateO, gateO);
-                    }
-
-                    //compute h_t
-                    h_activation(cInternal, hInternal);
-                    multiply(gateO, hInternal, hInternal);
-
-                    //save results in output blobs
-                    hInternal.copyTo(hOutTs.rowRange(curRowRange));
-
-                    if (produceCellOutput)
-                        cInternal.copyTo(cOutTs.rowRange(curRowRange));
-
-                }
-
-                // slice in the result from each direction to the assembly buffer
-                hOutTs.copyTo(hOutAll.colRange(i * hOutTs.cols, (i + 1) * hOutTs.cols));
-            }
-
-            // (seq*batch, dirs*hid) -> (seq, batch, dirs, hid), then into the ONNX Y layout for this
-            // `layout` attribute, written INTO the preallocated output[0] (transposeND's exact-shape
-            // create() keeps it in place)
+            // Reshape to (seq, batch, dirs, hid), then transpose into output[0] per `layout`.
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
             Mat y4d = hOutAll.reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
-            Mat ySeqFirst;   // (seq, dirs, batch, hid) - the layout=0 Y; Yh is sliced from it
+            Mat ySeqFirst;   // (seq, dirs, batch, hid): the layout=0 Y; Yh sliced from it
             if (layout == SEQ_BATCH_HID) {
                 cv::transposeND(y4d, {0, 2, 1, 3}, output[0]);
                 ySeqFirst = output[0];
@@ -541,78 +635,68 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
         }
 
-        void transformBlobs(std::vector<Mat>& blobs)
+        // Fill weightBlobs: [0]=Wx, [1]=Wh, [2]=bias, and (peephole) [3]=pI, [4]=pF, [5]=pO.
+        // Shape-independent, so it runs once for constant weights.
+        void packWeights(const std::vector<Mat>& input)
         {
-            Mat &Wx = blobs[0];
-            Mat &Wh = blobs[1];
-            Mat &b = blobs[2];
+            int biasShape[] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
 
-            const int numHidden = Wh.size[2];
+            weightBlobs.clear();
+            weightBlobs.push_back(input[1].clone());  // W -> Wx
+            weightBlobs.push_back(input[2].clone());  // R -> Wh
+            weightBlobs.push_back((input.size() > 3 && !input[3].empty())
+                                      ? input[3].clone()
+                                      : Mat::zeros(2, biasShape, input[0].type()));  // B
+            bool hasP = usePeephole && input.size() > 7 && !input[7].empty();
+            if (hasP)
+                weightBlobs.push_back(input[7].clone());  // P
 
-            Mat h0, c0;
-            // check weather input is dynamic or not: hx, cx are given by user.
-            // Resahpe if only they are given
-            if (!blobs[3].empty()){
-                h0 = blobs[3];
-                h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-            }
-            if (!blobs[4].empty()){
-                c0 = blobs[4];
-                c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
-            }
+            Mat& Wx = weightBlobs[0];
+            Mat& Wh = weightBlobs[1];
+            Mat& b  = weightBlobs[2];
 
             b = b.reshape(1, b.size[0]);
             Mat bx = b.colRange(0, b.cols / 2);
             Mat bh = b.colRange(b.cols / 2, b.cols);
             b = bx + bh;
 
-            auto toIFOC = [] (Mat& in) {
-                int first = in.size[0];
-                int rest = in.total() / first / 4;
-                // every weight blob contains weights for Input, Output, Forget and Cell gates
-                Mat m = in.reshape(1, {first, 4, rest});
-                Mat outputGate = m.col(1);
-                Mat forgetGate = m.col(2);
-                std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), forgetGate.begin<float>());
-            };
+            reorderGatesIOFCtoIFOC(Wx);
+            reorderGatesIOFCtoIFOC(Wh);
+            reorderGatesIOFCtoIFOC(b);
 
-            toIFOC(Wx);
-            toIFOC(Wh);
-            toIFOC(b);
+            weightBlobs[0] = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+            weightBlobs[1] = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+            weightBlobs[2] = b.reshape(1, 1);
 
-
-            Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
-            Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
-
-
-            blobs[0] = Wx;
-            blobs[1] = Wh;
-            blobs[2] = b.reshape(1, 1);
-
-            if (!blobs[3].empty()){
-                blobs[3] = h0;
-            }
-            if (!blobs[4].empty()){
-                blobs[4] = c0;
+            // Prepack Wx per direction (fp32) so the projection is one batched GEMM.
+            packedWx.clear();
+            if (weightBlobs[0].type() == CV_32F)
+            {
+                const int numDirs = 1 + static_cast<int>(bidirectional);
+                const int N = weightBlobs[0].rows / numDirs;   // 4 * numHidden
+                packedWx.resize(numDirs);
+                for (int d = 0; d < numDirs; d++)
+                {
+                    Mat WxDir = weightBlobs[0].rowRange(d * N, (d + 1) * N);
+                    fastGemmPackB(WxDir, packedWx[d], true, gemmOpt);
+                }
             }
 
-            if (blobs.size() == 5) {
+            if (!hasP)
                 return;
-            }
 
-            Mat P = blobs[5];
-            blobs[5] = P.colRange(0, numHidden);
-            blobs[5] = blobs[5].clone().reshape(1, blobs[5].total());  // Single column.
-            blobs[5] = Mat::diag(blobs[5]);
+            Mat P = weightBlobs[3];
+            weightBlobs[3] = P.colRange(0, numHidden);
+            weightBlobs[3] = weightBlobs[3].clone().reshape(1, weightBlobs[3].total());  // Single column.
+            weightBlobs[3] = Mat::diag(weightBlobs[3]);
 
-            blobs.push_back(P.colRange(numHidden, 2 * numHidden));
-            blobs[6] = blobs[6].clone().reshape(1, blobs[6].total());  // Single column.
-            blobs[6] = Mat::diag(blobs[6]);
+            weightBlobs.push_back(P.colRange(numHidden, 2 * numHidden));
+            weightBlobs[4] = weightBlobs[4].clone().reshape(1, weightBlobs[4].total());  // Single column.
+            weightBlobs[4] = Mat::diag(weightBlobs[4]);
 
-            blobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));
-            blobs[7] = blobs[7].clone().reshape(1, blobs[7].total());  // Single column.
-            blobs[7] = Mat::diag(blobs[7]);
-            return;
+            weightBlobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));
+            weightBlobs[5] = weightBlobs[5].clone().reshape(1, weightBlobs[5].total());  // Single column.
+            weightBlobs[5] = Mat::diag(weightBlobs[5]);
         }
 };
 

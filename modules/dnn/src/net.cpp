@@ -515,6 +515,24 @@ void Net::resetKVCache()
     setKVCacheManager(impl);
 }
 
+void Net::reserveKVCache(int maxSequenceLength)
+{
+    CV_Assert(impl);
+    CV_CheckTrue(impl->useKVCache && impl->kvCacheManager.isInitialized,
+                 "reserveKVCache() requires enableKVCache() to be called first");
+    CV_CheckGE(maxSequenceLength, 0, "maxSequenceLength must be non-negative");
+    CV_CheckLE(maxSequenceLength, KV_CACHE_MAX_RESERVED_TOKENS,
+               "maxSequenceLength is unreasonably large");
+    if (impl->kvCacheManager.empty())
+    {
+        CV_LOG_WARNING(NULL, "DNN: reserveKVCache() has no effect, the model has no paged attention "
+                             "layers (no Attention/MultiHeadAttention/GroupQueryAttention op was imported). "
+                             "Only the present.* -> past_key_values.* routing is active.");
+        return;
+    }
+    impl->kvCacheManager.reserve(maxSequenceLength);
+}
+
 
 Ptr<Graph> Net::getMainGraph() const
 {

@@ -1480,7 +1480,12 @@ Rect getTextSize(Size imgsize, const String& str, Point org,
     return bbox;
 }
 
+} // namespace cv
+
 #else // HAVE_HARFBUZZ
+
+namespace cv
+{
 
 // Text rendering is implemented entirely on top of HarfBuzz. When OpenCV is
 // built without it, the public text API is present but throws.
@@ -1510,9 +1515,9 @@ Rect getTextSize(Size, const String&, Point, FontFace&, int, int, PutTextFlags, 
     CV_Error(Error::StsNotImplemented, OPENCV_NO_TEXT_RENDERING_MSG);
 }
 
-#endif // HAVE_HARFBUZZ
+} // namespace cv
 
-}
+#endif // HAVE_HARFBUZZ
 
 //////////////////////////// text drawing functions for backward compatibility ///////////////////////////
 
@@ -1611,4 +1616,4 @@ double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const i
     return (double)pixelHeight/ttsize;
 }
 
-}
+} // namespace cv

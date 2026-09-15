@@ -37,17 +37,35 @@ public:
         if (!proto.empty())
             proto = findDataFile(proto);
 
-        // Create two networks - with default backend and target and a tested one.
-        Net netDefault = readNet(weights, proto);
-        netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
-        netDefault.setInput(inp);
+        Mat inp2 = inp.clone();
+        float* inpData = (float*)inp2.data;
+        for (int i = 0; i < inp2.size[0] * inp2.size[1]; ++i)
+        {
+            Mat slice(inp2.size[2], inp2.size[3], CV_32F, inpData);
+            cv::flip(slice, slice, 1);
+            inpData += slice.total();
+        }
 
-        // BUG: https://github.com/opencv/opencv/issues/26349
-        Mat outDefault;
-        if(netDefault.getMainGraph())
-            outDefault = netDefault.forward().clone();
-        else
-            outDefault = netDefault.forward(outputLayer).clone();
+        // Both reference passes run before the tested net is loaded, so netDefault can be
+        // released first. Keeping both alive doubles peak memory on large models.
+        Mat outDefault1, outDefault2;
+        {
+            Net netDefault = readNet(weights, proto);
+            netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+            // BUG: https://github.com/opencv/opencv/issues/26349
+            netDefault.setInput(inp);
+            if(netDefault.getMainGraph())
+                outDefault1 = netDefault.forward().clone();
+            else
+                outDefault1 = netDefault.forward(outputLayer).clone();
+
+            netDefault.setInput(inp2);
+            if(netDefault.getMainGraph())
+                outDefault2 = netDefault.forward().clone();
+            else
+                outDefault2 = netDefault.forward(outputLayer).clone();
+        }
 
         net = readNet(weights, proto);
         net.setInput(inp);
@@ -64,30 +82,15 @@ public:
         else
             out = net.forward(outputLayer).clone();
 
-        check(outDefault, out, outputLayer, l1, lInf, detectionConfThresh, "First run");
+        check(outDefault1, out, outputLayer, l1, lInf, detectionConfThresh, "First run");
 
-        // Test 2: change input.
-        float* inpData = (float*)inp.data;
-        for (int i = 0; i < inp.size[0] * inp.size[1]; ++i)
-        {
-            Mat slice(inp.size[2], inp.size[3], CV_32F, inpData);
-            cv::flip(slice, slice, 1);
-            inpData += slice.total();
-        }
-        netDefault.setInput(inp);
-        net.setInput(inp);
-
-        if(netDefault.getMainGraph())
-            outDefault = netDefault.forward().clone();
-        else
-            outDefault = netDefault.forward(outputLayer).clone();
-
+        net.setInput(inp2);
         if(net.getMainGraph())
             out = net.forward().clone();
         else
             out = net.forward(outputLayer).clone();
 
-        check(outDefault, out, outputLayer, l1, lInf, detectionConfThresh, "Second run");
+        check(outDefault2, out, outputLayer, l1, lInf, detectionConfThresh, "Second run");
     }
 
     void check(Mat& ref, Mat& out, const std::string& outputLayer, double l1, double lInf,
@@ -115,7 +118,7 @@ public:
     Net net;
 };
 
-TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
+TEST_P(DNNTestNetwork, YOLOv8n) {
     processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0");
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -124,12 +127,6 @@ TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
-    // fc6 needs one contiguous 9216*4096*4 = 144 MiB block, which does not fit
-    // reliably in the 2 GB user address space of a 32-bit process on Windows.
-#ifdef _WIN32
-    if (sizeof(void*) == 4)
-        throw SkipTestException("Skip memory-heavy network on 32-bit (x86) Windows platform");
-#endif
     processNet("dnn/onnx/models/alexnet.onnx", "", Size(227, 227));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);

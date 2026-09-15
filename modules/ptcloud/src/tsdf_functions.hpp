@@ -85,7 +85,9 @@ inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
 {
     const bool fixMissingData = false;
     const depthType defaultValue = qnan;
-    if (pt.x < 0 || pt.x >= m.cols - 1 ||
+    // NaN passes both bounds checks below, so reject it explicitly
+    if (cvIsNaN(pt.x) || cvIsNaN(pt.y) ||
+        pt.x < 0 || pt.x >= m.cols - 1 ||
         pt.y < 0 || pt.y >= m.rows - 1)
         return defaultValue;
 

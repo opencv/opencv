@@ -29,6 +29,14 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 #if cn != 3
 #define loadpix(addr) *(__global const T *)(addr)
 #define TSIZE (int)sizeof(T)

@@ -78,4 +78,31 @@ TEST(Flann_Index, radiusSearch_output_size_matches_returned_count)
     }
 }
 
+TEST(Flann_Index, empty_data_build_and_search)
+{
+    cv::flann::KDTreeIndexParams indexParams(1);
+    cv::Mat data(0, 2, CV_32F);
+    cv::flann::Index index(data, indexParams);
+
+    cv::Mat query = (cv::Mat_<float>(1, 2) << 1.0f, 2.0f);
+    std::vector<int> indices;
+    std::vector<float> dists;
+    int nn = index.radiusSearch(query, indices, dists, 100, 4);
+    EXPECT_EQ(nn, 0);
+    EXPECT_TRUE(indices.empty());
+}
+
+TEST(Flann_GenericIndex, empty_data_kdtree)
+{
+    cv::Mat_<double> features(0, 3);
+    cv::flann::GenericIndex<cvflann::L2_Simple<double>> index(
+        features, cvflann::KDTreeIndexParams(1));
+
+    std::vector<double> query = {1.0, 2.0, 3.0};
+    std::vector<int> indices(5, -1);
+    std::vector<double> distances(5, 0.0);
+    index.radiusSearch(query, indices, distances, 1.0, cvflann::SearchParams(-1));
+    EXPECT_EQ(indices[0], -1);
+}
+
 }} // namespace

@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #endif
 
+#include <math.h>
 #include <string.h>
 
 #ifdef HAVE_ASSERT_H
@@ -94,6 +95,7 @@ typedef int (*TIFFSeekMethod)(TIFF *, uint32_t);
 typedef void (*TIFFPostMethod)(TIFF *tif, uint8_t *buf, tmsize_t size);
 typedef uint32_t (*TIFFStripMethod)(TIFF *, uint32_t);
 typedef void (*TIFFTileMethod)(TIFF *, uint32_t *, uint32_t *);
+typedef uint64_t (*TIFFGetMaxCompressionRatioMethod)(TIFF *);
 
 struct TIFFOffsetAndDirNumber
 {
@@ -143,13 +145,18 @@ struct tiff
     0x800000U /* read buffer (tif_rawdata) points into mmap() memory */
 #define TIFF_DEFERSTRILELOAD                                                   \
     0x1000000U /* defer strip/tile offset/bytecount array loading. */
-#define TIFF_LAZYSTRILELOAD                                                    \
-    0x2000000U /* lazy/ondemand loading of strip/tile offset/bytecount values. \
-                  Only used if TIFF_DEFERSTRILELOAD is set and in read-only    \
-                  mode */
+#define TIFF_LAZYSTRILELOAD_DONE                                               \
+    0x2000000U /* set when lazy/ondemand loading of strip/tile                 \
+                  offset/bytecount values has been done. Only used if          \
+                  TIFF_DEFERSTRILELOAD is set and in read-only mode */
 #define TIFF_CHOPPEDUPARRAYS                                                   \
     0x4000000U /* set when allocChoppedUpStripArrays() has modified strip      \
                   array */
+#define TIFF_LAZYSTRILELOAD_ASKED                                              \
+    0x8000000U /* set when lazy/ondemand loading of strip/tile                 \
+                  offset/bytecount values has been requested on opening ('O'   \
+                  flag) */
+
     uint64_t tif_diroff;     /* file offset of current directory */
     uint64_t tif_nextdiroff; /* file offset of following directory */
     uint64_t tif_lastdiroff; /* file offset of last directory written so far */
@@ -162,7 +169,6 @@ struct tiff
         tif_customdir; /* custom IFDs are separated from the main ones */
     TIFFHeaderUnion tif_header; /* file's header block Classic/BigTIFF union */
     uint16_t tif_header_size;   /* file's header block and its length */
-    uint32_t tif_row;           /* current scanline */
 
     /* There are IFDs in the file and an "active" IFD in memory,
      * from which fields are "set" and "get".
@@ -184,7 +190,6 @@ struct tiff
      * - TIFF_NON_EXISTENT_DIR_NUMBER means 'dont know number of IFDs'.
      * - 0 means 'empty file opened for writing, but no IFD written yet' */
     tdir_t tif_curdircount;
-    uint32_t tif_curstrip;     /* current strip for read/write */
     uint64_t tif_curoff;       /* current offset for read/write */
     uint64_t tif_lastvalidoff; /* last valid offset allowed for rewrite in
                                   place. Used only by TIFFAppendToStrip() */
@@ -192,10 +197,6 @@ struct tiff
     /* SubIFD support */
     uint16_t tif_nsubifd;   /* remaining subifds to write */
     uint64_t tif_subifdoff; /* offset for patching SubIFD link */
-    /* tiling support */
-    uint32_t tif_col;      /* current column (offset by row too) */
-    uint32_t tif_curtile;  /* current tile for read/write */
-    tmsize_t tif_tilesize; /* # of bytes in a tile */
     /* compression scheme hooks */
     int tif_decodestatus;
     TIFFBoolMethod tif_fixuptags;   /* called in TIFFReadDirectory */
@@ -216,10 +217,10 @@ struct tiff
     TIFFVoidMethod tif_cleanup;       /* cleanup state routine */
     TIFFStripMethod tif_defstripsize; /* calculate/constrain strip size */
     TIFFTileMethod tif_deftilesize;   /* calculate/constrain tile size */
-    uint8_t *tif_data;                /* compression scheme private data */
+    /* returns maximum compression ratio for current compression method */
+    TIFFGetMaxCompressionRatioMethod tif_getmaxcompressionratio;
+    uint8_t *tif_data; /* compression scheme private data */
     /* input/output buffering */
-    tmsize_t tif_scanlinesize;  /* # of bytes in a scanline */
-    tmsize_t tif_scanlineskew;  /* scanline skew for reading strips */
     uint8_t *tif_rawdata;       /* raw data buffer */
     tmsize_t tif_rawdatasize;   /* # of bytes in raw data buffer */
     tmsize_t tif_rawdataoff;    /* rawdata offset within strip */
@@ -295,13 +296,15 @@ struct TIFFOpenOptions
  * Default Read/Seek/Write definitions.
  */
 #ifndef ReadOK
-#define ReadOK(tif, buf, size) (TIFFReadFile((tif), (buf), (size)) == (size))
+#define ReadOK(tif, buf, size)                                                 \
+    (TIFFReadFile((tif), (buf), (size)) == (tmsize_t)(size))
 #endif
 #ifndef SeekOK
 #define SeekOK(tif, off) _TIFFSeekOK(tif, off)
 #endif
 #ifndef WriteOK
-#define WriteOK(tif, buf, size) (TIFFWriteFile((tif), (buf), (size)) == (size))
+#define WriteOK(tif, buf, size)                                                \
+    (TIFFWriteFile((tif), (buf), (size)) == (tmsize_t)(size))
 #endif
 
 /* NB: the uint32_t casts are to silence certain ANSI-C compilers */
@@ -315,25 +318,29 @@ struct TIFFOpenOptions
     (((uint32_t)(x) / (uint32_t)(y)) +                                         \
      ((((uint32_t)(x) % (uint32_t)(y)) != 0) ? 1 : 0))
 #define TIFFhowmany8_32(x)                                                     \
-    (((x)&0x07) ? ((uint32_t)(x) >> 3) + 1 : (uint32_t)(x) >> 3)
-#define TIFFroundup_32(x, y) (TIFFhowmany_32(x, y) * (y))
+    (((x) & 0x07) ? ((uint32_t)(x) >> 3) + 1 : (uint32_t)(x) >> 3)
+#define TIFFroundup_32(x, y) ((uint32_t)(TIFFhowmany_32(x, y) * (uint32_t)(y)))
 #define TIFFhowmany_64(x, y)                                                   \
     ((((uint64_t)(x)) + (((uint64_t)(y)) - 1)) / ((uint64_t)(y)))
 #define TIFFhowmany8_64(x)                                                     \
-    (((x)&0x07) ? ((uint64_t)(x) >> 3) + 1 : (uint64_t)(x) >> 3)
-#define TIFFroundup_64(x, y) (TIFFhowmany_64(x, y) * (y))
+    (((x) & 0x07) ? ((uint64_t)(x) >> 3) + 1 : (uint64_t)(x) >> 3)
+#define TIFFroundup_64(x, y) ((uint64_t)(TIFFhowmany_64(x, y) * (uint64_t)(y)))
 
 /* Safe multiply which returns zero if there is an *unsigned* integer overflow.
  * This macro is not safe for *signed* integer types */
 #define TIFFSafeMultiply(t, v, m)                                              \
-    ((((t)(m) != (t)0) && (((t)(((v) * (m)) / (m))) == (t)(v)))                \
-         ? (t)((v) * (m))                                                      \
+    ((((t)(m) != (t)0) && (((t)((((t)(v)) * ((t)(m))) / ((t)(m)))) == (t)(v))) \
+         ? (t)(((t)(v)) * ((t)(m)))                                            \
          : (t)0)
 
 #define TIFFmax(A, B) ((A) > (B) ? (A) : (B))
 #define TIFFmin(A, B) ((A) < (B) ? (A) : (B))
 
 #define TIFFArrayCount(a) (sizeof(a) / sizeof((a)[0]))
+
+/* Float/double equality macros that suppress -Wfloat-equal warnings */
+#define TIFF_FLOAT_EQ(x, y) (!(fabsf((x) - (y)) > 0.0f))
+#define TIFF_DOUBLE_EQ(x, y) (!(fabs((x) - (y)) > 0.0))
 
 /*
   Support for large files.
@@ -355,7 +362,7 @@ struct TIFFOpenOptions
 */
 #if defined(HAVE_FSEEKO)
 #define fseek(stream, offset, whence) fseeko(stream, offset, whence)
-#define ftell(stream, offset, whence) ftello(stream, offset, whence)
+#define ftell(stream) ftello(stream)
 #endif
 #endif
 #if defined(_WIN32) &&                                                         \
@@ -459,9 +466,18 @@ extern "C"
 
     extern uint32_t _TIFFMultiply32(TIFF *, uint32_t, uint32_t, const char *);
     extern uint64_t _TIFFMultiply64(TIFF *, uint64_t, uint64_t, const char *);
+    extern uint64_t _TIFFAdd64(TIFF *, uint64_t, uint64_t, const char *);
     extern tmsize_t _TIFFMultiplySSize(TIFF *, tmsize_t, tmsize_t,
                                        const char *);
+    extern tmsize_t _TIFFAddSSize(TIFF *, tmsize_t, tmsize_t, const char *);
     extern tmsize_t _TIFFCastUInt64ToSSize(TIFF *, uint64_t, const char *);
+    extern uint32_t _TIFFCastUInt64ToUInt32(TIFF *, uint64_t, const char *);
+    extern uint64_t _TIFFComputeRowSize64(TIFF *, uint32_t, uint16_t, uint16_t,
+                                          const char *);
+    extern tmsize_t _TIFFComputeRowOffset(TIFF *, tmsize_t rowstride, uint32_t,
+                                          const char *);
+    extern uint64_t _TIFFComputeBitOffset(TIFF *, uint32_t, uint16_t, uint16_t,
+                                          const char *);
     extern void *_TIFFCheckMalloc(TIFF *, tmsize_t, tmsize_t, const char *);
     extern void *_TIFFCheckRealloc(TIFF *, void *, tmsize_t, tmsize_t,
                                    const char *);
@@ -470,6 +486,8 @@ extern "C"
     extern uint32_t _TIFFClampDoubleToUInt32(double);
 
     extern void _TIFFCleanupIFDOffsetAndNumberMaps(TIFF *tif);
+
+    extern uint64_t _TIFFStrileSize64(TIFF *tif, uint32_t nrows, int isStrip);
 
     extern tmsize_t _TIFFReadEncodedStripAndAllocBuffer(TIFF *tif,
                                                         uint32_t strip,

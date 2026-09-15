@@ -154,17 +154,6 @@ TEST(Photo_White, issue_2646)
     ASSERT_EQ(0, nonWhitePixelsCount);
 }
 
-TEST(Photo_Denoising, speed)
-{
-    string imgname = string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
-    Mat src = imread(imgname, IMREAD_GRAYSCALE), dst;
-
-    double t = (double)getTickCount();
-    fastNlMeansDenoising(src, dst, 5, 7, 21);
-    t = (double)getTickCount() - t;
-    printf("execution time: %gms\n", t*1000./getTickFrequency());
-}
-
 // Related issue : https://github.com/opencv/opencv/issues/26582
 TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
 {

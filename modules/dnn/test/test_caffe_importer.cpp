@@ -52,37 +52,6 @@ static std::string _tf(TString filename)
     return findDataFile(std::string("dnn/") + filename);
 }
 
-class Test_Caffe_nets : public DNNTestLayer
-{
-public:
-    void testFaster(const std::string& proto, const std::string& model, const Mat& ref,
-                    double scoreDiff = 0.0, double iouDiff = 0.0)
-    {
-        checkBackend();
-        Net net = readNet(findDataFile("dnn/" + proto),
-                          findDataFile("dnn/" + model, false));
-        net.setPreferableBackend(backend);
-        net.setPreferableTarget(target);
-
-        if (target == DNN_TARGET_CPU_FP16)
-            net.enableWinograd(false);
-
-        Mat img = imread(findDataFile("dnn/dog416.png"));
-        resize(img, img, Size(800, 600));
-        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
-        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
-
-        net.setInput(blob);
-        net.setInput(imInfo, "im_info");
-        // Output has shape 1x1xNx7 where N - number of detections.
-        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
-        Mat out = net.forward();
-        scoreDiff = scoreDiff ? scoreDiff : default_l1;
-        iouDiff = iouDiff ? iouDiff : default_lInf;
-        normAssertDetections(ref, out, ("model name: " + model).c_str(), 0.8, scoreDiff, iouDiff);
-    }
-};
-
 TEST(Reproducibility_SSD, Accuracy)
 {
     applyTestTag(
@@ -136,7 +105,5 @@ TEST(Test_Caffe, multiple_inputs)
 
     normAssert(out, first_image + second_image);
 }
-
-INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
 
 }} // namespace

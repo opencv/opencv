@@ -285,6 +285,9 @@ CV__DNN_INLINE_NS_BEGIN
 
         //! List of learned parameters must be stored here to allow read them by using Net::getParam().
         CV_PROP_RW std::vector<Mat> blobs;
+
+        //! Bumped when a blob is replaced; executors then re-run Layer::prepackWeights().
+        unsigned weightEpoch = 1;
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
         void* netimpl = nullptr;
@@ -505,7 +508,18 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual void unsetAttached();
 
+        /** @brief One-time, shape-independent weight packing; runs once per
+         *  LayerInfo::weightEpoch, unlike finalize(). Default: no-op.
+         */
+        virtual void prepackWeights();
+
         CV_PROP int preferableTarget; //!< prefer target for layer forwarding
+
+        //! Executor-side bookkeeping for per-layer (re)initialization.
+        unsigned packedWeightEpoch = 0;        //!< LayerInfo::weightEpoch prepackWeights() last ran for
+        bool finalizedOnce = false;
+        std::vector<MatShape> lastInpShapes;   //!< input shapes finalize() last ran for
+        std::vector<int> lastInpTypes;         //!< input types finalize() last ran for
 
         Layer();
         explicit Layer(const LayerParams &params);      //!< Initializes only #name, #type and #blobs fields.
@@ -1029,6 +1043,17 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Resets KV-Cache for all AttentionOnnxI layers */
         CV_WRAP void resetKVCache();
+
+        /** @brief Pre-allocates KV-Cache pages for up to @p maxSequenceLength tokens.
+         *
+         * Call after enableKVCache() and before the prefill forward, so no page allocation
+         * happens during generation. A hint, not a limit: going past @p maxSequenceLength
+         * still grows the cache. resetKVCache() drops the reservation.
+         *
+         * Only models whose attention imports as a single fused op (ONNX Attention,
+         * com.microsoft MultiHeadAttention / GroupQueryAttention) use the paged cache;
+         * otherwise this warns and does nothing. */
+        CV_WRAP void reserveKVCache(int maxSequenceLength);
         /** @brief Returns profiling data captured during the last forward pass.
          *
          * Entries are sorted by time in descending order. Empty vectors are returned

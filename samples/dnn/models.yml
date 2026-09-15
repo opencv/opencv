@@ -283,6 +283,20 @@ u2netp:
   rgb: true
   sample: "segmentation"
 
+sam:
+  load_info:
+    url: "https://huggingface.co/onnx-community/sam-vit-base-ONNX/resolve/main/onnx/vision_encoder.onnx"
+    sha1: "305e9bac1b6ca9358bebb5d24afcc63a43100a7f"
+  model: "vision_encoder.onnx"
+  decoder_load_info:
+    decoder_url: "https://huggingface.co/onnx-community/sam-vit-base-ONNX/resolve/main/onnx/prompt_encoder_mask_decoder.onnx"
+    decoder_sha1: "81184f05faf4a6b85e63e4fee09f438dc614004d"
+  decoder_model: "prompt_encoder_mask_decoder.onnx"
+  width: 1024
+  height: 1024
+  rgb: true
+  sample: "segmentation"
+
 ################################################################################
 # Text detection models.
 ################################################################################

@@ -47,11 +47,12 @@ static void printUsage(char** argv)
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb|sift|akaze|aliked)\n"
+        "  --features (surf|orb|sift|akaze|aliked|xfeat)\n"
         "      Type of features used for images matching.\n"
         "      The default is surf if available, orb otherwise.\n"
         "      When using 'aliked', requires --matcher lightglue and DNN model paths.\n"
-        "  --matcher (homography|affine)\n"
+        "      When using 'xfeat', requires --xfeat_model and uses the standard matcher.\n"
+        "  --matcher (homography|affine|lightglue)\n"
         "      Matcher used for pairwise image matching.\n"
         "  --estimator (homography|affine)\n"
         "      Type of estimator used for transformation estimation.\n"
@@ -107,13 +108,15 @@ static void printUsage(char** argv)
         "      Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.\n"
         "  --rangewidth <int>\n"
         "      uses range_width to limit number of images to match with.\n"
-        "\nDNN Feature Options (when --features aliked --matcher lightglue):\n"
+        "\nDNN Feature Options:\n"
         "  --aliked_model <path>\n"
         "      Path to ALIKED ONNX model file.\n"
         "  --lightglue_model <path>\n"
         "      Path to LightGlue ONNX model file (for ALIKED descriptors).\n"
         "  --lg_score_thresh <float>\n"
-        "      LightGlue confidence threshold. The default is 0.0 (accept all).\n";
+        "      LightGlue confidence threshold. The default is 0.0 (accept all).\n"
+        "  --xfeat_model <path>\n"
+        "      Path to XFeat ONNX model file.\n";
 }
 
 
@@ -154,6 +157,7 @@ bool timelapse = false;
 int range_width = -1;
 String aliked_model_path;
 String lightglue_model_path;
+String xfeat_model_path;
 float lg_score_thresh = 0.0f;
 
 
@@ -399,6 +403,11 @@ static int parseCmdArgs(int argc, char** argv)
             lightglue_model_path = argv[i + 1];
             i++;
         }
+        else if (string(argv[i]) == "--xfeat_model")
+        {
+            xfeat_model_path = argv[i + 1];
+            i++;
+        }
         else if (string(argv[i]) == "--lg_score_thresh")
         {
             lg_score_thresh = static_cast<float>(atof(argv[i + 1]));
@@ -423,6 +432,16 @@ static int parseCmdArgs(int argc, char** argv)
         cout << "Error: --features aliked requires --aliked_model and --lightglue_model\n";
         return -1;
     }
+    if (features_type == "xfeat" && xfeat_model_path.empty())
+    {
+        cout << "Error: --features xfeat requires --xfeat_model\n";
+        return -1;
+    }
+    if (features_type == "xfeat" && matcher_type == "lightglue")
+    {
+        cout << "Error: --features xfeat does not support --matcher lightglue; use homography or affine\n";
+        return -1;
+    }
 
     return 0;
 }
@@ -444,7 +463,8 @@ int main(int argc, char* argv[])
 
     // Disable OpenCL for DNN-based features to avoid backend sync issues
     bool use_aliked = (features_type == "aliked");
-    if (use_aliked)
+    bool use_xfeat = (features_type == "xfeat");
+    if (use_aliked || use_xfeat)
         cv::ocl::setUseOpenCL(false);
 
     // Check if have enough images
@@ -464,9 +484,9 @@ int main(int argc, char* argv[])
 #endif
 
     Ptr<Feature2D> finder;
-    if (use_aliked)
+    if (features_type == "aliked")
     {
-        // ALIKED will be created per-image in the loop below
+        finder = ALIKED::create(aliked_model_path);
     }
     else if (features_type == "orb")
     {
@@ -493,6 +513,15 @@ int main(int argc, char* argv[])
     else if (features_type == "sift")
     {
         finder = SIFT::create();
+    }
+    else if (features_type == "xfeat")
+    {
+#ifdef HAVE_OPENCV_DNN
+        finder = XFeat::create(xfeat_model_path, 4096, 0.05f, Size(640, 640));
+#else
+        cout << "OpenCV is built without opencv_dnn module. XFeat algorithm is not available!" << std::endl;
+        return -1;
+#endif
     }
     else
     {
@@ -538,15 +567,7 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        if (use_aliked)
-        {
-            Ptr<ALIKED> aliked = ALIKED::create(aliked_model_path);
-            computeImageFeatures(aliked, img, features[i]);
-        }
-        else
-        {
-            computeImageFeatures(finder, img, features[i]);
-        }
+        computeImageFeatures(finder, img, features[i]);
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 

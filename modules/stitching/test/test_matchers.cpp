@@ -104,13 +104,11 @@ TEST(ParallelFeaturesFinder, IsSameWithSerial)
     {
         SCOPED_TRACE(cv::format("i=%zu", i));
         EXPECT_EQ(serial_descriptors.size(), para_features[i].descriptors.size());
-#if 0 // FIXIT ORB descriptors are not bit-exact (perhaps due internal parallel_for usage)
-        ASSERT_EQ(0, cv::norm(u_serial_descriptors, para_features[i].descriptors, NORM_L1))
-            << "serial_size=" << u_serial_descriptors.size()
+        ASSERT_EQ(0, cv::norm(serial_descriptors, para_features[i].descriptors, NORM_L1))
+            << "serial_size=" << serial_descriptors.size()
             << " par_size=" << para_features[i].descriptors.size()
-            << endl << u_serial_descriptors.getMat(ACCESS_READ)
+            << endl << serial_descriptors
             << endl << endl << para_features[i].descriptors.getMat(ACCESS_READ);
-#endif
         EXPECT_EQ(serial_features.img_size, para_features[i].img_size);
         EXPECT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
     }

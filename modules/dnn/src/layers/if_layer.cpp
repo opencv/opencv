@@ -29,6 +29,24 @@ public:
         return false;
     }
 
+    // Control flow just forwards tensors; branch() below already handles every depth.
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8U || input == CV_8S ||
+                                input == CV_16U || input == CV_16S || input == CV_32U || input == CV_32S ||
+                                input == CV_64U || input == CV_64S || input == CV_Bool,
+                         "If: unsupported input type");
+
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
     bool dynamicOutputShapes() const CV_OVERRIDE { return true; }
 
     int branch(InputArray arr) const CV_OVERRIDE

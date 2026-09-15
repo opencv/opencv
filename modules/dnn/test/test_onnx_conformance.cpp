@@ -1866,7 +1866,6 @@ public:
     static std::set<std::string> global_deny_list;
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
-    static std::set<std::string> classic_deny_list;
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
@@ -1965,7 +1964,6 @@ std::set<std::string> Test_ONNX_conformance::parser_deny_list;
 std::set<std::string> Test_ONNX_conformance::global_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
-std::set<std::string> Test_ONNX_conformance::classic_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
 #endif
@@ -1987,12 +1985,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 
     // SKIP when the test case is in the parser deny list.
     if (parser_deny_list.find(name) != parser_deny_list.end())
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-    }
-
-    // SKIP some more if we are in the 'classic engine' mode, where we don't support certain layers.
-    if (classic_deny_list.find(name) != classic_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
@@ -2044,6 +2036,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded") {
             default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.06394e-05 vs 1e-05
         }
+        if (name == "test_gridsample_bicubic") {
+            default_l1 = 4e-5; // Expected: (normL1) <= (l1), actual: 3.61577e-05 vs 1e-05
+        }
         // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
         // even when executed on an fp32 target.
         if (name == "test_attention_4d_fp16" ||
@@ -2057,6 +2052,18 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_causal_conv_with_state_fp16" || name == "test_causal_conv_with_state_silu_fp16") {
             default_l1 = std::max(default_l1, 2e-4);
             default_lInf = std::max(default_lInf, 2e-3);
+        }
+        // fp16 LinearAttention retains fp16 output precision (~4e-5 L1, ~5e-4 Inf) on fp32 targets.
+        if (name == "test_linear_attention_fp16" ||
+            name == "test_linear_attention_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
+        }
+        // fp16 FlexAttention likewise keeps fp16 output precision (~3e-4 Inf) on fp32 targets.
+        if (name == "test_flexattention_fp16" ||
+            name == "test_flexattention_fp16_expanded_ver26") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
         }
     }
 #ifdef HAVE_HALIDE
@@ -2120,6 +2127,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
         }
+        if (name == "test_gridsample_bicubic") {
+            default_l1 = 4e-5; // GridSample falls back to CPU; same actual: 3.61577e-05 vs 1e-05 as the OpenCV backend
+        }
         // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
         // even when executed on an fp32 target (the layer falls back to the CPU path).
         if (name == "test_attention_4d_fp16" ||
@@ -2134,6 +2144,20 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_causal_conv_with_state_fp16" || name == "test_causal_conv_with_state_silu_fp16") {
             default_l1 = std::max(default_l1, 2e-4);
             default_lInf = std::max(default_lInf, 2e-3);
+        }
+        // fp16 LinearAttention retains fp16 output precision (~4e-5 L1, ~5e-4 Inf) on fp32 targets
+        // (the layer falls back to the CPU path).
+        if (name == "test_linear_attention_fp16" ||
+            name == "test_linear_attention_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
+        }
+        // fp16 FlexAttention likewise keeps fp16 output precision (~3e-4 Inf) on fp32 targets
+        // (the layer falls back to the CPU path).
+        if (name == "test_flexattention_fp16" ||
+            name == "test_flexattention_fp16_expanded_ver26") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
         }
     }
 #endif

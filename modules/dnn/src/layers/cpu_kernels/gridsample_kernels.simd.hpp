@@ -347,7 +347,6 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                             }
                         }
                         v_float32 row0, row1, row2, row3;
-                        v_float32 mn, mx;
                         {
                             v_float32 c0 = vx_load_aligned(a[0]);
                             v_float32 c1 = vx_load_aligned(a[1]);
@@ -355,8 +354,6 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                             v_float32 c3 = vx_load_aligned(a[3]);
                             row0 = v_add(v_add(v_mul(c0, vwx0), v_mul(c1, vwx1)),
                                          v_add(v_mul(c2, vwx2), v_mul(c3, vwx3)));
-                            mn = v_min(v_min(c0, c1), v_min(c2, c3));
-                            mx = v_max(v_max(c0, c1), v_max(c2, c3));
                         }
                         {
                             v_float32 c0 = vx_load_aligned(a[4]);
@@ -365,8 +362,6 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                             v_float32 c3 = vx_load_aligned(a[7]);
                             row1 = v_add(v_add(v_mul(c0, vwx0), v_mul(c1, vwx1)),
                                          v_add(v_mul(c2, vwx2), v_mul(c3, vwx3)));
-                            mn = v_min(mn, v_min(v_min(c0, c1), v_min(c2, c3)));
-                            mx = v_max(mx, v_max(v_max(c0, c1), v_max(c2, c3)));
                         }
                         {
                             v_float32 c0 = vx_load_aligned(a[8]);
@@ -375,8 +370,6 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                             v_float32 c3 = vx_load_aligned(a[11]);
                             row2 = v_add(v_add(v_mul(c0, vwx0), v_mul(c1, vwx1)),
                                          v_add(v_mul(c2, vwx2), v_mul(c3, vwx3)));
-                            mn = v_min(mn, v_min(v_min(c0, c1), v_min(c2, c3)));
-                            mx = v_max(mx, v_max(v_max(c0, c1), v_max(c2, c3)));
                         }
                         {
                             v_float32 c0 = vx_load_aligned(a[12]);
@@ -385,12 +378,9 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                             v_float32 c3 = vx_load_aligned(a[15]);
                             row3 = v_add(v_add(v_mul(c0, vwx0), v_mul(c1, vwx1)),
                                          v_add(v_mul(c2, vwx2), v_mul(c3, vwx3)));
-                            mn = v_min(mn, v_min(v_min(c0, c1), v_min(c2, c3)));
-                            mx = v_max(mx, v_max(v_max(c0, c1), v_max(c2, c3)));
                         }
                         v_float32 R = v_add(v_add(v_mul(row0, vwy0), v_mul(row1, vwy1)),
                                             v_add(v_mul(row2, vwy2), v_mul(row3, vwy3)));
-                        R = v_max(mn, v_min(R, mx));
                         v_store_aligned(bo, R);
                         for (int k = 0; k < L; k++) {
                             outBase[(size_t)(c + k) * yCStride + (size_t)w] = bo[k];
@@ -401,7 +391,6 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                 for (; c < C; c++) {
                     const float* baseNC = baseN + (size_t)c * xCStride;
                     float a[4][4];
-                    float minv = FLT_MAX, maxv = -FLT_MAX;
                     if (interior) {
                         const float* p = baseNC + (size_t)(y1 - 1) * xHStride + (size_t)(x1 - 1);
                         for (int j = 0; j < 4; j++) {
@@ -419,13 +408,8 @@ static inline void bicubic2D(const float* X, const float* G, float* Y,
                     float rowv[4];
                     for (int j = 0; j < 4; j++) {
                         rowv[j] = a[j][0] * wx[0] + a[j][1] * wx[1] + a[j][2] * wx[2] + a[j][3] * wx[3];
-                        for (int i = 0; i < 4; i++) {
-                            minv = std::min(minv, a[j][i]);
-                            maxv = std::max(maxv, a[j][i]);
-                        }
                     }
                     float outv = rowv[0] * wy[0] + rowv[1] * wy[1] + rowv[2] * wy[2] + rowv[3] * wy[3];
-                    outv = std::max(minv, std::min(outv, maxv));
                     outBase[(size_t)c * yCStride + (size_t)w] = outv;
                 }
             }

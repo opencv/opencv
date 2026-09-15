@@ -43,21 +43,58 @@
 
 namespace opencv_test { namespace {
 
-//
-// TODO!!!:
-//  check_slice (and/or check) seem(s) to be broken, or this is a bug in function
-//  (or its inability to handle possible self-intersections in the generated contours).
-//
-//  At least, if // return TotalErrors;
-//  is uncommented in check_slice, the test fails easily.
-//  So, now (and it looks like since 0.9.6)
-//  we only check that the set of vertices of the approximated polygon is
-//  a subset of vertices of the original contour.
-//
+
+// Tests that every point on the original polygon is
+// within epsilon distance to the approximated polygon.
+TEST(Geometry_ApproxPoly, accuracy)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    const int polygon_count = 30;
+
+    for (int i = 0; i < polygon_count; ++i)
+    {
+        // create a random noisy polygon
+        vector<Point> curve;
+        Point center {rng.uniform(100, 400), rng.uniform(100, 400)};
+        double base_radius = rng.uniform(20.0, 100.0);
+        int points_count = rng.uniform(20, 100);
+
+        for (int p = 0; p < points_count; ++p)
+        {
+            double angle = p * (2 * CV_PI) / points_count;
+            double radius = base_radius + rng.uniform(-10.0, 10.0);
+            curve.push_back(Point(cvRound(center.x + radius * cos(angle)),
+                                  cvRound(center.y + radius * sin(angle))));
+        }
+
+        Rect bound = boundingRect(curve);
+        double max_diameter = sqrt(bound.width * bound.width + bound.height * bound.height);
+        const int epsilons_count = 10;
+        double eps_step = max_diameter / epsilons_count;
+
+        // test different epsilon values
+        for (double eps = eps_step; eps < max_diameter; eps += eps_step)
+        {
+            vector<Point> approx_curve;
+            approxPolyDP(curve, approx_curve, eps, true);
+
+            EXPECT_LE(approx_curve.size(), curve.size());
+            EXPECT_GT(approx_curve.size(), 0U);
+
+            // every point on original curve should be within epsilon distance to the new polygon
+            const double tol = std::max(1e-3, 16 * FLT_EPSILON * max_diameter);
+            for (const auto& pt : curve)
+            {
+                const double min_dist = std::abs(cv::pointPolygonTest(approx_curve, Point2f(pt), true));
+                EXPECT_LE(min_dist, eps + tol);
+            }
+        }
+    }
+}
 
 //Tests to make sure that unreasonable epsilon (error)
 //values never get passed to the Douglas-Peucker algorithm.
-TEST(Imgproc_ApproxPoly, bad_epsilon)
+TEST(Geometry_ApproxPoly, bad_epsilon)
 {
     std::vector<Point2f> inputPoints;
     inputPoints.push_back(Point2f(0.0f, 0.0f));
@@ -76,7 +113,7 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
-TEST(Imgproc_ApproxPoly, distace_between_point_and_segment)
+TEST(Geometry_ApproxPoly, distance_between_point_and_segment)
 {
     vector<Point2f> inputPoints = {
         { {0.f, 0.f}, {4.f, 2.f}, {11.f, 1.f}, {8.f, 0.f} }

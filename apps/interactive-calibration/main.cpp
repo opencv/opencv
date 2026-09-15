@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/core.hpp>
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 #include <opencv2/calib.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
@@ -122,8 +122,11 @@ int main(int argc, char** argv)
     std::cout << consoleHelp << std::endl;
     parametersController paramsController;
 
-    if(!paramsController.loadFromParser(parser))
+    if(!paramsController.loadFromParser(parser) || !parser.check())
+    {
+        parser.printErrors();
         return 0;
+    }
 
     captureParameters capParams = paramsController.getCaptureParameters();
     internalParameters intParams = paramsController.getInternalParameters();

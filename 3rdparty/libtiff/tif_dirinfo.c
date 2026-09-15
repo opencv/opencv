@@ -40,16 +40,46 @@
  *       values accordingly.
  */
 
-/* const object should be initialized */
-#ifdef _MSC_VER
+/* Forward declarations - definition follows after field arrays.
+ * Note: In C, we can forward declare static const objects and define them
+ * later. In C++, we need extern for the declaration, then define without
+ * extern. Since these are only used within this file via pointers, we use a
+ * workaround that works in both C and C++: declare as extern here, define as
+ * static later, but actually we need a different approach for C++
+ * compatibility.
+ *
+ * For C/C++ compatibility, we define a simple struct that holds the pointer
+ * and initialize it after the arrays are defined.
+ */
+#ifdef __cplusplus
+/* C++ doesn't allow forward declaration of const objects, so we use extern */
+extern const TIFFFieldArray tiffFieldArray;
+extern const TIFFFieldArray exifFieldArray;
+extern const TIFFFieldArray gpsFieldArray;
+#else
+/* C allows forward declaration of const objects, but C++ doesn't.
+ * We disable the C++-compat warning for this section since these circular
+ * dependencies are unavoidable with static initialization. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++-compat"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++-compat"
+#elif defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4132)
 #endif
 static const TIFFFieldArray tiffFieldArray;
 static const TIFFFieldArray exifFieldArray;
 static const TIFFFieldArray gpsFieldArray;
-#ifdef _MSC_VER
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
 #pragma warning(pop)
+#endif
 #endif
 /*--: Rational2Double: --
  * The Rational2Double upgraded libtiff functionality allows the definition and
@@ -152,9 +182,9 @@ static const TIFFField tiffFields[] = {
     /*--: EXIFIFD and GPSIFD specified as TIFF_LONG by Aware-Systems and not TIFF_IFD8 as in original LibTiff. However, for IFD-like tags,
      * libtiff uses the data type TIFF_IFD8 in tiffFields[]-tag definition combined with a special handling procedure in order to write either
      * a 32-bit value and the TIFF_IFD type-id into ClassicTIFF files or a 64-bit value and the TIFF_IFD8 type-id into BigTIFF files. */
-    {TIFFTAG_EXIFIFD, 1, 1, TIFF_IFD8, 0, TIFF_SETGET_IFD8,  FIELD_CUSTOM, 1, 0, "EXIFIFDOffset", (TIFFFieldArray *)&exifFieldArray},
+    {TIFFTAG_EXIFIFD, 1, 1, TIFF_LONG8, 0, TIFF_SETGET_UINT64,  FIELD_CUSTOM, 1, 0, "EXIFIFDOffset", (TIFFFieldArray *)&exifFieldArray},
     {TIFFTAG_ICCPROFILE, -3, -3, TIFF_UNDEFINED, 0, TIFF_SETGET_C32_UINT8,  FIELD_CUSTOM, 1, 1, "ICC Profile", NULL},
-    {TIFFTAG_GPSIFD, 1, 1, TIFF_IFD8, 0, TIFF_SETGET_IFD8,  FIELD_CUSTOM, 1, 0, "GPSIFDOffset", (TIFFFieldArray *)&gpsFieldArray},
+    {TIFFTAG_GPSIFD, 1, 1, TIFF_LONG8, 0, TIFF_SETGET_UINT64,  FIELD_CUSTOM, 1, 0, "GPSIFDOffset", (TIFFFieldArray *)&gpsFieldArray},
     {TIFFTAG_FAXRECVPARAMS, 1, 1, TIFF_LONG, 0, TIFF_SETGET_UINT32,  FIELD_CUSTOM, TRUE, FALSE, "FaxRecvParams", NULL},
     {TIFFTAG_FAXSUBADDRESS, -1, -1, TIFF_ASCII, 0, TIFF_SETGET_ASCII,  FIELD_CUSTOM, TRUE, FALSE, "FaxSubAddress", NULL},
     {TIFFTAG_FAXRECVTIME, 1, 1, TIFF_LONG, 0, TIFF_SETGET_UINT32,  FIELD_CUSTOM, TRUE, FALSE, "FaxRecvTime", NULL},
@@ -479,12 +509,36 @@ static const TIFFField gpsFields[] = {
     {GPSTAG_GPSHPOSITIONINGERROR, 1, 1, TIFF_RATIONAL, 0, TIFF_SETGET_DOUBLE,  FIELD_CUSTOM, 1, 0, "HorizontalPositioningError", NULL}};
 /* clang-format on */ /* was off for better readability of tag comments */
 
+#ifdef __cplusplus
+/* In C++, the forward declaration used extern, so definitions must not be
+ * static */
+const TIFFFieldArray tiffFieldArray = {
+    tfiatImage, 0, TIFFArrayCount(tiffFields), (TIFFField *)tiffFields};
+const TIFFFieldArray exifFieldArray = {tfiatExif, 0, TIFFArrayCount(exifFields),
+                                       (TIFFField *)exifFields};
+const TIFFFieldArray gpsFieldArray = {tfiatGps, 0, TIFFArrayCount(gpsFields),
+                                      (TIFFField *)gpsFields};
+#else
+/* Suppress C++-compat warning for the definitions as well */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++-compat"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++-compat"
+#endif
 static const TIFFFieldArray tiffFieldArray = {
     tfiatImage, 0, TIFFArrayCount(tiffFields), (TIFFField *)tiffFields};
 static const TIFFFieldArray exifFieldArray = {
     tfiatExif, 0, TIFFArrayCount(exifFields), (TIFFField *)exifFields};
 static const TIFFFieldArray gpsFieldArray = {
     tfiatGps, 0, TIFFArrayCount(gpsFields), (TIFFField *)gpsFields};
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+#endif
 
 /*
  *  We have our own local lfind() equivalent to avoid subtle differences
@@ -523,7 +577,7 @@ void _TIFFSetupFields(TIFF *tif, const TIFFFieldArray *fieldarray)
             {
                 if (fld->field_bit == FIELD_CUSTOM && TIFFFieldIsAnonymous(fld))
                 {
-                    _TIFFfreeExt(tif, fld->field_name);
+                    _TIFFfreeExt(tif, (void *)fld->field_name);
                     /* caution: tif_fields[i] must not be the beginning of a
                      * fields-array. Otherwise the following tags are also freed
                      * with the first free().
@@ -579,22 +633,26 @@ int _TIFFMergeFields(TIFF *tif, const TIFFField info[], uint32_t n)
 
     tif->tif_foundfield = NULL;
 
+    TIFFField **tif_newfields = NULL;
+
     if (tif->tif_fields && tif->tif_nfields > 0)
     {
-        tif->tif_fields = (TIFFField **)_TIFFCheckRealloc(
-            tif, tif->tif_fields, (tif->tif_nfields + n), sizeof(TIFFField *),
-            reason);
+        tif_newfields = (TIFFField **)_TIFFCheckRealloc(
+            tif, tif->tif_fields, (tmsize_t)tif->tif_nfields + n,
+            (tmsize_t)sizeof(TIFFField *), reason);
     }
     else
     {
-        tif->tif_fields =
+        tif_newfields =
             (TIFFField **)_TIFFCheckMalloc(tif, n, sizeof(TIFFField *), reason);
     }
-    if (!tif->tif_fields)
+    if (!tif_newfields)
     {
+        tif->tif_nfields = 0;
         TIFFErrorExtR(tif, module, "Failed to allocate fields array");
         return 0;
     }
+    tif->tif_fields = tif_newfields;
 
     /* tp = tif->tif_fields + tif->tif_nfields; */
     for (i = 0; i < n; i++)
@@ -612,7 +670,7 @@ int _TIFFMergeFields(TIFF *tif, const TIFFField info[], uint32_t n)
     /* Sort the field info by tag number */
     qsort(tif->tif_fields, tif->tif_nfields, sizeof(TIFFField *), tagCompare);
 
-    return n;
+    return (int)n;
 }
 
 void _TIFFPrintFieldInfo(TIFF *tif, FILE *fd)
@@ -623,7 +681,7 @@ void _TIFFPrintFieldInfo(TIFF *tif, FILE *fd)
     for (i = 0; i < tif->tif_nfields; i++)
     {
         const TIFFField *fip = tif->tif_fields[i];
-        fprintf(fd, "field[%2d] %5lu, %2d, %2d, %d, %2d, %5s, %5s, %s\n",
+        fprintf(fd, "field[%2d] %5lu, %2d, %2d, %u, %2d, %5s, %5s, %s\n",
                 (int)i, (unsigned long)fip->field_tag, fip->field_readcount,
                 fip->field_writecount, fip->field_type, fip->field_bit,
                 fip->field_oktochange ? "TRUE" : "FALSE",
@@ -787,6 +845,34 @@ int TIFFFieldSetGetCountSize(const TIFFField *fip)
         case TIFF_SETGET_C32_DOUBLE:
         case TIFF_SETGET_C32_IFD8:
             return 4;
+        case TIFF_SETGET_UNDEFINED:
+        case TIFF_SETGET_ASCII:
+        case TIFF_SETGET_UINT8:
+        case TIFF_SETGET_SINT8:
+        case TIFF_SETGET_UINT16:
+        case TIFF_SETGET_SINT16:
+        case TIFF_SETGET_UINT32:
+        case TIFF_SETGET_SINT32:
+        case TIFF_SETGET_UINT64:
+        case TIFF_SETGET_SINT64:
+        case TIFF_SETGET_FLOAT:
+        case TIFF_SETGET_DOUBLE:
+        case TIFF_SETGET_IFD8:
+        case TIFF_SETGET_INT:
+        case TIFF_SETGET_UINT16_PAIR:
+        case TIFF_SETGET_C0_ASCII:
+        case TIFF_SETGET_C0_UINT8:
+        case TIFF_SETGET_C0_SINT8:
+        case TIFF_SETGET_C0_UINT16:
+        case TIFF_SETGET_C0_SINT16:
+        case TIFF_SETGET_C0_UINT32:
+        case TIFF_SETGET_C0_SINT32:
+        case TIFF_SETGET_C0_UINT64:
+        case TIFF_SETGET_C0_SINT64:
+        case TIFF_SETGET_C0_FLOAT:
+        case TIFF_SETGET_C0_DOUBLE:
+        case TIFF_SETGET_C0_IFD8:
+        case TIFF_SETGET_OTHER:
         default:
             return 0;
     }
@@ -794,7 +880,8 @@ int TIFFFieldSetGetCountSize(const TIFFField *fip)
 
 const TIFFField *TIFFFindField(TIFF *tif, uint32_t tag, TIFFDataType dt)
 {
-    TIFFField key = {0, 0, 0, TIFF_NOTYPE, 0, 0, 0, 0, 0, NULL, NULL};
+    TIFFField key = {0, 0, 0, TIFF_NOTYPE, 0,   TIFF_SETGET_UNDEFINED,
+                     0, 0, 0, NULL,        NULL};
     TIFFField *pkey = &key;
     const TIFFField **ret;
     if (tif->tif_foundfield && tif->tif_foundfield->field_tag == tag &&
@@ -818,7 +905,8 @@ const TIFFField *TIFFFindField(TIFF *tif, uint32_t tag, TIFFDataType dt)
 static const TIFFField *_TIFFFindFieldByName(TIFF *tif, const char *field_name,
                                              TIFFDataType dt)
 {
-    TIFFField key = {0, 0, 0, TIFF_NOTYPE, 0, 0, 0, 0, 0, NULL, NULL};
+    TIFFField key = {0, 0, 0, TIFF_NOTYPE, 0,   TIFF_SETGET_UNDEFINED,
+                     0, 0, 0, NULL,        NULL};
     TIFFField *pkey = &key;
     const TIFFField **ret;
     if (tif->tif_foundfield &&
@@ -876,7 +964,10 @@ int TIFFFieldReadCount(const TIFFField *fip) { return fip->field_readcount; }
 
 int TIFFFieldWriteCount(const TIFFField *fip) { return fip->field_writecount; }
 
-int TIFFFieldIsAnonymous(const TIFFField *fip) { return fip->field_anonymous; }
+int TIFFFieldIsAnonymous(const TIFFField *fip)
+{
+    return (int)fip->field_anonymous;
+}
 
 const TIFFField *_TIFFFindOrRegisterField(TIFF *tif, uint32_t tag,
                                           TIFFDataType dt)
@@ -954,6 +1045,7 @@ TIFFField *_TIFFCreateAnonField(TIFF *tif, uint32_t tag,
         case TIFF_SLONG8:
             fld->set_get_field_type = TIFF_SETGET_C32_SINT64;
             break;
+        case TIFF_NOTYPE:
         default:
             fld->set_get_field_type = TIFF_SETGET_UNDEFINED;
             break;
@@ -961,8 +1053,8 @@ TIFFField *_TIFFCreateAnonField(TIFF *tif, uint32_t tag,
     fld->field_bit = FIELD_CUSTOM;
     fld->field_oktochange = TRUE;
     fld->field_passcount = TRUE;
-    fld->field_name = (char *)_TIFFmallocExt(tif, 32);
-    if (fld->field_name == NULL)
+    char *field_name_buf = (char *)_TIFFmallocExt(tif, 32);
+    if (field_name_buf == NULL)
     {
         _TIFFfreeExt(tif, fld);
         return NULL;
@@ -975,7 +1067,8 @@ TIFFField *_TIFFCreateAnonField(TIFF *tif, uint32_t tag,
      * Update:
      *   This special sign is replaced by fld->field_anonymous  flag.
      */
-    (void)snprintf(fld->field_name, 32, "Tag %d", (int)tag);
+    (void)snprintf(field_name_buf, 32, "Tag %d", (int)tag);
+    fld->field_name = field_name_buf;
 
     return fld;
 }
@@ -1025,6 +1118,7 @@ static TIFFSetGetFieldType _TIFFSetGetType(TIFFDataType type, short count,
                 return TIFF_SETGET_UINT64;
             case TIFF_SLONG8:
                 return TIFF_SETGET_SINT64;
+            case TIFF_NOTYPE:
             default:
                 return TIFF_SETGET_UNDEFINED;
         }
@@ -1062,6 +1156,7 @@ static TIFFSetGetFieldType _TIFFSetGetType(TIFFDataType type, short count,
                 return TIFF_SETGET_C0_UINT64;
             case TIFF_SLONG8:
                 return TIFF_SETGET_C0_SINT64;
+            case TIFF_NOTYPE:
             default:
                 return TIFF_SETGET_UNDEFINED;
         }
@@ -1099,6 +1194,7 @@ static TIFFSetGetFieldType _TIFFSetGetType(TIFFDataType type, short count,
                 return TIFF_SETGET_C16_UINT64;
             case TIFF_SLONG8:
                 return TIFF_SETGET_C16_SINT64;
+            case TIFF_NOTYPE:
             default:
                 return TIFF_SETGET_UNDEFINED;
         }
@@ -1136,6 +1232,7 @@ static TIFFSetGetFieldType _TIFFSetGetType(TIFFDataType type, short count,
                 return TIFF_SETGET_C32_UINT64;
             case TIFF_SLONG8:
                 return TIFF_SETGET_C32_SINT64;
+            case TIFF_NOTYPE:
             default:
                 return TIFF_SETGET_UNDEFINED;
         }
@@ -1152,22 +1249,25 @@ int TIFFMergeFieldInfo(TIFF *tif, const TIFFFieldInfo info[], uint32_t n)
     size_t nfields;
     uint32_t i;
 
+    TIFFFieldArray *tif_newfieldscompat = NULL;
+
     if (tif->tif_nfieldscompat > 0)
     {
-        tif->tif_fieldscompat = (TIFFFieldArray *)_TIFFCheckRealloc(
-            tif, tif->tif_fieldscompat, tif->tif_nfieldscompat + 1,
-            sizeof(TIFFFieldArray), reason);
+        tif_newfieldscompat = (TIFFFieldArray *)_TIFFCheckRealloc(
+            tif, tif->tif_fieldscompat, (tmsize_t)tif->tif_nfieldscompat + 1,
+            (tmsize_t)sizeof(TIFFFieldArray), reason);
     }
     else
     {
-        tif->tif_fieldscompat = (TIFFFieldArray *)_TIFFCheckMalloc(
+        tif_newfieldscompat = (TIFFFieldArray *)_TIFFCheckMalloc(
             tif, 1, sizeof(TIFFFieldArray), reason);
     }
-    if (!tif->tif_fieldscompat)
+    if (!tif_newfieldscompat)
     {
         TIFFErrorExtR(tif, module, "Failed to allocate fields array");
         return -1;
     }
+    tif->tif_fieldscompat = tif_newfieldscompat;
     nfields = tif->tif_nfieldscompat++;
 
     tif->tif_fieldscompat[nfields].type = tfiatOther;
@@ -1309,6 +1409,8 @@ int _TIFFCheckFieldIsValidForCodec(TIFF *tif, ttag_t tag)
                 case TIFFTAG_JPEGPROC:
                 case TIFFTAG_JPEGRESTARTINTERVAL:
                     return 1;
+                default:
+                    break;
             }
             break;
         case COMPRESSION_CCITTRLE:
@@ -1328,6 +1430,8 @@ int _TIFFCheckFieldIsValidForCodec(TIFF *tif, ttag_t tag)
                 case TIFFTAG_GROUP4OPTIONS:
                     if (tif->tif_dir.td_compression == COMPRESSION_CCITTFAX4)
                         return 1;
+                    break;
+                default:
                     break;
             }
             break;
@@ -1358,6 +1462,8 @@ int _TIFFCheckFieldIsValidForCodec(TIFF *tif, ttag_t tag)
         case COMPRESSION_LERC:
             if (tag == TIFFTAG_LERC_PARAMETERS)
                 return 1;
+            break;
+        default:
             break;
     }
     return 0;

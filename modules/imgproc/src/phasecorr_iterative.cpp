@@ -13,11 +13,25 @@ void calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2, cv::M
         const auto* dft2p = dft2.ptr<cv::Vec<T, 2>>(row);
         for (int col = 0; col < dft1.cols; ++col)
         {
-            const T re = dft1p[col][0] * dft2p[col][0] + dft1p[col][1] * dft2p[col][1];
-            const T im = dft1p[col][0] * dft2p[col][1] - dft1p[col][1] * dft2p[col][0];
-            const T mag = std::sqrt(re * re + im * im);
-            cpsp[col][0] = re / mag;
-            cpsp[col][1] = im / mag;
+            // accumulate in double like cv::divSpectrums, float32 products of large
+            // DFT bins can overflow to inf and underflow small bins to zero
+            const double re = static_cast<double>(dft1p[col][0]) * dft2p[col][0] +
+                              static_cast<double>(dft1p[col][1]) * dft2p[col][1];
+            const double im = static_cast<double>(dft1p[col][0]) * dft2p[col][1] -
+                              static_cast<double>(dft1p[col][1]) * dft2p[col][0];
+            const double mag = std::sqrt(re * re + im * im);
+            // a zero-magnitude bin has undefined phase, zero it instead of dividing
+            // by zero which yields NaN and corrupts the whole correlation landscape
+            if (mag > 0.0)
+            {
+                cpsp[col][0] = static_cast<T>(re / mag);
+                cpsp[col][1] = static_cast<T>(im / mag);
+            }
+            else
+            {
+                cpsp[col][0] = 0;
+                cpsp[col][1] = 0;
+            }
         }
     }
 }

@@ -480,9 +480,16 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     else
     {
         Mat preMaskFloat;
-        threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
-
-        preMask.convertTo(preMaskFloat, CV_32F);
+        Mat inputMaskMat = inputMask.getMat();
+        if (inputMaskMat.depth() == CV_Bool)
+        {
+            inputMaskMat.convertTo(preMaskFloat, CV_32F);
+        }
+        else
+        {
+            threshold(inputMaskMat, preMask, 0, 1, THRESH_BINARY);
+            preMask.convertTo(preMaskFloat, CV_32F);
+        }
         GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
         // Change threshold.
         preMaskFloat *= (0.5/0.95);

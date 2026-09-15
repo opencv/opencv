@@ -27,14 +27,14 @@ public:
 
     Operation()
         : linear(true)
-        , M(Mat()) {};
+        , M(Mat()) {}
     Operation(Mat M_)
         : linear(true)
-        , M(M_) {};
+        , M(M_) {}
     Operation(MatFunc f_)
         : linear(false)
-        , f(f_) {};
-    virtual ~Operation() {};
+        , f(f_) {}
+    virtual ~Operation() {}
 
     /** @brief operator function will run operation
     */
@@ -58,10 +58,10 @@ class Operations
 public:
     std::vector<Operation> ops;
     Operations()
-        : ops {} {};
+        : ops {} {}
     Operations(std::initializer_list<Operation> op)
-        : ops { op } {};
-    virtual ~Operations() {};
+        : ops { op } {}
+    virtual ~Operations() {}
 
     /** @brief add function will conbine this operation with other transformation operations
     */

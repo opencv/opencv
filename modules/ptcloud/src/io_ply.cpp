@@ -50,9 +50,14 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     {
         e = trimSpaces(e);
     }
-    if (splitArr[0] != "format")
+    if (splitArr.empty() || splitArr[0] != "format")
     {
         CV_LOG_ERROR(NULL, "Provided file doesn't have format");
+        return false;
+    }
+    if (splitArr.size() < 2)
+    {
+        CV_LOG_ERROR(NULL, "Provided PLY file format is not supported");
         return false;
     }
     if (splitArr[1] == "ascii")
@@ -104,7 +109,13 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
             {
                 e = trimSpaces(e);
             }
-            std::string elemName = splitArrElem.at(1);
+            if (splitArrElem.size() < 2)
+            {
+                CV_LOG_ERROR(NULL, "Element description has " << splitArrElem.size()
+                             << " words instead of at least 2");
+                return false;
+            }
+            std::string elemName = splitArrElem[1];
             if (elemName == "vertex")
             {
                 elemRead = READ_VERTEX;

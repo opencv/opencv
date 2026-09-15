@@ -380,6 +380,27 @@ public:
     mutable bool outputShapeComputed;
     mutable MatShape cachedOutputShape;
 
+    // Equation parsing maps labels to concrete dimensions, so every derived
+    // table must be rebuilt together when any operand shape changes.
+    void resetShapeState()
+    {
+        einsumInpShapes.clear();
+        preProcessedInputs.clear();
+        homogenizedInputDims.clear();
+        einsumOutDims.clear();
+        inputSubscriptIndices.clear();
+        subscriptIndicesToLastInput.clear();
+        subscriptIndicesToDimValue.clear();
+        subscriptIndicesToOutputIndices.clear();
+        letter2count.fill(0);
+        letter2index.fill(-1);
+        numLetterIndices = 0;
+        numOfEllipsisDims = 0;
+        numInputs = 0;
+        cachedOutputShape.clear();
+        outputShapeComputed = false;
+    }
+
     void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
     void processBroadcastedDims();
@@ -404,12 +425,13 @@ public:
     );
 
     void computeOutputShape(const std::vector<MatShape>& inputs) const {
-        if (!outputShapeComputed) {
-            // Copy of the existing computation logic
-            const_cast<LayerEinsumImpl*>(this)->processEquation(inputs);
-            const_cast<LayerEinsumImpl*>(this)->processBroadcastedDims();
-            const_cast<LayerEinsumImpl*>(this)->validateOutputSubscript();
-            const_cast<LayerEinsumImpl*>(this)->calculateOutputShape();
+        if (!outputShapeComputed || inputs != einsumInpShapes) {
+            LayerEinsumImpl* self = const_cast<LayerEinsumImpl*>(this);
+            self->resetShapeState();
+            self->processEquation(inputs);
+            self->processBroadcastedDims();
+            self->validateOutputSubscript();
+            self->calculateOutputShape();
 
             cachedOutputShape = einsumOutDims;
             outputShapeComputed = true;
@@ -471,19 +493,6 @@ public:
     {
         CV_UNUSED(requiredOutputs);
         CV_UNUSED(internals);
-
-        // check if input einsumInputShapes is empty
-        if (einsumInpShapes.empty()) {
-            outputShapeComputed = false;
-        } else {
-            // check weather shapes in inputs are compatible with shapes in einsumInpShapes
-            for (int i = 0; i < inputs.size(); i++) {
-                if (inputs[i] != einsumInpShapes[i]) {
-                    outputShapeComputed = false;
-                    break;
-                }
-            }
-        }
 
         computeOutputShape(inputs);
 

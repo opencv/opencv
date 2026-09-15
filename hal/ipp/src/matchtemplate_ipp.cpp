@@ -114,10 +114,12 @@ int ipp_hal_matchTemplate(const uchar* src_data, size_t src_step, int src_width,
     if(templ.size().area()*4 > img.size().area())
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+#if IPP_VERSION_X100 < 202610
     // CV_8U SQDIFF/SQDIFF_NORMED suffer from float32 catastrophic cancellation
-    // in IPP's internal accumulators; fall through to the double-precision path instead.
+    // in IPP's internal accumulators (older versions); fall through to the double-precision path instead.
     if(depth == CV_8U && (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+#endif
 
     if(method == cv::TM_SQDIFF)
     {

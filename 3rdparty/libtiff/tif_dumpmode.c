@@ -80,7 +80,7 @@ static int DumpModeDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                       "Not enough data for scanline %" PRIu32
                       ", expected a request for at most %" TIFF_SSIZE_FORMAT
                       " bytes, got a request for %" TIFF_SSIZE_FORMAT " bytes",
-                      tif->tif_row, tif->tif_rawcc, cc);
+                      tif->tif_dir.td_row, tif->tif_rawcc, cc);
         return (0);
     }
     /*
@@ -99,8 +99,23 @@ static int DumpModeDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
  */
 static int DumpModeSeek(TIFF *tif, uint32_t nrows)
 {
-    tif->tif_rawcp += nrows * tif->tif_scanlinesize;
-    tif->tif_rawcc -= nrows * tif->tif_scanlinesize;
+    tmsize_t seek_size;
+    if (nrows > 0 &&
+        tif->tif_dir.td_scanlinesize > (tmsize_t)(TIFF_TMSIZE_T_MAX / nrows))
+    {
+        TIFFErrorExtR(tif, "DumpModeSeek",
+                      "Integer overflow computing seek size");
+        return (0);
+    }
+    seek_size = (tmsize_t)nrows * tif->tif_dir.td_scanlinesize;
+    if (seek_size > tif->tif_rawcc)
+    {
+        TIFFErrorExtR(tif, "DumpModeSeek",
+                      "Seek beyond end of raw data buffer");
+        return (0);
+    }
+    tif->tif_rawcp += seek_size;
+    tif->tif_rawcc -= seek_size;
     return (1);
 }
 

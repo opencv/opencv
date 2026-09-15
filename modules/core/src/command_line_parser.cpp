@@ -76,9 +76,13 @@ static bool parse_bool(std::string str)
 {
     std::transform(str.begin(), str.end(), str.begin(), details::char_tolower);
     std::istringstream is(str);
-    bool b;
-    is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;
-    return b;
+    bool value = false;
+    is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> value;
+
+    if (is.fail())
+        CV_Error_(Error::StsBadArg, ("can not convert: [%s] to [bool]", str.c_str()));
+
+    return value;
 }
 
 static void from_str(const String& str, Param type, void* dst)

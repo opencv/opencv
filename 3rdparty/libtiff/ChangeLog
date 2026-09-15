@@ -1,3 +1,2339 @@
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	libtiff 4.7.2 release
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'revert_mr_910' into 'master'
+	Revert "_TIFFSetDefaultCompressionState(): reset postdecode callback"
+
+	Closes #860
+
+	See merge request libtiff/libtiff!915
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'mr_810_revert' into 'master'
+	Revert "tif_jbig.c don't discard validly decoded data if errors occur"
+
+	See merge request libtiff/libtiff!914
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'rst_formatting_fix' into 'master'
+	v4.7.2.rst: formatting fix
+
+	See merge request libtiff/libtiff!913
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Revert "_TIFFSetDefaultCompressionState(): reset postdecode callback"
+	This reverts commit b7a73279cc83e39a2d3425d69185281009f7554a.
+
+	Fixes #860, but re-opens #795
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Revert "tif_jbig.c don't discard validly decoded data if errors occur"
+	This reverts commit fd4e85614c479b9cac7b4d961648cac6f15ad81f.
+
+	This causes a null-ptr deref in jbigkit on some corrupted images. See https://gitlab.com/libtiff/libtiff/-/merge_requests/810#note_3500232812
+
+2026-06-27  Even Rouault  <even.rouault@spatialys.com>
+
+	v4.7.2.rst: formatting fix.
+
+2026-06-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_859' into 'master'
+	Revert "OJPEG: fix nullptr deref when changing compression method from OJPEG to something else"
+
+	Closes #795
+
+	See merge request libtiff/libtiff!910
+
+2026-06-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tif_jbig-benign_errors' into 'master'
+	tif_jbig.c don't discard validly decoded data if errors occur
+
+	See merge request libtiff/libtiff!810
+
+2026-06-25  Lee Howard  <faxguy@howardsilvan.com>
+
+	tif_jbig.c don't discard validly decoded data if errors occur.
+
+2026-06-25  Even Rouault  <even.rouault@spatialys.com>
+
+	_TIFFSetDefaultCompressionState(): reset postdecode callback.
+	Fixes #795
+
+	Revert "OJPEG: fix nullptr deref when changing compression method from OJPEG to something else"
+	This reverts commit 04607e3ce091ac0579317f185ab2cc378c3f6d39.
+
+2026-06-19  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'add_missing_export_symbols' into 'master'
+	libtiff.def/libtiff.map: add semi-public/private symbols added recently
+
+	Closes #857
+
+	See merge request libtiff/libtiff!902
+
+2026-06-19  Even Rouault  <even.rouault@spatialys.com>
+
+	tiffdump.c: fix build error on Windows.
+
+	libtiff/tiffiop.h: fix ftell() macro in HAVE_FSEEKO case.
+
+	libtiff.def/libtiff.map: add semi-public/private symbols added recently.
+
+2026-06-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-846-integer_overflow' into 'master'
+	Harden integer size and offset calculations in libtiff, tools, and contrib
+
+	See merge request libtiff/libtiff!897
+
+2026-06-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-850-Luv32fromLuv48' into 'master'
+	Fix signed left-shift UB in LogLuv RANDITHER encoding (#850)
+
+	See merge request libtiff/libtiff!898
+
+2026-06-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-854-TIFFReadAndRealloc' into 'master'
+	Handle negative TIFFReadFile results before state updates (#854)
+
+	See merge request libtiff/libtiff!901
+
+2026-06-16  waugustus  <wangdw.augustus@qq.com>
+
+	Handle negative TIFFReadFile results before state updates (#854)
+
+	Harden integer size and offset calculations in libtiff, tools, and contrib
+
+2026-06-12  waugustus  <wangdw.augustus@qq.com>
+
+	Fix signed left-shift UB in LogLuv RANDITHER encoding (#850)
+
+2026-06-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'patch-1' into 'master'
+	oss-fuzz: fix broken build
+
+	See merge request libtiff/libtiff!896
+
+2026-06-10  david korczynski  <david@adalogics.com>
+
+	oss-fuzz: fix broken build.
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'DumpModeDecode_signedness_warning' into 'master'
+	DumpModeSeek(): fix -Wsign-compare on 32 bit platforms
+
+	See merge request libtiff/libtiff!894
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	DumpModeSeek(): fix -Wsign-compare on 32 bit platforms.
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'formatting_fixes' into 'master'
+	Formatting fixes (apply pre-commit run --all)
+
+	See merge request libtiff/libtiff!893
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Formatting fixes (apply pre-commit run --all)
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/ojpeg-overflow-and-misc-fixes' into 'master'
+	Fix integer overflows, copy-paste bug, and loop underflow
+
+	See merge request libtiff/libtiff!891
+
+2026-06-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'jpegdecoderaw-uninit-heap' into 'master'
+	JPEGDecodeRaw: initialize output buffer to avoid returning uninitialized memory
+
+	See merge request libtiff/libtiff!892
+
+2026-06-06  evilgensec  <evil.gen.sec@gmail.com>
+
+	JPEGDecodeRaw: initialize output buffer to avoid returning uninitialized memory
+	JPEGDecodeRaw() (the YCbCr-subsampled "raw" decode path) writes at most
+	sp->cinfo.d.image_height rows, and within each scanline only the
+	clumps_per_line clumps derived from the JPEG codestream width. When a
+	strip/tile is declared larger than the embedded JPEG SOF dimensions --
+	which JPEGPreDecode() only warns about rather than rejecting -- the
+	unwritten tail of the caller's buffer is left untouched and returned as
+	decoded data.
+
+	Callers such as TIFFReadEncodedStrip/TIFFReadEncodedTile (and the tools
+	built on them: tiffinfo -d, tiff2rgba, plus downstream users like GDAL
+	and tiff2pdf) hand in an uninitialized malloc'd buffer, so the contents
+	of previously freed heap are disclosed to the consumer. The amount of
+	leaked data scales with the declared strip/tile height.
+
+	JPEGDecode() already zeroes its output buffer for this case, but
+	JPEGDecodeRaw() does not. A conditional memset mirroring JPEGDecode()'s
+	dimension test is not sufficient here: for subsampled data the per-clump
+	write stride can leave part of the caller buffer untouched even for
+	spec-compliant images, so the buffer is zeroed unconditionally before the
+	decode loop.
+
+2026-05-31  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	tiff2pdf.c: add overflow checks to RGBA/RGBAA sample count computation.
+	The YCBCR-to-RGB conversion path uses TIFFSafeMultiply for the
+	tiff_width * tiff_length computation, but the RGBA-to-RGB and
+	RGBAA-to-RGB paths perform raw uint32_t multiplication. The same
+	inconsistency exists in the tile path with tiles_tilewidth *
+	tiles_tilelength.
+
+	For crafted TIFF files with large dimensions, the unchecked
+	multiplication overflows and passes a wrong sample count to
+	t2p_sample_rgba_to_rgb / t2p_sample_rgbaa_to_rgb, causing
+	out-of-bounds buffer access in those conversion functions.
+
+	Add TIFFSafeMultiply overflow checks consistent with the YCBCR path,
+	covering both the image path (tiff_width * tiff_length) and the tile
+	path (tiles_tilewidth * tiles_tilelength).
+
+2026-05-31  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	tiffcrop.c: fix integer overflow in extractImageSection.
+	The computations img_width * spp * bps and sect_width * spp * bps are
+	performed in uint32_t (img_width/sect_width are uint32_t, spp/bps are
+	uint16_t promoted to int, but the product is truncated back to uint32_t
+	when assigned). For images with large dimensions and high bit depth,
+	these products can overflow, producing incorrect img_rowsize and
+	full_bytes values that lead to out-of-bounds buffer access.
+
+	Use uint64_t intermediates and check against UINT32_MAX before use.
+
+2026-05-31  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	tif_write.c: fix OOB read and underflow in TIFFAppendToStrip copy loop.
+	When TIFFAppendToStrip needs to relocate strip data to the end of the
+	file, it copies in chunks of tempSize (up to 1 MB). On the final
+	iteration, toCopy may be less than tempSize, but the loop unconditionally
+	reads and writes tempSize bytes. This causes:
+
+	1. OOB file read past the end of the original strip data
+	2. uint64_t underflow when toCopy -= tempSize wraps, causing the loop
+	   to run indefinitely
+
+	Introduce a chunkSize variable that is min(toCopy, tempSize) to
+	correctly handle the final partial iteration.
+
+2026-05-31  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	tif_dirread.c: fix copy-paste bug in ChopUpSingleUncompressedStrip.
+	Line 8024 assigns offset = TIFFGetStrileByteCount(tif, 0) but should
+	use TIFFGetStrileOffset(tif, 0). The variable is used at lines
+	8061-8063 to perform a file-size sanity check that prevents excessive
+	memory allocation when chopping a single-strip TIFF into multiple
+	strips.
+
+	With the byte count instead of the offset, the sanity check compares
+	the wrong value against the file size, allowing a crafted uncompressed
+	single-strip TIFF with a small byte count but large nstrips to bypass
+	the guard and trigger excessive allocation from TIFFReadDirectory().
+
+2026-05-31  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	tif_ojpeg.c: fix integer overflow in subsampling buffer allocation.
+	The computation of subsampling_convert_ybuflen (ylinelen * ylines),
+	subsampling_convert_cbuflen (clinelen * clines), and their sum
+	subsampling_convert_ycbcrbuflen is performed in uint32_t and can
+	silently overflow for large strile_width values. The existing overflow
+	check at line 1362 only guards the ylinelen addition, not the
+	subsequent multiplications.
+
+	When the product wraps to a small value, _TIFFcallocExt allocates an
+	undersized buffer. Row pointers are then computed using the
+	non-overflowed stride, pointing past the allocation. Libjpeg writes
+	decompressed scanline data through these out-of-bounds pointers,
+	causing heap buffer overflow.
+
+	Use 64-bit intermediates for the multiplications and check against
+	UINT32_MAX before truncating back to uint32_t. Return an error
+	instead of proceeding with a corrupted allocation size.
+
+2026-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-832-raw2tiff' into 'master'
+	Fix integer wraparound checks in raw2tiff/tiffcrop and add missing zero-divisor guards in tiff2rgba (#832).
+
+	See merge request libtiff/libtiff!885
+
+2026-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-836-tiffcrop' into 'master'
+	tiffcrop: Fix tiffcrop composite crop buffer sizing (#836)
+
+	See merge request libtiff/libtiff!884
+
+2026-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/compute-tile-strip-overflow' into 'master'
+	TIFFComputeTile/TIFFComputeStrip: use overflow-checked multiplication
+
+	See merge request libtiff/libtiff!890
+
+2026-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/dumpmode-seek-oob' into 'master'
+	DumpModeSeek: add bounds check to prevent OOB pointer advance
+
+	See merge request libtiff/libtiff!888
+
+2026-05-29  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	TIFFComputeTile/TIFFComputeStrip: use overflow-checked multiplication.
+	TIFFComputeTile() computes xpt * ypt * zpt using raw uint32_t
+	multiplication that can silently overflow for images with small tile
+	dimensions and large image dimensions. The wrapped result is used as a
+	tile index into the strip offset/bytecount arrays, causing out-of-bounds
+	array access.
+
+	TIFFComputeStrip() has the same issue with (uint32_t)sample *
+	td_stripsperimage.
+
+	Replace raw multiplication with _TIFFMultiply32() in both functions,
+	consistent with their TIFFNumberOf* counterparts in the same files.
+	_TIFFMultiply32() reports an error and returns 0 on overflow instead of
+	silently wrapping. Added early return when overflow is detected (result
+	is 0 but operands are non-zero) to prevent using a bogus index.
+
+2026-05-29  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	DumpModeSeek: add bounds check to prevent OOB pointer advance.
+	DumpModeSeek() advances tif_rawcp by nrows * td_scanlinesize without
+	any bounds check against tif_rawcc (remaining buffer bytes). A crafted
+	TIFF with COMPRESSION_NONE can trigger an arbitrary forward seek past
+	the raw data buffer, causing subsequent DumpModeDecode() calls to read
+	from out-of-bounds heap memory.
+
+	Added pre-multiplication overflow check using TIFF_TMSIZE_T_MAX
+	division (avoiding undefined behavior from signed overflow detection),
+	then bounds check against tif_rawcc before advancing the pointer.
+
+	Note the contrast with DumpModeDecode() in the same file, which
+	correctly checks tif_rawcc < cc before any access.
+
+2026-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/growstrips-uaf' into 'master'
+	TIFFGrowStrips: fix use-after-free on partial realloc failure
+
+	See merge request libtiff/libtiff!889
+
+2026-05-29  Anthony Hurtado  <amhurtado@protonmail.com>
+
+	TIFFGrowStrips: fix use-after-free on partial realloc failure.
+	TIFFGrowStrips() performs two realloc calls for td_stripoffset_p and
+	td_stripbytecount_p. If the first realloc succeeds (potentially moving
+	the allocation) but the second fails, the error path frees the new
+	pointer while td->td_stripoffset_p still points to the old (now-freed)
+	memory. When TIFFFreeDirectory() later frees td_stripoffset_p, it
+	triggers a double-free of the dangling pointer.
+
+	Fix by updating each struct member immediately after its successful
+	realloc, before attempting the second realloc. If either realloc fails,
+	the struct members point to valid memory (either the successfully
+	reallocated block or the original unchanged block), preventing any
+	dangling pointer.
+
+2026-05-25  waugustus  <wangdw.augustus@qq.com>
+
+	Address review feedback for overflow guard fixes.
+
+2026-05-14  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-844-_TIFFReserveLargeEnoughWriteBuffer' into 'master'
+	Fix NULL dereference in _TIFFReserveLargeEnoughWriteBuffer() by validating the strip bytecount array before accessing it (#844)
+
+	See merge request libtiff/libtiff!886
+
+2026-05-14  waugustus  <wangdw.augustus@qq.com>
+
+	Fix NULL dereference in _TIFFReserveLargeEnoughWriteBuffer() by validating the strip bytecount array before accessing it.
+
+	Fix integer wraparound checks in raw2tiff/tiffcrop and add missing zero-divisor guards in tiff2rgba (#832).
+
+2026-05-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_834_835_836' into 'master'
+	tiffcrop: fix uint32 overflows in writeImageSections and getCropOffsets
+
+	Closes #834, #835, and #836
+
+	See merge request libtiff/libtiff!879
+
+2026-05-09  waugustus  <wangdw.augustus@qq.com>
+
+	tiffcrop: fix byte carry for left/right composite bit offsets.
+
+	tiffcrop: recompute composite crop dimensions before allocation.
+
+2026-05-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-828-horizontalAccumulate8abgr' into 'master'
+	pixarlog: complete ABGR bounds check for multi-row strip decoding
+
+	See merge request libtiff/libtiff!883
+
+2026-05-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_830' into 'master'
+	TIFFRGBAImage: avoid int overflows in put functions
+
+	Closes #830
+
+	See merge request libtiff/libtiff!881
+
+2026-05-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_831' into 'master'
+	TIFFFillStrip/Tile(): avoid excessive memory allocation
+
+	Closes #831
+
+	See merge request libtiff/libtiff!880
+
+2026-05-07  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFFillStrip/Tile(): avoid excessive memory allocation.
+	Closes #831
+
+2026-05-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_823' into 'master'
+	Doc: TIFFFdOpen(): clarify role of filename parameter
+
+	Closes #823
+
+	See merge request libtiff/libtiff!882
+
+2026-05-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_788_Write_IFDLoop' into 'master'
+	TIFFLinkDirectory() checks for IFD loops (fixes 788)
+
+	Closes #788
+
+	See merge request libtiff/libtiff!878
+
+2026-05-07  Su Laus  <sulau@freenet.de>
+
+	TIFFLinkDirectory() checks for IFD loops (fixes 788)
+
+2026-05-07  waugustus  <wangdw.augustus@qq.com>
+
+	pixarlog: error out on invalid ABGR output buffer sizes.
+
+	pixarlog: complete ABGR bounds check for multi-row strip decoding.
+
+2026-05-05  Niels Provos  <provos@gmail.com>
+
+	tiffcrop: simplify safeAccumUInt32 overflow check.
+	Use the canonical unsigned-overflow idiom (a > MAX - b) instead of a
+	uint64_t cast, per maintainer suggestion.
+
+2026-05-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Doc: TIFFFdOpen(): clarify role of filename parameter.
+	Fixes #823
+
+	TIFFRGBAImage: avoid int overflows in put functions.
+	Fixes #830
+
+2026-05-04  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'TIFFGetMaxCompressionRatio' into 'master'
+	Add TIFFGetMaxCompressionRatio() and use it in _TIFFReadEncoded[Tile|Strip)AndAllocBuffer()
+
+	Closes #781
+
+	See merge request libtiff/libtiff!872
+
+2026-05-03  Niels Provos  <provos@gmail.com>
+
+	tiffcrop: fix uint32 overflows in writeImageSections and getCropOffsets.
+	Three uint32 wraps in tiffcrop allowed crafted TIFFs to bypass
+	loadImage()'s buffer-size guard:
+
+	* writeImageSections:8301 computed sectsize via ceil((n+7)/8.0) (double),
+	  which overcounts bytes-per-row by 1 vs. loadImage:7209's integer
+	  (n+7)/8, then multiplied in uint32. Now uses uint64_t with the same
+	  integer formula and rejects results exceeding UINT32_MAX-3.
+
+	* getCropOffsets accumulates crop->combined_{width,length} in uint32
+	  across zones for all four EDGE_* branches; sums >= 2^32 wrap and
+	  under-size the crop_buff allocation in processCropSelections. A
+	  safeAccumUInt32() helper now guards each accumulation.
+
+	Fixes #834, #835, #836.
+
+2026-04-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_826' into 'master'
+	JPEG decompressor: initialize output buffer when JPEG image is smaller than...
+
+	Closes #826
+
+	See merge request libtiff/libtiff!877
+
+2026-04-29  Even Rouault  <even.rouault@spatialys.com>
+
+	JPEG decompressor: initialize output buffer when JPEG image is smaller than strile dimension to avoid heap memory disclosure
+	Fixes #826
+
+2026-04-28  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_ossfuzz_506737072' into 'master'
+	TIFFAdvanceDirectory(): avoid potential read heap-buffer-overflow in mmap code...
+
+	See merge request libtiff/libtiff!876
+
+2026-04-28  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFAdvanceDirectory(): avoid potential read heap-buffer-overflow in mmap code path on 32 bit builds
+	Fixes https://issues.oss-fuzz.com/issues/506737072
+
+	```
+	==250==ERROR: AddressSanitizer: SEGV on unknown address 0x73402dbf (pc 0xf7cc6656 bp 0xff9cc408 sp 0xff9cbfb8 T0)
+	==250==The signal is caused by a READ memory access.
+		    0 0xf7cc6656 in libc.so.6
+		    1 0x5763d373 in __asan_memcpy /src/llvm-project/compiler-rt/lib/asan/asan_interceptors_memintrinsics.cpp:63:3
+		    2 0x57f675ba in gdal__TIFFmemcpy gdal/frmts/gtiff/libtiff/tif_vsi.c:174:2
+		    3 0x57f631a9 in gdal_TIFFAdvanceDirectory gdal/frmts/gtiff/libtiff/tif_dir.c:1878:13
+	```
+
+	with
+	```
+	$ tiffdump test.tif
+	test.tif:
+	Magic: 0x4949 <little-endian> Version: 0x2a <ClassicTIFF>
+	Directory 0: offset 8 (0x8) next 2147483647 (0x7fffffff)
+	[...]
+	```
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cmake-macos-framework' into 'master'
+	Build: Support for iOS-derived builds
+
+	See merge request libtiff/libtiff!780
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	cmake: Fix bundle identifiers to use reverse-DNS format.
+	PRODUCT_BUNDLE_IDENTIFIER and MACOSX_FRAMEWORK_IDENTIFIER must use
+	reverse-DNS dot notation (com.gitlab.libtiff.libtiff_tiff), not
+	URL-style slashes which are not valid in bundle ID strings.
+
+2026-04-25  Treata11  <treata11@yahoo.com>
+
+	cmake: Incorporate improvements from treata11/cmake-macos-framework.
+	- .gitignore: add build* to ignore build directories
+	- CMakeLists.txt: add framework build status message in configure summary
+	- libtiff/CMakeLists.txt: refactor duplicate if(tiff-framework) blocks
+	  into a set_framework_properties(target headers_var) macro, eliminating
+	  repetition between the tiff and tiffxx targets
+	- tools/CMakeLists.txt: extract install target list into libtiff_tools
+	  variable for clarity
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	cmake: Fix and improve Apple framework build support.
+	- Fix FRAMEWORK_VERSION to use conventional letter "A" instead of the
+	  full version string, which incorrectly named the Versions/ directory
+	- Remove FRAMEWORK/BUNDLE properties from fax2ps and other executables;
+	  only shared libraries can be frameworks, and framework linking is
+	  implicit for executables via target_link_libraries
+	- Remove BUNDLE DESTINATION from tools install rule; CLI tools are not
+	  app bundles
+	- Add framework properties to tiffxx (C++ wrapper library), including
+	  FRAMEWORK DESTINATION in its install rule
+	- Move OPENGL_SUPPORT=OFF for embedded Apple platforms into the root
+	  CMakeLists.txt, gated on CMAKE_SYSTEM_NAME rather than tiff-framework,
+	  so it is driven by platform identity and applies before subdirectories
+	  are processed
+	- Default tiff-framework to ON for non-Darwin Apple platforms (iOS,
+	  tvOS, watchOS, visionOS) where .dylib is not permitted by the App
+	  Store; keep OFF on macOS where .dylib is the conventional format
+	- Short-circuit HAVE_LD_VERSION_SCRIPT=FALSE on Apple unconditionally,
+	  since ld64 does not support --version-script, avoiding a noisy probe
+
+2026-04-25  Treata11  <treata11@yahoo.com>
+
+	Build: Support for iOS-derived builds.
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'oss-fuzz' into 'master'
+	Add fuzzer for libtiff write logic
+
+	See merge request libtiff/libtiff!875
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Remove unused __TIFFSafeMultiply macro and MAX_SIZE constant.
+
+2026-04-25  Arthur Chan  <arthur.chan@adalogics.com>
+
+	Fix formatting and build script.
+
+	Fix formatting accordingly.
+
+	Create new fuzzer and integrate to libtiff.
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix-bufoverflow' into 'master'
+	tiffcrop: avoid buffer overflow in combineSeparateTileSamplesBytes()
+
+	See merge request libtiff/libtiff!848
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'tiffsplit-kostasl' into 'master'
+	tiffsplit: use 7-digit numbered output names
+
+	See merge request libtiff/libtiff!874
+
+2026-04-25  Kostas Lagogiannis  <costaslag@gmail.com>
+
+	tiffsplit: use 7-digit numbered output names.
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'issue-824-horizontalAccumulate8abgr' into 'master'
+	pixarlog: fix heap-buffer-overflow in 8BITABGR decode with stride 3 (#824)
+
+	See merge request libtiff/libtiff!873
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix/thumbnail-integer-overflow' into 'master'
+	thumbnail: prevent integer overflow by capping row count at 256
+
+	See merge request libtiff/libtiff!852
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'support_arm64_arm64ec' into 'master'
+	Enable support for arm64EC
+
+	See merge request libtiff/libtiff!830
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cmake-turbojpeg' into 'master'
+	cmake: Use TurboJPEG CONFIG by default
+
+	Closes #767
+
+	See merge request libtiff/libtiff!806
+
+2026-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	cmake: JPEG dual mode requires both functions.
+
+	cmake: Update JPEG dual mode check to use correct library target.
+
+	cmake: Update JPEG dual mode check to use check_symbol_exists.
+	* The existing approach failed with clang due to it not using declared symbols
+
+	cmake: Enable 8-/12-bit modes with TurboJPEG CONFIG.
+
+	cmake: Use TurboJPEG CONFIG by default.
+
+2026-04-24  waugustus  <wangdw.augustus@qq.com>
+
+	pixarlog: add comment explaining 4-byte advance in ABGR decode.
+
+2026-04-23  waugustus  <wangdw.augustus@qq.com>
+
+	pixarlog: fix heap-buffer-overflow in 8BITABGR decode with stride 3 (#824)
+
+2026-04-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Add libtiff/README_for_libtiff_developpers.md and reference it in various GetMaxCompressionRatio() functions
+
+2026-04-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-816-tiffcrop' into 'master'
+	tiffcrop: size separated region buffers from actual dimensions (#816)
+
+	See merge request libtiff/libtiff!871
+
+2026-04-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Add TIFFGetMaxCompressionRatio() and use it in _TIFFReadEncoded[Tile|Strip)AndAllocBuffer()
+	```rst
+
+	.. c:function:: uint64_t TIFFGetMaxCompressionRatio(TIFF *tif);
+
+	Description
+	-----------
+
+	:c:func:`TIFFGetMaxCompressionRatio` returns the maximum compression ratio
+	for the current codec, which is typically achieved for a uncompressed buffer
+	with all bytes at zero.
+
+	This function can be used to determine if the compressed size of a strip or tile
+	is realistic compared to the expected uncompressed size, to prevent some
+	denial-of-service scenarios.
+
+	Depending on the codec, it may take into account the strip or tile size,
+	number of samples per pixel, etc.
+
+	Some codecs don't implement that method, or only for a subset of configurations,
+	and may return 0 when the maximum compression ratio is unknown.
+
+	Return values
+	-------------
+
+	0 is returned if no maximum compression ratio is known.
+	1 is returned when there is no compression.
+	Values strictly bigger than 1 are returned when a maximum compression ratio is
+	known.
+	```
+
+	Fixes #781
+
+2026-04-21  waugustus  <wangdw.augustus@qq.com>
+
+	tiffcrop: size separated region buffers from actual dimensions.
+
+2026-04-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'reformat' into 'master'
+	Update pre-commit clang-format to v22.1.3 and apply 'pre-commit run --all'
+
+	See merge request libtiff/libtiff!870
+
+2026-04-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Update pre-commit clang-format to v22.1.3 and apply 'pre-commit run --all'
+
+2026-04-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'warning_fixes_armhf_32bit' into 'master'
+	Fix warning fixes with arm-linux-gnueabihf-gcc-13
+
+	See merge request libtiff/libtiff!868
+
+2026-04-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Fix warning fixes with arm-linux-gnueabihf-gcc-13.
+	Fixes
+	```
+	 /home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tiffiop.h:296:68: error: comparison of integer expressions of different signedness: 'tmsize_t' {aka 'long int'} and 'long unsigned int' [-Werror=sign-compare]
+	  296 | #define ReadOK(tif, buf, size) (TIFFReadFile((tif), (buf), (size)) == (size))
+	      |                                                                    ^~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_dirread.c:6141:14: note: in expansion of macro 'ReadOK'
+	 6141 |         if (!ReadOK(tif, origdir, (tmsize_t)dircount16 * dirsize))
+	      |              ^~~~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_dirread.c:6270:29: error: comparison of integer expressions of different signedness: 'tmsize_t' {aka 'long int'} and 'long unsigned int' [-Werror=sign-compare]
+	 6270 |         if ((m < off) || (m < (tmsize_t)dircount16 * dirsize) ||
+	      |                             ^
+	```
+
+2026-04-20  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'warning-additions5' into 'master'
+	Add extra warnings, with a focus upon the preprocessor
+
+	See merge request libtiff/libtiff!805
+
+2026-04-19  Roger Leigh  <rleigh@codelibre.net>
+
+	tif_write: Make expression less ambiguous.
+
+	tif_config: Don't check if macro defined when undefined.
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Run clang-format on all modified files.
+	Suggested-by: Timothy Lyanguzov <theta682@gitlab.com>
+	Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Use lowercase float literal suffixes.
+	Replace all uppercase F float literal suffixes with the more conventional
+	lowercase f across all source files for consistency.
+
+	Suggested-by: Timothy Lyanguzov <theta682@gitlab.com>
+	Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Simplify cmake byte order version check.
+	The CMAKE_VERSION >= 3.20 guard is redundant since CMAKE_C_BYTE_ORDER
+	is only defined by CMake 3.20+. If it's defined, the version is already
+	sufficient.
+
+	Suggested-by: Timothy Lyanguzov <theta682@gitlab.com>
+	Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Add -Wtrampolines to extra-warnings.
+
+	Add -Walloc-zero to extra-warnings.
+
+	Add -Wstringop-overflow=4 to extra-warnings.
+
+	Add -Warray-bounds=3 to extra-warnings.
+
+	Add -Wvla to extra-warnings.
+
+	Add -Wnested-externs to extra-warnings.
+
+	Add -Wold-style-definition to extra-warnings.
+
+	Add -Wundef to extra-warnings.
+
+	cmake: Add extra broken-warnings.
+	* Will promote to extra-warnings after testing
+
+	cmake: Unset /W3 before setting /W4.
+
+	tools: Use HAVE_UNISTD_H consistently.
+
+	cmake: Suppress warnings in Windows system headers.
+
+	tif_jpeg: Use HAVE_DECL_OPTARG consistently.
+
+	tif_jpeg: Use JPEG_LIB_MK1_OR_12BIT consistently.
+
+	port: Correct HAVE_GETOPT and HAVE_UNISTD_H usage.
+
+	cmake: Modernise endianness checks.
+
+	Correct WORDS_BIGENDIAN to always be defined to 1 or 0.
+
+	Add extra MSVC warnings.
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'warning-additions4' into 'master'
+	Add additional warnings, primarily floating precision conversions and integer arithmetic conversions
+
+	See merge request libtiff/libtiff!804
+
+2026-04-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge remote-tracking branch 'origin/master' into warning-additions4.
+
+2026-04-12  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix-integer-overflows' into 'master'
+	fix: add integer overflow checks to allocation size calculations
+
+	See merge request libtiff/libtiff!862
+
+2026-04-12  mohammadmseet-hue  <mohammadmseet@gmail.com>
+
+	fix: add integer overflow checks to allocation size calculations.
+	Several allocation sites compute buffer sizes using unchecked 32-bit
+	multiplication of attacker-controlled TIFF tag values. When the product
+	exceeds UINT32_MAX, the result wraps to a small value, causing undersized
+	allocations followed by heap buffer overflows.
+
+	Changes across 2 files (5 overflow sites):
+
+	- tif_dirwrite.c: 4 unchecked count*sizeof() replaced with
+	  _TIFFCheckMalloc
+	- tif_print.c: 1 tv_size*value_count replaced with _TIFFCheckMalloc
+
+	All 158 existing tests pass.
+
+2026-04-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_777_part1_division_by_zero_and_move_params_to_tif_dir' into 'master'
+	tif_read.c: Fixed division by zero in TIFFStartStrip() by correctly initialising the parameters and checking for zero (fixes #777 first part)
+
+	See merge request libtiff/libtiff!863
+
+2026-04-10  Su_Laus  <sulau@freenet.de>
+
+	Some editorials due to suggestions.
+
+2026-04-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'master' into 'master'
+	Check result of _TIFFCheckRealloc
+
+	See merge request libtiff/libtiff!865
+
+2026-04-08  Roger Leigh  <rleigh@codelibre.net>
+
+	Widen pointer-offset arithmetic in tif_getimage.c.
+	Cast `line` to `size_t` before multiplying by `w` in the horizontal
+	flip loops, so the pointer offset computation happens at pointer
+	width rather than uint32_t. Prevents overflow for large images
+	where line * w exceeds UINT32_MAX.
+
+2026-04-08  Roger Leigh  <rleigh@codelibre.net>
+
+	Move widening casts inside arithmetic scope (additional cases)
+	Extend the approach from 96ea0393 to additional cases: place widening
+	casts on operands rather than wrapping the arithmetic result, so the
+	computation happens at the wider type. This covers additions,
+	subtractions, and multiplications used for memory sizes, buffer
+	offsets, and function arguments.
+
+	For cases where the moved cast creates a same-precedence ambiguity
+	(e.g. in % or / expressions), add grouping parentheses to preserve
+	the original semantics.
+
+2026-04-07  Aymeric Esparre  <aymeric.esparre@gmail.com>
+
+	Check result of _TIFFCheckRealloc to prevent memory leaks and segmentation fault when reallocation fails.
+
+2026-04-06  Su_Laus  <sulau@freenet.de>
+
+	tif_read.c: Fixed division by zero in TIFFStartStrip() by correctly initialising the parameters and checking for zero (resolves the first issue from #777)
+	Move the tif-directory related parameters tif_scanlinesize, tif_tilesize, tif_row, tif_curstrip, tif_col, tif_curtile, tif_tilesize from the tif structure to the tif_dir structure.
+	Initialise these parameters not only in TIFFClientOpenExt(), but also in TIFFDefaultDirectory() using the new function _TIFFResetTifDirAndInitStrileCounters().
+	The partial initialisation of these parameters is removed from TIFFReadDirectory(), TIFFCreateDirectory(), TIFFCreateCustomDirectory() and TIFFUnlinkDirectory(), where TIFFDefaultDirectory() and thus _TIFFResetTifDirAndInitStrileCounters() is called.
+
+	In TIFFStartStrip(), check for td_stripsperimage == 0 to avoid division by zero.
+
+	This initialisation resolves the first issue from #777.
+
+2026-04-05  Roger Leigh  <rleigh@codelibre.net>
+
+	Move widening casts inside multiplication scope.
+	Place widening casts where the multiplication is performed rather
+	than wrapping the entire result. This ensures arithmetic happens
+	at the wider type, reducing the chance of overflow.
+
+	For sizeof patterns, cast the non-sizeof operand to (size_t)
+	before multiplication: (tmsize_t)((size_t)count * sizeof(type)).
+	For integer arithmetic, cast the variable directly:
+	constant + (uint64_t)dircount * constant + constant.
+
+2026-04-05  Roger Leigh  <rleigh@codelibre.net>
+
+	Use dircount64 directly to avoid unnecessary narrowing and widening.
+	Where dircount64 (uint64_t) is already validated and in scope, use it
+	directly in multiplication instead of narrowing to uint16_t and casting
+	back. Remove the now-unused dircount/dircount16 variables from the
+	affected blocks.
+
+	Add TIFF_FLOAT_EQ/TIFF_DOUBLE_EQ macros and use throughout.
+	Define TIFF_FLOAT_EQ and TIFF_DOUBLE_EQ macros in tiffiop.h to
+	centralise the fabs/fabsf-based float equality pattern used to
+	suppress -Wfloat-equal warnings. Replace all inline occurrences
+	across library, tools, and test files with the new macros.
+
+	Use lowercase float literal suffixes.
+	Replace all uppercase F float literal suffixes with the more conventional
+	lowercase f across all source files for consistency.
+
+2026-04-05  Roger Leigh  <rleigh@codelibre.net>
+
+	Remove redundant (size_t) casts in tmsize_t allocation expressions.
+	When the count operand is already unsigned (uint16_t, uint32_t,
+	uint64_t), the intermediate (size_t) cast in expressions like
+	(tmsize_t)((size_t)count * sizeof(T)) is redundant — the
+	multiplication with sizeof (which returns size_t) already promotes
+	the unsigned count via the usual arithmetic conversions.
+
+	Simplify to (tmsize_t)(count * sizeof(T)) for all 40 occurrences
+	where the count is unsigned. Retain the (size_t) cast for the 18
+	occurrences where the count is signed (int, tmsize_t, int32_t).
+
+2026-04-05  Roger Leigh  <rleigh@codelibre.net>
+
+	Simplify typecasts using unsigned constant suffixes and better types.
+	Use U-suffixed constants (1U, 255U, 12U, 20U) instead of explicit
+	(uint32_t) casts on expressions. Change CMYK local variables from
+	uint16_t/uint32_t to unsigned int to match the natural arithmetic
+	type. Remove redundant intermediate casts: inner (int16_t) before
+	shift in tif_luv.c, unnecessary (size_t) wrapping in tif_dirread.c,
+	and redundant (double) on already-double variables in tiff2ps.c.
+
+	tif_color: Use 1.0F instead of 1 in Code2V ternary and remove redundant cast
+	Use a float literal for the fallback value so both branches of the
+	ternary have the same type, and drop the now-unnecessary outer (float)
+	cast.
+
+	test: Fix -Wconversion warnings in test_transferfunction_write_read.c.
+	Add explicit (size_t) and (tmsize_t) casts in buffer size calculations
+	to prevent implicit integer conversion warnings when computing
+	allocation sizes and memcmp lengths.
+
+	test: Fix -Wdouble-promotion and operator precedence warnings in test_write_read_tags.c
+	Add (double) casts on float arguments to printf and in float-to-double
+	arithmetic. Fix operator precedence in (short)(i + 1) * 7 which casts
+	before multiplying — should be (short)((i + 1) * 7).
+
+	test: Fix -Wdouble-promotion warnings in rational_precision2double.c.
+	Add explicit (double) casts on float arguments passed to variadic
+	functions (printf, TIFFSetField) and in arithmetic expressions where
+	float is implicitly promoted to double.
+
+	test: Use check_tag.h include in tifftest.h instead of inline declarations
+	Replace the inline function declarations with an include of check_tag.h
+	which provides the canonical declarations for CheckShortField,
+	CheckShortPairedField, and CheckLongField.
+
+	test: Use tifftest.h include instead of extern declaration in long_tag.c
+	Replace the bare extern declaration of CheckLongField with an include
+	of tifftest.h, which provides all check function declarations via
+	check_tag.h. Fixes -Wmissing-prototypes style warning.
+
+	Add -Wunused-macros to extra-warnings.
+
+	Add -Wmisleading-indentation to extra-warnings.
+
+	Add -Wunused-local-typedefs to extra-warnings.
+
+	Add -Wmissing-include-dirs to extra-warnings.
+
+	Add -Wbool-operation to extra-warnings.
+
+	Add -Wunreachable-code to extra-warnings.
+
+	Add -Wdangling-else to extra-warnings.
+
+	Add -Wno-int-to-pointer-cast to extra-warnings.
+
+	Add -Wlogical-not-parentheses to extra-warnings.
+
+	Add -Wlogical-op to extra-warnings.
+
+	Add -Wsizeof-pointer-memaccess to extra-warnings.
+
+	Add -Wsizeof-pointer-div to extra-warnings.
+
+	Add -Wsizeof-array-div to extra-warnings.
+
+	Add -Wredundant-decls to extra-warnings.
+
+	Add -Wmissing-declarations to extra-warnings.
+
+	Add -Wunused-parameter to extra-warnings.
+
+	Add -Wduplicated-cond to extra-warnings.
+
+	Add -Wduplicated-branches to extra-warnings.
+
+	Add -Wuninitialized to extra-warnings.
+
+	Add -Wfloat-equal to extra-warnings.
+
+	Add -Wfloat-conversion to extra-warnings.
+
+	Add -Wdouble-promotion to extra-warnings.
+
+	Add -Warith-conversion to extra-warnings.
+
+	Add -Wsign-conversion to extra-warnings.
+
+	Fix -Wconversion warnings with Clang.
+	Cast bitwise NOT results to avoid implicit integer conversion
+	warnings on unsigned char and uint16_t.
+
+2026-04-04  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tif_jpeg_warning_fix' into 'master'
+	tif_jpeg.c: fix MSVC compiler warning
+
+	See merge request libtiff/libtiff!861
+
+2026-04-04  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_jpeg.c: fix MSVC compiler warning.
+	Fixes MSVC 19.44.35225.0:
+	D:\a\gdal\gdal\frmts\gtiff\libtiff\tif_jpeg.c(2036,40): error C2220: the following warning is treated as an error [D:\a\gdal\gdal\build\frmts\gtiff\libtiff\libtiff.vcxproj]
+	D:\a\gdal\gdal\frmts\gtiff\libtiff\tif_jpeg.c(2036,40): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?) [D:
+
+	Reformatting fix.
+
+2026-04-04  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'warning-additions3' into 'master'
+	Add additional warnings: write-strings and conversion
+
+	See merge request libtiff/libtiff!802
+
+2026-04-04  Roger Leigh  <rleigh@codelibre.net>
+
+	tiff_ojpeg: Correct cast.
+
+	tiff2ps: Simplify casts in ps_bytesperrow calculation.
+
+	iptcutil: Don't check if unsigned value is less than zero.
+
+	Merge remote-tracking branch 'origin/master' into warning-additions3.
+
+2026-04-04  Vladimir D. Seleznev  <vseleznev@cloudlinux.com>
+
+	tiffcrop: Remove dead code in combineSeparateTileSamplesBytes()
+
+2026-04-01  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-808-put1bitbwtile' into 'master'
+	tif_getimage: reject tile widths that would overflow toskew (#808)
+
+	See merge request libtiff/libtiff!860
+
+2026-04-01  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_805' into 'master'
+	TIFFVTileSize64(): in YCbCr contig non upsampled mode, validate td_samplesperpixel==3
+
+	Closes #805
+
+	See merge request libtiff/libtiff!859
+
+2026-04-01  waugustus  <wangdw.augustus@qq.com>
+
+	tif_getimage: reject tile widths that would overflow toskew (#808)
+
+2026-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_777_part2_null_pointer_dereferencing' into 'master'
+	TIFFAppendToStrip(): add some checks to avoid null-pointer-dereferencing (fixes #777 second issue)
+
+	Closes #777
+
+	See merge request libtiff/libtiff!853
+
+2026-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue_802_tiffcmp' into 'master'
+	tiffcmp: validate scanline buffer sizes in mixed planar comparison to prevent out-of-bounds reads (#802)
+
+	See merge request libtiff/libtiff!855
+
+	Fixes #802
+
+2026-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-803-tiffcrop' into 'master'
+	tiffcrop: Fix heap-buffer-overflow in composite mode by allocating buffer based on final image layout instead of region-based bufftotal (#803)
+
+	See merge request libtiff/libtiff!856
+
+2026-03-29  4ugustus  <wangdw.augustus@qq.com>
+
+	tiffcrop: Fix heap-buffer-overflow in composite mode by allocating buffer based on final image layout instead of region-based bufftotal
+	Fixes #803
+
+2026-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-804-tiff2pdf' into 'master'
+	tiff2pdf: Fix integer overflow in RGBA raster allocation in tiff2pdf by validating size computation before _TIFFrealloc() (#804)
+
+	See merge request libtiff/libtiff!857
+
+2026-03-29  4ugustus  <wangdw.augustus@qq.com>
+
+	tiff2pdf: Fix integer overflow in RGBA raster allocation in tiff2pdf by validating size computation before _TIFFrealloc()
+	Fixes #804
+
+2026-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFVTileSize64(): in YCbCr contig non upsampled mode, validate td_samplesperpixel==3
+	to reflect the same check as done in TIFFVStripSize64().
+	Actually unify both implementations to avoid them drifting apart.
+
+	Adapted from proposed fix of https://gitlab.com/libtiff/libtiff/-/merge_requests/858
+	by Quang Luong (@gabezrupp)
+
+	Avoids out-of-bounds access in raw decoding mode on malformed files.
+
+	Fixes #805
+
+2026-03-26  waugustus  <wangdw.augustus@qq.com>
+
+	tiffcmp: validate scanline buffer sizes in mixed planar comparison to prevent out-of-bounds reads (#802)
+
+2026-03-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix-partial-read-overflow' into 'master'
+	Fix integer overflow in _TIFFPartialReadStripArray on 32-bit
+
+	See merge request libtiff/libtiff!854
+
+2026-03-23  Koda Reef  <kodareef5@gmail.com>
+
+	Fix integer overflow in _TIFFPartialReadStripArray on 32-bit.
+	MR !851 fixed an identical overflow at line 8248 by adding a
+	(uint64_t) cast to prevent 32-bit wraparound in the multiplication
+	of sizeofval * strile. The same function has the same unchecked
+	pattern at line 8256 where arraySize * sizeofval can wrap on
+	32-bit platforms where size_t is 32-bit.
+
+	Apply the same (uint64_t) cast to ensure the multiplication is
+	performed in 64-bit arithmetic before addition with nBaseOffset.
+
+2026-03-22  dataisland  <dataisland@outlook.com>
+
+	thumbnail: improve integer overflow check for image memory allocation.
+
+	thumbnail: add integer overflow check for image memory allocation.
+
+2026-03-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch '_TIFFPartialReadStripArray_overflow' into 'master'
+	_TIFFPartialReadStripArray(): avoid potential (unsigned) integer overflow in...
+
+	See merge request libtiff/libtiff!851
+
+2026-03-22  Su_Laus  <sulau@freenet.de>
+
+	TIFFAppendToStrip(): add some checks to avoid null-pointer-dereferencing (fixes #777 second issue).
+
+2026-03-22  dataisland  <dataisland@outlook.com>
+
+	thumbnail: prevent integer overflow by capping row count at 256.
+
+2026-03-21  Even Rouault  <even.rouault@spatialys.com>
+
+	_TIFFPartialReadStripArray(): avoid potential (unsigned) integer overflow in file offset computation, on 32 bit builds
+
+2026-03-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/rgb2ycbcr-crash' into 'master'
+	rgb2ycbcr: fix integer overflow check for pixel count calculation
+
+	See merge request libtiff/libtiff!850
+
+2026-03-19  dataisland  <dataisland@outlook.com>
+
+	rgb2ycbcr: fix integer overflow check for pixel count calculation.
+
+2026-03-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/thumbnail-nullptr-deref' into 'master'
+	thumbnail: validate strip/tile byte-count fields before raw copy
+
+	See merge request libtiff/libtiff!847
+
+2026-03-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'pixarlog_warning_fixes' into 'master'
+	tif_pixarlog.c: fix -Wshorten-64-to-32 warnings
+
+	See merge request libtiff/libtiff!849
+
+2026-03-18  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_pixarlog.c: fix -Wshorten-64-to-32 warnings.
+	Fixes
+	```
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:958:43: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  958 |                 horizontalAccumulateF(up, llen, sp->stride, (float *)op,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:963:44: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  963 |                 horizontalAccumulate16(up, llen, sp->stride, (uint16_t *)op,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:968:44: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  968 |                 horizontalAccumulate12(up, llen, sp->stride, (int16_t *)op,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:973:44: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  973 |                 horizontalAccumulate11(up, llen, sp->stride, (uint16_t *)op);
+	      |                 ~~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:977:43: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  977 |                 horizontalAccumulate8(up, llen, sp->stride, (unsigned char *)op,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:982:47: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	  982 |                 horizontalAccumulate8abgr(up, llen, sp->stride,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~     ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:1349:52: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	 1349 |                 horizontalDifferenceF((float *)bp, llen, sp->stride, up,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~              ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:1354:56: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	 1354 |                 horizontalDifference16((uint16_t *)bp, llen, sp->stride, up,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~~                 ^~~~
+	/home/runner/work/gdal/gdal/frmts/gtiff/libtiff/tif_pixarlog.c:1359:60: error: implicit conversion loses integer precision: 'tmsize_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+	 1359 |                 horizontalDifference8((unsigned char *)bp, llen, sp->stride, up,
+	      |                 ~~~~~~~~~~~~~~~~~~~~~                      ^~~~
+	```
+
+2026-03-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_773' into 'master'
+	JPEG: fix generation of tiled 12-bit JPEG compressed files with libjpeg-turbo 3.0.3
+
+	Closes #773
+
+	See merge request libtiff/libtiff!846
+
+2026-03-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_789' into 'master'
+	PixarLog: fix undoing horizontal differencing when SamplesPerPixel != 3 and 4
+
+	Closes #789
+
+	See merge request libtiff/libtiff!845
+
+2026-03-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_795' into 'master'
+	OJPEG: fix nullptr deref when changing compression method from OJPEG to something else
+
+	Closes #795
+
+	See merge request libtiff/libtiff!844
+
+2026-03-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_796' into 'master'
+	OJPEG codec: fix potential integer overflow/out-of-bounds access
+
+	Closes #796
+
+	See merge request libtiff/libtiff!843
+
+2026-03-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_797' into 'master'
+	PixarLog codec: fix potential integer overflow/out-of-bounds access
+
+	Closes #797
+
+	See merge request libtiff/libtiff!842
+
+2026-03-17  dataisland  <dataisland@outlook.com>
+
+	thumbnail.c: add error handling for missing strip and tile byte counts.
+
+2026-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	_TIFFSetDefaultPostDecode(): improve code comment for bitspersample == 128
+
+2026-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	JPEG: fix generation of tiled 12-bit JPEG compressed files with libjpeg-turbo 3.0.3
+	Fixes #773
+
+	Patch by D. R. Commander. (@dcommander)
+
+2026-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	PixarLog: fix undoing horizontal differencing when SamplesPerPixel != 3 and 4
+	Patch by Christoph Gohlke (@cgohlke)
+
+	Fixes #789
+
+2026-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	OJPEG: fix nullptr deref when changing compression method from OJPEG to something else
+	Fixes #795
+
+	OJPEG codec: fix potential integer overflow/out-of-bounds access.
+	Fixes #796
+
+	PixarLog codec: fix potential integer overflow/out-of-bounds access.
+	Fixes #797
+
+2026-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'thumbnail_build_fix' into 'master'
+	thumbnail.c: add missing include (master only)
+
+	See merge request libtiff/libtiff!841
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	thumbnail.c: add missing include (master only)
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'formatting_fixes' into 'master'
+	Formatting fixes
+
+	See merge request libtiff/libtiff!840
+
+2026-03-15  Roger Leigh  <rleigh@codelibre.net>
+
+	thumbnail: Include tiffiop.h for _TIFFMultiply32.
+
+	Merge remote-tracking branch 'origin/master' into warning-additions3.
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-790-median' into 'master'
+	fix UAF in tiffmedian (#790)
+
+	See merge request libtiff/libtiff!831
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-790-thumbnail' into 'master'
+	fix Out-of-Bounds Write in thumbnail (#790)
+
+	See merge request libtiff/libtiff!832
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-790-tiffsplit' into 'master'
+	fix global-buffer-overflow in tiffsplit (#790)
+
+	See merge request libtiff/libtiff!833
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-790-tiffcrop' into 'master'
+	fix undefined behaviour in tiffcrop (#790)
+
+	See merge request libtiff/libtiff!834
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-792-put16bitbwtile' into 'master'
+	fix inconsistent fromskew handling in put16bitbwtile (#792)
+
+	See merge request libtiff/libtiff!836
+
+2026-03-15  Roger Leigh  <rleigh@codelibre.net>
+
+	Simplify casts using more appropriate types.
+
+	Add -Wconversion to extra-warnings.
+
+	Add -Wc99-c11-compat to extra-warnings.
+
+	Add -Wwrite-strings to extra-warnings.
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Formatting fixes.
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue_799_strtoul' into 'master'
+	tools: validate numeric command-line arguments (#799)
+
+	See merge request libtiff/libtiff!839
+
+2026-03-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_798' into 'master'
+	putcontig8bitYCbCr44tile: fix wrong fromskew computation
+
+	Closes #798
+
+	See merge request libtiff/libtiff!838
+
+2026-03-13  waugustus  <wangdw.augustus@qq.com>
+
+	tools: validate numeric command-line arguments (#799)
+
+2026-03-13  Even Rouault  <even.rouault@spatialys.com>
+
+	putcontig8bitYCbCr44tile: fix wrong fromskew computation.
+	Fix error introduced in 06155116f6ee7f910ac5a8a60e0852c621d72306
+
+	Fixes #798
+
+2026-03-11  waugustus  <wangdw.augustus@qq.com>
+
+	fix inconsistent fromskew handling in put16bitbwtile (#792)
+
+2026-03-03  4ugustus  <wangdw.augustus@qq.com>
+
+	Simplify cleanup by removing redundant NULL check.
+
+2026-03-03  waugustus  <wangdw.augustus@qq.com>
+
+	fix undefined behaviour in tiffcrop (#790)
+
+	fix global-buffer-overflow in tiffsplit (#790)
+
+	fix oob write in thumbnail (#790)
+
+	fix UAF in tiffmedian(#790)
+
+2026-02-26  amaldika  <amaldika@qti.qualcomm.com>
+
+	Enable support for arm64EC.
+
+2026-02-24  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-cygwin-runner' into 'master'
+	ci: Use dedicated runner for Cygwin builds
+
+	See merge request libtiff/libtiff!829
+
+2026-02-24  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Correct Cygwin invocation to use proper PATH settings.
+
+	ci: Run Cygwin bash shell directly.
+
+	ci: Use dedicated runner for Cygwin builds.
+
+2026-02-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_787' into 'master'
+	TIFFReadRGBAImage(): prevent integer overflow and later heap overflow on...
+
+	Closes #787
+
+	See merge request libtiff/libtiff!828
+
+2026-02-23  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-vs-windows-containers' into 'master'
+	CI: Add Windows container builds for visual studio
+
+	See merge request libtiff/libtiff!827
+
+2026-02-22  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFReadRGBAImage(): prevent integer overflow and later heap overflow on images with huge width in YCbCr tile decoding functions
+	Fixes https://gitlab.com/libtiff/libtiff/-/issues/787
+
+2026-02-22  Roger Leigh  <rleigh@codelibre.net>
+
+	test: Correct MSVC warnings.
+
+	Use Windows Containers for VS2022 and VS2026 builds.
+
+2026-02-14  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-784-tiffcrop' into 'master'
+	fix stack-overflow in #784
+
+	See merge request libtiff/libtiff!823
+
+2026-02-14  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-782-TIFFPrintDirectory' into 'master'
+	Fix NULL pointer deference in TIFFPrintDirectory  in #782
+
+	See merge request libtiff/libtiff!824
+
+2026-02-14  waugustus  <wangdw.augustus@qq.com>
+
+	fix null pointer deference in #782.
+
+2026-02-12  waugustus  <wangdw.augustus@qq.com>
+
+	fix stack-overflow in #784.
+
+2026-02-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'formatting_fixes' into 'master'
+	Formatting fixes
+
+	See merge request libtiff/libtiff!822
+
+2026-02-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Formatting fixes.
+
+2026-02-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ci-cygwin' into 'master'
+	CI: Switch Cygwin builds to use Windows Docker image
+
+	See merge request libtiff/libtiff!821
+
+2026-02-06  Roger Leigh  <rleigh@codelibre.net>
+
+	CI: Switch MinGW builds to use Windows Docker image.
+	Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
+	ci: Revert to use powershell.
+
+2026-02-06  Roger Leigh  <rleigh@codelibre.net>
+
+	CI: Add bash tag to Cygwin Docker jobs.
+	Route Cygwin jobs to a dedicated runner with shell=bash, since the
+	Cygwin Docker image does not contain pwsh.
+
+	Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
+2026-02-06  Roger Leigh  <rleigh@codelibre.net>
+
+	CI: Switch Cygwin builds to use Windows Docker image.
+	Use the codelibre/containers/cygwin-libtiff Docker image instead of
+	bare-metal Cygwin runners. This simplifies the script invocation since
+	the container's default shell is already Cygwin bash.
+
+	Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
+2026-02-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffdump_unaligned_memory_access_fix_776' into 'master'
+	tiffdump: Avoid unaligned memory access for tag field values.
+
+	Closes #776
+
+	See merge request libtiff/libtiff!816
+
+2026-02-02  Su Laus  <sulau@freenet.de>
+
+	tiffdump: Avoid unaligned memory access for tag field values.
+
+2026-02-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'change_EXIF_tags_type_to_LONG8' into 'master'
+	Change EXIF and GPS tag type from IFD8 to LONG8 - EXIF-specification -  #739
+
+	Closes #739
+
+	See merge request libtiff/libtiff!819
+
+2026-02-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'amend_tools_and_test_for_CPP_compatibility' into 'master'
+	Amend test and tools for cxx compatibility - mainly "const char *".
+
+	See merge request libtiff/libtiff!820
+
+2026-02-01  Su_Laus  <sulau@freenet.de>
+
+	Amend test and tools for cxx compatibility - mainly "const char *". Some additional re-formating due to clang-format.
+
+2026-01-30  Su_Laus  <sulau@freenet.de>
+
+	CPP compatibility.
+
+	Change EXIF and GPS tag type from IFD8 to LONG8 (UINT64) to fulfill current EXIF-specification.
+	Closes #739
+
+2026-01-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ojpeg-eof-return' into 'master'
+	ojpeg: prevent EOF infinite loop (fixes commit 2a3d55b)
+
+	See merge request libtiff/libtiff!818
+
+2026-01-22  Lovell Fuller  <github@lovell.info>
+
+	ojpeg: prevent EOF infinite loop (fixes commit 2a3d55b)
+
+2026-01-22  Bob Friesenhahn  <graphicsmagick.project@gmail.com>
+
+	Merge branch 'tif_dirread.c-duplicate-TIFF_SETGET_C0_IFD8' into 'master'
+	Eliminate duplicate case TIFF_SETGET_C0_IFD8
+
+	See merge request libtiff/libtiff!817
+
+2026-01-22  Bob Friesenhahn  <bobjfriesenhahn@gmail.com>
+
+	Eliminate duplicate case TIFF_SETGET_C0_IFD8.
+
+2026-01-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp-770' into 'master'
+	tiffcp - avoid integer overflow in iskew and oskew, #770
+
+	See merge request libtiff/libtiff!813
+
+2026-01-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'align_handling_of_LONG8_IFD8_tags' into 'master'
+	Align writing and reading of TIFF_LONG8 and TIFF_IFD8 tags.
+
+	See merge request libtiff/libtiff!773
+
+2026-01-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fax2tiff-759' into 'master'
+	fax2tiff: avoid endless loop on corrupt input, #759
+
+	See merge request libtiff/libtiff!807
+
+2026-01-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffsplit-769' into 'master'
+	tiffsplit: check filename length, #769
+
+	See merge request libtiff/libtiff!808
+
+2026-01-19  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'warning-additions2' into 'master'
+	Add additional compiler warnings to extra-warnings
+
+	See merge request libtiff/libtiff!800
+
+2026-01-09  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiffcp - avoid integer overflow in iskew and oskew, #770.
+
+2025-12-31  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiffsplit: check filename length, #769.
+
+	fax2tiff: avoid endless loop on corrupt input, #759.
+
+2025-12-29  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge remote-tracking branch 'origin/master' into warning-additions2.
+
+2025-12-27  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix_ossfuzz_471945501' into 'master'
+	JPEGDecode(): fix memory leak in error code path
+
+	See merge request libtiff/libtiff!803
+
+2025-12-27  Even Rouault  <even.rouault@spatialys.com>
+
+	JPEGDecode(): fix memory leak in error code path.
+	Fixes https://issues.oss-fuzz.com/issues/471945501
+
+2025-12-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'warning-additions' into 'master'
+	ci: Build CMake builds with extra-warnings
+
+	See merge request libtiff/libtiff!798
+
+2025-12-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ossfuzz_471472003' into 'master'
+	TIFFFillStrip(): prevent harmless unsigned integer overflow
+
+	See merge request libtiff/libtiff!801
+
+2025-12-25  Roger Leigh  <rleigh@codelibre.net>
+
+	Add version guards for LZMA enums.
+
+	Add -Wswitch-enum to extra-warnings.
+	* Fix warnings
+
+	Add -Wswitch-default to extra-warnings.
+	* Fix warnings
+
+2025-12-25  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFFillStrip(): prevent harmless unsigned integer overflow.
+	Fixes https://issues.oss-fuzz.com/issues/471472003
+
+2025-12-24  Roger Leigh  <rleigh@codelibre.net>
+
+	Add -Wstrict-prototypes and -Wmissing-prototypes to extra-warnings.
+	* Add 'static' keyword to file-local functions that lack external visibility
+	* Create header files for functions shared between test source files
+
+	Add -Wshadow to extra-warnings.
+
+	Add -Wnull-dereference to extra-warnings.
+
+2025-12-24  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix_ossfuzz_471328917' into 'master'
+	_TIFFGetStrileOffsetOrByteCountValue(): fix potential crash on corrupted files...
+
+	See merge request libtiff/libtiff!799
+
+2025-12-24  Roger Leigh  <rleigh@codelibre.net>
+
+	Correct -Wformat errors.
+	Fix format string mismatches where the format specifier doesn't match
+	the argument type:
+
+	- Change %d to %u for unsigned int/uint32_t arguments
+	- Change %u to %d for signed int arguments
+	- Add casts where needed for printf family functions
+	- Use PRIu64/PRIi64 for uint64_t/int64_t arguments
+
+	Fix -Wformat-nonliteral warnings
+
+	Add TIFF_ATTRIBUTE((__format__(__printf__, N, 0))) to functions that
+	accept format strings as parameters (va_list style). The 0 indicates
+	no variadic arguments to check since the format is validated at the
+	call site.
+
+2025-12-24  Roger Leigh  <rleigh@codelibre.net>
+
+	Correct -pedantic errors.
+	* Missing void in function declarations
+	* Extra semicolons
+
+	ci: Build CMake builds with extra-warnings.
+	* Split extra-warnings into extra-warnings and broken-warnings
+	* extra-warnings initially only uses -pedantic -Wextra
+	* Warnings will be moved from broken-warnings to extra-warnings
+	  once the CI builds have proved them safe to use
+
+	ci: Pre-build is static.
+	* Includes additional test source files
+
+2025-12-24  Even Rouault  <even.rouault@spatialys.com>
+
+	_TIFFGetStrileOffsetOrByteCountValue(): fix potential crash on corrupted files when file opened in 'O' mode
+	Fixes https://issues.oss-fuzz.com/issues/471328917
+
+2025-12-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'typo_fix' into 'master'
+	tif_dirread.c: fix typo in code comment (master only)
+
+	See merge request libtiff/libtiff!797
+
+2025-12-23  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_dirread.c: fix typo in code comment (master only)
+
+2025-12-22  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix_ossfuzz_470691578' into 'master'
+	TIFFReadDirectory(): re-set TIFF_LAZYSTRILELOAD if file opened in 'O' mode
+
+	See merge request libtiff/libtiff!793
+
+2025-12-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Rework TIFF_LAZYSTRILELOAD flag.
+
+2025-12-22  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFReadDirectory(): re-set TIFF_LAZYSTRILELOAD if file opened in 'O' mode
+	This fixes a potential heap write buffer overflow when reading a
+	corrupted file, with multiple IFDs, and when iterating over those IFDs,
+	and when the file was opened in 'O' mode.
+
+	Fixes https://issues.oss-fuzz.com/issues/470691578
+
+2025-12-21  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-vcpkg' into 'master'
+	ci: Use vcpkg installation specific to libtiff
+
+	See merge request libtiff/libtiff!792
+
+2025-12-21  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Use vcpkg installation specific to libtiff.
+
+2025-12-21  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cpp-check' into 'master'
+	Add explicit casts for void* and int-to-enum conversions
+
+	See merge request libtiff/libtiff!791
+
+2025-12-21  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: enforce MSVC /W4 warnings.
+
+	Correct MSVC /W4 warnings.
+	* Shadowing (add local_ prefix)
+	* Conversion (add casts)
+	* Initialisation (initialise with value)
+
+2025-12-20  Roger Leigh  <rleigh@codelibre.net>
+
+	tif_dirinfo: Restore MSVC warning disable 4132.
+
+	ci: Run compatibility checks before main builds.
+
+	Allow tif_jbig to compile with C++ compiler.
+
+	cmake: Improve tiff_target_compile_as_cxx implementation.
+
+	tif_dir: Correct C++ circular dependency warning.
+
+2025-12-18  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Test C++ compatibility mode.
+
+2025-12-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Add CMake options for C++ compatibility checking.
+	Add two new CMake options to help maintain C++ compatibility:
+
+	1. cxx-compat-warnings: Enables -Wc++-compat flag (GCC/Clang) which
+	   warns about using C++ keywords as identifiers and some enum/int
+	   conversions. This is limited and won't catch all issues.
+
+	2. cxx-compat-mode: Compiles C source files as C++17 using -x c++
+	   (GCC/Clang) or /TP (MSVC). This catches all C++ incompatibilities
+	   as compile errors, including:
+	   - implicit void* to typed pointer conversions
+	   - register storage class (removed in C++17)
+	   - goto/switch jumping over variable initialization
+	   - enum arithmetic and implicit conversions
+
+	Usage:
+	  cmake -Dcxx-compat-warnings=ON ..  # Light checking
+	  cmake -Dcxx-compat-mode=ON ..      # Full C++ compilation
+
+2025-12-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Fix remaining C++ compatibility issues.
+	- tif_compress.c: Cast const away for strcpy to initialized const char* field
+	- tif_jpeg.c: Add unsigned short* cast for malloc result
+	- tif_ojpeg.c: Add JSAMPARRAY and JSAMPIMAGE casts for jpeg functions
+	- tif_print.c: Change sep variable from char* to const char*
+	- mkspans.c: Convert K&R style functions to ANSI C, add return type to main
+
+	Add more explicit void* to typed pointer casts in tools.
+	Additional C++ compatibility fixes for implicit void* to typed pointer
+	conversions that are not allowed in C++. These files had function calls
+	where void* (tdata_t) was passed to functions expecting typed pointers
+	like uint8_t* or unsigned char*.
+
+2025-12-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Add explicit casts for void* and int-to-enum conversions.
+	C++ is stricter about type conversions than C:
+
+	1. void* to typed pointer: In C++ you cannot implicitly convert void*
+	   to a typed pointer. Add explicit casts for custom tag value pointers
+	   passed to TIFFWriteDirectoryTag* functions.
+
+	2. Integer to enum: C++ requires explicit casts when assigning integer
+	   types to enum types. Add casts for:
+	   - TIFFDataWidth() calls where tdir_type (uint16_t) is passed
+	   - TIFFDataType assignments from uint16_t entry_type
+
+	Files modified:
+	- tif_dirwrite.c: Cast td_customValues[m].value to appropriate types
+	  for each TIFF type (char*, uint8_t*, int8_t*, uint16_t*, etc.)
+	  and cast entry_type to TIFFDataType where needed
+	- tif_dirread.c: Cast tdir_type to TIFFDataType for TIFFDataWidth calls
+
+2025-12-18  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-windows' into 'master'
+	ci: Add Windows builds
+
+	See merge request libtiff/libtiff!790
+
+2025-12-17  Roger Leigh  <rleigh@codelibre.net>
+
+	Add .gitattributes.
+
+	ci: Corrections for Cygwin and MinGW builds.
+
+	ci: Restrict most jobs to libtiff/libtiff.
+
+2025-12-16  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Add Windows builds.
+
+	ci: Drop AppVeyor use.
+
+2025-12-16  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'TIFFReadDirEntryPersampleShort_zero' into 'master'
+	TIFFReadDirEntryPersampleShort(): reject tags with tdir_count=0 (master only)
+
+	Closes #764
+
+	See merge request libtiff/libtiff!788
+
+2025-12-16  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffFieldArray_msvc_warning' into 'master'
+	tif_dirinfo.c: re-add MSVC warning suppression (master only)
+
+	See merge request libtiff/libtiff!789
+
+2025-12-16  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_dirinfo.c: re-add MSVC warning suppression (master only)
+	It has been removed by a recent commit, but is still needed to get a
+	warning free build when using most verbose warning levels.
+
+2025-12-16  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFReadDirEntryPersampleShort(): reject tags with tdir_count=0 (master only)
+	This amends commit b8fda5eeb8567d63f37e18b24a37e7e4d7a5bfdc that could
+	lead to reading uninitialized variables.
+
+	Fixes #764
+
+2025-12-16  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-linux' into 'master'
+	ci: Use Linux Docker runner
+
+	See merge request libtiff/libtiff!787
+
+2025-12-15  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Use Linux Docker runner.
+
+2025-12-15  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-macos' into 'master'
+	ci: Add MacOS and FreeBSD builds
+
+	See merge request libtiff/libtiff!786
+
+2025-12-15  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Add MacOS and FreeBSD builds.
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix-enum-cpp-compat' into 'master'
+	Fix enum-related C++ compatibility issues
+
+	See merge request libtiff/libtiff!785
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'fix-goto-variable-init' into 'master'
+	Fix goto bypassing variable initialisation
+
+	See merge request libtiff/libtiff!783
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge remote-tracking branch 'origin/master' into fix-goto-variable-init
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'explicit-cast-void-pointer' into 'master'
+	Add explicit casts for void* to typed pointer conversions
+
+	See merge request libtiff/libtiff!782
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'const-char-literals-data' into 'master'
+	Use const char* for string literals and const data
+
+	See merge request libtiff/libtiff!781
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'remove-register-keyword' into 'master'
+	Remove use of register keyword
+
+	See merge request libtiff/libtiff!779
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'configure-ac-require-ac-2-71' into 'master'
+	configure.ac: Require bootstrap with at least Autoconf 2.71
+
+	See merge request libtiff/libtiff!784
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Add explicit casts for void* to typed pointer conversions.
+	C++ requires explicit casts when converting from void* to typed pointers,
+	unlike C which allows implicit conversion. This change adds the necessary
+	casts to all memory allocation results (_TIFFmallocExt, _TIFFcallocExt,
+	_TIFFreallocExt) and other void* assignments throughout the codebase.
+
+	Files modified:
+	- tif_dir.c: Cast for double* allocation
+	- tif_dirread.c: Casts for uint8_t* allocations
+	- tif_dirwrite.c: Multiple casts for various typed pointer allocations
+	- tif_getimage.c: Casts for uint8_t* allocations
+	- tif_jpeg.c: Cast for uint8_t* buffer assignment
+	- tif_ojpeg.c: Multiple casts for OJPEGState*, uint8_t*, uint8_t** allocations
+	- tif_read.c: Casts for uint8_t* and function pointer arguments
+	- tif_webp.c: Casts for uint8_t* allocations
+	- tif_zip.c: Cast for TIFF* from opaque pointer
+
+	C++ requires explicit casts when assigning void* (from malloc, realloc,
+	_TIFFmalloc, etc.) to typed pointers. Add casts in:
+
+	- tools/fax2tiff.c: rowbuf, refbuf, tif_rawdata allocations
+	- tools/raw2tiff.c: buf1, buf2 allocations
+	- tools/tiff2ps.c: ascii85_p allocations
+	- tools/tiffcrop.c: tilebuf, buff, new_buff, next_buff allocations
+	- tools/tiffinfo.c: subIFDoffsets allocation
+	- test/rewrite_tag.c: buf allocation
+	- test/test_IFD_enlargement.c: pbufLine allocation
+	- test/test_RGBAImage.c: pbufLine allocation
+	- test/test_transferfunction_write_read.c: pTransferFunctionData, bufLine
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Fix goto bypassing variable initialisation.
+	C++ does not allow a goto statement to jump past a variable declaration
+	with initialisation.
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Fix enum initialisation and bitwise operations.
+	C++ doesn't allow implicit int-to-enum conversions. Fix by:
+	- Using enum value PIXEL instead of 0 for InterleavingType initialisation
+	- Adding explicit (t2p_cs_t) casts for bitwise OR/XOR operations on t2p_cs_t
+	- Adding explicit (t2p_sample_t) cast for bitwise OR on t2p_sample_t
+
+	Files modified:
+	- tools/raw2tiff.c: InterleavingType initialisation
+	- tools/tiff2pdf.c: t2p_cs_t and t2p_sample_t bitwise operations
+
+2025-12-14  Roger Leigh  <rleigh@codelibre.net>
+
+	Fix enum-related C++ compatibility issues.
+	C++ is stricter than C about enum types:
+	1. Cannot use ++ operator on enum types directly - must cast through int
+	2. Cannot initialize enum members with integer literals - must use enum values
+	3. Cannot forward declare const objects without initialization
+
+	Changes:
+	- tif_ojpeg.c: Replace sp->out_state++ with explicit cast pattern
+	  sp->out_state = (OJPEGStateOutState)(sp->out_state + 1)
+	- tif_dirinfo.c: Use TIFF_SETGET_UNDEFINED instead of 0 for
+	  TIFFSetGetFieldType member in TIFFField struct initialization
+	- tif_dirinfo.c: Use #ifdef __cplusplus to handle forward declarations
+	  of const TIFFFieldArray objects differently for C vs C++
+
+2025-12-13  Bob Friesenhahn  <bobjfriesenhahn@gmail.com>
+
+	configure.ac: Require bootstrap with at least Autoconf 2.71.
+
+2025-12-13  Roger Leigh  <rleigh@codelibre.net>
+
+	Use const char* for string literals and const data.
+	Change TIFFCodec::name, TIFFField::field_name, and TIFFFieldInfo::field_name
+	from char* to const char* to allow assignment of string literals without
+	warnings in C++ mode.
+
+	For dynamically allocated field names (anonymous tags), use a local buffer
+	variable before assigning to the const field. Add explicit (void*) casts
+	when freeing these dynamically allocated names.
+
+2025-12-13  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cmake-cmath-avoid-imported-target_neroburner' into 'master'
+	cmake: Replace CMath::CMath with direct link to avoid export
+
+	Closes #625
+
+	See merge request libtiff/libtiff!764
+
+2025-12-13  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cmake-allow_all_find_package_capitalizations' into 'master'
+	cmake: install tiff-config.cmake to allow all capitalizations
+
+	See merge request libtiff/libtiff!763
+
+2025-12-13  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'cmake_mingw_soversion' into 'master'
+	CMake: add SOVERSION to DLLs for MinGW builds
+
+	See merge request libtiff/libtiff!392
+
+2025-12-12  Roger Leigh  <rleigh@codelibre.net>
+
+	Remove use of register keyword.
+	* register is not particularly useful with modern optimising
+	  compilers
+	* If compiling as C++, it's not compatible with C++17 and
+	  newer, which have removed support for the register
+	  keyword
+
+2025-12-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_679_tiff2ps_check_for_double_to_int32' into 'master'
+	Checking the range of double values in tiff2ps before converting to int32_t. Closes #679
+
+	Closes #679
+
+	See merge request libtiff/libtiff!777
+
+2025-12-07  Su Laus  <sulau@freenet.de>
+
+	Checking the range of double values in tiff2ps before converting to int32_t. Closes #679
+
+2025-12-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'SampleFormat_not_SamplesPerPixel' into 'master'
+	TIFFReadDirEntryPersampleShort(): be tolerant to tags like SampleFormat not...
+
+	See merge request libtiff/libtiff!770
+
+2025-12-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_Coverity_tiffdump_false-positive_tainted_data' into 'master'
+	Silence Coverity Scan warning about tainted_data in tiffdump.
+
+	See merge request libtiff/libtiff!774
+
+2025-12-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'validate-data_precision' into 'master'
+	tif_jpeg: reject mismatched JPEG data precision to avoid write overflow
+
+	See merge request libtiff/libtiff!776
+
+2025-12-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_755_TIFFMergeFields_nfields_not_reset_to_zero' into 'master'
+	Fix #755: In _TIFFMergeFields() set tif_nfields to zero if buffer cannot be re-allocated to avoid NULL ptr dereference.
+
+	Closes #755
+
+	See merge request libtiff/libtiff!775
+
+2025-12-01  Mikhail Khachaiants  <mkhachaiants@gmail.com>
+
+	tif_jpeg: reject mismatched JPEG data precision to avoid write overflow.
+	Ensure TIFF BitsPerSample matches both BITS_IN_JSAMPLE and the JPEG
+	header data_precision for JPEG-compressed images. This prevents
+	under-sized scanline buffers that can lead to write buffer overflows
+	in jdcolor.c/null_convert when decoding malformed inputs.
+
+2025-11-29  Su_Laus  <sulau@freenet.de>
+
+	In _TIFFMergeFields() set tif_nfields to zero if buffer cannot be re-allocated to avoid NULL pointer dereference in TIFFReadDirectoryFindFieldInfo().
+	Closes #755
+
+	Silence Coverity Scan warning about tainted_data: Passing tainted expression *datamem to PrintData, which uses it as a divisor or modulus. False positive because division by zero is checked in PrintData().
+
+2025-11-29  Even Rouault  <even.rouault@spatialys.com>
+	    Su Laus  <sulau@freenet.de>
+
+	Apply 2 suggestion(s) to 1 file(s)
+
+2025-11-29  Su_Laus  <sulau@freenet.de>
+
+	Align writing and reading of TIFF_LONG8 and TIFF_IFD8 tags.
+
+2025-11-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'warning_fixes' into 'master'
+	Fix compiler warnings with clang 18
+
+	See merge request libtiff/libtiff!771
+
+2025-11-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_AppVeyor_mingw_error_after_MR_issue-753' into 'master'
+	Fix bug introduced by MR libtiff/libtiff!769 - AppVeyor mingw -
+
+	See merge request libtiff/libtiff!772
+
+2025-11-28  Su_Laus  <sulau@freenet.de>
+
+	Fix bug introduced by MR libtiff/libtiff!769 (issue-753-putcontig8bitYCbCr42tile) and revealed by mingw build in AppVeyor.
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Fix compiler warnings with clang 18.
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-751-tiffcrop' into 'master'
+	Fix: avoid dangling pointer in loadImage by clearing *read_ptr after free (#751)
+
+	See merge request libtiff/libtiff!766
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-752-tiffcrop' into 'master'
+	tiffcrop: fix undefined behavior in reverseSamples32bits() (#752)
+
+	See merge request libtiff/libtiff!767
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_750_ipctutil_out_of_bound_read_search_semicolon' into 'master'
+	Prevent convertHTMLcodes() in iptcutil.c. to perform out-of-bound read. Fixes #750
+
+	Closes #750
+
+	See merge request libtiff/libtiff!768
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'issue-753-putcontig8bitYCbCr42tile' into 'master'
+	Reject invalid YCbCr subsampling when image dimensions are smaller than the subsampling block to prevent out-of-bounds writes. (#753)
+
+	See merge request libtiff/libtiff!769
+
+2025-11-25  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFReadDirEntryPersampleShort(): be tolerant to tags like SampleFormat not having 1 or SamplesPerPixel values
+	Fixes https://github.com/OSGeo/gdal/issues/13465
+
+2025-11-24  waugustus  <wangdw.augustus@qq.com>
+
+	Reject invalid YCbCr subsampling when image dimensions are smaller than the subsampling block to prevent out-of-bounds writes. (#753)
+
+2025-11-11  waugustus  <wangdw.augustus@qq.com>
+
+	tiffcrop: fix undefined behavior in reverseSamples32bits() (#752)
+
+2025-11-10  waugustus  <wangdw.augustus@qq.com>
+
+	Fix: avoid dangling pointer in loadImage by clearing *read_ptr after free
+	When reusing the read buffer, freeing the old buffer left *read_ptr pointing
+	to freed memory and could lead to use-after-free or double-free in callers.
+	Clear *read_ptr after freeing and write back the newly allocated buffer on
+	success.
+
+2025-11-08  Su_Laus  <sulau@freenet.de>
+
+	Prevent convertHTMLcodes() function in contrib/iptcutil/iptcutil.c. to perform an out-of-bounds read while searching for the semicolon.
+	Closes #750
+
+2025-11-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_749_stripbytecounts_array_null_pointer_to_rewrite' into 'master'
+	Check td_stripbytecount_p and td_stripoffset_p for NULL pointer before (re-)writing to file.
+
+	Closes #749
+
+	See merge request libtiff/libtiff!765
+
+2025-11-04  Su_Laus  <sulau@freenet.de>
+
+	Check td_stripbytecount_p and td_stripoffset_p for NULL pointer before (re-)writing to file.
+	Closes #749
+
+2025-09-17  Reinhold Gschweicher  <pyro4hell@gmail.com>
+
+	cmake: rename TiffConfig.cmake.in to tiff-config.cmake.in.
+	As requested by code review and to make it more coherent.
+
+2025-09-15  Reinhold Gschweicher  <pyro4hell@gmail.com>
+
+	cmake: Replace CMath::CMath with direct link to avoid export.
+	Link with CMATH_LIBRARIES instead of CMath::CMath.  While this
+	will still be exported, it will be available on the host system.
+
+	Port of original commit:
+	67f73084ca824e6c2465c47a5b67b16b5beca569
+
+	co-authored: Roger Leigh <rleigh@codelibre.net>
+
+2025-09-15  Reinhold Gschweicher  <pyro4hell@gmail.com>
+
+	cmake: install tiff-config.cmake to allow all capitalizations.
+	Rename `TiffConfig.cmake` to `tiff-config.cmake` to allow all
+	capitalizations of `find_package(TIFF)` to be found.
+
+2025-09-12  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch '4.7.1_preparation' into 'master'
+	Prepare for 4.7.1 release
+
+	See merge request libtiff/libtiff!762
+
 2025-09-11  Even Rouault  <even.rouault@spatialys.com>
 
 	Merge branch 'raw2tiff-742' into 'master'

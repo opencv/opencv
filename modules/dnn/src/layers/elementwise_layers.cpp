@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/blocked_pointwise.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -52,6 +53,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
 #include <limits>
+#include <type_traits>
 #include <cfenv>
 
 #ifdef HAVE_OPENCL
@@ -106,18 +108,101 @@ int ActivationLayer::getLayouts(const std::vector<DataLayout>& actualInputs,
 }
 
 struct PowerFunctor;
+struct AbsValFunctor;
+struct SignFunctor;
 
 template<typename Func>
 struct ElementWiseIntDispatch
 {
+    static inline bool supports(const Func&, int) { return false; }
     static inline bool apply(const Func&, const Mat&, Mat&) { return false; }
 };
 
-template<typename Func>
-struct ElementWiseExtraTypes
+static inline bool isIntegerDepth(int depth)
 {
-    static inline bool allowed(int) { return false; }
+    return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S ||
+           depth == CV_32U || depth == CV_32S || depth == CV_64U || depth == CV_64S;
+}
+
+static inline bool isUnsignedDepth(int depth)
+{
+    return depth == CV_8U || depth == CV_16U || depth == CV_32U || depth == CV_64U;
+}
+
+template<typename T> static inline T intAbs(T x, std::true_type)
+{
+    // Negating the type's minimum is undefined; the unsigned round trip wraps instead.
+    typedef typename std::make_unsigned<T>::type UT;
+    return x < 0 ? (T)(UT(0) - (UT)x) : x;
+}
+
+template<typename T> static inline T intAbs(T x, std::false_type) { return x; }
+
+template<typename T> static inline T intSign(T x, std::true_type) { return (T)((x > 0) - (x < 0)); }
+
+template<typename T> static inline T intSign(T x, std::false_type) { return (T)(x != 0); }
+
+struct IntAbsOp
+{
+    template<typename T> static inline T apply(T x)
+    {
+        return intAbs(x, std::integral_constant<bool, std::numeric_limits<T>::is_signed>());
+    }
 };
+
+struct IntSignOp
+{
+    template<typename T> static inline T apply(T x)
+    {
+        return intSign(x, std::integral_constant<bool, std::numeric_limits<T>::is_signed>());
+    }
+};
+
+template<typename Body> static inline void blockedParallelFor(size_t total, Body&& body)
+{
+    const size_t BLOCK_SIZE = 1 << 16;
+    parallel_for_(Range(0, (int)((total + BLOCK_SIZE - 1) / BLOCK_SIZE)),
+        [&](const Range& r)
+        {
+            for (int b = r.start; b < r.end; b++)
+            {
+                size_t start = (size_t)b * BLOCK_SIZE;
+                body(start, std::min(BLOCK_SIZE, total - start));
+            }
+        });
+}
+
+template<typename T, typename Op> static inline void intUnaryKernel(const Mat& src, Mat& dst)
+{
+    const T* srcptr = src.ptr<T>();
+    T* dstptr = dst.ptr<T>();
+
+    blockedParallelFor(src.total(), [&](size_t start, size_t len)
+    {
+        for (size_t i = start; i < start + len; i++)
+            dstptr[i] = Op::apply(srcptr[i]);
+    });
+}
+
+template<typename Op> static inline bool intUnaryDispatch(const Mat& src, Mat& dst)
+{
+    if (src.type() != dst.type())
+        return false;
+
+    switch (src.depth())
+    {
+        case CV_8U:  intUnaryKernel<uint8_t,  Op>(src, dst); break;
+        case CV_8S:  intUnaryKernel<int8_t,   Op>(src, dst); break;
+        case CV_16U: intUnaryKernel<uint16_t, Op>(src, dst); break;
+        case CV_16S: intUnaryKernel<int16_t,  Op>(src, dst); break;
+        case CV_32U: intUnaryKernel<uint32_t, Op>(src, dst); break;
+        case CV_32S: intUnaryKernel<int32_t,  Op>(src, dst); break;
+        case CV_64U: intUnaryKernel<uint64_t, Op>(src, dst); break;
+        case CV_64S: intUnaryKernel<int64_t,  Op>(src, dst); break;
+        default: return false;
+    }
+    return true;
+}
 
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
@@ -237,11 +322,15 @@ public:
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            if (!ElementWiseExtraTypes<Func>::allowed(input))
+        {
+            // Types the functor has no integer kernel for follow the default gate.
+            if (!ElementWiseIntDispatch<Func>::supports(func, input))
             {
-                Layer::getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
+                LayerInfo::getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
                 return;
             }
+        }
+
         outputs.assign(requiredOutputs, inputs[0]);
         internals.assign(requiredInternals, inputs[0]);
     }
@@ -250,7 +339,8 @@ public:
     {
         CV_TRACE_FUNCTION();
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
+        // The OCL kernels compute in float, which would silently round wide integers.
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget) && !isIntegerDepth(inputs_arr.depth()),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16F)
@@ -287,15 +377,9 @@ public:
                     const float* srcptr = src.ptr<float>();
                     float* dstptr = dst.ptr<float>();
 
-                    const size_t BLOCK_SIZE = 1 << 16;
-                    parallel_for_(Range(0, (int)((total + BLOCK_SIZE - 1) / BLOCK_SIZE)),
-                        [&](const Range& r) {
-                            for (int b = r.start; b < r.end; b++) {
-                                size_t start = b * BLOCK_SIZE;
-                                size_t len = std::min(BLOCK_SIZE, total - start);
-                                activFunc(srcptr + start, dstptr + start, len, params);
-                            }
-                        });
+                    blockedParallelFor(total, [&](size_t start, size_t len) {
+                        activFunc(srcptr + start, dstptr + start, len, params);
+                    });
                     continue;
                 }
 
@@ -1562,6 +1646,26 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 
 template<>
 const char* const AbsValFunctor::BaseDefaultFunctor<AbsValFunctor>::ocl_kernel_name = "AbsValForward";
+
+template<>
+struct ElementWiseIntDispatch<AbsValFunctor>
+{
+    static inline bool supports(const AbsValFunctor&, int depth) { return isIntegerDepth(depth); }
+
+    static inline bool apply(const AbsValFunctor&, const Mat& src, Mat& dst)
+    {
+        if (src.type() != dst.type())
+            return false;
+
+        // |x| leaves an unsigned value unchanged.
+        if (isUnsignedDepth(src.depth()))
+        {
+            src.copyTo(dst);
+            return true;
+        }
+        return intUnaryDispatch<IntAbsOp>(src, dst);
+    }
+};
 
 struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 {
@@ -2990,14 +3094,10 @@ struct PowerFunctor : public BaseFunctor
 template<>
 struct ElementWiseIntDispatch<PowerFunctor>
 {
-    static inline bool apply(const PowerFunctor& func, const Mat& src, Mat& dst)
+    // Only the degenerate form is representable in integers, so support depends on the
+    // functor's parameters and not on the depth alone.
+    static inline bool integerScale(const PowerFunctor& func, int64_t& scale)
     {
-        if (src.type() != dst.type())
-            return false;
-        const int depth = src.depth();
-        if (depth != CV_32S && depth != CV_64S)
-            return false;
-
         if (func.power != 1.f)
             return false;
         if (func.shift != 0.f)
@@ -3007,7 +3107,27 @@ struct ElementWiseIntDispatch<PowerFunctor>
         const double scale_d = (double)func.scale;
         if (std::floor(scale_d) != scale_d)
             return false;
-        const int64_t scale = (int64_t)scale_d;
+        scale = (int64_t)scale_d;
+        return true;
+    }
+
+    static inline bool supports(const PowerFunctor& func, int depth)
+    {
+        int64_t scale;
+        return (depth == CV_32S || depth == CV_64S) && integerScale(func, scale);
+    }
+
+    static inline bool apply(const PowerFunctor& func, const Mat& src, Mat& dst)
+    {
+        if (src.type() != dst.type())
+            return false;
+        const int depth = src.depth();
+        if (depth != CV_32S && depth != CV_64S)
+            return false;
+
+        int64_t scale;
+        if (!integerScale(func, scale))
+            return false;
 
         const size_t n = src.total();
         if (depth == CV_32S)
@@ -3022,8 +3142,9 @@ struct ElementWiseIntDispatch<PowerFunctor>
         {
             const int64_t* sp = src.ptr<int64_t>();
             int64_t* dp = dst.ptr<int64_t>();
+            // Unsigned so the wrap at the type minimum is defined rather than overflow.
             for (size_t i = 0; i < n; ++i)
-                dp[i] = sp[i] * scale;
+                dp[i] = (int64_t)((uint64_t)sp[i] * (uint64_t)scale);
             return true;
         }
     }
@@ -3371,36 +3492,14 @@ const char* const SignFunctor::BaseDefaultFunctor<SignFunctor>::ocl_kernel_name 
 template<>
 struct ElementWiseIntDispatch<SignFunctor>
 {
-    template<typename T>
-    static inline void apply_(const T* sp, T* dp, size_t n)
-    {
-        const int nstripes = getNumThreads();
-        parallel_for_(Range(0, (int)n), [&](const Range& r) {
-            for (int i = r.start; i < r.end; ++i)
-                dp[i] = sp[i] > 0 ? (T)1 : (sp[i] < 0 ? (T)-1 : (T)0);
-        }, nstripes);
-    }
+    static inline bool supports(const SignFunctor&, int depth) { return isIntegerDepth(depth); }
 
     static inline bool apply(const SignFunctor&, const Mat& src, Mat& dst)
     {
-        if (src.type() != dst.type())
-            return false;
-
-        const size_t n = src.total();
-        switch (src.depth())
-        {
-            case CV_32S: apply_(src.ptr<int32_t>(), dst.ptr<int32_t>(), n); return true;
-            case CV_64S: apply_(src.ptr<int64_t>(), dst.ptr<int64_t>(), n); return true;
-            default: return false;
-        }
+        return intUnaryDispatch<IntSignOp>(src, dst);
     }
 };
 
-template<>
-struct ElementWiseExtraTypes<SignFunctor>
-{
-    static inline bool allowed(int type) { return type == CV_32S || type == CV_64S; }
-};
 
 struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
 {
@@ -3851,14 +3950,27 @@ private:
         const size_t outStep2 = dst.step.p[2] / sizeof(float);
         const size_t outStep3 = dst.step.p[3] / sizeof(float);
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VEC_SZ = VTraits<v_float32>::vlanes();
+        // C0 is the block-layout channel block (8 by default); VEC_SZ is whatever
+        // the target's float vector holds, so the two coincide only on 8-lane
+        // targets. Cover both directions instead: when C0 is a multiple of VEC_SZ
+        // each pixel is walked in VEC_SZ chunks, and when VEC_SZ is a multiple of
+        // C0 the slopes are replicated across the vector and the contiguous
+        // H*W*C0 block is walked in one flat loop.
+        const bool vecChunk = C0 > VEC_SZ && (C0 % VEC_SZ) == 0;
+        const bool vecFlat  = blockCanSpan(C0, VEC_SZ, W, inStep2, inStep3,
+                                           outStep2, outStep3);
 #endif
 
         parallel_for_(Range(0, N * C1), [&](const Range& r) {
             const float* inptr0 = src.ptr<float>();
             float* outptr0 = dst.ptr<float>();
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            AutoBuffer<float> slopeBuf(std::max(C0, VEC_SZ));
+#else
             AutoBuffer<float> slopeBuf(C0);
+#endif
             float* slopes = slopeBuf.data();
 
             for (int i = r.start; i < r.end; ++i) {
@@ -3875,7 +3987,7 @@ private:
                 const float* inbase  = inptr0  + n * inStep0 + c1 * inStep1;
                 float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (C0 == VEC_SZ) {
                     v_float32 vslope = vx_load(slopes);
                     v_float32 vzero  = vx_setzero_f32();
@@ -3889,6 +4001,29 @@ private:
                             vx_store(outrow + w * outStep3, out);
                         }
                     }
+                    continue;
+                }
+                if (vecChunk) {
+                    v_float32 vzero = vx_setzero_f32();
+                    for (int h = 0; h < H; ++h) {
+                        const float* inrow  = inbase  + h * inStep2;
+                        float*       outrow = outbase + h * outStep2;
+                        for (int w = 0; w < W; ++w) {
+                            const float* in_pos  = inrow  + w * inStep3;
+                            float*       out_pos = outrow + w * outStep3;
+                            for (int c0 = 0; c0 < C0; c0 += VEC_SZ) {
+                                v_float32 v = vx_load(in_pos + c0);
+                                v_float32 scaled = v_mul(v, vx_load(slopes + c0));
+                                v_float32 out = v_select(v_ge(v, vzero), v, scaled);
+                                vx_store(out_pos + c0, out);
+                            }
+                        }
+                    }
+                    continue;
+                }
+                if (vecFlat) {
+                    blockedSpanApply(inbase, outbase, (int64_t)H * W * C0, C0, VEC_SZ,
+                                     slopes, slopes, BlockedPReLUOp());
                     continue;
                 }
 #endif

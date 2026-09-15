@@ -917,9 +917,7 @@ TEST_P(CharucoBoardGenerate, issue_24806)
     }
 }
 
-// Temporary disabled in https://github.com/opencv/opencv/pull/24338
-// 5.x version produces conrnes with different shape than 4.x (32F_C2 instead of 2x 32FC1)
-TEST(Charuco, DISABLED_testSeveralBoardsWithCustomIds)
+TEST(Charuco, testSeveralBoardsWithCustomIds)
 {
     Size res{500, 500};
     Mat K = (Mat_<double>(3,3) <<

@@ -236,6 +236,12 @@ struct CV_EXPORTS TExpr
         // units. A per-channel scalar of any width is carried this way (no 4-channel Scalar limit).
         int srcdepth = EW_DEPTH_NONE;
         size_t constofs = 0;
+        // Set on a value the parser bound to a name ("t = ...;"). Such a value may be referenced
+        // any number of times later, so the two retire-the-slot manoeuvres (moveToOutput's MOVE and
+        // emitUnary's abs(x-y) peephole) must leave it alone: they reclassify the slot to NONE,
+        // which a later reference would then read as the reserved empty operand. Both take their
+        // non-destructive path (a copy / the plain absdiff form) when this is set.
+        bool pinned = false;
     };
 
     // One compiled instruction: the op + arg-table indices + a resolved kernel (TKernel: fptr +

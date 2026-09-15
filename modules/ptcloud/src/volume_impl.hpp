@@ -20,7 +20,7 @@ private:
     // make this function run with debug lvl == 10
 public:
     Impl(const VolumeSettings& settings);
-    virtual ~Impl() {};
+    virtual ~Impl() {}
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) = 0;
     virtual void integrate(InputArray depth, InputArray pose) = 0;

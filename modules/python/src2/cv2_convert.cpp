@@ -8,6 +8,8 @@
 #include "cv2_util.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+#include <limits>
+
 PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
 
 //======================================================================================================================
@@ -23,6 +25,25 @@ static std::string pycv_dumpArray(const T* arr, int n)
         out << " " << arr[i];
     out << " ]";
     return out.str();
+}
+
+static bool int64ArrayFitsInt32(PyArrayObject* arr)
+{
+    // Not GETCONTIGUOUS: PyArray_TYPE() also reports NPY_LONGLONG for byte-swapped dtypes.
+    PyArrayObject* contig = (PyArrayObject*)PyArray_FROM_OTF((PyObject*)arr, NPY_INT64, NPY_ARRAY_IN_ARRAY);
+    if (!contig)
+    {
+        PyErr_Clear();
+        return false;
+    }
+    const int64_t* data = (const int64_t*)PyArray_DATA(contig);
+    const npy_intp total = PyArray_SIZE(contig);
+    bool fits = true;
+    for (npy_intp i = 0; i < total && fits; i++)
+        fits = data[i] >= (int64_t)std::numeric_limits<int32_t>::min() &&
+               data[i] <= (int64_t)std::numeric_limits<int32_t>::max();
+    Py_DECREF(contig);
+    return fits;
 }
 
 static inline std::string getArrayTypeName(PyArrayObject* arr)
@@ -133,19 +154,18 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     if( type < 0 )
     {
-        if( typenum == NPY_INT64 || typenum == NPY_LONG || typenum == NPY_LONGLONG )
-        {
-            needcopy = needcast = true;
-            new_typenum = NPY_INT;
-            type = CV_32S;
-        }
-        else
-        {
-            const std::string dtype_name = getArrayTypeName(oarr);
-            failmsg("%s data type = %s is not supported", info.name,
-                    dtype_name.c_str());
-            return false;
-        }
+        const std::string dtype_name = getArrayTypeName(oarr);
+        failmsg("%s data type = %s is not supported", info.name,
+                dtype_name.c_str());
+        return false;
+    }
+
+    // int64 is numpy's default int dtype: narrow for CV_32S APIs, but only losslessly.
+    if( type == CV_64S && int64ArrayFitsInt32(oarr) )
+    {
+        needcopy = needcast = true;
+        new_typenum = NPY_INT;
+        type = CV_32S;
     }
 
 #ifndef CV_MAX_DIM
@@ -165,7 +185,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
 
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX && !info.nd_mat;
+    bool ismultichannel = ndims == 3 && !info.nd_mat;
     if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
     {
         bool wrapChannels = false;
@@ -315,8 +335,8 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    // NumPy has no bfloat16 dtype: widen CV_16BF to float32 (lossless).
-    if( m.depth() == CV_16BF )
+    // NumPy has no bfloat16 or float8 dtype: widen these to float32 (lossless).
+    if( m.depth() == CV_16BF || m.depth() == CV_8F_E4M3FN || m.depth() == CV_8F_E4M3FNUZ )
     {
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));

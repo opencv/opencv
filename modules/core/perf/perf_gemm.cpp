@@ -30,7 +30,7 @@ class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
             SANITY_CHECK_NOTHING();
         else
             SANITY_CHECK(dst, (CV_MAT_DEPTH(type) == CV_32F) ? 1e-4 : 1e-6, ERROR_RELATIVE);
-    };
+    }
 };
 
 // Sparse coverage: exercise tiny/small/rectangular shapes and m=1/n=1 edge cases.

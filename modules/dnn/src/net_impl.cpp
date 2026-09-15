@@ -153,7 +153,6 @@ void Net::Impl::clear()
     bufidxs.push_back(-1);
 
     prepared = false;
-    finalizeLayers = true;
     finalized = false;
     fusedSnapshotValid = false;
     fusedSnapshot.clear();
@@ -1653,6 +1652,12 @@ Mat Net::Impl::getParam(int layer, int numParam) const
     return layerBlobs[numParam];
 }
 
+// Bump only the epoch: the executor holding the packed weights may be another object.
+static void markLayerWeightsChanged(const Ptr<LayerInfo>& layer)
+{
+    layer->weightEpoch++;
+}
+
 void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
     // FIXIT we should not modify "execution" instance
@@ -1661,7 +1666,7 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
     if (mainGraph)
-        finalizeLayers = true;
+        markLayerWeightsChanged(getLayer(layer));
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1695,21 +1700,21 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
 
             if (numParam < (int)layer->blobs.size()) {
                 layer->blobs[numParam] = blob;
-                finalizeLayers = true;
+                markLayerWeightsChanged(layer);
                 return;
             }
 
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get());
             if (conv && numParam == 0) {
                 conv->setWeights(blob, Mat(), defaultC0, accuracy);
-                finalizeLayers = true;
+                markLayerWeightsChanged(layer);
                 return;
             }
 
             ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get());
             if (deconv && numParam == 0) {
                 deconv->setWeights(blob, Mat(), defaultC0, accuracy);
-                finalizeLayers = true;
+                markLayerWeightsChanged(layer);
                 return;
             }
 
@@ -2769,7 +2774,7 @@ void Net::Impl::collectOrtProfileData() const
     }
 
     // Read the JSON entirely into memory, then parse it from the string.
-    std::ifstream in(profile_path.get());
+    std::ifstream in(toOrtPath(profile_path.get()).c_str());
     if (!in.is_open()) {
         CV_LOG_WARNING(NULL, "DNN/ORT: failed to open profile JSON " << profile_path.get());
         return;

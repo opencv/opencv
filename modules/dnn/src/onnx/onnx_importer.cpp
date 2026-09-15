@@ -137,13 +137,6 @@ static int onnxDataTypeToCvDepth(int onnxType)
     }
 }
 
-static void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
-{
-    if (!tensor_proto.raw_data().empty()) {
-        delete tensor_proto.release_raw_data();
-    }
-}
-
 Mat readTensorFromONNX(const String& path)
 {
     std::fstream input(path.c_str(), std::ios::in | std::ios::binary);

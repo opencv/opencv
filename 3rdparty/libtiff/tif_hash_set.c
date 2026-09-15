@@ -76,7 +76,7 @@ static const int anPrimes[] = {
     100663319, 201326611, 402653189, 805306457, 1610612741};
 
 /************************************************************************/
-/*                    TIFFHashSetHashPointer()                          */
+/*                       TIFFHashSetHashPointer()                       */
 /************************************************************************/
 
 /**
@@ -93,7 +93,7 @@ static unsigned long TIFFHashSetHashPointer(const void *elt)
 }
 
 /************************************************************************/
-/*                   TIFFHashSetEqualPointer()                          */
+/*                      TIFFHashSetEqualPointer()                       */
 /************************************************************************/
 
 /**
@@ -111,7 +111,7 @@ static bool TIFFHashSetEqualPointer(const void *elt1, const void *elt2)
 }
 
 /************************************************************************/
-/*                          TIFFHashSetNew()                             */
+/*                           TIFFHashSetNew()                           */
 /************************************************************************/
 
 /**
@@ -164,7 +164,7 @@ TIFFHashSet *TIFFHashSetNew(TIFFHashSetHashFunc fnHashFunc,
 }
 
 /************************************************************************/
-/*                          TIFFHashSetSize()                            */
+/*                          TIFFHashSetSize()                           */
 /************************************************************************/
 
 /**
@@ -184,7 +184,7 @@ int TIFFHashSetSize(const TIFFHashSet *set)
 }
 
 /************************************************************************/
-/*                       TIFFHashSetGetNewListElt()                      */
+/*                      TIFFHashSetGetNewListElt()                      */
 /************************************************************************/
 
 static TIFFList *TIFFHashSetGetNewListElt(TIFFHashSet *set)
@@ -202,7 +202,7 @@ static TIFFList *TIFFHashSetGetNewListElt(TIFFHashSet *set)
 }
 
 /************************************************************************/
-/*                       TIFFHashSetReturnListElt()                      */
+/*                      TIFFHashSetReturnListElt()                      */
 /************************************************************************/
 
 static void TIFFHashSetReturnListElt(TIFFHashSet *set, TIFFList *psList)
@@ -220,7 +220,7 @@ static void TIFFHashSetReturnListElt(TIFFHashSet *set, TIFFList *psList)
 }
 
 /************************************************************************/
-/*                   TIFFHashSetClearInternal()                          */
+/*                      TIFFHashSetClearInternal()                      */
 /************************************************************************/
 
 static void TIFFHashSetClearInternal(TIFFHashSet *set, bool bFinalize)
@@ -246,7 +246,7 @@ static void TIFFHashSetClearInternal(TIFFHashSet *set, bool bFinalize)
 }
 
 /************************************************************************/
-/*                         TIFFListDestroy()                            */
+/*                          TIFFListDestroy()                           */
 /************************************************************************/
 
 /**
@@ -270,7 +270,7 @@ static void TIFFListDestroy(TIFFList *psList)
 }
 
 /************************************************************************/
-/*                        TIFFHashSetDestroy()                          */
+/*                         TIFFHashSetDestroy()                         */
 /************************************************************************/
 
 /**
@@ -295,7 +295,7 @@ void TIFFHashSetDestroy(TIFFHashSet *set)
 
 #ifdef notused
 /************************************************************************/
-/*                        TIFFHashSetClear()                             */
+/*                          TIFFHashSetClear()                          */
 /************************************************************************/
 
 /**
@@ -319,7 +319,7 @@ void TIFFHashSetClear(TIFFHashSet *set)
 }
 
 /************************************************************************/
-/*                       TIFFHashSetForeach()                           */
+/*                         TIFFHashSetForeach()                         */
 /************************************************************************/
 
 /**
@@ -360,14 +360,14 @@ void TIFFHashSetForeach(TIFFHashSet *set, TIFFHashSetIterEltFunc fnIterFunc,
 #endif
 
 /************************************************************************/
-/*                        TIFFHashSetRehash()                           */
+/*                         TIFFHashSetRehash()                          */
 /************************************************************************/
 
 static bool TIFFHashSetRehash(TIFFHashSet *set)
 {
     int nNewAllocatedSize = anPrimes[set->nIndiceAllocatedSize];
     TIFFList **newTabList =
-        (TIFFList **)(calloc(nNewAllocatedSize, sizeof(TIFFList *)));
+        (TIFFList **)(calloc((size_t)nNewAllocatedSize, sizeof(TIFFList *)));
     if (newTabList == NULL)
         return false;
 #ifdef HASH_DEBUG
@@ -384,7 +384,7 @@ static bool TIFFHashSetRehash(TIFFHashSet *set)
         while (cur)
         {
             const unsigned long nNewHashVal =
-                set->fnHashFunc(cur->pData) % nNewAllocatedSize;
+                set->fnHashFunc(cur->pData) % (unsigned long)nNewAllocatedSize;
 #ifdef HASH_DEBUG
             if (newTabList[nNewHashVal])
                 set->nCollisions++;
@@ -403,12 +403,13 @@ static bool TIFFHashSetRehash(TIFFHashSet *set)
 }
 
 /************************************************************************/
-/*                        TIFFHashSetFindPtr()                          */
+/*                         TIFFHashSetFindPtr()                         */
 /************************************************************************/
 
 static void **TIFFHashSetFindPtr(TIFFHashSet *set, const void *elt)
 {
-    const unsigned long nHashVal = set->fnHashFunc(elt) % set->nAllocatedSize;
+    const unsigned long nHashVal =
+        set->fnHashFunc(elt) % (unsigned long)set->nAllocatedSize;
     TIFFList *cur = set->tabList[nHashVal];
     while (cur)
     {
@@ -464,7 +465,8 @@ bool TIFFHashSetInsert(TIFFHashSet *set, void *elt)
         }
     }
 
-    const unsigned long nHashVal = set->fnHashFunc(elt) % set->nAllocatedSize;
+    const unsigned long nHashVal =
+        set->fnHashFunc(elt) % (unsigned long)set->nAllocatedSize;
 #ifdef HASH_DEBUG
     if (set->tabList[nHashVal])
         set->nCollisions++;
@@ -486,7 +488,7 @@ bool TIFFHashSetInsert(TIFFHashSet *set, void *elt)
 }
 
 /************************************************************************/
-/*                        TIFFHashSetLookup()                           */
+/*                         TIFFHashSetLookup()                          */
 /************************************************************************/
 
 /**
@@ -532,7 +534,8 @@ static bool TIFFHashSetRemoveInternal(TIFFHashSet *set, const void *elt,
         }
     }
 
-    int nHashVal = (int)(set->fnHashFunc(elt) % set->nAllocatedSize);
+    int nHashVal =
+        (int)(set->fnHashFunc(elt) % (unsigned long)set->nAllocatedSize);
     TIFFList *cur = set->tabList[nHashVal];
     TIFFList *prev = NULL;
     while (cur)
@@ -581,7 +584,7 @@ bool TIFFHashSetRemove(TIFFHashSet *set, const void *elt)
 
 #ifdef notused
 /************************************************************************/
-/*                     TIFFHashSetRemoveDeferRehash()                   */
+/*                    TIFFHashSetRemoveDeferRehash()                    */
 /************************************************************************/
 
 /**

@@ -50,11 +50,11 @@ class FILEScopeGuard {
 public:
     explicit FILEScopeGuard(FILE* file) {
         file_ = file;
-    };
+    }
 
     ~FILEScopeGuard() {
         fclose(file_);
-    };
+    }
 
 private:
     FILE* file_;

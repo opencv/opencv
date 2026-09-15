@@ -475,6 +475,29 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void toPaddedVec4f(const Mat& src, Mat_<Vec4f>& dst)
+{
+    Mat src32;
+    if (src.depth() == CV_32F)
+        src32 = src;
+    else
+        src.convertTo(src32, CV_32F);
+
+    CV_Assert(src32.channels() == 3 || src32.channels() == 4);
+
+    if (src32.channels() == 4)
+    {
+        dst = src32;
+        return;
+    }
+
+    dst.create(src32.rows, src32.cols);
+    dst.setTo(Scalar::all(0));
+    int from_to[] = { 0, 0, 1, 1, 2, 2 };
+    Mat dstMat = dst;
+    mixChannels(&src32, 1, &dstMat, 1, from_to, 3);
+}
+
 void findPlanes(InputArray points3d_in, InputArray normals_in, OutputArray mask_out, OutputArray plane_coefficients_out,
                 int block_size, int min_size, double threshold, double sensor_error_a, double sensor_error_b, double sensor_error_c,
                 RgbdPlaneMethod method)
@@ -482,17 +505,9 @@ void findPlanes(InputArray points3d_in, InputArray normals_in, OutputArray mask_
     CV_Assert(method == RGBD_PLANE_METHOD_DEFAULT);
 
     Mat_<Vec4f> points3d, normals;
-    if (points3d_in.depth() == CV_32F)
-        points3d = points3d_in.getMat();
-    else
-        points3d_in.getMat().convertTo(points3d, CV_32F);
+    toPaddedVec4f(points3d_in.getMat(), points3d);
     if (!normals_in.empty())
-    {
-        if (normals_in.depth() == CV_32F)
-            normals = normals_in.getMat();
-        else
-            normals_in.getMat().convertTo(normals, CV_32F);
-    }
+        toPaddedVec4f(normals_in.getMat(), normals);
 
     // Pre-computations
     mask_out.create(points3d.size(), CV_8U);

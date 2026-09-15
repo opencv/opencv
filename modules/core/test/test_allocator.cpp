@@ -9,8 +9,8 @@ namespace opencv_test { namespace {
 struct DummyAllocator: public cv::MatAllocator
 {
 public:
-    DummyAllocator() {};
-    ~DummyAllocator() {};
+    DummyAllocator() {}
+    ~DummyAllocator() {}
 
     cv::UMatData* allocate(int dims, const int* sizes, int type,
                     void* data0, size_t* step, cv::AccessFlag flags,

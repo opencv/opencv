@@ -165,6 +165,28 @@ TEST(CommandLineParser, testBoolOption_FalseValues)
     EXPECT_FALSE(parser.get<bool>("n"));
 }
 
+TEST(CommandLineParser, testBoolOption_InvalidValue)
+{
+    const char* argv[] = {"<bin>", "--info=invalid"};
+    const int argc = 2;
+    cv::CommandLineParser parser(argc, argv, keys);
+
+    parser.get<bool>("info");
+
+    EXPECT_FALSE(parser.check());
+}
+
+TEST(CommandLineParser, testBoolOption_InvalidNumericValue)
+{
+    const char* argv[] = {"<bin>", "--info=2"};
+    const int argc = 2;
+    cv::CommandLineParser parser(argc, argv, keys);
+
+    parser.get<bool>("info");
+
+    EXPECT_FALSE(parser.check());
+}
+
 
 static const char * const keys2 =
     "{ h help    |          | print help }"

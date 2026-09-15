@@ -332,7 +332,7 @@ inline float calcSubpixel(const float &x_l,const float &x,const float &x_r)
     const float l1 = float(std::log(x+1e-6));
     const float l2 = float(std::log(x_r+1e-6));
     float delta = l2-l1-l1+l0;
-    if(!delta) // this happens if all values are identical
+    if(delta == 0.0f) // this happens if all values are identical
         return 0;
     delta = (l0-l2)/(delta+delta);
     return delta;

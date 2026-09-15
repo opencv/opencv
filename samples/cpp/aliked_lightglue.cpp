@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// ALIKED + LightGlueMatcher usage example
-// Demonstrates feature detection, extraction, and matching using ALIKED and LightGlue.
+// Learned feature usage examples.
+// Demonstrates ALIKED + LightGlue matching and XFeat feature extraction.
 
 #include <opencv2/features.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -14,10 +14,46 @@
 using namespace cv;
 using namespace std;
 
+static int runXFeatExample(const String& imgPath, const String& xfeatModel, const String& outputPath)
+{
+    Mat img = imread(imgPath);
+    if (img.empty())
+    {
+        cerr << "Error: cannot load image: " << imgPath << endl;
+        return -1;
+    }
+
+    Ptr<XFeat> xfeat = XFeat::create(xfeatModel, 2000, 0.05f, Size(640, 640));
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+    xfeat->detectAndCompute(img, Mat(), keypoints, descriptors);
+
+    Mat canvas;
+    drawKeypoints(img, keypoints, canvas, Scalar(0, 255, 0),
+                  DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+    if (!outputPath.empty())
+    {
+        imwrite(outputPath, canvas);
+        cout << "Saved XFeat keypoint visualization to: " << outputPath << endl;
+    }
+
+    imshow("XFeat Keypoints", canvas);
+    cout << "Press any key to exit..." << endl;
+    waitKey(0);
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     // ---- Parse arguments ----
     String alikedModel, lightglueModel, imgPath1, imgPath2;
+
+    if (argc >= 4 && String(argv[1]) == "--xfeat")
+    {
+        const String outputPath = argc >= 5 ? argv[4] : String();
+        return runXFeatExample(argv[2], argv[3], outputPath);
+    }
 
     if (argc >= 5)
     {
@@ -26,12 +62,15 @@ int main(int argc, char** argv)
         alikedModel = argv[3];
         lightglueModel = argv[4];
     }
-else
+    else
     {
-        cout << "Usage: " << argv[0] << " <image1> <image2> <aliked_model> <lightglue_model>" << endl;
+        cout << "Usage:" << endl;
+        cout << "  " << argv[0] << " <image1> <image2> <aliked_model> <lightglue_model>" << endl;
+        cout << "  " << argv[0] << " --xfeat <image> <xfeat_model> [output_image]" << endl;
         cout << endl;
-        cout << "Example:" << endl;
+        cout << "Examples:" << endl;
         cout << "  " << argv[0] << " img1.jpg img2.jpg aliked-n16rot-top1k-640.onnx aliked_lightglue.onnx" << endl;
+        cout << "  " << argv[0] << " --xfeat img.jpg xfeat.onnx xfeat_keypoints.jpg" << endl;
         return 0;
     }
 

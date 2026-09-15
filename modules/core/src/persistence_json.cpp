@@ -694,10 +694,13 @@ public:
         return ptr;
     }
 
-    char* parseSeq( char* ptr, FileNode& node )
+    char* parseSeq( char* ptr, FileNode& node, int depth = 0 )
     {
         if (!ptr)
             CV_PARSE_ERROR_CPP( "ptr is NULL" );
+
+        if( depth > CV_PERSISTENCE_MAX_DEPTH )
+            CV_PARSE_ERROR_CPP("Too many nested collections");
 
         if ( *ptr != '[' )
             CV_PARSE_ERROR_CPP( "'[' - left-brace of seq is missing" );
@@ -717,9 +720,9 @@ public:
                 FileNode child = fs->addNode(node, std::string(), FileNode::NONE );
 
                 if ( *ptr == '[' )
-                    ptr = parseSeq( ptr, child );
+                    ptr = parseSeq( ptr, child, depth + 1 );
                 else if ( *ptr == '{' )
-                    ptr = parseMap( ptr, child );
+                    ptr = parseMap( ptr, child, depth + 1 );
                 else
                     ptr = parseValue( ptr, child );
             }
@@ -748,10 +751,13 @@ public:
         return ptr;
     }
 
-    char* parseMap( char* ptr, FileNode& node )
+    char* parseMap( char* ptr, FileNode& node, int depth = 0 )
     {
         if (!ptr)
             CV_PARSE_ERROR_CPP("ptr is NULL");
+
+        if( depth > CV_PERSISTENCE_MAX_DEPTH )
+            CV_PARSE_ERROR_CPP("Too many nested collections");
 
         if ( *ptr != '{' )
             CV_PARSE_ERROR_CPP( "'{' - left-brace of map is missing" );
@@ -777,9 +783,9 @@ public:
                     break;
 
                 if ( *ptr == '[' )
-                    ptr = parseSeq( ptr, child );
+                    ptr = parseSeq( ptr, child, depth + 1 );
                 else if ( *ptr == '{' )
-                    ptr = parseMap( ptr, child );
+                    ptr = parseMap( ptr, child, depth + 1 );
                 else
                     ptr = parseValue( ptr, child );
             }

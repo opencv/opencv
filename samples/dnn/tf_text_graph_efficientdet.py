@@ -73,10 +73,10 @@ def createGraph(modelPath, outputPath, min_level, aspect_ratios, num_scales,
     nodesToKeep += ['scale_w', 'scale_h']
 
     for node in graph_def.node:
-        if re.match('efficientnet-(.*)/blocks_\d+/se/mul_1', node.name):
+        if re.match(r'efficientnet-(.*)/blocks_\d+/se/mul_1', node.name):
             node.input[0], node.input[1] = node.input[1], node.input[0]
 
-        if re.match('fpn_cells/cell_\d+/fnode\d+/resample(.*)/nearest_upsampling/Reshape_1$', node.name):
+        if re.match(r'fpn_cells/cell_\d+/fnode\d+/resample(.*)/nearest_upsampling/Reshape_1$', node.name):
             node.op = 'ResizeNearestNeighbor'
             node.input[1] = 'scale_w'
             node.input.append('scale_h')
@@ -85,7 +85,7 @@ def createGraph(modelPath, outputPath, min_level, aspect_ratios, num_scales,
                 if inpNode.name == node.name[:node.name.rfind('_')]:
                     node.input[0] = inpNode.input[0]
 
-        if re.match('box_net/box-predict(_\d)*/separable_conv2d$', node.name):
+        if re.match(r'box_net/box-predict(_\d)*/separable_conv2d$', node.name):
             node.addAttr('loc_pred_transposed', True)
 
         # Replace RealDiv to Mul with inversed scale for compatibility

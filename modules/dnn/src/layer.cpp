@@ -190,6 +190,10 @@ std::vector<Mat> Layer::finalize(const std::vector<Mat>& inputs)
     return outputs;
 }
 
+void Layer::prepackWeights()
+{
+}
+
 void Layer::forward(std::vector<Mat*>& input, std::vector<Mat>& output, std::vector<Mat>& internals)
 {
     // We kept this method for compatibility. DNN calls it now only to support users' implementations.

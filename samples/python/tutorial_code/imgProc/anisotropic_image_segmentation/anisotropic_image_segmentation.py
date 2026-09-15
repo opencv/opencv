@@ -74,7 +74,7 @@ imgCoherency, imgOrientation = calcGST(imgIn, W)
 
 ## [thresholding]
 _, imgCoherencyBin = cv.threshold(imgCoherency, C_Thr, 255, cv.THRESH_BINARY)
-_, imgOrientationBin = cv.threshold(imgOrientation, LowThr, HighThr, cv.THRESH_BINARY)
+imgOrientationBin = cv.inRange(imgOrientation, LowThr, HighThr)
 ## [thresholding]
 
 ## [combining]

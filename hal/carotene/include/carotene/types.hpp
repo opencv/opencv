@@ -118,7 +118,7 @@ namespace CAROTENE_NS {
 
     struct KeypointStore {
         virtual void push(f32 kpX, f32 kpY, f32 kpSize, f32 kpAngle=-1, f32 kpResponse=0, s32 kpOctave=0, s32 kpClass_id=-1) = 0;
-        virtual ~KeypointStore() {};
+        virtual ~KeypointStore() {}
     };
 }
 

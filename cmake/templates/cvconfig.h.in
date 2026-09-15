@@ -36,6 +36,7 @@
 
 /* NVIDIA CUDA Deep Neural Network (cuDNN) API*/
 #cmakedefine HAVE_CUDNN
+#cmakedefine HAVE_CUDNNJIT
 
 /* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT

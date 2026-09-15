@@ -31,7 +31,7 @@ public:
     and deduct: Ax = y
     */
     Polyfit(Mat x, Mat y, int deg);
-    virtual ~Polyfit() {};
+    virtual ~Polyfit() {}
     Mat operator()(const Mat& inp);
 
     // Serialization support
@@ -59,7 +59,7 @@ public:
     /** @brief Logpolyfit method.
     */
     LogPolyfit(Mat x, Mat y, int deg);
-    virtual ~LogPolyfit() {};
+    virtual ~LogPolyfit() {}
     Mat operator()(const Mat& inp);
 
     // Serialization support
@@ -77,8 +77,8 @@ void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& de
 class Linear
 {
 public:
-    Linear() {};
-    virtual ~Linear() {};
+    Linear() {}
+    virtual ~Linear() {}
 
     /** @brief Inference.
         @param inp the input array, type of cv::Mat.
@@ -86,7 +86,7 @@ public:
     virtual Mat linearize(Mat inp);
     /** @brief Evaluate linearization model.
     */
-    virtual void value(void) {};
+    virtual void value(void) {}
 
     // Serialization support
     virtual void write(cv::FileStorage& fs) const;
@@ -119,10 +119,10 @@ public:
     double gamma;
 
     LinearGamma()
-        : gamma(1.0) {};
+        : gamma(1.0) {}
 
     LinearGamma(double gamma_)
-        : gamma(gamma_) {};
+        : gamma(gamma_) {}
 
     Mat linearize(Mat inp) CV_OVERRIDE;
 
@@ -145,7 +145,7 @@ public:
     int deg;
     T p;
 
-    LinearGray(): deg(3) {};
+    LinearGray(): deg(3) {}
 
     LinearGray(int deg_, Mat src, Color dst, Mat mask, RGBBase_ cs)
         : deg(deg_)
@@ -169,12 +169,12 @@ public:
     void calc(const Mat& src, const Mat& dst)
     {
         p = T(src, dst, deg);
-    };
+    }
 
     Mat linearize(Mat inp) CV_OVERRIDE
     {
         return p(inp);
-    };
+    }
 
     // Serialization support
     void write(cv::FileStorage& fs) const CV_OVERRIDE;
@@ -199,7 +199,7 @@ public:
     T pg;
     T pb;
 
-    LinearColor(): deg(3) {};
+    LinearColor(): deg(3) {}
 
     LinearColor(int deg_, Mat src_, Color dst, Mat mask, RGBBase_ cs)
         : deg(deg_)
@@ -218,7 +218,7 @@ public:
         pr = T(schannels[0], dchannels[0], deg);
         pg = T(schannels[1], dchannels[1], deg);
         pb = T(schannels[2], dchannels[2], deg);
-    };
+    }
 
     Mat linearize(Mat inp) CV_OVERRIDE
     {
@@ -228,7 +228,7 @@ public:
         Mat res;
         merge(std::vector<Mat> { pr(channels[0]), pg(channels[1]), pb(channels[2]) }, res);
         return res;
-    };
+    }
 
     // Serialization support
     void write(cv::FileStorage& fs) const CV_OVERRIDE;

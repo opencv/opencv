@@ -907,7 +907,7 @@ template<typename S, typename T, typename R = uint64_t>
 class AnnoyIndexInterface {
  public:
   // Note that the methods with an **error argument will allocate memory and write the pointer to that string if error is non-NULL
-  virtual ~AnnoyIndexInterface() {};
+  virtual ~AnnoyIndexInterface() {}
   virtual bool add_item(S item, const T* w, char** error=NULL) = 0;
   virtual bool build(int q, int n_threads=-1, char** error=NULL) = 0;
   virtual bool unbuild(char** error=NULL) = 0;

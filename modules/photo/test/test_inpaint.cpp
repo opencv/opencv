@@ -183,4 +183,36 @@ TEST_P(Photo_InpaintSmallBorders, regression)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintSmallBorders,  Values(CV_8UC1, CV_8UC3));
 
+CV_ENUM(InpaintAlgo, cv::INPAINT_NS, cv::INPAINT_TELEA)
+
+typedef testing::TestWithParam<tuple<perf::MatType, InpaintAlgo>> Photo_InpaintBoolMask;
+
+TEST_P(Photo_InpaintBoolMask, accepts_bool_mask)
+{
+    const int type = get<0>(GetParam());
+    const int flag = get<1>(GetParam());
+    Mat img(21, 21, type, Scalar::all(128));
+
+    Mat_<bool> mask_bool(img.size(), false);
+    mask_bool(Rect(8, 8, 5, 5)) = true;
+    ASSERT_EQ(mask_bool.depth(), CV_Bool);
+
+    Mat mask_uchar(img.size(), CV_8UC1, Scalar::all(0));
+    mask_uchar(Rect(8, 8, 5, 5)) = 255;
+
+    img.setTo(Scalar::all(0), mask_uchar);
+
+    Mat inpainted_bool, inpainted_uchar;
+    ASSERT_NO_THROW(inpaint(img, mask_bool, inpainted_bool, 3, flag));
+    inpaint(img, mask_uchar, inpainted_uchar, 3, flag);
+
+    EXPECT_EQ(inpainted_bool.type(), inpainted_uchar.type());
+    Mat diff;
+    cv::absdiff(inpainted_bool, inpainted_uchar, diff);
+    EXPECT_EQ(countNonZero(diff.reshape(1)), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintBoolMask,
+                        Combine(Values(CV_8UC1, CV_8UC3), InpaintAlgo::all()));
+
 }} // namespace

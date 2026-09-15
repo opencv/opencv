@@ -506,6 +506,11 @@ struct ModelFusionAttention
 
         (void)input_hidden;  // input_hidden currently unused; kept for symmetry with existing path.
 
+        std::set<int> attn_out_args;
+        for (const Arg& o : attn_layer->outputs) attn_out_args.insert(o.idx);
+        if (!removalIsSelfContained(prog, to_remove, attn_out_args))
+            return false;
+
         for (int op : to_remove) removed_ops.insert(op);
         const int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
@@ -796,9 +801,35 @@ struct ModelFusionAttention
         };
         for (int op : consumed) to_remove.insert(op);
 
+        std::set<int> attn_out_args;
+        for (const Arg& o : attn_layer->outputs) attn_out_args.insert(o.idx);
+        if (!removalIsSelfContained(prog, to_remove, attn_out_args))
+            return false;
+
         for (int op : to_remove) removed_ops.insert(op);
         int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
+        return true;
+    }
+
+    // A removal set is self-contained if each removed op's output is re-produced by the
+    // replacement layer or consumed only by other removed ops. A graph output, or an output
+    // still feeding a surviving op, would otherwise lose its producer.
+    bool removalIsSelfContained(const vector<Ptr<LayerInfo>>& prog,
+                                const std::set<int>& to_remove,
+                                const std::set<int>& produced_out_args) const
+    {
+        for (int op_idx : to_remove) {
+            if (op_idx < 0 || op_idx >= (int)prog.size() || !prog[op_idx]) continue;
+            for (const Arg& out : prog[op_idx]->outputs) {
+                if (produced_out_args.count(out.idx)) continue;
+                if (graph_outputs_.count(out.idx)) return false;
+                auto cit = consumers_.find(out.idx);
+                if (cit == consumers_.end()) continue;
+                for (int c : cit->second)
+                    if (!to_remove.count(c)) return false;
+            }
+        }
         return true;
     }
 
@@ -816,6 +847,12 @@ struct ModelFusionAttention
             for (Arg inp : prog[i]->inputs)
                 consumers_[inp.idx].push_back((int)i);
         }
+
+        // A graph output is exported, not consumed by any op, so it never enters consumers_;
+        // track it separately so a removed op cannot silently drop an exported arg.
+        graph_outputs_.clear();
+        for (Arg out : graph->outputs())
+            graph_outputs_.insert(out.idx);
 
         bool modified = false;
         std::set<int> removed_ops;
@@ -1136,6 +1173,11 @@ struct ModelFusionAttention
                         if (all_consumers_removed) to_remove.insert(op_idx);
                     }
 
+                    std::set<int> attn_out_args;
+                    for (const Arg& o : attn_layer->outputs) attn_out_args.insert(o.idx);
+                    if (!removalIsSelfContained(prog, to_remove, attn_out_args))
+                        continue;
+
                     for (int op : to_remove)
                         removed_ops.insert(op);
 
@@ -1183,6 +1225,7 @@ struct ModelFusionAttention
 private:
     std::map<int, int> producer_;
     std::map<int, vector<int>> consumers_;
+    std::set<int> graph_outputs_;
     vector<std::pair<int, Ptr<LayerInfo>>> attention_replacements_;
 };
 

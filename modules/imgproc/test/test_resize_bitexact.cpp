@@ -183,8 +183,9 @@ TEST_P(Resize_Bitexact, Nearest8U_vsNonExact)
     EXPECT_EQ(CountDiff(mat_gray), 0) << "gray, type: " << depth;
 }
 
-// Now INTER_NEAREST's convention and INTER_NEAREST_EXACT's one are different.
-INSTANTIATE_TEST_CASE_P(DISABLED_Imgproc, Resize_Bitexact,
+// At an integer upscale INTER_NEAREST and INTER_NEAREST_EXACT both map dst i to src i/k, so they
+// agree here. They diverge on downscale and fractional factors, where EXACT follows Pillow.
+INSTANTIATE_TEST_CASE_P(Imgproc, Resize_Bitexact,
     testing::Values(CV_8U, CV_16U, CV_32F, CV_64F)
 );
 

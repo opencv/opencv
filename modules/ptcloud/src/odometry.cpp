@@ -13,8 +13,8 @@ namespace cv
 class Odometry::Impl
 {
 public:
-    Impl() {};
-    virtual ~Impl() {};
+    Impl() {}
+    virtual ~Impl() {}
     virtual void prepareFrame(OdometryFrame& frame) const = 0;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const = 0;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
