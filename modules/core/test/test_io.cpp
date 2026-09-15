@@ -2143,6 +2143,36 @@ TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_recursion_depth_limit_29939_XML)
+{
+    const int N = 2000; // well past CV_PERSISTENCE_MAX_DEPTH, small enough to run fast
+    std::string open_tags, close_tags;
+    for (int i = 0; i < N; i++) { open_tags += "<a>"; close_tags += "</a>"; }
+    std::string content = "<?xml version=\"1.0\"?>\n<opencv_storage>\n"
+        + open_tags + "1" + close_tags + "\n</opencv_storage>\n";
+
+    EXPECT_THROW(FileStorage(content, FileStorage::READ | FileStorage::MEMORY), cv::Exception);
+}
+
+TEST(Core_InputOutput, FileStorage_recursion_depth_limit_29939_YAML)
+{
+    const int N = 2000;
+    std::string content = "%YAML:1.0\n---\n" + std::string(N, '[') + std::string(N, ']') + "\n";
+
+    EXPECT_THROW(FileStorage(content, FileStorage::READ | FileStorage::MEMORY), cv::Exception);
+}
+
+TEST(Core_InputOutput, FileStorage_recursion_depth_limit_29939_JSON)
+{
+    const int N = 2000;
+    std::string content;
+    for (int i = 0; i < N; i++) content += "{\"a\":";
+    content += "1";
+    for (int i = 0; i < N; i++) content += "}";
+    content += "\n";
+
+    EXPECT_THROW(FileStorage(content, FileStorage::READ | FileStorage::MEMORY), cv::Exception);
+}
 // see https://github.com/opencv/opencv/issues/25073
 typedef testing::TestWithParam< std::string > Core_InputOutput_regression_25073;
 
