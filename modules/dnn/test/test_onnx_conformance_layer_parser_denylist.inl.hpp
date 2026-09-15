@@ -85,7 +85,6 @@
 "test_compress_negative_axis",  // ---- same as above ---
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convtranspose_autopad_same",
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_e4m3fn",
@@ -130,8 +129,6 @@
 "test_optional_has_element_empty_optional_input",
 "test_optional_has_element_optional_input",
 "test_optional_has_element_tensor_input",
-"test_prelu_broadcast",  // Issue::Parser:Blob slope not found in const blobs in function 'getBlob' (weights are required as inputs)
-"test_prelu_example",  // ---- same as above ---
 "test_qlinearmatmul_2D_int8_float16",  // Float output QLinearMatMul variants not supported
 "test_qlinearmatmul_2D_int8_float32",
 "test_qlinearmatmul_2D_uint8_float16",
@@ -157,7 +154,6 @@
 "test_reshape_allowzero_reordered",  // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time",  // ---- same as above ---
-"test_rnn_seq_length",  // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 // Scan edge cases beyond the opset-9+ dataflow the new engine supports:
 "test_scan_sum",  // opset-8 Scan (leading batch dim + sequence_lens, different semantics)
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
@@ -175,9 +171,6 @@
 "test_sequence_map_identity_2_sequences",
 "test_sequence_map_identity_2_sequences_expanded",
 "test_shape_start_greater_than_end",
-"test_simple_rnn_batchwise",  // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
-"test_simple_rnn_defaults",  // ---- same as above ---
-"test_simple_rnn_with_initial_bias",  // ---- same as above ---
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",

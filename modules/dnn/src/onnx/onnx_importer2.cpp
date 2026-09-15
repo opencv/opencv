@@ -216,6 +216,7 @@ protected:
     void parseGemm                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGlobalPool           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGRU                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRNN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseImageScaler          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -497,6 +498,8 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "auto_pad")
             {
+                // pad_mode cannot express SAME_UPPER vs SAME_LOWER; getAutoPadding() prefers auto_pad.
+                lp.set("auto_pad", attribute_proto.s());
                 if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
                     lp.set("pad_mode",  "SAME");
                 }
@@ -509,7 +512,9 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
                 CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
                 lp.set("dilation", parse(attribute_proto.ints()));
             }
-            else if(attribute_name == "activations" && node_proto.op_type() == "LSTM")
+            else if(attribute_name == "activations" &&
+                    (node_proto.op_type() == "LSTM" || node_proto.op_type() == "GRU" ||
+                     node_proto.op_type() == "RNN"))
             {
                 lp.set(attribute_name, parseStr(attribute_proto.strings()));
             }
@@ -1384,6 +1389,14 @@ void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseRNN(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "RNN2";
+    // An empty output name means absent; a lone slot could be Y or Y_h.
+    layerParams.set("produce_y", node_proto.output_size() > 0 && !node_proto.output(0).empty());
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const float scale = layerParams.has("scale") ? layerParams.get<float>("scale") : 1.0f;
@@ -1475,21 +1488,47 @@ void ONNXImporter2::parseAbs(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+// True when the fused per-channel PReLU layer is the right reading of a slope.
+// ONNX right-aligns it, so only a lone non-unit dim on axis 1 qualifies.
+// One that does not broadcast at its aligned axis is an MXNet-style flat slope.
+static bool isPerChannelSlope(const MatShape& s, const MatShape& x)
+{
+    int nonUnit = -1;
+    for (int i = 0; i < s.dims; i++)
+    {
+        if (s[i] == 1)
+            continue;
+        if (nonUnit >= 0)
+            return false;
+        nonUnit = i;
+    }
+    if (nonUnit < 0 || x.dims < 2)
+        return true;
+    int axis = x.dims - s.dims + nonUnit;
+    if (axis == 1)
+        return true;
+    bool broadcasts = axis >= 0 && axis < x.dims && x[axis] == s[nonUnit];
+    return !broadcasts && s[nonUnit] == x[1];
+}
+
 void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "PReLU";
     CV_Assert(node_inputs.size() == 2);
     if (net.isConstArg(node_inputs[1]))
     {
-        layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
-        addLayer(layerParams, node_proto, 1);
+        Mat slope = net.argTensor(node_inputs[1]);
+        const MatShape& xshape = netimpl->args.at(node_inputs[0].idx).shape;
+        if (isPerChannelSlope(shape(slope), xshape))
+        {
+            layerParams.type = "PReLU";
+            layerParams.blobs.push_back(slope);
+            addLayer(layerParams, node_proto, 1);
+            return;
+        }
     }
-    else
-    {
-        // Slope produced by a foldable subgraph (e.g. Reshape of an initializer):
-        // keep it as a second input for constFold()/constArgs() to resolve.
-        addLayer(layerParams, node_proto);
-    }
+    layerParams.type = "NaryEltwise";
+    layerParams.set("operation", "prelu");
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1584,50 +1623,33 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     if (layerParams.has("output_shape"))
     {
         const DictValue& outShape = layerParams.get("output_shape");
-        DictValue strides = layerParams.get("stride");
 
-        // Infer kernel_size from weight shape if not provided
-        if (!layerParams.has("kernel_size"))
+        // strides is optional, so the spatial rank comes from the weights instead.
+        const ArgData& wdata = netimpl->args.at(node_inputs[1].idx);
+        const bool haveWShape = wdata.shape.size() >= 3;
+        const int nspatial = haveWShape ? (int)wdata.shape.size() - 2 : outShape.size();
+        CV_CheckGE(outShape.size(), nspatial, "ConvTranspose: output_shape is too short");
+
+        if (!layerParams.has("kernel_size") && haveWShape)
         {
-            const Arg& warg = node_inputs[1];
-            const ArgData& wdata = netimpl->args.at(warg.idx);
-            if (wdata.shape.size() >= 3)
-            {
-                int kdims = (int)wdata.shape.size() - 2;
-                std::vector<int> kshape(kdims);
-                for (int i = 0; i < kdims; ++i)
-                    kshape[i] = wdata.shape[2 + i];
-                layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), kdims));
-            }
+            std::vector<int> kshape(nspatial);
+            for (int i = 0; i < nspatial; ++i)
+                kshape[i] = wdata.shape[2 + i];
+            layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), nspatial));
         }
 
-        DictValue kernel = layerParams.get("kernel_size");
-
-        String padMode;
-        std::vector<int> adjust_pads;
         if (layerParams.has("pad_mode"))
         {
-            padMode = toUpperCase(layerParams.get<String>("pad_mode"));
+            String padMode = toUpperCase(layerParams.get<String>("pad_mode"));
             if (padMode != "SAME" && padMode != "VALID")
                 CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+        }
 
-            for (int i = 0; i < strides.size(); i++)
-            {
-                int sz = outShape.get<int>(2 + i);
-                int stride = strides.get<int>(i);
-                adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
-                                                         (sz - kernel.get<int>(i)) % stride);
-            }
-            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
-        }
-        else
-        {
-            for (int i = 0; i < strides.size(); i++)
-            {
-                adjust_pads.push_back(1);
-            }
-            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
-        }
+        // ONNX says output_shape is spatial-only, but some exporters prepend N and C.
+        std::vector<int> out_spatial(nspatial);
+        for (int i = 0; i < nspatial; i++)
+            out_spatial[i] = outShape.get<int>(outShape.size() - nspatial + i);
+        layerParams.set("output_shape_spatial", DictValue::arrayInt(out_spatial.data(), nspatial));
     }
     else if (layerParams.has("output_padding"))
     {
@@ -3123,6 +3145,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Constant"] = &ONNXImporter2::parseConstant;
     dispatch["LSTM"] = &ONNXImporter2::parseLSTM;
     dispatch["GRU"] = &ONNXImporter2::parseGRU;
+    dispatch["RNN"] = &ONNXImporter2::parseRNN;
     dispatch["ImageScaler"] = &ONNXImporter2::parseImageScaler;
     dispatch["Clip"] = &ONNXImporter2::parseClip;
     dispatch["LeakyRelu"] = &ONNXImporter2::parseLeakyRelu;

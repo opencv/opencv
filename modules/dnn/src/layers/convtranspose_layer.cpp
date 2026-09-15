@@ -31,7 +31,19 @@ public:
         dilations = params.getVector<int>("dilation");
         pads = params.getVector<int>("pad");
         adjust_pads = params.getVector<int>("adj");
+        // ONNX output_shape (spatial only); fixes the output, paddings derived from it.
+        explicit_out_shape = params.getVector<int>("output_shape_spatial");
         ngroups = params.get<int>("group", 1);
+    }
+
+    void applyExplicitOutShape(MatShape& outshape) const
+    {
+        if (explicit_out_shape.empty())
+            return;
+        int nsd = outshape.dims - 2 - int(outshape.layout == DATA_LAYOUT_BLOCK);
+        CV_CheckEQ((int)explicit_out_shape.size(), nsd, "output_shape must cover all spatial dims");
+        for (int i = 0; i < nsd; i++)
+            outshape[i + 2] = explicit_out_shape[i];
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -156,6 +168,7 @@ public:
         outshapes.assign(1, deconvInferShape(inpshapes[0], wshape, emptyKernelShape,
                                              ngroups, strides, dilations,
                                              pads, adjust_pads, auto_pad));
+        applyExplicitOutShape(outshapes[0]);
         tempshapes.clear();
         return true;
     }
@@ -205,11 +218,12 @@ public:
         MatShape outshape = deconvInferShape(inpshape, wshape0, emptyKernelShape,
                                              ngroups, strides, dilations,
                                              pads, adjust_pads, auto_pad);
+        applyExplicitOutShape(outshape);
 
-        // compute actual pads for SAME/VALID auto-padding
+        // compute actual pads for SAME/VALID auto-padding, or from an explicit output_shape
         int nsd = inpshape.dims - 3;
         std::vector<int> pads_resolved = pads;
-        if (auto_pad != AUTO_PAD_NONE) {
+        if (auto_pad != AUTO_PAD_NONE || !explicit_out_shape.empty()) {
             pads_resolved.resize(nsd * 2, 0);
             for (int i = 0; i < nsd; i++) {
                 int inpsz   = inpshape[2 + i];
@@ -219,12 +233,9 @@ public:
                 int dil     = dilations.empty() ? 1 : dilations[i];
                 int ki      = wshape0[2 + i];
                 int total   = (inpsz - 1) * stride + dil * (ki - 1) + 1 + adj_i - outsz;
-                int pb;
-                if (auto_pad == AUTO_PAD_SAME_UPPER && stride <= ki * dil) {
-                    pb = std::max((total - (outsz - 1 + stride) % stride) / 2, 0);
-                } else {
-                    pb = total / 2;
-                }
+                total = std::max(total, 0);
+                // ONNX splits total_padding evenly; odd pixel goes last for SAME_UPPER.
+                int pb = (auto_pad == AUTO_PAD_SAME_UPPER) ? total / 2 : total - total / 2;
                 pads_resolved[i]       = pb;
                 pads_resolved[nsd + i] = total - pb;
             }
@@ -273,6 +284,7 @@ public:
     }
 
     std::vector<int> emptyKernelShape;
+    std::vector<int> explicit_out_shape;
     Mat weights, bias;
     MatShape wshape0, prevInpshape;
     ConvState cs;

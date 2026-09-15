@@ -226,6 +226,19 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GRULayer> create(const LayerParams& params);
     };
 
+    /** @brief ONNX RNN layer, the single-gate recurrent unit.
+
+     * @f$h_t = f(W x_t + R h_{t-1} + W_b + R_b)@f$, where @f$f@f$ defaults to Tanh
+     * and can also be Relu or Sigmoid. Unlike @ref RNNLayer this follows the ONNX
+     * operator: weights arrive as inputs and there is no output projection.
+    */
+    class CV_EXPORTS RNN2Layer : public Layer
+    {
+    public:
+        /** Creates instance of ONNX RNN layer */
+        static Ptr<RNN2Layer> create(const LayerParams& params);
+    };
+
     /** @brief Classical recurrent layer
 
     Accepts two inputs @f$x_t@f$ and @f$h_{t-1}@f$ and compute two outputs @f$o_t@f$ and @f$h_t@f$.
@@ -1488,7 +1501,8 @@ CV__DNN_INLINE_NS_BEGIN
             WHERE,
             BITWISE_AND,
             BITWISE_OR,
-            BITWISE_XOR
+            BITWISE_XOR,
+            PRELU
         };
         OPERATION op;
 
