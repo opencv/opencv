@@ -1664,6 +1664,7 @@ bool CvCapture_FFMPEG::grabFrame()
     // get the next frame
     while (!valid)
     {
+        bool eof = false;
 
         _opencv_ffmpeg_av_packet_unref (&packet);
 
@@ -1686,6 +1687,7 @@ bool CvCapture_FFMPEG::grabFrame()
                 break;
 
             // flush cached frames from video decoder
+            eof = true;
             packet.data = NULL;
             packet.size = 0;
             packet.stream_index = video_stream;
@@ -1714,13 +1716,22 @@ bool CvCapture_FFMPEG::grabFrame()
 
         // Decode video frame
 #if USE_AV_SEND_FRAME_API
-        if (avcodec_send_packet(context, &packet) < 0) {
+        ret = avcodec_send_packet(context, &packet);
+        if (ret < 0) {
+            if (cur_decode_attempts == 0 && !eof && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF)
+            {
+                CV_LOG_ERROR(NULL, "Failed to send packet for decoding: " << _opencv_ffmpeg_get_error_string(ret) << " (" << ret << ")");
+            }
             break;
         }
         ret = avcodec_receive_frame(context, picture);
 #else
         int got_picture = 0;
-        avcodec_decode_video2(context, picture, &got_picture, &packet);
+        const int decode_ret = avcodec_decode_video2(context, picture, &got_picture, &packet);
+        if (decode_ret < 0 && !eof && decode_ret != AVERROR(EAGAIN) && decode_ret != AVERROR_EOF && cur_decode_attempts == 0)
+        {
+            CV_LOG_ERROR(NULL, "Failed to decode video packet: " << _opencv_ffmpeg_get_error_string(decode_ret) << " (" << decode_ret << ")");
+        }
         ret = got_picture ? 0 : -1;
 #endif
         if (ret >= 0) {
@@ -1730,6 +1741,12 @@ bool CvCapture_FFMPEG::grabFrame()
         }
         else
         {
+#if USE_AV_SEND_FRAME_API
+            if (cur_decode_attempts == 0 && !eof && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF)
+            {
+                CV_LOG_ERROR(NULL, "Failed to decode video frame: " << _opencv_ffmpeg_get_error_string(ret) << " (" << ret << ")");
+            }
+#endif
             if (++cur_decode_attempts > max_decode_attempts)
             {
                 CV_LOG_WARNING(NULL,

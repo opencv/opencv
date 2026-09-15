@@ -861,6 +861,49 @@ TEST(videoio_ffmpeg, open_with_format_cv8uc3)
     EXPECT_EQ(frame.channels(), 3);
 }
 
+TEST(videoio_ffmpeg, first_frame_decode_failure_is_reported)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string video_file = findDataFile("video/sample_322x242_15frames.yuv420p.libaom-av1.mp4");
+    VideoCapture cap(video_file, CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("AV1 decoder is not available");
+    ASSERT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15);
+
+    testing::internal::CaptureStderr();
+    Mat frame;
+    const bool read_result = cap.read(frame);
+    const string stderr_output = testing::internal::GetCapturedStderr();
+    if (read_result)
+        throw SkipTestException("AV1 decoder is available");
+
+    EXPECT_TRUE(stderr_output.find("Failed to send packet for decoding") != string::npos ||
+                stderr_output.find("Failed to decode video frame") != string::npos);
+}
+
+TEST(videoio_ffmpeg, normal_end_of_stream_is_not_reported_as_decode_failure)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    VideoCapture cap(findDataFile("video/big_buck_bunny.mp4"), CAP_FFMPEG);
+    ASSERT_TRUE(cap.isOpened());
+
+    testing::internal::CaptureStderr();
+    Mat frame;
+    int frames_read = 0;
+    while (cap.read(frame))
+        ++frames_read;
+    const string stderr_output = testing::internal::GetCapturedStderr();
+
+    ASSERT_EQ(frames_read, 125);
+    EXPECT_EQ(stderr_output.find("Failed to send packet for decoding"), string::npos);
+    EXPECT_EQ(stderr_output.find("Failed to decode video frame"), string::npos);
+    EXPECT_EQ(stderr_output.find("Failed to decode video packet"), string::npos);
+}
+
 // related issue: https://github.com/opencv/opencv/issues/16821
 TEST(videoio_ffmpeg, DISABLED_open_from_web)
 {
