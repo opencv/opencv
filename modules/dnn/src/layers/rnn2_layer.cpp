@@ -117,9 +117,7 @@ public:
 
         const int outCount = std::max(requiredOutputs, 1);
         outputs.assign(outCount, yhShape);
-        if (outCount > 1)
-            outputs[0] = yShape;
-        else if (produceY)
+        if (outCount > 1 || produceY)
             outputs[0] = yShape;
 
         internals.clear();
@@ -185,7 +183,7 @@ public:
         }
 
         Mat y, yh;
-        resolveOutputs(output, D, N, y, yh);
+        resolveOutputs(output, y, yh);
         Mat y2d  = y.empty()  ? Mat() : y.reshape(1, (int)(y.total() / H));
         Mat yh2d = yh.empty() ? Mat() : yh.reshape(1, (int)(yh.total() / H));
 
@@ -238,7 +236,7 @@ public:
     }
 
 private:
-    void resolveOutputs(std::vector<Mat>& output, int D, int N, Mat& y, Mat& yh) const
+    void resolveOutputs(std::vector<Mat>& output, Mat& y, Mat& yh) const
     {
         if (output.empty())
             return;
@@ -251,7 +249,6 @@ private:
         }
         y = output[0];
         yh = output[1];
-        CV_UNUSED(D); CV_UNUSED(N);
     }
 
     static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)

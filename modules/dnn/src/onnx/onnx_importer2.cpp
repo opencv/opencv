@@ -1488,31 +1488,37 @@ void ONNXImporter2::parseAbs(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
-// The PReLU layer is per-channel only; [C,1,..,1] right-aligns onto that axis.
-// Any other slope, and every non-const one, needs NaryEltwise broadcasting.
-static int countNonUnitDims(const MatShape& s)
+// True when the fused per-channel PReLU layer is the right reading of a slope.
+// ONNX right-aligns it, so only a lone non-unit dim on axis 1 qualifies.
+// One that does not broadcast at its aligned axis is an MXNet-style flat slope.
+static bool isPerChannelSlope(const MatShape& s, const MatShape& x)
 {
-    int n = 0;
+    int nonUnit = -1;
     for (int i = 0; i < s.dims; i++)
-        n += s[i] != 1;
-    return n;
+    {
+        if (s[i] == 1)
+            continue;
+        if (nonUnit >= 0)
+            return false;
+        nonUnit = i;
+    }
+    if (nonUnit < 0 || x.dims < 2)
+        return true;
+    int axis = x.dims - s.dims + nonUnit;
+    if (axis == 1)
+        return true;
+    bool broadcasts = axis >= 0 && axis < x.dims && x[axis] == s[nonUnit];
+    return !broadcasts && s[nonUnit] == x[1];
 }
 
 void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_inputs.size() == 2);
-    // A flat slope reads two ways: per channel in MXNet/Caffe-derived exports,
-    // trailing-axis broadcast under strict ONNX. A known input shape breaks the tie.
-    // Otherwise per channel wins, as SFace and face_recognizer_fast intend.
-    // Per channel keeps the fusable layer; all else needs NaryEltwise broadcasting.
     if (net.isConstArg(node_inputs[1]))
     {
         Mat slope = net.argTensor(node_inputs[1]);
         const MatShape& xshape = netimpl->args.at(node_inputs[0].idx).shape;
-        bool perChannel = countNonUnitDims(shape(slope)) <= 1 &&
-                          (xshape.dims < 2 || slope.total() == 1 ||
-                           (int)slope.total() == xshape[1]);
-        if (perChannel)
+        if (isPerChannelSlope(shape(slope), xshape))
         {
             layerParams.type = "PReLU";
             layerParams.blobs.push_back(slope);

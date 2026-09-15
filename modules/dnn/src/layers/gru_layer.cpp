@@ -48,6 +48,17 @@ public:
         linearBeforeReset = params.get<int>("linear_before_reset", 0) != 0;
         layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
 
+        // forward() hardcodes f=Sigmoid, g=Tanh; reject anything else rather than miscompute.
+        DictValue acts = params.get<DictValue>("activations", DictValue(String()));
+        for (int i = 0; i < acts.size() && !acts.getStringValue(0).empty(); i++)
+        {
+            const String expected = (i % 2 == 0) ? "Sigmoid" : "Tanh";
+            if (acts.getStringValue(i) != expected)
+                CV_Error(Error::StsNotImplemented,
+                         cv::format("GRU: activation '%s' is not supported",
+                                    acts.getStringValue(i).c_str()));
+        }
+
         if (!blobs.empty())
         {
             CV_Assert(blobs.size() >= 3);
