@@ -17,27 +17,31 @@ namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 enum {
-    FUSION_MAX_EXPR_NODES   = 64,      //!< cap on one extracted expression
-    FUSION_MAX_MATH_NODES = 16,      //!< cap on one layer's math
-    FUSION_MAX_ARENA_NODES  = 1 << 16  //!< cap on the shared arena for a whole graph
+    //! Cap on one extracted expression, and the size of evalElement()'s stack array.
+    FUSION_MAX_EXPR_NODES  = 64,
+    //! Cap on one layer's math, and the size of LayerMath::nodes_.
+    FUSION_MAX_MATH_NODES  = 16,
+    //! Cap on the shared arena for a whole graph. Chain growth stops on it; internNode()
+    //! only checks it under CV_DbgAssert, so treat it as advisory in release builds.
+    FUSION_MAX_ARENA_NODES = 1 << 16
 };
 
 enum class FusionEltwiseOp
 {
-    INPUT = 0,
-    CONST = 1,
-    PER_CHANNEL_CONST = 2,
-    ADD = 3,
-    SUB = 4,
-    MUL = 5,
-    MAX = 6,
-    MIN = 7,
-    ERF = 8,
-    TANH = 9,
-    EXP = 10,
-    SQRT = 11,
-    CLAMP = 12,
-    RECIP = 13
+    INPUT,
+    CONST,
+    PER_CHANNEL_CONST,
+    ADD,
+    SUB,
+    MUL,
+    MAX,
+    MIN,
+    ERF,
+    TANH,
+    EXP,
+    SQRT,
+    CLAMP,
+    RECIP
 };
 
 namespace fusion { namespace detail {
@@ -70,16 +74,55 @@ inline unsigned bits(float f) { Cv32suf s; s.f = f; return s.u; }
 
 }} // namespace fusion::detail
 
-/** @brief The constant operand(s) a layer has alongside the value flowing into it,
- *  e.g. the 3 in `x + 3`, or Clip's two bounds. A layer with none gets hasValue false.
+/** @brief One constant operand: a scalar, or a per-channel buffer. */
+struct FusionConst
+{
+    float value    = 0.f;   //!< the scalar, meaningful only while bufferId < 0
+    int   bufferId = -1;    //!< >=0 selects a per-channel buffer, indexes constBufs
+
+    bool isBuffer() const { return bufferId >= 0; }
+};
+
+/** @brief The constant operands a layer has alongside the value flowing into it, kept in
+ *  the layer's own input order with the flowing one removed: the 3 in `x + 3`, Clip's two
+ *  bounds, BatchNorm's scale and bias. A layer with none gets count 0.
  */
 struct ConstOperand
 {
-    bool  hasValue         = false;  //!< false means there is no constant operand
-    bool  flowIsFirstInput = true;   //!< the flowing value is the layer's input 0
-    float value            = 0.f;    //!< scalar constant, or Clip's lower bound
-    float value2           = 0.f;    //!< Clip's upper bound; unused otherwise
-    int   bufferId         = -1;     //!< >=0 for a per-channel constant, indexes constBufs
+    enum { MAX_CONSTS = 2 };
+
+    bool flowIsFirstInput = true;   //!< the flowing value is the layer's input 0
+    int  count            = 0;      //!< how many entries of consts[] are filled
+    FusionConst consts[MAX_CONSTS];
+
+    const FusionConst& at(int i) const
+    {
+        CV_DbgAssert(i >= 0 && i < count);
+        return consts[i];
+    }
+};
+
+/** @brief A ready-made kernel for exactly one expression, when the layer that described
+ *  it already owns one. A sink that recognizes it runs it directly instead of walking
+ *  the decomposed form. The two must agree: fn(x, params) is the same function the
+ *  expression evaluates to.
+ */
+struct FusionKernel
+{
+    enum { MAX_PARAMS = 4 };
+
+    ActivationFunc fn = nullptr;
+    float params[MAX_PARAMS] = { 0.f, 0.f, 0.f, 0.f };
+    int   nparams = 0;
+
+    void set(ActivationFunc f, const std::vector<float>& p)
+    {
+        CV_Assert(p.size() <= (size_t)MAX_PARAMS);
+        fn = f;
+        nparams = (int)p.size();
+        for (int i = 0; i < nparams; i++)
+            params[i] = p[i];
+    }
 };
 
 struct LayerMathNode
@@ -101,23 +144,11 @@ struct LayerMath
 {
     enum { INPUT_VALUE = -1 };
 
-    enum { MAX_KERNEL_PARAMS = 4 };
-
-    //! The layer's own kernel for exactly this math, when it has one. A backend that
-    //! also has it can run it directly instead of walking the decomposed form.
-    ActivationFunc kernel = nullptr;
-    float kernelParams[MAX_KERNEL_PARAMS] = { 0.f, 0.f, 0.f, 0.f };
-    int   kernelParamCount = 0;
+    //! The layer's own kernel for exactly this math, when it has one.
+    FusionKernel kernel;
 
     void setKernel(ActivationFunc fn, const std::vector<float>& params)
-    {
-        if (params.size() > (size_t)MAX_KERNEL_PARAMS)
-            return;
-        kernel = fn;
-        kernelParamCount = (int)params.size();
-        for (int i = 0; i < kernelParamCount; i++)
-            kernelParams[i] = params[i];
-    }
+    { kernel.set(fn, params); }
 
     int nodeCount() const { return nodeCount_; }
     const LayerMathNode& nodeAt(int i) const
@@ -227,13 +258,19 @@ class AdjacencyGraph
 public:
     const std::vector<FusionNode>& nodes() const { return nodes_; }
     size_t size() const { return nodes_.size(); }
-    int outputNode = -1;
+
+    /** @brief The node holding the result, always the last one.
+     *
+     * internNode() only ever appends, and every node's inputs precede it, so the graph
+     * is topologically ordered and the root cannot be anywhere else. extract() rebuilds
+     * the same way. -1 while the graph is empty.
+     */
+    int outputNode() const { return (int)nodes_.size() - 1; }
+
     std::vector<Mat> constBufs;
 
     //! Set when this whole expression is one layer that already has a kernel.
-    ActivationFunc kernel = nullptr;
-    float kernelParams[LayerMath::MAX_KERNEL_PARAMS] = { 0.f, 0.f, 0.f, 0.f };
-    int   kernelParamCount = 0;
+    FusionKernel kernel;
 
 private:
     std::vector<FusionNode> nodes_;
@@ -287,10 +324,10 @@ public:
     size_t size() const { return gp_->size(); }
     const AdjacencyGraph& graph() const { return *gp_; }
 
-    Ptr<AdjacencyGraph> finish(int output)
+    //! Hands over the built graph, checking that @p root really is its output node.
+    Ptr<AdjacencyGraph> finish(int root)
     {
-        CV_Assert(output == (int)gp_->size() - 1);
-        gp_->outputNode = output;
+        CV_Assert(root == gp_->outputNode());
         return gp_;
     }
 
@@ -327,8 +364,7 @@ inline float evalElement(const AdjacencyGraph& g, float x,
                              const std::vector<const float*>& constBufs, int channelIdx)
 {
     const std::vector<FusionNode>& nodes = g.nodes();
-    const int out = g.outputNode;
-    CV_DbgAssert(out == (int)nodes.size() - 1);
+    const int out = g.outputNode();
     CV_Assert(nodes.size() <= (size_t)FUSION_MAX_EXPR_NODES);
 
     float v[FUSION_MAX_EXPR_NODES];

@@ -94,7 +94,7 @@ TEST(Fusion, ExtractionYieldsAStandaloneGraph)
     ASSERT_TRUE(g);
     EXPECT_EQ(9u, g->size());
     EXPECT_EQ(FusionEltwiseOp::INPUT, g->nodes()[0].op);
-    EXPECT_EQ((int)g->size() - 1, g->outputNode);
+    EXPECT_EQ(FusionEltwiseOp::MUL, g->nodes()[g->outputNode()].op);
     EXPECT_NEAR(0.5f * 1.5f * (1.f + std::erf(1.5f * 0.70710678118654752440f)),
                 fusion::evalElement(*g, 1.5f, kNoBufs, 0), 1e-5);
 
@@ -169,8 +169,8 @@ TEST(Fusion, ReversedSubIsRefused)
 
     LayerMath r;
     ConstOperand vs;
-    vs.hasValue = true;
-    vs.value = 3.f;
+    vs.count = 1;
+    vs.consts[0].value = 3.f;
     vs.flowIsFirstInput = false;
     EXPECT_FALSE(unfoldOf(sub, r, vs));
 
@@ -189,8 +189,8 @@ TEST(Fusion, VariadicNaryIsRefused)
 
     LayerMath r;
     ConstOperand vs;
-    vs.hasValue = true;
-    vs.value = 3.f;
+    vs.count = 1;
+    vs.consts[0].value = 3.f;
 
     sum->inputs.assign(3, Arg());
     EXPECT_FALSE(unfoldOf(sum, r, vs));
@@ -208,9 +208,9 @@ TEST(Fusion, ClipWithOneDynamicBoundIsRefused)
 
     LayerMath r;
     ConstOperand vs;
-    vs.hasValue = true;
-    vs.value = 2.f;
-    vs.value2 = 0.f;
+    vs.count = 2;
+    vs.consts[0].value = 2.f;
+    vs.consts[1].value = 0.f;
 
     clip->inputs = { Arg(1), Arg(2) };
     EXPECT_FALSE(unfoldOf(clip, r, vs));
@@ -221,7 +221,7 @@ TEST(Fusion, ClipWithOneDynamicBoundIsRefused)
     EXPECT_FALSE(unfoldOf(clip, r, vs));
 
     r = LayerMath();
-    vs.value2 = 6.f;
+    vs.consts[1].value = 6.f;
     clip->inputs = { Arg(1), Arg(2), Arg(3) };
     ASSERT_TRUE(unfoldOf(clip, r, vs));
     EXPECT_FLOAT_EQ(2.f, eval1(r, 1.f));
@@ -248,14 +248,11 @@ TEST(Fusion, LayersDeclareTheirOwnKernel)
         LayerMath m;
         ConstOperand side;
         ASSERT_TRUE(unfoldOf(l, m, side)) << c.name;
-        EXPECT_TRUE(m.kernel != nullptr) << c.name << ": no kernel declared";
+        EXPECT_TRUE(m.kernel.fn != nullptr) << c.name << ": no kernel declared";
 
         Ptr<AdjacencyGraph> expr = graphOf(m);
         ASSERT_TRUE(expr) << c.name;
         expr->kernel = m.kernel;
-        expr->kernelParamCount = m.kernelParamCount;
-        for (int i = 0; i < m.kernelParamCount; i++)
-            expr->kernelParams[i] = m.kernelParams[i];
 
         PreparedFusion pf;
         const bool took = pf.take(expr);
@@ -274,10 +271,10 @@ TEST(Fusion, NonElementwiseLayersDeclareToo)
     clip->inputs = { Arg(1), Arg(2), Arg(3) };
     LayerMath cm;
     ConstOperand cs;
-    cs.hasValue = true; cs.value = 0.f; cs.value2 = 6.f;
+    cs.count = 2; cs.consts[0].value = 0.f; cs.consts[1].value = 6.f;
     ASSERT_TRUE(unfoldOf(clip, cm, cs));
-    EXPECT_TRUE(cm.kernel != nullptr) << "clip declared no kernel";
-    EXPECT_EQ(2, cm.kernelParamCount);
+    EXPECT_TRUE(cm.kernel.fn != nullptr) << "clip declared no kernel";
+    EXPECT_EQ(2, cm.kernel.nparams);
 
     LayerParams np;
     np.set("operation", "max");
@@ -286,9 +283,9 @@ TEST(Fusion, NonElementwiseLayersDeclareToo)
     mx->inputs.assign(2, Arg(1));
     LayerMath nm;
     ConstOperand ns;
-    ns.hasValue = true; ns.value = 0.f;
+    ns.count = 1; ns.consts[0].value = 0.f;
     ASSERT_TRUE(unfoldOf(mx, nm, ns));
-    EXPECT_TRUE(nm.kernel != nullptr) << "Max(x,0) declared no kernel";
+    EXPECT_TRUE(nm.kernel.fn != nullptr) << "Max(x,0) declared no kernel";
 }
 
 TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
@@ -298,9 +295,6 @@ TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
     r.clamp(LayerMath::INPUT_VALUE, 0.f, 6.f);
     Ptr<AdjacencyGraph> ce = graphOf(r);
     ce->kernel = r.kernel;
-    ce->kernelParamCount = r.kernelParamCount;
-    for (int i = 0; i < r.kernelParamCount; i++)
-        ce->kernelParams[i] = r.kernelParams[i];
     PreparedFusion kern;
     ASSERT_TRUE(kern.take(ce));
     ASSERT_TRUE(kern.activationFn != nullptr);

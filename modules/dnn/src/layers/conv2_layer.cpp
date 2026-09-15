@@ -354,8 +354,6 @@ public:
         const std::vector<FusionNode>& nd = expr->nodes();
         if (nd[0].op != FusionEltwiseOp::INPUT)
             return false;
-        if (expr->outputNode != (int)nd.size() - 1)
-            return false;
         if (addResidual || inputs.size() > 1)
             return false;
         if (activationFunc != nullptr || !activ.empty())
@@ -367,7 +365,7 @@ public:
         if (!bias.empty() && (bias.dims != 1 || (int)bias.total() != K))
             return false;
 
-        int cur = expr->outputNode;
+        int cur = expr->outputNode();
 
         // act(x)*s == act(x*s) only for s >= 0 and a positively homogeneous act.
         float postScale = 1.f;
@@ -380,7 +378,7 @@ public:
                 cur = other;
             }
         }
-        const bool hasPostScale = cur != expr->outputNode;
+        const bool hasPostScale = cur != expr->outputNode();
 
         if (fusedBatchNorm || fastActivation != FAST_ACTIV_NONE) {
             if (!hasPostScale || cur != 0 ||
@@ -390,14 +388,14 @@ public:
 
         FastActivation act = FAST_ACTIV_NONE;
         std::vector<float> ap;
-        if (nd[cur].op == FusionEltwiseOp::CLAMP && fusion::detail::bits(nd[cur].scalar) == fusion::detail::bits(0.f)) {
+        if (nd[cur].op == FusionEltwiseOp::CLAMP && nd[cur].scalar == 0.f) {
             act = FAST_ACTIV_CLIP;
             ap.assign(2, 0.f);
             ap[1] = nd[cur].scalar2;
             cur = nd[cur].inputs[0];
         } else if (nd[cur].op == FusionEltwiseOp::MAX && nd[cur].inputs.size() == 2 &&
                    nd[nd[cur].inputs[1]].op == FusionEltwiseOp::CONST &&
-                   fusion::detail::bits(nd[nd[cur].inputs[1]].scalar) == fusion::detail::bits(0.f)) {
+                   nd[nd[cur].inputs[1]].scalar == 0.f) {
             act = FAST_ACTIV_RELU;
             cur = nd[cur].inputs[0];
         }

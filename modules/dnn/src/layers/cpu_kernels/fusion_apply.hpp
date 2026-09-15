@@ -36,8 +36,6 @@ inline bool PreparedFusion::take(const Ptr<AdjacencyGraph>& e)
         return false;
     if (!e || e->size() == 0)
         return false;
-    if (e->outputNode != (int)e->size() - 1)
-        return false;
     if (e->size() > (size_t)FUSION_MAX_EXPR_NODES)
         return false;
 
@@ -49,10 +47,10 @@ inline bool PreparedFusion::take(const Ptr<AdjacencyGraph>& e)
 
     // The layer may already own a kernel for exactly this math; use it rather than
     // decomposing and then recognising the pieces again.
-    if (e->kernel) {
-        prepared.activationFn = e->kernel;
-        prepared.activationParams.assign(e->kernelParams,
-                                         e->kernelParams + e->kernelParamCount);
+    if (e->kernel.fn) {
+        prepared.activationFn = e->kernel.fn;
+        prepared.activationParams.assign(e->kernel.params,
+                                         e->kernel.params + e->kernel.nparams);
         *this = prepared;
         return true;
     }

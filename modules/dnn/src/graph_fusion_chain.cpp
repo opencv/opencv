@@ -62,9 +62,8 @@ private:
         vector<Arg> constArgs;
         vector<int> rootAfterStep;
         vector<Mat> constBufs;
-        ActivationFunc singleStepKernel = nullptr;
-        float singleStepKernelParams[LayerMath::MAX_KERNEL_PARAMS] = { 0.f, 0.f, 0.f, 0.f };
-        int   singleStepKernelParamCount = 0;
+        //! First step's kernel; a chain that lands at one step runs it instead of the DAG.
+        FusionKernel singleStepKernel;
     };
 
     const vector<Ptr<LayerInfo> >& prog() const { return graph_->prog(); }
@@ -90,6 +89,17 @@ private:
         return true;
     }
 
+    //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
+    static int bufferSlotFor(Arg a, ChainCandidate& c)
+    {
+        for (size_t k = 0; k < c.constArgs.size(); k++) {
+            if (c.constArgs[k].idx == a.idx)
+                return (int)k;
+        }
+        c.constArgs.push_back(a);
+        return (int)c.constArgs.size() - 1;
+    }
+
     bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c, ConstOperand& out) const
     {
         vector<Arg> sideInputs;
@@ -100,41 +110,22 @@ private:
         }
         if (sideInputs.empty())
             return true;
-        if (sideInputs.size() > 2)
+        if (sideInputs.size() > (size_t)ConstOperand::MAX_CONSTS)
             return false;
 
         out.flowIsFirstInput = !L->inputs.empty() && L->inputs[0].idx == cur.idx;
 
-        if (sideInputs.size() == 2) {
-            bool s0 = false, s1 = false;
-            float v0 = 0.f, v1 = 0.f;
-            if (!isFusableConstArg(sideInputs[0], s0, v0) || !s0)
+        for (size_t i = 0; i < sideInputs.size(); i++) {
+            bool isScalar = false;
+            float scalarVal = 0.f;
+            if (!isFusableConstArg(sideInputs[i], isScalar, scalarVal))
                 return false;
-            if (!isFusableConstArg(sideInputs[1], s1, v1) || !s1)
-                return false;
-            out.hasValue = true;
-            out.value = v0;
-            out.value2 = v1;
-            return true;
+            if (isScalar)
+                out.consts[i].value = scalarVal;
+            else
+                out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
         }
-
-        bool isScalar = false;
-        float scalarVal = 0.f;
-        if (!isFusableConstArg(sideInputs[0], isScalar, scalarVal))
-            return false;
-        out.hasValue = true;
-        if (isScalar) {
-            out.value = scalarVal;
-            return true;
-        }
-        for (size_t k = 0; k < c.constArgs.size(); k++) {
-            if (c.constArgs[k].idx == sideInputs[0].idx) {
-                out.bufferId = (int)k;
-                return true;
-            }
-        }
-        c.constArgs.push_back(sideInputs[0]);
-        out.bufferId = (int)c.constArgs.size() - 1;
+        out.count = (int)sideInputs.size();
         return true;
     }
 
@@ -143,10 +134,15 @@ private:
         const FusionOps* ops = fusionOpsFor(l);
         if (!ops || !ops->unfold)
             return false;
-        LayerMath r;
-        ConstOperand anyConstant;
-        anyConstant.hasValue = true;
-        return ops->unfold(l, r, anyConstant);
+        // We don't know yet how many constants this layer will get, so try each count.
+        for (int n = 0; n <= ConstOperand::MAX_CONSTS; n++) {
+            LayerMath r;
+            ConstOperand probe;
+            probe.count = n;
+            if (ops->unfold(l, r, probe))
+                return true;
+        }
+        return false;
     }
 
     void growChain(size_t anchor, ChainCandidate& c)
@@ -195,12 +191,8 @@ private:
             }
 
             CV_DbgAssert(next > chainRoot);
-            if (c.rootAfterStep.empty()) {
+            if (c.rootAfterStep.empty())
                 c.singleStepKernel = r.kernel;
-                c.singleStepKernelParamCount = r.kernelParamCount;
-                for (int q = 0; q < r.kernelParamCount; q++)
-                    c.singleStepKernelParams[q] = r.kernelParams[q];
-            }
             chainRoot = next;
             c.rootAfterStep.push_back(next);
             c.layerIdx.push_back(j);
@@ -222,6 +214,10 @@ private:
                 continue;
             Layer* anchor = dynamic_cast<Layer*>(L.get());
             if (!anchor || isAbsorbableMath(anchor))
+                continue;
+            // A layer that cannot take anything on is no use as the head of a chain.
+            const FusionOps* anchorOps = fusionOpsFor(anchor);
+            if (!anchorOps || !anchorOps->absorb)
                 continue;
 
             ChainCandidate c;
@@ -265,12 +261,8 @@ private:
                 Ptr<AdjacencyGraph> expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1], c.constBufs);
                 if (!expr)
                     continue;
-                if (n == 1) {
+                if (n == 1)
                     expr->kernel = c.singleStepKernel;
-                    expr->kernelParamCount = c.singleStepKernelParamCount;
-                    for (int q = 0; q < c.singleStepKernelParamCount; q++)
-                        expr->kernelParams[q] = c.singleStepKernelParams[q];
-                }
                 if (sinkOps->absorb(sink, expr)) {
                     accepted = n;
                     break;

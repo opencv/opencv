@@ -95,15 +95,16 @@ public:
         if (hasMin) lo = minValue;
         if (hasMax) hi = maxValue;
         if ((!hasMin || !hasMax) && inputs.size() > 1) {
-            // ConstOperand carries two anonymous scalars with no slot information, so
-            // only the fully specified (x, min, max) form can be read unambiguously.
-            // An omitted optional input shows up as an empty Arg, not a missing one.
-            if (inputs.size() != 3 || !side.hasValue)
+            // An omitted optional input is an empty Arg, not a missing one, so only the
+            // full (x, min, max) form tells us which bound is which.
+            if (inputs.size() != 3 || side.count != 2)
                 return false;
             if (inputs[1].idx == 0 || inputs[2].idx == 0)
                 return false;
-            if (!hasMin) lo = side.value;
-            if (!hasMax) hi = side.value2;
+            if (side.at(0).isBuffer() || side.at(1).isBuffer())
+                return false;
+            if (!hasMin) lo = side.at(0).value;
+            if (!hasMax) hi = side.at(1).value;
         }
         r.setKernel(cv::dnn::getActivationFunc(ACTIV_CLIP), { lo, hi });
         r.clamp(LayerMath::INPUT_VALUE, lo, hi);
