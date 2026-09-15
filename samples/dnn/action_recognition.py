@@ -45,7 +45,7 @@ def classify_video(video_path, net_path):
     mean = (114.7748, 107.7354, 99.4750)
     class_names = get_class_names(args.classes)
 
-    net = cv.dnn.readNet(net_path)
+    net = cv.dnn.readNetFromONNX(net_path)
     net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
     net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
 

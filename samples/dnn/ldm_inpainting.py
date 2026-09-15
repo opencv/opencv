@@ -357,9 +357,9 @@ class DDIMInpainter(object):
 
         engine = cv.dnn.ENGINE_OPENCV
 
-        self.encoder = cv.dnn.readNet(encoder_path, "", "", engine)
-        self.diffusor = cv.dnn.readNet(diffusor_path, "", "", engine)
-        self.decoder = cv.dnn.readNet(decoder_path, "", "", engine)
+        self.encoder = cv.dnn.readNetFromONNX(encoder_path, engine)
+        self.diffusor = cv.dnn.readNetFromONNX(diffusor_path, engine)
+        self.decoder = cv.dnn.readNetFromONNX(decoder_path, engine)
         self.sampler = DDIMSampler(self, ddpm_num_timesteps=self.num_timesteps)
         self.set_backend(backend=get_backend_id(args.backend), target=get_target_id(args.target))
 
