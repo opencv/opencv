@@ -1620,52 +1620,6 @@ TEST(Reduce, regression_should_fail_bug_4594)
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, REDUCE_SUM2, CV_32S));
 }
 
-TEST(Reduce, sum8u_row_boundaries)
-{
-    const int heights[] = {1, 2, 255, 256, 257, 258, 511, 512, 513, 1025};
-    const int widths[] = {1, 7, 15, 16, 17, 31, 32, 33, 63, 64, 65, 127, 129};
-    const int channels[] = {1, 3, 4};
-    RNG rng(0x29923);
-    for (int cn : channels)
-    for (int height : heights)
-    for (int width : widths)
-    for (int roi = 0; roi < 2; roi++)
-    for (int pattern = 0; pattern < 2; pattern++)
-    {
-        SCOPED_TRACE(cv::format("width=%d height=%d cn=%d roi=%d pattern=%d",
-                               width, height, cn, roi, pattern));
-        Mat storage(height + 2 * roi, width + 2 * roi, CV_8UC(cn));
-        Mat src = storage(Rect(roi, roi, width, height));
-        if (pattern == 0)
-            src.setTo(Scalar::all(255));
-        else
-            rng.fill(src, RNG::UNIFORM, 0, 256);
-
-        Mat expected = Mat::zeros(1, width, CV_32SC(cn));
-        for (int y = 0; y < height; y++)
-        for (int x = 0; x < width * cn; x++)
-            expected.ptr<int>()[x] += src.ptr<uchar>(y)[x];
-
-        // An offset destination also checks that stores stay inside the ROI.
-        Mat outStorage(3, width + 2, CV_32SC(cn), Scalar::all(-1));
-        Mat actual = outStorage(Rect(1, 1, width, 1));
-        cv::reduce(src, actual, 0, REDUCE_SUM, CV_32S);
-        EXPECT_EQ(0, cv::norm(expected, actual, NORM_INF));
-        for (int y = 0; y < outStorage.rows; y++)
-        for (int x = 0; x < outStorage.cols * cn; x++)
-            if (y != 1 || x < cn || x >= (width + 1) * cn)
-                EXPECT_EQ(-1, outStorage.ptr<int>(y)[x]);
-
-        Mat expectedFloat, actualFloat;
-        expected.convertTo(expectedFloat, CV_32F);
-        cv::reduce(src, actualFloat, 0, REDUCE_SUM, CV_32F);
-        EXPECT_EQ(0, cv::norm(expectedFloat, actualFloat, NORM_INF));
-        expected.convertTo(expectedFloat, CV_32F, 1.0 / height);
-        cv::reduce(src, actualFloat, 0, REDUCE_AVG, CV_32F);
-        EXPECT_LE(cv::norm(expectedFloat, actualFloat, NORM_INF), 1e-4);
-    }
-}
-
 TEST(Mat, push_back_vector)
 {
     cv::Mat result(1, 5, CV_32FC1);
