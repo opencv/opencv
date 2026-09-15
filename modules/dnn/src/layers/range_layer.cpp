@@ -128,9 +128,9 @@ public:
         CV_Assert(inputs.size() == this->inputs.size());
         Net::Impl* netimpl_ = getNetImpl(this);
 
-        Mat startTensor = netimpl_->argTensor(this->inputs[0]);
-        Mat limitTensor = netimpl_->argTensor(this->inputs[1]);
-        Mat deltaTensor = netimpl_->argTensor(this->inputs[2]);
+        Mat startTensor = netimpl_->argTensor(this->inputs[0]).getMat(ACCESS_READ);
+        Mat limitTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
+        Mat deltaTensor = netimpl_->argTensor(this->inputs[2]).getMat(ACCESS_READ);
 
         double fstart, flimit, fdelta;
         int64_t istart, ilimit, idelta;

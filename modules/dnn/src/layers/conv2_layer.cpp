@@ -850,14 +850,14 @@ public:
                      OutputArrayOfArrays outputs_,
                      void* workspace) CV_OVERRIDE
     {
-        std::vector<cuda::GpuMatND> inputs, outputs;
-        inputs_.getGpuMatNDVector(inputs);
-        outputs_.getGpuMatNDVector(outputs);
+        std::vector<UMat> inputs, outputs;
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
         CV_Assert(!inputs.empty() && !outputs.empty());
 
         auto& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
         if (!node) {
-            node = conv->initCudaConvNode(ctx, inputs[0].size, outputs[0].size, preferableTarget);
+            node = conv->initCudaConvNode(ctx, cv::dnn::shape(inputs[0]), cv::dnn::shape(outputs[0]), preferableTarget);
             cudaNode = node.dynamicCast<CUDABackendNode>();
             CV_Assert(cudaNode);
             ws.require(cudaNode->get_workspace_memory_in_bytes());

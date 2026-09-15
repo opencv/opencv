@@ -196,9 +196,9 @@ struct ModelFusionBasic
                                         if (reshape1_lyr && reshape1_lyr->outputs.size() == 1 &&
                                             usecounts.at(instnorm_inp.idx) == 1) {
                                             Mat in_scale = netimpl->isConstArg(instnorm->inputs[1]) ?
-                                                           netimpl->argTensor(instnorm->inputs[1]) : Mat();
+                                                           netimpl->argTensor(instnorm->inputs[1]).getMat(ACCESS_READ) : Mat();
                                             Mat in_bias = netimpl->isConstArg(instnorm->inputs[2]) ?
-                                                          netimpl->argTensor(instnorm->inputs[2]) : Mat();
+                                                          netimpl->argTensor(instnorm->inputs[2]).getMat(ACCESS_READ) : Mat();
                                             bool valid = !in_scale.empty() && !in_bias.empty() &&
                                                          in_scale.type() == CV_32F && in_bias.type() == CV_32F;
                                             if (valid) {
@@ -211,7 +211,7 @@ struct ModelFusionBasic
                                                     all_zeros = (std::abs(bp[k]) < 1e-6f);
                                                 if (all_ones && all_zeros) {
                                                     Arg orig_inp = reshape1_lyr->inputs[0];
-                                                    Mat mul_scale_mat = netimpl->argTensor(mul_scale_arg);
+                                                    Mat mul_scale_mat = netimpl->argTensor(mul_scale_arg).getMat(ACCESS_READ);
                                                     if (in_scale.total() == mul_scale_mat.total()) {
                                                         // Channel dim preserved — fuse into InstanceNorm
                                                         instnorm->inputs[0] = orig_inp;
@@ -377,7 +377,7 @@ struct FuseBNPass
         if (conv->inputs.size() < 2 || !netimpl->isConstArg(conv->inputs[1]))
             return false;
 
-        Mat& Wref = netimpl->argTensor(conv->inputs[1]);
+        Mat Wref = netimpl->argTensor(conv->inputs[1]).getMat(ACCESS_RW);
         if (Wref.empty() || Wref.type() != CV_32F || Wref.dims != 4)
             return false;
 
@@ -443,7 +443,7 @@ struct FuseBNPass
         // apply bias correction into existing bias tensor or create a new one
         size_t conv_nin = conv->inputs.size();
         if (conv_nin >= 3 && netimpl->isConstArg(conv->inputs[2])) {
-            Mat& Bref = netimpl->argTensor(conv->inputs[2]);
+            Mat Bref = netimpl->argTensor(conv->inputs[2]).getMat(ACCESS_RW);
             if (Bref.type() != CV_32F || (int)Bref.total() != OC)
                 return false;
             float* bp = Bref.ptr<float>();
@@ -453,7 +453,7 @@ struct FuseBNPass
             Mat newB(1, OC, CV_32F);
             std::memcpy(newB.ptr<float>(), bias_adj.data(), OC * sizeof(float));
             Arg ba = netimpl->newConstArg(
-                "__fused_bn_bias_w" + std::to_string(conv->inputs[1].idx), newB);
+                "__fused_bn_bias_w" + std::to_string(conv->inputs[1].idx), netimpl->toArgTensor(newB));
             if (conv_nin == 2) conv->inputs.push_back(ba);
             else               conv->inputs[2] = ba;
         }
