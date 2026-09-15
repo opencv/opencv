@@ -4,6 +4,9 @@
 #include "test_precomp.hpp"
 #include "test_common.hpp"
 
+#include <cstdio>
+#include <cstring>
+
 namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
@@ -51,6 +54,129 @@ TEST(Imgcodecs_Png, encode)
     EXPECT_FALSE(img.empty());
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
 }
+
+#ifdef HAVE_PNG
+static size_t pngChunkLength(const vector<uchar>& buffer, size_t offset)
+{
+    return (static_cast<size_t>(buffer[offset]) << 24) |
+           (static_cast<size_t>(buffer[offset + 1]) << 16) |
+           (static_cast<size_t>(buffer[offset + 2]) << 8) |
+           static_cast<size_t>(buffer[offset + 3]);
+}
+
+static vector<size_t> pngIDATOffsets(const vector<uchar>& buffer)
+{
+    vector<size_t> offsets;
+    for (size_t offset = 8; offset + 12 <= buffer.size();)
+    {
+        const size_t length = pngChunkLength(buffer, offset);
+        CV_Assert(length <= buffer.size() - offset - 12);
+        if (std::memcmp(&buffer[offset + 4], "IDAT", 4) == 0)
+            offsets.push_back(offset);
+        offset += length + 12;
+    }
+    return offsets;
+}
+
+class Imgcodecs_Png_ReadIDAT : public testing::Test
+{
+protected:
+    Imgcodecs_Png_ReadIDAT() : filename(cv::tempfile(".png")) {}
+    ~Imgcodecs_Png_ReadIDAT() { std::remove(filename.c_str()); }
+
+    void checkReading(const vector<uchar>& buffer, const Mat& expected, size_t expectedCount = 1)
+    {
+        Mat decoded;
+        ASSERT_NO_THROW(decoded = imdecode(buffer, IMREAD_UNCHANGED));
+        if (expected.empty())
+            EXPECT_TRUE(decoded.empty());
+        else
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), decoded, expected);
+
+        FILE* file = std::fopen(filename.c_str(), "wb");
+        ASSERT_TRUE(file != NULL);
+        const size_t written = std::fwrite(buffer.data(), 1, buffer.size(), file);
+        const int closeResult = std::fclose(file);
+        ASSERT_EQ(buffer.size(), written);
+        ASSERT_EQ(0, closeResult);
+        EXPECT_EQ(expectedCount, imcount(filename));
+        ASSERT_NO_THROW(decoded = imread(filename, IMREAD_UNCHANGED));
+        if (expected.empty())
+            EXPECT_TRUE(decoded.empty());
+        else
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), decoded, expected);
+    }
+
+private:
+    const string filename;
+};
+
+class Imgcodecs_Png_ReadIDAT_RoundTrip
+    : public Imgcodecs_Png_ReadIDAT,
+      public testing::WithParamInterface<testing::tuple<int, int> >
+{};
+
+TEST_P(Imgcodecs_Png_ReadIDAT_RoundTrip, decode)
+{
+    const int layout = get<1>(GetParam()); // Single, multiple, or empty first IDAT.
+    Mat source(256, 256, get<0>(GetParam()));
+    RNG rng(0x12345678);
+    rng.fill(source, RNG::UNIFORM, 0, source.depth() == CV_8U ? 256 : 65536);
+    vector<uchar> buffer;
+    ASSERT_TRUE(imencode(".png", source, buffer,
+        { IMWRITE_PNG_COMPRESSION, 0, IMWRITE_PNG_ZLIBBUFFER_SIZE,
+          layout == 1 ? 8192 : 1024 * 1024 }));
+
+    const vector<size_t> offsets = pngIDATOffsets(buffer);
+    ASSERT_FALSE(offsets.empty());
+    if (layout == 1)
+        ASSERT_GT(offsets.size(), static_cast<size_t>(1));
+    else
+    {
+        ASSERT_EQ(static_cast<size_t>(1), offsets.size());
+        ASSERT_GT(pngChunkLength(buffer, offsets[0]), static_cast<size_t>(8192));
+    }
+
+    if (layout == 2)
+    {
+        // A zero-length IDAT is valid before the first compressed byte.
+        const uchar emptyIDAT[] = { 0, 0, 0, 0, 'I', 'D', 'A', 'T', 0x35, 0xaf, 0x06, 0x1e };
+        buffer.insert(buffer.begin() + offsets[0], emptyIDAT, emptyIDAT + sizeof(emptyIDAT));
+    }
+    checkReading(buffer, source);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ReadIDAT_RoundTrip,
+    testing::Combine(testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4),
+                     testing::Values(0, 1, 2)));
+
+TEST_F(Imgcodecs_Png_ReadIDAT, damaged_first_IDAT)
+{
+    const Mat source(256, 256, CV_8UC3, Scalar(17, 81, 203));
+    vector<uchar> buffer;
+    ASSERT_TRUE(imencode(".png", source, buffer,
+        { IMWRITE_PNG_COMPRESSION, 0, IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024 * 1024 }));
+    const vector<size_t> offsets = pngIDATOffsets(buffer);
+    ASSERT_EQ(static_cast<size_t>(1), offsets.size());
+    const size_t offset = offsets[0];
+    const size_t length = pngChunkLength(buffer, offset);
+    ASSERT_NO_FATAL_FAILURE(checkReading(buffer, source));
+
+    // Incomplete header, absent/partial payload, and absent/partial CRC.
+    const size_t truncatedSizes[] = { offset + 4, offset + 7, offset + 8,
+        offset + 8 + length / 2, offset + 8 + length, offset + 8 + length + 3 };
+    for (size_t i = 0; i < sizeof(truncatedSizes) / sizeof(truncatedSizes[0]); ++i)
+    {
+        SCOPED_TRACE(format("truncated size: %zu", truncatedSizes[i]));
+        const vector<uchar> truncated(buffer.begin(), buffer.begin() + truncatedSizes[i]);
+        ASSERT_NO_FATAL_FAILURE(checkReading(truncated, Mat(), 0));
+    }
+
+    // Header-only imcount does not validate IDAT CRC, but decoding must do so.
+    buffer[offset + 8 + length] ^= 1;
+    checkReading(buffer, Mat());
+}
+#endif
 
 TEST(Imgcodecs_Png, regression_ImreadVSCvtColor)
 {
