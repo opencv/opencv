@@ -94,6 +94,38 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 for (; x < width; x++)
                     total += (int)src[x];
                 dst[0] = total;
+#elif CV_RVV
+                // RVV: use the largest legal widening pair (u8m4 -> u16m8).
+                // vwaddu.wv accumulates bytes directly into u16 lanes, avoiding the
+                // generic v_expand(lo/hi) + add sequence. Flush before u16 overflow.
+                const size_t vl = __riscv_vsetvlmax_e8m4();
+                vuint16m8_t acc16 = __riscv_vmv_v_x_u16m8(0, vl);
+                int total = 0;
+                int x = 0, batch = 0;
+                const int flush_at = 128; // per-lane max: 128 * 255 = 32640
+
+                for (; x <= width - (int)vl; x += (int)vl)
+                {
+                    const vuint8m4_t v = __riscv_vle8_v_u8m4(src + x, vl);
+                    acc16 = __riscv_vwaddu_wv_u16m8(acc16, v, vl);
+
+                    if (++batch >= flush_at)
+                    {
+                        const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, vl);
+                        total += (int)__riscv_vmv_x(
+                            __riscv_vwredsumu_vs_u16m8_u32m1(acc16, zero, vl));
+                        acc16 = __riscv_vmv_v_x_u16m8(0, vl);
+                        batch = 0;
+                    }
+                }
+                {
+                    const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, vl);
+                    total += (int)__riscv_vmv_x(
+                        __riscv_vwredsumu_vs_u16m8_u32m1(acc16, zero, vl));
+                }
+                for (; x < width; x++)
+                    total += (int)src[x];
+                dst[0] = total;
 #else
                 const int vlanes8 = VTraits<v_uint8>::vlanes();
                 v_uint32 v_sum = vx_setzero_u32();
@@ -263,6 +295,70 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 dst[1] = _mm_cvtsi128_si32(sum_ga);
                 dst[2] = _mm_cvtsi128_si32(_mm_srli_si128(sum_br, 8));
                 dst[3] = _mm_cvtsi128_si32(_mm_srli_si128(sum_ga, 8));
+                for (; x < cols; x++)
+                {
+                    dst[0] += (int)src[x * 4];
+                    dst[1] += (int)src[x * 4 + 1];
+                    dst[2] += (int)src[x * 4 + 2];
+                    dst[3] += (int)src[x * 4 + 3];
+                }
+#elif CV_RVV
+                // RVV segmented load: four u8m2 fields are the largest legal
+                // LMUL for vlseg4e8 (NFIELDS * LMUL = 8). Accumulate each channel
+                // directly into u16m4 with vwaddu.wv, then widen-reduce to u32.
+                const size_t vl = __riscv_vsetvlmax_e8m2();
+                vuint16m4_t acc0 = __riscv_vmv_v_x_u16m4(0, vl);
+                vuint16m4_t acc1 = __riscv_vmv_v_x_u16m4(0, vl);
+                vuint16m4_t acc2 = __riscv_vmv_v_x_u16m4(0, vl);
+                vuint16m4_t acc3 = __riscv_vmv_v_x_u16m4(0, vl);
+                int sums[4] = {0, 0, 0, 0};
+                int x = 0, batch = 0;
+                const int flush_at = 128; // per-lane max: 128 * 255 = 32640
+
+                for (; x <= cols - (int)vl; x += (int)vl)
+                {
+                    const vuint8m2x4_t v = __riscv_vlseg4e8_v_u8m2x4(src + x * 4, vl);
+                    acc0 = __riscv_vwaddu_wv_u16m4(
+                        acc0, __riscv_vget_v_u8m2x4_u8m2(v, 0), vl);
+                    acc1 = __riscv_vwaddu_wv_u16m4(
+                        acc1, __riscv_vget_v_u8m2x4_u8m2(v, 1), vl);
+                    acc2 = __riscv_vwaddu_wv_u16m4(
+                        acc2, __riscv_vget_v_u8m2x4_u8m2(v, 2), vl);
+                    acc3 = __riscv_vwaddu_wv_u16m4(
+                        acc3, __riscv_vget_v_u8m2x4_u8m2(v, 3), vl);
+
+                    if (++batch >= flush_at)
+                    {
+                        const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, vl);
+                        sums[0] += (int)__riscv_vmv_x(
+                            __riscv_vwredsumu_vs_u16m4_u32m1(acc0, zero, vl));
+                        sums[1] += (int)__riscv_vmv_x(
+                            __riscv_vwredsumu_vs_u16m4_u32m1(acc1, zero, vl));
+                        sums[2] += (int)__riscv_vmv_x(
+                            __riscv_vwredsumu_vs_u16m4_u32m1(acc2, zero, vl));
+                        sums[3] += (int)__riscv_vmv_x(
+                            __riscv_vwredsumu_vs_u16m4_u32m1(acc3, zero, vl));
+                        acc0 = __riscv_vmv_v_x_u16m4(0, vl);
+                        acc1 = __riscv_vmv_v_x_u16m4(0, vl);
+                        acc2 = __riscv_vmv_v_x_u16m4(0, vl);
+                        acc3 = __riscv_vmv_v_x_u16m4(0, vl);
+                        batch = 0;
+                    }
+                }
+                {
+                    const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, vl);
+                    sums[0] += (int)__riscv_vmv_x(
+                        __riscv_vwredsumu_vs_u16m4_u32m1(acc0, zero, vl));
+                    sums[1] += (int)__riscv_vmv_x(
+                        __riscv_vwredsumu_vs_u16m4_u32m1(acc1, zero, vl));
+                    sums[2] += (int)__riscv_vmv_x(
+                        __riscv_vwredsumu_vs_u16m4_u32m1(acc2, zero, vl));
+                    sums[3] += (int)__riscv_vmv_x(
+                        __riscv_vwredsumu_vs_u16m4_u32m1(acc3, zero, vl));
+                }
+
+                dst[0] = sums[0]; dst[1] = sums[1];
+                dst[2] = sums[2]; dst[3] = sums[3];
                 for (; x < cols; x++)
                 {
                     dst[0] += (int)src[x * 4];
