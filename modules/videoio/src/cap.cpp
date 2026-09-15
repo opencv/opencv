@@ -67,6 +67,28 @@ IStreamReader::~IStreamReader()
     // nothing
 }
 
+// Strip CAP_PROP_TARGET_FPS before VideoCaptureParameters exists: plugin backends rebuild their own copy across the ABI boundary, so marking it "consumed" here wouldn't stop them rejecting it.
+static double extractTargetFps(const std::vector<int>& params, std::vector<int>& backendParams)
+{
+    double target_fps = 0.0;
+    backendParams.clear();
+    backendParams.reserve(params.size());
+    size_t i = 0;
+    for (; i + 1 < params.size(); i += 2)
+    {
+        if (params[i] == CAP_PROP_TARGET_FPS)
+            target_fps = params[i + 1];
+        else
+        {
+            backendParams.push_back(params[i]);
+            backendParams.push_back(params[i + 1]);
+        }
+    }
+    if (i < params.size())  // odd-length input; keep the leftover so VideoCaptureParameters still rejects it
+        backendParams.push_back(params[i]);
+    return target_fps;
+}
+
 VideoCapture::VideoCapture() : throwOnFail(false)
 {}
 
@@ -111,6 +133,7 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
+    CV_INSTRUMENT_REGION();
     return open(filename, apiPreference, std::vector<int>());
 }
 
@@ -123,7 +146,9 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
         release();
     }
 
-    const VideoCaptureParameters parameters(params);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -152,6 +177,8 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
                                                         info.name, icap->isOpened()));
                         if (icap->isOpened())
                         {
+                            if (target_fps > 0)
+                                enableFpsControl(target_fps);
                             return true;
                         }
                         icap.release();
@@ -251,7 +278,9 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
         release();
     }
 
-    const VideoCaptureParameters parameters(params);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByStream();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -281,6 +310,8 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
                                                     info.name, icap->isOpened()));
                     if (icap->isOpened())
                     {
+                        if (target_fps > 0)
+                            enableFpsControl(target_fps);
                         return true;
                     }
                     icap.release();
@@ -363,6 +394,7 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
 
 bool VideoCapture::open(int cameraNum, int apiPreference)
 {
+    CV_INSTRUMENT_REGION();
     return open(cameraNum, apiPreference, std::vector<int>());
 }
 
@@ -386,7 +418,9 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
         }
     }
 
-    const VideoCaptureParameters parameters(params);
+    std::vector<int> backendParams;
+    const double target_fps = extractTargetFps(params, backendParams);
+    const VideoCaptureParameters parameters(backendParams);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -415,6 +449,8 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
                                                         info.name, icap->isOpened()));
                         if (icap->isOpened())
                         {
+                            if (target_fps > 0)
+                                enableFpsControl(target_fps);
                             return true;
                         }
                         icap.release();
@@ -519,12 +555,90 @@ void VideoCapture::release()
 {
     CV_TRACE_FUNCTION();
     icap.release();
+    fpsCtl = FpsControlState(); // don't leak fps-control state (clock/buffers) across reopen
+}
+
+// target_fps <= 0 disables; restricted to backends with a real per-frame CAP_PROP_POS_MSEC.
+void VideoCapture::enableFpsControl(double target_fps)
+{
+    fpsCtl = FpsControlState();
+    if (target_fps <= 0 || icap.empty())
+        return;
+
+    const int domain = icap->isOpened() ? icap->getCaptureDomain() : 0;
+    if (domain != CAP_FFMPEG && domain != CAP_GSTREAMER && domain != CAP_V4L2 &&
+        domain != CAP_OPENCV_MJPEG)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO: target_fps is not supported for backend "
+            << (domain != 0 ? cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(domain)) : cv::String("<unknown>"))
+            << " -- frame-rate control not enabled, using plain passthrough instead");
+        return; // fpsCtl.enabled stays false from the reset above
+    }
+
+    fpsCtl.enabled = true;
+    fpsCtl.targetFps = target_fps;
+    fpsCtl.outFrameDurationMs = 1000.0 / target_fps;
+}
+
+// Drop the output clock on a seek, leaving the feature enabled and its rate intact.
+void VideoCapture::fpsControlResetClock()
+{
+    fpsCtl.nextOutPts = -1.0;
+    fpsCtl.pendingValid = false;
+    fpsCtl.pendingPosMsec = fpsCtl.pendingPosFrames = fpsCtl.pendingPosAviRatio = -1.0;
+}
+
+// Absorbs floating-point rounding noise at an exact schedule boundary in fpsControlGrab().
+const double VideoCapture::kFpsControlEpsMs = 1e-6;
+
+// Drop-only: emits the first frame at-or-after each tick using only its own timestamp; matches FFmpeg's vf_fps.c only on evenly-spaced timestamps, not jittery ones.
+bool VideoCapture::fpsControlGrab()
+{
+    FpsControlState& s = fpsCtl;
+
+    for (;;)
+    {
+        if (!icap->grabFrame())
+        {
+            // Invalidate the previous answer so a retrieve() after a failed grab() can't re-serve a stale frame.
+            s.pendingValid = false;
+            return false;
+        }
+
+        const double posMsec = icap->getProperty(CAP_PROP_POS_MSEC);
+
+        if (s.nextOutPts < 0)
+            s.nextOutPts = posMsec; // anchor the output clock to the first real frame's timestamp
+
+        if (posMsec < s.nextOutPts - kFpsControlEpsMs)
+        {
+            // Not yet due -- drop and try the next frame, without ever calling retrieveFrame().
+            continue;
+        }
+
+        // Capture the other position properties now, since get() may be called several times before retrieve().
+        s.pendingValid = true;
+        s.pendingPosMsec = posMsec;
+        s.pendingPosFrames = icap->getProperty(CAP_PROP_POS_FRAMES);
+        s.pendingPosAviRatio = icap->getProperty(CAP_PROP_POS_AVI_RATIO);
+        s.nextOutPts += s.outFrameDurationMs;
+
+        // Catches up if a source gap left nextOutPts behind real time, instead of over several frames.
+        if (s.nextOutPts <= posMsec)
+            s.nextOutPts = posMsec + s.outFrameDurationMs;
+
+        return true;
+    }
 }
 
 bool VideoCapture::grab()
 {
     CV_INSTRUMENT_REGION();
-    bool ret = !icap.empty() ? icap->grabFrame() : false;
+    bool ret = false;
+    if (!icap.empty())
+    {
+        ret = fpsCtl.enabled ? fpsControlGrab() : icap->grabFrame();
+    }
     if (!ret && throwOnFail)
     {
         CV_Error(Error::StsError, "");
@@ -539,7 +653,24 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
     bool ret = false;
     if (!icap.empty())
     {
-        ret = icap->retrieveFrame(channel, image);
+        if (fpsCtl.enabled)
+        {
+            // Only channel 0 is supported; fail loudly rather than silently return channel 0's data for another channel.
+            if (channel != 0)
+            {
+                CV_LOG_WARNING(NULL, "VIDEOIO: target_fps does not support multi-head capture "
+                                      "(channel != 0); use target_fps <= 0 for multi-head sources");
+            }
+            else if (fpsCtl.pendingValid)
+            {
+                // Still un-retrieved in the backend's buffer; fetch it directly, same as the disabled path.
+                ret = icap->retrieveFrame(0, image);
+            }
+        }
+        else
+        {
+            ret = icap->retrieveFrame(channel, image);
+        }
     }
     if (!ret && throwOnFail)
     {
@@ -601,6 +732,12 @@ bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
     bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    if (ret && fpsCtl.enabled &&
+        (propId == CAP_PROP_POS_MSEC || propId == CAP_PROP_POS_FRAMES || propId == CAP_PROP_POS_AVI_RATIO))
+    {
+        // Resets on any seek, or pre-seek frames get emitted and a stale clock drops frames afterward.
+        fpsControlResetClock();
+    }
     if (!ret && throwOnFail)
     {
         CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
@@ -622,6 +759,35 @@ double VideoCapture::get(int propId) const
             return CAP_PROP_UNKNOWN;
         }
         return static_cast<double>(api);
+    }
+    if (fpsCtl.enabled)
+    {
+        // Captured together in fpsControlGrab(), so these can't disagree; falls through until a frame is emitted.
+        switch (propId)
+        {
+        case CAP_PROP_POS_MSEC:
+            if (fpsCtl.pendingPosMsec >= 0)
+                return fpsCtl.pendingPosMsec;
+            break;
+        case CAP_PROP_POS_FRAMES:
+            if (fpsCtl.pendingPosFrames >= 0)
+                return fpsCtl.pendingPosFrames;
+            break;
+        case CAP_PROP_POS_AVI_RATIO:
+            if (fpsCtl.pendingPosAviRatio >= 0)
+                return fpsCtl.pendingPosAviRatio;
+            break;
+        case CAP_PROP_FPS:
+        {
+            // The emitted rate, clamped to native since drop-only can't emit faster than the source.
+            const double nativeFps = !icap.empty() ? icap->getProperty(CAP_PROP_FPS) : 0.0;
+            if (nativeFps > 0 && nativeFps < fpsCtl.targetFps)
+                return nativeFps;
+            return fpsCtl.targetFps;
+        }
+        default:
+            break;
+        }
     }
     return !icap.empty() ? icap->getProperty(propId) : static_cast<double>(CAP_PROP_UNKNOWN);
 }
