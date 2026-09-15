@@ -1627,9 +1627,24 @@ Output on zero, negative and special (NaN, Inf) values is undefined.
 
 @param src input array.
 @param dst output array of the same size and type as src .
-@sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
+@sa exp, expm1, log1p, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
 */
 CV_EXPORTS_W void log(InputArray src, OutputArray dst);
+
+/** @brief Computes @f$\log(1 + x)@f$ element-wise.
+
+The function cv::log1p computes @f$\log(1 + x)@f$ for every element of the
+input array. It is more accurate than using @ref log for input values close to
+zero.
+
+The implementation follows the stable transformation described in @cite
+Higham02, Appendix A, Eq. A.1, page 528.
+
+@param src input single- or double-precision floating-point array.
+@param dst output array of the same size and type as @p src.
+@sa log, expm1
+*/
+CV_EXPORTS_W void log1p(InputArray src, OutputArray dst);
 
 /** @brief Calculates x and y coordinates of 2D vectors from their magnitude and angle.
 

@@ -101,6 +101,28 @@ struct Expm1Operation
     }
 };
 
+template <typename T>
+struct Log1pOperation
+{
+    static T transform(T x)
+    {
+        return T(1) + x;
+    }
+
+    static T special(T x, T transformed, int transformedClass)
+    {
+        using std::log;
+        CV_UNUSED(transformedClass);
+        return x > T(0) ? transformed : log(transformed);
+    }
+
+    static T finite(T x, T transformed)
+    {
+        using std::log;
+        return log(transformed) * x / (transformed - T(1));
+    }
+};
+
 template <typename T, typename Operation>
 T accurateTransformed(T x)
 {
@@ -132,9 +154,21 @@ T accurateExpm1(T x)
 }
 
 template <typename T>
+T accurateLog1p(T x)
+{
+    return accurateTransformed<T, Log1pOperation<T>>(x);
+}
+
+template <typename T>
 void expm1Impl(const Mat& src, Mat& dst)
 {
     unaryMathImpl(src, dst, accurateExpm1<T>);
+}
+
+template <typename T>
+void log1pImpl(const Mat& src, Mat& dst)
+{
+    unaryMathImpl(src, dst, accurateLog1p<T>);
 }
 
 } // namespace
@@ -604,6 +638,33 @@ void log( InputArray _src, OutputArray _dst )
             hal::log32f( (const float*)ptrs[0], (float*)ptrs[1], len );
         else
             hal::log64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+    }
+}
+
+void log1p(InputArray _src, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int type = _src.type();
+    const int depth = _src.depth();
+    CV_CheckDepth(depth, depth == CV_32F || depth == CV_64F,
+                  "Input array must have CV_32F or CV_64F depth");
+
+    const Mat src = _src.getMat();
+    _dst.create(src.dims, src.size, type);
+    Mat dst = _dst.getMat();
+
+    switch (depth)
+    {
+    case CV_32F:
+        log1pImpl<float>(src, dst);
+        break;
+    case CV_64F:
+        log1pImpl<double>(src, dst);
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat,
+                 "cv::log1p supports only CV_32F and CV_64F arrays");
     }
 }
 

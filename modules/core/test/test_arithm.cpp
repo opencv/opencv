@@ -3241,6 +3241,113 @@ struct Core_Expm1ExpectedValues<double>
     }
 };
 
+template <typename T>
+struct Core_Log1pExpectedValues;
+
+template <>
+struct Core_Log1pExpectedValues<float>
+{
+    static std::array<float, 5> data()
+    {
+        // These are the exact values written as -0x1.62e430p-1,
+        // -0x1.064670p-10, 0x1.060354p-10, and 0x1.9f323ep-2.
+        return {{
+            -std::scalbn(0x162e430, -25),
+            -std::scalbn(0x1064670, -34),
+             0.0f,
+             std::scalbn(0x1060354, -34),
+             std::scalbn(0x19f323e, -26)}};
+    }
+};
+
+template <>
+struct Core_Log1pExpectedValues<double>
+{
+    static std::array<double, 5> data()
+    {
+        // These are the exact values written as -0x1.62e42fefa39efp-1,
+        // -0x1.064670d979b6fp-10, 0x1.060354f8c3ebfp-10,
+        // and 0x1.9f323ecbf984cp-2.
+        return {{
+            -std::scalbn(0x162e42fefa39ef, -53),
+            -std::scalbn(0x1064670d979b6f, -62),
+             0.0,
+             std::scalbn(0x1060354f8c3ebf, -62),
+             std::scalbn(0x19f323ecbf984c, -54)}};
+    }
+};
+
+TYPED_TEST(Core_MathTest, log1p_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {Scalar(-0.5), Scalar(-0.001), Scalar(0),
+                             Scalar(0.001), Scalar(0.5)};
+    const std::array<Scalar, 5> expectedValues =
+        Core_Log1pExpectedValues<Scalar>::data();
+    const int type = DataType<Scalar>::type;
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::log1p(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, log1p_preserves_tiny_arguments)
+{
+    using Scalar = TypeParam;
+    const Scalar tiny = std::scalbn(Scalar(1),
+                                    -std::numeric_limits<Scalar>::digits - 1);
+    Mat src(1, 1, DataType<Scalar>::type);
+    src.at<Scalar>(0, 0) = tiny;
+    Mat dst;
+
+    cv::log1p(src, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), tiny);
+}
+
+TYPED_TEST(Core_MathTest, log1p_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -std::numeric_limits<Scalar>::infinity(),
+        Scalar(-2),
+        Scalar(-1),
+        std::nextafter(Scalar(-1), -std::numeric_limits<Scalar>::infinity()),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+    const Scalar expectedValues[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -std::numeric_limits<Scalar>::infinity(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, DataType<Scalar>::type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::log1p(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
 TYPED_TEST(Core_MathTest, expm1_matches_expected_values)
 {
     using Scalar = TypeParam;
@@ -3303,6 +3410,31 @@ TYPED_TEST(Core_MathTest, expm1_matches_special_values)
         cv::expm1(src, dst);
 
         expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, expm1_log1p_identity)
+{
+    using Scalar = TypeParam;
+    // These are the exact values written as -0x1p-1, -0x1p-10, 0x1p-10,
+    // 0x1p-1, and 0x1p+1.
+    const Scalar values[] = { -std::scalbn(Scalar(1), -1),
+                               -std::scalbn(Scalar(1), -10),
+                               std::scalbn(Scalar(1), -10),
+                               std::scalbn(Scalar(1), -1),
+                               std::scalbn(Scalar(1), 1) };
+
+    for (const Scalar value : values)
+    {
+        Mat src(1, 1, DataType<Scalar>::type);
+        src.at<Scalar>(0, 0) = value;
+        Mat log1pResult;
+        Mat expm1Result;
+
+        cv::log1p(src, log1pResult);
+        cv::expm1(log1pResult, expm1Result);
+
+        expectWithinOneUlp(expm1Result.at<Scalar>(0, 0), value);
     }
 }
 
