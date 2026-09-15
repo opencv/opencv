@@ -118,7 +118,9 @@ void KVCacheManager::initPastTensors()
             dtype = CV_32F;
 
         UMat& past_t = netimpl->__tensors__.at(route.second);
-        past_t = UMat((int)shape_vec.size(), shape_vec.data(), dtype, Scalar(0));
+        past_t.release();
+        past_t.allocator = netimpl->tensorAllocator();
+        Mat((int)shape_vec.size(), shape_vec.data(), dtype, Scalar(0)).copyTo(past_t);
         // The consumer's signature changed; the op loop re-finalizes it.
     }
 }
