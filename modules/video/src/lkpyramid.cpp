@@ -454,7 +454,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 {
                     vint16m1_t ix16 = __riscv_vncvt_x_x_w_i16m1(ix, vl);
                     vint16m1_t iy16 = __riscv_vncvt_x_x_w_i16m1(iy, vl);
-                    vint16m1x2_t out = __riscv_vcreate_v_i16m1x2(ix16, iy16);
+                    vint16m1x2_t out =
+                            __riscv_vset_v_i16m1_i16m1x2(grad, 0, ix16);
+                    out = __riscv_vset_v_i16m1_i16m1x2(out, 1, iy16);
                     __riscv_vsseg2e16_v_i16m1x2(dIptr, out, vl);
                 }
 
