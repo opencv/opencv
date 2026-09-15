@@ -8,8 +8,40 @@
 
 namespace opencv_test { namespace {
 
-// Compares in premultiplied space -- straight color is unstable when alpha is near zero.
-static void referenceOverPremultiplied(const Mat& overlay, const Mat& background, Mat& dst)
+static const int allOperators[] = {
+    ALPHA_COMPOSITE_CLEAR, ALPHA_COMPOSITE_SOURCE, ALPHA_COMPOSITE_DEST,
+    ALPHA_COMPOSITE_OVER, ALPHA_COMPOSITE_DEST_OVER,
+    ALPHA_COMPOSITE_IN, ALPHA_COMPOSITE_DEST_IN,
+    ALPHA_COMPOSITE_OUT, ALPHA_COMPOSITE_DEST_OUT,
+    ALPHA_COMPOSITE_ATOP, ALPHA_COMPOSITE_DEST_ATOP,
+    ALPHA_COMPOSITE_XOR, ALPHA_COMPOSITE_PLUS
+};
+
+// Porter-Duff weights straight from the W3C table, independently of the fixed-point implementation.
+static void referenceWeights(int op, double as, double ad, double& fa, double& fb)
+{
+    switch (op)
+    {
+    case ALPHA_COMPOSITE_CLEAR:     fa = 0;      fb = 0;      break;
+    case ALPHA_COMPOSITE_SOURCE:    fa = 1;      fb = 0;      break;
+    case ALPHA_COMPOSITE_DEST:      fa = 0;      fb = 1;      break;
+    case ALPHA_COMPOSITE_OVER:      fa = 1;      fb = 1 - as; break;
+    case ALPHA_COMPOSITE_DEST_OVER: fa = 1 - ad; fb = 1;      break;
+    case ALPHA_COMPOSITE_IN:        fa = ad;     fb = 0;      break;
+    case ALPHA_COMPOSITE_DEST_IN:   fa = 0;      fb = as;     break;
+    case ALPHA_COMPOSITE_OUT:       fa = 1 - ad; fb = 0;      break;
+    case ALPHA_COMPOSITE_DEST_OUT:  fa = 0;      fb = 1 - as; break;
+    case ALPHA_COMPOSITE_ATOP:      fa = ad;     fb = 1 - as; break;
+    case ALPHA_COMPOSITE_DEST_ATOP: fa = 1 - ad; fb = as;     break;
+    case ALPHA_COMPOSITE_XOR:       fa = 1 - ad; fb = 1 - as; break;
+    case ALPHA_COMPOSITE_PLUS:      fa = 1;      fb = 1;      break;
+    default: CV_Error(Error::StsBadArg, "unknown operator");
+    }
+}
+
+// Takes straight-alpha inputs and returns the premultiplied result; straight color is unstable
+// when the composited alpha is near zero, so comparisons are done in premultiplied space.
+static void referenceCompositePremultiplied(const Mat& overlay, const Mat& background, int op, Mat& dst)
 {
     CV_Assert(overlay.type() == CV_8UC4);
     int bgChannels = background.channels();
@@ -24,16 +56,16 @@ static void referenceOverPremultiplied(const Mat& overlay, const Mat& background
         {
             double as = ov[3] / 255.0;
             double ad = (bgChannels == 4) ? bg[3] / 255.0 : 1.0;
+            double fa = 0, fb = 0;
+            referenceWeights(op, as, ad, fa, fb);
+
             for (int c = 0; c < 3; ++c)
             {
-                double premul = ov[c] * as + bg[c] * ad * (1.0 - as);
+                double premul = ov[c] * as * fa + bg[c] * ad * fb;
                 d[c] = saturate_cast<uchar>(cvRound(premul));
             }
             if (bgChannels == 4)
-            {
-                double ao = as + ad * (1.0 - as);
-                d[3] = saturate_cast<uchar>(cvRound(ao * 255.0));
-            }
+                d[3] = saturate_cast<uchar>(cvRound(255.0 * (as * fa + ad * fb)));
         }
     }
 }
@@ -57,12 +89,13 @@ static double maxAbsDiff(const Mat& a, const Mat& b)
 // Fixed-point rounding vs. the float reference differs by ~2; expected, not a bug.
 static const double kRoundingTolerance = 2.0;
 
-typedef testing::TestWithParam<std::tuple<int, bool>> Imgproc_AlphaComposite_Correctness;
+typedef testing::TestWithParam<std::tuple<int, bool, int>> Imgproc_AlphaComposite_Correctness;
 
 TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
 {
     int bgChannels = std::get<0>(GetParam());
     bool premultiplied = std::get<1>(GetParam());
+    int op = std::get<2>(GetParam());
 
     Size size(157, 83);
     Mat overlay(size, CV_8UC4), background(size, CV_8UC(bgChannels));
@@ -84,7 +117,7 @@ TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
         backgroundInput = background;
 
     Mat dst;
-    alphaComposite(overlayInput, backgroundInput, dst, premultiplied);
+    alphaComposite(overlayInput, backgroundInput, dst, op, premultiplied);
 
     ASSERT_EQ(dst.type(), background.type());
     ASSERT_EQ(dst.size(), background.size());
@@ -96,12 +129,13 @@ TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
         dstPremul = dst;
 
     Mat ref;
-    referenceOverPremultiplied(overlay, background, ref);
+    referenceCompositePremultiplied(overlay, background, op, ref);
     EXPECT_LE(maxAbsDiff(dstPremul, ref), kRoundingTolerance);
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_Correctness,
-                        testing::Combine(testing::Values(3, 4), testing::Bool()));
+                        testing::Combine(testing::Values(3, 4), testing::Bool(),
+                                         testing::ValuesIn(allOperators)));
 
 TEST(Imgproc_AlphaComposite, NoFringingAtBoundariesAndEdges)
 {
@@ -173,23 +207,107 @@ TEST(Imgproc_AlphaComposite, NoFringingAtBoundariesAndEdges)
     }
 }
 
+// Cases where the operator collapses to one of its operands, so no rounding slack is allowed.
+TEST(Imgproc_AlphaComposite, OperatorIdentities)
+{
+    Size size(63, 37);
+    Mat overlay(size, CV_8UC4), background(size, CV_8UC3), dst;
+    randu(overlay, 0, 256);
+    randu(background, 0, 256);
+
+    Mat opaqueOverlay = overlay.clone(), opaqueColor;
+    std::vector<Mat> channels;
+    split(opaqueOverlay, channels);
+    channels[3].setTo(255);
+    merge(channels, opaqueOverlay);
+    cvtColor(opaqueOverlay, opaqueColor, COLOR_BGRA2BGR);
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_DEST);
+    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_CLEAR);
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+
+    // An opaque source covers an opaque destination for every "keep the source" operator.
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_SOURCE);
+    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_IN);
+    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_ATOP);
+    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
+
+    // ... and the complementary operators erase everything on an opaque destination.
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_OUT);
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_DEST_OUT);
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_XOR);
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+
+    // A transparent source leaves an opaque destination alone.
+    Mat transparentOverlay(size, CV_8UC4, Scalar(200, 100, 50, 0));
+    alphaComposite(transparentOverlay, background, dst, ALPHA_COMPOSITE_OVER);
+    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+    alphaComposite(transparentOverlay, background, dst, ALPHA_COMPOSITE_DEST_OVER);
+    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+
+    // PLUS onto black is the premultiplied source.
+    Mat black(size, CV_8UC3, Scalar::all(0)), overlayPremul, overlayPremulColor;
+    cvtColor(overlay, overlayPremul, COLOR_RGBA2mRGBA);
+    cvtColor(overlayPremul, overlayPremulColor, COLOR_BGRA2BGR);
+    alphaComposite(overlay, black, dst, ALPHA_COMPOSITE_PLUS);
+    EXPECT_EQ(0.0, cv::norm(dst, overlayPremulColor, NORM_INF));
+}
+
+// A 4-channel destination keeps the composited alpha, which a 3-channel one cannot.
+TEST(Imgproc_AlphaComposite, CompositedAlphaOnFourChannelBackground)
+{
+    Size size(40, 24);
+    Mat overlay(size, CV_8UC4, Scalar(200, 100, 50, 128));
+    Mat background(size, CV_8UC4, Scalar(10, 20, 30, 64));
+    Mat dst;
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_OVER);
+    // 128 + 64*(1 - 128/255) = 159.8
+    EXPECT_NEAR(dst.at<Vec4b>(0, 0)[3], 160, 1);
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_DEST_OUT);
+    // 64*(1 - 128/255) = 31.9
+    EXPECT_NEAR(dst.at<Vec4b>(0, 0)[3], 32, 1);
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_IN);
+    // 128 * 64/255 = 32.1
+    EXPECT_NEAR(dst.at<Vec4b>(0, 0)[3], 32, 1);
+
+    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_PLUS);
+    EXPECT_EQ(dst.at<Vec4b>(0, 0)[3], 192);
+}
+
 TEST(Imgproc_AlphaComposite, InPlaceDestinationAliasingBackground)
 {
     Size size(80, 60);
     Mat overlay(size, CV_8UC4);
     randu(overlay, 0, 256);
 
-    Mat background3(size, CV_8UC3), expected3;
-    randu(background3, 0, 256);
-    alphaComposite(overlay, background3, expected3);
-    alphaComposite(overlay, background3, background3); // dst aliases background
-    EXPECT_EQ(0.0, cv::norm(background3, expected3, NORM_INF));
+    for (size_t i = 0; i < sizeof(allOperators) / sizeof(allOperators[0]); ++i)
+    {
+        int op = allOperators[i];
+        SCOPED_TRACE(cv::format("op=%d", op));
 
-    Mat background4(size, CV_8UC4), expected4;
-    randu(background4, 0, 256);
-    alphaComposite(overlay, background4, expected4);
-    alphaComposite(overlay, background4, background4);
-    EXPECT_EQ(0.0, cv::norm(background4, expected4, NORM_INF));
+        Mat background3(size, CV_8UC3), expected3;
+        randu(background3, 0, 256);
+        Mat inPlace3 = background3.clone();
+        alphaComposite(overlay, background3, expected3, op);
+        alphaComposite(overlay, inPlace3, inPlace3, op); // dst aliases background
+        EXPECT_EQ(0.0, cv::norm(inPlace3, expected3, NORM_INF));
+
+        Mat background4(size, CV_8UC4), expected4;
+        randu(background4, 0, 256);
+        Mat inPlace4 = background4.clone();
+        alphaComposite(overlay, background4, expected4, op);
+        alphaComposite(overlay, inPlace4, inPlace4, op);
+        EXPECT_EQ(0.0, cv::norm(inPlace4, expected4, NORM_INF));
+    }
 }
 
 TEST(Imgproc_AlphaComposite, RejectsInvalidInputs)
@@ -206,6 +324,8 @@ TEST(Imgproc_AlphaComposite, RejectsInvalidInputs)
     EXPECT_THROW(alphaComposite(overlay4, background2, dst), cv::Exception);
     EXPECT_THROW(alphaComposite(overlay4, backgroundSmall, dst), cv::Exception);
     EXPECT_THROW(alphaComposite(overlayFloat, background3, dst), cv::Exception);
+    EXPECT_THROW(alphaComposite(overlay4, background3, dst, -1), cv::Exception);
+    EXPECT_THROW(alphaComposite(overlay4, background3, dst, ALPHA_COMPOSITE_PLUS + 1), cv::Exception);
 }
 
 }} // namespace opencv_test / anonymous namespace

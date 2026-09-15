@@ -26,7 +26,7 @@ PERF_TEST_P(Size_BgChannels, alphaComposite,
 
     declare.in(overlay, background, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() alphaComposite(overlay, background, dst);
+    TEST_CYCLE() alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_OVER);
 
     SANITY_CHECK_NOTHING();
 }
