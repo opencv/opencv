@@ -426,6 +426,19 @@ public:
             return Ptr<BackendNode>();
         }
 
+        if (input_shape.size() == 3)
+        {
+            // Pool1D
+            // We add an extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
+            input_shape.insert(std::end(input_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
+
         PoolingConfiguration config;
         if (type == MAX)
         {

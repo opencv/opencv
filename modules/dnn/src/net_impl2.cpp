@@ -505,10 +505,11 @@ bool Net::Impl::haveArg(const std::string& name) const
 
 UMat Net::Impl::toArgTensor(const Mat& m) const
 {
-    if (m.empty())
-        return UMat();
-    CV_Assert(m.isContinuous());
-    return m.getUMat(ACCESS_READ);
+    UMat t;
+    forceAllocator(t, Mat::getDefaultAllocator());
+    t.fit(m.shape(), m.type());
+    m.copyTo(t);
+    return t;
 }
 
 Arg Net::Impl::newConstArg(const std::string& name, const UMat& m)
@@ -585,10 +586,14 @@ void Net::Impl::widenHalfConstants()
         return;
     size_t nargs = args.size();
     __tensors__.resize(nargs);
+    std::vector<int> usecounts;
+    useCounts(usecounts);
     for (size_t i = 1; i < nargs; i++) {
         ArgData& adata = args[i];
         if (adata.kind != DNN_ARG_CONST ||
             (adata.type != CV_16F && adata.type != CV_16BF))
+            continue;
+        if (usecounts[i] == 0)
             continue;
         UMat& t = __tensors__[i];
         if (!t.empty()) {
@@ -887,7 +892,7 @@ void Net::Impl::allocateLayerOutputs(
 #ifdef HAVE_CUDA
             if (opBackend == DNN_BACKEND_CUDA) {
                 out_t.fit(outShapes[i], outTypes[i]);
-                outputs[i].fit(outShapes[i], outTypes[i]);
+                outputs[i] = Mat(outShapes[i], outTypes[i], (void*)nullptr);
             } else
 #endif
             {
@@ -1592,8 +1597,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             inpShapes[i] = u.shape();
 #ifdef HAVE_CUDA
             if (opBackend == DNN_BACKEND_CUDA) {
-                inpMats[i].release();
-                inpMats[i].fit(u.shape(), u.type());
+                inpMats[i] = Mat(u.shape(), u.type(), (void*)nullptr);
             } else
                 inpMats[i] = u.getMat(ACCESS_READ);
 #else
