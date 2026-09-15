@@ -236,6 +236,39 @@ cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& file
     return NULL;
 }
 
+static NSArray *orderedVideoCaptureDevices()
+{
+    NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
+            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+
+    // Preserve devices ordering on the system
+    // see AVCaptureDevice::uniqueID property documentation for more info
+    return [devices
+        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
+                                                     AVCaptureDevice *d2) {
+          return [d1.uniqueID compare:d2.uniqueID];
+        }
+    ];
+}
+
+std::vector<cv::VideoDeviceInfo> cv::enumerate_AVFoundation_devices()
+{
+    std::vector<cv::VideoDeviceInfo> result;
+    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
+
+    NSArray *devices = orderedVideoCaptureDevices();
+
+    for (NSUInteger i = 0; i < devices.count; i++)
+    {
+        AVCaptureDevice *device = [devices objectAtIndex:i];
+        const char *name = [[device localizedName] UTF8String];
+        result.push_back(cv::makeVideoDeviceInfo((int)i, cv::CAP_AVFOUNDATION, name ? name : ""));
+    }
+
+    [localpool drain];
+    return result;
+}
+
 /********************** Implementation of Classes ****************************/
 
 /*****************************************************************************
@@ -359,8 +392,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 #endif
 
     // get capture device
-    NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
-            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+    NSArray *devices = orderedVideoCaptureDevices();
 
     if ( devices.count == 0 ) {
         fprintf(stderr, "OpenCV: AVFoundation didn't find any attached Video Input Devices!\n");
@@ -373,15 +405,6 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         [localpool drain];
         return 0;
     }
-
-    // Preserve devices ordering on the system
-    // see AVCaptureDevice::uniqueID property documentation for more info
-    devices = [devices
-        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
-                                                     AVCaptureDevice *d2) {
-          return [d1.uniqueID compare:d2.uniqueID];
-        }
-    ];
 
     mCaptureDevice = devices[cameraNum];
 
