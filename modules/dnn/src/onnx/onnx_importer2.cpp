@@ -309,7 +309,7 @@ protected:
                       const opencv_onnx::NodeProto& node_proto, int axis = -1);
     void addQuantize(const std::string& name, const Arg& data,
                      const std::vector<Arg>& scale_zp, const std::vector<Arg>& outputs,
-                     const opencv_onnx::NodeProto& node_proto);
+                     const opencv_onnx::NodeProto& node_proto, int output_onnx_dtype = -1);
 
     std::map<std::string, int> onnx_opset_map;  // map from OperatorSetIdProto
     void parseOperatorSet();
@@ -2420,10 +2420,17 @@ void ONNXImporter2::parseDequantizeLinear(LayerParams& layerParams, const opencv
 
 void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    // Raw dtype disambiguates E5M2 vs E5M2FNUZ, which both collapse to CV_16F.
     int dt = layerParams.get<int>("output_dtype", -1);
+    if (dt < 0 && node_proto.input_size() >= 3)
+        dt = findGraphTensorOnnxType(node_proto.input(2));
     if (dt >= 0)
+        layerParams.set<int>("output_onnx_dtype", dt);
+
+    int attrDt = layerParams.get<int>("output_dtype", -1);
+    if (attrDt >= 0)
     {
-        layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
+        layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)attrDt));
     }
     addLayer(layerParams, node_proto);
 }
@@ -2478,11 +2485,14 @@ Arg ONNXImporter2::addDequantize(const std::string& name, const std::vector<Arg>
 void ONNXImporter2::addQuantize(const std::string& name, const Arg& data,
                                 const std::vector<Arg>& scale_zp,
                                 const std::vector<Arg>& outputs,
-                                const opencv_onnx::NodeProto& node_proto)
+                                const opencv_onnx::NodeProto& node_proto,
+                                int output_onnx_dtype)
 {
     LayerParams lp;
     lp.name = name;
     lp.type = "QuantizeLinear";
+    if (output_onnx_dtype >= 0)
+        lp.set<int>("output_onnx_dtype", output_onnx_dtype);
     node_inputs = {data};
     node_inputs.insert(node_inputs.end(), scale_zp.begin(), scale_zp.end());
     node_outputs = outputs;
@@ -2571,7 +2581,8 @@ void ONNXImporter2::parseQMatMul(LayerParams& layerParams, const opencv_onnx::No
     node_outputs = {mm_out};
     addLayer(mmLp, node_proto);
 
-    addQuantize(bn + "/quant_y", mm_out, {inp[6], inp[7]}, out, node_proto);
+    addQuantize(bn + "/quant_y", mm_out, {inp[6], inp[7]}, out, node_proto,
+                findGraphTensorOnnxType(node_proto.input(7)));
 }
 
 void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

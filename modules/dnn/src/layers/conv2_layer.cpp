@@ -117,7 +117,16 @@ public:
         Mat bias_ = bias_arr.getMat();
         CV_Assert(!weights_.empty());
         int wtype0 = weights_.type();
-        CV_Assert(wtype0 == CV_32F || wtype0 == CV_16F || wtype0 == CV_16BF);
+        CV_Assert(wtype0 == CV_32F || wtype0 == CV_16F || wtype0 == CV_16BF ||
+                  wtype0 == CV_8F_E4M3FN || wtype0 == CV_8F_E4M3FNUZ);
+        // repackConvWeights is FP32-only; FP8 reaches here only from vendor-quantised
+        // graphs that feed Conv without a DequantizeLinear. Half stays as it was --
+        // repackDepthwiseConvWeights takes CV_16F/CV_16BF natively.
+        if (wtype0 == CV_8F_E4M3FN || wtype0 == CV_8F_E4M3FNUZ) {
+            Mat widened;
+            weights_.convertTo(widened, CV_32F);
+            weights_ = widened;
+        }
         CV_Assert(accuracy == -1 || accuracy == CV_32F);
         int wtype = accuracy < 0 ? CV_32F : accuracy;
 
@@ -143,7 +152,7 @@ public:
         // >= 256*256 so the reorder cost is amortized).
         mlas_packed_B_.release();
         mlas_packed_M_ = mlas_packed_K_ = 0;
-        if (!depthwise && ngroups == 1 && wtype0 == CV_32F &&
+        if (!depthwise && ngroups == 1 && weights_.type() == CV_32F &&
             wtype == CV_32F && mlasAvailable())
         {
             bool ksize_all_one = wshape0.dims >= 3;

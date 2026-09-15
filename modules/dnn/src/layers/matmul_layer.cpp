@@ -43,8 +43,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
 
+        // The GEMM kernels are FP32-only, so narrow constant weights are decoded
+        // once here. FP8 arrives this way from vendor-quantised models that feed
+        // MatMul directly instead of going through DequantizeLinear.
         for (Mat& blob : blobs) {
-            if (blob.type() == CV_16F || blob.type() == CV_16BF) {
+            if (blob.type() == CV_16F || blob.type() == CV_16BF ||
+                blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
                 Mat widened;
                 blob.convertTo(widened, CV_32F);
                 blob = widened;

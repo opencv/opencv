@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
+#include "onnx/onnx_dtype_convert.hpp"
 
 #include <limits>
 
@@ -1262,6 +1263,26 @@ void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
     setGraphInput(mainGraph, i, m.getMat());
 }
 
+static inline bool isNativeFp8(int type)
+{
+    const int d = CV_MAT_DEPTH(type);
+    return d == CV_8F_E4M3FN || d == CV_8F_E4M3FNUZ;
+}
+
+// ONNX encodes FP8 round-to-nearest-even with saturation; core's fp8_t rounds half
+// away from zero and overflows to NaN, so convertTo cannot produce FP8 here.
+static void convertToOnnxFp8(const Mat& src, Mat& dst, int ddepth)
+{
+    const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(ddepth == CV_8F_E4M3FN ? 17 : 18);
+    Mat src32f;
+    src.convertTo(src32f, CV_32F);
+    dst.fit(src.shape(), CV_MAKETYPE(ddepth, src.channels()));
+    const float* s = src32f.ptr<float>();
+    uchar* d = dst.data;
+    for (size_t i = 0, n = src32f.total() * src32f.channels(); i < n; i++)
+        d[i] = onnx_dtype::f32ToFp8(s[i], fmt, true);
+}
+
 void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
 {
     int mtype = m.type();
@@ -1314,6 +1335,10 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         {
             Mat tmp(mshape, CV_16F, (void*)m.data);
             tmp.convertTo(inp_t, adata_type);
+        }
+        else if (isNativeFp8(adata_type) && CV_MAT_DEPTH(mtype) != CV_MAT_DEPTH(adata_type))
+        {
+            convertToOnnxFp8(m, inp_t, CV_MAT_DEPTH(adata_type));
         }
         else
         {
@@ -1900,7 +1925,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 outputsVec[i].depth() != CV_MAT_DEPTH(declaredOutType))
             {
                 Mat tmp;
-                outputsVec[i].convertTo(tmp, CV_MAT_DEPTH(declaredOutType));
+                if (isNativeFp8(declaredOutType))
+                    convertToOnnxFp8(outputsVec[i], tmp, CV_MAT_DEPTH(declaredOutType));
+                else
+                    outputsVec[i].convertTo(tmp, CV_MAT_DEPTH(declaredOutType));
                 outputsVec[i] = tmp;
             }
         } else {

@@ -71,7 +71,8 @@ public:
         real_ndims_C = params.get<int>("real_ndims_C", -1);
 
         for (Mat& blob : blobs) {
-            if (blob.type() == CV_16F || blob.type() == CV_16BF) {
+            if (blob.type() == CV_16F || blob.type() == CV_16BF ||
+                blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
                 Mat widened;
                 blob.convertTo(widened, CV_32F);
                 blob = widened;
