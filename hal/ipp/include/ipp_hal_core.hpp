@@ -35,6 +35,14 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 # define IPP_DISABLE_NORM_INF_16U_C1MR   0
 #endif
 
+// segmentation fault in ippiNorm[Diff]_Inf_32f_C3CMR with the macOS ippicv (2021.9.1);
+// the newer Linux/Windows ippicv (2026.0.0) is not affected
+#if defined(__APPLE__)
+# define IPP_DISABLE_NORM_INF_32F_C3CMR  1
+# else
+# define IPP_DISABLE_NORM_INF_32F_C3CMR  0
+#endif
+
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
 

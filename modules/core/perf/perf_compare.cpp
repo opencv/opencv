@@ -35,7 +35,7 @@ PERF_TEST_P( Size_MatType_CmpType, compare,
 PERF_TEST_P( Size_MatType_CmpType, compareScalar,
              testing::Combine(
                  testing::Values(TYPICAL_MAT_SIZES),
-                 testing::Values(TYPICAL_MAT_TYPES),
+                 testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
                  CmpType::all()
                  )
              )

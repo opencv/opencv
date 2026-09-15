@@ -5,7 +5,7 @@ namespace opencv_test
 using namespace perf;
 
 #define TYPICAL_MAT_SIZES_SORT  TYPICAL_MAT_SIZES
-#define TYPICAL_MAT_TYPES_SORT  CV_8UC1, CV_16UC1, CV_32FC1
+#define TYPICAL_MAT_TYPES_SORT  CV_8UC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1
 #define SORT_TYPES              SORT_EVERY_ROW | SORT_ASCENDING, SORT_EVERY_ROW | SORT_DESCENDING
 #define TYPICAL_MATS_SORT       testing::Combine( testing::Values(TYPICAL_MAT_SIZES_SORT), testing::Values(TYPICAL_MAT_TYPES_SORT), testing::Values(SORT_TYPES) )
 
