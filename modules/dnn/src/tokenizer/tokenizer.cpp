@@ -274,7 +274,7 @@ static void registerDefaultTokenizers() {
             CoreBPE core;
             std::unordered_set<std::string> special;
             if (model_type == "gpt2" || model_type == "gpt4") {
-                core = buildTokenizerFromJson(model_type, tok_json);
+                core = buildTokenizerFromJson(model_type, tok_json, &special);
             } else if (model_type == "qwen2" || model_type == "qwen2.5") {
                 core = buildTokenizerFromJson(model_type, tok_json, &special);
             } else {
