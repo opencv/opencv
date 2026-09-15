@@ -2103,11 +2103,12 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
 /** @brief Coordinate mapping convention used to align source and destination samples during resize.
 
 #ResizeCoord::PIXEL_CENTER is classic #resize's convention; the others are ONNX Resize's
-`coordinate_transformation_mode` values. Only #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC support
-modes other than #ResizeCoord::PIXEL_CENTER.
+`coordinate_transformation_mode` values. All of them are resolved while the interpolation tables
+are built, so they all run the same kernels at the same speed. #INTER_AREA is the exception: its
+decimation geometry is tied to #ResizeCoord::PIXEL_CENTER, so it accepts no other mode.
 
 @note #ResizeCoord::HALF_PIXEL_SYMMETRIC and #ResizeCoord::ALIGN_CORNERS need the true scale --
-pass it via #ResizeParams::fx / #ResizeParams::fy.
+pass it via @ref cv::ResizeParams::fx "ResizeParams::fx" / @ref cv::ResizeParams::fy "ResizeParams::fy".
 */
 enum class ResizeCoord
 {
@@ -2120,10 +2121,11 @@ enum class ResizeCoord
     HALF_PIXEL_SYMMETRIC    //!< ONNX Resize "half_pixel_symmetric"; see @ref ResizeCoord note
 };
 
-/** @brief Index-rounding rule used by #INTER_NEAREST in non-default coordinate modes.
+/** @brief Index-rounding rule used by #cv::INTER_NEAREST in non-default coordinate modes.
 
-Applies when #ResizeParams::coordMode is not #ResizeCoord::PIXEL_CENTER; matches ONNX
-Resize's `nearest_mode` attribute. No effect for #ResizeCoord::PIXEL_CENTER.
+Applies when @ref cv::ResizeParams::coordMode "ResizeParams::coordMode" is not
+#ResizeCoord::PIXEL_CENTER; matches ONNX Resize's `nearest_mode` attribute. #ResizeCoord::PIXEL_CENTER
+always rounds down, which is what classic #resize does.
 */
 enum class ResizeNearest
 {
@@ -2136,7 +2138,7 @@ enum class ResizeNearest
 /** @brief Parameters of the struct-based and batched #resize overload.
 
 Collects the output geometry and every interpolation flag in one place, like
-@ref cv::dnn::Image2BlobParams, so that the batched #resize does not need a growing argument list.
+@ref cv::dnn::Image2BlobParams, so that #resize does not need a growing argument list.
 
 @sa resize
 */
@@ -2145,10 +2147,10 @@ struct CV_EXPORTS_W_SIMPLE ResizeParams
     CV_WRAP ResizeParams();
 
     /** @brief Constructs the parameters from the output geometry.
-    @param dsize output spatial size, see #ResizeParams::dsize.
-    @param fx horizontal scale factor, see #ResizeParams::fx.
-    @param fy vertical scale factor, see #ResizeParams::fy.
-    @param interpolation interpolation method, see #ResizeParams::interpolation.
+    @param dsize output spatial size, see @ref dsize.
+    @param fx horizontal scale factor, see @ref fx.
+    @param fy vertical scale factor, see @ref fy.
+    @param interpolation interpolation method, see @ref interpolation.
     */
     CV_WRAP ResizeParams(Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
@@ -2158,13 +2160,13 @@ struct CV_EXPORTS_W_SIMPLE ResizeParams
     CV_PROP_RW Size dsize;
 
     //! scale factor along the horizontal axis; when it equals 0, it is computed as
-    //! `(double)dsize.width/src.cols`. For a #coordMode other than #ResizeCoord::PIXEL_CENTER pass
-    //! it explicitly whenever #dsize was obtained by flooring/rounding a scale you already know,
-    //! e.g. an ONNX Resize node's "scales" input: re-deriving the scale from #dsize and the input
-    //! size alone is exact only when #dsize was itself computed as `round(srcSize * scale)`.
+    //! `(double)dsize.width/src.cols`. For a @ref coordMode other than #ResizeCoord::PIXEL_CENTER
+    //! pass it explicitly whenever @ref dsize was obtained by flooring/rounding a scale you already
+    //! know, e.g. an ONNX Resize node's "scales" input: re-deriving the scale from @ref dsize and
+    //! the input size alone is exact only when @ref dsize was itself `round(srcSize * scale)`.
     CV_PROP_RW double fx;
 
-    //! scale factor along the vertical axis; see #ResizeParams::fx.
+    //! scale factor along the vertical axis; see @ref fx.
     CV_PROP_RW double fy;
 
     //! interpolation method: #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC/#INTER_AREA/#INTER_LANCZOS4.
@@ -2178,16 +2180,16 @@ struct CV_EXPORTS_W_SIMPLE ResizeParams
     //! coordinate mapping convention; see #ResizeCoord
     CV_PROP_RW ResizeCoord coordMode;
 
-    //! index-rounding rule for #INTER_NEAREST when #coordMode is not
-    //! #ResizeCoord::PIXEL_CENTER; see #ResizeNearest
+    //! index-rounding rule for #INTER_NEAREST; see #ResizeNearest
     CV_PROP_RW ResizeNearest nearestMode;
 
-    //! Keys cubic coefficient for #INTER_CUBIC when #coordMode isn't #ResizeCoord::PIXEL_CENTER.
-    //! Default -0.75.
+    //! Keys cubic coefficient for #INTER_CUBIC (ONNX `cubic_coeff_a`). Default -0.75, which is
+    //! what classic #resize uses.
     CV_PROP_RW float cubicCoeffA;
 
-    //! For a non-#ResizeCoord::PIXEL_CENTER #INTER_CUBIC: zero-weight out-of-bounds taps instead of
-    //! clamping (ONNX `exclude_outside`).
+    //! Zero-weight the taps that fall outside the image and renormalise the rest, instead of
+    //! replicating the edge sample (ONNX `exclude_outside`). Only #INTER_CUBIC and #INTER_LANCZOS4
+    //! are affected: with two taps the two rules agree.
     CV_PROP_RW bool excludeOutside;
 
     //! apply antialiasing filter when downscaling (not yet implemented)
@@ -2212,6 +2214,14 @@ Accepts the same three `src` kinds, picked at runtime from `src.kind()`:
 For a batch, the rows of all the images are enumerated as a single list of stripes and processed by
 one parallel loop, so the work is spread evenly over the threads whether the batch holds two large
 images or hundreds of small ones.
+
+@ref ResizeParams::coordMode "coordMode", @ref ResizeParams::nearestMode "nearestMode",
+@ref ResizeParams::cubicCoeffA "cubicCoeffA" and @ref ResizeParams::excludeOutside "excludeOutside"
+are resolved into the interpolation tables, so a non-default value costs a different table and
+nothing else: every combination runs the same kernels at the same speed.
+
+@note A `std::vector<UMat>` is resized element by element on the OpenCL device; the shared tables
+and the single parallel loop apply to the two host-memory kinds.
 
 @note A batch always runs OpenCV's own interpolation kernels. It does not offer the work to a
 custom HAL, which takes whole images only and would therefore give up both the shared tables and
