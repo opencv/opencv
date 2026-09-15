@@ -197,4 +197,59 @@ TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
     EXPECT_EQ(dis->getCoarsestScale(), -1);
 }
 
+// See https://github.com/opencv/opencv/issues/20185
+TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
+{
+    Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
+    theRNG().fill(prev, RNG::UNIFORM, 0, 256);
+    theRNG().fill(next, RNG::UNIFORM, 0, 256);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->setPatchStride(10);
+
+    Mat flow(prev.size(), CV_32FC2, Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+
+    dis->setPatchSize(25);
+    flow.setTo(Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+}
+
+TEST(DenseOpticalFlow_DIS, regression_20185_stress)
+{
+    for (int trial = 0; trial < 40; ++trial)
+    {
+        int rows = 120 + theRNG().uniform(0, 300);
+        int cols = 120 + theRNG().uniform(0, 300);
+        int patch_size = 9 + theRNG().uniform(0, 40);
+        // Fixed, deliberately small stride (matching the built-in presets, all of which use
+        // 3-4): autoSelectPatchSizeAndScales() can silently reduce patch_size for a given image
+        // size, and a stride comparable to or larger than the *effective* patch_size hits an
+        // unrelated pre-existing buffer-sizing mismatch in precomputeStructureTensor() -- not
+        // the bug this test targets. Keeping the stride small relative to every patch_size this
+        // test can produce (9-48, or the auto-reduced minimum of 8) avoids that unrelated issue.
+        int patch_stride = 2;
+        float flow_mag = (float)theRNG().uniform(20, 120);
+
+        Mat prev(rows, cols, CV_8UC1), next(rows, cols, CV_8UC1);
+        theRNG().fill(prev, RNG::UNIFORM, 0, 256);
+        theRNG().fill(next, RNG::UNIFORM, 0, 256);
+
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+        dis->setPatchStride(patch_stride);
+        dis->setPatchSize(patch_size);
+
+        Mat flow(prev.size(), CV_32FC2, Scalar(flow_mag, -flow_mag));
+        SCOPED_TRACE(cv::format("trial=%d rows=%d cols=%d patch_size=%d patch_stride=%d flow_mag=%f",
+                                 trial, rows, cols, patch_size, patch_stride, flow_mag));
+        ASSERT_NO_THROW(dis->calc(prev, next, flow));
+        EXPECT_EQ(flow.size(), prev.size());
+
+        flow.setTo(Scalar(flow_mag, -flow_mag));
+        ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    }
+}
+
 }} // namespace
