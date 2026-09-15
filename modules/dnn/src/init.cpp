@@ -240,6 +240,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LinearAttention, LinearAttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(FlexAttention,   FlexAttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(RotaryEmbedding, RotaryEmbeddingLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(GroupQueryAttention, GroupQueryAttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast,           CastLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast2,          Cast2Layer);

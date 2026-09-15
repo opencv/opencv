@@ -204,6 +204,18 @@ template<typename Op> static inline bool intUnaryDispatch(const Mat& src, Mat& d
     return true;
 }
 
+static int computeElementwiseNstripes(const Mat& src)
+{
+    size_t planeSize = 1;
+    for (int d = 2; d < src.dims; ++d)
+        planeSize *= (size_t)src.size[d];
+    if (src.dims <= 1)
+        planeSize = (size_t)src.size[0];
+
+    int nstripes = (int)std::max(1.0, (double)src.total() * (1. / 1024));
+    return (int)std::min((size_t)nstripes, planeSize);
+}
+
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
 {
@@ -383,7 +395,7 @@ public:
                     continue;
                 }
 
-                const int nstripes = getNumThreads();
+                const int nstripes = computeElementwiseNstripes(src);
                 PBody body(func, src, dst, nstripes);
                 parallel_for_(Range(0, nstripes), body, nstripes);
                 continue;
@@ -393,7 +405,7 @@ public:
             {
                 Mat src_f, dst_f(dst.size, CV_32F);
                 src.convertTo(src_f, CV_32F);
-                const int nstripes = getNumThreads();
+                const int nstripes = computeElementwiseNstripes(src_f);
                 PBody body(func, src_f, dst_f, nstripes);
                 parallel_for_(Range(0, nstripes), body, nstripes);
                 dst_f.convertTo(dst, CV_64F);

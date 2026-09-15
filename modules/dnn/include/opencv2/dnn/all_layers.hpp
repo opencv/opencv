@@ -1977,6 +1977,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RotaryEmbeddingLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS GroupQueryAttentionLayer : public Layer {
+     public:
+        static Ptr<GroupQueryAttentionLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS AttentionOnnxAiLayer : public Layer {
      public:
         int kv_num_heads;

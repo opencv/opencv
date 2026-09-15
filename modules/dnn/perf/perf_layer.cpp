@@ -787,6 +787,81 @@ PERF_TEST_P_(Layer_Attention, VisionTransformer) {
     test_layer({1, 197, 768}, {768, 768, 768}, 12);
 }
 
+struct Layer_GroupQueryAttention : public TestBaseWithParam<tuple<Backend, Target>> {
+    void test_layer(int B, int S, int Sp, int num_heads, int kv_num_heads, int D) {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        int Skv = Sp + S;
+
+        Mat query(std::vector<int>{B, S, num_heads * D}, CV_32F);
+        Mat key(std::vector<int>{B, S, kv_num_heads * D}, CV_32F);
+        Mat value(std::vector<int>{B, S, kv_num_heads * D}, CV_32F);
+        Mat pastKey, pastValue;
+        if (Sp > 0) {
+            pastKey.create(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
+            pastValue.create(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
+            randu(pastKey, 0.f, 1.f);
+            randu(pastValue, 0.f, 1.f);
+        }
+        Mat seqlensK(std::vector<int>{B}, CV_32S, Scalar(Skv - 1));
+        Mat totalSeqLen(std::vector<int>{1}, CV_32S, Scalar(Skv));
+        Mat cosCache(std::vector<int>{Skv, D / 2}, CV_32F);
+        Mat sinCache(std::vector<int>{Skv, D / 2}, CV_32F);
+
+        randu(query, 0.f, 1.f);
+        randu(key, 0.f, 1.f);
+        randu(value, 0.f, 1.f);
+        randu(cosCache, -1.f, 1.f);
+        randu(sinCache, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "GroupQueryAttention";
+        lp.name = "testLayer";
+        lp.set("num_heads", num_heads);
+        lp.set("kv_num_heads", kv_num_heads);
+
+        Net net;
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        for (int i = 0; i < 9; ++i)
+            net.connect(0, i, id, i);
+
+        std::vector<std::string> input_names{
+            "query", "key", "value", "past_key", "past_value",
+            "seqlens_k", "total_sequence_length", "cos_cache", "sin_cache"};
+        net.setInputsNames(input_names);
+        net.setInput(query, input_names[0]);
+        net.setInput(key, input_names[1]);
+        net.setInput(value, input_names[2]);
+        net.setInput(pastKey, input_names[3]);
+        net.setInput(pastValue, input_names[4]);
+        net.setInput(seqlensK, input_names[5]);
+        net.setInput(totalSeqLen, input_names[6]);
+        net.setInput(cosCache, input_names[7]);
+        net.setInput(sinCache, input_names[8]);
+
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_GroupQueryAttention, MHA_ShortCache) {
+    test_layer(/*B*/1, /*S*/512, /*Sp*/1, /*num_heads*/32, /*kv_num_heads*/32, /*D*/128);
+}
+
+PERF_TEST_P_(Layer_GroupQueryAttention, Grouped_WithCache) {
+    test_layer(/*B*/1, /*S*/1, /*Sp*/2048, /*num_heads*/32, /*kv_num_heads*/8, /*D*/128);
+}
+
+
 struct Layer_AttentionOnnxAi : public TestBaseWithParam<int>
 {
     void decode_step(const std::string& layout, int nq, int nkv)
@@ -844,6 +919,7 @@ struct Layer_AttentionOnnxAi : public TestBaseWithParam<int>
 PERF_TEST_P_(Layer_AttentionOnnxAi, decode_gqa_3d) { decode_step("3d", 8, 4); }
 PERF_TEST_P_(Layer_AttentionOnnxAi, decode_gqa_4d) { decode_step("4d", 8, 2); }
 PERF_TEST_P_(Layer_AttentionOnnxAi, decode_mha_4d) { decode_step("4d", 8, 8); }
+
 
 struct Layer_GroupNorm : public TestBaseWithParam<tuple<Backend, Target> >
 {
@@ -1021,6 +1097,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_GroupQueryAttention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionOnnxAi, testing::Values(1, 64, 512));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GroupNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_MVN, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
@@ -1210,6 +1287,54 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Elementwise,
                                               /* withNgraph= */          true,
                                               /* withWebnn= */           false,
                                               /* withCann= */            false));
+
+struct Layer_Sign : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(int matType, const std::vector<int>& input_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        if (backendId == DNN_BACKEND_CUDA && matType != CV_32F)
+            throw SkipTestException("The CUDA SignOp only supports floating point tensors.");
+
+        Mat input(input_shape, matType);
+        randu(input, -100, 100);
+
+        LayerParams lp;
+        lp.type = "Sign";
+        lp.name = "PerfLayer/Sign";
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+
+        {
+            net.setInput(input);
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_Sign, Float) {
+    test_layer(CV_32F, {2, 32, 416, 416});
+}
+PERF_TEST_P_(Layer_Sign, Int32) {
+    test_layer(CV_32S, {2, 32, 416, 416});
+}
+PERF_TEST_P_(Layer_Sign, Int64) {
+    test_layer(CV_64S, {2, 32, 416, 416});
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Sign, dnnBackendsAndTargets());
 
 struct Layer_TopK : public TestBaseWithParam<tuple<Backend, Target>> {
     void test_layer(const std::vector<int> &input_shape, const int K, const int axis) {

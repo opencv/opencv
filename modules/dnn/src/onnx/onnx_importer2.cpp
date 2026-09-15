@@ -2457,6 +2457,7 @@ void ONNXImporter2::parseDynamicQuantizeLinear(LayerParams& layerParams, const o
 
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "RMSNormalization";
     addLayer(layerParams, node_proto);
 }
 
@@ -2860,6 +2861,13 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
     addLayer(params, node_proto, n_inputs);
 }
 
+void ONNXImporter2::parseGroupQueryAttention(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(layerParams.has("num_heads"), "ONNXImporter2/parseGroupQueryAttention: num_heads is required but missing");
+    CV_CheckTrue(layerParams.has("kv_num_heads"), "ONNXImporter2/parseGroupQueryAttention: kv_num_heads is required but missing");
+    layerParams.type = "GroupQueryAttention";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseSDPA(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckEQ(node_proto.input_size(), 3, "ONNXImporter2/parseSDPA: SDPA expects 3 inputs (Q, K^T, V)");
     addLayer(params, node_proto, 3);
@@ -2910,43 +2918,6 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
     params.set("kv_num_heads", params.get<int>("num_heads"));
     if (params.get<int>("unidirectional", 0))
         params.set("is_causal", true);
-
-    addLayer(params, node_proto, (int)node_inputs.size());
-}
-
-// com.microsoft GroupQueryAttention (grouped, causal) -> AttentionOnnxAi.
-void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
-                 "GroupQueryAttention: num_heads and kv_num_heads are required");
-    CV_CheckEQ(params.get<int>("do_rotary", 0), 0, "GroupQueryAttention: do_rotary=1 is not supported");
-    CV_CheckEQ(params.get<int>("local_window_size", -1), -1, "GroupQueryAttention: sliding window is not supported");
-    CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
-                 "GroupQueryAttention: separate key and value are required");
-    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
-        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
-
-    // inputs: query, key, value, past_key, past_value, seqlens_k, total_sequence_length, ...
-    const bool has_past_k = hasInput(node_proto, 3), has_past_v = hasInput(node_proto, 4);
-    CV_CheckTrue(has_past_k == has_past_v,
-                 "GroupQueryAttention: past_key and past_value must be provided as a pair");
-
-    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
-    if (has_past_k) {
-        // Dropping seqlens_k is only sound for a growing past. A fixed past seq dim means a
-        // shared-buffer cache whose real length lives in seqlens_k, so it would be mis-read.
-        const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
-        if (pk.dims >= 2)
-            CV_CheckLE(pk[pk.dims - 2], 0,
-                "GroupQueryAttention: past_key has a fixed sequence length (shared-buffer / static "
-                "cache export); only dynamic-cache exports are supported");
-        ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]);
-    }
-    node_inputs = ins;
-
-    params.type = "AttentionOnnxAi";
-    params.set("q_num_heads", params.get<int>("num_heads"));
-    params.set("kv_num_heads", params.get<int>("kv_num_heads"));
-    params.set("is_causal", true);
 
     addLayer(params, node_proto, (int)node_inputs.size());
 }
@@ -3216,7 +3187,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
-    dispatch["RMSNormalization"] = &ONNXImporter2::parseRMSNormalization;
+    dispatch["RMSNormalization"] = dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseRMSNormalization;
     dispatch["RotaryEmbedding"] = &ONNXImporter2::parseRotaryEmbedding;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
