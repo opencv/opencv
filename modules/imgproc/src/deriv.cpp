@@ -534,79 +534,6 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 }
 #endif
 
-#if defined(HAVE_IPP)
-namespace cv
-{
-
-static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double scale, double delta, int borderType)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    ::ipp::IwiSize size(_src.size().width, _src.size().height);
-    IppDataType   srcType   = ippiGetDataType(_src.depth());
-    IppDataType   dstType   = ippiGetDataType(_dst.depth());
-    int           channels  = _src.channels();
-    bool          useScale  = false;
-
-    if(channels != _dst.channels() || channels > 1)
-        return false;
-
-    if(fabs(delta) > FLT_EPSILON || fabs(scale-1) > FLT_EPSILON)
-        useScale = true;
-
-    IppiMaskSize maskSize = ippiGetMaskSize(ksize, ksize);
-    if((int)maskSize < 0)
-        return false;
-
-    // Acquire data and begin processing
-    try
-    {
-        Mat src = _src.getMat();
-        Mat dst = _dst.getMat();
-        ::ipp::IwiImage iwSrc      = ippiGetImage(src);
-        ::ipp::IwiImage iwDst      = ippiGetImage(dst);
-        ::ipp::IwiImage iwSrcProc  = iwSrc;
-        ::ipp::IwiImage iwDstProc  = iwDst;
-        ::ipp::IwiBorderSize  borderSize(maskSize);
-        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder)
-            return false;
-
-        if(srcType == ipp8u && dstType == ipp8u)
-        {
-            iwDstProc.Alloc(iwDst.m_size, ipp16s, channels);
-            useScale = true;
-        }
-        else if(srcType == ipp8u && dstType == ipp32f)
-        {
-            iwSrc -= borderSize;
-            iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0);
-            iwSrcProc += borderSize;
-        }
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterLaplacian, iwSrcProc, iwDstProc, maskSize, ::ipp::IwDefault(), ippBorder);
-
-        if(useScale)
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta);
-
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ksize); CV_UNUSED(scale); CV_UNUSED(delta); CV_UNUSED(borderType);
-    return false;
-#endif
-}
-}
-#endif
-
-
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
@@ -650,7 +577,19 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
     }
 
-    CV_IPP_RUN(!(cv::ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
+    if (!(cv::ocl::isOpenCLActivated() && _dst.isUMat()))
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if(!(borderType & BORDER_ISOLATED))
+            src.locateROI(wsz, ofs);
+
+        CALL_HAL(laplacian_offset, cv_hal_laplacian_offset,
+                 src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
+                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y,
+                 ksize, scale, delta, borderType & ~BORDER_ISOLATED);
+    }
 
     if( ksize == 1 || ksize == 3 )
     {
