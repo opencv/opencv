@@ -873,6 +873,17 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
+#ifdef HAVE_MIGRAPHX
+    if (preferableBackend == DNN_BACKEND_MIGRAPHX && mainGraph && modelFormat == DNN_MODEL_ONNX)
+    {
+        if (finalizeMIGraphX())
+        {
+            runMIGraphX(inputs, outputs);
+            return;
+        }
+        CV_LOG_ONCE_WARNING(NULL, "DNN/MIGraphX: offload unavailable; falling back to default engine");
+    }
+#endif
     finalize();  // select per-op executors for the chosen backend/target (idempotent)
     // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;

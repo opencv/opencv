@@ -146,6 +146,11 @@ private:
 #ifdef HAVE_CANN
         backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
 #endif
+
+#ifdef HAVE_MIGRAPHX
+        backends.push_back(std::make_pair(DNN_BACKEND_MIGRAPHX, DNN_TARGET_CUDA));
+        backends.push_back(std::make_pair(DNN_BACKEND_MIGRAPHX, DNN_TARGET_CUDA_FP16));
+#endif
     }
 
     BackendsList backends;
