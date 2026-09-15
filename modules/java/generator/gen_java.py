@@ -1054,7 +1054,12 @@ class JavaWrapperGenerator(object):
                     name = prop_name + ";//"
 
             cvname = fi.fullNameCPP()
-            retval = self.fullTypeNameCPP(fi.ctype) + " _retval_ = " if ret else "return "
+            # A scoped enum ('enum class') has no implicit conversion to the JNI integer type,
+            # so the int it is mapped to has to be named explicitly.
+            enum_cast = ""
+            if fi.ctype in type_dict and "cast_from" in type_dict[fi.ctype]:
+                enum_cast = "(%s)" % cast_from(fi.ctype)
+            retval = self.fullTypeNameCPP(fi.ctype) + " _retval_ = " + enum_cast if ret else "return " + enum_cast
             if fi.ctype == "void":
                 retval = ""
             elif fi.ctype == "String":

@@ -9,30 +9,82 @@
 
 namespace opencv_test {
 
-typedef tuple<int, Size, Size> Interp_Size_Size_t;
-typedef TestBaseWithParam<Interp_Size_Size_t> ResizeParams_CoordMode;
+// ResizeCoord as an int, so the report lists the mode next to its timing:
+// 0 PIXEL_CENTER, 1 HALF_PIXEL, 2 PYTORCH_HALF_PIXEL, 3 ALIGN_CORNERS,
+// 4 ASYMMETRIC, 5 TF_HALF_PIXEL_FOR_NN, 6 HALF_PIXEL_SYMMETRIC.
+#define RESIZE_ALL_COORD_MODES testing::Values(0, 1, 2, 3, 4, 5, 6)
 
-PERF_TEST_P(ResizeParams_CoordMode, resize_HalfPixel,
-            testing::Values(
-                Interp_Size_Size_t(INTER_LINEAR, sz1080p, szVGA),
-                Interp_Size_Size_t(INTER_LINEAR, szVGA, sz1080p),
-                Interp_Size_Size_t(INTER_NEAREST, sz1080p, szVGA),
-                Interp_Size_Size_t(INTER_NEAREST, szVGA, sz1080p),
-                Interp_Size_Size_t(INTER_CUBIC, sz1080p, szVGA),
-                Interp_Size_Size_t(INTER_CUBIC, szVGA, sz1080p)
-                )
-            )
+typedef tuple<MatType, int, int> Type_Interp_Coord_t;
+typedef TestBaseWithParam<Type_Interp_Coord_t> ResizeParams_CoordMode;
+
+// Every coordinate mode resolves into the interpolation tables and then runs the same kernels,
+// so the whole sweep has to come out at one speed. A mode that drifted onto a slower path --
+// a scalar reference kernel, say -- would show up here as an outlier column.
+PERF_TEST_P(ResizeParams_CoordMode, coord_modes_1080p_to_VGA,
+            testing::Combine(
+                testing::Values(CV_8UC3, CV_32FC1),
+                testing::Values(INTER_NEAREST, INTER_LINEAR, INTER_CUBIC),
+                RESIZE_ALL_COORD_MODES))
 {
-    int interp = get<0>(GetParam());
-    Size from = get<1>(GetParam());
-    Size to = get<2>(GetParam());
+    const int matType = get<0>(GetParam());
+    const int interp = get<1>(GetParam());
+    const int coord = get<2>(GetParam());
 
-    Mat src(from, CV_32FC1), dst(to, CV_32FC1);
-    cvtest::fillGradient<float>(src);
+    Mat src(sz1080p, matType), dst(szVGA, matType);
+    RNG(0x5eed).fill(src, RNG::UNIFORM, 0, 255);
     declare.in(src).out(dst);
 
-    ResizeParams params(to, 0, 0, interp);
+    ResizeParams params(szVGA, 0, 0, interp);
+    params.coordMode = (ResizeCoord)coord;
+
+    TEST_CYCLE() resize(src, dst, params);
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef TestBaseWithParam<tuple<MatType, int> > ResizeParams_NearestMode;
+
+// Same question for nearest_mode: it picks the rounding rule while the index table is built,
+// so all four have to cost the same.
+PERF_TEST_P(ResizeParams_NearestMode, nearest_modes_1080p_to_VGA,
+            testing::Combine(
+                testing::Values(CV_8UC3, CV_16UC1),
+                testing::Values(0, 1, 2, 3)))   // FLOOR, CEIL, ROUND_PREFER_CEIL, ROUND_PREFER_FLOOR
+{
+    const int matType = get<0>(GetParam());
+    const int round = get<1>(GetParam());
+
+    Mat src(sz1080p, matType), dst(szVGA, matType);
+    RNG(0x5eed).fill(src, RNG::UNIFORM, 0, 255);
+    declare.in(src).out(dst);
+
+    ResizeParams params(szVGA, 0, 0, INTER_NEAREST);
     params.coordMode = ResizeCoord::HALF_PIXEL;
+    params.nearestMode = (ResizeNearest)round;
+
+    TEST_CYCLE() resize(src, dst, params);
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef TestBaseWithParam<tuple<int, bool> > ResizeParams_ExcludeOutside;
+
+// exclude_outside only zeroes and renormalises weights in the table, so it is free at run time.
+PERF_TEST_P(ResizeParams_ExcludeOutside, exclude_outside_1080p_to_VGA,
+            testing::Combine(
+                testing::Values(INTER_CUBIC, INTER_LANCZOS4),
+                testing::Bool()))
+{
+    const int interp = get<0>(GetParam());
+    const bool exclude = get<1>(GetParam());
+
+    Mat src(sz1080p, CV_8UC3), dst(szVGA, CV_8UC3);
+    RNG(0x5eed).fill(src, RNG::UNIFORM, 0, 255);
+    declare.in(src).out(dst);
+
+    ResizeParams params(szVGA, 0, 0, interp);
+    params.coordMode = ResizeCoord::HALF_PIXEL;
+    params.excludeOutside = exclude;
 
     TEST_CYCLE() resize(src, dst, params);
 
