@@ -17,7 +17,9 @@ static Mat makeTestImage(int type, Size sz, int seed)
     return img;
 }
 
-static double referenceSrcCoord(int dst, double scale, int outLen, ResizeCoord mode)
+// The ONNX coordinate_transformation_mode formulas, spelled out independently of resize.cpp.
+// For ALIGN_CORNERS the caller passes the already-rewritten scale.
+static double referenceSrcCoord(int dst, double scale, int inLen, int outLen, ResizeCoord mode)
 {
     switch (mode)
     {
@@ -28,11 +30,28 @@ static double referenceSrcCoord(int dst, double scale, int outLen, ResizeCoord m
     case ResizeCoord::ASYMMETRIC:
     case ResizeCoord::ALIGN_CORNERS:
         return dst * scale;
-    case ResizeCoord::HALF_PIXEL:
     case ResizeCoord::HALF_PIXEL_SYMMETRIC:
+        return (inLen * 0.5 - outLen * scale * 0.5) + (dst + 0.5) * scale - 0.5;
+    case ResizeCoord::HALF_PIXEL:
     default:
         return (dst + 0.5) * scale - 0.5;
     }
+}
+
+static int referenceNearestIndex(double src, int inLen, ResizeNearest mode)
+{
+    const int f = (int)std::floor(src);
+    const double frac = src - f;
+    const bool tie = std::abs(frac - 0.5) <= 1e-6;
+    int idx;
+    switch (mode)
+    {
+    case ResizeNearest::FLOOR:             idx = f; break;
+    case ResizeNearest::CEIL:              idx = (int)std::ceil(src); break;
+    case ResizeNearest::ROUND_PREFER_CEIL: idx = tie ? f + 1 : cvRound(src); break;
+    default:                               idx = tie ? f : cvRound(src); break;
+    }
+    return std::min(std::max(idx, 0), inLen - 1);
 }
 
 static void referenceCubicWeights(float x, float A, float w[4])
@@ -47,7 +66,7 @@ static float referenceCubic1D(const std::vector<float>& src, double dstCoordScal
                               int outLen, ResizeCoord mode, bool excludeOutside, float A)
 {
     const int inLen = (int)src.size();
-    double srcCoord = referenceSrcCoord(dst, dstCoordScale, outLen, mode);
+    double srcCoord = referenceSrcCoord(dst, dstCoordScale, inLen, outLen, mode);
     int i = (int)std::floor(srcCoord);
     float w[4];
     referenceCubicWeights((float)(srcCoord - i), A, w);
@@ -56,14 +75,65 @@ static float referenceCubic1D(const std::vector<float>& src, double dstCoordScal
     for (int k = -1; k <= 2; k++)
     {
         int idx = i + k;
-        bool valid = idx >= 0 && idx < inLen;
+        const bool valid = idx >= 0 && idx < inLen;
         float wk = w[k + 1];
-        if (excludeOutside && !valid) wk = 0.f;
-        else if (!valid) idx = std::min(std::max(idx, 0), inLen - 1);
+        if (excludeOutside && !valid)
+            wk = 0.f;
+        idx = std::min(std::max(idx, 0), inLen - 1);
         sw += wk;
         acc += wk * src[idx];
     }
     return sw != 0.f ? acc / sw : acc;
+}
+
+// Mirrors resize.cpp's own truncated-Lanczos weights: unlike Keys cubic, they do not reproduce a
+// linear ramp exactly, so the reference has to spell them out.
+static void referenceLanczos4Weights(float x, float w[8])
+{
+    const double s45 = 0.70710678118654752440084436210485;
+    const double cs[][2] = {{1,0},{-s45,-s45},{0,1},{s45,-s45},{-1,0},{s45,s45},{0,-1},{-s45,s45}};
+
+    const double y0 = -(x + 3)*CV_PI*0.25, s0 = std::sin(y0), c0 = std::cos(y0);
+    float sum = 0.f;
+    for (int i = 0; i < 8; i++)
+    {
+        const float yi = x + 3 - i;
+        if (std::fabs(yi) >= 1e-6f)
+        {
+            const double y = -yi*CV_PI*0.25;
+            w[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        }
+        else
+            w[i] = 1e30f;
+        sum += w[i];
+    }
+    sum = 1.f/sum;
+    for (int i = 0; i < 8; i++)
+        w[i] *= sum;
+}
+
+static float referenceLanczos4_1D(const std::vector<float>& src, double scale, int dst, int outLen,
+                                  ResizeCoord mode, bool excludeOutside)
+{
+    const int inLen = (int)src.size();
+    const double srcCoord = referenceSrcCoord(dst, scale, inLen, outLen, mode);
+    const int i = (int)std::floor(srcCoord);
+    float w[8];
+    referenceLanczos4Weights((float)(srcCoord - i), w);
+
+    float acc = 0.f, sw = 0.f;
+    for (int k = -3; k <= 4; k++)
+    {
+        int idx = i + k;
+        const bool valid = idx >= 0 && idx < inLen;
+        float wk = w[k + 3];
+        if (excludeOutside && !valid)
+            wk = 0.f;
+        idx = std::min(std::max(idx, 0), inLen - 1);
+        sw += wk;
+        acc += wk * src[idx];
+    }
+    return excludeOutside && sw != 0.f ? acc / sw : acc;
 }
 
 TEST(Resize_Params, BackwardCompat)
@@ -227,7 +297,8 @@ TEST(Resize_Params, BatchIdentitySize)
     }
 }
 
-// CV_64F must be interpolated in double, not narrowed to float on the way.
+// CV_64F samples are accumulated in double, as they are in classic cv::resize -- the weights
+// themselves are float there, and a coordMode does not change that.
 TEST(Resize_Params, DoublePrecisionCoordMode)
 {
     const int inW = 9, outW = 5;
@@ -246,12 +317,15 @@ TEST(Resize_Params, DoublePrecisionCoordMode)
         resize(src, out, params);
         ASSERT_EQ(out.depth(), CV_64F);
 
-        // Detail survives and values stay near the input; cubic may overshoot slightly.
+        // Detail two orders below float resolution survives, which a float accumulator would
+        // flatten to zero. The level itself is only float-weight accurate: the CV_64F kernels
+        // carry double samples and a double accumulator but float weights, and the coordinate
+        // modes reuse those kernels rather than introducing a differently rounded second path.
         double lo, hi;
         minMaxLoc(out, &lo, &hi);
         EXPECT_GT(hi - lo, 1e-13) << "interpolation=" << interp << ": detail lost to float";
-        EXPECT_LT(std::abs(hi - 1.0), 1e-10) << "interpolation=" << interp;
-        EXPECT_LT(std::abs(lo - 1.0), 1e-10) << "interpolation=" << interp;
+        EXPECT_LT(std::abs(hi - 1.0), 1e-6) << "interpolation=" << interp;
+        EXPECT_LT(std::abs(lo - 1.0), 1e-6) << "interpolation=" << interp;
     }
 }
 
@@ -270,9 +344,23 @@ TEST(Resize_Params, RejectsInvalidInputs)
     coordModeArea.coordMode = ResizeCoord::HALF_PIXEL;
     EXPECT_THROW(resize(src, dst, coordModeArea), cv::Exception);
 
-    ResizeParams coordModeLanczos(Size(32, 32), 0, 0, INTER_LANCZOS4);
-    coordModeLanczos.coordMode = ResizeCoord::HALF_PIXEL;
-    EXPECT_THROW(resize(src, dst, coordModeLanczos), cv::Exception);
+    // The separable kernels only exist for the depths classic resize supports, and a coordMode
+    // does not add any: CV_8S and CV_32S have no INTER_LINEAR/CUBIC/LANCZOS4 kernel either way.
+    for (int type : { CV_8SC1, CV_32SC1 })
+    {
+        Mat narrow = makeTestImage(type, Size(64, 64), 2), narrowDst;
+        for (int interp : { INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4 })
+        {
+            ResizeParams params(Size(32, 32), 0, 0, interp);
+            params.coordMode = ResizeCoord::HALF_PIXEL;
+            EXPECT_THROW(resize(narrow, narrowDst, params), cv::Exception)
+                << typeToString(type) << " interpolation=" << interp;
+        }
+        // INTER_NEAREST only copies pixels, so it takes any depth.
+        ResizeParams nearest(Size(32, 32), 0, 0, INTER_NEAREST);
+        nearest.coordMode = ResizeCoord::HALF_PIXEL;
+        EXPECT_NO_THROW(resize(narrow, narrowDst, nearest)) << typeToString(type);
+    }
 
     ResizeParams coordModeBitExact(Size(32, 32));
     coordModeBitExact.coordMode = ResizeCoord::HALF_PIXEL;
@@ -335,7 +423,7 @@ TEST(Resize_Params, CoordModeMath)
 
             for (int x = 0; x < outW; x++)
             {
-                double expected = std::min(std::max(referenceSrcCoord(x, scale, outW, mode), 0.0), (double)(inW - 1));
+                double expected = std::min(std::max(referenceSrcCoord(x, scale, inW, outW, mode), 0.0), (double)(inW - 1));
                 EXPECT_NEAR(expected, out.at<float>(0, x), 1e-3)
                     << "mode=" << (int)mode << " x=" << x;
             }
@@ -364,8 +452,8 @@ TEST(Resize_Params, CoordModeMath)
         for (int oy = 0; oy < outH; oy++)
             for (int ox = 0; ox < outW; ox++)
             {
-                double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
-                double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
+                double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
+                double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
                 for (int c = 0; c < cn; c++)
                 {
                     float expected = (float)(sx + sy * 1000.0 + c);
@@ -394,7 +482,7 @@ TEST(Resize_Params, CoordModeMath)
         double scale = (double)inW / outW;
         for (int x = 0; x < outW; x++)
         {
-            double src = std::min(std::max(referenceSrcCoord(x, scale, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
+            double src = std::min(std::max(referenceSrcCoord(x, scale, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
             double frac = src - std::floor(src);
             int expectedIdx = (std::abs(frac - 0.5) <= 1e-6) ? (int)std::floor(src) : cvRound(src);
             EXPECT_FLOAT_EQ((float)expectedIdx, out.at<float>(0, x)) << "x=" << x;
@@ -525,6 +613,193 @@ TEST(Resize_Params, CoordModeMath)
     }
 }
 
+
+// The coordinate mode only ever becomes table content, and PIXEL_CENTER's formula *is* ONNX
+// half_pixel, so with the scale taken from dsize the two must agree bit for bit. If a
+// non-default mode ever fell back to a separate reference kernel, this is what would catch it.
+TEST(Resize_Params, PixelCenterIsHalfPixel)
+{
+    const int interpolations[] = { INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4 };
+    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC3, CV_32FC1, CV_64FC1 };
+    const Size sizes[][2] = { { Size(64, 51), Size(37, 29) }, { Size(37, 29), Size(64, 51) } };
+
+    for (int type : types)
+        for (int interp : interpolations)
+            for (const Size* sz : sizes)
+            {
+                // A one-element batch keeps both runs on OpenCV's own kernels: a single image
+                // could be taken over by a HAL for one mode and not for the other.
+                std::vector<Mat> src(1, makeTestImage(type, sz[0], 4242 + interp));
+                std::vector<Mat> classic, halfPixel;
+
+                ResizeParams params(sz[1], 0, 0, interp);
+                resize(src, classic, params);
+                params.coordMode = ResizeCoord::HALF_PIXEL;
+                resize(src, halfPixel, params);
+
+                EXPECT_EQ(0, cvtest::norm(classic[0], halfPixel[0], NORM_INF))
+                    << typeToString(type) << " interpolation=" << interp
+                    << " " << sz[0] << "->" << sz[1];
+            }
+
+    // Classic INTER_NEAREST is the asymmetric map rounded down.
+    for (int type : { CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_32FC1 })
+    {
+        std::vector<Mat> src(1, makeTestImage(type, Size(64, 51), 7)), classic, asymmetric;
+        ResizeParams params(Size(37, 29), 0, 0, INTER_NEAREST);
+        resize(src, classic, params);
+        params.coordMode = ResizeCoord::ASYMMETRIC;
+        params.nearestMode = ResizeNearest::FLOOR;
+        resize(src, asymmetric, params);
+        EXPECT_EQ(0, cvtest::norm(classic[0], asymmetric[0], NORM_INF)) << typeToString(type);
+    }
+}
+
+// Every coordMode x nearestMode pair against a scalar index reference. CV_16UC1 and CV_8UC4 are
+// the 2- and 4-byte pixels that take the SIMD gather path; CV_8UC3 is the byte-copy fallback.
+TEST(Resize_Params, NearestAllModes)
+{
+    const ResizeCoord coords[] = {
+        ResizeCoord::HALF_PIXEL, ResizeCoord::PYTORCH_HALF_PIXEL, ResizeCoord::ASYMMETRIC,
+        ResizeCoord::ALIGN_CORNERS, ResizeCoord::TF_HALF_PIXEL_FOR_NN,
+        ResizeCoord::HALF_PIXEL_SYMMETRIC
+    };
+    const ResizeNearest rounds[] = {
+        ResizeNearest::FLOOR, ResizeNearest::CEIL,
+        ResizeNearest::ROUND_PREFER_CEIL, ResizeNearest::ROUND_PREFER_FLOOR
+    };
+    const int inW = 23, inH = 11, outW = 41, outH = 7;
+
+    // Each sample names the source pixel it came from: value == y*256 + x.
+    Mat src(inH, inW, CV_16UC1);
+    for (int y = 0; y < inH; y++)
+        for (int x = 0; x < inW; x++)
+            src.at<ushort>(y, x) = (ushort)(y * 256 + x);
+
+    for (ResizeCoord coord : coords)
+        for (ResizeNearest round : rounds)
+        {
+            ResizeParams params(Size(outW, outH), 0, 0, INTER_NEAREST);
+            params.coordMode = coord;
+            params.nearestMode = round;
+
+            Mat out;
+            resize(src, out, params);
+            ASSERT_EQ(out.size(), Size(outW, outH));
+
+            const bool corners = coord == ResizeCoord::ALIGN_CORNERS;
+            const double scaleX = corners ? (double)(inW - 1)/(outW - 1) : (double)inW/outW;
+            const double scaleY = corners ? (double)(inH - 1)/(outH - 1) : (double)inH/outH;
+
+            for (int oy = 0; oy < outH; oy++)
+                for (int ox = 0; ox < outW; ox++)
+                {
+                    const int sx = referenceNearestIndex(
+                        referenceSrcCoord(ox, scaleX, inW, outW, coord), inW, round);
+                    const int sy = referenceNearestIndex(
+                        referenceSrcCoord(oy, scaleY, inH, outH, coord), inH, round);
+                    ASSERT_EQ((ushort)(sy * 256 + sx), out.at<ushort>(oy, ox))
+                        << "coordMode=" << (int)coord << " nearestMode=" << (int)round
+                        << " oy=" << oy << " ox=" << ox;
+                }
+        }
+
+    // The other pixel sizes must land on the same source pixels.
+    for (int type : { CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3 })
+    {
+        Mat wide(inH, inW, type);
+        RNG(0x5eed).fill(wide, RNG::UNIFORM, 0, 255);
+
+        ResizeParams params(Size(outW, outH), 0, 0, INTER_NEAREST);
+        params.coordMode = ResizeCoord::HALF_PIXEL;
+        params.nearestMode = ResizeNearest::ROUND_PREFER_CEIL;
+
+        Mat out;
+        resize(wide, out, params);
+        ASSERT_EQ(out.size(), Size(outW, outH));
+
+        const double scaleX = (double)inW/outW, scaleY = (double)inH/outH;
+        for (int oy = 0; oy < outH; oy++)
+            for (int ox = 0; ox < outW; ox++)
+            {
+                const int sx = referenceNearestIndex(
+                    referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL),
+                    inW, ResizeNearest::ROUND_PREFER_CEIL);
+                const int sy = referenceNearestIndex(
+                    referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL),
+                    inH, ResizeNearest::ROUND_PREFER_CEIL);
+                ASSERT_EQ(0, cvtest::norm(Mat(wide, Rect(sx, sy, 1, 1)),
+                                          Mat(out, Rect(ox, oy, 1, 1)), NORM_INF))
+                    << typeToString(type) << " oy=" << oy << " ox=" << ox;
+            }
+    }
+}
+
+// A coordMode has to reach the wide kernels too, not just the two-tap ones: the 8-tap Lanczos
+// table is built by the same loop, so it comes along for free and has to be right.
+TEST(Resize_Params, Lanczos4CoordMode)
+{
+    const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f, 5.f, 3.f,
+                                     5.f, 8.f, 9.f, 7.f, 9.f, 3.f, 2.f, 3.f, 8.f, 4.f };
+    const int inW = (int)src.size(), outW = 7;
+    Mat srcMat(1, inW, CV_32FC1, (void*)src.data());
+
+    struct { ResizeCoord mode; bool excludeOutside; } cases[] = {
+        { ResizeCoord::HALF_PIXEL, false },
+        { ResizeCoord::HALF_PIXEL, true },
+        { ResizeCoord::ASYMMETRIC, false },
+        { ResizeCoord::ALIGN_CORNERS, false },
+        { ResizeCoord::PYTORCH_HALF_PIXEL, true },
+    };
+
+    for (const auto& c : cases)
+    {
+        ResizeParams params(Size(outW, 1), 0, 0, INTER_LANCZOS4);
+        params.coordMode = c.mode;
+        params.excludeOutside = c.excludeOutside;
+
+        Mat out;
+        resize(srcMat, out, params);
+        ASSERT_EQ(out.size(), Size(outW, 1));
+
+        const double scale = c.mode == ResizeCoord::ALIGN_CORNERS
+                           ? (double)(inW - 1)/(outW - 1) : (double)inW/outW;
+        for (int x = 0; x < outW; x++)
+            EXPECT_NEAR(referenceLanczos4_1D(src, scale, x, outW, c.mode, c.excludeOutside),
+                        out.at<float>(0, x), 1e-3)
+                << "coordMode=" << (int)c.mode << " excludeOutside=" << c.excludeOutside << " x=" << x;
+    }
+}
+
+// cubicCoeffA is table input like everything else, so a non-default Keys coefficient has to take
+// effect and still match the reference.
+TEST(Resize_Params, CubicCoeffA)
+{
+    const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f };
+    const int inW = (int)src.size(), outW = 5;
+    Mat srcMat(1, inW, CV_32FC1, (void*)src.data());
+    const double scale = (double)inW/outW;
+
+    Mat outDefault;
+    for (float A : { -0.75f, -0.5f, -1.0f })
+    {
+        ResizeParams params(Size(outW, 1), 0, 0, INTER_CUBIC);
+        params.coordMode = ResizeCoord::HALF_PIXEL;
+        params.cubicCoeffA = A;
+
+        Mat out;
+        resize(srcMat, out, params);
+        for (int x = 0; x < outW; x++)
+            EXPECT_NEAR(referenceCubic1D(src, scale, x, outW, ResizeCoord::HALF_PIXEL, false, A),
+                        out.at<float>(0, x), 1e-3) << "A=" << A << " x=" << x;
+
+        if (A == -0.75f)
+            out.copyTo(outDefault);
+        else
+            EXPECT_GT(cv::norm(out, outDefault, NORM_INF), 1e-3) << "A=" << A << " changed nothing";
+    }
+}
+
 TEST(Resize_Params, BatchMechanics)
 {
     {
@@ -588,8 +863,8 @@ TEST(Resize_Params, BatchMechanics)
                 const float* row = dstView.ptr<float>(n * outH + oy);
                 for (int ox = 0; ox < outW; ox++)
                 {
-                    double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
-                    double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
+                    double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
+                    double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
                     float expected = (float)(sx + sy * 1000.0);
                     EXPECT_NEAR(expected, row[ox], 5e-2) << "n=" << n << " oy=" << oy << " ox=" << ox;
                 }

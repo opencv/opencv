@@ -56,16 +56,16 @@ namespace cv
 namespace opt_AVX2
 {
 #if CV_TRY_AVX2
-void resizeNN2_AVX2(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_AVX2(const Range&, const Mat&, Mat&, int*, double);
+void resizeNN2_AVX2(const Range&, const Mat&, Mat&, int*, const int*);
+void resizeNN4_AVX2(const Range&, const Mat&, Mat&, int*, const int*);
 #endif
 }
 
 namespace opt_SSE4_1
 {
 #if CV_TRY_SSE4_1
-void resizeNN2_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
+void resizeNN2_SSE4_1(const Range&, const Mat&, Mat&, int*, const int*);
+void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, const int*);
 
 int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width);
 #endif
@@ -74,8 +74,8 @@ int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float*
 namespace opt_LASX
 {
 #if CV_TRY_LASX
-void resizeNN2_LASX(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, double);
+void resizeNN2_LASX(const Range&, const Mat&, Mat&, int*, const int*);
+void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, const int*);
 #endif
 }
 
