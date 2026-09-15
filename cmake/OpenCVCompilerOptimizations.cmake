@@ -4,6 +4,7 @@
 # SSE4_1 / SSE4_2 / POPCNT
 # AVX / AVX2 / AVX_512F
 # FMA3
+# AVX_VNNI (VEX-encoded VPDPBUSD, Alder Lake and later; implies AVX2)
 #
 # AVX512 details: https://en.wikipedia.org/wiki/AVX-512#CPUs_with_AVX-512
 #
@@ -47,7 +48,7 @@
 #
 # CPU_{opt}_ENABLED_DEFAULT=ON/OFF - has compiler support without additional flag (CPU_BASELINE_DETECT=ON only)
 
-set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_512F")
+set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_VNNI;AVX_512F")
 list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
 list(APPEND CPU_ALL_OPTIMIZATIONS SVE NEON VFPV3 FP16 NEON_DOTPROD NEON_FP16 NEON_BF16)
 list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
@@ -194,7 +195,7 @@ endmacro()
 
 if(X86 OR X86_64)
 
-  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;AVX;FP16;AVX2;FMA3;AVX_512F;AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;AVX;FP16;AVX2;FMA3;AVX_VNNI;AVX_512F;AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
 
   ocv_update(CPU_AVX512_COMMON_GROUP "AVX_512F;AVX_512CD")
   ocv_update(CPU_AVX512_KNL_GROUP "AVX512_COMMON;AVX512_KNL_EXTRA")
@@ -214,6 +215,7 @@ if(X86 OR X86_64)
   ocv_update(CPU_AVX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx.cpp")
   ocv_update(CPU_AVX2_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx2.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
+  ocv_update(CPU_AVX_VNNI_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx_vnni.cpp")
   ocv_update(CPU_AVX_512F_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512.cpp")
   ocv_update(CPU_AVX512_COMMON_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512common.cpp")
   ocv_update(CPU_AVX512_KNL_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_avx512knl.cpp")
@@ -233,6 +235,8 @@ if(X86 OR X86_64)
     ocv_update(CPU_AVX512_COMMON_IMPLIES "AVX_512F")
     ocv_update(CPU_AVX_512F_IMPLIES "AVX2")
     ocv_update(CPU_AVX_512F_FORCE "") # Don't force other optimizations
+    ocv_update(CPU_AVX_VNNI_IMPLIES "AVX2")
+    ocv_update(CPU_AVX_VNNI_FORCE "") # Don't force other optimizations
     ocv_update(CPU_AVX2_IMPLIES "AVX;FMA3;FP16")
     ocv_update(CPU_FMA3_IMPLIES "AVX2")
     ocv_update(CPU_FMA3_FORCE "") # Don't force other optimizations
@@ -286,6 +290,7 @@ if(X86 OR X86_64)
     ocv_intel_compiler_optimization_option(AVX512_ICL "-xICELAKE-CLIENT" "/Qx:ICELAKE-CLIENT")
   elseif(CV_GCC OR CV_CLANG OR CV_ICX)
     ocv_update(CPU_AVX2_FLAGS_ON "-mavx2")
+    ocv_update(CPU_AVX_VNNI_FLAGS_ON "-mavxvnni")  # implies AVX2 on GCC/Clang
     ocv_update(CPU_FP16_FLAGS_ON "-mf16c")
     ocv_update(CPU_AVX_FLAGS_ON "-mavx")
     ocv_update(CPU_FMA3_FLAGS_ON "-mfma")
@@ -335,7 +340,7 @@ if(X86 OR X86_64)
 
   if(NOT DEFINED CPU_DISPATCH)
     if(X86_64)
-      set(CPU_DISPATCH "SSE4_1;SSE4_2;AVX;FP16;AVX2;AVX512_SKX" CACHE STRING "${HELP_CPU_DISPATCH}")
+      set(CPU_DISPATCH "SSE4_1;SSE4_2;AVX;FP16;AVX2;AVX_VNNI;AVX512_SKX" CACHE STRING "${HELP_CPU_DISPATCH}")
     else()
       set(CPU_DISPATCH "SSE4_1;SSE4_2;AVX;FP16" CACHE STRING "${HELP_CPU_DISPATCH}")
     endif()
