@@ -4527,11 +4527,11 @@ static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double
                 switch( rng.uniform(0, 4) )
                 {
                     case 0:
-                        in.at<double>(i, j) =  randomNanDbl(rng);
-                        gold.at<double>(i, j) =  val;
+                        in.at<double>(i, j) = randomNanDbl(rng);
+                        gold.at<double>(i, j) = val;
                         break;
                     case 1:
-                        in.at<double>(i, j) =  std::numeric_limits<double>::infinity();
+                        in.at<double>(i, j) = std::numeric_limits<double>::infinity();
                         gold.at<double>(i, j) =  in.at<double>(i, j);
                         break;
                     case 2:
@@ -4540,7 +4540,7 @@ static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double
                         break;
 
                     default:
-                        in.at<double>(i, j) =  rng.uniform(-100.0, 100.0);
+                        in.at<double>(i, j) = rng.uniform(-100.0, 100.0);
                         gold.at<double>(i, j) = in.at<double>(i, j);
                         break;
                 }
@@ -4550,11 +4550,11 @@ static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double
                 switch( rng.uniform(0, 4) )
                 {
                     case 0:
-                        in.at<float>(i, j) =  randomNanFlt(rng);
-                        gold.at<float>(i, j) =  val;
+                        in.at<float>(i, j) = randomNanFlt(rng);
+                        gold.at<float>(i, j) = static_cast<float>(val);
                         break;
                     case 1:
-                        in.at<float>(i, j) =  std::numeric_limits<float>::infinity();
+                        in.at<float>(i, j) = std::numeric_limits<float>::infinity();
                         gold.at<float>(i, j) =  in.at<float>(i, j);
                         break;
                     case 2:
@@ -4563,7 +4563,7 @@ static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double
                         break;
 
                     default:
-                        in.at<float>(i, j) =  rng.uniform(-100.0, 100.0);
+                        in.at<float>(i, j) = rng.uniform(-100.0f, 100.0f);
                         gold.at<float>(i, j) = in.at<float>(i, j);
                         break;
                 }
@@ -4579,8 +4579,8 @@ TEST_P(Core_PatchNaNs, accuracy)
     fillReferenceWithNans(theRNG(), cv::Size(127, 71), CV_MAKE_TYPE(depth, 1), 142., in, gold);
     cv::patchNaNs(in, 142.);
     // bit-exact check independant from
-    cv::Mat in_bin(in.rows, in.cols*in.elemSize(), CV_8UC1, in.data);
-    cv::Mat gold_bin(gold.rows, gold.cols*gold.elemSize(), CV_8UC1, gold.data);
+    cv::Mat in_bin(in.rows, static_cast<int>(in.cols*in.elemSize()), CV_8UC1, in.data);
+    cv::Mat gold_bin(gold.rows, static_cast<int>(gold.cols*gold.elemSize()), CV_8UC1, gold.data);
     EXPECT_EQ(0, cvtest::norm(gold_bin, in_bin, cv::NORM_INF));
 }
 
