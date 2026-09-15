@@ -1644,6 +1644,10 @@ zero.
 The implementation follows the stable transformation described in @cite
 Higham02, Appendix A, Eq. A.1, page 528.
 
+The same stable formula is used for CPU and OpenCL execution. The
+implementation does not delegate the operation to a backend-specific standard
+library function, which keeps results comparable across backends.
+
 @param src input single- or double-precision floating-point array.
 @param dst output array of the same size and type as @p src.
 @sa log, expm1

@@ -368,6 +368,17 @@
 #define PROCESS_ELEM \
     storedst(log(fabs(srcelem1)))
 
+#elif defined OP_LOG1P
+#define PROCESS_ELEM \
+    workT onePlusValue = (workT)(1) + srcelem1; \
+    workT result = log(onePlusValue) * srcelem1 / \
+        (onePlusValue - (workT)(1)); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        onePlusValue == (workT)(1))); \
+    result = select(result, onePlusValue, CV_SELECT_MASK( \
+        isinf(onePlusValue) & srcelem1 > (workT)(0))); \
+    storedst(result)
+
 #elif defined OP_CMP
 #define srcT2 srcT1
 #ifndef convertToWT1

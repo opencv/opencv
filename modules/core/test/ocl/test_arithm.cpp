@@ -1275,6 +1275,88 @@ TYPED_TEST(OCL_MathTest, expm1_matches_expected_values)
 }
 
 template <typename T>
+struct Ocl_Log1pExpectedValues;
+
+template <>
+struct Ocl_Log1pExpectedValues<float>
+{
+    static std::array<float, 5> data()
+    {
+        // These are the exact values written as -0x1.62e430p-1,
+        // -0x1.064670p-10, 0x1.060354p-10, and 0x1.9f323ep-2.
+        return {{
+            -std::scalbn(0x162e430, -25),
+            -std::scalbn(0x1064670, -34),
+             0.0f,
+             std::scalbn(0x1060354, -34),
+             std::scalbn(0x19f323e, -26)}};
+    }
+};
+
+template <>
+struct Ocl_Log1pExpectedValues<double>
+{
+    static std::array<double, 5> data()
+    {
+        // These are the exact values written as -0x1.62e42fefa39efp-1,
+        // -0x1.064670d979b6fp-10, 0x1.060354f8c3ebfp-10,
+        // and 0x1.9f323ecbf984cp-2.
+        return {{
+            -std::scalbn(0x162e42fefa39ef, -53),
+            -std::scalbn(0x1064670d979b6f, -62),
+             0.0,
+             std::scalbn(0x1060354f8c3ebf, -62),
+             std::scalbn(0x19f323ecbf984c, -54)}};
+    }
+};
+
+TYPED_TEST(OCL_MathTest, log1p_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    Scalar values[] = {Scalar(-0.5), Scalar(-0.001), Scalar(0),
+                       Scalar(0.001), Scalar(0.5)};
+    std::array<Scalar, 5> expectedValues =
+        Ocl_Log1pExpectedValues<Scalar>::data();
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    Mat src(1, valueCount, DataType<Scalar>::type, values);
+    Mat expected(1, valueCount, DataType<Scalar>::type, expectedValues.data());
+    Mat cpu;
+    UMat usrc;
+    UMat gpu;
+    src.copyTo(usrc);
+
+    OCL_OFF(cv::log1p(src, cpu));
+    OCL_ON(cv::log1p(usrc, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    expectOpenCLWithinOneUlp<Scalar>(expected, gpu);
+}
+
+TYPED_TEST(OCL_MathTest, log1p_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar infinity = std::numeric_limits<Scalar>::infinity();
+    const Scalar nan = std::numeric_limits<Scalar>::quiet_NaN();
+    Scalar values[] = {nan, -infinity, Scalar(-2), Scalar(-1), -Scalar(0),
+                       Scalar(0), infinity};
+    Scalar expectedValues[] = {nan, nan, nan, -infinity, -Scalar(0),
+                               Scalar(0), infinity};
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    Mat src(1, valueCount, DataType<Scalar>::type, values);
+    Mat expected(1, valueCount, DataType<Scalar>::type, expectedValues);
+    Mat cpu;
+    UMat usrc;
+    UMat gpu;
+    src.copyTo(usrc);
+
+    OCL_OFF(cv::log1p(src, cpu));
+    OCL_ON(cv::log1p(usrc, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    expectOpenCLWithinOneUlp<Scalar>(expected, gpu);
+}
+
+template <typename T>
 void testOpenCLTinyArguments()
 {
     const T tiny = std::scalbn(T(1), -std::numeric_limits<T>::digits - 1);
@@ -1291,6 +1373,35 @@ void testOpenCLTinyArguments()
     Mat actualExpm1;
     gpuExpm1.copyTo(actualExpm1);
     EXPECT_EQ(actualExpm1.at<T>(0, 0), cpuExpm1.at<T>(0, 0));
+}
+
+template <typename T>
+void testOpenCLLog1pTinyArguments()
+{
+    const T tiny = std::scalbn(T(1), -std::numeric_limits<T>::digits - 1);
+    Mat src(1, 1, DataType<T>::type);
+    src.at<T>(0, 0) = tiny;
+    UMat usrc;
+    src.copyTo(usrc);
+    Mat cpuLog1p;
+    UMat gpuLog1p;
+
+    OCL_OFF(cv::log1p(src, cpuLog1p));
+    OCL_ON(cv::log1p(usrc, gpuLog1p));
+
+    Mat actualLog1p;
+    gpuLog1p.copyTo(actualLog1p);
+    EXPECT_EQ(actualLog1p.at<T>(0, 0), cpuLog1p.at<T>(0, 0));
+}
+
+OCL_TEST(Math, log1p_preserves_tiny_arguments_float)
+{
+    testOpenCLLog1pTinyArguments<float>();
+}
+
+OCL_TEST(Math, log1p_preserves_tiny_arguments_double)
+{
+    testOpenCLLog1pTinyArguments<double>();
 }
 
 OCL_TEST(Math, expm1_preserves_tiny_arguments_float)
