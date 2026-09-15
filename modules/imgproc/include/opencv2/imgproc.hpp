@@ -372,6 +372,32 @@ enum FloodFillFlags {
     FLOODFILL_MASK_ONLY   = 1 << 17
 };
 
+/** @brief Porter-Duff compositing operators used by #alphaComposite.
+
+The names and the semantics follow [W3C Compositing and Blending Level 1](https://www.w3.org/TR/compositing-1/),
+which is also what cairo and Skia implement. Every operator is a pair of per-pixel weights
+\f$F_a\f$ (applied to the overlay, the *source*) and \f$F_b\f$ (applied to the background, the
+*destination*), combined in premultiplied alpha space:
+\f[C_o = C_s F_a + C_b F_b, \qquad \alpha_o = \alpha_s F_a + \alpha_b F_b\f]
+The weights are listed below for each operator in terms of the source alpha \f$\alpha_s\f$ and the
+destination alpha \f$\alpha_b\f$.
+*/
+enum AlphaCompositeOperations {
+    ALPHA_COMPOSITE_CLEAR     = 0,  //!< \f$F_a = 0\f$, \f$F_b = 0\f$. Erases both images.
+    ALPHA_COMPOSITE_SOURCE    = 1,  //!< \f$F_a = 1\f$, \f$F_b = 0\f$. Keeps the overlay only (W3C `copy`).
+    ALPHA_COMPOSITE_DEST      = 2,  //!< \f$F_a = 0\f$, \f$F_b = 1\f$. Keeps the background only.
+    ALPHA_COMPOSITE_OVER      = 3,  //!< \f$F_a = 1\f$, \f$F_b = 1 - \alpha_s\f$. Draws the overlay on top (W3C `source-over`).
+    ALPHA_COMPOSITE_DEST_OVER = 4,  //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = 1\f$. Draws the overlay underneath.
+    ALPHA_COMPOSITE_IN        = 5,  //!< \f$F_a = \alpha_b\f$, \f$F_b = 0\f$. Keeps the overlay where the background is opaque.
+    ALPHA_COMPOSITE_DEST_IN   = 6,  //!< \f$F_a = 0\f$, \f$F_b = \alpha_s\f$. Keeps the background where the overlay is opaque.
+    ALPHA_COMPOSITE_OUT       = 7,  //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = 0\f$. Keeps the overlay where the background is transparent.
+    ALPHA_COMPOSITE_DEST_OUT  = 8,  //!< \f$F_a = 0\f$, \f$F_b = 1 - \alpha_s\f$. Keeps the background where the overlay is transparent.
+    ALPHA_COMPOSITE_ATOP      = 9,  //!< \f$F_a = \alpha_b\f$, \f$F_b = 1 - \alpha_s\f$. Draws the overlay on top, clipped to the background's shape.
+    ALPHA_COMPOSITE_DEST_ATOP = 10, //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = \alpha_s\f$. Draws the background on top, clipped to the overlay's shape.
+    ALPHA_COMPOSITE_XOR       = 11, //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = 1 - \alpha_s\f$. Keeps the non-overlapping parts of both.
+    ALPHA_COMPOSITE_PLUS      = 12  //!< \f$F_a = 1\f$, \f$F_b = 1\f$. Adds the two, clamped (W3C `lighter`, cairo `OPERATOR_ADD`).
+};
+
 //! @} imgproc_misc
 
 //! @addtogroup imgproc_shape
@@ -3474,6 +3500,52 @@ CV_EXPORTS int floodFill( InputOutputArray image,
 //! @param weights2 It has a type of CV_32FC1 and the same size with src1.
 //! @param dst It is created if it does not have the same size and type with src1.
 CV_EXPORTS_W void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
+
+/** @brief Composites two images according to their alpha channels, using a Porter-Duff operator.
+
+The default operator, #ALPHA_COMPOSITE_OVER, draws overlay on top of background and blends the two
+according to overlay's alpha channel, so that partially-transparent pixels mix smoothly into the
+background with no fringing at the edges. This is what is usually wanted when pasting an RGBA
+sprite, an antialiased glyph or a segmentation mask onto a picture. The other operators of
+#AlphaCompositeOperations select the rest of the Porter-Duff set, for instance
+#ALPHA_COMPOSITE_ATOP to clip the overlay to the background's shape, or #ALPHA_COMPOSITE_DEST_OUT
+to punch a hole in the background.
+
+Only the compositing operator is configurable. The blend mode is always *normal*: the overlay's
+color is taken as-is and is never mixed with the background's color the way the separable blend
+modes of the same specification (multiply, screen, overlay, darken, and so on) do. Blend modes are
+a separate axis and are not implemented here.
+
+All operators are evaluated in premultiplied alpha space, where each one reduces to a pair of
+per-pixel weights \f$F_a\f$, \f$F_b\f$ listed in #AlphaCompositeOperations:
+\f[C_o = C_s F_a + C_b F_b, \qquad \alpha_o = \alpha_s F_a + \alpha_b F_b\f]
+with \f$C_s, \alpha_s\f$ taken from overlay and \f$C_b, \alpha_b\f$ from background. Inputs that
+carry straight (unassociated) alpha are premultiplied on entry and the result is un-premultiplied
+on exit. Both steps reuse #cvtColor with #COLOR_RGBA2mRGBA and #COLOR_mRGBA2RGBA, so alphaComposite
+follows exactly the same alpha conventions as those conversions.
+
+@param overlay 8-bit 4-channel image (RGBA or BGRA; channel order does not matter as long as it
+matches background) acting as the source of the operator; must be the same size as background.
+@param background 8-bit 3-channel or 4-channel image acting as the destination of the operator. A
+4-channel background contributes its own alpha to the blend, using the same straight/premultiplied
+convention as overlay, and dst has 4 channels holding the composited alpha \f$\alpha_o\f$. A
+3-channel background is taken to be fully opaque (\f$\alpha_b = 1\f$) and dst has 3 channels;
+since such a dst cannot store \f$\alpha_o\f$, the alpha is dropped and the premultiplied color is
+written, which is what cairo does when the target surface has no alpha channel. Operators whose
+result is not opaque (#ALPHA_COMPOSITE_CLEAR, #ALPHA_COMPOSITE_OUT, #ALPHA_COMPOSITE_XOR and
+others) therefore darken toward black on a 3-channel background; pass a 4-channel background to
+keep the alpha.
+@param dst output image, created with the same size and type as background. It may be the same
+array as background.
+@param op compositing operator, one of #AlphaCompositeOperations.
+@param premultiplied false (the default) if overlay's alpha (and background's, when it has one) is
+straight/unassociated, as produced by e.g. `imread(..., IMREAD_UNCHANGED)`; true if it is already
+premultiplied, which skips the internal conversion.
+
+@sa cvtColor, COLOR_RGBA2mRGBA, COLOR_mRGBA2RGBA, blendLinear, addWeighted
+*/
+CV_EXPORTS_W void alphaComposite(InputArray overlay, InputArray background, OutputArray dst,
+                                 int op = ALPHA_COMPOSITE_OVER, bool premultiplied = false);
 
 //! @} imgproc_misc
 
