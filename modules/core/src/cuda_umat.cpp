@@ -106,6 +106,8 @@ public:
             cudaSafeCall(cudaMemcpy(u->handle, u->data, u->size, cudaMemcpyHostToDevice));
             u->markDeviceCopyObsolete(false);
         }
+        if (u->urefcount == 0 && u->refcount == 0)
+            deallocate(u);
     }
 
     void download(UMatData* u, void* dstptr, int dims, const size_t sz[],
