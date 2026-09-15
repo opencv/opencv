@@ -1922,8 +1922,6 @@ struct Parser
 
 } // anonymous namespace
 
-
-
 }} // namespace cv::ew
 
 namespace cv {
