@@ -97,6 +97,12 @@
 #define CV_DST_TYPE_FIT_32F 0
 #endif
 
+#if CV_DST_TYPE_FIT_32F
+#define CV_SELECT_MASK(value) ((int)(value))
+#else
+#define CV_SELECT_MASK(value) ((long)(value))
+#endif
+
 
 #if CV_DST_TYPE_FIT_32F
 #define CV_PI M_PI_F
@@ -324,6 +330,21 @@
 #else
 #define PROCESS_ELEM storedst(exp(srcelem1))
 #endif
+
+#elif defined OP_EXPM1
+#define PROCESS_ELEM \
+    workT expValue = exp(srcelem1); \
+    workT result = (expValue - (workT)(1)) * srcelem1 / log(expValue); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        expValue == (workT)(1))); \
+    result = select(result, (workT)(-1), CV_SELECT_MASK( \
+        expValue == (workT)(0))); \
+    result = select(result, expValue, CV_SELECT_MASK(isinf(expValue))); \
+    result = select(result, (workT)(-1), CV_SELECT_MASK( \
+        isinf(srcelem1) & srcelem1 < (workT)(0))); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        isinf(srcelem1) & srcelem1 > (workT)(0))); \
+    storedst(result)
 
 #elif defined OP_POW
 #define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))

@@ -1612,6 +1612,10 @@ array. It is more accurate than using @ref exp for input values close to zero.
 The implementation follows the stable transformation described in @cite
 Higham02, Section 1.14.1, pages 19-21.
 
+The same formulation is used for CPU and OpenCL execution. The implementation
+does not delegate the operation to a backend-specific standard library function,
+which keeps results comparable across backends.
+
 @param src input single- or double-precision floating-point array.
 @param dst output array of the same size and type as @p src.
 @sa exp, log1p

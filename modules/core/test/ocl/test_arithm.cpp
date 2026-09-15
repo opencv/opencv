@@ -41,6 +41,7 @@
 
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
+#include <array>
 
 #ifdef HAVE_OPENCL
 
@@ -1132,6 +1133,174 @@ OCL_TEST_P(Magnitude, Mat)
         OCL_ON(cv::magnitude(usrc1_roi, usrc2_roi, udst1_roi));
         Near(depth == CV_64F ? 1e-5 : 1e-2);
     }
+}
+
+template <typename T>
+using OclMathTestBits = typename ::testing::internal::TypeWithSize<sizeof(T)>::UInt;
+
+template <typename T>
+OclMathTestBits<T> oclMathTestOrderedBits(T value)
+{
+    using Bits = OclMathTestBits<T>;
+    Bits bits = 0;
+    std::memcpy(&bits, &value, sizeof(value));
+    const Bits signBit = Bits(1) << (sizeof(T) * CHAR_BIT - 1);
+    return (bits & signBit) != 0 ? ~bits + Bits(1) : signBit | bits;
+}
+
+template <typename T>
+OclMathTestBits<T> oclMathTestUlpDistance(T lhs, T rhs)
+{
+    const OclMathTestBits<T> lhsBits = oclMathTestOrderedBits(lhs);
+    const OclMathTestBits<T> rhsBits = oclMathTestOrderedBits(rhs);
+    return lhsBits >= rhsBits ? lhsBits - rhsBits : rhsBits - lhsBits;
+}
+
+template <typename T>
+void expectMatWithinOneUlp(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+
+    const int channels = expected.channels();
+    for (int row = 0; row < expected.rows; ++row)
+    {
+        const T* expectedPtr = expected.ptr<T>(row);
+        const T* actualPtr = actual.ptr<T>(row);
+        for (int column = 0; column < expected.cols * channels; ++column)
+        {
+            const T expectedValue = expectedPtr[column];
+            const T actualValue = actualPtr[column];
+            if (std::isnan(expectedValue))
+            {
+                EXPECT_TRUE(std::isnan(actualValue));
+            }
+            else if (std::isinf(expectedValue))
+            {
+                EXPECT_EQ(actualValue, expectedValue);
+            }
+            else if (std::fpclassify(expectedValue) == FP_ZERO)
+            {
+                EXPECT_EQ(actualValue, expectedValue);
+                EXPECT_EQ(std::signbit(actualValue), std::signbit(expectedValue));
+            }
+            else
+            {
+                EXPECT_LE(oclMathTestUlpDistance(actualValue, expectedValue),
+                          OclMathTestBits<T>(1))
+                    << "row=" << row << ", column=" << column
+                    << ", actual=" << actualValue
+                    << ", expected=" << expectedValue;
+            }
+        }
+    }
+}
+
+template <typename T>
+void expectOpenCLWithinOneUlp(const Mat& expected, const UMat& actual)
+{
+    Mat actualMat;
+    actual.copyTo(actualMat);
+    expectMatWithinOneUlp<T>(expected, actualMat);
+}
+
+template <typename T>
+class OCL_MathTest : public TestUtils, public ::testing::Test
+{
+};
+
+using OCL_MathTypes = ::testing::Types<float, double>;
+TYPED_TEST_CASE(OCL_MathTest, OCL_MathTypes);
+
+template <typename T>
+struct Ocl_Expm1ExpectedValues;
+
+template <>
+struct Ocl_Expm1ExpectedValues<float>
+{
+    static std::array<float, 6> data()
+    {
+        // These are the exact values written as -0x1.bab556p-1,
+        // -0x1.92e9a0p-2, -0x1.060352p-10, 0x1.06466ep-10,
+        // 0x1.4c2532p-1, and 0x1.98e64cp+2.
+        return {{
+            -std::scalbn(0x1bab556,  -25),
+            -std::scalbn(0x192e9a0,  -26),
+            -std::scalbn(0x1060352, -34),
+             std::scalbn(0x106466e, -34),
+             std::scalbn(0x14c2532, -25),
+             std::scalbn(0x198e64c, -22)}};
+    }
+};
+
+template <>
+struct Ocl_Expm1ExpectedValues<double>
+{
+    static std::array<double, 6> data()
+    {
+        // These are the exact values written as -0x1.bab5557101f8dp-1,
+        // -0x1.92e9a0720d3ecp-2, -0x1.0603521cac48cp-10,
+        // 0x1.06466dfb8cf3ap-10, 0x1.4c2531c3c0d38p-1,
+        // and 0x1.98e64b8d4ddaep+2.
+        return {{
+            -std::scalbn(0x1bab5557101f8d,  -53),
+            -std::scalbn(0x192e9a0720d3ec,  -54),
+            -std::scalbn(0x10603521cac48c, -62),
+             std::scalbn(0x106466dfb8cf3a, -62),
+             std::scalbn(0x14c2531c3c0d38, -53),
+             std::scalbn(0x198e64b8d4ddae, -50)}};
+    }
+};
+
+TYPED_TEST(OCL_MathTest, expm1_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    Scalar values[] = {Scalar(-2), Scalar(-0.5), Scalar(-0.001),
+                       Scalar(0.001), Scalar(0.5), Scalar(2)};
+    std::array<Scalar, 6> expectedValues =
+        Ocl_Expm1ExpectedValues<Scalar>::data();
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    Mat src(1, valueCount, DataType<Scalar>::type, values);
+    Mat expected(1, valueCount, DataType<Scalar>::type, expectedValues.data());
+    Mat cpu;
+    UMat usrc;
+    UMat gpu;
+    src.copyTo(usrc);
+
+    OCL_OFF(cv::expm1(src, cpu));
+    OCL_ON(cv::expm1(usrc, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    expectOpenCLWithinOneUlp<Scalar>(expected, gpu);
+}
+
+template <typename T>
+void testOpenCLTinyArguments()
+{
+    const T tiny = std::scalbn(T(1), -std::numeric_limits<T>::digits - 1);
+    Mat src(1, 1, DataType<T>::type);
+    src.at<T>(0, 0) = tiny;
+    UMat usrc;
+    src.copyTo(usrc);
+    Mat cpuExpm1;
+    UMat gpuExpm1;
+
+    OCL_OFF(cv::expm1(src, cpuExpm1));
+    OCL_ON(cv::expm1(usrc, gpuExpm1));
+
+    Mat actualExpm1;
+    gpuExpm1.copyTo(actualExpm1);
+    EXPECT_EQ(actualExpm1.at<T>(0, 0), cpuExpm1.at<T>(0, 0));
+}
+
+OCL_TEST(Math, expm1_preserves_tiny_arguments_float)
+{
+    testOpenCLTinyArguments<float>();
+}
+
+OCL_TEST(Math, expm1_preserves_tiny_arguments_double)
+{
+    testOpenCLTinyArguments<double>();
 }
 
 //////////////////////////////// Flip /////////////////////////////////////////////////
