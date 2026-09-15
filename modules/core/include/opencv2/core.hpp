@@ -1742,6 +1742,11 @@ The implementation follows the algorithm described in @cite Borges20. For
 finite inputs, the result is typically accurate to within 1 ULP for both
 single- and double-precision arrays.
 
+The same scaled and corrected formula is used for CPU and OpenCL execution.
+The implementation does not delegate the operation to a
+backend-specific standard library function, which keeps results comparable
+across backends.
+
 @param x single- or double-precision floating-point array of x-coordinates.
 @param y array of y-coordinates; it must have the same size and type as @p x.
 @param dst output array of the same size and type as @p x.

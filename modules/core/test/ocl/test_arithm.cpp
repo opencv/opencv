@@ -1357,6 +1357,131 @@ TYPED_TEST(OCL_MathTest, log1p_matches_special_values)
 }
 
 template <typename T>
+struct Ocl_HypotScaledValues;
+
+template <>
+struct Ocl_HypotScaledValues<float>
+{
+    static float x()
+    {
+        // This is the exact value written as 0x1.8p-126f.
+        return std::scalbn(0x18, -130);
+    }
+
+    static float y()
+    {
+        // This is the exact value written as 0x1.4p-129f.
+        return std::scalbn(0x14, -133);
+    }
+
+    static float expected()
+    {
+        // This is the exact value written as 0x1.8213e4p-126f.
+        return std::scalbn(0x18213e4, -150);
+    }
+};
+
+template <>
+struct Ocl_HypotScaledValues<double>
+{
+    static double x()
+    {
+        // This is the exact value written as 0x1.8p-1008.
+        return std::scalbn(0x18, -1012);
+    }
+
+    static double y()
+    {
+        // This is the exact value written as 0x1.4p-1011.
+        return std::scalbn(0x14, -1015);
+    }
+
+    static double expected()
+    {
+        // This is the exact value written as 0x1.8213e4f575a6ap-1008.
+        return std::scalbn(0x18213e4f575a6a, -1060);
+    }
+};
+
+TYPED_TEST(OCL_MathTest, hypot_scales_before_squaring)
+{
+    using Scalar = TypeParam;
+    const Scalar xValue = Ocl_HypotScaledValues<Scalar>::x();
+    const Scalar yValue = Ocl_HypotScaledValues<Scalar>::y();
+    const Scalar expectedValue = Ocl_HypotScaledValues<Scalar>::expected();
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = xValue;
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = yValue;
+    Mat expected(1, 1, DataType<Scalar>::type);
+    expected.at<Scalar>(0, 0) = expectedValue;
+    Mat cpu;
+    UMat ux;
+    UMat uy;
+    UMat gpu;
+    x.copyTo(ux);
+    y.copyTo(uy);
+
+    OCL_OFF(cv::hypot(x, y, cpu));
+    OCL_ON(cv::hypot(ux, uy, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    Mat actual;
+    gpu.copyTo(actual);
+    EXPECT_EQ(actual.at<Scalar>(0, 0), expectedValue);
+}
+
+TYPED_TEST(OCL_MathTest, hypot_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    Scalar xValues[] = {Scalar(3), Scalar(-3), Scalar(0), Scalar(5)};
+    Scalar yValues[] = {Scalar(4), Scalar(4), Scalar(0), Scalar(-12)};
+    Scalar expectedValues[] = {Scalar(5), Scalar(5), Scalar(0), Scalar(13)};
+    constexpr int valueCount = static_cast<int>(sizeof(xValues) / sizeof(xValues[0]));
+    Mat x(1, valueCount, DataType<Scalar>::type, xValues);
+    Mat y(1, valueCount, DataType<Scalar>::type, yValues);
+    Mat expected(1, valueCount, DataType<Scalar>::type, expectedValues);
+    Mat cpu;
+    UMat ux;
+    UMat uy;
+    UMat gpu;
+    x.copyTo(ux);
+    y.copyTo(uy);
+
+    OCL_OFF(cv::hypot(x, y, cpu));
+    OCL_ON(cv::hypot(ux, uy, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    expectOpenCLWithinOneUlp<Scalar>(expected, gpu);
+}
+
+TYPED_TEST(OCL_MathTest, hypot_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar infinity = std::numeric_limits<Scalar>::infinity();
+    const Scalar nan = std::numeric_limits<Scalar>::quiet_NaN();
+    Scalar xValues[] = {infinity, infinity, nan, Scalar(0), -Scalar(0)};
+    Scalar yValues[] = {nan, Scalar(1), Scalar(1), -Scalar(0), Scalar(0)};
+    Scalar expectedValues[] = {infinity, infinity, nan, Scalar(0), Scalar(0)};
+    constexpr int valueCount = static_cast<int>(sizeof(xValues) / sizeof(xValues[0]));
+    Mat x(1, valueCount, DataType<Scalar>::type, xValues);
+    Mat y(1, valueCount, DataType<Scalar>::type, yValues);
+    Mat expected(1, valueCount, DataType<Scalar>::type, expectedValues);
+    Mat cpu;
+    UMat ux;
+    UMat uy;
+    UMat gpu;
+    x.copyTo(ux);
+    y.copyTo(uy);
+
+    OCL_OFF(cv::hypot(x, y, cpu));
+    OCL_ON(cv::hypot(ux, uy, gpu));
+
+    expectMatWithinOneUlp<Scalar>(expected, cpu);
+    expectOpenCLWithinOneUlp<Scalar>(expected, gpu);
+}
+
+template <typename T>
 void testOpenCLTinyArguments()
 {
     const T tiny = std::scalbn(T(1), -std::numeric_limits<T>::digits - 1);
@@ -1402,6 +1527,40 @@ OCL_TEST(Math, log1p_preserves_tiny_arguments_float)
 OCL_TEST(Math, log1p_preserves_tiny_arguments_double)
 {
     testOpenCLLog1pTinyArguments<double>();
+}
+
+template <typename T>
+void testOpenCLHypotOverflow()
+{
+    const T large = std::numeric_limits<T>::max() / T(2);
+    Mat x(1, 1, DataType<T>::type);
+    x.at<T>(0, 0) = large;
+    Mat y(1, 1, DataType<T>::type);
+    y.at<T>(0, 0) = large;
+    UMat ux;
+    UMat uy;
+    x.copyTo(ux);
+    y.copyTo(uy);
+    UMat gpu;
+
+    OCL_ON(cv::hypot(ux, uy, gpu));
+
+    Mat actual;
+    gpu.copyTo(actual);
+    // This is the exact value written as 0x1.6a09e667f3bcdp+0.
+    const T expected =
+        large * std::scalbn(T(0x16a09e667f3bcd), -52);
+    EXPECT_EQ(actual.at<T>(0, 0), expected);
+}
+
+OCL_TEST(Math, hypot_avoids_overflow_float)
+{
+    testOpenCLHypotOverflow<float>();
+}
+
+OCL_TEST(Math, hypot_avoids_overflow_double)
+{
+    testOpenCLHypotOverflow<double>();
 }
 
 OCL_TEST(Math, expm1_preserves_tiny_arguments_float)
