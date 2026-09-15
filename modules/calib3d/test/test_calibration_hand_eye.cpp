@@ -689,6 +689,64 @@ TEST(Calib3d_CalibrateHandEye, regression_17986)
     }
 }
 
+TEST(Calib3d_CalibrateHandEye, illConditionedParkRotationSystem)
+{
+    constexpr int poseCount = 6;
+    constexpr double rotationPerturbation = 1e-8;
+    constexpr double rotationNoise = 1e-12;
+    constexpr double rotationTolerance = 1e-4;
+    const Mat expectedRvec = (Mat_<double>(3, 1) << 0.3, -0.2, 0.4);
+    const Mat expectedTvec = (Mat_<double>(3, 1) << 0.1, 0.2, 0.3);
+    const Mat target2base = Mat::eye(4, 4, CV_64F);
+    Mat expectedR;
+    cv::Rodrigues(expectedRvec, expectedR);
+    Mat expectedTransform;
+    hconcat(expectedR, expectedTvec, expectedTransform);
+    vconcat(expectedTransform, Mat(Matx14d(0.0, 0.0, 0.0, 1.0)), expectedTransform);
+    std::vector<Mat> gripper2baseRotations;
+    std::vector<Mat> gripper2baseTranslations;
+    std::vector<Mat> target2camRotations;
+    std::vector<Mat> target2camTranslations;
+
+    for (int pose = 0; pose < poseCount; ++pose)
+    {
+        const double angle = 0.2 + 0.1 * pose;
+        const double y = rotationPerturbation * (pose - 2.5);
+        const double z = rotationPerturbation * (pose % 3 - 1);
+        const Mat gripper2baseRvec = (Mat_<double>(3, 1) << angle, y, z);
+        Mat gripper2baseR;
+        cv::Rodrigues(gripper2baseRvec, gripper2baseR);
+        const Mat gripper2baseTvec =
+            (Mat_<double>(3, 1) << 0.1 * pose, -0.05 * pose, 0.02 * pose);
+        Mat gripper2base;
+        hconcat(gripper2baseR, gripper2baseTvec, gripper2base);
+        vconcat(gripper2base, Mat(Matx14d(0.0, 0.0, 0.0, 1.0)), gripper2base);
+
+        Mat target2cam = homogeneousInverse(expectedTransform) *
+                         homogeneousInverse(gripper2base) * target2base;
+        Mat target2camRvec;
+        cv::Rodrigues(target2cam(Rect(0, 0, 3, 3)), target2camRvec);
+        target2camRvec.at<double>(0) += rotationNoise * (pose % 3 - 1);
+        target2camRvec.at<double>(1) += rotationNoise * (2.0 * (pose % 2) - 1.0);
+
+        gripper2baseRotations.push_back(gripper2baseR);
+        gripper2baseTranslations.push_back(gripper2baseTvec);
+        target2camRotations.push_back(target2camRvec);
+        target2camTranslations.push_back(target2cam(Rect(3, 0, 1, 3)));
+    }
+
+    Mat estimatedR;
+    Mat estimatedT;
+    calibrateHandEye(gripper2baseRotations, gripper2baseTranslations,
+                     target2camRotations, target2camTranslations,
+                     estimatedR, estimatedT, CALIB_HAND_EYE_PARK);
+
+    EXPECT_NEAR(cv::norm(estimatedR - expectedR, NORM_INF), 0.0,
+                rotationTolerance);
+    RecordProperty("matrix_error", cv::format("%.17g",
+        cv::norm(estimatedR - expectedR, NORM_INF)));
+}
+
 TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
 {
     std::vector<Mat> R_world2cam, t_worldt2cam;

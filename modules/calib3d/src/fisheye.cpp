@@ -1358,9 +1358,14 @@ cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
         }
     }
 
-    if (Np > 4) L = L.t() * L;
-    SVD svd(L);
-    Mat hh = svd.vt.row(8) / svd.vt.row(8).at<double>(8);
+    // Do not multiply L by its transpose from the left to avoid squaring the
+    // condition number.
+    Mat singularValues;
+    Mat rightSingularVectors;
+    // Retain the full right nullspace only for an underdetermined system.
+    const int flags = L.rows < L.cols ? SVD::FULL_UV : 0;
+    SVD::compute(L, singularValues, noArray(), rightSingularVectors, flags);
+    Mat hh = rightSingularVectors.row(8) / rightSingularVectors.at<double>(8, 8);
     Mat Hrem = hh.reshape(1, 3);
     Mat H = inv_Hnorm * Hrem;
 

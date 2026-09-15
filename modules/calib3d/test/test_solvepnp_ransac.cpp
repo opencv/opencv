@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "test_rotation_distance.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
@@ -2402,6 +2403,210 @@ TEST(AP3P, ctheta1p_nan_23607)
         }
         EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3.34e-16);
     }
+}
+
+template<typename T>
+class RotationDistanceTest : public testing::Test {};
+typedef testing::Types<float, double> RotationDistanceTypes;
+TYPED_TEST_CASE(RotationDistanceTest, RotationDistanceTypes);
+
+TYPED_TEST(RotationDistanceTest, principalAngle)
+{
+    using T = TypeParam;
+    using std::acos;
+    using std::cos;
+    using std::sin;
+    const T pi = acos(T(-1));
+    constexpr T smallAngle = T(1e-7);
+    constexpr T tolerance = T(8) * std::numeric_limits<T>::epsilon();
+    const T angles[] = {T(0), smallAngle, T(0.5), pi - smallAngle, pi};
+    for (T angle : angles)
+    {
+        const T c = cos(angle);
+        const T s = sin(angle);
+        const cv::Matx<T, 3, 3> rotation(c, -s, T(0), s, c, T(0), T(0), T(0), T(1));
+        EXPECT_NEAR(angularDistance(rotation, cv::Matx<T, 3, 3>::eye()), angle, tolerance);
+        EXPECT_NEAR(angularDistance(cv::Matx<T, 3, 3>::eye(), rotation), angle, tolerance);
+        EXPECT_NEAR(angularDistance(rotation, rotation), T(0), tolerance);
+    }
+}
+
+TYPED_TEST(RotationDistanceTest, equivalentHalfTurns)
+{
+    using T = TypeParam;
+    using std::acos;
+    const T pi = acos(T(-1));
+    constexpr T tolerance = T(8) * std::numeric_limits<T>::epsilon();
+    const cv::Vec<T, 3> positive(pi, T(0), T(0));
+    const cv::Vec<T, 3> negative(-pi, T(0), T(0));
+    cv::Matx<T, 3, 3> first;
+    cv::Matx<T, 3, 3> second;
+    cv::Rodrigues(positive, first);
+    cv::Rodrigues(negative, second);
+    EXPECT_NEAR(angularDistance(first, second), T(0), tolerance);
+}
+
+TEST(SolvePnP, illConditionedEPnPSystem)
+{
+    constexpr int pointCount = 20;
+    constexpr double cameraFocalLength = 1000.0;
+    constexpr double cameraCenterX = 320.0;
+    constexpr double cameraCenterY = 240.0;
+    constexpr double objectDepth = 10.0;
+    constexpr double coordinateScale = 7e-11;
+    constexpr double imageNoise = 1e-14;
+    constexpr double poseTolerance = 1e-3;
+    const Mat cameraMatrix = (Mat_<double>(3, 3) <<
+        cameraFocalLength, 0.0, cameraCenterX,
+        0.0, cameraFocalLength, cameraCenterY,
+        0.0, 0.0, 1.0);
+    const Mat expectedRvec = Mat::zeros(3, 1, CV_64F);
+    const Mat expectedTvec = (Mat_<double>(3, 1) << 0.0, 0.0, objectDepth);
+    std::vector<Point3d> objectPoints;
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * (point % 5) / 4.0;
+        const double y = coordinateScale * (-1.0 + 2.0 * (point / 5) / 3.0);
+        const double z = coordinateScale * (point % 3);
+        objectPoints.emplace_back(x, y, z);
+    }
+
+    std::vector<Point2d> imagePoints;
+    projectPoints(objectPoints, expectedRvec, expectedTvec, cameraMatrix,
+                  noArray(), imagePoints);
+    for (int point = 0; point < pointCount; ++point)
+    {
+        imagePoints[point].x += imageNoise * (point % 3 - 1);
+        imagePoints[point].y += imageNoise * (2.0 * (point % 2) - 1.0);
+    }
+
+    Mat estimatedRvec;
+    Mat estimatedTvec;
+    const bool success = solvePnP(objectPoints, imagePoints, cameraMatrix,
+                                  noArray(), estimatedRvec, estimatedTvec,
+                                  false, SOLVEPNP_EPNP);
+
+    ASSERT_TRUE(success);
+    Matx33d estimatedRotation;
+    cv::Rodrigues(estimatedRvec, estimatedRotation);
+    RecordProperty("rotation_error_rad", cv::format("%.17g",
+        angularDistance(estimatedRotation, Matx33d::eye())));
+    RecordProperty("translation_error", cv::format("%.17g",
+        cv::norm(estimatedTvec - expectedTvec, NORM_L2)));
+    EXPECT_NEAR(cv::norm(estimatedRvec - expectedRvec, NORM_INF), 0.0,
+                poseTolerance);
+    EXPECT_NEAR(cv::norm(estimatedTvec - expectedTvec, NORM_INF), 0.0,
+                poseTolerance);
+}
+
+TEST(SolvePnP, illConditionedEPnPWorldFrame)
+{
+    constexpr int pointCount = 20;
+    constexpr int columns = 5;
+    constexpr int rows = pointCount / columns;
+    constexpr int depthLevels = 3;
+    constexpr double coordinateScale = 7e-11;
+    constexpr double focalLength = 1000.0;
+    constexpr double centerX = 320.0;
+    constexpr double centerY = 240.0;
+    constexpr double objectDepth = 10.0;
+    constexpr double poseTolerance = 1e-3;
+    const Matx33d camera(focalLength, 0.0, centerX,
+                        0.0, focalLength, centerY,
+                        0.0, 0.0, 1.0);
+    const Vec3d expectedTranslation(0.0, 0.0, objectDepth);
+    std::vector<Point3d> referencePoints;
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * (point % columns) / (columns - 1);
+        const double y = coordinateScale * (-1.0 + 2.0 * (point / columns) / (rows - 1));
+        const double z = coordinateScale * (point % depthLevels);
+        referencePoints.emplace_back(x, y, z);
+    }
+    std::vector<Point2d> imagePoints;
+    projectPoints(referencePoints, Vec3d::all(0.0), expectedTranslation,
+                  camera, noArray(), imagePoints);
+    // Half-turns change the world frame without changing the observed scene.
+    for (double xSign : {-1.0, 1.0})
+    {
+        for (double ySign : {-1.0, 1.0})
+        {
+            SCOPED_TRACE(cv::format("xSign=%g ySign=%g", xSign, ySign));
+            const Matx33d expectedRotation(xSign, 0.0, 0.0,
+                                          0.0, ySign, 0.0,
+                                          0.0, 0.0, xSign * ySign);
+            std::vector<Point3d> objectPoints;
+            transform(referencePoints, objectPoints, expectedRotation);
+            Mat rvec;
+            Mat tvec;
+            ASSERT_TRUE(solvePnP(objectPoints, imagePoints, camera, noArray(),
+                                rvec, tvec, false, SOLVEPNP_EPNP));
+            ASSERT_TRUE(checkRange(rvec));
+            ASSERT_TRUE(checkRange(tvec));
+            Matx33d rotation;
+            cv::Rodrigues(rvec, rotation);
+            EXPECT_NEAR(angularDistance(rotation, expectedRotation), 0.0, poseTolerance);
+            EXPECT_NEAR(cv::norm(tvec, Mat(expectedTranslation), NORM_INF), 0.0, poseTolerance);
+        }
+    }
+}
+
+TEST(SolvePnP, illConditionedIPPEHomography)
+{
+    constexpr int pointCount = 20;
+    constexpr double cameraFocalLength = 1000.0;
+    constexpr double cameraCenterX = 320.0;
+    constexpr double cameraCenterY = 240.0;
+    constexpr double coordinateScale = 1e-11;
+    constexpr double objectDepth = 10.0;
+    constexpr double imageNoise = 1e-12;
+    constexpr double poseTolerance = 1e-2;
+    const Mat cameraMatrix = (Mat_<double>(3, 3) <<
+        cameraFocalLength, 0.0, cameraCenterX,
+        0.0, cameraFocalLength, cameraCenterY,
+        0.0, 0.0, 1.0);
+    const Mat expectedRvec = (Mat_<double>(3, 1) << 0.1, -0.2, 0.3);
+    const Mat expectedTvec = (Mat_<double>(3, 1) << 0.2, -0.1, objectDepth);
+    std::vector<Point3d> objectPoints;
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * (point % 5) / 4.0;
+        const double y = coordinateScale * (-1.0 + 2.0 * (point / 5) / 3.0);
+        objectPoints.emplace_back(x, y, 0.0);
+    }
+
+    std::vector<Point2d> imagePoints;
+    projectPoints(objectPoints, expectedRvec, expectedTvec, cameraMatrix,
+                  noArray(), imagePoints);
+    for (int point = 0; point < pointCount; ++point)
+    {
+        imagePoints[point].x += imageNoise * (point % 3 - 1);
+        imagePoints[point].y += imageNoise * (2.0 * (point % 2) - 1.0);
+    }
+
+    Mat estimatedRvec;
+    Mat estimatedTvec;
+    const bool success = solvePnP(objectPoints, imagePoints, cameraMatrix,
+                                  noArray(), estimatedRvec, estimatedTvec,
+                                  false, SOLVEPNP_IPPE);
+
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(checkRange(estimatedRvec));
+    ASSERT_TRUE(checkRange(estimatedTvec));
+    Matx33d estimatedRotation;
+    Matx33d expectedRotation;
+    cv::Rodrigues(estimatedRvec, estimatedRotation);
+    cv::Rodrigues(expectedRvec, expectedRotation);
+    RecordProperty("rotation_error_rad", cv::format("%.17g",
+        angularDistance(estimatedRotation, expectedRotation)));
+    RecordProperty("translation_error", cv::format("%.17g",
+        cv::norm(estimatedTvec - expectedTvec, NORM_L2)));
+    EXPECT_NEAR(cv::norm(estimatedRvec - expectedRvec, NORM_INF), 0.0,
+                poseTolerance);
+    EXPECT_NEAR(cv::norm(estimatedTvec - expectedTvec, NORM_INF), 0.0,
+                poseTolerance);
 }
 
 }} // namespace
