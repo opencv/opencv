@@ -480,63 +480,6 @@ PERF_TEST_P_(Layer_LayerNorm, LayerNorm_Large)
     test_layer({1, 512, 768});
 }
 
-struct Layer_SkipSimplifiedLayerNorm : public TestBaseWithParam<tuple<Backend, Target> >
-{
-    void test_layer(const std::vector<int>& x_shape, bool hasBias)
-    {
-        int backendId = get<0>(GetParam());
-        int targetId = get<1>(GetParam());
-
-        const int hidden = x_shape.back();
-        Mat input(x_shape, CV_32FC1);
-        Mat skip(x_shape, CV_32FC1);
-        Mat gamma(std::vector<int>{hidden}, CV_32FC1);
-        Mat bias(std::vector<int>{hidden}, CV_32FC1);
-
-        randu(input, 0.f, 1.f);
-        randu(skip, 0.f, 1.f);
-        randu(gamma, 0.f, 1.f);
-        randu(bias, 0.f, 1.f);
-
-        Net net;
-        LayerParams lp;
-        lp.type = "SkipSimplifiedLayerNormalization";
-        lp.name = "testLayer";
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
-        net.connect(0, 1, id, 1);
-        net.connect(0, 2, id, 2);
-        if (hasBias)
-            net.connect(0, 3, id, 3);
-
-        {
-            std::vector<String> inpNames{"input", "skip", "gamma"};
-            if (hasBias) inpNames.push_back("bias");
-            net.setInputsNames(inpNames);
-            net.setInput(input, inpNames[0]);
-            net.setInput(skip, inpNames[1]);
-            net.setInput(gamma, inpNames[2]);
-            if (hasBias) net.setInput(bias, inpNames[3]);
-
-            net.setPreferableBackend(backendId);
-            net.setPreferableTarget(targetId);
-            Mat out = net.forward();
-        }
-
-        TEST_CYCLE()
-        {
-            Mat res = net.forward();
-        }
-
-        SANITY_CHECK_NOTHING();
-    }
-};
-
-PERF_TEST_P_(Layer_SkipSimplifiedLayerNorm, WithBias)
-{
-    test_layer({1, 512, 4096}, /*hasBias*/ true);
-}
-
 struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& x_shape)
@@ -1150,7 +1093,6 @@ INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple
 INSTANTIATE_TEST_CASE_P(VULKAN, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN)));
 #endif
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
-INSTANTIATE_TEST_CASE_P(/**/, Layer_SkipSimplifiedLayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));

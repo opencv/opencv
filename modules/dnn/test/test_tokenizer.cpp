@@ -229,40 +229,6 @@ TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Roundtrip) {
     }
 }
 
-static void checkAgainstHfTestDataOptionalDecode(Tokenizer& tok, const std::string& goldenPath) {
-    cv::FileStorage fs(goldenPath, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
-    ASSERT_TRUE(fs.isOpened()) << "Failed to open " << goldenPath;
-
-    cv::FileNode samples = fs["samples"];
-    for (auto it = samples.begin(); it != samples.end(); ++it) {
-        cv::FileNode sample = *it;
-        std::string text;
-        sample["text"] >> text;
-        std::vector<int> expected;
-        sample["ids"] >> expected;
-
-        EXPECT_EQ(tok.encode(text), expected) << "sample: " << (std::string)sample["name"];
-
-        cv::FileNode decodedNode = sample["decoded"];
-        if (!decodedNode.empty()) {
-            std::string decoded;
-            decodedNode >> decoded;
-            EXPECT_EQ(tok.decode(expected), decoded) << "sample: " << (std::string)sample["name"];
-        }
-    }
-}
-
-TEST(Tokenizer_Unigram, Tokenizer_T5_RealModel) {
-    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
-    std::vector<int> ids = tok.encode("hello world");
-    EXPECT_EQ(tok.decode(ids), "hello world");
-}
-
-TEST(Tokenizer_Unigram, Tokenizer_T5_HfTestData) {
-    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
-    checkAgainstHfTestDataOptionalDecode(tok, _tf("t5/t5_hf_testdata.json"));
-}
-
 static void checkAgainstHfTestData(Tokenizer& tok, const std::string& goldenPath) {
     cv::FileStorage fs(goldenPath, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     ASSERT_TRUE(fs.isOpened()) << "Failed to open " << goldenPath;

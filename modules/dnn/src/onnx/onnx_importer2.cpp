@@ -3239,9 +3239,6 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
     dispatch["MultiHeadAttention"] = &ONNXImporter2::parseMultiHeadAttention;
-    // GraniteDocling-258M's real onnxruntime-genai export sets do_rotary=1 on this node (verified
-    // against a live export of its published config); upstream's AttentionOnnxAi decomposition
-    // rejects do_rotary=1, so the standalone layer path is kept for this op specifically.
     dispatch["GroupQueryAttention"] = &ONNXImporter2::parseGroupQueryAttention;
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
     dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNorm;

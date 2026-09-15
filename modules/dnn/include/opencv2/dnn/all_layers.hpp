@@ -1968,11 +1968,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GroupQueryAttentionLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS SkipSimplifiedLayerNormalizationLayer : public Layer {
-     public:
-        static Ptr<SkipSimplifiedLayerNormalizationLayer> create(const LayerParams &params);
-    };
-
     class CV_EXPORTS AttentionOnnxAiLayer : public Layer {
      public:
         int kv_num_heads;
