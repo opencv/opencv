@@ -322,6 +322,67 @@ TEST_P(Test_Model, Classify)
     testClassifyModel(weights_file, "", img_path, ref, norm, size);
 }
 
+TEST_P(Test_Model, PredictBatch)
+{
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/mobilenet_v2_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("mobilenet_v2_batch_exp.npy"));
+
+    std::vector<Mat> frames;
+    for (const char* name : {"grace_hopper_227.png", "dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    Model model(weights_file);
+    model.setInputSize(Size(224, 224));
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<Mat> outs;
+    model.predict(frames, outs);
+    ASSERT_EQ(outs.size(), (size_t)1);
+    ASSERT_EQ(outs[0].size[0], (int)frames.size());
+    normAssert(exp, outs[0], "", 1e-4, 1e-3);
+}
+
+TEST_P(Test_Model, ClassifyBatch)
+{
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/mobilenet_v2_dynbatch.onnx", false);
+    const std::vector<int>   refClassIds = {722, 722, 795};
+    const std::vector<float> refConfs    = {9.136000f, 11.903928f, 10.677275f};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"grace_hopper_227.png", "dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    ClassificationModel model(weights_file);
+    model.setInputSize(Size(224, 224));
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<int> classIds;
+    std::vector<float> confs;
+    model.classify(frames, classIds, confs);
+    ASSERT_EQ(classIds.size(), frames.size());
+    ASSERT_EQ(confs.size(), frames.size());
+
+    for (size_t i = 0; i < frames.size(); i++)
+    {
+        EXPECT_EQ(classIds[i], refClassIds[i]) << "image " << i;
+        EXPECT_NEAR(confs[i], refConfs[i], 1e-3) << "image " << i;
+    }
+}
+
 TEST_P(Test_Model, YOLOv3)
 {
     applyTestTag(
@@ -437,6 +498,48 @@ TEST_P(Test_Model, Keypoints_pose)
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
+TEST_P(Test_Model, KeypointsBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/vitpose_plus_small_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("vitpose_batch_exp.npy"));   // [images x keypoints x 2]
+    ASSERT_EQ(exp.dims, 3);
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png", "grace_hopper_227.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    KeypointsModel model(weights_file);
+    model.setInputSize(Size(192, 256));
+    model.setInputScale(1.0 / 255.0);
+    model.setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<std::vector<Point2f> > keypoints;
+    model.estimate(frames, keypoints, 0.5f);
+    ASSERT_EQ(keypoints.size(), frames.size());
+    ASSERT_EQ((int)keypoints.size(), exp.size[0]);
+
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "image " << i;
+        const float* e = exp.ptr<float>((int)i);
+        for (size_t k = 0; k < keypoints[i].size(); k++)
+        {
+            EXPECT_NEAR(keypoints[i][k].x, e[2 * k], 1e-2) << "image " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].y, e[2 * k + 1], 1e-2)
+                << "image " << i << " keypoint " << k;
+        }
+    }
+}
+
 TEST_P(Test_Model, Keypoints_face)
 {
 #if defined(INF_ENGINE_RELEASE)
@@ -520,6 +623,147 @@ TEST_P(Test_Model, Segmentation)
     bool swapRB = true;
 
     testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false);
+}
+
+TEST_P(Test_Model, SegmentBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/segformer_b3_ade_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("segformer_b3_batch_exp.npy"));   // [images x H x W], CV_8U
+    ASSERT_EQ(exp.dims, 3);
+    ASSERT_EQ(exp.type(), CV_8U);
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    SegmentationModel model(weights_file);
+    model.setInputSize(Size(256, 256));
+    model.setInputScale(1.0 / 255.0);
+    model.setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<Mat> masks;
+    model.segment(frames, masks);
+    ASSERT_EQ(masks.size(), frames.size());
+    ASSERT_EQ((int)masks.size(), exp.size[0]);
+
+    for (size_t b = 0; b < masks.size(); b++)
+    {
+        Mat refMask(exp.size[1], exp.size[2], CV_8U, exp.ptr<uchar>((int)b));
+        ASSERT_EQ(masks[b].size(), refMask.size()) << "image " << b;
+        EXPECT_EQ(countNonZero(masks[b] != refMask), 0) << "image " << b;
+    }
+}
+
+TEST_P(Test_Model, DetectBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/yolo26n_dynbatch.onnx", false);
+    const std::vector<int>   refClassIds = {16, 1, 7, 2, 0, 2, 9};
+    const std::vector<int>   refFrameIds = {0, 0, 0, 1, 1, 1, 1};
+    const std::vector<float> refConfs    = {0.938952f, 0.930894f, 0.796426f, 0.926659f,
+                                            0.873587f, 0.762157f, 0.268055f};
+    const std::vector<Rect>  refBoxes    = {
+        Rect(70, 161, 98, 228), Rect(65, 96, 241, 205), Rect(251, 54, 124, 69),
+        Rect(333, 234, 84, 104), Rect(91, 185, 44, 137), Rect(231, 236, 22, 32),
+        Rect(192, 162, 11, 39)};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    DetectionModel model(weights_file);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<int> classIds, frameIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.detect(frames, classIds, confidences, boxes, frameIds, 0.25f, 0.45f);
+
+    ASSERT_EQ(classIds.size(), refClassIds.size());
+    ASSERT_EQ(confidences.size(), refClassIds.size());
+    ASSERT_EQ(boxes.size(), refClassIds.size());
+    ASSERT_EQ(frameIds.size(), refClassIds.size());
+
+    for (size_t i = 0; i < refClassIds.size(); i++)
+    {
+        EXPECT_EQ(classIds[i], refClassIds[i]) << "detection " << i;
+        EXPECT_EQ(frameIds[i], refFrameIds[i]) << "detection " << i;
+        EXPECT_EQ(boxes[i], refBoxes[i]) << "detection " << i;
+        EXPECT_NEAR(confidences[i], refConfs[i], 1e-3) << "detection " << i;
+    }
+}
+
+TEST_P(Test_Model, EstimatePosesBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/yolo26n_pose_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("yolo26n_pose_batch_exp.npy"));   // [people x keypoints x 3]
+    ASSERT_EQ(exp.dims, 3);
+    const std::vector<int>   refFrameIds = {0, 1};
+    const std::vector<float> refConfs    = {0.911909f, 0.843495f};
+    const std::vector<Rect>  refBoxes    = {Rect(58, 26, 383, 573), Rect(100, 185, 35, 137)};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    KeypointsModel model(weights_file);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<std::vector<Point3f> > keypoints;
+    std::vector<Rect> boxes;
+    std::vector<float> confidences;
+    std::vector<int> frameIds;
+    model.estimatePoses(frames, keypoints, boxes, confidences, frameIds, 0.25f, 0.45f);
+
+    ASSERT_EQ((int)keypoints.size(), exp.size[0]);
+    ASSERT_EQ(boxes.size(), keypoints.size());
+    ASSERT_EQ(confidences.size(), keypoints.size());
+    ASSERT_EQ(frameIds.size(), keypoints.size());
+
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        EXPECT_EQ(frameIds[i], refFrameIds[i]) << "person " << i;
+        EXPECT_EQ(boxes[i], refBoxes[i]) << "person " << i;
+        EXPECT_NEAR(confidences[i], refConfs[i], 1e-3) << "person " << i;
+
+        ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "person " << i;
+        const float* e = exp.ptr<float>((int)i);
+        for (size_t k = 0; k < keypoints[i].size(); k++)
+        {
+            EXPECT_NEAR(keypoints[i][k].x, e[3 * k], 1e-2)
+                << "person " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].y, e[3 * k + 1], 1e-2)
+                << "person " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].z, e[3 * k + 2], 1e-3)
+                << "person " << i << " keypoint " << k;
+        }
+    }
 }
 
 TEST_P(Test_Model, TextRecognition)
