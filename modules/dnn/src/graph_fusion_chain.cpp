@@ -72,7 +72,7 @@ private:
     {
         if (!net_.isConstArg(a))
             return false;
-        Mat t = net_.argTensor(a);
+        Mat t = net_.argTensor(a).getMat(ACCESS_READ);
         if (t.total() == 1) {
             if (t.type() == CV_32F) { isScalar = true; scalarVal = t.ptr<float>()[0]; return true; }
             if (t.type() == CV_64F) { isScalar = true; scalarVal = (float)t.ptr<double>()[0]; return true; }
@@ -238,7 +238,7 @@ private:
         for (ChainCandidate& c : chains_) {
             c.constBufs.reserve(c.constArgs.size());
             for (Arg a : c.constArgs)
-                c.constBufs.push_back(net_.argTensor(a));
+                c.constBufs.push_back(net_.argTensor(a).getMat(ACCESS_READ));
         }
     }
 
