@@ -109,6 +109,7 @@ protected:
     void parseNode(const opencv_onnx::NodeProto& node_proto);
     bool parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoProto, ArgData& data);
     int findGraphTensorOnnxType(const std::string& name) const;
+    void rememberProducedOnnxType(const opencv_onnx::NodeProto& node_proto, int onnx_type);
     Mat parseTensor(const opencv_onnx::TensorProto& tensorProto);
     void rememberMissingOp(const std::string& opname);
 
@@ -160,6 +161,9 @@ protected:
     std::unordered_map<std::string, const opencv_onnx::NodeProto*> const_producers;
     std::vector<Ptr<LayerInfo> > curr_prog;
     std::vector<Arg> node_inputs, node_outputs;
+    // Raw ONNX dtype per produced tensor, keyed by remapped name: exports often omit
+    // value_info for intermediates, and FP8 formats sharing one depth need it.
+    std::unordered_map<std::string, int> produced_onnx_type;
 
     std::string framework_name;
     std::set<std::string> missing_ops;
@@ -1715,7 +1719,15 @@ void ONNXImporter2::parseShape(LayerParams& layerParams, const opencv_onnx::Node
 void ONNXImporter2::parseCast2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Cast2";
+    rememberProducedOnnxType(node_proto, layerParams.get<int>("to", -1));
     addLayer(layerParams, node_proto);
+}
+
+// First output only - the FP8-producing ops (Cast/CastLike/QuantizeLinear) have just one.
+void ONNXImporter2::rememberProducedOnnxType(const opencv_onnx::NodeProto& node_proto, int onnx_type)
+{
+    if (onnx_type > 0 && node_proto.output_size() > 0 && !node_proto.output(0).empty())
+        produced_onnx_type[remap(node_proto.output(0))] = onnx_type;
 }
 
 // Returns a graph tensor's ONNX data_type by name, or -1 if unknown.
@@ -1736,7 +1748,8 @@ int ONNXImporter2::findGraphTensorOnnxType(const std::string& name) const
     for (int i = 0; i < g.initializer_size(); i++)
         if (g.initializer(i).name() == name)
             return g.initializer(i).data_type();
-    return -1;
+    auto it = produced_onnx_type.find(remap(name));
+    return it != produced_onnx_type.end() ? it->second : -1;
 }
 
 void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1749,6 +1762,7 @@ void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::N
         if (elemType > 0)
             layerParams.set("to", elemType);
     }
+    rememberProducedOnnxType(node_proto, layerParams.get<int>("to", -1));
     addLayer(layerParams, node_proto);
 }
 
@@ -2454,6 +2468,7 @@ void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_o
     {
         layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)attrDt));
     }
+    rememberProducedOnnxType(node_proto, dt);
     addLayer(layerParams, node_proto);
 }
 

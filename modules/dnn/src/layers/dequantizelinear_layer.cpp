@@ -161,10 +161,10 @@ static void dequantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
     });
 }
 
-// Native FP8 bytes; decode via fp8ToF32 (core's fp8_t rounds differently on encode).
+// Core's decode table matches ONNX bit-for-bit; only the encode direction differs.
 template <typename _ScaleTp, typename _OutTp>
 static void dequantizeLinearFp8Native(const uchar* inp, const _ScaleTp* scale, const uchar* zp,
-                                       _OutTp* out, const onnx_dtype::Fp8Fmt& fmt,
+                                       _OutTp* out, const float* fp8lut,
                                        int64_t nslices, int sz_a, int64_t slice_size)
 {
     parallel_for_(Range(0, (int)nslices), [&](const Range& r) {
@@ -172,10 +172,10 @@ static void dequantizeLinearFp8Native(const uchar* inp, const _ScaleTp* scale, c
             size_t base = (size_t)slice * sz_a * slice_size;
             for (int a = 0; a < sz_a; a++) {
                 float sc = (float)scale[a];
-                float zpv = zp ? onnx_dtype::fp8ToF32(zp[a], fmt) : 0.f;
+                float zpv = zp ? fp8lut[zp[a]] : 0.f;
                 for (int64_t j = 0; j < slice_size; j++) {
                     size_t idx = base + (size_t)a * slice_size + j;
-                    out[idx] = _OutTp((onnx_dtype::fp8ToF32(inp[idx], fmt) - zpv) * sc);
+                    out[idx] = _OutTp((fp8lut[inp[idx]] - zpv) * sc);
                 }
             }
         }
@@ -204,13 +204,21 @@ static void dequantizeLinearFp8Wide(const _InpTp* inp, const _ScaleTp* scale, co
 }
 
 // Dequantize INT8/UINT8 to FP32/FP16; out must be preallocated
-static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
+static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp_,
                              int axis, int block_size, Mat& out)
 {
     Mat scale = scale_;
+    Mat zp = zp_;
     CV_Assert(inp.isContinuous());
     CV_Assert(scale.isContinuous());
     CV_Assert(out.isContinuous());
+
+    // E5M2 rides in CV_16F, but widenHalfConstants() may already have promoted a constant
+    // zero_point to CV_32F, so the two can reach here at different widths.
+    if (!zp.empty() && zp.type() != inp.type() &&
+        (inp.type() == CV_16F || inp.type() == CV_32F) &&
+        (zp.type() == CV_16F || zp.type() == CV_32F))
+        zp_.convertTo(zp, inp.type());
 
     int inptype = inp.type();
     int outtype = out.type();
@@ -366,20 +374,20 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                          reinterpret_cast<hfloat*>(out.data),
                          nslices, sz_a, slice_size, block_size);
     else if (inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ) {
-        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(inptype == CV_8F_E4M3FN ? 17 : 18);
+        const float* fp8lut = inptype == CV_8F_E4M3FN ? fp8_t::decodeLUT() : fp8a_t::decodeLUT();
         const uchar* zpdata = zp.empty() ? nullptr : reinterpret_cast<const uchar*>(zp.data);
         if (sctype == CV_32F && outtype == CV_32F)
             dequantizeLinearFp8Native(reinterpret_cast<const uchar*>(inp.data), reinterpret_cast<const float*>(scale.data),
-                                       zpdata, reinterpret_cast<float*>(out.data), fmt, nslices, sz_a, slice_size);
+                                       zpdata, reinterpret_cast<float*>(out.data), fp8lut, nslices, sz_a, slice_size);
         else if (sctype == CV_16F && outtype == CV_32F)
             dequantizeLinearFp8Native(reinterpret_cast<const uchar*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
-                                       zpdata, reinterpret_cast<float*>(out.data), fmt, nslices, sz_a, slice_size);
+                                       zpdata, reinterpret_cast<float*>(out.data), fp8lut, nslices, sz_a, slice_size);
         else if (sctype == CV_32F && outtype == CV_16F)
             dequantizeLinearFp8Native(reinterpret_cast<const uchar*>(inp.data), reinterpret_cast<const float*>(scale.data),
-                                       zpdata, reinterpret_cast<hfloat*>(out.data), fmt, nslices, sz_a, slice_size);
+                                       zpdata, reinterpret_cast<hfloat*>(out.data), fp8lut, nslices, sz_a, slice_size);
         else
             dequantizeLinearFp8Native(reinterpret_cast<const uchar*>(inp.data), reinterpret_cast<const hfloat*>(scale.data),
-                                       zpdata, reinterpret_cast<hfloat*>(out.data), fmt, nslices, sz_a, slice_size);
+                                       zpdata, reinterpret_cast<hfloat*>(out.data), fp8lut, nslices, sz_a, slice_size);
     }
     else if (inptype == CV_16F) {
         const hfloat* zpdata = zp.empty() ? nullptr : reinterpret_cast<const hfloat*>(zp.data);
@@ -465,7 +473,10 @@ public:
         size_t ninputs = inputs.size();
         CV_Assert(2 <= ninputs && ninputs <= 3);
         if (ninputs == 3) {
-            CV_Assert(inputs[0] == inputs[2]);
+            // Both widths are accepted on the E5M2 pair; see dequantizeLinear() above.
+            const bool wideFp8Pair = (inputs[0] == CV_16F || inputs[0] == CV_32F) &&
+                                     (inputs[2] == CV_16F || inputs[2] == CV_32F);
+            CV_Assert(inputs[0] == inputs[2] || wideFp8Pair);
         }
         outputs.assign(1, getOutType());
     }
