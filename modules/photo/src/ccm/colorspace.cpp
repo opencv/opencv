@@ -352,10 +352,10 @@ Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, ChromaticAdaptationType meth
     *        Chromatic adaption matrices.
     */
 
-    static const Mat Von_Kries = (Mat_<double>(3, 3) << 0.40024, 0.7076, -0.08081, -0.2263, 1.16532, 0.0457, 0., 0., 0.91822);
-    static const Mat Bradford = (Mat_<double>(3, 3) << 0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296);
-    static const std::map<ChromaticAdaptationType, std::vector<Mat>> MAs = {
-        { IDENTITY, { Mat::eye(Size(3, 3), CV_64FC1), Mat::eye(Size(3, 3), CV_64FC1) } },
+    static const Matx33d Von_Kries(0.40024, 0.7076, -0.08081, -0.2263, 1.16532, 0.0457, 0., 0., 0.91822);
+    static const Matx33d Bradford(0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296);
+    static const std::map<ChromaticAdaptationType, std::vector<Matx33d>> MAs = {
+        { IDENTITY, { Matx33d::eye(), Matx33d::eye() } },
         { VON_KRIES, { Von_Kries, Von_Kries.inv() } },
         { BRADFORD, { Bradford, Bradford.inv() } }
     };
@@ -365,8 +365,8 @@ Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, ChromaticAdaptationType meth
     Mat XYZWd = Mat(getIlluminants(sio));
     XYZws = XYZws.reshape(1, (int)XYZws.total());
     XYZWd = XYZWd.reshape(1, (int)XYZWd.total());
-    Mat MA = MAs.at(method)[0];
-    Mat MA_inv = MAs.at(method)[1];
+    Matx33d MA = MAs.at(method)[0];
+    Matx33d MA_inv = MAs.at(method)[1];
     Mat M = MA_inv * Mat::diag((MA * XYZws) / (MA * XYZWd)) * MA;
     cams[std::make_tuple(dio, sio, method)] = M;
     cams[std::make_tuple(sio, dio, method)] = M.inv();

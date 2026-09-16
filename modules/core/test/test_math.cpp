@@ -1926,7 +1926,7 @@ TEST(Core_SolveCubic, regression_27748)
     double c = -96.795;
     double d = 13.6826;
 
-    Mat coeffs = (Mat_<double>(1, 4) << a, b, c, d);
+    Mat coeffs = Mat_<double>({1, 4}, {a, b, c, d});
     Mat roots;
 
     int n = solveCubic(coeffs, roots);
@@ -1947,7 +1947,7 @@ TEST(Core_SolveCubic, regression_27748)
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
-    cv::Mat coefs = (cv::Mat_<float>(1,5) << 0, 0, -1, 0, 1 );
+    cv::Mat coefs = cv::Mat_<float>({1, 5}, {0, 0, -1, 0, 1});
     {
         cv::Mat r;
         double prec;
@@ -1963,7 +1963,7 @@ TEST(Core_SolvePoly, regression_5599)
         checkRoot<float>(r, 0, 0);
     }
     // x^2 - 2x + 1 = 0,  roots: 1, 1
-    coefs = (cv::Mat_<float>(1,3) << 1, -2, 1 );
+    coefs = cv::Mat_<float>({1, 3}, {1, -2, 1});
     {
         cv::Mat r;
         double prec;
@@ -1981,7 +1981,7 @@ TEST(Core_SolvePoly, regression_5599)
 TEST(Core_SolvePoly, regression_23644)
 {
     // x^2 - 2x - 3 = 0,  roots: 3, -1
-    cv::Mat coefs = (cv::Mat_<float>(1,3) << -3, -2, 1 );
+    cv::Mat coefs = cv::Mat_<float>({1, 3}, {-3, -2, 1});
     cv::Mat r;
     double prec;
     prec = cv::solvePoly(coefs, r);
@@ -2322,7 +2322,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
 
 TEST(Core_Invert, small)
 {
-    cv::Mat a = (cv::Mat_<float>(3,3) << 2.42104644730331, 1.81444796521479, -3.98072565304758, 0, 7.08389214348967e-3, 5.55326770986007e-3, 0,0, 7.44556154284261e-3);
+    cv::Mat a = cv::Mat_<float>({3, 3}, {2.42104644730331, 1.81444796521479, -3.98072565304758, 0, 7.08389214348967e-3, 5.55326770986007e-3, 0,0, 7.44556154284261e-3});
     //cv::randu(a, -1, 1);
 
     cv::Mat b = a.t()*a;

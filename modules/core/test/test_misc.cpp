@@ -50,7 +50,7 @@ static double maxAbsDiff(const T &t, const U &u)
 
 TEST(Core_OutputArrayAssign, _Matxd_Matd)
 {
-    Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<double>({2, 3}, {1, 2, 3, .1, .2, .3});
     Matx23d actualx;
 
     {
@@ -65,7 +65,7 @@ TEST(Core_OutputArrayAssign, _Matxd_Matd)
 
 TEST(Core_OutputArrayAssign, _Matxd_Matf)
 {
-    Mat expected = (Mat_<float>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<float>({2, 3}, {1.f, 2.f, 3.f, .1f, .2f, .3f});
     Matx23d actualx;
 
     {
@@ -80,7 +80,7 @@ TEST(Core_OutputArrayAssign, _Matxd_Matf)
 
 TEST(Core_OutputArrayAssign, _Matxf_Matd)
 {
-    Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<double>({2, 3}, {1, 2, 3, .1, .2, .3});
     Matx23f actualx;
 
     {
@@ -95,7 +95,7 @@ TEST(Core_OutputArrayAssign, _Matxf_Matd)
 
 TEST(Core_OutputArrayAssign, _Matxd_UMatd)
 {
-    Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<double>({2, 3}, {1, 2, 3, .1, .2, .3});
     UMat uexpected = expected.getUMat(ACCESS_READ);
     Matx23d actualx;
 
@@ -111,7 +111,7 @@ TEST(Core_OutputArrayAssign, _Matxd_UMatd)
 
 TEST(Core_OutputArrayAssign, _Matxd_UMatf)
 {
-    Mat expected = (Mat_<float>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<float>({2, 3}, {1.f, 2.f, 3.f, .1f, .2f, .3f});
     UMat uexpected = expected.getUMat(ACCESS_READ);
     Matx23d actualx;
 
@@ -127,7 +127,7 @@ TEST(Core_OutputArrayAssign, _Matxd_UMatf)
 
 TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 {
-    Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
+    Mat expected = Mat_<double>({2, 3}, {1, 2, 3, .1, .2, .3});
     UMat uexpected = expected.getUMat(ACCESS_READ);
     Matx23f actualx;
 
@@ -212,7 +212,7 @@ TEST(Core_String, end_method_regression)
 
 TEST(Core_Copy, repeat_regression_8972)
 {
-    Mat src = (Mat_<int>(1, 4) << 1, 2, 3, 4);
+    Mat src = Mat_<int>({1, 4}, {1, 2, 3, 4});
 
     ASSERT_ANY_THROW({
                          repeat(src, 5, 1, src);

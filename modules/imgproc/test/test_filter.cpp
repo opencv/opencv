@@ -676,7 +676,7 @@ TEST(Imgproc_Blur, borderTypes)
     // should work like !BORDER_ISOLATED
     cv::blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
     Mat expected_dst =
-            (Mat_<uchar>(3, 3) << 170, 113, 170, 113, 28, 113, 170, 113, 170);
+            Mat_<uchar>({3, 3}, {170, 113, 170, 113, 28, 113, 170, 113, 170});
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
@@ -742,7 +742,7 @@ TEST(Imgproc_Sobel, borderTypes)
     int kernelSize = 3;
 
     /// ksize > src_roi.size()
-    Mat src = (Mat_<uchar>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9), dst, expected_dst;
+    Mat src = Mat_<uchar>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9}), dst, expected_dst;
     Mat src_roi = src(Rect(1, 1, 1, 1));
     src_roi.setTo(cv::Scalar::all(0));
 
@@ -765,7 +765,7 @@ TEST(Imgproc_Sobel, borderTypes)
 
     // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
     expected_dst =
-        (Mat_<short>(3, 3) << -15, 0, 15, -20, 0, 20, -15, 0, 15);
+        Mat_<short>({3, 3}, {-15, 0, 15, -20, 0, 20, -15, 0, 15});
     cv::Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
@@ -789,21 +789,15 @@ TEST(Imgproc_Sobel, borderTypes)
 
 TEST(Imgproc_MorphEx, hitmiss_regression_8957)
 {
-    Mat_<uchar> src(3, 3);
-    src << 0, 255, 0,
-           0,   0, 0,
-           0, 255, 0;
-
+    Mat_<uchar> src({3, 3}, {0, 255, 0,
+                             0,   0, 0,
+                             0, 255, 0});
     Mat_<uchar> kernel = src / 255;
-
     Mat dst;
     cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
-
     Mat ref = Mat::zeros(3, 3, CV_8U);
     ref.at<uchar>(1, 1) = 255;
-
     ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
-
     src.at<uchar>(1, 1) = 255;
     ref.at<uchar>(0, 1) = 255;
     ref.at<uchar>(2, 1) = 255;
@@ -813,11 +807,9 @@ TEST(Imgproc_MorphEx, hitmiss_regression_8957)
 
 TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
 {
-    Mat_<uchar> src(3, 3);
-    src << 0, 255, 0,
-           0,   0, 0,
-           0, 255, 0;
-
+    Mat_<uchar> src({3, 3}, {0, 255, 0,
+                             0,   0, 0,
+                             0, 255, 0});
     Mat_<uchar> kernel = Mat_<uchar>::zeros(3, 3);
 
     Mat dst;
@@ -989,22 +981,26 @@ TEST(Imgproc_MedianBlur, regression_28385)
 
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
-    Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
-                                     164,   3,  51, 124, 151,  89, 154, 117,  36,  88, 116, 117, 180, 112, 147, 124,
-                                      63,  50, 115, 103,  83, 148, 106,  79, 213, 106, 135,  53,  79, 106, 122, 112,
-                                     218, 107,  81, 126,  78, 138,  85, 142, 151, 108, 104, 158, 155,  81, 112, 178,
-                                     184,  96, 187, 148, 150, 112, 138, 162, 222, 146, 128,  49, 124,  46, 165, 104,
-                                     119, 164,  77, 144, 186,  98, 106, 148, 155, 157, 160, 151, 156, 149,  43, 122,
-                                     106, 155, 120, 132, 159, 115, 126, 188,  44,  79, 164, 201, 153,  97, 139, 133,
-                                     133,  98, 111, 165,  66, 106, 131,  85, 176, 156,  67, 108, 142,  91,  74, 137);
-    Mat ref = (Mat_<short>(8, 16) <<     0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0,
-                                     -1020, -796, -489, -469,  -247,  317,  760,  1429,  1983,  1384,   254, -459, -899, -1197, -1172, -1058,
-                                      2552, 2340, 1617,  591,     9,   96,  722,  1985,  2746,  1916,   676,    9, -635, -1115,  -779,  -380,
-                                      3546, 3349, 2838, 2206,  1388,  669,  938,  1880,  2252,  1785,  1083,  606,  180,  -298,  -464,  -418,
-                                       816,  966, 1255, 1652,  1619,  924,  535,   288,     5,   601,  1581, 1870, 1520,   625,  -627, -1260,
-                                      -782, -610, -395, -267,  -122,  -42, -317, -1378, -2293, -1451,   596, 1870, 1679,   763,   -69,  -394,
-                                      -882, -681, -463, -818, -1167, -732, -463, -1042, -1604, -1592, -1047, -334, -104,  -117,   229,   512,
-                                         0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0);
+    Mat src = Mat_<short>({8, 16}, {
+            127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
+            164,   3,  51, 124, 151,  89, 154, 117,  36,  88, 116, 117, 180, 112, 147, 124,
+            63,  50, 115, 103,  83, 148, 106,  79, 213, 106, 135,  53,  79, 106, 122, 112,
+            218, 107,  81, 126,  78, 138,  85, 142, 151, 108, 104, 158, 155,  81, 112, 178,
+            184,  96, 187, 148, 150, 112, 138, 162, 222, 146, 128,  49, 124,  46, 165, 104,
+            119, 164,  77, 144, 186,  98, 106, 148, 155, 157, 160, 151, 156, 149,  43, 122,
+            106, 155, 120, 132, 159, 115, 126, 188,  44,  79, 164, 201, 153,  97, 139, 133,
+            133,  98, 111, 165,  66, 106, 131,  85, 176, 156,  67, 108, 142,  91,  74, 137
+    });
+    Mat ref = Mat_<short>({8, 16}, {
+            0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0,
+            -1020, -796, -489, -469,  -247,  317,  760,  1429,  1983,  1384,   254, -459, -899, -1197, -1172, -1058,
+            2552, 2340, 1617,  591,     9,   96,  722,  1985,  2746,  1916,   676,    9, -635, -1115,  -779,  -380,
+            3546, 3349, 2838, 2206,  1388,  669,  938,  1880,  2252,  1785,  1083,  606,  180,  -298,  -464,  -418,
+            816,  966, 1255, 1652,  1619,  924,  535,   288,     5,   601,  1581, 1870, 1520,   625,  -627, -1260,
+            -782, -610, -395, -267,  -122,  -42, -317, -1378, -2293, -1451,   596, 1870, 1679,   763,   -69,  -394,
+            -882, -681, -463, -818, -1167, -732, -463, -1042, -1604, -1592, -1047, -334, -104,  -117,   229,   512,
+            0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0
+    });
     Mat dst;
     Sobel(src, dst, CV_16S, 0, 1, 5);
     ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
@@ -1257,16 +1253,17 @@ static void runFilter(const Mat& src, Mat& dst, int borderType, bool isSep)
 {
     if (isSep)
     {
-        Mat kx = (Mat_<float>(1, 3) << 0.25f, 0.5f, 0.25f);
-        Mat ky = (Mat_<float>(3, 1) << 0.25f, 0.5f, 0.25f);
+        Mat kx = Mat_<float>({1, 3}, {0.25f, 0.5f, 0.25f});
+        Mat ky = Mat_<float>({3, 1}, {0.25f, 0.5f, 0.25f});
         cv::sepFilter2D(src, dst, -1, kx, ky, Point(-1, -1), 0, borderType);
     }
     else
     {
-        Mat kernel = (Mat_<float>(3, 3) <<
-            1/16.f, 2/16.f, 1/16.f,
-            2/16.f, 4/16.f, 2/16.f,
-            1/16.f, 2/16.f, 1/16.f);
+        Mat kernel = Mat_<float>({3, 3}, {
+                1/16.f, 2/16.f, 1/16.f,
+                2/16.f, 4/16.f, 2/16.f,
+                1/16.f, 2/16.f, 1/16.f
+        });
         cv::filter2D(src, dst, -1, kernel, Point(-1, -1), 0, borderType);
     }
 }
@@ -1362,7 +1359,7 @@ TEST(Imgproc_Filter2D, padding_bounds_extreme_anchor)
 {
     // Case 1: 1x1 image, large kernel, anchor at far right
     {
-        Mat src = (Mat_<uchar>(1, 1) << 128);
+        Mat src = Mat_<uchar>({1, 1}, {128});
         Mat kernel = Mat::ones(1, 7, CV_32F) / 7.0f;
         Mat dst;
         Point anchor(6, 0);
@@ -1373,7 +1370,7 @@ TEST(Imgproc_Filter2D, padding_bounds_extreme_anchor)
 
     // Case 2: 1x1 image, large kernel, anchor at far left
     {
-        Mat src = (Mat_<uchar>(1, 1) << 200);
+        Mat src = Mat_<uchar>({1, 1}, {200});
         Mat kernel = Mat::ones(1, 9, CV_32F) / 9.0f;
         Mat dst;
         Point anchor(0, 0);
@@ -1384,7 +1381,7 @@ TEST(Imgproc_Filter2D, padding_bounds_extreme_anchor)
 
     // Case 3: 2x2 image, 11x11 kernel, various anchors
     {
-        Mat src = (Mat_<uchar>(2, 2) << 100, 150, 200, 250);
+        Mat src = Mat_<uchar>({2, 2}, {100, 150, 200, 250});
         Mat kernel = Mat::ones(11, 11, CV_32F) / 121.0f;
         Mat dst;
         for (int ax : {0, 5, 10}) {
@@ -1410,7 +1407,7 @@ TEST(Imgproc_Filter2D, padding_bounds_extreme_anchor)
 
     // Case 5: all border types with all valid anchors for wide kernel on narrow image
     {
-        Mat src = (Mat_<uchar>(1, 3) << 10, 20, 30);
+        Mat src = Mat_<uchar>({1, 3}, {10, 20, 30});
         Mat kernel = Mat::ones(1, 15, CV_32F) / 15.0f;
         Mat dst;
         int borderTypes[] = {BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101, BORDER_CONSTANT};

@@ -2119,7 +2119,7 @@ estimated, both components are set to NaN and, if @p inliers is provided, the ma
 
 @code{.cpp}
 cv::Vec2d t = cv::estimateTranslation2D(from, to, inliers);
-cv::Mat T = (cv::Mat_<double>(2,3) << 1,0,t[0], 0,1,t[1]);
+cv::Mat T = cv::Mat_<double>({2,3}, {1,0,t[0], 0,1,t[1]});
 @endcode
 
 The function estimates a pure 2D translation between two 2D point sets using the selected robust

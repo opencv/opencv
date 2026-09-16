@@ -1132,7 +1132,7 @@ TEST(Core_Mat, issue4457_pass_null_ptr)
 
 TEST(Core_Mat, reshape_1942)
 {
-    cv::Mat A = (cv::Mat_<float>(2,3) << 3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364);
+    cv::Mat A = cv::Mat_<float>({2, 3}, {3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364});
     int cn = 0;
     ASSERT_NO_THROW(
         cv::Mat_<float> M = A.reshape(3);
@@ -1246,8 +1246,8 @@ TEST(Core_Mat, reinterpret_OutputArray_8UC4_32FC1) {
 
 TEST(Core_Mat, push_back)
 {
-    Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);
-    Mat b = (Mat_<float>(1,2) << 0.78737736f, 2.3456569f);
+    Mat a = Mat_<float>({1, 2}, {3.4884074f, 1.4159607f});
+    Mat b = Mat_<float>({1, 2}, {0.78737736f, 2.3456569f});
 
     a.push_back(b);
 
@@ -1259,7 +1259,7 @@ TEST(Core_Mat, push_back)
     ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
     ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
 
-    Mat c = (Mat_<float>(2,2) << -0.88010466f, 0.3009364f, 2.22399974f, -5.45933905f);
+    Mat c = Mat_<float>({2, 2}, {-0.88010466f, 0.3009364f, 2.22399974f, -5.45933905f});
 
     ASSERT_EQ(c.rows, a.cols);
 
@@ -1320,13 +1320,11 @@ INSTANTIATE_TYPED_TEST_CASE_P(CopyToTest, Core_Mat_copyTo, AllMatDepths);
 
 TEST(Core_Mat, copyNx1ToVector)
 {
-    cv::Mat_<uchar> src(5, 1);
+    cv::Mat_<uchar> src({5, 1}, {1, 2, 3, 4, 5});
     cv::Mat_<uchar> ref_dst8;
     cv::Mat_<ushort> ref_dst16;
     std::vector<uchar> dst8;
     std::vector<ushort> dst16;
-
-    src << 1, 2, 3, 4, 5;
 
     src.copyTo(ref_dst8);
     src.copyTo(dst8);
@@ -1360,14 +1358,14 @@ TEST(Core_Mat, zeros)
 
 TEST(Core_Matx, fromMat_)
 {
-    Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
+    Mat_<double> a = Mat_<double>({2, 2}, {10, 11, 12, 13});
     Matx22d b(a);
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
 TEST(Core_Matx, from_initializer_list)
 {
-    Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
+    Mat_<double> a = Mat_<double>({2, 2}, {10, 11, 12, 13});
     Matx22d b = {10, 11, 12, 13};
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
     Mat_<double> c({2, 2}, {10, 11, 12, 13});
@@ -1479,10 +1477,8 @@ TEST(Core_SparseMat, footprint)
 // Can't fix without dirty hacks or broken user code (PR #4159)
 TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
 {
-    cv::Mat_<uchar> src_base(5, 1);
+    cv::Mat_<uchar> src_base({5, 1}, {1, 2, 3, 4, 5});
     std::vector<uchar> dst8;
-
-    src_base << 1, 2, 3, 4, 5;
 
     Mat src(src_base);
     OutputArray _dst(dst8);
@@ -1497,10 +1493,8 @@ TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
 
 TEST(Core_Mat_vector, copyTo_roi_column)
 {
-    cv::Mat_<uchar> src_base(5, 2);
+    cv::Mat_<uchar> src_base({5, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
     std::vector<uchar> dst1;
-
-    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
 
     Mat src_full(src_base);
     Mat src(src_full.col(0));
@@ -1529,10 +1523,8 @@ TEST(Core_Mat_vector, copyTo_roi_column)
 
 TEST(Core_Mat_vector, copyTo_roi_row)
 {
-    cv::Mat_<uchar> src_base(2, 5);
+    cv::Mat_<uchar> src_base({2, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
     std::vector<uchar> dst1;
-
-    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
 
     Mat src_full(src_base);
     Mat src(src_full.row(0));
@@ -1699,10 +1691,8 @@ TEST(Mat, regression_10507_mat_setTo)
 
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
-    cv::Mat_<uchar> src_base(5, 1);
+    cv::Mat_<uchar> src_base({5, 1}, {1, 2, 3, 4, 5});
     std::array<uchar, 5> dst8;
-
-    src_base << 1, 2, 3, 4, 5;
 
     Mat src(src_base);
     OutputArray _dst(dst8);
@@ -1718,9 +1708,7 @@ TEST(Core_Mat_array, outputArray_create_getMat)
 
 TEST(Core_Mat_array, copyTo_roi_column)
 {
-    cv::Mat_<uchar> src_base(5, 2);
-
-    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+    cv::Mat_<uchar> src_base({5, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
 
     Mat src_full(src_base);
     Mat src(src_full.col(0));
@@ -1739,10 +1727,8 @@ TEST(Core_Mat_array, copyTo_roi_column)
 
 TEST(Core_Mat_array, copyTo_roi_row)
 {
-    cv::Mat_<uchar> src_base(2, 5);
+    cv::Mat_<uchar> src_base({2, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
     std::array<uchar, 5> dst1;
-
-    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
 
     Mat src_full(src_base);
     Mat src(src_full.row(0));
@@ -1826,8 +1812,7 @@ TEST(Mat_, range_based_for)
 TEST(Mat, from_initializer_list)
 {
     Mat A({1.f, 2.f, 3.f});
-    int n = 3;
-    Mat_<float> B(1, &n); B << 1, 2, 3;
+    Mat_<float> B({3}, {1, 2, 3});
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_EQ(A.type(), CV_32F);
@@ -1848,8 +1833,7 @@ TEST(Mat, from_initializer_list)
 TEST(Mat_, from_initializer_list)
 {
     Mat_<float> A = {1, 2, 3};
-    int n = 3;
-    Mat_<float> B(1, &n); B << 1, 2, 3;
+    Mat_<float> B({3}, {1, 2, 3});
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
@@ -1865,7 +1849,7 @@ TEST(Mat_, from_initializer_list)
 
 TEST(Mat, template_based_ptr)
 {
-    Mat mat = (Mat_<float>(2, 2) << 11.0f, 22.0f, 33.0f, 44.0f);
+    Mat mat = Mat_<float>({2, 2}, {11.0f, 22.0f, 33.0f, 44.0f});
     int idx[2] = {1, 0};
     ASSERT_FLOAT_EQ(33.0f, *(mat.ptr<float>(idx)));
     idx[0] = 1;
@@ -1875,9 +1859,8 @@ TEST(Mat, template_based_ptr)
 
 TEST(Mat_, template_based_ptr)
 {
-    int dim[4] = {2, 2, 1, 2};
-    Mat_<float> mat = (Mat_<float>(4, dim) << 11.0f, 22.0f, 33.0f, 44.0f,
-                                              55.0f, 66.0f, 77.0f, 88.0f);
+    Mat_<float> mat({2, 2, 1, 2}, {11.0f, 22.0f, 33.0f, 44.0f,
+                                   55.0f, 66.0f, 77.0f, 88.0f});
     int idx[4] = {1, 0, 0, 1};
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
@@ -2238,10 +2221,12 @@ TEST(Core_Vectors, issue_13078_workaround)
 
 TEST(Core_MatExpr, issue_13926)
 {
-    Mat M1 = (Mat_<double>(4,4,CV_64FC1) << 1, 2, 3, 4,
-                                           5, 6, 7, 8,
-                                           9, 10, 11, 12,
-                                           13, 14, 15, 16);
+    Mat M1 = Mat_<double>({4, 4}, {
+            1, 2, 3, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+            13, 14, 15, 16
+    });
 
     Matx44d M2(1, 2, 3, 4,
                5, 6, 7, 8,
@@ -2546,7 +2531,7 @@ TEST(Mat1D, basic)
 
 TEST(Mat, ptrVecni_20044)
 {
-    Mat_<int> m(3,4); m << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+    Mat_<int> m({3, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
     Vec2i idx(1,1);
 
     uchar *u = m.ptr(idx);

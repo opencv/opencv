@@ -354,8 +354,8 @@ TEST(Core_TExpr, atan2)
                       std::atan2(y64.at<double>(r, c), x64.at<double>(r, c)));
 
     // axis cases: atan2(0, 1) = 0, atan2(1, 0) = pi/2, atan2(0, -1) = pi, atan2(-1, 0) = -pi/2
-    Mat ya = (Mat_<float>(1, 4) << 0.f, 1.f, 0.f, -1.f);
-    Mat xa = (Mat_<float>(1, 4) << 1.f, 0.f, -1.f, 0.f);
+    Mat ya = Mat_<float>({1, 4}, {0.f, 1.f, 0.f, -1.f});
+    Mat xa = Mat_<float>({1, 4}, {1.f, 0.f, -1.f, 0.f});
     Mat ga = expr1("atan2({0}, {1})", { ya, xa });
     const float expctd[] = { 0.f, (float)(CV_PI/2), (float)CV_PI, (float)(-CV_PI/2) };
     for (int i = 0; i < 4; i++)

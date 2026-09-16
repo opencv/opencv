@@ -39,7 +39,7 @@ void TestPhaseCorrelationIterative(const Size& size, const double maxShift)
     {
         const auto shift =
             Point2d(maxShift * i / (iters - 1), maxShift * i / (iters - 1)) + shiftOffset;
-        const Mat Tmat = (Mat_<double>(2, 3) << 1., 0., shift.x, 0., 1., shift.y);
+        const Mat Tmat = Mat_<double>({2, 3}, {1., 0., shift.x, 0., 1., shift.y});
         warpAffine(image1, image2, Tmat, image2.size());
         Mat crop2 = CropMid(image2, size.width, size.height);
         const auto ipcshift = phaseCorrelateIterative(crop1, crop2);

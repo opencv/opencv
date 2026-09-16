@@ -596,25 +596,26 @@ TEST(Charuco, testCharucoCornersCollinear_false)
 TEST(Charuco, testBoardSubpixelCoords)
 {
     cv::Size res{500, 500};
-    cv::Mat K = (cv::Mat_<double>(3,3) <<
-        0.5*res.width, 0, 0.5*res.width,
-        0, 0.5*res.height, 0.5*res.height,
-        0, 0, 1);
+    cv::Mat K = cv::Mat_<double>({3, 3}, {
+            0.5*res.width, 0, 0.5*res.width,
+            0, 0.5*res.height, 0.5*res.height,
+            0, 0, 1
+    });
 
     // set expected_corners values
     // Note: Values adjusted by -0.5px after fixing the systematic offset bug in charuco_detector.cpp
     // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
-    cv::Mat expected_corners = (cv::Mat_<float>(9,2) <<
-        199.5, 199.5,
-        249.5, 199.5,
-        299.5, 199.5,
-        199.5, 249.5,
-        249.5, 249.5,
-        299.5, 249.5,
-        199.5, 299.5,
-        249.5, 299.5,
-        299.5, 299.5
-    );
+    cv::Mat expected_corners = cv::Mat_<float>({9, 2}, {
+            199.5, 199.5,
+            249.5, 199.5,
+            299.5, 199.5,
+            199.5, 249.5,
+            249.5, 249.5,
+            299.5, 249.5,
+            199.5, 299.5,
+            249.5, 299.5,
+            299.5, 299.5
+    });
     std::vector<int> shape={expected_corners.rows};
     expected_corners = expected_corners.reshape(2, shape);
 
@@ -848,16 +849,18 @@ TEST_P(CharucoBoardGenerate, issue_24806)
     // chessboard corner 1:
     // B W
     // W B
-    Mat goldCorner1 = (Mat_<uint8_t>(2, 2) <<
-        0, 255,
-        255, 0);
+    Mat goldCorner1 = Mat_<uint8_t>({2, 2}, {
+            0, 255,
+            255, 0
+    });
     // B - black pixel, W - white pixel
     // chessboard corner 2:
     // W B
     // B W
-    Mat goldCorner2 = (Mat_<uint8_t>(2, 2) <<
-        255, 0,
-        0, 255);
+    Mat goldCorner2 = Mat_<uint8_t>({2, 2}, {
+            255, 0,
+            0, 255
+    });
 
     // test chessboard corners in generated image
     for (const Point3f& p: board.getChessboardCorners()) {
@@ -920,24 +923,25 @@ TEST_P(CharucoBoardGenerate, issue_24806)
 TEST(Charuco, testSeveralBoardsWithCustomIds)
 {
     Size res{500, 500};
-    Mat K = (Mat_<double>(3,3) <<
-        0.5*res.width, 0, 0.5*res.width,
-        0, 0.5*res.height, 0.5*res.height,
-        0, 0, 1);
+    Mat K = Mat_<double>({3, 3}, {
+            0.5*res.width, 0, 0.5*res.width,
+            0, 0.5*res.height, 0.5*res.height,
+            0, 0, 1
+    });
 
     // Expected corner coordinates adjusted by -0.5px after fixing the systematic offset bug
     // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
-    Mat expected_corners = (Mat_<float>(9,2) <<
-        199.5, 199.5,
-        249.5, 199.5,
-        299.5, 199.5,
-        199.5, 249.5,
-        249.5, 249.5,
-        299.5, 249.5,
-        199.5, 299.5,
-        249.5, 299.5,
-        299.5, 299.5
-    );
+    Mat expected_corners = Mat_<float>({9, 2}, {
+            199.5, 199.5,
+            249.5, 199.5,
+            299.5, 199.5,
+            199.5, 249.5,
+            249.5, 249.5,
+            299.5, 249.5,
+            199.5, 299.5,
+            249.5, 299.5,
+            299.5, 299.5
+    });
 
 
     aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
