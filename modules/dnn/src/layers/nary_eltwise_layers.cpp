@@ -185,7 +185,6 @@ public:
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
-    std::vector<Mat> convBufs;  // promoted operands, reused so forward() does not allocate
 public:
     std::string operation;
 
@@ -465,7 +464,8 @@ public:
     }
 
     // typeDispatch instantiates one kernel, so every operand must hold the returned type.
-    int promoteOperands(std::vector<Mat>& operands, const std::vector<Mat>& outputs)
+    int promoteOperands(std::vector<Mat>& operands, const std::vector<Mat>& outputs,
+                        std::vector<Mat>& scratch)
     {
         int dispatchType = outputs.front().type();
         // A comparison declares CV_Bool and is binary, so its compute type is the operand pair.
@@ -476,13 +476,20 @@ public:
         }
 
         size_t firstOperand = op == OPERATION::WHERE ? 1 : 0;
-        convBufs.resize(operands.size());
-        for (size_t i = firstOperand; i < operands.size(); i++)
+        bool converted = false;
+        for (size_t i = firstOperand; i < operands.size() && i < scratch.size(); i++)
         {
             if (operands[i].type() == dispatchType)
                 continue;
-            operands[i].convertTo(convBufs[i], dispatchType);
-            operands[i] = convBufs[i];
+            operands[i].convertTo(scratch[i], dispatchType);
+            operands[i] = scratch[i];
+            converted = true;
+        }
+        // finalize() measured helper.steps on the unconverted operands.
+        if (converted)
+        {
+            helper.init(operands, outputs);
+            CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
         }
         return dispatchType;
     }
@@ -492,8 +499,6 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        // helper.init() reads steps and elemsize off the Mats, so convert first.
-        promoteOperands(inputs, outputs);
         helper.init(inputs, outputs);
         CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
     }
@@ -508,6 +513,13 @@ public:
         } else {
             MatShape outShape = findCommonShape(inputs);
             outputs.assign(1, outShape);
+            // promoteOperands() converts into these, one per input. Empty tensors get none:
+            // the engine rejects a zero-size internal, and there is nothing to convert.
+            bool anyEmpty = false;
+            for (const MatShape& inpShape : inputs)
+                anyEmpty = anyEmpty || total(inpShape) == 0;
+            if (!anyEmpty)
+                internals.assign(inputs.begin(), inputs.end());
         }
         return false;
     }
@@ -521,7 +533,9 @@ public:
         if (op == OPERATION::WHERE)
         {
             CV_CheckTypeEQ(inputs[0], CV_Bool, "");
-            outputs.assign(1, commonArithType(inputs[1], inputs[2]));
+            int valueType = commonArithType(inputs[1], inputs[2]);
+            internals.assign(requiredInternals, valueType);
+            outputs.assign(1, valueType);
             return;
         }
 
@@ -529,6 +543,7 @@ public:
         {
             CV_CheckTypeEQ(inputs[0], CV_Bool, "");
             CV_CheckTypeEQ(inputs[1], CV_Bool, "");
+            internals.assign(requiredInternals, CV_Bool);
             outputs.assign(1, CV_Bool);
             return;
         }
@@ -538,7 +553,9 @@ public:
             CV_Assert(inputs.size());
             for (auto input : inputs)
                 CV_CheckType(input, input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
-            outputs.assign(requiredOutputs, findCommonType(inputs));
+            int commonType = findCommonType(inputs);
+            internals.assign(requiredInternals, commonType);
+            outputs.assign(requiredOutputs, commonType);
             return;
         }
 
@@ -574,6 +591,7 @@ public:
             {
                 out_type = CV_32F;
             }
+            internals.assign(requiredInternals, out_type);
             outputs.assign(1, out_type);
             return;
         }
@@ -588,6 +606,7 @@ public:
         }
         int commonType = findCommonType(inputs);
 
+        internals.assign(requiredInternals, commonType);
         if (isComparison())
             outputs.assign(1, CV_Bool);
         else
@@ -1074,9 +1093,10 @@ public:
             return;
         }
 
-        std::vector<Mat> inputs, outputs;
+        std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         if (inputs.size() == 1) {
             inputs[0].copyTo(outputs[0]);
@@ -1084,7 +1104,7 @@ public:
         }
 
         std::vector<Mat> used_inputs = inputs;
-        int type_for_dispatch = promoteOperands(used_inputs, outputs);
+        int type_for_dispatch = promoteOperands(used_inputs, outputs, internals);
 
         const Mat& out0 = outputs[0];
         bool needsCrop = false;
