@@ -97,8 +97,11 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
 #elif CV_RVV
                 // RVV: use the largest legal widening pair (u8m4 -> u16m8).
                 // vwaddu.wv accumulates bytes directly into u16 lanes, avoiding the
-                // generic v_expand(lo/hi) + add sequence. Flush before u16 overflow.
-                const size_t vl = __riscv_vsetvlmax_e8m4();
+                // generic v_expand(lo/hi) + add sequence. Use the row width as AVL so
+                // rows shorter than VLMAX still execute a vector iteration instead of
+                // falling through entirely to the scalar tail. Flush before u16 overflow.
+                // Keep vl nonzero so zero-width rows skip the accumulation loop.
+                const size_t vl = __riscv_vsetvl_e8m4(width > 0 ? width : 1);
                 vuint16m8_t acc16 = __riscv_vmv_v_x_u16m8(0, vl);
                 int total = 0;
                 int x = 0, batch = 0;
