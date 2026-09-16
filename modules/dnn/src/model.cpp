@@ -272,6 +272,13 @@ void Model::predict(InputArray frame, OutputArrayOfArrays outs) const
     impl->processFrame(frame, outs);
 }
 
+void Model::predict(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& outs) const
+{
+    CV_DbgAssert(impl);
+    impl->processFrame(frames, outs);
+}
+
+
 class ClassificationModel_Impl : public Model::Impl
 {
 public:
@@ -395,6 +402,13 @@ std::pair<int, float> ClassificationModel::classify(InputArray frame)
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 {
     std::tie(classId, conf) = classify(frame);
+}
+
+void ClassificationModel::classify(InputArrayOfArrays frames, std::vector<int>& classIds,
+                                   std::vector<float>& confs)
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<ClassificationModel_Impl>() != nullptr);
+    impl.dynamicCast<ClassificationModel_Impl>()->classify(frames, classIds, confs);
 }
 
 namespace {
@@ -891,6 +905,25 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
     return points;
 }
 
+void KeypointsModel::estimate(InputArrayOfArrays frames,
+                              std::vector< std::vector<Point2f> >& keypoints, float thresh)
+{
+    std::vector<Mat> images;
+    frames.getMatVector(images);
+
+    std::vector<Mat> outs;
+    impl->processFrame(frames, outs);
+    CV_Assert(outs.size() == 1);
+
+    const Mat& output = outs[0];
+    CV_CheckEQ(output.size[0], (int)images.size(),
+               "KeypointsModel: the net returned a different number of samples");
+
+    keypoints.resize(images.size());
+    for (size_t i = 0; i < images.size(); i++)
+        keypointsFromOutput(output, (int)i, images[i].size(), thresh, keypoints[i]);
+}
+
 void KeypointsModel::estimatePoses(InputArray frame, CV_OUT std::vector<std::vector<Point3f>>& keypoints,
                                     CV_OUT std::vector<Rect>& boxes, CV_OUT std::vector<float>& confidences,
                                     float confThreshold, float nmsThreshold)
@@ -910,6 +943,43 @@ void KeypointsModel::estimatePoses(InputArray frame, CV_OUT std::vector<std::vec
     posesFromSample(out, layout, /*b=*/0, detWidth, poseKeypointCount(layout, detWidth),
                     impl->size, impl->getEffectivePaddingMode(), frame.size(), confThreshold,
                     nmsThreshold, keypoints, boxes, confidences);
+}
+
+void KeypointsModel::estimatePoses(InputArrayOfArrays frames,
+                                    CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                    CV_OUT std::vector<Rect>& boxes,
+                                    CV_OUT std::vector<float>& confidences,
+                                    CV_OUT std::vector<int>& frameIds,
+                                    float confThreshold, float nmsThreshold)
+{
+    std::vector<Mat> images;
+    frames.getMatVector(images);
+    CV_Assert(!images.empty());
+
+    std::vector<Mat> outs;
+    impl->processFrame(frames, outs);
+    CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
+
+    const Mat& out = outs[0];
+    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
+    CV_CheckEQ(layout.B, (int)images.size(),
+               "batched estimatePoses: the net returned a different number of samples");
+    const int detWidth = poseDetWidth(out, layout, /*b=*/0);
+    const int numKeypoints = poseKeypointCount(layout, detWidth);
+
+    keypoints.clear();
+    boxes.clear();
+    confidences.clear();
+    frameIds.clear();
+    for (int b = 0; b < layout.B; b++)
+    {
+        // Keypoints map back through the size of the frame that sample came from, not a shared one.
+        const size_t before = boxes.size();
+        posesFromSample(out, layout, b, detWidth, numKeypoints, impl->size,
+                        impl->getEffectivePaddingMode(), images[b].size(), confThreshold,
+                        nmsThreshold, keypoints, boxes, confidences);
+        frameIds.insert(frameIds.end(), boxes.size() - before, b);
+    }
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
@@ -960,6 +1030,26 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
     argmaxOverChannels(score, 0, classIds);
 }
 
+void SegmentationModel::segment(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks)
+{
+    std::vector<Mat> outs;
+    impl->processFrame(frames, outs);
+    // default output is the first one
+    if(outs.size() > 1)
+        outs.resize(1);
+    Mat score = outs[0];
+    CV_CheckEQ(score.dims, 4, "SegmentationModel: expected an [N x classes x H x W] output");
+    CV_CheckEQ(score.size[0], (int)frames.total(),
+               "SegmentationModel: the net returned a different number of samples");
+
+    masks.resize(score.size[0]);
+    for (int b = 0; b < score.size[0]; b++)
+    {
+        masks[b].create(score.size[2], score.size[3], CV_8U);
+        argmaxOverChannels(score, b, masks[b]);
+    }
+}
+
 void SegmentationModel::segmentInstances(InputArray frame, CV_OUT std::vector<Mat>& masks,
                                           CV_OUT std::vector<int>& classIds,
                                           CV_OUT std::vector<float>& confidences,
@@ -984,6 +1074,48 @@ void SegmentationModel::segmentInstances(InputArray frame, CV_OUT std::vector<Ma
     instancesFromSample(*det, *proto, layout, /*b=*/0, impl->size,
                         impl->getEffectivePaddingMode(), frame.size(), confThreshold, nmsThreshold,
                         masks, classIds, confidences, boxes);
+}
+
+void SegmentationModel::segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
+                                          CV_OUT std::vector<int>& classIds,
+                                          CV_OUT std::vector<float>& confidences,
+                                          CV_OUT std::vector<Rect>& boxes,
+                                          CV_OUT std::vector<int>& frameIds,
+                                          float confThreshold, float nmsThreshold)
+{
+    std::vector<Mat> images;
+    frames.getMatVector(images);
+    CV_Assert(!images.empty());
+
+    std::vector<Mat> outs;
+    impl->processFrame(frames, outs);
+    CV_CheckEQ((int)outs.size(), 2,
+               "segmentInstances requires a network with exactly 2 outputs: a detect head and "
+               "mask prototypes");
+
+    const Mat* det = nullptr;
+    const Mat* proto = nullptr;
+    splitSegOutputs(outs, det, proto);
+    AnchorFreeLayout layout = AnchorFreeLayout::from(*det);
+    CV_CheckEQ(layout.B, (int)images.size(),
+               "batched segmentInstances: the net returned a different number of samples");
+    CV_CheckEQ(proto->size[0], (int)images.size(),
+               "batched segmentInstances: the prototypes hold a different number of samples");
+
+    masks.clear();
+    classIds.clear();
+    confidences.clear();
+    boxes.clear();
+    frameIds.clear();
+    for (int b = 0; b < layout.B; b++)
+    {
+        // Masks and boxes map back through the size of the frame that sample came from.
+        const size_t before = boxes.size();
+        instancesFromSample(*det, *proto, layout, b, impl->size, impl->getEffectivePaddingMode(),
+                            images[b].size(), confThreshold, nmsThreshold, masks, classIds,
+                            confidences, boxes);
+        frameIds.insert(frameIds.end(), boxes.size() - before, b);
+    }
 }
 
 class DetectionModel_Impl : public Model::Impl
@@ -1234,6 +1366,55 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
+}
+
+void DetectionModel::detect(InputArrayOfArrays frames,
+                            CV_OUT std::vector<int>& classIds,
+                            CV_OUT std::vector<float>& confidences,
+                            CV_OUT std::vector<Rect>& boxes,
+                            CV_OUT std::vector<int>& frameIds,
+                            float confThreshold, float nmsThreshold)
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<DetectionModel_Impl>() != nullptr);
+
+    std::vector<Mat> images;
+    frames.getMatVector(images);
+    CV_Assert(!images.empty());
+
+    std::vector<Mat> detections;
+    impl->processFrame(frames, detections);
+
+    Mat merged;
+    if (mergeSplitOutputs(detections, merged))
+        detections.assign(1, merged);
+
+    CV_Check((int)detections.size(), detections.size() == 1 && detections[0].dims == 3,
+             "batched detect requires a single 3D anchor-free output");
+    const Mat& out = detections[0];
+    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
+    CV_CheckEQ(layout.B, (int)images.size(),
+               "batched detect: the net returned a different number of samples");
+
+    classIds.clear();
+    confidences.clear();
+    boxes.clear();
+    frameIds.clear();
+
+    for (int b = 0; b < layout.B; b++)
+    {
+        // Boxes map back through the size of the frame that sample came from, not a shared one.
+        SampleDecode d = decodeSample(out, layout, b, /*nm=*/0, impl->size,
+                                       impl->getEffectivePaddingMode(), images[b].size(),
+                                       confThreshold, nmsThreshold,
+                                       getNmsAcrossClasses());
+        for (size_t i = 0; i < d.keep.size(); i++)
+        {
+            classIds.push_back(d.dets[d.keep[i]].classId);
+            confidences.push_back(d.dets[d.keep[i]].confidence);
+            boxes.push_back(d.boxes[i]);
+            frameIds.push_back(b);
+        }
+    }
 }
 
 struct TextRecognitionModel_Impl : public Model::Impl
