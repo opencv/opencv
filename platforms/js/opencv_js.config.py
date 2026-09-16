@@ -171,8 +171,7 @@ video = {
 }
 
 dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend','getUnconnectedOutLayersNames'],
-       '': ['readNetFromTensorflow',
-            'readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
+       '': ['readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
 
 features = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
               'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFastThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],

@@ -8,9 +8,6 @@ from threading import Thread
 import queue
 
 from common import *
-from tf_text_graph_common import readTextMessage
-from tf_text_graph_ssd import createSSDGraph
-from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
 def help():
     print(
@@ -33,10 +30,6 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                     help='An optional path to file with preprocessing parameters.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--out_tf_graph', default='graph.pbtxt',
-                    help='For models from TensorFlow Object Detection API, you may '
-                         'pass a .config file which was used for training through --config '
-                         'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
 parser.add_argument('--backend', default="default", type=str, choices=backends,
@@ -77,20 +70,6 @@ if args.config is not None:
     args.config = findModel(args.config, args.config_sha1)
 if args.labels is not None:
     args.labels = findFile(args.labels)
-
-# If config specified, try to load it as TensorFlow Object Detection API's pipeline.
-config = readTextMessage(args.config)
-if 'model' in config:
-    print('TensorFlow Object Detection API config detected')
-    if 'ssd' in config['model'][0]:
-        print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
-        createSSDGraph(args.model, args.config, args.out_tf_graph)
-        args.config = args.out_tf_graph
-    elif 'faster_rcnn' in config['model'][0]:
-        print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
-        createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
-        args.config = args.out_tf_graph
-
 
 # Load names of classes
 labels = None

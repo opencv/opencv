@@ -21,7 +21,7 @@ const string about =
 #ifdef HAVE_OPENCV_DNN
     "With DNN model:\n"
     "\t ./example_cpp_macbeth_chart_detection mcc --input=path/to/your/input/image/or/video\n\n"
-    "Model path can also be specified using --model argument. And config path can be specified using --config. Download it using python download_models.py mcc from dnn samples directory\n\n"
+    "Model path can also be specified using --model argument. Download it using python download_models.py mcc from dnn samples directory\n\n"
 #else
     "Note: DNN-based detection is not available in this build.\n\n"
 #endif
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
         zooFile = findFile(zooFile);
     }
     else{
-        cout<<"[WARN] set the environment variables or pass the arguments --model, --config and models.yml file using --zoo for using dnn based detector. Continuing with default detector.\n\n";
+        cout<<"[WARN] set the environment variables or pass the argument --model and models.yml file using --zoo for using dnn based detector. Continuing with default detector.\n\n";
     }
 
     keys += genPreprocArguments(modelName, zooFile);
@@ -124,8 +124,6 @@ int main(int argc, char *argv[])
 #ifdef HAVE_OPENCV_DNN
     const string sha1 = parser.get<String>("sha1");
     const string model_path = findModel(parser.get<string>("model"), sha1);
-    const string config_sha1 = parser.get<String>("config_sha1");
-    const string pbtxt_path = findModel(parser.get<string>("config"), config_sha1);
     const string backend = parser.get<String>("backend");
     const string target = parser.get<String>("target");
 #endif
@@ -134,9 +132,8 @@ int main(int argc, char *argv[])
 
     Ptr<CCheckerDetector> detector;
 #ifdef HAVE_OPENCV_DNN
-    if (model_path != "" && pbtxt_path != ""){
-        EngineType engine = ENGINE_OPENCV;
-        Net net = readNetFromTensorflow(model_path, pbtxt_path, engine);
+    if (model_path != ""){
+        Net net = readNetFromONNX(model_path);
         net.setPreferableBackend(getBackendID(backend));
         net.setPreferableTarget(getTargetID(target));
 

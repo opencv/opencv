@@ -373,7 +373,6 @@ if __name__ == '__main__':
     models = []
     save_dir = args.save_dir
     selected_model_name = args.model_name
-    models.extend(parseMetalinkFile('face_detector/weights.meta4', save_dir))
     models.extend(parseYAMLFile('models.yml', save_dir, selected_model_name))
     for m in models:
         print(m)

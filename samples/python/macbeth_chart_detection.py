@@ -48,7 +48,7 @@ def get_args_parser(func_args):
             DNN model:
                 python macbeth_chart_detection.py mcc --input=path/to/your/input/image/or/video
 
-        Model path can also be specified using --model argument. And config path can be specified using --config.
+        Model path can also be specified using --model argument.
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 
@@ -77,20 +77,16 @@ def main(func_args=None):
     if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None:
         try:
             args.model = findModel(args.model, args.sha1)
-            args.config = findModel(args.config, args.config_sha1)
         except:
-            print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector.\n\n")
+            print("[WARN] Model file not provided, using default detector. Pass model using --model to use dnn based detector.\n\n")
             args.model = None
-            args.config = None
     else:
         args.model = None
-        args.config = None
-        print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector. Or, set OPENCV_SAMPLES_DATA_PATH environment variable.\n\n")
+        print("[WARN] Model file not provided, using default detector. Pass model using --model to use dnn based detector. Or, set OPENCV_SAMPLES_DATA_PATH environment variable.\n\n")
 
-    if args.model and args.config:
-        # Load the DNN from TensorFlow model
-        engine = cv.dnn.ENGINE_OPENCV
-        net = cv.dnn.readNetFromTensorflow(args.model, args.config, engine)
+    if args.model:
+        # Load the DNN from ONNX model
+        net = cv.dnn.readNetFromONNX(args.model)
         net.setPreferableBackend(get_backend_id(args.backend))
         net.setPreferableTarget(get_target_id(args.target))
 
