@@ -36,7 +36,14 @@ static void checkGQAOutputs(const std::string& basename, const std::vector<Mat>&
     normAssert(refPresentValue, outs[2], "present_value", 1e-4, 1e-3);
 }
 
+// cos_cache / sin_cache exist only on a node that sets do_rotary, as in real exports,
+// so the non-rotary models stop at total_sequence_length.
 static const std::vector<std::string> GQA_INPUT_NAMES = {
+    "query", "key", "value", "past_key", "past_value",
+    "seqlens_k", "total_sequence_length"
+};
+
+static const std::vector<std::string> GQA_ROTARY_INPUT_NAMES = {
     "query", "key", "value", "past_key", "past_value",
     "seqlens_k", "total_sequence_length", "cos_cache", "sin_cache"
 };
@@ -79,7 +86,7 @@ TEST(GroupQueryAttentionLayer, ONNXModel_SoftcapClampsScores)
 TEST(GroupQueryAttentionLayer, ONNXModel_RotaryAppliesOnlyToNewToken)
 {
     std::vector<Mat> outs;
-    runGQAModel("group_query_attention_rotary", GQA_INPUT_NAMES, outs);
+    runGQAModel("group_query_attention_rotary", GQA_ROTARY_INPUT_NAMES, outs);
     checkGQAOutputs("group_query_attention_rotary", outs);
 }
 

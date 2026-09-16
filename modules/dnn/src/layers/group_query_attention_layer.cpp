@@ -71,7 +71,7 @@ public:
         // (enableFP16 is hardcoded false, opencv/opencv#26196), so claim what is true and
         // let it fail loudly here if that changes.
         CV_CheckType(inputs[0], inputs[0] == CV_32F, "GroupQueryAttention: only CV_32F is supported");
-        outputs.assign(3, inputs[0]);
+        outputs.assign(requiredOutputs, inputs[0]);
         internals.assign(requiredInternals, inputs[0]);
     }
 
@@ -102,15 +102,21 @@ public:
         if (shared_kv_buffer)
             CV_CheckGE(Sp, S, "GroupQueryAttention: shared KV buffer is shorter than the query");
 
-        outputs.resize(3);
-        outputs[0] = MatShape{B, S, num_heads * D};
-        outputs[1] = MatShape{B, kv_num_heads, presentLen, D};
-        outputs[2] = MatShape{B, kv_num_heads, presentLen, D};
+        // present_key / present_value are optional in the op spec, so only declare the ones the
+        // node actually asked for.
+        const MatShape presentShape{B, kv_num_heads, presentLen, D};
+        outputs.assign(1, MatShape{B, S, num_heads * D});
+        if (requiredOutputs > 1) outputs.push_back(presentShape);
+        if (requiredOutputs > 2) outputs.push_back(presentShape);
 
         internals.assign(1, MatShape{B, num_heads, S, D});     // Q
         internals.push_back(MatShape{B, kv_num_heads, S, D});  // Knew
         internals.push_back(MatShape{B, kv_num_heads, S, D});  // Vnew
         internals.push_back(MatShape{B, num_heads, S, presentLen});  // attention scores
+        // The concatenated cache is what attention actually reads, so when it is not an output
+        // it still has to live somewhere. Appended last, leaving the indices above fixed.
+        if (requiredOutputs <= 1) internals.push_back(presentShape);  // present_key scratch
+        if (requiredOutputs <= 2) internals.push_back(presentShape);  // present_value scratch
         return false;
     }
 
@@ -177,7 +183,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
-        CV_Assert(internals.size() == 4);
+        CV_Assert(internals.size() >= 4);
         Mat& Q = internals[0];
         Mat& Knew = internals[1];
         Mat& Vnew = internals[2];
@@ -249,8 +255,11 @@ public:
             applyRotary(ropeK, Knew, B, kv_num_heads, S, D, cosCache, sinCache, positionIds);
         }
 
-        Mat& presentKey = outputs[1];
-        Mat& presentValue = outputs[2];
+        // Mirrors getMemoryShapes: a present_* the node did not declare lives in the scratch
+        // internals appended after the attention scores, in the same order.
+        size_t scratch = 4;
+        Mat& presentKey   = outputs.size() > 1 ? outputs[1] : internals[scratch++];
+        Mat& presentValue = outputs.size() > 2 ? outputs[2] : internals[scratch++];
         {
             float* pk = presentKey.ptr<float>();
             float* pv = presentValue.ptr<float>();
