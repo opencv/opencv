@@ -990,10 +990,14 @@ int cv::borderInterpolate( int p, int len, int borderType )
     else if( borderType == BORDER_WRAP )
     {
         CV_Assert(len > 0);
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
+        if( p < 0 || p >= len )
+        {
+            int64_t p64 = p;
+            p64 %= (int64_t)len;
+            if( p64 < 0 )
+                p64 += len;
+            p = (int)p64;
+        }
     }
     else if( borderType == BORDER_CONSTANT )
         p = -1;
