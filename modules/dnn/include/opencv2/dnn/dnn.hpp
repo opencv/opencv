@@ -1632,6 +1632,21 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void predict(InputArray frame, OutputArrayOfArrays outs) const;
 
          /** @overload
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] outs Allocated output blobs. The images are run as one batch, so each
+          *  blob carries them in its first dimension.
+          */
+         CV_WRAP void predict(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& outs) const;
+
+
+         // ============================== Net proxy methods ==============================
+         // Never expose methods with network implementation details, like:
+         // - addLayer, addLayerToPrev, connect, setInputsNames, setInputShape, setParam, getParam
+         // - getLayer*, getUnconnectedOutLayers, getUnconnectedOutLayersNames, getLayersShapes
+         // - forward* methods, setInput
+
+         /// @sa Net::setPreferableBackend
+         CV_WRAP Model& setPreferableBackend(dnn::Backend backendId);
          /// @sa Net::setPreferableTarget
          CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
 
@@ -1705,6 +1720,13 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
 
          /** @brief Given a batch of @p frames, run net once and return the top-1 prediction
+          *  of each of them.
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] classIds Top-1 class index per image.
+          *  @param[out] confs Confidence of the top-1 class per image.
+          */
+         CV_WRAP void classify(InputArrayOfArrays frames, CV_OUT std::vector<int>& classIds,
+                               CV_OUT std::vector<float>& confs);
      };
 
      /** @brief This class represents high-level API for keypoints models
@@ -1739,6 +1761,14 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP std::vector<Point2f> estimate(InputArray frame, float thresh=0.5);
 
          /** @brief Given a batch of @p frames, run net once and return the keypoints of each
+          *  of them.
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] keypoints x and y coordinates of each detected keypoint, per image
+          *  @param thresh minimum confidence threshold to select a keypoint
+          */
+         CV_WRAP void estimate(InputArrayOfArrays frames,
+                               CV_OUT std::vector< std::vector<Point2f> >& keypoints,
+                               float thresh=0.5);
 
          /** @brief Given the @p input frame, create input blob, run net and return multi-person
           *  pose estimation results (YOLOv8-pose-style decoding).
@@ -1761,6 +1791,21 @@ CV__DNN_INLINE_NS_BEGIN
                                      float confThreshold = 0.5f, float nmsThreshold = 0.45f);
 
          /** @overload
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] keypoints One entry per detected person across all images.
+          *  @param[out] boxes Per-person bounding boxes, parallel to @p keypoints.
+          *  @param[out] confidences Person-detection confidences, parallel to @p keypoints.
+          *  @param[out] frameIds Index into @p frames of the image each person came from,
+          *  parallel to @p keypoints and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void estimatePoses(InputArrayOfArrays frames,
+                                     CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                     CV_OUT std::vector<Rect>& boxes,
+                                     CV_OUT std::vector<float>& confidences,
+                                     CV_OUT std::vector<int>& frameIds,
+                                     float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for segmentation  models
@@ -1793,6 +1838,11 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void segment(InputArray frame, OutputArray mask);
 
          /** @brief Given a batch of @p frames, run net once and return the class prediction
+          *  of every pixel of each of them.
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] masks Allocated class prediction for each pixel, one mask per input image.
+          */
+         CV_WRAP void segment(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks);
 
          /** @brief Given the @p input frame, create input blob, run net and return per-instance
           *  segmentation results (YOLOv8-seg-style mask-prototype decoding).
@@ -1817,6 +1867,23 @@ CV__DNN_INLINE_NS_BEGIN
                                         float confThreshold = 0.5f, float nmsThreshold = 0.45f);
 
          /** @overload
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] masks One binary mask per detection across all images, each sized to its
+          *  corresponding entry in @p boxes.
+          *  @param[out] classIds Class indexes, parallel to @p masks.
+          *  @param[out] confidences Confidences, parallel to @p masks.
+          *  @param[out] boxes Bounding boxes, parallel to @p masks.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p masks and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
+                                        CV_OUT std::vector<int>& classIds,
+                                        CV_OUT std::vector<float>& confidences,
+                                        CV_OUT std::vector<Rect>& boxes,
+                                        CV_OUT std::vector<int>& frameIds,
+                                        float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for object detection networks.
@@ -1884,6 +1951,23 @@ CV__DNN_INLINE_NS_BEGIN
                              float confThreshold = 0.5f, float nmsThreshold = 0.45f);
 
          /** @overload
+          *  @param[in]  frames The input images. They must share one size and type.
+          *  @param[out] classIds Class indexes of every detection across all images.
+          *  @param[out] confidences Confidences, parallel to @p classIds.
+          *  @param[out] boxes Bounding boxes, parallel to @p classIds.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p classIds and non-decreasing.
+          *  @param[in]  confThreshold A threshold used to filter boxes by confidences.
+          *  @param[in]  nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          *
+          *  Only anchor-free heads are supported; SSD and Darknet outputs have no batched form.
+          */
+         CV_WRAP void detect(InputArrayOfArrays frames,
+                             CV_OUT std::vector<int>& classIds,
+                             CV_OUT std::vector<float>& confidences,
+                             CV_OUT std::vector<Rect>& boxes,
+                             CV_OUT std::vector<int>& frameIds,
+                             float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
 
