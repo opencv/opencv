@@ -1086,7 +1086,7 @@ static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
-#if CV_RVV && CV_SIMD_SCALABLE
+#if CV_SIMD_SCALABLE
 static inline v_float32 reduceRowSum2Acc4(const v_float32& acc,
                                            const float* src0, const float* src1,
                                            const float* src2, const float* src3)
@@ -1102,8 +1102,7 @@ static inline v_float32 reduceRowSum2Acc4(const v_float32& acc,
     return v_fma(x, x, sum);
 }
 
-// dim=0, REDUCE_SUM2 for CV_32F. Keep the common implementation on
-// Universal Intrinsics; the dispatched backend selects RVV.
+// dim=0, REDUCE_SUM2 for CV_32F using scalable universal intrinsics.
 static void reduceRowSum2_32f32f(const Mat& srcmat, Mat& dstmat)
 {
     const int width = srcmat.cols * srcmat.channels();
@@ -1261,7 +1260,7 @@ ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
 
 ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth)
 {
-#if CV_RVV && CV_SIMD_SCALABLE
+#if CV_SIMD_SCALABLE
     if (sdepth == CV_32F && ddepth == CV_32F) return reduceRowSum2_32f32f;
 #else
     CV_UNUSED(sdepth);
