@@ -44,7 +44,15 @@
 
 namespace opencv_test { namespace {
 
+// To reduce reference image maintenance costs, pixel-by-pixel comparison
+// is limited to specific standard font combinations.
+#if defined(HAVE_HARFBUZZ) && defined(HAVE_RUBIK_SANS) && defined(HAVE_RUBIK_ITALIC) && defined(HAVE_UNIFONT) && !defined(HAVE_MANROPE_SANS)
+  #define TEST_TO_COMPARE_DRAWN_GLYPHS
+#endif
+
 //#define DRAW_TEST_IMAGE
+
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 
 class CV_DrawingTest : public cvtest::BaseTest
 {
@@ -432,6 +440,8 @@ void CV_DrawingTest_Far::draw(Mat& img)
 TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
 TEST(Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
 
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
+
 class CV_FillConvexPolyTest : public cvtest::BaseTest
 {
 public:
@@ -466,6 +476,7 @@ protected:
 
 TEST(Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
 
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 class CV_DrawingTest_UTF8 : public cvtest::BaseTest
 {
 public:
@@ -544,6 +555,7 @@ protected:
 };
 
 TEST(Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 
 TEST(Drawing, _914)
@@ -613,6 +625,7 @@ TEST(Drawing, longline)
 }
 
 
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, putText_no_garbage)
 {
     Size sz(640, 480);
@@ -635,6 +648,7 @@ TEST(Drawing, putText_no_garbage)
     waitKey();
 #endif
 }
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 
 TEST(Drawing, line)
@@ -693,6 +707,7 @@ TEST(Drawing, fillpoly_circle)
 }
 
 
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, fromJava_getTextSize)
 {
     String text = "Android all the way";
@@ -718,7 +733,9 @@ TEST(Drawing, fromJava_getTextSize)
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
 {
     String text = "Hello World";
@@ -746,6 +763,7 @@ TEST(Drawing, fromJava_testPutTextMatStringPointIntDoubleScalarIntIntBoolean)
     rectangle(img, Point(10, 10), Point(labelSize.width + 10, labelSize.height + 10), Scalar::all(0), -1);
     EXPECT_EQ(0, countNonZero(img));
 }
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 typedef struct TextProp
 {
@@ -755,6 +773,7 @@ typedef struct TextProp
     bool italic;
 } TextProp;
 
+#ifdef TEST_TO_COMPARE_DRAWN_GLYPHS
 #ifdef HAVE_UNIFONT // there are other tests for text drawing, so the functionality is tested anyway,
                     // but this test needs concrete unicode font to compare the printed text
                     // (including CJK characters) with the reference picture from the database
@@ -859,6 +878,7 @@ TEST(Drawing, ttf_text)
 #endif
 }
 #endif
+#endif // TEST_TO_COMPARE_DRAWN_GLYPHS
 
 // Experiment (not a regression test): render Arabic + Devanagari with FiraGO,
 // which covers both scripts, and dump a PNG for visual inspection.
