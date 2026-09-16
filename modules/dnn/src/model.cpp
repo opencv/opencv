@@ -25,6 +25,7 @@ struct Model::Impl
     Scalar scale = Scalar::all(1.0);
     bool   swapRB = false;
     bool   crop = false;
+    ImagePaddingMode paddingMode = DNN_PMODE_NULL;
     Mat    blob;
     std::vector<String> outNames;
 
@@ -102,6 +103,19 @@ public:
         swapRB = swapRB_;
     }
     /*virtual*/
+    void setPaddingMode(ImagePaddingMode paddingMode_)
+    {
+        paddingMode = paddingMode_;
+    }
+
+    // setPaddingMode() wins; else falls back to the legacy crop flag.
+    ImagePaddingMode getEffectivePaddingMode() const
+    {
+        if (paddingMode != DNN_PMODE_NULL)
+            return paddingMode;
+        return crop ? DNN_PMODE_CROP_CENTER : DNN_PMODE_NULL;
+    }
+    /*virtual*/
     void setOutputNames(const std::vector<String>& outNames_)
     {
         outNames = outNames_;
@@ -119,16 +133,23 @@ public:
         param.size = size;
         param.mean = mean;
         param.swapRB = swapRB;
-        if (crop)
-        {
-            param.paddingmode = DNN_PMODE_CROP_CENTER;
-        }
-        Mat blob = dnn::blobFromImageWithParams(frame, param); // [1, 10, 10, 4]
+        param.paddingmode = getEffectivePaddingMode();
+        // A vector input is one batch, so every output below carries it in dim 0.
+        const bool batched = frame.isMatVector() || frame.isUMatVector();
+        Mat blob;
+        if (batched)
+            blob = dnn::blobFromImagesWithParams(frame, param);
+        else
+            blob = dnn::blobFromImageWithParams(frame, param);
 
         // Faster-RCNN or R-FCN
         if ((net.getMainGraph() && net.haveArg("im_info") && net.argKind(net.getArg("im_info")) == DNN_ARG_INPUT) ||
             (!net.getMainGraph() && net.getLayer(0)->outputNameToIndex("im_info") != -1))
         {
+            // im_info describes one image's geometry, so this path has no batched form
+            if (batched)
+                CV_Error(Error::StsNotImplemented,
+                         "batched input is not supported for models with an 'im_info' input");
             net.setInput(blob, "data");
             Mat imInfo(Matx13f(size.height, size.width, 1.6f));
             net.setInput(imInfo, "im_info");
@@ -224,6 +245,13 @@ Model& Model::setInputSwapRB(bool swapRB)
     return *this;
 }
 
+Model& Model::setPaddingMode(ImagePaddingMode mode)
+{
+    CV_DbgAssert(impl);
+    impl->setPaddingMode(mode);
+    return *this;
+}
+
 Model& Model::setOutputNames(const std::vector<String>& outNames)
 {
     CV_DbgAssert(impl);
@@ -243,7 +271,6 @@ void Model::predict(InputArray frame, OutputArrayOfArrays outs) const
     CV_DbgAssert(impl);
     impl->processFrame(frame, outs);
 }
-
 
 class ClassificationModel_Impl : public Model::Impl
 {
@@ -280,6 +307,35 @@ public:
         Point maxLoc;
         cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
         return {maxLoc.x, static_cast<float>(conf)};
+    }
+
+    void classify(InputArrayOfArrays frames, std::vector<int>& classIds,
+                  std::vector<float>& confs)
+    {
+        std::vector<Mat> outs;
+        processFrame(frames, outs);
+        CV_Assert(outs.size() == 1);
+
+        const Mat& out = outs[0];
+        CV_CheckEQ(out.dims, 2, "ClassificationModel: expected an [N x classes] output");
+        const int num = out.size[0];
+
+        classIds.resize(num);
+        confs.resize(num);
+        for (int i = 0; i < num; i++)
+        {
+            Mat row = out.row(i), probs;
+            if (getEnableSoftmaxPostProcessing())
+                softmax(row, probs);
+            else
+                probs = row;
+
+            double conf;
+            Point maxLoc;
+            cv::minMaxLoc(probs, nullptr, &conf, nullptr, &maxLoc);
+            classIds[i] = maxLoc.x;
+            confs[i] = static_cast<float>(conf);
+        }
     }
 
 protected:
@@ -341,24 +397,450 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
     std::tie(classId, conf) = classify(frame);
 }
 
+namespace {
+
+// Anchor-free head output: [1, C, N] or [1, N, C]; first 4 channels are box (cx, cy, w, h).
+struct AnchorFreeLayout
+{
+    int B = 0;                // number of samples
+    int N = 0;                // number of anchors
+    int C = 0;                // channels per anchor
+    bool transposed = false;  // true for the [B, C, N] layout
+
+    static AnchorFreeLayout from(const Mat& out)
+    {
+        CV_CheckEQ(out.dims, 3, "Anchor-free head output must be 3D: [B, C, N] or [B, N, C]");
+        CV_CheckTypeEQ(out.type(), CV_32F, "Anchor-free head output must be CV_32F");
+        AnchorFreeLayout layout;
+        layout.B = out.size[0];
+        int d1 = out.size[1], d2 = out.size[2];
+        layout.transposed = d1 <= d2;
+        layout.C = layout.transposed ? d1 : d2;
+        layout.N = layout.transposed ? d2 : d1;
+        return layout;
+    }
+
+    // Returns anchor i of sample b contiguously, copying into buf if transposed.
+    const float* anchor(const Mat& out, int b, int i, std::vector<float>& buf) const
+    {
+        if (!transposed)
+            return out.ptr<float>(b, i);
+        buf.resize(C);
+        const float* base = out.ptr<float>(b);
+        for (int c = 0; c < C; c++)
+            buf[c] = base[(size_t)c * N + i];
+        return buf.data();
+    }
+};
+
+struct AnchorDetection
+{
+    Rect blobBox;
+    int classId;
+    float confidence;
+    int anchorIndex;
+};
+
+// Only a 6-wide row is ambiguous; a class index is cast from an integer, a class score is not.
+bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int b, int nm)
+{
+    if (layout.C - nm != 6)
+        return false;
+
+    const int channel = layout.C - nm - 1;
+    const float* p = out.ptr<float>(b) + (layout.transposed ? (size_t)channel * layout.N : channel);
+    const int step = layout.transposed ? 1 : layout.C;
+
+    for (int i = 0; i < layout.N; i++, p += step)
+    {
+        if (*p < 0.f || *p != std::floor(*p))
+            return false;
+    }
+    return true;
+}
+
+// Decided per tensor, not per box; the bound only has to exclude sub-pixel boxes.
+bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int b)
+{
+    std::vector<float> buf;
+    for (int i = 0; i < layout.N; i++)
+    {
+        const float* r = layout.anchor(out, b, i, buf);
+        for (int c = 0; c < 4; c++)
+        {
+            if (std::abs(r[c]) > 2.f)
+                return false;
+        }
+    }
+    return true;
+}
+
+// Joined so the single-tensor decoder runs unchanged.
+bool mergeSplitOutputs(const std::vector<Mat>& outs, Mat& merged)
+{
+    if (outs.size() != 2)
+        return false;
+
+    const Mat* box = nullptr;
+    const Mat* cls = nullptr;
+    for (const Mat& out : outs)
+    {
+        if (out.dims != 3 || out.type() != CV_32F || !out.isContinuous())
+            return false;
+        if (out.size[2] == 4 && box == nullptr)
+            box = &out;
+        else
+            cls = &out;
+    }
+    if (!box || !cls || box->size[0] != cls->size[0] || box->size[1] != cls->size[1])
+        return false;
+
+    const int batch = box->size[0], rows = box->size[1], numClasses = cls->size[2];
+    Mat scores = cls->reshape(1, batch * rows);
+
+    // A probability cannot fall outside [0, 1], so anything that does is logits.
+    double lo = 0, hi = 0;
+    minMaxLoc(scores, &lo, &hi);
+    if (lo < 0.0 || hi > 1.0)
+    {
+        Mat negExp;
+        cv::exp(-scores, negExp);
+        scores = 1.0 / (1.0 + negExp);
+    }
+
+    const int sz[] = {batch, rows, 4 + numClasses};
+    merged.create(3, sz, CV_32F);
+    Mat joined = merged.reshape(1, batch * rows);
+    box->reshape(1, batch * rows).copyTo(joined.colRange(0, 4));
+    scores.copyTo(joined.colRange(4, 4 + numClasses));
+    return true;
+}
+
+// Centre rows fail this: w would have to exceed cx on every detection.
+bool boxesAreCorners(const Mat& out, const AnchorFreeLayout& layout, int b)
+{
+    std::vector<float> buf;
+    bool any = false;
+    for (int i = 0; i < layout.N; i++)
+    {
+        const float* r = layout.anchor(out, b, i, buf);
+        if (r[4] <= 0.f)
+            continue;
+        if (r[2] <= r[0] || r[3] <= r[1])
+            return false;
+        any = true;
+    }
+    return any;
+}
+
+// What a row means.
+struct HeadLayout
+{
+    bool explicitClass = false;  // column 4 is the score, column 5 the class index
+    bool normalized = false;     // box values are fractions of the blob, not pixels
+    bool cornerBox = false;      // x1, y1, x2, y2 rather than cx, cy, w, h
+
+    static HeadLayout from(const Mat& out, const AnchorFreeLayout& layout, int b, int nm)
+    {
+        HeadLayout head;
+        head.explicitClass = lastChannelIsClassIndex(out, layout, b, nm);
+        head.normalized = boxesAreNormalized(out, layout, b);
+        head.cornerBox = head.explicitClass && boxesAreCorners(out, layout, b);
+        return head;
+    }
+
+    // Mask coefficients follow the detection part, whose width depends on how the class is carried.
+    int tailOffset(int numClasses) const { return explicitClass ? 6 : 4 + numClasses; }
+};
+
+void decodeRows(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout& head, int b,
+                 int numClasses, float confThreshold, const Size& blobSize,
+                 std::vector<AnchorDetection>& detections)
+{
+    CV_CheckGE(layout.C, 4 + numClasses, "Anchor-free head: not enough channels for the requested class count");
+    detections.clear();
+    const float sx = head.normalized ? (float)blobSize.width : 1.f;
+    const float sy = head.normalized ? (float)blobSize.height : 1.f;
+
+    std::vector<float> buf;
+    for (int i = 0; i < layout.N; i++)
+    {
+        const float* r = layout.anchor(out, b, i, buf);
+
+        int bestCls;
+        float bestScore;
+        if (head.explicitClass)
+        {
+            bestScore = r[4];
+            bestCls = cvRound(r[5]);
+            // An explicit-class head sorts best-first and zero-pads the tail.
+            if (bestScore <= 0.f || bestScore < confThreshold)
+                break;
+        }
+        else
+        {
+            bestCls = 0;
+            bestScore = r[4];
+            for (int c = 1; c < numClasses; c++)
+            {
+                if (r[4 + c] > bestScore)
+                {
+                    bestScore = r[4 + c];
+                    bestCls = c;
+                }
+            }
+            if (bestScore < confThreshold)
+                continue;
+        }
+        CV_CheckLE(bestScore, 1.0f,
+                   "Anchor-free head: score above 1, the output layout was misdetected");
+
+        const float b0 = r[0] * sx, b1 = r[1] * sy, b2 = r[2] * sx, b3 = r[3] * sy;
+        Rect box = head.cornerBox
+                 ? Rect(cvRound(b0), cvRound(b1), cvRound(b2 - b0), cvRound(b3 - b1))
+                 : Rect(cvRound(b0 - b2 * 0.5f), cvRound(b1 - b3 * 0.5f), cvRound(b2), cvRound(b3));
+        CV_Check(box.width, box.width > 0 && box.height > 0,
+                 "Anchor-free head: non-positive box, the output layout was misdetected");
+
+        AnchorDetection det;
+        det.blobBox = box;
+        det.classId = bestCls;
+        det.confidence = bestScore;
+        det.anchorIndex = i;
+        detections.push_back(det);
+    }
+}
+
+// One sample's worth of decoding: rows -> NMS -> image-space boxes. Segmentation and pose read
+// their trailing channels from dets[keep[i]] afterwards.
+struct SampleDecode
+{
+    HeadLayout head;
+    int numClasses = 0;
+    std::vector<AnchorDetection> dets;
+    std::vector<int> keep;
+    std::vector<Rect> boxes;
+};
+
+void nmsAnchorDetections(const std::vector<AnchorDetection>& detections,
+                          float confThreshold, float nmsThreshold, bool acrossClasses,
+                          std::vector<int>& keep)
+{
+    keep.clear();
+    if (detections.empty())
+        return;
+    if (nmsThreshold <= 0)
+    {
+        keep.resize(detections.size());
+        for (size_t i = 0; i < detections.size(); i++)
+            keep[i] = (int)i;
+        return;
+    }
+
+    std::vector<Rect> boxes;
+    std::vector<float> confidences;
+    std::vector<int> classIds;
+    boxes.reserve(detections.size());
+    confidences.reserve(detections.size());
+    classIds.reserve(detections.size());
+    for (const AnchorDetection& det : detections)
+    {
+        boxes.push_back(det.blobBox);
+        confidences.push_back(det.confidence);
+        classIds.push_back(det.classId);
+    }
+
+    if (acrossClasses)
+        NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, keep);
+    else
+        NMSBoxesBatched(boxes, confidences, classIds, confThreshold, nmsThreshold, keep);
+}
+
+
+SampleDecode decodeSample(const Mat& out, const AnchorFreeLayout& layout, int b, int nm,
+                           const Size& blobSize, ImagePaddingMode paddingMode,
+                           const Size& frameSize, float confThreshold, float nmsThreshold,
+                           bool acrossClasses)
+{
+    SampleDecode r;
+    r.head = HeadLayout::from(out, layout, b, nm);
+    r.numClasses = r.head.explicitClass ? 1 : layout.C - 4 - nm;
+    CV_Check(r.numClasses, r.numClasses >= 1,
+             "Anchor-free head: too few channels to hold a box and a class");
+
+    decodeRows(out, layout, r.head, b, r.numClasses, confThreshold, blobSize, r.dets);
+    nmsAnchorDetections(r.dets, confThreshold, nmsThreshold, acrossClasses, r.keep);
+
+    std::vector<Rect> blobBoxes;
+    blobBoxes.reserve(r.keep.size());
+    for (int idx : r.keep)
+        blobBoxes.push_back(r.dets[idx].blobBox);
+
+    Image2BlobParams param;
+    param.size = blobSize;
+    param.paddingmode = paddingMode;
+    param.blobRectsToImageRects(blobBoxes, r.boxes, frameSize);
+
+    for (Rect& box : r.boxes)
+    {
+        int left   = std::max(0, std::min(box.x, frameSize.width - 1));
+        int top    = std::max(0, std::min(box.y, frameSize.height - 1));
+        int width  = std::max(1, std::min(box.width, frameSize.width - left));
+        int height = std::max(1, std::min(box.height, frameSize.height - top));
+        box = Rect(left, top, width, height);
+    }
+    return r;
+}
+
+// detWidth 5 and 6 never collide: C is 2 mod 3 for one, 0 for the other.
+int poseKeypointCount(const AnchorFreeLayout& layout, int detWidth)
+{
+    CV_Check(layout.C, (layout.C - detWidth) % 3 == 0 && layout.C >= detWidth + 3,
+             "estimatePoses: output channel count is not consistent with a "
+             "[box(4) + person-score(1) + optional class(1) + 3*numKeypoints] pose head");
+    return (layout.C - detWidth) / 3;
+}
+
+int poseDetWidth(const Mat& out, const AnchorFreeLayout& layout, int b)
+{
+    if ((layout.C - 6) % 3 == 0 && layout.C >= 9
+        && lastChannelIsClassIndex(out, layout, b, /*nm=*/layout.C - 6))
+        return 6;
+    return 5;
+}
+
+// Poses of sample b, appended to the flat outputs.
+void posesFromSample(const Mat& out, const AnchorFreeLayout& layout, int b, int detWidth,
+                     int numKeypoints, const Size& blobSize, ImagePaddingMode paddingMode,
+                     const Size& frameSize, float confThreshold, float nmsThreshold,
+                     std::vector<std::vector<Point3f> >& keypoints, std::vector<Rect>& boxes,
+                     std::vector<float>& confidences)
+{
+    // The keypoint triples are trailing channels, so the class part is what remains after them.
+    CV_DbgAssert(layout.C == detWidth + 3 * numKeypoints);
+    SampleDecode d = decodeSample(out, layout, b, /*nm=*/3 * numKeypoints, blobSize, paddingMode,
+                                   frameSize, confThreshold, nmsThreshold,
+                                   /*acrossClasses=*/false);
+
+    Image2BlobParams param;
+    param.size = blobSize;
+    param.paddingmode = paddingMode;
+
+    std::vector<float> buf;
+    for (size_t i = 0; i < d.keep.size(); i++)
+    {
+        const float* kp = layout.anchor(out, b, d.dets[d.keep[i]].anchorIndex, buf) + detWidth;
+
+        std::vector<Point2f> blobPts(numKeypoints);
+        std::vector<float> vis(numKeypoints);
+        for (int k = 0; k < numKeypoints; k++)
+        {
+            blobPts[k] = Point2f(kp[3 * k], kp[3 * k + 1]);
+            vis[k] = kp[3 * k + 2];
+        }
+
+        std::vector<Point2f> imgPts;
+        param.blobPointsToImagePoints(blobPts, imgPts, frameSize);
+
+        std::vector<Point3f> personKeypoints(numKeypoints);
+        for (int k = 0; k < numKeypoints; k++)
+            personKeypoints[k] = Point3f(imgPts[k].x, imgPts[k].y, vis[k]);
+
+        keypoints.push_back(std::move(personKeypoints));
+        boxes.push_back(d.boxes[i]);
+        confidences.push_back(d.dets[d.keep[i]].confidence);
+    }
+}
+
+// A seg head is [B, C, N] or [B, N, C]; its prototypes are the only 4D output.
+void splitSegOutputs(const std::vector<Mat>& outs, const Mat*& det, const Mat*& proto)
+{
+    det = nullptr;
+    proto = nullptr;
+    for (const Mat& out : outs)
+    {
+        if (out.dims == 3 && det == nullptr)
+            det = &out;
+        else if (out.dims == 4 && proto == nullptr)
+            proto = &out;
+    }
+    if (!det || !proto)
+        CV_Error(Error::StsNotImplemented,
+                 "segmentInstances: could not identify a [B,C,N]-or-[B,N,C] detect head and a "
+                 "[B,nm,maskH,maskW] mask-prototype output among the network outputs");
+}
+
+// Instances of sample b, appended to the flat outputs.
+void instancesFromSample(const Mat& det, const Mat& proto, const AnchorFreeLayout& layout, int b,
+                         const Size& blobSize, ImagePaddingMode paddingMode, const Size& frameSize,
+                         float confThreshold, float nmsThreshold, std::vector<Mat>& masks,
+                         std::vector<int>& classIds, std::vector<float>& confidences,
+                         std::vector<Rect>& boxes)
+{
+    const int nm = proto.size[1], maskH = proto.size[2], maskW = proto.size[3];
+    SampleDecode d = decodeSample(det, layout, b, nm, blobSize, paddingMode, frameSize,
+                                   confThreshold, nmsThreshold, /*acrossClasses=*/false);
+    const int coeffOffset = d.head.tailOffset(d.numClasses);
+    const Rect blobRect(0, 0, blobSize.width, blobSize.height);
+
+    std::vector<float> buf;
+    for (size_t i = 0; i < d.keep.size(); i++)
+    {
+        const int width = d.boxes[i].width, height = d.boxes[i].height;
+        const float* r = layout.anchor(det, b, d.dets[d.keep[i]].anchorIndex, buf);
+        const float* coeffs = r + coeffOffset;
+
+        // mask = sigmoid(sum_k coeffs[k] * proto[k]), at mask-prototype resolution.
+        Mat maskProto(maskH, maskW, CV_32F, Scalar(0));
+        for (int k = 0; k < nm; k++)
+        {
+            const float c = coeffs[k];
+            for (int y = 0; y < maskH; y++)
+            {
+                const float* src = proto.ptr<float>(b, k, y);
+                float* dst = maskProto.ptr<float>(y);
+                for (int x = 0; x < maskW; x++)
+                    dst[x] += c * src[x];
+            }
+        }
+        Mat negExp;
+        cv::exp(-maskProto, negExp);
+        Mat sigmoidMask = 1.0 / (1.0 + negExp);
+
+        Mat fullBlobMask;
+        cv::resize(sigmoidMask, fullBlobMask, blobSize, 0, 0, INTER_LINEAR);
+
+        Rect blobBox = d.dets[d.keep[i]].blobBox & blobRect;
+        Mat instanceMask;
+        if (blobBox.width > 0 && blobBox.height > 0)
+            cv::resize(fullBlobMask(blobBox), instanceMask, Size(width, height), 0, 0,
+                       INTER_LINEAR);
+        else
+            instanceMask = Mat::zeros(height, width, CV_32F);
+
+        Mat instanceMask8u;
+        cv::compare(instanceMask, 0.5, instanceMask8u, CMP_GT);
+
+        masks.push_back(instanceMask8u);
+        classIds.push_back(d.dets[d.keep[i]].classId);
+        confidences.push_back(d.dets[d.keep[i]].confidence);
+        boxes.push_back(d.boxes[i]);
+    }
+}
+
+} // namespace
+
 KeypointsModel::KeypointsModel(const String& model, const String& config)
     : Model(model, config) {}
 
 KeypointsModel::KeypointsModel(const Net& network) : Model(network) {}
 
-std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
+// Keypoints of sample b, scaled back to the size of the frame that sample came from.
+static void keypointsFromOutput(const Mat& output, int b, Size frameSize, float thresh,
+                                std::vector<Point2f>& points)
 {
-
-    int frameHeight = frame.rows();
-    int frameWidth = frame.cols();
-    std::vector<Mat> outs;
-
-    impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
-    Mat output = outs[0];
-
     const int nPoints = output.size[1];
-    std::vector<Point2f> points;
+    points.clear();
 
     // If output is a map, extract the keypoints
     if (output.dims == 4)
@@ -367,10 +849,10 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
         int width = output.size[3];
 
         // find the position of the keypoints (ignore the background)
-        for (int n=0; n < nPoints - 1; n++)
+        for (int n = 0; n < nPoints - 1; n++)
         {
             // Probability map of corresponding keypoint
-            Mat probMap(height, width, CV_32F, output.ptr(0, n));
+            Mat probMap(height, width, CV_32F, (void*)output.ptr<float>(b, n));
 
             Point2f p(-1, -1);
             Point maxLoc;
@@ -379,8 +861,8 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
             if (prob > thresh)
             {
                 p = maxLoc;
-                p.x *= (float)frameWidth / width;
-                p.y *= (float)frameHeight / height;
+                p.x *= (float)frameSize.width / width;
+                p.y *= (float)frameSize.height / height;
             }
             points.push_back(p);
         }
@@ -388,15 +870,46 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
     // Otherwise the output is a vector of keypoints and we can just return it
     else
     {
-        for (int n=0; n < nPoints; n++)
+        for (int n = 0; n < nPoints; n++)
         {
             Point2f p;
-            p.x = *output.ptr<float>(0, n, 0);
-            p.y = *output.ptr<float>(0, n, 1);
+            p.x = *output.ptr<float>(b, n, 0);
+            p.y = *output.ptr<float>(b, n, 1);
             points.push_back(p);
         }
     }
+}
+
+std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
+{
+    std::vector<Mat> outs;
+    impl->processFrame(frame, outs);
+    CV_Assert(outs.size() == 1);
+
+    std::vector<Point2f> points;
+    keypointsFromOutput(outs[0], 0, Size(frame.cols(), frame.rows()), thresh, points);
     return points;
+}
+
+void KeypointsModel::estimatePoses(InputArray frame, CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                    CV_OUT std::vector<Rect>& boxes, CV_OUT std::vector<float>& confidences,
+                                    float confThreshold, float nmsThreshold)
+{
+    std::vector<Mat> outs;
+    impl->processFrame(frame, outs);
+    CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
+
+    const Mat& out = outs[0];
+    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
+
+    const int detWidth = poseDetWidth(out, layout, /*b=*/0);
+
+    keypoints.clear();
+    boxes.clear();
+    confidences.clear();
+    posesFromSample(out, layout, /*b=*/0, detWidth, poseKeypointCount(layout, detWidth),
+                    impl->size, impl->getEffectivePaddingMode(), frame.size(), confThreshold,
+                    nmsThreshold, keypoints, boxes, confidences);
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
@@ -404,29 +917,21 @@ SegmentationModel::SegmentationModel(const String& model, const String& config)
 
 SegmentationModel::SegmentationModel(const Net& network) : Model(network) {}
 
-void SegmentationModel::segment(InputArray frame, OutputArray mask)
+// maxVal aliases channel 0 of sample b, so the running maximum needs no extra buffer.
+static void argmaxOverChannels(Mat& score, int b, Mat& classIds)
 {
-    std::vector<Mat> outs;
-    impl->processFrame(frame, outs);
-    // default output is the first one
-    if(outs.size() > 1)
-        outs.resize(1);
-    Mat score = outs[0];
-
     const int chns = score.size[1];
     const int rows = score.size[2];
     const int cols = score.size[3];
 
-    mask.create(rows, cols, CV_8U);
-    Mat classIds = mask.getMat();
     classIds.setTo(0);
-    Mat maxVal(rows, cols, CV_32F, score.data);
+    Mat maxVal(rows, cols, CV_32F, score.ptr<float>(b, 0));
 
     for (int ch = 1; ch < chns; ch++)
     {
         for (int row = 0; row < rows; row++)
         {
-            const float *ptrScore = score.ptr<float>(0, ch, row);
+            const float *ptrScore = score.ptr<float>(b, ch, row);
             uint8_t *ptrMaxCl = classIds.ptr<uint8_t>(row);
             float *ptrMaxVal = maxVal.ptr<float>(row);
             for (int col = 0; col < cols; col++)
@@ -441,6 +946,46 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
     }
 }
 
+void SegmentationModel::segment(InputArray frame, OutputArray mask)
+{
+    std::vector<Mat> outs;
+    impl->processFrame(frame, outs);
+    // default output is the first one
+    if(outs.size() > 1)
+        outs.resize(1);
+    Mat score = outs[0];
+
+    mask.create(score.size[2], score.size[3], CV_8U);
+    Mat classIds = mask.getMat();
+    argmaxOverChannels(score, 0, classIds);
+}
+
+void SegmentationModel::segmentInstances(InputArray frame, CV_OUT std::vector<Mat>& masks,
+                                          CV_OUT std::vector<int>& classIds,
+                                          CV_OUT std::vector<float>& confidences,
+                                          CV_OUT std::vector<Rect>& boxes,
+                                          float confThreshold, float nmsThreshold)
+{
+    std::vector<Mat> outs;
+    impl->processFrame(frame, outs);
+    CV_CheckEQ((int)outs.size(), 2,
+               "segmentInstances requires a network with exactly 2 outputs: a detect head and "
+               "mask prototypes");
+
+    const Mat* det = nullptr;
+    const Mat* proto = nullptr;
+    splitSegOutputs(outs, det, proto);
+    AnchorFreeLayout layout = AnchorFreeLayout::from(*det);
+
+    masks.clear();
+    classIds.clear();
+    confidences.clear();
+    boxes.clear();
+    instancesFromSample(*det, *proto, layout, /*b=*/0, impl->size,
+                        impl->getEffectivePaddingMode(), frame.size(), confThreshold, nmsThreshold,
+                        masks, classIds, confidences, boxes);
+}
+
 class DetectionModel_Impl : public Model::Impl
 {
 public:
@@ -451,9 +996,10 @@ public:
 
     void disableRegionNMS(Net& net)
     {
-        for (String& name : net.getUnconnectedOutLayersNames())
+        // getLayerId() resolves layer names; an unconnected output is a tensor name, and on the
+        // graph engine the two namespaces are disjoint.
+        for (int layerId : net.getUnconnectedOutLayers())
         {
-            int layerId = net.getLayerId(name);
             Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
             if (!layer.empty())
             {
@@ -515,6 +1061,10 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
+
+    Mat merged;
+    if (mergeSplitOutputs(detections, merged))
+        detections.assign(1, merged);
 
     boxes.clear();
     confidences.clear();
@@ -666,6 +1216,21 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
             classIds    = std::move(predClassIds);
             confidences = std::move(predConfidences);
         }
+    }
+    else if (detections.size() == 1 && detections[0].dims == 3 && detections[0].size[0] == 1)
+    {
+        const Mat& out = detections[0];
+        AnchorFreeLayout layout = AnchorFreeLayout::from(out);
+        SampleDecode d = decodeSample(out, layout, /*b=*/0, /*nm=*/0, impl->size,
+                                       impl->getEffectivePaddingMode(),
+                                       Size(frameWidth, frameHeight), confThreshold, nmsThreshold,
+                                       getNmsAcrossClasses());
+        for (int idx : d.keep)
+        {
+            classIds.push_back(d.dets[idx].classId);
+            confidences.push_back(d.dets[idx].confidence);
+        }
+        boxes = std::move(d.boxes);
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
