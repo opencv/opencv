@@ -1196,6 +1196,220 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOv8n_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 
+// Same model/image as Reproducibility_YOLOv8n_ONNX, via DetectionModel's high-level API.
+// dog416.png is square, so default DNN_PMODE_NULL resize matches that test's plain resize.
+typedef testing::TestWithParam<Target> Test_DetectionModel_YOLOv8;
+TEST_P(Test_DetectionModel_YOLOv8, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("yolov8n.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    DetectionModel model(net);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    // Reference values below were generated with across-class NMS.
+    model.setNmsAcrossClasses(true);
+    model.setPreferableBackend(DNN_BACKEND_OPENCV);
+    model.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        model.enableWinograd(false);
+
+    Mat image = imread(_tf("dog416.png"));
+    ASSERT_TRUE(!image.empty());
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.detect(image, classIds, confidences, boxes, 0.25f, 0.45f);
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+    {
+        testBoxes.emplace_back(box.x / (double)image.cols, box.y / (double)image.rows,
+                               box.width / (double)image.cols, box.height / (double)image.rows);
+    }
+
+    std::vector<int>    refClassIds  = {16, 1, 7};
+    std::vector<float>  refScores    = {0.827f, 0.809f, 0.544f};
+    std::vector<Rect2d> refBoxes     = {
+        Rect2d(0.171157, 0.386951, 0.231909, 0.551873),  // dog
+        Rect2d(0.160967, 0.234788, 0.577899, 0.495077),  // bicycle
+        Rect2d(0.608337, 0.130141, 0.291832, 0.167390),  // truck
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_YOLOv8,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+static void testDetectionModel(const std::string& model, const std::string& image, int size,
+                                const std::vector<int>& refClassIds,
+                                const std::vector<float>& refScores,
+                                const std::vector<Rect2d>& refBoxes, Target targetId,
+                                float confThreshold = 0.25f)
+{
+    Net net = readNetFromONNX(_tf(model, false));
+
+    DetectionModel dm(net);
+    dm.setInputSize(size, size).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    dm.setPreferableBackend(DNN_BACKEND_OPENCV);
+    dm.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        dm.enableWinograd(false);
+
+    Mat frame = imread(_tf(image));
+    ASSERT_FALSE(frame.empty());
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    dm.detect(frame, classIds, confidences, boxes, confThreshold, 0.45f);
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+        testBoxes.emplace_back(box.x / (double)frame.cols, box.y / (double)frame.rows,
+                               box.width / (double)frame.cols, box.height / (double)frame.rows);
+
+    normAssertDetections(refClassIds, refScores, refBoxes, classIds, confidences, testBoxes,
+                         "", confThreshold, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+}
+
+// NMS-free export: rows are [x1, y1, x2, y2, score, classIdx]
+typedef testing::TestWithParam<Target> Test_DetectionModel_YOLO26n;
+TEST_P(Test_DetectionModel_YOLO26n, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::vector<int>    refClassIds = {16, 1, 7};
+    std::vector<float>  refScores   = {0.939f, 0.931f, 0.796f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.169624, 0.388881, 0.236413, 0.548341),  // dog
+        Rect2d(0.157487, 0.230821, 0.581572, 0.493849),  // bicycle
+        Rect2d(0.605301, 0.131084, 0.298750, 0.167857),  // truck
+    };
+    testDetectionModel("onnx/models/yolo26n.onnx", "dog416.png", 640,
+                       refClassIds, refScores, refBoxes, targetId);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_YOLO26n,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// Boxes are fractions of the image rather than blob pixels.
+typedef testing::TestWithParam<Target> Test_DetectionModel_RTDETR;
+TEST_P(Test_DetectionModel_RTDETR, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::vector<int>    refClassIds = {1, 16, 7, 2};
+    std::vector<float>  refScores   = {0.962f, 0.936f, 0.678f, 0.615f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.166314, 0.234772, 0.573119, 0.495991),  // bicycle
+        Rect2d(0.170998, 0.385147, 0.233343, 0.555273),  // dog
+        Rect2d(0.608527, 0.130004, 0.290127, 0.166160),  // truck
+        Rect2d(0.607701, 0.130143, 0.290616, 0.166489),  // car, same object as the truck above
+    };
+    testDetectionModel("onnx/models/rtdetr-l.onnx", "dog416.png", 640,
+                       refClassIds, refScores, refBoxes, targetId, /*confThreshold=*/0.5f);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_RTDETR,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// Two outputs, [1,N,4] boxes and [1,N,91] class logits. Input is fixed at 560: the graph's
+// position_embeddings initializer is [1, 1601, 384], the token count only that size produces.
+typedef testing::TestWithParam<Target> Test_DetectionModel_RFDETR;
+TEST_P(Test_DetectionModel_RFDETR, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    // Class ids follow the 91-entry COCO numbering, not the 80-entry one the YOLO models use.
+    std::vector<int>    refClassIds = {2, 18, 3, 4, 8};
+    std::vector<float>  refScores   = {0.956f, 0.953f, 0.653f, 0.363f, 0.257f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.162980, 0.230139, 0.575498, 0.501513),  // bicycle
+        Rect2d(0.170413, 0.384726, 0.233895, 0.554258),  // dog
+        Rect2d(0.606809, 0.130301, 0.285919, 0.166218),  // car
+        Rect2d(0.072298, 0.124998, 0.072972, 0.090138),  // motorcycle
+        Rect2d(0.605576, 0.129564, 0.287405, 0.167635),  // truck, same object as the car above
+    };
+    testDetectionModel("onnx/models/rfdetr.onnx", "dog416.png", 560,
+                       refClassIds, refScores, refBoxes, targetId);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_RFDETR,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// NMS-free segmentation export: the detect head is 6 wide once the 32 mask channels are removed.
+typedef testing::TestWithParam<Target> Test_SegmentationModel_YOLO26mSeg;
+TEST_P(Test_SegmentationModel_YOLO26mSeg, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    Net net = readNetFromONNX(_tf("onnx/models/yolo26m-seg.onnx", false));
+
+    SegmentationModel model(net);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(DNN_BACKEND_OPENCV);
+    model.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        model.enableWinograd(false);
+
+    Mat frame = imread(_tf("street.png"));
+    ASSERT_FALSE(frame.empty());
+
+    std::vector<Mat> masks;
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.segmentInstances(frame, masks, classIds, confidences, boxes, 0.25f, 0.45f);
+    ASSERT_EQ(masks.size(), boxes.size());
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+        testBoxes.emplace_back(box.x / (double)frame.cols, box.y / (double)frame.rows,
+                               box.width / (double)frame.cols, box.height / (double)frame.rows);
+
+    std::vector<int>    refClassIds = {2, 0, 2, 9, 9};
+    std::vector<float>  refScores   = {0.955f, 0.908f, 0.894f, 0.631f, 0.549f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.651824, 0.458378, 0.162776, 0.201584),  // car
+        Rect2d(0.201430, 0.359583, 0.064147, 0.272150),  // person
+        Rect2d(0.451695, 0.462340, 0.043343, 0.060642),  // car
+        Rect2d(0.374813, 0.314014, 0.023998, 0.080583),  // traffic light
+        Rect2d(0.668268, 0.373815, 0.018404, 0.068568),  // traffic light
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes, classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+
+    // Pixel counts rather than "not blank": every wrong mask-coefficient offset changes them.
+    const std::vector<int> refMaskPixels = {6565, 2853, 587, 477, 315};
+    ASSERT_EQ(masks.size(), refMaskPixels.size());
+    for (size_t i = 0; i < masks.size(); i++)
+    {
+        EXPECT_EQ(masks[i].type(), CV_8U);
+        EXPECT_EQ(masks[i].size(), boxes[i].size());
+        EXPECT_NEAR(countNonZero(masks[i]), refMaskPixels[i], 2) << "instance " << i;
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_SegmentationModel_YOLO26mSeg,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
 typedef testing::TestWithParam<Target> Reproducibility_YOLOXS_ONNX;
 TEST_P(Reproducibility_YOLOXS_ONNX, Accuracy)
 {
