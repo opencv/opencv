@@ -717,6 +717,7 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
 
         int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
         int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        bool padded = cs.hasPadding();
         int ksize = ksize_;
         int8_t zbuf[C0];
         memset(zbuf, (uint8_t)inp_zp, C0);
@@ -748,7 +749,7 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
             int planeblocks_l = planeblocks;
             int ksize_l = ksize;
 
-            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1) {
+            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1 && !padded) {
                 W_l *= D_l * H_l;
                 Wi_l *= Di_l * Hi_l;
                 D_l = Di_l = H_l = Hi_l = 1;
@@ -1426,6 +1427,7 @@ void convInt8Block(const void* inp_, const void* residual_,
 
         int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
         int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        bool padded = cs.hasPadding();
         int ksize = ksize_;
         int8_t zbuf[C0];
         memset(zbuf, (uint8_t)inp_zp, C0);
@@ -1457,7 +1459,7 @@ void convInt8Block(const void* inp_, const void* residual_,
             int planeblocks_l = planeblocks;
             int ksize_l = ksize;
 
-            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1) {
+            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1 && !padded) {
                 W_l *= D_l * H_l;
                 Wi_l *= Di_l * Hi_l;
                 D_l = Di_l = H_l = Hi_l = 1;

@@ -97,6 +97,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
 
         int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
         int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        bool padded = cs.hasPadding();
         int ksize = ksize_;
         int8_t zbuf[C0];
         memset(zbuf, (uint8_t)inp_zp, C0);
@@ -124,11 +125,15 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
             int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
+            const int k_valid = std::min(K0, K - k_base);
+
             alignas(32) int32_t biasbuf[K0];
-            memcpy(biasbuf, biasVNNI + k_base, K0 * sizeof(int32_t));
+            memcpy(biasbuf, biasVNNI + k_base, k_valid * sizeof(int32_t));
+            memset(biasbuf + k_valid, 0, (K0 - k_valid) * sizeof(int32_t));
 
             alignas(32) float multbuf[K0];
-            memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
+            memcpy(multbuf, multiplier + k_base, k_valid * sizeof(float));
+            memset(multbuf + k_valid, 0, (K0 - k_valid) * sizeof(float));
 
             const int k0_off_dw = k_base & (K0-1);
             if (cs.depthwise) {
@@ -142,7 +147,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
             int planeblocks_l = planeblocks;
             int ksize_l = ksize;
 
-            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1) {
+            if (ksize == 1 && Sx == 1 && Sy == 1 && Sz == 1 && !padded) {
                 W_l *= D_l * H_l;
                 Wi_l *= Di_l * Hi_l;
                 D_l = Di_l = H_l = Hi_l = 1;
@@ -456,10 +461,14 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
             int8_t*       outptr = out      + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
+            const int k_valid = std::min(K0, K - k_base);
+
             alignas(32) int32_t biasbuf[K0];
             alignas(32) float   multbuf[K0];
-            memcpy(biasbuf, biasVNNI   + k_base, K0 * sizeof(int32_t));
-            memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
+            memcpy(biasbuf, biasVNNI   + k_base, k_valid * sizeof(int32_t));
+            memset(biasbuf + k_valid, 0, (K0 - k_valid) * sizeof(int32_t));
+            memcpy(multbuf, multiplier + k_base, k_valid * sizeof(float));
+            memset(multbuf + k_valid, 0, (K0 - k_valid) * sizeof(float));
 
             int p_start = tile * TILE;
             int p_end   = std::min(p_start + TILE, P);
@@ -581,7 +590,7 @@ void convInt8BlockVNNI(const void* inp_, const void* residual_,
                        const int8_t* activLUT,
                        bool inputIsU8)
 {
-    if (cs.wshape[2] == 1 &&
+    if (cs.wshape[2] == 1 && !cs.hasPadding() &&
         cs.strides[0] == 1 && cs.strides[1] == 1 && cs.strides[2] == 1) {
         convInt8BlockVNNI_1x1(inp_, residual_, out_, cs, weightsVNNI_,
                               biasVNNI, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
