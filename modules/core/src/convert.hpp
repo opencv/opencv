@@ -73,23 +73,53 @@ static inline void v_store_as(hfloat* ptr, const v_float32& a)
 static inline void v_store_as(bfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
+// Rounding into a v_int32 first would destroy the value before the widening to 64 bits ever
+// happens: everything outside the int32 range is already saturated to INT32_MIN/INT32_MAX by
+// v_round, so a CV_16BF source holding 2147483648 lands as 0 (unsigned) or -2147483648 (signed)
+// instead of keeping its value. There is no portable SIMD float->int64 conversion, so spill and
+// saturate per element - the same approach v_store_pair_as(int64_t*, const v_float64&, ...)
+// already takes for the 64-bit destinations further down.
+// True when every lane is inside the int32 range, so the cheap round-and-widen path below is
+// exact. 2^31 is used as the upper bound because 2147483647 is not representable in float32.
+static inline bool v_fits_s32(const v_float32& a)
+{
+    const v_float32 lo = vx_setall_f32(-2147483648.0f);
+    const v_float32 hi = vx_setall_f32( 2147483648.0f);
+    return v_check_all(v_and(v_ge(a, lo), v_lt(a, hi)));
+}
+
 static inline void v_store_as(int64_t* ptr, const v_float32& a)
 {
-    v_int32 ia = v_round(a);
-    v_int64 ia_0, ia_1;
-    v_expand(ia, ia_0, ia_1);
-    v_store(ptr, ia_0);
-    v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+    if (v_fits_s32(a))
+    {
+        v_int32 ia = v_round(a);
+        v_int64 ia_0, ia_1;
+        v_expand(ia, ia_0, ia_1);
+        v_store(ptr, ia_0);
+        v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+        return;
+    }
+    const int n = VTraits<v_float32>::vlanes();
+    float buf[VTraits<v_float32>::max_nlanes];
+    v_store(buf, a);
+    for (int i = 0; i < n; i++) ptr[i] = saturate_cast<int64_t>(buf[i]);
 }
 
 static inline void v_store_as(uint64_t* ptr, const v_float32& a)
 {
-    v_int32 ia = v_round(a);
-    v_uint64 ia_0, ia_1;
-    ia = v_max(ia, vx_setzero_s32());
-    v_expand(v_reinterpret_as_u32(ia), ia_0, ia_1);
-    v_store(ptr, ia_0);
-    v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+    if (v_fits_s32(a))
+    {
+        v_int32 ia = v_max(v_round(a), vx_setzero_s32());
+        v_uint64 ia_0, ia_1;
+        v_expand(v_reinterpret_as_u32(ia), ia_0, ia_1);
+        v_store(ptr, ia_0);
+        v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+        return;
+    }
+    const int n = VTraits<v_float32>::vlanes();
+    float buf[VTraits<v_float32>::max_nlanes];
+    v_store(buf, a);
+    for (int i = 0; i < n; i++) ptr[i] = saturate_cast<uint64_t>(buf[i]);
 }
 
 static inline void vx_load_pair_as(const uchar* ptr, v_uint16& a, v_uint16& b)
