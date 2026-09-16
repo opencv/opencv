@@ -94,7 +94,7 @@ private:
     {
         if (!net_.isConstArg(a))
             return false;
-        Mat t = net_.argTensor(a);
+        Mat t = net_.argTensor(a).getMat(ACCESS_READ);
         if (t.total() == 1) {
             if (t.type() == CV_32F) { isScalar = true; scalarVal = t.ptr<float>()[0]; return true; }
             if (t.type() == CV_64F) { isScalar = true; scalarVal = (float)t.ptr<double>()[0]; return true; }
