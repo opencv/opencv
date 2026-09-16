@@ -11,6 +11,7 @@
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -188,8 +189,41 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 public:
     std::string operation;
 
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const NaryEltwiseLayerImpl*>(self)->unfoldMath(r, side);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
+    {
+        if (side.count != 1) return false;
+        if (inputs.size() != 2) return false;
+        if (op == OPERATION::SUB && !side.flowIsFirstInput) return false;
+
+        FusionEltwiseOp o;
+        switch (op) {
+        case OPERATION::ADD:
+        case OPERATION::SUM:  o = FusionEltwiseOp::ADD; break;
+        case OPERATION::SUB:  o = FusionEltwiseOp::SUB; break;
+        case OPERATION::PROD: o = FusionEltwiseOp::MUL; break;
+        case OPERATION::MAX:  o = FusionEltwiseOp::MAX; break;
+        case OPERATION::MIN:  o = FusionEltwiseOp::MIN; break;
+        default: return false;
+        }
+
+        const FusionConst& k = side.at(0);
+        if (o == FusionEltwiseOp::MAX && !k.isBuffer() && k.value == 0.f)
+            r.setKernel(cv::dnn::getActivationFunc(ACTIV_RELU), { 0.f });
+
+        const int operand = k.isBuffer() ? r.perChannelConstant(k.bufferId)
+                                         : r.constant(k.value);
+        r.binary(o, LayerMath::INPUT_VALUE, operand);
+        return true;
+    }
+
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<NaryEltwiseLayerImpl>({ &NaryEltwiseLayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         operation = toLowerCase(params.get<String>("operation", "sum"));
 

@@ -5,6 +5,7 @@
 // Copyright (C) 2025, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
+#include "../adjacency_graph.hpp"
 #define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "cpu_kernels/activation_kernels.simd.hpp"
 #include "layers/cpu_kernels/activation_kernels.simd_declarations.hpp"
@@ -71,8 +72,14 @@ public:
     float minValue, maxValue;
     bool  hasMin,   hasMax;
 
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const ClipLayerImpl*>(self)->unfoldMath(r, side);
+    }
+
     ClipLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<ClipLayerImpl>({ &ClipLayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         hasMin = params.has("min");
         hasMax = params.has("max");
@@ -80,6 +87,28 @@ public:
         if (hasMax) maxValue = params.get<float>("max");
         if (hasMin && hasMax)
             CV_Assert(minValue <= maxValue);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
+    {
+        float lo = -FLT_MAX, hi = FLT_MAX;
+        if (hasMin) lo = minValue;
+        if (hasMax) hi = maxValue;
+        if ((!hasMin || !hasMax) && inputs.size() > 1) {
+            // An omitted optional input is an empty Arg, not a missing one, so only the
+            // full (x, min, max) form tells us which bound is which.
+            if (inputs.size() != 3 || side.count != 2)
+                return false;
+            if (inputs[1].idx == 0 || inputs[2].idx == 0)
+                return false;
+            if (side.at(0).isBuffer() || side.at(1).isBuffer())
+                return false;
+            if (!hasMin) lo = side.at(0).value;
+            if (!hasMax) hi = side.at(1).value;
+        }
+        r.setKernel(cv::dnn::getActivationFunc(ACTIV_CLIP), { lo, hi });
+        r.clamp(LayerMath::INPUT_VALUE, lo, hi);
+        return true;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
