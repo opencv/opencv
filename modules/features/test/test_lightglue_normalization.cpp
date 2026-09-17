@@ -13,71 +13,21 @@
 
 namespace opencv_test { namespace {
 
-typedef testing::TestWithParam<int> Features2d_LightGlue_Keypoints;
-
-TEST_P(Features2d_LightGlue_Keypoints, Coordinates)
-{
-    const Mat keypoints = (Mat_<float>(3, 2) << 0, 0, 4, 2, 7, 3);
-    const Mat expected = GetParam() == LG_ALIKED
-        ? (Mat_<float>(3, 2) << -1, -1, 0, 0, 0.75f, 0.5f)
-        : (Mat_<float>(3, 2) << 0, 0, 4.0f / 7, 2.0f / 3, 1, 1);
-    Mat normalized;
-    normalizeLightGlueKeypoints(keypoints, normalized, Size(8, 4), GetParam());
-    EXPECT_LE(cvtest::norm(normalized, expected, NORM_INF), 1e-6);
-    EXPECT_EQ(keypoints.at<float>(2, 0), 7.0f);
-    EXPECT_EQ(keypoints.at<float>(2, 1), 3.0f);
-}
-
-TEST_P(Features2d_LightGlue_Keypoints, InPlaceNonContinuous)
-{
-    Mat storage(3, 4, CV_32F, Scalar(42));
-    Mat keypoints = storage.colRange(1, 3);
-    const Mat pixels = (Mat_<float>(3, 2) << 0, 0, 4, 2, 7, 3);
-    pixels.copyTo(keypoints);
-    ASSERT_FALSE(keypoints.isContinuous());
-
-    Mat expected;
-    normalizeLightGlueKeypoints(pixels, expected, Size(8, 4), GetParam());
-    normalizeLightGlueKeypoints(keypoints, keypoints, Size(8, 4), GetParam());
-    EXPECT_LE(cvtest::norm(keypoints, expected, NORM_INF), 1e-6);
-    EXPECT_EQ(countNonZero(storage.col(0) != 42), 0);
-    EXPECT_EQ(countNonZero(storage.col(3) != 42), 0);
-}
-
-TEST_P(Features2d_LightGlue_Keypoints, InvalidInput)
-{
-    const Mat keypoints = Mat::zeros(3, 2, CV_32F);
-    Mat normalized;
-    EXPECT_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(), GetParam()), cv::Exception);
-    EXPECT_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(8, 0), GetParam()), cv::Exception);
-    EXPECT_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(0, 4), GetParam()), cv::Exception);
-    EXPECT_THROW(normalizeLightGlueKeypoints(Mat::zeros(3, 2, CV_64F), normalized,
-                                             Size(8, 4), GetParam()), cv::Exception);
-    EXPECT_THROW(normalizeLightGlueKeypoints(Mat::zeros(3, 3, CV_32F), normalized,
-                                             Size(8, 4), GetParam()), cv::Exception);
-    if (GetParam() == LG_DISK)
-    {
-        EXPECT_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(1, 4), LG_DISK), cv::Exception);
-        EXPECT_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(8, 1), LG_DISK), cv::Exception);
-    }
-    else
-    {
-        EXPECT_NO_THROW(normalizeLightGlueKeypoints(keypoints, normalized, Size(1, 1), LG_ALIKED));
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(Models, Features2d_LightGlue_Keypoints, testing::Values(LG_ALIKED, LG_DISK));
-
-TEST(Features2d_LightGlue_Keypoints, InvalidModelType)
-{
-    Mat normalized;
-    EXPECT_THROW(normalizeLightGlueKeypoints(Mat::zeros(3, 2, CV_32F), normalized,
-                                             Size(8, 4), -1), cv::Exception);
-    EXPECT_THROW(normalizeLightGlueKeypoints(Mat::zeros(3, 2, CV_32F), normalized,
-                                             Size(8, 4), 2), cv::Exception);
-}
-
 #ifdef HAVE_OPENCV_DNN
+
+static Mat normalizeKeypointsForTest(const Mat& keypoints, Size imageSize, int type)
+{
+    Mat normalized(keypoints.size(), keypoints.type());
+    const float sx = type == LG_ALIKED ? 2.0f / imageSize.width : 1.0f / (imageSize.width - 1);
+    const float sy = type == LG_ALIKED ? 2.0f / imageSize.height : 1.0f / (imageSize.height - 1);
+    const float offset = type == LG_ALIKED ? -1.0f : 0.0f;
+    for (int i = 0; i < keypoints.rows; ++i)
+    {
+        normalized.at<float>(i, 0) = keypoints.at<float>(i, 0) * sx + offset;
+        normalized.at<float>(i, 1) = keypoints.at<float>(i, 1) * sy + offset;
+    }
+    return normalized;
+}
 
 static void expectSameMatches(const std::vector<DMatch>& expected, const std::vector<DMatch>& actual)
 {
@@ -122,7 +72,7 @@ TEST_P(Features2d_LightGlue_PairInfo, PixelAndCachedCoordinates)
             pixels[i].at<float>((int)j, 0) = keypoints[i][j].pt.x;
             pixels[i].at<float>((int)j, 1) = keypoints[i][j].pt.y;
         }
-        normalizeLightGlueKeypoints(pixels[i], normalized[i], images[i].size(), type);
+        normalized[i] = normalizeKeypointsForTest(pixels[i], images[i].size(), type);
     }
 
     const std::string modelPath = cvtest::findDataFile(type == LG_ALIKED

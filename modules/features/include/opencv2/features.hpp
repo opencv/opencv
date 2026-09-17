@@ -1367,25 +1367,6 @@ enum LightGlueType
     LG_DISK = 1     //!< DISK model:  keypoints normalized to [ 0, 1]
 };
 
-/** @brief Normalizes keypoint coordinates for LightGlue models.
-
-Use the same LightGlueType as in LightGlueMatcher::create(). ALIKED normalization is
-x / width * 2 - 1, y / height * 2 - 1; DISK normalization is
-x / (width - 1), y / (height - 1).
-The result can be cached and passed to LightGlueMatcher::setPairInfo() with empty image sizes
-to avoid normalizing it again.
-
-@param keypoints Input keypoints as an Nx2 CV_32F matrix with x,y coordinates.
-@param normalizedKeypoints Output Nx2 CV_32F matrix.
-@param imageSize Source image size used for pixel-coordinate normalization.
-                 Both dimensions must be positive for ALIKED and greater than 1 for DISK.
-@param type Model variant: LG_ALIKED or LG_DISK.
- */
-CV_EXPORTS_W void normalizeLightGlueKeypoints(InputArray keypoints,
-                                              OutputArray normalizedKeypoints,
-                                              Size imageSize,
-                                              int type);
-
 /** @brief LightGlue feature matcher.
 
 LightGlue is an attention-based feature matcher, as described in @cite Lindenberger23 . It takes
@@ -1429,8 +1410,7 @@ public:
     This provides the spatial context that LightGlue needs in addition to descriptors.
     Must be called before match()/knnMatch(), or use setImagePairInfo().
     Pixel coordinates are normalized according to the LightGlueType selected at creation.
-    For keypoints already normalized for that model (for example, using
-    normalizeLightGlueKeypoints()), leave the corresponding image size empty.
+    For keypoints already normalized for that model, leave the corresponding image size empty.
 
     @param queryKpts Query image keypoints (Nx2 float matrix with x,y coordinates).
     @param trainKpts Train image keypoints (Nx2 float matrix with x,y coordinates).

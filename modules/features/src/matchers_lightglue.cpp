@@ -34,8 +34,10 @@ void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, 
     setPairInfo(qk, tk, queryImageSize, trainImageSize);
 }
 
-void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
-                                 Size imageSize, int type)
+#ifdef HAVE_OPENCV_DNN
+
+static void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
+                                        Size imageSize, int type)
 {
     CV_INSTRUMENT_REGION();
 
@@ -73,8 +75,6 @@ void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedK
         dst[1] = src[1] * sy + oy;
     }
 }
-
-#ifdef HAVE_OPENCV_DNN
 
 static void normalizeMatcherKeypoints(InputArray keypoints, OutputArray normalizedKeypoints,
                                       Size imageSize, int type)
