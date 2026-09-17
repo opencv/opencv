@@ -32,9 +32,8 @@ static void summarise(const Mat& cost, const std::vector<int>& a, int& pairs, do
     }
 }
 
-// True when (k1, c1) beats (k2, c2) under the padded objective. A threshold this large means the
-// penalty already dominates every rearrangement of the real costs, so it degenerates to "as many
-// pairs as possible, then cheapest".
+// True when (k1, c1) beats (k2, c2) under the padded objective. A huge threshold makes the penalty
+// dominate, so it becomes "as many pairs as possible, then cheapest".
 static bool better(int k1, double c1, int k2, double c2, double thr, int cap)
 {
     if (thr < 1e100)
@@ -305,9 +304,8 @@ TEST(Core_LinearAssignment, random_vs_bruteforce)
     }
 }
 
-// Independent oracle that scales: plant a cheap permutation among expensive cells, so the optimum
-// is that permutation by construction. Any other matching gives up at least two cheap cells for
-// two expensive ones.
+// An oracle that scales: hide a cheap permutation among expensive cells, so that permutation is
+// the optimum by construction. Any other matching swaps cheap cells for expensive ones.
 TEST(Core_LinearAssignment, known_optimum_large)
 {
     RNG rng(0xC0FFEE);
@@ -343,14 +341,13 @@ TEST(Core_LinearAssignment, known_optimum_large)
     }
 }
 
-// The dummy columns are skipped when nothing is forbidden and every cost is cheaper than the
-// price of not pairing. That is a different matrix shape reaching the solver, so sweep it on its
-// own rather than relying on a random matrix happening to contain no inf.
+// With nothing forbidden and every cost cheap, the solver skips the dummy columns. That is a
+// different matrix shape, so it gets its own sweep.
 TEST(Core_LinearAssignment, unpadded_path_vs_bruteforce)
 {
     RNG rng(0xFEEDBEEF);
-    // 25.5 and 1e6 sit above the cost range, so no cell is forbidden and no cell can tie with
-    // the threshold; DBL_MAX is the default. All three take the skip.
+    // All three sit above the cost range, so nothing is forbidden and nothing ties with the
+    // threshold. Every one of them takes the skip.
     const double thresholds[] = { 25.5, 1e6, DBL_MAX };
 
     for (int iter = 0; iter < 2000; iter++)
@@ -400,6 +397,61 @@ TEST(Core_LinearAssignment, threshold_tie_objective)
     EXPECT_NEAR(10.0, objective, 1e-9) << "pairs = " << pairs << ", total = " << total;
 }
 
+// An integer cost matrix is solved directly, without the caller having to convert first. The
+// answer must be the one the same values give as doubles.
+TEST(Core_LinearAssignment, integer_cost_matrix)
+{
+    Mat costI = Mat_<int>({3, 3}, {4, 1, 3,
+                                   2, 0, 5,
+                                   3, 2, 2});
+    Mat costD;
+    costI.convertTo(costD, CV_64F);
+
+    std::vector<int> ai, ad;
+    const double ti = cv::linearAssignment(costI, ai);
+    const double td = cv::linearAssignment(costD, ad);
+
+    EXPECT_NEAR(5.0, ti, 1e-12);
+    EXPECT_NEAR(td, ti, 1e-12);
+    EXPECT_EQ(ad, ai);
+
+    // thresholds and forbidden pairs work the same way on integers
+    Mat c2 = Mat_<int>({2, 2}, {0, 10,
+                                10, 100});
+    std::vector<int> a2;
+    const double t2 = cv::linearAssignment(c2, a2, 10.0);
+    int pairs; double sum;
+    summarise(costD, ad, pairs, sum);            // reuse the helper on the double copy
+    EXPECT_EQ(1, std::count_if(a2.begin(), a2.end(), [](int v){ return v >= 0; }));
+    EXPECT_NEAR(0.0, t2, 1e-12);
+}
+
+// Random integer matrices against the same values as doubles: the two paths must agree exactly.
+TEST(Core_LinearAssignment, integer_matches_double)
+{
+    RNG rng(0x1234ABCD);
+    for (int iter = 0; iter < 2000; iter++)
+    {
+        const int M = rng.uniform(1, 7);
+        const int N = rng.uniform(1, 7);
+        Mat costI(M, N, CV_32S);
+        for (int i = 0; i < M; i++)
+            for (int j = 0; j < N; j++)
+                costI.at<int>(i, j) = rng.uniform(-50, 200);
+
+        Mat costD;
+        costI.convertTo(costD, CV_64F);
+
+        const double thr = (iter % 3 == 0) ? 40.0 : DBL_MAX;
+        std::vector<int> ai, ad;
+        const double ti = cv::linearAssignment(costI, ai, thr);
+        const double td = cv::linearAssignment(costD, ad, thr);
+
+        EXPECT_NEAR(td, ti, 1e-9) << "iteration " << iter << "\n" << costI;
+        EXPECT_EQ(ad, ai) << "iteration " << iter << "\n" << costI;
+    }
+}
+
 TEST(Core_LinearAssignment, types_and_errors)
 {
     Mat cost64 = Mat_<double>({3, 4}, {5, 2, 8, 1,
@@ -416,7 +468,7 @@ TEST(Core_LinearAssignment, types_and_errors)
     EXPECT_EQ(a64, a32);
 
     EXPECT_ANY_THROW(cv::linearAssignment(Mat::zeros(3, 3, CV_8U), a64));
-    EXPECT_ANY_THROW(cv::linearAssignment(Mat::zeros(3, 3, CV_32S), a64));
+    EXPECT_ANY_THROW(cv::linearAssignment(Mat::zeros(3, 3, CV_16S), a64));
     EXPECT_ANY_THROW(cv::linearAssignment(Mat::zeros(3, 3, CV_32FC2), a64));
 
     // A NaN threshold has no meaning: every comparison against it is false, so it would silently
