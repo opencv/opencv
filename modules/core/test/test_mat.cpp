@@ -1132,7 +1132,7 @@ TEST(Core_Mat, issue4457_pass_null_ptr)
 
 TEST(Core_Mat, reshape_1942)
 {
-    cv::Mat A = cv::Mat_<float>({2, 3}, {3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364});
+    cv::Mat A = cv::Mat_<float>({2, 3}, {3.4884074f, 1.4159607f, 0.78737736f,  2.3456569f, -0.88010466f, 0.3009364f});
     int cn = 0;
     ASSERT_NO_THROW(
         cv::Mat_<float> M = A.reshape(3);
