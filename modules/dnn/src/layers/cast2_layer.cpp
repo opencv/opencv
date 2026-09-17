@@ -333,7 +333,7 @@ public:
             const int ddepth = dst.depth();
             if (ddepth == CV_8F_E4M3FN || ddepth == CV_8F_E4M3FNUZ)
             {
-                // Store the ONNX-encoded byte: core's E4M3 encode rounds differently.
+                // Native depth: store the raw FP8 byte.
                 uchar* d = dst.ptr<uchar>();
                 for (size_t i = 0; i < total; i++)
                     d[i] = onnx_dtype::f32ToFp8(CV_DNN_SRC_F(i), fmt, saturate);
