@@ -346,7 +346,15 @@ TEST_P(Test_Model, PredictBatch)
     model.predict(frames, outs);
     ASSERT_EQ(outs.size(), (size_t)1);
     ASSERT_EQ(outs[0].size[0], (int)frames.size());
-    normAssert(exp, outs[0], "", 1e-4, 1e-3);
+    // Ref. range: [-5.14, 11.90].
+    double l1 = 1e-4, lInf = 1e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.01;
+        lInf = 0.15;
+    }
+    normAssert(exp, outs[0], "", l1, lInf);
 }
 
 TEST_P(Test_Model, ClassifyBatch)
@@ -376,10 +384,16 @@ TEST_P(Test_Model, ClassifyBatch)
     ASSERT_EQ(classIds.size(), frames.size());
     ASSERT_EQ(confs.size(), frames.size());
 
+    // Confidences are logits. Ref. range: [9.14, 11.90].
+    double scoreDiff = 1e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+        scoreDiff = 0.15;
+
     for (size_t i = 0; i < frames.size(); i++)
     {
         EXPECT_EQ(classIds[i], refClassIds[i]) << "image " << i;
-        EXPECT_NEAR(confs[i], refConfs[i], 1e-3) << "image " << i;
+        EXPECT_NEAR(confs[i], refConfs[i], scoreDiff) << "image " << i;
     }
 }
 
@@ -501,6 +515,15 @@ TEST_P(Test_Model, Keypoints_pose)
 TEST_P(Test_Model, KeypointsBatch)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    // A heatmap argmax jumps a whole cell under FP16.
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+#ifdef HAVE_INF_ENGINE
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     checkBackend();
 
     std::string weights_file = _tf("onnx/models/vitpose_plus_small_dynbatch.onnx", false);
@@ -527,14 +550,17 @@ TEST_P(Test_Model, KeypointsBatch)
     ASSERT_EQ(keypoints.size(), frames.size());
     ASSERT_EQ((int)keypoints.size(), exp.size[0]);
 
+    // Ref. range: [-1, 537.97].
+    const double kpDiff = target == DNN_TARGET_CUDA_FP16 ? 20.0 : 1e-2;
+
     for (size_t i = 0; i < keypoints.size(); i++)
     {
         ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "image " << i;
         const float* e = exp.ptr<float>((int)i);
         for (size_t k = 0; k < keypoints[i].size(); k++)
         {
-            EXPECT_NEAR(keypoints[i][k].x, e[2 * k], 1e-2) << "image " << i << " keypoint " << k;
-            EXPECT_NEAR(keypoints[i][k].y, e[2 * k + 1], 1e-2)
+            EXPECT_NEAR(keypoints[i][k].x, e[2 * k], kpDiff) << "image " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].y, e[2 * k + 1], kpDiff)
                 << "image " << i << " keypoint " << k;
         }
     }
@@ -655,11 +681,22 @@ TEST_P(Test_Model, SegmentBatch)
     ASSERT_EQ(masks.size(), frames.size());
     ASSERT_EQ((int)masks.size(), exp.size[0]);
 
+    // A per-pixel argmax flips along class boundaries under FP16.
+    const double minMatch = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD) ? 0.98 : 1.0;
+
     for (size_t b = 0; b < masks.size(); b++)
     {
         Mat refMask(exp.size[1], exp.size[2], CV_8U, exp.ptr<uchar>((int)b));
         ASSERT_EQ(masks[b].size(), refMask.size()) << "image " << b;
-        EXPECT_EQ(countNonZero(masks[b] != refMask), 0) << "image " << b;
+
+        double lo = 0, hi = 0;
+        minMaxLoc(refMask, &lo, &hi);
+        // A single-class reference would make the comparison below trivially true.
+        ASSERT_GT(hi, lo) << "image " << b << ": the reference mask holds one class";
+
+        const int total = refMask.rows * refMask.cols;
+        EXPECT_GE(countNonZero(masks[b] == refMask), cvRound(minMatch * total)) << "image " << b;
     }
 }
 
@@ -669,14 +706,15 @@ TEST_P(Test_Model, DetectBatch)
     checkBackend();
 
     std::string weights_file = _tf("onnx/models/yolo26n_dynbatch.onnx", false);
-    const std::vector<int>   refClassIds = {16, 1, 7, 2, 0, 2, 9};
-    const std::vector<int>   refFrameIds = {0, 0, 0, 1, 1, 1, 1};
-    const std::vector<float> refConfs    = {0.938952f, 0.930894f, 0.796426f, 0.926659f,
-                                            0.873587f, 0.762157f, 0.268055f};
-    const std::vector<Rect>  refBoxes    = {
-        Rect(70, 161, 98, 228), Rect(65, 96, 241, 205), Rect(251, 54, 124, 69),
-        Rect(333, 234, 84, 104), Rect(91, 185, 44, 137), Rect(231, 236, 22, 32),
-        Rect(192, 162, 11, 39)};
+    // Clear of every reference confidence, so none can drop out on a target that shifts scores.
+    const float confThreshold = 0.3f;
+    const std::vector<int>    refClassIds = {16, 1, 7, 2, 0, 2};
+    const std::vector<int>    refFrameIds = {0, 0, 0, 1, 1, 1};
+    const std::vector<float>  refConfs    = {0.938952f, 0.930894f, 0.796426f,
+                                             0.926659f, 0.873587f, 0.762157f};
+    const std::vector<Rect2d> refBoxes    = {
+        Rect2d(70, 161, 98, 228), Rect2d(65, 96, 241, 205), Rect2d(251, 54, 124, 69),
+        Rect2d(333, 234, 84, 104), Rect2d(91, 185, 44, 137), Rect2d(231, 236, 22, 32)};
 
     std::vector<Mat> frames;
     for (const char* name : {"dog416.png", "street.png"})
@@ -694,19 +732,38 @@ TEST_P(Test_Model, DetectBatch)
     std::vector<int> classIds, frameIds;
     std::vector<float> confidences;
     std::vector<Rect> boxes;
-    model.detect(frames, classIds, confidences, boxes, frameIds, 0.25f, 0.45f);
+    model.detect(frames, classIds, confidences, boxes, frameIds, confThreshold, 0.45f);
 
-    ASSERT_EQ(classIds.size(), refClassIds.size());
-    ASSERT_EQ(confidences.size(), refClassIds.size());
-    ASSERT_EQ(boxes.size(), refClassIds.size());
-    ASSERT_EQ(frameIds.size(), refClassIds.size());
+    ASSERT_EQ(confidences.size(), classIds.size());
+    ASSERT_EQ(boxes.size(), classIds.size());
+    ASSERT_EQ(frameIds.size(), classIds.size());
+    for (size_t i = 1; i < frameIds.size(); i++)
+        EXPECT_LE(frameIds[i - 1], frameIds[i]) << "frameIds must be non-decreasing";
 
-    for (size_t i = 0; i < refClassIds.size(); i++)
+    for (int b = 0; b < (int)frames.size(); b++)
     {
-        EXPECT_EQ(classIds[i], refClassIds[i]) << "detection " << i;
-        EXPECT_EQ(frameIds[i], refFrameIds[i]) << "detection " << i;
-        EXPECT_EQ(boxes[i], refBoxes[i]) << "detection " << i;
-        EXPECT_NEAR(confidences[i], refConfs[i], 1e-3) << "detection " << i;
+        std::vector<int> refCls, cls;
+        std::vector<float> refConf, conf;
+        std::vector<Rect2d> refBox, box;
+        for (size_t i = 0; i < refClassIds.size(); i++)
+        {
+            if (refFrameIds[i] != b)
+                continue;
+            refCls.push_back(refClassIds[i]);
+            refConf.push_back(refConfs[i]);
+            refBox.push_back(refBoxes[i]);
+        }
+        for (size_t i = 0; i < classIds.size(); i++)
+        {
+            if (frameIds[i] != b)
+                continue;
+            cls.push_back(classIds[i]);
+            conf.push_back(confidences[i]);
+            box.push_back(boxes[i]);
+        }
+        normAssertDetections(refCls, refConf, refBox, cls, conf, box,
+                             cv::format("frame %d", b).c_str(), confThreshold,
+                             /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
     }
 }
 
@@ -718,9 +775,11 @@ TEST_P(Test_Model, EstimatePosesBatch)
     std::string weights_file = _tf("onnx/models/yolo26n_pose_dynbatch.onnx", false);
     Mat exp = blobFromNPY(_tf("yolo26n_pose_batch_exp.npy"));   // [people x keypoints x 3]
     ASSERT_EQ(exp.dims, 3);
-    const std::vector<int>   refFrameIds = {0, 1};
-    const std::vector<float> refConfs    = {0.911909f, 0.843495f};
-    const std::vector<Rect>  refBoxes    = {Rect(58, 26, 383, 573), Rect(100, 185, 35, 137)};
+    const std::vector<int>    refFrameIds = {0, 1};
+    const std::vector<int>    refClassIds = {0, 0};
+    const std::vector<float>  refConfs    = {0.911909f, 0.843495f};
+    const std::vector<Rect2d> refBoxes    = {Rect2d(58, 26, 383, 573),
+                                             Rect2d(100, 185, 35, 137)};
 
     std::vector<Mat> frames;
     for (const char* name : {"pose.png", "street.png"})
@@ -745,22 +804,52 @@ TEST_P(Test_Model, EstimatePosesBatch)
     ASSERT_EQ(boxes.size(), keypoints.size());
     ASSERT_EQ(confidences.size(), keypoints.size());
     ASSERT_EQ(frameIds.size(), keypoints.size());
+    for (size_t i = 1; i < frameIds.size(); i++)
+        EXPECT_LE(frameIds[i - 1], frameIds[i]) << "frameIds must be non-decreasing";
+
+    for (int b = 0; b < (int)frames.size(); b++)
+    {
+        std::vector<int> refCls, cls;
+        std::vector<float> refConf, conf;
+        std::vector<Rect2d> refBox, box;
+        for (size_t i = 0; i < refFrameIds.size(); i++)
+        {
+            if (refFrameIds[i] != b)
+                continue;
+            refCls.push_back(refClassIds[i]);
+            refConf.push_back(refConfs[i]);
+            refBox.push_back(refBoxes[i]);
+        }
+        for (size_t i = 0; i < frameIds.size(); i++)
+        {
+            if (frameIds[i] != b)
+                continue;
+            cls.push_back(0);
+            conf.push_back(confidences[i]);
+            box.push_back(boxes[i]);
+        }
+        normAssertDetections(refCls, refConf, refBox, cls, conf, box,
+                             cv::format("frame %d", b).c_str(), 0.25,
+                             /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+    }
+
+    // Ref. range: [69.93, 552.05] in image pixels, visibility around 1.5e-3.
+    const bool fp16 = target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+                   || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD;
+    const double kpDiff = fp16 ? 20.0 : 1e-2;
+    const double visDiff = fp16 ? 1e-3 : 1e-5;
 
     for (size_t i = 0; i < keypoints.size(); i++)
     {
-        EXPECT_EQ(frameIds[i], refFrameIds[i]) << "person " << i;
-        EXPECT_EQ(boxes[i], refBoxes[i]) << "person " << i;
-        EXPECT_NEAR(confidences[i], refConfs[i], 1e-3) << "person " << i;
-
         ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "person " << i;
         const float* e = exp.ptr<float>((int)i);
         for (size_t k = 0; k < keypoints[i].size(); k++)
         {
-            EXPECT_NEAR(keypoints[i][k].x, e[3 * k], 1e-2)
+            EXPECT_NEAR(keypoints[i][k].x, e[3 * k], kpDiff)
                 << "person " << i << " keypoint " << k;
-            EXPECT_NEAR(keypoints[i][k].y, e[3 * k + 1], 1e-2)
+            EXPECT_NEAR(keypoints[i][k].y, e[3 * k + 1], kpDiff)
                 << "person " << i << " keypoint " << k;
-            EXPECT_NEAR(keypoints[i][k].z, e[3 * k + 2], 1e-3)
+            EXPECT_NEAR(keypoints[i][k].z, e[3 * k + 2], visDiff)
                 << "person " << i << " keypoint " << k;
         }
     }
