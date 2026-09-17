@@ -612,13 +612,29 @@ public:
 /** @brief The resulting HDR image is calculated as weighted average of the exposures considering exposure
 values and camera response.
 
+Input images must be 1-channel or 3-channel (CV_8U, CV_16U, or CV_32F).
+
 For more information see @cite DM97 .
  */
 class CV_EXPORTS_W MergeDebevec : public MergeExposures
 {
 public:
+    /** @brief Merges images.
+
+    @param src vector of input images, all 1-channel or all 3-channel, CV_8U, CV_16U, or CV_32F
+    @param dst result image
+    @param times vector of exposure time values for each image
+    @param response 256x1 or 65536x1 matrix with inverse camera response function for each pixel value; it must
+    have the same number of channels as images (empty means a linear response)
+     */
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
                                  InputArray times, InputArray response) CV_OVERRIDE = 0;
+    /** @brief Short version of process that uses a linear camera response.
+
+    @param src vector of input images, all 1-channel or all 3-channel, CV_8U, CV_16U, or CV_32F
+    @param dst result image
+    @param times vector of exposure time values for each image
+     */
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
