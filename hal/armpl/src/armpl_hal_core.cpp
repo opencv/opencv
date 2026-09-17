@@ -3,9 +3,126 @@
 #include "armpl_hal_core.hpp"
 
 #include <fftw3.h>
+#include <cblas.h>
 #include <cstring>
 #include <cstdio>
 #include <cmath>
+
+#define ARMPL_GEMM_SMALL_MATRIX_THRESH 100
+
+namespace {
+
+template <typename fptype> static inline void
+armpl_transpose(const fptype *src, size_t src_ld, fptype *dst, size_t dst_ld, size_t m, size_t n)
+{
+    for (size_t i = 0; i < m; i++)
+        for (size_t j = 0; j < n; j++)
+            dst[j*dst_ld + i] = src[i*src_ld + j];
+}
+
+template <typename fptype> static inline void
+armpl_copy_matrix(const fptype *src, size_t src_ld, fptype *dst, size_t dst_ld, size_t m, size_t n)
+{
+    for (size_t i = 0; i < m; i++)
+        for (size_t j = 0; j < n; j++)
+            dst[i*dst_ld + j] = src[i*src_ld + j];
+}
+
+template <typename fptype> static inline void
+armpl_set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
+{
+    for (size_t i = 0; i < m; i++)
+        for (size_t j = 0; j < n; j++)
+            dst[i*dst_ld + j] = value;
+}
+
+template <typename fptype> static inline int
+armpl_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
+           const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step,
+           int a_m, int a_n, int d_n, int flags)
+{
+    int ldsrc1 = (int)(src1_step / sizeof(fptype));
+    int ldsrc2 = (int)(src2_step / sizeof(fptype));
+    int ldsrc3 = (int)(src3_step / sizeof(fptype));
+    int lddst  = (int)(dst_step  / sizeof(fptype));
+    int c_m, c_n, d_m;
+    CBLAS_TRANSPOSE transA, transB;
+
+    if (flags & CV_HAL_GEMM_2_T)
+    {
+        transB = CblasTrans;
+        d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
+    }
+    else
+    {
+        transB = CblasNoTrans;
+        d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
+    }
+
+    if (flags & CV_HAL_GEMM_3_T)
+    {
+        c_m = d_n;
+        c_n = d_m;
+    }
+    else
+    {
+        c_m = d_m;
+        c_n = d_n;
+    }
+
+    if (flags & CV_HAL_GEMM_1_T)
+    {
+        transA = CblasTrans;
+        std::swap(a_n, a_m);
+    }
+    else
+    {
+        transA = CblasNoTrans;
+    }
+
+    if (src3 != dst && beta != 0.0 && src3_step != 0)
+    {
+        if (flags & CV_HAL_GEMM_3_T)
+            armpl_transpose(src3, ldsrc3, dst, lddst, c_m, c_n);
+        else
+            armpl_copy_matrix(src3, ldsrc3, dst, lddst, c_m, c_n);
+    }
+    else if (src3 == dst && (flags & CV_HAL_GEMM_3_T))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    else if (src3_step == 0 && beta != 0.0)
+        armpl_set_value(dst, lddst, (fptype)0.0, d_m, d_n);
+
+    if (typeid(fptype) == typeid(float))
+        cblas_sgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (float)alpha,
+                    (const float*)src1, ldsrc1, (const float*)src2, ldsrc2, (float)beta, (float*)dst, lddst);
+    else
+        cblas_dgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (double)alpha,
+                    (const double*)src1, ldsrc1, (const double*)src2, ldsrc2, (double)beta, (double*)dst, lddst);
+
+    return CV_HAL_ERROR_OK;
+}
+
+}
+
+int armpl_hal_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
+                       const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step,
+                       int m, int n, int k, int flags)
+{
+    if (m < ARMPL_GEMM_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
+}
+
+int armpl_hal_gemm64f(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
+                       const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step,
+                       int m, int n, int k, int flags)
+{
+    if (m < ARMPL_GEMM_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
+}
+
 enum ArmPLDFTMode
 {
     ARMPL_DFT_C2C,
