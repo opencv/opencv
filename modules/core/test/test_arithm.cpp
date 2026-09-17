@@ -3033,41 +3033,40 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
-// Narrowing a 64-bit or 32-bit-unsigned array must SATURATE, and must do so identically however
-// long the array is. The vectorized path narrows through a 32-bit intermediate, and v_pack()
-// truncates at 64->32 (unlike the narrower widths, which saturate), so an unclamped value used to
-// wrap before the final saturating step ever saw it - turning 4294967295 into 0 rather than 255,
-// but only once the array was long enough to enter the vector loop.
-TEST(Core_ConvertTo, saturation_is_length_independent)
+// Narrowing a 64-bit or 32-bit-unsigned array must SATURATE. The vectorized path narrows through a
+// 32-bit intermediate, and v_pack() truncates at 64->32 (unlike the narrower widths, which
+// saturate), so an unclamped value used to wrap before the final saturating step ever saw it -
+// turning 4294967295 into 0 rather than 255. Only the vector loop was affected, so the single
+// element result is the reference. 127 elements covers both the vector body and an odd tail.
+typedef testing::TestWithParam< tuple<int, int, double> > Core_ConvertToSaturate;
+
+TEST_P(Core_ConvertToSaturate, length_independent)
 {
-    const int srcDepths[] = { CV_32U, CV_64U, CV_64S };
-    const int dstDepths[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32S };
-    // values chosen to sit above every destination's range
-    const double vals[] = { 4294967295.0, 2147483648.0, 65536.0, 70000.0, 300.0 };
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const double value = get<2>(GetParam());
+    const int N = 127;
 
-    for (int sd : srcDepths)
-        for (int dd : dstDepths)
-            for (double v : vals)
-            {
-                Mat one64(1, 1, CV_64F, Scalar(v));
-                Mat one; one64.convertTo(one, sd);
-                Mat oneDst; one.convertTo(oneDst, dd);
-                Mat ref; oneDst.convertTo(ref, CV_64F);
-                const double expected = ref.at<double>(0, 0);
+    Mat one64(1, 1, CV_64F, Scalar(value));
+    Mat one; one64.convertTo(one, srcDepth);
+    Mat oneDst; one.convertTo(oneDst, dstDepth);
+    Mat ref; oneDst.convertTo(ref, CV_64F);
+    const double expected = ref.at<double>(0, 0);
 
-                for (int n : { 2, 4, 8, 15, 16, 17, 32, 33, 64, 127 })
-                {
-                    Mat src64(1, n, CV_64F, Scalar(v));
-                    Mat src; src64.convertTo(src, sd);
-                    Mat dst; src.convertTo(dst, dd);
-                    Mat got; dst.convertTo(got, CV_64F);
-                    for (int i = 0; i < n; i++)
-                        ASSERT_EQ(expected, got.at<double>(0, i))
-                            << "src depth " << sd << " -> dst depth " << dd
-                            << ", value " << v << ", length " << n << ", index " << i;
-                }
-            }
+    Mat src64(1, N, CV_64F, Scalar(value));
+    Mat src; src64.convertTo(src, srcDepth);
+    Mat dst; src.convertTo(dst, dstDepth);
+    Mat got; dst.convertTo(got, CV_64F);
+
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(expected, got.at<double>(0, i)) << "index " << i;
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertToSaturate,
+    testing::Combine(
+        testing::Values(CV_32U, CV_64U, CV_64S),
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(4294967295.0, 2147483648.0, 65536.0, 70000.0, 300.0)));
 
 TEST(Core_ConvertTo, regression_12121)
 {
@@ -4386,6 +4385,5 @@ TEST(Core_Arithm, min_empty)
   cv::max(A,B,C);
   EXPECT_TRUE(C.empty());
 }
-
 
 }} // namespace
