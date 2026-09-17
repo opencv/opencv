@@ -161,7 +161,7 @@ static void dequantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
     });
 }
 
-// Core's decode table matches ONNX bit-for-bit; only the encode direction differs.
+// Native FP8 bytes through core's decode table, bit-identical to the ONNX reference.
 template <typename _ScaleTp, typename _OutTp>
 static void dequantizeLinearFp8Native(const uchar* inp, const _ScaleTp* scale, const uchar* zp,
                                        _OutTp* out, const float* fp8lut,

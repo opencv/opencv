@@ -985,39 +985,42 @@ protected:
 
 namespace fp8_detail {
 
-// round-half-up (ties away from zero) — deliberately NOT round-to-nearest-even / OCP-ONNX spec
-inline unsigned roundHalfUp(unsigned full, int shift)
+// IEEE 754 default rounding, same as cv::hfloat and every hardware FP8 convert.
+inline unsigned roundNearestEven(unsigned full, int shift)
 {
     if (shift <= 0) return full << (-shift);
     unsigned q = full >> shift, rem = full & ((1u << shift) - 1), half = 1u << (shift - 1);
-    if (rem >= half) q++;
+    if (rem > half || (rem == half && (q & 1))) q++;
     return q;
 }
 inline float pow2(int n) { Cv32suf s; s.u = (unsigned)((n + 127) << 23); return s.f; }
 
-// E4M3 encode; no inf, bias/fnuz select E4M3FN vs E4M3FNUZ
-inline uchar encodeE4M3(float x, int bias, bool fnuz)
+// E4M3 encode; no inf, bias/fnuz select E4M3FN vs E4M3FNUZ.
+// saturate (default): overflow and inf clamp to max finite, otherwise they become NaN.
+inline uchar encodeE4M3(float x, int bias, bool fnuz, bool saturate = true)
 {
     Cv32suf in; in.f = x;
     unsigned u = in.u, sign = (u >> 31) & 1, e = (u >> 23) & 0xFF, m = u & 0x7FFFFF;
     const unsigned sbit = sign << 7;
     const unsigned nanc = fnuz ? 0x80u : (sbit | 0x7Fu);
-    if (e == 0xFF) return (uchar)nanc;
+    const unsigned maxfin = sbit | (fnuz ? 0x7Fu : 0x7Eu);              // 240 (FNUZ) / 448 (FN)
+    const unsigned ovc = saturate ? maxfin : nanc;
+    if (e == 0xFF) return (uchar)(m != 0 ? nanc : ovc);                 // NaN stays NaN, inf saturates
     if (e == 0 && m == 0) return (uchar)(fnuz ? 0u : sbit);
     int newexp = (int)e - 127 + bias;
     const unsigned full = (1u << 23) | m;
     if (newexp <= 0)                                                    // subnormal
     {
         const int shift = 20 + (1 - newexp);
-        unsigned mant = (shift >= 32) ? 0u : roundHalfUp(full, shift);
+        unsigned mant = (shift >= 32) ? 0u : roundNearestEven(full, shift);
         return (uchar)(mant == 0 ? (fnuz ? 0u : sbit) : (sbit | mant));
     }
-    unsigned rounded = roundHalfUp(full, 20);
+    unsigned rounded = roundNearestEven(full, 20);
     if (rounded & 16u) { rounded >>= 1; newexp++; }                     // carry into exponent
     const unsigned mant = rounded & 7u;
     const bool ov = fnuz ? ((unsigned)newexp > 15)
                          : ((unsigned)newexp > 15 || ((unsigned)newexp == 15 && mant == 7));
-    if (ov) return (uchar)nanc;
+    if (ov) return (uchar)ovc;
     return (uchar)(sbit | ((unsigned)newexp << 3) | mant);
 }
 
@@ -1038,6 +1041,7 @@ struct fp8_t     // E4M3FN: bias 7, no inf, max 448
 {
     fp8_t() : b(0) {}
     explicit fp8_t(float x) : b(fp8_detail::encodeE4M3(x, 7, false)) {}
+    fp8_t(float x, bool saturate) : b(fp8_detail::encodeE4M3(x, 7, false, saturate)) {}
     operator float() const { return table()[b]; }
     static const float* decodeLUT() { return table(); }
 protected:
@@ -1051,6 +1055,7 @@ struct fp8a_t    // E4M3FNUZ: bias 8, no inf, single NaN, no -0, max 240
 {
     fp8a_t() : b(0) {}
     explicit fp8a_t(float x) : b(fp8_detail::encodeE4M3(x, 8, true)) {}
+    fp8a_t(float x, bool saturate) : b(fp8_detail::encodeE4M3(x, 8, true, saturate)) {}
     operator float() const { return table()[b]; }
     static const float* decodeLUT() { return table(); }
 protected:

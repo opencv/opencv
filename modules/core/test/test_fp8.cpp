@@ -41,6 +41,11 @@ TEST(Core_FP8, scalar_roundtrip_exact)
     }
     // round-to-nearest-even onto the grid
     EXPECT_EQ((float)cv::fp8_t(1.234f), 1.25f);   // 3 mantissa bits
+    // exact ties go to the even code, not away from zero
+    EXPECT_EQ((float)cv::fp8_t(1.0625f), 1.f);       // between 1.0 (even) and 1.125
+    EXPECT_EQ((float)cv::fp8_t(1.1875f), 1.25f);     // between 1.125 and 1.25 (even)
+    EXPECT_EQ((float)cv::fp8_t(-1.0625f), -1.f);
+    EXPECT_EQ((float)cv::fp8_t(0.0009765625f), 0.f); // subnormal tie -> even
 }
 
 TEST(Core_FP8, format_specific_limits)
@@ -49,14 +54,24 @@ TEST(Core_FP8, format_specific_limits)
     EXPECT_EQ((float)cv::fp8_t(448.f),   448.f);
     EXPECT_EQ((float)cv::fp8a_t(240.f), 240.f);
 
-    // overflow: these formats have no inf -> overflow to NaN
-    EXPECT_TRUE(cvIsNaN((float)cv::fp8_t(1e6f)));
-    EXPECT_TRUE(cvIsNaN((float)cv::fp8a_t(1e6f)));
-    // 448 exceeds the FNUZ E4M3 range (max 240) -> NaN
-    EXPECT_TRUE(cvIsNaN((float)cv::fp8a_t(448.f)));
+    // overflow: these formats have no inf, so out-of-range magnitudes clamp to max finite
+    EXPECT_EQ((float)cv::fp8_t(1e6f),   448.f);
+    EXPECT_EQ((float)cv::fp8a_t(1e6f), 240.f);
+    EXPECT_EQ((float)cv::fp8_t(-1e6f), -448.f);
+    // 448 exceeds the FNUZ E4M3 range (max 240)
+    EXPECT_EQ((float)cv::fp8a_t(448.f), 240.f);
+    const float inf = std::numeric_limits<float>::infinity();
+    EXPECT_EQ((float)cv::fp8_t(inf),   448.f);
+    EXPECT_EQ((float)cv::fp8a_t(-inf), -240.f);
 
-    // NaN propagates
+    // saturate=false keeps the old overflow-to-NaN behaviour (ONNX saturate=0)
+    EXPECT_TRUE(cvIsNaN((float)cv::fp8_t(1e6f, false)));
+    EXPECT_TRUE(cvIsNaN((float)cv::fp8a_t(1e6f, false)));
+    EXPECT_TRUE(cvIsNaN((float)cv::fp8_t(inf, false)));
+
+    // NaN propagates regardless
     EXPECT_TRUE(cvIsNaN((float)cv::fp8_t(std::numeric_limits<float>::quiet_NaN())));
+    EXPECT_TRUE(cvIsNaN((float)cv::fp8_t(std::numeric_limits<float>::quiet_NaN(), false)));
 
     // smallest E4M3FN subnormal is 2^-9
     EXPECT_EQ((float)cv::fp8_t(0.001953125f), 0.001953125f);

@@ -491,13 +491,16 @@ fp8Prepare(const v_float32& vf, v_uint32& full, v_uint32& sbit, v_int32& newexpR
     fallbackMask = v_or(isNan, v_le(newexpRaw, vx_setall_s32(0)));
 }
 
-// round-half-up + carry + overflow-to-NaN; valid only when fp8Prepare's fallbackMask is false
+// Valid only when fp8Prepare's fallbackMask is false; must stay bit-identical to encodeE4M3.
 template<int bias, bool fnuz> static inline v_int32
 encodeFp8Finish(v_uint32 full, v_uint32 sbit, v_int32 newexpRaw)
 {
+    v_uint32 one     = vx_setall_u32(1u);
+    v_uint32 half    = vx_setall_u32(1u << 19);
     v_uint32 q       = v_shr<20>(full);
     v_uint32 rem     = v_and(full, vx_setall_u32((1u << 20) - 1));
-    v_uint32 inc     = v_and(v_ge(rem, vx_setall_u32(1u << 19)), vx_setall_u32(1u));
+    v_uint32 tie     = v_and(v_eq(rem, half), v_ne(v_and(q, one), vx_setzero_u32()));
+    v_uint32 inc     = v_and(v_or(v_gt(rem, half), tie), one);
     v_uint32 rounded = v_add(q, inc);
 
     v_uint32 carry = v_ne(v_and(rounded, vx_setall_u32(16u)), vx_setall_u32(0u));
@@ -514,14 +517,10 @@ encodeFp8Finish(v_uint32 full, v_uint32 sbit, v_int32 newexpRaw)
         overflow = v_or(gt15, v_and(v_eq(newexp, vx_setall_s32(15)),
                                      v_eq(v_reinterpret_as_s32(mant), vx_setall_s32(7))));
 
-    v_uint32 nanCode;
-    if constexpr (fnuz)
-        nanCode = vx_setall_u32(0x80u);
-    else
-        nanCode = v_or(sbit, vx_setall_u32(0x7Fu));
+    v_uint32 maxFin = v_or(sbit, vx_setall_u32(fnuz ? 0x7Fu : 0x7Eu));
 
     v_uint32 normal = v_or(v_or(sbit, v_shl<3>(v_reinterpret_as_u32(newexp))), mant);
-    v_uint32 result = v_select(v_reinterpret_as_u32(overflow), nanCode, normal);
+    v_uint32 result = v_select(v_reinterpret_as_u32(overflow), maxFin, normal);
     return v_reinterpret_as_s32(result);
 }
 
