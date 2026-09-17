@@ -235,13 +235,13 @@ private:
 void resizeNN2_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
     resizeNNInvokerLASX2 invoker(src, dst, x_ofs, y_ofs);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    invoker(range);
 }
 
 void resizeNN4_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
     resizeNNInvokerLASX4 invoker(src, dst, x_ofs, y_ofs);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    invoker(range);
 }
 
 }
