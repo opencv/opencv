@@ -80,6 +80,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
         DNN_BACKEND_CANN,
+        DNN_BACKEND_MIGRAPHX,  //!< AMD MIGraphX (ROCm) graph-compiler backend (ONNX)
 #if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
 #if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
