@@ -41,6 +41,12 @@
 
 #include "precomp.hpp"
 #include <iostream>
+#include "convex_hull_bucket_sort.hpp"
+
+// set to 0 to disable the bucket-sort dispatch, falling back to std::sort
+#ifndef CV_CONVHULL_USE_BUCKET_SORT
+#define CV_CONVHULL_USE_BUCKET_SORT 1
+#endif
 
 namespace cv
 {
@@ -171,14 +177,20 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     // sort the point set by x-coordinate, find min and max y
     if( !is_float )
     {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
+        bool require_monotonic_indices = !returnPoints;
+        if (!CV_CONVHULL_USE_BUCKET_SORT ||
+            !convex_hull_bucket_sort(data0, require_monotonic_indices,
+                                     pointer, total, miny_ind, maxy_ind))
         {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
+            std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+            for( i = 1; i < total; i++ )
+            {
+                int y = pointer[i]->y;
+                if( pointer[miny_ind]->y > y )
+                    miny_ind = i;
+                if( pointer[maxy_ind]->y < y )
+                    maxy_ind = i;
+            }
         }
     }
     else
