@@ -4,6 +4,7 @@
 
 #include <opencv2/dnn/dnn.hpp>
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 #include "utils.hpp"
 #include "unicode.hpp"
 #include "core_bpe.hpp"
@@ -996,13 +997,26 @@ static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
 
 Tokenizer Tokenizer::load(const std::string& model_config)
 {
-    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
-    if (!cfg.isOpened())
-        CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
+    // Accepts the model directory or the config.json path itself.
+    std::string cfgPath = model_config;
+    std::string dir;
+    if (model_config.empty() || model_config.back() == '/' || model_config.back() == '\\'
+        || utils::fs::isDirectory(model_config))
+    {
+        dir = model_config;
+        if (!dir.empty() && dir.back() != '/' && dir.back() != '\\')
+            dir += '/';
+        cfgPath = dir + "config.json";
+    }
+    else
+    {
+        size_t pos = model_config.find_last_of("/\\");
+        dir = (pos == std::string::npos) ? std::string() : model_config.substr(0, pos + 1);
+    }
 
-    std::string dir = model_config;
-    size_t pos = dir.find_last_of("/\\");
-    dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
+    cv::FileStorage cfg(cfgPath, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!cfg.isOpened())
+        CV_Error(cv::Error::StsError, "Could not open config.json: " + cfgPath);
 
     std::string methodType = "BPE";
     cv::FileNode methodNode = cfg["method"];

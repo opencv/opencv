@@ -58,7 +58,8 @@ static void splitOnSpecialTokens(const std::string& text,
 // R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K"
 static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)";
 
-// Extracts and erases a JSON string field FileStorage would overflow on.
+// Extracts and erases a JSON string field FileStorage cannot parse: it caps string
+// literals at CV_FS_MAX_LEN (4096), a precompiled_charsmap is hundreds of KB.
 static inline std::string extractAndStripBase64Field(std::string& jsonText,
                                                      const std::string& fieldKey)
 {

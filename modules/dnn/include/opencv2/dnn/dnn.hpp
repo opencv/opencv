@@ -2085,7 +2085,7 @@ public:
  *
  * @code
  * using namespace cv::dnn;
- * Tokenizer tok = Tokenizer::load("/path/to/model/config.json");
+ * Tokenizer tok = Tokenizer::load("/path/to/model/");
  * std::vector<int> ids = tok.encode("hello world");
  * std::string text = tok.decode(ids);
  * @endcode
@@ -2101,14 +2101,14 @@ public:
     /**
      * @brief Load a tokenizer from a model directory.
      *
-     * `model_config` is the path to `config.json`. Its parent directory must
-     * also contain:
+     * Accepts either the model directory or the path to its `config.json`. The
+     * directory must contain:
      *  - `config.json`. An optional `method` field (one of: BPE, Gemma, SentencePiece,
      *    Unigram, WordPiece) selects the family; without it the family is detected from
      *    `tokenizer.json`, so a stock Hugging Face config works unmodified.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
-     * @param model_config  Path to config.json for model.
+     * @param model_config  Model directory, or the path to its config.json.
      * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);

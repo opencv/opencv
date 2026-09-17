@@ -31,14 +31,14 @@ Run the script:
 
 2. Run the script:
 
-    python albert_inference.py --model_dir=<path-to-albert-large-v2-dir> \
-                                --text="Paris is the [MASK] of France." \
-                                --topk=5
+    python albert_inference.py --model=<path-to-onnx-model> \
+                               --tokenizer_path=<path-to-albert-large-v2-dir> \
+                               --text="Paris is the [MASK] of France." \
+                               --topk=5
 '''
 
 import numpy as np
 import argparse
-import os
 import cv2 as cv
 
 MASK_TOKEN = '[MASK]'
@@ -46,17 +46,11 @@ MASK_TOKEN = '[MASK]'
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run ALBERT masked-LM inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model_dir', type=str, required=True, help='Path to the ALBERT model directory (config.json and the ONNX model file are located automatically).')
+    parser.add_argument('--model', type=str, required=True, help='Path to the ALBERT ONNX model file.')
+    parser.add_argument('--tokenizer_path', type=str, required=True, help='Path to the ALBERT tokenizer directory, or to its config.json.')
     parser.add_argument('--text', type=str, default='Paris is the [MASK] of France.', help='Input text containing a single [MASK] token.')
     parser.add_argument('--topk', type=int, default=5, help='Number of top predictions to print.')
     return parser.parse_args()
-
-def find_file(model_dir, filename):
-    for root, dirs, files in os.walk(model_dir):
-        dirs[:] = [d for d in dirs if d != '.git']
-        if filename in files:
-            return os.path.join(root, filename)
-    raise FileNotFoundError(f'{filename} not found under {model_dir}')
 
 def encode_with_mask(tokenizer, text):
     if text.count(MASK_TOKEN) != 1:
@@ -96,9 +90,9 @@ if __name__ == '__main__':
     args = parse_args()
 
     print("Preparing ALBERT model...")
-    tokenizer = cv.dnn.Tokenizer.load(find_file(args.model_dir, 'config.json'))
+    tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    net = cv.dnn.readNetFromONNX(find_file(args.model_dir, 'model.onnx'), cv.dnn.ENGINE_OPENCV)
+    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
 
     print(f"Text: {args.text}")
     predictions = albert_inference(net, tokenizer, args.text, args.topk)

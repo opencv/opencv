@@ -23,6 +23,13 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2_Tokens) {
     EXPECT_EQ(tokens, expected);
 }
 
+// load() must keep accepting the model directory, not only the config.json path.
+TEST(Tokenizer_BPE, Tokenizer_LoadFromDirectory) {
+    std::vector<int> expected = {31373, 995};
+    EXPECT_EQ(Tokenizer::load(_tf("gpt2/")).encode("hello world"), expected);
+    EXPECT_EQ(Tokenizer::load(_tf("gpt2")).encode("hello world"), expected);
+}
+
 TEST(Tokenizer_BPE, Tokenizer_GPT4) {
     std::string gpt4_model = _tf("gpt4/config.json");
     Tokenizer tok = Tokenizer::load(gpt4_model);
@@ -158,8 +165,8 @@ TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
     }
 }
 
-// Gemma3's post_processor prepends <bos> (id 2), which method:"Gemma" used to skip.
-// Ground truth: tokenizers.Tokenizer.from_file("gemma3/tokenizer.json").encode(t).ids
+// Ids gained the leading <bos> (id 2) the old Gemma path dropped by ignoring the
+// post_processor; they match tokenizers.Tokenizer.from_file(...).encode(t).ids
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_English) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
