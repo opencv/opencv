@@ -2107,6 +2107,9 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
 are built, so they all run the same kernels at the same speed. #INTER_AREA is the exception: its
 decimation geometry is tied to #ResizeCoord::PIXEL_CENTER, so it accepts no other mode.
 
+@note The bit-exact kernels behind #INTER_NEAREST_EXACT and #INTER_LINEAR_EXACT exist only for
+#ResizeCoord::PIXEL_CENTER, so those two flags are rejected with any other mode.
+
 @note #ResizeCoord::HALF_PIXEL_SYMMETRIC and #ResizeCoord::ALIGN_CORNERS need the true scale --
 pass it via @ref cv::ResizeParams::fx "ResizeParams::fx" / @ref cv::ResizeParams::fy "ResizeParams::fy".
 */
@@ -2160,22 +2163,17 @@ struct CV_EXPORTS_W_SIMPLE ResizeParams
     CV_PROP_RW Size dsize;
 
     //! scale factor along the horizontal axis; when it equals 0, it is computed as
-    //! `(double)dsize.width/src.cols`. For a @ref coordMode other than #ResizeCoord::PIXEL_CENTER
-    //! pass it explicitly whenever @ref dsize was obtained by flooring/rounding a scale you already
-    //! know, e.g. an ONNX Resize node's "scales" input: re-deriving the scale from @ref dsize and
-    //! the input size alone is exact only when @ref dsize was itself `round(srcSize * scale)`.
+    //! `(double)dsize.width/src.cols`. For a @ref coordMode other than #ResizeCoord::PIXEL_CENTER,
+    //! pass the scale you already know (an ONNX "scales" input, say): dividing a floored @ref dsize
+    //! back out only recovers it when @ref dsize was itself `round(srcSize * scale)`.
     CV_PROP_RW double fx;
 
     //! scale factor along the vertical axis; see @ref fx.
     CV_PROP_RW double fy;
 
-    //! interpolation method: #INTER_NEAREST/#INTER_LINEAR/#INTER_CUBIC/#INTER_AREA/#INTER_LANCZOS4.
-    //! Use #bitExact instead of the _EXACT variants.
+    //! interpolation method, see #InterpolationFlags. #INTER_NEAREST_EXACT and
+    //! #INTER_LINEAR_EXACT ask for the bit-exact kernels and need #ResizeCoord::PIXEL_CENTER.
     CV_PROP_RW int interpolation;
-
-    //! bit-exact output; only #INTER_NEAREST/#INTER_LINEAR with #ResizeCoord::PIXEL_CENTER.
-    //! Replaces #INTER_NEAREST_EXACT/#INTER_LINEAR_EXACT.
-    CV_PROP_RW bool bitExact;
 
     //! coordinate mapping convention; see #ResizeCoord
     CV_PROP_RW ResizeCoord coordMode;
@@ -2211,22 +2209,20 @@ Accepts the same three `src` kinds, picked at runtime from `src.kind()`:
 - a `std::vector<Mat>`/`std::vector<UMat>`, whose elements may differ in size. Tables are shared
   between the elements that happen to have the same size. C++ only, not usable from Python.
 
-For a batch, the rows of all the images are enumerated as a single list of stripes and processed by
-one parallel loop, so the work is spread evenly over the threads whether the batch holds two large
-images or hundreds of small ones.
+A batch is scheduled as one unit rather than image by image, so the threads are used evenly
+whether it holds two large images or hundreds of small ones.
 
 @ref ResizeParams::coordMode "coordMode", @ref ResizeParams::nearestMode "nearestMode",
 @ref ResizeParams::cubicCoeffA "cubicCoeffA" and @ref ResizeParams::excludeOutside "excludeOutside"
-are resolved into the interpolation tables, so a non-default value costs a different table and
-nothing else: every combination runs the same kernels at the same speed.
+only change the interpolation tables, so every combination of them runs at the same speed.
 
 @note A `std::vector<UMat>` is resized element by element on the OpenCL device; the shared tables
 and the single parallel loop apply to the two host-memory kinds.
 
-@note A batch always runs OpenCV's own interpolation kernels. It does not offer the work to a
-custom HAL, which takes whole images only and would therefore give up both the shared tables and
-the balanced split. With such a HAL installed (IPP, for instance) a batch can consequently differ
-from the same images resized one at a time, by however much the two kernels round differently.
+@note A batch always runs OpenCV's own kernels: a custom HAL takes whole images only, so using it
+would give up both the shared tables and the even split. With such a HAL installed (IPP, for
+instance) a batch can therefore differ from the same images resized one at a time, by however
+much the two kernels round differently.
 
 @param src input image, N-D batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
 @param dst output image or batch, matching `src`'s kind; see #resize.

@@ -86,8 +86,8 @@ static float referenceCubic1D(const std::vector<float>& src, double dstCoordScal
     return sw != 0.f ? acc / sw : acc;
 }
 
-// Mirrors resize.cpp's own truncated-Lanczos weights: unlike Keys cubic, they do not reproduce a
-// linear ramp exactly, so the reference has to spell them out.
+// Mirrors resize.cpp's truncated-Lanczos weights: unlike Keys cubic they do not reproduce a
+// linear ramp exactly, so the reference cannot shortcut them.
 static void referenceLanczos4Weights(float x, float w[8])
 {
     const double s45 = 0.70710678118654752440084436210485;
@@ -159,19 +159,13 @@ TEST(Resize_Params, BackwardCompat)
         const Size bitExactSrcSize(342, 256), bitExactDstSize(171, 128);
         Mat src = makeTestImage(CV_8UC3, bitExactSrcSize, 777);
 
-        Mat expectedLinear, actualLinear;
-        resize(src, expectedLinear, bitExactDstSize, 0, 0, INTER_LINEAR_EXACT);
-        ResizeParams linearParams(bitExactDstSize, 0, 0, INTER_LINEAR);
-        linearParams.bitExact = true;
-        resize(src, actualLinear, linearParams);
-        EXPECT_EQ(0, cvtest::norm(expectedLinear, actualLinear, NORM_INF));
-
-        Mat expectedNearest, actualNearest;
-        resize(src, expectedNearest, bitExactDstSize, 0, 0, INTER_NEAREST_EXACT);
-        ResizeParams nearestParams(bitExactDstSize, 0, 0, INTER_NEAREST);
-        nearestParams.bitExact = true;
-        resize(src, actualNearest, nearestParams);
-        EXPECT_EQ(0, cvtest::norm(expectedNearest, actualNearest, NORM_INF));
+        for (int interp : { INTER_LINEAR_EXACT, INTER_NEAREST_EXACT })
+        {
+            Mat expected, actual;
+            resize(src, expected, bitExactDstSize, 0, 0, interp);
+            resize(src, actual, ResizeParams(bitExactDstSize, 0, 0, interp));
+            EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF)) << "interpolation=" << interp;
+        }
     }
 
     {
@@ -297,8 +291,7 @@ TEST(Resize_Params, BatchIdentitySize)
     }
 }
 
-// CV_64F samples are accumulated in double, as they are in classic cv::resize -- the weights
-// themselves are float there, and a coordMode does not change that.
+// CV_64F accumulates in double, as in classic cv::resize, whose weights are float either way.
 TEST(Resize_Params, DoublePrecisionCoordMode)
 {
     const int inW = 9, outW = 5;
@@ -318,9 +311,8 @@ TEST(Resize_Params, DoublePrecisionCoordMode)
         ASSERT_EQ(out.depth(), CV_64F);
 
         // Detail two orders below float resolution survives, which a float accumulator would
-        // flatten to zero. The level itself is only float-weight accurate: the CV_64F kernels
-        // carry double samples and a double accumulator but float weights, and the coordinate
-        // modes reuse those kernels rather than introducing a differently rounded second path.
+        // flatten. The level itself is only float-weight accurate: these kernels carry double
+        // samples and a double accumulator, but float weights.
         double lo, hi;
         minMaxLoc(out, &lo, &hi);
         EXPECT_GT(hi - lo, 1e-13) << "interpolation=" << interp << ": detail lost to float";
@@ -333,12 +325,13 @@ TEST(Resize_Params, RejectsInvalidInputs)
 {
     Mat src = makeTestImage(CV_8UC3, Size(64, 64), 1), dst;
 
-    ResizeParams bitExactCubic(Size(32, 32), 0, 0, INTER_CUBIC);
-    bitExactCubic.bitExact = true;
-    EXPECT_THROW(resize(src, dst, bitExactCubic), cv::Exception);
-
-    ResizeParams legacyExactSentinel(Size(32, 32), 0, 0, INTER_LINEAR_EXACT);
-    EXPECT_THROW(resize(src, dst, legacyExactSentinel), cv::Exception);
+    // The bit-exact kernels have no coordinate-mode parameter, so they only serve PIXEL_CENTER.
+    for (int interp : { INTER_LINEAR_EXACT, INTER_NEAREST_EXACT })
+    {
+        ResizeParams exactCoordMode(Size(32, 32), 0, 0, interp);
+        exactCoordMode.coordMode = ResizeCoord::HALF_PIXEL;
+        EXPECT_THROW(resize(src, dst, exactCoordMode), cv::Exception) << "interpolation=" << interp;
+    }
 
     ResizeParams coordModeArea(Size(32, 32), 0, 0, INTER_AREA);
     coordModeArea.coordMode = ResizeCoord::HALF_PIXEL;
@@ -361,11 +354,6 @@ TEST(Resize_Params, RejectsInvalidInputs)
         nearest.coordMode = ResizeCoord::HALF_PIXEL;
         EXPECT_NO_THROW(resize(narrow, narrowDst, nearest)) << typeToString(type);
     }
-
-    ResizeParams coordModeBitExact(Size(32, 32));
-    coordModeBitExact.coordMode = ResizeCoord::HALF_PIXEL;
-    coordModeBitExact.bitExact = true;
-    EXPECT_THROW(resize(src, dst, coordModeBitExact), cv::Exception);
 
     ResizeParams antialias(Size(32, 32));
     antialias.antialias = true;
@@ -614,9 +602,8 @@ TEST(Resize_Params, CoordModeMath)
 }
 
 
-// The coordinate mode only ever becomes table content, and PIXEL_CENTER's formula *is* ONNX
-// half_pixel, so with the scale taken from dsize the two must agree bit for bit. If a
-// non-default mode ever fell back to a separate reference kernel, this is what would catch it.
+// PIXEL_CENTER's formula *is* ONNX half_pixel, so with the scale taken from dsize the two must
+// agree bit for bit. If a mode ever fell back to a separate kernel, this is what catches it.
 TEST(Resize_Params, PixelCenterIsHalfPixel)
 {
     const int interpolations[] = { INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4 };
@@ -735,8 +722,7 @@ TEST(Resize_Params, NearestAllModes)
     }
 }
 
-// A coordMode has to reach the wide kernels too, not just the two-tap ones: the 8-tap Lanczos
-// table is built by the same loop, so it comes along for free and has to be right.
+// A coordMode reaches the wide kernels too: the 8-tap Lanczos table is built by the same loop.
 TEST(Resize_Params, Lanczos4CoordMode)
 {
     const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f, 5.f, 3.f,
@@ -771,8 +757,7 @@ TEST(Resize_Params, Lanczos4CoordMode)
     }
 }
 
-// cubicCoeffA is table input like everything else, so a non-default Keys coefficient has to take
-// effect and still match the reference.
+// cubicCoeffA is table input, so a non-default Keys coefficient must take effect and stay right.
 TEST(Resize_Params, CubicCoeffA)
 {
     const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f };

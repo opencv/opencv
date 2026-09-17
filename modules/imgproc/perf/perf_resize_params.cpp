@@ -17,9 +17,8 @@ namespace opencv_test {
 typedef tuple<MatType, int, int> Type_Interp_Coord_t;
 typedef TestBaseWithParam<Type_Interp_Coord_t> ResizeParams_CoordMode;
 
-// Every coordinate mode resolves into the interpolation tables and then runs the same kernels,
-// so the whole sweep has to come out at one speed. A mode that drifted onto a slower path --
-// a scalar reference kernel, say -- would show up here as an outlier column.
+// Every mode resolves into the tables and then runs the same kernels, so the whole sweep has to
+// come out at one speed. A mode that drifted onto a slower path shows up as an outlier column.
 PERF_TEST_P(ResizeParams_CoordMode, coord_modes_1080p_to_VGA,
             testing::Combine(
                 testing::Values(CV_8UC3, CV_32FC1),
@@ -44,8 +43,7 @@ PERF_TEST_P(ResizeParams_CoordMode, coord_modes_1080p_to_VGA,
 
 typedef TestBaseWithParam<tuple<MatType, int> > ResizeParams_NearestMode;
 
-// Same question for nearest_mode: it picks the rounding rule while the index table is built,
-// so all four have to cost the same.
+// Same for nearest_mode: it picks the rounding rule while the table is built, so all four tie.
 PERF_TEST_P(ResizeParams_NearestMode, nearest_modes_1080p_to_VGA,
             testing::Combine(
                 testing::Values(CV_8UC3, CV_16UC1),

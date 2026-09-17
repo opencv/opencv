@@ -177,13 +177,13 @@ private:
 void resizeNN2_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
     resizeNNInvokerSSE2 invoker(src, dst, x_ofs, y_ofs);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    invoker(range);
 }
 
 void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
     resizeNNInvokerSSE4 invoker(src, dst, x_ofs, y_ofs);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    invoker(range);
 }
 
 int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width)
