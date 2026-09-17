@@ -204,8 +204,10 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 //
 // The unsigned-source helpers test the high bits with a shift rather than an ordering compare,
 // since unsigned 64-bit comparison is not uniformly available across the SIMD backends.
-// v_select() is not provided for 64-bit lanes, so blend through the comparison mask by hand
-// (the mask is all-ones / all-zeros per lane, like every other v_gt/v_ne result).
+// v_select() is not provided for 64-bit lanes on any backend - intrin_sse.hpp carries the two
+// entries commented out as TBD, and the NEON list stops at v_float64x2 - so blend through the
+// comparison mask by hand. The mask is all-ones / all-zeros per lane like every other v_gt/v_ne
+// result, which is the same shape as the v_and(ia, v_gt(ia, z)) idiom already used below.
 static inline v_int64 v_blend_s64(const v_int64& mask, const v_int64& a, const v_int64& b)
 {
     return v_or(v_and(a, mask), v_and(b, v_xor(mask, vx_setall_s64((int64_t)-1))));
