@@ -329,7 +329,7 @@ TEST(SLAM_BundleAdjustment, pose_optimization_flags_outliers)
         Frame f = frame;
         const int n = Optimizer::poseOptimization(f, sc.K, 4.0, /*enable*/ false);
         checkClassification(f, n, "reprojection fallback");
-        EXPECT_DOUBLE_EQ(cv::norm(f.poseCw - gtPose(1)), 0.0);   // must not touch the pose
+        EXPECT_DOUBLE_EQ(cv::norm(f.poseCw - frame.poseCw), 0.0);   // must not touch the pose
     }
 
 #ifdef HAVE_G2O
@@ -364,6 +364,7 @@ TEST(SLAM_BundleAdjustment, global_ba_reduces_chi2_and_recovers_geometry)
 
     const double rmseBefore = sc.reprojRmse();
     EXPECT_GT(rmseBefore, 1.0);
+    const Matx44d anchor0 = sc.kfs[0]->poseCw;
 
     Optimizer::GlobalBAStats stats;
     Optimizer::globalBundleAdjustment(map, sc.K, /*iterations*/ 20, /*minObservations*/ 2,
@@ -382,7 +383,7 @@ TEST(SLAM_BundleAdjustment, global_ba_reduces_chi2_and_recovers_geometry)
     EXPECT_EQ(sc.numObservations(), (long)nKeyframes * nPoints);
     EXPECT_LT(sc.reprojRmse(), 1e-2);
 
-    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[0]->poseCw - gtPose(0)), 0.0);
+    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[0]->poseCw - anchor0), 0.0);
 
     const double s = sc.scaleToGt();
     EXPECT_NEAR(s, 1.0, 0.1);
@@ -419,11 +420,13 @@ TEST(SLAM_BundleAdjustment, local_ba_refines_window_and_fixes_anchors)
 
     const double rmseBefore = sc.reprojRmse();
     EXPECT_GT(rmseBefore, 1.0);
+    const Matx44d anchor0 = sc.kfs[0]->poseCw;
+    const Matx44d anchor1 = sc.kfs[1]->poseCw;
 
     Optimizer::localBundleAdjustment(newKf, sc.K, /*enable*/ true);
 
-    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[0]->poseCw - gtPose(0)), 0.0);
-    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[1]->poseCw - gtPose(1)), 0.0);
+    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[0]->poseCw - anchor0), 0.0);
+    EXPECT_DOUBLE_EQ(cv::norm(sc.kfs[1]->poseCw - anchor1), 0.0);
 
     // The anchors pin the scale, so the window returns to absolute ground truth.
     for (int f = 2; f < nKeyframes; ++f)

@@ -64,7 +64,7 @@ VisualOdometryImpl::VisualOdometryImpl(
                       << " global_ba=" << (params.globalBaEnable ? "on" : "off")
                       << " loop=" << (params.loopEnable ? "on" : "off"));
 #ifndef HAVE_G2O
-    CV_LOG_WARNING(NULL, "slam: built without g2o — bundle adjustment and loop closure are no-ops");
+    CV_LOG_WARNING(NULL, "slam: built without g2o. bundle adjustment and loop closure are no-ops");
 #endif
 }
 

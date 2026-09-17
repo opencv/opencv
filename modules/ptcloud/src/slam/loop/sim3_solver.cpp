@@ -110,6 +110,7 @@ Sim3Result estimateSim3(const KeyFrame* Kc, const KeyFrame* Km,
 {
     Sim3Result res;
     if (!Kc || !Km || K.empty()) return res;
+    minInliers = std::max(3, minInliers);
 
     const double fx = K.at<double>(0,0), fy = K.at<double>(1,1);
     const double cx = K.at<double>(0,2), cy = K.at<double>(1,2);

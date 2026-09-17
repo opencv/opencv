@@ -76,7 +76,7 @@ struct CV_EXPORTS_W_SIMPLE OdometryParams
     CV_PROP_RW int loopMinInliers = 40;      //!< min Essential-RANSAC inliers to accept
     CV_PROP_RW double loopMinInlierRatio = 0.4; //!< min inlier/raw ratio
     CV_PROP_RW int loopNConsistent = 3;      //!< consecutive detections required to act
-    CV_PROP_RW int loopCloseCooldown = 20;   //!< keyframe gap before re-closing same region
+    CV_PROP_RW int loopCloseCooldown = 10;   //!< keyframe gap before re-closing same region
     CV_PROP_RW int loopHashBits   = 256;     //!< binary LSH code length (bits, multiple of 8); 0 disables Hamming pre-filter
     CV_PROP_RW int loopCoarseTopk = 20;      //!< candidates kept after Hamming pre-filter before cosine rerank
 
