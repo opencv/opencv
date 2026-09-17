@@ -757,17 +757,15 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
         if( (flags & cv::COVAR_USE_AVG) != 0 )
         {
             CV_Assert( _mean.size() == size );
+            Mat mean0 = _mean.getMat();
 
-            if( mean.type() != ctype )
+            if( mean0.isContinuous() && mean0.type() == ctype )
+                mean = mean0.reshape(1, 1);
+            else
             {
-                mean = _mean.getMat();
-                _mean.create(mean.size(), ctype);
-                Mat tmp = _mean.getMat();
-                mean.convertTo(tmp, ctype);
-                mean = tmp;
+                mean0.convertTo(mean, ctype);
+                mean = mean.reshape(1, 1);
             }
-
-            mean = _mean.getMat().reshape(1, 1);
         }
 
         calcCovarMatrix( _data, _covar, mean, (flags & ~(cv::COVAR_ROWS|cv::COVAR_COLS)) | cv::COVAR_ROWS, ctype );
