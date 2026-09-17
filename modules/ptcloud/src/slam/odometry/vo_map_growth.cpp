@@ -109,7 +109,6 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
     Mat pts4D;
     triangulatePoints(P1, P2, pts1, pts2, pts4D);
 
-    int nNew = 0;
     for (int i = 0; i < pts4D.cols; ++i)
     {
         double w = pts4D.at<float>(3, i);
@@ -140,12 +139,9 @@ void VisualOdometryImpl::promoteKeyframeAndGrowMap(Frame& currentFrame)
         map.addMapPoint(mp);
         map.addObservation(lastKf, (size_t)dm.queryIdx, mp);
         map.addObservation(newKf, (size_t)dm.trainIdx, mp);
-        ++nNew;
     }
 
     finalizeKeyframe(newKf, currentFrame);
-
-    (void)nNew;
 }
 
 void VisualOdometryImpl::finalizeKeyframe(KeyFrame* newKf, Frame& currentFrame)

@@ -71,7 +71,8 @@ void VisualOdometryImpl::buildVocabulary()
     {
         const int dim = Kv * vocab.cols;
         Mat W(B, dim, CV_32F);
-        cv::randn(W, 0.f, 1.f);
+        RNG lshRng(0x5EED1BA5ull);
+        lshRng.fill(W, RNG::NORMAL, Scalar::all(0.0), Scalar::all(1.0));
         for (int i = 0; i < B; ++i)
         {
             double n = norm(W.row(i), NORM_L2);
