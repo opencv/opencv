@@ -303,8 +303,7 @@ CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z);
 /** @brief Solves the rectangular linear assignment problem.
 
 Pairs the rows of a cost matrix with its columns at the lowest total cost, each row taking at most
-one column and each column at most one row. Costs may be negative. A cell holding a non-finite
-value marks a pair that may not be matched.
+one column and each column at most one row. Costs may be negative.
 
 @p costThreshold is the price of leaving a row unmatched, not a filter applied afterwards. The
 function minimises
@@ -314,15 +313,21 @@ function minimises
 so a pair is made only when it costs less than leaving it unmade, and any pair above the threshold
 is forbidden. The default threshold forbids nothing and gives the plain optimal assignment.
 
-@param cost `M`-by-`N` cost matrix, CV_32FC1 or CV_64FC1.
+A cell that is infinite or NaN marks a pair that may not be matched, whatever @p costThreshold is.
+Both are treated the same way and for the same reason: neither is a cost the solver can compare, so
+the pair is excluded rather than guessed at. Infinity is the natural way for a caller to say "these
+two cannot go together"; NaN usually means the cost could not be computed, and excluding it keeps
+one bad cell from turning the whole result into NaN. A row left with no usable cell simply reports
+-1, and a matrix of nothing but non-finite cells returns an empty matching with a total of 0.
+
+@param cost `M`-by-`N` cost matrix, CV_32FC1, CV_64FC1 or CV_32SC1. Infinite and NaN cells are
+forbidden pairs; an integer matrix has none, so only @p costThreshold can forbid a pair there.
 @param assignment Output vector of size `M`. Element `i` is the column matched to row `i`, or -1.
 @param costThreshold Maximum cost of a pair, and the price of each pair left unmade.
 @return Sum of @p cost over the matched pairs only, without the unassignment term; 0 if no pair was
 made.
 
-@note Implemented from D. F. Crouse, *On implementing 2D rectangular assignment algorithms*, IEEE
-Trans. Aerospace and Electronic Systems 52(4), 2016, after R. Jonker and A. Volgenant, *A shortest
-augmenting path algorithm for dense and sparse linear assignment problems*, Computing 38, 1987.
+@note Implemented from @cite Crouse2016, which extends @cite Jonker1987 to rectangular matrices.
  */
 CV_EXPORTS_W double linearAssignment(InputArray cost,
                                      CV_OUT std::vector<int>& assignment,
