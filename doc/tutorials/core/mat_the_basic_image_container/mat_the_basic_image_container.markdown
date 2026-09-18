@@ -270,7 +270,54 @@ Most of the samples here have been included in a small console application. You 
 [here](https://github.com/opencv/opencv/tree/5.x/samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
 or in the core section of the cpp samples.
 
+5.x Specific Changes
+--------------------
+
+**MatShape** is a class that represents the shape of an n-dimensional matrix (tensor). It is used
+throughout the C++ and Python APIs to describe matrix dimensions. Key features:
+
+-   **Construction**: `MatShape()` (empty), `MatShape(dims, sizes)`, `MatShape::scalar()` (0d),
+    `MatShape(std::initializer_list<int>)`.
+-   **Properties**: `size()` returns the number of dimensions, `total()` returns the number of
+    elements, `isScalar()` checks if `dims==0`.
+-   **Usage**: Pass a `MatShape` object to functions like `create()`, `fit()`, or as the `shape`
+    parameter in Mat constructors to specify non-2D matrices.
+
+**0d Mat (scalar)** in OpenCV 5.x:
+-   You can create a 0-dimensional matrix (essentially a scalar) using `Mat()` default constructor,
+    `Mat(1, 1, type)`, or `Mat(std::vector<int>{1}, type)`.
+-   The `Mat::type()` method returns the element type, and `Mat::elemSize1()` gives the size in bytes.
+-   0d Mat values can be accessed via `Mat::at<Type>()` or converted to a scalar using `Mat::at()`.
+
+**1d Mat (vector)** in OpenCV 5.x:
+-   You can create a 1-dimensional matrix using `Mat(std::vector<int>{size}, type)`,
+    `Mat::zeros(size, type)`, or initializer lists `Mat({value1, value2, ...})`.
+-   The `Mat::type()` method still applies, and channels are handled via the type encoding.
+-   1d Mat is useful for one-dimensional data, signal processing, or as an intermediate step
+    before reshaping to 2D.
+
+The following code snippet demonstrates basic usage:
+
+@code{.cpp}
+#include <opencv2/core.hpp>
+#include <vector>
+
+void example_0d_1d() {
+    // 0d Mat (scalar)
+    Mat s0 = Mat();                  // default scalar
+    Mat s1 = Mat(1, 1, CV_32F);    // 1x1 matrix (effectively scalar)
+    Mat s2 = Mat(std::vector<int>{1}, CV_32F); // via vector
+
+    // 1d Mat (vector)
+    Mat v1 = Mat(std::vector<int>{5}, CV_32F);   // 1x5 row vector
+    Mat v2 = Mat::ones(5, 1, CV_32F);            // 5x1 column vector
+    Mat v3 = Mat::zeros(5, CV_32F);              // 5-element vector filled with 0
+    Mat v4 = Mat({1.f, 2.f, 3.f, 4.f, 5.f});     // initializer list (1x5 row vector)
+}
+@endcode
+
 You can also find a quick video demonstration of this on
 [YouTube](https://www.youtube.com/watch?v=1tibU7vGWpk).
+@youtube{1tibU7vGWpk}
 
 @youtube{1tibU7vGWpk}
