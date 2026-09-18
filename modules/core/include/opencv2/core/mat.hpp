@@ -378,6 +378,15 @@ protected:
 
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
+
+private:
+    int dims_(int i=-1) const;
+    int cols_(int i=-1) const;
+    int rows_(int i=-1) const;
+    Size size_(int i=-1) const;
+    int type_(int i=-1) const;
+    int depth_(int i=-1) const;
+    bool empty_() const;
 };
 CV_ENUM_FLAGS(_InputArray::KindFlag)
 __CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag)
@@ -520,6 +529,10 @@ public:
 
     void move(UMat& u) const;
     void move(Mat& m) const;
+
+private:
+    void create_(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void create_(int rows, int cols, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
 };
 
 
