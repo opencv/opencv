@@ -63,5 +63,47 @@ class TokenizerBindingTest(NewOpenCVTests):
             )
             self.assertEqual(tok.decode(expected), text)
 
+    def test_tokenizer_load_vlm_granite_docling_real_model(self):
+        # granite-docling loads through the same generic Tokenizer.load(config.json)
+        # entry point as every other model; there is no VLM-specific API.
+        tok = cv.dnn.Tokenizer.load(_tf("granite/config.json"))
+        ids = tok.encode("hello world")
+        self.assertEqual(tok.decode(ids), "hello world")
+
+    def test_with_hf_tokenizers_load_vlm_granite_docling(self):
+        tok = cv.dnn.Tokenizer.load(_tf("granite/config.json"))
+        with open(_tf("granite/granite_hf_testdata.json"), "r", encoding="utf-8") as f:
+            golden = json.load(f)
+
+        for s in golden["samples"]:
+            text = s["text"]
+            expected = s["ids"]
+            got = tok.encode(text).tolist()
+            self.assertEqual(
+                got, expected,
+                msg=f"Mismatch for sample '{s['name']}'"
+            )
+            self.assertEqual(tok.decode(expected), text)
+
+    def test_tokenizer_load_vlm_paddleocr_vl_real_model(self):
+        tok = cv.dnn.Tokenizer.load(_tf("paddleocr_vl/config.json"))
+        ids = tok.encode("hello world")
+        self.assertEqual(tok.decode(ids), "hello world")
+
+    def test_with_hf_tokenizers_load_vlm_paddleocr_vl(self):
+        tok = cv.dnn.Tokenizer.load(_tf("paddleocr_vl/config.json"))
+        with open(_tf("paddleocr_vl/paddleocr_vl_hf_testdata.json"), "r", encoding="utf-8") as f:
+            golden = json.load(f)
+
+        for s in golden["samples"]:
+            text = s["text"]
+            expected = s["ids"]
+            got = tok.encode(text).tolist()
+            self.assertEqual(
+                got, expected,
+                msg=f"Mismatch for sample '{s['name']}'"
+            )
+            self.assertEqual(tok.decode(expected), text)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

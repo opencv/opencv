@@ -205,6 +205,21 @@ template<typename Op> static inline bool intUnaryDispatch(const Mat& src, Mat& d
     return true;
 }
 
+static int computeElementwiseNstripes(const Mat& src)
+{
+    // Must match PBody::operator()'s own planeSize: it splits the per-sample plane, i.e. the
+    // dimensions from 2 on, and nothing else. A rank-1 tensor has no such dimensions -- PBody
+    // reads it as a single plane of size 1 whose elements are all channels, and the channel
+    // loop is not striped -- so its plane size is 1 here too, however many elements it holds.
+    // Deriving it from size[0] instead would ask for stripes PBody cannot hand out any work.
+    size_t planeSize = 1;
+    for (int d = 2; d < src.dims; ++d)
+        planeSize *= (size_t)src.size[d];
+
+    int nstripes = (int)std::max(1.0, (double)src.total() * (1. / 1024));
+    return (int)std::min((size_t)nstripes, planeSize);
+}
+
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
 {
@@ -242,8 +257,8 @@ public:
                 planeSize *= src_->size[i];
 
             size_t stripeSize = (planeSize + nstripes - 1)/nstripes;
-            size_t stripeStart = r.start*stripeSize;
-            size_t stripeEnd = std::min(r.end*stripeSize, planeSize);
+            size_t stripeStart = std::min((size_t)r.start*stripeSize, planeSize);
+            size_t stripeEnd = std::min((size_t)r.end*stripeSize, planeSize);
 
             for( int i = 0; i < nsamples; i++ )
             {
@@ -388,7 +403,7 @@ public:
                     continue;
                 }
 
-                const int nstripes = getNumThreads();
+                const int nstripes = computeElementwiseNstripes(src);
                 PBody body(func, src, dst, nstripes);
                 parallel_for_(Range(0, nstripes), body, nstripes);
                 continue;
@@ -398,7 +413,7 @@ public:
             {
                 Mat src_f, dst_f(dst.size, CV_32F);
                 src.convertTo(src_f, CV_32F);
-                const int nstripes = getNumThreads();
+                const int nstripes = computeElementwiseNstripes(src_f);
                 PBody body(func, src_f, dst_f, nstripes);
                 parallel_for_(Range(0, nstripes), body, nstripes);
                 dst_f.convertTo(dst, CV_64F);
