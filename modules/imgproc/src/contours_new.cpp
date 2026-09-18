@@ -666,7 +666,7 @@ void cv::findContours(InputArray _image,
             else
             {
                 const Scalar shift(offset.x, offset.y);
-                const int n = (int)_contours.size().height;
+                const int n = (int)_contours.total();
                 for (int i = 0; i < n; i++)
                     _contours.getMat(i) += shift;
             }

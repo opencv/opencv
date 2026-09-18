@@ -549,7 +549,94 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
     }
 }
 
-// TODO: offset test
+typedef testing::TestWithParam<tuple<int, int, Point, bool, bool>> Imgproc_FindContours_ROIOffset;
+
+TEST_P(Imgproc_FindContours_ROIOffset, border_and_hole)
+{
+    const int mode = get<0>(GetParam());
+    const int method = get<1>(GetParam());
+    const Point offset = get<2>(GetParam());
+    const bool withHierarchy = get<3>(GetParam());
+    const bool matOutput = get<4>(GetParam());
+
+    // Nonzero pixels outside the non-contiguous ROI must not extend its contours.
+    Mat parent(15, 19, CV_8UC1, Scalar(123));
+    Mat image = parent(Rect(4, 2, 11, 9));
+    image.setTo(Scalar(37));
+    image(Rect(3, 3, 5, 3)).setTo(Scalar(0));
+    const Mat original = parent.clone();
+    ASSERT_FALSE(image.isContinuous());
+
+    // Coordinates refer to foreground pixels, including around the hole.
+    vector<vector<Point>> expected = {{Point(0, 0), Point(0, 8), Point(10, 8), Point(10, 0)}};
+    if (mode != RETR_EXTERNAL)
+        expected.push_back({Point(2, 3), Point(3, 2), Point(7, 2), Point(8, 3),
+                            Point(8, 5), Point(7, 6), Point(3, 6), Point(2, 5)});
+    for (auto& contour : expected)
+    {
+        vector<Point> points;
+        for (size_t i = 0; i < contour.size(); ++i)
+        {
+            const Point start = contour[i];
+            points.push_back(start + offset);
+            if (method == CHAIN_APPROX_NONE)
+            {
+                const Point delta = contour[(i + 1) % contour.size()] - start;
+                const int length = std::max(std::abs(delta.x), std::abs(delta.y));
+                const Point step(delta.x / length, delta.y / length);
+                for (int j = 1; j < length; ++j)
+                    points.push_back(start + step * j + offset);
+            }
+        }
+        contour.swap(points);
+    }
+
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    const _OutputArray hierarchyOutput = withHierarchy ? _OutputArray(hierarchy) : _OutputArray();
+    if (matOutput)
+    {
+        vector<Mat> mats;
+        findContours(image, mats, hierarchyOutput, mode, method, offset);
+        contours.resize(mats.size());
+        for (size_t i = 0; i < mats.size(); ++i)
+            mats[i].copyTo(contours[i]);
+    }
+    else
+    {
+        findContours(image, contours, hierarchyOutput, mode, method, offset);
+    }
+
+    EXPECT_EQ(0., cvtest::norm(parent, original, NORM_INF));
+    ASSERT_EQ(expected.size(), contours.size());
+    if (withHierarchy)
+    {
+        EXPECT_EQ(contours.size(), hierarchy.size());
+    }
+
+    // The fast and general paths may choose different contour/start-point orders.
+    const auto pointLess = [](const Point& a, const Point& b) {
+        return a.y < b.y || (a.y == b.y && a.x < b.x);
+    };
+    const auto contourLess = [&](const vector<Point>& a, const vector<Point>& b) {
+        return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), pointLess);
+    };
+    for (auto& contour : expected)
+        std::sort(contour.begin(), contour.end(), pointLess);
+    for (auto& contour : contours)
+        std::sort(contour.begin(), contour.end(), pointLess);
+    std::sort(expected.begin(), expected.end(), contourLess);
+    std::sort(contours.begin(), contours.end(), contourLess);
+    EXPECT_EQ(expected, contours);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    ,
+    Imgproc_FindContours_ROIOffset,
+    testing::Combine(testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                     testing::Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE),
+                     testing::Values(Point(), Point(4, 2), Point(-7, -11)),
+                     testing::Bool(), testing::Bool()));
 
 // no RETR_FLOODFILL - no CV_32S input images
 INSTANTIATE_TEST_CASE_P(
