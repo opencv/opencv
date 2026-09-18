@@ -1334,6 +1334,35 @@ TEST(Drawing, line_connectivity_regression_26413)
     EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
 }
 
+// Regression test for issue #28940
+TEST(Drawing, thickline_negative_coordinate_regression_28940)
+{
+    Mat img = Mat::zeros(10, 5, CV_8UC1);
+
+    vector<vector<Point>> contours = {
+        {
+            Point(0, 0),
+            Point(4, 0),
+            Point(4, 4),
+            Point(0, 4)
+        }
+    };
+
+    drawContours(
+        img,
+        contours,
+        0,
+        Scalar(255),
+        2,
+        LINE_8,
+        noArray(),
+        0,
+        Point(2, -5)
+    );
+
+    EXPECT_GT(countNonZero(img), 0);
+}
+
 //This test ensures that the tipLength geometric ratio is strictly bounded  within the logical range (0.0, 1.0].
 TEST(Imgproc_Drawing, arrowedLine_tipLength_validation)
 {
