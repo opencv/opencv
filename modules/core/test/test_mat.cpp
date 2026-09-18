@@ -11,6 +11,7 @@
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/bindings_utils.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace opencv_test { namespace {
 
@@ -302,6 +303,57 @@ void Core_ReduceTest::run( int )
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     ts->set_failed_test_info( code );
+}
+
+TEST(Core_Reduce, accuracy_8UC4_32S_colsum)
+{
+#if CV_RVV
+    // One e8,m2 load contains VLEN / 16 four-channel pixels.
+    const int vl = cv::VTraits<cv::v_uint8>::vlanes() / 2;
+#else
+    // Keep the accuracy case active on non-RVV builders as well.
+    const int vl = 32;
+#endif
+    const int widths[] = {
+        1, vl - 1, vl, vl + 1, 2 * vl + 1,
+        256 * vl - 1, 256 * vl, 256 * vl + 1, 512 * vl + 1
+    };
+    const int rows = 3;
+
+    for (size_t wi = 0; wi < sizeof(widths) / sizeof(widths[0]); ++wi)
+    {
+        const int width = widths[wi];
+        SCOPED_TRACE(cv::format("width=%d", width));
+
+        Mat src(rows, width, CV_8UC4);
+        Mat expected(rows, 1, CV_32SC4, Scalar::all(0));
+
+        for (int y = 0; y < rows; ++y)
+        {
+            Vec4b* srcRow = src.ptr<Vec4b>(y);
+            Vec4i sum(0, 0, 0, 0);
+            for (int x = 0; x < width; ++x)
+            {
+                const Vec4b value = y == 0 ? Vec4b::all(255) : Vec4b(
+                    (uchar)(1 + x % 7 + y),
+                    (uchar)(32 + x % 11 + 2 * y),
+                    (uchar)(96 + x % 13 + 3 * y),
+                    (uchar)(224 + x % 17 + 4 * y));
+                srcRow[x] = value;
+                for (int c = 0; c < 4; ++c)
+                    sum[c] += value[c];
+            }
+            expected.at<Vec4i>(y, 0) = sum;
+        }
+
+        Mat dst;
+        cv::reduce(src, dst, 1, REDUCE_SUM, CV_32S);
+
+        ASSERT_EQ(CV_32SC4, dst.type());
+        ASSERT_EQ(expected.rows, dst.rows);
+        ASSERT_EQ(expected.cols, dst.cols);
+        EXPECT_EQ(0.0, cv::norm(dst, expected, NORM_INF));
+    }
 }
 
 TEST(Core_PCA, accuracy)
