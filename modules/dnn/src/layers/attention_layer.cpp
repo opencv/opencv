@@ -167,7 +167,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         CV_CheckGE(num_inputs, 3, "DNN/Attention: at least three inputs are required (data, weight, bias)");
         CV_CheckLE(num_inputs, 4, "DNN/Attention: at most four inputs are supported (data, weight, bias, mask)");
         const auto &input_shape = inputs[0];
-        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        const auto &weight_shape = blobs.empty() ? inputs[1] : weightShape();
         const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
 
         CV_CheckEQ(input_shape.size(), static_cast<size_t>(3), "DNN/Attention: invalid input dimension");
@@ -220,7 +220,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         int64 S = input_shape[1];
         int64 D = input_shape[2];
 
-        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        const auto &weight_shape = blobs.empty() ? inputs[1] : weightShape();
         int64 hidden = weight_shape[1];
 
         int64 q_size = (int64)qkv_hidden_sizes[0];
@@ -240,6 +240,11 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return flops;
     }
 
+    // prepackWeights() drops the weight once packed, so its shape has to outlive the blob
+    MatShape weightShape() const {
+        return blobs.front().empty() ? wshape0 : shape(blobs.front());
+    }
+
     // Geometry derives from the weight shape alone, so this is safe before finalize().
     void packQKV(const Mat& weight) {
         opt.init();
@@ -257,8 +262,15 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
     // Dynamic weights (blobs empty) aren't available yet; forward() packs those.
     void prepackWeights() CV_OVERRIDE {
-        if (!blobs.empty())
-            packQKV(blobs.front());
+        if (blobs.empty() || blobs.front().empty())
+            return;
+        packQKV(blobs.front());
+        // The packed copy is what the kernels read from here on; the original is dead weight.
+        // With no separate bias blob, blobs.back() aliases the weight and must survive.
+        if (blobs.size() >= 2) {
+            wshape0 = shape(blobs.front());
+            blobs.front().release();
+        }
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
@@ -271,8 +283,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         seq_len = static_cast<size_t>(input_shape[1]);
         input_hidden_size = static_cast<size_t>(input_shape[2]);
 
-        const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
-        const auto weight_shape = shape(weight);
+        const auto weight_shape = blobs.empty() ? shape(inputs[1]) : weightShape();
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
@@ -565,6 +576,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;
     std::vector<unsigned char> flash_scratch;
+    MatShape wshape0;
 
     FastGemmOpt opt;
 };
