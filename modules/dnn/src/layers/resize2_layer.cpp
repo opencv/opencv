@@ -73,6 +73,29 @@ static inline NearestMode parseNearestMode(const String& s)
     return NearestMode::ROUND_PREFER_FLOOR;
 }
 
+static inline ResizeCoord toResizeCoord(CoordTransMode m, bool alignCorners)
+{
+    if (alignCorners)
+        return ResizeCoord::ALIGN_CORNERS; // caller already checked coordTransMode is asymmetric
+    switch (m) {
+    case CoordTransMode::HALF_PIXEL: return ResizeCoord::HALF_PIXEL;
+    case CoordTransMode::PYTORCH_HALF_PIXEL: return ResizeCoord::PYTORCH_HALF_PIXEL;
+    case CoordTransMode::TF_HALF_PIXEL_FOR_NN: return ResizeCoord::TF_HALF_PIXEL_FOR_NN;
+    case CoordTransMode::HALF_PIXEL_SYMMETRIC: return ResizeCoord::HALF_PIXEL_SYMMETRIC;
+    default: return ResizeCoord::ASYMMETRIC;
+    }
+}
+
+static inline ResizeNearest toResizeNearest(NearestMode m)
+{
+    switch (m) {
+    case NearestMode::FLOOR: return ResizeNearest::FLOOR;
+    case NearestMode::CEIL: return ResizeNearest::CEIL;
+    case NearestMode::ROUND_PREFER_CEIL: return ResizeNearest::ROUND_PREFER_CEIL;
+    default: return ResizeNearest::ROUND_PREFER_FLOOR;
+    }
+}
+
 static constexpr int kResizeNumStripes = 16;
 
 inline float computeSrcGeneric(int dst, float scale, int limit, int len,
@@ -1324,6 +1347,35 @@ public:
             case CV_32F: resizeAntialias<float>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
             default: CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
             }
+        }
+        else if ((interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic") &&
+                 inp.dims == 4 && inp.shape().layout != DATA_LAYOUT_BLOCK &&
+                 coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE &&
+                 (!alignCorners || coordTransModeE == CoordTransMode::ASYMMETRIC) &&
+                 (depth == CV_32F || (depth == CV_8U && interpolation == "nearest")))
+        {
+            // cv::resize treats inp's N,C dims as a batch; other kernels handle remaining cases.
+            ResizeParams params;
+            params.interpolation = (interpolation == "nearest") ? INTER_NEAREST
+                                  : (interpolation == "cubic") ? INTER_CUBIC : INTER_LINEAR;
+            params.coordMode = toResizeCoord(coordTransModeE, alignCorners);
+            params.nearestMode = toResizeNearest(nearestModeE);
+            params.excludeOutside = excludeOutside;
+            params.cubicCoeffA = cubicCoeffA;
+
+            double trueFx = (double)out.size[3] / inp.size[3], trueFy = (double)out.size[2] / inp.size[2];
+            if (!scales.empty())
+            {
+                int hIdx, wIdx;
+                spatialIndices(scales.size(), hIdx, wIdx);
+                trueFy = scales[hIdx];
+                trueFx = scales[wIdx];
+            }
+
+            params.dsize = Size(out.size[3], out.size[2]);
+            params.fx = trueFx;
+            params.fy = trueFy;
+            resize(inp, out, params);
         }
         else if(interpolation=="nearest"){
             switch(depth){
