@@ -39,6 +39,8 @@ public:
                   std::vector<Point3f>& texCoords, int& nTexCoords,
                   std::vector<std::vector<int32_t>>& indices, int flags) CV_OVERRIDE;
 
+    bool readNamedProperties(const std::vector<std::string>& names, Mat& values);
+
 protected:
     bool parseHeader(std::ifstream &file, int& nTexCoords);
     void parseBody(std::ifstream &file,
