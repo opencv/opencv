@@ -2375,9 +2375,9 @@ computes the corresponding coordinates in the source image (that is, in the orig
 
 \f[
 \begin{array}{l}
-\text{newCameraMatrix}\\
-x  \leftarrow (u - {c'}_x)/{f'}_x  \\
-y  \leftarrow (v - {c'}_y)/{f'}_y  \\
+\text{cameraMatrix}\\
+x  \leftarrow (u - c_x)/f_x  \\
+y  \leftarrow (v - c_y)/f_y  \\
 
 \\\text{Undistortion}
 \\\scriptsize{\textit{though equation shown is for radial undistortion, function implements cv::undistortPoints()}}\\
@@ -2391,9 +2391,9 @@ y'  \leftarrow \frac{y}{\theta} \\
 x''  \leftarrow X/W  \\
 y''  \leftarrow Y/W  \\
 
-\\\text{cameraMatrix}\\
-map_x(u,v)  \leftarrow x'' f_x + c_x  \\
-map_y(u,v)  \leftarrow y'' f_y + c_y
+\\\text{newCameraMatrix}\\
+map_x(u,v)  \leftarrow x'' f'_x + c'_x  \\
+map_y(u,v)  \leftarrow y'' f'_y + c'_y
 \end{array}
 \f]
 where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
