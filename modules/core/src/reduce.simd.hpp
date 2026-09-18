@@ -10,6 +10,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
 ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
 ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -1094,6 +1095,136 @@ static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
+#if CV_SIMD_SCALABLE
+static inline v_float32 reduceRowSum2Acc4(const v_float32& acc,
+                                           const float* src0, const float* src1,
+                                           const float* src2, const float* src3)
+{
+    v_float32 sum = acc;
+    v_float32 x = vx_load(src0);
+    sum = v_fma(x, x, sum);
+    x = vx_load(src1);
+    sum = v_fma(x, x, sum);
+    x = vx_load(src2);
+    sum = v_fma(x, x, sum);
+    x = vx_load(src3);
+    return v_fma(x, x, sum);
+}
+
+// dim=0, REDUCE_SUM2 for CV_32F using scalable universal intrinsics.
+static void reduceRowSum2_32f32f(const Mat& srcmat, Mat& dstmat)
+{
+    const int width = srcmat.cols * srcmat.channels();
+    const int height = srcmat.rows;
+    const int vlanes = VTraits<v_float32>::vlanes();
+    const int block = vlanes * 4;
+    AutoBuffer<float> buffer(width);
+    float* buf = buffer.data();
+
+    const float* src = srcmat.ptr<float>(0);
+    int i = 0;
+    for (; i <= width - block; i += block)
+    {
+        v_float32 x0 = vx_load(src + i);
+        v_float32 x1 = vx_load(src + i + vlanes);
+        v_float32 x2 = vx_load(src + i + vlanes * 2);
+        v_float32 x3 = vx_load(src + i + vlanes * 3);
+        v_store(buf + i, v_mul(x0, x0));
+        v_store(buf + i + vlanes, v_mul(x1, x1));
+        v_store(buf + i + vlanes * 2, v_mul(x2, x2));
+        v_store(buf + i + vlanes * 3, v_mul(x3, x3));
+    }
+    for (; i <= width - vlanes; i += vlanes)
+    {
+        v_float32 x = vx_load(src + i);
+        v_store(buf + i, v_mul(x, x));
+    }
+    for (; i < width; i++)
+        buf[i] = src[i] * src[i];
+
+    int row = 1;
+    // Four rows per pass amortize buffer traffic while preserving source-row
+    // accumulation order. The outer loop stays serial: splitting width into
+    // tiny parallel stripes under-fills scalable vectors and adds scheduling
+    // overhead for this memory-streaming kernel.
+    for (; row <= height - 4; row += 4)
+    {
+        const float* src0 = srcmat.ptr<float>(row);
+        const float* src1 = srcmat.ptr<float>(row + 1);
+        const float* src2 = srcmat.ptr<float>(row + 2);
+        const float* src3 = srcmat.ptr<float>(row + 3);
+
+        i = 0;
+        for (; i <= width - block; i += block)
+        {
+            v_float32 sum0 = vx_load(buf + i);
+            v_float32 sum1 = vx_load(buf + i + vlanes);
+            v_float32 sum2 = vx_load(buf + i + vlanes * 2);
+            v_float32 sum3 = vx_load(buf + i + vlanes * 3);
+            sum0 = reduceRowSum2Acc4(sum0, src0 + i, src1 + i, src2 + i, src3 + i);
+            sum1 = reduceRowSum2Acc4(sum1, src0 + i + vlanes, src1 + i + vlanes,
+                                     src2 + i + vlanes, src3 + i + vlanes);
+            sum2 = reduceRowSum2Acc4(sum2, src0 + i + vlanes * 2, src1 + i + vlanes * 2,
+                                     src2 + i + vlanes * 2, src3 + i + vlanes * 2);
+            sum3 = reduceRowSum2Acc4(sum3, src0 + i + vlanes * 3, src1 + i + vlanes * 3,
+                                     src2 + i + vlanes * 3, src3 + i + vlanes * 3);
+            v_store(buf + i, sum0);
+            v_store(buf + i + vlanes, sum1);
+            v_store(buf + i + vlanes * 2, sum2);
+            v_store(buf + i + vlanes * 3, sum3);
+        }
+        for (; i <= width - vlanes; i += vlanes)
+        {
+            v_float32 sum = vx_load(buf + i);
+            sum = reduceRowSum2Acc4(sum, src0 + i, src1 + i, src2 + i, src3 + i);
+            v_store(buf + i, sum);
+        }
+        for (; i < width; i++)
+        {
+            float sum = buf[i];
+            float x = src0[i]; sum += x * x;
+            x = src1[i]; sum += x * x;
+            x = src2[i]; sum += x * x;
+            x = src3[i]; sum += x * x;
+            buf[i] = sum;
+        }
+    }
+
+    for (; row < height; row++)
+    {
+        src = srcmat.ptr<float>(row);
+        i = 0;
+        for (; i <= width - block; i += block)
+        {
+            v_float32 sum0 = vx_load(buf + i);
+            v_float32 sum1 = vx_load(buf + i + vlanes);
+            v_float32 sum2 = vx_load(buf + i + vlanes * 2);
+            v_float32 sum3 = vx_load(buf + i + vlanes * 3);
+            v_float32 x0 = vx_load(src + i);
+            v_float32 x1 = vx_load(src + i + vlanes);
+            v_float32 x2 = vx_load(src + i + vlanes * 2);
+            v_float32 x3 = vx_load(src + i + vlanes * 3);
+            v_store(buf + i, v_fma(x0, x0, sum0));
+            v_store(buf + i + vlanes, v_fma(x1, x1, sum1));
+            v_store(buf + i + vlanes * 2, v_fma(x2, x2, sum2));
+            v_store(buf + i + vlanes * 3, v_fma(x3, x3, sum3));
+        }
+        for (; i <= width - vlanes; i += vlanes)
+        {
+            v_float32 x = vx_load(src + i);
+            v_store(buf + i, v_fma(x, x, vx_load(buf + i)));
+        }
+        for (; i < width; i++)
+            buf[i] += src[i] * src[i];
+    }
+
+    // Delay output stores until all source rows are consumed, preserving the
+    // existing overlap-safe behavior of the proposed optimized path.
+    memcpy(dstmat.ptr<float>(), buf, width * sizeof(float));
+    v_cleanup();
+}
+#endif
+
 // =====================================================================
 //  Dispatchers
 // =====================================================================
@@ -1129,6 +1260,17 @@ ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceRowSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceRowSum_64f64f;
 #endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
+#endif
+    return nullptr;
+}
+
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth)
+{
+#if CV_SIMD_SCALABLE
+    if (sdepth == CV_32F && ddepth == CV_32F) return reduceRowSum2_32f32f;
 #else
     CV_UNUSED(sdepth);
     CV_UNUSED(ddepth);
