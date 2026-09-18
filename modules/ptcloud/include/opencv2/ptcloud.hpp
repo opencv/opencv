@@ -62,6 +62,117 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
  */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
+/** @brief Removes statistical outliers from a point cloud.
+ *
+ * For each point the mean distance to its @p meanK nearest neighbors is computed. Points whose
+ * mean distance exceeds `global_mean + stddevMulThresh * global_stddev` are treated as outliers
+ * and dropped. This targets sparse noise scattered around the surface.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param outputCloud Output filtered point cloud, Nx1 CV_32FC3.
+ * @param meanK Number of nearest neighbors used to estimate the mean distance of each point.
+ * @param stddevMulThresh Standard-deviation multiplier for the distance threshold.
+ * @param keptIndices Optional output, indices (CV_32S) into the input cloud of the points that were kept.
+ */
+CV_EXPORTS_W void removeStatisticalOutliers(InputArray inputCloud, OutputArray outputCloud,
+        int meanK = 20, double stddevMulThresh = 2.0, OutputArray keptIndices = noArray());
+
+/** @brief Removes radius outliers from a point cloud.
+ *
+ * Any point that has fewer than @p minNeighbors other points within @p radius is treated as an
+ * isolated outlier and dropped.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param outputCloud Output filtered point cloud, Nx1 CV_32FC3.
+ * @param radius Search radius.
+ * @param minNeighbors Minimum number of neighbors (not counting the point itself) required to keep a point.
+ * @param keptIndices Optional output, indices (CV_32S) into the input cloud of the points that were kept.
+ */
+CV_EXPORTS_W void removeRadiusOutliers(InputArray inputCloud, OutputArray outputCloud,
+        double radius, int minNeighbors = 16, OutputArray keptIndices = noArray());
+
+/** @brief Flips point-cloud normals so that they face a given viewpoint.
+ *
+ * Each normal whose direction points away from @p viewpoint is negated. Useful when the sensor
+ * position is known. Estimate the normals first with cv::normalEstimate.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals to orient in place, Nx1 CV_32FC3 (as from cv::normalEstimate).
+ * @param viewpoint Point the normals should face towards (e.g. the camera center).
+ */
+CV_EXPORTS_W void orientNormals(InputArray inputCloud, InputOutputArray normals, const Point3f& viewpoint);
+
+/** @brief Orients point-cloud normals consistently across the whole cloud.
+ *
+ * Builds a Riemannian graph over the k nearest neighbors (edge weight 1 - |n_i . n_j|), computes
+ * its minimum spanning tree with cv::buildMST, and propagates a consistent sign along the tree
+ * from a seed point (Hoppe et al. 1992). If the neighbor graph is disconnected the normals are
+ * oriented outward about the centroid instead. Estimate the normals first with cv::normalEstimate.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals to orient in place, Nx1 CV_32FC3 (as from cv::normalEstimate).
+ * @param k Number of nearest neighbors used to build the graph.
+ */
+CV_EXPORTS_W void orientNormalsConsistent(InputArray inputCloud, InputOutputArray normals, int k = 30);
+
+/** @brief Estimates the median spacing between neighboring points of a point cloud.
+ *
+ * Returns the median distance from a sampled set of points to their nearest neighbor. Useful for
+ * picking a ball radius for cv::createMeshBPA.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @return Median nearest-neighbor distance, or 0 if the cloud has fewer than 2 points.
+ */
+CV_EXPORTS_W float estimateMedianSpacing(InputArray inputCloud);
+
+/** @brief Reconstructs a triangle mesh from an oriented point cloud using Ball-Pivoting.
+ *
+ * Implements the Ball-Pivoting Algorithm @cite Bernardini1999 : a ball of a given radius is
+ * rolled over the points; whenever it rests on three points without containing any other, those
+ * points form a triangle. Several radii are used in ascending order so larger balls bridge the
+ * gaps left by smaller ones. The algorithm is interpolating — the mesh vertices are the input
+ * points — so estimate and orient the normals first (cv::normalEstimate, cv::orientNormalsConsistent).
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param normals Per-point normals, Nx1 CV_32FC3 (same count as the cloud).
+ * @param vertices Output mesh vertices (a copy of the input points), Nx1 CV_32FC3.
+ * @param triangles Output triangle vertex indices, Mx3 CV_32S.
+ * @param radii Optional ball radii (1D CV_32F/CV_64F). If empty, radii are derived from
+ *              cv::estimateMedianSpacing as {1x, 2x, 4x} the median spacing.
+ */
+CV_EXPORTS_W void createMeshBPA(InputArray inputCloud, InputArray normals, OutputArray vertices,
+        OutputArray triangles, InputArray radii = noArray());
+
+/** @brief Computes the axis-aligned bounding box (AABB) of a point cloud.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param minBound Output minimum corner (x,y,z), 3x1 CV_32F.
+ * @param maxBound Output maximum corner (x,y,z), 3x1 CV_32F.
+ */
+CV_EXPORTS_W void boundingBox3D(InputArray inputCloud, OutputArray minBound, OutputArray maxBound);
+
+/** @brief Computes a PCA-based oriented bounding box (OBB) of a point cloud.
+ *
+ * The box axes are the principal axes of the cloud (covariance eigenvectors). This is the common
+ * practical OBB (as in Open3D); it is not guaranteed to be the minimum-volume OBB.
+ * A point p is inside the box iff `abs(axes * (p - center))` is `<= halfExtents` component-wise.
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param center Output box center (x,y,z), 3x1 CV_32F.
+ * @param axes Output 3x3 CV_32F; each row is a unit box axis.
+ * @param halfExtents Output half-size along each axis, 3x1 CV_32F.
+ */
+CV_EXPORTS_W void orientedBoundingBox3D(InputArray inputCloud, OutputArray center, OutputArray axes,
+        OutputArray halfExtents);
+
+/** @brief Computes an approximate minimum enclosing sphere of a point cloud (Ritter's algorithm).
+ *
+ * @param inputCloud Input point cloud, 3-channel float array (CV_32FC3), or an Nx3 / 3xN CV_32F matrix.
+ * @param center Output sphere center (x,y,z), 3x1 CV_32F.
+ * @return Sphere radius, or 0 if the cloud is empty.
+ */
+CV_EXPORTS_W double approxEnclosingSphere3D(InputArray inputCloud, OutputArray center);
+
 /** @brief Loads a mesh from a file.
  *
  * The function loads mesh from the specified file and returns it.
