@@ -13,9 +13,8 @@
 #include <opencv2/core/check.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__)
-// FIXIT: eliminate massive warnigs from templates
-// GCC from 'rvv-next': riscv64-unknown-linux-gnu-g++ (g42df3464463) 12.0.1 20220505 (prerelease)
-// doesn't work: #pragma GCC diagnostic push
+// Suppress warnings from RVV vector types without changing includer state.
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
@@ -2199,5 +2198,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 //! @endcond
 
 } //namespace cv
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif //OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
