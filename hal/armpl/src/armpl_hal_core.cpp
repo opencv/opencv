@@ -5,11 +5,12 @@
 #include <fftw3.h>
 #include <cblas.h>
 #include <algorithm>
+#include <complex>
 #include <cstring>
 #include <cstdio>
 #include <cmath>
 
-#define ARMPL_GEMM_SMALL_MATRIX_THRESH 100
+#define ARMPL_GEMM_MIN_WORK_VOLUME 10000
 
 namespace {
 
@@ -36,6 +37,22 @@ armpl_set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
         std::fill(dst + i*dst_ld, dst + i*dst_ld + n, value);
 }
 
+static inline void
+armpl_cblas_gemm(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int a_m, int d_n, int a_n,
+                  float alpha, const float *src1, int ldsrc1, const float *src2, int ldsrc2,
+                  float beta, float *dst, int lddst)
+{
+    cblas_sgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, alpha, src1, ldsrc1, src2, ldsrc2, beta, dst, lddst);
+}
+
+static inline void
+armpl_cblas_gemm(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int a_m, int d_n, int a_n,
+                  double alpha, const double *src1, int ldsrc1, const double *src2, int ldsrc2,
+                  double beta, double *dst, int lddst)
+{
+    cblas_dgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, alpha, src1, ldsrc1, src2, ldsrc2, beta, dst, lddst);
+}
+
 template <typename fptype> static inline int
 armpl_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
            const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step,
@@ -48,16 +65,8 @@ armpl_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
 
-    if (flags & CV_HAL_GEMM_2_T)
-    {
-        transB = CblasTrans;
-        d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
-    }
-    else
-    {
-        transB = CblasNoTrans;
-        d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
-    }
+    transB = (flags & CV_HAL_GEMM_2_T) ? CblasTrans : CblasNoTrans;
+    d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
 
     if (flags & CV_HAL_GEMM_3_T)
     {
@@ -93,23 +102,92 @@ armpl_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2
     else if (src3_step == 0 && beta != 0.0)
         armpl_set_value(dst, lddst, (fptype)0.0, d_m, d_n);
 
-    if (typeid(fptype) == typeid(float))
-        cblas_sgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (float)alpha,
-                    (const float*)src1, ldsrc1, (const float*)src2, ldsrc2, (float)beta, (float*)dst, lddst);
-    else
-        cblas_dgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (double)alpha,
-                    (const double*)src1, ldsrc1, (const double*)src2, ldsrc2, (double)beta, (double*)dst, lddst);
+    armpl_cblas_gemm(transA, transB, a_m, d_n, a_n, alpha, src1, ldsrc1, src2, ldsrc2, beta, dst, lddst);
 
     return CV_HAL_ERROR_OK;
 }
 
+static inline void
+armpl_cblas_gemm(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int a_m, int d_n, int a_n,
+                  std::complex<float> alpha, const std::complex<float> *src1, int ldsrc1,
+                  const std::complex<float> *src2, int ldsrc2,
+                  std::complex<float> beta, std::complex<float> *dst, int lddst)
+{
+    cblas_cgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, &alpha, src1, ldsrc1, src2, ldsrc2, &beta, dst, lddst);
+}
+
+static inline void
+armpl_cblas_gemm(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int a_m, int d_n, int a_n,
+                  std::complex<double> alpha, const std::complex<double> *src1, int ldsrc1,
+                  const std::complex<double> *src2, int ldsrc2,
+                  std::complex<double> beta, std::complex<double> *dst, int lddst)
+{
+    cblas_zgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, &alpha, src1, ldsrc1, src2, ldsrc2, &beta, dst, lddst);
+}
+
+template <typename fptype> static inline int
+armpl_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
+             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step,
+             int a_m, int a_n, int d_n, int flags)
+{
+    typedef std::complex<fptype> cplx;
+    int ldsrc1 = (int)(src1_step / sizeof(cplx));
+    int ldsrc2 = (int)(src2_step / sizeof(cplx));
+    int ldsrc3 = (int)(src3_step / sizeof(cplx));
+    int lddst  = (int)(dst_step  / sizeof(cplx));
+    int c_m, c_n, d_m;
+    CBLAS_TRANSPOSE transA, transB;
+    cplx cAlpha(alpha, (fptype)0.0);
+    cplx cBeta(beta, (fptype)0.0);
+
+    transB = (flags & CV_HAL_GEMM_2_T) ? CblasTrans : CblasNoTrans;
+    d_m = (flags & CV_HAL_GEMM_1_T) ? a_n : a_m;
+
+    if (flags & CV_HAL_GEMM_3_T)
+    {
+        c_m = d_n;
+        c_n = d_m;
+    }
+    else
+    {
+        c_m = d_m;
+        c_n = d_n;
+    }
+
+    if (flags & CV_HAL_GEMM_1_T)
+    {
+        transA = CblasTrans;
+        std::swap(a_n, a_m);
+    }
+    else
+    {
+        transA = CblasNoTrans;
+    }
+
+    if (src3 != dst && beta != 0.0 && src3_step != 0)
+    {
+        if (flags & CV_HAL_GEMM_3_T)
+            armpl_transpose((const cplx*)src3, ldsrc3, (cplx*)dst, lddst, c_m, c_n);
+        else
+            armpl_copy_matrix((const cplx*)src3, ldsrc3, (cplx*)dst, lddst, c_m, c_n);
+    }
+    else if (src3 == dst && (flags & CV_HAL_GEMM_3_T))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    else if (src3_step == 0 && beta != 0.0)
+        armpl_set_value((cplx*)dst, lddst, cplx((fptype)0.0, (fptype)0.0), d_m, d_n);
+
+    armpl_cblas_gemm(transA, transB, a_m, d_n, a_n, cAlpha, (const cplx*)src1, ldsrc1, (const cplx*)src2, ldsrc2, cBeta, (cplx*)dst, lddst);
+
+    return CV_HAL_ERROR_OK;
+}
 }
 
 int armpl_hal_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
                        const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step,
                        int m, int n, int k, int flags)
 {
-    if (m < ARMPL_GEMM_SMALL_MATRIX_THRESH)
+    if (m * n * k < ARMPL_GEMM_MIN_WORK_VOLUME)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return armpl_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
@@ -118,9 +196,27 @@ int armpl_hal_gemm64f(const double *src1, size_t src1_step, const double *src2, 
                        const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step,
                        int m, int n, int k, int flags)
 {
-    if (m < ARMPL_GEMM_SMALL_MATRIX_THRESH)
+    if (m * n * k < ARMPL_GEMM_MIN_WORK_VOLUME)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return armpl_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
+}
+
+int armpl_hal_gemm32fc(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,
+                        const float *src3, size_t src3_step, float beta, float *dst, size_t dst_step,
+                        int m, int n, int k, int flags)
+{
+    if (m * n * k < ARMPL_GEMM_MIN_WORK_VOLUME)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
+}
+
+int armpl_hal_gemm64fc(const double *src1, size_t src1_step, const double *src2, size_t src2_step, double alpha,
+                        const double *src3, size_t src3_step, double beta, double *dst, size_t dst_step,
+                        int m, int n, int k, int flags)
+{
+    if (m * n * k < ARMPL_GEMM_MIN_WORK_VOLUME)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
 
 enum ArmPLDFTMode
