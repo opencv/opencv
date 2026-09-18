@@ -4,6 +4,7 @@
 
 #include <fftw3.h>
 #include <cblas.h>
+#include <algorithm>
 #include <cstring>
 #include <cstdio>
 #include <cmath>
@@ -32,8 +33,7 @@ template <typename fptype> static inline void
 armpl_set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
 {
     for (size_t i = 0; i < m; i++)
-        for (size_t j = 0; j < n; j++)
-            dst[i*dst_ld + j] = value;
+        std::fill(dst + i*dst_ld, dst + i*dst_ld + n, value);
 }
 
 template <typename fptype> static inline int
