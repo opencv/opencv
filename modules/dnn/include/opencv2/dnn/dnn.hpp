@@ -2101,28 +2101,40 @@ public:
     /**
      * @brief Load a tokenizer from a model directory.
      *
-     * Expects the directory to contain:
-     *  - `config.json` with field `model_type` with value "gpt2" or "gpt4".
+     * Accepts either the model directory or the path to its `config.json`. The
+     * directory must contain:
+     *  - `config.json`. An optional `method` field (one of: BPE, Gemma, SentencePiece,
+     *    Unigram, WordPiece) selects the family; without it the family is detected from
+     *    `tokenizer.json`, so a stock Hugging Face config works unmodified.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
-     * The argument is a path prefix; this function concatenates file
-     * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
-     * end with an appropriate path separator.
-     *
-     * @param model_config  Path to config.json for model.
-     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `model_type` is unsupported.
+     * @param model_config  Model directory, or the path to its config.json.
+     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
-     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
+     * @brief Encode UTF-8 text to token ids.
      *
-     * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
+     * Special-token text in @p text is recognized and mapped to its own id, and any
+     * wrapper the model's post_processor declares (e.g. BERT's `[CLS]`/`[SEP]`) is
+     * applied.
      *
      * @param text  UTF-8 input string.
      * @return Vector of token ids (32-bit ids narrowed to int for convenience).
      */
     CV_WRAP std::vector<int> encode(const std::string& text);
+
+    /**
+     * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`.
+     *
+     * Supported only by WordPiece (BERT-family) tokenizers, which are the only ones that
+     * define a paired-sequence template; every other method throws cv::Exception.
+     * @param text  UTF-8 first input string.
+     * @param textPair  UTF-8 second input string.
+     * @return Vector of token ids. Throws cv::Exception if unsupported by the loaded tokenizer.
+     */
+    CV_WRAP std::vector<int> encodePair(const std::string& text, const std::string& textPair);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;
