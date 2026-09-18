@@ -2091,6 +2091,20 @@ public:
 
     The method returns a matrix element type. This is an identifier compatible with the CvMat type
     system, like CV_16SC3 or 16-bit signed 3-channel array, and so on.
+
+    The returned value is a packed bit-field that encodes two fields in the lowest 12 bits
+    (`CV_MAT_TYPE_MASK`):
+    -   bits 0-4 (`CV_MAT_DEPTH_MASK`) store the element depth, one of the CV_8U, CV_8S, CV_16U,
+        CV_16S, CV_32S, CV_32F, CV_64F, CV_16F, ... constants;
+    -   bits 5-11 (`CV_MAT_CN_MASK`) store the number of channels minus one, so a matrix may have
+        between 1 and CV_CN_MAX (128) channels.
+
+    The macros CV_MAT_DEPTH(type) and CV_MAT_CN(type) extract these fields, while
+    CV_MAKETYPE(depth, cn) assembles a type from a depth and a channel count; for example,
+    CV_MAKETYPE(CV_16S, 3) is CV_16SC3.
+
+    @note Only the packed type is returned. The other bits of Mat::flags, such as the continuity
+    flag (CV_MAT_CONT_FLAG) and the submatrix flag (CV_SUBMAT_FLAG), are not part of the value.
      */
     int type() const;
 
