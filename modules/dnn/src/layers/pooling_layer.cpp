@@ -381,10 +381,10 @@ public:
         if (type == ROI)
             return make_cuda_node<cuda4dnn::ROIPoolingOp>(preferableTarget, std::move(context->stream), spatialScale);
 
-        std::vector<cuda::GpuMatND> inputs, outputs;
-        inputs_.getGpuMatNDVector(inputs);
-        outputs_.getGpuMatNDVector(outputs);
-        MatShape input_shape = inputs[0].size;
+        std::vector<UMat> inputs, outputs;
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        MatShape input_shape = cv::dnn::shape(inputs[0]);
 
         /* storing max indices is a special case and we deal with it separately */
         if (computeMaxIdx) {
