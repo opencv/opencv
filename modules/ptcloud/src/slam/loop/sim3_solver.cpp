@@ -51,11 +51,11 @@ void computeSim3(const Mat& P1, const Mat& P2, bool fixScale,
     const double N33 = -m00 + m11 - m22;
     const double N34 =  m12 + m21;
     const double N44 = -m00 - m11 + m22;
-    Mat N = (Mat_<double>(4,4) <<
-             N11, N12, N13, N14,
-             N12, N22, N23, N24,
-             N13, N23, N33, N34,
-             N14, N24, N34, N44);
+    Mat N = Mat_<double>({4, 4},
+                         { N11, N12, N13, N14,
+                           N12, N22, N23, N24,
+                           N13, N23, N33, N34,
+                           N14, N24, N34, N44 });
 
     Mat eval, evec;
     eigen(N, eval, evec);
