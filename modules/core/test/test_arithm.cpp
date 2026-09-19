@@ -3099,6 +3099,98 @@ TEST(Core_ConvertTo, regression_12121)
     }
 }
 
+template <typename SrcT, typename DstT>
+static void checkConvertToSaturation(int sdepth, int ddepth, const SrcT* values, int nvalues,
+                                     const int* widths, int nwidths)
+{
+    int len = 0;
+    for (int k = 0; k < nwidths; ++k)
+        if (widths[k] > len) len = widths[k];
+
+    Mat src(1, len, sdepth);
+    SrcT* srcdata = src.ptr<SrcT>();
+    for (int i = 0; i < len; ++i)
+        srcdata[i] = values[i % nvalues];
+
+    std::vector<DstT> ref(len);
+    for (int i = 0; i < len; ++i)
+        ref[i] = cv::saturate_cast<DstT>(srcdata[i]);
+
+    for (int k = 0; k < nwidths; ++k)
+    {
+        const int w = widths[k];
+        Mat part = src.colRange(0, w).clone();
+        Mat dst;
+        part.convertTo(dst, ddepth);
+        ASSERT_EQ(ddepth, dst.depth());
+        ASSERT_EQ((size_t)w, dst.total()) << "sdepth=" << sdepth << " ddepth=" << ddepth;
+        const DstT* got = dst.ptr<DstT>();
+        for (int i = 0; i < w; ++i)
+            ASSERT_EQ(ref[i], got[i]) << "sdepth=" << sdepth << " ddepth=" << ddepth
+                                      << " width=" << w << " index=" << i;
+    }
+}
+
+template <typename SrcT>
+static void checkConvertToSaturationAll(int sdepth, const SrcT* values, int nvalues,
+                                        const int* widths, int nwidths)
+{
+    checkConvertToSaturation<SrcT, uchar   >(sdepth, CV_8U , values, nvalues, widths, nwidths);
+    checkConvertToSaturation<SrcT, schar   >(sdepth, CV_8S , values, nvalues, widths, nwidths);
+    checkConvertToSaturation<SrcT, ushort  >(sdepth, CV_16U, values, nvalues, widths, nwidths);
+    checkConvertToSaturation<SrcT, short   >(sdepth, CV_16S, values, nvalues, widths, nwidths);
+    checkConvertToSaturation<SrcT, int     >(sdepth, CV_32S, values, nvalues, widths, nwidths);
+    checkConvertToSaturation<SrcT, unsigned>(sdepth, CV_32U, values, nvalues, widths, nwidths);
+}
+
+TEST(Core_ConvertTo, regression_29964)
+{
+    // convertTo() must saturate 64-bit and unsigned 32-bit integer sources on the vectorized
+    // path exactly like it does on the scalar path. The 64->32 narrowing pack truncates to the
+    // low 32 bits instead of saturating, so arrays longer than one SIMD vector used to wrap
+    // large magnitudes and then clamp the wrapped value (e.g. CV_64U 4294967295 -> CV_8U gave
+    // 255 for 15 pixels but 0 for 16).  https://github.com/opencv/opencv/issues/29964
+    const int64_t i64_values[] = {
+        INT64_MIN, (int64_t)INT32_MIN - 1, INT32_MIN, (int64_t)INT32_MIN + 1, -1, 0, 1,
+        INT32_MAX, (int64_t)INT32_MAX + 1, (int64_t)UINT32_MAX, (int64_t)UINT32_MAX + 1, INT64_MAX
+    };
+    const uint64_t u64_values[] = {
+        0, 1, 127, 128, 255, 256, 32767, 32768, 65535, 65536, 0x7fffffffULL, 0x80000000ULL,
+        0xffffffffULL, 0x100000000ULL, (uint64_t)INT64_MAX, 0x8000000000000000ULL, UINT64_MAX
+    };
+    const unsigned u32_values[] = {
+        0, 1, 127, 128, 255, 256, 32767, 32768, 65535, 65536, 0x7fffffffu, 0x80000000u, 0xffffffffu
+    };
+    // widths straddle the universal-intrinsic vector sizes (in elements) and include odd tails
+    const int widths[] = { 1, 7, 8, 15, 16, 17, 31, 64, 127 };
+    const int nwidths = (int)(sizeof(widths) / sizeof(widths[0]));
+
+    checkConvertToSaturationAll<int64_t>(CV_64S, i64_values,
+                                         (int)(sizeof(i64_values) / sizeof(i64_values[0])),
+                                         widths, nwidths);
+    checkConvertToSaturationAll<uint64_t>(CV_64U, u64_values,
+                                          (int)(sizeof(u64_values) / sizeof(u64_values[0])),
+                                          widths, nwidths);
+    checkConvertToSaturationAll<unsigned>(CV_32U, u32_values,
+                                          (int)(sizeof(u32_values) / sizeof(u32_values[0])),
+                                          widths, nwidths);
+
+    {   // the exact case from the report: constant 4294967295 in a CV_64U array
+        for (int n : { 1, 15, 16, 17, 64 })
+        {
+            Mat src(1, n, CV_64U);
+            uint64_t* p = src.ptr<uint64_t>();
+            for (int i = 0; i < n; ++i)
+                p[i] = 4294967295ULL;
+            Mat d8, d16;
+            src.convertTo(d8, CV_8U);
+            src.convertTo(d16, CV_16U);
+            EXPECT_EQ(255, d8.at<uchar>(0)) << "n=" << n;
+            EXPECT_EQ(65535, d16.at<ushort>(0)) << "n=" << n;
+        }
+    }
+}
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
