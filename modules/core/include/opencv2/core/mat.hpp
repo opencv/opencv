@@ -2103,6 +2103,11 @@ public:
     CV_MAKETYPE(depth, cn) assembles a type from a depth and a channel count; for example,
     CV_MAKETYPE(CV_16S, 3) is CV_16SC3.
 
+    @note The exact bit layout is an implementation detail and is subject to change in future
+    releases. Users should not rely on the description above and should use the corresponding
+    macros (CV_MAT_DEPTH(type), CV_MAT_CN(type), CV_MAT_TYPE(depth, cn)) or the depth() and
+    channels() methods instead.
+
     @note Only the packed type is returned. The other bits of Mat::flags, such as the continuity
     flag (CV_MAT_CONT_FLAG) and the submatrix flag (CV_SUBMAT_FLAG), are not part of the value.
      */
