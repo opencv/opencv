@@ -4,6 +4,9 @@
 #include "test_precomp.hpp"
 #include "test_common.hpp"
 
+#include <cstdio>
+#include <cstring>
+
 namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
@@ -51,6 +54,100 @@ TEST(Imgcodecs_Png, encode)
     EXPECT_FALSE(img.empty());
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
 }
+
+#ifdef HAVE_PNG
+static size_t pngChunkLength(const vector<uchar>& buffer, size_t offset)
+{
+    return (static_cast<size_t>(buffer[offset]) << 24) |
+           (static_cast<size_t>(buffer[offset + 1]) << 16) |
+           (static_cast<size_t>(buffer[offset + 2]) << 8) |
+           static_cast<size_t>(buffer[offset + 3]);
+}
+
+static vector<size_t> pngIDATOffsets(const vector<uchar>& buffer)
+{
+    vector<size_t> offsets;
+    for (size_t offset = 8; offset + 12 <= buffer.size();)
+    {
+        const size_t length = pngChunkLength(buffer, offset);
+        CV_Assert(length <= buffer.size() - offset - 12);
+        if (std::memcmp(&buffer[offset + 4], "IDAT", 4) == 0)
+            offsets.push_back(offset);
+        offset += length + 12;
+    }
+    return offsets;
+}
+
+typedef testing::TestWithParam<testing::tuple<int, int>> Imgcodecs_Png_ReadIDAT;
+
+TEST_P(Imgcodecs_Png_ReadIDAT, decode)
+{
+    const int layout = get<1>(GetParam()); // Single, multiple, or empty first IDAT.
+    Mat source(256, 256, get<0>(GetParam()));
+    theRNG().fill(source, RNG::UNIFORM, 0, source.depth() == CV_8U ? 256 : 65536);
+    vector<uchar> buffer;
+    ASSERT_TRUE(imencode(".png", source, buffer,
+        { IMWRITE_PNG_COMPRESSION, 0, IMWRITE_PNG_ZLIBBUFFER_SIZE,
+          layout == 1 ? 8192 : 1024 * 1024 }));
+
+    const vector<size_t> offsets = pngIDATOffsets(buffer);
+    ASSERT_FALSE(offsets.empty());
+    if (layout == 1)
+        ASSERT_GT(offsets.size(), static_cast<size_t>(1));
+    else
+    {
+        ASSERT_EQ(static_cast<size_t>(1), offsets.size());
+        ASSERT_GT(pngChunkLength(buffer, offsets[0]), static_cast<size_t>(8192));
+    }
+
+    if (layout == 2)
+    {
+        // A zero-length IDAT is valid before the first compressed byte.
+        const uchar emptyIDAT[] = { 0, 0, 0, 0, 'I', 'D', 'A', 'T', 0x35, 0xaf, 0x06, 0x1e };
+        buffer.insert(buffer.begin() + offsets[0], emptyIDAT, emptyIDAT + sizeof(emptyIDAT));
+    }
+
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecode(buffer, IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), decoded, source);
+}
+
+TEST_P(Imgcodecs_Png_ReadIDAT, damaged_first_IDAT)
+{
+    const Mat source(256, 256, CV_8UC3, Scalar(17, 81, 203));
+    Mat decoded;
+    vector<uchar> buffer;
+    ASSERT_TRUE(imencode(".png", source, buffer,
+        { IMWRITE_PNG_COMPRESSION, 0, IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024 * 1024 }));
+    const vector<size_t> offsets = pngIDATOffsets(buffer);
+    ASSERT_EQ(static_cast<size_t>(1), offsets.size());
+    const size_t offset = offsets[0];
+    const size_t length = pngChunkLength(buffer, offset);
+
+    ASSERT_NO_THROW(decoded = imdecode(buffer, IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), decoded, source);
+
+    // Incomplete header, absent/partial payload, and absent/partial CRC.
+    const size_t truncatedSizes[] = { offset + 4, offset + 7, offset + 8,
+        offset + 8 + length / 2, offset + 8 + length, offset + 8 + length + 3 };
+    for (size_t i = 0; i < sizeof(truncatedSizes) / sizeof(truncatedSizes[0]); ++i)
+    {
+        SCOPED_TRACE(format("truncated size: %zu", truncatedSizes[i]));
+        const vector<uchar> truncated(buffer.begin(), buffer.begin() + truncatedSizes[i]);
+        ASSERT_NO_THROW(decoded = imdecode(truncated, IMREAD_UNCHANGED));
+        EXPECT_TRUE(decoded.empty());
+    }
+
+    // Header-only imcount does not validate IDAT CRC, but decoding must do so.
+    buffer[offset + 8 + length] ^= 1;
+    ASSERT_NO_THROW(decoded = imdecode(buffer, IMREAD_UNCHANGED));
+    EXPECT_TRUE(decoded.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ReadIDAT,
+                        testing::Combine(testing::Values(CV_8UC1, CV_8UC3, CV_16UC1),
+                                         testing::Values(0, 1, 2)));
+#endif
 
 TEST(Imgcodecs_Png, regression_ImreadVSCvtColor)
 {

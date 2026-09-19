@@ -301,7 +301,7 @@ bool  PngDecoder::readHeader()
     m_is_fcTL_loaded = false;
     while (true)
     {
-        id = read_chunk(chunk);
+        id = read_chunk(chunk, true);
 
         if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
         {
@@ -799,7 +799,7 @@ bool PngDecoder::readFromStreamOrBuffer(void* buffer, size_t num_bytes)
     return true;
 }
 
-uint32_t PngDecoder::read_chunk(Chunk& chunk)
+uint32_t PngDecoder::read_chunk(Chunk& chunk, bool skipIDATPayload)
 {
     unsigned char size_id[8];
     if (!readFromStreamOrBuffer(&size_id, 8))
@@ -807,6 +807,28 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
     const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
 
     const uint32_t id = png_get_uint_32(size_id + 4);
+    // Header discovery rewinds the input before handing it to libpng. Check
+    // that IDAT is complete without allocating and copying its payload.
+    // libpng will read the image data and validate its CRC during readData().
+    if (skipIDATPayload && id == id_IDAT)
+    {
+        if (!m_f)
+        {
+            if (size - 8 > m_buf.total() * m_buf.elemSize() - m_buf_pos)
+                return 0;
+            m_buf_pos += size - 8;
+            return id;
+        }
+        // Small chunks are cheaper to read through the existing stdio buffer.
+        // Keep the full-read fallback when the offset cannot fit in a long.
+        if (size > 65536 && size - 9 <= static_cast<size_t>(LONG_MAX))
+        {
+            if (fseek(m_f, static_cast<long>(size - 9), SEEK_CUR) != 0 || fgetc(m_f) == EOF)
+                return 0;
+            return id;
+        }
+    }
+
     if (id == id_IHDR) {
         // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
