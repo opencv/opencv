@@ -3033,6 +3033,44 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+// Converting a float source to a 64-bit integer must keep values outside the int32 range. The
+// vectorized path for the 16-bit float formats rounds through a 32-bit intermediate before
+// widening, so a CV_16BF holding 2147483648 used to land as 0 (unsigned) or -2147483648 (signed)
+// once the array was long enough to enter the vector loop.
+TEST(Core_ConvertTo, float16_to_64bit_keeps_large_values)
+{
+    const int srcDepths[] = { CV_16BF, CV_16F, CV_32F, CV_64F };
+    const int dstDepths[] = { CV_64U, CV_64S };
+    const double vals[] = { 0.0, 1.0, 1000.0, 65504.0, 2147483648.0, 4294967296.0, 1e10 };
+
+    for (int sd : srcDepths)
+        for (int dd : dstDepths)
+            for (double v : vals)
+            {
+                Mat one64(1, 1, CV_64F, Scalar(v));
+                Mat one; one64.convertTo(one, sd);
+                // skip values the source type cannot represent finitely (CV_16F tops out at 65504)
+                Mat back; one.convertTo(back, CV_64F);
+                if (cvIsInf(back.at<double>(0, 0)) || cvIsNaN(back.at<double>(0, 0))) continue;
+
+                Mat oneDst; one.convertTo(oneDst, dd);
+                Mat ref; oneDst.convertTo(ref, CV_64F);
+                const double expected = ref.at<double>(0, 0);
+
+                for (int n : { 2, 4, 8, 15, 16, 17, 32, 64 })
+                {
+                    Mat src(1, n, one.type(), Scalar(0));
+                    for (int i = 0; i < n; i++) one.copyTo(src(Rect(i, 0, 1, 1)));
+                    Mat dst; src.convertTo(dst, dd);
+                    Mat got; dst.convertTo(got, CV_64F);
+                    for (int i = 0; i < n; i++)
+                        ASSERT_EQ(expected, got.at<double>(0, i))
+                            << "src depth " << sd << " -> dst depth " << dd
+                            << ", value " << v << ", length " << n << ", index " << i;
+                }
+            }
+}
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
