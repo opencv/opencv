@@ -322,7 +322,30 @@ template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
     if( !m.data )
-        Py_RETURN_NONE;
+    {
+        if (m.dims <= 0)
+            Py_RETURN_NONE;
+
+        const int depth = CV_MAT_DEPTH(m.type());
+        const int channels = CV_MAT_CN(m.type());
+        const int f = (int)(sizeof(size_t) / 8);
+        const int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
+            depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
+            depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
+            depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF :
+            f * NPY_ULONGLONG + (f ^ 1) * NPY_UINT;
+        int dimensions = m.dims;
+        AutoBuffer<npy_intp> sizes(dimensions + 1);
+        for (int i = 0; i < dimensions; i++)
+            sizes[i] = m.size[i];
+        if (channels > 1)
+            sizes[dimensions++] = channels;
+
+        PyObject* array = PyArray_SimpleNew(dimensions, sizes.data(), typenum);
+        if (!array)
+            CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dimensions));
+        return array;
+    }
     cv::Mat temp, *p = (cv::Mat*)&m;
     if(!p->u || p->allocator != &GetNumpyAllocator())
     {

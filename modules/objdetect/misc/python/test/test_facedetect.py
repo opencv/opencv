@@ -22,6 +22,27 @@ from tests_common import NewOpenCVTests, intersectionRate
 
 class facedetect_test(NewOpenCVTests):
 
+    def test_facedetect_no_faces_returns_array(self):
+        model = self.find_file('dnn/onnx/models/yunet-202303.onnx', required=False)
+        detector = cv.FaceDetectorYN.create(model, '', (512, 512), 0.7, 0.3)
+        image = np.zeros((512, 512, 3), dtype=np.uint8)
+
+        status, faces = detector.detect(image)
+
+        self.assertEqual(status, 1)
+        self.assertIsInstance(faces, np.ndarray)
+        self.assertEqual(faces.shape, (0, 15))
+        self.assertEqual(faces.dtype, np.float32)
+
+        image = self.get_sample('samples/data/lena.jpg')
+        detector.setInputSize((image.shape[1], image.shape[0]))
+        status, faces = detector.detect(image)
+
+        self.assertEqual(status, 1)
+        self.assertIsInstance(faces, np.ndarray)
+        self.assertEqual(faces.shape[1], 15)
+        self.assertGreater(faces.shape[0], 0)
+
     def test_facedetect(self):
         cascade_fn = self.repoPath + '/data/haarcascades/haarcascade_frontalface_alt.xml'
         nested_fn  = self.repoPath + '/data/haarcascades/haarcascade_eye.xml'

@@ -154,7 +154,14 @@ public:
 
         // Post process
         Mat results = postProcess(output_blobs);
-        results.convertTo(faces, CV_32FC1);
+        if (results.empty())
+        {
+            faces.create(0, 15, CV_32FC1);
+        }
+        else
+        {
+            results.convertTo(faces, CV_32FC1);
+        }
         return 1;
     }
 private:
