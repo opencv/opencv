@@ -2399,6 +2399,16 @@ map_y(u,v)  \leftarrow y'' f'_y + c'_y
 where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 are the distortion coefficients vector distCoeffs.
 
+In the equations above, \f$f_x\f$ and \f$f_y\f$ are the focal lengths expressed in pixel units and
+\f$(c_x, c_y)\f$ is the principal point, which is usually close to the image center. They are taken
+from the input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$
+(cameraMatrix). The primed quantities \f$f'_x\f$, \f$f'_y\f$ and \f$(c'_x, c'_y)\f$ are the
+corresponding parameters of the new camera matrix
+\f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$ (newCameraMatrix). A pixel
+\f$(u, v)\f$ and a 3D point \f$(X_c, Y_c, Z_c)\f$ expressed in the camera coordinate system are
+related by the pinhole camera model \f$u = f_x X_c / Z_c + c_x\f$, \f$v = f_y Y_c / Z_c + c_y\f$, as
+described in #calibrateCamera and #stereoCalibrate.
+
 In case of a stereo-rectified projector-camera pair, this function is called for the projector while #initUndistortRectifyMap is called for the camera head.
 This is done after #stereoRectify, which in turn is called after #stereoCalibrate. If the projector-camera pair
 is not calibrated, it is still possible to compute the rectification transformations directly from
