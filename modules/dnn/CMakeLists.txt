@@ -6,6 +6,7 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX NEON SVE)
 ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX NEON)
+ocv_add_dispatched_file("int8layers/layers_common_vnni" AVX_VNNI)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON NEON_FP16 RVV)
@@ -13,6 +14,7 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("int8layers/conv2_int8_kernels" AVX2 RVV)
+ocv_add_dispatched_file("int8layers/conv2_int8_vnni_kernels" AVX_VNNI)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/reduce2_kernels" AVX AVX2 NEON RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/transpose_kernels" AVX AVX2 NEON RVV LASX)
