@@ -362,11 +362,17 @@ static int sum16u( const ushort* src, const uchar* mask, int* dst, int len, int 
 static int sum16s( const short* src, const uchar* mask, int* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
+// sum_()'s unrolled step adds four elements TO EACH OTHER in WT before the result reaches the
+// double accumulator. WT defaults to the source type, which is harmless for the 8/16-bit depths
+// (integer promotion widens them to int) but wraps for the 32-bit ones - and for CV_32S that wrap
+// is signed overflow. Widen to 64-bit rather than to double: it keeps the step in integer
+// arithmetic, and four 32-bit values cannot come near the 64-bit range. The 16-bit float entry
+// points below pass an explicit WT for the same reason.
 static int sum32u( const unsigned* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<unsigned, double, uint64>(src, mask, dst, len, cn); }
 
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
 static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
