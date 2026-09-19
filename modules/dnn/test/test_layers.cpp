@@ -2497,12 +2497,9 @@ public:
         }
         Y.setTo(0);
 
-        std::vector<Range> ranges_pref;
-        if (layout == "3d") {
-            ranges_pref = {Range::all(), Range(0, T_pref), Range::all()};
-        } else {
-            ranges_pref = {Range::all(), Range::all(), Range(0, T_pref), Range::all()};
-        }
+        std::vector<Range> ranges_pref = (layout == "3d")
+                         ? std::vector<Range>{Range::all(), Range(0, T_pref), Range::all()}
+                         : std::vector<Range>{Range::all(), Range::all(), Range(0, T_pref), Range::all()};
 
         Mat Q_pref = Q_all(ranges_pref);
         Mat K_pref = K_all(ranges_pref);
@@ -2517,12 +2514,9 @@ public:
         // 2. Generate
         for(int t = T_pref; t < T; t++)
         {
-            std::vector<Range> ranges_gen;
-            if (layout == "3d") {
-                ranges_gen = {Range::all(), Range(t, t + 1), Range::all()};
-            } else {
-                ranges_gen = {Range::all(), Range::all(), Range(t, t + 1), Range::all()};
-            }
+            std::vector<Range> ranges_gen = (layout == "3d")
+                                          ? std::vector<Range>{Range::all(), Range(t, t + 1), Range::all()}
+                                          : std::vector<Range>{Range::all(), Range::all(), Range(t, t + 1), Range::all()};
 
             netWithKVCache.setInput(Q_all(ranges_gen), "Q");
             netWithKVCache.setInput(K_all(ranges_gen), "K");
@@ -2587,9 +2581,9 @@ public:
         for (int lo = 0; lo < T; )
         {
             int hi = (lo == 0) ? T_pref : std::min(lo + chunk, T);
-            std::vector<Range> qr;
-            if (layout == "3d") qr = { Range::all(), Range(lo, hi), Range::all() };
-            else                qr = { Range::all(), Range::all(), Range(lo, hi), Range::all() };
+            std::vector<Range> qr = (layout == "3d")
+                                    ? std::vector<Range>{ Range::all(), Range(lo, hi), Range::all() }
+                                    : std::vector<Range>{ Range::all(), Range::all(), Range(lo, hi), Range::all() };
             std::vector<Range> mr = { Range::all(), Range::all(), Range(lo, hi), Range(0, hi) };
 
             netWithKVCache.setInput(Q_all(qr), "Q");
