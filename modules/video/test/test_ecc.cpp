@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#include <cmath>
+
 namespace opencv_test {
 namespace {
 
@@ -348,7 +350,13 @@ void CV_ECC_BigPictureTest::run(int)
         roiMask0 = imread(string(ts->get_data_path()) + "shared/halmosh0mask.png", IMREAD_GRAYSCALE);
         roiMask1 = imread(string(ts->get_data_path()) + "shared/halmosh2mask.png", IMREAD_GRAYSCALE);
         readError = largeGray0.empty() || largeGray1.empty() || roiMask0.empty() || roiMask1.empty();
-        expectedRes = (Mat_<float>(3, 3) << 1.0225, 0.0606, -28.6452, -0.0475, 1.0314, 11.819, 8.21e-06, -3.65e-07, 1);
+        // This is the estimate with the sample mask in the sums.  The matrix
+        // recorded before the estimator read the sample mask at all is
+        // reproduced to an L1 distance of 8e-4 by running this pair with the
+        // reference mask only; honouring the sample mask moves the estimate by
+        // 0.15 px in tx and 0.10 px in ty and raises the correlation over the
+        // pixel set the caller declared valid from 0.7530 to 0.7555.
+        expectedRes = (Mat_<float>(3, 3) << 1.0229, 0.0608, -28.795, -0.0476, 1.032, 11.7229, 8.32e-06, 2.67e-08, 1);
     }
     else
     {
@@ -370,8 +378,21 @@ void CV_ECC_BigPictureTest::run(int)
     ECCParameters params;
     params.criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, N_ITERS, TERMINATION_EPS);
     params.motionType = MOTION_HOMOGRAPHY;
-    params.nlevels = 5;
-    params.itersPerLevel = {5, 10, 300, 300, 1000};
+    if (maskedVersion) {
+        // With the sample mask applied, the pixel set of the correlation is
+        // valid(x; W) = referenceMask(x) && sampleMask(W x): it follows the
+        // warp.  The two masks of this pair cover nearly the same image region
+        // although the frames are ~28 px apart, and on the 46x61 coarsest level
+        // of a 5-level pyramid that warp-dependent set has a correlation peak
+        // far from the recorded warp, so that level is unsuitable for a masked
+        // run of this data.  From four levels the masked run converges, on
+        // the estimate recorded above.
+        params.nlevels = 4;
+        params.itersPerLevel = {10, 300, 300, 1000};
+    } else {
+        params.nlevels = 5;
+        params.itersPerLevel = {5, 10, 300, 300, 1000};
+    }
     findTransformECCMultiScale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
     ASSERT_EQ(checkMap(found, expectedRes), true);
     ts->set_failed_test_info(cvtest::TS::OK);
@@ -470,6 +491,96 @@ TEST(Video_ECC_BigMS, accuracy) {
 TEST(Video_ECC_BigMS_Mask, accuracy) {
     CV_ECC_BigPictureTest test(true);
     test.safe_run();
+}
+
+// The multi-scale estimator packs the sample as (value, gx, gy, mask) per
+// pixel.  Its bilinear gather used to read the four mask taps from the gy
+// channel, so under INTER_LINEAR (the default) the sample mask had no effect,
+// and a sampled point was rejected whenever any of its four taps had gy == 0.
+// Two checks: a masked-out moving foreground region must not pull the
+// estimate, and an input with gy == 0 everywhere must not be discarded into an
+// empty pixel set.
+class EccSampleMaskFixture : public testing::Test {
+   protected:
+    static Mat texture(int n) {
+        RNG rng(7);
+        Mat noise(n, n, CV_32F);
+        rng.fill(noise, RNG::UNIFORM, 0.f, 1.f);
+        Mat img;
+        GaussianBlur(noise, img, Size(0, 0), 2.0);
+        normalize(img, img, 30, 225, NORM_MINMAX);
+        Mat img8;
+        img.convertTo(img8, CV_8U);
+        return img8;
+    }
+    // RMS displacement of the window corners between two 2x3 warps, in px
+    static double cornerError(const Mat& found, const Mat& ground, int n) {
+        const std::vector<Point2f> corners = {Point2f(0, 0), Point2f((float)n, 0),
+                                              Point2f(0, (float)n), Point2f((float)n, (float)n)};
+        std::vector<Point2f> expected, got;
+        Mat foundF, groundF;
+        found.convertTo(foundF, CV_32F);
+        ground.convertTo(groundF, CV_32F);
+        cv::transform(corners, expected, groundF);
+        cv::transform(corners, got, foundF);
+        return cv::norm(got, expected, NORM_L2) / 2;
+    }
+};
+
+TEST_F(EccSampleMaskFixture, occluder_masked_out_of_sample) {
+    const int n = 256;
+    const Mat reference = texture(n);
+    // the sample: sample(x) = reference(ground^-1 x), so the warp the
+    // estimator looks for (sample(W x) = reference(x)) is `ground` ...
+    const Mat ground = (Mat_<double>(2, 3) << 1.003, -0.002, 0.8, 0.002, 0.997, -0.5);
+    Mat groundInv, sample;
+    invertAffineTransform(ground, groundInv);
+    warpAffine(reference, sample, groundInv, reference.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_REFLECT_101);
+    // ... except for a vertical band that moved on its own (the same texture
+    // shifted by 6 px), which the caller masks out of the sample
+    const Mat shift = (Mat_<double>(2, 3) << 1, 0, 6, 0, 1, 0);
+    Mat shifted;
+    warpAffine(sample, shifted, shift, sample.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_REFLECT_101);
+    const Rect band(60, 0, 80, n);
+    shifted(band).copyTo(sample(band));
+    Mat sampleMask(n, n, CV_8U, Scalar(255));
+    sampleMask(Rect(band.x - 8, 0, band.width + 16, n)).setTo(0);
+
+    ECCParameters params;
+    params.motionType = MOTION_AFFINE;
+    params.nlevels = 1;
+    params.interpolation = INTER_LINEAR;  // the path under test
+    params.criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-8);
+    Mat found = Mat::eye(2, 3, CV_64F);
+    findTransformECCMultiScale(reference, sample, found, params, noArray(), sampleMask);
+    // with the band out of the sums the background warp comes back to a few
+    // hundredths of a pixel; with the mask ignored the band pulls it away
+    EXPECT_LT(cornerError(found, ground, n), 0.1);
+}
+
+TEST_F(EccSampleMaskFixture, zero_vertical_gradient_is_not_a_mask) {
+    const int n = 256;
+    // every row the same smooth profile: gy == 0 at every pixel, a legal
+    // input whose x translation is well defined
+    Mat stripes(n, n, CV_8U);
+    for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++)
+            stripes.at<uchar>(y, x) = saturate_cast<uchar>(128 + 90 * std::sin(x * 0.19) + 30 * std::sin(x * 0.53));
+    const Mat shift = (Mat_<double>(2, 3) << 1, 0, 1.3, 0, 1, 0);
+    Mat shifted;
+    warpAffine(stripes, shifted, shift, stripes.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_REFLECT_101);
+
+    ECCParameters params;
+    params.motionType = MOTION_TRANSLATION;
+    params.nlevels = 1;
+    params.interpolation = INTER_LINEAR;  // the path under test
+    params.criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-8);
+    Mat found = Mat::eye(2, 3, CV_64F);
+    // The recovered transform is not the property under test: the y
+    // translation is unobservable in this pattern, so the estimator may leave
+    // the warp alone.  What it must not do is discard every pixel, solely
+    // because gy == 0, and fail on the empty set.
+    EXPECT_NO_THROW(findTransformECCMultiScale(stripes, shifted, found, params));
 }
 }  // namespace
 }  // namespace opencv_test
