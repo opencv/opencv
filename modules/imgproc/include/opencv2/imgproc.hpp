@@ -2375,9 +2375,9 @@ computes the corresponding coordinates in the source image (that is, in the orig
 
 \f[
 \begin{array}{l}
-\text{newCameraMatrix}\\
-x  \leftarrow (u - {c'}_x)/{f'}_x  \\
-y  \leftarrow (v - {c'}_y)/{f'}_y  \\
+\text{cameraMatrix}\\
+x  \leftarrow (u - c_x)/f_x  \\
+y  \leftarrow (v - c_y)/f_y  \\
 
 \\\text{Undistortion}
 \\\scriptsize{\textit{though equation shown is for radial undistortion, function implements cv::undistortPoints()}}\\
@@ -2391,13 +2391,23 @@ y'  \leftarrow \frac{y}{\theta} \\
 x''  \leftarrow X/W  \\
 y''  \leftarrow Y/W  \\
 
-\\\text{cameraMatrix}\\
-map_x(u,v)  \leftarrow x'' f_x + c_x  \\
-map_y(u,v)  \leftarrow y'' f_y + c_y
+\\\text{newCameraMatrix}\\
+map_x(u,v)  \leftarrow x'' f'_x + c'_x  \\
+map_y(u,v)  \leftarrow y'' f'_y + c'_y
 \end{array}
 \f]
 where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 are the distortion coefficients vector distCoeffs.
+
+In the equations above, \f$f_x\f$ and \f$f_y\f$ are the focal lengths expressed in pixel units and
+\f$(c_x, c_y)\f$ is the principal point, which is usually close to the image center. They are taken
+from the input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$
+(cameraMatrix). The primed quantities \f$f'_x\f$, \f$f'_y\f$ and \f$(c'_x, c'_y)\f$ are the
+corresponding parameters of the new camera matrix
+\f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$ (newCameraMatrix). A pixel
+\f$(u, v)\f$ and a 3D point \f$(X_c, Y_c, Z_c)\f$ expressed in the camera coordinate system are
+related by the pinhole camera model \f$u = f_x X_c / Z_c + c_x\f$, \f$v = f_y Y_c / Z_c + c_y\f$, as
+described in #calibrateCamera and #stereoCalibrate.
 
 In case of a stereo-rectified projector-camera pair, this function is called for the projector while #initUndistortRectifyMap is called for the camera head.
 This is done after #stereoRectify, which in turn is called after #stereoCalibrate. If the projector-camera pair
