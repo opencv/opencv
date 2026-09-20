@@ -342,8 +342,7 @@ struct NormL2_RVV<float, double> {
         for (int i = 0; i < n; i += vl) {
             vl = __riscv_vsetvl_e32m4(n - i);
             auto v = __riscv_vle32_v_f32m4(src + i, vl);
-            auto v_mul = __riscv_vfwmul(v, v, vl);
-            s = __riscv_vfadd_tu(s, s, v_mul, vl);
+            s = __riscv_vfwmacc_tu(s, v, v, vl);
         }
         return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e64m1()), vlmax));
     }
@@ -829,8 +828,7 @@ struct MaskedNormL2_RVV<float, double> {
                 auto v = __riscv_vle32_v_f32m4(src + i, vl);
                 auto m = __riscv_vle8_v_u8m1(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
-                auto v_mul = __riscv_vfwmul(b, v, v, vl);
-                s = __riscv_vfadd_tumu(b, s, s, v_mul, vl);
+                s = __riscv_vfwmacc_tumu(b, s, v, v, vl);
             }
         } else {
             for (int cn_index = 0; cn_index < cn; cn_index++) {
@@ -840,8 +838,7 @@ struct MaskedNormL2_RVV<float, double> {
                     auto v = __riscv_vlse32_v_f32m4(src + cn * i + cn_index, sizeof(float) * cn, vl);
                     auto m = __riscv_vle8_v_u8m1(mask + i, vl);
                     auto b = __riscv_vmsne(m, 0, vl);
-                    auto v_mul = __riscv_vfwmul(b, v, v, vl);
-                    s = __riscv_vfadd_tumu(b, s, s, v_mul, vl);
+                    s = __riscv_vfwmacc_tumu(b, s, v, v, vl);
                 }
             }
         }
