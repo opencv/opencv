@@ -57,6 +57,16 @@ else()
   endif()
 endif()
 
+# When zlib is built from 3rdparty, ZLIB_LIBRARY holds a target name instead of a
+# file path. A later find_package(ZLIB), for example the find_dependency(ZLIB) done
+# by the OpenEXR package config, accepts that cache entry and creates a ZLIB::ZLIB
+# imported target whose location is the bare name. Everything linking that target
+# then gets an unresolvable link item. Declare the alias first so find_package(ZLIB)
+# keeps the target we build.
+if(TARGET ${ZLIB_LIBRARY} AND NOT TARGET ZLIB::ZLIB)
+  add_library(ZLIB::ZLIB ALIAS ${ZLIB_LIBRARY})
+endif()
+
 # --- libavif (optional) ---
 
 if(WITH_AVIF)
