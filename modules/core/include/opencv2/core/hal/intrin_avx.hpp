@@ -1081,7 +1081,7 @@ OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float64x4, _mm256_castsi256_pd
 /** Reverse **/
 inline v_uint8x32 v_reverse(const v_uint8x32 &a)
 {
-    static const __m256i perm = _mm256_setr_epi8(
+    const __m256i perm = _mm256_setr_epi8(
             15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
             15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
     __m256i vec = _mm256_shuffle_epi8(a.val, perm);
@@ -1093,7 +1093,7 @@ inline v_int8x32 v_reverse(const v_int8x32 &a)
 
 inline v_uint16x16 v_reverse(const v_uint16x16 &a)
 {
-    static const __m256i perm = _mm256_setr_epi8(
+    const __m256i perm = _mm256_setr_epi8(
             14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1,
             14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
     __m256i vec = _mm256_shuffle_epi8(a.val, perm);
@@ -1105,7 +1105,7 @@ inline v_int16x16 v_reverse(const v_int16x16 &a)
 
 inline v_uint32x8 v_reverse(const v_uint32x8 &a)
 {
-    static const __m256i perm = _mm256_setr_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+    const __m256i perm = _mm256_setr_epi32(7, 6, 5, 4, 3, 2, 1, 0);
     return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
 }
 
@@ -2360,7 +2360,7 @@ inline double v_extract_n(v_float64x4 v)
 template<int i>
 inline v_uint32x8 v_broadcast_element(v_uint32x8 a)
 {
-    static const __m256i perm = _mm256_set1_epi32((char)i);
+    const __m256i perm = _mm256_set1_epi32((char)i);
     return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
 }
 

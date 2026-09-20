@@ -2037,7 +2037,7 @@ OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int16x8,  32, vwmul_vv_i32m2, vnclip_wx_i16m1)
 OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint16x8, 32, vwmulu_vv_u32m2, vnclipu_wx_u16m1)
 
 
-static const signed char popCountTable[256] =
+static constexpr signed char popCountTable[256] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,

@@ -869,7 +869,7 @@ Scheme:
 For all types except 64-bit integer and 64-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
 
-static const unsigned char popCountTable[] =
+static constexpr unsigned char popCountTable[] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,

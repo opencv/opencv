@@ -1978,7 +1978,7 @@ OPENCV_HAL_IMPL_SSE_UNPACKS(v_float64x2, pd, _mm_castpd_si128, _mm_castsi128_pd)
 inline v_uint8x16 v_reverse(const v_uint8x16 &a)
 {
 #if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
     return v_uint8x16(_mm_shuffle_epi8(a.val, perm));
 #else
     uchar CV_DECL_ALIGNED(32) d[16];
@@ -1993,7 +1993,7 @@ inline v_int8x16 v_reverse(const v_int8x16 &a)
 inline v_uint16x8 v_reverse(const v_uint16x8 &a)
 {
 #if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
+    const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
     return v_uint16x8(_mm_shuffle_epi8(a.val, perm));
 #else
     __m128i r = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3));

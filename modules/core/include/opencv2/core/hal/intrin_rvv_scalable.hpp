@@ -2130,7 +2130,7 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int32, 32, __riscv_vzext_vf4, quads)
 OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_float32, 32, __riscv_vzext_vf4, quads)
 
 //////////// PopCount //////////
-static const unsigned char popCountTable[256] =
+static constexpr unsigned char popCountTable[256] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
