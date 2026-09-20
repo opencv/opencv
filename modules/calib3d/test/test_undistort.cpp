@@ -1991,4 +1991,33 @@ TEST(Calib3d_initInverseRectificationMap, regression_20165)
     EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
+TEST(Calib3d_getOptimalNewCameraMatrix, regression_27374)
+{
+    Size2f size(512, 512);
+    Matx33f cameraMatrix(
+        size.width / 2, 0, size.width / 2,
+        0, size.height / 2, size.height / 2,
+        0, 0, 1
+    );
+
+    // Barrel distortion (k1 only)
+    cv::Mat distCoeffs = (cv::Mat_<double>(1, 4) << -0.1, 0, 0, 0);
+
+    // Innermost pixels of ROI after undistortion are along center lines
+    std::vector<cv::Point2f> points = {
+        {0, size.width / 2},
+        {size.width, size.height / 2},
+        {size.width / 2, 0},
+        {size.width / 2, size.height}
+    };
+ 
+    // getOptimalNewCameraMatrix() with alpha=0 should keep innermost pixels at roughly same position
+    std::vector<cv::Point2f> undistorted;
+    cv::Rect roi;
+    double alpha = 0;
+    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, size, alpha, size, &roi);
+    cv::undistortPoints(points, undistorted, cameraMatrix, distCoeffs, cv::noArray(), newCameraMatrix);
+    EXPECT_LE(cvtest::norm(points, undistorted, NORM_INF), 1);
+}
+
 }} // namespace
