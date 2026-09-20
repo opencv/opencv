@@ -1516,45 +1516,53 @@ inline v_int16x32 v_absdiffs(const v_int16x32& a, const v_int16x32& b)
 ////////// Conversions /////////
 
 /** Rounding **/
+
+// vcvtps2dq/vcvtpd2dq and the truncating variants return INT_MIN ("integer indefinite") for any
+// out-of-range input, so the input is clamped from above to make the conversion saturate instead;
+// the indefinite value already is the correct saturated result for inputs below INT_MIN.
+// See cvRound()/cvFloor()/cvCeil()/cvTrunc() for the scalar counterparts and the exact bounds.
 inline v_int32x16 v_round(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvtps_epi32(a.val)); }
+{ return v_int32x16(_mm512_cvtps_epi32(_mm512_min_ps(a.val, _mm512_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x16 v_round(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvtpd_epi32(a.val))); }
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvtpd_epi32(_mm512_min_pd(a.val, _mm512_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 inline v_int32x16 v_round(const v_float64x8& a, const v_float64x8& b)
-{ return v_int32x16(_v512_combine(_mm512_cvtpd_epi32(a.val), _mm512_cvtpd_epi32(b.val))); }
+{
+    __m512d hi = _mm512_set1_pd(CV__FLT2INT_MAX_D);
+    return v_int32x16(_v512_combine(_mm512_cvtpd_epi32(_mm512_min_pd(a.val, hi)), _mm512_cvtpd_epi32(_mm512_min_pd(b.val, hi))));
+}
 
 inline v_int32x16 v_trunc(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvttps_epi32(a.val)); }
+{ return v_int32x16(_mm512_cvttps_epi32(_mm512_min_ps(a.val, _mm512_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x16 v_trunc(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvttpd_epi32(a.val))); }
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvttpd_epi32(_mm512_min_pd(a.val, _mm512_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 #if CVT_ROUND_MODES_IMPLEMENTED
 inline v_int32x16 v_floor(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvt_roundps_epi32(a.val, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC)); }
+{ return v_int32x16(_mm512_cvt_roundps_epi32(_mm512_min_ps(a.val, _mm512_set1_ps(CV__FLT2INT_MAX_F)), _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC)); }
 
 inline v_int32x16 v_floor(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(a.val, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC))); }
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(_mm512_min_pd(a.val, _mm512_set1_pd(CV__FLT2INT_MAX_D)), _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC))); }
 
 inline v_int32x16 v_ceil(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvt_roundps_epi32(a.val, _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC)); }
+{ return v_int32x16(_mm512_cvt_roundps_epi32(_mm512_min_ps(a.val, _mm512_set1_ps(CV__FLT2INT_MAX_F)), _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC)); }
 
 inline v_int32x16 v_ceil(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(a.val, _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC))); }
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(_mm512_min_pd(a.val, _mm512_set1_pd(CV__FLT2INT_MAX_D)), _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC))); }
 #else
 inline v_int32x16 v_floor(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvtps_epi32(_mm512_roundscale_ps(a.val, 1))); }
+{ return v_trunc(v_float32x16(_mm512_roundscale_ps(a.val, 1))); }
 
 inline v_int32x16 v_floor(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvtpd_epi32(_mm512_roundscale_pd(a.val, 1)))); }
+{ return v_trunc(v_float64x8(_mm512_roundscale_pd(a.val, 1))); }
 
 inline v_int32x16 v_ceil(const v_float32x16& a)
-{ return v_int32x16(_mm512_cvtps_epi32(_mm512_roundscale_ps(a.val, 2))); }
+{ return v_trunc(v_float32x16(_mm512_roundscale_ps(a.val, 2))); }
 
 inline v_int32x16 v_ceil(const v_float64x8& a)
-{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvtpd_epi32(_mm512_roundscale_pd(a.val, 2)))); }
+{ return v_trunc(v_float64x8(_mm512_roundscale_pd(a.val, 2))); }
 #endif
 
 /** To float **/

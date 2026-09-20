@@ -4,6 +4,7 @@
 #include "test_precomp.hpp"
 #include <cmath>
 #include <climits>
+#include <limits>
 
 #include "opencv2/core/utils/logger.hpp"
 
@@ -36,6 +37,98 @@ TEST(Core_SaturateCast, NegativesAreClipped)
     unsigned int val = cv::saturate_cast<unsigned int>(d);
 
     ASSERT_EQ(0u, val);
+}
+
+TEST(Core_SaturateCast, FloatToIntSaturation)
+{
+    const double inf = std::numeric_limits<double>::infinity();
+    const float inff = std::numeric_limits<float>::infinity();
+
+    EXPECT_EQ(255, saturate_cast<uchar>(1e10f)); EXPECT_EQ(0, saturate_cast<uchar>(-1e10f));
+    EXPECT_EQ(255, saturate_cast<uchar>(1e10));  EXPECT_EQ(0, saturate_cast<uchar>(-1e10));
+    EXPECT_EQ(255, saturate_cast<uchar>(inff));  EXPECT_EQ(0, saturate_cast<uchar>(-inf));
+    EXPECT_EQ(127, saturate_cast<schar>(1e10f)); EXPECT_EQ(-128, saturate_cast<schar>(-1e10f));
+    EXPECT_EQ(127, saturate_cast<schar>(1e10));  EXPECT_EQ(-128, saturate_cast<schar>(-1e10));
+    EXPECT_EQ(127, saturate_cast<schar>(inf));   EXPECT_EQ(-128, saturate_cast<schar>(-inff));
+    EXPECT_EQ(65535, saturate_cast<ushort>(3.6e9f)); EXPECT_EQ(0, saturate_cast<ushort>(-3.6e9f));
+    EXPECT_EQ(65535, saturate_cast<ushort>(3.6e9));  EXPECT_EQ(0, saturate_cast<ushort>(-3.6e9));
+    EXPECT_EQ(65535, saturate_cast<ushort>(60000.f*60000.f));    // #28557
+    EXPECT_EQ(32767, saturate_cast<short>(3.6e9f));  EXPECT_EQ(-32768, saturate_cast<short>(-3.6e9f));
+    EXPECT_EQ(32767, saturate_cast<short>(3.6e9));   EXPECT_EQ(-32768, saturate_cast<short>(-3.6e9));
+    EXPECT_EQ(32767, saturate_cast<short>(inff));    EXPECT_EQ(-32768, saturate_cast<short>(-inf));
+
+    // int: INT_MAX is not representable as float, so for float inputs >= 2^31 the result is
+    // 2147483520 (the largest float below 2^31) or INT_MAX depending on the platform
+    EXPECT_EQ(INT_MAX, saturate_cast<int>(1e10)); EXPECT_EQ(INT_MIN, saturate_cast<int>(-1e10));
+    EXPECT_EQ(INT_MAX, saturate_cast<int>(inf));  EXPECT_EQ(INT_MIN, saturate_cast<int>(-inf));
+    EXPECT_GE(saturate_cast<int>(1e10f), 2147483520); EXPECT_EQ(INT_MIN, saturate_cast<int>(-1e10f));
+    EXPECT_GE(saturate_cast<int>(inff), 2147483520);  EXPECT_EQ(INT_MIN, saturate_cast<int>(-inff));
+    EXPECT_EQ(2147483520, saturate_cast<int>(2147483520.f));
+    EXPECT_EQ(INT_MIN, saturate_cast<int>(-2147483648.f));
+
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(1e10)); EXPECT_EQ(0u, saturate_cast<unsigned>(-1e10));
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(1e10f)); EXPECT_EQ(0u, saturate_cast<unsigned>(-1e10f));
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(inf)); EXPECT_EQ(0u, saturate_cast<unsigned>(-inff));
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(4294967295.)); EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(4294967295.5));
+    EXPECT_EQ(4294967294u, saturate_cast<unsigned>(4294967294.5)); EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(4294967294.6));
+    EXPECT_EQ(3000000000u, saturate_cast<unsigned>(3e9)); EXPECT_EQ(3000000000u, saturate_cast<unsigned>(3e9f));
+    EXPECT_EQ(0u, saturate_cast<unsigned>(-0.4)); EXPECT_EQ(0u, saturate_cast<unsigned>(-0.6f));
+
+    EXPECT_EQ(INT64_MAX, saturate_cast<int64>(1e30)); EXPECT_EQ(INT64_MIN, saturate_cast<int64>(-1e30));
+    EXPECT_EQ(INT64_MAX, saturate_cast<int64>(1e30f)); EXPECT_EQ(INT64_MIN, saturate_cast<int64>(-1e30f));
+    EXPECT_EQ(INT64_MAX, saturate_cast<int64>(inf)); EXPECT_EQ(INT64_MIN, saturate_cast<int64>(-inff));
+    EXPECT_EQ(9223372036854774784LL, saturate_cast<int64>(9223372036854774784.0));  // the largest double below 2^63
+    EXPECT_EQ(INT64_MAX, saturate_cast<int64>(9223372036854775808.0));
+    EXPECT_EQ(3000000000LL, saturate_cast<int64>(3e9f)); EXPECT_EQ(-3000000000LL, saturate_cast<int64>(-3e9));
+
+    EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(1e30)); EXPECT_EQ(0u, saturate_cast<uint64>(-1e30));
+    EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(1e30f)); EXPECT_EQ(0u, saturate_cast<uint64>(-1e30f));
+    EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(inff)); EXPECT_EQ(0u, saturate_cast<uint64>(-inf));
+    EXPECT_EQ(0u, saturate_cast<uint64>(-0.4)); EXPECT_EQ(0u, saturate_cast<uint64>(-1.f));
+    EXPECT_EQ(10000000000000000000ULL, saturate_cast<uint64>(1e19));
+    EXPECT_EQ((uint64)1e19f, saturate_cast<uint64>(1e19f));
+    EXPECT_EQ(9223372036854775808ULL, saturate_cast<uint64>(9223372036854775808.0));
+    EXPECT_EQ(18446744073709549568ULL, saturate_cast<uint64>(18446744073709549568.0));  // the largest double below 2^64
+    EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(18446744073709551616.0));
+    EXPECT_EQ(3000000000ULL, saturate_cast<uint64>(3e9f));
+
+    // 16-bit floats go through float
+    EXPECT_EQ(255, saturate_cast<uchar>(hfloat(65504.f))); EXPECT_EQ(-128, saturate_cast<schar>(hfloat(-65504.f)));
+    EXPECT_EQ(32767, saturate_cast<short>(hfloat(65504.f))); EXPECT_EQ(65504, saturate_cast<int>(hfloat(65504.f)));
+    EXPECT_EQ(255, saturate_cast<uchar>(bfloat(1e30f))); EXPECT_EQ(-32768, saturate_cast<short>(bfloat(-1e30f)));
+    EXPECT_GE(saturate_cast<int>(bfloat(1e30f)), 2147483520); EXPECT_EQ(INT_MIN, saturate_cast<int>(bfloat(-1e30f)));
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(bfloat(1e30f))); EXPECT_EQ(INT64_MAX, saturate_cast<int64>(bfloat(1e30f)));
+    EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(bfloat(1e30f))); EXPECT_EQ(0u, saturate_cast<uint64>(bfloat(-1e30f)));
+}
+
+TEST(Core_SaturateCast, RoundHalfToEven)
+{
+    // all the integer targets use the same round-half-to-even rule (cvRound/cvRound64)
+    EXPECT_EQ(2, saturate_cast<uchar>(2.5f)); EXPECT_EQ(4, saturate_cast<uchar>(3.5)); EXPECT_EQ(0, saturate_cast<uchar>(0.5));
+    EXPECT_EQ(-2, saturate_cast<schar>(-2.5f)); EXPECT_EQ(-4, saturate_cast<schar>(-3.5)); EXPECT_EQ(0, saturate_cast<schar>(-0.5f));
+    EXPECT_EQ(2, saturate_cast<ushort>(2.5)); EXPECT_EQ(4, saturate_cast<ushort>(3.5f));
+    EXPECT_EQ(-4, saturate_cast<short>(-3.5)); EXPECT_EQ(-2, saturate_cast<short>(-2.5f));
+    EXPECT_EQ(2, saturate_cast<int>(2.5)); EXPECT_EQ(4, saturate_cast<int>(3.5f)); EXPECT_EQ(-2, saturate_cast<int>(-2.5));
+    EXPECT_EQ(2u, saturate_cast<unsigned>(2.5)); EXPECT_EQ(4u, saturate_cast<unsigned>(3.5f)); EXPECT_EQ(0u, saturate_cast<unsigned>(0.5)); EXPECT_EQ(2u, saturate_cast<unsigned>(1.5f));
+    EXPECT_EQ(2, saturate_cast<int64>(2.5)); EXPECT_EQ(-4, saturate_cast<int64>(-3.5f)); EXPECT_EQ(0, saturate_cast<int64>(-0.5));
+    EXPECT_EQ(2u, saturate_cast<uint64>(2.5)); EXPECT_EQ(4u, saturate_cast<uint64>(3.5f)); EXPECT_EQ(0u, saturate_cast<uint64>(0.5f)); EXPECT_EQ(2u, saturate_cast<uint64>(1.5));
+}
+
+TEST(Core_SaturateCast, IntToNarrowerIntBoundaries)
+{
+    // the range checks must not overflow (UB) for inputs near the source type limits
+    EXPECT_EQ(127, saturate_cast<schar>(INT_MAX)); EXPECT_EQ(-128, saturate_cast<schar>(INT_MIN));
+    EXPECT_EQ(127, saturate_cast<schar>(128)); EXPECT_EQ(127, saturate_cast<schar>(127)); EXPECT_EQ(-128, saturate_cast<schar>(-128)); EXPECT_EQ(-128, saturate_cast<schar>(-129));
+    EXPECT_EQ(32767, saturate_cast<short>(INT_MAX)); EXPECT_EQ(-32768, saturate_cast<short>(INT_MIN));
+    EXPECT_EQ(32767, saturate_cast<short>(32768)); EXPECT_EQ(32767, saturate_cast<short>(32767)); EXPECT_EQ(-32768, saturate_cast<short>(-32768)); EXPECT_EQ(-32768, saturate_cast<short>(-32769));
+    EXPECT_EQ(127, saturate_cast<schar>(INT64_MAX)); EXPECT_EQ(-128, saturate_cast<schar>(INT64_MIN));
+    EXPECT_EQ(127, saturate_cast<schar>((int64)128)); EXPECT_EQ(-128, saturate_cast<schar>((int64)-129)); EXPECT_EQ(-128, saturate_cast<schar>((int64)-128));
+    EXPECT_EQ(32767, saturate_cast<short>(INT64_MAX)); EXPECT_EQ(-32768, saturate_cast<short>(INT64_MIN));
+    EXPECT_EQ(32767, saturate_cast<short>((int64)32768)); EXPECT_EQ(-32768, saturate_cast<short>((int64)-32769)); EXPECT_EQ(32767, saturate_cast<short>((int64)32767));
+    EXPECT_EQ(INT_MAX, saturate_cast<int>(INT64_MAX)); EXPECT_EQ(INT_MIN, saturate_cast<int>(INT64_MIN));
+    EXPECT_EQ(INT_MAX, saturate_cast<int>((int64)INT_MAX + 1)); EXPECT_EQ(INT_MAX, saturate_cast<int>((int64)INT_MAX));
+    EXPECT_EQ(INT_MIN, saturate_cast<int>((int64)INT_MIN - 1)); EXPECT_EQ(INT_MIN, saturate_cast<int>((int64)INT_MIN));
+    EXPECT_EQ(-1, saturate_cast<int>((int64)-1)); EXPECT_EQ(-1, saturate_cast<short>((int64)-1)); EXPECT_EQ(-1, saturate_cast<schar>(-1));
 }
 
 template<typename T, typename U>
