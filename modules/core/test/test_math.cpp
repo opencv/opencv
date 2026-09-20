@@ -2636,6 +2636,40 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     ASSERT_EQ(sDiff.dot(sDiff), 0.0);
 }
 
+TEST(CovariationMatrixVectorOfMatWithMean, non_contiguous_mean)
+{
+    std::vector<cv::Mat> samples;
+    samples.push_back(cv::Mat_<float>({2, 2}, {1, 2, 3, 4}));
+    samples.push_back(cv::Mat_<float>({2, 2}, {2, 4, 6, 8}));
+    samples.push_back(cv::Mat_<float>({2, 2}, {3, 6, 9, 12}));
+
+    const float sentinel0 = 12345.0f;
+    const float sentinel1 = -12345.0f;
+    cv::Mat meanStorage = cv::Mat_<float>({2, 3}, {
+        10, 20, sentinel0,
+        30, 40, sentinel1});
+    cv::Mat meanROI = meanStorage(cv::Rect(0, 0, 2, 2));
+    cv::Mat expectedMean = meanROI.clone();
+    cv::Mat continuousMean = expectedMean.clone();
+    ASSERT_TRUE(continuousMean.isContinuous());
+    ASSERT_FALSE(meanROI.isContinuous());
+    ASSERT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+
+    const int flags = cv::COVAR_ROWS | cv::COVAR_USE_AVG;
+    cv::Mat covContinuous, covROI, covPointer;
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covContinuous, continuousMean, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(&samples[0], static_cast<int>(samples.size()),
+                                       covPointer, meanROI, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covROI, meanROI, flags, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(covContinuous, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(covPointer, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, continuousMean, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+    EXPECT_EQ(sentinel0, meanStorage.at<float>(0, 2));
+    EXPECT_EQ(sentinel1, meanStorage.at<float>(1, 2));
+}
+
 TEST(Core_Pow, special)
 {
     for( int i = 0; i < 100; i++ )
