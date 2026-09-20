@@ -546,10 +546,68 @@ public:
             size_t startIndex = r.start * stripeSize;
             size_t endIndex = std::min(r.end * stripeSize, (size_t)total_output_size);
 
+            if (startIndex >= endIndex)
+                return;
+
+            if (is1x1_)
+            {
+                const size_t output_spatial_size = total_output_size / channels;
+                for (size_t index = startIndex; index < endIndex; index++)
+                    data_im_[index] += biasvec_[index / output_spatial_size];
+                return;
+            }
+
+            // Each worker reuses its coordinates and kernel visitor for all output values.
+            std::vector<int> coords(ndims + 1);
+            std::vector<int> kernel_coords(ndims);
+            std::vector<int> input_coords(ndims);
+            float val = 0.0f;
+            std::function<void(int)> iterate_kernel = [&](int dim) {
+                if (dim == ndims) {
+                    bool valid = true;
+
+                    for (int i = 0; i < ndims; i++) {
+                        // Apply dilation to kernel coordinates
+                        int dilated_kernel_pos = kernel_coords[i] * dilations[i];
+                        input_coords[i] = coords[i + 1] + pads[i] - dilated_kernel_pos;
+                        if (input_coords[i] < 0 || input_coords[i] % strides[i] != 0) {
+                            valid = false;
+                            break;
+                        }
+                        input_coords[i] /= strides[i];
+                        if (input_coords[i] >= input_shape[i]) {
+                            valid = false;
+                            break;
+                        }
+                    }
+
+                    if (valid) {
+                        // Calculate offset in column matrix
+                        int col_offset = coords[0];  // channel
+                        for (int i = 0; i < ndims; i++) {
+                            col_offset = col_offset * kernel_shape[i] + kernel_coords[i];
+                        }
+                        col_offset *= input_spatial_size;
+
+                        // Calculate input position in flattened input
+                        int input_pos = 0;
+                        for (int i = 0; i < ndims; i++) {
+                            input_pos = input_pos * input_shape[i] + input_coords[i];
+                        }
+
+                        val += data_col_[col_offset + input_pos];
+                    }
+                } else {
+                    for (int k = 0; k < kernel_shape[dim]; k++) {
+                        kernel_coords[dim] = k;
+                        iterate_kernel(dim + 1);
+                    }
+                }
+            };
+
             for (size_t index = startIndex; index < endIndex; index++)
             {
                 // Convert linear index to multi-dimensional coordinates
-                std::vector<int> coords(ndims + 1);  // +1 for channel dimension
                 size_t idx = index;
 
                 // Extract spatial coordinates and channel
@@ -559,58 +617,9 @@ public:
                 }
                 coords[0] = idx;  // channel
 
-                float val = 0.0f;
+                val = 0.0f;
 
-                if( is1x1_ )
-                    val = data_im_[index];
-                else {
-                    std::vector<int> kernel_coords(ndims);
-                    std::function<void(int)> iterate_kernel = [&](int dim) {
-                        if (dim == ndims) {
-                            std::vector<int> input_coords(ndims);
-                            bool valid = true;
-
-                            for (int i = 0; i < ndims; i++) {
-                                // Apply dilation to kernel coordinates
-                                int dilated_kernel_pos = kernel_coords[i] * dilations[i];
-                                input_coords[i] = coords[i + 1] + pads[i] - dilated_kernel_pos;
-                                if (input_coords[i] < 0 || input_coords[i] % strides[i] != 0) {
-                                    valid = false;
-                                    break;
-                                }
-                                input_coords[i] /= strides[i];
-                                if (input_coords[i] >= input_shape[i]) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-
-                            if (valid) {
-                                // Calculate offset in column matrix
-                                int col_offset = coords[0];  // channel
-                                for (int i = 0; i < ndims; i++) {
-                                    col_offset = col_offset * kernel_shape[i] + kernel_coords[i];
-                                }
-                                col_offset *= input_spatial_size;
-
-                                // Calculate input position in flattened input
-                                int input_pos = 0;
-                                for (int i = 0; i < ndims; i++) {
-                                    input_pos = input_pos * input_shape[i] + input_coords[i];
-                                }
-
-                                val += data_col_[col_offset + input_pos];
-                            }
-                        } else {
-                            for (int k = 0; k < kernel_shape[dim]; k++) {
-                                kernel_coords[dim] = k;
-                                iterate_kernel(dim + 1);
-                            }
-                        }
-                    };
-
-                    iterate_kernel(0);
-                }
+                iterate_kernel(0);
                 data_im_[index] = val + biasvec_[coords[0]];
             }
         }
