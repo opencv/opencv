@@ -76,8 +76,7 @@ namespace cv
  the floating-point value is first rounded to the nearest integer (using the round-half-to-even rule,
  see cvRound and cvRound64) and then clipped to the target type range. In particular,
  saturate_cast<int>(1e10) == INT_MAX, saturate_cast<uchar>(1e10f) == 255,
- saturate_cast<uint64>(-1.) == 0. NaN is not handled specially, the result is platform-specific
- (NaN is converted like +infinity on x86 and RISC-V, like 0 on ARM; see cvRound).
+ saturate_cast<uint64>(-1.) == 0. NaN is not handled, the result is unspecified (see cvRound).
 
  @param v Function parameter.
  @sa add, subtract, multiply, divide, Mat::convertTo
