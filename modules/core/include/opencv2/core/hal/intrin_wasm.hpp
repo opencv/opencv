@@ -292,7 +292,7 @@ OPENCV_HAL_IMPL_REINTERPRET_INT(uint64, int64)
 OPENCV_HAL_IMPL_REINTERPRET_INT(int64, int64)
 OPENCV_HAL_IMPL_REINTERPRET_INT(double, int64)
 
-static const unsigned char popCountTable[] =
+static constexpr unsigned char popCountTable[] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
