@@ -182,6 +182,15 @@ void CV_InitUndistortRectifyMapBadArgTest::run(int)
     errcount += run_test_case( cv::Error::StsAssert, "Invalid distortion coefficients data matrix size" );
     distortion_coeffs = Mat(1,4,CV_64F,dist);
 
+    // newCameraMatrix*R must be invertible, otherwise all the map coordinates would turn into NaN's
+    new_camera_mat = Mat::ones(3, 3, CV_64F);
+    errcount += run_test_case( cv::Error::StsBadArg, "Singular new camera matrix" );
+    new_camera_mat = Mat(3,3,CV_64F,arr_new_camera_mat);
+
+    R = Mat::zeros(3, 3, CV_64F);
+    errcount += run_test_case( cv::Error::StsBadArg, "Singular rotation matrix" );
+    R = Mat(3,3,CV_64F,r);
+
 //------------
     ts->set_failed_test_info(errcount > 0 ? cvtest::TS::FAIL_BAD_ARG_CHECK : cvtest::TS::OK);
 }
@@ -237,6 +246,12 @@ void CV_UndistortBadArgTest::run(int)
 
     camera_mat.create(5, 5, CV_64F);
     errcount += run_test_case( cv::Error::StsAssert, "Invalid camera data matrix size" );
+    camera_mat = Mat(3,3,CV_64F,cam);
+
+    // the new camera matrix must be invertible, otherwise all the map coordinates would turn into NaN's
+    new_camera_mat = Mat::ones(3, 3, CV_64F);
+    errcount += run_test_case( cv::Error::StsBadArg, "Singular new camera matrix" );
+    new_camera_mat = Mat(3,3,CV_64F,arr_new_camera_mat);
 
 //------------
     ts->set_failed_test_info(errcount > 0 ? cvtest::TS::FAIL_BAD_ARG_CHECK : cvtest::TS::OK);

@@ -103,7 +103,10 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
 
     CV_Assert( A.size() == Size(3,3) && A.size() == R.size() );
     CV_Assert( Ar.size() == Size(3,3) || Ar.size() == Size(4, 3));
-    Mat_<double> iR = (Ar.colRange(0,3)*R).inv(DECOMP_LU);
+    Mat_<double> iR;
+    // a singular matrix would turn all the map coordinates into NaN's
+    if( invert(Ar.colRange(0,3)*R, iR, DECOMP_LU) == 0 )
+        CV_Error(Error::StsBadArg, "newCameraMatrix*R is singular (not invertible)");
     const double* ir = &iR(0,0);
 
     double u0 = A(0, 2),  v0 = A(1, 2);

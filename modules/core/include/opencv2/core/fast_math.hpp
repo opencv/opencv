@@ -234,6 +234,11 @@
  saturate by itself; where it does (e.g. AArch64, RISC-V), INT_MAX is returned. Both variants are
  accepted by OpenCV tests; the result is guaranteed to be in [2147483520, INT_MAX] for
  values >= 2^31 and INT_MIN for values <= -2^31.
+
+ NaN is not handled specially, the result is what comes for free on each platform:
+ on x86 (SSE2) and RISC-V, as well as in the portable branch, NaN is converted like +infinity,
+ i.e. to the upper bound (min(x, C) returns C when x is NaN; fcvt.w/fcvt.l return the maximum value);
+ on ARM NaN is converted to 0. Other platforms may behave differently.
 */
 #define CV__FLT2INT_MAX_F  2147483520.f
 #define CV__FLT2INT_MIN_F  -2147483648.f
@@ -246,7 +251,7 @@
 
  The function uses the round-half-to-even rule (the default IEEE 754 rounding mode).
  If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
- The result for NaN is platform-specific.
+ The result for NaN is platform-specific (the upper bound on x86 and RISC-V, 0 on ARM).
  @param value floating-point number.
  */
 inline int
@@ -280,7 +285,7 @@ cvRound( double value )
     __m128d t = _mm_min_sd(_mm_set_sd(value), _mm_set_sd(CV__FLT2INT_MAX_D));
     return _mm_cvtsd_si32(t);
 #else
-    value = value >= CV__FLT2INT_MAX_D ? CV__FLT2INT_MAX_D : value <= CV__FLT2INT_MIN_D ? CV__FLT2INT_MIN_D : value;
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     return (int)lrint(value);
 #endif
 }
@@ -291,7 +296,7 @@ cvRound( double value )
  The function computes an integer i such that:
  \f[i \le \texttt{value} < i+1\f]
  If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
- The result for NaN is platform-specific.
+ The result for NaN is platform-specific (the upper bound on x86 and RISC-V, 0 on ARM).
  @param value floating-point number.
  */
 inline int cvFloor( double value )
@@ -318,13 +323,13 @@ inline int cvFloor( double value )
     return i;
 #elif defined CV__FASTMATH_HAVE_SSE2
     __m128d v = _mm_set_sd(value);
-    v = _mm_max_sd(v, _mm_set_sd(CV__FLT2INT_MIN_D));
-    v = _mm_min_sd(v, _mm_set_sd(CV__FLT2INT_MAX_D));
+    v = _mm_max_sd(_mm_set_sd(CV__FLT2INT_MIN_D), v); // NaN (2nd operand) passes through ...
+    v = _mm_min_sd(v, _mm_set_sd(CV__FLT2INT_MAX_D)); // ... and is replaced with the upper bound here
     int i = _mm_cvtsd_si32(v);
     __m128d r = _mm_cvtsi32_sd(v, i);
     return i - _mm_comilt_sd(v, r);
 #else
-    value = value >= CV__FLT2INT_MAX_D ? CV__FLT2INT_MAX_D : value <= CV__FLT2INT_MIN_D ? CV__FLT2INT_MIN_D : value;
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     int i = (int)value;
     return i - (i > value);
 #endif
@@ -335,7 +340,7 @@ inline int cvFloor( double value )
  The function computes an integer i such that:
  \f[i-1 < \texttt{value} \le i\f]
  If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
- The result for NaN is platform-specific.
+ The result for NaN is platform-specific (the upper bound on x86 and RISC-V, 0 on ARM).
  @param value floating-point number.
  */
 inline int cvCeil( double value )
@@ -367,7 +372,7 @@ inline int cvCeil( double value )
     __m128d r = _mm_cvtsi32_sd(v, i);
     return i + _mm_comigt_sd(v, r);
 #else
-    value = value >= CV__FLT2INT_MAX_D ? CV__FLT2INT_MAX_D : value <= CV__FLT2INT_MIN_D ? CV__FLT2INT_MIN_D : value;
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     int i = (int)value;
     return i + (i < value);
 #endif
@@ -376,7 +381,7 @@ inline int cvCeil( double value )
 /** @brief Truncates floating-point number to integer (rounds towards zero).
 
  If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
- The result for NaN is platform-specific.
+ The result for NaN is platform-specific (the upper bound on x86 and RISC-V, 0 on ARM).
  @param value floating-point number.
  */
 inline int cvTrunc( double value )
@@ -405,7 +410,7 @@ inline int cvTrunc( double value )
     // cvttsd2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
     return _mm_cvttsd_si32(_mm_min_sd(_mm_set_sd(value), _mm_set_sd(CV__FLT2INT_MAX_D)));
 #else
-    value = value >= CV__FLT2INT_MAX_D ? CV__FLT2INT_MAX_D : value <= CV__FLT2INT_MIN_D ? CV__FLT2INT_MIN_D : value;
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     return (int)value;
 #endif
 }
@@ -414,7 +419,7 @@ inline int cvTrunc( double value )
 
  The function uses the round-half-to-even rule (the default IEEE 754 rounding mode).
  If the value is outside of INT64_MIN ... INT64_MAX range, the result is saturated to INT64_MIN or INT64_MAX.
- The result for NaN is platform-specific.
+ The result for NaN is platform-specific (the upper bound on x86 and RISC-V, 0 on ARM).
  @param value floating-point number.
  */
 inline int64_t cvRound64( double value )
@@ -439,11 +444,11 @@ inline int64_t cvRound64( double value )
              :);
     return i;
 #elif defined CV__FASTMATH_HAVE_SSE2_X64
-    // cvtsd2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check
-    return value >= CV__FLT2INT_2P63_D ? INT64_MAX : (int64_t)_mm_cvtsd_si64(_mm_set_sd(value));
+    // cvtsd2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check;
+    // the comparison is written so that NaN takes the upper bound as well
+    return value < CV__FLT2INT_2P63_D ? (int64_t)_mm_cvtsd_si64(_mm_set_sd(value)) : INT64_MAX;
 #else
-    return value >= CV__FLT2INT_2P63_D ? INT64_MAX :
-           value <= -CV__FLT2INT_2P63_D ? INT64_MIN : (int64_t)llrint(value);
+    return value < CV__FLT2INT_2P63_D ? (value > -CV__FLT2INT_2P63_D ? (int64_t)llrint(value) : INT64_MIN) : INT64_MAX;
 #endif
 }
 
@@ -526,7 +531,7 @@ inline int cvRound(float value)
     __m128 t = _mm_min_ss(_mm_set_ss(value), _mm_set_ss(CV__FLT2INT_MAX_F));
     return _mm_cvtss_si32(t);
 #else
-    value = value >= CV__FLT2INT_MAX_F ? CV__FLT2INT_MAX_F : value <= CV__FLT2INT_MIN_F ? CV__FLT2INT_MIN_F : value;
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     return (int)lrintf(value);
 #endif
 }
@@ -566,13 +571,13 @@ inline int cvFloor( float value )
     return i;
 #elif defined CV__FASTMATH_HAVE_SSE2
     __m128 v = _mm_set_ss(value);
-    v = _mm_max_ss(v, _mm_set_ss(CV__FLT2INT_MIN_F));
-    v = _mm_min_ss(v, _mm_set_ss(CV__FLT2INT_MAX_F));
+    v = _mm_max_ss(_mm_set_ss(CV__FLT2INT_MIN_F), v); // NaN (2nd operand) passes through ...
+    v = _mm_min_ss(v, _mm_set_ss(CV__FLT2INT_MAX_F)); // ... and is replaced with the upper bound here
     int i = _mm_cvtss_si32(v);
     __m128 r = _mm_cvtsi32_ss(v, i);
     return i - _mm_comilt_ss(v, r);
 #else
-    value = value >= CV__FLT2INT_MAX_F ? CV__FLT2INT_MAX_F : value <= CV__FLT2INT_MIN_F ? CV__FLT2INT_MIN_F : value;
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     int i = (int)value;
     return i - (i > value);
 #endif
@@ -618,7 +623,7 @@ inline int cvCeil( float value )
     __m128 r = _mm_cvtsi32_ss(v, i);
     return i + _mm_comigt_ss(v, r);
 #else
-    value = value >= CV__FLT2INT_MAX_F ? CV__FLT2INT_MAX_F : value <= CV__FLT2INT_MIN_F ? CV__FLT2INT_MIN_F : value;
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     int i = (int)value;
     return i + (i < value);
 #endif
@@ -661,7 +666,7 @@ inline int cvTrunc( float value )
     // cvttss2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
     return _mm_cvttss_si32(_mm_min_ss(_mm_set_ss(value), _mm_set_ss(CV__FLT2INT_MAX_F)));
 #else
-    value = value >= CV__FLT2INT_MAX_F ? CV__FLT2INT_MAX_F : value <= CV__FLT2INT_MIN_F ? CV__FLT2INT_MIN_F : value;
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     return (int)value;
 #endif
 }
@@ -695,11 +700,11 @@ inline int64_t cvRound64( float value )
              :);
     return i;
 #elif defined CV__FASTMATH_HAVE_SSE2_X64
-    // cvtss2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check
-    return value >= CV__FLT2INT_2P63_F ? INT64_MAX : (int64_t)_mm_cvtss_si64(_mm_set_ss(value));
+    // cvtss2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check;
+    // the comparison is written so that NaN takes the upper bound as well
+    return value < CV__FLT2INT_2P63_F ? (int64_t)_mm_cvtss_si64(_mm_set_ss(value)) : INT64_MAX;
 #else
-    return value >= CV__FLT2INT_2P63_F ? INT64_MAX :
-           value <= -CV__FLT2INT_2P63_F ? INT64_MIN : (int64_t)llrintf(value);
+    return value < CV__FLT2INT_2P63_F ? (value > -CV__FLT2INT_2P63_F ? (int64_t)llrintf(value) : INT64_MIN) : INT64_MAX;
 #endif
 }
 
