@@ -1912,11 +1912,25 @@ public class ImgprocTest extends OpenCVTestCase {
                 put(0, 0, 2, 1, 4, 5);
             }
         };
-        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
+        // the new camera matrix must be invertible (a singular one is rejected with an exception)
+        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 0, 1);
+                put(1, 0, 0, 2, 1);
+                put(2, 0, 0, 0, 1);
+            }
+        };
 
         Imgproc.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
 
-        truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        // only the central pixel (the new principal point) is mapped inside of the source image
+        truth = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 0, 0, 0);
+                put(1, 0, 0, 3, 0);
+                put(2, 0, 0, 0, 0);
+            }
+        };
         assertMatEqual(truth, dst, EPS);
     }
 }

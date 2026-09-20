@@ -967,6 +967,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 #define msa_qaddq_s16         __builtin_msa_adds_s_h
 #define msa_qaddq_u32         __builtin_msa_adds_u_w
 #define msa_qaddq_s32         __builtin_msa_adds_s_w
+#define msa_qsubq_s32         __builtin_msa_subs_s_w
 #define msa_qaddq_u64         __builtin_msa_adds_u_d
 #define msa_qaddq_s64         __builtin_msa_adds_s_d
 #define msa_addq_u8(a, b)     ((v16u8)__builtin_msa_addv_b((v16i8)(a), (v16i8)(b)))

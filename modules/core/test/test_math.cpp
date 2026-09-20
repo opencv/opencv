@@ -3684,6 +3684,24 @@ TEST(Core_FastMath, SaturatingRoundingOps)
     }
 }
 
+// NaN is not handled specially, but on x86 and RISC-V it is converted like +inf for free
+// (min(x, C) returns C when x is NaN; fcvt.w/fcvt.l return the maximum value); see fast_math.hpp.
+// The order of min/max operands matters there, so guard it. On ARM NaN is converted to 0.
+#if defined __SSE2__ || defined _M_X64 || defined __riscv
+TEST(Core_FastMath, NaN_is_converted_like_inf)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const float nanf = std::numeric_limits<float>::quiet_NaN();
+    EXPECT_EQ(INT_MAX, cvRound(nan)); EXPECT_EQ(INT_MAX, cvFloor(nan)); EXPECT_EQ(INT_MAX, cvCeil(nan)); EXPECT_EQ(INT_MAX, cvTrunc(nan));
+    EXPECT_EQ(INT_MAX, cvRound(-nan)); EXPECT_EQ(INT_MAX, cvFloor(-nan)); EXPECT_EQ(INT_MAX, cvCeil(-nan)); EXPECT_EQ(INT_MAX, cvTrunc(-nan));
+    EXPECT_GE(cvRound(nanf), 2147483520); EXPECT_GE(cvFloor(nanf), 2147483520); EXPECT_GE(cvCeil(nanf), 2147483520); EXPECT_GE(cvTrunc(nanf), 2147483520);
+    EXPECT_GE(cvRound(-nanf), 2147483520); EXPECT_GE(cvFloor(-nanf), 2147483520); EXPECT_GE(cvCeil(-nanf), 2147483520); EXPECT_GE(cvTrunc(-nanf), 2147483520);
+    EXPECT_EQ(INT64_MAX, cvRound64(nan)); EXPECT_EQ(INT64_MAX, cvRound64(nanf)); EXPECT_EQ(INT64_MAX, cvRound64(-nan)); EXPECT_EQ(INT64_MAX, cvRound64(-nanf));
+    EXPECT_EQ(255, saturate_cast<uchar>(nanf)); EXPECT_EQ(32767, saturate_cast<short>(nan));
+    EXPECT_EQ(UINT_MAX, saturate_cast<unsigned>(nan)); EXPECT_EQ(UINT64_MAX, saturate_cast<uint64>(nanf));
+}
+#endif
+
 TEST(Core_FastMath, Round64)
 {
     const double inf = std::numeric_limits<double>::infinity();

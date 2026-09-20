@@ -1511,6 +1511,24 @@ template<typename R> struct TheTest
                     }
                 }
             }
+
+#if defined __SSE2__ || defined _M_X64 || defined __riscv
+            // NaN is not handled specially, but on x86 and RISC-V it is converted like +inf for free,
+            // in the vector code as well as in the scalar one (see fast_math.hpp)
+            Data<R> dataN((LaneType)std::numeric_limits<float>::quiet_NaN());
+            R aN = dataN;
+            Data<Ri> roundN = v_round(aN), truncN = v_trunc(aN), floorN = v_floor(aN), ceilN = v_ceil(aN);
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            {
+                SCOPED_TRACE(cv::format("NaN: i=%d", i));
+                LaneType x = dataN[i];
+                EXPECT_EQ(saturate_cast<ILaneType>(cvRound(x)), roundN[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvTrunc(x)), truncN[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvFloor(x)), floorN[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvCeil(x)), ceilN[i]);
+                EXPECT_GT((int)roundN[i], 0); EXPECT_GT((int)truncN[i], 0); EXPECT_GT((int)floorN[i], 0); EXPECT_GT((int)ceilN[i], 0);
+            }
+#endif
         }
 
         return *this;

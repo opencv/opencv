@@ -1348,13 +1348,15 @@ inline v_int32x4 v_round(const v_float32x4& a)
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
     v4i32 a1 = msa_cvttintq_s32_f32(a.val);
-    return v_int32x4(msa_addq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(msa_cvtfintq_f32_s32(a1), a.val))));
+    // ftint_s.w saturates; the correction must saturate too, otherwise INT_MIN-1 wraps around
+    return v_int32x4(msa_qaddq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(msa_cvtfintq_f32_s32(a1), a.val))));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
     v4i32 a1 = msa_cvttintq_s32_f32(a.val);
-    return v_int32x4(msa_subq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(a.val, msa_cvtfintq_f32_s32(a1)))));
+    // ftint_s.w saturates; the correction must saturate too, otherwise INT_MAX+1 wraps around
+    return v_int32x4(msa_qsubq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(a.val, msa_cvtfintq_f32_s32(a1)))));
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)

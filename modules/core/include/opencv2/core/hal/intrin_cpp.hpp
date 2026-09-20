@@ -288,7 +288,8 @@ Most of these operations return only one value.
 Different type conversions and casts:
 
 - Rounding: @ref v_round, @ref v_floor, @ref v_ceil, @ref v_trunc (all saturate to the int32 range,
-  see @ref cvRound and friends for the exact bounds; the result for NaN is platform-specific),
+  see @ref cvRound and friends for the exact bounds; the result for NaN is platform-specific:
+  the upper bound on x86 and RISC-V, 0 on ARM),
 - To float: @ref v_cvt_f32, @ref v_cvt_f64
 - Reinterpret: @ref v_reinterpret_as_u8, @ref v_reinterpret_as_s8, ...
 
