@@ -1500,9 +1500,11 @@ inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_RVV_SELECT(v_uint8, VTraits<v_uint8>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_uint16, VTraits<v_uint16>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_uint32, VTraits<v_uint32>::vlanes())
+OPENCV_HAL_IMPL_RVV_SELECT(v_uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int8, VTraits<v_int8>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int16, VTraits<v_int16>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int32, VTraits<v_int32>::vlanes())
+OPENCV_HAL_IMPL_RVV_SELECT(v_int64, VTraits<v_int64>::vlanes())
 #if CV_SIMD_SCALABLE_FP16
 inline v_float16 v_select(const v_float16& mask, const v_float16& a, const v_float16& b) \
 { \
