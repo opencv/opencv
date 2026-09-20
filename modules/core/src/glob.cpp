@@ -66,7 +66,7 @@ namespace
 #endif
         HANDLE handle;
         dirent ent;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         DIR() { }
         ~DIR()
         {
@@ -113,6 +113,7 @@ namespace
         char* aname = new char[asize+1];
         aname[asize] = 0;
         wcstombs(aname, dir->data.cFileName, asize);
+        delete[] dir->ent.d_name;
         dir->ent.d_name = aname;
 #else
         if (dir->ent.d_name != 0)
