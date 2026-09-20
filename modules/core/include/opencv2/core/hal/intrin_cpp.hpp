@@ -287,7 +287,8 @@ Most of these operations return only one value.
 
 Different type conversions and casts:
 
-- Rounding: @ref v_round, @ref v_floor, @ref v_ceil, @ref v_trunc,
+- Rounding: @ref v_round, @ref v_floor, @ref v_ceil, @ref v_trunc (all saturate to the int32 range,
+  see @ref cvRound and friends for the exact bounds; the result for NaN is platform-specific),
 - To float: @ref v_cvt_f32, @ref v_cvt_f64
 - Reinterpret: @ref v_reinterpret_as_u8, @ref v_reinterpret_as_s8, ...
 
@@ -2546,7 +2547,7 @@ template<int n> inline v_reg<int, n> v_trunc(const v_reg<float, n>& a)
 {
     v_reg<int, n> c;
     for( int i = 0; i < n; i++ )
-        c.s[i] = (int)(a.s[i]);
+        c.s[i] = cvTrunc(a.s[i]);
     return c;
 }
 
@@ -2592,7 +2593,7 @@ template<int n> inline v_reg<int, n*2> v_trunc(const v_reg<double, n>& a)
     v_reg<int, n*2> c;
     for( int i = 0; i < n; i++ )
     {
-        c.s[i] = (int)(a.s[i]);
+        c.s[i] = cvTrunc(a.s[i]);
         c.s[i+n] = 0;
     }
     return c;

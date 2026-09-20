@@ -1928,23 +1928,33 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
     return v_rotate_right<s>(a, b);
 }
 
+// i32x4.trunc_sat_f32x4 saturates, but the "-1"/"+1" corrections in v_floor/v_ceil could wrap the
+// saturated INT_MIN/INT_MAX around, so the input is clamped to the int32 range first.
+// See cvRound() and friends for the exact bounds.
+static inline v128_t wasm_clamp_to_s32_f32x4(v128_t a)
+{
+    return wasm_f32x4_max(wasm_f32x4_min(a, wasm_f32x4_splat(CV__FLT2INT_MAX_F)), wasm_f32x4_splat(CV__FLT2INT_MIN_F));
+}
+
 inline v_int32x4 v_round(const v_float32x4& a)
 {
-    v128_t h = wasm_f32x4_splat(0.5);
-    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_add(a.val, h)));
+    // f32x4.nearest rounds half to even, like cvRound()
+    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_nearest(wasm_clamp_to_s32_f32x4(a.val))));
 }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
-    v128_t mask = wasm_f32x4_lt(a.val, wasm_f32x4_convert_i32x4(a1));
+    v128_t v = wasm_clamp_to_s32_f32x4(a.val);
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(v);
+    v128_t mask = wasm_f32x4_lt(v, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_add(a1, mask));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
-    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
-    v128_t mask = wasm_f32x4_gt(a.val, wasm_f32x4_convert_i32x4(a1));
+    v128_t v = wasm_clamp_to_s32_f32x4(a.val);
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(v);
+    v128_t mask = wasm_f32x4_gt(v, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_sub(a1, mask));
 }
 
@@ -1967,7 +1977,7 @@ inline v_int32x4 func(const v_float64x2& a) \
 OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_round, cvRound)
 OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_floor, cvFloor)
 OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_ceil, cvCeil)
-OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_trunc, int)
+OPENCV_HAL_IMPL_WASM_MATH_FUNC(v_trunc, cvTrunc)
 
 inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 {

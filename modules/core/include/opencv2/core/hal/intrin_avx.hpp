@@ -1502,32 +1502,38 @@ inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
 ////////// Conversions /////////
 
 /** Rounding **/
+
+// vcvtps2dq/vcvtpd2dq and the truncating variants return INT_MIN ("integer indefinite") for any
+// out-of-range input, so the input is clamped from above to make the conversion saturate instead;
+// the indefinite value already is the correct saturated result for inputs below INT_MIN.
+// See cvRound()/cvFloor()/cvCeil()/cvTrunc() for the scalar counterparts and the exact bounds.
 inline v_int32x8 v_round(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvtps_epi32(a.val)); }
+{ return v_int32x8(_mm256_cvtps_epi32(_mm256_min_ps(a.val, _mm256_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x8 v_round(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(a.val))); }
+{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(_mm256_min_pd(a.val, _mm256_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 inline v_int32x8 v_round(const v_float64x4& a, const v_float64x4& b)
 {
-    __m128i ai = _mm256_cvtpd_epi32(a.val), bi = _mm256_cvtpd_epi32(b.val);
+    __m256d hi = _mm256_set1_pd(CV__FLT2INT_MAX_D);
+    __m128i ai = _mm256_cvtpd_epi32(_mm256_min_pd(a.val, hi)), bi = _mm256_cvtpd_epi32(_mm256_min_pd(b.val, hi));
     return v_int32x8(_v256_combine(ai, bi));
 }
 
 inline v_int32x8 v_trunc(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(a.val)); }
+{ return v_int32x8(_mm256_cvttps_epi32(_mm256_min_ps(a.val, _mm256_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x8 v_trunc(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvttpd_epi32(a.val))); }
+{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvttpd_epi32(_mm256_min_pd(a.val, _mm256_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 inline v_int32x8 v_floor(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_floor_ps(a.val))); }
+{ return v_trunc(v_float32x8(_mm256_floor_ps(a.val))); }
 
 inline v_int32x8 v_floor(const v_float64x4& a)
 { return v_trunc(v_float64x4(_mm256_floor_pd(a.val))); }
 
 inline v_int32x8 v_ceil(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_ceil_ps(a.val))); }
+{ return v_trunc(v_float32x8(_mm256_ceil_ps(a.val))); }
 
 inline v_int32x8 v_ceil(const v_float64x4& a)
 { return v_trunc(v_float64x4(_mm256_ceil_pd(a.val))); }

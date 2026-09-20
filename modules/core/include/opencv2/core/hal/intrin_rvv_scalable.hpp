@@ -2317,7 +2317,7 @@ inline v_int16 v_round(const v_float16& a)
 inline v_int16 v_floor(const v_float16& a)
 {
 #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
-    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 1 /*RNE, round-to-nearest-even*/, VTraits<v_float16>::vlanes());
+    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 2 /*RDN, round-down (towards -inf)*/, VTraits<v_float16>::vlanes());
 #else
     return __riscv_vfcvt_x(vfsub(a, 0.5f - 1e-5, VTraits<v_float16>::vlanes()), VTraits<v_float16>::vlanes());
 #endif
@@ -2326,7 +2326,7 @@ inline v_int16 v_floor(const v_float16& a)
 inline v_int16 v_ceil(const v_float16& a)
 {
 #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
-    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 3 /*ROD, round-to-odd*/, VTraits<v_float16>::vlanes());
+    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 3 /*RUP, round-up (towards +inf)*/, VTraits<v_float16>::vlanes());
 #else
     return __riscv_vfcvt_x(vfadd(a, 0.5f - 1e-5, VTraits<v_float16>::vlanes()), VTraits<v_float16>::vlanes());
 #endif
