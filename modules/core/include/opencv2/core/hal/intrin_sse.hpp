@@ -2039,14 +2039,13 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 // out-of-range input, so the input is clamped to make the conversion saturate instead. The lower
 // bound is only needed by v_floor, where the subsequent "-1" correction could wrap INT_MIN around;
 // for the other functions the indefinite value already is the correct saturated result.
-// min(a, C) returns C when a is NaN, so NaN is converted like +inf (as on RISC-V; on ARM it is 0).
+// NaN is not handled: the result is unspecified.
 // See cvRound()/cvFloor()/cvCeil()/cvTrunc() for the scalar counterparts and the exact bounds.
 inline v_int32x4 v_round(const v_float32x4& a)
 { return v_int32x4(_mm_cvtps_epi32(_mm_min_ps(a.val, _mm_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-    // the order of operands matters for NaN: max(LO, a) lets it through, min(a, HI) converts it to HI, like in v_round/v_ceil/v_trunc
     __m128 v = _mm_min_ps(_mm_max_ps(_mm_set1_ps(CV__FLT2INT_MIN_F), a.val), _mm_set1_ps(CV__FLT2INT_MAX_F));
     __m128i a1 = _mm_cvtps_epi32(v);
     __m128i mask = _mm_castps_si128(_mm_cmpgt_ps(_mm_cvtepi32_ps(a1), v));
@@ -2076,7 +2075,6 @@ inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 
 inline v_int32x4 v_floor(const v_float64x2& a)
 {
-    // the order of operands matters for NaN: max(LO, a) lets it through, min(a, HI) converts it to HI, like in v_round/v_ceil/v_trunc
     __m128d v = _mm_min_pd(_mm_max_pd(_mm_set1_pd(CV__FLT2INT_MIN_D), a.val), _mm_set1_pd(CV__FLT2INT_MAX_D));
     __m128i a1 = _mm_cvtpd_epi32(v);
     __m128i mask = _mm_castpd_si128(_mm_cmpgt_pd(_mm_cvtepi32_pd(a1), v));
