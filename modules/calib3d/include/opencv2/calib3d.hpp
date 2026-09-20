@@ -2177,6 +2177,8 @@ undistorted image. See roi1, roi2 description in #stereoRectify .
 @param centerPrincipalPoint Optional flag that indicates whether in the new camera intrinsic matrix the
 principal point should be at the image center or not. By default, the principal point is chosen to
 best fit a subset of the source image (determined by alpha) to the corrected image.
+@param ignoreCorners Optional flag that indicates whether to ignore the corners of the image when computing
+the new camera matrix. By default, the corners are included in the computation.
 @return new_camera_matrix Output new camera intrinsic matrix.
 
 The function computes and returns the optimal new camera intrinsic matrix based on the free scaling parameter.
@@ -2190,7 +2192,8 @@ coefficients, the computed new camera intrinsic matrix, and newImageSize should 
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize = Size(),
                                             CV_OUT Rect* validPixROI = 0,
-                                            bool centerPrincipalPoint = false);
+                                            bool centerPrincipalPoint = false,
+                                            bool ignoreCorners = false);
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
 

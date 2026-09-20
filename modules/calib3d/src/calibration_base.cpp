@@ -1523,7 +1523,7 @@ void cv::projectPoints( InputArray _opoints,
 
 void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
-              Rect_<double>& inner, Rect_<double>& outer )
+              Rect_<double>& inner, Rect_<double>& outer, bool ignoreCorners)
 {
     const int N = 9;
     int x, y, k;
@@ -1543,7 +1543,7 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
                 // have no influence on the two deformation rectangles that are calculated below
                 continue;
             }
-            if ((x == 0 || x == N - 1) && (y == 0 || y == N - 1))
+            if (ignoreCorners && (x == 0 || x == N - 1) && (y == 0 || y == N - 1))
             {
                 // skip corners, because undistortPoints is likely to fail and return the same
                 // value
@@ -1567,7 +1567,7 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
             {
                 continue;
             }
-            if ((x == 0 || x == N - 1) && (y == 0 || y == N - 1))
+            if (ignoreCorners && (x == 0 || x == N - 1) && (y == 0 || y == N - 1))
             {
                 continue;
             }
@@ -1594,7 +1594,8 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
 
 cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _distCoeffs,
                                   Size imgSize, double alpha, Size newImgSize,
-                                  Rect* validPixROI, bool centerPrincipalPoint )
+                                  Rect* validPixROI, bool centerPrincipalPoint,
+                                  bool ignoreCorners )
 {
     Rect_<double> inner, outer;
     newImgSize = newImgSize.width*newImgSize.height != 0 ? newImgSize : imgSize;
@@ -1610,7 +1611,8 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
         double cx = (newImgSize.width-1)*0.5;
         double cy = (newImgSize.height-1)*0.5;
 
-        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), cameraMatrix, imgSize, inner, outer );
+        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), cameraMatrix, imgSize, inner, outer,
+                                ignoreCorners );
         double s0 = std::max(std::max(std::max((double)cx/(cx0 - inner.x), (double)cy/(cy0 - inner.y)),
                                       (double)cx/(inner.x + inner.width - cx0)),
                              (double)cy/(inner.y + inner.height - cy0));
@@ -1639,7 +1641,8 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
     {
         // Get inscribed and circumscribed rectangles in normalized
         // (independent of camera matrix) coordinates
-        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), Mat(), imgSize, inner, outer );
+        getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), Mat(), imgSize, inner, outer,
+                                ignoreCorners );
 
         // Projection mapping inner rectangle to viewport
         double fx0 = (newImgSize.width  - 1) / inner.width;
@@ -1661,7 +1664,7 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
 
         if( validPixROI )
         {
-            getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), M, imgSize, inner, outer );
+            getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), M, imgSize, inner, outer, ignoreCorners );
             Rect r = inner;
             r &= Rect(0, 0, newImgSize.width, newImgSize.height);
             *validPixROI = r;

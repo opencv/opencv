@@ -2015,7 +2015,8 @@ TEST(Calib3d_getOptimalNewCameraMatrix, regression_27374)
     std::vector<cv::Point2f> undistorted;
     cv::Rect roi;
     double alpha = 0;
-    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, size, alpha, size, &roi);
+    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, size, alpha, size, &roi,
+                                                            false, true);
     cv::undistortPoints(points, undistorted, cameraMatrix, distCoeffs, cv::noArray(), newCameraMatrix);
     EXPECT_LE(cvtest::norm(points, undistorted, NORM_INF), 1);
 }

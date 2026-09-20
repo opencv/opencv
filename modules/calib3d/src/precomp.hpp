@@ -152,7 +152,7 @@ void projectPoints( InputArray objectPoints,
 
 void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
-              Rect_<double>& inner, Rect_<double>& outer );
+              Rect_<double>& inner, Rect_<double>& outer, bool ignoreCorners = false);
 
 } // namespace cv
 
