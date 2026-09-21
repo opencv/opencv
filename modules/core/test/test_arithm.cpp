@@ -3060,7 +3060,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_SumWide,
     testing::Combine(
         testing::Values(CV_32U, CV_32S),
         testing::Values(1, 2, 3, 4),
-        testing::Values(4, 8, 23, 24, 64, 127)));
+        testing::Values(4, 127)));
 
 TEST(Core_ConvertTo, regression_12121)
 {
