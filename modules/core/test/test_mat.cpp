@@ -1195,6 +1195,24 @@ TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 TEST(Core_Merge, shape_operations) { Core_MergeTest test; test.safe_run(); }
 TEST(Core_Split, shape_operations) { Core_SplitTest test; test.safe_run(); }
 
+TEST(Core_Split, empty_std_array_output)
+{
+    std::array<Mat, 3> outputs = {
+        Mat::ones(2, 2, CV_8U),
+        Mat::ones(3, 1, CV_32F),
+        Mat::eye(2, 3, CV_64F)
+    };
+
+    for( size_t i = 0; i < outputs.size(); i++ )
+        ASSERT_FALSE(outputs[i].empty());
+
+    EXPECT_NO_THROW(split(Mat(), outputs));
+
+    EXPECT_EQ((size_t)3, outputs.size());
+    for( size_t i = 0; i < outputs.size(); i++ )
+        EXPECT_TRUE(outputs[i].empty());
+}
+
 
 TEST(Core_IOArray, submat_assignment)
 {
