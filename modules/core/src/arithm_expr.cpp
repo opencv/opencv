@@ -870,12 +870,14 @@ void TExpr::compile()
         if (a.kind != CONST || a.depth == EW_DEPTH_NONE) continue;
         const int cn = std::max(1, a.channels), sd = a.srcdepth, dd = a.depth;
         const size_t sesz = CV_ELEM_SIZE1(sd), desz = CV_ELEM_SIZE1(dd);
-        AutoBuffer<uchar, 64> srcbytes((size_t)cn * sesz);
-        memcpy(srcbytes.data(), (const uchar*)(constbuf.data() + a.constofs), (size_t)cn * sesz);
+        // uint64_t element type is used for buffer alignment on worst case
+        AutoBuffer<uint64_t, sizeof(uint64_t)> srcbuf(divUp((size_t)cn * sesz, (unsigned)sizeof(uint64_t)));
+        uchar* srcbytes = (uchar*)srcbuf.data();
+        memcpy(srcbytes, (const uchar*)(constbuf.data() + a.constofs), (size_t)cn * sesz);
         const size_t ofs = appendConstBuf(constbuf, dd, nullptr, cn);   // reserve converted region
         uchar* dst = (uchar*)(constbuf.data() + ofs);
-        if (sd == dd) memcpy(dst, srcbytes.data(), (size_t)cn * desz);
-        else getConvertFunc(sd, dd)(srcbytes.data(), 0, nullptr, 0, dst, 0, Size(cn, 1), nullptr);
+        if (sd == dd) memcpy(dst, srcbytes, (size_t)cn * desz);
+        else getConvertFunc(sd, dd)(srcbytes, 0, nullptr, 0, dst, 0, Size(cn, 1), nullptr);
         a.constofs = ofs; a.srcdepth = dd;
         nconsts++;
     }
@@ -1299,9 +1301,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             const size_t region = alignSize((size_t)wf0, 8);
             // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
             // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
-            // the rare larger case.
-            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * region);
-            uchar* scratch = scratchBuf.data();
+            // the rare larger case. uint64_t is used for memory alignment on the worst case.
+            AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> scratchBuf(
+                divUp((size_t)totalEsz * region, (unsigned)sizeof(uint64_t)));
+            uchar* scratch = (uchar*)scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
                 const int wf = std::min(wf0, (int)total - x0);
@@ -1472,8 +1475,11 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         const int bw = std::min(w, bc.capElems);
         const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
         const size_t region = alignSize((size_t)bw * bh, 8);
-        AutoBuffer<uchar, 16*1024 + 256> tstoreBuf((size_t)eszPrefix[bc.nbuffers] * region);  // inline (<= ~16KB)
-        uchar* tstore = tstoreBuf.data();
+        // uint64_t elements (see the note on scratchBuf above): keeps the block-local temp store
+        // 8-byte aligned, which the 64-bit-lane kernels require on 32-bit ABIs.
+        AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
+            divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~16KB)
+        uchar* tstore = (uchar*)tstoreBuf.data();
 
         AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
         for (int y0 = 0; y0 < h; y0 += bh)
