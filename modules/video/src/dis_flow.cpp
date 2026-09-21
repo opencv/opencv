@@ -547,9 +547,9 @@ inline float processPatch(float &dst_dUx, float &dst_dUy, uchar *I0_ptr, uchar *
     if (patch_sz == 8 && vlanes <= 8)
     {
         /* Variables to accumulate the sums */
-        v_float32 Ux_vec = vx_setall_f32(0);
-        v_float32 Uy_vec = vx_setall_f32(0);
-        v_float32 SSD_vec = vx_setall_f32(0);
+        v_float32 Ux_vec = vx_setzero_f32();
+        v_float32 Uy_vec = vx_setzero_f32();
+        v_float32 SSD_vec = vx_setzero_f32();
 
         HAL_INIT_BILINEAR_8x8_PATCH_EXTRACTION;
         for (int c = 0; c < 8; c += vlanes)
@@ -612,10 +612,10 @@ inline float processPatchMeanNorm(float &dst_dUx, float &dst_dUy, uchar *I0_ptr,
     if (patch_sz == 8 && vlanes <= 8)
     {
         /* Variables to accumulate the sums */
-        v_float32 sum_I0x_mul_vec = vx_setall_f32(0);
-        v_float32 sum_I0y_mul_vec = vx_setall_f32(0);
-        v_float32 sum_diff_vec = vx_setall_f32(0);
-        v_float32 sum_diff_sq_vec = vx_setall_f32(0);
+        v_float32 sum_I0x_mul_vec = vx_setzero_f32();
+        v_float32 sum_I0y_mul_vec = vx_setzero_f32();
+        v_float32 sum_diff_vec = vx_setzero_f32();
+        v_float32 sum_diff_sq_vec = vx_setzero_f32();
 
         HAL_INIT_BILINEAR_8x8_PATCH_EXTRACTION;
         for (int c = 0; c < 8; c += vlanes)
@@ -675,7 +675,7 @@ inline float computeSSD(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int I1_stri
     const int vlanes = VTraits<v_float32>::vlanes();
     if (patch_sz == 8 && vlanes <= 8)
     {
-        v_float32 SSD_vec = vx_setall_f32(0);
+        v_float32 SSD_vec = vx_setzero_f32();
         HAL_INIT_BILINEAR_8x8_PATCH_EXTRACTION;
         for (int c = 0; c < 8; c += vlanes)
         {
@@ -715,8 +715,8 @@ inline float computeSSDMeanNorm(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int
     const int vlanes = VTraits<v_float32>::vlanes();
     if (patch_sz == 8 && vlanes <= 8)
     {
-        v_float32 sum_diff_vec = vx_setall_f32(0);
-        v_float32 sum_diff_sq_vec = vx_setall_f32(0);
+        v_float32 sum_diff_vec = vx_setzero_f32();
+        v_float32 sum_diff_sq_vec = vx_setzero_f32();
         HAL_INIT_BILINEAR_8x8_PATCH_EXTRACTION;
         for (int c = 0; c < 8; c += vlanes)
         {
