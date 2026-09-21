@@ -114,6 +114,7 @@ namespace
         aname[asize] = 0;
         wcstombs(aname, dir->data.cFileName, asize);
         delete[] dir->ent.d_name;
+        dir->ent.d_name = 0;
         dir->ent.d_name = aname;
 #else
         if (dir->ent.d_name != 0)
