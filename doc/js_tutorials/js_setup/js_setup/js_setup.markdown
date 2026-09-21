@@ -47,7 +47,6 @@ git pull
 ./emsdk activate 6.0.9
 @endcode
 
-
 Obtaining OpenCV Source Code
 --------------------------
 
