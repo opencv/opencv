@@ -68,6 +68,7 @@
 #    pragma warning(disable:4714)  // const marked as __forceinline not inlined
 #  endif
 #  include <Eigen/Core>
+#  include <Eigen/Geometry>
 #  if defined(_MSC_VER)
 #    pragma warning(pop)
 #  endif

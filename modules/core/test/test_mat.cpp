@@ -6,6 +6,8 @@
 #ifdef HAVE_EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include "opencv2/core/quaternion.hpp"
+#include "opencv2/core/affine.hpp"
 #include "opencv2/core/eigen.hpp"
 #endif
 
@@ -2307,6 +2309,106 @@ TEST(Core_Eigen, cv2eigen_check_RowMajor)
     ASSERT_EQ(4.0, eigen_A(1, 1));
     ASSERT_EQ(5.0, eigen_A(2, 0));
     ASSERT_EQ(6.0, eigen_A(2, 1));
+}
+
+TEST(Core_Eigen, quaternion_conversion)
+{
+    // Test float version
+    {
+        cv::Quatf cv_q(1.0f, 2.0f, 3.0f, 4.0f);
+        Eigen::Quaternionf eigen_q;
+        cv2eigen(cv_q, eigen_q);
+        EXPECT_FLOAT_EQ(cv_q.w, eigen_q.w());
+        EXPECT_FLOAT_EQ(cv_q.x, eigen_q.x());
+        EXPECT_FLOAT_EQ(cv_q.y, eigen_q.y());
+        EXPECT_FLOAT_EQ(cv_q.z, eigen_q.z());
+
+        cv::Quatf cv_q_back;
+        eigen2cv(eigen_q, cv_q_back);
+        EXPECT_FLOAT_EQ(cv_q.w, cv_q_back.w);
+        EXPECT_FLOAT_EQ(cv_q.x, cv_q_back.x);
+        EXPECT_FLOAT_EQ(cv_q.y, cv_q_back.y);
+        EXPECT_FLOAT_EQ(cv_q.z, cv_q_back.z);
+    }
+
+    // Test double version
+    {
+        cv::Quatd cv_q(1.0, 2.0, 3.0, 4.0);
+        Eigen::Quaterniond eigen_q;
+        cv2eigen(cv_q, eigen_q);
+        EXPECT_DOUBLE_EQ(cv_q.w, eigen_q.w());
+        EXPECT_DOUBLE_EQ(cv_q.x, eigen_q.x());
+        EXPECT_DOUBLE_EQ(cv_q.y, eigen_q.y());
+        EXPECT_DOUBLE_EQ(cv_q.z, eigen_q.z());
+
+        cv::Quatd cv_q_back;
+        eigen2cv(eigen_q, cv_q_back);
+        EXPECT_DOUBLE_EQ(cv_q.w, cv_q_back.w);
+        EXPECT_DOUBLE_EQ(cv_q.x, cv_q_back.x);
+        EXPECT_DOUBLE_EQ(cv_q.y, cv_q_back.y);
+        EXPECT_DOUBLE_EQ(cv_q.z, cv_q_back.z);
+    }
+}
+
+TEST(Core_Eigen, isometry_conversion)
+{
+    // Test float version
+    {
+        cv::Matx33f R = cv::Matx33f::eye();
+        cv::Vec3f t(1.0f, 2.0f, 3.0f);
+        cv::Affine3f cv_aff(R, t);
+
+        Eigen::Transform<float, 3, Eigen::Isometry> eigen_iso;
+        cv2eigen(cv_aff, eigen_iso);
+
+        // Verify elements
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                EXPECT_FLOAT_EQ(cv_aff.matrix(i, j), eigen_iso.matrix()(i, j));
+            }
+        }
+
+        cv::Affine3f cv_aff_back;
+        eigen2cv(eigen_iso, cv_aff_back);
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                EXPECT_FLOAT_EQ(cv_aff.matrix(i, j), cv_aff_back.matrix(i, j));
+            }
+        }
+    }
+
+    // Test double version
+    {
+        cv::Matx33d R = cv::Matx33d::eye();
+        cv::Vec3d t(1.0, 2.0, 3.0);
+        cv::Affine3d cv_aff(R, t);
+
+        Eigen::Transform<double, 3, Eigen::Isometry> eigen_iso;
+        cv2eigen(cv_aff, eigen_iso);
+
+        // Verify elements
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                EXPECT_DOUBLE_EQ(cv_aff.matrix(i, j), eigen_iso.matrix()(i, j));
+            }
+        }
+
+        cv::Affine3d cv_aff_back;
+        eigen2cv(eigen_iso, cv_aff_back);
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                EXPECT_DOUBLE_EQ(cv_aff.matrix(i, j), cv_aff_back.matrix(i, j));
+            }
+        }
+    }
 }
 #endif // HAVE_EIGEN
 
