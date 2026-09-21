@@ -2378,19 +2378,16 @@ computes the corresponding coordinates in the source image (that is, in the orig
 \text{newCameraMatrix}\\
 x  \leftarrow (u - {c'}_x)/{f'}_x  \\
 y  \leftarrow (v - {c'}_y)/{f'}_y  \\
-
 \\\text{Undistortion}
 \\\scriptsize{\textit{though equation shown is for radial undistortion, function implements cv::undistortPoints()}}\\
 r^2  \leftarrow x^2 + y^2 \\
 \theta \leftarrow \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}\\
 x' \leftarrow \frac{x}{\theta} \\
 y'  \leftarrow \frac{y}{\theta} \\
-
 \\\text{Rectification}\\
 {[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
 x''  \leftarrow X/W  \\
 y''  \leftarrow Y/W  \\
-
 \\\text{cameraMatrix}\\
 map_x(u,v)  \leftarrow x'' f_x + c_x  \\
 map_y(u,v)  \leftarrow y'' f_y + c_y
