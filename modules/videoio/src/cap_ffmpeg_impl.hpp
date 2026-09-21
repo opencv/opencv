@@ -2325,6 +2325,8 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
 
         AVStream* st = ic->streams[video_stream];
         int64_t time_stamp = st->start_time;
+        if (time_stamp == AV_NOPTS_VALUE_)  // same guard as dts_to_sec(): without it the target is INT64_MIN + offset,
+            time_stamp = 0;                 // av_seek_frame() lands at position 0 and the loop below decodes every frame
         double  time_base  = r2d(st->time_base);
         int64_t ts_norm = (int64_t)(sec / time_base + 0.5);
 
