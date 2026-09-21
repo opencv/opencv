@@ -887,8 +887,11 @@ void regressionVolPoseRot(VolumeType volumeType)
     double ptsDiffNorm = cv::sum(maskPtsDiff)[0]/255.0;
     double nrmDiffNorm = cv::sum(maskNrmDiff)[0]/255.0;
 
-    EXPECT_LE(ptsDiffNorm, 786);
-    EXPECT_LE(nrmDiffNorm, 786);
+    // The number of differing pixels is not deterministic: HashTSDF integration is multi-threaded and
+    // the result varies from run to run by several pixels (e.g. 768..773 on x86-64 for the same binary,
+    // always 772 with a single thread), and it also depends on the platform (up to 789 was observed on ARM).
+    EXPECT_LE(ptsDiffNorm, 800);
+    EXPECT_LE(nrmDiffNorm, 800);
 
     double normPts = cv::norm(mpts, mptsRot, NORM_INF, (maskPts0 & maskPtsRot));
     Mat absdot = normalsError(mnrm, mnrmRot);
