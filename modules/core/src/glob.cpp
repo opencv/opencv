@@ -66,7 +66,7 @@ namespace
 #endif
         HANDLE handle;
         dirent ent;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         DIR() { }
         ~DIR()
         {
@@ -105,6 +105,8 @@ namespace
 #if defined(WINRT) || defined(_WIN32_WCE)
         if (dir->ent.d_name != 0)
         {
+            delete[] dir->ent.d_name;
+            dir->ent.d_name = 0;
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
                 return 0;
         }
