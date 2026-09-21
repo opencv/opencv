@@ -218,19 +218,34 @@ static inline v_uint64 v_blend_u64(const v_uint64& mask, const v_uint64& a, cons
     return v_or(v_and(a, mask), v_and(b, v_xor(mask, vx_setall_u64((uint64_t)-1))));
 }
 
+// The 64-bit ORDERING compares cannot be used here. At the SSE and NEON baselines v_gt on
+// v_int64x2 is the sign of (b - a) (intrin_sse.hpp, intrin_neon.hpp), so it overflows - and
+// answers the wrong way - precisely when the operands sit at opposite ends of the 64-bit range,
+// which is the case a saturating conversion must get right: v_gt(INT64_MIN, INT32_MAX) reports
+// true. Only the 256-bit AVX2 path lowers to a native compare, so a build would be correct when
+// it dispatches to AVX2 and wrong at its own baseline. Use an arithmetic shift and an equality
+// instead; v_eq on 64-bit lanes is exact (it is built from 32-bit compares) and the shift cannot
+// overflow.
 static inline v_int64 v_clamp_s64_to_s32(const v_int64& x)
 {
-    const v_int64 hi = vx_setall_s64((int64_t)INT_MAX);
-    const v_int64 lo = vx_setall_s64((int64_t)INT_MIN);
-    v_int64 r = v_blend_s64(v_gt(x, hi), hi, x);
-    return v_blend_s64(v_gt(lo, r), lo, r);
+    const v_int64 zero = vx_setzero_s64();
+    const v_int64 ones = vx_setall_s64((int64_t)-1);
+    const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
+    const v_int64 top  = v_shr<31>(x);                   // 0 or -1 exactly when x fits in int32
+    const v_int64 fits = v_or(v_eq(top, zero), v_eq(top, ones));
+    const v_int64 sat  = v_blend_s64(sign, vx_setall_s64((int64_t)INT_MIN),
+                                           vx_setall_s64((int64_t)INT_MAX));
+    return v_blend_s64(fits, x, sat);
 }
 
 static inline v_int64 v_clamp_s64_to_u32(const v_int64& x)
 {
-    const v_int64 hi = vx_setall_s64((int64_t)UINT_MAX);
-    v_int64 r = v_blend_s64(v_gt(x, hi), hi, x);
-    return v_and(r, v_gt(r, vx_setzero_s64()));          // negatives clamp to 0
+    const v_int64 zero = vx_setzero_s64();
+    const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
+    const v_int64 top  = v_shr<32>(x);                   // 0 exactly when x is in [0, UINT32_MAX]
+    const v_int64 fits = v_eq(top, zero);
+    const v_int64 sat  = v_blend_s64(sign, zero, vx_setall_s64((int64_t)UINT_MAX));
+    return v_blend_s64(fits, x, sat);
 }
 
 static inline v_uint64 v_clamp_u64_to_u32(const v_uint64& x)
