@@ -746,6 +746,8 @@ OPENCV_HAL_IMPL_LSX_SELECT(v_uint16x8)
 OPENCV_HAL_IMPL_LSX_SELECT(v_int16x8)
 OPENCV_HAL_IMPL_LSX_SELECT(v_uint32x4)
 OPENCV_HAL_IMPL_LSX_SELECT(v_int32x4)
+OPENCV_HAL_IMPL_LSX_SELECT(v_uint64x2)
+OPENCV_HAL_IMPL_LSX_SELECT(v_int64x2)
 
 inline v_float32x4 v_select(const v_float32x4 &mask, const v_float32x4 &a, const v_float32x4 &b)
 { return v_float32x4(__lsx_vbitsel_v((__m128i)b.val, (__m128i)a.val, (__m128i)mask.val)); }

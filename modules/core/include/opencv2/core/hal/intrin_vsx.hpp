@@ -643,6 +643,8 @@ OPENCV_HAL_IMPL_VSX_SELECT(v_uint16x8, vec_bshort8_c)
 OPENCV_HAL_IMPL_VSX_SELECT(v_int16x8, vec_bshort8_c)
 OPENCV_HAL_IMPL_VSX_SELECT(v_uint32x4, vec_bint4_c)
 OPENCV_HAL_IMPL_VSX_SELECT(v_int32x4, vec_bint4_c)
+OPENCV_HAL_IMPL_VSX_SELECT(v_uint64x2, vec_bdword2_c)
+OPENCV_HAL_IMPL_VSX_SELECT(v_int64x2, vec_bdword2_c)
 OPENCV_HAL_IMPL_VSX_SELECT(v_float32x4, vec_bint4_c)
 OPENCV_HAL_IMPL_VSX_SELECT(v_float64x2, vec_bdword2_c)
 

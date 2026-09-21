@@ -897,6 +897,14 @@ OPENCV_HAL_IMPL_AVX_SELECT(v_int32x8,   epi8)
 OPENCV_HAL_IMPL_AVX_SELECT(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_SELECT(v_float64x4, pd)
 
+#define OPENCV_HAL_IMPL_AVX_SELECT64(_Tpvec)                                     \
+    inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
+    { return _Tpvec(_mm256_castpd_si256(_mm256_blendv_pd(_mm256_castsi256_pd(b.val), \
+                          _mm256_castsi256_pd(a.val), _mm256_castsi256_pd(mask.val)))); }
+
+OPENCV_HAL_IMPL_AVX_SELECT64(v_uint64x4)
+OPENCV_HAL_IMPL_AVX_SELECT64(v_int64x4)
+
 /** Comparison **/
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                            \
     inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)                 \

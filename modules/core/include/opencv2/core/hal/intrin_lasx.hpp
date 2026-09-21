@@ -970,6 +970,8 @@ OPENCV_HAL_IMPL_LASX_SELECT(v_uint16x16)
 OPENCV_HAL_IMPL_LASX_SELECT(v_int16x16)
 OPENCV_HAL_IMPL_LASX_SELECT(v_uint32x8)
 OPENCV_HAL_IMPL_LASX_SELECT(v_int32x8)
+OPENCV_HAL_IMPL_LASX_SELECT(v_uint64x4)
+OPENCV_HAL_IMPL_LASX_SELECT(v_int64x4)
 
 inline v_float32x8 v_select(const v_float32x8 &mask, const v_float32x8 &a, const v_float32x8 &b)
 { return v_float32x8(__lasx_xvbitsel_v(*((__m256i*)&b.val), *((__m256i*)&a.val), *((__m256i*)&mask.val))); }
