@@ -1415,6 +1415,23 @@ TEST(Core_InputArray, empty)
     ASSERT_TRUE( _InputArray(data).empty() );
 }
 
+TEST(Core_InputArray, element_empty)
+{
+    Mat src = Mat::ones(2, 2, CV_8U);
+
+    std::vector<Mat> mats(2);
+    mats[1] = src;
+    InputArray matInput(mats);
+    EXPECT_TRUE(matInput.empty(0));
+    EXPECT_FALSE(matInput.empty(1));
+
+    std::vector<UMat> umats(2);
+    src.copyTo(umats[1]);
+    InputArray umatInput(umats);
+    EXPECT_NO_THROW({ EXPECT_TRUE(umatInput.empty(0)); });
+    EXPECT_NO_THROW({ EXPECT_FALSE(umatInput.empty(1)); });
+}
+
 TEST(Core_InputArray, convert_from_vector_over2GB)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);
