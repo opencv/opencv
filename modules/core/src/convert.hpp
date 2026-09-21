@@ -195,11 +195,76 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
     b = v_cvt_f32(ib);
 }
 
+// No universal-intrinsics backend offers a saturating 64->32 narrowing pack: v_pack for
+// 64-bit lanes simply keeps the low 32 bits (see OPENCV_HAL_IMPL_C_PACK in intrin_cpp.hpp).
+// Narrowing a wide source through such a pack therefore wraps large magnitudes, and the
+// saturating 32->8/16 narrow that follows then clamps the already-wrapped value, producing a
+// different (wrong) result for long arrays than for short ones. The helpers below clamp each
+// 64-bit lane to the target 32-bit range first, so the truncating pack becomes exact.
+//
+// Working from the 32-bit halves avoids 64-bit v_min/v_max (not provided by most backends)
+// and non-zero 64-bit comparisons, whose SSE implementation is subtraction-based and overflows.
+
+static inline v_int32 v_saturate_s64_to_s32(const v_int64& a, const v_int64& b)
+{
+    v_uint32 lo = v_pack(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b));
+    v_uint32 hi = v_pack(v_shr<32>(v_reinterpret_as_u64(a)), v_shr<32>(v_reinterpret_as_u64(b)));
+    v_int32 L = v_reinterpret_as_s32(lo), H = v_reinterpret_as_s32(hi);
+    v_int32 z = vx_setzero_s32(), m1 = vx_setall_s32(-1);
+    // W > INT32_MAX: high part positive, or high part zero and the low half negative as signed
+    v_int32 over  = v_or(v_gt(H, z), v_and(v_eq(H, z), v_lt(L, z)));
+    // W < INT32_MIN: high part < -1, or high part == -1 and the low half non-negative as signed
+    v_int32 under = v_or(v_lt(H, m1), v_and(v_eq(H, m1), v_ge(L, z)));
+    v_int32 both  = v_or(over, under);
+    return v_or(v_or(v_and(over,  vx_setall_s32(std::numeric_limits<int>::max())),
+                     v_and(under, vx_setall_s32(std::numeric_limits<int>::min()))),
+                v_and(v_not(both), L));
+}
+
+static inline v_int32 v_saturate_u64_to_s32(const v_uint64& a, const v_uint64& b)
+{
+    v_uint32 lo = v_pack(a, b);
+    v_uint32 over = v_or(v_ne(v_pack(v_shr<32>(a), v_shr<32>(b)), vx_setzero_u32()),
+                         v_reinterpret_as_u32(v_lt(v_reinterpret_as_s32(lo), vx_setzero_s32())));
+    return v_reinterpret_as_s32(v_or(v_and(over, vx_setall_u32(std::numeric_limits<int>::max())),
+                                     v_and(v_not(over), lo)));
+}
+
+static inline v_uint32 v_saturate_u64_to_u32(const v_uint64& a, const v_uint64& b)
+{
+    v_uint32 lo = v_pack(a, b);
+    v_uint32 over = v_ne(v_pack(v_shr<32>(a), v_shr<32>(b)), vx_setzero_u32());
+    return v_or(v_and(over, vx_setall_u32(std::numeric_limits<unsigned>::max())),
+                v_and(v_not(over), lo));
+}
+
+static inline v_uint32 v_saturate_s64_to_u32(const v_int64& a, const v_int64& b)
+{
+    v_uint64 ua = v_reinterpret_as_u64(a), ub = v_reinterpret_as_u64(b);
+    v_uint32 lo = v_pack(ua, ub);
+    v_int32 H = v_reinterpret_as_s32(v_pack(v_shr<32>(ua), v_shr<32>(ub)));
+    v_int32 z = vx_setzero_s32();
+    // W < 0 exactly when the high half is negative; a zero high half is always in range,
+    // even when the low half has its top bit set (values in [2^31, 2^32) are valid uint32)
+    v_uint32 neg  = v_reinterpret_as_u32(v_lt(H, z));
+    v_uint32 over = v_reinterpret_as_u32(v_gt(H, z));
+    v_uint32 mask = v_or(neg, over);
+    return v_or(v_and(over, vx_setall_u32(std::numeric_limits<unsigned>::max())),
+                v_and(v_not(mask), lo));
+}
+
+static inline v_int32 v_saturate_u32_to_s32(const v_uint32& u)
+{
+    v_uint32 over = v_reinterpret_as_u32(v_lt(v_reinterpret_as_s32(u), vx_setzero_s32()));
+    return v_reinterpret_as_s32(v_or(v_and(over, vx_setall_u32(std::numeric_limits<int>::max())),
+                                     v_and(v_not(over), u)));
+}
+
 static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
-    b = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
+    a = v_saturate_s64_to_s32(vx_load(ptr), vx_load(ptr + int64_nlanes));
+    b = v_saturate_s64_to_s32(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
 }
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
@@ -215,15 +280,8 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint32& a, v_uint32& b)
 {
     const int nlanes = VTraits<v_uint64>::vlanes();
-    v_int64 z = vx_setzero_s64();
-    v_int64 ia0 = vx_load(ptr), ia1 = vx_load(ptr + nlanes);
-    v_int64 ib0 = vx_load(ptr + nlanes*2), ib1 = vx_load(ptr + nlanes*3);
-    ia0 = v_and(ia0, v_gt(ia0, z));
-    ia1 = v_and(ia1, v_gt(ia1, z));
-    ib0 = v_and(ib0, v_gt(ib0, z));
-    ib1 = v_and(ib1, v_gt(ib1, z));
-    a = v_pack(v_reinterpret_as_u64(ia0), v_reinterpret_as_u64(ia1));
-    b = v_pack(v_reinterpret_as_u64(ib0), v_reinterpret_as_u64(ib1));
+    a = v_saturate_s64_to_u32(vx_load(ptr), vx_load(ptr + nlanes));
+    b = v_saturate_s64_to_u32(vx_load(ptr + nlanes*2), vx_load(ptr + nlanes*3));
 }
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_float32& a, v_float32& b)
@@ -291,17 +349,15 @@ static inline void vx_load_pair_as(const int* ptr, v_uint32& a, v_uint32& b)
 static inline void vx_load_pair_as(const uint64_t* ptr, v_uint32& a, v_uint32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
-    b = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
+    a = v_saturate_u64_to_u32(vx_load(ptr), vx_load(ptr + int64_nlanes));
+    b = v_saturate_u64_to_u32(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
 }
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_int32& a, v_int32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    v_uint32 ua = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
-    v_uint32 ub = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
-    a = v_reinterpret_as_s32(ua);
-    b = v_reinterpret_as_s32(ub);
+    a = v_saturate_u64_to_s32(vx_load(ptr), vx_load(ptr + int64_nlanes));
+    b = v_saturate_u64_to_s32(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
 }
 
 static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
@@ -327,8 +383,8 @@ static inline void vx_load_pair_as(const unsigned* ptr, v_uint32& a, v_uint32& b
 
 static inline void vx_load_pair_as(const unsigned* ptr, v_int32& a, v_int32& b)
 {
-    a = v_reinterpret_as_s32(vx_load(ptr));
-    b = v_reinterpret_as_s32(vx_load(ptr + VTraits<v_uint32>::vlanes()));
+    a = v_saturate_u32_to_s32(vx_load(ptr));
+    b = v_saturate_u32_to_s32(vx_load(ptr + VTraits<v_uint32>::vlanes()));
 }
 
 static inline void vx_load_pair_as(const unsigned* ptr, v_float32& a, v_float32& b)
