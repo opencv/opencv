@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include <set>
+#include <thread>
 #include "opencv2/core/utils/filesystem.hpp"
 
 namespace opencv_test
@@ -693,6 +695,429 @@ inline static std::string safe_capture_name_printer(const testing::TestParamInfo
 }
 
 INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis), safe_capture_name_printer);
+
+//==================================================================================================
+// TEST_P(prefetch_capture, ...)
+
+typedef testing::TestWithParam<VideoCaptureAPIs> prefetch_capture;
+
+static void openBunnyOrSkip(VideoCapture& cap, VideoCaptureAPIs apiPref)
+{
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    const String video_file = BunnyParameters::getFilename(String(".avi"));
+    EXPECT_NO_THROW(cap.open(video_file, apiPref));
+    if (!cap.isOpened())
+        throw SkipTestException(cv::String("Backend can't open the video: ") + video_file);
+}
+
+// retrieve() hands out the queued frame itself, so the Mat shares storage with the
+// capture. Each frame gets its own buffer; clone() before modifying one.
+TEST_P(prefetch_capture, retrieve_is_repeatable)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    ASSERT_TRUE(cap.grab());
+
+    Mat first;
+    ASSERT_TRUE(cap.retrieve(first));
+    ASSERT_FALSE(first.empty());
+    const Mat reference = first.clone();
+
+    Mat second;
+    ASSERT_TRUE(cap.retrieve(second));
+    ASSERT_FALSE(second.empty());
+    EXPECT_EQ(0, cv::norm(reference, second, NORM_INF));
+}
+
+TEST_P(prefetch_capture, retrieve_shares_queued_buffer)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    ASSERT_TRUE(cap.grab());
+
+    Mat shared;
+    ASSERT_TRUE(cap.retrieve(shared));
+    ASSERT_FALSE(shared.empty());
+
+    // Documented consequence of the zero-copy handoff: no clone(), no isolation.
+    shared.setTo(Scalar::all(0));
+
+    Mat again;
+    ASSERT_TRUE(cap.retrieve(again));
+    ASSERT_FALSE(again.empty());
+    EXPECT_EQ(shared.data, again.data);
+    EXPECT_EQ(0, cv::norm(again, NORM_INF));
+}
+
+// Consecutive frames must not share one recycled buffer, or holding a frame past
+// the next read() would corrupt it. A direct capture does reuse one here.
+TEST_P(prefetch_capture, frames_do_not_alias_each_other)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    const int frame_count = 5;
+
+    VideoCapture direct;
+    openBunnyOrSkip(direct, apiPref);
+
+    std::vector<Mat> reference;
+    for (int i = 0; i < frame_count; i++)
+    {
+        Mat frame;
+        ASSERT_NO_THROW(direct >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+        reference.push_back(frame.clone());
+    }
+
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    // Deliberately kept without clone(), to catch buffer recycling.
+    std::vector<Mat> held;
+    Mat frame;
+    for (int i = 0; i < frame_count; i++)
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+        held.push_back(frame);
+    }
+
+    std::set<const uchar*> buffers;
+    for (int i = 0; i < frame_count; i++)
+        buffers.insert(held[i].data);
+    EXPECT_EQ((size_t)frame_count, buffers.size()) << "queued frames share storage";
+
+    for (int i = 0; i < frame_count; i++)
+        EXPECT_EQ(0, cv::norm(reference[i], held[i], NORM_INF)) << i;
+}
+
+TEST_P(prefetch_capture, matches_direct_read)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    const int frame_count = 10;
+
+    VideoCapture direct;
+    openBunnyOrSkip(direct, apiPref);
+
+    std::vector<Mat> expected_frames;
+    std::vector<int> expected_positions;
+    for (int i = 0; i < frame_count; i++)
+    {
+        Mat frame;
+        ASSERT_NO_THROW(direct >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+        expected_frames.push_back(frame);
+        expected_positions.push_back((int)direct.get(CAP_PROP_POS_FRAMES));
+    }
+
+    VideoCapture prefetched;
+    openBunnyOrSkip(prefetched, apiPref);
+    ASSERT_TRUE(prefetched.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    for (int i = 0; i < frame_count; i++)
+    {
+        Mat frame;
+        ASSERT_NO_THROW(prefetched >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+        EXPECT_EQ(0, cv::norm(expected_frames[i], frame, NORM_INF)) << i;
+        EXPECT_EQ(expected_positions[i], (int)prefetched.get(CAP_PROP_POS_FRAMES)) << i;
+    }
+}
+
+TEST_P(prefetch_capture, disable_resumes_direct_read)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    EXPECT_EQ(4, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
+
+    Mat frame;
+    for (int i = 0; i < 5; i++)
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+    }
+
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 0));
+
+    for (int i = 0; i < 5; i++)
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+    }
+}
+
+// How many frames this backend actually delivers for the clip. Not always
+// BunnyParameters::getCount() - GStreamer reads a couple more than FFMPEG here.
+static int countFramesDirect(VideoCaptureAPIs apiPref)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    int n = 0;
+    Mat frame;
+    while (cap.read(frame))
+        n++;
+    return n;
+}
+
+// Read the whole clip with a consumer slow enough to let the queue fill up.
+static int countFramesWithSlowConsumer(VideoCaptureAPIs apiPref, int depth, int drop, int delayMs)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    EXPECT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, depth));
+    EXPECT_TRUE(cap.set(CAP_PROP_PREFETCH_DROP, drop));
+    EXPECT_EQ(drop, (int)cap.get(CAP_PROP_PREFETCH_DROP));
+
+    int received = 0;
+    Mat frame;
+    for (;;)
+    {
+        cap >> frame;
+        if (frame.empty())
+            break;
+        received++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+    }
+    return received;
+}
+
+// A fast consumer never lets the queue fill, so it never exercises the policy at
+// all - the reader has to be slower than the decoder for either branch to matter.
+TEST_P(prefetch_capture, drop_policy_skips_frames_when_behind)
+{
+    const int total = countFramesDirect(GetParam());
+    const int received = countFramesWithSlowConsumer(GetParam(), 2, /*drop*/ 1, /*delayMs*/ 5);
+    EXPECT_GT(received, 0);
+    EXPECT_LT(received, total) << "drop policy delivered every frame; nothing was dropped";
+}
+
+TEST_P(prefetch_capture, block_policy_keeps_every_frame_when_behind)
+{
+    const int total = countFramesDirect(GetParam());
+    const int received = countFramesWithSlowConsumer(GetParam(), 2, /*drop*/ 0, /*delayMs*/ 5);
+    EXPECT_EQ(total, received);
+}
+
+// The worker decodes ahead, so the backend sits past the consumer's position.
+// Reconfiguring the prefetcher must not throw those frames away.
+TEST_P(prefetch_capture, reconfigure_does_not_skip_frames)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    Mat frame;
+    for (int i = 0; i < 5; i++)
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+    }
+    const int before = (int)cap.get(CAP_PROP_POS_FRAMES);
+
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 8));
+
+    ASSERT_NO_THROW(cap >> frame);
+    ASSERT_FALSE(frame.empty());
+    EXPECT_EQ(before + 1, (int)cap.get(CAP_PROP_POS_FRAMES))
+        << "queued frames were discarded when the depth changed";
+}
+
+TEST_P(prefetch_capture, disable_does_not_skip_frames)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 8));
+
+    int received = 0;
+    Mat frame;
+    for (;;)
+    {
+        cap >> frame;
+        if (frame.empty())
+            break;
+        received++;
+        if (received == 20)
+        {
+            ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 0));
+        }
+    }
+    EXPECT_EQ(countFramesDirect(GetParam()), received)
+        << "disabling prefetch mid-stream lost the frames still queued";
+}
+
+// A seek must discard what the worker read ahead, or it returns pre-seek frames.
+TEST_P(prefetch_capture, seek_discards_queued_frames)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    const int target = 40;
+
+    VideoCapture direct;
+    openBunnyOrSkip(direct, apiPref);
+    if (!direct.set(CAP_PROP_POS_FRAMES, target))
+        throw SkipTestException("Backend cannot seek");
+    Mat expected;
+    ASSERT_NO_THROW(direct >> expected);
+    ASSERT_FALSE(expected.empty());
+
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    Mat frame;
+    for (int i = 0; i < 10; i++)   // let the worker run ahead
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+    }
+
+    ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, target));
+    ASSERT_NO_THROW(cap >> frame);
+    ASSERT_FALSE(frame.empty());
+    EXPECT_EQ(0, cv::norm(expected, frame, NORM_INF)) << "stale pre-seek frame returned";
+}
+
+TEST_P(prefetch_capture, reenable_after_disable)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    Mat frame;
+    for (int i = 0; i < 5; i++)
+    {
+        ASSERT_NO_THROW(cap >> frame);
+        ASSERT_FALSE(frame.empty()) << i;
+    }
+
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 0));
+    EXPECT_EQ(0, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
+    ASSERT_NO_THROW(cap >> frame);
+    ASSERT_FALSE(frame.empty());
+
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    EXPECT_EQ(4, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
+    const int before = (int)cap.get(CAP_PROP_POS_FRAMES);
+    ASSERT_NO_THROW(cap >> frame);
+    ASSERT_FALSE(frame.empty());
+    EXPECT_EQ(before + 1, (int)cap.get(CAP_PROP_POS_FRAMES));
+}
+
+TEST_P(prefetch_capture, reads_after_end_of_stream)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    Mat frame;
+    int received = 0;
+    while (cap.read(frame))
+        received++;
+    EXPECT_GT(received, 0);
+
+    // Past the end it must keep saying no, not block or start returning frames.
+    for (int i = 0; i < 3; i++)
+    {
+        EXPECT_FALSE(cap.read(frame)) << i;
+        EXPECT_TRUE(frame.empty()) << i;
+    }
+}
+
+// Documented as incompatible, and enforced - retrieve() only serves channel 0.
+TEST_P(prefetch_capture, multi_channel_retrieve_is_rejected)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    ASSERT_TRUE(cap.grab());
+
+    Mat first;
+    EXPECT_TRUE(cap.retrieve(first, 0));
+    EXPECT_FALSE(first.empty());
+
+    Mat other;
+    EXPECT_FALSE(cap.retrieve(other, 1));
+}
+
+TEST_P(prefetch_capture, wait_any_is_rejected)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    std::vector<VideoCapture> streams;
+    streams.push_back(cap);
+    std::vector<int> ready;
+    EXPECT_THROW(VideoCapture::waitAny(streams, ready), cv::Exception);
+}
+
+// retrieve() hands out a Mat without copying, but an OutputArray that cannot
+// share storage still has to work - assign() deep-copies for those.
+TEST_P(prefetch_capture, retrieve_into_umat)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+
+    VideoCapture direct;
+    openBunnyOrSkip(direct, apiPref);
+    Mat expected;
+    ASSERT_NO_THROW(direct >> expected);
+    ASSERT_FALSE(expected.empty());
+
+    VideoCapture cap;
+    openBunnyOrSkip(cap, apiPref);
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+
+    UMat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_FALSE(frame.empty());
+    EXPECT_EQ(0, cv::norm(expected, frame.getMat(ACCESS_READ), NORM_INF));
+}
+
+TEST_P(prefetch_capture, negative_depth_is_rejected)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+
+    // Rejected before the capture is wrapped ...
+    EXPECT_FALSE(cap.set(CAP_PROP_PREFETCH_FRAMES, -1));
+
+    // ... and again once it is, which is a different code path.
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    EXPECT_FALSE(cap.set(CAP_PROP_PREFETCH_FRAMES, -1));
+    EXPECT_EQ(4, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
+}
+
+static VideoCaptureAPIs thread_affine_apis[] = {CAP_MSMF, CAP_DSHOW, CAP_OBSENSOR, CAP_AVFOUNDATION};
+
+static VideoCaptureAPIs prefetch_apis[] = {CAP_FFMPEG, CAP_GSTREAMER};
+
+typedef testing::TestWithParam<VideoCaptureAPIs> prefetch_unsupported;
+
+TEST_P(prefetch_unsupported, set_is_rejected)
+{
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    EXPECT_FALSE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+}
+
+inline static std::string prefetch_unsupported_name_printer(const testing::TestParamInfo<prefetch_unsupported::ParamType>& info)
+{
+    std::ostringstream os;
+    os << getBackendNameSafe(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, prefetch_unsupported, testing::ValuesIn(thread_affine_apis), prefetch_unsupported_name_printer);
+
+INSTANTIATE_TEST_CASE_P(videoio, prefetch_capture, testing::ValuesIn(prefetch_apis), safe_capture_name_printer);
 
 //==================================================================================================
 // TEST_P(videocapture_acceleration, ...)
