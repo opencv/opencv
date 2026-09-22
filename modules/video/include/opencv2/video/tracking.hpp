@@ -1108,6 +1108,102 @@ public:
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+/** @brief Follows many objects at once from per-frame detections.
+
+Takes the boxes a detector produced for one frame and returns the same boxes carrying a stable id,
+so an object keeps its id from frame to frame. This is the association half of tracking: it does not
+look at pixels and runs no network of its own.
+
+Each track holds a constant-velocity cv::KalmanFilter. Every frame the tracker predicts where its
+tracks should be, pairs those predictions with the new detections through cv::linearAssignment, then
+corrects the matched filters. Detections that match nothing start new tracks; tracks that match
+nothing coast on their prediction and are dropped once they have been unmatched for
+MultiTracker::Params::maxAge frames.
+
+Detections are used in two passes, as in ByteTrack: confident ones first, then the leftovers are
+offered to whatever is still unmatched. A half-occluded object whose score has dropped is usually
+recovered by that second pass instead of losing its id.
+
+This is deliberately not a cv::Tracker. That interface follows one object that the caller points at,
+and is driven by images; this one is driven by detections and owns a changing set of objects.
+
+@note Not thread safe. Calls to update() must be serialised, and the tracker is stateful, so frames
+must be fed in order.
+ */
+class CV_EXPORTS_W MultiTracker
+{
+protected:
+    MultiTracker();  // use ::create()
+public:
+    virtual ~MultiTracker();
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW float highDetectionThreshold;  //!< score at or above which a detection is used in the first pass
+        CV_PROP_RW float lowDetectionThreshold;   //!< below this a detection is ignored entirely
+        //! largest association cost still accepted as a match, and the price of leaving a
+        //! track unmatched. The cost is the IoU distance (1 - IoU), blended with the cosine
+        //! distance when embeddingWeight > 0, so it no longer bounds IoU on its own.
+        CV_PROP_RW float iouThreshold;
+        CV_PROP_RW float gatingThreshold;         //!< chi-square gate on squared Mahalanobis distance, 4 DoF; <= 0 disables it
+        CV_PROP_RW float embeddingWeight;         //!< how much appearance counts against IoU; 0 ignores embeddings
+        CV_PROP_RW float embeddingThreshold;      //!< largest cosine distance still accepted as a match
+        CV_PROP_RW float embeddingMomentum;       //!< how strongly a track remembers its earlier appearance
+        CV_PROP_RW int minHits;                   //!< frames a new track must be matched before it is reported
+        CV_PROP_RW int maxAge;                    //!< frames a track may go unmatched before it is dropped
+        CV_PROP_RW bool classAware;               //!< when true a detection may only match a track of the same class
+    };
+
+    /** @brief Create a tracker
+     *  @param parameters tracker parameters MultiTracker::Params
+     */
+    static CV_WRAP
+    Ptr<MultiTracker> create(const MultiTracker::Params& parameters = MultiTracker::Params());
+
+    /** @brief Feed one frame's detections and read back the live tracks
+
+    The three detection vectors describe the same detections and must be the same length. The three
+    track vectors are outputs and are also parallel: element `i` of each describes one track.
+
+    Only confirmed tracks are reported, so a brand new object does not appear until it has been seen
+    MultiTracker::Params::minHits times, and a track that is currently unmatched but not yet expired
+    is reported at its predicted position.
+
+    @param detBoxes detection boxes for this frame
+    @param detScores detector confidence per box
+    @param detClassIds class id per box; ignored unless MultiTracker::Params::classAware is set
+    @param trackIds output, the id of each live track; ids are never reused
+    @param trackBoxes output, where each live track is now
+    @param trackClassIds output, the class of each live track
+     */
+    CV_WRAP virtual
+    void update(const std::vector<Rect2d>& detBoxes,
+                const std::vector<float>& detScores,
+                const std::vector<int>& detClassIds,
+                CV_OUT std::vector<int>& trackIds,
+                CV_OUT std::vector<Rect2d>& trackBoxes,
+                CV_OUT std::vector<int>& trackClassIds) = 0;
+
+    /** @overload
+    Adds an appearance descriptor per detection, which lets objects that cross or briefly disappear
+    keep their ids when position alone is ambiguous.
+
+    @param detEmbeddings one L2-normalised CV_32F row per detection, in the same order as @p detBoxes
+     */
+    CV_WRAP virtual
+    void update(const std::vector<Rect2d>& detBoxes,
+                const std::vector<float>& detScores,
+                const std::vector<int>& detClassIds,
+                InputArray detEmbeddings,
+                CV_OUT std::vector<int>& trackIds,
+                CV_OUT std::vector<Rect2d>& trackBoxes,
+                CV_OUT std::vector<int>& trackClassIds) = 0;
+
+    /** @brief Drop every track and restart id numbering */
+    CV_WRAP virtual void reset() = 0;
+};
+
 //! @} video_track
 
 } // cv
