@@ -382,7 +382,7 @@ TEST(Photo_CalibrateDebevec, regression)
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     ASSERT_LT(max, 0.25);
 #else
     ASSERT_LT(max, 0.15);

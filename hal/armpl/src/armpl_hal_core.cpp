@@ -4,13 +4,16 @@
 
 #include <fftw3.h>
 #include <cblas.h>
+#include <lapacke.h>
 #include <algorithm>
 #include <complex>
+#include <vector>
 #include <cstring>
 #include <cstdio>
 #include <cmath>
 
 #define ARMPL_GEMM_MIN_WORK_VOLUME 10000
+#define ARMPL_SVD_SMALL_MATRIX_THRESH 33
 
 namespace {
 
@@ -170,6 +173,90 @@ int armpl_hal_gemm64fc(const double *src1, size_t src1_step, const double *src2,
     typedef std::complex<double> cplx;
     return armpl_gemm_impl<cplx, double>(reinterpret_cast<const cplx*>(src1), src1_step, reinterpret_cast<const cplx*>(src2), src2_step, alpha,
                                          reinterpret_cast<const cplx*>(src3), src3_step, beta, reinterpret_cast<cplx*>(dst), dst_step, m, n, k, flags);
+}
+
+namespace {
+
+static inline armpl_int_t
+armpl_lapacke_gesdd(char jobz, int m, int n, float *a, int lda, float *s, float *u, int ldu, float *vt, int ldvt)
+{
+    return LAPACKE_sgesdd(LAPACK_COL_MAJOR, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+static inline armpl_int_t
+armpl_lapacke_gesdd(char jobz, int m, int n, double *a, int lda, double *s, double *u, int ldu, double *vt, int ldvt)
+{
+    return LAPACKE_dgesdd(LAPACK_COL_MAJOR, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+template <typename fptype> static inline void
+armpl_transpose_square_inplace(fptype *a, size_t lda, size_t n)
+{
+    for (size_t i = 0; i < n - 1; i++)
+        for (size_t j = i + 1; j < n; j++)
+            std::swap(a[j*lda + i], a[i*lda + j]);
+}
+
+template <typename fptype> static inline int
+armpl_svd(fptype *src, size_t src_step, fptype *w, fptype *u, size_t u_step, fptype *vt, size_t vt_step, int m, int n, int flags)
+{
+    int lda = (int)(src_step / sizeof(fptype));
+    int ldu = (int)(u_step / sizeof(fptype));
+    int ldv = (int)(vt_step / sizeof(fptype));
+    std::vector<fptype> ubuf;
+
+    char jobz = ' ';
+    if (flags & CV_HAL_SVD_NO_UV)
+    {
+        ldv = 1;
+        jobz = 'N';
+    }
+    else if ((flags & CV_HAL_SVD_SHORT_UV) && (flags & CV_HAL_SVD_MODIFY_A))
+        jobz = 'O';
+    else if ((flags & CV_HAL_SVD_SHORT_UV) && !(flags & CV_HAL_SVD_MODIFY_A))
+        jobz = 'S';
+    else if (flags & CV_HAL_SVD_FULL_UV)
+        jobz = 'A';
+
+    if ((flags & CV_HAL_SVD_MODIFY_A) && (flags & CV_HAL_SVD_FULL_UV))
+    {
+        ubuf.resize((size_t)m * m);
+        u = ubuf.data();
+        ldu = m;
+    }
+
+    armpl_int_t linfo = armpl_lapacke_gesdd(jobz, m, n, src, lda, w, u, ldu, vt, ldv);
+
+    if (linfo != 0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    if (!(flags & CV_HAL_SVD_NO_UV))
+        armpl_transpose_square_inplace(vt, ldv, n);
+
+    if ((flags & CV_HAL_SVD_MODIFY_A) && (flags & CV_HAL_SVD_FULL_UV))
+    {
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < m; j++)
+                src[i*lda + j] = u[i*m + j];
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+}
+
+int armpl_hal_SVD32f(float *src, size_t src_step, float *w, float *u, size_t u_step, float *vt, size_t vt_step, int m, int n, int flags)
+{
+    if (m < ARMPL_SVD_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_svd(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
+}
+
+int armpl_hal_SVD64f(double *src, size_t src_step, double *w, double *u, size_t u_step, double *vt, size_t vt_step, int m, int n, int flags)
+{
+    if (m < ARMPL_SVD_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_svd(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
 }
 
 enum ArmPLDFTMode
