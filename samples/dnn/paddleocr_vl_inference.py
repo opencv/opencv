@@ -52,6 +52,22 @@ form, and the int8 variant uses ai.onnx MatMulInteger, which isn't implemented a
 Neither gap is specific to this PR. Use the full-precision decoder.onnx (or export a
 symmetric-quantized variant) until one of those is addressed.
 
+Model directory layout (matches modules/vlm's engines, so a directory that works
+here also works with cv.vlm.create() once that module lands):
+
+    <model_dir>/
+      config.json               OpenCV tokenizer config -- NOT HuggingFace's
+                                 tokenizer_config.json. Needs model_type/method
+                                 (for cv.dnn.Tokenizer.load) plus image_token_id
+                                 and eos_token_id (read directly here).
+      processor_config.json     image_processor: patch_size, merge_size, min_pixels,
+                                 max_pixels.
+      tokenizer.json
+      onnx/
+        vision_encoder.onnx
+        embedding.onnx
+        decoder.onnx
+
 Run the script:
 1. Install the required dependencies:
 
@@ -59,46 +75,55 @@ Run the script:
 
 2. Run the script:
 
-    python paddleocr_vl_inference.py --vision=<path-to-vision_encoder.onnx> \\
-                                     --embedding=<path-to-embedding.onnx> \\
-                                     --model=<path-to-decoder.onnx> \\
-                                     --tokenizer_path=<path-to-opencv-tokenizer-config.json> \\
+    python paddleocr_vl_inference.py --model_dir=<path-to-model-dir> \\
                                      --input=<path-to-page-image>
-
-    The tokenizer_path should point to an OpenCV-format config.json, NOT the
-    HuggingFace tokenizer_config.json.
 '''
 
 import math
+import os
 import numpy as np
 import argparse
 import cv2 as cv
 
-PATCH_SIZE = 14
-MERGE_SIZE = 2
-FACTOR = PATCH_SIZE * MERGE_SIZE  # 28
-MIN_PIXELS = 112896
-MAX_PIXELS = 1003520
 IMAGE_MEAN = 0.5
 IMAGE_STD = 0.5
-
-IMAGE_TOKEN_ID = 100295
-EOS_ID = 2
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run PaddleOCR-VL-1.5 vision-language inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--vision', type=str, required=True, help='Path to the vision encoder ONNX model file.')
-    parser.add_argument('--embedding', type=str, required=True, help='Path to embedding ONNX model file.')
-    parser.add_argument('--model', type=str, required=True, help='Path to the decoder ONNX model file.')
-    parser.add_argument('--tokenizer_path', type=str, required=True, help='Path to tokenizer config.json.')
+    parser.add_argument('--model_dir', type=str, required=True, help='Path to the model directory (see the layout in this script\'s docstring).')
     parser.add_argument('--input', '-i', type=str, required=True, help='Path to the input page image.')
     parser.add_argument('--prompt', type=str, default='OCR:', help='Task instruction.')
     parser.add_argument('--max_new_tokens', type=int, default=512, help='Maximum number of new tokens to generate.')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
     return parser.parse_args()
 
-def smart_resize(height, width, factor=FACTOR, min_pixels=MIN_PIXELS, max_pixels=MAX_PIXELS):
+def open_json_config_or_throw(path):
+    '''Mirrors modules/vlm/src/config_json.cpp's openJsonConfigOrThrow, so the config
+    reading here matches what cv.vlm will do with the same directory.'''
+    fs = cv.FileStorage(path, cv.FILE_STORAGE_READ)
+    if not fs.isOpened():
+        raise IOError(f'vlm: could not open config file: {path}')
+    return fs
+
+def get_int(node, name, fallback):
+    child = node.getNode(name)
+    return int(child.real()) if not child.empty() else fallback
+
+def get_int_with_text_config_fallback(config, name, fallback):
+    '''Mirrors config_json.cpp's getIntWithTextConfigFallback: some HF configs nest
+    the generation-relevant ids (image_token_id, eos_token_id) under text_config.'''
+    node = config.getNode(name)
+    if not node.empty():
+        return int(node.real())
+    text_config = config.getNode('text_config')
+    if not text_config.empty():
+        child = text_config.getNode(name)
+        if not child.empty():
+            return int(child.real())
+    return fallback
+
+def smart_resize(height, width, factor, min_pixels, max_pixels):
     '''Verbatim from PaddleOCR-VL-1.5's image_processing_paddleocr_vl.py.'''
     if height < factor or width < factor:
         if height < width:
@@ -121,26 +146,27 @@ def smart_resize(height, width, factor=FACTOR, min_pixels=MIN_PIXELS, max_pixels
         w_bar = math.ceil(width * beta / factor) * factor
     return h_bar, w_bar
 
-def preprocess_image(image_path):
-    '''smart_resize then pack into (1, num_patches, 3, 14, 14) + image_grid_thw (1, 3),
-    matching the real vision encoder's input contract. Ported from
-    image_processing_paddleocr_vl.py's _preprocess (temporal_patch_size is asserted
-    to be 1 there, so no temporal tiling happens for a single image).'''
+def preprocess_image(image_path, patch_size, merge_size, min_pixels, max_pixels):
+    '''smart_resize then pack into (1, num_patches, 3, patch_size, patch_size) +
+    image_grid_thw (1, 3), matching the real vision encoder's input contract. Ported
+    from image_processing_paddleocr_vl.py's _preprocess (temporal_patch_size is
+    asserted to be 1 there, so no temporal tiling happens for a single image).'''
     img = cv.imread(image_path)
     if img is None:
         raise IOError("Could not read image: " + image_path)
     h, w = img.shape[:2]
-    resized_h, resized_w = smart_resize(h, w)
+    factor = patch_size * merge_size
+    resized_h, resized_w = smart_resize(h, w, factor, min_pixels, max_pixels)
 
     img = cv.resize(img, (resized_w, resized_h), interpolation=cv.INTER_CUBIC)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB).astype(np.float32) / 255.0
     img = (img - IMAGE_MEAN) / IMAGE_STD
     img = img.transpose(2, 0, 1)[np.newaxis]        # (1, 3, H, W)
 
-    grid_t, grid_h, grid_w = 1, resized_h // PATCH_SIZE, resized_w // PATCH_SIZE
-    patches = img.reshape(grid_t, 1, 3, grid_h, PATCH_SIZE, grid_w, PATCH_SIZE)
+    grid_t, grid_h, grid_w = 1, resized_h // patch_size, resized_w // patch_size
+    patches = img.reshape(grid_t, 1, 3, grid_h, patch_size, grid_w, patch_size)
     patches = patches.transpose(0, 3, 5, 2, 1, 4, 6)
-    pixel_values = patches.reshape(1, grid_t * grid_h * grid_w, 3, PATCH_SIZE, PATCH_SIZE).astype(np.float32)
+    pixel_values = patches.reshape(1, grid_t * grid_h * grid_w, 3, patch_size, patch_size).astype(np.float32)
     image_grid_thw = np.array([[grid_t, grid_h, grid_w]], dtype=np.int64)
     return pixel_values, image_grid_thw
 
@@ -158,11 +184,11 @@ def set_optional_input(net, name, value):
     except cv.error:
         return False
 
-def merge_image_features(input_ids, text_embeds, image_features):
-    '''masked_scatter equivalent: replace the embedding at every IMAGE_TOKEN_ID
+def merge_image_features(input_ids, text_embeds, image_features, image_token_id):
+    '''masked_scatter equivalent: replace the embedding at every image_token_id
     position, in order, with the next row of image_features.'''
     merged = text_embeds.copy()
-    positions = np.where(input_ids[0] == IMAGE_TOKEN_ID)[0]
+    positions = np.where(input_ids[0] == image_token_id)[0]
     if len(positions) != image_features.shape[0]:
         raise ValueError(f"Prompt has {len(positions)} image-token placeholders but the "
                          f"vision encoder produced {image_features.shape[0]} feature tokens.")
@@ -170,7 +196,7 @@ def merge_image_features(input_ids, text_embeds, image_features):
     return merged
 
 def paddleocr_vl_inference(vision_net, embed_net, decoder_net, pixel_values, image_grid_thw,
-                           prompt, max_new_tokens, tokenizer):
+                           prompt, max_new_tokens, tokenizer, image_token_id, eos_id):
 
     print("Inferencing PaddleOCR-VL-1.5 model...")
 
@@ -187,7 +213,7 @@ def paddleocr_vl_inference(vision_net, embed_net, decoder_net, pixel_values, ima
 
     embed_net.setInput(input_ids, 'input_ids')
     text_embeds = embed_net.forward()                # (1, prompt_len, 1024)
-    inputs_embeds = merge_image_features(input_ids, text_embeds, image_features)
+    inputs_embeds = merge_image_features(input_ids, text_embeds, image_features, image_token_id)
 
     decoder_net.enableKVCache()
     prompt_len = inputs_embeds.shape[1]
@@ -203,7 +229,7 @@ def paddleocr_vl_inference(vision_net, embed_net, decoder_net, pixel_values, ima
 
     # Decode: feed one new token's embedding per step; the cache supplies the rest.
     for _ in range(max_new_tokens - 1):
-        if new_id == EOS_ID:
+        if new_id == eos_id:
             break
         cur_len = prompt_len + len(generated)
         embed_net.setInput(np.array([[new_id]], dtype=np.int64), 'input_ids')
@@ -215,7 +241,7 @@ def paddleocr_vl_inference(vision_net, embed_net, decoder_net, pixel_values, ima
         new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
         generated.append(new_id)
 
-    if generated and generated[-1] == EOS_ID:
+    if generated and generated[-1] == eos_id:
         generated.pop()
 
     return generated
@@ -226,16 +252,30 @@ if __name__ == '__main__':
     np.random.seed(args.seed)
 
     print("Preparing PaddleOCR-VL-1.5 model...")
-    tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
+    tokenizer = cv.dnn.Tokenizer.load(os.path.join(args.model_dir, 'config.json'))
 
-    vision_net  = cv.dnn.readNetFromONNX(args.vision, cv.dnn.ENGINE_OPENCV)
-    embed_net   = cv.dnn.readNetFromONNX(args.embedding, cv.dnn.ENGINE_OPENCV)
-    decoder_net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+    config = open_json_config_or_throw(os.path.join(args.model_dir, 'config.json'))
+    processor = open_json_config_or_throw(os.path.join(args.model_dir, 'processor_config.json'))
+    image_processor = processor.getNode('image_processor')
+
+    image_token_id = get_int_with_text_config_fallback(config, 'image_token_id', 0)
+    eos_id = get_int_with_text_config_fallback(config, 'eos_token_id', 2)
+    patch_size = get_int(image_processor, 'patch_size', 14)
+    merge_size = get_int(image_processor, 'merge_size', 2)
+    min_pixels = get_int(image_processor, 'min_pixels', 28 * 28 * 130)
+    max_pixels = get_int(image_processor, 'max_pixels', 28 * 28 * 1280)
+
+    onnx_dir = os.path.join(args.model_dir, 'onnx')
+    vision_net  = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'vision_encoder.onnx'), cv.dnn.ENGINE_OPENCV)
+    embed_net   = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'embedding.onnx'), cv.dnn.ENGINE_OPENCV)
+    decoder_net = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'decoder.onnx'), cv.dnn.ENGINE_OPENCV)
 
     print(f"Task:\n{args.prompt}")
-    pixel_values, image_grid_thw = preprocess_image(args.input)
+    pixel_values, image_grid_thw = preprocess_image(args.input, patch_size, merge_size,
+                                                     min_pixels, max_pixels)
 
     generated = paddleocr_vl_inference(vision_net, embed_net, decoder_net, pixel_values,
-                                       image_grid_thw, args.prompt, args.max_new_tokens, tokenizer)
+                                       image_grid_thw, args.prompt, args.max_new_tokens,
+                                       tokenizer, image_token_id, eos_id)
     response = tokenizer.decode(generated)
     print(f"Response:\n{response}")

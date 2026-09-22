@@ -204,6 +204,11 @@ public:
 
         const int B = query.size[0];
         const int S = query.size[1];
+        // The op has no cross-attention mode: onnxruntime itself refuses a node where key/value
+        // don't match the query's sequence length. splitHeads() below reads key/value assuming
+        // that length, so without this check a shorter key/value would be read out of bounds.
+        CV_CheckEQ(key.size[1], S, "GroupQueryAttention: key sequence length must match the query");
+        CV_CheckEQ(value.size[1], S, "GroupQueryAttention: value sequence length must match the query");
         const int D = query.size[2] / num_heads;
         const int Sp = (pastKey.dims == 4) ? pastKey.size[2] : 0;
         const int Skv = shared_kv_buffer ? Sp : Sp + S;   // length of present / attention span
