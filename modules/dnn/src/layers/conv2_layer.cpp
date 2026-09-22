@@ -36,7 +36,8 @@ class Conv2LayerImpl : public Conv2Layer
 public:
     Conv2LayerImpl(const LayerParams& params)
     {
-        registerFusionOpsOnce<Conv2LayerImpl>({ nullptr, &Conv2LayerImpl::absorbOp, true });
+        registerFusionOpsOnce<Conv2LayerImpl>({ nullptr, &Conv2LayerImpl::absorbOp, true,
+                                               &Conv2LayerImpl::foldInputScaleOp });
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
         ceil_mode = params.get<bool>("ceil_mode", false);
@@ -48,6 +49,120 @@ public:
         fastActivation = FAST_ACTIV_NONE;
         activationFunc = nullptr;
         addResidual = false;
+    }
+
+    static bool foldInputScaleOp(Layer* self, const Mat& scale, const Mat& shift)
+    {
+        return static_cast<Conv2LayerImpl*>(self)->foldInputScale(scale, shift);
+    }
+
+    //! Below this, thread dispatch costs more than the fold.
+    static const size_t kFoldParallelMin = 100000;
+
+    //! conv(scale*x + shift) becomes conv'(x). Every weight copy the layer holds moves.
+    bool foldInputScale(const Mat& scale, const Mat& shift)
+    {
+        if (fusedBatchNorm || addResidual || fastActivation != FAST_ACTIV_NONE ||
+            activationFunc != nullptr || !activ.empty())
+            return false;
+        // The bias correction sums the whole kernel, so padding adds a spurious border
+        // shift. SAME_* carries its padding in auto_pad rather than in pads.
+        if (auto_pad != AUTO_PAD_NONE && auto_pad != AUTO_PAD_VALID)
+            return false;
+        for (int p : pads)
+            if (p > 0)
+                return false;
+        if (weights.empty() || weights.type() != CV_32F || wshape0.dims != 4 || packC0 <= 0)
+            return false;
+        if (scale.type() != CV_32F || shift.type() != CV_32F ||
+            !scale.isContinuous() || !shift.isContinuous() ||
+            scale.total() != shift.total())
+            return false;
+
+        const int K = wshape0[0], Cg = wshape0[1];
+        if (ngroups <= 0 || K % ngroups != 0 || (int)scale.total() != Cg * ngroups)
+            return false;
+        // The loops below rewrite the weights in place, so nothing may fail after them.
+        if (!bias.empty() && (bias.type() != CV_32F || (int)bias.total() != K))
+            return false;
+
+        const float* sc = scale.ptr<float>();
+        const float* sh = shift.ptr<float>();
+        std::vector<float> adj(K, 0.f);
+        const MatShape ws = weights.shape();
+        float* W = weights.ptr<float>();
+
+        // MLAS holds its own copy, packed from the plain matrix setWeights() then dropped.
+        // It arms only for 1x1 dense, so the fold below walks exactly those weights.
+        Mat plain;
+        if (!mlas_packed_B_.empty())
+            plain.create(K, Cg, CV_32F);
+
+        if (ngroups == K && Cg == 1) {
+            // depthwise: C1 x ksize x C0, and the input channel is the output channel
+            const int ksize = ws[1], C0 = ws[2];
+            for (int ch = 0; ch < K; ch++) {
+                float* w = W + (size_t)(ch / C0) * ksize * C0 + (ch % C0);
+                float sw = 0.f;
+                for (int i = 0; i < ksize; i++) {
+                    sw += w[(size_t)i * C0];
+                    w[(size_t)i * C0] *= sc[ch];
+                }
+                adj[ch] += sh[ch] * sw;
+            }
+        } else {
+            // dense: the offsets are repackConvWeights()'s, which this layer packed with
+            const int Kblk = ws[1], ksize = ws[2], C1Max = ws[3];
+            const int C0 = packC0, K0 = C0, Kg = K / ngroups;
+            const size_t sstride = (size_t)C1Max * C0 * K0;
+            for (int k = 0; k < K; k++) {
+                const int g = k / Kg, kin = k - g * Kg;
+                const int kblk = kin / K0, k0 = kin & (K0 - 1);
+                const int c00 = (g * Cg) & (C0 - 1);
+                for (int c = 0; c < Cg; c++) {
+                    const int ch = c00 + c, c1 = ch / C0, c0 = ch & (C0 - 1);
+                    float* w = W + ((((size_t)(g * Kblk + kblk) * ksize + 0) * C1Max + c1) * C0
+                                    + c0) * K0 + k0;
+                    float sw = 0.f;
+                    for (int i = 0; i < ksize; i++) {
+                        sw += w[i * sstride];
+                        w[i * sstride] *= sc[g * Cg + c];
+                    }
+                    if (!plain.empty())
+                        plain.ptr<float>(k)[c] = w[0];  // ksize == 1 whenever MLAS armed
+                    adj[k] += sh[g * Cg + c] * sw;
+                }
+            }
+        }
+
+        if (!plain.empty() &&
+            !mlasSgemmPackB(false, true, K, Cg, plain.ptr<float>(), Cg, mlas_packed_B_.data))
+            mlas_packed_B_.release();
+
+#ifdef HAVE_CUDA
+        // The CUDA path reads this plain copy instead of the packed one.
+        if (!origWeights.empty() && origWeights.type() == CV_32F) {
+            Mat w2d = origWeights.reshape(1, K);
+            const int Kg = K / ngroups, inner = (int)(origWeights.total() / ((size_t)K * Cg));
+            for (int k = 0; k < K; k++) {
+                float* row = w2d.ptr<float>(k);
+                for (int c = 0; c < Cg; c++) {
+                    float* wc = row + (size_t)c * inner;
+                    for (int i = 0; i < inner; i++)
+                        wc[i] *= sc[(k / Kg) * Cg + c];
+                }
+            }
+        }
+#endif
+
+        if (bias.empty()) {
+            bias.fit(1, &K, CV_32F);
+            bias.setTo(0.f);
+        }
+        float* bp = bias.ptr<float>();
+        for (int k = 0; k < K; k++)
+            bp[k] += adj[k];
+        return true;
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -133,6 +248,7 @@ public:
         int wtype = accuracy < 0 ? CV_32F : accuracy;
 
         wshape0 = weights_.shape();
+        packC0 = C0;
 #ifdef HAVE_CUDA
         // Retain the original NCHW filter for the CUDA (cuDNN) path.
         weights_.convertTo(origWeights, CV_32F);
@@ -186,48 +302,6 @@ public:
         }
     }
 
-    void fuseBatchNormWeights(const BatchNorm2Layer* bn)
-    {
-        Mat bn_scale, bn_bias;
-        bn->getScaleBias(bn_scale, bn_bias);
-
-        CV_Assert(bn_scale.isContinuous() && bn_bias.isContinuous());
-        CV_Assert(bn_scale.type() == CV_32F && bn_bias.type() == CV_32F);
-        CV_Assert(bn_scale.total() == bn_bias.total());
-        int K = (int)bn_scale.total();
-        CV_Assert(bias.empty() || (bias.type() == CV_32F && bias.total() == (size_t)K));
-        const float* bias_data = bias.data ? bias.ptr<float>() : nullptr;
-
-        fusedScale.fit(1, &K, CV_32F);
-        fusedBias.fit(1, &K, CV_32F);
-
-        const float* bn_scale_data = bn_scale.ptr<float>();
-        const float* bn_bias_data = bn_bias.ptr<float>();
-        float* fused_scale_data = fusedScale.ptr<float>();
-        float* fused_bias_data = fusedBias.ptr<float>();
-
-        // (sum(x*w) + bias)*bn_scale + bn_bias => sum(x*w)*fused_scale + fused_bias,
-        // where fused_scale = bn_scale and fused_bias = bias*bn_scale + bn_bias.
-        for (size_t i = 0; i < K; i++) {
-            fused_scale_data[i] = bn_scale_data[i];
-            fused_bias_data[i] = (bias_data ? bn_scale_data[i]*bias_data[i] : 0.f) + bn_bias_data[i];
-        }
-    }
-
-    virtual bool fuseBatchNorm(const Ptr<Layer>& bnlayer) override
-    {
-        BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(bnlayer.get());
-        // addResidual means the graph order is conv->add->bn: the residual is added
-        // before BN, but the conv applies the fused BN scale only to conv(x), not to
-        // the residual. Refuse so BN stays separate and runs on (conv + residual).
-        if (fusedBatchNorm || !bn || bn->inputs.size() > 1 ||
-            fastActivation != FAST_ACTIV_NONE || !activ.empty() || addResidual)
-            return false;
-        fuseBatchNormWeights(bn);
-        fusedBatchNorm = true;
-        return true;
-    }
-
     virtual bool fuseAddBias(InputArray arr) CV_OVERRIDE
     {
         if (inputs.size() > 1 || fusedBatchNorm || addResidual)
@@ -247,54 +321,6 @@ public:
             new_bias.copyTo(bias);
         }
         return true;
-    }
-
-    virtual bool fuseActivation(const Ptr<Layer>& activlayer) override
-    {
-        ActivationLayer* activ_ptr = dynamic_cast<ActivationLayer*>(activlayer.get());
-        if (!activ_ptr || fastActivation != FAST_ACTIV_NONE ||
-            activationFunc != nullptr || !activ.empty())
-            return false;
-
-        ReLULayer* activRelu = dynamic_cast<ReLULayer*>(activ_ptr);
-        ReLU6Layer* activClip = dynamic_cast<ReLU6Layer*>(activ_ptr);
-        ChannelsPReLULayer* activPRelu = dynamic_cast<ChannelsPReLULayer*>(activ_ptr);
-        if (activRelu) {
-            float alpha = activRelu->negativeSlope;
-            if (alpha == 0.f) {
-                fastActivation = FAST_ACTIV_RELU;
-            } else {
-                fastActivation = FAST_ACTIV_LEAKY_RELU;
-                activParams = {alpha};
-            }
-        } else if (activClip && activClip->minValue == 0.f) {
-            fastActivation = FAST_ACTIV_CLIP;
-            activParams = {activClip->minValue, activClip->maxValue};
-        } else if (activPRelu && activPRelu->blobs.size() == 1) {
-            fastActivation = FAST_ACTIV_PRELU;
-            const Mat& slopes = activPRelu->blobs[0];
-            int slopesType = slopes.type();
-            CV_Assert_N((slopesType == CV_32F || slopesType == CV_16F || slopesType == CV_16BF),
-                        slopes.isContinuous());
-            int nslopes = int(slopes.total());
-            Mat(1, &nslopes, slopesType, (void*)slopes.data).convertTo(activParams, CV_32F);
-        } else {
-            activationFunc = activ_ptr->getActivationFunc(CV_32F, activParams);
-            if (!activationFunc)
-                return false;
-        }
-        return true;
-    }
-
-    virtual bool fuseAddResidual(Arg residual) CV_OVERRIDE
-    {
-        if (activ.empty() && fastActivation == FAST_ACTIV_NONE &&
-            activationFunc == nullptr && !addResidual && residual.idx >= 0) {
-            addResidual = true;
-            inputs.push_back(residual);
-            return true;
-        }
-        return false;
     }
 
 private:
@@ -538,29 +564,40 @@ public:
         std::vector<float> scale(K, 1.f), shift(K, 0.f);
         bool affine = false;
 
-        if (nd[cur].op == FusionEltwiseOp::ADD) {
-            int other = -1, bufId = -1;
-            float sv = 0.f;
-            if (!splitConstOperand(nd, cur, other, bufId, sv))
+        // A chain can stack more than one affine, so peel rounds until the input and
+        // compose them: x*a+b then *c+d is x*(a*c) + (b*c+d).
+        while (cur != 0) {
+            const int before = cur;
+            std::vector<float> s(K, 1.f), t(K, 0.f);
+
+            if (nd[cur].op == FusionEltwiseOp::ADD) {
+                int other = -1, bufId = -1;
+                float sv = 0.f;
+                if (!splitConstOperand(nd, cur, other, bufId, sv))
+                    return false;
+                if (!readPerChannelValues(*expr, bufId, sv, K, t))
+                    return false;
+                cur = other;
+            }
+            if (nd[cur].op == FusionEltwiseOp::MUL) {
+                int other = -1, bufId = -1;
+                float sv = 0.f;
+                if (!splitConstOperand(nd, cur, other, bufId, sv))
+                    return false;
+                if (!readPerChannelValues(*expr, bufId, sv, K, s))
+                    return false;
+                cur = other;
+            }
+            if (cur == before)
                 return false;
-            if (!readPerChannelValues(*expr, bufId, sv, K, shift))
-                return false;
+
+            for (int k = 0; k < K; k++) {
+                shift[k] += t[k]*scale[k];  // uses the old scale, so it goes first
+                scale[k] *= s[k];
+            }
             affine = true;
-            cur = other;
-        }
-        if (nd[cur].op == FusionEltwiseOp::MUL) {
-            int other = -1, bufId = -1;
-            float sv = 0.f;
-            if (!splitConstOperand(nd, cur, other, bufId, sv))
-                return false;
-            if (!readPerChannelValues(*expr, bufId, sv, K, scale))
-                return false;
-            affine = true;
-            cur = other;
         }
 
-        if (cur != 0)
-            return false;
         if (!affine && !hasPostScale && act == FAST_ACTIV_NONE && !takesResidual)
             return false;
 
@@ -1072,6 +1109,7 @@ public:
     Mat weights, bias, fusedScale, fusedBias;
     Mat origWeights;  // original NCHW filter (FP32), kept for the CUDA path
     MatShape wshape0, prevInpshape;
+    int packC0 = 0;   // block factor the weights were packed with
     ConvState cs;
     bool fusedBatchNorm;
     FastActivation fastActivation;

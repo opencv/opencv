@@ -3423,14 +3423,14 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 {
     typedef ChannelsPReLULayer Layer;
 
-    bool unfoldOp(LayerMath& r, const ConstOperand&) const
+    bool unfoldOp(LayerMath& r, const ConstOperand& side) const
     {
-        if (scale.empty() || scale.type() != CV_32F || !scale.isContinuous())
+        if (side.count != 1 || !side.at(0).isBuffer())
             return false;
         const int zero   = r.constant(0.f);
         const int pos    = r.binary(FusionEltwiseOp::MAX, LayerMath::INPUT_VALUE, zero);
         const int neg    = r.binary(FusionEltwiseOp::MIN, LayerMath::INPUT_VALUE, zero);
-        const int slopes = r.perChannelConstant(scale);
+        const int slopes = r.perChannelConstant(side.at(0).bufferId);
         const int scaled = r.binary(FusionEltwiseOp::MUL, neg, slopes);
         r.binary(FusionEltwiseOp::ADD, pos, scaled);
         return true;
@@ -4096,7 +4096,24 @@ Ptr<ExpLayer> ExpLayer::create(const LayerParams& params)
 class ChannelsPReLUImpl CV_FINAL : public ElementWiseLayer<ChannelsPReLUFunctor>
 {
 public:
-    using ElementWiseLayer<ChannelsPReLUFunctor>::ElementWiseLayer;
+    // fusionOpsFor() keys on the dynamic type, which the base constructor cannot register.
+    explicit ChannelsPReLUImpl(const ChannelsPReLUFunctor& f = ChannelsPReLUFunctor())
+        : ElementWiseLayer<ChannelsPReLUFunctor>(f)
+    {
+        registerFusionOpsOnce<ChannelsPReLUImpl>(
+            { &ElementWiseLayer<ChannelsPReLUFunctor>::unfoldOp, nullptr, false, nullptr,
+              &ChannelsPReLUImpl::ownedBuffersOp });
+    }
+
+    //! setSlope() moved the slope into the functor, so it has no Arg for the pass to read.
+    static bool ownedBuffersOp(const Layer* self, std::vector<Mat>& out)
+    {
+        const Mat& s = static_cast<const ChannelsPReLUImpl*>(self)->func.scale;
+        if (s.empty() || s.type() != CV_32F || !s.isContinuous())
+            return false;
+        out.push_back(s);
+        return true;
+    }
 
     void setSlope(const Mat& slope) CV_OVERRIDE
     {

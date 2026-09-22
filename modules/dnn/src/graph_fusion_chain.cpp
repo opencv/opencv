@@ -78,32 +78,8 @@ private:
         vector<uchar> constBufPerChannel;
         //! First step's kernel; a chain that lands at one step runs it instead of the DAG.
         FusionKernel singleStepKernel;
-        //! The one step states a kernel and no expression, so it has no arena node.
-        bool kernelOnly = false;
         //! Live tensors the steps read, in the order their slots were handed out.
         vector<Arg> tensorArgs;
-    };
-
-    //! Buffer slots for per-channel data an earlier pass folded into members, leaving no Arg.
-    struct BufferSink CV_FINAL : public FusionBufferSink
-    {
-        ChainCandidate* c = nullptr;
-
-        int add(const Mat& buf) CV_OVERRIDE
-        {
-            c->constBufs.push_back(buf);
-            c->constArgs.push_back(Arg());
-            c->constBufPerChannel.push_back(1);
-            return (int)c->constBufs.size() - 1;
-        }
-    };
-
-    //! Sink for isAbsorbableMath()'s probe, which discards whatever the layer states.
-    struct DiscardingSink CV_FINAL : public FusionBufferSink
-    {
-        int nbufs = 0;
-
-        int add(const Mat&) CV_OVERRIDE { return nbufs++; }
     };
 
     const vector<Ptr<LayerInfo> >& prog() const { return graph_->prog(); }
@@ -175,6 +151,27 @@ private:
         return (int)c.constBufs.size() - 1;
     }
 
+    //! Per-channel data the layer folded into its members has no Arg, so it is slotted here
+    //! and its ids join the ones readConstOperand() took from the layer's inputs.
+    static bool addOwnedBuffers(const FusionOps* ops, Layer* l, ChainCandidate& c,
+                                ConstOperand& out)
+    {
+        if (!ops->ownedBuffers)
+            return true;
+        std::vector<Mat> owned;
+        if (!ops->ownedBuffers(l, owned))
+            return false;
+        if (out.count + (int)owned.size() > ConstOperand::MAX_CONSTS)
+            return false;
+        for (const Mat& buf : owned) {
+            c.constBufs.push_back(buf);
+            c.constArgs.push_back(Arg());
+            c.constBufPerChannel.push_back(1);
+            out.consts[out.count++].bufferId = (int)c.constBufs.size() - 1;
+        }
+        return true;
+    }
+
     bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c,
                           ConstOperand& out, size_t anchor, bool acceptsTensors) const
     {
@@ -214,21 +211,20 @@ private:
         const FusionOps* ops = fusionOpsFor(l);
         if (!ops || !ops->unfold)
             return false;
-        // The probe discards what it names, but still needs a sink or a layer that owns
-        // its per-channel data cannot answer.
-        DiscardingSink probeSink;
-        // We don't know yet how many operands this layer will get, nor whether they will be
-        // constants or live tensors, so try each count both ways.
+        // The operand count and kind are not known yet, so try every combination.
         for (int n = 0; n <= ConstOperand::MAX_CONSTS; n++) {
-            for (int asTensor = 0; asTensor < 2; asTensor++) {
-                if (asTensor && n == 0)
-                    continue;   // nothing to mark, so it would repeat the probe above
+            for (int kind = 0; kind < 3; kind++) {
+                if (kind > 0 && n == 0)
+                    continue;   // nothing to mark, so it repeats the probe above
                 LayerMath r;
-                r.buffers = &probeSink;
                 ConstOperand probe;
                 probe.count = n;
-                for (int i = 0; asTensor && i < n; i++)
-                    probe.consts[i].tensorId = i;
+                for (int i = 0; i < n; i++) {
+                    if (kind == 1)
+                        probe.consts[i].bufferId = i;
+                    else if (kind == 2)
+                        probe.consts[i].tensorId = i;
+                }
                 if (ops->unfold(l, r, probe))
                     return true;
             }
@@ -236,16 +232,9 @@ private:
         return false;
     }
 
-    void growChain(size_t anchor, ChainCandidate& c)
+    void growChain(size_t anchor, bool acceptsTensors, ChainCandidate& c)
     {
         CV_Assert(!arenaPtr_);
-
-        BufferSink sink;
-        sink.c = &c;
-
-        Layer* anchorLayer = dynamic_cast<Layer*>(prog()[anchor].get());
-        const FusionOps* anchorOps = anchorLayer ? fusionOpsFor(anchorLayer) : nullptr;
-        const bool acceptsTensors = anchorOps && anchorOps->acceptsTensorOperands;
 
         int chainRoot = 0;
         Arg curArg = prog()[anchor]->outputs[0];
@@ -278,8 +267,8 @@ private:
             const size_t savedTensors = c.tensorArgs.size();
             ConstOperand side;
             LayerMath r;
-            r.buffers = &sink;
             if (!readConstOperand(L, curArg, c, side, anchor, acceptsTensors) ||
+                !addOwnedBuffers(ops, l, c, side) ||
                 !ops->unfold(l, r, side)) {
                 dropSlotsAfter(c, savedBufs, savedTensors);
                 break;
@@ -287,12 +276,12 @@ private:
 
             if (r.nodeCount() == 0) {
                 // A kernel states the whole expression, so the step can neither extend a
-                // chain nor be extended, and is taken only as the sole step.
+                // chain nor be extended, and is taken only as the sole step. chainRoot is
+                // still the arena's INPUT node, which is the expression extract() returns.
                 if (!r.kernel.fn || !c.rootAfterStep.empty()) {
                     dropSlotsAfter(c, savedBufs, savedTensors);
                     break;
                 }
-                c.kernelOnly = true;
                 c.singleStepKernel = r.kernel;
                 c.rootAfterStep.push_back(chainRoot);
                 c.layerIdx.push_back(j);
@@ -340,7 +329,7 @@ private:
 
             ChainCandidate c;
             c.layerIdx.push_back((int)i);
-            growChain(i, c);
+            growChain(i, anchorOps->acceptsTensorOperands, c);
 
             if (c.rootAfterStep.empty())
                 continue;
@@ -352,16 +341,6 @@ private:
 
     //! Carries a kernel when there is no expression. The lone INPUT node is an identity,
     //! so this is only ever built with a kernel attached.
-    static Ptr<AdjacencyGraph> kernelEnvelope(const FusionKernel& kernel)
-    {
-        CV_Assert(kernel.fn != nullptr);
-        AdjacencyGraphBuilder b;
-        const int root = b.internNode(FusionEltwiseOp::INPUT, {});
-        Ptr<AdjacencyGraph> g = b.finish(root);
-        g->kernel = kernel;
-        return g;
-    }
-
     void freezeArena()
     {
         arenaPtr_ = arena_.sharedGraph();
@@ -382,18 +361,16 @@ private:
                 continue;
 
             size_t accepted = 0;
-            Ptr<AdjacencyGraph> acceptedExpr;
+            Ptr<AdjacencyGraph> expr;
             for (size_t n = c.rootAfterStep.size(); n >= 1; n--) {
-                Ptr<AdjacencyGraph> expr = c.kernelOnly ? kernelEnvelope(c.singleStepKernel)
-                    : fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1],
-                                      c.constBufs, c.constBufPerChannel, c.tensorArgs);
+                expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1],
+                                       c.constBufs, c.constBufPerChannel, c.tensorArgs);
                 if (!expr)
                     continue;
                 if (n == 1)
                     expr->kernel = c.singleStepKernel;
                 if (sinkOps->absorb(sink, expr)) {
                     accepted = n;
-                    acceptedExpr = expr;
                     break;
                 }
             }
@@ -406,7 +383,7 @@ private:
 
             // Wired on here rather than in absorb(), which the retry loop above may call
             // more than once per chain.
-            for (Arg t : acceptedExpr->tensorArgs)
+            for (Arg t : expr->tensorArgs)
                 anchorInfo->inputs.push_back(t);
 
             anchorInfo->outputs[0] = prog()[c.layerIdx[accepted]]->outputs[0];
@@ -475,196 +452,6 @@ bool fuseChainsInGraph(Net::Impl& net, const Ptr<Graph>& graph,
     return fusedHere || subFused;
 }
 
-//! Reshape+InstanceNorm(1,0)+Reshape+Mul+Add collapsed into one layer. It matches
-//! backward from the Add and can swap the survivor's type, so it is not a chain.
-struct InstanceNormAffineFusion
-{
-    InstanceNormAffineFusion(Net::Impl* netimpl_) : netimpl(netimpl_) {}
-
-    void fuse()
-    {
-        int i, niter = 10;
-        netimpl->useCounts(usecounts);
-        for (i = 0; i < niter; i++) {
-            bool fused_any = fuseGraph(netimpl->mainGraph);
-            if (!fused_any)
-                break;
-        }
-    }
-
-    template<typename _LayerType> _LayerType*
-    getLayer(std::vector<Ptr<LayerInfo> >& newprog, int op_idx) const
-    {
-        return op_idx >= 0 ? dynamic_cast<_LayerType*>(newprog.at(op_idx).get()) : 0;
-    }
-
-    bool fuseGraph(Ptr<Graph>& graph)
-    {
-        vector<Arg> removed_args;
-        bool modified = false;
-        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
-        size_t i, nargs = netimpl->args.size(), nops = prog.size();
-        std::vector<int> producer_of(nargs, -1);
-        std::vector<Ptr<LayerInfo> > newprog;
-
-        for (i = 0; i < nops; i++) {
-            const Ptr<LayerInfo>& layer = prog[i];
-            Layer* layer_ptr = (Layer*)layer.get();
-            int fused_layer_idx = -1;
-            std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
-            if (subgraphs) {
-                for (Ptr<Graph>& g: *subgraphs) {
-                    if (fuseGraph(g))
-                        modified = true;
-                }
-            }
-            const std::vector<Arg>& inputs = layer->inputs;
-            const std::vector<Arg>& outputs = layer->outputs;
-            size_t ninputs = inputs.size();
-            removed_args.clear();
-
-            NaryEltwiseLayer* elemwise = dynamic_cast<NaryEltwiseLayer*>(layer_ptr);
-
-            // fuse Reshape + InstanceNorm(scale=ones,bias=zeros) + Reshape + Mul + Add
-            if (elemwise && elemwise->op == NaryEltwiseLayer::OPERATION::ADD &&
-                ninputs == 2) {
-                int mul_input_idx = -1;
-                Arg add_bias_arg;
-                for (int k = 0; k < 2; k++) {
-                    int pidx = producer_of.at(inputs[k].idx);
-                    NaryEltwiseLayer* mul = getLayer<NaryEltwiseLayer>(newprog, pidx);
-                    if (mul && mul->op == NaryEltwiseLayer::OPERATION::PROD) {
-                        mul_input_idx = k;
-                        add_bias_arg = inputs[1 - k];
-                        break;
-                    }
-                }
-                if (mul_input_idx >= 0 && netimpl->isConstArg(add_bias_arg)) {
-                    Arg mul_out = inputs[mul_input_idx];
-                    int mul_idx = producer_of.at(mul_out.idx);
-                    NaryEltwiseLayer* mul = getLayer<NaryEltwiseLayer>(newprog, mul_idx);
-                    if (mul && mul->inputs.size() == 2 &&
-                        usecounts.at(mul_out.idx) == 1) {
-                        int reshape2_input_idx = -1;
-                        Arg mul_scale_arg;
-                        for (int k = 0; k < 2; k++) {
-                            int pidx = producer_of.at(mul->inputs[k].idx);
-                            if (getLayer<Reshape2Layer>(newprog, pidx)) {
-                                reshape2_input_idx = k;
-                                mul_scale_arg = mul->inputs[1 - k];
-                                break;
-                            }
-                        }
-                        if (reshape2_input_idx >= 0 && netimpl->isConstArg(mul_scale_arg)) {
-                            Arg reshape2_out = mul->inputs[reshape2_input_idx];
-                            int reshape2_idx = producer_of.at(reshape2_out.idx);
-                            Reshape2Layer* reshape2_lyr = getLayer<Reshape2Layer>(newprog, reshape2_idx);
-                            if (reshape2_lyr && reshape2_lyr->inputs.size() >= 1 &&
-                                usecounts.at(reshape2_out.idx) == 1) {
-                                Arg reshape2_inp = reshape2_lyr->inputs[0];
-                                int instnorm_idx = producer_of.at(reshape2_inp.idx);
-                                InstanceNormLayer* instnorm = getLayer<InstanceNormLayer>(newprog, instnorm_idx);
-                                if (instnorm && instnorm->inputs.size() == 3 &&
-                                    usecounts.at(reshape2_inp.idx) == 1) {
-                                    Arg instnorm_inp = instnorm->inputs[0];
-                                    int reshape1_idx = producer_of.at(instnorm_inp.idx);
-                                    Reshape2Layer* reshape1_lyr = getLayer<Reshape2Layer>(newprog, reshape1_idx);
-                                    if (reshape1_lyr && reshape1_lyr->outputs.size() == 1 &&
-                                        usecounts.at(instnorm_inp.idx) == 1) {
-                                        Mat in_scale = netimpl->isConstArg(instnorm->inputs[1]) ?
-                                                       netimpl->argTensor(instnorm->inputs[1]) : Mat();
-                                        Mat in_bias = netimpl->isConstArg(instnorm->inputs[2]) ?
-                                                      netimpl->argTensor(instnorm->inputs[2]) : Mat();
-                                        bool valid = !in_scale.empty() && !in_bias.empty() &&
-                                                     in_scale.type() == CV_32F && in_bias.type() == CV_32F;
-                                        if (valid) {
-                                            const float* sp = in_scale.ptr<float>();
-                                            const float* bp = in_bias.ptr<float>();
-                                            bool all_ones = true, all_zeros = true;
-                                            for (size_t k = 0; k < in_scale.total() && all_ones; k++)
-                                                all_ones = (std::abs(sp[k] - 1.f) < 1e-6f);
-                                            for (size_t k = 0; k < in_bias.total() && all_zeros; k++)
-                                                all_zeros = (std::abs(bp[k]) < 1e-6f);
-                                            if (all_ones && all_zeros) {
-                                                Arg orig_inp = reshape1_lyr->inputs[0];
-                                                Mat mul_scale_mat = netimpl->argTensor(mul_scale_arg);
-                                                if (in_scale.total() == mul_scale_mat.total()) {
-                                                    // Channel dim preserved — fuse into InstanceNorm
-                                                    instnorm->inputs[0] = orig_inp;
-                                                    instnorm->inputs[1] = mul_scale_arg;
-                                                    instnorm->inputs[2] = add_bias_arg;
-                                                } else {
-                                                    // Channel dim changed (e.g. [1,C,H,W]->[1,1,C*H*W]):
-                                                    // original is global norm + per-channel affine.
-                                                    // Replace with GroupNorm(num_groups=reshaped_C).
-                                                    int num_groups = (int)in_scale.total();
-                                                    LayerParams gnparams;
-                                                    gnparams.name = instnorm->name;
-                                                    gnparams.type = "GroupNormalization";
-                                                    gnparams.set("epsilon", instnorm->epsilon);
-                                                    gnparams.set("num_groups", num_groups);
-                                                    Ptr<LayerInfo> gnlayer = GroupNormLayer::create(gnparams);
-                                                    gnlayer->netimpl = netimpl;
-                                                    gnlayer->inputs = {orig_inp, mul_scale_arg, add_bias_arg};
-                                                    newprog[instnorm_idx] = gnlayer;
-                                                }
-                                                fused_layer_idx = instnorm_idx;
-                                                removed_args.push_back(instnorm_inp);
-                                                removed_args.push_back(reshape2_inp);
-                                                removed_args.push_back(reshape2_out);
-                                                removed_args.push_back(mul_out);
-                                                newprog[reshape1_idx] = Ptr<LayerInfo>();
-                                                newprog[reshape2_idx] = Ptr<LayerInfo>();
-                                                newprog[mul_idx] = Ptr<LayerInfo>();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (fused_layer_idx >= 0) {
-                modified = true;
-                Layer* fused_layer = (Layer*)newprog[fused_layer_idx].get();
-                fused_layer->outputs = outputs;
-                for (Arg new_out: outputs)
-                    producer_of[new_out.idx] = fused_layer_idx;
-                for (Arg old_out: removed_args) {
-                    usecounts.at(old_out.idx) = 0;
-                    producer_of.at(old_out.idx) = -1;
-                }
-            } else {
-                for (auto out: outputs)
-                    producer_of[out.idx] = (int)newprog.size();
-                newprog.push_back(layer);
-            }
-        }
-
-        if (modified) {
-            size_t i, j = 0, newops = newprog.size();
-            for (i = 0; i < newops; i++) {
-                if (!newprog[i].empty()) {
-                    if (j < i)
-                        newprog[j] = newprog[i];
-                    j++;
-                }
-            }
-            newprog.resize(j);
-            //printf("fused some ops in graph %s. size before: %zu ops, size after: %zu ops\n",
-            //       graph->name().data(), nops, j);
-            graph->setProg(newprog);
-        }
-
-        return modified;
-    }
-
-    Net::Impl* netimpl;
-    vector<int> usecounts;
-};
-
 } // namespace
 
 void Net::Impl::fuseChains()
@@ -672,17 +459,34 @@ void Net::Impl::fuseChains()
     if (!mainGraph)
         return;
 
-    // Sinks apply the fused math on the CPU path only; on an OpenCL target the
-    // absorbed layers would be dropped and their math never run.
+    // First: it deletes a layer, and if the chain pass absorbed the BatchNorm backwards into
+    // the preceding conv it would find nothing left.
+    fuseBN();
+
+    // Order is load-bearing: each pass matches shapes the one before it leaves.
+    fuseAttention();
+    fuseMatMulConstBToGemm();
+    fuseSharedInputGemm();
+    fuseReshapeTranspose();
+    fuseTransposeMatMul();
+    fuseScaleSoftmax();
+
+    // A sink runs the math it absorbs in its own CPU kernel. setPreferableTarget resolves
+    // only CPU and CUDA while mainGraph is set, so nothing reaches here on OpenCL today.
     if (!IS_DNN_OPENCL_TARGET(preferableTarget)) {
+        // Only a one-step chain carries the layer's kernel, so absorbing a step can
+        // expose a fusable next one.
         vector<int> usecounts;
-        useCounts(usecounts);
-        fuseChainsInGraph(*this, mainGraph, usecounts);
+        for (int iter = 0; iter < 10; iter++) {
+            useCounts(usecounts);
+            if (!fuseChainsInGraph(*this, mainGraph, usecounts))
+                break;
+        }
     }
 
     // Leaves a whole layer behind rather than handing math to a sink, so unlike the
     // chain pass it is not restricted to the CPU path.
-    InstanceNormAffineFusion(this).fuse();
+    fuseInstanceNormAffine();
 }
 
 CV__DNN_INLINE_NS_END

@@ -589,14 +589,7 @@ void Net::Impl::prepareForInference()
         widenHalfConstants();
         fuseQDQ();
         constFold();
-        fuseBN();
         constArgs();
-        fuseAttention();
-        fuseMatMulConstBToGemm();
-        fuseSharedInputGemm();
-        fuseReshapeTranspose();
-        fuseTransposeMatMul();
-        fuseScaleSoftmax();
         fuseChains();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;

@@ -138,14 +138,6 @@ struct LayerMathNode
     int   bufferId = -1;
 };
 
-//! Per-channel buffer ids for a layer whose data an earlier pass folded into members,
-//! leaving no Arg. Ids come in request order and hold for the rest of the chain.
-struct FusionBufferSink
-{
-    virtual ~FusionBufferSink() {}
-    virtual int add(const Mat& buf) = 0;
-};
-
 /** @brief Straight-line description of one layer's elementwise math.
  *
  * A layer builds its math by appending nodes; each call returns the index of
@@ -159,9 +151,6 @@ struct LayerMath
 
     //! The layer's own kernel for exactly this math, when it has one.
     FusionKernel kernel;
-
-    //! Set by the pass before unfold; null when a math is built standalone.
-    FusionBufferSink* buffers = nullptr;
 
     void setKernel(ActivationFunc fn, const std::vector<float>& params)
     { kernel.set(fn, params); }
@@ -189,14 +178,6 @@ struct LayerMath
         CV_Assert(tensorId >= 0);
         return appendNode(FusionEltwiseOp::TENSOR, INPUT_VALUE, INPUT_VALUE,
                           0.f, 0.f, tensorId);
-    }
-
-    //! For per-channel data the layer owns; @p buf is kept by reference.
-    int perChannelConstant(const Mat& buf)
-    {
-        CV_Assert(buffers != nullptr);
-        CV_Assert(!buf.empty() && buf.type() == CV_32F && buf.isContinuous());
-        return perChannelConstant(buffers->add(buf));
     }
 
     int unary(FusionEltwiseOp op, int operand)
@@ -595,6 +576,19 @@ struct FusionOps
     //! Opt-in: lets a chain grow through a live-tensor (TENSOR) side operand. The pass wires
     //! the accepted expression's tensorArgs on as extra layer inputs, in order.
     bool acceptsTensorOperands = false;
+
+    //! Folds a per-input-channel scale and shift into the layer's own weights, so a pass can
+    //! do it without knowing how they are packed. A null slot means the layer never does.
+    bool (*foldInputScale)(Layer* self, const Mat& scale, const Mat& shift) = nullptr;
+
+    /** @brief Names per-channel data an earlier pass folded into the layer's own members,
+     *  which therefore has no Arg for the pass to read.
+     *
+     *  The pass slots these before calling unfold and hands their ids over in @c side, the
+     *  same way it hands over the ones it read from the layer's inputs. @p out is filled in
+     *  the order unfold expects to read it back. A null slot means the layer owns none.
+     */
+    bool (*ownedBuffers)(const Layer* self, std::vector<Mat>& out) = nullptr;
 };
 
 /** @brief Binds @p ops to one concrete layer class. Last registration for a type wins. */

@@ -536,6 +536,8 @@ struct Net::Impl : public detail::NetImplBase
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
+    // collapse Reshape+InstanceNorm+Reshape+Mul+Add into InstanceNorm or GroupNormalization
+    void fuseInstanceNormAffine();
     void fuseChains();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();

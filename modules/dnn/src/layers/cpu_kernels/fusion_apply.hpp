@@ -67,6 +67,11 @@ inline bool PreparedFusion::take(const Ptr<AdjacencyGraph>& e)
             continue;
         if (n.constBufferId < 0 || n.constBufferId >= (int)prepared.channelBufs.size())
             return false;
+        // run() walks the last axis, but a flagged buffer varies along the channel one.
+        // Refusing lets the caller fall back to a chain that leaves it alone.
+        if (n.constBufferId < (int)e->constBufPerChannel.size() &&
+            e->constBufPerChannel[n.constBufferId])
+            return false;
         const Mat& m = e->constBufs[n.constBufferId];
         if (m.dims < 1 || (int)m.total() != m.size[m.dims - 1])
             return false;
