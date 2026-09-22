@@ -382,6 +382,34 @@ reid:
   yolo_rgb: true
   sample: "person_reid"
 
+# Detection-driven multi-object tracking: yolov8n finds people, cv::MultiTracker keeps their ids,
+# and the re-ID network is only loaded when --reid is passed. Both files are the same URLs and
+# sha1s the reid alias above uses, so running this costs no extra download.
+#
+# The preprocessing differs from that alias on purpose. blobFromImage computes (input - mean) * scale
+# on 0-255 pixels, so the torchvision means have to be scaled to that range, and the ImageNet mean
+# is RGB so the swap has to be on. The per-channel std is folded into the scale.
+multi_object_tracker:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/main/models/person_reid_youtureid/person_reid_youtu_2021nov.onnx?download="
+    sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
+  model: "person_reid_youtu_2021nov.onnx"
+  yolo_load_info:
+    yolo_url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  yolo_model: "yolov8n.onnx"
+  mean: [123.675, 116.28, 103.53]
+  std: [0.229, 0.224, 0.225]
+  scale: 0.00392
+  yolo_scale: 0.00392
+  yolo_width: 640
+  yolo_height: 640
+  width: 128
+  height: 256
+  rgb: true
+  yolo_rgb: true
+  sample: "multi_object_tracker"
+
 ################################################################################
 # Tracker models.
 ################################################################################
