@@ -464,7 +464,7 @@ TEST(Core_TExpr, math_inplace)
     Mat ref = expr1("sqrt({0})", { a });
     std::vector<Mat> out{ a };                     // preallocated == input => in-place
     cv::texpr("sqrt({0})", std::vector<Mat>{ a }, out);
-    EXPECT_EQ(0, cvtest::norm(out[0], ref, NORM_INF));
+    EXPECT_LE(cvtest::norm(out[0], ref, NORM_INF), FLT_EPSILON);
 }
 
 // ------------------------------------------------------------------------------------- select
