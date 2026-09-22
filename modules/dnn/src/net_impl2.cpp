@@ -760,6 +760,9 @@ void Net::Impl::finalize()
     for (const Ptr<Graph>& g : allgraphs)
         finalizeGraph(g, useCUDA);
     useBlockLayout();
+    // Second call: TransformLayout nodes only exist once useBlockLayout() has
+    // created them, so this is where a residual Add can fold into one.
+    fuseChains();
     assignBuffers();
     totalLayers = updateGraphOfs(mainGraph, 0, true);
 

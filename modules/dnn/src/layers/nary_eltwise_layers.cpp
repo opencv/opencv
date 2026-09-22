@@ -212,6 +212,15 @@ public:
         }
 
         const FusionConst& k = side.at(0);
+        if (k.isTensor()) {
+            // A live second tensor only makes sense for a plain add.
+            if (o != FusionEltwiseOp::ADD)
+                return false;
+            const int operand = r.tensorOperand(k.tensorId);
+            r.binary(o, LayerMath::INPUT_VALUE, operand);
+            return true;
+        }
+
         if (o == FusionEltwiseOp::MAX && !k.isBuffer() && k.value == 0.f)
             r.setKernel(cv::dnn::getActivationFunc(ACTIV_RELU), { 0.f });
 

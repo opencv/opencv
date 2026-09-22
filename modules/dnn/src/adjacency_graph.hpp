@@ -31,6 +31,8 @@ enum class FusionEltwiseOp
     INPUT,
     CONST,
     PER_CHANNEL_CONST,
+    //! A second runtime tensor contributed by another layer's live output, not a baked buffer.
+    TENSOR,
     ADD,
     SUB,
     MUL,
@@ -52,6 +54,7 @@ inline int arity(FusionEltwiseOp op)
     case FusionEltwiseOp::INPUT:
     case FusionEltwiseOp::CONST:
     case FusionEltwiseOp::PER_CHANNEL_CONST:
+    case FusionEltwiseOp::TENSOR:
         return 0;
     case FusionEltwiseOp::ADD:
     case FusionEltwiseOp::SUB:
@@ -74,13 +77,15 @@ inline unsigned bits(float f) { Cv32suf s; s.f = f; return s.u; }
 
 }} // namespace fusion::detail
 
-/** @brief One constant operand: a scalar, or a per-channel buffer. */
+/** @brief One non-flowing operand: a scalar, a per-channel buffer, or a live tensor. */
 struct FusionConst
 {
-    float value    = 0.f;   //!< the scalar, meaningful only while bufferId < 0
+    float value    = 0.f;   //!< the scalar, meaningful only while bufferId < 0 and tensorId < 0
     int   bufferId = -1;    //!< >=0 selects a per-channel buffer, indexes constBufs
+    int   tensorId = -1;    //!< >=0 selects a live tensor, indexes the chain's own tensorArgs
 
     bool isBuffer() const { return bufferId >= 0; }
+    bool isTensor() const { return tensorId >= 0; }
 };
 
 /** @brief The constant operands a layer has alongside the value flowing into it, kept in
@@ -165,6 +170,13 @@ struct LayerMath
         CV_Assert(bufferId >= 0);
         return appendNode(FusionEltwiseOp::PER_CHANNEL_CONST, INPUT_VALUE, INPUT_VALUE,
                           0.f, 0.f, bufferId);
+    }
+
+    int tensorOperand(int tensorId)
+    {
+        CV_Assert(tensorId >= 0);
+        return appendNode(FusionEltwiseOp::TENSOR, INPUT_VALUE, INPUT_VALUE,
+                          0.f, 0.f, tensorId);
     }
 
     int unary(FusionEltwiseOp op, int operand)
@@ -269,6 +281,9 @@ public:
 
     std::vector<Mat> constBufs;
 
+    //! Live tensor operands, indexed by each TENSOR node's constBufferId; remapped by extract().
+    std::vector<Arg> tensorArgs;
+
     //! Set when this whole expression is one layer that already has a kernel.
     FusionKernel kernel;
 
@@ -303,7 +318,8 @@ public:
 
         if (op != FusionEltwiseOp::CONST && op != FusionEltwiseOp::CLAMP) scalar = 0.f;
         if (op != FusionEltwiseOp::CLAMP)                                 scalar2 = 0.f;
-        if (op != FusionEltwiseOp::PER_CHANNEL_CONST)                     constBufferId = -1;
+        if (op != FusionEltwiseOp::PER_CHANNEL_CONST && op != FusionEltwiseOp::TENSOR)
+            constBufferId = -1;
 
         FusionNode cand;
         cand.op = op;
@@ -394,6 +410,10 @@ inline float evalElement(const AdjacencyGraph& g, float x,
         case FusionEltwiseOp::CLAMP:
             v[i] = a < n.scalar ? n.scalar : (a > n.scalar2 ? n.scalar2 : a);
             break;
+        case FusionEltwiseOp::TENSOR:
+            // Only an opted-in sink can be offered this; it reads the node structure itself.
+            CV_Error(Error::StsNotImplemented,
+                     "DNN/fusion: TENSOR operand reached the generic interpreter");
         }
     }
     return v[out];
@@ -422,7 +442,8 @@ inline int markLive(const AdjacencyGraph& g, int root, std::vector<char>& live)
 } // namespace detail
 
 inline Ptr<AdjacencyGraph> extract(const AdjacencyGraph& arena, int root,
-                                          const std::vector<Mat>& constBufs)
+                                          const std::vector<Mat>& constBufs,
+                                          const std::vector<Arg>& tensorArgs = std::vector<Arg>())
 {
     const std::vector<FusionNode>& src = arena.nodes();
     if (root < 0 || root >= (int)src.size())
@@ -435,6 +456,9 @@ inline Ptr<AdjacencyGraph> extract(const AdjacencyGraph& arena, int root,
         return Ptr<AdjacencyGraph>();
 
     std::vector<int> remap(live.size(), -1);
+    // tensorId -> fresh slot in outTensorArgs, so a partial extraction only keeps live tensors.
+    std::vector<int> tensorRemap(tensorArgs.size(), -1);
+    std::vector<Arg> outTensorArgs;
     AdjacencyGraphBuilder out;
     remap[0] = out.internNode(FusionEltwiseOp::INPUT, {});
 
@@ -462,16 +486,27 @@ inline Ptr<AdjacencyGraph> extract(const AdjacencyGraph& arena, int root,
         if (n.op == FusionEltwiseOp::PER_CHANNEL_CONST &&
             (n.constBufferId < 0 || n.constBufferId >= (int)constBufs.size()))
             return Ptr<AdjacencyGraph>();
+        int constBufferId = n.constBufferId;
+        if (n.op == FusionEltwiseOp::TENSOR) {
+            if (n.constBufferId < 0 || n.constBufferId >= (int)tensorArgs.size())
+                return Ptr<AdjacencyGraph>();
+            if (tensorRemap[n.constBufferId] < 0) {
+                tensorRemap[n.constBufferId] = (int)outTensorArgs.size();
+                outTensorArgs.push_back(tensorArgs[n.constBufferId]);
+            }
+            constBufferId = tensorRemap[n.constBufferId];
+        }
         std::vector<int> ins(n.inputs.size());
         for (size_t k = 0; k < ins.size(); k++)
             ins[k] = remap[n.inputs[k]];
-        remap[i] = out.internNode(n.op, ins, n.scalar, n.scalar2, n.constBufferId);
+        remap[i] = out.internNode(n.op, ins, n.scalar, n.scalar2, constBufferId);
     }
     if (remap[root] != (int)out.size() - 1)
         return Ptr<AdjacencyGraph>();
 
     Ptr<AdjacencyGraph> g = out.finish(remap[root]);
     g->constBufs = constBufs;
+    g->tensorArgs = outTensorArgs;
     return g;
 }
 
@@ -505,6 +540,9 @@ struct FusionOps
      *          responsible for computing it. A null slot means it never takes one.
      */
     bool (*absorb)(Layer* self, const Ptr<AdjacencyGraph>& expr);
+
+    //! Opt-in: lets a chain grow through a live-tensor (TENSOR) side operand.
+    bool acceptsTensorOperands = false;
 };
 
 /** @brief Binds @p ops to one concrete layer class. Last registration for a type wins. */
