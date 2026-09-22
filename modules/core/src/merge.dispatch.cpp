@@ -46,19 +46,25 @@ void merge64s(const int64** src, int64* dst, int len, int cn )
 } // namespace cv::hal::
 
 
-typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
+typedef void (*MergeFunc)(const void** src, void* dst, int len, int cn);
+
+template<typename T, void (*fn)(const T**, T*, int, int)>
+static void mergeWrap(const void** src, void* dst, int len, int cn)
+{
+    fn((const T**)src, (T*)dst, len, cn);
+}
 
 static MergeFunc getMergeFunc(int depth)
 {
     static MergeFunc mergeTab[CV_DEPTH_MAX] =
     {
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), 0, 0, 0,
+        mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>, mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>,
+        mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>, mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>,
+        mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>, mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>,
+        mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>, mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>,
+        mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>, mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>,
+        mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>, mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>,
+        mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>, 0, 0, 0,
     };
 
     return mergeTab[depth];
@@ -187,7 +193,7 @@ void merge(const Mat* mv, size_t n, OutputArray _dst)
         for( size_t j = 0; j < total; j += blocksize )
         {
             size_t bsz = std::min(total - j, blocksize);
-            func( (const uchar**)&ptrs[1], ptrs[0], (int)bsz, cn );
+            func( (const void**)&ptrs[1], ptrs[0], (int)bsz, cn );
 
             if( j + blocksize < total )
             {

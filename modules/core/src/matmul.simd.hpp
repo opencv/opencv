@@ -75,8 +75,8 @@
 namespace cv {
 
 // forward declarations
-typedef void (*TransformFunc)(const uchar* src, uchar* dst, const uchar* m, int len, int scn, int dcn);
-typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
+typedef void (*TransformFunc)(const void* src, void* dst, const void* m, int len, int scn, int dcn);
+typedef void (*ScaleAddFunc)(const void* src1, const void* src2, void* dst, int len, const void* alpha);
 typedef void (*MulTransposedFunc)(const Mat& src, const/*preallocated*/ Mat& dst, const Mat& delta, double scale);
 typedef double (*MahalanobisImplFunc)(const Mat& v1, const Mat& v2, const Mat& icovar, double *diff_buffer /*[len]*/, int len /*=v1.total()*/);
 
@@ -1136,6 +1136,31 @@ typedef void (*GEMMStoreFunc)( const void* src1, size_t step1,
                    const void* src2, size_t step2, void* dst, size_t dststep,
                    Size dstsize, double alpha, double beta, int flags );
 
+template<typename T, typename WT, void (*fn)(const T*, size_t, const T*, size_t, const T*, size_t, T*, size_t, Size, Size, double, double, int)>
+static void gemmSingleMulWrap( const void* src1, size_t step1,
+                   const void* src2, size_t step2, const void* src3, size_t step3,
+                   void* dst, size_t dststep, Size srcsize, Size dstsize,
+                   double alpha, double beta, int flags )
+{
+    fn((const T*)src1, step1, (const T*)src2, step2, (const T*)src3, step3, (T*)dst, dststep, srcsize, dstsize, alpha, beta, flags);
+}
+
+template<typename T, typename WT, void (*fn)(const T*, size_t, const T*, size_t, WT*, size_t, Size, Size, int)>
+static void gemmBlockMulWrap( const void* src1, size_t step1,
+                   const void* src2, size_t step2, void* dst, size_t dststep,
+                   Size srcsize, Size dstsize, int flags )
+{
+    fn((const T*)src1, step1, (const T*)src2, step2, (WT*)dst, dststep, srcsize, dstsize, flags);
+}
+
+template<typename T, typename WT, void (*fn)(const T*, size_t, const WT*, size_t, T*, size_t, Size, double, double, int)>
+static void gemmStoreWrap( const void* src1, size_t step1,
+                   const void* src2, size_t step2, void* dst, size_t dststep,
+                   Size dstsize, double alpha, double beta, int flags )
+{
+    fn((const T*)src1, step1, (const WT*)src2, step2, (T*)dst, dststep, dstsize, alpha, beta, flags);
+}
+
 static void GEMMSingleMul_32f( const float* a_data, size_t a_step,
               const float* b_data, size_t b_step,
               const float* c_data, size_t c_step,
@@ -1560,28 +1585,28 @@ static void gemmImpl( Mat A, Mat B, double alpha,
 
     if( type == CV_32FC1 )
     {
-        singleMulFunc = (GEMMSingleMulFunc)GEMMSingleMul_32f;
-        blockMulFunc = (GEMMBlockMulFunc)GEMMBlockMul_32f;
-        storeFunc = (GEMMStoreFunc)GEMMStore_32f;
+        singleMulFunc = gemmSingleMulWrap<float, double, GEMMSingleMul_32f>;
+        blockMulFunc = gemmBlockMulWrap<float, double, GEMMBlockMul_32f>;
+        storeFunc = gemmStoreWrap<float, double, GEMMStore_32f>;
     }
     else if( type == CV_64FC1 )
     {
-        singleMulFunc = (GEMMSingleMulFunc)GEMMSingleMul_64f;
-        blockMulFunc = (GEMMBlockMulFunc)GEMMBlockMul_64f;
-        storeFunc = (GEMMStoreFunc)GEMMStore_64f;
+        singleMulFunc = gemmSingleMulWrap<double, double, GEMMSingleMul_64f>;
+        blockMulFunc = gemmBlockMulWrap<double, double, GEMMBlockMul_64f>;
+        storeFunc = gemmStoreWrap<double, double, GEMMStore_64f>;
     }
     else if( type == CV_32FC2 )
     {
-        singleMulFunc = (GEMMSingleMulFunc)GEMMSingleMul_32fc;
-        blockMulFunc = (GEMMBlockMulFunc)GEMMBlockMul_32fc;
-        storeFunc = (GEMMStoreFunc)GEMMStore_32fc;
+        singleMulFunc = gemmSingleMulWrap<Complexf, Complexd, GEMMSingleMul_32fc>;
+        blockMulFunc = gemmBlockMulWrap<Complexf, Complexd, GEMMBlockMul_32fc>;
+        storeFunc = gemmStoreWrap<Complexf, Complexd, GEMMStore_32fc>;
     }
     else
     {
         CV_Assert( type == CV_64FC2 );
-        singleMulFunc = (GEMMSingleMulFunc)GEMMSingleMul_64fc;
-        blockMulFunc = (GEMMBlockMulFunc)GEMMBlockMul_64fc;
-        storeFunc = (GEMMStoreFunc)GEMMStore_64fc;
+        singleMulFunc = gemmSingleMulWrap<Complexd, Complexd, GEMMSingleMul_64fc>;
+        blockMulFunc = gemmBlockMulWrap<Complexd, Complexd, GEMMBlockMul_64fc>;
+        storeFunc = gemmStoreWrap<Complexd, Complexd, GEMMStore_64fc>;
     }
 
     if( (d_size.width == 1 || len == 1) && !(flags & GEMM_2_T) && B.isContinuous() )
@@ -2844,13 +2869,19 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 }
 
 
+template<typename T, typename WT, void (*fn)(const T*, T*, const WT*, int, int, int)>
+static void transformWrap(const void* src, void* dst, const void* m, int len, int scn, int dcn)
+{
+    fn((const T*)src, (T*)dst, (const WT*)m, len, scn, dcn);
+}
+
 TransformFunc getTransformFunc(int depth)
 {
     static TransformFunc transformTab[CV_DEPTH_MAX] =
     {
-        (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
-        (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
-        (TransformFunc)transform_64f, 0
+        transformWrap<uchar, float, transform_8u>, transformWrap<schar, float, transform_8s>, transformWrap<ushort, float, transform_16u>,
+        transformWrap<short, float, transform_16s>, transformWrap<int, double, transform_32s>, transformWrap<float, float, transform_32f>,
+        transformWrap<double, double, transform_64f>, 0
     };
 
     return transformTab[depth];
@@ -2860,9 +2891,9 @@ TransformFunc getDiagTransformFunc(int depth)
 {
     static TransformFunc diagTransformTab[CV_DEPTH_MAX] =
     {
-        (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
-        (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
-        (TransformFunc)diagtransform_64f, 0
+        transformWrap<uchar, float, diagtransform_8u>, transformWrap<schar, float, diagtransform_8s>, transformWrap<ushort, float, diagtransform_16u>,
+        transformWrap<short, float, diagtransform_16s>, transformWrap<int, double, diagtransform_32s>, transformWrap<float, float, diagtransform_32f>,
+        transformWrap<double, double, diagtransform_64f>, 0
     };
 
     return diagTransformTab[depth];
@@ -2875,8 +2906,11 @@ TransformFunc getDiagTransformFunc(int depth)
 \****************************************************************************************/
 
 template<typename T> static void
-perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, int dcn )
+perspectiveTransform_( const void* _src, void* _dst, const void* _m_ptr, int len, int scn, int dcn )
 {
+    const T* src = (const T*)_src;
+    T* dst = (T*)_dst;
+    const double* m = (const double*)_m_ptr;
     const double eps = FLT_EPSILON;
     int i;
 
@@ -2959,24 +2993,12 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
     }
 }
 
-static void
-perspectiveTransform_32f(const float* src, float* dst, const double* m, int len, int scn, int dcn)
-{
-    perspectiveTransform_(src, dst, m, len, scn, dcn);
-}
-
-static void
-perspectiveTransform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
-{
-    perspectiveTransform_(src, dst, m, len, scn, dcn);
-}
-
 TransformFunc getPerspectiveTransform(int depth)
 {
     if (depth == CV_32F)
-        return (TransformFunc)perspectiveTransform_32f;
+        return perspectiveTransform_<float>;
     if (depth == CV_64F)
-        return (TransformFunc)perspectiveTransform_64f;
+        return perspectiveTransform_<double>;
     CV_Assert(0 && "Not supported");
 }
 
@@ -2986,10 +3008,13 @@ TransformFunc getPerspectiveTransform(int depth)
 *                                       ScaleAdd                                         *
 \****************************************************************************************/
 
-static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
-                         int len, float* _alpha)
+static void scaleAdd_32f(const void* _src1, const void* _src2, void* _dst,
+                         int len, const void* _alpha)
 {
-    float alpha = *_alpha;
+    const float* src1 = (const float*)_src1;
+    const float* src2 = (const float*)_src2;
+    float* dst = (float*)_dst;
+    float alpha = *(const float*)_alpha;
     int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 v_alpha = vx_setall_f32(alpha);
@@ -3003,10 +3028,13 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
 }
 
 
-static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
-                         int len, double* _alpha)
+static void scaleAdd_64f(const void* _src1, const void* _src2, void* _dst,
+                         int len, const void* _alpha)
 {
-    double alpha = *_alpha;
+    const double* src1 = (const double*)_src1;
+    const double* src2 = (const double*)_src2;
+    double* dst = (double*)_dst;
+    double alpha = *(const double*)_alpha;
     int i = 0;
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     v_float64 a2 = vx_setall_f64(alpha);
@@ -3022,9 +3050,9 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 ScaleAddFunc getScaleAddFunc(int depth)
 {
     if (depth == CV_32F)
-        return (ScaleAddFunc)scaleAdd_32f;
+        return scaleAdd_32f;
     if (depth == CV_64F)
-        return (ScaleAddFunc)scaleAdd_64f;
+        return scaleAdd_64f;
     CV_Assert(0 && "Not supported");
 }
 

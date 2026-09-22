@@ -256,9 +256,9 @@ typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, Size sz,
                        void*);
 
-typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
-                       const uchar* src2, size_t step2,
-                       uchar* dst, size_t step, int width, int height,
+typedef void (*BinaryFuncC)(const void* src1, size_t step1,
+                       const void* src2, size_t step2,
+                       void* dst, size_t step, int width, int height,
                        void*);
 
 // Exported so the new element-wise expression engine can reuse the already-optimized,

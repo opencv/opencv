@@ -517,6 +517,12 @@ macro(ocv_add_modules_compiler_options)
   if(OPENCV_ENABLE_MEMORY_SANITIZER)
     add_definitions(-DOPENCV_ENABLE_MEMORY_SANITIZER=1)
   endif()
+  if(CV_GCC OR CV_CLANG OR CV_ICX)
+    ocv_check_flag_support(CXX "-Wcast-function-type-strict" _varname_cxx "")
+    if(${_varname_cxx})
+      add_compile_options(-Wcast-function-type-strict)
+    endif()
+  endif()
 endmacro()
 
 # adjust -Wl,-rpath-link
