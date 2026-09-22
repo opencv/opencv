@@ -259,6 +259,9 @@ static inline armpl_int_t armpl_lapacke_getrf(int m, double *a, int lda, armpl_i
 template <typename fptype> static inline int
 armpl_lu(fptype *a, size_t a_step, int m, fptype *b, size_t b_step, int n, int *info)
 {
+    if(!info)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     int lda = (int)(a_step / sizeof(fptype));
     std::vector<armpl_int_t> ipiv(m);
     armpl_int_t linfo;
