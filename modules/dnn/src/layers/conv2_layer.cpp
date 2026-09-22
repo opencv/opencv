@@ -36,7 +36,7 @@ class Conv2LayerImpl : public Conv2Layer
 public:
     Conv2LayerImpl(const LayerParams& params)
     {
-        registerFusionOpsOnce<Conv2LayerImpl>({ nullptr, &Conv2LayerImpl::absorbOp });
+        registerFusionOpsOnce<Conv2LayerImpl>({ nullptr, &Conv2LayerImpl::absorbOp, true });
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
         ceil_mode = params.get<bool>("ceil_mode", false);
@@ -322,6 +322,47 @@ private:
         return false;
     }
 
+    //! The operand of max(v, 0) or min(v, 0), or -1 when @p node is not that shape.
+    static int zeroClamped(const std::vector<FusionNode>& nd, int node, FusionEltwiseOp op)
+    {
+        const FusionNode& n = nd[node];
+        if (n.op != op || n.inputs.size() != 2)
+            return -1;
+        for (int k = 0; k < 2; k++) {
+            const FusionNode& z = nd[n.inputs[k]];
+            if (z.op == FusionEltwiseOp::CONST && z.scalar == 0.f)
+                return n.inputs[1 - k];
+        }
+        return -1;
+    }
+
+    //! Matches max(x,0) + s*min(x,0). Interning sorts commutative operands, so both
+    //! sides of every node are tried.
+    static bool splitLeakyRelu(const std::vector<FusionNode>& nd, int node,
+                               int& operand, int& slopeNode)
+    {
+        const FusionNode& add = nd[node];
+        if (add.op != FusionEltwiseOp::ADD || add.inputs.size() != 2)
+            return false;
+
+        for (int s = 0; s < 2; s++) {
+            const FusionNode& mul = nd[add.inputs[1 - s]];
+            if (mul.op != FusionEltwiseOp::MUL || mul.inputs.size() != 2)
+                continue;
+            const int x = zeroClamped(nd, add.inputs[s], FusionEltwiseOp::MAX);
+            if (x < 0)
+                continue;
+            for (int k = 0; k < 2; k++) {
+                if (zeroClamped(nd, mul.inputs[k], FusionEltwiseOp::MIN) != x)
+                    continue;
+                operand = x;
+                slopeNode = mul.inputs[1 - k];
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool readPerChannelValues(const AdjacencyGraph& g, int bufId, float scalarVal, int K,
                        std::vector<float>& out) const
     {
@@ -335,15 +376,17 @@ private:
         if (c.empty() || c.type() != CV_32F || !c.isContinuous() || (int)c.total() != K)
             return false;
 
-        // Broadcasting puts the channel axis last-but-the-spatial-dims, so the
-        // constant is only per-channel if that axis holds K and the rest are 1.
-        const int nspatial = wshape0.dims - 2;
-        const int ax = c.dims - nspatial - 1;
-        if (ax < 0)
-            return false;
-        for (int d = 0; d < c.dims; d++) {
-            if (c.size[d] != (d == ax ? K : 1))
+        // A declared buffer is per-channel by construction; a graph constant must prove it,
+        // since a bare [K] broadcasts onto the last axis, not the channel axis.
+        if (bufId >= (int)g.constBufPerChannel.size() || !g.constBufPerChannel[bufId]) {
+            const int nspatial = wshape0.dims - 2;
+            const int ax = c.dims - nspatial - 1;
+            if (ax < 0)
                 return false;
+            for (int d = 0; d < c.dims; d++) {
+                if (c.size[d] != (d == ax ? K : 1))
+                    return false;
+            }
         }
         const float* p = c.ptr<float>();
         std::copy(p, p + K, out.begin());
@@ -356,7 +399,81 @@ public:
         return static_cast<Conv2LayerImpl*>(self)->absorbMath(expr);
     }
 
+    //! The TENSOR side of a binary node, if it has one. Reports only; the caller commits.
+    static bool splitTensorOperand(const std::vector<FusionNode>& nd, int node,
+                                   int& other, int& tensorId)
+    {
+        const FusionNode& n = nd[node];
+        if (n.inputs.size() != 2)
+            return false;
+        for (int s = 0; s < 2; s++) {
+            if (nd[n.inputs[s]].op != FusionEltwiseOp::TENSOR)
+                continue;
+            tensorId = nd[n.inputs[s]].constBufferId;
+            other = n.inputs[1 - s];
+            return true;
+        }
+        return false;
+    }
+
+    //! Peels a recognised activation off @p cur. Reports only; the caller commits.
+    void peelActivation(const AdjacencyGraph& g, int& cur, int K,
+                        FastActivation& act, std::vector<float>& ap) const
+    {
+        const std::vector<FusionNode>& nd = g.nodes();
+        if (nd[cur].op == FusionEltwiseOp::CLAMP && nd[cur].scalar == 0.f) {
+            act = FAST_ACTIV_CLIP;
+            ap.assign(2, 0.f);
+            ap[1] = nd[cur].scalar2;
+            cur = nd[cur].inputs[0];
+            return;
+        }
+        if (nd[cur].op == FusionEltwiseOp::MAX && nd[cur].inputs.size() == 2 &&
+            nd[nd[cur].inputs[1]].op == FusionEltwiseOp::CONST &&
+            nd[nd[cur].inputs[1]].scalar == 0.f) {
+            act = FAST_ACTIV_RELU;
+            cur = nd[cur].inputs[0];
+            return;
+        }
+        int leakyOperand = -1, slopeNode = -1;
+        if (!splitLeakyRelu(nd, cur, leakyOperand, slopeNode))
+            return;
+        const FusionNode& sl = nd[slopeNode];
+        if (sl.op == FusionEltwiseOp::CONST) {
+            act = FAST_ACTIV_LEAKY_RELU;
+            ap.assign(1, sl.scalar);
+            cur = leakyOperand;
+        } else if (sl.op == FusionEltwiseOp::PER_CHANNEL_CONST) {
+            ap.assign(K, 0.f);
+            if (readPerChannelValues(g, sl.constBufferId, 0.f, K, ap)) {
+                act = FAST_ACTIV_PRELU;
+                cur = leakyOperand;
+            } else {
+                ap.clear();
+            }
+        }
+    }
+
     bool absorbMath(const Ptr<AdjacencyGraph>& expr)
+    {
+        return absorbAffine(expr) || absorbKernel(expr);
+    }
+
+    //! Takes an expression the layer has a kernel for. Only a one-layer chain carries
+    //! one, so this cannot swallow math absorbAffine() just turned down.
+    bool absorbKernel(const Ptr<AdjacencyGraph>& expr)
+    {
+        if (!expr || !expr->kernel.fn || !expr->tensorArgs.empty())
+            return false;
+        if (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr || !activ.empty())
+            return false;
+
+        activationFunc = expr->kernel.fn;
+        activParams.assign(expr->kernel.params, expr->kernel.params + expr->kernel.nparams);
+        return true;
+    }
+
+    bool absorbAffine(const Ptr<AdjacencyGraph>& expr)
     {
         if (!expr || expr->size() == 0)
             return false;
@@ -371,7 +488,8 @@ public:
             return false;
 
         const int K = wshape0[0];
-        if (!bias.empty() && (bias.dims != 1 || (int)bias.total() != K))
+        // Only K contiguous floats are needed; the rank is the producer's business.
+        if (!bias.empty() && (!bias.isContinuous() || (int)bias.total() != K))
             return false;
 
         int cur = expr->outputNode();
@@ -397,19 +515,25 @@ public:
 
         FastActivation act = FAST_ACTIV_NONE;
         std::vector<float> ap;
-        if (nd[cur].op == FusionEltwiseOp::CLAMP && nd[cur].scalar == 0.f) {
-            act = FAST_ACTIV_CLIP;
-            ap.assign(2, 0.f);
-            ap[1] = nd[cur].scalar2;
-            cur = nd[cur].inputs[0];
-        } else if (nd[cur].op == FusionEltwiseOp::MAX && nd[cur].inputs.size() == 2 &&
-                   nd[nd[cur].inputs[1]].op == FusionEltwiseOp::CONST &&
-                   nd[nd[cur].inputs[1]].scalar == 0.f) {
-            act = FAST_ACTIV_RELU;
-            cur = nd[cur].inputs[0];
-        }
+        peelActivation(*expr, cur, K, act, ap);
         if (act == FAST_ACTIV_CLIP)
             ap[1] *= postScale;
+
+        // The kernel adds the residual after the scale and bias and before the activation,
+        // so that is the only position it can occupy; a postScale would scale the sum too.
+        bool takesResidual = false;
+        if (nd[cur].op == FusionEltwiseOp::ADD) {
+            int other = -1, tensorId = -1;
+            if (splitTensorOperand(nd, cur, other, tensorId)) {
+                if (hasPostScale || tensorId != 0)
+                    return false;
+                takesResidual = true;
+                cur = other;
+            }
+        }
+        // An unread tensor would still be wired on as an input, so refuse rather than ignore.
+        if (expr->tensorArgs.size() != (size_t)(takesResidual ? 1 : 0))
+            return false;
 
         std::vector<float> scale(K, 1.f), shift(K, 0.f);
         bool affine = false;
@@ -437,7 +561,7 @@ public:
 
         if (cur != 0)
             return false;
-        if (!affine && !hasPostScale && act == FAST_ACTIV_NONE)
+        if (!affine && !hasPostScale && act == FAST_ACTIV_NONE && !takesResidual)
             return false;
 
         if (affine || hasPostScale) {
@@ -465,6 +589,7 @@ public:
             fastActivation = act;
             activParams = ap;
         }
+        addResidual = takesResidual;
         return true;
     }
 

@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/batch_norm.hpp"
@@ -369,8 +370,33 @@ class BatchNorm2LayerImpl CV_FINAL : public BatchNorm2Layer
 {
 public:
     BatchNorm2LayerImpl(const LayerParams& params) {
+        registerFusionOpsOnce<BatchNorm2LayerImpl>(
+            { &BatchNorm2LayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         epsilon = params.get<float>("epsilon", 1e-5);
+    }
+
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const BatchNorm2LayerImpl*>(self)->unfoldMath(r, side);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
+    {
+        // Only once freezeScaleBias() has run; before it the members are empty.
+        if (side.count != 0 || inputs.size() != 1)
+            return false;
+        if (scale.empty() || bias.empty() || scale.total() != bias.total())
+            return false;
+        if (scale.type() != CV_32F || bias.type() != CV_32F ||
+            !scale.isContinuous() || !bias.isContinuous())
+            return false;
+
+        const int s      = r.perChannelConstant(scale);
+        const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, s);
+        const int b      = r.perChannelConstant(bias);
+        r.binary(FusionEltwiseOp::ADD, scaled, b);
+        return true;
     }
 
     bool supportBackend(int backendId) CV_OVERRIDE

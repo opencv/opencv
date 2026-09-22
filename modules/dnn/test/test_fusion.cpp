@@ -151,6 +151,59 @@ TEST(Fusion, MathMatchesClosedForm)
     }
 }
 
+// The expression comes from the layer itself, so a wrong emitter shows up here.
+TEST(Fusion, DeclaredMathMatchesTheActivation)
+{
+    // elementwise_layers.cpp, GeluApproximationConstants
+    const float kSqrt2Pi = 0.7978845834732056f;
+    const float kCoef    = 0.044714998453855515f * kSqrt2Pi;
+    const float kSeluA   = 1.67326319217681884765625f;
+    const float kSeluG   = 1.05070102214813232421875f;
+
+    const float xs[] = { -3.f, -0.5f, 0.f, 0.25f, 1.f, 4.f };
+    for (float x : xs) {
+        struct { const char* type; float expected; } cases[] = {
+            { "Swish",       x / (1.f + std::exp(-x)) },
+            { "ELU",         x >= 0.f ? x : std::exp(x) - 1.f },
+            { "AbsVal",      std::abs(x) },
+            { "HardSwish",   x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f)) },
+            { "Softsign",    x / (1.f + std::abs(x)) },
+            { "HardSigmoid", std::max(0.f, std::min(1.f, 0.2f * x + 0.5f)) },
+            { "Celu",        std::max(0.f, x) + std::min(0.f, std::expm1(x)) },
+            { "Selu",        kSeluG * (x > 0.f ? x : kSeluA * std::expm1(x)) },
+            { "GeluApproximation",
+              0.5f * x * (1.f + std::tanh(x * (kSqrt2Pi + kCoef * x * x))) },
+        };
+
+        for (const auto& c : cases) {
+            LayerParams lp;
+            Ptr<Layer> l = LayerFactory::createLayerInstance(c.type, lp);
+            ASSERT_TRUE(l) << c.type;
+            l->inputs.assign(1, Arg(1));
+
+            LayerMath m;
+            ConstOperand side;
+            ASSERT_TRUE(unfoldOf(l, m, side)) << c.type << " declared no math";
+            EXPECT_NEAR(c.expected, eval1(m, x), 1e-5) << c.type << " at x=" << x;
+        }
+    }
+}
+
+// A negative alpha moves Celu's exponential arm to the other side of zero, so the
+// branchless form no longer holds and the layer must decline.
+TEST(Fusion, CeluWithNegativeAlphaIsRefused)
+{
+    LayerParams lp;
+    lp.set("alpha", -1.f);
+    Ptr<Layer> l = LayerFactory::createLayerInstance("Celu", lp);
+    ASSERT_TRUE(l);
+    l->inputs.assign(1, Arg(1));
+
+    LayerMath m;
+    ConstOperand side;
+    EXPECT_FALSE(unfoldOf(l, m, side));
+}
+
 TEST(Fusion, EmptyMathIsRefused)
 {
     AdjacencyGraphBuilder arena;
@@ -454,6 +507,34 @@ TEST(Fusion, ShapeOfUnpinnedInputStaysDynamic)
     net.setInput(other);
     out = net.forward();
     EXPECT_EQ(MatShape({1, 24, 2}), out.shape());
+}
+
+//! How many layers of @p type the fused program still holds.
+static int fusedCount(Net& net, const char* type)
+{
+    Ptr<Graph> g = net.getMainGraph();
+    CV_Assert(g);
+    int n = 0;
+    for (const Ptr<LayerInfo>& l : g->prog())
+        n += l && l->type == type;
+    return n;
+}
+
+// Two convs over one input, summed. The later conv takes the Add as its residual,
+// so nothing is left that adds two tensors.
+TEST(Fusion, ConvTakesTheResidualAdd)
+{
+    const std::string model = findDataFile("dnn/onnx/models/depthwiseconv_add.onnx");
+    Net net = readNetFromONNX(model, ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    const int shape[] = {1, 8, 32, 32};
+    Mat input(4, shape, CV_32F, Scalar(1.f));
+    net.setInput(input);
+    net.forward();
+
+    // The trailing Mul stays, so one is expected; two means the Add was not absorbed.
+    EXPECT_EQ(fusedCount(net, "NaryEltwise"), 1);
 }
 
 }} // namespace opencv_test
