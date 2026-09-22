@@ -97,19 +97,19 @@ HasNonZeroFunc getHasNonZeroFunc(int depth)
 {
     static HasNonZeroFunc hasNonZeroTab[CV_DEPTH_MAX] =
     {
-        GET_OPTIMIZED(hasNonZero8u),
-        GET_OPTIMIZED(hasNonZero8u),
-        GET_OPTIMIZED(hasNonZero16u),
-        GET_OPTIMIZED(hasNonZero16u),
-        GET_OPTIMIZED(hasNonZero32s),
-        GET_OPTIMIZED(hasNonZero32f),
-        GET_OPTIMIZED(hasNonZero64f),
-        GET_OPTIMIZED(hasNonZero16f),
-        GET_OPTIMIZED(hasNonZero16f),
-        GET_OPTIMIZED(hasNonZero8u),
-        GET_OPTIMIZED(hasNonZero64s),
-        GET_OPTIMIZED(hasNonZero64s),
-        GET_OPTIMIZED(hasNonZero32s),
+        hasNonZero8u,
+        hasNonZero8u,
+        hasNonZero16u,
+        hasNonZero16u,
+        hasNonZero32s,
+        hasNonZero32f,
+        hasNonZero64f,
+        hasNonZero16f,
+        hasNonZero16f,
+        hasNonZero8u,
+        hasNonZero64s,
+        hasNonZero64s,
+        hasNonZero32s,
         0
     };
 

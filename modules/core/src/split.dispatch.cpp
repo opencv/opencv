@@ -61,13 +61,13 @@ static SplitFunc getSplitFunc(int depth)
 {
     static SplitFunc splitTab[CV_DEPTH_MAX] =
     {
-        splitWrap<uchar, GET_OPTIMIZED(cv::hal::split8u)>, splitWrap<uchar, GET_OPTIMIZED(cv::hal::split8u)>,
-        splitWrap<ushort, GET_OPTIMIZED(cv::hal::split16u)>, splitWrap<ushort, GET_OPTIMIZED(cv::hal::split16u)>,
-        splitWrap<int, GET_OPTIMIZED(cv::hal::split32s)>, splitWrap<int, GET_OPTIMIZED(cv::hal::split32s)>,
-        splitWrap<int64_t, GET_OPTIMIZED(cv::hal::split64s)>, splitWrap<ushort, GET_OPTIMIZED(cv::hal::split16u)>,
-        splitWrap<ushort, GET_OPTIMIZED(cv::hal::split16u)>, splitWrap<uchar, GET_OPTIMIZED(cv::hal::split8u)>,
-        splitWrap<int64_t, GET_OPTIMIZED(cv::hal::split64s)>, splitWrap<int64_t, GET_OPTIMIZED(cv::hal::split64s)>,
-        splitWrap<int, GET_OPTIMIZED(cv::hal::split32s)>, 0, 0, 0
+        splitWrap<uchar, cv::hal::split8u>, splitWrap<uchar, cv::hal::split8u>,
+        splitWrap<ushort, cv::hal::split16u>, splitWrap<ushort, cv::hal::split16u>,
+        splitWrap<int, cv::hal::split32s>, splitWrap<int, cv::hal::split32s>,
+        splitWrap<int64_t, cv::hal::split64s>, splitWrap<ushort, cv::hal::split16u>,
+        splitWrap<ushort, cv::hal::split16u>, splitWrap<uchar, cv::hal::split8u>,
+        splitWrap<int64_t, cv::hal::split64s>, splitWrap<int64_t, cv::hal::split64s>,
+        splitWrap<int, cv::hal::split32s>, 0, 0, 0
     };
 
     return splitTab[depth];

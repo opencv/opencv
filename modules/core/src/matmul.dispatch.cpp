@@ -979,9 +979,9 @@ static DotProdFunc getDotProdFunc(int depth)
 {
     static DotProdFunc dotProdTab[CV_DEPTH_MAX] =
     {
-        GET_OPTIMIZED(dotProd_8u), GET_OPTIMIZED(dotProd_8s),
+        dotProd_8u, dotProd_8s,
         dotProd_16u, dotProd_16s,
-        dotProd_32s, GET_OPTIMIZED(dotProd_32f),
+        dotProd_32s, dotProd_32f,
         dotProd_64f, 0
     };
 

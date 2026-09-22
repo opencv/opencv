@@ -58,13 +58,13 @@ static MergeFunc getMergeFunc(int depth)
 {
     static MergeFunc mergeTab[CV_DEPTH_MAX] =
     {
-        mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>, mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>,
-        mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>, mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>,
-        mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>, mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>,
-        mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>, mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>,
-        mergeWrap<ushort, GET_OPTIMIZED(cv::hal::merge16u)>, mergeWrap<uchar, GET_OPTIMIZED(cv::hal::merge8u)>,
-        mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>, mergeWrap<int64_t, GET_OPTIMIZED(cv::hal::merge64s)>,
-        mergeWrap<int, GET_OPTIMIZED(cv::hal::merge32s)>, 0, 0, 0,
+        mergeWrap<uchar, cv::hal::merge8u>, mergeWrap<uchar, cv::hal::merge8u>,
+        mergeWrap<ushort, cv::hal::merge16u>, mergeWrap<ushort, cv::hal::merge16u>,
+        mergeWrap<int, cv::hal::merge32s>, mergeWrap<int, cv::hal::merge32s>,
+        mergeWrap<int64_t, cv::hal::merge64s>, mergeWrap<ushort, cv::hal::merge16u>,
+        mergeWrap<ushort, cv::hal::merge16u>, mergeWrap<uchar, cv::hal::merge8u>,
+        mergeWrap<int64_t, cv::hal::merge64s>, mergeWrap<int64_t, cv::hal::merge64s>,
+        mergeWrap<int, cv::hal::merge32s>, 0, 0, 0,
     };
 
     return mergeTab[depth];
