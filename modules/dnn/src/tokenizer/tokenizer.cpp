@@ -26,6 +26,41 @@ namespace {
 enum class TokenizerFamily { Auto, BPE, SentencePiece, Unigram, WordPiece };
 }
 
+// The id layout a TemplateProcessing post_processor declares, from its 'single'
+// and 'pair' templates. N chunks reuse the pair layout as
+// pairPrefix chunk0 separator chunk1 ... chunkN-1 pairSuffix.
+struct TemplateWrap {
+    std::vector<int> prefixIds;      // before the sequence, from 'single'
+    std::vector<int> suffixIds;      // after the sequence, from 'single'
+    std::vector<int> pairPrefixIds;  // before the first chunk, from 'pair'
+    std::vector<int> separatorIds;   // between two chunks, from 'pair'
+    std::vector<int> pairSuffixIds;  // after the last chunk, from 'pair'
+    bool hasPair = false;            // no 'pair' template means no way to join chunks
+};
+
+// Appends one chunk's ids, without a wrap of its own.
+typedef std::function<void(const std::string&, std::vector<int>&)> ChunkEncoder;
+
+static std::vector<int> encodeChunksWithWrap(const std::vector<std::string>& textChunks,
+                                             const TemplateWrap& wrap,
+                                             const ChunkEncoder& encodeBody)
+{
+    CV_Assert(textChunks.size() > 1);
+    if (!wrap.hasPair)
+        CV_Error(cv::Error::StsNotImplemented,
+            "this tokenizer's post_processor declares no 'pair' template, so it cannot "
+            "encode more than one text chunk");
+
+    std::vector<int> ids = wrap.pairPrefixIds;
+    for (size_t i = 0; i < textChunks.size(); i++) {
+        if (i > 0)
+            ids.insert(ids.end(), wrap.separatorIds.begin(), wrap.separatorIds.end());
+        encodeBody(textChunks[i], ids);
+    }
+    ids.insert(ids.end(), wrap.pairSuffixIds.begin(), wrap.pairSuffixIds.end());
+    return ids;
+}
+
 static CoreBPE buildTokenizerFromJson(cv::FileStorage& fs,
                           std::unordered_set<std::string>* outSpecial = nullptr);
 
@@ -54,8 +89,12 @@ static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
 struct Tokenizer::Impl {
     virtual ~Impl() {}
     virtual std::vector<int> encode(const std::string& text) = 0;
-    virtual std::vector<int> encodePair(const std::string&, const std::string&) {
-        CV_Error(cv::Error::StsNotImplemented, "This tokenizer does not support paired-sequence encoding");
+    // Not an encode() overload: that would hide one half of the pair in every subclass.
+    virtual std::vector<int> encodeChunks(const std::vector<std::string>& textChunks) {
+        if (textChunks.size() == 1)
+            return encode(textChunks[0]);
+        CV_Error(cv::Error::StsNotImplemented,
+            "this tokenizer does not support encoding several text chunks as one sequence");
     }
     virtual std::string decode(const std::vector<int>& tokens) = 0;
 };
@@ -95,43 +134,54 @@ class SentencePieceTokenizerImpl : public Tokenizer::Impl {
 public:
     SentencePieceTokenizerImpl(CoreGemmaBPE model,
                                 std::unordered_set<std::string> special = {},
-                                std::vector<int> prefixIds = {},
-                                std::vector<int> suffixIds = {});
+                                TemplateWrap wrap = TemplateWrap());
 
     std::vector<int> encode(const std::string& text) override;
+    std::vector<int> encodeChunks(const std::vector<std::string>& textChunks) override;
     std::string decode(const std::vector<int>& tokens) override;
 
 private:
+    void encodeBody(const std::string& text, std::vector<int>& ids) const;
+
     CoreGemmaBPE model_;
     std::unordered_set<std::string> allowedSpecial_;
-    std::vector<int> prefixIds_;
-    std::vector<int> suffixIds_;
+    TemplateWrap wrap_;
 };
 
 SentencePieceTokenizerImpl::SentencePieceTokenizerImpl(CoreGemmaBPE model,
                                                         std::unordered_set<std::string> special,
-                                                        std::vector<int> prefixIds,
-                                                        std::vector<int> suffixIds)
+                                                        TemplateWrap wrap)
     : model_(std::move(model)), allowedSpecial_(std::move(special)),
-      prefixIds_(std::move(prefixIds)), suffixIds_(std::move(suffixIds)) {}
+      wrap_(std::move(wrap)) {}
 
-std::vector<int> SentencePieceTokenizerImpl::encode(const std::string& text) {
-    std::vector<int> ids = prefixIds_;
+void SentencePieceTokenizerImpl::encodeBody(const std::string& text, std::vector<int>& ids) const {
     std::vector<int> body = model_.encode(text, allowedSpecial_);
     ids.insert(ids.end(), body.begin(), body.end());
-    ids.insert(ids.end(), suffixIds_.begin(), suffixIds_.end());
+}
+
+std::vector<int> SentencePieceTokenizerImpl::encode(const std::string& text) {
+    std::vector<int> ids = wrap_.prefixIds;
+    encodeBody(text, ids);
+    ids.insert(ids.end(), wrap_.suffixIds.begin(), wrap_.suffixIds.end());
     return ids;
+}
+
+std::vector<int> SentencePieceTokenizerImpl::encodeChunks(const std::vector<std::string>& textChunks) {
+    if (textChunks.size() == 1)
+        return encode(textChunks[0]);
+    return encodeChunksWithWrap(textChunks, wrap_,
+        [this](const std::string& chunk, std::vector<int>& ids) { encodeBody(chunk, ids); });
 }
 
 std::string SentencePieceTokenizerImpl::decode(const std::vector<int>& tokens) {
     // Strip only the wrap added here; CoreGemmaBPE handles the rest.
     size_t begin = 0, end = tokens.size();
-    if (end - begin >= prefixIds_.size() &&
-        std::equal(prefixIds_.begin(), prefixIds_.end(), tokens.begin()))
-        begin += prefixIds_.size();
-    if (end - begin >= suffixIds_.size() &&
-        std::equal(suffixIds_.rbegin(), suffixIds_.rend(), tokens.rbegin()))
-        end -= suffixIds_.size();
+    if (end - begin >= wrap_.prefixIds.size() &&
+        std::equal(wrap_.prefixIds.begin(), wrap_.prefixIds.end(), tokens.begin()))
+        begin += wrap_.prefixIds.size();
+    if (end - begin >= wrap_.suffixIds.size() &&
+        std::equal(wrap_.suffixIds.rbegin(), wrap_.suffixIds.rend(), tokens.rbegin()))
+        end -= wrap_.suffixIds.size();
     if (begin == 0 && end == tokens.size())
         return model_.decode(tokens);
     return model_.decode(std::vector<int>(tokens.begin() + begin, tokens.begin() + end));
@@ -140,21 +190,35 @@ std::string SentencePieceTokenizerImpl::decode(const std::vector<int>& tokens) {
 // CoreUnigram already adds eos/strips specials; don't redo here.
 class UnigramTokenizerImpl : public Tokenizer::Impl {
 public:
-    UnigramTokenizerImpl(CoreUnigram model, std::unordered_set<std::string> special = {});
+    UnigramTokenizerImpl(CoreUnigram model, std::unordered_set<std::string> special = {},
+                          TemplateWrap wrap = TemplateWrap());
 
     std::vector<int> encode(const std::string& text) override;
+    std::vector<int> encodeChunks(const std::vector<std::string>& textChunks) override;
     std::string decode(const std::vector<int>& tokens) override;
 
 private:
     CoreUnigram model_;
     std::unordered_set<std::string> allowedSpecial_;
+    // CoreUnigram applies the single-sequence wrap itself; this is for chunk layout.
+    TemplateWrap wrap_;
 };
 
-UnigramTokenizerImpl::UnigramTokenizerImpl(CoreUnigram model, std::unordered_set<std::string> special)
-    : model_(std::move(model)), allowedSpecial_(std::move(special)) {}
+UnigramTokenizerImpl::UnigramTokenizerImpl(CoreUnigram model, std::unordered_set<std::string> special,
+                                            TemplateWrap wrap)
+    : model_(std::move(model)), allowedSpecial_(std::move(special)), wrap_(std::move(wrap)) {}
 
 std::vector<int> UnigramTokenizerImpl::encode(const std::string& text) {
     return model_.encode(text, allowedSpecial_);
+}
+
+std::vector<int> UnigramTokenizerImpl::encodeChunks(const std::vector<std::string>& textChunks) {
+    if (textChunks.size() == 1)
+        return encode(textChunks[0]);
+    return encodeChunksWithWrap(textChunks, wrap_,
+        [this](const std::string& chunk, std::vector<int>& ids) {
+            model_.encodeBody(chunk, allowedSpecial_, ids);
+        });
 }
 
 std::string UnigramTokenizerImpl::decode(const std::vector<int>& tokens) {
@@ -194,12 +258,11 @@ public:
                             bool handleChineseChars,
                             bool stripAccents,
                             bool lowercase,
-                            int clsId,
-                            int sepId,
+                            TemplateWrap wrap,
                             std::unordered_map<std::string, int> specialToId);
 
     std::vector<int> encode(const std::string& text) override;
-    std::vector<int> encodePair(const std::string& textA, const std::string& textB) override;
+    std::vector<int> encodeChunks(const std::vector<std::string>& textChunks) override;
     std::string decode(const std::vector<int>& tokens) override;
 
 private:
@@ -220,8 +283,9 @@ private:
     bool handleChineseChars_;
     bool stripAccents_;
     bool lowercase_;
-    int clsId_;
-    int sepId_;
+    TemplateWrap wrap_;
+    // Every id the template contributes, dropped by decode() wherever it sits.
+    std::unordered_set<int> wrapIds_;
     // Literal added/special tokens (e.g. "[MASK]") bypassing normalize/preTokenize/encode.
     std::unordered_map<std::string, int> specialToId_;
 };
@@ -231,18 +295,21 @@ WordPieceTokenizerImpl::WordPieceTokenizerImpl(CoreWordPiece model,
                                                 bool handleChineseChars,
                                                 bool stripAccents,
                                                 bool lowercase,
-                                                int clsId,
-                                                int sepId,
+                                                TemplateWrap wrap,
                                                 std::unordered_map<std::string, int> specialToId)
     : model_(std::move(model)),
       cleanText_(cleanText),
       handleChineseChars_(handleChineseChars),
       stripAccents_(stripAccents),
       lowercase_(lowercase),
-      clsId_(clsId),
-      sepId_(sepId),
+      wrap_(std::move(wrap)),
       specialToId_(std::move(specialToId))
-{}
+{
+    for (const std::vector<int>* ids : { &wrap_.prefixIds, &wrap_.suffixIds,
+                                         &wrap_.pairPrefixIds, &wrap_.separatorIds,
+                                         &wrap_.pairSuffixIds })
+        wrapIds_.insert(ids->begin(), ids->end());
+}
 
 std::string WordPieceTokenizerImpl::normalize(const std::string& text) const {
     std::string out;
@@ -314,26 +381,24 @@ void WordPieceTokenizerImpl::encodeSegment(const std::string& text, std::vector<
 }
 
 std::vector<int> WordPieceTokenizerImpl::encode(const std::string& text) {
-    return encodePair(text, std::string());
+    std::vector<int> ids = wrap_.prefixIds;
+    encodeSegment(text, ids);
+    ids.insert(ids.end(), wrap_.suffixIds.begin(), wrap_.suffixIds.end());
+    return ids;
 }
 
-std::vector<int> WordPieceTokenizerImpl::encodePair(const std::string& textA, const std::string& textB) {
-    std::vector<int> ids;
-    if (clsId_ >= 0) ids.push_back(clsId_);
-    encodeSegment(textA, ids);
-    if (sepId_ >= 0) ids.push_back(sepId_);
-    if (!textB.empty()) {
-        encodeSegment(textB, ids);
-        if (sepId_ >= 0) ids.push_back(sepId_);
-    }
-    return ids;
+std::vector<int> WordPieceTokenizerImpl::encodeChunks(const std::vector<std::string>& textChunks) {
+    if (textChunks.size() == 1)
+        return encode(textChunks[0]);
+    return encodeChunksWithWrap(textChunks, wrap_,
+        [this](const std::string& chunk, std::vector<int>& ids) { encodeSegment(chunk, ids); });
 }
 
 std::string WordPieceTokenizerImpl::decode(const std::vector<int>& tokens) {
     std::vector<int> filtered;
     filtered.reserve(tokens.size());
     for (int id : tokens) {
-        if (id == clsId_ || id == sepId_) continue;
+        if (wrapIds_.count(id)) continue;
         if (isSpecialId(id)) continue;
         filtered.push_back(id);
     }
@@ -489,26 +554,20 @@ static std::string detectSplitPattern(const cv::FileStorage& fs, const std::stri
         (modelType.empty() ? std::string("(none)") : modelType) + "'");
 }
 
-// Splits a TemplateProcessing template's SpecialToken ids into those before
-// and after the sequence.
-static void readTemplateProcessingWrap(const cv::FileNode& postProc,
-                                       const std::unordered_map<std::string, int>& specialToId,
-                                       std::vector<int>& prefixIds,
-                                       std::vector<int>& suffixIds)
-{
-    if (postProc.empty())
-        return;
-    std::string postType;
-    postProc["type"] >> postType;
-    if (postType != "TemplateProcessing")
-        return;
+// Resolves a post_processor SpecialToken id to a vocab id, or -1 if unknown.
+typedef std::function<int(const std::string&)> SpecialIdResolver;
 
-    bool seenSequence = false;
-    cv::FileNode single = postProc["single"];
-    for (auto it = single.begin(); it != single.end(); ++it) {
+// Splits one template ('single' or 'pair') into the runs of SpecialToken ids around
+// its $A/$B placeholders: slot 0 precedes the first placeholder, slot i follows the
+// i-th one. A template without placeholders yields one slot.
+static std::vector<std::vector<int>> readTemplateSlots(const cv::FileNode& tmpl,
+                                                       const SpecialIdResolver& resolve)
+{
+    std::vector<std::vector<int>> slots(1);
+    for (auto it = tmpl.begin(); it != tmpl.end(); ++it) {
         cv::FileNode entry = *it;
         if (!entry["Sequence"].empty()) {
-            seenSequence = true;
+            slots.push_back(std::vector<int>());
             continue;
         }
         cv::FileNode special = entry["SpecialToken"];
@@ -516,14 +575,55 @@ static void readTemplateProcessingWrap(const cv::FileNode& postProc,
             continue;
         std::string tokId;
         special["id"] >> tokId;
-        auto found = specialToId.find(tokId);
-        if (found == specialToId.end()) {
+        const int id = resolve(tokId);
+        if (id < 0) {
             CV_LOG_WARNING(NULL, "tokenizer.json: post_processor references special token '"
-                << tokId << "' that is not in 'added_tokens'; it will not be emitted");
+                << tokId << "' that has no id in this tokenizer; it will not be emitted");
             continue;
         }
-        (seenSequence ? suffixIds : prefixIds).push_back(found->second);
+        slots.back().push_back(id);
     }
+    return slots;
+}
+
+// The 'pair' template is what makes multi-chunk encoding possible: its ids between
+// $A and $B separate every neighbouring pair of chunks.
+static TemplateWrap readTemplateProcessingWrap(const cv::FileNode& postProc,
+                                               const SpecialIdResolver& resolve)
+{
+    TemplateWrap wrap;
+    if (postProc.empty())
+        return wrap;
+    std::string postType;
+    postProc["type"] >> postType;
+    if (postType != "TemplateProcessing")
+        return wrap;
+
+    const std::vector<std::vector<int>> single = readTemplateSlots(postProc["single"], resolve);
+    wrap.prefixIds = single.front();
+    for (size_t i = 1; i < single.size(); i++)
+        wrap.suffixIds.insert(wrap.suffixIds.end(), single[i].begin(), single[i].end());
+
+    const std::vector<std::vector<int>> pair = readTemplateSlots(postProc["pair"], resolve);
+    if (pair.size() == 3) {
+        wrap.pairPrefixIds = pair[0];
+        wrap.separatorIds = pair[1];
+        wrap.pairSuffixIds = pair[2];
+        wrap.hasPair = true;
+    } else if (pair.size() > 1) {
+        CV_LOG_WARNING(NULL, "tokenizer.json: post_processor 'pair' template does not have "
+            "exactly two sequence placeholders; encoding several text chunks is disabled");
+    }
+    return wrap;
+}
+
+// The common case: template tokens come from 'added_tokens'.
+static SpecialIdResolver addedTokenResolver(const std::unordered_map<std::string, int>& specialToId)
+{
+    return [specialToId](const std::string& name) -> int {
+        auto found = specialToId.find(name);
+        return found == specialToId.end() ? -1 : found->second;
+    };
 }
 
 static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
@@ -608,11 +708,11 @@ static Ptr<Tokenizer::Impl> buildSentencePieceTokenizerImpl(
     }
 
     // The post_processor declares the wrap, not how 'merges' is serialized.
-    std::vector<int> prefixIds, suffixIds;
-    readTemplateProcessingWrap(fs["post_processor"], specialToId, prefixIds, suffixIds);
+    TemplateWrap wrap = readTemplateProcessingWrap(fs["post_processor"],
+                                                   addedTokenResolver(specialToId));
 
     return makePtr<SentencePieceTokenizerImpl>(std::move(gemma), std::move(special),
-                                               std::move(prefixIds), std::move(suffixIds));
+                                               std::move(wrap));
 }
 
 static void appendUnigramNormalizerStep(const cv::FileNode& node,
@@ -747,14 +847,14 @@ static Ptr<Tokenizer::Impl> buildUnigramTokenizerImpl(
     }
 
     // The post_processor declares the wrap, not the name of any one added token.
-    std::vector<int> prefixIds, suffixIds;
-    readTemplateProcessingWrap(fs["post_processor"], specialToId, prefixIds, suffixIds);
+    TemplateWrap wrap = readTemplateProcessingWrap(fs["post_processor"],
+                                                   addedTokenResolver(specialToId));
 
     CoreUnigram unigram(vocab, unkId, buildUnigramPrecompiledNormalizer(charsmapB64),
-                        specialToId, prefixIds, suffixIds,
+                        specialToId, wrap.prefixIds, wrap.suffixIds,
                         readUnigramNormalizerSteps(fs["normalizer"]));
 
-    return makePtr<UnigramTokenizerImpl>(std::move(unigram), std::move(special));
+    return makePtr<UnigramTokenizerImpl>(std::move(unigram), std::move(special), std::move(wrap));
 }
 
 static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs)
@@ -819,12 +919,34 @@ static Ptr<Tokenizer::Impl> buildWordPieceTokenizerImpl(cv::FileStorage& fs)
         stripAccents = lowercase;
     }
 
+    // [CLS]/[SEP] are usually in 'added_tokens' but always in the vocab.
+    TemplateWrap wrap = readTemplateProcessingWrap(fs["post_processor"],
+        [&](const std::string& name) -> int {
+            auto found = specialToId.find(name);
+            if (found != specialToId.end())
+                return found->second;
+            int id = -1;
+            return core.tryGetId(name, id) ? id : -1;
+        });
+
+    // Older WordPiece exports ship no post_processor; BERT's wrap is the convention
+    // for them, with [SEP] separating chunks the way the template would.
     int clsId = -1, sepId = -1;
     core.tryGetId("[CLS]", clsId);
     core.tryGetId("[SEP]", sepId);
+    if (wrap.prefixIds.empty() && clsId >= 0)
+        wrap.prefixIds.push_back(clsId);
+    if (wrap.suffixIds.empty() && sepId >= 0)
+        wrap.suffixIds.push_back(sepId);
+    if (!wrap.hasPair && !wrap.suffixIds.empty()) {
+        wrap.pairPrefixIds = wrap.prefixIds;
+        wrap.separatorIds = wrap.suffixIds;
+        wrap.pairSuffixIds = wrap.suffixIds;
+        wrap.hasPair = true;
+    }
 
     return makePtr<WordPieceTokenizerImpl>(std::move(core), cleanText, handleChineseChars,
-                                            stripAccents, lowercase, clsId, sepId,
+                                            stripAccents, lowercase, std::move(wrap),
                                             std::move(specialToId));
 }
 
@@ -911,10 +1033,11 @@ std::vector<int> Tokenizer::encode(const std::string& text)
     return impl_->encode(text);
 }
 
-std::vector<int> Tokenizer::encodePair(const std::string& text, const std::string& textPair)
+std::vector<int> Tokenizer::encode(const std::vector<std::string>& textChunks)
 {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
-    return impl_->encodePair(text, textPair);
+    CV_CheckFalse(textChunks.empty(), "Tokenizer::encode(): the chunk list must not be empty");
+    return impl_->encodeChunks(textChunks);
 }
 
 std::string Tokenizer::decode(const std::vector<int>& tokens)

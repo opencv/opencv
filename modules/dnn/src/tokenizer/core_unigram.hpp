@@ -139,6 +139,11 @@ public:
                     std::vector<UnigramNormalizerStep>(1));
 
     std::vector<int> encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
+
+    /// @brief encode() without the prefix/suffix wrap, for callers laying out chunks.
+    void encodeBody(const std::string& text, const std::unordered_set<std::string>& allowedSpecial,
+                    std::vector<int>& out) const;
+
     std::string decode(const std::vector<int>& tokens) const;
 
 private:

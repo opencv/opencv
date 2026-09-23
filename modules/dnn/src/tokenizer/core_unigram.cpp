@@ -301,12 +301,12 @@ std::string CoreUnigram::applyNormalizer(const std::string& text) const {
     return cur;
 }
 
-std::vector<int> CoreUnigram::encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
-    std::vector<int> ids;
-    ids.insert(ids.end(), prefixIds_.begin(), prefixIds_.end());
+void CoreUnigram::encodeBody(const std::string& text,
+                             const std::unordered_set<std::string>& allowedSpecial,
+                             std::vector<int>& out) const {
     auto normalizeAndEncode = [&](const std::string& literal) {
         std::string norm = applyNormalizer(literal);
-        pretokenizeAndEncode(norm, ids);
+        pretokenizeAndEncode(norm, out);
     };
     if (allowedSpecial.empty()) {
         normalizeAndEncode(text);
@@ -314,8 +314,14 @@ std::vector<int> CoreUnigram::encode(const std::string& text, const std::unorder
         splitOnSpecialTokens(text, specialToId_,
             [&](const std::string& sp) { return allowedSpecial.count(sp) != 0; },
             normalizeAndEncode,
-            [&](int id) { ids.push_back(id); });
+            [&](int id) { out.push_back(id); });
     }
+}
+
+std::vector<int> CoreUnigram::encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
+    std::vector<int> ids;
+    ids.insert(ids.end(), prefixIds_.begin(), prefixIds_.end());
+    encodeBody(text, allowedSpecial, ids);
     ids.insert(ids.end(), suffixIds_.begin(), suffixIds_.end());
     return ids;
 }

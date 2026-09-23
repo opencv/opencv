@@ -2126,15 +2126,23 @@ public:
     CV_WRAP std::vector<int> encode(const std::string& text);
 
     /**
-     * @brief Encode a text pair as `[CLS] text [SEP] textPair [SEP]`.
+     * @brief Encode several text chunks as one sequence.
      *
-     * Supported only by WordPiece (BERT-family) tokenizers, which are the only ones that
-     * define a paired-sequence template; every other method throws cv::Exception.
-     * @param text  UTF-8 first input string.
-     * @param textPair  UTF-8 second input string.
-     * @return Vector of token ids. Throws cv::Exception if unsupported by the loaded tokenizer.
+     * The chunks are laid out the way the model's own post_processor declares a pair of
+     * sequences, repeated for as many chunks as are given. For a BERT-family tokenizer
+     * that is `[CLS] textChunks[0] [SEP] textChunks[1] [SEP] ... textChunks[N-1] [SEP]`;
+     * for T5 it is `textChunks[0] </s> textChunks[1] </s> ...`. Whatever the template
+     * puts between its two sequences is repeated between every neighbouring pair.
+     *
+     * A single chunk is encoded exactly like encode(const std::string&). Two or more
+     * require a tokenizer whose `post_processor` declares a `pair` template: BERT and
+     * ALBERT, T5 and Gemma do; byte-level BPE models such as GPT-2 do not, and throw.
+     *
+     * @param textChunks  UTF-8 input chunks; must not be empty.
+     * @return Vector of token ids. Throws cv::Exception if @p textChunks is empty, or if
+     *         it holds more than one chunk and the loaded tokenizer has no pair template.
      */
-    CV_WRAP std::vector<int> encodePair(const std::string& text, const std::string& textPair);
+    CV_WRAP std::vector<int> encode(const std::vector<std::string>& textChunks);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;

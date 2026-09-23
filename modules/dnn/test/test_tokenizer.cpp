@@ -432,19 +432,40 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_Roundtrip) {
     }
 }
 
-TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodePair) {
+// Every chunk past the first contributes its single-chunk encoding minus the ids the
+// pair template does not repeat at the front (BERT's [CLS]).
+static std::vector<int> concatChunkEncodings(const std::vector<std::vector<int>>& singles,
+                                             size_t dropFromFollowing) {
+    std::vector<int> expected;
+    for (size_t i = 0; i < singles.size(); i++)
+        expected.insert(expected.end(),
+                        singles[i].begin() + (i == 0 ? 0 : dropFromFollowing),
+                        singles[i].end());
+    return expected;
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodeChunks) {
     std::string model = _tf("bert/config.json");
     Tokenizer tok = Tokenizer::load(model);
 
     std::vector<int> a = tok.encode("hello world");
     std::vector<int> b = tok.encode("OpenCV is Great");
-    std::vector<int> pair = tok.encodePair("hello world", "OpenCV is Great");
+    std::vector<int> pair = tok.encode(std::vector<std::string>{"hello world", "OpenCV is Great"});
 
     EXPECT_EQ(pair, (std::vector<int>{101, 7592, 2088, 102, 2330, 2278, 2615, 2003, 2307, 102}));
+    EXPECT_EQ(pair, concatChunkEncodings({a, b}, 1));
 
-    std::vector<int> expected(a.begin(), a.end());
-    expected.insert(expected.end(), b.begin() + 1, b.end());
-    EXPECT_EQ(pair, expected);
+    // The template generalizes past two chunks.
+    std::vector<int> c = tok.encode("third one");
+    std::vector<int> triple = tok.encode(std::vector<std::string>{"hello world", "OpenCV is Great", "third one"});
+    EXPECT_EQ(triple, concatChunkEncodings({a, b, c}, 1));
+
+    // A one-chunk list is the plain single-sequence encoding.
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello world"}), a);
+    EXPECT_THROW(tok.encode(std::vector<std::string>()), cv::Exception);
+
+    // decode() drops template ids wherever they sit, not just at the ends.
+    EXPECT_EQ(tok.decode(pair), "hello world opencv is great");
 }
 TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsNullFollowsLowercase) {
     std::string model = _tf("bert-cased/config.json");
@@ -484,19 +505,42 @@ TEST(Tokenizer_BPE, Tokenizer_Utf8BoundaryRoundtrip) {
         EXPECT_EQ(tok.decode(tok.encode(text)), text);
 }
 
-TEST(Tokenizer_BPE, Tokenizer_EncodePair_Unsupported) {
-    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
-    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+// GPT-2 and GPT-4 carry a ByteLevel post_processor or none, so there is no pair
+// template to repeat.
+TEST(Tokenizer_BPE, Tokenizer_EncodeChunks_Unsupported) {
+    for (const char* cfg : {"gpt2/config.json", "gpt4/config.json"}) {
+        Tokenizer tok = Tokenizer::load(_tf(cfg));
+        EXPECT_THROW(tok.encode(std::vector<std::string>{"hello", "world"}), cv::Exception);
+        // One chunk needs no template and still works.
+        EXPECT_EQ(tok.encode(std::vector<std::string>{"hello world"}), tok.encode("hello world"));
+    }
 }
 
-TEST(Tokenizer_SentencePiece, Tokenizer_EncodePair_Unsupported) {
+// Gemma's pair template is <bos> A <bos> B: another <bos> separates, nothing closes.
+TEST(Tokenizer_SentencePiece, Tokenizer_EncodeChunks) {
     Tokenizer tok = Tokenizer::load(_tf("gemma2/config.json"));
-    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+    std::vector<int> a = tok.encode("hello");
+    std::vector<int> b = tok.encode("world");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello", "world"}), concatChunkEncodings({a, b}, 0));
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello"}), a);
 }
 
-TEST(Tokenizer_Unigram, Tokenizer_EncodePair_Unsupported) {
+// T5's pair template is A </s> B </s>: no prefix, one </s> closing each chunk.
+TEST(Tokenizer_Unigram, Tokenizer_EncodeChunks) {
     Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
-    EXPECT_THROW(tok.encodePair("hello", "world"), cv::Exception);
+    std::vector<int> a = tok.encode("hello");
+    std::vector<int> b = tok.encode("world");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello", "world"}), concatChunkEncodings({a, b}, 0));
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello"}), a);
+}
+
+// ALBERT is a Unigram model with BERT's own [CLS] A [SEP] B [SEP] pair template.
+TEST(Tokenizer_Unigram, Tokenizer_Albert_EncodeChunks) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    std::vector<int> a = tok.encode("Hello world");
+    std::vector<int> b = tok.encode("second chunk");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"Hello world", "second chunk"}),
+              concatChunkEncodings({a, b}, 1));
 }
 
 TEST(Tokenizer_Unigram, Tokenizer_MalformedUtf8) {
