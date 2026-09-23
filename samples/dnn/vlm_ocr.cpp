@@ -13,7 +13,11 @@
  * Run the sample:
  *
  *      ./vlm_ocr --model_type=paddleocr-vl --model_dir=<dir> --input=<path-to-image>
- *      ./vlm_ocr --model_type=openai --api_key=<key> --input=<path-to-image>
+ *      export OPENAI_API_KEY=...   # or ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY
+ *      ./vlm_ocr --model_type=openai --model_dir=<provider model name> --input=<path-to-image>
+ *
+ * Cloud model types read the key from the provider's usual environment variable. Prefer that
+ * over --api_key, which puts the key in your shell history and in the process list.
  */
 
 #include <iostream>
@@ -33,12 +37,13 @@ int main(int argc, char** argv)
         "{ help h         |      | Print help message }"
         "{ model_type     |      | Which VLM to run: paddleocr-vl, granite-docling, openai, anthropic, gemini or grok }"
         "{ model_dir      |      | Local model types: path to the ONNX export directory. "
-        "Cloud model types: provider model name, e.g. gpt-4o (required, no default) }"
-        "{ api_key        |      | API key for cloud model types (openai/anthropic/gemini/grok); ignored otherwise }"
+        "Cloud model types: provider model name, taken from the provider's model list (required, no default) }"
+        "{ api_key        |      | API key for cloud model types; ignored otherwise. Leave unset to read it from "
+        "OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY instead }"
         "{ input i        |      | Path to the input image (.png/.jpg/.jpeg) }"
         "{ prompt         |      | Task prompt (defaults to the model's built-in prompt) }"
         "{ max_new_tokens | 512  | Maximum number of new tokens to generate }"
-        "{ engine         | new  | Local model types only: dnn engine used to load each ONNX sub-model: new or ort }"
+        "{ engine         | opencv | Local model types only: dnn engine used to load each ONNX sub-model: opencv }"
         "{ device         | cpu  | Local model types only: compute device: cpu or cuda }";
 
     CommandLineParser parser(argc, argv, keys);
@@ -75,16 +80,11 @@ int main(int argc, char** argv)
                 "cloud model types need the provider's model name" << endl;
         return 1;
     }
-    if (isCloud && !parser.has("api_key"))
-    {
-        cerr << "api_key is required for cloud model types" << endl;
-        return 1;
-    }
 
     string engine = parser.get<String>("engine");
-    if (!isCloud && engine != "new" && engine != "ort")
+    if (!isCloud && engine != "opencv")
     {
-        cerr << "Unknown engine: " << engine << " (expected new or ort)" << endl;
+        cerr << "Unknown engine: " << engine << " (expected opencv)" << endl;
         return 1;
     }
 

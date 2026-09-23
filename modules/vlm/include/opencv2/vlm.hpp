@@ -107,20 +107,31 @@ public:
 @param model_dir  For local model types: path to the local ONNX export directory, following
                    the upstream layout documented in samples/dnn/granite_docling_inference.py
                    and samples/dnn/paddleocr_vl_inference.py.
-                   For cloud model types: the provider's model name, e.g. "gpt-4o",
-                   "claude-3-5-sonnet-20241022", "gemini-2.0-flash", "grok-2-vision-1212" --
-                   required, with no built-in default, since provider model names change over
-                   time and a hardcoded guess would eventually go stale and fail confusingly.
-@param engine     cv::dnn::Net engine used to load each underlying ONNX sub-model: "opencv"
-                  (dnn::ENGINE_OPENCV) or "ort" (dnn::ENGINE_ORT). Ignored by cloud model types.
+                   For cloud model types: the provider's model name -- required, with no
+                   built-in default. Providers retire model names, so take the name from the
+                   provider's own model list rather than from documentation: OpenAI and Grok
+                   serve one at GET /v1/models, Gemini at
+                   generativelanguage.googleapis.com/v1beta/models, Anthropic at
+                   api.anthropic.com/v1/models. Where a provider offers a moving alias
+                   (e.g. a "-latest" suffix), prefer it over a dated id. A retired name comes
+                   back as an HTTP 404/400 naming the model, which is distinguishable from a
+                   401 for a bad key.
+@param engine     cv::dnn::Net engine used to load each underlying ONNX sub-model. Only
+                  "opencv" (dnn::ENGINE_OPENCV) is supported: these decoders rely on
+                  Net::enableKVCache(), which the ONNX Runtime path does not implement.
+                  Ignored by cloud model types.
 @param device     For local model types: compute device for all underlying nets, "cpu" or
                   "cuda". For cloud model types: pass "cloud" (there is no local compute
                   device to pick; any value is accepted here and has no effect).
-@param api_key    API key for cloud model types; required for VLM_MODEL_OPENAI/ANTHROPIC/
-                  GEMINI/GROK, ignored by local model types.
+@param api_key    API key for cloud model types, ignored by local model types. If left empty,
+                  the key is read from the provider's usual environment variable --
+                  OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY or XAI_API_KEY -- which
+                  keeps it out of source, shell history and notebooks. Pass it explicitly only
+                  when the key comes from somewhere else, such as a secret store. create()
+                  throws and names the variable if neither is available.
 */
 CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, CV_WRAP_FILE_PATH const String& model_dir,
-                                   const String& engine = "new",
+                                   const String& engine = "opencv",
                                    const String& device = "cpu",
                                    const String& api_key = String());
 

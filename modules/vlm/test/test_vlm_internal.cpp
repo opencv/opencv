@@ -12,6 +12,20 @@
 #include "../src/engines/granite_docling_preprocess.hpp"
 #include "../src/engines/paddleocr_vl_preprocess.hpp"
 
+// None of these helpers are exported from "opencv_vlm", so the only way to test them
+// is to compile the source code into "opencv_test_vlm" (same approach as
+// core's test_logtagmanager.cpp). This workaround may cause step debugger
+// breakpoints to work unreliably.
+#if 1
+#include "../src/base64.cpp"
+#include "../src/config_json.cpp"
+#include "../src/vlm_generation.cpp"
+#include "../src/vlm_model_base.cpp"
+#include "../src/local_vlm_model_base.cpp"
+#include "../src/engines/granite_docling_preprocess.cpp"
+#include "../src/engines/paddleocr_vl_preprocess.cpp"
+#endif
+
 #include <fstream>
 #include <cstdio>
 

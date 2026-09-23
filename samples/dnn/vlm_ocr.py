@@ -13,7 +13,11 @@ export directory (or cloud model name), and an input image.
 Run the script:
 
     python vlm_ocr.py --model_type=paddleocr-vl --model_dir=<dir> --input=<path-to-image>
-    python vlm_ocr.py --model_type=openai --api_key=<key> --input=<path-to-image>
+    export OPENAI_API_KEY=...   # or ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY
+    python vlm_ocr.py --model_type=openai --model_dir=<provider model name> --input=<path-to-image>
+
+Cloud model types read the key from the provider's usual environment variable. Prefer that
+over --api_key, which puts the key in your shell history and in the process list.
 '''
 
 import argparse
@@ -38,13 +42,16 @@ def parse_args():
                         help='Which VLM to run.')
     parser.add_argument('--model_dir', type=str, default='',
                         help='Local model types: path to the ONNX export directory. '
-                             'Cloud model types: provider model name, e.g. gpt-4o (required, no default).')
+                             'Cloud model types: provider model name, taken from the provider\'s model list '
+                             '(required, no default).')
     parser.add_argument('--api_key', type=str, default='',
-                        help='API key for cloud model types (openai/anthropic/gemini/grok); ignored otherwise.')
+                        help='API key for cloud model types; ignored otherwise. Leave unset to read it from '
+                             'OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY instead, which '
+                             'keeps it out of shell history and the process list.')
     parser.add_argument('--input', '-i', type=str, required=True, help='Path to the input image.')
     parser.add_argument('--prompt', type=str, default='', help="Task prompt (default: the model's built-in prompt).")
     parser.add_argument('--max_new_tokens', type=int, default=512, help='Maximum number of new tokens to generate.')
-    parser.add_argument('--engine', type=str, default='new', choices=['new', 'ort'],
+    parser.add_argument('--engine', type=str, default='opencv', choices=['opencv'],
                         help='Local model types only: dnn engine used to load each ONNX sub-model.')
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
                         help='Local model types only: compute device.')
@@ -52,8 +59,6 @@ def parse_args():
 
     if not args.model_dir:
         parser.error('--model_dir is required (local: ONNX export directory, cloud: provider model name)')
-    if args.model_type in CLOUD_MODEL_TYPES and not args.api_key:
-        parser.error('--api_key is required for cloud model types')
     return args
 
 if __name__ == '__main__':

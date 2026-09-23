@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
 #include "opencv2/dnn.hpp"
 #include "opencv2/imgcodecs.hpp"

@@ -26,7 +26,7 @@ class GraniteDoclingModel CV_FINAL : public LocalVLMModelBase
 public:
     GraniteDoclingModel(const String& model_dir, int engine, const String& device)
     {
-        tokenizer_ = Tokenizer::load(model_dir + "/");
+        tokenizer_ = Tokenizer::load(model_dir + "/config.json");
 
         FileStorage config = openJsonConfigOrThrow(model_dir + "/config.json");
         FileStorage preprocessor = openJsonConfigOrThrow(model_dir + "/preprocessor_config.json");
