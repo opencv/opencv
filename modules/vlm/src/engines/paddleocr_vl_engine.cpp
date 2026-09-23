@@ -24,7 +24,7 @@ class PaddleOCRVLModel CV_FINAL : public LocalVLMModelBase
 public:
     PaddleOCRVLModel(const String& model_dir, int engine, const String& device)
     {
-        tokenizer_ = Tokenizer::load(model_dir + "/");
+        tokenizer_ = Tokenizer::load(model_dir + "/config.json");
 
         FileStorage config = openJsonConfigOrThrow(model_dir + "/config.json");
         FileStorage processorFs = openJsonConfigOrThrow(model_dir + "/processor_config.json");

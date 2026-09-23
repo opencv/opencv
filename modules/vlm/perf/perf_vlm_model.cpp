@@ -9,6 +9,14 @@
 #include "../src/base64.hpp"
 #include "../src/vlm_generation.hpp"
 
+// Neither helper is exported from "opencv_vlm", so the only way to measure them is to
+// compile the source code into "opencv_perf_vlm" (same approach as core's
+// test_logtagmanager.cpp, and as test_vlm_internal.cpp here).
+#if 1
+#include "../src/base64.cpp"
+#include "../src/vlm_generation.cpp"
+#endif
+
 namespace opencv_test {
 
 PERF_TEST(Vlm_Base64, EncodePngSizedBuffer)
