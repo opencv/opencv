@@ -1075,20 +1075,8 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
 /////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
 
-static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
+static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 {
-    // for too small images use the simple interpolation algorithm
-    if( MIN(_srcmat.size().width, _srcmat.size().height) < 8 )
-    {
-        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( _srcmat, dstmat, code );
-        return;
-    }
-
-    // VNG uses a 5x5 filter to calculate the gradient around the target pixel.
-    // To make it simple for edge pixels, 2 pixel paddings are added using reflection.
-    cv::Mat srcmat;
-    copyMakeBorder(_srcmat, srcmat, 2, 2, 2, 2, BORDER_REFLECT_101);
-
     const uchar* bayer = srcmat.ptr();
     int bstep = (int)srcmat.step;
     uchar* dst = dstmat.ptr();
@@ -1098,6 +1086,13 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
     int blueIdx = code == COLOR_BayerBG2BGR_VNG || code == COLOR_BayerGB2BGR_VNG ? 0 : 2;
     bool greenCell0 = code != COLOR_BayerBG2BGR_VNG && code != COLOR_BayerRG2BGR_VNG;
 
+    // for too small images use the simple interpolation algorithm
+    if( MIN(size.width, size.height) < 8 )
+    {
+        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( srcmat, dstmat, code );
+        return;
+    }
+
     const int brows = 3, bcn = 7;
     int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
     int i, bufstep = N7*bcn;
@@ -1106,7 +1101,7 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
 
     for( int y = 2; y < size.height - 2; y++ )
     {
-        uchar* dstrow = dst + dststep*(y - 2); // srcmat has 2 pixel paddings, but dstmat has no padding.
+        uchar* dstrow = dst + dststep*y + 6;
         const uchar* srow;
 
         for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
@@ -1588,8 +1583,23 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
         }
         while( i < N - 2 );
 
+        // fill the last and the first pixels of row accordingly
+        for( i = 0; i < 6; i++ )
+        {
+            dst[dststep*y + 5 - i] = dst[dststep*y + 8 - i];
+            dst[dststep*y + (N - 2)*3 + i] = dst[dststep*y + (N - 3)*3 + i];
+        }
+
         greenCell0 = !greenCell0;
         blueIdx ^= 2;
+    }
+
+    // filling the first and the last rows
+    for( i = 0; i < size.width*3; i++ )
+    {
+        dst[i] = dst[i + dststep] = dst[i + dststep*2];
+        dst[i + dststep*(size.height-2)] =
+        dst[i + dststep*(size.height-1)] = dst[i + dststep*(size.height-3)];
     }
 }
 
