@@ -320,8 +320,12 @@ two cannot go together"; NaN usually means the cost could not be computed, and e
 one bad cell from turning the whole result into NaN. A row left with no usable cell simply reports
 -1, and a matrix of nothing but non-finite cells returns an empty matching with a total of 0.
 
-@param cost `M`-by-`N` cost matrix, CV_32FC1, CV_64FC1 or CV_32SC1. Infinite and NaN cells are
-forbidden pairs; an integer matrix has none, so only @p costThreshold can forbid a pair there.
+Several matchings can share the lowest total, as in a matrix of repeated columns. Any one of them
+may be returned, so tests should compare the total rather than the pairing.
+
+@param cost `M`-by-`N` cost matrix, CV_32FC1, CV_64FC1 or CV_32SC1. Must not be empty. Infinite
+and NaN cells are forbidden pairs; an integer matrix has none, so only @p costThreshold can forbid
+a pair there.
 @param assignment Output vector of size `M`. Element `i` is the column matched to row `i`, or -1.
 @param costThreshold Maximum cost of a pair, and the price of each pair left unmade.
 @return Sum of @p cost over the matched pairs only, without the unassignment term; 0 if no pair was

@@ -133,28 +133,28 @@ TEST(Core_LinearAssignment, non_square_tall)
     std::vector<int> a;
     const double total = cv::linearAssignment(cost, a);
 
+    // Column 0 is cheapest on row 1 and column 1 on row 2, so the other two rows go unmatched.
     ASSERT_EQ(4u, a.size());
+    EXPECT_EQ(-1, a[0]);
+    EXPECT_EQ(0, a[1]);
+    EXPECT_EQ(1, a[2]);
+    EXPECT_EQ(-1, a[3]);
+    EXPECT_NEAR(3.0, total, 1e-12);
+
     int pairs;
     double sum;
     summarise(cost, a, pairs, sum);
     EXPECT_EQ(2, pairs) << "M > N must assign exactly N rows";
-    EXPECT_NEAR(3.0, total, 1e-12);
+    EXPECT_NEAR(3.0, sum, 1e-12);
 }
 
-TEST(Core_LinearAssignment, empty)
+TEST(Core_LinearAssignment, empty_input_throws)
 {
     std::vector<int> a;
 
-    EXPECT_NEAR(0.0, cv::linearAssignment(Mat(0, 0, CV_64F), a), 1e-12);
-    EXPECT_TRUE(a.empty());
-
-    EXPECT_NEAR(0.0, cv::linearAssignment(Mat(0, 5, CV_64F), a), 1e-12);
-    EXPECT_TRUE(a.empty());
-
-    EXPECT_NEAR(0.0, cv::linearAssignment(Mat(5, 0, CV_64F), a), 1e-12);
-    ASSERT_EQ(5u, a.size());
-    for (size_t i = 0; i < a.size(); i++)
-        EXPECT_EQ(-1, a[i]);
+    EXPECT_ANY_THROW(cv::linearAssignment(Mat(0, 0, CV_64F), a));
+    EXPECT_ANY_THROW(cv::linearAssignment(Mat(0, 5, CV_64F), a));
+    EXPECT_ANY_THROW(cv::linearAssignment(Mat(5, 0, CV_64F), a));
 }
 
 TEST(Core_LinearAssignment, all_infeasible)
@@ -179,28 +179,27 @@ TEST(Core_LinearAssignment, threshold_limited)
                                     0.35, 17.36, 15.09});
     std::vector<int> a;
     const double t1 = cv::linearAssignment(c1, a, 10.0);
-    checkWellFormed(c1, a, 10.0);
-    int pairs;
-    double sum;
-    summarise(c1, a, pairs, sum);
-    EXPECT_EQ(2, pairs);
     EXPECT_NEAR(-2.69, t1, 1e-9);
+    ASSERT_EQ(3u, a.size());
+    EXPECT_EQ(-1, a[0]);
+    EXPECT_EQ(2, a[1]);
+    EXPECT_EQ(0, a[2]);
 
     // Max-cardinality-then-min-cost takes both pairs for 20.0, throwing away a free perfect
     // match to manufacture a marginal second pair.
     Mat c2 = Mat_<double>({2, 2}, {0, 10,
                                   10, 100});
     const double t2 = cv::linearAssignment(c2, a, 10.0);
-    checkWellFormed(c2, a, 10.0);
-    summarise(c2, a, pairs, sum);
-    EXPECT_EQ(1, pairs);
     EXPECT_NEAR(0.0, t2, 1e-12);
+    ASSERT_EQ(2u, a.size());
+    EXPECT_EQ(0, a[0]);
+    EXPECT_EQ(-1, a[1]);
 
     // A threshold above every cost recovers the max-cardinality answer on the same matrix.
     const double t3 = cv::linearAssignment(c2, a, 50.0);
-    summarise(c2, a, pairs, sum);
-    EXPECT_EQ(2, pairs);
     EXPECT_NEAR(20.0, t3, 1e-12);
+    EXPECT_EQ(1, a[0]);
+    EXPECT_EQ(0, a[1]);
 }
 
 // Skipping rows whose augmenting search fails returns 10.0 on the second matrix.
@@ -236,7 +235,7 @@ TEST(Core_LinearAssignment, nan_is_forbidden)
 
 TEST(Core_LinearAssignment, transpose_invariance)
 {
-    RNG rng(0x5EED1234);
+    RNG& rng = theRNG();
     for (int iter = 0; iter < 300; iter++)
     {
         const int M = rng.uniform(1, 6);
@@ -256,6 +255,9 @@ TEST(Core_LinearAssignment, transpose_invariance)
         cv::transpose(cost, costT);
         const double tt = cv::linearAssignment(costT, at, thr);
 
+        checkWellFormed(cost, a, thr);
+        checkWellFormed(costT, at, thr);
+
         int pairs, pairsT;
         double sum, sumT;
         summarise(cost, a, pairs, sum);
@@ -263,12 +265,29 @@ TEST(Core_LinearAssignment, transpose_invariance)
 
         EXPECT_EQ(pairs, pairsT) << "iteration " << iter;
         EXPECT_NEAR(t, tt, 1e-9) << "iteration " << iter;
+        EXPECT_NEAR(t, sum, 1e-9) << "iteration " << iter;
+        EXPECT_NEAR(tt, sumT, 1e-9) << "iteration " << iter;
+
+        // When the sides differ both calls transpose to the same matrix internally, so the pairs
+        // must mirror exactly. On a square input they solve different matrices and a tie could
+        // pick either of two equally good answers, so only the total is guaranteed there.
+        if (M != N)
+        {
+            for (int i = 0; i < M; i++)
+            {
+                if (a[(size_t)i] >= 0)
+                {
+                    EXPECT_EQ(i, at[(size_t)a[(size_t)i]])
+                        << "iteration " << iter << ", row " << i;
+                }
+            }
+        }
     }
 }
 
 TEST(Core_LinearAssignment, random_vs_bruteforce)
 {
-    RNG rng(0xB00B1E5);
+    RNG& rng = theRNG();
     const double thresholds[] = { 2.0, 5.0, 10.0, 15.0, DBL_MAX };
 
     for (int iter = 0; iter < 2000; iter++)
@@ -308,7 +327,7 @@ TEST(Core_LinearAssignment, random_vs_bruteforce)
 // the optimum by construction. Any other matching swaps cheap cells for expensive ones.
 TEST(Core_LinearAssignment, known_optimum_large)
 {
-    RNG rng(0xC0FFEE);
+    RNG& rng = theRNG();
     const int sizes[] = { 17, 64, 150 };
 
     for (int s = 0; s < 3; s++)
@@ -345,7 +364,7 @@ TEST(Core_LinearAssignment, known_optimum_large)
 // different matrix shape, so it gets its own sweep.
 TEST(Core_LinearAssignment, unpadded_path_vs_bruteforce)
 {
-    RNG rng(0xFEEDBEEF);
+    RNG& rng = theRNG();
     // All three sit above the cost range, so nothing is forbidden and nothing ties with the
     // threshold. Every one of them takes the skip.
     const double thresholds[] = { 25.5, 1e6, DBL_MAX };
@@ -429,7 +448,7 @@ TEST(Core_LinearAssignment, integer_cost_matrix)
 // Random integer matrices against the same values as doubles: the two paths must agree exactly.
 TEST(Core_LinearAssignment, integer_matches_double)
 {
-    RNG rng(0x1234ABCD);
+    RNG& rng = theRNG();
     for (int iter = 0; iter < 2000; iter++)
     {
         const int M = rng.uniform(1, 7);
