@@ -3,6 +3,10 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+try:
+    from lapjv import lapjv
+except ImportError:
+    lapjv = None
 
 from tests_common import NewOpenCVTests
 
@@ -93,16 +97,12 @@ class linear_assignment_test(NewOpenCVTests):
             self.check_pairs(cost, total, assignment)
             self.assertTrue(all(a >= 0 for a in assignment))
 
-
     def test_matches_lapjv(self):
-        # Optional cross-check against a reference implementation. lapjv takes square matrices
-        # only and has no threshold, which is exactly the unconstrained case. Skipped when the
-        # package is not installed.
-        try:
-            from lapjv import lapjv
-        except ImportError:
-            self.skipTest('lapjv is not installed')
+        if lapjv is None:
+            self.skipTest("lapjv is not available")
 
+        # lapjv takes square matrices only and has no threshold, which is exactly the
+        # unconstrained case this should agree with.
         rng = np.random.default_rng(987)
         for _ in range(25):
             n = int(rng.integers(2, 12))
