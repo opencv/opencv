@@ -48,11 +48,8 @@ static Scalar colorForId(int id)
     return Scalar(rng.uniform(64, 256), rng.uniform(64, 256), rng.uniform(64, 256));
 }
 
-/*
-    yolov8 emits one [1, 84, 8400] tensor: four box numbers then one score per class, for every
-    candidate. The image is padded to a square first so nothing is distorted, which is why the
-    boxes are scaled back by the padded length afterwards.
-*/
+// yolov8 emits one [1, 84, 8400] tensor: four box numbers then a score per class. The image is
+// padded to a square first, so the boxes scale back by the padded length.
 static void detect(const Mat& frame, Net& net, int inputSize, double inputScale, bool swapRB,
                    float confThreshold, float nmsThreshold,
                    vector<Rect2d>& boxes, vector<float>& scores, vector<int>& classIds)
@@ -109,11 +106,8 @@ static void detect(const Mat& frame, Net& net, int inputSize, double inputScale,
     }
 }
 
-/*
-    One L2-normalised descriptor per detection, which is what the tracker's appearance overload
-    wants. cv::dnn::Model is used rather than a hand-written blobFromImage because setInputScale
-    takes a Scalar, so the per-channel std folds straight in.
-*/
+// One L2-normalised descriptor per detection. Model is used over blobFromImage because
+// setInputScale takes a Scalar, so the per-channel std folds straight in.
 static Mat describe(const Mat& frame, const Ptr<Model>& reid, const vector<Rect2d>& boxes)
 {
     if (boxes.empty())

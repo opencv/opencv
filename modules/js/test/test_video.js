@@ -133,7 +133,7 @@ QUnit.test('MultiTracker', function(assert) {
         let tracker = cv.MultiTracker.create(params);
 
         let boxes = new cv.Rect2dVector();
-        boxes.push_back(new cv.Rect2d(10, 10, 20, 40));
+        boxes.push_back({x: 10, y: 10, width: 20, height: 40});
         let scores = new cv.FloatVector();
         scores.push_back(0.9);
         let classes = new cv.IntVector();
