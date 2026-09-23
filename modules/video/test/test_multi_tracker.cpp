@@ -393,6 +393,49 @@ TEST(Video_MultiTracker, embedding_ema_keeps_memory)
         << "the B detection was absorbed by the A track, so the running descriptor was not kept";
 }
 
+// The counterpart above: appearance must not pull a non-overlapping pair under iouThreshold.
+TEST(Video_MultiTracker, ungated_appearance_cannot_match_across_the_frame)
+{
+    const std::vector<float> A = {1.0f, 0.0f};
+    std::vector<float> B;
+    B.push_back(0.7f);                          // cosine distance 0.3, inside embeddingThreshold
+    B.push_back(std::sqrt(1.0f - 0.49f));
+
+    MultiTracker::Params p;
+    p.minHits = 1;                              // reported at once, so the first id is observable
+    p.gatingThreshold = 0.0f;                   // the header documents <= 0 as disabling the gate
+    p.embeddingWeight = 0.4f;
+    ASSERT_LT(p.embeddingWeight * 0.3 + (1.0 - p.embeddingWeight) * 1.0, (double)p.iouThreshold);
+
+    const Rect2d nearBox(100, 100, 40, 80);
+    const Rect2d farBox(600, 100, 40, 80);
+    ASSERT_DOUBLE_EQ(1.0, jaccardDistance(nearBox, farBox));
+
+    Ptr<MultiTracker> tracker = MultiTracker::create(p);
+    std::vector<int> ids; std::vector<Rect2d> boxes; std::vector<int> classes;
+
+    Frame f1; f1.add(nearBox);
+    tracker->update(f1.boxes, f1.scores, f1.classIds,
+                    embeddingRows(std::vector<std::vector<float> >(1, A)), ids, boxes, classes);
+    ASSERT_EQ(1u, ids.size());
+    const int firstId = ids[0];
+
+    Frame f2; f2.add(farBox);
+    tracker->update(f2.boxes, f2.scores, f2.classIds,
+                    embeddingRows(std::vector<std::vector<float> >(1, B)), ids, boxes, classes);
+
+    bool sawNewId = false;
+    for (size_t i = 0; i < ids.size(); i++)
+    {
+        if (ids[i] == firstId)
+            EXPECT_LT(boxes[i].x, 300.0)
+                << "the first track followed a detection it does not overlap at all";
+        else
+            sawNewId = true;
+    }
+    EXPECT_TRUE(sawNewId) << "the far detection should have started a track of its own";
+}
+
 TEST(Video_MultiTracker, reset_clears_everything)
 {
     Ptr<MultiTracker> tracker = MultiTracker::create(fastParams());

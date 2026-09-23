@@ -10,11 +10,6 @@
 
 #include "../precomp.hpp"
 
-#include "opencv2/core/optim.hpp"
-
-#include <algorithm>
-#include <limits>
-
 namespace cv {
 inline namespace tracking {
 namespace impl {
@@ -49,13 +44,8 @@ static Rect2d stateToBox(const Mat& state)
 
 enum TrackState { TENTATIVE = 0, CONFIRMED = 1, LOST = 2 };
 
-/*
-    One tracked object.
-
-    Held only through a Ptr. cv::KalmanFilter has value semantics over refcounted Mats, so copying
-    a Track would leave two tracks sharing one filter state -- and a std::vector<Track> would do
-    exactly that on reallocation.
-*/
+// Held only through a Ptr: KalmanFilter copies share their Mats, so two copies of a Track would
+// share one filter state.
 struct Track
 {
     Track(int id_, const Rect2d& box, int classId_, float score_)
@@ -76,9 +66,7 @@ struct Track
         kf.statePost = Mat::zeros(STATE_DIM, 1, CV_32F);
         z.copyTo(kf.statePost(Rect(0, 0, 1, MEAS_DIM)));
 
-        // KalmanFilter::init leaves errorCovPost at zero rather than identity. Left alone, the
-        // first predict() would report no uncertainty at all and the first correct() would produce
-        // an over-confident gain, so the initial covariance has to be set explicitly.
+        // init() leaves errorCovPost at zero, which would make the first correct() over-confident.
         const float h = z.at<float>(3);
         kf.errorCovPost = Mat::zeros(STATE_DIM, STATE_DIM, CV_32F);
         const float p[STATE_DIM] = {
@@ -148,7 +136,7 @@ struct Track
     int classId;
     float score;
     int state;
-    int hits;               // consecutive frames matched, used to confirm a new track
+    int hits;               // frames matched, only read while the track is still tentative
     int age;                // consecutive frames unmatched
 };
 
@@ -242,9 +230,7 @@ void MultiTrackerImpl::associate(const std::vector<size_t>& cands,
     const int nr = (int)cands.size();
     const int nc = (int)dets.size();
 
-    // Anything above the threshold is refused by the solver, so a rejected pair just gets a cost
-    // above it. cv::linearAssignment treats "over the threshold" and "infinite" identically, which
-    // is why the gate needs no separate sentinel.
+    // The solver refuses anything above the threshold, so a rejected pair needs no inf sentinel.
     const double reject = (double)params.iouThreshold + 1.0;
 
     const bool gate = useGate && params.gatingThreshold > 0.0f;
@@ -257,7 +243,12 @@ void MultiTrackerImpl::associate(const std::vector<size_t>& cands,
     }
 
     Mat cost(nr, nc, CV_64F);
-    for (int i = 0; i < nr; i++)
+
+    // Each row is written by one track and reads nothing another row writes, so the rows split
+    // cleanly. Below a few dozen tracks the dispatch costs more than the loop, so stay serial.
+    const auto fillRows = [&](const Range& range)
+    {
+    for (int i = range.start; i < range.end; i++)
     {
         const Ptr<Track>& tr = tracks[cands[i]];
         double* row = cost.ptr<double>(i);
@@ -283,6 +274,7 @@ void MultiTrackerImpl::associate(const std::vector<size_t>& cands,
             }
 
             double c = jaccardDistance(tr->predictedBox, detBoxes[d]);
+            const double iouDist = c;
 
             if (useAppearance && !tr->feature.empty() && !embeddings.empty())
             {
@@ -305,10 +297,21 @@ void MultiTrackerImpl::associate(const std::vector<size_t>& cands,
                     continue;
                 }
             }
+            else if (iouDist > (double)params.iouThreshold)
+            {
+                row[j] = reject;   // ungated, and a good appearance score can hide zero overlap
+                continue;
+            }
 
             row[j] = c;
         }
     }
+    };
+
+    if (nr >= 64)
+        parallel_for_(Range(0, nr), fillRows);
+    else
+        fillRows(Range(0, nr));
 
     std::vector<int> assignment;
     linearAssignment(cost, assignment, (double)params.iouThreshold);
@@ -319,7 +322,7 @@ void MultiTrackerImpl::associate(const std::vector<size_t>& cands,
 void MultiTrackerImpl::setFeature(const Ptr<Track>& tr, const Mat& f, bool replace) const
 {
     Mat row;
-    f.convertTo(row, CV_32F);
+    f.copyTo(row);                            // f views the caller's matrix, normalize is in place
     normalize(row, row, 1.0, 0.0, NORM_L2);   // the contract says normalised, but check anyway
 
     if (replace || tr->feature.empty())
@@ -474,9 +477,7 @@ void MultiTrackerImpl::run(const std::vector<Rect2d>& detBoxes,
         if (detTaken[d])
             continue;
         Ptr<Track> tr = makePtr<Track>(nextId++, detBoxes[d], detClassIds[d], detScores[d]);
-        // A track is created after the ageing pass above, so it never goes through the promotion
-        // check on the frame it appears. At minHits == 1 that would hold it back a frame for no
-        // reason, so promote it here instead.
+        // New tracks miss the promotion check above, so minHits == 1 has to be honoured here.
         if (tr->hits >= params.minHits)
             tr->state = CONFIRMED;
         if (!embeddings.empty())
