@@ -236,8 +236,7 @@ armpl_svd(fptype *src, size_t src_step, fptype *w, fptype *u, size_t u_step, fpt
     if ((flags & CV_HAL_SVD_MODIFY_A) && (flags & CV_HAL_SVD_FULL_UV))
     {
         for (int i = 0; i < m; i++)
-            for (int j = 0; j < m; j++)
-                src[i*lda + j] = u[i*m + j];
+            std::copy(u + i*m, u + i*m + m, src + i*lda);
     }
 
     return CV_HAL_ERROR_OK;
