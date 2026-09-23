@@ -1545,6 +1545,46 @@ TEST(Resize, nearest_regression_15075)
     EXPECT_EQ(C, cvtest::norm(dst, NORM_L1)) << src.size;
 }
 
+// When dsize is derived from fx/fy, the rounded output size does not
+// necessarily match the requested factor (e.g. 55*0.5 -> 28, 28/55 != 0.5).
+// resize() must recompute inv_scale from the realized dsize so that passing
+// fx/fy is equivalent to passing the resulting dsize explicitly.
+//
+// INTER_AREA is intentionally not covered: the fix skips it because its
+// accumulation window is derived from the requested factor (see
+// computeResizeAreaTab), so fx/fy and dsize are not expected to be equivalent
+// there.
+typedef testing::TestWithParam<int> Resize_DerivedDsizeConsistency;
+TEST_P(Resize_DerivedDsizeConsistency, regression)
+{
+    const int interp = GetParam();
+    RNG& rng = theRNG();
+    // Odd source sizes make ssize*0.5 round to a size whose ratio differs
+    // from the requested 0.5, exercising the recomputation.
+    const int sizes[] = { 55, 53, 41, 33 };
+
+    for (int s : sizes)
+    {
+        SCOPED_TRACE(cv::format("interp=%d size=%d", interp, s));
+        Mat src(s, s, CV_8UC1);
+        rng.fill(src, RNG::UNIFORM, 0, 256);
+
+        const double fx = 0.5, fy = 0.5;
+        Size dsize(cvRound(s * fx), cvRound(s * fy));
+
+        Mat dst_factor, dst_size;
+        cv::resize(src, dst_factor, Size(), fx, fy, interp);
+        cv::resize(src, dst_size, dsize, 0, 0, interp);
+
+        ASSERT_EQ(dst_factor.size(), dst_size.size());
+        EXPECT_EQ(0, cvtest::norm(dst_factor, dst_size, NORM_INF));
+    }
+}
+INSTANTIATE_TEST_CASE_P(Imgproc, Resize_DerivedDsizeConsistency,
+    testing::Values(INTER_NEAREST, INTER_NEAREST_EXACT, INTER_LINEAR,
+                    INTER_LINEAR_EXACT, INTER_CUBIC, INTER_LANCZOS4));
+
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
