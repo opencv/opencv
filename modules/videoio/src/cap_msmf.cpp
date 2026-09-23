@@ -2495,12 +2495,11 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const Ptr<IStreamReader>& st
 std::vector<cv::VideoDeviceInfo> cv::enumerate_MSMF_devices()
 {
     std::vector<cv::VideoDeviceInfo> result;
-    Media_Foundation::getInstance();
-
     DeviceList devices;
     UINT32 count = 0;
     try
     {
+        Media_Foundation::getInstance();
         count = devices.read();
     }
     catch (const cv::Exception& e)

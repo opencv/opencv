@@ -1361,7 +1361,7 @@ int videoInput::listDevices(bool silent){
             if(!silent) DebugPrintOut("SETUP: Looking For Capture Devices\n");
             IMoniker *pMoniker = NULL;
 
-            while (pEnum->Next(1, &pMoniker, NULL) == S_OK){
+            while (deviceCounter < VI_MAX_CAMERAS && pEnum->Next(1, &pMoniker, NULL) == S_OK){
 
                 IPropertyBag *pPropBag;
                 hr = pMoniker->BindToStorage(0, 0, IID_IPropertyBag,

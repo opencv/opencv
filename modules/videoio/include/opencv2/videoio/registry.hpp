@@ -80,6 +80,10 @@ CV_EXPORTS_W std::string getWriterBackendPluginVersion(
 Devices are returned in backend priority order. With #CAP_ANY the same physical camera may be
 reported by more than one backend; use VideoDeviceInfo::backend to tell those entries apart.
 
+Only the built-in #CAP_V4L2, #CAP_MSMF, #CAP_DSHOW and #CAP_AVFOUNDATION backends can list devices.
+Other backends, and any of these loaded as a plugin, report nothing, even when
+`cv::VideoCapture(index, apiPreference)` can open a camera through them.
+
 @param apiPreference backend to query (#VideoCaptureAPIs), or #CAP_ANY for all camera backends
 */
 CV_EXPORTS_W std::vector<VideoDeviceInfo> enumerateDevices(VideoCaptureAPIs apiPreference = CAP_ANY);
