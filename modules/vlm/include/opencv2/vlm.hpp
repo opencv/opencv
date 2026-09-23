@@ -104,9 +104,12 @@ public:
 
 @param model_type Which VLM to load. VLM_MODEL_PADDLEOCR_VL/VLM_MODEL_GRANITE_DOCLING run
                    locally; VLM_MODEL_OPENAI/ANTHROPIC/GEMINI/GROK call a hosted API.
-@param model_dir  For local model types: path to the local ONNX export directory, following
-                   the upstream layout documented in samples/dnn/granite_docling_inference.py
-                   and samples/dnn/paddleocr_vl_inference.py.
+@param model_dir  What to load, which depends on @p model_type. It is not tagged as a file
+                   path, because it only names one for half the model types.
+                   For local model types: path to the local ONNX export directory; see
+                   @ref vlm_model_dir_layout for the files each model needs. Note that its
+                   config.json is an OpenCV tokenizer config, not HuggingFace's, so a stock
+                   upstream export needs that one file added.
                    For cloud model types: the provider's model name -- required, with no
                    built-in default. Providers retire model names, so take the name from the
                    provider's own model list rather than from documentation: OpenAI and Grok
@@ -130,10 +133,10 @@ public:
                   when the key comes from somewhere else, such as a secret store. create()
                   throws and names the variable if neither is available.
 */
-CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, CV_WRAP_FILE_PATH const String& model_dir,
-                                   const String& engine = "opencv",
-                                   const String& device = "cpu",
-                                   const String& api_key = String());
+CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, const String& model_dir,
+                                  const String& engine = "opencv",
+                                  const String& device = "cpu",
+                                  const String& api_key = String());
 
 //! @}
 

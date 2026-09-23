@@ -7,6 +7,7 @@
 #include "test_precomp.hpp"
 #include "../src/base64.hpp"
 #include "../src/config_json.hpp"
+#include "../src/json_parser.hpp"
 #include "../src/vlm_generation.hpp"
 #include "../src/local_vlm_model_base.hpp"
 #include "../src/engines/granite_docling_preprocess.hpp"
@@ -19,11 +20,13 @@
 #if 1
 #include "../src/base64.cpp"
 #include "../src/config_json.cpp"
+#include "../src/json_parser.cpp"
 #include "../src/vlm_generation.cpp"
 #include "../src/vlm_model_base.cpp"
 #include "../src/local_vlm_model_base.cpp"
 #include "../src/engines/granite_docling_preprocess.cpp"
 #include "../src/engines/paddleocr_vl_preprocess.cpp"
+#include "../src/engines/cloud_engine.cpp"
 #endif
 
 #include <fstream>
@@ -58,6 +61,204 @@ TEST(Vlm_Base64, FullByteRange)
     std::string encoded = base64Encode(data.data(), data.size());
     EXPECT_EQ(encoded.size() % 4, 0u);
     EXPECT_EQ(encoded.size(), ((data.size() + 2) / 3) * 4);
+}
+
+TEST(Vlm_JsonParser, ScalarsAndNesting)
+{
+    const JsonValue root = jsonParse(
+        "{\"s\": \"text\", \"i\": 42, \"neg\": -7, \"f\": 1.5, \"e\": 2e3,"
+        " \"t\": true, \"f2\": false, \"n\": null, \"a\": [1, 2, 3],"
+        " \"o\": {\"inner\": \"value\"}}");
+
+    EXPECT_EQ(JsonValue::OBJECT, root.type());
+    EXPECT_EQ("text", root["s"].asString());
+    EXPECT_EQ(42, root["i"].asInt(-1));
+    EXPECT_EQ(-7, root["neg"].asInt(0));
+    EXPECT_EQ(2, root["f"].asInt(-1)); // 1.5 rounds to even, as cvRound does
+    EXPECT_EQ(2000, root["e"].asInt(-1));
+    EXPECT_EQ(1, root["t"].asInt(-1));
+    EXPECT_EQ(0, root["f2"].asInt(-1));
+    EXPECT_EQ((size_t)3, root["a"].size());
+    EXPECT_EQ(3, root["a"][2].asInt(-1));
+    EXPECT_EQ("value", root["o"]["inner"].asString());
+}
+
+TEST(Vlm_JsonParser, MissingAndNullBothFallBack)
+{
+    const JsonValue root = jsonParse("{\"usage\": null}");
+
+    // A provider that sends "usage": null and one that omits it must behave the same way.
+    EXPECT_TRUE(root["usage"].empty());
+    EXPECT_TRUE(root["absent"].empty());
+    EXPECT_EQ(-1, root["usage"]["total_tokens"].asInt(-1));
+    EXPECT_EQ(-1, root["absent"]["total_tokens"].asInt(-1));
+}
+
+TEST(Vlm_JsonParser, LookupsOnWrongTypesNeverThrow)
+{
+    const JsonValue root = jsonParse("{\"s\": \"text\", \"a\": [1]}");
+
+    EXPECT_TRUE(root["s"][0].empty());          // index into a string
+    EXPECT_TRUE(root["s"]["nope"].empty());     // key into a string
+    EXPECT_TRUE(root["a"][5].empty());          // out of range
+    EXPECT_TRUE(root["a"]["nope"].empty());     // key into an array
+    EXPECT_EQ((size_t)0, root["s"].size());
+    EXPECT_EQ("", root["a"].asString());
+}
+
+TEST(Vlm_JsonParser, StringLongerThanFileStorageLimit)
+{
+    // The reason this parser exists: FileStorage's JSON reader rejects a single string
+    // value at CV_FS_MAX_LEN (4096), and a page of recognized text is far longer.
+    const std::string page(20000, 'x');
+    const JsonValue root = jsonParse("{\"content\": \"" + page + "\"}");
+
+    EXPECT_EQ((size_t)20000, root["content"].asString().size());
+    EXPECT_EQ(page, root["content"].asString());
+}
+
+TEST(Vlm_JsonParser, Escapes)
+{
+    const JsonValue root = jsonParse(
+        "{\"s\": \"a\\\"b\\\\c\\/d\\be\\ff\\ng\\rh\\ti\"}");
+
+    EXPECT_EQ("a\"b\\c/d\be\ff\ng\rh\ti", root["s"].asString());
+}
+
+TEST(Vlm_JsonParser, UnicodeEscapeToUtf8)
+{
+    // U+00E1 a-acute and U+010C C-caron, 2 UTF-8 bytes each: the Czech test page needs both.
+    const JsonValue root = jsonParse("{\"s\": \"P\\u00e1tek \\u010cervence\"}");
+
+    // The literal is split because a C++ hex escape is greedy: "\xC4\x8Cervence" would read
+    // \x8Ce as one escape, since 'e' is a hex digit. Do not join these back together.
+    EXPECT_EQ("P\xC3\xA1tek \xC4\x8C" "ervence", root["s"].asString());
+}
+
+TEST(Vlm_JsonParser, SurrogatePairBecomesOneCodePoint)
+{
+    // U+1F600, which only reaches us as a surrogate pair, is 4 UTF-8 bytes.
+    const JsonValue root = jsonParse("{\"s\": \"\\ud83d\\ude00\"}");
+
+    EXPECT_EQ("\xF0\x9F\x98\x80", root["s"].asString());
+}
+
+TEST(Vlm_JsonParser, UnpairedSurrogateBecomesReplacementChar)
+{
+    // Never emit invalid UTF-8: a lone surrogate turns into U+FFFD.
+    EXPECT_EQ("\xEF\xBF\xBD", jsonParse("{\"s\": \"\\ud83d\"}")["s"].asString());
+    EXPECT_EQ("\xEF\xBF\xBD", jsonParse("{\"s\": \"\\ude00\"}")["s"].asString());
+}
+
+TEST(Vlm_JsonParser, WhitespaceAndEmptyContainers)
+{
+    const JsonValue root = jsonParse("  {\n\t\"a\" : [ ] ,\r \"o\" : { }\n}  ");
+
+    EXPECT_EQ(JsonValue::ARRAY, root["a"].type());
+    EXPECT_EQ((size_t)0, root["a"].size());
+    EXPECT_EQ(JsonValue::OBJECT, root["o"].type());
+    EXPECT_EQ((size_t)0, root["o"].size());
+}
+
+TEST(Vlm_JsonParser, MalformedInputThrows)
+{
+    EXPECT_THROW(jsonParse(""), cv::Exception);
+    EXPECT_THROW(jsonParse("{"), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\""), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\": }"), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\" 1}"), cv::Exception);
+    EXPECT_THROW(jsonParse("[1, 2"), cv::Exception);
+    EXPECT_THROW(jsonParse("\"unterminated"), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\": \"bad \\q escape\"}"), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\": \"\\u12\"}"), cv::Exception);
+    EXPECT_THROW(jsonParse("tru"), cv::Exception);
+    EXPECT_THROW(jsonParse("{\"a\": 1} trailing"), cv::Exception);
+}
+
+TEST(Vlm_JsonParser, ExcessiveNestingThrowsInsteadOfOverflowingTheStack)
+{
+    const JsonValue shallow = jsonParse(std::string(60, '[') + std::string(60, ']'));
+    EXPECT_EQ(JsonValue::ARRAY, shallow.type());
+
+    const std::string tooDeep = std::string(500, '[') + std::string(500, ']');
+    EXPECT_THROW(jsonParse(tooDeep), cv::Exception);
+}
+
+TEST(Vlm_JsonParser, OpenAIResponseShape)
+{
+    const JsonValue root = jsonParse(
+        "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"page text\"}}],"
+        " \"usage\":{\"prompt_tokens\":700,\"completion_tokens\":12,\"total_tokens\":712}}");
+
+    EXPECT_EQ(712, root["usage"]["total_tokens"].asInt(-1));
+    ASSERT_EQ((size_t)1, root["choices"].size());
+    EXPECT_EQ("page text", root["choices"][0]["message"]["content"].asString());
+}
+
+TEST(Vlm_JsonParser, AnthropicResponseShape)
+{
+    const JsonValue root = jsonParse(
+        "{\"content\":[{\"type\":\"text\",\"text\":\"page text\"}],"
+        " \"usage\":{\"input_tokens\":700,\"output_tokens\":12}}");
+
+    EXPECT_EQ(700, root["usage"]["input_tokens"].asInt(0));
+    EXPECT_EQ(12, root["usage"]["output_tokens"].asInt(0));
+    ASSERT_EQ((size_t)1, root["content"].size());
+    EXPECT_EQ("page text", root["content"][0]["text"].asString());
+}
+
+TEST(Vlm_JsonParser, GeminiResponseShape)
+{
+    const JsonValue root = jsonParse(
+        "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"page text\"}],"
+        "\"role\":\"model\"}}], \"usageMetadata\":{\"totalTokenCount\":712}}");
+
+    EXPECT_EQ(712, root["usageMetadata"]["totalTokenCount"].asInt(-1));
+    ASSERT_EQ((size_t)1, root["candidates"].size());
+    const JsonValue& parts = root["candidates"][0]["content"]["parts"];
+    ASSERT_EQ((size_t)1, parts.size());
+    EXPECT_EQ("page text", parts[0]["text"].asString());
+}
+
+TEST(Vlm_CloudEngine, RedactsExactApiKeyFromErrorBody)
+{
+    const std::string key = "sk-proj-AbCdEf1234567890";
+    const std::string body = "{\"error\":{\"message\":\"Incorrect API key provided: "
+                             + key + ". Check your key.\"}}";
+
+    const std::string out = redactSecrets(body, key);
+    EXPECT_EQ(std::string::npos, out.find(key));
+    EXPECT_NE(std::string::npos, out.find("<redacted>"));
+    EXPECT_NE(std::string::npos, out.find("Incorrect API key provided"));
+}
+
+TEST(Vlm_CloudEngine, RedactsKeyShapedTokensNotMatchingTheConfiguredKey)
+{
+    // A provider that echoes only part of the key, or a stale key from elsewhere in the
+    // body, still must not survive into the message.
+    const std::string body = "{\"error\":\"bad key xai-9f8e7d6c5b4a and AIzaSyDzZzZz\"}";
+
+    const std::string out = redactSecrets(body, "sk-completely-different");
+    EXPECT_EQ(std::string::npos, out.find("9f8e7d6c5b4a"));
+    EXPECT_EQ(std::string::npos, out.find("SyDzZzZz"));
+    EXPECT_NE(std::string::npos, out.find("xai-<redacted>"));
+    EXPECT_NE(std::string::npos, out.find("AIza<redacted>"));
+}
+
+TEST(Vlm_CloudEngine, RedactionLeavesOrdinaryTextAlone)
+{
+    const std::string body = "{\"error\":{\"type\":\"invalid_request_error\","
+                             "\"message\":\"model gpt-4o-mini not found\"}}";
+
+    EXPECT_EQ(body, redactSecrets(body, "sk-1234567890abcdef"));
+}
+
+TEST(Vlm_CloudEngine, RedactionIgnoresShortOrEmptyKeys)
+{
+    // An empty or implausibly short key must not turn into a match-everything pattern.
+    const std::string body = "{\"error\":\"quota exceeded\"}";
+    EXPECT_EQ(body, redactSecrets(body, ""));
+    EXPECT_EQ(body, redactSecrets(body, "abc"));
 }
 
 TEST(Vlm_ConfigJson, GetIntPresentAndFallback)
@@ -203,6 +404,49 @@ TEST(Vlm_Generation, ScatterImageFeaturesThrowsWhenTooFewFeatures)
     int imageTokenId = 99;
     std::vector<int> tokens = {imageTokenId, imageTokenId};
     EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures), cv::Exception);
+}
+
+TEST(Vlm_Generation, ScatterImageFeaturesThrowsOnTokenCountMismatch)
+{
+    // More tokens than embedding rows used to walk off the end of the buffer.
+    int hiddenDim = 4;
+    int embedsSizes[] = {1, 2, hiddenDim};
+    Mat inputsEmbeds(3, embedsSizes, CV_32F, Scalar(0));
+
+    int featSizes[] = {1, 4, hiddenDim};
+    Mat imageFeatures(3, featSizes, CV_32F, Scalar(0));
+
+    int imageTokenId = 99;
+    std::vector<int> tokens = {1, imageTokenId, imageTokenId, imageTokenId};
+    EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures),
+                 cv::Exception);
+}
+
+TEST(Vlm_Generation, ScatterImageFeaturesRejectsWrongRankAndType)
+{
+    int hiddenDim = 4;
+    int featSizes[] = {1, 1, hiddenDim};
+    Mat imageFeatures(3, featSizes, CV_32F, Scalar(0));
+    std::vector<int> tokens = {99};
+
+    int flatSizes[] = {1, hiddenDim};
+    Mat rank2(2, flatSizes, CV_32F, Scalar(0));
+    EXPECT_THROW(scatterImageFeatures(rank2, tokens, 99, imageFeatures), cv::Exception);
+
+    int embedsSizes[] = {1, 1, hiddenDim};
+    Mat wrongType(3, embedsSizes, CV_64F, Scalar(0));
+    EXPECT_THROW(scatterImageFeatures(wrongType, tokens, 99, imageFeatures), cv::Exception);
+}
+
+TEST(Vlm_Generation, ArgmaxLastTokenRejectsWrongRankAndType)
+{
+    int sizes2d[] = {1, 4};
+    Mat rank2(2, sizes2d, CV_32F, Scalar(0));
+    EXPECT_THROW(argmaxLastToken(rank2), cv::Exception);
+
+    int sizes3d[] = {1, 1, 4};
+    Mat wrongType(3, sizes3d, CV_64F, Scalar(0));
+    EXPECT_THROW(argmaxLastToken(wrongType), cv::Exception);
 }
 
 TEST(Vlm_GraniteDoclingPreprocess, TileGridDimensionsForKnownAspectRatio)
