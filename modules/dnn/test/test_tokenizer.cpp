@@ -432,8 +432,8 @@ TEST(Tokenizer_WordPiece, Tokenizer_Bert_Roundtrip) {
     }
 }
 
-// Every chunk past the first contributes its single-chunk encoding minus the ids the
-// pair template does not repeat at the front (BERT's [CLS]).
+// BERT's pair template is [CLS] A [SEP] B [SEP], so every chunk past the first adds
+// its own body plus one [SEP] -- that is, its single-chunk encoding minus the [CLS].
 static std::vector<int> concatChunkEncodings(const std::vector<std::vector<int>>& singles,
                                              size_t dropFromFollowing) {
     std::vector<int> expected;
@@ -505,8 +505,8 @@ TEST(Tokenizer_BPE, Tokenizer_Utf8BoundaryRoundtrip) {
         EXPECT_EQ(tok.decode(tok.encode(text)), text);
 }
 
-// GPT-2 and GPT-4 carry a ByteLevel post_processor or none, so there is no pair
-// template to repeat.
+// GPT-2 and GPT-4 carry a ByteLevel post_processor (or none at all), so there is no
+// pair template to repeat and nothing sensible to put between two chunks.
 TEST(Tokenizer_BPE, Tokenizer_EncodeChunks_Unsupported) {
     for (const char* cfg : {"gpt2/config.json", "gpt4/config.json"}) {
         Tokenizer tok = Tokenizer::load(_tf(cfg));
@@ -516,7 +516,8 @@ TEST(Tokenizer_BPE, Tokenizer_EncodeChunks_Unsupported) {
     }
 }
 
-// Gemma's pair template is <bos> A <bos> B: another <bos> separates, nothing closes.
+// Gemma's pair template is <bos> A <bos> B: the separator is another <bos> and
+// nothing closes the sequence.
 TEST(Tokenizer_SentencePiece, Tokenizer_EncodeChunks) {
     Tokenizer tok = Tokenizer::load(_tf("gemma2/config.json"));
     std::vector<int> a = tok.encode("hello");

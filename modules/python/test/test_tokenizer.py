@@ -61,8 +61,8 @@ class TokenizerBindingTest(NewOpenCVTests):
                          a + b[1:] + c[1:])
         self.assertEqual(list(tok.encode(["hello world"])), a)
 
-    # A Python str is also a sequence, so the string overload has to win over the
-    # chunk-list one; getting this wrong encodes text letter by letter.
+    # A Python str is a sequence of one-character strings, so the string overload has
+    # to win over the chunk-list one; getting this wrong encodes text letter by letter.
     def test_tokenizer_encode_str_is_not_a_chunk_list(self):
         tok = cv.dnn.Tokenizer.load(_tf("bert/config.json"))
         self.assertEqual(list(tok.encode("hello world")),

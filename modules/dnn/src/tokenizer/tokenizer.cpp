@@ -26,9 +26,11 @@ namespace {
 enum class TokenizerFamily { Auto, BPE, SentencePiece, Unigram, WordPiece };
 }
 
-// The id layout a TemplateProcessing post_processor declares, from its 'single'
-// and 'pair' templates. N chunks reuse the pair layout as
-// pairPrefix chunk0 separator chunk1 ... chunkN-1 pairSuffix.
+// The id layout a TemplateProcessing post_processor declares: what wraps one
+// sequence (the 'single' template) and what sits before, between and after two of
+// them (the 'pair' template). Encoding N chunks reuses the pair layout as
+// pairPrefix chunk0 separator chunk1 separator ... chunkN-1 pairSuffix, which for
+// N == 2 is exactly the template the model shipped.
 struct TemplateWrap {
     std::vector<int> prefixIds;      // before the sequence, from 'single'
     std::vector<int> suffixIds;      // after the sequence, from 'single'
@@ -38,7 +40,7 @@ struct TemplateWrap {
     bool hasPair = false;            // no 'pair' template means no way to join chunks
 };
 
-// Appends one chunk's ids, without a wrap of its own.
+// Appends one chunk's own ids, with no wrap of its own.
 typedef std::function<void(const std::string&, std::vector<int>&)> ChunkEncoder;
 
 static std::vector<int> encodeChunksWithWrap(const std::vector<std::string>& textChunks,
@@ -89,7 +91,8 @@ static cv::FileStorage openTokenizerJson(const std::string& jsonPath,
 struct Tokenizer::Impl {
     virtual ~Impl() {}
     virtual std::vector<int> encode(const std::string& text) = 0;
-    // Not an encode() overload: that would hide one half of the pair in every subclass.
+    // A separate name, not an encode() overload: overloading a virtual that every
+    // subclass already overrides would hide one half of the pair in each of them.
     virtual std::vector<int> encodeChunks(const std::vector<std::string>& textChunks) {
         if (textChunks.size() == 1)
             return encode(textChunks[0]);
@@ -557,9 +560,10 @@ static std::string detectSplitPattern(const cv::FileStorage& fs, const std::stri
 // Resolves a post_processor SpecialToken id to a vocab id, or -1 if unknown.
 typedef std::function<int(const std::string&)> SpecialIdResolver;
 
-// Splits one template ('single' or 'pair') into the runs of SpecialToken ids around
-// its $A/$B placeholders: slot 0 precedes the first placeholder, slot i follows the
-// i-th one. A template without placeholders yields one slot.
+// Splits one TemplateProcessing template ('single' or 'pair') into the runs of
+// SpecialToken ids around its $A/$B placeholders: slot 0 holds everything before
+// the first placeholder, slot i the ids following the i-th one. A template with no
+// placeholder at all yields a single slot, matching the old prefix-only reading.
 static std::vector<std::vector<int>> readTemplateSlots(const cv::FileNode& tmpl,
                                                        const SpecialIdResolver& resolve)
 {
@@ -586,8 +590,9 @@ static std::vector<std::vector<int>> readTemplateSlots(const cv::FileNode& tmpl,
     return slots;
 }
 
-// The 'pair' template is what makes multi-chunk encoding possible: its ids between
-// $A and $B separate every neighbouring pair of chunks.
+// Reads both templates a TemplateProcessing post_processor declares. The 'pair' one
+// is what makes multi-chunk encoding possible: its ids between $A and $B are the
+// separator repeated between every pair of neighbouring chunks.
 static TemplateWrap readTemplateProcessingWrap(const cv::FileNode& postProc,
                                                const SpecialIdResolver& resolve)
 {
@@ -617,7 +622,7 @@ static TemplateWrap readTemplateProcessingWrap(const cv::FileNode& postProc,
     return wrap;
 }
 
-// The common case: template tokens come from 'added_tokens'.
+// The common case: template tokens are looked up in 'added_tokens'.
 static SpecialIdResolver addedTokenResolver(const std::unordered_map<std::string, int>& specialToId)
 {
     return [specialToId](const std::string& name) -> int {

@@ -8,6 +8,9 @@
             "(Net*)readNetFromTFLite:(NSString*)model engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
             "(Net*)readNetFromTFLite:(ByteVector*)buffer engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
         },
+        "Tokenizer": {
+            "(IntVector*)encode:(NSArray<NSString*>*)textChunks" : { "encode" : {"name" : "encodeChunks"} }
+        },
         "Net": {
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outputName:(NSString*)outputName" : { "forward" : {"name" : "forwardOutputBlobs"} },
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outBlobNames:(NSArray<NSString*>*)outBlobNames" : { "forward" : {"name" : "forwardOutputBlobs"} },

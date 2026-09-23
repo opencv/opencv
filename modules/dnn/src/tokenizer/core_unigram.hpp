@@ -140,7 +140,12 @@ public:
 
     std::vector<int> encode(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
 
-    /// @brief encode() without the prefix/suffix wrap, for callers laying out chunks.
+    /**
+     * @brief Appends one text's ids to @p out without the post_processor wrap.
+     *
+     * encode() is this plus the prefix/suffix ids; a caller laying out several
+     * chunks supplies its own wrap and separators instead.
+     */
     void encodeBody(const std::string& text, const std::unordered_set<std::string>& allowedSpecial,
                     std::vector<int>& out) const;
 
