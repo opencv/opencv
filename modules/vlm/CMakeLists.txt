@@ -17,4 +17,3 @@ endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
-ocv_add_samples()

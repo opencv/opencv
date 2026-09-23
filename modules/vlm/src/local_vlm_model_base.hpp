@@ -26,8 +26,7 @@ protected:
 
     void setLastTokensUsed(int tokens);
 
-    // Any engine-specific geometry the prompt needs (grid rows/cols, tile rows/cols, ...)
-    // must be written to dimsOut so buildPrompt() below can consume it.
+    // dimsOut carries the grid/tile geometry that buildPrompt() needs.
     virtual Mat runVisionEncoder(const Mat& imageBgr, Vec2i& dimsOut) = 0;
 
     virtual String buildPrompt(const Vec2i& dims, const String& userPrompt) const = 0;

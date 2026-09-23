@@ -9,9 +9,7 @@
 #include "../src/base64.hpp"
 #include "../src/vlm_generation.hpp"
 
-// Neither helper is exported from "opencv_vlm", so the only way to measure them is to
-// compile the source code into "opencv_perf_vlm" (same approach as core's
-// test_logtagmanager.cpp, and as test_vlm_internal.cpp here).
+// Not exported from "opencv_vlm", so compile them in (as core's test_logtagmanager.cpp does).
 #if 1
 #include "../src/base64.cpp"
 #include "../src/vlm_generation.cpp"
@@ -71,7 +69,8 @@ static Mat loadPerfImageOrSkip()
 
 PERF_TEST(Vlm_Model, Infer_PaddleOCRVL)
 {
-    Ptr<VLMModel> model = createModelOrSkip(VLM_MODEL_PADDLEOCR_VL, "OPENCV_TEST_VLM_PADDLEOCR_VL_DIR");
+    Ptr<VLMModel> model =
+        createModelOrSkip(VLM_MODEL_PADDLEOCR_VL, "OPENCV_TEST_VLM_PADDLEOCR_VL_DIR");
     Mat image = loadPerfImageOrSkip();
 
     TEST_CYCLE()
@@ -85,7 +84,8 @@ PERF_TEST(Vlm_Model, Infer_PaddleOCRVL)
 
 PERF_TEST(Vlm_Model, Infer_GraniteDocling)
 {
-    Ptr<VLMModel> model = createModelOrSkip(VLM_MODEL_GRANITE_DOCLING, "OPENCV_TEST_VLM_GRANITE_DOCLING_DIR");
+    Ptr<VLMModel> model =
+        createModelOrSkip(VLM_MODEL_GRANITE_DOCLING, "OPENCV_TEST_VLM_GRANITE_DOCLING_DIR");
     Mat image = loadPerfImageOrSkip();
 
     TEST_CYCLE()

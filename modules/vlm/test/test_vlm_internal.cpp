@@ -13,10 +13,7 @@
 #include "../src/engines/granite_docling_preprocess.hpp"
 #include "../src/engines/paddleocr_vl_preprocess.hpp"
 
-// None of these helpers are exported from "opencv_vlm", so the only way to test them
-// is to compile the source code into "opencv_test_vlm" (same approach as
-// core's test_logtagmanager.cpp). This workaround may cause step debugger
-// breakpoints to work unreliably.
+// Not exported from "opencv_vlm", so compile them in (as core's test_logtagmanager.cpp does).
 #if 1
 #include "../src/base64.cpp"
 #include "../src/config_json.cpp"
@@ -108,8 +105,7 @@ TEST(Vlm_JsonParser, LookupsOnWrongTypesNeverThrow)
 
 TEST(Vlm_JsonParser, StringLongerThanFileStorageLimit)
 {
-    // The reason this parser exists: FileStorage's JSON reader rejects a single string
-    // value at CV_FS_MAX_LEN (4096), and a page of recognized text is far longer.
+    // Why this parser exists: FileStorage caps one string at CV_FS_MAX_LEN (4096).
     const std::string page(20000, 'x');
     const JsonValue root = jsonParse("{\"content\": \"" + page + "\"}");
 
@@ -130,8 +126,7 @@ TEST(Vlm_JsonParser, UnicodeEscapeToUtf8)
     // U+00E1 a-acute and U+010C C-caron, 2 UTF-8 bytes each: the Czech test page needs both.
     const JsonValue root = jsonParse("{\"s\": \"P\\u00e1tek \\u010cervence\"}");
 
-    // The literal is split because a C++ hex escape is greedy: "\xC4\x8Cervence" would read
-    // \x8Ce as one escape, since 'e' is a hex digit. Do not join these back together.
+    // Keep the literal split: a C++ hex escape is greedy, so "\x8Ce" would be one escape.
     EXPECT_EQ("P\xC3\xA1tek \xC4\x8C" "ervence", root["s"].asString());
 }
 
@@ -234,8 +229,7 @@ TEST(Vlm_CloudEngine, RedactsExactApiKeyFromErrorBody)
 
 TEST(Vlm_CloudEngine, RedactsKeyShapedTokensNotMatchingTheConfiguredKey)
 {
-    // A provider that echoes only part of the key, or a stale key from elsewhere in the
-    // body, still must not survive into the message.
+    // A partial echo, or a stale key from elsewhere in the body, must not survive either.
     const std::string body = "{\"error\":\"bad key xai-9f8e7d6c5b4a and AIzaSyDzZzZz\"}";
 
     const std::string out = redactSecrets(body, "sk-completely-different");
@@ -300,7 +294,8 @@ TEST(Vlm_ConfigJson, GetIntWithTextConfigFallback)
     FileStorage topLevel("{\"eos_token_id\": 2}", FileStorage::READ | FileStorage::MEMORY);
     EXPECT_EQ(getIntWithTextConfigFallback(topLevel, "eos_token_id", -1), 2);
 
-    FileStorage nested("{\"text_config\": {\"eos_token_id\": 7}}", FileStorage::READ | FileStorage::MEMORY);
+    FileStorage nested("{\"text_config\": {\"eos_token_id\": 7}}",
+                      FileStorage::READ | FileStorage::MEMORY);
     EXPECT_EQ(getIntWithTextConfigFallback(nested, "eos_token_id", -1), 7);
 
     FileStorage neither("{}", FileStorage::READ | FileStorage::MEMORY);
@@ -403,7 +398,8 @@ TEST(Vlm_Generation, ScatterImageFeaturesThrowsWhenTooFewFeatures)
 
     int imageTokenId = 99;
     std::vector<int> tokens = {imageTokenId, imageTokenId};
-    EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures), cv::Exception);
+    EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures),
+                 cv::Exception);
 }
 
 TEST(Vlm_Generation, ScatterImageFeaturesThrowsOnTokenCountMismatch)
@@ -470,7 +466,8 @@ TEST(Vlm_GraniteDoclingPreprocess, TileGridDimensionsForPortraitImage)
 {
     Mat image(800, 400, CV_8UC3, Scalar(0, 0, 0));
     int rows, cols;
-    tileImage(image, /*longestEdge=*/512, /*tileSize=*/256, Vec3f(0.f, 0.f, 0.f), Vec3f(1.f, 1.f, 1.f),
+    tileImage(image, /*longestEdge=*/512, /*tileSize=*/256,
+              Vec3f(0.f, 0.f, 0.f), Vec3f(1.f, 1.f, 1.f),
               rows, cols);
 
     EXPECT_EQ(rows, 2);
@@ -516,7 +513,8 @@ TEST(Vlm_PaddleOCRVLPreprocess, PreprocessImageComputesGridAndShape)
     Mat image(28, 28, CV_8UC3, Scalar(0, 0, 0));
     int gridH, gridW;
     Mat pixelValues = preprocessImage(image, /*patchSize=*/14, /*mergeSize=*/1, /*minPixels=*/1,
-                                       /*maxPixels=*/1000000, Vec3f(0.f, 0.f, 0.f), Vec3f(1.f, 1.f, 1.f),
+                                       /*maxPixels=*/1000000,
+                                       Vec3f(0.f, 0.f, 0.f), Vec3f(1.f, 1.f, 1.f),
                                        1.f, gridH, gridW);
 
     EXPECT_EQ(gridH, 2);
@@ -542,7 +540,8 @@ public:
     using LocalVLMModelBase::setLastTokensUsed;
 
 protected:
-    Mat runVisionEncoder(const Mat&, Vec2i& dimsOut) CV_OVERRIDE { dimsOut = Vec2i(0, 0); return Mat(); }
+    Mat runVisionEncoder(const Mat&, Vec2i& dimsOut) CV_OVERRIDE
+    { dimsOut = Vec2i(0, 0); return Mat(); }
     String buildPrompt(const Vec2i&, const String&) const CV_OVERRIDE { return String(); }
     String defaultPrompt() const CV_OVERRIDE { return String(); }
 };

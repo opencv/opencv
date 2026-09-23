@@ -77,22 +77,27 @@ TEST(Vlm_Model, MissingModelNameThrows_Gemini)
 
 TEST(Vlm_Model, UnknownEngineThrows_PaddleOCRVL)
 {
-    EXPECT_THROW(create(VLM_MODEL_PADDLEOCR_VL, "/nonexistent/model/dir", "tensorrt"), cv::Exception);
+    EXPECT_THROW(create(VLM_MODEL_PADDLEOCR_VL, "/nonexistent/model/dir", "tensorrt"),
+                 cv::Exception);
 }
 
 TEST(Vlm_Model, UnknownEngineThrows_GraniteDocling)
 {
-    EXPECT_THROW(create(VLM_MODEL_GRANITE_DOCLING, "/nonexistent/model/dir", "tensorrt"), cv::Exception);
+    EXPECT_THROW(create(VLM_MODEL_GRANITE_DOCLING, "/nonexistent/model/dir", "tensorrt"),
+                 cv::Exception);
 }
 
 TEST(Vlm_Model, EndToEnd_PaddleOCRVL)
 {
-    std::string modelDir = cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_PADDLEOCR_VL_DIR");
+    std::string modelDir =
+        cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_PADDLEOCR_VL_DIR");
     if (modelDir.empty())
-        throw SkipTestException("OPENCV_TEST_VLM_PADDLEOCR_VL_DIR is not set; skipping end-to-end test");
+        throw SkipTestException(
+            "OPENCV_TEST_VLM_PADDLEOCR_VL_DIR is not set; skipping end-to-end test");
 
     std::string imagePath = cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_IMAGE");
-    ASSERT_FALSE(imagePath.empty()) << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_PADDLEOCR_VL_DIR";
+    ASSERT_FALSE(imagePath.empty())
+        << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_PADDLEOCR_VL_DIR";
 
     cv::Ptr<VLMModel> model = create(VLM_MODEL_PADDLEOCR_VL, modelDir);
     std::vector<cv::String> results = model->inferDocument(imagePath);
@@ -103,12 +108,15 @@ TEST(Vlm_Model, EndToEnd_PaddleOCRVL)
 
 TEST(Vlm_Model, EndToEnd_GraniteDocling)
 {
-    std::string modelDir = cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_GRANITE_DOCLING_DIR");
+    std::string modelDir =
+        cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_GRANITE_DOCLING_DIR");
     if (modelDir.empty())
-        throw SkipTestException("OPENCV_TEST_VLM_GRANITE_DOCLING_DIR is not set; skipping end-to-end test");
+        throw SkipTestException(
+            "OPENCV_TEST_VLM_GRANITE_DOCLING_DIR is not set; skipping end-to-end test");
 
     std::string imagePath = cv::utils::getConfigurationParameterString("OPENCV_TEST_VLM_IMAGE");
-    ASSERT_FALSE(imagePath.empty()) << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_GRANITE_DOCLING_DIR";
+    ASSERT_FALSE(imagePath.empty())
+        << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_GRANITE_DOCLING_DIR";
 
     cv::Ptr<VLMModel> model = create(VLM_MODEL_GRANITE_DOCLING, modelDir, "opencv");
     std::vector<cv::String> results = model->inferDocument(imagePath);

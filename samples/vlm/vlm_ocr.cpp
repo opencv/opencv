@@ -35,19 +35,24 @@ int main(int argc, char** argv)
 {
     const string keys =
         "{ help h         |      | Print help message }"
-        "{ model_type     |      | Which VLM to run: paddleocr-vl, granite-docling, openai, anthropic, gemini or grok }"
+        "{ model_type     |      | Which VLM to run: paddleocr-vl, granite-docling, "
+                                  "openai, anthropic, gemini or grok }"
         "{ model_dir      |      | Local model types: path to the ONNX export directory. "
-        "Cloud model types: provider model name, taken from the provider's model list (required, no default) }"
-        "{ api_key        |      | API key for cloud model types; ignored otherwise. Leave unset to read it from "
+        "Cloud model types: provider model name, taken from the provider's model "
+                                  "list (required, no default) }"
+        "{ api_key        |      | API key for cloud model types; ignored otherwise. "
+                                  "Leave unset to read it from "
         "OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY instead }"
         "{ input i        |      | Path to the input image (.png/.jpg/.jpeg) }"
         "{ prompt         |      | Task prompt (defaults to the model's built-in prompt) }"
         "{ max_new_tokens | 512  | Maximum number of new tokens to generate }"
-        "{ engine         | opencv | Local model types only: dnn engine used to load each ONNX sub-model: opencv }"
+        "{ engine         | opencv | Local model types only: dnn engine used to load "
+                                  "each ONNX sub-model: opencv }"
         "{ device         | cpu  | Local model types only: compute device: cpu or cuda }";
 
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Use this sample to run vision-language OCR / document-understanding inference in OpenCV");
+    parser.about(
+        "Use this sample to run vision-language OCR / document-understanding inference in OpenCV");
     if (parser.has("help") || !parser.has("model_type") || !parser.has("input"))
     {
         parser.printMessage();

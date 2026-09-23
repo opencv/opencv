@@ -50,10 +50,7 @@ std::string jsonEscape(const std::string& s)
 
 const char* const REDACTED = "<redacted>";
 
-// Some providers echo the offending credential back in the body of an authentication error,
-// so nothing from a response body reaches an exception message -- which a caller may log --
-// without the key being taken out of it first. The known prefixes cover the case where the
-// provider echoes only part of the key, which an exact match on apiKey would miss.
+// Providers echo the key back in some auth errors; never let it reach an exception message.
 std::string redactSecrets(const std::string& text, const String& apiKey)
 {
     const size_t redactedLen = strlen(REDACTED);
@@ -110,8 +107,6 @@ public:
         : modelType_(modelType), modelName_(modelName), apiKey_(apiKey)
     {
         CV_CheckFalse(apiKey.empty(), "vlm: api_key is required for cloud VLMModelType values");
-        // Deliberately names no model: providers retire names, and a suggestion baked in
-        // here goes stale silently and sends users chasing a 404 that is not their fault.
         CV_CheckFalse(modelName.empty(),
                       "vlm: a model name (model_dir) is required for cloud VLMModelType "
                       "values. Take it from the provider's own model list -- OpenAI and Grok "
@@ -145,8 +140,12 @@ public:
 
         switch (modelType_)
         {
-        case VLM_MODEL_OPENAI:    return inferOpenAICompatible("https://api.openai.com/v1/chat/completions", imageB64, actualPrompt, max_new_tokens);
-        case VLM_MODEL_GROK:      return inferOpenAICompatible("https://api.x.ai/v1/chat/completions", imageB64, actualPrompt, max_new_tokens);
+        case VLM_MODEL_OPENAI:
+            return inferOpenAICompatible("https://api.openai.com/v1/chat/completions",
+                                         imageB64, actualPrompt, max_new_tokens);
+        case VLM_MODEL_GROK:
+            return inferOpenAICompatible("https://api.x.ai/v1/chat/completions",
+                                         imageB64, actualPrompt, max_new_tokens);
         case VLM_MODEL_ANTHROPIC: return inferAnthropic(imageB64, actualPrompt, max_new_tokens);
         case VLM_MODEL_GEMINI:    return inferGemini(imageB64, actualPrompt, max_new_tokens);
         default:
@@ -164,7 +163,8 @@ private:
              << "\"max_tokens\":" << maxNewTokens << ","
              << "\"messages\":[{\"role\":\"user\",\"content\":["
              << "{\"type\":\"text\",\"text\":\"" << jsonEscape(prompt) << "\"},"
-             << "{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64," << imageB64 << "\"}}"
+             << "{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,"
+             << imageB64 << "\"}}"
              << "]}]}";
 
         std::vector<std::string> headers = {
@@ -191,7 +191,8 @@ private:
              << "\"model\":\"" << jsonEscape(modelName_) << "\","
              << "\"max_tokens\":" << maxNewTokens << ","
              << "\"messages\":[{\"role\":\"user\",\"content\":["
-             << "{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/png\",\"data\":\"" << imageB64 << "\"}},"
+             << "{\"type\":\"image\",\"source\":{\"type\":\"base64\","
+                "\"media_type\":\"image/png\",\"data\":\"" << imageB64 << "\"}},"
              << "{\"type\":\"text\",\"text\":\"" << jsonEscape(prompt) << "\"}"
              << "]}]}";
 
@@ -201,7 +202,8 @@ private:
             "anthropic-version: 2023-06-01"
         };
 
-        HttpResponse response = httpPostJson("https://api.anthropic.com/v1/messages", body.str(), headers);
+        HttpResponse response =
+            httpPostJson("https://api.anthropic.com/v1/messages", body.str(), headers);
         checkHttpStatus(response, "Anthropic", apiKey_);
 
         const JsonValue root = jsonParse(response.body);
@@ -226,8 +228,9 @@ private:
              << "\"generationConfig\":{\"maxOutputTokens\":" << maxNewTokens << "}"
              << "}";
 
-        String url = cv::format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
-                                 modelName_.c_str());
+        String url =
+            cv::format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
+                       modelName_.c_str());
         std::vector<std::string> headers = {
             "Content-Type: application/json",
             "x-goog-api-key: " + apiKey_
@@ -257,7 +260,8 @@ private:
 
 } // namespace
 
-Ptr<VLMModel> createCloudModel(VLMModelType model_type, const String& model_name, const String& api_key)
+Ptr<VLMModel> createCloudModel(VLMModelType model_type, const String& model_name,
+                               const String& api_key)
 {
     return makePtr<CloudVLMModel>(model_type, model_name, api_key);
 }
