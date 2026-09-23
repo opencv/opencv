@@ -1012,6 +1012,30 @@ struct RotateOp : public BaseElemWiseOp
     int rotatecode;
 };
 
+TEST(Core_Rotate, OddSizesAndPaddedRows)
+{
+    const int types[] = { CV_8UC1, CV_16UC1, CV_32SC1, CV_64FC1 };
+    const Size sizes[] = { Size(3550, 3), Size(513, 7), Size(1025, 9), Size(17, 19) };
+    const int rotateCodes[] = { ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE };
+    RNG rng(0x12345678);
+
+    for (int type : types)
+        for (const Size& size : sizes)
+        {
+            Mat storage(size.height + 2, size.width + 2, type);
+            Mat src = storage(Rect(1, 1, size.width, size.height));
+            rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(255));
+            for (int rotateCode : rotateCodes)
+            {
+                SCOPED_TRACE(cv::format("type=%d size=%dx%d code=%d", type, size.width, size.height, rotateCode));
+                Mat expected, actual;
+                reference::rotate(src, expected, rotateCode);
+                cv::rotate(src, actual, rotateCode);
+                EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+            }
+        }
+}
+
 struct TransposeOp : public BaseElemWiseOp
 {
     TransposeOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}

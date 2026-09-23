@@ -334,6 +334,14 @@ int transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t 
 #undef cv_hal_transpose2d
 #define cv_hal_transpose2d cv::rvv_hal::core::transpose2d
 
+/* ############ rotate90 ############ */
+
+int rotate90(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+             uchar* dst_data, size_t dst_step, int angle);
+
+#undef cv_hal_rotate90
+#define cv_hal_rotate90 cv::rvv_hal::core::rotate90
+
 #endif // CV_HAL_RVV_1P0_ENABLED
 
 }}} // cv::rvv_hal::core
