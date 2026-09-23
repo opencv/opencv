@@ -1,0 +1,100 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+'''
+This is a sample script to run ALBERT (albert-large-v2) masked-LM inference
+in OpenCV using an ONNX model. The input text must contain a single literal
+"[MASK]" token; the script prints the top predictions for that position.
+
+Model: https://huggingface.co/Xenova/albert-large-v2
+
+Downloading the ALBERT model and tokenizer:
+
+1. Install the Hugging Face CLI:
+
+    pip install -U "hf"
+
+2. Download only the files needed (full-precision ONNX model, config.json and
+   the SentencePiece tokenizer.json) into a local directory:
+
+    hf download Xenova/albert-large-v2 \
+        onnx/model.onnx config.json tokenizer.json tokenizer_config.json \
+        --local-dir albert-large-v2
+
+Run the script:
+1. Install the required dependencies:
+
+    pip install numpy
+
+2. Run the script:
+
+    python albert_inference.py --model=<path-to-onnx-model> \
+                               --tokenizer_path=<path-to-albert-large-v2-dir> \
+                               --text="Paris is the [MASK] of France." \
+                               --topk=5
+'''
+
+import numpy as np
+import argparse
+import cv2 as cv
+
+MASK_TOKEN = '[MASK]'
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Use this script to run ALBERT masked-LM inference in OpenCV',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--model', type=str, required=True, help='Path to the ALBERT ONNX model file.')
+    parser.add_argument('--tokenizer_path', type=str, required=True, help='Path to the ALBERT tokenizer directory, or to its config.json.')
+    parser.add_argument('--text', type=str, default='Paris is the [MASK] of France.', help='Input text containing a single [MASK] token.')
+    parser.add_argument('--topk', type=int, default=5, help='Number of top predictions to print.')
+    return parser.parse_args()
+
+def encode_with_mask(tokenizer, text):
+    if text.count(MASK_TOKEN) != 1:
+        raise ValueError('expected exactly one [MASK] token')
+    mask_id = tokenizer.encode(MASK_TOKEN)[1]
+    ids = list(tokenizer.encode(text))
+    mask_pos = ids.index(mask_id)
+    return ids, mask_pos
+
+def softmax(x):
+    e = np.exp(x - np.max(x))
+    return e / e.sum()
+
+def albert_inference(net, tokenizer, text, topk):
+
+    print("Inferencing ALBERT model...")
+
+    ids, mask_pos = encode_with_mask(tokenizer, text)
+    n = len(ids)
+    input_ids = np.array([ids], dtype=np.int64)
+    attention_mask = np.ones((1, n), dtype=np.int64)
+    token_type_ids = np.zeros((1, n), dtype=np.int64)
+
+    net.setInput(input_ids, 'input_ids')
+    net.setInput(attention_mask, 'attention_mask')
+    net.setInput(token_type_ids, 'token_type_ids')
+    logits = net.forward('logits')
+
+    row = logits[0, mask_pos]
+    probs = softmax(row)
+    top_ids = np.argsort(row)[::-1][:topk]
+
+    return [(int(t), tokenizer.decode([int(t)]).strip(), float(probs[t])) for t in top_ids]
+
+if __name__ == '__main__':
+
+    args = parse_args()
+
+    print("Preparing ALBERT model...")
+    tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
+
+    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+
+    print(f"Text: {args.text}")
+    predictions = albert_inference(net, tokenizer, args.text, args.topk)
+    for rank, (token_id, token, prob) in enumerate(predictions, start=1):
+        print(f"  {rank}. {token!r}  id={token_id}  p={prob:.4f}")

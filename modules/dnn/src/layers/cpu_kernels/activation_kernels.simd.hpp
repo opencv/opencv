@@ -139,9 +139,12 @@ static void activationTanH(const void* input, void* output,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int vlanes = VTraits<v_float32>::vlanes();
     v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f);
+    // Clamp prevents v_exp overflow turning (inf-1)/(inf+1) into NaN.
+    v_float32 min_val = vx_setall_f32(-80.f), max_val = vx_setall_f32(88.f);
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
-        v_float32 e2x = v_exp(v_mul(two, x));
+        v_float32 z = v_min(v_max(v_mul(two, x), min_val), max_val);
+        v_float32 e2x = v_exp(z);
         v_float32 t = v_div(v_sub(e2x, one), v_add(e2x, one));
         vx_store(out + i, t);
     }

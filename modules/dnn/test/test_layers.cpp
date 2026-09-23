@@ -2666,6 +2666,39 @@ TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
     EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);
 }
 
+TEST(Layer_Test_TanH, NoNaN_LargeInput)
+{
+    LayerParams lp;
+    lp.type = "TanH";
+    lp.name = "test_tanh";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("TanH", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    // Overflowing values go first; in the scalar tail tanhf() would mask the NaN.
+    const int len = 64;
+    float data[len];
+    for (int i = 0; i < len / 2; i++)
+        data[i] = (i % 2 == 0 ? 1.f : -1.f) * (45.f + i);
+    for (int i = len / 2; i < len; i++)
+        data[i] = -4.f + 0.25f * (i - len / 2);
+
+    int dims[] = {1, 1, len};
+    Mat inp(3, dims, CV_32F, data);
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < len; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
+        EXPECT_NEAR(val, std::tanh(data[i]), 1e-6f) << "index " << i;
+    }
+}
+
 TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
 {
     LayerParams lp;

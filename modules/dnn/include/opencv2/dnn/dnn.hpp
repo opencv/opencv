@@ -2101,28 +2101,48 @@ public:
     /**
      * @brief Load a tokenizer from a model directory.
      *
-     * Expects the directory to contain:
-     *  - `config.json` with field `model_type` with value "gpt2" or "gpt4".
+     * Accepts either the model directory or the path to its `config.json`. The
+     * directory must contain:
+     *  - `config.json`. An optional `method` field (one of: BPE, Gemma, SentencePiece,
+     *    Unigram, WordPiece) selects the family; without it the family is detected from
+     *    `tokenizer.json`, so a stock Hugging Face config works unmodified.
      *  - `tokenizer.json` produced by the corresponding model family.
      *
-     * The argument is a path prefix; this function concatenates file
-     * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
-     * end with an appropriate path separator.
-     *
-     * @param model_config  Path to config.json for model.
-     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `model_type` is unsupported.
+     * @param model_config  Model directory, or the path to its config.json.
+     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `method` is unsupported.
      */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
-     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
+     * @brief Encode UTF-8 text to token ids.
      *
-     * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
+     * Special-token text in @p text is recognized and mapped to its own id, and any
+     * wrapper the model's post_processor declares (e.g. BERT's `[CLS]`/`[SEP]`) is
+     * applied.
      *
      * @param text  UTF-8 input string.
      * @return Vector of token ids (32-bit ids narrowed to int for convenience).
      */
     CV_WRAP std::vector<int> encode(const std::string& text);
+
+    /**
+     * @brief Encode several text chunks as one sequence.
+     *
+     * The chunks are laid out the way the model's own post_processor declares a pair of
+     * sequences, repeated for as many chunks as are given. For a BERT-family tokenizer
+     * that is `[CLS] textChunks[0] [SEP] textChunks[1] [SEP] ... textChunks[N-1] [SEP]`;
+     * for T5 it is `textChunks[0] </s> textChunks[1] </s> ...`. Whatever the template
+     * puts between its two sequences is repeated between every neighbouring pair.
+     *
+     * A single chunk is encoded exactly like encode(const std::string&). Two or more
+     * require a tokenizer whose `post_processor` declares a `pair` template: BERT and
+     * ALBERT, T5 and Gemma do; byte-level BPE models such as GPT-2 do not, and throw.
+     *
+     * @param textChunks  UTF-8 input chunks; must not be empty.
+     * @return Vector of token ids. Throws cv::Exception if @p textChunks is empty, or if
+     *         it holds more than one chunk and the loaded tokenizer has no pair template.
+     */
+    CV_WRAP std::vector<int> encode(const std::vector<std::string>& textChunks);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;
