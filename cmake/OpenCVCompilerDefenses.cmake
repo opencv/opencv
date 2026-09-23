@@ -51,11 +51,7 @@ elseif(CV_CLANG)
     set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "${OPENCV_LINKER_DEFENSES_FLAGS_COMMON} -z noexecstack -z relro -z now" )
   endif()
 elseif(CV_GCC)
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")
-    ocv_add_defense_compiler_flag("-fstack-protector")
-  else()
-    ocv_add_defense_compiler_flag("-fstack-protector-strong")
-  endif()
+  ocv_add_defense_compiler_flag("-fstack-protector-strong")
 
   # These flags is added by general options: -Wformat -Wformat-security
   if(NOT CMAKE_CXX_FLAGS MATCHES "-Wformat" OR NOT CMAKE_CXX_FLAGS MATCHES "format-security")

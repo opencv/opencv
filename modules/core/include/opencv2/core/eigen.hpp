@@ -51,7 +51,7 @@
 
 #include "opencv2/core.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
+#if defined _MSC_VER
 #ifndef NOMINMAX
 #define NOMINMAX // fix https://github.com/opencv/opencv/issues/17548
 #endif

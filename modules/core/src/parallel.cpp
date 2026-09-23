@@ -88,7 +88,7 @@
     #define HAVE_GCD
 #endif
 
-#if defined _MSC_VER && _MSC_VER >= 1600
+#if defined _MSC_VER
     #define HAVE_CONCURRENCY
 #endif
 
@@ -128,8 +128,6 @@
 #elif defined HAVE_GCD
     #include <dispatch/dispatch.h>
     #include <pthread.h>
-#elif defined WINRT && _MSC_VER < 1900
-    #include <ppltasks.h>
 #elif defined HAVE_CONCURRENCY
     #include <ppl.h>
 #elif defined HAVE_PTHREADS_PF

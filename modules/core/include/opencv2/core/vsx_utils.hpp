@@ -344,33 +344,8 @@ VSX_IMPL_1RG(vec_udword2, vec_float4,  xvcvspuxds, vec_ctulo)
 VSX_FINLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
 
 #ifndef vec_permi
-#if __clang_major__ < 5
-// implement vec_permi in a dirty way
-#   define VSX_IMPL_CLANG_4_PERMI(Tvec)                                                 \
-    VSX_FINLINE(Tvec) vec_permi(const Tvec& a, const Tvec& b, unsigned const char c)    \
-    {                                                                                   \
-        switch (c)                                                                      \
-        {                                                                               \
-        case 0:                                                                         \
-            return vec_mergeh(a, b);                                                    \
-        case 1:                                                                         \
-            return vec_mergel(vec_mergeh(a, a), b);                                     \
-        case 2:                                                                         \
-            return vec_mergeh(vec_mergel(a, a), b);                                     \
-        default:                                                                        \
-            return vec_mergel(a, b);                                                    \
-        }                                                                               \
-    }
-    VSX_IMPL_CLANG_4_PERMI(vec_udword2)
-    VSX_IMPL_CLANG_4_PERMI(vec_dword2)
-    VSX_IMPL_CLANG_4_PERMI(vec_double2)
-
-// vec_xxsldwi is missing in clang 4
-#   define vec_xxsldwi(a, b, c) vec_sld(a, b, (c) * 4)
-#else
 // vec_xxpermdi is missing little-endian supports in clang 4 just like gcc4
 #   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
-#endif // __clang_major__ < 5
 #endif
 
 // shift left double by word immediate
@@ -429,25 +404,19 @@ VSX_IMPL_CONVERT(vec_double2, vec_dword2,  vec_ctd)
 VSX_IMPL_CONVERT(vec_double2, vec_udword2, vec_ctd)
 
 // converts word and doubleword to single-precision
-#if __clang_major__ > 4
-#   undef vec_ctf
-#endif
+#undef vec_ctf
 VSX_IMPL_CONVERT(vec_float4, vec_int4,    vec_ctf)
 VSX_IMPL_CONVERT(vec_float4, vec_uint4,   vec_ctf)
 VSX_REDIRECT_1RG(vec_float4, vec_dword2,  vec_ctfo, __builtin_vsx_xvcvsxdsp)
 VSX_REDIRECT_1RG(vec_float4, vec_udword2, vec_ctfo, __builtin_vsx_xvcvuxdsp)
 
 // converts single and double precision to signed word
-#if __clang_major__ > 4
-#   undef vec_cts
-#endif
+#undef vec_cts
 VSX_REDIRECT_1RG(vec_int4,  vec_double2, vec_ctso, __builtin_vsx_xvcvdpsxws)
 VSX_IMPL_CONVERT(vec_int4,  vec_float4,  vec_cts)
 
 // converts single and double precision to unsigned word
-#if __clang_major__ > 4
-#   undef vec_ctu
-#endif
+#undef vec_ctu
 VSX_REDIRECT_1RG(vec_uint4, vec_double2, vec_ctuo, __builtin_vsx_xvcvdpuxws)
 VSX_IMPL_CONVERT(vec_uint4, vec_float4,  vec_ctu)
 
@@ -510,7 +479,6 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
  * changing behavior of conversion intrinsics for gcc has effect on Eigen
  * so we redefine old behavior again only on gcc, clang
 */
-#if !defined(__clang__) || __clang_major__ > 4
     // ignoring second arg since Eigen only truncates toward zero
 #   define VSX_IMPL_CONV_2VARIANT(rt, rg, fnm, fn2)     \
     VSX_FINLINE(rt) fnm(const rg& a, int only_truncate) \
@@ -526,7 +494,6 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
     // define vec_cts for converting double precision to signed doubleword
     // which isn't compatible with xlc but its okay since Eigen only uses it for gcc
     VSX_IMPL_CONV_2VARIANT(vec_dword2, vec_double2, vec_cts, vec_ctsl)
-#endif // Eigen
 
 #endif // Common GCC, CLANG compatibility
 

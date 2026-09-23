@@ -38,6 +38,7 @@
 //! @cond IGNORED
 
 #include <algorithm>
+#include <random>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
@@ -362,7 +363,8 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
 #ifndef OPENCV_FLANN_USE_STD_RAND
     cv::randShuffle(indices);
 #else
-    std::random_shuffle(indices.begin(), indices.end());
+    std::mt19937 std_rng(12345);
+    std::shuffle(indices.begin(), indices.end(), std_rng);
 #endif
 
     // Generate a random set of order of subsignature_size_ bits

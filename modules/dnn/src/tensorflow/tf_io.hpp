@@ -13,7 +13,7 @@ Declaration of various functions which are related to Tensorflow models reading.
 #define __OPENCV_DNN_TF_IO_HPP__
 #ifdef HAVE_PROTOBUF
 
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
@@ -22,7 +22,7 @@ Declaration of various functions which are related to Tensorflow models reading.
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 

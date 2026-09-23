@@ -55,15 +55,7 @@ enum class NearestMode {
     ROUND_PREFER_FLOOR
 };
 
-#if __cplusplus < 201703L
-template<typename T>
-static T clamp(T d, T min, T max)
-{
-    return std::min(std::max(d, min), max);
-}
-#else
-#define clamp std::clamp
-#endif
+using std::clamp;
 
 static inline NearestMode parseNearestMode(const String& s)
 {

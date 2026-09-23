@@ -70,7 +70,6 @@ function(ocv_create_plugin module default_name dependency_target dependency_targ
 
   target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE ${dependency_target})
   set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES
-    CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
   )
 

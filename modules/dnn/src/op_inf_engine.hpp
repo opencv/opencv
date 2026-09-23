@@ -34,7 +34,7 @@
 #define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
@@ -43,7 +43,7 @@
 #include <openvino/pass/serialize.hpp>
 #include <openvino/pass/convert_fp32_to_fp16.hpp>
 
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 //#pragma GCC diagnostic pop
 #endif
 

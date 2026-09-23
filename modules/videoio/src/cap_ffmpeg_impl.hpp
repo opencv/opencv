@@ -60,9 +60,6 @@ using namespace cv;
 
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4244 4510 4610 )
-#endif
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -162,12 +159,6 @@ inline static AVRational av_make_q(int num, int den)
 }
 #endif
 
-// GCC 4.x compilation bug. Details: https://github.com/opencv/opencv/issues/20292
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)
-#undef USE_AV_HW_CODECS
-#define USE_AV_HW_CODECS 0
-#endif
-
 //#define USE_AV_HW_CODECS 0
 #ifndef USE_AV_HW_CODECS
 #if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
@@ -178,9 +169,7 @@ inline static AVRational av_make_q(int num, int den)
 #endif
 #endif
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( default: 4244 4510 4610 )
-#endif
+
 
 #ifdef NDEBUG
 #define CV_WARN(message)
@@ -190,13 +179,6 @@ inline static AVRational av_make_q(int num, int den)
 
 #if defined _WIN32
     #include <windows.h>
-    #if defined _MSC_VER && _MSC_VER < 1900
-    struct timespec
-    {
-        time_t tv_sec;
-        long   tv_nsec;
-    };
-  #endif
 #elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     #include <unistd.h>
     #include <stdio.h>

@@ -100,11 +100,6 @@ CV_OperationsTest::~CV_OperationsTest() {}
 #define CHECK_DIFF(a, b) checkDiff(a, b, "(" #a ")  !=  (" #b ")  at l." STR(__LINE__))
 #define CHECK_DIFF_FLT(a, b) checkDiffF(a, b, "(" #a ")  !=(eps)  (" #b ")  at l." STR(__LINE__))
 
-#if defined _MSC_VER && _MSC_VER < 1400
-#define MSVC_OLD 1
-#else
-#define MSVC_OLD 0
-#endif
 
 template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
 {
@@ -295,9 +290,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(4.0 * (maskMat1 | maskMat1), maskMat4);
         CHECK_DIFF((maskMat4 | maskMat4)/4.0, maskMat1);
 
-#if !MSVC_OLD
         CHECK_DIFF(2.0 * (maskMat1 * 2.0) , maskMat4);
-#endif
         CHECK_DIFF((maskMat4 / 2.0) / 2.0 , maskMat1);
         CHECK_DIFF(-(maskMat4 - maskMat5) , maskMat1);
         CHECK_DIFF(-((maskMat4 - maskMat5) * 1.0), maskMat1);
@@ -363,7 +356,6 @@ bool CV_OperationsTest::TestMat()
 
         m = maskMat1.clone(); m+=(maskMat1 * 3.0 + 1.0); CHECK_DIFF(m, maskMat5);
         m = maskMat5.clone(); m-=(maskMat1 * 3.0 + 1.0); CHECK_DIFF(m, maskMat1);
-#if !MSVC_OLD
         m = mi.clone(); m+=(3.0 * mi * mt + d1); CHECK_DIFF_FLT(m, mi + d1 * 4);
         m = mi.clone(); m-=(3.0 * mi * mt + d1); CHECK_DIFF_FLT(m, mi - d1 * 4);
         m = mi.clone(); m*=(mt * 1.0); CHECK_DIFF_FLT(m, d1);
@@ -420,7 +412,6 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF_FLT(mt.inv() * mt, d1);
 
         CHECK_DIFF_FLT(mt.inv() * (2*mt - mt), d1);
-#endif
     }
     catch (const test_excep& e)
     {

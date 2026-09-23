@@ -14,7 +14,7 @@ extern "C"
 #   define OPENCV_FFMPEG_API
 #elif defined _WIN32
 #   define OPENCV_FFMPEG_API __declspec(dllexport)
-#elif defined __GNUC__ && __GNUC__ >= 4
+#elif defined __GNUC__
 #   define OPENCV_FFMPEG_API __attribute__ ((visibility ("default")))
 #else
 #   define OPENCV_FFMPEG_API

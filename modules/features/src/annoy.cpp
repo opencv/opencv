@@ -14,10 +14,8 @@ namespace cv
 
 struct Random
 {
-    static const uint64 default_seed = 0xffffffff;
-    #if __cplusplus < 201103L
     typedef uint64 seed_type;
-    #endif
+    static const uint64 default_seed = 0xffffffff;
 
     RNG rng;
 

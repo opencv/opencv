@@ -317,10 +317,6 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
 template<typename T, typename WT, typename MT>
-#if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
-// Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60196
-__attribute__((optimize("no-tree-vectorize")))
-#endif
 static void momentsInTile( const Mat& img, double* moments )
 {
     Size size = img.size();
