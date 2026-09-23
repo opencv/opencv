@@ -930,59 +930,59 @@ void mulTransposed(InputArray _src, OutputArray _dst, bool ata,
 *                                      Dot Product                                       *
 \****************************************************************************************/
 
-static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
+static double dotProd_8u(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_8u, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_8u, ((const uchar*)src1, (const uchar*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_8s(const schar* src1, const schar* src2, int len)
+static double dotProd_8s(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_8s, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_8s, ((const schar*)src1, (const schar*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
+static double dotProd_16u(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_16u, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_16u, ((const ushort*)src1, (const ushort*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_16s(const short* src1, const short* src2, int len)
+static double dotProd_16s(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_16s, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_16s, ((const short*)src1, (const short*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_32s(const int* src1, const int* src2, int len)
+static double dotProd_32s(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_32s, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_32s, ((const int*)src1, (const int*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_32f(const float* src1, const float* src2, int len)
+static double dotProd_32f(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_32f, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_32f, ((const float*)src1, (const float*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-static double dotProd_64f(const double* src1, const double* src2, int len)
+static double dotProd_64f(const void* src1, const void* src2, int len)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(dotProd_64f, (src1, src2, len),
+    CV_CPU_DISPATCH(dotProd_64f, ((const double*)src1, (const double*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
+typedef double (*DotProdFunc)(const void* src1, const void* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
 {
     static DotProdFunc dotProdTab[CV_DEPTH_MAX] =
     {
-        (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
-        (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-        (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
-        (DotProdFunc)dotProd_64f, 0
+        dotProd_8u, dotProd_8s,
+        dotProd_16u, dotProd_16s,
+        dotProd_32s, dotProd_32f,
+        dotProd_64f, 0
     };
 
     return dotProdTab[depth];

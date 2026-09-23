@@ -11,9 +11,12 @@ namespace cv
 {
 
 template<typename _Tp, typename _Rt>
-void batchDistL1_(const _Tp* src1, const _Tp* src2, size_t step2,
-                  int nvecs, int len, _Rt* dist, const uchar* mask)
+static void batchDistL1_(const void* _src1, const void* _src2, size_t step2,
+                         int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const _Tp* src1 = (const _Tp*)_src1;
+    const _Tp* src2 = (const _Tp*)_src2;
+    _Rt* dist = (_Rt*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -29,9 +32,12 @@ void batchDistL1_(const _Tp* src1, const _Tp* src2, size_t step2,
 }
 
 template<typename _Tp, typename _Rt>
-void batchDistL2Sqr_(const _Tp* src1, const _Tp* src2, size_t step2,
-                     int nvecs, int len, _Rt* dist, const uchar* mask)
+static void batchDistL2Sqr_(const void* _src1, const void* _src2, size_t step2,
+                            int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const _Tp* src1 = (const _Tp*)_src1;
+    const _Tp* src2 = (const _Tp*)_src2;
+    _Rt* dist = (_Rt*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -47,9 +53,12 @@ void batchDistL2Sqr_(const _Tp* src1, const _Tp* src2, size_t step2,
 }
 
 template<>
-void batchDistL2Sqr_(const float* src1, const float* src2, size_t step2,
-                     int nvecs, int len, float* dist, const uchar* mask)
+void batchDistL2Sqr_<float, float>(const void* _src1, const void* _src2, size_t step2,
+                                   int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const float* src1 = (const float*)_src1;
+    const float* src2 = (const float*)_src2;
+    float* dist = (float*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -65,9 +74,12 @@ void batchDistL2Sqr_(const float* src1, const float* src2, size_t step2,
 }
 
 template<typename _Tp, typename _Rt>
-void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
-                  int nvecs, int len, _Rt* dist, const uchar* mask)
+static void batchDistL2_(const void* _src1, const void* _src2, size_t step2,
+                         int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const _Tp* src1 = (const _Tp*)_src1;
+    const _Tp* src2 = (const _Tp*)_src2;
+    _Rt* dist = (_Rt*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -83,9 +95,12 @@ void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
 }
 
 template<>
-void batchDistL2_(const float* src1, const float* src2, size_t step2,
-                  int nvecs, int len, float* dist, const uchar* mask)
+void batchDistL2_<float, float>(const void* _src1, const void* _src2, size_t step2,
+                                int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const float* src1 = (const float*)_src1;
+    const float* src2 = (const float*)_src2;
+    float* dist = (float*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -100,9 +115,12 @@ void batchDistL2_(const float* src1, const float* src2, size_t step2,
     }
 }
 
-static void batchDistHamming(const uchar* src1, const uchar* src2, size_t step2,
-                             int nvecs, int len, int* dist, const uchar* mask)
+static void batchDistHamming(const void* _src1, const void* _src2, size_t step2,
+                             int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const uchar* src1 = (const uchar*)_src1;
+    const uchar* src2 = (const uchar*)_src2;
+    int* dist = (int*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -122,9 +140,12 @@ static void batchDistHamming(const uchar* src1, const uchar* src2, size_t step2,
     }
 }
 
-static void batchDistHamming2(const uchar* src1, const uchar* src2, size_t step2,
-                              int nvecs, int len, int* dist, const uchar* mask)
+static void batchDistHamming2(const void* _src1, const void* _src2, size_t step2,
+                              int nvecs, int len, void* _dist, const uchar* mask)
 {
+    const uchar* src1 = (const uchar*)_src1;
+    const uchar* src2 = (const uchar*)_src2;
+    int* dist = (int*)_dist;
     step2 /= sizeof(src2[0]);
     if( !mask )
     {
@@ -144,56 +165,8 @@ static void batchDistHamming2(const uchar* src1, const uchar* src2, size_t step2
     }
 }
 
-static void batchDistL1_8u32s(const uchar* src1, const uchar* src2, size_t step2,
-                               int nvecs, int len, int* dist, const uchar* mask)
-{
-    batchDistL1_<uchar, int>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL1_8u32f(const uchar* src1, const uchar* src2, size_t step2,
-                               int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL1_<uchar, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL2Sqr_8u32s(const uchar* src1, const uchar* src2, size_t step2,
-                                  int nvecs, int len, int* dist, const uchar* mask)
-{
-    batchDistL2Sqr_<uchar, int>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL2Sqr_8u32f(const uchar* src1, const uchar* src2, size_t step2,
-                                  int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL2Sqr_<uchar, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL2_8u32f(const uchar* src1, const uchar* src2, size_t step2,
-                               int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL2_<uchar, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL1_32f(const float* src1, const float* src2, size_t step2,
-                             int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL1_<float, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL2Sqr_32f(const float* src1, const float* src2, size_t step2,
-                                int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL2Sqr_<float, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-static void batchDistL2_32f(const float* src1, const float* src2, size_t step2,
-                             int nvecs, int len, float* dist, const uchar* mask)
-{
-    batchDistL2_<float, float>(src1, src2, step2, nvecs, len, dist, mask);
-}
-
-typedef void (*BatchDistFunc)(const uchar* src1, const uchar* src2, size_t step2,
-                              int nvecs, int len, uchar* dist, const uchar* mask);
+typedef void (*BatchDistFunc)(const void* src1, const void* src2, size_t step2,
+                              int nvecs, int len, void* dist, const uchar* mask);
 
 
 struct BatchDistInvoker : public ParallelLoopBody
@@ -352,28 +325,28 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     if( type == CV_8U )
     {
         if( normType == NORM_L1 && dtype == CV_32S )
-            func = (BatchDistFunc)batchDistL1_8u32s;
+            func = batchDistL1_<uchar, int>;
         else if( normType == NORM_L1 && dtype == CV_32F )
-            func = (BatchDistFunc)batchDistL1_8u32f;
+            func = batchDistL1_<uchar, float>;
         else if( normType == NORM_L2SQR && dtype == CV_32S )
-            func = (BatchDistFunc)batchDistL2Sqr_8u32s;
+            func = batchDistL2Sqr_<uchar, int>;
         else if( normType == NORM_L2SQR && dtype == CV_32F )
-            func = (BatchDistFunc)batchDistL2Sqr_8u32f;
+            func = batchDistL2Sqr_<uchar, float>;
         else if( normType == NORM_L2 && dtype == CV_32F )
-            func = (BatchDistFunc)batchDistL2_8u32f;
+            func = batchDistL2_<uchar, float>;
         else if( normType == NORM_HAMMING && dtype == CV_32S )
-            func = (BatchDistFunc)batchDistHamming;
+            func = batchDistHamming;
         else if( normType == NORM_HAMMING2 && dtype == CV_32S )
-            func = (BatchDistFunc)batchDistHamming2;
+            func = batchDistHamming2;
     }
     else if( type == CV_32F && dtype == CV_32F )
     {
         if( normType == NORM_L1 )
-            func = (BatchDistFunc)batchDistL1_32f;
+            func = batchDistL1_<float, float>;
         else if( normType == NORM_L2SQR )
-            func = (BatchDistFunc)batchDistL2Sqr_32f;
+            func = batchDistL2Sqr_<float, float>;
         else if( normType == NORM_L2 )
-            func = (BatchDistFunc)batchDistL2_32f;
+            func = batchDistL2_<float, float>;
     }
 
     if( func == 0 )

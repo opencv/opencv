@@ -812,8 +812,10 @@ struct iPow_SIMD<double, double>
 
 template<typename T, typename WT>
 static void
-iPow_i( const T* src, T* dst, int len, int power )
+iPow_i( const void* _src, void* _dst, int len, int power )
 {
+    const T* src = (const T*)_src;
+    T* dst = (T*)_dst;
     if( power < 0 )
     {
         T tab[5] =
@@ -852,8 +854,10 @@ iPow_i( const T* src, T* dst, int len, int power )
 
 template<typename T>
 static void
-iPow_f( const T* src, T* dst, int len, int power0 )
+iPow_f( const void* _src, void* _dst, int len, int power0 )
 {
+    const T* src = (const T*)_src;
+    T* dst = (T*)_dst;
     iPow_SIMD<T, T> vop;
     int i = vop(src, dst, len, power0);
     int power = std::abs(power0);
@@ -878,48 +882,12 @@ iPow_f( const T* src, T* dst, int len, int power0 )
     }
 }
 
-static void iPow8u(const uchar* src, uchar* dst, int len, int power)
-{
-    iPow_i<uchar, unsigned>(src, dst, len, power);
-}
-
-static void iPow8s(const schar* src, schar* dst, int len, int power)
-{
-    iPow_i<schar, int>(src, dst, len, power);
-}
-
-static void iPow16u(const ushort* src, ushort* dst, int len, int power)
-{
-    iPow_i<ushort, unsigned>(src, dst, len, power);
-}
-
-static void iPow16s(const short* src, short* dst, int len, int power)
-{
-    iPow_i<short, int>(src, dst, len, power);
-}
-
-static void iPow32s(const int* src, int* dst, int len, int power)
-{
-    iPow_i<int, int>(src, dst, len, power);
-}
-
-static void iPow32f(const float* src, float* dst, int len, int power)
-{
-    iPow_f<float>(src, dst, len, power);
-}
-
-static void iPow64f(const double* src, double* dst, int len, int power)
-{
-    iPow_f<double>(src, dst, len, power);
-}
-
-
-typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
+typedef void (*IPowFunc)( const void* src, void* dst, int len, int power );
 
 static IPowFunc ipowTab[CV_DEPTH_MAX] =
 {
-    (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
-    (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
+    iPow_i<uchar, unsigned>, iPow_i<schar, int>, iPow_i<ushort, unsigned>, iPow_i<short, int>,
+    iPow_i<int, int>, iPow_f<float>, iPow_f<double>, 0
 };
 
 #ifdef HAVE_OPENCL

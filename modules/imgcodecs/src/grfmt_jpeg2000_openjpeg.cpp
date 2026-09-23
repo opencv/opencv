@@ -446,8 +446,9 @@ bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bo
     return false;
 }
 
-OPJ_SIZE_T opjReadFromBuffer(void* dist, OPJ_SIZE_T count, detail::OpjMemoryBuffer* buffer)
+OPJ_SIZE_T opjReadFromBuffer(void* dist, OPJ_SIZE_T count, void* userData)
 {
+    detail::OpjMemoryBuffer* buffer = static_cast<detail::OpjMemoryBuffer*>(userData);
     const OPJ_SIZE_T bytesToRead = std::min(buffer->availableBytes(), count);
     if (bytesToRead > 0)
     {
@@ -461,21 +462,23 @@ OPJ_SIZE_T opjReadFromBuffer(void* dist, OPJ_SIZE_T count, detail::OpjMemoryBuff
     }
 }
 
-OPJ_SIZE_T opjSkipFromBuffer(OPJ_SIZE_T count, detail::OpjMemoryBuffer* buffer) {
-    const OPJ_SIZE_T bytesToSkip = std::min(buffer->availableBytes(), count);
+OPJ_OFF_T opjSkipFromBuffer(OPJ_OFF_T count, void* userData) {
+    detail::OpjMemoryBuffer* buffer = static_cast<detail::OpjMemoryBuffer*>(userData);
+    const OPJ_SIZE_T bytesToSkip = std::min(buffer->availableBytes(), static_cast<OPJ_SIZE_T>(count));
     if (bytesToSkip > 0)
     {
         buffer->pos += bytesToSkip;
-        return bytesToSkip;
+        return static_cast<OPJ_OFF_T>(bytesToSkip);
     }
     else
     {
-        return static_cast<OPJ_SIZE_T>(-1);
+        return static_cast<OPJ_OFF_T>(-1);
     }
 }
 
-OPJ_BOOL opjSeekFromBuffer(OPJ_OFF_T count, detail::OpjMemoryBuffer* buffer)
+OPJ_BOOL opjSeekFromBuffer(OPJ_OFF_T count, void* userData)
 {
+    detail::OpjMemoryBuffer* buffer = static_cast<detail::OpjMemoryBuffer*>(userData);
     // Count should stay positive to prevent unsigned overflow
     CV_DbgAssert(count > 0);
     // To provide proper comparison between OPJ_OFF_T and OPJ_SIZE_T, both should be
@@ -494,9 +497,9 @@ detail::StreamPtr opjCreateBufferInputStream(detail::OpjMemoryBuffer* buf)
         opj_stream_set_user_data(stream.get(), static_cast<void*>(buf), nullptr);
         opj_stream_set_user_data_length(stream.get(), buf->length);
 
-        opj_stream_set_read_function(stream.get(), (opj_stream_read_fn)(opjReadFromBuffer));
-        opj_stream_set_skip_function(stream.get(), (opj_stream_skip_fn)(opjSkipFromBuffer));
-        opj_stream_set_seek_function(stream.get(), (opj_stream_seek_fn)(opjSeekFromBuffer));
+        opj_stream_set_read_function(stream.get(), opjReadFromBuffer);
+        opj_stream_set_skip_function(stream.get(), opjSkipFromBuffer);
+        opj_stream_set_seek_function(stream.get(), opjSeekFromBuffer);
     }
     return stream;
 }

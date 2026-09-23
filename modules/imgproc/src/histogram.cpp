@@ -691,12 +691,19 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
 typedef IppStatus(CV_STDCALL * IppiHistogram_C1)(const void* pSrc, int srcStep,
     IppiSize roiSize, Ipp32u* pHist, const IppiHistogramSpec* pSpec, Ipp8u* pBuffer);
 
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, IppiSize, Ipp32u*, const IppiHistogramSpec*, Ipp8u*)>
+static IppStatus CV_STDCALL ippiHistogram_C1_Wrap(const void* pSrc, int srcStep,
+    IppiSize roiSize, Ipp32u* pHist, const IppiHistogramSpec* pSpec, Ipp8u* pBuffer)
+{
+    return fn((const T*)pSrc, srcStep, roiSize, pHist, pSpec, pBuffer);
+}
+
 static IppiHistogram_C1 getIppiHistogramFunction_C1(int type)
 {
     IppiHistogram_C1 ippFunction =
-        (type == CV_8UC1) ? (IppiHistogram_C1)ippiHistogram_8u_C1R :
-        (type == CV_16UC1) ? (IppiHistogram_C1)ippiHistogram_16u_C1R :
-        (type == CV_32FC1) ? (IppiHistogram_C1)ippiHistogram_32f_C1R :
+        (type == CV_8UC1) ? ippiHistogram_C1_Wrap<Ipp8u, ippiHistogram_8u_C1R> :
+        (type == CV_16UC1) ? ippiHistogram_C1_Wrap<Ipp16u, ippiHistogram_16u_C1R> :
+        (type == CV_32FC1) ? ippiHistogram_C1_Wrap<Ipp32f, ippiHistogram_32f_C1R> :
         NULL;
 
     return ippFunction;

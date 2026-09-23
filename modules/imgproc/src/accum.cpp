@@ -51,40 +51,96 @@
 namespace cv
 {
 
-typedef void(*AccFunc)(const uchar*, uchar*, const uchar*, int, int);
-typedef void(*AccProdFunc)(const uchar*, const uchar*, uchar*, const uchar*, int, int);
-typedef void(*AccWFunc)(const uchar*, uchar*, const uchar*, int, int, double);
+#ifdef HAVE_IPP
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, Ipp32f*, int, IppiSize)>
+static IppStatus CV_STDCALL ippiAddWrap(const void* pSrc, int srcStep, Ipp32f* pSrcDst, int srcdstStep, IppiSize roiSize)
+{
+    return fn((const T*)pSrc, srcStep, pSrcDst, srcdstStep, roiSize);
+}
+
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, const Ipp8u*, int, Ipp32f*, int, IppiSize)>
+static IppStatus CV_STDCALL ippiAddMaskWrap(const void* pSrc, int srcStep, const Ipp8u* pMask, int maskStep, Ipp32f* pSrcDst, int srcDstStep, IppiSize roiSize)
+{
+    return fn((const T*)pSrc, srcStep, pMask, maskStep, pSrcDst, srcDstStep, roiSize);
+}
+
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, const T*, int, Ipp32f*, int, IppiSize)>
+static IppStatus CV_STDCALL ippiAddProductWrap(const void* pSrc1, int src1Step, const void* pSrc2, int src2Step, Ipp32f* pSrcDst, int srcdstStep, IppiSize roiSize)
+{
+    return fn((const T*)pSrc1, src1Step, (const T*)pSrc2, src2Step, pSrcDst, srcdstStep, roiSize);
+}
+
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, const T*, int, const Ipp8u*, int, Ipp32f*, int, IppiSize)>
+static IppStatus CV_STDCALL ippiAddProductMaskWrap(const void* pSrc1, int src1Step, const void* pSrc2, int src2Step, const Ipp8u* pMask, int maskStep, Ipp32f* pSrcDst, int srcDstStep, IppiSize roiSize)
+{
+    return fn((const T*)pSrc1, src1Step, (const T*)pSrc2, src2Step, pMask, maskStep, pSrcDst, srcDstStep, roiSize);
+}
+
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, Ipp32f*, int, IppiSize, Ipp32f)>
+static IppStatus CV_STDCALL ippiAddWeightedWrap(const void* pSrc, int srcStep, Ipp32f* pSrcDst, int srcdstStep, IppiSize roiSize, Ipp32f alpha)
+{
+    return fn((const T*)pSrc, srcStep, pSrcDst, srcdstStep, roiSize, alpha);
+}
+
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, int, const Ipp8u*, int, Ipp32f*, int, IppiSize, Ipp32f)>
+static IppStatus CV_STDCALL ippiAddWeightedMaskWrap(const void* pSrc, int srcStep, const Ipp8u* pMask, int maskStep, Ipp32f* pSrcDst, int srcDstStep, IppiSize roiSize, Ipp32f alpha)
+{
+    return fn((const T*)pSrc, srcStep, pMask, maskStep, pSrcDst, srcDstStep, roiSize, alpha);
+}
+#endif
+
+typedef void(*AccFunc)(const void*, void*, const uchar*, int, int);
+typedef void(*AccProdFunc)(const void*, const void*, void*, const uchar*, int, int);
+typedef void(*AccWFunc)(const void*, void*, const uchar*, int, int, double);
+
+template<typename ST, typename DT, void (*fn)(const ST*, DT*, const uchar*, int, int)>
+static void accWrap(const void* src, void* dst, const uchar* mask, int len, int cn)
+{
+    fn((const ST*)src, (DT*)dst, mask, len, cn);
+}
+
+template<typename ST, typename DT, void (*fn)(const ST*, const ST*, DT*, const uchar*, int, int)>
+static void accProdWrap(const void* src1, const void* src2, void* dst, const uchar* mask, int len, int cn)
+{
+    fn((const ST*)src1, (const ST*)src2, (DT*)dst, mask, len, cn);
+}
+
+template<typename ST, typename DT, void (*fn)(const ST*, DT*, const uchar*, int, int, double)>
+static void accWWrap(const void* src, void* dst, const uchar* mask, int len, int cn, double alpha)
+{
+    fn((const ST*)src, (DT*)dst, mask, len, cn, alpha);
+}
 
 static AccFunc accTab[CV_DEPTH_MAX] =
 {
-    (AccFunc)acc_8u32f, (AccFunc)acc_8u64f,
-    (AccFunc)acc_16u32f, (AccFunc)acc_16u64f,
-    (AccFunc)acc_32f, (AccFunc)acc_32f64f,
-    (AccFunc)acc_64f
+    accWrap<uchar, float, acc_8u32f>, accWrap<uchar, double, acc_8u64f>,
+    accWrap<ushort, float, acc_16u32f>, accWrap<ushort, double, acc_16u64f>,
+    accWrap<float, float, acc_32f>, accWrap<float, double, acc_32f64f>,
+    accWrap<double, double, acc_64f>
 };
 
 static AccFunc accSqrTab[CV_DEPTH_MAX] =
 {
-    (AccFunc)accSqr_8u32f, (AccFunc)accSqr_8u64f,
-    (AccFunc)accSqr_16u32f, (AccFunc)accSqr_16u64f,
-    (AccFunc)accSqr_32f, (AccFunc)accSqr_32f64f,
-    (AccFunc)accSqr_64f
+    accWrap<uchar, float, accSqr_8u32f>, accWrap<uchar, double, accSqr_8u64f>,
+    accWrap<ushort, float, accSqr_16u32f>, accWrap<ushort, double, accSqr_16u64f>,
+    accWrap<float, float, accSqr_32f>, accWrap<float, double, accSqr_32f64f>,
+    accWrap<double, double, accSqr_64f>
 };
 
 static AccProdFunc accProdTab[CV_DEPTH_MAX] =
 {
-    (AccProdFunc)accProd_8u32f, (AccProdFunc)accProd_8u64f,
-    (AccProdFunc)accProd_16u32f, (AccProdFunc)accProd_16u64f,
-    (AccProdFunc)accProd_32f, (AccProdFunc)accProd_32f64f,
-    (AccProdFunc)accProd_64f
+    accProdWrap<uchar, float, accProd_8u32f>, accProdWrap<uchar, double, accProd_8u64f>,
+    accProdWrap<ushort, float, accProd_16u32f>, accProdWrap<ushort, double, accProd_16u64f>,
+    accProdWrap<float, float, accProd_32f>, accProdWrap<float, double, accProd_32f64f>,
+    accProdWrap<double, double, accProd_64f>
 };
 
 static AccWFunc accWTab[CV_DEPTH_MAX] =
 {
-    (AccWFunc)accW_8u32f, (AccWFunc)accW_8u64f,
-    (AccWFunc)accW_16u32f, (AccWFunc)accW_16u64f,
-    (AccWFunc)accW_32f, (AccWFunc)accW_32f64f,
-    (AccWFunc)accW_64f
+    accWWrap<uchar, float, accW_8u32f>, accWWrap<uchar, double, accW_8u64f>,
+    accWWrap<ushort, float, accW_16u32f>, accWWrap<ushort, double, accW_16u64f>,
+    accWWrap<float, float, accW_32f>, accWWrap<float, double, accW_32f64f>,
+    accWWrap<double, double, accW_64f>
 };
 
 inline int getAccTabIdx(int sdepth, int ddepth)
@@ -187,16 +243,16 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
         if (mask.empty())
         {
             CV_SUPPRESS_DEPRECATED_START
-            ippiAdd_I = sdepth == CV_8U && ddepth == CV_32F ? (IppiAdd)ippiAdd_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (IppiAdd)ippiAdd_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (IppiAdd)ippiAdd_32f_C1IR : 0;
+            ippiAdd_I = sdepth == CV_8U && ddepth == CV_32F ? ippiAddWrap<Ipp8u, ippiAdd_8u32f_C1IR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddWrap<Ipp16u, ippiAdd_16u32f_C1IR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddWrap<Ipp32f, ippiAdd_32f_C1IR> : 0;
             CV_SUPPRESS_DEPRECATED_END
         }
         else if (scn == 1)
         {
-            ippiAdd_IM = sdepth == CV_8U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (IppiAddMask)ippiAdd_32f_C1IMR : 0;
+            ippiAdd_IM = sdepth == CV_8U && ddepth == CV_32F ? ippiAddMaskWrap<Ipp8u, ippiAdd_8u32f_C1IMR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddMaskWrap<Ipp16u, ippiAdd_16u32f_C1IMR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddMaskWrap<Ipp32f, ippiAdd_32f_C1IMR> : 0;
         }
 
         if (ippiAdd_I || ippiAdd_IM)
@@ -284,15 +340,15 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 
         if (mask.empty())
         {
-            ippiAddSquare_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_32f_C1IR : 0;
+            ippiAddSquare_I = sdepth == CV_8U && ddepth == CV_32F ? ippiAddWrap<Ipp8u, ippiAddSquare_8u32f_C1IR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddWrap<Ipp16u, ippiAddSquare_16u32f_C1IR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddWrap<Ipp32f, ippiAddSquare_32f_C1IR> : 0;
         }
         else if (scn == 1)
         {
-            ippiAddSquare_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_32f_C1IMR : 0;
+            ippiAddSquare_IM = sdepth == CV_8U && ddepth == CV_32F ? ippiAddMaskWrap<Ipp8u, ippiAddSquare_8u32f_C1IMR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddMaskWrap<Ipp16u, ippiAddSquare_16u32f_C1IMR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddMaskWrap<Ipp32f, ippiAddSquare_32f_C1IMR> : 0;
         }
 
         if (ippiAddSquare_I || ippiAddSquare_IM)
@@ -381,15 +437,15 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 
         if (mask.empty())
         {
-            ippiAddProduct_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_32f_C1IR : 0;
+            ippiAddProduct_I = sdepth == CV_8U && ddepth == CV_32F ? ippiAddProductWrap<Ipp8u, ippiAddProduct_8u32f_C1IR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddProductWrap<Ipp16u, ippiAddProduct_16u32f_C1IR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddProductWrap<Ipp32f, ippiAddProduct_32f_C1IR> : 0;
         }
         else if (scn == 1)
         {
-            ippiAddProduct_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_32f_C1IMR : 0;
+            ippiAddProduct_IM = sdepth == CV_8U && ddepth == CV_32F ? ippiAddProductMaskWrap<Ipp8u, ippiAddProduct_8u32f_C1IMR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddProductMaskWrap<Ipp16u, ippiAddProduct_16u32f_C1IMR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddProductMaskWrap<Ipp32f, ippiAddProduct_32f_C1IMR> : 0;
         }
 
         if (ippiAddProduct_I || ippiAddProduct_IM)
@@ -485,15 +541,15 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 
         if (mask.empty())
         {
-            ippiAddWeighted_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
+            ippiAddWeighted_I = sdepth == CV_8U && ddepth == CV_32F ? ippiAddWeightedWrap<Ipp8u, ippiAddWeighted_8u32f_C1IR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddWeightedWrap<Ipp16u, ippiAddWeighted_16u32f_C1IR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddWeightedWrap<Ipp32f, ippiAddWeighted_32f_C1IR> : 0;
         }
         else if (scn == 1)
         {
-            ippiAddWeighted_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
+            ippiAddWeighted_IM = sdepth == CV_8U && ddepth == CV_32F ? ippiAddWeightedMaskWrap<Ipp8u, ippiAddWeighted_8u32f_C1IMR> :
+                sdepth == CV_16U && ddepth == CV_32F ? ippiAddWeightedMaskWrap<Ipp16u, ippiAddWeighted_16u32f_C1IMR> :
+                sdepth == CV_32F && ddepth == CV_32F ? ippiAddWeightedMaskWrap<Ipp32f, ippiAddWeighted_32f_C1IMR> : 0;
         }
 
         if (ippiAddWeighted_I || ippiAddWeighted_IM)

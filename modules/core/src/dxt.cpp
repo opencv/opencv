@@ -1691,35 +1691,10 @@ ExpandCCS( uchar* _ptr, int n, int elem_size )
     }
 }
 
-static void DFT_32f(const OcvDftOptions & c, const Complexf* src, Complexf* dst)
+template<typename T, void (*fn)(const OcvDftOptions&, const T*, T*)>
+static void dftWrap(const OcvDftOptions & c, const void* src, void* dst)
 {
-    DFT(c, src, dst);
-}
-
-static void DFT_64f(const OcvDftOptions & c, const Complexd* src, Complexd* dst)
-{
-    DFT(c, src, dst);
-}
-
-
-static void RealDFT_32f(const OcvDftOptions & c, const float* src, float* dst)
-{
-    RealDFT(c, src, dst);
-}
-
-static void RealDFT_64f(const OcvDftOptions & c, const double* src, double* dst)
-{
-    RealDFT(c, src, dst);
-}
-
-static void CCSIDFT_32f(const OcvDftOptions & c, const float* src, float* dst)
-{
-    CCSIDFT(c, src, dst);
-}
-
-static void CCSIDFT_64f(const OcvDftOptions & c, const double* src, double* dst)
-{
-    CCSIDFT(c, src, dst);
+    fn(c, (const T*)src, (T*)dst);
 }
 
 }
@@ -1727,6 +1702,12 @@ static void CCSIDFT_64f(const OcvDftOptions & c, const double* src, double* dst)
 #ifdef USE_IPP_DFT
 typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, int*, int*, int*);
 typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
+
+template<typename SpecType, IppStatus (CV_STDCALL *init_fn)(int, int, IppHintAlgorithm, SpecType*, Ipp8u*)>
+static IppStatus CV_STDCALL ippDFTInitWrap(int n, int flags, IppHintAlgorithm hint, void* spec, Ipp8u* initbuf)
+{
+    return init_fn(n, flags, hint, (SpecType*)spec, initbuf);
+}
 #endif
 
 namespace cv
@@ -3278,12 +3259,12 @@ public:
                 if( depth == CV_32F )
                 {
                     getSizeFunc = ippsDFTGetSize_R_32f;
-                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_32f;
+                    initFunc = ippDFTInitWrap<IppsDFTSpec_R_32f, ippsDFTInit_R_32f>;
                 }
                 else
                 {
                     getSizeFunc = ippsDFTGetSize_R_64f;
-                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_64f;
+                    initFunc = ippDFTInitWrap<IppsDFTSpec_R_64f, ippsDFTInit_R_64f>;
                 }
             }
             else
@@ -3291,12 +3272,12 @@ public:
                 if( depth == CV_32F )
                 {
                     getSizeFunc = ippsDFTGetSize_C_32fc;
-                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_32fc;
+                    initFunc = ippDFTInitWrap<IppsDFTSpec_C_32fc, ippsDFTInit_C_32fc>;
                 }
                 else
                 {
                     getSizeFunc = ippsDFTGetSize_C_64fc;
-                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_64fc;
+                    initFunc = ippDFTInitWrap<IppsDFTSpec_C_64fc, ippsDFTInit_C_64fc>;
                 }
             }
             if( getSizeFunc(opt.n, ipp_norm_flag, ippAlgHintNone, &specsize, &initsize, &worksize) >= 0 )
@@ -3351,12 +3332,12 @@ public:
         {
             static DFTFunc dft_tbl[6] =
             {
-                (DFTFunc)DFT_32f,
-                (DFTFunc)RealDFT_32f,
-                (DFTFunc)CCSIDFT_32f,
-                (DFTFunc)DFT_64f,
-                (DFTFunc)RealDFT_64f,
-                (DFTFunc)CCSIDFT_64f
+                dftWrap<Complexf, DFT<float>>,
+                dftWrap<float, RealDFT<float>>,
+                dftWrap<float, CCSIDFT<float>>,
+                dftWrap<Complexd, DFT<double>>,
+                dftWrap<double, RealDFT<double>>,
+                dftWrap<double, CCSIDFT<double>>
             };
             int idx = 0;
             if (stage == 0)
@@ -4145,28 +4126,11 @@ DCTInit( int n, int elem_size, void* _wave, int inv )
 typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src,
                         void* dft_dst, void* dst, size_t dst_step, const void* dct_wave);
 
-static void DCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
-                    float* dst, size_t dst_step, const Complexf* dct_wave)
+template<typename T, void (*fn)(const OcvDftOptions&, const T*, size_t, T*, T*, T*, size_t, const Complex<T>*)>
+static void dctWrap(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src, void* dft_dst,
+                    void* dst, size_t dst_step, const void* dct_wave)
 {
-    DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
-}
-
-static void IDCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
-                    float* dst, size_t dst_step, const Complexf* dct_wave)
-{
-    IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
-}
-
-static void DCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
-                    double* dst, size_t dst_step, const Complexd* dct_wave)
-{
-    DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
-}
-
-static void IDCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
-                     double* dst, size_t dst_step, const Complexd* dct_wave)
-{
-    IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
+    fn(c, (const T*)src, src_step, (T*)dft_src, (T*)dft_dst, (T*)dst, dst_step, (const Complex<T>*)dct_wave);
 }
 
 }
@@ -4179,11 +4143,54 @@ namespace cv
 typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer);
 typedef IppStatus (CV_STDCALL * ippiDCTInit)(void* pDCTSpec, IppiSize roiSize, Ipp8u* pMemInit );
 typedef IppStatus (CV_STDCALL * ippiDCTGetSize)(IppiSize roiSize, int* pSizeSpec, int* pSizeInit, int* pSizeBuf);
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(const Ipp32f*, int, Ipp32f*, int, const SpecType*, Ipp8u*)>
+static IppStatus CV_STDCALL ippiDCTWrap(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer)
+{
+    return fn(pSrc, srcStep, pDst, dstStep, (const SpecType*)pDCTSpec, pBuffer);
+}
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(SpecType*, IppiSize, Ipp8u*)>
+static IppStatus CV_STDCALL ippiDCTInitWrap(void* pDCTSpec, IppiSize roiSize, Ipp8u* pMemInit)
+{
+    return fn((SpecType*)pDCTSpec, roiSize, pMemInit);
+}
+
+template<IppStatus (CV_STDCALL *fn)(IppiSize, int*, int*, int*)>
+static IppStatus CV_STDCALL ippiDCTGetSizeWrap(IppiSize roiSize, int* pSizeSpec, int* pSizeInit, int* pSizeBuf)
+{
+    return fn(roiSize, pSizeSpec, pSizeInit, pSizeBuf);
+}
+
 #elif IPP_VERSION_X100 >= 700
 typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f*, int, Ipp32f*, int, const void*, Ipp8u*);
 typedef IppStatus (CV_STDCALL * ippiDCTInitAlloc)(void**, IppiSize, IppHintAlgorithm);
 typedef IppStatus (CV_STDCALL * ippiDCTFree)(void* pDCTSpec);
 typedef IppStatus (CV_STDCALL * ippiDCTGetBufSize)(const void*, int*);
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(const Ipp32f*, int, Ipp32f*, int, const SpecType*, Ipp8u*)>
+static IppStatus CV_STDCALL ippiDCTWrap(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer)
+{
+    return fn(pSrc, srcStep, pDst, dstStep, (const SpecType*)pDCTSpec, pBuffer);
+}
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(SpecType**, IppiSize, IppHintAlgorithm)>
+static IppStatus CV_STDCALL ippiDCTInitAllocWrap(void** pDCTSpec, IppiSize roiSize, IppHintAlgorithm hint)
+{
+    return fn((SpecType**)pDCTSpec, roiSize, hint);
+}
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(SpecType*)>
+static IppStatus CV_STDCALL ippiDCTFreeWrap(void* pDCTSpec)
+{
+    return fn((SpecType*)pDCTSpec);
+}
+
+template<typename SpecType, IppStatus (CV_STDCALL *fn)(const SpecType*, int*)>
+static IppStatus CV_STDCALL ippiDCTGetBufSizeWrap(const void* pDCTSpec, int* pSize)
+{
+    return fn((const SpecType*)pDCTSpec, pSize);
+}
 #endif
 
 class DctIPPLoop_Invoker : public ParallelLoopBody
@@ -4220,9 +4227,9 @@ public:
                 ippFree(pInitBuf);      \
             return;
 
-        ippiDCTFunc     ippiDCT_32f_C1R   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
-        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+        ippiDCTFunc     ippiDCT_32f_C1R   = inv ? ippiDCTWrap<IppiDCTInvSpec_32f, ippiDCTInv_32f_C1R> : ippiDCTWrap<IppiDCTFwdSpec_32f, ippiDCTFwd_32f_C1R>;
+        ippiDCTInit     ippDctInit     = inv ? ippiDCTInitWrap<IppiDCTInvSpec_32f, ippiDCTInvInit_32f> : ippiDCTInitWrap<IppiDCTFwdSpec_32f, ippiDCTFwdInit_32f>;
+        ippiDCTGetSize  ippDctGetSize  = inv ? ippiDCTGetSizeWrap<ippiDCTInvGetSize_32f> : ippiDCTGetSizeWrap<ippiDCTFwdGetSize_32f>;
 
         if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
         {
@@ -4276,10 +4283,10 @@ public:
 
         CV_SUPPRESS_DEPRECATED_START
 
-        ippiDCTFunc ippDctFun           = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R             : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
-        ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
-        ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
+        ippiDCTFunc ippDctFun           = inv ? ippiDCTWrap<IppiDCTInvSpec_32f, ippiDCTInv_32f_C1R>             : ippiDCTWrap<IppiDCTFwdSpec_32f, ippiDCTFwd_32f_C1R>;
+        ippiDCTInitAlloc ippInitAlloc   = inv ? ippiDCTInitAllocWrap<IppiDCTInvSpec_32f, ippiDCTInvInitAlloc_32f>   : ippiDCTInitAllocWrap<IppiDCTFwdSpec_32f, ippiDCTFwdInitAlloc_32f>;
+        ippiDCTFree ippFree             = inv ? ippiDCTFreeWrap<IppiDCTInvSpec_32f, ippiDCTInvFree_32f>             : ippiDCTFreeWrap<IppiDCTFwdSpec_32f, ippiDCTFwdFree_32f>;
+        ippiDCTGetBufSize ippGetBufSize = inv ? ippiDCTGetBufSizeWrap<IppiDCTInvSpec_32f, ippiDCTInvGetBufSize_32f> : ippiDCTGetBufSizeWrap<IppiDCTFwdSpec_32f, ippiDCTFwdGetBufSize_32f>;
 
         if (ippInitAlloc(&pDCTSpec, srcRoiSize, ippAlgHintNone)>=0 && ippGetBufSize(pDCTSpec, &bufSize)>=0)
         {
@@ -4352,9 +4359,9 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
             if(pInitBuf)                \
                 ippFree(pInitBuf);      \
 
-        ippiDCTFunc     ippiDCT_32f_C1R      = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
-        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+        ippiDCTFunc     ippiDCT_32f_C1R      = inv ? ippiDCTWrap<IppiDCTInvSpec_32f, ippiDCTInv_32f_C1R> : ippiDCTWrap<IppiDCTFwdSpec_32f, ippiDCTFwd_32f_C1R>;
+        ippiDCTInit     ippDctInit     = inv ? ippiDCTInitWrap<IppiDCTInvSpec_32f, ippiDCTInvInit_32f> : ippiDCTInitWrap<IppiDCTFwdSpec_32f, ippiDCTFwdInit_32f>;
+        ippiDCTGetSize  ippDctGetSize  = inv ? ippiDCTGetSizeWrap<ippiDCTInvGetSize_32f> : ippiDCTGetSizeWrap<ippiDCTFwdGetSize_32f>;
 
         if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
             return false;
@@ -4402,10 +4409,10 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
 
         CV_SUPPRESS_DEPRECATED_START
 
-        ippiDCTFunc ippDctFun           = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R             : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
-        ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
-        ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
+        ippiDCTFunc ippDctFun           = inv ? ippiDCTWrap<IppiDCTInvSpec_32f, ippiDCTInv_32f_C1R>             : ippiDCTWrap<IppiDCTFwdSpec_32f, ippiDCTFwd_32f_C1R>;
+        ippiDCTInitAlloc ippInitAlloc   = inv ? ippiDCTInitAllocWrap<IppiDCTInvSpec_32f, ippiDCTInvInitAlloc_32f>   : ippiDCTInitAllocWrap<IppiDCTFwdSpec_32f, ippiDCTFwdInitAlloc_32f>;
+        ippiDCTFree ippFree             = inv ? ippiDCTFreeWrap<IppiDCTInvSpec_32f, ippiDCTInvFree_32f>             : ippiDCTFreeWrap<IppiDCTFwdSpec_32f, ippiDCTFwdFree_32f>;
+        ippiDCTGetBufSize ippGetBufSize = inv ? ippiDCTGetBufSizeWrap<IppiDCTInvSpec_32f, ippiDCTInvGetBufSize_32f> : ippiDCTGetBufSizeWrap<IppiDCTFwdSpec_32f, ippiDCTFwdGetBufSize_32f>;
 
         status = ippStsErr;
 
@@ -4463,10 +4470,10 @@ public:
         isContinuous = (flags & CV_HAL_DFT_IS_CONTINUOUS) != 0;
         static DCTFunc dct_tbl[4] =
         {
-            (DCTFunc)DCT_32f,
-            (DCTFunc)IDCT_32f,
-            (DCTFunc)DCT_64f,
-            (DCTFunc)IDCT_64f
+            dctWrap<float, DCT<float>>,
+            dctWrap<float, IDCT<float>>,
+            dctWrap<double, DCT<double>>,
+            dctWrap<double, IDCT<double>>
         };
         dct_func = dct_tbl[(int)isInverse + (depth == CV_64F)*2];
         opt.nf = 0;

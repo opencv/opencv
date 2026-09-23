@@ -234,9 +234,8 @@ ImageDecoder PngDecoder::newDecoder() const
     return makePtr<PngDecoder>();
 }
 
-void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t size )
+void  PngDecoder::readDataFromBuf( png_structp png_ptr, png_bytep dst, png_size_t size )
 {
-    png_structp png_ptr = (png_structp)_png_ptr;
     PngDecoder* decoder = (PngDecoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( decoder );
     const Mat& buf = decoder->m_buf;
@@ -270,7 +269,7 @@ bool  PngDecoder::readHeader()
     uint32_t id = 0;
 
     if( !m_buf.empty() )
-        png_set_read_fn(m_png_ptr, this, (png_rw_ptr)readDataFromBuf );
+        png_set_read_fn(m_png_ptr, this, readDataFromBuf );
     else
     {
         m_f = fopen(m_filename.c_str(), "rb");
@@ -977,11 +976,10 @@ ImageEncoder PngEncoder::newEncoder() const
     return makePtr<PngEncoder>();
 }
 
-void PngEncoder::writeDataToBuf(void* _png_ptr, unsigned char* src, size_t size)
+void PngEncoder::writeDataToBuf(png_structp png_ptr, png_bytep src, png_size_t size)
 {
     if( size == 0 )
         return;
-    png_structp png_ptr = (png_structp)_png_ptr;
     PngEncoder* encoder = (PngEncoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( encoder && encoder->m_buf );
     size_t cursz = encoder->m_buf->size();
@@ -989,7 +987,7 @@ void PngEncoder::writeDataToBuf(void* _png_ptr, unsigned char* src, size_t size)
     memcpy( &(*encoder->m_buf)[cursz], src, size );
 }
 
-void PngEncoder::flushBuf(void*)
+void PngEncoder::flushBuf(png_structp)
 {
 }
 
@@ -1020,7 +1018,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                 if( m_buf )
                 {
                     png_set_write_fn(png_ptr, this,
-                        (png_rw_ptr)writeDataToBuf, (png_flush_ptr)flushBuf);
+                        writeDataToBuf, flushBuf);
                 }
                 else
                 {

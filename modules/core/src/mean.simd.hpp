@@ -12,6 +12,12 @@ typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, 
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+template<typename T, typename ST, typename SQT, int (*fn)(const T*, const uchar*, ST*, SQT*, int, int)>
+static int sumSqrWrap(const uchar* src, const uchar* mask, uchar* sum, uchar* sqsum, int len, int cn)
+{
+    return fn((const T*)src, mask, (ST*)sum, (SQT*)sqsum, len, cn);
+}
+
 SumSqrFunc getSumSqrFunc(int depth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -621,10 +627,13 @@ SumSqrFunc getSumSqrFunc(int depth)
     CV_INSTRUMENT_REGION();
     static SumSqrFunc sumSqrTab[CV_DEPTH_MAX] =
     {
-        (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f,
-        (SumSqrFunc)sqsum16f, (SumSqrFunc)sqsum16bf, 0,
-        (SumSqrFunc)sqsum64u, (SumSqrFunc)sqsum64s, (SumSqrFunc)sqsum32u, 0
+        sumSqrWrap<uchar, int, int, sqsum8u>, sumSqrWrap<schar, int, int, sqsum8s>,
+        sumSqrWrap<ushort, int, double, sqsum16u>, sumSqrWrap<short, int, double, sqsum16s>,
+        sumSqrWrap<int, double, double, sqsum32s>, sumSqrWrap<float, double, double, sqsum32f>,
+        sumSqrWrap<double, double, double, sqsum64f>,
+        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
+        sumSqrWrap<uint64, double, double, sqsum64u>, sumSqrWrap<int64, double, double, sqsum64s>,
+        sumSqrWrap<unsigned, double, double, sqsum32u>, 0
     };
 
     return sumSqrTab[depth];
