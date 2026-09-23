@@ -196,13 +196,14 @@ static double solveTyped(const Mat& src, bool transposed, std::vector<int>& assi
     for (int i = 0; i < nrows; i++)
     {
         const int j = colOfRow[i];
-        if (j < 0 || j >= nreal || !allowed.at<uchar>(i, j))
+        CV_DbgAssert(j >= 0 && j < ncols);      // solveJV gives every row a column
+        if (j >= nreal || !allowed.at<uchar>(i, j))
             continue;   // landed on a dummy column or a forbidden cell, so it stays unmatched
+
         total += (double)src.ptr<T>(i)[j];
-        if (transposed)
-            assignment[(size_t)j] = i;
-        else
-            assignment[(size_t)i] = j;
+        const int row = transposed ? j : i;
+        CV_DbgAssert(row >= 0 && (size_t)row < assignment.size());
+        assignment[(size_t)row] = transposed ? i : j;
     }
     return total;
 }
@@ -213,10 +214,9 @@ double linearAssignment(InputArray _cost, std::vector<int>& assignment, double c
 
     Mat cost = _cost.getMat();
     CV_Assert(cost.dims <= 2);
+    CV_Assert(!cost.empty());
 
     assignment.assign((size_t)cost.rows, -1);
-    if (cost.empty())
-        return 0.0;
 
     CV_CheckType(cost.type(),
                  cost.type() == CV_32FC1 || cost.type() == CV_64FC1 || cost.type() == CV_32SC1,
