@@ -615,10 +615,10 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
     switch (image_->color_space)
     {
     case OPJ_CLRSPC_UNKNOWN:
-        /* FALLTHRU */
+        [[fallthrough]];
     case OPJ_CLRSPC_UNSPECIFIED:
         CV_LOG_WARNING(NULL, "OpenJPEG2000: Image has unknown or unspecified color space, SRGB is assumed");
-        /* FALLTHRU */
+        [[fallthrough]];
     case OPJ_CLRSPC_SRGB:
         decode = decodeSRGBData;
         break;

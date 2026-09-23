@@ -2003,11 +2003,11 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             break;
 #endif //GTK_VERSION3_4
         case GDK_SCROLL_LEFT:  cv_event = cv::EVENT_MOUSEHWHEEL;
-            /* FALLTHRU */
+            [[fallthrough]];
         case GDK_SCROLL_UP:    flags |= ~0xffff;
             break;
         case GDK_SCROLL_RIGHT: cv_event = cv::EVENT_MOUSEHWHEEL;
-            /* FALLTHRU */
+            [[fallthrough]];
         case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
             break;
         default: ;

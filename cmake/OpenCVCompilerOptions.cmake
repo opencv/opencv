@@ -522,6 +522,7 @@ macro(ocv_add_modules_compiler_options)
     if(${_varname_cxx})
       add_compile_options(-Wcast-function-type-strict)
     endif()
+    add_compile_options(-Wimplicit-fallthrough)
   endif()
 endmacro()
 
