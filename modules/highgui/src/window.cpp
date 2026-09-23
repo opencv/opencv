@@ -48,6 +48,7 @@
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
 
+
 using namespace cv;
 using namespace cv::highgui_backend;
 
@@ -226,7 +227,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_QT(name,prop_value);
         #elif defined(HAVE_WIN32UI)
             cvSetModeWindow_W32(name,prop_value);
-        #elif defined (HAVE_GTK)
+        #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)      // see window_gtk.cpp
             cvSetModeWindow_GTK(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
@@ -311,7 +312,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetModeWindow_W32(name);
-        #elif defined (HAVE_GTK)
+        #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
             return cvGetModeWindow_GTK(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
@@ -328,7 +329,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropWindowAutoSize_W32(name);
-        #elif defined (HAVE_GTK)
+        #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
             return cvGetPropWindowAutoSize_GTK(name);
         #else
             return -1;
@@ -341,7 +342,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetRatioWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetRatioWindow_W32(name);
-        #elif defined (HAVE_GTK)
+        #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
             return cvGetRatioWindow_GTK(name);
         #else
             return -1;
@@ -354,7 +355,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetOpenGlProp_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetOpenGlProp_W32(name);
-        #elif defined (HAVE_GTK)
+        #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
             return cvGetOpenGlProp_GTK(name);
         #else
             return -1;
@@ -432,7 +433,7 @@ cv::Rect cv::getWindowImageRect(const String& winname)
         return cvGetWindowRect_QT(winname.c_str());
     #elif defined(HAVE_WIN32UI)
         return cvGetWindowRect_W32(winname.c_str());
-    #elif defined (HAVE_GTK)
+    #elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
         return cvGetWindowRect_GTK(winname.c_str());
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(winname.c_str());
@@ -611,7 +612,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
     return;
 #elif defined(HAVE_WIN32UI)
     return setWindowTitle_W32(winname, title);
-#elif defined (HAVE_GTK)
+#elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
     return setWindowTitle_GTK(winname, title);
 #elif defined (HAVE_QT)
     return setWindowTitle_QT(winname, title);
@@ -1107,7 +1108,9 @@ const std::string cv::currentUIFramework()
     // builtin backends
 #if defined(HAVE_WIN32UI)
     CV_Assert(false); // backend-compatible
-#elif defined (HAVE_GTK)
+#elif defined(HAVE_GTK4)
+    return std::string("GTK4");
+#elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
     CV_Assert(false); // backend-compatible
 #elif defined (HAVE_QT)
     return std::string("QT");
@@ -1256,7 +1259,9 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #endif
 
 #if   defined (HAVE_WIN32UI)  // see window_w32.cpp
-#elif defined (HAVE_GTK)      // see window_gtk.cpp
+
+#elif defined (HAVE_GTK4)     //see window_gtk4.cpp
+#elif defined (HAVE_GTK) && !defined(HAVE_GTK4)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
 #elif defined (HAVE_QT)       // see window_QT.cpp
 #elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
