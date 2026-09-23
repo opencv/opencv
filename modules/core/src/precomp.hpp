@@ -94,7 +94,6 @@
 #include "opencv2/core/vsx_utils.hpp"
 #include "hal_replacement.hpp"
 
-#define GET_OPTIMIZED(func) (func)
 
 namespace cv
 {
