@@ -1564,7 +1564,7 @@ string Net::Impl::dump(bool forceAllocation) const
             prevNode = itBackend->second;
         }
     }
-    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371", "#ffcab3"};
+    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371", "#ffcab3", "#aaa000"};
     string backend;
     switch (prefBackend)
     {
@@ -1579,6 +1579,7 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
     case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
     case DNN_BACKEND_CANN: backend = "CANN/"; break;
+    case DNN_BACKEND_TENSORRT: backend = "TENSORRT/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -1770,6 +1771,10 @@ string Net::Impl::dump(bool forceAllocation) const
         case DNN_TARGET_CPU_FP16:
             out << "CPU_FP16";
             colorId = 10;
+            break;
+        case DNN_TARGET_TENSORRT:
+            out << "TENSORRT";
+            colorId = 11;
             break;
             // don't use default:
         }
@@ -1989,6 +1994,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
             case DNN_BACKEND_WEBNN:     backend = "WEBNN"; break;
             case DNN_BACKEND_TIMVX:     backend = "TIMVX"; break;
             case DNN_BACKEND_CANN:      backend = "CANN"; break;
+            case DNN_BACKEND_TENSORRT:      backend = "TENSORRT"; break;
         }
         return backend;
     };
