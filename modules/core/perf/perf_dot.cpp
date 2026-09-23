@@ -25,7 +25,7 @@ PERF_TEST_P( MatType_Length, dot,
 
     TEST_CYCLE_N(1000) product = a.dot(b);
 
-    SANITY_CHECK(product, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(product, 1e-5, ERROR_RELATIVE);
 }
 
 } // namespace

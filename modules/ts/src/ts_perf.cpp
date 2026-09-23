@@ -435,14 +435,25 @@ void Regression::write(cv::InputArray array)
 
 static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const cv::Mat& diff, double eps, double* max_violation = 0, double* max_allowed = 0)
 {
-    cv::Mat diff64f;
+    cv::Mat diff64f, expected64f, actual64f;
+    cv::Mat neg, expected_abs, actual_abs;
     diff.reshape(1).convertTo(diff64f, CV_64F);
+    expected.reshape(1).convertTo(expected64f, CV_64F);
+    actual.reshape(1).convertTo(actual64f, CV_64F);
 
-    cv::Mat expected_abs = cv::abs(expected.reshape(1));
-    cv::Mat actual_abs = cv::abs(actual.reshape(1));
+    // Compute threshold = eps * max(|expected|, |actual|)
+    // Note: cv::abs() returns a lazy MatExpr whose evaluation can produce tiny
+    // negative denorms for zero-valued float32 inputs (SIMD rounding artifact),
+    // resulting in negative thresholds that flag all elements as violations.
+    // Fix: convert to CV_64F and use eager max(x,-x) for guaranteed non-negative abs.
+    cv::multiply(expected64f, cv::Scalar(-1.0), neg);
+    cv::max(expected64f, neg, expected_abs);
+    cv::multiply(actual64f, cv::Scalar(-1.0), neg);
+    cv::max(actual64f, neg, actual_abs);
+
     cv::Mat maximum, mask;
     cv::max(expected_abs, actual_abs, maximum);
-    cv::multiply(maximum, cv::Vec<double, 1>(eps), maximum, CV_64F);
+    cv::multiply(maximum, cv::Scalar(eps), maximum);
     cv::compare(diff64f, maximum, mask, cv::CMP_GT);
 
     int v = cv::countNonZero(mask);
