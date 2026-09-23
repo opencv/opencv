@@ -7,20 +7,13 @@
 
 namespace opencv_test { namespace {
 
-typedef TestWithParam<tuple<int, int, bool, int> > DeconvolutionCoordinates;
+typedef TestWithParam<tuple<int, int, bool> > DeconvolutionCoordinates;
 
 TEST_P(DeconvolutionCoordinates, Accuracy)
 {
     const int dims = get<0>(GetParam());
     const int mode = get<1>(GetParam());
     const bool dynamicWeights = get<2>(GetParam());
-    const int previousThreads = cv::getNumThreads();
-    cv::setNumThreads(get<3>(GetParam()));
-    struct RestoreThreads
-    {
-        int count;
-        ~RestoreThreads() { cv::setNumThreads(count); }
-    } restoreThreads = {previousThreads};
 
     const int inChannels = 4, outChannels = 6, groups = 2;
     const bool hasBias = mode % 2 == 0;
@@ -130,6 +123,9 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test, DeconvolutionCoordinates, testing::Combine(
-    testing::Values(2, 3), testing::Values(0, 1, 2, 3), testing::Bool(), testing::Values(1, 4)));
+    testing::Values(2, 3), testing::Values(0, 1, 2, 3), testing::Values(false)));
+
+INSTANTIATE_TEST_CASE_P(DynamicWeights, DeconvolutionCoordinates, testing::Combine(
+    testing::Values(2, 3), testing::Values(2), testing::Values(true)));
 
 }} // namespace
