@@ -333,6 +333,9 @@ if(X86 OR X86_64)
       ocv_update(CPU_SSE2_SUPPORTED ON)
       ocv_update(CPU_AVX_512F_FLAGS_ON "/arch:AVX512")
     endif()
+    # MSVC has no /arch: switch that enables VEX-encoded AVX-VNNI on its own and
+    # does not define __AVXVNNI__, so the dispatched AVX-VNNI code paths stay off.
+    ocv_update(CPU_AVX_VNNI_SUPPORTED OFF)
     # Other instruction sets are supported by default since MSVC 2008 at least
   else()
     message(WARNING "TODO: Unsupported compiler")

@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "int8_vnni.hpp"
+#include "conv2_int8_kernels.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 

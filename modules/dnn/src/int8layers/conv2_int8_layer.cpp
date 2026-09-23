@@ -9,9 +9,7 @@
 #include "../layers/conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#include "int8_vnni.hpp"
-#include "conv2_int8_kernels.simd.hpp"
-#include "int8layers/conv2_int8_kernels.simd_declarations.hpp"
+#include "conv2_int8_kernels.hpp"
 
 namespace cv {
 namespace dnn {
@@ -143,45 +141,6 @@ static void repackWeightsForVNNI(const Mat& wpack, int ngroups, int Kg, int Cg,
         }
     });
 }
-
-static void convInt8Block(const void* inp_, const void* residual_,
-                          void* out_, const ConvState& cs,
-                          const void* weights_,
-                          const void* weightsVNNI_,
-                          const int* bias, const int* biasVNNI_,
-                          const float* multiplier,
-                          int inp_zp, int out_zp,
-                          const int8_t* activLUT,
-                          bool inputIsU8)
-{
-    // AVX-VNNI kernels are dispatched separately (conv2_int8_vnni_kernels), so the
-    // whole path disappears when the toolchain cannot encode AVX-VNNI.
-    if (CV_CPU_HAS_SUPPORT_AVX_VNNI && !cs.depthwise && weightsVNNI_ && biasVNNI_) {
-        convInt8BlockVNNI(inp_, residual_, out_, cs, weightsVNNI_,
-                          biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
-        return;
-    }
-#if CV_TRY_RVV && CV_RVV
-    if (cv::checkHardwareSupport(CV_CPU_RVV)) {
-        opt_RVV::convInt8Block(inp_, residual_, out_, cs, weights_,
-                               weightsVNNI_, bias, biasVNNI_,
-                               multiplier, inp_zp, out_zp, activLUT, inputIsU8);
-        return;
-    }
-#endif
-#if CV_TRY_AVX2
-    if (cv::checkHardwareSupport(CV_CPU_AVX2)) {
-        opt_AVX2::convInt8Block(inp_, residual_, out_, cs, weights_,
-                                weightsVNNI_, bias, biasVNNI_,
-                                multiplier, inp_zp, out_zp, activLUT, inputIsU8);
-        return;
-    }
-#endif
-    CV_CPU_CALL_BASELINE(convInt8Block, (inp_, residual_, out_, cs, weights_,
-                                         weightsVNNI_, bias, biasVNNI_,
-                                         multiplier, inp_zp, out_zp, activLUT, inputIsU8));
-}
-
 
 class Conv2Int8LayerImpl CV_FINAL : public Conv2Int8Layer
 {

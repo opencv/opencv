@@ -5,15 +5,31 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
-#include "int8_vnni.hpp"
+#include "conv2_int8_kernels.hpp"
 
-#include "layers_common_vnni.simd.hpp"
-#include "int8layers/layers_common_vnni.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX_VNNI,BASELINE based on CMakeLists.txt content
+#include "conv2_int8_kernels.simd.hpp"
+#include "int8layers/conv2_int8_kernels.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX_VNNI,RVV,AVX2,BASELINE based on CMakeLists.txt content
 
 namespace cv
 {
 namespace dnn
 {
+
+void convInt8Block(const void* inp_, const void* residual_,
+                   void* out_, const ConvState& cs,
+                   const void* weights_,
+                   const void* weightsVNNI_,
+                   const int* bias, const int* biasVNNI_,
+                   const float* multiplier,
+                   int inp_zp, int out_zp,
+                   const int8_t* activLUT,
+                   bool inputIsU8)
+{
+    CV_CPU_DISPATCH(convInt8Block, (inp_, residual_, out_, cs, weights_, weightsVNNI_,
+                                    bias, biasVNNI_, multiplier, inp_zp, out_zp,
+                                    activLUT, inputIsU8),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
 
 void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
                    const uint8_t* rowbuf, int* output, const int* outShape,
@@ -24,15 +40,6 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
                                         blockSize, vecsize, vecsize_aligned, outZp,
                                         multiplier, initOutput, finalOutput));
     CV_Error(Error::StsNotImplemented, "DNN/INT8: AVX-VNNI convolution kernel is not available");
-}
-
-void fastGEMM1TVNNI( const uint8_t* vec, const int8_t* weights,
-                     size_t wstep, const int* bias, const float* multiplier,
-                     int* dst, int nvecs, int vecsize, int outZp )
-{
-    CV_CPU_CALL_AVX_VNNI(fastGEMM1TVNNI, (vec, weights, wstep, bias, multiplier,
-                                          dst, nvecs, vecsize, outZp));
-    CV_Error(Error::StsNotImplemented, "DNN/INT8: AVX-VNNI GEMM kernel is not available");
 }
 
 }
