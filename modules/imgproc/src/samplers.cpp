@@ -238,10 +238,7 @@ static void getRectSubPix_8u32f
         float a = center.x - ip.x;
         float b = center.y - ip.y;
         a = MAX(a,0.0001f);
-        // Bilinear weights of the 4-tap kernel. They are the same for every output
-        // pixel of the patch, so the kernel is applied directly instead of using the
-        // incremental form (prev = t*s), whose loop-carried dependency across the row
-        // serialized the whole inner loop.
+
         float a11 = (1.f - a)*(1.f - b);
         float a12 = a*(1.f - b);
         float a21 = (1.f - a)*b;
@@ -267,8 +264,7 @@ static void getRectSubPix_8u32f
                     v_float32 s1 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + 1)));
                     v_float32 s2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + src_step)));
                     v_float32 s3 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + src_step + 1)));
-                    // v_add/v_mul instead of operators: the RVV scalable backend
-                    // defines no operator overloads for its native vector types.
+
                     v_float32 s = v_mul(s0, va11);
                     s = v_add(s, v_mul(s1, va12));
                     s = v_add(s, v_mul(s2, va21));
