@@ -9,8 +9,11 @@
 #include "../vlm_model_base.hpp"
 #include "../http_client.hpp"
 #include "../base64.hpp"
+#include "../json_parser.hpp"
 
+#include <cctype>
 #include <cstdio>
+#include <cstring>
 
 namespace cv { namespace vlm {
 
@@ -45,34 +48,59 @@ std::string jsonEscape(const std::string& s)
     return out;
 }
 
-void checkHttpStatus(const HttpResponse& response, const String& provider)
+const char* const REDACTED = "<redacted>";
+
+// Some providers echo the offending credential back in the body of an authentication error,
+// so nothing from a response body reaches an exception message -- which a caller may log --
+// without the key being taken out of it first. The known prefixes cover the case where the
+// provider echoes only part of the key, which an exact match on apiKey would miss.
+std::string redactSecrets(const std::string& text, const String& apiKey)
+{
+    const size_t redactedLen = strlen(REDACTED);
+    std::string out = text;
+
+    if (apiKey.size() >= 8)
+    {
+        for (size_t at = out.find(apiKey); at != std::string::npos;
+             at = out.find(apiKey, at + redactedLen))
+            out.replace(at, apiKey.size(), REDACTED);
+    }
+
+    static const char* const prefixes[] = { "sk-", "xai-", "AIza", "gsk_" };
+    for (const char* prefix : prefixes)
+    {
+        const size_t prefixLen = strlen(prefix);
+        size_t at = 0;
+        while ((at = out.find(prefix, at)) != std::string::npos)
+        {
+            size_t end = at + prefixLen;
+            while (end < out.size() &&
+                   (isalnum((unsigned char)out[end]) || out[end] == '-' || out[end] == '_'))
+                end++;
+            out.replace(at, end - at, std::string(prefix) + REDACTED);
+            at += prefixLen + redactedLen;
+        }
+    }
+    return out;
+}
+
+void checkHttpStatus(const HttpResponse& response, const String& provider, const String& apiKey)
 {
     if (response.statusCode < 200 || response.statusCode >= 300)
     {
-        std::string snippet = response.body.substr(0, 500);
-        CV_Error(Error::StsError, cv::format("vlm: %s request failed with HTTP status %ld: %s",
-                                              provider.c_str(), response.statusCode, snippet.c_str()));
+        const std::string snippet = redactSecrets(response.body.substr(0, 500), apiKey);
+        CV_Error(Error::StsError,
+                 cv::format("vlm: %s request failed with HTTP status %ld: %s",
+                            provider.c_str(), response.statusCode, snippet.c_str()));
     }
 }
 
-FileStorage parseJson(const std::string& body, const String& provider)
+String extractOrThrow(const JsonValue& node, const String& provider)
 {
-    FileStorage fs(body, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
-    if (!fs.isOpened())
-        CV_Error(Error::StsError, "vlm: could not parse " + provider + " response as JSON");
-    return fs;
-}
-
-String extractOrThrow(const FileNode& node, const String& provider)
-{
-    if (node.empty())
-        CV_Error(Error::StsError, "vlm: unexpected " + provider + " response shape (missing generated text)");
-    return (String)node;
-}
-
-int readIntOr(const FileNode& node, int fallback)
-{
-    return node.empty() ? fallback : (int)node;
+    if (node.type() != JsonValue::STRING)
+        CV_Error(Error::StsError,
+                 "vlm: unexpected " + provider + " response shape (missing generated text)");
+    return node.asString();
 }
 
 class CloudVLMModel CV_FINAL : public VLMModelBase
@@ -82,10 +110,14 @@ public:
         : modelType_(modelType), modelName_(modelName), apiKey_(apiKey)
     {
         CV_CheckFalse(apiKey.empty(), "vlm: api_key is required for cloud VLMModelType values");
+        // Deliberately names no model: providers retire names, and a suggestion baked in
+        // here goes stale silently and sends users chasing a 404 that is not their fault.
         CV_CheckFalse(modelName.empty(),
-                      "vlm: a model name (model_dir) is required for cloud VLMModelType values, "
-                      "e.g. 'gpt-4o', 'claude-3-5-sonnet-20241022', 'gemini-2.0-flash', 'grok-2-vision-1212' "
-                      "-- check the provider's current model list, names change over time");
+                      "vlm: a model name (model_dir) is required for cloud VLMModelType "
+                      "values. Take it from the provider's own model list -- OpenAI and Grok "
+                      "serve one at GET /v1/models, Gemini at "
+                      "generativelanguage.googleapis.com/v1beta/models, Anthropic at "
+                      "api.anthropic.com/v1/models");
     }
 
     void setPreferableDevice(const String&) CV_OVERRIDE
@@ -141,13 +173,14 @@ private:
         };
 
         HttpResponse response = httpPostJson(url, body.str(), headers);
-        checkHttpStatus(response, "OpenAI-compatible");
+        checkHttpStatus(response, "OpenAI-compatible", apiKey_);
 
-        FileStorage fs = parseJson(response.body, "OpenAI-compatible");
-        lastTokensUsed_ = readIntOr(fs["usage"]["total_tokens"], -1);
-        FileNode choices = fs["choices"];
+        const JsonValue root = jsonParse(response.body);
+        lastTokensUsed_ = root["usage"]["total_tokens"].asInt(-1);
+        const JsonValue& choices = root["choices"];
         if (choices.size() == 0)
-            CV_Error(Error::StsError, "vlm: unexpected OpenAI-compatible response shape (missing choices)");
+            CV_Error(Error::StsError,
+                     "vlm: unexpected OpenAI-compatible response shape (missing choices)");
         return extractOrThrow(choices[0]["message"]["content"], "OpenAI-compatible");
     }
 
@@ -169,15 +202,16 @@ private:
         };
 
         HttpResponse response = httpPostJson("https://api.anthropic.com/v1/messages", body.str(), headers);
-        checkHttpStatus(response, "Anthropic");
+        checkHttpStatus(response, "Anthropic", apiKey_);
 
-        FileStorage fs = parseJson(response.body, "Anthropic");
-        int inputTokens = readIntOr(fs["usage"]["input_tokens"], 0);
-        int outputTokens = readIntOr(fs["usage"]["output_tokens"], 0);
+        const JsonValue root = jsonParse(response.body);
+        const int inputTokens = root["usage"]["input_tokens"].asInt(0);
+        const int outputTokens = root["usage"]["output_tokens"].asInt(0);
         lastTokensUsed_ = (inputTokens > 0 || outputTokens > 0) ? inputTokens + outputTokens : -1;
-        FileNode content = fs["content"];
+        const JsonValue& content = root["content"];
         if (content.size() == 0)
-            CV_Error(Error::StsError, "vlm: unexpected Anthropic response shape (missing content)");
+            CV_Error(Error::StsError,
+                     "vlm: unexpected Anthropic response shape (missing content)");
         return extractOrThrow(content[0]["text"], "Anthropic");
     }
 
@@ -200,16 +234,18 @@ private:
         };
 
         HttpResponse response = httpPostJson(url, body.str(), headers);
-        checkHttpStatus(response, "Gemini");
+        checkHttpStatus(response, "Gemini", apiKey_);
 
-        FileStorage fs = parseJson(response.body, "Gemini");
-        lastTokensUsed_ = readIntOr(fs["usageMetadata"]["totalTokenCount"], -1);
-        FileNode candidates = fs["candidates"];
+        const JsonValue root = jsonParse(response.body);
+        lastTokensUsed_ = root["usageMetadata"]["totalTokenCount"].asInt(-1);
+        const JsonValue& candidates = root["candidates"];
         if (candidates.size() == 0)
-            CV_Error(Error::StsError, "vlm: unexpected Gemini response shape (missing candidates)");
-        FileNode parts = candidates[0]["content"]["parts"];
+            CV_Error(Error::StsError,
+                     "vlm: unexpected Gemini response shape (missing candidates)");
+        const JsonValue& parts = candidates[0]["content"]["parts"];
         if (parts.size() == 0)
-            CV_Error(Error::StsError, "vlm: unexpected Gemini response shape (missing content parts)");
+            CV_Error(Error::StsError,
+                     "vlm: unexpected Gemini response shape (missing content parts)");
         return extractOrThrow(parts[0]["text"], "Gemini");
     }
 
