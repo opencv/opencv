@@ -49,19 +49,25 @@ void split64s(const int64* src, int64** dst, int len, int cn )
 *                                       split & merge                                    *
 \****************************************************************************************/
 
-typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
+typedef void (*SplitFunc)(const void* src, void** dst, int len, int cn);
+
+template<typename T, void (*fn)(const T*, T**, int, int)>
+static void splitWrap(const void* src, void** dst, int len, int cn)
+{
+    fn((const T*)src, (T**)dst, len, cn);
+}
 
 static SplitFunc getSplitFunc(int depth)
 {
     static SplitFunc splitTab[CV_DEPTH_MAX] =
     {
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split8u), (SplitFunc)GET_OPTIMIZED(cv::hal::split8u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split16u), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split32s), (SplitFunc)GET_OPTIMIZED(cv::hal::split32s),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split64s), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split16u), (SplitFunc)GET_OPTIMIZED(cv::hal::split8u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split64s), (SplitFunc)GET_OPTIMIZED(cv::hal::split64s),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split32s), 0, 0, 0
+        splitWrap<uchar, cv::hal::split8u>, splitWrap<uchar, cv::hal::split8u>,
+        splitWrap<ushort, cv::hal::split16u>, splitWrap<ushort, cv::hal::split16u>,
+        splitWrap<int, cv::hal::split32s>, splitWrap<int, cv::hal::split32s>,
+        splitWrap<int64_t, cv::hal::split64s>, splitWrap<ushort, cv::hal::split16u>,
+        splitWrap<ushort, cv::hal::split16u>, splitWrap<uchar, cv::hal::split8u>,
+        splitWrap<int64_t, cv::hal::split64s>, splitWrap<int64_t, cv::hal::split64s>,
+        splitWrap<int, cv::hal::split32s>, 0, 0, 0
     };
 
     return splitTab[depth];
@@ -161,7 +167,7 @@ void split(const Mat& src, Mat* mv)
         for( size_t j = 0; j < total; j += blocksize )
         {
             size_t bsz = std::min(total - j, blocksize);
-            func( ptrs[0], &ptrs[1], (int)bsz, cn );
+            func( ptrs[0], (void**)&ptrs[1], (int)bsz, cn );
 
             if( j + blocksize < total )
             {

@@ -23,6 +23,13 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2_Tokens) {
     EXPECT_EQ(tokens, expected);
 }
 
+// load() must keep accepting the model directory, not only the config.json path.
+TEST(Tokenizer_BPE, Tokenizer_LoadFromDirectory) {
+    std::vector<int> expected = {31373, 995};
+    EXPECT_EQ(Tokenizer::load(_tf("gpt2/")).encode("hello world"), expected);
+    EXPECT_EQ(Tokenizer::load(_tf("gpt2")).encode("hello world"), expected);
+}
+
 TEST(Tokenizer_BPE, Tokenizer_GPT4) {
     std::string gpt4_model = _tf("gpt4/config.json");
     Tokenizer tok = Tokenizer::load(gpt4_model);
@@ -35,6 +42,21 @@ TEST(Tokenizer_BPE, Tokenizer_GPT4) {
     std::string expec_str = "hello world";
     EXPECT_EQ(sent, expec_str);
 
+}
+
+// GPT-4's split regex must come from the embedded pre_tokenizer.pattern.Regex
+// in tokenizer.json (CL100K-style whitespace-run handling), not from a
+// family-name fallback. Ground truth generated with:
+//   from tokenizers import Tokenizer
+//   tok = Tokenizer.from_file("gpt4/tokenizer.json")
+//   tok.encode("a\n\nb").ids
+TEST(Tokenizer_BPE, Tokenizer_GPT4_WhitespaceSplit) {
+    std::string gpt4_model = _tf("gpt4/config.json");
+    Tokenizer tok = Tokenizer::load(gpt4_model);
+
+    EXPECT_EQ(tok.encode("a b"), std::vector<int>({64, 293}));
+    EXPECT_EQ(tok.encode("a\n\nb"), std::vector<int>({64, 271, 65}));
+    EXPECT_EQ(tok.encode("a \n\n b"), std::vector<int>({64, 4815, 293}));
 }
 
 TEST(Tokenizer_BPE, Tokenizer_GPT2) {
@@ -143,36 +165,37 @@ TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
     }
 }
 
-
+// Ids gained the leading <bos> (id 2) the old Gemma path dropped by ignoring the
+// post_processor; they match tokenizers.Tokenizer.from_file(...).encode(t).ids
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_English) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
-    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{9259, 1902}));
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{2, 9259, 1902}));
 }
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Phrase) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
     EXPECT_EQ(tok.encode("the quick brown fox"),
-              (std::vector<int>{1437, 3823, 8864, 37423}));
+              (std::vector<int>{2, 1437, 3823, 8864, 37423}));
 }
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Mixed) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
-    EXPECT_EQ(tok.encode("OpenCV"), (std::vector<int>{7084, 20741}));
+    EXPECT_EQ(tok.encode("OpenCV"), (std::vector<int>{2, 7084, 20741}));
 }
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Numbers) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
-    EXPECT_EQ(tok.encode("2024"), (std::vector<int>{236778, 236771, 236778, 236812}));
+    EXPECT_EQ(tok.encode("2024"), (std::vector<int>{2, 236778, 236771, 236778, 236812}));
 }
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_SpecialTokens) {
     std::string model = _tf("gemma3/config.json");
     Tokenizer tok = Tokenizer::load(model);
-    EXPECT_EQ(tok.encode("<bos>Hello<eos>"), (std::vector<int>{2, 9259, 1}));
+    EXPECT_EQ(tok.encode("<bos>Hello<eos>"), (std::vector<int>{2, 2, 9259, 1}));
 }
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Roundtrip) {
@@ -255,6 +278,392 @@ TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_RealModel) {
 TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_HfTestData) {
     Tokenizer tok = Tokenizer::load(_tf("paddleocr_vl/config.json"));
     checkAgainstHfTestData(tok, _tf("paddleocr_vl/paddleocr_vl_hf_testdata.json"));
+}
+
+// ---- T5 tests (Unigram tokenizer) ----
+// Ground truth generated with:
+//   from tokenizers import Tokenizer
+//   tok = Tokenizer.from_file("tokenizer.json")  # onnx-models/sentence-t5-base-onnx
+//   tok.encode(text).ids
+
+TEST(Tokenizer_Unigram, Tokenizer_T5_BasicEncode) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("hello world"), (std::vector<int>{21820, 296, 1}));
+    EXPECT_EQ(tok.encode("Don't stop! Really?? ...ok."),
+              (std::vector<int>{1008, 31, 17, 1190, 55, 11291, 8546, 3, 233, 1825, 5, 1}));
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_T5_Numbers) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("Invoice #12345, total: $1,234.56"),
+              (std::vector<int>{86, 23235, 7172, 2773, 2128, 6, 792, 10, 1970, 6, 2773, 12451, 948, 1}));
+}
+TEST(Tokenizer_Unigram, Tokenizer_T5_Whitespace) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    EXPECT_EQ(tok.encode("helloworld"), (std::vector<int>{21820, 7276, 1}));
+
+    std::vector<int> trailing = tok.encode("hello ");
+    EXPECT_EQ(trailing, (std::vector<int>{21820, 1}));
+    EXPECT_EQ(tok.decode(trailing), "hello");
+
+    std::vector<int> leading = tok.encode(" hello");
+    EXPECT_EQ(leading, (std::vector<int>{21820, 1}));
+    EXPECT_EQ(tok.decode(leading), "hello");
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_T5_UnicodeNormalization) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    // "ＡＢＣ１２３"
+    std::vector<int> fullwidth = tok.encode("\xef\xbc\xa1\xef\xbc\xa2\xef\xbc\xa3\xef\xbc\x91\xef\xbc\x92\xef\xbc\x93");
+    EXPECT_EQ(fullwidth, (std::vector<int>{14213, 14574, 1}));
+    EXPECT_EQ(tok.decode(fullwidth), "ABC123");
+
+    // "ﬁle ﬂow"
+    std::vector<int> ligature = tok.encode("\xef\xac\x81\x6c\x65\x20\xef\xac\x82\x6f\x77");
+    EXPECT_EQ(ligature, (std::vector<int>{1042, 2537, 1}));
+    EXPECT_EQ(tok.decode(ligature), "file flow");
+
+    // "café näive" (NFC and NFD input forms both map to the same ids)
+    std::vector<int> accents = tok.encode("\x63\x61\x66\xc3\xa9\x20\x6e\xc3\xa4\x69\x76\x65");
+    EXPECT_EQ(accents, (std::vector<int>{11949, 3, 29, 1864, 757, 1}));
+    EXPECT_EQ(tok.decode(accents), "caf\xc3\xa9 n\xc3\xa4ive");
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_T5_UnknownChars) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    // "こんにちは世界"
+    EXPECT_EQ(tok.encode("\xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf\xe4\xb8\x96\xe7\x95\x8c"),
+              (std::vector<int>{3, 2, 1}));
+
+    // "hello 👋 world 🌍"
+    std::vector<int> emoji = tok.encode("\x68\x65\x6c\x6c\x6f\x20\xf0\x9f\x91\x8b\x20\x77\x6f\x72\x6c\x64\x20\xf0\x9f\x8c\x8d");
+    EXPECT_EQ(emoji, (std::vector<int>{21820, 3, 2, 296, 3, 2, 1}));
+    EXPECT_EQ(tok.decode(emoji), "hello  world ");
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_T5_Roundtrip) {
+    std::string model = _tf("t5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    std::vector<std::string> cases = {
+        "hello world",
+        "Invoice #12345, total: $1,234.56",
+        "Don't stop! Really?? ...ok.",
+        "helloworld",
+    };
+    for (const auto& text : cases) {
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+    }
+}
+
+// ---- BERT tests (WordPiece tokenizer) ----
+// Ground truth generated with:
+//   from tokenizers import Tokenizer
+//   tok = Tokenizer.from_file("tokenizer.json")  # bert-base-uncased
+//   tok.encode(text).ids ; tok.decode(ids, skip_special_tokens=True)
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_BasicEncode) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("hello world"), (std::vector<int>{101, 7592, 2088, 102}));
+    EXPECT_EQ(tok.encode("Don't stop! Really?? ...ok."),
+              (std::vector<int>{101, 2123, 1005, 1056, 2644, 999, 2428, 1029, 1029, 1012, 1012, 1012,
+                                 7929, 1012, 102}));
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_Numbers) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("Invoice #12345, total: $1,234.56"),
+              (std::vector<int>{101, 1999, 6767, 6610, 1001, 13138, 19961, 1010, 2561, 1024, 1002, 1015,
+                                 1010, 22018, 1012, 5179, 102}));
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_Whitespace) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    EXPECT_EQ(tok.encode("helloworld"), (std::vector<int>{101, 7592, 11108, 102}));
+
+    std::vector<int> trailing = tok.encode("hello ");
+    EXPECT_EQ(trailing, (std::vector<int>{101, 7592, 102}));
+    EXPECT_EQ(tok.decode(trailing), "hello");
+
+    std::vector<int> leading = tok.encode(" hello");
+    EXPECT_EQ(leading, (std::vector<int>{101, 7592, 102}));
+    EXPECT_EQ(tok.decode(leading), "hello");
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_CaseAndSubword) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    // do_lower_case: true
+    std::vector<int> upper = tok.encode("HELLO WORLD");
+    EXPECT_EQ(upper, (std::vector<int>{101, 7592, 2088, 102}));
+    EXPECT_EQ(tok.decode(upper), "hello world");
+
+    std::vector<int> mixed = tok.encode("OpenCV is Great");
+    EXPECT_EQ(mixed, (std::vector<int>{101, 2330, 2278, 2615, 2003, 2307, 102}));
+    EXPECT_EQ(tok.decode(mixed), "opencv is great");
+
+    // long OOV word split fully into WordPiece subword units, no [UNK] fallback
+    std::vector<int> unk = tok.encode("supercalifragilisticexpialidocious");
+    EXPECT_EQ(unk, (std::vector<int>{101, 3565, 9289, 10128, 29181, 24411, 4588, 10288, 19312, 21273,
+                                      10085, 6313, 102}));
+    EXPECT_EQ(tok.decode(unk), "supercalifragilisticexpialidocious");
+
+    std::vector<int> hyphen = tok.encode("state-of-the-art");
+    EXPECT_EQ(hyphen, (std::vector<int>{101, 2110, 1011, 1997, 1011, 1996, 1011, 2396, 102}));
+    EXPECT_EQ(tok.decode(hyphen), "state - of - the - art");
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_NonAsciiStripping) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    // "こんにちは世界" -- BertNormalizer's handle_chinese_chars pads CJK codepoints with
+    // spaces before WordPiece splitting; the trailing character falls back to [UNK] (100).
+    EXPECT_EQ(tok.encode("\xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf\xe4\xb8\x96\xe7\x95\x8c"),
+              (std::vector<int>{101, 1655, 30217, 30194, 30188, 30198, 1745, 100, 102}));
+
+    // "hello 👋 world 🌍" -- emoji are stripped by the normalizer's control-char handling
+    // and map to [UNK] (100)
+    std::vector<int> emoji = tok.encode("\x68\x65\x6c\x6c\x6f\x20\xf0\x9f\x91\x8b\x20\x77\x6f\x72\x6c\x64\x20\xf0\x9f\x8c\x8d");
+    EXPECT_EQ(emoji, (std::vector<int>{101, 7592, 100, 2088, 100, 102}));
+    EXPECT_EQ(tok.decode(emoji), "hello world");
+
+    // "café näive" -- BertNormalizer strips accents by default
+    std::vector<int> accents = tok.encode("\x63\x61\x66\xc3\xa9\x20\x6e\xc3\xa4\x69\x76\x65");
+    EXPECT_EQ(accents, (std::vector<int>{101, 7668, 15743, 102}));
+    EXPECT_EQ(tok.decode(accents), "cafe naive");
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_Roundtrip) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    std::vector<std::pair<std::string, std::string>> cases = {
+        {"hello world", "hello world"},
+        {"helloworld", "helloworld"},
+        {"2024", "2024"},
+        {"supercalifragilisticexpialidocious", "supercalifragilisticexpialidocious"},
+    };
+    for (const auto& c : cases) {
+        EXPECT_EQ(tok.decode(tok.encode(c.first)), c.second);
+    }
+}
+
+// BERT's pair template is [CLS] A [SEP] B [SEP], so every chunk past the first adds
+// its own body plus one [SEP] -- that is, its single-chunk encoding minus the [CLS].
+static std::vector<int> concatChunkEncodings(const std::vector<std::vector<int>>& singles,
+                                             size_t dropFromFollowing) {
+    std::vector<int> expected;
+    for (size_t i = 0; i < singles.size(); i++)
+        expected.insert(expected.end(),
+                        singles[i].begin() + (i == 0 ? 0 : dropFromFollowing),
+                        singles[i].end());
+    return expected;
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_EncodeChunks) {
+    std::string model = _tf("bert/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+
+    std::vector<int> a = tok.encode("hello world");
+    std::vector<int> b = tok.encode("OpenCV is Great");
+    std::vector<int> pair = tok.encode(std::vector<std::string>{"hello world", "OpenCV is Great"});
+
+    EXPECT_EQ(pair, (std::vector<int>{101, 7592, 2088, 102, 2330, 2278, 2615, 2003, 2307, 102}));
+    EXPECT_EQ(pair, concatChunkEncodings({a, b}, 1));
+
+    // The template generalizes past two chunks.
+    std::vector<int> c = tok.encode("third one");
+    std::vector<int> triple = tok.encode(std::vector<std::string>{"hello world", "OpenCV is Great", "third one"});
+    EXPECT_EQ(triple, concatChunkEncodings({a, b, c}, 1));
+
+    // A one-chunk list is the plain single-sequence encoding.
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello world"}), a);
+    EXPECT_THROW(tok.encode(std::vector<std::string>()), cv::Exception);
+
+    // decode() drops template ids wherever they sit, not just at the ends.
+    EXPECT_EQ(tok.decode(pair), "hello world opencv is great");
+}
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsNullFollowsLowercase) {
+    std::string model = _tf("bert-cased/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    // Hex-escaped: a raw UTF-8 literal is re-encoded by MSVC without /utf-8.
+    EXPECT_EQ(tok.decode(tok.encode("caf\xc3\xa9")), "caf\xc3\xa9");
+    EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
+}
+
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_MalformedUtf8) {
+    Tokenizer tok = Tokenizer::load(_tf("bert/config.json"));
+    // Malformed bytes are dropped during clean-text normalization, the same
+    // way BertNormalizer already drops other control characters, not thrown --
+    // unicode_cpts_from_utf8() recovers with U+FFFD instead of propagating.
+    EXPECT_NO_THROW(tok.encode("\xff"));
+    EXPECT_EQ(tok.decode(tok.encode("a\xc3z")), "az");
+}
+
+// Valid codepoints sitting exactly on the range boundaries the strictness
+// checks test against. An off-by-one in any of those checks turns one of these
+// into U+FFFD, silently corrupting legitimate text, so they roundtrip here.
+TEST(Tokenizer_BPE, Tokenizer_Utf8BoundaryRoundtrip) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+    const std::vector<std::string> valid = {
+        "\x7F",                 // U+007F, 1-byte max
+        "\xC2\x80",             // U+0080, 2-byte min
+        "\xDF\xBF",             // U+07FF, 2-byte max
+        "\xE0\xA0\x80",         // U+0800, 3-byte min
+        "\xED\x9F\xBF",         // U+D7FF, just below the surrogate block
+        "\xEE\x80\x80",         // U+E000, just above the surrogate block
+        "\xEF\xBF\xBF",         // U+FFFF, 3-byte max
+        "\xEF\xBF\xBD",         // U+FFFD itself, must not be taken for recovery output
+        "\xF0\x90\x80\x80",     // U+10000, 4-byte min
+        "\xF4\x8F\xBF\xBF",     // U+10FFFF, last valid codepoint
+    };
+    for (const std::string& text : valid)
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+}
+
+// GPT-2 and GPT-4 carry a ByteLevel post_processor (or none at all), so there is no
+// pair template to repeat and nothing sensible to put between two chunks.
+TEST(Tokenizer_BPE, Tokenizer_EncodeChunks_Unsupported) {
+    for (const char* cfg : {"gpt2/config.json", "gpt4/config.json"}) {
+        Tokenizer tok = Tokenizer::load(_tf(cfg));
+        EXPECT_THROW(tok.encode(std::vector<std::string>{"hello", "world"}), cv::Exception);
+        // One chunk needs no template and still works.
+        EXPECT_EQ(tok.encode(std::vector<std::string>{"hello world"}), tok.encode("hello world"));
+    }
+}
+
+// Gemma's pair template is <bos> A <bos> B: the separator is another <bos> and
+// nothing closes the sequence.
+TEST(Tokenizer_SentencePiece, Tokenizer_EncodeChunks) {
+    Tokenizer tok = Tokenizer::load(_tf("gemma2/config.json"));
+    std::vector<int> a = tok.encode("hello");
+    std::vector<int> b = tok.encode("world");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello", "world"}), concatChunkEncodings({a, b}, 0));
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello"}), a);
+}
+
+// T5's pair template is A </s> B </s>: no prefix, one </s> closing each chunk.
+TEST(Tokenizer_Unigram, Tokenizer_EncodeChunks) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    std::vector<int> a = tok.encode("hello");
+    std::vector<int> b = tok.encode("world");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello", "world"}), concatChunkEncodings({a, b}, 0));
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"hello"}), a);
+}
+
+// ALBERT is a Unigram model with BERT's own [CLS] A [SEP] B [SEP] pair template.
+TEST(Tokenizer_Unigram, Tokenizer_Albert_EncodeChunks) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    std::vector<int> a = tok.encode("Hello world");
+    std::vector<int> b = tok.encode("second chunk");
+    EXPECT_EQ(tok.encode(std::vector<std::string>{"Hello world", "second chunk"}),
+              concatChunkEncodings({a, b}, 1));
+}
+
+TEST(Tokenizer_Unigram, Tokenizer_MalformedUtf8) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    // Malformed sequences resolve to U+FFFD and encode like any other unknown
+    // text rather than throwing, so one bad byte cannot abort a whole prompt.
+    // Every family shares this behaviour via unicode_cpt_from_utf8_lenient().
+    EXPECT_NO_THROW(tok.encode("\xff"));           // invalid lead byte
+    EXPECT_NO_THROW(tok.encode("\xc3"));            // truncated 2-byte sequence
+}
+
+// T5's normalizer is a bare Precompiled node with no Lowercase step, so case
+// must survive here -- the ALBERT chain below must not be applied unconditionally.
+TEST(Tokenizer_Unigram, Tokenizer_T5_NormalizerKeepsCase) {
+    Tokenizer tok = Tokenizer::load(_tf("t5/config.json"));
+    EXPECT_NE(tok.encode("Hello"), tok.encode("hello"));
+}
+
+// ALBERT declares Sequence[Replace, Replace, NFKD, StripAccents, Lowercase,
+// Precompiled]. Reading only precompiled_charsmap skips the lowercase and
+// accent steps, so every capitalised or accented word mistokenizes.
+TEST(Tokenizer_Unigram, Tokenizer_Albert_SequenceNormalizer) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    EXPECT_EQ(tok.encode("Hello world"), tok.encode("hello world"));
+    EXPECT_EQ(tok.encode("The Quick BROWN Fox"), tok.encode("the quick brown fox"));
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), tok.encode("cafe"));
+    EXPECT_EQ(tok.decode(tok.encode("Hello world")), "hello world");
+}
+
+// Accent stripping must not delete a spacing mark or Hangul syllable.
+// Ground truth: tokenizers.Tokenizer.from_file("bert/tokenizer.json").encode(t).ids
+TEST(Tokenizer_WordPiece, Tokenizer_Bert_StripAccentsKeepsNonMarkDecompositions) {
+    Tokenizer tok = Tokenizer::load(_tf("bert/config.json"));
+
+    // Devanagari "hindi" survives intact and matches the reference id for id
+    const std::string devanagari =
+        "\xe0\xa4\xb9\xe0\xa4\xbf\xe0\xa4\xa8\xe0\xa5\x8d\xe0\xa4\xa6\xe0\xa5\x80";
+    EXPECT_EQ(tok.encode(devanagari),
+              (std::vector<int>{101, 1339, 29877, 29863, 29861, 29878, 102}));
+
+    // Uncovered scripts (Bengali, Tamil, Oriya, Hangul) fall back to one [UNK] (100).
+    const std::vector<std::string> unsupported = {
+        "\xe0\xa6\xae\xe0\xa7\x8c\xe0\xa6\xb6\xe0\xa6\xb2",
+        "\xe0\xae\xa4\xe0\xae\xae\xe0\xae\xbf\xe0\xae\xb4\xe0\xaf\x8d",
+        "\xe0\xac\x93\xe0\xac\xa1\xe0\xac\xbc\xe0\xac\xbf\xe0\xac\x86",
+        "\xec\x95\x88\xeb\x85\x95\xed\x95\x98\xec\x84\xb8\xec\x9a\x94",
+    };
+    for (const std::string& text : unsupported)
+        EXPECT_EQ(tok.encode(text), (std::vector<int>{101, 100, 102})) << "text: " << text;
+
+    // accented Latin still folds to its base
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), (std::vector<int>{101, 7668, 102}));
+}
+
+// Malformed UTF-8 must not reach cv::error(), which dumps and can terminate.
+TEST(Tokenizer_BPE, Tokenizer_MalformedUtf8DoesNotRaise) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+
+    // opencv_ts's handler has a non-null userdata; restore both or it reads null.
+    int errors = 0;
+    void* prevUserdata = NULL;
+    ErrorCallback prev = redirectError(
+        [](int, const char*, const char*, const char*, int, void* counter) -> int {
+            ++*static_cast<int*>(counter);
+            return 0;
+        }, &errors, &prevUserdata);
+    // Split literals: a hex escape is greedy and would swallow the next hex digit.
+    std::vector<int> ids = tok.encode("a\xff" "b\xc3" "z");
+    redirectError(prev, prevUserdata);
+
+    EXPECT_EQ(errors, 0) << "invalid UTF-8 must not construct a cv::Exception";
+    EXPECT_FALSE(ids.empty());
+}
+
+// ALBERT wraps with [CLS]/[SEP] and folds case and accents.
+// Ground truth: tokenizers.Tokenizer.from_file("albert/tokenizer.json").encode(t).ids
+TEST(Tokenizer_Unigram, Tokenizer_Albert_GroundTruth) {
+    Tokenizer tok = Tokenizer::load(_tf("albert/config.json"));
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{2, 10975, 126, 3}));
+    EXPECT_EQ(tok.encode("The Quick BROWN Fox"), (std::vector<int>{2, 14, 2231, 886, 2385, 3}));
+    EXPECT_EQ(tok.encode("caf\xc3\xa9"), (std::vector<int>{2, 6241, 3}));
+    EXPECT_EQ(tok.decode(tok.encode("Hello world")), "hello world");
+}
+
+// Overlong encodings, surrogate halves and codepoints past U+10FFFF must not
+// decode to their shortest-form equivalents: accepting "\xC0\xAF" would let a
+// caller smuggle '/' past any check performed on the decoded text.
+TEST(Tokenizer_BPE, Tokenizer_Utf8Strictness) {
+    Tokenizer tok = Tokenizer::load(_tf("gpt2/config.json"));
+    const std::vector<int> slash = tok.encode("/");
+    EXPECT_NE(tok.encode("\xC0\xAF"), slash);
+    EXPECT_NE(tok.encode("\xE0\x80\xAF"), slash);
+    EXPECT_NO_THROW(tok.encode("\xED\xA0\x80"));       // UTF-16 surrogate half
+    EXPECT_NO_THROW(tok.encode("\xF7\xBF\xBF\xBF"));   // decodes past U+10FFFF
 }
 
 }}

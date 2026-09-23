@@ -8623,67 +8623,73 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 
 }
 
+template<typename T, void (*fn)(const float*, const float*, int, const void*, size_t, Size, T*, const float*, int, T*)>
+static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval)
+{
+    fn(x, y, len, src, srcstep, srcsize, (T*)dst, coeffs, flags, (T*)fillval);
+}
+
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
     if (type == CV_8UC1) {
-        return (ImgWarpFunc)bicubic8uC1;
+        return bicubicWarpWrap<uint8_t, bicubic8uC1>;
     }
     if (type == CV_8UC2) {
-        return (ImgWarpFunc)bicubic8uC2;
+        return bicubicWarpWrap<uint8_t, bicubic8uC2>;
     }
     if (type == CV_8UC3) {
-        return (ImgWarpFunc)bicubic8uC3;
+        return bicubicWarpWrap<uint8_t, bicubic8uC3>;
     }
     if (type == CV_8UC4) {
-        return (ImgWarpFunc)bicubic8uC4;
+        return bicubicWarpWrap<uint8_t, bicubic8uC4>;
     }
     if (type == CV_16UC1) {
-        return (ImgWarpFunc)bicubic16uC1;
+        return bicubicWarpWrap<uint16_t, bicubic16uC1>;
     }
     if (type == CV_16UC2) {
-        return (ImgWarpFunc)bicubic16uC2;
+        return bicubicWarpWrap<uint16_t, bicubic16uC2>;
     }
     if (type == CV_16UC3) {
-        return (ImgWarpFunc)bicubic16uC3;
+        return bicubicWarpWrap<uint16_t, bicubic16uC3>;
     }
     if (type == CV_16UC4) {
-        return (ImgWarpFunc)bicubic16uC4;
+        return bicubicWarpWrap<uint16_t, bicubic16uC4>;
     }
     if (type == CV_16SC1) {
-        return (ImgWarpFunc)bicubic16sC1;
+        return bicubicWarpWrap<int16_t, bicubic16sC1>;
     }
     if (type == CV_16SC2) {
-        return (ImgWarpFunc)bicubic16sC2;
+        return bicubicWarpWrap<int16_t, bicubic16sC2>;
     }
     if (type == CV_16SC3) {
-        return (ImgWarpFunc)bicubic16sC3;
+        return bicubicWarpWrap<int16_t, bicubic16sC3>;
     }
     if (type == CV_16SC4) {
-        return (ImgWarpFunc)bicubic16sC4;
+        return bicubicWarpWrap<int16_t, bicubic16sC4>;
     }
     if (type == CV_32FC1) {
-        return (ImgWarpFunc)bicubic32fC1;
+        return bicubicWarpWrap<float, bicubic32fC1>;
     }
     if (type == CV_32FC2) {
-        return (ImgWarpFunc)bicubic32fC2;
+        return bicubicWarpWrap<float, bicubic32fC2>;
     }
     if (type == CV_32FC3) {
-        return (ImgWarpFunc)bicubic32fC3;
+        return bicubicWarpWrap<float, bicubic32fC3>;
     }
     if (type == CV_32FC4) {
-        return (ImgWarpFunc)bicubic32fC4;
+        return bicubicWarpWrap<float, bicubic32fC4>;
     }
     if (type == CV_64FC1) {
-        return (ImgWarpFunc)bicubic64fC1;
+        return bicubicWarpWrap<double, bicubic64fC1>;
     }
     if (type == CV_64FC2) {
-        return (ImgWarpFunc)bicubic64fC2;
+        return bicubicWarpWrap<double, bicubic64fC2>;
     }
     if (type == CV_64FC3) {
-        return (ImgWarpFunc)bicubic64fC3;
+        return bicubicWarpWrap<double, bicubic64fC3>;
     }
     if (type == CV_64FC4) {
-        return (ImgWarpFunc)bicubic64fC4;
+        return bicubicWarpWrap<double, bicubic64fC4>;
     }
     return (ImgWarpFunc)nullptr;
 }

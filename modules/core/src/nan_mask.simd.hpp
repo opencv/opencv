@@ -107,8 +107,8 @@ static void patchNaNs_64f(uchar* ptr, size_t ulen, double newVal)
 
 PatchNanFunc getPatchNanFunc(bool isDouble)
 {
-    return isDouble ? (PatchNanFunc)GET_OPTIMIZED(patchNaNs_64f)
-                    : (PatchNanFunc)GET_OPTIMIZED(patchNaNs_32f);
+    return isDouble ? patchNaNs_64f
+                    : patchNaNs_32f;
 }
 
 ////// finiteMask //////
@@ -421,14 +421,14 @@ FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
 {
     static FiniteMaskFunc tab[CV_DEPTH_MAX] =
     {
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  1>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  2>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  3>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  4>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<double, 1>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<double, 2>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<double, 3>)),
-        (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<double, 4>)),
+        finiteMask_<float,  1>,
+        finiteMask_<float,  2>,
+        finiteMask_<float,  3>,
+        finiteMask_<float,  4>,
+        finiteMask_<double, 1>,
+        finiteMask_<double, 2>,
+        finiteMask_<double, 3>,
+        finiteMask_<double, 4>,
     };
 
     int idx = (isDouble ? 4 : 0) + cn - 1;

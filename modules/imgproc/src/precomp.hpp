@@ -65,7 +65,6 @@
 #include <stack>
 #include <numeric>
 
-#define GET_OPTIMIZED(func) (func)
 
 /* helper tables */
 extern const uchar icvSaturate8u_cv[];

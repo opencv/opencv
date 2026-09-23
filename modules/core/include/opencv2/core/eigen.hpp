@@ -70,6 +70,9 @@
 namespace cv
 {
 
+template<typename _Tp> class Quat;
+template<typename _Tp> class Affine3;
+
 /** @addtogroup core_eigen
 These functions are provided for OpenCV-Eigen interoperability. They convert `Mat`
 objects to corresponding `Eigen::Matrix` objects and vice-versa. Consult the [Eigen
@@ -417,6 +420,46 @@ void cv2eigen( const Matx<_Tp, 1, _cols>& src,
         Mat(src).copyTo(_dst);
     }
 }
+
+#if defined(EIGEN_GEOMETRY_MODULE_H)
+/** @brief Converts an Eigen::Quaternion to a cv::Quat.
+*/
+template<typename _Tp, int _options> inline
+void eigen2cv( const Eigen::Quaternion<_Tp, _options>& src, Quat<_Tp>& dst )
+{
+    dst.w = src.w();
+    dst.x = src.x();
+    dst.y = src.y();
+    dst.z = src.z();
+}
+
+/** @brief Converts a cv::Quat to an Eigen::Quaternion.
+*/
+template<typename _Tp, int _options> inline
+void cv2eigen( const Quat<_Tp>& src, Eigen::Quaternion<_Tp, _options>& dst )
+{
+    dst.w() = src.w;
+    dst.x() = src.x;
+    dst.y() = src.y;
+    dst.z() = src.z;
+}
+
+/** @brief Converts an Eigen::Transform (Isometry) to a cv::Affine3.
+*/
+template<typename _Tp, int _options> inline
+void eigen2cv( const Eigen::Transform<_Tp, 3, Eigen::Isometry, _options>& src, Affine3<_Tp>& dst )
+{
+    eigen2cv(src.matrix(), dst.matrix);
+}
+
+/** @brief Converts a cv::Affine3 to an Eigen::Transform (Isometry).
+*/
+template<typename _Tp, int _options> inline
+void cv2eigen( const Affine3<_Tp>& src, Eigen::Transform<_Tp, 3, Eigen::Isometry, _options>& dst )
+{
+    cv2eigen(src.matrix, dst.matrix());
+}
+#endif
 
 //! @}
 

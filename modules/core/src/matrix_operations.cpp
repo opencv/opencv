@@ -327,6 +327,7 @@ namespace cv
 typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
 ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
 ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth);
 
 template <typename T, typename WT, typename Op>
 struct ReduceR_SIMD
@@ -865,7 +866,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if( op == REDUCE_SUM2 )
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceRSum2Func(sdepth, ddepth);
+            if(simd_func)
+                func = simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSum2R8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSum2R8u32f;
@@ -1037,23 +1041,29 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
 
+template<typename T, IppStatus (CV_STDCALL *fn)(T*, int, Ipp8u*)>
+static IppStatus CV_STDCALL ippSortWrap(void* pSrcDst, int len, Ipp8u* pBuffer)
+{
+    return fn((T*)pSrcDst, len, pBuffer);
+}
+
 static IppSortFunc getSortFunc(int depth, bool sortDescending)
 {
     if (!sortDescending)
-        return depth == CV_8U ? (IppSortFunc)ippsSortRadixAscend_8u_I :
-            depth == CV_16U ? (IppSortFunc)ippsSortRadixAscend_16u_I :
-            depth == CV_16S ? (IppSortFunc)ippsSortRadixAscend_16s_I :
-            depth == CV_32S ? (IppSortFunc)ippsSortRadixAscend_32s_I :
-            depth == CV_32F ? (IppSortFunc)ippsSortRadixAscend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortRadixAscend_64f_I :
+        return depth == CV_8U ? ippSortWrap<Ipp8u, ippsSortRadixAscend_8u_I> :
+            depth == CV_16U ? ippSortWrap<Ipp16u, ippsSortRadixAscend_16u_I> :
+            depth == CV_16S ? ippSortWrap<Ipp16s, ippsSortRadixAscend_16s_I> :
+            depth == CV_32S ? ippSortWrap<Ipp32s, ippsSortRadixAscend_32s_I> :
+            depth == CV_32F ? ippSortWrap<Ipp32f, ippsSortRadixAscend_32f_I> :
+            depth == CV_64F ? ippSortWrap<Ipp64f, ippsSortRadixAscend_64f_I> :
             0;
     else
-        return depth == CV_8U ? (IppSortFunc)ippsSortRadixDescend_8u_I :
-            depth == CV_16U ? (IppSortFunc)ippsSortRadixDescend_16u_I :
-            depth == CV_16S ? (IppSortFunc)ippsSortRadixDescend_16s_I :
-            depth == CV_32S ? (IppSortFunc)ippsSortRadixDescend_32s_I :
-            depth == CV_32F ? (IppSortFunc)ippsSortRadixDescend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortRadixDescend_64f_I :
+        return depth == CV_8U ? ippSortWrap<Ipp8u, ippsSortRadixDescend_8u_I> :
+            depth == CV_16U ? ippSortWrap<Ipp16u, ippsSortRadixDescend_16u_I> :
+            depth == CV_16S ? ippSortWrap<Ipp16s, ippsSortRadixDescend_16s_I> :
+            depth == CV_32S ? ippSortWrap<Ipp32s, ippsSortRadixDescend_32s_I> :
+            depth == CV_32F ? ippSortWrap<Ipp32f, ippsSortRadixDescend_32f_I> :
+            depth == CV_64F ? ippSortWrap<Ipp64f, ippsSortRadixDescend_64f_I> :
             0;
 }
 
@@ -1195,21 +1205,27 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #if defined(HAVE_IPP) && !IPP_DISABLE_SORT
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
+template<typename T, IppStatus (CV_STDCALL *fn)(const T*, Ipp32s, Ipp32s*, int, Ipp8u*)>
+static IppStatus CV_STDCALL ippSortIndexWrap(const void* pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer)
+{
+    return fn((const T*)pSrc, srcStrideBytes, pDstIndx, len, pBuffer);
+}
+
 static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
 {
     if (!sortDescending)
-        return depth == CV_8U ? (IppSortIndexFunc)ippsSortRadixIndexAscend_8u :
-            depth == CV_16U ? (IppSortIndexFunc)ippsSortRadixIndexAscend_16u :
-            depth == CV_16S ? (IppSortIndexFunc)ippsSortRadixIndexAscend_16s :
-            depth == CV_32S ? (IppSortIndexFunc)ippsSortRadixIndexAscend_32s :
-            depth == CV_32F ? (IppSortIndexFunc)ippsSortRadixIndexAscend_32f :
+        return depth == CV_8U ? ippSortIndexWrap<Ipp8u, ippsSortRadixIndexAscend_8u> :
+            depth == CV_16U ? ippSortIndexWrap<Ipp16u, ippsSortRadixIndexAscend_16u> :
+            depth == CV_16S ? ippSortIndexWrap<Ipp16s, ippsSortRadixIndexAscend_16s> :
+            depth == CV_32S ? ippSortIndexWrap<Ipp32s, ippsSortRadixIndexAscend_32s> :
+            depth == CV_32F ? ippSortIndexWrap<Ipp32f, ippsSortRadixIndexAscend_32f> :
             0;
     else
-        return depth == CV_8U ? (IppSortIndexFunc)ippsSortRadixIndexDescend_8u :
-            depth == CV_16U ? (IppSortIndexFunc)ippsSortRadixIndexDescend_16u :
-            depth == CV_16S ? (IppSortIndexFunc)ippsSortRadixIndexDescend_16s :
-            depth == CV_32S ? (IppSortIndexFunc)ippsSortRadixIndexDescend_32s :
-            depth == CV_32F ? (IppSortIndexFunc)ippsSortRadixIndexDescend_32f :
+        return depth == CV_8U ? ippSortIndexWrap<Ipp8u, ippsSortRadixIndexDescend_8u> :
+            depth == CV_16U ? ippSortIndexWrap<Ipp16u, ippsSortRadixIndexDescend_16u> :
+            depth == CV_16S ? ippSortIndexWrap<Ipp16s, ippsSortRadixIndexDescend_16s> :
+            depth == CV_32S ? ippSortIndexWrap<Ipp32s, ippsSortRadixIndexDescend_32s> :
+            depth == CV_32F ? ippSortIndexWrap<Ipp32f, ippsSortRadixIndexDescend_32f> :
             0;
 }
 

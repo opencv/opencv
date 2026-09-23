@@ -645,9 +645,7 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
     int width_simd = width & -vlanes;
     int height = size.height;
 
-#if CV_STRONG_ALIGNMENT
-    CV_Assert(isAligned<sizeof(T)>(src, dst));
-#endif
+    CV_DbgAssert(!CV_STRONG_ALIGNMENT || isAligned<sizeof(T)>(src, dst));
 
     for( ; height--; src += sstep, dst += dstep )
     {
@@ -812,14 +810,8 @@ CV_ALWAYS_INLINE void flipHoriz_vlanes_dispatch( const uchar* src, size_t sstep,
 // SIMD flip for ESZ=24 (CV_64FC3)
 CV_ALWAYS_INLINE void flipHoriz_24( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size )
 {
-#if CV_STRONG_ALIGNMENT
-    // This kernel performs 64-bit scalar loads/stores, so require 8-byte alignment.
-    if (!isAligned<8>(((size_t)src)|((size_t)dst)|sstep|dstep))
-    {
-        flipHoriz_generic(src, sstep, dst, dstep, size, 24);
-        return;
-    }
-#endif
+    CV_DbgAssert(!CV_STRONG_ALIGNMENT || isAligned<8>(((size_t)src)|((size_t)dst)|sstep|dstep));
+
     const int lanes16 = 16;
     int end = (int)(size.width * 24);
     int width = (end + 1) / 2;
@@ -845,21 +837,43 @@ CV_ALWAYS_INLINE void flipHoriz_24( const uchar* src, size_t sstep, uchar* dst, 
 static void flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
 #if CV_SIMD || CV_SIMD_SCALABLE
+#if CV_STRONG_ALIGNMENT
+    const size_t alignMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
+#else
+    const size_t alignMark = 0; // unaligned access is allowed: all the checks below fold to true
+#endif
+
     // SIMD-optimized dispatch
     switch(esz)
     {
-        case 1:   flipHoriz_single<v_uint8>(src, sstep, dst, dstep, size); return;            // CV_8UC1: 8-bit, 1 channel
-        case 2:   flipHoriz_single<v_uint16>(src, sstep, dst, dstep, size); return;           // CV_8UC2, CV_16UC1: 8-bit 2-channel or 16-bit 1-channel
-        case 3:   flipHoriz_c3<v_uint8>(src, sstep, dst, dstep, size); return;                // CV_8UC3: 8-bit, 3 channels
-        case 4:   flipHoriz_single<v_uint32>(src, sstep, dst, dstep, size); return;           // CV_8UC4, CV_16UC2, CV_32SC1, CV_32FC1: 8-bit 4-channel, 16-bit 2-channel, or 32-bit 1-channel
-        case 6:   flipHoriz_c3<v_uint16>(src, sstep, dst, dstep, size); return;               // CV_16UC3, CV_16SC3: 16-bit, 3 channels
-        case 8:   flipHoriz_single<v_uint64>(src, sstep, dst, dstep, size); return;           // CV_16UC4, CV_32SC2, CV_32FC2, CV_64FC1: 16-bit 4-channel, 32-bit 2-channel, or 64-bit 1-channel
-        case 12:  flipHoriz_c3<v_uint32>(src, sstep, dst, dstep, size); return;               // CV_32SC3, CV_32FC3: 32-bit, 3 channels
-        case 16:  flipHoriz_vlanes_dispatch<16>(src, sstep, dst, dstep, size); return;        // CV_32SC4, CV_32FC4, CV_64FC2: 32-bit 4-channel or 64-bit 2-channel
+        case 1:                                                                               // CV_8UC1: 8-bit, 1 channel
+            flipHoriz_single<v_uint8>(src, sstep, dst, dstep, size); return;
+        case 2:                                                                               // CV_8UC2, CV_16UC1: 8-bit 2-channel or 16-bit 1-channel
+            if (isAligned<2>(alignMark)) { flipHoriz_single<v_uint16>(src, sstep, dst, dstep, size); return; }
+            break;
+        case 3:                                                                               // CV_8UC3: 8-bit, 3 channels
+            flipHoriz_c3<v_uint8>(src, sstep, dst, dstep, size); return;
+        case 4:                                                                               // CV_8UC4, CV_16UC2, CV_32SC1, CV_32FC1: 8-bit 4-channel, 16-bit 2-channel, or 32-bit 1-channel
+            if (isAligned<4>(alignMark)) { flipHoriz_single<v_uint32>(src, sstep, dst, dstep, size); return; }
+            break;
+        case 6:                                                                               // CV_16UC3, CV_16SC3: 16-bit, 3 channels
+            if (isAligned<2>(alignMark)) { flipHoriz_c3<v_uint16>(src, sstep, dst, dstep, size); return; }
+            break;
+        case 8:                                                                               // CV_16UC4, CV_32SC2, CV_32FC2, CV_64FC1: 16-bit 4-channel, 32-bit 2-channel, or 64-bit 1-channel
+            if (isAligned<8>(alignMark)) { flipHoriz_single<v_uint64>(src, sstep, dst, dstep, size); return; }
+            break;
+        case 12:                                                                              // CV_32SC3, CV_32FC3: 32-bit, 3 channels
+            if (isAligned<4>(alignMark)) { flipHoriz_c3<v_uint32>(src, sstep, dst, dstep, size); return; }
+            break;
+        case 16:                                                                              // CV_32SC4, CV_32FC4, CV_64FC2: 32-bit 4-channel or 64-bit 2-channel
+            flipHoriz_vlanes_dispatch<16>(src, sstep, dst, dstep, size); return;               // byte-wise access only
 #if CV_SIMD128
-        case 24:  flipHoriz_24(src, sstep, dst, dstep, size); return;                         // CV_64FC3: 64-bit, 3 channels
+        case 24:                                                                              // CV_64FC3: 64-bit, 3 channels
+            if (isAligned<8>(alignMark)) { flipHoriz_24(src, sstep, dst, dstep, size); return; }
+            break;
 #endif
-        case 32:  flipHoriz_vlanes_dispatch<32>(src, sstep, dst, dstep, size); return;        // CV_64FC4: 64-bit, 4 channels
+        case 32:                                                                              // CV_64FC4: 64-bit, 4 channels
+            flipHoriz_vlanes_dispatch<32>(src, sstep, dst, dstep, size); return;               // byte-wise access only
         default:
             break; // Fall through to generic implementation
     }

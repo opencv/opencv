@@ -84,9 +84,9 @@ TEST(Core_DownhillSolver, regression_basic){
 #if 1
     {
         cv::Ptr<cv::MinProblemSolver::Function> ptr_F = cv::makePtr<SphereF>();
-        cv::Mat x=(cv::Mat_<double>(1,2)<<1.0,1.0),
-            step=(cv::Mat_<double>(2,1)<<-0.5,-0.5),
-            etalon_x=(cv::Mat_<double>(1,2)<<-0.0,0.0);
+        cv::Mat x=cv::Mat_<double>({1,2},{1.0,1.0}),
+            step=cv::Mat_<double>({2,1},{-0.5,-0.5}),
+            etalon_x=cv::Mat_<double>({1,2},{-0.0,0.0});
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,step,etalon_x,etalon_res);
     }
@@ -94,9 +94,9 @@ TEST(Core_DownhillSolver, regression_basic){
 #if 1
     {
         cv::Ptr<cv::MinProblemSolver::Function> ptr_F = cv::makePtr<RosenbrockF>();
-        cv::Mat x=(cv::Mat_<double>(2,1)<<0.0,0.0),
-            step=(cv::Mat_<double>(2,1)<<0.5,+0.5),
-            etalon_x=(cv::Mat_<double>(2,1)<<1.0,1.0);
+        cv::Mat x=cv::Mat_<double>({2,1},{0.0,0.0}),
+            step=cv::Mat_<double>({2,1},{0.5,+0.5}),
+            etalon_x=cv::Mat_<double>({2,1},{1.0,1.0});
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,step,etalon_x,etalon_res);
     }

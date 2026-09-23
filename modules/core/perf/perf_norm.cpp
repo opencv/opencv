@@ -36,7 +36,10 @@ PERF_TEST_P(Size_MatType_NormType, norm,
 PERF_TEST_P(Size_MatType_NormType, norm_mask,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4,
+                                CV_8SC1, CV_8SC3, CV_16UC1, CV_16UC3,
+                                CV_16SC1, CV_16SC3, CV_32SC1, CV_32SC3,
+                                CV_32FC1, CV_64FC1),
                 testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)
                 )
             )

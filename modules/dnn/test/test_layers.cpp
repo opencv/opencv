@@ -614,8 +614,8 @@ TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
     // 4 5 | 6
     // ----+--
     // 7 8 | 9
-    Mat inp = (Mat_<float>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9);
-    Mat ref = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
+    Mat inp = Mat_<float>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9});
+    Mat ref = Mat_<float>({2, 2}, {(1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9});
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
     net.setPreferableBackend(backend);
@@ -652,10 +652,12 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
     net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    Mat ref = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
-                                       0.25, 0.0, 1.0, 1.0,
-                                       0.1f, 0.1f, 0.2f, 0.2f,
-                                       0.1f, 0.1f, 0.2f, 0.2f);
+    Mat ref = Mat_<float>({4, 4}, {
+            0.0, 0.0, 0.75, 1.0,
+            0.25, 0.0, 1.0, 1.0,
+            0.1f, 0.1f, 0.2f, 0.2f,
+            0.1f, 0.1f, 0.2f, 0.2f
+    });
     double l1 = 1e-5;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
         l1 = 2e-5;
@@ -2495,12 +2497,9 @@ public:
         }
         Y.setTo(0);
 
-        std::vector<Range> ranges_pref;
-        if (layout == "3d") {
-            ranges_pref = {Range::all(), Range(0, T_pref), Range::all()};
-        } else {
-            ranges_pref = {Range::all(), Range::all(), Range(0, T_pref), Range::all()};
-        }
+        std::vector<Range> ranges_pref = (layout == "3d")
+                         ? std::vector<Range>{Range::all(), Range(0, T_pref), Range::all()}
+                         : std::vector<Range>{Range::all(), Range::all(), Range(0, T_pref), Range::all()};
 
         Mat Q_pref = Q_all(ranges_pref);
         Mat K_pref = K_all(ranges_pref);
@@ -2515,12 +2514,9 @@ public:
         // 2. Generate
         for(int t = T_pref; t < T; t++)
         {
-            std::vector<Range> ranges_gen;
-            if (layout == "3d") {
-                ranges_gen = {Range::all(), Range(t, t + 1), Range::all()};
-            } else {
-                ranges_gen = {Range::all(), Range::all(), Range(t, t + 1), Range::all()};
-            }
+            std::vector<Range> ranges_gen = (layout == "3d")
+                                          ? std::vector<Range>{Range::all(), Range(t, t + 1), Range::all()}
+                                          : std::vector<Range>{Range::all(), Range::all(), Range(t, t + 1), Range::all()};
 
             netWithKVCache.setInput(Q_all(ranges_gen), "Q");
             netWithKVCache.setInput(K_all(ranges_gen), "K");
@@ -2585,9 +2581,9 @@ public:
         for (int lo = 0; lo < T; )
         {
             int hi = (lo == 0) ? T_pref : std::min(lo + chunk, T);
-            std::vector<Range> qr;
-            if (layout == "3d") qr = { Range::all(), Range(lo, hi), Range::all() };
-            else                qr = { Range::all(), Range::all(), Range(lo, hi), Range::all() };
+            std::vector<Range> qr = (layout == "3d")
+                                    ? std::vector<Range>{ Range::all(), Range(lo, hi), Range::all() }
+                                    : std::vector<Range>{ Range::all(), Range::all(), Range(lo, hi), Range::all() };
             std::vector<Range> mr = { Range::all(), Range::all(), Range(lo, hi), Range(0, hi) };
 
             netWithKVCache.setInput(Q_all(qr), "Q");
@@ -2668,6 +2664,39 @@ TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
     EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);
     EXPECT_NEAR(out.ptr<float>()[0], 0.f, 1e-6f);
     EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);
+}
+
+TEST(Layer_Test_TanH, NoNaN_LargeInput)
+{
+    LayerParams lp;
+    lp.type = "TanH";
+    lp.name = "test_tanh";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("TanH", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    // Overflowing values go first; in the scalar tail tanhf() would mask the NaN.
+    const int len = 64;
+    float data[len];
+    for (int i = 0; i < len / 2; i++)
+        data[i] = (i % 2 == 0 ? 1.f : -1.f) * (45.f + i);
+    for (int i = len / 2; i < len; i++)
+        data[i] = -4.f + 0.25f * (i - len / 2);
+
+    int dims[] = {1, 1, len};
+    Mat inp(3, dims, CV_32F, data);
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < len; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
+        EXPECT_NEAR(val, std::tanh(data[i]), 1e-6f) << "index " << i;
+    }
 }
 
 TEST(Layer_Test_Softmax, NoNaN_AllNegInf)

@@ -1926,7 +1926,7 @@ TEST(Core_SolveCubic, regression_27748)
     double c = -96.795;
     double d = 13.6826;
 
-    Mat coeffs = (Mat_<double>(1, 4) << a, b, c, d);
+    Mat coeffs = Mat_<double>({1, 4}, {a, b, c, d});
     Mat roots;
 
     int n = solveCubic(coeffs, roots);
@@ -1947,7 +1947,7 @@ TEST(Core_SolveCubic, regression_27748)
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
-    cv::Mat coefs = (cv::Mat_<float>(1,5) << 0, 0, -1, 0, 1 );
+    cv::Mat coefs = cv::Mat_<float>({1, 5}, {0, 0, -1, 0, 1});
     {
         cv::Mat r;
         double prec;
@@ -1963,7 +1963,7 @@ TEST(Core_SolvePoly, regression_5599)
         checkRoot<float>(r, 0, 0);
     }
     // x^2 - 2x + 1 = 0,  roots: 1, 1
-    coefs = (cv::Mat_<float>(1,3) << 1, -2, 1 );
+    coefs = cv::Mat_<float>({1, 3}, {1, -2, 1});
     {
         cv::Mat r;
         double prec;
@@ -1981,7 +1981,7 @@ TEST(Core_SolvePoly, regression_5599)
 TEST(Core_SolvePoly, regression_23644)
 {
     // x^2 - 2x - 3 = 0,  roots: 3, -1
-    cv::Mat coefs = (cv::Mat_<float>(1,3) << -3, -2, 1 );
+    cv::Mat coefs = cv::Mat_<float>({1, 3}, {-3, -2, 1});
     cv::Mat r;
     double prec;
     prec = cv::solvePoly(coefs, r);
@@ -2322,7 +2322,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
 
 TEST(Core_Invert, small)
 {
-    cv::Mat a = (cv::Mat_<float>(3,3) << 2.42104644730331, 1.81444796521479, -3.98072565304758, 0, 7.08389214348967e-3, 5.55326770986007e-3, 0,0, 7.44556154284261e-3);
+    cv::Mat a = cv::Mat_<float>({3, 3}, {2.42104644730331f, 1.81444796521479f, -3.98072565304758f, 0.0f, 7.08389214348967e-3f, 5.55326770986007e-3f, 0.0f, 0.0f, 7.44556154284261e-3f});
     //cv::randu(a, -1, 1);
 
     cv::Mat b = a.t()*a;
@@ -2634,6 +2634,40 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
     cv::Scalar sDiff = cv::sum(meanDiff);
     ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(CovariationMatrixVectorOfMatWithMean, non_contiguous_mean)
+{
+    std::vector<cv::Mat> samples;
+    samples.push_back(cv::Mat_<float>({2, 2}, {1, 2, 3, 4}));
+    samples.push_back(cv::Mat_<float>({2, 2}, {2, 4, 6, 8}));
+    samples.push_back(cv::Mat_<float>({2, 2}, {3, 6, 9, 12}));
+
+    const float sentinel0 = 12345.0f;
+    const float sentinel1 = -12345.0f;
+    cv::Mat meanStorage = cv::Mat_<float>({2, 3}, {
+        10, 20, sentinel0,
+        30, 40, sentinel1});
+    cv::Mat meanROI = meanStorage(cv::Rect(0, 0, 2, 2));
+    cv::Mat expectedMean = meanROI.clone();
+    cv::Mat continuousMean = expectedMean.clone();
+    ASSERT_TRUE(continuousMean.isContinuous());
+    ASSERT_FALSE(meanROI.isContinuous());
+    ASSERT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+
+    const int flags = cv::COVAR_ROWS | cv::COVAR_USE_AVG;
+    cv::Mat covContinuous, covROI, covPointer;
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covContinuous, continuousMean, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(&samples[0], static_cast<int>(samples.size()),
+                                       covPointer, meanROI, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covROI, meanROI, flags, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(covContinuous, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(covPointer, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, continuousMean, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+    EXPECT_EQ(sentinel0, meanStorage.at<float>(0, 2));
+    EXPECT_EQ(sentinel1, meanStorage.at<float>(1, 2));
 }
 
 TEST(Core_Pow, special)

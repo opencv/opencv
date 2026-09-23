@@ -65,14 +65,14 @@ int main(int argc, char* argv[])
     namedWindow("OpenGL", WINDOW_OPENGL);
     resizeWindow("OpenGL", win_width, win_height);
 
-    Mat_<Vec2f> vertex(1, 4);
-    vertex << Vec2f(-1, 1), Vec2f(-1, -1), Vec2f(1, -1), Vec2f(1, 1);
+    Mat_<Vec2f> vertex({1, 4}, {
+        Vec2f(-1, 1), Vec2f(-1, -1), Vec2f(1, -1), Vec2f(1, 1)
+    });
+    Mat_<Vec2f> texCoords({1, 4}, {
+        Vec2f(0, 0), Vec2f(0, 1), Vec2f(1, 1), Vec2f(1, 0)
+    });
+    Mat_<int> indices({1, 6}, {0, 1, 2, 2, 3, 0});
 
-    Mat_<Vec2f> texCoords(1, 4);
-    texCoords << Vec2f(0, 0), Vec2f(0, 1), Vec2f(1, 1), Vec2f(1, 0);
-
-    Mat_<int> indices(1, 6);
-    indices << 0, 1, 2, 2, 3, 0;
 
     DrawData data;
 

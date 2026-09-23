@@ -11,6 +11,7 @@
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -188,8 +189,41 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 public:
     std::string operation;
 
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const NaryEltwiseLayerImpl*>(self)->unfoldMath(r, side);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
+    {
+        if (side.count != 1) return false;
+        if (inputs.size() != 2) return false;
+        if (op == OPERATION::SUB && !side.flowIsFirstInput) return false;
+
+        FusionEltwiseOp o;
+        switch (op) {
+        case OPERATION::ADD:
+        case OPERATION::SUM:  o = FusionEltwiseOp::ADD; break;
+        case OPERATION::SUB:  o = FusionEltwiseOp::SUB; break;
+        case OPERATION::PROD: o = FusionEltwiseOp::MUL; break;
+        case OPERATION::MAX:  o = FusionEltwiseOp::MAX; break;
+        case OPERATION::MIN:  o = FusionEltwiseOp::MIN; break;
+        default: return false;
+        }
+
+        const FusionConst& k = side.at(0);
+        if (o == FusionEltwiseOp::MAX && !k.isBuffer() && k.value == 0.f)
+            r.setKernel(cv::dnn::getActivationFunc(ACTIV_RELU), { 0.f });
+
+        const int operand = k.isBuffer() ? r.perChannelConstant(k.bufferId)
+                                         : r.constant(k.value);
+        r.binary(o, LayerMath::INPUT_VALUE, operand);
+        return true;
+    }
+
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<NaryEltwiseLayerImpl>({ &NaryEltwiseLayerImpl::unfoldOp, nullptr });
         setParamsFrom(params);
         operation = toLowerCase(params.get<String>("operation", "sum"));
 
@@ -241,6 +275,8 @@ public:
             op = OPERATION::BITWISE_OR;
         else if (operation == "bitwise_xor")
             op = OPERATION::BITWISE_XOR;
+        else if (operation == "prelu")
+            op = OPERATION::PRELU;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
@@ -1088,6 +1124,11 @@ public:
                     binary_forward<T, T>(bxor, std::forward<Args>(args)...);
                     break;
                 }
+                case OPERATION::PRELU: {
+                    auto prelu = [](const T &a, const T &b) { return a < T{0} ? (T)(a * b) : a; };
+                    binary_forward<T, T>(prelu, std::forward<Args>(args)...);
+                    break;
+                }
                 default: CV_Error(Error::StsBadArg, "Unsupported operation");
             }
         } else if (ninputs == 3 && op == OPERATION::WHERE) {
@@ -1201,6 +1242,11 @@ public:
                 case OPERATION::DIV: {
                     auto div = [](const T &a, const T &b) { return a / b; };
                     binary_forward<T, T>(div, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::PRELU: {
+                    auto prelu = [](const T &a, const T &b) { return a < T{0} ? (T)(a * b) : a; };
+                    binary_forward<T, T>(prelu, std::forward<Args>(args)...);
                     break;
                 }
                 default: CV_Error(Error::StsBadArg, "Unsupported operation");

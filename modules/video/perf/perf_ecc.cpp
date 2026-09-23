@@ -29,23 +29,25 @@ PERF_TEST_P(ECCPerfTest, findTransformECC,
     double angle;
     switch (transform_type) {
         case MOTION_TRANSLATION:
-            warpGround = (Mat_<float>(2, 3) << 1.f, 0.f, 7.234f, 0.f, 1.f, 11.839f);
+            warpGround = Mat_<float>({2, 3}, {1.f, 0.f, 7.234f, 0.f, 1.f, 11.839f});
 
             warpAffine(img, templateImage, warpGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_EUCLIDEAN:
             angle = CV_PI / 30;
 
-            warpGround = (Mat_<float>(2, 3) << (float)cos(angle), (float)-sin(angle), 12.123f, (float)sin(angle),
-                          (float)cos(angle), 14.789f);
+            warpGround = Mat_<float>({2, 3}, {
+                    (float)cos(angle), (float)-sin(angle), 12.123f, (float)sin(angle),
+                    (float)cos(angle), 14.789f
+            });
             warpAffine(img, templateImage, warpGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_AFFINE:
-            warpGround = (Mat_<float>(2, 3) << 0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f);
+            warpGround = Mat_<float>({2, 3}, {0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f});
             warpAffine(img, templateImage, warpGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_HOMOGRAPHY:
-            warpGround = (Mat_<float>(3, 3) << 0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f, 0.0002f, 0.0003f, 1.f);
+            warpGround = Mat_<float>({3, 3}, {0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f, 0.0002f, 0.0003f, 1.f});
             warpPerspective(img, templateImage, warpGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
     }
@@ -87,22 +89,24 @@ PERF_TEST_P(ECCPerfTestMS, findTransformECCMultiScale,
     double angle;
     switch (transform_type) {
         case MOTION_TRANSLATION:
-            warpGround = (Mat_<float>(2, 3) << 1.f, 0.f, 7.234f, 0.f, 1.f, 11.839f);
+            warpGround = Mat_<float>({2, 3}, {1.f, 0.f, 7.234f, 0.f, 1.f, 11.839f});
             warpAffine(img, templateImage, warpGround, img.size(), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_EUCLIDEAN:
             angle = CV_PI / 30;
 
-            warpGround = (Mat_<float>(2, 3) << (float)cos(angle), (float)-sin(angle), 12.123f, (float)sin(angle),
-                          (float)cos(angle), 14.789f);
+            warpGround = Mat_<float>({2, 3}, {
+                    (float)cos(angle), (float)-sin(angle), 12.123f, (float)sin(angle),
+                    (float)cos(angle), 14.789f
+            });
             warpAffine(img, templateImage, warpGround, img.size(), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_AFFINE:
-            warpGround = (Mat_<float>(2, 3) << 0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f);
+            warpGround = Mat_<float>({2, 3}, {0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f});
             warpAffine(img, templateImage, warpGround, img.size(), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_HOMOGRAPHY:
-            warpGround = (Mat_<float>(3, 3) << 0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f, 0.0002f, 0.0003f, 1.f);
+            warpGround = Mat_<float>({3, 3}, {0.98f, 0.03f, 15.523f, -0.02f, 0.95f, 10.456f, 0.0002f, 0.0003f, 1.f});
             warpPerspective(img, templateImage, warpGround, img.size(), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
     }

@@ -42,6 +42,14 @@
 #include "precomp.hpp"
 #include "backend.hpp"
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wcast-function-type-strict"
+#endif
+
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>

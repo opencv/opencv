@@ -92,8 +92,8 @@ Here is an example:
         fs << "frameCount" << 5;
         time_t rawtime; time(&rawtime);
         fs << "calibrationDate" << asctime(localtime(&rawtime));
-        Mat cameraMatrix = (Mat_<double>(3,3) << 1000, 0, 320, 0, 1000, 240, 0, 0, 1);
-        Mat distCoeffs = (Mat_<double>(5,1) << 0.1, 0.01, -0.001, 0, 0);
+        Mat cameraMatrix = Mat_<double>({3,3},{1000, 0, 320, 0, 1000, 240, 0, 0, 1});
+        Mat distCoeffs = Mat_<double>({5,1},{0.1, 0.01, -0.001, 0, 0});
         fs << "cameraMatrix" << cameraMatrix << "distCoeffs" << distCoeffs;
         fs << "features" << "[";
         for( int i = 0; i < 3; i++ )

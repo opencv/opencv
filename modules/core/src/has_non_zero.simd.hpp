@@ -6,7 +6,7 @@
 
 namespace cv {
 
-typedef bool (*HasNonZeroFunc)(const uchar*, size_t);
+typedef bool (*HasNonZeroFunc)(const void*, size_t);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
@@ -23,8 +23,9 @@ HasNonZeroFunc getHasNonZeroFunc(int depth);
 
 #undef DEFINE_HASNONZERO_FUNC
 #define DEFINE_HASNONZERO_FUNC(funcname, suffix, T, VT, cmp_op, scalar_nz_op) \
-static bool funcname( const T* src, size_t len ) \
+static bool funcname( const void* _src, size_t len ) \
 { \
+    const T* src = (const T*)_src; \
     size_t i = 0; \
     SIMD_ONLY( \
     const int vlanes = VTraits<VT>::vlanes(); \
@@ -96,19 +97,19 @@ HasNonZeroFunc getHasNonZeroFunc(int depth)
 {
     static HasNonZeroFunc hasNonZeroTab[CV_DEPTH_MAX] =
     {
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero32s),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero32f),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero64f),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16f),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16f),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero64s),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero64s),
-        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero32s),
+        hasNonZero8u,
+        hasNonZero8u,
+        hasNonZero16u,
+        hasNonZero16u,
+        hasNonZero32s,
+        hasNonZero32f,
+        hasNonZero64f,
+        hasNonZero16f,
+        hasNonZero16f,
+        hasNonZero8u,
+        hasNonZero64s,
+        hasNonZero64s,
+        hasNonZero32s,
         0
     };
 

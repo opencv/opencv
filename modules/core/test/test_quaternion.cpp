@@ -108,10 +108,10 @@ TEST_F(QuatTest, basicfuns)
     EXPECT_MAT_NEAR(q1RotMat, R, 1e-6);
     Vec3d z_axis{0,0,1};
     Quatd q_unit1 = Quatd::createFromAngleAxis(angle, z_axis);
-    Mat pointsA = (Mat_<double>(2, 3) << 1,0,0,1,0,1);
+    Mat pointsA = Mat_<double>({2, 3}, {1,0,0,1,0,1});
     pointsA = pointsA.t();
     Mat new_point = q_unit1.toRotMat3x3() * pointsA;
-    Mat afterRo = (Mat_<double>(3, 2) << -1,-1,0,0,0,1);
+    Mat afterRo = Mat_<double>({3, 2}, {-1,-1,0,0,0,1});
     EXPECT_MAT_NEAR(afterRo, new_point, 1e-6);
     EXPECT_ANY_THROW(qNull.toRotVec());
     Vec3d rodVec{CV_PI/sqrt(3), CV_PI/sqrt(3), CV_PI/sqrt(3)};
@@ -451,9 +451,9 @@ TEST_F(DualQuatTest, basic_ops)
     EXPECT_EQ(dqTrans.log().exp(), dqTrans);
     EXPECT_MAT_NEAR(q1norm.toMat(QUAT_ASSUME_UNIT), dq1.toMat(), 1e-6);
     Matx44d R1 = dq2.toMat();
-    Mat point = (Mat_<double>(4, 1) << 3, 0, 0, 1);
+    Mat point = Mat_<double>({4, 1}, {3, 0, 0, 1});
     Mat new_point = R1 * point;
-    Mat after = (Mat_<double>(4, 1) << 0, 3, 5 ,1);
+    Mat after = Mat_<double>({4, 1}, {0, 3, 5 ,1});
     EXPECT_MAT_NEAR(new_point,  after, 1e-6);
     Vec<double, 8> vec = dq1.toVec();
     EXPECT_EQ(DualQuatd(vec), dq1);

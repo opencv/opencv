@@ -51,8 +51,6 @@
 
 #include "opencv2/core/ocl.hpp"
 
-#define GET_OPTIMIZED(func) (func)
-
 
 namespace cv
 {

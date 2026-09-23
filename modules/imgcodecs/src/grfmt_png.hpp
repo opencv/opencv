@@ -131,7 +131,7 @@ public:
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
 private:
-    static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
+    static void readDataFromBuf(png_structp png_ptr, png_bytep dst, png_size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
     CV_NODISCARD_STD bool processing_start(void* frame_ptr, const Mat& img);
@@ -144,7 +144,7 @@ private:
      * @return true if the operation is successful, false otherwise.
      */
     CV_NODISCARD_STD bool readFromStreamOrBuffer(void* buffer, size_t num_bytes);
-    uint32_t  read_chunk(Chunk& chunk);
+    uint32_t  read_chunk(Chunk& chunk, bool skipIDATPayload = false);
     CV_NODISCARD_STD bool InitPngPtr();
     void ClearPngPtr();
 
@@ -188,8 +188,8 @@ public:
     ImageEncoder newEncoder() const CV_OVERRIDE;
 
 protected:
-    static void writeDataToBuf(void* png_ptr, unsigned char* src, size_t size);
-    static void flushBuf(void* png_ptr);
+    static void writeDataToBuf(png_structp png_ptr, png_bytep src, png_size_t size);
+    static void flushBuf(png_structp png_ptr);
     /**
     * @brief Writes data to an output destination, either a file stream or an in-memory buffer.
     *

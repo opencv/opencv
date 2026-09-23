@@ -1459,10 +1459,13 @@ struct InRange_SIMD<double>
 #endif
 
 template <typename T>
-static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
-         const T* src3, size_t step3, uchar* dst, size_t step,
+static void inRange_(const void* _src1, size_t step1, const void* _src2, size_t step2,
+         const void* _src3, size_t step3, uchar* dst, size_t step,
          Size size)
 {
+    const T* src1 = (const T*)_src1;
+    const T* src2 = (const T*)_src2;
+    const T* src3 = (const T*)_src3;
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
     step3 /= sizeof(src3[0]);
@@ -1489,79 +1492,6 @@ static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     }
 }
 
-
-static void inRange8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
-                      const uchar* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
-                      const schar* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
-                       const ushort* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange16s(const short* src1, size_t step1, const short* src2, size_t step2,
-                       const short* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange32u(const unsigned* src1, size_t step1, const unsigned* src2, size_t step2,
-                       const unsigned* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange32s(const int* src1, size_t step1, const int* src2, size_t step2,
-                       const int* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange64u(const uint64* src1, size_t step1, const uint64* src2, size_t step2,
-                       const uint64* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange64s(const int64* src1, size_t step1, const int64* src2, size_t step2,
-                       const int64* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange32f(const float* src1, size_t step1, const float* src2, size_t step2,
-                       const float* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange64f(const double* src1, size_t step1, const double* src2, size_t step2,
-                       const double* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange16f(const hfloat* src1, size_t step1, const hfloat* src2, size_t step2,
-                       const hfloat* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
-static void inRange16bf(const bfloat* src1, size_t step1, const bfloat* src2, size_t step2,
-                        const bfloat* src3, size_t step3, uchar* dst, size_t step, Size size)
-{
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
-}
-
 static void inRangeReduce(const uchar* src, uchar* dst, size_t len, int cn)
 {
     int k = cn % 4 ? cn % 4 : 4;
@@ -1586,26 +1516,26 @@ static void inRangeReduce(const uchar* src, uchar* dst, size_t len, int cn)
     }
 }
 
-typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
-                             const uchar* src3, size_t step3, uchar* dst, size_t step, Size sz );
+typedef void (*InRangeFunc)( const void* src1, size_t step1, const void* src2, size_t step2,
+                             const void* src3, size_t step3, uchar* dst, size_t step, Size sz );
 
 static InRangeFunc getInRangeFunc(int depth)
 {
     static InRangeFunc inRangeTab[CV_DEPTH_MAX] =
     {
-        (InRangeFunc)GET_OPTIMIZED(inRange8u),
-        (InRangeFunc)GET_OPTIMIZED(inRange8s),
-        (InRangeFunc)GET_OPTIMIZED(inRange16u),
-        (InRangeFunc)GET_OPTIMIZED(inRange16s),
-        (InRangeFunc)GET_OPTIMIZED(inRange32s),
-        (InRangeFunc)GET_OPTIMIZED(inRange32f),
-        (InRangeFunc)GET_OPTIMIZED(inRange64f),
-        (InRangeFunc)inRange16f,
-        (InRangeFunc)inRange16bf,
+        inRange_<uchar>,
+        inRange_<schar>,
+        inRange_<ushort>,
+        inRange_<short>,
+        inRange_<int>,
+        inRange_<float>,
+        inRange_<double>,
+        inRange_<hfloat>,
+        inRange_<bfloat>,
         0,
-        (InRangeFunc)GET_OPTIMIZED(inRange64u),
-        (InRangeFunc)GET_OPTIMIZED(inRange64s),
-        (InRangeFunc)GET_OPTIMIZED(inRange32u),
+        inRange_<uint64_t>,
+        inRange_<int64_t>,
+        inRange_<unsigned>,
         0,
     };
 

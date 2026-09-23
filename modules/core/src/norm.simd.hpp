@@ -15,6 +15,18 @@ using NormDiffFunc = int (*)(const uchar*, const uchar*, const uchar*, uchar*, i
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+template<typename T, typename RT, int (*fn)(const T*, const uchar*, RT*, int, int)>
+static int normWrap(const uchar* src1, const uchar* src2, uchar* res, int len, int cn)
+{
+    return fn((const T*)src1, src2, (RT*)res, len, cn);
+}
+
+template<typename T, typename RT, int (*fn)(const T*, const T*, const uchar*, RT*, int, int)>
+static int normDiffWrap(const uchar* src1, const uchar* src2, const uchar* src3, uchar* res, int len, int cn)
+{
+    return fn((const T*)src1, (const T*)src2, src3, (RT*)res, len, cn);
+}
+
 NormFunc getNormFunc(int normType, int depth);
 NormDiffFunc getNormDiffFunc(int normType, int depth);
 
@@ -2319,51 +2331,51 @@ NormFunc getNormFunc(int normType, int depth)
     static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
         {
-            (NormFunc)GET_OPTIMIZED(normInf_8u),
-            (NormFunc)GET_OPTIMIZED(normInf_8s),
-            (NormFunc)GET_OPTIMIZED(normInf_16u),
-            (NormFunc)GET_OPTIMIZED(normInf_16s),
-            (NormFunc)GET_OPTIMIZED(normInf_32s),
-            (NormFunc)GET_OPTIMIZED(normInf_32f),
-            (NormFunc)normInf_64f,
-            (NormFunc)GET_OPTIMIZED(normInf_16f),
-            (NormFunc)GET_OPTIMIZED(normInf_16bf),
-            (NormFunc)normInf_Bool,
-            (NormFunc)GET_OPTIMIZED(normInf_64u),
-            (NormFunc)GET_OPTIMIZED(normInf_64s),
-            (NormFunc)GET_OPTIMIZED(normInf_32u),
+            normWrap<uchar, int, normInf_8u>,
+            normWrap<schar, int, normInf_8s>,
+            normWrap<ushort, int, normInf_16u>,
+            normWrap<short, int, normInf_16s>,
+            normWrap<int, unsigned, normInf_32s>,
+            normWrap<float, float, normInf_32f>,
+            normWrap<double, double, normInf_64f>,
+            normWrap<hfloat, float, normInf_16f>,
+            normWrap<bfloat, float, normInf_16bf>,
+            normWrap<uchar, int, normInf_Bool>,
+            normWrap<uint64, uint64, normInf_64u>,
+            normWrap<int64, uint64, normInf_64s>,
+            normWrap<unsigned, unsigned, normInf_32u>,
             0
         },
         {
-            (NormFunc)GET_OPTIMIZED(normL1_8u),
-            (NormFunc)GET_OPTIMIZED(normL1_8s),
-            (NormFunc)GET_OPTIMIZED(normL1_16u),
-            (NormFunc)GET_OPTIMIZED(normL1_16s),
-            (NormFunc)GET_OPTIMIZED(normL1_32s),
-            (NormFunc)GET_OPTIMIZED(normL1_32f),
-            (NormFunc)normL1_64f,
-            (NormFunc)GET_OPTIMIZED(normL1_16f),
-            (NormFunc)GET_OPTIMIZED(normL1_16bf),
-            (NormFunc)normL1_Bool,
-            (NormFunc)GET_OPTIMIZED(normL1_64u),
-            (NormFunc)GET_OPTIMIZED(normL1_64s),
-            (NormFunc)GET_OPTIMIZED(normL1_32u),
+            normWrap<uchar, int, normL1_8u>,
+            normWrap<schar, int, normL1_8s>,
+            normWrap<ushort, int, normL1_16u>,
+            normWrap<short, int, normL1_16s>,
+            normWrap<int, double, normL1_32s>,
+            normWrap<float, double, normL1_32f>,
+            normWrap<double, double, normL1_64f>,
+            normWrap<hfloat, float, normL1_16f>,
+            normWrap<bfloat, float, normL1_16bf>,
+            normWrap<uchar, int, normL1_Bool>,
+            normWrap<uint64, double, normL1_64u>,
+            normWrap<int64, double, normL1_64s>,
+            normWrap<unsigned, double, normL1_32u>,
             0
         },
         {
-            (NormFunc)GET_OPTIMIZED(normL2_8u),
-            (NormFunc)GET_OPTIMIZED(normL2_8s),
-            (NormFunc)GET_OPTIMIZED(normL2_16u),
-            (NormFunc)GET_OPTIMIZED(normL2_16s),
-            (NormFunc)GET_OPTIMIZED(normL2_32s),
-            (NormFunc)GET_OPTIMIZED(normL2_32f),
-            (NormFunc)normL2_64f,
-            (NormFunc)GET_OPTIMIZED(normL2_16f),
-            (NormFunc)GET_OPTIMIZED(normL2_16bf),
-            (NormFunc)normL2_Bool,
-            (NormFunc)GET_OPTIMIZED(normL2_64u),
-            (NormFunc)GET_OPTIMIZED(normL2_64s),
-            (NormFunc)GET_OPTIMIZED(normL2_32u),
+            normWrap<uchar, int, normL2_8u>,
+            normWrap<schar, int, normL2_8s>,
+            normWrap<ushort, double, normL2_16u>,
+            normWrap<short, double, normL2_16s>,
+            normWrap<int, double, normL2_32s>,
+            normWrap<float, double, normL2_32f>,
+            normWrap<double, double, normL2_64f>,
+            normWrap<hfloat, float, normL2_16f>,
+            normWrap<bfloat, float, normL2_16bf>,
+            normWrap<uchar, int, normL2_Bool>,
+            normWrap<uint64, double, normL2_64u>,
+            normWrap<int64, double, normL2_64s>,
+            normWrap<unsigned, double, normL2_32u>,
             0
         }
     };
@@ -2378,51 +2390,51 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
     static NormDiffFunc normDiffTab[3][CV_DEPTH_MAX] =
     {
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u),
-            (NormDiffFunc)normDiffInf_8s,
-            (NormDiffFunc)normDiffInf_16u,
-            (NormDiffFunc)normDiffInf_16s,
-            (NormDiffFunc)normDiffInf_32s,
-            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
-            (NormDiffFunc)normDiffInf_64f,
-            (NormDiffFunc)normDiffInf_16f,
-            (NormDiffFunc)normDiffInf_16bf,
-            (NormDiffFunc)normDiffInf_Bool,
-            (NormDiffFunc)normDiffInf_64u,
-            (NormDiffFunc)normDiffInf_64s,
-            (NormDiffFunc)normDiffInf_32u,
+            normDiffWrap<uchar, int, normDiffInf_8u>,
+            normDiffWrap<schar, int, normDiffInf_8s>,
+            normDiffWrap<ushort, int, normDiffInf_16u>,
+            normDiffWrap<short, int, normDiffInf_16s>,
+            normDiffWrap<int, unsigned, normDiffInf_32s>,
+            normDiffWrap<float, float, normDiffInf_32f>,
+            normDiffWrap<double, double, normDiffInf_64f>,
+            normDiffWrap<hfloat, float, normDiffInf_16f>,
+            normDiffWrap<bfloat, float, normDiffInf_16bf>,
+            normDiffWrap<uchar, int, normDiffInf_Bool>,
+            normDiffWrap<uint64, uint64, normDiffInf_64u>,
+            normDiffWrap<int64, uint64, normDiffInf_64s>,
+            normDiffWrap<unsigned, unsigned, normDiffInf_32u>,
             0
         },
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u),
-            (NormDiffFunc)normDiffL1_8s,
-            (NormDiffFunc)normDiffL1_16u,
-            (NormDiffFunc)normDiffL1_16s,
-            (NormDiffFunc)normDiffL1_32s,
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
-            (NormDiffFunc)normDiffL1_64f,
-            (NormDiffFunc)normDiffL1_16f,
-            (NormDiffFunc)normDiffL1_16bf,
-            (NormDiffFunc)normDiffL1_Bool,
-            (NormDiffFunc)normDiffL1_64u,
-            (NormDiffFunc)normDiffL1_64s,
-            (NormDiffFunc)normDiffL1_32u,
+            normDiffWrap<uchar, int, normDiffL1_8u>,
+            normDiffWrap<schar, int, normDiffL1_8s>,
+            normDiffWrap<ushort, int, normDiffL1_16u>,
+            normDiffWrap<short, int, normDiffL1_16s>,
+            normDiffWrap<int, double, normDiffL1_32s>,
+            normDiffWrap<float, double, normDiffL1_32f>,
+            normDiffWrap<double, double, normDiffL1_64f>,
+            normDiffWrap<hfloat, float, normDiffL1_16f>,
+            normDiffWrap<bfloat, float, normDiffL1_16bf>,
+            normDiffWrap<uchar, int, normDiffL1_Bool>,
+            normDiffWrap<uint64, double, normDiffL1_64u>,
+            normDiffWrap<int64, double, normDiffL1_64s>,
+            normDiffWrap<unsigned, double, normDiffL1_32u>,
             0
         },
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u),
-            (NormDiffFunc)normDiffL2_8s,
-            (NormDiffFunc)normDiffL2_16u,
-            (NormDiffFunc)normDiffL2_16s,
-            (NormDiffFunc)normDiffL2_32s,
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
-            (NormDiffFunc)normDiffL2_64f,
-            (NormDiffFunc)normDiffL2_16f,
-            (NormDiffFunc)normDiffL2_16bf,
-            (NormDiffFunc)normDiffL2_Bool,
-            (NormDiffFunc)normDiffL2_64u,
-            (NormDiffFunc)normDiffL2_64s,
-            (NormDiffFunc)normDiffL2_32u,
+            normDiffWrap<uchar, int, normDiffL2_8u>,
+            normDiffWrap<schar, int, normDiffL2_8s>,
+            normDiffWrap<ushort, double, normDiffL2_16u>,
+            normDiffWrap<short, double, normDiffL2_16s>,
+            normDiffWrap<int, double, normDiffL2_32s>,
+            normDiffWrap<float, double, normDiffL2_32f>,
+            normDiffWrap<double, double, normDiffL2_64f>,
+            normDiffWrap<hfloat, float, normDiffL2_16f>,
+            normDiffWrap<bfloat, float, normDiffL2_16bf>,
+            normDiffWrap<uchar, int, normDiffL2_Bool>,
+            normDiffWrap<uint64, double, normDiffL2_64u>,
+            normDiffWrap<int64, double, normDiffL2_64s>,
+            normDiffWrap<unsigned, double, normDiffL2_32u>,
             0
         },
     };

@@ -224,19 +224,19 @@ CountNonZeroFunc getCountNonZeroTab(int depth)
 {
     static CountNonZeroFunc countNonZeroTab[CV_DEPTH_MAX] =
     {
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16f),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16f), // for bf16 it's the same code as for f16
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64s),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64s),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s),
+        countNonZero8u,
+        countNonZero8u,
+        countNonZero16u,
+        countNonZero16u,
+        countNonZero32s,
+        countNonZero32f,
+        countNonZero64f,
+        countNonZero16f,
+        countNonZero16f, // for bf16 it's the same code as for f16
+        countNonZero8u,
+        countNonZero64s,
+        countNonZero64s,
+        countNonZero32s,
         0
     };
 

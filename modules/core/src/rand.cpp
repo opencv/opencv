@@ -213,24 +213,17 @@ randi_( uint64_t* arr, int len, int cn, uint64* state, const DivStruct* p )
     *state = temp;
 }
 
-#define DEF_RANDI_FUNC(suffix, type) \
-static void randBits_##suffix(type* arr, int len, int cn, uint64* state, \
-                              const Vec2l* p, void*, int flags) \
-{ randBits_(arr, len, cn, state, p, flags); } \
-\
-static void randi_##suffix(type* arr, int len, int cn, uint64* state, \
-                           const DivStruct* p, void*, int) \
-{ randi_(arr, len, cn, state, p); }
+template<typename T>
+static void randBitsWrap(void* arr, int len, int cn, uint64* state, const void* p, void*, int flags)
+{
+    randBits_((T*)arr, len, cn, state, (const Vec2l*)p, flags);
+}
 
-DEF_RANDI_FUNC(8u, uchar)
-DEF_RANDI_FUNC(8b, bool)
-DEF_RANDI_FUNC(8s, schar)
-DEF_RANDI_FUNC(16u, ushort)
-DEF_RANDI_FUNC(16s, short)
-DEF_RANDI_FUNC(32u, unsigned)
-DEF_RANDI_FUNC(32s, int)
-DEF_RANDI_FUNC(64u, uint64_t)
-DEF_RANDI_FUNC(64s, int64_t)
+template<typename T>
+static void randiWrap(void* arr, int len, int cn, uint64* state, const void* p, void*, int)
+{
+    randi_((T*)arr, len, cn, state, (const DivStruct*)p);
+}
 
 // Narrow an f32 buffer into one of the 1-byte FP8 destinations.
 static inline void cvt32fToFP8(const float* src, void* dst, int len, int depth)
@@ -240,8 +233,10 @@ static inline void cvt32fToFP8(const float* src, void* dst, int len, int depth)
 }
 static inline bool isFP8Depth(int d) { return d >= CV_8F_E4M3FN && d <= CV_8F_E4M3FNUZ; }
 
-static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const Vec2f* p, float* fbuf, int flags )
+static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const void* _p, void* _fbuf, int flags )
 {
+    const Vec2f* p = (const Vec2f*)_p;
+    float* fbuf = (float*)_fbuf;
     int depth = CV_MAT_DEPTH(flags);
     uint64 temp = *state;
     int k = 0, len = len_*cn;
@@ -264,8 +259,10 @@ static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const V
 }
 
 static void
-randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, int )
+randf_64f( void* _arr, int len_, int cn, uint64* state, const void* _p, void*, int )
 {
+    double* arr = (double*)_arr;
+    const Vec2d* p = (const Vec2d*)_p;
     uint64 temp = *state;
     int k = 0, len = len_*cn;
     cn--;
@@ -280,24 +277,24 @@ randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, 
     hal::addRNGBias64f(arr, &p[0][0], len_, cn+1);
 }
 
-typedef void (*RandFunc)(uchar* arr, int len, int cn, uint64* state,
+typedef void (*RandFunc)(void* arr, int len, int cn, uint64* state,
                          const void* p, void* tempbuf, int flags);
 
 static RandFunc randTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
 {
     {
-        (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u,
-        (RandFunc)randi_16s, (RandFunc)randi_32s, (RandFunc)randf_16_or_32f,
-        (RandFunc)randf_64f, (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f,
-        (RandFunc)randi_8b, (RandFunc)randi_64u, (RandFunc)randi_64s,
-        (RandFunc)randi_32u,
-        (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f    // CV_8F_E4M3FN, E4M3FNUZ
+        randiWrap<uchar>, randiWrap<schar>, randiWrap<ushort>,
+        randiWrap<short>, randiWrap<int>, randf_16_or_32f,
+        randf_64f, randf_16_or_32f, randf_16_or_32f,
+        randiWrap<bool>, randiWrap<uint64_t>, randiWrap<int64_t>,
+        randiWrap<unsigned>,
+        randf_16_or_32f, randf_16_or_32f    // CV_8F_E4M3FN, E4M3FNUZ
     },
     {
-        (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u,
-        (RandFunc)randBits_16s, (RandFunc)randBits_32s, 0, 0, 0, 0,
-        (RandFunc)randBits_8b, (RandFunc)randBits_64u, (RandFunc)randBits_64s,
-        (RandFunc)randBits_32u, 0, 0, 0
+        randBitsWrap<uchar>, randBitsWrap<schar>, randBitsWrap<ushort>,
+        randBitsWrap<short>, randBitsWrap<int>, 0, 0, 0, 0,
+        randBitsWrap<bool>, randBitsWrap<uint64_t>, randBitsWrap<int64_t>,
+        randBitsWrap<unsigned>, 0, 0, 0
     }
 };
 
@@ -390,9 +387,12 @@ double RNG::gaussian(double sigma)
 }
 
 template<typename T, typename PT> static void
-randnScale_(float* src, T* dst, int len, int cn,
-            const PT* mean, const PT* stddev, int flags )
+randnScale_(float* src, void* _dst, int len, int cn,
+            const void* _mean, const void* _stddev, int flags )
 {
+    T* dst = (T*)_dst;
+    const PT* mean = (const PT*)_mean;
+    const PT* stddev = (const PT*)_stddev;
     bool stdmtx = (flags & RNG_FLAG_STDMTX) != 0;
     int i, j, k;
     if( !stdmtx || cn == 1 )
@@ -431,9 +431,12 @@ randnScale_(float* src, T* dst, int len, int cn,
 
 // special version for 16f, 16bf and 32f
 static void
-randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
-                     const float* mean, const float* stddev, int flags)
+randnScale_16_or_32f(float* fbuf, void* _dst, int len, int cn,
+                     const void* _mean, const void* _stddev, int flags)
 {
+    float* dst = (float*)_dst;
+    const float* mean = (const float*)_mean;
+    const float* stddev = (const float*)_stddev;
     bool stdmtx = (flags & RNG_FLAG_STDMTX) != 0;
     int depth = CV_MAT_DEPTH(flags);
     float* arr = depth == CV_16F || depth == CV_16BF || isFP8Depth(depth) ? fbuf : dst;
@@ -498,33 +501,17 @@ randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
         cvt32fToFP8(fbuf, dst, len, depth);
 }
 
-#define DEF_RANDNSCALE_FUNC(suffix, T, PT) \
-static void randnScale_##suffix( float* src, T* dst, int len, int cn, \
-                                 const PT* mean, const PT* stddev, int flags ) \
-{ randnScale_(src, dst, len, cn, mean, stddev, flags); }
-
-DEF_RANDNSCALE_FUNC(8u, uchar, float)
-DEF_RANDNSCALE_FUNC(8b, bool, float)
-DEF_RANDNSCALE_FUNC(8s, schar, float)
-DEF_RANDNSCALE_FUNC(16u, ushort, float)
-DEF_RANDNSCALE_FUNC(16s, short, float)
-DEF_RANDNSCALE_FUNC(32u, unsigned, float)
-DEF_RANDNSCALE_FUNC(32s, int, float)
-DEF_RANDNSCALE_FUNC(64u, uint64_t, double)
-DEF_RANDNSCALE_FUNC(64s, int64_t, double)
-DEF_RANDNSCALE_FUNC(64f, double, double)
-
 typedef void (*RandnScaleFunc)(float* src, void* dst, int len, int cn,
                                const void* mean, const void* stddev, int flags);
 
 static RandnScaleFunc randnScaleTab[CV_DEPTH_MAX] =
 {
-    (RandnScaleFunc)randnScale_8u, (RandnScaleFunc)randnScale_8s, (RandnScaleFunc)randnScale_16u,
-    (RandnScaleFunc)randnScale_16s, (RandnScaleFunc)randnScale_32s, (RandnScaleFunc)randnScale_16_or_32f,
-    (RandnScaleFunc)randnScale_64f, (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f,
-    (RandnScaleFunc)randnScale_8b, (RandnScaleFunc)randnScale_64u, (RandnScaleFunc)randnScale_64s,
-    (RandnScaleFunc)randnScale_32u,
-    (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f   // CV_8F_E4M3FN, E4M3FNUZ
+    randnScale_<uchar, float>, randnScale_<schar, float>, randnScale_<ushort, float>,
+    randnScale_<short, float>, randnScale_<int, float>, randnScale_16_or_32f,
+    randnScale_<double, double>, randnScale_16_or_32f, randnScale_16_or_32f,
+    randnScale_<bool, float>, randnScale_<uint64_t, double>, randnScale_<int64_t, double>,
+    randnScale_<unsigned, float>,
+    randnScale_16_or_32f, randnScale_16_or_32f   // CV_8F_E4M3FN, E4M3FNUZ
 };
 
 void RNG::fill( InputOutputArray _mat, int disttype,

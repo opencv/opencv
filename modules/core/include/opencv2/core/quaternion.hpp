@@ -944,7 +944,7 @@ public:
      * Quatd q_unit = Quatd::createFromAngleAxis(angle, axis); //quaternion could also be get by interpolation by two or more quaternions.
      *
      * //assume there is two points (1,0,0) and (1,0,1) to be rotated
-     * Mat pointsA = (Mat_<double>(2, 3) << 1,0,0,1,0,1);
+     * Mat pointsA = Mat_<double>({2, 3}, {1,0,0,1,0,1});
      * //change the shape
      * pointsA = pointsA.t();
      * // rotate 180 degrees around the z axis

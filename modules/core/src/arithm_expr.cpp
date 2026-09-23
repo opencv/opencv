@@ -48,6 +48,7 @@ const char* opName(TOp op)
     case OP_MIN:           return "min";
     case OP_MAX:           return "max";
     case OP_ABSDIFF:       return "absdiff";
+    case OP_ADDW:          return "addWeighted";
     case OP_HYPOT:         return "hypot";
     case OP_ATAN2:         return "atan2";
     case OP_AND:           return "and";
@@ -294,6 +295,63 @@ static inline bool isFlexConst(const TExpr& e, int s)
     return e.arginfo[s].kind == TExpr::CONST && e.arginfo[s].depth == EW_DEPTH_NONE;
 }
 
+// Read a CONST slot that carries exactly ONE value. OP_ADDW transports alpha/beta/gamma in the
+// instruction's params block - a single value applied to every channel - so a per-channel const
+// cannot ride it and must keep the expanded form.
+static bool scalarConstValue(const TExpr& e, int s, double& v)
+{
+    const TExpr::Arg& a = e.arginfo[s];
+    if (a.kind != TExpr::CONST || std::max(1, a.channels) != 1) return false;
+    AutoBuffer<double, MAX_LOCAL_CN> buf;
+    constDoubles(e, s, buf);
+    v = buf[0];
+    return true;
+}
+
+// Does the run of instructions ENDING at `end` compute `array * scalar` into slot `t`?
+//
+// emitBinary() may wrap the multiply in casts: an integer array times a fractional scalar computes
+// in the float domain and lands back in the array's own type, so the run is
+//     [cast widen] -> mul -> [cast narrow]
+// with the multiply always present and the two casts optional. All three are contiguous and sit at
+// the tail of the program (the operand was emitted immediately before the pending add), so matching
+// backwards from `end` identifies the whole run. Fills the ORIGINAL array operand, the scalar, and
+// the index of the run's first instruction.
+static bool matchScaledChain(const TExpr& e, int end, int t,
+                             int& arrSlot, double& scale, int& startIdx)
+{
+    if (end < 0) return false;
+    int j = end, mulResult = t;
+
+    // optional trailing narrowing cast
+    if (e.prog[j].op == OP_CAST && e.prog[j].result == t)
+    {
+        mulResult = e.prog[j].arg0;
+        if (--j < 0) return false;
+    }
+
+    const TExpr::Insn& mul = e.prog[j];
+    if (mul.op != OP_MUL || mul.result != mulResult || mul.params[0] != 1.0) return false;
+
+    int arr;
+    if      (scalarConstValue(e, mul.arg1, scale)) arr = mul.arg0;
+    else if (scalarConstValue(e, mul.arg0, scale)) arr = mul.arg1;
+    else return false;                                  // array*array is not an addWeighted term
+    startIdx = j;
+
+    // optional leading widening cast feeding the multiply
+    if (j - 1 >= 0 && e.prog[j-1].op == OP_CAST && e.prog[j-1].result == arr &&
+        e.arginfo[arr].kind == TExpr::TEMP)
+    {
+        arr = e.prog[j-1].arg0;
+        startIdx = j - 1;
+    }
+
+    if (e.arginfo[arr].kind == TExpr::CONST) return false;   // scalar*scalar is folded elsewhere
+    arrSlot = arr;
+    return true;
+}
+
 // Can a flexible CONST `s` be represented exactly at depth `d`? (typed operands trivially "fit").
 static bool constFits(const TExpr& e, int s, int d)
 {
@@ -343,6 +401,68 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
         const int out2 = addTemp(rdepth);
         addInsn(OP_CAST, out, 0, 0, out2);
         return out2;
+    }
+
+    // peephole: a*alpha + b*beta [+ gamma] -> the fused OP_ADDW kernel (two v_fma). Written out,
+    // the form costs four instructions, three temp buffers and four passes over the data; OP_ADDW
+    // does the whole thing in one pass with no temp. Like the abs(x - y) -> absdiff peephole in
+    // emitUnary() this RETIRES the instructions it folds, so - same as there - it must leave a
+    // pinned (named) slot alone: see TExpr::Arg::pinned.
+    if (op == OP_ADD)
+    {
+        const int n = (int)prog.size();
+
+        // (x*alpha) + (y*beta). Both multiplies are the last two instructions and their results the
+        // last two temps (the operands were emitted immediately before this add), so folding them is
+        // a pop of the program tail and no slot renumbering is needed.
+        int x = 0, y = 0, startA = 0, startB = 0;
+        double alpha = 0, beta = 0;
+        if (n >= 2 && a != b &&
+            arginfo[a].kind == TEMP && !arginfo[a].pinned &&
+            arginfo[b].kind == TEMP && !arginfo[b].pinned &&
+            matchScaledChain(*this, n - 1, b, y, beta, startB) &&
+            matchScaledChain(*this, startB - 1, a, x, alpha, startA) &&
+            x != a && x != b && y != a && y != b &&
+            // OP_ADDW has no CV_Bool form (it would have to pick a numeric work type); leave a bool
+            // operand to the plain expansion rather than turning it into an error.
+            arginfo[x].depth != CV_Bool && arginfo[y].depth != CV_Bool)
+        {
+            // The two runs together are exactly the tail [startA, n), so folding them is a truncation
+            // of the program; every temp they produced was created after every surviving one, so
+            // retiring them keeps the temp indices dense (0..ntemps-1) for compile()'s liveness.
+            int retired = 0, lowest = INT_MAX;
+            for (int i = startA; i < n; i++)
+            {
+                const int r = prog[i].result;
+                if (arginfo[r].kind != TEMP || arginfo[r].pinned) { retired = -1; break; }
+                lowest = std::min(lowest, arginfo[r].index);
+                retired++;
+            }
+            if (retired > 0 && lowest == ntemps - retired)
+            {
+                for (int i = startA; i < n; i++) arginfo[prog[i].result].kind = NONE;
+                prog.resize(startA);
+                ntemps -= retired;
+                return emitBinary(OP_ADDW, x, y, rdepth, Scalar(alpha, beta, 0.));
+            }
+        }
+
+        // (x*alpha + y*beta) + gamma: the ADDW is already emitted and its gamma still 0, so the
+        // trailing scalar folds into the instruction's params instead of costing another pass.
+        {
+            int acc = 0; double gamma = 0;
+            if      (scalarConstValue(*this, b, gamma)) acc = a;
+            else if (scalarConstValue(*this, a, gamma)) acc = b;
+            if (acc != 0 && n >= 1 &&
+                arginfo[acc].kind == TEMP && !arginfo[acc].pinned &&
+                arginfo[acc].index == ntemps - 1 &&
+                prog[n-1].op == OP_ADDW && prog[n-1].result == acc &&
+                (rdepth == EW_DEPTH_NONE || rdepth == arginfo[acc].depth))
+            {
+                prog[n-1].params[2] += gamma;
+                return acc;
+            }
+        }
     }
 
     const int nd0 = isFlexConst(*this, a) ? EW_DEPTH_NONE : arginfo[a].depth;
@@ -750,12 +870,14 @@ void TExpr::compile()
         if (a.kind != CONST || a.depth == EW_DEPTH_NONE) continue;
         const int cn = std::max(1, a.channels), sd = a.srcdepth, dd = a.depth;
         const size_t sesz = CV_ELEM_SIZE1(sd), desz = CV_ELEM_SIZE1(dd);
-        AutoBuffer<uchar, 64> srcbytes((size_t)cn * sesz);
-        memcpy(srcbytes.data(), (const uchar*)(constbuf.data() + a.constofs), (size_t)cn * sesz);
+        // uint64_t element type is used for buffer alignment on worst case
+        AutoBuffer<uint64_t, sizeof(uint64_t)> srcbuf(divUp((size_t)cn * sesz, (unsigned)sizeof(uint64_t)));
+        uchar* srcbytes = (uchar*)srcbuf.data();
+        memcpy(srcbytes, (const uchar*)(constbuf.data() + a.constofs), (size_t)cn * sesz);
         const size_t ofs = appendConstBuf(constbuf, dd, nullptr, cn);   // reserve converted region
         uchar* dst = (uchar*)(constbuf.data() + ofs);
-        if (sd == dd) memcpy(dst, srcbytes.data(), (size_t)cn * desz);
-        else getConvertFunc(sd, dd)(srcbytes.data(), 0, nullptr, 0, dst, 0, Size(cn, 1), nullptr);
+        if (sd == dd) memcpy(dst, srcbytes, (size_t)cn * desz);
+        else getConvertFunc(sd, dd)(srcbytes, 0, nullptr, 0, dst, 0, Size(cn, 1), nullptr);
         a.constofs = ofs; a.srcdepth = dd;
         nconsts++;
     }
@@ -1179,9 +1301,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             const size_t region = alignSize((size_t)wf0, 8);
             // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
             // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
-            // the rare larger case.
-            AutoBuffer<uchar, 16*1024 + 256> scratchBuf((size_t)totalEsz * region);
-            uchar* scratch = scratchBuf.data();
+            // the rare larger case. uint64_t is used for memory alignment on the worst case.
+            AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> scratchBuf(
+                divUp((size_t)totalEsz * region, (unsigned)sizeof(uint64_t)));
+            uchar* scratch = (uchar*)scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
                 const int wf = std::min(wf0, (int)total - x0);
@@ -1352,8 +1475,11 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         const int bw = std::min(w, bc.capElems);
         const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
         const size_t region = alignSize((size_t)bw * bh, 8);
-        AutoBuffer<uchar, 16*1024 + 256> tstoreBuf((size_t)eszPrefix[bc.nbuffers] * region);  // inline (<= ~16KB)
-        uchar* tstore = tstoreBuf.data();
+        // uint64_t elements (see the note on scratchBuf above): keeps the block-local temp store
+        // 8-byte aligned, which the 64-bit-lane kernels require on 32-bit ABIs.
+        AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
+            divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~16KB)
+        uchar* tstore = (uchar*)tstoreBuf.data();
 
         AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
         for (int y0 = 0; y0 < h; y0 += bh)

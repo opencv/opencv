@@ -54,7 +54,7 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
 {
     uint index_max = std::numeric_limits<uint>::max();
     T minval = std::numeric_limits<T>::max();
-    T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
+    T maxval = std::numeric_limits<T>::min() > 0 ? (T)-std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
     uint minloc = index_max, maxloc = index_max;
 
     size_t index = 0;

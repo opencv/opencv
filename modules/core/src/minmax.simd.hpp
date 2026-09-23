@@ -13,6 +13,15 @@ typedef void (*MinMaxIdxFunc)(const uchar* data, const uchar* mask,
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+template<typename T, typename WT, void (*fn)(const T*, const uchar*, WT*, WT*, size_t*, size_t*, int, size_t)>
+static void minMaxIdxWrap(const uchar* data, const uchar* mask,
+                          void* minval, void* maxval,
+                          size_t* minidx, size_t* maxidx,
+                          int len, size_t startidx)
+{
+    fn((const T*)data, mask, (WT*)minval, (WT*)maxval, minidx, maxidx, len, startidx);
+}
+
 MinMaxIdxFunc getMinMaxIdxFunc(int depth);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -369,19 +378,19 @@ MinMaxIdxFunc getMinMaxIdxFunc(int depth)
 {
     static MinMaxIdxFunc minMaxIdxTab[CV_DEPTH_MAX] =
     {
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx8u),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx8s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx16u),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx16s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx32s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx32f),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx64f),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx16f),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx16bf),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx8u),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx64u),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx64s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx32u),
+        minMaxIdxWrap<uchar, int, minMaxIdx8u>,
+        minMaxIdxWrap<schar, int, minMaxIdx8s>,
+        minMaxIdxWrap<ushort, int, minMaxIdx16u>,
+        minMaxIdxWrap<short, int, minMaxIdx16s>,
+        minMaxIdxWrap<int, int, minMaxIdx32s>,
+        minMaxIdxWrap<float, float, minMaxIdx32f>,
+        minMaxIdxWrap<double, double, minMaxIdx64f>,
+        minMaxIdxWrap<hfloat, float, minMaxIdx16f>,
+        minMaxIdxWrap<bfloat, float, minMaxIdx16bf>,
+        minMaxIdxWrap<uchar, int, minMaxIdx8u>,
+        minMaxIdxWrap<uint64, uint64, minMaxIdx64u>,
+        minMaxIdxWrap<int64, int64, minMaxIdx64s>,
+        minMaxIdxWrap<unsigned, int64, minMaxIdx32u>,
         0
     };
 

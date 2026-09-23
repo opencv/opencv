@@ -82,8 +82,6 @@
 #include <unordered_map>
 #include <cmath>
 
-#define GET_OPTIMIZED(func) (func)
-
 
 namespace cv {
 

@@ -36,4 +36,32 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
     SANITY_CHECK_NOTHING();
 }
 
+
+// The same computation written as an expression. cv::texpr() folds a*alpha + b*beta + gamma into
+// the single fused OP_ADDW kernel instead of emitting two multiplies, two adds and three temp
+// buffers, so this shares the grid above and can be compared against it directly.
+PERF_TEST_P(Size_MatType, texpr_addWeighted, TYPICAL_MATS_ADWEIGHTED)
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int depth = CV_MAT_DEPTH(type);
+    Mat src1(size, type);
+    Mat src2(size, type);
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    if (depth == CV_32S)
+    {
+        // there might be not enough precision for integers
+        src1 /= 2048;
+        src2 /= 2048;
+    }
+
+    std::vector<Mat> inputs{ src1, src2 }, outputs;
+
+    TEST_CYCLE() cv::texpr("{0} * 3.75 + {1} * -0.125 + 100.0", inputs, outputs);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

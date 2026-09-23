@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "cpu_kernels/fusion_apply.hpp"
 
 #include <type_traits>
 #include <opencv2/dnn/shape_utils.hpp>
@@ -31,9 +32,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #ifdef HAVE_OPENCL
     UMat weight_umat, bias_umat;
 #endif
+    PreparedFusion fusion;
 
  public:
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
+    {
+        return static_cast<MatMulLayerImpl*>(self)->fusion.take(expr);
+    }
+
     MatMulLayerImpl(const LayerParams& params) {
+        registerFusionOpsOnce<MatMulLayerImpl>({ nullptr, &MatMulLayerImpl::absorbOp });
         setParamsFrom(params);
 
         trans_a = params.get<bool>("transA", false);
@@ -43,8 +51,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
 
+        // The GEMM kernels are FP32-only, so narrow constant weights are decoded
+        // once here. FP8 arrives this way from vendor-quantised models that feed
+        // MatMul directly instead of going through DequantizeLinear.
         for (Mat& blob : blobs) {
-            if (blob.type() == CV_16F || blob.type() == CV_16BF) {
+            if (blob.type() == CV_16F || blob.type() == CV_16BF ||
+                blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
                 Mat widened;
                 blob.convertTo(widened, CV_32F);
                 blob = widened;
@@ -53,6 +65,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        if (fusion.expr)
+            return backendId == DNN_BACKEND_OPENCV;
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b) ||
@@ -289,6 +303,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            if (fusion.expr) {
+                std::vector<Mat> outs;
+                outputs_arr.getMatVector(outs);
+                if (!outs.empty()) {
+                    Mat y32;
+                    outs[0].convertTo(y32, CV_32F);
+                    fusion.run(y32);
+                    y32.convertTo(outs[0], outs[0].type());
+                }
+            }
             return;
         }
 
@@ -385,6 +409,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
         }
+        fusion.run(Y);
     }
 
     // CV_64F: one cv::gemm call per batch slice (batches don't collapse like Gemm's).
