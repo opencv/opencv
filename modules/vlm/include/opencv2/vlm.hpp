@@ -32,8 +32,10 @@ api_key passed to create()).
 */
 enum VLMModelType
 {
-    VLM_MODEL_PADDLEOCR_VL    = 0,  //!< PaddleOCR-VL-1.5, see https://huggingface.co/PaddlePaddle/PaddleOCR-VL
-    VLM_MODEL_GRANITE_DOCLING = 1,  //!< Granite-Docling-258M, see https://huggingface.co/ibm-granite/granite-docling-258M
+    //! PaddleOCR-VL-1.5, see https://huggingface.co/PaddlePaddle/PaddleOCR-VL
+    VLM_MODEL_PADDLEOCR_VL    = 0,
+    //! Granite-Docling-258M, see https://huggingface.co/ibm-granite/granite-docling-258M
+    VLM_MODEL_GRANITE_DOCLING = 1,
 
     VLM_MODEL_OPENAI          = 2,  //!< OpenAI hosted vision API (e.g. gpt-4o), requires api_key
     VLM_MODEL_ANTHROPIC       = 3,  //!< Anthropic Claude hosted vision API, requires api_key
@@ -102,36 +104,18 @@ public:
 
 /** @brief Create a vision-language OCR / document-understanding engine.
 
-@param model_type Which VLM to load. VLM_MODEL_PADDLEOCR_VL/VLM_MODEL_GRANITE_DOCLING run
-                   locally; VLM_MODEL_OPENAI/ANTHROPIC/GEMINI/GROK call a hosted API.
-@param model_dir  What to load, which depends on @p model_type. It is not tagged as a file
-                   path, because it only names one for half the model types.
-                   For local model types: path to the local ONNX export directory; see
-                   @ref vlm_model_dir_layout for the files each model needs. Note that its
-                   config.json is an OpenCV tokenizer config, not HuggingFace's, so a stock
-                   upstream export needs that one file added.
-                   For cloud model types: the provider's model name -- required, with no
-                   built-in default. Providers retire model names, so take the name from the
-                   provider's own model list rather than from documentation: OpenAI and Grok
-                   serve one at GET /v1/models, Gemini at
-                   generativelanguage.googleapis.com/v1beta/models, Anthropic at
-                   api.anthropic.com/v1/models. Where a provider offers a moving alias
-                   (e.g. a "-latest" suffix), prefer it over a dated id. A retired name comes
-                   back as an HTTP 404/400 naming the model, which is distinguishable from a
-                   401 for a bad key.
-@param engine     cv::dnn::Net engine used to load each underlying ONNX sub-model. Only
-                  "opencv" (dnn::ENGINE_OPENCV) is supported: these decoders rely on
-                  Net::enableKVCache(), which the ONNX Runtime path does not implement.
-                  Ignored by cloud model types.
-@param device     For local model types: compute device for all underlying nets, "cpu" or
-                  "cuda". For cloud model types: pass "cloud" (there is no local compute
-                  device to pick; any value is accepted here and has no effect).
-@param api_key    API key for cloud model types, ignored by local model types. If left empty,
-                  the key is read from the provider's usual environment variable --
-                  OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY or XAI_API_KEY -- which
-                  keeps it out of source, shell history and notebooks. Pass it explicitly only
-                  when the key comes from somewhere else, such as a secret store. create()
-                  throws and names the variable if neither is available.
+PADDLEOCR_VL and GRANITE_DOCLING run locally from an ONNX export; OPENAI, ANTHROPIC, GEMINI
+and GROK call a hosted API.
+
+@param model_type Which VLM to load.
+@param model_dir  Local types: the ONNX export directory, laid out as in
+                  samples/dnn/granite_docling_inference.py. Cloud types: the provider's
+                  model name, taken from the provider's own model list.
+@param engine     Local types only: only "opencv" (dnn::ENGINE_OPENCV) is supported.
+@param device     Local types only: "cpu" or "cuda".
+@param api_key    Cloud types only. Empty reads OPENAI_API_KEY, ANTHROPIC_API_KEY,
+                  GEMINI_API_KEY or XAI_API_KEY instead; create() throws naming the variable
+                  if neither is set.
 */
 CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, const String& model_dir,
                                   const String& engine = "opencv",

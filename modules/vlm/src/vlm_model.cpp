@@ -13,10 +13,7 @@ namespace cv { namespace vlm {
 
 namespace {
 
-// dnn::ENGINE_ORT is deliberately not offered yet: these decoders are KV-cached, and
-// Net::enableKVCache() is a no-op on the ORT path (the present.* -> past_key_values.*
-// routing runs only on OpenCV's own graph path), so the decoder's past_key_values inputs
-// are never supplied and generation fails. Add "ort" here once that routing works.
+// No "ort": Net::enableKVCache() is a no-op on the ORT path, so generation fails there.
 int engineFromString(const String& engine)
 {
     if (engine == "opencv")
@@ -24,10 +21,7 @@ int engineFromString(const String& engine)
     CV_Error(Error::StsBadArg, "vlm: unknown engine '" + engine + "' (expected 'opencv')");
 }
 
-// Each provider's own SDK reads its key from one of these, so a user who has already
-// set one up needs no extra step here -- and the key stays out of source, shell history
-// and notebooks, which an explicit create() argument cannot guarantee. An argument, when
-// given, still wins, so callers holding a key from a vault are unaffected.
+// The variable each provider's own SDK reads; an explicit api_key argument still wins.
 const char* apiKeyEnvVar(VLMModelType model_type)
 {
     switch (model_type)

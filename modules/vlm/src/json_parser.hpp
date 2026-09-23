@@ -15,18 +15,11 @@
 
 namespace cv { namespace vlm {
 
-/** @brief A node of a parsed JSON document. Read-only.
+/** @brief A read-only node of a parsed JSON document.
 
-This exists because a cloud provider returns a whole page of recognized text as a single
-JSON string value, and FileStorage's JSON reader caps one string at CV_FS_MAX_LEN (4096).
-Local model config files stay on FileStorage -- they are small files in a format we control,
-which is what it is for. See config_json.hpp.
-
-Lookups never throw. A missing key, an out-of-range index, a lookup on the wrong node type
-and an explicit JSON `null` all yield an empty node, so a chain such as
-`root["candidates"][0]["content"]` can be written straight through and tested once at the
-end. Treating `null` as empty is deliberate: providers send `"usage": null` rather than
-omitting the field, and both should fall back the same way.
+Exists because a provider returns a whole page of text as one JSON string, and FileStorage's
+JSON reader caps a string at CV_FS_MAX_LEN. Lookups never throw: a missing key, a bad index,
+a lookup on the wrong type and an explicit null all give an empty node.
 */
 class JsonValue
 {
@@ -77,11 +70,9 @@ private:
 
 /** @brief Parses one complete JSON document.
 
-@param text Document text: exactly one JSON value, optionally surrounded by whitespace.
-@return The document's root node.
-
-Throws Error::StsParseError on malformed input, on nesting deeper than 64 levels, and on
-trailing content after the root value. There is no limit on the length of a string value.
+@param text Exactly one JSON value, optionally surrounded by whitespace.
+@return The root node. Throws Error::StsParseError on malformed input, on nesting deeper
+        than 64 levels, and on trailing content. String length is not limited.
 */
 JsonValue jsonParse(const std::string& text);
 

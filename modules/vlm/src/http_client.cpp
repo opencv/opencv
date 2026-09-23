@@ -56,9 +56,7 @@ HttpResponse httpPostJson(const std::string& url, const std::string& jsonBody,
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 300L);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
-    // The provider endpoints do not redirect, and libcurl resends CURLOPT_HTTPHEADER to a
-    // redirect target even on a different host -- which would hand the caller's API key to
-    // whatever that Location pointed at. A redirect surfaces as a 3xx status instead.
+    // Off deliberately: libcurl resends the API key header to the redirect target.
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
 #if LIBCURL_VERSION_NUM >= 0x075500 // 7.85.0
     curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "https");

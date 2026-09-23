@@ -16,8 +16,6 @@ using namespace cv::dnn;
 
 int argmaxLastToken(const Mat& logits)
 {
-    // Shape and type come from a downloaded ONNX export, so they are input, not an
-    // invariant: check before indexing size[] and reinterpreting the data as float.
     CV_CheckEQ(logits.dims, 3, "vlm: decoder logits must be 1xSxV");
     CV_CheckTypeEQ(logits.type(), CV_32F, "vlm: decoder logits must be CV_32F");
     CV_CheckGT(logits.size[1], 0, "vlm: decoder logits have an empty sequence dimension");
@@ -32,13 +30,9 @@ int argmaxLastToken(const Mat& logits)
 void scatterImageFeatures(Mat& inputsEmbeds, const std::vector<int>& tokens,
                            int imageTokenId, const Mat& imageFeatures)
 {
-    // The write below is indexed by token position, so a token list longer than the
-    // embedding sequence would run off the end of the buffer. Both shapes come from the
-    // model export and the tokenizer config, which can disagree with each other.
     CV_CheckEQ(inputsEmbeds.dims, 3, "vlm: inputs_embeds must be 1xSxH");
     CV_CheckTypeEQ(inputsEmbeds.type(), CV_32F, "vlm: inputs_embeds must be CV_32F");
     CV_CheckTypeEQ(imageFeatures.type(), CV_32F, "vlm: vision features must be CV_32F");
-    // Both buffers are addressed flat below, which a padded Mat would break.
     CV_Assert(inputsEmbeds.isContinuous() && imageFeatures.isContinuous());
     CV_CheckEQ((int)tokens.size(), inputsEmbeds.size[1],
                "vlm: token count and embedding sequence length disagree "
