@@ -342,7 +342,21 @@ private:
             if (discardQueued)
                 cap.discardQueue();
         }
-        ~Pause() { try { cap.startWorker(); } catch (...) {} }
+        ~Pause()
+        {
+            try
+            {
+                cap.startWorker();
+            }
+            catch (const std::exception& e)
+            {
+                CV_LOG_WARNING(NULL, "VIDEOIO: can't restart prefetch worker: " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_WARNING(NULL, "VIDEOIO: can't restart prefetch worker: unknown C++ exception");
+            }
+        }
     };
 
     bool ensureWorker()
@@ -418,8 +432,14 @@ private:
                         frame.meta[i] = inner->getProperty(framePropIds[i]);
                 }
             }
+            catch (const std::exception& e)
+            {
+                CV_LOG_WARNING(NULL, "VIDEOIO: prefetch worker: exception is raised: " << e.what());
+                ok = false;
+            }
             catch (...)
             {
+                CV_LOG_WARNING(NULL, "VIDEOIO: prefetch worker: unknown C++ exception is raised");
                 ok = false;
             }
 
