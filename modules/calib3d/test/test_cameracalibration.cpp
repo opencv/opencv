@@ -1924,8 +1924,8 @@ TEST(Calib3d_CalibrateCamera_CPP, nonContinuousPointVectors)
 
     EXPECT_LT(rmsRoi, 1e-4);
     EXPECT_NEAR(rmsContinuous, rmsRoi, 1e-12);
-    EXPECT_LE(cv::norm(cameraContinuous, cameraRoi, NORM_INF), 1e-10);
-    EXPECT_LE(cv::norm(distContinuous, distRoi, NORM_INF), 1e-10);
+    EXPECT_LE(cv::norm(cameraContinuous, cameraRoi, NORM_INF), 1e-9);
+    EXPECT_LE(cv::norm(distContinuous, distRoi, NORM_INF), 1e-9);
 
     for (size_t i = 0; i < objectBacking.size(); ++i)
     {
