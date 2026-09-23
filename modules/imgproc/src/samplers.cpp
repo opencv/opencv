@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -237,11 +238,14 @@ static void getRectSubPix_8u32f
         float a = center.x - ip.x;
         float b = center.y - ip.y;
         a = MAX(a,0.0001f);
-        float a12 = a*(1.f-b);
+        // Bilinear weights of the 4-tap kernel. They are the same for every output
+        // pixel of the patch, so the kernel is applied directly instead of using the
+        // incremental form (prev = t*s), whose loop-carried dependency across the row
+        // serialized the whole inner loop.
+        float a11 = (1.f - a)*(1.f - b);
+        float a12 = a*(1.f - b);
+        float a21 = (1.f - a)*b;
         float a22 = a*b;
-        float b1 = 1.f - b;
-        float b2 = b;
-        double s = (1. - a)/a;
 
         src_step /= sizeof(src[0]);
         dst_step /= sizeof(dst[0]);
@@ -251,13 +255,30 @@ static void getRectSubPix_8u32f
 
         for( ; win_size.height--; src += src_step, dst += dst_step )
         {
-            float prev = (1 - a)*(b1*src[0] + b2*src[src_step]);
-            for( int j = 0; j < win_size.width; j++ )
+            int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
-                float t = a12*src[j+1] + a22*src[j+1+src_step];
-                dst[j] = prev + t;
-                prev = (float)(t*s);
+                const int V = VTraits<v_float32>::vlanes();
+                const v_float32 va11 = vx_setall_f32(a11), va12 = vx_setall_f32(a12);
+                const v_float32 va21 = vx_setall_f32(a21), va22 = vx_setall_f32(a22);
+                for( ; j <= win_size.width - V; j += V )
+                {
+                    v_float32 s0 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j)));
+                    v_float32 s1 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + 1)));
+                    v_float32 s2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + src_step)));
+                    v_float32 s3 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + j + src_step + 1)));
+                    // v_add/v_mul instead of operators: the RVV scalable backend
+                    // defines no operator overloads for its native vector types.
+                    v_float32 s = v_mul(s0, va11);
+                    s = v_add(s, v_mul(s1, va12));
+                    s = v_add(s, v_mul(s2, va21));
+                    s = v_add(s, v_mul(s3, va22));
+                    v_store(dst + j, s);
+                }
             }
+#endif
+            for( ; j < win_size.width; j++ )
+                dst[j] = a11*src[j] + a12*src[j+1] + a21*src[j+src_step] + a22*src[j+1+src_step];
         }
     }
     else
