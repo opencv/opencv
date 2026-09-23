@@ -863,7 +863,12 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
     COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
-    COLOR_COLORCVT_MAX  = 155
+    COLOR_BGR2Oklab     = 155, //!< [8U/32F] convert RGB/BGR to perceptual Oklab, @ref color_convert_rgb_oklab "color conversions"
+    COLOR_RGB2Oklab     = 156, //!< [8U/32F]
+    COLOR_Oklab2BGR     = 157, //!< [8U/32F]
+    COLOR_Oklab2RGB     = 158, //!< [8U/32F]
+
+    COLOR_COLORCVT_MAX  = 159
 };
 
 //! @addtogroup imgproc_shape

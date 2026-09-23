@@ -506,4 +506,30 @@ PERF_TEST_P(EdgeAwareDemosaicingTest, demosaicingEA,
     SANITY_CHECK(dst, 1);
 }
 
+CV_ENUM(OklabMode, COLOR_BGR2Oklab, COLOR_Oklab2BGR)
+typedef tuple<Size, MatType, OklabMode> Size_MatType_OklabMode_t;
+typedef perf::TestBaseWithParam<Size_MatType_OklabMode_t> Size_MatType_OklabMode;
+
+PERF_TEST_P(Size_MatType_OklabMode, cvtColorOklab,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p),
+                testing::Values(CV_8UC3, CV_32FC3),
+                OklabMode::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int mode = get<2>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cvtColor(src, dst, mode);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
