@@ -171,6 +171,7 @@ private:
     cv::Mat camera_mat;
     cv::Mat distortion_coeffs;
     cv::Mat new_camera_mat;
+    cv::Rect validPixROI;
 
     cv::Size img_size;
     double alpha;
@@ -187,6 +188,8 @@ CV_GetOptimalNewCameraMatrixNoDistortionTest::CV_GetOptimalNewCameraMatrixNoDist
     test_array[INPUT].push_back(NULL); // camera_mat
     test_array[INPUT].push_back(NULL); // distortion_coeffs
     test_array[OUTPUT].push_back(NULL); // new_camera_mat
+    test_array[OUTPUT].push_back(NULL); // validPixROI
+    test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
 
     alpha = 0.0;
@@ -199,7 +202,9 @@ void CV_GetOptimalNewCameraMatrixNoDistortionTest::get_test_array_types_and_size
     cvtest::ArrayTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
     RNG& rng = ts->get_rng();
     matrix_type = types[INPUT][0] = types[INPUT][1] = types[OUTPUT][0] = types[REF_OUTPUT][0] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_32S;
     sizes[INPUT][0] = sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(3,3);
+    sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = Size(4,1);
     sizes[INPUT][1] = cvSize(1,4);
 }
 
@@ -240,7 +245,7 @@ int CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_test_case(int test_cas
 
 void CV_GetOptimalNewCameraMatrixNoDistortionTest::run_func()
 {
-    new_camera_mat = cv::getOptimalNewCameraMatrix(camera_mat, distortion_coeffs, img_size, alpha, img_size, NULL, center_principal_point);
+    new_camera_mat = cv::getOptimalNewCameraMatrix(camera_mat, distortion_coeffs, img_size, alpha, img_size, &validPixROI, center_principal_point);
 }
 
 void CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_to_validation(int /*test_case_idx*/)
@@ -248,9 +253,15 @@ void CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_to_validation(int /*t
     const Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_OUTPUT][0];
     cvtest::copy(src, dst);
+    Mat& ref_validPixROI = test_mat[REF_OUTPUT][1];
+    cvtest::copy(cv::Mat(cv::Vec4i(0, 0, img_size.width, img_size.height)), ref_validPixROI);
+    std::cout << "ref_validPixROI: " << ref_validPixROI << std::endl;
 
     Mat& output = test_mat[OUTPUT][0];
     cvtest::convert(new_camera_mat, output, output.type());
+    Mat& output_validPixROI = test_mat[OUTPUT][1];
+    cvtest::copy(cv::Mat(cv::Vec4i(validPixROI.x, validPixROI.y, validPixROI.width, validPixROI.height)), output_validPixROI);
+    std::cout << "output_validPixROI: " << output_validPixROI << std::endl;
 }
 
 //---------
@@ -1978,6 +1989,36 @@ TEST(Calib3d_initInverseRectificationMap, regression_20165)
 
     // Check Result
     EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
+}
+
+TEST(Calib3d_getOptimalNewCameraMatrix, regression_27374)
+{
+    Size2f size(512, 512);
+    Matx33f cameraMatrix(
+        size.width / 2, 0, size.width / 2,
+        0, size.height / 2, size.height / 2,
+        0, 0, 1
+    );
+
+    // Barrel distortion (k1 only)
+    cv::Mat distCoeffs = (cv::Mat_<double>(1, 4) << -0.1, 0, 0, 0);
+
+    // Innermost pixels of ROI after undistortion are along center lines
+    std::vector<cv::Point2f> points = {
+        {0, size.width / 2},
+        {size.width, size.height / 2},
+        {size.width / 2, 0},
+        {size.width / 2, size.height}
+    };
+ 
+    // getOptimalNewCameraMatrix() with alpha=0 should keep innermost pixels at roughly same position
+    std::vector<cv::Point2f> undistorted;
+    cv::Rect roi;
+    double alpha = 0;
+    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, size, alpha, size, &roi,
+                                                            false, true);
+    cv::undistortPoints(points, undistorted, cameraMatrix, distCoeffs, cv::noArray(), newCameraMatrix);
+    EXPECT_LE(cvtest::norm(points, undistorted, NORM_INF), 1);
 }
 
 }} // namespace
