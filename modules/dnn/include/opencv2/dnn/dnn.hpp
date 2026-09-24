@@ -1257,6 +1257,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
+     *  @note Weights held in external data files are mapped rather than copied, so those files
+     *  must stay in place and unmodified for as long as the Net is alive. Set
+     *  OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA=0 to copy them instead.
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
 

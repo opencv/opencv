@@ -80,9 +80,10 @@ static std::string dataType2str(int dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto,
+                             const std::string base_path="", ExternalDataCache* cache=nullptr)
 {
-    Mat m = getMatFromTensor(tensor_proto, false, base_path);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path, cache);
     m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -106,6 +107,7 @@ protected:
     int findGraphTensorOnnxType(const std::string& name) const;
     void rememberProducedOnnxType(const opencv_onnx::NodeProto& node_proto, int onnx_type);
     Mat parseTensor(const opencv_onnx::TensorProto& tensorProto);
+    void collectPackedInitializers(const opencv_onnx::GraphProto& graph_proto);
     void rememberMissingOp(const std::string& opname);
 
     // Subgraph body-local names are renamed to "<scope_prefix><name>" so
@@ -149,6 +151,7 @@ protected:
     Net::Impl* netimpl;
     std::string onnxFilename;
     std::string onnxBasePath;
+    ExternalDataCache externalData;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     // resolveConstThroughIdentity producer map, cached per graph (curr_graph_proto swaps per subgraph).
@@ -804,7 +807,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto, onnxBasePath);
+    return getMatFromTensor2(tensor_proto, onnxBasePath, &externalData);
 }
 
 std::string ONNXImporter2::remap(const std::string& name) const
@@ -893,10 +896,28 @@ void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
     }
 }
 
+// These layers repack their weight operands, so a mapping would stay resident beside the
+// packed copy instead of replacing it. Over-listing costs a copy, under-listing twice that.
+void ONNXImporter2::collectPackedInitializers(const opencv_onnx::GraphProto& graph_proto)
+{
+    static const std::set<std::string> packing_ops = {
+        "MatMul", "Gemm", "Conv", "ConvTranspose", "Attention", "LSTM", "GRU", "RNN"
+    };
+    for (int i = 0; i < graph_proto.node_size(); i++)
+    {
+        const opencv_onnx::NodeProto& node = graph_proto.node(i);
+        if (packing_ops.find(node.op_type()) == packing_ops.end())
+            continue;
+        for (int j = 1; j < node.input_size(); j++)
+            externalData.packed.insert(node.input(j));
+    }
+}
+
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
     simplifySubgraphs(*graph_proto, onnxBasePath);
+    collectPackedInitializers(*graph_proto);
     int n_nodes = graph_proto->node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << n_nodes << " nodes");
 
