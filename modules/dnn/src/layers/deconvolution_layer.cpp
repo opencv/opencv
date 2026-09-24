@@ -480,17 +480,17 @@ public:
         const float* biasvec;
         int channels;
         std::vector<int> output_shape;  // spatial dimensions only
-        std::vector<int> kernel_shape;
-        std::vector<int> pads;
-        std::vector<int> strides;
-        std::vector<int> dilations;
-        std::vector<int> input_shape;   // spatial dimensions only
+        std::vector<std::vector<size_t> > tap_starts;
+        std::vector<std::vector<size_t> > tap_offsets;
+        size_t output_spatial_size;
+        size_t column_channel_stride;
         float* data_im;
         int nstripes;
         bool is1x1;
 
         Col2ImInvoker()
-            : data_col(0), biasvec(0), channels(0), data_im(0),
+            : data_col(0), biasvec(0), channels(0), output_spatial_size(1),
+              column_channel_stride(0), data_im(0),
               nstripes(0), is1x1(0)
         {}
 
@@ -513,14 +513,48 @@ public:
             t.data_im = data_im;
             t.channels = channels;
             t.output_shape = output_shape;
-            t.kernel_shape = kernel_shape;
-            t.pads = pads;
-            t.strides = strides;
-            t.dilations = dilations;
-            t.input_shape = input_shape;
             t.nstripes = nstripes;
             t.is1x1 = is1x1;
             t.biasvec = biasvec;
+
+            const int ndims = output_shape.size();
+            for (int d = 0; d < ndims; d++)
+                t.output_spatial_size *= output_shape[d];
+
+            if (!is1x1)
+            {
+                size_t kernel_step = 1, input_step = 1;
+                for (int d = 0; d < ndims; d++)
+                    kernel_step *= input_shape[d];
+
+                // Store the kernel and input offset for each valid tap on each axis.
+                // The tables are shared by all channels and workers.
+                t.tap_starts.resize(ndims);
+                t.tap_offsets.resize(ndims);
+                for (int d = ndims - 1; d >= 0; d--)
+                {
+                    std::vector<size_t>& starts = t.tap_starts[d];
+                    std::vector<size_t>& offsets = t.tap_offsets[d];
+                    starts.resize(output_shape[d] + 1);
+                    for (int out = 0; out < output_shape[d]; out++)
+                    {
+                        starts[out] = offsets.size();
+                        for (int k = 0; k < kernel_shape[d]; k++)
+                        {
+                            int input = out + pads[d] - k * dilations[d];
+                            if (input < 0 || input % strides[d] != 0)
+                                continue;
+                            input /= strides[d];
+                            if (input < input_shape[d])
+                                offsets.push_back(k * kernel_step + input * input_step);
+                        }
+                    }
+                    starts[output_shape[d]] = offsets.size();
+                    kernel_step *= kernel_shape[d];
+                    input_step *= input_shape[d];
+                }
+                t.column_channel_stride = kernel_step;
+            }
 
             parallel_for_(Range(0, nstripes), t, nstripes);
         }
@@ -534,13 +568,7 @@ public:
 
             int ndims = output_shape.size();
 
-            // Calculate total output size
-            int total_output_size = channels;
-            int input_spatial_size = 1;
-            for (int i = 0; i < ndims; i++) {
-                total_output_size *= output_shape[i];
-                input_spatial_size *= input_shape[i];
-            }
+            const size_t total_output_size = channels * output_spatial_size;
 
             size_t stripeSize = (total_output_size + nstripes - 1) / nstripes;
             size_t startIndex = r.start * stripeSize;
@@ -551,76 +579,62 @@ public:
 
             if (is1x1_)
             {
-                const size_t output_spatial_size = total_output_size / channels;
-                for (size_t index = startIndex; index < endIndex; index++)
-                    data_im_[index] += biasvec_[index / output_spatial_size];
+                size_t index = startIndex;
+                while (index < endIndex)
+                {
+                    const size_t channel = index / output_spatial_size;
+                    const size_t channel_end = std::min((channel + 1) * output_spatial_size, endIndex);
+                    const float bias = biasvec_[channel];
+                    for (; index < channel_end; index++)
+                        data_im_[index] += bias;
+                }
                 return;
             }
 
-            // Each worker reuses its coordinates and kernel visitor for all output values.
-            std::vector<int> coords(ndims + 1);
-            std::vector<int> kernel_coords(ndims);
-            std::vector<int> input_coords(ndims);
-            float val = 0.0f;
-            std::function<void(int)> iterate_kernel = [&](int dim) {
-                if (dim == ndims) {
-                    bool valid = true;
-
-                    for (int i = 0; i < ndims; i++) {
-                        // Apply dilation to kernel coordinates
-                        int dilated_kernel_pos = kernel_coords[i] * dilations[i];
-                        input_coords[i] = coords[i + 1] + pads[i] - dilated_kernel_pos;
-                        if (input_coords[i] < 0 || input_coords[i] % strides[i] != 0) {
-                            valid = false;
-                            break;
-                        }
-                        input_coords[i] /= strides[i];
-                        if (input_coords[i] >= input_shape[i]) {
-                            valid = false;
-                            break;
-                        }
-                    }
-
-                    if (valid) {
-                        // Calculate offset in column matrix
-                        int col_offset = coords[0];  // channel
-                        for (int i = 0; i < ndims; i++) {
-                            col_offset = col_offset * kernel_shape[i] + kernel_coords[i];
-                        }
-                        col_offset *= input_spatial_size;
-
-                        // Calculate input position in flattened input
-                        int input_pos = 0;
-                        for (int i = 0; i < ndims; i++) {
-                            input_pos = input_pos * input_shape[i] + input_coords[i];
-                        }
-
-                        val += data_col_[col_offset + input_pos];
-                    }
-                } else {
-                    for (int k = 0; k < kernel_shape[dim]; k++) {
-                        kernel_coords[dim] = k;
-                        iterate_kernel(dim + 1);
-                    }
-                }
-            };
+            std::vector<size_t> tap_begin(ndims), tap_end(ndims), tap_index(ndims);
 
             for (size_t index = startIndex; index < endIndex; index++)
             {
-                // Convert linear index to multi-dimensional coordinates
                 size_t idx = index;
-
-                // Extract spatial coordinates and channel
-                for (int i = ndims - 1; i >= 0; i--) {
-                    coords[i + 1] = idx % output_shape[i];
-                    idx /= output_shape[i];
+                size_t col_offset = 0;
+                bool has_taps = true;
+                for (int d = ndims - 1; d >= 0; d--)
+                {
+                    const size_t coord = idx % output_shape[d];
+                    idx /= output_shape[d];
+                    tap_index[d] = tap_begin[d] = tap_starts[d][coord];
+                    tap_end[d] = tap_starts[d][coord + 1];
+                    if (tap_begin[d] == tap_end[d])
+                        has_taps = false;
+                    else
+                        col_offset += tap_offsets[d][tap_begin[d]];
                 }
-                coords[0] = idx;  // channel
+                col_offset += idx * column_channel_stride;
 
-                val = 0.0f;
-
-                iterate_kernel(0);
-                data_im_[index] = val + biasvec_[coords[0]];
+                float val = 0.0f;
+                if (has_taps)
+                {
+                    // Visit valid taps in the same order as the original nested kernel loops.
+                    for (;;)
+                    {
+                        val += data_col_[col_offset];
+                        int d = ndims - 1;
+                        for (; d >= 0; d--)
+                        {
+                            col_offset -= tap_offsets[d][tap_index[d]];
+                            if (++tap_index[d] < tap_end[d])
+                            {
+                                col_offset += tap_offsets[d][tap_index[d]];
+                                break;
+                            }
+                            tap_index[d] = tap_begin[d];
+                            col_offset += tap_offsets[d][tap_index[d]];
+                        }
+                        if (d < 0)
+                            break;
+                    }
+                }
+                data_im_[index] = val + biasvec_[idx];
             }
         }
     };
