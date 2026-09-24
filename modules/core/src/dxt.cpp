@@ -828,97 +828,61 @@ CopyColumn( const uchar* _src, size_t src_step,
 }
 
 
-static void
-CopyFrom2Columns( const uchar* _src, size_t src_step,
-                  uchar* _dst0, uchar* _dst1,
-                  int len, size_t elem_size )
+// Copies `ncols` adjacent columns of `src` (element size elem_size, row step src_step in bytes)
+// into `ncols` contiguous column buffers of `len` elements each: dst + k*len*elem_size holds
+// column k. Row-wise: each source row is read once, sequentially. (Row steps are only
+// guaranteed to be multiples of the element size, hence the byte arithmetic.)
+template<typename T> static inline void
+copyFromColumns_( const uchar* src, size_t src_step, T* dst, int ncols, int len )
 {
-    int i, t0, t1;
-    const int* src = (const int*)_src;
-    int* dst0 = (int*)_dst0;
-    int* dst1 = (int*)_dst1;
-    src_step /= sizeof(src[0]);
-
-    if( elem_size == sizeof(int) )
+    for( int i = 0; i < len; i++, src += src_step )
     {
-        for( i = 0; i < len; i++, src += src_step )
-        {
-            t0 = src[0]; t1 = src[1];
-            dst0[i] = t0; dst1[i] = t1;
-        }
-    }
-    else if( elem_size == sizeof(int)*2 )
-    {
-        for( i = 0; i < len*2; i += 2, src += src_step )
-        {
-            t0 = src[0]; t1 = src[1];
-            dst0[i] = t0; dst0[i+1] = t1;
-            t0 = src[2]; t1 = src[3];
-            dst1[i] = t0; dst1[i+1] = t1;
-        }
-    }
-    else if( elem_size == sizeof(int)*4 )
-    {
-        for( i = 0; i < len*4; i += 4, src += src_step )
-        {
-            t0 = src[0]; t1 = src[1];
-            dst0[i] = t0; dst0[i+1] = t1;
-            t0 = src[2]; t1 = src[3];
-            dst0[i+2] = t0; dst0[i+3] = t1;
-            t0 = src[4]; t1 = src[5];
-            dst1[i] = t0; dst1[i+1] = t1;
-            t0 = src[6]; t1 = src[7];
-            dst1[i+2] = t0; dst1[i+3] = t1;
-        }
+        const T* s = (const T*)src;
+        for( int k = 0; k < ncols; k++ )
+            dst[(size_t)k*len + i] = s[k];
     }
 }
 
-
 static void
-CopyTo2Columns( const uchar* _src0, const uchar* _src1,
-                uchar* _dst, size_t dst_step,
-                int len, size_t elem_size )
+CopyFromColumns( const uchar* src, size_t src_step, uchar* dst, int ncols, int len, size_t elem_size )
 {
-    int i, t0, t1;
-    const int* src0 = (const int*)_src0;
-    const int* src1 = (const int*)_src1;
-    int* dst = (int*)_dst;
-    dst_step /= sizeof(dst[0]);
-
     if( elem_size == sizeof(int) )
+        copyFromColumns_(src, src_step, (int*)dst, ncols, len);
+    else if( elem_size == sizeof(int64) )
+        copyFromColumns_(src, src_step, (int64*)dst, ncols, len);
+    else
     {
-        for( i = 0; i < len; i++, dst += dst_step )
-        {
-            t0 = src0[i]; t1 = src1[i];
-            dst[0] = t0; dst[1] = t1;
-        }
-    }
-    else if( elem_size == sizeof(int)*2 )
-    {
-        for( i = 0; i < len*2; i += 2, dst += dst_step )
-        {
-            t0 = src0[i]; t1 = src0[i+1];
-            dst[0] = t0; dst[1] = t1;
-            t0 = src1[i]; t1 = src1[i+1];
-            dst[2] = t0; dst[3] = t1;
-        }
-    }
-    else if( elem_size == sizeof(int)*4 )
-    {
-        for( i = 0; i < len*4; i += 4, dst += dst_step )
-        {
-            t0 = src0[i]; t1 = src0[i+1];
-            dst[0] = t0; dst[1] = t1;
-            t0 = src0[i+2]; t1 = src0[i+3];
-            dst[2] = t0; dst[3] = t1;
-            t0 = src1[i]; t1 = src1[i+1];
-            dst[4] = t0; dst[5] = t1;
-            t0 = src1[i+2]; t1 = src1[i+3];
-            dst[6] = t0; dst[7] = t1;
-        }
+        CV_Assert( elem_size == sizeof(int64)*2 );
+        copyFromColumns_(src, src_step, (Vec<int64, 2>*)dst, ncols, len);
     }
 }
 
+// The inverse of CopyFromColumns: `ncols` contiguous column buffers -> `ncols` adjacent columns
+// of `dst` (row step in bytes), written row by row.
+template<typename T> static inline void
+copyToColumns_( const T* src, uchar* dst, size_t dst_step, int ncols, int len )
+{
+    for( int i = 0; i < len; i++, dst += dst_step )
+    {
+        T* d = (T*)dst;
+        for( int k = 0; k < ncols; k++ )
+            d[k] = src[(size_t)k*len + i];
+    }
+}
+
+static void
+CopyToColumns( const uchar* src, uchar* dst, size_t dst_step, int ncols, int len, size_t elem_size )
+{
+    if( elem_size == sizeof(int) )
+        copyToColumns_((const int*)src, dst, dst_step, ncols, len);
+    else if( elem_size == sizeof(int64) )
+        copyToColumns_((const int64*)src, dst, dst_step, ncols, len);
+    else
+    {
+        CV_Assert( elem_size == sizeof(int64)*2 );
+        copyToColumns_((const Vec<int64, 2>*)src, dst, dst_step, ncols, len);
+    }
+}
 
 static void
 ExpandCCS( uchar* _ptr, int n, int elem_size )
@@ -2206,6 +2170,21 @@ public:
 // The number of stripes given to parallel_for_ is the estimated cost of the pass
 // (count * len * log2(len), i.e. N log N) divided by an empirically chosen quantum: a 256x256
 // pass gets 1-2 stripes, 512x512 ~5, 1024x1024 ~20.
+// The column pass of the 2D transforms copies the columns into contiguous buffers, several at a
+// time, row by row: every source/destination row is touched once per batch and the strided
+// accesses do not alias in the cache (which they do when columns are copied one or two at a
+// time and the row step is a multiple of a page). The batch is sized so that the column buffers
+// stay within DFT_COLS_BATCH_BYTES (~L1-resident), between DFT_COLS_BATCH_MIN and _MAX columns.
+static const int DFT_COLS_BATCH_MIN = 4;
+static const int DFT_COLS_BATCH_MAX = 16;
+static const size_t DFT_COLS_BATCH_BYTES = 1 << 17;
+
+static int dftColsBatch(int len, size_t complex_elem_size)
+{
+    int batch = (int)(DFT_COLS_BATCH_BYTES/((size_t)len*complex_elem_size));
+    return std::max(DFT_COLS_BATCH_MIN, std::min(DFT_COLS_BATCH_MAX, batch));
+}
+
 static double dftParallelStripes(int count, int len)
 {
     const double quantum = 0.5e6;
@@ -2649,67 +2628,42 @@ protected:
             }
         }
 
+        // the remaining columns are processed in batches of cols_batch columns: copied row-wise into
+        // contiguous per-column buffers, transformed one by one, copied back row-wise
+        int ncols = b - a;
+        const int cols_batch = dftColsBatch(len, complex_elem_size);
+        int nbatches = (ncols + cols_batch - 1)/cols_batch;
         size_t ws_size = basicB ? basicB->workspaceSize() : 0;
-        int npairs = (b - a + 1)/2;
-        double nstripes = dftParallelStripes(b - a, len);
-        if( ws_size > 0 && npairs > 1 && nstripes >= 1.5 )
+        size_t colbuf_size = (size_t)len*complex_elem_size;
+        const OcvDftBasicImpl* ctx = basicB;
+        auto processBatches = [&, ctx](const Range& range)
         {
-            // every worker gets its own column buffers and workspace once per range
-            const OcvDftBasicImpl* ctx = basicB;
-            size_t colbuf_size = (size_t)len*complex_elem_size;
-            auto processPairs = [&, ctx](const Range& range)
+            AutoBuffer<uchar> ws(ws_size);
+            AutoBuffer<uchar> cbuf(colbuf_size*cols_batch*(needBufferB ? 2 : 1));
+            uchar* cbuf0 = cbuf.data();
+            uchar* cdbuf0 = needBufferB ? cbuf0 + colbuf_size*cols_batch : cbuf0;
+            for( int bi = range.start; bi < range.end; bi++ )
             {
-                AutoBuffer<uchar> ws(ws_size);
-                AutoBuffer<uchar> cbuf(colbuf_size*(needBufferB ? 4 : 2));
-                uchar* cbuf0 = cbuf.data();
-                uchar* cbuf1 = cbuf0 + colbuf_size;
-                uchar* cdbuf0 = needBufferB ? cbuf1 + colbuf_size : cbuf0;
-                uchar* cdbuf1 = needBufferB ? cdbuf0 + colbuf_size : cbuf1;
-                for( int pi = range.start; pi < range.end; pi++ )
+                int c0 = bi*cols_batch;
+                int nc = std::min(cols_batch, ncols - c0);
+                const uchar* sptr = sptr0 + (size_t)c0*complex_elem_size;
+                uchar* dptr = dptr0 + (size_t)c0*complex_elem_size;
+                CopyFromColumns( sptr, src_step, cbuf0, nc, len, complex_elem_size );
+                for( int k = 0; k < nc; k++ )
                 {
-                    int i = a + pi*2;
-                    const uchar* sptr = sptr0 + (size_t)pi*2*complex_elem_size;
-                    uchar* dptr = dptr0 + (size_t)pi*2*complex_elem_size;
-                    if( i+1 < b )
-                    {
-                        CopyFrom2Columns( sptr, src_step, cbuf0, cbuf1, len, complex_elem_size );
-                        ctx->applyWithWorkspace(cbuf1, cdbuf1, ws.data());
-                    }
+                    if( ctx )
+                        ctx->applyWithWorkspace(cbuf0 + k*colbuf_size, cdbuf0 + k*colbuf_size, ws.data());
                     else
-                        CopyColumn( sptr, src_step, cbuf0, complex_elem_size, len, complex_elem_size );
-
-                    ctx->applyWithWorkspace(cbuf0, cdbuf0, ws.data());
-
-                    if( i+1 < b )
-                        CopyTo2Columns( cdbuf0, cdbuf1, dptr, dst_step, len, complex_elem_size );
-                    else
-                        CopyColumn( cdbuf0, complex_elem_size, dptr, dst_step, len, complex_elem_size );
+                        contextB->apply(cbuf0 + k*colbuf_size, cdbuf0 + k*colbuf_size);
                 }
-            };
-            parallel_for_(Range(0, npairs), processPairs, nstripes);
-        }
-        else
-        {
-            for(int i = a; i < b; i += 2 )
-            {
-                if( i+1 < b )
-                {
-                    CopyFrom2Columns( sptr0, src_step, buf0.data(), buf1.data(), len, complex_elem_size );
-                    contextB->apply(buf1.data(), dbuf1);
-                }
-                else
-                    CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
-
-                contextB->apply(buf0.data(), dbuf0);
-
-                if( i+1 < b )
-                    CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
-                else
-                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, complex_elem_size );
-                sptr0 += 2*complex_elem_size;
-                dptr0 += 2*complex_elem_size;
+                CopyToColumns( cdbuf0, dptr, dst_step, nc, len, complex_elem_size );
             }
-        }
+        };
+        double nstripes = dftParallelStripes(ncols, len);
+        if( ctx && nbatches > 1 && nstripes >= 1.5 )
+            parallel_for_(Range(0, nbatches), processBatches, nstripes);
+        else
+            processBatches(Range(0, nbatches));
         if(isLastStage && mode == FwdRealToComplex)
             complementComplexOutput(depth, dst_data, dst_step, count, len, 2);
     }
