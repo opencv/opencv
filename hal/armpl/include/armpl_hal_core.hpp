@@ -108,6 +108,14 @@ int armpl_hal_gemm64fc(const double* src1, size_t src1_step, const double* src2,
 #undef  cv_hal_gemm64fc
 #define cv_hal_gemm64fc armpl_hal_gemm64fc
 
+int armpl_hal_SVD32f(float* src, size_t src_step, float* w, float* u, size_t u_step, float* vt, size_t vt_step, int m, int n, int flags);
+int armpl_hal_SVD64f(double* src, size_t src_step, double* w, double* u, size_t u_step, double* vt, size_t vt_step, int m, int n, int flags);
+
+#undef  cv_hal_SVD32f
+#define cv_hal_SVD32f armpl_hal_SVD32f
+#undef  cv_hal_SVD64f
+#define cv_hal_SVD64f armpl_hal_SVD64f
+
 #endif  // HAVE_ARMPL
 
 #endif  // OPENCV_ARMPL_HAL_CORE_HPP
