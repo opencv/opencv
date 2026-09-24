@@ -1436,6 +1436,14 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
 }
 
+void mjpegConvertToYUV(int colorspace, int channels, int input_channels,
+                       short* UV_data, short* Y_data, const uchar* pix_data,
+                       int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
+{
+    mjpeg_convertToYUV_dispatch(colorspace, channels, input_channels, UV_data, Y_data, pix_data,
+                                y_limit, x_limit, step, u_plane_ofs, v_plane_ofs);
+}
+
 Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc,
                                          double fps, const Size& frameSize,
                                          const VideoWriterParameters& params)
