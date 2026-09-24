@@ -135,6 +135,12 @@ protected:
 };
 
 enum { COLORSPACE_GRAY=0, COLORSPACE_RGBA=1, COLORSPACE_BGR=2, COLORSPACE_YUV444P=3 };
+
+// Motion JPEG color conversion used by the builtin encoder (SIMD + scalar leftover).
+CV_EXPORTS void mjpegConvertToYUV(int colorspace, int channels, int input_channels,
+                                  short* UV_data, short* Y_data, const uchar* pix_data,
+                                  int y_limit, int x_limit, int step,
+                                  int u_plane_ofs, int v_plane_ofs);
 enum StreamType { db, dc, pc, wb };
 class BitStream;
 
