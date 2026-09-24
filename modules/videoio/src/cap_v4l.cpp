@@ -1769,6 +1769,7 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
             break;
         case CAP_PROP_AUTO_EXPOSURE:
             range = Range(0, 4);
+            break;
         default:
             break;
         }

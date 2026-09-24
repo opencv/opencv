@@ -478,7 +478,7 @@ static void fixOrientationPartial(Mat &img, uint16_t orientation)
         case ORIENTATION_RIGHTTOP:
         case ORIENTATION_LEFTBOT:
             flip(img, img, -1);
-            /* fall through */
+            [[fallthrough]];
 
         case ORIENTATION_LEFTTOP:
         case ORIENTATION_RIGHTBOT:
@@ -1473,7 +1473,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         {
             case CV_8U:
                 sample_format = SAMPLEFORMAT_UINT;
-                /* FALLTHRU */
+                [[fallthrough]];
             case CV_8S:
             {
                 bitsPerChannel = 8;
@@ -1482,7 +1482,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
             case CV_16U:
                 sample_format = SAMPLEFORMAT_UINT;
-                /* FALLTHRU */
+                [[fallthrough]];
             case CV_16S:
             {
                 bitsPerChannel = 16;

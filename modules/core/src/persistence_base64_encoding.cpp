@@ -185,9 +185,9 @@ size_t base64::base64_encode(const uint8_t *src, uint8_t *dst, size_t off, size_
     switch (rst)
     {
         case 1U: *dst_cur++ = base64_padding;
-            /* fallthrough */
+            [[fallthrough]];
         case 2U: *dst_cur++ = base64_padding;
-            /* fallthrough */
+            [[fallthrough]];
         default: *dst_cur   = 0;
             break;
     }

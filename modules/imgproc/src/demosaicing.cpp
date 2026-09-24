@@ -1776,7 +1776,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
     case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
         if (dcn <= 0)
           dcn = 4;
-        /* fallthrough */
+        [[fallthrough]];
     case COLOR_BayerBG2BGR: case COLOR_BayerGB2BGR: case COLOR_BayerRG2BGR: case COLOR_BayerGR2BGR:
     case COLOR_BayerBG2BGR_VNG: case COLOR_BayerGB2BGR_VNG: case COLOR_BayerRG2BGR_VNG: case COLOR_BayerGR2BGR_VNG:
         {
