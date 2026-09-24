@@ -936,6 +936,73 @@ TEST_F(fisheyeTest, Homography)
     EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
+TEST_F(fisheyeTest, HomographyWithFourPoints)
+{
+    constexpr double projectionTolerance = 1e-12;
+    const Mat objectPoints = (Mat_<double>(2, 4) <<
+        -1.0, 1.0, 1.0, -1.0,
+        -1.0, -1.0, 1.0, 1.0);
+    const Mat expectedHomography = (Mat_<double>(3, 3) <<
+        1.2, 0.1, 0.3,
+        -0.05, 0.9, -0.2,
+        0.001, -0.002, 1.0);
+    Mat homogeneousPoints;
+    vconcat(objectPoints, Mat::ones(1, objectPoints.cols, CV_64F), homogeneousPoints);
+    Mat imagePoints = expectedHomography * homogeneousPoints;
+    cv::divide(imagePoints, Mat::ones(3, 1, CV_64F) * imagePoints.row(2), imagePoints);
+
+    const Mat estimatedHomography = cv::internal::ComputeHomography(
+        imagePoints.rowRange(0, 2), objectPoints);
+    EXPECT_NEAR(cv::norm(estimatedHomography, expectedHomography, NORM_INF),
+                0.0, projectionTolerance);
+}
+
+TEST_F(fisheyeTest, HomographyWithIllConditionedPoints)
+{
+    constexpr int pointCount = 8;
+    constexpr double narrowWidth = 1e-8;
+    constexpr double imageNoise = 1e-15;
+    constexpr double homographyTolerance = 1e-6;
+    const Matx33d expectedHomography(1.2, 0.1, 0.3,
+                                     -0.05, 0.9, -0.2,
+                                     0.001, -0.002, 1.0);
+    Mat objectPoints = Mat::ones(3, pointCount, CV_64F);
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double coordinate = -1.0 + 2.0 * point / (pointCount - 1);
+        const double offset = (point % 2 == 0) ? -narrowWidth : narrowWidth;
+        objectPoints.at<double>(0, point) = coordinate;
+        objectPoints.at<double>(1, point) = offset;
+    }
+
+    Mat imagePoints = Mat(expectedHomography) * objectPoints;
+    cv::divide(imagePoints, Mat::ones(3, 1, CV_64F) * imagePoints.row(2), imagePoints);
+    for (int point = 0; point < pointCount; ++point)
+    {
+        imagePoints.at<double>(0, point) += imageNoise * (point % 3 - 1);
+        imagePoints.at<double>(1, point) += imageNoise * (2.0 * (point % 2) - 1.0);
+    }
+    Mat estimatedHomography = cv::internal::ComputeHomography(
+        imagePoints.rowRange(0, 2), objectPoints.rowRange(0, 2));
+    Mat reprojected = estimatedHomography * objectPoints;
+    cv::divide(reprojected, Mat::ones(3, 1, CV_64F) * reprojected.row(2), reprojected);
+
+    EXPECT_NEAR(cv::norm(imagePoints.rowRange(0, 2), reprojected.rowRange(0, 2), NORM_INF),
+                0.0, homographyTolerance);
+
+    const Mat validationPoint = (Mat_<double>(3, 1) << 0.0, 0.5, 1.0);
+    Mat expectedProjection = Mat(expectedHomography) * validationPoint;
+    Mat estimatedProjection = estimatedHomography * validationPoint;
+    expectedProjection /= expectedProjection.at<double>(2, 0);
+    estimatedProjection /= estimatedProjection.at<double>(2, 0);
+    EXPECT_NEAR(cv::norm(expectedProjection.rowRange(0, 2),
+                         estimatedProjection.rowRange(0, 2), NORM_INF),
+                0.0, homographyTolerance);
+    RecordProperty("held_out_projection_error", cv::format("%.17g",
+        cv::norm(expectedProjection.rowRange(0, 2), estimatedProjection.rowRange(0, 2), NORM_INF)));
+}
+
 TEST_F(fisheyeTest, EstimateUncertainties)
 {
     const int n_images = 34;
@@ -1230,44 +1297,42 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
 
 TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
 {
-    const int n_images = 2;
+    constexpr int viewCount = 2;
+    constexpr int columnCount = 5;
+    constexpr int firstPointCount = 10;
+    constexpr int additionalPointCount = 5;
+    constexpr double reprojectionTolerance = 1e-8;
+    constexpr int iterationCount = 20;
+    constexpr double convergenceTolerance = 1e-10;
+    const cv::Matx33d expectedK(80.0, 0.0, 50.0, 0.0, 80.0, 50.0, 0.0, 0.0, 1.0);
+    const cv::Vec4d expectedD = cv::Vec4d::all(0.0);
+    std::vector<std::vector<cv::Point2d> > imagePoints(viewCount);
+    std::vector<std::vector<cv::Point3d> > objectPoints(viewCount);
 
-    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
-    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
-
-    std::vector<cv::Point2d> imgPoints1(10);
-    std::vector<cv::Point2d> imgPoints2(15);
-
-    std::vector<cv::Point3d> objectPoints1(imgPoints1.size());
-    std::vector<cv::Point3d> objectPoints2(imgPoints2.size());
-
-    for (size_t i = 0; i < imgPoints1.size(); i++)
+    // Noncollinear boards exercise variable view sizes without an ambiguous pose.
+    for (int view = 0; view < viewCount; ++view)
     {
-        imgPoints1[i] = cv::Point2d((double)i, (double)i);
-        objectPoints1[i] = cv::Point3d((double)i, (double)i, 10.0);
+        const int pointCount = firstPointCount + additionalPointCount * view;
+        for (int point = 0; point < pointCount; ++point)
+        {
+            objectPoints[view].emplace_back(point % columnCount, point / columnCount, 0.0);
+        }
+        const cv::Vec3d rotation(0.1 + 0.1 * view, -0.2, 0.05);
+        const cv::Vec3d translation(-2.0, -1.0, 10.0 + view);
+        cv::fisheye::projectPoints(objectPoints[view], imagePoints[view], rotation,
+                                   translation, expectedK, expectedD);
     }
 
-    for (size_t i = 0; i < imgPoints2.size(); i++)
-    {
-        imgPoints2[i] = cv::Point2d(i + 0.5, i + 0.5);
-        objectPoints2[i] = cv::Point3d(i + 0.5, i + 0.5, 10.0);
-    }
-
-    imagePoints[0] = imgPoints1;
-    imagePoints[1] = imgPoints2;
-    objectPoints[0] = objectPoints1;
-    objectPoints[1] = objectPoints2;
-
-    cv::Matx33d theK = cv::Matx33d::eye();
-    cv::Vec4d theD;
-
-    int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
-
-    cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100), theK, theD,
-        cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
+    cv::Matx33d estimatedK = expectedK;
+    cv::Vec4d estimatedD = expectedD;
+    const int flags = cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC |
+                      cv::fisheye::CALIB_USE_INTRINSIC_GUESS |
+                      cv::fisheye::CALIB_FIX_SKEW;
+    const double rms = cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100),
+        estimatedK, estimatedD, cv::noArray(), cv::noArray(), flags,
+        cv::TermCriteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS,
+                         iterationCount, convergenceTolerance));
+    EXPECT_NEAR(rms, 0.0, reprojectionTolerance);
 }
 
 TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
