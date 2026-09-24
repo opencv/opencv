@@ -4,6 +4,25 @@ namespace opencv_test
 {
 using namespace perf;
 
+// The 32-bit integer depths are not in TYPICAL_MAT_TYPES, so they were not measured; they are the
+// ones whose scalar accumulation step this touches.
+PERF_TEST_P(Size_MatType, sum_wide,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
+                             testing::Values(CV_32SC1, CV_32UC1, CV_32SC3)))
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+
+    Mat arr(sz, type);
+    Scalar s;
+
+    declare.in(arr, WARMUP_RNG).out(s);
+
+    TEST_CYCLE() s = sum(arr);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
