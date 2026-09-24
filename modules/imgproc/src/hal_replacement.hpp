@@ -1311,6 +1311,27 @@ inline int hal_ni_distanceTransform(const uchar* src_data, size_t src_step, ucha
 //! @endcond
 
 /**
+   @brief Harris corner response for each pixel of a single-channel image
+   @param src_data Source image (8-bit or 32-bit float single-channel) data
+   @param src_step Source image step
+   @param src_type Type of the source image (CV_8UC1 or CV_32FC1)
+   @param dst_data Destination image (32-bit float single-channel) data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param block_size Neighborhood size
+   @param ksize Aperture size for the Sobel operator
+   @param k Harris detector free parameter
+   @param border_type Pixel extrapolation method (may carry BORDER_ISOLATED)
+   @param is_submatrix Whether the source is a submatrix of a larger image
+*/
+inline int hal_ni_cornerHarris(const uchar* src_data, size_t src_step, int src_type, uchar* dst_data, size_t dst_step, int width, int height, int block_size, int ksize, double k, int border_type, bool is_submatrix) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_cornerHarris hal_ni_cornerHarris
+//! @endcond
+
+/**
    @brief Calculate box filter
    @param src_data Source image data
    @param src_step Source image step
@@ -1476,6 +1497,32 @@ inline int hal_ni_laplacian(const uchar* src_data, size_t src_step, uchar* dst_d
 
 //! @cond IGNORED
 #define cv_hal_laplacian hal_ni_laplacian
+//! @endcond
+
+/**
+   @brief Computes Laplacian filter with scale/delta and submatrix (offset) support
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param src_depth Depth of source image
+   @param dst_depth Depth of destination image
+   @param cn Number of channels
+   @param margin_left Left margin of the source ROI within the full image
+   @param margin_top Top margin of the source ROI within the full image
+   @param margin_right Right margin of the source ROI within the full image
+   @param margin_bottom Bottom margin of the source ROI within the full image
+   @param ksize Kernel size (3 or 5)
+   @param scale Scale factor applied to the results
+   @param delta Delta value added to the results
+   @param border_type Border type
+ */
+inline int hal_ni_laplacian_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int ksize, double scale, double delta, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_laplacian_offset hal_ni_laplacian_offset
 //! @endcond
 
 /**
