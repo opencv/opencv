@@ -349,10 +349,10 @@ static double imageHessianProjECC(const Mat& map,
                     const float p0_gy = p00_gy * (1.0f - dx) + p01_gy * dx;
                     const float p1_gy = p10_gy * (1.0f - dx) + p11_gy * dx;
 
-                    const float p00_mask = samplePtr0[4 * y0 * ws + 4 * x0 + 2] == 0.f ? 0.f : 1.f;
-                    const float p01_mask = samplePtr0[4 * y0 * ws + 4 * x1 + 2] == 0.f ? 0.f : 1.f;
-                    const float p10_mask = samplePtr0[4 * y1 * ws + 4 * x0 + 2] == 0.f ? 0.f : 1.f;
-                    const float p11_mask = samplePtr0[4 * y1 * ws + 4 * x1 + 2] == 0.f ? 0.f : 1.f;
+                    const float p00_mask = samplePtr0[4 * y0 * ws + 4 * x0 + 3] == 0.f ? 0.f : 1.f;
+                    const float p01_mask = samplePtr0[4 * y0 * ws + 4 * x1 + 3] == 0.f ? 0.f : 1.f;
+                    const float p10_mask = samplePtr0[4 * y1 * ws + 4 * x0 + 3] == 0.f ? 0.f : 1.f;
+                    const float p11_mask = samplePtr0[4 * y1 * ws + 4 * x1 + 3] == 0.f ? 0.f : 1.f;
 
                     sampleVal = p0_val * (1.0f - dy) + p1_val * dy;
                     gx = p0_gx * (1.0f - dy) + p1_gx * dy;
