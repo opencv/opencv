@@ -221,14 +221,14 @@ public:
         }
         return true;
     }
-    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
+    bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
     {
         close();
         ffmpegWriter = cvCreateVideoWriterWithParams_FFMPEG( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, params );
         return ffmpegWriter != 0;
     }
 
-    virtual void close()
+    void close()
     {
         if (ffmpegWriter)
             icvReleaseVideoWriter_FFMPEG_p( &ffmpegWriter );
