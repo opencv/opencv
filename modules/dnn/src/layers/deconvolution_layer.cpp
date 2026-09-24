@@ -482,6 +482,8 @@ public:
         std::vector<int> output_shape;  // spatial dimensions only
         std::vector<std::vector<size_t> > tap_starts;
         std::vector<std::vector<size_t> > tap_offsets;
+        std::vector<size_t> x_run_end;
+        int x_stride;
         size_t output_spatial_size;
         size_t column_channel_stride;
         float* data_im;
@@ -489,7 +491,7 @@ public:
         bool is1x1;
 
         Col2ImInvoker()
-            : data_col(0), biasvec(0), channels(0), output_spatial_size(1),
+            : data_col(0), biasvec(0), channels(0), x_stride(0), output_spatial_size(1),
               column_channel_stride(0), data_im(0),
               nstripes(0), is1x1(0)
         {}
@@ -554,9 +556,60 @@ public:
                     input_step *= input_shape[d];
                 }
                 t.column_channel_stride = kernel_step;
+#if CV_SIMD128
+                const int last = ndims - 1;
+                const size_t width = output_shape[last];
+                const int step = strides[last];
+                const int phase_taps = (kernel_shape[last] + step - 1) / step;
+                // Four input values must fit while the set of valid taps stays the same.
+                if (step <= 2 && width >= (size_t)(4 * step) && input_shape[last] >= 4 &&
+                    (dilations[last] != 1 || input_shape[last] >= phase_taps + 3))
+                {
+                    t.x_stride = step;
+                    t.x_run_end.resize(width);
+                    const std::vector<size_t>& starts = t.tap_starts[last];
+                    const std::vector<size_t>& offsets = t.tap_offsets[last];
+                    // Each run keeps the same sum order and has consecutive input offsets.
+                    for (size_t x = width; x-- > 0;)
+                    {
+                        const size_t next = x + step;
+                        t.x_run_end[x] = next;
+                        if (next >= width)
+                            continue;
+                        const size_t begin = starts[x], next_begin = starts[next];
+                        const size_t count = starts[x + 1] - begin;
+                        if (starts[next + 1] - next_begin != count)
+                            continue;
+                        size_t k = 0;
+                        for (; k < count; k++)
+                            if (offsets[next_begin + k] != offsets[begin + k] + 1)
+                                break;
+                        if (k == count)
+                            t.x_run_end[x] = t.x_run_end[next];
+                    }
+                }
+#endif
             }
 
             parallel_for_(Range(0, nstripes), t, nstripes);
+        }
+
+        bool next_tap(size_t& offset, std::vector<size_t>& index,
+                      const std::vector<size_t>& begin, const std::vector<size_t>& end,
+                      int last) const
+        {
+            for (int d = last; d >= 0; d--)
+            {
+                offset -= tap_offsets[d][index[d]];
+                if (++index[d] < end[d])
+                {
+                    offset += tap_offsets[d][index[d]];
+                    return true;
+                }
+                index[d] = begin[d];
+                offset += tap_offsets[d][index[d]];
+            }
+            return false;
         }
 
         virtual void operator ()(const Range &r) const CV_OVERRIDE
@@ -618,8 +671,41 @@ public:
                 const size_t row_start = row * width;
                 const size_t row_end = std::min(row_start + width, endIndex);
 
-                for (size_t x = index - row_start; index < row_end; x++, index++)
+#if CV_SIMD128
+                const v_float32x4 vbias = v_setall_f32(bias);
+                auto sum_four = [&](size_t x) {
+                    v_float32x4 val = v_setzero_f32();
+                    if (has_outer_taps)
+                    {
+                        size_t offset = row_offset;
+                        do
+                        {
+                            for (size_t k = x_starts[x]; k < x_starts[x + 1]; k++)
+                                val = v_add(val, v_load(data_col_ + offset + x_offsets[k]));
+                        } while (next_tap(offset, tap_index, tap_begin, tap_end, last - 1));
+                    }
+                    return v_add(val, vbias);
+                };
+#endif
+                size_t x = index - row_start;
+                while (index < row_end)
                 {
+#if CV_SIMD128
+                    const size_t span = 4 * x_stride;
+                    if (x_stride && index + span <= row_end && x_run_end[x] >= x + span &&
+                        (x_stride == 1 || x_run_end[x + 1] >= x + 1 + span))
+                    {
+                        // Stride two has two phases. Store their outputs in alternating lanes.
+                        const v_float32x4 v0 = sum_four(x);
+                        if (x_stride == 1)
+                            v_store(data_im_ + index, v0);
+                        else
+                            v_store_interleave(data_im_ + index, v0, sum_four(x + 1));
+                        x += span;
+                        index += span;
+                        continue;
+                    }
+#endif
                     tap_index[last] = tap_begin[last] = x_starts[x];
                     tap_end[last] = x_starts[x + 1];
                     float val = 0.0f;
@@ -627,26 +713,14 @@ public:
                     {
                         size_t col_offset = row_offset + x_offsets[tap_begin[last]];
                         // Keep the sum order. The last axis changes first.
-                        for (;;)
+                        do
                         {
                             val += data_col_[col_offset];
-                            int d = last;
-                            for (; d >= 0; d--)
-                            {
-                                col_offset -= tap_offsets[d][tap_index[d]];
-                                if (++tap_index[d] < tap_end[d])
-                                {
-                                    col_offset += tap_offsets[d][tap_index[d]];
-                                    break;
-                                }
-                                tap_index[d] = tap_begin[d];
-                                col_offset += tap_offsets[d][tap_index[d]];
-                            }
-                            if (d < 0)
-                                break;
-                        }
+                        } while (next_tap(col_offset, tap_index, tap_begin, tap_end, last));
                     }
                     data_im_[index] = val + bias;
+                    x++;
+                    index++;
                 }
             }
         }
