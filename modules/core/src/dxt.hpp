@@ -89,7 +89,19 @@ struct DftPlan
     DftPlan() : kind(0), n(0), nc(0), depth(0), vl(0), first_radix(1), real_input(false),
                 pingpong(false), need_tmp(false), nstages(0), rtw_re(0), rtw_im(0),
                 dct_re(0), dct_im(0), ws_bytes(0), pair1_ofs(0), scratch_ofs(0) {}
+
+    // Builds the plan for a 1D transform of the given kind (DftKind) and length.
+    //
+    // IMPORTANT: `vl` (vector lanes) MUST come from the dispatched kernel table
+    // (DFTKernels::vlanes), never from VTraits<> in dxt.cpp, which is compiled for the baseline
+    // ISA and reports the wrong lane count on AVX2/AVX512/RVV builds. Stage modes and step counts
+    // depend on it.
+    void build(int kind, int n, int depth, int vl);
+
 private:
+    // fills the twiddle tables (stage tables, W_n^k, DCT) into `tw`; ntw = total number of T entries
+    template<typename T> void fillTables(size_t ntw, bool need_rtw, bool need_dct);
+
     DftPlan(const DftPlan&);            // tables hold raw pointers into the AutoBuffers: no copies
     DftPlan& operator=(const DftPlan&);
 };

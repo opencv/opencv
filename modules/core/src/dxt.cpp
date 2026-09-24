@@ -295,9 +295,15 @@ struct DftTwiddleGen
 };
 
 template<typename T>
-static void fillDftPlanTables(DftPlan& p, const DftTwiddleGen& gen, int M, bool need_rtw, bool need_dct)
+void DftPlan::fillTables(size_t ntw, bool need_rtw, bool need_dct)
 {
-    int n = p.n, nc = p.nc;
+    DftPlan& p = *this;
+    // all angles come from one base table exp(-2*pi*i*m/M), M a multiple of every angle grid used:
+    // C2C: M = nc; real kinds with even n: M = n (=2nc) or 4n for DCT (W_4n^k); odd real: M = n = nc.
+    int M = nc*(need_dct ? 8 : need_rtw ? 2 : 1);
+    DftTwiddleGen gen;
+    gen.init(M);
+    p.tw.allocate((ntw*sizeof(T) + sizeof(double) - 1)/sizeof(double) + 1);
     T* cur = (T*)p.tw.data();
     int maxL = 1;
     for (int s = 0; s < p.nstages; s++)
@@ -316,7 +322,7 @@ static void fillDftPlanTables(DftPlan& p, const DftTwiddleGen& gen, int M, bool 
             // Leg 1 (W_{rL}^j) by K independent interleaved rotation recurrences (a single chain is
             // latency-bound), each re-seeded from the exact generator every 16 of its steps; legs
             // q >= 2 as t_q(j) = t_{q-1}(j)*t_1(j), independent per entry (error <= q ulps).
-            const int K = 8;
+            constexpr int K = 8;
             double cr[K], ci[K], wr, wi;
             gen.get(K*step, wr, wi);
             for (int k = 0; k < K; k++)
@@ -335,7 +341,7 @@ static void fillDftPlanTables(DftPlan& p, const DftTwiddleGen& gen, int M, bool 
                     cr[k] = t;
                 }
             }
-            for (int j = 0; j < L; j++)
+            for (int j = 0; j < L; j++)     // separate pass: vectorizes, the recurrence loop does not
             {
                 twr[j] = (T)t1r[j]; twi[j] = (T)t1i[j];
             }
@@ -412,24 +418,20 @@ static void fillDftPlanTables(DftPlan& p, const DftTwiddleGen& gen, int M, bool 
     }
 }
 
-// Builds the immutable plan for a 1D transform of the given kind and length.
-//
-// IMPORTANT: `vl` (vector lanes) MUST come from the dispatched kernel table (DFTKernels::vlanes),
-// never from VTraits<> in this translation unit, which is compiled for the baseline ISA and
-// reports the wrong lane count on AVX2/AVX512/RVV builds. Stage modes and step counts depend on it.
-static void buildDftPlan(DftPlan& p, int kind, int n, int depth, int vl)
+// See dxt.hpp for the contract (in particular where `vl` must come from).
+void DftPlan::build(int _kind, int _n, int _depth, int _vl)
 {
-    CV_Assert(n >= 1 && vl >= 1);
-    CV_Assert(depth == CV_32F || depth == CV_64F);
-    bool real_kind = kind != DFT_KIND_C2C;
-    bool dct_kind = kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
+    DftPlan& p = *this;
+    CV_Assert(_n >= 1 && _vl >= 1);
+    CV_Assert(_depth == CV_32F || _depth == CV_64F);
+    bool real_kind = _kind != DFT_KIND_C2C;
+    bool dct_kind = _kind == DFT_KIND_DCT || _kind == DFT_KIND_IDCT;
     if (dct_kind)
-        CV_Assert(n % 2 == 0);   // cv::dct() supports even n only (n == 1 is handled by the caller)
-    int nc = real_kind && n % 2 == 0 ? n/2 : n;
+        CV_Assert(_n % 2 == 0);   // cv::dct() supports even n only (n == 1 is handled by the caller)
+    p.kind = _kind; p.n = _n; p.depth = _depth; p.vl = _vl;
+    p.nc = real_kind && _n % 2 == 0 ? _n/2 : _n;
     CV_Assert(nc < (1 << 28));
     size_t esz = depth == CV_32F ? sizeof(float) : sizeof(double);
-
-    p.kind = kind; p.n = n; p.nc = nc; p.depth = depth; p.vl = vl;
     p.real_input = kind == DFT_KIND_R2C && (n & 1) != 0;
     p.need_tmp = kind == DFT_KIND_C2R || kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
     p.pingpong = false;
@@ -511,7 +513,7 @@ static void buildDftPlan(DftPlan& p, int kind, int n, int depth, int vl)
     if (r0 == 1)
     {
         p.itab.allocate(nc*2);
-        int* itab = p.itab.data();
+        int* it_all = p.itab.data();
         // the two lowest digits are enumerated by plain nested loops, the higher ones by a counter
         int n_in = std::min(nseq, 2);
         int r_0 = n_in > 0 ? seq[0] : 1, w_0 = n_in > 0 ? weights[0] : 0;
@@ -521,7 +523,7 @@ static void buildDftPlan(DftPlan& p, int kind, int n, int depth, int vl)
             for (int d1 = 0; d1 < r_1; d1++)
             {
                 int rev = rev_hi + d1*w_1;
-                int* it = itab + pos*2;
+                int* it = it_all + pos*2;
                 if (p.real_input)
                 {
                     for (int d0 = 0; d0 < r_0; d0++, rev += w_0)
@@ -588,20 +590,14 @@ static void buildDftPlan(DftPlan& p, int kind, int n, int depth, int vl)
         }
     }
 
-    // twiddle tables from one base table exp(-2*pi*i*m/M), M a multiple of every angle grid used:
-    // C2C: M = nc; real kinds with even n: M = n (=2nc) or 4n for DCT (W_4n^k); odd real: M = n = nc.
+    // twiddle tables
     bool need_rtw = real_kind && n % 2 == 0;
-    int mult = dct_kind ? 8 : need_rtw ? 2 : 1;
-    int M = nc*mult;
     if (need_rtw) ntw += 2*(size_t)(nc + 1);
     if (dct_kind) ntw += 2*(size_t)(nc + 1);
-    p.tw.allocate((ntw*esz + sizeof(double) - 1)/sizeof(double) + 1);
-    DftTwiddleGen gen;
-    gen.init(M);
     if (depth == CV_32F)
-        fillDftPlanTables<float>(p, gen, M, need_rtw, dct_kind);
+        fillTables<float>(ntw, need_rtw, dct_kind);
     else
-        fillDftPlanTables<double>(p, gen, M, need_rtw, dct_kind);
+        fillTables<double>(ntw, need_rtw, dct_kind);
 
     // workspace layout (from the 64-byte aligned base): pair0 (re, im), optional pair1 (re, im) or
     // the interleaved temp, radix-odd scratch (a[h], b[h] complex per lane).
@@ -2572,7 +2568,7 @@ public:
             const DFTKernels& kernels = getDFTKernels(depth);
             int kind = stage == 0 && real_transform ? (opt.isInverse ? DFT_KIND_C2R : DFT_KIND_R2C)
                                                     : DFT_KIND_C2C;
-            buildDftPlan(plan, kind, len, depth, kernels.vlanes);
+            plan.build(kind, len, depth, kernels.vlanes);
             ws.allocate(plan.ws_bytes);
             opt.plan = &plan;
             opt.kernels = &kernels;
@@ -3646,7 +3642,7 @@ public:
                     CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
                 if( len > 1 )
                 {
-                    buildDftPlan(plan, isInverse ? DFT_KIND_IDCT : DFT_KIND_DCT, len, depth, kernels.vlanes);
+                    plan.build(isInverse ? DFT_KIND_IDCT : DFT_KIND_DCT, len, depth, kernels.vlanes);
                     ws.allocate(plan.ws_bytes);
                 }
                 opt.plan = &plan;
