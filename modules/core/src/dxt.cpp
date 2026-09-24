@@ -43,6 +43,9 @@
 #include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels_core.hpp"
+#include "dxt.hpp"
+#include "dxt.simd.hpp"
+#include "dxt.simd_declarations.hpp"
 #include <map>
 
 namespace cv
@@ -72,95 +75,8 @@ namespace cv
                                Discrete Fourier Transform
 \****************************************************************************************/
 
-static unsigned char bitrevTab[] =
-{
-  0x00,0x80,0x40,0xc0,0x20,0xa0,0x60,0xe0,0x10,0x90,0x50,0xd0,0x30,0xb0,0x70,0xf0,
-  0x08,0x88,0x48,0xc8,0x28,0xa8,0x68,0xe8,0x18,0x98,0x58,0xd8,0x38,0xb8,0x78,0xf8,
-  0x04,0x84,0x44,0xc4,0x24,0xa4,0x64,0xe4,0x14,0x94,0x54,0xd4,0x34,0xb4,0x74,0xf4,
-  0x0c,0x8c,0x4c,0xcc,0x2c,0xac,0x6c,0xec,0x1c,0x9c,0x5c,0xdc,0x3c,0xbc,0x7c,0xfc,
-  0x02,0x82,0x42,0xc2,0x22,0xa2,0x62,0xe2,0x12,0x92,0x52,0xd2,0x32,0xb2,0x72,0xf2,
-  0x0a,0x8a,0x4a,0xca,0x2a,0xaa,0x6a,0xea,0x1a,0x9a,0x5a,0xda,0x3a,0xba,0x7a,0xfa,
-  0x06,0x86,0x46,0xc6,0x26,0xa6,0x66,0xe6,0x16,0x96,0x56,0xd6,0x36,0xb6,0x76,0xf6,
-  0x0e,0x8e,0x4e,0xce,0x2e,0xae,0x6e,0xee,0x1e,0x9e,0x5e,0xde,0x3e,0xbe,0x7e,0xfe,
-  0x01,0x81,0x41,0xc1,0x21,0xa1,0x61,0xe1,0x11,0x91,0x51,0xd1,0x31,0xb1,0x71,0xf1,
-  0x09,0x89,0x49,0xc9,0x29,0xa9,0x69,0xe9,0x19,0x99,0x59,0xd9,0x39,0xb9,0x79,0xf9,
-  0x05,0x85,0x45,0xc5,0x25,0xa5,0x65,0xe5,0x15,0x95,0x55,0xd5,0x35,0xb5,0x75,0xf5,
-  0x0d,0x8d,0x4d,0xcd,0x2d,0xad,0x6d,0xed,0x1d,0x9d,0x5d,0xdd,0x3d,0xbd,0x7d,0xfd,
-  0x03,0x83,0x43,0xc3,0x23,0xa3,0x63,0xe3,0x13,0x93,0x53,0xd3,0x33,0xb3,0x73,0xf3,
-  0x0b,0x8b,0x4b,0xcb,0x2b,0xab,0x6b,0xeb,0x1b,0x9b,0x5b,0xdb,0x3b,0xbb,0x7b,0xfb,
-  0x07,0x87,0x47,0xc7,0x27,0xa7,0x67,0xe7,0x17,0x97,0x57,0xd7,0x37,0xb7,0x77,0xf7,
-  0x0f,0x8f,0x4f,0xcf,0x2f,0xaf,0x6f,0xef,0x1f,0x9f,0x5f,0xdf,0x3f,0xbf,0x7f,0xff
-};
-
-static const double DFTTab[][2] =
-{
-{ 1.00000000000000000, 0.00000000000000000 },
-{-1.00000000000000000, 0.00000000000000000 },
-{ 0.00000000000000000, 1.00000000000000000 },
-{ 0.70710678118654757, 0.70710678118654746 },
-{ 0.92387953251128674, 0.38268343236508978 },
-{ 0.98078528040323043, 0.19509032201612825 },
-{ 0.99518472667219693, 0.09801714032956060 },
-{ 0.99879545620517241, 0.04906767432741802 },
-{ 0.99969881869620425, 0.02454122852291229 },
-{ 0.99992470183914450, 0.01227153828571993 },
-{ 0.99998117528260111, 0.00613588464915448 },
-{ 0.99999529380957619, 0.00306795676296598 },
-{ 0.99999882345170188, 0.00153398018628477 },
-{ 0.99999970586288223, 0.00076699031874270 },
-{ 0.99999992646571789, 0.00038349518757140 },
-{ 0.99999998161642933, 0.00019174759731070 },
-{ 0.99999999540410733, 0.00009587379909598 },
-{ 0.99999999885102686, 0.00004793689960307 },
-{ 0.99999999971275666, 0.00002396844980842 },
-{ 0.99999999992818922, 0.00001198422490507 },
-{ 0.99999999998204725, 0.00000599211245264 },
-{ 0.99999999999551181, 0.00000299605622633 },
-{ 0.99999999999887801, 0.00000149802811317 },
-{ 0.99999999999971945, 0.00000074901405658 },
-{ 0.99999999999992983, 0.00000037450702829 },
-{ 0.99999999999998246, 0.00000018725351415 },
-{ 0.99999999999999567, 0.00000009362675707 },
-{ 0.99999999999999889, 0.00000004681337854 },
-{ 0.99999999999999978, 0.00000002340668927 },
-{ 0.99999999999999989, 0.00000001170334463 },
-{ 1.00000000000000000, 0.00000000585167232 },
-{ 1.00000000000000000, 0.00000000292583616 }
-};
-
-namespace {
-template <typename T>
-struct Constants {
-    static const T sin_120;
-    static const T fft5_2;
-    static const T fft5_3;
-    static const T fft5_4;
-    static const T fft5_5;
-};
-
-template <typename T>
-const T Constants<T>::sin_120 = (T)0.86602540378443864676372317075294;
-
-template <typename T>
-const T Constants<T>::fft5_2 = (T)0.559016994374947424102293417182819;
-
-template <typename T>
-const T Constants<T>::fft5_3 = (T)-0.951056516295153572116439333379382;
-
-template <typename T>
-const T Constants<T>::fft5_4 = (T)-1.538841768587626701285145288018455;
-
-template <typename T>
-const T Constants<T>::fft5_5 = (T)0.363271264002680442947733378740309;
-
-}  //namespace
-
-#define BitRev(i,shift) \
-   ((int)((((unsigned)bitrevTab[(i)&255] << 24)+ \
-           ((unsigned)bitrevTab[((i)>> 8)&255] << 16)+ \
-           ((unsigned)bitrevTab[((i)>>16)&255] <<  8)+ \
-           ((unsigned)bitrevTab[((i)>>24)])) >> (shift)))
-
+#ifdef HAVE_OPENCL
+// factorization used by the OpenCL radix selection
 static int
 DFTFactorize( int n, int* factors )
 {
@@ -204,533 +120,6 @@ DFTFactorize( int n, int* factors )
 
     return nf;
 }
-
-static void
-DFTInit( int n0, int nf, const int* factors, int* itab, int elem_size, void* _wave, int inv_itab )
-{
-    int digits[34], radix[34];
-    int n = factors[0], m = 0;
-    int* itab0 = itab;
-    int i, j, k;
-    Complex<double> w, w1;
-    double t;
-
-    if( n0 <= 5 )
-    {
-        itab[0] = 0;
-        itab[n0-1] = n0-1;
-
-        if( n0 != 4 )
-        {
-            for( i = 1; i < n0-1; i++ )
-                itab[i] = i;
-        }
-        else
-        {
-            itab[1] = 2;
-            itab[2] = 1;
-        }
-        if( n0 == 5 )
-        {
-            if( elem_size == sizeof(Complex<double>) )
-                ((Complex<double>*)_wave)[0] = Complex<double>(1.,0.);
-            else
-                ((Complex<float>*)_wave)[0] = Complex<float>(1.f,0.f);
-        }
-        if( n0 != 4 )
-            return;
-        m = 2;
-    }
-    else
-    {
-        // radix[] is initialized from index 'nf' down to zero
-        CV_Assert (nf < 34);
-        radix[nf] = 1;
-        digits[nf] = 0;
-        for( i = 0; i < nf; i++ )
-        {
-            digits[i] = 0;
-            radix[nf-i-1] = radix[nf-i]*factors[nf-i-1];
-        }
-
-        if( inv_itab && factors[0] != factors[nf-1] )
-            itab = (int*)_wave;
-
-        if( (n & 1) == 0 )
-        {
-            int a = radix[1], na2 = n*a>>1, na4 = na2 >> 1;
-            for( m = 0; (unsigned)(1 << m) < (unsigned)n; m++ )
-                ;
-            if( n <= 2  )
-            {
-                itab[0] = 0;
-                itab[1] = na2;
-            }
-            else if( n <= 256 )
-            {
-                int shift = 10 - m;
-                for( i = 0; i <= n - 4; i += 4 )
-                {
-                    j = (bitrevTab[i>>2]>>shift)*a;
-                    itab[i] = j;
-                    itab[i+1] = j + na2;
-                    itab[i+2] = j + na4;
-                    itab[i+3] = j + na2 + na4;
-                }
-            }
-            else
-            {
-                int shift = 34 - m;
-                for( i = 0; i < n; i += 4 )
-                {
-                    int i4 = i >> 2;
-                    j = BitRev(i4,shift)*a;
-                    itab[i] = j;
-                    itab[i+1] = j + na2;
-                    itab[i+2] = j + na4;
-                    itab[i+3] = j + na2 + na4;
-                }
-            }
-
-            digits[1]++;
-
-            if( nf >= 2 )
-            {
-                for( i = n, j = radix[2]; i < n0; )
-                {
-                    for( k = 0; k < n; k++ )
-                        itab[i+k] = itab[k] + j;
-                    if( (i += n) >= n0 )
-                        break;
-                    j += radix[2];
-                    for( k = 1; ++digits[k] >= factors[k]; k++ )
-                    {
-                        digits[k] = 0;
-                        j += radix[k+2] - radix[k];
-                    }
-                }
-            }
-        }
-        else
-        {
-            for( i = 0, j = 0;; )
-            {
-                itab[i] = j;
-                if( ++i >= n0 )
-                    break;
-                j += radix[1];
-                for( k = 0; ++digits[k] >= factors[k]; k++ )
-                {
-                    digits[k] = 0;
-                    j += radix[k+2] - radix[k];
-                }
-            }
-        }
-
-        if( itab != itab0 )
-        {
-            itab0[0] = 0;
-            for( i = n0 & 1; i < n0; i += 2 )
-            {
-                int k0 = itab[i];
-                int k1 = itab[i+1];
-                itab0[k0] = i;
-                itab0[k1] = i+1;
-            }
-        }
-    }
-
-    if( (n0 & (n0-1)) == 0 )
-    {
-        w.re = w1.re = DFTTab[m][0];
-        w.im = w1.im = -DFTTab[m][1];
-    }
-    else
-    {
-        t = -CV_PI*2/n0;
-        w.im = w1.im = sin(t);
-        w.re = w1.re = std::sqrt(1. - w1.im*w1.im);
-    }
-    n = (n0+1)/2;
-
-    if( elem_size == sizeof(Complex<double>) )
-    {
-        Complex<double>* wave = (Complex<double>*)_wave;
-
-        wave[0].re = 1.;
-        wave[0].im = 0.;
-
-        if( (n0 & 1) == 0 )
-        {
-            wave[n].re = -1.;
-            wave[n].im = 0;
-        }
-
-        for( i = 1; i < n; i++ )
-        {
-            wave[i] = w;
-            wave[n0-i].re = w.re;
-            wave[n0-i].im = -w.im;
-
-            t = w.re*w1.re - w.im*w1.im;
-            w.im = w.re*w1.im + w.im*w1.re;
-            w.re = t;
-        }
-    }
-    else
-    {
-        Complex<float>* wave = (Complex<float>*)_wave;
-        CV_Assert( elem_size == sizeof(Complex<float>) );
-
-        wave[0].re = 1.f;
-        wave[0].im = 0.f;
-
-        if( (n0 & 1) == 0 )
-        {
-            wave[n].re = -1.f;
-            wave[n].im = 0.f;
-        }
-
-        for( i = 1; i < n; i++ )
-        {
-            wave[i].re = (float)w.re;
-            wave[i].im = (float)w.im;
-            wave[n0-i].re = (float)w.re;
-            wave[n0-i].im = (float)-w.im;
-
-            t = w.re*w1.re - w.im*w1.im;
-            w.im = w.re*w1.im + w.im*w1.re;
-            w.re = t;
-        }
-    }
-}
-
-// Reference radix-2 implementation.
-template<typename T> struct DFT_R2
-{
-    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        const int nx = n/2;
-        for(int i = 0 ; i < c_n; i += n)
-        {
-            Complex<T>* v = dst + i;
-            T r0 = v[0].re + v[nx].re;
-            T i0 = v[0].im + v[nx].im;
-            T r1 = v[0].re - v[nx].re;
-            T i1 = v[0].im - v[nx].im;
-            v[0].re = r0; v[0].im = i0;
-            v[nx].re = r1; v[nx].im = i1;
-
-            for( int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-            {
-                v = dst + i + j;
-                r1 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
-                i1 = v[nx].im*wave[dw].re + v[nx].re*wave[dw].im;
-                r0 = v[0].re; i0 = v[0].im;
-
-                v[0].re = r0 + r1; v[0].im = i0 + i1;
-                v[nx].re = r0 - r1; v[nx].im = i0 - i1;
-            }
-        }
-    }
-};
-
-// Reference radix-3 implementation.
-template<typename T> struct DFT_R3
-{
-    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        const int nx = n / 3;
-        for(int i = 0; i < c_n; i += n )
-        {
-            {
-                Complex<T>* v = dst + i;
-                T r1 = v[nx].re + v[nx*2].re;
-                T i1 = v[nx].im + v[nx*2].im;
-                T r0 = v[0].re;
-                T i0 = v[0].im;
-                T r2 = Constants<T>::sin_120*(v[nx].im - v[nx*2].im);
-                T i2 = Constants<T>::sin_120*(v[nx*2].re - v[nx].re);
-                v[0].re = r0 + r1; v[0].im = i0 + i1;
-                r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
-                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
-                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
-            }
-
-            for(int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-            {
-                Complex<T>* v = dst + i + j;
-                T r0 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
-                T i0 = v[nx].re*wave[dw].im + v[nx].im*wave[dw].re;
-                T i2 = v[nx*2].re*wave[dw*2].re - v[nx*2].im*wave[dw*2].im;
-                T r2 = v[nx*2].re*wave[dw*2].im + v[nx*2].im*wave[dw*2].re;
-                T r1 = r0 + i2; T i1 = i0 + r2;
-
-                r2 = Constants<T>::sin_120*(i0 - r2); i2 = Constants<T>::sin_120*(i2 - r0);
-                r0 = v[0].re; i0 = v[0].im;
-                v[0].re = r0 + r1; v[0].im = i0 + i1;
-                r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
-                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
-                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
-            }
-        }
-    }
-};
-
-// Reference radix-5 implementation.
-template<typename T> struct DFT_R5
-{
-    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        const int nx = n / 5;
-        for(int i = 0; i < c_n; i += n )
-        {
-            for(int j = 0, dw = 0; j < nx; j++, dw += dw0 )
-            {
-                Complex<T>* v0 = dst + i + j;
-                Complex<T>* v1 = v0 + nx*2;
-                Complex<T>* v2 = v1 + nx*2;
-
-                T r0, i0, r1, i1, r2, i2, r3, i3, r4, i4, r5, i5;
-
-                r3 = v0[nx].re*wave[dw].re - v0[nx].im*wave[dw].im;
-                i3 = v0[nx].re*wave[dw].im + v0[nx].im*wave[dw].re;
-                r2 = v2[0].re*wave[dw*4].re - v2[0].im*wave[dw*4].im;
-                i2 = v2[0].re*wave[dw*4].im + v2[0].im*wave[dw*4].re;
-
-                r1 = r3 + r2; i1 = i3 + i2;
-                r3 -= r2; i3 -= i2;
-
-                r4 = v1[nx].re*wave[dw*3].re - v1[nx].im*wave[dw*3].im;
-                i4 = v1[nx].re*wave[dw*3].im + v1[nx].im*wave[dw*3].re;
-                r0 = v1[0].re*wave[dw*2].re - v1[0].im*wave[dw*2].im;
-                i0 = v1[0].re*wave[dw*2].im + v1[0].im*wave[dw*2].re;
-
-                r2 = r4 + r0; i2 = i4 + i0;
-                r4 -= r0; i4 -= i0;
-
-                r0 = v0[0].re; i0 = v0[0].im;
-                r5 = r1 + r2; i5 = i1 + i2;
-
-                v0[0].re = r0 + r5; v0[0].im = i0 + i5;
-
-                r0 -= (T)0.25*r5; i0 -= (T)0.25*i5;
-                r1 = Constants<T>::fft5_2*(r1 - r2); i1 = Constants<T>::fft5_2*(i1 - i2);
-                r2 = -Constants<T>::fft5_3*(i3 + i4); i2 = Constants<T>::fft5_3*(r3 + r4);
-
-                i3 *= -Constants<T>::fft5_5; r3 *= Constants<T>::fft5_5;
-                i4 *= -Constants<T>::fft5_4; r4 *= Constants<T>::fft5_4;
-
-                r5 = r2 + i3; i5 = i2 + r3;
-                r2 -= i4; i2 -= r4;
-
-                r3 = r0 + r1; i3 = i0 + i1;
-                r0 -= r1; i0 -= i1;
-
-                v0[nx].re = r3 + r2; v0[nx].im = i3 + i2;
-                v2[0].re = r3 - r2; v2[0].im = i3 - i2;
-
-                v1[0].re = r0 + r5; v1[0].im = i0 + i5;
-                v1[nx].re = r0 - r5; v1[nx].im = i0 - i5;
-            }
-        }
-    }
-};
-
-template<typename T> struct DFT_VecR2
-{
-    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        DFT_R2<T>()(dst, c_n, n, dw0, wave);
-    }
-};
-
-template<typename T> struct DFT_VecR3
-{
-    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        DFT_R3<T>()(dst, c_n, n, dw0, wave);
-    }
-};
-
-template<typename T> struct DFT_VecR4
-{
-    int operator()(Complex<T>*, int, int, int&, const Complex<T>*) const { return 1; }
-};
-
-#if CV_SSE3
-
-// multiplies *a and *b:
-//  r_re + i*r_im = (a_re + i*a_im)*(b_re + i*b_im)
-// r_re and r_im are placed respectively in bits 31:0 and 63:32 of the resulting
-// vector register.
-inline __m128 complexMul(const Complex<float>* const a, const Complex<float>* const b) {
-    const __m128 z = _mm_setzero_ps();
-    const __m128 neg_elem0 = _mm_set_ps(0.0f,0.0f,0.0f,-0.0f);
-    // v_a[31:0] is a->re and v_a[63:32] is a->im.
-    const __m128 v_a = _mm_loadl_pi(z, (const __m64*)a);
-    const __m128 v_b = _mm_loadl_pi(z, (const __m64*)b);
-    // x_1 = v[nx] * wave[dw].
-    const __m128 v_a_riri = _mm_shuffle_ps(v_a, v_a, _MM_SHUFFLE(0, 1, 0, 1));
-    const __m128 v_b_irri = _mm_shuffle_ps(v_b, v_b, _MM_SHUFFLE(1, 0, 0, 1));
-    const __m128 mul = _mm_mul_ps(v_a_riri, v_b_irri);
-    const __m128 xored = _mm_xor_ps(mul, neg_elem0);
-    return _mm_hadd_ps(xored, z);
-}
-
-// optimized radix-2 transform
-template<> struct DFT_VecR2<float> {
-    void operator()(Complex<float>* dst, const int c_n, const int n, const int dw0, const Complex<float>* wave) const {
-        const __m128 z = _mm_setzero_ps();
-        const int nx = n/2;
-        for(int i = 0 ; i < c_n; i += n)
-        {
-            {
-                Complex<float>* v = dst + i;
-                float r0 = v[0].re + v[nx].re;
-                float i0 = v[0].im + v[nx].im;
-                float r1 = v[0].re - v[nx].re;
-                float i1 = v[0].im - v[nx].im;
-                v[0].re = r0; v[0].im = i0;
-                v[nx].re = r1; v[nx].im = i1;
-            }
-
-            for( int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-            {
-                Complex<float>* v = dst + i + j;
-                const __m128 x_1 = complexMul(&v[nx], &wave[dw]);
-                const __m128 v_0 = _mm_loadl_pi(z, (const __m64*)&v[0]);
-                _mm_storel_pi((__m64*)&v[0], _mm_add_ps(v_0, x_1));
-                _mm_storel_pi((__m64*)&v[nx], _mm_sub_ps(v_0, x_1));
-            }
-        }
-    }
-};
-
-// Optimized radix-3 implementation.
-template<> struct DFT_VecR3<float> {
-    void operator()(Complex<float>* dst, const int c_n, const int n, const int dw0, const Complex<float>* wave) const {
-        const int nx = n / 3;
-        const __m128 z = _mm_setzero_ps();
-        const __m128 neg_elem1 = _mm_set_ps(0.0f,0.0f,-0.0f,0.0f);
-        const __m128 sin_120 = _mm_set1_ps(Constants<float>::sin_120);
-        const __m128 one_half = _mm_set1_ps(0.5f);
-        for(int i = 0; i < c_n; i += n )
-        {
-            {
-                Complex<float>* v = dst + i;
-
-                float r1 = v[nx].re + v[nx*2].re;
-                float i1 = v[nx].im + v[nx*2].im;
-                float r0 = v[0].re;
-                float i0 = v[0].im;
-                float r2 = Constants<float>::sin_120*(v[nx].im - v[nx*2].im);
-                float i2 = Constants<float>::sin_120*(v[nx*2].re - v[nx].re);
-                v[0].re = r0 + r1; v[0].im = i0 + i1;
-                r0 -= (float)0.5*r1; i0 -= (float)0.5*i1;
-                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
-                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
-            }
-
-            for(int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-            {
-                Complex<float>* v = dst + i + j;
-                const __m128 x_0 = complexMul(&v[nx], &wave[dw]);
-                const __m128 x_2 = complexMul(&v[nx*2], &wave[dw*2]);
-                const __m128 x_1 = _mm_add_ps(x_0, x_2);
-
-                const __m128 v_0 = _mm_loadl_pi(z, (const __m64*)&v[0]);
-                _mm_storel_pi((__m64*)&v[0], _mm_add_ps(v_0, x_1));
-
-                const __m128 x_3 = _mm_mul_ps(sin_120, _mm_xor_ps(_mm_sub_ps(x_2, x_0), neg_elem1));
-                const __m128 x_3s = _mm_shuffle_ps(x_3, x_3, _MM_SHUFFLE(0, 1, 0, 1));
-                const __m128 x_4 = _mm_sub_ps(v_0, _mm_mul_ps(one_half, x_1));
-                _mm_storel_pi((__m64*)&v[nx], _mm_add_ps(x_4, x_3s));
-                _mm_storel_pi((__m64*)&v[nx*2], _mm_sub_ps(x_4, x_3s));
-            }
-        }
-    }
-};
-
-// optimized radix-4 transform
-template<> struct DFT_VecR4<float>
-{
-    int operator()(Complex<float>* dst, int N, int n0, int& _dw0, const Complex<float>* wave) const
-    {
-        int n = 1, i, j, nx, dw, dw0 = _dw0;
-        __m128 z = _mm_setzero_ps(), x02=z, x13=z, w01=z, w23=z, y01, y23, t0, t1;
-        Cv32suf t; t.i = 0x80000000;
-        __m128 neg0_mask = _mm_load_ss(&t.f);
-        __m128 neg3_mask = _mm_shuffle_ps(neg0_mask, neg0_mask, _MM_SHUFFLE(0,1,2,3));
-
-        for( ; n*4 <= N; )
-        {
-            nx = n;
-            n *= 4;
-            dw0 /= 4;
-
-            for( i = 0; i < n0; i += n )
-            {
-                Complexf *v0, *v1;
-
-                v0 = dst + i;
-                v1 = v0 + nx*2;
-
-                x02 = _mm_loadl_pi(x02, (const __m64*)&v0[0]);
-                x13 = _mm_loadl_pi(x13, (const __m64*)&v0[nx]);
-                x02 = _mm_loadh_pi(x02, (const __m64*)&v1[0]);
-                x13 = _mm_loadh_pi(x13, (const __m64*)&v1[nx]);
-
-                y01 = _mm_add_ps(x02, x13);
-                y23 = _mm_sub_ps(x02, x13);
-                t1 = _mm_xor_ps(_mm_shuffle_ps(y01, y23, _MM_SHUFFLE(2,3,3,2)), neg3_mask);
-                t0 = _mm_movelh_ps(y01, y23);
-                y01 = _mm_add_ps(t0, t1);
-                y23 = _mm_sub_ps(t0, t1);
-
-                _mm_storel_pi((__m64*)&v0[0], y01);
-                _mm_storeh_pi((__m64*)&v0[nx], y01);
-                _mm_storel_pi((__m64*)&v1[0], y23);
-                _mm_storeh_pi((__m64*)&v1[nx], y23);
-
-                for( j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-                {
-                    v0 = dst + i + j;
-                    v1 = v0 + nx*2;
-
-                    x13 = _mm_loadl_pi(x13, (const __m64*)&v0[nx]);
-                    w23 = _mm_loadl_pi(w23, (const __m64*)&wave[dw*2]);
-                    x13 = _mm_loadh_pi(x13, (const __m64*)&v1[nx]); // x1, x3 = r1 i1 r3 i3
-                    w23 = _mm_loadh_pi(w23, (const __m64*)&wave[dw*3]); // w2, w3 = wr2 wi2 wr3 wi3
-
-                    t0 = _mm_mul_ps(_mm_moveldup_ps(x13), w23);
-                    t1 = _mm_mul_ps(_mm_movehdup_ps(x13), _mm_shuffle_ps(w23, w23, _MM_SHUFFLE(2,3,0,1)));
-                    x13 = _mm_addsub_ps(t0, t1);
-                    // re(x1*w2), im(x1*w2), re(x3*w3), im(x3*w3)
-                    x02 = _mm_loadl_pi(x02, (const __m64*)&v1[0]); // x2 = r2 i2
-                    w01 = _mm_loadl_pi(w01, (const __m64*)&wave[dw]); // w1 = wr1 wi1
-                    x02 = _mm_shuffle_ps(x02, x02, _MM_SHUFFLE(0,0,1,1));
-                    w01 = _mm_shuffle_ps(w01, w01, _MM_SHUFFLE(1,0,0,1));
-                    x02 = _mm_mul_ps(x02, w01);
-                    x02 = _mm_addsub_ps(x02, _mm_movelh_ps(x02, x02));
-                    // re(x0) im(x0) re(x2*w1), im(x2*w1)
-                    x02 = _mm_loadl_pi(x02, (const __m64*)&v0[0]);
-
-                    y01 = _mm_add_ps(x02, x13);
-                    y23 = _mm_sub_ps(x02, x13);
-                    t1 = _mm_xor_ps(_mm_shuffle_ps(y01, y23, _MM_SHUFFLE(2,3,3,2)), neg3_mask);
-                    t0 = _mm_movelh_ps(y01, y23);
-                    y01 = _mm_add_ps(t0, t1);
-                    y23 = _mm_sub_ps(t0, t1);
-
-                    _mm_storel_pi((__m64*)&v0[0], y01);
-                    _mm_storeh_pi((__m64*)&v0[nx], y01);
-                    _mm_storel_pi((__m64*)&v1[0], y23);
-                    _mm_storeh_pi((__m64*)&v1[nx], y23);
-                }
-            }
-        }
-
-        _dw0 = dw0;
-        return n;
-    }
-};
-
 #endif
 
 #ifdef USE_IPP_DFT
@@ -791,21 +180,14 @@ struct OcvDftOptions;
 
 typedef void (*DFTFunc)(const OcvDftOptions & c, const void* src, void* dst);
 
+// Per-transform options of the 1D engine: the immutable plan (shared by all rows), the kernel
+// table resolved for the current CPU, and the per-executor workspace (see dxt.hpp).
 struct OcvDftOptions {
-    int nf;
-    int *factors;
     double scale;
-
-    int* itab;
-    void* wave;
-    int tab_size;
     int n;
 
     bool isInverse;
-    bool noPermute;
-    bool isComplex;
-
-    bool haveSSE3;
+    bool isComplex;     // DFT_COMPLEX_OUTPUT (forward) / complex input (inverse) for real transforms
 
     DFTFunc dft_func;
     bool useIpp;
@@ -815,17 +197,18 @@ struct OcvDftOptions {
     uchar* ipp_work;
 #endif
 
+    const DftPlan* plan;
+    const DFTKernels* kernels;
+    uchar* workspace;
+
     OcvDftOptions()
     {
-        nf = 0;
-        factors = 0;
+        plan = 0;
+        kernels = 0;
+        workspace = 0;
         scale = 0;
-        itab = 0;
-        wave = 0;
-        tab_size = 0;
         n = 0;
         isInverse = false;
-        noPermute = false;
         isComplex = false;
         useIpp = false;
 #ifdef USE_IPP_DFT
@@ -833,40 +216,492 @@ struct OcvDftOptions {
         ipp_work = 0;
 #endif
         dft_func = 0;
-        haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
     }
 };
 
-// mixed-radix complex discrete Fourier transform: double-precision version
+
+/****************************************************************************************\
+                     New 1D engine: kernel table, plan builder, driver
+\****************************************************************************************/
+
+static DFTKernels getDFTKernelsDispatch(int depth)
+{
+    CV_CPU_DISPATCH(getDFTKernels_, (depth), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+// The kernel tables are resolved once for the best available ISA; all further calls go
+// through the function pointers with no dispatch overhead.
+static const DFTKernels& getDFTKernels(int depth)
+{
+    static const DFTKernels k32 = getDFTKernelsDispatch(CV_32F);
+    static const DFTKernels k64 = getDFTKernelsDispatch(CV_64F);
+    return depth == CV_32F ? k32 : k64;
+}
+
+// exp(-2*pi*i*m/M) in double precision, m in [0, M): m = B*a + b -> hi[a]*lo[b] with B a power of
+// two ~ sqrt(M). Both small tables are built by the rotation recurrence, re-seeded with exact
+// sin/cos every 16 entries, so the error stays within a few ulps while only ~(B + M/B)/16 + 4
+// trigonometric calls are made (4 for small M). Cheap to build, which matters because cv::dft()
+// builds a fresh plan on every call.
+struct DftTwiddleGen
+{
+    int M, logB, maskB;
+    AutoBuffer<double, 1024> buf;
+    double *hi_re, *hi_im, *lo_re, *lo_im;
+
+    // re[i] + i*im[i] = w^i, i in [0, count), w = (wr, wi) = exp(i*stepAngle); the rotation
+    // recurrence is re-seeded with exact sin/cos every 16 entries
+    static void fillTable(double* re, double* im, int count, double wr, double wi, double stepAngle)
+    {
+        double cr = 1, ci = 0;
+        for (int i = 0; i < count; i++)
+        {
+            if ((i & 15) == 0 && i > 0)
+            {
+                double t = stepAngle*i;
+                cr = cos(t); ci = sin(t);
+            }
+            re[i] = cr; im[i] = ci;
+            double t = cr*wr - ci*wi;
+            ci = cr*wi + ci*wr;
+            cr = t;
+        }
+    }
+
+    void init(int _M)
+    {
+        M = _M;
+        logB = 0;
+        while ((1 << (2*logB)) < M) logB++;   // B = 2^logB >= sqrt(M)
+        int B = 1 << logB;
+        maskB = B - 1;
+        int nhi = (M + B - 1)/B;
+        buf.allocate(2*(B + nhi));
+        hi_re = buf.data(); hi_im = hi_re + nhi;
+        lo_re = hi_im + nhi; lo_im = lo_re + B;
+        double a = -2*CV_PI/M;
+        // the two step angles are computed exactly (4 trigonometric calls in total for small M)
+        fillTable(lo_re, lo_im, B, cos(a), sin(a), a);
+        fillTable(hi_re, hi_im, nhi, cos(a*B), sin(a*B), a*B);
+    }
+
+    void get(int m, double& re, double& im) const
+    {
+        CV_DbgAssert(0 <= m && m < M);
+        int a = m >> logB, b = m & maskB;
+        re = hi_re[a]*lo_re[b] - hi_im[a]*lo_im[b];
+        im = hi_re[a]*lo_im[b] + hi_im[a]*lo_re[b];
+    }
+};
+
+template<typename T>
+static void fillDftPlanTables(DftPlan& p, const DftTwiddleGen& gen, int M, bool need_rtw, bool need_dct)
+{
+    int n = p.n, nc = p.nc;
+    T* cur = (T*)p.tw.data();
+    int maxL = 1;
+    for (int s = 0; s < p.nstages; s++)
+        if (p.stages[s].radix <= 8) maxL = std::max(maxL, p.stages[s].span);
+    AutoBuffer<double, 2048> twd_buf(2*maxL);     // leg-1 twiddles of the current stage in double
+    double* twd = twd_buf.data();
+    for (int s = 0; s < p.nstages; s++)
+    {
+        DftStage& st = p.stages[s];
+        int r = st.radix, L = st.span, ts = st.tw_stride;
+        T* twr = cur; T* twi = cur + (r - 1)*ts;
+        cur = twi + (r - 1)*ts;
+        int step = M/(r*L);
+        if (r <= 8)
+        {
+            // Leg 1 (W_{rL}^j) by K independent interleaved rotation recurrences (a single chain is
+            // latency-bound), each re-seeded from the exact generator every 16 of its steps; legs
+            // q >= 2 as t_q(j) = t_{q-1}(j)*t_1(j), independent per entry (error <= q ulps).
+            const int K = 8;
+            double cr[K], ci[K], wr, wi;
+            gen.get(K*step, wr, wi);
+            for (int k = 0; k < K; k++)
+                gen.get(std::min(k, L - 1)*step, cr[k], ci[k]);
+            double* t1r = twd; double* t1i = twd + L;      // leg 1 kept in double for the products
+            for (int j = 0; j < L; j += K)
+            {
+                if ((j & (16*K - 1)) == 0 && j > 0)
+                    for (int k = 0; k < K; k++)
+                        gen.get(std::min(j + k, L - 1)*step, cr[k], ci[k]);
+                for (int k = 0; k < K && j + k < L; k++)
+                {
+                    t1r[j+k] = cr[k]; t1i[j+k] = ci[k];
+                    double t = cr[k]*wr - ci[k]*wi;
+                    ci[k] = cr[k]*wi + ci[k]*wr;
+                    cr[k] = t;
+                }
+            }
+            for (int j = 0; j < L; j++)
+            {
+                twr[j] = (T)t1r[j]; twi[j] = (T)t1i[j];
+            }
+            for (int q = 2; q < r; q++)
+            {
+                const T* pr = twr + (q-2)*ts; const T* pi = twi + (q-2)*ts;
+                T* tr = twr + (q-1)*ts; T* ti = twi + (q-1)*ts;
+                for (int j = 0; j < L; j++)
+                {
+                    double ar = pr[j], ai = pi[j], br = t1r[j], bi = t1i[j];
+                    tr[j] = (T)(ar*br - ai*bi);
+                    ti[j] = (T)(ar*bi + ai*br);
+                }
+            }
+        }
+        else
+        {
+            // large odd radix: exact-ish generator lookup per entry
+            for (int q = 1; q < r; q++)
+                for (int j = 0; j < L; j++)
+                {
+                    double re, im;
+                    gen.get(q*j*step, re, im);
+                    twr[(q-1)*ts + j] = (T)re;
+                    twi[(q-1)*ts + j] = (T)im;
+                }
+        }
+        st.tw_re = twr; st.tw_im = twi;
+        st.cs = st.sn = 0;
+        if (r >= 7)
+        {
+            int h = (r - 1)/2;
+            T* cs = cur; T* sn = cur + h*h;
+            cur = sn + h*h;
+            for (int pp = 1; pp <= h; pp++)
+                for (int k = 1; k <= h; k++)
+                {
+                    double t = 2*CV_PI*((double)pp*k/r);
+                    cs[(pp-1)*h + (k-1)] = (T)cos(t);
+                    sn[(pp-1)*h + (k-1)] = (T)sin(t);
+                }
+            st.cs = cs; st.sn = sn;
+        }
+    }
+    p.rtw_re = p.rtw_im = p.dct_re = p.dct_im = 0;
+    if (need_rtw)
+    {
+        // W_n^k, k in [0, nc]
+        T* wr = cur; T* wi = cur + (nc + 1);
+        cur = wi + (nc + 1);
+        int step = M/n;
+        for (int k = 0; k <= nc; k++)
+        {
+            double re, im;
+            gen.get(k*step, re, im);
+            wr[k] = (T)re; wi[k] = (T)im;
+        }
+        p.rtw_re = wr; p.rtw_im = wi;
+    }
+    if (need_dct)
+    {
+        // s*W_4n^k, k in [0, nc]; s = 2*sqrt(1/(2n)) forward, sqrt(1/(2n)) inverse (the original normalization)
+        T* wr = cur; T* wi = cur + (nc + 1);
+        cur = wi + (nc + 1);
+        double scale = (p.kind == DFT_KIND_DCT ? 2 : 1)*std::sqrt(1./(2*n));
+        int step = M/(4*n);
+        for (int k = 0; k <= nc; k++)
+        {
+            double re, im;
+            gen.get(k*step, re, im);
+            wr[k] = (T)(re*scale); wi[k] = (T)(im*scale);
+        }
+        p.dct_re = wr; p.dct_im = wi;
+    }
+}
+
+// Builds the immutable plan for a 1D transform of the given kind and length.
+//
+// IMPORTANT: `vl` (vector lanes) MUST come from the dispatched kernel table (DFTKernels::vlanes),
+// never from VTraits<> in this translation unit, which is compiled for the baseline ISA and
+// reports the wrong lane count on AVX2/AVX512/RVV builds. Stage modes and step counts depend on it.
+static void buildDftPlan(DftPlan& p, int kind, int n, int depth, int vl)
+{
+    CV_Assert(n >= 1 && vl >= 1);
+    CV_Assert(depth == CV_32F || depth == CV_64F);
+    bool real_kind = kind != DFT_KIND_C2C;
+    bool dct_kind = kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
+    if (dct_kind)
+        CV_Assert(n % 2 == 0);   // cv::dct() supports even n only (n == 1 is handled by the caller)
+    int nc = real_kind && n % 2 == 0 ? n/2 : n;
+    CV_Assert(nc < (1 << 28));
+    size_t esz = depth == CV_32F ? sizeof(float) : sizeof(double);
+
+    p.kind = kind; p.n = n; p.nc = nc; p.depth = depth; p.vl = vl;
+    p.real_input = kind == DFT_KIND_R2C && (n & 1) != 0;
+    p.need_tmp = kind == DFT_KIND_C2R || kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
+    p.pingpong = false;
+
+    // factorization: 2^k part first (fused first stage r0 + radix-4 stages), then 3s, 5s, other odd.
+    // (A radix-8 middle stage was tried and measured slower on NEON: with per-leg twiddle tables it
+    // does not save loads over two radix-4 stages and keeps 16 data vectors live.)
+    int k2 = 0, rest = nc;
+    while ((rest & 1) == 0) { rest >>= 1; k2++; }
+    int r0 = k2 == 0 ? 1 : k2 == 1 ? 2 : (k2 & 1) ? 8 : 4;
+    p.first_radix = r0;
+    int radices[DFT_MAX_STAGES], nst = 0;
+    for (int m = k2 - (r0 == 1 ? 0 : r0 == 2 ? 1 : r0 == 4 ? 2 : 3); m > 0; m -= 2) radices[nst++] = 4;
+    rest = nc >> k2;
+    while (rest % 3 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 3; rest /= 3; }
+    while (rest % 5 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 5; rest /= 5; }
+    for (int f = 7; rest > 1; f += 2)
+    {
+        if (f*f > rest)
+        {
+            CV_Assert(nst < DFT_MAX_STAGES);
+            radices[nst++] = rest;
+            break;
+        }
+        while (rest % f == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = f; rest /= f; }
+    }
+    p.nstages = nst;
+
+    // stages
+    int L = r0, max_h = 0;
+    size_t ntw = 0;
+    for (int s = 0; s < nst; s++)
+    {
+        DftStage& st = p.stages[s];
+        int r = radices[s];
+        st.radix = r; st.span = L; st.ngroups = nc/(r*L); st.tw_stride = L;
+        if (vl > 1 && L >= vl)
+        {
+            st.mode = DFT_STAGE_FULL;
+            st.nsteps = st.ngroups*((L + vl - 1)/vl);
+            if (L % vl != 0)
+                p.pingpong = true;   // back-off clamp => overlapping stores => must be out-of-place
+        }
+        else
+        {
+            st.mode = DFT_STAGE_SCALAR;
+            st.nsteps = st.ngroups*L;
+        }
+        ntw += 2*(size_t)(r - 1)*st.tw_stride;
+        if (r >= 7)
+        {
+            int h = (r - 1)/2;
+            ntw += 2*(size_t)h*h;
+            max_h = std::max(max_h, h);
+        }
+        L *= r;
+    }
+    CV_Assert(L == nc);
+
+    // digit-reversal: position p = sum_s d_s*L_s holds input element sum_s d_s*M_s, M_s = nc/(L_s*r_s);
+    // the radix sequence is r0 (if > 1) followed by the stage radices.
+    //  - r0 == 1 (odd nc): itab holds two element indices (re, im) per complex element for the
+    //    scalar gather (im index unused when real_input);
+    //  - r0 > 1: the r0 inputs of group g are the column x[base(g) + q*nc/r0]; itab[base(g)] = g*r0
+    //    tells the transposed first stage where the outputs of column base(g) go.
+    int seq[DFT_MAX_STAGES + 1], nseq = 0;
+    if (r0 > 1) seq[nseq++] = r0;
+    for (int s = 0; s < nst; s++) seq[nseq++] = radices[s];
+    int digits[DFT_MAX_STAGES + 1], weights[DFT_MAX_STAGES + 1];
+    {
+        int Ls = 1;
+        for (int s = 0; s < nseq; s++)
+        {
+            digits[s] = 0;
+            weights[s] = nc/(Ls*seq[s]);
+            Ls *= seq[s];
+        }
+    }
+    if (r0 == 1)
+    {
+        p.itab.allocate(nc*2);
+        int* itab = p.itab.data();
+        // the two lowest digits are enumerated by plain nested loops, the higher ones by a counter
+        int n_in = std::min(nseq, 2);
+        int r_0 = n_in > 0 ? seq[0] : 1, w_0 = n_in > 0 ? weights[0] : 0;
+        int r_1 = n_in > 1 ? seq[1] : 1, w_1 = n_in > 1 ? weights[1] : 0;
+        for (int pos = 0, rev_hi = 0; pos < nc; )
+        {
+            for (int d1 = 0; d1 < r_1; d1++)
+            {
+                int rev = rev_hi + d1*w_1;
+                int* it = itab + pos*2;
+                if (p.real_input)
+                {
+                    for (int d0 = 0; d0 < r_0; d0++, rev += w_0)
+                    {
+                        it[d0*2] = rev; it[d0*2+1] = rev;
+                    }
+                }
+                else
+                {
+                    for (int d0 = 0; d0 < r_0; d0++, rev += w_0)
+                    {
+                        it[d0*2] = rev*2; it[d0*2+1] = rev*2 + 1;
+                    }
+                }
+                pos += r_0;
+            }
+            for (int s = n_in; s < nseq; s++)
+            {
+                rev_hi += weights[s];
+                if (++digits[s] < seq[s])
+                    break;
+                digits[s] = 0;
+                rev_hi -= seq[s]*weights[s];
+            }
+        }
+    }
+    else
+    {
+        // gtab[base(g)] = g*r0, written in increasing base order (sequential stores): base is
+        // counted up with the digits s = nseq-1 (base weight 1) .. 1 (base weight weights[1]),
+        // g follows incrementally with the digit weights gw[s] = L_s/r0. The two fastest digits
+        // are enumerated by plain nested loops.
+        int M = nc/r0;
+        p.itab.allocate(M);
+        int* gtab = p.itab.data();
+        int gw[DFT_MAX_STAGES + 1];
+        {
+            int Ls = 1;
+            for (int s = 0; s < nseq; s++)
+            {
+                gw[s] = Ls/r0;      // valid for s >= 1 (L_s is a multiple of r0)
+                Ls *= seq[s];
+            }
+        }
+        int sa = nseq - 1, sb = nseq - 2;                  // fastest and second fastest digits
+        int r_a = sa >= 1 ? seq[sa] : 1, g_a = sa >= 1 ? gw[sa] : 0;
+        int r_b = sb >= 1 ? seq[sb] : 1, g_b = sb >= 1 ? gw[sb] : 0;
+        for (int base = 0, g_hi = 0; base < M; )
+        {
+            for (int db = 0; db < r_b; db++)
+            {
+                int g = (g_hi + db*g_b)*r0;
+                for (int da = 0; da < r_a; da++, g += g_a*r0)
+                    gtab[base++] = g;
+            }
+            for (int s = sb - 1; s >= 1; s--)
+            {
+                g_hi += gw[s];
+                if (++digits[s] < seq[s])
+                    break;
+                digits[s] = 0;
+                g_hi -= seq[s]*gw[s];
+            }
+        }
+    }
+
+    // twiddle tables from one base table exp(-2*pi*i*m/M), M a multiple of every angle grid used:
+    // C2C: M = nc; real kinds with even n: M = n (=2nc) or 4n for DCT (W_4n^k); odd real: M = n = nc.
+    bool need_rtw = real_kind && n % 2 == 0;
+    int mult = dct_kind ? 8 : need_rtw ? 2 : 1;
+    int M = nc*mult;
+    if (need_rtw) ntw += 2*(size_t)(nc + 1);
+    if (dct_kind) ntw += 2*(size_t)(nc + 1);
+    p.tw.allocate((ntw*esz + sizeof(double) - 1)/sizeof(double) + 1);
+    DftTwiddleGen gen;
+    gen.init(M);
+    if (depth == CV_32F)
+        fillDftPlanTables<float>(p, gen, M, need_rtw, dct_kind);
+    else
+        fillDftPlanTables<double>(p, gen, M, need_rtw, dct_kind);
+
+    // workspace layout (from the 64-byte aligned base): pair0 (re, im), optional pair1 (re, im) or
+    // the interleaved temp, radix-odd scratch (a[h], b[h] complex per lane).
+    size_t pair_bytes = 2*(size_t)nc*esz;
+    bool two_pairs = p.pingpong || p.need_tmp;
+    p.pair1_ofs = two_pairs ? pair_bytes : 0;
+    p.scratch_ofs = pair_bytes*(two_pairs ? 2 : 1);
+    size_t scratch_bytes = 4*(size_t)max_h*std::max(vl, 1)*esz;
+    p.ws_bytes = p.scratch_ofs + scratch_bytes + 64;
+}
+
+// Runs the transform described by c.plan: A (preproc) -> B stages (ping-pong) -> C (postproc).
+// No allocations. sstep/dstep are in elements (used by DCT/IDCT only; 1 otherwise).
+static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* dst, size_t dstep,
+                   bool complex_io)
+{
+    const DftPlan& p = *c.plan;
+    const DFTKernels& k = *c.kernels;
+    CV_DbgAssert(p.vl == k.vlanes);
+    size_t esz = p.depth == CV_32F ? sizeof(float) : sizeof(double);
+    uchar* base = alignPtr(c.workspace, 64);
+    uchar* re0 = base;
+    uchar* im0 = re0 + p.nc*esz;
+    uchar* re1 = base + p.pair1_ofs;
+    uchar* im1 = re1 + p.nc*esz;
+    uchar* scratch = base + p.scratch_ofs;
+
+    const void* asrc = src;
+    size_t astep = sstep;
+    bool conj = false;
+    if (p.kind == DFT_KIND_C2R)
+    {
+        k.preprocCCS(p, src, re1, complex_io);
+        asrc = re1; astep = 1; conj = true;
+    }
+    else if (p.kind == DFT_KIND_IDCT)
+    {
+        k.preprocIDCT(p, src, sstep, re1);
+        asrc = re1; astep = 1; conj = true;
+    }
+    else if (p.kind == DFT_KIND_DCT)
+    {
+        k.preprocDCT(p, src, sstep, re1);
+        asrc = re1; astep = 1;
+    }
+    else if (p.kind == DFT_KIND_C2C)
+        conj = c.isInverse;
+    CV_DbgAssert(astep == 1 || p.first_radix == 1);
+
+    DftPreprocFunc pre = p.first_radix == 1 ? k.preprocRadix0 : p.first_radix == 2 ? k.preprocRadix2 :
+                         p.first_radix == 4 ? k.preprocRadix4 : k.preprocRadix8;
+    pre(p, asrc, astep, re0, im0, conj);
+
+    uchar *sre = re0, *sim = im0, *dre = re1, *dim = im1;
+    for (int i = 0; i < p.nstages; i++)
+    {
+        const DftStage& st = p.stages[i];
+        DftStageFunc fn = st.radix == 4 ? k.radix4 : st.radix == 3 ? k.radix3 :
+                          st.radix == 5 ? k.radix5 : k.radixOdd;
+        if (p.pingpong)
+        {
+            fn(st, sre, sim, dre, dim, scratch);
+            std::swap(sre, dre); std::swap(sim, dim);
+        }
+        else
+            fn(st, sre, sim, sre, sim, scratch);
+    }
+
+    double scale = c.scale;
+    switch (p.kind)
+    {
+    case DFT_KIND_C2C:
+        k.postprocDFT(p, sre, sim, dst, scale, c.isInverse ? -scale : scale);
+        break;
+    case DFT_KIND_R2C:
+        k.postprocRealDFT(p, sre, sim, dst, scale, complex_io);
+        break;
+    case DFT_KIND_C2R:
+        if (p.nc == p.n)
+            k.postprocReal(p, sre, dst, scale);
+        else
+            k.postprocDFT(p, sre, sim, dst, scale, -scale);
+        break;
+    case DFT_KIND_DCT:
+        k.postprocDCT(p, sre, sim, dst, dstep);
+        break;
+    default:
+        CV_Assert(p.kind == DFT_KIND_IDCT);
+        k.postprocIDCT(p, sre, sim, dst, dstep);
+    }
+}
+
+// mixed-radix complex discrete Fourier transform (forward or inverse)
 template<typename T> static void
 DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 {
-    const Complex<T>* wave = (Complex<T>*)c.wave;
-    const int * itab = c.itab;
-
-    int n = c.n;
-    int f_idx, nx;
-    int inv = c.isInverse;
-    int dw0 = c.tab_size, dw;
-    int i, j, k;
-    Complex<T> t;
-    T scale = (T)c.scale;
-
-    if(typeid(T) == typeid(float))
-    {
-        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_32F,
-                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
-    }
-    if(typeid(T) == typeid(double))
-    {
-        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_64F,
-                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
-    }
-
     if( c.useIpp )
     {
 #ifdef USE_IPP_DFT
-        if( !inv )
+        if( !c.isInverse )
         {
             if (ippsDFTFwd_CToC( src, dst, c.ipp_spec, c.ipp_work ) >= 0)
             {
@@ -886,321 +721,7 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 #endif
     }
 
-    int tab_step = c.tab_size == n ? 1 : c.tab_size == n*2 ? 2 : c.tab_size/n;
-
-    // 0. shuffle data
-    if( dst != src )
-    {
-        CV_Assert( !c.noPermute );
-        if( !inv )
-        {
-            for( i = 0; i <= n - 2; i += 2, itab += 2*tab_step )
-            {
-                int k0 = itab[0], k1 = itab[tab_step];
-                CV_Assert( (unsigned)k0 < (unsigned)n && (unsigned)k1 < (unsigned)n );
-                dst[i] = src[k0]; dst[i+1] = src[k1];
-            }
-
-            if( i < n )
-                dst[n-1] = src[n-1];
-        }
-        else
-        {
-            for( i = 0; i <= n - 2; i += 2, itab += 2*tab_step )
-            {
-                int k0 = itab[0], k1 = itab[tab_step];
-                CV_Assert( (unsigned)k0 < (unsigned)n && (unsigned)k1 < (unsigned)n );
-                t.re = src[k0].re; t.im = -src[k0].im;
-                dst[i] = t;
-                t.re = src[k1].re; t.im = -src[k1].im;
-                dst[i+1] = t;
-            }
-
-            if( i < n )
-            {
-                t.re = src[n-1].re; t.im = -src[n-1].im;
-                dst[i] = t;
-            }
-        }
-    }
-    else
-    {
-        if( !c.noPermute )
-        {
-            CV_Assert( c.factors[0] == c.factors[c.nf-1] );
-            if( c.nf == 1 )
-            {
-                if( (n & 3) == 0 )
-                {
-                    int n2 = n/2;
-                    Complex<T>* dsth = dst + n2;
-
-                    for( i = 0; i < n2; i += 2, itab += tab_step*2 )
-                    {
-                        j = itab[0];
-                        CV_Assert( (unsigned)j < (unsigned)n2 );
-
-                        CV_SWAP(dst[i+1], dsth[j], t);
-                        if( j > i )
-                        {
-                            CV_SWAP(dst[i], dst[j], t);
-                            CV_SWAP(dsth[i+1], dsth[j+1], t);
-                        }
-                    }
-                }
-                // else do nothing
-            }
-            else
-            {
-                for( i = 0; i < n; i++, itab += tab_step )
-                {
-                    j = itab[0];
-                    CV_Assert( (unsigned)j < (unsigned)n );
-                    if( j > i )
-                        CV_SWAP(dst[i], dst[j], t);
-                }
-            }
-        }
-
-        if( inv )
-        {
-            for( i = 0; i <= n - 2; i += 2 )
-            {
-                T t0 = -dst[i].im;
-                T t1 = -dst[i+1].im;
-                dst[i].im = t0; dst[i+1].im = t1;
-            }
-
-            if( i < n )
-                dst[n-1].im = -dst[n-1].im;
-        }
-    }
-
-    n = 1;
-    // 1. power-2 transforms
-    if( (c.factors[0] & 1) == 0 )
-    {
-        if( c.factors[0] >= 4 && c.haveSSE3)
-        {
-            DFT_VecR4<T> vr4;
-            n = vr4(dst, c.factors[0], c.n, dw0, wave);
-        }
-
-        // radix-4 transform
-        for( ; n*4 <= c.factors[0]; )
-        {
-            nx = n;
-            n *= 4;
-            dw0 /= 4;
-
-            for( i = 0; i < c.n; i += n )
-            {
-                Complex<T> *v0, *v1;
-                T r0, i0, r1, i1, r2, i2, r3, i3, r4, i4;
-
-                v0 = dst + i;
-                v1 = v0 + nx*2;
-
-                r0 = v1[0].re; i0 = v1[0].im;
-                r4 = v1[nx].re; i4 = v1[nx].im;
-
-                r1 = r0 + r4; i1 = i0 + i4;
-                r3 = i0 - i4; i3 = r4 - r0;
-
-                r2 = v0[0].re; i2 = v0[0].im;
-                r4 = v0[nx].re; i4 = v0[nx].im;
-
-                r0 = r2 + r4; i0 = i2 + i4;
-                r2 -= r4; i2 -= i4;
-
-                v0[0].re = r0 + r1; v0[0].im = i0 + i1;
-                v1[0].re = r0 - r1; v1[0].im = i0 - i1;
-                v0[nx].re = r2 + r3; v0[nx].im = i2 + i3;
-                v1[nx].re = r2 - r3; v1[nx].im = i2 - i3;
-
-                for( j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-                {
-                    v0 = dst + i + j;
-                    v1 = v0 + nx*2;
-
-                    r2 = v0[nx].re*wave[dw*2].re - v0[nx].im*wave[dw*2].im;
-                    i2 = v0[nx].re*wave[dw*2].im + v0[nx].im*wave[dw*2].re;
-                    r0 = v1[0].re*wave[dw].im + v1[0].im*wave[dw].re;
-                    i0 = v1[0].re*wave[dw].re - v1[0].im*wave[dw].im;
-                    r3 = v1[nx].re*wave[dw*3].im + v1[nx].im*wave[dw*3].re;
-                    i3 = v1[nx].re*wave[dw*3].re - v1[nx].im*wave[dw*3].im;
-
-                    r1 = i0 + i3; i1 = r0 + r3;
-                    r3 = r0 - r3; i3 = i3 - i0;
-                    r4 = v0[0].re; i4 = v0[0].im;
-
-                    r0 = r4 + r2; i0 = i4 + i2;
-                    r2 = r4 - r2; i2 = i4 - i2;
-
-                    v0[0].re = r0 + r1; v0[0].im = i0 + i1;
-                    v1[0].re = r0 - r1; v1[0].im = i0 - i1;
-                    v0[nx].re = r2 + r3; v0[nx].im = i2 + i3;
-                    v1[nx].re = r2 - r3; v1[nx].im = i2 - i3;
-                }
-            }
-        }
-
-        for( ; n < c.factors[0]; )
-        {
-            // do the remaining radix-2 transform
-            n *= 2;
-            dw0 /= 2;
-
-            if(c.haveSSE3)
-            {
-                DFT_VecR2<T> vr2;
-                vr2(dst, c.n, n, dw0, wave);
-            }
-            else
-            {
-                DFT_R2<T> vr2;
-                vr2(dst, c.n, n, dw0, wave);
-            }
-        }
-    }
-
-    // 2. all the other transforms
-    for( f_idx = (c.factors[0]&1) ? 0 : 1; f_idx < c.nf; f_idx++ )
-    {
-        int factor = c.factors[f_idx];
-        nx = n;
-        n *= factor;
-        dw0 /= factor;
-
-        if( factor == 3 )
-        {
-            if(c.haveSSE3)
-            {
-                DFT_VecR3<T> vr3;
-                vr3(dst, c.n, n, dw0, wave);
-            }
-            else
-            {
-                DFT_R3<T> vr3;
-                vr3(dst, c.n, n, dw0, wave);
-            }
-        }
-        else if( factor == 5 )
-        {
-            DFT_R5<T> vr5;
-            vr5(dst, c.n, n, dw0, wave);
-        }
-        else
-        {
-            // radix-"factor" - an odd number
-            int p, q, factor2 = (factor - 1)/2;
-            int d, dd, dw_f = c.tab_size/factor;
-            AutoBuffer<Complex<T> > buf(factor2 * 2);
-            Complex<T>* a = buf.data();
-            Complex<T>* b = a + factor2;
-
-            for( i = 0; i < c.n; i += n )
-            {
-                for( j = 0, dw = 0; j < nx; j++, dw += dw0 )
-                {
-                    Complex<T>* v = dst + i + j;
-                    Complex<T> v_0 = v[0];
-                    Complex<T> vn_0 = v_0;
-
-                    if( j == 0 )
-                    {
-                        for( p = 1, k = nx; p <= factor2; p++, k += nx )
-                        {
-                            T r0 = v[k].re + v[n-k].re;
-                            T i0 = v[k].im - v[n-k].im;
-                            T r1 = v[k].re - v[n-k].re;
-                            T i1 = v[k].im + v[n-k].im;
-
-                            vn_0.re += r0; vn_0.im += i1;
-                            a[p-1].re = r0; a[p-1].im = i0;
-                            b[p-1].re = r1; b[p-1].im = i1;
-                        }
-                    }
-                    else
-                    {
-                        const Complex<T>* wave_ = wave + dw*factor;
-                        d = dw;
-
-                        for( p = 1, k = nx; p <= factor2; p++, k += nx, d += dw )
-                        {
-                            T r2 = v[k].re*wave[d].re - v[k].im*wave[d].im;
-                            T i2 = v[k].re*wave[d].im + v[k].im*wave[d].re;
-
-                            T r1 = v[n-k].re*wave_[-d].re - v[n-k].im*wave_[-d].im;
-                            T i1 = v[n-k].re*wave_[-d].im + v[n-k].im*wave_[-d].re;
-
-                            T r0 = r2 + r1;
-                            T i0 = i2 - i1;
-                            r1 = r2 - r1;
-                            i1 = i2 + i1;
-
-                            vn_0.re += r0; vn_0.im += i1;
-                            a[p-1].re = r0; a[p-1].im = i0;
-                            b[p-1].re = r1; b[p-1].im = i1;
-                        }
-                    }
-
-                    v[0] = vn_0;
-
-                    for( p = 1, k = nx; p <= factor2; p++, k += nx )
-                    {
-                        Complex<T> s0 = v_0, s1 = v_0;
-                        d = dd = dw_f*p;
-
-                        for( q = 0; q < factor2; q++ )
-                        {
-                            T r0 = wave[d].re * a[q].re;
-                            T i0 = wave[d].im * a[q].im;
-                            T r1 = wave[d].re * b[q].im;
-                            T i1 = wave[d].im * b[q].re;
-
-                            s1.re += r0 + i0; s0.re += r0 - i0;
-                            s1.im += r1 - i1; s0.im += r1 + i1;
-
-                            d += dd;
-                            d -= -(d >= c.tab_size) & c.tab_size;
-                        }
-
-                        v[k] = s0;
-                        v[n-k] = s1;
-                    }
-                }
-            }
-        }
-    }
-
-    if( scale != 1 )
-    {
-        T re_scale = scale, im_scale = scale;
-        if( inv )
-            im_scale = -im_scale;
-
-        for( i = 0; i < c.n; i++ )
-        {
-            T t0 = dst[i].re*re_scale;
-            T t1 = dst[i].im*im_scale;
-            dst[i].re = t0;
-            dst[i].im = t1;
-        }
-    }
-    else if( inv )
-    {
-        for( i = 0; i <= c.n - 2; i += 2 )
-        {
-            T t0 = -dst[i].im;
-            T t1 = -dst[i+1].im;
-            dst[i].im = t0;
-            dst[i+1].im = t1;
-        }
-
-        if( i < c.n )
-            dst[c.n-1].im = -dst[c.n-1].im;
-    }
+    runDft(c, src, 1, dst, 1, false);
 }
 
 
@@ -1211,23 +732,21 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 template<typename T> static void
 RealDFT(const OcvDftOptions & c, const T* src, T* dst)
 {
-    int n = c.n;
     int complex_output = c.isComplex;
-    T scale = (T)c.scale;
-    int j;
-    dst += complex_output;
 
     if( c.useIpp )
     {
 #ifdef USE_IPP_DFT
-        if (ippsDFTFwd_RToPack( src, dst, c.ipp_spec, c.ipp_work ) >=0)
+        int n = c.n;
+        T* ipp_dst = dst + complex_output;
+        if (ippsDFTFwd_RToPack( src, ipp_dst, c.ipp_spec, c.ipp_work ) >=0)
         {
             if( complex_output )
             {
-                dst[-1] = dst[0];
-                dst[0] = 0;
+                ipp_dst[-1] = ipp_dst[0];
+                ipp_dst[0] = 0;
                 if( (n & 1) == 0 )
-                    dst[n] = 0;
+                    ipp_dst[n] = 0;
             }
             CV_IMPL_ADD(CV_IMPL_IPP);
             return;
@@ -1235,110 +754,7 @@ RealDFT(const OcvDftOptions & c, const T* src, T* dst)
         setIppErrorStatus();
 #endif
     }
-    CV_Assert( c.tab_size == n );
-
-    if( n == 1 )
-    {
-        dst[0] = src[0]*scale;
-    }
-    else if( n == 2 )
-    {
-        T t = (src[0] + src[1])*scale;
-        dst[1] = (src[0] - src[1])*scale;
-        dst[0] = t;
-    }
-    else if( n & 1 )
-    {
-        dst -= complex_output;
-        Complex<T>* _dst = (Complex<T>*)dst;
-        _dst[0].re = src[0]*scale;
-        _dst[0].im = 0;
-        for( j = 1; j < n; j += 2 )
-        {
-            T t0 = src[c.itab[j]]*scale;
-            T t1 = src[c.itab[j+1]]*scale;
-            _dst[j].re = t0;
-            _dst[j].im = 0;
-            _dst[j+1].re = t1;
-            _dst[j+1].im = 0;
-        }
-        OcvDftOptions sub_c = c;
-        sub_c.isComplex = false;
-        sub_c.isInverse = false;
-        sub_c.noPermute = true;
-        sub_c.scale = 1.;
-        DFT(sub_c, _dst, _dst);
-        if( !complex_output )
-            dst[1] = dst[0];
-    }
-    else
-    {
-        T t0, t;
-        T h1_re, h1_im, h2_re, h2_im;
-        T scale2 = scale*(T)0.5;
-        int n2 = n >> 1;
-
-        c.factors[0] >>= 1;
-
-        OcvDftOptions sub_c = c;
-        sub_c.factors += (c.factors[0] == 1);
-        sub_c.nf -= (c.factors[0] == 1);
-        sub_c.isComplex = false;
-        sub_c.isInverse = false;
-        sub_c.noPermute = false;
-        sub_c.scale = 1.;
-        sub_c.n = n2;
-
-        DFT(sub_c, (Complex<T>*)src, (Complex<T>*)dst);
-
-        c.factors[0] <<= 1;
-
-        t = dst[0] - dst[1];
-        dst[0] = (dst[0] + dst[1])*scale;
-        dst[1] = t*scale;
-
-        t0 = dst[n2];
-        t = dst[n-1];
-        dst[n-1] = dst[1];
-
-        const Complex<T> *wave = (const Complex<T>*)c.wave;
-
-        for( j = 2, wave++; j < n2; j += 2, wave++ )
-        {
-            /* calc odd */
-            h2_re = scale2*(dst[j+1] + t);
-            h2_im = scale2*(dst[n-j] - dst[j]);
-
-            /* calc even */
-            h1_re = scale2*(dst[j] + dst[n-j]);
-            h1_im = scale2*(dst[j+1] - t);
-
-            /* rotate */
-            t = h2_re*wave->re - h2_im*wave->im;
-            h2_im = h2_re*wave->im + h2_im*wave->re;
-            h2_re = t;
-            t = dst[n-j-1];
-
-            dst[j-1] = h1_re + h2_re;
-            dst[n-j-1] = h1_re - h2_re;
-            dst[j] = h1_im + h2_im;
-            dst[n-j] = h2_im - h1_im;
-        }
-
-        if( j <= n2 )
-        {
-            dst[n2-1] = t0*scale;
-            dst[n2] = -t*scale;
-        }
-    }
-
-    if( complex_output && ((n & 1) == 0 || n == 1))
-    {
-        dst[-1] = dst[0];
-        dst[0] = 0;
-        if( n > 1 )
-            dst[n] = 0;
-    }
+    runDft(c, src, 1, dst, 1, complex_output != 0);
 }
 
 /* Inverse FFT of complex conjugate-symmetric vector
@@ -1348,176 +764,35 @@ RealDFT(const OcvDftOptions & c, const T* src, T* dst)
 template<typename T> static void
 CCSIDFT(const OcvDftOptions & c, const T* src, T* dst)
 {
-    int n = c.n;
     int complex_input = c.isComplex;
-    int j, k;
-    T scale = (T)c.scale;
-    T save_s1 = 0.;
-    T t0, t1, t2, t3, t;
-
-    CV_Assert( c.tab_size == n );
 
     if( complex_input )
-    {
         CV_Assert( src != dst );
-        save_s1 = src[1];
-        ((T*)src)[1] = src[0];
-        src++;
-    }
     if( c.useIpp )
     {
 #ifdef USE_IPP_DFT
-        if (ippsDFTInv_PackToR( src, dst, c.ipp_spec, c.ipp_work ) >=0)
+        // IPP expects the packed format; with complex input the packed spectrum is src+1 once
+        // im(0) (always zero) is overwritten with re(0)
+        const T* ipp_src = src;
+        T save_s1 = 0;
+        if( complex_input )
         {
-            if( complex_input )
-                ((T*)src)[0] = (T)save_s1;
+            save_s1 = src[1];
+            ((T*)src)[1] = src[0];
+            ipp_src = src + 1;
+        }
+        IppStatus status = ippsDFTInv_PackToR( ipp_src, dst, c.ipp_spec, c.ipp_work );
+        if( complex_input )
+            ((T*)src)[1] = save_s1;
+        if( status >= 0 )
+        {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return;
         }
-
         setIppErrorStatus();
 #endif
     }
-    if( n == 1 )
-    {
-        dst[0] = (T)(src[0]*scale);
-    }
-    else if( n == 2 )
-    {
-        t = (src[0] + src[1])*scale;
-        dst[1] = (src[0] - src[1])*scale;
-        dst[0] = t;
-    }
-    else if( n & 1 )
-    {
-        Complex<T>* _src = (Complex<T>*)(src-1);
-        Complex<T>* _dst = (Complex<T>*)dst;
-
-        _dst[0].re = src[0];
-        _dst[0].im = 0;
-
-        int n2 = (n+1) >> 1;
-
-        for( j = 1; j < n2; j++ )
-        {
-            int k0 = c.itab[j], k1 = c.itab[n-j];
-            t0 = _src[j].re; t1 = _src[j].im;
-            _dst[k0].re = t0; _dst[k0].im = -t1;
-            _dst[k1].re = t0; _dst[k1].im = t1;
-        }
-
-        OcvDftOptions sub_c = c;
-        sub_c.isComplex = false;
-        sub_c.isInverse = false;
-        sub_c.noPermute = true;
-        sub_c.scale = 1.;
-        sub_c.n = n;
-
-        DFT(sub_c, _dst, _dst);
-        dst[0] *= scale;
-        for( j = 1; j < n; j += 2 )
-        {
-            t0 = dst[j*2]*scale;
-            t1 = dst[j*2+2]*scale;
-            dst[j] = t0;
-            dst[j+1] = t1;
-        }
-    }
-    else
-    {
-        int inplace = src == dst;
-        const Complex<T>* w = (const Complex<T>*)c.wave;
-
-        t = src[1];
-        t0 = (src[0] + src[n-1]);
-        t1 = (src[n-1] - src[0]);
-        dst[0] = t0;
-        dst[1] = t1;
-
-        int n2 = (n+1) >> 1;
-
-        for( j = 2, w++; j < n2; j += 2, w++ )
-        {
-            T h1_re, h1_im, h2_re, h2_im;
-
-            h1_re = (t + src[n-j-1]);
-            h1_im = (src[j] - src[n-j]);
-
-            h2_re = (t - src[n-j-1]);
-            h2_im = (src[j] + src[n-j]);
-
-            t = h2_re*w->re + h2_im*w->im;
-            h2_im = h2_im*w->re - h2_re*w->im;
-            h2_re = t;
-
-            t = src[j+1];
-            t0 = h1_re - h2_im;
-            t1 = -h1_im - h2_re;
-            t2 = h1_re + h2_im;
-            t3 = h1_im - h2_re;
-
-            if( inplace )
-            {
-                dst[j] = t0;
-                dst[j+1] = t1;
-                dst[n-j] = t2;
-                dst[n-j+1]= t3;
-            }
-            else
-            {
-                int j2 = j >> 1;
-                k = c.itab[j2];
-                dst[k] = t0;
-                dst[k+1] = t1;
-                k = c.itab[n2-j2];
-                dst[k] = t2;
-                dst[k+1]= t3;
-            }
-        }
-
-        if( j <= n2 )
-        {
-            t0 = t*2;
-            t1 = src[n2]*2;
-
-            if( inplace )
-            {
-                dst[n2] = t0;
-                dst[n2+1] = t1;
-            }
-            else
-            {
-                k = c.itab[n2];
-                dst[k*2] = t0;
-                dst[k*2+1] = t1;
-            }
-        }
-
-        c.factors[0] >>= 1;
-
-        OcvDftOptions sub_c = c;
-        sub_c.factors += (c.factors[0] == 1);
-        sub_c.nf -= (c.factors[0] == 1);
-        sub_c.isComplex = false;
-        sub_c.isInverse = false;
-        sub_c.noPermute = !inplace;
-        sub_c.scale = 1.;
-        sub_c.n = n2;
-
-        DFT(sub_c, (Complex<T>*)dst, (Complex<T>*)dst);
-
-        c.factors[0] <<= 1;
-
-        for( j = 0; j < n; j += 2 )
-        {
-            t0 = dst[j]*scale;
-            t1 = dst[j+1]*(-scale);
-            dst[j] = t0;
-            dst[j+1] = t1;
-        }
-    }
-    if( complex_input )
-        ((T*)src)[0] = (T)save_s1;
+    runDft(c, src, 1, dst, 1, complex_input != 0);
 }
 
 static void
@@ -3214,9 +2489,10 @@ class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
 {
 public:
     OcvDftOptions opt;
-    int _factors[34];
-    AutoBuffer<uchar> wave_buf;
-    AutoBuffer<int> itab_buf;
+    // the plan is built once in init(), the workspace is allocated once here and reused by
+    // every apply() (zero allocations per transform)
+    DftPlan plan;
+    AutoBuffer<uchar> ws;
 #ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     AutoBuffer<uchar> ippworkbuf;
@@ -3225,21 +2501,16 @@ public:
 public:
     OcvDftBasicImpl()
     {
-        opt.factors = _factors;
     }
     void init(int len, int count, int depth, int flags, bool *needBuffer)
     {
-        int prev_len = opt.n;
-
         int stage = (flags & CV_HAL_DFT_STAGE_COLS) != 0 ? 1 : 0;
-        int complex_elem_size = depth == CV_32F ? sizeof(Complex<float>) : sizeof(Complex<double>);
         opt.isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
         bool real_transform = (flags & CV_HAL_DFT_REAL_OUTPUT) != 0;
         opt.isComplex = (stage == 0) && (flags & CV_HAL_DFT_COMPLEX_OUTPUT) != 0;
         bool needAnotherStage = (flags & CV_HAL_DFT_TWO_STAGE) != 0;
 
         opt.scale = 1;
-        opt.tab_size = len;
         opt.n = len;
 
         opt.useIpp = false;
@@ -3295,38 +2566,19 @@ public:
         }
     #endif
 
-        if (!opt.useIpp)
         {
-            if (len != prev_len)
-            {
-                opt.nf = DFTFactorize( opt.n, opt.factors );
-            }
-            bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
-            if (len != prev_len || (!inplace_transform && opt.isInverse && real_transform))
-            {
-                wave_buf.allocate(opt.n*complex_elem_size);
-                opt.wave = wave_buf.data();
-                itab_buf.allocate(opt.n);
-                opt.itab = itab_buf.data();
-                DFTInit( opt.n, opt.nf, opt.factors, opt.itab, complex_elem_size,
-                         opt.wave, stage == 0 && opt.isInverse && real_transform );
-            }
-            // otherwise reuse the tables calculated on the previous stage
+            // The plan is built even when IPP is enabled: the IPP calls fall back to the generic
+            // code on failure.
+            const DFTKernels& kernels = getDFTKernels(depth);
+            int kind = stage == 0 && real_transform ? (opt.isInverse ? DFT_KIND_C2R : DFT_KIND_R2C)
+                                                    : DFT_KIND_C2C;
+            buildDftPlan(plan, kind, len, depth, kernels.vlanes);
+            ws.allocate(plan.ws_bytes);
+            opt.plan = &plan;
+            opt.kernels = &kernels;
+            opt.workspace = ws.data();
             if (needBuffer)
-            {
-                if( (stage == 0 && ((*needBuffer && !inplace_transform) || (real_transform && (len & 1)))) ||
-                    (stage == 1 && !inplace_transform) )
-                {
-                    *needBuffer = true;
-                }
-            }
-        }
-        else
-        {
-            if (needBuffer)
-            {
-                *needBuffer = false;
-            }
+                *needBuffer = false;   // the engine supports in-place for every kind
         }
 
         {
@@ -3961,176 +3213,37 @@ namespace cv
 /* DCT is calculated using DFT, as described here:
    http://www.ece.utexas.edu/~bevans/courses/ee381k/lectures/09_DCT/lecture9/:
 */
+// DCT-II / DCT-III through the new engine (plan kinds DFT_KIND_DCT / DFT_KIND_IDCT).
+// src_step / dst_step are in bytes.
 template<typename T> static void
-DCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
-     const Complex<T>* dct_wave )
+DCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dst, size_t dst_step )
 {
-    static const T sin_45 = (T)0.70710678118654752440084436210485;
-
-    int n = c.n;
-    int j, n2 = n >> 1;
-
-    src_step /= sizeof(src[0]);
-    dst_step /= sizeof(dst[0]);
-    T* dst1 = dst + (n-1)*dst_step;
-
-    if( n == 1 )
+    if( c.n == 1 )
     {
         dst[0] = src[0];
         return;
     }
-
-    for( j = 0; j < n2; j++, src += src_step*2 )
-    {
-        dft_src[j] = src[0];
-        dft_src[n-j-1] = src[src_step];
-    }
-
-    RealDFT(c, dft_src, dft_dst);
-    src = dft_dst;
-
-    dst[0] = (T)(src[0]*dct_wave->re*sin_45);
-    dst += dst_step;
-    for( j = 1, dct_wave++; j < n2; j++, dct_wave++,
-                                    dst += dst_step, dst1 -= dst_step )
-    {
-        T t0 = dct_wave->re*src[j*2-1] - dct_wave->im*src[j*2];
-        T t1 = -dct_wave->im*src[j*2-1] - dct_wave->re*src[j*2];
-        dst[0] = t0;
-        dst1[0] = t1;
-    }
-
-    dst[0] = src[n-1]*dct_wave->re;
+    runDft(c, src, src_step/sizeof(T), dst, dst_step/sizeof(T), false);
 }
 
-
 template<typename T> static void
-IDCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
-      const Complex<T>* dct_wave)
+IDCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dst, size_t dst_step )
 {
-    static const T sin_45 = (T)0.70710678118654752440084436210485;
-    int n = c.n;
-    int j, n2 = n >> 1;
-
-    src_step /= sizeof(src[0]);
-    dst_step /= sizeof(dst[0]);
-    const T* src1 = src + (n-1)*src_step;
-
-    if( n == 1 )
+    if( c.n == 1 )
     {
         dst[0] = src[0];
         return;
     }
-
-    dft_src[0] = (T)(src[0]*2*dct_wave->re*sin_45);
-    src += src_step;
-    for( j = 1, dct_wave++; j < n2; j++, dct_wave++,
-                                    src += src_step, src1 -= src_step )
-    {
-        T t0 = dct_wave->re*src[0] - dct_wave->im*src1[0];
-        T t1 = -dct_wave->im*src[0] - dct_wave->re*src1[0];
-        dft_src[j*2-1] = t0;
-        dft_src[j*2] = t1;
-    }
-
-    dft_src[n-1] = (T)(src[0]*2*dct_wave->re);
-    CCSIDFT(c, dft_src, dft_dst);
-
-    for( j = 0; j < n2; j++, dst += dst_step*2 )
-    {
-        dst[0] = dft_dst[j];
-        dst[dst_step] = dft_dst[n-j-1];
-    }
+    runDft(c, src, src_step/sizeof(T), dst, dst_step/sizeof(T), false);
 }
 
+typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, size_t src_step,
+                        void* dst, size_t dst_step);
 
-static void
-DCTInit( int n, int elem_size, void* _wave, int inv )
+template<typename T, void (*fn)(const OcvDftOptions&, const T*, size_t, T*, size_t)>
+static void dctWrap(const OcvDftOptions & c, const void* src, size_t src_step, void* dst, size_t dst_step)
 {
-    static const double DctScale[] =
-    {
-    0.707106781186547570, 0.500000000000000000, 0.353553390593273790,
-    0.250000000000000000, 0.176776695296636890, 0.125000000000000000,
-    0.088388347648318447, 0.062500000000000000, 0.044194173824159223,
-    0.031250000000000000, 0.022097086912079612, 0.015625000000000000,
-    0.011048543456039806, 0.007812500000000000, 0.005524271728019903,
-    0.003906250000000000, 0.002762135864009952, 0.001953125000000000,
-    0.001381067932004976, 0.000976562500000000, 0.000690533966002488,
-    0.000488281250000000, 0.000345266983001244, 0.000244140625000000,
-    0.000172633491500622, 0.000122070312500000, 0.000086316745750311,
-    0.000061035156250000, 0.000043158372875155, 0.000030517578125000
-    };
-
-    int i;
-    Complex<double> w, w1;
-    double t, scale;
-
-    if( n == 1 )
-        return;
-
-    CV_Assert( (n&1) == 0 );
-
-    if( (n & (n - 1)) == 0 )
-    {
-        int m;
-        for( m = 0; (unsigned)(1 << m) < (unsigned)n; m++ )
-            ;
-        scale = (!inv ? 2 : 1)*DctScale[m];
-        w1.re = DFTTab[m+2][0];
-        w1.im = -DFTTab[m+2][1];
-    }
-    else
-    {
-        t = 1./(2*n);
-        scale = (!inv ? 2 : 1)*std::sqrt(t);
-        w1.im = sin(-CV_PI*t);
-        w1.re = std::sqrt(1. - w1.im*w1.im);
-    }
-    n >>= 1;
-
-    if( elem_size == sizeof(Complex<double>) )
-    {
-        Complex<double>* wave = (Complex<double>*)_wave;
-
-        w.re = scale;
-        w.im = 0.;
-
-        for( i = 0; i <= n; i++ )
-        {
-            wave[i] = w;
-            t = w.re*w1.re - w.im*w1.im;
-            w.im = w.re*w1.im + w.im*w1.re;
-            w.re = t;
-        }
-    }
-    else
-    {
-        Complex<float>* wave = (Complex<float>*)_wave;
-        CV_Assert( elem_size == sizeof(Complex<float>) );
-
-        w.re = (float)scale;
-        w.im = 0.f;
-
-        for( i = 0; i <= n; i++ )
-        {
-            wave[i].re = (float)w.re;
-            wave[i].im = (float)w.im;
-            t = w.re*w1.re - w.im*w1.im;
-            w.im = w.re*w1.im + w.im*w1.re;
-            w.re = t;
-        }
-    }
-}
-
-
-typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src,
-                        void* dft_dst, void* dst, size_t dst_step, const void* dct_wave);
-
-template<typename T, void (*fn)(const OcvDftOptions&, const T*, size_t, T*, T*, T*, size_t, const Complex<T>*)>
-static void dctWrap(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src, void* dft_dst,
-                    void* dst, size_t dst_step, const void* dct_wave)
-{
-    fn(c, (const T*)src, src_step, (T*)dft_src, (T*)dft_dst, (T*)dst, dst_step, (const Complex<T>*)dct_wave);
+    fn(c, (const T*)src, src_step, (T*)dst, dst_step);
 }
 
 }
@@ -4445,12 +3558,10 @@ class OcvDctImpl CV_FINAL : public hal::DCT2D
 {
 public:
     OcvDftOptions opt;
-
-    int _factors[34];
-    AutoBuffer<uint> wave_buf;
-    AutoBuffer<int> itab_buf;
-
     DCTFunc dct_func;
+    // per-stage plan + workspace, (re)built once per stage length, never per row
+    DftPlan plan;
+    AutoBuffer<uchar> ws;
     bool isRowTransform;
     bool isInverse;
     bool isContinuous;
@@ -4476,12 +3587,9 @@ public:
             dctWrap<double, IDCT<double>>
         };
         dct_func = dct_tbl[(int)isInverse + (depth == CV_64F)*2];
-        opt.nf = 0;
         opt.isComplex = false;
         opt.isInverse = false;
-        opt.noPermute = false;
         opt.scale = 1.;
-        opt.factors = _factors;
 
         if (isRowTransform || height == 1 || (width == 1 && isContinuous))
         {
@@ -4497,12 +3605,9 @@ public:
     {
         CV_IPP_RUN(IPP_VERSION_X100 >= 700 && depth == CV_32F, ippi_DCT_32f(src, src_step, dst, dst_step, width, height, isInverse, isRowTransform))
 
-        AutoBuffer<uchar> dct_wave;
-        AutoBuffer<uchar> src_buf, dst_buf;
-        uchar *src_dft_buf = 0, *dst_dft_buf = 0;
         int prev_len = 0;
         int elem_size = (depth == CV_32F) ? sizeof(float) : sizeof(double);
-        int complex_elem_size = elem_size*2;
+        const DFTKernels& kernels = getDFTKernels(depth);
 
         for(int stage = start_stage ; stage <= end_stage; stage++ )
         {
@@ -4534,43 +3639,24 @@ public:
             }
 
             opt.n = len;
-            opt.tab_size = len;
 
             if( len != prev_len )
             {
                 if( len > 1 && (len & 1) )
                     CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
-
-                opt.nf = DFTFactorize( len, opt.factors );
-                bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
-
-                wave_buf.allocate(len*complex_elem_size);
-                opt.wave = wave_buf.data();
-                itab_buf.allocate(len);
-                opt.itab = itab_buf.data();
-                DFTInit( len, opt.nf, opt.factors, opt.itab, complex_elem_size, opt.wave, isInverse );
-
-                dct_wave.allocate((len/2 + 1)*complex_elem_size);
-                src_buf.allocate(len*elem_size);
-                src_dft_buf = src_buf.data();
-                if(!inplace_transform)
+                if( len > 1 )
                 {
-                    dst_buf.allocate(len*elem_size);
-                    dst_dft_buf = dst_buf.data();
+                    buildDftPlan(plan, isInverse ? DFT_KIND_IDCT : DFT_KIND_DCT, len, depth, kernels.vlanes);
+                    ws.allocate(plan.ws_bytes);
                 }
-                else
-                {
-                    dst_dft_buf = src_buf.data();
-                }
-                DCTInit( len, complex_elem_size, dct_wave.data(), isInverse);
+                opt.plan = &plan;
+                opt.kernels = &kernels;
+                opt.workspace = ws.data();
                 prev_len = len;
             }
-            // otherwise reuse the tables calculated on the previous stage
+            // otherwise reuse the plan built on the previous stage (same length, only the steps differ)
             for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
-            {
-                dct_func( opt, sptr + i*sstep0, sstep1, src_dft_buf, dst_dft_buf,
-                          dptr + i*dstep0, dstep1, dct_wave.data());
-            }
+                dct_func( opt, sptr + i*sstep0, sstep1, dptr + i*dstep0, dstep1 );
             src = dst;
             src_step = dst_step;
         }

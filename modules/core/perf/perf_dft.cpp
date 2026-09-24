@@ -66,4 +66,54 @@ PERF_TEST_P(Size_MatType_Flag, dct, testing::Combine(
     SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
 }
 
+///////////////////////////////////////////// 1D transforms /////////////////////////////////////////////
+
+CV_ENUM(DFT1D_FlagsType, 0, DFT_INVERSE, DFT_SCALE, DFT_COMPLEX_OUTPUT)
+
+typedef tuple<int, MatType, DFT1D_FlagsType, bool> Len_MatType_Flags_Col_t;
+typedef perf::TestBaseWithParam<Len_MatType_Flags_Col_t> Len_MatType_Flags_Col;
+
+// single row (1 x N) or single column (N x 1) vectors, N covers the 2^k, 5-smooth and odd plans
+PERF_TEST_P(Len_MatType_Flags_Col, dft1d, testing::Combine(
+                                    testing::Values(256, 1000, 1024, 4096, 4725, 65536),
+                                    testing::Values(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2),
+                                    DFT1D_FlagsType::all(), testing::Bool()))
+{
+    int len = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int flags = get<2>(GetParam());
+    bool column = get<3>(GetParam());
+
+    Mat src(column ? len : 1, column ? 1 : len, type);
+    Mat dst;
+
+    declare.in(src, WARMUP_RNG).time(20);
+
+    TEST_CYCLE_N(100) dft(src, dst, flags);
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef tuple<int, MatType, DCT_FlagsType> Len_MatType_Flag_t;
+typedef perf::TestBaseWithParam<Len_MatType_Flag_t> Len_MatType_Flag;
+
+PERF_TEST_P(Len_MatType_Flag, dct1d, testing::Combine(
+                                    testing::Values(256, 1000, 1024, 4096, 65536),
+                                    testing::Values(CV_32FC1, CV_64FC1),
+                                    testing::Values(0, DCT_INVERSE)))
+{
+    int len = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int flags = get<2>(GetParam());
+
+    Mat src(1, len, type);
+    Mat dst;
+
+    declare.in(src, WARMUP_RNG).time(20);
+
+    TEST_CYCLE_N(100) dct(src, dst, flags);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
