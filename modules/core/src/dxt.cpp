@@ -2203,8 +2203,14 @@ public:
 
 // 2D transforms (and the multi-row 1D batches) distribute the rows / the column pairs over
 // threads. The per-thread state is the 1D workspace (+ the column buffers); the plans are shared.
-// Below this many elements the transform runs on the calling thread.
-static const size_t DFT_PARALLEL_MIN_ELEMS = 1 << 16;
+// The number of stripes given to parallel_for_ is the estimated cost of the pass
+// (count * len * log2(len), i.e. N log N) divided by an empirically chosen quantum: a 256x256
+// pass gets 1-2 stripes, 512x512 ~5, 1024x1024 ~20.
+static double dftParallelStripes(int count, int len)
+{
+    const double quantum = 0.5e6;
+    return (double)count*len*std::max(std::log((double)len)/std::log(2.), 1.)/quantum;
+}
 
 class OcvDftImpl CV_FINAL : public hal::DFT2D
 {
@@ -2492,7 +2498,8 @@ protected:
             nz = count;
 
         size_t ws_size = basicA ? basicA->workspaceSize() : 0;
-        if( ws_size > 0 && nz > 1 && (size_t)nz*len >= DFT_PARALLEL_MIN_ELEMS )
+        double nstripes = dftParallelStripes(nz, len);
+        if( ws_size > 0 && nz > 1 && nstripes >= 1.5 )
         {
             // every worker gets its own workspace (and row buffer) once per range
             const OcvDftBasicImpl* ctx = basicA;
@@ -2510,7 +2517,7 @@ protected:
                         memcpy( dptr0, dptr + dptr_offset, dst_full_len );
                 }
             };
-            parallel_for_(Range(0, nz), processRows, (double)nz*len/DFT_PARALLEL_MIN_ELEMS);
+            parallel_for_(Range(0, nz), processRows, nstripes);
         }
         else
         {
@@ -2644,7 +2651,8 @@ protected:
 
         size_t ws_size = basicB ? basicB->workspaceSize() : 0;
         int npairs = (b - a + 1)/2;
-        if( ws_size > 0 && npairs > 1 && (size_t)(b - a)*len >= DFT_PARALLEL_MIN_ELEMS )
+        double nstripes = dftParallelStripes(b - a, len);
+        if( ws_size > 0 && npairs > 1 && nstripes >= 1.5 )
         {
             // every worker gets its own column buffers and workspace once per range
             const OcvDftBasicImpl* ctx = basicB;
@@ -2678,7 +2686,7 @@ protected:
                         CopyColumn( cdbuf0, complex_elem_size, dptr, dst_step, len, complex_elem_size );
                 }
             };
-            parallel_for_(Range(0, npairs), processPairs, (double)(b - a)*len/DFT_PARALLEL_MIN_ELEMS);
+            parallel_for_(Range(0, npairs), processPairs, nstripes);
         }
         else
         {
@@ -3737,7 +3745,8 @@ public:
                 prev_len = len;
             }
             // otherwise reuse the plan built on the previous stage (same length, only the steps differ)
-            if( len > 1 && count > 1 && (size_t)count*len >= DFT_PARALLEL_MIN_ELEMS )
+            double nstripes = dftParallelStripes(count, len);
+            if( len > 1 && count > 1 && nstripes >= 1.5 )
             {
                 // the plan is shared, every worker gets its own workspace once per range
                 auto processLines = [&](const Range& range)
@@ -3748,7 +3757,7 @@ public:
                     for( int i = range.start; i < range.end; i++ )
                         dct_func( opt_, sptr + i*sstep0, sstep1, dptr + i*dstep0, dstep1 );
                 };
-                parallel_for_(Range(0, count), processLines, (double)count*len/DFT_PARALLEL_MIN_ELEMS);
+                parallel_for_(Range(0, count), processLines, nstripes);
             }
             else
             {
