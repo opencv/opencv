@@ -419,6 +419,8 @@ public:
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
+            if (stripeStart >= stripeEnd)
+                return;
             const float* coeffsptr = !coeffs.empty() ? &coeffs[0] : 0;
             float* dstptr0 = dst->ptr<float>();
             int blockSize0 = 1 << 12;
