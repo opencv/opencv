@@ -6,7 +6,6 @@
 
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
-#include "aliked_context.hpp"
 #endif
 
 namespace cv
@@ -37,9 +36,64 @@ void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, 
 
 #ifdef HAVE_OPENCV_DNN
 
+static void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
+                                        Size imageSize, int type)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat keypoints = _keypoints.getMat();
+    CV_CheckTypeEQ(keypoints.type(), CV_32FC1, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+    CV_CheckEQ(keypoints.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+
+    float sx = 0.0f, sy = 0.0f, ox = 0.0f, oy = 0.0f;
+    switch (type)
+    {
+    case LG_ALIKED:
+        CV_CheckGT(imageSize.width, 0, "LightGlue keypoint normalization requires a valid image width");
+        CV_CheckGT(imageSize.height, 0, "LightGlue keypoint normalization requires a valid image height");
+        sx = 2.0f / (float)imageSize.width;
+        sy = 2.0f / (float)imageSize.height;
+        ox = oy = -1.0f;
+        break;
+    case LG_DISK:
+        CV_CheckGT(imageSize.width, 1, "DISK LightGlue: image width must be >= 2 for [0,1] normalization");
+        CV_CheckGT(imageSize.height, 1, "DISK LightGlue: image height must be >= 2 for [0,1] normalization");
+        sx = 1.0f / (float)(imageSize.width - 1);
+        sy = 1.0f / (float)(imageSize.height - 1);
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
+    }
+
+    _normalizedKeypoints.create(keypoints.rows, 2, CV_32F);
+    Mat normalized = _normalizedKeypoints.getMat();
+    for (int i = 0; i < keypoints.rows; i++)
+    {
+        const float* src = keypoints.ptr<float>(i);
+        float* dst = normalized.ptr<float>(i);
+        dst[0] = src[0] * sx + ox;
+        dst[1] = src[1] * sy + oy;
+    }
+}
+
+static void normalizeMatcherKeypoints(InputArray keypoints, OutputArray normalizedKeypoints,
+                                      Size imageSize, int type)
+{
+    if (imageSize.width > 0 && imageSize.height > 0)
+        normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, type);
+    else
+    {
+        // Preserve the existing convention for already-normalized coordinates.
+        Mat kpts = keypoints.getMat();
+        CV_CheckTypeEQ(kpts.type(), CV_32FC1, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+        CV_CheckEQ(kpts.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
+        kpts.copyTo(normalizedKeypoints);
+    }
+}
+
 struct LightGluePairContext
 {
-    Mat queryKeypoints;   // Nx2 float (normalized [-1,1] or pixel)
+    Mat queryKeypoints;   // Nx2 float (normalized or pixel)
     Mat trainKeypoints;   // Mx2 float
     Size queryImageSize;
     Size trainImageSize;
@@ -84,7 +138,6 @@ public:
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
-    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE;
 
     // LightGlueMatcher interface
     void setPairInfo(InputArray queryKpts, InputArray trainKpts,
@@ -101,10 +154,15 @@ protected:
                          InputArrayOfArrays masks = noArray(),
                          bool compactResult = false) CV_OVERRIDE;
 
-    void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
-                        const Mat& queryKpts, const Mat& trainKpts,
-                        Size queryImgSize, Size trainImgSize,
-                        std::vector<DMatch>& matches);
+    void setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
+                            const Mat& queryKpts, const Mat& trainKpts,
+                            Size queryImgSize, Size trainImgSize,
+                            int type);
+
+    virtual void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
+                                const Mat& queryKpts, const Mat& trainKpts,
+                                Size queryImgSize, Size trainImgSize,
+                                std::vector<DMatch>& matches) = 0;
 
     bool resolveContext(Mat& queryKpts, Mat& trainKpts,
                         Size& queryImgSize, Size& trainImgSize);
@@ -113,19 +171,6 @@ protected:
     float scoreThreshold;
     LightGluePairContext pairContext;
 };
-
-Ptr<DescriptorMatcher> LightGlueMatcherImpl::clone(bool emptyTrainData) const
-{
-    Ptr<LightGlueMatcherImpl> m = makePtr<LightGlueMatcherImpl>(net, scoreThreshold);
-    // Always copy pairContext - it's matcher state, not train data
-    m->pairContext = pairContext;
-    if (!emptyTrainData)
-    {
-        m->trainDescCollection = trainDescCollection;
-        m->utrainDescCollection = utrainDescCollection;
-    }
-    return m;
-}
 
 void LightGlueMatcherImpl::setPairInfo(InputArray _queryKpts, InputArray _trainKpts,
                                         Size _queryImageSize, Size _trainImageSize)
@@ -156,34 +201,17 @@ bool LightGlueMatcherImpl::resolveContext(Mat& queryKpts, Mat& trainKpts,
     return false;
 }
 
-void LightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
-                                            const Mat& queryKpts, const Mat& trainKpts,
-                                            Size queryImgSize, Size trainImgSize,
-                                            std::vector<DMatch>& matches)
+void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& trainDesc,
+                                               const Mat& queryKpts, const Mat& trainKpts,
+                                               Size queryImgSize, Size trainImgSize,
+                                               int type)
 {
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
-    // Normalize keypoints to [-1, 1] if in pixel coordinates
-    Mat kpts0 = queryKpts.clone();
-    Mat kpts1 = trainKpts.clone();
-
-    if (queryImgSize.width > 0 && queryImgSize.height > 0)
-    {
-        for (int i = 0; i < kpts0.rows; i++)
-        {
-            kpts0.at<float>(i, 0) = kpts0.at<float>(i, 0) / (float)queryImgSize.width * 2.0f - 1.0f;
-            kpts0.at<float>(i, 1) = kpts0.at<float>(i, 1) / (float)queryImgSize.height * 2.0f - 1.0f;
-        }
-    }
-    if (trainImgSize.width > 0 && trainImgSize.height > 0)
-    {
-        for (int i = 0; i < kpts1.rows; i++)
-        {
-            kpts1.at<float>(i, 0) = kpts1.at<float>(i, 0) / (float)trainImgSize.width * 2.0f - 1.0f;
-            kpts1.at<float>(i, 1) = kpts1.at<float>(i, 1) / (float)trainImgSize.height * 2.0f - 1.0f;
-        }
-    }
+    Mat kpts0, kpts1;
+    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);
+    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, type);
 
     // Prepare blobs: [1, N, 2] and [1, N, D]
     int descDim = queryDesc.cols;
@@ -200,35 +228,6 @@ void LightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& train
     net.setInput(kpts1blob, "kpts1");
     net.setInput(desc0blob, "desc0");
     net.setInput(desc1blob, "desc1");
-
-    std::vector<String> outNames = {"matches0", "mscores0"};
-    std::vector<Mat> outs;
-    net.forward(outs, outNames);
-
-    CV_Assert(outs.size() == 2);
-
-    // matches0: [M, 2] int64 - pair indices (kpt0_idx, kpt1_idx)
-    // mscores0: [M] float32 - confidence per pair
-    Mat matchesMat = outs[0];
-    Mat scoresMat = outs[1];
-
-    matches.clear();
-    int nMatches = matchesMat.rows;
-    matches.reserve(nMatches);
-
-    for (int i = 0; i < nMatches; i++)
-    {
-        int qIdx = (int)matchesMat.at<int64_t>(i, 0);
-        int tIdx = (int)matchesMat.at<int64_t>(i, 1);
-        if (qIdx >= 0 && tIdx >= 0 && qIdx < N && tIdx < M)
-        {
-            float score = scoresMat.at<float>(i);
-            if (score >= scoreThreshold)
-            {
-                matches.push_back(DMatch(qIdx, tIdx, 1.0f - score));
-            }
-        }
-    }
 }
 
 void LightGlueMatcherImpl::knnMatchImpl(InputArray _queryDescriptors,
@@ -273,26 +272,188 @@ void LightGlueMatcherImpl::radiusMatchImpl(InputArray, std::vector<std::vector<D
              "radiusMatch is not supported by LightGlueMatcher. Use match() or knnMatch().");
 }
 
-Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath, float scoreThreshold, int backend, int target)
+// ==================== ALIKED variant ====================
+
+class ALIKEDLightGlueMatcherImpl CV_FINAL : public LightGlueMatcherImpl
 {
-    return makePtr<LightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
+public:
+    using LightGlueMatcherImpl::LightGlueMatcherImpl;
+    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE;
+
+protected:
+    void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
+                        const Mat& queryKpts, const Mat& trainKpts,
+                        Size queryImgSize, Size trainImgSize,
+                        std::vector<DMatch>& matches) CV_OVERRIDE;
+};
+
+Ptr<DescriptorMatcher> ALIKEDLightGlueMatcherImpl::clone(bool emptyTrainData) const
+{
+    Ptr<ALIKEDLightGlueMatcherImpl> matcher = makePtr<ALIKEDLightGlueMatcherImpl>(net, scoreThreshold);
+    // Always copy pairContext - it's matcher state, not train data
+    matcher->pairContext = pairContext;
+    if (!emptyTrainData)
+    {
+        matcher->trainDescCollection = trainDescCollection;
+        matcher->utrainDescCollection = utrainDescCollection;
+    }
+    return matcher;
+}
+
+void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
+                                                  const Mat& queryKpts, const Mat& trainKpts,
+                                                  Size queryImgSize, Size trainImgSize,
+                                                  std::vector<DMatch>& matches)
+{
+    int N = queryDesc.rows;
+    int M = trainDesc.rows;
+
+    setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
+                       queryImgSize, trainImgSize, LG_ALIKED);
+
+    std::vector<String> outNames = {"matches0", "mscores0"};
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+
+    CV_Assert(outs.size() == 2);
+
+    // matches0: [M, 2] int64 - pair indices (kpt0_idx, kpt1_idx)
+    // mscores0: [M] float32 - confidence per pair
+    Mat matchesMat = outs[0];
+    Mat scoresMat = outs[1];
+
+    matches.clear();
+    int nMatches = matchesMat.rows;
+    matches.reserve(nMatches);
+
+    for (int i = 0; i < nMatches; i++)
+    {
+        int qIdx = (int)matchesMat.at<int64_t>(i, 0);
+        int tIdx = (int)matchesMat.at<int64_t>(i, 1);
+        if (qIdx >= 0 && tIdx >= 0 && qIdx < N && tIdx < M)
+        {
+            float score = scoresMat.at<float>(i);
+            if (score >= scoreThreshold)
+            {
+                matches.push_back(DMatch(qIdx, tIdx, 1.0f - score));
+            }
+        }
+    }
+}
+
+// ==================== DISK variant ====================
+
+class DISKLightGlueMatcherImpl CV_FINAL : public LightGlueMatcherImpl
+{
+public:
+    using LightGlueMatcherImpl::LightGlueMatcherImpl;
+    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE;
+
+protected:
+    void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
+                        const Mat& queryKpts, const Mat& trainKpts,
+                        Size queryImgSize, Size trainImgSize,
+                        std::vector<DMatch>& matches) CV_OVERRIDE;
+};
+
+Ptr<DescriptorMatcher> DISKLightGlueMatcherImpl::clone(bool emptyTrainData) const
+{
+    Ptr<DISKLightGlueMatcherImpl> matcher = makePtr<DISKLightGlueMatcherImpl>(net, scoreThreshold);
+    // Always copy pairContext - it's matcher state, not train data
+    matcher->pairContext = pairContext;
+    if (!emptyTrainData)
+    {
+        matcher->trainDescCollection = trainDescCollection;
+        matcher->utrainDescCollection = utrainDescCollection;
+    }
+    return matcher;
+}
+
+void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
+                                                const Mat& queryKpts, const Mat& trainKpts,
+                                                Size queryImgSize, Size trainImgSize,
+                                                std::vector<DMatch>& matches)
+{
+    int N = queryDesc.rows;
+    int M = trainDesc.rows;
+
+    setLightGlueInputs(queryDesc, trainDesc, queryKpts, trainKpts,
+                       queryImgSize, trainImgSize, LG_DISK);
+
+    // DISK LightGlue has 4 outputs (bidirectional matches + scores)
+    std::vector<String> outNames = {"matches0", "matches1", "mscores0", "mscores1"};
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+
+    CV_Assert(outs.size() == 4);
+
+    // DISK LightGlue outputs:
+    //   matches0: [1, N] int64 — for each query kpt i, matched train kpt j (or -1)
+    //   matches1: [1, M] int64 — for each train kpt j, matched query kpt i (or -1)
+    //   mscores0: [1, N] float  — confidence per query kpt
+    //   mscores1: [1, M] float  — confidence per train kpt
+    //
+    // ORT engine may drop the batch dim, producing [N] / [M] instead of [1, N] / [1, M].
+    Mat matches0 = outs[0];  // matches0
+    Mat mscores0 = outs[2];  // mscores0
+
+    // Flatten to 1D in case ORT dropped the batch dimension
+    matches0 = matches0.reshape(1, (int)matches0.total());
+    mscores0 = mscores0.reshape(1, (int)mscores0.total());
+
+    CV_Assert(matches0.total() == (size_t)N);
+    CV_Assert(mscores0.total() == (size_t)N);
+
+    matches.clear();
+    matches.reserve(N);
+
+    for (int i = 0; i < N; i++)
+    {
+        int64_t j = matches0.at<int64_t>(i);
+        if (j >= 0 && j < M)
+        {
+            float score = mscores0.at<float>(i);
+            if (score >= scoreThreshold)
+            {
+                matches.push_back(DMatch(i, (int)j, 1.0f - score));
+            }
+        }
+    }
+}
+
+Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
+                                                 float scoreThreshold, int backend, int target,
+                                                 int type)
+{
+    if (type == LG_DISK)
+        return makePtr<DISKLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
+    else if (type == LG_ALIKED)
+        return makePtr<ALIKEDLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
+    CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
 }
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelData,
-                                               float scoreThreshold, int backend, int target)
+                                                 float scoreThreshold, int backend, int target,
+                                                 int type)
 {
-    return makePtr<LightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
+    if (type == LG_DISK)
+        return makePtr<DISKLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
+    else if (type == LG_ALIKED)
+        return makePtr<ALIKEDLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
+    CV_Error(Error::StsBadArg, "Unsupported LightGlue model type");
 }
 
 #else  // !HAVE_OPENCV_DNN
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
-                                                 float scoreThreshold, int backend, int target)
+                                                 float scoreThreshold, int backend, int target,
+                                                 int type)
 {
     CV_UNUSED(modelPath);
     CV_UNUSED(scoreThreshold);
     CV_UNUSED(backend);
     CV_UNUSED(target);
+    CV_UNUSED(type);
     CV_Error(cv::Error::StsNotImplemented,
              "LightGlueMatcher requires OpenCV built with opencv_dnn module!");
 }

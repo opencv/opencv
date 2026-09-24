@@ -262,8 +262,10 @@ protected:
 /** @brief Features matcher that adapts LightGlueMatcher (DescriptorMatcher) to the
 stitching pipeline's FeaturesMatcher interface.
 
-This matcher uses DNN-based LightGlue for feature matching, requiring ALIKED-style
-keypoints with spatial context for positional encoding.
+This matcher uses DNN-based LightGlue for feature matching. The wrapped
+LightGlueMatcher controls which feature type and keypoint normalization are used.
+ImageFeatures must contain compatible descriptors, keypoints, and image sizes for
+the selected LightGlue model.
 
 @sa cv::detail::FeaturesMatcher cv::LightGlueMatcher
  */
