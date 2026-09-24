@@ -4018,6 +4018,17 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
                      saturate_cast<int>(ssize.height*inv_scale_y));
         CV_Assert( !dsize.empty() );
+        // The rounded dsize may not correspond exactly to the requested factor
+        // (e.g. 55*0.5 -> 28, but 28/55 != 0.5). Recompute the scale from the
+        // realized size so that all back ends (CPU, OpenCL, HAL) generate the
+        // same sample coordinates, consistent with the dsize-given branch
+        // below. INTER_AREA derives its accumulation window from the requested
+        // factor and is excluded (see computeResizeAreaTab).
+        if (interpolation != INTER_AREA)
+        {
+            inv_scale_x = (double)dsize.width/ssize.width;
+            inv_scale_y = (double)dsize.height/ssize.height;
+        }
     }
     else
     {
