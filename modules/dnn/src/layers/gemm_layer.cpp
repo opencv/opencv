@@ -341,8 +341,8 @@ public:
             }
 #endif
             if (!mlas_packed) {
-                fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-
+                // forward() prefers thin_packed_B whenever it is non-empty, so a generic pack
+                // built beside it would be a second N*K copy of B that no kernel ever loads.
                 if (!trans_a && blobs[0].type() == CV_32F) {
                     std::vector<Mat> outputs;
                     outputs_arr.getMatVector(outputs);
@@ -362,6 +362,8 @@ public:
                         }
                     }
                 }
+                if (thin_packed_B.empty())
+                    fastGemmPackB(blobs[0], packed_B, trans_b, opt);
             }
 
             last_packed_blob_data = blobs[0].data;
@@ -369,15 +371,20 @@ public:
             // The packed copy is what the kernels read from here on; the original is dead weight.
             // A layer built outside a Net holds the only copy, so it keeps it.
             Net::Impl* netimpl = getNetImpl(this);
-            if (blobs[0].type() == CV_32F && (mlas_packed || !packed_B.empty()) &&
+            if (blobs[0].type() == CV_32F &&
+                (mlas_packed || !packed_B.empty() || !thin_packed_B.empty()) &&
                 netimpl && netimpl->mainGraph) {
                 wshape0 = shape(blobs[0]);
 #ifdef HAVE_CUDA
-                // initCUDA() runs lazily after finalize(), so it needs its own copy
-                if (origWeights.empty() && supportBackend(DNN_BACKEND_CUDA))
-                    blobs[0].convertTo(origWeights, CV_32F);
+                // initCUDA() reads B after finalize(), so keep it only when this net targets
+                // CUDA; a CPU net on a CUDA build frees it like any other.
+                if (origWeights.empty() && netimpl->preferableBackend == DNN_BACKEND_CUDA &&
+                    supportBackend(DNN_BACKEND_CUDA))
+                    origWeights = blobs[0];
 #endif
                 blobs[0].release();
+                // A recycled address would compare equal and skip the repack.
+                last_packed_blob_data = nullptr;
             }
         }
 
@@ -538,11 +545,11 @@ public:
                 }
             }
 #endif
-            CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             if (!thin_packed_B.empty()) {
                 fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
                              thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
             } else {
+                CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
                 fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
             }
         } else {

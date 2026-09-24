@@ -267,6 +267,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 netimpl && netimpl->mainGraph) {
                 wshape0 = shape(blobs[0]);
                 blobs[0].release();
+                // A recycled address would compare equal and skip the repack.
+                last_packed_input_B_data = nullptr;
             }
         }
 

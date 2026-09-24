@@ -853,6 +853,10 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Returns parameter blob of the layer.
          *  @param layer name or id of the layer.
          *  @param numParam index of the layer parameter in the Layer::blobs array.
+         *  @note With ENGINE_OPENCV, the constant weight of MatMul, Gemm and Attention layers is
+         *  released once packed, during the first forward(); getParam() then returns an empty Mat.
+         *  A net targeting CUDA keeps the weight for initCUDA(), so selecting DNN_BACKEND_CUDA
+         *  after a forward requires reloading the model.
          *  @see Layer::blobs
          */
         CV_WRAP Mat getParam(int layer, int numParam = 0) const;

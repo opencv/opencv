@@ -901,7 +901,8 @@ void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
 void ONNXImporter2::collectPackedInitializers(const opencv_onnx::GraphProto& graph_proto)
 {
     static const std::set<std::string> packing_ops = {
-        "MatMul", "Gemm", "Conv", "ConvTranspose", "Attention", "LSTM", "GRU", "RNN"
+        "MatMul", "Gemm", "Conv", "ConvTranspose", "Attention", "MultiHeadAttention",
+        "LSTM", "GRU", "RNN"
     };
     for (int i = 0; i < graph_proto.node_size(); i++)
     {

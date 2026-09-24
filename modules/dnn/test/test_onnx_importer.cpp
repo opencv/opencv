@@ -2385,6 +2385,69 @@ TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
                  cv::Exception);
 }
 
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReleasedOncePacked)
+{
+    Net net = readNetFromONNX(_tf("models/gemm_vector_bias.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int gemm = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "Gemm")
+            gemm = id;
+    }
+    ASSERT_GE(gemm, 0);
+    EXPECT_FALSE(net.getParam(gemm, 0).empty());
+    EXPECT_FALSE(net.getParam(gemm, 1).empty());
+
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it.
+    EXPECT_EQ(net.getParam(gemm, 0).empty(), backend != DNN_BACKEND_CUDA);
+    EXPECT_FALSE(net.getParam(gemm, 1).empty());
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
+{
+    const String model = _tf("models/gemm_vector_bias.onnx");
+    Mat big(16, 6, CV_32F), small(3, 6, CV_32F);
+    randu(big, -1.0, 1.0);
+    randu(small, -1.0, 1.0);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    // Forward the large shape first: the thin pack is built only for small M and never re-checked.
+    net.setInput(big);
+    Mat big_first = net.forward().clone();
+    net.setInput(small);
+    Mat small_out = net.forward().clone();
+    net.setInput(big);
+    Mat big_again = net.forward().clone();
+
+    Net fresh_big = readNetFromONNX(model);
+    fresh_big.setPreferableBackend(backend);
+    fresh_big.setPreferableTarget(target);
+    fresh_big.setInput(big);
+    normAssert(big_first, fresh_big.forward());
+    normAssert(big_again, big_first);
+
+    Net fresh_small = readNetFromONNX(model);
+    fresh_small.setPreferableBackend(backend);
+    fresh_small.setPreferableTarget(target);
+    fresh_small.setInput(small);
+    normAssert(small_out, fresh_small.forward());
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
