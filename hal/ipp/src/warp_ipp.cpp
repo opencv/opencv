@@ -105,13 +105,9 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
-    // Zeroed entries diverge:
-    //   16S LINEAR, 64F - 16S LINEAR differs on 94-99% of pixels (maxdiff 77..106); 64F NEAREST
-    //               differs on ~0.1% of pixels (maxdiff ~3900): IW falls back to a different code path.
-    //   C2        - not implemented by IPP IW yet.
-    //   8S, 32S   - not supported by cv::warpAffine itself.
-    //   CUBIC     - never reaches the HAL: genericWarp() in imgwarp.cpp handles
-    //               INTER_CUBIC before hal::warpAffine() is called.
+    // Columns per type: { NEAREST, LINEAR, CUBIC }. Zeroed = IPP declines, OpenCV is used:
+    // 16S LINEAR (diverges 94-99%), 64F/C2 (no IPP support), 8S/32S (not in cv::warpAffine),
+    // CUBIC (handled by genericWarp before the HAL).
                                      /* C1         C2         C3         C4 */
     char impl[CV_DEPTH_MAX][4][3]={{{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //8U
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
@@ -249,18 +245,15 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                                    {{1, 1}, {0, 0}, {1, 1}, {1, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
-    // Zeroed entries diverge:
-    //   NEAREST for 8U/16U/32F - differs on a handful of pixels (1 per channel) where
-    //               the sample coordinate lands exactly on a .5 boundary and IPP rounds
-    //               the opposite way from cvRound(); maxdiff is a full pixel value.
-    //   LINEAR for 16S - differs on 90-97% of pixels (maxdiff 92..100).
-    //   C2        - not implemented by IPP IW, always declines.
-    //   8S, 32S, 64F - unsupported: rejected by the src_type check above.
+    // Columns per type: { NEAREST, LINEAR }. Zeroed = IPP declines, OpenCV is used:
+    // 16S LINEAR (IPP diverges from OpenCV); NEAREST for 8U/16U and 32F C3/C4 (IPP rounds the .5
+    // boundary opposite cvRound); C2/8S/32S/64F unsupported. NEAREST is enabled for 16S (all
+    // channels) and 32F C1.
                                     /* C1      C2      C3      C4 */
     char impl[CV_DEPTH_MAX][4][2]={{{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //8U
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //8S
                                    {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //16U
-                                   {{1, 0}, {0, 0}, {1, 1}, {1, 0}},   //16S
+                                   {{1, 0}, {0, 0}, {1, 0}, {1, 0}},   //16S
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //32S
                                    {{1, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
