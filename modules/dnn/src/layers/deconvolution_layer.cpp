@@ -592,49 +592,62 @@ public:
             }
 
             std::vector<size_t> tap_begin(ndims), tap_end(ndims), tap_index(ndims);
-
-            for (size_t index = startIndex; index < endIndex; index++)
+            const int last = ndims - 1;
+            const size_t width = output_shape[last];
+            const std::vector<size_t>& x_starts = tap_starts[last];
+            const std::vector<size_t>& x_offsets = tap_offsets[last];
+            size_t index = startIndex;
+            for (size_t row = startIndex / width; index < endIndex; row++)
             {
-                size_t idx = index;
-                size_t col_offset = 0;
-                bool has_taps = true;
-                for (int d = ndims - 1; d >= 0; d--)
+                size_t idx = row;
+                size_t row_offset = 0;
+                bool has_outer_taps = true;
+                for (int d = last - 1; d >= 0; d--)
                 {
                     const size_t coord = idx % output_shape[d];
                     idx /= output_shape[d];
                     tap_index[d] = tap_begin[d] = tap_starts[d][coord];
                     tap_end[d] = tap_starts[d][coord + 1];
                     if (tap_begin[d] == tap_end[d])
-                        has_taps = false;
+                        has_outer_taps = false;
                     else
-                        col_offset += tap_offsets[d][tap_begin[d]];
+                        row_offset += tap_offsets[d][tap_begin[d]];
                 }
-                col_offset += idx * column_channel_stride;
+                row_offset += idx * column_channel_stride;
+                const float bias = biasvec_[idx];
+                const size_t row_start = row * width;
+                const size_t row_end = std::min(row_start + width, endIndex);
 
-                float val = 0.0f;
-                if (has_taps)
+                for (size_t x = index - row_start; index < row_end; x++, index++)
                 {
-                    // Visit valid taps in the same order as the original nested kernel loops.
-                    for (;;)
+                    tap_index[last] = tap_begin[last] = x_starts[x];
+                    tap_end[last] = x_starts[x + 1];
+                    float val = 0.0f;
+                    if (has_outer_taps && tap_begin[last] != tap_end[last])
                     {
-                        val += data_col_[col_offset];
-                        int d = ndims - 1;
-                        for (; d >= 0; d--)
+                        size_t col_offset = row_offset + x_offsets[tap_begin[last]];
+                        // Keep the sum order. The last axis changes first.
+                        for (;;)
                         {
-                            col_offset -= tap_offsets[d][tap_index[d]];
-                            if (++tap_index[d] < tap_end[d])
+                            val += data_col_[col_offset];
+                            int d = last;
+                            for (; d >= 0; d--)
                             {
+                                col_offset -= tap_offsets[d][tap_index[d]];
+                                if (++tap_index[d] < tap_end[d])
+                                {
+                                    col_offset += tap_offsets[d][tap_index[d]];
+                                    break;
+                                }
+                                tap_index[d] = tap_begin[d];
                                 col_offset += tap_offsets[d][tap_index[d]];
-                                break;
                             }
-                            tap_index[d] = tap_begin[d];
-                            col_offset += tap_offsets[d][tap_index[d]];
+                            if (d < 0)
+                                break;
                         }
-                        if (d < 0)
-                            break;
                     }
+                    data_im_[index] = val + bias;
                 }
-                data_im_[index] = val + biasvec_[idx];
             }
         }
     };
