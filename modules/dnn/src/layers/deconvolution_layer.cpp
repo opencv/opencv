@@ -655,12 +655,20 @@ public:
                 size_t idx = row;
                 size_t row_offset = 0;
                 bool has_outer_taps = true;
+#if CV_SIMD128
+                int last_outer_axis = -1;
+#endif
                 for (int d = last - 1; d >= 0; d--)
                 {
                     const size_t coord = idx % output_shape[d];
                     idx /= output_shape[d];
                     tap_index[d] = tap_begin[d] = tap_starts[d][coord];
                     tap_end[d] = tap_starts[d][coord + 1];
+#if CV_SIMD128
+                    // Skip trailing outer axes that have only one tap.
+                    if (last_outer_axis < 0 && tap_end[d] > tap_begin[d] + 1)
+                        last_outer_axis = d;
+#endif
                     if (tap_begin[d] == tap_end[d])
                         has_outer_taps = false;
                     else
@@ -682,7 +690,7 @@ public:
                         {
                             for (size_t k = x_starts[x]; k < x_starts[x + 1]; k++)
                                 val = v_add(val, v_load(data_col_ + offset + x_offsets[k] + input_offset));
-                        } while (next_tap(offset, tap_index, tap_begin, tap_end, last - 1));
+                        } while (next_tap(offset, tap_index, tap_begin, tap_end, last_outer_axis));
                     }
                     return v_add(val, vbias);
                 };
