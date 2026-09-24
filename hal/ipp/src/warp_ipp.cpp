@@ -106,9 +106,8 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
     // Zeroed entries diverge:
-    //   16S, 64F  - LINEAR differs on 94-99% of pixels (maxdiff 77..106) and NEAREST
-    //               differs on ~0.1% of pixels (maxdiff ~3900): IPP has no 16S/64F
-    //               warp of its own, so IW falls back to a different code path.
+    //   16S LINEAR, 64F - 16S LINEAR differs on 94-99% of pixels (maxdiff 77..106); 64F NEAREST
+    //               differs on ~0.1% of pixels (maxdiff ~3900): IW falls back to a different code path.
     //   C2        - not implemented by IPP IW yet.
     //   8S, 32S   - not supported by cv::warpAffine itself.
     //   CUBIC     - never reaches the HAL: genericWarp() in imgwarp.cpp handles
@@ -117,7 +116,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
     char impl[CV_DEPTH_MAX][4][3]={{{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //8U
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //16U
-                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
+                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
@@ -261,9 +260,9 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
     char impl[CV_DEPTH_MAX][4][2]={{{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //8U
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //8S
                                    {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //16U
-                                   {{1, 0}, {0, 0}, {1, 0}, {1, 0}},   //16S
+                                   {{1, 0}, {0, 0}, {1, 1}, {1, 0}},   //16S
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //32S
-                                   {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
+                                   {{1, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #endif
 
