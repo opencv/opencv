@@ -869,7 +869,6 @@ TEST(Core_Allocation, alignedAllocation)
 }
 
 
-#if !(defined(__GNUC__) && __GNUC__ < 5)  // GCC 4.8 emits: 'is_trivially_copyable' is not a member of 'std'
 TEST(Core_Types, trivially_copyable)
 {
     EXPECT_TRUE(std::is_trivially_copyable<cv::Complexd>::value);
@@ -889,7 +888,6 @@ TEST(Core_Types, trivially_copyable_extra)
     EXPECT_TRUE(std::is_trivially_copyable<cv::TermCriteria>::value);
     EXPECT_TRUE(std::is_trivially_copyable<cv::Moments>::value);
 }
-#endif
 
 template <typename T> class Rect_Test : public testing::Test {};
 

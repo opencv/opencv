@@ -90,11 +90,9 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #ifdef CV_Func
 // keep current value (through OpenCV port file)
-#elif defined __GNUC__ || (defined (__cpluscplus) && (__cpluscplus >= 201103))
+#elif defined __GNUC__ || defined __clang__ || defined __cplusplus
 #define CV_Func __func__
-#elif defined __clang__ && (__clang_minor__ * 100 + __clang_major__ >= 305)
-#define CV_Func __func__
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION >= 199901)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
 #define CV_Func __func__
 #elif defined _MSC_VER
 #define CV_Func __FUNCTION__
@@ -114,36 +112,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CVAUX_CONCAT_EXP(a, b) a##b
 #define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
 
-#if defined(__clang__)
-#  ifndef __has_extension
-#    define __has_extension __has_feature /* compatibility, for older versions of clang */
-#  endif
-#  if __has_extension(cxx_static_assert)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  elif __has_extension(c_static_assert)
-#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(__GNUC__)
-#  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(_MSC_VER)
-#  if _MSC_VER >= 1600 /* MSVC 10 */
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#endif
-#ifndef CV_StaticAssert
-#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
-#    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
-#  else
-namespace cv {
-     template <bool x> struct CV_StaticAssert_failed;
-     template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
-     template<int x> struct CV_StaticAssert_test {};
-}
-#    define CV_StaticAssert(condition, reason)\
-       typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
-#  endif
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)
+#  define CV_StaticAssert(condition, reason) static_assert((condition), reason " " #condition)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#  define CV_StaticAssert(condition, reason) _Static_assert((condition), reason " " #condition)
+#else
+#  define CV_StaticAssert(condition, reason)
 #endif
 
 // Suppress warning "-Wdeprecated-declarations" / C4996
@@ -220,7 +194,7 @@ namespace cv {
 #endif
 
 #ifndef CV_ALWAYS_INLINE
-#if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
+#if defined(__GNUC__)
 #define CV_ALWAYS_INLINE inline __attribute__((always_inline))
 #elif defined(_MSC_VER)
 #define CV_ALWAYS_INLINE __forceinline
@@ -437,7 +411,7 @@ Cv64suf;
 #ifndef CV_EXPORTS
 # if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined(CVAPI_EXPORTS)
 #   define CV_EXPORTS __declspec(dllexport)
-# elif defined __GNUC__ && __GNUC__ >= 4 && (defined(CVAPI_EXPORTS) || defined(__APPLE__))
+# elif defined __GNUC__ && (defined(CVAPI_EXPORTS) || defined(__APPLE__))
 #   define CV_EXPORTS __attribute__ ((visibility ("default")))
 # endif
 #endif
@@ -729,21 +703,10 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 
 #ifdef CV_XADD
   // allow to use user-defined macro
+#elif defined __clang__ && !defined __EMSCRIPTEN__ && !defined __INTEL_COMPILER
+#  define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
 #elif defined __GNUC__ || defined __clang__
-#  if defined __clang__ && __clang_major__ >= 3 && !defined __EMSCRIPTEN__ && !defined __INTEL_COMPILER
-#    ifdef __ATOMIC_ACQ_REL
-#      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
-#    else
-#      define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), delta, 4)
-#    endif
-#  else
-#    if defined __ATOMIC_ACQ_REL && !defined __clang__
-       // version for gcc >= 4.7
-#      define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
-#    else
-#      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
-#    endif
-#  endif
+#  define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
 #elif defined _MSC_VER && !defined RC_INVOKED
 #  include <intrin.h>
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
@@ -785,20 +748,9 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #    else
 #       define CV_NODISCARD_STD [[nodiscard]]
 #    endif
-#  elif __cplusplus >= 201703L
+#  else
 //   available when compiler is C++17 compliant
 #    define CV_NODISCARD_STD [[nodiscard]]
-#  elif defined(__INTEL_COMPILER)
-     // see above, available when C++17 is enabled
-#  elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
-//   available with VS2017 v15.3+ with /std:c++17 or higher; works on functions and classes
-#    define CV_NODISCARD_STD [[nodiscard]]
-#  elif defined(__GNUC__) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 700) && (__cplusplus >= 201103L)
-//   available with GCC 7.0+; works on functions, works or silently fails on classes
-#    define CV_NODISCARD_STD [[nodiscard]]
-#  elif defined(__GNUC__) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 408) && (__cplusplus >= 201103L)
-//   available with GCC 4.8+ but it usually does nothing and can fail noisily -- therefore not used
-//   define CV_NODISCARD_STD [[gnu::warn_unused_result]]
 #  endif
 #endif
 #ifndef CV_NODISCARD_STD
@@ -810,21 +762,11 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 *                                    C++ 11                                              *
 \****************************************************************************************/
 #ifdef __cplusplus
-// MSVC was stuck at __cplusplus == 199711L for a long time, even where it supports C++11,
-// so check _MSC_VER instead. See:
-// <https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus>
-#  if defined(_MSC_VER)
-#    if _MSC_VER < 1800
-#      error "OpenCV 4.x+ requires enabled C++11 support"
-#    endif
-#  elif __cplusplus < 201103L
-#    error "OpenCV 4.x+ requires enabled C++11 support"
+#  if __cplusplus < 201103L && !(defined(_MSC_VER) && _MSVC_LANG >= 201103L)
+#    error "OpenCV 5.x+ requires enabled C++11 support"
 #  endif
 #endif
 
-#ifndef CV_CXX11
-#  define CV_CXX11 1
-#endif
 
 #ifndef CV_OVERRIDE
 #  define CV_OVERRIDE override

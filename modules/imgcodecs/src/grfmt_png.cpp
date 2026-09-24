@@ -110,7 +110,7 @@
 #include "grfmt_png.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
-#if defined _MSC_VER && _MSC_VER >= 1200
+#if defined _MSC_VER
     // interaction between '_setjmp' and C++ object destruction is non-portable
     #pragma warning( disable: 4611 )
     #pragma warning( disable: 4244 )

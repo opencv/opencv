@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <map>
 #include <cstring>
+#include <random>
 
 #include "nn_index.h"
 #include "dynamic_bitset.h"
@@ -143,7 +144,8 @@ public:
 #ifndef OPENCV_FLANN_USE_STD_RAND
             cv::randShuffle(vind_);
 #else
-            std::random_shuffle(vind_.begin(), vind_.end());
+            std::mt19937 std_rng(12345);
+            std::shuffle(vind_.begin(), vind_.end(), std_rng);
 #endif
 
             tree_roots_[i] = divideTree(vind_.data(), int(size_) );

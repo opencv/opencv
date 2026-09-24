@@ -48,12 +48,6 @@
 namespace cv
 {
 
-// On Win64 optimized versions of DFT and DCT fail the tests (fixed in VS2010)
-#if defined _MSC_VER && !defined CV_ICC && defined _M_X64 && _MSC_VER < 1600
-# pragma optimize("", off)
-# pragma warning(disable: 4748)
-#endif
-
 #if IPP_VERSION_X100 >= 710
 #define USE_IPP_DFT 1
 #else

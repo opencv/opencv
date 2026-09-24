@@ -47,7 +47,7 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
-#if defined _MSC_VER && _MSC_VER >= 1200
+#if defined _MSC_VER
 #  pragma warning( disable: 4100 4244 4267 )
 #endif
 

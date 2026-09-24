@@ -78,15 +78,6 @@ endif()
 #   Details: https://protobuf.dev/news/2022-08-03/
 # And if std::text_view is in abseil-cpp requests C++17 and later.
 
-if(HAVE_PROTOBUF)
-  if(NOT (Protobuf_VERSION VERSION_LESS 22))
-    if((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 17))
-      message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} is too old to support protobuf(${Protobuf_VERSION}) and/or abseil-cpp. Use C++17 or later. Turning HAVE_PROTOBUF off")
-      set(HAVE_PROTOBUF FALSE)
-    endif()
-  endif()
-endif()
-
 if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
   message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
 endif()

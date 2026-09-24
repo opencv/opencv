@@ -167,23 +167,13 @@ public:
     //! default constructor
     Point_();
     Point_(_Tp _x, _Tp _y);
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
-    Point_(const Point_& pt);
-    Point_(Point_&& pt) CV_NOEXCEPT = default;
-#elif OPENCV_ABI_COMPATIBILITY < 500
     Point_(const Point_& pt) = default;
     Point_(Point_&& pt) CV_NOEXCEPT = default;
-#endif
     Point_(const Size_<_Tp>& sz);
     Point_(const Vec<_Tp, 2>& v);
 
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
-    Point_& operator = (const Point_& pt);
-    Point_& operator = (Point_&& pt) CV_NOEXCEPT = default;
-#elif OPENCV_ABI_COMPATIBILITY < 500
     Point_& operator = (const Point_& pt) = default;
     Point_& operator = (Point_&& pt) CV_NOEXCEPT = default;
-#endif
     //! conversion to another data type
     template<typename _Tp2> operator Point_<_Tp2>() const;
 
@@ -1204,12 +1194,6 @@ template<typename _Tp> inline
 Point_<_Tp>::Point_(_Tp _x, _Tp _y)
     : x(_x), y(_y) {}
 
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
-template<typename _Tp> inline
-Point_<_Tp>::Point_(const Point_& pt)
-    : x(pt.x), y(pt.y) {}
-#endif
-
 template<typename _Tp> inline
 Point_<_Tp>::Point_(const Size_<_Tp>& sz)
     : x(sz.width), y(sz.height) {}
@@ -1217,15 +1201,6 @@ Point_<_Tp>::Point_(const Size_<_Tp>& sz)
 template<typename _Tp> inline
 Point_<_Tp>::Point_(const Vec<_Tp,2>& v)
     : x(v[0]), y(v[1]) {}
-
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
-template<typename _Tp> inline
-Point_<_Tp>& Point_<_Tp>::operator = (const Point_& pt)
-{
-    x = pt.x; y = pt.y;
-    return *this;
-}
-#endif
 
 template<typename _Tp> template<typename _Tp2> inline
 Point_<_Tp>::operator Point_<_Tp2>() const

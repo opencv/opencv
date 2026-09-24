@@ -305,7 +305,7 @@ function(ocv_include_directories)
     ocv_is_opencv_directory(__is_opencv_dir "${dir}")
     if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
-    elseif(((CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0") OR CV_CLANG) AND
+    elseif((CV_GCC OR CV_CLANG) AND
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()
@@ -359,7 +359,7 @@ function(ocv_target_include_directories target)
     if("${dir}" STREQUAL "SYSTEM")
       set(__var_name __system_params)
     else()
-      if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+      if(CV_GCC AND
           dir MATCHES "/usr/include$")
          # workaround for GCC 6.x bug
       else()

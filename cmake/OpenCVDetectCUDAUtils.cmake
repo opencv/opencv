@@ -405,7 +405,7 @@ macro(ocv_nvcc_flags)
   endif()
 
   # disabled because of multiple warnings during building nvcc auto generated files
-  if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
+  if(CV_GCC)
     ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
   endif()
 endmacro()

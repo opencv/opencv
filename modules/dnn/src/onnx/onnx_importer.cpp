@@ -31,17 +31,12 @@
 #include <algorithm>
 
 
-#if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
-#pragma warning(push)
-#pragma warning(disable: 4503)  // decorated name length exceeded, name was truncated
-#endif
-
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 #include "opencv-onnx.pb.h"
-#if defined(__GNUC__) && __GNUC__ >= 5
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 

@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+#include <random>
 
 namespace cvflann
 {
@@ -127,7 +128,8 @@ public:
 #ifndef OPENCV_FLANN_USE_STD_RAND
         cv::randShuffle(vals_);
 #else
-        std::random_shuffle(vals_.begin(), vals_.end());
+        std::mt19937 std_rng(12345);
+        std::shuffle(vals_.begin(), vals_.end(), std_rng);
 #endif
 
         counter_ = 0;

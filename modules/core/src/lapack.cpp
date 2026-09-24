@@ -58,10 +58,6 @@
 #  include "opencv2/core/eigen.hpp"
 #endif
 
-#if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
-#pragma float_control(precise, on)
-#endif
-
 namespace cv
 {
 

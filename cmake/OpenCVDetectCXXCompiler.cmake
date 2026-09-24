@@ -203,24 +203,11 @@ if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
   ocv_update(CMAKE_CXX_STANDARD 17)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
   ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++17 instead of -std=gnu++17
-  if("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    set(HAVE_CXX11 ON)
-  endif()
-  if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    set(HAVE_CXX17 ON)
-  endif()
 endif()
 
-if(NOT HAVE_CXX11)
-  message(WARNING "OpenCV 5.x requires C++11 support, but it was not detected. Your compilation may fail.")
-endif()
-if(NOT HAVE_CXX17)
-  message(WARNING "OpenCV 5.x requires C++17 support, but it was not detected. Your compilation may fail.")
-endif()
-
-# Debian 10 - GCC 8.3.0
-if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
-  message(WARNING "OpenCV requires GCC >= 8.x (detected ${CMAKE_CXX_COMPILER_VERSION}). Your compilation may fail.")
+# Debian 9 - GCC 7.3.0
+if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+  message(WARNING "OpenCV requires GCC >= 7.x (detected ${CMAKE_CXX_COMPILER_VERSION}). Your compilation may fail.")
 endif()
 
 # Debian 10 - Clang 7.0
@@ -236,12 +223,12 @@ endif()
 # TODO: check other known compilers versions
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
-if(HAVE_CXX11 AND (X86 OR X86_64))
+if(X86 OR X86_64)
   set(__OPENCV_ENABLE_ATOMIC_LONG_LONG ON)
 endif()
 option(OPENCV_ENABLE_ATOMIC_LONG_LONG "Enable C++ compiler support for atomic<long long>" ${__OPENCV_ENABLE_ATOMIC_LONG_LONG})
 
-if((HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG
+if((OPENCV_ENABLE_ATOMIC_LONG_LONG
         AND NOT MSVC
         AND NOT (X86 OR X86_64)
     AND NOT OPENCV_SKIP_LIBATOMIC_COMPILER_CHECK)
@@ -260,6 +247,6 @@ if((HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG
   else()
     set(HAVE_ATOMIC_LONG_LONG ON)
   endif()
-else(HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG)
+else()
   set(HAVE_ATOMIC_LONG_LONG ${OPENCV_ENABLE_ATOMIC_LONG_LONG})
 endif()

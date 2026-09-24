@@ -14,9 +14,7 @@
 
 IF(CV_GCC)
 
-    IF(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.2.0")
-        SET(PCHSupport_FOUND TRUE)
-    ENDIF()
+    SET(PCHSupport_FOUND TRUE)
 
     SET(_PCH_include_prefix "-I")
     SET(_PCH_isystem_prefix "-isystem")
@@ -65,7 +63,7 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
-        elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+        elseif(CV_GCC AND
                item MATCHES "/usr/include$")
           # workaround for GCC 6.x bug
         else()
@@ -78,7 +76,7 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
-        elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+        elseif(CV_GCC AND
                item MATCHES "/usr/include$")
           # workaround for GCC 6.x bug
         else()

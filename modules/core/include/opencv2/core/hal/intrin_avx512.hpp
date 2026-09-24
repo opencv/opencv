@@ -1464,12 +1464,7 @@ inline v_float32x16 v_abs(const v_float32x16& x)
 inline v_float64x8 v_abs(const v_float64x8& x)
 {
 #ifdef _mm512_abs_pd
-    #if defined __GNUC__ && (__GNUC__ < 7 || (__GNUC__ == 7 && __GNUC_MINOR__ <= 3) || (__GNUC__ == 8 && __GNUC_MINOR__ <= 2))
-        // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87476
-        return v_float64x8(_mm512_abs_pd(_mm512_castpd_ps(x.val)));
-    #else
-        return v_float64x8(_mm512_abs_pd(x.val));
-    #endif
+    return v_float64x8(_mm512_abs_pd(x.val));
 #else
     return v_float64x8(_mm512_castsi512_pd(_mm512_and_si512(_mm512_castpd_si512(x.val),
                        _v512_set_epu64(0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF,

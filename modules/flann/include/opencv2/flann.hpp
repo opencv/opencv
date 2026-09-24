@@ -406,7 +406,7 @@ int GenericIndex<Distance>::radiusSearch(const std::vector<ElementType>& query, 
 
     FLANN_DISTANCE_CHECK
 
-    return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
+    return nnIndex->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
 }
 
 template <typename Distance>
@@ -426,7 +426,7 @@ int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& di
 
     FLANN_DISTANCE_CHECK
 
-    return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
+    return nnIndex->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
 }
 
 /**
@@ -502,8 +502,8 @@ public:
         ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
         ::cvflann::Matrix<DistanceType> m_dists(&dists[0], 1, dists.size());
 
-        if (nnIndex_L1) return nnIndex_L1->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
-        if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
+        if (nnIndex_L1) return nnIndex_L1->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
+        if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
     }
 
     CV_DEPRECATED int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
@@ -520,8 +520,8 @@ public:
         CV_Assert(dists.isContinuous());
         ::cvflann::Matrix<DistanceType> m_dists((DistanceType*)dists.ptr<DistanceType>(0), dists.rows, dists.cols);
 
-        if (nnIndex_L1) return nnIndex_L1->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
-        if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
+        if (nnIndex_L1) return nnIndex_L1->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
+        if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,static_cast<float>(radius),searchParams);
     }
 
     CV_DEPRECATED void save(String filename)

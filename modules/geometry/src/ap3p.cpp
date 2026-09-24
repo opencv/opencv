@@ -4,10 +4,6 @@
 
 #include <cmath>
 #include <complex>
-#if defined (_MSC_VER) && (_MSC_VER <= 1700)
-static inline double cbrt(double x) { return (double)cv::cubeRoot((float)x); };
-#endif
-
 namespace {
 void polishQuarticRoots(const double *coeffs, double *roots, int nb_roots) {
     const int iterations = 2;
