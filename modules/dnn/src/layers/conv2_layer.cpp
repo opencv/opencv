@@ -56,9 +56,6 @@ public:
         return static_cast<Conv2LayerImpl*>(self)->foldInputScale(scale, shift);
     }
 
-    //! Below this, thread dispatch costs more than the fold.
-    static const size_t kFoldParallelMin = 100000;
-
     //! conv(scale*x + shift) becomes conv'(x). Every weight copy the layer holds moves.
     bool foldInputScale(const Mat& scale, const Mat& shift)
     {
@@ -101,59 +98,58 @@ public:
         if (ngroups == K && Cg == 1) {
             // depthwise: C1 x ksize x C0, and the input channel is the output channel
             const int ksize = ws[1], C0 = ws[2];
-            for (int ch = 0; ch < K; ch++) {
-                float* w = W + (size_t)(ch / C0) * ksize * C0 + (ch % C0);
-                float sw = 0.f;
-                for (int i = 0; i < ksize; i++) {
-                    sw += w[(size_t)i * C0];
-                    w[(size_t)i * C0] *= sc[ch];
-                }
-                adj[ch] += sh[ch] * sw;
-            }
-        } else {
-            // dense: the offsets are repackConvWeights()'s, which this layer packed with
-            const int Kblk = ws[1], ksize = ws[2], C1Max = ws[3];
-            const int C0 = packC0, K0 = C0, Kg = K / ngroups;
-            const size_t sstride = (size_t)C1Max * C0 * K0;
-            for (int k = 0; k < K; k++) {
-                const int g = k / Kg, kin = k - g * Kg;
-                const int kblk = kin / K0, k0 = kin & (K0 - 1);
-                const int c00 = (g * Cg) & (C0 - 1);
-                for (int c = 0; c < Cg; c++) {
-                    const int ch = c00 + c, c1 = ch / C0, c0 = ch & (C0 - 1);
-                    float* w = W + ((((size_t)(g * Kblk + kblk) * ksize + 0) * C1Max + c1) * C0
-                                    + c0) * K0 + k0;
+            parallel_for_(Range(0, K), [&](const Range& r) {
+                for (int ch = r.start; ch < r.end; ch++) {
+                    float* w = W + (size_t)(ch / C0) * ksize * C0 + (ch % C0);
                     float sw = 0.f;
                     for (int i = 0; i < ksize; i++) {
-                        sw += w[i * sstride];
-                        w[i * sstride] *= sc[g * Cg + c];
+                        sw += w[(size_t)i * C0];
+                        w[(size_t)i * C0] *= sc[ch];
                     }
-                    if (!plain.empty())
-                        plain.ptr<float>(k)[c] = w[0];  // ksize == 1 whenever MLAS armed
-                    adj[k] += sh[g * Cg + c] * sw;
+                    adj[ch] += sh[ch] * sw;
                 }
-            }
+            });
+        } else {
+            const ConvWeightPack pack = ConvWeightPack::forConv(wshape0, ws, ngroups, packC0);
+            const int ksize = pack.ksize;
+            const size_t sstride = pack.tapStride();
+            parallel_for_(Range(0, K), [&](const Range& r) {
+                for (int k = r.start; k < r.end; k++) {
+                    const int cbase = (k / pack.Kg) * Cg;  // first input channel of k's group
+                    for (int c = 0; c < Cg; c++) {
+                        float* w = W + pack.offset(k, c);
+                        float sw = 0.f;
+                        for (int i = 0; i < ksize; i++) {
+                            sw += w[i * sstride];
+                            w[i * sstride] *= sc[cbase + c];
+                        }
+                        if (!plain.empty())
+                            plain.ptr<float>(k)[c] = w[0];  // ksize == 1 whenever MLAS armed
+                        adj[k] += sh[cbase + c] * sw;
+                    }
+                }
+            });
         }
 
         if (!plain.empty() &&
             !mlasSgemmPackB(false, true, K, Cg, plain.ptr<float>(), Cg, mlas_packed_B_.data))
             mlas_packed_B_.release();
 
-#ifdef HAVE_CUDA
         // The CUDA path reads this plain copy instead of the packed one.
         if (!origWeights.empty() && origWeights.type() == CV_32F) {
             Mat w2d = origWeights.reshape(1, K);
             const int Kg = K / ngroups, inner = (int)(origWeights.total() / ((size_t)K * Cg));
-            for (int k = 0; k < K; k++) {
-                float* row = w2d.ptr<float>(k);
-                for (int c = 0; c < Cg; c++) {
-                    float* wc = row + (size_t)c * inner;
-                    for (int i = 0; i < inner; i++)
-                        wc[i] *= sc[(k / Kg) * Cg + c];
+            parallel_for_(Range(0, K), [&](const Range& r) {
+                for (int k = r.start; k < r.end; k++) {
+                    float* row = w2d.ptr<float>(k);
+                    for (int c = 0; c < Cg; c++) {
+                        float* wc = row + (size_t)c * inner;
+                        for (int i = 0; i < inner; i++)
+                            wc[i] *= sc[(k / Kg) * Cg + c];
+                    }
                 }
-            }
+            });
         }
-#endif
 
         if (bias.empty()) {
             bias.fit(1, &K, CV_32F);
@@ -389,6 +385,19 @@ private:
         return false;
     }
 
+    //! Splits one affine term off @p cur into @p out and steps past it.
+    bool splitAffineTerm(const std::vector<FusionNode>& nd, const AdjacencyGraph& g,
+                         int& cur, int K, std::vector<float>& out) const
+    {
+        int other = -1, bufId = -1;
+        float sv = 0.f;
+        if (!splitConstOperand(nd, cur, other, bufId, sv) ||
+            !readPerChannelValues(g, bufId, sv, K, out))
+            return false;
+        cur = other;
+        return true;
+    }
+
     bool readPerChannelValues(const AdjacencyGraph& g, int bufId, float scalarVal, int K,
                        std::vector<float>& out) const
     {
@@ -442,42 +451,45 @@ public:
         return false;
     }
 
-    //! Peels a recognised activation off @p cur. Reports only; the caller commits.
-    void peelActivation(const AdjacencyGraph& g, int& cur, int K,
-                        FastActivation& act, std::vector<float>& ap) const
+    //! Fills locals, not layer members: the match can still be refused after this.
+    bool splitActivation(const AdjacencyGraph& g, int node, int K, int& operand,
+                         FastActivation& act, std::vector<float>& ap) const
     {
         const std::vector<FusionNode>& nd = g.nodes();
-        if (nd[cur].op == FusionEltwiseOp::CLAMP && nd[cur].scalar == 0.f) {
+        if (nd[node].op == FusionEltwiseOp::CLAMP && nd[node].scalar == 0.f) {
             act = FAST_ACTIV_CLIP;
             ap.assign(2, 0.f);
-            ap[1] = nd[cur].scalar2;
-            cur = nd[cur].inputs[0];
-            return;
+            ap[1] = nd[node].scalar2;
+            operand = nd[node].inputs[0];
+            return true;
         }
-        if (nd[cur].op == FusionEltwiseOp::MAX && nd[cur].inputs.size() == 2 &&
-            nd[nd[cur].inputs[1]].op == FusionEltwiseOp::CONST &&
-            nd[nd[cur].inputs[1]].scalar == 0.f) {
+        if (nd[node].op == FusionEltwiseOp::MAX && nd[node].inputs.size() == 2 &&
+            nd[nd[node].inputs[1]].op == FusionEltwiseOp::CONST &&
+            nd[nd[node].inputs[1]].scalar == 0.f) {
             act = FAST_ACTIV_RELU;
-            cur = nd[cur].inputs[0];
-            return;
+            operand = nd[node].inputs[0];
+            return true;
         }
         int leakyOperand = -1, slopeNode = -1;
-        if (!splitLeakyRelu(nd, cur, leakyOperand, slopeNode))
-            return;
+        if (!splitLeakyRelu(nd, node, leakyOperand, slopeNode))
+            return false;
         const FusionNode& sl = nd[slopeNode];
         if (sl.op == FusionEltwiseOp::CONST) {
             act = FAST_ACTIV_LEAKY_RELU;
             ap.assign(1, sl.scalar);
-            cur = leakyOperand;
-        } else if (sl.op == FusionEltwiseOp::PER_CHANNEL_CONST) {
+            operand = leakyOperand;
+            return true;
+        }
+        if (sl.op == FusionEltwiseOp::PER_CHANNEL_CONST) {
             ap.assign(K, 0.f);
             if (readPerChannelValues(g, sl.constBufferId, 0.f, K, ap)) {
                 act = FAST_ACTIV_PRELU;
-                cur = leakyOperand;
-            } else {
-                ap.clear();
+                operand = leakyOperand;
+                return true;
             }
+            ap.clear();
         }
+        return false;
     }
 
     bool absorbMath(const Ptr<AdjacencyGraph>& expr)
@@ -541,7 +553,9 @@ public:
 
         FastActivation act = FAST_ACTIV_NONE;
         std::vector<float> ap;
-        peelActivation(*expr, cur, K, act, ap);
+        int activOperand = -1;
+        if (splitActivation(*expr, cur, K, activOperand, act, ap))
+            cur = activOperand;
         if (act == FAST_ACTIV_CLIP)
             ap[1] *= postScale;
 
@@ -570,24 +584,12 @@ public:
             const int before = cur;
             std::vector<float> s(K, 1.f), t(K, 0.f);
 
-            if (nd[cur].op == FusionEltwiseOp::ADD) {
-                int other = -1, bufId = -1;
-                float sv = 0.f;
-                if (!splitConstOperand(nd, cur, other, bufId, sv))
-                    return false;
-                if (!readPerChannelValues(*expr, bufId, sv, K, t))
-                    return false;
-                cur = other;
-            }
-            if (nd[cur].op == FusionEltwiseOp::MUL) {
-                int other = -1, bufId = -1;
-                float sv = 0.f;
-                if (!splitConstOperand(nd, cur, other, bufId, sv))
-                    return false;
-                if (!readPerChannelValues(*expr, bufId, sv, K, s))
-                    return false;
-                cur = other;
-            }
+            if (nd[cur].op == FusionEltwiseOp::ADD &&
+                !splitAffineTerm(nd, *expr, cur, K, t))
+                return false;
+            if (nd[cur].op == FusionEltwiseOp::MUL &&
+                !splitAffineTerm(nd, *expr, cur, K, s))
+                return false;
             if (cur == before)
                 return false;
 

@@ -134,9 +134,8 @@ struct InstanceNormAffineFusion
                                                     instnorm->inputs[1] = mul_scale_arg;
                                                     instnorm->inputs[2] = add_bias_arg;
                                                 } else {
-                                                    // Channel dim changed (e.g. [1,C,H,W]->[1,1,C*H*W]):
-                                                    // original is global norm + per-channel affine.
-                                                    // Replace with GroupNorm(num_groups=reshaped_C).
+                                                    // [1,C,H,W]->[1,1,C*H*W] folds C into spatial,
+                                                    // so this is global norm + per-channel affine.
                                                     int num_groups = (int)in_scale.total();
                                                     LayerParams gnparams;
                                                     gnparams.name = instnorm->name;

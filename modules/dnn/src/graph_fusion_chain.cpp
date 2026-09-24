@@ -68,14 +68,20 @@ public:
     }
 
 private:
+    //! A per-channel constant the chain carries. Its slot id is the index here, and the
+    //! arena interns that id, so slots are only ever appended or trimmed off the end.
+    struct ConstSlot
+    {
+        Mat   buf;
+        Arg   arg;            //!< default when the layer owns the data
+        uchar perChannel = 0; //!< 1 varies along the channel axis, 0 along the last
+    };
+
     struct ChainCandidate
     {
         vector<int> layerIdx;
-        vector<Arg> constArgs;
         vector<int> rootAfterStep;
-        vector<Mat> constBufs;
-        //! Parallel to constBufs: set for a buffer the layer declared per-channel outright.
-        vector<uchar> constBufPerChannel;
+        vector<ConstSlot> constSlots;
         //! First step's kernel; a chain that lands at one step runs it instead of the DAG.
         FusionKernel singleStepKernel;
         //! Live tensors the steps read, in the order their slots were handed out.
@@ -108,9 +114,7 @@ private:
     //! Releases the slots a refused step claimed, so the next step's ids start where it did.
     static void dropSlotsAfter(ChainCandidate& c, size_t keepBufs, size_t keepTensors)
     {
-        c.constBufs.resize(keepBufs);
-        c.constArgs.resize(keepBufs);
-        c.constBufPerChannel.resize(keepBufs);
+        c.constSlots.resize(keepBufs);
         c.tensorArgs.resize(keepTensors);
     }
 
@@ -125,9 +129,8 @@ private:
         return (int)c.tensorArgs.size() - 1;
     }
 
-    //! The host reads it, so a layer before @p anchor must have produced it, and it must not
-    //! be one the graph still owes its caller. Shape and type belong to the sink: they are
-    //! unknown here, since an intermediate's ArgData is only filled once the graph runs.
+    //! Producer must precede @p anchor and the arg must not be a graph output. No type check:
+    //! an intermediate's ArgData is filled only at run time, so a gate here rejects them all.
     bool isFusableTensorArg(Arg a, size_t anchor) const
     {
         if (a.idx <= 0 || a.idx >= (int)producerOf_.size())
@@ -141,14 +144,14 @@ private:
     //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
     int bufferSlotFor(Arg a, ChainCandidate& c) const
     {
-        for (size_t k = 0; k < c.constArgs.size(); k++) {
-            if (c.constArgs[k].idx == a.idx)
+        // Owned buffers park Arg() in the table, so a real input must never match one.
+        CV_DbgAssert(a.idx != 0);
+        for (size_t k = 0; k < c.constSlots.size(); k++) {
+            if (c.constSlots[k].arg.idx == a.idx)
                 return (int)k;
         }
-        c.constBufs.push_back(net_.argTensor(a));
-        c.constArgs.push_back(a);
-        c.constBufPerChannel.push_back(0);
-        return (int)c.constBufs.size() - 1;
+        c.constSlots.push_back({net_.argTensor(a), a, 0});
+        return (int)c.constSlots.size() - 1;
     }
 
     //! Per-channel data the layer folded into its members has no Arg, so it is slotted here
@@ -164,10 +167,8 @@ private:
         if (out.count + (int)owned.size() > ConstOperand::MAX_CONSTS)
             return false;
         for (const Mat& buf : owned) {
-            c.constBufs.push_back(buf);
-            c.constArgs.push_back(Arg());
-            c.constBufPerChannel.push_back(1);
-            out.consts[out.count++].bufferId = (int)c.constBufs.size() - 1;
+            c.constSlots.push_back({buf, Arg(), 1});
+            out.consts[out.count++].bufferId = (int)c.constSlots.size() - 1;
         }
         return true;
     }
@@ -263,7 +264,7 @@ private:
             if (!ops || !ops->unfold)
                 break;
 
-            const size_t savedBufs = c.constBufs.size();
+            const size_t savedBufs = c.constSlots.size();
             const size_t savedTensors = c.tensorArgs.size();
             ConstOperand side;
             LayerMath r;
@@ -275,9 +276,8 @@ private:
             }
 
             if (r.nodeCount() == 0) {
-                // A kernel states the whole expression, so the step can neither extend a
-                // chain nor be extended, and is taken only as the sole step. chainRoot is
-                // still the arena's INPUT node, which is the expression extract() returns.
+                // A kernel is the whole expression, so it can only be a chain's sole step.
+                // chainRoot stays the arena's INPUT node, which is what extract() returns.
                 if (!r.kernel.fn || !c.rootAfterStep.empty()) {
                     dropSlotsAfter(c, savedBufs, savedTensors);
                     break;
@@ -360,11 +360,20 @@ private:
             if (!sinkOps || !sinkOps->absorb)
                 continue;
 
+            vector<Mat> constBufs;
+            vector<uchar> constBufPerChannel;
+            constBufs.reserve(c.constSlots.size());
+            constBufPerChannel.reserve(c.constSlots.size());
+            for (const ConstSlot& s : c.constSlots) {
+                constBufs.push_back(s.buf);
+                constBufPerChannel.push_back(s.perChannel);
+            }
+
             size_t accepted = 0;
             Ptr<AdjacencyGraph> expr;
             for (size_t n = c.rootAfterStep.size(); n >= 1; n--) {
                 expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1],
-                                       c.constBufs, c.constBufPerChannel, c.tensorArgs);
+                                       constBufs, constBufPerChannel, c.tensorArgs);
                 if (!expr)
                     continue;
                 if (n == 1)

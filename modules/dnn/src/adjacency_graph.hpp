@@ -31,7 +31,6 @@ enum class FusionEltwiseOp
     INPUT,
     CONST,
     PER_CHANNEL_CONST,
-    //! A second runtime tensor: another layer's live output, not a baked buffer.
     TENSOR,
     ADD,
     SUB,
@@ -82,7 +81,7 @@ struct FusionConst
 {
     float value    = 0.f;   //!< the scalar, meaningful only while bufferId and tensorId are < 0
     int   bufferId = -1;    //!< >=0 selects a per-channel buffer, indexes constBufs
-    int   tensorId = -1;    //!< >=0 selects a live tensor, indexes tensorArgs
+    int   tensorId = -1;    //!< >=0 selects another layer's live output, indexes tensorArgs
 
     bool isBuffer() const { return bufferId >= 0; }
     bool isTensor() const { return tensorId >= 0; }
