@@ -1496,6 +1496,55 @@ TEST(Core_DCT, sweep_1d)
     }
 }
 
+// large 2D / DFT_ROWS / DCT transforms go through the parallel path; they must match the
+// single-threaded result (same plan, different workspaces)
+TEST(Core_DFT, parallel_large)
+{
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    int nthreads0 = getNumThreads();
+    static const int sizes[][2] = { {1024, 1024}, {700, 1500}, {1, 1 << 20}, {1 << 18, 1}, {513, 2000} };
+    for (size_t si = 0; si < sizeof(sizes)/sizeof(sizes[0]); si++)
+    {
+        int rows = sizes[si][0], cols = sizes[si][1];
+        for (int depth = CV_32F; depth <= CV_64F; depth += CV_64F - CV_32F)
+        {
+            double thresh = dxtSweepThresh(depth, std::max(rows, cols));
+            for (int cn = 1; cn <= 2; cn++)
+            {
+                static const int flag_sets[] = { 0, DFT_ROWS, DFT_INVERSE | DFT_SCALE, DFT_COMPLEX_OUTPUT,
+                                                 DFT_INVERSE | DFT_SCALE | DFT_REAL_OUTPUT };
+                for (size_t fi = 0; fi < sizeof(flag_sets)/sizeof(flag_sets[0]); fi++)
+                {
+                    int flags = flag_sets[fi];
+                    if ((flags & DFT_COMPLEX_OUTPUT) && cn != 1) continue;
+                    if ((flags & DFT_REAL_OUTPUT) && cn != 2) continue;
+                    SCOPED_TRACE(cv::format("%dx%d depth=%d cn=%d flags=%d", rows, cols, depth, cn, flags));
+                    Mat x = dxtRandom(rng, rows, cols, CV_MAKETYPE(depth, cn)), ref, out;
+                    if ((flags & DFT_INVERSE) && cn == 1)
+                    {
+                        Mat xr = dxtRandom(rng, rows, cols, depth);
+                        cv::dft(xr, x, 0);   // a valid CCS spectrum
+                    }
+                    setNumThreads(1);
+                    cv::dft(x, ref, flags);
+                    setNumThreads(nthreads0);
+                    cv::dft(x, out, flags);
+                    EXPECT_LE(dxtRelDiff(out, ref), thresh);
+                    if (cn == 1 && !(flags & (DFT_INVERSE | DFT_COMPLEX_OUTPUT)) && rows % 2 == 0 && cols % 2 == 0)
+                    {
+                        setNumThreads(1);
+                        cv::dct(x, ref, flags & DFT_ROWS ? DCT_ROWS : 0);
+                        setNumThreads(nthreads0);
+                        cv::dct(x, out, flags & DFT_ROWS ? DCT_ROWS : 0);
+                        EXPECT_LE(dxtRelDiff(out, ref), thresh) << "dct";
+                    }
+                }
+            }
+        }
+    }
+    setNumThreads(nthreads0);
+}
+
 // 2D transform with nonzero_rows (only the first rows of the input are non-zero; the rest is
 // not read on the forward pass, and only the first rows of the output are needed on the inverse)
 TEST(Core_DFT, nonzero_rows)

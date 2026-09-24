@@ -2049,438 +2049,6 @@ inline DftDims determineDims(int rows, int cols, bool isRowWise, bool isContinuo
     return InvalidDim;
 }
 
-class OcvDftImpl CV_FINAL : public hal::DFT2D
-{
-protected:
-    Ptr<hal::DFT1D> contextA;
-    Ptr<hal::DFT1D> contextB;
-    bool needBufferA;
-    bool needBufferB;
-    bool inv;
-    int width;
-    int height;
-    DftMode mode;
-    int elem_size;
-    int complex_elem_size;
-    int depth;
-    bool real_transform;
-    int nonzero_rows;
-    bool isRowTransform;
-    bool isScaled;
-    std::vector<int> stages;
-    bool useIpp;
-    int src_channels;
-    int dst_channels;
-
-    AutoBuffer<uchar> tmp_bufA;
-    AutoBuffer<uchar> tmp_bufB;
-    AutoBuffer<uchar> buf0;
-    AutoBuffer<uchar> buf1;
-
-public:
-    OcvDftImpl()
-    {
-        needBufferA = false;
-        needBufferB = false;
-        inv = false;
-        width = 0;
-        height = 0;
-        mode = InvalidDft;
-        elem_size = 0;
-        complex_elem_size = 0;
-        depth = 0;
-        real_transform = false;
-        nonzero_rows = 0;
-        isRowTransform = false;
-        isScaled = false;
-        useIpp = false;
-        src_channels = 0;
-        dst_channels = 0;
-    }
-
-    void init(int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows)
-    {
-        bool isComplex = _src_channels != _dst_channels;
-        nonzero_rows = _nonzero_rows;
-        width = _width;
-        height = _height;
-        depth = _depth;
-        src_channels = _src_channels;
-        dst_channels = _dst_channels;
-        bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
-        bool isInplace = (flags & CV_HAL_DFT_IS_INPLACE) != 0;
-        bool isContinuous = (flags & CV_HAL_DFT_IS_CONTINUOUS) != 0;
-        mode = determineMode(isInverse, _src_channels, _dst_channels);
-        inv = isInverse;
-        isRowTransform = (flags & CV_HAL_DFT_ROWS) != 0;
-        isScaled = (flags & CV_HAL_DFT_SCALE) != 0;
-        needBufferA = false;
-        needBufferB = false;
-        real_transform = (mode != FwdComplexToComplex && mode != InvComplexToComplex);
-
-        elem_size = (depth == CV_32F) ? sizeof(float) : sizeof(double);
-        complex_elem_size = elem_size * 2;
-        if( !real_transform )
-            elem_size = complex_elem_size;
-
-#if defined USE_IPP_DFT
-        CV_IPP_CHECK()
-        {
-            if (nonzero_rows == 0 && depth == CV_32F && ((width * height)>(int)(1<<6)))
-            {
-                if (mode == FwdComplexToComplex || mode == InvComplexToComplex || mode == FwdRealToCCS || mode == InvCCSToReal)
-                {
-                    useIpp = true;
-                    return;
-                }
-            }
-        }
-#endif
-
-        DftDims dims = determineDims(height, width, isRowTransform, isContinuous);
-        if (dims == TwoDims)
-        {
-            stages.resize(2);
-            if (mode == InvCCSToReal || mode == InvComplexToReal)
-            {
-                stages[0] = 1;
-                stages[1] = 0;
-            }
-            else
-            {
-                stages[0] = 0;
-                stages[1] = 1;
-            }
-        }
-        else
-        {
-            stages.resize(1);
-            if (dims == OneDimColWise)
-                stages[0] = 1;
-            else
-                stages[0] = 0;
-        }
-
-        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
-        {
-            if (stageIndex == 1)
-            {
-                isInplace = true;
-                isComplex = false;
-            }
-
-            int stage = stages[stageIndex];
-            bool isLastStage = (stageIndex + 1 == stages.size());
-
-            int len, count;
-
-            int f = 0;
-            if (inv)
-                f |= CV_HAL_DFT_INVERSE;
-            if (isScaled)
-                f |= CV_HAL_DFT_SCALE;
-            if (isRowTransform)
-                f |= CV_HAL_DFT_ROWS;
-            if (isComplex)
-                f |= CV_HAL_DFT_COMPLEX_OUTPUT;
-            if (real_transform)
-                f |= CV_HAL_DFT_REAL_OUTPUT;
-            if (!isLastStage)
-                f |= CV_HAL_DFT_TWO_STAGE;
-
-            if( stage == 0 ) // row-wise transform
-            {
-                if (width == 1 && !isRowTransform )
-                {
-                    len = height;
-                    count = width;
-                }
-                else
-                {
-                    len = width;
-                    count = height;
-                }
-                needBufferA = isInplace;
-                contextA = hal::DFT1D::create(len, count, depth, f, &needBufferA);
-                if (needBufferA)
-                    tmp_bufA.allocate(len * complex_elem_size);
-            }
-            else
-            {
-                len = height;
-                count = width;
-                f |= CV_HAL_DFT_STAGE_COLS;
-                needBufferB = isInplace;
-                contextB = hal::DFT1D::create(len, count, depth, f, &needBufferB);
-                if (needBufferB)
-                    tmp_bufB.allocate(len * complex_elem_size);
-
-                buf0.allocate(len * complex_elem_size);
-                buf1.allocate(len * complex_elem_size);
-            }
-        }
-    }
-
-    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step) CV_OVERRIDE
-    {
-#if defined USE_IPP_DFT
-        if (useIpp)
-        {
-            int ipp_norm_flag = !isScaled ? 8 : inv ? 2 : 1;
-            if (!isRowTransform)
-            {
-                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
-                {
-                    if (ippi_DFT_C_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
-                {
-                    if (ippi_DFT_R_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-            }
-            else
-            {
-                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
-                {
-                    ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
-                    if (Dft_C_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
-                {
-                    ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
-                    if (Dft_R_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-            }
-            return;
-        }
-#endif
-
-        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
-        {
-            int stage_src_channels = src_channels;
-            int stage_dst_channels = dst_channels;
-
-            if (stageIndex == 1)
-            {
-                src = dst;
-                src_step = dst_step;
-                stage_src_channels = stage_dst_channels;
-            }
-
-            int stage = stages[stageIndex];
-            bool isLastStage = (stageIndex + 1 == stages.size());
-            bool isComplex = stage_src_channels != stage_dst_channels;
-
-            if( stage == 0 )
-                rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
-            else
-                colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
-        }
-    }
-
-protected:
-
-    void rowDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, bool isComplex, bool isLastStage)
-    {
-        int len, count;
-        if (width == 1 && !isRowTransform )
-        {
-            len = height;
-            count = width;
-        }
-        else
-        {
-            len = width;
-            count = height;
-        }
-        int dptr_offset = 0;
-        int dst_full_len = len*elem_size;
-
-        if( needBufferA )
-        {
-            if (mode == FwdRealToCCS && (len & 1) && len > 1)
-                dptr_offset = elem_size;
-        }
-
-        if( !inv && isComplex )
-            dst_full_len += (len & 1) ? elem_size : complex_elem_size;
-
-        int nz = nonzero_rows;
-        if( nz <= 0 || nz > count )
-            nz = count;
-
-        int i;
-        for( i = 0; i < nz; i++ )
-        {
-            const uchar* sptr = src_data + src_step * i;
-            uchar* dptr0 = dst_data + dst_step * i;
-            uchar* dptr = dptr0;
-
-            if( needBufferA )
-                dptr = tmp_bufA.data();
-
-            contextA->apply(sptr, dptr);
-
-            if( needBufferA )
-                memcpy( dptr0, dptr + dptr_offset, dst_full_len );
-        }
-
-        for( ; i < count; i++ )
-        {
-            uchar* dptr0 = dst_data + dst_step * i;
-            memset( dptr0, 0, dst_full_len );
-        }
-        if(isLastStage &&  mode == FwdRealToComplex)
-            complementComplexOutput(depth, dst_data, dst_step, len, nz, 1);
-    }
-
-    void colDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
-    {
-        int len = height;
-        int count = width;
-        int a = 0, b = count;
-        uchar *dbuf0, *dbuf1;
-        const uchar* sptr0 = src_data;
-        uchar* dptr0 = dst_data;
-
-        dbuf0 = buf0.data(), dbuf1 = buf1.data();
-
-        if( needBufferB )
-        {
-            dbuf1 = tmp_bufB.data();
-            dbuf0 = buf1.data();
-        }
-
-        if( real_transform )
-        {
-            int even;
-            a = 1;
-            even = (count & 1) == 0;
-            b = (count+1)/2;
-            if( !inv )
-            {
-                memset( buf0.data(), 0, len*complex_elem_size );
-                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, elem_size );
-                sptr0 += stage_dst_channels*elem_size;
-                if( even )
-                {
-                    memset( buf1.data(), 0, len*complex_elem_size );
-                    CopyColumn( sptr0 + (count-2)*elem_size, src_step,
-                                buf1.data(), complex_elem_size, len, elem_size );
-                }
-            }
-            else if( stage_src_channels == 1 )
-            {
-                CopyColumn( sptr0, src_step, buf0.data(), elem_size, len, elem_size );
-                ExpandCCS( buf0.data(), len, elem_size );
-                if( even )
-                {
-                    CopyColumn( sptr0 + (count-1)*elem_size, src_step,
-                                buf1.data(), elem_size, len, elem_size );
-                    ExpandCCS( buf1.data(), len, elem_size );
-                }
-                sptr0 += elem_size;
-            }
-            else
-            {
-                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
-                if( even )
-                {
-                    CopyColumn( sptr0 + b*complex_elem_size, src_step,
-                                   buf1.data(), complex_elem_size, len, complex_elem_size );
-                }
-                sptr0 += complex_elem_size;
-            }
-
-            if( even )
-                contextB->apply(buf1.data(), dbuf1);
-            contextB->apply(buf0.data(), dbuf0);
-
-            if( stage_dst_channels == 1 )
-            {
-                if( !inv )
-                {
-                    // copy the half of output vector to the first/last column.
-                    // before doing that, defgragment the vector
-                    memcpy( dbuf0 + elem_size, dbuf0, elem_size );
-                    CopyColumn( dbuf0 + elem_size, elem_size, dptr0,
-                                   dst_step, len, elem_size );
-                    if( even )
-                    {
-                        memcpy( dbuf1 + elem_size, dbuf1, elem_size );
-                        CopyColumn( dbuf1 + elem_size, elem_size,
-                                       dptr0 + (count-1)*elem_size,
-                                       dst_step, len, elem_size );
-                    }
-                    dptr0 += elem_size;
-                }
-                else
-                {
-                    // copy the real part of the complex vector to the first/last column
-                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, elem_size );
-                    if( even )
-                        CopyColumn( dbuf1, complex_elem_size, dptr0 + (count-1)*elem_size,
-                                       dst_step, len, elem_size );
-                    dptr0 += elem_size;
-                }
-            }
-            else
-            {
-                CV_Assert( !inv );
-                CopyColumn( dbuf0, complex_elem_size, dptr0,
-                               dst_step, len, complex_elem_size );
-                if( even )
-                    CopyColumn( dbuf1, complex_elem_size,
-                                   dptr0 + b*complex_elem_size,
-                                   dst_step, len, complex_elem_size );
-                dptr0 += complex_elem_size;
-            }
-        }
-
-        for(int i = a; i < b; i += 2 )
-        {
-            if( i+1 < b )
-            {
-                CopyFrom2Columns( sptr0, src_step, buf0.data(), buf1.data(), len, complex_elem_size );
-                contextB->apply(buf1.data(), dbuf1);
-            }
-            else
-                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
-
-            contextB->apply(buf0.data(), dbuf0);
-
-            if( i+1 < b )
-                CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
-            else
-                CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, complex_elem_size );
-            sptr0 += 2*complex_elem_size;
-            dptr0 += 2*complex_elem_size;
-        }
-        if(isLastStage && mode == FwdRealToComplex)
-            complementComplexOutput(depth, dst_data, dst_step, count, len, 2);
-    }
-};
-
 class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
 {
 public:
@@ -2618,7 +2186,525 @@ public:
         opt.dft_func(opt, src, dst);
     }
 
+    // size of a private workspace for applyWithWorkspace() (0 when the IPP path is used)
+    size_t workspaceSize() const { return opt.plan ? plan.ws_bytes : 0; }
+
+    // Same as apply(), but with a caller-provided workspace: several threads may run the same
+    // transform (the plan is immutable) as long as each of them uses its own workspace.
+    void applyWithWorkspace(const uchar *src, uchar *dst, uchar* workspace) const
+    {
+        OcvDftOptions opt_ = opt;
+        opt_.workspace = workspace;
+        opt_.dft_func(opt_, src, dst);
+    }
+
     void free() {}
+};
+
+// 2D transforms (and the multi-row 1D batches) distribute the rows / the column pairs over
+// threads. The per-thread state is the 1D workspace (+ the column buffers); the plans are shared.
+// Below this many elements the transform runs on the calling thread.
+static const size_t DFT_PARALLEL_MIN_ELEMS = 1 << 16;
+
+class OcvDftImpl CV_FINAL : public hal::DFT2D
+{
+protected:
+    Ptr<hal::DFT1D> contextA;
+    Ptr<hal::DFT1D> contextB;
+    const OcvDftBasicImpl* basicA;   // contextA/contextB when they are our own implementation
+    const OcvDftBasicImpl* basicB;   // (parallel path); 0 for external HAL contexts
+    bool needBufferA;
+    bool needBufferB;
+    bool inv;
+    int width;
+    int height;
+    DftMode mode;
+    int elem_size;
+    int complex_elem_size;
+    int depth;
+    bool real_transform;
+    int nonzero_rows;
+    bool isRowTransform;
+    bool isScaled;
+    std::vector<int> stages;
+    bool useIpp;
+    int src_channels;
+    int dst_channels;
+
+    AutoBuffer<uchar> tmp_bufA;
+    AutoBuffer<uchar> tmp_bufB;
+    AutoBuffer<uchar> buf0;
+    AutoBuffer<uchar> buf1;
+
+public:
+    OcvDftImpl()
+    {
+        basicA = basicB = 0;
+        needBufferA = false;
+        needBufferB = false;
+        inv = false;
+        width = 0;
+        height = 0;
+        mode = InvalidDft;
+        elem_size = 0;
+        complex_elem_size = 0;
+        depth = 0;
+        real_transform = false;
+        nonzero_rows = 0;
+        isRowTransform = false;
+        isScaled = false;
+        useIpp = false;
+        src_channels = 0;
+        dst_channels = 0;
+    }
+
+    void init(int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows)
+    {
+        bool isComplex = _src_channels != _dst_channels;
+        nonzero_rows = _nonzero_rows;
+        width = _width;
+        height = _height;
+        depth = _depth;
+        src_channels = _src_channels;
+        dst_channels = _dst_channels;
+        bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
+        bool isInplace = (flags & CV_HAL_DFT_IS_INPLACE) != 0;
+        bool isContinuous = (flags & CV_HAL_DFT_IS_CONTINUOUS) != 0;
+        mode = determineMode(isInverse, _src_channels, _dst_channels);
+        inv = isInverse;
+        isRowTransform = (flags & CV_HAL_DFT_ROWS) != 0;
+        isScaled = (flags & CV_HAL_DFT_SCALE) != 0;
+        needBufferA = false;
+        needBufferB = false;
+        real_transform = (mode != FwdComplexToComplex && mode != InvComplexToComplex);
+
+        elem_size = (depth == CV_32F) ? sizeof(float) : sizeof(double);
+        complex_elem_size = elem_size * 2;
+        if( !real_transform )
+            elem_size = complex_elem_size;
+
+#if defined USE_IPP_DFT
+        CV_IPP_CHECK()
+        {
+            if (nonzero_rows == 0 && depth == CV_32F && ((width * height)>(int)(1<<6)))
+            {
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex || mode == FwdRealToCCS || mode == InvCCSToReal)
+                {
+                    useIpp = true;
+                    return;
+                }
+            }
+        }
+#endif
+
+        DftDims dims = determineDims(height, width, isRowTransform, isContinuous);
+        if (dims == TwoDims)
+        {
+            stages.resize(2);
+            if (mode == InvCCSToReal || mode == InvComplexToReal)
+            {
+                stages[0] = 1;
+                stages[1] = 0;
+            }
+            else
+            {
+                stages[0] = 0;
+                stages[1] = 1;
+            }
+        }
+        else
+        {
+            stages.resize(1);
+            if (dims == OneDimColWise)
+                stages[0] = 1;
+            else
+                stages[0] = 0;
+        }
+
+        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
+        {
+            if (stageIndex == 1)
+            {
+                isInplace = true;
+                isComplex = false;
+            }
+
+            int stage = stages[stageIndex];
+            bool isLastStage = (stageIndex + 1 == stages.size());
+
+            int len, count;
+
+            int f = 0;
+            if (inv)
+                f |= CV_HAL_DFT_INVERSE;
+            if (isScaled)
+                f |= CV_HAL_DFT_SCALE;
+            if (isRowTransform)
+                f |= CV_HAL_DFT_ROWS;
+            if (isComplex)
+                f |= CV_HAL_DFT_COMPLEX_OUTPUT;
+            if (real_transform)
+                f |= CV_HAL_DFT_REAL_OUTPUT;
+            if (!isLastStage)
+                f |= CV_HAL_DFT_TWO_STAGE;
+
+            if( stage == 0 ) // row-wise transform
+            {
+                if (width == 1 && !isRowTransform )
+                {
+                    len = height;
+                    count = width;
+                }
+                else
+                {
+                    len = width;
+                    count = height;
+                }
+                needBufferA = isInplace;
+                contextA = hal::DFT1D::create(len, count, depth, f, &needBufferA);
+                basicA = dynamic_cast<const OcvDftBasicImpl*>(contextA.get());
+                if (needBufferA)
+                    tmp_bufA.allocate(len * complex_elem_size);
+            }
+            else
+            {
+                len = height;
+                count = width;
+                f |= CV_HAL_DFT_STAGE_COLS;
+                needBufferB = isInplace;
+                contextB = hal::DFT1D::create(len, count, depth, f, &needBufferB);
+                basicB = dynamic_cast<const OcvDftBasicImpl*>(contextB.get());
+                if (needBufferB)
+                    tmp_bufB.allocate(len * complex_elem_size);
+
+                buf0.allocate(len * complex_elem_size);
+                buf1.allocate(len * complex_elem_size);
+            }
+        }
+    }
+
+    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step) CV_OVERRIDE
+    {
+#if defined USE_IPP_DFT
+        if (useIpp)
+        {
+            int ipp_norm_flag = !isScaled ? 8 : inv ? 2 : 1;
+            if (!isRowTransform)
+            {
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
+                {
+                    if (ippi_DFT_C_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
+                {
+                    if (ippi_DFT_R_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+            }
+            else
+            {
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
+                {
+                    ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
+                    if (Dft_C_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
+                {
+                    ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
+                    if (Dft_R_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+            }
+            return;
+        }
+#endif
+
+        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
+        {
+            int stage_src_channels = src_channels;
+            int stage_dst_channels = dst_channels;
+
+            if (stageIndex == 1)
+            {
+                src = dst;
+                src_step = dst_step;
+                stage_src_channels = stage_dst_channels;
+            }
+
+            int stage = stages[stageIndex];
+            bool isLastStage = (stageIndex + 1 == stages.size());
+            bool isComplex = stage_src_channels != stage_dst_channels;
+
+            if( stage == 0 )
+                rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
+            else
+                colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
+        }
+    }
+
+protected:
+
+    void rowDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, bool isComplex, bool isLastStage)
+    {
+        int len, count;
+        if (width == 1 && !isRowTransform )
+        {
+            len = height;
+            count = width;
+        }
+        else
+        {
+            len = width;
+            count = height;
+        }
+        int dptr_offset = 0;
+        int dst_full_len = len*elem_size;
+
+        if( needBufferA )
+        {
+            if (mode == FwdRealToCCS && (len & 1) && len > 1)
+                dptr_offset = elem_size;
+        }
+
+        if( !inv && isComplex )
+            dst_full_len += (len & 1) ? elem_size : complex_elem_size;
+
+        int nz = nonzero_rows;
+        if( nz <= 0 || nz > count )
+            nz = count;
+
+        size_t ws_size = basicA ? basicA->workspaceSize() : 0;
+        if( ws_size > 0 && nz > 1 && (size_t)nz*len >= DFT_PARALLEL_MIN_ELEMS )
+        {
+            // every worker gets its own workspace (and row buffer) once per range
+            const OcvDftBasicImpl* ctx = basicA;
+            auto processRows = [&, ctx](const Range& range)
+            {
+                AutoBuffer<uchar> ws(ws_size);
+                AutoBuffer<uchar> rowbuf(needBufferA ? len * complex_elem_size : 0);
+                for( int i = range.start; i < range.end; i++ )
+                {
+                    const uchar* sptr = src_data + src_step * i;
+                    uchar* dptr0 = dst_data + dst_step * i;
+                    uchar* dptr = needBufferA ? rowbuf.data() : dptr0;
+                    ctx->applyWithWorkspace(sptr, dptr, ws.data());
+                    if( needBufferA )
+                        memcpy( dptr0, dptr + dptr_offset, dst_full_len );
+                }
+            };
+            parallel_for_(Range(0, nz), processRows, (double)nz*len/DFT_PARALLEL_MIN_ELEMS);
+        }
+        else
+        {
+            for( int i = 0; i < nz; i++ )
+            {
+                const uchar* sptr = src_data + src_step * i;
+                uchar* dptr0 = dst_data + dst_step * i;
+                uchar* dptr = dptr0;
+
+                if( needBufferA )
+                    dptr = tmp_bufA.data();
+
+                contextA->apply(sptr, dptr);
+
+                if( needBufferA )
+                    memcpy( dptr0, dptr + dptr_offset, dst_full_len );
+            }
+        }
+
+        for( int i = nz; i < count; i++ )
+        {
+            uchar* dptr0 = dst_data + dst_step * i;
+            memset( dptr0, 0, dst_full_len );
+        }
+        if(isLastStage &&  mode == FwdRealToComplex)
+            complementComplexOutput(depth, dst_data, dst_step, len, nz, 1);
+    }
+
+    void colDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
+    {
+        int len = height;
+        int count = width;
+        int a = 0, b = count;
+        uchar *dbuf0, *dbuf1;
+        const uchar* sptr0 = src_data;
+        uchar* dptr0 = dst_data;
+
+        dbuf0 = buf0.data(), dbuf1 = buf1.data();
+
+        if( needBufferB )
+        {
+            dbuf1 = tmp_bufB.data();
+            dbuf0 = buf1.data();
+        }
+
+        if( real_transform )
+        {
+            int even;
+            a = 1;
+            even = (count & 1) == 0;
+            b = (count+1)/2;
+            if( !inv )
+            {
+                memset( buf0.data(), 0, len*complex_elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, elem_size );
+                sptr0 += stage_dst_channels*elem_size;
+                if( even )
+                {
+                    memset( buf1.data(), 0, len*complex_elem_size );
+                    CopyColumn( sptr0 + (count-2)*elem_size, src_step,
+                                buf1.data(), complex_elem_size, len, elem_size );
+                }
+            }
+            else if( stage_src_channels == 1 )
+            {
+                CopyColumn( sptr0, src_step, buf0.data(), elem_size, len, elem_size );
+                ExpandCCS( buf0.data(), len, elem_size );
+                if( even )
+                {
+                    CopyColumn( sptr0 + (count-1)*elem_size, src_step,
+                                buf1.data(), elem_size, len, elem_size );
+                    ExpandCCS( buf1.data(), len, elem_size );
+                }
+                sptr0 += elem_size;
+            }
+            else
+            {
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
+                if( even )
+                {
+                    CopyColumn( sptr0 + b*complex_elem_size, src_step,
+                                   buf1.data(), complex_elem_size, len, complex_elem_size );
+                }
+                sptr0 += complex_elem_size;
+            }
+
+            if( even )
+                contextB->apply(buf1.data(), dbuf1);
+            contextB->apply(buf0.data(), dbuf0);
+
+            if( stage_dst_channels == 1 )
+            {
+                if( !inv )
+                {
+                    // copy the half of output vector to the first/last column.
+                    // before doing that, defgragment the vector
+                    memcpy( dbuf0 + elem_size, dbuf0, elem_size );
+                    CopyColumn( dbuf0 + elem_size, elem_size, dptr0,
+                                   dst_step, len, elem_size );
+                    if( even )
+                    {
+                        memcpy( dbuf1 + elem_size, dbuf1, elem_size );
+                        CopyColumn( dbuf1 + elem_size, elem_size,
+                                       dptr0 + (count-1)*elem_size,
+                                       dst_step, len, elem_size );
+                    }
+                    dptr0 += elem_size;
+                }
+                else
+                {
+                    // copy the real part of the complex vector to the first/last column
+                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, elem_size );
+                    if( even )
+                        CopyColumn( dbuf1, complex_elem_size, dptr0 + (count-1)*elem_size,
+                                       dst_step, len, elem_size );
+                    dptr0 += elem_size;
+                }
+            }
+            else
+            {
+                CV_Assert( !inv );
+                CopyColumn( dbuf0, complex_elem_size, dptr0,
+                               dst_step, len, complex_elem_size );
+                if( even )
+                    CopyColumn( dbuf1, complex_elem_size,
+                                   dptr0 + b*complex_elem_size,
+                                   dst_step, len, complex_elem_size );
+                dptr0 += complex_elem_size;
+            }
+        }
+
+        size_t ws_size = basicB ? basicB->workspaceSize() : 0;
+        int npairs = (b - a + 1)/2;
+        if( ws_size > 0 && npairs > 1 && (size_t)(b - a)*len >= DFT_PARALLEL_MIN_ELEMS )
+        {
+            // every worker gets its own column buffers and workspace once per range
+            const OcvDftBasicImpl* ctx = basicB;
+            size_t colbuf_size = (size_t)len*complex_elem_size;
+            auto processPairs = [&, ctx](const Range& range)
+            {
+                AutoBuffer<uchar> ws(ws_size);
+                AutoBuffer<uchar> cbuf(colbuf_size*(needBufferB ? 4 : 2));
+                uchar* cbuf0 = cbuf.data();
+                uchar* cbuf1 = cbuf0 + colbuf_size;
+                uchar* cdbuf0 = needBufferB ? cbuf1 + colbuf_size : cbuf0;
+                uchar* cdbuf1 = needBufferB ? cdbuf0 + colbuf_size : cbuf1;
+                for( int pi = range.start; pi < range.end; pi++ )
+                {
+                    int i = a + pi*2;
+                    const uchar* sptr = sptr0 + (size_t)pi*2*complex_elem_size;
+                    uchar* dptr = dptr0 + (size_t)pi*2*complex_elem_size;
+                    if( i+1 < b )
+                    {
+                        CopyFrom2Columns( sptr, src_step, cbuf0, cbuf1, len, complex_elem_size );
+                        ctx->applyWithWorkspace(cbuf1, cdbuf1, ws.data());
+                    }
+                    else
+                        CopyColumn( sptr, src_step, cbuf0, complex_elem_size, len, complex_elem_size );
+
+                    ctx->applyWithWorkspace(cbuf0, cdbuf0, ws.data());
+
+                    if( i+1 < b )
+                        CopyTo2Columns( cdbuf0, cdbuf1, dptr, dst_step, len, complex_elem_size );
+                    else
+                        CopyColumn( cdbuf0, complex_elem_size, dptr, dst_step, len, complex_elem_size );
+                }
+            };
+            parallel_for_(Range(0, npairs), processPairs, (double)(b - a)*len/DFT_PARALLEL_MIN_ELEMS);
+        }
+        else
+        {
+            for(int i = a; i < b; i += 2 )
+            {
+                if( i+1 < b )
+                {
+                    CopyFrom2Columns( sptr0, src_step, buf0.data(), buf1.data(), len, complex_elem_size );
+                    contextB->apply(buf1.data(), dbuf1);
+                }
+                else
+                    CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
+
+                contextB->apply(buf0.data(), dbuf0);
+
+                if( i+1 < b )
+                    CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
+                else
+                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, complex_elem_size );
+                sptr0 += 2*complex_elem_size;
+                dptr0 += 2*complex_elem_size;
+            }
+        }
+        if(isLastStage && mode == FwdRealToComplex)
+            complementComplexOutput(depth, dst_data, dst_step, count, len, 2);
+    }
 };
 
 struct ReplacementDFT1D : public hal::DFT1D
@@ -3651,8 +3737,24 @@ public:
                 prev_len = len;
             }
             // otherwise reuse the plan built on the previous stage (same length, only the steps differ)
-            for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
-                dct_func( opt, sptr + i*sstep0, sstep1, dptr + i*dstep0, dstep1 );
+            if( len > 1 && count > 1 && (size_t)count*len >= DFT_PARALLEL_MIN_ELEMS )
+            {
+                // the plan is shared, every worker gets its own workspace once per range
+                auto processLines = [&](const Range& range)
+                {
+                    OcvDftOptions opt_ = opt;
+                    AutoBuffer<uchar> ws_(plan.ws_bytes);
+                    opt_.workspace = ws_.data();
+                    for( int i = range.start; i < range.end; i++ )
+                        dct_func( opt_, sptr + i*sstep0, sstep1, dptr + i*dstep0, dstep1 );
+                };
+                parallel_for_(Range(0, count), processLines, (double)count*len/DFT_PARALLEL_MIN_ELEMS);
+            }
+            else
+            {
+                for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
+                    dct_func( opt, sptr + i*sstep0, sstep1, dptr + i*dstep0, dstep1 );
+            }
             src = dst;
             src_step = dst_step;
         }
