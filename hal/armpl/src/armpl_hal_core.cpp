@@ -11,9 +11,11 @@
 #include <cstring>
 #include <cstdio>
 #include <cmath>
+#include <cfloat>
 
 #define ARMPL_GEMM_MIN_WORK_VOLUME 10000
 #define ARMPL_SVD_SMALL_MATRIX_THRESH 33
+#define ARMPL_SVBACKSUBST_MIN_WORK_VOLUME 10000
 
 namespace {
 
@@ -256,6 +258,70 @@ int armpl_hal_SVD64f(double *src, size_t src_step, double *w, double *u, size_t 
     if (m < ARMPL_SVD_SMALL_MATRIX_THRESH)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return armpl_svd(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
+}
+
+namespace {
+
+static inline bool armpl_svbacksubst_below_min_volume(int m, int n, int nb)
+{
+    return (double)std::min(m, n) * (m + n) * nb < ARMPL_SVBACKSUBST_MIN_WORK_VOLUME;
+}
+
+template <typename fptype> static inline int
+armpl_svbacksubst_impl(const fptype *w, size_t wstep, const fptype *u, size_t ustep,
+                        const fptype *vt, size_t vstep, const fptype *rhs, size_t rhs_step,
+                        fptype *dst, size_t dst_step, int m, int n, int nb)
+{
+    if (armpl_svbacksubst_below_min_volume(m, n, nb))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int nm = std::min(m, n);
+    int ldu = (int)(ustep / sizeof(fptype));
+    int ldv = (int)(vstep / sizeof(fptype));
+    int ldx = (int)(dst_step / sizeof(fptype));
+    int wdelta = wstep ? (int)(wstep / sizeof(fptype)) : 1;
+    int ldb = rhs ? (int)(rhs_step / sizeof(fptype)) : 0;
+
+    std::vector<fptype> t((size_t)nm * nb);
+
+    if (rhs)
+        armpl_cblas_gemm(CblasTrans, CblasNoTrans, nm, nb, m, (fptype)1, u, ldu, rhs, ldb, (fptype)0, t.data(), nb);
+    else
+        armpl_transpose(u, ldu, t.data(), nb, m, nm);
+
+    double threshold = 0;
+    for (int i = 0; i < nm; i++)
+        threshold += w[i*wdelta];
+    threshold *= DBL_EPSILON * 2;
+
+    for (int i = 0; i < nm; i++)
+    {
+        fptype wi = w[i*wdelta];
+        fptype scale = (double)std::abs(wi) <= threshold ? (fptype)0 : (fptype)1 / wi;
+        fptype *trow = t.data() + (size_t)i * nb;
+        for (int j = 0; j < nb; j++)
+            trow[j] *= scale;
+    }
+
+    armpl_cblas_gemm(CblasTrans, CblasNoTrans, n, nb, nm, (fptype)1, vt, ldv, t.data(), nb, (fptype)0, dst, ldx);
+
+    return CV_HAL_ERROR_OK;
+}
+
+}
+
+int armpl_hal_SVBackSubst64f(const double *w, size_t wstep, const double *u, size_t ustep,
+                              const double *vt, size_t vstep, const double *rhs, size_t rhs_step,
+                              double *dst, size_t dst_step, int m, int n, int nb)
+{
+    return armpl_svbacksubst_impl(w, wstep, u, ustep, vt, vstep, rhs, rhs_step, dst, dst_step, m, n, nb);
+}
+
+int armpl_hal_SVBackSubst32f(const float *w, size_t wstep, const float *u, size_t ustep,
+                              const float *vt, size_t vstep, const float *rhs, size_t rhs_step,
+                              float *dst, size_t dst_step, int m, int n, int nb)
+{
+    return armpl_svbacksubst_impl(w, wstep, u, ustep, vt, vstep, rhs, rhs_step, dst, dst_step, m, n, nb);
 }
 
 enum ArmPLDFTMode

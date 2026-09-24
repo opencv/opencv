@@ -116,6 +116,18 @@ int armpl_hal_SVD64f(double* src, size_t src_step, double* w, double* u, size_t 
 #undef  cv_hal_SVD64f
 #define cv_hal_SVD64f armpl_hal_SVD64f
 
+int armpl_hal_SVBackSubst32f(const float* w, size_t wstep, const float* u, size_t ustep,
+                              const float* vt, size_t vstep, const float* rhs, size_t rhs_step,
+                              float* dst, size_t dst_step, int m, int n, int nb);
+int armpl_hal_SVBackSubst64f(const double* w, size_t wstep, const double* u, size_t ustep,
+                              const double* vt, size_t vstep, const double* rhs, size_t rhs_step,
+                              double* dst, size_t dst_step, int m, int n, int nb);
+
+#undef  cv_hal_SVBackSubst32f
+#define cv_hal_SVBackSubst32f armpl_hal_SVBackSubst32f
+#undef  cv_hal_SVBackSubst64f
+#define cv_hal_SVBackSubst64f armpl_hal_SVBackSubst64f
+
 #endif  // HAVE_ARMPL
 
 #endif  // OPENCV_ARMPL_HAL_CORE_HPP
