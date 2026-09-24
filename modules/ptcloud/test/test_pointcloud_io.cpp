@@ -359,4 +359,20 @@ TEST(PointCloud, LoadPlyMalformedElementLine)
     std::remove(path.c_str());
 }
 
+TEST(PointCloud, LoadObjFaceExtraSlashFields)
+{
+    std::string path = tempfile("extra_slash_face.obj");
+    std::ofstream file(path, std::ios::binary);
+    file << "v 0 0 0\nv 1 0 0\nv 0 1 0\n";
+    // a face vertex reference should hold at most v/vt/vn; the extra fields
+    // used to run past the 3-element index array on the stack
+    file << "f 1/1/1/9/9/9/9/9/9/9/9/9/9/9/9/9/9/9/9/9\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    EXPECT_NO_THROW(cv::loadPointCloud(path, points, normals, rgb));
+    EXPECT_EQ(points.size(), size_t(3));
+    std::remove(path.c_str());
+}
+
 }} /* namespace opencv_test */

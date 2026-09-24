@@ -96,7 +96,9 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
             {
                 auto vertexinfo = split(tokens[i], '/');
                 std::array<int, 3> idx = { -1, -1, -1 };
-                for (int j = 0; j < (int)vertexinfo.size(); j++)
+                // a face vertex reference holds at most v/vt/vn; ignore any extra
+                // slash-separated fields instead of writing past idx
+                for (int j = 0; j < (int)vertexinfo.size() && j < (int)idx.size(); j++)
                 {
                     std::string sj = vertexinfo[j];
                     // trimming spaces; as a result s can become empty - this is not an error
