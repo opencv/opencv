@@ -267,19 +267,27 @@ static inline bool armpl_svbacksubst_below_min_volume(int m, int n, int nb)
     return (double)std::min(m, n) * (m + n) * nb < ARMPL_SVBACKSUBST_MIN_WORK_VOLUME;
 }
 
-static inline void
-armpl_svbacksubst_core(const double *w, int wdelta, const double *u, int ldu,
-                        const double *vt, int ldv, const double *rhs, int ldb,
-                        double *dst, int ldx, int m, int n, int nb, int nm)
+template <typename fptype> static inline int
+armpl_svbacksubst_impl(const fptype *w, size_t wstep, const fptype *u, size_t ustep,
+                        const fptype *vt, size_t vstep, const fptype *rhs, size_t rhs_step,
+                        fptype *dst, size_t dst_step, int m, int n, int nb)
 {
-    std::vector<double> t((size_t)nm * nb);
+    if (armpl_svbacksubst_below_min_volume(m, n, nb))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int nm = std::min(m, n);
+    int ldu = (int)(ustep / sizeof(fptype));
+    int ldv = (int)(vstep / sizeof(fptype));
+    int ldx = (int)(dst_step / sizeof(fptype));
+    int wdelta = wstep ? (int)(wstep / sizeof(fptype)) : 1;
+    int ldb = rhs ? (int)(rhs_step / sizeof(fptype)) : 0;
+
+    std::vector<fptype> t((size_t)nm * nb);
 
     if (rhs)
-        armpl_cblas_gemm(CblasTrans, CblasNoTrans, nm, nb, m, 1.0, u, ldu, rhs, ldb, 0.0, t.data(), nb);
+        armpl_cblas_gemm(CblasTrans, CblasNoTrans, nm, nb, m, (fptype)1, u, ldu, rhs, ldb, (fptype)0, t.data(), nb);
     else
-        for (int i = 0; i < nm; i++)
-            for (int j = 0; j < m; j++)
-                t[i*nb + j] = u[j*ldu + i];
+        armpl_transpose(u, ldu, t.data(), nb, m, nm);
 
     double threshold = 0;
     for (int i = 0; i < nm; i++)
@@ -288,14 +296,16 @@ armpl_svbacksubst_core(const double *w, int wdelta, const double *u, int ldu,
 
     for (int i = 0; i < nm; i++)
     {
-        double wi = w[i*wdelta];
-        double scale = std::abs(wi) <= threshold ? 0.0 : 1.0 / wi;
-        double *trow = t.data() + (size_t)i * nb;
+        fptype wi = w[i*wdelta];
+        fptype scale = (double)std::abs(wi) <= threshold ? (fptype)0 : (fptype)1 / wi;
+        fptype *trow = t.data() + (size_t)i * nb;
         for (int j = 0; j < nb; j++)
             trow[j] *= scale;
     }
 
-    armpl_cblas_gemm(CblasTrans, CblasNoTrans, n, nb, nm, 1.0, vt, ldv, t.data(), nb, 0.0, dst, ldx);
+    armpl_cblas_gemm(CblasTrans, CblasNoTrans, n, nb, nm, (fptype)1, vt, ldv, t.data(), nb, (fptype)0, dst, ldx);
+
+    return CV_HAL_ERROR_OK;
 }
 
 }
@@ -304,59 +314,14 @@ int armpl_hal_SVBackSubst64f(const double *w, size_t wstep, const double *u, siz
                               const double *vt, size_t vstep, const double *rhs, size_t rhs_step,
                               double *dst, size_t dst_step, int m, int n, int nb)
 {
-    if (armpl_svbacksubst_below_min_volume(m, n, nb))
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    int nm = std::min(m, n);
-    int ldu = (int)(ustep / sizeof(double));
-    int ldv = (int)(vstep / sizeof(double));
-    int ldx = (int)(dst_step / sizeof(double));
-    int wdelta = wstep ? (int)(wstep / sizeof(double)) : 1;
-    int ldb = rhs ? (int)(rhs_step / sizeof(double)) : 0;
-    armpl_svbacksubst_core(w, wdelta, u, ldu, vt, ldv, rhs, ldb, dst, ldx, m, n, nb, nm);
-    return CV_HAL_ERROR_OK;
+    return armpl_svbacksubst_impl(w, wstep, u, ustep, vt, vstep, rhs, rhs_step, dst, dst_step, m, n, nb);
 }
 
 int armpl_hal_SVBackSubst32f(const float *w, size_t wstep, const float *u, size_t ustep,
                               const float *vt, size_t vstep, const float *rhs, size_t rhs_step,
                               float *dst, size_t dst_step, int m, int n, int nb)
 {
-    if (armpl_svbacksubst_below_min_volume(m, n, nb))
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-    int nm = std::min(m, n);
-    int ldu = (int)(ustep / sizeof(float));
-    int ldv = (int)(vstep / sizeof(float));
-    int ldx = (int)(dst_step / sizeof(float));
-    int wdelta = wstep ? (int)(wstep / sizeof(float)) : 1;
-    int ldb = rhs ? (int)(rhs_step / sizeof(float)) : 0;
-
-    std::vector<double> wd(nm), ud((size_t)m * nm), vtd((size_t)nm * n), dstd((size_t)n * nb);
-    for (int i = 0; i < nm; i++)
-        wd[i] = w[i*wdelta];
-    for (int i = 0; i < m; i++)
-        std::copy(u + i*ldu, u + i*ldu + nm, ud.data() + i*nm);
-    for (int i = 0; i < nm; i++)
-        std::copy(vt + i*ldv, vt + i*ldv + n, vtd.data() + i*n);
-
-    std::vector<double> rhsd;
-    const double *rhsd_ptr = nullptr;
-    int ldb_d = 0;
-    if (rhs)
-    {
-        rhsd.resize((size_t)m * nb);
-        for (int i = 0; i < m; i++)
-            std::copy(rhs + i*ldb, rhs + i*ldb + nb, rhsd.data() + i*nb);
-        rhsd_ptr = rhsd.data();
-        ldb_d = nb;
-    }
-
-    armpl_svbacksubst_core(wd.data(), 1, ud.data(), nm, vtd.data(), n, rhsd_ptr, ldb_d, dstd.data(), nb, m, n, nb, nm);
-
-    for (int i = 0; i < n; i++)
-        std::copy(dstd.data() + i*nb, dstd.data() + i*nb + nb, dst + i*ldx);
-
-    return CV_HAL_ERROR_OK;
+    return armpl_svbacksubst_impl(w, wstep, u, ustep, vt, vstep, rhs, rhs_step, dst, dst_step, m, n, nb);
 }
 
 enum ArmPLDFTMode
