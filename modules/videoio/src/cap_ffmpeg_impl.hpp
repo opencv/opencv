@@ -1912,8 +1912,13 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     case AV_PIX_FMT_GRAY8: *depth = CV_8U; *cn = 1; break;
     case AV_PIX_FMT_GRAY16LE: *depth = CV_16U; *cn = 1; break;
     default:
-        CV_LOG_WARNING(NULL, "Unknown/unsupported picture format: " << av_get_pix_fmt_name(result_format)
-                       << ", will be treated as 8UC1.");
+        // Rate-limited: this branch is reached for every decoded frame, so an
+        // unconditional warning floods the logs of any caller that decodes
+        // with CAP_PROP_CONVERT_RGB=0 (e.g. to read the luma plane of a planar
+        // YUV source). The format is a property of the stream rather than of
+        // an individual frame, so one report is enough to diagnose it.
+        CV_LOG_ONCE_WARNING(NULL, "Unknown/unsupported picture format: " << av_get_pix_fmt_name(result_format)
+                       << ", will be treated as 8UC1. (reported once)");
         *depth = CV_8U;
         *cn = 1;
         break; // TODO: return false?
