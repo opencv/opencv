@@ -90,17 +90,8 @@ struct ConvState
 
 AutoPadding getAutoPadding(const LayerParams& params);
 
-// Compute number of spatial chunks for load balancing across threads.
-//
-// Both the forward-convolution and deconvolution kernels parallelise over
-// N * <output channel blocks> first. For layers with few output channels that
-// alone can be far below the thread count -- e.g. a 32-channel blocked output
-// is only 32/C0 = 4 tasks -- leaving most of the machine idle while each task
-// walks the whole spatial plane serially. Splitting the spatial range into
-// `nSpatChunks` pieces per block restores the missing parallelism.
-//
-// Returns 1 whenever total_blocks already saturates the pool, so layers that
-// were already decomposed well keep their existing behaviour unchanged.
+// Extra spatial split for when total_blocks alone is too few tasks to occupy
+// every thread. Returns 1 (no-op) once total_blocks already saturates the pool.
 static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_per_chunk = 16) {
     int nSpatChunks = 1;
     int nthreads = cv::getNumThreads();

@@ -476,8 +476,6 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 #endif
 
-// computeSpatChunks() lives in conv2_common.hpp -- shared with the deconv kernel.
-
 static void setupActivation(const ConvState& cs, int K,
                              FastActivation& fastActivation, const float*& activParams,
                              ActivationFunc& activation, float& maxval, float& defaultAlpha) {

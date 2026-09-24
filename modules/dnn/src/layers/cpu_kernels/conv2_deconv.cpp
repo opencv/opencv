@@ -72,26 +72,16 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
 
     const int NK1 = N * K1;
 
-    // Each (n, k1) task below walks the entire output plane serially, so NK1 on its
-    // own is the whole parallel decomposition -- and it is K1 = K/C0 wide, which for
-    // a narrow output is a small fraction of the core count (a 32-channel blocked
-    // output is just 4 tasks). Split the spatial range as well.
-    //
-    // Safe without any synchronisation: the loop gathers rather than scatters --
-    // it derives each contributing input position backwards from the output
-    // coordinates, and every opos_flat writes only its own C0-wide slot at
-    // out_k1 + opos_flat*C0 -- so distinct spatial chunks never touch the same
-    // output element. computeSpatChunks() returns 1 when NK1 already saturates the
-    // pool, leaving wide-output layers on their previous decomposition.
+    // NK1 alone can be too few tasks; split the spatial range too. Safe without
+    // sync -- the loop gathers, not scatters, so each opos_flat owns one slot.
     const int nSpatChunks   = computeSpatChunks(NK1, ospatial);
     const int spatChunkSize = (ospatial + nSpatChunks - 1) / nSpatChunks;
     const int total_tasks   = NK1 * nSpatChunks;
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         for (int task = range.start; task < range.end; task++) {
-            // nk1 major, chunk minor: consecutive tasks stay within one (n, k1) and
-            // advance through the output plane, so a thread's slice keeps its weight
-            // block hot and writes out_k1 contiguously.
+            // nk1-major/chunk-minor keeps a thread's slice within one (n,k1) block,
+            // weights hot and out_k1 writes contiguous.
             const int nk1   = task / nSpatChunks;
             const int chunk = task % nSpatChunks;
 

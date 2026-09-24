@@ -347,9 +347,9 @@ void transformLayout(const Mat& inp, Mat& out,
     }, nstripes);
 }
 
-// Deinterleave (BLOCK/NHWC -> NCHW) fused with an add against a same-shaped
-// NCHW residual; nzc <= nc skips the padding channels of a partial last block.
-static void transformLayoutDeinterleaveAddF32(const uint32_t* inp_base, const float* res_base,
+// Deinterleave (BLOCK/NHWC -> NCHW) fused with an add; nzc <= nc skips a partial
+// block's padding. float32-only -- isFusableTensorArg() never admits any other dtype.
+static void transformLayoutDeinterleaveAdd32f(const float* inp_base, const float* res_base,
                                               float* out_base, size_t len,
                                               int nc, int nzc, size_t dlen)
 {
@@ -360,7 +360,7 @@ static void transformLayoutDeinterleaveAddF32(const uint32_t* inp_base, const fl
         for (; c + 7u < nzc; c += 8u)
         {
             float* dst = out_base + (size_t)c * len + i;
-            transpose8x8<uint32_t>(inp_base + i * nc + c, nc, (uint32_t*)dst, len);
+            transpose8x8<float>(inp_base + i * nc + c, nc, dst, len);
             for (int r = 0; r < 8; r++)
             {
                 float* o = out_base + (size_t)(c + r) * len + i;
@@ -371,24 +371,24 @@ static void transformLayoutDeinterleaveAddF32(const uint32_t* inp_base, const fl
         }
         for (; c < nzc; ++c)
         {
-            const uint32_t* inptr = inp_base + i * nc + c;
+            const float* inptr = inp_base + i * nc + c;
             const float* rr = res_base + (size_t)c * len + i;
             float* outptr = out_base + (size_t)c * len + i;
             for (int j = 0; j < 8; j++)
-                outptr[j] = *(const float*)&inptr[j * nc] + rr[j];
+                outptr[j] = inptr[j * nc] + rr[j];
         }
     }
     for (; i < dlen; ++i)
     {
-        const uint32_t* inptr = inp_base + i * nc;
+        const float* inptr = inp_base + i * nc;
         for (int c = 0; c < nzc; ++c)
-            out_base[(size_t)c * len + i] = *(const float*)&inptr[c] + res_base[(size_t)c * len + i];
+            out_base[(size_t)c * len + i] = inptr[c] + res_base[(size_t)c * len + i];
     }
 }
 
 // Mirrors transformLayout()'s chunking, specialized to what the fusion pass
 // produces: BLOCK or NHWC input, NCHW output, float32, exact shape match.
-static void transformLayoutAddF32(const Mat& inp, const Mat& residual, Mat& out,
+static void transformLayoutAdd32f(const Mat& inp, const Mat& residual, Mat& out,
                                   DataLayout defaultLayout, int C0)
 {
     CV_Assert(inp.type() == CV_32F && residual.type() == CV_32F);
@@ -427,9 +427,9 @@ static void transformLayoutAddF32(const Mat& inp, const Mat& residual, Mat& out,
 
     int total_chunks = N * C1 * nblocks;
     double nstripes = std::min((double)total_chunks, (double)nthreads);
-    const uint32_t* inpdata = (const uint32_t*)inp.data;
-    const float* resdata = (const float*)residual.data;
-    float* outdata = (float*)out.data;
+    const float* inpdata = inp.ptr<float>();
+    const float* resdata = residual.ptr<float>();
+    float* outdata = out.ptr<float>();
     parallel_for_(Range(0, total_chunks), [&](const Range& range)
     {
         int dchunk = 1;
@@ -447,7 +447,7 @@ static void transformLayoutAddF32(const Mat& inp, const Mat& residual, Mat& out,
             size_t inpofs = ((size_t)(n * C1 + c1) * planesize + block_start) * nc;
             size_t outofs = ((size_t)(n * C + c1 * C0) * planesize + block_start);
 
-            transformLayoutDeinterleaveAddF32(inpdata + inpofs, resdata + outofs, outdata + outofs,
+            transformLayoutDeinterleaveAdd32f(inpdata + inpofs, resdata + outofs, outdata + outofs,
                                               planesize, nc, nzc, dlen);
         }
     }, nstripes);
@@ -507,7 +507,7 @@ public:
     virtual int64_t getFLOPS(const std::vector<MatShape> &inputs,
                              const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs.size() == (fusedAdd ? 2u : 1u));
         CV_Assert(outputs.size() == 1);
         // probably, there should be a coefficient in the case of complex reduction functions
         return (int64_t)std::max(inputs[0].total(), outputs[0].total());
@@ -613,7 +613,7 @@ public:
         // alwaysSupportInplace()==false should prevent it, but check rather than trust.
         CV_Assert(out.data != inp.data && out.data != residual.data);
         DataLayout origLayout = getNetImpl(this)->originalLayout;
-        transformLayoutAddF32(inp, residual, out, origLayout, C0);
+        transformLayoutAdd32f(inp, residual, out, origLayout, C0);
     }
 
 private:
