@@ -2471,14 +2471,14 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         Mat objectPoint = objectPoints.getMat(i);
         if (objectPoint.empty())
             CV_Error(cv::Error::StsBadSize, "objectPoints should not contain empty vector of vectors of points");
-        int numberOfObjectPoints = objectPoint.checkVector(3, CV_32F);
+        int numberOfObjectPoints = objectPoint.checkVector(3, CV_32F, false);
         if (numberOfObjectPoints <= 0)
             CV_Error(cv::Error::StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
 
         Mat imagePoint1 = imagePoints1.getMat(i);
         if (imagePoint1.empty())
             CV_Error(cv::Error::StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
-        int numberOfImagePoints = imagePoint1.checkVector(2, CV_32F);
+        int numberOfImagePoints = imagePoint1.checkVector(2, CV_32F, false);
         if (numberOfImagePoints <= 0)
             CV_Error(cv::Error::StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
         CV_CheckEQ(numberOfObjectPoints, numberOfImagePoints, "Number of object and image points must be equal");
@@ -2507,7 +2507,11 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     {
         Mat objpt = objectPoints.getMat(i);
         Mat imgpt1 = imagePoints1.getMat(i);
-        int numberOfObjectPoints = objpt.checkVector(3, CV_32F);
+        int numberOfObjectPoints = objpt.checkVector(3, CV_32F, false);
+        if (!objpt.isContinuous())
+            objpt = objpt.clone();
+        if (!imgpt1.isContinuous())
+            imgpt1 = imgpt1.clone();
         nPointsMat.at<int>(i) = numberOfObjectPoints;
         for (int n = 0; n < numberOfObjectPoints; ++n)
         {
@@ -2518,8 +2522,10 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         if (imgPtData2)
         {
             Mat imgpt2 = imagePoints2.getMat(i);
-            int numberOfImage2Points = imgpt2.checkVector(2, CV_32F);
+            int numberOfImage2Points = imgpt2.checkVector(2, CV_32F, false);
             CV_CheckEQ(numberOfObjectPoints, numberOfImage2Points, "Number of object and image(2) points must be equal");
+            if (!imgpt2.isContinuous())
+                imgpt2 = imgpt2.clone();
             for (int n = 0; n < numberOfImage2Points; ++n)
             {
                 imgPtData2[j + n] = imgpt2.ptr<Point2f>()[n];

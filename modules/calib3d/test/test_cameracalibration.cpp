@@ -1851,6 +1851,89 @@ void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Calib3d_CalibrateCamera_CPP, regression) { CV_CameraCalibrationTest_CPP test; test.safe_run(); }
+
+TEST(Calib3d_CalibrateCamera_CPP, nonContinuousPointVectors)
+{
+    const Size imageSize(640, 480);
+    const Mat cameraTruth = Mat(Matx33d(800.0, 0.0, 320.0,
+                                       0.0, 810.0, 240.0,
+                                       0.0, 0.0, 1.0));
+    const Mat distTruth = Mat::zeros(5, 1, CV_64F);
+
+    vector<Point3f> board;
+    for (int y = 0; y < 6; ++y)
+        for (int x = 0; x < 7; ++x)
+            board.push_back(Point3f((x - 3) * 0.04f, (y - 2.5f) * 0.04f, 0.0f));
+
+    const Vec3d rotations[] = {
+        Vec3d(-0.20,  0.10,  0.02), Vec3d( 0.15, -0.12, -0.04),
+        Vec3d(-0.08, -0.18,  0.08), Vec3d( 0.22,  0.05, -0.10),
+        Vec3d(-0.16,  0.20,  0.12), Vec3d( 0.10,  0.16, -0.07)
+    };
+    const Vec3d translations[] = {
+        Vec3d(-0.08, -0.04, 1.10), Vec3d( 0.06, -0.03, 1.25),
+        Vec3d(-0.04,  0.07, 1.35), Vec3d( 0.08,  0.05, 1.20),
+        Vec3d( 0.00, -0.08, 1.40), Vec3d(-0.06,  0.02, 1.15)
+    };
+
+    vector<Mat> objectContinuous, imageContinuous;
+    vector<Mat> objectBacking, imageBacking, objectBackingBefore, imageBackingBefore;
+    vector<Mat> objectRoi, imageRoi;
+    for (size_t i = 0; i < sizeof(rotations) / sizeof(rotations[0]); ++i)
+    {
+        vector<Point2f> projected;
+        projectPoints(board, rotations[i], translations[i], cameraTruth, distTruth, projected);
+
+        objectContinuous.push_back(Mat(board).clone());
+        imageContinuous.push_back(Mat(projected).clone());
+
+        Mat objectStorage((int)board.size(), 2, CV_32FC3, Scalar(-11.0f, -22.0f, -33.0f));
+        Mat imageStorage((int)board.size(), 2, CV_32FC2, Scalar(-44.0f, -55.0f));
+        objectContinuous.back().copyTo(objectStorage.col(0));
+        imageContinuous.back().copyTo(imageStorage.col(0));
+        objectBacking.push_back(objectStorage);
+        imageBacking.push_back(imageStorage);
+        objectBackingBefore.push_back(objectStorage.clone());
+        imageBackingBefore.push_back(imageStorage.clone());
+        objectRoi.push_back(objectStorage.col(0));
+        imageRoi.push_back(imageStorage.col(0));
+
+        ASSERT_TRUE(objectContinuous.back().isContinuous());
+        ASSERT_TRUE(imageContinuous.back().isContinuous());
+        ASSERT_FALSE(objectRoi.back().isContinuous());
+        ASSERT_FALSE(imageRoi.back().isContinuous());
+        ASSERT_EQ(objectContinuous.back().size(), objectRoi.back().size());
+        ASSERT_EQ(imageContinuous.back().size(), imageRoi.back().size());
+        ASSERT_EQ(objectContinuous.back().type(), objectRoi.back().type());
+        ASSERT_EQ(imageContinuous.back().type(), imageRoi.back().type());
+        EXPECT_EQ(0.0, cv::norm(objectContinuous.back(), objectRoi.back(), NORM_INF));
+        EXPECT_EQ(0.0, cv::norm(imageContinuous.back(), imageRoi.back(), NORM_INF));
+    }
+
+    Mat cameraContinuous, distContinuous;
+    const double rmsContinuous = calibrateCamera(objectContinuous, imageContinuous, imageSize,
+                                                  cameraContinuous, distContinuous,
+                                                  noArray(), noArray());
+    EXPECT_LT(rmsContinuous, 1e-4);
+
+    Mat cameraRoi, distRoi;
+    double rmsRoi = -1.0;
+    SCOPED_TRACE(format("continuous RMS: %.12g", rmsContinuous));
+    ASSERT_NO_THROW(rmsRoi = calibrateCamera(objectRoi, imageRoi, imageSize,
+                                              cameraRoi, distRoi, noArray(), noArray()));
+
+    EXPECT_LT(rmsRoi, 1e-4);
+    EXPECT_NEAR(rmsContinuous, rmsRoi, 1e-12);
+    EXPECT_LE(cv::norm(cameraContinuous, cameraRoi, NORM_INF), 1e-9);
+    EXPECT_LE(cv::norm(distContinuous, distRoi, NORM_INF), 1e-9);
+
+    for (size_t i = 0; i < objectBacking.size(); ++i)
+    {
+        EXPECT_EQ(0.0, cv::norm(objectBacking[i], objectBackingBefore[i], NORM_INF));
+        EXPECT_EQ(0.0, cv::norm(imageBacking[i], imageBackingBefore[i], NORM_INF));
+    }
+}
+
 TEST(Calib3d_CalibrationMatrixValues_CPP, accuracy) { CV_CalibrationMatrixValuesTest_CPP test; test.safe_run(); }
 TEST(Calib3d_ProjectPoints_CPP, regression) { CV_ProjectPointsTest_CPP test; test.safe_run(); }
 
