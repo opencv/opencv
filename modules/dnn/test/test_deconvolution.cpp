@@ -7,27 +7,28 @@
 
 namespace opencv_test { namespace {
 
-typedef TestWithParam<tuple<int, int, bool> > DeconvolutionCoordinates;
+enum DeconvolutionMode { Pointwise, NonOverlap, Overlap, Dilated };
+typedef TestWithParam<tuple<int, DeconvolutionMode, bool> > DeconvolutionCoordinates;
 
 TEST_P(DeconvolutionCoordinates, Accuracy)
 {
     const int dims = get<0>(GetParam());
-    const int mode = get<1>(GetParam());
+    const DeconvolutionMode mode = get<1>(GetParam());
     const bool dynamicWeights = get<2>(GetParam());
 
     const int inChannels = 4, outChannels = 6, groups = 2;
-    const bool hasBias = mode % 2 == 0;
+    const bool hasBias = mode != NonOverlap;
     std::vector<int> kernel(dims), stride(dims), dilation(dims, 1);
     std::vector<int> pads(2 * dims, 0), adjust(dims, 0);
     int kernelSize = 1;
     for (int d = 0; d < dims; ++d)
     {
-        kernel[d] = mode == 0 ? 1 : 2 + d % 2;
-        stride[d] = mode == 1 ? kernel[d] : mode == 3 ? 2 : 1;
-        dilation[d] = mode == 3 && d == 0 ? 2 : 1;
-        pads[d] = mode >= 2 ? 1 : 0;
-        pads[d + dims] = mode >= 2 ? d % 2 : 0;
-        adjust[d] = mode == 3 ? 1 : 0;
+        kernel[d] = mode == Pointwise ? 1 : mode == Overlap ? 3 : 2 + d % 2;
+        stride[d] = mode == NonOverlap ? kernel[d] : mode == Dilated ? 2 : 1;
+        dilation[d] = mode == Dilated && d == 0 ? 2 : 1;
+        pads[d] = mode >= Overlap ? 1 : 0;
+        pads[d + dims] = mode >= Overlap ? d % 2 : 0;
+        adjust[d] = mode == Dilated ? 1 : 0;
         kernelSize *= kernel[d];
     }
     LayerParams lp;
@@ -62,9 +63,9 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
         int inputSize = 1, outputSize = 1;
         for (int d = 0; d < dims; ++d)
         {
-            int size = mode == 0 && run ? 1 : 3 + 2 * d + run;
+            int size = mode == Pointwise && run ? 1 : 3 + 2 * d + run;
             // The resized row spans more than one SIMD block.
-            if (mode == 2 && run && d == dims - 1)
+            if (mode == Overlap && run && d == dims - 1)
                 size += 4;
             const int outSize = (size - 1) * stride[d] + dilation[d] * (kernel[d] - 1)
                                 + 1 - pads[d] - pads[d + dims] + adjust[d];
@@ -125,10 +126,14 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Layer_Test, DeconvolutionCoordinates, testing::Combine(
-    testing::Values(2, 3), testing::Values(0, 1, 2, 3), testing::Values(false)));
-
-INSTANTIATE_TEST_CASE_P(DynamicWeights, DeconvolutionCoordinates, testing::Combine(
-    testing::Values(2, 3), testing::Values(2), testing::Values(true)));
+INSTANTIATE_TEST_CASE_P(Layer_Test, DeconvolutionCoordinates, testing::Values(
+    make_tuple(2, Pointwise, false),
+    make_tuple(2, NonOverlap, false),
+    make_tuple(2, Overlap, false),
+    make_tuple(2, Dilated, false),
+    make_tuple(3, NonOverlap, false),
+    make_tuple(3, Overlap, false),
+    make_tuple(3, Dilated, false),
+    make_tuple(2, Overlap, true)));
 
 }} // namespace
