@@ -4308,6 +4308,7 @@ public:
     CV_WRAP FontFace();
     /** @brief loads font at the specified path or with specified name.
        @param fontPathOrName either path to the custom font or the name of embedded font: "sans", "italic" or "uni".
+          If built with `WITH_MANROPE_SANS=ON`, "manrope-sans" is also available.
           Empty fontPathOrName means the default embedded font.
     */
     CV_WRAP FontFace(const String& fontPathOrName);
