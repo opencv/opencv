@@ -599,16 +599,30 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 
 static bool isPrefetchSupported(const Ptr<IVideoCapture>& cap)
 {
-    switch (cap->getCaptureDomain())
+    const int api = cap->getCaptureDomain();
+    switch (api)
     {
         case CAP_MSMF:
         case CAP_DSHOW:
         case CAP_OBSENSOR:
         case CAP_AVFOUNDATION:
+            CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported by backend "
+                                 << videoio_registry::getBackendName((VideoCaptureAPIs)api));
             return false;
         default:
-            return true;
+            break;
     }
+    if (cap->getProperty(CAP_PROP_HW_ACCELERATION) > VIDEO_ACCELERATION_NONE)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported with hardware accelerated decoding");
+        return false;
+    }
+    if (api == CAP_FFMPEG && cap->getProperty(CAP_PROP_FORMAT) == -1)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported in raw mode (CAP_PROP_FORMAT = -1)");
+        return false;
+    }
+    return true;
 }
 
 bool VideoCapture::set(int propId, double value)
@@ -628,16 +642,21 @@ bool VideoCapture::set(int propId, double value)
                 prefetch->disablePrefetch();
             return true;
         }
+        if (!isPrefetchSupported(icap))
+            return false;
         if (!prefetch)
         {
-            if (!isPrefetchSupported(icap))
-            {
-                CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported by backend "
-                                     << videoio_registry::getBackendName((VideoCaptureAPIs)icap->getCaptureDomain()));
-                return false;
-            }
             icap = makePtr<PrefetchCapture>(icap, static_cast<size_t>(depth));
             return true;
+        }
+    }
+    if (propId == CAP_PROP_FORMAT && value == -1 && !icap.empty())
+    {
+        Ptr<PrefetchCapture> prefetch = icap.dynamicCast<PrefetchCapture>();
+        if (prefetch && prefetch->isPrefetching())
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO: raw mode (CAP_PROP_FORMAT = -1) is not supported while CAP_PROP_PREFETCH_FRAMES is enabled");
+            return false;
         }
     }
     bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;

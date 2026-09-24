@@ -1095,6 +1095,45 @@ TEST_P(prefetch_capture, negative_depth_is_rejected)
     EXPECT_EQ(4, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
 }
 
+TEST_P(prefetch_capture, raw_mode_is_rejected)
+{
+    if (GetParam() != CAP_FFMPEG)
+        throw SkipTestException("raw mode is FFmpeg only");
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_FORMAT, -1));
+    EXPECT_FALSE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    EXPECT_EQ(0, (int)cap.get(CAP_PROP_PREFETCH_FRAMES));
+}
+
+TEST_P(prefetch_capture, raw_mode_is_rejected_while_prefetching)
+{
+    if (GetParam() != CAP_FFMPEG)
+        throw SkipTestException("raw mode is FFmpeg only");
+    VideoCapture cap;
+    openBunnyOrSkip(cap, GetParam());
+    ASSERT_TRUE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+    EXPECT_FALSE(cap.set(CAP_PROP_FORMAT, -1));
+    EXPECT_NE(-1, (int)cap.get(CAP_PROP_FORMAT));
+}
+
+TEST_P(prefetch_capture, hw_acceleration_is_rejected)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    const String video_file = BunnyParameters::getFilename(String(".mp4"));
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, apiPref, {CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY}));
+    if (!cap.isOpened())
+        throw SkipTestException(cv::String("Backend can't open the video: ") + video_file);
+    if ((int)cap.get(CAP_PROP_HW_ACCELERATION) <= VIDEO_ACCELERATION_NONE)
+        throw SkipTestException("no hardware decoder for this stream");
+
+    EXPECT_FALSE(cap.set(CAP_PROP_PREFETCH_FRAMES, 4));
+}
+
 static VideoCaptureAPIs thread_affine_apis[] = {CAP_MSMF, CAP_DSHOW, CAP_OBSENSOR, CAP_AVFOUNDATION};
 
 static VideoCaptureAPIs prefetch_apis[] = {CAP_FFMPEG, CAP_GSTREAMER};
