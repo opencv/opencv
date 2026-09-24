@@ -673,7 +673,7 @@ public:
 
 #if CV_SIMD128
                 const v_float32x4 vbias = v_setall_f32(bias);
-                auto sum_four = [&](size_t x) {
+                auto sum_four = [&](size_t x, size_t input_offset) {
                     v_float32x4 val = v_setzero_f32();
                     if (has_outer_taps)
                     {
@@ -681,7 +681,7 @@ public:
                         do
                         {
                             for (size_t k = x_starts[x]; k < x_starts[x + 1]; k++)
-                                val = v_add(val, v_load(data_col_ + offset + x_offsets[k]));
+                                val = v_add(val, v_load(data_col_ + offset + x_offsets[k] + input_offset));
                         } while (next_tap(offset, tap_index, tap_begin, tap_end, last - 1));
                     }
                     return v_add(val, vbias);
@@ -695,14 +695,26 @@ public:
                     if (x_stride && index + span <= row_end && x_run_end[x] >= x + span &&
                         (x_stride == 1 || x_run_end[x + 1] >= x + 1 + span))
                     {
-                        // Stride two has two phases. Store their outputs in alternating lanes.
-                        const v_float32x4 v0 = sum_four(x);
+                        size_t run_end = std::min(row_end - row_start, x_run_end[x]);
+                        if (x_stride == 2)
+                            run_end = std::min(run_end, x_run_end[x + 1] - 1);
+                        const size_t blocks = (run_end - x) / span;
+                        // Keep the tap lists fixed for the whole run.
                         if (x_stride == 1)
-                            v_store(data_im_ + index, v0);
+                        {
+                            for (size_t block = 0; block < blocks; block++, index += span)
+                                v_store(data_im_ + index, sum_four(x, block * 4));
+                        }
                         else
-                            v_store_interleave(data_im_ + index, v0, sum_four(x + 1));
-                        x += span;
-                        index += span;
+                        {
+                            // Stride two has two phases. Store them in alternating lanes.
+                            for (size_t block = 0; block < blocks; block++, index += span)
+                            {
+                                const v_float32x4 v0 = sum_four(x, block * 4);
+                                v_store_interleave(data_im_ + index, v0, sum_four(x + 1, block * 4));
+                            }
+                        }
+                        x += blocks * span;
                         continue;
                     }
 #endif

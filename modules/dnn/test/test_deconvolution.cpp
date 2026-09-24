@@ -62,7 +62,10 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
         int inputSize = 1, outputSize = 1;
         for (int d = 0; d < dims; ++d)
         {
-            const int size = mode == 0 && run ? 1 : 3 + 2 * d + run;
+            int size = mode == 0 && run ? 1 : 3 + 2 * d + run;
+            // The resized row spans more than one SIMD block.
+            if (mode == 2 && run && d == dims - 1)
+                size += 4;
             const int outSize = (size - 1) * stride[d] + dilation[d] * (kernel[d] - 1)
                                 + 1 - pads[d] - pads[d + dims] + adjust[d];
             inputShape.push_back(size);
