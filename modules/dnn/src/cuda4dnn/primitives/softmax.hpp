@@ -18,25 +18,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class SoftmaxOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         SoftmaxOp(csl::cudnn::Handle handle, std::size_t axis_, bool log_)
             : cudnnHandle(std::move(handle)), channel_axis{ axis_ }, log{ log_ }
         {
         }
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
-            for (int i = 0; i < inputs.size(); i++)
-            {
-                auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
-                auto input = input_wrapper->getView();
+            CV_UNUSED(workspace);
+            CV_Assert(inputs.size() == outputs.size());
 
-                auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
-                auto output = output_wrapper->getSpan();
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                auto input = csl::viewOf<T>(inputs[i]);
+                auto output = csl::spanOf<T>(outputs[i]);
 
                 csl::tensor_ops::softmax<T>(cudnnHandle, output, input, channel_axis, log);
             }
