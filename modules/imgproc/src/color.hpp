@@ -62,6 +62,7 @@ inline bool swapBlue(int code)
     case COLOR_BGR2YCrCb: case COLOR_BGR2YUV:
     case COLOR_YCrCb2BGR: case COLOR_YUV2BGR:
     case COLOR_BGR2XYZ: case COLOR_XYZ2BGR:
+    case COLOR_BGR2Oklab: case COLOR_Oklab2BGR:
     case COLOR_BGR2HSV: case COLOR_BGR2HLS: case COLOR_BGR2HSV_FULL: case COLOR_BGR2HLS_FULL:
     case COLOR_YUV2BGR_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2BGR_IYUV: case COLOR_YUV2BGRA_IYUV:
     case COLOR_YUV2BGR_NV21: case COLOR_YUV2BGRA_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2BGRA_NV12:
@@ -123,6 +124,7 @@ inline int dstChannels(int code)
         case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
         case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB: case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
         case COLOR_XYZ2BGR: case COLOR_XYZ2RGB: case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
+        case COLOR_Oklab2BGR: case COLOR_Oklab2RGB: case COLOR_BGR2Oklab: case COLOR_RGB2Oklab:
 
             return 3;
 
@@ -377,6 +379,9 @@ void cvtColorLab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool srgb );
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
+
+void cvtColorBGR2Oklab( InputArray _src, OutputArray _dst, bool swapb );
+void cvtColorOklab2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
 void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, bool crcb);
 void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, bool crcb);

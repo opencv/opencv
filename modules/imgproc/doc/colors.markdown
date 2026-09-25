@@ -180,6 +180,42 @@ sources on the web, primarily from the Charles Poynton site <http://www.poynton.
 
 @see cv::COLOR_BGR2Luv, cv::COLOR_RGB2Luv, cv::COLOR_Luv2BGR, cv::COLOR_Luv2RGB
 
+@anchor color_convert_rgb_oklab
+RGB <-> Oklab
+-------------
+In case of 8-bit images, R, G, and B are converted to the floating-point format and scaled to fit
+the 0 to 1 range. They are then linearized by undoing the sRGB gamma companding:
+
+\f[R'  \leftarrow \fork{R/12.92}{for \(R \le 0.04045\)}{\left(\frac{R+0.055}{1.055}\right)^{2.4}}{for \(R>0.04045\)}\f]
+
+and likewise for \f$G'\f$ and \f$B'\f$. The linear values are then converted to LMS cone
+responses and compressed with a cube root, following Bjorn Ottosson's Oklab definition
+(<https://bottosson.github.io/posts/oklab/>):
+
+\f[\vecthree{l}{m}{s} \leftarrow \vecthreethree{0.4122214708}{0.5363325363}{0.0514459929}
+                                                {0.2119034982}{0.6806995451}{0.1073969566}
+                                                {0.0883024619}{0.2817188376}{0.6299787005}
+                                  \cdot \vecthree{R'}{G'}{B'}\f]
+\f[l' \leftarrow \sqrt[3]{l}, \quad m' \leftarrow \sqrt[3]{m}, \quad s' \leftarrow \sqrt[3]{s}\f]
+\f[\vecthree{L}{a}{b} \leftarrow \vecthreethree{0.2104542553}{0.7936177850}{-0.0040720468}
+                                                {1.9779984951}{-2.4285922050}{0.4505937099}
+                                                {0.0259040371}{0.7827717662}{-0.8086757660}
+                                  \cdot \vecthree{l'}{m'}{s'}\f]
+
+This outputs \f$0 \leq L \leq 1\f$; \f$a\f$ and \f$b\f$ are unbounded in principle but stay
+roughly within \f$-0.5 \leq a,b \leq 0.5\f$ for colors inside the sRGB gamut. The values are then
+converted to the destination data type:
+- 8-bit images: \f$L \leftarrow 255 L, \; a \leftarrow 255 a + 128, \; b \leftarrow 255 b + 128\f$
+- 32-bit images: L, a, and b are left as is
+
+The backward conversion (Oklab to RGB) applies the exact inverse of the two matrices above,
+raises \f$l'\f$, \f$m'\f$, \f$s'\f$ to the third power instead of taking a cube root, and finishes
+with the sRGB gamma companding (the inverse of the linearization step) instead of removing it.
+
+Only CV_8U and CV_32F images are currently supported.
+
+@see cv::COLOR_BGR2Oklab, cv::COLOR_RGB2Oklab, cv::COLOR_Oklab2BGR, cv::COLOR_Oklab2RGB
+
 @anchor color_convert_bayer
 Bayer -> RGB
 ------------

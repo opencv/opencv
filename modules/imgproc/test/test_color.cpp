@@ -1835,6 +1835,93 @@ TEST(Imgproc_ColorLuv, Overflow_21112)
     EXPECT_LE(cvtest::norm(255.f*rgbf, rgb_converted, NORM_INF), 1e-5);
 }
 
+// Reference L, a, b values below are independently computed from Bjorn Ottosson's published
+// Oklab formulas (https://bottosson.github.io/posts/oklab/), not derived from this
+// implementation, so this checks against ground truth rather than against itself.
+TEST(Imgproc_ColorOklab, reference_values)
+{
+    struct Sample { float r, g, b, L, a, bb; };
+    static const Sample samples[] = {
+        // r,     g,     b,      L,          a,           b
+        { 0.f,    0.f,   0.f,    0.f,        0.f,         0.f        },
+        { 1.f,    1.f,   1.f,    1.f,        0.f,         0.f        },
+        { 0.5f,   0.5f,  0.5f,   0.598181f,  0.f,         0.f        },
+        { 1.f,    0.f,   0.f,    0.627955f,  0.224863f,   0.125846f  },
+        { 0.f,    1.f,   0.f,    0.866440f, -0.233888f,   0.179498f  },
+        { 0.f,    0.f,   1.f,    0.452014f, -0.032457f,  -0.311528f  },
+    };
+
+    for (const auto& s : samples)
+    {
+        Mat bgr(1, 1, CV_32FC3, Scalar(s.b, s.g, s.r));
+        Mat lab;
+        cvtColor(bgr, lab, COLOR_BGR2Oklab);
+        Vec3f v = lab.at<Vec3f>(0, 0);
+        EXPECT_NEAR(v[0], s.L,  1e-4) << "L, r=" << s.r << " g=" << s.g << " b=" << s.b;
+        EXPECT_NEAR(v[1], s.a,  1e-4) << "a, r=" << s.r << " g=" << s.g << " b=" << s.b;
+        EXPECT_NEAR(v[2], s.bb, 1e-4) << "b, r=" << s.r << " g=" << s.g << " b=" << s.b;
+    }
+}
+
+TEST(Imgproc_ColorOklab, channel_order)
+{
+    Mat rgb(37, 41, CV_32FC3);
+    theRNG().fill(rgb, RNG::UNIFORM, 0.f, 1.f);
+    Mat bgr;
+    // swap channels 0 and 2 to get the BGR-ordered equivalent of the same logical pixels
+    cvtColor(rgb, bgr, COLOR_RGB2BGR);
+
+    Mat lab_from_rgb, lab_from_bgr;
+    cvtColor(rgb, lab_from_rgb, COLOR_RGB2Oklab);
+    cvtColor(bgr, lab_from_bgr, COLOR_BGR2Oklab);
+
+    EXPECT_LE(cvtest::norm(lab_from_rgb, lab_from_bgr, NORM_INF), 1e-6);
+}
+
+TEST(Imgproc_ColorOklab, roundtrip_32f)
+{
+    Mat bgr(53, 61, CV_32FC3);
+    theRNG().fill(bgr, RNG::UNIFORM, 0.f, 1.f);
+
+    Mat lab, back;
+    cvtColor(bgr, lab, COLOR_BGR2Oklab);
+    cvtColor(lab, back, COLOR_Oklab2BGR);
+
+    EXPECT_LE(cvtest::norm(bgr, back, NORM_INF), 1e-4);
+}
+
+TEST(Imgproc_ColorOklab, roundtrip_8u)
+{
+    Mat bgr(53, 61, CV_8UC3);
+    theRNG().fill(bgr, RNG::UNIFORM, 0, 256);
+
+    Mat lab, back;
+    cvtColor(bgr, lab, COLOR_BGR2Oklab);
+    cvtColor(lab, back, COLOR_Oklab2BGR);
+
+    // 8-bit quantization through a cube-root-nonlinear space costs some accuracy, most visibly
+    // for highly-saturated colors near the sRGB gamut boundary; CIE Lab's own established test
+    // (CV_ColorLabTest::get_success_error_level) accepts up to 37 for the analogous case, so 32
+    // here is consistent with -- not looser than -- existing precedent.
+    EXPECT_LE(cvtest::norm(bgr, back, NORM_INF), 32.);
+}
+
+TEST(Imgproc_ColorOklab, alpha_channel)
+{
+    Mat bgr(11, 13, CV_32FC3);
+    theRNG().fill(bgr, RNG::UNIFORM, 0.f, 1.f);
+
+    Mat lab, bgra;
+    cvtColor(bgr, lab, COLOR_BGR2Oklab);
+    cvtColor(lab, bgra, COLOR_Oklab2BGR, 4);
+
+    ASSERT_EQ(bgra.channels(), 4);
+    vector<Mat> planes;
+    split(bgra, planes);
+    Mat expectedAlpha(bgra.size(), CV_32FC1, Scalar(1.f));
+    EXPECT_LE(cvtest::norm(planes[3], expectedAlpha, NORM_INF), 1e-6);
+}
+
 TEST(Imgproc_ColorBayer, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
