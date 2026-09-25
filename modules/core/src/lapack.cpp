@@ -272,7 +272,7 @@ template<typename T> struct VBLAS
     int givens(T*, T*, int, T, T) const { return 0; }
 };
 
-#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
 {
     if( n < 2*VTraits<v_float32>::vlanes() )
@@ -352,8 +352,8 @@ template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double 
 }
 
 
-#endif //CV_SIMD_64F
-#endif //CV_SIMD
+#endif // (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
 template<typename _Tp> void
 JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
