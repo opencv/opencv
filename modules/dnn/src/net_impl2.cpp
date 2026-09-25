@@ -1274,6 +1274,14 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
     Arg inp = gr_inputs[idx];
     const ArgData& adata = args.at(inp.idx);
+    if (graph == mainGraph && idx < foldedInputShapes.size() &&
+        !foldedInputShapes[idx].empty() && mshape != foldedInputShapes[idx])
+    {
+        CV_Error_(Error::StsBadArg, ("input '%s' has shape %s, but the model declares the static shape %s "
+                                     "and shape-dependent constants were folded for it",
+                                     adata.name.c_str(), mshape.str().c_str(),
+                                     foldedInputShapes[idx].str().c_str()));
+    }
     /*
      [TODO] add more detailed shape check
      if (adata.shape.dims != mshape.dims) {
@@ -2146,7 +2154,7 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
 
             if (adata.kind == DNN_ARG_CONST || adata.kind == DNN_ARG_EMPTY) {
                 shape = adata.shape;
-                type = adata.type;
+                type = adata.type < 0 ? Mat().type() : adata.type;
 
                 // unnecessary, but nice to have for consistency
                 shapeCache[inp.idx] = shape;

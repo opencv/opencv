@@ -413,4 +413,27 @@ TEST(Fusion, SharedRootKeepsEachChainsOwnBuffers)
     }
 }
 
+TEST(Fusion, ShapeOfStaticInputFoldsToConstant)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/dynamic_reshape.onnx"));
+    Mat inp(std::vector<int>{1, 2, 3, 4}, CV_32F, Scalar(1));
+    net.setInput(inp);
+    Mat out = net.forward();
+    EXPECT_EQ(MatShape({1, 12, 2}), out.shape());
+
+    std::vector<String> types;
+    net.getLayerTypes(types);
+    EXPECT_EQ(types.end(), std::find(types.begin(), types.end(), "Shape"));
+}
+
+TEST(Fusion, FoldedShapeRejectsOtherInputShape)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/dynamic_reshape.onnx"));
+    Mat inp(std::vector<int>{1, 2, 3, 4}, CV_32F, Scalar(1));
+    net.setInput(inp);
+    net.forward();
+    Mat other(std::vector<int>{1, 2, 3, 8}, CV_32F, Scalar(1));
+    EXPECT_THROW(net.setInput(other), cv::Exception);
+}
+
 }} // namespace opencv_test

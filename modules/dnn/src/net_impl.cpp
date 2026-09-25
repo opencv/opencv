@@ -154,6 +154,7 @@ void Net::Impl::clear()
 
     prepared = false;
     finalized = false;
+    foldedInputShapes.clear();
     fusedSnapshotValid = false;
     fusedSnapshot.clear();
 }
