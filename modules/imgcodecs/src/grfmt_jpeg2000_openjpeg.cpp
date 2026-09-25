@@ -323,7 +323,7 @@ opj_dparameters setupDecoderParameters()
     return parameters;
 }
 
-opj_cparameters setupEncoderParameters(const std::vector<int>& params)
+opj_cparameters setupEncoderParameters(const std::vector<int>& params, const Size& imgSize)
 {
     opj_cparameters parameters;
     opj_set_default_encoder_parameters(&parameters);
@@ -353,6 +353,16 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     {
         parameters.tcp_rates[0] = 4;
     }
+    // OpenJPEG rejects a tile smaller than 2^(numresolution - 1) in either direction.
+    // Tiling is not enabled, so the single tile is the whole image and the default
+    // number of resolutions has to be lowered for images smaller than that.
+    const int minSide = std::min(imgSize.width, imgSize.height);
+    int numresolution = 1;
+    while (numresolution < parameters.numresolution && (1 << numresolution) <= minSide)
+    {
+        numresolution++;
+    }
+    parameters.numresolution = numresolution;
     return parameters;
 }
 
@@ -724,7 +734,7 @@ bool Jpeg2KOpjEncoder::write(const Mat& img, const std::vector<int>& params)
                  cv::format("OpenJPEG2000: image precision > 16 not supported. Got: %d", depth));
     }();
 
-    opj_cparameters parameters = setupEncoderParameters(params);
+    opj_cparameters parameters = setupEncoderParameters(params, img.size());
 
     std::vector<opj_image_cmptparm_t> compparams(channels);
     for (int i = 0; i < channels; i++) {
