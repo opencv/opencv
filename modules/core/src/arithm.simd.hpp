@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
+#include <type_traits>
 
 namespace cv {
 
@@ -578,6 +580,33 @@ struct EwXor {
         s0y == s0x*(size_t)width && (NSRC < 2 || s1y == s1x*(size_t)width)) \
     { width *= height; height = 1; }
 
+// The scalar tails narrow the work-type result with saturate_cast<Tr>(). For a FLOAT work type and
+// an 8/16-bit integer Tr that cast goes through cvRound() -> int, which does not saturate: a work
+// value past INT_MAX (e.g. the u16 product 65535*65535, or anything >= 46341^2) lands on INT_MIN on
+// x86 and wraps on aarch64, so the result comes out at the wrong end of the range - 0 for an
+// unsigned Tr, the type minimum for a signed one (#28557, #29893). Clamp to Tr's range in the work
+// type first: both bounds are exactly representable in float and double for the 8/16-bit types, so
+// no in-range value moves, and NaN and -inf fall through untouched (both comparisons are false).
+// The op functors keep returning the unclamped work value; only the narrowing store changes, and
+// only for mul/div into 8U/8S/16U/16S - every other instantiation compiles the clamp away.
+// This makes the tail agree with the mul-at-scale-1 vector path, which is exact (v_mul_sat widens
+// and clamps). The other vector paths through here (mul with a scale, Mat x Scalar, div) narrow
+// with v_round plus a saturating pack; ON X86 v_round is cvtps2dq and returns INT_MIN out of range,
+// so for those the tail is now the more correct of the two and the result depends on the row length
+// (on aarch64 vcvtnq_s32_f32 saturates and the body is already correct). Fixing that means fixing
+// the v_round store, which is shared with convertTo. 32-bit integer outputs are left alone: those
+// kernels use an f64 work type, and CV_32S is documented as non-saturating.
+template<typename Tr, typename W>
+static inline Tr narrowSaturate(W v)
+{
+    if constexpr (std::is_floating_point<W>::value && std::is_integral<Tr>::value && sizeof(Tr) <= 2)
+    {
+        const W lo = (W)std::numeric_limits<Tr>::lowest(), hi = (W)std::numeric_limits<Tr>::max();
+        v = v < lo ? lo : (v > hi ? hi : v);
+    }
+    return saturate_cast<Tr>(v);
+}
+
 // Unified binary kernel: T0 x T1 -> Tr (operands same depth for arithmetic; cast is separate).
 //   Wvec     = work vector. Native (v_uint8/...) drives the same-type saturating path
 //              (v_add saturates 8/16-bit, wraps 32-bit); v_float32 drives the widening hub.
@@ -606,17 +635,17 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     {
         if (s0x == s1x) {
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], (WT)src1[x], scalar));
         }
         else if (s0x == 0) {
             WT sc0 = (WT)src0[0];
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl(sc0, (WT)src1[x], scalar));
         }
         else {
             WT sc1 = (WT)src1[0];
             for (int x = 0; x < width; x++)
-                dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x], sc1, scalar));
+                dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x], sc1, scalar));
         }
     }
     return 0;
@@ -1066,7 +1095,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
         }
     #endif
         for (; x < width; x++)
-            dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
+            dst[x] = narrowSaturate<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x], scalar));
     }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
