@@ -1081,7 +1081,7 @@ OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float64x4, _mm256_castsi256_pd
 /** Reverse **/
 inline v_uint8x32 v_reverse(const v_uint8x32 &a)
 {
-    static const __m256i perm = _mm256_setr_epi8(
+    const __m256i perm = _mm256_setr_epi8(
             15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
             15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
     __m256i vec = _mm256_shuffle_epi8(a.val, perm);
@@ -1093,7 +1093,7 @@ inline v_int8x32 v_reverse(const v_int8x32 &a)
 
 inline v_uint16x16 v_reverse(const v_uint16x16 &a)
 {
-    static const __m256i perm = _mm256_setr_epi8(
+    const __m256i perm = _mm256_setr_epi8(
             14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1,
             14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
     __m256i vec = _mm256_shuffle_epi8(a.val, perm);
@@ -1105,7 +1105,7 @@ inline v_int16x16 v_reverse(const v_int16x16 &a)
 
 inline v_uint32x8 v_reverse(const v_uint32x8 &a)
 {
-    static const __m256i perm = _mm256_setr_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+    const __m256i perm = _mm256_setr_epi32(7, 6, 5, 4, 3, 2, 1, 0);
     return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
 }
 
@@ -1502,32 +1502,38 @@ inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
 ////////// Conversions /////////
 
 /** Rounding **/
+
+// vcvtps2dq/vcvtpd2dq and the truncating variants return INT_MIN ("integer indefinite") for any
+// out-of-range input, so the input is clamped from above to make the conversion saturate instead;
+// the indefinite value already is the correct saturated result for inputs below INT_MIN.
+// See cvRound()/cvFloor()/cvCeil()/cvTrunc() for the scalar counterparts and the exact bounds.
 inline v_int32x8 v_round(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvtps_epi32(a.val)); }
+{ return v_int32x8(_mm256_cvtps_epi32(_mm256_min_ps(a.val, _mm256_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x8 v_round(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(a.val))); }
+{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(_mm256_min_pd(a.val, _mm256_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 inline v_int32x8 v_round(const v_float64x4& a, const v_float64x4& b)
 {
-    __m128i ai = _mm256_cvtpd_epi32(a.val), bi = _mm256_cvtpd_epi32(b.val);
+    __m256d hi = _mm256_set1_pd(CV__FLT2INT_MAX_D);
+    __m128i ai = _mm256_cvtpd_epi32(_mm256_min_pd(a.val, hi)), bi = _mm256_cvtpd_epi32(_mm256_min_pd(b.val, hi));
     return v_int32x8(_v256_combine(ai, bi));
 }
 
 inline v_int32x8 v_trunc(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(a.val)); }
+{ return v_int32x8(_mm256_cvttps_epi32(_mm256_min_ps(a.val, _mm256_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x8 v_trunc(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvttpd_epi32(a.val))); }
+{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvttpd_epi32(_mm256_min_pd(a.val, _mm256_set1_pd(CV__FLT2INT_MAX_D))))); }
 
 inline v_int32x8 v_floor(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_floor_ps(a.val))); }
+{ return v_trunc(v_float32x8(_mm256_floor_ps(a.val))); }
 
 inline v_int32x8 v_floor(const v_float64x4& a)
 { return v_trunc(v_float64x4(_mm256_floor_pd(a.val))); }
 
 inline v_int32x8 v_ceil(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_ceil_ps(a.val))); }
+{ return v_trunc(v_float32x8(_mm256_ceil_ps(a.val))); }
 
 inline v_int32x8 v_ceil(const v_float64x4& a)
 { return v_trunc(v_float64x4(_mm256_ceil_pd(a.val))); }
@@ -2354,7 +2360,7 @@ inline double v_extract_n(v_float64x4 v)
 template<int i>
 inline v_uint32x8 v_broadcast_element(v_uint32x8 a)
 {
-    static const __m256i perm = _mm256_set1_epi32((char)i);
+    const __m256i perm = _mm256_set1_epi32((char)i);
     return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
 }
 

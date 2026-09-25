@@ -56,21 +56,29 @@
 
 #ifdef __cplusplus
 #  include <cmath>
+#  include <climits>
 #else
 #  ifdef __BORLANDC__
 #    include <fastmath.h>
 #  else
 #    include <math.h>
 #  endif
+#  include <limits.h>
 #endif
 
 #if defined(__CUDACC__)
   // nothing, intrinsics/asm code is not supported
 #else
-  #if ((defined _MSC_VER && defined _M_X64) \
+  #if ((defined _MSC_VER && (defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2))) \
       || (defined __GNUC__ && defined __SSE2__)) \
       && !defined(OPENCV_SKIP_INCLUDE_EMMINTRIN_H)
     #include <emmintrin.h>
+    // SSE2 is guaranteed by the compiler flags: 32-bit results can use cvtss2si/cvtsd2si
+    #define CV__FASTMATH_HAVE_SSE2 1
+    #if defined _M_X64 || defined __x86_64__
+      // 64-bit mode: cvtss2si/cvtsd2si with a 64-bit destination are available too
+      #define CV__FASTMATH_HAVE_SSE2_X64 1
+    #endif
   #endif
 
   #if defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8 \
@@ -79,6 +87,32 @@
     #undef vector
     #undef bool
     #undef pixel
+  #endif
+
+  #if defined(__aarch64__) && defined(__GNUC__)
+    // fcvt{ns,ms,ps,zs} saturate to the destination integer range
+    #define CV__FASTMATH_HAVE_AARCH64_ASM 1
+  #endif
+
+  #if defined(__riscv) && defined(__riscv_flen) && defined(__GNUC__)
+    // fcvt.w.{s,d} / fcvt.l.{s,d} saturate to the destination integer range
+    #define CV__FASTMATH_HAVE_RISCV_ASM_FLT 1
+    #if __riscv_flen >= 64
+      #define CV__FASTMATH_HAVE_RISCV_ASM_DBL 1
+    #endif
+    #if __riscv_xlen >= 64
+      #define CV__FASTMATH_HAVE_RISCV_ASM_64 1
+    #endif
+  #endif
+
+  #if defined(__loongarch64) && defined(__GNUC__)
+    // ftint*.{w,l}.{s,d} saturate to the destination integer range
+    #define CV__FASTMATH_HAVE_LOONGARCH_ASM 1
+  #endif
+
+  #if defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    // ACLE scalar conversions (fcvt*) saturate to the destination integer range
+    #define CV__FASTMATH_HAVE_MSVC_ARM64 1
   #endif
 
   #if defined(CV_INLINE_ROUND_FLT)
@@ -191,35 +225,67 @@
 
 #endif // defined(__CUDACC__)
 
+/*
+ Saturation limits used by the conversion functions below.
+
+ The double-precision functions saturate exactly to INT_MIN/INT_MAX (INT64_MIN/INT64_MAX).
+ INT_MAX is not representable as float: the single-precision functions clamp the input to
+ 2^31-128 = 2147483520 (the largest float below 2^31) where the conversion instruction does not
+ saturate by itself; where it does (e.g. AArch64, RISC-V), INT_MAX is returned. Both variants are
+ accepted by OpenCV tests; the result is guaranteed to be in [2147483520, INT_MAX] for
+ values >= 2^31 and INT_MIN for values <= -2^31.
+
+ NaN is not handled: the result is unspecified. It is whatever the conversion instruction gives
+ (INT_MIN on x86, 0 on ARM, INT_MAX on RISC-V), possibly altered by the clamp above: min(x, C) returns C
+ for NaN x, but compilers are allowed to (and some do) treat scalar min/max as commutative and to
+ constant-fold them, so neither value can be relied on. Check for NaN explicitly (cvIsNaN) if it may occur.
+*/
+#define CV__FLT2INT_MAX_F  2147483520.f
+#define CV__FLT2INT_MIN_F  -2147483648.f
+#define CV__FLT2INT_MAX_D  2147483647.0
+#define CV__FLT2INT_MIN_D  -2147483648.0
+#define CV__FLT2INT_2P63_D  9223372036854775808.0
+#define CV__FLT2INT_2P63_F  9223372036854775808.f
+
 /** @brief Rounds floating-point number to the nearest integer
 
- @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
- result is not defined.
+ The function uses the round-half-to-even rule (the default IEEE 754 rounding mode).
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
+ The result for NaN is unspecified: it depends on the platform and on the compiler.
+ @param value floating-point number.
  */
 inline int
 cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+#elif defined CV__FASTMATH_HAVE_MSVC_ARM64
     float64x1_t v = vdup_n_f64(value);
-    int64x1_t r = vcvtn_s64_f64(v);
-    return static_cast<int>(vget_lane_s64(r, 0));
-#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
-    __m128d t = _mm_set_sd( value );
+    int64_t r = vget_lane_s64(vcvtn_s64_f64(v), 0);
+    return r >= INT_MAX ? INT_MAX : r <= INT_MIN ? INT_MIN : (int)r;
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtns %w[i], %d[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_DBL
+    int i;
+    __asm__("fcvt.w.d %[i], %[in], rne" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int i;
+    double tmp;
+    __asm__ ("ftintrne.w.d    %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvtsd2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    __m128d t = _mm_min_sd(_mm_set_sd(value), _mm_set_sd(CV__FLT2INT_MAX_D));
     return _mm_cvtsd_si32(t);
-#elif defined _MSC_VER && defined _M_IX86
-    int t;
-    __asm
-    {
-        fld value;
-        fistp t;
-    }
-    return t;
-#elif defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-      defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_lrint(value);
 #else
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     return (int)lrint(value);
 #endif
 }
@@ -229,26 +295,41 @@ cvRound( double value )
 
  The function computes an integer i such that:
  \f[i \le \texttt{value} < i+1\f]
- @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
- result is not defined.
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
+ The result for NaN is unspecified: it depends on the platform and on the compiler.
+ @param value floating-point number.
  */
 inline int cvFloor( double value )
 {
-#if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-    defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_floor(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
-    return (int)vcvtmd_s64_f64(value);
-#elif defined __loongarch64
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    int64_t r = vcvtmd_s64_f64(value);
+    return r >= INT_MAX ? INT_MAX : r <= INT_MIN ? INT_MIN : (int)r;
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtms %w[i], %d[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_DBL
+    int i;
+    __asm__("fcvt.w.d %[i], %[in], rdn" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
     int i;
     double tmp;
-    __asm__ ("ftintrm.l.d     %[tmp],    %[in]       \n\t"
-             "movfr2gr.d      %[i],      %[tmp]      \n\t"
+    __asm__ ("ftintrm.w.d     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
              : [i] "=r" (i), [tmp] "=f" (tmp)
              : [in] "f" (value)
              :);
     return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    __m128d v = _mm_set_sd(value);
+    v = _mm_max_sd(_mm_set_sd(CV__FLT2INT_MIN_D), v);
+    v = _mm_min_sd(v, _mm_set_sd(CV__FLT2INT_MAX_D));
+    int i = _mm_cvtsd_si32(v);
+    __m128d r = _mm_cvtsi32_sd(v, i);
+    return i - _mm_comilt_sd(v, r);
 #else
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
     int i = (int)value;
     return i - (i > value);
 #endif
@@ -257,29 +338,116 @@ inline int cvFloor( double value )
 /** @brief Rounds floating-point number to the nearest integer not smaller than the original.
 
  The function computes an integer i such that:
- \f[i \le \texttt{value} < i+1\f]
- @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
- result is not defined.
+ \f[i-1 < \texttt{value} \le i\f]
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
+ The result for NaN is unspecified: it depends on the platform and on the compiler.
+ @param value floating-point number.
  */
 inline int cvCeil( double value )
 {
-#if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-    defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_ceil(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
-    return (int)vcvtpd_s64_f64(value);
-#elif defined __loongarch64
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    int64_t r = vcvtpd_s64_f64(value);
+    return r >= INT_MAX ? INT_MAX : r <= INT_MIN ? INT_MIN : (int)r;
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtps %w[i], %d[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_DBL
+    int i;
+    __asm__("fcvt.w.d %[i], %[in], rup" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
     int i;
     double tmp;
-    __asm__ ("ftintrp.l.d     %[tmp],    %[in]       \n\t"
+    __asm__ ("ftintrp.w.d     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvtsd2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    __m128d v = _mm_min_sd(_mm_set_sd(value), _mm_set_sd(CV__FLT2INT_MAX_D));
+    int i = _mm_cvtsd_si32(v);
+    __m128d r = _mm_cvtsi32_sd(v, i);
+    return i + _mm_comigt_sd(v, r);
+#else
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
+    int i = (int)value;
+    return i + (i < value);
+#endif
+}
+
+/** @brief Truncates floating-point number to integer (rounds towards zero).
+
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated to INT_MIN or INT_MAX.
+ The result for NaN is unspecified: it depends on the platform and on the compiler.
+ @param value floating-point number.
+ */
+inline int cvTrunc( double value )
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    int64_t r = vcvtd_s64_f64(value);
+    return r >= INT_MAX ? INT_MAX : r <= INT_MIN ? INT_MIN : (int)r;
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtzs %w[i], %d[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_DBL
+    int i;
+    __asm__("fcvt.w.d %[i], %[in], rtz" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int i;
+    double tmp;
+    __asm__ ("ftintrz.w.d     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvttsd2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    return _mm_cvttsd_si32(_mm_min_sd(_mm_set_sd(value), _mm_set_sd(CV__FLT2INT_MAX_D)));
+#else
+    value = value < CV__FLT2INT_MAX_D ? (value > CV__FLT2INT_MIN_D ? value : CV__FLT2INT_MIN_D) : CV__FLT2INT_MAX_D;
+    return (int)value;
+#endif
+}
+
+/** @brief Rounds floating-point number to the nearest 64-bit integer
+
+ The function uses the round-half-to-even rule (the default IEEE 754 rounding mode).
+ If the value is outside of INT64_MIN ... INT64_MAX range, the result is saturated to INT64_MIN or INT64_MAX.
+ The result for NaN is unspecified: it depends on the platform and on the compiler.
+ @param value floating-point number.
+ */
+inline int64_t cvRound64( double value )
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return vcvtnd_s64_f64(value);
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int64_t i;
+    __asm__("fcvtns %x[i], %d[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_DBL && defined CV__FASTMATH_HAVE_RISCV_ASM_64
+    int64_t i;
+    __asm__("fcvt.l.d %[i], %[in], rne" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int64_t i;
+    double tmp;
+    __asm__ ("ftintrne.l.d    %[tmp],    %[in]       \n\t"
              "movfr2gr.d      %[i],      %[tmp]      \n\t"
              : [i] "=r" (i), [tmp] "=f" (tmp)
              : [in] "f" (value)
              :);
     return i;
+#elif defined CV__FASTMATH_HAVE_SSE2_X64
+    // cvtsd2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check
+    return value < CV__FLT2INT_2P63_D ? (int64_t)_mm_cvtsd_si64(_mm_set_sd(value)) : INT64_MAX;
 #else
-    int i = (int)value;
-    return i + (i < value);
+    return value < CV__FLT2INT_2P63_D ? (value > -CV__FLT2INT_2P63_D ? (int64_t)llrint(value) : INT64_MIN) : INT64_MAX;
 #endif
 }
 
@@ -326,30 +494,43 @@ inline int cvIsInf( double value )
 
 #ifdef __cplusplus
 
-/** @overload */
+/** @overload
+
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated: INT_MIN for values
+ not greater than -2^31; for values not less than 2^31 the result is in [2147483520, INT_MAX]
+ (INT_MAX is not representable as float, and the exact value depends on the platform).
+ */
 inline int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+#elif defined CV__FASTMATH_HAVE_MSVC_ARM64
     float32x2_t v = vdup_n_f32(value);
     int32x2_t r = vcvtn_s32_f32(v);
     return vget_lane_s32(r, 0);
-#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
-    __m128 t = _mm_set_ss( value );
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtns %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_FLT
+    int i;
+    __asm__("fcvt.w.s %[i], %[in], rne" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int i;
+    float tmp;
+    __asm__ ("ftintrne.w.s    %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvtss2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    __m128 t = _mm_min_ss(_mm_set_ss(value), _mm_set_ss(CV__FLT2INT_MAX_F));
     return _mm_cvtss_si32(t);
-#elif defined _MSC_VER && defined _M_IX86
-    int t;
-    __asm
-    {
-        fld value;
-        fistp t;
-    }
-    return t;
-#elif defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-      defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_lrintf(value);
 #else
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     return (int)lrintf(value);
 #endif
 }
@@ -360,16 +541,25 @@ inline int cvRound( int value )
     return value;
 }
 
-/** @overload */
-CV_DISABLE_UBSAN
+/** @overload
+
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated: INT_MIN for values
+ not greater than -2^31; for values not less than 2^31 the result is in [2147483520, INT_MAX]
+ (INT_MAX is not representable as float, and the exact value depends on the platform).
+ */
 inline int cvFloor( float value )
 {
-#if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-    defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_floorf(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
-    return (int)vcvtms_s32_f32(value);
-#elif defined __loongarch__
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return vcvtms_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtms %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_FLT
+    int i;
+    __asm__("fcvt.w.s %[i], %[in], rdn" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
     int i;
     float tmp;
     __asm__ ("ftintrm.w.s     %[tmp],    %[in]       \n\t"
@@ -378,7 +568,15 @@ inline int cvFloor( float value )
              : [in] "f" (value)
              :);
     return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    __m128 v = _mm_set_ss(value);
+    v = _mm_max_ss(_mm_set_ss(CV__FLT2INT_MIN_F), v);
+    v = _mm_min_ss(v, _mm_set_ss(CV__FLT2INT_MAX_F));
+    int i = _mm_cvtss_si32(v);
+    __m128 r = _mm_cvtsi32_ss(v, i);
+    return i - _mm_comilt_ss(v, r);
 #else
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     int i = (int)value;
     return i - (i > value);
 #endif
@@ -390,15 +588,25 @@ inline int cvFloor( int value )
     return value;
 }
 
-/** @overload */
+/** @overload
+
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated: INT_MIN for values
+ not greater than -2^31; for values not less than 2^31 the result is in [2147483520, INT_MAX]
+ (INT_MAX is not representable as float, and the exact value depends on the platform).
+ */
 inline int cvCeil( float value )
 {
-#if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
-    defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
-    return (int)__builtin_ceilf(value);
-#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
-    return (int)vcvtps_s32_f32(value);
-#elif defined __loongarch__
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return vcvtps_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtps %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_FLT
+    int i;
+    __asm__("fcvt.w.s %[i], %[in], rup" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
     int i;
     float tmp;
     __asm__ ("ftintrp.w.s     %[tmp],    %[in]       \n\t"
@@ -407,7 +615,14 @@ inline int cvCeil( float value )
              : [in] "f" (value)
              :);
     return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvtss2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    __m128 v = _mm_min_ss(_mm_set_ss(value), _mm_set_ss(CV__FLT2INT_MAX_F));
+    int i = _mm_cvtss_si32(v);
+    __m128 r = _mm_cvtsi32_ss(v, i);
+    return i + _mm_comigt_ss(v, r);
 #else
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
     int i = (int)value;
     return i + (i < value);
 #endif
@@ -415,6 +630,84 @@ inline int cvCeil( float value )
 
 /** @overload */
 inline int cvCeil( int value )
+{
+    return value;
+}
+
+/** @overload
+
+ If the value is outside of INT_MIN ... INT_MAX range, the result is saturated: INT_MIN for values
+ not greater than -2^31; for values not less than 2^31 the result is in [2147483520, INT_MAX]
+ (INT_MAX is not representable as float, and the exact value depends on the platform).
+ */
+inline int cvTrunc( float value )
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return vcvts_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int i;
+    __asm__("fcvtzs %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_FLT
+    int i;
+    __asm__("fcvt.w.s %[i], %[in], rtz" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int i;
+    float tmp;
+    __asm__ ("ftintrz.w.s     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2
+    // cvttss2si returns INT_MIN for anything below INT_MIN, so only the upper bound needs a clamp
+    return _mm_cvttss_si32(_mm_min_ss(_mm_set_ss(value), _mm_set_ss(CV__FLT2INT_MAX_F)));
+#else
+    value = value < CV__FLT2INT_MAX_F ? (value > CV__FLT2INT_MIN_F ? value : CV__FLT2INT_MIN_F) : CV__FLT2INT_MAX_F;
+    return (int)value;
+#endif
+}
+
+/** @overload */
+inline int cvTrunc( int value )
+{
+    return value;
+}
+
+/** @overload */
+inline int64_t cvRound64( float value )
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return vcvtnd_s64_f64((double)value);
+#elif defined CV__FASTMATH_HAVE_AARCH64_ASM
+    int64_t i;
+    __asm__("fcvtns %x[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_RISCV_ASM_FLT && defined CV__FASTMATH_HAVE_RISCV_ASM_64
+    int64_t i;
+    __asm__("fcvt.l.s %[i], %[in], rne" : [i] "=r" (i) : [in] "f" (value));
+    return i;
+#elif defined CV__FASTMATH_HAVE_LOONGARCH_ASM
+    int64_t i;
+    float tmp;
+    __asm__ ("ftintrne.l.s    %[tmp],    %[in]       \n\t"
+             "movfr2gr.d      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
+#elif defined CV__FASTMATH_HAVE_SSE2_X64
+    // cvtss2si returns INT64_MIN for anything below INT64_MIN, so only the upper bound needs a check
+    return value < CV__FLT2INT_2P63_F ? (int64_t)_mm_cvtss_si64(_mm_set_ss(value)) : INT64_MAX;
+#else
+    return value < CV__FLT2INT_2P63_F ? (value > -CV__FLT2INT_2P63_F ? (int64_t)llrintf(value) : INT64_MIN) : INT64_MAX;
+#endif
+}
+
+/** @overload */
+inline int64_t cvRound64( int value )
 {
     return value;
 }

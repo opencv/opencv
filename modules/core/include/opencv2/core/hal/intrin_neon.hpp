@@ -2237,9 +2237,7 @@ inline v_int16x8 v_floor(const v_float16x8 &a)
 
 inline v_int16x8 v_ceil(const v_float16x8 &a)
 {
-    int16x8_t a1 = vcvtq_s16_f16(a.val);
-    uint16x8_t mask = vcgtq_f16(a.val, vcvtq_f16_s16(a1));
-    return v_int16x8(vsubq_s16(a1, vreinterpretq_s16_u16(mask)));
+    return v_int16x8(vcvtpq_s16_f16(a.val));
 }
 
 inline v_int16x8 v_trunc(const v_float16x8 &a)
@@ -2269,56 +2267,54 @@ inline v_int32x4 v_floor(const v_float32x4& a)
 #if __ARM_ARCH > 7
     return v_int32x4(vcvtmq_s32_f32(a.val));
 #else
+    // vcvtq saturates; the correction must saturate too, otherwise INT_MIN-1 wraps around
     int32x4_t a1 = vcvtq_s32_f32(a.val);
     uint32x4_t mask = vcgtq_f32(vcvtq_f32_s32(a1), a.val);
-    return v_int32x4(vaddq_s32(a1, vreinterpretq_s32_u32(mask)));
+    return v_int32x4(vqaddq_s32(a1, vreinterpretq_s32_u32(mask)));
 #endif
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
+#if __ARM_ARCH > 7
+    return v_int32x4(vcvtpq_s32_f32(a.val));
+#else
+    // vcvtq saturates; the correction must saturate too, otherwise INT_MAX+1 wraps around
     int32x4_t a1 = vcvtq_s32_f32(a.val);
     uint32x4_t mask = vcgtq_f32(a.val, vcvtq_f32_s32(a1));
-    return v_int32x4(vsubq_s32(a1, vreinterpretq_s32_u32(mask)));
+    return v_int32x4(vqsubq_s32(a1, vreinterpretq_s32_u32(mask)));
+#endif
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
 { return v_int32x4(vcvtq_s32_f32(a.val)); }
 
+
 #if CV_SIMD128_64F
+// fcvt* saturate to the int64 range; the narrowing to int32 must saturate too (vqmovn), a plain vmovn would wrap
 inline v_int32x4 v_round(const v_float64x2& a)
 {
-    static const int32x2_t zero = vdup_n_s32(0);
-    return v_int32x4(vcombine_s32(vmovn_s64(vcvtnq_s64_f64(a.val)), zero));
+    return v_int32x4(vcombine_s32(vqmovn_s64(vcvtnq_s64_f64(a.val)), vdup_n_s32(0)));
 }
 
 inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 {
-    return v_int32x4(vcombine_s32(vmovn_s64(vcvtnq_s64_f64(a.val)), vmovn_s64(vcvtnq_s64_f64(b.val))));
+    return v_int32x4(vcombine_s32(vqmovn_s64(vcvtnq_s64_f64(a.val)), vqmovn_s64(vcvtnq_s64_f64(b.val))));
 }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
 {
-    static const int32x2_t zero = vdup_n_s32(0);
-    int64x2_t a1 = vcvtq_s64_f64(a.val);
-    uint64x2_t mask = vcgtq_f64(vcvtq_f64_s64(a1), a.val);
-    a1 = vaddq_s64(a1, vreinterpretq_s64_u64(mask));
-    return v_int32x4(vcombine_s32(vmovn_s64(a1), zero));
+    return v_int32x4(vcombine_s32(vqmovn_s64(vcvtmq_s64_f64(a.val)), vdup_n_s32(0)));
 }
 
 inline v_int32x4 v_ceil(const v_float64x2& a)
 {
-    static const int32x2_t zero = vdup_n_s32(0);
-    int64x2_t a1 = vcvtq_s64_f64(a.val);
-    uint64x2_t mask = vcgtq_f64(a.val, vcvtq_f64_s64(a1));
-    a1 = vsubq_s64(a1, vreinterpretq_s64_u64(mask));
-    return v_int32x4(vcombine_s32(vmovn_s64(a1), zero));
+    return v_int32x4(vcombine_s32(vqmovn_s64(vcvtpq_s64_f64(a.val)), vdup_n_s32(0)));
 }
 
 inline v_int32x4 v_trunc(const v_float64x2& a)
 {
-    static const int32x2_t zero = vdup_n_s32(0);
-    return v_int32x4(vcombine_s32(vmovn_s64(vcvtaq_s64_f64(a.val)), zero));
+    return v_int32x4(vcombine_s32(vqmovn_s64(vcvtq_s64_f64(a.val)), vdup_n_s32(0)));
 }
 #endif
 

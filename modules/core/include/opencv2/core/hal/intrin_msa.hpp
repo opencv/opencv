@@ -1348,13 +1348,15 @@ inline v_int32x4 v_round(const v_float32x4& a)
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
     v4i32 a1 = msa_cvttintq_s32_f32(a.val);
-    return v_int32x4(msa_addq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(msa_cvtfintq_f32_s32(a1), a.val))));
+    // ftint_s.w saturates; the correction must saturate too, otherwise INT_MIN-1 wraps around
+    return v_int32x4(msa_qaddq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(msa_cvtfintq_f32_s32(a1), a.val))));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
     v4i32 a1 = msa_cvttintq_s32_f32(a.val);
-    return v_int32x4(msa_subq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(a.val, msa_cvtfintq_f32_s32(a1)))));
+    // ftint_s.w saturates; the correction must saturate too, otherwise INT_MAX+1 wraps around
+    return v_int32x4(msa_qsubq_s32(a1, MSA_TPV_REINTERPRET(v4i32, msa_cgtq_f32(a.val, msa_cvtfintq_f32_s32(a1)))));
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
@@ -1362,31 +1364,40 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
     return v_int32x4(msa_cvttruncq_s32_f32(a.val));
 }
 
+// ftint_s.d saturates to the int64 range, but msa_pack_s64 (pckev.w) just takes the low 32 bits,
+// so the input is clamped to the int32 range first. See cvRound() and friends for the exact bounds.
+static inline v2f64 msa_clamp_to_s32_f64(v2f64 a)
+{
+    return msa_maxq_f64(msa_minq_f64(a, msa_dupq_n_f64(CV__FLT2INT_MAX_D)), msa_dupq_n_f64(CV__FLT2INT_MIN_D));
+}
+
 inline v_int32x4 v_round(const v_float64x2& a)
 {
-    return v_int32x4(msa_pack_s64(msa_cvttintq_s64_f64(a.val), msa_dupq_n_s64(0)));
+    return v_int32x4(msa_pack_s64(msa_cvttintq_s64_f64(msa_clamp_to_s32_f64(a.val)), msa_dupq_n_s64(0)));
 }
 
 inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 {
-    return v_int32x4(msa_pack_s64(msa_cvttintq_s64_f64(a.val), msa_cvttintq_s64_f64(b.val)));
+    return v_int32x4(msa_pack_s64(msa_cvttintq_s64_f64(msa_clamp_to_s32_f64(a.val)), msa_cvttintq_s64_f64(msa_clamp_to_s32_f64(b.val))));
 }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
 {
-    v2f64 a1 = msa_cvtrintq_f64(a.val);
-    return v_int32x4(msa_pack_s64(msa_addq_s64(msa_cvttruncq_s64_f64(a1), MSA_TPV_REINTERPRET(v2i64, msa_cgtq_f64(a1, a.val))), msa_dupq_n_s64(0)));
+    v2f64 a0 = msa_clamp_to_s32_f64(a.val);
+    v2f64 a1 = msa_cvtrintq_f64(a0);
+    return v_int32x4(msa_pack_s64(msa_addq_s64(msa_cvttruncq_s64_f64(a1), MSA_TPV_REINTERPRET(v2i64, msa_cgtq_f64(a1, a0))), msa_dupq_n_s64(0)));
 }
 
 inline v_int32x4 v_ceil(const v_float64x2& a)
 {
-    v2f64 a1 = msa_cvtrintq_f64(a.val);
-    return v_int32x4(msa_pack_s64(msa_subq_s64(msa_cvttruncq_s64_f64(a1), MSA_TPV_REINTERPRET(v2i64, msa_cgtq_f64(a.val, a1))), msa_dupq_n_s64(0)));
+    v2f64 a0 = msa_clamp_to_s32_f64(a.val);
+    v2f64 a1 = msa_cvtrintq_f64(a0);
+    return v_int32x4(msa_pack_s64(msa_subq_s64(msa_cvttruncq_s64_f64(a1), MSA_TPV_REINTERPRET(v2i64, msa_cgtq_f64(a0, a1))), msa_dupq_n_s64(0)));
 }
 
 inline v_int32x4 v_trunc(const v_float64x2& a)
 {
-    return v_int32x4(msa_pack_s64(msa_cvttruncq_s64_f64(a.val), msa_dupq_n_s64(0)));
+    return v_int32x4(msa_pack_s64(msa_cvttruncq_s64_f64(msa_clamp_to_s32_f64(a.val)), msa_dupq_n_s64(0)));
 }
 
 #define OPENCV_HAL_IMPL_MSA_TRANSPOSE4x4(_Tpvec, _Tpv, _Tpvs, ssuffix) \

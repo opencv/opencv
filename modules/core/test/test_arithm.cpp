@@ -2,6 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <iomanip>
+#include <limits>
 #include "ref_reduce_arg.impl.hpp"
 #include <algorithm>
 
@@ -3033,6 +3035,74 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+// Floating-point sources with values far outside of the destination integer range must saturate,
+// in the vector body as well as in the scalar tail (see cvRound(), saturate_cast<>).
+template<typename ST, typename DT> static void checkConvertToOverflow(int sdepth, int ddepth)
+{
+    const double inf = std::numeric_limits<double>::infinity();
+    const double vals[] =
+    {
+        1e10, -1e10, 3e9, -3e9, 2147483647.5, -2147483648.5, inf, -inf, 65535.4, 65535.6, -1.5, 40000,
+        200.5, 201.5, -200.5, 0, 1e30, -1e30, 2.5, 3.5, 4294967295., 1e19, 9223372036854775808., -9223372036854775808.
+    };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+    const int rows = 3, cols = 67;   // 67: not a multiple of any vector width => both the body and the tail are used
+    Mat src(rows, cols, sdepth), ref(rows, cols, ddepth);
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+        {
+            ST v = (ST)vals[(r*cols + c) % nvals];
+            src.at<ST>(r, c) = v;
+            ref.at<DT>(r, c) = saturate_cast<DT>(v);
+        }
+    Mat dst;
+    src.convertTo(dst, ddepth);
+    ASSERT_EQ(ddepth, dst.depth());
+    int nerrs = 0;
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+        {
+            double v = vals[(r*cols + c) % nvals];
+            DT d = dst.at<DT>(r, c), rf = ref.at<DT>(r, c);
+            bool ok = d == rf;
+            // the extreme inputs (+-1e30, +-inf) must land on the type limits; for int <- float the
+            // positive limit is platform-dependent (INT_MAX or 2147483520, see the cvRound() documentation)
+            if (v >= 1e29)
+            {
+                if (sizeof(DT) == 4 && std::numeric_limits<DT>::is_signed && sizeof(ST) == 4)
+                    ok = ok && (double)d >= 2147483520.;
+                else
+                    ok = ok && d == std::numeric_limits<DT>::max();
+            }
+            else if (v <= -1e29)
+                ok = ok && d == std::numeric_limits<DT>::lowest();
+            if (!ok && nerrs++ < 10)
+                ADD_FAILURE() << "sdepth=" << sdepth << " ddepth=" << ddepth << " (" << r << "," << c << "): src=" << std::setprecision(17) << v
+                              << " -> " << (double)d << ", expected " << (double)rf;
+        }
+    EXPECT_EQ(0, nerrs);
+}
+
+TEST(Core_ConvertTo, float_overflow_saturation)
+{
+    checkConvertToOverflow<float, uchar>(CV_32F, CV_8U);
+    checkConvertToOverflow<float, schar>(CV_32F, CV_8S);
+    checkConvertToOverflow<float, ushort>(CV_32F, CV_16U);
+    checkConvertToOverflow<float, short>(CV_32F, CV_16S);
+    checkConvertToOverflow<float, int>(CV_32F, CV_32S);
+    checkConvertToOverflow<float, unsigned>(CV_32F, CV_32U);
+    checkConvertToOverflow<float, int64>(CV_32F, CV_64S);
+    checkConvertToOverflow<float, uint64>(CV_32F, CV_64U);
+    checkConvertToOverflow<double, uchar>(CV_64F, CV_8U);
+    checkConvertToOverflow<double, schar>(CV_64F, CV_8S);
+    checkConvertToOverflow<double, ushort>(CV_64F, CV_16U);
+    checkConvertToOverflow<double, short>(CV_64F, CV_16S);
+    checkConvertToOverflow<double, int>(CV_64F, CV_32S);
+    checkConvertToOverflow<double, unsigned>(CV_64F, CV_32U);
+    checkConvertToOverflow<double, int64>(CV_64F, CV_64S);
+    checkConvertToOverflow<double, uint64>(CV_64F, CV_64U);
+}
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
@@ -4279,8 +4349,8 @@ TEST_P(Core_MaskTypeTest, MeanStdDev)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MaskTypeTest, MaskType::all());
 
-// Still fails in 5.x: https://github.com/opencv/opencv/issues/28557
-TEST(Core_Arithm, DISABLED_mul_overflow_28557)
+// https://github.com/opencv/opencv/issues/28557
+TEST(Core_Arithm, mul_overflow_28557)
 {
     uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
     cv::Mat m(1, 6, CV_16U, data);
@@ -4290,6 +4360,53 @@ TEST(Core_Arithm, DISABLED_mul_overflow_28557)
     {
         EXPECT_EQ(65535, res.at<uint16_t>(0, i));
     }
+}
+
+// multiply / pow(x, 2) on 8- and 16-bit integer arrays whose products overflow the element type
+// (and, for 16U, int): every row length from 1 to 70, so that both the vector body and the scalar
+// tail are exercised, out-of-place and in-place. The scalar tail computes the product in float and
+// narrows it with saturate_cast<> -> cvRound(), which must saturate (#28557).
+template<typename T> static void checkMulOverflow(int depth, const std::vector<T>& vals)
+{
+    const int nvals = (int)vals.size();
+    for (int n = 1; n <= 70; n++)
+    {
+        Mat a(1, n, depth), b(1, n, depth), ref_ab(1, n, depth), ref_aa(1, n, depth);
+        for (int i = 0; i < n; i++)
+        {
+            T x = vals[i % nvals], y = vals[(i * 7 + 3) % nvals];
+            a.at<T>(0, i) = x;
+            b.at<T>(0, i) = y;
+            ref_ab.at<T>(0, i) = saturate_cast<T>((int64)x * (int64)y);
+            ref_aa.at<T>(0, i) = saturate_cast<T>((int64)x * (int64)x);
+        }
+        Mat c;
+        cv::multiply(a, b, c);
+        EXPECT_EQ(0, cvtest::norm(c, ref_ab, NORM_INF)) << "multiply(a, b, c), depth=" << depth << ", n=" << n;
+        c = a.mul(b);
+        EXPECT_EQ(0, cvtest::norm(c, ref_ab, NORM_INF)) << "a.mul(b), depth=" << depth << ", n=" << n;
+        cv::pow(a, 2, c);
+        EXPECT_EQ(0, cvtest::norm(c, ref_aa, NORM_INF)) << "pow(a, 2, c), depth=" << depth << ", n=" << n;
+
+        Mat d = a.clone();
+        cv::multiply(d, b, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_ab, NORM_INF)) << "multiply(a, b, a), depth=" << depth << ", n=" << n;
+        d = a.clone();
+        cv::multiply(b, d, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_ab, NORM_INF)) << "multiply(b, a, a), depth=" << depth << ", n=" << n;
+        d = a.clone();
+        cv::pow(d, 2, d);
+        EXPECT_EQ(0, cvtest::norm(d, ref_aa, NORM_INF)) << "pow(a, 2, a), depth=" << depth << ", n=" << n;
+    }
+}
+
+TEST(Core_Arithm, mul_overflow_tail_and_inplace)
+{
+    checkMulOverflow<uchar>(CV_8U, {0, 1, 2, 15, 16, 17, 100, 128, 200, 254, 255});
+    checkMulOverflow<schar>(CV_8S, {-128, -127, -100, -12, -11, -1, 0, 1, 11, 12, 100, 127});
+    // 46341^2 and 65535^2 exceed INT_MAX, 46340^2 does not
+    checkMulOverflow<ushort>(CV_16U, {0, 1, 2, 255, 256, 257, 300, 46340, 46341, 50000, 65534, 65535});
+    checkMulOverflow<short>(CV_16S, {-32768, -32767, -256, -182, -181, -1, 0, 1, 181, 182, 256, 32767});
 }
 
 

@@ -1978,7 +1978,7 @@ OPENCV_HAL_IMPL_SSE_UNPACKS(v_float64x2, pd, _mm_castpd_si128, _mm_castsi128_pd)
 inline v_uint8x16 v_reverse(const v_uint8x16 &a)
 {
 #if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
     return v_uint8x16(_mm_shuffle_epi8(a.val, perm));
 #else
     uchar CV_DECL_ALIGNED(32) d[16];
@@ -1993,7 +1993,7 @@ inline v_int8x16 v_reverse(const v_int8x16 &a)
 inline v_uint16x8 v_reverse(const v_uint16x8 &a)
 {
 #if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
+    const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
     return v_uint16x8(_mm_shuffle_epi8(a.val, perm));
 #else
     __m128i r = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3));
@@ -2034,53 +2034,65 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
     return v_rotate_right<s>(a, b);
 }
 
+
+// cvtps2dq/cvtpd2dq and the truncating variants return INT_MIN ("integer indefinite") for any
+// out-of-range input, so the input is clamped to make the conversion saturate instead. The lower
+// bound is only needed by v_floor, where the subsequent "-1" correction could wrap INT_MIN around;
+// for the other functions the indefinite value already is the correct saturated result.
+// NaN is not handled: the result is unspecified.
+// See cvRound()/cvFloor()/cvCeil()/cvTrunc() for the scalar counterparts and the exact bounds.
 inline v_int32x4 v_round(const v_float32x4& a)
-{ return v_int32x4(_mm_cvtps_epi32(a.val)); }
+{ return v_int32x4(_mm_cvtps_epi32(_mm_min_ps(a.val, _mm_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-    __m128i a1 = _mm_cvtps_epi32(a.val);
-    __m128i mask = _mm_castps_si128(_mm_cmpgt_ps(_mm_cvtepi32_ps(a1), a.val));
+    __m128 v = _mm_min_ps(_mm_max_ps(_mm_set1_ps(CV__FLT2INT_MIN_F), a.val), _mm_set1_ps(CV__FLT2INT_MAX_F));
+    __m128i a1 = _mm_cvtps_epi32(v);
+    __m128i mask = _mm_castps_si128(_mm_cmpgt_ps(_mm_cvtepi32_ps(a1), v));
     return v_int32x4(_mm_add_epi32(a1, mask));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
-    __m128i a1 = _mm_cvtps_epi32(a.val);
-    __m128i mask = _mm_castps_si128(_mm_cmpgt_ps(a.val, _mm_cvtepi32_ps(a1)));
+    __m128 v = _mm_min_ps(a.val, _mm_set1_ps(CV__FLT2INT_MAX_F));
+    __m128i a1 = _mm_cvtps_epi32(v);
+    __m128i mask = _mm_castps_si128(_mm_cmpgt_ps(v, _mm_cvtepi32_ps(a1)));
     return v_int32x4(_mm_sub_epi32(a1, mask));
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
-{ return v_int32x4(_mm_cvttps_epi32(a.val)); }
+{ return v_int32x4(_mm_cvttps_epi32(_mm_min_ps(a.val, _mm_set1_ps(CV__FLT2INT_MAX_F)))); }
 
 inline v_int32x4 v_round(const v_float64x2& a)
-{ return v_int32x4(_mm_cvtpd_epi32(a.val)); }
+{ return v_int32x4(_mm_cvtpd_epi32(_mm_min_pd(a.val, _mm_set1_pd(CV__FLT2INT_MAX_D)))); }
 
 inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 {
-    __m128i ai = _mm_cvtpd_epi32(a.val), bi = _mm_cvtpd_epi32(b.val);
+    __m128d hi = _mm_set1_pd(CV__FLT2INT_MAX_D);
+    __m128i ai = _mm_cvtpd_epi32(_mm_min_pd(a.val, hi)), bi = _mm_cvtpd_epi32(_mm_min_pd(b.val, hi));
     return v_int32x4(_mm_unpacklo_epi64(ai, bi));
 }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
 {
-    __m128i a1 = _mm_cvtpd_epi32(a.val);
-    __m128i mask = _mm_castpd_si128(_mm_cmpgt_pd(_mm_cvtepi32_pd(a1), a.val));
+    __m128d v = _mm_min_pd(_mm_max_pd(_mm_set1_pd(CV__FLT2INT_MIN_D), a.val), _mm_set1_pd(CV__FLT2INT_MAX_D));
+    __m128i a1 = _mm_cvtpd_epi32(v);
+    __m128i mask = _mm_castpd_si128(_mm_cmpgt_pd(_mm_cvtepi32_pd(a1), v));
     mask = _mm_srli_si128(_mm_slli_si128(mask, 4), 8); // m0 m0 m1 m1 => m0 m1 0 0
     return v_int32x4(_mm_add_epi32(a1, mask));
 }
 
 inline v_int32x4 v_ceil(const v_float64x2& a)
 {
-    __m128i a1 = _mm_cvtpd_epi32(a.val);
-    __m128i mask = _mm_castpd_si128(_mm_cmpgt_pd(a.val, _mm_cvtepi32_pd(a1)));
+    __m128d v = _mm_min_pd(a.val, _mm_set1_pd(CV__FLT2INT_MAX_D));
+    __m128i a1 = _mm_cvtpd_epi32(v);
+    __m128i mask = _mm_castpd_si128(_mm_cmpgt_pd(v, _mm_cvtepi32_pd(a1)));
     mask = _mm_srli_si128(_mm_slli_si128(mask, 4), 8); // m0 m0 m1 m1 => m0 m1 0 0
     return v_int32x4(_mm_sub_epi32(a1, mask));
 }
 
 inline v_int32x4 v_trunc(const v_float64x2& a)
-{ return v_int32x4(_mm_cvttpd_epi32(a.val)); }
+{ return v_int32x4(_mm_cvttpd_epi32(_mm_min_pd(a.val, _mm_set1_pd(CV__FLT2INT_MAX_D)))); }
 
 #define OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(_Tpvec, suffix, cast_from, cast_to) \
 inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1, \

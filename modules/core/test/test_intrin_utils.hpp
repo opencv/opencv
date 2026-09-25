@@ -1465,6 +1465,54 @@ template<typename R> struct TheTest
             EXPECT_COMPARE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
         }
 
+        // Out-of-range, boundary and .5 inputs: the results must saturate to the destination range and
+        // agree with the scalar functions (see the cvRound() documentation for the exact bounds).
+        {
+            typedef typename VTraits<Ri>::lane_type ILaneType;
+            const float inf = std::numeric_limits<float>::infinity();
+            const float ovals32[] = { 3e9f, -3e9f, 1e30f, -1e30f, 2147483520.f, -2147483648.f, inf, -inf,
+                                      2.5f, -2.5f, 2.75f, -2.75f, 0.5f, -0.5f, 100.5f, -100.5f };
+            // 16-bit floats -> 16-bit ints: values that fit into f16, but not into int16
+            const float ovals16[] = { 40000.f, -40000.f, 65504.f, -65504.f, 32768.f, -32768.f, 33000.f, -33000.f,
+                                      2.5f, -2.5f, 2.75f, -2.75f, 0.5f, -0.5f, 100.5f, -100.5f };
+            const int novals = 16;
+            const float* ov = sizeof(ILaneType) == 2 ? ovals16 : ovals32;
+            Data<R> dataO;
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+                dataO[i] = (LaneType)ov[i % novals];
+            R aO = dataO;
+            Data<Ri> roundO = v_round(aO), truncO = v_trunc(aO), floorO = v_floor(aO), ceilO = v_ceil(aO);
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            {
+                LaneType x = dataO[i];
+                double xd = (double)x;
+                SCOPED_TRACE(cv::format("overflow: i=%d, x=%g", i, xd));
+                EXPECT_EQ(saturate_cast<ILaneType>(cvRound(x)), roundO[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvTrunc(x)), truncO[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvFloor(x)), floorO[i]);
+                EXPECT_EQ(saturate_cast<ILaneType>(cvCeil(x)), ceilO[i]);
+                if (sizeof(ILaneType) == 4)
+                {
+                    if (xd >= 2147483648.)
+                    {
+                        // INT_MAX is not representable as float, 2147483520 is the largest float below 2^31
+                        int lo = sizeof(LaneType) == 8 ? INT_MAX : 2147483520;
+                        EXPECT_GE((int)roundO[i], lo); EXPECT_LE((int)roundO[i], INT_MAX);
+                        EXPECT_GE((int)truncO[i], lo); EXPECT_LE((int)truncO[i], INT_MAX);
+                        EXPECT_GE((int)floorO[i], lo); EXPECT_LE((int)floorO[i], INT_MAX);
+                        EXPECT_GE((int)ceilO[i], lo);  EXPECT_LE((int)ceilO[i], INT_MAX);
+                    }
+                    else if (xd <= -2147483648.)
+                    {
+                        EXPECT_EQ(INT_MIN, (int)roundO[i]);
+                        EXPECT_EQ(INT_MIN, (int)truncO[i]);
+                        EXPECT_EQ(INT_MIN, (int)floorO[i]);
+                        EXPECT_EQ(INT_MIN, (int)ceilO[i]);
+                    }
+                }
+            }
+        }
+
         return *this;
     }
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
@@ -1489,6 +1537,36 @@ template<typename R> struct TheTest
             EXPECT_EQ(cvRound(data1[i]), resA[i]);
             EXPECT_EQ(cvRound(data1_border[i]), resB[i]);
             EXPECT_EQ(cvRound(data2[i]), resC[i]);
+        }
+
+        // out-of-range inputs must saturate in both halves (see the cvRound() documentation)
+        {
+            const double inf = std::numeric_limits<double>::infinity();
+            const double ovals[] = { 3e9, -3e9, 1e30, -1e30, 2147483647.5, -2147483648.5, inf, -inf,
+                                     2.5, -2.5, 2147483646.5, -2147483647.5, 0.5, -0.5, 1e10, -1e10 };
+            const int novals = 16;
+            Data<R> dataO1, dataO2;
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            {
+                dataO1[i] = ovals[i % novals];
+                dataO2[i] = ovals[(i + 5) % novals];
+            }
+            R aO1 = dataO1, aO2 = dataO2;
+            Data<Ri> resO = v_round(aO1, aO2);
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            {
+                SCOPED_TRACE(cv::format("overflow: i=%d", i));
+                EXPECT_EQ(cvRound(dataO1[i]), resO[i]);
+                EXPECT_EQ(cvRound(dataO2[i]), resO[i + VTraits<R>::vlanes()]);
+                if (dataO1[i] >= 2147483648.)
+                {
+                    EXPECT_EQ(INT_MAX, resO[i]);
+                }
+                if (dataO1[i] <= -2147483648.)
+                {
+                    EXPECT_EQ(INT_MIN, resO[i]);
+                }
+            }
         }
 
         return *this;
