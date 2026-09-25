@@ -240,7 +240,7 @@ enum VideoWriterProperties {
 #endif
 };
 
-/** @brief cv::VideoWriter encoder presets for \ref VIDEOWRITER_PROP_PRESET.
+/** @brief cv::VideoWriter encoder presets for \ref cv::VIDEOWRITER_PROP_PRESET.
 
 Ordered from fastest encoding / lowest compression to slowest / highest. Names match the
 preset system used by libx264 and libx265.
