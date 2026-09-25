@@ -1801,6 +1801,61 @@ TEST(Core_InputOutput, FileStorage_json_unicode_escape)
     fs.release();
 }
 
+
+TEST(Core_InputOutput, FileStorage_json_unicode_surrogate_pairs)
+{
+    // A \\uXXXX escape holds one UTF-16 code unit, so a character above the BMP is written as a
+    // surrogate pair and has to be recombined into one 4-byte UTF-8 sequence; encoding each half
+    // separately produces CESU-8, which is not valid UTF-8.
+    // Written with doubled backslashes in a normal literal on purpose: in a raw string the
+    // escapes are easy to decode before the parser ever sees them, which silently voids the test.
+    std::string test =
+        "{"
+        "\"first_supplementary\": \"\\uD800\\uDC00\","
+        "\"emoji\": \"\\uD83D\\uDE00\","
+        "\"last_valid\": \"\\uDBFF\\uDFFF\","
+        "\"bmp_max\": \"\\uFFFF\","
+        "\"embedded\": \"a\\uD83D\\uDE00b\","
+        "\"\\uD83D\\uDE00\": \"key_is_a_surrogate_pair\""
+        "}";
+    ASSERT_NE(test.find("\\u"), std::string::npos) << "escapes were decoded before the parser";
+
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+
+    EXPECT_EQ((std::string)fs["first_supplementary"], "\xF0\x90\x80\x80");  // U+10000
+    EXPECT_EQ((std::string)fs["emoji"], "\xF0\x9F\x98\x80");                // U+1F600
+    EXPECT_EQ((std::string)fs["last_valid"], "\xF4\x8F\xBF\xBF");           // U+10FFFF
+    EXPECT_EQ((std::string)fs["bmp_max"], "\xEF\xBF\xBF");   // U+FFFF stays 3-byte
+    EXPECT_EQ((std::string)fs["embedded"], "a\xF0\x9F\x98\x80" "b");
+    // Keys go through the same escape handling as values.
+    EXPECT_EQ((std::string)fs["\xF0\x9F\x98\x80"], "key_is_a_surrogate_pair");
+
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_unicode_malformed_surrogates)
+{
+    // Half a pair names no character, and a lone surrogate cannot be encoded in UTF-8 at all,
+    // so these are rejected instead of becoming CESU-8 bytes.
+    const char* bad[] = {
+        "{\"v\": \"\\uD83D\"}",         // high surrogate, nothing after it
+        "{\"v\": \"\\uDE00\"}",         // low surrogate on its own
+        "{\"v\": \"\\uD83Dx\"}",        // high surrogate then a plain character
+        "{\"v\": \"\\uD83D\\un\"}",      // high surrogate then a non-\\u escape
+        "{\"v\": \"\\uD83D\\u0041\"}",   // high surrogate then a BMP escape
+        "{\"v\": \"\\uD83D\\uD83D\"}",   // two high surrogates
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        SCOPED_TRACE(cv::format("case %d: %s", (int)i, bad[i]));
+        EXPECT_ANY_THROW({
+            FileStorage fs(bad[i], FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+            std::string unused = (std::string)fs["v"];
+            (void)unused;
+        });
+    }
+}
+
 TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 {
     const std::string fileName = cv::tempfile("FileStorage_free_file_after_exception_test.yml");

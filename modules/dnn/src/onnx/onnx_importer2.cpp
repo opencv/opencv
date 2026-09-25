@@ -2474,6 +2474,7 @@ void ONNXImporter2::parseDynamicQuantizeLinear(LayerParams& layerParams, const o
 
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "RMSNormalization";
     addLayer(layerParams, node_proto);
 }
 
@@ -2935,21 +2936,53 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
     addLayer(params, node_proto, (int)node_inputs.size());
 }
 
-// com.microsoft GroupQueryAttention (grouped, causal) -> AttentionOnnxAi.
+// com.microsoft GroupQueryAttention (grouped, causal). AttentionOnnxAi handles the plain
+// case and brings the fused kernel and paged KV cache with it, so only the variants it
+// cannot express -- rotary embedding and sliding-window attention -- go to the standalone
+// GroupQueryAttention layer. GraniteDocling-258M's onnxruntime-genai export is the rotary
+// case (do_rotary=1 on all 30 attention nodes).
 void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
                  "GroupQueryAttention: num_heads and kv_num_heads are required");
-    CV_CheckEQ(params.get<int>("do_rotary", 0), 0, "GroupQueryAttention: do_rotary=1 is not supported");
-    CV_CheckEQ(params.get<int>("local_window_size", -1), -1, "GroupQueryAttention: sliding window is not supported");
     CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
-                 "GroupQueryAttention: separate key and value are required");
-    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
-        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
+                 "GroupQueryAttention: packed QKV is not supported, key and value must be separate");
 
-    // inputs: query, key, value, past_key, past_value, seqlens_k, total_sequence_length, ...
+    // inputs: query, key, value, past_key, past_value, seqlens_k, total_sequence_length,
+    //         cos_cache, sin_cache, ...
     const bool has_past_k = hasInput(node_proto, 3), has_past_v = hasInput(node_proto, 4);
     CV_CheckTrue(has_past_k == has_past_v,
                  "GroupQueryAttention: past_key and past_value must be provided as a pair");
+
+    const bool do_rotary = params.get<int>("do_rotary", 0) != 0;
+    const bool sliding_window = params.get<int>("local_window_size", -1) > 0;
+
+    // A fixed past seq dim means the export preallocates one KV buffer and rewrites it in
+    // place, so present is that buffer rather than past + query and seqlens_k says how much
+    // of it is live. AttentionOnnxAi cannot express that, the standalone layer can.
+    bool shared_buffer = false;
+    if (has_past_k) {
+        const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
+        shared_buffer = (pk.dims >= 2 && pk[pk.dims - 2] > 0);
+    }
+
+    if (do_rotary || sliding_window || shared_buffer) {
+        for (int i = 9; i < node_proto.input_size(); i++)  // position_ids / attention_bias / head_sink
+            CV_CheckFalse(hasInput(node_proto, i),
+                "GroupQueryAttention: only inputs 0..8 (query .. sin_cache) are supported");
+        if (do_rotary)
+            CV_CheckTrue(hasInput(node_proto, 7) && hasInput(node_proto, 8),
+                         "GroupQueryAttention: do_rotary=1 requires cos_cache and sin_cache");
+        // seqlens_k's value is not available during shape inference, so the layer cannot
+        // work the convention out for itself and is told here.
+        if (shared_buffer)
+            params.set("shared_kv_buffer", 1);
+        params.type = "GroupQueryAttention";
+        addLayer(params, node_proto);
+        return;
+    }
+
+    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
+        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
 
     std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
     if (has_past_k) {
@@ -3237,7 +3270,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
-    dispatch["RMSNormalization"] = &ONNXImporter2::parseRMSNormalization;
+    dispatch["RMSNormalization"] = dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseRMSNormalization;
     dispatch["RotaryEmbedding"] = &ONNXImporter2::parseRotaryEmbedding;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
