@@ -322,6 +322,81 @@ TEST_P(Test_Model, Classify)
     testClassifyModel(weights_file, "", img_path, ref, norm, size);
 }
 
+TEST_P(Test_Model, PredictBatch)
+{
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/mobilenet_v2_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("mobilenet_v2_batch_exp.npy"));
+
+    std::vector<Mat> frames;
+    for (const char* name : {"grace_hopper_227.png", "dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    Model model(weights_file);
+    model.setInputSize(Size(224, 224));
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<Mat> outs;
+    model.predict(frames, outs);
+    ASSERT_EQ(outs.size(), (size_t)1);
+    ASSERT_EQ(outs[0].size[0], (int)frames.size());
+    // Ref. range: [-5.14, 11.90].
+    double l1 = 1e-4, lInf = 1e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.01;
+        lInf = 0.15;
+    }
+    normAssert(exp, outs[0], "", l1, lInf);
+}
+
+TEST_P(Test_Model, ClassifyBatch)
+{
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/mobilenet_v2_dynbatch.onnx", false);
+    const std::vector<int>   refClassIds = {722, 722, 795};
+    const std::vector<float> refConfs    = {9.136000f, 11.903928f, 10.677275f};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"grace_hopper_227.png", "dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    ClassificationModel model(weights_file);
+    model.setInputSize(Size(224, 224));
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<int> classIds;
+    std::vector<float> confs;
+    model.classify(frames, classIds, confs);
+    ASSERT_EQ(classIds.size(), frames.size());
+    ASSERT_EQ(confs.size(), frames.size());
+
+    // Confidences are logits. Ref. range: [9.14, 11.90].
+    double scoreDiff = 1e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+        scoreDiff = 0.15;
+
+    for (size_t i = 0; i < frames.size(); i++)
+    {
+        EXPECT_EQ(classIds[i], refClassIds[i]) << "image " << i;
+        EXPECT_NEAR(confs[i], refConfs[i], scoreDiff) << "image " << i;
+    }
+}
+
 TEST_P(Test_Model, YOLOv3)
 {
     applyTestTag(
@@ -437,6 +512,60 @@ TEST_P(Test_Model, Keypoints_pose)
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
+TEST_P(Test_Model, KeypointsBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    // A heatmap argmax jumps a whole cell under FP16.
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+#ifdef HAVE_INF_ENGINE
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/vitpose_plus_small_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("vitpose_batch_exp.npy"));   // [images x keypoints x 2]
+    ASSERT_EQ(exp.dims, 3);
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png", "grace_hopper_227.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    KeypointsModel model(weights_file);
+    model.setInputSize(Size(192, 256));
+    model.setInputScale(1.0 / 255.0);
+    model.setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<std::vector<Point2f> > keypoints;
+    model.estimate(frames, keypoints, 0.5f);
+    ASSERT_EQ(keypoints.size(), frames.size());
+    ASSERT_EQ((int)keypoints.size(), exp.size[0]);
+
+    // Ref. range: [-1, 537.97].
+    const double kpDiff = target == DNN_TARGET_CUDA_FP16 ? 20.0 : 1e-2;
+
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "image " << i;
+        const float* e = exp.ptr<float>((int)i);
+        for (size_t k = 0; k < keypoints[i].size(); k++)
+        {
+            EXPECT_NEAR(keypoints[i][k].x, e[2 * k], kpDiff) << "image " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].y, e[2 * k + 1], kpDiff)
+                << "image " << i << " keypoint " << k;
+        }
+    }
+}
+
 TEST_P(Test_Model, Keypoints_face)
 {
 #if defined(INF_ENGINE_RELEASE)
@@ -520,6 +649,210 @@ TEST_P(Test_Model, Segmentation)
     bool swapRB = true;
 
     testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false);
+}
+
+TEST_P(Test_Model, SegmentBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/segformer_b3_ade_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("segformer_b3_batch_exp.npy"));   // [images x H x W], CV_8U
+    ASSERT_EQ(exp.dims, 3);
+    ASSERT_EQ(exp.type(), CV_8U);
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    SegmentationModel model(weights_file);
+    model.setInputSize(Size(256, 256));
+    model.setInputScale(1.0 / 255.0);
+    model.setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<Mat> masks;
+    model.segment(frames, masks);
+    ASSERT_EQ(masks.size(), frames.size());
+    ASSERT_EQ((int)masks.size(), exp.size[0]);
+
+    // A per-pixel argmax flips along class boundaries under FP16.
+    const double minMatch = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+        || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD) ? 0.98 : 1.0;
+
+    for (size_t b = 0; b < masks.size(); b++)
+    {
+        Mat refMask(exp.size[1], exp.size[2], CV_8U, exp.ptr<uchar>((int)b));
+        ASSERT_EQ(masks[b].size(), refMask.size()) << "image " << b;
+
+        double lo = 0, hi = 0;
+        minMaxLoc(refMask, &lo, &hi);
+        // A single-class reference would make the comparison below trivially true.
+        ASSERT_GT(hi, lo) << "image " << b << ": the reference mask holds one class";
+
+        const int total = refMask.rows * refMask.cols;
+        EXPECT_GE(countNonZero(masks[b] == refMask), cvRound(minMatch * total)) << "image " << b;
+    }
+}
+
+TEST_P(Test_Model, DetectBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/yolo26n_dynbatch.onnx", false);
+    // Clear of every reference confidence, so none can drop out on a target that shifts scores.
+    const float confThreshold = 0.3f;
+    const std::vector<int>    refClassIds = {16, 1, 7, 2, 0, 2};
+    const std::vector<int>    refFrameIds = {0, 0, 0, 1, 1, 1};
+    const std::vector<float>  refConfs    = {0.938952f, 0.930894f, 0.796426f,
+                                             0.926659f, 0.873587f, 0.762157f};
+    const std::vector<Rect2d> refBoxes    = {
+        Rect2d(70, 161, 98, 228), Rect2d(65, 96, 241, 205), Rect2d(251, 54, 124, 69),
+        Rect2d(333, 234, 84, 104), Rect2d(91, 185, 44, 137), Rect2d(231, 236, 22, 32)};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"dog416.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    DetectionModel model(weights_file);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<int> classIds, frameIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.detect(frames, classIds, confidences, boxes, frameIds, confThreshold, 0.45f);
+
+    ASSERT_EQ(confidences.size(), classIds.size());
+    ASSERT_EQ(boxes.size(), classIds.size());
+    ASSERT_EQ(frameIds.size(), classIds.size());
+    for (size_t i = 1; i < frameIds.size(); i++)
+        EXPECT_LE(frameIds[i - 1], frameIds[i]) << "frameIds must be non-decreasing";
+
+    for (int b = 0; b < (int)frames.size(); b++)
+    {
+        std::vector<int> refCls, cls;
+        std::vector<float> refConf, conf;
+        std::vector<Rect2d> refBox, box;
+        for (size_t i = 0; i < refClassIds.size(); i++)
+        {
+            if (refFrameIds[i] != b)
+                continue;
+            refCls.push_back(refClassIds[i]);
+            refConf.push_back(refConfs[i]);
+            refBox.push_back(refBoxes[i]);
+        }
+        for (size_t i = 0; i < classIds.size(); i++)
+        {
+            if (frameIds[i] != b)
+                continue;
+            cls.push_back(classIds[i]);
+            conf.push_back(confidences[i]);
+            box.push_back(boxes[i]);
+        }
+        normAssertDetections(refCls, refConf, refBox, cls, conf, box,
+                             cv::format("frame %d", b).c_str(), confThreshold,
+                             /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+    }
+}
+
+TEST_P(Test_Model, EstimatePosesBatch)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    std::string weights_file = _tf("onnx/models/yolo26n_pose_dynbatch.onnx", false);
+    Mat exp = blobFromNPY(_tf("yolo26n_pose_batch_exp.npy"));   // [people x keypoints x 3]
+    ASSERT_EQ(exp.dims, 3);
+    const std::vector<int>    refFrameIds = {0, 1};
+    const std::vector<int>    refClassIds = {0, 0};
+    const std::vector<float>  refConfs    = {0.911909f, 0.843495f};
+    const std::vector<Rect2d> refBoxes    = {Rect2d(58, 26, 383, 573),
+                                             Rect2d(100, 185, 35, 137)};
+
+    std::vector<Mat> frames;
+    for (const char* name : {"pose.png", "street.png"})
+    {
+        Mat img = imread(_tf(name));
+        ASSERT_FALSE(img.empty()) << name;
+        frames.push_back(img);
+    }
+
+    KeypointsModel model(weights_file);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+
+    std::vector<std::vector<Point3f> > keypoints;
+    std::vector<Rect> boxes;
+    std::vector<float> confidences;
+    std::vector<int> frameIds;
+    model.estimatePoses(frames, keypoints, boxes, confidences, frameIds, 0.25f, 0.45f);
+
+    ASSERT_EQ((int)keypoints.size(), exp.size[0]);
+    ASSERT_EQ(boxes.size(), keypoints.size());
+    ASSERT_EQ(confidences.size(), keypoints.size());
+    ASSERT_EQ(frameIds.size(), keypoints.size());
+    for (size_t i = 1; i < frameIds.size(); i++)
+        EXPECT_LE(frameIds[i - 1], frameIds[i]) << "frameIds must be non-decreasing";
+
+    for (int b = 0; b < (int)frames.size(); b++)
+    {
+        std::vector<int> refCls, cls;
+        std::vector<float> refConf, conf;
+        std::vector<Rect2d> refBox, box;
+        for (size_t i = 0; i < refFrameIds.size(); i++)
+        {
+            if (refFrameIds[i] != b)
+                continue;
+            refCls.push_back(refClassIds[i]);
+            refConf.push_back(refConfs[i]);
+            refBox.push_back(refBoxes[i]);
+        }
+        for (size_t i = 0; i < frameIds.size(); i++)
+        {
+            if (frameIds[i] != b)
+                continue;
+            cls.push_back(0);
+            conf.push_back(confidences[i]);
+            box.push_back(boxes[i]);
+        }
+        normAssertDetections(refCls, refConf, refBox, cls, conf, box,
+                             cv::format("frame %d", b).c_str(), 0.25,
+                             /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+    }
+
+    // Ref. range: [69.93, 552.05] in image pixels, visibility around 1.5e-3.
+    const bool fp16 = target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16
+                   || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD;
+    const double kpDiff = fp16 ? 20.0 : 1e-2;
+    const double visDiff = fp16 ? 1e-3 : 1e-5;
+
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        ASSERT_EQ((int)keypoints[i].size(), exp.size[1]) << "person " << i;
+        const float* e = exp.ptr<float>((int)i);
+        for (size_t k = 0; k < keypoints[i].size(); k++)
+        {
+            EXPECT_NEAR(keypoints[i][k].x, e[3 * k], kpDiff)
+                << "person " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].y, e[3 * k + 1], kpDiff)
+                << "person " << i << " keypoint " << k;
+            EXPECT_NEAR(keypoints[i][k].z, e[3 * k + 2], visDiff)
+                << "person " << i << " keypoint " << k;
+        }
+    }
 }
 
 TEST_P(Test_Model, TextRecognition)
@@ -1193,6 +1526,220 @@ TEST_P(Reproducibility_YOLOv8n_ONNX, Accuracy)
                          "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOv8n_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// Same model/image as Reproducibility_YOLOv8n_ONNX, via DetectionModel's high-level API.
+// dog416.png is square, so default DNN_PMODE_NULL resize matches that test's plain resize.
+typedef testing::TestWithParam<Target> Test_DetectionModel_YOLOv8;
+TEST_P(Test_DetectionModel_YOLOv8, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("yolov8n.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    DetectionModel model(net);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    // Reference values below were generated with across-class NMS.
+    model.setNmsAcrossClasses(true);
+    model.setPreferableBackend(DNN_BACKEND_OPENCV);
+    model.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        model.enableWinograd(false);
+
+    Mat image = imread(_tf("dog416.png"));
+    ASSERT_TRUE(!image.empty());
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.detect(image, classIds, confidences, boxes, 0.25f, 0.45f);
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+    {
+        testBoxes.emplace_back(box.x / (double)image.cols, box.y / (double)image.rows,
+                               box.width / (double)image.cols, box.height / (double)image.rows);
+    }
+
+    std::vector<int>    refClassIds  = {16, 1, 7};
+    std::vector<float>  refScores    = {0.827f, 0.809f, 0.544f};
+    std::vector<Rect2d> refBoxes     = {
+        Rect2d(0.171157, 0.386951, 0.231909, 0.551873),  // dog
+        Rect2d(0.160967, 0.234788, 0.577899, 0.495077),  // bicycle
+        Rect2d(0.608337, 0.130141, 0.291832, 0.167390),  // truck
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_YOLOv8,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+static void testDetectionModel(const std::string& model, const std::string& image, int size,
+                                const std::vector<int>& refClassIds,
+                                const std::vector<float>& refScores,
+                                const std::vector<Rect2d>& refBoxes, Target targetId,
+                                float confThreshold = 0.25f)
+{
+    Net net = readNetFromONNX(_tf(model, false));
+
+    DetectionModel dm(net);
+    dm.setInputSize(size, size).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    dm.setPreferableBackend(DNN_BACKEND_OPENCV);
+    dm.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        dm.enableWinograd(false);
+
+    Mat frame = imread(_tf(image));
+    ASSERT_FALSE(frame.empty());
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    dm.detect(frame, classIds, confidences, boxes, confThreshold, 0.45f);
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+        testBoxes.emplace_back(box.x / (double)frame.cols, box.y / (double)frame.rows,
+                               box.width / (double)frame.cols, box.height / (double)frame.rows);
+
+    normAssertDetections(refClassIds, refScores, refBoxes, classIds, confidences, testBoxes,
+                         "", confThreshold, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+}
+
+// NMS-free export: rows are [x1, y1, x2, y2, score, classIdx]
+typedef testing::TestWithParam<Target> Test_DetectionModel_YOLO26n;
+TEST_P(Test_DetectionModel_YOLO26n, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::vector<int>    refClassIds = {16, 1, 7};
+    std::vector<float>  refScores   = {0.939f, 0.931f, 0.796f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.169624, 0.388881, 0.236413, 0.548341),  // dog
+        Rect2d(0.157487, 0.230821, 0.581572, 0.493849),  // bicycle
+        Rect2d(0.605301, 0.131084, 0.298750, 0.167857),  // truck
+    };
+    testDetectionModel("onnx/models/yolo26n.onnx", "dog416.png", 640,
+                       refClassIds, refScores, refBoxes, targetId);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_YOLO26n,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// Boxes are fractions of the image rather than blob pixels.
+typedef testing::TestWithParam<Target> Test_DetectionModel_RTDETR;
+TEST_P(Test_DetectionModel_RTDETR, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::vector<int>    refClassIds = {1, 16, 7, 2};
+    std::vector<float>  refScores   = {0.962f, 0.936f, 0.678f, 0.615f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.166314, 0.234772, 0.573119, 0.495991),  // bicycle
+        Rect2d(0.170998, 0.385147, 0.233343, 0.555273),  // dog
+        Rect2d(0.608527, 0.130004, 0.290127, 0.166160),  // truck
+        Rect2d(0.607701, 0.130143, 0.290616, 0.166489),  // car, same object as the truck above
+    };
+    testDetectionModel("onnx/models/rtdetr-l.onnx", "dog416.png", 640,
+                       refClassIds, refScores, refBoxes, targetId, /*confThreshold=*/0.5f);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_RTDETR,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// Two outputs, [1,N,4] boxes and [1,N,91] class logits. Input is fixed at 560: the graph's
+// position_embeddings initializer is [1, 1601, 384], the token count only that size produces.
+typedef testing::TestWithParam<Target> Test_DetectionModel_RFDETR;
+TEST_P(Test_DetectionModel_RFDETR, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    // Class ids follow the 91-entry COCO numbering, not the 80-entry one the YOLO models use.
+    std::vector<int>    refClassIds = {2, 18, 3, 4, 8};
+    std::vector<float>  refScores   = {0.956f, 0.953f, 0.653f, 0.363f, 0.257f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.162980, 0.230139, 0.575498, 0.501513),  // bicycle
+        Rect2d(0.170413, 0.384726, 0.233895, 0.554258),  // dog
+        Rect2d(0.606809, 0.130301, 0.285919, 0.166218),  // car
+        Rect2d(0.072298, 0.124998, 0.072972, 0.090138),  // motorcycle
+        Rect2d(0.605576, 0.129564, 0.287405, 0.167635),  // truck, same object as the car above
+    };
+    testDetectionModel("onnx/models/rfdetr.onnx", "dog416.png", 560,
+                       refClassIds, refScores, refBoxes, targetId);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_RFDETR,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+// NMS-free segmentation export: the detect head is 6 wide once the 32 mask channels are removed.
+typedef testing::TestWithParam<Target> Test_SegmentationModel_YOLO26mSeg;
+TEST_P(Test_SegmentationModel_YOLO26mSeg, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    Net net = readNetFromONNX(_tf("onnx/models/yolo26m-seg.onnx", false));
+
+    SegmentationModel model(net);
+    model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+    model.setPreferableBackend(DNN_BACKEND_OPENCV);
+    model.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        model.enableWinograd(false);
+
+    Mat frame = imread(_tf("street.png"));
+    ASSERT_FALSE(frame.empty());
+
+    std::vector<Mat> masks;
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    model.segmentInstances(frame, masks, classIds, confidences, boxes, 0.25f, 0.45f);
+    ASSERT_EQ(masks.size(), boxes.size());
+
+    std::vector<Rect2d> testBoxes;
+    for (const Rect& box : boxes)
+        testBoxes.emplace_back(box.x / (double)frame.cols, box.y / (double)frame.rows,
+                               box.width / (double)frame.cols, box.height / (double)frame.rows);
+
+    std::vector<int>    refClassIds = {2, 0, 2, 9, 9};
+    std::vector<float>  refScores   = {0.955f, 0.908f, 0.894f, 0.631f, 0.549f};
+    std::vector<Rect2d> refBoxes    = {
+        Rect2d(0.651824, 0.458378, 0.162776, 0.201584),  // car
+        Rect2d(0.201430, 0.359583, 0.064147, 0.272150),  // person
+        Rect2d(0.451695, 0.462340, 0.043343, 0.060642),  // car
+        Rect2d(0.374813, 0.314014, 0.023998, 0.080583),  // traffic light
+        Rect2d(0.668268, 0.373815, 0.018404, 0.068568),  // traffic light
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes, classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+
+    // Pixel counts rather than "not blank": every wrong mask-coefficient offset changes them.
+    const std::vector<int> refMaskPixels = {6565, 2853, 587, 477, 315};
+    ASSERT_EQ(masks.size(), refMaskPixels.size());
+    for (size_t i = 0; i < masks.size(); i++)
+    {
+        EXPECT_EQ(masks[i].type(), CV_8U);
+        EXPECT_EQ(masks[i].size(), boxes[i].size());
+        EXPECT_NEAR(countNonZero(masks[i]), refMaskPixels[i], 2) << "instance " << i;
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_SegmentationModel_YOLO26mSeg,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 

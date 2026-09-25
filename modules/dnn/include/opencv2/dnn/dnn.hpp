@@ -1404,6 +1404,13 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param size original input image size.
          */
         CV_WRAP void blobRectsToImageRects(const std::vector<Rect> &rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
+
+        /** @brief Get points coordinates in original image system from points in blob coordinates.
+         *  @param pBlob points in blob coordinates.
+         *  @param pImg result points in image coordinates.
+         *  @param size original input image size.
+         */
+        CV_WRAP void blobPointsToImagePoints(const std::vector<Point2f> &pBlob, CV_OUT std::vector<Point2f>& pImg, const Size& size);
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
@@ -1596,6 +1603,13 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP Model& setInputSwapRB(bool swapRB);
 
+         /** @brief Set the image padding mode used when resizing the frame to the network input size.
+          *  @param[in] mode Padding mode, @see ImagePaddingMode. Defaults to DNN_PMODE_NULL.
+          *  @note This, setInputCrop() and setInputParams() all write the same setting, so the
+          *  last call wins. YOLOv8-family exports expect DNN_PMODE_LETTERBOX.
+         */
+         CV_WRAP Model& setPaddingMode(ImagePaddingMode mode);
+
          /** @brief Set output names for frame.
           *  @param[in] outNames Names for output layers.
          */
@@ -1617,6 +1631,14 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] outs Allocated output blobs, which will store results of the computation.
           */
          CV_WRAP void predict(InputArray frame, OutputArrayOfArrays outs) const;
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] outs Allocated output blobs. The images are run as one batch, so each
+          *  blob carries them in its first dimension.
+          */
+         CV_WRAP void predict(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& outs) const;
 
 
          // ============================== Net proxy methods ==============================
@@ -1698,6 +1720,16 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @overload */
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
+
+         /** @brief Given a batch of @p frames, run net once and return the top-1 prediction
+          *  of each of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] classIds Top-1 class index per image.
+          *  @param[out] confs Confidence of the top-1 class per image.
+          */
+         CV_WRAP void classify(InputArrayOfArrays frames, CV_OUT std::vector<int>& classIds,
+                               CV_OUT std::vector<float>& confs);
      };
 
      /** @brief This class represents high-level API for keypoints models
@@ -1730,6 +1762,55 @@ CV__DNN_INLINE_NS_BEGIN
           *
           */
          CV_WRAP std::vector<Point2f> estimate(InputArray frame, float thresh=0.5);
+
+         /** @brief Given a batch of @p frames, run net once and return the keypoints of each
+          *  of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] keypoints x and y coordinates of each detected keypoint, per image
+          *  @param thresh minimum confidence threshold to select a keypoint
+          */
+         CV_WRAP void estimate(InputArrayOfArrays frames,
+                               CV_OUT std::vector< std::vector<Point2f> >& keypoints,
+                               float thresh=0.5);
+
+         /** @brief Given the @p input frame, create input blob, run net and return multi-person
+          *  pose estimation results (YOLOv8-pose-style decoding).
+          *
+          *  Requires a network with a single output shaped `[1, 4+1+3*numKeypoints, N]` (or
+          *  `[1, N, 4+1+3*numKeypoints]`): box, one "person" class score, then `numKeypoints`
+          *  `(x, y, visibility)` triples per anchor, matching the standard Ultralytics
+          *  YOLOv8-pose export contract.
+          *
+          *  @param[in]  frame  The input image.
+          *  @param[out] keypoints One entry per detected person, each holding `numKeypoints`
+          *  points; `Point3f::z` carries the per-keypoint visibility/confidence.
+          *  @param[out] boxes A set of per-person bounding boxes.
+          *  @param[out] confidences A set of corresponding person-detection confidences.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void estimatePoses(InputArray frame, CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                     CV_OUT std::vector<Rect>& boxes, CV_OUT std::vector<float>& confidences,
+                                     float confThreshold = 0.5f, float nmsThreshold = 0.45f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] keypoints One entry per detected person across all images.
+          *  @param[out] boxes Per-person bounding boxes, parallel to @p keypoints.
+          *  @param[out] confidences Person-detection confidences, parallel to @p keypoints.
+          *  @param[out] frameIds Index into @p frames of the image each person came from,
+          *  parallel to @p keypoints and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void estimatePoses(InputArrayOfArrays frames,
+                                     CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                     CV_OUT std::vector<Rect>& boxes,
+                                     CV_OUT std::vector<float>& confidences,
+                                     CV_OUT std::vector<int>& frameIds,
+                                     float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for segmentation  models
@@ -1760,6 +1841,56 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] mask Allocated class prediction for each pixel
           */
          CV_WRAP void segment(InputArray frame, OutputArray mask);
+
+         /** @brief Given a batch of @p frames, run net once and return the class prediction
+          *  of every pixel of each of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] masks Allocated class prediction for each pixel, one mask per input image.
+          */
+         CV_WRAP void segment(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks);
+
+         /** @brief Given the @p input frame, create input blob, run net and return per-instance
+          *  segmentation results (YOLOv8-seg-style mask-prototype decoding).
+          *
+          *  Requires a network with two outputs: a detect head shaped `[1, 4+numClasses+nm, N]`
+          *  (or `[1, N, 4+numClasses+nm]`) and mask prototypes shaped `[1, nm, maskH, maskW]`,
+          *  matching the standard Ultralytics YOLOv8-seg export contract.
+          *
+          *  @param[in]  frame  The input image.
+          *  @param[out] masks A set of per-detection binary masks (CV_8U, 0 or 255), each sized
+          *  to its corresponding entry in @p boxes.
+          *  @param[out] classIds Class indexes in result detection.
+          *  @param[out] confidences A set of corresponding confidences.
+          *  @param[out] boxes A set of bounding boxes.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void segmentInstances(InputArray frame, CV_OUT std::vector<Mat>& masks,
+                                        CV_OUT std::vector<int>& classIds,
+                                        CV_OUT std::vector<float>& confidences,
+                                        CV_OUT std::vector<Rect>& boxes,
+                                        float confThreshold = 0.5f, float nmsThreshold = 0.45f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] masks One binary mask per detection across all images, each sized to its
+          *  corresponding entry in @p boxes.
+          *  @param[out] classIds Class indexes, parallel to @p masks.
+          *  @param[out] confidences Confidences, parallel to @p masks.
+          *  @param[out] boxes Bounding boxes, parallel to @p masks.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p masks and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
+                                        CV_OUT std::vector<int>& classIds,
+                                        CV_OUT std::vector<float>& confidences,
+                                        CV_OUT std::vector<Rect>& boxes,
+                                        CV_OUT std::vector<int>& frameIds,
+                                        float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for object detection networks.
@@ -1767,7 +1898,18 @@ CV__DNN_INLINE_NS_BEGIN
       * DetectionModel allows to set params for preprocessing input image.
       * DetectionModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return result detections.
-      * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
+      * For DetectionModel SSD, Faster R-CNN, YOLOv2-v4 (Region layer) topologies are supported,
+      * as well as anchor-free heads (YOLOv8/v9/v10/v11 detect head, and RT-DETR exported through
+      * the same Ultralytics contract) that produce a single output tensor shaped
+      * `[1, 4+numClasses, N]` or `[1, N, 4+numClasses]`, with box coordinates in blob-pixel
+      * space and class scores already passed through sigmoid.
+      * @note The anchor-free path does not support YOLOv5-style heads with a separate
+      * objectness channel, or the two-tensor DETR/RT-DETR contract (separate pred_boxes and
+      * pred_logits tensors). It also should not be used on YOLOv8-seg/-pose model outputs --
+      * see SegmentationModel::segmentInstances() and KeypointsModel::estimatePoses() instead.
+      * @note For models trained with aspect-ratio-preserving letterbox preprocessing (the usual
+      * case for the YOLO family), call Model::setPaddingMode(DNN_PMODE_LETTERBOX) so detected
+      * boxes are mapped back to the input frame correctly.
       */
      class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
      {
@@ -1809,11 +1951,33 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] confidences A set of corresponding confidences.
           *  @param[out] boxes A set of bounding boxes.
           *  @param[in] confThreshold A threshold used to filter boxes by confidences.
-          *  @param[in] nmsThreshold A threshold used in non maximum suppression.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it,
+          *  which suits an SSD output because the network suppresses internally. An anchor-free
+          *  head emits one box per grid cell and needs a non-zero threshold, 0.45 conventionally.
           */
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] classIds Class indexes of every detection across all images.
+          *  @param[out] confidences Confidences, parallel to @p classIds.
+          *  @param[out] boxes Bounding boxes, parallel to @p classIds.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p classIds and non-decreasing.
+          *  @param[in]  confThreshold A threshold used to filter boxes by confidences.
+          *  @param[in]  nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          *
+          *  Only anchor-free heads are supported; SSD and Darknet outputs have no batched form.
+          */
+         CV_WRAP void detect(InputArrayOfArrays frames,
+                             CV_OUT std::vector<int>& classIds,
+                             CV_OUT std::vector<float>& confidences,
+                             CV_OUT std::vector<Rect>& boxes,
+                             CV_OUT std::vector<int>& frameIds,
+                             float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
 
