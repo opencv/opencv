@@ -1253,6 +1253,173 @@ unsigned int cv::ogl::Texture2D::texId() const
 }
 
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// ogl::TextureBuffer
+
+#ifndef HAVE_OPENGL
+
+class cv::ogl::TextureBuffer::Impl
+{
+};
+
+#else
+
+class cv::ogl::TextureBuffer::Impl
+{
+public:
+    static const Ptr<Impl> empty();
+
+    Impl(GLenum internalFormat, GLuint bufId, bool autoRelease);
+    ~Impl();
+
+    void bind(GLint unit) const;
+
+    void setAutoRelease(bool flag) { autoRelease_ = flag; }
+
+    GLuint texId() const { return texId_; }
+
+private:
+    Impl();
+
+    GLuint texId_;
+    bool autoRelease_;
+};
+
+const Ptr<cv::ogl::TextureBuffer::Impl> cv::ogl::TextureBuffer::Impl::empty()
+{
+    static Ptr<Impl> p(new Impl);
+    return p;
+}
+
+cv::ogl::TextureBuffer::Impl::Impl() : texId_(0), autoRelease_(false)
+{
+}
+
+cv::ogl::TextureBuffer::Impl::Impl(GLenum internalFormat, GLuint bufId, bool autoRelease) : texId_(0), autoRelease_(autoRelease)
+{
+    gl::GenTextures(1, &texId_);
+    CV_CheckGlError();
+
+    CV_Assert(texId_ != 0);
+
+    gl::BindTexture(gl::TEXTURE_BUFFER, texId_);
+    CV_CheckGlError();
+
+    gl::TexBuffer(gl::TEXTURE_BUFFER, internalFormat, bufId);
+    CV_CheckGlError();
+
+    gl::BindTexture(gl::TEXTURE_BUFFER, 0);
+    CV_CheckGlError();
+}
+
+cv::ogl::TextureBuffer::Impl::~Impl()
+{
+    if (autoRelease_ && texId_)
+        gl::DeleteTextures(1, &texId_);
+}
+
+void cv::ogl::TextureBuffer::Impl::bind(GLint unit) const
+{
+    gl::ActiveTexture(gl::TEXTURE0 + unit);
+    CV_CheckGlError();
+
+    gl::BindTexture(gl::TEXTURE_BUFFER, texId_);
+    CV_CheckGlError();
+}
+
+#endif // HAVE_OPENGL
+
+cv::ogl::TextureBuffer::TextureBuffer() : format_(NONE)
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+#endif
+}
+
+cv::ogl::TextureBuffer::TextureBuffer(const Buffer& buf, Format aformat, bool autoRelease) : format_(NONE)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(buf);
+    CV_UNUSED(aformat);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+    create(buf, aformat, autoRelease);
+#endif
+}
+
+void cv::ogl::TextureBuffer::create(const Buffer& buf, Format aformat, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(buf);
+    CV_UNUSED(aformat);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    CV_Assert( !buf.empty() );
+    CV_Assert( aformat != NONE );
+
+    impl_.reset(new Impl(aformat, buf.bufId(), autoRelease));
+    buf_ = buf;
+    format_ = aformat;
+#endif
+}
+
+void cv::ogl::TextureBuffer::release()
+{
+#ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
+    impl_ = Impl::empty();
+#endif
+    buf_ = Buffer();
+    format_ = NONE;
+}
+
+void cv::ogl::TextureBuffer::setAutoRelease(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    impl_->setAutoRelease(flag);
+#endif
+}
+
+void cv::ogl::TextureBuffer::bind(int unit) const
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(unit);
+    throw_no_ogl();
+#else
+    CV_Assert( unit >= 0 );
+    impl_->bind(unit);
+#endif
+}
+
+cv::ogl::TextureBuffer::Format cv::ogl::TextureBuffer::format() const
+{
+    return format_;
+}
+
+bool cv::ogl::TextureBuffer::empty() const
+{
+    return format_ == NONE;
+}
+
+unsigned int cv::ogl::TextureBuffer::texId() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    return impl_->texId();
+#endif
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 // ogl::Arrays
 
@@ -1959,6 +2126,26 @@ void cv::ogl::Program::setUniformVec3(int loc, Vec3f vec)
 #endif
 }
 
+void cv::ogl::Program::setUniformVec2(int loc, Vec2f vec)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(loc); CV_UNUSED(vec);
+    throw_no_ogl();
+#else
+    gl::Uniform2f(loc, vec(0), vec(1));
+#endif
+}
+
+void cv::ogl::Program::setUniformVec4(int loc, Vec4f vec)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(loc); CV_UNUSED(vec);
+    throw_no_ogl();
+#else
+    gl::Uniform4f(loc, vec(0), vec(1), vec(2), vec(3));
+#endif
+}
+
 void cv::ogl::Program::setUniformMat4x4(int loc, Matx44f mat)
 {
 #ifndef HAVE_OPENGL
@@ -1966,6 +2153,26 @@ void cv::ogl::Program::setUniformMat4x4(int loc, Matx44f mat)
     throw_no_ogl();
 #else
     gl::UniformMatrix4fv(loc, 1, true, mat.val);
+#endif
+}
+
+void cv::ogl::Program::setUniform1f(int loc, float value)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(loc); CV_UNUSED(value);
+    throw_no_ogl();
+#else
+    gl::Uniform1f(loc, value);
+#endif
+}
+
+void cv::ogl::Program::setUniform1i(int loc, int value)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(loc); CV_UNUSED(value);
+    throw_no_ogl();
+#else
+    gl::Uniform1i(loc, value);
 #endif
 }
 
@@ -2184,6 +2391,37 @@ void cv::ogl::drawElements(int first, int count, int type, int mode)
     throw_no_ogl();
 #else
     gl::DrawElements(mode, count, type, reinterpret_cast<const void*>(static_cast<size_t>(first)));
+#endif
+}
+
+void cv::ogl::drawElementsInstanced(int first, int count, int type, int mode, int instanceCount)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(first); CV_UNUSED(count); CV_UNUSED(type); CV_UNUSED(mode); CV_UNUSED(instanceCount);
+    throw_no_ogl();
+#else
+    gl::DrawElementsInstanced(mode, count, type, reinterpret_cast<const void*>(static_cast<size_t>(first)), instanceCount);
+    CV_CheckGlError();
+#endif
+}
+
+void cv::ogl::blendFunc(int sfactor, int dfactor)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(sfactor); CV_UNUSED(dfactor);
+    throw_no_ogl();
+#else
+    gl::BlendFunc(sfactor, dfactor);
+#endif
+}
+
+void cv::ogl::depthMask(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    gl::DepthMask(flag ? gl::TRUE_ : gl::FALSE_);
 #endif
 }
 
