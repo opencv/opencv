@@ -400,6 +400,12 @@ if(ANDROID AND ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES AND (ANDROID_ABI STREQUAL arm
  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 endif()
 
+# HACK: GCC 14 and GCC 15.2 for Spacelit autovectorization bug
+# Imgproc_resize_area.regression crashes after https://github.com/opencv/opencv/pull/30007
+if(CV_GCC AND RISCV)
+  add_extra_compiler_option(-fno-tree-vectorize)
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
