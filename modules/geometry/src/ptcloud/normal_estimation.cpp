@@ -40,9 +40,14 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         CV_Check(max_neighbor_num_, max_neighbor_num_ >= 2,
                 "When nn_idx is empty, max_neighbor_num (the number of neighbors k) must be >= 2.");
         const int kk = std::min(max_neighbor_num_, pts_size);
-        flann::Index index(ori_pts, flann::KDTreeIndexParams(4));
-        Mat dists;
-        index.knnSearch(ori_pts, builtIdx, dists, kk);   // pts_size x kk, CV_32S
+        flann::Index index(ori_pts, flann::KDTreeIndexParams(1));   // single tree for exact search
+        flann::SearchParams exact(cvflann::FLANN_CHECKS_UNLIMITED);
+        builtIdx.create(pts_size, kk, CV_32S);
+        parallel_for_(Range(0, pts_size), [&](const Range &range) {
+            Mat rowDist;   // discarded; only the neighbor indices are used
+            for (int i = range.start; i < range.end; ++i)
+                index.knnSearch(ori_pts.row(i), builtIdx.row(i), rowDist, kk, exact);
+        });
     }
     else
     {

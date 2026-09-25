@@ -287,7 +287,7 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
  *               is empty this is the number of neighbors k to search for and must be >= 2.
  */
 
-CV_EXPORTS void normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts,
+CV_EXPORTS_W void normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts,
         InputArrayOfArrays nn_idx, int max_neighbor_num = 0);
 
 /**

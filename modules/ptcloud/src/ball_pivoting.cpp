@@ -184,9 +184,10 @@ private:
     bool ballEmpty(const Point3f& center, int e0, int e1, int e2) const
     {
         // 3 supports lie on the ball; an interior point is closer, so k=4 catches any intruder.
+        // Clamped to N: FLANN asserts if asked for more neighbors than points in the index.
         float buf[3] = { center.x, center.y, center.z };
         Mat q(1, 3, CV_32F, buf), beIdx, beDist;
-        index->knnSearch(q, beIdx, beDist, 4, exact);
+        index->knnSearch(q, beIdx, beDist, std::min(4, N), exact);
         const float rq2 = (r * (1.f - 1e-3f)) * (r * (1.f - 1e-3f));   // FLANN dist is squared L2
         for (int t = 0; t < beIdx.cols; t++)
         {

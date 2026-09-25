@@ -187,10 +187,25 @@ TEST(Ptcloud_BPA, empty_and_tiny)
     EXPECT_TRUE(t.empty());
     EXPECT_EQ(estimateMedianSpacing(empty), 0.f);
 
-    Mat two = (Mat_<float>(2, 3) << 0, 0, 0, 1, 0, 0);
-    Mat n = (Mat_<float>(2, 3) << 0, 0, 1, 0, 0, 1), vv, tt;
+    Mat two = Mat_<float>({2, 3}, {0, 0, 0, 1, 0, 0});
+    Mat n = Mat_<float>({2, 3}, {0, 0, 1, 0, 0, 1}), vv, tt;
     createMeshBPA(two, n, vv, tt);      // < 3 points -> no mesh, no crash
     EXPECT_TRUE(vv.empty());
+}
+
+// Exactly 3 points: ballEmpty's empty-ball check searches for 4 neighbors, which used to be
+// asked of a 3-point FLANN index verbatim and hit a miniflann assertion. Regression test for
+// clamping that search to min(4, N).
+TEST(Ptcloud_BPA, three_points_no_miniflann_assert)
+{
+    Mat pts = Mat_<float>({3, 3}, {0, 0, 0,  1, 0, 0,  0, 1, 0});
+    Mat normals = Mat_<float>({3, 3}, {0, 0, 1,  0, 0, 1,  0, 0, 1});
+
+    Mat vertices, triangles;
+    ASSERT_NO_THROW(createMeshBPA(pts, normals, vertices, triangles));
+    ASSERT_EQ((int)vertices.total(), 3);
+    ASSERT_FALSE(triangles.empty());
+    EXPECT_EQ(triangles.rows, 1);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -296,7 +311,7 @@ TEST(Ptcloud_Bounds, empty_and_tiny)
     EXPECT_TRUE(cc.empty());
 
     // one point: must not crash.
-    Mat one = (Mat_<float>(1, 3) << 1, 2, 3), center, axes, half;
+    Mat one = Mat_<float>({1, 3}, {1, 2, 3}), center, axes, half;
     EXPECT_NO_THROW(orientedBoundingBox3D(one, center, axes, half));
     EXPECT_NO_THROW(approxEnclosingSphere3D(one, center));
 }
