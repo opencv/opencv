@@ -65,11 +65,12 @@ TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
         - ResizeSubgraph2
         - ResizeSubgraph3
     */
-    test("upsample_unfused_torch1.2", std::vector<std::string>{"BatchNorm", "Cast", "Concat", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
+    // Inputs have fixed shapes, so the Shape-based size computation is folded into constants.
+    test("upsample_unfused_torch1.2", std::vector<std::string>{"BatchNorm", "Resize"});
     // In the models below the BatchNorm is folded into the preceding convolution by fuseBN().
-    test("resize_nearest_unfused_opset11_torch1.3", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Unsqueeze"});
-    test("resize_nearest_unfused_opset11_torch1.4", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
-    test("upsample_unfused_opset9_torch1.4", std::vector<std::string>{"Cast", "Concat", "Conv", "Floor", "Gather", "NaryEltwise", "Resize", "Shape", "Slice", "Unsqueeze"});
+    test("resize_nearest_unfused_opset11_torch1.3", std::vector<std::string>{"Conv", "Resize"});
+    test("resize_nearest_unfused_opset11_torch1.4", std::vector<std::string>{"Conv", "Resize"});
+    test("upsample_unfused_opset9_torch1.4", std::vector<std::string>{"Conv", "Resize"});
     test("two_resizes_with_shared_subgraphs", std::vector<std::string>{"NaryEltwise", "Resize"});
 }
 
