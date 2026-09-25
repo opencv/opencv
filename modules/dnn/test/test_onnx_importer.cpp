@@ -427,6 +427,9 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("deconvolution_output_shape", npy, 0, 0, false, false);
     if (target != DNN_TARGET_CUDA_FP16) // bug
         testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
+    // out_channels == C0, so NK1 == 1: exercises computeSpatChunks()'s spatial
+    // split in conv2_deconv.cpp regardless of thread count.
+    testONNXModels("deconv_spatial_narrow", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D)

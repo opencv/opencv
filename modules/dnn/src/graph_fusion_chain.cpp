@@ -28,6 +28,20 @@ void firstConsumerOf(const vector<Ptr<LayerInfo> >& prog, int nargs,
     }
 }
 
+//! Maps each Arg produced anywhere in `prog` to the index of the op that produces it.
+void producerOfArgs(const vector<Ptr<LayerInfo> >& prog, int nargs,
+                    vector<int>& producerOf)
+{
+    producerOf.assign((size_t)nargs, -1);
+    for (size_t j = 0; j < prog.size(); j++) {
+        if (!prog[j]) continue;
+        for (Arg out : prog[j]->outputs) {
+            if (out.idx > 0 && out.idx < nargs)
+                producerOf[out.idx] = (int)j;
+        }
+    }
+}
+
 class ChainFuser
 {
 public:
@@ -60,6 +74,7 @@ private:
     {
         vector<int> layerIdx;
         vector<Arg> constArgs;
+        vector<Arg> tensorArgs;
         vector<int> rootAfterStep;
         vector<Mat> constBufs;
         //! First step's kernel; a chain that lands at one step runs it instead of the DAG.
@@ -100,7 +115,35 @@ private:
         return (int)c.constArgs.size() - 1;
     }
 
-    bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c, ConstOperand& out) const
+    //! The slot @p a occupies in the chain's live-tensor operand list, adding it if new.
+    static int tensorSlotFor(Arg a, ChainCandidate& c)
+    {
+        for (size_t k = 0; k < c.tensorArgs.size(); k++) {
+            if (c.tensorArgs[k].idx == a.idx)
+                return (int)k;
+        }
+        c.tensorArgs.push_back(a);
+        return (int)c.tensorArgs.size() - 1;
+    }
+
+    // Safe to wire in as a live second input: no producer (a graph input) or one
+    // strictly before anchorIdx, float32, not a graph output. Shape isn't checked here.
+    bool isFusableTensorArg(Arg a, size_t anchorIdx) const
+    {
+        if (a.idx <= 0 || a.idx >= (int)producerOf_.size())
+            return false;
+        const int prodIdx = producerOf_[a.idx];
+        if (prodIdx >= 0 && prodIdx >= (int)anchorIdx)
+            return false;
+        if (net_.argData(a).type != CV_32F)
+            return false;
+        if (externalArgs_.count(a.idx))
+            return false;
+        return true;
+    }
+
+    bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c, ConstOperand& out,
+                          size_t anchorIdx, bool acceptsTensorOperands) const
     {
         vector<Arg> sideInputs;
         for (Arg in : L->inputs) {
@@ -118,12 +161,16 @@ private:
         for (size_t i = 0; i < sideInputs.size(); i++) {
             bool isScalar = false;
             float scalarVal = 0.f;
-            if (!isFusableConstArg(sideInputs[i], isScalar, scalarVal))
+            if (isFusableConstArg(sideInputs[i], isScalar, scalarVal)) {
+                if (isScalar)
+                    out.consts[i].value = scalarVal;
+                else
+                    out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
+                continue;
+            }
+            if (!acceptsTensorOperands || !isFusableTensorArg(sideInputs[i], anchorIdx))
                 return false;
-            if (isScalar)
-                out.consts[i].value = scalarVal;
-            else
-                out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
+            out.consts[i].tensorId = tensorSlotFor(sideInputs[i], c);
         }
         out.count = (int)sideInputs.size();
         return true;
@@ -148,6 +195,10 @@ private:
     void growChain(size_t anchor, ChainCandidate& c)
     {
         CV_Assert(!arenaPtr_);
+
+        Layer* anchorLayer = dynamic_cast<Layer*>(prog()[anchor].get());
+        const FusionOps* anchorOps = anchorLayer ? fusionOpsFor(anchorLayer) : nullptr;
+        const bool acceptsTensorOperands = anchorOps && anchorOps->acceptsTensorOperands;
 
         int chainRoot = 0;
         Arg curArg = prog()[anchor]->outputs[0];
@@ -176,17 +227,21 @@ private:
             if (!ops || !ops->unfold)
                 break;
 
-            const size_t savedSlots = c.constArgs.size();
+            const size_t savedConstSlots = c.constArgs.size();
+            const size_t savedTensorSlots = c.tensorArgs.size();
             ConstOperand side;
             LayerMath r;
-            if (!readConstOperand(L, curArg, c, side) || !ops->unfold(l, r, side)) {
-                c.constArgs.resize(savedSlots);
+            if (!readConstOperand(L, curArg, c, side, anchor, acceptsTensorOperands) ||
+                !ops->unfold(l, r, side)) {
+                c.constArgs.resize(savedConstSlots);
+                c.tensorArgs.resize(savedTensorSlots);
                 break;
             }
 
             const int next = fusion::instantiate(arena_, chainRoot, r);
             if (next < 0 || fusion::detail::markLive(arena_.graph(), next, reachScratch_) > FUSION_MAX_EXPR_NODES) {
-                c.constArgs.resize(savedSlots);
+                c.constArgs.resize(savedConstSlots);
+                c.tensorArgs.resize(savedTensorSlots);
                 break;
             }
 
@@ -205,6 +260,9 @@ private:
     {
         const int nargs = (int)net_.args.size();
         firstConsumerOf(prog(), nargs, firstConsumer_);
+        producerOfArgs(prog(), nargs, producerOf_);
+        for (Arg out : graph_->outputs())
+            externalArgs_.insert(out.idx);
 
         for (size_t i = 0; i < prog().size(); i++) {
             const Ptr<LayerInfo>& L = prog()[i];
@@ -257,14 +315,17 @@ private:
                 continue;
 
             size_t accepted = 0;
+            Ptr<AdjacencyGraph> acceptedExpr;
             for (size_t n = c.rootAfterStep.size(); n >= 1; n--) {
-                Ptr<AdjacencyGraph> expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1], c.constBufs);
+                Ptr<AdjacencyGraph> expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1],
+                                                           c.constBufs, c.tensorArgs);
                 if (!expr)
                     continue;
                 if (n == 1)
                     expr->kernel = c.singleStepKernel;
                 if (sinkOps->absorb(sink, expr)) {
                     accepted = n;
+                    acceptedExpr = expr;
                     break;
                 }
             }
@@ -274,6 +335,11 @@ private:
                                               (int)c.rootAfterStep.size()));
                 continue;
             }
+
+            // Wire the accepted expression's tensors on once here, not in absorb()
+            // (which the retry loop above may call more than once per chain).
+            for (Arg t : acceptedExpr->tensorArgs)
+                anchorInfo->inputs.push_back(t);
 
             anchorInfo->outputs[0] = prog()[c.layerIdx[accepted]]->outputs[0];
             for (size_t k = 1; k <= accepted; k++)
@@ -308,6 +374,8 @@ private:
     AdjacencyGraphBuilder arena_;
     Ptr<AdjacencyGraph>   arenaPtr_;
     vector<int>        firstConsumer_;
+    vector<int>        producerOf_;
+    std::set<int>      externalArgs_;
     vector<bool>       claimed_, dropped_;
     vector<ChainCandidate>  chains_;
     vector<char>       reachScratch_;
