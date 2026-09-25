@@ -198,7 +198,7 @@ GEMM_TransposeBlock( const uchar* src, size_t src_step,
     }
 }
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename ST> struct VecTraits;
 
 template<> struct VecTraits<float> {
@@ -209,7 +209,7 @@ template<> struct VecTraits<float> {
 };
 #endif
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<> struct VecTraits<double> {
     typedef v_float64 VT;
     static inline VT zero() { return vx_setzero_f64(); }
@@ -218,7 +218,7 @@ template<> struct VecTraits<double> {
 };
 #endif
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename ST>
 static inline ST simdDotProduct(const ST* a, const ST* b, int n, int& k)
 {
@@ -243,7 +243,7 @@ static inline ST simdDotProduct(const ST* a, const ST* b, int n, int& k)
 }
 #endif
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 // Float input, double accumulation dot product (for 32FC1 where WT=double)
 static inline double simdDotProduct_f32f64(const float* a, const float* b, int n, int& k)
 {
@@ -408,7 +408,7 @@ static inline void simdGEMM_kj_f32f64(
 }
 #endif
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename ST>
 static inline void simdGEMM_kj(
     const ST* a_data, const ST* _b_data, size_t b_step,
@@ -692,7 +692,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             }
 
             j = 0;
-#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F) && CV_GEMM_SIMD_ENABLED
             if( sizeof(WT) == sizeof(double) )
             {
                 if( sizeof(T) == sizeof(double) )
@@ -778,7 +778,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             {
                 WT al(a_data[k]);
                 j=0;
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sizeof(WT) == sizeof(double) )
                 {
                     if( sizeof(T) == sizeof(double) )
@@ -829,7 +829,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         }
     }
 }
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<typename WT>
 static inline void setDoubleDataZero(WT* d_data, int m, int vlanes)
 {
@@ -909,7 +909,7 @@ static inline void simdBlockMul_kj(
     for( int k = 0; k < n; k++, b_data += b_step )
         simdMulAdd(b_data, d_data, m, (double)a_data[k]);
 }
-#endif // CV_SIMD_64F
+#endif // CV_SIMD_64F || CV_SIMD_SCALABLE_64F
 
 template<typename T, typename WT> static void
 GEMMBlockMul( const T* a_data, size_t a_step,
@@ -995,7 +995,7 @@ GEMMBlockMul( const T* a_data, size_t a_step,
                     a_buf[k] = a_data[a_step1*k];
                 a_data = a_buf;
             }
-#if CV_SIMD_64F && CV_GEMM_SIMD_ENABLED
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F) && CV_GEMM_SIMD_ENABLED
             if( sizeof(WT) == sizeof(double) )
             {
                 if( sizeof(T) == sizeof(double) )
