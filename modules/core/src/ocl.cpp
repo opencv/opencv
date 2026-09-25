@@ -3762,7 +3762,7 @@ int Kernel::set(int i, const KernelArg& arg)
         }
         if (arg.m->u && arg.m->u->currAllocator != getOpenCLAllocator())
         {
-            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is not backed by the OpenCL allocator, declining",
+            CV_LOG_ERROR(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is not backed by the OpenCL allocator, declining",
                     p->name.c_str(), (int)i));
             p->release();
             p = 0;
