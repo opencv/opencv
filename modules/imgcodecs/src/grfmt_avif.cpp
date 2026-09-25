@@ -25,10 +25,6 @@
 
 #endif
 
-// libavif v1.4.0 or later supports 16 bit images.
-#define CV_AVIF_SUPPORT_16BIT \
-  (AVIF_VERSION >= ((1 * 1000000) + (4 * 10000) + (0 * 100)))
-
 namespace cv {
 namespace {
 
@@ -39,7 +35,7 @@ static bool isSupportedBitDepth16U(int requestDepth)
     return true;
   }
 
-#if CV_AVIF_SUPPORT_16BIT
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
   if (requestDepth == 16)
   {
     return true;
@@ -238,7 +234,7 @@ bool AvifDecoder::readHeader() {
   }
   decoder_->strictFlags = AVIF_STRICT_DISABLED;
 
-#if CV_AVIF_SUPPORT_16BIT
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
   decoder_->imageContentToDecode |= AVIF_IMAGE_CONTENT_SAMPLE_TRANSFORMS;
 #endif
 
@@ -411,7 +407,7 @@ bool AvifEncoder::writeanimation(const Animation& animation,
 #endif
   encoder_->speed = speed;
 
-#if CV_AVIF_SUPPORT_16BIT
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
   if(bit_depth == 16) {
     encoder_->sampleTransformRecipe = (do_lossless)?
                                       AVIF_SAMPLE_TRANSFORM_BIT_DEPTH_EXTENSION_12B_4B: // lossless

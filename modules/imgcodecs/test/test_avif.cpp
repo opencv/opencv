@@ -11,10 +11,6 @@
 
 #include <avif/avif.h>
 
-// libavif v1.4.0 or later supports 16 bit images.
-#define CV_AVIF_SUPPORT_16BIT \
-  (AVIF_VERSION >= ((1 * 1000000) + (4 * 10000) + (0 * 100)))
-
 namespace opencv_test {
 namespace {
 
@@ -311,7 +307,7 @@ INSTANTIATE_TEST_CASE_P(
                                             IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 
-#if CV_AVIF_SUPPORT_16BIT
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
 class Imgcodecs_Avif_16bit : public testing::TestWithParam<int> {};
 
 TEST_P(Imgcodecs_Avif_16bit, encode_decode)
@@ -351,7 +347,7 @@ INSTANTIATE_TEST_CASE_P(
   Imgcodecs_AVIF, Imgcodecs_Avif_16bit,
   testing::Values(0, 50, 100) // Quality
 );
-#endif
+#endif // OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
 
 
 }  // namespace
