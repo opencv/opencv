@@ -229,5 +229,203 @@ inline static std::string gstreamer_bunny_name_printer(const testing::TestParamI
 
 INSTANTIATE_TEST_CASE_P(videoio, gstreamer_bunny, testing::ValuesIn(bunny_params), gstreamer_bunny_name_printer);
 
+static std::string gstEncoderPipeline(const std::string& encoder, const std::string& file)
+{
+    return "appsrc ! videoconvert ! " + encoder + " ! matroskamux ! filesink location=" + file;
+}
+
+static bool gstEncoderAvailable(const std::string& encoder)
+{
+    const string file = cv::tempfile(".mkv");
+    VideoWriter writer;
+    const bool ok = writer.open(gstEncoderPipeline(encoder, file), CAP_GSTREAMER, 0, 25, Size(320, 240));
+    writer.release();
+    remove(file.c_str());
+    return ok;
+}
+
+static void writeGstFrames(VideoWriter& writer, Size size, int count, bool staticBackground)
+{
+    RNG rng(12345);
+    Mat background(size, CV_8UC3);
+    rng.fill(background, RNG::UNIFORM, 0, 255);
+    for (int i = 0; i < count; i++)
+    {
+        Mat frame(size, CV_8UC3);
+        if (staticBackground)
+            background.copyTo(frame);
+        else
+            rng.fill(frame, RNG::UNIFORM, 0, 255);
+        circle(frame, Point((i * 13) % size.width, (i * 7) % size.height), 40, Scalar::all(255), -1);
+        writer.write(frame);
+    }
+}
+
+static long fileSize(const std::string& file)
+{
+    std::ifstream fs(file.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+    return fs ? (long)fs.tellg() : -1;
+}
+
+static long writeWithGstEncoderParams(const std::string& file, const std::vector<int>& params, int count,
+                                      bool staticBackground = false, double* readBack = NULL, int prop = -1)
+{
+    const Size size(320, 240);
+    VideoWriter writer;
+    if (!writer.open(gstEncoderPipeline("x264enc", file), CAP_GSTREAMER, 0, 25, size, params))
+        return -1;
+    if (readBack && prop >= 0)
+        *readBack = writer.get(prop);
+    writeGstFrames(writer, size, count, staticBackground);
+    writer.release();
+    return fileSize(file);
+}
+
+static int maxKeyFrameGap(const std::string& file)
+{
+    VideoCapture cap(file, CAP_FFMPEG, {CAP_PROP_FORMAT, -1});
+    if (!cap.isOpened())
+        return -1;
+    int gap = 0, maxGap = 0;
+    bool seenKeyFrame = false;
+    while (cap.grab())
+    {
+        if (cap.get(CAP_PROP_LRF_HAS_KEY_FRAME) != 0)
+        {
+            maxGap = std::max(maxGap, gap);
+            gap = 0;
+            seenKeyFrame = true;
+        }
+        gap++;
+    }
+    return seenKeyFrame ? std::max(maxGap, gap) : -1;
+}
+
+TEST(videoio_gstreamer_encoder_props, bitrate_changes_size)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    if (!gstEncoderAvailable("x264enc"))
+        throw SkipTestException("x264enc is not available");
+
+    const string lowFile = cv::tempfile(".mkv");
+    const string highFile = cv::tempfile(".mkv");
+    double readBack = -1;
+    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_BITRATE, 200000}, 30,
+                                                   false, &readBack, VIDEOWRITER_PROP_BITRATE);
+    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_BITRATE, 4000000}, 30);
+    ASSERT_GT(lowSize, 0);
+    ASSERT_GT(highSize, 0);
+    EXPECT_EQ(200000, (int)readBack);
+    EXPECT_GT(highSize, lowSize);
+    remove(lowFile.c_str());
+    remove(highFile.c_str());
+}
+
+TEST(videoio_gstreamer_encoder_props, crf_changes_size)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    if (!gstEncoderAvailable("x264enc"))
+        throw SkipTestException("x264enc is not available");
+
+    const string lowFile = cv::tempfile(".mkv");
+    const string highFile = cv::tempfile(".mkv");
+    double readBack = -1;
+    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_CRF, 18}, 30,
+                                                   false, &readBack, VIDEOWRITER_PROP_CRF);
+    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_CRF, 40}, 30);
+    ASSERT_GT(lowSize, 0);
+    ASSERT_GT(highSize, 0);
+    EXPECT_EQ(18, (int)readBack);
+    EXPECT_GT(lowSize, highSize);
+    remove(lowFile.c_str());
+    remove(highFile.c_str());
+}
+
+TEST(videoio_gstreamer_encoder_props, gop_limits_key_frame_interval)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend is needed to read key frames");
+    if (!gstEncoderAvailable("x264enc"))
+        throw SkipTestException("x264enc is not available");
+
+    const string defaultFile = cv::tempfile(".mkv");
+    const string gopFile = cv::tempfile(".mkv");
+    double readBack = -1;
+    ASSERT_GT(writeWithGstEncoderParams(defaultFile, std::vector<int>(), 30, true), 0);
+    ASSERT_GT(writeWithGstEncoderParams(gopFile, {VIDEOWRITER_PROP_GOP_SIZE, 5}, 30,
+                                        true, &readBack, VIDEOWRITER_PROP_GOP_SIZE), 0);
+    EXPECT_EQ(5, (int)readBack);
+    EXPECT_GT(maxKeyFrameGap(defaultFile), 5);
+    const int gap = maxKeyFrameGap(gopFile);
+    EXPECT_GT(gap, 0);
+    EXPECT_LE(gap, 5);
+    remove(defaultFile.c_str());
+    remove(gopFile.c_str());
+}
+
+TEST(videoio_gstreamer_encoder_props, preset_round_trip)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    if (!gstEncoderAvailable("x264enc"))
+        throw SkipTestException("x264enc is not available");
+
+    const string file = cv::tempfile(".mkv");
+    double readBack = -1;
+    ASSERT_GT(writeWithGstEncoderParams(file, {VIDEOWRITER_PROP_PRESET, VIDEOWRITER_PRESET_ULTRAFAST}, 20,
+                                        false, &readBack, VIDEOWRITER_PROP_PRESET), 0);
+    EXPECT_EQ(VIDEOWRITER_PRESET_ULTRAFAST, (int)readBack);
+    remove(file.c_str());
+}
+
+TEST(videoio_gstreamer_encoder_props, unsupported_property_fails_open)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    if (!gstEncoderAvailable("avenc_mpeg4"))
+        throw SkipTestException("avenc_mpeg4 is not available");
+
+    const string file = cv::tempfile(".mkv");
+    VideoWriter writer;
+    EXPECT_FALSE(writer.open(gstEncoderPipeline("avenc_mpeg4", file), CAP_GSTREAMER, 0, 25, Size(320, 240),
+                             {VIDEOWRITER_PROP_PRESET, VIDEOWRITER_PRESET_VERYSLOW}));
+    remove(file.c_str());
+}
+
+TEST(videoio_gstreamer_encoder_props, fourcc_path_encodes)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
+    const Size size(320, 240);
+    const int count = 20;
+    const string file = cv::tempfile(".mkv");
+    VideoWriter writer;
+    ASSERT_TRUE(writer.open(file, CAP_GSTREAMER, VideoWriter::fourcc('X', '2', '6', '4'), 25, size));
+    writeGstFrames(writer, size, count, true);
+    writer.release();
+
+    const long rawSize = (long)size.area() * 3 / 2 * count;
+    const long encodedSize = fileSize(file);
+    ASSERT_GT(encodedSize, 0);
+    EXPECT_LT(encodedSize, rawSize / 4);
+    remove(file.c_str());
+
+    const string nv12File = cv::tempfile(".mkv");
+    VideoWriter nv12Writer;
+    ASSERT_TRUE(nv12Writer.open(nv12File, CAP_GSTREAMER, VideoWriter::fourcc('X', '2', '6', '4'), 25, size,
+                                {VIDEOWRITER_PROP_COLOR_SPACE, VideoWriter::fourcc('N', 'V', '1', '2')}));
+    writeGstFrames(nv12Writer, size, count, true);
+    nv12Writer.release();
+    const long nv12Size = fileSize(nv12File);
+    ASSERT_GT(nv12Size, 0);
+    EXPECT_LT(nv12Size, rawSize / 4);
+    remove(nv12File.c_str());
+}
+
 
 }} // namespace

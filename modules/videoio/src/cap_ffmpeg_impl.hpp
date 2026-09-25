@@ -2426,6 +2426,15 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 
 
 ///////////////// FFMPEG CvVideoWriter implementation //////////////////////////
+struct CvVideoWriterEncoderParams_FFMPEG
+{
+    int bitrate;
+    int crf;
+    int preset;
+    int gop_size;
+    int pix_fmt;
+};
+
 struct CvVideoWriter_FFMPEG
 {
     bool open( const char* filename, int fourcc,
@@ -2463,6 +2472,7 @@ struct CvVideoWriter_FFMPEG
     bool              key_frame;
     int               pts_index;
     int               b_frame_dts_delay;
+    CvVideoWriterEncoderParams_FFMPEG enc_params;
 };
 
 static const char * icvFFMPEGErrStr(int err)
@@ -2533,6 +2543,34 @@ void CvVideoWriter_FFMPEG::init()
     key_frame = false;
     pts_index = -1;
     b_frame_dts_delay = 0;
+    enc_params.bitrate = 0;
+    enc_params.crf = -1;
+    enc_params.preset = -1;
+    enc_params.gop_size = 0;
+    enc_params.pix_fmt = 0;
+}
+
+static AVPixelFormat icv_fourcc_to_pix_fmt_FFMPEG(int fourcc)
+{
+    const AVPixFmtDescriptor* desc = NULL;
+    while ((desc = av_pix_fmt_desc_next(desc)) != NULL)
+    {
+        const AVPixelFormat fmt = av_pix_fmt_desc_get_id(desc);
+        if (avcodec_pix_fmt_to_codec_tag(fmt) == (unsigned int)fourcc)
+            return fmt;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
+static const char* icv_preset_to_string_FFMPEG(int preset)
+{
+    static const char* const names[] = {
+        "ultrafast", "superfast", "veryfast", "faster", "fast",
+        "medium", "slow", "slower", "veryslow", "placebo"
+    };
+    if (preset < 0 || preset >= (int)(sizeof(names) / sizeof(names[0])))
+        return NULL;
+    return names[preset];
 }
 
 /**
@@ -2578,7 +2616,8 @@ static AVCodecContext * icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
                                                    AVStream *st,
                                                    const AVCodec* codec,
                                                    int w, int h, int bitrate,
-                                                   double fps, AVPixelFormat pixel_format, int fourcc, AVCodecID codec_id)
+                                                   double fps, AVPixelFormat pixel_format, int fourcc, AVCodecID codec_id,
+                                                   const CvVideoWriterEncoderParams_FFMPEG& enc)
 {
 #ifdef CV_FFMPEG_CODECPAR
     AVCodecContext *c = avcodec_alloc_context3(codec);
@@ -2674,8 +2713,42 @@ static AVCodecContext * icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
       c->gop_size = -1;
       c->qmin = -1;
       c->bit_rate = 0;
-      if (c->priv_data)
+      if (c->priv_data && enc.crf < 0 && enc.bitrate <= 0)
           av_opt_set(c->priv_data,"crf","23", 0);
+    }
+
+    if (enc.gop_size > 0)
+        c->gop_size = enc.gop_size;
+
+    if (enc.bitrate > 0)
+        c->bit_rate = enc.bitrate;
+
+    if (enc.crf >= 0)
+    {
+        if (!c->priv_data || av_opt_set_int(c->priv_data, "crf", enc.crf, 0) < 0)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: encoder '" << (codec ? codec->name : "unknown")
+                               << "' does not support VIDEOWRITER_PROP_CRF. Bailout");
+#ifdef CV_FFMPEG_CODECPAR
+            avcodec_free_context(&c);
+#endif
+            return NULL;
+        }
+        c->bit_rate = 0;
+    }
+
+    if (enc.preset >= 0)
+    {
+        const char* preset_name = icv_preset_to_string_FFMPEG(enc.preset);
+        if (!preset_name || !c->priv_data || av_opt_set(c->priv_data, "preset", preset_name, 0) < 0)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: encoder '" << (codec ? codec->name : "unknown")
+                               << "' does not support VIDEOWRITER_PROP_PRESET value " << enc.preset << ". Bailout");
+#ifdef CV_FFMPEG_CODECPAR
+            avcodec_free_context(&c);
+#endif
+            return NULL;
+        }
     }
 
     // some formats want stream headers to be separate
@@ -3009,6 +3082,35 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
         return static_cast<double>(use_opencl);
     }
 #endif
+    if (propId == VIDEOWRITER_PROP_BITRATE)
+    {
+        if (enc_params.bitrate > 0)
+            return static_cast<double>(enc_params.bitrate);
+    }
+    else if (propId == VIDEOWRITER_PROP_GOP_SIZE)
+    {
+        if (enc_params.gop_size > 0)
+            return static_cast<double>(enc_params.gop_size);
+    }
+    else if (propId == VIDEOWRITER_PROP_CRF)
+    {
+        if (enc_params.crf >= 0)
+            return static_cast<double>(enc_params.crf);
+    }
+    else if (propId == VIDEOWRITER_PROP_PRESET)
+    {
+        if (enc_params.preset >= 0)
+            return static_cast<double>(enc_params.preset);
+    }
+    else if (propId == VIDEOWRITER_PROP_COLOR_SPACE)
+    {
+        if (context)
+        {
+            const unsigned int tag = avcodec_pix_fmt_to_codec_tag(context->pix_fmt);
+            if (tag != 0)
+                return static_cast<double>(tag);
+        }
+    }
     return CAP_PROP_UNKNOWN;
 }
 
@@ -3204,6 +3306,18 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     bool enable_alpha = params.get<bool>(VIDEOWRITER_PROP_ENABLE_ALPHA, false);
+
+    enc_params.bitrate = params.get<int>(VIDEOWRITER_PROP_BITRATE, 0);
+    enc_params.crf = params.get<int>(VIDEOWRITER_PROP_CRF, -1);
+    enc_params.preset = params.get<int>(VIDEOWRITER_PROP_PRESET, -1);
+    enc_params.gop_size = params.get<int>(VIDEOWRITER_PROP_GOP_SIZE, 0);
+    enc_params.pix_fmt = params.get<int>(VIDEOWRITER_PROP_COLOR_SPACE, 0);
+
+    if (enc_params.crf < -1 || enc_params.preset < -1)
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: invalid VIDEOWRITER_PROP_CRF or VIDEOWRITER_PROP_PRESET value. Bailout");
+        return false;
+    }
 
     if (params.warnUnusedParameters())
     {
@@ -3445,6 +3559,19 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         break;
     }
 
+    if (enc_params.pix_fmt != 0)
+    {
+        const AVPixelFormat requested = icv_fourcc_to_pix_fmt_FFMPEG(enc_params.pix_fmt);
+        if (requested == AV_PIX_FMT_NONE)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unknown VIDEOWRITER_PROP_COLOR_SPACE '"
+                               << cv::format("%c%c%c%c", CV_TAG_TO_PRINTABLE_CHAR4(enc_params.pix_fmt))
+                               << "'. Bailout");
+            return false;
+        }
+        codec_pix_fmt = requested;
+    }
+
     double bitrate = std::min(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
     if (codec_id == AV_CODEC_ID_NONE) {
@@ -3491,6 +3618,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                 av_buffer_unref(&hw_device_ctx);
             if (hw_type != AV_HWDEVICE_TYPE_NONE)
             {
+                if (enc_params.pix_fmt != 0 && codec_pix_fmt != HW_DEFAULT_SW_FORMAT)
+                {
+                    CV_LOG_INFO(NULL, "VIDEOIO/FFMPEG: skipping " << av_hwdevice_get_type_name(hw_type)
+                                      << " acceleration, HW encoding supports only NV12 for VIDEOWRITER_PROP_COLOR_SPACE");
+                    continue;
+                }
                 codec = hw_find_codec(codec_id, hw_type, av_codec_is_encoder, accel_iter.disabled_codecs().c_str(), &hw_format);
                 if (!codec)
                     continue;
@@ -3523,7 +3656,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
         context = icv_configure_video_stream_FFMPEG(oc, video_st, codec,
                                               width, height, (int) (bitrate + 0.5),
-                                              fps, format, fourcc, codec_id);
+                                              fps, format, fourcc, codec_id, enc_params);
         if (!context)
         {
             continue;
@@ -3549,11 +3682,18 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
         }
 
-        int64_t lbit_rate = (int64_t) context->bit_rate;
-        lbit_rate += (int64_t)(bitrate / 2);
-        lbit_rate = std::min(lbit_rate, (int64_t) INT_MAX);
-        context->bit_rate_tolerance = (int) lbit_rate;
-        context->bit_rate = (int) lbit_rate;
+        if (enc_params.bitrate > 0)
+        {
+            context->bit_rate_tolerance = enc_params.bitrate;
+        }
+        else if (enc_params.crf < 0)
+        {
+            int64_t lbit_rate = (int64_t) context->bit_rate;
+            lbit_rate += (int64_t)(bitrate / 2);
+            lbit_rate = std::min(lbit_rate, (int64_t) INT_MAX);
+            context->bit_rate_tolerance = (int) lbit_rate;
+            context->bit_rate = (int) lbit_rate;
+        }
 
         /* open the codec */
         err = !encode_video ? 0 : avcodec_open2(context, codec, NULL);
