@@ -719,6 +719,36 @@ def _write_required_imports(required_imports: Collection[str],
         output_stream.write("\n\n")
 
 
+def _write_typing_module_import_guard(output_stream: StringIO) -> None:
+    output_stream.write(
+        "if __name__ == \"typing\":\n"
+        "    import importlib.util as _importlib_util\n"
+        "    import os as _os\n"
+        "    import sys as _sys\n"
+        "    import sysconfig as _sysconfig\n"
+        "\n"
+        "    _typing_path = _os.path.join(\n"
+        "        _sysconfig.get_path(\"stdlib\"), \"typing.py\"\n"
+        "    )\n"
+        "    _spec = _importlib_util.spec_from_file_location(\n"
+        "        \"typing\", _typing_path\n"
+        "    )\n"
+        "    if _spec is None or _spec.loader is None:\n"
+        "        raise ImportError(\"Unable to load Python stdlib typing module\")\n"
+        "    _module = _importlib_util.module_from_spec(_spec)\n"
+        "    _sys.modules[\"typing\"] = _module\n"
+        "    _spec.loader.exec_module(_module)\n"
+        "else:\n"
+    )
+
+
+def _write_indented_block(output_stream: StringIO, content: str) -> None:
+    for line in content.splitlines(True):
+        if line.strip():
+            output_stream.write("    ")
+        output_stream.write(line)
+
+
 def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     """Generates stub file for typings module.
     Actual module doesn't exist, but it is an appropriate place to define
@@ -832,23 +862,32 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         for required_import in node.required_definition_imports:
             required_imports.add(required_import)
 
-    output_stream = StringIO()
-    output_stream.write("__all__ = [\n")
+    body_stream = StringIO()
+    body_stream.write("__all__ = [\n")
     for alias_name in aliases:
-        output_stream.write(f'    "{alias_name}",\n')
-    output_stream.write("]\n\n")
+        body_stream.write(f'    "{alias_name}",\n')
+    body_stream.write("]\n\n")
 
-    _write_required_imports(required_imports, output_stream)
+    _write_required_imports(required_imports, body_stream)
 
     # Add type checking time definitions as generated __init__.py content
     for _, type_node in conditional_type_nodes.items():
-        output_stream.write(f"if {type_node.condition}:\n    ")
-        output_stream.write(f"{type_node.typename} = {type_node.positive_branch_type.full_typename}\nelse:\n")
-        output_stream.write(f"    {type_node.typename} = {type_node.negative_branch_type.full_typename}\n\n\n")
+        body_stream.write(f"if {type_node.condition}:\n    ")
+        body_stream.write(
+            f"{type_node.typename} = "
+            f"{type_node.positive_branch_type.full_typename}\nelse:\n"
+        )
+        body_stream.write(
+            f"    {type_node.typename} = "
+            f"{type_node.negative_branch_type.full_typename}\n\n\n"
+        )
 
     for alias_name, alias_type in aliases.items():
-        output_stream.write(f"{alias_name} = {alias_type}\n")
+        body_stream.write(f"{alias_name} = {alias_type}\n")
 
+    output_stream = StringIO()
+    _write_typing_module_import_guard(output_stream)
+    _write_indented_block(output_stream, body_stream.getvalue())
     TypeNode.compatible_to_runtime_usage = False
     (output_path / "__init__.py").write_text(output_stream.getvalue())
 
