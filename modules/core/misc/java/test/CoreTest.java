@@ -2078,4 +2078,69 @@ public class CoreTest extends OpenCVTestCase {
         Core.setUseOptimized(original_status);
         assertEquals(original_status, Core.useOptimized());
     }
+
+    public void testSolveLP() {
+        // Cormen's example #1, the same problem and expected optimum as
+        // modules/core/test/test_lpsolver.cpp.
+        Mat func = new Mat(3, 1, CvType.CV_64FC1);
+        func.put(0, 0, 3, 1, 2);
+        Mat constr = new Mat(3, 4, CvType.CV_64FC1);
+        constr.put(0, 0, 1, 1, 3, 30,
+                         2, 2, 5, 24,
+                         4, 1, 2, 36);
+
+        Mat z = new Mat();
+        int result = Core.solveLP(func, constr, z);
+
+        assertEquals(Core.SOLVELP_SINGLE, result);
+        assertEquals(3, z.rows());
+        assertEquals(1, z.cols());
+        assertEquals(8.0, z.get(0, 0)[0], EPS);
+        assertEquals(4.0, z.get(1, 0)[0], EPS);
+        assertEquals(0.0, z.get(2, 0)[0], EPS);
+    }
+
+    public void testSolveLPWithEps() {
+        // Cormen's example #2, through the overload that takes constr_eps.
+        Mat func = new Mat(1, 2, CvType.CV_64FC1);
+        func.put(0, 0, 18, 12.5);
+        Mat constr = new Mat(3, 3, CvType.CV_64FC1);
+        constr.put(0, 0, 1, 1, 20,
+                         1, 0, 20,
+                         0, 1, 16);
+
+        Mat z = new Mat();
+        int result = Core.solveLP(func, constr, z, 1e-12);
+
+        assertEquals(Core.SOLVELP_SINGLE, result);
+        assertEquals(2, z.rows());
+        assertEquals(20.0, z.get(0, 0)[0], EPS);
+        assertEquals(0.0, z.get(1, 0)[0], EPS);
+    }
+
+    public void testLinearAssignment() {
+        Mat cost = new Mat(3, 3, CvType.CV_64FC1);
+        cost.put(0, 0, 4, 1, 3,
+                       2, 0, 5,
+                       3, 2, 2);
+
+        MatOfInt assignment = new MatOfInt();
+        double total = Core.linearAssignment(cost, assignment);
+
+        assertEquals(5.0, total, EPS);
+        assertListEquals(Arrays.asList(1, 0, 2), assignment.toList());
+    }
+
+    public void testLinearAssignmentWithThreshold() {
+        // Taking both pairs costs 20, while leaving one row unmatched costs the threshold, 10.
+        Mat cost = new Mat(2, 2, CvType.CV_64FC1);
+        cost.put(0, 0, 0, 10,
+                      10, 100);
+
+        MatOfInt assignment = new MatOfInt();
+        double total = Core.linearAssignment(cost, assignment, 10.0);
+
+        assertEquals(0.0, total, EPS);
+        assertListEquals(Arrays.asList(0, -1), assignment.toList());
+    }
 }
