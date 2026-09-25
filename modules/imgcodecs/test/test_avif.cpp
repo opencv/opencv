@@ -9,8 +9,6 @@
 
 #ifdef HAVE_AVIF
 
-#include <avif/avif.h>
-
 namespace opencv_test {
 namespace {
 
@@ -316,7 +314,7 @@ TEST_P(Imgcodecs_Avif_16bit, encode_decode)
   const int bit_depth = 16;
 
   const string root = cvtest::TS::ptr()->get_data_path();
-  const string filename = root + "../cv/shared/lena.png";
+  const string filename = root + "../cv/features2d/tsukuba.png";
 
   cv::Mat src;
   EXPECT_NO_THROW(src = cv::imread(filename));
