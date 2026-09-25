@@ -94,7 +94,8 @@ TEST(videoio_target_fps, last_frame_pos_msec_matches_its_own_timestamp)
 
     ASSERT_EQ(42, n); // indices 0,3,...,123
     const double srcFrameDurationMs = 1000.0 / BBB_FPS;
-    EXPECT_NEAR(123 * srcFrameDurationMs, lastPosMsec, 1.0); // frame 123's own timestamp, not 0 and not a lookahead frame's
+    // Frame 123's own timestamp, not 0 and not the lookahead frame's.
+    EXPECT_NEAR(123 * srcFrameDurationMs, lastPosMsec, 1.0);
 }
 
 // Timing rather than quantity: successive kept frames should be exactly 1000/target_fps ms apart.
@@ -191,6 +192,33 @@ TEST(videoio_target_fps, non_zero_channel_fails_under_fps_control)
     Mat channel1;
     EXPECT_FALSE(cap.retrieve(channel1, 1)); // must fail, not silently return channel 0's frame
     EXPECT_TRUE(channel1.empty());
+
+    cap.release();
+}
+
+// waitAny() grabs through the raw backend, bypassing fpsControlGrab() entirely, so a stream with
+// target_fps enabled must be rejected up front rather than silently never reporting ready.
+TEST(videoio_target_fps, wait_any_rejects_fps_controlled_stream)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = targetFpsTestVideoPath();
+
+    VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, 8});
+    ASSERT_TRUE(cap.isOpened());
+
+    std::vector<VideoCapture> streams{cap};
+    std::vector<int> readyIndex;
+    try
+    {
+        VideoCapture::waitAny(streams, readyIndex);
+        ADD_FAILURE() << "waitAny() should reject a stream with CAP_PROP_TARGET_FPS enabled";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(cv::Error::StsNotImplemented, e.code);
+    }
 
     cap.release();
 }
@@ -392,6 +420,34 @@ TEST(videoio_target_fps, reports_effective_output_fps)
     }
 }
 
+// get(CAP_PROP_FRAME_COUNT) must reflect the emitted (post-drop) count, not the native source count.
+TEST(videoio_target_fps, reports_effective_frame_count)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = targetFpsTestVideoPath();
+
+    {   // below native: scaled down to what a read() loop emits (see keeps_expected_frame_count)
+        VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, 8});
+        ASSERT_TRUE(cap.isOpened());
+        EXPECT_EQ(42.0, cap.get(CAP_PROP_FRAME_COUNT)) << "before any read()";
+        Mat frame;
+        ASSERT_TRUE(cap.read(frame));
+        EXPECT_EQ(42.0, cap.get(CAP_PROP_FRAME_COUNT)) << "after read()";
+    }
+    {   // above native: drop-only can't reduce below the native count, so native is the honest answer.
+        VideoCapture cap(filename, CAP_FFMPEG, {CAP_PROP_TARGET_FPS, cvRound(BBB_FPS * 2)});
+        ASSERT_TRUE(cap.isOpened());
+        EXPECT_EQ(BBB_FRAME_COUNT, cap.get(CAP_PROP_FRAME_COUNT));
+    }
+    {   // disabled: untouched passthrough
+        VideoCapture cap(filename, CAP_FFMPEG);
+        ASSERT_TRUE(cap.isOpened());
+        EXPECT_EQ(BBB_FRAME_COUNT, cap.get(CAP_PROP_FRAME_COUNT));
+    }
+}
+
 // The get()->set() round trip POS_FRAMES exists for; checked on pixels, not position readback.
 TEST(videoio_target_fps, bookmarked_frame_can_be_seeked_back_to)
 {
@@ -537,7 +593,7 @@ TEST(videoio_target_fps, v4l2_vivid_respects_target_fps)
     for (size_t i = 1; i < posMsec.size(); i++)
     {
         const double stepMs = posMsec[i] - posMsec[i - 1];
-        // 50% tolerance (vs ~1% for file-based tests): real kernel jitter, not sub-frame precision, is what matters.
+        // 50% tolerance (vs ~1% for file tests): this checks real kernel jitter, not sub-frame precision.
         EXPECT_NEAR(expectedStepMs, stepMs, expectedStepMs * 0.5)
             << "step " << i << ": " << posMsec[i - 1] << " -> " << posMsec[i];
     }

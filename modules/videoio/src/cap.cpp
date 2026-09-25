@@ -67,7 +67,8 @@ IStreamReader::~IStreamReader()
     // nothing
 }
 
-// Strip CAP_PROP_TARGET_FPS before VideoCaptureParameters exists: plugin backends rebuild their own copy across the ABI boundary, so marking it "consumed" here wouldn't stop them rejecting it.
+// Strip CAP_PROP_TARGET_FPS before any backend sees it: plugin backends rebuild their own
+// params copy, so marking it "consumed" here wouldn't stop them rejecting it.
 static double extractTargetFps(const std::vector<int>& params, std::vector<int>& backendParams)
 {
     double target_fps = 0.0;
@@ -591,7 +592,8 @@ void VideoCapture::fpsControlResetClock()
 // Absorbs floating-point rounding noise at an exact schedule boundary in fpsControlGrab().
 const double VideoCapture::kFpsControlEpsMs = 1e-6;
 
-// Drop-only: emits the first frame at-or-after each tick using only its own timestamp; matches FFmpeg's vf_fps.c only on evenly-spaced timestamps, not jittery ones.
+// Drop-only: emits the first frame at or after each tick, based on its own timestamp.
+// Matches FFmpeg's vf_fps.c for evenly spaced timestamps, not for jittery ones.
 bool VideoCapture::fpsControlGrab()
 {
     FpsControlState& s = fpsCtl;
@@ -655,7 +657,7 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
     {
         if (fpsCtl.enabled)
         {
-            // Only channel 0 is supported; fail loudly rather than silently return channel 0's data for another channel.
+            // Only channel 0 is supported; fail instead of returning channel 0's data for another channel.
             if (channel != 0)
             {
                 CV_LOG_WARNING(NULL, "VIDEOIO: target_fps does not support multi-head capture "
@@ -785,6 +787,17 @@ double VideoCapture::get(int propId) const
                 return nativeFps;
             return fpsCtl.targetFps;
         }
+        case CAP_PROP_FRAME_COUNT:
+        {
+            // Above native (or native fps unknown): passthrough, so the native count is already correct.
+            const double nativeFps = !icap.empty() ? icap->getProperty(CAP_PROP_FPS) : 0.0;
+            if (nativeFps <= 0 || nativeFps < fpsCtl.targetFps)
+                break;
+            const double nativeFrameCount = !icap.empty() ? icap->getProperty(CAP_PROP_FRAME_COUNT) : 0.0;
+            if (nativeFrameCount <= 0)
+                break;
+            return static_cast<double>(cvCeil(nativeFrameCount * fpsCtl.targetFps / nativeFps));
+        }
         default:
             break;
         }
@@ -797,6 +810,13 @@ bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams,
                            CV_OUT std::vector<int>& readyIndex, int64 timeoutNs)
 {
     CV_Assert(!streams.empty());
+
+    // waitAny() grabs through the raw backend and bypasses fpsControlGrab(), so reject such streams.
+    for (size_t i = 0; i < streams.size(); ++i)
+    {
+        if (streams[i].fpsCtl.enabled)
+            CV_Error(Error::StsNotImplemented, "VideoCapture::waitAny() does not support captures with CAP_PROP_TARGET_FPS enabled");
+    }
 
     VideoCaptureAPIs backend = (VideoCaptureAPIs)streams[0].icap->getCaptureDomain();
 
