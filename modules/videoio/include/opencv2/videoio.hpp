@@ -229,11 +229,33 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_KEY_FLAG = 11, //!< Set to non-zero to signal that the following frames are key frames or zero if not, when encapsulating raw video (\ref VIDEOWRITER_PROP_RAW_VIDEO != 0). FFmpeg back-end only.
   VIDEOWRITER_PROP_PTS = 12, //!< Specifies the frame presentation timestamp for each frame using the FPS time base. This property is **only** necessary when encapsulating **externally** encoded video where the decoding order differs from the presentation order, such as in GOP patterns with bi-directional B-frames. The value should be provided by your external encoder and for video sources with fixed frame rates it is equivalent to dividing the current frame's presentation time (\ref CAP_PROP_POS_MSEC) by the frame duration (1000.0 / VideoCapture::get(\ref CAP_PROP_FPS)). It can be queried from the resulting encapsulated video file using VideoCapture::get(\ref CAP_PROP_PTS). FFmpeg back-end only.
   VIDEOWRITER_PROP_DTS_DELAY = 13, //!< Specifies the maximum difference between presentation (pts) and decompression timestamps (dts) using the FPS time base. This property is necessary **only** when encapsulating **externally** encoded video where the decoding order differs from the presentation order, such as in GOP patterns with bi-directional B-frames. The value should be calculated based on the specific GOP pattern used during encoding. For example, in a GOP with presentation order IBP and decoding order IPB, this value would be 1, as the B-frame is the second frame presented but the third to be decoded. It can be queried from the resulting encapsulated video file using VideoCapture::get(\ref CAP_PROP_DTS_DELAY). Non-zero values usually imply the stream is encoded using B-frames. FFmpeg back-end only.
-  VIDEOWRITER_PROP_COLOR_SPACE = 14, //!< (**open-only**) GStreamer backend only. Pixel format for the encoding profile. Default is "I420". Other values: "NV12", "BGRx". See GStreamer raw video formats for more options.
+  VIDEOWRITER_PROP_COLOR_SPACE = 14, //!< (**open-only**) Pixel format of the encoded stream as a 4-character code, see VideoWriter::fourcc. GStreamer: raw format the encoder input is restricted to, for example "I420", "NV12" or "BGRx", see GStreamer raw video formats for more options. When not set, the encoder picks its own input format. FFmpeg: uses the same encoding as the read-only \ref CAP_PROP_CODEC_PIXEL_FORMAT, VideoWriter::open() fails if the code is unknown or the selected encoder does not support it, hardware accelerated encoding accepts only "NV12", VideoWriter::get() returns the pixel format in use. FFmpeg and GStreamer back-ends.
   VIDEOWRITER_PROP_ENABLE_ALPHA = 15, //!< (**open-only**) FFmpeg backend only. Defines that input frames contain alpha channel.
+  VIDEOWRITER_PROP_BITRATE = 16, //!< (**open-only**) Target bitrate of the encoded video stream in bits per second. Ignored when \ref VIDEOWRITER_PROP_CRF is set. VideoWriter::open() fails if the selected encoder does not support it. GStreamer supports `x264enc`, `x265enc`, `vp8enc`, `vp9enc`, `openh264enc`, `vaapih264enc`, `vah264enc`, `svtav1enc` and `avenc_*`, for other encoders set the bitrate in the pipeline string. VideoWriter::get() returns the value passed to open(), or \ref VIDEOWRITER_PROP_UNKNOWN if it was not set. FFmpeg and GStreamer back-ends.
+  VIDEOWRITER_PROP_CRF = 17, //!< (**open-only**) Constant Rate Factor, lower values give better quality and larger files. Only supported by encoders exposing a constant-quality control - `crf` for libx264, libx265, libvpx and libaom in FFmpeg; `quantizer` for `x264enc`, `crf` through `option-string` for `x265enc`, and `cq-level` in constant quality mode for `vp8enc`/`vp9enc` in GStreamer. The useful range is codec specific, 0..51 for FFmpeg libx264 and 0..50 for GStreamer `x264enc`. Takes precedence over \ref VIDEOWRITER_PROP_BITRATE. VideoWriter::open() fails if the selected encoder does not support it. VideoWriter::get() returns the value passed to open(), or \ref VIDEOWRITER_PROP_UNKNOWN if it was not set. FFmpeg and GStreamer back-ends.
+  VIDEOWRITER_PROP_PRESET = 18, //!< (**open-only**) Encoding speed/compression trade-off, one of #VideoWriterPresets. Only supported by encoders exposing a preset control (libx264 and libx265, or the `x264enc`/`x265enc` GStreamer elements). VideoWriter::open() fails if the selected encoder does not support it, or if the value is not a valid #VideoWriterPresets. VideoWriter::get() returns the value passed to open(), or \ref VIDEOWRITER_PROP_UNKNOWN if it was not set. FFmpeg and GStreamer back-ends.
+  VIDEOWRITER_PROP_GOP_SIZE = 19, //!< (**open-only**) Group Of Pictures size, i.e. the maximum interval between key frames. VideoWriter::open() fails if the selected encoder does not support it. VideoWriter::get() returns the value passed to open(), or \ref VIDEOWRITER_PROP_UNKNOWN if it was not set. FFmpeg and GStreamer back-ends.
 #ifndef CV_DOXYGEN
   CV__VIDEOWRITER_PROP_LATEST
 #endif
+};
+
+/** @brief cv::VideoWriter encoder presets for \ref cv::VIDEOWRITER_PROP_PRESET.
+
+Ordered from fastest encoding / lowest compression to slowest / highest. Names match the
+preset system used by libx264 and libx265.
+*/
+enum VideoWriterPresets {
+  VIDEOWRITER_PRESET_ULTRAFAST = 0, //!< Fastest encoding, lowest compression efficiency.
+  VIDEOWRITER_PRESET_SUPERFAST = 1,
+  VIDEOWRITER_PRESET_VERYFAST = 2,
+  VIDEOWRITER_PRESET_FASTER = 3,
+  VIDEOWRITER_PRESET_FAST = 4,
+  VIDEOWRITER_PRESET_MEDIUM = 5,    //!< Encoder default.
+  VIDEOWRITER_PRESET_SLOW = 6,
+  VIDEOWRITER_PRESET_SLOWER = 7,
+  VIDEOWRITER_PRESET_VERYSLOW = 8,
+  VIDEOWRITER_PRESET_PLACEBO = 9    //!< Slowest encoding, highest compression efficiency.
 };
 
 //! @} videoio_flags_base
