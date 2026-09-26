@@ -132,6 +132,27 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
  * @param points3d the resulting 3d points
  */
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+// Interleaved 4-channel store: on RVV the portable v_store_interleave lowers to
+// 4x strided stores (vsse), which are much slower than scalar sequential stores
+// on in-order cores - use the native vsseg4 segmented store (one instruction
+// writes the AoS block) there. Other backends keep the portable path.
+template<typename T, typename VT>
+static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
+                                const VT& Z, const VT& W, int vl)
+{
+#if defined(__riscv_vector)
+    if constexpr (sizeof(T) == 4)
+        __riscv_vsseg4e32_v_f32m1x4(reinterpret_cast<float*>(p),
+                                    __riscv_vcreate_v_f32m1x4(X, Y, Z, W), vl);
+    else
+        __riscv_vsseg4e64_v_f64m1x4(reinterpret_cast<double*>(p),
+                                    __riscv_vcreate_v_f64m1x4(X, Y, Z, W), vl);
+#else
+    v_store_interleave(reinterpret_cast<T*>(p), X, Y, Z, W);
+#endif
+    (void)vl;
+}
+
 /** One row of the dense no-mask path, universal-intrinsics vectorized.
  * Per output element: p0 = x_cache*z, p1 = y*z, p2 = z, p3 = 0 - a single IEEE
  * multiply each (no accumulation, no reassociation), so the vector body is
@@ -149,7 +170,7 @@ static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* po
     {
         VT zv = vx_load(z + i);
         VT xv = vx_load(x_cache + i);
-        v_store_interleave(reinterpret_cast<T*>(point + i), v_mul(xv, zv), v_mul(yv, zv), zv, zero);
+        storePoints4<T>(point + i, v_mul(xv, zv), v_mul(yv, zv), zv, zero, vl);
     }
     for (; i < n; ++i)
     {
