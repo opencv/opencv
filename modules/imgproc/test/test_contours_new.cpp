@@ -70,6 +70,49 @@ inline static void drawContours(Mat& img,
     }
 }
 
+#if CHECK_OLD
+static void checkLegacyContours(const Mat& image, const vector<vector<Point>>& contours,
+                                const vector<Vec4i>& hierarchy, int mode, int method)
+{
+    const bool exact = method != CHAIN_APPROX_TC89_L1;
+    vector<vector<Point>> reference;
+    vector<Vec4i> referenceHierarchy;
+    findContours_legacy(image, reference, referenceHierarchy, mode, method);
+    ASSERT_EQ(reference.size(), contours.size());
+    EXPECT_MAT_NEAR(Mat(referenceHierarchy), Mat(hierarchy), 0);
+
+    vector<vector<Point>> boundary;
+    if (!exact)
+    {
+        // Legacy TC89_L1 has known vertex-selection differences (see #25663).
+        // Keep its contour/hierarchy comparison and check vertices against the
+        // unapproximated boundary instead of requiring the old approximation.
+        vector<Vec4i> boundaryHierarchy;
+        findContours_legacy(image, boundary, boundaryHierarchy, mode, CHAIN_APPROX_NONE);
+        ASSERT_EQ(reference.size(), boundary.size());
+        EXPECT_MAT_NEAR(Mat(boundaryHierarchy), Mat(hierarchy), 0);
+    }
+    for (size_t i = 0; i < contours.size(); ++i)
+    {
+        SCOPED_TRACE(format("contour = %zu", i));
+        if (exact)
+        {
+            EXPECT_MAT_NEAR(Mat(reference[i]), Mat(contours[i]), 0);
+        }
+        else
+        {
+            ASSERT_FALSE(contours[i].empty());
+            EXPECT_LE(contours[i].size(), boundary[i].size());
+            for (const Point& point : contours[i])
+            {
+                EXPECT_TRUE(std::find(boundary[i].begin(), boundary[i].end(), point) != boundary[i].end())
+                    << "Point " << point << " is not on the unapproximated boundary";
+            }
+        }
+    }
+}
+#endif
+
 //==================================================================================================
 
 // Test parameters - mode + method
@@ -476,16 +519,7 @@ TEST_P(Imgproc_FindContours_Modes2, new_accuracy)
         EXPECT_EQ(0., diff1);
     }
 #if CHECK_OLD
-    vector<vector<Point>> contours_o;
-    vector<Vec4i> hierarchy_o;
-    findContours(img, contours_o, hierarchy_o, mode, method);
-    ASSERT_EQ(contours_o.size(), contours.size());
-    for (size_t i = 0; i < contours_o.size(); ++i)
-    {
-        SCOPED_TRACE(format("contour = %zu", i));
-        EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
-    }
-    EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
+    checkLegacyContours(img, contours, hierarchy, mode, method);
 #endif
 }
 
@@ -499,6 +533,7 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
 
     for (int c = 0; c < 4; ++c)
     {
+        SCOPED_TRACE(format("case = %d", c));
         if (c != 0)
         {
             // noise + filter + threshold
@@ -508,13 +543,12 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
             Mat fimg;
             boxFilter(img, fimg, CV_8U, Size(5, 5));
 
-            Mat timg;
             const int level = 44 + c * 42;
             // 'level' goes through:
             // 86 - some black speckles on white
             // 128 - 50/50 black/white
             // 170 - some white speckles on black
-            cv::threshold(fimg, timg, level, 255, THRESH_BINARY);
+            cv::threshold(fimg, img, level, 255, THRESH_BINARY);
         }
         else
         {
@@ -526,26 +560,16 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
             rectangle(img, center, center + cut, Scalar(0), FILLED);
         }
 
+        ASSERT_EQ(0, countNonZero((img != 0) & (img != 255)));
         vector<vector<Point>> contours;
         vector<Vec4i> hierarchy;
         findContours(img, contours, hierarchy, mode, method);
 
 #if CHECK_OLD
-        // NOTE: old and new function results might not match when approximation mode is TC89.
-        // Currently this test passes, but might fail for other random data.
-        // See https://github.com/opencv/opencv/issues/25663 for details.
-        vector<vector<Point>> contours_o;
-        vector<Vec4i> hierarchy_o;
-        findContours_legacy(img, contours_o, hierarchy_o, mode, method);
-        ASSERT_EQ(contours_o.size(), contours.size());
-        for (size_t i = 0; i < contours_o.size(); ++i)
-        {
-            SCOPED_TRACE(format("c = %d, contour = %zu", c, i));
-            EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
-        }
-        EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
-#endif
+        checkLegacyContours(img, contours, hierarchy, mode, method);
+#else
         // TODO: check something
+#endif
     }
 }
 
