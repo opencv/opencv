@@ -8,7 +8,6 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 
-#include "opencv-onnx.pb.h"
 #include "../onnx/onnx_dtype_convert.hpp"
 
 namespace cv { namespace dnn {
@@ -352,7 +351,7 @@ public:
             for (size_t i = 0; i < total; i++)
                 d[i] = onnx_dtype::e8m0ToF32(onnx_dtype::f32ToE8M0(CV_DNN_SRC_F(i)));
         }
-        else if (onnxType == opencv_onnx::TensorProto_DataType_FLOAT4E2M1)
+        else if (onnxType == onnx_dtype::ONNX_FLOAT4E2M1)
         {
             hfloat* d = dst.ptr<hfloat>();
             for (size_t i = 0; i < total; i++)

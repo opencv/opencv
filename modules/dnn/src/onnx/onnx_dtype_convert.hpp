@@ -16,8 +16,8 @@
 
 namespace cv { namespace dnn { namespace onnx_dtype {
 
-// ONNX TensorProto.DataType value for FLOAT8E8M0 (absent from the bundled opencv-onnx.proto).
-enum { ONNX_FLOAT8E8M0 = 24 };
+// ONNX TensorProto.DataType value for FLOAT8E8M0 (absent from the bundled opencv-onnx.proto) and ONNX_FLOAT4E2M1 (avoids dependence on protobuf generated headers).
+enum { ONNX_FLOAT4E2M1 = 23, ONNX_FLOAT8E8M0 = 24 };
 
 // Description of a sign+exponent+mantissa low-precision float (the FP8 family).
 struct Fp8Fmt { int ebits, mbits, bias; bool has_inf, fnuz; };
