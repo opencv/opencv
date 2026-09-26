@@ -43,9 +43,14 @@ public:
 
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;
-            if (vecsize % VEC_ALIGN != 0)
+            #if CV_TRY_SVE && CV_SVE
+                int valign = svcntb();
+            #else
+                int valign = FullyConnectedLayerInt8Impl::VEC_ALIGN;
+            #endif
+            if (vecsize % valign != 0)
             {
-                int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
+                int vecsize_aligned = (int)alignSize(vecsize, valign);
                 Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
                 Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
                 wpadding.setTo(Scalar::all(0));
@@ -301,17 +306,21 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
             p.useLASX = checkHardwareSupport(CPU_LASX);
             p.useRVV = checkHardwareSupport(CPU_RVV);
-
+            p.useSVE = checkHardwareSupport(CPU_SVE);
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
         void operator()(const Range& r) const CV_OVERRIDE
         {
-            int valign = FullyConnectedLayerInt8Impl::VEC_ALIGN;
+            #if CV_TRY_SVE && CV_SVE
+                int valign =  svcntb(); // SVE is VLA so generalization for alignment is required.
+            #else
+                int valign = FullyConnectedLayerInt8Impl::VEC_ALIGN;
+            #endif
             int nsamples = srcMat->rows;
             int nw0 = weights->rows;
             int k, vecsize = srcMat->cols;
-            int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
+            int vecsize_aligned = (int)alignSize(vecsize, valign);
             size_t total = (size_t)nsamples*nw0;
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
@@ -359,6 +368,12 @@ public:
             #if CV_RVP052
                 if( 1 )
                     opt_RVP052::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
+            #if CV_TRY_SVE && CV_SVE
+                if(useSVE){
+                    opt_SVE::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                }
                 else
             #endif
                 {
@@ -417,6 +432,7 @@ public:
         bool useAVX512;
         bool useLASX;
         bool useRVV;
+        bool useSVE;
     };
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
