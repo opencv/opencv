@@ -18,32 +18,74 @@ struct CvNThreadScope{
     }
 };
 
-// Ignore contour order, but preserve multiplicity and the point order within each contour.
+static bool trucoPointLess(const Point& a, const Point& b)
+{
+    return a.x < b.x || (a.x == b.x && a.y < b.y);
+}
+
+// Find the least cyclic rotation in linear time, including contours that revisit a point.
+static size_t trucoContourStart(const vector<Point>& contour)
+{
+    const size_t n = contour.size();
+    size_t i = 0, j = 1, k = 0;
+    while (i < n && j < n && k < n)
+    {
+        const Point& a = contour[(i + k) % n];
+        const Point& b = contour[(j + k) % n];
+        if (a == b)
+        {
+            ++k;
+            continue;
+        }
+        if (trucoPointLess(a, b))
+        {
+            j += k + 1;
+            if (j <= i)
+                j = i + 1;
+        }
+        else
+        {
+            i += k + 1;
+            if (i <= j)
+                i = j + 1;
+        }
+        k = 0;
+    }
+    return std::min(i, j);
+}
+
+// Ignore contour order and cyclic starts, but preserve multiplicity and point traversal order.
 static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
 {
     if (cont1.size() != cont2.size())
         return false;
 
-    // Sort references so that large contour point buffers do not need to be copied.
-    vector<const vector<Point>*> sorted1, sorted2;
+    // Sort references and starting indices without copying large contour point buffers.
+    typedef std::pair<const vector<Point>*, size_t> ContourReference;
+    vector<ContourReference> sorted1, sorted2;
     sorted1.reserve(cont1.size());
     sorted2.reserve(cont2.size());
     for (const auto& contour : cont1)
-        sorted1.push_back(&contour);
+        sorted1.emplace_back(&contour, trucoContourStart(contour));
     for (const auto& contour : cont2)
-        sorted2.push_back(&contour);
+        sorted2.emplace_back(&contour, trucoContourStart(contour));
 
-    const auto pointLess = [](const Point& a, const Point& b) {
-        return a.x < b.x || (a.x == b.x && a.y < b.y);
-    };
-    const auto contourLess = [&](const vector<Point>* a, const vector<Point>* b) {
-        return std::lexicographical_compare(a->begin(), a->end(), b->begin(), b->end(), pointLess);
+    const auto contourLess = [](const ContourReference& a, const ContourReference& b) {
+        const size_t na = a.first->size(), nb = b.first->size();
+        for (size_t k = 0; k < std::min(na, nb); ++k)
+        {
+            const Point& pa = (*a.first)[(a.second + k) % na];
+            const Point& pb = (*b.first)[(b.second + k) % nb];
+            if (pa != pb)
+                return trucoPointLess(pa, pb);
+        }
+        return na < nb;
     };
     std::sort(sorted1.begin(), sorted1.end(), contourLess);
     std::sort(sorted2.begin(), sorted2.end(), contourLess);
     for (size_t i = 0; i < sorted1.size(); ++i)
     {
-        if (*sorted1[i] != *sorted2[i])
+        if (contourLess(sorted1[i], sorted2[i]) || contourLess(sorted2[i], sorted1[i]))
             return false;
     }
     return true;
@@ -86,13 +128,65 @@ TEST(Imgproc_FindTRUContoursComparison, multiplicity)
 
 TEST(Imgproc_FindTRUContoursComparison, point_sequences)
 {
-    const vector<Point> a = {Point(1, 2), Point(3, 4)};
-    const vector<Point> reversed = {Point(3, 4), Point(1, 2)};
-    const vector<Point> different = {Point(1, 2), Point(3, 5)};
+    const vector<Point> a = {Point(0, 0), Point(2, 0), Point(2, 2), Point(0, 2)};
+    const vector<Point> reversed(a.rbegin(), a.rend());
+    const vector<Point> reordered = {a[0], a[2], a[1], a[3]};
+    vector<Point> different = a;
+    different[1].x += 1;
     EXPECT_TRUE(trucoContoursMatch({a}, {a}));
     EXPECT_FALSE(trucoContoursMatch({a}, {reversed}));
+    EXPECT_FALSE(trucoContoursMatch({a}, {reordered}));
     EXPECT_FALSE(trucoContoursMatch({a}, {different}));
     EXPECT_FALSE(trucoContoursMatch({a}, {{Point(1, 2)}}));
+}
+
+TEST(Imgproc_FindTRUContoursComparison, cyclic_starts)
+{
+    const vector<vector<Point>> contours = {
+        {}, {Point(1, 2)}, {Point(1, 2), Point(3, 4)},
+        {Point(0, 0), Point(2, 0), Point(2, 2), Point(0, 2)},
+        {Point(0, 0), Point(2, 0), Point(0, 0), Point(1, 0)},
+        {Point(0, 0), Point(1, 0), Point(0, 0), Point(1, 0)},
+        {Point(0, 0), Point(0, 0), Point(0, 0)}
+    };
+    EXPECT_TRUE(trucoContoursMatch({{}, {}}, {{}, {}}));
+    EXPECT_FALSE(trucoContoursMatch({{}}, {{}, {}}));
+    for (const auto& contour : contours)
+    {
+        vector<Point> rotated = contour;
+        for (size_t shift = 0; shift < contour.size(); ++shift)
+        {
+            std::rotate(rotated.begin(), rotated.begin() + 1, rotated.end());
+            EXPECT_TRUE(trucoContoursMatch({contour}, {rotated}));
+            EXPECT_TRUE(trucoContoursMatch({contour, contour}, {rotated, contour}));
+        }
+    }
+}
+
+TEST(Imgproc_FindTRUContoursComparison, canonical_start)
+{
+    // Compare against exhaustive rotations to cover repeated minima and periodic sequences.
+    for (size_t n = 1, count = 3; n <= 7; ++n, count *= 3)
+    {
+        for (size_t code = 0; code < count; ++code)
+        {
+            vector<Point> contour(n);
+            size_t value = code;
+            for (size_t i = 0; i < n; ++i, value /= 3)
+                contour[i] = Point(static_cast<int>(value % 3), 0);
+            vector<Point> expected = contour, rotated = contour;
+            for (size_t shift = 1; shift < n; ++shift)
+            {
+                std::rotate(rotated.begin(), rotated.begin() + 1, rotated.end());
+                if (std::lexicographical_compare(rotated.begin(), rotated.end(),
+                                                 expected.begin(), expected.end(), trucoPointLess))
+                    expected = rotated;
+            }
+            const size_t start = trucoContourStart(contour);
+            std::rotate(contour.begin(), contour.begin() + start, contour.end());
+            ASSERT_EQ(expected, contour);
+        }
+    }
 }
 
 typedef testing::TestWithParam<ContourApproximationModes> Imgproc_FindTRUContours;
