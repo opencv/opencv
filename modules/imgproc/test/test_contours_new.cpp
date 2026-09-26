@@ -630,6 +630,8 @@ TEST_P(Imgproc_FindContours_ROIOffset, border_and_hole)
     EXPECT_EQ(expected, contours);
 }
 
+// RETR_LIST without hierarchy exercises TRUCO; the other combinations are
+// general-scanner controls for the same ROI isolation and offset contract.
 INSTANTIATE_TEST_CASE_P(
     ,
     Imgproc_FindContours_ROIOffset,
