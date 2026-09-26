@@ -25,12 +25,12 @@ void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
 
 void ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
                             Mat&  tvec, Mat& J, const int MaxIter,
-                            const IntrinsicParams& param, const double thresh_cond);
+                            const IntrinsicParams& param);
 CV_EXPORTS Mat ComputeHomography(Mat m, Mat M);
 
 CV_EXPORTS Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
 
-void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
+CV_EXPORTS void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
 
 void CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                          const IntrinsicParams& param, const int check_cond,
