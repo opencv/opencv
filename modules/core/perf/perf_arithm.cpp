@@ -532,6 +532,164 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     )
 );
 
+///////////// CV_64F element-wise ops (f64-work kernels) ////////
+
+typedef Size_MatType F64ArithmTest;
+
+PERF_TEST_P_(F64ArithmTest, add)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::add(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, subtract)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::subtract(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, multiply)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::multiply(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, divide)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    randu(a, 1., 2.);
+    randu(b, 1., 2.);
+    declare.in(a, b).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::divide(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, min)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::min(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, max)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::max(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, absdiff)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::absdiff(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, compare)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, CV_8UC1);
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::compare(a, b, c, cv::CMP_GT);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(F64ArithmTest, addWeighted)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+    double alpha = 0.7, beta = -0.2, gamma = 3.5;
+
+    declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
+
+    TEST_CYCLE() cv::addWeighted(a, alpha, b, beta, gamma, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , F64ArithmTest,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p, Size(127, 61)),   // 127x61 guards per-call overhead
+        testing::Values(CV_64FC1)
+    )
+);
+
 ///////////// Mixed type arithmetics ////////
 
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, std::tuple<perf::MatType, perf::MatType>>> ArithmMixedTest;
