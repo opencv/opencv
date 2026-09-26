@@ -3033,6 +3033,47 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+// Narrowing a 64-bit or 32-bit-unsigned array must SATURATE, and identically at every dispatch
+// level. The vectorized path narrows through a
+// 32-bit intermediate, and v_pack() truncates at 64->32 (unlike the narrower widths, which
+// saturate), so an unclamped value used to wrap before the final saturating step ever saw it -
+// turning 4294967295 into 0 rather than 255. Only the vector loop was affected, so the single
+// element result is the reference. 127 elements covers both the vector body and an odd tail.
+typedef testing::TestWithParam< tuple<int, int, double> > Core_ConvertToSaturate;
+
+TEST_P(Core_ConvertToSaturate, length_independent)
+{
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const double value = get<2>(GetParam());
+    const int N = 127;
+
+    Mat one64(1, 1, CV_64F, Scalar(value));
+    Mat one; one64.convertTo(one, srcDepth);
+    Mat oneDst; one.convertTo(oneDst, dstDepth);
+    Mat ref; oneDst.convertTo(ref, CV_64F);
+    const double expected = ref.at<double>(0, 0);
+
+    Mat src64(1, N, CV_64F, Scalar(value));
+    Mat src; src64.convertTo(src, srcDepth);
+    Mat dst; src.convertTo(dst, dstDepth);
+    Mat got; dst.convertTo(got, CV_64F);
+
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(expected, got.at<double>(0, i)) << "index " << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertToSaturate,
+    testing::Combine(
+        testing::Values(CV_32U, CV_64U, CV_64S),
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(4294967295.0, 2147483648.0, 65536.0, 70000.0, 300.0,
+                        // opposite ends of the 64-bit range: a clamp built on the 64-bit ordering
+                        // compares gets these wrong at the SSE/NEON baselines, where v_gt is the
+                        // sign of a subtraction that overflows here
+                        -9223372036854775808.0, 9223372036854775807.0,
+                        -2147483649.0, -2147483648.0, -1.0)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
