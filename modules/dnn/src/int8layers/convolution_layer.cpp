@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "conv2_int8_kernels.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -804,10 +805,7 @@ public:
 
             p.useAVX2   = checkHardwareSupport(CPU_AVX2) && isConv2D;
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
-        #if CV_AVXVNNI_AVAILABLE
-            p.useVNNI = p.useAVX2 && checkHardwareSupport(CPU_AVX_VNNI) && isConv2D &&
-                        input.type() == CV_8UC1;
-        #endif
+            p.useVNNI   = p.useAVX2 && CV_CPU_HAS_SUPPORT_AVX_VNNI && input.type() == CV_8UC1;
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
             p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
@@ -1380,12 +1378,10 @@ public:
                                 }
                             }
                         }
-                    #if CV_AVXVNNI_AVAILABLE
                         if(useVNNI)
-                            opt_AVX2::fastConvVNNI(wptr, wstep, biasptr, (const uint8_t*)rowbuf0, data_out0 + ofs0,
+                            fastConvVNNI(wptr, wstep, biasptr, (const uint8_t*)rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
                         else
-                    #endif
                     #if CV_TRY_AVX512_SKX
                         if(useAVX512)
                             opt_AVX2::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
@@ -1590,9 +1586,8 @@ public:
         Mat outputInt32 = outputInt32Buf_;
         if (inputs[0].type() == CV_8U)
         {
-        #if CV_AVXVNNI_AVAILABLE
             // AVX-VNNI path: pass uint8 input directly, skip u8→s8 conversion.
-            if (checkHardwareSupport(CPU_AVX_VNNI) && inputs[0].dims == 4) {
+            if (CV_CPU_HAS_SUPPORT_AVX_VNNI && inputs[0].dims == 4) {
                 if (biasvecVNNI.empty() && !biasvec.empty()) {
                     int outCn = weightsMat.rows;
                     biasvecVNNI.resize(biasvec.size());
@@ -1614,7 +1609,6 @@ public:
                                   &outputs[0]);
             }
             else
-        #endif
             {
                 Mat inpS8;
                 inputs[0].convertTo(inpS8, CV_8S, 1.0, -128.0);
