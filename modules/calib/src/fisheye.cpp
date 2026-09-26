@@ -737,6 +737,33 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
 
     Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
     Mat objectPoints = _objectPoints.reshape(1).t();
+
+    // Since https://github.com/opencv/opencv/pull/17454 (commit
+    // 657c8d1c65b88173521b7955ed2f2ac725a5a5b2), fisheye::undistortPoints
+    // marks points it cannot undistort with a sentinel coordinate instead of
+    // reporting an error. This happens for poor intermediate intrinsics,
+    // e.g., after a bad initial guess. Such points are outliers that corrupt
+    // the homography and must be skipped.
+    constexpr double undistortionFailureCoordinate = -1e6;
+    constexpr int minimumHomographyPoints = 4;
+    Mat validImagePoints;
+    Mat validObjectPoints;
+    for (int i = 0; i < imagePointsNormalized.cols; ++i)
+    {
+        const bool undistorted =
+            imagePointsNormalized.at<double>(0, i) != undistortionFailureCoordinate ||
+            imagePointsNormalized.at<double>(1, i) != undistortionFailureCoordinate;
+        if (undistorted)
+        {
+            validImagePoints.push_back(Mat(imagePointsNormalized.col(i).t()));
+            validObjectPoints.push_back(Mat(objectPoints.col(i).t()));
+        }
+    }
+    CV_CheckGE(validImagePoints.rows, minimumHomographyPoints,
+               "Too few image points can be undistorted to estimate the initial pose");
+    imagePointsNormalized = validImagePoints.t();
+    objectPoints = validObjectPoints.t();
+
     Mat objectPointsMean, covObjectPoints;
     Mat Rckk;
     int Np = imagePointsNormalized.cols;
