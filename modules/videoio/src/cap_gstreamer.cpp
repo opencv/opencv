@@ -1203,6 +1203,7 @@ void GStreamerCapture::startPipeline()
     if (status == GST_STATE_CHANGE_FAILURE)
     {
         handleMessage(pipeline);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
         pipeline.release();
         CV_WARN("unable to start pipeline");
         return;
@@ -1693,6 +1694,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         {
             GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-error");
             handleMessage(pipeline);
+            gst_element_set_state(pipeline, GST_STATE_NULL);
             pipeline.release();
             CV_WARN("unable to start pipeline");
             return false;
