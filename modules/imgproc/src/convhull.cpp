@@ -140,7 +140,7 @@ struct CHullCmpPoints
     }
 };
 
-bool convex_hull_bucket_sort(const Point* data,
+static bool convex_hull_bucket_sort(const Point* data,
                              bool require_monotonic_indices,
                              Point** out_points,
                              int& total,
