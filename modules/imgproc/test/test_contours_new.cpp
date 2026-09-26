@@ -74,14 +74,24 @@ inline static void drawContours(Mat& img,
 static void checkLegacyContours(const Mat& image, const vector<vector<Point>>& contours,
                                 const vector<Vec4i>& hierarchy, int mode, int method)
 {
-    const bool exact = method == CHAIN_APPROX_NONE || method == CHAIN_APPROX_SIMPLE;
+    const bool exact = method != CHAIN_APPROX_TC89_L1;
     vector<vector<Point>> reference;
     vector<Vec4i> referenceHierarchy;
-    // Legacy TC89 has known approximation differences (see #25663). Its unapproximated
-    // contours still provide a reference for the boundary points and hierarchy.
-    findContours_legacy(image, reference, referenceHierarchy, mode,
-                        exact ? method : CHAIN_APPROX_NONE);
+    findContours_legacy(image, reference, referenceHierarchy, mode, method);
     ASSERT_EQ(reference.size(), contours.size());
+    EXPECT_MAT_NEAR(Mat(referenceHierarchy), Mat(hierarchy), 0);
+
+    vector<vector<Point>> boundary;
+    if (!exact)
+    {
+        // Legacy TC89_L1 has known vertex-selection differences (see #25663).
+        // Keep its contour/hierarchy comparison and check vertices against the
+        // unapproximated boundary instead of requiring the old approximation.
+        vector<Vec4i> boundaryHierarchy;
+        findContours_legacy(image, boundary, boundaryHierarchy, mode, CHAIN_APPROX_NONE);
+        ASSERT_EQ(reference.size(), boundary.size());
+        EXPECT_MAT_NEAR(Mat(boundaryHierarchy), Mat(hierarchy), 0);
+    }
     for (size_t i = 0; i < contours.size(); ++i)
     {
         SCOPED_TRACE(format("contour = %zu", i));
@@ -92,15 +102,14 @@ static void checkLegacyContours(const Mat& image, const vector<vector<Point>>& c
         else
         {
             ASSERT_FALSE(contours[i].empty());
-            EXPECT_LE(contours[i].size(), reference[i].size());
+            EXPECT_LE(contours[i].size(), boundary[i].size());
             for (const Point& point : contours[i])
             {
-                EXPECT_TRUE(std::find(reference[i].begin(), reference[i].end(), point) != reference[i].end())
+                EXPECT_TRUE(std::find(boundary[i].begin(), boundary[i].end(), point) != boundary[i].end())
                     << "Point " << point << " is not on the unapproximated boundary";
             }
         }
     }
-    EXPECT_MAT_NEAR(Mat(referenceHierarchy), Mat(hierarchy), 0);
 }
 #endif
 
