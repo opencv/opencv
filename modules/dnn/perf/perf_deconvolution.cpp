@@ -7,22 +7,28 @@
 
 namespace opencv_test {
 
-typedef TestBaseWithParam<tuple<int, int> > DeconvolutionCoordinates;
+typedef TestBaseWithParam<tuple<int, int, int, int> > DeconvolutionCoordinates;
 
 PERF_TEST_P(DeconvolutionCoordinates, forward,
-            testing::Combine(testing::Values(2, 3), testing::Values(1, 2, 3)))
+            testing::Values(make_tuple(2, 1, 1, 0), make_tuple(2, 2, 2, 0),
+                            make_tuple(2, 3, 1, 0), make_tuple(3, 1, 1, 0),
+                            make_tuple(3, 2, 2, 0), make_tuple(3, 3, 1, 0),
+                            make_tuple(2, 3, 1, 1), make_tuple(2, 4, 2, 1)))
 {
     const int dims = get<0>(GetParam());
     const int kernelSize = get<1>(GetParam());
+    const int strideSize = get<2>(GetParam());
+    const int padSize = get<3>(GetParam());
     std::vector<int> inputShape = {1, 16};
     for (int d = 0; d < dims; ++d)
         inputShape.push_back(dims == 2 ? 128 : 16);
     std::vector<int> weightShape = {16, 16};
     weightShape.resize(dims + 2, kernelSize);
-    std::vector<int> kernel(dims, kernelSize), stride(dims, kernelSize == 2 ? 2 : 1);
+    std::vector<int> kernel(dims, kernelSize), stride(dims, strideSize), pad(dims, padSize);
     LayerParams lp;
     lp.set("kernel_size", DictValue::arrayInt(kernel.data(), dims));
     lp.set("stride", DictValue::arrayInt(stride.data(), dims));
+    lp.set("pad", DictValue::arrayInt(pad.data(), dims));
     lp.set("num_output", 16);
     lp.set("bias_term", true);
     Mat input(inputShape, CV_32F), weights(weightShape, CV_32F), bias(1, 16, CV_32F);
