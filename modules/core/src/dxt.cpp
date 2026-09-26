@@ -272,7 +272,7 @@ struct DftTwiddleGen
     {
         M = _M;
         logB = 0;
-        while ((1 << (2*logB)) < M) logB++;   // B = 2^logB >= sqrt(M)
+        while ((1LL << (2*logB)) < M) logB++;   // B = 2^logB >= sqrt(M)
         int B = 1 << logB;
         maskB = B - 1;
         int nhi = (M + B - 1)/B;
@@ -285,9 +285,13 @@ struct DftTwiddleGen
         fillTable(hi_re, hi_im, nhi, cos(a*B), sin(a*B), a*B);
     }
 
+    // exp(-2*pi*i*m/M) for any m >= 0 (the angle is periodic: only m mod M matters; callers may
+    // ask for m == M, e.g. the rotation step of a chain that covers the whole period)
     void get(int m, double& re, double& im) const
     {
-        CV_DbgAssert(0 <= m && m < M);
+        CV_DbgAssert(m >= 0);
+        if (m >= M)
+            m %= M;
         int a = m >> logB, b = m & maskB;
         re = hi_re[a]*lo_re[b] - hi_im[a]*lo_im[b];
         im = hi_re[a]*lo_im[b] + hi_im[a]*lo_re[b];
@@ -443,7 +447,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
     int r0 = k2 == 0 ? 1 : k2 == 1 ? 2 : (k2 & 1) ? 8 : 4;
     p.first_radix = r0;
     int radices[DFT_MAX_STAGES], nst = 0;
-    for (int m = k2 - (r0 == 1 ? 0 : r0 == 2 ? 1 : r0 == 4 ? 2 : 3); m > 0; m -= 2) radices[nst++] = 4;
+    for (int m = k2 - (r0 == 1 ? 0 : r0 == 2 ? 1 : r0 == 4 ? 2 : 3); m > 0; m -= 2) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 4; }
     rest = nc >> k2;
     while (rest % 3 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 3; rest /= 3; }
     while (rest % 5 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 5; rest /= 5; }
