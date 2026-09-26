@@ -20,6 +20,37 @@ ReduceSumFunc getReduceRSum2Func(int sdepth, int ddepth);
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
+#if CV_RVV
+// Sum at most 256 * vl bytes. Two independent accumulators keep each lane
+// at most 128 * 255; merging them is safe in u16 (256 * 255 = 65280).
+static CV_ALWAYS_INLINE vuint16m4_t reduceSum8uBlockRVV(const uchar* src, int size, size_t vl)
+{
+    vuint16m4_t acc0 = __riscv_vmv_v_x_u16m4(0, vl);
+    vuint16m4_t acc1 = __riscv_vmv_v_x_u16m4(0, vl);
+    int x = 0;
+    for (; x <= size - 2 * (int)vl; x += 2 * (int)vl)
+    {
+        const vuint8m2_t v0 = __riscv_vle8_v_u8m2(src + x, vl);
+        const vuint8m2_t v1 = __riscv_vle8_v_u8m2(src + x + vl, vl);
+        acc0 = __riscv_vwaddu_wv_u16m4(acc0, v0, vl);
+        acc1 = __riscv_vwaddu_wv_u16m4(acc1, v1, vl);
+    }
+    if (x <= size - (int)vl)
+    {
+        acc0 = __riscv_vwaddu_wv_u16m4(acc0, __riscv_vle8_v_u8m2(src + x, vl), vl);
+        x += (int)vl;
+    }
+    if (x < size)
+    {
+        const size_t tail = size - x;
+        // Preserve earlier partial sums in the inactive lanes of acc1.
+        acc1 = __riscv_vwaddu_wv_u16m4_tu(
+            acc1, acc1, __riscv_vle8_v_u8m2(src + x, tail), tail);
+    }
+    return __riscv_vadd_vv_u16m4(acc0, acc1, vl);
+}
+#endif
+
 // --- uchar → int ---
 // Uses u16 intermediate accumulator to halve the number of widen operations:
 // u8→u16 per iteration, u16→u32 flush every 128 iterations (max u16 value: 128*255=32640 < 65535)
@@ -95,6 +126,18 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 for (; x < width; x++)
                     total += (int)src[x];
                 dst[0] = total;
+#elif CV_RVV
+                const size_t vl = __riscv_vsetvl_e8m2(width > 0 ? width : 1);
+                const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, 1);
+                uint32_t total = 0;
+                for (int x = 0; x < width;)
+                {
+                    const int size = std::min(width - x, 256 * (int)vl);
+                    const vuint16m4_t sum = reduceSum8uBlockRVV(src + x, size, vl);
+                    total += __riscv_vmv_x(__riscv_vwredsumu_vs_u16m4_u32m1(sum, zero, vl));
+                    x += size;
+                }
+                dst[0] = (int)total;
 #else
                 const int vlanes8 = VTraits<v_uint8>::vlanes();
                 v_uint32 v_sum = vx_setzero_u32();
@@ -271,6 +314,37 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                     dst[2] += (int)src[x * 4 + 2];
                     dst[3] += (int)src[x * 4 + 3];
                 }
+#elif CV_RVV
+                // Keep the channels interleaved while accumulating unit-stride
+                // byte loads. Selecting VL in pixels keeps every block and vector
+                // step a multiple of four bytes, including for short rows.
+                const size_t pixels = __riscv_vsetvl_e32m2(cols > 0 ? cols : 1);
+                const size_t vl = 4 * pixels;
+                const vuint32m1_t zero = __riscv_vmv_v_x_u32m1(0, 1);
+                uint32_t sums[4] = {0, 0, 0, 0};
+                for (int x = 0; x < width;)
+                {
+                    const int size = std::min(width - x, 256 * (int)vl);
+                    const vuint16m4_t sum = reduceSum8uBlockRVV(src + x, size, vl);
+
+                    // Each u64 lane contains four u16 channel sums. Narrowing
+                    // shifts separate the channels once per block, without
+                    // segmented/strided loads or wider unaligned memory accesses.
+                    const vuint64m4_t packed = __riscv_vreinterpret_v_u16m4_u64m4(sum);
+                    const vuint32m2_t ch01 = __riscv_vnsrl_wx_u32m2(packed, 0, pixels);
+                    const vuint32m2_t ch23 = __riscv_vnsrl_wx_u32m2(packed, 32, pixels);
+                    const vuint16m1_t ch0 = __riscv_vnsrl_wx_u16m1(ch01, 0, pixels);
+                    const vuint16m1_t ch1 = __riscv_vnsrl_wx_u16m1(ch01, 16, pixels);
+                    const vuint16m1_t ch2 = __riscv_vnsrl_wx_u16m1(ch23, 0, pixels);
+                    const vuint16m1_t ch3 = __riscv_vnsrl_wx_u16m1(ch23, 16, pixels);
+                    sums[0] += __riscv_vmv_x(__riscv_vwredsumu_vs_u16m1_u32m1(ch0, zero, pixels));
+                    sums[1] += __riscv_vmv_x(__riscv_vwredsumu_vs_u16m1_u32m1(ch1, zero, pixels));
+                    sums[2] += __riscv_vmv_x(__riscv_vwredsumu_vs_u16m1_u32m1(ch2, zero, pixels));
+                    sums[3] += __riscv_vmv_x(__riscv_vwredsumu_vs_u16m1_u32m1(ch3, zero, pixels));
+                    x += size;
+                }
+                dst[0] = (int)sums[0]; dst[1] = (int)sums[1];
+                dst[2] = (int)sums[2]; dst[3] = (int)sums[3];
 #else
                 const int vlanes8 = VTraits<v_uint8>::vlanes();
                 v_uint32 vsum0 = vx_setzero_u32(), vsum1 = vx_setzero_u32();
