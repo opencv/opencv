@@ -244,6 +244,73 @@ TEST_F(fisheyeTest, Homography)
     EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
+TEST_F(fisheyeTest, InitExtrinsicsIgnoresPointsThatCannotBeUndistorted)
+{
+    // The negative k4 limits the distorted angle to a maximum of about
+    // 0.98 rad. Image points beyond that radius cannot be undistorted.
+    const cv::Vec2d focalLength(600.0, 600.0);
+    const cv::Vec2d principalPoint(640.0, 480.0);
+    const cv::Vec4d distortion(0.0, 0.0, 0.0, -0.05);
+    const cv::Matx33d cameraMatrix(focalLength[0], 0.0, principalPoint[0],
+                                   0.0, focalLength[1], principalPoint[1],
+                                   0.0, 0.0, 1.0);
+    const cv::Vec3d trueR(0.1, -0.2, 0.05);
+    const cv::Vec3d trueT(-0.1, 0.05, 2.0);
+    constexpr int gridSize = 4;
+    constexpr double gridSpacing = 0.2;
+    constexpr double undistortionFailureCoordinate = -1e6;
+    constexpr double poseTolerance = 1e-6;
+
+    std::vector<cv::Point3d> objectPoints;
+    for (int row = 0; row < gridSize; ++row)
+    {
+        for (int column = 0; column < gridSize; ++column)
+        {
+            objectPoints.emplace_back(column * gridSpacing, row * gridSpacing,
+                                      0.0);
+        }
+    }
+
+    std::vector<cv::Point2d> imagePoints;
+    cv::fisheye::projectPoints(objectPoints, imagePoints, trueR, trueT,
+                               cameraMatrix, distortion);
+
+    const std::vector<cv::Point2d> invalidImagePoints = {
+        {1340.0, 930.0}, {1300.0, 950.0}, {1260.0, 960.0}};
+    const std::vector<cv::Point3d> invalidObjectPoints = {
+        {-0.2, 0.0, 0.0}, {0.0, -0.2, 0.0}, {-0.2, -0.2, 0.0}};
+    imagePoints.insert(imagePoints.end(), invalidImagePoints.begin(),
+                       invalidImagePoints.end());
+    objectPoints.insert(objectPoints.end(), invalidObjectPoints.begin(),
+                        invalidObjectPoints.end());
+
+    const cv::internal::IntrinsicParams param(focalLength, principalPoint,
+                                              distortion);
+    // InitExtrinsics expects column vectors like CalibrateExtrinsics passes.
+    const int numberOfPoints = static_cast<int>(imagePoints.size());
+    const cv::Mat imagePointsMat = cv::Mat(imagePoints).reshape(2, numberOfPoints);
+    const cv::Mat objectPointsMat =
+        cv::Mat(objectPoints).reshape(3, numberOfPoints);
+
+    const cv::Mat undistorted =
+        cv::internal::NormalizePixels(imagePointsMat, param);
+    const size_t numberOfValidPoints = gridSize * gridSize;
+    for (size_t i = numberOfValidPoints; i < imagePoints.size(); ++i)
+    {
+        const cv::Vec2d point = undistorted.at<cv::Vec2d>(static_cast<int>(i));
+        ASSERT_EQ(point[0], undistortionFailureCoordinate);
+        ASSERT_EQ(point[1], undistortionFailureCoordinate);
+    }
+
+    cv::Mat rvec;
+    cv::Mat tvec;
+    cv::internal::InitExtrinsics(imagePointsMat, objectPointsMat, param, rvec,
+                                 tvec);
+
+    EXPECT_MAT_NEAR(rvec.reshape(1, 3), cv::Mat(trueR), poseTolerance);
+    EXPECT_MAT_NEAR(tvec.reshape(1, 3), cv::Mat(trueT), poseTolerance);
+}
+
 TEST_F(fisheyeTest, EstimateUncertainties)
 {
     const int n_images = 34;
