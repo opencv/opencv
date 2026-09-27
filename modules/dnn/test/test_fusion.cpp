@@ -640,11 +640,7 @@ TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
     checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
-// End-to-end (vs. the direct AdjacencyGraph/LayerMath tests above): a real ONNX
-// net, checking TransformLayout+Add actually fuses and matches doing it unfused.
-
-// ConvTranspose2d(8->16, C0=8) -> Add(residual): the Add should fuse into
-// TransformLayout, matching the unfused two-step result.
+// ConvTranspose2d(8->16) -> Add(residual): the Add fuses into TransformLayout.
 TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
 {
     Net net = readNetFromONNX(_tf("models/deconv_transform_add.onnx"));
@@ -664,8 +660,7 @@ TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
     net.setInput(input, "input");
     net.setInput(residual, "residual");
 
-    // net.forward(out, name) hands back a plain, already-converted tensor (not
-    // the raw block-layout buffer), so it's directly comparable to the final result.
+    // Comes back already converted from block layout.
     Mat deconvOut;
     net.forward(deconvOut, "/deconv/ConvTranspose_output_0");
 
@@ -677,8 +672,6 @@ TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
     EXPECT_EQ(std::find(postTypes.begin(), postTypes.end(), std::string("NaryEltwise")), postTypes.end())
         << "NaryEltwise should have been absorbed into TransformLayout by the fusion pass";
 
-    // Unfused reference: the same two values added as a separate step, instead of
-    // in one fused TransformLayout(+residual) pass.
     Mat unfusedOut;
     cv::add(deconvOut, residual, unfusedOut);
 
@@ -713,6 +706,34 @@ TEST(Fusion, TransformLayoutAddPartialChannelBlockMatchesUnfused)
     cv::add(deconvOut, residual, unfusedOut);
 
     normAssert(unfusedOut, fusedOut, "fused vs unfused, partial channel block", 1e-5, 1e-5);
+}
+
+// Residual [1,16,1,1] broadcasts over the ConvTranspose output. Shapes aren't known
+// at fusion time, so the fused layer must fall back to a broadcasting add.
+TEST(Fusion, TransformLayoutAddBroadcastResidualMatchesUnfused)
+{
+    Net net = readNetFromONNX(_tf("models/deconv_transform_add_broadcast.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    RNG rng(4242);
+    Mat input(std::vector<int>{1, 8, 6, 6}, CV_32F);
+    rng.fill(input, RNG::UNIFORM, -1.0, 1.0);
+    Mat residual(std::vector<int>{1, 16, 1, 1}, CV_32F);
+    rng.fill(residual, RNG::UNIFORM, -1.0, 1.0);
+
+    net.setInput(input, "input");
+    net.setInput(residual, "residual");
+
+    Mat deconvOut;
+    net.forward(deconvOut, "/deconv/ConvTranspose_output_0");
+    Mat fusedOut = net.forward();
+
+    Mat residualFull;
+    broadcast(residual, deconvOut.shape(), residualFull);
+    Mat unfusedOut;
+    cv::add(deconvOut, residualFull, unfusedOut);
+
+    normAssert(unfusedOut, fusedOut, "fused vs unfused, broadcast residual", 1e-5, 1e-5);
 }
 
 }} // namespace opencv_test
