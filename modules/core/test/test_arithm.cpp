@@ -3162,14 +3162,21 @@ TEST_P(Core_ConvertToSaturate, length_independent)
         ASSERT_EQ(expected, got.at<double>(0, i)) << "index " << i;
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertToSaturate,
+INSTANTIATE_TEST_CASE_P(From32U, Core_ConvertToSaturate,
     testing::Combine(
-        testing::Values(CV_32U, CV_64U, CV_64S),
+        testing::Values(CV_32U),
         testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
-        testing::Values(4294967295.0, 2147483648.0, 65536.0, 70000.0, 300.0,
-                        // opposite ends of the 64-bit range: a clamp built on the 64-bit ordering
-                        // compares gets these wrong at the SSE/NEON baselines, where v_gt is the
-                        // sign of a subtraction that overflows here
+        testing::Values(4294967295.0, 2147483648.0, 70000.0, 65536.0, 300.0)));
+
+// The 64-bit sources additionally carry values at opposite ends of the 64-bit range: a clamp built
+// on the 64-bit ordering compares gets those wrong at the SSE and NEON baselines, where v_gt is
+// the sign of a subtraction that overflows. They are not crossed with the CV_32U source, where
+// they would only exercise the double -> CV_32U conversion rather than the narrowing under test.
+INSTANTIATE_TEST_CASE_P(From64, Core_ConvertToSaturate,
+    testing::Combine(
+        testing::Values(CV_64U, CV_64S),
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(4294967295.0, 2147483648.0, 65536.0, 300.0,
                         -9223372036854775808.0, 9223372036854775807.0,
                         -2147483649.0, -2147483648.0, -1.0)));
 
