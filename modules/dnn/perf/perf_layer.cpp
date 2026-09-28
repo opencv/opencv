@@ -787,6 +787,7 @@ PERF_TEST_P_(Layer_Attention, VisionTransformer) {
     test_layer({1, 197, 768}, {768, 768, 768}, 12);
 }
 
+// GroupQueryAttention runs on AttentionOnnxAi; these flags are what the ONNX importer sets.
 struct Layer_GroupQueryAttention : public TestBaseWithParam<tuple<Backend, Target>> {
     void test_layer(int B, int S, int Sp, int num_heads, int kv_num_heads, int D) {
         int backendId = get<0>(GetParam());
@@ -797,38 +798,34 @@ struct Layer_GroupQueryAttention : public TestBaseWithParam<tuple<Backend, Targe
         Mat query(std::vector<int>{B, S, num_heads * D}, CV_32F);
         Mat key(std::vector<int>{B, S, kv_num_heads * D}, CV_32F);
         Mat value(std::vector<int>{B, S, kv_num_heads * D}, CV_32F);
-        Mat pastKey, pastValue;
-        if (Sp > 0) {
-            pastKey.create(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
-            pastValue.create(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
-            randu(pastKey, 0.f, 1.f);
-            randu(pastValue, 0.f, 1.f);
-        }
+        Mat pastKey(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
+        Mat pastValue(std::vector<int>{B, kv_num_heads, Sp, D}, CV_32F);
         Mat seqlensK(std::vector<int>{B}, CV_32S, Scalar(Skv - 1));
-        Mat totalSeqLen(std::vector<int>{1}, CV_32S, Scalar(Skv));
-        Mat cosCache(std::vector<int>{Skv, D / 2}, CV_32F);
-        Mat sinCache(std::vector<int>{Skv, D / 2}, CV_32F);
 
         randu(query, 0.f, 1.f);
         randu(key, 0.f, 1.f);
         randu(value, 0.f, 1.f);
-        randu(cosCache, -1.f, 1.f);
-        randu(sinCache, -1.f, 1.f);
+        randu(pastKey, 0.f, 1.f);
+        randu(pastValue, 0.f, 1.f);
 
         LayerParams lp;
-        lp.type = "GroupQueryAttention";
+        lp.type = "AttentionOnnxAi";
         lp.name = "testLayer";
-        lp.set("num_heads", num_heads);
+        lp.set("q_num_heads", num_heads);
         lp.set("kv_num_heads", kv_num_heads);
+        lp.set("is_causal", true);
+        lp.set("has_attn_mask", 0);
+        lp.set("has_past", 1);
+        lp.set("has_seqlens_k", 1);
+        lp.set("has_rotary_cache", 0);
 
         Net net;
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        for (int i = 0; i < 9; ++i)
+        for (int i = 0; i < 6; ++i)
             net.connect(0, i, id, i);
 
         std::vector<std::string> input_names{
-            "query", "key", "value", "past_key", "past_value",
-            "seqlens_k", "total_sequence_length", "cos_cache", "sin_cache"};
+            "query", "key", "value", "past_key", "past_value", "seqlens_k"};
         net.setInputsNames(input_names);
         net.setInput(query, input_names[0]);
         net.setInput(key, input_names[1]);
@@ -836,9 +833,6 @@ struct Layer_GroupQueryAttention : public TestBaseWithParam<tuple<Backend, Targe
         net.setInput(pastKey, input_names[3]);
         net.setInput(pastValue, input_names[4]);
         net.setInput(seqlensK, input_names[5]);
-        net.setInput(totalSeqLen, input_names[6]);
-        net.setInput(cosCache, input_names[7]);
-        net.setInput(sinCache, input_names[8]);
 
         net.setPreferableBackend(backendId);
         net.setPreferableTarget(targetId);

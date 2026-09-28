@@ -526,7 +526,9 @@ void Net::reserveKVCache(int maxSequenceLength)
     if (impl->kvCacheManager.empty())
     {
         CV_LOG_WARNING(NULL, "DNN: reserveKVCache() has no effect, the model has no paged attention "
-                             "layers (no Attention/MultiHeadAttention/GroupQueryAttention op was imported). "
+                             "layers (no Attention/MultiHeadAttention op was imported, and a "
+                             "GroupQueryAttention node that carries seqlens_k or a rotary cache "
+                             "keeps its KV history in the graph instead). "
                              "Only the present.* -> past_key_values.* routing is active.");
         return;
     }

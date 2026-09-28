@@ -2941,11 +2941,9 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
     addLayer(params, node_proto, (int)node_inputs.size());
 }
 
-// com.microsoft GroupQueryAttention (grouped, causal). AttentionOnnxAi handles the plain
-// case and brings the fused kernel and paged KV cache with it, so only the variants it
-// cannot express -- rotary embedding and sliding-window attention -- go to the standalone
-// GroupQueryAttention layer. GraniteDocling-258M's onnxruntime-genai export is the rotary
-// case (do_rotary=1 on all 30 attention nodes).
+// Operator spec: https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#com.microsoft.GroupQueryAttention
+// Supported opsets: com.microsoft 1. Supported inputs: 0..8, query through sin_cache.
+// Lowers to AttentionOnnxAi, told here about seqlens_k, rotary, the window and a shared buffer.
 void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
                  "GroupQueryAttention: num_heads and kv_num_heads are required");
@@ -2957,9 +2955,15 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
     const bool has_past_k = hasInput(node_proto, 3), has_past_v = hasInput(node_proto, 4);
     CV_CheckTrue(has_past_k == has_past_v,
                  "GroupQueryAttention: past_key and past_value must be provided as a pair");
+    CV_CheckTrue(hasInput(node_proto, 5), "GroupQueryAttention: seqlens_k is required");
 
     const bool do_rotary = params.get<int>("do_rotary", 0) != 0;
-    const bool sliding_window = params.get<int>("local_window_size", -1) > 0;
+    if (do_rotary)
+        CV_CheckTrue(hasInput(node_proto, 7) && hasInput(node_proto, 8),
+                     "GroupQueryAttention: do_rotary=1 requires cos_cache and sin_cache");
+    for (int i = 9; i < node_proto.input_size(); i++)  // position_ids / attention_bias / head_sink
+        CV_CheckFalse(hasInput(node_proto, i),
+            "GroupQueryAttention: only inputs 0..8 (query .. sin_cache) are supported");
 
     // A preallocated buffer is rewritten in place, so present_key keeps past_key's length;
     // a growing cache declares a longer one. A static past alone does not separate them --
@@ -2977,42 +2981,26 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
         }
     }
 
-    if (do_rotary || sliding_window || shared_buffer) {
-        for (int i = 9; i < node_proto.input_size(); i++)  // position_ids / attention_bias / head_sink
-            CV_CheckFalse(hasInput(node_proto, i),
-                "GroupQueryAttention: only inputs 0..8 (query .. sin_cache) are supported");
-        if (do_rotary)
-            CV_CheckTrue(hasInput(node_proto, 7) && hasInput(node_proto, 8),
-                         "GroupQueryAttention: do_rotary=1 requires cos_cache and sin_cache");
-        // seqlens_k's value is not available during shape inference, so the layer cannot
-        // work the convention out for itself and is told here.
-        if (shared_buffer)
-            params.set("shared_kv_buffer", 1);
-        params.type = "GroupQueryAttention";
-        addLayer(params, node_proto);
-        return;
-    }
-
-    for (int i = 7; i < node_proto.input_size(); i++)  // rotary / bias / KV-quant / QK-norm inputs
-        CV_CheckFalse(hasInput(node_proto, i), "GroupQueryAttention: only query/key/value/past_key/past_value are supported");
-
+    // total_sequence_length (6) is redundant with seqlens_k and dropped.
     std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
-    if (has_past_k) {
-        // Dropping seqlens_k is only sound for a growing past. With a present_key the check
-        // above already proved that; without one, a shared buffer's length would be mis-read.
-        const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
-        if (pk.dims >= 2 && node_outputs.size() <= 1)
-            CV_CheckLE(pk[pk.dims - 2], 0,
-                "GroupQueryAttention: past_key has a fixed sequence length and the node declares "
-                "no present_key to tell a growing cache from a shared buffer");
-        ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]);
-    }
+    if (has_past_k) { ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]); }
+    ins.push_back(node_inputs[5]);
+    if (do_rotary) { ins.push_back(node_inputs[7]); ins.push_back(node_inputs[8]); }
     node_inputs = ins;
 
     params.type = "AttentionOnnxAi";
     params.set("q_num_heads", params.get<int>("num_heads"));
     params.set("kv_num_heads", params.get<int>("kv_num_heads"));
     params.set("is_causal", true);
+    params.set("has_attn_mask", 0);
+    params.set("has_past", has_past_k ? 1 : 0);
+    params.set("has_seqlens_k", 1);
+    params.set("has_rotary_cache", do_rotary ? 1 : 0);
+    if (shared_buffer)
+        params.set("shared_kv_buffer", 1);
+    // GQA's scale=0 means 1/sqrt(head_size); AttentionOnnxAi would take the 0 literally.
+    if (params.has("scale") && params.get<float>("scale") == 0.f)
+        params.erase("scale");
 
     addLayer(params, node_proto, (int)node_inputs.size());
 }

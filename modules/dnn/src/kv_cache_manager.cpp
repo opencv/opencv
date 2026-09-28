@@ -22,7 +22,11 @@ void initKVDataRecursively(const Ptr<Graph>& graph, std::map<std::string, KCache
         }
 
         if (layer->type == "AttentionOnnxAi") {
-            int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
+            Ptr<AttentionOnnxAiLayer> attn = layer.dynamicCast<AttentionOnnxAiLayer>();
+            // Leaving it out of kData/vData also routes its forward() to the graph inputs.
+            if (!attn->paged_cache_supported)
+                continue;
+            int kvNumHeads = attn->kv_num_heads;
 
             if (kvNumHeads > 0)
             {

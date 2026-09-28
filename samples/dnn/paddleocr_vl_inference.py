@@ -42,7 +42,7 @@ real published ONNX export above, not just against the model's config:
 
 What this script does NOT do: this export's decoder graph decomposes attention into
 primitive MatMul/Softmax ops rather than the fused com.microsoft::GroupQueryAttention
-node -- it does not exercise the GroupQueryAttentionLayer this PR adds. It does confirm
+node -- it does not exercise the GroupQueryAttention lowering this PR adds. It does confirm
 PaddleOCR-VL-1.5 runs in OpenCV's DNN engine today, independent of that layer.
 
 Note on quantized variants: the int4-kquant and int8 (MatMulInteger) decoder variants
