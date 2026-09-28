@@ -42,10 +42,16 @@ TEST_P(Core_Transpose_C3, accuracy)
                                      dst.ptr(x) + y * element_size, element_size))
                 << "type=" << type << " size=" << size << " x=" << x << " y=" << y;
     for (int y = 0; y < dst_storage.rows; ++y)
+    {
         for (int x = 0; x < dst_storage.cols; ++x)
+        {
             if (x == 0 || x > size.height || y == 0 || y > size.width)
+            {
                 for (size_t b = 0; b < element_size; ++b)
                     ASSERT_EQ(0xa5, dst_storage.ptr(y)[x * element_size + b]);
+            }
+        }
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_Transpose_C3,
