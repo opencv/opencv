@@ -3133,11 +3133,11 @@ TEST(Core_ConvertTo, float_overflow_saturation)
 }
 
 // Narrowing a 64-bit or 32-bit-unsigned array must SATURATE, and identically at every dispatch
-// level. The vectorized path narrows through a
-// 32-bit intermediate, and v_pack() truncates at 64->32 (unlike the narrower widths, which
-// saturate), so an unclamped value used to wrap before the final saturating step ever saw it -
-// turning 4294967295 into 0 rather than 255. Only the vector loop was affected, so the single
-// element result is the reference. 127 elements covers both the vector body and an odd tail.
+// level. The vectorized path narrows through a 32-bit intermediate, and v_pack() truncates at
+// 64->32 (unlike the narrower widths, which saturate), so an unclamped value used to wrap before
+// the final saturating step ever saw it - turning 4294967295 into 0 rather than 255. Only the
+// vector loop was affected, so the single element result is the reference. 127 elements covers
+// both the vector body and an odd tail.
 typedef testing::TestWithParam< tuple<int, int, double> > Core_ConvertToSaturate;
 
 TEST_P(Core_ConvertToSaturate, length_independent)

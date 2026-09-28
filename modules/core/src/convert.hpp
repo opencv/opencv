@@ -204,19 +204,6 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 //
 // The unsigned-source helpers test the high bits with a shift rather than an ordering compare,
 // since unsigned 64-bit comparison is not uniformly available across the SIMD backends.
-// v_select() is not provided for 64-bit lanes on any backend - intrin_sse.hpp carries the two
-// entries commented out as TBD, and the NEON list stops at v_float64x2 - so blend through the
-// comparison mask by hand. The mask is all-ones / all-zeros per lane like every other v_gt/v_ne
-// result, which is the same shape as the v_and(ia, v_gt(ia, z)) idiom already used below.
-static inline v_int64 v_blend_s64(const v_int64& mask, const v_int64& a, const v_int64& b)
-{
-    return v_or(v_and(a, mask), v_and(b, v_xor(mask, vx_setall_s64((int64_t)-1))));
-}
-
-static inline v_uint64 v_blend_u64(const v_uint64& mask, const v_uint64& a, const v_uint64& b)
-{
-    return v_or(v_and(a, mask), v_and(b, v_xor(mask, vx_setall_u64((uint64_t)-1))));
-}
 
 // The 64-bit ORDERING compares cannot be used here. At the SSE and NEON baselines v_gt on
 // v_int64x2 is the sign of (b - a) (intrin_sse.hpp, intrin_neon.hpp), so it overflows - and
@@ -233,9 +220,9 @@ static inline v_int64 v_clamp_s64_to_s32(const v_int64& x)
     const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
     const v_int64 top  = v_shr<31>(x);                   // 0 or -1 exactly when x fits in int32
     const v_int64 fits = v_or(v_eq(top, zero), v_eq(top, ones));
-    const v_int64 sat  = v_blend_s64(sign, vx_setall_s64((int64_t)INT_MIN),
-                                           vx_setall_s64((int64_t)INT_MAX));
-    return v_blend_s64(fits, x, sat);
+    const v_int64 sat  = v_select(sign, vx_setall_s64((int64_t)INT_MIN),
+                                        vx_setall_s64((int64_t)INT_MAX));
+    return v_select(fits, x, sat);
 }
 
 static inline v_int64 v_clamp_s64_to_u32(const v_int64& x)
@@ -244,22 +231,22 @@ static inline v_int64 v_clamp_s64_to_u32(const v_int64& x)
     const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
     const v_int64 top  = v_shr<32>(x);                   // 0 exactly when x is in [0, UINT32_MAX]
     const v_int64 fits = v_eq(top, zero);
-    const v_int64 sat  = v_blend_s64(sign, zero, vx_setall_s64((int64_t)UINT_MAX));
-    return v_blend_s64(fits, x, sat);
+    const v_int64 sat  = v_select(sign, zero, vx_setall_s64((int64_t)UINT_MAX));
+    return v_select(fits, x, sat);
 }
 
 static inline v_uint64 v_clamp_u64_to_u32(const v_uint64& x)
 {
     // x > UINT32_MAX  <=>  (x >> 32) != 0
     const v_uint64 over = v_shr<32>(x);
-    return v_blend_u64(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)UINT_MAX), x);
+    return v_select(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)UINT_MAX), x);
 }
 
 static inline v_uint64 v_clamp_u64_to_s32(const v_uint64& x)
 {
     // x > INT32_MAX  <=>  (x >> 31) != 0
     const v_uint64 over = v_shr<31>(x);
-    return v_blend_u64(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)INT_MAX), x);
+    return v_select(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)INT_MAX), x);
 }
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
