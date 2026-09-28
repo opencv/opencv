@@ -5,24 +5,7 @@
 
 namespace opencv_test { namespace {
 
-// One iteration walks a short sequence, which is how dense flow is normally used, so the
-// one cold call at the head of a sequence dilutes the saving a little.
-//
-// sharedInstance keeps one object across the sequence and so reuses; sharedInstanceNoReuse
-// is the same object with collectGarbage() before every calc(), which drops the held
-// expansion and nothing else on this path, so the gap between the two is the saving by
-// itself; calcOpticalFlowFarneback is how most callers reach this code and creates an
-// instance per pair, differing in its allocation as well.
-
 const int SEQUENCE_LENGTH = 10;
-
-// create()'s defaults, passed to the free function too, so every arm does the same work.
-const double PYR_SCALE = 0.5;
-const int NUM_LEVELS = 5;
-const int WIN_SIZE = 13;
-const int NUM_ITERS = 10;
-const int POLY_N = 5;
-const double POLY_SIGMA = 1.1;
 
 static std::vector<Mat> makeSequence(Size size)
 {
@@ -42,43 +25,32 @@ static std::vector<Mat> makeSequence(Size size)
     return frames;
 }
 
-typedef tuple<Size, std::string> FarnebackParams;
+enum { REUSE_OFF, REUSE_CHAINED, REUSE_UNCHAINED };
+CV_ENUM(ReuseMode, REUSE_OFF, REUSE_CHAINED, REUSE_UNCHAINED)
+
+typedef tuple<Size, ReuseMode> FarnebackParams;
 typedef TestBaseWithParam<FarnebackParams> DenseOpticalFlow_Farneback;
 
-// Two sizes: an iteration is a whole sequence, so six cases already take about a minute at
-// 20 samples, and the saving is a ratio that does not need a third size.
+// Every arm computes the same frame pairs. REUSE_UNCHAINED visits them last to first, so no
+// call's first image is the previous call's second and every call misses.
 PERF_TEST_P(DenseOpticalFlow_Farneback, perf,
-            Combine(Values(szQVGA, szVGA),
-                    Values("calcOpticalFlowFarneback", "sharedInstance",
-                           "sharedInstanceNoReuse")))
+            Combine(Values(szVGA, sz720p), ReuseMode::all()))
 {
     const Size size = get<0>(GetParam());
-    const std::string mode = get<1>(GetParam());
-    const bool shared = mode != "calcOpticalFlowFarneback";
-    const bool dropExpansion = mode == "sharedInstanceNoReuse";
+    const int mode = get<1>(GetParam());
 
     const std::vector<Mat> frames = makeSequence(size);
     Mat flow;
 
-    // Built once, since what is measured is where the expansion comes from rather than the
-    // allocation. Every cycle still starts cold: the frame held from the end of the last
-    // one is not frames[0].
-    Ptr<FarnebackOpticalFlow> instance = FarnebackOpticalFlow::create(
-        NUM_LEVELS, PYR_SCALE, false, WIN_SIZE, NUM_ITERS, POLY_N, POLY_SIGMA, 0);
+    Ptr<FarnebackOpticalFlow> algo = FarnebackOpticalFlow::create();
+    algo->setReuseExpansion(mode != REUSE_OFF);
 
     TEST_CYCLE()
     {
-        for( int i = 0; i + 1 < SEQUENCE_LENGTH; i++ )
+        for( int j = 0; j + 1 < SEQUENCE_LENGTH; j++ )
         {
-            if( !shared )
-            {
-                calcOpticalFlowFarneback(frames[i], frames[i + 1], flow, PYR_SCALE, NUM_LEVELS,
-                                         WIN_SIZE, NUM_ITERS, POLY_N, POLY_SIGMA, 0);
-                continue;
-            }
-            if( dropExpansion )
-                instance->collectGarbage();
-            instance->calc(frames[i], frames[i + 1], flow);
+            const int i = mode == REUSE_UNCHAINED ? SEQUENCE_LENGTH - 2 - j : j;
+            algo->calc(frames[i], frames[i + 1], flow);
         }
     }
 
