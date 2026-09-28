@@ -2961,13 +2961,20 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
     const bool do_rotary = params.get<int>("do_rotary", 0) != 0;
     const bool sliding_window = params.get<int>("local_window_size", -1) > 0;
 
-    // A fixed past seq dim means the export preallocates one KV buffer and rewrites it in
-    // place, so present is that buffer rather than past + query and seqlens_k says how much
-    // of it is live. AttentionOnnxAi cannot express that, the standalone layer can.
+    // A preallocated buffer is rewritten in place, so present_key keeps past_key's length;
+    // a growing cache declares a longer one. A static past alone does not separate them --
+    // a fully static export can still grow.
     bool shared_buffer = false;
-    if (has_past_k) {
-        const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
-        shared_buffer = (pk.dims >= 2 && pk[pk.dims - 2] > 0);
+    if (has_past_k && node_outputs.size() > 1) {
+        const MatShape& pastShape = netimpl->args.at(node_inputs[3].idx).shape;
+        const MatShape& presentShape = netimpl->args.at(node_outputs[1].idx).shape;
+        if (pastShape.dims >= 2 && presentShape.dims >= 2) {
+            const int pastLen = pastShape[pastShape.dims - 2];
+            const int presentLen = presentShape[presentShape.dims - 2];
+            // Only an explicitly longer present proves growth: onnxruntime treats a static
+            // past with a dynamic present as in-place reuse. Not '== pastLen'.
+            shared_buffer = (pastLen > 0 && !(presentLen > pastLen));
+        }
     }
 
     if (do_rotary || sliding_window || shared_buffer) {
@@ -2991,13 +2998,13 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
 
     std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
     if (has_past_k) {
-        // Dropping seqlens_k is only sound for a growing past. A fixed past seq dim means a
-        // shared-buffer cache whose real length lives in seqlens_k, so it would be mis-read.
+        // Dropping seqlens_k is only sound for a growing past. With a present_key the check
+        // above already proved that; without one, a shared buffer's length would be mis-read.
         const MatShape& pk = netimpl->args.at(node_inputs[3].idx).shape;
-        if (pk.dims >= 2)
+        if (pk.dims >= 2 && node_outputs.size() <= 1)
             CV_CheckLE(pk[pk.dims - 2], 0,
-                "GroupQueryAttention: past_key has a fixed sequence length (shared-buffer / static "
-                "cache export); only dynamic-cache exports are supported");
+                "GroupQueryAttention: past_key has a fixed sequence length and the node declares "
+                "no present_key to tell a growing cache from a shared buffer");
         ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]);
     }
     node_inputs = ins;

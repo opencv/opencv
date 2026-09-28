@@ -1298,6 +1298,11 @@ struct Layer_Sign : public TestBaseWithParam<tuple<Backend, Target> >
         if (backendId == DNN_BACKEND_CUDA && matType != CV_32F)
             throw SkipTestException("The CUDA SignOp only supports floating point tensors.");
 
+        // OpenVINO narrows custom-layer outputs from int64 to int32; test_int.cpp skips
+        // the same CV_64S/NGRAPH pairing.
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+            throw SkipTestException("OpenVINO narrows int64 to int32 for custom layers.");
+
         Mat input(input_shape, matType);
         randu(input, -100, 100);
 

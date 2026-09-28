@@ -13,6 +13,8 @@
 namespace cv { namespace dnn {
 
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#com.microsoft.GroupQueryAttention
+// Supported opsets: com.microsoft 1 (contrib ops never version-bump; they grow by
+// appending optional inputs). Supported inputs: 0..8, query through sin_cache.
 class GroupQueryAttentionLayerImpl CV_FINAL : public GroupQueryAttentionLayer {
 public:
     int num_heads = 0;
@@ -91,8 +93,20 @@ public:
         int B = q[0], S = q[1];
         int D = q[2] / num_heads;
         int Sp = 0;
+        // These size every buffer below, so a bad value here becomes an overrun later.
+        CV_CheckGT(B, 0, "GroupQueryAttention: batch size must be positive");
+        CV_CheckGT(S, 0, "GroupQueryAttention: query sequence length must be positive");
+        CV_CheckGT(D, 0, "GroupQueryAttention: head size must be positive");
+
         const MatShape& pastKey = inputs[3];
-        if (pastKey.dims == 4) Sp = pastKey[2];
+        if (pastKey.dims == 4) {
+            // Disagreeing dims here would yield a wrong Sp, and buffers sized from it.
+            CV_CheckEQ(pastKey[0], B, "GroupQueryAttention: past_key batch must match the query");
+            CV_CheckEQ(pastKey[1], kv_num_heads, "GroupQueryAttention: past_key head count must be kv_num_heads");
+            CV_CheckEQ(pastKey[3], D, "GroupQueryAttention: past_key head size must match the query");
+            Sp = pastKey[2];
+            CV_CheckGE(Sp, 0, "GroupQueryAttention: past_key sequence length must not be negative");
+        }
 
         // A shared buffer is rewritten in place, so present keeps the buffer's length; a
         // growing cache appends, so present is past + query. seqlens_k decides which slots
