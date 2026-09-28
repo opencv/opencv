@@ -218,3 +218,15 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
 }
 
 }} // namespace
+TEST(Video_OpticalFlowFarneback, MissingInitialFlowException)
+{
+    Mat frame1(100, 100, CV_8UC1, Scalar(0));
+    Mat frame2(100, 100, CV_8UC1, Scalar(0));
+    Mat flow;
+
+    // 當帶入 OPTFLOW_USE_INITIAL_FLOW 旗標但 flow 為空時，驗證是否拋出 StsBadArg 異常
+    EXPECT_THROW(
+        calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, OPTFLOW_USE_INITIAL_FLOW),
+        cv::Exception
+    );
+}

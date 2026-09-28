@@ -1197,6 +1197,11 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 {
     CV_INSTRUMENT_REGION();
 
+    if ((flags & OPTFLOW_USE_INITIAL_FLOW) && _flow0.empty())
+    {
+        CV_Error(Error::StsBadArg, "The 'flow' argument must be provided when OPTFLOW_USE_INITIAL_FLOW flag is set.");
+    }
+
     Ptr<cv::FarnebackOpticalFlow> optflow;
     optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
     optflow->calc(_prev0,_next0,_flow0);
