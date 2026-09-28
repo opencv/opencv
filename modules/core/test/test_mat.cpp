@@ -14,7 +14,43 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/bindings_utils.hpp"
 
+#include <cstring>
+
 namespace opencv_test { namespace {
+
+TEST(Core_Transpose, C3ElementSizesWithRoi)
+{
+    const int types[] = {CV_8UC3, CV_8UC(6), CV_16SC3, CV_16FC3, CV_8UC(12), CV_32FC3};
+    const Size sizes[] = {Size(1, 1), Size(2, 3), Size(137, 5), Size(133, 4)};
+
+    for (int type : types)
+    {
+        const size_t element_size = CV_ELEM_SIZE(type);
+        for (const Size& size : sizes)
+        {
+            Mat src_storage(size.height + 2, size.width + 4, type);
+            Mat dst_storage(size.width + 2, size.height + 4, type);
+            for (size_t i = 0; i < src_storage.total() * element_size; ++i)
+                src_storage.data[i] = static_cast<uchar>((i * 37 + 11) & 255);
+            std::memset(dst_storage.data, 0xa5, dst_storage.total() * element_size);
+
+            Mat src = src_storage(Rect(1, 1, size.width, size.height));
+            Mat dst = dst_storage(Rect(1, 1, size.height, size.width));
+            cv::transpose(src, dst);
+
+            for (int y = 0; y < size.height; ++y)
+                for (int x = 0; x < size.width; ++x)
+                    ASSERT_EQ(0, std::memcmp(src.ptr(y) + x * element_size,
+                                             dst.ptr(x) + y * element_size, element_size))
+                        << "type=" << type << " size=" << size << " x=" << x << " y=" << y;
+            for (int y = 0; y < dst_storage.rows; ++y)
+                for (int x = 0; x < dst_storage.cols; ++x)
+                    if (x == 0 || x > size.height || y == 0 || y > size.width)
+                        for (size_t b = 0; b < element_size; ++b)
+                            ASSERT_EQ(0xa5, dst_storage.ptr(y)[x * element_size + b]);
+        }
+    }
+}
 
 class Core_ReduceTest : public cvtest::BaseTest
 {
