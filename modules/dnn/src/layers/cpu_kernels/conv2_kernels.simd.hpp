@@ -2141,7 +2141,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 {
 #if !CV_SIMD_SCALABLE  // RVV: skip the C0=8-specialized kernels; use the generic runtime-C0 path
     int ksize = cs.wshape[2];
-    if (ksize == 1 && cs.strides[0]*cs.strides[1]*cs.strides[2] == 1) {
+    if (ksize == 1 && cs.strides[0]*cs.strides[1]*cs.strides[2] == 1 && !cs.hasPadding()) {
     #if CV_SIMD256 && defined(__AVX2__)
         // Pair-Kblk fast path: 6×16 AVX2 microkernel for wide-C 1x1 stride=1.
         // Requires Kblk even and K aligned to K0 (so both Kblks are full).
@@ -2316,7 +2316,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
 
         // 1x1x1 convolution with (1,1,1) strides:
-        bool is_1x1s1 = (ksize == 1 && Sz*Sy*Sx == 1);
+        bool is_1x1s1 = (ksize == 1 && Sz*Sy*Sx == 1 && !cs.hasPadding());
         if (is_1x1s1) {
             W *= D*H;
             Wi *= Di*Hi;

@@ -55,6 +55,15 @@ struct ConvState
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;
 
+    // The 1x1 fast paths map output coordinates straight onto input ones, which only holds without padding.
+    bool hasPadding() const
+    {
+        for (int i = 0; i < MAX_CONV_DIMS; i++)
+            if (pads[i] != 0 || pads[i + MAX_CONV_DIMS] != 0)
+                return true;
+        return false;
+    }
+
     void initConv(const MatShape& inpShape,
                   const MatShape& wshape,
                   const MatShape& outShape,
