@@ -1083,11 +1083,66 @@ around both axes.
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 /** @brief Flips a n-dimensional at given axis
+ *
+ * The input may be multi-channel and non-continuous (e.g. a sub-array); the channels of each
+ * element are kept together. In-place operation (src and dst sharing data) is supported.
  *  @param src input array
  *  @param dst output array that has the same shape of src
- *  @param axis axis that performs a flip on. 0 <= axis < src.dims.
+ *  @param axis axis that performs a flip on. -src.dims <= axis < src.dims.
  */
 CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
+
+/** @brief Concatenates n-dimensional arrays along the given axis.
+ *
+ * All the arrays must have the same type and number of dimensions, and the same size along every
+ * axis except @p axis. The arrays may be multi-channel and non-continuous; the channels of each
+ * element are kept together, so @p axis refers to the array dimensions, not to the channels.
+ * For 2D arrays concatND(src, 0, dst) is equivalent to vconcat() and concatND(src, 1, dst) to hconcat().
+ * @param src input arrays
+ * @param axis axis to concatenate along; -dims <= axis < dims
+ * @param dst output array
+ * @sa splitND, hconcat, vconcat
+ */
+CV_EXPORTS_W void concatND(InputArrayOfArrays src, int axis, OutputArray dst);
+
+/** @brief Splits an n-dimensional array into several arrays along the given axis.
+ *
+ * This is the inverse of concatND(). Not to be confused with split(), which separates the channels.
+ * @param src input array; may be multi-channel and non-continuous
+ * @param axis axis to split along; -src.dims <= axis < src.dims
+ * @param sizes size of each output array along @p axis; the values must sum up to src.size[axis]
+ * @param dst output arrays, one per element of @p sizes
+ * @sa concatND
+ */
+CV_EXPORTS_W void splitND(InputArray src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays dst);
+
+/** @brief Repeats an n-dimensional array along each axis.
+ *
+ * dst.size[i] == src.size[i]*repeats[i]. This is the n-dimensional version of repeat(), and matches
+ * numpy.tile and ONNX Tile for arrays of the same rank.
+ * @param src input array; may be multi-channel and non-continuous
+ * @param repeats number of copies along each axis; must have src.dims non-negative elements
+ * @param dst output array of the same type as src
+ * @sa repeat
+ */
+CV_EXPORTS_W void tileND(InputArray src, const std::vector<int>& repeats, OutputArray dst);
+
+/** @brief Copies a strided slice of an n-dimensional array.
+ *
+ * Along axis i the output takes the elements src[starts[i]], src[starts[i] + steps[i]], ...
+ * up to, but not including, ends[i]. Axes past starts.size() are copied whole.
+ * Unlike Python, the indices are absolute: negative values are not counted from the end.
+ * For a positive step, 0 <= start, end <= src.size[i]. For a negative step,
+ * -1 <= start, end < src.size[i], and end == -1 means "down to and including element 0".
+ * When all the steps are 1, `Mat(src, ranges)` gives the same result without copying.
+ * @param src input array; may be multi-channel and non-continuous
+ * @param starts first index along each sliced axis
+ * @param ends end index (exclusive) along each sliced axis
+ * @param steps step along each sliced axis (non-zero, may be negative); empty means all ones
+ * @param dst output array of the same type as src
+ */
+CV_EXPORTS_W void sliceND(InputArray src, const std::vector<int>& starts, const std::vector<int>& ends,
+                          const std::vector<int>& steps, OutputArray dst);
 
 /** @brief Broadcast the given Mat to the given shape.
  * @param src input array
@@ -1772,7 +1827,8 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
 
 /** @brief Transpose for n-dimensional matrices.
  *
- * @note Input should be continuous single-channel matrix.
+ * The input may be multi-channel and non-continuous (e.g. a sub-array); the channels of each
+ * element are kept together, so @p order permutes the array dimensions only.
  * @param src input array.
  * @param order a permutation of [0,1,..,N-1] where N is the number of axes of src.
  * The i'th axis of dst will correspond to the axis numbered order[i] of the input.

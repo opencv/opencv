@@ -11,7 +11,7 @@ namespace cv
 namespace dnn
 {
 
-static constexpr int TILE_MAX_DIMS = 6;
+static constexpr int TILE_MAX_DIMS = MatShape::MAX_DIMS;
 
 /*
     Tile layer, as defined in ONNX specification:
@@ -19,112 +19,6 @@ static constexpr int TILE_MAX_DIMS = 6;
 
     Opset's 1 to 13 are covered.
 */
-
-// out must be pre-allocated
-// repeats_[] should contains as many elements as inp.dims (== out.dims)
-static void tile(const Mat& inp, const int* repeats_, Mat& out)
-{
-    MatShape inpshape_ = inp.shape();
-    MatShape outshape_ = out.shape();
-    const uchar* inpdata0 = inp.data;
-    uchar* outdata0_ = out.data;
-
-    int inpshape[TILE_MAX_DIMS];
-    int outshape[TILE_MAX_DIMS];
-    int repeats[TILE_MAX_DIMS];
-    int64_t inpstep[TILE_MAX_DIMS];
-    int64_t outstep[TILE_MAX_DIMS];
-
-    int ndims = inp.dims, delta = TILE_MAX_DIMS - ndims;
-    int64_t esz = inp.elemSize();
-    int64_t total_size = 1, total_repeats = 1;
-
-    CV_Assert(inp.isContinuous());
-    CV_Assert(out.isContinuous());
-    CV_Assert(inp.type() == out.type());
-    CV_Assert(esz == 1 || esz == 2 || esz == 4 || esz == 8);
-    CV_Assert(inp.dims == out.dims);
-    CV_Assert(inp.dims <= TILE_MAX_DIMS);
-
-    for (int i = 0; i < TILE_MAX_DIMS; i++) {
-        inpshape[i] = outshape[i] = repeats[i] = 1;
-    }
-
-    for (int i = 0; i < ndims; i++) {
-        inpshape[i + delta] = inpshape_[i];
-        outshape[i + delta] = outshape_[i];
-        repeats[i + delta] = repeats_[i];
-
-        CV_Assert(inpshape_[i]*repeats_[i] == outshape_[i]);
-
-        total_size *= outshape_[i];
-        total_repeats *= repeats_[i];
-    }
-
-    for (int i = TILE_MAX_DIMS-1; i >= 0; i--) {
-        if (i == TILE_MAX_DIMS-1)
-            inpstep[i] = outstep[i] = 1;
-        else {
-            inpstep[i] = inpstep[i+1]*inpshape[i+1];
-            outstep[i] = outstep[i+1]*outshape[i+1];
-        }
-    }
-
-    int ntasks = 8;
-    if (ntasks > total_repeats)
-        ntasks = (int)total_repeats;
-    if (total_size < 1000000)
-        ntasks = 1;
-
-    parallel_for_(Range(0, ntasks), [&](const Range& r)
-    {
-        int sz0 = inpshape[0], sz1 = inpshape[1], sz2 = inpshape[2];
-        int sz3 = inpshape[3], sz4 = inpshape[4], sz5 = inpshape[5];
-
-        int64_t outstep_prelast = outstep[TILE_MAX_DIMS-2];
-        int64_t j0 = r.start*total_repeats/ntasks, j1 = r.end*total_repeats/ntasks;
-
-        for (int64_t j = j0; j < j1; j++)
-        {
-            // convert raw tile index into n-dim tile index.
-            // but we don't need this nd-index itself, we just need the
-            // offset of the tile in the output tensor
-            int64_t j_ = j, rawofs = 0;
-            for (int k = TILE_MAX_DIMS-1; k >= 0; k--) {
-                int r = repeats[k];
-                int64_t q = j_ / r;
-                rawofs += (j_ - q*r)*inpshape[k]*outstep[k];
-                j_ = q;
-            }
-
-            #undef IMPL_COPY_TILE
-            #define IMPL_COPY_TILE(T) \
-                T* inpdata = (T*)inpdata0; \
-                T* outdata0 = (T*)outdata0_ + rawofs; \
-                for (int i0 = 0; i0 < sz0; i0++) { \
-                for (int i1 = 0; i1 < sz1; i1++) { \
-                for (int i2 = 0; i2 < sz2; i2++) { \
-                for (int i3 = 0; i3 < sz3; i3++) { \
-                    T* outdata = outdata0 + i0*outstep[0] + i1*outstep[1] + i2*outstep[2] + i3*outstep[3]; \
-                    for (int i4 = 0; i4 < sz4; i4++, outdata += outstep_prelast, inpdata += sz5) { \
-                        for (int i5 = 0; i5 < sz5; i5++) \
-                            outdata[i5] = inpdata[i5]; \
-                    } \
-                }}}}
-
-            if (esz == 1) {
-                IMPL_COPY_TILE(uint8_t)
-            } else if (esz == 2) {
-                IMPL_COPY_TILE(uint16_t)
-            } else if (esz == 4) {
-                IMPL_COPY_TILE(uint32_t)
-            } else {
-                IMPL_COPY_TILE(uint64_t)
-            }
-        }
-    }
-    , ntasks);
-}
 
 class Tile2LayerImpl CV_FINAL : public Tile2Layer
 {
@@ -283,13 +177,13 @@ public:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outshape, inptype);
-            tile(inp, repeats, outs[0]);
+            tileND(inp, std::vector<int>(repeats, repeats + ndims), outs[0]);
         } else if (kind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
             outs[0].fit(outshape, inptype);
             Mat temp(outshape, inptype);
-            tile(inp, repeats, temp);
+            tileND(inp, std::vector<int>(repeats, repeats + ndims), temp);
             temp.copyTo(outs[0]);
         } else {
             CV_Error(Error::StsNotImplemented, "");

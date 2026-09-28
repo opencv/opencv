@@ -26,73 +26,6 @@ namespace dnn
     Opset's 1 to 13 are covered.
 */
 
-// all outputs must be pre-allocated.
-// axis must be normalized
-static void split(const Mat& inp, std::vector<Mat>& outs, int axis)
-{
-    CV_Assert(inp.isContinuous());
-
-    MatShape inpShape = inp.shape();
-    int ndims = inpShape.dims;
-
-    CV_Assert_N(0 <= axis, axis <= inp.dims);
-
-    int nslices = 1;
-    int inpType = inp.type();
-    size_t esz = inp.elemSize();
-    size_t sliceSize = esz;
-    size_t inpStep = 0;
-    int outSize_a = 0;
-    for (int i = ndims-1; i > axis; i--)
-        sliceSize *= inpShape[i];
-    inpStep = sliceSize*inpShape[axis];
-    for (int i = 0; i < axis; i++)
-        nslices *= inpShape[i];
-
-    size_t noutputs = outs.size();
-    for (size_t k = 0; k < noutputs; k++) {
-        Mat& out = outs[k];
-        MatShape outShape = out.shape();
-        CV_Assert(out.isContinuous());
-        CV_Assert(out.type() == inpType);
-        CV_Assert(out.dims == ndims);
-        for (int i = 0; i < ndims; i++) {
-            if (i == axis)
-                outSize_a += outShape[i];
-            else {
-                CV_Assert(inpShape[i] == outShape[i]);
-            }
-        }
-    }
-
-    CV_Assert(outSize_a == inpShape[axis]);
-
-    // Precompute per-output source offset and per-slice size.
-    std::vector<size_t> srcOffset(noutputs);
-    std::vector<size_t> sliceSize_k_vec(noutputs);
-    {
-        size_t acc = 0;
-        for (size_t k = 0; k < noutputs; k++) {
-            int sz_a = outs[k].size[axis];
-            srcOffset[k] = acc;
-            sliceSize_k_vec[k] = sliceSize * sz_a;
-            acc += sliceSize_k_vec[k];
-        }
-    }
-
-    int64_t nTasks = (int64_t)nslices * (int64_t)noutputs;
-    parallel_for_(Range(0, (int)nTasks), [&](const Range& r) {
-        for (int64_t idx = r.start; idx < r.end; idx++) {
-            int k = (int)(idx % (int64_t)noutputs);
-            int s = (int)(idx / (int64_t)noutputs);
-            uchar* outptr_k = outs[k].data;
-            const uchar* inptr = inp.data + srcOffset[k];
-            size_t sliceSize_k = sliceSize_k_vec[k];
-            memcpy(outptr_k + (size_t)s*sliceSize_k, inptr + (size_t)s*inpStep, sliceSize_k);
-        }
-    });
-}
-
 class Split2LayerImpl CV_FINAL : public Split2Layer
 {
 public:
@@ -262,7 +195,10 @@ public:
 
     void runOp(const Mat& inp, std::vector<Mat>& outs, int axis_)
     {
-        cv::dnn::split(inp, outs, axis_);
+        std::vector<int> sizes(outs.size());
+        for (size_t i = 0; i < outs.size(); i++)
+            sizes[i] = outs[i].size[axis_];
+        splitND(inp, axis_, sizes, outs);
     }
 };
 
