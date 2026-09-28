@@ -14,6 +14,7 @@
 
 #define ARMPL_GEMM_MIN_WORK_VOLUME 10000
 #define ARMPL_SVD_SMALL_MATRIX_THRESH 33
+#define ARMPL_LU_SMALL_MATRIX_THRESH 100
 
 namespace {
 
@@ -242,6 +243,55 @@ armpl_svd(fptype *src, size_t src_step, fptype *w, fptype *u, size_t u_step, fpt
     return CV_HAL_ERROR_OK;
 }
 
+static inline armpl_int_t armpl_lapacke_gesv(int m, int n, float *a, int lda, armpl_int_t *ipiv, float *b, int ldb){
+    return LAPACKE_sgesv(LAPACK_ROW_MAJOR, m, n, a, lda, ipiv, b, ldb);
+}
+static inline armpl_int_t armpl_lapacke_gesv(int m, int n, double *a, int lda, armpl_int_t *ipiv, double *b, int ldb){
+    return LAPACKE_dgesv(LAPACK_ROW_MAJOR, m, n, a, lda, ipiv, b, ldb);
+}
+static inline armpl_int_t armpl_lapacke_getrf(int m, float *a, int lda, armpl_int_t *ipiv){
+    return LAPACKE_sgetrf(LAPACK_ROW_MAJOR, m, m, a, lda, ipiv);
+}
+static inline armpl_int_t armpl_lapacke_getrf(int m, double *a, int lda, armpl_int_t *ipiv){
+    return LAPACKE_dgetrf(LAPACK_ROW_MAJOR, m, m, a, lda, ipiv);
+}
+
+template <typename fptype> static inline int
+armpl_lu(fptype *a, size_t a_step, int m, fptype *b, size_t b_step, int n, int *info)
+{
+    if(!info)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int lda = (int)(a_step / sizeof(fptype));
+    std::vector<armpl_int_t> ipiv(m);
+    armpl_int_t linfo;
+
+    if (b)
+    {
+        int ldb = (int)(b_step / sizeof(fptype));
+        linfo = armpl_lapacke_gesv(m, n, a, lda, ipiv.data(), b, ldb);
+    }
+    else
+    {
+        linfo = armpl_lapacke_getrf(m, a, lda, ipiv.data());
+    }
+
+    if (linfo < 0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    if (linfo == 0)
+    {
+        int sign = 0;
+        for (int i = 0; i < m; i++)
+            sign ^= (ipiv[i] != i + 1);
+        *info = sign ? -1 : 1;
+    }
+    else
+        *info = 0;
+
+    return CV_HAL_ERROR_OK;
+}
+
 }
 
 int armpl_hal_SVD32f(float *src, size_t src_step, float *w, float *u, size_t u_step, float *vt, size_t vt_step, int m, int n, int flags)
@@ -256,6 +306,17 @@ int armpl_hal_SVD64f(double *src, size_t src_step, double *w, double *u, size_t 
     if (m < ARMPL_SVD_SMALL_MATRIX_THRESH)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return armpl_svd(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
+}
+
+int armpl_hal_LU32f(float *a, size_t a_step, int m, float *b, size_t b_step, int n, int *info) {
+    if (m < ARMPL_LU_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_lu(a, a_step, m, b, b_step, n, info);
+}
+int armpl_hal_LU64f(double *a, size_t a_step, int m, double *b, size_t b_step, int n, int *info) {
+    if (m < ARMPL_LU_SMALL_MATRIX_THRESH)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_lu(a, a_step, m, b, b_step, n, info);
 }
 
 enum ArmPLDFTMode
