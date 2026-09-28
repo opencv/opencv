@@ -1187,9 +1187,8 @@ void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
     if (dst.total() == 0)
         return;
 
-    // Axis i of the output (size repeats[i]*size[i]) is viewed as two axes: the repeat index
-    // (source step 0) and the position inside one copy (source step unchanged). The whole
-    // operation then becomes a single broadcasting copy.
+    // Each repeated output axis is split into (repeat index, position), the former
+    // with source step 0, so the whole tile is one broadcasting copy.
     nd::View sv, dv;
     sv.data = src.data;
     dv.data = dst.data;

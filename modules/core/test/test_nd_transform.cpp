@@ -1,10 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
-// Accuracy tests for the n-dimensional data-movement functions:
-// transposeND, flipND, concatND, splitND, tileND, sliceND.
-// Every function is compared bit-exactly against a naive per-element reference.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
 #include <numeric>
@@ -12,7 +10,7 @@
 
 namespace opencv_test { namespace {
 
-// element types of all the sizes the kernels care about: 1, 2, 3, 4, 5, 6, 8, 16, 24, 32 bytes
+// element sizes 1, 2, 3, 4, 5, 6, 8, 16, 24 and 32 bytes
 static const int ndTypes[] = { CV_8UC1, CV_16FC1, CV_8UC3, CV_32FC1, CV_8UC(5), CV_16UC3,
                                CV_64FC1, CV_32SC2, CV_32FC4, CV_64FC3, CV_64FC4 };
 
@@ -29,8 +27,7 @@ static std::vector<int> randomShape(RNG& rng, int dims, int maxSize)
     return shape;
 }
 
-// Random array of the given shape. With roi == true it is a non-continuous sub-array of a
-// bigger array. The data are random bytes, so the comparisons below are byte-exact.
+// Random bytes; with roi == true the result is a sub-array of a bigger array.
 static Mat randomArray(RNG& rng, const std::vector<int>& shape, int type, bool roi)
 {
     const int dims = (int)shape.size();
@@ -59,7 +56,6 @@ static std::vector<int> shapeOf(const Mat& m)
     return std::vector<int>(m.size.p, m.size.p + m.dims);
 }
 
-// Calls f(idx) for every n-dimensional index of the given shape, in row-major order.
 template<typename F> static void forEachIndex(const std::vector<int>& shape, F f)
 {
     const int dims = (int)shape.size();
@@ -106,8 +102,6 @@ static std::string describe(const Mat& m)
     return cv::format("%s %s%s", typeToString(m.type()).c_str(),
                       MatShape(shapeOf(m)).str().c_str(), m.isContinuous() ? "" : " (roi)");
 }
-
-//////////////////////////////// references ////////////////////////////////
 
 static Mat refTranspose(const Mat& src, const std::vector<int>& order)
 {
@@ -206,8 +200,6 @@ static Mat refSlice(const Mat& src, const std::vector<int>& starts,
     return dst;
 }
 
-//////////////////////////////// transposeND ////////////////////////////////
-
 TEST(Core_TransposeND, random)
 {
     RNG& rng = theRNG();
@@ -292,8 +284,6 @@ TEST(Core_TransposeND, invalid_order)
     EXPECT_ANY_THROW(cv::transposeND(a, {0, 1, 3}, b));
 }
 
-//////////////////////////////// flipND ////////////////////////////////
-
 TEST(Core_FlipND, random)
 {
     RNG& rng = theRNG();
@@ -320,8 +310,6 @@ TEST(Core_FlipND, inplace)
         EXPECT_SAME(expected, a);
     }
 }
-
-//////////////////////////////// concatND / splitND ////////////////////////////////
 
 TEST(Core_ConcatND, random)
 {
@@ -425,8 +413,6 @@ TEST(Core_SplitND, invalid)
     EXPECT_NO_THROW(cv::splitND(a, -2, {2, 4}, d));
 }
 
-//////////////////////////////// tileND ////////////////////////////////
-
 TEST(Core_TileND, random)
 {
     RNG& rng = theRNG();
@@ -460,8 +446,6 @@ TEST(Core_TileND, large)
     cv::tileND(src, {1, 1, 64, 1}, dst);
     EXPECT_SAME(refTile(src, {1, 1, 64, 1}), dst);
 }
-
-//////////////////////////////// sliceND ////////////////////////////////
 
 TEST(Core_SliceND, random)
 {
@@ -506,7 +490,6 @@ TEST(Core_SliceND, reverse_whole_axis)
     EXPECT_SAME(refFlip(src, 1), dst);
 }
 
-// 0-dimensional (scalar) arrays are common in DNN graphs
 TEST(Core_NDTransform, scalar)
 {
     Mat a(0, nullptr, CV_32F);

@@ -1,16 +1,15 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
-// Performance tests for the n-dimensional data-movement functions, on the tensor shapes
-// that are typical for DNN models.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
 using namespace perf;
 
-// declare.in() only handles 2D arrays, so fill n-dimensional inputs directly
+// declare.in() only handles 2D arrays
 static void fillRandom(Mat& m)
 {
     CV_Assert(m.isContinuous());

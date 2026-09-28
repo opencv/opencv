@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
 #include "nd_copy.hpp"
@@ -66,7 +68,7 @@ enum Kind
 {
     KIND_MEMCPY,    // the innermost axis is contiguous in both views
     KIND_FILL,      // the innermost axis is broadcast (step 0) in the source
-    KIND_STRIDED,   // generic strided copy along the innermost axis
+    KIND_STRIDED,
     KIND_TRANSPOSE, // the two innermost axes are swapped between source and destination
     KIND_SPLIT,     // 2..4 planes are read from one interleaved stream (e.g. NHWC -> NCHW)
     KIND_MERGE      // 2..4 planes are written into one interleaved stream (e.g. NCHW -> NHWC)
@@ -74,13 +76,14 @@ enum Kind
 
 enum
 {
-    TRANSPOSE_TILE = 64,                // tile side for the 2D transpose kernel, in elements
-    SPLIT_CHUNK = 1024,                 // elements per plane processed by one split/merge call
-    ROW_CHUNK_BYTES = 64*1024,          // long rows are split into chunks of this size
-    GATHER_BLOCK_BYTES = 8*1024,        // source span of one chunk in the cache-blocked gather
-    PARALLEL_MIN_COST = 1024*1024,      // below this (weighted bytes) everything runs in one thread
-    STRIPE_COST = 1024*1024             // weighted bytes per parallel stripe; the copies are
-                                        // memory-bound, so small stripes only add overhead
+    TRANSPOSE_TILE = 64,                // in elements
+    SPLIT_CHUNK = 1024,                 // in elements
+    ROW_CHUNK_BYTES = 64*1024,
+    GATHER_BLOCK_BYTES = 8*1024,
+    // costs are bytes weighted by the kernel; the copies are memory-bound,
+    // so small stripes only add overhead
+    PARALLEL_MIN_COST = 1024*1024,
+    STRIPE_COST = 1024*1024
 };
 
 struct Plan
@@ -88,21 +91,19 @@ struct Plan
     const uchar* src;
     uchar* dst;
     size_t esz;
-    int dims;                           // >= 1
+    int dims;
     int kind;
     int64 size[MAX_VIEW_DIMS];
     ptrdiff_t sstep[MAX_VIEW_DIMS];
     ptrdiff_t dstep[MAX_VIEW_DIMS];
     TransposeFunc tfunc;
 
-    // Work decomposition. Row kinds: an item is a chunk of one row of the innermost axis;
-    // items go row by row, or chunk by chunk when chunkMajor is set.
-    // KIND_TRANSPOSE: an item is one tile of the two innermost axes.
+    // an item is a chunk of an innermost row, or a tile for KIND_TRANSPOSE
     int64 nrows, chunk, nchunks;
     bool chunkMajor;
     int64 tilesA, tilesB;
     int64 nitems;
-    double cost;                        // bytes weighted by the relative cost of the kernel
+    double cost;
 };
 
 static void swapAxes(Plan& p, int i, int j)
@@ -112,14 +113,13 @@ static void swapAxes(Plan& p, int i, int j)
     std::swap(p.dstep[i], p.dstep[j]);
 }
 
-// move axis k to position `to` (k <= to), shifting the axes in between down by one
 static void moveAxis(Plan& p, int k, int to)
 {
     for (int i = k; i < to; i++)
         swapAxes(p, i, i + 1);
 }
 
-// Split / merge of 2..4 planes via the HAL kernels (the same ones used by cv::split and cv::merge).
+// 2..4 planes via the cv::split / cv::merge HAL kernels
 static bool trySplitMerge(Plan& p)
 {
     const ptrdiff_t esz = (ptrdiff_t)p.esz;
@@ -132,8 +132,7 @@ static bool trySplitMerge(Plan& p)
     if ((addrs & (esz - 1)) != 0)
         return false;
 
-    // split: some axis k holds cn planes that are interleaved in the source
-    // and the innermost axis walks over them with step cn*esz
+    // split: axis k holds cn planes interleaved in the source
     for (int k = L - 1; k >= 0; k--)
     {
         const int64 cn = p.size[k];
@@ -146,8 +145,7 @@ static bool trySplitMerge(Plan& p)
         }
     }
 
-    // merge: the innermost axis has cn elements coming from cn planes,
-    // and some axis k walks over the source planes contiguously
+    // merge: the innermost axis holds cn planes interleaved in the destination
     const int64 cn = p.size[L];
     if (cn >= 2 && cn <= 4 && p.sstep[L] > 0 && p.sstep[L] % esz == 0)
     {
@@ -175,8 +173,8 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
     p.dst = d.data;
     p.esz = s.esz;
 
-    // 1. drop size-1 axes and make every destination step non-negative;
-    //    reversing an axis in both views does not change the element mapping.
+    // Drop size-1 axes and make the destination steps positive
+    // (reversing an axis in both views keeps the mapping).
     int n = 0;
     double total = 1;
     for (int i = 0; i < s.dims; i++)
@@ -203,13 +201,11 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
         n++;
     }
 
-    // 2. order the axes by destination step, largest first, so that the destination
-    //    is written as sequentially as possible (stable insertion sort, n is small).
+    // Write the destination as sequentially as possible.
     for (int i = 1; i < n; i++)
         for (int j = i; j > 0 && p.dstep[j-1] < p.dstep[j]; j--)
             swapAxes(p, j-1, j);
 
-    // 3. merge neighbour axes that are contiguous across the boundary in both views.
     int m = 0;
     for (int i = 0; i < n; i++)
     {
@@ -235,7 +231,6 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
     }
     p.dims = m;
 
-    // 4. pick the kernel for the innermost axis.
     const int L = m - 1;
     p.tfunc = nullptr;
     if (p.sstep[L] == esz && p.dstep[L] == esz)
@@ -245,17 +240,14 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
     else if (!trySplitMerge(p))
     {
         p.kind = KIND_STRIDED;
-        // If some outer axis is contiguous in the source while the innermost axis is
-        // contiguous in the destination, this is a (batched) 2D transpose. Move that
-        // axis next to the innermost one and use the cache-blocked SIMD kernel.
+        // An outer axis contiguous in the source makes it a batched 2D transpose.
         if (m >= 2 && p.dstep[L] == esz && p.sstep[L] > 0)
         {
             int k = L - 1;
             while (k >= 0 && p.sstep[k] != esz)
                 k--;
             TransposeFunc f = getTransposeFunc(s.esz);
-            // the source-contiguous axis must be long enough to fill SIMD registers,
-            // otherwise a strided gather along the innermost axis is faster
+            // a short axis cannot fill SIMD registers; the gather is faster then
             if (k >= 0 && f && p.size[k] >= 8)
             {
                 moveAxis(p, k, L - 1);
@@ -265,11 +257,9 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
         }
     }
 
-    // 5. split the work into items.
     const double bytes = total*(double)esz;
     if (p.kind == KIND_SPLIT || p.kind == KIND_MERGE)
     {
-        // items: outer rows (axes 0..L-2) x chunks of the long axis
         const int X = p.kind == KIND_SPLIT ? L : L - 1;
         int64 nouter = 1;
         for (int i = 0; i < L - 1; i++)
@@ -310,16 +300,15 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
         if (p.kind == KIND_STRIDED && L > 0 && nrows <= 64 && std::abs(p.sstep[L-1]) < sstepL &&
             (double)rowLen*sstepL > 2.0*GATHER_BLOCK_BYTES)
         {
-            // A few rows that read interleaved source data (e.g. the planes of an NHWC -> NCHW
-            // transpose with a small C). Go chunk by chunk, so that all the rows of one chunk
-            // reuse the same source cache lines.
+            // Rows reading interleaved source data (NHWC -> NCHW with a small C):
+            // go chunk by chunk so that the rows share the cached source lines.
             p.chunk = std::max((int64)16, (int64)(GATHER_BLOCK_BYTES/sstepL));
             p.nchunks = (rowLen + p.chunk - 1)/p.chunk;
             p.chunkMajor = true;
         }
         else if (nrows < 64 && rowBytes >= 2.0*ROW_CHUNK_BYTES)
         {
-            // few long rows: split them, otherwise there is nothing to parallelize over
+            // few long rows: split them to have something to parallelize
             int64 nch = std::min((int64)(rowBytes/ROW_CHUNK_BYTES), (int64)1024);
             p.chunk = (rowLen + nch - 1)/nch;
             p.nchunks = (rowLen + p.chunk - 1)/p.chunk;
@@ -361,7 +350,7 @@ template<typename T> static void fill_(const uchar* s, uchar* d, ptrdiff_t ds, i
 
 struct Elem16 { uint64_t a, b; };
 
-// Copy n elements along the innermost axis (KIND_FILL and KIND_STRIDED).
+// KIND_FILL and KIND_STRIDED
 static void copyRow(const Plan& p, const uchar* s, uchar* d, int64 n)
 {
     const size_t esz = p.esz;
@@ -451,7 +440,6 @@ template<bool MEMCPY> static void runRows(const Plan& p, int64 i0, int64 i1)
 
     if (nch == 1 && L == 1)
     {
-        // the common "many rows of one outer axis" case
         const ptrdiff_t ss = p.sstep[0], ds = p.dstep[0];
         for (int64 it = i0; it < i1; it++, s += ss, d += ds)
             copyRowT<MEMCPY>(p, s, d, rowLen);
@@ -467,7 +455,6 @@ template<bool MEMCPY> static void runRows(const Plan& p, int64 i0, int64 i1)
         if (chEnd < nch)
             break;
         ch = 0;
-        // move to the next row
         for (int k = L - 1; k >= 0; k--)
         {
             s += p.sstep[k];
@@ -554,9 +541,8 @@ static void runPlan(const Plan& p, int64 i0, int64 i1)
         runRows<false>(p, i0, i1);
 }
 
-// Plans that iterate over the same rows (e.g. the inputs of concatND or the outputs of splitND)
-// can run in lockstep: a block of rows of every plan, then the next block. The shared side
-// (the destination of concat, the source of split) is then accessed sequentially.
+// Plans over the same rows (concatND inputs, splitND outputs) run in lockstep, block by block,
+// so that the shared destination (or source) is accessed sequentially.
 static bool canRunInLockstep(const Plan* plans, size_t np)
 {
     if (np < 2)
@@ -621,7 +607,7 @@ static void runPlans(const Plan* plans, size_t np)
         return;
     }
 
-    // Items are grouped so that the parallel range always fits into int.
+    // grouped so that the range fits into int
     const int64 ngroups = std::min(total, (int64)1 << 20);
     const double nstripes = std::min((double)ngroups, std::max(2.0, cost/STRIPE_COST));
     parallel_for_(Range(0, (int)ngroups), [&](const Range& r)
@@ -688,7 +674,6 @@ void copyBatch(const View* src, const View* dst, int n)
             continue;
         if (overlap(s, d))
         {
-            // The source and the destination share memory: copy the source out first.
             size_t total = 1;
             for (int k = 0; k < s.dims; k++)
                 total *= (size_t)s.size[k];
