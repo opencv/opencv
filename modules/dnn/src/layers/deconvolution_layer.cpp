@@ -480,17 +480,19 @@ public:
         const float* biasvec;
         int channels;
         std::vector<int> output_shape;  // spatial dimensions only
-        std::vector<int> kernel_shape;
-        std::vector<int> pads;
-        std::vector<int> strides;
-        std::vector<int> dilations;
-        std::vector<int> input_shape;   // spatial dimensions only
+        std::vector<std::vector<size_t> > tap_starts;
+        std::vector<std::vector<size_t> > tap_offsets;
+        std::vector<size_t> x_run_end;
+        int x_stride;
+        size_t output_spatial_size;
+        size_t column_channel_stride;
         float* data_im;
         int nstripes;
         bool is1x1;
 
         Col2ImInvoker()
-            : data_col(0), biasvec(0), channels(0), data_im(0),
+            : data_col(0), biasvec(0), channels(0), x_stride(0), output_spatial_size(1),
+              column_channel_stride(0), data_im(0),
               nstripes(0), is1x1(0)
         {}
 
@@ -513,14 +515,81 @@ public:
             t.data_im = data_im;
             t.channels = channels;
             t.output_shape = output_shape;
-            t.kernel_shape = kernel_shape;
-            t.pads = pads;
-            t.strides = strides;
-            t.dilations = dilations;
-            t.input_shape = input_shape;
             t.nstripes = nstripes;
             t.is1x1 = is1x1;
             t.biasvec = biasvec;
+
+            const int ndims = output_shape.size();
+            for (int d = 0; d < ndims; d++)
+                t.output_spatial_size *= output_shape[d];
+
+            if (!is1x1)
+            {
+                size_t kernel_step = 1, input_step = 1;
+                for (int d = 0; d < ndims; d++)
+                    kernel_step *= input_shape[d];
+
+                // Store the kernel and input offset for each valid tap on each axis.
+                // The tables are shared by all channels and workers.
+                t.tap_starts.resize(ndims);
+                t.tap_offsets.resize(ndims);
+                for (int d = ndims - 1; d >= 0; d--)
+                {
+                    std::vector<size_t>& starts = t.tap_starts[d];
+                    std::vector<size_t>& offsets = t.tap_offsets[d];
+                    starts.resize(output_shape[d] + 1);
+                    for (int out = 0; out < output_shape[d]; out++)
+                    {
+                        starts[out] = offsets.size();
+                        for (int k = 0; k < kernel_shape[d]; k++)
+                        {
+                            int input = out + pads[d] - k * dilations[d];
+                            if (input < 0 || input % strides[d] != 0)
+                                continue;
+                            input /= strides[d];
+                            if (input < input_shape[d])
+                                offsets.push_back(k * kernel_step + input * input_step);
+                        }
+                    }
+                    starts[output_shape[d]] = offsets.size();
+                    kernel_step *= kernel_shape[d];
+                    input_step *= input_shape[d];
+                }
+                t.column_channel_stride = kernel_step;
+#if CV_SIMD128
+                const int last = ndims - 1;
+                const size_t width = output_shape[last];
+                const int step = strides[last];
+                const int phase_taps = (kernel_shape[last] + step - 1) / step;
+                // Four input values must fit while the set of valid taps stays the same.
+                if (step <= 2 && width >= (size_t)(4 * step) && input_shape[last] >= 4 &&
+                    (dilations[last] != 1 || input_shape[last] >= phase_taps + 3))
+                {
+                    t.x_stride = step;
+                    t.x_run_end.resize(width);
+                    const std::vector<size_t>& starts = t.tap_starts[last];
+                    const std::vector<size_t>& offsets = t.tap_offsets[last];
+                    // Each run keeps the same sum order and has consecutive input offsets.
+                    for (size_t x = width; x-- > 0;)
+                    {
+                        const size_t next = x + step;
+                        t.x_run_end[x] = next;
+                        if (next >= width)
+                            continue;
+                        const size_t begin = starts[x], next_begin = starts[next];
+                        const size_t count = starts[x + 1] - begin;
+                        if (starts[next + 1] - next_begin != count)
+                            continue;
+                        size_t k = 0;
+                        for (; k < count; k++)
+                            if (offsets[next_begin + k] != offsets[begin + k] + 1)
+                                break;
+                        if (k == count)
+                            t.x_run_end[x] = t.x_run_end[next];
+                    }
+                }
+#endif
+            }
 
             parallel_for_(Range(0, nstripes), t, nstripes);
         }
@@ -534,84 +603,133 @@ public:
 
             int ndims = output_shape.size();
 
-            // Calculate total output size
-            int total_output_size = channels;
-            int input_spatial_size = 1;
-            for (int i = 0; i < ndims; i++) {
-                total_output_size *= output_shape[i];
-                input_spatial_size *= input_shape[i];
-            }
+            const size_t total_output_size = channels * output_spatial_size;
 
             size_t stripeSize = (total_output_size + nstripes - 1) / nstripes;
             size_t startIndex = r.start * stripeSize;
             size_t endIndex = std::min(r.end * stripeSize, (size_t)total_output_size);
 
-            for (size_t index = startIndex; index < endIndex; index++)
+            if (startIndex >= endIndex)
+                return;
+
+            if (is1x1_)
             {
-                // Convert linear index to multi-dimensional coordinates
-                std::vector<int> coords(ndims + 1);  // +1 for channel dimension
-                size_t idx = index;
-
-                // Extract spatial coordinates and channel
-                for (int i = ndims - 1; i >= 0; i--) {
-                    coords[i + 1] = idx % output_shape[i];
-                    idx /= output_shape[i];
+                size_t index = startIndex;
+                while (index < endIndex)
+                {
+                    const size_t channel = index / output_spatial_size;
+                    const size_t channel_end = std::min((channel + 1) * output_spatial_size, endIndex);
+                    const float bias = biasvec_[channel];
+                    for (; index < channel_end; index++)
+                        data_im_[index] += bias;
                 }
-                coords[0] = idx;  // channel
+                return;
+            }
 
-                float val = 0.0f;
+            std::vector<size_t> row_buffer;
+            const size_t zero_offset = 0;
+#if CV_SIMD128
+            std::vector<const float*> run_inputs[2];
+#endif
+            const int last = ndims - 1;
+            const size_t width = output_shape[last];
+            const std::vector<size_t>& x_starts = tap_starts[last];
+            const std::vector<size_t>& x_offsets = tap_offsets[last];
+            size_t index = startIndex;
+            for (size_t row = startIndex / width; index < endIndex; row++)
+            {
+                size_t idx = row;
+                const size_t* row_offsets = &zero_offset;
+                size_t row_count = 1;
+                for (int d = last - 1; d >= 0; d--)
+                {
+                    const size_t coord = idx % output_shape[d];
+                    idx /= output_shape[d];
+                    const size_t begin = tap_starts[d][coord];
+                    const size_t count = tap_starts[d][coord + 1] - begin;
+                    if (d == last - 1)
+                    {
+                        row_offsets = tap_offsets[d].data();
+                        row_count = count;
+                        if (count)
+                            row_offsets += begin;
+                        continue;
+                    }
+                    const size_t inner = row_count;
+                    row_count *= count;
+                    row_buffer.resize(row_count);
+                    if (d < last - 2)
+                        row_offsets = row_buffer.data();
+                    // Fill backwards when the previous offsets are in this buffer.
+                    for (size_t k = count; k-- > 0;)
+                        for (size_t i = 0; i < inner; i++)
+                            row_buffer[k * inner + i] = row_offsets[i] + tap_offsets[d][begin + k];
+                    row_offsets = row_buffer.data();
+                }
+                const float* row_data = data_col_ + idx * column_channel_stride;
+                const float bias = biasvec_[idx];
+                const size_t row_start = row * width;
+                const size_t row_end = std::min(row_start + width, endIndex);
 
-                if( is1x1_ )
-                    val = data_im_[index];
-                else {
-                    std::vector<int> kernel_coords(ndims);
-                    std::function<void(int)> iterate_kernel = [&](int dim) {
-                        if (dim == ndims) {
-                            std::vector<int> input_coords(ndims);
-                            bool valid = true;
-
-                            for (int i = 0; i < ndims; i++) {
-                                // Apply dilation to kernel coordinates
-                                int dilated_kernel_pos = kernel_coords[i] * dilations[i];
-                                input_coords[i] = coords[i + 1] + pads[i] - dilated_kernel_pos;
-                                if (input_coords[i] < 0 || input_coords[i] % strides[i] != 0) {
-                                    valid = false;
-                                    break;
-                                }
-                                input_coords[i] /= strides[i];
-                                if (input_coords[i] >= input_shape[i]) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-
-                            if (valid) {
-                                // Calculate offset in column matrix
-                                int col_offset = coords[0];  // channel
-                                for (int i = 0; i < ndims; i++) {
-                                    col_offset = col_offset * kernel_shape[i] + kernel_coords[i];
-                                }
-                                col_offset *= input_spatial_size;
-
-                                // Calculate input position in flattened input
-                                int input_pos = 0;
-                                for (int i = 0; i < ndims; i++) {
-                                    input_pos = input_pos * input_shape[i] + input_coords[i];
-                                }
-
-                                val += data_col_[col_offset + input_pos];
-                            }
-                        } else {
-                            for (int k = 0; k < kernel_shape[dim]; k++) {
-                                kernel_coords[dim] = k;
-                                iterate_kernel(dim + 1);
+#if CV_SIMD128
+                const v_float32x4 vbias = v_setall_f32(bias);
+                auto sum_four = [&](int phase, size_t input_offset) {
+                    v_float32x4 val = v_setzero_f32();
+                    for (const float* input : run_inputs[phase])
+                        val = v_add(val, v_load(input + input_offset));
+                    return v_add(val, vbias);
+                };
+#endif
+                size_t x = index - row_start;
+                while (index < row_end)
+                {
+#if CV_SIMD128
+                    const size_t span = 4 * x_stride;
+                    if (x_stride && index + span <= row_end && x_run_end[x] >= x + span &&
+                        (x_stride == 1 || x_run_end[x + 1] >= x + 1 + span))
+                    {
+                        size_t run_end = std::min(row_end - row_start, x_run_end[x]);
+                        if (x_stride == 2)
+                            run_end = std::min(run_end, x_run_end[x + 1] - 1);
+                        const size_t blocks = (run_end - x) / span;
+                        for (int phase = 0; phase < x_stride; phase++)
+                        {
+                            const size_t begin = x_starts[x + phase];
+                            const size_t count = x_starts[x + phase + 1] - begin;
+                            run_inputs[phase].resize(row_count * count);
+                            size_t k = 0;
+                            for (size_t j = 0; j < row_count; j++)
+                                for (size_t i = 0; i < count; i++)
+                                    run_inputs[phase][k++] = row_data + row_offsets[j] + x_offsets[begin + i];
+                        }
+                        // Keep the tap lists fixed for the whole run.
+                        if (x_stride == 1)
+                        {
+                            for (size_t block = 0; block < blocks; block++, index += span)
+                                v_store(data_im_ + index, sum_four(0, block * 4));
+                        }
+                        else
+                        {
+                            // Stride two has two phases. Store them in alternating lanes.
+                            for (size_t block = 0; block < blocks; block++, index += span)
+                            {
+                                const v_float32x4 v0 = sum_four(0, block * 4);
+                                v_store_interleave(data_im_ + index, v0, sum_four(1, block * 4));
                             }
                         }
-                    };
-
-                    iterate_kernel(0);
+                        x += blocks * span;
+                        continue;
+                    }
+#endif
+                    float val = 0.0f;
+                    // Keep the sum order. The last axis changes first.
+                    for (size_t i = 0; i < row_count; i++)
+                        for (size_t k = x_starts[x]; k < x_starts[x + 1]; k++)
+                            val += row_data[row_offsets[i] + x_offsets[k]];
+                    data_im_[index] = val + bias;
+                    x++;
+                    index++;
                 }
-                data_im_[index] = val + biasvec_[coords[0]];
             }
         }
     };
