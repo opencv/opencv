@@ -1269,6 +1269,7 @@ class cv::ogl::TextureBuffer::Impl
 public:
     static const Ptr<Impl> empty();
 
+    Impl();
     Impl(GLenum internalFormat, GLuint bufId, bool autoRelease);
     ~Impl();
 
@@ -1279,15 +1280,13 @@ public:
     GLuint texId() const { return texId_; }
 
 private:
-    Impl();
-
     GLuint texId_;
     bool autoRelease_;
 };
 
 const Ptr<cv::ogl::TextureBuffer::Impl> cv::ogl::TextureBuffer::Impl::empty()
 {
-    static Ptr<Impl> p(new Impl);
+    static Ptr<Impl> p = makePtr<Impl>();
     return p;
 }
 
@@ -1362,7 +1361,7 @@ void cv::ogl::TextureBuffer::create(const Buffer& buf, Format aformat, bool auto
     CV_Assert( !buf.empty() );
     CV_Assert( aformat != NONE );
 
-    impl_.reset(new Impl(aformat, buf.bufId(), autoRelease));
+    impl_ = makePtr<Impl>(aformat, buf.bufId(), autoRelease);
     buf_ = buf;
     format_ = aformat;
 #endif
