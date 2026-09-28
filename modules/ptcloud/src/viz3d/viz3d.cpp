@@ -1015,9 +1015,21 @@ void Window::draw()
         if (!obj.second->isTransparent())
             obj.second->draw(this->view, this->sun);
 
+    std::vector<std::pair<float, Object*>> transparent;
     for (auto& obj : this->objects)
+    {
         if (obj.second->isTransparent())
-            obj.second->draw(this->view, this->sun);
+        {
+            const Vec3f c = obj.second->getCenter();
+            const Vec4f depth_col = splat::depthColumn(obj.second->getModel() * this->view.getView());
+            transparent.emplace_back(splat::viewDepth(depth_col, c.val), obj.second.get());
+        }
+    }
+    std::stable_sort(transparent.begin(), transparent.end(),
+                     [](const std::pair<float, Object*>& a, const std::pair<float, Object*>& b)
+                     { return a.first > b.first; });
+    for (auto& obj : transparent)
+        obj.second->draw(this->view, this->sun);
 }
 
 void Window::onMouse(int event, int x, int y, int flags)
@@ -1574,6 +1586,9 @@ GaussianSplats::GaussianSplats(InputArray splats_)
 
     // Only the positions are kept on the CPU, for the depth sort.
     this->pos = src.colRange(0, 3).clone();
+    Scalar mean_pos = mean(this->pos.reshape(3));
+    this->center = Vec3f(static_cast<float>(mean_pos[0]), static_cast<float>(mean_pos[1]),
+                         static_cast<float>(mean_pos[2]));
 
     Mat packed(this->count * 4, 1, CV_32FC4, Scalar::all(0.0));
     Vec4f* texel = packed.ptr<Vec4f>(0);
@@ -1616,13 +1631,12 @@ GaussianSplats::GaussianSplats(InputArray splats_)
     });
 
     this->sorted = false;
-    this->last_cam = Vec3f::all(0.0f);
-    this->last_model = Matx44f::eye();
+    this->last_mv = Matx44f::eye();
 }
 
-void GaussianSplats::reorder(const Vec3f& cam)
+void GaussianSplats::reorder(const Matx44f& mv)
 {
-    splat::sortByDepth(this->pos, cam, this->order_cpu);
+    splat::sortByDepth(this->pos, splat::depthColumn(mv), this->order_cpu);
     this->order.copyFrom(Mat(this->count, 1, CV_32S, this->order_cpu.data()), ogl::Buffer::TEXTURE_BUFFER);
 }
 
@@ -1630,19 +1644,15 @@ void GaussianSplats::draw(const View& view, const Light& light)
 {
     CV_UNUSED(light);
 
-    Vec3f cam = view.getPosition();
     Matx44f model_ = this->getModel();
 
-    if (!this->sorted || norm(cam - this->last_cam) > 1e-6 ||
-        norm(model_ - this->last_model) > 0.0)
+    // Depth depends on the view direction as well as the camera position, so the sort is
+    // keyed on the whole model-view matrix, the same one the shader projects with.
+    Matx44f mv = model_ * view.getView();
+    if (!this->sorted || norm(mv - this->last_mv) > 0.0)
     {
-        // The shader applies model, so sort against the camera in object space.
-        Matx<float, 1, 4> world(cam[0], cam[1], cam[2], 1.0f);
-        Matx<float, 1, 4> local = world * model_.inv();
-
-        this->reorder(Vec3f(local(0, 0), local(0, 1), local(0, 2)));
-        this->last_cam = cam;
-        this->last_model = model_;
+        this->reorder(mv);
+        this->last_mv = mv;
         this->sorted = true;
     }
 

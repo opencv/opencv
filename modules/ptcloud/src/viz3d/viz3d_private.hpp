@@ -85,6 +85,8 @@ public:
 
     // Alpha-blended objects must be drawn after all opaque ones. See Window::draw.
     virtual bool isTransparent() const { return false; }
+    // Point in object space by which transparent objects are ordered against each other.
+    virtual Vec3f getCenter() const { return Vec3f::all(0.0f); }
 
     inline Matx44f getModel() const { return this->model; }
 
@@ -223,9 +225,10 @@ public:
     virtual void setShader(ogl::Program program) override;
 
     virtual bool isTransparent() const override { return true; }
+    virtual Vec3f getCenter() const override { return this->center; }
 
 private:
-    void reorder(const Vec3f& cam);
+    void reorder(const Matx44f& mv);
 
     ogl::Program program;
     ogl::VertexArray va;
@@ -238,8 +241,8 @@ private:
 
     Mat pos;
     std::vector<int> order_cpu;
-    Vec3f last_cam;
-    Matx44f last_model;
+    Vec3f center;
+    Matx44f last_mv;
     bool sorted;
     int count;
 

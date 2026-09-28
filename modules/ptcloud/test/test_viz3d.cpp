@@ -124,8 +124,9 @@ TEST(Splat, sort_far_to_near)
     for (int i = 0; i < 4; i++)
         pos.ptr<float>(i)[0] = xs[i];
 
+    // Depth taken along +x.
     std::vector<int> order;
-    splat::sortByDepth(pos, Vec3f(0.f, 0.f, 0.f), order);
+    splat::sortByDepth(pos, Vec4f(1.f, 0.f, 0.f, 0.f), order);
 
     ASSERT_EQ(order.size(), (size_t)4);
     EXPECT_EQ(order[0], 1);
@@ -139,6 +140,48 @@ TEST(Splat, sort_far_to_near)
         float cur = pos.ptr<float>(order[i])[0];
         EXPECT_GE(prev, cur);
     }
+}
+
+// A point far off to the side is further from the camera but shallower in depth.
+// Sorting must follow depth, as the reference 3DGS rasterizer does, not distance.
+TEST(Splat, sort_by_view_depth_not_distance)
+{
+    const float data[] = {
+         0.f, 0.f, 5.f,   // on axis: distance 5, depth 5
+        10.f, 0.f, 4.f    // off axis: distance ~10.8, depth 4
+    };
+    Mat pos(2, 3, CV_32F, (void*)data);
+
+    std::vector<int> order;
+    splat::sortByDepth(pos, splat::depthColumn(Matx44f::eye()), order);
+
+    ASSERT_EQ(order.size(), (size_t)2);
+    EXPECT_EQ(order[0], 0);
+    EXPECT_EQ(order[1], 1);
+}
+
+// depthColumn must reproduce the camera-space z the shaders get from vec4(p, 1) * model * view.
+TEST(Splat, depth_column_matches_row_vector_transform)
+{
+    // A camera at (1, 2, -3) looking along +z: view rows as View::lookAt builds them.
+    const Vec3f eye(1.f, 2.f, -3.f);
+    const Vec3f s(1.f, 0.f, 0.f), u(0.f, 1.f, 0.f), f(0.f, 0.f, 1.f);
+    Matx44f view(s(0), u(0), f(0), 0.f,
+                 s(1), u(1), f(1), 0.f,
+                 s(2), u(2), f(2), 0.f,
+                 -s.dot(eye), -u.dot(eye), -f.dot(eye), 1.f);
+
+    // A model that moves the object by (0, 0, 2).
+    Matx44f model = Matx44f::eye();
+    model(3, 2) = 2.f;
+
+    const Matx44f mv = model * view;
+    const float p[] = { 4.f, -1.f, 7.f };
+    Matx<float, 1, 4> cam = Matx<float, 1, 4>(p[0], p[1], p[2], 1.f) * mv;
+
+    // Object z 7, moved to 9 in the world, 12 in front of a camera at z = -3.
+    EXPECT_NEAR(cam(0, 2), 12.f, 1e-5f);
+    EXPECT_NEAR(splat::viewDepth(splat::depthColumn(mv), p), cam(0, 2), 1e-5f);
 }
 
 // Writes a minimal 3DGS PLY. Properties are deliberately out of order and an

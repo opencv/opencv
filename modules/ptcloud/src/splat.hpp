@@ -60,8 +60,22 @@ inline Matx33f covariance(const Vec3f& scale, const Vec4f& rot)
     return rs * rs.t();
 }
 
+// Column of a model-view matrix that gives camera-space z of a point, for the row vector
+// convention the viz3d shaders use: z = p * depth_col.xyz + depth_col.w.
+inline Vec4f depthColumn(const Matx44f& mv)
+{
+    return Vec4f(mv(0, 2), mv(1, 2), mv(2, 2), mv(3, 2));
+}
+
+inline float viewDepth(const Vec4f& depth_col, const float* p)
+{
+    return p[0] * depth_col[0] + p[1] * depth_col[1] + p[2] * depth_col[2] + depth_col[3];
+}
+
 // Back to front order of the rows of a Nx3 position matrix, as alpha blending needs.
-inline void sortByDepth(const Mat& pos, const Vec3f& cam, std::vector<int>& order)
+// Sorts by camera-space depth, the order the reference 3DGS rasterizer composites in,
+// so trained scenes blend the way they were optimized.
+inline void sortByDepth(const Mat& pos, const Vec4f& depth_col, std::vector<int>& order)
 {
     CV_Assert(pos.type() == CV_32F && pos.cols == 3);
 
@@ -72,11 +86,7 @@ inline void sortByDepth(const Mat& pos, const Vec3f& cam, std::vector<int>& orde
     parallel_for_(Range(0, n), [&](const Range& range)
     {
         for (int i = range.start; i < range.end; i++)
-        {
-            const float* p = pos.ptr<float>(i);
-            Vec3f d(p[0] - cam[0], p[1] - cam[1], p[2] - cam[2]);
-            k[i] = d.dot(d);
-        }
+            k[i] = viewDepth(depth_col, pos.ptr<float>(i));
     });
 
     order.resize(n);
