@@ -4,6 +4,7 @@
 
 #include <fftw3.h>
 #include <cblas.h>
+#include <lapacke.h>
 #include <algorithm>
 #include <complex>
 #include <cstring>
