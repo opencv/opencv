@@ -1545,6 +1545,62 @@ TEST(Resize, nearest_regression_15075)
     EXPECT_EQ(C, cvtest::norm(dst, NORM_L1)) << src.size;
 }
 
+// Horizontal upscaling of 8UC1 (fx > 1) exercises the carotene NEON path
+// (downsample_bilinear_8uc1, wr < 1) on ARM. The leftmost output column used
+// to extrapolate because the negative sample coordinate produced an
+// out-of-range interpolation weight. Compare against a double-precision
+// bilinear reference; the first column must match like any other.
+// Uses sizes where sw*fx is integral so only the horizontal-upscale path is
+// under test (no dsize-rounding effects). On non-ARM builds this simply
+// verifies the scalar path stays correct.
+TEST(Resize, horizontal_upscale_left_edge_regression)
+{
+    RNG& rng = theRNG();
+    const struct { int sw, sh; double fx, fy; } cases[] = {
+        { 100, 100, 1.5, 0.5 },
+        { 200, 100, 1.5, 0.5 },
+        {  64,  64, 1.5, 1.0 },
+        { 128,  96, 2.0, 0.5 },
+    };
+
+    for (const auto& c : cases)
+    {
+        SCOPED_TRACE(cv::format("%dx%d fx=%.1f fy=%.1f", c.sw, c.sh, c.fx, c.fy));
+        Mat src(c.sh, c.sw, CV_8UC1);
+        rng.fill(src, RNG::UNIFORM, 0, 256);
+
+        Mat dst;
+        cv::resize(src, dst, Size(), c.fx, c.fy, INTER_LINEAR);
+
+        const double rx = (double)dst.cols / c.sw, ry = (double)dst.rows / c.sh;
+        double maxdiff = 0;
+        for (int dy = 0; dy < dst.rows; dy++)
+        {
+            double sy = (dy + 0.5) / ry - 0.5;
+            int y0 = cvFloor(sy); double v = sy - y0;
+            if (y0 < 0) { y0 = 0; v = 0; }
+            if (y0 >= c.sh) { y0 = c.sh - 1; v = 0; }
+            int y1 = std::min(y0 + 1, c.sh - 1);
+            for (int dx = 0; dx < dst.cols; dx++)
+            {
+                double sx = (dx + 0.5) / rx - 0.5;
+                int x0 = cvFloor(sx); double u = sx - x0;
+                if (x0 < 0) { x0 = 0; u = 0; }
+                if (x0 >= c.sw) { x0 = c.sw - 1; u = 0; }
+                int x1 = std::min(x0 + 1, c.sw - 1);
+                double ref = (1 - u) * (1 - v) * src.at<uchar>(y0, x0)
+                           + u * (1 - v) * src.at<uchar>(y0, x1)
+                           + (1 - u) * v * src.at<uchar>(y1, x0)
+                           + u * v * src.at<uchar>(y1, x1);
+                maxdiff = std::max(maxdiff, std::abs(ref - dst.at<uchar>(dy, dx)));
+            }
+        }
+        // Allow small fixed-point rounding differences; the pre-fix carotene
+        // bug produced first-column errors of ~100+.
+        EXPECT_LE(maxdiff, 3.0);
+    }
+}
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
