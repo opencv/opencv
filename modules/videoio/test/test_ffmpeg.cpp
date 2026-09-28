@@ -1191,7 +1191,7 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
 static void generateEncoderFrames(std::vector<Mat>& frames, Size size, int count, bool staticBackground = false)
 {
     frames.clear();
-    RNG rng(12345);
+    RNG& rng = theRNG();
     Mat background(size, CV_8UC3);
     rng.fill(background, RNG::UNIFORM, 0, 255);
     for (int i = 0; i < count; i++)

@@ -450,7 +450,11 @@ static void apply_encoder_properties(const GValue* item, gpointer request)
         else
         {
             if (strcmp(props->factory, "x264enc") == 0)
+            {
                 set_gst_property_if_supported(element, "pass", 5);
+                // x264enc caps constant quality mode at its 'bitrate' (2048 kbps by default), disable that cap
+                set_gst_property_if_supported(element, "vbv-buf-capacity", 0);
+            }
             else if (strncmp(props->factory, "vp", 2) == 0)
                 set_gst_property_if_supported(element, "end-usage", 2);
             applied = set_gst_property_if_supported(element, props->crf, req->crf);

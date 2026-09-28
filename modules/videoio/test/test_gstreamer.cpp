@@ -244,9 +244,10 @@ static bool gstEncoderAvailable(const std::string& encoder)
     return ok;
 }
 
-static void writeGstFrames(VideoWriter& writer, Size size, int count, bool staticBackground)
+static void generateGstFrames(std::vector<Mat>& frames, Size size, int count, bool staticBackground = false)
 {
-    RNG rng(12345);
+    frames.clear();
+    RNG& rng = theRNG();
     Mat background(size, CV_8UC3);
     rng.fill(background, RNG::UNIFORM, 0, 255);
     for (int i = 0; i < count; i++)
@@ -257,8 +258,14 @@ static void writeGstFrames(VideoWriter& writer, Size size, int count, bool stati
         else
             rng.fill(frame, RNG::UNIFORM, 0, 255);
         circle(frame, Point((i * 13) % size.width, (i * 7) % size.height), 40, Scalar::all(255), -1);
-        writer.write(frame);
+        frames.push_back(frame);
     }
+}
+
+static void writeGstFrames(VideoWriter& writer, const std::vector<Mat>& frames)
+{
+    for (size_t i = 0; i < frames.size(); i++)
+        writer.write(frames[i]);
 }
 
 static long fileSize(const std::string& file)
@@ -267,16 +274,15 @@ static long fileSize(const std::string& file)
     return fs ? (long)fs.tellg() : -1;
 }
 
-static long writeWithGstEncoderParams(const std::string& file, const std::vector<int>& params, int count,
-                                      bool staticBackground = false, double* readBack = NULL, int prop = -1)
+static long writeWithGstEncoderParams(const std::string& file, const std::vector<int>& params,
+                                      const std::vector<Mat>& frames, double* readBack = NULL, int prop = -1)
 {
-    const Size size(320, 240);
     VideoWriter writer;
-    if (!writer.open(gstEncoderPipeline("x264enc", file), CAP_GSTREAMER, 0, 25, size, params))
+    if (!writer.open(gstEncoderPipeline("x264enc", file), CAP_GSTREAMER, 0, 25, frames[0].size(), params))
         return -1;
     if (readBack && prop >= 0)
         *readBack = writer.get(prop);
-    writeGstFrames(writer, size, count, staticBackground);
+    writeGstFrames(writer, frames);
     writer.release();
     return fileSize(file);
 }
@@ -308,12 +314,15 @@ TEST(videoio_gstreamer_encoder_props, bitrate_changes_size)
     if (!gstEncoderAvailable("x264enc"))
         throw SkipTestException("x264enc is not available");
 
+    std::vector<Mat> frames;
+    generateGstFrames(frames, Size(320, 240), 30);
+
     const string lowFile = cv::tempfile(".mkv");
     const string highFile = cv::tempfile(".mkv");
     double readBack = -1;
-    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_BITRATE, 200000}, 30,
-                                                   false, &readBack, VIDEOWRITER_PROP_BITRATE);
-    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_BITRATE, 4000000}, 30);
+    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_BITRATE, 200000}, frames,
+                                                   &readBack, VIDEOWRITER_PROP_BITRATE);
+    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_BITRATE, 4000000}, frames);
     ASSERT_GT(lowSize, 0);
     ASSERT_GT(highSize, 0);
     EXPECT_EQ(200000, (int)readBack);
@@ -329,12 +338,15 @@ TEST(videoio_gstreamer_encoder_props, crf_changes_size)
     if (!gstEncoderAvailable("x264enc"))
         throw SkipTestException("x264enc is not available");
 
+    std::vector<Mat> frames;
+    generateGstFrames(frames, Size(320, 240), 30);
+
     const string lowFile = cv::tempfile(".mkv");
     const string highFile = cv::tempfile(".mkv");
     double readBack = -1;
-    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_CRF, 18}, 30,
-                                                   false, &readBack, VIDEOWRITER_PROP_CRF);
-    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_CRF, 40}, 30);
+    const long lowSize = writeWithGstEncoderParams(lowFile, {VIDEOWRITER_PROP_CRF, 18}, frames,
+                                                   &readBack, VIDEOWRITER_PROP_CRF);
+    const long highSize = writeWithGstEncoderParams(highFile, {VIDEOWRITER_PROP_CRF, 40}, frames);
     ASSERT_GT(lowSize, 0);
     ASSERT_GT(highSize, 0);
     EXPECT_EQ(18, (int)readBack);
@@ -352,12 +364,15 @@ TEST(videoio_gstreamer_encoder_props, gop_limits_key_frame_interval)
     if (!gstEncoderAvailable("x264enc"))
         throw SkipTestException("x264enc is not available");
 
+    std::vector<Mat> frames;
+    generateGstFrames(frames, Size(320, 240), 30, true);
+
     const string defaultFile = cv::tempfile(".mkv");
     const string gopFile = cv::tempfile(".mkv");
     double readBack = -1;
-    ASSERT_GT(writeWithGstEncoderParams(defaultFile, std::vector<int>(), 30, true), 0);
-    ASSERT_GT(writeWithGstEncoderParams(gopFile, {VIDEOWRITER_PROP_GOP_SIZE, 5}, 30,
-                                        true, &readBack, VIDEOWRITER_PROP_GOP_SIZE), 0);
+    ASSERT_GT(writeWithGstEncoderParams(defaultFile, std::vector<int>(), frames), 0);
+    ASSERT_GT(writeWithGstEncoderParams(gopFile, {VIDEOWRITER_PROP_GOP_SIZE, 5}, frames,
+                                        &readBack, VIDEOWRITER_PROP_GOP_SIZE), 0);
     EXPECT_EQ(5, (int)readBack);
     EXPECT_GT(maxKeyFrameGap(defaultFile), 5);
     const int gap = maxKeyFrameGap(gopFile);
@@ -374,10 +389,13 @@ TEST(videoio_gstreamer_encoder_props, preset_round_trip)
     if (!gstEncoderAvailable("x264enc"))
         throw SkipTestException("x264enc is not available");
 
+    std::vector<Mat> frames;
+    generateGstFrames(frames, Size(320, 240), 20);
+
     const string file = cv::tempfile(".mkv");
     double readBack = -1;
-    ASSERT_GT(writeWithGstEncoderParams(file, {VIDEOWRITER_PROP_PRESET, VIDEOWRITER_PRESET_ULTRAFAST}, 20,
-                                        false, &readBack, VIDEOWRITER_PROP_PRESET), 0);
+    ASSERT_GT(writeWithGstEncoderParams(file, {VIDEOWRITER_PROP_PRESET, VIDEOWRITER_PRESET_ULTRAFAST}, frames,
+                                        &readBack, VIDEOWRITER_PROP_PRESET), 0);
     EXPECT_EQ(VIDEOWRITER_PRESET_ULTRAFAST, (int)readBack);
     remove(file.c_str());
 }
@@ -403,10 +421,13 @@ TEST(videoio_gstreamer_encoder_props, fourcc_path_encodes)
 
     const Size size(320, 240);
     const int count = 20;
+    std::vector<Mat> frames;
+    generateGstFrames(frames, size, count, true);
+
     const string file = cv::tempfile(".mkv");
     VideoWriter writer;
     ASSERT_TRUE(writer.open(file, CAP_GSTREAMER, VideoWriter::fourcc('X', '2', '6', '4'), 25, size));
-    writeGstFrames(writer, size, count, true);
+    writeGstFrames(writer, frames);
     writer.release();
 
     const long rawSize = (long)size.area() * 3 / 2 * count;
@@ -419,7 +440,7 @@ TEST(videoio_gstreamer_encoder_props, fourcc_path_encodes)
     VideoWriter nv12Writer;
     ASSERT_TRUE(nv12Writer.open(nv12File, CAP_GSTREAMER, VideoWriter::fourcc('X', '2', '6', '4'), 25, size,
                                 {VIDEOWRITER_PROP_COLOR_SPACE, VideoWriter::fourcc('N', 'V', '1', '2')}));
-    writeGstFrames(nv12Writer, size, count, true);
+    writeGstFrames(nv12Writer, frames);
     nv12Writer.release();
     const long nv12Size = fileSize(nv12File);
     ASSERT_GT(nv12Size, 0);
