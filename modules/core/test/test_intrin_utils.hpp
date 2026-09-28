@@ -1028,6 +1028,36 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // v_select() on its own. test_mask() also covers it, but its v_signmask() expectations assume
+    // more than two lanes, so the 64-bit types cannot use it.
+    TheTest & test_select()
+    {
+        typedef typename V_RegTraits<R>::int_reg int_reg;
+        typedef typename V_RegTraits<int_reg>::u_reg uint_reg;
+        typedef typename VTraits<int_reg>::lane_type int_type;
+        typedef typename VTraits<uint_reg>::lane_type uint_type;
+
+        union { LaneType l; uint_type ui; } all1s;
+        all1s.ui = (uint_type)-1;
+        const LaneType mask_one = all1s.l;
+
+        Data<R> dataMask((LaneType)0), dataA((LaneType)1), dataB((LaneType)2);
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 2)
+            dataMask[i] = mask_one;
+        dataMask[VTraits<R>::vlanes() - 1] = mask_one;
+
+        R m = dataMask, a = dataA, b = dataB;
+        Data<R> res = v_select(m, a, b);
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            int_type msk = dataMask.as_int(i);
+            EXPECT_EQ((dataA.as_int(i) & msk) | (dataB.as_int(i) & ~msk), res.as_int(i));
+        }
+
+        return *this;
+    }
+
     TheTest & test_mask()
     {
         typedef typename V_RegTraits<R>::int_reg int_reg;
@@ -2449,6 +2479,7 @@ void test_hal_intrin_uint64()
         .test_loadstore()
         .test_addsub()
         .test_cmp64()
+        .test_select()
         //.test_cmp() - not declared as supported
         .test_shift<1>().test_shift<8>()
         .test_logic()
@@ -2469,6 +2500,7 @@ void test_hal_intrin_int64()
         .test_loadstore()
         .test_addsub()
         .test_cmp64()
+        .test_select()
         //.test_cmp() - not declared as supported
         .test_shift<1>().test_shift<8>()
         .test_logic()
