@@ -844,6 +844,76 @@ void instancesFromSample(const Mat& det, const Mat& proto, const AnchorFreeLayou
     }
 }
 
+std::vector<Size> frameSizesOf(const std::vector<Mat>& images)
+{
+    std::vector<Size> sizes(images.size());
+    for (size_t i = 0; i < images.size(); i++)
+        sizes[i] = images[i].size();
+    return sizes;
+}
+
+// Poses of every sample, appended in sample order. frameIds may be null.
+void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const Size& blobSize,
+                     ImagePaddingMode paddingMode, float confThreshold, float nmsThreshold,
+                     std::vector<std::vector<Point3f> >& keypoints, std::vector<Rect>& boxes,
+                     std::vector<float>& confidences, std::vector<int>* frameIds)
+{
+    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
+    CV_CheckEQ(layout.B, (int)frameSizes.size(),
+               "estimatePoses: the net returned a different number of samples");
+    const int detWidth = poseDetWidth(out, layout);
+    const int numKeypoints = poseKeypointCount(layout, detWidth);
+    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints);
+
+    keypoints.clear();
+    boxes.clear();
+    confidences.clear();
+    if (frameIds)
+        frameIds->clear();
+
+    for (int b = 0; b < layout.B; b++)
+    {
+        // Keypoints map back through the size of the frame that sample came from, not a shared one.
+        const size_t before = boxes.size();
+        posesFromSample(out, layout, head, b, detWidth, numKeypoints, blobSize, paddingMode,
+                        frameSizes[b], confThreshold, nmsThreshold, keypoints, boxes, confidences);
+        if (frameIds)
+            frameIds->insert(frameIds->end(), boxes.size() - before, b);
+    }
+}
+
+// Instances of every sample, appended in sample order. frameIds may be null.
+void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Size>& frameSizes,
+                          const Size& blobSize, ImagePaddingMode paddingMode, float confThreshold,
+                          float nmsThreshold, std::vector<Mat>& masks, std::vector<int>& classIds,
+                          std::vector<float>& confidences, std::vector<Rect>& boxes,
+                          std::vector<int>* frameIds)
+{
+    AnchorFreeLayout layout = AnchorFreeLayout::from(det);
+    CV_CheckEQ(layout.B, (int)frameSizes.size(),
+               "segmentInstances: the net returned a different number of samples");
+    CV_CheckEQ(proto.size[0], (int)frameSizes.size(),
+               "segmentInstances: the prototypes hold a different number of samples");
+    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1]);
+
+    masks.clear();
+    classIds.clear();
+    confidences.clear();
+    boxes.clear();
+    if (frameIds)
+        frameIds->clear();
+
+    for (int b = 0; b < layout.B; b++)
+    {
+        // Masks and boxes map back through the size of the frame that sample came from.
+        const size_t before = boxes.size();
+        instancesFromSample(det, proto, layout, head, b, blobSize, paddingMode, frameSizes[b],
+                            confThreshold, nmsThreshold, masks, classIds, confidences, boxes);
+        if (frameIds)
+            frameIds->insert(frameIds->end(), boxes.size() - before, b);
+    }
+}
+
 // InputArrayOfArrays is InputArray, so a single Mat reaches the batched overloads and
 // getMatVector would split it into rows.
 void getBatchFrames(InputArrayOfArrays frames, std::vector<Mat>& images)
@@ -943,19 +1013,8 @@ void KeypointsModel::estimatePoses(InputArray frame, CV_OUT std::vector<std::vec
     impl->processFrame(frame, outs);
     CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
 
-    const Mat& out = outs[0];
-    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
-
-    const int detWidth = poseDetWidth(out, layout);
-    const int numKeypoints = poseKeypointCount(layout, detWidth);
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints);
-
-    keypoints.clear();
-    boxes.clear();
-    confidences.clear();
-    posesFromSample(out, layout, head, /*b=*/0, detWidth, numKeypoints, impl->size,
-                    impl->paddingMode, frame.size(), confThreshold, nmsThreshold,
-                    keypoints, boxes, confidences);
+    posesFromOutput(outs[0], {frame.size()}, impl->size, impl->paddingMode, confThreshold,
+                    nmsThreshold, keypoints, boxes, confidences, /*frameIds=*/nullptr);
 }
 
 void KeypointsModel::estimatePoses(InputArrayOfArrays frames,
@@ -972,27 +1031,8 @@ void KeypointsModel::estimatePoses(InputArrayOfArrays frames,
     impl->processFrame(frames, outs);
     CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
 
-    const Mat& out = outs[0];
-    AnchorFreeLayout layout = AnchorFreeLayout::from(out);
-    CV_CheckEQ(layout.B, (int)images.size(),
-               "batched estimatePoses: the net returned a different number of samples");
-    const int detWidth = poseDetWidth(out, layout);
-    const int numKeypoints = poseKeypointCount(layout, detWidth);
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints);
-
-    keypoints.clear();
-    boxes.clear();
-    confidences.clear();
-    frameIds.clear();
-    for (int b = 0; b < layout.B; b++)
-    {
-        // Keypoints map back through the size of the frame that sample came from, not a shared one.
-        const size_t before = boxes.size();
-        posesFromSample(out, layout, head, b, detWidth, numKeypoints, impl->size,
-                        impl->paddingMode, images[b].size(), confThreshold, nmsThreshold,
-                        keypoints, boxes, confidences);
-        frameIds.insert(frameIds.end(), boxes.size() - before, b);
-    }
+    posesFromOutput(outs[0], frameSizesOf(images), impl->size, impl->paddingMode, confThreshold,
+                    nmsThreshold, keypoints, boxes, confidences, &frameIds);
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
@@ -1081,16 +1121,10 @@ void SegmentationModel::segmentInstances(InputArray frame, CV_OUT std::vector<Ma
     const Mat* det = nullptr;
     const Mat* proto = nullptr;
     splitSegOutputs(outs, det, proto);
-    AnchorFreeLayout layout = AnchorFreeLayout::from(*det);
-    const HeadLayout head = HeadLayout::from(*det, layout, /*nm=*/proto->size[1]);
 
-    masks.clear();
-    classIds.clear();
-    confidences.clear();
-    boxes.clear();
-    instancesFromSample(*det, *proto, layout, head, /*b=*/0, impl->size,
-                        impl->paddingMode, frame.size(), confThreshold, nmsThreshold,
-                        masks, classIds, confidences, boxes);
+    instancesFromOutputs(*det, *proto, {frame.size()}, impl->size, impl->paddingMode,
+                         confThreshold, nmsThreshold, masks, classIds, confidences, boxes,
+                         /*frameIds=*/nullptr);
 }
 
 void SegmentationModel::segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
@@ -1112,27 +1146,10 @@ void SegmentationModel::segmentInstances(InputArrayOfArrays frames, CV_OUT std::
     const Mat* det = nullptr;
     const Mat* proto = nullptr;
     splitSegOutputs(outs, det, proto);
-    AnchorFreeLayout layout = AnchorFreeLayout::from(*det);
-    CV_CheckEQ(layout.B, (int)images.size(),
-               "batched segmentInstances: the net returned a different number of samples");
-    CV_CheckEQ(proto->size[0], (int)images.size(),
-               "batched segmentInstances: the prototypes hold a different number of samples");
-    const HeadLayout head = HeadLayout::from(*det, layout, /*nm=*/proto->size[1]);
 
-    masks.clear();
-    classIds.clear();
-    confidences.clear();
-    boxes.clear();
-    frameIds.clear();
-    for (int b = 0; b < layout.B; b++)
-    {
-        // Masks and boxes map back through the size of the frame that sample came from.
-        const size_t before = boxes.size();
-        instancesFromSample(*det, *proto, layout, head, b, impl->size,
-                            impl->paddingMode, images[b].size(), confThreshold, nmsThreshold,
-                            masks, classIds, confidences, boxes);
-        frameIds.insert(frameIds.end(), boxes.size() - before, b);
-    }
+    instancesFromOutputs(*det, *proto, frameSizesOf(images), impl->size, impl->paddingMode,
+                         confThreshold, nmsThreshold, masks, classIds, confidences, boxes,
+                         &frameIds);
 }
 
 class DetectionModel_Impl : public Model::Impl
