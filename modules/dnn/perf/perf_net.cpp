@@ -22,6 +22,7 @@ public:
     dnn::Target target;
 
     dnn::Net net;
+    std::string pinnedInput;
 
     DNNTestNetwork()
     {
@@ -35,6 +36,8 @@ public:
         if (!proto.empty())
             proto = findDataFile(proto);
         net = readNet(weights, proto);
+        if (!pinnedInput.empty())
+            net.setInputShape(pinnedInput, shape(std::get<0>(inputs[0])));
         // Set multiple inputs
         for(auto &inp: inputs){
             net.setInput(std::get<0>(inp), std::get<1>(inp));
@@ -435,11 +438,13 @@ PERF_TEST_P_(DNNTestNetwork, BERT)
 PERF_TEST_P_(DNNTestNetwork, VIT_Base_Patch16_224)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    pinnedInput = "x";
     processNet("dnn/vit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, DeiT_Tiny_Patch16_224)
 {
+    pinnedInput = "x";
     processNet("dnn/deit_tiny_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 

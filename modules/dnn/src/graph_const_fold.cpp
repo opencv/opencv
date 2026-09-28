@@ -25,8 +25,6 @@ struct ConstFolding
     std::vector<int> usecounts;
     std::vector<MatShape> knownShapes;
     std::vector<int> knownTypes;
-    std::vector<char> shapeKnown;
-    bool shapeFolded = false;
 
     ConstFolding(Net::Impl* netimpl_) : netimpl(netimpl_) {}
 
@@ -34,7 +32,6 @@ struct ConstFolding
     {
         knownShapes[arg.idx] = shape;
         knownTypes[arg.idx] = type;
-        shapeKnown[arg.idx] = 1;
     }
 
     void process()
@@ -44,23 +41,21 @@ struct ConstFolding
         netimpl->useCounts(usecounts);
         knownShapes.assign(nargs, MatShape());
         knownTypes.assign(nargs, -1);
-        shapeKnown.assign(nargs, 0);
         const std::vector<Arg>& graphInputs = netimpl->mainGraph->inputs();
-        std::vector<MatShape> seeded(graphInputs.size());
         for (size_t i = 0; i < graphInputs.size(); i++) {
+            if (i >= netimpl->pinnedInputShapes.size() || !isConcreteShape(netimpl->pinnedInputShapes[i]))
+                continue;
+            const MatShape& pinned = netimpl->pinnedInputShapes[i];
             Arg inp = graphInputs[i];
             const ArgData& adata = netimpl->args.at(inp.idx);
-            if (adata.type < 0 || !isConcreteShape(adata.shape))
+            if (adata.type < 0)
                 continue;
             const Mat& t = netimpl->argTensor(inp);
-            if (!t.empty() && t.shape() != adata.shape)
+            if (!t.empty() && t.shape() != pinned)
                 continue;
-            setKnown(inp, adata.shape, t.empty() ? adata.type : t.type());
-            seeded[i] = adata.shape;
+            setKnown(inp, pinned, t.empty() ? adata.type : t.type());
         }
         processGraph(netimpl->mainGraph);
-        if (shapeFolded)
-            netimpl->foldedInputShapes = seeded;
         netimpl->scratchBufs.clear();
     }
 
@@ -74,6 +69,7 @@ struct ConstFolding
             layer->getMemoryShapes(inpShapes, (int)outputs.size(), outShapes, tempShapes);
             layer->getTypes(inpTypes, (int)outputs.size(), (int)tempShapes.size(), outTypes, tempTypes);
         } catch (const cv::Exception& e) {
+            CV_UNUSED(e);
             CV_LOG_DEBUG(NULL, "DNN/ConstFold: shape inference failed for layer '" << layer->name
                          << "' (" << layer->type << "): " << e.msg);
             return;
@@ -143,7 +139,7 @@ struct ConstFolding
                     const Mat& m = netimpl->argTensor(inp);
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
-                } else if (shapeKnown[inp.idx]) {
+                } else if (knownTypes[inp.idx] >= 0) {
                     inpTypes[j] = knownTypes[inp.idx];
                     inpShapes[j] = knownShapes[inp.idx];
                 } else {
@@ -182,8 +178,6 @@ struct ConstFolding
                     if (out.idx > 0)
                         setKnown(out, m.shape(), m.type());
                 }
-                if (fold_shape)
-                    shapeFolded = true;
 
                 modified = true;
                 for (size_t i = 0; i < ninputs; i++)

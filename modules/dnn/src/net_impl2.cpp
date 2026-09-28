@@ -1274,13 +1274,12 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
     Arg inp = gr_inputs[idx];
     const ArgData& adata = args.at(inp.idx);
-    if (graph == mainGraph && idx < foldedInputShapes.size() &&
-        !foldedInputShapes[idx].empty() && mshape != foldedInputShapes[idx])
+    if (graph == mainGraph && idx < pinnedInputShapes.size() &&
+        !pinnedInputShapes[idx].empty() && mshape != pinnedInputShapes[idx])
     {
-        CV_Error_(Error::StsBadArg, ("input '%s' has shape %s, but the model declares the static shape %s "
-                                     "and shape-dependent constants were folded for it",
+        CV_Error_(Error::StsBadArg, ("input '%s' has shape %s, but setInputShape() pinned it to %s",
                                      adata.name.c_str(), mshape.str().c_str(),
-                                     foldedInputShapes[idx].str().c_str()));
+                                     pinnedInputShapes[idx].str().c_str()));
     }
     /*
      [TODO] add more detailed shape check
