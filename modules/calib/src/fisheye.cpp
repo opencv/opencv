@@ -49,7 +49,47 @@ namespace {
 
 void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows);
 
+double reciprocalConditionNumber(const Mat& singularValues)
+{
+    const double largest = singularValues.at<double>(0);
+    if (std::fpclassify(largest) == FP_ZERO)
+    {
+        return 0;
+    }
+    return singularValues.at<double>(singularValues.rows - 1) / largest;
+}
+
 }}
+
+// The normal matrix consists of the intrinsic block followed by a 6x6 block per
+// view. Being symmetric positive semidefinite, it is singular if and only if a
+// view block or the Schur complement of the view blocks is. The condition
+// numbers of these small blocks never exceed the one of the full matrix.
+bool cv::internal::isNormalMatrixSingular(const Mat& JJ2, int numberOfIntrinsics)
+{
+    constexpr int numberOfExtrinsics = 6;
+    constexpr double epsilon = std::numeric_limits<double>::epsilon();
+    Mat schurComplement =
+        JJ2(Rect(0, 0, numberOfIntrinsics, numberOfIntrinsics)).clone();
+    for (int offset = numberOfIntrinsics; offset < JJ2.rows;
+         offset += numberOfExtrinsics)
+    {
+        const Mat viewBlock =
+            JJ2(Rect(offset, offset, numberOfExtrinsics, numberOfExtrinsics));
+        const SVD viewDecomposition(viewBlock);
+        if (reciprocalConditionNumber(viewDecomposition.w) < epsilon)
+        {
+            return true;
+        }
+        const Mat coupling =
+            JJ2(Rect(offset, 0, numberOfExtrinsics, numberOfIntrinsics));
+        Mat viewSolution;
+        viewDecomposition.backSubst(coupling.t(), viewSolution);
+        schurComplement -= coupling * viewSolution;
+    }
+    const SVD schurDecomposition(schurComplement, SVD::NO_UV);
+    return reciprocalConditionNumber(schurDecomposition.w) < epsilon;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::calibrate
@@ -134,8 +174,21 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
         Mat JJ2, ex3;
         ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond,thresh_cond, JJ2, ex3);
 
+        // Singular normal equations leave the intrinsics unchanged. Detect
+        // them explicitly to behave identically across platforms since the
+        // linear solver only rejects pivots that vanish or fall below an
+        // absolute threshold, which depends on rounding.
+        const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
         Mat G;
-        solve(JJ2, ex3, G);
+        if (numberOfIntrinsics > 0 &&
+            isNormalMatrixSingular(JJ2, numberOfIntrinsics))
+        {
+            G = Mat::zeros(JJ2.rows, 1, CV_64FC1);
+        }
+        else
+        {
+            solve(JJ2, ex3, G);
+        }
         currentParam = finalParam + alpha_smooth2*G;
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -

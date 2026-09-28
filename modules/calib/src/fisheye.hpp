@@ -30,6 +30,8 @@ CV_EXPORTS Mat ComputeHomography(Mat m, Mat M);
 
 CV_EXPORTS Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param);
 
+CV_EXPORTS bool isNormalMatrixSingular(const Mat& JJ2, int numberOfIntrinsics);
+
 void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
 
 void CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,

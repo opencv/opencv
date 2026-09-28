@@ -472,6 +472,69 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
 }
 
 
+TEST_F(fisheyeTest, NormalMatrixSingularity)
+{
+    // The Jacobian consists of the intrinsic columns followed by six pose
+    // columns per view. Each view contributes six rows that depend on the
+    // intrinsics and its own pose only. Additional rows constrain each
+    // intrinsic parameter. Integer entries and unit pose columns keep all
+    // products exact such that the singular cases do not depend on rounding.
+    constexpr int numberOfIntrinsics = 8;
+    constexpr int numberOfExtrinsics = 6;
+    constexpr int numberOfViews = 2;
+    constexpr int couplingModulus = 3;
+    constexpr int couplingOffset = 1;
+    const int numberOfRows = numberOfExtrinsics * numberOfViews + numberOfIntrinsics;
+    const int numberOfColumns = numberOfIntrinsics + numberOfExtrinsics * numberOfViews;
+
+    cv::Mat jacobian = cv::Mat::zeros(numberOfRows, numberOfColumns, CV_64FC1);
+    for (int view = 0; view < numberOfViews; ++view)
+    {
+        for (int pose = 0; pose < numberOfExtrinsics; ++pose)
+        {
+            const int row = numberOfExtrinsics * view + pose;
+            jacobian.at<double>(row, numberOfIntrinsics + row) = 1;
+            for (int intrinsic = 0; intrinsic < numberOfIntrinsics; ++intrinsic)
+            {
+                jacobian.at<double>(row, intrinsic) =
+                    (row + intrinsic) % couplingModulus - couplingOffset;
+            }
+        }
+    }
+    for (int intrinsic = 0; intrinsic < numberOfIntrinsics; ++intrinsic)
+    {
+        jacobian.at<double>(numberOfExtrinsics * numberOfViews + intrinsic,
+                            intrinsic) = 1;
+    }
+
+    const auto normalMatrix = [](const cv::Mat& J) { return cv::Mat(J.t() * J); };
+
+    EXPECT_FALSE(cv::internal::isNormalMatrixSingular(normalMatrix(jacobian),
+                                                      numberOfIntrinsics));
+
+    // A pose parameter without effect makes the view block singular.
+    cv::Mat unidentifiablePose = jacobian.clone();
+    unidentifiablePose.col(numberOfIntrinsics).setTo(0);
+    EXPECT_TRUE(cv::internal::isNormalMatrixSingular(
+        normalMatrix(unidentifiablePose), numberOfIntrinsics));
+
+    // An intrinsic parameter without effect makes the Schur complement
+    // singular.
+    cv::Mat unidentifiableIntrinsic = jacobian.clone();
+    unidentifiableIntrinsic.col(0).setTo(0);
+    EXPECT_TRUE(cv::internal::isNormalMatrixSingular(
+        normalMatrix(unidentifiableIntrinsic), numberOfIntrinsics));
+
+    // An intrinsic parameter confined to the six rows of a single view lies in
+    // the span of its pose columns. Both the intrinsic and the view blocks
+    // remain regular, while the Schur complement is singular.
+    cv::Mat coupledIntrinsic = jacobian.clone();
+    coupledIntrinsic.col(0).rowRange(numberOfExtrinsics, numberOfRows).setTo(0);
+    coupledIntrinsic.at<double>(0, 0) = 1;
+    EXPECT_TRUE(cv::internal::isNormalMatrixSingular(
+        normalMatrix(coupledIntrinsic), numberOfIntrinsics));
+}
+
 TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 {
     const int n_images = 34;
