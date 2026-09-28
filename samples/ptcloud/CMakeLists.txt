@@ -3,6 +3,7 @@ SET(OPENCV_PTCLOUD_SAMPLES_REQUIRED_DEPS
   opencv_imgproc
   opencv_imgcodecs
   opencv_highgui
+  opencv_geometry
   opencv_ptcloud)
 ocv_check_dependencies(${OPENCV_PTCLOUD_SAMPLES_REQUIRED_DEPS})
 

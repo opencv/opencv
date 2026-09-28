@@ -60,5 +60,50 @@ TEST(NormalEstimationTest, PlaneNormalEstimation)
     ASSERT_LE(avg_diff_curvature, curvature_thr);
 }
 
+// nn_idx left empty -> normalEstimate must build the kd-tree internally (k = max_neighbor_num)
+// and produce the same plane normals as when the caller supplies the neighbor indices.
+TEST(NormalEstimationTest, InternalKnnMatchesExternal)
+{
+    Mat plane_pts;
+    vector<float> model({1, 2, 3, 4});
+    int num = 1000;
+    vector<float> limit({5, 55, 5, 55, 0, 0});
+    generatePlane(plane_pts, model, 0.f, num, limit);
+
+    const int k = 10;
+
+    // reference: caller-supplied neighbors
+    Mat knn_idx(num, k, CV_32S);
+    flann::Index tree(plane_pts, flann::KDTreeIndexParams());
+    tree.knnSearch(plane_pts, knn_idx, noArray(), k);
+    vector<Point3f> ref;  vector<float> refCurv;
+    normalEstimate(ref, refCurv, plane_pts, knn_idx, k);
+
+    // new path: nn_idx empty -> built internally
+    vector<Point3f> got;  vector<float> gotCurv;
+    normalEstimate(got, gotCurv, plane_pts, noArray(), k);
+
+    ASSERT_EQ(ref.size(), got.size());
+
+    // The internal-kNN path must reproduce the caller-supplied-neighbor result.
+    for (int i = 0; i < num; ++i)
+    {
+        float denom = std::sqrt(ref[i].dot(ref[i]) * got[i].dot(got[i])) + 1e-12f;
+        EXPECT_NEAR(std::abs(ref[i].dot(got[i])) / denom, 1.f, 1e-3f);   // parallel, up to sign
+    }
+
+    // ...and both must be parallel to the analytic plane normal.
+    Point3f n1(model[0], model[1], model[2]);
+    float n1m = n1.dot(n1);
+    float total_theta = 0.f;
+    for (int i = 0; i < num; ++i)
+    {
+        float cos_theta = n1.dot(got[i]) / std::sqrt(n1m * got[i].dot(got[i]));
+        cos_theta = std::max(-1.f, std::min(1.f, cos_theta));
+        total_theta += std::acos(std::abs(cos_theta));
+    }
+    ASSERT_LE(total_theta / (float)num, 1.f);   // normals parallel to the plane normal
+}
+
 } // namespace
 } // opencv_test
