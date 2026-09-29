@@ -2009,17 +2009,18 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             default_l1 = std::max(default_l1, 3e-5);
         }
-        if (name == "test_gelu_tanh_1") {
-            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
-            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
-        }
-        if (name == "test_gelu_tanh_2") {
-            if (target == DNN_TARGET_OPENCL_FP16) {
-                default_l1 = 0.00016; // Expected: (normL1) <= (l1), actual: 0.000157223 vs 9e-05
-                default_lInf = 0.0016; // Expected: (normInf) <= (lInf), actual: 0.00153041 vs 0.0005
-            } else {
-                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
-                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+        // Gelu(approximate='tanh') now selects the tanh layer (see ONNXImporter2::parseGelu), so
+        // the fp32 targets pass with the default tolerance. The reduced-precision targets keep
+        // the explicit bounds they had, which stay tighter than their (much looser) defaults.
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 ||
+            target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) {
+            if (name == "test_gelu_tanh_1") {
+                default_l1 = 0.00011;
+                default_lInf = 0.00016;
+            }
+            if (name == "test_gelu_tanh_2") {
+                default_l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.00016 : 9e-5;
+                default_lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.0016 : 0.0005;
             }
         }
         if (name == "test_reduce_prod_default_axes_keepdims_random") {

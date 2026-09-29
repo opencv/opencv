@@ -216,6 +216,7 @@ protected:
     void parseGlobalPool           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGRU                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRNN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseImageScaler          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2404,6 +2405,16 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
     addLayer(layerParams, node_proto, n_inputs);
 }
 
+// Gelu(approximate='tanh') is 0.5*x*(1+tanh(sqrt(2/pi)*(x + 0.044715*x^3))), a different
+// function from the exact (erf-based) Gelu it is an approximation of. It has a layer of its
+// own, so route the attribute there instead of computing the exact form.
+void ONNXImporter2::parseGelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    if (layerParams.get<String>("approximate", "none") == "tanh")
+        layerParams.type = "GeluApproximation";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     addLayer(layerParams, node_proto);
@@ -3258,13 +3269,13 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
         "Cosh", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
         "Identity", "Log", "Not", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
-        "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
-        "GeluApproximation"
+        "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "GeluApproximation"
     };
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter2::parseSimpleLayers;
     }
+    dispatch["Gelu"] = &ONNXImporter2::parseGelu;
     dispatch["Dropout"] = &ONNXImporter2::parseDropout;
 
     // BUG: https://github.com/opencv/opencv/issues/26310
