@@ -741,6 +741,11 @@ class SequenceTypeNode(ContainerTypeNode):
         return "_typing.Sequence[{}]"
 
     @property
+    def required_usage_imports(self) -> Generator[str, None, None]:
+        yield "import typing as _typing"
+        yield from super().required_usage_imports
+
+    @property
     def types_separator(self) -> str:
         return ", "
 
@@ -895,6 +900,11 @@ class ClassTypeNode(ContainerTypeNode):
     @property
     def type_format(self) -> str:
         return "_typing.Type[{}]"
+
+    @property
+    def required_usage_imports(self) -> Generator[str, None, None]:
+        yield "import typing as _typing"
+        yield from super().required_usage_imports
 
     @property
     def types_separator(self) -> str:
