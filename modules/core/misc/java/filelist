@@ -1,4 +1,5 @@
 include/opencv2/core/base.hpp
 include/opencv2/core.hpp
+include/opencv2/core/optim.hpp
 include/opencv2/core/utility.hpp
 misc/java/src/cpp/core_manual.hpp
