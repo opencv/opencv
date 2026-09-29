@@ -2279,12 +2279,20 @@ void ONNXImporter2::parseSoftMax(LayerParams& layerParams, const opencv_onnx::No
     }
     const int opset_onnx_ai = onnx_opset_map[str_domain_ai_onnx];
 
-    if (opset_onnx_ai != 0 && opset_onnx_ai <= 11) {
+    // Softmax-13 is the first version that reduces along "axis" alone; up to opset 12 the
+    // spec coerces the input to 2D and reduces over the flattened dims [axis, rank), and
+    // the default axis is 1 rather than -1.  A node fused from an Exp/ReduceSum/Div
+    // subgraph states its own meaning through the attribute added by the simplifier.
+    bool coerced = (opset_onnx_ai != 0 && opset_onnx_ai < 13);
+    if (layerParams.has("coerced_2d"))
+        coerced = layerParams.get<bool>("coerced_2d");
+    if (coerced) {
         axis = layerParams.get<int>("axis", 1);
     } else {
         axis = layerParams.get<int>("axis", -1);
     }
     layerParams.set<int>("axis", axis);
+    layerParams.set("coerced_2d", coerced);
     layerParams.type = "Softmax";
     layerParams.set("log_softmax", layer_type == "LogSoftmax");
     addLayer(layerParams, node_proto);
