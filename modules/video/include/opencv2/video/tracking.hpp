@@ -231,6 +231,8 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
     opencv_source_code/samples/cpp/fback.cpp
 -   (Python) An example using the optical flow algorithm described by Gunnar Farneback can be
     found at opencv_source_code/samples/python/opt_flow.py
+
+@sa FarnebackOpticalFlow::setReuseExpansion
  */
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, InputOutputArray flow,
                                             double pyr_scale, int levels, int winsize,

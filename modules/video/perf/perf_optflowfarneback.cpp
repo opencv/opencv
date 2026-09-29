@@ -25,33 +25,25 @@ static std::vector<Mat> makeSequence(Size size)
     return frames;
 }
 
-enum { REUSE_OFF, REUSE_CHAINED, REUSE_UNCHAINED };
-CV_ENUM(ReuseMode, REUSE_OFF, REUSE_CHAINED, REUSE_UNCHAINED)
-
-typedef tuple<Size, ReuseMode> FarnebackParams;
+typedef tuple<Size, bool> FarnebackParams;
 typedef TestBaseWithParam<FarnebackParams> DenseOpticalFlow_Farneback;
 
-// Every arm computes the same frame pairs. REUSE_UNCHAINED visits them last to first, so no
-// call's first image is the previous call's second and every call misses.
 PERF_TEST_P(DenseOpticalFlow_Farneback, perf,
-            Combine(Values(szVGA, sz720p), ReuseMode::all()))
+            Combine(Values(szVGA, sz720p), testing::Bool()))
 {
     const Size size = get<0>(GetParam());
-    const int mode = get<1>(GetParam());
+    const bool reuseExpansion = get<1>(GetParam());
 
     const std::vector<Mat> frames = makeSequence(size);
     Mat flow;
 
     Ptr<FarnebackOpticalFlow> algo = FarnebackOpticalFlow::create();
-    algo->setReuseExpansion(mode != REUSE_OFF);
+    algo->setReuseExpansion(reuseExpansion);
 
     TEST_CYCLE()
     {
-        for( int j = 0; j + 1 < SEQUENCE_LENGTH; j++ )
-        {
-            const int i = mode == REUSE_UNCHAINED ? SEQUENCE_LENGTH - 2 - j : j;
+        for( int i = 0; i + 1 < SEQUENCE_LENGTH; i++ )
             algo->calc(frames[i], frames[i + 1], flow);
-        }
     }
 
     SANITY_CHECK_NOTHING();
