@@ -150,4 +150,7 @@
 /* The font "uni" (WQY MicroHei) is available */
 #cmakedefine HAVE_UNIFONT
 
+/* Rubik Italic font is compiled into imgproc as the built-in "italic" font */
+#cmakedefine HAVE_ITALICFONT
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED

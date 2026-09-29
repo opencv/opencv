@@ -516,7 +516,12 @@ OCV_OPTION(ENABLE_CUDA_FIRST_CLASS_LANGUAGE "Enable CUDA as a first class langua
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
-OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              (NOT BUILD_opencv_js)
+# Optional built-in fonts. Only the "sans" font (Rubik) is always compiled into imgproc;
+# the others cost ~150 KB (italic) and ~2 MB (uni) of library size and can instead be
+# supplied at run time as external files via cv::FontFace::setBuiltinFont().
+OCV_OPTION(WITH_ITALICFONT            "Build 'italic' font (Rubik Italic) into OpenCV"           OFF
+           VERIFY HAVE_ITALICFONT)
+OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              OFF
            VERIFY HAVE_UNIFONT)
 
 if(ENABLE_IMPL_COLLECTION)
@@ -1452,8 +1457,15 @@ if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
 endif()
 
-if(WITH_UNIFONT OR HAVE_UNIFONT)
-  status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
+if(HAVE_HARFBUZZ)
+  set(_builtin_fonts "sans")
+  if(HAVE_ITALICFONT)
+    set(_builtin_fonts "${_builtin_fonts} italic")
+  endif()
+  if(HAVE_UNIFONT)
+    set(_builtin_fonts "${_builtin_fonts} uni")
+  endif()
+  status("    Built-in fonts:" "${_builtin_fonts}")
 endif()
 
 # ========================== MEDIA IO ==========================

@@ -4312,8 +4312,17 @@ public:
     /** @brief loads default font */
     CV_WRAP FontFace();
     /** @brief loads font at the specified path or with specified name.
-       @param fontPathOrName either path to the custom font or the name of embedded font: "sans", "italic" or "uni".
-          Empty fontPathOrName means the default embedded font.
+       @param fontPathOrName either path to a custom font file (.ttf/.otf, optionally gzip-compressed)
+          or the name of one of the built-in font slots:
+          - "sans": the default font (Rubik, always compiled in);
+          - "italic": Rubik Italic, compiled in only if OpenCV was built with WITH_ITALICFONT=ON;
+            otherwise it can be provided with setBuiltinFont(), and if it is not available,
+            "italic" silently resolves to "sans";
+          - "uni": WenQuanYi Micro Hei (CJK), compiled in only with WITH_UNIFONT=ON; otherwise
+            provide it with setBuiltinFont(), or loading fails.
+          The built-in slots also serve as the fallback chain: characters missing from the
+          user's font are taken from "sans", then "italic", then "uni".
+          Empty fontPathOrName means the default embedded font ("sans").
     */
     CV_WRAP FontFace(const String& fontPathOrName);
 
@@ -4331,6 +4340,23 @@ public:
     */
     CV_WRAP bool setInstance(const std::vector<int>& params);
     CV_WRAP bool getInstance(CV_OUT std::vector<int>& params) const;
+
+    /** @brief Provides or replaces one of the built-in font slots with an external font file.
+        @param fontName the slot: "sans", "italic" or "uni".
+        @param fontPath path to a .ttf/.otf font (optionally gzip-compressed, e.g. `.ttf.gz`).
+          An empty path restores the compiled-in font of that slot (if any), otherwise the slot
+          becomes empty.
+        @return false if the slot name is unknown or the font file cannot be loaded (the
+          registry is left unchanged).
+
+        This is the way to get CJK text or a true italic when OpenCV is built without
+        WITH_UNIFONT / WITH_ITALICFONT (the defaults), e.g.
+        `cv::FontFace::setBuiltinFont("uni", "/usr/share/fonts/NotoSansCJK-Regular.ttc")`.
+        The registered font participates in the automatic fallback chain like the compiled-in
+        one would. The change is global (all threads) and applies to FontFace objects created
+        afterwards; existing FontFace objects keep the font they were created with.
+    */
+    CV_WRAP static bool setBuiltinFont(const String& fontName, const String& fontPath);
 
     struct Impl;
 

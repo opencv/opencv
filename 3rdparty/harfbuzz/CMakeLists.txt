@@ -30,7 +30,16 @@ add_library(${HARFBUZZ_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib
 target_compile_definitions(${HARFBUZZ_LIBRARY} PRIVATE
     HB_TINY
     HB_HAS_RASTER   # request the software rasterizer: keeps draw/paint/color + CFF under HB_TINY
+    HB_NO_VAR_COMPOSITES  # drop the VARC table (variable composite glyphs, 2024 format; ~20 KB of code)
     "HB_CONFIG_OVERRIDE_H=\"hb-opencv-config.hh\"")
+
+# Optimize HarfBuzz for size: it is ~0.5 MB of libopencv_imgproc at -O3 and ~18% less at -Os,
+# while text rendering speed is dominated by the glyph cache, not by shaping. Target options
+# come after CMAKE_CXX_FLAGS_<CONFIG> on the command line, so -Os overrides -O3.
+# HarfBuzz's own build also disables exceptions/RTTI/thread-safe statics (it uses none).
+if(CV_GCC OR CV_CLANG)
+  target_compile_options(${HARFBUZZ_LIBRARY} PRIVATE -Os -fno-exceptions -fno-rtti -fno-threadsafe-statics)
+endif()
 
 set_target_properties(${HARFBUZZ_LIBRARY} PROPERTIES
   CXX_STANDARD 17

@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
 
 namespace opencv_test { namespace {
 
@@ -755,13 +756,26 @@ typedef struct TextProp
     bool italic;
 } TextProp;
 
-#ifdef HAVE_UNIFONT // there are other tests for text drawing, so the functionality is tested anyway,
-                    // but this test needs concrete unicode font to compare the printed text
-                    // (including CJK characters) with the reference picture from the database
+// External fonts for the "italic" and "uni" built-in slots, shipped in opencv_extra
+// and registered for the whole test run by test_main.cpp (see registerExternalTestFonts).
+static string externalTestFont(const char* slot)
+{
+    const char* fname = strcmp(slot, "italic") == 0 ? "Rubik-Italic.ttf.gz" : "WenQuanYiMicroHei.ttf.gz";
+    string path = TS::ptr()->get_data_path() + "../highgui/drawing/" + fname;
+    if (!utils::fs::exists(path))
+        throw SkipTestException(string("font is missing in opencv_extra: ") + path);
+    return path;
+}
+
+// The reference picture was rendered with Rubik Italic as the "italic" font and
+// WenQuanYi Micro Hei as the "uni" (CJK) font. Neither is compiled into OpenCV by
+// default (WITH_ITALICFONT / WITH_UNIFONT are OFF); the external copies from
+// opencv_extra reproduce the picture 1:1.
 TEST(Drawing, ttf_text)
 {
     string ts_data_path = TS::ptr()->get_data_path();
-    string custom_font_path = ts_data_path + "../highgui/drawing/";
+    externalTestFont("italic");
+    externalTestFont("uni");
 
     FontFace sans("sans");
     FontFace italic("italic");
@@ -858,7 +872,66 @@ TEST(Drawing, ttf_text)
     EXPECT_LT(cv::norm(refimg, img, NORM_L1), 6500);
 #endif
 }
+
+// Re-registers the external test fonts when a test that unregistered them finishes.
+struct ExternalTestFontsGuard
+{
+    ~ExternalTestFontsGuard()
+    {
+        FontFace::setBuiltinFont("italic", externalTestFont("italic"));
+        FontFace::setBuiltinFont("uni", externalTestFont("uni"));
+    }
+};
+
+TEST(Drawing, builtin_font_slots)
+{
+    string italic_font = externalTestFont("italic"), uni_font = externalTestFont("uni");
+    ExternalTestFontsGuard guard;
+
+    EXPECT_FALSE(FontFace::setBuiltinFont("no-such-slot", ""));
+    EXPECT_FALSE(FontFace::setBuiltinFont("uni", "no-such-file.ttf"));
+
+    // back to the compiled-in state: only the fonts selected at build time
+    ASSERT_TRUE(FontFace::setBuiltinFont("italic", ""));
+    ASSERT_TRUE(FontFace::setBuiltinFont("uni", ""));
+    {
+        // "italic" always resolves to some font: the compiled-in Rubik Italic if any,
+        // otherwise the upright "sans" (so FONT_ITALIC in the legacy API keeps working)
+        FontFace italic("italic");
+#ifdef HAVE_ITALICFONT
+        EXPECT_EQ(italic.getName(), "italic");
+#else
+        EXPECT_EQ(italic.getName(), "sans");
 #endif
+        FontFace uni;
+#ifdef HAVE_UNIFONT
+        EXPECT_TRUE(uni.set("uni"));
+#else
+        EXPECT_FALSE(uni.set("uni"));
+#endif
+    }
+    Mat img(60, 300, CV_8UC3, Scalar::all(255));
+    FontFace sans("sans");
+    Rect r_before = getTextSize(img.size(), "打印文字", Point(10, 40), sans, 30, 400, PUT_TEXT_ALIGN_LEFT);
+
+    // register the external CJK font: it now serves both as "uni" and as a fallback for "sans"
+    ASSERT_TRUE(FontFace::setBuiltinFont("uni", uni_font));
+    FontFace uni("uni");
+    EXPECT_EQ(uni.getName(), "uni");
+    Rect r_after = getTextSize(img.size(), "打印文字", Point(10, 40), sans, 30, 400, PUT_TEXT_ALIGN_LEFT);
+#ifndef HAVE_UNIFONT
+    // without the CJK font the characters were not covered and measured as '?'
+    EXPECT_NE(r_before.width, r_after.width);
+#else
+    EXPECT_EQ(r_before.width, r_after.width);
+#endif
+    putText(img, "打印文字", Point(10, 40), Scalar(0, 0, 0), sans, 30, 400, PUT_TEXT_ALIGN_LEFT);
+    EXPECT_LT(mean(img)[0], 255.0); // something has been drawn
+
+    ASSERT_TRUE(FontFace::setBuiltinFont("italic", italic_font));
+    FontFace italic("italic");
+    EXPECT_EQ(italic.getName(), "italic");
+}
 
 // Experiment (not a regression test): render Arabic + Devanagari with FiraGO,
 // which covers both scripts, and dump a PNG for visual inspection.
