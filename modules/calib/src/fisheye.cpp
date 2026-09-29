@@ -906,7 +906,7 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
     return undistorted;
 }
 
-void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
+bool cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
@@ -957,11 +957,13 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     H = H / sc;
     Mat u1 = H.col(0).clone();
     double norm_u1 = norm(u1);
-    CV_Assert(fabs(norm_u1) > 0);
+    if (!(norm_u1 > 0))
+        return false;
     u1  = u1 / norm_u1;
     Mat u2 = H.col(1).clone() - u1.dot(H.col(1).clone()) * u1;
     double norm_u2 = norm(u2);
-    CV_Assert(fabs(norm_u2) > 0);
+    if (!(norm_u2 > 0))
+        return false;
     u2 = u2 / norm_u2;
     Mat u3 = u1.cross(u2);
     Mat RRR;
@@ -973,6 +975,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Tckk = Tckk + Rckk * T;
     Rckk = Rckk * R;
     Rodrigues(Rckk, omckk);
+    return true;
 }
 
 void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
@@ -999,7 +1002,8 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         bool imT = image.rows < image.cols;
         bool obT = object.rows < object.cols;
 
-        InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
+        if (!InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk))
+            CV_Error(cv::Error::StsBadArg, format("Cannot compute the initial pose for input array %d: the view is degenerate", image_idx));
 
         ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param);
         if (check_cond)
