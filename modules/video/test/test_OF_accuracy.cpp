@@ -228,4 +228,3 @@ TEST(Video_OpticalFlowFarneback, MissingInitialFlowException)
     );
 }
 }} // namespace
-
