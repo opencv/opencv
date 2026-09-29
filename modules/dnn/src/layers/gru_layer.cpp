@@ -158,22 +158,15 @@ public:
         }
         yhShape.push_back(_numOut);                                   // hidden
 
-        bool needY, needYh;
-        resolveOutputPolicy(requiredOutputs, needY, needYh);
-        if (!runtimeWeights)
-        {
-            needY = true;
-            needYh = false;
-        }
-
         const int outCount = std::max(requiredOutputs, 1);
         outputs.assign(outCount, MatShape());
         const bool legacyPackedY = !runtimeWeights;
-        if (outCount == 1)
-            outputs[0] = needY ? (legacyPackedY ? outResShapeLegacy : outResShape) : yhShape;
-        else
+        // Slot #0 is Y (the hidden state of every timestep); Y_h is slot #1. As in the other
+        // recurrent ops, asking for Y_h alone still needs output #0 to be declared (as an
+        // empty name), so a node with a single declared output can only mean Y.
+        outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
+        if (outCount >= 2)
         {
-            outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
             outputs[1] = yhShape;     // slot #1 -> Y_h
             for (int i = 2; i < outCount; ++i)
                 outputs[i] = yhShape;
@@ -381,25 +374,6 @@ private:
     static bool hasRuntimeWeights(const std::vector<T>& in)
     {
         return in.size() >= 3 && !in[1].empty() && !in[2].empty();
-    }
-
-    void resolveOutputPolicy(int requiredOutputs, bool& needY, bool& needYh) const
-    {
-        if (requiredOutputs == 0)
-        {
-            needY = true;
-            needYh = false;
-        }
-        else if (requiredOutputs == 1)
-        {
-            needY = false;
-            needYh = true;
-        }
-        else
-        {
-            needY = true;
-            needYh = true;
-        }
     }
 
     void prepareRuntimeState(const std::vector<Mat>& input)

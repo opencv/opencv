@@ -294,6 +294,107 @@ TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+// ONNX output #0 of a recurrent op is Y (the hidden state of every timestep), output #1 is Y_h.
+// Asking for Y_h alone still requires output #0 to be declared (as an empty name), so a node
+// with a single declared output can only mean Y. The GRU used to answer Y_h for that case,
+// unlike LSTM2/RNN2.
+TEST(Layer_GRU_Test_Accuracy_, SingleOutputIsSequenceY)
+{
+    const int T = 3, N = 2, I = 4, H = 5;
+
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 3 * H, I}, CV_32F);   // ONNX W: [Wz; Wr; Wh]
+    Mat R({1, 3 * H, H}, CV_32F);   // ONNX R: [Rz; Rr; Rh]
+    Mat B({1, 6 * H}, CV_32F);      // ONNX B: [Wbz; Wbr; Wbh; Rbz; Rbr; Rbh]
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    // W/R/B are passed as inputs, exactly like the ONNX importer does.
+    LayerParams lp;
+    lp.type = "GRU";
+    lp.name = "gru_single_output";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    // A single declared output => requiredOutputs == 1.
+    layer->getMemoryShapes(inShapes, 1, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)1);
+    EXPECT_EQ(outShapes[0], shape(T, 1, N, H));  // Y, not Y_h
+    layer->getTypes(inTypes, 1, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    // Reference GRU written straight from the ONNX definition (linear_before_reset = 0):
+    //   z = sigmoid(x*Wz^T + h*Rz^T + Wbz + Rbz)
+    //   r = sigmoid(x*Wr^T + h*Rr^T + Wbr + Rbr)
+    //   n = tanh(x*Wh^T + (r (*) h)*Rh^T + Wbh + Rbh)
+    //   h = z (*) h + (1 - z) (*) n
+    Mat expected({T, 1, N, H}, CV_32F);
+    const float* xData = X.ptr<float>();
+    const float* wData = W.ptr<float>();
+    const float* rData = R.ptr<float>();
+    const float* bData = B.ptr<float>();
+    std::vector<double> z(H), r(H), n(H), h(H, 0.);
+    for (int s = 0; s < N; s++)
+    {
+        std::fill(h.begin(), h.end(), 0.);   // initial_h defaults to zero
+        for (int t = 0; t < T; t++)
+        {
+            const float* x = xData + (t * N + s) * I;
+            for (int j = 0; j < H; j++)
+            {
+                double pz = bData[j] + bData[3 * H + j];
+                double pr = bData[H + j] + bData[3 * H + H + j];
+                for (int i = 0; i < I; i++)
+                {
+                    pz += x[i] * wData[j * I + i];
+                    pr += x[i] * wData[(H + j) * I + i];
+                }
+                for (int k = 0; k < H; k++)
+                {
+                    pz += h[k] * rData[j * H + k];
+                    pr += h[k] * rData[(H + j) * H + k];
+                }
+                z[j] = 1. / (1. + std::exp(-pz));
+                r[j] = 1. / (1. + std::exp(-pr));
+            }
+            for (int j = 0; j < H; j++)
+            {
+                double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
+                for (int i = 0; i < I; i++)
+                    pn += x[i] * wData[(2 * H + j) * I + i];
+                for (int k = 0; k < H; k++)
+                    pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
+                n[j] = std::tanh(pn);
+            }
+            for (int j = 0; j < H; j++)
+            {
+                h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
+                expected.ptr<float>()[(t * N + s) * H + j] = (float)h[j];
+            }
+        }
+    }
+
+    normAssert(outputs[0], expected, "GRU single output must be Y", 1e-4, 1e-4);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
