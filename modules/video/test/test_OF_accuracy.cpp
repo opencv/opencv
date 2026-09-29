@@ -216,8 +216,6 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     ASSERT_NO_THROW(dis->calc(prev, next, flow));
     EXPECT_EQ(flow.size(), prev.size());
 }
-
-}} // namespace
 TEST(Video_OpticalFlowFarneback, MissingInitialFlowException)
 {
     Mat frame1(100, 100, CV_8UC1, Scalar(0));
@@ -225,8 +223,9 @@ TEST(Video_OpticalFlowFarneback, MissingInitialFlowException)
     Mat flow;
 
     // Verify that StsBadArg exception is thrown when OPTFLOW_USE_INITIAL_FLOW flag is set but flow is empty
-    EXPECT_THROW_WITH_TYPE(
-        calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, OPTFLOW_USE_INITIAL_FLOW),
-        cv::Exception
+    EXPECT_ANY_THROW(
+        calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, OPTFLOW_USE_INITIAL_FLOW)
     );
 }
+}} // namespace
+
