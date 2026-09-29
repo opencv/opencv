@@ -363,10 +363,10 @@ static int sum16s( const short* src, const uchar* mask, int* dst, int len, int c
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
 static int sum32u( const unsigned* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<unsigned, double, uint64>(src, mask, dst, len, cn); }
 
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
 static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }

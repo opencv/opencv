@@ -3033,6 +3033,35 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+// cv::sum() returns doubles, so a CV_32U or CV_32S array whose total exceeds the 32-bit range must
+// still come back exact. The scalar step of the accumulation adds four elements to each other in
+// the source type before reaching the double accumulator, so large values used to wrap - silently
+// for CV_32U, and as signed overflow for CV_32S (8 x INT_MAX came back as -8).
+typedef testing::TestWithParam< tuple<int, int, int> > Core_SumWide;
+
+TEST_P(Core_SumWide, no_32bit_wraparound)
+{
+    const int depth = get<0>(GetParam());
+    const int cn    = get<1>(GetParam());
+    const int len   = get<2>(GetParam());
+    const double value = (depth == CV_32U) ? 4294967295.0 : 2147483647.0;
+
+    Mat flat(1, len * cn, depth, Scalar(value));   // Scalar::all() caps at 4 channels
+    Mat src = flat.reshape(cn);
+
+    const Scalar got = cv::sum(src);
+    const double expected = (double)len * value;
+    for (int c = 0; c < cn; c++)
+        EXPECT_DOUBLE_EQ(expected, got[c])
+            << "depth " << depth << ", channels " << cn << ", length " << len << ", channel " << c;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_SumWide,
+    testing::Combine(
+        testing::Values(CV_32U, CV_32S),
+        testing::Values(1, 2, 3, 4),
+        testing::Values(4, 127)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
