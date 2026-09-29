@@ -261,7 +261,7 @@ static inline void v_reinterpret_as(const v_float32& s, v_uint32& d) { d = v_rei
 #if CV_SIMD_16F
 static inline void v_reinterpret_as(const v_float16& s, v_uint16& d) { d = v_reinterpret_as_u16(s); }
 #endif
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
 static inline void v_reinterpret_as(const v_float64& s, v_uint64& d) { d = v_reinterpret_as_u64(s); }
 #endif
 
@@ -1148,7 +1148,7 @@ TKernel getAddSubFunc(int T, int R)
         fptr = R == CV_32F ? vecBinaryKernel<float, float, v_float32, float, Op, float> : nullptr;
         break;
     case CV_64F:
-        #if CV_SIMD_64F
+        #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
         fptr = R == CV_64F ? vecBinaryKernel<double, double, v_float64, double, Op> : nullptr;
         #else
         fptr = R == CV_64F ? scalarBinaryKernel<double, double, double, Op> : nullptr;
@@ -1210,10 +1210,10 @@ TKernel getMulFunc_(int T, int R)
     case CV_32U:
         fptr =   // scale==1 fast path (where v_mul_sat32 exists): whole u32 registers, widening
                  // multiply + saturating narrow; the f64 work vector serves the scale path
-        #if defined(EW_HAVE_MULSAT32) && CV_SIMD_64F
+        #if defined(EW_HAVE_MULSAT32) && (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_float64, double, EwMul, double, v_uint32> :
             R == CV_64F ? vecBinaryKernel<unsigned, double,   v_float64, double, EwMul> : nullptr;
-        #elif CV_SIMD_64F
+        #elif CV_SIMD_64F || CV_SIMD_SCALABLE_64F
             R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_float64, double, EwMul> :
             R == CV_64F ? vecBinaryKernel<unsigned, double,   v_float64, double, EwMul> : nullptr;
         #else
@@ -1223,10 +1223,10 @@ TKernel getMulFunc_(int T, int R)
         break;
     case CV_32S:
         fptr =   // scale==1 fast path: see CV_32U
-        #if defined(EW_HAVE_MULSAT32) && CV_SIMD_64F
+        #if defined(EW_HAVE_MULSAT32) && (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             R == CV_32S ? vecBinaryKernel<int, int,    v_float64, double, EwMul, double, v_int32> :
             R == CV_64F ? vecBinaryKernel<int, double, v_float64, double, EwMul> : nullptr;
-        #elif CV_SIMD_64F
+        #elif CV_SIMD_64F || CV_SIMD_SCALABLE_64F
             R == CV_32S ? vecBinaryKernel<int, int,    v_float64, double, EwMul> :
             R == CV_64F ? vecBinaryKernel<int, double, v_float64, double, EwMul> : nullptr;
         #else
@@ -1241,7 +1241,7 @@ TKernel getMulFunc_(int T, int R)
         fptr = R == CV_64F ? scalarBinaryKernel<int64_t,  double, double, EwMul> : nullptr;
         break;
     case CV_64F:
-        #if CV_SIMD_64F
+        #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
         fptr = R == CV_64F ? vecBinaryKernel<double, double, v_float64, double, EwMul> : nullptr;
         #else
         fptr = R == CV_64F ? scalarBinaryKernel<double,   double, double, EwMul> : nullptr;
@@ -1272,7 +1272,7 @@ TKernel getDivFunc_(int T, int R, bool checked)
 #else
     #define DIV8(T_)   DIV(T_, T_, v_float32, float)
 #endif
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     #define DIVW(T_, Tr_) DIV(T_, Tr_, v_float64, double)                 // 32/64-bit, f64 SIMD
 #else
     #define DIVW(T_, Tr_) (checked ? scalarBinaryKernel<T_, Tr_, double, EwDivInt> \
@@ -1302,7 +1302,7 @@ TKernel getDivFunc_(int T, int R, bool checked)
 
 
 // min / max: T x T -> T for every depth. Native v_min/v_max on the matching lane type (8/16/32-bit
-// ints, f16/bf16/f32); 64-bit ints and f64 use the scalar path. Op = EwMin or EwMax.
+// ints, f16/bf16/f32); 64-bit ints use the scalar path. Op = EwMin or EwMax.
 template<class Op>
 static TKernel getMinMaxFunc(int T)
 {
@@ -1326,7 +1326,7 @@ static TKernel getMinMaxFunc(int T)
     case CV_32F:  fptr = vecBinaryKernel<float, float, v_float32, float, Op, float>; break;
     case CV_64U:  fptr = scalarBinaryKernel<uint64_t, uint64_t, uint64_t, Op>; break;
     case CV_64S:  fptr = scalarBinaryKernel<int64_t,  int64_t,  int64_t,  Op>; break;
-    #if CV_SIMD_64F
+    #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  fptr = vecBinaryKernel<double, double, v_float64, double, Op, double>; break;
     #else
     case CV_64F:  fptr = scalarBinaryKernel<double,   double,   double,   Op>; break;
@@ -1364,7 +1364,7 @@ TKernel getAbsdiffFunc_(int T, int R)
     case CV_32F:  fptr = R == CV_32F  ? vecBinaryKernel<float,  float,  v_float32, float, EwAbsdiff, float> : nullptr; break;
     case CV_64U:  fptr = R == CV_64U  ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwAbsdiff> : nullptr; break;
     case CV_64S:  fptr = R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
-    #if CV_SIMD_64F
+    #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  fptr = R == CV_64F  ? vecBinaryKernel<double, double, v_float64, double, EwAbsdiff, double> : nullptr; break;
     #else
     case CV_64F:  fptr = R == CV_64F  ? scalarBinaryKernel<double, double, double, EwAbsdiff> : nullptr; break;
@@ -1375,7 +1375,7 @@ TKernel getAbsdiffFunc_(int T, int R)
 }
 
 // compare: T x T -> u8 mask. Directly-comparable depths (u8/s8/u16/s16/u32/s32/f32) take the SIMD
-// vecCompareKernel; f16/bf16 and 64-bit depths fall back to scalarCompareKernel. The returned kernel
+// vecCompareKernel; f16/bf16 and 64-bit int depths fall back to scalarCompareKernel. The returned kernel
 // defaults to a 255 mask in TKernel::flags (cv::compare-compatible); kernel.flags=1 gives a 0/1 mask.
 template<class Cmp>
 static KernelFunc compareByType(int T)
@@ -1397,7 +1397,7 @@ static KernelFunc compareByType(int T)
     case CV_16BF: return vecCompareKernel<bfloat,   v_float32, v_uint32, Cmp>;   // widen bf16->f32 (no native)
     case CV_64U:  return scalarCompareKernel<uint64_t, uint64_t, Cmp>;
     case CV_64S:  return scalarCompareKernel<int64_t,  int64_t,  Cmp>;
-    #if CV_SIMD_64F
+    #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  return vecCompareKernel<double,   v_float64, v_uint64, Cmp>;
     #else
     case CV_64F:  return scalarCompareKernel<double,   double,   Cmp>;
@@ -1506,7 +1506,7 @@ TKernel getNotFunc_(int esz)
 // ===========================================================================
 // OP_ADDW (addWeighted): dst = a*alpha + b*beta + gamma, params[0..2] = {alpha, beta, gamma}. Two fused
 // v_fma in the work type Wvec - f32 SIMD for u8/s8/u16/s16/f16/bf16/f32; the 32-bit-int/64-bit group
-// works in f64 (v_float64 SIMD under CV_SIMD_64F, else use_simd=false scalar). Like vecBinaryKernel but
+// works in f64 (v_float64 SIMD under CV_SIMD_64F || CV_SIMD_SCALABLE_64F, else use_simd=false scalar). Like vecBinaryKernel but
 // WITHOUT its multi-channel short-row
 // branch: addWeighted takes plain scalar coefficients (a multi-channel scalar is not optimized, matching
 // the classic function). The broadcast branches fold the constant operand's contribution once.
@@ -1593,7 +1593,7 @@ TKernel getAddWeightedFunc_(int T, int R)
 #else
     #define AWH(Tt)     AWS(Tt, Tt)                                                  // no f16: f32 work
 #endif
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     #define AWD(Tt, Rr) addWeightedKernel<Tt, Rr, v_float64, double, true>       // f64 SIMD
 #else
     #define AWD(Tt, Rr) addWeightedKernel<Tt, Rr, v_float32, double, false>      // scalar (v_float32 unused)
