@@ -216,6 +216,16 @@ public:
         const bool legacyDirectMode = (input.size() == 1);
         const bool useLinearBeforeReset = linearBeforeReset || legacyDirectMode;
 
+        // ONNX sequence_lens (input #4): each batch entry stops after its own length, keeping the
+        // state it finished with, and contributes zeros to Y from there on.
+        Mat seqLens;
+        if (input.size() > 4 && !input[4].empty())
+        {
+            input[4].convertTo(seqLens, CV_32S);
+            CV_CheckEQ((int)seqLens.total(), numSamples, "GRU: sequence_lens must have one entry per sample");
+        }
+        Mat hPrev;
+
         Mat sequence_input = input[0];
         Mat sequence_input_time_major = sequence_input;
         if (layout == BATCH_SEQ_HID)
@@ -266,6 +276,9 @@ public:
 
         Mat yh = (yhIndex >= 0) ? output[yhIndex] : Mat();
         Mat xTs = sequence_input_time_major.reshape(1, numTimeStamps * numSamples);
+
+        if (!seqLens.empty())
+            hPrev.create(numSamples, blobs[0].size[1], blobs[0].type());
 
         for (int i = 0; i < numDirs; ++i)
         {
@@ -332,6 +345,8 @@ public:
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
                 Range curRowRange(ts * numSamples, (ts + 1) * numSamples);
+                if (!seqLens.empty())
+                    hInternal.copyTo(hPrev);
 
                 // Use precomputed input projection for this timestep
                 Mat xCurrProj_rz = xProj_rz.rowRange(curRowRange);
@@ -368,7 +383,10 @@ public:
                 else
                     gruComputeH<double>(z, n_t, hInternal);
 
-                writeYStep(y, y3d2d, ts, i, numOut, hInternal);
+                if (!seqLens.empty())
+                    holdFinishedRows(seqLens, ts, hPrev, hInternal);
+
+                writeYStep(y, y3d2d, ts, i, numOut, hInternal, seqLens);
             }
 
             writeYhDir(yh, i, numDirs, hInternal);
@@ -501,31 +519,54 @@ private:
                m.size[2] == numSamples && m.size[3] == numOutGlobal;
     }
 
-    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState) const
+    // A sample that has reached the end of its sequence keeps the state it finished with;
+    // the gates it would compute are discarded.
+    static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)
+    {
+        const int* lens = seqLens.ptr<int>();
+        for (int n = 0; n < h.rows; n++)
+            if (ts >= lens[n])
+                hPrev.row(n).copyTo(h.row(n));
+    }
+
+    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState,
+                    const Mat& seqLens = Mat()) const
     {
         if (y.empty())
             return;
 
+        Mat ySlice2d;
         if (y.dims == 3)
         {
             CV_CheckLE((dir + 1) * numOut, y3d2d.cols, "Invalid Y shape for current direction");
-            Mat yRow = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
-                         .colRange(dir * numOut, (dir + 1) * numOut);
-            hState.copyTo(yRow);
-            return;
+            ySlice2d = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
+                            .colRange(dir * numOut, (dir + 1) * numOut);
         }
-
-        if (layout == BATCH_SEQ_HID)
+        else if (layout == BATCH_SEQ_HID)
         {
             Range ranges[4] = { Range::all(), Range(ts, ts + 1), Range(dir, dir + 1), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
-            hState.copyTo(ySlice2d);
+            ySlice2d = y(ranges).reshape(1, numSamples);
         }
         else
         {
             Range ranges[4] = { Range(ts, ts + 1), Range(dir, dir + 1), Range::all(), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
+            ySlice2d = y(ranges).reshape(1, numSamples);
+        }
+
+        if (seqLens.empty())
+        {
             hState.copyTo(ySlice2d);
+            return;
+        }
+
+        // Past its sequence length a sample contributes zeros to Y.
+        const int* lens = seqLens.ptr<int>();
+        for (int n = 0; n < numSamples; n++)
+        {
+            if (ts < lens[n])
+                hState.row(n).copyTo(ySlice2d.row(n));
+            else
+                ySlice2d.row(n).setTo(0);
         }
     }
 
