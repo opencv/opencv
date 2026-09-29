@@ -154,6 +154,7 @@ void Net::Impl::clear()
 
     prepared = false;
     finalized = false;
+    pinnedInputShapes.clear();
     fusedSnapshotValid = false;
     fusedSnapshot.clear();
 }
@@ -1569,6 +1570,19 @@ void Net::Impl::setInputsNames(const std::vector<String>& inputBlobNames)
 
 void Net::Impl::setInputShape(const String& inputName, const MatShape& shape)
 {
+    if (mainGraph) {
+        const std::vector<Arg>& inputs = mainGraph->inputs();
+        for (size_t i = 0; i < inputs.size(); i++) {
+            if (args.at(inputs[i].idx).name == inputName) {
+                CV_Check(inputName, !finalized, "setInputShape() must be called before the first forward()");
+                pinnedInputShapes.resize(inputs.size());
+                pinnedInputShapes[i] = shape;
+                prepared = false;
+                return;
+            }
+        }
+        CV_Error_(Error::StsObjectNotFound, ("unknown input '%s'", inputName.c_str()));
+    }
     CV_Assert(netInputLayer);
     netInputLayer->setInputShape(inputName, shape);
 }
