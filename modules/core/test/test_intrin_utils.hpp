@@ -1014,6 +1014,17 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reduce_sum_f64()
+    {
+        Data<R> dataA((LaneType)INT_MAX);   // every lane needs 31 mantissa bits
+        R a = dataA;
+        static_assert(std::is_same<decltype(v_reduce_sum(a)), double>::value,
+                      "v_reduce_sum(v_float64) must return double, not float");
+        const double expected = (double)INT_MAX * VTraits<R>::vlanes();
+        EXPECT_DOUBLE_EQ(expected, v_reduce_sum(a));
+        return *this;
+    }
+
     TheTest & test_reduce_sad()
     {
         Data<R> dataA, dataB((LaneType)VTraits<R>::vlanes() /2);
@@ -2587,6 +2598,7 @@ void test_hal_intrin_float64()
         .test_exp_fp64()
         .test_log_fp64()
         .test_sincos_fp64()
+        .test_reduce_sum_f64()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
