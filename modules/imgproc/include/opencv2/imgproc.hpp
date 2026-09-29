@@ -372,7 +372,7 @@ enum FloodFillFlags {
     FLOODFILL_MASK_ONLY   = 1 << 17
 };
 
-/** @brief Porter-Duff compositing operators used by #alphaComposite.
+/** @brief Porter-Duff compositing operators used by cv::alphaComposite.
 
 The names and the semantics follow [W3C Compositing and Blending Level 1](https://www.w3.org/TR/compositing-1/),
 which is also what cairo and Skia implement. Every operator is a pair of per-pixel weights
