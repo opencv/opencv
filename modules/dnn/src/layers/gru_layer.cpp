@@ -39,6 +39,8 @@ class GRULayerImpl CV_FINAL : public GRULayer
     bool reverse;        // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     bool linearBeforeReset;
+    bool useClip;        // If true, bound the input of the activations to [-clipValue, clipValue]
+    float clipValue;
 
 public:
     GRULayerImpl(const LayerParams& params) : numTimeStamps(0), numSamples(0)
@@ -51,6 +53,8 @@ public:
         CV_Assert(!reverse || !bidirectional);
         linearBeforeReset = params.get<int>("linear_before_reset", 0) != 0;
         layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
+        clipValue = params.get<float>("clip", 0.f);
+        useClip = clipValue > 0.f;
 
         // forward() hardcodes f=Sigmoid, g=Tanh; reject anything else rather than miscompute.
         DictValue acts = params.get<DictValue>("activations", DictValue(String()));
@@ -354,6 +358,7 @@ public:
 
                 xCurrProj_rz.copyTo(gates);                                // x * Wx_rz + b_rz (precomputed)
                 gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);     // + h_(t-1) * Wh_rz
+                clipToThreshold(gates);                                    // -clip <= ... <= clip
                 sigmoid(gates, gates);                                     // sigmoid()
 
                 Mat z = gates.colRange(0, gates.cols / 2);
@@ -375,6 +380,7 @@ public:
                     add(n_t, xCurrProj_n, n_t);                            // + x * Wx_n + b_in (precomputed)
                     gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                // + b_hn
                 }
+                clipToThreshold(n_t);                                      // -clip <= ... <= clip
                 tanh(n_t, n_t);                                            // tanh()
 
                 // h_t = z (*) h_(t-1) + (1 - z) (*) n_t  (fused single-pass)
@@ -517,6 +523,16 @@ private:
                    m.size[2] == numDirs && m.size[3] == numOutGlobal;
         return m.dims == 4 && m.size[0] == numTimeStamps && m.size[1] == numDirs &&
                m.size[2] == numSamples && m.size[3] == numOutGlobal;
+    }
+
+    // The ONNX `clip` attribute bounds the input of the activations (not their output, and not
+    // the state) to [-clip, clip]. It is off unless the model asks for it.
+    void clipToThreshold(Mat& m) const
+    {
+        if (!useClip)
+            return;
+        min(m, clipValue, m);
+        max(m, -clipValue, m);
     }
 
     // A sample that has reached the end of its sequence keeps the state it finished with;
