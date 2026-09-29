@@ -950,7 +950,9 @@ private:
 static void
 resizeNN( const Mat& src, Mat& dst, int* x_ofs, const int* y_ofs, const Range& range )
 {
+#if CV_TRY_AVX2 || CV_TRY_SSE4_1 || CV_TRY_LASX
     int pix_size = (int)src.elemSize();
+#endif
 #if CV_TRY_AVX2
     if(CV_CPU_HAS_SUPPORT_AVX2 && ((pix_size == 2) || (pix_size == 4)))
     {
