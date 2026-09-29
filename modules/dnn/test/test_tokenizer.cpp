@@ -252,7 +252,16 @@ TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Roundtrip) {
     }
 }
 
-static void checkAgainstHfTestData(Tokenizer& tok, const std::string& goldenPath) {
+TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_RealModel) {
+    Tokenizer tok = Tokenizer::load(_tf("paddleocr_vl/config.json"));
+    std::vector<int> ids = tok.encode("hello world");
+    EXPECT_EQ(tok.decode(ids), "hello world");
+}
+
+TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_HfTestData) {
+    Tokenizer tok = Tokenizer::load(_tf("paddleocr_vl/config.json"));
+
+    const std::string goldenPath = _tf("paddleocr_vl/paddleocr_vl_hf_testdata.json");
     cv::FileStorage fs(goldenPath, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     ASSERT_TRUE(fs.isOpened()) << "Failed to open " << goldenPath;
 
@@ -267,17 +276,6 @@ static void checkAgainstHfTestData(Tokenizer& tok, const std::string& goldenPath
         EXPECT_EQ(tok.encode(text), expected);
         EXPECT_EQ(tok.decode(expected), text);
     }
-}
-
-TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_RealModel) {
-    Tokenizer tok = Tokenizer::load(_tf("paddleocr_vl/config.json"));
-    std::vector<int> ids = tok.encode("hello world");
-    EXPECT_EQ(tok.decode(ids), "hello world");
-}
-
-TEST(Tokenizer_VLM, Tokenizer_PaddleOcrVl_HfTestData) {
-    Tokenizer tok = Tokenizer::load(_tf("paddleocr_vl/config.json"));
-    checkAgainstHfTestData(tok, _tf("paddleocr_vl/paddleocr_vl_hf_testdata.json"));
 }
 
 // ---- T5 tests (Unigram tokenizer) ----

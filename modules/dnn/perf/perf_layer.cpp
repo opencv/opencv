@@ -855,7 +855,6 @@ PERF_TEST_P_(Layer_GroupQueryAttention, Grouped_WithCache) {
     test_layer(/*B*/1, /*S*/1, /*Sp*/2048, /*num_heads*/32, /*kv_num_heads*/8, /*D*/128);
 }
 
-
 struct Layer_AttentionOnnxAi : public TestBaseWithParam<int>
 {
     void decode_step(const std::string& layout, int nq, int nkv)

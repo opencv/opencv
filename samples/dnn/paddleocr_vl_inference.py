@@ -11,55 +11,17 @@ using ONNX models. Given a page image, it recognizes and outputs its text/layout
 Model: https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.5
 ONNX:  https://huggingface.co/onnx-community/PaddleOCR-VL-1.5-ONNX
 
-Unlike granite_docling_inference.py, this script is verified end to end against the
-real published ONNX export above, not just against the model's config:
-    - vision encoder (pixel_values + image_grid_thw -> image_embeds): loaded and run
-      through OpenCV's engine on the real (quantized) weights; output shape matched
-      onnxruntime run on the same real weights exactly (609x1024 for a 600x800 test
-      image, i.e. num_patches/merge_size^2 with no fudging).
-    - decoder (inputs_embeds + attention_mask, KV-cache via present.*/past_key_values.*):
-      loaded and run through OpenCV's engine on the real (full-precision) weights;
-      both a prefill forward() and one enableKVCache()-backed decode-step forward()
-      produced logits at the expected vocab size (103424) and sequence positions.
-      reserveKVCache() logs "has no effect" for this decoder -- expected, since its
-      attention is decomposed rather than a fused paged-attention op; the
-      present.*/past_key_values.* routing that actually carries the cache is unaffected.
-    - the full chain -- real vision encoder, real tokenizer, real embedding, the
-      merge, and a real decoder prefill -- was run together once and produced the
-      expected (1, prompt_len, 103424) logits with no shape mismatches anywhere
-      in between.
-    - embedding (input_ids -> embeddings): loaded and run through OpenCV's engine on
-      the real weights.
-    - the smart_resize + patch-packing preprocessing below was copied from
-      PaddlePaddle/PaddleOCR-VL-1.5's own image_processing_paddleocr_vl.py (reading
-      the literal source, not a paraphrase of it -- an early summary of that file
-      mislabeled temporal tiling and had to be corrected against the raw file), then
-      exercised against the real vision encoder above.
-    - image_token_id, the special image-wrapper tokens (<|IMAGE_START|>,
-      <|IMAGE_PLACEHOLDER|>, <|IMAGE_END|>) and the chat template (User: .../
-      Assistant:\\n) were read from this ONNX repo's own tokenizer_config.json and
-      chat_template.jinja, not guessed.
+Use the full-precision decoder.onnx: the int4-kquant variant needs MatMulNBits'
+asymmetric form and the int8 variant needs ai.onnx MatMulInteger, neither of which
+OpenCV's importer supports.
 
-What this script does NOT do: this export's decoder graph decomposes attention into
-primitive MatMul/Softmax ops rather than the fused com.microsoft::GroupQueryAttention
-node -- it does not exercise the GroupQueryAttention lowering this PR adds. It does confirm
-PaddleOCR-VL-1.5 runs in OpenCV's DNN engine today, independent of that layer.
-
-Note on quantized variants: the int4-kquant and int8 (MatMulInteger) decoder variants
-in that repo do not currently load in OpenCV -- int4-kquant uses MatMulNBits' asymmetric
-(with zero-point) form, which OpenCV's importer only supports in its symmetric 3-input
-form, and the int8 variant uses ai.onnx MatMulInteger, which isn't implemented at all.
-Neither gap is specific to this PR. Use the full-precision decoder.onnx (or export a
-symmetric-quantized variant) until one of those is addressed.
-
-Model directory layout (matches modules/vlm's engines, so a directory that works
-here also works with cv.vlm.create() once that module lands):
+Model directory layout:
 
     <model_dir>/
       config.json               OpenCV tokenizer config -- NOT HuggingFace's
                                  tokenizer_config.json. Needs model_type/method
                                  (for cv.dnn.Tokenizer.load) plus image_token_id
-                                 and eos_token_id (read directly here).
+                                 and eos_token_id.
       processor_config.json     image_processor: patch_size, merge_size, min_pixels,
                                  max_pixels.
       tokenizer.json
@@ -99,8 +61,7 @@ def parse_args():
     return parser.parse_args()
 
 def open_json_config_or_throw(path):
-    '''Mirrors modules/vlm/src/config_json.cpp's openJsonConfigOrThrow, so the config
-    reading here matches what cv.vlm will do with the same directory.'''
+    '''Opens a config file from the model directory, or raises if it is missing.'''
     fs = cv.FileStorage(path, cv.FILE_STORAGE_READ)
     if not fs.isOpened():
         raise IOError(f'vlm: could not open config file: {path}')

@@ -12,21 +12,13 @@ OpenCV using ONNX models. Given a page image, it converts it to DocTags markup
 Model: https://huggingface.co/ibm-granite/granite-docling-258M
 ONNX export: https://huggingface.co/onnx-community/granite-docling-258M-ONNX
 
-This is a real export, not one this script's I/O split invented: its
-decoder_model_merged.onnx already uses the fused GroupQueryAttention op (30 nodes,
-one per layer, do_rotary=1, num_heads=9, kv_num_heads=3, head_dim=64, scale=0.125,
-local_window_size=-1, softcap=0.0) and SkipSimplifiedLayerNormalization (60 nodes),
-landing on both the layer this PR adds and the decomposition path upstream/5.x
-already provides for the other op.
-
-Model directory layout (matches modules/vlm's engines, so a directory that works
-here also works with cv.vlm.create() once that module lands):
+Model directory layout:
 
     <model_dir>/
       config.json               OpenCV tokenizer config -- NOT HuggingFace's
                                  tokenizer_config.json. Needs model_type/method
                                  (for cv.dnn.Tokenizer.load) plus image_token_id
-                                 and eos_token_id (read directly here).
+                                 and eos_token_id.
       preprocessor_config.json  image_mean, image_std, max_image_size.longest_edge
       processor_config.json     image_seq_len
       tokenizer.json
@@ -45,7 +37,6 @@ Run the script:
     python granite_docling_inference.py --model_dir=<path-to-model-dir> \\
                                         --input=<path-to-page-image> \\
                                         --prompt="Convert this page to docling."
-
 '''
 
 import math
@@ -69,8 +60,7 @@ def parse_args():
     return parser.parse_args()
 
 def open_json_config_or_throw(path):
-    '''Mirrors modules/vlm/src/config_json.cpp's openJsonConfigOrThrow, so the config
-    reading here matches what cv.vlm will do with the same directory.'''
+    '''Opens a config file from the model directory, or raises if it is missing.'''
     fs = cv.FileStorage(path, cv.FILE_STORAGE_READ)
     if not fs.isOpened():
         raise IOError(f'vlm: could not open config file: {path}')
