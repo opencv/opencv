@@ -1607,6 +1607,15 @@ void downsample_bilinear_8uc1(const Size2D &ssize, const Size2D &dsize,
 
             cwi[k] = (short)floorf((col2[k] - c) * (1 << SHIFT_BITS) + 0.5f);
 
+            // When the sample point falls left of the first source column
+            // (c < 0, happens for the leftmost destination pixel when
+            // upscaling horizontally, wr < 1), the left-column weight cwi
+            // overflows past the full-scale value (1<<SHIFT_BITS) and the
+            // interpolation extrapolates beyond the source range. Clamp the
+            // weight so the leftmost pixel is taken as-is, matching the
+            // OpenCV scalar / OpenCL behaviour (if (x<0) x=0, u=0).
+            if(c < 0.f) cwi[k] = (1 << SHIFT_BITS);
+
             if(col1[k] < 0) col1[k] = 0;
             if(col2[k] >= (ptrdiff_t)ssize.width) col2[k] = ssize.width-1;
         }
@@ -1769,6 +1778,11 @@ downsample_bilinear_8uc1_col_loop8:
             col2[k] = col1[k] + 1;
 
             cwi[k] = (s16)floorf((col2[k] - c) * (1 << SHIFT_BITS) + 0.5f);
+
+            // See the 16-wide loop above: clamp the left-column weight when the
+            // sample point is left of the first source column (horizontal
+            // upscaling, wr < 1) to avoid extrapolation on the leftmost pixel.
+            if(c < 0.f) cwi[k] = (1 << SHIFT_BITS);
 
             if(col1[k] < 0) col1[k] = 0;
             if(col2[k] >= (ptrdiff_t)ssize.width) col2[k] = (ptrdiff_t)ssize.width-1;
