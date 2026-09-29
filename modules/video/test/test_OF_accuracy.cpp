@@ -216,15 +216,21 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     ASSERT_NO_THROW(dis->calc(prev, next, flow));
     EXPECT_EQ(flow.size(), prev.size());
 }
-TEST(Video_OpticalFlowFarneback, MissingInitialFlowException)
+TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
 {
-    Mat frame1(100, 100, CV_8UC1, Scalar(0));
-    Mat frame2(100, 100, CV_8UC1, Scalar(0));
-    Mat flow;
+    cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat frame2 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat flow;
 
-    // Verify that StsBadArg exception is thrown when OPTFLOW_USE_INITIAL_FLOW flag is set but flow is empty
-    EXPECT_ANY_THROW(
-        calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, OPTFLOW_USE_INITIAL_FLOW)
-    );
+    // Test 1: Empty flow with OPTFLOW_USE_INITIAL_FLOW flag
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 2: Mismatched size (image is 100x100, but flow is 50x50)
+    cv::Mat wrong_size_flow = cv::Mat::zeros(50, 50, CV_32FC2);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_size_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 3: Mismatched type (CV_8UC1 instead of CV_32FC2)
+    cv::Mat wrong_type_flow = cv::Mat::zeros(100, 100, CV_8UC1);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_type_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
 }
 }} // namespace
