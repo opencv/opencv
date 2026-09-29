@@ -6,17 +6,16 @@
 
 #include "precomp.hpp"
 #include "nd_copy.hpp"
+#include "hal_replacement.hpp"
 
 #include "opencv2/core/hal/hal.hpp"
 
 #include <algorithm>
-#include <memory>
 
 namespace cv { namespace nd {
 
 View viewOf(const Mat& m)
 {
-    CV_Assert(m.dims <= CV_MAX_DIM);
     View v;
     v.data = m.data;
     v.dims = m.dims;
@@ -119,6 +118,15 @@ static void moveAxis(Plan& p, int k, int to)
         swapAxes(p, i, i + 1);
 }
 
+// OR of the base pointers and all the steps: its low bits give the common alignment.
+static size_t addressBits(const Plan& p)
+{
+    size_t addrs = (size_t)p.src | (size_t)p.dst;
+    for (int i = 0; i < p.dims; i++)
+        addrs |= (size_t)p.sstep[i] | (size_t)p.dstep[i];
+    return addrs;
+}
+
 // 2..4 planes via the cv::split / cv::merge HAL kernels
 static bool trySplitMerge(Plan& p)
 {
@@ -126,10 +134,7 @@ static bool trySplitMerge(Plan& p)
     const int L = p.dims - 1;
     if (L < 1 || !(esz == 1 || esz == 2 || esz == 4 || esz == 8) || p.dstep[L] != esz)
         return false;
-    size_t addrs = (size_t)p.src | (size_t)p.dst;
-    for (int i = 0; i < p.dims; i++)
-        addrs |= (size_t)p.sstep[i] | (size_t)p.dstep[i];
-    if ((addrs & (esz - 1)) != 0)
+    if ((addressBits(p) & (esz - 1)) != 0)
         return false;
 
     // split: axis k holds cn planes interleaved in the source
@@ -247,8 +252,10 @@ static bool buildPlan(const View& s, const View& d, Plan& p)
             while (k >= 0 && p.sstep[k] != esz)
                 k--;
             TransposeFunc f = getTransposeFunc(s.esz);
+            // the kernels access the elements as uchar, ushort or int based types
+            const size_t align = std::min(s.esz & (0 - s.esz), (size_t)4);
             // a short axis cannot fill SIMD registers; the gather is faster then
-            if (k >= 0 && f && p.size[k] >= 8)
+            if (k >= 0 && f && p.size[k] >= 8 && (addressBits(p) & (align - 1)) == 0)
             {
                 moveAxis(p, k, L - 1);
                 p.kind = KIND_TRANSPOSE;
@@ -484,6 +491,8 @@ static void runTranspose(const Plan& p, int64 i0, int64 i1)
         int hb = (int)std::min((int64)TRANSPOSE_TILE, p.size[B] - b0);
         s += a0*p.sstep[A] + b0*p.sstep[B];
         d += a0*p.dstep[A] + b0*p.dstep[B];
+        if (cv_hal_transpose2d(s, (size_t)p.sstep[B], d, (size_t)p.dstep[A], wa, hb, (int)p.esz) == CV_HAL_ERROR_OK)
+            continue;
         p.tfunc(s, (size_t)p.sstep[B], d, (size_t)p.dstep[A], Size(wa, hb));
     }
 }
@@ -662,7 +671,8 @@ void copyBatch(const View* src, const View* dst, int n)
     CV_Assert(n >= 0);
     AutoBuffer<Plan, 4> plans(n);
     size_t np = 0;
-    std::vector<std::unique_ptr<uchar[]> > temps;
+    std::vector<AutoBuffer<uchar> > temps;
+    temps.reserve(n);  // the views below point into the buffers, so they must not move
 
     for (int i = 0; i < n; i++)
     {
@@ -672,14 +682,19 @@ void copyBatch(const View* src, const View* dst, int n)
         CV_CheckLE(s.dims, (int)MAX_VIEW_DIMS, "nd::copy: too many dimensions");
         if (hasZeroSize(s) || sameMapping(s, d))
             continue;
-        if (overlap(s, d))
+        // All the copies run after this loop, so a source that overlaps any of the
+        // destinations is saved first.
+        bool needTemp = false;
+        for (int j = 0; j < n && !needTemp; j++)
+            needTemp = !hasZeroSize(dst[j]) && overlap(s, dst[j]);
+        if (needTemp)
         {
             size_t total = 1;
             for (int k = 0; k < s.dims; k++)
                 total *= (size_t)s.size[k];
-            temps.emplace_back(new uchar[total*s.esz]);
+            temps.emplace_back(total*s.esz);
             View t = s;
-            t.data = temps.back().get();
+            t.data = temps.back().data();
             ptrdiff_t st = (ptrdiff_t)s.esz;
             for (int k = s.dims - 1; k >= 0; k--)
             {

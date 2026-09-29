@@ -543,9 +543,9 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
         newShape[i] = inp.size[j];
     }
 
-    // plain 2D transpose keeps using cv::transpose (HAL, in-place square case)
-    const size_t esz = inp.elemSize();
-    if (ndims == 2 && order[0] == 1 && esz <= 32 && nd::getTransposeFunc(esz))
+    // plain 2D transpose keeps using cv::transpose (HAL, in-place square case);
+    // not for an empty input, which cv::transpose would answer by releasing dst
+    if (ndims == 2 && order[0] == 1 && !inp.empty() && nd::getTransposeFunc(inp.elemSize()))
     {
         transpose(inp, dst_);
         return;
@@ -1052,6 +1052,20 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
+// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
+static void flipNDInplace(Mat& m, int axis)
+{
+    size_t nouter = 1;
+    for (int i = 0; i < axis; i++)
+        nouter *= (size_t)m.size[i];
+    const int n = m.size[axis];
+    const size_t step = m.step[axis];
+    uchar* data = m.ptr();
+    for (size_t i = 0; i < nouter; i++, data += n*step)
+        for (int j = 0, k = n - 1; j < k; j++, k--)
+            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
+}
+
 void flipND(InputArray _src, OutputArray _dst, int _axis)
 {
     CV_INSTRUMENT_REGION();
@@ -1066,6 +1080,11 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
 
     _dst.create(ndim, src.size.p, src.type());
     Mat dst = _dst.getMat();
+    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
+    {
+        flipNDInplace(dst, axis);
+        return;
+    }
 
     nd::View v = nd::viewOf(src);
     nd::flip(v, axis);

@@ -276,6 +276,18 @@ TEST(Core_TransposeND, inplace)
     EXPECT_SAME(expected, a);
 }
 
+// dnn preallocates the outputs with Mat::fit(), which keeps the buffer for an empty shape;
+// transposeND must not reallocate or release it
+TEST(Core_TransposeND, empty_keeps_buffer)
+{
+    Mat src({0, 5}, CV_32F);
+    Mat buf(1, 16, CV_32F), dst = buf;
+    dst.fit(std::vector<int>{5, 0}, CV_32F);
+    cv::transposeND(src, {1, 0}, dst);
+    EXPECT_EQ(buf.u, dst.u);
+    EXPECT_EQ(std::vector<int>({5, 0}), shapeOf(dst));
+}
+
 TEST(Core_TransposeND, invalid_order)
 {
     Mat a({2, 3, 4}, CV_32F, Scalar(0)), b;
@@ -305,6 +317,18 @@ TEST(Core_FlipND, inplace)
     for (int axis = 0; axis < 3; axis++)
     {
         Mat a = randomArray(rng, {5, 7, 9}, CV_8UC3, false);
+        Mat expected = refFlip(a, axis);
+        cv::flipND(a, a, axis);
+        EXPECT_SAME(expected, a);
+    }
+}
+
+TEST(Core_FlipND, inplace_roi)
+{
+    RNG& rng = theRNG();
+    for (int axis = 0; axis < 3; axis++)
+    {
+        Mat a = randomArray(rng, {5, 7, 9}, CV_32FC2, true);
         Mat expected = refFlip(a, axis);
         cv::flipND(a, a, axis);
         EXPECT_SAME(expected, a);
@@ -364,6 +388,19 @@ TEST(Core_ConcatND, invalid)
     EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, c}, 0, d));
     EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, a}, 3, d));
     EXPECT_NO_THROW(cv::concatND(std::vector<Mat>{a, b}, 1, d));
+}
+
+// an input that aliases a part of dst written by another input must be read first
+TEST(Core_ConcatND, input_aliases_dst)
+{
+    RNG& rng = theRNG();
+    Mat dst = randomArray(rng, {6, 4}, CV_32F, false);
+    Mat other = randomArray(rng, {3, 4}, CV_32F, false);
+    std::vector<Mat> src = { other, dst.rowRange(0, 3) };
+    Mat expected;
+    cv::vconcat(std::vector<Mat>{ other.clone(), src[1].clone() }, expected);
+    cv::concatND(src, 0, dst);
+    EXPECT_SAME(expected, dst);
 }
 
 TEST(Core_SplitND, random)

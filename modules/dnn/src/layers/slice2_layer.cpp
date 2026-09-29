@@ -222,15 +222,6 @@ public:
 
 
 private:
-    static void runOp(const Mat& inp, Mat& out, const int* starts_, const int* ends_, const int* steps_)
-    {
-        if (out.total() == 0)
-            return;
-        int ndims = inp.dims;
-        sliceND(inp, std::vector<int>(starts_, starts_ + ndims), std::vector<int>(ends_, ends_ + ndims),
-                std::vector<int>(steps_, steps_ + ndims), out);
-    }
-
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
@@ -269,6 +260,12 @@ private:
         int allSteps[MatShape::MAX_DIMS];
         MatShape outShape = getOutShape(inpShape, *starts_, *ends_, *axes_, steps,
                                         allStarts, allEnds, allSteps);
+        const int ndims = inpShape.dims;
+        const std::vector<int> sliceStarts(allStarts, allStarts + ndims);
+        const std::vector<int> sliceEnds(allEnds, allEnds + ndims);
+        const std::vector<int> sliceSteps(allSteps, allSteps + ndims);
+        // an empty output may keep an out-of-range end, which sliceND would reject
+        const bool emptyOut = outShape.empty();
 
         int outKind = outputs_arr.kind();
         CV_Assert(outKind == _InputArray::STD_VECTOR_MAT ||
@@ -280,7 +277,8 @@ private:
             outs.resize(1);
             outs[0].fit(outShape, inpType);
 
-            runOp(inp, outs[0], allStarts, allEnds, allSteps);
+            if (!emptyOut)
+                sliceND(inp, sliceStarts, sliceEnds, sliceSteps, outs[0]);
         } else {
              Mat inp = inputs_arr.getMat(0);
              std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
@@ -288,7 +286,8 @@ private:
              outs[0].fit(outShape, inpType);
              Mat temp(outShape, inpType);
 
-             runOp(inp, temp, allStarts, allEnds, allSteps);
+             if (!emptyOut)
+                 sliceND(inp, sliceStarts, sliceEnds, sliceSteps, temp);
 
              temp.copyTo(outs[0]);
         }
