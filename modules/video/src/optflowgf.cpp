@@ -1117,8 +1117,11 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
     // If flag is set, check for integrity; if not set, allocate memory space
     if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
-        CV_Assert( _flow0.size() == prev0.size() && _flow0.channels() == 2 &&
-                   _flow0.depth() == CV_32F );
+    {
+        CV_Assert(!_flow0.empty());
+        CV_Assert(_flow0.size() == prev0.size());
+        CV_Assert(_flow0.type() == CV_32FC2);
+    }
     else
         _flow0.create( prev0.size(), CV_32FC2 );
 
