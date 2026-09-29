@@ -202,10 +202,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 _batchSize = inp0[0];
                 outResShape.push_back(1 + static_cast<int>(bidirectional));
                 outResShape.push_back(_batchSize);
-            }
-
-            outResShape.push_back(_hidSize);
-            outputs.assign(1, outResShape);
+            }            outResShape.push_back(_hidSize);
 
             // Yh / Yc: ONNX layout=0 -> (dirs, batch, hid), layout=1 -> (batch, dirs, hid)
             int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
@@ -213,16 +210,15 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
-            // compute output shape of yc
-            if (produceCellOutput)
-            {
-                outputs.push_back(newShape);
-            }
-            // compute output shape of yh
-            if (produceOutputYh)
-            {
-                outputs.push_back(newShape);
-            }
+            // The slots are positional - Y, Y_h, Y_c - and an output the node does not fill still
+            // occupies its position, so there is one shape per declared output (the engine requires
+            // outShapes.size() == requiredOutputs, see allocateLayerOutputs()).
+            const int outCount = std::max(requiredOutputs, 1);
+            outputs.assign(outCount, MatShape());
+            outputs[0] = outResShape;      // slot #0 -> Y
+            for (int i = 1; i < outCount; i++)
+                outputs[i] = newShape;     // Y_h / Y_c share the same shape
+
 
             // forward() allocates its own per-direction scratch, so no engine internals are needed
             internals.clear();

@@ -591,6 +591,65 @@ TEST(Layer_LSTM2_Test_Accuracy_, InputForget)
     normAssert(outputs[2], Yc, "LSTM2(input_forget) Y_c", 1e-4, 1e-4);
 }
 
+// An ONNX LSTM may declare Y_c and skip Y_h (declaring output #1 as an empty name). The slots are
+// positional, so the layer has to answer with one shape per declared output - the engine asserts
+// outShapes.size() == the number of slots (Net::Impl::allocateLayerOutputs).
+TEST(Layer_LSTM2_Test_Accuracy_, CellOutputWithoutHiddenOutput)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    // what parseLSTM() sets for a node with outputs ['Y', '', 'Y_c']
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_yc_without_yh";
+    lp.set("hidden_size", H);
+    lp.set("is_onnx", true);
+    lp.set("produce_sequence_y", true);
+    lp.set("produce_output_yh", false);
+    lp.set("produce_cell_output", true);
+    lp.set("const_weights", false);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    const int slots = 3;   // Y, Y_h (unused) and Y_c
+    layer->getMemoryShapes(inShapes, slots, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)slots);
+    EXPECT_EQ(outShapes[0], shape(T, 1, N, H));
+    EXPECT_EQ(outShapes[1], shape(1, N, H));   // the unused Y_h slot
+    EXPECT_EQ(outShapes[2], shape(1, N, H));   // Y_c
+    layer->getTypes(inTypes, slots, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (int i = 0; i < slots; i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc);
+    normAssert(outputs[0], Y, "LSTM2(Y_c without Y_h) Y", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(Y_c without Y_h) Y_c", 1e-4, 1e-4);
+}
+
 
 class Layer_RNN_Test : public ::testing::Test
 {
