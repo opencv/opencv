@@ -1230,14 +1230,7 @@ public:
             }
         }
 
-        if (sizes.empty() && !scales.empty() && halfPixelCenters)
-        {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            scaleHeight = 1.f / scales[hIdx];
-            scaleWidth  = 1.f / scales[wIdx];
-        }
-        else if (sizes.empty() && !scales.empty() && alignCorners)
+        if (sizes.empty() && !scales.empty() && alignCorners)
         {
             int hIdx, wIdx;
             spatialIndices(scales.size(), hIdx, wIdx);
@@ -1245,6 +1238,38 @@ public:
             float lenW = inpShape[3] * scales[wIdx];
             if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
             if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
+        }
+        // ONNX Resize with a "scales" input: the resampling step along an axis is
+        // exactly 1/scale, which is not the same as in/out unless in*scale happens to
+        // be integral.  W=5 with scale=0.5 gives out=2, so the step is 2 and not
+        // 5/2; W=7 with scale=1.5 gives out=10 and a step of 2/3 and not 7/10.  The
+        // step must therefore come from the scales themselves.  They reach this layer
+        // either as a runtime input or folded into zoom_factor_* by the importer, and
+        // both have to be honoured.  "sizes" (step = in/out by definition) and the
+        // roi-based tf_crop_and_resize mode (whose grid does not use the step at all)
+        // keep the value derived from the shapes.
+        else if (sizes.empty() && !alignCorners && coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        {
+            float scH = 0.f, scW = 0.f;
+            if (!scales.empty())
+            {
+                int hIdx, wIdx;
+                spatialIndices(scales.size(), hIdx, wIdx);
+                scH = scales[hIdx];
+                scW = scales[wIdx];
+            }
+            else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
+            {
+                // constant "scales" were folded into the layer params by the importer
+                scH = zoomFactorHeight;
+                scW = zoomFactorWidth;
+            }
+
+            if (scH > 0 && scW > 0)
+            {
+                scaleHeight = 1.f / scH;
+                scaleWidth  = 1.f / scW;
+            }
         }
 
         auto kind = outputs_arr.kind();
@@ -1297,14 +1322,23 @@ public:
 
         if (antialias && inp.dims == 4 &&
             (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
-        {
-            const bool cubic = (interpolation == "cubic");
+        {            const bool cubic = (interpolation == "cubic");
+            // The output/input ratio sets the antialias filter support, so it has to be
+            // the ONNX "scales" when they were given -- whether as an input or folded
+            // into the layer params.  in/out only stands in for them with "sizes".
             float xsH, xsW;
-            if (!scales.empty()) {
+            if (!scales.empty())
+            {
                 int hIdx, wIdx;
                 spatialIndices(scales.size(), hIdx, wIdx);
                 xsH = scales[hIdx]; xsW = scales[wIdx];
-            } else {
+            }
+            else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
+            {
+                xsH = zoomFactorHeight; xsW = zoomFactorWidth;
+            }
+            else
+            {
                 xsH = float(outShape[2]) / inpShape[2];
                 xsW = float(outShape[3]) / inpShape[3];
             }
