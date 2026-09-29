@@ -160,6 +160,31 @@ OCL_TEST(Gemm, small)
     EXPECT_LE(cvtest::norm(C, uC, cv::NORM_INF), 1e-5);
 }
 
+OCL_TEST(Gemm, empty_mat_C_beta_zero)
+{
+    Mat A = (Mat_<float>(2, 3) <<
+             1, 2, 3,
+             4, 5, 6);
+
+    Mat B = (Mat_<float>(3, 2) <<
+             7, 8,
+             9, 10,
+             11, 12);
+
+    UMat uA, uB, uD;
+    A.copyTo(uA);
+    B.copyTo(uB);
+
+    Mat C;
+
+    OCL_ON(cv::gemm(uA, uB, 1, C, 0, uD, 0));
+
+    Mat expected = (Mat_<float>(2, 2) <<
+                    58, 64,
+                    139, 154);
+
+    EXPECT_LE(cvtest::norm(expected, uD, cv::NORM_INF), 1e-5);
+}
 } } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

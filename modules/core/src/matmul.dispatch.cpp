@@ -65,7 +65,7 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
     int type = matA.type(), esz = CV_ELEM_SIZE(type);
-    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    bool haveC = beta != 0.0 && matC.kind() != cv::_InputArray::NONE;
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
 
@@ -170,7 +170,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     if (!doubleSupport && depth == CV_64F)
         return false;
 
-    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    bool haveC = beta != 0.0 && matC.kind() != cv::_InputArray::NONE;
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
 
