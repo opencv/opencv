@@ -395,6 +395,104 @@ TEST(Layer_GRU_Test_Accuracy_, SingleOutputIsSequenceY)
     normAssert(outputs[0], expected, "GRU single output must be Y", 1e-4, 1e-4);
 }
 
+// direction == "reverse" processes the sequence from the last timestep to the first, so Y[t] holds
+// the state after seeing x[t..T-1] and Y_h is the state left after the very last step (t = 0).
+TEST(Layer_GRU_Test_Accuracy_, ReverseDirection)
+{
+    const int T = 3, N = 2, I = 4, H = 5;
+
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 3 * H, I}, CV_32F);
+    Mat R({1, 3 * H, H}, CV_32F);
+    Mat B({1, 6 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "GRU";
+    lp.name = "gru_reverse";
+    lp.set("direction", "reverse");
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    layer->getMemoryShapes(inShapes, 2, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)2);
+    EXPECT_EQ(outShapes[0], shape(T, 1, N, H));
+    EXPECT_EQ(outShapes[1], shape(1, N, H));
+    layer->getTypes(inTypes, 2, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    // Same equations as above, but starting from the last timestep.
+    const float* xData = X.ptr<float>();
+    const float* wData = W.ptr<float>();
+    const float* rData = R.ptr<float>();
+    const float* bData = B.ptr<float>();
+    Mat expectedY(shape(T, 1, N, H), CV_32F), expectedYh(shape(1, N, H), CV_32F);
+    std::vector<double> z(H), r(H), n(H), h(H);
+    for (int s = 0; s < N; s++)
+    {
+        std::fill(h.begin(), h.end(), 0.);
+        for (int t = T - 1; t >= 0; t--)
+        {
+            const float* x = xData + (t * N + s) * I;
+            for (int j = 0; j < H; j++)
+            {
+                double pz = bData[j] + bData[3 * H + j];
+                double pr = bData[H + j] + bData[3 * H + H + j];
+                for (int i = 0; i < I; i++)
+                {
+                    pz += x[i] * wData[j * I + i];
+                    pr += x[i] * wData[(H + j) * I + i];
+                }
+                for (int k = 0; k < H; k++)
+                {
+                    pz += h[k] * rData[j * H + k];
+                    pr += h[k] * rData[(H + j) * H + k];
+                }
+                z[j] = 1. / (1. + std::exp(-pz));
+                r[j] = 1. / (1. + std::exp(-pr));
+            }
+            for (int j = 0; j < H; j++)
+            {
+                double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
+                for (int i = 0; i < I; i++)
+                    pn += x[i] * wData[(2 * H + j) * I + i];
+                for (int k = 0; k < H; k++)
+                    pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
+                n[j] = std::tanh(pn);
+            }
+            for (int j = 0; j < H; j++)
+            {
+                h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
+                expectedY.ptr<float>()[(t * N + s) * H + j] = (float)h[j];
+            }
+        }
+        for (int j = 0; j < H; j++)
+            expectedYh.ptr<float>()[s * H + j] = (float)h[j];
+    }
+
+    normAssert(outputs[0], expectedY, "GRU(reverse) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], expectedYh, "GRU(reverse) Y_h", 1e-4, 1e-4);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());

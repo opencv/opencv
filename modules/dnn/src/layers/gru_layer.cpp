@@ -36,7 +36,8 @@ class GRULayerImpl CV_FINAL : public GRULayer
     int numTimeStamps, numSamples;
     layout_t layout;
     MatShape outTailShape;
-    bool bidirectional;
+    bool reverse;        // If true, go in negative direction along the time axis
+    bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     bool linearBeforeReset;
 
 public:
@@ -44,7 +45,10 @@ public:
     {
         setParamsFrom(params);
 
-        bidirectional = params.get<String>("direction", "forward") == "bidirectional";
+        const String direction = params.get<String>("direction", "forward");
+        bidirectional = (direction == "bidirectional");
+        reverse = (direction == "reverse");
+        CV_Assert(!reverse || !bidirectional);
         linearBeforeReset = params.get<int>("linear_before_reset", 0) != 0;
         layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
 
@@ -312,8 +316,10 @@ public:
             gemm(xTs, wx_n, 1, xProj_n, 0, xProj_n, GEMM_2_T);
             gemm(dummyOnesAll, b_in, 1, xProj_n, 1, xProj_n);
 
+            // For a single direction, "reverse" walks the sequence from the last timestep to the
+            // first; for a bidirectional node the second direction is the reversed one.
             int tsStart, tsEnd, tsInc;
-            if (i == 1) {
+            if (reverse || i == 1) {
                 tsStart = numTimeStamps - 1;
                 tsEnd = -1;
                 tsInc = -1;
