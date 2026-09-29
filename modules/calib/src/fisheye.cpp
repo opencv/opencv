@@ -408,7 +408,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
     const int threshold = 50;
     const double thresh_cond = 1e6;
-    const int check_cond = 1;
+    const int check_cond = flags & CALIB_CHECK_COND ? 1 : 0;
 
     int n_points = (int)objectPoints.getMat(0).total();
     int n_images = (int)objectPoints.total();
@@ -1010,7 +1010,7 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         {
             SVD svd(JJ_kk, SVD::NO_UV);
             if(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) > thresh_cond )
-                CV_Error( cv::Error::StsInternal, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
+                CV_Error( cv::Error::StsBadArg, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
         }
         omckk.reshape(3,1).copyTo(omc.getMat().col(image_idx));
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));
@@ -1070,7 +1070,8 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         {
             Mat JJ_kk = B.t();
             SVD svd(JJ_kk, SVD::NO_UV);
-            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+            if (!(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond))
+                CV_Error(cv::Error::StsBadArg, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d", image_idx));
         }
     }
 
