@@ -368,7 +368,8 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
 
 // Runs LSTM2 exactly like the ONNX importer does: W/R/B as inputs, all three outputs produced.
 static void runLSTM2(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int H,
-                     bool reverse, const std::vector<int>& lens, std::vector<Mat>& outputs)
+                     bool reverse, const std::vector<int>& lens, std::vector<Mat>& outputs,
+                     float clip = 0.f, bool inputForget = false)
 {
     LayerParams lp;
     lp.type = "LSTM2";
@@ -380,6 +381,10 @@ static void runLSTM2(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int
     lp.set("produce_output_yh", true);
     lp.set("produce_cell_output", true);
     lp.set("const_weights", false);
+    if (clip > 0.f)
+        lp.set("clip", clip);
+    if (inputForget)
+        lp.set("input_forget", 1);
     Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
     ASSERT_TRUE(layer);
 
@@ -419,8 +424,11 @@ static void runLSTM2(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int
 // contributes zeros to Y from there on. An empty `lens` runs every sample over the whole sequence.
 static void lstm2Reference(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int H,
                            bool reverse, const std::vector<int>& lens,
-                           Mat& Y, Mat& Yh, Mat& Yc)
+                           Mat& Y, Mat& Yh, Mat& Yc, float clip = 0.f, bool inputForget = false)
 {
+    const auto clamped = [clip](double v) {
+        return clip > 0.f ? std::max(-(double)clip, std::min(v, (double)clip)) : v;
+    };
     const int T = X.size[0], N = X.size[1], I = X.size[2];
     Y = Mat::zeros(shape(T, 1, N, H), CV_32F);
     Yh = Mat::zeros(shape(1, N, H), CV_32F);
@@ -461,13 +469,15 @@ static void lstm2Reference(const Mat& X, const Mat& W, const Mat& R, const Mat& 
                         pf += h[m] * rData[(2 * H + j) * H + m];
                         pc += h[m] * rData[(3 * H + j) * H + m];
                     }
-                    ii[j] = 1. / (1. + std::exp(-pi));
-                    oo[j] = 1. / (1. + std::exp(-po));
-                    ff[j] = 1. / (1. + std::exp(-pf));
-                    cc[j] = std::tanh(pc);
+                    ii[j] = 1. / (1. + std::exp(-clamped(pi)));
+                    oo[j] = 1. / (1. + std::exp(-clamped(po)));
+                    ff[j] = 1. / (1. + std::exp(-clamped(pf)));
+                    cc[j] = std::tanh(clamped(pc));
                 }
                 for (int j = 0; j < H; j++)
                 {
+                    if (inputForget)
+                        ff[j] = 1. - ii[j];   // coupled gates
                     c[j] = ff[j] * c[j] + ii[j] * cc[j];
                     h[j] = oo[j] * std::tanh(c[j]);
                 }
@@ -532,6 +542,53 @@ TEST(Layer_LSTM2_Test_Accuracy_, ReverseFinalState)
     normAssert(outputs[0], Y, "LSTM2(reverse) Y", 1e-4, 1e-4);
     normAssert(outputs[1], Yh, "LSTM2(reverse) Y_h", 1e-4, 1e-4);
     normAssert(outputs[2], Yc, "LSTM2(reverse) Y_c", 1e-4, 1e-4);
+}
+
+// The ONNX `clip` attribute bounds the input of the activations to [-clip, clip].
+TEST(Layer_LSTM2_Test_Accuracy_, Clip)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    const float clip = 0.3f;   // small enough that it binds for the weights below
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, false, std::vector<int>(), outputs, clip);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc, clip);
+    normAssert(outputs[0], Y, "LSTM2(clip) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(clip) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(clip) Y_c", 1e-4, 1e-4);
+}
+
+// ONNX input_forget couples the gates: f_t = 1 - i_t instead of f_t = sigmoid(...).
+TEST(Layer_LSTM2_Test_Accuracy_, InputForget)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, false, std::vector<int>(), outputs, 0.f, true);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc, 0.f, true);
+    normAssert(outputs[0], Y, "LSTM2(input_forget) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(input_forget) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(input_forget) Y_c", 1e-4, 1e-4);
 }
 
 
