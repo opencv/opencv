@@ -160,6 +160,16 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     // compute shape of the result with possible broadcasting
     CV_WRAP MatShape expand(const MatShape& another) const;
 
+    // removes the given axes of size 1; all the axes of size 1 when axes is empty
+    CV_WRAP MatShape squeeze(const std::vector<int>& axes = std::vector<int>()) const;
+    // inserts axes of size 1; axes are positions in the result
+    CV_WRAP MatShape unsqueeze(const std::vector<int>& axes) const;
+    // merges the axes from startAxis to endAxis (inclusive) into one
+    CV_WRAP MatShape flatten(int startAxis = 0, int endAxis = -1) const;
+    // the shape of the same number of elements given by newShape, where -1 is inferred
+    // and 0 copies the corresponding axis of this shape (unless allowZero is set)
+    CV_WRAP MatShape reshape(const MatShape& newShape, bool allowZero = false) const;
+
     // convert shape between layouts
     CV_WRAP MatShape toLayout(DataLayout newLayout, int C0=0) const;
 

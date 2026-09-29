@@ -52,35 +52,7 @@ public:
 
     MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& axes_) const
     {
-        bool squeezeMask[MatShape::MAX_DIMS];
-
-        if (axes_.empty()) {
-            // remove all 1's
-            for (int i = 0; i < inpShape.dims; i++)
-                squeezeMask[i] = inpShape[i] == 1;
-        } else {
-            for (int i = 0; i < inpShape.dims; i++)
-                squeezeMask[i] = false;
-            for (int a: axes_) {
-                int a_ = normalize_axis(a, inpShape.dims);
-                if (squeezeMask[a_]) {
-                    CV_Error_(Error::StsBadArg, ("duplicate squeezed axis #%d", a));
-                }
-                if (inpShape[a_] != 1) {
-                    CV_Error_(Error::StsBadArg, ("squeezed axis #%d (== %d) != 1", a, inpShape[a_]));
-                }
-                squeezeMask[a_] = true;
-            }
-        }
-
-        MatShape outShape(inpShape.dims);
-        int j = 0;
-        for (int i = 0; i < inpShape.dims; i++) {
-            if (!squeezeMask[i])
-                outShape[j++] = inpShape[i];
-        }
-        outShape.dims = j;
-        return outShape;
+        return inpShape.squeeze(axes_);
     }
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
