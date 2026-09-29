@@ -86,6 +86,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     bool useTimestampDim;
     bool produceCellOutput, produceOutputYh;
     bool useCellClip, usePeephole;
+    bool inputForget;   // If true, couple the gates: f_t = 1 - i_t (ONNX input_forget)
+    bool useClip;       // If true, bound the input of the activations (ONNX clip)
+    float clipValue;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     float forgetBias, cellClip;
@@ -120,6 +123,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             forgetBias = params.get<float>("forget_bias", 0.0f);
             cellClip = params.get<float>("cell_clip", 0.0f);
+
+            inputForget = params.get<int>("input_forget", 0) != 0;
+            clipValue = params.get<float>("clip", 0.f);
+            useClip = clipValue > 0.f;
 
             CV_Assert(!reverse || !bidirectional);
 
@@ -284,6 +291,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
 
             Mat hOutTs(batchSizeTotal, numHidden, dtype);
+            Mat ones;   // for f_t = 1 - i_t
+            if (inputForget)
+                ones = Mat::ones(batchSize, numHidden, dtype);
 
             // Batched projection: gatesAll = Wx*x + bias for the whole sequence.
             const int gateN = 4 * numHidden, projK = xTs.cols;
@@ -395,15 +405,22 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     Mat gatesIF = gates.colRange(0, 2*numHidden);
                     gemm(cInternal, pI, 1, gateI, 1, gateI);
                     gemm(cInternal, pF, 1, gateF, 1, gateF);
+                    clipToThreshold(gatesIF);
                     f_activation(gatesIF, gatesIF);
                 }
                 else
                 {
                     Mat gatesIFO = gates.colRange(0, 3*numHidden);
+                    clipToThreshold(gatesIFO);
                     f_activation(gatesIFO, gatesIFO);
                 }
 
+                clipToThreshold(gateG);
                 g_activation(gateG, gateG);
+
+                // Coupled gates: the forget gate follows the input gate instead of being computed.
+                if (inputForget)
+                    subtract(ones, gateI, gateF);
 
                 //compute c_t
                 multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
@@ -419,6 +436,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 if (usePeephole)
                 {
                     gemm(cInternal, pO, 1, gateO, 1, gateO);
+                    clipToThreshold(gateO);
                     f_activation(gateO, gateO);
                 }
 
@@ -552,6 +570,16 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             if (produceCellOutput)
                 writeFinalStates(cFinal, output[2], numDirs);
+        }
+
+        // The ONNX `clip` attribute bounds the input of the activations (not their output, and not
+        // the state) to [-clip, clip]. It is off unless the model asks for it.
+        void clipToThreshold(Mat& m) const
+        {
+            if (!useClip)
+                return;
+            min(m, clipValue, m);
+            max(m, -clipValue, m);
         }
 
         // A sample that has reached the end of its sequence keeps the state it finished with;
