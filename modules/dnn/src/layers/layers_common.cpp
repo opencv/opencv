@@ -253,6 +253,17 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
     }
 }
 
+void expandGlobalPoolingParams(std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
+                               std::vector<size_t>& strides, size_t nspatial)
+{
+    if (pads_begin.size() < nspatial)
+        pads_begin.insert(pads_begin.begin(), nspatial - pads_begin.size(), 0);
+    if (pads_end.size() < nspatial)
+        pads_end.insert(pads_end.begin(), nspatial - pads_end.size(), 0);
+    if (strides.size() < nspatial)
+        strides.insert(strides.begin(), nspatial - strides.size(), 1);
+}
+
 double getWeightScale(const Mat& weightsMat)
 {
     double realMin, realMax;
