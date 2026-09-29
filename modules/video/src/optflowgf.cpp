@@ -1197,9 +1197,11 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 {
     CV_INSTRUMENT_REGION();
 
-    if ((flags & OPTFLOW_USE_INITIAL_FLOW) && _flow0.empty())
+    if (flags & OPTFLOW_USE_INITIAL_FLOW)
     {
-        CV_Error(Error::StsBadArg, "The 'flow' argument must be provided when OPTFLOW_USE_INITIAL_FLOW flag is set.");
+        CV_Assert(!_flow0.empty());
+        CV_Assert(_flow0.size() == _prev0.size());
+        CV_Assert(_flow0.type() == CV_32FC2);
     }
 
     Ptr<cv::FarnebackOpticalFlow> optflow;
