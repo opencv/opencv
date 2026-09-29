@@ -143,43 +143,11 @@ public:
 
     MatShape getOutShape(const MatShape& inpShape, const MatShape& shapeSpec) const
     {
-        MatShape outShape = shapeSpec;
-        int m1idx = -1;
-        int i, ndims = outShape.dims;
-        int64_t outTotal = 1;
-        for (i = 0; i < ndims; i++) {
-            if (outShape[i] < 0) {
-                CV_Assert(outShape[i] == -1);
-                if (m1idx >= 0) {
-                    CV_Error(Error::StsBadArg, "invalid shape spec, there must be at most one '-1'");
-                }
-                m1idx = i;
-            }
-            else {
-                if (outShape[i] == 0) {
-                    if (i >= inpShape.dims) {
-                        CV_Error(Error::StsBadArg, "cannot copy dimension from the input tensor");
-                    }
-                    outShape[i] = inpShape[i];
-                }
-                outTotal *= outShape[i];
-            }
-        }
-
-        int64_t inpTotal = (int64_t)inpShape.total();
-        if (m1idx >= 0) {
-            int64_t autoSize = inpTotal/outTotal;
-            CV_Assert(autoSize <= INT_MAX && autoSize*outTotal == inpTotal);
-            outShape[m1idx] = (int)autoSize;
-        }
-        else if (outTotal != inpTotal && ndims == 2 && outShape[0] == 1 && outShape[1] > 0) {
-            outShape[1] = (int)(inpTotal / outShape[0]);
-        }
-        else {
-            CV_Assert(outTotal == inpTotal);
-        }
-
-        return outShape;
+        // legacy models: (1, k) with the wrong k means (1, total)
+        if (shapeSpec.dims == 2 && shapeSpec[0] == 1 && shapeSpec[1] > 0 &&
+            (int64_t)shapeSpec[1] != (int64_t)inpShape.total())
+            return MatShape({1, (int)inpShape.total()});
+        return inpShape.reshape(shapeSpec);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
