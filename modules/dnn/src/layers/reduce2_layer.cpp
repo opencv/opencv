@@ -365,9 +365,12 @@ public:
                     for (int j = last_reduced_axis - 1; j > 0; --j) {
                         if (projected_indices[j] < shape_src[reduced_axes[j]])
                             break;
-                        projected_indices[j] = 0;
+                        // Carry into the next reduced axis, as for the
+                        // unprojected axes below.
+                        projected_indices[j] -= shape_src[reduced_axes[j]];
+                        current_step -= shape_src[reduced_axes[j]] * steps_src[reduced_axes[j]];
                         ++projected_indices[j - 1];
-                        current_step = steps_src[reduced_axes[j - 1]];
+                        current_step += steps_src[reduced_axes[j - 1]];
                     }
                 }
             }

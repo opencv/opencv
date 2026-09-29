@@ -1931,6 +1931,8 @@ CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
     // no filter
+CASE(test_mvn_expanded_ver18)
+    SKIP;
 CASE(test_neg)
     // no filter
 CASE(test_neg_example)

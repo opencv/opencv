@@ -1240,6 +1240,74 @@ TEST(Layer_Test_ReduceMean, accuracy_input_0)
 }
 
 
+// A Reduce over more than two axes carries the odometer index into the next
+// reduced axis; doing so used to drop the steps of the axes above it.
+TEST(Layer_Test_Reduce, NonContiguousAxes)
+{
+    const int sizes[] = {3, 3, 3, 3};
+    const int ndims = 4;
+    Mat inp(ndims, sizes, CV_32F);
+    randu(inp, -1, 1);
+
+    const std::vector<std::vector<int> > axesSets = { {0, 2, 3}, {0, 1, 3} };
+    const char* ops[] = {"MEAN", "SUM"};
+
+    for (int a = 0; a < (int)axesSets.size(); a++)
+    {
+        for (int o = 0; o < 2; o++)
+        {
+            const std::vector<int>& axes = axesSets[a];
+            const bool useMean = o == 0;
+
+            // keepdims=true, so the reduced dimensions are 1 in the reference.
+            std::vector<int> outShape(ndims, 1);
+            int reduceCount = 1;
+            for (int i = 0; i < ndims; i++)
+            {
+                if (std::find(axes.begin(), axes.end(), i) == axes.end())
+                    outShape[i] = sizes[i];
+                else
+                    reduceCount *= sizes[i];
+            }
+
+            Mat ref(outShape, CV_32F, Scalar(0));
+            Mat refFlat = ref.reshape(1, 1);
+            const float* src = inp.ptr<float>();
+            for (int i = 0; i < (int)inp.total(); i++)
+            {
+                int idx[ndims], offset = i, dst = 0;
+                for (int d = ndims - 1; d >= 0; d--)
+                {
+                    idx[d] = offset % sizes[d];
+                    offset /= sizes[d];
+                }
+                for (int d = 0; d < ndims; d++)
+                {
+                    const bool reduced = std::find(axes.begin(), axes.end(), d) != axes.end();
+                    dst = dst * outShape[d] + (reduced ? 0 : idx[d]);
+                }
+                refFlat.at<float>(dst) += src[i];
+            }
+            if (useMean)
+                ref *= 1.f / reduceCount;
+
+            LayerParams lp;
+            lp.name = "testReduce";
+            lp.type = "Reduce2";
+            lp.set("reduce", ops[o]);
+            lp.set("keepdims", true);
+            lp.set("axes", DictValue::arrayInt(&axes[0], (int)axes.size()));
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+            std::vector<Mat> input(1, inp), output;
+            runLayer(layer, input, output);
+
+            EXPECT_EQ(shape(output[0]), shape(ref)) << "axes #" << a << ", op " << ops[o];
+            normAssert(ref.reshape(1, 1), output[0].reshape(1, 1), "", 1e-6, 1e-6);
+        }
+    }
+}
+
 // Check if relu is not fused to convolution if we requested it's output
 TEST(Layer_Test_Convolution, relu_fusion)
 {

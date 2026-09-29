@@ -107,9 +107,7 @@
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
-"test_mvn",  // Issues::Wrong answer
-"test_mvn_expanded",  // Issues::Wrong answer
-"test_mvn_expanded_ver18",
+"test_mvn",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MeanVarianceNormalization" in function 'getLayerInstance'
 "test_nesterov_momentum",  // Issues::Layer does not exist (NesterovsAcceleratedGradient) Can't create layer "onnx_node_output_0!X_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_optional_get_element",  // Issue::out of memory :: Failed to allocate 1044051907127083008 bytes in function 'OutOfMemoryError'
 "test_optional_get_element_optional_sequence",
