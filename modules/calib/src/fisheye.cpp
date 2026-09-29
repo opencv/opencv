@@ -182,6 +182,10 @@ private:
     internal::IntrinsicParams params_;
 };
 
+const int fisheyeCalibrateFlags = CALIB_USE_INTRINSIC_GUESS | CALIB_RECOMPUTE_EXTRINSIC | CALIB_CHECK_COND |
+                                  CALIB_FIX_SKEW | CALIB_FIX_K1 | CALIB_FIX_K2 | CALIB_FIX_K3 | CALIB_FIX_K4 |
+                                  CALIB_FIX_PRINCIPAL_POINT | CALIB_FIX_FOCAL_LENGTH;
+
 }}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,6 +206,10 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     CV_Assert(tvecs.empty() || (tvecs.channels() == 3));
 
     CV_Assert((!K.empty() && !D.empty()) || !(flags & CALIB_USE_INTRINSIC_GUESS));
+    if (flags & ~fisheyeCalibrateFlags)
+        CV_Error_(cv::Error::StsBadArg, ("Unsupported fisheye flags 0x%x. Fisheye flags use the unified cv::CALIB_* values "
+                                         "since OpenCV 5.0; numeric flags saved from OpenCV 4.x must be converted",
+                                         flags & ~fisheyeCalibrateFlags));
 
     using namespace cv::internal;
     //-------------------------------Initialization
@@ -403,6 +411,10 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     CV_Assert(D2.empty() || (D2.total() == 4));
 
     CV_Assert((!K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
+    if (flags & ~(fisheyeCalibrateFlags | CALIB_FIX_INTRINSIC))
+        CV_Error_(cv::Error::StsBadArg, ("Unsupported fisheye flags 0x%x. Fisheye flags use the unified cv::CALIB_* values "
+                                         "since OpenCV 5.0; numeric flags saved from OpenCV 4.x must be converted",
+                                         flags & ~(fisheyeCalibrateFlags | CALIB_FIX_INTRINSIC)));
 
     //-------------------------------Initialization
 

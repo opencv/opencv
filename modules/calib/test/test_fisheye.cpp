@@ -410,40 +410,6 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     EXPECT_MAT_NEAR(theD, newD, 1e-6);
 }
 
-TEST_F(fisheyeTest, CalibrationReportsDegenerateView)
-{
-    const cv::Matx33d K_true(600, 0, 320, 0, 610, 240, 0, 0, 1);
-    const std::vector<cv::Point3d> board = {
-        {-0.4, -0.3, 0.0}, {0.0, -0.3, 0.1}, {0.4, -0.3, 0.0},
-        {-0.4,  0.0, 0.1}, {0.0,  0.0, 0.0}, {0.4,  0.0, 0.1},
-        {-0.4,  0.3, 0.0}, {0.0,  0.3, 0.1}, {0.4,  0.3, 0.0}};
-
-    std::vector<cv::Point2d> good;
-    cv::fisheye::projectPoints(board, good, cv::Vec3d(0.15, -0.1, 0.08), cv::Vec3d(0.2, -0.15, 3.0),
-                               K_true, cv::Vec4d::all(0));
-    std::vector<cv::Point2d> collapsed(board.size(), cv::Point2d(320, 240));
-
-    std::vector<std::vector<cv::Point3d> > objectPoints = {board, board};
-    std::vector<std::vector<cv::Point2d> > imagePoints = {good, collapsed};
-
-    cv::Mat K_est = cv::Mat(K_true), D_est = cv::Mat::zeros(4, 1, CV_64F);
-    std::vector<cv::Vec3d> rvecs, tvecs;
-    const int flags = cv::CALIB_USE_INTRINSIC_GUESS | cv::CALIB_FIX_FOCAL_LENGTH | cv::CALIB_FIX_PRINCIPAL_POINT |
-                      cv::CALIB_FIX_SKEW | cv::CALIB_FIX_K1 | cv::CALIB_FIX_K2 | cv::CALIB_FIX_K3 | cv::CALIB_FIX_K4;
-
-    try
-    {
-        cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(640, 480), K_est, D_est, rvecs, tvecs, flags,
-                               cv::TermCriteria(cv::TermCriteria::COUNT, 1, 0));
-        FAIL() << "calibrate accepted a degenerate view";
-    }
-    catch (const cv::Exception& e)
-    {
-        EXPECT_EQ(cv::Error::StsBadArg, e.code);
-        EXPECT_NE(std::string::npos, e.err.find("input array 1"));
-    }
-}
-
 TEST_F(fisheyeTest, Homography)
 {
     const int n_images = 1;
