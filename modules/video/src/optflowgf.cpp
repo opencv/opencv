@@ -1197,6 +1197,13 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 {
     CV_INSTRUMENT_REGION();
 
+    if (flags & OPTFLOW_USE_INITIAL_FLOW)
+    {
+        CV_Assert(!_flow0.empty());
+        CV_Assert(_flow0.size() == _prev0.size());
+        CV_Assert(_flow0.type() == CV_32FC2);
+    }
+
     Ptr<cv::FarnebackOpticalFlow> optflow;
     optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
     optflow->calc(_prev0,_next0,_flow0);

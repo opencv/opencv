@@ -216,5 +216,21 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     ASSERT_NO_THROW(dis->calc(prev, next, flow));
     EXPECT_EQ(flow.size(), prev.size());
 }
+TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
+{
+    cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat frame2 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat flow;
 
+    // Test 1: Empty flow with OPTFLOW_USE_INITIAL_FLOW flag
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 2: Mismatched size (image is 100x100, but flow is 50x50)
+    cv::Mat wrong_size_flow = cv::Mat::zeros(50, 50, CV_32FC2);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_size_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 3: Mismatched type (CV_8UC1 instead of CV_32FC2)
+    cv::Mat wrong_type_flow = cv::Mat::zeros(100, 100, CV_8UC1);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_type_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+}
 }} // namespace
