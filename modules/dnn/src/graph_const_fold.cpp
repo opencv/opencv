@@ -54,7 +54,7 @@ struct ConstFolding
             const ArgData& adata = netimpl->args.at(inp.idx);
             if (adata.type < 0)
                 continue;
-            const Mat& t = netimpl->argTensor(inp);
+            const UMat& t = netimpl->argTensor(inp);
             if (!t.empty() && t.shape() != pinned)
                 continue;
             setKnown(inp, pinned, t.empty() ? adata.type : t.type());
@@ -142,7 +142,7 @@ struct ConstFolding
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
                 } else if (const_arg) {
-                    const Mat& m = netimpl->argTensor(inp);
+                    const UMat& m = netimpl->argTensor(inp);
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
                 } else if (knownTypes[inp.idx] >= 0) {
@@ -180,7 +180,6 @@ struct ConstFolding
                     out_data.type = m.type();
                     out_data.shape = m.shape();
                     out_data.kind = DNN_ARG_CONST; // re-classify each output as constant
-                    netimpl->__tensors__.at(out.idx) = m;
                     if (out.idx > 0)
                         setKnown(out, m.shape(), m.type());
                     netimpl->__tensors__.at(out.idx) = netimpl->toArgTensor(m);
