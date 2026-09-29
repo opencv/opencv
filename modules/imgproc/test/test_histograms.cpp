@@ -142,6 +142,51 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
 
+// Verify that multi-threaded calcHist produces exactly the same result
+// as single-threaded, across multiple depths, dimensions and image sizes.
+typedef testing::TestWithParam< testing::tuple<int, int, Size> > Imgproc_Hist_Calc_Parallel;
+
+TEST_P(Imgproc_Hist_Calc_Parallel, consistency)
+{
+    int type = testing::get<0>(GetParam());
+    int dims = testing::get<1>(GetParam());
+    Size sz  = testing::get<2>(GetParam());
+
+    int cn = dims;  // multi-channel image matching dims
+    Mat src(sz, CV_MAKETYPE(type, cn));
+    randu(src, Scalar::all(0), Scalar::all(256));
+
+    std::vector<int> ch(dims), hs(dims);
+    std::vector<std::vector<float> > rv(dims);
+    std::vector<const float*> rp(dims);
+    for (int i = 0; i < dims; i++)
+    {
+        ch[i] = i;
+        hs[i] = (dims == 3) ? 32 : 256;
+        rv[i].assign(2, 0.f);
+        rv[i][1] = 256.f;
+        rp[i] = &rv[i][0];
+    }
+
+    Mat h1, h2;
+    setNumThreads(1);
+    calcHist(&src, 1, ch.data(), noArray(), h1, dims, hs.data(), rp.data());
+    setNumThreads(8);
+    calcHist(&src, 1, ch.data(), noArray(), h2, dims, hs.data(), rp.data());
+    setNumThreads(0);
+
+    EXPECT_EQ(0.0, cv::norm(h1, h2, NORM_INF))
+        << "type=" << type << " dims=" << dims << " size=" << sz;
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Hist_Calc_Parallel,
+    testing::Combine(
+        testing::Values(CV_8U, CV_16U, CV_32F),
+        testing::Values(1, 2, 3),
+        testing::Values(Size(640, 480), Size(1920, 1080), Size(7, 13))
+    )
+);
+
 ////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
 
 void equalizeHistReference(const Mat& src, Mat& dst)
