@@ -565,8 +565,11 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_16FC2);
     PUBLISH(CV_16FC3);
     PUBLISH(CV_16FC4);
-#undef PUBLISH_
-#undef PUBLISH
+    PyObject* resize3D_obj = PyDict_GetItemString(d, "resize3D");
+    if (resize3D_obj)
+    {
+        PyDict_SetItemString(d, "resize3d", resize3D_obj);
+    }
 
     return true;
 }
