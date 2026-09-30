@@ -4,28 +4,7 @@
 
 #include "opencv2/core/hal/intrin.hpp"
 
-#define DEF_ACC_INT_FUNCS(suffix, type, acctype) \
-void acc_##suffix(const type* src, acctype* dst, \
-                         const uchar* mask, int len, int cn) \
-{ \
-    CV_CPU_DISPATCH(acc_simd_, (src, dst, mask, len, cn),  CV_CPU_DISPATCH_MODES_ALL); \
-} \
-void accSqr_##suffix(const type* src, acctype* dst, \
-                            const uchar* mask, int len, int cn) \
-{ \
-    CV_CPU_DISPATCH(accSqr_simd_, (src, dst, mask, len, cn),  CV_CPU_DISPATCH_MODES_ALL); \
-} \
-void accProd_##suffix(const type* src1, const type* src2, \
-                             acctype* dst, const uchar* mask, int len, int cn) \
-{ \
-    CV_CPU_DISPATCH(accProd_simd_, (src1, src2, dst, mask, len, cn),  CV_CPU_DISPATCH_MODES_ALL); \
-} \
-void accW_##suffix(const type* src, acctype* dst, \
-                          const uchar* mask, int len, int cn, double alpha) \
-{ \
-    CV_CPU_DISPATCH(accW_simd_, (src, dst, mask, len, cn, alpha),  CV_CPU_DISPATCH_MODES_ALL); \
-}
-#define DEF_ACC_FLT_FUNCS(suffix, type, acctype) \
+#define DEF_ACC_FUNCS(suffix, type, acctype) \
 void acc_##suffix(const type* src, acctype* dst, \
                          const uchar* mask, int len, int cn) \
 { \
