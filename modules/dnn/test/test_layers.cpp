@@ -1712,6 +1712,72 @@ TEST_P(Layer_Test_Resize, antialias_downscale_uses_given_scales)
     normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
 }
 
+// align_corners is the one coordinate transformation whose step is not 1/scale: it lines up
+// the corners of the input and the output, so its step is (in - 1) / (in * scale - 1).
+// Constant "scales" are folded into zoom_factor_* by the importer, and that source has to
+// reach the very same formula, not only a runtime "scales" input, which is what the ONNX
+// conformance data (test_resize_downsample_scales_*_align_corners) pins down.
+TEST_P(Layer_Test_Resize, align_corners_downscale)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 5, inW = 7;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = 3.f * (y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "bilinear");
+    lp.set("align_corners", true);
+    lp.set("coordinate_transformation_mode", "align_corners");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    // src = dst * (in - 1) / (in * scale - 1), bilinear with edge clamping.
+    const float stepY = float(inH - 1) / (inH * scale - 1.f);
+    const float stepX = float(inW - 1) / (inW * scale - 1.f);
+    Mat ref(outH, outW, CV_32F);
+    for (int i = 0; i < outH; ++i)
+    {
+        const float sy = std::min(std::max(i * stepY, 0.f), (float)(inH - 1));
+        const int y0 = cvFloor(sy), y1 = std::min(y0 + 1, inH - 1);
+        const float fy = sy - y0;
+        for (int j = 0; j < outW; ++j)
+        {
+            const float sx = std::min(std::max(j * stepX, 0.f), (float)(inW - 1));
+            const int x0 = cvFloor(sx), x1 = std::min(x0 + 1, inW - 1);
+            const float fx = sx - x0;
+            ref.at<float>(i, j) = (1 - fy) * ((1 - fx) * inp.at<float>(y0, x0) + fx * inp.at<float>(y0, x1))
+                                + fy * ((1 - fx) * inp.at<float>(y1, x0) + fx * inp.at<float>(y1, x1));
+        }
+    }
+
+    // the first corner is the one every formula agrees on; a 1/scale step would give 6 for
+    // the second column instead of the 7.2 this one asks for
+    const Mat out2d = out.reshape(1, std::vector<int>{outH, outW});
+    EXPECT_FLOAT_EQ(inp.at<float>(0, 0), out2d.at<float>(0, 0));
+    EXPECT_FLOAT_EQ(3.f * stepX, out2d.at<float>(0, 1));
+    normAssert(out2d, ref);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
