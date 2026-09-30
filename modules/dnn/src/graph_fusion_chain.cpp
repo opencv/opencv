@@ -150,7 +150,7 @@ private:
             if (c.constSlots[k].arg.idx == a.idx)
                 return (int)k;
         }
-        c.constSlots.push_back({net_.argTensor(a), a, 0});
+        c.constSlots.push_back({net_.argTensor(a).getMat(ACCESS_READ), a, 0});
         return (int)c.constSlots.size() - 1;
     }
 

@@ -112,9 +112,9 @@ struct InstanceNormAffineFusion
                                     if (reshape1_lyr && reshape1_lyr->outputs.size() == 1 &&
                                         usecounts.at(instnorm_inp.idx) == 1) {
                                         Mat in_scale = netimpl->isConstArg(instnorm->inputs[1]) ?
-                                                       netimpl->argTensor(instnorm->inputs[1]) : Mat();
+                                                       netimpl->argTensor(instnorm->inputs[1]).getMat(ACCESS_READ) : Mat();
                                         Mat in_bias = netimpl->isConstArg(instnorm->inputs[2]) ?
-                                                      netimpl->argTensor(instnorm->inputs[2]) : Mat();
+                                                      netimpl->argTensor(instnorm->inputs[2]).getMat(ACCESS_READ) : Mat();
                                         bool valid = !in_scale.empty() && !in_bias.empty() &&
                                                      in_scale.type() == CV_32F && in_bias.type() == CV_32F;
                                         if (valid) {
@@ -127,7 +127,7 @@ struct InstanceNormAffineFusion
                                                 all_zeros = (std::abs(bp[k]) < 1e-6f);
                                             if (all_ones && all_zeros) {
                                                 Arg orig_inp = reshape1_lyr->inputs[0];
-                                                Mat mul_scale_mat = netimpl->argTensor(mul_scale_arg);
+                                                Mat mul_scale_mat = netimpl->argTensor(mul_scale_arg).getMat(ACCESS_READ);
                                                 if (in_scale.total() == mul_scale_mat.total()) {
                                                     // Channel dim preserved — fuse into InstanceNorm
                                                     instnorm->inputs[0] = orig_inp;
