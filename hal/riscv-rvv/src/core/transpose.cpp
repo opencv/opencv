@@ -7,28 +7,7 @@
 
 #include "rvv_hal.hpp"
 
-#if defined (__clang__) && __clang_major__ < 18
-#define OPENCV_HAL_IMPL_RVV_VCREATE_x4(suffix, width, v0, v1, v2, v3) \
-    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x4(v, 0, v0); \
-    v = __riscv_vset(v, 1, v1); \
-    v = __riscv_vset(v, 2, v2); \
-    v = __riscv_vset(v, 3, v3);
-
-#define OPENCV_HAL_IMPL_RVV_VCREATE_x8(suffix, width, v0, v1, v2, v3, v4, v5, v6, v7) \
-    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x8(v, 0, v0); \
-    v = __riscv_vset(v, 1, v1); \
-    v = __riscv_vset(v, 2, v2); \
-    v = __riscv_vset(v, 3, v3); \
-    v = __riscv_vset(v, 4, v4); \
-    v = __riscv_vset(v, 5, v5); \
-    v = __riscv_vset(v, 6, v6); \
-    v = __riscv_vset(v, 7, v7);
-
-#define __riscv_vcreate_v_u8m1x8(v0, v1, v2, v3, v4, v5, v6, v7) OPENCV_HAL_IMPL_RVV_VCREATE_x8(u8, 1, v0, v1, v2, v3, v4, v5, v6, v7)
-#define __riscv_vcreate_v_u16m1x8(v0, v1, v2, v3, v4, v5, v6, v7) OPENCV_HAL_IMPL_RVV_VCREATE_x8(u16, 1, v0, v1, v2, v3, v4, v5, v6, v7)
-#define __riscv_vcreate_v_i32m1x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(i32, 1, v0, v1, v2, v3)
-#define __riscv_vcreate_v_i64m1x8(v0, v1, v2, v3, v4, v5, v6, v7) OPENCV_HAL_IMPL_RVV_VCREATE_x8(i64, 1, v0, v1, v2, v3, v4, v5, v6, v7)
-#endif
+#include "rvv_vcreate.hpp"
 
 namespace cv { namespace rvv_hal { namespace core {
 
@@ -186,7 +165,8 @@ static void transpose2d_32sC2(const uchar *src_data, size_t src_step, uchar *dst
 using Transpose2dFunc = void (*)(const uchar*, size_t, uchar*, size_t, int, int);
 int transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                 int src_width, int src_height, int element_size) {
-    if (src_data == dst_data) {
+    if (src_data == dst_data || element_size <= 0 ||
+        src_step % element_size != 0 || dst_step % element_size != 0) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 

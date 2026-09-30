@@ -1012,29 +1012,111 @@ struct RotateOp : public BaseElemWiseOp
     int rotatecode;
 };
 
-TEST(Core_Rotate, OddSizesAndPaddedRows)
-{
-    const int types[] = { CV_8UC1, CV_16UC1, CV_32SC1, CV_64FC1 };
-    const Size sizes[] = { Size(3550, 3), Size(513, 7), Size(1025, 9), Size(17, 19) };
-    const int rotateCodes[] = { ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE };
-    RNG rng(0x12345678);
+typedef testing::TestWithParam<tuple<int, Size, int> > RotatePaddedTest;
 
-    for (int type : types)
-        for (const Size& size : sizes)
-        {
-            Mat storage(size.height + 2, size.width + 2, type);
-            Mat src = storage(Rect(1, 1, size.width, size.height));
-            rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(255));
-            for (int rotateCode : rotateCodes)
-            {
-                SCOPED_TRACE(cv::format("type=%d size=%dx%d code=%d", type, size.width, size.height, rotateCode));
-                Mat expected, actual;
-                reference::rotate(src, expected, rotateCode);
-                cv::rotate(src, actual, rotateCode);
-                EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
-            }
-        }
+TEST_P(RotatePaddedTest, accuracy)
+{
+    const int type = get<0>(GetParam());
+    const Size size = get<1>(GetParam());
+    const int rotateCode = get<2>(GetParam());
+    RNG& rng = theRNG();
+
+    Mat storage(size.height + 2, size.width + 2, type);
+    Mat src = storage(Rect(1, 1, size.width, size.height));
+    rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(255));
+    const Size dstSize = rotateCode == ROTATE_180 ? size : Size(size.height, size.width);
+    Mat dstStorage(dstSize.height + 2, dstSize.width + 2, type, Scalar::all(0));
+    Mat actual = dstStorage(Rect(1, 1, dstSize.width, dstSize.height));
+    Mat expected;
+    reference::rotate(src, expected, rotateCode);
+    cv::rotate(src, actual, rotateCode);
+    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+    Mat expectedStorage(dstStorage.size(), type, Scalar::all(0));
+    expected.copyTo(expectedStorage(Rect(1, 1, dstSize.width, dstSize.height)));
+    EXPECT_EQ(0, cvtest::norm(expectedStorage, dstStorage, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(Core_Rotate, RotatePaddedTest, testing::Combine(
+    testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_64FC1),
+    testing::Values(Size(3550, 3), Size(513, 7), Size(1025, 9), Size(17, 19)),
+    testing::Values(ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE)));
+
+typedef testing::TestWithParam<tuple<Size, int, bool, bool> > FlipWideTest;
+
+TEST_P(FlipWideTest, accuracy)
+{
+    const Size size = get<0>(GetParam());
+    const int flipCode = get<1>(GetParam());
+    const bool inPlace = get<2>(GetParam());
+    const bool padded = get<3>(GetParam());
+    const int border = padded ? 1 : 0;
+    const Rect roi(border, border, size.width, size.height);
+    Mat storage(size.height + 2 * border, size.width + 2 * border, CV_8UC1, Scalar::all(0));
+    Mat src = storage(roi);
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+    Mat expected;
+    reference::flip(src, expected, flipCode);
+    Mat dstStorage(storage.size(), CV_8UC1, Scalar::all(0));
+    Mat actual = inPlace ? src : dstStorage(roi);
+    cv::flip(src, actual, flipCode);
+    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+    Mat expectedStorage(storage.size(), CV_8UC1, Scalar::all(0));
+    expected.copyTo(expectedStorage(roi));
+    EXPECT_EQ(0, cvtest::norm(expectedStorage, inPlace ? storage : dstStorage, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Core_Flip, FlipWideTest, testing::Combine(
+    testing::Values(Size(255, 1), Size(256, 2), Size(257, 3), Size(513, 3),
+                    Size(1025, 4), Size(3550, 3)),
+    testing::Values(-1, 1), testing::Bool(), testing::Bool()));
+
+// Multi-channel byte matrices may have a row step not divisible by elemSize().
+typedef testing::TestWithParam<tuple<int, int, int> > TransformByteStepTest;
+
+TEST_P(TransformByteStepTest, accuracy)
+{
+    const int type = get<0>(GetParam());
+    const int operation = get<1>(GetParam());
+    const int paddedSide = get<2>(GetParam());
+    const Size size(17, 9);
+    const Size dstSize = operation == ROTATE_180 ? size : Size(size.height, size.width);
+    const size_t srcStep = size.width * CV_ELEM_SIZE(type) + (paddedSide != 1 ? 1 : 0);
+    const size_t dstStep = dstSize.width * CV_ELEM_SIZE(type) + (paddedSide != 0 ? 1 : 0);
+    vector<uchar> srcBuffer(srcStep * size.height, 0);
+    vector<uchar> dstBuffer(dstStep * dstSize.height, 0);
+    Mat src(size, type, srcBuffer.data(), srcStep);
+    Mat actual(dstSize, type, dstBuffer.data(), dstStep);
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+    Mat expected(dstSize, type);
+    for (int y = 0; y < size.height; ++y)
+        for (int x = 0; x < size.width; ++x)
+        {
+            int dy = x, dx = y;
+            if (operation == ROTATE_90_CLOCKWISE)
+                dx = size.height - 1 - y;
+            else if (operation == ROTATE_180)
+            {
+                dy = size.height - 1 - y;
+                dx = size.width - 1 - x;
+            }
+            else if (operation == ROTATE_90_COUNTERCLOCKWISE)
+                dy = size.width - 1 - x;
+            std::memcpy(expected.ptr(dy) + dx * expected.elemSize(),
+                        src.ptr(y) + x * src.elemSize(), src.elemSize());
+        }
+    if (operation == -1)
+        cv::transpose(src, actual);
+    else
+        cv::rotate(src, actual, operation);
+    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+    for (int y = 0; y < dstSize.height; ++y)
+        for (size_t x = dstSize.width * actual.elemSize(); x < dstStep; ++x)
+            EXPECT_EQ(0, dstBuffer[y * dstStep + x]);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_Transform, TransformByteStepTest, testing::Combine(
+    testing::Values(CV_8UC2, CV_8UC4, CV_8UC(8)),
+    testing::Values(-1, 0, 1, 2), testing::Values(0, 1, 2)));
 
 struct TransposeOp : public BaseElemWiseOp
 {
