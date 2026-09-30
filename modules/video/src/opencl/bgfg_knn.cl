@@ -79,7 +79,7 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
                          __global uchar* sample,
                          __global uchar* fgmask, int fgmask_step, int fgmask_offset,
                          int nLongCounter, int nMidCounter, int nShortCounter,
-                         float c_Tb, int c_nkNN, float c_tau
+                         float c_Tb, int c_nkNN, float c_tau, uchar updateModel
 #ifdef SHADOW_DETECT
                          , uchar c_shadowVal
 #endif
@@ -177,6 +177,9 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
 #endif
         __global uchar* _fgmask = fgmask + mad24(y, fgmask_step, x + fgmask_offset);
         *_fgmask = (uchar)foreground;
+
+        if (!updateModel)
+            return;
 
         __global const uchar* _nNextLongUpdate = nNextLongUpdate + pt_idx;
         __global const uchar* _nNextMidUpdate = nNextMidUpdate + pt_idx;
