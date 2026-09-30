@@ -92,7 +92,7 @@ private:
 k-means center initialization using the following algorithm:
 Arthur & Vassilvitskii (2007) k-means++: The Advantages of Careful Seeding
 */
-static void generateCentersPP(const Mat& data, Mat& _out_centers,
+static bool generateCentersPP(const Mat& data, Mat& _out_centers,
                               int K, RNG& rng, int trials)
 {
     CV_TRACE_FUNCTION();
@@ -110,6 +110,8 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
         dist[i] = hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(centers[0]), dims);
         sum0 += dist[i];
     }
+    if (!(sum0 < DBL_MAX))
+        return false;
 
     for (int k = 1; k < K; k++)
     {
@@ -152,7 +154,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
             }
         }
         if (bestCenter < 0)
-            CV_Error(Error::StsNoConv, "kmeans: can't update cluster center (check input for huge or NaN values)");
+            return false;
         centers[k] = bestCenter;
         sum0 = bestSum;
         std::swap(dist, tdist);
@@ -165,6 +167,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
         for (int j = 0; j < dims; j++)
             dst[j] = src[j];
     }
+    return true;
 }
 
 template<bool onlyDistance>
@@ -208,6 +211,11 @@ public:
                 {
                     const float* center = centers.ptr<float>(k);
                     const double dist = hal::normL2Sqr_(sample, center, dims);
+                    if (!(dist <= FLT_MAX))
+                    {
+                        min_dist = DBL_MAX;
+                        break;
+                    }
 
                     if (min_dist > dist)
                     {
@@ -326,7 +334,7 @@ double cv::kmeans( InputArray _data, int K,
     double best_compactness = DBL_MAX;
     for (int a = 0; a < attempts; a++)
     {
-        double compactness = 0;
+        double compactness = DBL_MAX;
 
         for (int iter = 0; ;)
         {
@@ -337,7 +345,10 @@ double cv::kmeans( InputArray _data, int K,
             if (iter == 0 && (a > 0 || !(flags & KMEANS_USE_INITIAL_LABELS)))
             {
                 if (flags & KMEANS_PP_CENTERS)
-                    generateCentersPP(data, centers, K, rng, SPP_TRIALS);
+                {
+                    if (!generateCentersPP(data, centers, K, rng, SPP_TRIALS))
+                        break;
+                }
                 else
                 {
                     for (int k = 0; k < K; k++)
@@ -389,6 +400,8 @@ double cv::kmeans( InputArray _data, int K,
                     {
                         if (labels[i] != max_k)
                             continue;
+                        if (farthest_i < 0)
+                            farthest_i = i;
                         const float* sample = data.ptr<float>(i);
                         double dist = hal::normL2Sqr_(sample, _base_center, dims);
 
@@ -448,9 +461,17 @@ double cv::kmeans( InputArray _data, int K,
             {
                 // assign labels
                 parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N * K), CV_KMEANS_PARALLEL_GRANULARITY));
+                if (!(sum(Mat(Size(N, 1), CV_64F, &dists[0]))[0] < DBL_MAX))
+                    break;
             }
         }
 
+        if (!(compactness < DBL_MAX))
+        {
+            centers.setZero();
+            _labels.setZero();
+            compactness = -1.;
+        }
         if (compactness < best_compactness)
         {
             best_compactness = compactness;
@@ -463,6 +484,8 @@ double cv::kmeans( InputArray _data, int K,
             }
             _labels.copyTo(best_labels);
         }
+        if (compactness < 0.)
+            break;
     }
 
     return best_compactness;
