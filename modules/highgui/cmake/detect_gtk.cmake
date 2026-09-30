@@ -1,7 +1,19 @@
 # --- GTK ---
-ocv_clear_vars(HAVE_GTK HAVE_GTK2 HAVE_GTK3 HAVE_GTKGLEXT)
+ocv_clear_vars(HAVE_GTK HAVE_GTK2 HAVE_GTK3 HAVE_GTK4 HAVE_GTKGLEXT)
+# --- GTK4 ---
+ocv_check_modules(GTK4 gtk4)
+if(HAVE_GTK4)
+  ocv_add_external_target(
+    gtk4
+    "${GTK4_INCLUDE_DIRS}"
+    "${GTK4_LIBRARIES}"
+    "HAVE_GTK"
+  )
+  set(HAVE_GTK TRUE)
+endif()
+
 if(WITH_GTK)
-  if(NOT WITH_GTK_2_X)
+  if(NOT HAVE_GTK4 AND NOT WITH_GTK_2_X)
     ocv_check_modules(GTK3 gtk+-3.0)
     if(HAVE_GTK3)
       ocv_add_external_target(gtk3 "${GTK3_INCLUDE_DIRS}" "${GTK3_LIBRARIES}" "HAVE_GTK3;HAVE_GTK")
