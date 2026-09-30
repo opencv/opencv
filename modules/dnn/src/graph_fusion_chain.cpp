@@ -28,6 +28,18 @@ void firstConsumerOf(const vector<Ptr<LayerInfo> >& prog, int nargs,
     }
 }
 
+void producerOf(const vector<Ptr<LayerInfo> >& prog, int nargs, vector<int>& producer)
+{
+    producer.assign((size_t)nargs, -1);
+    for (size_t j = 0; j < prog.size(); j++) {
+        if (!prog[j]) continue;
+        for (Arg out : prog[j]->outputs) {
+            if (out.idx > 0 && out.idx < nargs)
+                producer[out.idx] = (int)j;
+        }
+    }
+}
+
 class ChainFuser
 {
 public:
@@ -56,14 +68,24 @@ public:
     }
 
 private:
+    //! A per-channel constant the chain carries. Its slot id is the index here, and the
+    //! arena interns that id, so slots are only ever appended or trimmed off the end.
+    struct ConstSlot
+    {
+        Mat   buf;
+        Arg   arg;            //!< default when the layer owns the data
+        uchar perChannel = 0; //!< 1 varies along the channel axis, 0 along the last
+    };
+
     struct ChainCandidate
     {
         vector<int> layerIdx;
-        vector<Arg> constArgs;
         vector<int> rootAfterStep;
-        vector<Mat> constBufs;
+        vector<ConstSlot> constSlots;
         //! First step's kernel; a chain that lands at one step runs it instead of the DAG.
         FusionKernel singleStepKernel;
+        //! Live tensors the steps read, in the order their slots were handed out.
+        vector<Arg> tensorArgs;
     };
 
     const vector<Ptr<LayerInfo> >& prog() const { return graph_->prog(); }
@@ -89,18 +111,70 @@ private:
         return true;
     }
 
-    //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
-    static int bufferSlotFor(Arg a, ChainCandidate& c)
+    //! Releases the slots a refused step claimed, so the next step's ids start where it did.
+    static void dropSlotsAfter(ChainCandidate& c, size_t keepBufs, size_t keepTensors)
     {
-        for (size_t k = 0; k < c.constArgs.size(); k++) {
-            if (c.constArgs[k].idx == a.idx)
-                return (int)k;
-        }
-        c.constArgs.push_back(a);
-        return (int)c.constArgs.size() - 1;
+        c.constSlots.resize(keepBufs);
+        c.tensorArgs.resize(keepTensors);
     }
 
-    bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c, ConstOperand& out) const
+    //! The slot @p a occupies in the chain's live-tensor list, adding it if new.
+    static int tensorSlotFor(Arg a, ChainCandidate& c)
+    {
+        for (size_t k = 0; k < c.tensorArgs.size(); k++) {
+            if (c.tensorArgs[k].idx == a.idx)
+                return (int)k;
+        }
+        c.tensorArgs.push_back(a);
+        return (int)c.tensorArgs.size() - 1;
+    }
+
+    //! Producer must precede @p anchor and the arg must not be a graph output. No type check:
+    //! an intermediate's ArgData is filled only at run time, so a gate here rejects them all.
+    bool isFusableTensorArg(Arg a, size_t anchor) const
+    {
+        if (a.idx <= 0 || a.idx >= (int)producerOf_.size())
+            return false;
+        const int prod = producerOf_[a.idx];
+        if (prod < 0 || prod >= (int)anchor)
+            return false;
+        return externalArgs_.find(a.idx) == externalArgs_.end();
+    }
+
+    //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
+    int bufferSlotFor(Arg a, ChainCandidate& c) const
+    {
+        // Owned buffers park Arg() in the table, so a real input must never match one.
+        CV_DbgAssert(a.idx != 0);
+        for (size_t k = 0; k < c.constSlots.size(); k++) {
+            if (c.constSlots[k].arg.idx == a.idx)
+                return (int)k;
+        }
+        c.constSlots.push_back({net_.argTensor(a), a, 0});
+        return (int)c.constSlots.size() - 1;
+    }
+
+    //! Per-channel data the layer folded into its members has no Arg, so it is slotted here
+    //! and its ids join the ones readConstOperand() took from the layer's inputs.
+    static bool addOwnedBuffers(const FusionOps* ops, Layer* l, ChainCandidate& c,
+                                ConstOperand& out)
+    {
+        if (!ops->ownedBuffers)
+            return true;
+        std::vector<Mat> owned;
+        if (!ops->ownedBuffers(l, owned))
+            return false;
+        if (out.count + (int)owned.size() > ConstOperand::MAX_CONSTS)
+            return false;
+        for (const Mat& buf : owned) {
+            c.constSlots.push_back({buf, Arg(), 1});
+            out.consts[out.count++].bufferId = (int)c.constSlots.size() - 1;
+        }
+        return true;
+    }
+
+    bool readConstOperand(const Ptr<LayerInfo>& L, Arg cur, ChainCandidate& c,
+                          ConstOperand& out, size_t anchor, bool acceptsTensors) const
     {
         vector<Arg> sideInputs;
         for (Arg in : L->inputs) {
@@ -118,12 +192,16 @@ private:
         for (size_t i = 0; i < sideInputs.size(); i++) {
             bool isScalar = false;
             float scalarVal = 0.f;
-            if (!isFusableConstArg(sideInputs[i], isScalar, scalarVal))
+            if (isFusableConstArg(sideInputs[i], isScalar, scalarVal)) {
+                if (isScalar)
+                    out.consts[i].value = scalarVal;
+                else
+                    out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
+                continue;
+            }
+            if (!acceptsTensors || !isFusableTensorArg(sideInputs[i], anchor))
                 return false;
-            if (isScalar)
-                out.consts[i].value = scalarVal;
-            else
-                out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
+            out.consts[i].tensorId = tensorSlotFor(sideInputs[i], c);
         }
         out.count = (int)sideInputs.size();
         return true;
@@ -134,18 +212,28 @@ private:
         const FusionOps* ops = fusionOpsFor(l);
         if (!ops || !ops->unfold)
             return false;
-        // We don't know yet how many constants this layer will get, so try each count.
+        // The operand count and kind are not known yet, so try every combination.
         for (int n = 0; n <= ConstOperand::MAX_CONSTS; n++) {
-            LayerMath r;
-            ConstOperand probe;
-            probe.count = n;
-            if (ops->unfold(l, r, probe))
-                return true;
+            for (int kind = 0; kind < 3; kind++) {
+                if (kind > 0 && n == 0)
+                    continue;   // nothing to mark, so it repeats the probe above
+                LayerMath r;
+                ConstOperand probe;
+                probe.count = n;
+                for (int i = 0; i < n; i++) {
+                    if (kind == 1)
+                        probe.consts[i].bufferId = i;
+                    else if (kind == 2)
+                        probe.consts[i].tensorId = i;
+                }
+                if (ops->unfold(l, r, probe))
+                    return true;
+            }
         }
         return false;
     }
 
-    void growChain(size_t anchor, ChainCandidate& c)
+    void growChain(size_t anchor, bool acceptsTensors, ChainCandidate& c)
     {
         CV_Assert(!arenaPtr_);
 
@@ -176,17 +264,33 @@ private:
             if (!ops || !ops->unfold)
                 break;
 
-            const size_t savedSlots = c.constArgs.size();
+            const size_t savedBufs = c.constSlots.size();
+            const size_t savedTensors = c.tensorArgs.size();
             ConstOperand side;
             LayerMath r;
-            if (!readConstOperand(L, curArg, c, side) || !ops->unfold(l, r, side)) {
-                c.constArgs.resize(savedSlots);
+            if (!readConstOperand(L, curArg, c, side, anchor, acceptsTensors) ||
+                !addOwnedBuffers(ops, l, c, side) ||
+                !ops->unfold(l, r, side)) {
+                dropSlotsAfter(c, savedBufs, savedTensors);
+                break;
+            }
+
+            if (r.nodeCount() == 0) {
+                // A kernel is the whole expression, so it can only be a chain's sole step.
+                // chainRoot stays the arena's INPUT node, which is what extract() returns.
+                if (!r.kernel.fn || !c.rootAfterStep.empty()) {
+                    dropSlotsAfter(c, savedBufs, savedTensors);
+                    break;
+                }
+                c.singleStepKernel = r.kernel;
+                c.rootAfterStep.push_back(chainRoot);
+                c.layerIdx.push_back(j);
                 break;
             }
 
             const int next = fusion::instantiate(arena_, chainRoot, r);
             if (next < 0 || fusion::detail::markLive(arena_.graph(), next, reachScratch_) > FUSION_MAX_EXPR_NODES) {
-                c.constArgs.resize(savedSlots);
+                dropSlotsAfter(c, savedBufs, savedTensors);
                 break;
             }
 
@@ -205,6 +309,9 @@ private:
     {
         const int nargs = (int)net_.args.size();
         firstConsumerOf(prog(), nargs, firstConsumer_);
+        producerOf(prog(), nargs, producerOf_);
+        for (Arg out : graph_->outputs())
+            externalArgs_.insert(out.idx);
 
         for (size_t i = 0; i < prog().size(); i++) {
             const Ptr<LayerInfo>& L = prog()[i];
@@ -222,7 +329,7 @@ private:
 
             ChainCandidate c;
             c.layerIdx.push_back((int)i);
-            growChain(i, c);
+            growChain(i, anchorOps->acceptsTensorOperands, c);
 
             if (c.rootAfterStep.empty())
                 continue;
@@ -232,14 +339,11 @@ private:
         }
     }
 
+    //! Carries a kernel when there is no expression. The lone INPUT node is an identity,
+    //! so this is only ever built with a kernel attached.
     void freezeArena()
     {
         arenaPtr_ = arena_.sharedGraph();
-        for (ChainCandidate& c : chains_) {
-            c.constBufs.reserve(c.constArgs.size());
-            for (Arg a : c.constArgs)
-                c.constBufs.push_back(net_.argTensor(a));
-        }
     }
 
     void fuseLongestChains()
@@ -256,9 +360,20 @@ private:
             if (!sinkOps || !sinkOps->absorb)
                 continue;
 
+            vector<Mat> constBufs;
+            vector<uchar> constBufPerChannel;
+            constBufs.reserve(c.constSlots.size());
+            constBufPerChannel.reserve(c.constSlots.size());
+            for (const ConstSlot& s : c.constSlots) {
+                constBufs.push_back(s.buf);
+                constBufPerChannel.push_back(s.perChannel);
+            }
+
             size_t accepted = 0;
+            Ptr<AdjacencyGraph> expr;
             for (size_t n = c.rootAfterStep.size(); n >= 1; n--) {
-                Ptr<AdjacencyGraph> expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1], c.constBufs);
+                expr = fusion::extract(*arenaPtr_, c.rootAfterStep[n - 1],
+                                       constBufs, constBufPerChannel, c.tensorArgs);
                 if (!expr)
                     continue;
                 if (n == 1)
@@ -274,6 +389,11 @@ private:
                                               (int)c.rootAfterStep.size()));
                 continue;
             }
+
+            // Wired on here rather than in absorb(), which the retry loop above may call
+            // more than once per chain.
+            for (Arg t : expr->tensorArgs)
+                anchorInfo->inputs.push_back(t);
 
             anchorInfo->outputs[0] = prog()[c.layerIdx[accepted]]->outputs[0];
             for (size_t k = 1; k <= accepted; k++)
@@ -307,7 +427,8 @@ private:
 
     AdjacencyGraphBuilder arena_;
     Ptr<AdjacencyGraph>   arenaPtr_;
-    vector<int>        firstConsumer_;
+    vector<int>        firstConsumer_, producerOf_;
+    std::set<int>      externalArgs_;
     vector<bool>       claimed_, dropped_;
     vector<ChainCandidate>  chains_;
     vector<char>       reachScratch_;
@@ -346,13 +467,35 @@ void Net::Impl::fuseChains()
 {
     if (!mainGraph)
         return;
-    // Sinks apply the fused math on the CPU path only; on an OpenCL target the
-    // absorbed layers would be dropped and their math never run.
-    if (IS_DNN_OPENCL_TARGET(preferableTarget))
-        return;
-    vector<int> usecounts;
-    useCounts(usecounts);
-    fuseChainsInGraph(*this, mainGraph, usecounts);
+
+    // First: it deletes a layer, and if the chain pass absorbed the BatchNorm backwards into
+    // the preceding conv it would find nothing left.
+    fuseBN();
+
+    // Order is load-bearing: each pass matches shapes the one before it leaves.
+    fuseAttention();
+    fuseMatMulConstBToGemm();
+    fuseSharedInputGemm();
+    fuseReshapeTranspose();
+    fuseTransposeMatMul();
+    fuseScaleSoftmax();
+
+    // A sink runs the math it absorbs in its own CPU kernel. setPreferableTarget resolves
+    // only CPU and CUDA while mainGraph is set, so nothing reaches here on OpenCL today.
+    if (!IS_DNN_OPENCL_TARGET(preferableTarget)) {
+        // Only a one-step chain carries the layer's kernel, so absorbing a step can
+        // expose a fusable next one.
+        vector<int> usecounts;
+        for (int iter = 0; iter < 10; iter++) {
+            useCounts(usecounts);
+            if (!fuseChainsInGraph(*this, mainGraph, usecounts))
+                break;
+        }
+    }
+
+    // Leaves a whole layer behind rather than handing math to a sink, so unlike the
+    // chain pass it is not restricted to the CPU path.
+    fuseInstanceNormAffine();
 }
 
 CV__DNN_INLINE_NS_END

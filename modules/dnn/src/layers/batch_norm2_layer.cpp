@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 #include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/batch_norm.hpp"
@@ -369,8 +370,44 @@ class BatchNorm2LayerImpl CV_FINAL : public BatchNorm2Layer
 {
 public:
     BatchNorm2LayerImpl(const LayerParams& params) {
+        registerFusionOpsOnce<BatchNorm2LayerImpl>(
+            { &BatchNorm2LayerImpl::unfoldOp, nullptr, false, nullptr,
+              &BatchNorm2LayerImpl::ownedBuffersOp });
         setParamsFrom(params);
         epsilon = params.get<float>("epsilon", 1e-5);
+    }
+
+    //! Only once freezeScaleBias() has run; before it the members are empty.
+    static bool ownedBuffersOp(const Layer* self, std::vector<Mat>& out)
+    {
+        const BatchNorm2LayerImpl* l = static_cast<const BatchNorm2LayerImpl*>(self);
+        if (l->inputs.size() != 1)
+            return false;
+        if (l->scale.empty() || l->bias.empty() || l->scale.total() != l->bias.total())
+            return false;
+        if (l->scale.type() != CV_32F || l->bias.type() != CV_32F ||
+            !l->scale.isContinuous() || !l->bias.isContinuous())
+            return false;
+        out.push_back(l->scale);
+        out.push_back(l->bias);
+        return true;
+    }
+
+    static bool unfoldOp(const Layer* self, LayerMath& r, const ConstOperand& side)
+    {
+        return static_cast<const BatchNorm2LayerImpl*>(self)->unfoldMath(r, side);
+    }
+
+    bool unfoldMath(LayerMath& r, const ConstOperand& side) const
+    {
+        if (side.count != 2 || !side.at(0).isBuffer() || !side.at(1).isBuffer())
+            return false;
+
+        const int s      = r.perChannelConstant(side.at(0).bufferId);
+        const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, s);
+        const int b      = r.perChannelConstant(side.at(1).bufferId);
+        r.binary(FusionEltwiseOp::ADD, scaled, b);
+        return true;
     }
 
     bool supportBackend(int backendId) CV_OVERRIDE

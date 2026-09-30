@@ -212,6 +212,14 @@ public:
         }
 
         const FusionConst& k = side.at(0);
+        if (k.isTensor()) {
+            // Only a plain sum is order-independent enough for the host to place freely.
+            if (o != FusionEltwiseOp::ADD)
+                return false;
+            r.binary(o, LayerMath::INPUT_VALUE, r.tensorOperand(k.tensorId));
+            return true;
+        }
+
         if (o == FusionEltwiseOp::MAX && !k.isBuffer() && k.value == 0.f)
             r.setKernel(cv::dnn::getActivationFunc(ACTIV_RELU), { 0.f });
 

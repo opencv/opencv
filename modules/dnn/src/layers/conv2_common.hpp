@@ -105,6 +105,44 @@ typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
 ConvFunc getConvFunc(int depth, int C0);
 ConvFunc getDepthwiseConvFunc(int depth);
 
+/** @brief Where a weight lands in the (ngroups, Kblk, ksize, C1Max, C0*K0) packed buffer.
+
+repackConvWeights() writes through this and anything editing packed weights afterwards reads
+through it, so the layout has one definition. Hands back element indices rather than typed
+pointers, since the same layout carries int8. Integer math only: this header is compiled at
+several CPU baselines.
+*/
+struct ConvWeightPack
+{
+    int Kg, Cg, K0, Kblk, ksize, C1Max, C0;
+
+    //! @p wshape0 is the plain (K, Cg, spatial...) filter. ConvTranspose swaps that
+    //! convention, so it needs its own factory rather than this one.
+    static ConvWeightPack forConv(const MatShape& wshape0, const MatShape& wpackShape,
+                                  int ngroups, int C0)
+    {
+        ConvWeightPack p;
+        p.Kg = wshape0[0]/ngroups;
+        p.Cg = wshape0[1];
+        p.K0 = p.C0 = C0;
+        p.Kblk = wpackShape[1];
+        p.ksize = wpackShape[2];
+        p.C1Max = wpackShape[3];
+        return p;
+    }
+
+    size_t tapStride() const { return (size_t)C1Max*C0*K0; }
+
+    //! Output channel @p k, input channel @p c within its group. Tap i adds i*tapStride().
+    size_t offset(int k, int c) const
+    {
+        int g = k/Kg, kin = k - g*Kg;
+        int kblk = kin/K0, k0 = kin & (K0 - 1);
+        int ch = ((g*Cg) & (C0 - 1)) + c;
+        return ((((size_t)(g*Kblk + kblk)*ksize)*C1Max + ch/C0)*C0 + (ch & (C0 - 1)))*K0 + k0;
+    }
+};
+
 void repackDepthwiseConvWeights(const Mat& weights, Mat& Wpack, int outtype, int C0);
 void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
 

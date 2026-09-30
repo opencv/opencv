@@ -5,6 +5,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include "../src/adjacency_graph.hpp"
 #include "../src/layers/cpu_kernels/fusion_apply.hpp"
 
@@ -151,6 +152,55 @@ TEST(Fusion, MathMatchesClosedForm)
     }
 }
 
+TEST(Fusion, DeclaredMathMatchesTheActivation)
+{
+    const float kSqrt2Pi = 0.7978845834732056f;
+    const float kCoef    = 0.044714998453855515f * kSqrt2Pi;
+    const float kSeluA   = 1.67326319217681884765625f;
+    const float kSeluG   = 1.05070102214813232421875f;
+
+    const float xs[] = { -3.f, -0.5f, 0.f, 0.25f, 1.f, 4.f };
+    for (float x : xs) {
+        struct { const char* type; float expected; } cases[] = {
+            { "Swish",       x / (1.f + std::exp(-x)) },
+            { "ELU",         x >= 0.f ? x : std::exp(x) - 1.f },
+            { "AbsVal",      std::abs(x) },
+            { "HardSwish",   x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f)) },
+            { "Softsign",    x / (1.f + std::abs(x)) },
+            { "HardSigmoid", std::max(0.f, std::min(1.f, 0.2f * x + 0.5f)) },
+            { "Celu",        std::max(0.f, x) + std::min(0.f, std::expm1(x)) },
+            { "Selu",        kSeluG * (x > 0.f ? x : kSeluA * std::expm1(x)) },
+            { "GeluApproximation",
+              0.5f * x * (1.f + std::tanh(x * (kSqrt2Pi + kCoef * x * x))) },
+        };
+
+        for (const auto& c : cases) {
+            LayerParams lp;
+            Ptr<Layer> l = LayerFactory::createLayerInstance(c.type, lp);
+            ASSERT_TRUE(l) << c.type;
+            l->inputs.assign(1, Arg(1));
+
+            LayerMath m;
+            ConstOperand side;
+            ASSERT_TRUE(unfoldOf(l, m, side)) << c.type << " declared no math";
+            EXPECT_NEAR(c.expected, eval1(m, x), 1e-5) << c.type << " at x=" << x;
+        }
+    }
+}
+
+TEST(Fusion, CeluWithNegativeAlphaIsRefused)
+{
+    LayerParams lp;
+    lp.set("alpha", -1.f);
+    Ptr<Layer> l = LayerFactory::createLayerInstance("Celu", lp);
+    ASSERT_TRUE(l);
+    l->inputs.assign(1, Arg(1));
+
+    LayerMath m;
+    ConstOperand side;
+    EXPECT_FALSE(unfoldOf(l, m, side));
+}
+
 TEST(Fusion, EmptyMathIsRefused)
 {
     AdjacencyGraphBuilder arena;
@@ -288,6 +338,33 @@ TEST(Fusion, NonElementwiseLayersDeclareToo)
     EXPECT_TRUE(nm.kernel.fn != nullptr) << "Max(x,0) declared no kernel";
 }
 
+TEST(Fusion, SubclassOfElementWiseLayerIsRegistered)
+{
+    LayerParams lp;
+    Mat slope(1, 4, CV_32F);
+    float* s = slope.ptr<float>();
+    s[0] = 0.1f; s[1] = 0.2f; s[2] = 0.3f; s[3] = 0.4f;
+    lp.blobs.push_back(slope);
+
+    Ptr<Layer> prelu = ChannelsPReLULayer::create(lp);
+    ASSERT_TRUE(prelu);
+    prelu->inputs.assign(1, Arg(1));
+
+    const FusionOps* ops = fusionOpsFor(prelu.get());
+    ASSERT_TRUE(ops && ops->unfold) << "fusionOpsFor() missed the concrete type";
+
+    ASSERT_TRUE(ops->ownedBuffers);
+    std::vector<Mat> owned;
+    ASSERT_TRUE(ops->ownedBuffers(prelu.get(), owned));
+    ASSERT_EQ(1u, owned.size());
+
+    LayerMath m;
+    ConstOperand side;
+    side.count = 1;
+    side.consts[0].bufferId = 0;
+    ASSERT_TRUE(ops->unfold(prelu.get(), m, side));
+}
+
 TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
 {
     LayerMath r;
@@ -369,6 +446,34 @@ TEST(Fusion, PerChannelConstIndexesTheLastAxis)
     const float want[] = { 2.f, 3.f, 4.f, 2.f, 3.f, 4.f };
     for (int i = 0; i < 6; i++)
         EXPECT_FLOAT_EQ(want[i], y.ptr<float>()[i]) << "i=" << i;
+}
+
+TEST(Fusion, PerChannelBufferIsRefusedByTheInterpreter)
+{
+    AdjacencyGraphBuilder arena;
+    const int in = arena.internNode(FusionEltwiseOp::INPUT, {});
+    LayerMath r;
+    r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, r.perChannelConstant(0));
+    const int root = fusion::instantiate(arena, in, r);
+    ASSERT_GE(root, 0);
+
+    int three = 3;
+    Mat b(1, &three, CV_32F);
+    b.ptr<float>()[0] = 2.f;
+    b.ptr<float>()[1] = 3.f;
+    b.ptr<float>()[2] = 4.f;
+    const std::vector<Mat> bufs(1, b);
+
+    Ptr<AdjacencyGraph> lastAxis = fusion::extract(arena.graph(), root, bufs);
+    ASSERT_TRUE(lastAxis);
+    PreparedFusion plain;
+    EXPECT_TRUE(plain.take(lastAxis));
+
+    Ptr<AdjacencyGraph> perChannel =
+        fusion::extract(arena.graph(), root, bufs, std::vector<uchar>(1, 1));
+    ASSERT_TRUE(perChannel);
+    PreparedFusion channel;
+    EXPECT_FALSE(channel.take(perChannel));
 }
 
 TEST(Fusion, SharedRootKeepsEachChainsOwnBuffers)
@@ -454,6 +559,80 @@ TEST(Fusion, ShapeOfUnpinnedInputStaysDynamic)
     net.setInput(other);
     out = net.forward();
     EXPECT_EQ(MatShape({1, 24, 2}), out.shape());
+}
+
+//! How many layers of @p type the fused program still holds.
+static int fusedCount(Net& net, const char* type)
+{
+    Ptr<Graph> g = net.getMainGraph();
+    CV_Assert(g);
+    int n = 0;
+    for (const Ptr<LayerInfo>& l : g->prog())
+        n += l && l->type == type;
+    return n;
+}
+
+TEST(Fusion, ConvTakesTheResidualAdd)
+{
+    const std::string model = findDataFile("dnn/onnx/models/depthwiseconv_add.onnx");
+    Net net = readNetFromONNX(model, ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    const int shape[] = {1, 8, 32, 32};
+    Mat input(4, shape, CV_32F, Scalar(1.f));
+    net.setInput(input);
+    net.forward();
+
+    EXPECT_EQ(fusedCount(net, "NaryEltwise"), 1) << "the residual Add was not absorbed";
+}
+
+TEST(Fusion, SharedProjectionsCollapseToOneGemm)
+{
+    const std::string model =
+        findDataFile("dnn/onnx/models/attention_shared_shape_reshape.onnx");
+    Net net = readNetFromONNX(model, ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    const int shape[] = {1, 4, 8};
+    Mat input(3, shape, CV_32F, Scalar(1.f));
+    net.setInput(input);
+    net.forward();
+
+    EXPECT_EQ(fusedCount(net, "Gemm"), 1);
+    EXPECT_EQ(fusedCount(net, "Slice2"), 3);
+}
+
+static void checkBatchNormFoldsIntoConv(const std::string& name)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(0, fusedCount(net, "BatchNorm2")) << name << ": the fold did not fire";
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               name.c_str());
+}
+
+TEST(Fusion, BatchNormFoldsIntoDenseConv)
+{
+    checkBatchNormFoldsIntoConv("batchnorm_conv_dense");
+}
+
+TEST(Fusion, BatchNormFoldsIntoDepthwiseConv)
+{
+    checkBatchNormFoldsIntoConv("batchnorm_conv_depthwise");
+}
+
+TEST(Fusion, BatchNormFoldsIntoGroupedConv)
+{
+    checkBatchNormFoldsIntoConv("batchnorm_conv_grouped");
+}
+
+TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
+{
+    checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
 }} // namespace opencv_test

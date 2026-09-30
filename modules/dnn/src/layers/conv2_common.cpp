@@ -283,30 +283,18 @@ void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups,
     Wpack.setZero();
 
     parallel_for_(Range(0, K), [&](const Range& range) {
-        int Cg = wshape[1], Kg = K / ngroups;
-        int ksize = wpackShape[2], Kblk = wpackShape[1], C1Max = wpackShape[3];
-        int C0 = C0_, K0 = C0;
+        const ConvWeightPack pack = ConvWeightPack::forConv(wshape, wpackShape, ngroups, C0_);
+        const int Cg = pack.Cg, ksize = pack.ksize;
+        const size_t tapStride = pack.tapStride();
         const float* wdata = weights.ptr<float>();
         float* Wpackdata = Wpack.ptr<float>();
 
         for (int k = range.start; k < range.end; ++k) {
-            int g = k / Kg;
-            int kin = k - g * Kg;
-            int kblk = kin / K0;
-            int k0   = kin & (K0 - 1);
-
-            int c_start = g * Cg;
-            int c00 = c_start & (C0 - 1);
-
             for (int c = 0; c < Cg; ++c) {
-                int ch = c00 + c;
-                int c1  = ch / C0;
-                int c0  = ch & (C0 - 1);
-
-                const float* wptr = wdata + ((k * Cg + c) * ksize);
-                float* wpackptr = Wpackdata + (((g * Kblk + kblk) * ksize * C1Max + c1) * C0 + c0)*K0 + k0;
+                const float* wptr = wdata + ((size_t)(k * Cg + c) * ksize);
+                float* wpackptr = Wpackdata + pack.offset(k, c);
                 for (int i = 0; i < ksize; ++i) {
-                    wpackptr[i*(C1Max*C0*K0)] = wptr[i];
+                    wpackptr[i*tapStride] = wptr[i];
                 }
             }
         }
