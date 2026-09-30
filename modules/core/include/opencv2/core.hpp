@@ -2344,9 +2344,23 @@ separate random number generator, so you can use the function safely in multi-th
 If you just need to get a single random number using this generator or initialize an array, you can
 use randu or randn instead. But if you are going to generate many random numbers inside a loop, it
 is much faster to use this function to retrieve the generator and then use RNG::operator _Tp() .
+
+@note In Python the function returns a reference-counted handle to the default generator of the
+calling thread, not a copy of it, i.e. the numbers generated from the returned object do affect
+the default generator.
 @sa RNG, randu, randn
 */
 CV_EXPORTS RNG& theRNG();
+
+/** @brief Returns the default random number generator as a shared pointer.
+
+The function is the counterpart of cv::theRNG that shares the ownership of the generator with the
+caller. The generator is created on demand for each thread, exactly as in cv::theRNG, but it stays
+alive as long as at least one returned pointer refers to it, even after the thread that created it
+has finished. It is used to implement the Python binding of cv::theRNG.
+@sa RNG, theRNG
+*/
+CV_EXPORTS Ptr<RNG> theRNGPtr();
 
 /** @brief Sets state of default random number generator.
 
@@ -2835,7 +2849,7 @@ Gaussian-distribution random numbers are generated using the Ziggurat
 algorithm ( <http://en.wikipedia.org/wiki/Ziggurat_algorithm> ),
 introduced by G. Marsaglia and W. W. Tsang.
 */
-class CV_EXPORTS RNG
+class CV_EXPORTS_W RNG
 {
 public:
     enum { UNIFORM = 0,
@@ -2850,14 +2864,14 @@ public:
     , the constructor uses the above default value instead to avoid the
     singular random number sequence, consisting of all zeros.
     */
-    RNG();
+    CV_WRAP RNG();
     /** @overload
     @param state 64-bit value used to initialize the RNG.
     */
-    RNG(uint64 state);
+    CV_WRAP RNG(uint64 state);
     /**The method updates the state using the MWC algorithm and returns the
     next 32-bit random number.*/
-    unsigned next();
+    CV_WRAP unsigned next();
 
     /**Each of the methods updates the state using the MWC algorithm and
     returns the next random number of the specified type. In case of integer
@@ -2927,14 +2941,17 @@ public:
     want a floating-point random number, but the range boundaries are
     integer numbers, either put dots in the end, if they are constants, or
     use explicit type cast operators, as in the a1 initialization above.
+    In Python only the integer and the double-precision variants are available; the one to use is
+    chosen by the types of a and b, e.g. rng.uniform(0, 10) returns an integer, whereas
+    rng.uniform(0.0, 10.0) returns a floating-point number.
     @param a lower inclusive boundary of the returned random number.
     @param b upper non-inclusive boundary of the returned random number.
     */
-    int uniform(int a, int b);
+    CV_WRAP int uniform(int a, int b);
     /** @overload */
     float uniform(float a, float b);
     /** @overload */
-    double uniform(double a, double b);
+    CV_WRAP double uniform(double a, double b);
 
     /** @brief Fills arrays with random numbers.
 
@@ -2970,7 +2987,7 @@ public:
     with zero mean and identity covariation matrix, and then transforms them
     using transform to get samples from the specified Gaussian distribution.
     */
-    void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
+    CV_WRAP void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
 
     /** @brief Returns the next random number sampled from the Gaussian distribution
     @param sigma standard deviation of the distribution.
@@ -2980,9 +2997,9 @@ public:
     the mean value of the returned random numbers is zero and the standard
     deviation is the specified sigma .
     */
-    double gaussian(double sigma);
+    CV_WRAP double gaussian(double sigma);
 
-    uint64 state;
+    CV_PROP_RW uint64 state;
 
     bool operator ==(const RNG& other) const;
 };
