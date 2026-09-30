@@ -1,0 +1,70 @@
+name: nuget build (nupkg) creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      vcVersions:
+        description: "Visual C Compiler Version"
+        required: true
+        default: "vc16"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache OpenCV Build
+        id: cache-opencv-build
+        uses: actions/cache@v2
+        with:
+          path: opencv-build
+          key: ${{ runner.os }}-opencv-build
+      - uses: nuget/setup-nuget@v1
+        with:
+          nuget-version: 'latest'
+      - name: Install dependency packages
+        run: |
+          choco install ninja cmake
+          ninja --version
+          cmake --version
+          python -m pip install --upgrade pip
+          pip install jinja2
+      - name: Set vc14
+        if: "${{ github.event.inputs.vcVersions == 'vc14' }}"
+        run: |
+          $CMAKE_GENERATOR_OPTIONS="Visual Studio 14 2017"
+      - name: Set vc15
+        if: "${{ github.event.inputs.vcVersions == 'vc15' }}"
+        run: |
+          $CMAKE_GENERATOR_OPTIONS="Visual Studio 15 2018"
+      - name: Set vc16
+        if: "${{ github.event.inputs.vcVersions == 'vc16' }}"
+        run: |
+          $CMAKE_GENERATOR_OPTIONS="Visual Studio 16 2019"
+      - name: Build world DLLs
+        run: |
+          cd "D:/a/opencv/"
+          mkdir build
+          cd build
+          mkdir install
+          cd ..
+          cmake "${CMAKE_GENERATOR_OPTIONS[@]}" "-DBUILD_opencv_world:BOOL=ON -DWITH_FFMPEG=ON" -S "D:/a/opencv/opencv" -B "D:/a/opencv/build"
+          cmake --build "D:/a/opencv/build" --config Debug --target install
+          cmake --build "D:/a/opencv/build" --config Release --target install
+      - name: Build nuspec and targets
+        run: |
+          cd platforms/nuget
+          mkdir build
+          python build-jinja.py --package_version "${{ github.event.inputs.vcVersions }}" --build_directory "D:\a\opencv\build\install" 
+      - name: Build nupkg
+        run: |
+          cd "D:/a/opencv/build/install/"
+          mkdir nupkg
+          nuget pack opencv.nuspec -OutputDirectory nupkg
+      - name: Upload Artifact GitHub Action
+        uses: actions/upload-artifact@v2
+        with:
+          name: nupkg-file
+          path: |
+            D:/a/opencv/build/install/nupkg/*.nupkg
