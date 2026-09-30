@@ -3083,25 +3083,13 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
     }
 #endif
     if (propId == VIDEOWRITER_PROP_BITRATE)
-    {
-        if (enc_params.bitrate > 0)
-            return static_cast<double>(enc_params.bitrate);
-    }
+        return static_cast<double>(enc_params.bitrate);
     else if (propId == VIDEOWRITER_PROP_GOP_SIZE)
-    {
-        if (enc_params.gop_size > 0)
-            return static_cast<double>(enc_params.gop_size);
-    }
+        return static_cast<double>(enc_params.gop_size);
     else if (propId == VIDEOWRITER_PROP_CRF)
-    {
-        if (enc_params.crf >= 0)
-            return static_cast<double>(enc_params.crf);
-    }
+        return static_cast<double>(enc_params.crf);
     else if (propId == VIDEOWRITER_PROP_PRESET)
-    {
-        if (enc_params.preset >= 0)
-            return static_cast<double>(enc_params.preset);
-    }
+        return static_cast<double>(enc_params.preset);
     else if (propId == VIDEOWRITER_PROP_COLOR_SPACE)
     {
         if (context)

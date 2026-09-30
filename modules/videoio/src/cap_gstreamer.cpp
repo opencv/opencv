@@ -3000,25 +3000,13 @@ double CvVideoWriter_GStreamer::getProperty(int propId) const
         return static_cast<double>(hw_device);
     }
     else if (propId == VIDEOWRITER_PROP_BITRATE)
-    {
-        if (enc_bitrate > 0)
-            return static_cast<double>(enc_bitrate);
-    }
+        return static_cast<double>(enc_bitrate);
     else if (propId == VIDEOWRITER_PROP_CRF)
-    {
-        if (enc_crf >= 0)
-            return static_cast<double>(enc_crf);
-    }
+        return static_cast<double>(enc_crf);
     else if (propId == VIDEOWRITER_PROP_PRESET)
-    {
-        if (enc_preset >= 0)
-            return static_cast<double>(enc_preset);
-    }
+        return static_cast<double>(enc_preset);
     else if (propId == VIDEOWRITER_PROP_GOP_SIZE)
-    {
-        if (enc_gop_size > 0)
-            return static_cast<double>(enc_gop_size);
-    }
+        return static_cast<double>(enc_gop_size);
     return VIDEOWRITER_PROP_UNKNOWN;
 }
 
