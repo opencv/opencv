@@ -62,6 +62,51 @@ namespace cv { namespace cuda { namespace device
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(float v) { return _Tp(v); }
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(double v) { return _Tp(v); }
 
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+
+    // The integer to saturated integer conversions below are NVIDIA PTX cvt.sat
+    // inline asm. On HIP implement the identical saturating semantics with clamps.
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(schar v)  { return (uchar)::max(0, (int)v); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(short v)  { return (uchar)::min(255, ::max(0, (int)v)); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(ushort v) { return (uchar)::min(255u, (uint)v); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(int v)    { return (uchar)::min(255, ::max(0, v)); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(uint v)   { return (uchar)::min(255u, v); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(float v)  { return saturate_cast<uchar>(__float2int_rn(v)); }
+    template<> __device__ __forceinline__ uchar saturate_cast<uchar>(double v) { return saturate_cast<uchar>(__double2int_rn(v)); }
+
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(uchar v)  { return (schar)::min(127, (int)v); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(short v)  { return (schar)::min(127, ::max(-128, (int)v)); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(ushort v) { return (schar)::min(127u, (uint)v); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(int v)    { return (schar)::min(127, ::max(-128, v)); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(uint v)   { return (schar)::min(127u, v); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(float v)  { return saturate_cast<schar>(__float2int_rn(v)); }
+    template<> __device__ __forceinline__ schar saturate_cast<schar>(double v) { return saturate_cast<schar>(__double2int_rn(v)); }
+
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(schar v) { return (ushort)::max(0, (int)v); }
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(short v) { return (ushort)::max(0, (int)v); }
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(int v)   { return (ushort)::min(65535, ::max(0, v)); }
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(uint v)  { return (ushort)::min(65535u, v); }
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(float v)  { return saturate_cast<ushort>(__float2int_rn(v)); }
+    template<> __device__ __forceinline__ ushort saturate_cast<ushort>(double v) { return saturate_cast<ushort>(__double2int_rn(v)); }
+
+    template<> __device__ __forceinline__ short saturate_cast<short>(ushort v) { return (short)::min(32767u, (uint)v); }
+    template<> __device__ __forceinline__ short saturate_cast<short>(int v)    { return (short)::min(32767, ::max(-32768, v)); }
+    template<> __device__ __forceinline__ short saturate_cast<short>(uint v)   { return (short)::min(32767u, v); }
+    template<> __device__ __forceinline__ short saturate_cast<short>(float v)  { return saturate_cast<short>(__float2int_rn(v)); }
+    template<> __device__ __forceinline__ short saturate_cast<short>(double v) { return saturate_cast<short>(__double2int_rn(v)); }
+
+    template<> __device__ __forceinline__ int saturate_cast<int>(uint v)   { return (int)::min(v, (uint)2147483647); }
+    template<> __device__ __forceinline__ int saturate_cast<int>(float v)  { return __float2int_rn(v); }
+    template<> __device__ __forceinline__ int saturate_cast<int>(double v) { return __double2int_rn(v); }
+
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(schar v) { return (uint)::max(0, (int)v); }
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(short v) { return (uint)::max(0, (int)v); }
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(int v)   { return (uint)::max(0, v); }
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(float v)  { return __float2uint_rn(v); }
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(double v) { return __double2uint_rn(v); }
+
+#else
+
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(schar v)
     {
         uint res = 0;
@@ -285,6 +330,8 @@ namespace cv { namespace cuda { namespace device
         return saturate_cast<uint>((float)v);
     #endif
     }
+
+#endif // __HIP_PLATFORM_AMD__
 }}}
 
 //! @endcond
