@@ -804,6 +804,12 @@ static void solveFast(float semi_major, float semi_minor, const cv::Point2f& pt,
     float px = std::abs(pt.x);
     float py = std::abs(pt.y);
 
+    if (px == 0.f && py == 0.f)
+    {
+        closest_pt = Point2f(0.f, semi_minor);
+        return;
+    }
+
     float tx = 0.707f;
     float ty = 0.707f;
 

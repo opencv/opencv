@@ -242,6 +242,21 @@ static std::vector<Point2f> sample_ellipse_pts(const RotatedRect& ellipse_params
     return ellipse_pts;
 }
 
+TEST(Imgproc_getClosestEllipsePoints, circle_center)
+{
+    const RotatedRect circle(Point2f(30.f, 20.f), Size2f(90.f, 90.f), 0.f);
+    const vector<Point2f> points(1, circle.center);
+    Mat closest_pts;
+    getClosestEllipsePoints(circle, points, closest_pts);
+
+    ASSERT_EQ(closest_pts.total(), 1u);
+    const Point2f closest = closest_pts.at<Point2f>(0);
+    EXPECT_TRUE(std::isfinite(closest.x));
+    EXPECT_TRUE(std::isfinite(closest.y));
+    const Point2f offset = closest - circle.center;
+    EXPECT_NEAR(std::hypot(offset.x, offset.y), circle.size.width / 2.f, 1e-4f);
+}
+
 TEST(Imgproc_getClosestEllipsePoints, ellipse_mse_2) {
     const float tol = 1e-3f;
 
