@@ -645,6 +645,159 @@ TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
     EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
 }
 
+// k = 3 asked the chain tables for a zero length chain that was never marked as existing,
+// which left the minimum search without a candidate and the polygon construction read the
+// tables out of bounds.
+TEST(Imgproc_minEnclosingConvexPolygon, regression_k3)
+{
+    vector<Point2f> points;
+    points.push_back(Point2f(0.f, 0.f));
+    points.push_back(Point2f(10.f, 0.f));
+    points.push_back(Point2f(10.f, 10.f));
+    points.push_back(Point2f(0.f, 10.f));
+
+    Mat polygon;
+    const double area = minEnclosingConvexPolygon(points, polygon, 3);
+
+    vector<Point2f> vertices;
+    polygon.reshape(2).copyTo(vertices);
+    ASSERT_EQ(3, (int)vertices.size());
+
+    // the smallest triangle enclosing a 10 x 10 square has twice the area of the square
+    EXPECT_NEAR(200.0, area, 1e-3);
+
+    // and it has to agree with the dedicated implementation of the same problem
+    Mat reference;
+    const double referenceArea = minEnclosingTriangle(points, reference);
+    EXPECT_NEAR(referenceArea, area, 1e-3);
+}
+
+// A convex pentagon that needs the one sided chain between two adjacent sides, which used to
+// be missing from the chain tables. Without it the minimum search has no candidate at all, so
+// this input crashed the same way the square did before it was fixed.
+TEST(Imgproc_minEnclosingConvexPolygon, regression_k3_convex_pentagon)
+{
+    vector<Point2f> points;
+    points.push_back(Point2f(19.f, 10.f));
+    points.push_back(Point2f(6.f, 17.f));
+    points.push_back(Point2f(4.f, 15.f));
+    points.push_back(Point2f(7.f, 4.f));
+    points.push_back(Point2f(13.f, 4.f));
+
+    Mat polygon;
+    const double area = minEnclosingConvexPolygon(points, polygon, 3);
+
+    vector<Point2f> vertices;
+    polygon.reshape(2).copyTo(vertices);
+    EXPECT_EQ(3, (int)vertices.size());
+    EXPECT_GT(area, 0.);
+
+    for (size_t i = 0; i < points.size(); ++i)
+        EXPECT_GE(pointPolygonTest(polygon, points[i], true), -1e-3);
+
+    vector<Point2f> hull;
+    convexHull(points, hull);
+    EXPECT_GE(area, std::abs(contourArea(hull)));
+}
+
+TEST(Imgproc_minEnclosingConvexPolygon, enclosing_polygon_properties)
+{
+    RNG rng(0x12345);
+    for (int trial = 0; trial < 5; ++trial)
+    {
+        const int n = 10 + trial * 4;
+        vector<Point2f> points;
+        for (int i = 0; i < n; ++i)
+            points.push_back(Point2f((float)rng.uniform(0., 100.), (float)rng.uniform(0., 70.)));
+
+        vector<Point2f> hull;
+        convexHull(points, hull);
+
+        for (int k = 3; k <= (int)hull.size(); ++k)
+        {
+            SCOPED_TRACE(cv::format("k = %d, trial = %d", k, trial));
+
+            Mat polygon;
+            const double area = minEnclosingConvexPolygon(points, polygon, k);
+
+            vector<Point2f> vertices;
+            polygon.reshape(2).copyTo(vertices);
+            EXPECT_EQ(k, (int)vertices.size());
+
+            // the output polygon has to be convex ...
+            int orientation = 0;
+            bool convex = true;
+            for (int i = 0; i < k && convex; ++i)
+            {
+                const Point2f a = vertices[i], b = vertices[(i + 1) % k], c = vertices[(i + 2) % k];
+                const double cross =
+                    (double)(b.x - a.x) * (c.y - b.y) - (double)(b.y - a.y) * (c.x - b.x);
+                if (std::abs(cross) < 1e-3)
+                    continue;
+                const int sign = cross > 0 ? 1 : -1;
+                if (orientation == 0)
+                    orientation = sign;
+                else if (sign != orientation)
+                    convex = false;
+            }
+            EXPECT_TRUE(convex);
+
+            // ... enclose every input point ...
+            for (size_t i = 0; i < points.size(); ++i)
+                EXPECT_GE(pointPolygonTest(polygon, points[i], true), -0.1);
+
+            // ... and be no smaller than the input polygon itself
+            EXPECT_GE(area, std::abs(contourArea(hull)) - 1e-2);
+        }
+    }
+}
+
+TEST(Imgproc_minEnclosingConvexPolygon, k_equals_hull_size)
+{
+    RNG rng(0x54321);
+    vector<Point2f> points;
+    for (int i = 0; i < 12; ++i)
+        points.push_back(Point2f((float)rng.uniform(0., 100.), (float)rng.uniform(0., 70.)));
+
+    vector<Point2f> hull;
+    convexHull(points, hull);
+
+    Mat polygon;
+    const double area = minEnclosingConvexPolygon(points, polygon, (int)hull.size());
+
+    vector<Point2f> vertices;
+    polygon.reshape(2).copyTo(vertices);
+    EXPECT_EQ((int)hull.size(), (int)vertices.size());
+    EXPECT_NEAR(std::abs(contourArea(hull)), area, 1e-2);
+}
+
+TEST(Imgproc_minEnclosingConvexPolygon, more_sides_than_hull)
+{
+    vector<Point2f> points;
+    points.push_back(Point2f(0.f, 0.f));
+    points.push_back(Point2f(10.f, 0.f));
+    points.push_back(Point2f(10.f, 10.f));
+    points.push_back(Point2f(0.f, 10.f));
+    points.push_back(Point2f(5.f, 5.f));  // inside, the hull still has 4 vertices
+
+    Mat polygon(3, 1, CV_32FC2, Scalar::all(1));
+    EXPECT_EQ(0., minEnclosingConvexPolygon(points, polygon, 5));
+    EXPECT_TRUE(polygon.empty());
+}
+
+TEST(Imgproc_minEnclosingConvexPolygon, degenerate_input)
+{
+    vector<Point2f> points;
+    points.push_back(Point2f(0.f, 0.f));
+    points.push_back(Point2f(5.f, 0.f));
+    points.push_back(Point2f(10.f, 0.f));
+    points.push_back(Point2f(7.f, 0.f));
+
+    Mat polygon;
+    EXPECT_EQ(0., minEnclosingConvexPolygon(points, polygon, 3));
+    EXPECT_TRUE(polygon.empty());
+}
+
 //==============================================================================
 
 typedef testing::TestWithParam<tuple<int, int>> fitLine_Modes;
