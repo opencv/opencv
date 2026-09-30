@@ -49,6 +49,139 @@ namespace {
 
 void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows);
 
+double reciprocalConditionNumber(const Mat& singularValues)
+{
+    const double largest = singularValues.at<double>(0);
+    if (std::fpclassify(largest) == FP_ZERO)
+    {
+        return 0;
+    }
+    return singularValues.at<double>(singularValues.rows - 1) / largest;
+}
+
+}}
+
+// The normal matrix consists of the intrinsic block followed by a 6x6 block per
+// view. Being symmetric positive semidefinite, it is singular if and only if a
+// view block or the Schur complement of the view blocks is. The condition
+// numbers of these small blocks never exceed the one of the full matrix.
+bool cv::internal::isNormalMatrixSingular(const Mat& JJ2, int numberOfIntrinsics)
+{
+    constexpr int numberOfExtrinsics = 6;
+    constexpr double epsilon = std::numeric_limits<double>::epsilon();
+    Mat schurComplement =
+        JJ2(Rect(0, 0, numberOfIntrinsics, numberOfIntrinsics)).clone();
+    for (int offset = numberOfIntrinsics; offset < JJ2.rows;
+         offset += numberOfExtrinsics)
+    {
+        const Mat viewBlock =
+            JJ2(Rect(offset, offset, numberOfExtrinsics, numberOfExtrinsics));
+        const SVD viewDecomposition(viewBlock);
+        if (reciprocalConditionNumber(viewDecomposition.w) < epsilon)
+        {
+            return true;
+        }
+        const Mat coupling =
+            JJ2(Rect(offset, 0, numberOfExtrinsics, numberOfIntrinsics));
+        Mat viewSolution;
+        viewDecomposition.backSubst(coupling.t(), viewSolution);
+        schurComplement -= coupling * viewSolution;
+    }
+    const SVD schurDecomposition(schurComplement, SVD::NO_UV);
+    return reciprocalConditionNumber(schurDecomposition.w) < epsilon;
+}
+
+namespace cv { namespace
+{
+
+static double normalizePoints(const Mat& points,
+                              Mat& normalizedPoints,
+                              Mat& pointMean)
+{
+    using std::fpclassify;
+    using std::sqrt;
+    constexpr double defaultPointScale = 1.0;
+    const Mat pointCoordinates =
+        points.reshape(1, static_cast<int>(points.total()));
+    reduce(pointCoordinates, pointMean, 0, REDUCE_AVG);
+
+    Mat centeredPoints = pointCoordinates -
+        Mat::ones(pointCoordinates.rows, 1, CV_64F) * pointMean;
+    // Apply Hartley normalization. The maximum coordinate is an intermediate
+    // preconditioner that prevents the squared norm from underflowing.
+    double maximumCoordinate = norm(centeredPoints, NORM_INF);
+    if (fpclassify(maximumCoordinate) == FP_ZERO)
+    {
+        maximumCoordinate = defaultPointScale;
+    }
+    Mat scaledPoints = centeredPoints / maximumCoordinate;
+    double standardDeviation =
+        norm(scaledPoints, NORM_L2) / sqrt(scaledPoints.total());
+    if (fpclassify(standardDeviation) == FP_ZERO)
+    {
+        standardDeviation = defaultPointScale;
+    }
+    scaledPoints = scaledPoints / standardDeviation;
+    normalizedPoints = scaledPoints.reshape(points.channels(), points.rows);
+    // Restore the standard deviation to the original coordinate scale.
+    return maximumCoordinate * standardDeviation;
+}
+
+class ExtrinsicsCallback
+{
+public:
+    ExtrinsicsCallback(Mat imagePoints, Mat objectPoints,
+                       internal::IntrinsicParams params)
+        : imagePoints_(imagePoints)
+        , objectPoints_(objectPoints)
+        , params_(params)
+    {
+    }
+
+    bool operator()(InputArray extrinsics, OutputArray residuals,
+                    OutputArray J) const
+    {
+        Vec6d rtvec;
+        extrinsics.copyTo(rtvec);
+
+        const Vec3d rvec(rtvec.val);
+        const Vec3d tvec(rtvec.val + 3);
+
+        Mat expected;
+
+        if (J.needed())
+        {
+            Mat jacobians;
+            internal::projectPoints(objectPoints_, expected, rvec, tvec,
+                                     params_, jacobians);
+
+            jacobians.colRange(8, 14).copyTo(J);
+        }
+        else
+        {
+            internal::projectPoints(objectPoints_, expected, rvec, tvec,
+                                    params_, noArray());
+        }
+
+        if (residuals.needed())
+        {
+            Mat residualDifference;
+            // LevMarq expects the Jacobian of the ideal projection.
+            subtract(expected, imagePoints_, residualDifference);
+
+            residualDifference = residualDifference.reshape(1);
+            transpose(residualDifference, residuals);
+        }
+
+        return true;
+    }
+
+private:
+    Mat imagePoints_;
+    Mat objectPoints_;
+    internal::IntrinsicParams params_;
+};
+
 }}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,9 +249,32 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     errors.isEstimate = finalParam.isEstimate;
 
-    std::vector<Vec3d> omc(objectPoints.total()), Tc(objectPoints.total());
+    // Keep each view normalized through calibration to avoid scale-dependent
+    // overflow in the Jacobian and uncertainty calculations.
+    const size_t numberOfViews = objectPoints.total();
+    std::vector<Mat> normalizedObjectPoints(numberOfViews);
+    std::vector<Vec3d> objectPointMeans(numberOfViews);
+    std::vector<double> objectPointScales(numberOfViews);
+    for (size_t image_idx = 0; image_idx < numberOfViews; ++image_idx)
+    {
+        Mat object;
+        objectPoints.getMat(static_cast<int>(image_idx)).convertTo(object,
+                                                                    CV_64FC3);
+        Mat objectPointMean;
+        objectPointScales[image_idx] =
+            normalizePoints(object, normalizedObjectPoints[image_idx],
+                            objectPointMean);
+        objectPointMeans[image_idx] =
+            Vec3d(objectPointMean.at<double>(0, 0),
+                  objectPointMean.at<double>(0, 1),
+                  objectPointMean.at<double>(0, 2));
+    }
 
-    CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond, thresh_cond, omc, Tc);
+    std::vector<Vec3d> omc(numberOfViews);
+    std::vector<Vec3d> Tc(numberOfViews);
+
+    CalibrateExtrinsics(normalizedObjectPoints, imagePoints, finalParam,
+                        check_cond, thresh_cond, omc, Tc);
 
 
     //-------------------------------Optimization
@@ -132,10 +288,24 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
         double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
 
         Mat JJ2, ex3;
-        ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond,thresh_cond, JJ2, ex3);
+        ComputeJacobians(normalizedObjectPoints, imagePoints, finalParam, omc,
+                         Tc, check_cond, thresh_cond, JJ2, ex3);
 
+        // Singular normal equations leave the intrinsics unchanged. Detect
+        // them explicitly to behave identically across platforms since the
+        // linear solver only rejects pivots that vanish or fall below an
+        // absolute threshold, which depends on rounding.
+        const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
         Mat G;
-        solve(JJ2, ex3, G);
+        if (numberOfIntrinsics > 0 &&
+            isNormalMatrixSingular(JJ2, numberOfIntrinsics))
+        {
+            G = Mat::zeros(JJ2.rows, 1, CV_64FC1);
+        }
+        else
+        {
+            solve(JJ2, ex3, G);
+        }
         currentParam = finalParam + alpha_smooth2*G;
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
@@ -146,15 +316,25 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
         if (recompute_extrinsic)
         {
-            CalibrateExtrinsics(objectPoints,  imagePoints, finalParam, check_cond,
-                                    thresh_cond, omc, Tc);
+            CalibrateExtrinsics(normalizedObjectPoints, imagePoints, finalParam,
+                                check_cond, thresh_cond, omc, Tc);
         }
     }
 
     //-------------------------------Validation
     double rms;
-    EstimateUncertainties(objectPoints, imagePoints, finalParam,  omc, Tc, errors, err_std, thresh_cond,
-                              check_cond, rms);
+    EstimateUncertainties(normalizedObjectPoints, imagePoints, finalParam, omc,
+                          Tc, errors, err_std, thresh_cond, check_cond, rms);
+
+    std::vector<Vec3d> physicalTranslations(numberOfViews);
+    for (size_t image_idx = 0; image_idx < numberOfViews; ++image_idx)
+    {
+        Matx33d rotationMatrix;
+        Rodrigues(omc[image_idx], rotationMatrix);
+        physicalTranslations[image_idx] =
+            objectPointScales[image_idx] * Tc[image_idx] -
+            rotationMatrix * objectPointMeans[image_idx];
+    }
 
     //-------------------------------
     _K = Matx33d(finalParam.f[0], finalParam.f[0] * finalParam.alpha, finalParam.c[0],
@@ -165,7 +345,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     if (D.needed()) Mat(finalParam.k).convertTo(D, D.empty() ? CV_64FC1 : D.type());
     if (rvecs.isMatVector())
     {
-        int N = (int)objectPoints.total();
+        int N = static_cast<int>(numberOfViews);
 
         if(rvecs.empty())
             rvecs.create(N, 1, CV_64FC3);
@@ -178,13 +358,16 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
             rvecs.create(3, 1, CV_64F, i, true);
             tvecs.create(3, 1, CV_64F, i, true);
             memcpy(rvecs.getMat(i).ptr(), omc[i].val, sizeof(Vec3d));
-            memcpy(tvecs.getMat(i).ptr(), Tc[i].val, sizeof(Vec3d));
+            memcpy(tvecs.getMat(i).ptr(), physicalTranslations[i].val,
+                   sizeof(Vec3d));
         }
     }
     else
     {
         if (rvecs.needed()) Mat(omc).reshape(3, (int)omc.size()).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
-        if (tvecs.needed()) Mat(Tc).reshape(3, (int)Tc.size()).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
+        if (tvecs.needed())
+            Mat(physicalTranslations).reshape(3, (int)physicalTranslations.size()).convertTo(
+                tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
     }
 
     return rms;
@@ -569,46 +752,39 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
 
 void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& objectPoints, Mat& rvec,
                             Mat&  tvec, Mat& J, const int MaxIter,
-                            const IntrinsicParams& param, const double thresh_cond)
+                            const IntrinsicParams& param)
 {
     CV_Assert(!objectPoints.empty() && objectPoints.type() == CV_64FC3);
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
     CV_Assert(rvec.total() > 2 && tvec.total() > 2);
     Vec6d extrinsics(rvec.at<double>(0), rvec.at<double>(1), rvec.at<double>(2),
-                    tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
-    double change = 1;
-    int iter = 0;
+                    tvec.at<double>(0), tvec.at<double>(1),
+                    tvec.at<double>(2));
 
-    while (change > 1e-10 && iter < MaxIter)
-    {
-        std::vector<Point2d> x;
-        Mat jacobians;
-        projectPoints(objectPoints, x, rvec, tvec, param, jacobians);
+    const ExtrinsicsCallback callback(imagePoints, objectPoints, param);
+    const double solverEpsilon = std::numeric_limits<double>::epsilon();
+    // Terminate only on a vanishing step or residual. The relative energy and
+    // gradient checks stop too early for the tight fisheye tolerances.
+    LevMarq solver(extrinsics, callback,
+                   LevMarq::Settings()
+                   .setMaxIterations(MaxIter)
+                   .setCheckRelEnergyChange(false)
+                   .setCheckMinGradient(false)
+                   .setStepNormInf(true)
+                   .setStepNormTolerance(solverEpsilon)
+                   .setSmallEnergyTolerance(solverEpsilon * solverEpsilon));
+    solver.optimize();
 
-        Mat ex = imagePoints - Mat(x);
-        ex = ex.reshape(1, 2);
+    // Copy back refined parameters
+    const cv::Vec3d r(extrinsics.val);
+    const cv::Vec3d t(extrinsics.val + 3);
 
-        J = jacobians.colRange(8, 14).clone();
+    cv::copyTo(r, rvec, cv::noArray());
+    cv::copyTo(t, tvec, cv::noArray());
 
-        SVD svd(J, SVD::NO_UV);
-        double condJJ = svd.w.at<double>(0)/svd.w.at<double>(5);
-
-        if (condJJ > thresh_cond)
-            change = 0;
-        else
-        {
-            Vec6d param_innov;
-            solve(J, ex.reshape(1, (int)ex.total()), param_innov, DECOMP_SVD + DECOMP_NORMAL);
-
-            Vec6d param_up = extrinsics + param_innov;
-            change = norm(param_innov)/norm(param_up);
-            extrinsics = param_up;
-            iter = iter + 1;
-
-            rvec = Mat(Vec3d(extrinsics.val));
-            tvec = Mat(Vec3d(extrinsics.val+3));
-        }
-    }
+    // Avoid caching, which would require mutable state, at the expense of
+    // one final recomputation.
+    callback(extrinsics, noArray(), J);
 }
 
 cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
@@ -737,6 +913,33 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
 
     Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
     Mat objectPoints = _objectPoints.reshape(1).t();
+
+    // Since https://github.com/opencv/opencv/pull/17454 (commit
+    // 657c8d1c65b88173521b7955ed2f2ac725a5a5b2), fisheye::undistortPoints
+    // marks points it cannot undistort with a sentinel coordinate instead of
+    // reporting an error. This happens for poor intermediate intrinsics,
+    // e.g., after a bad initial guess. Such points are outliers that corrupt
+    // the homography and must be skipped.
+    constexpr double undistortionFailureCoordinate = -1e6;
+    constexpr int minimumHomographyPoints = 4;
+    Mat validImagePoints;
+    Mat validObjectPoints;
+    for (int i = 0; i < imagePointsNormalized.cols; ++i)
+    {
+        const bool undistorted =
+            imagePointsNormalized.at<double>(0, i) != undistortionFailureCoordinate ||
+            imagePointsNormalized.at<double>(1, i) != undistortionFailureCoordinate;
+        if (undistorted)
+        {
+            validImagePoints.push_back(Mat(imagePointsNormalized.col(i).t()));
+            validObjectPoints.push_back(Mat(objectPoints.col(i).t()));
+        }
+    }
+    CV_CheckGE(validImagePoints.rows, minimumHomographyPoints,
+               "Too few image points can be undistorted to estimate the initial pose");
+    imagePointsNormalized = validImagePoints.t();
+    objectPoints = validObjectPoints.t();
+
     Mat objectPointsMean, covObjectPoints;
     Mat Rckk;
     int Np = imagePointsNormalized.cols;
@@ -798,7 +1001,7 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
 
         InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
 
-        ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param, thresh_cond);
+        ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param);
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
