@@ -136,19 +136,7 @@ public:
             outputShapeVec.push_back((int)inner);
         }
         else {
-            CV_Assert(endAxis >= startAxis && endAxis <= numAxes);
-
-            size_t flattenedDimensionSize = total(inputs[0], startAxis, endAxis + 1);
-
-            for (int i = 0; i < startAxis; i++)
-            {
-                outputShapeVec.push_back(inputs[0][i]);
-            }
-            outputShapeVec.push_back(flattenedDimensionSize);
-            for (size_t i = endAxis + 1; i < numAxes; i++)
-            {
-                outputShapeVec.push_back(inputs[0][i]);
-            }
+            outputShapeVec = inputs[0].flatten(startAxis, endAxis);
         }
 
         outputs.resize(inputs.size(), outputShapeVec);
