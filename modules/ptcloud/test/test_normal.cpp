@@ -340,7 +340,9 @@ INSTANTIATE_TEST_CASE_P(RGBD_Normals, NormalsRandomPlanes,
 ::testing::Combine(::testing::Values(
     // 3 normal computer params + 5 thresholds:
     //depth, alg, scale, 1plane mean, 1plane max, 3planes mean, 1plane16u mean, 3planes16 mean
-    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS,  true, 0.00362, 0.08881, 0.02175, 0, 0},
+    // maxErr is the maximum over all the pixels, it is very sensitive to the floating-point details of a platform
+    // (FMA contraction, summation order in filters): 0.071 on x86-64, 0.094 on RISC-V (RVV)
+    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS,  true, 0.00362, 0.1, 0.02175, 0, 0},
     NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS, false, 0.00374, 0.10309, 0.02, 0, 0},
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_FALS,  true, 0.00023, 0.00037, 0.01805, 0, 0},
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_FALS, false, 0.00023, 0.00037, 0.01805, 0, 0},

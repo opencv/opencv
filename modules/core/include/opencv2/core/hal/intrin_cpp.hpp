@@ -287,7 +287,8 @@ Most of these operations return only one value.
 
 Different type conversions and casts:
 
-- Rounding: @ref v_round, @ref v_floor, @ref v_ceil, @ref v_trunc,
+- Rounding: @ref v_round, @ref v_floor, @ref v_ceil, @ref v_trunc (all saturate to the int32 range,
+  see @ref cvRound and friends for the exact bounds; the result for NaN is unspecified),
 - To float: @ref v_cvt_f32, @ref v_cvt_f64
 - Reinterpret: @ref v_reinterpret_as_u8, @ref v_reinterpret_as_s8, ...
 
@@ -868,7 +869,7 @@ Scheme:
 For all types except 64-bit integer and 64-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
 
-static const unsigned char popCountTable[] =
+static constexpr unsigned char popCountTable[] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -2546,7 +2547,7 @@ template<int n> inline v_reg<int, n> v_trunc(const v_reg<float, n>& a)
 {
     v_reg<int, n> c;
     for( int i = 0; i < n; i++ )
-        c.s[i] = (int)(a.s[i]);
+        c.s[i] = cvTrunc(a.s[i]);
     return c;
 }
 
@@ -2592,7 +2593,7 @@ template<int n> inline v_reg<int, n*2> v_trunc(const v_reg<double, n>& a)
     v_reg<int, n*2> c;
     for( int i = 0; i < n; i++ )
     {
-        c.s[i] = (int)(a.s[i]);
+        c.s[i] = cvTrunc(a.s[i]);
         c.s[i+n] = 0;
     }
     return c;
