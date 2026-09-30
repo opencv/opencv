@@ -7,6 +7,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/recurrent_activations.hpp"
 #include "../net_impl.hpp"
 
 namespace cv
@@ -87,7 +88,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     bool produceCellOutput, produceOutputYh;
     bool useCellClip, usePeephole;
     bool inputForget;   // If true, couple the gates: f_t = 1 - i_t (ONNX input_forget)
-    bool useClip;       // If true, bound the input of the activations (ONNX clip)
     float clipValue;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
@@ -126,7 +126,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             inputForget = params.get<int>("input_forget", 0) != 0;
             clipValue = params.get<float>("clip", 0.f);
-            useClip = clipValue > 0.f;
 
             CV_Assert(!reverse || !bidirectional);
 
@@ -202,7 +201,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 _batchSize = inp0[0];
                 outResShape.push_back(1 + static_cast<int>(bidirectional));
                 outResShape.push_back(_batchSize);
-            }            outResShape.push_back(_hidSize);
+            }
+            outResShape.push_back(_hidSize);
 
             // Yh / Yc: ONNX layout=0 -> (dirs, batch, hid), layout=1 -> (batch, dirs, hid)
             int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
@@ -257,7 +257,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         }
 
         // Run one direction's recurrence into its own scratch so both directions run concurrently.
-        // Writes hOutAll columns [i*H, (i+1)*H) and the matching cOut slice.
+        // Writes hOutAll columns [i*H, (i+1)*H) for this direction.
         void forwardDirection(int i, int numDirs, const Mat& xTs, const Mat& h0All, const Mat& c0All,
                               Mat& hOutAll, Mat& hFinal, Mat& cFinal, const Mat& seqLens) const
         {
@@ -401,17 +401,17 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     Mat gatesIF = gates.colRange(0, 2*numHidden);
                     gemm(cInternal, pI, 1, gateI, 1, gateI);
                     gemm(cInternal, pF, 1, gateF, 1, gateF);
-                    clipToThreshold(gatesIF);
+                    recurrent::clipToThreshold(gatesIF, clipValue);
                     f_activation(gatesIF, gatesIF);
                 }
                 else
                 {
                     Mat gatesIFO = gates.colRange(0, 3*numHidden);
-                    clipToThreshold(gatesIFO);
+                    recurrent::clipToThreshold(gatesIFO, clipValue);
                     f_activation(gatesIFO, gatesIFO);
                 }
 
-                clipToThreshold(gateG);
+                recurrent::clipToThreshold(gateG, clipValue);
                 g_activation(gateG, gateG);
 
                 // Coupled gates: the forget gate follows the input gate instead of being computed.
@@ -432,7 +432,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 if (usePeephole)
                 {
                     gemm(cInternal, pO, 1, gateO, 1, gateO);
-                    clipToThreshold(gateO);
+                    recurrent::clipToThreshold(gateO, clipValue);
                     f_activation(gateO, gateO);
                 }
 
@@ -441,7 +441,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 multiply(gateO, hInternal, hInternal);
 
                 if (!seqLens.empty())
-                    holdFinishedRows(seqLens, ts, hPrev, cPrev, hInternal, cInternal);
+                {
+                    recurrent::holdFinishedRows(seqLens, ts, hPrev, hInternal);
+                    recurrent::holdFinishedRows(seqLens, ts, cPrev, cInternal);
+                }
 
                 writeYStep(hOutTs.rowRange(curRowRange), ts, hInternal, seqLens);
             }
@@ -566,32 +569,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             if (produceCellOutput)
                 writeFinalStates(cFinal, output[2], numDirs);
-        }
-
-        // The ONNX `clip` attribute bounds the input of the activations (not their output, and not
-        // the state) to [-clip, clip]. It is off unless the model asks for it.
-        void clipToThreshold(Mat& m) const
-        {
-            if (!useClip)
-                return;
-            min(m, clipValue, m);
-            max(m, -clipValue, m);
-        }
-
-        // A sample that has reached the end of its sequence keeps the state it finished with;
-        // the gates it would compute are discarded.
-        static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, const Mat& cPrev,
-                                     Mat& h, Mat& c)
-        {
-            const int* lens = seqLens.ptr<int>();
-            for (int n = 0; n < h.rows; n++)
-            {
-                if (ts >= lens[n])
-                {
-                    hPrev.row(n).copyTo(h.row(n));
-                    cPrev.row(n).copyTo(c.row(n));
-                }
-            }
         }
 
         // One timestep of Y for the current direction; past its sequence length a sample
