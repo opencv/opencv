@@ -3577,10 +3577,84 @@ void resize(int src_type,
 
 //==================================================================================================
 
+// n-dimensional input: every 2D plane formed by the two innermost axes is resized
+static void resizeND(InputArray _src, OutputArray _dst, Size dsize,
+                     double inv_scale_x, double inv_scale_y, int interpolation)
+{
+    using namespace cv;
+    Mat src = _src.getMat();
+    const int dims = src.dims;
+    const Size ssize(src.size[dims - 1], src.size[dims - 2]);
+    CV_Assert( !ssize.empty() );
+    if( dsize.empty() )
+    {
+        CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
+        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
+                     saturate_cast<int>(ssize.height*inv_scale_y));
+        CV_Assert( !dsize.empty() );
+    }
+    else
+    {
+        inv_scale_x = (double)dsize.width/ssize.width;
+        inv_scale_y = (double)dsize.height/ssize.height;
+        CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
+    }
+    if (interpolation == INTER_LINEAR_EXACT && (src.depth() == CV_32F || src.depth() == CV_64F))
+        interpolation = INTER_LINEAR;
+
+    std::vector<int> outShape(src.size.p, src.size.p + dims);
+    outShape[dims - 2] = dsize.height;
+    outShape[dims - 1] = dsize.width;
+    _dst.create(dims, outShape.data(), src.type());
+    Mat dst = _dst.getMat();
+    if (dsize == ssize)
+    {
+        src.copyTo(dst);
+        return;
+    }
+    CV_Assert(dst.data != src.data);
+
+    int64 nplanes = 1;
+    for (int i = 0; i < dims - 2; i++)
+        nplanes *= src.size[i];
+    if (nplanes == 0)
+        return;
+
+    auto planePtr = [](const Mat& m, int64 p) {
+        const uchar* ptr = m.data;
+        for (int i = m.dims - 3; i >= 0; i--)
+        {
+            int64 q = p / m.size[i];
+            ptr += (size_t)(p - q*m.size[i])*m.step[i];
+            p = q;
+        }
+        return ptr;
+    };
+    auto resizePlanes = [&](const Range& r) {
+        for (int p = r.start; p < r.end; p++)
+            hal::resize(src.type(), planePtr(src, p), src.step[dims - 2], ssize.width, ssize.height,
+                        (uchar*)planePtr(dst, p), dst.step[dims - 2], dsize.width, dsize.height,
+                        inv_scale_x, inv_scale_y, interpolation);
+    };
+    // Many planes: resize them in parallel (each one serially). A few big planes: one after
+    // another, each resized in parallel internally.
+    CV_Assert(nplanes <= INT_MAX);
+    if (nplanes >= getNumThreads())
+        parallel_for_(Range(0, (int)nplanes), resizePlanes);
+    else
+        resizePlanes(Range(0, (int)nplanes));
+}
+
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
     CV_INSTRUMENT_REGION();
+
+    if (_src.dims() > 2)
+    {
+        resizeND(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation);
+        return;
+    }
 
     Size ssize = _src.size();
 
