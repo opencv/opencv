@@ -12,8 +12,11 @@
 //      Script/category come from HarfBuzz's Unicode functions; direction is a
 //      lightweight RTL heuristic (full UAX#9 BiDi is a TODO). For each code point
 //      the engine picks the first font that covers it: the user font first, then
-//      the built-in fallbacks (sans/italic/unifont); uncovered -> '?'. Adjacent
-//      compatible runs are then merged.
+//      the built-in font slots (sans/italic/uni); uncovered -> '?'. Adjacent
+//      compatible runs are then merged. Only "sans" (Rubik) is always compiled in;
+//      "italic" and "uni" are optional (WITH_ITALICFONT / WITH_UNIFONT) and any slot
+//      can be (re)filled at run time with an external file via
+//      FontFace::setBuiltinFont() (see the registry below).
 //   3. Shape each run with hb_shape(), yielding glyph ids and positions
 //      (advances include GPOS kerning); RTL runs come out already reordered.
 //   4. Lay out and render the glyphs. Each glyph is rasterized once by HarfBuzz's
@@ -49,10 +52,14 @@
 #include <hb-raster.h>
 
 #include "builtin_font_sans.h"
+#ifdef HAVE_ITALICFONT
 #include "builtin_font_italic.h"
+#endif
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
 #endif
+#include <atomic>
+#include <mutex>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -68,23 +75,51 @@ typedef struct BuiltinFontData
     bool italic;
 } BuiltinFontData;
 
+// The built-in font slots, in fallback order. A slot is backed by a compiled-in
+// gzipped blob (gzdata/size, when the corresponding WITH_* option is ON), or by an
+// external file registered with FontFace::setBuiltinFont(), or is empty.
 enum
 {
-    BUILTIN_FONTS_NUM = 2
+    BUILTIN_FONT_SANS = 0,
+    BUILTIN_FONT_ITALIC = 1,
+    BUILTIN_FONT_UNI = 2,
+    BUILTIN_FONTS_NUM = 3
+};
+
+static const BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM] =
+{
+    {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
+#ifdef HAVE_ITALICFONT
+    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
+#else
+    {0, 0, "italic", 1.0, true},
+#endif
 #ifdef HAVE_UNIFONT
-        +1
+    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
+#else
+    {0, 0, "uni", 1.0, true},
 #endif
 };
 
-static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
+static int builtinFontIndex(const String& name)
 {
-    {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
-    {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
-#ifdef HAVE_UNIFONT
-    {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
-#endif
-    {0, 0, 0, 0.0, false}
-};
+    for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+        if(name == builtinFontData[i].name)
+            return i;
+    return -1;
+}
+
+// Registry of external files provided via FontFace::setBuiltinFont(). It is
+// process-wide, while the loaded fonts live in each thread's FontRenderEngine:
+// the engine compares its generation with builtinFontGeneration on every use and
+// reloads its slots when they differ.
+static std::mutex& builtinFontMutex()
+{
+    static std::mutex m;
+    return m;
+}
+static std::string builtinFontPaths[BUILTIN_FONTS_NUM];
+static std::atomic<int> builtinFontGeneration(0);
 
 static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
 {
@@ -188,6 +223,19 @@ struct FontFace::Impl {
             if (!hb_font)
                 return false;
         }
+        currname = fontdata.name;
+        scalefactor = fontdata.sf;
+        italic = fontdata.italic;
+        initParams();
+        return true;
+    }
+
+    // Load an external file into a built-in slot: it is then addressed by the
+    // slot name ("italic", "uni", ...) and takes part in the fallback chain.
+    bool setStdExternal(const BuiltinFontData& fontdata, const String& path)
+    {
+        if(!set(path))
+            return false;
         currname = fontdata.name;
         scalefactor = fontdata.sf;
         italic = fontdata.italic;
@@ -397,6 +445,7 @@ public:
         hb_uni_funcs = hb_unicode_funcs_get_default();
         max_cache_size = (size_t)MAX_CACHE_SIZE;
         raster_draw = 0;
+        builtin_generation = -1;  // force the first syncBuiltinFonts() to load the slots
     }
 
     ~FontRenderEngine()
@@ -435,8 +484,39 @@ public:
     FontFace& getStdFontFace(int i)
     {
         CV_Assert(i >= 0 && i < BUILTIN_FONTS_NUM);
-        builtin_ffaces[i]->setStd(builtinFontData[i]);
+        syncBuiltinFonts();
         return builtin_ffaces[i];
+    }
+
+    // (Re)load the built-in font slots of this thread's engine if
+    // FontFace::setBuiltinFont() changed the registry since the last call.
+    void syncBuiltinFonts()
+    {
+        int gen = builtinFontGeneration.load(std::memory_order_acquire);
+        if(gen == builtin_generation)
+            return;
+        std::string paths[BUILTIN_FONTS_NUM];
+        {
+            std::lock_guard<std::mutex> lock(builtinFontMutex());
+            for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+                paths[i] = builtinFontPaths[i];
+            gen = builtinFontGeneration.load(std::memory_order_acquire);
+        }
+        for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+        {
+            const BuiltinFontData& fontdata = builtinFontData[i];
+            // a fresh Impl: FontFace objects handed out earlier keep the old one alive
+            FontFace fface;
+            bool ok = !paths[i].empty() && fface->setStdExternal(fontdata, paths[i]);
+            if(!ok && fontdata.size > 1)
+                ok = fface->setStd(fontdata);
+            builtin_ffaces[i] = ok ? fface : FontFace();
+        }
+        builtin_generation = gen;
+        // hb_font pointers are part of the glyph cache key; drop the cache so that a
+        // recycled address of a destroyed font cannot alias its glyphs.
+        glyph_cache.clear();
+        all_cached.clear();
     }
 
     Point putText_( Mat& img, Size imgsize, const String& str_, Point org,
@@ -446,7 +526,7 @@ public:
 
 protected:
     FontFace builtin_ffaces[BUILTIN_FONTS_NUM];
-    bool builtin_ffaces_initialized;
+    int builtin_generation;
 
     hb_unicode_funcs_t* hb_uni_funcs;
 
@@ -481,24 +561,21 @@ bool FontFace::set(const String& fontname_)
         fontname = "sans";
     if(impl->hb_font != 0 && impl->currname == fontname)
         return true;
-    int i = 0;
-    for( ; i < BUILTIN_FONTS_NUM; i++ )
-    {
-        if( builtinFontData[i].name == fontname && builtinFontData[i].size > 1 )
-            break;
-    }
-    if( i >= BUILTIN_FONTS_NUM )
-        i = -1;
+    int i = builtinFontIndex(fontname);
 
     FontRenderEngine& engine = fontRenderEngine;
 
     bool ok = false;
     if( i >= 0 )
     {
-        FontFace& builtin_fface = engine.getStdFontFace(i);
-        if(builtin_fface.impl->hb_font)
+        FontFace* builtin_fface = &engine.getStdFontFace(i);
+        // no italic font compiled in or registered: fall back to the upright one,
+        // so that e.g. FONT_ITALIC in the legacy putText() keeps working
+        if(!(*builtin_fface)->hb_font && i == BUILTIN_FONT_ITALIC)
+            builtin_fface = &engine.getStdFontFace(BUILTIN_FONT_SANS);
+        if((*builtin_fface)->hb_font)
         {
-            impl = builtin_fface.impl;
+            impl = builtin_fface->impl;
             ok = true;
         }
     }
@@ -511,6 +588,25 @@ bool FontFace::set(const String& fontname_)
     return ok;
 }
 
+bool FontFace::setBuiltinFont(const String& fontName, const String& fontPath)
+{
+    int i = builtinFontIndex(fontName);
+    if(i < 0)
+        return false;
+    if(!fontPath.empty())
+    {
+        // validate the file now, so that the caller learns about a bad path immediately
+        // and a broken registration cannot leave a slot empty
+        Impl probe;
+        if(!probe.set(fontPath))
+            return false;
+    }
+    std::lock_guard<std::mutex> lock(builtinFontMutex());
+    builtinFontPaths[i] = fontPath;
+    builtinFontGeneration.fetch_add(1, std::memory_order_acq_rel);
+    return true;
+}
+
 bool FontFace::getBuiltinFontData(const String& fontname_,
                                   const uchar*& data, size_t& size)
 {
@@ -519,20 +615,16 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
         fontname = "sans";
     data = 0;
     size = 0;
-    for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
+    int i = builtinFontIndex(fontname);
+    if(i < 0)
+        return false;
+    FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
+    if( builtin_fface.impl->hb_font )
     {
-        if(builtinFontData[i].name == fontname && builtinFontData[i].size > 1)
-        {
-            FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
-            if( builtin_fface.impl->hb_font )
-            {
-                std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
-                size = fbuf.size();
-                data = size > 0 ? &fbuf[0] : 0;
-                return size > 0;
-            }
-            return false;
-        }
+        std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
+        size = fbuf.size();
+        data = size > 0 ? &fbuf[0] : 0;
+        return size > 0;
     }
     return false;
 }
@@ -963,15 +1055,13 @@ Point FontRenderEngine::putText_(
 
     fontface->setParams(size, weight);
 
+    syncBuiltinFonts();
     for(j = 0; j < BUILTIN_FONTS_NUM; j++)
     {
         FontFace& fface = builtin_ffaces[j];
-        if(!builtin_ffaces_initialized)
-            fface.set(builtinFontData[j].name);
         if (fface->hb_font)
             fface->setParams(size, weight);
     }
-    builtin_ffaces_initialized = true;
 
     if(alignment == PUT_TEXT_ALIGN_RIGHT)
         std::swap(x0, x1);
@@ -1115,19 +1205,24 @@ Point FontRenderEngine::putText_(
                     glob_dir = dir;
             }
 
+            // pick the first font that covers the character: the user font, then the
+            // built-in slots (empty slots have hb_font == 0 and are skipped by hbGlyphIndex)
             hb_font_t* cand_hb = hb_font0;
-            for(j = -1; j < BUILTIN_FONTS_NUM; j++)
+            for(int attempt = 0; attempt < 2; attempt++)
             {
-                cand_hb = j < 0 ? hb_font0 : builtin_ffaces[j]->hb_font;
-                glyph_index = hbGlyphIndex(cand_hb, c);
-                if(glyph_index != 0)
-                    break;
-                if(j+1 == BUILTIN_FONTS_NUM)
+                for(j = -1; j < BUILTIN_FONTS_NUM; j++)
                 {
-                    chars[i] = c = '?'; // replace the character with 'unknown' ~ <?> (TBD: replace ? with 0xFFFD)
-                    break;
+                    cand_hb = j < 0 ? hb_font0 : builtin_ffaces[j]->hb_font;
+                    glyph_index = hbGlyphIndex(cand_hb, c);
+                    if(glyph_index != 0)
+                        break;
                 }
+                if(j < BUILTIN_FONTS_NUM || attempt > 0)
+                    break;
+                chars[i] = c = '?'; // no font covers the character: draw 'unknown' ~ <?> instead (TBD: 0xFFFD)
             }
+            if(j >= BUILTIN_FONTS_NUM)
+                j = -1; // not even '?' is available; stay with the user font
             int fontidx = j;
             int seglen = i - segstart;
             // if the current segment (if any) ends with 1 or more neutral/punctuation characters,
@@ -1500,6 +1595,7 @@ FontFace::~FontFace() {}
 bool FontFace::setInstance(const std::vector<int>&) { return false; }
 bool FontFace::getInstance(std::vector<int>&) const { return false; }
 bool FontFace::getBuiltinFontData(const String&, const uchar*&, size_t&) { return false; }
+bool FontFace::setBuiltinFont(const String&, const String&) { return false; }
 
 #define OPENCV_NO_TEXT_RENDERING_MSG \
     "Text rendering is not supported. Compile OpenCV with WITH_HARFBUZZ=ON."
