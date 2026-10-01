@@ -1146,6 +1146,101 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
+// Global pooling has to cover all spatial dimensions of the input, not only the
+// two that the pooling parameters (kernel_h/kernel_w) are sized for.
+TEST(Layer_Test_GlobalPooling, NDSpatialDimensions)
+{
+    const int sizes[] = {2, 3, 4, 5, 6};
+    Mat inp(5, sizes, CV_32F);
+    randu(inp, -1, 1);
+
+    // One row per (batch, channel) plane; the planes are contiguous in memory.
+    Mat planes = inp.reshape(1, sizes[0] * sizes[1]);
+    const int nplanes = planes.rows;
+    Mat aveRef(nplanes, 1, CV_32F), maxRef(nplanes, 1, CV_32F);
+    for (int i = 0; i < nplanes; i++)
+    {
+        double minVal, maxVal;
+        cv::minMaxIdx(planes.row(i), &minVal, &maxVal);
+        aveRef.at<float>(i) = (float)mean(planes.row(i))[0];
+        maxRef.at<float>(i) = (float)maxVal;
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        const bool useMax = i != 0;
+        LayerParams lp;
+        lp.name = "testGlobalPooling";
+        lp.type = "Pooling";
+        lp.set("pool", useMax ? "MAX" : "AVE");
+        lp.set("global_pooling", true);
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+        std::vector<Mat> input(1, inp), output;
+        runLayer(layer, input, output);
+
+        // Expected output shape is N x C x 1 x 1 x 1.
+        ASSERT_EQ(output[0].dims, 5) << "i = " << i;
+        for (int d = 2; d < output[0].dims; d++)
+            ASSERT_EQ(output[0].size[d], 1) << "i = " << i << ", d = " << d;
+
+        normAssert(useMax ? maxRef : aveRef, output[0].reshape(1, nplanes), "", 1e-6, 1e-6);
+    }
+}
+
+// The quantized pooling layer shares the kernel/pad/stride parameters of the
+// floating point one, hence it has to support the same spatial dimensionality.
+TEST(Layer_Test_GlobalPooling, QuantizedNDSpatialDimensions)
+{
+    const int sizes[] = {2, 3, 4, 5, 6};
+    const int nplanes = sizes[0] * sizes[1];
+    Mat inp(5, sizes, CV_8S);
+    randu(inp, -100, 100);
+
+    Mat planes = inp.reshape(1, nplanes);
+    Mat aveRef(nplanes, 1, CV_8S), maxRef(nplanes, 1, CV_8S);
+    for (int i = 0; i < nplanes; i++)
+    {
+        int sum = 0, maxVal = -128;
+        for (int j = 0; j < planes.cols; j++)
+        {
+            int val = planes.at<int8_t>(i, j);
+            sum += val;
+            maxVal = std::max(maxVal, val);
+        }
+        aveRef.at<int8_t>(i) = saturate_cast<int8_t>(std::round((double)sum / planes.cols));
+        maxRef.at<int8_t>(i) = saturate_cast<int8_t>(maxVal);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        const bool useMax = i != 0;
+        LayerParams lp;
+        lp.name = "testGlobalPoolingInt8";
+        lp.type = "PoolingInt8";
+        lp.set("pool", useMax ? "max" : "ave");
+        lp.set("global_pooling", true);
+        lp.set("zeropoints", 0);
+        lp.set("scales", 1.f);
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+        std::vector<MatShape> inputs(1, shape(inp)), outputs, internals;
+        layer->getMemoryShapes(inputs, 1, outputs, internals);
+        ASSERT_EQ(outputs[0].size(), 5) << "i = " << i;
+        for (int d = 2; d < outputs[0].size(); d++)
+            ASSERT_EQ(outputs[0][d], 1) << "i = " << i << ", d = " << d;
+
+        std::vector<Mat> input(1, inp), output(1, Mat(outputs[0], CV_8S));
+        layer->finalize(input, output);
+        layer->forward(input, output, std::vector<Mat>());
+
+        Mat ref = (useMax ? maxRef : aveRef).reshape(1, nplanes);
+        Mat got = output[0].reshape(1, nplanes);
+        for (int j = 0; j < nplanes; j++)
+            EXPECT_EQ((int)got.at<int8_t>(j), (int)ref.at<int8_t>(j)) << "i = " << i << ", j = " << j;
+    }
+}
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
