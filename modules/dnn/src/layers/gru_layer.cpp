@@ -36,17 +36,25 @@ class GRULayerImpl CV_FINAL : public GRULayer
     int numTimeStamps, numSamples;
     layout_t layout;
     MatShape outTailShape;
-    bool bidirectional;
+    bool reverse;        // If true, go in negative direction along the time axis
+    bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     bool linearBeforeReset;
+    bool useClip;        // If true, bound the input of the activations to [-clipValue, clipValue]
+    float clipValue;
 
 public:
     GRULayerImpl(const LayerParams& params) : numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
 
-        bidirectional = params.get<String>("direction", "forward") == "bidirectional";
+        const String direction = params.get<String>("direction", "forward");
+        bidirectional = (direction == "bidirectional");
+        reverse = (direction == "reverse");
+        CV_Assert(!reverse || !bidirectional);
         linearBeforeReset = params.get<int>("linear_before_reset", 0) != 0;
         layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
+        clipValue = params.get<float>("clip", 0.f);
+        useClip = clipValue > 0.f;
 
         // forward() hardcodes f=Sigmoid, g=Tanh; reject anything else rather than miscompute.
         DictValue acts = params.get<DictValue>("activations", DictValue(String()));
@@ -158,22 +166,15 @@ public:
         }
         yhShape.push_back(_numOut);                                   // hidden
 
-        bool needY, needYh;
-        resolveOutputPolicy(requiredOutputs, needY, needYh);
-        if (!runtimeWeights)
-        {
-            needY = true;
-            needYh = false;
-        }
-
         const int outCount = std::max(requiredOutputs, 1);
         outputs.assign(outCount, MatShape());
         const bool legacyPackedY = !runtimeWeights;
-        if (outCount == 1)
-            outputs[0] = needY ? (legacyPackedY ? outResShapeLegacy : outResShape) : yhShape;
-        else
+        // Slot #0 is Y (the hidden state of every timestep); Y_h is slot #1. As in the other
+        // recurrent ops, asking for Y_h alone still needs output #0 to be declared (as an
+        // empty name), so a node with a single declared output can only mean Y.
+        outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
+        if (outCount >= 2)
         {
-            outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
             outputs[1] = yhShape;     // slot #1 -> Y_h
             for (int i = 2; i < outCount; ++i)
                 outputs[i] = yhShape;
@@ -218,6 +219,16 @@ public:
         prepareRuntimeState(input);
         const bool legacyDirectMode = (input.size() == 1);
         const bool useLinearBeforeReset = linearBeforeReset || legacyDirectMode;
+
+        // ONNX sequence_lens (input #4): each batch entry stops after its own length, keeping the
+        // state it finished with, and contributes zeros to Y from there on.
+        Mat seqLens;
+        if (input.size() > 4 && !input[4].empty())
+        {
+            input[4].convertTo(seqLens, CV_32S);
+            CV_CheckEQ((int)seqLens.total(), numSamples, "GRU: sequence_lens must have one entry per sample");
+        }
+        Mat hPrev;
 
         Mat sequence_input = input[0];
         Mat sequence_input_time_major = sequence_input;
@@ -270,6 +281,9 @@ public:
         Mat yh = (yhIndex >= 0) ? output[yhIndex] : Mat();
         Mat xTs = sequence_input_time_major.reshape(1, numTimeStamps * numSamples);
 
+        if (!seqLens.empty())
+            hPrev.create(numSamples, blobs[0].size[1], blobs[0].type());
+
         for (int i = 0; i < numDirs; ++i)
         {
             const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
@@ -319,8 +333,10 @@ public:
             gemm(xTs, wx_n, 1, xProj_n, 0, xProj_n, GEMM_2_T);
             gemm(dummyOnesAll, b_in, 1, xProj_n, 1, xProj_n);
 
+            // For a single direction, "reverse" walks the sequence from the last timestep to the
+            // first; for a bidirectional node the second direction is the reversed one.
             int tsStart, tsEnd, tsInc;
-            if (i == 1) {
+            if (reverse || i == 1) {
                 tsStart = numTimeStamps - 1;
                 tsEnd = -1;
                 tsInc = -1;
@@ -333,6 +349,8 @@ public:
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
                 Range curRowRange(ts * numSamples, (ts + 1) * numSamples);
+                if (!seqLens.empty())
+                    hInternal.copyTo(hPrev);
 
                 // Use precomputed input projection for this timestep
                 Mat xCurrProj_rz = xProj_rz.rowRange(curRowRange);
@@ -340,6 +358,7 @@ public:
 
                 xCurrProj_rz.copyTo(gates);                                // x * Wx_rz + b_rz (precomputed)
                 gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);     // + h_(t-1) * Wh_rz
+                clipToThreshold(gates);                                    // -clip <= ... <= clip
                 sigmoid(gates, gates);                                     // sigmoid()
 
                 Mat z = gates.colRange(0, gates.cols / 2);
@@ -361,6 +380,7 @@ public:
                     add(n_t, xCurrProj_n, n_t);                            // + x * Wx_n + b_in (precomputed)
                     gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                // + b_hn
                 }
+                clipToThreshold(n_t);                                      // -clip <= ... <= clip
                 tanh(n_t, n_t);                                            // tanh()
 
                 // h_t = z (*) h_(t-1) + (1 - z) (*) n_t  (fused single-pass)
@@ -369,7 +389,10 @@ public:
                 else
                     gruComputeH<double>(z, n_t, hInternal);
 
-                writeYStep(y, y3d2d, ts, i, numOut, hInternal);
+                if (!seqLens.empty())
+                    holdFinishedRows(seqLens, ts, hPrev, hInternal);
+
+                writeYStep(y, y3d2d, ts, i, numOut, hInternal, seqLens);
             }
 
             writeYhDir(yh, i, numDirs, hInternal);
@@ -381,25 +404,6 @@ private:
     static bool hasRuntimeWeights(const std::vector<T>& in)
     {
         return in.size() >= 3 && !in[1].empty() && !in[2].empty();
-    }
-
-    void resolveOutputPolicy(int requiredOutputs, bool& needY, bool& needYh) const
-    {
-        if (requiredOutputs == 0)
-        {
-            needY = true;
-            needYh = false;
-        }
-        else if (requiredOutputs == 1)
-        {
-            needY = false;
-            needYh = true;
-        }
-        else
-        {
-            needY = true;
-            needYh = true;
-        }
     }
 
     void prepareRuntimeState(const std::vector<Mat>& input)
@@ -521,31 +525,64 @@ private:
                m.size[2] == numSamples && m.size[3] == numOutGlobal;
     }
 
-    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState) const
+    // The ONNX `clip` attribute bounds the input of the activations (not their output, and not
+    // the state) to [-clip, clip]. It is off unless the model asks for it.
+    void clipToThreshold(Mat& m) const
+    {
+        if (!useClip)
+            return;
+        min(m, clipValue, m);
+        max(m, -clipValue, m);
+    }
+
+    // A sample that has reached the end of its sequence keeps the state it finished with;
+    // the gates it would compute are discarded.
+    static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)
+    {
+        const int* lens = seqLens.ptr<int>();
+        for (int n = 0; n < h.rows; n++)
+            if (ts >= lens[n])
+                hPrev.row(n).copyTo(h.row(n));
+    }
+
+    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState,
+                    const Mat& seqLens = Mat()) const
     {
         if (y.empty())
             return;
 
+        Mat ySlice2d;
         if (y.dims == 3)
         {
             CV_CheckLE((dir + 1) * numOut, y3d2d.cols, "Invalid Y shape for current direction");
-            Mat yRow = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
-                         .colRange(dir * numOut, (dir + 1) * numOut);
-            hState.copyTo(yRow);
-            return;
+            ySlice2d = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
+                            .colRange(dir * numOut, (dir + 1) * numOut);
         }
-
-        if (layout == BATCH_SEQ_HID)
+        else if (layout == BATCH_SEQ_HID)
         {
             Range ranges[4] = { Range::all(), Range(ts, ts + 1), Range(dir, dir + 1), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
-            hState.copyTo(ySlice2d);
+            ySlice2d = y(ranges).reshape(1, numSamples);
         }
         else
         {
             Range ranges[4] = { Range(ts, ts + 1), Range(dir, dir + 1), Range::all(), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
+            ySlice2d = y(ranges).reshape(1, numSamples);
+        }
+
+        if (seqLens.empty())
+        {
             hState.copyTo(ySlice2d);
+            return;
+        }
+
+        // Past its sequence length a sample contributes zeros to Y.
+        const int* lens = seqLens.ptr<int>();
+        for (int n = 0; n < numSamples; n++)
+        {
+            if (ts < lens[n])
+                hState.row(n).copyTo(ySlice2d.row(n));
+            else
+                ySlice2d.row(n).setTo(0);
         }
     }
 
