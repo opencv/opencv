@@ -277,6 +277,33 @@ TEST(Imgproc_getClosestEllipsePoints, near_center)
     }
 }
 
+TEST(Imgproc_getClosestEllipsePoints, near_center_nonzero_center)
+{
+    const Point2f center(30.f, 20.f);
+    const RotatedRect ellipse(center, Size2f(10.f, 4.f), 0.f);
+    // FLT_EPSILON may round away when added to a nonzero center; use adjacent floats.
+    const vector<Point2f> points{
+        Point2f(std::nextafter(center.x, std::numeric_limits<float>::infinity()), center.y),
+        Point2f(std::nextafter(center.x, -std::numeric_limits<float>::infinity()), center.y),
+        Point2f(center.x, std::nextafter(center.y, std::numeric_limits<float>::infinity())),
+        Point2f(center.x, std::nextafter(center.y, -std::numeric_limits<float>::infinity()))
+    };
+    Mat closest_pts;
+    getClosestEllipsePoints(ellipse, points, closest_pts);
+
+    ASSERT_EQ(closest_pts.total(), points.size());
+    for (size_t i = 0; i < points.size(); ++i)
+    {
+        const Point2f closest = closest_pts.at<Point2f>(static_cast<int>(i));
+        const Point2f offset = closest - center;
+        const Point2f query_offset = points[i] - center;
+        EXPECT_TRUE(std::isfinite(closest.x));
+        EXPECT_TRUE(std::isfinite(closest.y));
+        EXPECT_NEAR(offset.x * offset.x / 25.f + offset.y * offset.y / 4.f, 1.f, 1e-4f);
+        EXPECT_GT(offset.x * query_offset.x + offset.y * query_offset.y, 0.f);
+    }
+}
+
 TEST(Imgproc_getClosestEllipsePoints, ellipse_mse_2) {
     const float tol = 1e-3f;
 
