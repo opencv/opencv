@@ -257,6 +257,26 @@ TEST(Imgproc_getClosestEllipsePoints, circle_center)
     EXPECT_NEAR(std::hypot(offset.x, offset.y), circle.size.width / 2.f, 1e-4f);
 }
 
+TEST(Imgproc_getClosestEllipsePoints, near_center)
+{
+    const RotatedRect ellipse(Point2f(0.f, 0.f), Size2f(10.f, 4.f), 0.f);
+    const float epsilon = std::numeric_limits<float>::epsilon();
+    const vector<Point2f> points{{epsilon, 0.f}, {-epsilon, 0.f},
+                                 {0.f, epsilon}, {0.f, -epsilon}};
+    Mat closest_pts;
+    getClosestEllipsePoints(ellipse, points, closest_pts);
+
+    ASSERT_EQ(closest_pts.total(), points.size());
+    for (size_t i = 0; i < points.size(); ++i)
+    {
+        const Point2f closest = closest_pts.at<Point2f>(static_cast<int>(i));
+        EXPECT_TRUE(std::isfinite(closest.x));
+        EXPECT_TRUE(std::isfinite(closest.y));
+        EXPECT_NEAR(closest.x * closest.x / 25.f + closest.y * closest.y / 4.f, 1.f, 1e-4f);
+        EXPECT_GT(closest.x * points[i].x + closest.y * points[i].y, 0.f);
+    }
+}
+
 TEST(Imgproc_getClosestEllipsePoints, ellipse_mse_2) {
     const float tol = 1e-3f;
 
