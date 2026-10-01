@@ -3064,6 +3064,43 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_SumWide,
         testing::Values(1, 2, 3, 4),
         testing::Values(4, 127)));
 
+// CV_32U reaches the double accumulator through v_cvt_f64() on unsigned lanes, which is built from
+// the signed conversion plus a bias. A uniform fill cannot catch a lane mix-up in that conversion,
+// so this varies the value per element and leans on the boundaries the bias has to get right:
+// either side of INT32_MAX, where a signed reinterpretation would read negative, and either side of
+// 2^24, where a detour through float would start dropping bits. Lengths straddle the vector width
+// so that both the vector body and the scalar tail are exercised.
+typedef testing::TestWithParam< tuple<int, int> > Core_Sum32U;
+
+TEST_P(Core_Sum32U, exact_over_the_whole_range)
+{
+    const int cn  = get<0>(GetParam());
+    const int len = get<1>(GetParam());
+    const unsigned vals[] = { 0u, 1u, 16777215u, 16777216u, 16777217u,
+                              2147483647u, 2147483648u, 2147483649u, 4294967294u, 4294967295u };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+
+    Mat src(1, len, CV_MAKETYPE(CV_32U, cn));
+    std::vector<double> expected(cn, 0.0);
+    for (int i = 0; i < len; i++)
+        for (int c = 0; c < cn; c++)
+        {
+            const unsigned v = vals[(i*cn + c) % nvals];
+            src.ptr<unsigned>(0)[i*cn + c] = v;
+            expected[c] += (double)v;   // exact: at most 1000 * 2^32, well below 2^53
+        }
+
+    const Scalar got = cv::sum(src);
+    for (int c = 0; c < cn; c++)
+        EXPECT_DOUBLE_EQ(expected[c], got[c])
+            << "channels " << cn << ", length " << len << ", channel " << c;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_Sum32U,
+    testing::Combine(
+        testing::Values(1, 2, 3, 4),
+        testing::Values(1, 3, 7, 8, 15, 16, 17, 33, 127, 1000)));
+
 // Floating-point sources with values far outside of the destination integer range must saturate,
 // in the vector body as well as in the scalar tail (see cvRound(), saturate_cast<>).
 template<typename ST, typename DT> static void checkConvertToOverflow(int sdepth, int ddepth)

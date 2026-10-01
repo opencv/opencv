@@ -1018,6 +1018,28 @@ namespace CV__SIMD_NAMESPACE {
 
 #endif //!CV_SIMD_SCALABLE
 
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+//! @brief Convert unsigned 32-bit lanes to double.
+//!
+//! No backend offers this natively below AVX512, so it is built once here from the signed
+//! conversion rather than twelve times in the backend headers. Flipping the top bit reinterprets
+//! u as the signed value u - 2^31, which is in range for every uint32; adding 2^31 back in double
+//! is exact, because the result is a non-negative integer below 2^32 and so well inside the 2^53
+//! that a double represents exactly. The whole conversion is therefore exact over the full uint32
+//! range - unlike routing through float, which loses bits above 2^24.
+inline v_float64 v_cvt_f64(const v_uint32& a)
+{
+    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(0x80000000u)));
+    return v_add(v_cvt_f64(biased), vx_setall_f64(2147483648.0));
+}
+
+inline v_float64 v_cvt_f64_high(const v_uint32& a)
+{
+    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(0x80000000u)));
+    return v_add(v_cvt_f64_high(biased), vx_setall_f64(2147483648.0));
+}
+#endif
+
 //! @cond IGNORED
 
     // backward compatibility

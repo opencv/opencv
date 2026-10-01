@@ -1680,6 +1680,37 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // v_cvt_f64() on unsigned 32-bit lanes is built from the signed conversion plus a bias, so the
+    // cases that matter are the ones above INT32_MAX, where a naive signed reinterpretation would
+    // come back negative, and those above 2^24, where a detour through float would drop bits.
+    TheTest & test_cvt64_unsigned()
+    {
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        const LaneType edges[] = { 0, 1, 16777215, 16777216, 16777217,
+                                   2147483647u, 2147483648u, 2147483649u, 4294967294u, 4294967295u };
+        const int nedges = (int)(sizeof(edges)/sizeof(edges[0]));
+        const int n = VTraits<v_float64>::vlanes();
+
+        for (int start = 0; start < nedges; ++start)
+        {
+            Data<R> dataA;
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+                dataA[i] = edges[(start + i) % nedges];
+            R a = dataA;
+
+            Data<v_float64> resLo = v_cvt_f64(a);
+            Data<v_float64> resHi = v_cvt_f64_high(a);
+            for (int i = 0; i < n; ++i)
+            {
+                SCOPED_TRACE(cv::format("start=%d i=%d", start, i));
+                EXPECT_EQ((double)dataA[i], resLo[i]);
+                EXPECT_EQ((double)dataA[i+n], resHi[i]);
+            }
+        }
+#endif
+        return *this;
+    }
+
     TheTest & test_matmul()
     {
         Data<R> dataV, dataA, dataB, dataC, dataD;
@@ -2518,6 +2549,7 @@ void test_hal_intrin_uint32()
         .test_broadcast_highest()
         .test_transpose()
         .test_pack_triplets()
+        .test_cvt64_unsigned()
         ;
 }
 
