@@ -763,4 +763,13 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
+TEST(Objdetect_QRCode, unsupported_mode_graceful)
+{
+    QRCodeDetector qrcode;
+    Mat dummy_img = Mat::zeros(100, 100, CV_8UC1);
+    std::string info;
+    std::vector<Point> corners;
+    EXPECT_NO_THROW(info = qrcode.decode(dummy_img, corners));
+}
+
 }} // namespace
