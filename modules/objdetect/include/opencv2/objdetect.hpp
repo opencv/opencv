@@ -396,7 +396,7 @@ only up to a rotation by 180 degrees; for a board with an equal number of rows a
 to a rotation by 90 degrees. Which one you get depends on how the board happens to be oriented in
 the image.
 
-This does not affect camera calibration: each view is free to absorb the rotation into its own pose,
+@note This does not affect camera calibration: each view is free to absorb the rotation into its own pose,
 so the intrinsics come out the same. It does break anything that assumes a fixed board coordinate
 frame across views, hand-eye calibration being the usual case, where a flipped view silently
 corrupts the estimated transform. The information needed to resolve the rotation is simply not
@@ -599,14 +599,15 @@ Sample usage of detecting and drawing the centers of circles: :
 @note The function requires white space (like a square-thick border, the wider the better) around
 the board to make the detection more robust in various environments.
 
-@note The returned points are not the exact projections of the circle centers. When a blob detector
-is used, each point is the centroid of the corresponding blob, computed from its image moments (see
-cv::SimpleBlobDetector), and the function does not refine it afterwards. The centroid of a projected
-circle does not coincide with the projection of that circle's center: under perspective the far side
-of the circle is compressed more than the near side, which shifts the centroid toward the camera by
-roughly 0.49 * f * (r / d)^2 pixels, where f is the focal length in pixels, r the circle radius and d
-the distance to the board. The error therefore grows with circle size and with viewing angle, and it
-is not removed by fitting an ellipse instead, since the ellipse center carries the same offset. For
+@note The returned points are not the exact projections of the circle centers. The function uses the
+keypoint locations reported by `blobDetector` as they are, without refining them; cv::SimpleBlobDetector
+is only the default choice. Any such detector locates a blob from the image region it occupies, which
+describes the circle as it appears in the image rather than the projection of its center. Under
+perspective projection the two need not coincide: the apparent center of a projected circle can be
+displaced from the projection of the physical center, by an amount that depends on the viewing
+geometry and on the circle's size relative to its distance. The displacement vanishes when the board
+is parallel to the image plane, since the projection is then an exact scaled copy of the pattern.
+Fitting an ellipse does not remove it, as the ellipse center is subject to the same effect. For
 calibration at ordinary accuracy this bias is usually acceptable; for high-accuracy work, compute
 corrected centers yourself and pass them in as a Point2f array of candidates with
 `blobDetector = NULL`.
