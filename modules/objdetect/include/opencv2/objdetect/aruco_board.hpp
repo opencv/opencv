@@ -163,7 +163,7 @@ public:
      * ChArUco corners while reporting a full set of marker detections. The only trace is a
      * `CV_LOG_DEBUG` message, which is not shown at the default log level. If you see detected
      * markers and no corners on a board with an even row count, try toggling this setting before
-     * looking anywhere else. See https://github.com/opencv/opencv/issues/29636 for an example.
+     * looking anywhere else.
      *
      * See https://github.com/opencv/opencv/issues/23152.
      *

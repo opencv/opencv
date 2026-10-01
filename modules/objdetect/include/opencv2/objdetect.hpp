@@ -402,8 +402,7 @@ frame across views, hand-eye calibration being the usual case, where a flipped v
 corrupts the estimated transform. The information needed to resolve the rotation is simply not
 present in a plain chessboard image, so it has to come from the pattern itself: use
 #findChessboardCornersSB with @ref CALIB_CB_MARKER, whose `meta` output identifies the origin, or a
-ChArUco board, where the markers make the orientation unambiguous. See
-https://github.com/opencv/opencv/issues/22083.
+ChArUco board, where the markers make the orientation unambiguous.
 
 Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
@@ -610,7 +609,7 @@ the distance to the board. The error therefore grows with circle size and with v
 is not removed by fitting an ellipse instead, since the ellipse center carries the same offset. For
 calibration at ordinary accuracy this bias is usually acceptable; for high-accuracy work, compute
 corrected centers yourself and pass them in as a Point2f array of candidates with
-`blobDetector = NULL`. See https://github.com/opencv/opencv/issues/7312 for the discussion.
+`blobDetector = NULL`.
  */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags,
