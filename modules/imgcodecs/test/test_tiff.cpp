@@ -840,6 +840,41 @@ TEST(Imgcodecs_Tiff, read_palette_color_image_rgb_and_bgr)
     EXPECT_EQ(img_bgr.at<Vec3b>(32, 24), Vec3b(0, 0, 255));
 }
 
+TEST(Imgcodecs_Tiff, read_16bit_rgb_and_bgr)
+{
+    // Every sample differs so that a short or misdirected row copy is visible.
+    Mat src(8, 8, CV_16UC3);
+    for (int y = 0; y < src.rows; y++)
+    {
+        for (int x = 0; x < src.cols; x++)
+        {
+            src.at<Vec3w>(y, x) = Vec3w((ushort)(1000 + x), (ushort)(2000 + y), (ushort)(3000 + x + y));
+        }
+    }
+
+    vector<uchar> buf;
+    ASSERT_TRUE(imencode(".tiff", src, buf));
+
+    Mat img_rgb, img_bgr;
+    ASSERT_NO_THROW(img_bgr = cv::imdecode(buf, IMREAD_ANYDEPTH | IMREAD_COLOR_BGR));
+    ASSERT_NO_THROW(img_rgb = cv::imdecode(buf, IMREAD_ANYDEPTH | IMREAD_COLOR_RGB));
+    ASSERT_EQ(CV_16UC3, img_bgr.type());
+    ASSERT_EQ(CV_16UC3, img_rgb.type());
+
+    Mat expected_rgb(src.size(), CV_16UC3);
+    for (int y = 0; y < src.rows; y++)
+    {
+        for (int x = 0; x < src.cols; x++)
+        {
+            const Vec3w& s = src.at<Vec3w>(y, x);
+            expected_rgb.at<Vec3w>(y, x) = Vec3w(s[2], s[1], s[0]);
+        }
+    }
+
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, img_bgr);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected_rgb, img_rgb);
+}
+
 TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
