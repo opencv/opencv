@@ -1,8 +1,8 @@
 function(download_kleidicv root_var)
   set(${root_var} "" PARENT_SCOPE)
 
-  ocv_update(KLEIDICV_SRC_COMMIT "26.03")
-  ocv_update(KLEIDICV_SRC_HASH "b85a745bfe0e87e67e30be9533eb6b24")
+  ocv_update(KLEIDICV_SRC_COMMIT "26.09")
+  ocv_update(KLEIDICV_SRC_HASH "77bb081492b2aa68033d7a848987252b")
 
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/kleidicv")
   ocv_download(FILENAME "kleidicv-${KLEIDICV_SRC_COMMIT}.tar.gz"
