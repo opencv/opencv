@@ -1029,7 +1029,7 @@ TegraRowOp_Invoker(combine4, combine4, 4, 1, 0, RANGE_DATA(ST, src1_data, sizeof
 
 TegraRowOp_Invoker(phase, phase, 2, 1, 1, RANGE_DATA(ST, src1_data, sizeof(CAROTENE_NS::f32)), range.end-range.start,
                                           RANGE_DATA(ST, src2_data, sizeof(CAROTENE_NS::f32)), range.end-range.start,
-                                          RANGE_DATA(DT, dst1_data, sizeof(CAROTENE_NS::f32)), range.end-range.start, val)
+                                          RANGE_DATA(DT, dst1_data, sizeof(CAROTENE_NS::f32)), range.end-range.start, (float)val)
 #define TEGRA_FASTATAN(y, x, dst, len, angleInDegrees) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
@@ -1441,13 +1441,13 @@ inline int TEGRA_MORPHFREE(cvhalFilter2D *context)
         (dst_width + 0.5)/inv_scale_x + 0.5 >= src_width && (dst_height + 0.5)/inv_scale_y + 0.5 >= src_height && \
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
             CAROTENE_NS::resizeLinearOpenCV(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                            src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)), \
+                                            src_data, src_step, dst_data, dst_step, (float)(1.0/inv_scale_x), (float)(1.0/inv_scale_y), ((src_type >> CV_CN_SHIFT) + 1)), \
             CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED : \
     interpolation == CV_HAL_INTER_AREA ? \
-        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeAreaSupported(1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)) && \
+        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeAreaSupported((float)(1.0/inv_scale_x), (float)(1.0/inv_scale_y), ((src_type >> CV_CN_SHIFT) + 1)) && \
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
             CAROTENE_NS::resizeAreaOpenCV(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                          src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)), \
+                                          src_data, src_step, dst_data, dst_step, (float)(1.0/inv_scale_x), (float)(1.0/inv_scale_y), ((src_type >> CV_CN_SHIFT) + 1)), \
             CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED : \
     /*nearest neighbour interpolation disabled due to rounding accuracy issues*/ \
     /*interpolation == CV_HAL_INTER_NEAREST ? \
