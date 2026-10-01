@@ -2273,7 +2273,6 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
-    // sxtl + scvtf: exact for the whole range; the former f32 round-trip lost bits above 2^24
     return v_float64x2(vcvtq_f64_s64(vmovl_s32(vget_low_s32(a.val))));
 }
 

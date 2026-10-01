@@ -1496,8 +1496,10 @@ template<typename R> struct TheTest
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min() + 1);
         R a = dataA, b = dataB;
-        Rt loA = v_cvt_f64(a), hiA = v_cvt_f64_high(a);
-        Rt loB = v_cvt_f64(b), hiB = v_cvt_f64_high(b);
+        Rt (*volatile cvt)(const R&) = v_cvt_f64;
+        Rt (*volatile cvt_high)(const R&) = v_cvt_f64_high;
+        Rt loA = cvt(a), hiA = cvt_high(a);
+        Rt loB = cvt(b), hiB = cvt_high(b);
         Data<Rt> resLoA = loA, resHiA = hiA, resLoB = loB, resHiB = hiB;
         int n = std::min<int>(VTraits<Rt>::vlanes(), VTraits<R>::vlanes());
         for (int i = 0; i < n; ++i)
