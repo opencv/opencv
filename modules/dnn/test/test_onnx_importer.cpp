@@ -2372,7 +2372,9 @@ TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
     testONNXModels("layer_norm_external_data_unaligned", npy);
     // A refused mapping copies instead and yields the same values; only the count separates them.
     if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
+    {
         EXPECT_GT(cv::dnn::mappedViewCount(), views);
+    }
 }
 
 TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
