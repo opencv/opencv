@@ -2124,6 +2124,14 @@ void _OutputArray::release() const
         return;
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        Mat* v = (Mat*)obj;
+        for( int i = 0; i < sz.height; i++ )
+            v[i].release();
+        return;
+    }
+
     if( k == STD_BOOL_VECTOR )
     {
         ((std::vector<bool>*)obj)->clear();
