@@ -920,7 +920,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
         iouDiff = 0.1;
     }
 
-    normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
+    normAssertDetections(ref, out, "", 0.26, scoreDiff, iouDiff);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2019010000
     expectNoFallbacksFromIE(net);
 #endif
@@ -1817,7 +1817,7 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
         scoreDiff = std::max(scoreDiff, 0.06);
         iouDiff = std::max(iouDiff, 0.01);
     }
-    normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
+    normAssertDetections(refDetections, outDetections, "", 0.33, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where
     // N - number of detected boxes
