@@ -1763,7 +1763,7 @@ if(WITH_IPP AND HAVE_IPP)
   else()
     status("    Intel IPP IW:"   NO)
   endif()
-else()
+elseif(DEFINED WITH_IPP)
   status("    Intel IPP:" WITH_IPP THEN "NO (download/detection failed)" ELSE "NO")
 endif()
 
