@@ -34,6 +34,7 @@ enum class CoordTransMode {
     PYTORCH_HALF_PIXEL,
     TF_HALF_PIXEL_FOR_NN,
     TF_CROP_AND_RESIZE,
+    ALIGN_CORNERS,
     HALF_PIXEL_SYMMETRIC,
     ASYMMETRIC
 };
@@ -44,6 +45,7 @@ static inline CoordTransMode parseCoordTransMode(const String& s)
     if (s == "pytorch_half_pixel") return CoordTransMode::PYTORCH_HALF_PIXEL;
     if (s == "tf_half_pixel_for_nn") return CoordTransMode::TF_HALF_PIXEL_FOR_NN;
     if (s == "tf_crop_and_resize") return CoordTransMode::TF_CROP_AND_RESIZE;
+    if (s == "align_corners") return CoordTransMode::ALIGN_CORNERS;
     if (s == "half_pixel_symmetric") return CoordTransMode::HALF_PIXEL_SYMMETRIC;
     return CoordTransMode::ASYMMETRIC;
 }
@@ -78,6 +80,8 @@ inline float computeSrcGeneric(int dst, float scale, int limit, int len,
         else
             return 0.5f * (start_coord + end_coord) * (limit - 1);
     }
+    if (coordTransMode == CoordTransMode::ALIGN_CORNERS)
+        return (len > 1) ? float(dst) * (limit - 1) / float(len - 1) : 0.f;
     if (coordTransMode == CoordTransMode::PYTORCH_HALF_PIXEL)
         return (len > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
     if (coordTransMode == CoordTransMode::HALF_PIXEL)
@@ -1251,20 +1255,16 @@ public:
         // in/out unless in*scale happens to be integral.  W=5 with scale=0.5 gives out=2,
         // so the step is 2 and not 5/2; W=7 with scale=1.5 gives out=10 and a step of 2/3
         // and not 7/10.  align_corners is the exception: it lines up the corners of the
-        // input and the output, so its step is (in - 1) / (in * scale - 1), the value the
-        // ONNX reference implementation uses and the one the conformance data for a runtime
-        // "scales" input pins down.  "sizes" (step = in/out by definition) and the roi-based
-        // tf_crop_and_resize mode (whose grid does not use the step at all) keep the value
-        // derived from the shapes.
+        // input and output, so its step is (in - 1) / (out - 1), using the integer output
+        // length.  "sizes" uses the same formula, while the roi-based tf_crop_and_resize mode
+        // derives its grid from the ROI and does not use this step.
         if (sizes.empty() && onnxScaleH > 0 && onnxScaleW > 0 &&
             coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
         {
             if (alignCorners)
             {
-                const float lenH = inpShape[2] * onnxScaleH;
-                const float lenW = inpShape[3] * onnxScaleW;
-                if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
-                if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
+                if (outShape[2] > 1) scaleHeight = float(inpShape[2] - 1) / (outShape[2] - 1);
+                if (outShape[3] > 1) scaleWidth  = float(inpShape[3] - 1) / (outShape[3] - 1);
             }
             else
             {
