@@ -3,7 +3,11 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
+#include <array>
 #include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <limits>
 
 namespace opencv_test { namespace {
 
@@ -3141,6 +3145,463 @@ TEST(Core_Magnitude, regression_19506)
         Mat res;
         magnitude(a, a, res);
         EXPECT_LE(cvtest::norm(res, NORM_L1), 1e-15) << N;
+    }
+}
+
+template <typename T>
+class Core_MathTest : public ::testing::Test
+{
+};
+
+using Core_MathTypes = ::testing::Types<float, double>;
+TYPED_TEST_CASE(Core_MathTest, Core_MathTypes);
+
+template <typename T>
+using MathTestBits = typename ::testing::internal::TypeWithSize<sizeof(T)>::UInt;
+
+template <typename T>
+MathTestBits<T> mathTestOrderedBits(T value)
+{
+    using Bits = MathTestBits<T>;
+    Bits bits = 0;
+    std::memcpy(&bits, &value, sizeof(value));
+    const Bits signBit = Bits(1) << (sizeof(T) * CHAR_BIT - 1);
+    return (bits & signBit) != 0 ? ~bits + Bits(1) : signBit | bits;
+}
+
+template <typename T>
+MathTestBits<T> mathTestUlpDistance(T lhs, T rhs)
+{
+    const MathTestBits<T> lhsBits = mathTestOrderedBits(lhs);
+    const MathTestBits<T> rhsBits = mathTestOrderedBits(rhs);
+    return lhsBits >= rhsBits ? lhsBits - rhsBits : rhsBits - lhsBits;
+}
+
+template <typename T>
+void expectWithinOneUlp(T actual, T expected)
+{
+    if (std::isnan(expected))
+    {
+        EXPECT_TRUE(std::isnan(actual));
+        return;
+    }
+    if (std::isinf(expected))
+    {
+        EXPECT_EQ(actual, expected);
+        return;
+    }
+    if (std::fpclassify(expected) == FP_ZERO)
+    {
+        EXPECT_EQ(actual, expected);
+        EXPECT_EQ(std::signbit(actual), std::signbit(expected));
+        return;
+    }
+
+    EXPECT_LE(mathTestUlpDistance(actual, expected), MathTestBits<T>(1))
+        << "actual=" << actual << ", expected=" << expected;
+}
+
+template <typename T>
+struct Core_Expm1ExpectedValues;
+
+template <>
+struct Core_Expm1ExpectedValues<float>
+{
+    static std::array<float, 6> data()
+    {
+        // These are the exact values written as -0x1.bab556p-1,
+        // -0x1.92e9a0p-2, -0x1.060352p-10, 0x1.06466ep-10,
+        // 0x1.4c2532p-1, and 0x1.98e64cp+2.
+        return {{
+            -std::scalbn(0x1bab556,  -25),
+            -std::scalbn(0x192e9a0,  -26),
+            -std::scalbn(0x1060352, -34),
+             std::scalbn(0x106466e, -34),
+             std::scalbn(0x14c2532, -25),
+             std::scalbn(0x198e64c, -22)}};
+    }
+};
+
+template <>
+struct Core_Expm1ExpectedValues<double>
+{
+    static std::array<double, 6> data()
+    {
+        // These are the exact values written as -0x1.bab5557101f8dp-1,
+        // -0x1.92e9a0720d3ecp-2, -0x1.0603521cac48cp-10,
+        // 0x1.06466dfb8cf3ap-10, 0x1.4c2531c3c0d38p-1,
+        // and 0x1.98e64b8d4ddaep+2.
+        return {{
+            -std::scalbn(0x1bab5557101f8d,  -53),
+            -std::scalbn(0x192e9a0720d3ec,  -54),
+            -std::scalbn(0x10603521cac48c, -62),
+             std::scalbn(0x106466dfb8cf3a, -62),
+             std::scalbn(0x14c2531c3c0d38, -53),
+             std::scalbn(0x198e64b8d4ddae, -50)}};
+    }
+};
+
+template <typename T>
+struct Core_Log1pExpectedValues;
+
+template <>
+struct Core_Log1pExpectedValues<float>
+{
+    static std::array<float, 5> data()
+    {
+        // These are the exact values written as -0x1.62e430p-1,
+        // -0x1.064670p-10, 0x1.060354p-10, and 0x1.9f323ep-2.
+        return {{
+            -std::scalbn(0x162e430, -25),
+            -std::scalbn(0x1064670, -34),
+             0.0f,
+             std::scalbn(0x1060354, -34),
+             std::scalbn(0x19f323e, -26)}};
+    }
+};
+
+template <>
+struct Core_Log1pExpectedValues<double>
+{
+    static std::array<double, 5> data()
+    {
+        // These are the exact values written as -0x1.62e42fefa39efp-1,
+        // -0x1.064670d979b6fp-10, 0x1.060354f8c3ebfp-10,
+        // and 0x1.9f323ecbf984cp-2.
+        return {{
+            -std::scalbn(0x162e42fefa39ef, -53),
+            -std::scalbn(0x1064670d979b6f, -62),
+             0.0,
+             std::scalbn(0x1060354f8c3ebf, -62),
+             std::scalbn(0x19f323ecbf984c, -54)}};
+    }
+};
+
+template <typename T>
+struct Core_HypotLostBitInput;
+
+template <>
+struct Core_HypotLostBitInput<float>
+{
+    static float value()
+    {
+        // This is the exact value written as 0x1.a29c86p-12f.
+        return std::scalbn(0xD14E43, -35);
+    }
+};
+
+template <>
+struct Core_HypotLostBitInput<double>
+{
+    static double value()
+    {
+        // This is the exact value written as 0x1.07ea128b86bdfp-26.
+        return std::scalbn(0x107EA128B86BDF, -78);
+    }
+};
+
+template <typename T>
+struct Core_HypotScaledValues;
+
+template <>
+struct Core_HypotScaledValues<float>
+{
+    static float x()
+    {
+        // This is the exact value written as 0x1.8p-126f.
+        return std::scalbn(0x18, -130);
+    }
+
+    static float y()
+    {
+        // This is the exact value written as 0x1.4p-129f.
+        return std::scalbn(0x14, -133);
+    }
+
+    static float expected()
+    {
+        // This is the exact value written as 0x1.8213e4p-126f.
+        return std::scalbn(0x18213e4, -150);
+    }
+};
+
+template <>
+struct Core_HypotScaledValues<double>
+{
+    static double x()
+    {
+        // This is the exact value written as 0x1.8p-1008.
+        return std::scalbn(0x18, -1012);
+    }
+
+    static double y()
+    {
+        // This is the exact value written as 0x1.4p-1011.
+        return std::scalbn(0x14, -1015);
+    }
+
+    static double expected()
+    {
+        // This is the exact value written as 0x1.8213e4f575a6ap-1008.
+        return std::scalbn(0x18213e4f575a6a, -1060);
+    }
+};
+
+TYPED_TEST(Core_MathTest, log1p_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {Scalar(-0.5), Scalar(-0.001), Scalar(0),
+                             Scalar(0.001), Scalar(0.5)};
+    const std::array<Scalar, 5> expectedValues =
+        Core_Log1pExpectedValues<Scalar>::data();
+    const int type = DataType<Scalar>::type;
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::log1p(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, log1p_preserves_tiny_arguments)
+{
+    using Scalar = TypeParam;
+    const Scalar tiny = std::scalbn(Scalar(1),
+                                    -std::numeric_limits<Scalar>::digits - 1);
+    Mat src(1, 1, DataType<Scalar>::type);
+    src.at<Scalar>(0, 0) = tiny;
+    Mat dst;
+
+    cv::log1p(src, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), tiny);
+}
+
+TYPED_TEST(Core_MathTest, log1p_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -std::numeric_limits<Scalar>::infinity(),
+        Scalar(-2),
+        Scalar(-1),
+        std::nextafter(Scalar(-1), -std::numeric_limits<Scalar>::infinity()),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+    const Scalar expectedValues[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -std::numeric_limits<Scalar>::infinity(),
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, DataType<Scalar>::type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::log1p(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, expm1_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {Scalar(-2), Scalar(-0.5), Scalar(-0.001),
+                             Scalar(0.001), Scalar(0.5), Scalar(2)};
+    const std::array<Scalar, 6> expectedValues =
+        Core_Expm1ExpectedValues<Scalar>::data();
+    const int type = DataType<Scalar>::type;
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::expm1(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, expm1_preserves_tiny_arguments)
+{
+    using Scalar = TypeParam;
+    const Scalar tiny = std::scalbn(Scalar(1),
+                                    -std::numeric_limits<Scalar>::digits - 1);
+    Mat src(1, 1, DataType<Scalar>::type);
+    src.at<Scalar>(0, 0) = tiny;
+    Mat dst;
+
+    cv::expm1(src, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), tiny);
+}
+
+TYPED_TEST(Core_MathTest, expm1_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar values[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        -std::numeric_limits<Scalar>::infinity(),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+    const Scalar expectedValues[] = {
+        std::numeric_limits<Scalar>::quiet_NaN(),
+        Scalar(-1),
+        -Scalar(0),
+        Scalar(0),
+        std::numeric_limits<Scalar>::infinity()};
+
+    constexpr int valueCount = static_cast<int>(sizeof(values) / sizeof(values[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat src(1, 1, DataType<Scalar>::type);
+        src.at<Scalar>(0, 0) = values[i];
+        Mat dst;
+
+        cv::expm1(src, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, expm1_log1p_identity)
+{
+    using Scalar = TypeParam;
+    // These are the exact values written as -0x1p-1, -0x1p-10, 0x1p-10,
+    // 0x1p-1, and 0x1p+1.
+    const Scalar values[] = { -std::scalbn(Scalar(1), -1),
+                               -std::scalbn(Scalar(1), -10),
+                               std::scalbn(Scalar(1), -10),
+                               std::scalbn(Scalar(1), -1),
+                               std::scalbn(Scalar(1), 1) };
+
+    for (const Scalar value : values)
+    {
+        Mat src(1, 1, DataType<Scalar>::type);
+        src.at<Scalar>(0, 0) = value;
+        Mat log1pResult;
+        Mat expm1Result;
+
+        cv::log1p(src, log1pResult);
+        cv::expm1(log1pResult, expm1Result);
+
+        expectWithinOneUlp(expm1Result.at<Scalar>(0, 0), value);
+    }
+}
+
+TYPED_TEST(Core_MathTest, hypot_matches_expected_values)
+{
+    using Scalar = TypeParam;
+    const Scalar xValues[] = {Scalar(3), Scalar(-3), Scalar(0), Scalar(5)};
+    const Scalar yValues[] = {Scalar(4), Scalar(4), Scalar(0), Scalar(-12)};
+    const Scalar expectedValues[] = {Scalar(5), Scalar(5), Scalar(0),
+                                     Scalar(13)};
+    const int type = DataType<Scalar>::type;
+
+    const int valueCount = static_cast<int>(sizeof(xValues) / sizeof(xValues[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat x(1, 1, type);
+        x.at<Scalar>(0, 0) = xValues[i];
+        Mat y(1, 1, type);
+        y.at<Scalar>(0, 0) = yValues[i];
+        Mat dst;
+
+        cv::hypot(x, y, dst);
+
+        EXPECT_EQ(dst.at<Scalar>(0, 0), expectedValues[i]);
+    }
+}
+
+TYPED_TEST(Core_MathTest, hypot_avoids_overflow)
+{
+    using Scalar = TypeParam;
+    const Scalar large = std::numeric_limits<Scalar>::max() / Scalar(2);
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = large;
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = large;
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    // This is the exact value written as 0x1.6a09e667f3bcdp+0.
+    const Scalar expected =
+        large * std::scalbn(Scalar(0x16a09e667f3bcd), -52);
+    EXPECT_EQ(dst.at<Scalar>(0, 0), expected);
+}
+
+TYPED_TEST(Core_MathTest, hypot_newton_correction_recovers_lost_bit)
+{
+    using Scalar = TypeParam;
+    const Scalar xValue = Scalar(1);
+    const Scalar yValue = Core_HypotLostBitInput<Scalar>::value();
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = xValue;
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = yValue;
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), std::nextafter(xValue, Scalar(2)));
+}
+
+TYPED_TEST(Core_MathTest, hypot_scales_before_squaring)
+{
+    using Scalar = TypeParam;
+    Mat x(1, 1, DataType<Scalar>::type);
+    x.at<Scalar>(0, 0) = Core_HypotScaledValues<Scalar>::x();
+    Mat y(1, 1, DataType<Scalar>::type);
+    y.at<Scalar>(0, 0) = Core_HypotScaledValues<Scalar>::y();
+    Mat dst;
+
+    cv::hypot(x, y, dst);
+
+    EXPECT_EQ(dst.at<Scalar>(0, 0), Core_HypotScaledValues<Scalar>::expected());
+}
+
+TYPED_TEST(Core_MathTest, hypot_matches_special_values)
+{
+    using Scalar = TypeParam;
+    const Scalar infinity = std::numeric_limits<Scalar>::infinity();
+    const Scalar nan = std::numeric_limits<Scalar>::quiet_NaN();
+    const Scalar xValues[] = {infinity, infinity, nan, Scalar(0), -Scalar(0)};
+    const Scalar yValues[] = {nan, Scalar(1), Scalar(1), -Scalar(0), Scalar(0)};
+    const Scalar expectedValues[] = {infinity, infinity, nan, Scalar(0), Scalar(0)};
+
+    constexpr int valueCount = static_cast<int>(sizeof(xValues) /
+                                                 sizeof(xValues[0]));
+    for (int i = 0; i < valueCount; ++i)
+    {
+        Mat x(1, 1, DataType<Scalar>::type);
+        x.at<Scalar>(0, 0) = xValues[i];
+        Mat y(1, 1, DataType<Scalar>::type);
+        y.at<Scalar>(0, 0) = yValues[i];
+        Mat dst;
+
+        cv::hypot(x, y, dst);
+
+        expectWithinOneUlp(dst.at<Scalar>(0, 0), expectedValues[i]);
     }
 }
 

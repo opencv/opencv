@@ -97,6 +97,12 @@
 #define CV_DST_TYPE_FIT_32F 0
 #endif
 
+#if CV_DST_TYPE_FIT_32F
+#define CV_SELECT_MASK(value) ((int)(value))
+#else
+#define CV_SELECT_MASK(value) ((long)(value))
+#endif
+
 
 #if CV_DST_TYPE_FIT_32F
 #define CV_PI M_PI_F
@@ -304,6 +310,68 @@
 #elif defined OP_MAG
 #define PROCESS_ELEM storedst(hypot(srcelem1, srcelem2))
 
+#elif defined OP_HYPOT
+#if DEPTH_dst == 5
+#define HYPOT_DIGITS FLT_MANT_DIG
+#define HYPOT_MAX_EXP FLT_MAX_EXP
+#define HYPOT_MIN_EXP FLT_MIN_EXP
+#else
+#define HYPOT_DIGITS DBL_MANT_DIG
+#define HYPOT_MAX_EXP DBL_MAX_EXP
+#define HYPOT_MIN_EXP DBL_MIN_EXP
+#endif
+#define PROCESS_ELEM \
+    workT abs1 = fabs(srcelem1); \
+    workT abs2 = fabs(srcelem2); \
+    workT mx = max(abs1, abs2); \
+    workT mn = min(abs1, abs2); \
+    workT cutoffRatio = ldexp(sqrt((workT)(2)) / (workT)(2), \
+                              (1 - HYPOT_DIGITS) / 2); \
+    workT huge = ldexp(sqrt((workT)(2)) / (workT)(2), \
+                       HYPOT_MAX_EXP / 2); \
+    workT tiny = ldexp((workT)(1), (HYPOT_MIN_EXP - 1) / 2); \
+    int scaleExponent = (HYPOT_MIN_EXP - 1) / 2 - HYPOT_DIGITS + 1; \
+    workT scaledMx = select(mx, ldexp(mx, scaleExponent), \
+                            CV_SELECT_MASK(mx > huge)); \
+    scaledMx = select(scaledMx, ldexp(mx, -scaleExponent), \
+                      CV_SELECT_MASK(mn < tiny)); \
+    workT scaledMn = select(mn, ldexp(mn, scaleExponent), \
+                            CV_SELECT_MASK(mx > huge)); \
+    scaledMn = select(scaledMn, ldexp(mn, -scaleExponent), \
+                      CV_SELECT_MASK(mn < tiny)); \
+    workT xSquared = scaledMx * scaledMx; \
+    workT ySquared = scaledMn * scaledMn; \
+    workT sigma = xSquared + ySquared; \
+    workT xPrime = sigma - ySquared; \
+    workT yPrime = sigma - xPrime; \
+    workT sigmaError = (xSquared - xPrime) + (ySquared - yPrime); \
+    workT xError = fma(scaledMx, scaledMx, -xSquared); \
+    workT yError = fma(scaledMn, scaledMn, -ySquared); \
+    workT squareErrorSum = xError + yError; \
+    workT squareErrorPrime = squareErrorSum - yError; \
+    workT squareErrorResidual = (xError - squareErrorPrime) + \
+        (yError - (squareErrorSum - squareErrorPrime)); \
+    workT errorSum = squareErrorSum + sigmaError; \
+    workT errorPrime = errorSum - sigmaError; \
+    workT errorResidual = (squareErrorSum - errorPrime) + \
+        (sigmaError - (errorSum - errorPrime)); \
+    workT totalError = squareErrorResidual + errorSum + errorResidual; \
+    workT h = sqrt(sigma); \
+    workT tau = totalError + fma(-h, h, sigma); \
+    workT unscaledResult = fma(tau / h, (workT)(0.5), h); \
+    workT result = select(unscaledResult, ldexp(unscaledResult, -scaleExponent), \
+                          CV_SELECT_MASK(mx > huge)); \
+    result = select(result, ldexp(unscaledResult, scaleExponent), \
+                    CV_SELECT_MASK(mn < tiny)); \
+    result = select(result, mx, CV_SELECT_MASK( \
+        mn <= mx * cutoffRatio)); \
+    result = select(result, mx, CV_SELECT_MASK(mx == (workT)(0))); \
+    result = select(result, (workT)(INFINITY), \
+        CV_SELECT_MASK(isinf(abs1) | isinf(abs2))); \
+    result = select(result, (workT)(NAN), CV_SELECT_MASK( \
+        (isnan(abs1) | isnan(abs2)) & ~(isinf(abs1) | isinf(abs2)))); \
+    storedst(result)
+
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
     workT tmp = atan2(srcelem2, srcelem1); \
@@ -324,6 +392,21 @@
 #else
 #define PROCESS_ELEM storedst(exp(srcelem1))
 #endif
+
+#elif defined OP_EXPM1
+#define PROCESS_ELEM \
+    workT expValue = exp(srcelem1); \
+    workT result = (expValue - (workT)(1)) * srcelem1 / log(expValue); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        expValue == (workT)(1))); \
+    result = select(result, (workT)(-1), CV_SELECT_MASK( \
+        expValue == (workT)(0))); \
+    result = select(result, expValue, CV_SELECT_MASK(isinf(expValue))); \
+    result = select(result, (workT)(-1), CV_SELECT_MASK( \
+        isinf(srcelem1) & srcelem1 < (workT)(0))); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        isinf(srcelem1) & srcelem1 > (workT)(0))); \
+    storedst(result)
 
 #elif defined OP_POW
 #define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))
@@ -346,6 +429,17 @@
 #elif defined OP_LOG
 #define PROCESS_ELEM \
     storedst(log(fabs(srcelem1)))
+
+#elif defined OP_LOG1P
+#define PROCESS_ELEM \
+    workT onePlusValue = (workT)(1) + srcelem1; \
+    workT result = log(onePlusValue) * srcelem1 / \
+        (onePlusValue - (workT)(1)); \
+    result = select(result, srcelem1, CV_SELECT_MASK( \
+        onePlusValue == (workT)(1))); \
+    result = select(result, onePlusValue, CV_SELECT_MASK( \
+        isinf(onePlusValue) & srcelem1 > (workT)(0))); \
+    storedst(result)
 
 #elif defined OP_CMP
 #define srcT2 srcT1

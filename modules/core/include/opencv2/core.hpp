@@ -1600,9 +1600,27 @@ converts denormalized values to zeros on output. Special values (NaN,
 Inf) are not handled.
 @param src input array.
 @param dst output array of the same size and type as src.
-@sa log, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
+@sa log, log1p, expm1, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
 */
 CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
+
+/** @brief Computes @f$e^x - 1@f$ element-wise.
+
+The function cv::expm1 computes @f$e^x - 1@f$ for every element of the input
+array. It is more accurate than using @ref exp for input values close to zero.
+
+The implementation follows the stable transformation described in @cite
+Higham02, Section 1.14.1, pages 19-21.
+
+The same formulation is used for CPU and OpenCL execution. The implementation
+does not delegate the operation to a backend-specific standard library function,
+which keeps results comparable across backends.
+
+@param src input single- or double-precision floating-point array.
+@param dst output array of the same size and type as @p src.
+@sa exp, log1p
+*/
+CV_EXPORTS_W void expm1(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 
@@ -1613,9 +1631,28 @@ Output on zero, negative and special (NaN, Inf) values is undefined.
 
 @param src input array.
 @param dst output array of the same size and type as src .
-@sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
+@sa exp, expm1, log1p, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
 */
 CV_EXPORTS_W void log(InputArray src, OutputArray dst);
+
+/** @brief Computes @f$\log(1 + x)@f$ element-wise.
+
+The function cv::log1p computes @f$\log(1 + x)@f$ for every element of the
+input array. It is more accurate than using @ref log for input values close to
+zero.
+
+The implementation follows the stable transformation described in @cite
+Higham02, Appendix A, Eq. A.1, page 528.
+
+The same stable formula is used for CPU and OpenCL execution. The
+implementation does not delegate the operation to a backend-specific standard
+library function, which keeps results comparable across backends.
+
+@param src input single- or double-precision floating-point array.
+@param dst output array of the same size and type as @p src.
+@sa log, expm1
+*/
+CV_EXPORTS_W void log1p(InputArray src, OutputArray dst);
 
 /** @brief Calculates x and y coordinates of 2D vectors from their magnitude and angle.
 
@@ -1690,9 +1727,32 @@ from the corresponding elements of x and y arrays:
 @param y floating-point array of y-coordinates of the vectors; it must
 have the same size as x.
 @param magnitude output array of the same size and type as x.
-@sa cartToPolar, polarToCart, phase, sqrt
+@sa cartToPolar, polarToCart, phase, sqrt, hypot
 */
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
+
+/** @brief Computes the Euclidean norm of 2D vectors.
+
+The function cv::hypot computes
+@f$\sqrt{x^2 + y^2}@f$ for every corresponding pair of
+elements in @p x and @p y. Scaling avoids intermediate overflow and underflow,
+and a Newton correction improves the accuracy of the result.
+
+The implementation follows the algorithm described in @cite Borges20. For
+finite inputs, the result is typically accurate to within 1 ULP for both
+single- and double-precision arrays.
+
+The same scaled and corrected formula is used for CPU and OpenCL execution.
+The implementation does not delegate the operation to a
+backend-specific standard library function, which keeps results comparable
+across backends.
+
+@param x single- or double-precision floating-point array of x-coordinates.
+@param y array of y-coordinates; it must have the same size and type as @p x.
+@param dst output array of the same size and type as @p x.
+@sa magnitude
+*/
+CV_EXPORTS_W void hypot(InputArray x, InputArray y, OutputArray dst);
 
 /** @brief Checks every element of an input array for invalid values.
 
