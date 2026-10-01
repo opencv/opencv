@@ -388,6 +388,23 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
+@note The corner order is guaranteed only up to a rotation of the board. The corners are returned
+row by row and left to right within each row, and the handedness of that ordering is fixed, but the
+function never inspects the colour of the squares, so it cannot tell which physical corner of the
+board is the origin. For a board whose two side lengths differ, the result is therefore determined
+only up to a rotation by 180 degrees; for a board with an equal number of rows and columns, only up
+to a rotation by 90 degrees. Which one you get depends on how the board happens to be oriented in
+the image.
+
+This does not affect camera calibration: each view is free to absorb the rotation into its own pose,
+so the intrinsics come out the same. It does break anything that assumes a fixed board coordinate
+frame across views, hand-eye calibration being the usual case, where a flipped view silently
+corrupts the estimated transform. The information needed to resolve the rotation is simply not
+present in a plain chessboard image, so it has to come from the pattern itself: use
+#findChessboardCornersSB with @ref CALIB_CB_MARKER, whose `meta` output identifies the origin, or a
+ChArUco board, where the markers make the orientation unambiguous. See
+https://github.com/opencv/opencv/issues/22083.
+
 Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
  */
@@ -557,12 +574,18 @@ perspective distortions but much more sensitive to background clutter.
                     If `blobDetector` is NULL then `image` represents Point2f array of candidates.
 @param parameters struct for finding circles in a grid pattern.
 
-return True if all of the centers have been found and they have been placed in a certain order
-(row by row, left to right in every row). Otherwise, if the function fails to find all the corners
-or reorder them, it returns false.
+@return True if all of the centers have been found and ordered, false if the function fails to find
+all of them or to reorder them.
+
+The returned centers are ordered row by row and left to right within each row, but that order is
+relative to the grid as it appears in the image, which need not match the physical board: depending
+on how the board is held, the detected grid may be flipped or rotated by 180 degrees with respect to
+it. A symmetric pattern cannot resolve this ambiguity on its own, so if the correspondence to
+physical board coordinates matters, fix the orientation yourself from an asymmetric pattern or from
+an external cue.
 
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
-function locates centers of the circles.
+function estimates the centers of the circles.
 
 Sample usage of detecting and drawing the centers of circles: :
 @code
@@ -576,6 +599,18 @@ Sample usage of detecting and drawing the centers of circles: :
 @endcode
 @note The function requires white space (like a square-thick border, the wider the better) around
 the board to make the detection more robust in various environments.
+
+@note The returned points are not the exact projections of the circle centers. When a blob detector
+is used, each point is the centroid of the corresponding blob, computed from its image moments (see
+cv::SimpleBlobDetector), and the function does not refine it afterwards. The centroid of a projected
+circle does not coincide with the projection of that circle's center: under perspective the far side
+of the circle is compressed more than the near side, which shifts the centroid toward the camera by
+roughly 0.49 * f * (r / d)^2 pixels, where f is the focal length in pixels, r the circle radius and d
+the distance to the board. The error therefore grows with circle size and with viewing angle, and it
+is not removed by fitting an ellipse instead, since the ellipse center carries the same offset. For
+calibration at ordinary accuracy this bias is usually acceptable; for high-accuracy work, compute
+corrected centers yourself and pass them in as a Point2f array of candidates with
+`blobDetector = NULL`. See https://github.com/opencv/opencv/issues/7312 for the discussion.
  */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags,
