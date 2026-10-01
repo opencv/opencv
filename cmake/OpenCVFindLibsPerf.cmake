@@ -221,6 +221,9 @@ if(WITH_KLEIDICV)
       set(HAVE_KLEIDICV ON)
     endif()
   endif()
+  if(HAVE_KLEIDICV AND EXISTS "${KLEIDICV_SOURCE_PATH}/LICENSES/Apache-2.0.txt")
+    ocv_install_3rdparty_licenses(KleidiCV "${KLEIDICV_SOURCE_PATH}/LICENSES/Apache-2.0.txt")
+  endif()
 endif(WITH_KLEIDICV)
 
 # --- FastCV ---
