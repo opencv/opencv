@@ -1487,6 +1487,33 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // exact for the full int32 range; float32's 24-bit mantissa would corrupt |x| > 2^24
+    TheTest & test_cvt64_int32_precision()
+    {
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        typedef v_float64 Rt;
+        // min()+1, not min(): min() is a power of two and converts exactly even with the old bug
+        Data<R> dataA(std::numeric_limits<LaneType>::max()),
+                dataB(std::numeric_limits<LaneType>::min() + 1);
+        R a = dataA, b = dataB;
+        Rt (*volatile cvt)(const R&) = v_cvt_f64;
+        Rt (*volatile cvt_high)(const R&) = v_cvt_f64_high;
+        Rt loA = cvt(a), hiA = cvt_high(a);
+        Rt loB = cvt(b), hiB = cvt_high(b);
+        Data<Rt> resLoA = loA, resHiA = hiA, resLoB = loB, resHiB = hiB;
+        int n = std::min<int>(VTraits<Rt>::vlanes(), VTraits<R>::vlanes());
+        for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((double)dataA[i], resLoA[i]);
+            EXPECT_EQ((double)dataA[i], resHiA[i]);
+            EXPECT_EQ((double)dataB[i], resLoB[i]);
+            EXPECT_EQ((double)dataB[i], resHiB[i]);
+        }
+#endif
+        return *this;
+    }
+
     TheTest & test_cvt64_double()
     {
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
@@ -2257,6 +2284,7 @@ void test_hal_intrin_int32()
         .test_broadcast_element<0>().test_broadcast_element<1>()
         .test_float_cvt32()
         .test_float_cvt64()
+        .test_cvt64_int32_precision()
         .test_transpose()
         .test_extract_highest()
         .test_broadcast_highest()
