@@ -1507,7 +1507,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
     }
 
-    if (interpolation == INTER_LINEAR) {
+    if (interpolation == INTER_LINEAR && borderType != BORDER_TRANSPARENT) {
         if (map1.depth() == CV_32F) {
             const auto *src_data = src.ptr<const uint8_t>();
             auto *dst_data = dst.ptr<uint8_t>();
