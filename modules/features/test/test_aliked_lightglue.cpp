@@ -75,7 +75,7 @@ TEST(Features2d_ALIKED, Regression)
     }
 }
 
-TEST(Features2d_LightGlue, Regression)
+TEST(Features2d_LightGlue_ALIKED, Regression)
 {
     applyTestTag( CV_TEST_TAG_MEMORY_2GB);
 
@@ -154,7 +154,7 @@ TEST(Features2d_ALIKED, not_available)
     EXPECT_THROW(ALIKED::create("dummy.onnx"), cv::Exception);
 }
 
-TEST(Features2d_LightGlueMatcher, not_available)
+TEST(Features2d_LightGlueMatcher_ALIKED, not_available)
 {
     EXPECT_THROW(LightGlueMatcher::create("dummy.onnx"), cv::Exception);
 }

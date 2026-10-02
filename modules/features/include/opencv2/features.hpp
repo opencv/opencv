@@ -1360,16 +1360,23 @@ protected:
 
 #endif
 
+//! LightGlue model variant (namespace-scoped like dnn::EngineType)
+enum LightGlueType
+{
+    LG_ALIKED = 0,  //!< ALIKED model: keypoints normalized to [-1, 1]
+    LG_DISK = 1     //!< DISK model:  keypoints normalized to [ 0, 1]
+};
+
 /** @brief LightGlue feature matcher.
 
-LightGlue is a CNN-based feature matcher, as described in @cite Lindenberger23 . It takes
+LightGlue is an attention-based feature matcher, as described in @cite Lindenberger23 . It takes
 keypoint locations and descriptors from two images and directly predicts match pairs. Unlike
-traditional matchers that compute descriptor distances, LightGlue uses attention mechanisms
-to produce confidence scores for each potential match pair.
+traditional matchers that compute descriptor distances, LightGlue produces confidence scores
+for each potential match pair.
 
-The matcher extends DescriptorMatcher and supports the standard match(), knnMatch(), and
-radiusMatch() interfaces. Context (keypoints and image sizes) must be provided via
-setPairInfo() before matching.
+The matcher extends DescriptorMatcher and supports match() and knnMatch() with k=1.
+Context (keypoints and image sizes) must be provided via setPairInfo() or setImagePairInfo()
+before matching. radiusMatch() is not supported.
 */
 class CV_EXPORTS_W LightGlueMatcher : public DescriptorMatcher
 {
@@ -1383,8 +1390,9 @@ public:
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LG_ALIKED (default) or LG_DISK.
     */
-    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0, int type = LG_ALIKED);
 
 #ifdef HAVE_OPENCV_DNN
     /** @brief Creates LightGlueMatcher from in-memory model data.
@@ -1392,20 +1400,22 @@ public:
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LG_ALIKED (default) or LG_DISK.
     */
-    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0, int type = LG_ALIKED);
 #endif
 
     /** @brief Sets the keypoint and image size context for the next match() call.
 
     This provides the spatial context that LightGlue needs in addition to descriptors.
-    Must be called before match()/knnMatch()/radiusMatch() unless using automatic context
-    from in-process ALIKED instances.
+    Must be called before match()/knnMatch(), or use setImagePairInfo().
+    Pixel coordinates are normalized according to the LightGlueType selected at creation.
+    For keypoints already normalized for that model, leave the corresponding image size empty.
 
     @param queryKpts Query image keypoints (Nx2 float matrix with x,y coordinates).
     @param trainKpts Train image keypoints (Nx2 float matrix with x,y coordinates).
-    @param queryImageSize Size of the query image (width, height).
-    @param trainImageSize Size of the train image (width, height).
+    @param queryImageSize Size of the query image, or Size() for normalized query keypoints.
+    @param trainImageSize Size of the train image, or Size() for normalized train keypoints.
     */
     CV_WRAP virtual void setPairInfo(InputArray queryKpts, InputArray trainKpts,
                                      Size queryImageSize = Size(), Size trainImageSize = Size()) = 0;
@@ -1414,7 +1424,9 @@ public:
     */
     CV_WRAP virtual void clearPairInfo() = 0;
 
-    /** @brief Convenience overload of setPairInfo() taking keypoints directly. */
+    /** @brief Convenience overload of setPairInfo() taking keypoints directly.
+    Uses the same model-specific normalization and image size convention as setPairInfo().
+    */
     CV_WRAP void setImagePairInfo(const std::vector<KeyPoint>& queryKpts, const std::vector<KeyPoint>& trainKpts,
                                   Size queryImageSize = Size(), Size trainImageSize = Size()) CV_OVERRIDE;
 };
