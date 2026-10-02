@@ -127,6 +127,51 @@ template<> Ptr<SVMSGD> tuneModel<SVMSGD>(const DatasetDesc &, Ptr<SVMSGD> m)
     return m;
 }
 
+static void trainSmallDefaultDTree(Ptr<DTrees> dtree)
+{
+    const int N = 10, F = 2, C = 2;
+    Mat samples(N, F, CV_32FC1);
+    Mat labels(N, 1, CV_32SC1);
+    for (int i = 0; i < N; i++)
+    {
+        samples.at<float>(i, 0) = (float)(i % C);
+        samples.at<float>(i, 1) = (float)(i / C);
+        labels.at<int>(i) = i % C;
+    }
+    Ptr<TrainData> train_data =
+        TrainData::create(samples, ROW_SAMPLE, labels);
+
+    bool trained = false;
+    ASSERT_NO_THROW(trained = dtree->train(train_data));
+    ASSERT_TRUE(trained);
+}
+
+TEST(ML_DTrees, defaultCVFoldsTrain)
+{
+    Ptr<DTrees> dtree = DTrees::create();
+    ASSERT_EQ(0, dtree->getCVFolds());
+    trainSmallDefaultDTree(dtree);
+}
+
+TEST(ML_DTrees, disabledCVFoldsTrain)
+{
+    Ptr<DTrees> dtree = DTrees::create();
+    dtree->setCVFolds(0);
+    ASSERT_EQ(0, dtree->getCVFolds());
+    trainSmallDefaultDTree(dtree);
+
+    dtree = DTrees::create();
+    dtree->setCVFolds(1);
+    ASSERT_EQ(0, dtree->getCVFolds());
+    trainSmallDefaultDTree(dtree);
+}
+
+TEST(ML_DTrees, CVFoldsGreaterThanOneNotImplemented)
+{
+    Ptr<DTrees> dtree = DTrees::create();
+    EXPECT_THROW(dtree->setCVFolds(5), cv::Exception);
+}
+
 template <>
 struct ModelFactory<Boost> : public IModelFactory
 {
