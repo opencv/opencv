@@ -144,10 +144,6 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             (preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16))
         return Ptr<BackendWrapper>();
 
-    MatShape shape(host.dims);
-    for (int i = 0; i < host.dims; ++i)
-        shape[i] = host.size[i];
-
     void* data = host.data;
     if (backendWrappers.find(data) != backendWrappers.end())
     {
@@ -191,19 +187,19 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             {
             case CV_32F:
                 if (preferableTarget == DNN_TARGET_CUDA_FP16)
-                    return CUDABackendWrapperFP16::create(baseBuffer, shape);
+                    return CUDABackendWrapperFP16::create(baseBuffer, host);
                 else
-                    return CUDABackendWrapperFP32::create(baseBuffer, shape);
+                    return CUDABackendWrapperFP32::create(baseBuffer, host);
             case CV_8S:
-                return CUDABackendWrapperINT8::create(baseBuffer, shape);
+                return CUDABackendWrapperINT8::create(baseBuffer, host);
             case CV_8U:
-                return CUDABackendWrapperUINT8::create(baseBuffer, shape);
+                return CUDABackendWrapperUINT8::create(baseBuffer, host);
             case CV_32S:
-                return CUDABackendWrapperINT32::create(baseBuffer, shape);
+                return CUDABackendWrapperINT32::create(baseBuffer, host);
             case CV_64S:
-                return CUDABackendWrapperINT64::create(baseBuffer, shape);
+                return CUDABackendWrapperINT64::create(baseBuffer, host);
             case CV_Bool:
-                return CUDABackendWrapperBOOL::create(baseBuffer, shape);
+                return CUDABackendWrapperBOOL::create(baseBuffer, host);
             default:
                 CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
             }
