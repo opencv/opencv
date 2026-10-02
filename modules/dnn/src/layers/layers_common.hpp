@@ -59,6 +59,24 @@ namespace cv
 {
 namespace dnn
 {
+inline void holdInactiveRows(const Mat& seqLens, int ts, const Mat& prev, Mat& cur)
+{
+    const int* lens = seqLens.ptr<int>();
+    for (int n = 0; n < cur.rows; n++)
+    {
+        if (ts >= lens[n])
+            prev.row(n).copyTo(cur.row(n));
+    }
+}
+
+inline void clipToThreshold(Mat& m, float threshold)
+{
+    if (threshold <= 0.f)
+        return;
+    cv::min(m, threshold, m);
+    cv::max(m, -threshold, m);
+}
+
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations,
                                 cv::String &padMode, std::vector<size_t>& adjust_pads, bool& useWinograd);

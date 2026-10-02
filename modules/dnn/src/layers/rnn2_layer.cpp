@@ -34,11 +34,7 @@ void applyRNNActivation(Mat& m, RNNActivation kind, float clip)
 {
     CV_Assert(m.type() == CV_32F);
     // ONNX clips the activation input, not its result.
-    if (clip > 0.f)
-    {
-        cv::min(m, clip, m);
-        cv::max(m, -clip, m);
-    }
+    clipToThreshold(m, clip);
     switch (kind)
     {
     case RNN_RELU:    cv::max(m, 0.f, m); break;
@@ -227,7 +223,7 @@ public:
                 gate.copyTo(h);
                 // Past its sequence length a row keeps its state and writes zeros to Y.
                 if (!seqLens.empty())
-                    holdFinishedRows(seqLens, ts, hPrev, h);
+                    holdInactiveRows(seqLens, ts, hPrev, h);
 
                 writeYStep(y2d, ts, dir, D, T, h, seqLens);
             }
@@ -249,16 +245,6 @@ private:
         }
         y = output[0];
         yh = output[1];
-    }
-
-    static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)
-    {
-        const int* lens = seqLens.ptr<int>();
-        for (int n = 0; n < h.rows; n++)
-        {
-            if (ts >= lens[n])
-                hPrev.row(n).copyTo(h.row(n));
-        }
     }
 
     // Y is [T,D,N,H], or [N,T,D,H] batchwise; both contiguous in H.

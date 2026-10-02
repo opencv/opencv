@@ -366,6 +366,290 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
     EXPECT_NEAR(std::tanh(2e-5f), data[1], 1e-10);
 }
 
+// Runs LSTM2 exactly like the ONNX importer does: W/R/B as inputs, all three outputs produced.
+static void runLSTM2(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int H,
+                     bool reverse, const std::vector<int>& lens, std::vector<Mat>& outputs,
+                     float clip = 0.f, bool inputForget = false)
+{
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_test";
+    lp.set("hidden_size", H);
+    lp.set("is_onnx", true);
+    lp.set("reverse", reverse);
+    lp.set("produce_sequence_y", true);
+    lp.set("produce_output_yh", true);
+    lp.set("produce_cell_output", true);
+    lp.set("const_weights", false);
+    if (clip > 0.f)
+        lp.set("clip", clip);
+    if (inputForget)
+        lp.set("input_forget", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {X, W, R, B};
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    if (!lens.empty())
+    {
+        Mat lensMat(1, (int)lens.size(), CV_32S);
+        for (size_t i = 0; i < lens.size(); i++)
+            lensMat.at<int>(0, (int)i) = lens[i];
+        inputs.push_back(lensMat);
+    }
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    layer->getMemoryShapes(inShapes, 3, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)3);
+    layer->getTypes(inTypes, 3, (int)internalShapes.size(), outTypes, internalTypes);
+
+    outputs.clear();
+    std::vector<Mat> internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+}
+
+// Reference for the LSTM2 tests, written from the ONNX LSTM equations (W/R are in the ONNX
+// [i, o, f, c] order, B in [Wbi, Wbo, Wbf, Wbc, Rbi, Rbo, Rbf, Rbc]). `lens` mirrors the ONNX
+// sequence_lens input: a sample stops after its own length, keeps the state it finished with and
+// contributes zeros to Y from there on. An empty `lens` runs every sample over the whole sequence.
+static void lstm2Reference(const Mat& X, const Mat& W, const Mat& R, const Mat& B, int H,
+                           bool reverse, const std::vector<int>& lens,
+                           Mat& Y, Mat& Yh, Mat& Yc, float clip = 0.f, bool inputForget = false)
+{
+    const auto clamped = [clip](double v) {
+        return clip > 0.f ? std::max(-(double)clip, std::min(v, (double)clip)) : v;
+    };
+    const int T = X.size[0], N = X.size[1], I = X.size[2];
+    Y = Mat::zeros(shape(T, 1, N, H), CV_32F);
+    Yh = Mat::zeros(shape(1, N, H), CV_32F);
+    Yc = Mat::zeros(shape(1, N, H), CV_32F);
+    const float* xData = X.ptr<float>();
+    const float* wData = W.ptr<float>();
+    const float* rData = R.ptr<float>();
+    const float* bData = B.ptr<float>();
+    std::vector<double> ii(H), oo(H), ff(H), cc(H), h(H), c(H);
+    for (int s = 0; s < N; s++)
+    {
+        const int len = lens.empty() ? T : lens[s];
+        std::fill(h.begin(), h.end(), 0.);
+        std::fill(c.begin(), c.end(), 0.);
+        for (int k = 0; k < T; k++)
+        {
+            const int t = reverse ? (T - 1 - k) : k;
+            if (t < len)
+            {
+                const float* x = xData + (t * N + s) * I;
+                for (int j = 0; j < H; j++)
+                {
+                    double pi = bData[j] + bData[4 * H + j];
+                    double po = bData[H + j] + bData[4 * H + H + j];
+                    double pf = bData[2 * H + j] + bData[4 * H + 2 * H + j];
+                    double pc = bData[3 * H + j] + bData[4 * H + 3 * H + j];
+                    for (int i = 0; i < I; i++)
+                    {
+                        pi += x[i] * wData[j * I + i];
+                        po += x[i] * wData[(H + j) * I + i];
+                        pf += x[i] * wData[(2 * H + j) * I + i];
+                        pc += x[i] * wData[(3 * H + j) * I + i];
+                    }
+                    for (int m = 0; m < H; m++)
+                    {
+                        pi += h[m] * rData[j * H + m];
+                        po += h[m] * rData[(H + j) * H + m];
+                        pf += h[m] * rData[(2 * H + j) * H + m];
+                        pc += h[m] * rData[(3 * H + j) * H + m];
+                    }
+                    ii[j] = 1. / (1. + std::exp(-clamped(pi)));
+                    oo[j] = 1. / (1. + std::exp(-clamped(po)));
+                    ff[j] = 1. / (1. + std::exp(-clamped(pf)));
+                    cc[j] = std::tanh(clamped(pc));
+                }
+                for (int j = 0; j < H; j++)
+                {
+                    if (inputForget)
+                        ff[j] = 1. - ii[j];   // coupled gates
+                    c[j] = ff[j] * c[j] + ii[j] * cc[j];
+                    h[j] = oo[j] * std::tanh(c[j]);
+                }
+            }
+            // Past its sequence length a sample contributes zeros to Y.
+            for (int j = 0; j < H; j++)
+                Y.ptr<float>()[(t * N + s) * H + j] = (t < len) ? (float)h[j] : 0.f;
+        }
+        for (int j = 0; j < H; j++)
+        {
+            Yh.ptr<float>()[s * H + j] = (float)h[j];
+            Yc.ptr<float>()[s * H + j] = (float)c[j];
+        }
+    }
+}
+
+// ONNX sequence_lens: each batch entry stops after its own length. Y is zero-padded past it, and
+// Y_h/Y_c are the states that entry finished with - not Y's last timestep, which is zero there.
+TEST(Layer_LSTM2_Test_Accuracy_, SequenceLens)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    // one sample of each interesting kind: full length, truncated, and empty
+    const std::vector<int> lens = {4, 2, 0};
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, false, lens, outputs);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, lens, Y, Yh, Yc);
+    normAssert(outputs[0], Y, "LSTM2(sequence_lens) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(sequence_lens) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(sequence_lens) Y_c", 1e-4, 1e-4);
+}
+
+// direction=reverse starts the recurrence at the last timestep, so Y[t] holds the state after
+// seeing x[t..T-1] and the final state reported as Y_h/Y_c is the one left after x[0].
+TEST(Layer_LSTM2_Test_Accuracy_, ReverseFinalState)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, true, std::vector<int>(), outputs);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, true, std::vector<int>(), Y, Yh, Yc);
+    normAssert(outputs[0], Y, "LSTM2(reverse) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(reverse) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(reverse) Y_c", 1e-4, 1e-4);
+}
+
+// The ONNX `clip` attribute bounds the input of the activations to [-clip, clip].
+TEST(Layer_LSTM2_Test_Accuracy_, Clip)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    const float clip = 0.3f;   // small enough that it binds for the weights below
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, false, std::vector<int>(), outputs, clip);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc, clip);
+    normAssert(outputs[0], Y, "LSTM2(clip) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(clip) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(clip) Y_c", 1e-4, 1e-4);
+}
+
+// ONNX input_forget couples the gates: f_t = 1 - i_t instead of f_t = sigmoid(...).
+TEST(Layer_LSTM2_Test_Accuracy_, InputForget)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, false, std::vector<int>(), outputs, 0.f, true);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc, 0.f, true);
+    normAssert(outputs[0], Y, "LSTM2(input_forget) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(input_forget) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(input_forget) Y_c", 1e-4, 1e-4);
+}
+
+// An ONNX LSTM may declare Y_c and skip Y_h (declaring output #1 as an empty name). The slots are
+// positional, so the layer has to answer with one shape per declared output - the engine asserts
+// outShapes.size() == the number of slots (Net::Impl::allocateLayerOutputs).
+TEST(Layer_LSTM2_Test_Accuracy_, CellOutputWithoutHiddenOutput)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    // what parseLSTM() sets for a node with outputs ['Y', '', 'Y_c']
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_yc_without_yh";
+    lp.set("hidden_size", H);
+    lp.set("is_onnx", true);
+    lp.set("produce_sequence_y", true);
+    lp.set("produce_output_yh", false);
+    lp.set("produce_cell_output", true);
+    lp.set("const_weights", false);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    const int slots = 3;   // Y, Y_h (unused) and Y_c
+    layer->getMemoryShapes(inShapes, slots, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)slots);
+    EXPECT_EQ(outShapes[0], shape(T, 1, N, H));
+    EXPECT_EQ(outShapes[1], shape(1, N, H));   // the unused Y_h slot
+    EXPECT_EQ(outShapes[2], shape(1, N, H));   // Y_c
+    layer->getTypes(inTypes, slots, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (int i = 0; i < slots; i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, false, std::vector<int>(), Y, Yh, Yc);
+    normAssert(outputs[0], Y, "LSTM2(Y_c without Y_h) Y", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(Y_c without Y_h) Y_c", 1e-4, 1e-4);
+}
+
 
 class Layer_RNN_Test : public ::testing::Test
 {
