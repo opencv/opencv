@@ -78,7 +78,7 @@ public:
 
         Mat blob;
         // 1/255 normalization, swap BGR->RGB, no mean subtraction.
-        blobFromImage(image, blob, 1.0 / 255.0, netSize, Scalar(), /*swapRB=*/true, /*crop=*/false);
+        blobFromImage(image, blob, 1.0 / 255.0, netSize, Scalar(), /*swapRB=*/true, /*crop=*/false, CV_32F, /*strictResize*/true);
         net_.setInput(blob, "image");
 
         const std::vector<String> outNames = {"keypoints", "scores", "descriptors"};
