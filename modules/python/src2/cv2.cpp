@@ -255,9 +255,18 @@ static bool init_submodule(PyObject * root, const char * name, PyMethodDef * met
     }
     // populate module's dict
     PyObject * d = PyModule_GetDict(submodule);
+    PySafeObject module_name(PyString_FromString(name));
+    if (!module_name)
+    {
+        return false;
+    }
     for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
     {
-        PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+        PyObject * method_obj = PyCFunction_NewEx(m, NULL, module_name);
+        if (!method_obj)
+        {
+            return false;
+        }
         if (PyDict_SetItemString(d, m->ml_name, method_obj) < 0)
         {
             PyErr_Format(PyExc_ImportError,
