@@ -59,9 +59,9 @@ class resizeNNInvokerSSE2 :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerSSE2(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+    resizeNNInvokerSSE2(const Mat& _src, Mat &_dst, int *_x_ofs, const int *_y_ofs) :
         ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
-        ify(_ify)
+        y_ofs(_y_ofs)
     {
     }
 
@@ -70,7 +70,7 @@ public:
 #endif
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int y, x;
         int width = dsize.width;
         int sseWidth = width - (width & 0x7);
@@ -78,7 +78,7 @@ public:
         {
             uchar* D = dst.data + dst.step*y;
             uchar* Dstart = D;
-            int sy = std::min(cvFloor(y*ify), ssize.height-1);
+            int sy = y_ofs[y];
             const uchar* S = src.data + sy*src.step;
             __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
             for(x = 0; x < sseWidth; x += 8)
@@ -113,7 +113,7 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofs;
-    double ify;
+    const int* y_ofs;
 
     resizeNNInvokerSSE2(const resizeNNInvokerSSE2&);
     resizeNNInvokerSSE2& operator=(const resizeNNInvokerSSE2&);
@@ -123,9 +123,9 @@ class resizeNNInvokerSSE4 :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerSSE4(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+    resizeNNInvokerSSE4(const Mat& _src, Mat &_dst, int *_x_ofs, const int *_y_ofs) :
         ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
-        ify(_ify)
+        y_ofs(_y_ofs)
     {
     }
 #if defined(__INTEL_COMPILER)
@@ -133,7 +133,7 @@ public:
 #endif
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int y, x;
         int width = dsize.width;
         int sseWidth = width - (width & 0x3);
@@ -141,7 +141,7 @@ public:
         {
             uchar* D = dst.data + dst.step*y;
             uchar* Dstart = D;
-            int sy = std::min(cvFloor(y*ify), ssize.height-1);
+            int sy = y_ofs[y];
             const uchar* S = src.data + sy*src.step;
             __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
             for(x = 0; x < sseWidth; x += 4)
@@ -168,22 +168,22 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofs;
-    double ify;
+    const int* y_ofs;
 
     resizeNNInvokerSSE4(const resizeNNInvokerSSE4&);
     resizeNNInvokerSSE4& operator=(const resizeNNInvokerSSE4&);
 };
 
-void resizeNN2_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
+void resizeNN2_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
-    resizeNNInvokerSSE2 invoker(src, dst, x_ofs, ify);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    resizeNNInvokerSSE2 invoker(src, dst, x_ofs, y_ofs);
+    invoker(range);
 }
 
-void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
+void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
-    resizeNNInvokerSSE4 invoker(src, dst, x_ofs, ify);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    resizeNNInvokerSSE4 invoker(src, dst, x_ofs, y_ofs);
+    invoker(range);
 }
 
 int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width)

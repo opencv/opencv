@@ -60,15 +60,15 @@ class resizeNNInvokerLASX4 CV_FINAL :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerLASX4(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+    resizeNNInvokerLASX4(const Mat& _src, Mat &_dst, int *_x_ofs, const int *_y_ofs) :
         ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
-        ify(_ify)
+        y_ofs(_y_ofs)
     {
     }
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int y, x;
         int width = dsize.width;
         int avxWidth = width - (width & 0x7);
@@ -78,7 +78,7 @@ public:
             {
                 uchar* D = dst.data + dst.step*y;
                 uchar* Dstart = D;
-                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                int sy = y_ofs[y];
                 const uchar* S = src.data + sy*src.step;
 #ifdef CV_ICC
 #pragma unroll(4)
@@ -102,7 +102,7 @@ public:
             {
                 uchar* D = dst.data + dst.step*y;
                 uchar* Dstart = D;
-                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                int sy = y_ofs[y];
                 const uchar* S = src.data + sy*src.step;
 #ifdef CV_ICC
 #pragma unroll(4)
@@ -126,7 +126,7 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofs;
-    double ify;
+    const int* y_ofs;
 
     resizeNNInvokerLASX4(const resizeNNInvokerLASX4&);
     resizeNNInvokerLASX4& operator=(const resizeNNInvokerLASX4&);
@@ -136,15 +136,15 @@ class resizeNNInvokerLASX2 CV_FINAL :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerLASX2(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+    resizeNNInvokerLASX2(const Mat& _src, Mat &_dst, int *_x_ofs, const int *_y_ofs) :
         ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
-        ify(_ify)
+        y_ofs(_y_ofs)
     {
     }
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int y, x;
         int width = dsize.width;
         int avxWidth = width - (width & 0xf);
@@ -157,7 +157,7 @@ public:
             {
                 uchar* D = dst.data + dst.step*y;
                 uchar* Dstart = D;
-                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                int sy = y_ofs[y];
                 const uchar* S = src.data + sy*src.step;
                 const uchar* S2 = S - 2;
 #ifdef CV_ICC
@@ -192,7 +192,7 @@ public:
             {
                 uchar* D = dst.data + dst.step*y;
                 uchar* Dstart = D;
-                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                int sy = y_ofs[y];
                 const uchar* S = src.data + sy*src.step;
                 const uchar* S2 = S - 2;
 #ifdef CV_ICC
@@ -226,22 +226,22 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofs;
-    double ify;
+    const int* y_ofs;
 
     resizeNNInvokerLASX2(const resizeNNInvokerLASX2&);
     resizeNNInvokerLASX2& operator=(const resizeNNInvokerLASX2&);
 };
 
-void resizeNN2_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
+void resizeNN2_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
-    resizeNNInvokerLASX2 invoker(src, dst, x_ofs, ify);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    resizeNNInvokerLASX2 invoker(src, dst, x_ofs, y_ofs);
+    invoker(range);
 }
 
-void resizeNN4_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
+void resizeNN4_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, const int *y_ofs)
 {
-    resizeNNInvokerLASX4 invoker(src, dst, x_ofs, ify);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
+    resizeNNInvokerLASX4 invoker(src, dst, x_ofs, y_ofs);
+    invoker(range);
 }
 
 }
