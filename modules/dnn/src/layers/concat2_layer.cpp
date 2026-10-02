@@ -18,78 +18,6 @@ namespace dnn
     Opset's 1 to 13 are covered.
 */
 
-// out must be pre-allocated
-static void concat(const std::vector<Mat>& inps, Mat& out, int axis)
-{
-    CV_Assert(out.isContinuous());
-
-    MatShape outShape = out.shape();
-    int ndims = outShape.dims, nslices = 1;
-    size_t esz = out.elemSize();
-    size_t sliceSize = esz;
-    size_t totalSize = 0;
-    size_t outStep = 0;
-    int ninputs = (int)inps.size();
-    for (int i = ndims-1; i > axis; i--)
-        sliceSize *= outShape[i];
-    outStep = sliceSize*outShape[axis];
-    for (int i = 0; i < axis; i++)
-        nslices *= outShape[i];
-    for (int i = 0; i < ninputs; i++) {
-        CV_Assert(inps[i].isContinuous());
-        totalSize += inps[i].total()*esz;
-    }
-
-    // Precompute per-input destination offset and per-slice size.
-    std::vector<size_t> dstOffset(ninputs);
-    std::vector<size_t> sliceSize_k_vec(ninputs);
-    {
-        size_t acc = 0;
-        for (int k = 0; k < ninputs; k++) {
-            int sz_a = inps[k].size[axis];
-            dstOffset[k] = acc;
-            sliceSize_k_vec[k] = sliceSize * sz_a;
-            acc += sliceSize_k_vec[k];
-        }
-    }
-    const size_t CHUNK = 64 * 1024;
-
-    // Precompute per-input chunk counts and a prefix sum for fast index decode.
-    std::vector<int> chunkOff(ninputs + 1, 0);
-    for (int k = 0; k < ninputs; k++)
-        chunkOff[k + 1] = chunkOff[k] + (int)((sliceSize_k_vec[k] + CHUNK - 1) / CHUNK);
-    int chunksPerSlice = chunkOff[ninputs];
-    int totalChunks = chunksPerSlice * nslices;
-
-    if (totalSize > CHUNK && totalChunks > 0) {
-        parallel_for_(Range(0, totalChunks), [&](const Range& r) {
-            for (int c = r.start; c < r.end; c++) {
-                int s = c / chunksPerSlice;
-                int local = c % chunksPerSlice;
-                int k = 0;
-                while (local >= chunkOff[k + 1]) k++;
-                int chunkInK = local - chunkOff[k];
-                size_t byteStart = (size_t)chunkInK * CHUNK;
-                size_t byteEnd = std::min(byteStart + CHUNK, sliceSize_k_vec[k]);
-
-                const uchar* inptr_k = inps[k].data;
-                uchar* outptr = out.data + dstOffset[k];
-                memcpy(outptr + (size_t)s * outStep + byteStart,
-                       inptr_k + (size_t)s * sliceSize_k_vec[k] + byteStart,
-                       byteEnd - byteStart);
-            }
-        });
-    } else {
-        for (int k = 0; k < ninputs; k++) {
-            const uchar* inptr_k = inps[k].data;
-            uchar* outptr = out.data + dstOffset[k];
-            size_t sliceSize_k = sliceSize_k_vec[k];
-            for (int s = 0; s < nslices; s++)
-                memcpy(outptr + (size_t)s * outStep, inptr_k + (size_t)s * sliceSize_k, sliceSize_k);
-        }
-    }
-}
-
 class Concat2LayerImpl CV_FINAL : public Concat2Layer
 {
 public:
@@ -263,7 +191,7 @@ public:
                 return;
             }
         }
-        concat(inps, out, axis_);
+        concatND(inps, axis_, out);
     }
 
     // Fallback for axis=1 BLOCK concat when inputs aren't C0-aligned.
@@ -288,7 +216,7 @@ public:
         Mat nchwOut;
         nchwOut.fit(nchwShape, out.type());
 
-        concat(nchwInps, nchwOut, /*axis=*/1);
+        concatND(nchwInps, 1, nchwOut);
         transformLayout(nchwOut, out, DATA_LAYOUT_BLOCK, origLayout, C0);
     }
 };

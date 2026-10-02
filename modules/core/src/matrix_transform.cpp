@@ -9,6 +9,7 @@
 
 #include "transpose.simd.hpp"
 #include "transpose.simd_declarations.hpp"
+#include "nd_copy.hpp"
 
 #include <algorithm> // std::swap_ranges
 #include <numeric> // std::accumulate
@@ -404,6 +405,11 @@ static TransposeFunc transposeTab[] =
     0, 0, 0, 0, 0, 0, 0, transpose_32sC6, 0, 0, 0, 0, 0, 0, 0, transpose_32sC8
 };
 
+nd::TransposeFunc nd::getTransposeFunc(size_t esz)
+{
+    return esz < sizeof(transposeTab)/sizeof(transposeTab[0]) ? transposeTab[esz] : nullptr;
+}
+
 static TransposeInplaceFunc transposeInplaceTab[] =
 {
     0, transposeI_8u, transposeI_16u, transposeI_8uC3, transposeI_32s, 0, transposeI_16uC3, 0,
@@ -521,94 +527,33 @@ void transpose( InputArray _src, OutputArray _dst )
 
 void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat inp = src_.getMat();
-    CV_Assert(inp.isContinuous());
-    CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
-    CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
+    const int ndims = inp.dims;
+    CV_CheckEQ(order.size(), static_cast<size_t>(ndims), "Number of dimensions shouldn't change");
 
-    bool isIdentityOrder = true;
-    for (size_t i = 0; i < order.size(); ++i)
+    bool used[CV_MAX_DIM] = {false};
+    int newShape[CV_MAX_DIM];
+    for (int i = 0; i < ndims; i++)
     {
-        if (order[i] != static_cast<int>(i))
-        {
-            isIdentityOrder = false;
-            break;
-        }
-    }
-    if (isIdentityOrder)
-    {
-        dst_.create(inp.dims, inp.size.p, inp.type());
-        Mat out = dst_.getMat();
-        CV_Assert(out.isContinuous());
-
-        if (inp.data != out.data)
-            inp.copyTo(out);
-        return;
+        int j = order[i];
+        CV_Check(j, 0 <= j && j < ndims && !used[j], "New order should be a valid permutation of the old one");
+        used[j] = true;
+        newShape[i] = inp.size[j];
     }
 
-    const bool is2DSwap = inp.dims == 2 && order.size() == 2 && order[0] == 1 && order[1] == 0;
-    if (is2DSwap)
+    // plain 2D transpose keeps using cv::transpose (HAL, in-place square case);
+    // not for an empty input, which cv::transpose would answer by releasing dst
+    if (ndims == 2 && order[0] == 1 && !inp.empty() && nd::getTransposeFunc(inp.elemSize()))
     {
         transpose(inp, dst_);
         return;
     }
 
-    auto order_ = order;
-    std::sort(order_.begin(), order_.end());
-    for (size_t i = 0; i < order_.size(); ++i)
-    {
-        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
-    }
-
-    AutoBuffer<int> newShape(order.size());
-    for (size_t i = 0; i < order.size(); ++i)
-    {
-        newShape[i] = inp.size[order[i]];
-    }
-
-    dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
+    dst_.create(ndims, newShape, inp.type());
     Mat out = dst_.getMat();
-    CV_Assert(out.isContinuous());
-    CV_Assert(inp.data != out.data);
-
-    int continuous_idx = 0;
-    for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
-    {
-        if (order[i] != i)
-        {
-            continuous_idx = i + 1;
-            break;
-        }
-    }
-
-    size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
-    size_t outer_size = out.total() / continuous_size;
-
-    AutoBuffer<size_t> steps(order.size());
-    for (int i = 0; i < static_cast<int>(steps.size()); ++i)
-    {
-        steps[i] = inp.step1(order[i]);
-    }
-
-    auto* src = inp.ptr<const unsigned char>();
-    auto* dst = out.ptr<unsigned char>();
-
-    size_t src_offset = 0;
-    size_t es = out.elemSize();
-    for (size_t i = 0; i < outer_size; ++i)
-    {
-        std::memcpy(dst, src + es * src_offset, es * continuous_size);
-        dst += es * continuous_size;
-        for (int j = continuous_idx - 1; j >= 0; --j)
-        {
-            src_offset += steps[j];
-            if ((src_offset / steps[j]) % out.size[j] != 0)
-            {
-                break;
-            }
-            src_offset -= steps[j] * out.size[j];
-        }
-    }
+    nd::copy(nd::permute(nd::viewOf(inp), order.data()), nd::viewOf(out));
 }
 
 
@@ -1107,22 +1052,18 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-static void
-flipNDImpl(uchar* data, const int* shape, const size_t* step, int axis)
+// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
+static void flipNDInplace(Mat& m, int axis)
 {
-    int total = 1;
-    for (int i = 0; i < axis; ++i)
-        total *= shape[i];
-
-    int shape_at_axis = shape[axis];
-    size_t step_at_axis = step[axis];
-    size_t offset = 0;
-    size_t offset_increment = axis == 0 ? 0 : step[axis - 1];
-    for (int i = 0; i < total; ++i, offset += offset_increment)
-        for (int j = 0, k = shape_at_axis - 1; j < shape_at_axis / 2; ++j, --k)
-            std::swap_ranges(data + offset + j * step_at_axis,
-                             data + offset + j * step_at_axis + step_at_axis,
-                             data + offset + k * step_at_axis);
+    size_t nouter = 1;
+    for (int i = 0; i < axis; i++)
+        nouter *= (size_t)m.size[i];
+    const int n = m.size[axis];
+    const size_t step = m.step[axis];
+    uchar* data = m.ptr();
+    for (size_t i = 0; i < nouter; i++, data += n*step)
+        for (int j = 0, k = n - 1; j < k; j++, k--)
+            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
 }
 
 void flipND(InputArray _src, OutputArray _dst, int _axis)
@@ -1137,17 +1078,207 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
     CV_CheckGE(_axis, -ndim, "flipND: given axis is out of range");
     int axis = (_axis + ndim) % ndim;
 
-    // in-place flip
-    _src.copyTo(_dst);
-
-    // return the src if it has only one element on the flip axis
-    const auto shape = src.size.p;
-    if (shape[axis] == 1)
-        return ;
-
-    // call impl
+    _dst.create(ndim, src.size.p, src.type());
     Mat dst = _dst.getMat();
-    flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
+    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
+    {
+        flipNDInplace(dst, axis);
+        return;
+    }
+
+    nd::View v = nd::viewOf(src);
+    nd::flip(v, axis);
+    nd::copy(v, nd::viewOf(dst));
+}
+
+void concatND(InputArrayOfArrays _src, int axis, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    std::vector<Mat> src;
+    _src.getMatVector(src);
+    CV_Assert(!src.empty());
+
+    const Mat& src0 = src[0];
+    const int ndims = src0.dims, type = src0.type(), ninputs = (int)src.size();
+    CV_CheckGE(ndims, 1, "concatND: 0-dimensional arrays are not supported");
+    CV_CheckGE(axis, -ndims, "concatND: axis is out of range");
+    CV_CheckLT(axis, ndims, "concatND: axis is out of range");
+    if (axis < 0)
+        axis += ndims;
+
+    int outShape[CV_MAX_DIM];
+    for (int i = 0; i < ndims; i++)
+        outShape[i] = src0.size[i];
+    int64 axisSize = 0;
+    for (int k = 0; k < ninputs; k++)
+    {
+        const Mat& m = src[k];
+        CV_CheckEQ(m.type(), type, "concatND: all the input arrays must have the same type");
+        CV_CheckEQ(m.dims, ndims, "concatND: all the input arrays must have the same number of dimensions");
+        for (int i = 0; i < ndims; i++)
+            if (i != axis)
+                CV_CheckEQ(m.size[i], outShape[i], "concatND: the input shapes must match except along the axis");
+        axisSize += m.size[axis];
+    }
+    CV_CheckLE((size_t)axisSize, (size_t)INT_MAX, "concatND: the output is too big");
+    outShape[axis] = (int)axisSize;
+
+    _dst.create(ndims, outShape, type);
+    Mat dst = _dst.getMat();
+
+    AutoBuffer<nd::View, 4> sv(ninputs), dv(ninputs);
+    const nd::View dst0 = nd::viewOf(dst);
+    int ofs = 0;
+    for (int k = 0; k < ninputs; k++)
+    {
+        const int sz = src[k].size[axis];
+        sv[k] = nd::viewOf(src[k]);
+        dv[k] = dst0;
+        nd::slice(dv[k], axis, ofs, 1, sz);
+        ofs += sz;
+    }
+    nd::copyBatch(sv.data(), dv.data(), ninputs);
+}
+
+void splitND(InputArray _src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+    const int ndims = src.dims, type = src.type(), noutputs = (int)sizes.size();
+    CV_CheckGE(ndims, 1, "splitND: 0-dimensional arrays are not supported");
+    CV_CheckGE(axis, -ndims, "splitND: axis is out of range");
+    CV_CheckLT(axis, ndims, "splitND: axis is out of range");
+    if (axis < 0)
+        axis += ndims;
+    CV_Assert(noutputs > 0);
+
+    int64 axisSize = 0;
+    for (int k = 0; k < noutputs; k++)
+    {
+        CV_CheckGE(sizes[k], 0, "splitND: the sizes must be non-negative");
+        axisSize += sizes[k];
+    }
+    CV_CheckEQ((size_t)axisSize, (size_t)src.size[axis], "splitND: the sizes must sum up to the size of the axis");
+
+    int outShape[CV_MAX_DIM];
+    for (int i = 0; i < ndims; i++)
+        outShape[i] = src.size[i];
+
+    _dst.create(noutputs, 1, type, -1, true);
+    AutoBuffer<nd::View, 4> sv(noutputs), dv(noutputs);
+    std::vector<Mat> dst(noutputs);
+    const nd::View src0 = nd::viewOf(src);
+    int ofs = 0;
+    for (int k = 0; k < noutputs; k++)
+    {
+        outShape[axis] = sizes[k];
+        _dst.create(ndims, outShape, type, k);
+        dst[k] = _dst.getMat(k);
+        sv[k] = src0;
+        nd::slice(sv[k], axis, ofs, 1, sizes[k]);
+        dv[k] = nd::viewOf(dst[k]);
+        ofs += sizes[k];
+    }
+    nd::copyBatch(sv.data(), dv.data(), noutputs);
+}
+
+void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+    const int ndims = src.dims;
+    CV_CheckEQ(repeats.size(), (size_t)ndims, "tileND: the number of repeats must match the number of dimensions");
+
+    int outShape[CV_MAX_DIM];
+    for (int i = 0; i < ndims; i++)
+    {
+        CV_CheckGE(repeats[i], 0, "tileND: the repeats must be non-negative");
+        int64 sz = (int64)src.size[i]*repeats[i];
+        CV_CheckLE((size_t)sz, (size_t)INT_MAX, "tileND: the output is too big");
+        outShape[i] = (int)sz;
+    }
+
+    _dst.create(ndims, outShape, src.type());
+    Mat dst = _dst.getMat();
+    if (dst.total() == 0)
+        return;
+
+    // Each repeated output axis is split into (repeat index, position), the former
+    // with source step 0, so the whole tile is one broadcasting copy.
+    nd::View sv, dv;
+    sv.data = src.data;
+    dv.data = dst.data;
+    sv.esz = dv.esz = src.elemSize();
+    int n = 0;
+    for (int i = 0; i < ndims; i++)
+    {
+        const int sz = src.size[i], r = repeats[i];
+        if (r != 1)
+        {
+            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "tileND: too many dimensions");
+            sv.size[n] = dv.size[n] = r;
+            sv.step[n] = 0;
+            dv.step[n] = (ptrdiff_t)dst.step[i]*sz;
+            n++;
+        }
+        if (sz != 1 || r == 1)
+        {
+            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "tileND: too many dimensions");
+            sv.size[n] = dv.size[n] = sz;
+            sv.step[n] = (ptrdiff_t)src.step[i];
+            dv.step[n] = (ptrdiff_t)dst.step[i];
+            n++;
+        }
+    }
+    sv.dims = dv.dims = n;
+    nd::copy(sv, dv);
+}
+
+void sliceND(InputArray _src, const std::vector<int>& starts, const std::vector<int>& ends,
+             const std::vector<int>& steps, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+    const int ndims = src.dims, nslices = (int)starts.size();
+    CV_CheckLE(nslices, ndims, "sliceND: too many starts");
+    CV_CheckEQ(ends.size(), starts.size(), "sliceND: starts and ends must have the same size");
+    CV_Check(steps.size(), steps.empty() || steps.size() == starts.size(),
+             "sliceND: steps must be empty or have the same size as starts");
+
+    nd::View sv = nd::viewOf(src);
+    int outShape[CV_MAX_DIM];
+    for (int i = 0; i < ndims; i++)
+        outShape[i] = src.size[i];
+
+    for (int i = 0; i < nslices; i++)
+    {
+        const int n = src.size[i], start = starts[i], end = ends[i];
+        const int step = steps.empty() ? 1 : steps[i];
+        CV_CheckNE(step, 0, "sliceND: step must not be zero");
+        int count;
+        if (step > 0)
+        {
+            CV_Check(start, 0 <= start && start <= n, "sliceND: start is out of range");
+            CV_Check(end, 0 <= end && end <= n, "sliceND: end is out of range");
+            count = end > start ? (int)(((int64)end - start + step - 1)/step) : 0;
+        }
+        else
+        {
+            CV_Check(start, -1 <= start && start < n, "sliceND: start is out of range");
+            CV_Check(end, -1 <= end && end < n, "sliceND: end is out of range");
+            count = start > end ? (int)(((int64)start - end - step - 1)/(-step)) : 0;
+        }
+        nd::slice(sv, i, start, step, count);
+        outShape[i] = count;
+    }
+
+    _dst.create(ndims, outShape, src.type());
+    Mat dst = _dst.getMat();
+    nd::copy(sv, nd::viewOf(dst));
 }
 
 /*
