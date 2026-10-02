@@ -969,7 +969,7 @@ bool  TiffDecoder::readData( Mat& img )
                                         if (m_use_rgb)
                                             std::memcpy( (void*) img_line_buffer,
                                                          (void*) bstart,
-                                                         tile_width * sizeof(uchar) );
+                                                         tile_width * ncn * sizeof(uchar) );
                                         else
                                             icvCvt_BGR2RGB_8u_C3R( bstart, 0,
                                                     img_line_buffer, 0,
@@ -1079,7 +1079,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
                                         if (m_use_rgb)
-                                            std::memcpy(buffer16, img.ptr<ushort>(img_y + i, x), tile_width * sizeof(ushort));
+                                            std::memcpy(img.ptr<ushort>(img_y + i, x), buffer16, tile_width * ncn * sizeof(ushort));
                                         else
                                             icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
                                                     img.ptr<ushort>(img_y + i, x), 0,
