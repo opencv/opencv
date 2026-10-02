@@ -795,6 +795,18 @@ class Arguments(NewOpenCVTests):
         self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
         self.assertEqual(len(rr), 3)
 
+    def test_function_module(self):
+        import inspect
+        import pickle
+
+        for module, function in ((cv, cv.GaussianBlur),
+                                 (cv.utils, cv.utils.dumpInputArray),
+                                 (cv.utils.nested, cv.utils.nested.testEchoBooleanFunction)):
+            self.assertEqual(function.__module__, module.__name__)
+            self.assertIs(inspect.getmodule(function), module)
+            self.assertIsNone(function.__self__)
+            self.assertIs(pickle.loads(pickle.dumps(function)), function)
+
     def test_nested_function_availability(self):
         self.assertTrue(hasattr(cv.utils, "nested"),
                         msg="Module is not generated for nested namespace")
