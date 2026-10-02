@@ -1,0 +1,12 @@
+newmtl board_mat
+Kd 0.200 0.800 1.000
+d 0.30
+Ka 0 0 0
+Ks 0 0 0
+
+newmtl frustum_mat
+Kd 1.000 0.400 0.200
+d 1.00
+Ka 0 0 0
+Ks 0 0 0
+
