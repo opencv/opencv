@@ -884,6 +884,70 @@ TEST(Core_InputOutput, filestorage_nd_matrix_too_many_dims)
     EXPECT_ANY_THROW(fs["sm"] >> sm);
 }
 
+TEST(Core_InputOutput, filestorage_sparse_matrix_bad_index)
+{
+    // write() delta-compresses the element indices: a negative entry in "data"
+    // is the first dimension that changed, stored as k - dims + 1. read()
+    // recovered it as dims + k - 1 without a lower bound, so a value below
+    // 1 - dims gave a negative index into the idx[CV_MAX_DIM] stack buffer.
+    {
+        const std::string content =
+            "%YAML:1.0\n---\n"
+            "sm: !!opencv-sparse-matrix\n"
+            "   sizes: [ 4, 5 ]\n"
+            "   dt: f\n"
+            "   data: [ 0, 1, 1., -6, 0, 0, 0, 0, 0, 0, 1, 2. ]\n";
+
+        FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+        SparseMat sm;
+        EXPECT_ANY_THROW(fs["sm"] >> sm);
+    }
+
+    // An index component outside the sizes of the same node was accepted, so the
+    // returned SparseMat held elements outside its own dims and copyTo() wrote
+    // them past the end of the dense Mat.
+    {
+        const std::string content =
+            "%YAML:1.0\n---\n"
+            "sm: !!opencv-sparse-matrix\n"
+            "   sizes: [ 4, 5 ]\n"
+            "   dt: f\n"
+            "   data: [ 0, 4000, 7. ]\n";
+
+        FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+        SparseMat sm;
+        EXPECT_ANY_THROW(fs["sm"] >> sm);
+    }
+
+    // well-formed sparse matrices still round-trip
+    const int sizes[] = { 7, 5, 4 };
+    for (int dims = 1; dims <= 3; dims++)
+    {
+        SparseMat sm(dims, sizes, CV_32F);
+        RNG rng(12345 + dims);
+        for (int i = 0; i < 40; i++)
+        {
+            int idx[3];
+            for (int j = 0; j < dims; j++)
+                idx[j] = (int)rng.uniform(0, sizes[j]);
+            sm.ref<float>(idx) = (float)i + 1.f;
+        }
+
+        FileStorage fs_out(".yml", FileStorage::WRITE | FileStorage::MEMORY);
+        fs_out << "sm" << sm;
+
+        FileStorage fs_in(fs_out.releaseAndGetString(), FileStorage::READ | FileStorage::MEMORY);
+        SparseMat sm2;
+        ASSERT_NO_THROW(fs_in["sm"] >> sm2);
+        EXPECT_EQ(sm.nzcount(), sm2.nzcount());
+
+        Mat dense, dense2;
+        sm.copyTo(dense);
+        sm2.copyTo(dense2);
+        EXPECT_EQ(0, cvtest::norm(dense, dense2, NORM_INF));
+    }
+}
+
 TEST(Core_InputOutput, filestorage_matrix_dt_too_long)
 {
     // A "dt" string with many distinct adjacent types makes decodeFormat()
