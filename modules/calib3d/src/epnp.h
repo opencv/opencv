@@ -19,6 +19,7 @@ class epnp {
 
   void compute_pose(cv::Mat& R, cv::Mat& t);
  private:
+  friend struct EPnPTestAccess;
   epnp(const epnp &); // copy disabled
   epnp& operator=(const epnp &); // assign disabled
   template <typename T>
