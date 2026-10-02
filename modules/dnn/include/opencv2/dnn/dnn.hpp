@@ -1297,6 +1297,10 @@ CV__DNN_INLINE_NS_BEGIN
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
      *  @param ddepth Depth of output blob. Choose CV_32F or CV_8U.
+     *  @param strictResize flag which indicates whether the bit-exact INTER_LINEAR_EXACT interpolation
+     *  should be used for resize instead of INTER_LINEAR. Bit-exact interpolation produces identical
+     *  results on all platforms for integer input depths only. For CV_32F and CV_64F images
+     *  cv::resize() falls back to INTER_LINEAR.
      *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
@@ -1307,7 +1311,7 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                   int ddepth=CV_32F);
+                                   int ddepth=CV_32F, bool strictResize=false);
 
     /** @brief Creates 4-dimensional blob from image.
      *  @details This is an overloaded member function, provided for convenience.
@@ -1315,7 +1319,8 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS void blobFromImage(InputArray image, OutputArray blob, double scalefactor=1.0,
                                   const Size& size = Size(), const Scalar& mean = Scalar(),
-                                  bool swapRB=false, bool crop=false, int ddepth=CV_32F);
+                                  bool swapRB=false, bool crop=false, int ddepth=CV_32F,
+                                  bool strictResize=false);
 
 
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
@@ -1330,6 +1335,10 @@ CV__DNN_INLINE_NS_BEGIN
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
      *  @param ddepth Depth of output blob. Choose CV_32F or CV_8U.
+     *  @param strictResize flag which indicates whether the bit-exact INTER_LINEAR_EXACT interpolation
+     *  should be used for resize instead of INTER_LINEAR. Bit-exact interpolation produces identical
+     *  results on all platforms, but it is supported for integer input depths only; for CV_32F and
+     *  CV_64F images cv::resize() falls back to INTER_LINEAR.
      *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
@@ -1340,7 +1349,7 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                    int ddepth=CV_32F);
+                                    int ddepth=CV_32F, bool strictResize=false);
 
     /** @brief Creates 4-dimensional blob from series of images.
      *  @details This is an overloaded member function, provided for convenience.
@@ -1349,7 +1358,7 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS void blobFromImages(InputArrayOfArrays images, OutputArray blob,
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                   int ddepth=CV_32F);
+                                   int ddepth=CV_32F, bool strictResize=false);
 
     /**
      * @brief Enum of image processing mode.
@@ -1380,7 +1389,8 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Image2BlobParams();
         CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
-                            ImagePaddingMode mode = dnn::DNN_PMODE_NULL, Scalar borderValue = 0.0);
+                            ImagePaddingMode mode = dnn::DNN_PMODE_NULL, Scalar borderValue = 0.0,
+                            bool strictResize = false);
 
         CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
         CV_PROP_RW Size size;    //!< Spatial size for output image.
@@ -1390,6 +1400,10 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW dnn::ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
         CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
+        CV_PROP_RW bool strictResize;    //!< Flag which indicates that bit-exact INTER_LINEAR_EXACT
+                                         //!< interpolation should be used for resize instead of INTER_LINEAR.
+                                         //!< Supported for integer input depths only, CV_32F and CV_64F
+                                         //!< images are resized with INTER_LINEAR anyway.
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.

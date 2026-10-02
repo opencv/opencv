@@ -82,7 +82,7 @@ void ALIKEDImpl::runNetwork(InputArray _image, std::vector<KeyPoint>& keypoints,
     Size origSize = image.size();
 
     // BGR->RGB conversion via swapRB=true
-    Mat blob = dnn::blobFromImage(image, 1.0/255.0, inputSz, Scalar(), /*swapRB=*/true, /*crop=*/false);
+    Mat blob = dnn::blobFromImage(image, 1.0/255.0, inputSz, Scalar(), /*swapRB=*/true, /*crop=*/false, CV_32F, /*strictResize=*/true);
 
     net.setInput(blob, "image");
 
