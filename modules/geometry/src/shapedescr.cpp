@@ -804,6 +804,14 @@ static void solveFast(float semi_major, float semi_minor, const cv::Point2f& pt,
     float px = std::abs(pt.x);
     float py = std::abs(pt.y);
 
+    // The nearest point is not unique at the exact center; choose the minor-axis endpoint.
+    // Nearby points still have a direction and must go through the iterative solver.
+    if (px == 0.f && py == 0.f)
+    {
+        closest_pt = Point2f(0.f, semi_minor);
+        return;
+    }
+
     float tx = 0.707f;
     float ty = 0.707f;
 
@@ -827,8 +835,8 @@ static void solveFast(float semi_major, float semi_minor, const cv::Point2f& pt,
         float r = std::hypotf(rx, ry);
         float q = std::hypotf(qx, qy);
 
-        tx = std::min(1.0f, std::max(0.0f, (qx * r / q + ex) / a));
-        ty = std::min(1.0f, std::max(0.0f, (qy * r / q + ey) / b));
+        tx = std::min(1.0f, std::max(0.0f, ((qx / q) * r + ex) / a));
+        ty = std::min(1.0f, std::max(0.0f, ((qy / q) * r + ey) / b));
         float t = std::hypotf(tx, ty);
         tx /= t;
         ty /= t;
