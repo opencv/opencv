@@ -34,6 +34,7 @@ enum class CoordTransMode {
     PYTORCH_HALF_PIXEL,
     TF_HALF_PIXEL_FOR_NN,
     TF_CROP_AND_RESIZE,
+    ALIGN_CORNERS,
     HALF_PIXEL_SYMMETRIC,
     ASYMMETRIC
 };
@@ -44,6 +45,7 @@ static inline CoordTransMode parseCoordTransMode(const String& s)
     if (s == "pytorch_half_pixel") return CoordTransMode::PYTORCH_HALF_PIXEL;
     if (s == "tf_half_pixel_for_nn") return CoordTransMode::TF_HALF_PIXEL_FOR_NN;
     if (s == "tf_crop_and_resize") return CoordTransMode::TF_CROP_AND_RESIZE;
+    if (s == "align_corners") return CoordTransMode::ALIGN_CORNERS;
     if (s == "half_pixel_symmetric") return CoordTransMode::HALF_PIXEL_SYMMETRIC;
     return CoordTransMode::ASYMMETRIC;
 }
@@ -78,6 +80,8 @@ inline float computeSrcGeneric(int dst, float scale, int limit, int len,
         else
             return 0.5f * (start_coord + end_coord) * (limit - 1);
     }
+    if (coordTransMode == CoordTransMode::ALIGN_CORNERS)
+        return (len > 1) ? float(dst) * (limit - 1) / float(len - 1) : 0.f;
     if (coordTransMode == CoordTransMode::PYTORCH_HALF_PIXEL)
         return (len > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
     if (coordTransMode == CoordTransMode::HALF_PIXEL)
@@ -1230,21 +1234,43 @@ public:
             }
         }
 
-        if (sizes.empty() && !scales.empty() && halfPixelCenters)
+        // Resolve the ONNX "scales" once: they are either a runtime input or were folded
+        // into zoom_factor_* as constants by the importer, and both sources have to be
+        // treated the same way, so the step below uses this single value.
+        float onnxScaleH = 0.f, onnxScaleW = 0.f;
+        if (!scales.empty())
         {
             int hIdx, wIdx;
             spatialIndices(scales.size(), hIdx, wIdx);
-            scaleHeight = 1.f / scales[hIdx];
-            scaleWidth  = 1.f / scales[wIdx];
+            onnxScaleH = scales[hIdx];
+            onnxScaleW = scales[wIdx];
         }
-        else if (sizes.empty() && !scales.empty() && alignCorners)
+        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
         {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            float lenH = inpShape[2] * scales[hIdx];
-            float lenW = inpShape[3] * scales[wIdx];
-            if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
-            if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
+            onnxScaleH = zoomFactorHeight;
+            onnxScaleW = zoomFactorWidth;
+        }
+
+        // The sampling step along an axis is exactly 1/scale, which is not the same as
+        // in/out unless in*scale happens to be integral.  W=5 with scale=0.5 gives out=2,
+        // so the step is 2 and not 5/2; W=7 with scale=1.5 gives out=10 and a step of 2/3
+        // and not 7/10.  align_corners is the exception: it lines up the corners of the
+        // input and output, so its step is (in - 1) / (out - 1), using the integer output
+        // length.  "sizes" uses the same formula, while the roi-based tf_crop_and_resize mode
+        // derives its grid from the ROI and does not use this step.
+        if (sizes.empty() && onnxScaleH > 0 && onnxScaleW > 0 &&
+            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        {
+            if (alignCorners)
+            {
+                if (outShape[2] > 1) scaleHeight = float(inpShape[2] - 1) / (outShape[2] - 1);
+                if (outShape[3] > 1) scaleWidth  = float(inpShape[3] - 1) / (outShape[3] - 1);
+            }
+            else
+            {
+                scaleHeight = 1.f / onnxScaleH;
+                scaleWidth  = 1.f / onnxScaleW;
+            }
         }
 
         auto kind = outputs_arr.kind();
@@ -1299,15 +1325,10 @@ public:
             (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
         {
             const bool cubic = (interpolation == "cubic");
-            float xsH, xsW;
-            if (!scales.empty()) {
-                int hIdx, wIdx;
-                spatialIndices(scales.size(), hIdx, wIdx);
-                xsH = scales[hIdx]; xsW = scales[wIdx];
-            } else {
-                xsH = float(outShape[2]) / inpShape[2];
-                xsW = float(outShape[3]) / inpShape[3];
-            }
+            // The filter support is the output/input ratio, which is the same "scales"
+            // resolved above; in/out only stands in for them with "sizes".
+            const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outShape[2]) / inpShape[2];
+            const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outShape[3]) / inpShape[3];
             switch (depth) {
             case CV_8S:  resizeAntialias<int8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
             case CV_8U:  resizeAntialias<uint8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;

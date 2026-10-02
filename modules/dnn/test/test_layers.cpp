@@ -1553,6 +1553,307 @@ TEST_P(Layer_Test_Resize, change_input)
     }
 }
 
+// ONNX folds a constant "scales" input of Resize into zoom_factor_x/y.  The sampling
+// step along an axis is then 1/scale, which is not the same as in/out whenever in*scale
+// is not integral: a 4x5 input with scales=0.5 gives a 2x2 output, so the step is 2 and
+// not 5/2.  Resize2Layer used to derive the step from the shapes and produced different
+// pixels from onnxruntime for that case.
+TEST_P(Layer_Test_Resize, downscale_uses_given_scales)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 4, inW = 5;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "opencv_linear");
+    lp.set("coordinate_transformation_mode", "half_pixel");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    // ONNX half_pixel: src = (dst + 0.5) / scale - 0.5, bilinear with edge clamping.
+    const float step = 1.f / scale;
+    Mat ref(outH, outW, CV_32F);
+    for (int i = 0; i < outH; ++i)
+    {
+        float sy = std::min(std::max((i + 0.5f) * step - 0.5f, 0.f), (float)(inH - 1));
+        int y0 = cvFloor(sy), y1 = std::min(y0 + 1, inH - 1);
+        float fy = sy - y0;
+        for (int j = 0; j < outW; ++j)
+        {
+            float sx = std::min(std::max((j + 0.5f) * step - 0.5f, 0.f), (float)(inW - 1));
+            int x0 = cvFloor(sx), x1 = std::min(x0 + 1, inW - 1);
+            float fx = sx - x0;
+            ref.at<float>(i, j) = (1 - fy) * ((1 - fx) * inp.at<float>(y0, x0) + fx * inp.at<float>(y0, x1))
+                                + fy * ((1 - fx) * inp.at<float>(y1, x0) + fx * inp.at<float>(y1, x1));
+        }
+    }
+
+    normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
+}
+
+// ONNX antialias filter taps for one axis: a triangle of support 1/scale, stretched
+// when downscaling, sampled at (dst + 0.5)/scale - 0.5 and edge-clamped.
+static void resizeAAReferenceWeights(int inS, int outS, float scale,
+                                     std::vector<std::vector<int> >& idx,
+                                     std::vector<std::vector<float> >& wgt)
+{
+    const float step = 1.f / scale;
+    const float support = step >= 1.f ? step : 1.f;
+    const float inv = step >= 1.f ? 1.f / step : 1.f;
+    idx.assign(outS, std::vector<int>());
+    wgt.assign(outS, std::vector<float>());
+    for (int o = 0; o < outS; ++o)
+    {
+        const float center = (o + 0.5f) * step - 0.5f;
+        const int lo = cvFloor(center - support + 0.5f);
+        const int hi = cvFloor(center + support + 0.5f);
+        std::vector<float> acc(inS, 0.f);
+        float total = 0.f;
+        for (int x = lo; x <= hi; ++x)
+        {
+            const float t = std::abs((x - center) * inv);
+            const float w = t < 1.f ? 1.f - t : 0.f;
+            acc[std::min(std::max(x, 0), inS - 1)] += w;
+            total += w;
+        }
+        for (int x = 0; x < inS; ++x)
+        {
+            if (acc[x] != 0.f)
+            {
+                idx[o].push_back(x);
+                wgt[o].push_back(total != 0.f ? acc[x] / total : 0.f);
+            }
+        }
+    }
+}
+
+// The antialias filter support is 1/scale as well, so the same folded-scale case
+// must not stretch the filter by the in/out ratio instead.
+TEST_P(Layer_Test_Resize, antialias_downscale_uses_given_scales)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 4, inW = 5;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "opencv_linear");
+    lp.set("coordinate_transformation_mode", "half_pixel");
+    lp.set("antialias", 1);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    std::vector<std::vector<int> > xi, yi;
+    std::vector<std::vector<float> > xw, yw;
+    resizeAAReferenceWeights(inW, outW, scale, xi, xw);
+    resizeAAReferenceWeights(inH, outH, scale, yi, yw);
+
+    Mat tmp(inH, outW, CV_32F, Scalar(0));
+    for (int y = 0; y < inH; ++y)
+        for (int ox = 0; ox < outW; ++ox)
+        {
+            float acc = 0.f;
+            for (size_t k = 0; k < xi[ox].size(); ++k)
+                acc += xw[ox][k] * inp.at<float>(y, xi[ox][k]);
+            tmp.at<float>(y, ox) = acc;
+        }
+
+    Mat ref(outH, outW, CV_32F);
+    for (int oy = 0; oy < outH; ++oy)
+        for (int ox = 0; ox < outW; ++ox)
+        {
+            float acc = 0.f;
+            for (size_t k = 0; k < yi[oy].size(); ++k)
+                acc += yw[oy][k] * tmp.at<float>(yi[oy][k], ox);
+            ref.at<float>(oy, ox) = acc;
+        }
+
+    normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
+}
+
+// align_corners maps the first and last output pixels to the first and last input pixels.
+// Its step uses the integer output length, including when "scales" are folded into
+// zoom_factor_* by the importer instead of supplied as a runtime input.
+TEST_P(Layer_Test_Resize, align_corners_downscale)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 5, inW = 7;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = 3.f * (y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "bilinear");
+    lp.set("align_corners", true);
+    lp.set("coordinate_transformation_mode", "align_corners");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    // align_corners maps the endpoints of the integer output grid to the input endpoints.
+    const float stepY = float(inH - 1) / (outH - 1);
+    const float stepX = float(inW - 1) / (outW - 1);
+    Mat ref(outH, outW, CV_32F);
+    for (int i = 0; i < outH; ++i)
+    {
+        const float sy = std::min(std::max(i * stepY, 0.f), (float)(inH - 1));
+        const int y0 = cvFloor(sy), y1 = std::min(y0 + 1, inH - 1);
+        const float fy = sy - y0;
+        for (int j = 0; j < outW; ++j)
+        {
+            const float sx = std::min(std::max(j * stepX, 0.f), (float)(inW - 1));
+            const int x0 = cvFloor(sx), x1 = std::min(x0 + 1, inW - 1);
+            const float fx = sx - x0;
+            ref.at<float>(i, j) = (1 - fy) * ((1 - fx) * inp.at<float>(y0, x0) + fx * inp.at<float>(y0, x1))
+                                + fy * ((1 - fx) * inp.at<float>(y1, x0) + fx * inp.at<float>(y1, x1));
+        }
+    }
+
+    // Both output endpoints must match the corresponding input endpoints.
+    const Mat out2d = out.reshape(1, std::vector<int>{outH, outW});
+    EXPECT_FLOAT_EQ(inp.at<float>(0, 0), out2d.at<float>(0, 0));
+    EXPECT_FLOAT_EQ(inp.at<float>(0, inW - 1), out2d.at<float>(0, outW - 1));
+    normAssert(out2d, ref);
+}
+
+TEST_P(Layer_Test_Resize, align_corners_fractional_scale)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 2, inW = 4;
+    const float scale = 0.6f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x + 1);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "bilinear");
+    lp.set("align_corners", true);
+    lp.set("coordinate_transformation_mode", "align_corners");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, 1);
+    ASSERT_EQ(outW, 2);
+    ASSERT_EQ(out.size[2], outH);
+    ASSERT_EQ(out.size[3], outW);
+
+    const Mat out2d = out.reshape(1, std::vector<int>{outH, outW});
+    EXPECT_FLOAT_EQ(inp.at<float>(0, 0), out2d.at<float>(0, 0));
+    EXPECT_FLOAT_EQ(inp.at<float>(0, inW - 1), out2d.at<float>(0, outW - 1));
+}
+
+TEST_P(Layer_Test_Resize, align_corners_cubic_fractional_scale)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 4, inW = 4;
+    const float scale = 0.8f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x + 1);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "cubic");
+    lp.set("align_corners", true);
+    lp.set("coordinate_transformation_mode", "align_corners");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.size[2], 3);
+    ASSERT_EQ(out.size[3], 3);
+    Mat expected(3, 3, CV_32F);
+    const float expectedValues[] = {1.f, 2.5f, 4.f, 7.f, 8.5f, 10.f, 13.f, 14.5f, 16.f};
+    std::copy(expectedValues, expectedValues + 9, expected.ptr<float>());
+    normAssert(out.reshape(1, std::vector<int>{3, 3}), expected, "", 1e-5, 1e-4);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
