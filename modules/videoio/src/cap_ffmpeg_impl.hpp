@@ -1860,6 +1860,10 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             av_frame_free(&sw_picture);
             return false;
         }
+        if (av_frame_copy_props(sw_picture, picture) < 0)                                          // av_hwframe_transfer_data() copies pixels only: without the frame
+            CV_LOG_WARNING(NULL, "av_frame_copy_props failed, colorimetry falls back to defaults"); // properties, sws_scale_frame() applies BT.601 limited range whatever
+                                                                                                   // the stream signals (same as fftools/ffmpeg_dec.c). Not fatal: the
+                                                                                                   // picture is still usable. No effect with swscale < 8.12.100.
     }
 #endif
 
