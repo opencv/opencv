@@ -622,6 +622,9 @@ PyObject* PyInit_cv2()
 {
     import_array(); // from numpy
     PyObject* m = PyModule_Create(&cv2_moduledef);
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
     if (!init_body(m))
         return NULL;
     return m;
