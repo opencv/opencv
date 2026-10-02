@@ -365,9 +365,15 @@ public:
                     for (int j = last_reduced_axis - 1; j > 0; --j) {
                         if (projected_indices[j] < shape_src[reduced_axes[j]])
                             break;
-                        projected_indices[j] = 0;
+                        // Carry into the next reduced axis: the step of the wrapped
+                        // axis has to be subtracted before the step of the axis it
+                        // carries into is added, as done for the unprojected axes
+                        // below. Assigning it would drop the steps of all the
+                        // reduced axes above the one that just wrapped.
+                        projected_indices[j] -= shape_src[reduced_axes[j]];
+                        current_step -= shape_src[reduced_axes[j]] * steps_src[reduced_axes[j]];
                         ++projected_indices[j - 1];
-                        current_step = steps_src[reduced_axes[j - 1]];
+                        current_step += steps_src[reduced_axes[j - 1]];
                     }
                 }
             }
