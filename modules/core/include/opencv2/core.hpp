@@ -3078,7 +3078,8 @@ after every attempt. The best (minimum) value is chosen and the corresponding la
 compactness value are returned by the function. Basically, you can use only the core of the
 function, set the number of attempts to 1, initialize labels each time using a custom algorithm,
 pass them with the ( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best
-(most-compact) clustering.
+(most-compact) clustering. If the value is negative, the algorithm did not succeed, most likely
+because the input contains NaN or Inf.
 */
 CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,

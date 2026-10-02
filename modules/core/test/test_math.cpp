@@ -2545,8 +2545,13 @@ TEST(Core_KMeans, compactness)
     }
 }
 
-TEST(Core_KMeans, bad_input)
+CV_ENUM(KMeansFlags, KMEANS_PP_CENTERS, KMEANS_RANDOM_CENTERS)
+
+typedef testing::TestWithParam<KMeansFlags> Core_KMeans_BadInput;
+
+TEST_P(Core_KMeans_BadInput, bad_input)
 {
+    int flags = GetParam();
     const int N = 100;
     const int attempts = 4;
     const TermCriteria crit = TermCriteria(TermCriteria::COUNT, 5, 0); // low number of iterations
@@ -2557,21 +2562,41 @@ TEST(Core_KMeans, bad_input)
         SCOPED_TRACE("Huge value");
         data.at<Vec2f>(10, 0) = Vec2f(1e20f, 0);
         Mat labels, centers;
-        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+        EXPECT_LT(kmeans(data, K, labels, crit, attempts, flags, centers), 0.);
+        EXPECT_EQ(K, centers.rows);
+        EXPECT_EQ(N, labels.rows);
     }
     {
         SCOPED_TRACE("Negative value");
         data.at<Vec2f>(10, 0) = Vec2f(0, -1e20f);
         Mat labels, centers;
-        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+        EXPECT_LT(kmeans(data, K, labels, crit, attempts, flags, centers), 0.);
+        EXPECT_EQ(K, centers.rows);
+        EXPECT_EQ(N, labels.rows);
     }
     {
         SCOPED_TRACE("NaN");
         data.at<Vec2f>(10, 0) = Vec2f(0, std::numeric_limits<float>::quiet_NaN());
         Mat labels, centers;
-        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+        EXPECT_LT(kmeans(data, K, labels, crit, attempts, flags, centers), 0.);
+        EXPECT_EQ(K, centers.rows);
+        EXPECT_EQ(N, labels.rows);
+    }
+    {
+        SCOPED_TRACE("All NaN");
+        Mat nan_data(N, 1, CV_32FC2, Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+        Mat labels, centers;
+        EXPECT_LT(kmeans(nan_data, K, labels, crit, attempts, flags, centers), 0.);
+        EXPECT_EQ(K, centers.rows);
+        EXPECT_EQ(N, labels.rows);
+        nan_data.at<Vec2f>(0, 0) = Vec2f(0, 0);
+        EXPECT_LT(kmeans(nan_data, K, labels, crit, attempts, flags, centers), 0.);
+        EXPECT_EQ(K, centers.rows);
+        EXPECT_EQ(N, labels.rows);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(AllFlags, Core_KMeans_BadInput, KMeansFlags::all());
 
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {
