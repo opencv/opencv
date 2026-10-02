@@ -73,9 +73,16 @@ class HomographyEstimatorCallback CV_FINAL : public PointSetRegistrator::Callbac
 public:
     bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
-        Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
-        if( haveCollinearPoints(ms1, count) || haveCollinearPoints(ms2, count) )
-            return false;
+        Mat ms1 = _ms1.getMat();
+        Mat ms2 = _ms2.getMat();
+        // Subsets arrive complete, while each check examines only its last point.
+        for (int prefix = 3; prefix <= count; ++prefix)
+        {
+            if (haveCollinearPoints(ms1, prefix) || haveCollinearPoints(ms2, prefix))
+            {
+                return false;
+            }
+        }
 
         // We check whether the minimal set of points for the homography estimation
         // are geometrically consistent. We check if every 3 correspondences sets
@@ -129,12 +136,6 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
 
-        double LtL[9][9], W[9][1], V[9][9];
-        Mat _LtL( 9, 9, CV_64F, &LtL[0][0] );
-        Mat matW( 9, 1, CV_64F, W );
-        Mat matV( 9, 9, CV_64F, V );
-        Mat _H0( 3, 3, CV_64F, V[8] );
-        Mat _Htemp( 3, 3, CV_64F, V[7] );
         Point2d cM(0,0), cm(0,0), sM(0,0), sm(0,0);
 
         for( i = 0; i < count; i++ )
@@ -156,8 +157,9 @@ public:
             sM.y += fabs(M[i].y - cM.y);
         }
 
-        if( fabs(sm.x) < DBL_EPSILON || fabs(sm.y) < DBL_EPSILON ||
-            fabs(sM.x) < DBL_EPSILON || fabs(sM.y) < DBL_EPSILON )
+        const double epsilon = std::numeric_limits<double>::epsilon();
+        if( fabs(sm.x) < epsilon || fabs(sm.y) < epsilon ||
+            fabs(sM.x) < epsilon || fabs(sM.y) < epsilon )
             return 0;
         sm.x = count/sm.x; sm.y = count/sm.y;
         sM.x = count/sM.x; sM.y = count/sM.y;
@@ -167,21 +169,42 @@ public:
         Mat _invHnorm( 3, 3, CV_64FC1, invHnorm );
         Mat _Hnorm2( 3, 3, CV_64FC1, Hnorm2 );
 
-        _LtL.setTo(Scalar::all(0));
+        Mat A(2 * count, 9, CV_64F);
         for( i = 0; i < count; i++ )
         {
-            double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
-            double X = (M[i].x - cM.x)*sM.x, Y = (M[i].y - cM.y)*sM.y;
-            double Lx[] = { X, Y, 1, 0, 0, 0, -x*X, -x*Y, -x };
-            double Ly[] = { 0, 0, 0, X, Y, 1, -y*X, -y*Y, -y };
-            int j, k;
-            for( j = 0; j < 9; j++ )
-                for( k = j; k < 9; k++ )
-                    LtL[j][k] += Lx[j]*Lx[k] + Ly[j]*Ly[k];
+            const double x = (m[i].x - cm.x)*sm.x;
+            const double y = (m[i].y - cm.y)*sm.y;
+            const double X = (M[i].x - cM.x)*sM.x;
+            const double Y = (M[i].y - cM.y)*sM.y;
+            double* const rowX = A.ptr<double>(2 * i);
+            double* const rowY = A.ptr<double>(2 * i + 1);
+            rowX[0] = X;
+            rowX[1] = Y;
+            rowX[2] = 1;
+            rowX[3] = 0;
+            rowX[4] = 0;
+            rowX[5] = 0;
+            rowX[6] = -x*X;
+            rowX[7] = -x*Y;
+            rowX[8] = -x;
+            rowY[0] = 0;
+            rowY[1] = 0;
+            rowY[2] = 0;
+            rowY[3] = X;
+            rowY[4] = Y;
+            rowY[5] = 1;
+            rowY[6] = -y*X;
+            rowY[7] = -y*Y;
+            rowY[8] = -y;
         }
-        completeSymm( _LtL );
 
-        eigen( _LtL, matW, matV );
+        Mat W;
+        Mat Vt;
+        // Retain the full right nullspace only for an underdetermined system.
+        const int flags = SVD::MODIFY_A | (A.rows < A.cols ? SVD::FULL_UV : 0);
+        SVD::compute(A, W, noArray(), Vt, flags);
+        Mat _H0(3, 3, CV_64F, Vt.ptr<double>(8));
+        Mat _Htemp(3, 3, CV_64F, Vt.ptr<double>(7));
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
         _H0.convertTo(_model, _H0.type(), scaleFor(_H0.at<double>(2,2)));
@@ -729,36 +752,46 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     scale1 = std::sqrt(2.)/scale1;
     scale2 = std::sqrt(2.)/scale2;
 
-    Matx<double, 9, 9> A;
+    Mat A(count, 9, CV_64F);
 
     // form a linear system Ax=0: for each selected pair of points m1 & m2,
     // the row of A(=a) represents the coefficients of equation: (m2, 1)'*F*(m1, 1) = 0
-    // to save computation time, we compute (At*A) instead of A and then solve (At*A)x=0.
     for( i = 0; i < count; i++ )
     {
-        double x1 = (m1[i].x - m1c.x)*scale1;
-        double y1 = (m1[i].y - m1c.y)*scale1;
-        double x2 = (m2[i].x - m2c.x)*scale2;
-        double y2 = (m2[i].y - m2c.y)*scale2;
-        Vec<double, 9> r( x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1 );
-        A += r*r.t();
+        const double x1 = (m1[i].x - m1c.x)*scale1;
+        const double y1 = (m1[i].y - m1c.y)*scale1;
+        const double x2 = (m2[i].x - m2c.x)*scale2;
+        const double y2 = (m2[i].y - m2c.y)*scale2;
+        double* const row = A.ptr<double>(i);
+        row[0] = x2*x1;
+        row[1] = x2*y1;
+        row[2] = x2;
+        row[3] = y2*x1;
+        row[4] = y2*y1;
+        row[5] = y2;
+        row[6] = x1;
+        row[7] = y1;
+        row[8] = 1;
     }
 
-    Vec<double, 9> W;
-    Matx<double, 9, 9> V;
+    Mat W;
+    Mat VtLinear;
 
-    eigen(A, W, V);
+    // Decompose the source matrix directly to preserve its condition number.
+    // Retain the full right nullspace only for an underdetermined system.
+    const int flags = SVD::MODIFY_A | (A.rows < A.cols ? SVD::FULL_UV : 0);
+    SVDecomp(A, W, noArray(), VtLinear, flags);
 
-    for( i = 0; i < 9; i++ )
+    for( i = 0; i < W.rows; i++ )
     {
-        if( fabs(W[i]) < DBL_EPSILON )
+        if( fabs(W.at<double>(i)) < std::numeric_limits<double>::epsilon() )
             break;
     }
 
     if( i < 8 )
         return 0;
 
-    Matx33d F0( V.val + 9*8 ); // take the last column of v as a solution of Af = 0
+    Matx33d F0(VtLinear.ptr<double>(8)); // take the last row of Vt as a solution of Af = 0
 
     // make F0 singular (of rank 2) by decomposing it with SVD,
     // zeroing the last diagonal element of W and then composing the matrices back.

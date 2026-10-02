@@ -63,8 +63,8 @@ void epnp::choose_control_points(void)
   // Take C1, C2, and C3 from PCA on the reference points:
   Mat PW0(number_of_correspondences, 3, CV_64F);
 
-  double pw0tpw0[3 * 3] = {}, dc[3] = {}, uct[3 * 3] = {};
-  Mat PW0tPW0(3, 3, CV_64F, pw0tpw0);
+  double dc[3] = {};
+  double uct[3 * 3] = {};
   Mat DC(3, 1, CV_64F, dc);
   Mat UCt(3, 3, CV_64F, uct);
 
@@ -74,14 +74,20 @@ void epnp::choose_control_points(void)
       PW0row[j] = pws[3 * i + j] - cws[0][j];
   }
 
-  mulTransposed(PW0, PW0tPW0, true);
-  SVDecomp(PW0tPW0, DC, UCt, noArray(), SVD::MODIFY_A);
-  transpose(UCt, UCt);
+  SVDecomp(PW0, DC, noArray(), UCt, SVD::MODIFY_A);
 
-  for(int i = 1; i < 4; i++) {
-    double k = sqrt(dc[i - 1] / number_of_correspondences);
-    for(int j = 0; j < 3; j++)
-      cws[i][j] = cws[0][j] + k * uct[3 * (i - 1) + j];
+  // Equalize nearly collinear controls to retain their shorter distance constraints.
+  // Preserve the in-plane control scales of planar point sets.
+  const bool equalizeAxes = dc[1] <= dc[0] * std::sqrt(std::numeric_limits<double>::epsilon());
+  const double denominator = std::sqrt(number_of_correspondences);
+  for (int i = 1; i < 4; ++i)
+  {
+    const double controlScale = (equalizeAxes ? dc[0] : dc[i - 1]) /
+                                denominator;
+    for (int j = 0; j < 3; ++j)
+    {
+      cws[i][j] = cws[0][j] + controlScale * uct[3 * (i - 1) + j];
+    }
   }
 }
 
@@ -161,14 +167,14 @@ void epnp::compute_pose(Mat& R, Mat& t)
   for(int i = 0; i < number_of_correspondences; i++)
     fill_M(M, 2 * i, &alphas[0] + 4 * i, us[2 * i], us[2 * i + 1]);
 
-  double mtm[12 * 12] = {}, d[12] = {}, ut[12 * 12] = {};
-  Mat MtM(12, 12, CV_64F, mtm);
+  double d[12] = {};
+  double ut[12 * 12] = {};
   Mat D(12,  1, CV_64F, d);
   Mat Ut(12, 12, CV_64F, ut);
 
-  mulTransposed(M, MtM, true);
-  SVDecomp(MtM, D, Ut, noArray(), SVD::MODIFY_A);
-  transpose(Ut, Ut);
+  // Retain the full right nullspace only for an underdetermined system.
+  const int flags = SVD::MODIFY_A | (M.rows < M.cols ? SVD::FULL_UV : 0);
+  SVDecomp(M, D, noArray(), Ut, flags);
 
   double l_6x10[6 * 10] = {}, rho[6] = {};
   Mat L_6x10(6, 10, CV_64F, l_6x10);
@@ -269,9 +275,10 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
   const double det = determinant(mR);
 
   if (det < 0) {
-    R[2][0] = -R[2][0];
-    R[2][1] = -R[2][1];
-    R[2][2] = -R[2][2];
+    // Correct the least constrained singular direction to obtain a proper rotation.
+    constexpr int leastConstrainedAxis = 2;
+    ABt_U.col(leastConstrainedAxis) *= -1.0;
+    gemm(ABt_U, ABt_Vt, 1, noArray(), 0, mR);
   }
 
   t[0] = pc0[0] - dot(R[0], pw0);

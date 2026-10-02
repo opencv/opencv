@@ -1062,17 +1062,12 @@ void homographyHO(InputArray _srcPoints, InputArray _targPoints, Matx33d& H)
         D.at<double>(i + n, 2) = My.at<double>(i, 2) - Ey.at<double>(i, 2);
     }
 
-    Mat DT, DDT;
-    transpose(D, DT);
-    DDT = DT * D;
+    Mat singularValues;
+    Mat rightSingularVectors;
+    SVD::compute(D, singularValues, noArray(), rightSingularVectors,
+                 SVD::MODIFY_A);
 
-    Mat S, U;
-    eigen(DDT, S, U);
-
-    Mat h789(3, 1, CV_64FC1);
-    h789.at<double>(0, 0) = U.at<double>(2, 0);
-    h789.at<double>(1, 0) = U.at<double>(2, 1);
-    h789.at<double>(2, 0) = U.at<double>(2, 2);
+    Mat h789 = rightSingularVectors.row(2).t();
 
     Mat h12 = -Bx * h789;
     Mat h45 = -By * h789;
