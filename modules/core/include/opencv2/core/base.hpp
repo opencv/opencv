@@ -306,7 +306,10 @@ inline int cv_abs(uchar x) { return x; }
 inline int cv_abs(schar x) { return std::abs(x); }
 inline int cv_abs(ushort x) { return x; }
 inline int cv_abs(short x) { return std::abs(x); }
-inline unsigned cv_abs(int x) { return (unsigned)std::abs(x); }
+// std::abs(INT_MIN) is undefined - its result is not representable in int - and optimized
+// builds have turned the overflow into a negative contribution in callers that accumulate
+// magnitudes. Negate in unsigned, where INT_MIN's magnitude is an ordinary value.
+inline unsigned cv_abs(int x) { return x < 0 ? 0u - (unsigned)x : (unsigned)x; }
 inline unsigned cv_abs(unsigned x) { return x; }
 inline uint64 cv_abs(uint64 x) { return x; }
 inline uint64 cv_abs(int64 x) { return (uint64)std::abs(x); }

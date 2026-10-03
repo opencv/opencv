@@ -3027,6 +3027,36 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
+// An L1 norm is a sum of magnitudes, so it is never negative and never depends on how many
+// elements sit beside a given one. CV_32S broke both rules: the vector body widened through float,
+// which rounds every |x| > 2^24 before it is accumulated, and the scalar paths reached INT_MIN
+// through cv_abs(), whose std::abs(INT_MIN) is undefined and came out negative in optimized builds.
+// Lengths straddle the vector width so the body, the tail and the two together are all covered.
+typedef testing::TestWithParam< tuple<int, int, bool> > Core_NormL1_32S;
+
+TEST_P(Core_NormL1_32S, exact_and_non_negative)
+{
+    const int  value  = get<0>(GetParam());
+    const int  len    = get<1>(GetParam());
+    const bool masked = get<2>(GetParam());
+
+    Mat src(1, len, CV_32S, Scalar(value));
+    Mat mask = masked ? Mat(1, len, CV_8U, Scalar(255)) : Mat();
+
+    const double got = cv::norm(src, NORM_L1, mask);
+    const double expected = (double)len * std::abs((double)value);  // exact: |int32| <= 2^31 < 2^53
+
+    EXPECT_GE(got, 0.0) << "an L1 norm cannot be negative";
+    EXPECT_DOUBLE_EQ(expected, got)
+        << "value " << value << ", length " << len << (masked ? ", masked" : "");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_32S,
+    testing::Combine(
+        testing::Values(INT_MIN, INT_MAX, 16777217, 1073741825, -1073741825, 1000),
+        testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
+        testing::Bool()));
+
 TEST(Core_Norm, NORM_L2SQR_16SC4_large)
 {
     const int sizes[] = {1, 116, 40};
