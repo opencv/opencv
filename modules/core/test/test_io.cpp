@@ -1082,6 +1082,21 @@ TEST(Core_InputOutput, filestorage_json_comment)
     EXPECT_EQ(str, String("value"));
 }
 
+TEST(Core_InputOutput, filestorage_json_escape_string)
+{
+    const String value = "O'Reilly\x01";
+    FileStorage writer("test.json", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "text" << value;
+    const String json = writer.releaseAndGetString();
+
+    EXPECT_NE(String::npos, json.find("\"text\": \"O'Reilly\\u0001\""));
+
+    FileStorage reader(json, FileStorage::READ | FileStorage::MEMORY);
+    String restored;
+    reader["text"] >> restored;
+    EXPECT_EQ(value, restored);
+}
+
 TEST(Core_InputOutput, filestorage_utf8_bom)
 {
     EXPECT_NO_THROW(
