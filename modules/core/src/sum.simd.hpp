@@ -228,6 +228,7 @@ template<> struct Sum_SIMD<T, ST> \
 };
 
 DEFINE_SUM_SIMD_32(int, double, int64, v_float64)
+DEFINE_SUM_SIMD_32(unsigned, double, int64, v_float64)
 DEFINE_SUM_SIMD_32(float, double, int64, v_float64)
 #endif
 #endif
