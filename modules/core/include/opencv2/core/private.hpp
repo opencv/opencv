@@ -137,6 +137,9 @@ inline int cvAlign( int size, int align )
 
 namespace cv
 {
+//! Writes `s` into `buf` as one element of `type`, then repeats that element until `unroll_to`
+//! values have been written. A cv::Scalar holds 4 values, so channels past the 4th are set to 0.
+//! `buf` must have room for max(CV_MAT_CN(type), unroll_to) values of CV_MAT_DEPTH(type).
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 
 //! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call.
