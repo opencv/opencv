@@ -191,11 +191,11 @@ Ptr<MappedFile> MappedFile::open(const Ptr<MappedSource>& src, size_t offset, si
                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (f == INVALID_HANDLE_VALUE)
         return Ptr<MappedFile>();
-    HANDLE m = CreateFileMappingW(f, NULL, PAGE_READONLY, 0, 0, NULL);
+    HANDLE m = CreateFileMappingW(f, NULL, PAGE_WRITECOPY, 0, 0, NULL);
     if (m)
     {
         const uint64_t off = (uint64_t)viewOffset;
-        p = MapViewOfFile(m, FILE_MAP_READ,
+        p = MapViewOfFile(m, FILE_MAP_COPY,
                           (DWORD)(off >> 32), (DWORD)(off & 0xFFFFFFFFu), viewLength);
         CloseHandle(m);
     }
@@ -206,7 +206,7 @@ Ptr<MappedFile> MappedFile::open(const Ptr<MappedSource>& src, size_t offset, si
     int fd = ::open(src->path_.c_str(), O_RDONLY);
     if (fd < 0)
         return Ptr<MappedFile>();
-    p = mmap(NULL, viewLength, PROT_READ, MAP_PRIVATE, fd, (off_t)viewOffset);
+    p = mmap(NULL, viewLength, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, (off_t)viewOffset);
     // The mapping carries its own reference, so a model split across one file per tensor never
     // accumulates descriptors.
     ::close(fd);

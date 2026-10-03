@@ -376,15 +376,15 @@ public:
                 netimpl && netimpl->mainGraph) {
                 wshape0 = shape(blobs[0]);
 #ifdef HAVE_CUDA
-                // initCUDA() reads B after finalize(), so keep it only when this net targets
-                // CUDA; a CPU net on a CUDA build frees it like any other.
-                if (origWeights.empty() && netimpl->preferableBackend == DNN_BACKEND_CUDA &&
-                    supportBackend(DNN_BACKEND_CUDA))
-                    origWeights = blobs[0];
+                // initCUDA() reads B after finalize(), so a net targeting CUDA keeps it.
+                if (netimpl->preferableBackend != DNN_BACKEND_CUDA ||
+                    !supportBackend(DNN_BACKEND_CUDA))
 #endif
-                blobs[0].release();
-                // A recycled address would compare equal and skip the repack.
-                last_packed_blob_data = nullptr;
+                {
+                    blobs[0].release();
+                    // A recycled address would compare equal and skip the repack.
+                    last_packed_blob_data = nullptr;
+                }
             }
         }
 
@@ -640,7 +640,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<cuda::GpuMatND> inputs;
         inputs_.getGpuMatNDVector(inputs);
-        auto B = blobs[0].empty() ? origWeights : blobs[0];
+        auto B = blobs[0];
         CV_CheckFalse(B.empty(), "DNN/Gemm/Cuda: input B (weight) was released and not retained");
         auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
@@ -800,7 +800,6 @@ private:
     int real_ndims_C;
     FastGemmOpt opt;
     const uchar* last_packed_blob_data = nullptr;
-    Mat origWeights;  // original B (FP32), kept for the CUDA path
     MatShape wshape0;
 };
 

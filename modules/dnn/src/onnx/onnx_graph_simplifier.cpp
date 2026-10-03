@@ -2016,7 +2016,14 @@ static bool mapExternalTensor(const opencv_onnx::TensorProto& tensor_proto, bool
     if (length != (size_t)-1 && length < payload)
         return false;
 
-    Ptr<MappedFile> view = MappedFile::open(cache.open(full_path), offset, payload);
+    Ptr<MappedSource> src = cache.open(full_path);
+    if (src.empty())
+        return false;
+    // Only the payload is mapped; the declared length still needs the copy path's bounds check.
+    if (length != (size_t)-1 && (offset > src->fileSize() || length > src->fileSize() - offset))
+        return false;
+
+    Ptr<MappedFile> view = MappedFile::open(src, offset, payload);
     if (view.empty())
         return false;
 

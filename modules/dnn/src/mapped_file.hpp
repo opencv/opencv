@@ -31,7 +31,7 @@ private:
     size_t fileSize_ = 0;
 };
 
-// One constant's bytes as a Mat header over the file. Read-only: no commit charge.
+// One constant's bytes as a Mat header over the file. Copy-on-write: a Mat is always writable.
 class MappedFile
 {
 public:
