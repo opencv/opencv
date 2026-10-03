@@ -21,6 +21,9 @@ struct ModelFusionAttention
 
     void fuse()
     {
+        // A const weight is owned by both blobs and __tensors__; dropping the table handle
+        // first lets the sources removed below be freed at setProg() instead of passes later.
+        netimpl->releaseUnusedConsts();
         fuseGraph(netimpl->mainGraph);
     }
 
@@ -467,10 +470,11 @@ struct ModelFusionAttention
                 collectShapeChain(prog, it->second, extra_ops);
         }
 
-        // W is already laid out as [Q|K|V] along the output dim.
-        Mat W_qkv = W.clone();
+        // W is already laid out as [Q|K|V] along the output dim, and the layer never writes its
+        // blobs, so the fused weight can alias it.
+        Mat W_qkv = W;
         Mat bias_qkv;
-        if (has_bias) bias_qkv = bias_mat.clone();
+        if (has_bias) bias_qkv = bias_mat;
 
         // Attention `scale` is the pre-softmax divisor; Q was multiplied by
         // q_scale, so scale = 1/q_scale.
@@ -511,7 +515,7 @@ struct ModelFusionAttention
         if (!removalIsSelfContained(prog, to_remove, attn_out_args))
             return false;
 
-        for (int op : to_remove) removed_ops.insert(op);
+        dropReplacedOps(prog, to_remove, removed_ops);
         const int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
         return true;
@@ -645,7 +649,7 @@ struct ModelFusionAttention
                 }
             }
             if (!got_bias || !got_runtime2) return -1;
-            out_bias = netimpl->argTensor(bias_arg).clone();
+            out_bias = netimpl->argTensor(bias_arg);
             ops_consumed.insert(next_idx);
             mm_idx = stepProducer(matmul_out_arg);
         } else {
@@ -656,10 +660,10 @@ struct ModelFusionAttention
         if (!dynamic_cast<MatMulLayer*>(prog[mm_idx].get())) return -1;
         if (prog[mm_idx]->blobs.empty()) return -1;
         if (prog[mm_idx]->inputs.size() != 1) return -1;
-        out_W = prog[mm_idx]->blobs[0].clone();
+        out_W = prog[mm_idx]->blobs[0];
         // Folded MatMul carries bias as a second blob (real_ndims_C >= 1).
         if (out_bias.empty() && prog[mm_idx]->blobs.size() >= 2)
-            out_bias = prog[mm_idx]->blobs.back().clone();
+            out_bias = prog[mm_idx]->blobs.back();
         return mm_idx;
     }
 
@@ -806,7 +810,7 @@ struct ModelFusionAttention
         if (!removalIsSelfContained(prog, to_remove, attn_out_args))
             return false;
 
-        for (int op : to_remove) removed_ops.insert(op);
+        dropReplacedOps(prog, to_remove, removed_ops);
         int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
         return true;
@@ -831,6 +835,18 @@ struct ModelFusionAttention
             }
         }
         return true;
+    }
+
+    // The fused weight is built by the time a block commits, so its sources are dead. Clearing
+    // at the commit point keeps at most one block's duplicate live.
+    void dropReplacedOps(const vector<Ptr<LayerInfo>>& prog, const std::set<int>& to_remove,
+                         std::set<int>& removed_ops) const
+    {
+        for (int op : to_remove) {
+            removed_ops.insert(op);
+            if (op >= 0 && op < (int)prog.size() && prog[op])
+                prog[op]->blobs.clear();
+        }
     }
 
     bool fuseGraph(Ptr<Graph>& graph)
@@ -1178,8 +1194,7 @@ struct ModelFusionAttention
                     if (!removalIsSelfContained(prog, to_remove, attn_out_args))
                         continue;
 
-                    for (int op : to_remove)
-                        removed_ops.insert(op);
+                    dropReplacedOps(prog, to_remove, removed_ops);
 
                     int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
                     attention_replacements_.push_back({insert_pos, attn_layer});

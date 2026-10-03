@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 
 #include <type_traits>
@@ -122,6 +123,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (!b1d) out.push_back(N);
     }
 
+    // finalize() drops B once it is packed, so its shape has to outlive the blob
+    MatShape constBShape() const {
+        return blobs[0].empty() ? wshape0 : shape(blobs[0]);
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
@@ -130,7 +136,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_CheckGE(num_inputs, 2, "DNN/MatMul: two inputs at least");
         CV_CheckLE(num_inputs, 3, "DNN/MatMul: three inputs at most");
 
-        const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
+        const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : constBShape();
         CV_CheckGE(shape_A.size(), static_cast<size_t>(1), "DNN/MatMul: invalid shape of input A");
         CV_CheckGE(shape_B.size(), static_cast<size_t>(1), "DNN/MatMul: invalid shape of input B");
 
@@ -182,7 +188,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_Assert(!inputs.empty());
         // Promote 1-D operands so shape.size()-2 can't underflow on a 1-D input.
         MatShape shape_Ap, shape_Bp, full_shape, out_shape;
-        matmulShapes(inputs[0], blobs.empty() ? inputs[1] : shape(blobs[0]),
+        matmulShapes(inputs[0], blobs.empty() ? inputs[1] : constBShape(),
                      trans_a, trans_b, shape_Ap, shape_Bp, full_shape, out_shape);
         int mA = shape_Ap[shape_Ap.size() - 2], nA = shape_Ap.back();
         int M = trans_a ? nA : mA;
@@ -209,7 +215,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         outputs_arr.getMatVector(outputs);
 
         MatShape A_shape, B_shape, C_shape, out_shape;
-        matmulShapes(shape(inputs[0]), blobs.empty() ? shape(inputs[1]) : shape(blobs[0]),
+        matmulShapes(shape(inputs[0]), blobs.empty() ? shape(inputs[1]) : constBShape(),
                      trans_a, trans_b, A_shape, B_shape, C_shape, out_shape);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
 
@@ -221,7 +227,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         }
 
         // Pack only 2D weight matrices; skip higher-dim tensors (e.g. Q@K^T in attention).
-        const Mat* B_mat = !blobs.empty() ? &blobs[0] :
+        // An already-released B yields nullptr: it is packed and has nothing left to pack from.
+        const Mat* B_mat = !blobs.empty() ? (blobs[0].empty() ? nullptr : &blobs[0]) :
                            (inputs.size() >= 2 && inputs[1].dims == 2 ? &inputs[1] : nullptr);
 
         // A constant rank-1 weight ([K] in the logical [M, K] @ [K] -> [M] contract) is
@@ -251,6 +258,18 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 helper.updatePackedBOffsets(packed_input_B.size());
             }
             last_packed_input_B_data = B_mat->data;
+
+            // The packed copy is what the kernels read from here on; the original is dead weight.
+            // A layer built outside a Net holds the only copy, so it keeps it.
+            Net::Impl* netimpl = getNetImpl(this);
+            if (!blobs.empty() && B_mat->type() == CV_32F &&
+                (!packed_input_B.empty() || !thin_packed_B.empty()) &&
+                netimpl && netimpl->mainGraph) {
+                wshape0 = shape(blobs[0]);
+                blobs[0].release();
+                // A recycled address would compare equal and skip the repack.
+                last_packed_input_B_data = nullptr;
+            }
         }
 
         // broadcast bias if needed
@@ -677,6 +696,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         auto input_B = Mat(), bias = Mat();
         if (!blobs.empty()) {
             input_B = blobs.front();
+            CV_CheckFalse(input_B.empty(), "DNN/MatMul/CUDA: constant B was released");
             if (blobs.size() >= 2) {
                 bias = broadcast_bias;
             }
@@ -755,6 +775,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     Mat broadcast_bias;
 
     const uchar* last_packed_input_B_data = nullptr;
+    MatShape wshape0;
 
     FastGemmOpt opt;
     MatMulHelper helper;
