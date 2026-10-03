@@ -51,7 +51,6 @@ private:
 public:
     const char* name;
     bool outputarg;
-    bool arithm_op_src;
     bool pathlike;
     bool nd_mat;
     // more fields may be added if necessary
@@ -59,7 +58,6 @@ public:
     ArgInfo(const char* name_, uint32_t arg_) :
         name(name_),
         outputarg((arg_ & arg_outputarg_flag) != 0),
-        arithm_op_src((arg_ & arg_arithm_op_src_flag) != 0),
         pathlike((arg_ & arg_pathlike_flag) != 0),
         nd_mat((arg_ & arg_nd_mat_flag) != 0) {}
 
