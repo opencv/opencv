@@ -71,8 +71,24 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
 #endif
 
     const int NK1 = N * K1;
-    parallel_for_(Range(0, NK1), [&](const Range& range) {
-        for (int nk1 = range.start; nk1 < range.end; nk1++) {
+
+    // NK1 alone can be too few tasks; split the spatial range too. Safe without
+    // sync -- the loop gathers, not scatters, so each opos_flat owns one slot.
+    const int nSpatChunks   = computeSpatChunks(NK1, ospatial);
+    const int spatChunkSize = (ospatial + nSpatChunks - 1) / nSpatChunks;
+    const int total_tasks   = NK1 * nSpatChunks;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        for (int task = range.start; task < range.end; task++) {
+            // nk1-major/chunk-minor keeps a thread's slice within one (n,k1) block,
+            // weights hot and out_k1 writes contiguous.
+            const int nk1   = task / nSpatChunks;
+            const int chunk = task % nSpatChunks;
+
+            const int opos_begin = chunk * spatChunkSize;
+            const int opos_end   = std::min(opos_begin + spatChunkSize, ospatial);
+            if (opos_begin >= opos_end) continue;
+
             const int n  = nk1 / K1;
             const int k1 = nk1 % K1;
 
@@ -94,7 +110,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
             }
 #endif
 
-            for (int opos_flat = 0; opos_flat < ospatial; opos_flat++) {
+            for (int opos_flat = opos_begin; opos_flat < opos_end; opos_flat++) {
                 float* out_ptr = out_k1 + opos_flat * C0;
 
                 // Bias init: write currK0 valid lanes + zero-pad the rest.

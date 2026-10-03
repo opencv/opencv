@@ -43,8 +43,10 @@ void producerOf(const vector<Ptr<LayerInfo> >& prog, int nargs, vector<int>& pro
 class ChainFuser
 {
 public:
-    ChainFuser(Net::Impl& net, const Ptr<Graph>& graph, const vector<int>& usecounts)
-        : net_(net), graph_(graph), usecounts_(usecounts)
+    ChainFuser(Net::Impl& net, const Ptr<Graph>& graph, const vector<int>& usecounts,
+               bool transformLayoutOnly)
+        : net_(net), graph_(graph), usecounts_(usecounts),
+          transformLayoutOnly_(transformLayoutOnly)
     {
         CV_Assert((int)usecounts_.size() == (int)net_.args.size());
         claimed_.assign(prog().size(), false);
@@ -131,12 +133,13 @@ private:
 
     //! Producer must precede @p anchor and the arg must not be a graph output. No type check:
     //! an intermediate's ArgData is filled only at run time, so a gate here rejects them all.
+    //! The TransformLayout pass also takes a graph input (no producer), e.g. a skip connection.
     bool isFusableTensorArg(Arg a, size_t anchor) const
     {
         if (a.idx <= 0 || a.idx >= (int)producerOf_.size())
             return false;
         const int prod = producerOf_[a.idx];
-        if (prod < 0 || prod >= (int)anchor)
+        if ((prod < 0 && !transformLayoutOnly_) || prod >= (int)anchor)
             return false;
         return externalArgs_.find(a.idx) == externalArgs_.end();
     }
@@ -326,6 +329,10 @@ private:
             const FusionOps* anchorOps = fusionOpsFor(anchor);
             if (!anchorOps || !anchorOps->absorb)
                 continue;
+            // Conv also takes tensor operands, but it was already offered its chains before
+            // the snapshot; after useBlockLayout() only the new TransformLayout nodes are.
+            if (transformLayoutOnly_ && !dynamic_cast<TransformLayoutLayer*>(anchor))
+                continue;
 
             ChainCandidate c;
             c.layerIdx.push_back((int)i);
@@ -424,6 +431,7 @@ private:
     Net::Impl& net_;
     const Ptr<Graph>& graph_;
     const vector<int>& usecounts_;
+    const bool transformLayoutOnly_;
 
     AdjacencyGraphBuilder arena_;
     Ptr<AdjacencyGraph>   arenaPtr_;
@@ -436,7 +444,7 @@ private:
 };
 
 bool fuseChainsInGraph(Net::Impl& net, const Ptr<Graph>& graph,
-                       const vector<int>& usecounts)
+                       const vector<int>& usecounts, bool transformLayoutOnly)
 {
     if (!graph)
         return false;
@@ -446,7 +454,7 @@ bool fuseChainsInGraph(Net::Impl& net, const Ptr<Graph>& graph,
         if (!layer) continue;
         if (vector<Ptr<Graph> >* subs = layer->subgraphs()) {
             for (Ptr<Graph>& g : *subs) {
-                if (fuseChainsInGraph(net, g, usecounts))
+                if (fuseChainsInGraph(net, g, usecounts, transformLayoutOnly))
                     subFused = true;
             }
         }
@@ -456,7 +464,7 @@ bool fuseChainsInGraph(Net::Impl& net, const Ptr<Graph>& graph,
     if (subFused)
         net.useCounts(recounted);
 
-    ChainFuser fuser(net, graph, subFused ? recounted : usecounts);
+    ChainFuser fuser(net, graph, subFused ? recounted : usecounts, transformLayoutOnly);
     const bool fusedHere = fuser.fuse();
     return fusedHere || subFused;
 }
@@ -488,7 +496,7 @@ void Net::Impl::fuseChains()
         vector<int> usecounts;
         for (int iter = 0; iter < 10; iter++) {
             useCounts(usecounts);
-            if (!fuseChainsInGraph(*this, mainGraph, usecounts))
+            if (!fuseChainsInGraph(*this, mainGraph, usecounts, false))
                 break;
         }
     }
@@ -496,6 +504,17 @@ void Net::Impl::fuseChains()
     // Leaves a whole layer behind rather than handing math to a sink, so unlike the
     // chain pass it is not restricted to the CPU path.
     fuseInstanceNormAffine();
+}
+
+void Net::Impl::fuseTransformLayoutChains()
+{
+    // Chain pass only: the passes above already ran before the snapshot. TransformLayout
+    // absorbs a single Add, so there is no next step to expose and one round is enough.
+    if (!mainGraph || IS_DNN_OPENCL_TARGET(preferableTarget))
+        return;
+    vector<int> usecounts;
+    useCounts(usecounts);
+    fuseChainsInGraph(*this, mainGraph, usecounts, true);
 }
 
 CV__DNN_INLINE_NS_END

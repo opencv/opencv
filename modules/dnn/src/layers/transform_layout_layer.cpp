@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../adjacency_graph.hpp"
 
 #if defined(__AVX2__)
 #include <immintrin.h>
@@ -253,7 +254,7 @@ TransformLayoutFunc getTransformLayoutFunc(DataLayout inplayout, DataLayout outl
 void transformLayout(const Mat& inp, Mat& out,
                      DataLayout outlayout,
                      DataLayout defaultLayout,
-                     int C0)
+                     int C0, const Mat& residual)
 {
     CV_Assert(defaultLayout == DATA_LAYOUT_NCHW || defaultLayout == DATA_LAYOUT_NHWC);
     CV_Assert(outlayout == DATA_LAYOUT_BLOCK || outlayout == DATA_LAYOUT_NCHW || outlayout == DATA_LAYOUT_NHWC);
@@ -271,11 +272,22 @@ void transformLayout(const Mat& inp, Mat& out,
     MatShape outshape = inferTransformLayoutShape(inpshape, outlayout, defaultLayout, C0);
     out.fit(outshape, inp.type());
 
+    // A residual is only fused into a float32 conversion to NCHW, with the exact output shape.
+    const bool addResidual = !residual.empty();
+    if (addResidual) {
+        CV_Assert(outlayout == DATA_LAYOUT_NCHW);
+        CV_Assert(inp.type() == CV_32F && residual.type() == CV_32F);
+        CV_Assert(residual.size == out.size && residual.isContinuous());
+    }
+
     if (inp.empty())
         return;
 
     if (inplayout == outlayout) {
-        inp.copyTo(out);
+        if (addResidual)
+            add(inp, residual, out);
+        else
+            inp.copyTo(out);
         return;
     }
 
@@ -315,6 +327,7 @@ void transformLayout(const Mat& inp, Mat& out,
         bool interleave = inplayout == DATA_LAYOUT_NCHW;
         const uint8_t* inptr = (const uint8_t*)inp.data;
         uint8_t* outptr = (uint8_t*)out.data;
+        const uint8_t* resptr = residual.data;
 
         for (int chunk = range.start; chunk < range.end; chunk += dchunk)
         {
@@ -334,6 +347,12 @@ void transformLayout(const Mat& inp, Mat& out,
             }
 
             kernel(inptr + inpofs, outptr + outofs, C, planesize, nc, nzc, dlen);
+            if (addResidual) {
+                // The chunk just written is nzc NCHW rows of dlen floats, planesize apart.
+                size_t step = planesize * sizeof(float);
+                Mat dst(nzc, (int)dlen, CV_32F, outptr + outofs, step);
+                add(dst, Mat(nzc, (int)dlen, CV_32F, (void*)(resptr + outofs), step), dst);
+            }
         }
     }, nstripes);
 }
@@ -343,6 +362,7 @@ class TransformLayoutLayerImpl : public TransformLayoutLayer
 public:
     TransformLayoutLayerImpl(const LayerParams& params)
     {
+        registerFusionOpsOnce<TransformLayoutLayerImpl>({ nullptr, &absorbOp, true });
         setParamsFrom(params);
         layout = (DataLayout)params.get<int>("layout");
         C0 = params.get<int>("C0", 1);
@@ -365,10 +385,33 @@ public:
         return false;
     }
 
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
+    {
+        return static_cast<TransformLayoutLayerImpl*>(self)->absorbMath(expr);
+    }
+
+    // Accepts exactly ADD(INPUT, TENSOR); the residual is wired on as a real
+    // input by fuseLongestChains(), not here.
+    bool absorbMath(const Ptr<AdjacencyGraph>& expr)
+    {
+        if (fusedAdd || !expr || expr->size() != 3 || layout != DATA_LAYOUT_NCHW)
+            return false;
+        const std::vector<FusionNode>& nd = expr->nodes();
+        const FusionNode& root = nd[expr->outputNode()];
+        if (root.op != FusionEltwiseOp::ADD || root.inputs.size() != 2)
+            return false;
+        if (root.inputs[0] != 0 || nd[root.inputs[1]].op != FusionEltwiseOp::TENSOR)
+            return false;
+        if (expr->tensorArgs.size() != 1)
+            return false;
+        fusedAdd = true;
+        return true;
+    }
+
     virtual int64_t getFLOPS(const std::vector<MatShape> &inputs,
                              const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs.size() == (fusedAdd ? 2u : 1u));
         CV_Assert(outputs.size() == 1);
         // probably, there should be a coefficient in the case of complex reduction functions
         return (int64_t)std::max(inputs[0].total(), outputs[0].total());
@@ -380,7 +423,7 @@ public:
                           std::vector<MatType>& temptypes) const CV_OVERRIDE
     {
         int ninputs = (int)inptypes.size();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2 : 1));
 
         outtypes.assign(1, inptypes[0]);
         temptypes.clear();
@@ -398,9 +441,14 @@ public:
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
         size_t ninputs = inpshapes.size();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2u : 1u));
 
-        outshapes.assign(1, inferShape(inpshapes[0]));
+        MatShape outshape = inferShape(inpshapes[0]);
+        // Shapes aren't known when the Add is fused, so a broadcasting residual can
+        // show up here; the result then takes the Add's broadcast shape.
+        if (fusedAdd && inpshapes[1] != outshape)
+            outshape = outshape.expand(inpshapes[1]);
+        outshapes.assign(1, outshape);
         tempshapes.clear();
         return true;
     }
@@ -414,7 +462,7 @@ public:
                  OutputArrayOfArrays) CV_OVERRIDE
     {
         size_t ninputs = inputs_arr.total();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs == (fusedAdd ? 2u : 1u));
 
         int inptype = inputs_arr.type(0);
         MatShape inpshape = inputs_arr.shape(0);
@@ -427,10 +475,15 @@ public:
             Mat inp = inputs_arr.getMat(0);
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
-            outs[0].fit(outshape, inptype);
-            runOp(inp, outs[0]);
+            if (fusedAdd) {
+                runOpAdd(inp, inputs_arr.getMat(1), outs[0]);
+            } else {
+                outs[0].fit(outshape, inptype);
+                runOp(inp, outs[0]);
+            }
         } else {
             // [TODO] more efficient OpenCL implementation
+            // fusedAdd is never set here: fuseChains() refuses to run on an OpenCL target.
             Mat inp = inputs_arr.getMat(0);
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
@@ -458,6 +511,34 @@ public:
         CV_Assert(err == 0.);
 #endif
     }
+
+    void runOpAdd(const Mat& inp, const Mat& residual, Mat& out)
+    {
+        CV_Assert(layout == DATA_LAYOUT_NCHW);
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        MatShape outshape = inferShape(inp.shape());
+
+        if (residual.shape() == outshape && inp.type() == CV_32F && residual.type() == CV_32F) {
+            // Fused path. The conversion writes out before reading the residual,
+            // so the buffers must not alias.
+            CV_Assert(out.data != inp.data && out.data != residual.data);
+            transformLayout(inp, out, layout, origLayout, C0, residual);
+            return;
+        }
+
+        // Broadcasting (or non-float) residual: do exactly what the fused-away Add did.
+        Mat converted;
+        transformLayout(inp, converted, layout, origLayout, C0);
+        MatShape addshape = outshape.expand(residual.shape());
+        Mat a, b;
+        if (converted.shape() == addshape) a = converted; else broadcast(converted, addshape, a);
+        if (residual.shape() == addshape)  b = residual;  else broadcast(residual, addshape, b);
+        add(a, b, out);
+    }
+
+private:
+    // Set by absorbMath() when a following elementwise Add has been folded in.
+    bool fusedAdd = false;
 };
 
 Ptr<TransformLayoutLayer> TransformLayoutLayer::create(const LayerParams& params)
