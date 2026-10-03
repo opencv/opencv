@@ -1027,16 +1027,24 @@ namespace CV__SIMD_NAMESPACE {
 //! is exact, because the result is a non-negative integer below 2^32 and so well inside the 2^53
 //! that a double represents exactly. The whole conversion is therefore exact over the full uint32
 //! range - unlike routing through float, which loses bits above 2^24.
+//
+// The calls below are qualified because these two overloads hide the backend's v_cvt_f64() inside
+// this namespace. Where v_int32 is a class type that is covered by argument-dependent lookup, but
+// on the scalable backends it is a builtin vector type, which ADL does not reach.
 inline v_float64 v_cvt_f64(const v_uint32& a)
 {
-    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(0x80000000u)));
-    return v_add(v_cvt_f64(biased), vx_setall_f64(2147483648.0));
+    const unsigned  sign_bit = 0x80000000u;    // 2^31, as a uint32 bit pattern
+    const double    bias     = 2147483648.0;   // 2^31, exactly representable in double
+    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(sign_bit)));
+    return v_add(cv::v_cvt_f64(biased), vx_setall_f64(bias));
 }
 
 inline v_float64 v_cvt_f64_high(const v_uint32& a)
 {
-    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(0x80000000u)));
-    return v_add(v_cvt_f64_high(biased), vx_setall_f64(2147483648.0));
+    const unsigned  sign_bit = 0x80000000u;    // 2^31, as a uint32 bit pattern
+    const double    bias     = 2147483648.0;   // 2^31, exactly representable in double
+    const v_int32 biased = v_reinterpret_as_s32(v_xor(a, vx_setall_u32(sign_bit)));
+    return v_add(cv::v_cvt_f64_high(biased), vx_setall_f64(bias));
 }
 #endif
 
