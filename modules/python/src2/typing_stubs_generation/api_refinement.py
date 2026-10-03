@@ -10,7 +10,8 @@ from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     TupleTypeNode, UnionTypeNode, ProtocolClassNode,
                     DictTypeNode, ClassTypeNode, AliasRefTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
-                        for_each_function_overload)
+                        for_each_function_overload, ScopeNotFoundError,
+                        SymbolNotFoundError)
 from .types_conversion import create_type_node
 
 
@@ -24,7 +25,11 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     builtin_exception.is_exported = False
     root.add_class("error", (builtin_exception, ), ERROR_CLASS_PROPERTIES)
     for symbol_name, refine_symbol in NODES_TO_REFINE.items():
-        refine_symbol(root, symbol_name)
+        try:
+            refine_symbol(root, symbol_name)
+        except (ScopeNotFoundError, SymbolNotFoundError):
+            # Function is not part of this build, e.g. its module is disabled
+            continue
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
 
