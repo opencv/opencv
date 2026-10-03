@@ -95,7 +95,7 @@ public:
 
     void write(const char* key, const char* str, bool quote)
     {
-        char buf[CV_FS_MAX_LEN*4+16];
+        char buf[CV_FS_MAX_LEN*6+16];
         char* data = (char*)str;
         int i, len;
 
@@ -114,18 +114,27 @@ public:
             for( i = 0; i < len; i++ )
             {
                 char c = str[i];
+                const unsigned char byte = static_cast<unsigned char>(c);
 
                 switch ( c )
                 {
                 case '\\':
-                case '\"':
-                case '\'': { *data++ = '\\'; *data++ = c;   break; }
+                case '\"': { *data++ = '\\'; *data++ = c;   break; }
                 case '\n': { *data++ = '\\'; *data++ = 'n'; break; }
                 case '\r': { *data++ = '\\'; *data++ = 'r'; break; }
                 case '\t': { *data++ = '\\'; *data++ = 't'; break; }
                 case '\b': { *data++ = '\\'; *data++ = 'b'; break; }
                 case '\f': { *data++ = '\\'; *data++ = 'f'; break; }
-                default  : { *data++ = c; }
+                default  :
+                    if (byte < 0x20)
+                    {
+                        static const char hex[] = "0123456789abcdef";
+                        *data++ = '\\'; *data++ = 'u'; *data++ = '0'; *data++ = '0';
+                        *data++ = hex[byte >> 4]; *data++ = hex[byte & 0xf];
+                    }
+                    else
+                        *data++ = c;
+                    break;
                 }
             }
 
