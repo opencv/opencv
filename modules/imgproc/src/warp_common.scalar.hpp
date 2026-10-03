@@ -7,26 +7,23 @@
     dtype_reg p00##cn;
 #define CV_WARP_LINEAR_SCALAR_SHUFFLE_DEF(cn, dtype_reg) \
     dtype_reg p00##cn, p01##cn, p10##cn, p11##cn;
-#define CV_WARP_SCALAR_SHUFFLE_DEF_C1(inter, dtype_reg, dtype_ptr) \
+#define CV_WARP_SCALAR_SHUFFLE_DEF_C1(inter, dtype_reg) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg)
+#define CV_WARP_SCALAR_SHUFFLE_DEF_C3(inter, dtype_reg) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(r, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg) \
-    const dtype_ptr *srcptr = src + srcstep * iy + ix;
-#define CV_WARP_SCALAR_SHUFFLE_DEF_C3(inter, dtype_reg, dtype_ptr) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(b, dtype_reg)
+#define CV_WARP_SCALAR_SHUFFLE_DEF_C4(inter, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(r, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(b, dtype_reg) \
-    const dtype_ptr *srcptr = src + srcstep * iy + ix*3;
-#define CV_WARP_SCALAR_SHUFFLE_DEF_C4(inter, dtype_reg, dtype_ptr) \
-    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(r, dtype_reg) \
-    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg) \
-    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(b, dtype_reg) \
-    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(a, dtype_reg) \
-    const dtype_ptr *srcptr = src + srcstep * iy + ix*4;
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(a, dtype_reg)
 #define CV_WARP_SCALAR_SHUFFLE_DEF_8U(INTER, CN) \
-    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, int, uint8_t)
+    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, int)
 #define CV_WARP_SCALAR_SHUFFLE_DEF_16U(INTER, CN) \
-    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, int, uint16_t)
+    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, int)
 #define CV_WARP_SCALAR_SHUFFLE_DEF_32F(INTER, CN) \
-    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, float, float)
+    CV_WARP_SCALAR_SHUFFLE_DEF_##CN(INTER, float)
 
 #define CV_WARP_NEAREST_SCALAR_SHUFFLE_LOAD(CN, cn, i) \
     p00##CN = srcptr[i];
@@ -34,12 +31,15 @@
     p00##CN = srcptr[i]; p01##CN = srcptr[i + cn]; \
     p10##CN = srcptr[srcstep + i]; p11##CN = srcptr[srcstep + cn + i];
 #define CV_WARP_SCALAR_SHUFFLE_LOAD_C1(inter) \
+    const auto *srcptr = src + srcstep * iy + ix; \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(g, 1, 0)
 #define CV_WARP_SCALAR_SHUFFLE_LOAD_C3(inter) \
+    const auto *srcptr = src + srcstep * iy + ix*3; \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(r, 3, 0) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(g, 3, 1) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(b, 3, 2)
 #define CV_WARP_SCALAR_SHUFFLE_LOAD_C4(inter) \
+    const auto *srcptr = src + srcstep * iy + ix*4; \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(r, 4, 0) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(g, 4, 1) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(b, 4, 2) \
@@ -59,8 +59,8 @@
 
 #define CV_WARP_SCALAR_FETCH_PIXEL_C1(dy, dx, pxy) \
     if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
-        size_t ofs = dy*srcstep + dx; \
-        pxy##g = srcptr[ofs]; \
+        size_t glob_ofs = (iy + dy)*srcstep + (ix + dx); \
+        pxy##g = src[glob_ofs]; \
     } else if (border_type == BORDER_CONSTANT) { \
         pxy##g = bval[0]; \
     } else if (border_type == BORDER_TRANSPARENT) { \
@@ -73,10 +73,10 @@
     }
 #define CV_WARP_SCALAR_FETCH_PIXEL_C3(dy, dx, pxy) \
     if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
-        size_t ofs = dy*srcstep + dx*3; \
-        pxy##r = srcptr[ofs]; \
-        pxy##g = srcptr[ofs+1]; \
-        pxy##b = srcptr[ofs+2]; \
+        size_t glob_ofs = (iy + dy)*srcstep + (ix + dx)*3; \
+        pxy##r = src[glob_ofs]; \
+        pxy##g = src[glob_ofs+1]; \
+        pxy##b = src[glob_ofs+2]; \
     } else if (border_type == BORDER_CONSTANT) { \
         pxy##r = bval[0]; \
         pxy##g = bval[1]; \
@@ -95,11 +95,11 @@
     }
 #define CV_WARP_SCALAR_FETCH_PIXEL_C4(dy, dx, pxy) \
     if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
-        size_t ofs = dy*srcstep + dx*4; \
-        pxy##r = srcptr[ofs]; \
-        pxy##g = srcptr[ofs+1]; \
-        pxy##b = srcptr[ofs+2]; \
-        pxy##a = srcptr[ofs+3]; \
+        size_t glob_ofs = (iy + dy)*srcstep + (ix + dx)*4; \
+        pxy##r = src[glob_ofs]; \
+        pxy##g = src[glob_ofs+1]; \
+        pxy##b = src[glob_ofs+2]; \
+        pxy##a = src[glob_ofs+3]; \
     } else if (border_type == BORDER_CONSTANT) { \
         pxy##r = bval[0]; \
         pxy##g = bval[1]; \
