@@ -2699,6 +2699,45 @@ TEST(Layer_Test_TanH, NoNaN_LargeInput)
     }
 }
 
+// Softmax/LogSoftmax before ONNX opset 13 coerce the input to the 2D tensor
+// [a_0*...*a_{axis-1}, a_axis*...*a_{n-1}], so axis=1 on a 2x3x4 input normalises the 12
+// values of the flattened tail per sample instead of the 3 values of the axis.
+TEST(Layer_Test_Softmax, Coerced2dReducesFlattenedTail)
+{
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "test_softmax";
+    lp.set("axis", 1);
+    lp.set("coerced_2d", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Softmax", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    const int rows = 2, tail = 12;
+    int dims[] = {rows, 3, 4};
+    Mat inp(3, dims, CV_32F);
+    randu(inp, -2.f, 2.f);
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+    const Mat& out = outVec[0];
+
+    for (int n = 0; n < rows; n++)
+    {
+        const float* inRow = inp.ptr<float>(n);
+        const float* outRow = out.ptr<float>(n);
+        float maxVal = inRow[0];
+        for (int i = 1; i < tail; i++)
+            maxVal = std::max(maxVal, inRow[i]);
+        double sum = 0;
+        for (int i = 0; i < tail; i++)
+            sum += std::exp(inRow[i] - maxVal);
+        for (int i = 0; i < tail; i++)
+            EXPECT_NEAR(outRow[i], std::exp(inRow[i] - maxVal) / sum, 1e-6f) << "row " << n << " index " << i;
+    }
+}
+
 TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
 {
     LayerParams lp;

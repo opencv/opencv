@@ -1468,6 +1468,14 @@ TEST_P(Test_ONNX_layers, Softmax)
     testONNXModels("softmax");
     testONNXModels("log_softmax", npy, 0, 0, false, false);
     testONNXModels("softmax_unfused");
+
+    // Before opset 13 the operator coerces its input to 2D and reduces the flattened
+    // dims [axis, rank), which the CPU path implements.
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
+    {
+        testONNXModels("softmax_axis_1_opset11");
+        testONNXModels("log_softmax_axis_0_opset11");
+    }
 }
 
 TEST_P(Test_ONNX_layers, Split_EltwiseMax)

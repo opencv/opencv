@@ -1060,6 +1060,15 @@ public:
         opencv_onnx::AttributeProto* attr = node->add_attribute();
         attr->set_name("axis");
         attr->set_i(axis);
+
+        // The matched subgraph reduces over the single `axes` entry of its ReduceSum/
+        // ReduceMax node, which is the per-axis normalization of that one axis.  That is
+        // not what a Softmax/LogSoftmax node before opset 13 means -- those coerce the
+        // input to 2D and reduce the whole flattened tail -- so the fused node has to say
+        // which of the two it stands for.
+        attr = node->add_attribute();
+        attr->set_name("coerced_2d");
+        attr->set_i(0);
     }
 
 protected:

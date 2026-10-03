@@ -78,6 +78,7 @@ public:
         axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
         scale = params.get<float>("scale", 1.f);
+        coerced2d = params.get<bool>("coerced_2d", false);
         setParamsFrom(params);
     }
 
@@ -141,6 +142,11 @@ public:
         UMat& src = inputs[0];
         UMat& dstMat = outputs[0];
         int axis = normalize_axis(axisRaw, src.dims);
+
+        // The kernels below reduce over a single axis; the pre-opset-13 semantics reduce
+        // over the flattened dims [axis, rank) and are handled by the CPU path.
+        if (coerced2d && axis != src.dims - 1)
+            return false;
 
         if (softmaxOp.empty())
         {
@@ -231,6 +237,29 @@ public:
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
         int axis = normalize_axis(axisRaw, src.dims);
+
+        // Softmax/LogSoftmax before opset 13 coerce the input to the 2D tensor
+        // [a_0 * ... * a_{axis-1}, a_axis * ... * a_{n-1}] and normalise over its second
+        // dimension, so the reduced range is the whole flattened tail and not just the
+        // one axis.  The tail is contiguous, so a 2D view of the blob expresses that.
+        if (coerced2d && axis != src.dims - 1)
+        {
+            MatShape s = shape(src);
+            std::vector<int> twoDims{static_cast<int>(total(s, 0, axis)),
+                                     static_cast<int>(total(s, axis))};
+            Mat src2d = src.reshape(1, twoDims);
+            Mat dst2d = dst.reshape(1, twoDims);
+
+            if (logSoftMax) {
+                CV_Assert(scale == 1.f);
+                logSoftmax(dst2d, src2d, 1);
+            } else if (scale != 1.f) {
+                softmax(dst2d, src2d, 1, scale);
+            } else {
+                softmax(dst2d, src2d, 1);
+            }
+            return;
+        }
 
         if (logSoftMax) {
             CV_Assert(scale == 1.f);
@@ -328,6 +357,7 @@ public:
     }
 
     int axisRaw;
+    bool coerced2d;  // ONNX Softmax/LogSoftmax before opset 13 reduce the flattened tail
 };
 
 Ptr<SoftmaxLayer> SoftmaxLayer::create(const LayerParams& params)
