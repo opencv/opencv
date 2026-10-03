@@ -158,6 +158,9 @@ inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
 { flags = _flags; obj = (void*)_obj; sz = _sz; }
 
 inline void* _InputArray::getObj() const { return obj; }
+inline _InputArray::KindFlag _InputArray::kind() const {
+  return static_cast<KindFlag>(flags & KIND_MASK);
+}
 inline int _InputArray::getFlags() const { return flags; }
 inline Size _InputArray::getSz() const { return sz; }
 
@@ -249,11 +252,92 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 
 inline _InputArray::~_InputArray() {}
 
+#if defined(__GNUC__) || defined(__clang__)
+#  define CV_IS_COMPILE_TIME_CONSTANT(x) __builtin_constant_p(x)
+#else
+#  define CV_IS_COMPILE_TIME_CONSTANT(x) 0
+#endif
+
 inline Mat _InputArray::getMat(int i) const
 {
-    if( kind() == MAT && i < 0 )
-        return *(const Mat*)obj;
+    if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+        const int k = flags & KIND_MASK;
+        if (k == MAT)
+            return *static_cast<const Mat*>(getObj());
+        if (k == MATX)
+            return Mat(sz, flags, getObj());
+        if (k == NONE)
+            return Mat();
+    }
     return getMat_(i);
+}
+
+inline int _InputArray::depth(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    if (flags & FIXED_TYPE) return CV_MAT_DEPTH(flags);
+    if ((flags & KIND_MASK) == MAT)
+      return static_cast<const Mat*>(getObj())->depth();
+  }
+  return depth_(i);
+}
+
+inline int _InputArray::type(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    if (flags & FIXED_TYPE) return CV_MAT_TYPE(flags);
+    if ((flags & KIND_MASK) == MAT)
+      return static_cast<const Mat*>(getObj())->type();
+  }
+  return type_(i);
+}
+
+inline int _InputArray::channels(int i) const { return CV_MAT_CN(type(i)); }
+
+inline bool _InputArray::empty() const {
+  if (CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    const int k = flags & KIND_MASK;
+    if (k == MAT) return static_cast<const Mat*>(getObj())->empty();
+    if (k == MATX) return false;
+    if (k == STD_VECTOR)
+      return static_cast<const std::vector<uchar>*>(getObj())->empty();
+    if (k == NONE) return true;
+  }
+  return empty_();
+}
+
+inline int _InputArray::dims(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    const int k = flags & KIND_MASK;
+    if (k == MAT) return static_cast<const Mat*>(getObj())->dims;
+    if (k == MATX || k == STD_VECTOR) return 2;
+  }
+  return dims_(i);
+}
+
+inline int _InputArray::rows(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    const int k = flags & KIND_MASK;
+    if (k == MAT) return static_cast<const Mat*>(getObj())->rows;
+    if (k == MATX) return sz.height;
+  }
+  return rows_(i);
+}
+
+inline int _InputArray::cols(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    const int k = flags & KIND_MASK;
+    if (k == MAT) return static_cast<const Mat*>(getObj())->cols;
+    if (k == MATX) return sz.width;
+  }
+  return cols_(i);
+}
+
+inline Size _InputArray::size(int i) const {
+  if (i < 0 && CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    const int k = flags & KIND_MASK;
+    if (k == MAT) return static_cast<const Mat*>(getObj())->size();
+    if (k == MATX) return sz;
+  }
+  return size_(i);
 }
 
 inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
@@ -427,6 +511,34 @@ std::vector<std::vector<_Tp> >& _OutputArray::getVecVecRef() const
     CV_Assert(type() == traits::Type<_Tp>::value);
     return *(std::vector<std::vector<_Tp> >*)obj;
 }
+
+inline void _OutputArray::create(Size _sz, int _type, int i,
+                                 bool allowTransposed,
+                                 _OutputArray::DepthMask fixedDepthMask) const {
+  if (i < 0 && !allowTransposed && fixedDepthMask == 0 &&
+      CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    if ((flags & (KIND_MASK | FIXED_SIZE | FIXED_TYPE)) == MAT) {
+      static_cast<Mat*>(getObj())->create(_sz, _type);
+      return;
+    }
+  }
+  create_(_sz, _type, i, allowTransposed, fixedDepthMask);
+}
+
+inline void _OutputArray::create(int _rows, int _cols, int _type, int i,
+                                 bool allowTransposed,
+                                 _OutputArray::DepthMask fixedDepthMask) const {
+  if (i < 0 && !allowTransposed && fixedDepthMask == 0 &&
+      CV_IS_COMPILE_TIME_CONSTANT(flags)) {
+    if ((flags & (KIND_MASK | FIXED_SIZE | FIXED_TYPE)) == MAT) {
+      static_cast<Mat*>(getObj())->create(_rows, _cols, _type);
+      return;
+    }
+  }
+  create_(_rows, _cols, _type, i, allowTransposed, fixedDepthMask);
+}
+
+#undef CV_IS_COMPILE_TIME_CONSTANT
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
