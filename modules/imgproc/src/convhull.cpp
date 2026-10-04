@@ -127,6 +127,24 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 }
 
 
+// int points that order exactly like the float coordinates (bit patterns, not rounded values).
+// the sortable points are stored in buf.
+static const Point* float_points_to_sortable_points(const Point2f* points, int total, AutoBuffer<int>& buf)
+{
+    buf.allocate((size_t)total * 2);
+    Point* sortable_points = (Point*)buf.data();
+    for (int i = 0; i < total; ++i)
+    {
+        Cv32suf x, y;
+        x.f = points[i].x;
+        y.f = points[i].y;
+        // -0.f has only the sign bit set (INT_MIN as int); treat it as +0.f, they are equal as floats
+        sortable_points[i].x = x.i == INT_MIN ? 0 : CV_TOGGLE_FLT(x.i);
+        sortable_points[i].y = y.i == INT_MIN ? 0 : CV_TOGGLE_FLT(y.i);
+    }
+    return sortable_points;
+}
+
 struct CHullRange
 {
     int minX, maxX;
@@ -296,13 +314,28 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         pointer[i] = &data0[i];
 
     // sort the point set by x-coordinate, find min and max y
-    if( !is_float )
+    bool sorted = false;
+    if( CV_CONVHULL_USE_COUNTING_SORT )
     {
-        bool require_monotonic_indices = !returnPoints;
-        if (!CV_CONVHULL_USE_COUNTING_SORT ||
-            !convex_hull_counting_sort(data0, compute_range(data0, total),
-                                       require_monotonic_indices,
-                                       pointer, total, miny_ind, maxy_ind))
+        AutoBuffer<int> _sortable_points_buffer;
+        const Point* sortable_points = is_float ?
+            float_points_to_sortable_points(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
+
+        const CHullRange range = compute_range(sortable_points, total);
+        sorted = convex_hull_counting_sort(sortable_points, range, !returnPoints /* require_monotonic_indices */,
+                                           pointer, total, miny_ind, maxy_ind);
+
+        if( is_float && sorted )
+        {
+            // the sort ran on the sortable points, make the result point into the data
+            for( i = 0; i < total; i++ )
+                pointer[i] = data0 + (pointer[i] - sortable_points);
+        }
+    }
+
+    if( !sorted )
+    {
+        if( !is_float )
         {
             std::sort(pointer, pointer + total, CHullCmpPoints<int>());
             for( i = 1; i < total; i++ )
@@ -314,17 +347,17 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                     maxy_ind = i;
             }
         }
-    }
-    else
-    {
-        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
-        for( i = 1; i < total; i++ )
+        else
         {
-            float y = pointerf[i]->y;
-            if( pointerf[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointerf[maxy_ind]->y < y )
-                maxy_ind = i;
+            std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
+            for( i = 1; i < total; i++ )
+            {
+                float y = pointerf[i]->y;
+                if( pointerf[miny_ind]->y > y )
+                    miny_ind = i;
+                if( pointerf[maxy_ind]->y < y )
+                    maxy_ind = i;
+            }
         }
     }
 

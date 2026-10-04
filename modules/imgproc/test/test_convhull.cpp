@@ -434,6 +434,62 @@ TEST(Imgproc_ConvexHull, overflow)
     ASSERT_EQ(hull, hullf);
 }
 
+// Float points on a grid of adjacent values are sorted the same way as dense int points.
+// They are an exact scaled copy of the int grid, so both hulls must be the same.
+TEST(Imgproc_ConvexHull, float_dense_grid)
+{
+    RNG& rng = TS::ptr()->get_rng();
+
+    for (int iter = 0; iter < 100; ++iter)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", iter));
+
+        const int total = rng.uniform(5, 200);
+        const int range = std::max(total / 2, 3);
+        const int sign = iter % 2 == 0 ? 1 : -1;
+
+        std::vector<Point> points;
+        std::vector<Point2f> pointsf;
+        Mat_<uchar> used(range, range, (uchar)0);
+        while ((int)points.size() < total)
+        {
+            const int x = rng.uniform(0, range), y = rng.uniform(0, range);
+            if (used(y, x))
+                continue; // keep the points distinct
+            used(y, x) = 1;
+            points.push_back(Point(sign * x, sign * y));
+            pointsf.push_back(Point2f(sign * (1.f + x * FLT_EPSILON), sign * (1.f + y * FLT_EPSILON)));
+        }
+
+        for (int clockwise = 0; clockwise < 2; ++clockwise)
+        {
+            SCOPED_TRACE(cv::format("clockwise %d", clockwise));
+
+            std::vector<int> hull, hullf;
+            convexHull(points, hull, clockwise != 0, false);
+            convexHull(pointsf, hullf, clockwise != 0, false);
+            ASSERT_EQ(hull, hullf);
+
+            std::vector<Point2f> hullf_points;
+            convexHull(pointsf, hullf_points, clockwise != 0, true);
+            ASSERT_EQ(hullf.size(), hullf_points.size());
+            for (size_t i = 0; i < hullf.size(); ++i)
+                EXPECT_EQ(pointsf[hullf[i]], hullf_points[i]);
+        }
+    }
+}
+
+// Points on the vertical line x = 0, where some of the zeros are negative, some positive.
+TEST(Imgproc_ConvexHull, float_signed_zero)
+{
+    const std::vector<Point2f> points = { {-0.f, 1.f}, {-0.f, 7.f}, {0.f, 3.f}, {0.f, 5.f} };
+
+    std::vector<int> hull;
+    convexHull(points, hull, false, false);
+    std::sort(hull.begin(), hull.end());
+    EXPECT_EQ(std::vector<int>({0, 1}), hull);
+}
+
 static
 bool checkMinAreaRect(const RotatedRect& rr, const Mat& c, double eps = 0.5f)
 {
