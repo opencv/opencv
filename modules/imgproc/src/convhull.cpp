@@ -42,9 +42,9 @@
 #include "precomp.hpp"
 #include <iostream>
 
-// set to 0 to disable the bucket-sort dispatch, falling back to std::sort
-#ifndef CV_CONVHULL_USE_BUCKET_SORT
-#define CV_CONVHULL_USE_BUCKET_SORT 1
+// set to 0 to disable the counting-sort dispatch, falling back to std::sort
+#ifndef CV_CONVHULL_USE_COUNTING_SORT
+#define CV_CONVHULL_USE_COUNTING_SORT 1
 #endif
 
 namespace cv
@@ -140,17 +140,17 @@ struct CHullCmpPoints
     }
 };
 
-static bool convex_hull_bucket_sort(const Point* data,
+static bool convex_hull_counting_sort(const Point* data,
                              bool require_monotonic_indices,
                              Point** out_points,
                              int& total,
                              int& ind_miny,
                              int& ind_maxy)
 {
-    struct XBucket { const Point* lo; const Point* hi; };
+    struct XColumn { const Point* lo; const Point* hi; };
 
-    const int MAX_RANGE = 100000;       // ~1.6 MB of buckets (sizeof(XBucket) * MAX_RANGE)
-    const int MAX_SPARSITY_FACTOR = 4;  // std::sort beats buckets on sparse ranges
+    const int MAX_RANGE = 100000;       // ~1.6 MB of columns (sizeof(XColumn) * MAX_RANGE)
+    const int MAX_SPARSITY_FACTOR = 4;  // std::sort beats counting sort on sparse ranges
 
     if (total <= 0) {
         return true;
@@ -171,35 +171,35 @@ static bool convex_hull_bucket_sort(const Point* data,
         return false;
     }
     if (rangeX64 > MAX_RANGE) {
-        // bail out, we cannot allocate too much memory for buckets
+        // bail out, we cannot allocate too much memory for columns
         return false;
     }
 
     const int rangeX = (int)rangeX64;
 
-    // 2) Create buckets that store pointers into data.
+    // 2) Create one column per x value, storing pointers to its lowest and highest points in data.
     // having lo and hi near to each other in memory should induce better cache locality
-    AutoBuffer<XBucket> buckets(rangeX);
-    std::fill_n(buckets.data(), rangeX, XBucket{nullptr, nullptr});
+    AutoBuffer<XColumn> columns(rangeX);
+    std::fill_n(columns.data(), rangeX, XColumn{nullptr, nullptr});
 
-    // 3) Fill buckets
+    // 3) Fill columns
     for (int i = 0; i < total; ++i)
     {
         const int idx = data[i].x - minX;
         const int y = data[i].y;
-        XBucket& b = buckets[idx];
+        XColumn& col = columns[idx];
 
-        if (b.lo == nullptr || y < b.lo->y) {
-            b.lo = &data[i];
+        if (col.lo == nullptr || y < col.lo->y) {
+            col.lo = &data[i];
         }
-        else if (require_monotonic_indices && y == b.lo->y && !(data[i-1] == data[i])) {
+        else if (require_monotonic_indices && y == col.lo->y && !(data[i-1] == data[i])) {
             return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
         }
 
-        if (b.hi == nullptr || y > b.hi->y) {
-            b.hi = &data[i];
+        if (col.hi == nullptr || y > col.hi->y) {
+            col.hi = &data[i];
         }
-        else if (require_monotonic_indices && y == b.hi->y && !(data[i-1] == data[i])) {
+        else if (require_monotonic_indices && y == col.hi->y && !(data[i-1] == data[i])) {
             return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
         }
     }
@@ -211,12 +211,12 @@ static bool convex_hull_bucket_sort(const Point* data,
     int cur = 0;
     for (int i = 0; i < rangeX; ++i)
     {
-        const Point* pmin = buckets[i].lo;
+        const Point* pmin = columns[i].lo;
         if (pmin == nullptr)
             continue;
 
-        const Point* pmax = buckets[i].hi;
-        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y); // when filling buckets either both pmax and pmin are set or neither.
+        const Point* pmax = columns[i].hi;
+        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y); // when filling columns either both pmax and pmin are set or neither.
 
         out_points[out++] = const_cast<Point*>(pmin);
         cur = out - 1;
@@ -278,8 +278,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !is_float )
     {
         bool require_monotonic_indices = !returnPoints;
-        if (!CV_CONVHULL_USE_BUCKET_SORT ||
-            !convex_hull_bucket_sort(data0, require_monotonic_indices,
+        if (!CV_CONVHULL_USE_COUNTING_SORT ||
+            !convex_hull_counting_sort(data0, require_monotonic_indices,
                                      pointer, total, miny_ind, maxy_ind))
         {
             std::sort(pointer, pointer + total, CHullCmpPoints<int>());
