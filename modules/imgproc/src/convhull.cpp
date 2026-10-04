@@ -127,12 +127,41 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 }
 
 
+struct CHullRange
+{
+    int minX, maxX;
+    int minY, maxY;
+
+    // number of distinct x values the range spans
+    int64 rangeX() const { return (int64)maxX - (int64)minX + 1; }
+};
+
+static CHullRange compute_range(const Point* data, int total)
+{
+    CV_DbgAssert(total > 0);
+
+    int minX = data[0].x;
+    int maxX = data[0].x;
+    int minY = data[0].y;
+    int maxY = data[0].y;
+    for (int i = 1; i < total; ++i)
+    {
+        minX = std::min(minX, data[i].x);
+        maxX = std::max(maxX, data[i].x);
+        minY = std::min(minY, data[i].y);
+        maxY = std::max(maxY, data[i].y);
+    }
+
+    return CHullRange{minX, maxX, minY, maxY};
+}
+
 static bool convex_hull_counting_sort(const Point* data,
-                             bool require_monotonic_indices,
-                             Point** out_points,
-                             int& total,
-                             int& ind_miny,
-                             int& ind_maxy)
+                                      const CHullRange& range,
+                                      bool require_monotonic_indices,
+                                      Point** out_points,
+                                      int& total,
+                                      int& ind_miny,
+                                      int& ind_maxy)
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
@@ -143,16 +172,8 @@ static bool convex_hull_counting_sort(const Point* data,
         return true;
     }
 
-    // 1) Find minX and maxX
-    int minX = data[0].x;
-    int maxX = data[0].x;
-    for (int i = 1; i < total; ++i)
-    {
-        minX = std::min(minX, data[i].x);
-        maxX = std::max(maxX, data[i].x);
-    }
-
-    const int64 rangeX64 = (int64)maxX - (int64)minX + 1;
+    // 1) Check the x range
+    const int64 rangeX64 = range.rangeX();
     if (rangeX64 > MAX_SPARSITY_FACTOR * (int64)total) {
         // bail out, std::sort is faster for sparse data
         return false;
@@ -172,7 +193,7 @@ static bool convex_hull_counting_sort(const Point* data,
     // 3) Fill columns
     for (int i = 0; i < total; ++i)
     {
-        const int idx = data[i].x - minX;
+        const int idx = data[i].x - range.minX;
         const int y = data[i].y;
         XColumn& col = columns[idx];
 
@@ -279,8 +300,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     {
         bool require_monotonic_indices = !returnPoints;
         if (!CV_CONVHULL_USE_COUNTING_SORT ||
-            !convex_hull_counting_sort(data0, require_monotonic_indices,
-                                     pointer, total, miny_ind, maxy_ind))
+            !convex_hull_counting_sort(data0, compute_range(data0, total),
+                                       require_monotonic_indices,
+                                       pointer, total, miny_ind, maxy_ind))
         {
             std::sort(pointer, pointer + total, CHullCmpPoints<int>());
             for( i = 1; i < total; i++ )
