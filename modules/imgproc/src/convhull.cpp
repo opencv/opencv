@@ -127,19 +127,6 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 }
 
 
-template<typename _Tp>
-struct CHullCmpPoints
-{
-    bool operator()(const Point_<_Tp>* p1, const Point_<_Tp>* p2) const
-    {
-        if( p1->x != p2->x )
-            return p1->x < p2->x;
-        if( p1->y != p2->y )
-            return p1->y < p2->y;
-        return p1 < p2;
-    }
-};
-
 static bool convex_hull_counting_sort(const Point* data,
                              bool require_monotonic_indices,
                              Point** out_points,
@@ -241,6 +228,19 @@ static bool convex_hull_counting_sort(const Point* data,
     total = out;
     return true;
 }
+
+template<typename _Tp>
+struct CHullCmpPoints
+{
+    bool operator()(const Point_<_Tp>* p1, const Point_<_Tp>* p2) const
+    {
+        if( p1->x != p2->x )
+            return p1->x < p2->x;
+        if( p1->y != p2->y )
+            return p1->y < p2->y;
+        return p1 < p2;
+    }
+};
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
