@@ -31,7 +31,7 @@ public:
                        :divisor(32),
                        strides({8, 16, 32})
     {
-        net = dnn::readNet(model, config);
+        net = dnn::readNetFromONNX(model, dnn::ENGINE_ORT);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(backend_id);
@@ -63,7 +63,8 @@ public:
                        :divisor(32),
                        strides({8, 16, 32})
     {
-        net = dnn::readNet(framework, bufferModel, bufferConfig);
+        std::string model = reinterpret_cast<const char*>(bufferModel.data());
+        net = dnn::readNetFromONNX(model, dnn::ENGINE_ORT);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(backend_id);
