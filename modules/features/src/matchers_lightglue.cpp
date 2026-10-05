@@ -167,6 +167,20 @@ protected:
     bool resolveContext(Mat& queryKpts, Mat& trainKpts,
                         Size& queryImgSize, Size& trainImgSize);
 
+    // Shared clone() body; pairContext is matcher state, so it is always copied.
+    template<class Derived>
+    Ptr<DescriptorMatcher> cloneAs(bool emptyTrainData) const
+    {
+        Ptr<Derived> matcher = makePtr<Derived>(net, scoreThreshold);
+        matcher->pairContext = pairContext;
+        if (!emptyTrainData)
+        {
+            matcher->trainDescCollection = trainDescCollection;
+            matcher->utrainDescCollection = utrainDescCollection;
+        }
+        return matcher;
+    }
+
     dnn::Net net;
     float scoreThreshold;
     LightGluePairContext pairContext;
@@ -278,7 +292,8 @@ class ALIKEDLightGlueMatcherImpl CV_FINAL : public LightGlueMatcherImpl
 {
 public:
     using LightGlueMatcherImpl::LightGlueMatcherImpl;
-    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE;
+    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE
+    { return cloneAs<ALIKEDLightGlueMatcherImpl>(emptyTrainData); }
 
 protected:
     void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
@@ -286,19 +301,6 @@ protected:
                         Size queryImgSize, Size trainImgSize,
                         std::vector<DMatch>& matches) CV_OVERRIDE;
 };
-
-Ptr<DescriptorMatcher> ALIKEDLightGlueMatcherImpl::clone(bool emptyTrainData) const
-{
-    Ptr<ALIKEDLightGlueMatcherImpl> matcher = makePtr<ALIKEDLightGlueMatcherImpl>(net, scoreThreshold);
-    // Always copy pairContext - it's matcher state, not train data
-    matcher->pairContext = pairContext;
-    if (!emptyTrainData)
-    {
-        matcher->trainDescCollection = trainDescCollection;
-        matcher->utrainDescCollection = utrainDescCollection;
-    }
-    return matcher;
-}
 
 void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                                   const Mat& queryKpts, const Mat& trainKpts,
@@ -347,7 +349,8 @@ class DISKLightGlueMatcherImpl CV_FINAL : public LightGlueMatcherImpl
 {
 public:
     using LightGlueMatcherImpl::LightGlueMatcherImpl;
-    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE;
+    Ptr<DescriptorMatcher> clone(bool emptyTrainData) const CV_OVERRIDE
+    { return cloneAs<DISKLightGlueMatcherImpl>(emptyTrainData); }
 
 protected:
     void lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
@@ -355,19 +358,6 @@ protected:
                         Size queryImgSize, Size trainImgSize,
                         std::vector<DMatch>& matches) CV_OVERRIDE;
 };
-
-Ptr<DescriptorMatcher> DISKLightGlueMatcherImpl::clone(bool emptyTrainData) const
-{
-    Ptr<DISKLightGlueMatcherImpl> matcher = makePtr<DISKLightGlueMatcherImpl>(net, scoreThreshold);
-    // Always copy pairContext - it's matcher state, not train data
-    matcher->pairContext = pairContext;
-    if (!emptyTrainData)
-    {
-        matcher->trainDescCollection = trainDescCollection;
-        matcher->utrainDescCollection = utrainDescCollection;
-    }
-    return matcher;
-}
 
 void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& trainDesc,
                                                 const Mat& queryKpts, const Mat& trainKpts,

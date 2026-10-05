@@ -6,10 +6,12 @@
 #include "npy_blob.hpp"
 
 #ifdef HAVE_OPENCV_DNN
-
 #include "opencv2/dnn.hpp"
+#endif
 
 namespace opencv_test { namespace {
+
+#ifdef HAVE_OPENCV_DNN
 
 TEST(Features2d_ALIKED, Regression)
 {
