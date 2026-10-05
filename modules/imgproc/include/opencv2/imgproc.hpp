@@ -375,7 +375,7 @@ enum FloodFillFlags {
 /** @brief Porter-Duff compositing operators used by cv::alphaComposite.
 
 The names and the semantics follow [W3C Compositing and Blending Level 1](https://www.w3.org/TR/compositing-1/),
-which is also what cairo and Skia implement. Every operator is a pair of per-pixel weights
+which is also what Cairo and Skia implement. Every operator is a pair of per-pixel weights
 \f$F_a\f$ (applied to the overlay, the *source*) and \f$F_b\f$ (applied to the background, the
 *destination*), combined in premultiplied alpha space:
 \f[C_o = C_s F_a + C_b F_b, \qquad \alpha_o = \alpha_s F_a + \alpha_b F_b\f]
@@ -395,7 +395,7 @@ enum AlphaCompositeOperations {
     ALPHA_COMPOSITE_ATOP      = 9,  //!< \f$F_a = \alpha_b\f$, \f$F_b = 1 - \alpha_s\f$. Draws the overlay on top, clipped to the background's shape.
     ALPHA_COMPOSITE_DEST_ATOP = 10, //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = \alpha_s\f$. Draws the background on top, clipped to the overlay's shape.
     ALPHA_COMPOSITE_XOR       = 11, //!< \f$F_a = 1 - \alpha_b\f$, \f$F_b = 1 - \alpha_s\f$. Keeps the non-overlapping parts of both.
-    ALPHA_COMPOSITE_PLUS      = 12  //!< \f$F_a = 1\f$, \f$F_b = 1\f$. Adds the two, clamped (W3C `lighter`, cairo `OPERATOR_ADD`).
+    ALPHA_COMPOSITE_PLUS      = 12  //!< \f$F_a = 1\f$, \f$F_b = 1\f$. Adds the two, clamped (W3C `lighter`, Cairo `OPERATOR_ADD`).
 };
 
 //! @} imgproc_misc
@@ -3533,7 +3533,7 @@ matches background) acting as the source of the operator; must be the same size 
 convention as overlay, and dst has 4 channels holding the composited alpha \f$\alpha_o\f$. A
 3-channel background is taken to be fully opaque (\f$\alpha_b = 1\f$) and dst has 3 channels;
 since such a dst cannot store \f$\alpha_o\f$, the alpha is dropped and the premultiplied color is
-written, which is what cairo does when the target surface has no alpha channel. Operators whose
+written, which is what Cairo does when the target surface has no alpha channel. Operators whose
 result is not opaque (#ALPHA_COMPOSITE_CLEAR, #ALPHA_COMPOSITE_OUT, #ALPHA_COMPOSITE_XOR and
 others) therefore darken toward black on a 3-channel background; pass a 4-channel background to
 keep the alpha.

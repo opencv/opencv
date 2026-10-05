@@ -17,6 +17,28 @@ static const int allOperators[] = {
     ALPHA_COMPOSITE_XOR, ALPHA_COMPOSITE_PLUS
 };
 
+// Used to build readable test names, so a failing instantiation names its operator.
+static const char* operatorName(int op)
+{
+    switch (op)
+    {
+    case ALPHA_COMPOSITE_CLEAR:     return "CLEAR";
+    case ALPHA_COMPOSITE_SOURCE:    return "SOURCE";
+    case ALPHA_COMPOSITE_DEST:      return "DEST";
+    case ALPHA_COMPOSITE_OVER:      return "OVER";
+    case ALPHA_COMPOSITE_DEST_OVER: return "DEST_OVER";
+    case ALPHA_COMPOSITE_IN:        return "IN";
+    case ALPHA_COMPOSITE_DEST_IN:   return "DEST_IN";
+    case ALPHA_COMPOSITE_OUT:       return "OUT";
+    case ALPHA_COMPOSITE_DEST_OUT:  return "DEST_OUT";
+    case ALPHA_COMPOSITE_ATOP:      return "ATOP";
+    case ALPHA_COMPOSITE_DEST_ATOP: return "DEST_ATOP";
+    case ALPHA_COMPOSITE_XOR:       return "XOR";
+    case ALPHA_COMPOSITE_PLUS:      return "PLUS";
+    default: CV_Error(Error::StsBadArg, "unknown operator");
+    }
+}
+
 // Porter-Duff weights straight from the W3C table, independently of the fixed-point implementation.
 static void referenceWeights(int op, double as, double ad, double& fa, double& fb)
 {
@@ -89,7 +111,15 @@ static double maxAbsDiff(const Mat& a, const Mat& b)
 // Fixed-point rounding vs. the float reference differs by ~2; expected, not a bug.
 static const double kRoundingTolerance = 2.0;
 
-typedef testing::TestWithParam<std::tuple<int, bool, int>> Imgproc_AlphaComposite_Correctness;
+typedef std::tuple<int, bool, int> CorrectnessParams; // background channels, premultiplied, operator
+typedef testing::TestWithParam<CorrectnessParams> Imgproc_AlphaComposite_Correctness;
+
+static std::string correctnessName(const testing::TestParamInfo<CorrectnessParams>& info)
+{
+    return cv::format("C%d_%s_%s", std::get<0>(info.param),
+                      std::get<1>(info.param) ? "premultiplied" : "straight",
+                      operatorName(std::get<2>(info.param)));
+}
 
 TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
 {
@@ -135,127 +165,187 @@ TEST_P(Imgproc_AlphaComposite_Correctness, MatchesReference)
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_Correctness,
                         testing::Combine(testing::Values(3, 4), testing::Bool(),
-                                         testing::ValuesIn(allOperators)));
+                                         testing::ValuesIn(allOperators)),
+                        correctnessName);
 
-TEST(Imgproc_AlphaComposite, NoFringingAtBoundariesAndEdges)
+// Garbage RGB behind alpha=0 mimics the classic leak from skipping premultiplication.
+TEST(Imgproc_AlphaComposite, TransparentOverlayLeavesNoColorFringe)
 {
     Size size(64, 48);
+    Mat overlay(size, CV_8UC4, Scalar(255, 255, 255, 0));
+    Mat background(size, CV_8UC3);
+    randu(background, 0, 256);
 
-    { // Garbage RGB behind alpha=0 mimics the classic leak from skipping premultiplication.
-        Mat overlay(size, CV_8UC4, Scalar(255, 255, 255, 0));
-        Mat background(size, CV_8UC3);
-        randu(background, 0, 256);
-        Mat dst;
-        alphaComposite(overlay, background, dst);
-        EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+    Mat dst;
+    alphaComposite(overlay, background, dst);
+    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+}
+
+// Alpha=255 must reproduce the overlay's color exactly, regardless of the background.
+TEST(Imgproc_AlphaComposite, OpaqueOverlayReproducesItsColor)
+{
+    Size size(64, 48);
+    Mat overlay(size, CV_8UC4);
+    randu(overlay, 0, 256);
+    std::vector<Mat> channels;
+    split(overlay, channels);
+    channels[3].setTo(255);
+    merge(channels, overlay);
+
+    Mat background(size, CV_8UC3);
+    randu(background, 0, 256);
+
+    Mat dst, overlayColor;
+    alphaComposite(overlay, background, dst);
+    cvtColor(overlay, overlayColor, COLOR_BGRA2BGR);
+    EXPECT_EQ(0.0, cv::norm(dst, overlayColor, NORM_INF));
+}
+
+// Alpha ramp models an antialiased edge; blended values must stay within [background, overlay].
+TEST(Imgproc_AlphaComposite, AlphaRampStaysBetweenOperands)
+{
+    const int width = 256, height = 8;
+    Mat overlay(height, width, CV_8UC4);
+    Mat background(height, width, CV_8UC3, Scalar(10, 200, 30));
+    for (int y = 0; y < height; ++y)
+    {
+        Vec4b* row = overlay.ptr<Vec4b>(y);
+        for (int x = 0; x < width; ++x)
+            row[x] = Vec4b(240, 20, 220, saturate_cast<uchar>(x));
     }
 
-    { // Alpha=255 must reproduce the overlay's color exactly, regardless of the background.
-        Mat overlay(size, CV_8UC4);
+    Mat dst;
+    alphaComposite(overlay, background, dst);
+
+    for (int y = 0; y < height; ++y)
+    {
+        const Vec4b* ov = overlay.ptr<Vec4b>(y);
+        const Vec3b* bg = background.ptr<Vec3b>(y);
+        const Vec3b* d = dst.ptr<Vec3b>(y);
+        for (int x = 0; x < width; ++x)
+            for (int c = 0; c < 3; ++c)
+            {
+                // Rounding in two steps can shift the sum up to 1 outside [lo, hi].
+                int lo = std::min(ov[x][c], bg[x][c]);
+                int hi = std::max(ov[x][c], bg[x][c]);
+                ASSERT_GE((int)d[x][c], lo - 1) << "x=" << x << " c=" << c;
+                ASSERT_LE((int)d[x][c], hi + 1) << "x=" << x << " c=" << c;
+            }
+    }
+
+    // Ramp endpoints must match exactly -- no rounding slack at alpha=0 or 255.
+    Vec3b firstPixel = dst.at<Vec3b>(0, 0);
+    Vec3b bgPixel = background.at<Vec3b>(0, 0);
+    for (int c = 0; c < 3; ++c)
+        EXPECT_EQ((int)firstPixel[c], (int)bgPixel[c]);
+
+    Vec3b lastPixel = dst.at<Vec3b>(0, width - 1);
+    EXPECT_EQ((int)lastPixel[0], 240);
+    EXPECT_EQ((int)lastPixel[1], 20);
+    EXPECT_EQ((int)lastPixel[2], 220);
+}
+
+static std::string operatorParamName(const testing::TestParamInfo<int>& info)
+{
+    return operatorName(info.param);
+}
+
+// Shared images for the cases where an operator collapses to one of its operands,
+// so no rounding slack is allowed.
+struct IdentityImages
+{
+    IdentityImages() : size(63, 37)
+    {
+        overlay.create(size, CV_8UC4);
+        background.create(size, CV_8UC3);
         randu(overlay, 0, 256);
+        randu(background, 0, 256);
+
         std::vector<Mat> channels;
         split(overlay, channels);
         channels[3].setTo(255);
-        merge(channels, overlay);
-        Mat background(size, CV_8UC3);
-        randu(background, 0, 256);
-        Mat dst, overlayColor;
-        alphaComposite(overlay, background, dst);
-        cvtColor(overlay, overlayColor, COLOR_BGRA2BGR);
-        EXPECT_EQ(0.0, cv::norm(dst, overlayColor, NORM_INF));
+        merge(channels, opaqueOverlay);
+        cvtColor(opaqueOverlay, opaqueColor, COLOR_BGRA2BGR);
     }
 
-    { // Alpha ramp models an antialiased edge; blended values must stay within [background, overlay].
-        const int width = 256, height = 8;
-        Mat overlay(height, width, CV_8UC4);
-        Mat background(height, width, CV_8UC3, Scalar(10, 200, 30));
-        for (int y = 0; y < height; ++y)
-        {
-            Vec4b* row = overlay.ptr<Vec4b>(y);
-            for (int x = 0; x < width; ++x)
-                row[x] = Vec4b(240, 20, 220, saturate_cast<uchar>(x));
-        }
+    Size size;
+    Mat overlay, background, opaqueOverlay, opaqueColor;
+};
 
-        Mat dst;
-        alphaComposite(overlay, background, dst);
+class Imgproc_AlphaComposite_IdentityBase : public testing::TestWithParam<int>
+{
+protected:
+    IdentityImages img;
+};
 
-        for (int y = 0; y < height; ++y)
-        {
-            const Vec4b* ov = overlay.ptr<Vec4b>(y);
-            const Vec3b* bg = background.ptr<Vec3b>(y);
-            const Vec3b* d = dst.ptr<Vec3b>(y);
-            for (int x = 0; x < width; ++x)
-                for (int c = 0; c < 3; ++c)
-                {
-                    // Rounding in two steps can shift the sum up to 1 outside [lo, hi].
-                    int lo = std::min(ov[x][c], bg[x][c]);
-                    int hi = std::max(ov[x][c], bg[x][c]);
-                    ASSERT_GE((int)d[x][c], lo - 1) << "x=" << x << " c=" << c;
-                    ASSERT_LE((int)d[x][c], hi + 1) << "x=" << x << " c=" << c;
-                }
-        }
-        // Ramp endpoints must match exactly -- no rounding slack at alpha=0 or 255.
-        Vec3b firstPixel = dst.at<Vec3b>(0, 0);
-        Vec3b bgPixel = background.at<Vec3b>(0, 0);
-        for (int c = 0; c < 3; ++c)
-            EXPECT_EQ((int)firstPixel[c], (int)bgPixel[c]);
+// An opaque source covers an opaque destination for every "keep the source" operator.
+class Imgproc_AlphaComposite_OpaqueOverlayCovers : public Imgproc_AlphaComposite_IdentityBase {};
 
-        Vec3b lastPixel = dst.at<Vec3b>(0, width - 1);
-        EXPECT_EQ((int)lastPixel[0], 240);
-        EXPECT_EQ((int)lastPixel[1], 20);
-        EXPECT_EQ((int)lastPixel[2], 220);
-    }
+TEST_P(Imgproc_AlphaComposite_OpaqueOverlayCovers, Accuracy)
+{
+    Mat dst;
+    alphaComposite(img.opaqueOverlay, img.background, dst, GetParam());
+    EXPECT_EQ(0.0, cv::norm(dst, img.opaqueColor, NORM_INF));
 }
 
-// Cases where the operator collapses to one of its operands, so no rounding slack is allowed.
-TEST(Imgproc_AlphaComposite, OperatorIdentities)
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_OpaqueOverlayCovers,
+                        testing::Values(ALPHA_COMPOSITE_SOURCE, ALPHA_COMPOSITE_IN,
+                                        ALPHA_COMPOSITE_ATOP),
+                        operatorParamName);
+
+// The complementary operators erase everything on an opaque destination.
+class Imgproc_AlphaComposite_OpaqueOverlayErases : public Imgproc_AlphaComposite_IdentityBase {};
+
+TEST_P(Imgproc_AlphaComposite_OpaqueOverlayErases, Accuracy)
 {
-    Size size(63, 37);
-    Mat overlay(size, CV_8UC4), background(size, CV_8UC3), dst;
-    randu(overlay, 0, 256);
-    randu(background, 0, 256);
+    Mat dst;
+    alphaComposite(img.opaqueOverlay, img.background, dst, GetParam());
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(img.size, CV_8UC3), NORM_INF));
+}
 
-    Mat opaqueOverlay = overlay.clone(), opaqueColor;
-    std::vector<Mat> channels;
-    split(opaqueOverlay, channels);
-    channels[3].setTo(255);
-    merge(channels, opaqueOverlay);
-    cvtColor(opaqueOverlay, opaqueColor, COLOR_BGRA2BGR);
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_OpaqueOverlayErases,
+                        testing::Values(ALPHA_COMPOSITE_OUT, ALPHA_COMPOSITE_DEST_OUT,
+                                        ALPHA_COMPOSITE_XOR),
+                        operatorParamName);
 
-    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_DEST);
-    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+// A transparent source leaves an opaque destination alone.
+class Imgproc_AlphaComposite_TransparentOverlayKeepsBackground : public Imgproc_AlphaComposite_IdentityBase {};
 
-    alphaComposite(overlay, background, dst, ALPHA_COMPOSITE_CLEAR);
-    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+TEST_P(Imgproc_AlphaComposite_TransparentOverlayKeepsBackground, Accuracy)
+{
+    Mat transparentOverlay(img.size, CV_8UC4, Scalar(200, 100, 50, 0)), dst;
+    alphaComposite(transparentOverlay, img.background, dst, GetParam());
+    EXPECT_EQ(0.0, cv::norm(dst, img.background, NORM_INF));
+}
 
-    // An opaque source covers an opaque destination for every "keep the source" operator.
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_SOURCE);
-    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_IN);
-    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_ATOP);
-    EXPECT_EQ(0.0, cv::norm(dst, opaqueColor, NORM_INF));
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_TransparentOverlayKeepsBackground,
+                        testing::Values(ALPHA_COMPOSITE_OVER, ALPHA_COMPOSITE_DEST_OVER),
+                        operatorParamName);
 
-    // ... and the complementary operators erase everything on an opaque destination.
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_OUT);
-    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_DEST_OUT);
-    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
-    alphaComposite(opaqueOverlay, background, dst, ALPHA_COMPOSITE_XOR);
-    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(size, CV_8UC3), NORM_INF));
+TEST(Imgproc_AlphaComposite, DestKeepsBackground)
+{
+    IdentityImages img;
+    Mat dst;
+    alphaComposite(img.overlay, img.background, dst, ALPHA_COMPOSITE_DEST);
+    EXPECT_EQ(0.0, cv::norm(dst, img.background, NORM_INF));
+}
 
-    // A transparent source leaves an opaque destination alone.
-    Mat transparentOverlay(size, CV_8UC4, Scalar(200, 100, 50, 0));
-    alphaComposite(transparentOverlay, background, dst, ALPHA_COMPOSITE_OVER);
-    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
-    alphaComposite(transparentOverlay, background, dst, ALPHA_COMPOSITE_DEST_OVER);
-    EXPECT_EQ(0.0, cv::norm(dst, background, NORM_INF));
+TEST(Imgproc_AlphaComposite, ClearErasesBoth)
+{
+    IdentityImages img;
+    Mat dst;
+    alphaComposite(img.overlay, img.background, dst, ALPHA_COMPOSITE_CLEAR);
+    EXPECT_EQ(0.0, cv::norm(dst, Mat::zeros(img.size, CV_8UC3), NORM_INF));
+}
 
-    // PLUS onto black is the premultiplied source.
-    Mat black(size, CV_8UC3, Scalar::all(0)), overlayPremul, overlayPremulColor;
-    cvtColor(overlay, overlayPremul, COLOR_RGBA2mRGBA);
+// PLUS onto black is the premultiplied source.
+TEST(Imgproc_AlphaComposite, PlusOntoBlackIsPremultipliedOverlay)
+{
+    IdentityImages img;
+    Mat black(img.size, CV_8UC3, Scalar::all(0)), overlayPremul, overlayPremulColor, dst;
+    cvtColor(img.overlay, overlayPremul, COLOR_RGBA2mRGBA);
     cvtColor(overlayPremul, overlayPremulColor, COLOR_BGRA2BGR);
-    alphaComposite(overlay, black, dst, ALPHA_COMPOSITE_PLUS);
+    alphaComposite(img.overlay, black, dst, ALPHA_COMPOSITE_PLUS);
     EXPECT_EQ(0.0, cv::norm(dst, overlayPremulColor, NORM_INF));
 }
 
@@ -283,32 +373,34 @@ TEST(Imgproc_AlphaComposite, CompositedAlphaOnFourChannelBackground)
     EXPECT_EQ(dst.at<Vec4b>(0, 0)[3], 192);
 }
 
-TEST(Imgproc_AlphaComposite, InPlaceDestinationAliasingBackground)
+typedef std::tuple<int, int> AliasingParams; // background channels, operator
+typedef testing::TestWithParam<AliasingParams> Imgproc_AlphaComposite_InPlace;
+
+static std::string aliasingName(const testing::TestParamInfo<AliasingParams>& info)
 {
-    Size size(80, 60);
-    Mat overlay(size, CV_8UC4);
-    randu(overlay, 0, 256);
-
-    for (size_t i = 0; i < sizeof(allOperators) / sizeof(allOperators[0]); ++i)
-    {
-        int op = allOperators[i];
-        SCOPED_TRACE(cv::format("op=%d", op));
-
-        Mat background3(size, CV_8UC3), expected3;
-        randu(background3, 0, 256);
-        Mat inPlace3 = background3.clone();
-        alphaComposite(overlay, background3, expected3, op);
-        alphaComposite(overlay, inPlace3, inPlace3, op); // dst aliases background
-        EXPECT_EQ(0.0, cv::norm(inPlace3, expected3, NORM_INF));
-
-        Mat background4(size, CV_8UC4), expected4;
-        randu(background4, 0, 256);
-        Mat inPlace4 = background4.clone();
-        alphaComposite(overlay, background4, expected4, op);
-        alphaComposite(overlay, inPlace4, inPlace4, op);
-        EXPECT_EQ(0.0, cv::norm(inPlace4, expected4, NORM_INF));
-    }
+    return cv::format("C%d_%s", std::get<0>(info.param), operatorName(std::get<1>(info.param)));
 }
+
+TEST_P(Imgproc_AlphaComposite_InPlace, DestinationAliasesBackground)
+{
+    int bgChannels = std::get<0>(GetParam());
+    int op = std::get<1>(GetParam());
+
+    Size size(80, 60);
+    Mat overlay(size, CV_8UC4), background(size, CV_8UC(bgChannels));
+    randu(overlay, 0, 256);
+    randu(background, 0, 256);
+
+    Mat expected, inPlace = background.clone();
+    alphaComposite(overlay, background, expected, op);
+    alphaComposite(overlay, inPlace, inPlace, op);
+    EXPECT_EQ(0.0, cv::norm(inPlace, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_AlphaComposite_InPlace,
+                        testing::Combine(testing::Values(3, 4),
+                                         testing::ValuesIn(allOperators)),
+                        aliasingName);
 
 TEST(Imgproc_AlphaComposite, RejectsInvalidInputs)
 {
