@@ -291,7 +291,8 @@ static int radixPassesCount(int64 range)
 }
 
 // One pass: copies the pointers, ordered by one 8-bit digit of y (or x).
-static void radixPass(Point* const* src,
+// Returns false if the pass is skipped.
+static bool radixPass(Point* const* src,
                       Point** dst,
                       int total,
                       const CHullRange& range,
@@ -317,6 +318,10 @@ static void radixPass(Point* const* src,
         count[bucket]++;
     }
 
+    if (count[bucketOf(src[0])] == total) {
+        return false;
+    }
+
     // compute start positions of buckets in dst
     for (int b = 0, pos = 0; b < NBUCKETS; ++b)
     {
@@ -333,6 +338,7 @@ static void radixPass(Point* const* src,
         dst[pos] = src[i];
         count[bucket] = pos + 1;       // the slot is taken now
     }
+    return true;
 }
 
 // Stable radix sort by x, then by y
@@ -358,15 +364,17 @@ static void radixSort(const Point* data,
     const int passesY = radixPassesCount(range.rangeY());
     for (int p = 0; p < passesY; ++p)
     {
-        radixPass(src, dst, total, range, true /* sort_by_y */, p);
-        std::swap(src, dst);
+        if (radixPass(src, dst, total, range, true /* sort_by_y */, p)) {
+            std::swap(src, dst);
+        }
     }
 
     const int passesX = radixPassesCount(range.rangeX());
     for (int p = 0; p < passesX; ++p)
     {
-        radixPass(src, dst, total, range, false /* sort_by_y */, p);
-        std::swap(src, dst);
+        if (radixPass(src, dst, total, range, false /* sort_by_y */, p)) {
+            std::swap(src, dst);
+        }
     }
 
     // src is the array the last pass wrote to. If that is scratch_points, copy the result to out_points
