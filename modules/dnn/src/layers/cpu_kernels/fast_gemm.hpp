@@ -58,6 +58,10 @@ struct MatMulHelper {
     std::vector<size_t> B_rows;
     std::vector<size_t> C_rows;
     size_t batch;
+    // Number of matrices actually stored in B.  When B is broadcast over the output
+    // batch dims this is smaller than `batch`, and the packed-B stride must be derived
+    // from this value, not from `batch`.
+    size_t B_batch;
 
     int lda0, lda1;
     int ldb0, ldb1;
@@ -75,6 +79,7 @@ struct MatMulHelper {
         C_rows = {0};
 
         batch = 0;
+        B_batch = 0;
     }
 
     bool empty() const {
@@ -104,6 +109,7 @@ struct MatMulHelper {
         auto batch_ndims = C_ndims - 2;
 
         batch = total(C_shape, 0, batch_ndims);
+        B_batch = total(B_shape, 0, static_cast<int>(B_ndims) - 2);
 
         A_offsets.resize(batch, 0);
         B_offsets.resize(batch, 0);
@@ -147,7 +153,9 @@ struct MatMulHelper {
 
     // only run after compute
     void updatePackedBOffsets(size_t packed_B_size) {
-        size_t packed_B_inner_size = packed_B_size / batch;
+        // packed_B holds one packed (N, K) matrix per batch slice of B; B_batch is that
+        // slice count, which can be smaller than `batch` when B is broadcast.
+        size_t packed_B_inner_size = B_batch > 0 ? packed_B_size / B_batch : 0;
         packed_B_offsets.resize(B_offsets.size());
         for (size_t i = 0; i < packed_B_offsets.size(); i++) {
             packed_B_offsets[i] = (B_offsets[i] / (N * K)) * packed_B_inner_size;

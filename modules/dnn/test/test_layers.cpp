@@ -2890,4 +2890,43 @@ TEST(Test_MatMul, ConstantRank1WeightPacking)
     normAssert(outputs[0], expected, "MatMul constant rank-1 weight packing mismatch", 1e-4, 1e-4);
 }
 
+// A constant weight whose leading dims broadcast against the activations: B has more than
+// one batch slice, but fewer than the output batch. The packed-B stride has to be derived
+// from the number of slices actually stored in B, not from the (broadcast) output batch.
+TEST(Test_MatMul, PackedBroadcastMultipleSlices)
+{
+    const int A0 = 2, A1 = 1, M = 3, K = 4;
+    const int B0 = 1, B1 = 5, N = 6;
+    Mat A({A0, A1, M, K}, CV_32F);
+    Mat B({B0, B1, K, N}, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_packed_broadcast_multi_slice";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.blobs.push_back(B);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {A}, outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+
+    Mat expected({A0, B1, M, N}, CV_32F);
+    for (int i = 0; i < A0; i++)
+    {
+        for (int j = 0; j < B1; j++)
+        {
+            Mat a2d(M, K, CV_32F, A.ptr<float>(i, 0));
+            Mat b2d(K, N, CV_32F, B.ptr<float>(0, j));
+            Mat c2d(M, N, CV_32F, expected.ptr<float>(i, j));
+            gemm(a2d, b2d, 1., noArray(), 0., c2d);
+        }
+    }
+    normAssert(outputs[0], expected, "MatMul packed broadcast multi-slice mismatch", 1e-4, 1e-4);
+}
+
 }} // namespace
