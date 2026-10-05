@@ -143,10 +143,19 @@ public:
 
     MatShape getOutShape(const MatShape& inpShape, const MatShape& shapeSpec) const
     {
-        // legacy models: (1, k) with the wrong k means (1, total)
-        if (shapeSpec.dims == 2 && shapeSpec[0] == 1 && shapeSpec[1] > 0 &&
-            (int64_t)shapeSpec[1] != (int64_t)inpShape.total())
-            return MatShape({1, (int)inpShape.total()});
+        // legacy models: (1, k) with the wrong k means (1, total); 0 is resolved first so
+        // that the (0, k) spelling is recognized too
+        if (shapeSpec.dims == 2)
+        {
+            int d0 = shapeSpec[0] == 0 && inpShape.dims > 0 ? inpShape[0] : shapeSpec[0];
+            int d1 = shapeSpec[1] == 0 && inpShape.dims > 1 ? inpShape[1] : shapeSpec[1];
+            const int64_t inpTotal = (int64_t)inpShape.total();
+            if (d0 == 1 && d1 > 0 && (int64_t)d1 != inpTotal)
+            {
+                CV_CheckLE((double)inpTotal, (double)INT_MAX, "reshape: the result is too big");
+                return MatShape({1, (int)inpTotal});
+            }
+        }
         return inpShape.reshape(shapeSpec);
     }
 

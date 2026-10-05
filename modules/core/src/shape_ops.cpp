@@ -27,8 +27,15 @@ static void reshapeTo(InputArray _src, OutputArray _dst, const MatShape& shape)
     Mat dst = _dst.getMat();
     if (dst.data == src.data)
         return;
-    CV_Assert(dst.isContinuous());
-    src.copyTo(Mat(src.dims, src.size.p, src.type(), dst.data));
+    if (dst.isContinuous())
+    {
+        src.copyTo(Mat(src.dims, src.size.p, src.type(), dst.data));
+        return;
+    }
+    // create() keeps a preallocated destination of the right shape even when it is strided
+    Mat tmp;
+    src.copyTo(tmp);
+    Mat(shape.dims, shape.p, src.type(), tmp.data).copyTo(dst);
 }
 
 void squeeze(InputArray src, OutputArray dst, const std::vector<int>& axes)

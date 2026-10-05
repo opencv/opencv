@@ -160,6 +160,9 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     // compute shape of the result with possible broadcasting
     CV_WRAP MatShape expand(const MatShape& another) const;
 
+    // The operations below drop the layout, except for a block one: it is applied to the
+    // semantic NCHW form and blocked again, which only works while N and C stay unchanged.
+
     // removes the given axes of size 1; all the axes of size 1 when axes is empty
     CV_WRAP MatShape squeeze(const std::vector<int>& axes = std::vector<int>()) const;
     // inserts axes of size 1; axes are positions in the result

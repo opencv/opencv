@@ -33,6 +33,8 @@ TEST(Core_MatShape, shape_ops)
     EXPECT_EQ(MatShape({2, 12, 5}), u.flatten(1, 2));
     EXPECT_EQ(MatShape({2, 3, 4, 5}), u.flatten(2, 2));
     EXPECT_ANY_THROW(u.flatten(2, 1));
+    EXPECT_EQ(MatShape({1}), MatShape::scalar().flatten());
+    EXPECT_ANY_THROW(MatShape::scalar().flatten(1));
 
     EXPECT_EQ(MatShape({6, 20}), u.reshape(MatShape({6, -1})));
     EXPECT_EQ(MatShape({2, 3, 20}), u.reshape(MatShape({0, 0, -1})));
@@ -41,6 +43,45 @@ TEST(Core_MatShape, shape_ops)
     EXPECT_ANY_THROW(u.reshape(MatShape({7, -1})));
     EXPECT_ANY_THROW(u.reshape(MatShape({-1, -1})));
     EXPECT_ANY_THROW(u.reshape(MatShape({121})));
+}
+
+// A block ('NC1HWC0') shape survives these operations as long as N and C are untouched.
+TEST(Core_MatShape, shape_ops_block_layout)
+{
+    const MatShape nchw({2, 12, 5, 5}, DATA_LAYOUT_NCHW);
+    const MatShape blk = nchw.toLayout(DATA_LAYOUT_BLOCK, 8);
+    ASSERT_EQ(MatShape({2, 2, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12), blk);
+    ASSERT_EQ((size_t)800, blk.total());   // padded: C 12 rounds up to 2*8
+
+    // the spatial axes may move
+    const MatShape flat = blk.flatten(2);
+    EXPECT_EQ(MatShape({2, 2, 25, 8}, DATA_LAYOUT_BLOCK, 12), flat);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, flat.layout);
+    EXPECT_EQ(12, flat.C);
+    EXPECT_EQ(blk.total(), flat.total());
+    EXPECT_EQ(nchw.flatten(2), flat.toLayout(DATA_LAYOUT_NCHW));
+
+    EXPECT_EQ(MatShape({2, 2, 1, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12), blk.unsqueeze({2}));
+    EXPECT_EQ(MatShape({2, 2, 25, 8}, DATA_LAYOUT_BLOCK, 12), blk.reshape(MatShape({0, 0, -1})));
+    EXPECT_EQ(MatShape({2, 2, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12), blk.squeeze());
+
+    const MatShape blk1 = MatShape({2, 12, 1, 5}, DATA_LAYOUT_NCHW).toLayout(DATA_LAYOUT_BLOCK, 8);
+    EXPECT_EQ(MatShape({2, 2, 5, 8}, DATA_LAYOUT_BLOCK, 12), blk1.squeeze());
+
+    // moving N or C would repack the padded C0 lanes
+    EXPECT_ANY_THROW(blk.flatten());
+    EXPECT_ANY_THROW(blk.flatten(0, 1));
+    EXPECT_ANY_THROW(blk.unsqueeze({0}));
+    EXPECT_ANY_THROW(blk.reshape(MatShape({2, 6, 50})));
+    EXPECT_ANY_THROW(blk.reshape(MatShape({4, 12, 25})));
+    EXPECT_ANY_THROW(blk.reshape(MatShape({-1})));
+
+    const MatShape blkN1 = MatShape({1, 12, 5, 5}, DATA_LAYOUT_NCHW).toLayout(DATA_LAYOUT_BLOCK, 8);
+    EXPECT_ANY_THROW(blkN1.squeeze({0}));
+
+    // the counts a caller addresses are logical: C == 12, not the padded C1 * C0 == 16
+    EXPECT_EQ(MatShape({2, 12, 25}, DATA_LAYOUT_NCHW), blk.toLayout(DATA_LAYOUT_NCHW).flatten(2));
+    EXPECT_ANY_THROW(blk.reshape(MatShape({2, 16, 25})));
 }
 
 TEST(Core_ShapeOps, views_and_copies)
@@ -86,6 +127,17 @@ TEST(Core_ShapeOps, views_and_copies)
     cv::squeeze(b, b);
     EXPECT_EQ(std::vector<int>({5}), shapeOf(b));
     EXPECT_EQ(bdata, b.data);
+
+    // a preallocated strided destination of the target shape gets a copy, not an assert
+    Mat canvas(10, 10, CV_8U, Scalar(0)), view = canvas(Rect(0, 0, 4, 5));
+    Mat src5x4({1, 5, 4}, CV_8U);
+    rng.fill(src5x4, RNG::UNIFORM, 0, 256);
+    cv::squeeze(src5x4, view);
+    ASSERT_EQ(std::vector<int>({5, 4}), shapeOf(view));
+    EXPECT_FALSE(view.isContinuous());
+    for (int i = 0; i < 5; i++)
+        for (int j = 0; j < 4; j++)
+            EXPECT_EQ(src5x4.at<uchar>(0, i, j), view.at<uchar>(i, j));
 
     // to and from 0-d
     Mat one({1, 1}, CV_32F, Scalar(2)), sc;

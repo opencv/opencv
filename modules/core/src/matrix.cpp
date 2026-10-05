@@ -403,9 +403,32 @@ static int normalizeShapeAxis(int axis, int dims)
     return axis < 0 ? axis + dims : axis;
 }
 
+// The semantic NCHW form {N, C, spatial...} of a block ('NC1HWC0') shape, so that axes and
+// element counts are the logical ones rather than the C0-padded ones.
+static MatShape toSemantic(const MatShape& shape)
+{
+    CV_CheckGE(shape.dims, 3, "a block shape is {N, C1, spatial..., C0}");
+    return shape.toLayout(DATA_LAYOUT_NCHW);
+}
+
+// Blocks such a result again. Once N or C changes, elements cross the padded C0 lanes and
+// the data needs a repack, which a shape operation cannot express.
+static MatShape toBlockOf(MatShape result, const MatShape& src, const char* op)
+{
+    if (result.dims < 2 || result.p[0] != src.p[0] || result.p[1] != src.C)
+        CV_Error_(Error::StsNotImplemented,
+                  ("%s: the block layout is kept only when the batch and the channel axes stay "
+                   "unchanged; convert the shape with toLayout() first", op));
+    CV_CheckLE(result.dims + 1, (int)MatShape::MAX_DIMS, "too many dimensions");
+    result.layout = DATA_LAYOUT_NCHW;
+    return result.toLayout(DATA_LAYOUT_BLOCK, src.p[src.dims-1]);
+}
+
 MatShape MatShape::squeeze(const std::vector<int>& axes) const
 {
     CV_Assert(dims >= 0);
+    if (layout == DATA_LAYOUT_BLOCK)
+        return toBlockOf(toSemantic(*this).squeeze(axes), *this, "squeeze");
     bool remove[MAX_DIMS] = {false};
     if (axes.empty())
     {
@@ -431,6 +454,8 @@ MatShape MatShape::squeeze(const std::vector<int>& axes) const
 MatShape MatShape::unsqueeze(const std::vector<int>& axes) const
 {
     CV_Assert(dims >= 0);
+    if (layout == DATA_LAYOUT_BLOCK)
+        return toBlockOf(toSemantic(*this).unsqueeze(axes), *this, "unsqueeze");
     const int outDims = dims + (int)axes.size();
     CV_CheckLE(outDims, (int)MAX_DIMS, "unsqueeze: too many dimensions");
     bool insert[MAX_DIMS] = {false};
@@ -451,8 +476,14 @@ MatShape MatShape::unsqueeze(const std::vector<int>& axes) const
 MatShape MatShape::flatten(int startAxis, int endAxis) const
 {
     CV_Assert(dims >= 0);
+    if (layout == DATA_LAYOUT_BLOCK)
+        return toBlockOf(toSemantic(*this).flatten(startAxis, endAxis), *this, "flatten");
     if (dims == 0)
+    {
+        CV_Check(startAxis, startAxis == 0 || startAxis == -1, "flatten: axis is out of range");
+        CV_Check(endAxis, endAxis == 0 || endAxis == -1, "flatten: axis is out of range");
         return MatShape({1});
+    }
     int start = normalizeShapeAxis(startAxis, dims), end = normalizeShapeAxis(endAxis, dims);
     CV_CheckLE(start, end, "flatten: startAxis must not follow endAxis");
     int64 merged = 1;
@@ -475,7 +506,12 @@ MatShape MatShape::flatten(int startAxis, int endAxis) const
 MatShape MatShape::reshape(const MatShape& newShape, bool allowZero) const
 {
     CV_Assert(dims >= 0 && newShape.dims >= 0);
-    MatShape result = newShape;
+    if (layout == DATA_LAYOUT_BLOCK)
+        return toBlockOf(toSemantic(*this).reshape(newShape, allowZero), *this, "reshape");
+    // a new number of axes: neither the layout of this shape nor the one of the spec applies
+    MatShape result;
+    result.dims = newShape.dims;
+    std::copy(newShape.p, newShape.p + newShape.dims, result.p);
     int inferred = -1;
     int64 known = 1;
     for (int i = 0; i < result.dims; i++)
@@ -503,8 +539,9 @@ MatShape MatShape::reshape(const MatShape& newShape, bool allowZero) const
         CV_CheckLE((double)(total_/known), (double)INT_MAX, "reshape: the result is too big");
         result.p[inferred] = (int)(total_/known);
     }
-    else
-        CV_Check((double)known, known == total_, "reshape: the number of elements does not match");
+    else if (known != total_)
+        CV_Error_(Error::StsBadArg, ("reshape: the number of elements does not match: %lld vs %lld",
+                                     (long long)known, (long long)total_));
     return result;
 }
 
