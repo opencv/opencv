@@ -138,7 +138,7 @@ static const Point* float_points_to_sortable_points(const Point2f* points, int t
         Cv32suf x, y;
         x.f = points[i].x;
         y.f = points[i].y;
-        // -0.f has only the sign bit set (INT_MIN as int); treat it as +0.f, they are equal as floats
+        // treat -0.f (INT_MIN as int) specially - map to 0, same as +0.f
         sortable_points[i].x = x.i == INT_MIN ? 0 : CV_TOGGLE_FLT(x.i);
         sortable_points[i].y = y.i == INT_MIN ? 0 : CV_TOGGLE_FLT(y.i);
     }
@@ -149,9 +149,8 @@ struct CHullRange
 {
     int minX, maxX;
     int minY, maxY;
-
-    // number of distinct x values the range spans
     int64 rangeX() const { return (int64)maxX - (int64)minX + 1; }
+    int64 rangeY() const { return (int64)maxY - (int64)minY + 1; }
 };
 
 static CHullRange compute_range(const Point* data, int total)
@@ -266,6 +265,31 @@ static bool convex_hull_counting_sort(const Point* data,
 
     total = out;
     return true;
+}
+
+static const int RADIX_BITS = 11; // 2048 buckets per pass, 3 passes cover 32 bits
+
+// number of radix passes needed to sort keys in 0..range-1
+static int radixPassesCount(int64 range)
+{
+    if (range <= 1)
+        return 0;
+    else if (range <= ((int64)1 << RADIX_BITS))
+        return 1;                                   // up to 2048 values
+    else if (range <= ((int64)1 << (2 * RADIX_BITS)))
+        return 2;                                   // up to 2^22 values
+    else
+        return 3;
+}
+
+static void convex_hull_radix_sort(const Point* data,
+                                   const CHullRange& range,
+                                   Point** out_points,
+                                   int total,
+                                   int& ind_miny,
+                                   int& ind_maxy)
+{
+
 }
 
 template<typename _Tp>
