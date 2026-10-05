@@ -924,7 +924,7 @@ TEST(Core_InputOutput, filestorage_sparse_matrix_bad_index)
     for (int dims = 1; dims <= 3; dims++)
     {
         SparseMat sm(dims, sizes, CV_32F);
-        RNG rng(12345 + dims);
+        RNG& rng = theRNG();
         for (int i = 0; i < 40; i++)
         {
             int idx[3];
