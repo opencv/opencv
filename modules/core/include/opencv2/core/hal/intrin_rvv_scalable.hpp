@@ -2017,48 +2017,64 @@ OPENCV_HAL_IMPL_RVV_UNPACKS(v_float32, 32)
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_float64, 64)
 #endif
 
+// N-way interleaved (AoS) access with RVV 1.0 segmented loads/stores
+// (vlsegN/vssegN): all N fields of an AoS block are moved with a single
+// instruction in a single pass over memory. Tuple fields are assembled with
+// vset rather than vcreate for compatibility with compilers that lack the
+// tuple vcreate intrinsics (Clang < 18).
 #define OPENCV_HAL_IMPL_RVV_INTERLEAVED(_Tpvec, _Tp, _TpCast, suffix, width, hwidth, vl) \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
 { \
-    a = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)ptr  , sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
-    b = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+1), sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
+    auto tuple = __riscv_vlseg2e##width##_v_##suffix##m1x2((_TpCast *)ptr, VTraits<v_##_Tpvec>::vlanes()); \
+    a = __riscv_vget_v_##suffix##m1x2_##suffix##m1(tuple, 0); \
+    b = __riscv_vget_v_##suffix##m1x2_##suffix##m1(tuple, 1); \
 }\
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_##_Tpvec& c) \
 { \
-    a = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)ptr  , sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
-    b = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+1), sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
-    c = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+2), sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+    auto tuple = __riscv_vlseg3e##width##_v_##suffix##m1x3((_TpCast *)ptr, VTraits<v_##_Tpvec>::vlanes()); \
+    a = __riscv_vget_v_##suffix##m1x3_##suffix##m1(tuple, 0); \
+    b = __riscv_vget_v_##suffix##m1x3_##suffix##m1(tuple, 1); \
+    c = __riscv_vget_v_##suffix##m1x3_##suffix##m1(tuple, 2); \
 } \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
                                 v_##_Tpvec& c, v_##_Tpvec& d) \
 { \
-    \
-    a = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)ptr  , sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
-    b = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+1), sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
-    c = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+2), sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
-    d = __riscv_vlse##width##_v_##suffix##m1((_TpCast *)(ptr+3), sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    auto tuple = __riscv_vlseg4e##width##_v_##suffix##m1x4((_TpCast *)ptr, VTraits<v_##_Tpvec>::vlanes()); \
+    a = __riscv_vget_v_##suffix##m1x4_##suffix##m1(tuple, 0); \
+    b = __riscv_vget_v_##suffix##m1x4_##suffix##m1(tuple, 1); \
+    c = __riscv_vget_v_##suffix##m1x4_##suffix##m1(tuple, 2); \
+    d = __riscv_vget_v_##suffix##m1x4_##suffix##m1(tuple, 3); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
-    __riscv_vsse##width((_TpCast *)ptr, sizeof(_Tp)*2, a, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+1), sizeof(_Tp)*2, b, VTraits<v_##_Tpvec>::vlanes()); \
+    typedef decltype(__riscv_vlseg2e##width##_v_##suffix##m1x2((_TpCast *)ptr, 0)) tuple_t; \
+    tuple_t seg = tuple_t(); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x2(seg, 0, a); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x2(seg, 1, b); \
+    __riscv_vsseg2e##width##_v_##suffix##m1x2((_TpCast *)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
-    __riscv_vsse##width((_TpCast *)ptr, sizeof(_Tp)*3, a, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+1), sizeof(_Tp)*3, b, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+2), sizeof(_Tp)*3, c, VTraits<v_##_Tpvec>::vlanes()); \
+    typedef decltype(__riscv_vlseg3e##width##_v_##suffix##m1x3((_TpCast *)ptr, 0)) tuple_t; \
+    tuple_t seg = tuple_t(); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x3(seg, 0, a); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x3(seg, 1, b); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x3(seg, 2, c); \
+    __riscv_vsseg3e##width##_v_##suffix##m1x3((_TpCast *)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, const v_##_Tpvec& d, \
                                 hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
 { \
-    __riscv_vsse##width((_TpCast *)ptr, sizeof(_Tp)*4, a, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+1), sizeof(_Tp)*4, b, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+2), sizeof(_Tp)*4, c, VTraits<v_##_Tpvec>::vlanes()); \
-    __riscv_vsse##width((_TpCast *)(ptr+3), sizeof(_Tp)*4, d, VTraits<v_##_Tpvec>::vlanes()); \
+    typedef decltype(__riscv_vlseg4e##width##_v_##suffix##m1x4((_TpCast *)ptr, 0)) tuple_t; \
+    tuple_t seg = tuple_t(); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x4(seg, 0, a); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x4(seg, 1, b); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x4(seg, 2, c); \
+    seg = __riscv_vset_v_##suffix##m1_##suffix##m1x4(seg, 3, d); \
+    __riscv_vsseg4e##width##_v_##suffix##m1x4((_TpCast *)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
 }
 
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint8, uchar, uchar, u8, 8, 4, VTraits<v_uint8>::vlanes())
