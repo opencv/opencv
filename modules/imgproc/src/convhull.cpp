@@ -172,13 +172,17 @@ static CHullRange compute_range(const Point* data, int total)
     return CHullRange{minX, maxX, minY, maxY};
 }
 
-static bool convex_hull_counting_sort(const Point* data,
-                                      const CHullRange& range,
-                                      bool require_monotonic_indices,
-                                      Point** out_points,
-                                      int& total,
-                                      int& ind_miny,
-                                      int& ind_maxy)
+// Counting sort by x that also prunes.
+// Of the points sharing an x value only the lowest and the highest are kept, the others are not needed for the hull.
+// out_points gets the kept points ordered by x, then by y; total is set to their count.
+// Returns false, leaving the outputs untouched, if the x range is too sparse or too large, or if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
+static bool convex_hull_counting_sort_and_prune(const Point* data,
+                                                const CHullRange& range,
+                                                bool require_monotonic_indices,
+                                                Point** out_points,
+                                                int& total,
+                                                int& ind_miny,
+                                                int& ind_maxy)
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
@@ -346,8 +350,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             float_points_to_sortable_points(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
 
         const CHullRange range = compute_range(sortable_points, total);
-        sorted = convex_hull_counting_sort(sortable_points, range, !returnPoints /* require_monotonic_indices */,
-                                           pointer, total, miny_ind, maxy_ind);
+        sorted = convex_hull_counting_sort_and_prune(sortable_points, range,
+                                                     !returnPoints /* require_monotonic_indices */,
+                                                     pointer, total, miny_ind, maxy_ind);
 
         if( is_float && sorted )
         {
