@@ -130,7 +130,7 @@ CV_HAL_RVV_FLIP_C3_TYPES(64)
 inline void flip_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height, int flip_mode) { \
     for (int h = 0; h < src_height; h++) { \
         const _Tps* src_row = (const _Tps*)(src_data + src_step * h); \
-        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (flip_mode < 0 ? (src_height - h) : (h + 1))); \
+        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (flip_mode < 0 ? (src_height - 1 - h) : h)) + 3 * src_width; \
         int vl; \
         for (int w = 0; w < src_width; w += vl) { \
             vl = RVV::setvl(src_width - w); \
@@ -153,7 +153,7 @@ inline void flip_inplace_##name(uchar* data, size_t step, int width, int height,
     int h; \
     for (h = 0; h < new_height; h++) { \
         _Tps* row_begin = (_Tps*)(data + step * h); \
-        _Tps* row_end = (_Tps*)(data + step * (flip_mode < 0 ? (height - h) : (h + 1))); \
+        _Tps* row_end = (_Tps*)(data + step * (flip_mode < 0 ? (height - 1 - h) : h)) + 3 * width; \
         int vl; \
         for (int w = 0; w < new_width; w += vl) { \
             vl = RVV::setvl(new_width - w); \
@@ -168,7 +168,7 @@ inline void flip_inplace_##name(uchar* data, size_t step, int width, int height,
     } \
     if (flip_mode == -1 && new_height * 2 != height) { \
         _Tps* row_begin = (_Tps*)(data + step * h); \
-        _Tps* row_end   = (_Tps*)(data + step * (h + 1)); \
+        _Tps* row_end   = (_Tps*)(data + step * h) + 3 * width; \
         new_width /= 2; \
         int vl; \
         for (int w = 0; w < new_width; w += vl) { \
