@@ -126,10 +126,12 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
     return --stacksize;
 }
 
+namespace chull_sort
+{
 
 // int points that order exactly like the float coordinates (bit patterns, not rounded values).
 // the sortable points are stored in buf.
-static const Point* float_points_to_sortable_points(const Point2f* points, int total, AutoBuffer<int>& buf)
+static const Point* floatPointsToSortablePoints(const Point2f* points, int total, AutoBuffer<int>& buf)
 {
     buf.allocate((size_t)total * 2);
     Point* sortable_points = (Point*)buf.data();
@@ -153,7 +155,7 @@ struct CHullRange
     int64 rangeY() const { return (int64)maxY - (int64)minY + 1; }
 };
 
-static CHullRange compute_range(const Point* data, int total)
+static CHullRange computeRange(const Point* data, int total)
 {
     CV_DbgAssert(total > 0);
 
@@ -176,13 +178,13 @@ static CHullRange compute_range(const Point* data, int total)
 // Of the points sharing an x value only the lowest and the highest are kept, the others are not needed for the hull.
 // out_points gets the kept points ordered by x, then by y; total is set to their count.
 // Returns false, leaving the outputs untouched, if the x range is too sparse or too large, or if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
-static bool convex_hull_counting_sort_and_prune(const Point* data,
-                                                const CHullRange& range,
-                                                bool require_monotonic_indices,
-                                                Point** out_points,
-                                                int& total,
-                                                int& ind_miny,
-                                                int& ind_maxy)
+static bool countingSortAndPrune(const Point* data,
+                                 const CHullRange& range,
+                                 bool require_monotonic_indices,
+                                 Point** out_points,
+                                 int& total,
+                                 int& ind_miny,
+                                 int& ind_maxy)
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
@@ -286,15 +288,17 @@ static int radixPassesCount(int64 range)
         return 3;
 }
 
-static void convex_hull_radix_sort(const Point* data,
-                                   const CHullRange& range,
-                                   Point** out_points,
-                                   int total,
-                                   int& ind_miny,
-                                   int& ind_maxy)
+static void radixSort(const Point* data,
+                      const CHullRange& range,
+                      Point** out_points,
+                      int total,
+                      int& ind_miny,
+                      int& ind_maxy)
 {
 
 }
+
+} // namespace chull_sort
 
 template<typename _Tp>
 struct CHullCmpPoints
@@ -347,12 +351,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     {
         AutoBuffer<int> _sortable_points_buffer;
         const Point* sortable_points = is_float ?
-            float_points_to_sortable_points(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
+            chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
 
-        const CHullRange range = compute_range(sortable_points, total);
-        sorted = convex_hull_counting_sort_and_prune(sortable_points, range,
-                                                     !returnPoints /* require_monotonic_indices */,
-                                                     pointer, total, miny_ind, maxy_ind);
+        const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
+        sorted = chull_sort::countingSortAndPrune(sortable_points, range,
+                                                  !returnPoints /* require_monotonic_indices */,
+                                                  pointer, total, miny_ind, maxy_ind);
 
         if( is_float && sorted )
         {
