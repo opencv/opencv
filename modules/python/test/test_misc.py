@@ -795,6 +795,10 @@ class Arguments(NewOpenCVTests):
         self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
         self.assertEqual(len(rr), 3)
 
+    def test_function_module_issue_19349(self):
+        self.assertEqual(cv.GaussianBlur.__module__, "cv2")
+        self.assertEqual(str(cv.GaussianBlur), "<built-in function GaussianBlur>")
+
     def test_function_module(self):
         import inspect
         import pickle
@@ -804,6 +808,7 @@ class Arguments(NewOpenCVTests):
                                  (cv.utils.nested, cv.utils.nested.testEchoBooleanFunction)):
             self.assertEqual(function.__module__, module.__name__)
             self.assertIs(inspect.getmodule(function), module)
+            self.assertTrue(inspect.isbuiltin(function))
             self.assertIsNone(function.__self__)
             self.assertIs(pickle.loads(pickle.dumps(function)), function)
 
