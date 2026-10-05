@@ -11,9 +11,8 @@ def main():
     parser.add_argument(
         '--algo',
         help="""DEPTH - works with depth,
-                RGB - works with images,
+                RGB - works with images (depth frames are required too),
                 RGB_DEPTH - works with all,
-                SCALE - works with depth and calculate Rt with scale,
                 default - runs all algos""",
         default="")
     parser.add_argument(
