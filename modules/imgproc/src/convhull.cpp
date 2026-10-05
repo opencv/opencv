@@ -290,14 +290,101 @@ static int radixPassesCount(int64 range)
         return 4;
 }
 
+// One pass: copies the pointers, ordered by one 8-bit digit of y (or x).
+static void radixPass(Point* const* src,
+                      Point** dst,
+                      int total,
+                      const CHullRange& range,
+                      bool sort_by_y,
+                      int passNr)
+{
+    const int shift = passNr * RADIX_BITS;   // which byte of the key this pass sorts by
+    const int64 origin = sort_by_y ? range.minY : range.minX;
+
+    const int NBUCKETS = 1 << RADIX_BITS;
+    int count[NBUCKETS] = {};
+
+    const int BUCKET_MASK = NBUCKETS - 1;   // the lowest RADIX_BITS bits set
+    const auto bucketOf = [=](const Point* p) {
+        const int64 key = (sort_by_y ? p->y : p->x) - origin;
+        return (int)((key >> shift) & BUCKET_MASK);
+    };
+
+    // how many points fall into each bucket
+    for (int i = 0; i < total; ++i)
+    {
+        int bucket = bucketOf(src[i]);
+        count[bucket]++;
+    }
+
+    // compute start positions of buckets in dst
+    for (int b = 0, pos = 0; b < NBUCKETS; ++b)
+    {
+        int c = count[b];
+        count[b] = pos;
+        pos += c;
+    }
+
+    // scatter
+    for (int i = 0; i < total; ++i)
+    {
+        int bucket = bucketOf(src[i]);
+        int pos = count[bucket];       // next free slot
+        dst[pos] = src[i];
+        count[bucket] = pos + 1;       // the slot is taken now
+    }
+}
+
+// Stable radix sort by x, then by y
 static void radixSort(const Point* data,
+                      int total,
                       const CHullRange& range,
                       Point** out_points,
-                      int total,
                       int& ind_miny,
                       int& ind_maxy)
 {
+    // need this initialization here because for floats data is not the array the caller's pointers refer to,
+    // it is CV_TOGGLE_FLT mapping.
+    for (int i = 0; i < total; ++i)
+    {
+        out_points[i] = const_cast<Point*>(&data[i]);
+    }
 
+    AutoBuffer<Point*> scratch_points(total);
+    Point** src = out_points;
+    Point** dst = scratch_points.data();
+
+    // sort by y, then by x
+    const int passesY = radixPassesCount(range.rangeY());
+    for (int p = 0; p < passesY; ++p)
+    {
+        radixPass(src, dst, total, range, true /* sort_by_y */, p);
+        std::swap(src, dst);
+    }
+
+    const int passesX = radixPassesCount(range.rangeX());
+    for (int p = 0; p < passesX; ++p)
+    {
+        radixPass(src, dst, total, range, false /* sort_by_y */, p);
+        std::swap(src, dst);
+    }
+
+    // src is the array the last pass wrote to. If that is scratch_points, copy the result to out_points
+    if (src != out_points) {
+        std::copy(src, src + total, out_points);
+    }
+
+    // find the lowest and the highest points
+    ind_miny = 0;
+    ind_maxy = 0;
+    for (int i = 1; i < total; ++i)
+    {
+        const int y = out_points[i]->y;
+        if (out_points[ind_miny]->y > y)
+            ind_miny = i;
+        if (out_points[ind_maxy]->y < y)
+            ind_maxy = i;
+    }
 }
 
 } // namespace chull_sort
