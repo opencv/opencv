@@ -273,7 +273,7 @@ static bool countingSortAndPrune(const Point* data,
     return true;
 }
 
-static const int RADIX_BITS = 11; // 2048 buckets per pass, 3 passes cover 32 bits
+static const int RADIX_BITS = 8; // 256 buckets per pass, 4 passes cover 32 bits
 
 // number of radix passes needed to sort keys in 0..range-1
 static int radixPassesCount(int64 range)
@@ -281,11 +281,13 @@ static int radixPassesCount(int64 range)
     if (range <= 1)
         return 0;
     else if (range <= ((int64)1 << RADIX_BITS))
-        return 1;                                   // up to 2048 values
+        return 1;                                   // up to 256 values
     else if (range <= ((int64)1 << (2 * RADIX_BITS)))
-        return 2;                                   // up to 2^22 values
+        return 2;                                   // up to 2^16 values
+    else if (range <= ((int64)1 << (3 * RADIX_BITS)))
+        return 3;                                   // up to 2^24 values
     else
-        return 3;
+        return 4;
 }
 
 static void radixSort(const Point* data,
