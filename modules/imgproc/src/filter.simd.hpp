@@ -1629,7 +1629,7 @@ struct SymmColumnVec_32s16s
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width) const
+    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
     {
         CV_INSTRUMENT_REGION();
 
