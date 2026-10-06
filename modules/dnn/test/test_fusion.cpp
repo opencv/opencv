@@ -651,11 +651,10 @@ TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
     ASSERT_NE(std::find(preTypes.begin(), preTypes.end(), std::string("NaryEltwise")), preTypes.end())
         << "test model must start with a separate NaryEltwise layer for this test to mean anything";
 
-    RNG rng(12345);
     Mat input(std::vector<int>{1, 8, 6, 6}, CV_32F);
-    rng.fill(input, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(input, RNG::UNIFORM, -1.0, 1.0);
     Mat residual(std::vector<int>{1, 16, 12, 12}, CV_32F);
-    rng.fill(residual, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(residual, RNG::UNIFORM, -1.0, 1.0);
 
     net.setInput(input, "input");
     net.setInput(residual, "residual");
@@ -684,11 +683,10 @@ TEST(Fusion, TransformLayoutAddPartialChannelBlockMatchesUnfused)
     Net net = readNetFromONNX(_tf("models/deconv_transform_add_partial.onnx"));
     ASSERT_FALSE(net.empty());
 
-    RNG rng(6789);
     Mat input(std::vector<int>{1, 8, 6, 6}, CV_32F);
-    rng.fill(input, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(input, RNG::UNIFORM, -1.0, 1.0);
     Mat residual(std::vector<int>{1, 12, 12, 12}, CV_32F);
-    rng.fill(residual, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(residual, RNG::UNIFORM, -1.0, 1.0);
 
     net.setInput(input, "input");
     net.setInput(residual, "residual");
@@ -715,11 +713,10 @@ TEST(Fusion, TransformLayoutAddBroadcastResidualMatchesUnfused)
     Net net = readNetFromONNX(_tf("models/deconv_transform_add_broadcast.onnx"));
     ASSERT_FALSE(net.empty());
 
-    RNG rng(4242);
     Mat input(std::vector<int>{1, 8, 6, 6}, CV_32F);
-    rng.fill(input, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(input, RNG::UNIFORM, -1.0, 1.0);
     Mat residual(std::vector<int>{1, 16, 1, 1}, CV_32F);
-    rng.fill(residual, RNG::UNIFORM, -1.0, 1.0);
+    theRNG().fill(residual, RNG::UNIFORM, -1.0, 1.0);
 
     net.setInput(input, "input");
     net.setInput(residual, "residual");
