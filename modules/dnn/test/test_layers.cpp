@@ -934,6 +934,32 @@ TEST(Layer_LSTM2_Test_Accuracy_, ReverseFinalState)
     normAssert(outputs[2], Yc, "LSTM2(reverse) Y_c", 1e-4, 1e-4);
 }
 
+// direction=reverse with sequence_lens: each sample starts at its own last valid timestep and
+// Y_h/Y_c are the states left after x[0].
+TEST(Layer_LSTM2_Test_Accuracy_, ReverseSequenceLens)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 4 * H, I}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    // full length, truncated and empty, so the reverse start and the zero padding are both hit
+    const std::vector<int> lens = {4, 2, 0};
+    std::vector<Mat> outputs;
+    runLSTM2(X, W, R, B, H, true, lens, outputs);
+
+    Mat Y, Yh, Yc;
+    lstm2Reference(X, W, R, B, H, true, lens, Y, Yh, Yc);
+    normAssert(outputs[0], Y, "LSTM2(reverse, sequence_lens) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], Yh, "LSTM2(reverse, sequence_lens) Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], Yc, "LSTM2(reverse, sequence_lens) Y_c", 1e-4, 1e-4);
+}
+
 // The ONNX `clip` attribute bounds the input of the activations to [-clip, clip].
 TEST(Layer_LSTM2_Test_Accuracy_, Clip)
 {
