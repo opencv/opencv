@@ -2193,25 +2193,49 @@ void v_rshr_pack_store(short* ptr, const v_int32x8& a)
 
 // 64
 // Non-saturating pack
+// Low and high 32-bit halves of a and b, within each 128-bit lane: [a0 a1 b0 b1 | a2 a3 b2 b3].
+// The saturation below is decided on the high halves alone, so only 32-bit compares are needed.
+#define OPENCV_HAL_AVX2_SPLIT64(a, b, lo, hi)     __m256 lo##_af = _mm256_castsi256_ps(a), lo##_bf = _mm256_castsi256_ps(b);     __m256i lo = _mm256_castps_si256(_mm256_shuffle_ps(lo##_af, lo##_bf, _MM_SHUFFLE(2,0,2,0)));     __m256i hi = _mm256_castps_si256(_mm256_shuffle_ps(lo##_af, lo##_bf, _MM_SHUFFLE(3,1,3,1)))
+
+// the shuffle above works per 128-bit lane, so restore the a0..a3 b0..b3 order afterwards
+#define OPENCV_HAL_AVX2_FIX64(r) _mm256_permute4x64_epi64(r, _MM_SHUFFLE(3,1,2,0))
+
+// s64 -> s32: fits exactly when hi == sext(lo), else INT_MIN / INT_MAX by sign
+inline v_int32x8 v_pack(const v_int64x4& a, const v_int64x4& b)
+{
+    OPENCV_HAL_AVX2_SPLIT64(a.val, b.val, lo, hi);
+    __m256i fits = _mm256_cmpeq_epi32(hi, _mm256_srai_epi32(lo, 31));
+    __m256i sat  = _mm256_xor_si256(_mm256_srai_epi32(hi, 31), _mm256_set1_epi32(INT_MAX));
+    return v_int32x8(OPENCV_HAL_AVX2_FIX64(_mm256_blendv_epi8(sat, lo, fits)));
+}
+
+// u64 -> u32: fits exactly when hi == 0, else UINT_MAX
 inline v_uint32x8 v_pack(const v_uint64x4& a, const v_uint64x4& b)
 {
-    __m256i a0 = _mm256_shuffle_epi32(a.val, _MM_SHUFFLE(0, 0, 2, 0));
-    __m256i b0 = _mm256_shuffle_epi32(b.val, _MM_SHUFFLE(0, 0, 2, 0));
-    __m256i ab = _mm256_unpacklo_epi64(a0, b0); // a0, a1, b0, b1, a2, a3, b2, b3
-    return v_uint32x8(_v256_shuffle_odd_64(ab));
+    OPENCV_HAL_AVX2_SPLIT64(a.val, b.val, lo, hi);
+    __m256i fits = _mm256_cmpeq_epi32(hi, _mm256_setzero_si256());
+    return v_uint32x8(OPENCV_HAL_AVX2_FIX64(_mm256_blendv_epi8(_mm256_set1_epi32(-1), lo, fits)));
 }
 
-inline v_int32x8 v_pack(const v_int64x4& a, const v_int64x4& b)
-{ return v_reinterpret_as_s32(v_pack(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b))); }
+// s64 -> u32: hi == 0 keeps lo, hi < 0 clamps to 0, hi > 0 clamps to UINT_MAX - and cmpgt
+// yields exactly 0 / all-ones, so it doubles as the saturated value.
+inline v_uint32x8 v_pack_u(const v_int64x4& a, const v_int64x4& b)
+{
+    OPENCV_HAL_AVX2_SPLIT64(a.val, b.val, lo, hi);
+    __m256i zero = _mm256_setzero_si256();
+    __m256i fits = _mm256_cmpeq_epi32(hi, zero);
+    __m256i sat  = _mm256_cmpgt_epi32(hi, zero);
+    return v_uint32x8(OPENCV_HAL_AVX2_FIX64(_mm256_blendv_epi8(sat, lo, fits)));
+}
+
+inline void v_pack_store(int* ptr, const v_int64x4& a)
+{ v_store_low(ptr, v_pack(a, a)); }
 
 inline void v_pack_store(unsigned* ptr, const v_uint64x4& a)
-{
-    __m256i a0 = _mm256_shuffle_epi32(a.val, _MM_SHUFFLE(0, 0, 2, 0));
-    v_store_low(ptr, v_uint32x8(_v256_shuffle_odd_64(a0)));
-}
+{ v_store_low(ptr, v_pack(a, a)); }
 
-inline void v_pack_store(int* ptr, const v_int64x4& b)
-{ v_pack_store((unsigned*)ptr, v_reinterpret_as_u64(b)); }
+inline void v_pack_u_store(unsigned* ptr, const v_int64x4& a)
+{ v_store_low(ptr, v_pack_u(a, a)); }
 
 template<int n> inline
 v_uint32x8 v_rshr_pack(const v_uint64x4& a, const v_uint64x4& b)

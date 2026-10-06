@@ -274,10 +274,13 @@ OPENCV_HAL_IMPL_MSA_PACK(v_uint8x16, v_uint16x8, pack, msa_qpack_u16, msa_qrpack
 OPENCV_HAL_IMPL_MSA_PACK(v_int8x16, v_int16x8, pack, msa_qpack_s16, msa_qrpackr_s16)
 OPENCV_HAL_IMPL_MSA_PACK(v_uint16x8, v_uint32x4, pack, msa_qpack_u32, msa_qrpackr_u32)
 OPENCV_HAL_IMPL_MSA_PACK(v_int16x8, v_int32x4, pack, msa_qpack_s32, msa_qrpackr_s32)
-OPENCV_HAL_IMPL_MSA_PACK(v_uint32x4, v_uint64x2, pack, msa_pack_u64, msa_rpackr_u64)
-OPENCV_HAL_IMPL_MSA_PACK(v_int32x4, v_int64x2, pack, msa_pack_s64, msa_rpackr_s64)
+// 64->32 saturates like every other width now: the q-prefixed (saturating) primitives, not the
+// plain pckev-based ones, which truncated.
+OPENCV_HAL_IMPL_MSA_PACK(v_uint32x4, v_uint64x2, pack, msa_qpack_u64, msa_qrpackr_u64)
+OPENCV_HAL_IMPL_MSA_PACK(v_int32x4, v_int64x2, pack, msa_qpack_s64, msa_qrpackr_s64)
 OPENCV_HAL_IMPL_MSA_PACK(v_uint8x16, v_int16x8, pack_u, msa_qpacku_s16, msa_qrpackru_s16)
 OPENCV_HAL_IMPL_MSA_PACK(v_uint16x8, v_int32x4, pack_u, msa_qpacku_s32, msa_qrpackru_s32)
+OPENCV_HAL_IMPL_MSA_PACK(v_uint32x4, v_int64x2, pack_u, msa_qpacku_s64, msa_qrpackru_s64)
 
 #define OPENCV_HAL_IMPL_MSA_PACK_STORE(_Tpvec, _Tp, hreg, suffix, _Tpwvec, pack, mov, rshr) \
 inline void v_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
@@ -296,10 +299,11 @@ OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint8x16, uchar, v8u8, u8, v_uint16x8, pack, ms
 OPENCV_HAL_IMPL_MSA_PACK_STORE(v_int8x16, schar, v8i8, s8, v_int16x8, pack, msa_qmovn_s16, msa_qrshrn_n_s16)
 OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint16x8, ushort, v4u16, u16, v_uint32x4, pack, msa_qmovn_u32, msa_qrshrn_n_u32)
 OPENCV_HAL_IMPL_MSA_PACK_STORE(v_int16x8, short, v4i16, s16, v_int32x4, pack, msa_qmovn_s32, msa_qrshrn_n_s32)
-OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint32x4, unsigned, v2u32, u32, v_uint64x2, pack, msa_movn_u64, msa_rshrn_n_u64)
-OPENCV_HAL_IMPL_MSA_PACK_STORE(v_int32x4, int, v2i32, s32, v_int64x2, pack, msa_movn_s64, msa_rshrn_n_s64)
+OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint32x4, unsigned, v2u32, u32, v_uint64x2, pack, msa_qmovn_u64, msa_qrshrn_n_u64)
+OPENCV_HAL_IMPL_MSA_PACK_STORE(v_int32x4, int, v2i32, s32, v_int64x2, pack, msa_qmovn_s64, msa_qrshrn_n_s64)
 OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint8x16, uchar, v8u8, u8, v_int16x8, pack_u, msa_qmovun_s16, msa_qrshrun_n_s16)
 OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint16x8, ushort, v4u16, u16, v_int32x4, pack_u, msa_qmovun_s32, msa_qrshrun_n_s32)
+OPENCV_HAL_IMPL_MSA_PACK_STORE(v_uint32x4, unsigned, v2u32, u32, v_int64x2, pack_u, msa_qmovun_s64, msa_qrshrun_n_s64)
 
 // pack boolean
 inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)

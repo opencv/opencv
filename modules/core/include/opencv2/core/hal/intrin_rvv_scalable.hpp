@@ -1813,32 +1813,30 @@ void v_rshr_pack_store(_Tp* ptr, const _wTpvec& a, int N = n) \
     __riscv_vse##hwidth##_v_##hsuffix##mf2(ptr, rshr(a, N, 0, VTraits<_Tpvec>::vlanes()), VTraits<_wTpvec>::vlanes()); \
 }
 
-#define OPENCV_HAL_IMPL_RVV_PACK_32(_Tpvec, _Tp, _wTpvec, hwidth, hsuffix, suffix, rshr, shr) \
-inline _Tpvec v_pack(const _wTpvec& a, const _wTpvec& b) \
-{ \
-    return shr(__riscv_vset(__riscv_vlmul_ext_##suffix##m2(a), 1, b), 0, VTraits<_Tpvec>::vlanes()); \
-} \
-inline void v_pack_store(_Tp* ptr, const _wTpvec& a) \
-{ \
-    __riscv_vse##hwidth##_v_##hsuffix##mf2(ptr, shr(a, 0, VTraits<_Tpvec>::vlanes()), VTraits<_wTpvec>::vlanes()); \
-} \
-template<int n = 0> inline \
-_Tpvec v_rshr_pack(const _wTpvec& a, const _wTpvec& b, int N = n) \
-{ \
-    return rshr(__riscv_vset(__riscv_vlmul_ext_##suffix##m2(a), 1, b), N, 0, VTraits<_Tpvec>::vlanes()); \
-} \
-template<int n = 0> inline \
-void v_rshr_pack_store(_Tp* ptr, const _wTpvec& a, int N = n) \
-{ \
-    __riscv_vse##hwidth##_v_##hsuffix##mf2(ptr, rshr(a, N, 0, VTraits<_Tpvec>::vlanes()), VTraits<_wTpvec>::vlanes()); \
-}
-
 OPENCV_HAL_IMPL_RVV_PACK(v_uint8, uchar, v_uint16, 8, u8, u16, __riscv_vnclipu, __riscv_vnclipu)
 OPENCV_HAL_IMPL_RVV_PACK(v_int8, schar, v_int16, 8,  i8, i16, __riscv_vnclip, __riscv_vnclip)
 OPENCV_HAL_IMPL_RVV_PACK(v_uint16, ushort, v_uint32, 16, u16, u32, __riscv_vnclipu, __riscv_vnclipu)
 OPENCV_HAL_IMPL_RVV_PACK(v_int16, short, v_int32, 16, i16, i32, __riscv_vnclip, __riscv_vnclip)
-OPENCV_HAL_IMPL_RVV_PACK_32(v_uint32, unsigned, v_uint64, 32, u32, u64, __riscv_vnclipu, __riscv_vnsrl)
-OPENCV_HAL_IMPL_RVV_PACK_32(v_int32, int, v_int64, 32, i32, i64, __riscv_vnclip, __riscv_vnsra)
+// 64->32 saturates like every other width now, so these use the same saturating narrow
+// (vnclip/vnclipu) as the narrower widths rather than the truncating vnsrl/vnsra.
+OPENCV_HAL_IMPL_RVV_PACK(v_uint32, unsigned, v_uint64, 32, u32, u64, __riscv_vnclipu, __riscv_vnclipu)
+OPENCV_HAL_IMPL_RVV_PACK(v_int32, int, v_int64, 32, i32, i64, __riscv_vnclip, __riscv_vnclip)
+
+// s64 -> u32: clamp the negatives to zero first, then narrow as unsigned
+inline v_uint32 v_pack_u(const v_int64& a, const v_int64& b)
+{
+    size_t vl = VTraits<v_uint32>::vlanes();
+    vint64m2_t ab = __riscv_vset(__riscv_vlmul_ext_i64m2(a), 1, b);
+    vuint64m2_t t = __riscv_vreinterpret_u64m2(__riscv_vmax(ab, 0, VTraits<v_int64>::vlanes()*2));
+    return __riscv_vnclipu(t, 0, 0, vl);
+}
+
+inline void v_pack_u_store(unsigned* ptr, const v_int64& a)
+{
+    size_t vl = VTraits<v_int64>::vlanes();
+    vuint64m1_t t = __riscv_vreinterpret_u64m1(__riscv_vmax(a, 0, vl));
+    __riscv_vse32_v_u32mf2(ptr, __riscv_vnclipu(t, 0, 0, VTraits<v_uint32>::vlanes()), vl);
+}
 
 template <int N = VTraits<v_uint16>::max_nlanes>
 inline v_uint16 v_pack(const v_uint32& a, const v_uint32& b)

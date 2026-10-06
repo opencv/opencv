@@ -195,75 +195,32 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
     b = v_cvt_f32(ib);
 }
 
-// v_pack() narrows 64-bit lanes by TRUNCATION. At the 8/16/32-bit widths v_pack saturates, but the
-// 64->32 forms are defined with static_cast (see OPENCV_HAL_IMPL_C_PACK in intrin_cpp.hpp) because
-// no backend offers a saturating 64->32 pack. A conversion must saturate, so a 64-bit source has to
-// be clamped into the destination's range BEFORE it is packed: otherwise the value wraps first and
-// the later saturating narrow to 8/16 bits then saturates the WRAPPED value, which is not merely
-// imprecise but the wrong end of the range (4294967295 -> -1 -> 0 for uchar, instead of 255).
+// v_pack()/v_pack_u() saturate at every width, 64->32 included, so a 64-bit source needs no
+// clamping here any more - see the HAL headers for the per-backend implementations.
 //
-// The unsigned-source helpers test the high bits with a shift rather than an ordering compare,
-// since unsigned 64-bit comparison is not uniformly available across the SIMD backends.
-
-// The 64-bit ORDERING compares cannot be used here. At the SSE and NEON baselines v_gt on
-// v_int64x2 is the sign of (b - a) (intrin_sse.hpp, intrin_neon.hpp), so it overflows - and
-// answers the wrong way - precisely when the operands sit at opposite ends of the 64-bit range,
-// which is the case a saturating conversion must get right: v_gt(INT64_MIN, INT32_MAX) reports
-// true. Only the 256-bit AVX2 path lowers to a native compare, so a build would be correct when
-// it dispatches to AVX2 and wrong at its own baseline. Use an arithmetic shift and an equality
-// instead; v_eq on 64-bit lanes is exact (it is built from 32-bit compares) and the shift cannot
-// overflow.
-static inline v_int64 v_clamp_s64_to_s32(const v_int64& x)
-{
-    const v_int64 zero = vx_setzero_s64();
-    const v_int64 ones = vx_setall_s64((int64_t)-1);
-    const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
-    const v_int64 top  = v_shr<31>(x);                   // 0 or -1 exactly when x fits in int32
-    const v_int64 fits = v_or(v_eq(top, zero), v_eq(top, ones));
-    const v_int64 sat  = v_select(sign, vx_setall_s64((int64_t)INT_MIN),
-                                        vx_setall_s64((int64_t)INT_MAX));
-    return v_select(fits, x, sat);
-}
-
-static inline v_int64 v_clamp_s64_to_u32(const v_int64& x)
-{
-    const v_int64 zero = vx_setzero_s64();
-    const v_int64 sign = v_shr<63>(x);                   // all ones when x is negative
-    const v_int64 top  = v_shr<32>(x);                   // 0 exactly when x is in [0, UINT32_MAX]
-    const v_int64 fits = v_eq(top, zero);
-    const v_int64 sat  = v_select(sign, zero, vx_setall_s64((int64_t)UINT_MAX));
-    return v_select(fits, x, sat);
-}
-
-static inline v_uint64 v_clamp_u64_to_u32(const v_uint64& x)
-{
-    // x > UINT32_MAX  <=>  (x >> 32) != 0
-    const v_uint64 over = v_shr<32>(x);
-    return v_select(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)UINT_MAX), x);
-}
-
+// There is no saturating uint64 -> int32 narrow in the HAL (no width has a v_pack_s), so that one
+// direction still clamps first; everything else goes straight through v_pack/v_pack_u.
 static inline v_uint64 v_clamp_u64_to_s32(const v_uint64& x)
 {
     // x > INT32_MAX  <=>  (x >> 31) != 0
     const v_uint64 over = v_shr<31>(x);
-    return v_select(v_ne(over, vx_setzero_u64()), vx_setall_u64((uint64_t)INT_MAX), x);
+    return v_select(v_eq(over, vx_setzero_u64()), x, vx_setall_u64((uint64_t)INT_MAX));
 }
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_pack(v_clamp_s64_to_s32(vx_load(ptr)),
-               v_clamp_s64_to_s32(vx_load(ptr + int64_nlanes)));
-    b = v_pack(v_clamp_s64_to_s32(vx_load(ptr + int64_nlanes*2)),
-               v_clamp_s64_to_s32(vx_load(ptr + int64_nlanes*3)));
+    a = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
+    b = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
 }
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 {
-    v_int64 z = vx_setzero_s64();
+    // clamp the negatives to zero through the sign bit: v_gt on 64-bit lanes is sign(b - a) at the
+    // SSE and NEON baselines, which overflows for an operand at the bottom of the range
     v_int64 ia = vx_load(ptr), ib = vx_load(ptr + VTraits<v_uint64>::vlanes());
-    ia = v_and(ia, v_gt(ia, z));
-    ib = v_and(ib, v_gt(ib, z));
+    ia = v_and(ia, v_not(v_shr<63>(ia)));
+    ib = v_and(ib, v_not(v_shr<63>(ib)));
     a = v_reinterpret_as_u64(ia);
     b = v_reinterpret_as_u64(ib);
 }
@@ -271,16 +228,8 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint32& a, v_uint32& b)
 {
     const int nlanes = VTraits<v_uint64>::vlanes();
-    v_int64 z = vx_setzero_s64();
-    v_int64 ia0 = vx_load(ptr), ia1 = vx_load(ptr + nlanes);
-    v_int64 ib0 = vx_load(ptr + nlanes*2), ib1 = vx_load(ptr + nlanes*3);
-    CV_UNUSED(z);
-    ia0 = v_clamp_s64_to_u32(ia0);
-    ia1 = v_clamp_s64_to_u32(ia1);
-    ib0 = v_clamp_s64_to_u32(ib0);
-    ib1 = v_clamp_s64_to_u32(ib1);
-    a = v_pack(v_reinterpret_as_u64(ia0), v_reinterpret_as_u64(ia1));
-    b = v_pack(v_reinterpret_as_u64(ib0), v_reinterpret_as_u64(ib1));
+    a = v_pack_u(vx_load(ptr), vx_load(ptr + nlanes));
+    b = v_pack_u(vx_load(ptr + nlanes*2), vx_load(ptr + nlanes*3));
 }
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_float32& a, v_float32& b)
@@ -348,10 +297,8 @@ static inline void vx_load_pair_as(const int* ptr, v_uint32& a, v_uint32& b)
 static inline void vx_load_pair_as(const uint64_t* ptr, v_uint32& a, v_uint32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_pack(v_clamp_u64_to_u32(vx_load(ptr)),
-               v_clamp_u64_to_u32(vx_load(ptr + int64_nlanes)));
-    b = v_pack(v_clamp_u64_to_u32(vx_load(ptr + int64_nlanes*2)),
-               v_clamp_u64_to_u32(vx_load(ptr + int64_nlanes*3)));
+    a = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
+    b = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
 }
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_int32& a, v_int32& b)
