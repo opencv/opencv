@@ -46,3 +46,21 @@ class Imgproc_Tests(NewOpenCVTests):
             status = np.all(pil_result == ocv_result)
             print(ts, status)
             self.assertTrue(status, "resize result differs from Pillow for target size %s" % (ts,))
+
+    def test_warp_reject_nd_input(self):
+        # https://github.com/opencv/opencv/issues/29589
+        batch = np.zeros((4, 3, 5, 3), dtype=np.uint8)
+        map_x, map_y = np.meshgrid(np.arange(5, dtype=np.float32), np.arange(3, dtype=np.float32))
+        affine = np.eye(2, 3, dtype=np.float32)
+        perspective = np.eye(3, dtype=np.float32)
+
+        with self.assertRaises(cv.error):
+            cv.remap(batch, map_x, map_y, cv.INTER_NEAREST)
+        with self.assertRaises(cv.error):
+            cv.warpAffine(batch, affine, (5, 3), flags=cv.INTER_NEAREST)
+        with self.assertRaises(cv.error):
+            cv.warpPerspective(batch, perspective, (5, 3), flags=cv.INTER_NEAREST)
+
+        # a single HWC image is still accepted
+        res = cv.remap(batch[0], map_x, map_y, cv.INTER_NEAREST)
+        self.assertEqual(res.shape, (3, 5, 3))
