@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 #include <iostream>
 
-// set to 0 to disable the counting-sort dispatch, falling back to std::sort
+// set to 0 to disable counting sort
 #ifndef CV_CONVHULL_USE_COUNTING_SORT
 #define CV_CONVHULL_USE_COUNTING_SORT 1
 #endif
@@ -174,10 +174,12 @@ static CHullRange computeRange(const Point* data, int total)
     return CHullRange{minX, maxX, minY, maxY};
 }
 
+static const int COUNTING_MAX_RANGE = 100000;   // ~1.6 MB of columns
+
 // Counting sort by x that also prunes.
 // Of the points sharing an x value only the lowest and the highest are kept, the others are not needed for the hull.
 // out_points gets the kept points ordered by x, then by y; total is set to their count.
-// Returns false, leaving the outputs untouched, if the x range is too sparse or too large, or if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
+// Returns false, leaving the outputs untouched, if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
 static bool countingSortAndPrune(const Point* data,
                                  const CHullRange& range,
                                  bool require_monotonic_indices,
@@ -188,25 +190,13 @@ static bool countingSortAndPrune(const Point* data,
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
-    const int MAX_RANGE = 100000;       // ~1.6 MB of columns (sizeof(XColumn) * MAX_RANGE)
-    const int MAX_SPARSITY_FACTOR = 4;  // std::sort beats counting sort on sparse ranges
-
     if (total <= 0) {
         return true;
     }
 
     // 1) Check the x range
-    const int64 rangeX64 = range.rangeX();
-    if (rangeX64 > MAX_SPARSITY_FACTOR * (int64)total) {
-        // bail out, std::sort is faster for sparse data
-        return false;
-    }
-    if (rangeX64 > MAX_RANGE) {
-        // bail out, we cannot allocate too much memory for columns
-        return false;
-    }
-
-    const int rangeX = (int)rangeX64;
+    CV_Assert(range.rangeX() <= COUNTING_MAX_RANGE);
+    const int rangeX = (int)range.rangeX();
 
     // 2) Create one column per x value, storing pointers to its lowest and highest points in data.
     // having lo and hi near to each other in memory should induce better cache locality
@@ -453,24 +443,39 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         pointer[i] = &data0[i];
 
     // sort the point set by x-coordinate, find min and max y
-    bool sorted = false;
-    if( CV_CONVHULL_USE_COUNTING_SORT )
-    {
-        AutoBuffer<int> _sortable_points_buffer;
-        const Point* sortable_points = is_float ?
-            chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
 
-        const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
+    AutoBuffer<int> _sortable_points_buffer;
+    const Point* sortable_points = is_float ?
+        chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
+
+    // counting sort if rangeX <= COUNTING_MAX_RANGE and rangeX / total <= COUNTING_MAX_SPARSITY,
+    // else radix sort if total >= RADIX_MIN_TOTAL,
+    // else std::sort
+    const int COUNTING_MAX_SPARSITY = 1;
+    const int RADIX_MIN_TOTAL = 64;
+    const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
+
+    bool sorted = false;
+    if( CV_CONVHULL_USE_COUNTING_SORT &&
+        range.rangeX() <= chull_sort::COUNTING_MAX_RANGE &&
+        range.rangeX() <= (int64)COUNTING_MAX_SPARSITY * total )
+    {
         sorted = chull_sort::countingSortAndPrune(sortable_points, range,
                                                   !returnPoints /* require_monotonic_indices */,
                                                   pointer, total, miny_ind, maxy_ind);
+    }
 
-        if( is_float && sorted )
-        {
-            // the sort ran on the sortable points, make the result point into the data
-            for( i = 0; i < total; i++ )
-                pointer[i] = data0 + (pointer[i] - sortable_points);
-        }
+    if( !sorted && total >= RADIX_MIN_TOTAL )
+    {
+        chull_sort::radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
+        sorted = true;
+    }
+
+    if( is_float && sorted )
+    {
+        // the sort ran on the sortable points, make the result point into the data
+        for( i = 0; i < total; i++ )
+            pointer[i] = data0 + (pointer[i] - sortable_points);
     }
 
     if( !sorted )
