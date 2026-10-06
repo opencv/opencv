@@ -1607,7 +1607,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
     };
 
-    static RemapFunc lanczos4_tab[2][8] =
+    static RemapFunc lanczos4_tab[2][CV_DEPTH_MAX] =
     {
         {
             remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,

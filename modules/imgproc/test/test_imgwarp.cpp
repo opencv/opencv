@@ -1127,6 +1127,18 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_Remap, lanczos4_unsupported_depth)
+{
+    Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
+    Mat_<float> mapy({2, 2}, {0, 0, 1, 1});
+    for (int depth : {CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        Mat src(2, 2, CV_MAKETYPE(depth, 1), Scalar::all(0)), dst;
+        EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_LANCZOS4), cv::Exception) << "depth=" << depth;
+        EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_LANCZOS4 | WARP_RELATIVE_MAP), cv::Exception) << "depth=" << depth;
+    }
+}
+
 TEST(Imgproc_Resize, issue_26497)
 {
     std::vector<float> vec = {0.f, 1.f, 2.f, 3.f};
