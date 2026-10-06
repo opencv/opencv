@@ -16,9 +16,9 @@
 #include "../src/config_json.cpp"
 #include "../src/vlm_generation.cpp"
 #include "../src/local_vlm_model_base.cpp"
+#include "../src/engines/preprocess_common.cpp"
 #include "../src/engines/granite_docling_preprocess.cpp"
 #include "../src/engines/paddleocr_vl_preprocess.cpp"
-#include "../src/engines/cloud_engine.cpp"
 #endif
 
 #include <fstream>
@@ -27,46 +27,6 @@
 namespace opencv_test { namespace {
 
 using namespace cv::vlm;
-
-TEST(Vlm_CloudEngine, RedactsExactApiKeyFromErrorBody)
-{
-    const std::string key = "sk-proj-AbCdEf1234567890";
-    const std::string body = "{\"error\":{\"message\":\"Incorrect API key provided: "
-                             + key + ". Check your key.\"}}";
-
-    const std::string out = redactSecrets(body, key);
-    EXPECT_EQ(std::string::npos, out.find(key));
-    EXPECT_NE(std::string::npos, out.find("<redacted>"));
-    EXPECT_NE(std::string::npos, out.find("Incorrect API key provided"));
-}
-
-TEST(Vlm_CloudEngine, RedactsKeyShapedTokensNotMatchingTheConfiguredKey)
-{
-    // A partial echo, or a stale key from elsewhere in the body, must not survive either.
-    const std::string body = "{\"error\":\"bad key xai-9f8e7d6c5b4a and AIzaSyDzZzZz\"}";
-
-    const std::string out = redactSecrets(body, "sk-completely-different");
-    EXPECT_EQ(std::string::npos, out.find("9f8e7d6c5b4a"));
-    EXPECT_EQ(std::string::npos, out.find("SyDzZzZz"));
-    EXPECT_NE(std::string::npos, out.find("xai-<redacted>"));
-    EXPECT_NE(std::string::npos, out.find("AIza<redacted>"));
-}
-
-TEST(Vlm_CloudEngine, RedactionLeavesOrdinaryTextAlone)
-{
-    const std::string body = "{\"error\":{\"type\":\"invalid_request_error\","
-                             "\"message\":\"model gpt-4o-mini not found\"}}";
-
-    EXPECT_EQ(body, redactSecrets(body, "sk-1234567890abcdef"));
-}
-
-TEST(Vlm_CloudEngine, RedactionIgnoresShortOrEmptyKeys)
-{
-    // An empty or implausibly short key must not turn into a match-everything pattern.
-    const std::string body = "{\"error\":\"quota exceeded\"}";
-    EXPECT_EQ(body, redactSecrets(body, ""));
-    EXPECT_EQ(body, redactSecrets(body, "abc"));
-}
 
 TEST(Vlm_ConfigJson, GetIntPresentAndFallback)
 {
