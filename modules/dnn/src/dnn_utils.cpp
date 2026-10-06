@@ -13,13 +13,13 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 Image2BlobParams::Image2BlobParams():scalefactor(Scalar::all(1.0)), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
-                           datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL), strictResize(false)
+                           datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL), interpolation(cv::INTER_LINEAR)
 {}
 
 Image2BlobParams::Image2BlobParams(const Scalar& scalefactor_, const Size& size_, const Scalar& mean_, bool swapRB_,
-    int ddepth_, DataLayout datalayout_, ImagePaddingMode mode_, Scalar borderValue_, bool strictResize_):
+    int ddepth_, DataLayout datalayout_, ImagePaddingMode mode_, Scalar borderValue_, int _interpolation):
     scalefactor(scalefactor_), size(size_), mean(mean_), swapRB(swapRB_), ddepth(ddepth_),
-    datalayout(datalayout_), paddingmode(mode_), borderValue(borderValue_), strictResize(strictResize_)
+    datalayout(datalayout_), paddingmode(mode_), borderValue(borderValue_), interpolation(_interpolation)
 {}
 
 void getVector(InputArrayOfArrays images_, std::vector<Mat>& images) {
@@ -65,38 +65,38 @@ void getChannelFromBlob(UMat& m, InputArray blob, int i, int j, int rows, int co
 }
 
 Mat blobFromImage(InputArray image, const double scalefactor, const Size& size,
-        const Scalar& mean, bool swapRB, bool crop, int ddepth, bool strictResize)
+        const Scalar& mean, bool swapRB, bool crop, int ddepth, int interpolation)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
-    blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop, ddepth, strictResize);
+    blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop, ddepth, interpolation);
     return blob;
 }
 
 void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
-        const Size& size, const Scalar& mean, bool swapRB, bool crop, int ddepth, bool strictResize)
+        const Size& size, const Scalar& mean, bool swapRB, bool crop, int ddepth, int interpolation)
 {
     CV_TRACE_FUNCTION();
     if (image.kind() == _InputArray::UMAT) {
         std::vector<UMat> images(1, image.getUMat());
-        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, strictResize);
+        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, interpolation);
     } else {
         std::vector<Mat> images(1, image.getMat());
-        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, strictResize);
+        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, interpolation);
     }
 }
 
 Mat blobFromImages(InputArrayOfArrays images, double scalefactor, Size size,
-        const Scalar& mean, bool swapRB, bool crop, int ddepth, bool strictResize)
+        const Scalar& mean, bool swapRB, bool crop, int ddepth, int interpolation)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
-    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, strictResize);
+    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth, interpolation);
     return blob;
 }
 
 void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalefactor,
-        Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth, bool strictResize)
+        Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth, int interpolation)
 {
     CV_TRACE_FUNCTION();
     if (images_.kind() != _InputArray::STD_VECTOR_UMAT  && images_.kind() != _InputArray::STD_VECTOR_MAT && images_.kind() != _InputArray::STD_ARRAY_MAT &&
@@ -105,7 +105,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
         CV_Error(Error::StsBadArg, error_message);
     }
     Image2BlobParams param(Scalar::all(scalefactor), size, mean_, swapRB, ddepth);
-    param.strictResize = strictResize;
+    param.interpolation = interpolation;
     if (crop)
         param.paddingmode = DNN_PMODE_CROP_CENTER;
     blobFromImagesWithParams(images_, blob_, param);
@@ -300,11 +300,6 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
     Scalar scalefactor = param.scalefactor;
     Scalar mean = param.mean;
 
-    // INTER_LINEAR_EXACT is bit-exact, but it is implemented for integer depths only.
-    // cv::resize() silently falls back to INTER_LINEAR for CV_32F/CV_64F inputs.
-    const int interpolation = param.strictResize ? INTER_LINEAR_EXACT : INTER_LINEAR;
-    std::cout << "strict interpolation: " << (interpolation == INTER_LINEAR_EXACT) << std::endl;
-
     for (size_t i = 0; i < images.size(); i++)
     {
         Size imgSize = images[i].size();
@@ -316,7 +311,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             {
                 float resizeFactor = std::max(size.width / (float)imgSize.width,
                                               size.height / (float)imgSize.height);
-                resize(images[i], images[i], Size(), resizeFactor, resizeFactor, interpolation);
+                resize(images[i], images[i], Size(), resizeFactor, resizeFactor, param.interpolation);
                 Rect crop(Point(0.5 * (images[i].cols - size.width),
                                 0.5 * (images[i].rows - size.height)),
                           size);
@@ -328,7 +323,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
                                               size.height / (float)imgSize.height);
                 int rh = int(imgSize.height * resizeFactor);
                 int rw = int(imgSize.width * resizeFactor);
-                resize(images[i], images[i], Size(rw, rh), 0, 0, interpolation);
+                resize(images[i], images[i], Size(rw, rh), 0, 0, param.interpolation);
 
                 int top = (size.height - rh)/2;
                 int bottom = size.height - top - rh;
@@ -338,7 +333,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             }
             else
             {
-                resize(images[i], images[i], size, 0, 0, interpolation);
+                resize(images[i], images[i], size, 0, 0, param.interpolation);
             }
         }
     }
