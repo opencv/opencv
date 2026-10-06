@@ -763,13 +763,57 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
-TEST(Objdetect_QRCode, unsupported_mode_graceful)
+// Regression test: decode() must return an empty string (not throw) for a valid
+// QR image whose payload encodes a mode indicator that OpenCV does not implement
+// (e.g. Hanzi/GB2312, mode indicator 13 == 0b1101).
+// We use the alphanumeric-out-of-range QR fixture (same module pattern) but
+// verify only that no exception escapes; the return value may be empty.
+TEST(Objdetect_QRCode_decode, unsupported_mode_returns_empty)
 {
+    // Minimal version-1 QR whose data region starts with mode indicator 0x0D
+    // (Hanzi, binary 1101). The pixel grid below is identical in layout to the
+    // decode_alphanumeric_out_of_range fixture; only the data cells differ so
+    // that the first four bits of the decoded bitstream are 1101.
+    static const char* modules[21] = {
+        "111111100101101111111",
+        "100000100111001000001",
+        "101110101101101011101",
+        "101110100101001011101",
+        "101110100010101011101",
+        "100000100000101000001",
+        "111111101010101111111",
+        "000000001101100000000",
+        "111011111111011000100",
+        "110000010010001001010",
+        "111110111100100010101",
+        "110101011110001001010",
+        "000011110010101010101",
+        "000000001001010101010",
+        "111111101111011100101",
+        "100000101101110111000",
+        "101110101111011100101",
+        "101110100010001000110",
+        "101110101110100010001",
+        "100000101010001000100",
+        "111111101110101010110"
+    };
+    Mat qr(21, 21, CV_8UC1);
+    for (int i = 0; i < 21; i++)
+        for (int j = 0; j < 21; j++)
+            qr.at<uchar>(i, j) = modules[i][j] == '1' ? 0 : 255;
+
+    Mat src;
+    cv::resize(qr, src, qr.size() * 10, 0, 0, INTER_NEAREST);
+    cv::copyMakeBorder(src, src, 40, 40, 40, 40, BORDER_CONSTANT, Scalar(255));
+
     QRCodeDetector qrcode;
-    Mat dummy_img = Mat::zeros(100, 100, CV_8UC1);
-    std::string info;
     std::vector<Point> corners;
-    EXPECT_NO_THROW(info = qrcode.decode(dummy_img, corners));
+    Mat straight_barcode;
+    std::string decoded_info;
+    ASSERT_TRUE(qrcode.detect(src, corners));
+    EXPECT_NO_THROW(decoded_info = qrcode.decode(src, corners, straight_barcode));
+    // An unsupported mode must produce an empty result, not throw.
+    EXPECT_TRUE(decoded_info.empty());
 }
 
 }} // namespace

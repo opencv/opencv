@@ -1775,7 +1775,7 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
         }
         else
         {
-            CV_LOG_ERROR(NULL, "mode " << currMode);
+            CV_LOG_ERROR(NULL, "mode " << (int)currMode);
             return false;
         }
     }
