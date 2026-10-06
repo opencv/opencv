@@ -6,6 +6,7 @@
 
 #include "../precomp.hpp"
 #include "paddleocr_vl_preprocess.hpp"
+#include "preprocess_common.hpp"
 
 #include <cmath>
 #include <sstream>
@@ -59,14 +60,8 @@ Mat preprocessImage(const Mat& imageBgr, int patchSize, int mergeSize, int minPi
 
     Mat resized;
     resize(imageBgr, resized, Size(resizedWidth, resizedHeight), 0, 0, INTER_CUBIC);
-    Mat rgb;
-    cvtColor(resized, rgb, COLOR_BGR2RGB);
-    rgb.convertTo(rgb, CV_32F, rescaleFactor);
-
-    std::vector<Mat> channels(3);
-    split(rgb, channels);
-    for (int c = 0; c < 3; c++)
-        channels[c].convertTo(channels[c], -1, 1.0 / std_[c], -mean[c] / std_[c]);
+    Mat channels[3];
+    toNormalizedPlanes(resized, rescaleFactor, mean, std_, channels);
 
     gridH = resizedHeight / patchSize;
     gridW = resizedWidth / patchSize;

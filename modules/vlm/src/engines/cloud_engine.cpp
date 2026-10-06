@@ -8,9 +8,7 @@
 #include "cloud_engine.hpp"
 #include "../http_client.hpp"
 
-#include <cctype>
 #include <cstdio>
-#include <cstring>
 
 namespace cv { namespace vlm {
 
@@ -45,48 +43,32 @@ std::string jsonEscape(const std::string& s)
     return out;
 }
 
-const char* const REDACTED = "<redacted>";
-
-// Providers echo the key back in some auth errors; never let it reach an exception message.
-std::string redactSecrets(const std::string& text, const String& apiKey)
+// Never put the response body in the exception: providers echo the key back in some errors.
+void checkHttpStatus(const HttpResponse& response, const String& provider)
 {
-    const size_t redactedLen = strlen(REDACTED);
-    std::string out = text;
+    if (response.statusCode >= 200 && response.statusCode < 300)
+        return;
 
-    if (apiKey.size() >= 8)
+    String detail;
+    FileStorage fs(response.body, FileStorage::READ | FileStorage::MEMORY |
+                                  FileStorage::FORMAT_JSON);
+    if (fs.isOpened())
     {
-        for (size_t at = out.find(apiKey); at != std::string::npos;
-             at = out.find(apiKey, at + redactedLen))
-            out.replace(at, apiKey.size(), REDACTED);
-    }
-
-    static const char* const prefixes[] = { "sk-", "xai-", "AIza", "gsk_" };
-    for (const char* prefix : prefixes)
-    {
-        const size_t prefixLen = strlen(prefix);
-        size_t at = 0;
-        while ((at = out.find(prefix, at)) != std::string::npos)
+        const FileNode error = fs["error"];
+        for (const char* field : { "type", "code", "status" })
         {
-            size_t end = at + prefixLen;
-            while (end < out.size() &&
-                   (isalnum((unsigned char)out[end]) || out[end] == '-' || out[end] == '_'))
-                end++;
-            out.replace(at, end - at, std::string(prefix) + REDACTED);
-            at += prefixLen + redactedLen;
+            const FileNode node = error.empty() ? fs[field] : error[field];
+            if (node.isString())
+            {
+                detail = " (" + (String)node + ")";
+                break;
+            }
         }
     }
-    return out;
-}
 
-void checkHttpStatus(const HttpResponse& response, const String& provider, const String& apiKey)
-{
-    if (response.statusCode < 200 || response.statusCode >= 300)
-    {
-        const std::string snippet = redactSecrets(response.body.substr(0, 500), apiKey);
-        CV_Error(Error::StsError,
-                 cv::format("vlm: %s request failed with HTTP status %ld: %s",
-                            provider.c_str(), response.statusCode, snippet.c_str()));
-    }
+    CV_Error(Error::StsError,
+             cv::format("vlm: %s request failed with HTTP status %ld%s",
+                        provider.c_str(), response.statusCode, detail.c_str()));
 }
 
 FileStorage parseJson(const std::string& body, const String& provider)
@@ -123,6 +105,12 @@ public:
                       "serve one at GET /v1/models, Gemini at "
                       "generativelanguage.googleapis.com/v1beta/models, Anthropic at "
                       "api.anthropic.com/v1/models");
+    }
+
+    ~CloudVLMModel() CV_OVERRIDE
+    {
+        // Overwrite so the key does not linger in a freed page.
+        std::fill(apiKey_.begin(), apiKey_.end(), '\0');
     }
 
     void setPreferableDevice(const String&) CV_OVERRIDE
@@ -183,7 +171,7 @@ private:
         };
 
         HttpResponse response = httpPostJson(url, body.str(), headers);
-        checkHttpStatus(response, "OpenAI-compatible", apiKey_);
+        checkHttpStatus(response, "OpenAI-compatible");
 
         FileStorage fs = parseJson(response.body, "OpenAI-compatible");
         lastTokensUsed_ = readIntOr(fs["usage"]["total_tokens"], -1);
@@ -214,7 +202,7 @@ private:
 
         HttpResponse response =
             httpPostJson("https://api.anthropic.com/v1/messages", body.str(), headers);
-        checkHttpStatus(response, "Anthropic", apiKey_);
+        checkHttpStatus(response, "Anthropic");
 
         FileStorage fs = parseJson(response.body, "Anthropic");
         const int inputTokens = readIntOr(fs["usage"]["input_tokens"], 0);
@@ -247,7 +235,7 @@ private:
         };
 
         HttpResponse response = httpPostJson(url, body.str(), headers);
-        checkHttpStatus(response, "Gemini", apiKey_);
+        checkHttpStatus(response, "Gemini");
 
         FileStorage fs = parseJson(response.body, "Gemini");
         lastTokensUsed_ = readIntOr(fs["usageMetadata"]["totalTokenCount"], -1);
