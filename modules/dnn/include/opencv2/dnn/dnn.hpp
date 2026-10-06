@@ -1638,7 +1638,8 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] outs Allocated output blobs. The images are run as one batch, so each
           *  blob carries them in its first dimension.
           */
-         CV_WRAP void predict(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& outs) const;
+         CV_WRAP_AS(predictBatch) void predict(InputArrayOfArrays frames,
+                                               CV_OUT std::vector<Mat>& outs) const;
 
 
          // ============================== Net proxy methods ==============================
