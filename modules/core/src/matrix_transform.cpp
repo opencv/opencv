@@ -325,6 +325,18 @@ static void transpose_48bit_simd(const uchar* src, size_t sstep, uchar* dst, siz
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
+    // Byte-channel matrices may have strides that are not aligned for T.
+    // Preserve byte strides and avoid unaligned typed accesses in this case.
+    if (!isAligned<alignof(T)>(reinterpret_cast<size_t>(src) |
+                              reinterpret_cast<size_t>(dst) | sstep | dstep))
+    {
+        for (int y = 0; y < sz.height; ++y)
+            for (int x = 0; x < sz.width; ++x)
+                std::memcpy(dst + static_cast<size_t>(x) * dstep + y * sizeof(T),
+                            src + static_cast<size_t>(y) * sstep + x * sizeof(T), sizeof(T));
+        return;
+    }
+
 #if CV_SIMD128
     switch (sizeof(T))
     {
