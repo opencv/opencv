@@ -42,9 +42,14 @@
 #include "precomp.hpp"
 #include <iostream>
 
-// set to 0 to disable counting sort
-#ifndef CV_CONVHULL_USE_COUNTING_SORT
-#define CV_CONVHULL_USE_COUNTING_SORT 1
+// which sort convexHull uses
+#define CV_CONVHULL_SORT_DISPATCHER 0   // chosen by the data
+#define CV_CONVHULL_SORT_COUNTING   1
+#define CV_CONVHULL_SORT_RADIX      2
+#define CV_CONVHULL_SORT_STD        3
+
+#ifndef CV_CONVHULL_SORT
+#define CV_CONVHULL_SORT CV_CONVHULL_SORT_DISPATCHER
 #endif
 
 namespace cv
@@ -455,17 +460,22 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     const int RADIX_MIN_TOTAL = 64;
     const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
 
+    bool use_counting = range.rangeX() <= (int64)COUNTING_MAX_SPARSITY * total;
+    bool use_radix = total >= RADIX_MIN_TOTAL;
+#if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
+    use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
+    use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
+#endif
+
     bool sorted = false;
-    if( CV_CONVHULL_USE_COUNTING_SORT &&
-        range.rangeX() <= chull_sort::COUNTING_MAX_RANGE &&
-        range.rangeX() <= (int64)COUNTING_MAX_SPARSITY * total )
+    if( use_counting && range.rangeX() <= chull_sort::COUNTING_MAX_RANGE )
     {
         sorted = chull_sort::countingSortAndPrune(sortable_points, range,
                                                   !returnPoints /* require_monotonic_indices */,
                                                   pointer, total, miny_ind, maxy_ind);
     }
 
-    if( !sorted && total >= RADIX_MIN_TOTAL )
+    if( !sorted && use_radix )
     {
         chull_sort::radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
         sorted = true;
