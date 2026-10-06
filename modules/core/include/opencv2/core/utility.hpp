@@ -1363,6 +1363,14 @@ namespace utils {
 
 CV_EXPORTS int getThreadID();
 
+/** @brief Encodes a byte buffer as base64 (RFC 4648), with padding.
+
+@param data Bytes to encode. May be NULL only when @p size is 0.
+@param size Number of bytes to encode.
+@return The encoded text, or an empty string when @p size is 0.
+*/
+CV_EXPORTS String base64Encode(const uchar* data, size_t size);
+
 } // namespace
 
 } //namespace cv
