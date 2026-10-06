@@ -110,6 +110,30 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
+// Legacy models spell a flatten-to-(1, total) as a 2D shape whose second element is wrong.
+static MatShape reshape2OutShape(const MatShape& inpShape, const std::vector<int>& spec)
+{
+    LayerParams params;
+    params.set("shape", DictValue::arrayInt<const int*>(spec.data(), spec.size()));
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Reshape2", params);
+
+    std::vector<MatShape> outputs, internals;
+    layer->getMemoryShapes(std::vector<MatShape>(1, inpShape), 1, outputs, internals);
+    return outputs[0];
+}
+
+TEST(Layer_Test_Reshape2, legacy_shape_spec)
+{
+    EXPECT_EQ(MatShape({1, 7}), reshape2OutShape(MatShape({1, 7}), {1, 5}));
+    EXPECT_EQ(MatShape({1, 7}), reshape2OutShape(MatShape({1, 7}), {0, 5}));
+    EXPECT_EQ(MatShape({1, 24}), reshape2OutShape(MatShape({1, 2, 3, 4}), {0, 5}));
+
+    // a spec that already matches is not the legacy case
+    EXPECT_EQ(MatShape({1, 7}), reshape2OutShape(MatShape({7}), {1, 7}));
+    EXPECT_EQ(MatShape({1, 24}), reshape2OutShape(MatShape({1, 2, 3, 4}), {0, -1}));
+    EXPECT_EQ(MatShape({2, 12}), reshape2OutShape(MatShape({2, 3, 4}), {0, -1}));
+}
+
 class Layer_LSTM_Test : public ::testing::Test
 {
 public:

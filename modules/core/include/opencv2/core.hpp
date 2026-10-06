@@ -1092,6 +1092,52 @@ CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
  */
 CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
 
+/** @brief Removes axes of size 1 from an n-dimensional array.
+ *
+ * The elements are not changed. When called in place (dst is src) on a continuous array, only the
+ * header changes; otherwise the elements are copied into dst (Mat::reshape gives a view without
+ * copying). The channels of the elements are kept, the axes are the array dimensions. The same holds
+ * for unsqueeze, flatten and reshape.
+ * @param src input array
+ * @param dst output array
+ * @param axes axes to remove, each of size 1; negative values count from the end.
+ * When empty, all the axes of size 1 are removed.
+ * @sa unsqueeze, MatShape::squeeze
+ */
+CV_EXPORTS_W void squeeze(InputArray src, OutputArray dst, const std::vector<int>& axes = std::vector<int>());
+
+/** @brief Inserts axes of size 1 into an n-dimensional array.
+ * @param src input array
+ * @param dst output array with src.dims + axes.size() dimensions
+ * @param axes positions of the new axes in dst; negative values count from the end of dst.
+ * @sa squeeze, MatShape::unsqueeze
+ */
+CV_EXPORTS_W void unsqueeze(InputArray src, OutputArray dst, const std::vector<int>& axes);
+
+/** @brief Merges consecutive axes of an n-dimensional array into one.
+ *
+ * With the default arguments the result is 1-dimensional.
+ * @param src input array
+ * @param dst output array
+ * @param startAxis first axis to merge; negative values count from the end.
+ * @param endAxis last axis to merge (inclusive); negative values count from the end.
+ * @sa MatShape::flatten
+ */
+CV_EXPORTS_W void flatten(InputArray src, OutputArray dst, int startAxis = 0, int endAxis = -1);
+
+/** @brief Changes the shape of an n-dimensional array.
+ *
+ * One element of newShape may be -1, it is then inferred from the number of elements. An element
+ * equal to 0 copies the corresponding axis of src, unless allowZero is set, in which case it is a
+ * zero-size axis (the ONNX Reshape convention).
+ * @param src input array
+ * @param dst output array
+ * @param newShape the new shape
+ * @param allowZero treat 0 in newShape as a size instead of "same as src"
+ * @sa MatShape::reshape, Mat::reshape
+ */
+CV_EXPORTS_W void reshape(InputArray src, OutputArray dst, const std::vector<int>& newShape, bool allowZero = false);
+
 /** @brief Concatenates n-dimensional arrays along the given axis.
  *
  * All the arrays must have the same type and number of dimensions, and the same size along every

@@ -143,43 +143,20 @@ public:
 
     MatShape getOutShape(const MatShape& inpShape, const MatShape& shapeSpec) const
     {
-        MatShape outShape = shapeSpec;
-        int m1idx = -1;
-        int i, ndims = outShape.dims;
-        int64_t outTotal = 1;
-        for (i = 0; i < ndims; i++) {
-            if (outShape[i] < 0) {
-                CV_Assert(outShape[i] == -1);
-                if (m1idx >= 0) {
-                    CV_Error(Error::StsBadArg, "invalid shape spec, there must be at most one '-1'");
-                }
-                m1idx = i;
-            }
-            else {
-                if (outShape[i] == 0) {
-                    if (i >= inpShape.dims) {
-                        CV_Error(Error::StsBadArg, "cannot copy dimension from the input tensor");
-                    }
-                    outShape[i] = inpShape[i];
-                }
-                outTotal *= outShape[i];
+        // legacy models: (1, k) with the wrong k means (1, total); 0 is resolved first so
+        // that the (0, k) spelling is recognized too
+        if (shapeSpec.dims == 2)
+        {
+            int d0 = shapeSpec[0] == 0 && inpShape.dims > 0 ? inpShape[0] : shapeSpec[0];
+            int d1 = shapeSpec[1] == 0 && inpShape.dims > 1 ? inpShape[1] : shapeSpec[1];
+            const int64_t inpTotal = (int64_t)inpShape.total();
+            if (d0 == 1 && d1 > 0 && (int64_t)d1 != inpTotal)
+            {
+                CV_CheckLE((double)inpTotal, (double)INT_MAX, "reshape: the result is too big");
+                return MatShape({1, (int)inpTotal});
             }
         }
-
-        int64_t inpTotal = (int64_t)inpShape.total();
-        if (m1idx >= 0) {
-            int64_t autoSize = inpTotal/outTotal;
-            CV_Assert(autoSize <= INT_MAX && autoSize*outTotal == inpTotal);
-            outShape[m1idx] = (int)autoSize;
-        }
-        else if (outTotal != inpTotal && ndims == 2 && outShape[0] == 1 && outShape[1] > 0) {
-            outShape[1] = (int)(inpTotal / outShape[0]);
-        }
-        else {
-            CV_Assert(outTotal == inpTotal);
-        }
-
-        return outShape;
+        return inpShape.reshape(shapeSpec);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
