@@ -197,15 +197,6 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 
 // v_pack()/v_pack_u() saturate at every width, 64->32 included, so a 64-bit source needs no
 // clamping here any more - see the HAL headers for the per-backend implementations.
-//
-// There is no saturating uint64 -> int32 narrow in the HAL (no width has a v_pack_s), so that one
-// direction still clamps first; everything else goes straight through v_pack/v_pack_u.
-static inline v_uint64 v_clamp_u64_to_s32(const v_uint64& x)
-{
-    // x > INT32_MAX  <=>  (x >> 31) != 0
-    const v_uint64 over = v_shr<31>(x);
-    return v_select(v_eq(over, vx_setzero_u64()), x, vx_setall_u64((uint64_t)INT_MAX));
-}
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
 {
@@ -303,13 +294,14 @@ static inline void vx_load_pair_as(const uint64_t* ptr, v_uint32& a, v_uint32& b
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_int32& a, v_int32& b)
 {
+    // There is no uint64 -> int32 narrow in the HAL, so narrow as unsigned first - v_pack() clamps
+    // anything above UINT32_MAX to UINT32_MAX - and bring that down to INT32_MAX with the same
+    // 32-bit v_min() the uint32 -> int32 direction below uses.
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    v_uint32 ua = v_pack(v_clamp_u64_to_s32(vx_load(ptr)),
-                         v_clamp_u64_to_s32(vx_load(ptr + int64_nlanes)));
-    v_uint32 ub = v_pack(v_clamp_u64_to_s32(vx_load(ptr + int64_nlanes*2)),
-                         v_clamp_u64_to_s32(vx_load(ptr + int64_nlanes*3)));
-    a = v_reinterpret_as_s32(ua);
-    b = v_reinterpret_as_s32(ub);
+    const v_uint32 hi = vx_setall_u32((unsigned)INT_MAX);
+    a = v_reinterpret_as_s32(v_min(v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes)), hi));
+    b = v_reinterpret_as_s32(v_min(v_pack(vx_load(ptr + int64_nlanes*2),
+                                          vx_load(ptr + int64_nlanes*3)), hi));
 }
 
 static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
