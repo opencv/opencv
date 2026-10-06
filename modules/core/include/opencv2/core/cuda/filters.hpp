@@ -47,7 +47,18 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 #include "type_traits.hpp"
+#if defined(__HIP_PLATFORM_AMD__)
+// NPP is not part of the AMD ROCm/HIP path; only NPP_MIN_32S/NPP_MAX_32S are used
+// here (the signed 32-bit saturation bounds), so define them directly.
+#  ifndef NPP_MAX_32S
+#    define NPP_MAX_32S ( 2147483647 )
+#  endif
+#  ifndef NPP_MIN_32S
+#    define NPP_MIN_32S (-2147483647 - 1 )
+#  endif
+#else
 #include "nppdefs.h"
+#endif
 
 /** @file
  * @deprecated Use @ref cudev instead.

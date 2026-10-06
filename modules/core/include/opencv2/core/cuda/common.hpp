@@ -43,7 +43,17 @@
 #ifndef OPENCV_CUDA_COMMON_HPP
 #define OPENCV_CUDA_COMMON_HPP
 
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+// HIP defines __align__ only on the device (amdclang) pass (__HIP_CLANG_ONLY__).
+// The deprecated core vec_traits.hpp uses struct __align__(N) at namespace scope, so
+// a plain host (g++) compile that includes these headers needs the macro too.
+#ifndef __align__
+#define __align__(x) __attribute__((aligned(x)))
+#endif
+#else
 #include <cuda_runtime.h>
+#endif
 #include "opencv2/core/cuda_types.hpp"
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
