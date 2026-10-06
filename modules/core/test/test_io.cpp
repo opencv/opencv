@@ -2556,4 +2556,65 @@ TEST(Core_InputOutput, YAML_Compatibility)
     remove(filename.c_str());
 }
 
+TEST(Core_InputOutput, json_long_string_value)
+{
+    // A JSON document may legitimately carry a string far longer than CV_FS_MAX_LEN;
+    // the reader grows its buffer rather than refusing with "string is too long".
+    const std::string payload(200000, 'x');
+    const std::string doc = "{ \"text\": \"" + payload + "\" }";
+
+    FileStorage fs(doc, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    ASSERT_TRUE(fs.isOpened());
+
+    std::string readBack;
+    fs["text"] >> readBack;
+    EXPECT_EQ(payload.size(), readBack.size());
+    EXPECT_EQ(payload, readBack);
+}
+
+TEST(Core_InputOutput, json_long_string_with_escapes)
+{
+    // The escape and \uXXXX paths grow the same buffer, so exercise them past the limit too.
+    std::string payload;
+    while (payload.size() < 20000)
+        payload += "a\\\"b\\nc\\u00e9";
+
+    FileStorage fs("{ \"text\": \"" + payload + "\" }",
+                   FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    ASSERT_TRUE(fs.isOpened());
+
+    std::string readBack;
+    fs["text"] >> readBack;
+    EXPECT_GT(readBack.size(), (size_t)10000);
+    EXPECT_NE(std::string::npos, readBack.find("\xC3\xA9"));  // U+00E9 decoded to UTF-8
+}
+
+TEST(Core_Utils, base64Encode_RFC4648_vectors)
+{
+    const struct { const char* in; const char* out; } cases[] = {
+        { "",       ""         }, { "f",     "Zg==" },
+        { "fo",     "Zm8="     }, { "foo",   "Zm9v" },
+        { "foob",   "Zm9vYg==" }, { "fooba", "Zm9vYmE=" },
+        { "foobar", "Zm9vYmFy" },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        const std::string in(cases[i].in);
+        EXPECT_EQ(String(cases[i].out),
+                  utils::base64Encode(reinterpret_cast<const uchar*>(in.data()), in.size()))
+            << "input: '" << cases[i].in << "'";
+    }
+}
+
+TEST(Core_Utils, base64Encode_full_byte_range)
+{
+    std::vector<uchar> data(256);
+    for (int i = 0; i < 256; i++)
+        data[i] = (uchar)i;
+
+    const String encoded = utils::base64Encode(data.data(), data.size());
+    EXPECT_EQ((size_t)0, encoded.size() % 4);
+    EXPECT_EQ(((data.size() + 2) / 3) * 4, encoded.size());
+}
+
 }} // namespace
