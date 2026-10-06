@@ -132,10 +132,8 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
  * @param points3d the resulting 3d points
  */
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-// Interleaved 4-channel store: on RVV the portable v_store_interleave lowers to
-// 4x strided stores (vsse), which are much slower than scalar sequential stores
-// on in-order cores - use the native vsseg4 segmented store (one instruction
-// writes the AoS block) there. Other backends keep the portable path.
+// RVV: use the native vsseg4 segmented store; the portable v_store_interleave
+// lowers to slow strided stores (vsse) there.
 template<typename T, typename VT>
 static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
                                 const VT& Z, const VT& W, int vl)
@@ -153,24 +151,25 @@ static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
     (void)vl;
 }
 
-/** One row of the dense no-mask path, universal-intrinsics vectorized.
- * Per output element: p0 = x_cache*z, p1 = y*z, p2 = z, p3 = 0 - a single IEEE
- * multiply each (no accumulation, no reassociation), so the vector body is
- * bit-identical to the scalar reference for every input, NaN payloads included
- * where the hardware preserves them the same way for scalar and vector mul. */
+// One row of the dense no-mask path. Single IEEE multiply per output element,
+// no reassociation - results are bit-identical to the scalar reference.
 template<typename T>
 static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* point, int n)
 {
-    typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
-    const int vl = VTraits<VT>::vlanes();
-    const VT yv = v_setall_<VT>(y_val);
-    const VT zero = v_setzero_<VT>();
     int i = 0;
-    for (; i + vl <= n; i += vl)
+    // 64-bit lanes need CV_SIMD_64F / CV_SIMD_SCALABLE_64F (absent e.g. on ARMv7 NEON).
+    if constexpr (sizeof(T) == 4 || CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     {
-        VT zv = vx_load(z + i);
-        VT xv = vx_load(x_cache + i);
-        storePoints4<T>(point + i, v_mul(xv, zv), v_mul(yv, zv), zv, zero, vl);
+        typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
+        const int vl = VTraits<VT>::vlanes();
+        const VT yv = v_setall_<VT>(y_val);
+        const VT zero = v_setzero_<VT>();
+        for (; i + vl <= n; i += vl)
+        {
+            VT zv = vx_load(z + i);
+            VT xv = vx_load(x_cache + i);
+            storePoints4<T>(point + i, v_mul(xv, zv), v_mul(yv, zv), zv, zero, vl);
+        }
     }
     for (; i < n; ++i)
     {

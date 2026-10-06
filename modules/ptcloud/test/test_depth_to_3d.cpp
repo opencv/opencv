@@ -8,10 +8,7 @@ using namespace cv;
 
 namespace opencv_test { namespace {
 
-// Independent scalar reference replicating the documented per-pixel formula:
-//   x_cache[x] = (x - ox) * inv_fx;  p = (x_cache*z, y_cache*y... )
-// i.e. p0 = ((x-ox)*inv_fx)*z, p1 = ((y-oy)*inv_fy)*z, p2 = z, p3 = 0.
-// Written from scratch here (does not call library code).
+// Independent scalar reference of the documented formula (no library calls).
 template<typename T>
 static void refDepthTo3d(const Mat& depth, const Matx<T, 3, 3>& K, Mat& points3d)
 {
@@ -37,8 +34,7 @@ static void refDepthTo3d(const Mat& depth, const Matx<T, 3, 3>& K, Mat& points3d
     }
 }
 
-// Bit-exact compare, NaN-tolerant on payload: NaN must match NaN position-wise,
-// every other element must match bit-for-bit.
+// Bit-exact compare; NaN must match NaN position-wise, rest bit-for-bit.
 template<typename T>
 static void expectExact(const Mat& a, const Mat& b)
 {
@@ -119,9 +115,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, RGBD_DepthTo3d,
 
 TEST(RGBD_DepthTo3dMisc, sixteenUSemantics)
 {
-    // 16U input: rescaled by 1/1000, zeros become NaN (rescaleDepth contract).
-    // Note: output follows K converted to CV_32F for non-64F depth (actual
-    // implementation behavior; the doc comment on depthTo3d says otherwise).
+    // 16U: rescaled by 1/1000, zeros become NaN (rescaleDepth contract).
+    // Note: output depth follows K->CV_32F (implementation behavior).
     Mat depth(4, 4, CV_16UC1, Scalar(0));
     depth.at<ushort>(0, 0) = 1000;   // -> 1.0 m
     depth.at<ushort>(1, 1) = 2500;   // -> 2.5 m
