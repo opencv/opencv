@@ -545,6 +545,9 @@ struct Net::Impl : public detail::NetImplBase
     // collapse Reshape+InstanceNorm+Reshape+Mul+Add into InstanceNorm or GroupNormalization
     void fuseInstanceNormAffine();
     void fuseChains();
+    // fuseChains()'s chain pass limited to TransformLayout sinks; run
+    // after useBlockLayout(), which is what creates those nodes
+    void fuseTransformLayoutChains();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
     // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style
@@ -589,8 +592,10 @@ Net readNetFromONNX2_ORT(const String& onnxFile);
 
 CV__DNN_INLINE_NS_END
 
+// residual (optional): added to the result in the same pass; see transform_layout_layer.cpp
 void transformLayout(const Mat& inp, Mat& out,
-                     DataLayout outlayout, DataLayout defaultLayout, int C0);
+                     DataLayout outlayout, DataLayout defaultLayout, int C0,
+                     const Mat& residual = Mat());
 
 }}  // namespace cv::dnn
 #endif  // __OPENCV_DNN_SRC_NET_IMPL_HPP__

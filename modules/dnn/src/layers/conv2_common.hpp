@@ -6,6 +6,7 @@
 #define __OPENCV_DNN_LAYERS_CONV2_COMMON_HPP__
 
 #include <opencv2/dnn/all_layers.hpp>
+#include <algorithm>
 #include <array>
 
 namespace cv
@@ -97,6 +98,23 @@ struct ConvState
 };
 
 AutoPadding getAutoPadding(const LayerParams& params);
+
+// Extra spatial split for when total_blocks alone is too few tasks to occupy
+// every thread. Returns 1 (no-op) once total_blocks already saturates the pool.
+static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_per_chunk = 16) {
+    // Several tasks per thread let parallel_for_ even out uneven chunks.
+    // Value kept from the original forward-conv tuning (#28691).
+    constexpr int TASKS_PER_THREAD = 8;
+    int nSpatChunks = 1;
+    int nthreads = cv::getNumThreads();
+    int target_tasks = nthreads * TASKS_PER_THREAD;
+    if (total_blocks < target_tasks && planeblocks > min_per_chunk) {
+        nSpatChunks = (target_tasks + total_blocks - 1) / total_blocks;
+        int max_chunks = planeblocks / min_per_chunk;
+        nSpatChunks = std::min(nSpatChunks, std::max(1, max_chunks));
+    }
+    return nSpatChunks;
+}
 
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,

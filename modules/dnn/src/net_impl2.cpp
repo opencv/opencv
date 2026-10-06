@@ -752,6 +752,9 @@ void Net::Impl::finalize()
     for (const Ptr<Graph>& g : allgraphs)
         finalizeGraph(g, useCUDA);
     useBlockLayout();
+    // TransformLayout nodes only exist from here on; fuse residual Adds into
+    // them, and leave every layer already fused before the snapshot alone.
+    fuseTransformLayoutChains();
     assignBuffers();
     totalLayers = updateGraphOfs(mainGraph, 0, true);
 
