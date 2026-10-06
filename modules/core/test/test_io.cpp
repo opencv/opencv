@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
+#include "opencv2/core/utils/base64.private.hpp"
+
 #include <fstream>
 
 namespace opencv_test { namespace {
@@ -2684,6 +2686,91 @@ TEST(Core_InputOutput, filestorage_32u_large_values)
             EXPECT_EQ(0, cv::norm(src, dst, NORM_INF)) << ext << " base64=" << base64;
         }
     }
+}
+
+TEST(Core_InputOutput, json_long_string_value)
+{
+    // A JSON document may legitimately carry a string far longer than CV_FS_MAX_LEN,
+    // so neither direction may refuse one: the reader grew its buffer rather than
+    // raising "string is too long", the writer grows its escape buffer the same way.
+    const std::string payload(200000, 'x');
+
+    FileStorage writer(".json", FileStorage::WRITE | FileStorage::MEMORY);
+    ASSERT_NO_THROW(writer << "text" << payload);
+    const std::string doc = writer.releaseAndGetString();
+
+    FileStorage fs(doc, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    ASSERT_TRUE(fs.isOpened());
+
+    std::string readBack;
+    fs["text"] >> readBack;
+    EXPECT_EQ(payload.size(), readBack.size());
+    EXPECT_EQ(payload, readBack);
+}
+
+TEST(Core_InputOutput, json_long_string_with_escapes)
+{
+    // The escape and \uXXXX paths append to the same string, so take them past the old limit too.
+    std::string payload, expected;
+    while (payload.size() < 20000)
+    {
+        payload  += "a\\\"b\\nc\\u00e9";
+        expected += "a\"b\nc\xC3\xA9";
+    }
+
+    FileStorage fs("{ \"text\": \"" + payload + "\" }",
+                   FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    ASSERT_TRUE(fs.isOpened());
+
+    std::string readBack;
+    fs["text"] >> readBack;
+    EXPECT_EQ(expected, readBack);
+}
+
+TEST(Core_InputOutput, json_solidus_escape)
+{
+    // RFC 8259 lists \/ among the valid escapes and HTTP APIs emit it inside URLs,
+    // but the reader used to reject it as an invalid escape character.
+    FileStorage fs("{ \"url\": \"https:\\/\\/example.com\\/a\" }",
+                   FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    ASSERT_TRUE(fs.isOpened());
+
+    std::string url;
+    fs["url"] >> url;
+    EXPECT_EQ("https://example.com/a", url);
+}
+
+TEST(Core_Utils, base64Encode_RFC4648_vectors)
+{
+    const struct { const char* in; const char* out; } cases[] = {
+        { "",       ""         }, { "f",     "Zg==" },
+        { "fo",     "Zm8="     }, { "foo",   "Zm9v" },
+        { "foob",   "Zm9vYg==" }, { "fooba", "Zm9vYmE=" },
+        { "foobar", "Zm9vYmFy" },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        const std::string in(cases[i].in);
+        EXPECT_EQ(String(cases[i].out),
+                  utils::base64Encode(reinterpret_cast<const uchar*>(in.data()), in.size()))
+            << "input: '" << cases[i].in << "'";
+    }
+}
+
+TEST(Core_Utils, base64Encode_full_byte_range)
+{
+    std::vector<uchar> data(256);
+    for (int i = 0; i < 256; i++)
+        data[i] = (uchar)i;
+
+    const String expected =
+        "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1"
+        "Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWpr"
+        "bG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6Ch"
+        "oqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX"
+        "2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==";
+
+    EXPECT_EQ(expected, utils::base64Encode(data.data(), data.size()));
 }
 
 }} // namespace
