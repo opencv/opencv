@@ -4489,6 +4489,20 @@ TEST(Core_Arithm, addWeighted_fp64_uses_fp32_intermediate_29880)
     EXPECT_EQ(fp32Then64, dst.at<double>(0, 0));
 }
 
+// https://github.com/opencv/opencv/issues/30153
+TEST(Core_Arithm, inRange_unsupported_depth_30153)
+{
+    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        for (int cn : {1, 3})
+        {
+            cv::Mat src(4, 4, CV_MAKETYPE(depth, cn), cv::Scalar::all(0)), dst;
+            EXPECT_THROW(cv::inRange(src, cv::Scalar::all(0), cv::Scalar::all(1), dst), cv::Exception);
+            EXPECT_THROW(cv::inRange(src, src, src, dst), cv::Exception);
+        }
+    }
+}
+
 
 TEST(Core_Arithm, min_empty)
 {
