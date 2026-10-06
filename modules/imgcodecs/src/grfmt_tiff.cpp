@@ -1328,6 +1328,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     const int predictor_default_32F = IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT;
     const int predictor_default = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
     int compression = -1;
+    int compressionLevel = -1;
     int predictor = -1;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
@@ -1370,6 +1371,22 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION must be one of ImwriteTiffCompressionFlags. It is fallbacked to IMWRITE_TIFF_COMPRESSION_LZW", compression));
                 compression = IMWRITE_TIFF_COMPRESSION_LZW;
                 break;
+        }
+    }
+    if (readParam(params, IMWRITE_TIFF_COMPRESSION_LEVEL, compressionLevel))
+    {
+        const bool isValidCompression =
+          (compression == IMWRITE_TIFF_COMPRESSION_DEFLATE) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_ZSTD);
+        const bool isValidValue = (compressionLevel == -1) || ((compressionLevel >= 1) && (compressionLevel <= 9));
+        if (!isValidCompression) {
+            CV_LOG_WARNING(nullptr, cv::format("IMWRITE_TIFF_COMPRESSION_LEVEL can only be used for DEFLATE or ZSTD compression. It is ignored."));
+            compressionLevel = -1;
+        }
+        else if (!isValidValue) {
+            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION_LEVEL must be in the ZLIB range 1-9 (or -1 for default). It is set to default.", compressionLevel));
+            compressionLevel = -1;
         }
     }
     if(readParam(params, IMWRITE_TIFF_PREDICTOR, predictor))
@@ -1558,6 +1575,8 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bitsPerChannel));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_COMPRESSION, page_compression));
+        if (compressionLevel >= 0)
+            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZIPQUALITY, compressionLevel));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, colorspace));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, channels));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
