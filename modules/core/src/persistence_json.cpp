@@ -302,6 +302,9 @@ class JSONParser : public FileStorageParser
 public:
     JSONParser(FileStorage_API* _fs) : fs(_fs)
     {
+        // Start where the old fixed buffer was, so ordinary files never reallocate
+        // and bufStorage.data() is always valid, including for an empty string.
+        bufStorage.resize(CV_FS_MAX_LEN + 1024);
     }
 
     virtual ~JSONParser() {}
@@ -573,31 +576,28 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
+                                reserveBuf(i + sz + 1);
+                                memcpy(bufStorage.data() + i, beg, sz);
                                 i += sz;
                             }
                             ptr++;
-                            if (i + 1 >= CV_FS_MAX_LEN)
-                                CV_PARSE_ERROR_CPP("string is too long");
+                            reserveBuf(i + 2);
                             switch ( *ptr )
                             {
                             case '\\':
                             case '\"':
-                            case '\'': { buf[i++] = *ptr; break; }
-                            case 'n' : { buf[i++] = '\n'; break; }
-                            case 'r' : { buf[i++] = '\r'; break; }
-                            case 't' : { buf[i++] = '\t'; break; }
-                            case 'b' : { buf[i++] = '\b'; break; }
-                            case 'f' : { buf[i++] = '\f'; break; }
+                            case '\'': { bufStorage[i++] = *ptr; break; }
+                            case 'n' : { bufStorage[i++] = '\n'; break; }
+                            case 'r' : { bufStorage[i++] = '\r'; break; }
+                            case 't' : { bufStorage[i++] = '\t'; break; }
+                            case 'b' : { bufStorage[i++] = '\b'; break; }
+                            case 'f' : { bufStorage[i++] = '\f'; break; }
                             case 'u' : {
                                 ptr++;
                                 std::string utf8;
                                 parseUnicodeEscapeToUtf8(ptr, utf8);
-                                if (i + (int)utf8.size() >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, utf8.data(), utf8.size());
+                                reserveBuf(i + (int)utf8.size() + 1);
+                                memcpy(bufStorage.data() + i, utf8.data(), utf8.size());
                                 i += (int)utf8.size();
                                 beg = ptr;
                                 continue;
@@ -614,9 +614,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
+                                reserveBuf(i + sz + 1);
+                                memcpy(bufStorage.data() + i, beg, sz);
                                 i += sz;
                             }
                             ptr = fs->gets();
@@ -631,9 +630,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
+                                reserveBuf(i + sz + 1);
+                                memcpy(bufStorage.data() + i, beg, sz);
                                 i += sz;
                             }
                             beg = ptr;
@@ -659,7 +657,7 @@ public:
                 else
                     ptr++;
 
-                node.setValue(FileNode::STRING, buf, i);
+                node.setValue(FileNode::STRING, bufStorage.data(), i);
             }
         }
         else if ( cv_isdigit(*ptr) || *ptr == '-' || *ptr == '+' || *ptr == '.' )
@@ -872,8 +870,17 @@ public:
         return true;
     }
 
+    // Grows the string buffer to at least n bytes, keeping what is already in it.
+    void reserveBuf(int n)
+    {
+        if ((int)bufStorage.size() < n)
+            bufStorage.resize(std::max(n, (int)bufStorage.size() * 2));
+    }
+
     FileStorage_API* fs;
-    char buf[CV_FS_MAX_LEN+1024];
+    // Grown on demand: a JSON document may legitimately carry a string far longer
+    // than CV_FS_MAX_LEN, which only bounds the fixed buffers on the writing side.
+    std::vector<char> bufStorage;
 };
 
 Ptr<FileStorageEmitter> createJSONEmitter(FileStorage_API* fs)
