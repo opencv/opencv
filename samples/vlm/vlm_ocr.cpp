@@ -114,9 +114,8 @@ int main(int argc, char** argv)
     Ptr<VLMModel> model = create(modelType, modelDir, engine, device, apiKey);
 
     cout << "Running inference on " << inputPath << "..." << endl;
-    vector<String> results = model->inferDocument(inputPath, prompt, maxNewTokens);
-    for (size_t i = 0; i < results.size(); i++)
-        cout << "Page " << (i + 1) << ":\n" << results[i] << endl;
+    const String result = inferFile(model, inputPath, prompt, maxNewTokens);
+    cout << result << endl;
 
     return 0;
 }

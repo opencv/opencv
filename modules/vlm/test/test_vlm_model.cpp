@@ -17,10 +17,6 @@ public:
     void setPreferableDevice(const String&) CV_OVERRIDE {}
     void reset() CV_OVERRIDE {}
     String infer(InputArray, const String&, int) CV_OVERRIDE { return String(); }
-    std::vector<String> inferDocument(const String&, const String&, int) CV_OVERRIDE
-    {
-        return std::vector<String>();
-    }
 };
 
 TEST(Vlm_Model, LastTokensUsedBaseDefaultIsUnknown)
@@ -100,9 +96,8 @@ TEST(Vlm_Model, EndToEnd_PaddleOCRVL)
         << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_PADDLEOCR_VL_DIR";
 
     cv::Ptr<VLMModel> model = create(VLM_MODEL_PADDLEOCR_VL, modelDir);
-    std::vector<cv::String> results = model->inferDocument(imagePath);
-    ASSERT_EQ((size_t)1, results.size());
-    EXPECT_FALSE(results[0].empty());
+    const cv::String result = inferFile(model, imagePath);
+    EXPECT_FALSE(result.empty());
     EXPECT_GT(model->lastTokensUsed(), 0);
 }
 
@@ -119,9 +114,8 @@ TEST(Vlm_Model, EndToEnd_GraniteDocling)
         << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_GRANITE_DOCLING_DIR";
 
     cv::Ptr<VLMModel> model = create(VLM_MODEL_GRANITE_DOCLING, modelDir, "opencv");
-    std::vector<cv::String> results = model->inferDocument(imagePath);
-    ASSERT_EQ((size_t)1, results.size());
-    EXPECT_FALSE(results[0].empty());
+    const cv::String result = inferFile(model, imagePath);
+    EXPECT_FALSE(result.empty());
     EXPECT_GT(model->lastTokensUsed(), 0);
 }
 

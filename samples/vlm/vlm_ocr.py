@@ -72,6 +72,5 @@ if __name__ == '__main__':
                           args.engine, device, args.api_key)
 
     print(f'Running inference on {args.input}...')
-    results = model.inferDocument(args.input, args.prompt, args.max_new_tokens)
-    for i, text in enumerate(results):
-        print(f'Page {i + 1}:\n{text}')
+    result = cv.vlm.inferFile(model, args.input, args.prompt, args.max_new_tokens)
+    print(result)

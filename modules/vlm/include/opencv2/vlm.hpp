@@ -70,25 +70,10 @@ public:
     CV_WRAP virtual String infer(InputArray image, const String& prompt = String(),
                                   int max_new_tokens = 512) = 0;
 
-    /** @brief Run inference on a document file.
-
-    @param input_path      Path to a `.png`/`.jpg`/`.jpeg` image (treated as a single page).
-                            PDF input is not supported yet -- rasterize pages to images
-                            first (e.g. with poppler-utils' pdftoppm).
-    @param prompt          Task prompt; an empty string uses the engine's default prompt.
-    @param max_new_tokens  Maximum number of tokens to generate, per page.
-    @return One result string per page (always size 1 for now, since only single-image
-    input is supported). Each page is generated from a clean state -- reset() runs
-    internally before every page, so pages never see each other's KV-cache / context.
-    */
-    CV_WRAP virtual std::vector<String> inferDocument(CV_WRAP_FILE_PATH const String& input_path,
-                                                       const String& prompt = String(),
-                                                       int max_new_tokens = 512) = 0;
-
     /** @brief Clear KV-cache / generation state.
 
-    Only needed if you call infer() manually multiple times on the same instance --
-    inferDocument() already does this per page internally.
+    Needed only when calling infer() more than once on the same instance, so that one
+    call does not see the previous one's KV-cache / context.
     */
     CV_WRAP virtual void reset() = 0;
 
@@ -121,6 +106,19 @@ CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, const String& model_d
                                   const String& engine = "opencv",
                                   const String& device = "cpu",
                                   const String& api_key = String());
+
+/** @brief Convenience wrapper: reads an image file and runs VLMModel::infer() on it.
+
+Equivalent to `model->reset()` followed by `model->infer(imread(path), ...)`.
+
+@param model           Engine to run, from create().
+@param path            Path to a `.png`/`.jpg`/`.jpeg` image. PDF is not supported --
+                       rasterize pages first (e.g. with poppler-utils' pdftoppm).
+@param prompt          Task prompt; an empty string uses the engine's default prompt.
+@param max_new_tokens  Maximum number of tokens to generate.
+*/
+CV_EXPORTS_W String inferFile(const Ptr<VLMModel>& model, CV_WRAP_FILE_PATH const String& path,
+                              const String& prompt = String(), int max_new_tokens = 512);
 
 //! @}
 

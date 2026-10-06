@@ -11,6 +11,8 @@
 
 namespace cv { namespace vlm {
 
+VLMModel::~VLMModel() {}
+
 namespace {
 
 // No "ort": Net::enableKVCache() is a no-op on the ORT path, so generation fails there.
@@ -67,6 +69,19 @@ Ptr<VLMModel> create(VLMModelType model_type, const String& model_dir,
     default:
         CV_Error(Error::StsBadArg, cv::format("vlm: unknown VLMModelType: %d", (int)model_type));
     }
+}
+
+String inferFile(const Ptr<VLMModel>& model, const String& path, const String& prompt,
+                 int max_new_tokens)
+{
+    CV_Assert(model);
+
+    Mat image = imread(path, IMREAD_COLOR);
+    if (image.empty())
+        CV_Error(Error::StsError, "vlm: could not read input file: " + path);
+
+    model->reset();
+    return model->infer(image, prompt, max_new_tokens);
 }
 
 }} // namespace cv::vlm
