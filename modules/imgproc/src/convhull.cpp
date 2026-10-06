@@ -274,6 +274,8 @@ static bool countingSortAndPrune(const Point* data,
 }
 
 static const int RADIX_BITS = 8; // 256 buckets per pass, 4 passes cover 32 bits
+static const int RADIX_NBUCKETS = 1 << RADIX_BITS;
+static const int RADIX_MAX_PASSES = 4;
 
 // number of radix passes needed to sort keys in 0..range-1
 static int radixPassesCount(int64 range)
@@ -290,53 +292,49 @@ static int radixPassesCount(int64 range)
         return 4;
 }
 
+// bucket of a coordinate value in the given pass
+static int radixBucket(int value, int64 min_value, int passNr)
+{
+    const int shift = passNr * RADIX_BITS;        // which byte of the key this pass sorts by
+    const int BUCKET_MASK = RADIX_NBUCKETS - 1;   // the lowest RADIX_BITS bits set
+    const int64 key = value - min_value;
+    return (int)((key >> shift) & BUCKET_MASK);
+}
+
 // One pass: copies the pointers, ordered by one 8-bit digit of y (or x).
 // Returns false if the pass is skipped.
 static bool radixPass(Point* const* src,
                       Point** dst,
                       int total,
+                      const int* bucketSizes,
                       const CHullRange& range,
                       bool sort_by_y,
                       int passNr)
 {
-    const int shift = passNr * RADIX_BITS;   // which byte of the key this pass sorts by
-    const int64 origin = sort_by_y ? range.minY : range.minX;
-
-    const int NBUCKETS = 1 << RADIX_BITS;
-    int count[NBUCKETS] = {};
-
-    const int BUCKET_MASK = NBUCKETS - 1;   // the lowest RADIX_BITS bits set
+    const int64 min_value = sort_by_y ? range.minY : range.minX;
     const auto bucketOf = [=](const Point* p) {
-        const int64 key = (sort_by_y ? p->y : p->x) - origin;
-        return (int)((key >> shift) & BUCKET_MASK);
+        return radixBucket(sort_by_y ? p->y : p->x, min_value, passNr);
     };
 
-    // how many points fall into each bucket
-    for (int i = 0; i < total; ++i)
-    {
-        int bucket = bucketOf(src[i]);
-        count[bucket]++;
-    }
-
-    if (count[bucketOf(src[0])] == total) {
+    if (bucketSizes[bucketOf(src[0])] == total) {
         return false;
     }
 
-    // compute start positions of buckets in dst
-    for (int b = 0, pos = 0; b < NBUCKETS; ++b)
+    // start positions of buckets in dst
+    int bucket_pos[RADIX_NBUCKETS];
+    for (int b = 0, pos = 0; b < RADIX_NBUCKETS; ++b)
     {
-        int c = count[b];
-        count[b] = pos;
-        pos += c;
+        bucket_pos[b] = pos;
+        pos += bucketSizes[b];
     }
 
     // scatter
     for (int i = 0; i < total; ++i)
     {
         int bucket = bucketOf(src[i]);
-        int pos = count[bucket];       // next free slot
+        int pos = bucket_pos[bucket];       // next free slot
         dst[pos] = src[i];
-        count[bucket] = pos + 1;       // the slot is taken now
+        bucket_pos[bucket] = pos + 1;       // the slot is taken now
     }
     return true;
 }
@@ -356,23 +354,35 @@ static void radixSort(const Point* data,
         out_points[i] = const_cast<Point*>(&data[i]);
     }
 
+    const int passesY = radixPassesCount(range.rangeY());
+    const int passesX = radixPassesCount(range.rangeX());
+
+    // how many points fall into each bucket, per pass
+    int bucketSizesY[RADIX_MAX_PASSES][RADIX_NBUCKETS] = {};
+    int bucketSizesX[RADIX_MAX_PASSES][RADIX_NBUCKETS] = {};
+    for (int i = 0; i < total; ++i)
+    {
+        for (int p = 0; p < passesY; ++p)
+            bucketSizesY[p][radixBucket(data[i].y, range.minY, p)]++;
+        for (int p = 0; p < passesX; ++p)
+            bucketSizesX[p][radixBucket(data[i].x, range.minX, p)]++;
+    }
+
     AutoBuffer<Point*> scratch_points(total);
     Point** src = out_points;
     Point** dst = scratch_points.data();
 
     // sort by y, then by x
-    const int passesY = radixPassesCount(range.rangeY());
-    for (int p = 0; p < passesY; ++p)
+    for (int passNr = 0; passNr < passesY; ++passNr)
     {
-        if (radixPass(src, dst, total, range, true /* sort_by_y */, p)) {
+        if (radixPass(src, dst, total, bucketSizesY[passNr], range, true /* sort_by_y */, passNr)) {
             std::swap(src, dst);
         }
     }
 
-    const int passesX = radixPassesCount(range.rangeX());
-    for (int p = 0; p < passesX; ++p)
+    for (int passNr = 0; passNr < passesX; ++passNr)
     {
-        if (radixPass(src, dst, total, range, false /* sort_by_y */, p)) {
+        if (radixPass(src, dst, total, bucketSizesX[passNr], range, false /* sort_by_y */, passNr)) {
             std::swap(src, dst);
         }
     }
