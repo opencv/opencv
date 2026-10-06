@@ -200,13 +200,23 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
         FileNode n = *it;
         int k = (int)n;
         if( i > 0 && k >= 0 )
+        {
+            CV_Assert( k < sizes[dims-1] );
             idx[dims-1] = k;
+        }
         else
         {
             if( i > 0 )
+            {
+                // write() stores the first changed dimension as k - dims + 1
                 k = dims + k - 1;
+                CV_Assert( k >= 0 );
+            }
             else
+            {
+                CV_Assert( k >= 0 && k < sizes[0] );
                 idx[0] = k, k = 1;
+            }
             for( ; k < dims; k++ )
             {
                 ++it;
@@ -214,7 +224,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
                 n = *it;
                 CV_Assert( n.isInt() );
                 int idx_k = (int)n;
-                CV_Assert( idx_k >= 0 );
+                CV_Assert( idx_k >= 0 && idx_k < sizes[k] );
                 idx[k] = idx_k;
             }
         }
