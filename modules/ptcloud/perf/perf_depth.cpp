@@ -28,7 +28,7 @@ PERF_TEST_P_(DepthTo3dTest, noMask)
     Mat(makeK()).convertTo(K, CV_MAT_DEPTH(dtype));
     Mat points3d(sz, CV_MAKETYPE(CV_MAT_DEPTH(dtype), 4));
 
-    declare.in(depth, WARMUP_RNG).in(K).out(points3d);
+    declare.in(depth).in(K).out(points3d);  // keep the 0.1-10.0 range (no WARMUP_RNG)
     declare.time(50);
 
     TEST_CYCLE() cv::depthTo3d(depth, K, points3d);
@@ -43,8 +43,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, DepthTo3dTest,
     )
 );
 
-// The mask path accepts CV_16U/CV_16S/CV_32F only (CV_Assert in depthTo3dMask),
-// so the withMask variant covers CV_32FC1 exclusively.
+// depthTo3dMask accepts CV_16U/CV_16S/CV_32F only; withMask covers CV_32FC1 here.
 typedef TestBaseWithParam<DepthTo3dParams> DepthTo3dMaskTest;
 
 PERF_TEST_P_(DepthTo3dMaskTest, withMask)
@@ -60,7 +59,7 @@ PERF_TEST_P_(DepthTo3dMaskTest, withMask)
     Mat(makeK()).convertTo(K, CV_MAT_DEPTH(dtype));
     Mat points3d(1, sz.area(), CV_MAKETYPE(CV_MAT_DEPTH(dtype), 4));
 
-    declare.in(depth, WARMUP_RNG).in(K).in(mask).out(points3d);
+    declare.in(depth).in(K).in(mask).out(points3d);
     declare.time(50);
 
     TEST_CYCLE() cv::depthTo3d(depth, K, points3d, mask);
