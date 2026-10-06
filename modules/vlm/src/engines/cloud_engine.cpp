@@ -6,10 +6,7 @@
 
 #include "../precomp.hpp"
 #include "cloud_engine.hpp"
-#include "../vlm_model_base.hpp"
 #include "../http_client.hpp"
-#include "../base64.hpp"
-#include "../json_parser.hpp"
 
 #include <cctype>
 #include <cstdio>
@@ -92,15 +89,28 @@ void checkHttpStatus(const HttpResponse& response, const String& provider, const
     }
 }
 
-String extractOrThrow(const JsonValue& node, const String& provider)
+FileStorage parseJson(const std::string& body, const String& provider)
 {
-    if (node.type() != JsonValue::STRING)
-        CV_Error(Error::StsError,
-                 "vlm: unexpected " + provider + " response shape (missing generated text)");
-    return node.asString();
+    FileStorage fs(body, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    if (!fs.isOpened())
+        CV_Error(Error::StsError, "vlm: could not parse " + provider + " response as JSON");
+    return fs;
 }
 
-class CloudVLMModel CV_FINAL : public VLMModelBase
+String extractOrThrow(const FileNode& node, const String& provider)
+{
+    if (!node.isString())
+        CV_Error(Error::StsError,
+                 "vlm: unexpected " + provider + " response shape (missing generated text)");
+    return (String)node;
+}
+
+int readIntOr(const FileNode& node, int fallback)
+{
+    return node.empty() ? fallback : (int)node;
+}
+
+class CloudVLMModel CV_FINAL : public VLMModel
 {
 public:
     CloudVLMModel(VLMModelType modelType, const String& modelName, const String& apiKey)
@@ -135,7 +145,7 @@ public:
 
         std::vector<uchar> encoded;
         imencode(".png", img, encoded);
-        std::string imageB64 = base64Encode(encoded.data(), encoded.size());
+        std::string imageB64 = utils::base64Encode(encoded.data(), encoded.size());
         String actualPrompt = prompt.empty() ? "OCR" : prompt;
 
         switch (modelType_)
@@ -175,9 +185,9 @@ private:
         HttpResponse response = httpPostJson(url, body.str(), headers);
         checkHttpStatus(response, "OpenAI-compatible", apiKey_);
 
-        const JsonValue root = jsonParse(response.body);
-        lastTokensUsed_ = root["usage"]["total_tokens"].asInt(-1);
-        const JsonValue& choices = root["choices"];
+        FileStorage fs = parseJson(response.body, "OpenAI-compatible");
+        lastTokensUsed_ = readIntOr(fs["usage"]["total_tokens"], -1);
+        FileNode choices = fs["choices"];
         if (choices.size() == 0)
             CV_Error(Error::StsError,
                      "vlm: unexpected OpenAI-compatible response shape (missing choices)");
@@ -206,11 +216,11 @@ private:
             httpPostJson("https://api.anthropic.com/v1/messages", body.str(), headers);
         checkHttpStatus(response, "Anthropic", apiKey_);
 
-        const JsonValue root = jsonParse(response.body);
-        const int inputTokens = root["usage"]["input_tokens"].asInt(0);
-        const int outputTokens = root["usage"]["output_tokens"].asInt(0);
+        FileStorage fs = parseJson(response.body, "Anthropic");
+        const int inputTokens = readIntOr(fs["usage"]["input_tokens"], 0);
+        const int outputTokens = readIntOr(fs["usage"]["output_tokens"], 0);
         lastTokensUsed_ = (inputTokens > 0 || outputTokens > 0) ? inputTokens + outputTokens : -1;
-        const JsonValue& content = root["content"];
+        FileNode content = fs["content"];
         if (content.size() == 0)
             CV_Error(Error::StsError,
                      "vlm: unexpected Anthropic response shape (missing content)");
@@ -239,13 +249,13 @@ private:
         HttpResponse response = httpPostJson(url, body.str(), headers);
         checkHttpStatus(response, "Gemini", apiKey_);
 
-        const JsonValue root = jsonParse(response.body);
-        lastTokensUsed_ = root["usageMetadata"]["totalTokenCount"].asInt(-1);
-        const JsonValue& candidates = root["candidates"];
+        FileStorage fs = parseJson(response.body, "Gemini");
+        lastTokensUsed_ = readIntOr(fs["usageMetadata"]["totalTokenCount"], -1);
+        FileNode candidates = fs["candidates"];
         if (candidates.size() == 0)
             CV_Error(Error::StsError,
                      "vlm: unexpected Gemini response shape (missing candidates)");
-        const JsonValue& parts = candidates[0]["content"]["parts"];
+        FileNode parts = candidates[0]["content"]["parts"];
         if (parts.size() == 0)
             CV_Error(Error::StsError,
                      "vlm: unexpected Gemini response shape (missing content parts)");

@@ -8,11 +8,11 @@
 #define OPENCV_VLM_LOCAL_MODEL_BASE_HPP
 
 #include "opencv2/dnn.hpp"
-#include "vlm_model_base.hpp"
+#include "opencv2/vlm.hpp"
 
 namespace cv { namespace vlm {
 
-class LocalVLMModelBase : public VLMModelBase
+class LocalVLMModelBase : public VLMModel
 {
 public:
     String infer(InputArray image, const String& prompt, int max_new_tokens) CV_OVERRIDE;

@@ -6,31 +6,14 @@
 
 #include "perf_precomp.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
-#include "../src/base64.hpp"
 #include "../src/vlm_generation.hpp"
 
 // Not exported from "opencv_vlm", so compile them in (as core's test_logtagmanager.cpp does).
 #if 1
-#include "../src/base64.cpp"
 #include "../src/vlm_generation.cpp"
 #endif
 
 namespace opencv_test {
-
-PERF_TEST(Vlm_Base64, EncodePngSizedBuffer)
-{
-    std::vector<unsigned char> data(512 * 1024);
-    for (size_t i = 0; i < data.size(); i++)
-        data[i] = (unsigned char)(i & 0xFF);
-
-    std::string encoded;
-    TEST_CYCLE()
-    {
-        encoded = cv::vlm::base64Encode(data.data(), data.size());
-    }
-
-    SANITY_CHECK_NOTHING();
-}
 
 PERF_TEST(Vlm_Generation, ArgmaxLastToken)
 {
