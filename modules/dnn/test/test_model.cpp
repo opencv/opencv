@@ -514,7 +514,7 @@ TEST_P(Test_Model, Keypoints_pose)
 
 TEST_P(Test_Model, KeypointsBatch)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_VERYLONG);
     // A heatmap argmax jumps a whole cell under FP16.
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -653,7 +653,7 @@ TEST_P(Test_Model, Segmentation)
 
 TEST_P(Test_Model, SegmentBatch)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
     checkBackend();
 
     std::string weights_file = _tf("onnx/models/segformer_b3_ade_dynbatch.onnx", false);
@@ -1640,6 +1640,7 @@ typedef testing::TestWithParam<Target> Test_DetectionModel_RTDETR;
 TEST_P(Test_DetectionModel_RTDETR, Accuracy)
 {
     Target targetId = GetParam();
+    applyTestTag(CV_TEST_TAG_VERYLONG);
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
@@ -1664,6 +1665,7 @@ typedef testing::TestWithParam<Target> Test_DetectionModel_RFDETR;
 TEST_P(Test_DetectionModel_RFDETR, Accuracy)
 {
     Target targetId = GetParam();
+    applyTestTag(CV_TEST_TAG_VERYLONG);
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
@@ -1689,6 +1691,7 @@ typedef testing::TestWithParam<Target> Test_SegmentationModel_YOLO26mSeg;
 TEST_P(Test_SegmentationModel_YOLO26mSeg, Accuracy)
 {
     Target targetId = GetParam();
+    applyTestTag(CV_TEST_TAG_VERYLONG);
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
