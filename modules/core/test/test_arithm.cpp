@@ -4489,6 +4489,14 @@ TEST(Core_Arithm, addWeighted_fp64_uses_fp32_intermediate_29880)
     EXPECT_EQ(fp32Then64, dst.at<double>(0, 0));
 }
 
+// https://github.com/opencv/opencv/issues/30153
+TEST(Core_Arithm, inRange_bool_30153)
+{
+    cv::Mat src(4, 4, CV_MAKETYPE(CV_Bool, 3), cv::Scalar::all(1)), dst;
+    EXPECT_THROW(cv::inRange(src, cv::Scalar::all(0), cv::Scalar::all(1), dst), cv::Exception);
+    EXPECT_THROW(cv::inRange(src, src, src, dst), cv::Exception);
+}
+
 
 TEST(Core_Arithm, min_empty)
 {
