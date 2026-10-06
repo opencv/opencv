@@ -294,10 +294,80 @@ TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
-// ONNX output #0 of a recurrent op is Y (the hidden state of every timestep), output #1 is Y_h.
-// Asking for Y_h alone still requires output #0 to be declared (as an empty name), so a node
-// with a single declared output can only mean Y. The GRU used to answer Y_h for that case,
-// unlike LSTM2/RNN2.
+// Reference GRU from the ONNX definition (linear_before_reset = 0):
+//   z = sigmoid(x*Wz^T + h*Rz^T + Wbz + Rbz),   r = sigmoid(x*Wr^T + h*Rr^T + Wbr + Rbr)
+//   n = tanh(x*Wh^T + (r (*) h)*Rh^T + Wbh + Rbh),   h = z (*) h + (1 - z) (*) n
+// `reverse` walks backwards, `lens` limits a sample to t < lens[s], `clip` > 0 bounds each gate.
+// expectedY is [T, 1, N, H], expectedYh is [1, N, H].
+static void gruReference(const Mat& X, const Mat& W, const Mat& R, const Mat& B,
+                         const std::vector<int>& lens, bool reverse, float clip,
+                         Mat& expectedY, Mat& expectedYh)
+{
+    const int T = X.size[0], N = X.size[1], I = X.size[2];
+    const int H = W.size[1] / 3;
+    const auto clamped = [clip](double v) {
+        if (clip <= 0.f)
+            return v;
+        return std::max(-(double)clip, std::min(v, (double)clip));
+    };
+
+    const float* xData = X.ptr<float>();
+    const float* wData = W.ptr<float>();
+    const float* rData = R.ptr<float>();
+    const float* bData = B.ptr<float>();
+
+    expectedY.create(shape(T, 1, N, H), CV_32F);
+    expectedYh.create(shape(1, N, H), CV_32F);
+
+    std::vector<double> z(H), r(H), n(H), h(H);
+    for (int s = 0; s < N; s++)
+    {
+        std::fill(h.begin(), h.end(), 0.);   // initial_h defaults to zero
+        const int len = lens.empty() ? T : lens[s];
+        for (int step = 0; step < T; step++)
+        {
+            const int t = reverse ? (T - 1 - step) : step;
+            if (t < len)
+            {
+                const float* x = xData + (t * N + s) * I;
+                for (int j = 0; j < H; j++)
+                {
+                    double pz = bData[j] + bData[3 * H + j];
+                    double pr = bData[H + j] + bData[3 * H + H + j];
+                    for (int i = 0; i < I; i++)
+                    {
+                        pz += x[i] * wData[j * I + i];
+                        pr += x[i] * wData[(H + j) * I + i];
+                    }
+                    for (int k = 0; k < H; k++)
+                    {
+                        pz += h[k] * rData[j * H + k];
+                        pr += h[k] * rData[(H + j) * H + k];
+                    }
+                    z[j] = 1. / (1. + std::exp(-clamped(pz)));
+                    r[j] = 1. / (1. + std::exp(-clamped(pr)));
+                }
+                for (int j = 0; j < H; j++)
+                {
+                    double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
+                    for (int i = 0; i < I; i++)
+                        pn += x[i] * wData[(2 * H + j) * I + i];
+                    for (int k = 0; k < H; k++)
+                        pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
+                    n[j] = std::tanh(clamped(pn));
+                }
+                for (int j = 0; j < H; j++)
+                    h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
+            }
+            for (int j = 0; j < H; j++)
+                expectedY.ptr<float>()[(t * N + s) * H + j] = (t < len) ? (float)h[j] : 0.f;
+        }
+        for (int j = 0; j < H; j++)
+            expectedYh.ptr<float>()[s * H + j] = (float)h[j];
+    }
+}
+
+// Output #0 of a recurrent op is Y, #1 is Y_h; a lone declared output can only mean Y.
 TEST(Layer_GRU_Test_Accuracy_, SingleOutputIsSequenceY)
 {
     const int T = 3, N = 2, I = 4, H = 5;
@@ -341,62 +411,13 @@ TEST(Layer_GRU_Test_Accuracy_, SingleOutputIsSequenceY)
     layer->finalize(inputs, outputs);
     layer->forward(inputs, outputs, internals);
 
-    // Reference GRU written straight from the ONNX definition (linear_before_reset = 0):
-    //   z = sigmoid(x*Wz^T + h*Rz^T + Wbz + Rbz)
-    //   r = sigmoid(x*Wr^T + h*Rr^T + Wbr + Rbr)
-    //   n = tanh(x*Wh^T + (r (*) h)*Rh^T + Wbh + Rbh)
-    //   h = z (*) h + (1 - z) (*) n
-    Mat expected({T, 1, N, H}, CV_32F);
-    const float* xData = X.ptr<float>();
-    const float* wData = W.ptr<float>();
-    const float* rData = R.ptr<float>();
-    const float* bData = B.ptr<float>();
-    std::vector<double> z(H), r(H), n(H), h(H, 0.);
-    for (int s = 0; s < N; s++)
-    {
-        std::fill(h.begin(), h.end(), 0.);   // initial_h defaults to zero
-        for (int t = 0; t < T; t++)
-        {
-            const float* x = xData + (t * N + s) * I;
-            for (int j = 0; j < H; j++)
-            {
-                double pz = bData[j] + bData[3 * H + j];
-                double pr = bData[H + j] + bData[3 * H + H + j];
-                for (int i = 0; i < I; i++)
-                {
-                    pz += x[i] * wData[j * I + i];
-                    pr += x[i] * wData[(H + j) * I + i];
-                }
-                for (int k = 0; k < H; k++)
-                {
-                    pz += h[k] * rData[j * H + k];
-                    pr += h[k] * rData[(H + j) * H + k];
-                }
-                z[j] = 1. / (1. + std::exp(-pz));
-                r[j] = 1. / (1. + std::exp(-pr));
-            }
-            for (int j = 0; j < H; j++)
-            {
-                double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
-                for (int i = 0; i < I; i++)
-                    pn += x[i] * wData[(2 * H + j) * I + i];
-                for (int k = 0; k < H; k++)
-                    pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
-                n[j] = std::tanh(pn);
-            }
-            for (int j = 0; j < H; j++)
-            {
-                h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
-                expected.ptr<float>()[(t * N + s) * H + j] = (float)h[j];
-            }
-        }
-    }
+    Mat expected, expectedYh;
+    gruReference(X, W, R, B, std::vector<int>(), false, 0.f, expected, expectedYh);
 
     normAssert(outputs[0], expected, "GRU single output must be Y", 1e-4, 1e-4);
 }
 
-// direction == "reverse" processes the sequence from the last timestep to the first, so Y[t] holds
-// the state after seeing x[t..T-1] and Y_h is the state left after the very last step (t = 0).
+// direction == "reverse": Y[t] is the state after seeing x[t..T-1], Y_h the one after the last step.
 TEST(Layer_GRU_Test_Accuracy_, ReverseDirection)
 {
     const int T = 3, N = 2, I = 4, H = 5;
@@ -440,61 +461,44 @@ TEST(Layer_GRU_Test_Accuracy_, ReverseDirection)
     layer->finalize(inputs, outputs);
     layer->forward(inputs, outputs, internals);
 
-    // Same equations as above, but starting from the last timestep.
-    const float* xData = X.ptr<float>();
-    const float* wData = W.ptr<float>();
-    const float* rData = R.ptr<float>();
-    const float* bData = B.ptr<float>();
-    Mat expectedY(shape(T, 1, N, H), CV_32F), expectedYh(shape(1, N, H), CV_32F);
-    std::vector<double> z(H), r(H), n(H), h(H);
-    for (int s = 0; s < N; s++)
-    {
-        std::fill(h.begin(), h.end(), 0.);
-        for (int t = T - 1; t >= 0; t--)
-        {
-            const float* x = xData + (t * N + s) * I;
-            for (int j = 0; j < H; j++)
-            {
-                double pz = bData[j] + bData[3 * H + j];
-                double pr = bData[H + j] + bData[3 * H + H + j];
-                for (int i = 0; i < I; i++)
-                {
-                    pz += x[i] * wData[j * I + i];
-                    pr += x[i] * wData[(H + j) * I + i];
-                }
-                for (int k = 0; k < H; k++)
-                {
-                    pz += h[k] * rData[j * H + k];
-                    pr += h[k] * rData[(H + j) * H + k];
-                }
-                z[j] = 1. / (1. + std::exp(-pz));
-                r[j] = 1. / (1. + std::exp(-pr));
-            }
-            for (int j = 0; j < H; j++)
-            {
-                double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
-                for (int i = 0; i < I; i++)
-                    pn += x[i] * wData[(2 * H + j) * I + i];
-                for (int k = 0; k < H; k++)
-                    pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
-                n[j] = std::tanh(pn);
-            }
-            for (int j = 0; j < H; j++)
-            {
-                h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
-                expectedY.ptr<float>()[(t * N + s) * H + j] = (float)h[j];
-            }
-        }
-        for (int j = 0; j < H; j++)
-            expectedYh.ptr<float>()[s * H + j] = (float)h[j];
-    }
+    Mat expectedY, expectedYh;
+    gruReference(X, W, R, B, std::vector<int>(), true, 0.f, expectedY, expectedYh);
 
     normAssert(outputs[0], expectedY, "GRU(reverse) Y", 1e-4, 1e-4);
     normAssert(outputs[1], expectedYh, "GRU(reverse) Y_h", 1e-4, 1e-4);
 }
 
-// ONNX sequence_lens: each batch entry stops after its own length. Y is zero-padded past it and
-// Y_h is the state that entry finished with.
+// direction == "reverse" is a single backward sweep, so two-direction weights are rejected.
+TEST(Layer_GRU_Test_Accuracy_, ReverseWithTwoDirectionWeightsIsRejected)
+{
+    const int T = 3, N = 2, I = 4, H = 5;
+
+    Mat X({T, N, I}, CV_32F);
+    Mat W({2, 3 * H, I}, CV_32F);   // two directions
+    Mat R({2, 3 * H, H}, CV_32F);
+    Mat B({2, 6 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "GRU";
+    lp.name = "gru_reverse_two_directions";
+    lp.set("direction", "reverse");
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    for (size_t i = 0; i < inputs.size(); i++)
+        inShapes.push_back(shape(inputs[i]));
+
+    // The mix must be rejected here in shape inference, not later in forward().
+    EXPECT_THROW(layer->getMemoryShapes(inShapes, 2, outShapes, internalShapes), cv::Exception);
+}
+
+// ONNX sequence_lens: each entry stops after its own length, so Y is zero-padded past it.
 TEST(Layer_GRU_Test_Accuracy_, SequenceLens)
 {
     const int T = 4, N = 3, I = 4, H = 5;
@@ -543,69 +547,74 @@ TEST(Layer_GRU_Test_Accuracy_, SequenceLens)
     layer->finalize(inputs, outputs);
     layer->forward(inputs, outputs, internals);
 
-    // Same equations as above, per sample, with the state frozen once its length is reached
-    // and zeros written to Y from there on.
-    const float* xData = X.ptr<float>();
-    const float* wData = W.ptr<float>();
-    const float* rData = R.ptr<float>();
-    const float* bData = B.ptr<float>();
-    Mat expectedY(shape(T, 1, N, H), CV_32F), expectedYh(shape(1, N, H), CV_32F);
-    std::vector<double> z(H), r(H), n(H), h(H);
-    for (int s = 0; s < N; s++)
-    {
-        std::fill(h.begin(), h.end(), 0.);
-        for (int t = 0; t < T; t++)
-        {
-            if (t < lens[s])
-            {
-                const float* x = xData + (t * N + s) * I;
-                for (int j = 0; j < H; j++)
-                {
-                    double pz = bData[j] + bData[3 * H + j];
-                    double pr = bData[H + j] + bData[3 * H + H + j];
-                    for (int i = 0; i < I; i++)
-                    {
-                        pz += x[i] * wData[j * I + i];
-                        pr += x[i] * wData[(H + j) * I + i];
-                    }
-                    for (int k = 0; k < H; k++)
-                    {
-                        pz += h[k] * rData[j * H + k];
-                        pr += h[k] * rData[(H + j) * H + k];
-                    }
-                    z[j] = 1. / (1. + std::exp(-pz));
-                    r[j] = 1. / (1. + std::exp(-pr));
-                }
-                for (int j = 0; j < H; j++)
-                {
-                    double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
-                    for (int i = 0; i < I; i++)
-                        pn += x[i] * wData[(2 * H + j) * I + i];
-                    for (int k = 0; k < H; k++)
-                        pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
-                    n[j] = std::tanh(pn);
-                }
-                for (int j = 0; j < H; j++)
-                    h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
-            }
-            for (int j = 0; j < H; j++)
-                expectedY.ptr<float>()[(t * N + s) * H + j] = (t < lens[s]) ? (float)h[j] : 0.f;
-        }
-        for (int j = 0; j < H; j++)
-            expectedYh.ptr<float>()[s * H + j] = (float)h[j];
-    }
+    Mat expectedY, expectedYh;
+    gruReference(X, W, R, B, std::vector<int>(lens, lens + N), false, 0.f, expectedY, expectedYh);
 
     normAssert(outputs[0], expectedY, "GRU(sequence_lens) Y", 1e-4, 1e-4);
     normAssert(outputs[1], expectedYh, "GRU(sequence_lens) Y_h", 1e-4, 1e-4);
 }
 
-// The ONNX `clip` attribute bounds the input of the activations to [-clip, clip] - the gates
-// before sigmoid/tanh, not their outputs and not the state.
+// sequence_lens with reverse: the sweep starts at lens[s] - 1, so Y is zero on the padding.
+TEST(Layer_GRU_Test_Accuracy_, ReverseSequenceLens)
+{
+    const int T = 4, N = 3, I = 4, H = 5;
+    const int lens[N] = {4, 2, 0};
+
+    Mat X({T, N, I}, CV_32F);
+    Mat W({1, 3 * H, I}, CV_32F);
+    Mat R({1, 3 * H, H}, CV_32F);
+    Mat B({1, 6 * H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -1.f, 1.f);
+    randu(R, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    Mat lensMat(1, N, CV_32S);
+    for (int n = 0; n < N; n++)
+        lensMat.at<int>(0, n) = lens[n];
+
+    LayerParams lp;
+    lp.type = "GRU";
+    lp.name = "gru_reverse_seq_lens";
+    lp.set("direction", "reverse");
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {X, W, R, B, lensMat};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    layer->getMemoryShapes(inShapes, 2, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)2);
+    EXPECT_EQ(outShapes[0], shape(T, 1, N, H));
+    EXPECT_EQ(outShapes[1], shape(1, N, H));
+    layer->getTypes(inTypes, 2, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    Mat expectedY, expectedYh;
+    gruReference(X, W, R, B, std::vector<int>(lens, lens + N), true, 0.f, expectedY, expectedYh);
+
+    normAssert(outputs[0], expectedY, "GRU(reverse, sequence_lens) Y", 1e-4, 1e-4);
+    normAssert(outputs[1], expectedYh, "GRU(reverse, sequence_lens) Y_h", 1e-4, 1e-4);
+}
+
+// The ONNX `clip` attribute bounds the activation input (the gates before sigmoid/tanh), not their output.
 TEST(Layer_GRU_Test_Accuracy_, Clip)
 {
     const int T = 3, N = 2, I = 4, H = 5;
     const float clip = 0.3f;   // small enough that it binds for the weights below
-    const auto clamped = [clip](double v) { return std::max(-(double)clip, std::min(v, (double)clip)); };
 
     Mat X({T, N, I}, CV_32F);
     Mat W({1, 3 * H, I}, CV_32F);
@@ -644,54 +653,8 @@ TEST(Layer_GRU_Test_Accuracy_, Clip)
     layer->finalize(inputs, outputs);
     layer->forward(inputs, outputs, internals);
 
-    // Same equations as the other GRU tests, with the gate pre-activations clamped.
-    const float* xData = X.ptr<float>();
-    const float* wData = W.ptr<float>();
-    const float* rData = R.ptr<float>();
-    const float* bData = B.ptr<float>();
-    Mat expectedY(shape(T, 1, N, H), CV_32F), expectedYh(shape(1, N, H), CV_32F);
-    std::vector<double> z(H), r(H), n(H), h(H);
-    for (int s = 0; s < N; s++)
-    {
-        std::fill(h.begin(), h.end(), 0.);
-        for (int t = 0; t < T; t++)
-        {
-            const float* x = xData + (t * N + s) * I;
-            for (int j = 0; j < H; j++)
-            {
-                double pz = bData[j] + bData[3 * H + j];
-                double pr = bData[H + j] + bData[3 * H + H + j];
-                for (int i = 0; i < I; i++)
-                {
-                    pz += x[i] * wData[j * I + i];
-                    pr += x[i] * wData[(H + j) * I + i];
-                }
-                for (int k = 0; k < H; k++)
-                {
-                    pz += h[k] * rData[j * H + k];
-                    pr += h[k] * rData[(H + j) * H + k];
-                }
-                z[j] = 1. / (1. + std::exp(-clamped(pz)));
-                r[j] = 1. / (1. + std::exp(-clamped(pr)));
-            }
-            for (int j = 0; j < H; j++)
-            {
-                double pn = bData[2 * H + j] + bData[3 * H + 2 * H + j];
-                for (int i = 0; i < I; i++)
-                    pn += x[i] * wData[(2 * H + j) * I + i];
-                for (int k = 0; k < H; k++)
-                    pn += (r[k] * h[k]) * rData[(2 * H + j) * H + k];
-                n[j] = std::tanh(clamped(pn));
-            }
-            for (int j = 0; j < H; j++)
-            {
-                h[j] = z[j] * h[j] + (1. - z[j]) * n[j];
-                expectedY.ptr<float>()[(t * N + s) * H + j] = (float)h[j];
-            }
-        }
-        for (int j = 0; j < H; j++)
-            expectedYh.ptr<float>()[s * H + j] = (float)h[j];
-    }
+    Mat expectedY, expectedYh;
+    gruReference(X, W, R, B, std::vector<int>(), false, clip, expectedY, expectedYh);
 
     normAssert(outputs[0], expectedY, "GRU(clip) Y", 1e-4, 1e-4);
     normAssert(outputs[1], expectedYh, "GRU(clip) Y_h", 1e-4, 1e-4);
