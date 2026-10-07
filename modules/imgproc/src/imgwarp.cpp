@@ -1414,6 +1414,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
+    CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
+
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
@@ -2458,6 +2460,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
+    CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
+
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
                                         interpolation != INTER_CUBIC) );
@@ -3018,6 +3022,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
+
+    CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
 
     CV_Assert( _src.total() > 0 );
 

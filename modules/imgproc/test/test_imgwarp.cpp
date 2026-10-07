@@ -1139,6 +1139,20 @@ TEST(Imgproc_Remap, lanczos4_unsupported_depth)
     }
 }
 
+// https://github.com/opencv/opencv/issues/29589
+TEST(Imgproc_Warp, reject_nd_input)
+{
+    const int sz[] = {4, 3, 5, 3};
+    Mat src(4, sz, CV_8UC1, Scalar::all(0)), dst;
+    Mat_<float> mapx(3, 5, 0.f), mapy(3, 5, 0.f);
+    Mat affine = Mat::eye(2, 3, CV_32F), perspective = Mat::eye(3, 3, CV_32F);
+
+    EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_NEAREST), cv::Exception);
+    EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_LINEAR), cv::Exception);
+    EXPECT_THROW(warpAffine(src, dst, affine, Size(5, 3), INTER_NEAREST), cv::Exception);
+    EXPECT_THROW(warpPerspective(src, dst, perspective, Size(5, 3), INTER_NEAREST), cv::Exception);
+}
+
 TEST(Imgproc_Resize, issue_26497)
 {
     std::vector<float> vec = {0.f, 1.f, 2.f, 3.f};
