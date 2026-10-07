@@ -24,7 +24,7 @@ UsacParams::UsacParams() {
 }
 
 namespace usac {
-int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
+int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp, int dim = 2);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
 //! Adapter between SimpleUsacConfig and Model.
@@ -197,7 +197,8 @@ UniversalRANSAC::UniversalRANSAC (Ptr<Model> &params_, cv::InputArray points1, c
             threshold = Utils::getCalibratedThreshold(threshold, K1, K2);
             max_thr = Utils::getCalibratedThreshold(max_thr, K1, K2);
         } else {
-            points_size = mergePoints(points1, points2, points, false);
+            points_size = mergePoints(points1, points2, points, false,
+                                      params->isPtsetReg3D() ? 3 : 2);
             if (params->isFundamental() && ! K1_.empty() && ! K2_.empty()) {
                 K1 = K1_.getMat(); K1.convertTo(K1, CV_64F);
                 K2 = K2_.getMat(); K2.convertTo(K2, CV_64F);
@@ -207,11 +208,16 @@ UniversalRANSAC::UniversalRANSAC (Ptr<Model> &params_, cv::InputArray points1, c
     }
 
     if (params->getSampler() == SamplingMethod::SAMPLING_NAPSAC || params->getLO() == LocalOptimMethod::LOCAL_OPTIM_GC) {
-        if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_GRID) {
+        // grid graph is defined for pairs of 2D points only
+        if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_GRID &&
+                !params->isPtsetReg3D()) {
             graph = GridNeighborhoodGraph::create(points, points_size,
                     params->getCellSize(), params->getCellSize(), params->getCellSize(), params->getCellSize(), 10);
-        } else if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_FLANN_KNN) {
-            graph = FlannNeighborhoodGraph::create(points, points_size,params->getKNN(), false, 5, 1);
+        } else if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_FLANN_KNN ||
+                   params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_GRID) {
+            // the graph excludes the point itself, so at most points_size-1 neighbors exist
+            const int knn = std::min(params->getKNN(), points_size - 1);
+            graph = FlannNeighborhoodGraph::create(points, points_size, knn, false, 5, 1);
         } else if (params->getNeighborsSearch() == NeighborSearchMethod::NEIGH_FLANN_RADIUS) {
             graph = RadiusSearchNeighborhoodGraph::create(points, points_size, params->getGraphRadius(), 5, 1);
         } else CV_Error(cv::Error::StsNotImplemented, "Graph type is not implemented!");
@@ -222,8 +228,11 @@ UniversalRANSAC::UniversalRANSAC (Ptr<Model> &params_, cv::InputArray points1, c
         const auto &cell_number_per_layer = params->getGridCellNumber();
         layers.reserve(cell_number_per_layer.size());
         const auto * const pts = (float *) points.data;
+        // the grid uses the first 4 coordinates of each correspondence
+        // (e.g., x1 y1 z1 x2 for 3D point sets)
+        const int dim = points.cols;
         float img1_width = 0, img1_height = 0, img2_width = 0, img2_height = 0;
-        for (int i = 0; i < 4 * points_size; i += 4) {
+        for (int i = 0; i < dim * points_size; i += dim) {
             if (pts[i    ] > img1_width ) img1_width  = pts[i    ];
             if (pts[i + 1] > img1_height) img1_height = pts[i + 1];
             if (pts[i + 2] > img2_width ) img2_width  = pts[i + 2];
@@ -236,9 +245,13 @@ UniversalRANSAC::UniversalRANSAC (Ptr<Model> &params_, cv::InputArray points1, c
                 if (cell_number_per_layer[layer_idx-1] <= cell_number)
                     CV_Error(cv::Error::StsError, "Progressive NAPSAC sampler: "
                                                   "Cell number in layers must be in decreasing order!");
+            // cells of at least 1, e.g. for normalized or negative coordinates
+            const auto cellSize = [cell_number] (float extent) {
+                return std::max(1, (int)(extent / (float)cell_number));
+            };
             layers.emplace_back(GridNeighborhoodGraph::create(points, points_size,
-        (int)(img1_width / (float)cell_number), (int)(img1_height / (float)cell_number),
-        (int)(img2_width / (float)cell_number), (int)(img2_height / (float)cell_number), 10));
+                cellSize(img1_width), cellSize(img1_height),
+                cellSize(img2_width), cellSize(img2_height), 10));
         }
     }
 
@@ -293,7 +306,9 @@ void UniversalRANSAC::initialize (int state, Ptr<MinimalSolver> &min_solver, Ptr
         case ErrorMetric::SYMM_REPR_ERR:
             error = ReprojectionErrorSymmetric::create(points); break;
         case ErrorMetric::FORW_REPR_ERR:
-            if (params->getEstimator() == EstimationMethod::AFFINE)
+            if (params->isPtsetReg3D())
+                error = ReprojectionErrorAffine3D::create(points);
+            else if (params->isPtsetReg())
                 error = ReprojectionErrorAffine::create(points);
             else error = ReprojectionErrorForward::create(points);
             break;
@@ -392,6 +407,23 @@ void UniversalRANSAC::initialize (int state, Ptr<MinimalSolver> &min_solver, Ptr
                 _fo_solver = CovarianceAffineSolver::create(points);
             else _fo_solver = non_min_solver;
         }
+    } else if (params->isPtsetReg()) {
+        degeneracy = makePtr<Degeneracy>();
+        const EstimationMethod est = params->getEstimator();
+        const int dim = params->isPtsetReg3D() ? 3 : 2;
+        const bool is_scaled_rotation = est == EstimationMethod::SCALED_SO2 ||
+                                        est == EstimationMethod::SCALED_SO3;
+        const bool is_scale = est == EstimationMethod::SIM2 || est == EstimationMethod::SIM3 ||
+                              is_scaled_rotation,
+                   is_rotation_only = est == EstimationMethod::SO2 || est == EstimationMethod::SO3 ||
+                              is_scaled_rotation;
+        min_solver = PointSetRegistrationMinimalSolver::create(points, dim,
+                                                               is_scale, is_rotation_only);
+        non_min_solver = PointSetRegistrationNonMinimalSolver::create(points, dim,
+                                                                      is_scale, is_rotation_only);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+        if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER)
+            _fo_solver = non_min_solver;
     } else if (params->getEstimator() == EstimationMethod::PLANE || params->getEstimator() == EstimationMethod::SPHERE) {
         degeneracy = makePtr<Degeneracy>();
         using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
@@ -522,7 +554,9 @@ int UniversalRANSAC::getIndependentInliers (const Mat &model_, const std::vector
         // convert E to F
         model = Mat(Matx33d(K2).inv().t() * Matx33d(model) * Matx33d(K1).inv());
         sample_size = 5;
-    } else if (params->isPnP() || params->getEstimator() == EstimationMethod::AFFINE) sample_size = 3;
+    } else if (params->isPnP() || params->getEstimator() == EstimationMethod::AFFINE ||
+               params->isPtsetReg())
+        sample_size = params->getSampleSize();
     else
         CV_Error(cv::Error::StsNotImplemented, "Method for independent inliers is not implemented for this problem");
     if (num_inliers_ <= sample_size) return 0; // minimal sample size generates model
@@ -651,7 +685,21 @@ int UniversalRANSAC::getIndependentInliers (const Mat &model_, const std::vector
             }
         }
     };
-    if (params->isPnP()) {
+    if (params->isPtsetReg3D()) {
+        for (int i = 0; i < max_verify; i++) {
+            const int inl_idx = 6*inliers[i];
+            const auto x1 = pts[inl_idx  ], y1 = pts[inl_idx+1], z1 = pts[inl_idx+2],
+                       x2 = pts[inl_idx+3], y2 = pts[inl_idx+4], z2 = pts[inl_idx+5];
+            for (int j = i+1; j < num_inliers; j++) {
+                const auto * const pt = pts + 6*inliers[j];
+                if (fabsf(x1-pt[0]) + fabsf(y1-pt[1]) + fabsf(z1-pt[2]) < neigh_thr ||
+                    fabsf(x2-pt[3]) + fabsf(y2-pt[4]) + fabsf(z2-pt[5]) < neigh_thr) {
+                    num_non_random_inliers--;
+                    break;
+                }
+            }
+        }
+    } else if (params->isPnP()) {
         for (int i = 0; i < max_verify; i++) {
             const int inl_idx = 5*inliers[i];
             const auto x = pts[inl_idx], y = pts[inl_idx+1], X = pts[inl_idx+2], Y = pts[inl_idx+3], Z = pts[inl_idx+4];
@@ -1120,24 +1168,26 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
  * output is matrix of size N x (a + b)
  * return points_size = N
  */
-int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp) {
+int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp, int dim) {
     Mat pts1 = pts1_.getMat(), pts2 = pts2_.getMat();
     auto convertPoints = [] (Mat &points, int pt_dim) {
         points.convertTo(points, CV_32F); // convert points to have float precision
         if (points.channels() > 1)
             points = points.reshape(1, (int)points.total()); // convert point to have 1 channel
-        if (points.rows < points.cols)
-            transpose(points, points); // transpose so points will be in rows
+        // transpose so points will be in rows, unless they already are (e.g. N x 3 with N < 3)
+        if (points.rows < points.cols && points.cols != pt_dim)
+            transpose(points, points);
         CV_CheckGE(points.cols, pt_dim, "Invalid dimension of point");
         if (points.cols != pt_dim) // in case when image points are 3D convert them to 2D
             points = points.colRange(0, pt_dim);
     };
 
-    convertPoints(pts1, 2); // pts1 are always image points
-    convertPoints(pts2, ispnp ? 3 : 2); // for PnP points are 3D
+    convertPoints(pts1, dim); // pts1 are image points except for 3D point set registration
+    convertPoints(pts2, ispnp ? 3 : dim); // for PnP points are 3D
 
     // points are of size [Nx2 Nx2] = Nx4 for H, F, E
     // points are of size [Nx2 Nx3] = Nx5 for PnP
+    // points are of size [Nx3 Nx3] = Nx6 for 3D point set registration (SO3, SE3, SIM3)
     hconcat(pts1, pts2, pts);
     return pts.rows;
 }
@@ -1317,6 +1367,38 @@ Mat estimateAffine2D(InputArray from, InputArray to, OutputArray mask, int metho
     return Mat();
 }
 
+Mat estimatePointSetRegistration(InputArray from, InputArray to, OutputArray mask,
+        EstimationMethod estimator, int method, double thr, int max_iters, double conf) {
+    Ptr<Model> params;
+    setParameters(method, params, estimator, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    const int rows = params->isPtsetReg3D() ? 3 : 2;
+    if (run(params, from, to,
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0, rows).clone();
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
+Mat estimatePointSetRegistration(InputArray from, InputArray to, OutputArray mask,
+        EstimationMethod estimator, const UsacParams &usac_params) {
+    Ptr<Model> params;
+    setParameters(params, estimator, usac_params, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    const int rows = params->isPtsetReg3D() ? 3 : 2;
+    if (run(params, from, to,
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0, rows).clone();
+    }
+    return Mat();
+}
+
 class ModelImpl : public Model {
 private:
     // main parameters:
@@ -1398,6 +1480,20 @@ public:
             case (EstimationMethod::AFFINE):
                 avg_num_models = 1; model_est_to_ver_time = 50;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SO2):
+            case (EstimationMethod::SCALED_SO2):
+                avg_num_models = 1; model_est_to_ver_time = 100;
+                sample_size = 1; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SE2):
+            case (EstimationMethod::SIM2):
+            case (EstimationMethod::SO3):
+            case (EstimationMethod::SCALED_SO3):
+                avg_num_models = 1; model_est_to_ver_time = 100;
+                sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SE3):
+            case (EstimationMethod::SIM3):
+                avg_num_models = 1; model_est_to_ver_time = 100;
+                sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::HOMOGRAPHY):
                 avg_num_models = 0.8; model_est_to_ver_time = 200;
                 sample_size = 4; est_error = ErrorMetric ::FORW_REPR_ERR; break;
@@ -1428,8 +1524,20 @@ public:
             default: CV_Error(cv::Error::StsNotImplemented, "Estimator has not implemented yet!");
         }
 
+        // 3D point set registration: the residual (forward error) has 3 components
+        if (isPtsetReg3D()) {
+            DoF = 3; C = 0.39894228; sigma_quantile = 3.36821;
+            upper_incomplete_of_sigma_quantile = 0.00343949;
+            lower_incomplete_of_sigma_quantile = 0.97705026;
+        }
+
         if (score_ == ScoreMethod::SCORE_METHOD_MAGSAC)
             polisher = PolishingMethod::MAGSAC;
+
+        // neighborhood samplers draw the rest of a sample around its first point
+        if (sample_size < 2 && (sampler == SamplingMethod::SAMPLING_NAPSAC ||
+                                sampler == SamplingMethod::SAMPLING_PROGRESSIVE_NAPSAC))
+            sampler = SamplingMethod::SAMPLING_UNIFORM;
 
         // for PnP problem we can use only KNN graph
         if (estimator_ == EstimationMethod::P3P || estimator_ == EstimationMethod::P6P) {
@@ -1514,6 +1622,15 @@ public:
     bool isEssential () const override { return estimator == EstimationMethod::ESSENTIAL; }
     bool isPnP() const override {
         return estimator == EstimationMethod ::P3P || estimator == EstimationMethod ::P6P;
+    }
+    bool isPtsetReg () const override {
+        return estimator == EstimationMethod::SO2 || estimator == EstimationMethod::SE2 ||
+               estimator == EstimationMethod::SIM2 || estimator == EstimationMethod::SCALED_SO2 ||
+               isPtsetReg3D();
+    }
+    bool isPtsetReg3D () const override {
+        return estimator == EstimationMethod::SO3 || estimator == EstimationMethod::SE3 ||
+               estimator == EstimationMethod::SIM3 || estimator == EstimationMethod::SCALED_SO3;
     }
 };
 
