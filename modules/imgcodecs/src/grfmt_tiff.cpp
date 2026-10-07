@@ -1378,10 +1378,12 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         const bool isValidCompression =
           (compression == IMWRITE_TIFF_COMPRESSION_DEFLATE) ||
           (compression == IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE) ||
-          (compression == IMWRITE_TIFF_COMPRESSION_ZSTD);
+          (compression == IMWRITE_TIFF_COMPRESSION_LZMA) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_ZSTD) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_WEBP);
         const bool isValidValue = (compressionLevel == -1) || ((compressionLevel >= 1) && (compressionLevel <= 9));
         if (!isValidCompression) {
-            CV_LOG_WARNING(nullptr, cv::format("IMWRITE_TIFF_COMPRESSION_LEVEL can only be used for DEFLATE or ZSTD compression. It is ignored."));
+            CV_LOG_WARNING(nullptr, cv::format("IMWRITE_TIFF_COMPRESSION_LEVEL can only be used for DEFLATE, LZMA, ZSTD or WEBP compression. It is ignored."));
             compressionLevel = -1;
         }
         else if (!isValidValue) {
@@ -1576,7 +1578,27 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bitsPerChannel));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_COMPRESSION, page_compression));
         if (compressionLevel >= 0)
-            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZIPQUALITY, compressionLevel));
+        {
+          switch(page_compression)
+          {
+            case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+            case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZIPQUALITY, compressionLevel));
+                break;
+            case IMWRITE_TIFF_COMPRESSION_LZMA:
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_LZMAPRESET, compressionLevel));
+                break;
+            case IMWRITE_TIFF_COMPRESSION_ZSTD:
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, compressionLevel));
+                break;
+            case IMWRITE_TIFF_COMPRESSION_WEBP:
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_WEBP_LEVEL, compressionLevel));
+                break;
+            default:
+                CV_LOG_WARNING(nullptr, cv::format("Unexpected page_compression %d", page_compression));
+                break;
+          }//end switch(page_compression)
+        }//end if (compressionLevel >= 0)
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, colorspace));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, channels));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
