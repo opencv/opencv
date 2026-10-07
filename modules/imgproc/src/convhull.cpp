@@ -134,7 +134,7 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 namespace chull_sort
 {
 
-// int points that order exactly like the float coordinates (bit patterns, not rounded values).
+// int points that order exactly like the float coordinates.
 // the sortable points are stored in buf.
 static const Point* floatPointsToSortablePoints(const Point2f* points, int total, AutoBuffer<int>& buf)
 {
@@ -185,6 +185,8 @@ static const int COUNTING_MAX_RANGE = 100000;   // ~1.6 MB of columns
 // Of the points sharing an x value only the lowest and the highest are kept, the others are not needed for the hull.
 // out_points gets the kept points ordered by x, then by y; total is set to their count.
 // Returns false, leaving the outputs untouched, if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
+// With by_y x and y are swapped: the sort is by y, then by x.
+template<bool by_y = false>
 static bool countingSortAndPrune(const Point* data,
                                  const CHullRange& range,
                                  bool require_monotonic_indices,
@@ -199,9 +201,15 @@ static bool countingSortAndPrune(const Point* data,
         return true;
     }
 
+    // with by_y x and y are swapped
+    const auto x = [](const Point* p) { return by_y ? p->y : p->x; };
+    const auto y = [](const Point* p) { return by_y ? p->x : p->y; };
+    const int minX = by_y ? range.minY : range.minX;
+    const int64 rangeX64 = by_y ? range.rangeY() : range.rangeX();
+
     // 1) Check the x range
-    CV_Assert(range.rangeX() <= COUNTING_MAX_RANGE);
-    const int rangeX = (int)range.rangeX();
+    CV_Assert(rangeX64 <= COUNTING_MAX_RANGE);
+    const int rangeX = (int)rangeX64;
 
     // 2) Create one column per x value, storing pointers to its lowest and highest points in data.
     // having lo and hi near to each other in memory should induce better cache locality
@@ -211,21 +219,21 @@ static bool countingSortAndPrune(const Point* data,
     // 3) Fill columns
     for (int i = 0; i < total; ++i)
     {
-        const int idx = data[i].x - range.minX;
-        const int y = data[i].y;
+        const int idx = x(&data[i]) - minX;
+        const int cury = y(&data[i]);
         XColumn& col = columns[idx];
 
-        if (col.lo == nullptr || y < col.lo->y) {
+        if (col.lo == nullptr || cury < y(col.lo)) {
             col.lo = &data[i];
         }
-        else if (require_monotonic_indices && y == col.lo->y && !(data[i-1] == data[i])) {
+        else if (require_monotonic_indices && cury == y(col.lo) && !(data[i-1] == data[i])) {
             return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
         }
 
-        if (col.hi == nullptr || y > col.hi->y) {
+        if (col.hi == nullptr || cury > y(col.hi)) {
             col.hi = &data[i];
         }
-        else if (require_monotonic_indices && y == col.hi->y && !(data[i-1] == data[i])) {
+        else if (require_monotonic_indices && cury == y(col.hi) && !(data[i-1] == data[i])) {
             return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
         }
     }
@@ -242,24 +250,24 @@ static bool countingSortAndPrune(const Point* data,
             continue;
 
         const Point* pmax = columns[i].hi;
-        CV_DbgAssert(pmax != nullptr && pmin->y <= pmax->y); // when filling columns either both pmax and pmin are set or neither.
+        CV_DbgAssert(pmax != nullptr && y(pmin) <= y(pmax)); // when filling columns either both pmax and pmin are set or neither.
 
         out_points[out++] = const_cast<Point*>(pmin);
         cur = out - 1;
 
-        int y = out_points[cur]->y;
-        if (out_points[ind_miny]->y > y) {
+        int cury = y(out_points[cur]);
+        if (y(out_points[ind_miny]) > cury) {
             ind_miny = cur;
         }
-        if (out_points[ind_maxy]->y < y) {
+        if (y(out_points[ind_maxy]) < cury) {
             ind_maxy = cur;
         }
 
         if (pmax != pmin) {
             out_points[out++] = const_cast<Point*>(pmax);
             cur = out - 1;
-            y = out_points[cur]->y;
-            if (out_points[ind_maxy]->y < y)
+            cury = y(out_points[cur]);
+            if (y(out_points[ind_maxy]) < cury)
                 ind_maxy = cur;
         }
     }
