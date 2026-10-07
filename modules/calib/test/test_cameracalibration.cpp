@@ -2065,6 +2065,13 @@ static std::vector<std::vector<T> > toPointsOf(const std::vector<std::vector<S> 
     return dst;
 }
 
+template <typename T>
+static Mat toExplicitDimsMat(const std::vector<T>& pts, int cn)
+{
+    int sz[] = { 1, (int)pts.size(), cn };
+    return Mat(3, sz, CV_64F, (void*)pts.data()).clone();
+}
+
 TEST(Calib_CalibrateCamera, float64Points)
 {
     const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
@@ -2082,6 +2089,33 @@ TEST(Calib_CalibrateCamera, float64Points)
     EXPECT_MAT_NEAR(K64, Mat(K), 1e-6);
     EXPECT_LT(rms32, 1e-3);
     EXPECT_MAT_NEAR(K32, Mat(K), 1e-2);
+}
+
+TEST(Calib_CalibrateCamera, dims3PointArrays)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img, img2;
+    makeFloat64Views(K, Vec3d::all(0), Vec3d(-0.1, 0, 0), obj, img, img2);
+
+    std::vector<Mat> objDims3(obj.size()), imgDims3(img.size());
+    for (size_t i = 0; i < obj.size(); i++)
+    {
+        objDims3[i] = toExplicitDimsMat(obj[i], 3);
+        imgDims3[i] = toExplicitDimsMat(img[i], 2);
+        ASSERT_EQ(objDims3[i].dims, 3);
+        ASSERT_EQ(objDims3[i].checkVector(3), (int)obj[i].size());
+    }
+
+    Mat Kref, distref, Kdims3, distdims3;
+    std::vector<Mat> rvecs, tvecs;
+    double rmsRef = calibrateCamera(obj, img, Size(640, 480), Kref, distref, rvecs, tvecs);
+    double rmsDims3 = calibrateCamera(objDims3, imgDims3, Size(640, 480), Kdims3, distdims3, rvecs, tvecs);
+
+    EXPECT_LT(rmsRef, 1e-7);
+    EXPECT_NEAR(rmsRef, rmsDims3, 1e-9);
+    EXPECT_MAT_NEAR(Kref, Kdims3, 1e-9);
+    EXPECT_MAT_NEAR(distref, distdims3, 1e-9);
 }
 
 TEST(Calib_CalibrateCameraRO, float64Points)

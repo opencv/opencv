@@ -2781,8 +2781,10 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         if (!imgpt1.isContinuous())
             imgpt1 = imgpt1.clone();
         nPointsMat.at<int>(i) = numberOfObjectPoints;
-        objpt.reshape(3, 1).convertTo(objPtMat.colRange(j, j + numberOfObjectPoints), CV_64F);
-        imgpt1.reshape(2, 1).convertTo(imgPt1Mat.colRange(j, j + numberOfObjectPoints), CV_64F);
+        Mat(1, numberOfObjectPoints, CV_MAKETYPE(objpt.depth(), 3), objpt.ptr())
+            .convertTo(objPtMat.colRange(j, j + numberOfObjectPoints), CV_64F);
+        Mat(1, numberOfObjectPoints, CV_MAKETYPE(imgpt1.depth(), 2), imgpt1.ptr())
+            .convertTo(imgPt1Mat.colRange(j, j + numberOfObjectPoints), CV_64F);
 
         if (!imgPt2Mat.empty())
         {
@@ -2791,7 +2793,8 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
             CV_CheckEQ(numberOfObjectPoints, numberOfImage2Points, "Number of object and image(2) points must be equal");
             if (!imgpt2.isContinuous())
                 imgpt2 = imgpt2.clone();
-            imgpt2.reshape(2, 1).convertTo(imgPt2Mat.colRange(j, j + numberOfImage2Points), CV_64F);
+            Mat(1, numberOfImage2Points, CV_MAKETYPE(imgpt2.depth(), 2), imgpt2.ptr())
+                .convertTo(imgPt2Mat.colRange(j, j + numberOfImage2Points), CV_64F);
         }
 
         j += numberOfObjectPoints;
