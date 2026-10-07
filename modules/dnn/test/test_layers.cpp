@@ -1170,6 +1170,109 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
+// The input shape and the pool type are test parameters, so a failing case names the
+// configuration it belongs to.
+typedef testing::TestWithParam<tuple<MatShape, bool> > Layer_Test_GlobalPooling;
+
+struct GlobalPoolingParamName
+{
+    std::string operator()(const testing::TestParamInfo<Layer_Test_GlobalPooling::ParamType>& info) const
+    {
+        const MatShape sizes = std::get<0>(info.param);
+        std::string name = cv::format("N%d", sizes[0]);
+        for (size_t i = 1; i < sizes.size(); i++)
+            name += cv::format("x%d", sizes[i]);
+        return name + (std::get<1>(info.param) ? "_max" : "_ave");
+    }
+};
+
+TEST_P(Layer_Test_GlobalPooling, NDSpatialDimensions)
+{
+    const MatShape sizes = std::get<0>(GetParam());
+    const bool useMax = std::get<1>(GetParam());
+    Mat inp((int)sizes.size(), sizes.data(), CV_32F);
+    randu(inp, -1, 1);
+
+    // One row per (batch, channel) plane; the planes are contiguous in memory.
+    const int nplanes = sizes[0] * sizes[1];
+    Mat planes = inp.reshape(1, nplanes);
+    Mat ref(nplanes, 1, CV_32F);
+    for (int i = 0; i < nplanes; i++)
+    {
+        double maxVal;
+        cv::minMaxIdx(planes.row(i), NULL, &maxVal);
+        const double sum = cv::sum(planes.row(i))[0];
+        ref.at<float>(i) = useMax ? (float)maxVal : (float)(sum / planes.cols);
+    }
+
+    LayerParams lp;
+    lp.name = "testGlobalPooling";
+    lp.type = "Pooling";
+    lp.set("pool", useMax ? "MAX" : "AVE");
+    lp.set("global_pooling", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+    std::vector<Mat> input(1, inp), output;
+    runLayer(layer, input, output);
+
+    // Expected output shape is N x C x 1 x ... x 1.
+    ASSERT_EQ(output[0].dims, (int)sizes.size());
+    for (int d = 2; d < output[0].dims; d++)
+        ASSERT_EQ(output[0].size[d], 1) << "d = " << d;
+
+    normAssert(ref, output[0].reshape(1, nplanes), "", 1e-6, 1e-6);
+}
+
+TEST_P(Layer_Test_GlobalPooling, QuantizedNDSpatialDimensions)
+{
+    const MatShape sizes = std::get<0>(GetParam());
+    const bool useMax = std::get<1>(GetParam());
+    const int nplanes = sizes[0] * sizes[1];
+    Mat inp((int)sizes.size(), sizes.data(), CV_8S);
+    randu(inp, -100, 100);
+
+    Mat planes = inp.reshape(1, nplanes);
+    Mat ref(nplanes, 1, CV_8S);
+    for (int i = 0; i < nplanes; i++)
+    {
+        double maxVal;
+        cv::minMaxIdx(planes.row(i), NULL, &maxVal);
+        const double sum = cv::sum(planes.row(i))[0];
+        ref.at<int8_t>(i) = useMax ? saturate_cast<int8_t>(maxVal)
+                                   : saturate_cast<int8_t>(std::round(sum / planes.cols));
+    }
+
+    LayerParams lp;
+    lp.name = "testGlobalPoolingInt8";
+    lp.type = "PoolingInt8";
+    lp.set("pool", useMax ? "max" : "ave");
+    lp.set("global_pooling", true);
+    lp.set("zeropoints", 0);
+    lp.set("scales", 1.f);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+    std::vector<MatShape> inputs(1, shape(inp)), outputs, internals;
+    layer->getMemoryShapes(inputs, 1, outputs, internals);
+    ASSERT_EQ(outputs[0].size(), sizes.size());
+    for (int d = 2; d < (int)outputs[0].size(); d++)
+        ASSERT_EQ(outputs[0][d], 1) << "d = " << d;
+
+    std::vector<Mat> input(1, inp), output(1, Mat(outputs[0], CV_8S));
+    layer->finalize(input, output);
+    layer->forward(input, output, std::vector<Mat>());
+
+    const Mat got = output[0].reshape(1, nplanes);
+    for (int j = 0; j < nplanes; j++)
+        EXPECT_EQ((int)got.at<int8_t>(j), (int)ref.at<int8_t>(j)) << "j = " << j;
+}
+
+// The quantized layer shares the parameters of the float one, so both are checked on two
+// spatial dimensions (4-D input) and on the three the layer can describe (5-D input).
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPooling, testing::Combine(
+    testing::Values(MatShape{2, 3, 4, 5}, MatShape{2, 3, 4, 5, 6}),
+    testing::Bool()),
+    GlobalPoolingParamName());
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {

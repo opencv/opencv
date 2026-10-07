@@ -155,13 +155,16 @@ public:
             out.push_back(outputs[0].size[i]);
         }
         if (globalPooling) {
+            CV_CheckLE(inp.size(), isGlobalPooling.size(), "");
             std::vector<size_t> finalKernel;
-            for (int i = 0; i < inp.size(); i++) {
-                int idx = isGlobalPooling.size() - inp.size() + i;
+            for (size_t i = 0; i < inp.size(); i++) {
+                size_t idx = isGlobalPooling.size() - inp.size() + i;
                 finalKernel.push_back(isGlobalPooling[idx] ? inp[i] : kernel_size[idx]);
-             }
-             kernel_size = finalKernel;
-         }
+            }
+            kernel_size = finalKernel;
+
+            expandGlobalPoolingParams(pads_begin, pads_end, strides, kernel_size.size());
+        }
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
 
@@ -1188,13 +1191,19 @@ public:
 
         std::vector<size_t> local_kernel;
         if (globalPooling) {
-            for (int i = 0; i < inpShape.size(); i++) {
-                int idx = isGlobalPooling.size() - inpShape.size() + i;
+            CV_CheckLE(inpShape.size(), isGlobalPooling.size(), "");
+            for (size_t i = 0; i < inpShape.size(); i++) {
+                size_t idx = isGlobalPooling.size() - inpShape.size() + i;
                 local_kernel.push_back(isGlobalPooling[idx] ? inpShape[i] : kernel_size[idx]);
             }
         } else {
             local_kernel = kernel_size;
         }
+
+        std::vector<size_t> local_pads_begin = pads_begin, local_pads_end = pads_end;
+        std::vector<size_t> local_strides = strides;
+        if (globalPooling)
+            expandGlobalPoolingParams(local_pads_begin, local_pads_end, local_strides, inpShape.size());
 
         if (type == ROI || type == PSROI)
         {
@@ -1213,13 +1222,13 @@ public:
             {
                 size_t addedDims = isPool1D? inpShape.size() : local_kernel.size();
                 CV_CheckLE(addedDims, inpShape.size(), "");
-                CV_CheckLE(addedDims, pads_begin.size(), "");
-                CV_CheckLE(addedDims, pads_end.size(), "");
+                CV_CheckLE(addedDims, local_pads_begin.size(), "");
+                CV_CheckLE(addedDims, local_pads_end.size(), "");
                 CV_CheckLE(addedDims, local_kernel.size(), "");
-                CV_CheckLE(addedDims, strides.size(), "");
+                CV_CheckLE(addedDims, local_strides.size(), "");
                 for (int i = 0; i < addedDims; i++)
                 {
-                    float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
+                    float dst = (float) (inpShape[i] + local_pads_begin[i] + local_pads_end[i] - local_kernel[i]) / local_strides[i];
                     CV_CheckGE(dst, 0.0f, "");
                     outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
                 }
@@ -1227,13 +1236,13 @@ public:
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.
                 for (int i = 0; i < addedDims; i++) {
-                    if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
+                    if (local_pads_end[i] && (outShape[2 + i] - 1) * local_strides[i] >= inpShape[i] + local_pads_end[i]) {
                         --outShape[2 + i];
-                        CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
+                        CV_Assert((outShape[2 + i] - 1) * local_strides[i] < inpShape[i] + local_pads_end[i]);
                     }
                 }
             } else {
-                getConvPoolOutParams(inpShape, local_kernel, strides, padMode,
+                getConvPoolOutParams(inpShape, local_kernel, local_strides, padMode,
                                      std::vector<size_t>(local_kernel.size(), 1), outShape);
             }
         }
