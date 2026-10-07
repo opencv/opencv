@@ -388,21 +388,24 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-@note The corner order is guaranteed only up to a rotation of the board. The corners are returned
-row by row and left to right within each row, and the handedness of that ordering is fixed, but the
-function never inspects the colour of the squares, so it cannot tell which physical corner of the
-board is the origin. For a board whose two side lengths differ, the result is therefore determined
-only up to a rotation by 180 degrees; for a board with an equal number of rows and columns, only up
-to a rotation by 90 degrees. Which one you get depends on how the board happens to be oriented in
-the image.
-
-@note This does not affect camera calibration: each view is free to absorb the rotation into its own pose,
-so the intrinsics come out the same. It does break anything that assumes a fixed board coordinate
-frame across views, hand-eye calibration being the usual case, where a flipped view silently
-corrupts the estimated transform. The information needed to resolve the rotation is simply not
-present in a plain chessboard image, so it has to come from the pattern itself: use
-#findChessboardCornersSB with @ref CALIB_CB_MARKER, whose `meta` output identifies the origin, or a
-ChArUco board, where the markers make the orientation unambiguous.
+@note The corners are returned row by row and left to right within each row, but whether that order
+pins down a unique physical corner of the board depends on `patternSize`. The detector builds its
+grid from the dark squares only, so it recognises a rotated board only when the rotation maps dark
+squares onto dark squares. For a `patternSize` of w x h interior corners the squares form a
+(w+1) x (h+1) grid, and a rotation by 180 degrees preserves that colouring exactly when w and h have
+the same parity. Three cases follow. If w and h have different parity, as on the common 9x6 board,
+the origin is unique and the ordering is repeatable across views. If w and h have the same parity
+but differ, as on the 8x6 board used in the example above, the order is fixed only up to a rotation
+by 180 degrees. If w equals h, the detector cannot tell rows from columns either, and the order is
+fixed only up to a rotation by 90 degrees. Where the order is ambiguous, which one you get depends
+on how the board happens to lie in the image. That does not affect camera calibration, since each
+view absorbs the rotation into its own pose and the intrinsics come out the same, but it breaks
+anything that assumes a fixed board coordinate frame across views, hand-eye calibration being the
+usual case, where a flipped view silently corrupts the estimated transform. A plain chessboard image
+does not carry the information needed to resolve the rotation, so it has to come from the pattern:
+choose a board whose two dimensions have different parity, or use #findChessboardCornersSB with
+@ref CALIB_CB_MARKER, whose `meta` output identifies the origin, or a ChArUco board, where the
+markers make the orientation unambiguous.
 
 Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
