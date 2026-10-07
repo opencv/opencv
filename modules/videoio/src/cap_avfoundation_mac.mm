@@ -49,9 +49,69 @@
 #import <AVFoundation/AVFoundation.h>
 
 #define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_BGRA CV_FOURCC_MACRO('B','G','R','A')
 #define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
 #define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
 #define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
+
+
+class CVPixelBufferMatAllocator final : public cv::MatAllocator {
+public:
+    cv::UMatData* allocate(int, const int*, int, void*, size_t*, cv::AccessFlag, cv::UMatUsageFlags) const CV_OVERRIDE
+    {
+        CV_Error(cv::Error::StsNotImplemented, "CVPixelBuffer allocator does not allocate");
+    }
+
+    bool allocate(cv::UMatData*, cv::AccessFlag, cv::UMatUsageFlags) const CV_OVERRIDE
+    {
+        return false;
+    }
+
+    void deallocate(cv::UMatData* u) const CV_OVERRIDE
+    {
+        if (!u)
+            return;
+        CVPixelBufferRef pixelBuffer = static_cast<CVPixelBufferRef>(u->userdata);
+        if (pixelBuffer) {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+            CVBufferRelease(pixelBuffer);
+        }
+        delete u;
+    }
+};
+
+static CVPixelBufferMatAllocator g_CVPixelBufferMatAllocator;
+
+static cv::Mat wrapCVPixelBufferBGRA(CVPixelBufferRef pixelBuffer)
+{
+    CVBufferRetain(pixelBuffer);
+    if (CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) {
+        CVBufferRelease(pixelBuffer);
+        return cv::Mat();
+    }
+
+    const int width = static_cast<int>(CVPixelBufferGetWidth(pixelBuffer));
+    const int height = static_cast<int>(CVPixelBufferGetHeight(pixelBuffer));
+    uchar* baseAddress = reinterpret_cast<uchar*>(CVPixelBufferGetBaseAddress(pixelBuffer));
+    const size_t rowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer);
+
+    if (!baseAddress || rowBytes == 0) {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+        CVBufferRelease(pixelBuffer);
+        return cv::Mat();
+    }
+
+    cv::Mat result(height, width, CV_8UC4, baseAddress, rowBytes);
+    cv::UMatData* u = new cv::UMatData(&g_CVPixelBufferMatAllocator);
+    u->data = u->origdata = result.data;
+    u->size = rowBytes * static_cast<size_t>(height);
+    u->flags = cv::UMatData::USER_ALLOCATED;
+    u->userdata = pixelBuffer;
+    u->refcount = 1;
+    result.u = u;
+    result.allocator = &g_CVPixelBufferMatAllocator;
+    return result;
+}
 
 
 /********************** Declaration of class headers ************************/
@@ -751,12 +811,12 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
 
     // Capture in a pixel format that can be converted efficiently to the output mode.
     OSType pixelFormat;
-    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
-        // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's cv::COLOR_YUV2BGR_YV12)
+    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_BGRA || mMode == CV_CAP_MODE_RGB) {
+        // For CV_CAP_MODE_BGR/BGRA, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's cv::COLOR_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
         // kCVPixelFormatType_24RGB is significantly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
-        mFormat = CV_8UC3;
+        mFormat = (mMode == CV_CAP_MODE_BGRA) ? CV_8UC4 : CV_8UC3;
     } else if (mMode == CV_CAP_MODE_GRAY) {
         // For CV_CAP_MODE_GRAY, read frames as 420v (faster than 420f or 422 -- at least for H.264 files)
         pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
@@ -824,12 +884,19 @@ cv::Mat CvCaptureFile::retrieveFramePixelBuffer() {
 
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
+    OSType pixelFormat = CVPixelBufferGetPixelFormatType(mGrabbedPixels);
+    if (mMode == CV_CAP_MODE_BGRA && pixelFormat == kCVPixelFormatType_32BGRA) {
+        cv::Mat result = wrapCVPixelBufferBGRA(mGrabbedPixels);
+        CVBufferRelease(mGrabbedPixels);
+        mGrabbedPixels = NULL;
+        [localpool drain];
+        return result;
+    }
+
     CVPixelBufferLockBaseAddress(mGrabbedPixels, 0);
     uchar *baseaddress;
     size_t rowBytes;
     cv::Size sz;
-
-    OSType pixelFormat = CVPixelBufferGetPixelFormatType(mGrabbedPixels);
 
     if (CVPixelBufferIsPlanar(mGrabbedPixels)) {
         baseaddress = reinterpret_cast<uchar*>(CVPixelBufferGetBaseAddressOfPlane(mGrabbedPixels, 0));
@@ -855,6 +922,8 @@ cv::Mat CvCaptureFile::retrieveFramePixelBuffer() {
      int outChannels;
      if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
          outChannels = 3;
+     } else if (mMode == CV_CAP_MODE_BGRA) {
+         outChannels = 4;
      } else if (mMode == CV_CAP_MODE_GRAY) {
          outChannels = 1;
      } else if (mMode == CV_CAP_MODE_YUYV) {
@@ -980,7 +1049,10 @@ bool CvCaptureFile::retrieveFrame_(int, cv::OutputArray arr) {
     cv::Mat res = retrieveFramePixelBuffer();
     if (res.empty())
         return false;
-    res.copyTo(arr);
+    if (mMode == CV_CAP_MODE_BGRA)
+        arr.assign(res);
+    else
+        res.copyTo(arr);
     return true;
 }
 
@@ -1059,6 +1131,7 @@ bool CvCaptureFile::setProperty_(int property_id, double value) {
             } else {
                 switch (mode) {
                     case CV_CAP_MODE_BGR:
+                    case CV_CAP_MODE_BGRA:
                     case CV_CAP_MODE_RGB:
                     case CV_CAP_MODE_GRAY:
                     case CV_CAP_MODE_YUYV:
