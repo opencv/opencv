@@ -3550,6 +3550,64 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_AbsdiffSigned,
         testing::Values(CV_8S, CV_16S, CV_32S, CV_64S),
         testing::Values(1, 7, 8, 127)));
 
+// Mat::convertTo() must not depend on the array length: the SIMD body has to produce the same
+// values as the scalar path. The float32 store helpers used to round into an int32 before widening
+// to a wide integer destination, so a CV_16BF/CV_16F source lost every value above the int32 range
+// once the array reached the vector width (see #29996 and the CV_32U note in #29964).
+static bool sameInteger(const Mat& a, int ia, const Mat& b, int ib)
+{
+    switch (a.depth())
+    {
+    case CV_32U: return a.at<unsigned>(0, ia) == b.at<unsigned>(0, ib);
+    case CV_64U: return a.at<uint64_t>(0, ia) == b.at<uint64_t>(0, ib);
+    case CV_64S: return a.at<int64_t>(0, ia) == b.at<int64_t>(0, ib);
+    default: break;
+    }
+    CV_Error(Error::StsError, "unexpected destination depth");
+}
+
+// One case per source/destination pair that converts through the float32 store helpers in
+// convert.hpp. CV_32F and CV_64F reach the 64-bit destinations through v_float64 and are kept as
+// guards; their CV_32U destination goes through a different helper and has a separate, pre-existing
+// rounding mismatch, so that pair is not crossed here.
+typedef testing::TestWithParam< tuple<int, int> > Core_ConvertToWideInteger;
+
+TEST_P(Core_ConvertToWideInteger, matches_scalar_result)
+{
+    const int sd = get<0>(GetParam());
+    const int dd = get<1>(GetParam());
+
+    const double vals[] = { 0.0, 1.0, -1.0, 1000.0, 65504.0, 2147483000.0, 2147483648.0,
+                            3000000000.0, -3000000000.0, 4294967295.0, 1.0e10, -1.0e10 };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+    const int len = 127;   // not a multiple of any vector width, so body and scalar tail both run
+
+    Mat src64(1, len, CV_64F);
+    for (int i = 0; i < len; i++)
+        src64.at<double>(0, i) = vals[i % nvals];
+    Mat src; src64.convertTo(src, sd);
+
+    Mat dst; src.convertTo(dst, dd);
+
+    for (int i = 0; i < len; i++)
+    {
+        // a one-element array takes the scalar path, so it is the reference for the same value
+        Mat one64(1, 1, CV_64F, Scalar(vals[i % nvals]));
+        Mat one; one64.convertTo(one, sd);
+        Mat oneDst; one.convertTo(oneDst, dd);
+        EXPECT_TRUE(sameInteger(dst, i, oneDst, 0))
+            << "sdepth=" << sd << " ddepth=" << dd
+            << " value=" << vals[i % nvals] << " index=" << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertToWideInteger,
+    testing::Values(tuple<int, int>(CV_16F,  CV_32U), tuple<int, int>(CV_16F,  CV_64U),
+                    tuple<int, int>(CV_16F,  CV_64S), tuple<int, int>(CV_16BF, CV_32U),
+                    tuple<int, int>(CV_16BF, CV_64U), tuple<int, int>(CV_16BF, CV_64S),
+                    tuple<int, int>(CV_32F,  CV_64U), tuple<int, int>(CV_32F,  CV_64S),
+                    tuple<int, int>(CV_64F,  CV_64U), tuple<int, int>(CV_64F,  CV_64S)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
