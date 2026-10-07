@@ -108,10 +108,11 @@ __kernel void SigmoidForward(const int count, __global const T* in, __global T* 
   out[index] = 1.0f / (1.0f + exp(-in[index]));
 }
 
-__kernel void SwishForward(const int count, __global const T* in, __global T* out) {
+__kernel void SwishForward(const int count, __global const T* in, __global T* out,
+                           const KERNEL_ARG_DTYPE alpha) {
   int index = get_global_id(0);
   if(index < count)
-  out[index] = in[index] / (1.0f + exp(-in[index]));
+  out[index] = in[index] / (1.0f + exp(-alpha * in[index]));
 }
 
 __kernel void MishForward(const int count, __global const T* in, __global T* out) {

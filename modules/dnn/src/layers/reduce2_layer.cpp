@@ -415,7 +415,12 @@ public:
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
             if (src.total() == 0) {
-                dst.setTo(Scalar(static_cast<double>(Op::identity())));
+                double identity = static_cast<double>(Op::identity());
+                // Bool has no saturating representation of +/-inf: max over nothing is
+                // false, min over nothing is true.
+                if (dst.depth() == CV_Bool)
+                    identity = identity > 0 ? 1.0 : 0.0;
+                dst.setTo(Scalar(identity));
                 return;
             }
 
