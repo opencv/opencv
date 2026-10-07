@@ -56,7 +56,7 @@ namespace cv
 {
 
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
+static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2, bool by_y = false )
 {
     int incr = end > start ? 1 : -1;
     // prepare first triangle
@@ -77,6 +77,11 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
     end += incr; // make end = afterend
 
+    // with by_y the points are sorted by y, then by x
+    if (by_y) {
+        sign2 = -sign2;
+    }
+
     while( pnext != end )
     {
         // check the angle p1,p2,p3
@@ -84,7 +89,15 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
         _Tp nexty = array[pnext]->y;
         _Tp by = nexty - cury;
 
-        if( CV_SIGN( by ) != nsign )
+        // with by_y the walk direction is checked in x; by is still used for the angle
+        _Tp step = by;
+        if (by_y) {
+            _Tp curx = array[pcur]->x;
+            _Tp nextx = array[pnext]->x;
+            step = nextx - curx;
+        }
+
+        if( CV_SIGN( step ) != nsign ) // does the next point go the wrong way along the walk?
         {
             Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
             Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
@@ -476,6 +489,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 #endif
 
     bool sorted = false;
+    bool by_y = false; // true - sort by y, then by x. false - by x then by y
     if( use_counting && range.rangeX() <= chull_sort::COUNTING_MAX_RANGE )
     {
         sorted = chull_sort::countingSortAndPrune(sortable_points, range,
@@ -534,15 +548,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // upper half
         int *tl_stack = stack;
         int tl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1, by_y) :
+            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1, by_y);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1, by_y) :
+            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1, by_y);
 
         // gather upper part of convex hull to output
-        if( !clockwise )
+        if( clockwise == by_y )
         {
             std::swap( tl_stack, tr_stack );
             std::swap( tl_count, tr_count );
@@ -557,14 +571,14 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // lower half
         int *bl_stack = stack;
         int bl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
+            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1, by_y) :
+            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1, by_y);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1, by_y) :
+            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1, by_y);
 
-        if( clockwise )
+        if( clockwise != by_y )
         {
             std::swap( bl_stack, br_stack );
             std::swap( bl_count, br_count );
@@ -623,6 +637,19 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         for (i = 0; i < nout; ++i)
         {
             hullbuf[i] = int(pointer[hullbuf[i]] - data0);
+        }
+
+        if( by_y )
+        {
+            // start from the same vertex as in x order
+            const auto less = [sortable_points](int a, int b) {
+                const Point &p = sortable_points[a];
+                const Point &q = sortable_points[b];
+                return p.x != q.x ? p.x < q.x : p.y < q.y;
+            };
+            int* first = clockwise ? std::min_element(hullbuf, hullbuf + nout, less)
+                                   : std::max_element(hullbuf, hullbuf + nout, less);
+            std::rotate(hullbuf, first, hullbuf + nout);
         }
 
         // try to make the convex hull indices form
