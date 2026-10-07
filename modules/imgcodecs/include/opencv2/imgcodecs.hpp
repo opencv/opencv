@@ -110,7 +110,7 @@ enum ImwriteFlags {
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
        IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. The compression scheme can be specified by this flag; the default is LZW compression, except for 32F depth where it is NONE
-       IMWRITE_TIFF_COMPRESSION_LEVEL = 260,//!For TIFF and DEFLATE or ZSTD compression, matches TIFFTAG_ZIPQUALITY. Quality level is on the ZLIB 1-9 scale. Default value is -1
+       IMWRITE_TIFF_COMPRESSION_LEVEL = 260,//!< For TIFF, if IMWRITE_TIFF_COMPRESSION was used and supports it, sets a compression level. Valid range and meaning depends on the compression scheme. It is currently 1-9 for DEFLATE, 0-9 for LZMA, 1-22 for ZSTD, 1-100 for WEBP. -1 can be used as default.
        IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
        IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags. Default is IMWRITE_TIFF_PREDICTOR_HORIZONTAL .
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
