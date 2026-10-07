@@ -16,6 +16,8 @@ namespace opencv_test { namespace {
 
 TEST(Features2d_LightGlue_DISK, Regression)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     const std::string diskPath = cvtest::findDataFile("dnn/disk.onnx", false);
     const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/disk_lightglue.onnx", false);
 
