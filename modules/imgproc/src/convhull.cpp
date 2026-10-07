@@ -474,14 +474,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     const Point* sortable_points = is_float ?
         chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
 
-    // counting sort if rangeX <= COUNTING_MAX_RANGE and rangeX / total <= COUNTING_MAX_SPARSITY,
+    // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
     // else radix sort if total >= RADIX_MIN_TOTAL,
     // else std::sort
     const int COUNTING_MAX_SPARSITY = 1;
     const int RADIX_MIN_TOTAL = 64;
     const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
 
-    bool use_counting = range.rangeX() <= (int64)COUNTING_MAX_SPARSITY * total;
+    const int64 counting_range = std::min(range.rangeY(), range.rangeX());
+    bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
     bool use_radix = total >= RADIX_MIN_TOTAL;
 #if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
     use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
@@ -490,11 +491,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
     bool sorted = false;
     bool by_y = false; // true - sort by y, then by x. false - by x then by y
-    if( use_counting && range.rangeX() <= chull_sort::COUNTING_MAX_RANGE )
+    if( use_counting && counting_range <= chull_sort::COUNTING_MAX_RANGE )
     {
-        sorted = chull_sort::countingSortAndPrune(sortable_points, range,
-                                                  !returnPoints /* require_monotonic_indices */,
-                                                  pointer, total, miny_ind, maxy_ind);
+        bool monotonic = !returnPoints; // require_monotonic_indices
+        by_y = range.rangeY() < range.rangeX();
+        sorted = by_y ?
+            chull_sort::countingSortAndPrune<true>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind) :
+            chull_sort::countingSortAndPrune<false>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind);
+        if( !sorted )
+            by_y = false; // the fallback sorts by x, then by y
     }
 
     if( !sorted && use_radix )
