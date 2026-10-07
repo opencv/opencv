@@ -107,7 +107,7 @@ public:
 protected:
     vector<Vec3d> searchHorizontalLines();
     vector<Point2f> separateVerticalLines(const vector<Vec3d> &list_lines);
-    vector<Point2f> extractVerticalLines(const vector<Vec3d> &list_lines, double eps);
+    vector<Point2f> extractVerticalLines(const vector<Vec3d> &list_lines, double eps, bool checkCore = false);
     void fixationPoints(vector<Point2f> &local_point);
     vector<Point2f> getQuadrilateral(vector<Point2f> angle_list);
     bool testByPassRoute(vector<Point2f> hull, int start, int finish);
@@ -233,44 +233,81 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     CV_TRACE_FUNCTION();
     const double min_dist_between_points = 10.0;
     const double max_ratio = 1.0;
-    for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
-    {
-        const float coeff_epsilon = coeff_epsilon_i * 0.1f;
-        vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon);
-        if (!point2f_result.empty())
-        {
-            vector<Point2f> centers;
-            Mat labels;
-            double compactness = kmeans(
-                    point2f_result, 3, labels,
-                    TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-                    3, KMEANS_PP_CENTERS, centers);
-            double min_dist = std::numeric_limits<double>::max();
-            for (size_t i = 0; i < centers.size(); i++)
-            {
-                double dist = norm(centers[i] - centers[(i+1) % centers.size()]);
-                if (dist < min_dist)
-                {
-                    min_dist = dist;
-                }
-            }
-            if (min_dist < min_dist_between_points)
-            {
-                continue;
-            }
-            double mean_compactness = compactness / point2f_result.size();
-            double ratio = mean_compactness / min_dist;
 
-            if (ratio < max_ratio)
+    // The first pass uses the plain 1:1:3:1:1 ratio test. Some QR codes contain
+    // data modules that accidentally match this profile both horizontally and
+    // vertically, so the candidate set may end up polluted by false finder
+    // patterns and no valid configuration is found (issue #29540).
+    // In that case repeat the search, additionally requiring the solid dark core
+    // that a real finder pattern always has, and keep the first pass result
+    // untouched for all the images that were already handled correctly.
+    for (int pass = 0; pass < 2; ++pass)
+    {
+        const bool check_core = (pass == 1);
+        for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
+        {
+            const float coeff_epsilon = coeff_epsilon_i * 0.1f;
+            vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon, check_core);
+            if (!point2f_result.empty())
             {
-                return point2f_result;
+                vector<Point2f> centers;
+                Mat labels;
+                double compactness = kmeans(
+                        point2f_result, 3, labels,
+                        TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+                        3, KMEANS_PP_CENTERS, centers);
+                double min_dist = std::numeric_limits<double>::max();
+                for (size_t i = 0; i < centers.size(); i++)
+                {
+                    double dist = norm(centers[i] - centers[(i+1) % centers.size()]);
+                    if (dist < min_dist)
+                    {
+                        min_dist = dist;
+                    }
+                }
+                if (min_dist < min_dist_between_points)
+                {
+                    continue;
+                }
+                double mean_compactness = compactness / point2f_result.size();
+                double ratio = mean_compactness / min_dist;
+
+                if (ratio < max_ratio)
+                {
+                    return point2f_result;
+                }
             }
         }
     }
     return vector<Point2f>();  // nothing
 }
 
-vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps)
+// Every QR finder pattern contains a solid dark 3x3-module block in its center,
+// surrounded by a light ring. Random data modules may accidentally match the
+// 1:1:3:1:1 profile both horizontally and vertically (see issue #29540), so the
+// ratio test alone is not enough to tell a real finder pattern from a
+// coincidence. Sampling a ring of radius 0.75 module around the estimated center
+// stays inside the dark core of a real finder pattern for any code rotation.
+static bool hasSolidFinderCore(const Mat& bin, float cx, float cy, double module_size)
+{
+    const double radius = 0.75 * module_size;
+    static const float dirs[8][2] = {
+        { 1.0f,  0.0f}, {-1.0f,  0.0f}, { 0.0f,  1.0f}, { 0.0f, -1.0f},
+        { 0.70710678f,  0.70710678f}, { 0.70710678f, -0.70710678f},
+        {-0.70710678f,  0.70710678f}, {-0.70710678f, -0.70710678f}};
+    for (int k = 0; k < 8; ++k)
+    {
+        const int px = cvRound(cx + dirs[k][0] * radius);
+        const int py = cvRound(cy + dirs[k][1] * radius);
+        if (px < 0 || py < 0 || px >= bin.cols || py >= bin.rows)
+            return false;
+        if (bin.at<uint8_t>(py, px) != 0)  // 0 is a dark module after adaptiveThreshold
+            return false;
+    }
+    return true;
+}
+
+vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps, bool checkCore)
 {
     CV_TRACE_FUNCTION();
     vector<Vec3d> result;
@@ -341,7 +378,12 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
                 }
             }
 
-            if (weight < eps)
+            // The ratio test is cheap and rejects most candidates, so the core is
+            // only sampled when the profile already matches.
+            if (weight < eps && (!checkCore ||
+                    hasSolidFinderCore(bin_barcode,
+                                       static_cast<float>(list_lines[pnt][0] + list_lines[pnt][2] * 0.5),
+                                       static_cast<float>(list_lines[pnt][1]), list_lines[pnt][2] / 7.0)))
             {
                 result.push_back(list_lines[pnt]);
             }
