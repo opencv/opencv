@@ -142,7 +142,6 @@ enum
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 
-#define DATA_TYPE_4 CAT(DATA_TYPE, 4)
 #define DATA_TYPE_3 CAT(DATA_TYPE, 3)
 
 ///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
@@ -219,7 +218,7 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset
             {
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
                 DATA_TYPE Y = src_pix.x, U = src_pix.y, V = src_pix.z;
 
 #ifdef DEPTH_5
@@ -484,10 +483,10 @@ __kernel void RGB2YUV_YV12_IYUV(__global const uchar* srcptr, int src_step, int 
                 udst[1] = convert_uchar_sat(uv[2 + UIDX]);
                 vdst[1] = convert_uchar_sat(uv[3 - UIDX]);
 #else
-                float4 src_pix1 = convert_float4(vload4(0, src1));
-                float4 src_pix2 = convert_float4(vload4(0, src1+SCN));
-                float4 src_pix3 = convert_float4(vload4(0, src2));
-                float4 src_pix4 = convert_float4(vload4(0, src2+SCN));
+                float3 src_pix1 = convert_float3(vload3(0, src1));
+                float3 src_pix2 = convert_float3(vload3(0, src1+SCN));
+                float3 src_pix3 = convert_float3(vload3(0, src2));
+                float3 src_pix4 = convert_float3(vload3(0, src2+SCN));
 
                 ydst1[0] = convert_uchar_sat(fma(coeffs[0], src_pix1.R_COMP, fma(coeffs[1], src_pix1.G_COMP, fma(coeffs[2], src_pix1.B_COMP, 16.5f))));
                 ydst1[1] = convert_uchar_sat(fma(coeffs[0], src_pix2.R_COMP, fma(coeffs[1], src_pix2.G_COMP, fma(coeffs[2], src_pix2.B_COMP, 16.5f))));
@@ -662,7 +661,7 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int src_step, int src_offs
             {
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
                 DATA_TYPE b = src_pix.B_COMP, g = src_pix.G_COMP, r = src_pix.R_COMP;
 
 #ifdef DEPTH_5
@@ -713,7 +712,7 @@ __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
                 __global const DATA_TYPE * srcptr = (__global const DATA_TYPE*)(src + src_index);
                 __global DATA_TYPE * dstptr = (__global DATA_TYPE*)(dst + dst_index);
 
-                DATA_TYPE_4 src_pix = vload4(0, srcptr);
+                DATA_TYPE_3 src_pix = vload3(0, srcptr);
                 DATA_TYPE yp = src_pix.x, cr = src_pix.y, cb = src_pix.z;
 
 #ifdef DEPTH_5
