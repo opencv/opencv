@@ -42,10 +42,13 @@ const string keys =
     "{ target         | 0                 | 0 CPU, 1 OpenCL, 2 OpenCL FP16, 3 Myriad, 4 Vulkan, 6 CUDA, 7 CUDA FP16 }";
 
 // One colour per id, so the same person keeps the same colour for as long as they are tracked.
+// The golden angle keeps consecutive ids far apart on the hue circle.
 static Scalar colorForId(int id)
 {
-    RNG rng((uint64)id * 0x9E3779B97F4A7C15ULL + 1);
-    return Scalar(rng.uniform(64, 256), rng.uniform(64, 256), rng.uniform(64, 256));
+    Mat hsv(1, 1, CV_8UC3, Scalar(std::fmod(id * 137.508, 360.0) / 2, 200, 255)), bgr;
+    cvtColor(hsv, bgr, COLOR_HSV2BGR);
+    const Vec3b c = bgr.at<Vec3b>(0, 0);
+    return Scalar(c[0], c[1], c[2]);
 }
 
 // yolov8 emits one [1, 84, 8400] tensor: four box numbers then a score per class. The image is

@@ -1153,6 +1153,8 @@ public:
         CV_PROP_RW int minHits;                   //!< frames a new track must be matched before it is reported
         CV_PROP_RW int maxAge;                    //!< frames a track may go unmatched before it is dropped
         CV_PROP_RW bool classAware;               //!< when true a detection may only match a track of the same class
+        CV_PROP_RW float positionNoiseWeight;     //!< Kalman position noise, as a fraction of track height
+        CV_PROP_RW float velocityNoiseWeight;     //!< Kalman velocity noise, as a fraction of track height
     };
 
     /** @brief Create a tracker

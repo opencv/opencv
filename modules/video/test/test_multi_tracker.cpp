@@ -299,6 +299,33 @@ TEST(Video_MultiTracker, gate_uses_height_scaled_noise_on_first_association)
                                    "its own track";
 }
 
+// positionNoiseWeight says how far an object is expected to move between frames, so raising it
+// has to widen the gate. Same jump, same everything else, only the weight differs.
+TEST(Video_MultiTracker, position_noise_weight_widens_the_gate)
+{
+    const Rect2d at(100, 100, 10, 20);
+    const Rect2d jumped(106, 100, 10, 20);      // still overlaps, so only the gate can refuse it
+
+    size_t tight = 0, loose = 0;
+    for (int pass = 0; pass < 2; pass++)
+    {
+        MultiTracker::Params p;
+        p.minHits = 1;
+        p.positionNoiseWeight = pass ? 0.90f : 0.02f;
+        Ptr<MultiTracker> tracker = MultiTracker::create(p);
+
+        Frame still;  still.add(at);
+        Frame moved;  moved.add(jumped);
+        for (int i = 0; i < 4; i++)
+            step(tracker, still);
+        const size_t n = step(tracker, moved).ids.size();
+        (pass ? loose : tight) = n;
+    }
+
+    EXPECT_EQ(2u, tight) << "a tight noise weight should refuse the jump and start a new track";
+    EXPECT_EQ(1u, loose) << "a loose noise weight should accept the same jump";
+}
+
 TEST(Video_MultiTracker, embedding_outweighs_closer_box)
 {
     const std::vector<float> A = {1, 0, 0, 0};
@@ -391,6 +418,50 @@ TEST(Video_MultiTracker, embedding_ema_keeps_memory)
     }
     EXPECT_TRUE(sawNewId)
         << "the B detection was absorbed by the A track, so the running descriptor was not kept";
+}
+
+// The second pass matches on motion alone because a weak detection is usually a partial view,
+// so its descriptor must not reach the track's appearance bank either.
+TEST(Video_MultiTracker, low_score_match_does_not_update_the_appearance_bank)
+{
+    const std::vector<float> A = {1, 0, 0, 0};
+    const std::vector<float> B = {0, 1, 0, 0};
+    const Mat rowA = embeddingRows(std::vector<std::vector<float> >(1, A));
+    const Mat rowB = embeddingRows(std::vector<std::vector<float> >(1, B));
+
+    MultiTracker::Params p;
+    p.minHits = 2;
+    p.embeddingWeight = 0.5f;
+    Ptr<MultiTracker> tracker = MultiTracker::create(p);
+
+    Frame strong;  strong.add(Rect2d(100, 100, 40, 80), 0.9f);
+    Frame weak;    weak.add(Rect2d(100, 100, 40, 80), 0.3f);   // between low and high threshold
+    ASSERT_LT(weak.scores[0], p.highDetectionThreshold);
+    ASSERT_GT(weak.scores[0], p.lowDetectionThreshold);
+
+    std::vector<int> ids; std::vector<Rect2d> boxes; std::vector<int> classes;
+    for (int i = 0; i < 4; i++)
+        tracker->update(strong.boxes, strong.scores, strong.classIds, rowA, ids, boxes, classes);
+    ASSERT_EQ(1u, ids.size());
+    const int id = ids[0];
+
+    // Sixteen weak frames that look nothing like A. They match on overlap through the second
+    // pass; if their descriptor were folded in, the bank would end up close to B.
+    for (int i = 0; i < 16; i++)
+        tracker->update(weak.boxes, weak.scores, weak.classIds, rowB, ids, boxes, classes);
+
+    // A confident pure-B detection in the same place. Position alone would take it, so only a
+    // bank still holding A can refuse it -- and a refused detection has to start its own track.
+    bool sawNewId = false;
+    for (int i = 0; i < p.minHits + 1; i++)
+    {
+        tracker->update(strong.boxes, strong.scores, strong.classIds, rowB, ids, boxes, classes);
+        for (size_t k = 0; k < ids.size(); k++)
+            if (ids[k] != id)
+                sawNewId = true;
+    }
+    EXPECT_TRUE(sawNewId)
+        << "the weak detections rewrote the appearance bank, so a pure-B detection was absorbed";
 }
 
 // The counterpart above: appearance must not pull a non-overlapping pair under iouThreshold.
@@ -538,7 +609,7 @@ static void scoreFrame(const std::vector<Rect2d>& gtBoxes, const std::vector<int
 static MotScore runSyntheticSequence(const MultiTracker::Params& params, bool verbose)
 {
     Ptr<MultiTracker> tracker = MultiTracker::create(params);
-    RNG rng(0x5A17ED);                              // fixed, so the sequence is reproducible
+    RNG& rng = theRNG();                            // seeded per test case from --test_seed
 
     MotScore acc;
     acc.idSwitches = acc.falsePositives = acc.misses = acc.groundTruth = 0;

@@ -37,8 +37,7 @@ PERF_TEST_P_(Objects_Mode_MultiTracker, update)
     if (mode >= 2)
     {
         embeddings.create(nObjects, featureDim, CV_32F);
-        RNG rng(0x900D5EED);
-        rng.fill(embeddings, RNG::UNIFORM, 0.f, 1.f);
+        theRNG().fill(embeddings, RNG::UNIFORM, 0.f, 1.f);
         for (int i = 0; i < nObjects; i++)
         {
             Mat r = embeddings.row(i);
