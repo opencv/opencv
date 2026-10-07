@@ -653,9 +653,14 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     // A 4x1 CV_64F Mat/UMat pseudo-scalar (see isScalarArg) is hijacked only against a REAL array:
     // when the partner is itself a tiny scalar-shaped array (e.g. compare(Mat 4x1, Mat 1x1) -
     // issue #8999), both are honest data and ride the broadcast. A genuine MATX Scalar never demotes.
-    else if (s1 && src1.kind() != _InputArray::MATX && isScalarLikeMat(src2, cn1))
+    // Nor against an array of the very same shape and type: that is always an element-wise pair
+    // (as in 4.x), also when the partner is a non-continuous view (e.g. P.col(0)) failing
+    // isScalarArg itself.
+    else if (s1 && src1.kind() != _InputArray::MATX &&
+             (isScalarLikeMat(src2, cn1) || (src2.type() == CV_64F && src2.sameSize(src1))))
         s1 = false;
-    else if (s2 && src2.kind() != _InputArray::MATX && isScalarLikeMat(src1, cn2))
+    else if (s2 && src2.kind() != _InputArray::MATX &&
+             (isScalarLikeMat(src1, cn2) || (src1.type() == CV_64F && src1.sameSize(src2))))
         s2 = false;
 
     // Compat fallback: Java/Python/user code passes scalars as real little Mats (the classic 4x1

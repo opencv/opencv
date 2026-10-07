@@ -2526,6 +2526,24 @@ TEST(Compare, regression_8999)
     EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 
+TEST(Core_Arithm, NonContinuous)
+{
+    Mat Pf(4, 10, CV_32F); randu(Pf, 10, 100);
+    Mat cf = Pf.col(0), df;
+    subtract(cf.clone(), cf, df);
+    EXPECT_LT(cv::norm(df, cv::NORM_INF), FLT_EPSILON);
+
+    Mat Pd(4, 10, CV_64F); randu(Pd, 10, 100);
+    Mat cd = Pd.col(0), dd;
+    subtract(cd.clone(), cd, dd);
+    EXPECT_LT(cv::norm(dd, cv::NORM_INF), DBL_EPSILON);
+
+    Mat Ps(4, 10, CV_64S); randu(Ps, 10, 100);
+    Mat cs = Ps.col(0), ds;
+    subtract(cs.clone(), cs, ds);
+    EXPECT_EQ(0, cv::norm(ds, cv::NORM_INF));
+}
+
 TEST(Compare, regression_16F_do_not_crash)
 {
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
