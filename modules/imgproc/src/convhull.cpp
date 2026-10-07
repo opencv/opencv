@@ -434,6 +434,90 @@ struct CHullCmpPoints
     }
 };
 
+// Sorts the pointers and finds the points with min and max y. Picks the sort by the data.
+// Returns true if the sort is by y, then by x.
+static bool sortPoints(const Point* sortable_points,
+                       Point* data0,
+                       bool is_float,
+                       bool monotonic, // require_monotonic_indices
+                       Point** pointer,
+                       int& total,
+                       int& miny_ind,
+                       int& maxy_ind)
+{
+    Point2f** pointerf = (Point2f**)pointer;
+
+    // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
+    // else radix sort if total >= RADIX_MIN_TOTAL,
+    // else std::sort
+    const int COUNTING_MAX_SPARSITY = 1;
+    const int RADIX_MIN_TOTAL = 64;
+    const CHullRange range = computeRange(sortable_points, total);
+
+    const int64 counting_range = std::min(range.rangeY(), range.rangeX());
+    bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
+    bool use_radix = total >= RADIX_MIN_TOTAL;
+#if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
+    use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
+    use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
+#endif
+
+    bool sorted = false;
+    bool by_y = false; // true - sort by y, then by x. false - by x then by y
+    if( use_counting && counting_range <= COUNTING_MAX_RANGE )
+    {
+        by_y = range.rangeY() < range.rangeX();
+        sorted = by_y ?
+            countingSortAndPrune<true>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind) :
+            countingSortAndPrune<false>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind);
+        if( !sorted )
+            by_y = false; // the fallback sorts by x, then by y
+    }
+
+    if( !sorted && use_radix )
+    {
+        radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
+        sorted = true;
+    }
+
+    if( is_float && sorted )
+    {
+        // the sort ran on the sortable points, make the result point into the data
+        for( int i = 0; i < total; i++ )
+            pointer[i] = data0 + (pointer[i] - sortable_points);
+    }
+
+    if( !sorted )
+    {
+        if( !is_float )
+        {
+            std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+            for( int i = 1; i < total; i++ )
+            {
+                int y = pointer[i]->y;
+                if( pointer[miny_ind]->y > y )
+                    miny_ind = i;
+                if( pointer[maxy_ind]->y < y )
+                    maxy_ind = i;
+            }
+        }
+        else
+        {
+            std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
+            for( int i = 1; i < total; i++ )
+            {
+                float y = pointerf[i]->y;
+                if( pointerf[miny_ind]->y > y )
+                    miny_ind = i;
+                if( pointerf[maxy_ind]->y < y )
+                    maxy_ind = i;
+            }
+        }
+    }
+
+    return by_y;
+}
+
 } // namespace chull_sort
 
 
@@ -476,74 +560,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     const Point* sortable_points = is_float ?
         chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
 
-    // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
-    // else radix sort if total >= RADIX_MIN_TOTAL,
-    // else std::sort
-    const int COUNTING_MAX_SPARSITY = 1;
-    const int RADIX_MIN_TOTAL = 64;
-    const chull_sort::CHullRange range = chull_sort::computeRange(sortable_points, total);
-
-    const int64 counting_range = std::min(range.rangeY(), range.rangeX());
-    bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
-    bool use_radix = total >= RADIX_MIN_TOTAL;
-#if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
-    use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
-    use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
-#endif
-
-    bool sorted = false;
-    bool by_y = false; // true - sort by y, then by x. false - by x then by y
-    if( use_counting && counting_range <= chull_sort::COUNTING_MAX_RANGE )
-    {
-        bool monotonic = !returnPoints; // require_monotonic_indices
-        by_y = range.rangeY() < range.rangeX();
-        sorted = by_y ?
-            chull_sort::countingSortAndPrune<true>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind) :
-            chull_sort::countingSortAndPrune<false>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind);
-        if( !sorted )
-            by_y = false; // the fallback sorts by x, then by y
-    }
-
-    if( !sorted && use_radix )
-    {
-        chull_sort::radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
-        sorted = true;
-    }
-
-    if( is_float && sorted )
-    {
-        // the sort ran on the sortable points, make the result point into the data
-        for( i = 0; i < total; i++ )
-            pointer[i] = data0 + (pointer[i] - sortable_points);
-    }
-
-    if( !sorted )
-    {
-        if( !is_float )
-        {
-            std::sort(pointer, pointer + total, chull_sort::CHullCmpPoints<int>());
-            for( i = 1; i < total; i++ )
-            {
-                int y = pointer[i]->y;
-                if( pointer[miny_ind]->y > y )
-                    miny_ind = i;
-                if( pointer[maxy_ind]->y < y )
-                    maxy_ind = i;
-            }
-        }
-        else
-        {
-            std::sort(pointerf, pointerf + total, chull_sort::CHullCmpPoints<float>());
-            for( i = 1; i < total; i++ )
-            {
-                float y = pointerf[i]->y;
-                if( pointerf[miny_ind]->y > y )
-                    miny_ind = i;
-                if( pointerf[maxy_ind]->y < y )
-                    maxy_ind = i;
-            }
-        }
-    }
+    const bool by_y = chull_sort::sortPoints(sortable_points, data0, is_float, !returnPoints,
+                                             pointer, total, miny_ind, maxy_ind);
 
     if( pointer[0]->x == pointer[total-1]->x &&
         pointer[0]->y == pointer[total-1]->y )
