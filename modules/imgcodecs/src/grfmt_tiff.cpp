@@ -1478,6 +1478,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     const int predictor_default = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
     int compression = -1;
     int compressionLevel = -1;
+    std::pair<int, int> compressionLevelValidRange = {-1, -1};
     int predictor = -1;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
@@ -1522,6 +1523,24 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 break;
         }
     }
+    switch (compression) {
+        case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+        case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+            compressionLevelValidRange = std::make_pair(1, 9);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_LZMA:
+            compressionLevelValidRange = std::make_pair(0, 9);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_ZSTD:
+            compressionLevelValidRange = std::make_pair(1, 22);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_WEBP:
+            compressionLevelValidRange = std::make_pair(1, 100);
+            break;
+        default:
+          break;
+    }
+
     if (readParam(params, IMWRITE_TIFF_COMPRESSION_LEVEL, compressionLevel))
     {
         const bool isValidCompression =
@@ -1530,13 +1549,16 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
           (compression == IMWRITE_TIFF_COMPRESSION_LZMA) ||
           (compression == IMWRITE_TIFF_COMPRESSION_ZSTD) ||
           (compression == IMWRITE_TIFF_COMPRESSION_WEBP);
-        const bool isValidValue = (compressionLevel == -1) || ((compressionLevel >= 1) && (compressionLevel <= 9));
+        const bool isValidValue = (compressionLevel == -1) ||
+          ((compressionLevel >= compressionLevelValidRange.first) && (compressionLevel <= compressionLevelValidRange.second));
         if (!isValidCompression) {
             CV_LOG_WARNING(nullptr, cv::format("IMWRITE_TIFF_COMPRESSION_LEVEL can only be used for DEFLATE, LZMA, ZSTD or WEBP compression. It is ignored."));
             compressionLevel = -1;
         }
         else if (!isValidValue) {
-            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION_LEVEL must be in the ZLIB range 1-9 (or -1 for default). It is set to default.", compressionLevel));
+            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION_LEVEL=%d must be in the range %d-%d (or -1 for default). It is set to default.",
+              compressionLevel, compression,
+              compressionLevelValidRange.first, compressionLevelValidRange.second));
             compressionLevel = -1;
         }
     }
