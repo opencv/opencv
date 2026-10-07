@@ -421,8 +421,6 @@ static void radixSort(const Point* data,
     }
 }
 
-} // namespace chull_sort
-
 template<typename _Tp>
 struct CHullCmpPoints
 {
@@ -435,6 +433,10 @@ struct CHullCmpPoints
         return p1 < p2;
     }
 };
+
+} // namespace chull_sort
+
+
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
@@ -519,7 +521,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     {
         if( !is_float )
         {
-            std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+            std::sort(pointer, pointer + total, chull_sort::CHullCmpPoints<int>());
             for( i = 1; i < total; i++ )
             {
                 int y = pointer[i]->y;
@@ -531,7 +533,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
         else
         {
-            std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
+            std::sort(pointerf, pointerf + total, chull_sort::CHullCmpPoints<float>());
             for( i = 1; i < total; i++ )
             {
                 float y = pointerf[i]->y;
