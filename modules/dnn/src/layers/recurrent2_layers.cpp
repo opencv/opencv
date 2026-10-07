@@ -87,7 +87,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     bool useTimestampDim;
     bool produceCellOutput, produceOutputYh;
     bool useCellClip, usePeephole;
-    bool inputForget;   // If true, couple the gates: f_t = 1 - i_t (ONNX input_forget)
+    bool inputForget;   // ONNX input_forget: f_t = 1 - i_t
     float clipValue;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
@@ -210,14 +210,12 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
-            // The slots are positional - Y, Y_h, Y_c - and an output the node does not fill still
-            // occupies its position, so there is one shape per declared output (the engine requires
-            // outShapes.size() == requiredOutputs, see allocateLayerOutputs()).
+            // Slots are positional: every declared output gets a shape, even an unfilled one.
             const int outCount = std::max(requiredOutputs, 1);
             outputs.assign(outCount, MatShape());
             outputs[0] = outResShape;      // slot #0 -> Y
             for (int i = 1; i < outCount; i++)
-                outputs[i] = newShape;     // Y_h / Y_c share the same shape
+                outputs[i] = newShape;     // Y_h / Y_c
 
 
             // forward() allocates its own per-direction scratch, so no engine internals are needed
@@ -257,7 +255,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         }
 
         // Run one direction's recurrence into its own scratch so both directions run concurrently.
-        // Writes hOutAll columns [i*H, (i+1)*H) for this direction.
+        // Writes this direction's columns of hOutAll.
         void forwardDirection(int i, int numDirs, const Mat& xTs, const Mat& h0All, const Mat& c0All,
                               Mat& hOutAll, Mat& hFinal, Mat& cFinal, const Mat& seqLens) const
         {
@@ -414,7 +412,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 recurrent::clipToThreshold(gateG, clipValue);
                 g_activation(gateG, gateG);
 
-                // Coupled gates: the forget gate follows the input gate instead of being computed.
+                // Coupled gates: f_t = 1 - i_t.
                 if (inputForget)
                     subtract(ones, gateI, gateF);
 
@@ -512,8 +510,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             Mat c0All = hasInput(6) ? input[6].reshape(1, input[6].size[0] * input[6].size[1])
                                     : Mat::zeros(numDirs * batchSize, numHidden, input[0].type());
 
-            // ONNX sequence_lens: each batch entry stops after its own length, keeping the state it
-            // finished with, and contributes zeros to Y from there on.
+            // ONNX sequence_lens: each entry stops at its own length and keeps its final state.
             Mat seqLens;
             if (hasInput(4))
             {
@@ -525,10 +522,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             for (auto& out : output)
                 out.setTo(0);
 
-            // Final state of every direction, written by forwardDirection() when its scan ends.
-            // Y_h/Y_c must come from here and not from Y: past its sequence length a sample
-            // contributes zeros to Y, and a direction running backwards ends at the first
-            // sequence position, so Y's last timestep is not the state the recurrence finished on.
+            // Final states come from forwardDirection(), not from Y (zero padding, reverse order).
             const int finalRows = numDirs * batchSize;
             Mat hFinal(finalRows, numHidden, output[0].type());
             Mat cFinal = produceCellOutput ? Mat(finalRows, numHidden, output[0].type()) : Mat();
@@ -571,9 +565,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 writeFinalStates(cFinal, output[2], numDirs);
         }
 
-        // One timestep of Y for the current direction; past its sequence length a sample
-        // contributes zeros.
-        // `dst` is a header copy of this timestep's slice, so it writes the shared buffer.
+        // One timestep of Y; a sample past its length gets zeros. `dst` shares the output buffer.
         static void writeYStep(Mat dst, int ts, const Mat& h, const Mat& seqLens)
         {
             if (seqLens.empty())
@@ -591,8 +583,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
         }
 
-        // Write the per-direction final states as Y_h/Y_c: (dirs, batch, hid), or (batch, dirs,
-        // hid) for the batch-first layout, into the preallocated dst in place.
+        // Write the per-direction final states as Y_h/Y_c into the preallocated dst in place.
         void writeFinalStates(const Mat& scr, Mat& dst, int numDirs) const
         {
             int shp[] = {numDirs, batchSize, numHidden};
