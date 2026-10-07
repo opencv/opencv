@@ -306,12 +306,12 @@ static int radixBucket(int value, int64 min_value, int passNr)
 
 // One pass: copies the pointers, ordered by one 8-bit digit of y (or x).
 // Returns false if the pass is skipped.
+template<bool sort_by_y>
 static bool radixPass(Point* const* src,
                       Point** dst,
                       int total,
                       const int* bucketSizes,
                       const CHullRange& range,
-                      bool sort_by_y,
                       int passNr)
 {
     const int64 min_value = sort_by_y ? range.minY : range.minX;
@@ -378,14 +378,14 @@ static void radixSort(const Point* data,
     // sort by y, then by x
     for (int passNr = 0; passNr < passesY; ++passNr)
     {
-        if (radixPass(src, dst, total, bucketSizesY[passNr], range, true /* sort_by_y */, passNr)) {
+        if (radixPass<true /* sort_by_y */>(src, dst, total, bucketSizesY[passNr], range, passNr)) {
             std::swap(src, dst);
         }
     }
 
     for (int passNr = 0; passNr < passesX; ++passNr)
     {
-        if (radixPass(src, dst, total, bucketSizesX[passNr], range, false /* sort_by_y */, passNr)) {
+        if (radixPass<false /* sort_by_y */>(src, dst, total, bucketSizesX[passNr], range, passNr)) {
             std::swap(src, dst);
         }
     }
