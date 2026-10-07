@@ -2209,4 +2209,72 @@ TEST(Calib_RegisterCameras, float64Points)
     EXPECT_MAT_NEAR(T32, Mat(tStereo), 1e-4);
 }
 
+TEST(Calib_CalibrateCamera, deterministic_across_threads)
+{
+    const int nviews = 20;
+    cv::RNG& rng = cv::theRNG();
+    cv::Matx33d cameraMatrix(1000, 0, 640, 0, 1000, 360, 0, 0, 1);
+    cv::Vec<double, 5> distCoeffs(-0.2, 0.1, 0.001, -0.001, 0);
+    std::vector<cv::Point3f> board;
+    for (int y = 0; y < 6; y++)
+        for (int x = 0; x < 9; x++)
+            board.push_back(cv::Point3f(x * 0.03f, y * 0.03f, 0.f));
+
+    std::vector<std::vector<cv::Point3f>> objectPoints(nviews, board);
+    std::vector<std::vector<cv::Point2f>> imagePoints(nviews);
+    for (int i = 0; i < nviews; i++)
+    {
+        cv::Vec3d rvec(rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5), rng.uniform(-0.3, 0.3));
+        cv::Vec3d tvec(rng.uniform(-0.2, 0.0), rng.uniform(-0.15, 0.0), rng.uniform(0.5, 1.0));
+        cv::projectPoints(board, rvec, tvec, cameraMatrix, distCoeffs, imagePoints[i]);
+        for (cv::Point2f& p : imagePoints[i])
+            p += cv::Point2f((float)rng.gaussian(0.2), (float)rng.gaussian(0.2));
+    }
+
+    const int savedThreads = cv::getNumThreads();
+    for (bool releaseObject : {false, true})
+    {
+        cv::Mat reference;
+        for (int threads : {1, 4, cv::getNumberOfCPUs()})
+        {
+            cv::setNumThreads(threads);
+            for (int k = 0; k < 2; k++)
+            {
+                cv::Mat K, D, stdIntr, stdExtr, perViewErr, newObj, stdObj;
+                std::vector<cv::Mat> rvecs, tvecs;
+                if (releaseObject)
+                    cv::calibrateCameraRO(objectPoints, imagePoints, cv::Size(1280, 720), 8,
+                                          K, D, rvecs, tvecs, newObj,
+                                          stdIntr, stdExtr, stdObj, perViewErr);
+                else
+                    cv::calibrateCamera(objectPoints, imagePoints, cv::Size(1280, 720),
+                                        K, D, rvecs, tvecs, stdIntr, stdExtr, perViewErr);
+
+                std::vector<cv::Mat> parts = { K.reshape(1, 1), D.reshape(1, 1),
+                                               stdIntr.reshape(1, 1), stdExtr.reshape(1, 1) };
+                for (int i = 0; i < nviews; i++)
+                {
+                    parts.push_back(rvecs[i].reshape(1, 1));
+                    parts.push_back(tvecs[i].reshape(1, 1));
+                }
+                if (releaseObject)
+                {
+                    cv::Mat obj;
+                    newObj.reshape(1, 1).convertTo(obj, CV_64F);
+                    parts.push_back(obj);
+                }
+                cv::Mat result;
+                cv::hconcat(parts, result);
+
+                if (reference.empty())
+                    reference = result;
+                else
+                    EXPECT_EQ(0, cv::norm(result, reference, NORM_INF))
+                        << "releaseObject=" << releaseObject << " threads=" << threads << " call=" << k;
+            }
+        }
+    }
+    cv::setNumThreads(savedThreads);
+}
+
 }} // namespace
