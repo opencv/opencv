@@ -1183,7 +1183,7 @@ TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
     m_buf_supported = true;
-    m_supported_encode_key = {IMWRITE_TIFF_RESUNIT, IMWRITE_TIFF_XDPI, IMWRITE_TIFF_YDPI, IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_ROWSPERSTRIP, IMWRITE_TIFF_PREDICTOR};
+    m_supported_encode_key = {IMWRITE_TIFF_RESUNIT, IMWRITE_TIFF_XDPI, IMWRITE_TIFF_YDPI, IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_ROWSPERSTRIP, IMWRITE_TIFF_PREDICTOR, IMWRITE_TIFF_COMPRESSION_LEVEL};
 }
 
 TiffEncoder::~TiffEncoder()
@@ -1608,13 +1608,19 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZIPQUALITY, compressionLevel));
                 break;
             case IMWRITE_TIFF_COMPRESSION_LZMA:
+                #ifdef TIFFTAG_LZMAPRESET // libtiff 4.0.0+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_LZMAPRESET, compressionLevel));
+                #endif
                 break;
             case IMWRITE_TIFF_COMPRESSION_ZSTD:
+                #ifdef TIFFTAG_ZSTD_LEVEL // libtiff 4.0.10+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, compressionLevel));
+                #endif
                 break;
             case IMWRITE_TIFF_COMPRESSION_WEBP:
+                #ifdef TIFFTAG_WEBP_LEVEL // libtiff 4.0.10+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_WEBP_LEVEL, compressionLevel));
+                #endif
                 break;
             default:
                 CV_LOG_WARNING(nullptr, cv::format("Unexpected page_compression %d", page_compression));
