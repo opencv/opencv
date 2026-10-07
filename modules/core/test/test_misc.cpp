@@ -1028,6 +1028,26 @@ REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+// See https://github.com/opencv/opencv/issues/11988
+// Intersecting two disjoint unsigned rectangles must not underflow width/height.
+TEST(Core_Rect, unsigned_intersection_no_underflow)
+{
+    typedef Rect_<unsigned> R;
+    // Disjoint on both axes.
+    EXPECT_EQ(R(), R(0u, 0u, 1u, 1u) & R(2u, 2u, 1u, 1u));
+    // Disjoint on one axis only.
+    EXPECT_EQ(R(), R(0u, 0u, 4u, 4u) & R(5u, 1u, 4u, 4u));
+    EXPECT_EQ(R(), R(0u, 0u, 4u, 4u) & R(1u, 5u, 4u, 4u));
+    // Touching edges are still empty.
+    EXPECT_EQ(R(), R(0u, 0u, 4u, 4u) & R(4u, 4u, 4u, 4u));
+    // Overlapping intersection is unchanged.
+    EXPECT_EQ(R(3u, 2u, 2u, 3u), R(0u, 0u, 5u, 5u) & R(3u, 2u, 4u, 4u));
+
+    const R inter = R(0u, 0u, 1u, 1u) & R(2u, 2u, 1u, 1u);
+    EXPECT_TRUE(inter.empty());
+    EXPECT_EQ(0u, inter.area());
+}
+
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
     TestFixtureSkip(bool throwEx = true) {
