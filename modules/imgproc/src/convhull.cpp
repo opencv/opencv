@@ -436,8 +436,7 @@ struct CHullCmpPoints
 
 // Sorts the pointers and finds the points with min and max y. Picks the sort by the data.
 // Returns true if the sort is by y, then by x.
-static bool sortPoints(const Point* sortable_points,
-                       Point* data0,
+static bool sortPoints(Point* data0,
                        bool is_float,
                        bool monotonic, // require_monotonic_indices
                        Point** pointer,
@@ -446,6 +445,10 @@ static bool sortPoints(const Point* sortable_points,
                        int& maxy_ind)
 {
     Point2f** pointerf = (Point2f**)pointer;
+
+    AutoBuffer<int> _sortable_points_buffer;
+    const Point* sortable_points = is_float ?
+        floatPointsToSortablePoints((Point2f*)data0, total, _sortable_points_buffer) : data0;
 
     // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
     // else radix sort if total >= RADIX_MIN_TOTAL,
@@ -556,11 +559,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
     // sort the point set by x-coordinate, find min and max y
 
-    AutoBuffer<int> _sortable_points_buffer;
-    const Point* sortable_points = is_float ?
-        chull_sort::floatPointsToSortablePoints(points.ptr<Point2f>(), total, _sortable_points_buffer) : data0;
-
-    const bool by_y = chull_sort::sortPoints(sortable_points, data0, is_float, !returnPoints,
+    const bool by_y = chull_sort::sortPoints(data0, is_float, !returnPoints,
                                              pointer, total, miny_ind, maxy_ind);
 
     if( pointer[0]->x == pointer[total-1]->x &&
@@ -667,10 +666,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         if( by_y )
         {
             // start from the same vertex as in x order
-            const auto less = [sortable_points](int a, int b) {
-                const Point &p = sortable_points[a];
-                const Point &q = sortable_points[b];
-                return p.x != q.x ? p.x < q.x : p.y < q.y;
+            const auto less = [data0, is_float](int a, int b) {
+                return is_float ? chull_sort::CHullCmpPoints<float>()((Point2f*)&data0[a], (Point2f*)&data0[b])
+                                : chull_sort::CHullCmpPoints<int>()(&data0[a], &data0[b]);
             };
             int* first = clockwise ? std::min_element(hullbuf, hullbuf + nout, less)
                                    : std::max_element(hullbuf, hullbuf + nout, less);
