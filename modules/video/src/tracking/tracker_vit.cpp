@@ -38,6 +38,15 @@ TrackerVit::Params::Params()
 
 #ifdef HAVE_OPENCV_DNN
 
+// Per-channel 1/(255*std). Note: (1.0 / Scalar) is the quaternion inverse, not an elementwise reciprocal
+static Scalar getScaleFactor(const Scalar& stdvalue)
+{
+    Scalar scalefactor;
+    for (int i = 0; i < 4; i++)
+        scalefactor[i] = stdvalue[i] != 0 ? 1.0 / (stdvalue[i] * 255.0) : 0.0;
+    return scalefactor;
+}
+
 class TrackerVitImpl : public TrackerVit
 {
 public:
@@ -50,7 +59,7 @@ public:
         net.setPreferableTarget(parameters.target);
 
         i2bp.mean = parameters.meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / parameters.stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = getScaleFactor(parameters.stdvalue);
         tracking_score_threshold = parameters.tracking_score_threshold;
     }
 
@@ -60,7 +69,7 @@ public:
 
         net = model;
         i2bp.mean = meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = getScaleFactor(stdvalue);
         tracking_score_threshold = _tracking_score_threshold;
     }
 
