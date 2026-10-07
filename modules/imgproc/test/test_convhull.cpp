@@ -479,6 +479,46 @@ TEST(Imgproc_ConvexHull, float_dense_grid)
     }
 }
 
+// The hull indices must stay the same when both coordinates are multiplied by a large factor.
+TEST(Imgproc_ConvexHull, scaled_points)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    const int SCALE = 1000;
+
+    for (int iter = 0; iter < 100; ++iter)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", iter));
+
+        // a flat or a tall grid, the points are dense along its short side
+        int long_side = rng.uniform(10, 200), short_side = rng.uniform(2, long_side);
+        int w = iter % 2 == 0 ? long_side : short_side;
+        int h = iter % 2 == 0 ? short_side : long_side;
+        int total = rng.uniform(short_side, 2 * short_side + 10);
+
+        std::vector<Point> points, scaled;
+        Mat_<uchar> used(h, w, (uchar)0);
+        while ((int)points.size() < total)
+        {
+            int x = rng.uniform(0, w), y = rng.uniform(0, h);
+            if (used(y, x))
+                continue; // keep the points distinct
+            used(y, x) = 1;
+            Point p(x - w / 2, y - h / 2);
+            points.push_back(p);
+            scaled.push_back(p * SCALE);
+        }
+
+        std::vector<int> hull, hull_scaled;
+        convexHull(points, hull, false, false);
+        convexHull(scaled, hull_scaled, false, false);
+        ASSERT_EQ(hull, hull_scaled) << "counter-clockwise";
+
+        convexHull(points, hull, true, false);
+        convexHull(scaled, hull_scaled, true, false);
+        ASSERT_EQ(hull, hull_scaled) << "clockwise";
+    }
+}
+
 // Points on the vertical line x = 0, where some of the zeros are negative, some positive.
 TEST(Imgproc_ConvexHull, float_signed_zero)
 {
