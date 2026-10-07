@@ -435,7 +435,7 @@ struct CHullCmpPoints
 };
 
 // Sorts the pointers and finds the points with min and max y. Picks the sort by the data.
-// Returns true if the sort is by y, then by x.
+// Returns true if the sort is by y, then by x. miny_ind and maxy_ind are then the points with min and max x.
 static bool sortPoints(Point* data0,
                        bool is_float,
                        bool monotonic, // require_monotonic_indices
@@ -523,8 +523,6 @@ static bool sortPoints(Point* data0,
 
 } // namespace chull_sort
 
-
-
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
     CV_INSTRUMENT_REGION();
@@ -532,7 +530,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
     int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
-    int miny_ind = 0, maxy_ind = 0;
+    int miny_ind = 0, maxy_ind = 0; // with by_y: min and max x
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
 
     if( total == 0 )
@@ -557,8 +555,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     for( i = 0; i < total; i++ )
         pointer[i] = &data0[i];
 
-    // sort the point set by x-coordinate, find min and max y
-
+    // sort the point set by x or by y, find min and max of the other coordinate
     const bool by_y = chull_sort::sortPoints(data0, is_float, !returnPoints,
                                              pointer, total, miny_ind, maxy_ind);
 
@@ -569,7 +566,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
     else
     {
-        // upper half
+        // upper half (with by_y: upper and lower mean right and left)
         int *tl_stack = stack;
         int tl_count = !is_float ?
             Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1, by_y) :
