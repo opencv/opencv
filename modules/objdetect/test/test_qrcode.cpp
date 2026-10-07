@@ -763,11 +763,6 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
-// Regression test: decode() must return an empty string (not throw) for a valid
-// QR image whose payload encodes a mode indicator that OpenCV does not implement
-// (e.g. Hanzi/GB2312, mode indicator 13 == 0b1101).
-// We use the alphanumeric-out-of-range QR fixture (same module pattern) but
-// verify only that no exception escapes; the return value may be empty.
 TEST(Objdetect_QRCode_decode, unsupported_mode_returns_empty)
 {
     // Minimal version-1 QR whose data region starts with mode indicator 0x0D

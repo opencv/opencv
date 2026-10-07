@@ -1775,7 +1775,7 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
         }
         else
         {
-            CV_LOG_ERROR(NULL, "mode " << (int)currMode);
+            CV_LOG_ERROR(NULL, "QRcode mode " << (int)currMode << " is not supported!");
             return false;
         }
     }
