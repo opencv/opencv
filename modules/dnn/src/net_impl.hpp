@@ -121,6 +121,8 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<int64> layersTimings;
 
     std::string modelFileName;
+    // Why an importer gave up on the model; empty for every net that loaded.
+    std::string importFailure;
     ModelFormat modelFormat;
     DataLayout originalLayout;
     // int onnx_opset;
