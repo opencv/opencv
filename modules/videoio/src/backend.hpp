@@ -51,7 +51,8 @@ Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFileWithParams createCaptureFile,
                                           FN_createCaptureCameraWithParams createCaptureCamera,
                                           FN_createCaptureStreamWithParams createCaptureStream,
-                                          FN_createWriter createWriter);
+                                          FN_createWriter createWriter,
+                                          FN_enumerateDevices enumerateDevices = 0);
 
 Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char* baseName);
 
