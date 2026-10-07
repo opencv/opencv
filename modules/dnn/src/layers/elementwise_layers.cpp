@@ -386,6 +386,10 @@ public:
             if (ElementWiseIntDispatch<Func>::apply(func, src, dst))
                 continue;
 
+            if ((src.depth() == CV_32F || src.depth() == CV_64F) && src.type() == dst.type() &&
+                func.applyCore(src, dst))
+                continue;
+
             if (src.type() == CV_32F && dst.type() == CV_32F)
             {
                 // Try fast activation function path first
@@ -505,11 +509,36 @@ struct BaseFunctor
     { return nullptr; }
 
     bool unfoldOp(LayerMath&, const ConstOperand&) const { return false; }
+
+    // CV_32F/CV_64F via the core element-wise engine; false if there is no exact equivalent
+    bool applyCore(const Mat&, Mat&) const { return false; }
 };
+
+// 1-d views: Mat::create() would reallocate a 0-d dst
+static inline bool applyCoreExpr(const std::string& expr, const Mat& src, Mat& dst)
+{
+    CV_Assert(src.isContinuous() && dst.isContinuous() && src.total() == dst.total() &&
+              src.total() <= (size_t)INT_MAX);
+    int n = (int)src.total();
+    std::vector<Mat> res{Mat(1, &n, dst.type(), dst.data)};
+    cv::texpr(expr, std::vector<Mat>{Mat(1, &n, src.type(), src.data)}, res);
+    CV_Assert(res[0].data == dst.data);
+    return true;
+}
+
+static inline std::string exprConst(float v)
+{
+    return cv::format("%.9g", v);
+}
 
 struct ReLUFunctor : public BaseFunctor
 {
     typedef ReLULayer Layer;
+
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        return slope == 0.f && applyCoreExpr("relu({0})", src, dst);
+    }
     float slope;
 
     explicit ReLUFunctor(float slope_=1.f) : slope(slope_) {}
@@ -1701,6 +1730,8 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 {
     typedef AbsLayer Layer;
 
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("abs({0})", src, dst); }
+
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
         fusion::detail::abs(r, LayerMath::INPUT_VALUE);
@@ -2048,6 +2079,8 @@ const char* const BaseDefaultFunctor<RoundFunctor>::ocl_kernel_name = "RoundForw
 struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 {
     typedef SqrtLayer Layer;
+
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("sqrt({0})", src, dst); }
 
     bool supportBackend(int backendId, int)
     {
@@ -3108,6 +3141,18 @@ struct PowerFunctor : public BaseFunctor
 {
     typedef PowerLayer Layer;
 
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        std::string x = "{0}";
+        if (scale != 1.f)
+            x = "(" + x + "*(" + exprConst(scale) + "))";
+        if (shift != 0.f)
+            x = "(" + x + "+(" + exprConst(shift) + "))";
+        if (power != 1.f)
+            x = x + "**(" + exprConst(power) + ")";
+        return applyCoreExpr(x, src, dst);
+    }
+
     float power, scale, shift;
     float originPower, originScale, originShift;
 
@@ -3330,6 +3375,12 @@ struct ElementWiseIntDispatch<PowerFunctor>
 struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 {
     typedef ExpLayer Layer;
+
+    // with a base, scale or shift the SIMD kernel of this layer is as fast
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        return normScale == 1.f && normShift == 0.f && applyCoreExpr("exp({0})", src, dst);
+    }
 
     ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
     {
@@ -3746,6 +3797,8 @@ const char* const ShrinkFunctor::BaseDefaultFunctor<ShrinkFunctor>::ocl_kernel_n
 struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 {
     typedef ReciprocalLayer Layer;
+
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("1/{0}", src, dst); }
 
     bool supportBackend(int backendId, int)
     {

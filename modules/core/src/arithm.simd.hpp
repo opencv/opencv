@@ -1713,10 +1713,11 @@ static int selectKernel(const void* mask_, size_t smy, size_t smx,
             // a branch aliasing dst is fine under the backoff (idempotent select); dst == mask is not
             const bool use_tail_trick = width >= VECSZ*2 && dst_ != mask_;
             Tvec a, b;
-            if (s1x == 0) setallSelect(src1, a);
-            if (s2x == 0) setallSelect(src2, b);
             for (; y < height; y++, mask += smy, src1 += s1y, src2 += s2y, dst += dsty)
             {
+                // a row-constant branch still changes per row
+                if (s1x == 0) setallSelect(src1, a);
+                if (s2x == 0) setallSelect(src2, b);
                 int x = 0;
                 for (; x < width; x += VECSZ)
                 {
