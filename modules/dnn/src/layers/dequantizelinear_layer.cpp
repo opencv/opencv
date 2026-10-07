@@ -242,7 +242,9 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp_,
     if (!zp.empty()) {
         CV_Assert(zp.isContinuous());
         CV_Assert(zptype == inptype);
-        CV_Assert(zpshape == scshape);
+        // ONNX's own test data pairs a rank-0 scale with a [1] zero_point, so match on
+        // element count rather than on the exact rank.
+        CV_Assert(zpshape.total() == scshape.total());
     }
 
     if (ndims > 0)

@@ -30,6 +30,11 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         softmax_precision = params.get<int>("softmax_precision", 0);
 
         local_window_size = params.get<int>("local_window_size", -1);
+        // ONNX Attention-25 sliding window, -1 = that side unbounded. com.microsoft's
+        // local_window_size counts the window inclusive of the current token, so it is the
+        // same frontier shifted by one; both are normalized in forward().
+        left_window_size = params.get<int>("left_window_size", -1);
+        right_window_size = params.get<int>("right_window_size", -1);
         do_rotary = params.get<int>("do_rotary", 0) != 0;
         rotary_interleaved = params.get<int>("rotary_interleaved", 0) != 0;
         shared_kv_buffer = params.get<int>("shared_kv_buffer", 0) != 0;
@@ -41,7 +46,8 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         // The paged cache cannot express any of these; such a node reads history from the graph.
         paged_cache_supported = !(has_seqlens_attr || has_rotary_attr ||
-                                  do_rotary || shared_kv_buffer || local_window_size > 0);
+                                  do_rotary || shared_kv_buffer || local_window_size > 0 ||
+                                  left_window_size >= 0 || right_window_size >= 0);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -564,59 +570,47 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             opt
         );
 
-        // is_causal takes one past length for the whole batch; a window or ragged batch cannot.
+        // ONNX caps the raw scores first and only then adds the bias, so a -inf mask stays
+        // -inf instead of being pulled back to a finite -softcap.
+        if (softcap > 0.f)
+            fused_softmax_softcap_mask(attention_prob, Mat(), softcap, true, 9.f, -FLT_MAX,
+                                       /*has_mask*/ false, /*is_causal*/ false,
+                                       /*past_seq_len*/ 0, /*do_softmax*/ false);
+
+        // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
+        //   0/1 = scaled QK^T after softcap, 2 = + attention bias, 3 = post-softmax.
+        const bool want_qk = outputs.size() > 3 && !outputs[3].empty();
+        if (want_qk && qk_matmul_output_mode <= 1)
+            attention_prob.copyTo(outputs[3]);
+
+        // is_causal takes one past length for the whole batch; a window or ragged batch cannot,
+        // so those get an explicit per-(batch, query, key) mask instead.
         bool ragged = false;
         for (int b = 1; b < batch_size && !ragged; ++b)
             ragged = (pastLen[b] != pastLen[0]);
-        const bool window_mask = is_causal && (local_window_size > 0 || ragged);
-        CV_CheckFalse(window_mask && has_mask_input,
-                      "a sliding window cannot be combined with an attn_mask input");
         const int causal_past = pastLen[0];
 
-        // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
-        //   0 = raw scaled QK^T,  1 = + attention bias,  2 = + softcap,  3 = post-softmax.
-        const bool want_qk = outputs.size() > 3 && !outputs[3].empty();
-        if (want_qk && qk_matmul_output_mode == 0) {
-            attention_prob.copyTo(outputs[3]);
-        } else if (want_qk && (qk_matmul_output_mode == 1 || qk_matmul_output_mode == 2)) {
-            attention_prob.copyTo(outputs[3]);
-            fused_softmax_softcap_mask(
-                outputs[3], mask_mat,
-                softcap, (qk_matmul_output_mode == 2) && (softcap > 0.f), 9.f,
-                -std::numeric_limits<float>::infinity(),
-                has_mask_input, is_causal, causal_past, /*do_softmax=*/false
-            );
+        // com.microsoft's local_window_size spans that many tokens ending at the current one
+        // (checked vs onnxruntime), i.e. one more than ONNX-25's left_window_size.
+        int left_win = left_window_size, right_win = right_window_size;
+        if (local_window_size > 0 && left_win < 0)
+            left_win = local_window_size - 1;
+
+        Mat structMask;
+        if (left_win >= 0 || right_win >= 0 || (is_causal && ragged)) {
+            structMask = buildStructuralMask(batch_size, seq_len_q, total_seq_kv, pastLen, validLen,
+                                             has_seqlens, is_causal, left_win, right_win);
         }
 
-        if (!window_mask) {
-            fused_softmax_softcap_mask(
-                attention_prob, mask_mat,
-                softcap, softcap > 0.f, 9.f, -FLT_MAX,
-                has_mask_input, is_causal, causal_past
-            );
-        } else {
-            Mat mask(std::vector<int>{batch_size, 1, seq_len_q, total_seq_kv}, CV_8U, Scalar(0));
-            for (int b = 0; b < batch_size; ++b) {
-                for (int i = 0; i < seq_len_q; ++i) {
-                    const int hi = pastLen[b] + i;
-                    int lo = 0;
-                    // Spans local_window_size tokens ending at hi, not +1 (checked vs onnxruntime).
-                    if (local_window_size > 0) lo = std::max(lo, hi - local_window_size + 1);
-                    uchar* row = mask.ptr<uchar>(b, 0, i);
-                    for (int j = lo; j <= hi && j < total_seq_kv; ++j)
-                        row[j] = 1;
-                }
-            }
-
-            // Cap before masking: the kernel masks first, and softcap would turn -FLT_MAX finite.
-            if (softcap > 0.f)
-                fused_softmax_softcap_mask(attention_prob, Mat(), softcap, true, 9.f, -FLT_MAX,
-                                           /*has_mask*/ false, /*is_causal*/ false,
-                                           /*past_seq_len*/ 0, /*do_softmax*/ false);
-
-            fused_softmax_softcap_mask(attention_prob, mask, 0.f, false, 9.f, -FLT_MAX,
-                                       /*has_mask*/ true, /*is_causal*/ false);
+        if (want_qk && qk_matmul_output_mode == 2) {
+            attention_prob.copyTo(outputs[3]);
+            applyAttentionBias(outputs[3], mask_mat, has_mask_input, structMask,
+                               is_causal, causal_past,
+                               -std::numeric_limits<float>::infinity(), /*do_softmax=*/false);
         }
+
+        applyAttentionBias(attention_prob, mask_mat, has_mask_input, structMask,
+                           is_causal, causal_past, -FLT_MAX, /*do_softmax=*/true);
 
         if (want_qk && qk_matmul_output_mode == 3)
             attention_prob.copyTo(outputs[3]);
@@ -649,6 +643,50 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     }
 
  private:
+    // 1 where (batch, query, key) may attend, for the constraints the fused kernel's single
+    // causal frontier cannot express: a sliding window, a ragged batch, KV padding.
+    static Mat buildStructuralMask(int batch_size, int seq_len_q, int total_seq_kv,
+                                   const std::vector<int>& pastLen,
+                                   const std::vector<int>& validLen,
+                                   bool has_seqlens, bool is_causal,
+                                   int left_win, int right_win) {
+        Mat mask(std::vector<int>{batch_size, 1, seq_len_q, total_seq_kv}, CV_8U, Scalar(0));
+        for (int b = 0; b < batch_size; ++b) {
+            for (int i = 0; i < seq_len_q; ++i) {
+                const int pos = pastLen[b] + i;       // this query's absolute position
+                int lo = 0, hi = total_seq_kv - 1;
+                if (is_causal) hi = std::min(hi, pos);
+                if (left_win >= 0) lo = std::max(lo, pos - left_win);
+                if (right_win >= 0) hi = std::min(hi, pos + right_win);
+                if (has_seqlens) hi = std::min(hi, validLen[b] - 1);
+                uchar* row = mask.ptr<uchar>(b, 0, i);
+                for (int j = lo; j <= hi; ++j)
+                    row[j] = 1;
+            }
+        }
+        return mask;
+    }
+
+    // The fused kernel takes one mask tensor, so attn_mask and the structural mask each get a
+    // pass; the softmax runs in the last one.
+    static void applyAttentionBias(Mat& scores, const Mat& attnMask, bool hasMask,
+                                   const Mat& structMask, bool isCausal, int causalPast,
+                                   float minVal, bool doSoftmax) {
+        const bool hasStruct = !structMask.empty();
+        if (hasMask) {
+            fused_softmax_softcap_mask(scores, attnMask, 0.f, false, 9.f, minVal,
+                                       /*has_mask*/ true, isCausal && !hasStruct, causalPast,
+                                       doSoftmax && !hasStruct);
+        }
+        if (hasStruct) {
+            fused_softmax_softcap_mask(scores, structMask, 0.f, false, 9.f, minVal,
+                                       /*has_mask*/ true, /*is_causal*/ false, 0, doSoftmax);
+        } else if (!hasMask) {
+            fused_softmax_softcap_mask(scores, Mat(), 0.f, false, 9.f, minVal,
+                                       /*has_mask*/ false, isCausal, causalPast, doSoftmax);
+        }
+    }
+
     // past is 4D [B, nhkv, total, D]; fresh and out follow the query's rank.
     static void buildSharedKVBuffer(const Mat& past, const Mat& fresh, Mat& out,
                                     int batch_size, int nhkv, int total, int seq_len_q,
@@ -710,6 +748,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     int softmax_precision;
 
     int local_window_size;
+    int left_window_size, right_window_size;
     bool do_rotary;
     bool rotary_interleaved;
     bool shared_kv_buffer;

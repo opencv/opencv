@@ -44,6 +44,36 @@ struct ModelFusionReshapeTranspose
         return true;
     }
 
+    // A 0 in an ONNX reshape spec means "keep the input's dim here", so such a Reshape
+    // is not independent of what feeds it and the producer cannot be dropped. A spec we
+    // cannot read at graph-build time is treated the same way.
+    bool shapeSpecCopiesInputDims(const Reshape2Layer* rs) const
+    {
+        const MatShape& spec = rs->newShapeDesc;
+        if (spec.dims >= 0) {
+            for (int i = 0; i < spec.dims; i++)
+                if (spec[i] == 0)
+                    return true;
+            return false;
+        }
+        if (rs->inputs.size() != 2 || !netimpl->isConstArg(rs->inputs[1]))
+            return true;
+        Mat t = netimpl->argTensor(rs->inputs[1]);
+        if (t.empty() || !t.isContinuous())
+            return true;
+        const size_t n = t.total();
+        if (t.depth() == CV_64S) {
+            const int64_t* p = t.ptr<int64_t>();
+            for (size_t i = 0; i < n; i++) if (p[i] == 0) return true;
+        } else if (t.depth() == CV_32S) {
+            const int* p = t.ptr<int>();
+            for (size_t i = 0; i < n; i++) if (p[i] == 0) return true;
+        } else {
+            return true;
+        }
+        return false;
+    }
+
     bool fuseGraph(Ptr<Graph>& graph)
     {
         const vector<Ptr<LayerInfo>>& prog = graph->prog();
@@ -130,7 +160,7 @@ struct ModelFusionReshapeTranspose
 
             //Reshape + Reshape -> Reshape (drop the inner reshape).
             Reshape2Layer* rs = dynamic_cast<Reshape2Layer*>(layer.get());
-            if (rs && layer->outputs.size() == 1) {
+            if (rs && layer->outputs.size() == 1 && !shapeSpecCopiesInputDims(rs)) {
                 auto it = producer.find(layer->inputs[0].idx);
                 if (it != producer.end()) {
                     int prod_idx = it->second;
