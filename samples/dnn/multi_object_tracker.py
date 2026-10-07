@@ -53,9 +53,12 @@ def get_args_parser():
 
 
 def color_for_id(track_id):
-    '''One colour per id, so a person keeps the same colour while they are tracked.'''
-    rng = np.random.RandomState(track_id * 7919 % 2**31)
-    return tuple(int(c) for c in rng.randint(64, 256, 3))
+    '''One colour per id, so a person keeps the same colour while they are tracked.
+
+    The golden angle keeps consecutive ids far apart on the hue circle.
+    '''
+    hsv = np.uint8([[[(track_id * 137.508) % 360 / 2, 200, 255]]])
+    return tuple(int(c) for c in cv.cvtColor(hsv, cv.COLOR_HSV2BGR)[0, 0])
 
 
 def detect(frame, net, size, scale, swap_rb, conf_threshold, nms_threshold):

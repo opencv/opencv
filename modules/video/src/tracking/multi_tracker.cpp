@@ -18,8 +18,8 @@ namespace impl {
 static const int STATE_DIM = 8;
 static const int MEAS_DIM = 4;
 
-// DeepSORT's noise weights. Both are multiplied by the track height, so a distant object is
-// allowed to move less in pixels than a near one.
+// DeepSORT's noise weights, the defaults behind the two Params fields. Both scale with track
+// height, so a distant object is allowed to move less in pixels than a near one.
 static const float STD_POSITION = 1.0f / 20.0f;
 static const float STD_VELOCITY = 1.0f / 160.0f;
 
@@ -48,8 +48,10 @@ enum TrackState { TENTATIVE = 0, CONFIRMED = 1, LOST = 2 };
 // share one filter state.
 struct Track
 {
-    Track(int id_, const Rect2d& box, int classId_, float score_)
-        : id(id_), classId(classId_), score(score_), state(TENTATIVE), hits(1), age(0)
+    Track(int id_, const Rect2d& box, int classId_, float score_,
+          float posNoise, float velNoise)
+        : stdPosition(posNoise), stdVelocity(velNoise),
+          id(id_), classId(classId_), score(score_), state(TENTATIVE), hits(1), age(0)
     {
         kf.init(STATE_DIM, MEAS_DIM, 0, CV_32F);
 
@@ -70,8 +72,8 @@ struct Track
         const float h = z.at<float>(3);
         kf.errorCovPost = Mat::zeros(STATE_DIM, STATE_DIM, CV_32F);
         const float p[STATE_DIM] = {
-            2 * STD_POSITION * h, 2 * STD_POSITION * h, 1e-2f, 2 * STD_POSITION * h,
-            10 * STD_VELOCITY * h, 10 * STD_VELOCITY * h, 1e-5f, 10 * STD_VELOCITY * h
+            2 * stdPosition * h, 2 * stdPosition * h, 1e-2f, 2 * stdPosition * h,
+            10 * stdVelocity * h, 10 * stdVelocity * h, 1e-5f, 10 * stdVelocity * h
         };
         for (int i = 0; i < STATE_DIM; i++)
             kf.errorCovPost.at<float>(i, i) = p[i] * p[i];
@@ -83,8 +85,8 @@ struct Track
         const float h = std::max(kf.statePost.at<float>(3), 1e-6f);
         kf.processNoiseCov = Mat::zeros(STATE_DIM, STATE_DIM, CV_32F);
         const float q[STATE_DIM] = {
-            STD_POSITION * h, STD_POSITION * h, 1e-2f, STD_POSITION * h,
-            STD_VELOCITY * h, STD_VELOCITY * h, 1e-5f, STD_VELOCITY * h
+            stdPosition * h, stdPosition * h, 1e-2f, stdPosition * h,
+            stdVelocity * h, stdVelocity * h, 1e-5f, stdVelocity * h
         };
         for (int i = 0; i < STATE_DIM; i++)
             kf.processNoiseCov.at<float>(i, i) = q[i] * q[i];
@@ -94,7 +96,7 @@ struct Track
     {
         const float h = std::max(kf.statePre.at<float>(3), 1e-6f);
         kf.measurementNoiseCov = Mat::zeros(MEAS_DIM, MEAS_DIM, CV_32F);
-        const float r[MEAS_DIM] = { STD_POSITION * h, STD_POSITION * h, 1e-1f, STD_POSITION * h };
+        const float r[MEAS_DIM] = { stdPosition * h, stdPosition * h, 1e-1f, stdPosition * h };
         for (int i = 0; i < MEAS_DIM; i++)
             kf.measurementNoiseCov.at<float>(i, i) = r[i] * r[i];
     }
@@ -130,6 +132,8 @@ struct Track
     }
 
     KalmanFilter kf;
+    float stdPosition;      // noise weights, copied from Params so each track carries its own
+    float stdVelocity;
     Mat feature;            // running appearance descriptor, empty until one is supplied
     Rect2d predictedBox;
     int id;
@@ -417,7 +421,7 @@ void MultiTrackerImpl::run(const std::vector<Rect2d>& detBoxes,
         const int d = matched[t];
         if (d < 0)
             continue;
-        applyMatch(stillFree[t], d, detBoxes, detScores, detClassIds, embeddings);
+        applyMatch(stillFree[t], d, detBoxes, detScores, detClassIds, Mat());
         detTaken[d] = true;
         trackMatched[stillFree[t]] = true;
     }
@@ -476,7 +480,8 @@ void MultiTrackerImpl::run(const std::vector<Rect2d>& detBoxes,
         const int d = highDets[i];
         if (detTaken[d])
             continue;
-        Ptr<Track> tr = makePtr<Track>(nextId++, detBoxes[d], detClassIds[d], detScores[d]);
+        Ptr<Track> tr = makePtr<Track>(nextId++, detBoxes[d], detClassIds[d], detScores[d],
+                                       params.positionNoiseWeight, params.velocityNoiseWeight);
         // New tracks miss the promotion check above, so minHits == 1 has to be honoured here.
         if (tr->hits >= params.minHits)
             tr->state = CONFIRMED;
@@ -513,6 +518,8 @@ MultiTracker::Params::Params()
     minHits = 3;
     maxAge = 30;
     classAware = true;
+    positionNoiseWeight = tracking::impl::STD_POSITION;
+    velocityNoiseWeight = tracking::impl::STD_VELOCITY;
 }
 
 MultiTracker::MultiTracker()
