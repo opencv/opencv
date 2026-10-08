@@ -1871,7 +1871,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
         buf[i] = images.getMat(i);
 
     calcBackProject(&buf[0], nimages, csz ? &channels[0] : 0,
-        hist, dst, rsz ? (const float**)_ranges : 0, scale, true);
+        H, dst, rsz ? (const float**)_ranges : 0, scale, true);
 }
 
 

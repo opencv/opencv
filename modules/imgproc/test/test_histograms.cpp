@@ -2111,5 +2111,46 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
     EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
 
+// See https://github.com/opencv/opencv/issues/29938
+TEST(Imgproc_Hist_Calc, calcBackProject_3d_regression_29938)
+{
+    // A 3-dimensional histogram reaches this overload as a 2-dimensional
+    // multi-channel Mat (that is what the Python bindings build from an
+    // (8, 8, 8) ndarray). The extra dimension has to be restored before the
+    // lookup, otherwise the last channel of the image is ignored.
+    const int histSize[] = { 8, 8, 8 };
+    float range[] = { 0, 256 };
+    const float* ranges[] = { range, range, range };
+    const int channels[] = { 0, 1, 2 };
+
+    Mat roi(1, 1, CV_8UC3, Scalar(10, 20, 30));
+    Mat hist;
+    calcHist(&roi, 1, channels, Mat(), hist, 3, histSize, ranges);
+    ASSERT_EQ(3, hist.dims);
+    ASSERT_TRUE(hist.isContinuous());
+
+    Mat histAsMultiChannel(2, histSize, CV_MAKETYPE(CV_32F, histSize[2]), hist.ptr());
+
+    Mat img(1, 2, CV_8UC3);
+    img.at<Vec3b>(0, 0) = Vec3b(10, 20, 30);   // present in the histogram
+    img.at<Vec3b>(0, 1) = Vec3b(10, 20, 130);  // differs in the 3rd channel only
+
+    std::vector<Mat> images(1, img);
+    std::vector<int> channelsVec(channels, channels + 3);
+    std::vector<float> rangesVec;
+    for (int i = 0; i < 3; i++)
+    {
+        rangesVec.push_back(0);
+        rangesVec.push_back(256);
+    }
+
+    Mat backProject;
+    calcBackProject(images, channelsVec, histAsMultiChannel, backProject, rangesVec, 255.0);
+
+    ASSERT_EQ(CV_8UC1, backProject.type());
+    EXPECT_EQ(255, (int)backProject.at<uchar>(0, 0));
+    EXPECT_EQ(0, (int)backProject.at<uchar>(0, 1));
+}
+
 }} // namespace
 /* End Of File */
