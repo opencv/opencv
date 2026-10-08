@@ -2231,14 +2231,20 @@ TEST(Calib_CalibrateCamera, deterministic_across_threads)
             p += cv::Point2f((float)rng.gaussian(0.2), (float)rng.gaussian(0.2));
     }
 
-    const int savedThreads = cv::getNumThreads();
+    struct CvNThreadScope
+    {
+        int nprev;
+        CvNThreadScope(int n) { nprev = cv::getNumThreads(); cv::setNumThreads(n); }
+        ~CvNThreadScope() { cv::setNumThreads(nprev); }
+    };
+
     for (bool releaseObject : {false, true})
     {
         const int iFixedPoint = releaseObject ? 8 : -1;
         cv::Mat reference;
         for (int threads : {1, 8})
         {
-            cv::setNumThreads(threads);
+            CvNThreadScope threadScope(threads);
             for (int k = 0; k < 2; k++)
             {
                 cv::Mat K, D, stdIntr, stdExtr, perViewErr, newObj, stdObj;
@@ -2259,6 +2265,7 @@ TEST(Calib_CalibrateCamera, deterministic_across_threads)
                     cv::Mat obj;
                     newObj.reshape(1, 1).convertTo(obj, CV_64F);
                     parts.push_back(obj);
+                    parts.push_back(stdObj.reshape(1, 1));
                 }
                 cv::Mat result;
                 cv::hconcat(parts, result);
@@ -2271,7 +2278,6 @@ TEST(Calib_CalibrateCamera, deterministic_across_threads)
             }
         }
     }
-    cv::setNumThreads(savedThreads);
 }
 
 }} // namespace

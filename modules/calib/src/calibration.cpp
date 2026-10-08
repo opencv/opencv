@@ -81,6 +81,12 @@ public:
         NINTRINSIC = _NINTRINSIC;
         n_global = NINTRINSIC + nObjPoints * 3;
         nparts = std::min(nimages, 16);
+        {
+            const size_t partBytes = (size_t)n_global * n_global * sizeof(double);
+            const size_t maxTotalPartBytes = 256 * 1024 * 1024;
+            if (partBytes > 0)
+                nparts = std::min(nparts, (int)std::max<size_t>(1, maxTotalPartBytes / partBytes));
+        }
         criteria = _criteria;
 
         U.create(n_global, n_global, CV_64F);
