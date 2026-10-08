@@ -2333,6 +2333,14 @@ coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
 
+@note By default the function runs exactly 5 iterations and does not check convergence: the
+error is computed only when TermCriteria::EPS is set, so the 0.01 in the default criteria is not
+used. With strong distortion this leaves a visible error towards the image corners. To iterate
+until convergence, pass for example `TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 20, 1e-6)`.
+#fisheye::undistortPoints uses `TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)`
+by default; note that its epsilon is a threshold on the angle \f$ \theta \f$ (radians), not a pixel
+reprojection error like this function's, so the two numbers are not directly comparable.
+
 @note **Coordinate Systems:**
 - **Input (`src`)**: Points are expected in **pixel coordinates** of the distorted image, i.e.,
   coordinates \f$(u, v)\f$ measured in pixels from the top-left corner of the image.
@@ -2354,7 +2362,9 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 #stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
 @param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
 #stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used and output will be in normalized coordinates.
-@param criteria termination criteria for the iterative point undistortion algorithm
+@param criteria Termination criteria for the iterative point undistortion algorithm. The default runs a
+fixed 5 iterations, see the note above. Keep TermCriteria::COUNT in the type when using
+TermCriteria::EPS: with EPS alone there is no iteration limit.
  */
 CV_EXPORTS_W
 void undistortPoints(InputArray src, OutputArray dst,
@@ -2370,11 +2380,13 @@ void undistortPoints(InputArray src, OutputArray dst,
  * @param dst Output undistorted points position (1xN/Nx1 2-channel or vector\<Point2f\> ).
  * @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
  * @param distCoeffs Distortion coefficients
+ * @param criteria Termination criteria for the iterative undistortion, as in #undistortPoints.
+ * The default runs a fixed 5 iterations and ignores epsilon.
  */
 CV_EXPORTS_W
 void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
                           InputArray distCoeffs,
-                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+                          TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 
 namespace fisheye {
 
