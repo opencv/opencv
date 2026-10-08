@@ -42,11 +42,21 @@
 #include "precomp.hpp"
 #include <iostream>
 
+// which sort convexHull uses
+#define CV_CONVHULL_SORT_DISPATCHER 0   // chosen by the data
+#define CV_CONVHULL_SORT_COUNTING   1
+#define CV_CONVHULL_SORT_RADIX      2
+#define CV_CONVHULL_SORT_STD        3
+
+#ifndef CV_CONVHULL_SORT
+#define CV_CONVHULL_SORT CV_CONVHULL_SORT_DISPATCHER
+#endif
+
 namespace cv
 {
 
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
+static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2, bool by_y = false )
 {
     int incr = end > start ? 1 : -1;
     // prepare first triangle
@@ -67,6 +77,11 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
     end += incr; // make end = afterend
 
+    // with by_y the points are sorted by y, then by x
+    if (by_y) {
+        sign2 = -sign2;
+    }
+
     while( pnext != end )
     {
         // check the angle p1,p2,p3
@@ -74,7 +89,15 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
         _Tp nexty = array[pnext]->y;
         _Tp by = nexty - cury;
 
-        if( CV_SIGN( by ) != nsign )
+        // with by_y the walk direction is checked in x; by is still used for the angle
+        _Tp step = by;
+        if (by_y) {
+            _Tp curx = array[pcur]->x;
+            _Tp nextx = array[pnext]->x;
+            step = nextx - curx;
+        }
+
+        if( CV_SIGN( step ) != nsign ) // does the next point go the wrong way along the walk?
         {
             Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
             Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
@@ -121,6 +144,278 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
     return --stacksize;
 }
 
+namespace chull_sort
+{
+
+// int points that order exactly like the float coordinates.
+// the sortable points are stored in buf.
+static const Point* floatPointsToSortablePoints(const Point2f* points, int total, AutoBuffer<int>& buf)
+{
+    buf.allocate((size_t)total * 2);
+    Point* sortable_points = (Point*)buf.data();
+    for (int i = 0; i < total; ++i)
+    {
+        Cv32suf x, y;
+        x.f = points[i].x;
+        y.f = points[i].y;
+        // treat -0.f (INT_MIN as int) specially - map to 0, same as +0.f
+        sortable_points[i].x = x.i == INT_MIN ? 0 : CV_TOGGLE_FLT(x.i);
+        sortable_points[i].y = y.i == INT_MIN ? 0 : CV_TOGGLE_FLT(y.i);
+    }
+    return sortable_points;
+}
+
+struct CHullRange
+{
+    int minX, maxX;
+    int minY, maxY;
+    int64 rangeX() const { return (int64)maxX - (int64)minX + 1; }
+    int64 rangeY() const { return (int64)maxY - (int64)minY + 1; }
+};
+
+static CHullRange computeRange(const Point* data, int total)
+{
+    CV_DbgAssert(total > 0);
+
+    int minX = data[0].x;
+    int maxX = data[0].x;
+    int minY = data[0].y;
+    int maxY = data[0].y;
+    for (int i = 1; i < total; ++i)
+    {
+        minX = std::min(minX, data[i].x);
+        maxX = std::max(maxX, data[i].x);
+        minY = std::min(minY, data[i].y);
+        maxY = std::max(maxY, data[i].y);
+    }
+
+    return CHullRange{minX, maxX, minY, maxY};
+}
+
+static const int COUNTING_MAX_RANGE = 100000;   // ~1.6 MB of columns
+
+// Counting sort by x that also prunes.
+// Of the points sharing an x value only the lowest and the highest are kept, the others are not needed for the hull.
+// out_points gets the kept points ordered by x, then by y; total is set to their count.
+// Returns false, leaving the outputs untouched, if require_monotonic_indices is set and a non-consecutive duplicate of a kept point is found.
+// With by_y x and y are swapped: the sort is by y, then by x.
+template<bool by_y = false>
+static bool countingSortAndPrune(const Point* data,
+                                 const CHullRange& range,
+                                 bool require_monotonic_indices,
+                                 Point** out_points,
+                                 int& total,
+                                 int& ind_miny,
+                                 int& ind_maxy)
+{
+    struct XColumn { const Point* lo; const Point* hi; };
+
+    // with by_y x and y are swapped
+    const auto x = [](const Point* p) { return by_y ? p->y : p->x; };
+    const auto y = [](const Point* p) { return by_y ? p->x : p->y; };
+    const int minX = by_y ? range.minY : range.minX;
+    const int64 rangeX64 = by_y ? range.rangeY() : range.rangeX();
+
+    // 1) Check the x range
+    CV_Assert(rangeX64 <= COUNTING_MAX_RANGE);
+    const int rangeX = (int)rangeX64;
+
+    // 2) Create one column per x value, storing pointers to its lowest and highest points in data.
+    // having lo and hi near to each other in memory should induce better cache locality
+    AutoBuffer<XColumn> columns(rangeX);
+    std::fill_n(columns.data(), rangeX, XColumn{nullptr, nullptr});
+
+    // 3) Fill columns
+    for (int i = 0; i < total; ++i)
+    {
+        const int idx = x(&data[i]) - minX;
+        const int cury = y(&data[i]);
+        XColumn& col = columns[idx];
+
+        if (col.lo == nullptr || cury < y(col.lo)) {
+            col.lo = &data[i];
+        }
+        else if (require_monotonic_indices && cury == y(col.lo) && !(data[i-1] == data[i])) {
+            return false; // duplicate point (not consecutive) && require_monotonic_indices -> fallback to radix sort or std::sort
+        }
+
+        if (col.hi == nullptr || cury > y(col.hi)) {
+            col.hi = &data[i];
+        }
+        else if (require_monotonic_indices && cury == y(col.hi) && !(data[i-1] == data[i])) {
+            return false; // duplicate point (not consecutive) && require_monotonic_indices -> fallback to radix sort or std::sort
+        }
+    }
+
+    // 4) Rebuild output pointer array in sorted X order
+    int out = 0;
+    ind_miny = 0;
+    ind_maxy = 0;
+    int cur = 0;
+    for (int i = 0; i < rangeX; ++i)
+    {
+        const Point* pmin = columns[i].lo;
+        if (pmin == nullptr)
+            continue;
+
+        const Point* pmax = columns[i].hi;
+        CV_DbgAssert(pmax != nullptr && y(pmin) <= y(pmax)); // when filling columns either both pmax and pmin are set or neither.
+
+        out_points[out++] = const_cast<Point*>(pmin);
+        cur = out - 1;
+
+        int cury = y(out_points[cur]);
+        if (y(out_points[ind_miny]) > cury) {
+            ind_miny = cur;
+        }
+        if (y(out_points[ind_maxy]) < cury) {
+            ind_maxy = cur;
+        }
+
+        if (pmax != pmin) {
+            out_points[out++] = const_cast<Point*>(pmax);
+            cur = out - 1;
+            cury = y(out_points[cur]);
+            if (y(out_points[ind_maxy]) < cury)
+                ind_maxy = cur;
+        }
+    }
+
+    total = out;
+    return true;
+}
+
+static const int RADIX_BITS = 8; // 256 buckets per pass, 4 passes cover 32 bits
+static const int RADIX_NBUCKETS = 1 << RADIX_BITS;
+static const int RADIX_MAX_PASSES = 4;
+
+// number of radix passes needed to sort keys in 0..range-1
+static int radixPassesCount(int64 range)
+{
+    if (range <= 1)
+        return 0;
+    else if (range <= ((int64)1 << RADIX_BITS))
+        return 1;                                   // up to 256 values
+    else if (range <= ((int64)1 << (2 * RADIX_BITS)))
+        return 2;                                   // up to 2^16 values
+    else if (range <= ((int64)1 << (3 * RADIX_BITS)))
+        return 3;                                   // up to 2^24 values
+    else
+        return 4;
+}
+
+// bucket of a coordinate value in the given pass
+static int radixBucket(int value, int64 min_value, int passNr)
+{
+    const int shift = passNr * RADIX_BITS;        // which byte of the key this pass sorts by
+    const int BUCKET_MASK = RADIX_NBUCKETS - 1;   // the lowest RADIX_BITS bits set
+    const int64 key = value - min_value;
+    return (int)((key >> shift) & BUCKET_MASK);
+}
+
+// One pass: copies the pointers, ordered by one 8-bit digit of y (or x).
+// Returns false if the pass is skipped.
+template<bool sort_by_y>
+static bool radixPass(Point* const* src,
+                      Point** dst,
+                      int total,
+                      const int* bucketSizes,
+                      const CHullRange& range,
+                      int passNr)
+{
+    const int64 min_value = sort_by_y ? range.minY : range.minX;
+    const auto bucketOf = [=](const Point* p) {
+        return radixBucket(sort_by_y ? p->y : p->x, min_value, passNr);
+    };
+
+    if (bucketSizes[bucketOf(src[0])] == total) {
+        return false;
+    }
+
+    // start positions of buckets in dst
+    int bucket_pos[RADIX_NBUCKETS];
+    for (int b = 0, pos = 0; b < RADIX_NBUCKETS; ++b)
+    {
+        bucket_pos[b] = pos;
+        pos += bucketSizes[b];
+    }
+
+    // scatter
+    for (int i = 0; i < total; ++i)
+    {
+        int bucket = bucketOf(src[i]);
+        int pos = bucket_pos[bucket];       // next free slot
+        dst[pos] = src[i];
+        bucket_pos[bucket] = pos + 1;       // the slot is taken now
+    }
+    return true;
+}
+
+// Stable radix sort by x, then by y
+static void radixSort(const Point* data,
+                      int total,
+                      const CHullRange& range,
+                      Point** out_points,
+                      int& ind_miny,
+                      int& ind_maxy)
+{
+    // need this initialization here because for floats data is not the array the caller's pointers refer to,
+    // it is CV_TOGGLE_FLT mapping.
+    for (int i = 0; i < total; ++i)
+    {
+        out_points[i] = const_cast<Point*>(&data[i]);
+    }
+
+    const int passesY = radixPassesCount(range.rangeY());
+    const int passesX = radixPassesCount(range.rangeX());
+
+    // how many points fall into each bucket, per pass
+    int bucketSizesY[RADIX_MAX_PASSES][RADIX_NBUCKETS] = {};
+    int bucketSizesX[RADIX_MAX_PASSES][RADIX_NBUCKETS] = {};
+    for (int i = 0; i < total; ++i)
+    {
+        for (int p = 0; p < passesY; ++p)
+            bucketSizesY[p][radixBucket(data[i].y, range.minY, p)]++;
+        for (int p = 0; p < passesX; ++p)
+            bucketSizesX[p][radixBucket(data[i].x, range.minX, p)]++;
+    }
+
+    AutoBuffer<Point*> scratch_points(total);
+    Point** src = out_points;
+    Point** dst = scratch_points.data();
+
+    // sort by y, then by x
+    for (int passNr = 0; passNr < passesY; ++passNr)
+    {
+        if (radixPass<true /* sort_by_y */>(src, dst, total, bucketSizesY[passNr], range, passNr)) {
+            std::swap(src, dst);
+        }
+    }
+
+    for (int passNr = 0; passNr < passesX; ++passNr)
+    {
+        if (radixPass<false /* sort_by_y */>(src, dst, total, bucketSizesX[passNr], range, passNr)) {
+            std::swap(src, dst);
+        }
+    }
+
+    // src is the array the last pass wrote to. If that is scratch_points, copy the result to out_points
+    if (src != out_points) {
+        std::copy(src, src + total, out_points);
+    }
+
+    // find the lowest and the highest points
+    ind_miny = 0;
+    ind_maxy = 0;
+    for (int i = 1; i < total; ++i)
+    {
+        int y = out_points[i]->y;
+        if (out_points[ind_miny]->y > y)
+            ind_miny = i;
+        if (out_points[ind_maxy]->y < y)
+            ind_maxy = i;
+    }
+}
 
 template<typename _Tp>
 struct CHullCmpPoints
@@ -135,6 +430,99 @@ struct CHullCmpPoints
     }
 };
 
+// Sorts the pointers and finds the points with min and max y. Picks the sort by the data.
+// Returns true if the sort is by y, then by x. miny_ind and maxy_ind are then the points with min and max x.
+static bool sortPoints(Point* data0,
+                       bool is_float,
+                       bool monotonic, // require_monotonic_indices
+                       Point** pointer,
+                       int& total,
+                       int& miny_ind,
+                       int& maxy_ind)
+{
+    Point2f** pointerf = (Point2f**)pointer;
+
+    AutoBuffer<int> _sortable_points_buffer;
+    const Point* sortable_points = is_float ?
+        floatPointsToSortablePoints((Point2f*)data0, total, _sortable_points_buffer) : data0;
+
+    // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
+    // else radix sort if total >= (RADIX_MIN_TOTAL * radix pass count),
+    // else std::sort
+    const int COUNTING_MAX_SPARSITY = 1;
+    const int RADIX_MIN_TOTAL = 16; // per radix pass
+    const CHullRange range = computeRange(sortable_points, total);
+
+    int64 counting_range = std::min(range.rangeY(), range.rangeX());
+    bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
+    const int passes_count = radixPassesCount(range.rangeY()) + radixPassesCount(range.rangeX());
+    bool use_radix = total >= RADIX_MIN_TOTAL * passes_count;
+#if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
+    use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
+    use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
+#endif
+
+    if( use_counting && counting_range <= COUNTING_MAX_RANGE )
+    {
+        bool by_y = range.rangeY() < range.rangeX();
+        bool sorted = by_y ?
+            countingSortAndPrune<true>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind) :
+            countingSortAndPrune<false>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind);
+        if( sorted )
+        {
+            if( is_float )
+            {
+                // the sort ran on the sortable points, make the result point into the data
+                for( int i = 0; i < total; i++ )
+                    pointer[i] = data0 + (pointer[i] - sortable_points);
+            }
+            return by_y;
+        }
+    }
+
+    if( use_radix )
+    {
+        radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
+        if( is_float )
+        {
+            // the sort ran on the sortable points, make the result point into the data
+            for( int i = 0; i < total; i++ )
+                pointer[i] = data0 + (pointer[i] - sortable_points);
+        }
+        return false;
+    }
+
+    for( int i = 0; i < total; i++ )
+        pointer[i] = &data0[i];
+
+    if( !is_float )
+    {
+        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+        for( int i = 1; i < total; i++ )
+        {
+            int y = pointer[i]->y;
+            if( pointer[miny_ind]->y > y )
+                miny_ind = i;
+            if( pointer[maxy_ind]->y < y )
+                maxy_ind = i;
+        }
+    }
+    else
+    {
+        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
+        for( int i = 1; i < total; i++ )
+        {
+            float y = pointerf[i]->y;
+            if( pointerf[miny_ind]->y > y )
+                miny_ind = i;
+            if( pointerf[maxy_ind]->y < y )
+                maxy_ind = i;
+        }
+    }
+    return false;
+}
+
+} // namespace chull_sort
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
@@ -143,7 +531,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
     int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
-    int miny_ind = 0, maxy_ind = 0;
+    int miny_ind = 0, maxy_ind = 0; // with by_y: min and max x
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
 
     if( total == 0 )
@@ -165,34 +553,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
     CV_Assert(points.isContinuous());
 
-    for( i = 0; i < total; i++ )
-        pointer[i] = &data0[i];
-
-    // sort the point set by x-coordinate, find min and max y
-    if( !is_float )
-    {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
-        {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
-    }
-    else
-    {
-        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
-        for( i = 1; i < total; i++ )
-        {
-            float y = pointerf[i]->y;
-            if( pointerf[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointerf[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
-    }
+    // sort the point set by x or by y, find min and max of the other coordinate
+    bool by_y = chull_sort::sortPoints(data0, is_float, !returnPoints,
+                                       pointer, total, miny_ind, maxy_ind);
 
     if( pointer[0]->x == pointer[total-1]->x &&
         pointer[0]->y == pointer[total-1]->y )
@@ -201,18 +564,18 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
     else
     {
-        // upper half
+        // upper half (with by_y: upper and lower mean right and left)
         int *tl_stack = stack;
         int tl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1, by_y) :
+            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1, by_y);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1, by_y) :
+            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1, by_y);
 
         // gather upper part of convex hull to output
-        if( !clockwise )
+        if( clockwise == by_y )
         {
             std::swap( tl_stack, tr_stack );
             std::swap( tl_count, tr_count );
@@ -227,14 +590,14 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // lower half
         int *bl_stack = stack;
         int bl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
+            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1, by_y) :
+            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1, by_y);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1, by_y) :
+            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1, by_y);
 
-        if( clockwise )
+        if( clockwise != by_y )
         {
             std::swap( bl_stack, br_stack );
             std::swap( bl_count, br_count );
@@ -293,6 +656,18 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         for (i = 0; i < nout; ++i)
         {
             hullbuf[i] = int(pointer[hullbuf[i]] - data0);
+        }
+
+        if( by_y )
+        {
+            // start from the same vertex as in x order
+            const auto less = [data0, is_float](int a, int b) {
+                return is_float ? chull_sort::CHullCmpPoints<float>()((Point2f*)&data0[a], (Point2f*)&data0[b])
+                                : chull_sort::CHullCmpPoints<int>()(&data0[a], &data0[b]);
+            };
+            int* first = clockwise ? std::min_element(hullbuf, hullbuf + nout, less)
+                                   : std::max_element(hullbuf, hullbuf + nout, less);
+            std::rotate(hullbuf, first, hullbuf + nout);
         }
 
         // try to make the convex hull indices form
