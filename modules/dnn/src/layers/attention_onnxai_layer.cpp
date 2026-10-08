@@ -30,9 +30,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         softmax_precision = params.get<int>("softmax_precision", 0);
 
         local_window_size = params.get<int>("local_window_size", -1);
-        // ONNX Attention-25 sliding window, -1 = that side unbounded. com.microsoft's
-        // local_window_size counts the window inclusive of the current token, so it is the
-        // same frontier shifted by one; both are normalized in forward().
+        // ONNX Attention-25 sliding window; -1 leaves that side unbounded.
         left_window_size = params.get<int>("left_window_size", -1);
         right_window_size = params.get<int>("right_window_size", -1);
         do_rotary = params.get<int>("do_rotary", 0) != 0;
@@ -412,11 +410,13 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             past_seq_kv = seq_len_kv - seq_len_q;
 
-            fused_softmax_softcap_mask(
-                attention_prob, mask_mat,
-                softcap, softcap > 0.f, 9.f, -FLT_MAX,
-                has_mask_input, is_causal, past_seq_kv
-            );
+            // Softcap the raw scores before masking, as the non-paged path does.
+            if (softcap > 0.f)
+                fused_softmax_softcap_mask(attention_prob, Mat(), softcap, true, 9.f, -FLT_MAX,
+                                           /*has_mask*/ false, /*is_causal*/ false,
+                                           /*past_seq_len*/ 0, /*do_softmax*/ false);
+            fused_softmax_softcap_mask(attention_prob, mask_mat, 0.f, false, 9.f, -FLT_MAX,
+                                       has_mask_input, is_causal, past_seq_kv);
 
             auto it_v = kvCacheManager.vData.find(name);
             CV_Assert(it_v != kvCacheManager.vData.end());
@@ -578,13 +578,14 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                        /*past_seq_len*/ 0, /*do_softmax*/ false);
 
         // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
-        //   0/1 = scaled QK^T after softcap, 2 = + attention bias, 3 = post-softmax.
+        //   0/1 = scaled QK^T after softcap (the ONNX reference softcaps before the mode check,
+        //   despite the spec text for 0), 2 = + attention bias, 3 = post-softmax.
         const bool want_qk = outputs.size() > 3 && !outputs[3].empty();
         if (want_qk && qk_matmul_output_mode <= 1)
             attention_prob.copyTo(outputs[3]);
 
-        // is_causal takes one past length for the whole batch; a window or ragged batch cannot,
-        // so those get an explicit per-(batch, query, key) mask instead.
+        // is_causal carries one past length for the whole batch; a window or ragged batch needs
+        // the explicit mask below instead.
         bool ragged = false;
         for (int b = 1; b < batch_size && !ragged; ++b)
             ragged = (pastLen[b] != pastLen[0]);
@@ -653,7 +654,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         Mat mask(std::vector<int>{batch_size, 1, seq_len_q, total_seq_kv}, CV_8U, Scalar(0));
         for (int b = 0; b < batch_size; ++b) {
             for (int i = 0; i < seq_len_q; ++i) {
-                const int pos = pastLen[b] + i;       // this query's absolute position
+                const int pos = pastLen[b] + i;
                 int lo = 0, hi = total_seq_kv - 1;
                 if (is_causal) hi = std::min(hi, pos);
                 if (left_win >= 0) lo = std::max(lo, pos - left_win);

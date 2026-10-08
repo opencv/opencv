@@ -499,7 +499,7 @@ public:
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
 
             Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
-            if(!activ_swish.empty())
+            if(!activ_swish.empty() && activ_swish->supportBackend(DNN_BACKEND_CUDA))  // alpha == 1 only
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
 
             Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();

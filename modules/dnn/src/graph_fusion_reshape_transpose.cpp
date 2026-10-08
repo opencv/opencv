@@ -16,6 +16,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "layers/layers_common.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -44,33 +45,22 @@ struct ModelFusionReshapeTranspose
         return true;
     }
 
-    // A 0 in an ONNX reshape spec means "keep the input's dim here", so such a Reshape
-    // is not independent of what feeds it and the producer cannot be dropped. A spec we
-    // cannot read at graph-build time is treated the same way.
+    // A 0 in an ONNX reshape spec means "keep the input's dim here", so the Reshape depends
+    // on what feeds it and its producer cannot be dropped. An unreadable spec counts too.
     bool shapeSpecCopiesInputDims(const Reshape2Layer* rs) const
     {
-        const MatShape& spec = rs->newShapeDesc;
-        if (spec.dims >= 0) {
-            for (int i = 0; i < spec.dims; i++)
-                if (spec[i] == 0)
-                    return true;
-            return false;
+        MatShape spec = rs->newShapeDesc;
+        if (spec.dims < 0) {
+            if (rs->inputs.size() != 2 || !netimpl->isConstArg(rs->inputs[1]))
+                return true;
+            const Mat& t = netimpl->argTensor(rs->inputs[1]);
+            if (t.empty() || !t.isContinuous() || (t.type() != CV_32S && t.type() != CV_64S))
+                return true;
+            spec = tensorToShape(t);
         }
-        if (rs->inputs.size() != 2 || !netimpl->isConstArg(rs->inputs[1]))
-            return true;
-        Mat t = netimpl->argTensor(rs->inputs[1]);
-        if (t.empty() || !t.isContinuous())
-            return true;
-        const size_t n = t.total();
-        if (t.depth() == CV_64S) {
-            const int64_t* p = t.ptr<int64_t>();
-            for (size_t i = 0; i < n; i++) if (p[i] == 0) return true;
-        } else if (t.depth() == CV_32S) {
-            const int* p = t.ptr<int>();
-            for (size_t i = 0; i < n; i++) if (p[i] == 0) return true;
-        } else {
-            return true;
-        }
+        for (int i = 0; i < spec.dims; i++)
+            if (spec[i] == 0)
+                return true;
         return false;
     }
 
