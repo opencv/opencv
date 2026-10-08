@@ -54,8 +54,11 @@ class CV_EXPORTS_W VLMModel
 public:
     virtual ~VLMModel();
 
-    /** @brief Change the compute device used by all underlying nets: "cpu" or "cuda". */
-    CV_WRAP virtual void setPreferableDevice(const String& device) = 0;
+    /// @sa dnn::Net::setPreferableBackend
+    CV_WRAP virtual void setPreferableBackend(dnn::Backend backendId) = 0;
+
+    /// @sa dnn::Net::setPreferableTarget
+    CV_WRAP virtual void setPreferableTarget(dnn::Target targetId) = 0;
 
     /** @brief Run inference on a single already-decoded image/page.
 
@@ -93,18 +96,52 @@ PADDLEOCR_VL and GRANITE_DOCLING run locally from an ONNX export; OPENAI, ANTHRO
 and GROK call a hosted API.
 
 @param model_type Which VLM to load.
-@param model_dir  Local types: the ONNX export directory, laid out as in
-                  samples/dnn/granite_docling_inference.py. Cloud types: the provider's
-                  model name, taken from the provider's own model list.
-@param engine     Local types only: only "opencv" (dnn::ENGINE_OPENCV) is supported.
-@param device     Local types only: "cpu" or "cuda".
+@param model_dir  Local types: the ONNX export directory, laid out as below. Cloud types: the
+                  provider's model name, taken from the provider's own model list.
 @param api_key    Cloud types only. Empty reads OPENAI_API_KEY, ANTHROPIC_API_KEY,
                   GEMINI_API_KEY or XAI_API_KEY instead; create() throws naming the variable
                   if neither is set.
+
+Local types load on dnn::ENGINE_OPENCV, the only engine whose KV cache these decoders need.
+Set a backend or target afterwards with VLMModel::setPreferableBackend() and
+VLMModel::setPreferableTarget(); note ENGINE_OPENCV supports CPU only for now, so a non-CPU
+target is logged and ignored by dnn.
+
+### Model directory layout
+
+VLM_MODEL_GRANITE_DOCLING, exported from
+<https://huggingface.co/onnx-community/granite-docling-258M-ONNX>:
+
+    <model_dir>/
+      config.json               OpenCV tokenizer config -- see below
+      preprocessor_config.json  image_mean, image_std, size and max_image_size longest_edge
+      processor_config.json     image_seq_len
+      tokenizer.json
+      onnx/vision_encoder.onnx
+      onnx/embed_tokens.onnx
+      onnx/decoder_model_merged.onnx
+
+VLM_MODEL_PADDLEOCR_VL, exported from <https://huggingface.co/PaddlePaddle/PaddleOCR-VL>:
+
+    <model_dir>/
+      config.json               OpenCV tokenizer config -- see below
+      processor_config.json     patch size, merge size, pixel bounds and normalization
+      tokenizer.json
+      onnx/vision_encoder.onnx
+      onnx/embedding.onnx
+      onnx/decoder.onnx
+
+Note the two differ in their ONNX file names, and that PaddleOCR-VL reads no
+preprocessor_config.json.
+
+`config.json` is **not** HuggingFace's: it is the descriptor dnn::Tokenizer::load() consumes
+(`model_type`, `method`, `vocab_size`, `tokenizer_class`, the token strings), plus
+`image_token_id` and `eos_token_id`, which may instead sit under a `text_config` object. A
+stock upstream export needs that one file added. Use the full-precision decoder: the
+int4-kquant variant needs MatMulNBits' asymmetric form and the int8 variant needs
+ai.onnx MatMulInteger, neither of which is implemented.
 */
 CV_EXPORTS_W Ptr<VLMModel> create(VLMModelType model_type, const String& model_dir,
-                                  const String& engine = "opencv",
-                                  const String& device = "cpu",
                                   const String& api_key = String());
 
 /** @brief Convenience wrapper: reads an image file and runs VLMModel::infer() on it.

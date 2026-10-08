@@ -51,10 +51,8 @@ def parse_args():
     parser.add_argument('--input', '-i', type=str, required=True, help='Path to the input image.')
     parser.add_argument('--prompt', type=str, default='', help="Task prompt (default: the model's built-in prompt).")
     parser.add_argument('--max_new_tokens', type=int, default=512, help='Maximum number of new tokens to generate.')
-    parser.add_argument('--engine', type=str, default='opencv', choices=['opencv'],
-                        help='Local model types only: dnn engine used to load each ONNX sub-model.')
-    parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
-                        help='Local model types only: compute device.')
+    parser.add_argument('--target', type=str, default='cpu', choices=['cpu', 'cuda'],
+                        help='Local model types only: dnn target.')
     args = parser.parse_args()
 
     if not args.model_dir:
@@ -62,14 +60,13 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
-
     args = parse_args()
 
-    device = 'cloud' if args.model_type in CLOUD_MODEL_TYPES else args.device
-
     print(f'Preparing {args.model_type} model...')
-    model = cv.vlm.create(MODEL_TYPES[args.model_type], args.model_dir,
-                          args.engine, device, args.api_key)
+    model = cv.vlm.create(MODEL_TYPES[args.model_type], args.model_dir, args.api_key)
+    # CPU is already the default; setting it only triggers dnn's unsupported-target warning.
+    if args.model_type not in CLOUD_MODEL_TYPES and args.target == 'cuda':
+        model.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
 
     print(f'Running inference on {args.input}...')
     result = cv.vlm.inferFile(model, args.input, args.prompt, args.max_new_tokens)

@@ -46,9 +46,7 @@ int main(int argc, char** argv)
         "{ input i        |      | Path to the input image (.png/.jpg/.jpeg) }"
         "{ prompt         |      | Task prompt (defaults to the model's built-in prompt) }"
         "{ max_new_tokens | 512  | Maximum number of new tokens to generate }"
-        "{ engine         | opencv | Local model types only: dnn engine used to load "
-                                  "each ONNX sub-model: opencv }"
-        "{ device         | cpu  | Local model types only: compute device: cpu or cuda }";
+        "{ target         | cpu  | Local model types only: dnn target: cpu or cuda }";
 
     CommandLineParser parser(argc, argv, keys);
     parser.about(
@@ -86,20 +84,15 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    string engine = parser.get<String>("engine");
-    if (!isCloud && engine != "opencv")
-    {
-        cerr << "Unknown engine: " << engine << " (expected opencv)" << endl;
-        return 1;
-    }
-
-    string device = "cloud";
+    dnn::Target target = dnn::DNN_TARGET_CPU;
     if (!isCloud)
     {
-        device = parser.get<String>("device");
-        if (device != "cpu" && device != "cuda")
+        const string targetArg = parser.get<String>("target");
+        if (targetArg == "cuda")
+            target = dnn::DNN_TARGET_CUDA;
+        else if (targetArg != "cpu")
         {
-            cerr << "Unknown device: " << device << " (expected cpu or cuda)" << endl;
+            cerr << "Unknown target: " << targetArg << " (expected cpu or cuda)" << endl;
             return 1;
         }
     }
@@ -111,7 +104,10 @@ int main(int argc, char** argv)
     int maxNewTokens = parser.get<int>("max_new_tokens");
 
     cout << "Preparing " << modelTypeArg << " model..." << endl;
-    Ptr<VLMModel> model = create(modelType, modelDir, engine, device, apiKey);
+    Ptr<VLMModel> model = create(modelType, modelDir, apiKey);
+    // CPU is already the default; setting it only triggers dnn's unsupported-target warning.
+    if (!isCloud && target != dnn::DNN_TARGET_CPU)
+        model->setPreferableTarget(target);
 
     cout << "Running inference on " << inputPath << "..." << endl;
     const String result = inferFile(model, inputPath, prompt, maxNewTokens);

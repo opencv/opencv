@@ -113,7 +113,11 @@ public:
         std::fill(apiKey_.begin(), apiKey_.end(), '\0');
     }
 
-    void setPreferableDevice(const String&) CV_OVERRIDE
+    void setPreferableBackend(dnn::Backend) CV_OVERRIDE
+    {
+    }
+
+    void setPreferableTarget(dnn::Target) CV_OVERRIDE
     {
     }
 

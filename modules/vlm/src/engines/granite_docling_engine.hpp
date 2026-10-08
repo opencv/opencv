@@ -11,7 +11,7 @@
 
 namespace cv { namespace vlm {
 
-Ptr<VLMModel> createGraniteDoclingModel(const String& model_dir, int engine, const String& device);
+Ptr<VLMModel> createGraniteDoclingModel(const String& model_dir);
 
 }} // namespace cv::vlm
 
