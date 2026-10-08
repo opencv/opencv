@@ -2178,7 +2178,7 @@ TEST(Calib_InitCameraMatrix2D, float64Points)
     Mat K64 = initCameraMatrix2D(obj, img, Size(640, 480));
     Mat K32 = initCameraMatrix2D(toPointsOf<Point3f>(obj), toPointsOf<Point2f>(img), Size(640, 480));
 
-    EXPECT_MAT_NEAR(K64, Mat(K), 1.0);
+    EXPECT_MAT_NEAR(K64, Mat(K), 1e-4);
     EXPECT_MAT_NEAR(K64, K32, 1e-2);
 }
 
