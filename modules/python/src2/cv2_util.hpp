@@ -16,6 +16,9 @@ PyObject* failmsgp(const char *fmt, ...);
 
 int cvDepthToNumpyType(int depth);
 int numpyTypeToCvDepth(int typenum);
+// nullptr / -1 when ml_dtypes is not importable or the type has no OpenCV counterpart.
+PyArray_Descr* mlDtypeDescrForCvDepth(int depth);
+int mlDtypeToCvDepth(int typenum);
 
 //======================================================================================================================
 
