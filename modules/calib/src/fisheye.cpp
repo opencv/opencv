@@ -1034,13 +1034,12 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.channels() == 1 && image.rows > image.cols;
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
         Mat jacobians;
         projectPoints(object, x, om, T, param, jacobians);
-        Mat exkk = (imT ? image.t() : image) - Mat(x);
+        Mat exkk = image.reshape(2, 1) - Mat(x).reshape(2, 1);
 
         Mat A(jacobians.rows, 9, CV_64FC1);
         jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));
@@ -1100,13 +1099,11 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.channels() == 1 && image.rows > image.cols;
-
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
         projectPoints(object, x, om, T, params, noArray());
-        Mat ex_ = (imT ? image.t() : image) - Mat(x);
+        Mat ex_ = image.reshape(2, 1) - Mat(x).reshape(2, 1);
         ex_ = ex_.reshape(2, (int)ex_.total());
         ex_.copyTo(ex.rowRange(insert_idx, insert_idx + ex_.rows));
         insert_idx += ex_.rows;
