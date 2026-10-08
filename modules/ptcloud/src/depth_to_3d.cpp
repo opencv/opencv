@@ -138,7 +138,7 @@ template<typename T, typename VT>
 static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
                                 const VT& Z, const VT& W, int vl)
 {
-#if defined(__riscv_vector)
+#if CV_RVV
     if constexpr (sizeof(T) == 4)
         __riscv_vsseg4e32_v_f32m1x4(reinterpret_cast<float*>(p),
                                     __riscv_vcreate_v_f32m1x4(X, Y, Z, W), vl);
