@@ -315,6 +315,78 @@ private:
     std::vector<cv::Mat> deltaLocal;
 };
 
+struct CalibWeights
+{
+    bool active = false;
+    cv::Mat w;
+    double scale = 1.0;
+};
+
+static double pointWeight(const CalibWeights& cw, int idx, double ex, double ey,
+                          double& wx, double& wy, bool variance)
+{
+    if (!cw.w.empty())
+    {
+        const cv::Vec2d& w = cw.w.at<cv::Vec2d>(idx);
+        wx = w[0];
+        wy = w[1];
+        return wx * ex * ex + wy * ey * ey;
+    }
+    double r2 = ex * ex + ey * ey, s = cw.scale;
+    if (r2 <= s * s)
+    {
+        wx = wy = 1.0;
+        return r2;
+    }
+    double r = std::sqrt(r2);
+    wx = wy = s / r;
+    return variance ? s * r : 2 * s * r - s * s;
+}
+
+static double weightedError(const CalibWeights& cw, int pos, const cv::Mat& errors, bool variance = false)
+{
+    const double* e = errors.ptr<double>();
+    int n = (int)(errors.total() * errors.channels() / 2);
+    double sum = 0, wx, wy;
+    for (int j = 0; j < n; j++)
+        sum += pointWeight(cw, pos + j, e[2 * j], e[2 * j + 1], wx, wy, variance);
+    return sum;
+}
+
+static int weightedResiduals(const CalibWeights& cw, int total)
+{
+    return cw.w.empty() ? 2 * total : cv::countNonZero(cw.w.reshape(1));
+}
+
+static void scaleRow(cv::Mat& M, int row, double s)
+{
+    if (M.empty())
+        return;
+    double* p = M.ptr<double>(row);
+    for (int c = 0; c < M.cols; c++)
+        p[c] *= s;
+}
+
+static void weightRows(const CalibWeights& cw, int pos, cv::Mat& err,
+                       cv::Mat& Ji, cv::Mat& Je, cv::Mat& Jo)
+{
+    int n = err.rows / 2;
+    for (int j = 0; j < n; j++)
+    {
+        double* e = err.ptr<double>(2 * j);
+        double wx, wy;
+        pointWeight(cw, pos + j, e[0], e[1], wx, wy, false);
+        double sw[2] = { std::sqrt(wx), std::sqrt(wy) };
+        for (int a = 0; a < 2; a++)
+        {
+            e[a] *= sw[a];
+            scaleRow(Ji, 2 * j + a, sw[a]);
+            scaleRow(Je, 2 * j + a, sw[a]);
+            scaleRow(Jo, 2 * j + a, sw[a]);
+        }
+    }
+}
+
 class JAccumulator : public cv::ParallelLoopBody
 {
 public:
@@ -322,11 +394,11 @@ public:
                  const cv::Mat& _matM, const cv::Mat& _m, const cv::Mat& _npoints,
                  const cv::Mat& _param, int _flags, double _aspectRatio,
                  int _NINTRINSIC, bool _releaseObject, int _maxPoints,
-                 cv::Mutex& _globalMutex)
+                 cv::Mutex& _globalMutex, const CalibWeights& _weights)
         : solver(_solver), matM(_matM), m(_m), npoints(_npoints),
           param(_param), flags(_flags), aspectRatio(_aspectRatio),
           NINTRINSIC(_NINTRINSIC), releaseObject(_releaseObject),
-          maxPoints(_maxPoints), globalMutex(_globalMutex) {}
+          maxPoints(_maxPoints), globalMutex(_globalMutex), weights(_weights) {}
 
     void operator()(const cv::Range& range) const CV_OVERRIDE
     {
@@ -427,6 +499,8 @@ public:
 
             cv::subtract(_mp, _mi, _mp);
             localErr += cv::norm(err, cv::NORM_L2SQR);
+            if (weights.active)
+                weightRows(weights, pos, err, Ji, Je, Jo);
 
             // Accumulate V and eb blocks (per-image)
             solver.V[i] = Je.t() * Je;
@@ -475,6 +549,7 @@ private:
     bool releaseObject;
     int maxPoints;
     cv::Mutex& globalMutex;
+    const CalibWeights& weights;
 };
 
 } // anonymous namespace
@@ -609,7 +684,8 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
                                               const Mat& imagePoints, const Mat& npoints,
                                               Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
                                               Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
-                                              Mat perViewErr, int flags, const TermCriteria& termCrit )
+                                              Mat perViewErr, int flags, const TermCriteria& termCrit,
+                                              const CalibWeights& weights = CalibWeights() )
 {
     int NINTRINSIC = CALIB_NINTRINSIC;
 
@@ -846,10 +922,11 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
     }
 
     int nparams_nz = countNonZero(mask);
+    int nresiduals = weightedResiduals(weights, total);
 
-    if (nparams_nz >= 2 * total)
+    if (nparams_nz >= nresiduals)
         CV_Error_(Error::StsBadArg,
-                  ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+                  ("There should be less vars to optimize (having %d) than the number of residuals (%d)", nparams_nz, nresiduals));
 
     // 2. initialize extrinsic parameters
     for(int i = 0, pos = 0; i < nimages; i++ )
@@ -880,6 +957,7 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
     if (releaseObject)
         JoBuf = Mat( maxPoints*2, maxPoints*3, CV_64FC1);
 
+    double plainErr = 0;
     auto cameraCalcJErr = [&, npoints, nimages, flags, releaseObject, nparams, maxPoints, NINTRINSIC]
                           (InputOutputArray _param, OutputArray _JtErr, OutputArray _JtJ, double& errnorm) -> bool
     {
@@ -910,6 +988,7 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
         }
 
         double reprojErr = 0;
+        plainErr = 0;
 
         int so = NINTRINSIC + nimages * 6;
         int pos = 0;
@@ -960,6 +1039,15 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
             subtract( _mp, _mi, _mp );
             _mp.copyTo(_me);
 
+            double viewErr = norm(err, NORM_L2SQR);
+            double viewCost = viewErr;
+            if( weights.active )
+            {
+                viewCost = weightedError(weights, pos, err);
+                if( calcJ )
+                    weightRows(weights, pos, err, Ji, Je, Jo);
+            }
+
             if( calcJ )
             {
                 // see HZ: (A6.14) for details on the structure of the Jacobian
@@ -981,11 +1069,11 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
                 }
             }
 
-            double viewErr = norm(err, NORM_L2SQR);
             if( !perViewErr.empty() )
                 perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
 
-            reprojErr += viewErr;
+            reprojErr += viewCost;
+            plainErr += viewErr;
             pos += ni;
         }
 
@@ -1015,6 +1103,7 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
     }
 
     cameraCalcJErr(param, JtErr, JtJ, reprojErr);
+    reprojErr = plainErr;
 
     if (!stdDevs.empty())
     {
@@ -1027,7 +1116,8 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
         // an explanation of that denominator correction can be found here:
         // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
         // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
-        double sigma2 = norm(allErrors, NORM_L2SQR) / (2 * total - nparams_nz);
+        double sqErr = weights.active ? weightedError(weights, 0, allErrors, true) : norm(allErrors, NORM_L2SQR);
+        double sigma2 = sqErr / (nresiduals - nparams_nz);
         int j = 0;
         for ( int s = 0; s < nparams; s++ )
         {
@@ -1084,7 +1174,8 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
                                        const Mat& imagePoints, const Mat& npoints,
                                        Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
                                        Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
-                                       Mat perViewErr, int flags, const TermCriteria& termCrit )
+                                       Mat perViewErr, int flags, const TermCriteria& termCrit,
+                                       const CalibWeights& weights = CalibWeights() )
 {
     int NINTRINSIC = CALIB_NINTRINSIC;
     double reprojErr = 0;
@@ -1352,11 +1443,12 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
     Mat mask(mask_vec);
     int nparams_nz = countNonZero(mask);
 
-    if (nparams_nz >= 2 * total)
+    int nresiduals = weightedResiduals(weights, total);
+    if (nparams_nz >= nresiduals)
     {
         CV_Error_(Error::StsBadArg,
                   ("There should be less vars to optimize (having %d) than the "
-                   "number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+                   "number of residuals (%d)", nparams_nz, nresiduals));
     }
 
     // 2. initialize extrinsic parameters
@@ -1383,6 +1475,7 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
     // Compute initial error
     Mat allErrorsBuf(1, total, CV_64FC2);
     reprojErr = 0;
+    double cost = 0;
     int so = NINTRINSIC + nimages * 6;
     int pos = 0;
     for (int i = 0; i < nimages; i++)
@@ -1411,7 +1504,9 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
         subtract(_me, _mi, _me);
 
-        reprojErr += norm(_me, NORM_L2SQR);
+        double viewErr = norm(_me, NORM_L2SQR);
+        reprojErr += viewErr;
+        cost += weights.active ? weightedError(weights, pos, _me) : viewErr;
         pos += ni;
     }
 
@@ -1435,13 +1530,13 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         parallel_for_(Range(0, nimages),
                       JAccumulator(solver, matM, _m, npoints, param_m,
                                    flags, aspectRatio, NINTRINSIC,
-                                   releaseObject, maxPoints, globalMutex));
+                                   releaseObject, maxPoints, globalMutex, weights));
         jacobianAtCurrentParams = true;
         // JAccumulator acc(solver, matM, _m, npoints, param_m,
         //                         flags, aspectRatio, NINTRINSIC,
         //                         releaseObject, maxPoints, globalMutex);
         // acc(Range(0, nimages));
-        double prevErr = reprojErr;
+        double prevErr = cost;
         if (!computeStep())
         {
             recomputeFinalErrors = true;
@@ -1477,6 +1572,7 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
             }
 
             reprojErr = 0;
+            cost = 0;
             int pos_iter = 0;
             for (int i = 0; i < nimages; i++)
             {
@@ -1507,15 +1603,16 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
                     perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
                 }
                 reprojErr += viewErr;
+                cost += weights.active ? weightedError(weights, pos_iter, _me) : viewErr;
                 pos_iter += ni;
             }
 
             // Accept or reject the step
-            if (reprojErr < prevErr)
+            if (cost < prevErr)
             {
                 // Step accepted
                 solver.lambdaLg10 = std::max(solver.lambdaLg10 - 1, -16);
-                prevErr = reprojErr;
+                prevErr = cost;
 
                 // Check convergence BEFORE saving new prev_param
                 double paramChange = norm(param_m, prev_param, NORM_L2) /
@@ -1531,7 +1628,7 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
                 parallel_for_(Range(0, nimages),
                               JAccumulator(solver, matM, _m, npoints, param_m,
                                            flags, aspectRatio, NINTRINSIC,
-                                           releaseObject, maxPoints, globalMutex));
+                                           releaseObject, maxPoints, globalMutex, weights));
                 jacobianAtCurrentParams = true;
             }
             else
@@ -1653,7 +1750,7 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
             parallel_for_(Range(0, nimages),
                           JAccumulator(solver, matM, _m, npoints, param_m,
                                        flags, aspectRatio, NINTRINSIC,
-                                       releaseObject, maxPoints, globalMutex));
+                                       releaseObject, maxPoints, globalMutex, weights));
             jacobianAtCurrentParams = true;
         }
         Mat JtJ = Mat::zeros(nparams, nparams, CV_64F);
@@ -1720,9 +1817,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         completeSymm(JtJN, false);
         cv::invert(JtJN, JtJinv, DECOMP_SVD);
 
-        int nErrors = 2 * total - nparams_nz;
+        int nErrors = nresiduals - nparams_nz;
         const Mat& errorsForStats = finalErrorsBuf.empty() ? allErrorsBuf : finalErrorsBuf;
-        double sigma2 = norm(errorsForStats, NORM_L2SQR) / nErrors;
+        double sqErr = weights.active ? weightedError(weights, 0, errorsForStats, true)
+                                      : norm(errorsForStats, NORM_L2SQR);
+        double sigma2 = sqErr / nErrors;
 
         int j = 0;
         for (int s = 0; s < nparams; s++)
@@ -2894,13 +2993,14 @@ double calibrateCamera(InputArrayOfArrays _objectPoints,
                        OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
                        OutputArray stdDeviationsIntrinsics,
                        OutputArray stdDeviationsExtrinsics,
-                       OutputArray _perViewErrors, int flags, TermCriteria criteria )
+                       OutputArray _perViewErrors, int flags, TermCriteria criteria,
+                       CalibrationWeightMode weightMode, InputArrayOfArrays _weights, double lossScale )
 {
     CV_INSTRUMENT_REGION();
 
     return calibrateCameraRO(_objectPoints, _imagePoints, imageSize, -1, _cameraMatrix, _distCoeffs,
                              _rvecs, _tvecs, noArray(), stdDeviationsIntrinsics, stdDeviationsExtrinsics,
-                             noArray(), _perViewErrors, flags, criteria);
+                             noArray(), _perViewErrors, flags, criteria, weightMode, _weights, lossScale);
 }
 
 double calibrateCameraRO(InputArrayOfArrays _objectPoints,
@@ -2918,6 +3018,73 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
                              noArray(), noArray(), flags, criteria);
 }
 
+static Mat collectCalibrationWeights(InputArrayOfArrays weights, const Mat& npoints)
+{
+    int nimages = npoints.checkVector(1, CV_32S);
+    CV_CheckEQ((int)weights.total(), nimages, "weights must have one entry per view");
+    Mat w(1, (int)sum(npoints)[0], CV_64FC2);
+    for (int i = 0, pos = 0; i < nimages; i++)
+    {
+        int ni = npoints.at<int>(i);
+        Mat wi = weights.getMat(i);
+        int n = wi.checkVector(2, CV_32F);
+        if (n < 0)
+            n = wi.checkVector(2, CV_64F);
+        if (n != ni)
+            CV_Error_(Error::StsBadArg, ("weights of view #%d must be 2-channel float with one value per point", i));
+        Mat wv = w.colRange(pos, pos + ni);
+        wi.reshape(2, 1).convertTo(wv, CV_64F);
+        if (!checkRange(wv))
+            CV_Error_(Error::StsBadArg, ("weights of view #%d must be finite", i));
+        double minVal = 0;
+        minMaxLoc(wv.reshape(1), &minVal);
+        if (minVal < 0)
+            CV_Error_(Error::StsBadArg, ("weights of view #%d must be non-negative", i));
+        pos += ni;
+    }
+    return w;
+}
+
+static void dropZeroWeightPoints(Mat& objPt, Mat& imgPt, Mat& npoints, Mat& w, bool releaseObject)
+{
+    int nimages = npoints.checkVector(1, CV_32S);
+    int total = objPt.cols, nkept = 0;
+    const Vec2d* wp = w.ptr<Vec2d>();
+    std::vector<uchar> keep(total);
+    for (int i = 0, pos = 0; i < nimages; i++)
+    {
+        int ni = npoints.at<int>(i), kept = 0;
+        for (int j = pos; j < pos + ni; j++)
+        {
+            keep[j] = wp[j][0] != 0 || wp[j][1] != 0;
+            kept += keep[j];
+        }
+        if (releaseObject && kept != ni)
+            CV_Error_(Error::StsBadArg, ("view #%d has points with zero weight, which the object-releasing method does not support", i));
+        if (kept < 4)
+            CV_Error_(Error::StsBadArg, ("view #%d has fewer than 4 points with non-zero weight", i));
+        npoints.at<int>(i) = kept;
+        nkept += kept;
+        pos += ni;
+    }
+    if (nkept == total)
+        return;
+
+    Mat objKept(1, nkept, objPt.type()), imgKept(1, nkept, imgPt.type()), wKept(1, nkept, w.type());
+    for (int j = 0, k = 0; j < total; j++)
+    {
+        if (!keep[j])
+            continue;
+        objKept.at<Point3f>(k) = objPt.at<Point3f>(j);
+        imgKept.at<Point2f>(k) = imgPt.at<Point2f>(j);
+        wKept.at<Vec2d>(k) = wp[j];
+        k++;
+    }
+    objPt = objKept;
+    imgPt = imgKept;
+    w = wKept;
+}
+
 double calibrateCameraRO(InputArrayOfArrays _objectPoints,
                          InputArrayOfArrays _imagePoints,
                          Size imageSize, int iFixedPoint, InputOutputArray _cameraMatrix,
@@ -2927,7 +3094,8 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
                          OutputArray stdDeviationsIntrinsics,
                          OutputArray stdDeviationsExtrinsics,
                          OutputArray stdDeviationsObjPoints,
-                         OutputArray _perViewErrors, int flags, TermCriteria criteria )
+                         OutputArray _perViewErrors, int flags, TermCriteria criteria,
+                         CalibrationWeightMode weightMode, InputArrayOfArrays _weights, double lossScale )
 {
     CV_INSTRUMENT_REGION();
 
@@ -2990,6 +3158,27 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
                             objPt, imgPt, noArray(), npoints );
     bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints.at<int>(0) - 1;
 
+    CalibWeights weights;
+    if( weightMode == CALIB_WEIGHTED )
+    {
+        weights.active = true;
+        if( !_weights.empty() )
+        {
+            weights.w = collectCalibrationWeights(_weights, npoints);
+            dropZeroWeightPoints(objPt, imgPt, npoints, weights.w, releaseObject);
+        }
+        else
+        {
+            CV_CheckGT(lossScale, 0.0, "lossScale must be positive");
+            weights.scale = lossScale;
+        }
+    }
+    else
+    {
+        CV_CheckEQ((int)weightMode, (int)CALIB_WEIGHT_NONE, "Unknown weightMode");
+        CV_Assert( _weights.empty() && "weights are given but weightMode is CALIB_WEIGHT_NONE" );
+    }
+
     newobj_needed = newobj_needed && releaseObject;
     int np = npoints.at<int>( 0 );
     Mat newObjPt;
@@ -3021,7 +3210,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
             rvecM, tvecM,
             newObjPt,
             stdDeviationsM,
-            errorsM, flags, criteria);
+            errorsM, flags, criteria, weights);
     }
     else
     {
@@ -3031,7 +3220,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
             rvecM, tvecM,
             newObjPt,
             stdDeviationsM,
-            errorsM, flags, criteria);
+            errorsM, flags, criteria, weights);
     }
 
     if( stddev_needed )
