@@ -1851,18 +1851,23 @@ TEST_P(Imgcodecs_Tiff_compress_level, normal)
       pixel = cv::Vec3b(value, value, value);
     });
 
+    std::vector<uint8_t> bufNone;
+    std::vector<int> paramsNone = { IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_NONE};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufNone, paramsNone)));
+
     std::vector<uint8_t> bufDef;
-    std::vector<int>paramsDef = {IMWRITE_TIFF_COMPRESSION, compressMethod};
+    std::vector<int> paramsDef = {IMWRITE_TIFF_COMPRESSION, compressMethod};
     ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufDef, paramsDef)));
 
     std::vector<uint8_t> bufMin;
-    std::vector<int>paramsMin = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, minLevel};
+    std::vector<int> paramsMin = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, minLevel};
     ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMin, paramsMin)));
 
     std::vector<uint8_t> bufMax;
-    std::vector<int>paramsMax = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, maxLevel};
+    std::vector<int> paramsMax = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, maxLevel};
     ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMax, paramsMax)));
 
+    ASSERT_LT(bufDef.size(), bufNone.size());
     ASSERT_LE(bufDef.size(), bufMin.size());
     ASSERT_LE(bufMax.size(), bufDef.size());
 }
