@@ -451,15 +451,16 @@ static bool sortPoints(Point* data0,
         floatPointsToSortablePoints((Point2f*)data0, total, _sortable_points_buffer) : data0;
 
     // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
-    // else radix sort if total >= RADIX_MIN_TOTAL,
+    // else radix sort if total >= (RADIX_MIN_TOTAL * radix pass count),
     // else std::sort
     const int COUNTING_MAX_SPARSITY = 1;
-    const int RADIX_MIN_TOTAL = 64;
+    const int RADIX_MIN_TOTAL = 16; // per radix pass
     const CHullRange range = computeRange(sortable_points, total);
 
     int64 counting_range = std::min(range.rangeY(), range.rangeX());
     bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
-    bool use_radix = total >= RADIX_MIN_TOTAL;
+    const int passes_count = radixPassesCount(range.rangeY()) + radixPassesCount(range.rangeX());
+    bool use_radix = total >= RADIX_MIN_TOTAL * passes_count;
 #if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
     use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
     use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
