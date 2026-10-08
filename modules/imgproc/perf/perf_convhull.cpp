@@ -5,7 +5,6 @@
 
 namespace opencv_test { namespace {
 
-// Batch factor for TEST_CYCLE_MULTIRUN: keeps work per timed sample roughly constant (~100k point-ops) so small-n rows clear the timer floor.
 // The perf framework divides the reported time by the run count, so results stay per-call.
 static int multirun_count(int total) { return std::max(1, 100000 / total); }
 

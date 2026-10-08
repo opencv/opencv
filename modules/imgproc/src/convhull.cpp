@@ -210,10 +210,6 @@ static bool countingSortAndPrune(const Point* data,
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
-    if (total <= 0) {
-        return true;
-    }
-
     // with by_y x and y are swapped
     const auto x = [](const Point* p) { return by_y ? p->y : p->x; };
     const auto y = [](const Point* p) { return by_y ? p->x : p->y; };
@@ -240,14 +236,14 @@ static bool countingSortAndPrune(const Point* data,
             col.lo = &data[i];
         }
         else if (require_monotonic_indices && cury == y(col.lo) && !(data[i-1] == data[i])) {
-            return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
+            return false; // duplicate point (not consecutive) && require_monotonic_indices -> fallback to radix sort or std::sort
         }
 
         if (col.hi == nullptr || cury > y(col.hi)) {
             col.hi = &data[i];
         }
         else if (require_monotonic_indices && cury == y(col.hi) && !(data[i-1] == data[i])) {
-            return false; // duplicate point (not consequtive) && require_monotonic_indices -> fallback to std::sort
+            return false; // duplicate point (not consecutive) && require_monotonic_indices -> fallback to radix sort or std::sort
         }
     }
 
