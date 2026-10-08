@@ -1368,7 +1368,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            // x / (1.f + exp(-alpha * x));
             v_float32 one = vx_setall_f32(1.0f),
                       valpha = vx_setall_f32(alpha),
                       zero = vx_setzero_f32();

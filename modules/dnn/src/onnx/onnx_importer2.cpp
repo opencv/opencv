@@ -1092,11 +1092,12 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     }
     catch (const cv::Exception& e)
     {
-        raiseError();
         // An unknown op that throws before addLayer() is never recorded there, and
         // the "cannot be loaded" warning would then name no operation at all.
         if (dispatch.find(layer_type) == dispatch.end() && !LayerFactory::isLayerRegistered(layer_type))
-            missing_ops.insert(layer_type);
+            rememberMissingOp(layer_type);
+        else
+            raiseError();
         CV_LOG_INFO(NULL, "DNN/ONNX: error '" << e.what() << "' occurred when processing node '" << node_name
                     << "' (" << layer_type << ") with "
                     << node_proto.input_size() << " inputs and "

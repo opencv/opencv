@@ -512,9 +512,12 @@ static void maxPoolNchwWithIndices(const _Tp* inp, _Tp* out, int64_t* outIdx,
     int NC = N * C;
     int inHW = Hi * Wi;
     int outHW = H * W;
+    // ONNX indices flatten the whole input (batch included); storage_order picks the plane layout.
+    const int64_t idxStepY = storageOrder == 0 ? Wi : 1;
+    const int64_t idxStepX = storageOrder == 0 ? 1 : Hi;
     parallel_for_(Range(0, NC), [&](const Range& r) {
         for (int nc = r.start; nc < r.end; nc++) {
-            int c = nc % C;
+            const int64_t idxBase = (int64_t)nc * inHW;
             const _Tp* inp_nc = inp + nc * inHW;
             _Tp*       out_nc = out + nc * outHW;
             int64_t*   idx_nc = outIdx + nc * outHW;
@@ -533,16 +536,13 @@ static void maxPoolNchwWithIndices(const _Tp* inp, _Tp* out, int64_t* outIdx,
                             _Tp v = inp_nc[yi * Wi + xi];
                             if (v > vmax) {
                                 vmax = v;
-                                // row major: (c*Hi + yi)*Wi + xi; column major: c*Hi*Wi + xi*Hi + yi
-                                idxmax = (int64_t)c * Hi * Wi +
-                                         (storageOrder == 0 ? (int64_t)yi * Wi + xi
-                                                            : (int64_t)xi * Hi + yi);
+                                idxmax = idxBase + yi * idxStepY + xi * idxStepX;
                             }
                         }
                     }
                     if (idxmax < 0) {
                         vmax = (_Tp)0;
-                        idxmax = (int64_t)c * Hi * Wi;
+                        idxmax = idxBase;
                     }
                     out_nc[yo * W + xo] = vmax;
                     idx_nc[yo * W + xo] = idxmax;
