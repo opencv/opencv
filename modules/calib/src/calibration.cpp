@@ -120,27 +120,27 @@ public:
 
     void reset()
     {
-        U.setTo(0);
-        ea.setTo(0);
+        U.setZero();
+        ea.setZero();
         currentError = 0;
         for (int i = 0; i < nimages; i++)
         {
-            V[i].setTo(0);
-            W[i].setTo(0);
-            eb[i].setTo(0);
+            V[i].setZero();
+            W[i].setZero();
+            eb[i].setZero();
         }
     }
 
     void reduceGlobal()
     {
-        U.setTo(0);
-        ea.setTo(0);
-        currentError = 0;
-        for (int p = 0; p < nparts; p++)
+        U_part[0].copyTo(U);
+        ea_part[0].copyTo(ea);
+        for (int p = 1; p < nparts; p++)
         {
             U += U_part[p];
             ea += ea_part[p];
         }
+        currentError = 0;
         for (int i = 0; i < nimages; i++)
             currentError += error_img[i];
     }
@@ -238,7 +238,7 @@ public:
         }
 
         // Distribute the solution into the full update vector
-        deltaGlobal.setTo(0);
+        deltaGlobal.setZero();
         int j = 0;
         for (int i = 0; i < n_global; i++)
         {
@@ -328,9 +328,9 @@ public:
 private:
     void clearUpdates()
     {
-        deltaGlobal.setTo(0);
+        deltaGlobal.setZero();
         for (int i = 0; i < nimages; i++)
-            deltaLocal[i].setTo(0);
+            deltaLocal[i].setZero();
     }
 
     int iters;
@@ -377,8 +377,8 @@ public:
         int iend = range.end * nimages_total / nparts;
         for (int p = range.start; p < range.end; p++)
         {
-            solver.U_part[p].setTo(0);
-            solver.ea_part[p].setTo(0);
+            solver.U_part[p].setZero();
+            solver.ea_part[p].setZero();
         }
 
         int pos = 0;
@@ -406,14 +406,14 @@ public:
 
             // Buffers for derivatives
             cv::Mat Ji = JiBuf.rowRange(0, ni * 2);
-            Ji.setTo(0);
+            Ji.setZero();
             cv::Mat Je = JeBuf.rowRange(0, ni * 2);
-            Je.setTo(0);
+            Je.setZero();
             cv::Mat Jo;
             if (releaseObject)
             {
                 Jo = JoBuf.rowRange(0, ni * 2).colRange(0, ni * 3);
-                Jo.setTo(0);
+                Jo.setZero();
             }
             cv::Mat err = errBuf.rowRange(0, ni * 2);
             cv::Mat _mp = err.reshape(2, 1);

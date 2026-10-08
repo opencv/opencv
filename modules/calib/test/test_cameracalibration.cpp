@@ -2234,21 +2234,18 @@ TEST(Calib_CalibrateCamera, deterministic_across_threads)
     const int savedThreads = cv::getNumThreads();
     for (bool releaseObject : {false, true})
     {
+        const int iFixedPoint = releaseObject ? 8 : -1;
         cv::Mat reference;
-        for (int threads : {1, 4, cv::getNumberOfCPUs()})
+        for (int threads : {1, 8})
         {
             cv::setNumThreads(threads);
             for (int k = 0; k < 2; k++)
             {
                 cv::Mat K, D, stdIntr, stdExtr, perViewErr, newObj, stdObj;
                 std::vector<cv::Mat> rvecs, tvecs;
-                if (releaseObject)
-                    cv::calibrateCameraRO(objectPoints, imagePoints, cv::Size(1280, 720), 8,
-                                          K, D, rvecs, tvecs, newObj,
-                                          stdIntr, stdExtr, stdObj, perViewErr);
-                else
-                    cv::calibrateCamera(objectPoints, imagePoints, cv::Size(1280, 720),
-                                        K, D, rvecs, tvecs, stdIntr, stdExtr, perViewErr);
+                cv::calibrateCameraRO(objectPoints, imagePoints, cv::Size(1280, 720), iFixedPoint,
+                                      K, D, rvecs, tvecs, newObj,
+                                      stdIntr, stdExtr, stdObj, perViewErr);
 
                 std::vector<cv::Mat> parts = { K.reshape(1, 1), D.reshape(1, 1),
                                                stdIntr.reshape(1, 1), stdExtr.reshape(1, 1) };
