@@ -32,7 +32,7 @@ CV_EXPORTS Mat NormalizePixels(const Mat& imagePoints, const IntrinsicParams& pa
 
 CV_EXPORTS bool isNormalMatrixSingular(const Mat& JJ2, int numberOfIntrinsics);
 
-CV_EXPORTS void InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
+CV_EXPORTS bool InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk);
 
 void CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                          const IntrinsicParams& param, const int check_cond,

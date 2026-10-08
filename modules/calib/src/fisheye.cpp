@@ -182,6 +182,10 @@ private:
     internal::IntrinsicParams params_;
 };
 
+const int fisheyeCalibrateFlags = CALIB_USE_INTRINSIC_GUESS | CALIB_RECOMPUTE_EXTRINSIC | CALIB_CHECK_COND |
+                                  CALIB_FIX_SKEW | CALIB_FIX_K1 | CALIB_FIX_K2 | CALIB_FIX_K3 | CALIB_FIX_K4 |
+                                  CALIB_FIX_PRINCIPAL_POINT | CALIB_FIX_FOCAL_LENGTH;
+
 }}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,6 +206,10 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     CV_Assert(tvecs.empty() || (tvecs.channels() == 3));
 
     CV_Assert((!K.empty() && !D.empty()) || !(flags & CALIB_USE_INTRINSIC_GUESS));
+    if (flags & ~fisheyeCalibrateFlags)
+        CV_Error_(cv::Error::StsBadArg, ("Unsupported fisheye flags 0x%x. Fisheye flags use the unified cv::CALIB_* values "
+                                         "since OpenCV 5.0; numeric flags saved from OpenCV 4.x must be converted",
+                                         flags & ~fisheyeCalibrateFlags));
 
     using namespace cv::internal;
     //-------------------------------Initialization
@@ -403,12 +411,16 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     CV_Assert(D2.empty() || (D2.total() == 4));
 
     CV_Assert((!K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
+    if (flags & ~(fisheyeCalibrateFlags | CALIB_FIX_INTRINSIC))
+        CV_Error_(cv::Error::StsBadArg, ("Unsupported fisheye flags 0x%x. Fisheye flags use the unified cv::CALIB_* values "
+                                         "since OpenCV 5.0; numeric flags saved from OpenCV 4.x must be converted",
+                                         flags & ~(fisheyeCalibrateFlags | CALIB_FIX_INTRINSIC)));
 
     //-------------------------------Initialization
 
     const int threshold = 50;
     const double thresh_cond = 1e6;
-    const int check_cond = 1;
+    const int check_cond = flags & CALIB_CHECK_COND ? 1 : 0;
 
     int n_points = (int)objectPoints.getMat(0).total();
     int n_images = (int)objectPoints.total();
@@ -906,7 +918,7 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
     return undistorted;
 }
 
-void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
+bool cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
@@ -957,11 +969,13 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     H = H / sc;
     Mat u1 = H.col(0).clone();
     double norm_u1 = norm(u1);
-    CV_Assert(fabs(norm_u1) > 0);
+    if (!(norm_u1 > 0))
+        return false;
     u1  = u1 / norm_u1;
     Mat u2 = H.col(1).clone() - u1.dot(H.col(1).clone()) * u1;
     double norm_u2 = norm(u2);
-    CV_Assert(fabs(norm_u2) > 0);
+    if (!(norm_u2 > 0))
+        return false;
     u2 = u2 / norm_u2;
     Mat u3 = u1.cross(u2);
     Mat RRR;
@@ -973,6 +987,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Tckk = Tckk + Rckk * T;
     Rckk = Rckk * R;
     Rodrigues(Rckk, omckk);
+    return true;
 }
 
 void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
@@ -999,14 +1014,15 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         bool imT = image.rows < image.cols;
         bool obT = object.rows < object.cols;
 
-        InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
+        if (!InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk))
+            CV_Error(cv::Error::StsBadArg, format("Cannot compute the initial pose for input array %d: the view is degenerate", image_idx));
 
         ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param);
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
             if(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) > thresh_cond )
-                CV_Error( cv::Error::StsInternal, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
+                CV_Error( cv::Error::StsBadArg, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
         }
         omckk.reshape(3,1).copyTo(omc.getMat().col(image_idx));
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));
@@ -1066,7 +1082,8 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         {
             Mat JJ_kk = B.t();
             SVD svd(JJ_kk, SVD::NO_UV);
-            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+            if (!(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond))
+                CV_Error(cv::Error::StsBadArg, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d", image_idx));
         }
     }
 
