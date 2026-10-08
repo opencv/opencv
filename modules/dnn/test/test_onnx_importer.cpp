@@ -184,6 +184,10 @@ public:
 
         if (useSoftmax)
         {
+            // An fp16 model hands back an fp16 blob; the Softmax net below is float-only.
+            if (out.depth() == CV_16F || out.depth() == CV_16BF)
+                out.convertTo(out, CV_32F);
+
             LayerParams lp;
             Net netSoftmax;
             netSoftmax.addLayerToPrev("softmaxLayer", "Softmax", lp);
@@ -3061,6 +3065,13 @@ void yoloPostProcessing(
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
+
+    // An fp16 model hands back fp16 blobs; everything below reads them as float.
+    for (Mat& out : outs)
+    {
+        if (out.depth() == CV_16F || out.depth() == CV_16BF)
+            out.convertTo(out, CV_32F);
+    }
 
     if (model_name == "yolov8" || model_name == "yolov10" ||
         model_name == "yolov9")
