@@ -1727,16 +1727,22 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             case IMWRITE_TIFF_COMPRESSION_LZMA:
                 #ifdef TIFFTAG_LZMAPRESET // libtiff 4.0.0+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_LZMAPRESET, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The LZMA compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
                 #endif
                 break;
             case IMWRITE_TIFF_COMPRESSION_ZSTD:
                 #ifdef TIFFTAG_ZSTD_LEVEL // libtiff 4.0.10+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The ZSTD compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
                 #endif
                 break;
             case IMWRITE_TIFF_COMPRESSION_WEBP:
                 #ifdef TIFFTAG_WEBP_LEVEL // libtiff 4.0.10+
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_WEBP_LEVEL, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The WEBP compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
                 #endif
                 break;
             default:
