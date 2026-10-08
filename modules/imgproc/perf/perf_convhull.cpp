@@ -16,7 +16,7 @@ typedef TestBaseWithParam<ConvHullParams> ConvexHullPerfTest;
 PERF_TEST_P(ConvexHullPerfTest, convexHull,
     testing::Combine(
         testing::Values(16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 50000),  // total points
-        testing::Values(100, 1000, 10000, 100000)       // box side; sparsity = side / total
+        testing::Values(100, 1000, 10000)                                                         // box side; sparsity = side / total
     ))
 {
     const int total = get<0>(GetParam());
@@ -39,29 +39,41 @@ PERF_TEST_P(ConvexHullPerfTest, convexHull,
     SANITY_CHECK_NOTHING();
 }
 
-// a noisy closed contour (simulate output of findContours), points ordered along the boundary.
-typedef TestBaseWithParam<int> ConvexHullContourPerfTest;
+// a noisy closed contour (simulate output of findContours), points ordered along the boundary,
+// a different input on every call. (points count, step between neighbour points)
+typedef tuple<int, int> ConvHullContourParams;
+typedef TestBaseWithParam<ConvHullContourParams> ConvexHullContourPerfTest;
 
 PERF_TEST_P(ConvexHullContourPerfTest, convexHull,
-    testing::Values(100, 300, 1000, 10000, 50000))   // contour points
+    testing::Combine(
+        testing::Values(16, 32, 64, 100, 300, 1000, 10000, 50000),  // contour points
+        testing::Values(1, 2, 4, 8, 16)                 // ~pixels between neighbour points; sparsity ~ 0.35 * step
+    ))
 {
-    const int total = GetParam();
+    const int total = get<0>(GetParam());
+    const int step  = get<1>(GetParam());
+    const int runs  = multirun_count(total);
 
-    // polar form r(theta) = R * (1 + noise); R ~ total/(2*pi)
-    const double R = total / (2.0 * CV_PI);
+    // polar form r(theta) = R * (1 + noise); R ~ step*total/(2*pi)
+    const double R = step * total / (2.0 * CV_PI);
     const double scaleY = 1.25;   // ellipse, taller than wide with any noise
 
     RNG rng(0x12345678);      // fixed seed => identical input for both cases - bucketsort / std::sort
-    std::vector<Point> points(total);
-    for (int i = 0; i < total; ++i)
-    {
-        const double theta = 2.0 * CV_PI * i / total;
-        const double r = R * rng.uniform(0.9, 1.1);   // +-10% radial noise
-        points[i] = Point(cvRound(r * std::cos(theta)), cvRound(scaleY * r * std::sin(theta)));
-    }
+    std::vector<std::vector<Point> > inputs(runs, std::vector<Point>(total));
+    for (int k = 0; k < runs; ++k)
+        for (int i = 0; i < total; ++i)
+        {
+            const double theta = 2.0 * CV_PI * i / total;
+            const double r = R * rng.uniform(0.9, 1.1);   // +-10% radial noise
+            inputs[k][i] = Point(cvRound(r * std::cos(theta)), cvRound(scaleY * r * std::sin(theta)));
+        }
 
     std::vector<Point> hull_pts;
-    TEST_CYCLE_MULTIRUN(multirun_count(total)) convexHull(points, hull_pts, false /*clockwise*/, true /*returnPoints*/);
+    declare.runs(runs);
+    PERF_SAMPLE_BEGIN()
+        for (int k = 0; k < runs; ++k)
+            convexHull(inputs[k], hull_pts, false /*clockwise*/, true /*returnPoints*/);
+    PERF_SAMPLE_END()
 
     SANITY_CHECK_NOTHING();
 }
