@@ -169,6 +169,7 @@ public:
         blobParams.datalayout = DNN_LAYOUT_NCHW;
         blobParams.paddingmode = DNN_PMODE_LETTERBOX;
         blobParams.borderValue = Scalar();
+        blobParams.interpolation = cv::INTER_LINEAR_EXACT;
         blobFromImageWithParams(gray, blob, blobParams);
         net_.setInput(blob);
 

@@ -14,6 +14,36 @@
 
 namespace opencv_test { namespace {
 
+// DISK keeps its top-N keypoints in response order, picked with an unstable
+// partial_sort, so neither the reference nor the detector output has a
+// reproducible row order. Compare both sides in one canonical order instead:
+// keypoint position, x then y. Responses make a poor key here, because engines
+// can disagree on them by more than the gaps between neighbouring responses,
+// while distinct keypoints sit on distinct pixels.
+static std::vector<int> positionOrder(const std::vector<Point2f>& points)
+{
+    std::vector<int> order(points.size());
+    for (size_t i = 0; i < order.size(); ++i)
+        order[i] = static_cast<int>(i);
+    std::sort(order.begin(), order.end(), [&points](int a, int b)
+    {
+        if (points[a].x != points[b].x)
+            return points[a].x < points[b].x;
+        return points[a].y < points[b].y;
+    });
+    return order;
+}
+
+static Mat permuteRows(const Mat& rows, const std::vector<int>& order)
+{
+    CV_Assert(rows.rows == static_cast<int>(order.size()));
+
+    Mat permuted(rows.size(), rows.type());
+    for (size_t i = 0; i < order.size(); ++i)
+        rows.row(order[i]).copyTo(permuted.row(static_cast<int>(i)));
+    return permuted;
+}
+
 static void testDiskRegression(const Size& imageSize, const std::string& tag)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
@@ -46,21 +76,44 @@ static void testDiskRegression(const Size& imageSize, const std::string& tag)
     ASSERT_EQ(descriptors.rows, n);
     ASSERT_EQ(descriptors.cols, refDesc.cols);
     ASSERT_EQ(descriptors.type(), CV_32F);
+    ASSERT_EQ(refDesc.rows, n);
 
-    Mat pos(n, 2, CV_32F), resp(n, 1, CV_32F);
+    // Put both sides into the canonical order before comparing them row by row
+    std::vector<Point2f> refPoints(n), points(n);
     for (int i = 0; i < n; ++i)
     {
-        pos.at<float>(i, 0) = keypoints[i].pt.x;
-        pos.at<float>(i, 1) = keypoints[i].pt.y;
-        resp.at<float>(i, 0) = keypoints[i].response;
+        refPoints[i] = Point2f(refKpts.at<float>(i, 0), refKpts.at<float>(i, 1));
+        points[i] = keypoints[i].pt;
     }
 
-    EXPECT_LE(cvtest::norm(pos, refKpts.colRange(0, 2), NORM_INF), 1e-3)
-        << "keypoint positions differ (" << tag << ")";
-    EXPECT_LE(cvtest::norm(resp, refKpts.col(2), NORM_INF), 0.1)
-        << "keypoint responses differ (" << tag << ")";
-    EXPECT_LE(cvtest::norm(descriptors, refDesc, NORM_INF), 1e-2)
-        << "descriptors differ (" << tag << ")";
+    const std::vector<int> refOrder = positionOrder(refPoints);
+    refKpts = permuteRows(refKpts, refOrder);
+    refDesc = permuteRows(refDesc, refOrder);
+
+    const std::vector<int> order = positionOrder(points);
+    descriptors = permuteRows(descriptors, order);
+    std::vector<KeyPoint> sortedKeypoints(n);
+    for (int i = 0; i < n; ++i)
+        sortedKeypoints[i] = keypoints[order[i]];
+    keypoints.swap(sortedKeypoints);
+
+    for (int i = 0; i < n; ++i)
+    {
+        float refX = refKpts.at<float>(i, 0);
+        float refY = refKpts.at<float>(i, 1);
+        float refScore = refKpts.at<float>(i, 2);
+        EXPECT_NEAR(keypoints[i].pt.x, refX, 1e-4) << "Keypoint " << i << " x mismatch";
+        EXPECT_NEAR(keypoints[i].pt.y, refY, 1e-4) << "Keypoint " << i << " y mismatch";
+        EXPECT_NEAR(keypoints[i].response, refScore, 1e-4) << "Keypoint " << i << " score mismatch";;
+    }
+
+    // Compare descriptors row by row
+    for (int i = 0; i < refDesc.rows; i++)
+    {
+        Mat diff = descriptors.row(i) - refDesc.row(i);
+        double maxDiff = cv::norm(diff, cv::NORM_INF);
+        EXPECT_LT(maxDiff, 1e-5) << "Descriptor " << i << " mismatch (max diff=" << maxDiff << ")";
+    }
 }
 
 TEST(Features2d_DISK, regression_default)
