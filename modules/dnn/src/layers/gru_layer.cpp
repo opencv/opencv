@@ -6,6 +6,8 @@
 namespace cv {
 namespace dnn {
 
+using recurrent::clipToThreshold;
+using recurrent::holdFinishedRows;
 using recurrent::sigmoid;
 using recurrent::tanh;
 
@@ -36,17 +38,22 @@ class GRULayerImpl CV_FINAL : public GRULayer
     int numTimeStamps, numSamples;
     layout_t layout;
     MatShape outTailShape;
-    bool bidirectional;
+    bool reverse;        // If true, go in negative direction along the time axis
+    bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     bool linearBeforeReset;
+    float clipValue;     // Bound the input of the activations to [-clipValue, clipValue] when > 0
 
 public:
     GRULayerImpl(const LayerParams& params) : numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
 
-        bidirectional = params.get<String>("direction", "forward") == "bidirectional";
+        const String direction = params.get<String>("direction", "forward");
+        bidirectional = (direction == "bidirectional");
+        reverse = (direction == "reverse");
         linearBeforeReset = params.get<int>("linear_before_reset", 0) != 0;
         layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
+        clipValue = params.get<float>("clip", 0.f);
 
         // forward() hardcodes f=Sigmoid, g=Tanh; reject anything else rather than miscompute.
         DictValue acts = params.get<DictValue>("activations", DictValue(String()));
@@ -104,6 +111,9 @@ public:
             _numOut = R_shape[2];
             CV_Assert(W_shape[0] == R_shape[0] && W_shape[1] == R_shape[1] && W_shape[1] == 3 * _numOut);
             bidir = (W_shape[0] > 1);
+            // direction=reverse with two-direction weights is rejected here, not in forward().
+            CV_CheckFalse(reverse && bidir,
+                          "GRU: direction=reverse is incompatible with two-direction weights");
         }
         else
         {
@@ -158,22 +168,13 @@ public:
         }
         yhShape.push_back(_numOut);                                   // hidden
 
-        bool needY, needYh;
-        resolveOutputPolicy(requiredOutputs, needY, needYh);
-        if (!runtimeWeights)
-        {
-            needY = true;
-            needYh = false;
-        }
-
         const int outCount = std::max(requiredOutputs, 1);
         outputs.assign(outCount, MatShape());
         const bool legacyPackedY = !runtimeWeights;
-        if (outCount == 1)
-            outputs[0] = needY ? (legacyPackedY ? outResShapeLegacy : outResShape) : yhShape;
-        else
+        // Slot #0 is Y, slot #1 is Y_h; a lone declared output can only mean Y.
+        outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
+        if (outCount >= 2)
         {
-            outputs[0] = legacyPackedY ? outResShapeLegacy : outResShape; // slot #0 -> Y
             outputs[1] = yhShape;     // slot #1 -> Y_h
             for (int i = 2; i < outCount; ++i)
                 outputs[i] = yhShape;
@@ -219,6 +220,16 @@ public:
         const bool legacyDirectMode = (input.size() == 1);
         const bool useLinearBeforeReset = linearBeforeReset || legacyDirectMode;
 
+        // ONNX sequence_lens (input #4): a row stops at its own length and keeps its state.
+        Mat seqLens;
+        if (input.size() > 4 && !input[4].empty())
+        {
+            input[4].convertTo(seqLens, CV_32S);
+            CV_CheckEQ((int)seqLens.total(), numSamples, "GRU: sequence_lens must have one entry per sample");
+        }
+        // State before the current step; only used with sequence_lens.
+        Mat hPrev;
+
         Mat sequence_input = input[0];
         Mat sequence_input_time_major = sequence_input;
         if (layout == BATCH_SEQ_HID)
@@ -227,47 +238,14 @@ public:
         }
 
         const int numDirs = 1 + static_cast<int>(bidirectional);
-        const int numOutGlobal = blobs[0].size[1];
-        int yIndex = -1, yhIndex = -1;
-        for (int oi = 0; oi < (int)output.size(); ++oi)
-        {
-            if (yIndex < 0 && (isYShape3D(output[oi], numDirs, numOutGlobal) || isYShape4D(output[oi], numDirs, numOutGlobal)))
-                yIndex = oi;
-            if (yhIndex < 0 && isYhShape(output[oi], numDirs, numOutGlobal))
-                yhIndex = oi;
-        }
-        bool writeY = false;
-        bool writeYh = false;
-        {
-            const size_t nOut = output.size();
-            if (nOut == 0)
-            {
-                writeY = false;
-                writeYh = false;
-            }
-            else if (nOut == 1)
-            {
-                const bool hasY = (yIndex >= 0);
-                const bool hasYh = (yhIndex >= 0);
-                writeY = hasY && !hasYh;
-                writeYh = !writeY;
-            }
-            else
-            {
-                writeY = true;
-                writeYh = true;
-            }
-        }
 
-        if (!writeY) yIndex = -1;
-        if (!writeYh) yhIndex = -1;
-
-        Mat y = (yIndex >= 0) ? output[yIndex] : Mat();
+        // Outputs are positional, as in getMemoryShapes(): slot #0 is Y, slot #1 is Y_h.
+        Mat y = output.empty() ? Mat() : output[0];
         Mat y3d2d;
         if (!y.empty() && y.dims == 3)
             y3d2d = y.reshape(1, numTimeStamps * numSamples);
 
-        Mat yh = (yhIndex >= 0) ? output[yhIndex] : Mat();
+        Mat yh = (output.size() > 1) ? output[1] : Mat();
         Mat xTs = sequence_input_time_major.reshape(1, numTimeStamps * numSamples);
 
         for (int i = 0; i < numDirs; ++i)
@@ -319,8 +297,9 @@ public:
             gemm(xTs, wx_n, 1, xProj_n, 0, xProj_n, GEMM_2_T);
             gemm(dummyOnesAll, b_in, 1, xProj_n, 1, xProj_n);
 
+            // reverse (or the 2nd bidirectional direction) walks the sequence backwards.
             int tsStart, tsEnd, tsInc;
-            if (i == 1) {
+            if (reverse || i == 1) {
                 tsStart = numTimeStamps - 1;
                 tsEnd = -1;
                 tsInc = -1;
@@ -333,6 +312,8 @@ public:
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
                 Range curRowRange(ts * numSamples, (ts + 1) * numSamples);
+                if (!seqLens.empty())
+                    hInternal.copyTo(hPrev);
 
                 // Use precomputed input projection for this timestep
                 Mat xCurrProj_rz = xProj_rz.rowRange(curRowRange);
@@ -340,6 +321,7 @@ public:
 
                 xCurrProj_rz.copyTo(gates);                                // x * Wx_rz + b_rz (precomputed)
                 gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);     // + h_(t-1) * Wh_rz
+                clipToThreshold(gates, clipValue);                         // -clip <= ... <= clip
                 sigmoid(gates, gates);                                     // sigmoid()
 
                 Mat z = gates.colRange(0, gates.cols / 2);
@@ -361,6 +343,7 @@ public:
                     add(n_t, xCurrProj_n, n_t);                            // + x * Wx_n + b_in (precomputed)
                     gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                // + b_hn
                 }
+                clipToThreshold(n_t, clipValue);                           // -clip <= ... <= clip
                 tanh(n_t, n_t);                                            // tanh()
 
                 // h_t = z (*) h_(t-1) + (1 - z) (*) n_t  (fused single-pass)
@@ -369,7 +352,10 @@ public:
                 else
                     gruComputeH<double>(z, n_t, hInternal);
 
-                writeYStep(y, y3d2d, ts, i, numOut, hInternal);
+                if (!seqLens.empty())
+                    holdFinishedRows(seqLens, ts, hPrev, hInternal);
+
+                writeYStep(y, y3d2d, ts, i, numOut, hInternal, seqLens);
             }
 
             writeYhDir(yh, i, numDirs, hInternal);
@@ -381,25 +367,6 @@ private:
     static bool hasRuntimeWeights(const std::vector<T>& in)
     {
         return in.size() >= 3 && !in[1].empty() && !in[2].empty();
-    }
-
-    void resolveOutputPolicy(int requiredOutputs, bool& needY, bool& needYh) const
-    {
-        if (requiredOutputs == 0)
-        {
-            needY = true;
-            needYh = false;
-        }
-        else if (requiredOutputs == 1)
-        {
-            needY = false;
-            needYh = true;
-        }
-        else
-        {
-            needY = true;
-            needYh = true;
-        }
     }
 
     void prepareRuntimeState(const std::vector<Mat>& input)
@@ -418,6 +385,9 @@ private:
             const int num_directions = W_orig.size[0];
             numOut = R_orig.size[2];
             numInp = W_orig.size[2];
+            CV_CheckGE(num_directions, 1, "GRU: num_directions must be 1 or 2");
+            CV_CheckLE(num_directions, 2, "GRU: num_directions must be 1 or 2");
+            // Rejected in getMemoryShapes() when reverse and two-direction weights meet.
             bidirectional = (num_directions > 1);
 
             blobs.resize(4);
@@ -496,56 +466,44 @@ private:
         CV_CheckEQ(h0.cols, expectedCols, "Initial hidden state blob has incorrect dimensions");
     }
 
-    bool isYhShape(const Mat& m, int numDirs, int numOutGlobal) const
-    {
-        if (layout == BATCH_SEQ_HID)
-            return m.dims == 3 && m.size[0] == numSamples && m.size[1] == numDirs && m.size[2] == numOutGlobal;
-        return m.dims == 3 && m.size[0] == numDirs && m.size[1] == numSamples && m.size[2] == numOutGlobal;
-    }
-
-    bool isYShape3D(const Mat& m, int numDirs, int numOutGlobal) const
-    {
-        if (layout == BATCH_SEQ_HID)
-            return m.dims == 3 && m.size[0] == numSamples && m.size[1] == numTimeStamps &&
-                   m.size[2] == numOutGlobal * numDirs;
-        return m.dims == 3 && m.size[0] == numTimeStamps && m.size[1] == numSamples &&
-               m.size[2] == numOutGlobal * numDirs;
-    }
-
-    bool isYShape4D(const Mat& m, int numDirs, int numOutGlobal) const
-    {
-        if (layout == BATCH_SEQ_HID)
-            return m.dims == 4 && m.size[0] == numSamples && m.size[1] == numTimeStamps &&
-                   m.size[2] == numDirs && m.size[3] == numOutGlobal;
-        return m.dims == 4 && m.size[0] == numTimeStamps && m.size[1] == numDirs &&
-               m.size[2] == numSamples && m.size[3] == numOutGlobal;
-    }
-
-    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState) const
+    void writeYStep(Mat& y, Mat& y3d2d, int ts, int dir, int numOut, const Mat& hState,
+                    const Mat& seqLens = Mat()) const
     {
         if (y.empty())
             return;
 
+        Mat ySlice2d;
         if (y.dims == 3)
         {
             CV_CheckLE((dir + 1) * numOut, y3d2d.cols, "Invalid Y shape for current direction");
-            Mat yRow = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
-                         .colRange(dir * numOut, (dir + 1) * numOut);
-            hState.copyTo(yRow);
-            return;
+            ySlice2d = y3d2d.rowRange(ts * numSamples, (ts + 1) * numSamples)
+                            .colRange(dir * numOut, (dir + 1) * numOut);
         }
-
-        if (layout == BATCH_SEQ_HID)
+        else if (layout == BATCH_SEQ_HID)
         {
             Range ranges[4] = { Range::all(), Range(ts, ts + 1), Range(dir, dir + 1), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
-            hState.copyTo(ySlice2d);
+            ySlice2d = y(ranges).reshape(1, numSamples);
         }
         else
         {
             Range ranges[4] = { Range(ts, ts + 1), Range(dir, dir + 1), Range::all(), Range::all() };
-            Mat ySlice2d = y(ranges).reshape(1, numSamples);
+            ySlice2d = y(ranges).reshape(1, numSamples);
+        }
+
+        if (seqLens.empty())
+        {
             hState.copyTo(ySlice2d);
+            return;
+        }
+
+        // Past its sequence length a sample contributes zeros to Y.
+        const int* lens = seqLens.ptr<int>();
+        for (int n = 0; n < numSamples; n++)
+        {
+            if (ts < lens[n])
+                hState.row(n).copyTo(ySlice2d.row(n));
+            else
+                ySlice2d.row(n).setTo(0);
         }
     }
 

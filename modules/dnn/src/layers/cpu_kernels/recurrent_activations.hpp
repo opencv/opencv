@@ -86,6 +86,24 @@ inline void sigmoid(const Mat &src, Mat &dst)
         [](float x) { return 1.f / (1.f + std::exp(-x)); });
 }
 
+// ONNX `clip`: bounds the activation input (not its output) to [-clip, clip]; off if clip <= 0.
+inline void clipToThreshold(Mat &m, float clip)
+{
+    if (clip <= 0.f)
+        return;
+    cv::min(m, clip, m);
+    cv::max(m, -clip, m);
+}
+
+// A sample past its sequence length keeps the state it finished with; `seqLens` is [N] CV_32S.
+inline void holdFinishedRows(const Mat &seqLens, int ts, const Mat &hPrev, Mat &h)
+{
+    const int* lens = seqLens.ptr<int>();
+    for (int n = 0; n < h.rows; n++)
+        if (ts >= lens[n])
+            hPrev.row(n).copyTo(h.row(n));
+}
+
 }}} // namespace cv::dnn::recurrent
 
 #endif
