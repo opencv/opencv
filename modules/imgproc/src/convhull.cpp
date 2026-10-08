@@ -496,6 +496,9 @@ static bool sortPoints(Point* data0,
         return false;
     }
 
+    for( int i = 0; i < total; i++ )
+        pointer[i] = &data0[i];
+
     if( !is_float )
     {
         std::sort(pointer, pointer + total, CHullCmpPoints<int>());
@@ -553,9 +556,6 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     int* hullbuf = _hullbuf.data();
 
     CV_Assert(points.isContinuous());
-
-    for( i = 0; i < total; i++ )
-        pointer[i] = &data0[i];
 
     // sort the point set by x or by y, find min and max of the other coordinate
     bool by_y = chull_sort::sortPoints(data0, is_float, !returnPoints,
