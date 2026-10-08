@@ -769,7 +769,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         CV_CheckGE(dim, -_src.dims(), "reduce: dim is out of range");
         CV_CheckLT(dim, _src.dims(), "reduce: dim is out of range");
-        reduceND(_src, _dst, std::vector<int>{dim}, op, true, dtype < 0 && _dst.fixedType() ? _dst.depth() : dtype);
+        cv::reduce(_src, _dst, cv::ReduceParams(op, {dim}, true, dtype < 0 && _dst.fixedType() ? _dst.depth() : dtype));
         return;
     }
     int op0 = op;

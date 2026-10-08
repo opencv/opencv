@@ -11,10 +11,10 @@ using namespace perf;
 
 CV_ENUM(ReduceNDOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_L2, REDUCE_LOG_SUM_EXP)
 
-typedef tuple<std::vector<int>, std::vector<int>, ReduceNDOp, perf::MatType> ReduceNDParams;
-typedef TestBaseWithParam<ReduceNDParams> ReduceNDPerf;
+typedef tuple<std::vector<int>, std::vector<int>, ReduceNDOp, perf::MatType> ReduceNDPerfParams;
+typedef TestBaseWithParam<ReduceNDPerfParams> ReduceNDPerf;
 
-PERF_TEST_P_(ReduceNDPerf, reduceND)
+PERF_TEST_P_(ReduceNDPerf, reduce)
 {
     const std::vector<int> shape = get<0>(GetParam()), axes = get<1>(GetParam());
     const int op = get<2>(GetParam()), type = get<3>(GetParam());
@@ -23,9 +23,10 @@ PERF_TEST_P_(ReduceNDPerf, reduceND)
     randu(bytes, 0, 100);   // declare.in() only handles 2D arrays
     if (CV_MAT_DEPTH(type) == CV_32F)
         randu(Mat(1, (int)src.total(), CV_32F, src.data), -1, 1);
-    cv::reduceND(src, dst, axes, op);
+    const ReduceParams params(op, axes);
+    cv::reduce(src, dst, params);
 
-    TEST_CYCLE() cv::reduceND(src, dst, axes, op);
+    TEST_CYCLE() cv::reduce(src, dst, params);
 
     SANITY_CHECK_NOTHING();
 }

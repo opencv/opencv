@@ -56,7 +56,7 @@ template<typename F> static void forEachIndex(const std::vector<int>& shape, F f
     }
 }
 
-// Naive reference in double, with keepdims layout; returns a CV_64F array with src.channels() channels.
+// Naive reference in double: a CV_64F array in the keepdims layout, src.channels() channels.
 static Mat refReduce(const Mat& src, const std::vector<bool>& reduced, int op)
 {
     const int dims = src.dims, cn = src.channels();
@@ -226,7 +226,7 @@ TEST(Core_ReduceND, random)
         const int ddepth = rng.uniform(0, 3) == 0 ? (rng.uniform(0, 2) ? CV_32F : CV_64F) : depth;
 
         Mat dst;
-        cv::reduceND(src, dst, axes, op, keepdims, ddepth == depth ? -1 : ddepth);
+        cv::reduce(src, dst, ReduceParams(op, axes, keepdims, ddepth == depth ? -1 : ddepth));
         std::string info = cv::format("iter %d: %s %s cn=%d op=%d axes=%s keepdims=%d ddepth=%d%s", iter,
                                       typeToString(depth).c_str(), MatShape(shape).str().c_str(), cn, op,
                                       MatShape(axes).str().c_str(), (int)keepdims, ddepth,
@@ -254,7 +254,7 @@ TEST_P(Core_ReduceND_Large, accuracy)
         std::vector<bool> reduced(shape.size(), axes.empty());
         for (int a : axes) reduced[a] = true;
         Mat dst;
-        cv::reduceND(src, dst, axes, op, true, CV_64F);
+        cv::reduce(src, dst, ReduceParams(op, axes, true, CV_64F));
         checkReduce(src, dst, reduced, op, true, CV_64F, typeToString(depth));
     }
 }
@@ -282,7 +282,7 @@ TEST(Core_ReduceND, reduce_matches_2d)
             const int ddepth = op == REDUCE_MAX || op == REDUCE_MIN ? -1 : CV_64F;
             Mat a, b;
             cv::reduce(src, a, dim, op, ddepth);
-            cv::reduceND(src, b, {dim}, op, true, ddepth);
+            cv::reduce(src, b, ReduceParams(op, {dim}, true, ddepth));
             EXPECT_LE(cvtest::norm(a, b, NORM_INF), 1e-9) << op << " " << dim;
         }
 }
@@ -293,7 +293,7 @@ TEST(Core_ReduceND, reduce_nd_input)
     Mat src({4, 5, 6}, CV_32F), a, b;
     rng.fill(src, RNG::UNIFORM, -1, 1);
     cv::reduce(src, a, 1, REDUCE_MAX);
-    cv::reduceND(src, b, {1}, REDUCE_MAX);
+    cv::reduce(src, b, {REDUCE_MAX, {1}});
     ASSERT_EQ(std::vector<int>({4, 1, 6}), shapeOf(a));
     EXPECT_EQ(0, cvtest::norm(a, b, NORM_INF));
     // the new operations also work through cv::reduce on 2D input
@@ -305,34 +305,34 @@ TEST(Core_ReduceND, reduce_nd_input)
 TEST(Core_ReduceND, special_cases)
 {
     Mat a({3, 0, 4}, CV_32F), d;
-    cv::reduceND(a, d, {1}, REDUCE_SUM);                 // empty reduction -> identity
+    cv::reduce(a, d, {REDUCE_SUM, {1}});                  // empty reduction -> identity
     ASSERT_EQ(std::vector<int>({3, 1, 4}), shapeOf(d));
     EXPECT_EQ(0, cvtest::norm(d, NORM_INF));
-    cv::reduceND(a, d, {1}, REDUCE_PROD);
+    cv::reduce(a, d, {REDUCE_PROD, {1}});
     EXPECT_EQ(1., cvtest::norm(d, NORM_INF));
 
     Mat s(0, nullptr, CV_32F);                            // 0-dimensional input
     s.at<float>(0) = -3.f;
-    cv::reduceND(s, d, {}, REDUCE_L1);
+    cv::reduce(s, d, {REDUCE_L1});
     EXPECT_EQ(0, d.dims);
     EXPECT_EQ(3.f, d.at<float>(0));
 
     Mat m({2, 3}, CV_32F, Scalar(1));
-    cv::reduceND(m, d, {}, REDUCE_SUM, false);           // all axes, no keepdims -> scalar
+    cv::reduce(m, d, {REDUCE_SUM, {}, false});           // all axes, no keepdims -> scalar
     EXPECT_EQ(0, d.dims);
     EXPECT_EQ(6.f, d.at<float>(0));
 
     Mat f({2, 3}, CV_32F);
     f.setTo(-INFINITY);
-    cv::reduceND(f, d, {1}, REDUCE_LOG_SUM_EXP);
+    cv::reduce(f, d, {REDUCE_LOG_SUM_EXP, {1}});
     EXPECT_TRUE(std::isinf(d.at<float>(0)) && d.at<float>(0) < 0);
     f.setTo(1000.f);                                      // would overflow exp() without the shift
-    cv::reduceND(f, d, {1}, REDUCE_LOG_SUM_EXP);
+    cv::reduce(f, d, {REDUCE_LOG_SUM_EXP, {1}});
     EXPECT_NEAR(1000. + std::log(3.), d.at<float>(0), 1e-3);
 
-    EXPECT_ANY_THROW(cv::reduceND(m, d, {2}, REDUCE_SUM));
-    EXPECT_ANY_THROW(cv::reduceND(m, d, {0, -2}, REDUCE_SUM));
-    EXPECT_ANY_THROW(cv::reduceND(m, d, {0}, 42));
+    EXPECT_ANY_THROW(cv::reduce(m, d, {REDUCE_SUM, {2}}));
+    EXPECT_ANY_THROW(cv::reduce(m, d, {REDUCE_SUM, {0, -2}}));
+    EXPECT_ANY_THROW(cv::reduce(m, d, {42, {0}}));
 }
 
 }} // namespace

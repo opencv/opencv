@@ -54,7 +54,7 @@ TEST_P(Core_StatParallel, matches_serial)
     Mat src2s = src1.dims > 2 ? Mat(src1.size[0]*src1.size[1], src1.size[2], src1.type(), src1.data) : src1;
     Scalar s0, sx, sxx;
     double n0 = 0, mn0 = 0, mx0 = 0;
-    int64 imn0 = -1, imx0 = -1;
+    bool anyRow = false;
     for (int r = 0; r < src2.rows; r++)
     {
         Mat row = src2.row(r), mrow = mask.empty() ? Mat() : mask.row(r), row64;
@@ -71,9 +71,10 @@ TEST_P(Core_StatParallel, matches_serial)
         int ia[2] = {-1, -1}, ib[2] = {-1, -1};
         cv::minMaxIdx(src2s.row(r), &a, &b, withIdx ? ia : 0, withIdx ? ib : 0, cn == 1 ? mrow : Mat());
         if (withIdx && ia[1] < 0)
-            continue;
-        if (imn0 < 0 || a < mn0) { mn0 = a; imn0 = (int64)r*src2s.cols + ia[1]; }
-        if (imx0 < 0 || b > mx0) { mx0 = b; imx0 = (int64)r*src2s.cols + ib[1]; }
+            continue;                                   // the mask selects nothing in this row
+        if (!anyRow || a < mn0) mn0 = a;
+        if (!anyRow || b > mx0) mx0 = b;
+        anyRow = true;
     }
     Scalar m0 = n0 > 0 ? sx*(1./n0) : Scalar(), mean0 = m0, sd0;
     for (int k = 0; k < 4; k++)
@@ -88,10 +89,24 @@ TEST_P(Core_StatParallel, matches_serial)
     EXPECT_EQ(mx0, mx1);
     if (withIdx)
     {
-        // row-major index of the reported position
-        auto lin = [&](const int* idx) { int64 v = 0; for (int i = 0; i < src1.dims; i++) v = v*src1.size[i] + idx[i]; return v; };
-        EXPECT_EQ(imn0, lin(imn1));
-        EXPECT_EQ(imx0, lin(imx1));
+        // Which of several equal extrema a piece reports is up to its (vectorized, possibly HAL)
+        // serial code, so check that the position holds the extremum rather than that it matches
+        // the reference; the ordering across pieces is covered by first_occurrence below.
+        auto valAt = [&](const int* idx)
+        {
+            Mat e(1, 1, src1.type(), src1.ptr(idx)), e64;
+            e.convertTo(e64, CV_64F);
+            return e64.at<double>(0);
+        };
+        ASSERT_GE(imn1[0], 0);
+        ASSERT_GE(imx1[0], 0);
+        EXPECT_EQ(mn1, valAt(imn1));
+        EXPECT_EQ(mx1, valAt(imx1));
+        if (!mask.empty())
+        {
+            EXPECT_NE(0, mask.at<uchar>(imn1[0], imn1[1]));
+            EXPECT_NE(0, mask.at<uchar>(imx1[0], imx1[1]));
+        }
     }
 }
 

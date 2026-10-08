@@ -244,7 +244,7 @@ public:
             keepShape[a] = 1;
         CV_Assert(dst.isContinuous() && dst.total() == keepShape.total());
         Mat dstKeep(keepShape, dst.type(), dst.data);
-        reduceND(src, dstKeep, axes, toCoreReduceOp(reduce_type), true, -1);
+        cv::reduce(src, dstKeep, ReduceParams(toCoreReduceOp(reduce_type), axes));
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE

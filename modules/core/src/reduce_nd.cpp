@@ -4,7 +4,7 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// cv::reduceND: reduction of an n-dimensional array over any set of axes.
+// cv::reduce: reduction of an n-dimensional array over any set of axes.
 
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
@@ -96,10 +96,23 @@ template<typename A> struct OpProd
     template<typename V> static V vcombine(const V& a, const V& b) { return v_mul(a, b); }
 };
 
+// Identity elements of max and min. A trait rather than a ternary on has_infinity, so that the
+// unary minus is never compiled for an unsigned A (MSVC C4146).
+template<typename A, bool hasInf = std::numeric_limits<A>::has_infinity> struct Extremes
+{
+    static A low() { return std::numeric_limits<A>::lowest(); }
+    static A high() { return std::numeric_limits<A>::max(); }
+};
+
+template<typename A> struct Extremes<A, true>
+{
+    static A low() { return -std::numeric_limits<A>::infinity(); }
+    static A high() { return std::numeric_limits<A>::infinity(); }
+};
+
 template<typename A> struct OpMax
 {
-    static A init() { return std::numeric_limits<A>::has_infinity ? -std::numeric_limits<A>::infinity()
-                                                                   : std::numeric_limits<A>::lowest(); }
+    static A init() { return Extremes<A>::low(); }
     static A apply(A a, A x) { return a < x ? x : a; }
     static A combine(A a, A b) { return a < b ? b : a; }
     static A finalize(A a, int64) { return a; }
@@ -109,8 +122,7 @@ template<typename A> struct OpMax
 
 template<typename A> struct OpMin
 {
-    static A init() { return std::numeric_limits<A>::has_infinity ? std::numeric_limits<A>::infinity()
-                                                                   : std::numeric_limits<A>::max(); }
+    static A init() { return Extremes<A>::high(); }
     static A apply(A a, A x) { return x < a ? x : a; }
     static A combine(A a, A b) { return b < a ? b : a; }
     static A finalize(A a, int64) { return a; }
@@ -258,7 +270,8 @@ struct Iter
     }
 };
 
-// Returns `len` contiguous accumulator-typed elements taken from the source at `p` with byte step `step`.
+// `len` accumulator-typed elements of the source row at `p`: `p` itself when it is already
+// contiguous and of the accumulator type, otherwise `tmp`/`buf`.
 template<typename A> static const A* loadRow(const Plan& pl, const uchar* p, ptrdiff_t step, int64 len,
                                              A* buf, uchar* tmp)
 {
@@ -473,9 +486,9 @@ template<typename A, class Op, class OpM> static void runPass(const Plan& pl, A*
     {
         for (int64 o = 0; o < pl.nout; o++)
         {
-            A acc = partial[o];
+            A acc = partial[(size_t)o];
             for (int64 s = 1; s < w.nsplit; s++)
-                acc = Op::combine(acc, partial[s*pl.nout + o]);
+                acc = Op::combine(acc, partial[(size_t)(s*pl.nout + o)]);
             res[o] = OpM::finalize(acc, pl.count, mbuf ? mbuf[o] : A(0));
         }
     }
@@ -515,7 +528,7 @@ template<typename A> static void runOp(const Plan& pl, int op, A* res)
         break;
     }
     default:
-        CV_Error(Error::StsBadArg, "reduceND: unknown reduction operation");
+        CV_Error(Error::StsBadArg, "reduce: unknown reduction operation");
     }
 }
 
@@ -549,11 +562,10 @@ static void dispatch(const Plan& pl, int op, uchar* res)
     case CV_64U: runMinMax<uint64_t>(pl, op, (uint64_t*)res); break;
     case CV_64S: runMinMax<int64_t>(pl, op, (int64_t*)res); break;
     default:
-        CV_Error(Error::StsInternal, "reduceND: unexpected accumulator depth");
+        CV_Error(Error::StsInternal, "reduce: unexpected accumulator depth");
     }
 }
 
-// accumulator depth for the given source/destination depths and operation
 static int accumulatorDepth(int sdepth, int ddepth, int op)
 {
     if (op == REDUCE_MAX || op == REDUCE_MIN)
@@ -569,30 +581,36 @@ static int accumulatorDepth(int sdepth, int ddepth, int op)
 
 } // namespace
 
-void reduceND(InputArray _src, OutputArray _dst, const std::vector<int>& axes_, int op,
-              bool keepdims, int dtype)
+ReduceParams::ReduceParams(int _rtype, const std::vector<int>& _axes, bool _keepdims, int _dtype)
+    : rtype(_rtype), axes(_axes), keepdims(_keepdims), dtype(_dtype)
+{
+}
+
+void reduce(InputArray _src, OutputArray _dst, const ReduceParams& params)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Check(op, op >= REDUCE_SUM && op <= REDUCE_LOG_SUM_EXP, "reduceND: unknown reduction operation");
+    const int op = params.rtype, dtype = params.dtype;
+    const bool keepdims = params.keepdims;
+    CV_Check(op, op >= REDUCE_SUM && op <= REDUCE_LOG_SUM_EXP, "reduce: unknown reduction operation");
 
     Mat src = _src.getMat();
     const int dims = src.dims, cn = src.channels();
     const int sdepth = src.depth();
     int ddepth = dtype < 0 ? sdepth : CV_MAT_DEPTH(dtype);
     if ((op == REDUCE_MAX || op == REDUCE_MIN) && sdepth == CV_Bool && ddepth != CV_Bool)
-        CV_Error(Error::StsBadArg, "reduceND: the output of max/min over bool must be bool");
+        CV_Error(Error::StsBadArg, "reduce: the output of max/min over bool must be bool");
 
     // which axes are reduced; empty means all of them
     bool reduced[CV_MAX_DIM] = {false};
-    if (axes_.empty())
+    if (params.axes.empty())
         std::fill(reduced, reduced + dims, true);
-    for (int a : axes_)
+    for (int a : params.axes)
     {
-        CV_CheckGE(a, -dims, "reduceND: axis is out of range");
-        CV_CheckLT(a, dims, "reduceND: axis is out of range");
+        CV_CheckGE(a, -dims, "reduce: axis is out of range");
+        CV_CheckLT(a, dims, "reduce: axis is out of range");
         int ax = a < 0 ? a + dims : a;
-        CV_Check(a, !reduced[ax], "reduceND: duplicate axis");
+        CV_Check(a, !reduced[ax], "reduce: duplicate axis");
         reduced[ax] = true;
     }
 
