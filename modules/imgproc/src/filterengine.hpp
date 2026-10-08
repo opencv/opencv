@@ -138,6 +138,8 @@ public:
 
     int ksize;
     int anchor;
+    //! narrower rows (in elements, width*cn) are filtered by the separable row and column filters instead
+    int minWidth;
 };
 
 /*!

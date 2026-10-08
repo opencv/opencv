@@ -44,23 +44,33 @@
 // both row and column passes in a single traversal.
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-template<typename T>
-static inline typename std::enable_if<std::is_same<T, unsigned>::value, v_uint32>::type
-vx_setall(T value) { return vx_setall_u32(value); }
+// Sum3x3/Sum5x5: 32-bit sums of 16-bit pixels, same rounding as the separable ColumnSum
+static inline v_uint32 roundScale(const v_uint32& s, const v_float32& v_scale)
+{ return v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_reinterpret_as_s32(s)), v_scale))); }
+static inline v_int32 roundScale(const v_int32& s, const v_float32& v_scale)
+{ return v_round(v_mul(v_cvt_f32(s), v_scale)); }
+template<typename V>
+static inline V roundScale(const V& s, const v_float32&) { return s; }
 
-template<typename T>
-static inline typename std::enable_if<std::is_same<T, int>::value, v_int32>::type
-vx_setall(T value) { return vx_setall_s32(value); }
-
-template<typename T>
-static inline typename std::enable_if<std::is_same<T, ushort>::value, v_uint16>::type
-vx_setall(T value) { return vx_setall_u16(value); }
+// Sum3x3sameType/Sum5x5sameType
+static inline v_int32 scaleSameType(const v_int32& s, double, const v_float32& v_scale)
+{ return v_round(v_mul(v_cvt_f32(s), v_scale)); }
+static inline v_float32 scaleSameType(const v_float32& s, double, const v_float32& v_scale)
+{ return v_mul(s, v_scale); }
 #endif
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<typename T>
-static inline typename std::enable_if<std::is_same<T, double>::value, v_float64>::type
-vx_setall(T value) { return vx_setall_f64(value); }
+static inline v_float64 scaleSameType(const v_float64& s, double scale, const v_float32&)
+{ return v_mul(s, vx_setall_f64(scale)); }
 #endif
+
+// scalar tails scale floating-point sums in ET, as the vector loops do
+template<typename ET>
+static inline typename std::enable_if<std::is_floating_point<ET>::value, ET>::type
+scaleSum(ET s, double scale) { return s * (ET)scale; }
+
+template<typename ET>
+static inline typename std::enable_if<!std::is_floating_point<ET>::value, ET>::type
+scaleSum(ET s, double scale) { return saturate_cast<ET>(s * scale); }
 
 template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
 struct Sum3x3 :
@@ -71,6 +81,9 @@ struct Sum3x3 :
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = 2*VTraits<VET>::vlanes() + 8;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
 
@@ -78,9 +91,13 @@ struct Sum3x3 :
     void inline loadRow(const ET* src, int cn, VFT &a0, VFT &a1, VFT &b0, VFT &b1, VFT &c0, VFT &c1)
     {
         const ET* src_ptr = src - cn;
-        v_expand(vx_load(src_ptr), a0, a1);
-        v_expand(vx_load(src_ptr+cn), b0, b1);
-        v_expand(vx_load(src_ptr+cn*2), c0, c1);
+        const int half = VTraits<VFT>::vlanes();
+        a0 = vx_load_expand(src_ptr);
+        a1 = vx_load_expand(src_ptr + half);
+        b0 = vx_load_expand(src_ptr + cn);
+        b1 = vx_load_expand(src_ptr + cn + half);
+        c0 = vx_load_expand(src_ptr + cn*2);
+        c1 = vx_load_expand(src_ptr + cn*2 + half);
     }
     void inline addRow(const VFT &a0, const VFT &a1, const VFT &b0, const VFT &b1, VFT &r0, VFT &r1)
     {
@@ -96,26 +113,6 @@ struct Sum3x3 :
         loadRow(src+VECSZ, cn, a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
         addRow(a0, a1, b0, b1, r0, r1);
         addRow(a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
-    }
-    void inline scaleVal3x3(VFT &b0, const VFT &v_64, const VFT &v_32768, const VFT &v_mulFactor)
-    {
-        if (SCALE_T==APPLY_SCALING)
-        {
-            if (std::is_floating_point<WET>::value)
-                b0 = v_mul(b0, vx_setall((WET)scale));
-            else
-            {
-                if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
-                {
-                    VFT bsub = v_shr<1>(b0); // 1/2
-                    b0 = v_shr<8>(v_add(v_sub(v_mul(b0, v_mulFactor), bsub),v_64));
-                }
-                else if (std::is_same<ET, ushort>::value)
-                    b0 = v_shr<16>(v_sub(v_mul(b0, v_mulFactor), v_32768));
-                else if(std::is_same<ET, short>::value)
-                    b0 = v_shr<16>(v_add(v_mul(b0, v_mulFactor), v_32768));
-            }
-        }
     }
 #endif
 
@@ -143,23 +140,7 @@ struct Sum3x3 :
         const ET* src_ptr = (const ET*)(src + j * src_stride);
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        WET val_32768 = 32768;
-        VFT v_32768 = vx_setall(val_32768);
-        WET val_64 = 64;
-        VFT v_64 = vx_setall(val_64);
-        VFT v_mulFactor;
-        if (SCALE_T==APPLY_SCALING)
-        {
-            if (std::is_floating_point<WET>::value)
-                v_mulFactor = vx_setall((WET)scale);
-            else
-            {
-                WET val = 29;//default uchar or char
-                if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
-                    val = 7282;
-                v_mulFactor = vx_setall(val);
-            }
-        }
+        v_float32 v_scale = vx_setall_f32((float)scale);
         const int VECSZ = VTraits<VET>::vlanes();
         const int VECSZ_2 = VECSZ << 1;
 
@@ -204,10 +185,10 @@ struct Sum3x3 :
 
                 if (SCALE_T==APPLY_SCALING)
                 {
-                    scaleVal3x3(b00, v_64, v_32768, v_mulFactor);
-                    scaleVal3x3(b00v1, v_64, v_32768, v_mulFactor);
-                    scaleVal3x3(b01, v_64, v_32768, v_mulFactor);
-                    scaleVal3x3(b01v1, v_64, v_32768, v_mulFactor);
+                    b00   = roundScale(b00, v_scale);
+                    b00v1 = roundScale(b00v1, v_scale);
+                    b01   = roundScale(b01, v_scale);
+                    b01v1 = roundScale(b01v1, v_scale);
                 }
                 v_store(dstx, v_pack(b00, b01));
                 v_store(dstx + VECSZ, v_pack(b00v1, b01v1));
@@ -252,11 +233,8 @@ struct Sum3x3 :
     double scale;
 };
 
-// Specialized Sum3x3 for uchar→uchar with APPLY_SCALING.
-// Uses vx_load_expand (vpmovzxbw) to load 8-bit data directly into 16-bit lanes,
-// avoiding the load+v_expand double-instruction pattern of the generic Sum3x3.
-// Column-major traversal keeps row sums in registers across rows.
-template<int SCALE_T>
+// Normalized 3x3 box filter for uchar -> uchar. Works in one-vector strips with
+// 16-bit sums; column-major traversal keeps row sums in registers across rows.
 struct Sum3x3_8u :
         public BaseRowColumnFilter
 {
@@ -265,6 +243,9 @@ struct Sum3x3_8u :
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = VTraits<v_uint8>::vlanes() + 8;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
 
@@ -294,8 +275,9 @@ struct Sum3x3_8u :
         const int VECSZ16 = VTraits<v_uint16>::vlanes();
         const int VECSZ8 = VTraits<v_uint8>::vlanes();
 
-        v_uint16 v_64 = vx_setall_u16(64);
-        v_uint16 v_mulFactor = vx_setall_u16(29);
+        // mul_hi(s + 4, 7282) == round(s/9) exactly for every s <= 9*255
+        v_uint16 v_4 = vx_setall_u16(4);
+        v_uint16 v_mulFactor = vx_setall_u16(7282);
 
         for (; x < len; x += VECSZ8)
         {
@@ -331,13 +313,8 @@ struct Sum3x3_8u :
                 v_uint16 s_lo = v_add(v_add(r0_lo, r1_lo), r2_lo);
                 v_uint16 s_hi = v_add(v_add(r0_hi, r1_hi), r2_hi);
 
-                if (SCALE_T == APPLY_SCALING)
-                {
-                    v_uint16 sub_lo = v_shr<1>(s_lo);
-                    s_lo = v_shr<8>(v_add(v_sub(v_mul(s_lo, v_mulFactor), sub_lo), v_64));
-                    v_uint16 sub_hi = v_shr<1>(s_hi);
-                    s_hi = v_shr<8>(v_add(v_sub(v_mul(s_hi, v_mulFactor), sub_hi), v_64));
-                }
+                s_lo = v_mul_hi(v_add(s_lo, v_4), v_mulFactor);
+                s_hi = v_mul_hi(v_add(s_hi, v_4), v_mulFactor);
 
                 v_store(dstx, v_pack(s_lo, s_hi));
 
@@ -364,10 +341,7 @@ struct Sum3x3_8u :
                 uchar* dstx = dst + idst_ * dst_stride;
                 b2 = src_2[-cn] + src_2[0] + src_2[cn];
                 src_2 += src_inc;
-                if (SCALE_T == APPLY_SCALING)
-                    dstx[x] = saturate_cast<uchar>((b1 + b0 + b2) * _scale);
-                else
-                    dstx[x] = saturate_cast<uchar>(b1 + b0 + b2);
+                dstx[x] = saturate_cast<uchar>((b1 + b0 + b2) * _scale);
                 b0 = b1;
                 b1 = b2;
             }
@@ -375,121 +349,6 @@ struct Sum3x3_8u :
     }
 
     double scale;
-};
-
-//float
-template<int SCALE_T, typename ET, typename WET>
-struct Sum3x3_64f :
-        public BaseRowColumnFilter
-{
-    Sum3x3_64f( int _ksize, double _scale ) :
-        BaseRowColumnFilter()
-    {
-        ksize = _ksize;
-        scale = _scale;
-    }
-    virtual void reset() CV_OVERRIDE { }
-
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
-    {
-        CV_INSTRUMENT_REGION();
-        double _scale = scale;
-        int yTopOffset = 1;
-        int yBottomOffset = 1;
-        if(yidx >0)
-            yTopOffset = 0;
-        if( (yidx + height) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
-        int idst = yTopOffset;
-
-        int xoffset = 1;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        const int dst_inc = dst_stride / ETSZ;
-        int j = v;
-
-        if(sum.size() < (size_t)len)
-            sum.resize(len);
-        if(rowSum.size() < (size_t)(len*2))
-            rowSum.resize(len*2);
-
-        int idst_ = idst;
-        const ET* src_j0 = (const ET*)(src + j * src_stride);
-        const ET* src_j1 = (const ET*)(src + (j+1) * src_stride);
-        const ET* src_j2 = (const ET*)(src + (j+2) * src_stride);
-        ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-        for (; j < min(maxRow,v+1); j++, idst_++) //1st Row
-        {
-            x = xoffset * cn;
-            int x_st = 0;
-            const ET* src_0 = src_j0 + x;
-            const ET* src_1 = src_j1 + x;
-            const ET* src_2 = src_j2 + x;
-            for (; x < len; x++, x_st++)
-            {
-                WET b0, b1, b2;
-                b0 = src_0[-cn] + src_0[0] + src_0[cn];
-                b1 = src_1[-cn] + src_1[0] + src_1[cn];
-                b2 = src_2[-cn] + src_2[0] + src_2[cn];
-
-                WET bsum = b1 + b2;
-                sum[x_st]          = bsum;
-                rowSum[x_st]       = b1;
-                rowSum[x_st + len] = b2;
-                if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = saturate_cast<ET>((b0 + bsum)* _scale);
-                else
-                    dstx[x] = saturate_cast<ET>(b0 + bsum);
-                src_0++;
-                src_1++;
-                src_2++;
-            }
-            src_j0 += src_inc;
-            src_j1 += src_inc;
-            src_j2 += src_inc;
-            dstx += dst_inc;
-        }
-
-        int r0_idx = 0;
-        for (; j < maxRow; j++, idst_++)
-        {
-            x = xoffset * cn;
-            int x_st = 0;
-            int idx_offset = r0_idx * len;
-
-            for (; x < len; x++, x_st++)
-            {
-                WET b0, b2;
-                const ET* src_2 = src_j2 + x;
-
-                b0 = rowSum[x_st + idx_offset];
-                b2 = src_2[-cn] + src_2[0] + src_2[cn];
-                rowSum[x_st + idx_offset] = b2;
-
-                WET bsum = sum[x_st] + b2;
-                if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = saturate_cast<ET>(bsum* _scale);
-                else
-                    dstx[x] = saturate_cast<ET>(bsum);
-                sum[x_st] = bsum - b0;
-            }
-            src_j0 += src_inc;
-            src_j1 += src_inc;
-            src_j2 += src_inc;
-            dstx += dst_inc;
-
-            r0_idx++;
-            if (r0_idx > 1) r0_idx = 0;
-        }
-    }
-    double scale;
-    std::vector<WET>sum;
-    std::vector<WET>rowSum;
 };
 
 template<int SCALE_T, typename ET, typename VET>
@@ -501,6 +360,9 @@ struct Sum3x3sameType :
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = 4*VTraits<VET>::vlanes() + 8;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
 
@@ -532,36 +394,6 @@ struct Sum3x3sameType :
         addRow(av3, bv3, rv3);
     }
 
-    void inline scaleVal3x3sameType(VET &b0, const v_float32& _v_scale)
-    {
-        if (SCALE_T==APPLY_SCALING)
-        {
-            scaleVal3x3sameTypeImpl(b0, _v_scale);
-        }
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<std::is_floating_point<T>::value, void>::type
-    inline scaleVal3x3sameTypeImpl(VET &b0, const v_float32& /*_v_scale*/)
-    {
-        b0 = v_mul(b0, vx_setall((ET)scale));
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<!std::is_floating_point<T>::value &&
-                           (std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleVal3x3sameTypeImpl(VET &b0, const v_float32& _v_scale)
-    {
-        b0 = v_round(v_mul(v_cvt_f32(b0), _v_scale));
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<!std::is_floating_point<T>::value &&
-                           !(std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleVal3x3sameTypeImpl(VET &, const v_float32&)
-    {
-        // No scaling for other integer types
-    }
 #endif
 
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
@@ -642,10 +474,10 @@ struct Sum3x3sameType :
                 b0v3 = v_add(b2v3, v_add(b0v3, b1v3));
                 if (SCALE_T==APPLY_SCALING)
                 {
-                    scaleVal3x3sameType(b0, _v_scale);
-                    scaleVal3x3sameType(b0v1, _v_scale);
-                    scaleVal3x3sameType(b0v2, _v_scale);
-                    scaleVal3x3sameType(b0v3, _v_scale);
+                    b0 = scaleSameType(b0, _scale, _v_scale);
+                    b0v1 = scaleSameType(b0v1, _scale, _v_scale);
+                    b0v2 = scaleSameType(b0v2, _scale, _v_scale);
+                    b0v3 = scaleSameType(b0v3, _scale, _v_scale);
                 }
                 vx_store(dstx + x, b0);
                 vx_store(dstx + x + VECSZ, b0v1);
@@ -673,7 +505,7 @@ struct Sum3x3sameType :
                 a2 = src_2[-cn] + src_2[0] + src_2[cn];
                 src_2 += src_inc;
                 if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = saturate_cast<ET>((a1 + a0 + a2 )* _scale);
+                    dstx[x] = scaleSum<ET>(a1 + a0 + a2, _scale);
                 else
                     dstx[x] = saturate_cast<ET>(a1 + a0 + a2);
                 a0 = a1;
@@ -686,7 +518,7 @@ struct Sum3x3sameType :
 };
 
 
-template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT, typename Derived = void>
+template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
 struct Sum5x5 :
         public BaseRowColumnFilter
 {
@@ -695,6 +527,9 @@ struct Sum5x5 :
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = VTraits<VET>::vlanes() + 16;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -702,11 +537,17 @@ struct Sum5x5 :
                             VFT &c0, VFT &c1, VFT &d0, VFT &d1, VFT &e0, VFT &e1)
     {
         const ET* src_ptr = src - cn*2;
-        v_expand(vx_load(src_ptr), a0, a1);
-        v_expand(vx_load(src_ptr + cn), b0, b1);
-        v_expand(vx_load(src_ptr + cn*2), c0, c1);
-        v_expand(vx_load(src_ptr + cn*3), d0, d1);
-        v_expand(vx_load(src_ptr + cn*4), e0, e1);
+        const int half = VTraits<VFT>::vlanes();
+        a0 = vx_load_expand(src_ptr);
+        a1 = vx_load_expand(src_ptr + half);
+        b0 = vx_load_expand(src_ptr + cn);
+        b1 = vx_load_expand(src_ptr + cn + half);
+        c0 = vx_load_expand(src_ptr + cn*2);
+        c1 = vx_load_expand(src_ptr + cn*2 + half);
+        d0 = vx_load_expand(src_ptr + cn*3);
+        d1 = vx_load_expand(src_ptr + cn*3 + half);
+        e0 = vx_load_expand(src_ptr + cn*4);
+        e1 = vx_load_expand(src_ptr + cn*4 + half);
     }
     void inline addRow(const VFT &a0, const VFT &a1, const VFT &b0, const VFT &b1,
                           const VFT &c0, const VFT &c1, const VFT &d0, const VFT &d1, VFT &r0, VFT &r1)
@@ -719,19 +560,6 @@ struct Sum5x5 :
         VFT a0, a1, b0, b1, c0, c1, d0, d1;
         loadRow(src_0, cn, a0, a1, b0, b1, c0, c1, d0, d1, r0, r1);
         addRow(a0, a1, b0, b1, c0, c1, d0, d1, r0, r1);
-    }
-    VFT inline scaleVal5x5(VFT &b0, const VFT &v_mulFactor)
-    {
-        if (std::is_floating_point<WET>::value)
-            return v_mul(b0, vx_setall((WET)scale));
-        else
-        {
-            VFT berr = v_shr<2>(b0); // 1/4
-            if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
-                return v_shr<8>(v_add(v_mul(b0, v_mulFactor), berr));
-            else if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
-                return v_shr<15>(v_sub(v_mul(b0, v_mulFactor), berr));
-        }
     }
 #endif
 
@@ -761,24 +589,7 @@ struct Sum5x5 :
         int j = v;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        VFT v_896;
-        WET val_896 = 896;
-        v_896 = vx_setall(val_896);
-        VFT v_mulFactor;
-        if (SCALE_T==APPLY_SCALING)
-        {
-            if (std::is_floating_point<WET>::value)
-                v_mulFactor = vx_setall((WET)scale);
-            else
-            {
-                WET val = 10;
-                if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
-                    val = 10;
-                else if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
-                    val = 1311;
-                v_mulFactor = vx_setall(val);
-            }
-        }
+        v_float32 v_scale = vx_setall_f32((float)scale);
 
         const ET* src_ptr = (const ET*)(src + j * src_stride);
         const int VECSZ = VTraits<VET>::vlanes();
@@ -819,8 +630,8 @@ struct Sum5x5 :
                 b1 = bsum1 = v_add(bsum1, b41);
                 if (SCALE_T==APPLY_SCALING)
                 {
-                    b0 = scaleVal5x5(bsum0, v_mulFactor);
-                    b1 = scaleVal5x5(bsum1, v_mulFactor);
+                    b0 = roundScale(bsum0, v_scale);
+                    b1 = roundScale(bsum1, v_scale);
                 }
                 v_store(dstx, v_pack(b0, b1));
                 bsum0 = v_sub(bsum0, b00);
@@ -873,134 +684,134 @@ struct Sum5x5 :
     double scale;
 };
 
-template<int SCALE_T, typename ET, typename WET>
-struct Sum5x5_64f :
+// Normalized 5x5 box filter for uchar -> uchar, laid out like Sum3x3_8u.
+struct Sum5x5_8u :
         public BaseRowColumnFilter
 {
-    Sum5x5_64f( int _ksize, double _scale ) :
+    Sum5x5_8u( int _ksize, double _scale ) :
         BaseRowColumnFilter()
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = VTraits<v_uint8>::vlanes() + 16;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    static inline void rowSum(const uchar* p, int cn, v_uint16& lo, v_uint16& hi)
+    {
+        const int half = VTraits<v_uint16>::vlanes();
+        const uchar* q = p - cn*2;
+        lo = v_add(v_add(v_add(vx_load_expand(q), vx_load_expand(q + cn)),
+                         v_add(vx_load_expand(q + cn*2), vx_load_expand(q + cn*3))), vx_load_expand(q + cn*4));
+        q += half;
+        hi = v_add(v_add(v_add(vx_load_expand(q), vx_load_expand(q + cn)),
+                         v_add(vx_load_expand(q + cn*2), vx_load_expand(q + cn*3))), vx_load_expand(q + cn*4));
+    }
+#endif
 
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
         int yTopOffset = 2;
         int yBottomOffset = 2;
-        if(yidx >1)
+        if(yidx > 1)
             yTopOffset = 0;
-        if( (yidx + height+1) < wholeHeight)
+        if( (yidx + height + 1) < wholeHeight)
             yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
+        int maxRow = height - yTopOffset - yBottomOffset;
         int idst = yTopOffset;
 
         int xoffset = 2;
         int v = idst - yTopOffset;
         int len = (width - xoffset) * cn;
         int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        const int dst_inc = dst_stride / ETSZ;
         int cn2 = cn*2;
+
+        const int src_inc = src_stride;
         int j = v;
+        const uchar* src_ptr = src + j * src_inc;
 
-        if(sum.size() < (size_t)len)
-            sum.resize(len);
-        if(rowSum.size() < (size_t)(len*4))
-            rowSum.resize(len*4);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VECSZ8 = VTraits<v_uint8>::vlanes();
 
-        int idst_ = idst;
-        j = v;
-        const uchar * src_j = src + j * src_stride;
-        const ET* src_j0 = (const ET*)(src_j);
-        const ET* src_j1 = src_j0 + src_inc;
-        const ET* src_j2 = src_j1 + src_inc;
-        const ET* src_j3 = src_j2 + src_inc;
-        const ET* src_j4 = src_j3 + src_inc;
-        ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-        for (; j < min(maxRow,v+1); j++, idst_++) //1st Row
+        // mul_hi(s + 12, 5243) >> 1 == round(s/25) exactly for every s <= 25*255;
+        // no 16-bit multiplier with a 16-bit shift is exact over that range
+        v_uint16 v_12 = vx_setall_u16(12);
+        v_uint16 v_mulFactor = vx_setall_u16(5243);
+
+        for (; x < len; x += VECSZ8)
         {
-            x = xoffset * cn;
-
-            int x_st = 0;
-            for (; x < len; x++, x_st++)
+            if ( x > len - VECSZ8 )
             {
-                WET b0, b1, b2, b3, b4;
-                const ET* src_0 = src_j0 + x;
-                const ET* src_1 = src_j1 + x;
-                const ET* src_2 = src_j2 + x;
-                const ET* src_3 = src_j3 + x;
-                const ET* src_4 = src_j4 + x;
-
-                b0 = src_0[-cn2] + src_0[-cn] + src_0[0] + src_0[cn] + src_0[cn2];
-                b1 = src_1[-cn2] + src_1[-cn] + src_1[0] + src_1[cn] + src_1[cn2];
-                b2 = src_2[-cn2] + src_2[-cn] + src_2[0] + src_2[cn] + src_2[cn2];
-                b3 = src_3[-cn2] + src_3[-cn] + src_3[0] + src_3[cn] + src_3[cn2];
-                b4 = src_4[-cn2] + src_4[-cn] + src_4[0] + src_4[cn] + src_4[cn2];
-
-                WET bsum = b1 + b2 + b3 + b4;
-                sum[x_st] = bsum;
-                rowSum[x_st] = b1;
-                rowSum[x_st + len] = b2;
-                rowSum[x_st + len*2] = b3;
-                rowSum[x_st + len*3] = b4;
-
-                if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = saturate_cast<ET>((b0 + bsum)* _scale);
-                else
-                    dstx[x] = saturate_cast<ET>(b0 + bsum);
+                if (x == cn * xoffset || src == dst)
+                    break;
+                x = len - VECSZ8;
             }
-            src_j0 += src_inc;
-            src_j1 += src_inc;
-            src_j2 += src_inc;
-            src_j3 += src_inc;
-            src_j4 += src_inc;
-            dstx += dst_inc;
+            int idst_ = idst;
+            j = v;
+            const uchar* src_0 = src_ptr + x;
+            const uchar* src_4 = src_0 + src_inc*4;
+            uchar* dstx = dst + idst_ * dst_stride + x;
+
+            v_uint16 r0_lo, r0_hi, r1_lo, r1_hi, r2_lo, r2_hi, r3_lo, r3_hi;
+            rowSum(src_0, cn, r0_lo, r0_hi);
+            rowSum(src_0 + src_inc, cn, r1_lo, r1_hi);
+            rowSum(src_0 + src_inc*2, cn, r2_lo, r2_hi);
+            rowSum(src_0 + src_inc*3, cn, r3_lo, r3_hi);
+            v_uint16 s_lo = v_add(v_add(r0_lo, r1_lo), v_add(r2_lo, r3_lo));
+            v_uint16 s_hi = v_add(v_add(r0_hi, r1_hi), v_add(r2_hi, r3_hi));
+
+            for (; j < maxRow; j++, idst_++)
+            {
+                v_uint16 r4_lo, r4_hi;
+                rowSum(src_4, cn, r4_lo, r4_hi);
+                src_4 += src_inc;
+
+                s_lo = v_add(s_lo, r4_lo);
+                s_hi = v_add(s_hi, r4_hi);
+                v_uint16 o_lo = v_shr<1>(v_mul_hi(v_add(s_lo, v_12), v_mulFactor));
+                v_uint16 o_hi = v_shr<1>(v_mul_hi(v_add(s_hi, v_12), v_mulFactor));
+                v_store(dstx, v_pack(o_lo, o_hi));
+                dstx += dst_stride;
+
+                s_lo = v_sub(s_lo, r0_lo);
+                s_hi = v_sub(s_hi, r0_hi);
+                r0_lo = r1_lo; r0_hi = r1_hi;
+                r1_lo = r2_lo; r1_hi = r2_hi;
+                r2_lo = r3_lo; r2_hi = r3_hi;
+                r3_lo = r4_lo; r3_hi = r4_hi;
+            }
         }
-
-        int r0_idx = 0;
-        for (; j < maxRow; j++, idst_++)
+#endif
+        for (; x < len; x++)
         {
-            x = xoffset * cn;
-            int x_st = 0;
-            int idx_offset = r0_idx * len;
-
-            for (; x < len; x++, x_st++)//vectorization of this code results in lower performance
+            int idst_ = idst;
+            j = v;
+            const uchar* src_0 = src_ptr + x;
+            const uchar* src_4 = src_0 + src_inc*4;
+            int b[5];
+            for (int r = 0; r < 4; r++)
             {
-                WET b0, b4;
-                const ET* src_4 = src_j4 + x;
-
-                b0 = rowSum[x_st + idx_offset];
-                b4 = src_4[-cn2] + src_4[-cn] + src_4[0] + src_4[cn] + src_4[cn2];
-                rowSum[x_st + idx_offset] = b4;
-
-                WET bsum = sum[x_st] + b4;
-                if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = saturate_cast<ET>(bsum* _scale);
-                else
-                    dstx[x] = saturate_cast<ET>(bsum);
-                sum[x_st] = bsum - b0;
+                const uchar* p = src_0 + r*src_inc;
+                b[r] = p[-cn2] + p[-cn] + p[0] + p[cn] + p[cn2];
             }
-
-            r0_idx++;
-            if (r0_idx > 3) r0_idx = 0;
-
-            src_j0 += src_inc;
-            src_j1 += src_inc;
-            src_j2 += src_inc;
-            src_j3 += src_inc;
-            src_j4 += src_inc;
-            dstx += dst_inc;
+            int bsum = b[0] + b[1] + b[2] + b[3];
+            for (; j < maxRow; j++, idst_++)
+            {
+                b[4] = src_4[-cn2] + src_4[-cn] + src_4[0] + src_4[cn] + src_4[cn2];
+                src_4 += src_inc;
+                bsum += b[4];
+                dst[idst_ * dst_stride + x] = (uchar)((bsum + 12) / 25);
+                bsum -= b[0];
+                b[0] = b[1]; b[1] = b[2]; b[2] = b[3]; b[3] = b[4];
+            }
         }
     }
+
     double scale;
-    std::vector<WET>sum;
-    std::vector<WET>rowSum;
 };
 
 template<int SCALE_T, typename ET,  typename VET>
@@ -1012,6 +823,9 @@ struct Sum5x5sameType :
     {
         ksize = _ksize;
         scale = _scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        minWidth = 4*VTraits<VET>::vlanes() + 16;
+#endif
     }
     virtual void reset() CV_OVERRIDE { }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -1049,36 +863,6 @@ struct Sum5x5sameType :
         r_v3 = v_add(v_add(v_add(a_v3, b_v3), v_add(c_v3, d_v3)), e_v3);
     }
 
-    void inline scaleValsameType(VET &b0, const v_float32& _v_scale)
-    {
-        if (SCALE_T==APPLY_SCALING)
-        {
-            scaleValsameTypeImpl(b0, _v_scale);
-        }
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<std::is_floating_point<T>::value, void>::type
-    inline scaleValsameTypeImpl(VET &b0, const v_float32& /*_v_scale*/)
-    {
-        b0 = v_mul(b0, vx_setall((ET)scale));
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<!std::is_floating_point<T>::value &&
-                           (std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleValsameTypeImpl(VET &b0, const v_float32& _v_scale)
-    {
-        b0 = v_round(v_mul(v_cvt_f32(b0), _v_scale));
-    }
-
-    template<typename T = ET>
-    typename std::enable_if<!std::is_floating_point<T>::value &&
-                           !(std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleValsameTypeImpl(VET &, const v_float32& )
-    {
-        // No scaling for other integer types
-    }
 #endif
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
@@ -1149,26 +933,41 @@ struct Sum5x5sameType :
                 loadRowAdd(src_4, VECSZ, cn, b4, b4v1, b4v2, b4v3);
                 src_4 += src_inc;
 
-                sum = v_add(sum, b4);
-                sumv1 = v_add(sumv1, b4v1);
-                sumv2 = v_add(sumv2, b4v2);
-                sumv3 = v_add(sumv3, b4v3);
+                if (std::is_floating_point<ET>::value)
+                {
+                    // a running sum would accumulate rounding error down the column
+                    sum   = v_add(v_add(v_add(v_add(b1, b0), b2), b3), b4);
+                    sumv1 = v_add(v_add(v_add(v_add(b1v1, b0v1), b2v1), b3v1), b4v1);
+                    sumv2 = v_add(v_add(v_add(v_add(b1v2, b0v2), b2v2), b3v2), b4v2);
+                    sumv3 = v_add(v_add(v_add(v_add(b1v3, b0v3), b2v3), b3v3), b4v3);
+                }
+                else
+                {
+                    sum = v_add(sum, b4);
+                    sumv1 = v_add(sumv1, b4v1);
+                    sumv2 = v_add(sumv2, b4v2);
+                    sumv3 = v_add(sumv3, b4v3);
+                }
+                VET out = sum, outv1 = sumv1, outv2 = sumv2, outv3 = sumv3;
                 if (SCALE_T==APPLY_SCALING)
                 {
-                    scaleValsameType(sum, _v_scale);
-                    scaleValsameType(sumv1, _v_scale);
-                    scaleValsameType(sumv2, _v_scale);
-                    scaleValsameType(sumv3, _v_scale);
+                    out = scaleSameType(out, _scale, _v_scale);
+                    outv1 = scaleSameType(outv1, _scale, _v_scale);
+                    outv2 = scaleSameType(outv2, _scale, _v_scale);
+                    outv3 = scaleSameType(outv3, _scale, _v_scale);
                 }
-                v_store(dstx + x, sum);
-                v_store(dstx + x + VECSZ, sumv1);
-                v_store(dstx + x + VECSZ_2, sumv2);
-                v_store(dstx + x + VECSZ_3, sumv3);
+                v_store(dstx + x, out);
+                v_store(dstx + x + VECSZ, outv1);
+                v_store(dstx + x + VECSZ_2, outv2);
+                v_store(dstx + x + VECSZ_3, outv3);
 
-                sum   = v_sub(sum, b0);
-                sumv1 = v_sub(sumv1, b0v1);
-                sumv2 = v_sub(sumv2, b0v2);
-                sumv3 = v_sub(sumv3, b0v3);
+                if (!std::is_floating_point<ET>::value)
+                {
+                    sum   = v_sub(sum, b0);
+                    sumv1 = v_sub(sumv1, b0v1);
+                    sumv2 = v_sub(sumv2, b0v2);
+                    sumv3 = v_sub(sumv3, b0v3);
+                }
 
                 b0 = b1; b0v1 = b1v1; b0v2 = b1v2; b0v3 = b1v3;
                 b1 = b2; b1v1 = b2v1; b1v2 = b2v2; b1v3 = b2v3;
@@ -1188,19 +987,20 @@ struct Sum5x5sameType :
             const ET* src_4 = src_3 + src_inc;
 
             ET b0, b1, b2, b3, b4;
-            b0 = (ET)src_0[-cn2] + (ET)src_0[-cn] + (ET)src_0[0] + (ET)src_0[cn] + (ET)src_0[cn2];
-            b1 = (ET)src_1[-cn2] + (ET)src_1[-cn] + (ET)src_1[0] + (ET)src_1[cn] + (ET)src_1[cn2];
-            b2 = (ET)src_2[-cn2] + (ET)src_2[-cn] + (ET)src_2[0] + (ET)src_2[cn] + (ET)src_2[cn2];
-            b3 = (ET)src_3[-cn2] + (ET)src_3[-cn] + (ET)src_3[0] + (ET)src_3[cn] + (ET)src_3[cn2];
+            // same association as the vector loadRowAdd, so float results do not depend on x
+            b0 = ((src_0[-cn2] + src_0[-cn]) + (src_0[0] + src_0[cn])) + src_0[cn2];
+            b1 = ((src_1[-cn2] + src_1[-cn]) + (src_1[0] + src_1[cn])) + src_1[cn2];
+            b2 = ((src_2[-cn2] + src_2[-cn]) + (src_2[0] + src_2[cn])) + src_2[cn2];
+            b3 = ((src_3[-cn2] + src_3[-cn]) + (src_3[0] + src_3[cn])) + src_3[cn2];
 
             for (; j < maxRow; j++, idst_++)
             {
                 ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-                b4 = (ET)src_4[-cn2] + (ET)src_4[-cn] + (ET)src_4[0] + (ET)src_4[cn] + (ET)src_4[cn2];
+                b4 = ((src_4[-cn2] + src_4[-cn]) + (src_4[0] + src_4[cn])) + src_4[cn2];
                 src_4 += src_inc;
                 if (SCALE_T)
                 {
-                    dstx[x] = saturate_cast<ET>((b1 + b0 + b2 + b3 + b4 )* _scale);
+                    dstx[x] = scaleSum<ET>(b1 + b0 + b2 + b3 + b4, _scale);
                 }
                 else
                 {

@@ -46,14 +46,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <cstddef>
 
-// Align loops to 64-byte boundaries to prevent micro-op cache line splitting,
-// which causes performance variation from code layout changes on
-// modern x86 microarchitectures (AMD Zen4, Intel Alder Lake+).
-#if defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__)
-#pragma GCC push_options
-#pragma GCC optimize("align-loops=64")
-#endif
-
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
@@ -76,75 +68,517 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
 \****************************************************************************************/
 
 namespace {
-#if CV_SIMD128_64F
+
+// Kept outside the align-loops region below: forcing 64-byte alignment on the
+// separable sliding window is the Zen 5 ksize 7/21 regression.
 template<typename T, typename ST>
-struct RowSumCn1SIMD128
+struct RowSumSeparableSIMD
 {
-    static CV_ALWAYS_INLINE bool apply(const T*, ST*, int, int)
-    {
-        return false;
-    }
+    static bool apply(const T*, ST*, int, int, int) { return false; }
 };
+
+#if CV_SIMD && !CV_SIMD_SCALABLE
+// Separable integer row sum (every ksize other than 3 and 5, including 7, 21,
+// and blur 16x16). 256-bit vectors are used even in the AVX-512 build: the
+// 512-bit rotate expands through a mask and is slow.
+
+#if CV_SIMD256
+typedef v_int32x8 RowS32;
+typedef v_uint32x8 RowU32;
+typedef v_int16x16 RowS16;
+typedef v_uint16x16 RowU16;
+typedef v_uint8x32 RowU8;
+enum { kRowS32 = 8, kRowS16 = 16, kRowU8 = 32 };
+inline RowS32 rowBcastS32(int v) { return v256_setall_s32(v); }
+inline RowU16 rowBcastU16(ushort v) { return v256_setall_u16(v); }
+inline RowS16 rowLdS16(const short* p) { return v256_load(p); }
+inline RowS32 rowLdS32(const int* p) { return v256_load(p); }
+inline RowU8 rowLdU8(const uchar* p) { return v256_load(p); }
+inline RowU16 rowLdExpandU8(const uchar* p) { return v256_load_expand(p); }
+inline RowU16 rowBcastU64AsU16(uint64 v) { return v_reinterpret_as_u16(v256_setall_u64(v)); }
+inline RowS32 rowPrefixS32(RowS32 v)
+{
+    v = v_add(v, v_rotate_left<1>(v));
+    v = v_add(v, v_rotate_left<2>(v));
+    v = v_add(v, v_rotate_left<4>(v));
+    return v;
+}
+// Per-channel prefix over 4 interleaved channels (4 pixels per vector).
+inline RowU16 rowPrefixCn4U16(RowU16 v)
+{
+    v = v_add_wrap(v, v_rotate_left<4>(v));
+    v = v_add_wrap(v, v_rotate_left<8>(v));
+    return v;
+}
+inline RowU16 rowPrefixU16(RowU16 v)
+{
+    v = v_add_wrap(v, v_rotate_left<1>(v));
+    v = v_add_wrap(v, v_rotate_left<2>(v));
+    v = v_add_wrap(v, v_rotate_left<4>(v));
+    v = v_add_wrap(v, v_rotate_left<8>(v));
+    return v;
+}
+#else
+typedef v_int32x4 RowS32;
+typedef v_uint32x4 RowU32;
+typedef v_int16x8 RowS16;
+typedef v_uint16x8 RowU16;
+typedef v_uint8x16 RowU8;
+enum { kRowS32 = 4, kRowS16 = 8, kRowU8 = 16 };
+inline RowS32 rowBcastS32(int v) { return v_setall_s32(v); }
+inline RowU16 rowBcastU16(ushort v) { return v_setall_u16(v); }
+inline RowS16 rowLdS16(const short* p) { return v_load(p); }
+inline RowS32 rowLdS32(const int* p) { return v_load(p); }
+inline RowU8 rowLdU8(const uchar* p) { return v_load(p); }
+inline RowU16 rowLdExpandU8(const uchar* p) { return v_load_expand(p); }
+inline RowU16 rowBcastU64AsU16(uint64 v) { return v_reinterpret_as_u16(v_setall_u64(v)); }
+inline RowS32 rowPrefixS32(RowS32 v)
+{
+    v = v_add(v, v_rotate_left<1>(v));
+    v = v_add(v, v_rotate_left<2>(v));
+    return v;
+}
+inline RowU16 rowPrefixCn4U16(RowU16 v)
+{
+    return v_add_wrap(v, v_rotate_left<4>(v));
+}
+inline RowU16 rowPrefixU16(RowU16 v)
+{
+    v = v_add_wrap(v, v_rotate_left<1>(v));
+    v = v_add_wrap(v, v_rotate_left<2>(v));
+    v = v_add_wrap(v, v_rotate_left<4>(v));
+    return v;
+}
+#endif
+
+// The running sum is kept broadcast in `carry`. Each block's prefix does not
+// depend on it, so the only loop-carried operation is one vector add.
+inline RowS32 rowFoldS32(RowS32 delta, RowS32& carry)
+{
+    RowS32 p = rowPrefixS32(delta);
+    RowS32 d = v_add(p, carry);
+    carry = v_add(carry, v_broadcast_element<kRowS32 - 1>(p));
+    return d;
+}
+
+inline RowU16 rowFoldU16(RowU16 delta, RowU16& carry)
+{
+    RowU16 p = rowPrefixU16(delta);
+    RowU16 d = v_add_wrap(p, carry);
+    carry = v_add_wrap(carry, rowBcastU16(v_extract_highest(p)));
+    return d;
+}
+
+inline void rowExpand16(const short* p, RowS32& lo, RowS32& hi)
+{
+    RowS16 v = rowLdS16(p);
+    v_expand(v, lo, hi);
+}
+
+// 8-bit deltas: a 16-lane prefix stays within +-4080, so the scan runs in
+// 16-bit lanes and is widened once.
+inline void rowFoldU8S32(RowU16 neu, RowU16 old, RowS32& carry, RowS32& lo, RowS32& hi)
+{
+    RowS16 p = v_reinterpret_as_s16(rowPrefixU16(v_sub_wrap(neu, old)));
+    RowS32 plo, phi;
+    v_expand(p, plo, phi);
+    lo = v_add(plo, carry);
+    hi = v_add(phi, carry);
+    carry = v_add(carry, v_broadcast_element<kRowS32 - 1>(phi));
+}
+
+inline void rowStoreU16AsS32(RowU16 neu, RowU16 old, RowS32& carry, int* dst)
+{
+    RowS32 lo, hi;
+    rowFoldU8S32(neu, old, carry, lo, hi);
+    v_store(dst, lo);
+    v_store(dst + kRowS32, hi);
+}
+
+inline void rowSlideCn1Expand16(const short* s, int* D, int len, int kcn)
+{
+    int sum = 0;
+    for( int i = 0; i < kcn; i++ )
+        sum += (int)s[i];
+    D[0] = sum;
+    const int n = len - 1;
+    int j = 0;
+    RowS32 c = rowBcastS32(sum);
+    for( ; j + kRowS16 <= n; j += kRowS16 )
+    {
+        RowS32 nlo, nhi, olo, ohi;
+        rowExpand16(s + j + kcn, nlo, nhi);
+        rowExpand16(s + j, olo, ohi);
+        RowS32 dlo = rowFoldS32(v_sub(nlo, olo), c);
+        RowS32 dhi = rowFoldS32(v_sub(nhi, ohi), c);
+        v_store(D + j + 1, dlo);
+        v_store(D + j + 1 + kRowS32, dhi);
+    }
+    sum = v_get0(c);
+    for( ; j < n; j++ )
+    {
+        sum += (int)s[j + kcn] - (int)s[j];
+        D[j + 1] = sum;
+    }
+}
+
+inline void rowSlideCn1S32(const int* s, int* D, int len, int kcn)
+{
+    int sum = 0;
+    for( int i = 0; i < kcn; i++ )
+        sum += s[i];
+    D[0] = sum;
+    const int n = len - 1;
+    int j = 0;
+    RowS32 c = rowBcastS32(sum);
+    for( ; j + kRowS32 <= n; j += kRowS32 )
+    {
+        RowS32 d = rowFoldS32(v_sub(rowLdS32(s + j + kcn), rowLdS32(s + j)), c);
+        v_store(D + j + 1, d);
+    }
+    sum = v_get0(c);
+    for( ; j < n; j++ )
+    {
+        sum += s[j + kcn] - s[j];
+        D[j + 1] = sum;
+    }
+}
+
+inline void rowSlideCn1U8U16(const uchar* s, ushort* D, int len, int kcn)
+{
+    ushort sum = 0;
+    for( int i = 0; i < kcn; i++ )
+        sum += (ushort)s[i];
+    D[0] = sum;
+    const int n = len - 1;
+    int j = 0;
+    RowU16 c = rowBcastU16(sum);
+    for( ; j + kRowU8 <= n; j += kRowU8 )
+    {
+        RowU8 nv = rowLdU8(s + j + kcn);
+        RowU8 ov = rowLdU8(s + j);
+        RowU16 nlo, nhi, olo, ohi;
+        v_expand(nv, nlo, nhi);
+        v_expand(ov, olo, ohi);
+        RowU16 dlo = rowFoldU16(v_sub_wrap(nlo, olo), c);
+        RowU16 dhi = rowFoldU16(v_sub_wrap(nhi, ohi), c);
+        v_store(D + j + 1, dlo);
+        v_store(D + j + 1 + kRowS16, dhi);
+    }
+    sum = v_get0(c);
+    for( ; j < n; j++ )
+    {
+        sum += (ushort)s[j + kcn] - (ushort)s[j];
+        D[j + 1] = sum;
+    }
+}
+
+inline void rowSlideCn1U8S32(const uchar* s, int* D, int len, int kcn)
+{
+    int sum = 0;
+    for( int i = 0; i < kcn; i++ )
+        sum += (int)s[i];
+    D[0] = sum;
+    const int n = len - 1;
+    int j = 0;
+    RowS32 c = rowBcastS32(sum);
+    for( ; j + kRowU8 <= n; j += kRowU8 )
+    {
+        RowU8 nv = rowLdU8(s + j + kcn);
+        RowU8 ov = rowLdU8(s + j);
+        RowU16 nlo, nhi, olo, ohi;
+        v_expand(nv, nlo, nhi);
+        v_expand(ov, olo, ohi);
+        rowStoreU16AsS32(nlo, olo, c, D + j + 1);
+        rowStoreU16AsS32(nhi, ohi, c, D + j + 1 + kRowS16);
+    }
+    sum = v_get0(c);
+    for( ; j < n; j++ )
+    {
+        sum += (int)s[j + kcn] - (int)s[j];
+        D[j + 1] = sum;
+    }
+}
+
+inline void rowSlideCn3U8U16(const uchar* s, ushort* D, int len, int kcn)
+{
+    ushort s0 = 0, s1 = 0, s2 = 0;
+    for( int i = 0; i < kcn; i += 3 )
+    {
+        s0 += (ushort)s[i]; s1 += (ushort)s[i + 1]; s2 += (ushort)s[i + 2];
+    }
+    D[0] = s0; D[1] = s1; D[2] = s2;
+    const int n = len / 3 - 1;
+    int j = 0;
+    RowU16 c0 = rowBcastU16(s0), c1 = rowBcastU16(s1), c2 = rowBcastU16(s2);
+    for( ; j + kRowU8 <= n; j += kRowU8 )
+    {
+        RowU8 a, b, c, oa, ob, oc;
+        v_load_deinterleave(s + j * 3 + kcn, a, b, c);
+        v_load_deinterleave(s + j * 3, oa, ob, oc);
+        RowU16 alo, ahi, blo, bhi, clo, chi, oalo, oahi, oblo, obhi, oclo, ochi;
+        v_expand(a, alo, ahi); v_expand(b, blo, bhi); v_expand(c, clo, chi);
+        v_expand(oa, oalo, oahi); v_expand(ob, oblo, obhi); v_expand(oc, oclo, ochi);
+        RowU16 da = rowFoldU16(v_sub_wrap(alo, oalo), c0);
+        RowU16 db = rowFoldU16(v_sub_wrap(blo, oblo), c1);
+        RowU16 dc = rowFoldU16(v_sub_wrap(clo, oclo), c2);
+        v_store_interleave(D + (j + 1) * 3, da, db, dc);
+        da = rowFoldU16(v_sub_wrap(ahi, oahi), c0);
+        db = rowFoldU16(v_sub_wrap(bhi, obhi), c1);
+        dc = rowFoldU16(v_sub_wrap(chi, ochi), c2);
+        v_store_interleave(D + (j + 1 + kRowS16) * 3, da, db, dc);
+    }
+    s0 = v_get0(c0); s1 = v_get0(c1); s2 = v_get0(c2);
+    for( ; j < n; j++ )
+    {
+        int i = j * 3;
+        s0 += (ushort)s[i + kcn] - (ushort)s[i];
+        s1 += (ushort)s[i + kcn + 1] - (ushort)s[i + 1];
+        s2 += (ushort)s[i + kcn + 2] - (ushort)s[i + 2];
+        D[i + 3] = s0; D[i + 4] = s1; D[i + 5] = s2;
+    }
+}
+
+inline void rowSlideCn3U8S32(const uchar* s, int* D, int len, int kcn)
+{
+    int s0 = 0, s1 = 0, s2 = 0;
+    for( int i = 0; i < kcn; i += 3 )
+    {
+        s0 += (int)s[i]; s1 += (int)s[i + 1]; s2 += (int)s[i + 2];
+    }
+    D[0] = s0; D[1] = s1; D[2] = s2;
+    const int n = len / 3 - 1;
+    int j = 0;
+    RowS32 c0 = rowBcastS32(s0), c1 = rowBcastS32(s1), c2 = rowBcastS32(s2);
+    for( ; j + kRowU8 <= n; j += kRowU8 )
+    {
+        RowU8 a, b, c, oa, ob, oc;
+        v_load_deinterleave(s + j * 3 + kcn, a, b, c);
+        v_load_deinterleave(s + j * 3, oa, ob, oc);
+        RowU16 alo, ahi, blo, bhi, clo, chi, oalo, oahi, oblo, obhi, oclo, ochi;
+        v_expand(a, alo, ahi); v_expand(b, blo, bhi); v_expand(c, clo, chi);
+        v_expand(oa, oalo, oahi); v_expand(ob, oblo, obhi); v_expand(oc, oclo, ochi);
+        RowS32 a0, a1, b0, b1, d0, d1;
+        rowFoldU8S32(alo, oalo, c0, a0, a1);
+        rowFoldU8S32(blo, oblo, c1, b0, b1);
+        rowFoldU8S32(clo, oclo, c2, d0, d1);
+        v_store_interleave(D + (j + 1) * 3, a0, b0, d0);
+        v_store_interleave(D + (j + 1 + kRowS32) * 3, a1, b1, d1);
+        rowFoldU8S32(ahi, oahi, c0, a0, a1);
+        rowFoldU8S32(bhi, obhi, c1, b0, b1);
+        rowFoldU8S32(chi, ochi, c2, d0, d1);
+        v_store_interleave(D + (j + 1 + kRowS16) * 3, a0, b0, d0);
+        v_store_interleave(D + (j + 1 + kRowS16 + kRowS32) * 3, a1, b1, d1);
+    }
+    s0 = v_get0(c0); s1 = v_get0(c1); s2 = v_get0(c2);
+    for( ; j < n; j++ )
+    {
+        int i = j * 3;
+        s0 += (int)s[i + kcn] - (int)s[i];
+        s1 += (int)s[i + kcn + 1] - (int)s[i + 1];
+        s2 += (int)s[i + kcn + 2] - (int)s[i + 2];
+        D[i + 3] = s0; D[i + 4] = s1; D[i + 5] = s2;
+    }
+}
+
+// Channels stay interleaved: one pixel is 4 ushort lanes, so the per-channel
+// prefix is a scan with stride 4 and the carry is the last pixel broadcast as
+// one 64-bit lane.
+inline void rowSlideCn4U8U16(const uchar* s, ushort* D, int len, int kcn)
+{
+    ushort s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+    for( int i = 0; i < kcn; i += 4 )
+    {
+        s0 += (ushort)s[i]; s1 += (ushort)s[i + 1];
+        s2 += (ushort)s[i + 2]; s3 += (ushort)s[i + 3];
+    }
+    D[0] = s0; D[1] = s1; D[2] = s2; D[3] = s3;
+    const int n = len - 4;
+    int i = 0;
+    RowU16 c = rowBcastU64AsU16((uint64)s0 | ((uint64)s1 << 16) | ((uint64)s2 << 32) | ((uint64)s3 << 48));
+    for( ; i + kRowS16 <= n; i += kRowS16 )
+    {
+        RowU16 p = rowPrefixCn4U16(v_sub_wrap(rowLdExpandU8(s + i + kcn), rowLdExpandU8(s + i)));
+        v_store(D + i + 4, v_add_wrap(p, c));
+        c = v_add_wrap(c, rowBcastU64AsU16(v_extract_highest(v_reinterpret_as_u64(p))));
+    }
+    ushort buf[kRowS16];
+    v_store(buf, c);
+    s0 = buf[0]; s1 = buf[1]; s2 = buf[2]; s3 = buf[3];
+    for( ; i < n; i += 4 )
+    {
+        s0 += (ushort)s[i + kcn] - (ushort)s[i];
+        s1 += (ushort)s[i + kcn + 1] - (ushort)s[i + 1];
+        s2 += (ushort)s[i + kcn + 2] - (ushort)s[i + 2];
+        s3 += (ushort)s[i + kcn + 3] - (ushort)s[i + 3];
+        D[i + 4] = s0; D[i + 5] = s1; D[i + 6] = s2; D[i + 7] = s3;
+    }
+}
+
+#if defined(__GNUC__)
+#define CV_BOX_NOINLINE __attribute__((noinline))
+#else
+#define CV_BOX_NOINLINE
+#endif
+
+template<typename T, typename ST>
+CV_BOX_NOINLINE void rowSlideScalarCn1(const T* s, ST* D, int len, int kcn)
+{
+    ST sum = 0;
+    for( int i = 0; i < kcn; i++ )
+        sum += (ST)s[i];
+    D[0] = sum;
+    for( int i = 0; i < len - 1; i++ )
+    {
+        sum += (ST)s[i + kcn] - (ST)s[i];
+        D[i + 1] = sum;
+    }
+}
+
+template<typename T, typename ST>
+CV_BOX_NOINLINE void rowSlideScalarCn3(const T* s, ST* D, int len, int kcn)
+{
+    ST s0 = 0, s1 = 0, s2 = 0;
+    for( int i = 0; i < kcn; i += 3 )
+    {
+        s0 += (ST)s[i];
+        s1 += (ST)s[i + 1];
+        s2 += (ST)s[i + 2];
+    }
+    D[0] = s0; D[1] = s1; D[2] = s2;
+    for( int i = 0; i < len - 3; i += 3 )
+    {
+        s0 += (ST)s[i + kcn] - (ST)s[i];
+        s1 += (ST)s[i + kcn + 1] - (ST)s[i + 1];
+        s2 += (ST)s[i + kcn + 2] - (ST)s[i + 2];
+        D[i + 3] = s0; D[i + 4] = s1; D[i + 5] = s2;
+    }
+}
+
+// The 16S/32S 1-channel scans lose to scalar on NEON (Apple M5).
+template<>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<short, int>::apply(const short* s, int* D, int len, int cn, int kcn)
+{
+#if CV_SSE2
+    if( cn == 1 ) { rowSlideCn1Expand16(s, D, len, kcn); return true; }
+#endif
+    if( cn == 3 ) { rowSlideScalarCn3(s, D, len, kcn); return true; }
+    return false;
+}
 
 template<>
-struct RowSumCn1SIMD128<float, double>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<ushort, int>::apply(const ushort* s, int* D, int len, int cn, int kcn)
 {
-    static CV_ALWAYS_INLINE bool apply(const float* S, double* D, int width, int ksz_cn)
+    if( cn == 1 ) { rowSlideScalarCn1(s, D, len, kcn); return true; }
+    if( cn == 3 ) { rowSlideScalarCn3(s, D, len, kcn); return true; }
+    return false;
+}
+
+template<>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<int, int>::apply(const int* s, int* D, int len, int cn, int kcn)
+{
+#if CV_SSE2
+    if( cn == 1 ) { rowSlideCn1S32(s, D, len, kcn); return true; }
+#endif
+    if( cn == 3 ) { rowSlideScalarCn3(s, D, len, kcn); return true; }
+    return false;
+}
+
+template<>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<uchar, ushort>::apply(const uchar* s, ushort* D, int len, int cn, int kcn)
+{
+    if( cn == 1 ) { rowSlideCn1U8U16(s, D, len, kcn); return true; }
+    if( cn == 3 ) { rowSlideCn3U8U16(s, D, len, kcn); return true; }
+    if( cn == 4 ) { rowSlideCn4U8U16(s, D, len, kcn); return true; }
+    return false;
+}
+
+template<>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<uchar, int>::apply(const uchar* s, int* D, int len, int cn, int kcn)
+{
+    if( cn == 1 ) { rowSlideCn1U8S32(s, D, len, kcn); return true; }
+    if( cn == 3 ) { rowSlideCn3U8S32(s, D, len, kcn); return true; }
+    return false;
+}
+
+#if CV_SIMD_64F
+inline v_float64 rowPrefixF64(const v_float64& a)
+{
+    v_float64 v = v_add(a, v_rotate_left<1>(a));
+#if CV_SIMD_WIDTH >= 32
+    v = v_add(v, v_rotate_left<2>(v));
+#endif
+#if CV_SIMD_WIDTH >= 64
+    v = v_add(v, v_rotate_left<4>(v));
+#endif
+    return v;
+}
+
+// Native vector width: 256-bit doubles with AVX2, 512-bit with AVX-512.
+inline void rowSlideCn1F32F64(const float* S, double* D, int width, int ksz_cn)
+{
+    const int VF32 = VTraits<v_float32>::vlanes();
+    const int VF64 = VTraits<v_float64>::vlanes();
+
+    int i = 0;
+    v_float64 vsum0 = vx_setzero_f64(), vsum1 = vx_setzero_f64();
+    for( ; i <= ksz_cn - 2*VF32; i += 2*VF32 )
     {
-        double s = 0;
-        int i = 0;
-        {
-            v_float64x2 vsum0 = v_setzero_f64();
-            v_float64x2 vsum1 = v_setzero_f64();
-            for( ; i <= ksz_cn - 2*VTraits<v_float32x4>::nlanes; i += 2*VTraits<v_float32x4>::nlanes )
-            {
-                v_float32x4 va = v_load(S + i);
-                v_float32x4 vb = v_load(S + i + VTraits<v_float32x4>::nlanes);
-                vsum0 = v_add(vsum0, v_cvt_f64(va));
-                vsum0 = v_add(vsum0, v_cvt_f64_high(va));
-                vsum1 = v_add(vsum1, v_cvt_f64(vb));
-                vsum1 = v_add(vsum1, v_cvt_f64_high(vb));
-            }
-            for( ; i <= ksz_cn - VTraits<v_float32x4>::nlanes; i += VTraits<v_float32x4>::nlanes )
-            {
-                v_float32x4 v = v_load(S + i);
-                vsum0 = v_add(vsum0, v_cvt_f64(v));
-                vsum0 = v_add(vsum0, v_cvt_f64_high(v));
-            }
-            vsum0 = v_add(vsum0, vsum1);
-            s = v_reduce_sum(vsum0);
-            for( ; i < ksz_cn; i++ )
-                s += (double)S[i];
-        }
-        D[0] = s;
-
-        int j = 0;
-        for( ; j <= width - VTraits<v_float32x4>::nlanes; j += VTraits<v_float32x4>::nlanes )
-        {
-            v_float32x4 vnew = v_load(S + j + ksz_cn);
-            v_float32x4 vold = v_load(S + j);
-            v_float64x2 vd0 = v_sub(v_cvt_f64(vnew), v_cvt_f64(vold));
-            v_float64x2 vd1 = v_sub(v_cvt_f64_high(vnew), v_cvt_f64_high(vold));
-            v_float64x2 vp0 = v_add(vd0, v_rotate_left<1>(vd0));
-            v_float64x2 vp1 = v_add(vd1, v_rotate_left<1>(vd1));
-            double pair0_sum = v_extract_n<1>(vp0);
-            v_float64x2 vp1off = v_add(vp1, v_setall_f64(pair0_sum));
-            v_float64x2 vc = v_setall_f64(s);
-            v_store(D + j + 1, v_add(vp0, vc));
-            v_float64x2 vr2 = v_add(vp1off, vc);
-            v_store(D + j + 1 + VTraits<v_float64x2>::nlanes, vr2);
-            s = v_extract_n<1>(vr2);
-        }
-        for( ; j < width; j++ )
-        {
-            s += (double)S[j + ksz_cn] - (double)S[j];
-            D[j + 1] = s;
-        }
-        return true;
+        v_float32 va = vx_load(S + i);
+        v_float32 vb = vx_load(S + i + VF32);
+        vsum0 = v_add(vsum0, v_add(v_cvt_f64(va), v_cvt_f64_high(va)));
+        vsum1 = v_add(vsum1, v_add(v_cvt_f64(vb), v_cvt_f64_high(vb)));
     }
-};
-#endif // CV_SIMD128_64F
+    for( ; i <= ksz_cn - VF32; i += VF32 )
+    {
+        v_float32 v = vx_load(S + i);
+        vsum0 = v_add(vsum0, v_add(v_cvt_f64(v), v_cvt_f64_high(v)));
+    }
+    double s = v_reduce_sum(v_add(vsum0, vsum1));
+    for( ; i < ksz_cn; i++ )
+        s += (double)S[i];
+    D[0] = s;
 
+    // Both halves are scanned independently; only the final add per
+    // block depends on the running sum, which keeps the carried chain short.
+    int j = 0;
+    for( ; j <= width - VF32; j += VF32 )
+    {
+        v_float32 vnew = vx_load(S + j + ksz_cn);
+        v_float32 vold = vx_load(S + j);
+        v_float64 vp0 = rowPrefixF64(v_sub(v_cvt_f64(vnew), v_cvt_f64(vold)));
+        v_float64 vp1 = rowPrefixF64(v_sub(v_cvt_f64_high(vnew), v_cvt_f64_high(vold)));
+        vp1 = v_add(vp1, vx_setall_f64(v_extract_highest(vp0)));
+        v_float64 vc = vx_setall_f64(s);
+        v_store(D + j + 1, v_add(vp0, vc));
+        v_float64 vr1 = v_add(vp1, vc);
+        v_store(D + j + 1 + VF64, vr1);
+        s = v_extract_highest(vr1);
+    }
+    for( ; j < width; j++ )
+    {
+        s += (double)S[j + ksz_cn] - (double)S[j];
+        D[j + 1] = s;
+    }
+}
+
+template<>
+CV_BOX_NOINLINE bool RowSumSeparableSIMD<float, double>::apply(const float* s, double* D, int len, int cn, int kcn)
+{
+    if( cn == 1 ) { rowSlideCn1F32F64(s, D, len - 1, kcn); return true; }
+    return false;
+}
+#endif // CV_SIMD_64F
+
+#undef CV_BOX_NOINLINE
+#endif // CV_SIMD && !CV_SIMD_SCALABLE
+
+// 64-byte loop alignment improves performance for the 3/5-tap rows, the fused
+// kernels, and the column sum.
+#if defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__)
+#pragma GCC push_options
+#pragma GCC optimize("align-loops=64")
+#endif
 template<typename T, typename ST>
 struct RowSum :
         public BaseRowFilter
@@ -208,21 +642,20 @@ struct RowSum :
                 }
             }
         }
+        else if( (cn == 1 || cn == 3 || cn == 4) &&
+                 RowSumSeparableSIMD<T, ST>::apply(s, D, len, cn, kcn) )
+        {
+        }
         else if( cn == 1 )
         {
-#if CV_SIMD128_64F
-            if (!RowSumCn1SIMD128<T, ST>::apply(s, D, len - cn, kcn))
-#endif
+            ST sum = 0;
+            for( i = 0; i < kcn; i++ )
+                sum += (ST)s[i];
+            D[0] = sum;
+            for( i = 0; i < len-cn; i++ )
             {
-                ST sum = 0;
-                for( i = 0; i < kcn; i++ )
-                    sum += (ST)s[i];
-                D[0] = sum;
-                for( i = 0; i < len-cn; i++ )
-                {
-                    sum += (ST)s[i + kcn] - (ST)s[i];
-                    D[i+1] = sum;
-                }
+                sum += (ST)s[i + kcn] - (ST)s[i];
+                D[i+1] = sum;
             }
         }
         else if( cn == 3 )
@@ -1461,8 +1894,6 @@ struct ColumnSum<SCALE_T, int, float> :
     std::vector<int> sum;
 };
 
-
-// End align-loops region.
 #if defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__)
 #pragma GCC pop_options
 #endif
@@ -1869,6 +2300,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
         {
             if(scale==1)
             {
+                // the separable path is faster for 8- and 16-bit sums on NEON (Apple M5)
 #if defined(__x86_64__) || defined(_M_X64)
                 if( sdepth == CV_8U  )
                     return makePtr<Sum3x3<SKIP_SCALING, uchar, ushort, v_uint8, v_uint16> >(ksize, scale);
@@ -1879,8 +2311,8 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<SKIP_SCALING,  int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F && checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2) )
-                    return makePtr<Sum3x3_64f<SKIP_SCALING, float, double> >(ksize, scale);
+                if( sdepth == CV_32F )
+                    return makePtr<Sum3x3sameType<SKIP_SCALING, float, v_float32> >(ksize, scale);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum3x3sameType<SKIP_SCALING, double,v_float64> >(ksize, scale);
@@ -1890,7 +2322,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
             {
 #if defined(__x86_64__) || defined(_M_X64)
                 if( sdepth == CV_8U  )
-                    return makePtr<Sum3x3_8u<APPLY_SCALING> >(ksize, scale);
+                    return makePtr<Sum3x3_8u>(ksize, scale);
                 if( sdepth == CV_16U  )
                     return makePtr<Sum3x3<APPLY_SCALING, ushort, uint32_t, v_uint16, v_uint32> >(ksize, scale);
                 if( sdepth == CV_16S )
@@ -1898,8 +2330,8 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F && checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2) )
-                    return makePtr<Sum3x3_64f<APPLY_SCALING, float, double> >(ksize, scale);
+                if( sdepth == CV_32F )
+                    return makePtr<Sum3x3sameType<APPLY_SCALING, float, v_float32> >(ksize, scale);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum3x3sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);
@@ -1912,33 +2344,35 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
             {
 #if defined(__x86_64__) || defined(_M_X64)
                 if( sdepth == CV_8U  )
-                    return makePtr<Sum5x5<SKIP_SCALING, uchar, ushort, v_uint8, v_uint16, void> >(ksize, scale);
+                    return makePtr<Sum5x5<SKIP_SCALING, uchar, ushort, v_uint8, v_uint16> >(ksize, scale);
                 if( sdepth == CV_16U  )
-                    return makePtr<Sum5x5<SKIP_SCALING, ushort, uint32_t, v_uint16, v_uint32, void> >(ksize, scale);
+                    return makePtr<Sum5x5<SKIP_SCALING, ushort, uint32_t, v_uint16, v_uint32> >(ksize, scale);
                 if( sdepth == CV_16S )
-                    return makePtr<Sum5x5<SKIP_SCALING, short, int32_t, v_int16, v_int32, void> >(ksize, scale);
+                    return makePtr<Sum5x5<SKIP_SCALING, short, int32_t, v_int16, v_int32> >(ksize, scale);
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<SKIP_SCALING, int, v_int32> >(ksize, scale); //intermediate stored can be stored in int64_t, but matching reference code to avoid output mismatch.
-                if( sdepth == CV_32F && checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2) )
-                    return makePtr<Sum5x5_64f<SKIP_SCALING, float, double> >(ksize, scale);
+                if( sdepth == CV_32F )
+                    return makePtr<Sum5x5sameType<SKIP_SCALING, float, v_float32> >(ksize, scale);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-                    if( sdepth == CV_64F )
+                if( sdepth == CV_64F )
                     return makePtr<Sum5x5sameType<SKIP_SCALING, double, v_float64> >(ksize, scale);
 #endif
             }
             else
             {
 #if defined(__x86_64__) || defined(_M_X64)
+                if( sdepth == CV_8U  )
+                    return makePtr<Sum5x5_8u>(ksize, scale);
                 if( sdepth == CV_16U  )
-                    return makePtr<Sum5x5<APPLY_SCALING, ushort, uint32_t, v_uint16, v_uint32, void> >(ksize, scale);
+                    return makePtr<Sum5x5<APPLY_SCALING, ushort, uint32_t, v_uint16, v_uint32> >(ksize, scale);
                 if( sdepth == CV_16S )
                     return makePtr<Sum5x5<APPLY_SCALING, short, int32_t, v_int16, v_int32> >(ksize, scale);
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F && checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2) )
-                    return makePtr<Sum5x5_64f<APPLY_SCALING, float, double> >(ksize, scale);
+                if( sdepth == CV_32F )
+                    return makePtr<Sum5x5sameType<APPLY_SCALING, float, v_float32> >(ksize, scale);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum5x5sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);

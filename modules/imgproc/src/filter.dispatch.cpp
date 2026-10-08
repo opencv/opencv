@@ -71,7 +71,7 @@ BaseColumnFilter::BaseColumnFilter() : ksize(-1), anchor(-1) {}
 BaseColumnFilter::~BaseColumnFilter() {}
 void BaseColumnFilter::reset() {}
 
-BaseRowColumnFilter::BaseRowColumnFilter() { ksize = anchor = -1; }
+BaseRowColumnFilter::BaseRowColumnFilter() { ksize = anchor = -1; minWidth = 0; }
 BaseRowColumnFilter::~BaseRowColumnFilter() {}
 void BaseRowColumnFilter::reset() {}
 

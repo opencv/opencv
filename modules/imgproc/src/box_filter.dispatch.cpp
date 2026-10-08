@@ -365,11 +365,14 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5)
+    bool useRowColumnSum = false;
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-       && (src.data == dst.data || !checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2)) //blockSum is effective for x86 arch with AGU<=2.
+    // the fused 3x3/5x5 kernels of createBoxFilter only run out of place with a centered anchor
+    useRowColumnSum = src.data != dst.data && ksize.width == ksize.height &&
+                      (ksize.width == 3 || ksize.width == 5) &&
+                      (anchor == Point(-1, -1) || anchor == Point(ksize.width/2, ksize.height/2));
 #endif
-    )
+    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5) && !useRowColumnSum)
     {
         CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);

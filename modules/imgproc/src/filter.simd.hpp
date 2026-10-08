@@ -274,6 +274,139 @@ int inline getNextBatchCount(FilterEngine& this_, int bufRows, int kheight, int 
     return dcount;
 }
 
+// Copy n border pixels starting at border index b0 (0.._dx1-1 left, _dx1.. right) into out.
+static inline void copyBorderPixels(uchar* out, const uchar* src, int b0, int n, int esz, bool makeBorder,
+                                    const int* btab, int btab_esz, const uchar* constVal)
+{
+    if( n <= 0 )
+        return;
+    if( !makeBorder )
+    {
+        memcpy(out, constVal, n*esz);
+        return;
+    }
+    if( btab_esz*(int)sizeof(int) == esz )
+    {
+        const int* isrc = (const int*)src;
+        int* iout = (int*)out;
+        for( int i = 0; i < n*btab_esz; i++ )
+            iout[i] = isrc[btab[b0*btab_esz + i]];
+    }
+    else
+    {
+        for( int i = 0; i < n*esz; i++ )
+            out[i] = src[btab[b0*esz + i]];
+    }
+}
+
+// Gather row pixels [0, seg) and [width1 - seg, width1) of a bordered row into out.
+static inline void gatherRowEdges(uchar* out, const uchar* src, int seg, int width1, int _dx1, int _dx2,
+                                  int esz, bool makeBorder, const int* btab, int btab_esz, const uchar* constVal)
+{
+    copyBorderPixels(out, src, 0, _dx1, esz, makeBorder, btab, btab_esz, constVal);
+    memcpy(out + _dx1*esz, src, (seg - _dx1)*esz);
+    out += seg*esz;
+    memcpy(out, src + (width1 - seg - _dx1)*esz, (seg - _dx2)*esz);
+    copyBorderPixels(out + (seg - _dx2)*esz, src, _dx1, _dx2, esz, makeBorder, btab, btab_esz, constVal);
+}
+
+// Separable box filter whose inner region is computed by this_.rowColumnFilter in one pass.
+// Only the pixels the fused kernel does not produce go through rowFilter/columnFilter:
+// the top/bottom kx rows at image borders and the left/right kx columns of the other rows.
+static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int srcstep, uchar* dst, int dststep)
+{
+    const int esz = (int)getElemSize(this_.srcType);
+    const int bsz = (int)getElemSize(this_.bufType);
+    const int dsz = (int)getElemSize(this_.dstType);
+    const int cn = CV_MAT_CN(this_.bufType);
+    const int k = this_.ksize.width, kx = k / 2;
+    const int width = this_.roi.width, height = this_.roi.height;
+    const int width1 = width + k - 1;
+    const int wholeHeight = this_.wholeSize.height;
+    const int _dx1 = this_.dx1, _dx2 = this_.dx2;
+    const bool makeBorder = (_dx1 > 0 || _dx2 > 0) && this_.rowBorderType != BORDER_CONSTANT;
+    const int* btab = &this_.borderTab[0];
+    const int btab_esz = this_.borderElemSize;
+    const uchar* constVal = this_.constBorderValue.empty() ? 0 : &this_.constBorderValue[0];
+    const int xofs1 = std::min(this_.roi.x, this_.anchor.x);
+    const int y0 = this_.startY0;
+    BaseRowFilter& rowFilter = *this_.rowFilter;
+    BaseColumnFilter& columnFilter = *this_.columnFilter;
+
+    const int top = this_.roi.y >= kx ? 0 : kx;
+    const int bottom = this_.roi.y + height + kx <= wholeHeight ? 0 : kx;
+    const int inner = height - top - bottom;
+
+    auto srcRowPtr = [&](int y) { return src + (ptrdiff_t)(y - y0)*srcstep - xofs1*esz; };
+
+    // Rows at the top/bottom image border: full row sums, then one column pass.
+    uchar* srcRow = &this_.srcRow[0];
+    uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
+    const uchar* constRow = this_.columnBorderType == BORDER_CONSTANT ? alignPtr(&this_.constBorderRow[0], VEC_ALIGN) : 0;
+    const uchar* brows[16];
+    for( int part = 0; part < 2; part++ )
+    {
+        int nOut = part == 0 ? top : bottom;
+        if( nOut == 0 )
+            continue;
+        int dy0 = part == 0 ? 0 : height - bottom;
+        int nIn = nOut + k - 1;
+        CV_Assert( nIn <= (int)this_.rows.size() );
+        for( int i = 0; i < nIn; i++ )
+        {
+            int y = borderInterpolate(this_.roi.y + dy0 - kx + i, wholeHeight, this_.columnBorderType);
+            if( y < 0 )
+            {
+                brows[i] = constRow;
+                continue;
+            }
+            uchar* brow = ringBuf + i*this_.bufStep;
+            fillRowData(srcRow, srcRowPtr(y), width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, true);
+            rowFilter(srcRow, brow, width, cn, true);
+            brows[i] = brow;
+        }
+        columnFilter.reset();
+        columnFilter(brows, dst + (ptrdiff_t)dy0*dststep, dststep, nOut, width*cn, 0, true);
+    }
+
+    if( inner > 0 )
+    {
+        // Left/right kx columns of the inner rows, in chunks of up to maxChunk output rows.
+        // Each source row contributes two segments of seg pixels (row pixels [0, seg) and
+        // [width1 - seg, width1)); a chunk's segments are row-summed in one call, then each
+        // side gets one column pass.
+        const int seg = k + kx - 1;
+        const int maxChunk = 64;
+        const int maxIn = std::min(inner, maxChunk) + k - 1;
+        AutoBuffer<uchar> _edge((size_t)maxIn*2*seg*(esz + bsz) + VEC_ALIGN);
+        uchar* edge = _edge.data();
+        uchar* edgeSum = alignPtr(edge + (size_t)maxIn*2*seg*esz, VEC_ALIGN);
+        const uchar* erows[maxChunk + 16];
+        for( int y = 0; y < inner; y += maxChunk )
+        {
+            const int nOut = std::min(maxChunk, inner - y);
+            const int nIn = nOut + k - 1;
+            for( int i = 0; i < nIn; i++ )
+                gatherRowEdges(edge + (size_t)i*2*seg*esz, srcRowPtr(this_.roi.y + top + y - kx + i), seg, width1,
+                               _dx1, _dx2, esz, makeBorder, btab, btab_esz, constVal);
+            rowFilter(edge, edgeSum, nIn*2*seg - (k - 1), cn, true);
+
+            uchar* dstChunk = dst + (ptrdiff_t)(top + y)*dststep;
+            for( int side = 0; side < 2; side++ )
+            {
+                for( int i = 0; i < nIn; i++ )
+                    erows[i] = edgeSum + ((size_t)i*2 + side)*seg*bsz;
+                columnFilter.reset();
+                columnFilter(erows, dstChunk + (side ? (width - kx)*dsz : 0), dststep, nOut, kx*cn, 0, true);
+            }
+        }
+
+        const uchar* srcInner = src + (ptrdiff_t)(this_.roi.y + top - kx - y0)*srcstep;
+        (*this_.rowColumnFilter)(srcInner, dst, srcstep, dststep, width, height, this_.roi.y, wholeHeight, cn);
+    }
+    return height;
+}
+
 int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, int count,
                           uchar* dst, int dststep)
 {
@@ -293,7 +426,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     int xofs1 = std::min(this_.roi.x, this_.anchor.x);
     bool isSep = this_.isSeparable();
     bool makeBorder = (_dx1 > 0 || _dx2 > 0) && this_.rowBorderType != BORDER_CONSTANT;
-    int dy = 0, i = 0, yidx = this_.roi.y;
+    int dy = 0, i = 0;
     int startY0 = this_.startY0;
     int bufStep = this_.bufStep;
 
@@ -308,16 +441,27 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     if(width <= 32 || this_.roi.height <=2 || dst_ == src_ ) // in-place computation and small image size avoided.
         isRowColumnSeparable = false;
 
-    if(isRowColumnSeparable) {
-        int sdepth = CV_MAT_DEPTH(this_.srcType);
-        if(sdepth == CV_8U && width <= 480)
-            isRowColumnSeparable = false;
+    if(isRowColumnSeparable && width*cn < this_.rowColumnFilter->minWidth)
+        isRowColumnSeparable = false;
+
+    // The fused path needs the whole ROI in one call and a centered square kernel.
+    if(isRowColumnSeparable &&
+       (this_.dstY != 0 || this_.rowCount != 0 || count != this_.endY - this_.startY ||
+        kheight != kwidth || this_.anchor != Point(kwidth/2, kheight/2) || this_.roi.height <= kheight))
+        isRowColumnSeparable = false;
+
+    if(isSep && isRowColumnSeparable)
+    {
+        dy = proceedRowColumnSeparable(this_, src + xofs1*esz, srcstep, dst, dststep);
+        this_.dstY += dy;
+        CV_Assert(this_.dstY <= this_.roi.height);
+        return dy;
     }
 
     uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
     uchar* srcRow = &this_.srcRow[0];
 
-    if(isSep && !isRowColumnSeparable)
+    if(isSep)
     {
         // Streamlined separable path: processInnerRegion always true, no rowColumnFilter.
         for(;; dst += dststep*i, dy += i)
@@ -338,48 +482,6 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             i -= kheight - 1;
             (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn, 0, true);
         }
-    }
-    else if(isSep && isRowColumnSeparable)
-    {
-        // isRowColumnSeparable path: border rows via RowSum+ColumnSum, inner via rowColumnFilter.
-        bool processInnerRegion = true;
-
-        for(;; dst += dststep*i, dy += i)
-        {
-            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
-
-            for( ; dcount-- > 0; src += srcstep )
-            {
-                processInnerRegion = true;
-                if((yidx>(kheight-2)) && (yidx < (this_.wholeSize.height-kheight+1)))
-                {
-                    processInnerRegion = false;
-                }
-                int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
-                uchar* brow = ringBuf + bi*bufStep;
-                incrementRowCount(this_, bufRows);
-                fillRowData(srcRow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, processInnerRegion);
-                (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType), processInnerRegion);
-                yidx++;
-            }
-            fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
-            if( i < kheight )
-                break;
-            i -= kheight - 1;
-
-            int kcn = 0;
-            processInnerRegion = true;
-            int yidxColFilter = yidx - i - 1;
-            if((yidxColFilter>kheight/2) && (yidx < (this_.wholeSize.height-kheight+2)))
-            {
-                kcn = (kwidth >> 1)*cn;
-                processInnerRegion = false;
-            }
-            (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn, kcn, processInnerRegion);
-        }
-
-        // Process inner region with row-column filter.
-        (*this_.rowColumnFilter)(src_, dst_, srcstep, dststep, this_.roi.width, this_.roi.height, this_.roi.y, this_.wholeSize.height, cn);
     }
     else
     {
