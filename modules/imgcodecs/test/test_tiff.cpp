@@ -1394,6 +1394,57 @@ const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
 
 INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
 
+
+// https://github.com/opencv/opencv/pull/30165
+
+typedef tuple< int, int, int > Method_minLevel_maxLevel;
+typedef testing::TestWithParam<Method_minLevel_maxLevel> Imgcodecs_Tiff_compress_level;
+
+TEST_P(Imgcodecs_Tiff_compress_level, normal)
+{
+    // Get test parameters
+    const int compressMethod     = get<0>(GetParam());
+    const int minLevel           = get<1>(GetParam());
+    const int maxLevel           = get<2>(GetParam());
+
+    //build a dummy image that can be heavily compressed
+    cv::Mat src = cv::Mat(cv::Size(640, 480), CV_8UC3);
+    src.forEach<cv::Vec3b>([&](cv::Vec3b& pixel, const int* pos) {
+      const int y = pos[0];
+      const int x = pos[1];
+      const uchar value = static_cast<uchar>(y*src.cols+x);
+      pixel = cv::Vec3b(value, value, value);
+    });
+
+    std::vector<uint8_t> bufDef;
+    std::vector<int>paramsDef = {IMWRITE_TIFF_COMPRESSION, compressMethod};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufDef, paramsDef)));
+
+    std::vector<uint8_t> bufMin;
+    std::vector<int>paramsMin = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, minLevel};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMin, paramsMin)));
+
+    std::vector<uint8_t> bufMax;
+    std::vector<int>paramsMax = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, maxLevel};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMax, paramsMax)));
+
+    ASSERT_LE(bufDef.size(), bufMin.size());
+    ASSERT_LE(bufMax.size(), bufDef.size());
+}
+
+const Method_minLevel_maxLevel supportedMethod_minLevel_maxLevel[] =
+{
+    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_DEFLATE, 1, 9),
+    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE, 1, 9),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_LZMA, 0, 9),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_ZSTD, 1, 22),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_WEBP, 1, 100),
+};
+
+INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_compress_level,
+    testing::ValuesIn(supportedMethod_minLevel_maxLevel)
+);
+
 #endif
 
 }} // namespace
