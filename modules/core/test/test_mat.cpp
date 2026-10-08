@@ -2354,6 +2354,48 @@ TEST(Core_MatExpr, issue_16689)
     }
 }
 
+// https://github.com/opencv/opencv/issues/26138
+TEST(Core_MatExpr, issue_26138)
+{
+    // alpha*(m - s): the result must be saturated once, after the scalar has been
+    // added, both for single- and for multi-channel matrices.
+    for (int alpha = 1; alpha <= 9; alpha++)
+    {
+        Mat m1(3, 3, CV_8UC1, Scalar(100));
+        Mat m3(3, 3, CV_8UC3, Scalar(100, 100, 100));
+
+        Mat r1 = alpha * (m1 - Scalar(70));
+        Mat r3 = alpha * (m3 - Scalar(70, 70, 70));
+
+        Mat expected(3, 3, CV_8UC1, Scalar(saturate_cast<uchar>(alpha * (100 - 70))));
+        EXPECT_EQ(0, cvtest::norm(r1, expected, NORM_INF)) << "alpha=" << alpha << " channels=1";
+
+        std::vector<Mat> channels(3, expected);
+        Mat expected3;
+        merge(channels, expected3);
+        EXPECT_EQ(0, cvtest::norm(r3, expected3, NORM_INF)) << "alpha=" << alpha << " channels=3";
+    }
+
+    // The same for alpha*(a + b) + s, where both operands are matrices.
+    for (int alpha = 1; alpha <= 4; alpha++)
+    {
+        const int shift = -300;
+        Mat a1(3, 3, CV_8UC1, Scalar(100)), b1(3, 3, CV_8UC1, Scalar(100));
+        Mat a3(3, 3, CV_8UC3, Scalar(100, 100, 100)), b3(3, 3, CV_8UC3, Scalar(100, 100, 100));
+
+        Mat r1 = alpha * (a1 + b1) + Scalar(shift);
+        Mat r3 = alpha * (a3 + b3) + Scalar(shift, shift, shift);
+
+        Mat expected(3, 3, CV_8UC1, Scalar(saturate_cast<uchar>(alpha * (100 + 100) + shift)));
+        EXPECT_EQ(0, cvtest::norm(r1, expected, NORM_INF)) << "alpha=" << alpha << " channels=1";
+
+        std::vector<Mat> channels(3, expected);
+        Mat expected3;
+        merge(channels, expected3);
+        EXPECT_EQ(0, cvtest::norm(r3, expected3, NORM_INF)) << "alpha=" << alpha << " channels=3";
+    }
+}
+
 #ifdef HAVE_EIGEN
 TEST(Core_Eigen, eigen2cv_check_Mat_type)
 {

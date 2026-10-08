@@ -1297,27 +1297,40 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
     {
         if( e.s == Scalar() || !e.s.isReal() )
         {
-            if( e.alpha == 1 )
+            if( !e.s.isReal() && e.a.depth() != CV_32F && e.a.depth() != CV_64F )
             {
-                if( e.beta == 1 )
-                    cv::add(e.a, e.b, dst);
-                else if( e.beta == -1 )
-                    cv::subtract(e.a, e.b, dst);
-                else
-                    cv::scaleAdd(e.b, e.beta, e.a, dst);
-            }
-            else if( e.beta == 1 )
-            {
-                if( e.alpha == -1 )
-                    cv::subtract(e.b, e.a, dst);
-                else
-                    cv::scaleAdd(e.a, e.alpha, e.b, dst);
+                // Combine in a non-saturating type so that the scalar is added before
+                // the result is saturated, as for the single-channel case.
+                // https://github.com/opencv/opencv/issues/26138
+                Mat tmp;
+                cv::addWeighted(e.a, e.alpha, e.b, e.beta, 0, tmp, CV_64F);
+                cv::add(tmp, e.s, tmp);
+                tmp.convertTo(dst, e.a.type());
             }
             else
-                cv::addWeighted(e.a, e.alpha, e.b, e.beta, 0, dst);
+            {
+                if( e.alpha == 1 )
+                {
+                    if( e.beta == 1 )
+                        cv::add(e.a, e.b, dst);
+                    else if( e.beta == -1 )
+                        cv::subtract(e.a, e.b, dst);
+                    else
+                        cv::scaleAdd(e.b, e.beta, e.a, dst);
+                }
+                else if( e.beta == 1 )
+                {
+                    if( e.alpha == -1 )
+                        cv::subtract(e.b, e.a, dst);
+                    else
+                        cv::scaleAdd(e.a, e.alpha, e.b, dst);
+                }
+                else
+                    cv::addWeighted(e.a, e.alpha, e.b, e.beta, 0, dst);
 
-            if( !e.s.isReal() )
-                cv::add(dst, e.s, dst);
+                if( !e.s.isReal() )
+                    cv::add(dst, e.s, dst);
+            }
         }
         else
         {
@@ -1339,10 +1352,21 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
         cv::add(e.a, e.s, dst);
     else if( e.alpha == -1 )
         cv::subtract(e.s, e.a, dst);
-    else
+    else if( e.a.depth() == CV_32F || e.a.depth() == CV_64F )
     {
+        // Floating point types do not saturate, so both steps are exact.
         e.a.convertTo(dst, e.a.type(), e.alpha);
         cv::add(dst, e.s, dst);
+    }
+    else
+    {
+        // Scale in a non-saturating type so that the scalar is added before the
+        // result is saturated, as for the single-channel case.
+        // https://github.com/opencv/opencv/issues/26138
+        Mat tmp;
+        e.a.convertTo(tmp, CV_MAKETYPE(CV_64F, e.a.channels()), e.alpha);
+        cv::add(tmp, e.s, tmp);
+        tmp.convertTo(dst, e.a.type());
     }
 
     if( dst.data != m.data )
