@@ -10,8 +10,34 @@ namespace opencv_test { namespace {
 static int multirun_count(int total) { return std::max(1, 100000 / total); }
 
 // random points in a bounding box, a different input on every call. (points count, box side)
-typedef tuple<int, int> ConvHullParams;
-typedef TestBaseWithParam<ConvHullParams> ConvexHullPerfTest;
+typedef tuple<int, int> ConvHullRandomParams;
+typedef TestBaseWithParam<ConvHullRandomParams> ConvexHullRandomPerfTest;
+
+PERF_TEST_P(ConvexHullRandomPerfTest, convexHull,
+    testing::Combine(
+        testing::Values(16, 64, 256, 1024, 4096, 16384, 50000),     // total points
+        testing::Values(100, 1000, 10000)                           // box side; sparsity = side / total
+    ))
+{
+    const int total = get<0>(GetParam());
+    const int side  = get<1>(GetParam());
+    const int runs  = multirun_count(total);
+
+    RNG rng(0x12345678);      // fixed seed => identical input for comparison of different cases
+    std::vector<std::vector<Point> > inputs(runs, std::vector<Point>(total));
+    for (int k = 0; k < runs; ++k)
+        for (int i = 0; i < total; ++i)
+            inputs[k][i] = Point(rng.uniform(0, side), rng.uniform(0, side));
+
+    std::vector<Point> hull_pts;
+    declare.runs(runs);
+    PERF_SAMPLE_BEGIN()
+        for (int k = 0; k < runs; ++k)
+            convexHull(inputs[k], hull_pts, false /*clockwise*/, true /*returnPoints*/);
+    PERF_SAMPLE_END()
+
+    SANITY_CHECK_NOTHING();
+}
 
 // a noisy closed contour (simulate output of findContours), points ordered along the boundary,
 // a different input on every call. (points count, step between neighbour points)
