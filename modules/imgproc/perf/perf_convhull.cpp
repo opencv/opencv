@@ -74,15 +74,24 @@ PERF_TEST_P_(ConvexHullContourPerfTest, convexHull)
     SANITY_CHECK_NOTHING();
 }
 
+// sparsity ~ 0.35 * step
+INSTANTIATE_TEST_CASE_P(/*none*/, ConvexHullContourPerfTest,
+    testing::Combine(
+        testing::Values(16, 32, 64, 128, 256, 1000, 4000, 16000, 50000),    // contour points
+        testing::Values(1.0, 2.0, 4.0, 6.0, 8.0, 80.0)                      // ~pixels between neighbour points
+    ));
+
+// the two sweeps below were used to find the sort thresholds; run them with --gtest_also_run_disabled_tests
+
 // sparsity sweep; sparsity ~ 0.35 * step
-INSTANTIATE_TEST_CASE_P(Sparsity, ConvexHullContourPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_Sparsity, ConvexHullContourPerfTest,
     testing::Combine(
         testing::Values(16, 32, 64, 128, 256, 1000, 4000, 16000, 50000),                    // contour points
         testing::Values(1.0, 1.5, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 4.0, 5.0, 6.0)      // ~pixels between neighbour points
     ));
 
 // points count sweep, sparse contours; step 8: x and y ranges below 256, step 80: above
-INSTANTIATE_TEST_CASE_P(PointsCount, ConvexHullContourPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_PointsCount, ConvexHullContourPerfTest,
     testing::Combine(
         testing::Values(12, 16, 20, 24, 28, 32, 36, 40, 48, 64),                            // contour points
         testing::Values(8.0, 80.0)                                                          // ~pixels between neighbour points
