@@ -62,33 +62,20 @@ void LocalVLMModelBase::setLastTokensUsed(int tokens)
     lastTokensUsed_ = tokens;
 }
 
-void LocalVLMModelBase::setPreferableDevice(const String& device)
+void LocalVLMModelBase::setPreferableBackend(dnn::Backend backendId)
 {
     CV_Assert(visionNet_ && embedNet_ && decoderNet_);
+    visionNet_->setPreferableBackend(backendId);
+    embedNet_->setPreferableBackend(backendId);
+    decoderNet_->setPreferableBackend(backendId);
+}
 
-    int backendId, targetId;
-    if (device == "cpu")
-    {
-        backendId = dnn::DNN_BACKEND_DEFAULT;
-        targetId = dnn::DNN_TARGET_CPU;
-    }
-    else if (device == "cuda")
-    {
-        backendId = dnn::DNN_BACKEND_CUDA;
-        targetId = dnn::DNN_TARGET_CUDA;
-    }
-    else
-    {
-        CV_Error(Error::StsBadArg,
-                 "vlm: unknown device '" + device + "' (expected 'cpu' or 'cuda')");
-    }
-
-    dnn::Net* nets[] = {visionNet_, embedNet_, decoderNet_};
-    for (dnn::Net* net : nets)
-    {
-        net->setPreferableBackend(backendId);
-        net->setPreferableTarget(targetId);
-    }
+void LocalVLMModelBase::setPreferableTarget(dnn::Target targetId)
+{
+    CV_Assert(visionNet_ && embedNet_ && decoderNet_);
+    visionNet_->setPreferableTarget(targetId);
+    embedNet_->setPreferableTarget(targetId);
+    decoderNet_->setPreferableTarget(targetId);
 }
 
 }} // namespace cv::vlm

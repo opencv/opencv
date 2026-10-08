@@ -14,7 +14,8 @@ using namespace cv::vlm;
 class MinimalVLMModel CV_FINAL : public VLMModel
 {
 public:
-    void setPreferableDevice(const String&) CV_OVERRIDE {}
+    void setPreferableBackend(dnn::Backend) CV_OVERRIDE {}
+    void setPreferableTarget(dnn::Target) CV_OVERRIDE {}
     void reset() CV_OVERRIDE {}
     String infer(InputArray, const String&, int) CV_OVERRIDE { return String(); }
 };
@@ -27,7 +28,7 @@ TEST(Vlm_Model, LastTokensUsedBaseDefaultIsUnknown)
 
 TEST(Vlm_Model, LastTokensUsedDefaultsToUnknown_CloudModel)
 {
-    cv::Ptr<VLMModel> model = create(VLM_MODEL_OPENAI, "gpt-4o", "new", "cloud", "fake-api-key");
+    cv::Ptr<VLMModel> model = create(VLM_MODEL_OPENAI, "gpt-4o", "fake-api-key");
     EXPECT_EQ(model->lastTokensUsed(), -1);
 }
 
@@ -63,24 +64,12 @@ TEST(Vlm_Model, MissingApiKeyThrows_Grok)
 
 TEST(Vlm_Model, MissingModelNameThrows_OpenAI)
 {
-    EXPECT_THROW(create(VLM_MODEL_OPENAI, "", "new", "cloud", "some-api-key"), cv::Exception);
+    EXPECT_THROW(create(VLM_MODEL_OPENAI, "", "some-api-key"), cv::Exception);
 }
 
 TEST(Vlm_Model, MissingModelNameThrows_Gemini)
 {
-    EXPECT_THROW(create(VLM_MODEL_GEMINI, "", "new", "cloud", "some-api-key"), cv::Exception);
-}
-
-TEST(Vlm_Model, UnknownEngineThrows_PaddleOCRVL)
-{
-    EXPECT_THROW(create(VLM_MODEL_PADDLEOCR_VL, "/nonexistent/model/dir", "tensorrt"),
-                 cv::Exception);
-}
-
-TEST(Vlm_Model, UnknownEngineThrows_GraniteDocling)
-{
-    EXPECT_THROW(create(VLM_MODEL_GRANITE_DOCLING, "/nonexistent/model/dir", "tensorrt"),
-                 cv::Exception);
+    EXPECT_THROW(create(VLM_MODEL_GEMINI, "", "some-api-key"), cv::Exception);
 }
 
 TEST(Vlm_Model, EndToEnd_PaddleOCRVL)
@@ -113,7 +102,7 @@ TEST(Vlm_Model, EndToEnd_GraniteDocling)
     ASSERT_FALSE(imagePath.empty())
         << "OPENCV_TEST_VLM_IMAGE must be set together with OPENCV_TEST_VLM_GRANITE_DOCLING_DIR";
 
-    cv::Ptr<VLMModel> model = create(VLM_MODEL_GRANITE_DOCLING, modelDir, "opencv");
+    cv::Ptr<VLMModel> model = create(VLM_MODEL_GRANITE_DOCLING, modelDir);
     const cv::String result = inferFile(model, imagePath);
     EXPECT_FALSE(result.empty());
     EXPECT_GT(model->lastTokensUsed(), 0);

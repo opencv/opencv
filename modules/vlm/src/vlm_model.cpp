@@ -15,14 +15,6 @@ VLMModel::~VLMModel() {}
 
 namespace {
 
-// No "ort": Net::enableKVCache() is a no-op on the ORT path, so generation fails there.
-int engineFromString(const String& engine)
-{
-    if (engine == "opencv")
-        return dnn::ENGINE_OPENCV;
-    CV_Error(Error::StsBadArg, "vlm: unknown engine '" + engine + "' (expected 'opencv')");
-}
-
 // The variable each provider's own SDK reads; an explicit api_key argument still wins.
 const char* apiKeyEnvVar(VLMModelType model_type)
 {
@@ -53,14 +45,14 @@ String resolveApiKey(VLMModelType model_type, const String& api_key)
 } // namespace
 
 Ptr<VLMModel> create(VLMModelType model_type, const String& model_dir,
-                      const String& engine, const String& device, const String& api_key)
+                      const String& api_key)
 {
     switch (model_type)
     {
     case VLM_MODEL_PADDLEOCR_VL:
-        return createPaddleOCRVLModel(model_dir, engineFromString(engine), device);
+        return createPaddleOCRVLModel(model_dir);
     case VLM_MODEL_GRANITE_DOCLING:
-        return createGraniteDoclingModel(model_dir, engineFromString(engine), device);
+        return createGraniteDoclingModel(model_dir);
     case VLM_MODEL_OPENAI:
     case VLM_MODEL_ANTHROPIC:
     case VLM_MODEL_GEMINI:

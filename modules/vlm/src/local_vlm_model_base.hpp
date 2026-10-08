@@ -18,7 +18,8 @@ public:
     String infer(InputArray image, const String& prompt, int max_new_tokens) CV_OVERRIDE;
 
     void reset() CV_OVERRIDE;
-    void setPreferableDevice(const String& device) CV_OVERRIDE;
+    void setPreferableBackend(dnn::Backend backendId) CV_OVERRIDE;
+    void setPreferableTarget(dnn::Target targetId) CV_OVERRIDE;
     int lastTokensUsed() const CV_OVERRIDE;
 
 protected:

@@ -24,7 +24,7 @@ const String DEFAULT_PROMPT =
 class GraniteDoclingModel CV_FINAL : public LocalVLMModelBase
 {
 public:
-    GraniteDoclingModel(const String& model_dir, int engine, const String& device)
+    explicit GraniteDoclingModel(const String& model_dir)
     {
         tokenizer_ = Tokenizer::load(model_dir + "/config.json");
 
@@ -42,11 +42,11 @@ public:
         getVec3f(preprocessor.root(), "image_mean", mean_, Vec3f(0.5f, 0.5f, 0.5f));
         getVec3f(preprocessor.root(), "image_std", std_, Vec3f(0.5f, 0.5f, 0.5f));
 
-        visionNet_ = readNetFromONNX(model_dir + "/onnx/vision_encoder.onnx", engine);
-        embedNet_ = readNetFromONNX(model_dir + "/onnx/embed_tokens.onnx", engine);
-        decoderNet_ = readNetFromONNX(model_dir + "/onnx/decoder_model_merged.onnx", engine);
+        visionNet_ = readNetFromONNX(model_dir + "/onnx/vision_encoder.onnx", dnn::ENGINE_OPENCV);
+        embedNet_ = readNetFromONNX(model_dir + "/onnx/embed_tokens.onnx", dnn::ENGINE_OPENCV);
+        decoderNet_ = readNetFromONNX(model_dir + "/onnx/decoder_model_merged.onnx",
+                                      dnn::ENGINE_OPENCV);
         registerNets(visionNet_, embedNet_, decoderNet_);
-        setPreferableDevice(device);
     }
 
 protected:
@@ -80,9 +80,9 @@ private:
 
 } // namespace
 
-Ptr<VLMModel> createGraniteDoclingModel(const String& model_dir, int engine, const String& device)
+Ptr<VLMModel> createGraniteDoclingModel(const String& model_dir)
 {
-    return makePtr<GraniteDoclingModel>(model_dir, engine, device);
+    return makePtr<GraniteDoclingModel>(model_dir);
 }
 
 }} // namespace cv::vlm

@@ -325,27 +325,23 @@ TEST(Vlm_LocalModelBase, ResetWithoutNetsThrows)
     EXPECT_THROW(model.reset(), cv::Exception);
 }
 
-TEST(Vlm_LocalModelBase, SetDeviceWithoutNetsThrows)
+TEST(Vlm_LocalModelBase, SetBackendOrTargetWithoutNetsThrows)
 {
     TestLocalVLMModel model;
-    EXPECT_THROW(model.setPreferableDevice("cpu"), cv::Exception);
+    EXPECT_THROW(model.setPreferableBackend(dnn::DNN_BACKEND_DEFAULT), cv::Exception);
+    EXPECT_THROW(model.setPreferableTarget(dnn::DNN_TARGET_CPU), cv::Exception);
 }
 
-TEST(Vlm_LocalModelBase, SetDeviceUnknownDeviceThrows)
+TEST(Vlm_LocalModelBase, SetBackendAndTargetDoNotThrow)
 {
     TestLocalVLMModel model;
     dnn::Net vision, embed, decoder;
     model.registerNets(vision, embed, decoder);
-    EXPECT_THROW(model.setPreferableDevice("opencl"), cv::Exception);
-}
 
-TEST(Vlm_LocalModelBase, SetDeviceCpuAndCudaDoNotThrow)
-{
-    TestLocalVLMModel model;
-    dnn::Net vision, embed, decoder;
-    model.registerNets(vision, embed, decoder);
-    EXPECT_NO_THROW(model.setPreferableDevice("cpu"));
-    EXPECT_NO_THROW(model.setPreferableDevice("cuda"));
+    // ENGINE_OPENCV supports CPU only for now; dnn logs and ignores a non-CPU target.
+    EXPECT_NO_THROW(model.setPreferableBackend(dnn::DNN_BACKEND_DEFAULT));
+    EXPECT_NO_THROW(model.setPreferableTarget(dnn::DNN_TARGET_CPU));
+    EXPECT_NO_THROW(model.setPreferableTarget(dnn::DNN_TARGET_CUDA));
 }
 
 TEST(Vlm_LocalModelBase, LastTokensUsedDefaultsToUnknown)

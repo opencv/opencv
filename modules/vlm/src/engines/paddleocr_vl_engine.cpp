@@ -22,7 +22,7 @@ const String DEFAULT_PROMPT = "OCR";
 class PaddleOCRVLModel CV_FINAL : public LocalVLMModelBase
 {
 public:
-    PaddleOCRVLModel(const String& model_dir, int engine, const String& device)
+    explicit PaddleOCRVLModel(const String& model_dir)
     {
         tokenizer_ = Tokenizer::load(model_dir + "/config.json");
 
@@ -43,11 +43,10 @@ public:
         getVec3f(preprocessor, "image_mean", mean_, Vec3f(0.5f, 0.5f, 0.5f));
         getVec3f(preprocessor, "image_std", std_, Vec3f(0.5f, 0.5f, 0.5f));
 
-        visionNet_ = readNetFromONNX(model_dir + "/onnx/vision_encoder.onnx", engine);
-        embedNet_ = readNetFromONNX(model_dir + "/onnx/embedding.onnx", engine);
-        decoderNet_ = readNetFromONNX(model_dir + "/onnx/decoder.onnx", engine);
+        visionNet_ = readNetFromONNX(model_dir + "/onnx/vision_encoder.onnx", dnn::ENGINE_OPENCV);
+        embedNet_ = readNetFromONNX(model_dir + "/onnx/embedding.onnx", dnn::ENGINE_OPENCV);
+        decoderNet_ = readNetFromONNX(model_dir + "/onnx/decoder.onnx", dnn::ENGINE_OPENCV);
         registerNets(visionNet_, embedNet_, decoderNet_);
-        setPreferableDevice(device);
     }
 
 protected:
@@ -85,9 +84,9 @@ private:
 
 } // namespace
 
-Ptr<VLMModel> createPaddleOCRVLModel(const String& model_dir, int engine, const String& device)
+Ptr<VLMModel> createPaddleOCRVLModel(const String& model_dir)
 {
-    return makePtr<PaddleOCRVLModel>(model_dir, engine, device);
+    return makePtr<PaddleOCRVLModel>(model_dir);
 }
 
 }} // namespace cv::vlm
