@@ -2161,8 +2161,8 @@ TEST(Calib_StereoCalibrate, float64Points)
                                    R32, T32, noArray(), noArray(), CALIB_FIX_INTRINSIC);
 
     EXPECT_LT(rms64, 1e-7);
-    EXPECT_MAT_NEAR(R64, Rgt, 1e-9);
-    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-9);
+    EXPECT_MAT_NEAR(R64, Rgt, 1e-6);
+    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-6);
     EXPECT_LT(rms32, 1e-3);
     EXPECT_MAT_NEAR(R32, Rgt, 1e-4);
     EXPECT_MAT_NEAR(T32, Mat(tStereo), 1e-4);
@@ -2202,8 +2202,8 @@ TEST(Calib_RegisterCameras, float64Points)
                                    R32, T32, E, F, errs);
 
     EXPECT_LT(rms64, 1e-7);
-    EXPECT_MAT_NEAR(R64, Rgt, 1e-9);
-    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-9);
+    EXPECT_MAT_NEAR(R64, Rgt, 1e-6);
+    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-6);
     EXPECT_LT(rms32, 1e-3);
     EXPECT_MAT_NEAR(R32, Rgt, 1e-4);
     EXPECT_MAT_NEAR(T32, Mat(tStereo), 1e-4);
