@@ -165,9 +165,9 @@ def main():
 
         if args.reid:
             features = describe(frame, reid, boxes)
-            ids, out_boxes, out_classes = tracker.update(boxes, scores, classes, features)
+            ids, out_boxes, _ = tracker.update(boxes, scores, classes, features)
         else:
-            ids, out_boxes, out_classes = tracker.update(boxes, scores, classes)
+            ids, out_boxes, _ = tracker.update(boxes, scores, classes)
 
         for track_id, box in zip(ids, out_boxes):
             color = color_for_id(int(track_id))

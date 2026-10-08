@@ -169,7 +169,7 @@ video = {
     'TrackerMIL': ['create'],
     'TrackerMIL_Params': [],
     'MultiTracker': ['create', 'update', 'reset'],
-    'MultiTracker_Params': [],
+    'MultiTracker_Params': ['Params'],
 }
 
 dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend','getUnconnectedOutLayersNames'],
