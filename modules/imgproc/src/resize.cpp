@@ -53,7 +53,8 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
-#include "resize.hpp"
+#include "resize.simd.hpp"
+#include "resize.simd_declarations.hpp"
 
 #include "opencv2/core/softfloat.hpp"
 #include "fixedpoint.inl.hpp"
@@ -947,42 +948,16 @@ private:
     resizeNNInvoker& operator=(const resizeNNInvoker&);
 };
 
+static bool
+resizeNN2or4( const Mat& src, Mat& dst, int* x_ofs, const int* y_ofs, const Range& range )
+{
+    CV_CPU_DISPATCH(resizeNN2or4, (src, dst, x_ofs, y_ofs, range), CV_CPU_DISPATCH_MODES_ALL);
+}
+
 static void
 resizeNN( const Mat& src, Mat& dst, int* x_ofs, const int* y_ofs, const Range& range )
 {
-#if CV_TRY_AVX2 || CV_TRY_SSE4_1 || CV_TRY_LASX
-    int pix_size = (int)src.elemSize();
-#endif
-#if CV_TRY_AVX2
-    if(CV_CPU_HAS_SUPPORT_AVX2 && ((pix_size == 2) || (pix_size == 4)))
-    {
-        if(pix_size == 2)
-            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, y_ofs);
-        else
-            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, y_ofs);
-    }
-    else
-#endif
-#if CV_TRY_SSE4_1
-    if(CV_CPU_HAS_SUPPORT_SSE4_1 && ((pix_size == 2) || (pix_size == 4)))
-    {
-        if(pix_size == 2)
-            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, y_ofs);
-        else
-            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, y_ofs);
-    }
-    else
-#endif
-#if CV_TRY_LASX
-    if(CV_CPU_HAS_SUPPORT_LASX && ((pix_size == 2) || (pix_size == 4)))
-    {
-        if(pix_size == 2)
-            opt_LASX::resizeNN2_LASX(range, src, dst, x_ofs, y_ofs);
-        else
-            opt_LASX::resizeNN4_LASX(range, src, dst, x_ofs, y_ofs);
-    }
-    else
-#endif
+    if (!resizeNN2or4(src, dst, x_ofs, y_ofs, range))
     {
         resizeNNInvoker invoker(src, dst, x_ofs, y_ofs);
         invoker(range);
@@ -1275,10 +1250,7 @@ struct VResizeLanczos4Vec_32f16u
 {
     int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(src, dst, beta, width);
-        else
-            return 0;
+        CV_CPU_DISPATCH(vresizeLanczos4_32f16u, (src, dst, beta, width), CV_CPU_DISPATCH_MODES_ALL);
     }
 };
 
