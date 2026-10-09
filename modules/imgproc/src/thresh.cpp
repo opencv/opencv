@@ -1829,7 +1829,25 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         const uchar* mdata = mean.ptr(i);
         uchar* ddata = dst.ptr(i);
 
-        for( j = 0; j < size.width; j++ )
+        j = 0;
+#if CV_SIMD128
+        {
+            const v_int16x8 vth = v_setall_s16((short)std::min(std::max(-idelta, -256), 256));
+            const v_uint8x16 vmax = v_setall_u8(imaxval);
+            const v_uint8x16 vinv = v_setall_u8(type == cv::THRESH_BINARY_INV ? 0xFF : 0);
+            for( ; j <= size.width - 16; j += 16 )
+            {
+                v_uint16x8 s0, s1, m0, m1;
+                v_expand(v_load(sdata + j), s0, s1);
+                v_expand(v_load(mdata + j), m0, m1);
+                v_int16x8 d0 = v_reinterpret_as_s16(v_sub_wrap(s0, m0));
+                v_int16x8 d1 = v_reinterpret_as_s16(v_sub_wrap(s1, m1));
+                v_uint8x16 gt = v_pack_b(v_reinterpret_as_u16(v_gt(d0, vth)), v_reinterpret_as_u16(v_gt(d1, vth)));
+                v_store(ddata + j, v_and(vmax, v_xor(gt, vinv)));
+            }
+        }
+#endif
+        for( ; j < size.width; j++ )
             ddata[j] = tab[sdata[j] - mdata[j] + 255];
     }
 }
