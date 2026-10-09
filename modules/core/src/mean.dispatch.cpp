@@ -6,6 +6,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "stat.hpp"
+#include "stat_parallel.hpp"
 
 #include "mean.simd.hpp"
 #include "mean.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -13,13 +14,9 @@
 
 namespace cv {
 
-Scalar mean(InputArray _src, InputArray _mask)
+// serial implementation, also used for the pieces of the parallel version
+static Scalar mean_(const Mat& src, const Mat& mask)
 {
-    CV_INSTRUMENT_REGION();
-
-    Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
-
     int k, cn = src.channels(), depth = src.depth();
     Scalar s = Scalar::all(0.0);
 
@@ -95,6 +92,44 @@ Scalar mean(InputArray _src, InputArray _mask)
         }
     }
     return s*(nz0 ? 1./nz0 : 0);
+}
+
+// number of elements a piece contributes to the mean
+static double statCount(const StatChunk& c)
+{
+    return c.mask.empty() ? (double)c.src.total() : (double)countNonZero(c.mask);
+}
+
+Scalar mean(InputArray _src, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
+
+    std::vector<StatChunk> chunks;
+    if (src.channels() > 4 || !splitForParallelStat(src, mask, chunks))
+        return mean_(src, mask);
+
+    const int n = (int)chunks.size();
+    std::vector<Scalar> part(n);
+    std::vector<double> cnt(n);
+    parallel_for_(Range(0, n), [&](const Range& r)
+    {
+        for (int i = r.start; i < r.end; i++)
+        {
+            part[i] = mean_(chunks[i].src, chunks[i].mask);
+            cnt[i] = statCount(chunks[i]);
+        }
+    });
+    Scalar s = Scalar::all(0.0);
+    double total = 0;
+    for (int i = 0; i < n; i++)
+    {
+        s += part[i]*cnt[i];
+        total += cnt[i];
+    }
+    return s*(total > 0 ? 1./total : 0);
 }
 
 static SumSqrFunc getSumSqrFunc(int depth)
@@ -224,10 +259,9 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 }
 #endif
 
-void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask)
+// serial implementation, also used for the pieces of the parallel version
+static void meanStdDev_(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION();
-
     CV_Assert(!_src.empty());
     CV_Assert( _mask.empty() || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool );
 
@@ -384,6 +418,78 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
     }
+}
+
+static void writeStatResult(OutputArray _dst, int cn, const Scalar& v)
+{
+    if (!_dst.needed())
+        return;
+    if (!_dst.fixedSize())
+        _dst.create(cn, 1, CV_64F, -1, true);
+    Mat d = _dst.getMat();
+    int dcn = (int)d.total();
+    CV_Assert( d.type() == CV_64F && d.isContinuous() && (d.cols == 1 || d.rows == 1) && dcn >= cn );
+    double* p = d.ptr<double>();
+    for (int k = 0; k < dcn; k++)
+        p[k] = k < cn ? v[k] : 0;
+}
+
+void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    std::vector<StatChunk> chunks;
+    if (!_src.isUMat() && !_src.empty())
+    {
+        Mat src = _src.getMat(), mask = _mask.getMat();
+        const int cn = src.channels();
+        const bool maskOk = mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) &&
+                                             src.size == mask.size);
+        if (cn <= 4 && maskOk && splitForParallelStat(src, mask, chunks))
+        {
+            const int n = (int)chunks.size();
+            std::vector<Scalar> m(n), sd(n);
+            std::vector<double> cnt(n);
+            parallel_for_(Range(0, n), [&](const Range& r)
+            {
+                for (int i = r.start; i < r.end; i++)
+                {
+                    Mat mi, si;
+                    meanStdDev_(chunks[i].src, mi, si, chunks[i].mask);
+                    for (int k = 0; k < cn; k++)
+                    {
+                        m[i][k] = mi.at<double>(k);
+                        sd[i][k] = si.at<double>(k);
+                    }
+                    cnt[i] = statCount(chunks[i]);
+                }
+            });
+            // combine the pieces: the variance is the mean of the piece variances plus the
+            // variance of the piece means, both weighted by the piece sizes
+            double total = 0;
+            Scalar M = Scalar::all(0.0), V = Scalar::all(0.0);
+            for (int i = 0; i < n; i++)
+            {
+                M += m[i]*cnt[i];
+                total += cnt[i];
+            }
+            if (total > 0)
+                M *= 1./total;
+            for (int i = 0; i < n; i++)
+                for (int k = 0; k < cn; k++)
+                {
+                    double dm = m[i][k] - M[k];
+                    V[k] += cnt[i]*(sd[i][k]*sd[i][k] + dm*dm);
+                }
+            Scalar SD;
+            for (int k = 0; k < cn; k++)
+                SD[k] = total > 0 ? std::sqrt(std::max(V[k]/total, 0.)) : 0;
+            writeStatResult(_mean, cn, M);
+            writeStatResult(_sdv, cn, SD);
+            return;
+        }
+    }
+    meanStdDev_(_src, _mean, _sdv, _mask);
 }
 
 } // namespace
