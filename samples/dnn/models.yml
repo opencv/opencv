@@ -382,6 +382,30 @@ reid:
   yolo_rgb: true
   sample: "person_reid"
 
+# yolov8n finds people and cv::MultiTracker keeps their ids; the re-ID net loads only with --reid.
+# Same URLs and sha1s as the reid alias above, so it costs no extra download. The mean and scale
+# differ from that alias on purpose: they are in 0-255 RGB, with the per-channel std in the scale.
+multi_object_tracker:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/main/models/person_reid_youtureid/person_reid_youtu_2021nov.onnx?download="
+    sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
+  model: "person_reid_youtu_2021nov.onnx"
+  yolo_load_info:
+    yolo_url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  yolo_model: "yolov8n.onnx"
+  mean: [123.675, 116.28, 103.53]
+  std: [0.229, 0.224, 0.225]
+  scale: 0.00392
+  yolo_scale: 0.00392
+  yolo_width: 640
+  yolo_height: 640
+  width: 128
+  height: 256
+  rgb: true
+  yolo_rgb: true
+  sample: "multi_object_tracker"
+
 ################################################################################
 # Tracker models.
 ################################################################################

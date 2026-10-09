@@ -25,6 +25,62 @@ class tracking_test(NewOpenCVTests):
         t = cv.TrackerVit.create(model)
         self.assertTrue(t is not None)
 
+    def test_createMultiTracker(self):
+        t = cv.MultiTracker.create()
+        self.assertTrue(t is not None)
+
+    def test_multiTrackerParams(self):
+        p = cv.MultiTracker_Params()
+        self.assertEqual(p.minHits, 3)
+        self.assertEqual(p.maxAge, 30)
+        self.assertTrue(p.classAware)
+        p.minHits = 1
+        t = cv.MultiTracker.create(p)
+        self.assertTrue(t is not None)
+
+    def test_multiTrackerTracksAnObject(self):
+        p = cv.MultiTracker_Params()
+        p.minHits = 2
+        t = cv.MultiTracker.create(p)
+
+        boxes = [(100.0, 100.0, 40.0, 80.0)]
+        scores = [0.9]
+        classes = [0]
+
+        # withheld until seen minHits times, then reported with a stable id
+        ids, _, _ = t.update(boxes, scores, classes)
+        self.assertEqual(len(ids), 0)
+        ids, out_boxes, out_classes = t.update(boxes, scores, classes)
+        self.assertEqual(len(ids), 1)
+        self.assertEqual(len(out_boxes), 1)
+        self.assertEqual(len(out_classes), 1)
+
+        first = ids[0]
+        for _ in range(3):
+            ids, _, _ = t.update(boxes, scores, classes)
+        self.assertEqual(list(ids), [first])
+
+        t.reset()
+        ids, _, _ = t.update([], [], [])
+        self.assertEqual(len(ids), 0)
+
+    def test_multiTrackerEmbeddingOverload(self):
+        p = cv.MultiTracker_Params()
+        p.minHits = 1
+        p.embeddingWeight = 0.5
+        t = cv.MultiTracker.create(p)
+
+        boxes = [(100.0, 100.0, 40.0, 80.0)]
+        scores = [0.9]
+        classes = [0]
+        emb = np.array([[1, 0, 0, 0]], dtype=np.float32)
+
+        ids, _, _ = t.update(boxes, scores, classes, emb)
+        self.assertEqual(len(ids), 1)
+        first = ids[0]
+        ids, _, _ = t.update(boxes, scores, classes, emb)
+        self.assertEqual(list(ids), [first])
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

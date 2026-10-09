@@ -125,3 +125,36 @@ QUnit.test('TrackerMIL', function(assert) {
         src2.delete();
     }
 });
+
+QUnit.test('MultiTracker', function(assert) {
+    {
+        let params = new cv.MultiTracker_Params();
+        params.minHits = 1;
+        // create() returns a Ptr, which the binding generator turns into a constructor.
+        let tracker = new cv.MultiTracker(params);
+
+        let boxes = new cv.Rect2dVector();
+        boxes.push_back({x: 10, y: 10, width: 20, height: 40});
+        // scores and class ids arrive as emscripten::val, so these are plain arrays.
+        let scores = [0.9];
+        let classes = [0];
+
+        let ids = new cv.IntVector();
+        let outBoxes = new cv.Rect2dVector();
+        let outClasses = new cv.IntVector();
+        tracker.update(boxes, scores, classes, ids, outBoxes, outClasses);
+
+        assert.equal(ids.size(), 1);
+        assert.equal(outBoxes.size(), 1);
+        assert.equal(outClasses.get(0), 0);
+
+        tracker.reset();
+
+        boxes.delete();
+        ids.delete();
+        outBoxes.delete();
+        outClasses.delete();
+        params.delete();
+        tracker.delete();
+    }
+});
