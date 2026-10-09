@@ -177,3 +177,35 @@ corresponds to Value plane. See the code below:
 See the result below:
 
 ![image](images/opticalfb.jpg)
+
+When you process consecutive frames, the second image of one call is the first image of the next,
+so half of the polynomial expansion work is a repeat. Keep one cv::FarnebackOpticalFlow instance and
+turn on cv::FarnebackOpticalFlow::setReuseExpansion to skip it. The result is the same; the instance
+holds about 28 bytes per pixel between calls. This applies to the CPU path only, not to UMat flow.
+
+@add_toggle_cpp
+@code{.cpp}
+Ptr<FarnebackOpticalFlow> fb = FarnebackOpticalFlow::create(3, 0.5, false, 15, 3, 5, 1.2);
+fb->setReuseExpansion(true);
+// in the loop, instead of calcOpticalFlowFarneback():
+fb->calc(prvs, next, flow);
+@endcode
+@end_toggle
+
+@add_toggle_python
+@code{.py}
+fb = cv.FarnebackOpticalFlow.create(3, 0.5, False, 15, 3, 5, 1.2)
+fb.setReuseExpansion(True)
+# in the loop, instead of cv.calcOpticalFlowFarneback():
+flow = fb.calc(prvs, next, None)
+@endcode
+@end_toggle
+
+@add_toggle_java
+@code{.java}
+FarnebackOpticalFlow fb = FarnebackOpticalFlow.create(3, 0.5, false, 15, 3, 5, 1.2);
+fb.setReuseExpansion(true);
+// in the loop, instead of Video.calcOpticalFlowFarneback():
+fb.calc(prvs, next, flow);
+@endcode
+@end_toggle

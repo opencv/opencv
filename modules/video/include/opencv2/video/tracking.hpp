@@ -231,6 +231,8 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
     opencv_source_code/samples/cpp/fback.cpp
 -   (Python) An example using the optical flow algorithm described by Gunnar Farneback can be
     found at opencv_source_code/samples/python/opt_flow.py
+
+@sa FarnebackOpticalFlow::setReuseExpansion
  */
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, InputOutputArray flow,
                                             double pyr_scale, int levels, int winsize,
@@ -676,6 +678,16 @@ public:
 
     CV_WRAP virtual int getFlags() const = 0;
     CV_WRAP virtual void setFlags(int flags) = 0;
+
+    /** @brief Keep the polynomial expansion of calc()'s second image and reuse it if the next call's
+        first image is identical and pyrScale, polyN and polySigma are unchanged (off by default).
+        Helps on consecutive frames, where each call's prev is the previous call's next. Holds about
+        28 bytes per pixel of 8-bit input at the default pyrScale, twice that during a call; turning
+        it off or collectGarbage() frees it. Not used when calc() runs on OpenCL (UMat flow).
+    @see setReuseExpansion */
+    CV_WRAP virtual bool getReuseExpansion() const = 0;
+    /** @copybrief getReuseExpansion @see getReuseExpansion */
+    CV_WRAP virtual void setReuseExpansion(bool reuse) = 0;
 
     CV_WRAP static Ptr<FarnebackOpticalFlow> create(
             int numLevels = 5,
