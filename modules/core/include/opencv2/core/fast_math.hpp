@@ -134,6 +134,10 @@
     #endif
     // 3. version for float
     #define CV_INLINE_ROUND_FLT(value) ARM_ROUND(value, "vcvtr.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]")
+    // 4. vcvt.s32.f32 rounds towards zero and saturates to the int32 range, like the NEON vcvtq_s32_f32
+    //    used by the universal intrinsics; without it cvTrunc/cvFloor/cvCeil would fall back to the
+    //    portable clamp branch and disagree with v_trunc/v_floor/v_ceil above 2^31 (see issue #30203).
+    #define CV__FASTMATH_HAVE_ARM32_ASM 1
   #elif defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8
     // P8 and newer machines can convert fp32/64 to int quickly.
     #define CV_INLINE_ROUND_DBL(value) \
@@ -551,6 +555,13 @@ inline int cvFloor( float value )
 {
 #if defined CV__FASTMATH_HAVE_MSVC_ARM64
     return vcvtms_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_ARM32_ASM
+    int i; float temp; CV_UNUSED(temp);
+    __asm__("vcvt.s32.f32 %[temp], %[value]\n vmov %[i], %[temp]"
+            : [i] "=r" (i), [temp] "=w" (temp) : [value] "w" (value));
+    // vcvt saturates; the "-1" correction must be suppressed for the saturated result,
+    // otherwise INT_MIN-1 wraps around
+    return i - (i > value && i != INT_MIN);
 #elif defined CV__FASTMATH_HAVE_AARCH64_ASM
     int i;
     __asm__("fcvtms %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
@@ -598,6 +609,13 @@ inline int cvCeil( float value )
 {
 #if defined CV__FASTMATH_HAVE_MSVC_ARM64
     return vcvtps_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_ARM32_ASM
+    int i; float temp; CV_UNUSED(temp);
+    __asm__("vcvt.s32.f32 %[temp], %[value]\n vmov %[i], %[temp]"
+            : [i] "=r" (i), [temp] "=w" (temp) : [value] "w" (value));
+    // vcvt saturates; the "+1" correction must be suppressed for the saturated result,
+    // otherwise INT_MAX+1 wraps around
+    return i + (i < value && i != INT_MAX);
 #elif defined CV__FASTMATH_HAVE_AARCH64_ASM
     int i;
     __asm__("fcvtps %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));
@@ -644,6 +662,8 @@ inline int cvTrunc( float value )
 {
 #if defined CV__FASTMATH_HAVE_MSVC_ARM64
     return vcvts_s32_f32(value);
+#elif defined CV__FASTMATH_HAVE_ARM32_ASM
+    ARM_ROUND(value, "vcvt.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]");
 #elif defined CV__FASTMATH_HAVE_AARCH64_ASM
     int i;
     __asm__("fcvtzs %w[i], %s[in]" : [i] "=r" (i) : [in] "w" (value));

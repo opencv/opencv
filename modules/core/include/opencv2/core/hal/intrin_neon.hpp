@@ -2261,7 +2261,13 @@ inline v_int32x4 v_round(const v_float32x4& a)
 {
     // See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
     float32x4_t delta = vdupq_n_f32(12582912.0f);
-    return v_int32x4(vcvtq_s32_f32(vsubq_f32(vaddq_f32(a.val, delta), delta)));
+    float32x4_t rounded = vsubq_f32(vaddq_f32(a.val, delta), delta);
+    // The +-delta trick is only exact while a + delta stays in the same binade as delta, i.e. for
+    // |a| < 2^23; above that it rounds to a wrong integer (16777215 -> 16777216) and may even push
+    // 2147483520 over 2^31, where vcvtq then saturates to INT_MAX. Every float >= 2^23 already is an
+    // integer, so the plain (truncating) conversion is the correct rounding there.
+    uint32x4_t large = vcgeq_f32(vabsq_f32(a.val), vdupq_n_f32(8388608.0f));
+    return v_int32x4(vcvtq_s32_f32(vbslq_f32(large, a.val, rounded)));
 }
 #endif
 inline v_int32x4 v_floor(const v_float32x4& a)

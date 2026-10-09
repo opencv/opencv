@@ -1528,10 +1528,21 @@ template<typename R> struct TheTest
                 LaneType x = dataO[i];
                 double xd = (double)x;
                 SCOPED_TRACE(cv::format("overflow: i=%d, x=%g", i, xd));
-                EXPECT_EQ(saturate_cast<ILaneType>(cvRound(x)), roundO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvTrunc(x)), truncO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvFloor(x)), floorO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvCeil(x)), ceilO[i]);
+                // For float -> int32 the positive saturation value is platform-dependent, because INT_MAX
+                // is not representable as float: it is the clamp value 2147483520 where the conversion
+                // instruction does not saturate (x86, the portable scalar code) and INT_MAX where it does
+                // (ARM, PPC, MIPS, RISC-V, LoongArch). The scalar and the vector code of the same platform
+                // may use different variants: on 32-bit ARM cvTrunc/cvFloor/cvCeil take the portable clamp
+                // branch while NEON vcvt.s32.f32 saturates; VSX and MSA saturate in the vector code only
+                // too. Both results are valid, so such lanes are only checked against the documented
+                // [2147483520, INT_MAX] range below; see the cvRound() documentation for the exact bounds.
+                if (!(sizeof(ILaneType) == 4 && sizeof(LaneType) == 4 && xd >= 2147483648.))
+                {
+                    EXPECT_EQ(saturate_cast<ILaneType>(cvRound(x)), roundO[i]);
+                    EXPECT_EQ(saturate_cast<ILaneType>(cvTrunc(x)), truncO[i]);
+                    EXPECT_EQ(saturate_cast<ILaneType>(cvFloor(x)), floorO[i]);
+                    EXPECT_EQ(saturate_cast<ILaneType>(cvCeil(x)), ceilO[i]);
+                }
                 if (sizeof(ILaneType) == 4)
                 {
                     if (xd >= 2147483648.)
