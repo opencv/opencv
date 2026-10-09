@@ -1191,7 +1191,13 @@ public:
     Adds an appearance descriptor per detection, which lets objects that cross or briefly disappear
     keep their ids when position alone is ambiguous.
 
+    @param detBoxes detection boxes for this frame
+    @param detScores detector confidence per box
+    @param detClassIds class id per box; ignored unless MultiTracker::Params::classAware is set
     @param detEmbeddings one L2-normalised CV_32F row per detection, in the same order as @p detBoxes
+    @param trackIds output, the id of each live track; ids are never reused
+    @param trackBoxes output, where each live track is now
+    @param trackClassIds output, the class of each live track
      */
     CV_WRAP virtual
     void update(const std::vector<Rect2d>& detBoxes,

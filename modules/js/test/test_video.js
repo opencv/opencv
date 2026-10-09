@@ -130,14 +130,14 @@ QUnit.test('MultiTracker', function(assert) {
     {
         let params = new cv.MultiTracker_Params();
         params.minHits = 1;
-        let tracker = cv.MultiTracker.create(params);
+        // create() returns a Ptr, which the binding generator turns into a constructor.
+        let tracker = new cv.MultiTracker(params);
 
         let boxes = new cv.Rect2dVector();
         boxes.push_back({x: 10, y: 10, width: 20, height: 40});
-        let scores = new cv.FloatVector();
-        scores.push_back(0.9);
-        let classes = new cv.IntVector();
-        classes.push_back(0);
+        // scores and class ids arrive as emscripten::val, so these are plain arrays.
+        let scores = [0.9];
+        let classes = [0];
 
         let ids = new cv.IntVector();
         let outBoxes = new cv.Rect2dVector();
@@ -151,8 +151,6 @@ QUnit.test('MultiTracker', function(assert) {
         tracker.reset();
 
         boxes.delete();
-        scores.delete();
-        classes.delete();
         ids.delete();
         outBoxes.delete();
         outClasses.delete();
