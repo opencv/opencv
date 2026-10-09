@@ -75,16 +75,20 @@ def make_optional_none_return(root_node: NamespaceNode,
 
 def export_matrix_type_constants(root: NamespaceNode) -> None:
     MAX_PREDEFINED_CHANNELS = 4
+    CN_SHIFT = 5
 
-    depth_names = ("CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32U", "CV_32S",
-                   "CV_64U", "CV_64S", "CV_32F", "CV_64F", "CV_16F", "CV_16BF" "CV_Bool")
-    for depth_value, depth_name in enumerate(depth_names):
+    # Values must match modules/core/include/opencv2/core/hal/interface.h
+    depths = (("CV_8U", 0), ("CV_8S", 1), ("CV_16U", 2), ("CV_16S", 3),
+              ("CV_32S", 4), ("CV_32F", 5), ("CV_64F", 6), ("CV_16F", 7),
+              ("CV_16BF", 8), ("CV_Bool", 9), ("CV_64U", 10), ("CV_64S", 11),
+              ("CV_32U", 12), ("CV_8F_E4M3FN", 13), ("CV_8F_E4M3FNUZ", 14))
+    for depth_name, depth_value in depths:
         # Export depth constants
         root.add_constant(depth_name, str(depth_value))
         # Export predefined types
         for c in range(MAX_PREDEFINED_CHANNELS):
             root.add_constant(f"{depth_name}C{c + 1}",
-                              f"{depth_value + 8 * c}")
+                              f"{depth_value + (c << CN_SHIFT)}")
         # Export type creation function
         root.add_function(
             f"{depth_name}C",

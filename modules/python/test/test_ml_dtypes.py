@@ -10,9 +10,6 @@ except ImportError:
 
 from tests_common import NewOpenCVTests
 
-# Python does not publish these depths yet: CV_16BF, CV_8F_E4M3FN, CV_8F_E4M3FNUZ.
-CV_16BF, CV_8F_E4M3FN, CV_8F_E4M3FNUZ = 8, 13, 14
-
 
 class ml_dtypes_test(NewOpenCVTests):
 
@@ -22,9 +19,9 @@ class ml_dtypes_test(NewOpenCVTests):
             self.skipTest("ml_dtypes is not installed")
         # (numpy dtype, OpenCV depth, typeToString prefix, relative half-ULP)
         self.cases = [
-            (ml_dtypes.bfloat16, CV_16BF, "CV_16BF", 2.0 ** -8),
-            (ml_dtypes.float8_e4m3fn, CV_8F_E4M3FN, "CV_8F", 2.0 ** -4),
-            (ml_dtypes.float8_e4m3fnuz, CV_8F_E4M3FNUZ, "CV_8FNUZ", 2.0 ** -4),
+            (ml_dtypes.bfloat16, cv.CV_16BF, "CV_16BF", 2.0 ** -8),
+            (ml_dtypes.float8_e4m3fn, cv.CV_8F_E4M3FN, "CV_8F", 2.0 ** -4),
+            (ml_dtypes.float8_e4m3fnuz, cv.CV_8F_E4M3FNUZ, "CV_8FNUZ", 2.0 ** -4),
         ]
 
     def assertSameBits(self, actual, expected):
