@@ -264,7 +264,7 @@ private:
         const std::vector<int> sliceStarts(allStarts, allStarts + ndims);
         const std::vector<int> sliceEnds(allEnds, allEnds + ndims);
         const std::vector<int> sliceSteps(allSteps, allSteps + ndims);
-        // an empty output may keep an out-of-range end, which sliceND would reject
+        // an empty output may keep an out-of-range end, which cv::slice would reject
         const bool emptyOut = outShape.empty();
 
         int outKind = outputs_arr.kind();
@@ -278,7 +278,7 @@ private:
             outs[0].fit(outShape, inpType);
 
             if (!emptyOut)
-                sliceND(inp, sliceStarts, sliceEnds, sliceSteps, outs[0]);
+                cv::slice(inp, sliceStarts, sliceEnds, sliceSteps, outs[0]);
         } else {
              Mat inp = inputs_arr.getMat(0);
              std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
@@ -287,7 +287,7 @@ private:
              Mat temp(outShape, inpType);
 
              if (!emptyOut)
-                 sliceND(inp, sliceStarts, sliceEnds, sliceSteps, temp);
+                 cv::slice(inp, sliceStarts, sliceEnds, sliceSteps, temp);
 
              temp.copyTo(outs[0]);
         }

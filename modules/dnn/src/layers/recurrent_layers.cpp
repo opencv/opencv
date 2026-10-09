@@ -425,9 +425,9 @@ public:
             if (input[0].dims == 4){
                 // here !!!
                 CV_Assert(input[0].size[3] == 1);
-                cv::transposeND(input[0], {1, 0, 2, 3}, tmp); //back to seq_len, batch_size, hidden_size format
+                cv::transpose(input[0], {1, 0, 2, 3}, tmp); //back to seq_len, batch_size, hidden_size format
             }else{
-                cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+                cv::transpose(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
             }
             input[0] = tmp;
         }
@@ -744,9 +744,9 @@ public:
             }
         }
         // transpose to match batch first output - into the preallocated tensor (exact-shape create()
-        // inside transposeND reuses it, so the graph's output blob is written in place)
+        // inside cv::transpose reuses it, so the graph's output blob is written in place)
         if (layout == BATCH_SEQ_HID){
-            cv::transposeND(hOutSeqFirst, {1, 0, 2}, output[0]);
+            cv::transpose(hOutSeqFirst, {1, 0, 2}, output[0]);
         }
         if (needYcTransform && produceCellOutput)
         {
@@ -768,10 +768,10 @@ public:
         cv::Mat newCellState;
         // transpose to match batch first output
         if (layout == BATCH_SEQ_HID){
-            cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
+            cv::transpose(cOut, {2, 0, 1, 3}, newCellState);
         }
         else{
-            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+            cv::transpose(cOut, {0, 2, 1, 3}, newCellState);
         }
         cOut = newCellState;
 

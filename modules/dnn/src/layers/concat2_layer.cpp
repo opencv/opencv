@@ -191,7 +191,7 @@ public:
                 return;
             }
         }
-        concatND(inps, axis_, out);
+        cv::concat(inps, axis_, out);
     }
 
     // Fallback for axis=1 BLOCK concat when inputs aren't C0-aligned.
@@ -216,7 +216,7 @@ public:
         Mat nchwOut;
         nchwOut.fit(nchwShape, out.type());
 
-        concatND(nchwInps, 1, nchwOut);
+        cv::concat(nchwInps, 1, nchwOut);
         transformLayout(nchwOut, out, DATA_LAYOUT_BLOCK, origLayout, C0);
     }
 };

@@ -4,7 +4,8 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Strided n-dimensional copy shared by transposeND, flipND, concatND, splitND, tileND and sliceND.
+// Strided n-dimensional copy shared by the n-dimensional transpose, flip, concat, split, repeat
+// and slice.
 // Each of them only describes a source and a destination view; channels stay inside the element.
 
 #ifndef OPENCV_CORE_ND_COPY_HPP

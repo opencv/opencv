@@ -525,7 +525,7 @@ void transpose( InputArray _src, OutputArray _dst )
 }
 
 
-void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst_)
+void transpose(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1010,11 +1010,55 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 #endif
 
+// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
+static void flipAxisInplace(Mat& m, int axis)
+{
+    size_t nouter = 1;
+    for (int i = 0; i < axis; i++)
+        nouter *= (size_t)m.size[i];
+    const int n = m.size[axis];
+    const size_t step = m.step[axis];
+    uchar* data = m.ptr();
+    for (size_t i = 0; i < nouter; i++, data += n*step)
+        for (int j = 0, k = n - 1; j < k; j++, k--)
+            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
+}
+
+// flip() for an input that is not two-dimensional: the code is the axis to flip.
+static void flipAxis(InputArray _src, OutputArray _dst, int _axis)
+{
+    Mat src = _src.getMat();
+
+    // verify axis
+    int ndim = src.dims;
+    CV_CheckLT(_axis, ndim, "flip: given axis is out of range");
+    CV_CheckGE(_axis, -ndim, "flip: given axis is out of range");
+    int axis = (_axis + ndim) % ndim;
+
+    _dst.create(ndim, src.size.p, src.type());
+    Mat dst = _dst.getMat();
+    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
+    {
+        flipAxisInplace(dst, axis);
+        return;
+    }
+
+    nd::View v = nd::viewOf(src);
+    nd::flip(v, axis);
+    nd::copy(v, nd::viewOf(dst));
+}
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _src.dims() <= 2 );
+    // only a two-dimensional array has an x- and a y-axis to name; for any other shape the code is
+    // the axis to flip
+    if (_src.dims() != 2)
+    {
+        flipAxis(_src, _dst, flip_mode);
+        return;
+    }
     Size size = _src.size();
 
     if (flip_mode < 0)
@@ -1052,46 +1096,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
-static void flipNDInplace(Mat& m, int axis)
-{
-    size_t nouter = 1;
-    for (int i = 0; i < axis; i++)
-        nouter *= (size_t)m.size[i];
-    const int n = m.size[axis];
-    const size_t step = m.step[axis];
-    uchar* data = m.ptr();
-    for (size_t i = 0; i < nouter; i++, data += n*step)
-        for (int j = 0, k = n - 1; j < k; j++, k--)
-            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
-}
-
-void flipND(InputArray _src, OutputArray _dst, int _axis)
-{
-    CV_INSTRUMENT_REGION();
-
-    Mat src = _src.getMat();
-
-    // verify axis
-    int ndim = src.dims;
-    CV_CheckLT(_axis, ndim, "flipND: given axis is out of range");
-    CV_CheckGE(_axis, -ndim, "flipND: given axis is out of range");
-    int axis = (_axis + ndim) % ndim;
-
-    _dst.create(ndim, src.size.p, src.type());
-    Mat dst = _dst.getMat();
-    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
-    {
-        flipNDInplace(dst, axis);
-        return;
-    }
-
-    nd::View v = nd::viewOf(src);
-    nd::flip(v, axis);
-    nd::copy(v, nd::viewOf(dst));
-}
-
-void concatND(InputArrayOfArrays _src, int axis, OutputArray _dst)
+void concat(InputArrayOfArrays _src, int axis, OutputArray _dst)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1101,9 +1106,9 @@ void concatND(InputArrayOfArrays _src, int axis, OutputArray _dst)
 
     const Mat& src0 = src[0];
     const int ndims = src0.dims, type = src0.type(), ninputs = (int)src.size();
-    CV_CheckGE(ndims, 1, "concatND: 0-dimensional arrays are not supported");
-    CV_CheckGE(axis, -ndims, "concatND: axis is out of range");
-    CV_CheckLT(axis, ndims, "concatND: axis is out of range");
+    CV_CheckGE(ndims, 1, "concat: 0-dimensional arrays are not supported");
+    CV_CheckGE(axis, -ndims, "concat: axis is out of range");
+    CV_CheckLT(axis, ndims, "concat: axis is out of range");
     if (axis < 0)
         axis += ndims;
 
@@ -1114,14 +1119,14 @@ void concatND(InputArrayOfArrays _src, int axis, OutputArray _dst)
     for (int k = 0; k < ninputs; k++)
     {
         const Mat& m = src[k];
-        CV_CheckEQ(m.type(), type, "concatND: all the input arrays must have the same type");
-        CV_CheckEQ(m.dims, ndims, "concatND: all the input arrays must have the same number of dimensions");
+        CV_CheckEQ(m.type(), type, "concat: all the input arrays must have the same type");
+        CV_CheckEQ(m.dims, ndims, "concat: all the input arrays must have the same number of dimensions");
         for (int i = 0; i < ndims; i++)
             if (i != axis)
-                CV_CheckEQ(m.size[i], outShape[i], "concatND: the input shapes must match except along the axis");
+                CV_CheckEQ(m.size[i], outShape[i], "concat: the input shapes must match except along the axis");
         axisSize += m.size[axis];
     }
-    CV_CheckLE((size_t)axisSize, (size_t)INT_MAX, "concatND: the output is too big");
+    CV_CheckLE((size_t)axisSize, (size_t)INT_MAX, "concat: the output is too big");
     outShape[axis] = (int)axisSize;
 
     _dst.create(ndims, outShape, type);
@@ -1141,15 +1146,15 @@ void concatND(InputArrayOfArrays _src, int axis, OutputArray _dst)
     nd::copyBatch(sv.data(), dv.data(), ninputs);
 }
 
-void splitND(InputArray _src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays _dst)
+void split(InputArray _src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays _dst)
 {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     const int ndims = src.dims, type = src.type(), noutputs = (int)sizes.size();
-    CV_CheckGE(ndims, 1, "splitND: 0-dimensional arrays are not supported");
-    CV_CheckGE(axis, -ndims, "splitND: axis is out of range");
-    CV_CheckLT(axis, ndims, "splitND: axis is out of range");
+    CV_CheckGE(ndims, 1, "split: 0-dimensional arrays are not supported");
+    CV_CheckGE(axis, -ndims, "split: axis is out of range");
+    CV_CheckLT(axis, ndims, "split: axis is out of range");
     if (axis < 0)
         axis += ndims;
     CV_Assert(noutputs > 0);
@@ -1157,10 +1162,10 @@ void splitND(InputArray _src, int axis, const std::vector<int>& sizes, OutputArr
     int64 axisSize = 0;
     for (int k = 0; k < noutputs; k++)
     {
-        CV_CheckGE(sizes[k], 0, "splitND: the sizes must be non-negative");
+        CV_CheckGE(sizes[k], 0, "split: the sizes must be non-negative");
         axisSize += sizes[k];
     }
-    CV_CheckEQ((size_t)axisSize, (size_t)src.size[axis], "splitND: the sizes must sum up to the size of the axis");
+    CV_CheckEQ((size_t)axisSize, (size_t)src.size[axis], "split: the sizes must sum up to the size of the axis");
 
     int outShape[CV_MAX_DIM];
     for (int i = 0; i < ndims; i++)
@@ -1184,20 +1189,20 @@ void splitND(InputArray _src, int axis, const std::vector<int>& sizes, OutputArr
     nd::copyBatch(sv.data(), dv.data(), noutputs);
 }
 
-void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
+void repeat(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
 {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     const int ndims = src.dims;
-    CV_CheckEQ(repeats.size(), (size_t)ndims, "tileND: the number of repeats must match the number of dimensions");
+    CV_CheckEQ(repeats.size(), (size_t)ndims, "repeat: the number of repeats must match the number of dimensions");
 
     int outShape[CV_MAX_DIM];
     for (int i = 0; i < ndims; i++)
     {
-        CV_CheckGE(repeats[i], 0, "tileND: the repeats must be non-negative");
+        CV_CheckGE(repeats[i], 0, "repeat: the repeats must be non-negative");
         int64 sz = (int64)src.size[i]*repeats[i];
-        CV_CheckLE((size_t)sz, (size_t)INT_MAX, "tileND: the output is too big");
+        CV_CheckLE((size_t)sz, (size_t)INT_MAX, "repeat: the output is too big");
         outShape[i] = (int)sz;
     }
 
@@ -1218,7 +1223,7 @@ void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
         const int sz = src.size[i], r = repeats[i];
         if (r != 1)
         {
-            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "tileND: too many dimensions");
+            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "repeat: too many dimensions");
             sv.size[n] = dv.size[n] = r;
             sv.step[n] = 0;
             dv.step[n] = (ptrdiff_t)dst.step[i]*sz;
@@ -1226,7 +1231,7 @@ void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
         }
         if (sz != 1 || r == 1)
         {
-            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "tileND: too many dimensions");
+            CV_CheckLT(n, (int)nd::MAX_VIEW_DIMS, "repeat: too many dimensions");
             sv.size[n] = dv.size[n] = sz;
             sv.step[n] = (ptrdiff_t)src.step[i];
             dv.step[n] = (ptrdiff_t)dst.step[i];
@@ -1237,17 +1242,17 @@ void tileND(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
     nd::copy(sv, dv);
 }
 
-void sliceND(InputArray _src, const std::vector<int>& starts, const std::vector<int>& ends,
+void slice(InputArray _src, const std::vector<int>& starts, const std::vector<int>& ends,
              const std::vector<int>& steps, OutputArray _dst)
 {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     const int ndims = src.dims, nslices = (int)starts.size();
-    CV_CheckLE(nslices, ndims, "sliceND: too many starts");
-    CV_CheckEQ(ends.size(), starts.size(), "sliceND: starts and ends must have the same size");
+    CV_CheckLE(nslices, ndims, "slice: too many starts");
+    CV_CheckEQ(ends.size(), starts.size(), "slice: starts and ends must have the same size");
     CV_Check(steps.size(), steps.empty() || steps.size() == starts.size(),
-             "sliceND: steps must be empty or have the same size as starts");
+             "slice: steps must be empty or have the same size as starts");
 
     nd::View sv = nd::viewOf(src);
     int outShape[CV_MAX_DIM];
@@ -1258,18 +1263,18 @@ void sliceND(InputArray _src, const std::vector<int>& starts, const std::vector<
     {
         const int n = src.size[i], start = starts[i], end = ends[i];
         const int step = steps.empty() ? 1 : steps[i];
-        CV_CheckNE(step, 0, "sliceND: step must not be zero");
+        CV_CheckNE(step, 0, "slice: step must not be zero");
         int count;
         if (step > 0)
         {
-            CV_Check(start, 0 <= start && start <= n, "sliceND: start is out of range");
-            CV_Check(end, 0 <= end && end <= n, "sliceND: end is out of range");
+            CV_Check(start, 0 <= start && start <= n, "slice: start is out of range");
+            CV_Check(end, 0 <= end && end <= n, "slice: end is out of range");
             count = end > start ? (int)(((int64)end - start + step - 1)/step) : 0;
         }
         else
         {
-            CV_Check(start, -1 <= start && start < n, "sliceND: start is out of range");
-            CV_Check(end, -1 <= end && end < n, "sliceND: end is out of range");
+            CV_Check(start, -1 <= start && start < n, "slice: start is out of range");
+            CV_Check(end, -1 <= end && end < n, "slice: end is out of range");
             count = start > end ? (int)(((int64)start - end - step - 1)/(-step)) : 0;
         }
         nd::slice(sv, i, start, step, count);

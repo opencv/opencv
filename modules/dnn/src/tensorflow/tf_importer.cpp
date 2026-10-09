@@ -2574,7 +2574,7 @@ void TFImporter::parsePReLU(tensorflow::GraphDef& net, const tensorflow::NodeDef
 
     if (scales.dims == 3) {
         // Considering scales from Keras with HWC layout;
-        transposeND(scales, {2, 0, 1}, layerParams.blobs[0]);
+        cv::transpose(scales, {2, 0, 1}, layerParams.blobs[0]);
     } else {
         layerParams.blobs[0] = scales;
     }
