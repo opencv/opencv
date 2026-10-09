@@ -218,25 +218,21 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
     {
         Vec3d Xi = objectPoints.depth() == CV_32F ? (Vec3d)Xf[i] : Xd[i];
         Vec3d Y = aff*Xi;
-        if (fabs(Y[2]) < DBL_MIN)
-            Y[2] = 1;
-        Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
-
-        double r2 = x.dot(x);
-        double r = std::sqrt(r2);
-
-        // Angle of the incoming ray:
-        double theta = atan(r);
-
-        double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
-                theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
-
-        double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-
-        double inv_r = r > 1e-8 ? 1.0/r : 1;
-        double cdist = r > 1e-8 ? theta_d * inv_r : 1;
-
-        Vec2d xd1 = x * cdist;
+        const double radius = std::hypot(Y[0], Y[1]);
+        const double theta = std::atan2(radius, Y[2]);
+        const double theta2 = theta * theta;
+        const double theta3 = theta2 * theta;
+        const double theta4 = theta2 * theta2;
+        const double theta5 = theta4 * theta;
+        const double theta6 = theta4 * theta2;
+        const double theta7 = theta6 * theta;
+        const double theta8 = theta4 * theta4;
+        const double theta9 = theta8 * theta;
+        const double theta_d = theta + k[0] * theta3 + k[1] * theta5 +
+                               k[2] * theta7 + k[3] * theta9;
+        const bool onAxis = std::fpclassify(radius) == FP_ZERO;
+        const double cdist = onAxis ? (Y[2] > 0 ? 1.0 / Y[2] : 0.0) : theta_d / radius;
+        const Vec2d xd1(Y[0] * cdist, Y[1] * cdist);
         Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
         Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 
@@ -254,66 +250,51 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
                               0, 0, 0, 0, 0, 0, Xi[0], Xi[1], Xi[2] };
 
             Matx33d dYdom_data = Matx<double, 3, 9>(dYdR) * dRdom.t();
-            const Vec3d *dYdom = (Vec3d*)dYdom_data.val;
 
-            Matx33d dYdT_data = Matx33d::eye();
-            const Vec3d *dYdT = (Vec3d*)dYdT_data.val;
-
-            //Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
-            Vec3d dxdom[2];
-            dxdom[0] = (1.0/Y[2]) * dYdom[0] - x[0]/Y[2] * dYdom[2];
-            dxdom[1] = (1.0/Y[2]) * dYdom[1] - x[1]/Y[2] * dYdom[2];
-
-            Vec3d dxdT[2];
-            dxdT[0]  = (1.0/Y[2]) * dYdT[0] - x[0]/Y[2] * dYdT[2];
-            dxdT[1]  = (1.0/Y[2]) * dYdT[1] - x[1]/Y[2] * dYdT[2];
-
-            //double r2 = x.dot(x);
-            Vec3d dr2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
-            Vec3d dr2dT  = 2 * x[0] *  dxdT[0] + 2 * x[1] *  dxdT[1];
-
-            //double r = std::sqrt(r2);
-            double drdr2 = r > 1e-8 ? 1.0/(2*r) : 1;
-            Vec3d drdom = drdr2 * dr2dom;
-            Vec3d drdT  = drdr2 * dr2dT;
-
-            // Angle of the incoming ray:
-            //double theta = atan(r);
-            double dthetadr = 1.0/(1+r2);
-            Vec3d dthetadom = dthetadr * drdom;
-            Vec3d dthetadT  = dthetadr *  drdT;
-
-            //double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-            double dtheta_ddtheta = 1 + 3*k[0]*theta2 + 5*k[1]*theta4 + 7*k[2]*theta6 + 9*k[3]*theta8;
-            Vec3d dtheta_ddom = dtheta_ddtheta * dthetadom;
-            Vec3d dtheta_ddT  = dtheta_ddtheta * dthetadT;
-            Vec4d dtheta_ddk  = Vec4d(theta3, theta5, theta7, theta9);
-
-            //double inv_r = r > 1e-8 ? 1.0/r : 1;
-            //double cdist = r > 1e-8 ? theta_d / r : 1;
-            Vec3d dcdistdom = inv_r * (dtheta_ddom - cdist*drdom);
-            Vec3d dcdistdT  = inv_r * (dtheta_ddT  - cdist*drdT);
-            Vec4d dcdistdk  = inv_r *  dtheta_ddk;
-
-            //Vec2d xd1 = x * cdist;
-            Vec4d dxd1dk[2];
-            Vec3d dxd1dom[2], dxd1dT[2];
-            dxd1dom[0] = x[0] * dcdistdom + cdist * dxdom[0];
-            dxd1dom[1] = x[1] * dcdistdom + cdist * dxdom[1];
-            dxd1dT[0]  = x[0] * dcdistdT  + cdist * dxdT[0];
-            dxd1dT[1]  = x[1] * dcdistdT  + cdist * dxdT[1];
-            dxd1dk[0]  = x[0] * dcdistdk;
-            dxd1dk[1]  = x[1] * dcdistdk;
-
-            //Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
+            Matx23d dxd1dY = Matx23d::zeros();
+            Vec4d dxd1dk[2] = {Vec4d::all(0), Vec4d::all(0)};
+            if (onAxis)
+            {
+                dxd1dY(0, 0) = cdist;
+                dxd1dY(1, 1) = cdist;
+            }
+            else
+            {
+                const double length = std::hypot(radius, Y[2]);
+                const Vec3d drdY(Y[0] / radius, Y[1] / radius, 0);
+                const Vec3d dthetadY((Y[2] / length) * drdY[0] / length,
+                                    (Y[2] / length) * drdY[1] / length,
+                                    -(radius / length) / length);
+                const double dtheta_ddtheta = 1 + 3 * k[0] * theta2 +
+                    5 * k[1] * theta4 + 7 * k[2] * theta6 + 9 * k[3] * theta8;
+                // Y[i] * dcdist/dY equals drdY[i] * radius * dcdist/dY. Factoring
+                // out the radius avoids dividing by it twice, which overflows
+                // for points close to the camera center.
+                const Vec3d radiusTimesDcdistdY = dtheta_ddtheta * dthetadY - cdist * drdY;
+                for (int coordinate = 0; coordinate < 3; ++coordinate)
+                {
+                    dxd1dY(0, coordinate) = drdY[0] * radiusTimesDcdistdY[coordinate];
+                    dxd1dY(1, coordinate) = drdY[1] * radiusTimesDcdistdY[coordinate];
+                }
+                dxd1dY(0, 0) += cdist;
+                dxd1dY(1, 1) += cdist;
+                const Vec4d dtheta_ddk(theta3, theta5, theta7, theta9);
+                dxd1dk[0] = drdY[0] * dtheta_ddk;
+                dxd1dk[1] = drdY[1] * dtheta_ddk;
+            }
+            const Matx23d dxd1dom = dxd1dY * dYdom_data;
+            Vec3d dxd3dom[2];
+            Vec3d dxd3dT[2];
             Vec4d dxd3dk[2];
-            Vec3d dxd3dom[2], dxd3dT[2];
-            dxd3dom[0] = dxd1dom[0] + alpha * dxd1dom[1];
-            dxd3dom[1] = dxd1dom[1];
-            dxd3dT[0]  = dxd1dT[0]  + alpha * dxd1dT[1];
-            dxd3dT[1]  = dxd1dT[1];
-            dxd3dk[0]  = dxd1dk[0]  + alpha * dxd1dk[1];
-            dxd3dk[1]  = dxd1dk[1];
+            for (int coordinate = 0; coordinate < 3; ++coordinate)
+            {
+                dxd3dom[0][coordinate] = dxd1dom(0, coordinate) + alpha * dxd1dom(1, coordinate);
+                dxd3dom[1][coordinate] = dxd1dom(1, coordinate);
+                dxd3dT[0][coordinate] = dxd1dY(0, coordinate) + alpha * dxd1dY(1, coordinate);
+                dxd3dT[1][coordinate] = dxd1dY(1, coordinate);
+            }
+            dxd3dk[0] = dxd1dk[0] + alpha * dxd1dk[1];
+            dxd3dk[1] = dxd1dk[1];
 
             Vec2d dxd3dalpha(xd1[1], 0);
 

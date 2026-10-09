@@ -612,6 +612,41 @@ TEST_F(fisheyeTest, jacobians)
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 }
 
+TEST_F(fisheyeTest, jacobiansScaleInverselyNearCameraCenter)
+{
+    // The projection depends only on the ray direction. Scaling a camera
+    // frame point by t therefore leaves the image point and all Jacobian
+    // columns unchanged except those of the translation, which scale by 1/t.
+    constexpr double distanceScale = 1e-200;
+    constexpr double alpha = 0.01;
+    constexpr double relativeTolerance = 1e-12;
+    constexpr int translationColumn = 11;
+    constexpr int translationSize = 3;
+    const cv::Vec3d direction(0.6, -0.3, 0.5);
+    const std::vector<cv::Vec3d> unitPoint{direction};
+    const std::vector<cv::Vec3d> scaledPoint{direction * distanceScale};
+
+    std::vector<cv::Vec2d> unitProjection;
+    std::vector<cv::Vec2d> scaledProjection;
+    cv::Mat unitJacobian;
+    cv::Mat scaledJacobian;
+    cv::fisheye::projectPoints(unitPoint, unitProjection, cv::Vec3d::all(0),
+                               cv::Vec3d::all(0), this->K, this->D, alpha, unitJacobian);
+    cv::fisheye::projectPoints(scaledPoint, scaledProjection, cv::Vec3d::all(0),
+                               cv::Vec3d::all(0), this->K, this->D, alpha, scaledJacobian);
+
+    ASSERT_TRUE(cv::checkRange(scaledJacobian));
+    EXPECT_MAT_NEAR(cv::Mat(scaledProjection), cv::Mat(unitProjection),
+                    relativeTolerance * cv::norm(cv::Mat(unitProjection), cv::NORM_INF));
+
+    cv::Mat normalizedJacobian = scaledJacobian.clone();
+    cv::Mat normalizedTranslationColumns =
+        normalizedJacobian.colRange(translationColumn, translationColumn + translationSize);
+    normalizedTranslationColumns *= distanceScale;
+    EXPECT_MAT_NEAR(normalizedJacobian, unitJacobian,
+                    relativeTolerance * cv::norm(unitJacobian, cv::NORM_INF));
+}
+
 class FisheyeExtrinsicRefinementScaleTest
     : public fisheyeTest,
       public ::testing::WithParamInterface<double>
