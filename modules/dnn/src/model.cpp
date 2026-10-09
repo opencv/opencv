@@ -25,6 +25,7 @@ struct Model::Impl
     Scalar scale = Scalar::all(1.0);
     bool   swapRB = false;
     ImagePaddingMode paddingMode = DNN_PMODE_NULL;
+    DetectionOutputFormat outputFormat = DNN_DFMT_AUTO;
     Mat    blob;
     std::vector<String> outNames;
 
@@ -105,6 +106,11 @@ public:
     void setPaddingMode(ImagePaddingMode paddingMode_)
     {
         paddingMode = paddingMode_;
+    }
+    /*virtual*/
+    void setOutputFormat(DetectionOutputFormat outputFormat_)
+    {
+        outputFormat = outputFormat_;
     }
 
     /*virtual*/
@@ -259,6 +265,13 @@ Model& Model::setPaddingMode(ImagePaddingMode mode)
 {
     CV_DbgAssert(impl);
     impl->setPaddingMode(mode);
+    return *this;
+}
+
+Model& Model::setOutputFormat(DetectionOutputFormat format)
+{
+    CV_DbgAssert(impl);
+    impl->setOutputFormat(format);
     return *this;
 }
 
@@ -443,6 +456,8 @@ struct AnchorFreeLayout
         layout.transposed = d1 <= d2;
         layout.C = layout.transposed ? d1 : d2;
         layout.N = layout.transposed ? d2 : d1;
+        // 4 box channels plus at least one score; every predicate below reads channel 4.
+        CV_CheckGE(layout.C, 5, "Anchor-free head: too few channels for a box and a score");
         return layout;
     }
 
@@ -496,21 +511,25 @@ bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int
     return true;
 }
 
-// Decided per tensor, not per box; the bound only has to exclude sub-pixel boxes.
+// Only scored rows carry coordinates; zero padding would otherwise read as normalized.
 bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout)
 {
+    bool any = false;
     for (int b = 0; b < layout.B; b++)
     {
         for (int i = 0; i < layout.N; i++)
         {
+            if (layout.at(out, b, i, 4) <= 0.f)
+                continue;
             for (int c = 0; c < 4; c++)
             {
                 if (std::abs(layout.at(out, b, i, c)) > 2.f)
                     return false;
             }
+            any = true;
         }
     }
-    return true;
+    return any;
 }
 
 // Joined so the single-tensor decoder runs unchanged.
@@ -580,9 +599,20 @@ struct HeadLayout
     bool normalized = false;     // box values are fractions of the blob, not pixels
     bool cornerBox = false;      // x1, y1, x2, y2 rather than cx, cy, w, h
 
-    static HeadLayout from(const Mat& out, const AnchorFreeLayout& layout, int nm)
+    static HeadLayout from(const Mat& out, const AnchorFreeLayout& layout, int nm,
+                           DetectionOutputFormat format)
     {
         HeadLayout head;
+        if (format != DNN_DFMT_AUTO)
+        {
+            head.explicitClass = format == DNN_DFMT_CORNER || format == DNN_DFMT_CORNER_NORM;
+            head.cornerBox = head.explicitClass;
+            head.normalized = format == DNN_DFMT_CENTER_NORM || format == DNN_DFMT_CORNER_NORM;
+            if (head.explicitClass)
+                CV_CheckEQ(layout.C - nm, 6, "a corner format needs a "
+                           "[box(4) + score + class index] row");
+            return head;
+        }
         head.explicitClass = lastChannelIsClassIndex(out, layout, nm);
         head.normalized = boxesAreNormalized(out, layout);
         head.cornerBox = head.explicitClass && boxesAreCorners(out, layout);
@@ -613,9 +643,9 @@ void decodeRows(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout
         {
             bestScore = r[4];
             bestCls = cvRound(r[5]);
-            // An explicit-class head sorts best-first and zero-pads the tail.
+            // Zero-padded tail rows carry no detection.
             if (bestScore <= 0.f || bestScore < confThreshold)
-                break;
+                continue;
         }
         else
         {
@@ -719,15 +749,20 @@ SampleDecode decodeSample(const Mat& out, const AnchorFreeLayout& layout, const 
     param.paddingmode = paddingMode;
     param.blobRectsToImageRects(blobBoxes, r.boxes, frameSize);
 
-    for (Rect& box : r.boxes)
+    // boxes and keep stay parallel, so a dropped box takes its keep entry with it.
+    const Rect frameRect(0, 0, frameSize.width, frameSize.height);
+    size_t kept = 0;
+    for (size_t i = 0; i < r.boxes.size(); i++)
     {
-        // Keep only the visible part, with non-zero extent: callers resize a mask into this box.
-        const int x1 = std::min(std::max(0, box.x), frameSize.width - 1);
-        const int y1 = std::min(std::max(0, box.y), frameSize.height - 1);
-        const int x2 = std::min(frameSize.width, box.x + box.width);
-        const int y2 = std::min(frameSize.height, box.y + box.height);
-        box = Rect(x1, y1, std::max(1, x2 - x1), std::max(1, y2 - y1));
+        const Rect visible = r.boxes[i] & frameRect;
+        if (visible.empty())
+            continue;
+        r.boxes[kept] = visible;
+        r.keep[kept] = r.keep[i];
+        kept++;
     }
+    r.boxes.resize(kept);
+    r.keep.resize(kept);
     return r;
 }
 
@@ -872,7 +907,8 @@ std::vector<Size> frameSizesOf(const std::vector<Mat>& images)
 
 // Poses of every sample, appended in sample order. frameIds may be null.
 void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const Size& blobSize,
-                     ImagePaddingMode paddingMode, float confThreshold, float nmsThreshold,
+                     ImagePaddingMode paddingMode, DetectionOutputFormat format,
+                     float confThreshold, float nmsThreshold,
                      std::vector<std::vector<Point3f> >& keypoints, std::vector<Rect>& boxes,
                      std::vector<float>& confidences, std::vector<int>* frameIds)
 {
@@ -881,7 +917,7 @@ void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const 
                "estimatePoses: the net returned a different number of samples");
     const int detWidth = poseDetWidth(out, layout);
     const int numKeypoints = poseKeypointCount(layout, detWidth);
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints);
+    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints, format);
 
     keypoints.clear();
     boxes.clear();
@@ -902,8 +938,9 @@ void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const 
 
 // Instances of every sample, appended in sample order. frameIds may be null.
 void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Size>& frameSizes,
-                          const Size& blobSize, ImagePaddingMode paddingMode, float confThreshold,
-                          float nmsThreshold, std::vector<Mat>& masks, std::vector<int>& classIds,
+                          const Size& blobSize, ImagePaddingMode paddingMode,
+                          DetectionOutputFormat format, float confThreshold, float nmsThreshold,
+                          std::vector<Mat>& masks, std::vector<int>& classIds,
                           std::vector<float>& confidences, std::vector<Rect>& boxes,
                           std::vector<int>* frameIds)
 {
@@ -912,7 +949,7 @@ void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Si
                "segmentInstances: the net returned a different number of samples");
     CV_CheckEQ(proto.size[0], (int)frameSizes.size(),
                "segmentInstances: the prototypes hold a different number of samples");
-    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1]);
+    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1], format);
 
     masks.clear();
     classIds.clear();
@@ -1031,8 +1068,9 @@ void KeypointsModel::estimatePoses(InputArray frame, CV_OUT std::vector<std::vec
     impl->processFrame(frame, outs);
     CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
 
-    posesFromOutput(outs[0], {frame.size()}, impl->size, impl->paddingMode, confThreshold,
-                    nmsThreshold, keypoints, boxes, confidences, /*frameIds=*/nullptr);
+    posesFromOutput(outs[0], {frame.size()}, impl->size, impl->paddingMode, impl->outputFormat,
+                    confThreshold, nmsThreshold, keypoints, boxes, confidences,
+                    /*frameIds=*/nullptr);
 }
 
 void KeypointsModel::estimatePoses(InputArrayOfArrays frames,
@@ -1049,8 +1087,9 @@ void KeypointsModel::estimatePoses(InputArrayOfArrays frames,
     impl->processFrame(frames, outs);
     CV_CheckEQ((int)outs.size(), 1, "estimatePoses requires a network with a single output");
 
-    posesFromOutput(outs[0], frameSizesOf(images), impl->size, impl->paddingMode, confThreshold,
-                    nmsThreshold, keypoints, boxes, confidences, &frameIds);
+    posesFromOutput(outs[0], frameSizesOf(images), impl->size, impl->paddingMode,
+                    impl->outputFormat, confThreshold, nmsThreshold, keypoints, boxes,
+                    confidences, &frameIds);
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
@@ -1141,8 +1180,8 @@ void SegmentationModel::segmentInstances(InputArray frame, CV_OUT std::vector<Ma
     splitSegOutputs(outs, det, proto);
 
     instancesFromOutputs(*det, *proto, {frame.size()}, impl->size, impl->paddingMode,
-                         confThreshold, nmsThreshold, masks, classIds, confidences, boxes,
-                         /*frameIds=*/nullptr);
+                         impl->outputFormat, confThreshold, nmsThreshold, masks, classIds,
+                         confidences, boxes, /*frameIds=*/nullptr);
 }
 
 void SegmentationModel::segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
@@ -1166,8 +1205,8 @@ void SegmentationModel::segmentInstances(InputArrayOfArrays frames, CV_OUT std::
     splitSegOutputs(outs, det, proto);
 
     instancesFromOutputs(*det, *proto, frameSizesOf(images), impl->size, impl->paddingMode,
-                         confThreshold, nmsThreshold, masks, classIds, confidences, boxes,
-                         &frameIds);
+                         impl->outputFormat, confThreshold, nmsThreshold, masks, classIds,
+                         confidences, boxes, &frameIds);
 }
 
 class DetectionModel_Impl : public Model::Impl
@@ -1405,7 +1444,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     {
         const Mat& out = detections[0];
         AnchorFreeLayout layout = AnchorFreeLayout::from(out);
-        const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0);
+        const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputFormat);
         SampleDecode d = decodeSample(out, layout, head, /*b=*/0, /*nm=*/0, impl->size,
                                        impl->paddingMode, Size(frameWidth, frameHeight),
                                        confThreshold, nmsThreshold, getNmsAcrossClasses());
@@ -1445,7 +1484,7 @@ void DetectionModel::detect(InputArrayOfArrays frames,
     AnchorFreeLayout layout = AnchorFreeLayout::from(out);
     CV_CheckEQ(layout.B, (int)images.size(),
                "batched detect: the net returned a different number of samples");
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0);
+    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputFormat);
 
     classIds.clear();
     confidences.clear();
