@@ -1933,8 +1933,9 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 
 inline v_int32x4 v_round(const v_float32x4& a)
 {
-    v128_t h = wasm_f32x4_splat(0.5);
-    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_add(a.val, h)));
+    return v_int32x4(
+        wasm_i32x4_trunc_saturate_f32x4(
+            wasm_f32x4_nearest(a.val)));
 }
 
 inline v_int32x4 v_floor(const v_float32x4& a)

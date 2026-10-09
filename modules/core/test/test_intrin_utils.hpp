@@ -1416,6 +1416,19 @@ template<typename R> struct TheTest
 
         return *this;
     }
+
+    TheTest & test_float_rounding()
+    {
+        R input(2.5f, 3.5f, -2.5f, -3.5f);
+        Data<typename V_RegTraits<R>::round_reg> result = v_round(input);
+
+        EXPECT_EQ(cvRound(2.5f), result[0]);
+        EXPECT_EQ(cvRound(3.5f), result[1]);
+        EXPECT_EQ(cvRound(-2.5f), result[2]);
+        EXPECT_EQ(cvRound(-3.5f), result[3]);
+
+        return *this;
+    }
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     TheTest & test_round_pair_f64()
     {
@@ -2357,6 +2370,7 @@ void test_hal_intrin_float32()
         .test_mask()
         .test_unpack()
         .test_float_math()
+        .test_float_rounding()
         .test_float_cvt64()
         .test_matmul()
         .test_transpose()
