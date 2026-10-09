@@ -917,6 +917,21 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
             CalibrateExtrinsics(normalizedObjectPoints, imagePoints, finalParam,
                                 check_cond, thresh_cond, omc, Tc);
         }
+        else
+        {
+            constexpr int poseSize = 6;
+            constexpr int rotationSize = 3;
+            const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
+            for (size_t view = 0; view < numberOfViews; ++view)
+            {
+                const int offset = numberOfIntrinsics + poseSize * static_cast<int>(view);
+                for (int coordinate = 0; coordinate < rotationSize; ++coordinate)
+                {
+                    omc[view][coordinate] += alpha_smooth2 * G.at<double>(offset + coordinate);
+                    Tc[view][coordinate] += alpha_smooth2 * G.at<double>(offset + rotationSize + coordinate);
+                }
+            }
+        }
     }
 
     //-------------------------------Validation
