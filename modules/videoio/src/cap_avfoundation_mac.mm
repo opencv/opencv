@@ -861,6 +861,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
 bool CvCaptureFile::grabFrame() {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
+    mOutImage.release();
     CVBufferRelease(mGrabbedPixels);
     if ( mCurrentSampleBuffer ) {
         CFRelease(mCurrentSampleBuffer);
@@ -886,11 +887,12 @@ cv::Mat CvCaptureFile::retrieveFramePixelBuffer() {
 
     OSType pixelFormat = CVPixelBufferGetPixelFormatType(mGrabbedPixels);
     if (mMode == CV_CAP_MODE_BGRA && pixelFormat == kCVPixelFormatType_32BGRA) {
-        cv::Mat result = wrapCVPixelBufferBGRA(mGrabbedPixels);
-        CVBufferRelease(mGrabbedPixels);
-        mGrabbedPixels = NULL;
+        // Keep the capture-owned pixel buffer until the next grab, and reuse
+        // the same wrapped Mat for repeated retrieve calls on this frame.
+        if (mOutImage.empty())
+            mOutImage = wrapCVPixelBufferBGRA(mGrabbedPixels);
         [localpool drain];
-        return result;
+        return mOutImage;
     }
 
     CVPixelBufferLockBaseAddress(mGrabbedPixels, 0);
