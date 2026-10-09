@@ -219,6 +219,80 @@ INSTANTIATE_TEST_CASE_P(Fisheye, FisheyeExtrinsicRefinementScaleTest,
                                           smallObjectPointScale,
                                           smallestNormalObjectPointScale));
 
+TEST_F(fisheyeTest, CalibrationIsInvariantToPointLayout)
+{
+    constexpr double focalLength = 600.0;
+    constexpr double principalPointX = 320.0;
+    constexpr double principalPointY = 240.0;
+    constexpr double imageNoise = 0.05;
+    constexpr double tolerance = 1e-10;
+    constexpr int maxIterations = 1;
+    const cv::Size testImageSize(640, 480);
+    const cv::Matx33d cameraMatrix(focalLength, 0.0, principalPointX,
+                                  0.0, focalLength, principalPointY,
+                                  0.0, 0.0, 1.0);
+    const cv::Vec4d distortion = cv::Vec4d::all(0);
+    const std::vector<cv::Point3d> points = {
+        {-0.4, -0.3, 0.0}, {0.0, -0.3, 0.0}, {0.4, -0.3, 0.0},
+        {-0.4, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.4, 0.0, 0.0},
+        {-0.4, 0.3, 0.0}, {0.0, 0.3, 0.0}, {0.4, 0.3, 0.0}};
+    const std::vector<cv::Vec3d> rotations = {
+        {0.15, -0.1, 0.08}, {-0.1, 0.12, -0.06}};
+    const std::vector<cv::Vec3d> translations = {
+        {0.2, -0.15, 3.0}, {-0.3, 0.1, 2.5}};
+    std::vector<cv::Mat> objectRows;
+    std::vector<cv::Mat> imageRows;
+    for (size_t view = 0; view < rotations.size(); ++view)
+    {
+        std::vector<cv::Point2d> projected;
+        cv::fisheye::projectPoints(points, projected, rotations[view],
+                                  translations[view], cameraMatrix, distortion);
+        projected.front().x += imageNoise;
+        objectRows.push_back(cv::Mat(points).reshape(3, 1).clone());
+        imageRows.push_back(cv::Mat(projected).reshape(2, 1).clone());
+    }
+
+    const int flags = fixedIntrinsicCalibrationFlags(false);
+    const cv::TermCriteria criteria(cv::TermCriteria::COUNT, maxIterations, 0);
+    cv::Mat referenceK = cv::Mat(cameraMatrix);
+    cv::Mat referenceD = cv::Mat(distortion);
+    std::vector<cv::Vec3d> referenceR;
+    std::vector<cv::Vec3d> referenceT;
+    const double referenceRms = cv::fisheye::calibrate(
+        objectRows, imageRows, testImageSize, referenceK, referenceD,
+        referenceR, referenceT, flags, criteria);
+    ASSERT_GT(referenceRms, tolerance);
+
+    for (const bool columnImages : {true, false})
+    {
+        for (const bool columnObjects : {false, true})
+        {
+            SCOPED_TRACE(::testing::Message() << "columnImages=" << columnImages
+                                             << ", columnObjects=" << columnObjects);
+            std::vector<cv::Mat> objects;
+            std::vector<cv::Mat> images;
+            for (size_t view = 0; view < rotations.size(); ++view)
+            {
+                objects.push_back(columnObjects ? objectRows[view].t() : objectRows[view]);
+                images.push_back(columnImages ? imageRows[view].t() : imageRows[view]);
+            }
+            cv::Mat estimatedK = cv::Mat(cameraMatrix);
+            cv::Mat estimatedD = cv::Mat(distortion);
+            std::vector<cv::Vec3d> estimatedR;
+            std::vector<cv::Vec3d> estimatedT;
+            double rms = 0.0;
+            ASSERT_NO_THROW(rms = cv::fisheye::calibrate(
+                objects, images, testImageSize, estimatedK, estimatedD,
+                estimatedR, estimatedT, flags, criteria));
+            EXPECT_NEAR(rms, referenceRms, tolerance);
+            EXPECT_MAT_NEAR(estimatedK, referenceK, tolerance);
+            EXPECT_MAT_NEAR(estimatedD, referenceD, tolerance);
+            EXPECT_MAT_NEAR(cv::Mat(estimatedR), cv::Mat(referenceR), tolerance);
+            EXPECT_MAT_NEAR(cv::Mat(estimatedT), cv::Mat(referenceT), tolerance);
+        }
+    }
+}
+
 TEST_F(fisheyeTest, CalibrationHandlesTranslatedObjectPoints)
 {
     const cv::Matx33d cameraMatrix(600.0, 0.0, 320.0,
