@@ -442,5 +442,17 @@ TEST(Calib3d_FindFundamentalMat, Crash)
     findFundamentalMat(m1, m2, mask, FM_LMEDS, 1, 0.99);
 }
 
+TEST(Geometry_SampsonDistance, invalid_inputs)
+{
+    Mat pt1 = Mat(Vec2d(1.0, 2.0));
+    Mat pt2 = Mat(Vec2d(1.0, 2.0));
+    Mat F = Mat::eye(3, 3, CV_64F);
+    EXPECT_THROW(cv::sampsonDistance(pt1, pt2, F), cv::Exception);
+
+    Mat F_bad = Mat::eye(2, 2, CV_64F);
+    Mat pt3d = Mat(Vec3d(1.0, 2.0, 1.0));
+    EXPECT_THROW(cv::sampsonDistance(pt3d, pt3d, F_bad), cv::Exception);
+}
+
 }} // namespace
 /* End of file. */

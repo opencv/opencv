@@ -1295,7 +1295,7 @@ double sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
     CV_INSTRUMENT_REGION();
 
     CV_Assert(_pt1.depth() == CV_64F && _pt2.depth() == CV_64F && _F.depth() == CV_64F);
-    CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
+    CV_Assert((_pt1.rows() == 3 || _pt1.cols() == 3) && _F.size() == Size(3, 3) && (_pt2.rows() == 3 || _pt2.cols() == 3));
 
     Mat pt1(_pt1.getMat());
     Mat pt2(_pt2.getMat());

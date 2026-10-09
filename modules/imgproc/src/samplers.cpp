@@ -293,6 +293,12 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat();
+    if( image.empty() || patchSize.width <= 0 || patchSize.height <= 0 )
+    {
+        _patch.release();
+        return;
+    }
+
     int depth = image.depth(), cn = image.channels();
     int ddepth = patchType < 0 ? depth : CV_MAT_DEPTH(patchType);
 

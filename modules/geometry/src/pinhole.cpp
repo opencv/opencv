@@ -50,6 +50,7 @@ Mat getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
 {
     Mat cameraMatrix = _cameraMatrix.getMat();
+    CV_Assert( cameraMatrix.size() == Size(3, 3) );
     if( !centerPrincipalPoint && cameraMatrix.type() == CV_64F )
         return cameraMatrix;
 

@@ -3493,6 +3493,11 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 #endif
 
     Mat src0 = _src0.getMat(), src = src0;
+    if (src.empty())
+    {
+        _dst.release();
+        return;
+    }
     bool inv = (flags & DFT_INVERSE) != 0;
     int type = src.type();
     int depth = src.depth();
@@ -3700,6 +3705,11 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
 
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    if (srcA.empty() || srcB.empty())
+    {
+        _dst.release();
+        return;
+    }
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     size_t rows = srcA.rows, cols = srcA.cols;
 
@@ -3751,6 +3761,11 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
 void cv::divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
 {
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    if (srcA.empty() || srcB.empty())
+    {
+        _dst.release();
+        return;
+    }
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;
     int j, k;
@@ -4626,6 +4641,11 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     CV_INSTRUMENT_REGION();
 
     Mat src0 = _src0.getMat(), src = src0;
+    if (src.empty())
+    {
+        _dst.release();
+        return;
+    }
     int type = src.type(), depth = src.depth();
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );

@@ -105,5 +105,19 @@ TEST(NormalEstimationTest, InternalKnnMatchesExternal)
     ASSERT_LE(total_theta / (float)num, 1.f);   // normals parallel to the plane normal
 }
 
+TEST(NormalEstimationTest, EmptyAndInvalidInputs)
+{
+    Mat empty;
+    vector<Point3f> normals;
+    vector<float> curvatures;
+    normalEstimate(normals, curvatures, empty, noArray(), 5);
+    EXPECT_TRUE(normals.empty());
+    EXPECT_TRUE(curvatures.empty());
+
+    Mat pts(2, 3, CV_32F, Scalar(0));
+    std::vector<Mat> badIdx = { Mat(1, 1, CV_8U, Scalar(0)), Mat(1, 1, CV_8U, Scalar(0)) };
+    EXPECT_THROW(normalEstimate(normals, curvatures, pts, badIdx, 1), cv::Exception);
+}
+
 } // namespace
 } // opencv_test

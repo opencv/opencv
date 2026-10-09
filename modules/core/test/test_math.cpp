@@ -2068,6 +2068,19 @@ TEST(Core_SolvePoly, different_magnitudes_polynomials)
     }
 }
 
+TEST(Core_SolvePoly, invalid_inputs)
+{
+    Mat r;
+    Mat empty;
+    EXPECT_THROW(cv::solvePoly(empty, r), cv::Exception);
+
+    Mat single(1, 1, CV_64F, Scalar(5.0));
+    EXPECT_THROW(cv::solvePoly(single, r), cv::Exception);
+
+    Mat zeroPoly(3, 1, CV_64F, Scalar(0.0));
+    EXPECT_THROW(cv::solvePoly(zeroPoly, r), cv::Exception);
+}
+
 class Core_PhaseTest : public cvtest::BaseTest
 {
     int t;

@@ -1503,5 +1503,11 @@ TEST_F(FastFilterEngineTest, FullImage) {
     }
 }
 
+TEST(Imgproc_Gabor, invalid_parameters)
+{
+    EXPECT_THROW(cv::getGaborKernel(Size(5, 5), 0, 0, 1.0, 1.0), cv::Exception);
+    EXPECT_THROW(cv::getGaborKernel(Size(5, 5), 1.0, 0, 1.0, 0), cv::Exception);
+    EXPECT_THROW(cv::getGaborKernel(Size(5, 5), 1.0, 0, 0, 1.0), cv::Exception);
+}
 
 }} // namespace

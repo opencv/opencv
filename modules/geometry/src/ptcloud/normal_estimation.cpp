@@ -54,6 +54,11 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         nn_idx_.getMatVector(nn_idx);
         CV_CheckEQ((int) nn_idx.size(), pts_size,
                 "The point number of NN search result should be equal to the size of the point cloud.");
+        for (int i = 0; i < pts_size; ++i)
+        {
+            CV_CheckTypeEQ(nn_idx[i].type(), CV_32SC1, "Each matrix in nn_idx must be CV_32SC1");
+            CV_Assert(!nn_idx[i].empty() && (nn_idx[i].rows == 1 || nn_idx[i].cols == 1));
+        }
     }
 
     if (normals.channels() == 3 && normals.isVector())
@@ -92,10 +97,20 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
             for (int j = 1; j < bound; ++j)
             {
                 cur_nei_idx = nn_idx_ptr_base[j];
-                // If the index is less than 0,
+                // If the index is less than 0 or out of range,
                 // the nn_idx of this row will no longer have any information.
-                if (cur_nei_idx < 0) break;
+                if (cur_nei_idx < 0 || cur_nei_idx >= pts_size) break;
                 pt_set.push_back(ori_pts.row(cur_nei_idx));
+            }
+
+            float *normals_ptr_base = normals_ptr + 3 * i;
+            if (pt_set.rows < 3)
+            {
+                normals_ptr_base[0] = 0.f;
+                normals_ptr_base[1] = 0.f;
+                normals_ptr_base[2] = 0.f;
+                curvatures_ptr[i] = 0.f;
+                continue;
             }
 
             Mat mean;
@@ -105,14 +120,29 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
             PCA pca(pt_set, mean, PCA::DATA_AS_ROW);
 
             const float *eigenvectors_ptr = (float *) pca.eigenvectors.data;
-            float *normals_ptr_base = normals_ptr + 3 * i;
-            normals_ptr_base[0] = eigenvectors_ptr[6];
-            normals_ptr_base[1] = eigenvectors_ptr[7];
-            normals_ptr_base[2] = eigenvectors_ptr[8];
+            if (pca.eigenvectors.rows >= 3)
+            {
+                normals_ptr_base[0] = eigenvectors_ptr[6];
+                normals_ptr_base[1] = eigenvectors_ptr[7];
+                normals_ptr_base[2] = eigenvectors_ptr[8];
+            }
+            else
+            {
+                normals_ptr_base[0] = 0.f;
+                normals_ptr_base[1] = 0.f;
+                normals_ptr_base[2] = 0.f;
+            }
 
             const float *eigenvalues_ptr = (float *) pca.eigenvalues.data;
-            curvatures_ptr[i] = eigenvalues_ptr[2] /
-                                (eigenvalues_ptr[0] + eigenvalues_ptr[1] + eigenvalues_ptr[2]);
+            if (pca.eigenvalues.rows >= 3)
+            {
+                curvatures_ptr[i] = eigenvalues_ptr[2] /
+                                    (eigenvalues_ptr[0] + eigenvalues_ptr[1] + eigenvalues_ptr[2]);
+            }
+            else
+            {
+                curvatures_ptr[i] = 0.f;
+            }
         }
     });
 }

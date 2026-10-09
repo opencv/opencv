@@ -27,6 +27,12 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/") + filename;
 }
 
+TEST(Test_TensorFlow, empty_buffer)
+{
+    std::vector<uchar> emptyBuffer;
+    EXPECT_THROW(cv::dnn::readNetFromTensorflow(emptyBuffer), cv::Exception);
+}
+
 TEST(Test_TensorFlow, inception_accuracy)
 {
     Net net;

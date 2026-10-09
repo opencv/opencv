@@ -47,6 +47,7 @@
 #include "grfmts.hpp"
 #include "utils.hpp"
 #include "exif.hpp"
+#include <sys/stat.h>
 #undef min
 #undef max
 #include <iostream>
@@ -278,6 +279,14 @@ static ImageDecoder findDecoder( const String& filename ) {
         CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
+
+#if defined(S_ISREG)
+    struct stat st;
+    if (fstat(fileno(f), &st) != 0 || !S_ISREG(st.st_mode)) {
+        fclose(f);
+        return ImageDecoder();
+    }
+#endif
 
     // read the file signature
     String signature(maxlen, ' ');

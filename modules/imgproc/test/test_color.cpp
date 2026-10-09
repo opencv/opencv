@@ -3396,4 +3396,11 @@ TEST(ImgProc_applyColorMap, dimensions)
     ASSERT_EQ(cv::norm(dst, gt, NORM_L1), 0);
 }
 
+TEST(ImgProc_applyColorMap, empty_src)
+{
+    Mat emptySrc, dst;
+    cv::applyColorMap(emptySrc, dst, cv::COLORMAP_JET);
+    EXPECT_TRUE(dst.empty());
+}
+
 }} // namespace

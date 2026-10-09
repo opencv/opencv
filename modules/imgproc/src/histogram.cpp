@@ -1292,7 +1292,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
-    CV_Assert(nimages > 0 && dims > 0);
+    CV_Assert(nimages > 0 && dims > 0 && dims <= CV_MAX_DIM);
     CV_Assert(rsz == dims*2 || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims);
     float* _ranges[CV_MAX_DIM];
@@ -2008,7 +2008,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
     int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
-    CV_Assert(nimages > 0);
+    CV_Assert(nimages > 0 && dims <= CV_MAX_DIM);
     CV_Assert(rsz == dims*2 || (rsz == 2 && _1d) || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims || (csz == 1 && _1d));
 

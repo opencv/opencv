@@ -161,4 +161,17 @@ TEST(Imgproc_BoundingRect, out_of_int_range_29837)
     EXPECT_EQ(boundingRect(ints), Rect(imin, imin, imax, imax));
 }
 
+TEST(Geometry_MinEnclosingTriangle, empty_and_collinear)
+{
+    Mat empty;
+    std::vector<Point2f> triangle;
+    double area = cv::minEnclosingTriangle(empty, triangle);
+    EXPECT_EQ(area, 0.0);
+    EXPECT_TRUE(triangle.empty());
+
+    std::vector<Point2f> onePoint = { Point2f(0, 0) };
+    area = cv::minEnclosingTriangle(onePoint, triangle);
+    EXPECT_EQ(area, 0.0);
+}
+
 }} // namespace
