@@ -646,7 +646,7 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
 
     const bool haveMask = !mask.empty();
     const int cn1 = src1.channels(), cn2 = src2.channels();
-    bool s1 = isScalarArg(src1, cn2), s2 = isScalarArg(src2, cn1);
+    bool s1 = isScalarArg(src1, src2), s2 = isScalarArg(src2, src1);
     if (s1 && s2)
         s1 = s2 = false;    // two scalars: treat both as tiny array operands (element-wise + broadcast),
                             // matching arithm_op (Scalar+Scalar -> 4x1, number+number -> 1x1, ...)
