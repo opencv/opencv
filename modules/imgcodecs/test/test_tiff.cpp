@@ -1435,6 +1435,7 @@ TEST_P(Imgcodecs_Tiff_compress_level, normal)
     ASSERT_LT(bufDef.size(), bufNone.size());
     ASSERT_LE(bufDef.size(), bufMin.size());
     ASSERT_LE(bufMax.size(), bufDef.size());
+    ASSERT_NE(bufMax.size(), bufMin.size());
 }
 
 const Method_minLevel_maxLevel supportedMethod_minLevel_maxLevel[] =
