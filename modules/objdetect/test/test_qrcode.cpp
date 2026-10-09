@@ -811,4 +811,57 @@ TEST(Objdetect_QRCode_decode, unsupported_mode_returns_empty)
     EXPECT_TRUE(decoded_info.empty());
 }
 
+// See https://github.com/opencv/opencv/issues/29540
+TEST(Objdetect_QRCode_detect, detect_regression_29540)
+{
+    // QR Code (version 1, error correction level M) encoding the string "EMPSUI_7"
+    // as produced by the Python "qrcode" package. The data modules of this code
+    // contain a 1:1:3:1:1 pattern that mimics a finder pattern both horizontally
+    // and vertically, which used to make cv::QRCodeDetector unable to locate the
+    // code at all.
+    static const char* const qrcode_bitmap[] = {
+        "111111101001001111111",
+        "100000101101101000001",
+        "101110101010001011101",
+        "101110100111101011101",
+        "101110101110101011101",
+        "100000100101101000001",
+        "111111101010101111111",
+        "000000000101100000000",
+        "100111111000110010111",
+        "101111000110111101001",
+        "100111101010010100111",
+        "001000000111000100110",
+        "010100111110011000101",
+        "000000001101100100111",
+        "111111101100111010100",
+        "100000101001110111101",
+        "101110101011101110100",
+        "101110101011100011100",
+        "101110100010001010011",
+        "100000100110011101111",
+        "111111101001000011100",
+    };
+
+    const int qr_size = 21;
+    const int border = 4;
+    const int module_size = 10;
+
+    Mat img(Size((qr_size + 2 * border) * module_size, (qr_size + 2 * border) * module_size), CV_8UC1, Scalar(255));
+    for (int y = 0; y < qr_size; ++y)
+    {
+        for (int x = 0; x < qr_size; ++x)
+        {
+            if (qrcode_bitmap[y][x] == '1')
+                img(Rect((x + border) * module_size, (y + border) * module_size, module_size, module_size)).setTo(0);
+        }
+    }
+
+    QRCodeDetector qrcode;
+    std::vector<Point2f> corners;
+    Mat straight_qrcode;
+    EXPECT_EQ(qrcode.detectAndDecode(img, corners, straight_qrcode), std::string("EMPSUI_7"));
+    EXPECT_EQ(corners.size(), 4U);
+}
+
 }} // namespace
