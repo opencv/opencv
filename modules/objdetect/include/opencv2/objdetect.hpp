@@ -388,6 +388,25 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
+@note The corners are returned row by row and left to right within each row, but whether that order
+pins down a unique physical corner of the board depends on `patternSize`. The detector builds its
+grid from the dark squares only, so it recognises a rotated board only when the rotation maps dark
+squares onto dark squares. For a `patternSize` of w x h interior corners the squares form a
+(w+1) x (h+1) grid, and a rotation by 180 degrees preserves that colouring exactly when w and h have
+the same parity. Three cases follow. If w and h have different parity, as on the common 9x6 board,
+the origin is unique and the ordering is repeatable across views. If w and h have the same parity
+but differ, as on the 8x6 board used in the example above, the order is fixed only up to a rotation
+by 180 degrees. If w equals h, the detector cannot tell rows from columns either, and the order is
+fixed only up to a rotation by 90 degrees. Where the order is ambiguous, which one you get depends
+on how the board happens to lie in the image. That does not affect camera calibration, since each
+view absorbs the rotation into its own pose and the intrinsics come out the same, but it breaks
+anything that assumes a fixed board coordinate frame across views, hand-eye calibration being the
+usual case, where a flipped view silently corrupts the estimated transform. A plain chessboard image
+does not carry the information needed to resolve the rotation, so it has to come from the pattern:
+choose a board whose two dimensions have different parity, or use #findChessboardCornersSB with
+@ref CALIB_CB_MARKER, whose `meta` output identifies the origin, or a ChArUco board, where the
+markers make the orientation unambiguous.
+
 Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
  */
@@ -557,12 +576,18 @@ perspective distortions but much more sensitive to background clutter.
                     If `blobDetector` is NULL then `image` represents Point2f array of candidates.
 @param parameters struct for finding circles in a grid pattern.
 
-return True if all of the centers have been found and they have been placed in a certain order
-(row by row, left to right in every row). Otherwise, if the function fails to find all the corners
-or reorder them, it returns false.
+@return True if all of the centers have been found and ordered, false if the function fails to find
+all of them or to reorder them.
+
+The returned centers are ordered row by row and left to right within each row, but that order is
+relative to the grid as it appears in the image, which need not match the physical board: depending
+on how the board is held, the detected grid may be flipped or rotated by 180 degrees with respect to
+it. A symmetric pattern cannot resolve this ambiguity on its own, so if the correspondence to
+physical board coordinates matters, fix the orientation yourself from an asymmetric pattern or from
+an external cue.
 
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
-function locates centers of the circles.
+function estimates the centers of the circles.
 
 Sample usage of detecting and drawing the centers of circles: :
 @code
@@ -576,6 +601,19 @@ Sample usage of detecting and drawing the centers of circles: :
 @endcode
 @note The function requires white space (like a square-thick border, the wider the better) around
 the board to make the detection more robust in various environments.
+
+@note The returned points are not the exact projections of the circle centers. The function uses the
+keypoint locations reported by `blobDetector` as they are, without refining them; cv::SimpleBlobDetector
+is only the default choice. Any such detector locates a blob from the image region it occupies, which
+describes the circle as it appears in the image rather than the projection of its center. Under
+perspective projection the two need not coincide: the apparent center of a projected circle can be
+displaced from the projection of the physical center, by an amount that depends on the viewing
+geometry and on the circle's size relative to its distance. The displacement vanishes when the board
+is parallel to the image plane, since the projection is then an exact scaled copy of the pattern.
+Fitting an ellipse does not remove it, as the ellipse center is subject to the same effect. For
+calibration at ordinary accuracy this bias is usually acceptable; for high-accuracy work, compute
+corrected centers yourself and pass them in as a Point2f array of candidates with
+`blobDetector = NULL`.
  */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags,

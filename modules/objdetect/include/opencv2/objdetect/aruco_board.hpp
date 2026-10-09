@@ -148,9 +148,23 @@ public:
 
     /** @brief set legacy chessboard pattern.
      *
-     * Legacy setting creates chessboard patterns starting with a white box in the upper left corner
-     * if there is an even row count of chessboard boxes, otherwise it starts with a black box.
-     * This setting ensures compatibility to patterns created with OpenCV versions prior OpenCV 4.6.0.
+     * In OpenCV 4.6.0 the ChArUco pattern generation algorithm changed in an incompatible way for
+     * boards with an even number of rows. Enable this setting to interpret a board that was created
+     * with an OpenCV version older than 4.6.0, or with a third-party generator that follows the same
+     * convention; boards from calib.io, for example, use the legacy layout.
+     *
+     * The legacy layout starts the chessboard with a white box in the upper left corner when the row
+     * count is even, whereas the current layout starts with a black box. The two layouts differ only
+     * in that case: when `size.height` is odd they are identical, so this setting has no effect on
+     * boards with an odd number of rows.
+     *
+     * @note Getting this wrong fails quietly. The ArUco markers are still detected normally, but the
+     * corners they imply do not match the board, so CharucoDetector::detectBoard() returns zero
+     * ChArUco corners while reporting a full set of marker detections. The only trace is a
+     * `CV_LOG_DEBUG` message, which is not shown at the default log level. If you see detected
+     * markers and no corners on a board with an even row count, try toggling this setting before
+     * looking anywhere else.
+     *
      * See https://github.com/opencv/opencv/issues/23152.
      *
      * Default value: false.
