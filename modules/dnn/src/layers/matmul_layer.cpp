@@ -266,9 +266,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 (!packed_input_B.empty() || !thin_packed_B.empty()) &&
                 netimpl && netimpl->mainGraph) {
                 wshape0 = shape(blobs[0]);
-                blobs[0].release();
-                // A recycled address would compare equal and skip the repack.
-                last_packed_input_B_data = nullptr;
+#ifdef HAVE_CUDA
+                // initCUDA() reads B after finalize(), so a net targeting CUDA keeps it.
+                if (netimpl->preferableBackend != DNN_BACKEND_CUDA ||
+                    !supportBackend(DNN_BACKEND_CUDA))
+#endif
+                {
+                    blobs[0].release();
+                    // A recycled address would compare equal and skip the repack.
+                    last_packed_input_B_data = nullptr;
+                }
             }
         }
 

@@ -2416,6 +2416,35 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReleasedOncePacked)
     EXPECT_FALSE(net.getParam(gemm, 1).empty());
 }
 
+TEST_P(Test_ONNX_layers, MatMul_ConstWeight_ReleasedOncePacked)
+{
+    // B is 3-D, so fuseMatMulConstBToGemm declines it and the layer stays a MatMul.
+    Net net = readNetFromONNX(_tf("models/matmul_3d_init.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int matmul = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "MatMul")
+            matmul = id;
+    }
+    ASSERT_GE(matmul, 0);
+    EXPECT_FALSE(net.getParam(matmul, 0).empty());
+
+    int sizes[] = {5, 2, 3};
+    Mat input(3, sizes, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it.
+    EXPECT_EQ(net.getParam(matmul, 0).empty(), backend != DNN_BACKEND_CUDA);
+}
+
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
 {
     const String model = _tf("models/gemm_vector_bias.onnx");
