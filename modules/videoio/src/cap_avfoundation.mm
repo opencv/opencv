@@ -243,6 +243,28 @@ cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& file
     return NULL;
 }
 
+
+std::vector<cv::VideoDeviceInfo> cv::enumerate_AVFoundation_devices()
+{
+    std::vector<cv::VideoDeviceInfo> result;
+#if !TARGET_OS_VISION
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+
+    NSArray* devices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
+            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+
+    for (NSUInteger i = 0; i < devices.count; i++)
+    {
+        AVCaptureDevice* device = [devices objectAtIndex:i];
+        const char* name = [[device localizedName] UTF8String];
+        result.push_back(cv::makeVideoDeviceInfo((int)i, cv::CAP_AVFOUNDATION, name ? name : ""));
+    }
+
+    [localpool drain];
+#endif
+    return result;
+}
+
 /********************** Implementation of Classes ****************************/
 /*****************************************************************************
  *

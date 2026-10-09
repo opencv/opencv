@@ -21,6 +21,7 @@ public:
     virtual Ptr<IVideoCapture> createCapture(const Ptr<IStreamReader>&stream, const VideoCaptureParameters& params) const = 0;
     virtual Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps, const cv::Size& sz,
                                            const VideoWriterParameters& params) const = 0;
+    virtual std::vector<VideoDeviceInfo> enumerateDevices() const { return std::vector<VideoDeviceInfo>(); } // not every backend supports this
 };
 
 class IBackendFactory
@@ -41,14 +42,17 @@ typedef Ptr<IVideoCapture> (*FN_createCaptureCameraWithParams)(int camera, const
 typedef Ptr<IVideoCapture> (*FN_createCaptureStreamWithParams)(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
 typedef Ptr<IVideoWriter>  (*FN_createWriter)(const std::string& filename, int fourcc, double fps, const Size& sz,
                                               const VideoWriterParameters& params);
+typedef std::vector<VideoDeviceInfo> (*FN_enumerateDevices)();
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile,
                                           FN_createCaptureCamera createCaptureCamera,
                                           FN_createCaptureStream createCaptureStream,
-                                          FN_createWriter createWriter);
+                                          FN_createWriter createWriter,
+                                          FN_enumerateDevices enumerateDevices = 0);
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFileWithParams createCaptureFile,
                                           FN_createCaptureCameraWithParams createCaptureCamera,
                                           FN_createCaptureStreamWithParams createCaptureStream,
-                                          FN_createWriter createWriter);
+                                          FN_createWriter createWriter,
+                                          FN_enumerateDevices enumerateDevices = 0);
 
 Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char* baseName);
 
