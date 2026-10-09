@@ -526,6 +526,11 @@ enum { CALIB_USE_INTRINSIC_GUESS = (1 << 0), //!< Use user provided intrinsics a
        CALIB_STEREO_REGISTRATION = (1 << 26)  //!< For multiview calibration only. Use stereo correspondence approach for initial extrinsics guess. Limitation: all cameras should have the same type.
      };
 
+enum CalibrationWeightMode {
+    CALIB_WEIGHT_NONE = 0, //!< Every observation counts equally. This is the default.
+    CALIB_WEIGHTED    = 1  //!< Use the user weights if given, otherwise a Huber robust loss with scale lossScale.
+};
+
 enum HandEyeCalibrationMethod
 {
     CALIB_HAND_EYE_TSAI         = 0, //!< A New Technique for Fully Autonomous and Efficient 3D Robotics Hand/Eye Calibration @cite Tsai89
@@ -639,8 +644,21 @@ calibration function use the tilted sensor model and return 14 coefficients.
 the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
+@param weightMode @ref CALIB_WEIGHT_NONE (default) treats every observation equally. With
+@ref CALIB_WEIGHTED the fit uses weights if they are given, otherwise a Huber robust loss.
+@param weights Optional weights with the same layout as imagePoints: one 2-channel value per point,
+holding separate weights for the x and y residuals. Values must be finite and non-negative. A point
+whose x and y weights are both zero is removed before calibration starts, so it is not used for the
+initial guess and is not counted in the returned RMS or perViewErrors. Each view must keep at least
+4 points, and with the object-releasing method of #calibrateCameraRO no point may be removed.
+Passing weights is only valid with @ref CALIB_WEIGHTED; with @ref CALIB_WEIGHT_NONE it is an error
+to pass anything other than noArray().
+@param lossScale Huber threshold in pixels, used with @ref CALIB_WEIGHTED when no weights are given.
+A point whose reprojection error is above it gets weight lossScale / error.
 
-@return the overall RMS re-projection error.
+@return the overall RMS re-projection error. With @ref CALIB_WEIGHTED it is still the plain,
+unweighted error over the points that were not removed, and so is perViewErrors. The standard
+deviations come from the weighted problem.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
 views. By default, the optimization follows a sparse bundle adjustment formulation with Schur
@@ -701,7 +719,10 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      OutputArray stdDeviationsExtrinsics,
                                      OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 500, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 500, DBL_EPSILON),
+                                     CalibrationWeightMode weightMode = CALIB_WEIGHT_NONE,
+                                     InputArrayOfArrays weights = noArray(),
+                                     double lossScale = 1.0 );
 
 /** @overload */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
@@ -759,6 +780,9 @@ parameter is ignored with standard calibration method.
 be much longer. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially
 less precise and less stable in some rare cases.
 @param criteria Termination criteria for the iterative optimization algorithm.
+@param weightMode See #calibrateCamera for details.
+@param weights See #calibrateCamera for details.
+@param lossScale See #calibrateCamera for details.
 
 @return the overall RMS re-projection error.
 
@@ -778,7 +802,10 @@ CV_EXPORTS_AS(calibrateCameraROExtended) double calibrateCameraRO( InputArrayOfA
                                      OutputArray stdDeviationsObjPoints,
                                      OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 500, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 500, DBL_EPSILON),
+                                     CalibrationWeightMode weightMode = CALIB_WEIGHT_NONE,
+                                     InputArrayOfArrays weights = noArray(),
+                                     double lossScale = 1.0 );
 
 /** @overload */
 CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
