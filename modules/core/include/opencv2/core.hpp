@@ -898,7 +898,7 @@ And the following code demonstrates its usage for a two-channel matrix.
 @snippet snippets/core_reduce.cpp example2
 
 @param src input matrix. It may also be n-dimensional, then @p dim is the axis to reduce and the
-output keeps it with size 1 (see the #ReduceParams overload).
+output keeps it with size 1 (see the cv::ReduceParams overload).
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
 a single row. 1 means that the matrix is reduced to a single column.
@@ -951,7 +951,7 @@ integers, for CV_64F, and when the output depth is CV_64F).
 @param dst output array. With ReduceParams::keepdims, it has the shape of src with the reduced axes
 set to 1; otherwise the reduced axes are removed (reducing all the axes then gives a 0-dimensional
 array).
-@param params the reduction operation and the axes to reduce over, see #ReduceParams.
+@param params the reduction operation and the axes to reduce over, see cv::ReduceParams.
 @sa ReduceParams, sum, mean, minMaxIdx
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, const ReduceParams& params);
