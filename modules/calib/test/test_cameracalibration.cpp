@@ -43,6 +43,7 @@
 #include "opencv2/stereo.hpp"
 #include "opencv2/objdetect.hpp"
 #include <cfloat>
+#include "opencv2/ts/cuda_test.hpp"
 
 namespace opencv_test { namespace {
 
@@ -2027,6 +2028,185 @@ TEST(Calib_CalibrateCamera, size4DistortionCoeffs)
     EXPECT_LT(stereo_rms, 1e-4);
     EXPECT_LE(cv::norm(cv::Vec4d(D1), distCoeffs, NORM_INF), 1e-4);
     EXPECT_LE(cv::norm(cv::Vec4d(D2), distCoeffs, NORM_INF), 1e-4);
+}
+
+static void makeFloat64Views(const Matx33d& K, const Vec3d& rStereo, const Vec3d& tStereo,
+                             std::vector<std::vector<Point3d> >& objectPoints,
+                             std::vector<std::vector<Point2d> >& imagePoints1,
+                             std::vector<std::vector<Point2d> >& imagePoints2)
+{
+    std::vector<Point3d> board;
+    for (int y = 0; y < 6; y++)
+        for (int x = 0; x < 9; x++)
+            board.push_back(Point3d(x * 0.025, y * 0.025, 0));
+
+    const Vec3d rvecs[] = { Vec3d(0.1, 0.2, 0), Vec3d(-0.2, 0.1, 0.1), Vec3d(0.3, -0.1, 0.05), Vec3d(0, -0.3, -0.1) };
+    const Vec3d tvecs[] = { Vec3d(-0.1, -0.07, 0.5), Vec3d(-0.08, -0.06, 0.6), Vec3d(-0.12, -0.05, 0.55), Vec3d(-0.1, -0.08, 0.45) };
+    for (int i = 0; i < 4; i++)
+    {
+        Vec3d r2, t2;
+        composeRT(rvecs[i], tvecs[i], rStereo, tStereo, r2, t2);
+        std::vector<Point2d> p1, p2;
+        projectPoints(board, rvecs[i], tvecs[i], K, noArray(), p1);
+        projectPoints(board, r2, t2, K, noArray(), p2);
+        objectPoints.push_back(board);
+        imagePoints1.push_back(p1);
+        imagePoints2.push_back(p2);
+    }
+}
+
+template <typename T, typename S>
+static std::vector<std::vector<T> > toPointsOf(const std::vector<std::vector<S> >& src)
+{
+    std::vector<std::vector<T> > dst(src.size());
+    for (size_t i = 0; i < src.size(); i++)
+        for (const S& p : src[i])
+            dst[i].push_back(T(p));
+    return dst;
+}
+
+template <typename T>
+static Mat toExplicitDimsMat(const std::vector<T>& pts, int cn)
+{
+    int sz[] = { 1, (int)pts.size(), cn };
+    return Mat(3, sz, CV_64F, (void*)pts.data()).clone();
+}
+
+TEST(Calib_CalibrateCamera, float64Points)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img, img2;
+    makeFloat64Views(K, Vec3d::all(0), Vec3d(-0.1, 0, 0), obj, img, img2);
+
+    Mat K64, dist64, K32, dist32;
+    std::vector<Mat> rvecs, tvecs;
+    double rms64 = calibrateCamera(obj, img, Size(640, 480), K64, dist64, rvecs, tvecs);
+    double rms32 = calibrateCamera(toPointsOf<Point3f>(obj), toPointsOf<Point2f>(img),
+                                   Size(640, 480), K32, dist32, rvecs, tvecs);
+
+    EXPECT_LT(rms64, 1e-7);
+    EXPECT_MAT_NEAR(K64, Mat(K), 1e-6);
+    EXPECT_LT(rms32, 1e-3);
+    EXPECT_MAT_NEAR(K32, Mat(K), 1e-2);
+}
+
+TEST(Calib_CalibrateCamera, dims3PointArrays)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img, img2;
+    makeFloat64Views(K, Vec3d::all(0), Vec3d(-0.1, 0, 0), obj, img, img2);
+
+    std::vector<Mat> objDims3(obj.size()), imgDims3(img.size());
+    for (size_t i = 0; i < obj.size(); i++)
+    {
+        objDims3[i] = toExplicitDimsMat(obj[i], 3);
+        imgDims3[i] = toExplicitDimsMat(img[i], 2);
+        ASSERT_EQ(objDims3[i].dims, 3);
+        ASSERT_EQ(objDims3[i].checkVector(3), (int)obj[i].size());
+    }
+
+    Mat Kref, distref, Kdims3, distdims3;
+    std::vector<Mat> rvecs, tvecs;
+    double rmsRef = calibrateCamera(obj, img, Size(640, 480), Kref, distref, rvecs, tvecs);
+    double rmsDims3 = calibrateCamera(objDims3, imgDims3, Size(640, 480), Kdims3, distdims3, rvecs, tvecs);
+
+    EXPECT_LT(rmsRef, 1e-7);
+    EXPECT_NEAR(rmsRef, rmsDims3, 1e-9);
+    EXPECT_MAT_NEAR(Kref, Kdims3, 1e-9);
+    EXPECT_MAT_NEAR(distref, distdims3, 1e-9);
+}
+
+TEST(Calib_CalibrateCameraRO, float64Points)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img, img2;
+    makeFloat64Views(K, Vec3d::all(0), Vec3d(-0.1, 0, 0), obj, img, img2);
+    std::vector<std::vector<Point3f> > obj32 = toPointsOf<Point3f>(obj);
+
+    Mat K64, dist64, K32, dist32;
+    std::vector<Mat> rvecs, tvecs;
+    std::vector<Point3d> newObj64;
+    std::vector<Point3f> newObj32;
+    double rms64 = calibrateCameraRO(obj, img, Size(640, 480), 8, K64, dist64, rvecs, tvecs, newObj64);
+    double rms32 = calibrateCameraRO(obj32, toPointsOf<Point2f>(img), Size(640, 480), 8,
+                                     K32, dist32, rvecs, tvecs, newObj32);
+
+    EXPECT_LT(rms64, 1e-7);
+    EXPECT_MAT_NEAR(K64, Mat(K), 1e-6);
+    EXPECT_MAT_NEAR(Mat(newObj64).reshape(1), Mat(obj[0]).reshape(1), 1e-9);
+    EXPECT_LT(rms32, 1e-3);
+    EXPECT_MAT_NEAR(K32, Mat(K), 1e-2);
+    EXPECT_MAT_NEAR(Mat(newObj32).reshape(1), Mat(obj32[0]).reshape(1), 1e-4);
+}
+
+TEST(Calib_StereoCalibrate, float64Points)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    const Vec3d rStereo(0, 0.05, 0), tStereo(-0.1, 0, 0);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img1, img2;
+    makeFloat64Views(K, rStereo, tStereo, obj, img1, img2);
+
+    Mat Rgt;
+    Rodrigues(rStereo, Rgt);
+    Mat K1 = Mat(K).clone(), K2 = Mat(K).clone(), D1 = Mat::zeros(1, 5, CV_64F), D2 = Mat::zeros(1, 5, CV_64F);
+    Mat R64, T64, R32, T32;
+    double rms64 = stereoCalibrate(obj, img1, img2, K1, D1, K2, D2, Size(640, 480),
+                                   R64, T64, noArray(), noArray(), CALIB_FIX_INTRINSIC);
+    double rms32 = stereoCalibrate(toPointsOf<Point3f>(obj), toPointsOf<Point2f>(img1), toPointsOf<Point2f>(img2),
+                                   K1, D1, K2, D2, Size(640, 480),
+                                   R32, T32, noArray(), noArray(), CALIB_FIX_INTRINSIC);
+
+    EXPECT_LT(rms64, 1e-7);
+    EXPECT_MAT_NEAR(R64, Rgt, 1e-6);
+    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-6);
+    EXPECT_LT(rms32, 1e-3);
+    EXPECT_MAT_NEAR(R32, Rgt, 1e-4);
+    EXPECT_MAT_NEAR(T32, Mat(tStereo), 1e-4);
+}
+
+TEST(Calib_InitCameraMatrix2D, float64Points)
+{
+    const Matx33d K(800, 0, 319.5, 0, 800, 239.5, 0, 0, 1);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img, img2;
+    makeFloat64Views(K, Vec3d::all(0), Vec3d(-0.1, 0, 0), obj, img, img2);
+
+    Mat K64 = initCameraMatrix2D(obj, img, Size(640, 480));
+    Mat K32 = initCameraMatrix2D(toPointsOf<Point3f>(obj), toPointsOf<Point2f>(img), Size(640, 480));
+
+    EXPECT_MAT_NEAR(K64, Mat(K), 1e-4);
+    EXPECT_MAT_NEAR(K64, K32, 1e-2);
+}
+
+TEST(Calib_RegisterCameras, float64Points)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    const Vec3d rStereo(0, 0.05, 0), tStereo(-0.1, 0, 0);
+    std::vector<std::vector<Point3d> > obj;
+    std::vector<std::vector<Point2d> > img1, img2;
+    makeFloat64Views(K, rStereo, tStereo, obj, img1, img2);
+
+    Mat Rgt;
+    Rodrigues(rStereo, Rgt);
+    Mat D = Mat::zeros(1, 5, CV_64F);
+    Mat R64, T64, R32, T32, E, F, errs;
+    double rms64 = registerCameras(obj, obj, img1, img2, K, D, CALIB_MODEL_PINHOLE, K, D, CALIB_MODEL_PINHOLE,
+                                   R64, T64, E, F, errs);
+    std::vector<std::vector<Point3f> > obj32 = toPointsOf<Point3f>(obj);
+    double rms32 = registerCameras(obj32, obj32, toPointsOf<Point2f>(img1), toPointsOf<Point2f>(img2),
+                                   K, D, CALIB_MODEL_PINHOLE, K, D, CALIB_MODEL_PINHOLE,
+                                   R32, T32, E, F, errs);
+
+    EXPECT_LT(rms64, 1e-7);
+    EXPECT_MAT_NEAR(R64, Rgt, 1e-6);
+    EXPECT_MAT_NEAR(T64, Mat(tStereo), 1e-6);
+    EXPECT_LT(rms32, 1e-3);
+    EXPECT_MAT_NEAR(R32, Rgt, 1e-4);
+    EXPECT_MAT_NEAR(T32, Mat(tStereo), 1e-4);
 }
 
 }} // namespace

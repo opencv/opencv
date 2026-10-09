@@ -564,7 +564,8 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 pattern.
 
 @param objectPoints In the new interface it is a vector of vectors of calibration pattern points in
-the calibration pattern coordinate space (e.g. std::vector<std::vector<cv::Vec3f>>). The outer
+the calibration pattern coordinate space (e.g. std::vector<std::vector<cv::Vec3f>> or
+std::vector<std::vector<cv::Vec3d>>). Both single and double precision points are accepted. The outer
 vector contains as many elements as the number of pattern views. If the same calibration pattern
 is shown in each view and it is fully visible, all the vectors will be the same. Although, it is
 possible to use partially occluded patterns or even different patterns in different views. Then,
@@ -573,7 +574,8 @@ XY coordinate plane (thus 0 in the Z-coordinate), if the used calibration patter
 In the old interface all the vectors of object points from different views are concatenated
 together.
 @param imagePoints In the new interface it is a vector of vectors of the projections of calibration
-pattern points (e.g. std::vector<std::vector<cv::Vec2f>>). imagePoints.size() and
+pattern points (e.g. std::vector<std::vector<cv::Vec2f>> or std::vector<std::vector<cv::Vec2d>>).
+Both single and double precision points are accepted. imagePoints.size() and
 objectPoints.size(), and imagePoints[i].size() and objectPoints[i].size() for each i, must be equal,
 respectively. In the old interface all the vectors of object points from different views are
 concatenated together.
@@ -745,7 +747,8 @@ for details.
 @param newObjPoints The updated output vector of calibration pattern points. The coordinates might
 be scaled based on three fixed points. The returned coordinates are accurate only if the above
 mentioned three fixed points are accurate. If not needed, noArray() can be passed in. This parameter
-is ignored with standard calibration method.
+is ignored with standard calibration method. The output has the same depth as objectPoints[0]
+(CV_32F or CV_64F).
 @param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
 See #calibrateCamera for details.
 @param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
