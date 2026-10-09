@@ -38,6 +38,15 @@ TrackerVit::Params::Params()
 
 #ifdef HAVE_OPENCV_DNN
 
+// Image2BlobParams applies (x - mean) * scalefactor, so the factor must be 1/(255 * std).
+// `1.0 / Scalar` is Scalar's quaternion inverse, not an elementwise divide, so build it per channel.
+static Scalar vitScalefactor(const Scalar& stdvalue)
+{
+    return Scalar(1.0 / (255.0 * stdvalue[0]),
+                  1.0 / (255.0 * stdvalue[1]),
+                  1.0 / (255.0 * stdvalue[2]), 0.0);
+}
+
 class TrackerVitImpl : public TrackerVit
 {
 public:
@@ -50,7 +59,7 @@ public:
         net.setPreferableTarget(parameters.target);
 
         i2bp.mean = parameters.meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / parameters.stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = vitScalefactor(parameters.stdvalue);
         tracking_score_threshold = parameters.tracking_score_threshold;
     }
 
@@ -60,7 +69,7 @@ public:
 
         net = model;
         i2bp.mean = meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = vitScalefactor(stdvalue);
         tracking_score_threshold = _tracking_score_threshold;
     }
 
