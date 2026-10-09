@@ -1520,6 +1520,23 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 compression = IMWRITE_TIFF_COMPRESSION_LZW;
                 break;
         }
+
+        if (!TIFFIsCODECConfigured(static_cast<uint16_t>(compression)))
+        {
+            // this compression schema is not available with using libtiff.
+            if (TIFFIsCODECConfigured(static_cast<uint16_t>(IMWRITE_TIFF_COMPRESSION_LZW)))
+            {
+                // use LZW instead of specified compression schema.
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION is not available, It is fallbacked to IMWRITE_TIFF_COMPRESSION_LZW", compression));
+                compression = IMWRITE_TIFF_COMPRESSION_LZW;
+            }
+            else
+            {
+                // use NONE instead of LZW which is not available too.
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION is not available, It is fallbacked to IMWRITE_TIFF_COMPRESSION_NONE", compression));
+                compression = IMWRITE_TIFF_COMPRESSION_NONE;
+            }
+        }
     }
     if(readParam(params, IMWRITE_TIFF_PREDICTOR, predictor))
     {

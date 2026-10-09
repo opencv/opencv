@@ -1830,6 +1830,37 @@ TEST(Imgcodecs_Tiff, decode_planar_separate_multipage)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page1, pages[1]);
 }
 
+typedef testing::TestWithParam<ImwriteTiffCompressionFlags> Imgcodecs_Tiff_compression_schema;
+
+TEST_P(Imgcodecs_Tiff_compression_schema, normal)
+{
+    const ImwriteTiffCompressionFlags compression = GetParam();
+    cv::Mat src(cv::Size(320,240), CV_8UC3, cv::Scalar(45,167,56));
+    std::vector<uint8_t> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".tif", src, buf, {IMWRITE_TIFF_COMPRESSION, compression}));
+    EXPECT_TRUE(ret);
+    EXPECT_FALSE(buf.empty());
+}
+
+const ImwriteTiffCompressionFlags Imgcodecs_Tiff_compression_schema_list[] =
+{
+    static_cast<ImwriteTiffCompressionFlags>(0), // Expected it is not defined
+    IMWRITE_TIFF_COMPRESSION_NONE,
+    IMWRITE_TIFF_COMPRESSION_LZW,
+    IMWRITE_TIFF_COMPRESSION_DEFLATE,
+    IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE,
+    IMWRITE_TIFF_COMPRESSION_LZMA,
+    IMWRITE_TIFF_COMPRESSION_ZSTD,
+    IMWRITE_TIFF_COMPRESSION_WEBP,
+    IMWRITE_TIFF_COMPRESSION_JXL,
+    IMWRITE_TIFF_COMPRESSION_PIXARFILM, // Expected it is not supported.
+};
+
+INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_compression_schema,
+        testing::ValuesIn(Imgcodecs_Tiff_compression_schema_list),
+        testing::PrintToStringParamName()
+);
 #endif
 
 }} // namespace
