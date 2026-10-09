@@ -528,8 +528,16 @@ TEST(videoio_avfoundation, bgra_output_preserves_pixels_and_lifetime)
     cvtColor(bgraFrame, converted, COLOR_BGRA2BGR);
     EXPECT_EQ(0.0, cv::norm(bgrFrame, converted, NORM_INF));
 
-    Mat heldFrame = bgraFrame;
-    Mat heldReference = bgraFrame.clone();
+    // A second retrieve after one grab must return the same BGRA frame.
+    ASSERT_TRUE(bgraCapture.grab());
+    Mat firstRetrieve, secondRetrieve;
+    ASSERT_TRUE(bgraCapture.retrieve(firstRetrieve));
+    ASSERT_TRUE(bgraCapture.retrieve(secondRetrieve));
+    ASSERT_EQ(CV_8UC4, secondRetrieve.type());
+    EXPECT_EQ(0.0, cv::norm(firstRetrieve, secondRetrieve, NORM_INF));
+
+    Mat heldFrame = firstRetrieve;
+    Mat heldReference = firstRetrieve.clone();
     ASSERT_TRUE(bgraCapture.read(bgraFrame));
     ASSERT_EQ(CV_8UC4, bgraFrame.type());
     EXPECT_EQ(0.0, cv::norm(heldFrame, heldReference, NORM_INF));
