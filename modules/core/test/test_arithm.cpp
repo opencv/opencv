@@ -3027,6 +3027,19 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
+// cv_abs() must return the magnitude for every input, including the lowest value of each signed
+// type, where the magnitude is not representable in that type and std::abs() is undefined.
+TEST(Core_CvAbs, lowest_signed_values)
+{
+    EXPECT_EQ((unsigned)INT_MAX + 1u, cv_abs(INT_MIN));
+    EXPECT_EQ((unsigned)INT_MAX,      cv_abs(INT_MAX));
+    EXPECT_EQ(1u,                     cv_abs(-1));
+
+    EXPECT_EQ((uint64)LLONG_MAX + 1ull, cv_abs((int64)LLONG_MIN));
+    EXPECT_EQ((uint64)LLONG_MAX,        cv_abs((int64)LLONG_MAX));
+    EXPECT_EQ(1ull,                     cv_abs((int64)-1));
+}
+
 // An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
 // Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
 // width so the body, the tail and the two together are covered.
@@ -3040,7 +3053,7 @@ TEST_P(Core_NormL1_Signed, exact_and_non_negative)
     const bool    masked = get<3>(GetParam());
 
     if (depth == CV_32S && (value < INT_MIN || value > INT_MAX))
-        return;
+        throw SkipTestException("value is out of int32 range");
 
     Mat src(1, len, depth);
     for (int i = 0; i < len; i++)
