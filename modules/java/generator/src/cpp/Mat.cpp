@@ -2139,7 +2139,15 @@ namespace {
 #undef JOCvT
 }
 
+// Element pointer that also supports 0D scalar Mats (OpenCV Mat::ptr(const int*) requires dims >= 1).
+static uchar* mat_elem_ptr(cv::Mat* m, const int* idx) {
+    if (!m || !m->data) return nullptr;
+    if (m->dims <= 0) return m->data;
+    return m->ptr(idx);
+}
+
 static size_t idx2Offset(cv::Mat* mat, std::vector<int>& indices) {
+    if (mat->dims <= 0) return 0;
     size_t offset = indices[0];
     for (int dim=1; dim < mat->dims; dim++) {
         offset = offset*mat->size[dim] + indices[dim];
@@ -2148,9 +2156,15 @@ static size_t idx2Offset(cv::Mat* mat, std::vector<int>& indices) {
 }
 
 static void offset2Idx(cv::Mat* mat, size_t offset, std::vector<int>& indices) {
+    if (mat->dims <= 0) {
+        indices.clear();
+        return;
+    }
+    if ((int)indices.size() != mat->dims)
+        indices.resize(mat->dims);
     for (int dim=mat->dims-1; dim>=0; dim--) {
-        indices[dim] = offset % mat->size[dim];
-        offset = (offset - indices[dim]) / mat->size[dim];
+        indices[dim] = (int)(offset % mat->size[dim]);
+        offset = (offset - (size_t)indices[dim]) / mat->size[dim];
     }
 }
 
@@ -2163,31 +2177,66 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
     return reachedEnd;
 }
 
+// row/col APIs only address Mats with dims <= 2 (0D/1D/2D). ND Mats must use idx APIs.
+// Matches OpenCV Mat::ptr(row,col) semantics: for dims<=1, row must be 0 and col is the index.
+static bool check_row_col_access(const cv::Mat* me, int row, int col) {
+    if (!me) return false;
+    if (me->dims > 2) return false;
+    if (row < 0 || col < 0) return false;
+    if (me->rows <= row || me->cols <= col) return false;
+    return true;
+}
+
+static bool check_idx_access(const cv::Mat* me, const std::vector<int>& idx) {
+    if (!me) return false;
+    if ((int)idx.size() != me->dims) return false;
+    for (int i = 0; i < me->dims; i++) {
+        if (idx[i] < 0 || me->size[i] <= idx[i]) return false;
+    }
+    return true;
+}
+
+// Convert (row, col) to a dims-length index vector (OpenCV ptr(row,col) convention).
+static std::vector<int> row_col_to_idx(const cv::Mat* m, int row, int col) {
+    if (m->dims <= 0)
+        return std::vector<int>();
+    if (m->dims == 1)
+        return std::vector<int>(1, col);
+    int indicesArray[] = { row, col };
+    return std::vector<int>(indicesArray, indicesArray+2);
+}
+
 template<typename T> static int mat_copy_data(cv::Mat* m, std::vector<int>& idx, int count, char* buff, bool isPut) {
     if(! m) return 0;
     if(! buff) return 0;
+    if(! m->data) return 0;
+    if ((int)idx.size() != m->dims) return 0;
 
-    size_t countBytes = count * sizeof(T);
+    size_t countBytes = (size_t)count * sizeof(T);
     size_t remainingBytes = (size_t)(m->total() - idx2Offset(m, idx))*m->elemSize();
     countBytes = (countBytes>remainingBytes)?remainingBytes:countBytes;
     int res = (int)countBytes;
+    if (countBytes == 0) return 0;
 
-    if( m->isContinuous() )
+    if( m->isContinuous() || m->dims <= 1 )
     {
+        uchar* data = mat_elem_ptr(m, idx.data());
+        if (!data) return 0;
         if (isPut) {
-            memcpy(m->ptr(idx.data()), buff, countBytes);
+            memcpy(data, buff, countBytes);
         } else {
-            memcpy(buff, m->ptr(idx.data()), countBytes);
+            memcpy(buff, data, countBytes);
         }
     } else {
         size_t blockSize = m->size[m->dims-1] * m->elemSize();
-        size_t firstPartialBlockSize = (m->size[m->dims-1] - idx[m->dims-1]) * m->step[m->dims-1];;
+        size_t firstPartialBlockSize = (m->size[m->dims-1] - idx[m->dims-1]) * m->step[m->dims-1];
         for (int dim=m->dims-2; dim>=0 && blockSize == m->step[dim]; dim--) {
             blockSize *= m->size[dim];
             firstPartialBlockSize += (m->size[dim] - (idx[dim]+1)) * m->step[dim];
         }
         size_t copyCount = (countBytes<firstPartialBlockSize)?countBytes:firstPartialBlockSize;
-        uchar* data = m->ptr(idx.data());
+        uchar* data = mat_elem_ptr(m, idx.data());
+        if (!data) return 0;
         while(countBytes>0){
             if (isPut) {
                 memcpy(data, buff, copyCount);
@@ -2198,7 +2247,8 @@ template<typename T> static int mat_copy_data(cv::Mat* m, std::vector<int>& idx,
             countBytes -= copyCount;
             buff += copyCount;
             copyCount = countBytes<blockSize?countBytes:blockSize;
-            data = m->ptr(idx.data());
+            data = mat_elem_ptr(m, idx.data());
+            if (!data) break;
         }
     }
     return res;
@@ -2211,8 +2261,7 @@ template<typename T> static int mat_put_idx(cv::Mat* m, std::vector<int>& idx, i
 
 template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, int offset, char* buff)
 {
-    int indicesArray[] = { row, col };
-    std::vector<int> indices(indicesArray, indicesArray+2);
+    std::vector<int> indices = row_col_to_idx(m, row, col);
     return mat_put_idx<T>(m, indices, count, offset, buff);
 }
 
@@ -2224,7 +2273,7 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
         cv::Mat* me = (cv::Mat*) self;
         if(! self) return 0; // no native object behind
         if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        if(!check_row_col_access(me, row, col)) return 0; // indexes out of range / dims > 2
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
         int res = mat_put<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, offset, values);
@@ -2248,9 +2297,7 @@ template<class ARRAY> static jint java_mat_put_idx(JNIEnv* env, jlong self, jint
         if(! self) return 0; // no native object behind
         if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
         std::vector<int> idx = convertJintArrayToVector(env, idxArray);
-        for (int i = 0; i < me->dims ; i++ ) {
-            if (me->size[i]<=idx[i]) return 0;
-        }
+        if (!check_idx_access(me, idx)) return 0;
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
         int res = mat_put_idx<typename JavaOpenCVTrait<ARRAY>::value_type>(me, idx, count, offset, values);
         env->ReleasePrimitiveArrayCritical(vals, values, JNI_ABORT);
@@ -2370,7 +2417,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
         if(!me || !me->data) return 0;  // no native object behind
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        if(!check_row_col_access(me, row, col)) return 0; // indexes out of range / dims > 2
 
         int rest = ((me->rows - row) * me->cols - col) * me->channels();
         if(count>rest) count = rest;
@@ -2417,7 +2464,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
 }
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
-#define PUT_ITEM_IDX(T, I) { T*dst = (T*)me->ptr(I); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
+#define PUT_ITEM_IDX(T, I) { T*dst = (T*)mat_elem_ptr(me, I); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
     (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jdoubleArray vals);
@@ -2431,14 +2478,10 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
         cv::Mat* me = (cv::Mat*) self;
         if(!me || !me->data) return 0;  // no native object behind
         std::vector<int> idx = convertJintArrayToVector(env, idxArray);
-        for (int i=0; i<me->dims; i++) {
-            if (me->size[i]<=idx[i]) return 0; // indexes out of range
-        }
-        int rest = me->channels();
-        for (int i=0; i<me->dims; i++) {
-            rest *= (me->size[i] - idx[i]);
-        }
-        if(count>rest) count = rest;
+        if (!check_idx_access(me, idx)) return 0; // indexes out of range
+        if (count <= 0) return 0;
+        size_t rest = (me->total() - idx2Offset(me, idx)) * (size_t)me->channels();
+        if ((size_t)count > rest) count = (jint)rest;
         int res = count;
         double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
         double* src = values;
@@ -2475,8 +2518,7 @@ template<typename T> static int mat_get_idx(cv::Mat* m, std::vector<int>& idx, i
 
 template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count, char* buff)
 {
-    int indicesArray[] = { row, col };
-    std::vector<int> indices(indicesArray, indicesArray+2);
+    std::vector<int> indices = row_col_to_idx(m, row, col);
     return mat_get_idx<T>(m, indices, count, buff);
 }
 
@@ -2487,7 +2529,7 @@ template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row
         cv::Mat* me = (cv::Mat*) self;
         if(! self) return 0; // no native object behind
         if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        if(!check_row_col_access(me, row, col)) return 0; // indexes out of range / dims > 2
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
         int res = mat_get<typename JavaOpenCVTrait<ARRAY>::value_type>(me, row, col, count, values);
@@ -2510,9 +2552,7 @@ template<class ARRAY> static jint java_mat_get_idx(JNIEnv* env, jlong self, jint
         if(! self) return 0; // no native object behind
         if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
         std::vector<int> idx = convertJintArrayToVector(env, idxArray);
-        for (int i = 0; i < me->dims ; i++ ) {
-            if (me->size[i]<=idx[i]) return 0;
-        }
+        if (!check_idx_access(me, idx)) return 0;
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
         int res = mat_get_idx<typename JavaOpenCVTrait<ARRAY>::value_type>(me, idx, count, values);
@@ -2629,21 +2669,22 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
     try {
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
-        if(! self) return 0; // no native object behind
-        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        if(! self || !me->data) return 0; // no native object behind
+        if(!check_row_col_access(me, row, col)) return 0; // indexes out of range / dims > 2
 
         jdoubleArray res = env->NewDoubleArray(me->channels());
         if(res){
             jdouble buff[CV_CN_MAX];//me->channels()
+            uchar* elem = me->ptr(row, col);
             int i;
             switch(me->depth()){
-                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(row, col) + i); break;
-                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
-                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
-                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
-                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
-                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
-                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) elem + i); break;
+                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   elem + i); break;
+                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)elem + i); break;
+                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  elem + i); break;
+                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           elem + i); break;
+                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         elem + i); break;
+                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        elem + i); break;
             }
             env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }
@@ -2667,24 +2708,24 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGetIdx
     try {
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
-        if(! self) return 0; // no native object behind
+        if(! self || !me->data) return 0; // no native object behind
         std::vector<int> idx = convertJintArrayToVector(env, idxArray);
-        for (int i=0; i<me->dims; i++) {
-            if (me->size[i]<=idx[i]) return 0; // indexes out of range
-        }
+        if (!check_idx_access(me, idx)) return 0; // indexes out of range
 
         jdoubleArray res = env->NewDoubleArray(me->channels());
         if(res){
             jdouble buff[CV_CN_MAX];//me->channels()
+            uchar* elem = mat_elem_ptr(me, idx.data());
+            if (!elem) return 0;
             int i;
             switch(me->depth()){
-                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(idx.data()) + i); break;
-                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(idx.data()) + i); break;
-                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(idx.data()) + i); break;
-                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(idx.data()) + i); break;
-                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(idx.data()) + i); break;
-                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(idx.data()) + i); break;
-                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(idx.data()) + i); break;
+                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) elem + i); break;
+                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   elem + i); break;
+                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)elem + i); break;
+                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  elem + i); break;
+                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           elem + i); break;
+                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         elem + i); break;
+                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        elem + i); break;
             }
             env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }
