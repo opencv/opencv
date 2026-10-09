@@ -462,17 +462,7 @@ ogl::Buffer _InputArray::getOGlBuffer() const
     return *gl_buf;
 }
 
-_InputArray::KindFlag _InputArray::kind() const
-{
-    KindFlag k = flags & KIND_MASK;
-#if CV_VERSION_MAJOR < 5
-    CV_DbgAssert(k != EXPR);
-    CV_DbgAssert(k != STD_ARRAY);
-#endif
-    return k;
-}
-
-int _InputArray::rows(int i) const
+int _InputArray::rows_(int i) const
 {
 #ifdef HAVE_CUDA
     _InputArray::KindFlag k = kind();
@@ -483,10 +473,10 @@ int _InputArray::rows(int i) const
     }
 #endif
 
-    return size(i).height;
+    return size_(i).height;
 }
 
-int _InputArray::cols(int i) const
+int _InputArray::cols_(int i) const
 {
 #ifdef HAVE_CUDA
     _InputArray::KindFlag k = kind();
@@ -497,10 +487,10 @@ int _InputArray::cols(int i) const
     }
 #endif
 
-    return size(i).width;
+    return size_(i).width;
 }
 
-Size _InputArray::size(int i) const
+Size _InputArray::size_(int i) const
 {
     _InputArray::KindFlag k = kind();
 
@@ -832,7 +822,7 @@ bool _InputArray::sameSize(const _InputArray& arr) const
     return sz1 == arr.size();
 }
 
-int _InputArray::dims(int i) const
+int _InputArray::dims_(int i) const
 {
     _InputArray::KindFlag k = kind();
 
@@ -1011,7 +1001,7 @@ size_t _InputArray::total(int i) const
     return size(i).area();
 }
 
-int _InputArray::type(int i) const
+int _InputArray::type_(int i) const
 {
     _InputArray::KindFlag k = kind();
 
@@ -1110,17 +1100,12 @@ int _InputArray::type(int i) const
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
-int _InputArray::depth(int i) const
+int _InputArray::depth_(int i) const
 {
     return CV_MAT_DEPTH(type(i));
 }
 
-int _InputArray::channels(int i) const
-{
-    return CV_MAT_CN(type(i));
-}
-
-bool _InputArray::empty() const
+bool _InputArray::empty_() const
 {
     _InputArray::KindFlag k = kind();
 
@@ -1463,7 +1448,7 @@ bool _OutputArray::fixedType() const
     return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
 
-void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+void _OutputArray::create_(Size _sz, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1529,7 +1514,7 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _Out
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+void _OutputArray::create_(int _rows, int _cols, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )

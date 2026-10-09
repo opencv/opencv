@@ -3611,7 +3611,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         srcUMat = _src.getUMat();
 
     Mat src = _src.getMat();
-    _dst.create(dsize, src.type());
+    _dst.create(dsize, _src.type());
     Mat dst = _dst.getMat();
 
     if (dsize == ssize)
@@ -3621,5 +3621,5 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         return;
     }
 
-    hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
+    hal::resize(_src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }

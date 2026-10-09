@@ -1100,7 +1100,7 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_OCL_RUN(_flow0.isUMat() &&
+    CV_OCL_RUN(ocl::isOpenCLActivated() && _flow0.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                calc_ocl(_prev0,_next0,_flow0))
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
