@@ -389,6 +389,7 @@ DEF_CVT_SCALAR_FUNC(32u32s, unsigned, int)
 DEF_CVT_FUNC(32u32f, cvt_, unsigned, float,  v_float32)
 DEF_CVT_FUNC(32u64f, cvt_, unsigned, double, v_float32)
 DEF_CVT_SCALAR_FUNC(32u64s, unsigned, int64_t)
+DEF_CVT_SCALAR_FUNC(64u64s, uint64_t, int64_t)
 DEF_CVT_FUNC(32u16f, cvt1_, unsigned, hfloat, v_float32)
 DEF_CVT_FUNC(32u16bf, cvt1_, int, bfloat, v_float32)
 
@@ -811,7 +812,7 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_16F ? cvt16f64s :
             sdepth == CV_16BF ? cvt16bf64s :
             sdepth == CV_Bool ? cvt8b64s :
-            sdepth == CV_64U ? cvt64s :
+            sdepth == CV_64U ? cvt64u64s :
             sdepth == CV_64S ? cvt64s :
             sdepth == CV_8F_E4M3FN ? cvt8fe4m364s :
             sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u64s :
