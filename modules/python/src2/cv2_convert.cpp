@@ -369,6 +369,9 @@ PyObject* pyopencv_from(const cv::Mat& m)
         if( PyArray_Descr* descr = mlDtypeDescrForCvDepth(m.depth()) )
             return pyopencv_from_mldtype(m, descr);
         // Without ml_dtypes NumPy cannot name these; widen to float32 (lossless).
+        CV_LOG_ONCE_WARNING(NULL, "Python bindings: ml_dtypes package is not found, "
+                            "bfloat16 / float8 arrays are returned as float32. "
+                            "Install ml_dtypes to keep the exact dtype.");
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));
         return pyopencv_from(m32f);
