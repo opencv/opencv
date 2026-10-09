@@ -621,11 +621,20 @@ static inline void vx_load_pair_as(const double* ptr, v_int32& a, v_int32& b)
     b = v_combine_low(iv2, iv3);
 }
 
+// v_cvt_f64() converts SIGNED 64-bit lanes, so converting the bit pattern is off by exactly 2^64
+// on the lanes with the top bit set. Add it back on those.
+static inline v_float64 v_cvt_f64_u64(const v_uint64& x)
+{
+    const v_int64   s    = v_reinterpret_as_s64(x);
+    const v_float64 mask = v_reinterpret_as_f64(v_shr<63>(s));
+    return v_add(v_cvt_f64(s), v_and(vx_setall_f64(18446744073709551616.0), mask));
+}
+
 static inline void vx_load_pair_as(const uint64_t* ptr, v_float64& a, v_float64& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr)));
-    b = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr + int64_nlanes)));
+    a = v_cvt_f64_u64(vx_load(ptr));
+    b = v_cvt_f64_u64(vx_load(ptr + int64_nlanes));
 }
 
 static inline void vx_load_pair_as(const double* ptr, v_float32& a, v_float32& b)
