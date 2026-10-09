@@ -3815,4 +3815,16 @@ TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
     ASSERT_TRUE(layer);
 }
 
+// A Resize node that carries only its data input makes the importer pick input
+// index 2 for "scales" (opset-11 layout) although the node holds index 0 only,
+// reading past the node's input list. roi/scales/sizes are optional in the
+// operator schema, so the model is valid ONNX and has to be rejected cleanly.
+// Test data: https://github.com/opencv/opencv_extra/pull/1427
+TEST(Test_ONNX_importer, parse_resize_too_few_inputs)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/resize_no_scales.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
 }} // namespace
