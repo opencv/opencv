@@ -1837,7 +1837,10 @@ TEST_P(Imgcodecs_Tiff_compression_schema, normal)
     const ImwriteTiffCompressionFlags compression = GetParam();
     cv::Mat src(cv::Size(320,240), CV_8UC3, cv::Scalar(45,167,56));
     std::vector<uint8_t> buf;
-    EXPECT_NO_THROW(imencode(".tif", src, buf, {IMWRITE_TIFF_COMPRESSION, compression}));
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".tif", src, buf, {IMWRITE_TIFF_COMPRESSION, compression}));
+    EXPECT_TRUE(ret);
+    EXPECT_FALSE(buf.empty());
 }
 
 const ImwriteTiffCompressionFlags Imgcodecs_Tiff_compression_schema_list[] =
