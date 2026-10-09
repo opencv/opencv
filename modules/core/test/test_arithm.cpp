@@ -3132,6 +3132,70 @@ TEST(Core_ConvertTo, float_overflow_saturation)
     checkConvertToOverflow<double, uint64>(CV_64F, CV_64U);
 }
 
+// Mat::convertTo() must not depend on the array length: the SIMD body has to produce the same
+// values as the scalar path. The 16-bit float helpers used to round into an int32 before widening
+// to a 64-bit destination, so a CV_16BF/CV_16F source lost every value above the int32 range once
+// the array reached the vector width (see #29996 and the CV_32U note in #29964).
+static bool sameInteger(const Mat& a, int ia, const Mat& b, int ib)
+{
+    switch (a.depth())
+    {
+    case CV_32U: return a.at<unsigned>(0, ia) == b.at<unsigned>(0, ib);
+    case CV_64U: return a.at<uint64_t>(0, ia) == b.at<uint64_t>(0, ib);
+    case CV_64S: return a.at<int64_t>(0, ia) == b.at<int64_t>(0, ib);
+    default: break;
+    }
+    CV_Error(Error::StsError, "unexpected destination depth");
+}
+
+TEST(Core_ConvertTo, float_to_wide_integer_matches_scalar)
+{
+    // The pairs that convert through the float32 store helpers in convert.hpp. CV_32F/CV_64F reach
+    // the 64-bit destinations through v_float64 and are kept as guards; their CV_32U destination goes
+    // through a different helper and has a separate, pre-existing rounding mismatch left here.
+    const int pairs[][2] = {
+        { CV_16F,  CV_32U }, { CV_16F,  CV_64U }, { CV_16F,  CV_64S },
+        { CV_16BF, CV_32U }, { CV_16BF, CV_64U }, { CV_16BF, CV_64S },
+        { CV_32F,  CV_64U }, { CV_32F,  CV_64S },
+        { CV_64F,  CV_64U }, { CV_64F,  CV_64S }
+    };
+    const double vals[] = { 0.0, 1.0, -1.0, 1000.0, 65504.0, 2147483000.0, 2147483648.0,
+                            3000000000.0, -3000000000.0, 4294967295.0, 1.0e10, -1.0e10 };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+    const int len = 127;   // not a multiple of any vector width, so body and scalar tail both run
+
+    for (int p = 0; p < (int)(sizeof(pairs)/sizeof(pairs[0])); p++)
+        {
+            const int sd = pairs[p][0], dd = pairs[p][1];
+
+            Mat src64(1, len, CV_64F);
+            for (int i = 0; i < len; i++)
+                src64.at<double>(0, i) = vals[i % nvals];
+            Mat src; src64.convertTo(src, sd);
+
+            Mat dst; src.convertTo(dst, dd);
+
+            for (int i = 0; i < len; i++)
+            {
+                // a one-element array takes the scalar path, so it is the reference for the same value
+                Mat one64(1, 1, CV_64F, Scalar(vals[i % nvals]));
+                Mat one; one64.convertTo(one, sd);
+                Mat oneDst; one.convertTo(oneDst, dd);
+                EXPECT_TRUE(sameInteger(dst, i, oneDst, 0))
+                    << "sdepth=" << sd << " ddepth=" << dd
+                    << " value=" << vals[i % nvals] << " index=" << i;
+            }
+        }
+
+    // the values from the original report, on an array long enough for the vector loop
+    Mat big(1, 32, CV_16BF, Scalar(2147483648.0));
+    Mat bigU, bigS;
+    big.convertTo(bigU, CV_64U);
+    big.convertTo(bigS, CV_64S);
+    EXPECT_EQ((uint64_t)2147483648, bigU.at<uint64_t>(0, 0));
+    EXPECT_EQ((int64_t)2147483648, bigS.at<int64_t>(0, 0));
+}
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
