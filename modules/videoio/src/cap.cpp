@@ -597,9 +597,68 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
     return *this;
 }
 
+static bool isPrefetchSupported(const Ptr<IVideoCapture>& cap)
+{
+    const int api = cap->getCaptureDomain();
+    switch (api)
+    {
+        case CAP_MSMF:
+        case CAP_DSHOW:
+        case CAP_OBSENSOR:
+        case CAP_AVFOUNDATION:
+            CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported by backend "
+                                 << videoio_registry::getBackendName((VideoCaptureAPIs)api));
+            return false;
+        default:
+            break;
+    }
+    if (cap->getProperty(CAP_PROP_HW_ACCELERATION) > VIDEO_ACCELERATION_NONE)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported with hardware accelerated decoding");
+        return false;
+    }
+    if (api == CAP_FFMPEG && cap->getProperty(CAP_PROP_FORMAT) == -1)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported in raw mode (CAP_PROP_FORMAT = -1)");
+        return false;
+    }
+    return true;
+}
+
 bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
+    if (propId == CAP_PROP_PREFETCH_FRAMES && !icap.empty())
+    {
+        Ptr<PrefetchCapture> prefetch = icap.dynamicCast<PrefetchCapture>();
+        const int depth = cvRound(value);
+        if (depth < 0)
+            return false;
+        if (depth == 0)
+        {
+            // Keep the decorator in place so frames already decoded are still
+            // delivered; it becomes a pass-through once its queue drains.
+            if (prefetch)
+                prefetch->disablePrefetch();
+            return true;
+        }
+        if (!isPrefetchSupported(icap))
+            return false;
+        if (!prefetch)
+        {
+            icap = makePtr<PrefetchCapture>(icap, static_cast<size_t>(depth));
+            return true;
+        }
+    }
+    if (propId == CAP_PROP_FORMAT && value == -1 && !icap.empty())
+    {
+        Ptr<PrefetchCapture> prefetch = icap.dynamicCast<PrefetchCapture>();
+        if (prefetch && prefetch->isPrefetching())
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO: raw mode (CAP_PROP_FORMAT = -1) is not supported while CAP_PROP_PREFETCH_FRAMES is enabled");
+            return false;
+        }
+    }
     bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
     if (!ret && throwOnFail)
     {
@@ -610,6 +669,13 @@ bool VideoCapture::set(int propId, double value)
 
 double VideoCapture::get(int propId) const
 {
+    if (propId == CAP_PROP_PREFETCH_FRAMES || propId == CAP_PROP_PREFETCH_DROP)
+    {
+        // 0 means "off", which is also the answer for a capture that was never
+        // wrapped - backends do not know these properties themselves.
+        if (icap.empty() || !icap.dynamicCast<PrefetchCapture>())
+            return 0.0;
+    }
     if (propId == CAP_PROP_BACKEND)
     {
         int api = 0;
@@ -631,6 +697,13 @@ bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams,
                            CV_OUT std::vector<int>& readyIndex, int64 timeoutNs)
 {
     CV_Assert(!streams.empty());
+
+    for (size_t i = 0; i < streams.size(); ++i)
+    {
+        Ptr<PrefetchCapture> prefetch = streams[i].icap.dynamicCast<PrefetchCapture>();
+        if (prefetch && prefetch->isPrefetching())
+            CV_Error(Error::StsBadArg, "VideoCapture::waitAny() is not supported with CAP_PROP_PREFETCH_FRAMES enabled");
+    }
 
     VideoCaptureAPIs backend = (VideoCaptureAPIs)streams[0].icap->getCaptureDomain();
 
