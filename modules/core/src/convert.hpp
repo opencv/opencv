@@ -195,6 +195,9 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
     b = v_cvt_f32(ib);
 }
 
+// v_pack()/v_pack_u() saturate at every width, 64->32 included, so a 64-bit source needs no
+// clamping here any more - see the HAL headers for the per-backend implementations.
+
 static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
@@ -204,10 +207,11 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_int32& a, v_int32& b)
 
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 {
-    v_int64 z = vx_setzero_s64();
+    // clamp the negatives to zero through the sign bit: v_gt on 64-bit lanes is sign(b - a) at the
+    // SSE and NEON baselines, which overflows for an operand at the bottom of the range
     v_int64 ia = vx_load(ptr), ib = vx_load(ptr + VTraits<v_uint64>::vlanes());
-    ia = v_and(ia, v_gt(ia, z));
-    ib = v_and(ib, v_gt(ib, z));
+    ia = v_and(ia, v_not(v_shr<63>(ia)));
+    ib = v_and(ib, v_not(v_shr<63>(ib)));
     a = v_reinterpret_as_u64(ia);
     b = v_reinterpret_as_u64(ib);
 }
@@ -215,15 +219,8 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 static inline void vx_load_pair_as(const int64_t* ptr, v_uint32& a, v_uint32& b)
 {
     const int nlanes = VTraits<v_uint64>::vlanes();
-    v_int64 z = vx_setzero_s64();
-    v_int64 ia0 = vx_load(ptr), ia1 = vx_load(ptr + nlanes);
-    v_int64 ib0 = vx_load(ptr + nlanes*2), ib1 = vx_load(ptr + nlanes*3);
-    ia0 = v_and(ia0, v_gt(ia0, z));
-    ia1 = v_and(ia1, v_gt(ia1, z));
-    ib0 = v_and(ib0, v_gt(ib0, z));
-    ib1 = v_and(ib1, v_gt(ib1, z));
-    a = v_pack(v_reinterpret_as_u64(ia0), v_reinterpret_as_u64(ia1));
-    b = v_pack(v_reinterpret_as_u64(ib0), v_reinterpret_as_u64(ib1));
+    a = v_pack_u(vx_load(ptr), vx_load(ptr + nlanes));
+    b = v_pack_u(vx_load(ptr + nlanes*2), vx_load(ptr + nlanes*3));
 }
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_float32& a, v_float32& b)
@@ -297,11 +294,14 @@ static inline void vx_load_pair_as(const uint64_t* ptr, v_uint32& a, v_uint32& b
 
 static inline void vx_load_pair_as(const uint64_t* ptr, v_int32& a, v_int32& b)
 {
+    // There is no uint64 -> int32 narrow in the HAL, so narrow as unsigned first - v_pack() clamps
+    // anything above UINT32_MAX to UINT32_MAX - and bring that down to INT32_MAX with the same
+    // 32-bit v_min() the uint32 -> int32 direction below uses.
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    v_uint32 ua = v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes));
-    v_uint32 ub = v_pack(vx_load(ptr + int64_nlanes*2), vx_load(ptr + int64_nlanes*3));
-    a = v_reinterpret_as_s32(ua);
-    b = v_reinterpret_as_s32(ub);
+    const v_uint32 hi = vx_setall_u32((unsigned)INT_MAX);
+    a = v_reinterpret_as_s32(v_min(v_pack(vx_load(ptr), vx_load(ptr + int64_nlanes)), hi));
+    b = v_reinterpret_as_s32(v_min(v_pack(vx_load(ptr + int64_nlanes*2),
+                                          vx_load(ptr + int64_nlanes*3)), hi));
 }
 
 static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
@@ -327,8 +327,13 @@ static inline void vx_load_pair_as(const unsigned* ptr, v_uint32& a, v_uint32& b
 
 static inline void vx_load_pair_as(const unsigned* ptr, v_int32& a, v_int32& b)
 {
-    a = v_reinterpret_as_s32(vx_load(ptr));
-    b = v_reinterpret_as_s32(vx_load(ptr + VTraits<v_uint32>::vlanes()));
+    // Reinterpreting alone would turn everything above INT32_MAX negative, and the saturating
+    // narrow that follows would then clamp it to the WRONG end of the destination's range
+    // (4294967295 -> -1 -> -128 for schar, rather than 127). Clamp first, like the int -> unsigned
+    // direction above does for negatives.
+    const v_uint32 hi = vx_setall_u32((unsigned)INT_MAX);
+    a = v_reinterpret_as_s32(v_min(vx_load(ptr), hi));
+    b = v_reinterpret_as_s32(v_min(vx_load(ptr + VTraits<v_uint32>::vlanes()), hi));
 }
 
 static inline void vx_load_pair_as(const unsigned* ptr, v_float32& a, v_float32& b)

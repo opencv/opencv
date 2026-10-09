@@ -1929,10 +1929,11 @@ void v_rshr_pack_store(_Type* ptr, const v_##_Tp2##x##num2& a) \
 }
 OPENCV_HAL_IMPL_RISCVV_PACKS(int8, int16, i16, 8, i8, 16, vnclip_wx, vnclip_wx, signed char, 8)
 OPENCV_HAL_IMPL_RISCVV_PACKS(int16, int32, i32, 4, i16, 8, vnclip_wx, vnclip_wx, signed short, 16)
-OPENCV_HAL_IMPL_RISCVV_PACKS(int32, int64, i64, 2, i32, 4, vnclip_wx, vnsra_wx, int, 32)
+OPENCV_HAL_IMPL_RISCVV_PACKS(int32, int64, i64, 2, i32, 4, vnclip_wx, vnclip_wx, int, 32)
 OPENCV_HAL_IMPL_RISCVV_PACKS(uint8, uint16, u16, 8, u8, 16, vnclipu_wx, vnclipu_wx, unsigned char, 8)
 OPENCV_HAL_IMPL_RISCVV_PACKS(uint16, uint32, u32, 4, u16, 8, vnclipu_wx, vnclipu_wx, unsigned short, 16)
-OPENCV_HAL_IMPL_RISCVV_PACKS(uint32, uint64, u64, 2, u32, 4, vnclipu_wx, vnsrl_wx, unsigned int, 32)
+// 64->32 saturates like every other width now: vnclip/vnclipu, not the truncating vnsra/vnsrl
+OPENCV_HAL_IMPL_RISCVV_PACKS(uint32, uint64, u64, 2, u32, 4, vnclipu_wx, vnclipu_wx, unsigned int, 32)
 
 // pack boolean
 inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)
@@ -2021,6 +2022,7 @@ void v_rshr_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
 }
 OPENCV_HAL_IMPL_RISCVV_PACK_U(8, 16, 16, 8, unsigned char )
 OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
+OPENCV_HAL_IMPL_RISCVV_PACK_U(32, 4, 64, 2, unsigned int  )
 
 
 // saturating multiply 8-bit, 16-bit
