@@ -636,7 +636,8 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     // broadcast, cn>4 masked, ...) - then the CPU engine below handles it (mapping the UMat via getMat).
     // oclop < 0 is a sentinel: the caller (e.g. cv::compare) already ran its own OpenCL path, so this
     // helper only runs the CPU engine (a UMat operand is mapped via getMat).
-    if (oclop >= 0 && (src1.isUMat() || src2.isUMat() || dst.isUMat()))
+    if (oclop >= 0 && cv::ocl::isOpenCLActivated() &&
+        (src1.isUMat() || src2.isUMat() || dst.isUMat()))
     {
         double abg[3] = { params[0], params[1], params[2] }, scale = params[0];
         void* usrdata = (op == ew::OP_ADDW) ? (void*)abg : (muldiv ? (void*)&scale : nullptr);
