@@ -3180,6 +3180,49 @@ INSTANTIATE_TEST_CASE_P(From64, Core_ConvertToSaturate,
                         -9223372036854775808.0, 9223372036854775807.0,
                         -2147483649.0, -2147483648.0, -1.0)));
 
+// Converting from CV_32U must hold two properties, for every value and every array length:
+//   - the result is never negative, because the source is unsigned;
+//   - a destination that can represent the value exactly does so, which among the destinations
+//     covered here means CV_64F.
+// Both the plain and the scaled (alpha/beta) conversion paths are checked, since they are separate
+// implementations. Lengths straddle the vector width so that the vectorized body, the scalar tail
+// and the two together are all exercised.
+typedef testing::TestWithParam< tuple<int, unsigned, int, bool> > Core_ConvertFrom32U;
+
+TEST_P(Core_ConvertFrom32U, exact_and_unsigned)
+{
+    const int      dstDepth = get<0>(GetParam());
+    const unsigned value    = get<1>(GetParam());
+    const int      len      = get<2>(GetParam());
+    const bool     scaled   = get<3>(GetParam());
+
+    Mat src(1, len, CV_32U, Scalar(value));
+    Mat dst;
+    if (scaled)
+        src.convertTo(dst, dstDepth, 1.0, 0.0);
+    else
+        src.convertTo(dst, dstDepth);
+    Mat got; dst.convertTo(got, CV_64F);
+
+    for (int i = 0; i < len; i++)
+    {
+        SCOPED_TRACE(cv::format("dstDepth=%d value=%u len=%d scaled=%d i=%d",
+                                dstDepth, value, len, (int)scaled, i));
+        EXPECT_GE(got.at<double>(0, i), 0.0) << "an unsigned source cannot convert to a negative";
+        if (dstDepth == CV_64F)
+        {
+            EXPECT_EQ((double)value, got.at<double>(0, i));
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom32U,
+    testing::Combine(
+        testing::Values(CV_64F, CV_16BF, CV_16F, CV_32F),
+        testing::Values(0u, 1u, 16777217u, 2147483647u, 2147483648u, 3000000000u, 4294967295u),
+        testing::Values(1, 7, 8, 127),
+        testing::Bool()));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
