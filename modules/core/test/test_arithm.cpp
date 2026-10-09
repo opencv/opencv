@@ -3027,33 +3027,47 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
-// An L1 norm is a sum of magnitudes, so it is never negative and never depends on how many
-// elements sit beside a given one. CV_32S broke both rules: the vector body widened through float,
-// which rounds every |x| > 2^24 before it is accumulated, and the scalar paths reached INT_MIN
-// through cv_abs(), whose std::abs(INT_MIN) is undefined and came out negative in optimized builds.
-// Lengths straddle the vector width so the body, the tail and the two together are all covered.
-typedef testing::TestWithParam< tuple<int, int, bool> > Core_NormL1_32S;
+// An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
+// Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
+// width so the body, the tail and the two together are covered.
+typedef testing::TestWithParam< tuple<int, int64_t, int, bool> > Core_NormL1_Signed;
 
-TEST_P(Core_NormL1_32S, exact_and_non_negative)
+TEST_P(Core_NormL1_Signed, exact_and_non_negative)
 {
-    const int  value  = get<0>(GetParam());
-    const int  len    = get<1>(GetParam());
-    const bool masked = get<2>(GetParam());
+    const int     depth  = get<0>(GetParam());
+    const int64_t value  = get<1>(GetParam());
+    const int     len    = get<2>(GetParam());
+    const bool    masked = get<3>(GetParam());
 
-    Mat src(1, len, CV_32S, Scalar(value));
+    if (depth == CV_32S && (value < INT_MIN || value > INT_MAX))
+        return;
+
+    Mat src(1, len, depth);
+    for (int i = 0; i < len; i++)
+    {
+        if (depth == CV_32S)
+            src.ptr<int>(0)[i] = (int)value;
+        else
+            src.ptr<int64_t>(0)[i] = value;
+    }
     Mat mask = masked ? Mat(1, len, CV_8U, Scalar(255)) : Mat();
 
     const double got = cv::norm(src, NORM_L1, mask);
-    const double expected = (double)len * std::abs((double)value);  // exact: |int32| <= 2^31 < 2^53
+    // |value| and the total are both below 2^53 for the values used here, so this is exact
+    const double expected = (double)len * std::abs((double)value);
 
     EXPECT_GE(got, 0.0) << "an L1 norm cannot be negative";
-    EXPECT_DOUBLE_EQ(expected, got)
-        << "value " << value << ", length " << len << (masked ? ", masked" : "");
+    EXPECT_EQ(expected, got)
+        << "depth " << depth << ", value " << value << ", length " << len
+        << (masked ? ", masked" : "");
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_32S,
+INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_Signed,
     testing::Combine(
-        testing::Values(INT_MIN, INT_MAX, 16777217, 1073741825, -1073741825, 1000),
+        testing::Values(CV_32S, CV_64S),
+        testing::Values((int64_t)INT_MIN, (int64_t)INT_MAX, (int64_t)16777217,
+                        (int64_t)1073741825, (int64_t)-1073741825, (int64_t)1000,
+                        -(1LL << 52), (1LL << 52)),
         testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
         testing::Bool()));
 

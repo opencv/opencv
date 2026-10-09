@@ -774,10 +774,8 @@ struct NormL1_SIMD<int, double> {
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            // Widen straight to double and take the magnitude there. Going via float first, as this
-            // used to, rounds every |x| > 2^24 to the nearest float before it is ever accumulated,
-            // so the answer depended on how many elements happened to land in the vector body.
-            // Taking the magnitude in double also keeps INT_MIN, whose magnitude is not an int32.
+            // Widen to double before taking the magnitude: exact over the whole int32 range,
+            // INT_MIN included, which a float intermediate would not be above 2^24.
             v_int32 i0 = vx_load(src + j), i1 = vx_load(src + j + VTraits<v_int32>::vlanes());
             r00 = v_add(r00, v_abs(v_cvt_f64(i0))); r01 = v_add(r01, v_abs(v_cvt_f64_high(i0)));
             r10 = v_add(r10, v_abs(v_cvt_f64(i1))); r11 = v_add(r11, v_abs(v_cvt_f64_high(i1)));
