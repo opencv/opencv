@@ -128,7 +128,7 @@ public:
             int j = perm.empty() ? ndims - i - 1 : perm[i];
             order[i] = j < 0 ? j + ndims : j;
         }
-        transposeND(inp, order, out);
+        cv::transpose(inp, order, out);
     }
 };
 

@@ -971,7 +971,7 @@ private:
     void flip(Mat& output) // break if 1d tensor?
     {
         for (int i = 0; i < neg_step_dims.size(); ++i)
-                cv::flipND(output, output, neg_step_dims[i]);
+                cv::flip(output, output, neg_step_dims[i]);
     }
 protected:
     // The actual non-negative values determined from @p sliceRanges depends on input size.

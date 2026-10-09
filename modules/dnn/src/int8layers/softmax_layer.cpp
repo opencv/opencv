@@ -371,7 +371,7 @@ public:
         Mat src, dst;
 
         if (!coerced_2d && is_transpose_needed) {
-            transposeND(inputs[0], permutation, src);
+            cv::transpose(inputs[0], permutation, src);
             dst = Mat::zeros(transposed_shape.size(), transposed_shape.data(), outputs[0].type());
         } else {
             src = inputs[0];
@@ -397,7 +397,7 @@ public:
         }
 
         if (!coerced_2d && is_transpose_needed) {
-            transposeND(dst, permutation, outputs[0]);
+            cv::transpose(dst, permutation, outputs[0]);
         }
     }
 

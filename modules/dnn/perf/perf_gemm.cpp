@@ -383,7 +383,7 @@ PERF_TEST_P_(MatMul, innerproduct)
     std::iota(order.begin(), order.end(), 0);
     std::swap(order.back(), order[b_shape.size() - 2]);
     Mat B_transposed;
-    transposeND(B, order, B_transposed);
+    cv::transpose(B, order, B_transposed);
     lp.blobs.push_back(B_transposed);
     lp.set("num_output", int(B_transposed.total(0, b_shape.size() - 1)));
     lp.set("is_matmul", true);

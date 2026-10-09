@@ -212,7 +212,7 @@ TEST(Core_TransposeND, random)
         std::shuffle(order.begin(), order.end(), std::mt19937(rng.next()));
 
         Mat dst;
-        cv::transposeND(src, order, dst);
+        cv::transpose(src, order, dst);
         SCOPED_TRACE(describe(src) + " order " + MatShape(order).str());
         EXPECT_SAME(refTranspose(src, order), dst);
     }
@@ -231,7 +231,7 @@ TEST_P(Core_TransposeND_Large, accuracy)
     {
         Mat src = randomArray(rng, shape, type, roi != 0);
         Mat dst;
-        cv::transposeND(src, order, dst);
+        cv::transpose(src, order, dst);
         SCOPED_TRACE(describe(src));
         EXPECT_SAME(refTranspose(src, order), dst);
     }
@@ -263,7 +263,7 @@ TEST(Core_TransposeND, odd_step)
     rng.fill(bytes, RNG::UNIFORM, 0, 256);
     Mat src3(3, sizes, CV_16UC2, buf.data() + 2, steps);
     Mat dst;
-    cv::transposeND(src3, {2, 0, 1}, dst);
+    cv::transpose(src3, {2, 0, 1}, dst);
     EXPECT_SAME(refTranspose(src3, {2, 0, 1}), dst);
 }
 
@@ -272,18 +272,18 @@ TEST(Core_TransposeND, inplace)
     RNG& rng = theRNG();
     Mat a = randomArray(rng, {6, 6, 6}, CV_32FC3, false);
     Mat expected = refTranspose(a, {2, 0, 1});
-    cv::transposeND(a, {2, 0, 1}, a);
+    cv::transpose(a, {2, 0, 1}, a);
     EXPECT_SAME(expected, a);
 }
 
 // dnn preallocates the outputs with Mat::fit(), which keeps the buffer for an empty shape;
-// transposeND must not reallocate or release it
+// the n-dimensional transpose must not reallocate or release it
 TEST(Core_TransposeND, empty_keeps_buffer)
 {
     Mat src({0, 5}, CV_32F);
     Mat buf(1, 16, CV_32F), dst = buf;
     dst.fit(std::vector<int>{5, 0}, CV_32F);
-    cv::transposeND(src, {1, 0}, dst);
+    cv::transpose(src, {1, 0}, dst);
     EXPECT_EQ(buf.u, dst.u);
     EXPECT_EQ(std::vector<int>({5, 0}), shapeOf(dst));
 }
@@ -291,9 +291,9 @@ TEST(Core_TransposeND, empty_keeps_buffer)
 TEST(Core_TransposeND, invalid_order)
 {
     Mat a({2, 3, 4}, CV_32F, Scalar(0)), b;
-    EXPECT_ANY_THROW(cv::transposeND(a, {0, 1}, b));
-    EXPECT_ANY_THROW(cv::transposeND(a, {0, 1, 1}, b));
-    EXPECT_ANY_THROW(cv::transposeND(a, {0, 1, 3}, b));
+    EXPECT_ANY_THROW(cv::transpose(a, {0, 1}, b));
+    EXPECT_ANY_THROW(cv::transpose(a, {0, 1, 1}, b));
+    EXPECT_ANY_THROW(cv::transpose(a, {0, 1, 3}, b));
 }
 
 TEST(Core_FlipND, random)
@@ -303,9 +303,10 @@ TEST(Core_FlipND, random)
     {
         int dims = rng.uniform(1, 6);
         Mat src = randomArray(rng, randomShape(rng, dims, dims <= 3 ? 40 : 6), randomType(rng), rng.uniform(0, 2) != 0);
-        int axis = rng.uniform(-dims, dims);
+        // a negative code means "both axes" on a 2D array, so only the other ranks take one here
+        int axis = rng.uniform(dims == 2 ? 0 : -dims, dims);
         Mat dst;
-        cv::flipND(src, dst, axis);
+        cv::flip(src, dst, axis);
         SCOPED_TRACE(describe(src) + cv::format(" axis %d", axis));
         EXPECT_SAME(refFlip(src, (axis + dims) % dims), dst);
     }
@@ -318,7 +319,7 @@ TEST(Core_FlipND, inplace)
     {
         Mat a = randomArray(rng, {5, 7, 9}, CV_8UC3, false);
         Mat expected = refFlip(a, axis);
-        cv::flipND(a, a, axis);
+        cv::flip(a, a, axis);
         EXPECT_SAME(expected, a);
     }
 }
@@ -330,7 +331,7 @@ TEST(Core_FlipND, inplace_roi)
     {
         Mat a = randomArray(rng, {5, 7, 9}, CV_32FC2, true);
         Mat expected = refFlip(a, axis);
-        cv::flipND(a, a, axis);
+        cv::flip(a, a, axis);
         EXPECT_SAME(expected, a);
     }
 }
@@ -351,7 +352,7 @@ TEST(Core_ConcatND, random)
             src[k] = randomArray(rng, shape, type, rng.uniform(0, 2) != 0);
         }
         Mat dst;
-        cv::concatND(src, axis - (rng.uniform(0, 2) ? dims : 0), dst);
+        cv::concat(src, axis - (rng.uniform(0, 2) ? dims : 0), dst);
         SCOPED_TRACE(describe(src[0]) + cv::format(" x%d axis %d", n, axis));
         EXPECT_SAME(refConcat(src, axis), dst);
     }
@@ -364,8 +365,8 @@ TEST(Core_ConcatND, matches_hconcat_vconcat)
     Mat h1, h2, v1, v2;
     cv::hconcat(v, h1);
     cv::vconcat(v, v1);
-    cv::concatND(v, 1, h2);
-    cv::concatND(v, 0, v2);
+    cv::concat(v, 1, h2);
+    cv::concat(v, 0, v2);
     EXPECT_SAME(h1, h2);
     EXPECT_SAME(v1, v2);
 }
@@ -377,17 +378,17 @@ TEST(Core_ConcatND, large)
                              randomArray(rng, {1, 32, 40, 40}, CV_32F, true),
                              randomArray(rng, {1, 16, 40, 40}, CV_32F, false) };
     Mat dst;
-    cv::concatND(src, 1, dst);
+    cv::concat(src, 1, dst);
     EXPECT_SAME(refConcat(src, 1), dst);
 }
 
 TEST(Core_ConcatND, invalid)
 {
     Mat a({2, 3, 4}, CV_32F, Scalar(0)), b({2, 5, 4}, CV_32F, Scalar(0)), c({2, 3, 4}, CV_8U, Scalar(0)), d;
-    EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, b}, 2, d));
-    EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, c}, 0, d));
-    EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, a}, 3, d));
-    EXPECT_NO_THROW(cv::concatND(std::vector<Mat>{a, b}, 1, d));
+    EXPECT_ANY_THROW(cv::concat(std::vector<Mat>{a, b}, 2, d));
+    EXPECT_ANY_THROW(cv::concat(std::vector<Mat>{a, c}, 0, d));
+    EXPECT_ANY_THROW(cv::concat(std::vector<Mat>{a, a}, 3, d));
+    EXPECT_NO_THROW(cv::concat(std::vector<Mat>{a, b}, 1, d));
 }
 
 // an input that aliases a part of dst written by another input must be read first
@@ -399,7 +400,7 @@ TEST(Core_ConcatND, input_aliases_dst)
     std::vector<Mat> src = { other, dst.rowRange(0, 3) };
     Mat expected;
     cv::vconcat(std::vector<Mat>{ other.clone(), src[1].clone() }, expected);
-    cv::concatND(src, 0, dst);
+    cv::concat(src, 0, dst);
     EXPECT_SAME(expected, dst);
 }
 
@@ -421,7 +422,7 @@ TEST(Core_SplitND, random)
         if (sizes.empty())
             sizes.push_back(0);
         std::vector<Mat> dst;
-        cv::splitND(src, axis, sizes, dst);
+        cv::split(src, axis, sizes, dst);
         SCOPED_TRACE(describe(src) + cv::format(" axis %d", axis));
         ASSERT_EQ(sizes.size(), dst.size());
         int ofs = 0;
@@ -435,7 +436,7 @@ TEST(Core_SplitND, random)
             ofs += sizes[k];
         }
         Mat back;
-        cv::concatND(dst, axis, back);
+        cv::concat(dst, axis, back);
         EXPECT_SAME(src, back);
     }
 }
@@ -444,10 +445,10 @@ TEST(Core_SplitND, invalid)
 {
     Mat a({2, 6, 4}, CV_32F, Scalar(0));
     std::vector<Mat> d;
-    EXPECT_ANY_THROW(cv::splitND(a, 1, {2, 3}, d));
-    EXPECT_ANY_THROW(cv::splitND(a, 1, {7, -1}, d));
-    EXPECT_ANY_THROW(cv::splitND(a, 3, {2}, d));
-    EXPECT_NO_THROW(cv::splitND(a, -2, {2, 4}, d));
+    EXPECT_ANY_THROW(cv::split(a, 1, {2, 3}, d));
+    EXPECT_ANY_THROW(cv::split(a, 1, {7, -1}, d));
+    EXPECT_ANY_THROW(cv::split(a, 3, {2}, d));
+    EXPECT_NO_THROW(cv::split(a, -2, {2, 4}, d));
 }
 
 TEST(Core_TileND, random)
@@ -461,7 +462,7 @@ TEST(Core_TileND, random)
         for (int i = 0; i < dims; i++)
             repeats[i] = rng.uniform(0, 10) == 0 ? 0 : rng.uniform(1, 4);
         Mat dst;
-        cv::tileND(src, repeats, dst);
+        cv::repeat(src, repeats, dst);
         SCOPED_TRACE(describe(src) + " repeats " + MatShape(repeats).str());
         EXPECT_SAME(refTile(src, repeats), dst);
     }
@@ -472,7 +473,7 @@ TEST(Core_TileND, matches_repeat)
     RNG& rng = theRNG();
     Mat src = randomArray(rng, {7, 11}, CV_16UC3, true), a, b;
     cv::repeat(src, 3, 5, a);
-    cv::tileND(src, {3, 5}, b);
+    cv::repeat(src, {3, 5}, b);
     EXPECT_SAME(a, b);
 }
 
@@ -480,7 +481,7 @@ TEST(Core_TileND, large)
 {
     RNG& rng = theRNG();
     Mat src = randomArray(rng, {1, 64, 1, 128}, CV_32F, false), dst;
-    cv::tileND(src, {1, 1, 64, 1}, dst);
+    cv::repeat(src, {1, 1, 64, 1}, dst);
     EXPECT_SAME(refTile(src, {1, 1, 64, 1}), dst);
 }
 
@@ -512,7 +513,7 @@ TEST(Core_SliceND, random)
             }
         }
         Mat dst;
-        cv::sliceND(src, starts, ends, steps, dst);
+        cv::slice(src, starts, ends, steps, dst);
         SCOPED_TRACE(describe(src) + " starts " + MatShape(starts).str() + " ends " + MatShape(ends).str() +
                      " steps " + MatShape(steps).str());
         EXPECT_SAME(refSlice(src, starts, ends, steps), dst);
@@ -523,7 +524,7 @@ TEST(Core_SliceND, reverse_whole_axis)
 {
     RNG& rng = theRNG();
     Mat src = randomArray(rng, {4, 9, 5}, CV_32FC2, true), dst;
-    cv::sliceND(src, {0, 8}, {4, -1}, {1, -1}, dst);
+    cv::slice(src, {0, 8}, {4, -1}, {1, -1}, dst);
     EXPECT_SAME(refFlip(src, 1), dst);
 }
 
@@ -533,27 +534,27 @@ TEST(Core_NDTransform, scalar)
     a.at<float>(0) = 3.5f;
     ASSERT_EQ(0, a.dims);
     Mat t, r, s;
-    cv::transposeND(a, std::vector<int>(), t);
-    cv::tileND(a, std::vector<int>(), r);
-    cv::sliceND(a, std::vector<int>(), std::vector<int>(), std::vector<int>(), s);
+    cv::transpose(a, std::vector<int>(), t);
+    cv::repeat(a, std::vector<int>(), r);
+    cv::slice(a, std::vector<int>(), std::vector<int>(), std::vector<int>(), s);
     for (const Mat& m : {t, r, s})
     {
         EXPECT_EQ(0, m.dims);
         EXPECT_EQ((size_t)1, m.total());
         EXPECT_EQ(3.5f, m.at<float>(0));
     }
-    EXPECT_ANY_THROW(cv::flipND(a, t, 0));
-    EXPECT_ANY_THROW(cv::concatND(std::vector<Mat>{a, a}, 0, t));
+    EXPECT_ANY_THROW(cv::flip(a, t, 0));
+    EXPECT_ANY_THROW(cv::concat(std::vector<Mat>{a, a}, 0, t));
 }
 
 TEST(Core_SliceND, invalid)
 {
     Mat a({4, 5}, CV_32F, Scalar(0)), d;
-    EXPECT_ANY_THROW(cv::sliceND(a, {0}, {4}, {0}, d));
-    EXPECT_ANY_THROW(cv::sliceND(a, {0}, {5}, {}, d));
-    EXPECT_ANY_THROW(cv::sliceND(a, {-1}, {4}, {1}, d));
-    EXPECT_ANY_THROW(cv::sliceND(a, {0, 0, 0}, {1, 1, 1}, {}, d));
-    EXPECT_NO_THROW(cv::sliceND(a, {3}, {-1}, {-1}, d));
+    EXPECT_ANY_THROW(cv::slice(a, {0}, {4}, {0}, d));
+    EXPECT_ANY_THROW(cv::slice(a, {0}, {5}, {}, d));
+    EXPECT_ANY_THROW(cv::slice(a, {-1}, {4}, {1}, d));
+    EXPECT_ANY_THROW(cv::slice(a, {0, 0, 0}, {1, 1, 1}, {}, d));
+    EXPECT_NO_THROW(cv::slice(a, {3}, {-1}, {-1}, d));
 }
 
 }} // namespace

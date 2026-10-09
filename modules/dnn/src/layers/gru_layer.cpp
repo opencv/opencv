@@ -234,7 +234,7 @@ public:
         Mat sequence_input_time_major = sequence_input;
         if (layout == BATCH_SEQ_HID)
         {
-            cv::transposeND(sequence_input, {1, 0, 2}, sequence_input_time_major);
+            cv::transpose(sequence_input, {1, 0, 2}, sequence_input_time_major);
         }
 
         const int numDirs = 1 + static_cast<int>(bidirectional);

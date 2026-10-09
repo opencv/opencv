@@ -3065,7 +3065,7 @@ void yoloPostProcessing(
     if (model_name == "yolov8" || model_name == "yolov10" ||
         model_name == "yolov9")
     {
-        cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
+        cv::transpose(outs[0], {0, 2, 1}, outs[0]);
     }
 
     if (model_name == "yolonas"){
@@ -3693,8 +3693,8 @@ TEST_P(Test_ONNX_layers, ConsecutiveTransposeNonIdentity)
 {
     Mat input = makeConsecutiveTransposeInput();
     Mat ref1, ref;
-    cv::transposeND(input, std::vector<int>{0, 2, 3, 1}, ref1);
-    cv::transposeND(ref1, std::vector<int>{0, 1, 3, 2}, ref);
+    cv::transpose(input, std::vector<int>{0, 2, 3, 1}, ref1);
+    cv::transpose(ref1, std::vector<int>{0, 1, 3, 2}, ref);
 
     testConsecutiveTransposeModel("transpose_non_identity", backend, target, -1, input, ref);
 }

@@ -439,7 +439,7 @@ void yoloPostProcessing(
 
     if (postprocessing == "yolov8")
     {
-        transposeND(outs_copy[0], {0, 2, 1}, outs_copy[0]);
+        cv::transpose(outs_copy[0], {0, 2, 1}, outs_copy[0]);
     }
 
     if (postprocessing == "yolonas")

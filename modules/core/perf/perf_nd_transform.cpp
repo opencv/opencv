@@ -20,15 +20,15 @@ static void fillRandom(Mat& m)
 typedef tuple<std::vector<int>, std::vector<int>, perf::MatType> TransposeNDParams;
 typedef TestBaseWithParam<TransposeNDParams> TransposeNDPerf;
 
-PERF_TEST_P_(TransposeNDPerf, transposeND)
+PERF_TEST_P_(TransposeNDPerf, transpose)
 {
     const std::vector<int> shape = get<0>(GetParam()), order = get<1>(GetParam());
     const int type = get<2>(GetParam());
     Mat src(shape, type), dst;
     fillRandom(src);
-    cv::transposeND(src, order, dst);
+    cv::transpose(src, order, dst);
 
-    TEST_CYCLE() cv::transposeND(src, order, dst);
+    TEST_CYCLE() cv::transpose(src, order, dst);
 
     SANITY_CHECK_NOTHING();
 }
@@ -52,7 +52,7 @@ INSTANTIATE_TEST_CASE_P(/**/, TransposeNDPerf, testing::Values(
 typedef tuple<std::vector<int>, int, int> ConcatNDParams;
 typedef TestBaseWithParam<ConcatNDParams> ConcatNDPerf;
 
-PERF_TEST_P_(ConcatNDPerf, concatND)
+PERF_TEST_P_(ConcatNDPerf, concat)
 {
     const std::vector<int> shape = get<0>(GetParam());
     const int axis = get<1>(GetParam()), n = get<2>(GetParam());
@@ -63,14 +63,14 @@ PERF_TEST_P_(ConcatNDPerf, concatND)
         fillRandom(src[k]);
     }
     Mat dst;
-    cv::concatND(src, axis, dst);
+    cv::concat(src, axis, dst);
 
-    TEST_CYCLE() cv::concatND(src, axis, dst);
+    TEST_CYCLE() cv::concat(src, axis, dst);
 
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(ConcatNDPerf, splitND)
+PERF_TEST_P_(ConcatNDPerf, split)
 {
     std::vector<int> shape = get<0>(GetParam());
     const int axis = get<1>(GetParam()), n = get<2>(GetParam());
@@ -79,9 +79,9 @@ PERF_TEST_P_(ConcatNDPerf, splitND)
     Mat src(shape, CV_32F);
     fillRandom(src);
     std::vector<Mat> dst;
-    cv::splitND(src, axis, sizes, dst);
+    cv::split(src, axis, sizes, dst);
 
-    TEST_CYCLE() cv::splitND(src, axis, sizes, dst);
+    TEST_CYCLE() cv::split(src, axis, sizes, dst);
 
     SANITY_CHECK_NOTHING();
 }
@@ -96,14 +96,14 @@ INSTANTIATE_TEST_CASE_P(/**/, ConcatNDPerf, testing::Values(
 typedef tuple<std::vector<int>, std::vector<int> > TileNDParams;
 typedef TestBaseWithParam<TileNDParams> TileNDPerf;
 
-PERF_TEST_P_(TileNDPerf, tileND)
+PERF_TEST_P_(TileNDPerf, repeat)
 {
     const std::vector<int> shape = get<0>(GetParam()), repeats = get<1>(GetParam());
     Mat src(shape, CV_32F), dst;
     fillRandom(src);
-    cv::tileND(src, repeats, dst);
+    cv::repeat(src, repeats, dst);
 
-    TEST_CYCLE() cv::tileND(src, repeats, dst);
+    TEST_CYCLE() cv::repeat(src, repeats, dst);
 
     SANITY_CHECK_NOTHING();
 }
@@ -117,7 +117,7 @@ INSTANTIATE_TEST_CASE_P(/**/, TileNDPerf, testing::Values(
 typedef tuple<int, int> SliceNDParams;  // axis, step
 typedef TestBaseWithParam<SliceNDParams> SliceNDPerf;
 
-PERF_TEST_P_(SliceNDPerf, sliceND)
+PERF_TEST_P_(SliceNDPerf, slice)
 {
     const int axis = get<0>(GetParam()), step = get<1>(GetParam());
     Mat src({64, 128, 128}, CV_32F), dst;
@@ -134,9 +134,9 @@ PERF_TEST_P_(SliceNDPerf, sliceND)
         starts[axis] = step == 1 ? 10 : 0;
         ends[axis] = step == 1 ? src.size[axis] - 10 : src.size[axis];
     }
-    cv::sliceND(src, starts, ends, steps, dst);
+    cv::slice(src, starts, ends, steps, dst);
 
-    TEST_CYCLE() cv::sliceND(src, starts, ends, steps, dst);
+    TEST_CYCLE() cv::slice(src, starts, ends, steps, dst);
 
     SANITY_CHECK_NOTHING();
 }
@@ -146,7 +146,7 @@ INSTANTIATE_TEST_CASE_P(/**/, SliceNDPerf, testing::Combine(
     testing::Values(1, 2, -1)
 ));
 
-PERF_TEST_P_(TransposeNDPerf, flipND)
+PERF_TEST_P_(TransposeNDPerf, flip)
 {
     const std::vector<int> shape = get<0>(GetParam());
     const int type = get<2>(GetParam());
@@ -154,7 +154,7 @@ PERF_TEST_P_(TransposeNDPerf, flipND)
     fillRandom(src);
     const int axis = (int)shape.size() - 1;
 
-    TEST_CYCLE() cv::flipND(src, dst, axis);
+    TEST_CYCLE() cv::flip(src, dst, axis);
 
     SANITY_CHECK_NOTHING();
 }
