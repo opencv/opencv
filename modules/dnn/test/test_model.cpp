@@ -767,6 +767,57 @@ TEST_P(Test_Model, DetectBatch)
     }
 }
 
+TEST_P(Test_Model, OutputFormat)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
+
+    Mat frame = imread(_tf("dog416.png"));
+    ASSERT_FALSE(frame.empty());
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    auto detect = [&](const std::string& weights, DetectionOutputFormat format)
+    {
+        DetectionModel model(weights);
+        model.setInputSize(640, 640).setInputScale(1.0 / 255.0).setInputSwapRB(true);
+        model.setOutputFormat(format);
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+        model.detect(frame, classIds, confidences, boxes, 0.25f, 0.45f);
+    };
+
+    const struct { const char* model; DetectionOutputFormat format; } cases[] = {
+        {"yolov8n.onnx", DNN_DFMT_CENTER},
+        {"onnx/models/yolo26n_dynbatch.onnx", DNN_DFMT_CENTER_NORM},
+    };
+
+    for (const auto& c : cases)
+    {
+        SCOPED_TRACE(c.model);
+        const std::string weights = _tf(c.model, false);
+
+        detect(weights, DNN_DFMT_AUTO);
+        const std::vector<int> refClassIds = classIds;
+        const std::vector<float> refConfs = confidences;
+        const std::vector<Rect> refBoxes = boxes;
+        ASSERT_FALSE(refClassIds.empty());
+
+        detect(weights, c.format);
+        ASSERT_EQ(classIds.size(), refClassIds.size());
+        for (size_t i = 0; i < refClassIds.size(); i++)
+        {
+            EXPECT_EQ(classIds[i], refClassIds[i]) << "detection " << i;
+            EXPECT_EQ(boxes[i], refBoxes[i]) << "detection " << i;
+            EXPECT_NEAR(confidences[i], refConfs[i], 1e-6) << "detection " << i;
+        }
+    }
+
+    // A corner format needs a 6-wide row and yolov8n is 84-wide, so declaring it must be refused.
+    EXPECT_THROW(detect(_tf("yolov8n.onnx", false), DNN_DFMT_CORNER), cv::Exception);
+}
+
 TEST_P(Test_Model, EstimatePosesBatch)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);

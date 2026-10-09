@@ -1539,6 +1539,22 @@ CV__DNN_INLINE_NS_BEGIN
                                    SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
 
 
+    /**
+     * @brief Enum of anchor-free detection head layouts.
+     * A row is either [cx, cy, w, h] followed by one score per class, or
+     * [x1, y1, x2, y2, score, classIndex] as produced by an export that folds in NMS.
+     * Coordinates are blob pixels unless the name says normalized.
+     * @see Model::setOutputFormat
+     */
+    enum DetectionOutputFormat
+    {
+        DNN_DFMT_AUTO = 0,        // !< Default. Infer the layout from the output values.
+        DNN_DFMT_CENTER = 1,      // !< cx, cy, w, h then one score per class, in blob pixels.
+        DNN_DFMT_CENTER_NORM = 2, // !< As DNN_DFMT_CENTER, coordinates as fractions of the blob.
+        DNN_DFMT_CORNER = 3,      // !< x1, y1, x2, y2, score, class index, in blob pixels.
+        DNN_DFMT_CORNER_NORM = 4, // !< As DNN_DFMT_CORNER, coordinates as fractions of the blob.
+    };
+
      /** @brief This class is presented high-level API for neural networks.
       *
       * Model allows to set params for preprocessing input image.
@@ -1609,6 +1625,14 @@ CV__DNN_INLINE_NS_BEGIN
           *  last call wins. YOLOv8-family exports expect DNN_PMODE_LETTERBOX.
          */
          CV_WRAP Model& setPaddingMode(ImagePaddingMode mode);
+
+         /** @brief Declare how the network writes a detection row, instead of inferring it.
+          *  @param[in] format Output format, @see DetectionOutputFormat. Defaults to DNN_DFMT_AUTO.
+          *  @note Applies to detect(), estimatePoses() and segmentInstances(). Box form and
+          *  coordinate space are properties of the export, so declaring them is exact where
+          *  DNN_DFMT_AUTO reads them back from the values and can only guess on an empty output.
+         */
+         CV_WRAP Model& setOutputFormat(DetectionOutputFormat format);
 
          /** @brief Set output names for frame.
           *  @param[in] outNames Names for output layers.
