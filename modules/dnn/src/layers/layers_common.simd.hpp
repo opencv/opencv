@@ -182,6 +182,57 @@ void fastGEMM1T( const float* vec, const float* weights,
     const uint32x4_t tailMaskU = vld1q_u32(tailMaskPtr);
     const float32x4_t tailMask = vreinterpretq_f32_u32(tailMaskU);
 
+    for ( ; i <= nvecs - 8; i += 8 )
+    {
+        const float* wptr = weights + i * wstep;
+        float32x4_t vs0 = vdupq_n_f32(0.0f), vs1 = vdupq_n_f32(0.0f);
+        float32x4_t vs2 = vdupq_n_f32(0.0f), vs3 = vdupq_n_f32(0.0f);
+        float32x4_t vs4 = vdupq_n_f32(0.0f), vs5 = vdupq_n_f32(0.0f);
+        float32x4_t vs6 = vdupq_n_f32(0.0f), vs7 = vdupq_n_f32(0.0f);
+        int k = 0;
+        for ( ; k <= vecsize - 4; k += 4, wptr += 4 )
+        {
+            float32x4_t v = vld1q_f32(vec + k);
+            vs0 = vmlaq_f32(vs0, vld1q_f32(wptr),             v);
+            vs1 = vmlaq_f32(vs1, vld1q_f32(wptr + wstep),     v);
+            vs2 = vmlaq_f32(vs2, vld1q_f32(wptr + wstep * 2), v);
+            vs3 = vmlaq_f32(vs3, vld1q_f32(wptr + wstep * 3), v);
+            vs4 = vmlaq_f32(vs4, vld1q_f32(wptr + wstep * 4), v);
+            vs5 = vmlaq_f32(vs5, vld1q_f32(wptr + wstep * 5), v);
+            vs6 = vmlaq_f32(vs6, vld1q_f32(wptr + wstep * 6), v);
+            vs7 = vmlaq_f32(vs7, vld1q_f32(wptr + wstep * 7), v);
+        }
+        if (k != vecsize)
+        {
+            k    = vecsize - 4;
+            wptr = weights + i * wstep + k;
+            float32x4_t v = vld1q_f32(vec + k);
+            v = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(v), tailMaskU));
+
+            float32x4_t w0 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)), tailMaskU));
+            float32x4_t w1 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep)), tailMaskU));
+            float32x4_t w2 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 2)), tailMaskU));
+            float32x4_t w3 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 3)), tailMaskU));
+            float32x4_t w4 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 4)), tailMaskU));
+            float32x4_t w5 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 5)), tailMaskU));
+            float32x4_t w6 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 6)), tailMaskU));
+            float32x4_t w7 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 7)), tailMaskU));
+
+            vs0 = vmlaq_f32(vs0, w0, v);
+            vs1 = vmlaq_f32(vs1, w1, v);
+            vs2 = vmlaq_f32(vs2, w2, v);
+            vs3 = vmlaq_f32(vs3, w3, v);
+            vs4 = vmlaq_f32(vs4, w4, v);
+            vs5 = vmlaq_f32(vs5, w5, v);
+            vs6 = vmlaq_f32(vs6, w6, v);
+            vs7 = vmlaq_f32(vs7, w7, v);
+        }
+        v_float32x4 sum03 = v_reduce_sum4(v_float32x4(vs0), v_float32x4(vs1), v_float32x4(vs2), v_float32x4(vs3));
+        v_float32x4 sum47 = v_reduce_sum4(v_float32x4(vs4), v_float32x4(vs5), v_float32x4(vs6), v_float32x4(vs7));
+        v_store(dst + i,     v_add(sum03, v_load(bias + i)));
+        v_store(dst + i + 4, v_add(sum47, v_load(bias + i + 4)));
+    }
+
     for ( ; i <= nvecs - 4; i += 4 )
     {
         const float* wptr = weights + i * wstep;
@@ -215,16 +266,8 @@ void fastGEMM1T( const float* vec, const float* weights,
             vs3 = vmlaq_f32(vs3, w3, v);
         }
 
-        auto hsumq_f32 = [](float32x4_t x) -> float {
-            float32x2_t s2 = vadd_f32(vget_low_f32(x), vget_high_f32(x));
-            s2 = vpadd_f32(s2, s2);
-            return vget_lane_f32(s2, 0);
-        };
-
-        dst[i + 0] = hsumq_f32(vs0) + bias[i + 0];
-        dst[i + 1] = hsumq_f32(vs1) + bias[i + 1];
-        dst[i + 2] = hsumq_f32(vs2) + bias[i + 2];
-        dst[i + 3] = hsumq_f32(vs3) + bias[i + 3];
+        v_float32x4 sum03 = v_reduce_sum4(v_float32x4(vs0), v_float32x4(vs1), v_float32x4(vs2), v_float32x4(vs3));
+        v_store(dst + i, v_add(sum03, v_load(bias + i)));
     }
 
     for ( ; i < nvecs; i++ )
