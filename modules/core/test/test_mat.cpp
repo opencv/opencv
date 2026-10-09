@@ -3220,4 +3220,65 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+// https://github.com/opencv/opencv/issues/25575
+// A cv::Scalar carries 4 values, so filling an element with more than 4 channels takes
+// s[0..3] for the first four channels and 0 for the rest - the same rule Mat::ones()
+// already documents for the 2..4-channel case. It must not throw.
+typedef testing::TestWithParam<tuple<int, perf::MatDepth>> Core_MatFill_MultiChannelScalar;
+
+TEST_P(Core_MatFill_MultiChannelScalar, fill)
+{
+    const int cn = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const int type = CV_MAKETYPE(depth, cn);
+    const Scalar s(1, 2, 3, 4);
+
+    // the expected element, built through the (already working) per-channel value path
+    Mat value(cn, 1, CV_64F, Scalar::all(0));
+    for (int c = 0; c < std::min(cn, 4); c++)
+        value.at<double>(c) = s[c];
+
+    Mat expected(7, 11, type);
+    expected.setTo(value);
+
+    Mat a(7, 11, type, s); // Mat(rows, cols, type, Scalar)
+    EXPECT_EQ(0, cvtest::norm(a.reshape(1), expected.reshape(1), NORM_INF));
+
+    Mat b(7, 11, type); b = s; // Mat::operator=(Scalar)
+    EXPECT_EQ(0, cvtest::norm(b.reshape(1), expected.reshape(1), NORM_INF));
+
+    Mat c(7, 11, type); c.setTo(s); // Mat::setTo(Scalar)
+    EXPECT_EQ(0, cvtest::norm(c.reshape(1), expected.reshape(1), NORM_INF));
+
+    int sizes[] = { 3, 7, 11 }; // N-dimensional
+    Mat d(3, sizes, type, s);
+    Mat dexp(3, sizes, type); dexp.setTo(value);
+    EXPECT_EQ(0, cvtest::norm(d.reshape(1), dexp.reshape(1), NORM_INF));
+
+    Mat big(20, 30, type, Scalar::all(0)); // non-continuous submatrix
+    Mat roi = big(Rect(3, 2, 11, 7));
+    roi = s;
+    EXPECT_EQ(0, cvtest::norm(roi.reshape(1), expected.reshape(1), NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MatFill_MultiChannelScalar,
+                        testing::Combine(testing::Values(1, 2, 3, 4, 5, 9, CV_CN_MAX),
+                                         testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+TEST(Core_MatFill, ones_multichannel_25575)
+{
+    // Mat::ones() is documented to set the first channel only; it used to throw for cn > 4.
+    Mat m = Mat::ones(4, 5, CV_32FC(8));
+    for (int y = 0; y < m.rows; y++)
+    {
+        for (int x = 0; x < m.cols; x++)
+        {
+            const float* p = m.ptr<float>(y) + x*8;
+            EXPECT_EQ(1.f, p[0]);
+            for (int c = 1; c < 8; c++)
+                EXPECT_EQ(0.f, p[c]);
+        }
+    }
+}
+
 }} // namespace
