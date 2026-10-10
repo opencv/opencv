@@ -334,6 +334,37 @@ TEST_P(matchTemplate_Modes, accuracy)
     }
 }
 
+// small images (one correlation tile, small DFT sizes) given as a ROI of a larger matrix, as e.g.
+// the QR code detector does for its alignment markers
+TEST_P(matchTemplate_Modes, small_roi)
+{
+    const int data_type = CV_MAKE_TYPE(get<0>(GetParam()), get<1>(GetParam()));
+    const int method = get<2>(GetParam());
+    RNG & rng = TS::ptr()->get_rng();
+
+    for (int ITER = 0; ITER < 30; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const Size templSize(rng.uniform(2, 24), rng.uniform(2, 24));
+        const Size imgSize(templSize.width + rng.uniform(0, 48), templSize.height + rng.uniform(0, 48));
+        const Point ofs(rng.uniform(0, 32), rng.uniform(0, 32));
+        Mat big(imgSize.height + ofs.y + rng.uniform(0, 32), imgSize.width + ofs.x + rng.uniform(0, 32), data_type);
+        Mat templ(templSize, data_type);
+        cvtest::randUni(rng, big, Scalar::all(0), Scalar::all(255));
+        cvtest::randUni(rng, templ, Scalar::all(0), Scalar::all(255));
+        Mat img = big(Rect(ofs, imgSize));
+
+        Mat result;
+        cv::matchTemplate(img, templ, result, method);
+
+        Mat img_copy = img.clone(), reference;
+        matchTemplate_reference(img_copy, templ, reference, method);
+
+        EXPECT_MAT_NEAR_RELATIVE(result, reference, 1e-3);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/,
     matchTemplate_Modes,
         testing::Combine(
