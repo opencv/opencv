@@ -15,7 +15,7 @@ Why nested markers
 A fiducial marker of a single size has a bounded working range: a large marker is identifiable
 from far away but stops fitting the camera view up close, a small one only works near the
 camera. Nested markers extend this range by printing a small marker inside a cell block of a
-large one. Detection still depends on image resolution, viewing angle, lighting and motion blur.
+large one.
 
 One common use case is autonomous landing, or any rendezvous where the camera moves toward a known target. From far away the drone sees the large marker. As it gets closer, the inner markers start being detected. In the final approach, the small inner markers keep the target visible.
 
@@ -24,11 +24,12 @@ One common use case is autonomous landing, or any rendezvous where the camera mo
 Non-binary dictionaries
 ------------------
 
-A cell from the host marker that contains an inner marker is neither black nor white, which is why nested markers
-require a `cv::aruco::DICT_ENCODING_CELL_RATIO` dictionary: each cell stores its expected
-white pixel ratio in percent, and identification uses
-`|observed - expected| <= validBitIdThreshold` per cell after normalizing the stored
-percentages to [0, 1], exactly like binary markers.
+A cell from the host marker that contains an inner marker is neither black nor white. A
+`cv::aruco::DICT_ENCODING_CELL_RATIO` dictionary stores the expected white pixel ratio of each
+cell in percent, and identification uses `|observed - expected| <= validBitIdThreshold` per cell
+after normalizing the stored percentages to [0, 1], exactly like binary markers. Describing the
+host cells exactly keeps them matching at strict thresholds and lets the separation distance
+(see "Details") account for them.
 
 Ratio dictionaries are a general concept: any composed marker can be described this way, and you
 can build your own (see "Custom composed markers" at the end).
@@ -37,7 +38,9 @@ The image below shows a nested ArUco marker with an
 inner inverted marker. On the right: the nested marker with its bit encoding in the
 center. The cell boundaries are in red and the area considered for identification is in green.
 On the left: a zoom on the inner marker with the non-binary encoding corresponding to the ratio of
-white pixels inside the margins (green squares).
+white pixels inside the green squares. The figure leaves out a cell margin
+(`DetectorParameters::perspectiveRemoveIgnoredMarginPerCell`); with the default parameters this
+margin is 0 pixels.
 
 ![Nested marker with non-binary encoding](images/nested_marker_cell_ratio.png)
 
@@ -66,12 +69,13 @@ is standard ArUco:
 3. The inner marker is printed **rotated 45 degrees**, centered on the corner point shared by
    the block's 4 cells. Its half diagonal spans 0.7 outer cells, which makes the inner marker
    about 6 times smaller than the outer one. The rotation allows to keep the inner marker large while changing only small corner triangles of the outer marker cells.
-4. Both patterns have **at least 4 cells of each color** to reduce confusion with uniform
-   bright or dark regions.
+4. Both patterns have **at least 4 cells of each color**, so a uniformly dark or bright square
+   differs from every entry in at least 4 cells. The predefined dictionaries correct at most 1
+   cell, so such a square is never accepted with `errorCorrectionRate <= 1`.
 
-Because of rule 2, the printed image is fully determined by the dictionary content: the image
-generator only needs to locate the single white block and place the rotated inner marker there.
-There is no extra layout information to store or communicate.
+Because of rule 2, the printed image is fully determined by the dictionary entry and
+`innerHalfDiagonal` (0.7 for the predefined dictionaries): the image generator only needs to
+locate the single white block and place the rotated inner marker there.
 
 ![A printable pair: outer id 0 and inner id 1](images/nested_pair.png)
 
@@ -202,9 +206,10 @@ each. Therefore
     D >= 2c + 1   =>   no observation is ever accepted for both entries.
 
 This is the quantity in the dictionary table above. `generateNestedDictionary()` enforces it
-between all entries, and between each entry and its own rotations, using the default threshold
-and an `errorCorrectionRate` at most 1. For binary markers at this threshold, `D` is the
-Hamming distance.
+between all entries, and between each entry and its own rotations so the orientation is never
+ambiguous. It sets `maxCorrectionBits = (minDistance - 1) / 2`, so the guarantee holds for
+`errorCorrectionRate` up to 1 and `validBitIdThreshold` up to the default 0.49. For binary
+markers `D` is the Hamming distance.
 
 ### Host cells and range behavior
 
@@ -212,10 +217,10 @@ The inner marker covers a corner triangle of each of the 4 host cells. Its size 
 `innerHalfDiagonal`, the half diagonal of the inner marker square in outer cell units: rotated 45
 degrees, the diagonals align with the cell grid and the covered triangle has area
 `innerHalfDiagonal^2 / 2`. With the default 0.7 that is at most `0.245` of the cell, so a host
-cell's full-area white ratio stays within 25% of its original binary value. A smaller inner marker
-changes less of each host cell; the bound `sqrt(0.5)` on `innerHalfDiagonal` limits the covered
-area to a quarter of the cell. The detector ignores cell margins when sampling, so its observed
-ratios can differ from these full-area ratios.
+cell keeps at least 75% white pixels. A smaller inner marker changes less of each host cell, so
+the outer marker is detected from slightly farther away, but the inner marker is then detected
+only closer to the camera. The bound `sqrt(0.5)` on `innerHalfDiagonal` limits the covered area
+to a quarter of the cell.
 
 ### Orientation and corner order
 
@@ -229,12 +234,11 @@ object points always correspond one to one.
 ### False positives
 
 A false positive is a random square in the scene (a window, a screen, a
-picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. Every pattern in the predefined dictionaries also keeps at least 4 cells of each color to reduce confusion with uniform bright or dark regions.
+picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. Uniform bright or dark squares are never accepted by the predefined dictionaries (rule 4).
 
-You can also tighten `validBitIdThreshold` from its default 0.49 to 0.4, which narrows what each
-cell accepts and can reject more false positives. Lowering the threshold only makes cells more
-selective, so the separation guarantees cannot weaken, but valid markers can also be rejected
-more often. Test the threshold under your expected imaging conditions.
+You can also tighten `validBitIdThreshold` from its default 0.49 to 0.4. Each cell then accepts
+a subset of the observations it accepted before, so this cannot add false positives or weaken
+the separation guarantees. The cost is range: distant or blurred markers are rejected sooner.
 
 ### Custom composed markers
 

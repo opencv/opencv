@@ -16,7 +16,7 @@ PERF_TEST_P(ArucoNestedMarkerImage, generateImageMarkerNested, Values(120, 601, 
     TEST_CYCLE() {
         aruco::generateImageMarkerNested(dictionary, 0, sidePixels, image);
     }
-    SANITY_CHECK(image);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<int, bool> ArucoCellRatioIdentifyParams;

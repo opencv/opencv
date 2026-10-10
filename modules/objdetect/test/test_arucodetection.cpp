@@ -954,6 +954,14 @@ TEST(CV_ArucoDetectionCellRatioDict, emptyAcceptanceInterval) {
     EXPECT_EQ(0, close.getDistanceToId(observed, 0, false, 0.006f));
     int id = -1, rotation = -1;
     EXPECT_TRUE(close.identify(observed, id, rotation, 0., 0.006f));
+
+    // Every stored ratio matches its own expected value, even with a zero threshold.
+    for (int value = 0; value <= 100; value++) {
+        const Mat single(1, 1, CV_8UC1, Scalar(value));
+        const aruco::Dictionary singleDict(aruco::Dictionary::getRatioListFromCellRatios(single),
+                                           1, 0, aruco::DICT_ENCODING_CELL_RATIO);
+        EXPECT_EQ(0, singleDict.getDistanceToId(singleDict.getMarkerBits(0), 0, false, 0.f)) << "value=" << value;
+    }
 }
 
 /**
@@ -1339,6 +1347,10 @@ TEST(CV_ArucoNestedDictionary, objectPoints) {
             EXPECT_NEAR(corners[m][c].y, margin + pts.at<float>(c, 1), 3.) << "id " << ids[m];
         }
     }
+
+    // innerHalfDiagonal must be in [0.2, sqrt(0.5)], as for generateImageMarkerNested()
+    EXPECT_THROW(aruco::getNestedMarkerObjectPoints(dict, 0, (float)sidePixels, outerPts, innerPts, 1, 0.8f),
+                 cv::Exception);
 }
 
 TEST(CV_ArucoNestedDictionary, serialization) {
@@ -1354,6 +1366,19 @@ TEST(CV_ArucoNestedDictionary, serialization) {
     EXPECT_EQ(dict.dictEncoding, readDict.dictEncoding);
     EXPECT_EQ(dict.maxCorrectionBits, readDict.maxCorrectionBits);
     EXPECT_EQ(0., cvtest::norm(dict.bytesList, readDict.bytesList, NORM_INF));
+
+    // malformed files are rejected, without crashing or allocating the declared marker size
+    const char* invalidDictionaries[] = {
+        "nmarkers: 1\nmarkersize: 0\ndictEncoding: 1\nmarker_0: []\n",
+        "nmarkers: 1\nmarkersize: 65536\ndictEncoding: 1\nmarker_0: []\n",
+        "nmarkers: 1\nmarkersize: 2\ndictEncoding: 2\nmarker_0: [0, 50, 100, 100]\n",
+        "nmarkers: 1\nmarkersize: 2\ndictEncoding: 1\nmarker_0: [0, 50, 100]\n",
+        "nmarkers: 1\nmarkersize: 2\ndictEncoding: 1\nmarker_0: [0, 50, 100, 101]\n"
+    };
+    for (const char* invalid : invalidDictionaries) {
+        FileStorage fsInvalid(String("%YAML:1.0\n---\n") + invalid, FileStorage::READ + FileStorage::MEMORY);
+        EXPECT_FALSE(readDict.readDictionary(fsInvalid.root())) << invalid;
+    }
 }
 
 TEST(CV_ArucoNestedDictionary, detectorParametersSerialization) {
@@ -1382,14 +1407,16 @@ TEST(CV_ArucoNestedDictionary, cellRatiosFromImage) {
     EXPECT_EQ(0., cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(binaryImg, 4), expected,
                                NORM_INF));
 
-    // Nearest-neighbor rendering includes partial cells when the image size is not a grid multiple.
-    for (int sidePixels : {7, 11, 17, 100, 301}) {
+    // image sides that are not a multiple of the 6-cell grid; they are coprime with 6, so cv::resize
+    // cannot move a cell boundary by rounding
+    for (int sidePixels : {7, 11, 17, 101, 301}) {
         aruco::generateImageMarker(binaryDict, 0, sidePixels, binaryImg);
         EXPECT_EQ(0., cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(binaryImg, 4), expected,
                                   NORM_INF)) << "sidePixels=" << sidePixels;
     }
 
-    // A 34-pixel, six-cell grid has boundaries at 0, 6, 12, 17, 23, 29, 34.
+    // A 34-pixel, six-cell grid as drawn by generateImageMarkerNested(): pixel p belongs to cell
+    // floor(6 * p / 34), so the boundaries are at 0, 6, 12, 17, 23, 29, 34.
     Mat grid(34, 34, CV_8UC1, Scalar(0));
     grid(Rect(6, 6, 6, 6)).setTo(255);
     grid(Rect(17, 12, 6, 5)).setTo(255);
