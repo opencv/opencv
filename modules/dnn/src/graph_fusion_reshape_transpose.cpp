@@ -16,6 +16,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "layers/layers_common.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -42,6 +43,25 @@ struct ModelFusionReshapeTranspose
         for (size_t i = 0; i < perm.size(); i++)
             if (perm[i] != (int)i) return false;
         return true;
+    }
+
+    // A 0 in an ONNX reshape spec means "keep the input's dim here", so the Reshape depends
+    // on what feeds it and its producer cannot be dropped. An unreadable spec counts too.
+    bool shapeSpecCopiesInputDims(const Reshape2Layer* rs) const
+    {
+        MatShape spec = rs->newShapeDesc;
+        if (spec.dims < 0) {
+            if (rs->inputs.size() != 2 || !netimpl->isConstArg(rs->inputs[1]))
+                return true;
+            const Mat& t = netimpl->argTensor(rs->inputs[1]);
+            if (t.empty() || !t.isContinuous() || (t.type() != CV_32S && t.type() != CV_64S))
+                return true;
+            spec = tensorToShape(t);
+        }
+        for (int i = 0; i < spec.dims; i++)
+            if (spec[i] == 0)
+                return true;
+        return false;
     }
 
     bool fuseGraph(Ptr<Graph>& graph)
@@ -130,7 +150,7 @@ struct ModelFusionReshapeTranspose
 
             //Reshape + Reshape -> Reshape (drop the inner reshape).
             Reshape2Layer* rs = dynamic_cast<Reshape2Layer*>(layer.get());
-            if (rs && layer->outputs.size() == 1) {
+            if (rs && layer->outputs.size() == 1 && !shapeSpecCopiesInputDims(rs)) {
                 auto it = producer.find(layer->inputs[0].idx);
                 if (it != producer.end()) {
                     int prod_idx = it->second;

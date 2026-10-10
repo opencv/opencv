@@ -171,6 +171,15 @@ void run_fused_softmax(
             }
 
             if (do_softmax) {
+            // No key is attendable in this row: ONNX softmaxes it to all-zero probabilities
+            // instead of exp(-inf - -inf) = NaN or a uniform distribution over masked keys.
+            if (maxVal <= min_val) {
+                for (tk = 0; tk < seq_len_kv; tk++)
+                    data[offset + tk] = 0.f;
+                offset += seq_len_kv;
+                mask_offset_q += mask_step_q;
+                continue;
+            }
             float sum = 0.f;
             tk = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)

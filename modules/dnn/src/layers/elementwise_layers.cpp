@@ -1314,9 +1314,11 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
     using Layer = SwishLayer;
 
+    // ONNX Swish-24: y = x * sigmoid(alpha * x). alpha != 1 has no fused kernel.
+    float alpha;
     int vlanes;
 
-    explicit SwishFunctor() {
+    explicit SwishFunctor(float alpha_ = 1.f) : alpha(alpha_) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         vlanes = VTraits<v_float32>::vlanes();
 #else
@@ -1326,13 +1328,15 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
     ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
     {
-        if (depth != CV_32F) return nullptr;
+        if (depth != CV_32F || alpha != 1.f) return nullptr;
         activParams.clear();
         return cv::dnn::getActivationFunc(ACTIV_SWISH);
     }
 
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
+        if (alpha != 1.f)
+            return false;
         const int gate = fusion::detail::sigmoid(r);
         r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, gate);
         return true;
@@ -1340,15 +1344,23 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               backendId == DNN_BACKEND_CANN;
+        if (backendId == DNN_BACKEND_OPENCV)
+            return true;
+        // The CUDA/OpenVINO/CANN nodes below are the alpha == 1 formula only.
+        return alpha == 1.f &&
+               (backendId == DNN_BACKEND_CUDA ||
+                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+                backendId == DNN_BACKEND_CANN);
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
     }
 
     inline float calculate(float x) const
     {
-        return x / (1.f + exp(-x));
+        return x / (1.f + exp(-alpha * x));
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -1356,13 +1368,13 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            // x / (1.f + exp(-x));
             v_float32 one = vx_setall_f32(1.0f),
+                      valpha = vx_setall_f32(alpha),
                       zero = vx_setzero_f32();
             for (; i <= len - vlanes; i += vlanes) {
                 v_float32 x = vx_load(srcptr + i);
 
-                v_float32 t = v_sub(zero, x);
+                v_float32 t = v_sub(zero, v_mul(valpha, x));
                 t = v_exp(t);
                 t = v_add(one, t);
                 t = v_div(x, t);
@@ -3879,7 +3891,8 @@ Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 
 Ptr<SwishLayer> SwishLayer::create(const LayerParams& params)
 {
-    Ptr<SwishLayer> l(new ElementWiseLayer<SwishFunctor>());
+    float alpha = params.get<float>("alpha", 1.f);
+    Ptr<SwishLayer> l(new ElementWiseLayer<SwishFunctor>(SwishFunctor(alpha)));
     l->setParamsFrom(params);
 
     return l;

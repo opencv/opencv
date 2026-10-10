@@ -317,7 +317,14 @@ public:
         CV_CheckTrue(params.has("blocksize"), "SpaceToDepthLayer: blocksize is required");
         blocksize = params.get<int>("blocksize");
 
-        permutation = {0, 3, 5, 1, 2, 4};
+        auto mode = params.get<std::string>("mode", "DCR");
+        if (mode == "CRD") {
+            permutation = {0, 1, 3, 5, 2, 4};
+        } else if (mode == "DCR") {
+            permutation = {0, 3, 5, 1, 2, 4};
+        } else {
+            CV_Error(Error::StsBadArg, cv::format("SpaceToDepth: unsupported mode %s\n", mode.c_str()));
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {

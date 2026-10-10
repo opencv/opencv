@@ -16,7 +16,7 @@ namespace cv { namespace dnn {
 /*
     OneHot layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__OneHot.html
-    Supported opsets: 9-11
+    Supported opsets: 9-28
 */
 
 class OneHotLayerImpl CV_FINAL : public OneHotLayer
@@ -160,8 +160,11 @@ private:
             const Tout localOnVal = onVal;
             for (int pos = r.start; pos < r.end; ++pos) {
                 int64_t idxVal = localIdxPtr64[pos];
-                int64_t wrapped = idxVal % localDepth;
-                if (wrapped < 0) wrapped += localDepth;
+                // ONNX: valid range is [-depth, depth-1] (negative counts from the end);
+                // anything outside stays all-off_value.
+                int64_t wrapped = idxVal < 0 ? idxVal + localDepth : idxVal;
+                if (wrapped < 0 || wrapped >= localDepth)
+                    continue;
                 size_t hi = (size_t)pos / localOutStep;
                 size_t lo = (size_t)pos % localOutStep;
                 size_t base = hi * ((size_t)localDepth * localOutStep) + lo;

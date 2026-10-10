@@ -1554,7 +1554,9 @@ static Mat sliceScanAxis(const Mat& m, int axis, int idx)
     std::vector<int> ns;
     for (int d = 0; d < m.dims; d++)
         if (d != axis) ns.push_back(m.size[d]);
-    if (ns.empty()) ns.push_back(1);
+    // A rank-1 scan input slices to a true scalar, not to [1].
+    if (ns.empty())
+        return sub.reshape(0, 0, nullptr);
     return sub.reshape(0, (int)ns.size(), &ns[0]);
 }
 
@@ -1879,9 +1881,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     int ax = oax.empty() ? 0 : oax[k];
                     bool rev = !odir.empty() && odir[k] != 0;
                     // 0-D scalar output is stored as [1]; drop it so T scalars stack to [T], not [T,1].
+                    // reshape() on an already-0-D Mat would promote it back to 1x1, so skip those.
                     if (k < (int)orank.size() && orank[k] == 0) {
                         for (Mat& e : history[k])
-                            e = e.reshape(0, 0, nullptr);
+                            if (e.dims != 0)
+                                e = e.reshape(0, 0, nullptr);
                     }
                     outMats[S + k] = stackScanAxis(history[k], ax, rev);
                 }

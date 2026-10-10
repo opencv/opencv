@@ -1584,6 +1584,11 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    // A refused model leaves an empty net; without this the lookup below reports a
+    // missing blob, which blames the caller's input name for an import failure.
+    if (!importFailure.empty())
+        CV_Error(Error::StsError, importFailure);
+
     if (mainGraph) {
         CV_Assert(scalefactor == 1);
         CV_Assert(mean.val[0] == 0 && mean.val[1] == 0 && mean.val[2] == 0 && mean.val[3] == 0);
