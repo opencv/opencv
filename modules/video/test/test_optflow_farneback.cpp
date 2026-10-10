@@ -32,9 +32,8 @@ static std::vector<Mat> makeSequence(Size size, int count, int seed = 0x5eed)
 
 static Ptr<FarnebackOpticalFlow> makeFlow(bool reuse)
 {
-    Ptr<FarnebackOpticalFlow> algo = FarnebackOpticalFlow::create(3, 0.5, false, 9, 3);
-    algo->setReuseExpansion(reuse);
-    return algo;
+    return FarnebackOpticalFlow::create(3, 0.5, false, 9, 3, 5, 1.1,
+                                        reuse ? OPTFLOW_FARNEBACK_REUSE_EXPANSION : 0);
 }
 
 static Mat flowWithoutReuse(const Mat& prev, const Mat& next)
@@ -58,7 +57,7 @@ TEST(DenseOpticalFlow_Farneback, Accuracy)
 {
     const std::vector<Mat> frames = makeSequence(Size(320, 240), 4);
     Ptr<FarnebackOpticalFlow> algo = FarnebackOpticalFlow::create();
-    algo->setReuseExpansion(true);
+    algo->setFlags(OPTFLOW_FARNEBACK_REUSE_EXPANSION);
 
     for( size_t i = 0; i + 1 < frames.size(); i++ )
     {
@@ -78,11 +77,10 @@ TEST(DenseOpticalFlow_Farneback, Accuracy)
 
 TEST(DenseOpticalFlow_Farneback, ReuseMatchesNoReuseOnSequence)
 {
-    EXPECT_FALSE(FarnebackOpticalFlow::create()->getReuseExpansion());
+    EXPECT_FALSE(FarnebackOpticalFlow::create()->getFlags() & OPTFLOW_FARNEBACK_REUSE_EXPANSION);
 
     const std::vector<Mat> frames = makeSequence(Size(160, 120), 6);
     Ptr<FarnebackOpticalFlow> algo = makeFlow(true);
-    ASSERT_TRUE(algo->getReuseExpansion());
     for( size_t i = 0; i + 1 < frames.size(); i++ )
     {
         Mat flow;
@@ -168,12 +166,11 @@ TEST(DenseOpticalFlow_Farneback, ReuseReleaseKeepsResult)
     algo->calc(frames[1], frames[2], flow);
     expectSameFlow(flowWithoutReuse(frames[1], frames[2]), flow, "after collectGarbage");
 
-    algo->setReuseExpansion(false);
-    EXPECT_FALSE(algo->getReuseExpansion());
+    algo->setFlags(0);
     algo->calc(frames[2], frames[3], flow);
     expectSameFlow(flowWithoutReuse(frames[2], frames[3]), flow, "reuse off");
 
-    algo->setReuseExpansion(true);
+    algo->setFlags(OPTFLOW_FARNEBACK_REUSE_EXPANSION);
     algo->calc(frames[3], frames[4], flow);
     expectSameFlow(flowWithoutReuse(frames[3], frames[4]), flow, "reuse back on");
 }

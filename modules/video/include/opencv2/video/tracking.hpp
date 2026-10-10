@@ -58,7 +58,8 @@ namespace cv
 
 enum { OPTFLOW_USE_INITIAL_FLOW     = 4,
        OPTFLOW_LK_GET_MIN_EIGENVALS = 8,
-       OPTFLOW_FARNEBACK_GAUSSIAN   = 256
+       OPTFLOW_FARNEBACK_GAUSSIAN   = 256,
+       OPTFLOW_FARNEBACK_REUSE_EXPANSION = 512  //!< FarnebackOpticalFlow only, see FarnebackOpticalFlow::setFlags
      };
 
 /** @brief Finds an object center, size, and orientation.
@@ -232,7 +233,7 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
 -   (Python) An example using the optical flow algorithm described by Gunnar Farneback can be
     found at opencv_source_code/samples/python/opt_flow.py
 
-@sa FarnebackOpticalFlow::setReuseExpansion
+@sa FarnebackOpticalFlow::setFlags, OPTFLOW_FARNEBACK_REUSE_EXPANSION
  */
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, InputOutputArray flow,
                                             double pyr_scale, int levels, int winsize,
@@ -677,17 +678,17 @@ public:
     CV_WRAP virtual void setPolySigma(double polySigma) = 0;
 
     CV_WRAP virtual int getFlags() const = 0;
-    CV_WRAP virtual void setFlags(int flags) = 0;
+    /** @brief Sets the operation flags, see calcOpticalFlowFarneback.
 
-    /** @brief Keep the polynomial expansion of calc()'s second image and reuse it if the next call's
-        first image is identical and pyrScale, polyN and polySigma are unchanged (off by default).
-        Helps on consecutive frames, where each call's prev is the previous call's next. Holds about
-        28 bytes per pixel of 8-bit input at the default pyrScale, twice that during a call; turning
-        it off or collectGarbage() frees it. Not used when calc() runs on OpenCL (UMat flow).
-    @see setReuseExpansion */
-    CV_WRAP virtual bool getReuseExpansion() const = 0;
-    /** @copybrief getReuseExpansion @see getReuseExpansion */
-    CV_WRAP virtual void setReuseExpansion(bool reuse) = 0;
+    Besides the flags listed there, OPTFLOW_FARNEBACK_REUSE_EXPANSION makes calc() keep the
+    polynomial expansion of its second image and reuse it if the next call's first image is
+    identical and pyrScale, polyN and polySigma are unchanged. This helps on consecutive frames,
+    where each call's prev is the previous call's next. It holds about 28 bytes per pixel of 8-bit
+    input at the default pyrScale, twice that during a call; clearing the flag or collectGarbage()
+    frees it. It is not used when calc() runs on OpenCL (UMat flow), and calcOpticalFlowFarneback
+    ignores it.
+    */
+    CV_WRAP virtual void setFlags(int flags) = 0;
 
     CV_WRAP static Ptr<FarnebackOpticalFlow> create(
             int numLevels = 5,

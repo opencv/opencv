@@ -605,7 +605,7 @@ public:
     FarnebackOpticalFlowImpl(int numLevels=5, double pyrScale=0.5, bool fastPyramids=false, int winSize=13,
                              int numIters=10, int polyN=5, double polySigma=1.1, int flags=0) :
         numLevels_(numLevels), pyrScale_(pyrScale), fastPyramids_(fastPyramids), winSize_(winSize),
-        numIters_(numIters), polyN_(polyN), polySigma_(polySigma), flags_(flags), reuseExpansion_(false)
+        numIters_(numIters), polyN_(polyN), polySigma_(polySigma), flags_(flags)
     {
     }
 
@@ -631,13 +631,10 @@ public:
     virtual void setPolySigma(double polySigma) CV_OVERRIDE { polySigma_ = polySigma; }
 
     virtual int getFlags() const CV_OVERRIDE { return flags_; }
-    virtual void setFlags(int flags) CV_OVERRIDE { flags_ = flags; }
-
-    virtual bool getReuseExpansion() const CV_OVERRIDE { return reuseExpansion_; }
-    virtual void setReuseExpansion(bool reuse) CV_OVERRIDE
+    virtual void setFlags(int flags) CV_OVERRIDE
     {
-        reuseExpansion_ = reuse;
-        if( !reuse )
+        flags_ = flags;
+        if( !(flags & OPTFLOW_FARNEBACK_REUSE_EXPANSION) )
             releaseExpansion();
     }
 
@@ -654,7 +651,6 @@ private:
     int polyN_;
     double polySigma_;
     int flags_;
-    bool reuseExpansion_;
 
     // Expansion of the previous call's second image, one plane per pyramid level. The frame
     // and pyrScale fix every level's size and R.size() the depth; winSize, numIters, flags and
@@ -1154,7 +1150,7 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
     CV_OCL_RUN(_flow0.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                calc_ocl(_prev0,_next0,_flow0))
-    const bool reuse = reuseExpansion_;
+    const bool reuse = (flags_ & OPTFLOW_FARNEBACK_REUSE_EXPANSION) != 0;
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;
     const Mat* img[2] = { &prev0, &next0 };
@@ -1280,7 +1276,8 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
     CV_INSTRUMENT_REGION();
 
     Ptr<cv::FarnebackOpticalFlow> optflow;
-    optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
+    optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,
+                                                flags & ~OPTFLOW_FARNEBACK_REUSE_EXPANSION);
     optflow->calc(_prev0,_next0,_flow0);
 }
 

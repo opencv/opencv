@@ -38,7 +38,7 @@ PERF_TEST_P(DenseOpticalFlow_Farneback, perf,
     Mat flow;
 
     Ptr<FarnebackOpticalFlow> algo = FarnebackOpticalFlow::create();
-    algo->setReuseExpansion(reuseExpansion);
+    algo->setFlags(reuseExpansion ? OPTFLOW_FARNEBACK_REUSE_EXPANSION : 0);
 
     TEST_CYCLE()
     {

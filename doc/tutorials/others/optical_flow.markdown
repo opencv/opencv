@@ -180,13 +180,14 @@ See the result below:
 
 When you process consecutive frames, the second image of one call is the first image of the next,
 so half of the polynomial expansion work is a repeat. Keep one cv::FarnebackOpticalFlow instance and
-turn on cv::FarnebackOpticalFlow::setReuseExpansion to skip it. The result is the same; the instance
-holds about 28 bytes per pixel between calls. This applies to the CPU path only, not to UMat flow.
+set cv::OPTFLOW_FARNEBACK_REUSE_EXPANSION in its flags to skip the repeat. The result is the same;
+the instance holds about 28 bytes per pixel between calls. This applies to the CPU path only, not to
+UMat flow.
 
 @add_toggle_cpp
 @code{.cpp}
 Ptr<FarnebackOpticalFlow> fb = FarnebackOpticalFlow::create(3, 0.5, false, 15, 3, 5, 1.2);
-fb->setReuseExpansion(true);
+fb->setFlags(OPTFLOW_FARNEBACK_REUSE_EXPANSION);
 // in the loop, instead of calcOpticalFlowFarneback():
 fb->calc(prvs, next, flow);
 @endcode
@@ -195,7 +196,7 @@ fb->calc(prvs, next, flow);
 @add_toggle_python
 @code{.py}
 fb = cv.FarnebackOpticalFlow.create(3, 0.5, False, 15, 3, 5, 1.2)
-fb.setReuseExpansion(True)
+fb.setFlags(cv.OPTFLOW_FARNEBACK_REUSE_EXPANSION)
 # in the loop, instead of cv.calcOpticalFlowFarneback():
 flow = fb.calc(prvs, next, None)
 @endcode
@@ -204,7 +205,7 @@ flow = fb.calc(prvs, next, None)
 @add_toggle_java
 @code{.java}
 FarnebackOpticalFlow fb = FarnebackOpticalFlow.create(3, 0.5, false, 15, 3, 5, 1.2);
-fb.setReuseExpansion(true);
+fb.setFlags(Video.OPTFLOW_FARNEBACK_REUSE_EXPANSION);
 // in the loop, instead of Video.calcOpticalFlowFarneback():
 fb.calc(prvs, next, flow);
 @endcode
