@@ -483,6 +483,76 @@ INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                             testing::ValuesIn(synthetic_params)),
                         videoio_synthetic_name_printer);
 
+#ifdef HAVE_AVFOUNDATION
+TEST(videoio_avfoundation, bgra_output_preserves_pixels_and_lifetime)
+{
+    if (!videoio_registry::hasBackend(CAP_AVFOUNDATION))
+        throw SkipTestException("AVFoundation backend is not available");
+
+    const Size frameSize(640, 480);
+    const int frameCount = 8;
+    const double fps = 25.0;
+    const int codec = VideoWriter::fourcc('M', 'J', 'P', 'G');
+    const int bgraMode = VideoWriter::fourcc('B', 'G', 'R', 'A');
+    const string videoFile = cv::tempfile("avfoundation_bgra.mov");
+
+    VideoWriter writer;
+    ASSERT_NO_THROW(writer.open(videoFile, CAP_AVFOUNDATION, codec, fps, frameSize, true));
+    ASSERT_TRUE(writer.isOpened());
+
+    Mat source(frameSize, CV_8UC3);
+    for (int i = 0; i < frameCount; ++i)
+    {
+        generateFrame(i, frameCount, source);
+        ASSERT_NO_THROW(writer << source);
+    }
+    writer.release();
+
+    VideoCapture bgrCapture(videoFile, CAP_AVFOUNDATION);
+    VideoCapture bgraCapture(videoFile, CAP_AVFOUNDATION);
+    ASSERT_TRUE(bgrCapture.isOpened());
+    ASSERT_TRUE(bgraCapture.isOpened());
+    ASSERT_TRUE(bgraCapture.set(CAP_PROP_FOURCC, bgraMode));
+    EXPECT_EQ(bgraMode, static_cast<int>(bgraCapture.get(CAP_PROP_FOURCC)));
+    EXPECT_EQ(CV_8UC4, static_cast<int>(bgraCapture.get(CAP_PROP_FORMAT)));
+
+    Mat bgrFrame;
+    Mat bgraFrame;
+    ASSERT_TRUE(bgrCapture.read(bgrFrame));
+    ASSERT_TRUE(bgraCapture.read(bgraFrame));
+    ASSERT_EQ(CV_8UC3, bgrFrame.type());
+    ASSERT_EQ(CV_8UC4, bgraFrame.type());
+    ASSERT_EQ(bgrFrame.size(), bgraFrame.size());
+
+    Mat converted;
+    cvtColor(bgraFrame, converted, COLOR_BGRA2BGR);
+    EXPECT_EQ(0.0, cv::norm(bgrFrame, converted, NORM_INF));
+
+    // A second retrieve after one grab must return the same BGRA frame.
+    ASSERT_TRUE(bgraCapture.grab());
+    Mat firstRetrieve, secondRetrieve;
+    ASSERT_TRUE(bgraCapture.retrieve(firstRetrieve));
+    ASSERT_TRUE(bgraCapture.retrieve(secondRetrieve));
+    ASSERT_EQ(CV_8UC4, secondRetrieve.type());
+    EXPECT_EQ(0.0, cv::norm(firstRetrieve, secondRetrieve, NORM_INF));
+
+    Mat heldFrame = firstRetrieve;
+    Mat heldReference = firstRetrieve.clone();
+    ASSERT_TRUE(bgraCapture.read(bgraFrame));
+    ASSERT_EQ(CV_8UC4, bgraFrame.type());
+    EXPECT_EQ(0.0, cv::norm(heldFrame, heldReference, NORM_INF));
+
+    UMat bgraUMat;
+    ASSERT_TRUE(bgraCapture.grab());
+    ASSERT_TRUE(bgraCapture.retrieve(bgraUMat));
+    ASSERT_EQ(CV_8UC4, bgraUMat.type());
+
+    bgraCapture.release();
+    bgrCapture.release();
+    remove(videoFile.c_str());
+}
+#endif
+
 struct Ext_Fourcc_API
 {
     const char* ext;
