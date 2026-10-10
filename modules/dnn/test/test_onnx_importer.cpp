@@ -8,6 +8,7 @@
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
+#include "../src/mapped_file.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <numeric>
 namespace opencv_test { namespace {
@@ -2362,6 +2363,135 @@ TEST_P(Test_ONNX_layers, Quantized_Gemm)
 TEST_P(Test_ONNX_layers, Gemm_External_Data)
 {
     testONNXModels("gemm_external_data", npy);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data)
+{
+    testONNXModels("layer_norm_external_data", npy);
+}
+
+// ENGINE_ORT registers the file for ONNX Runtime without parsing it, so neither the mapping
+// nor the bounds check below is reached.
+static bool ortEngineForced()
+{
+    return static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT(
+               "OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_ORT;
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    testONNXModels("layer_norm_external_data_unaligned", npy);
+    // A refused mapping copies instead and yields the same values; only the count separates them.
+    if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
+    {
+        EXPECT_GT(cv::dnn::mappedViewCount(), views);
+    }
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    // A range past the end of the file must be refused here; mapping it faults at inference.
+    EXPECT_THROW(readNetFromONNX(_tf("models/layer_norm_external_data_truncated.onnx")),
+                 cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReleasedOncePacked)
+{
+    Net net = readNetFromONNX(_tf("models/gemm_vector_bias.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int gemm = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "Gemm")
+            gemm = id;
+    }
+    ASSERT_GE(gemm, 0);
+    EXPECT_FALSE(net.getParam(gemm, 0).empty());
+    EXPECT_FALSE(net.getParam(gemm, 1).empty());
+
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it.
+    EXPECT_EQ(net.getParam(gemm, 0).empty(), backend != DNN_BACKEND_CUDA);
+    EXPECT_FALSE(net.getParam(gemm, 1).empty());
+}
+
+TEST_P(Test_ONNX_layers, MatMul_ConstWeight_ReleasedOncePacked)
+{
+    // B is 3-D, so fuseMatMulConstBToGemm declines it and the layer stays a MatMul.
+    Net net = readNetFromONNX(_tf("models/matmul_3d_init.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int matmul = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "MatMul")
+            matmul = id;
+    }
+    ASSERT_GE(matmul, 0);
+    EXPECT_FALSE(net.getParam(matmul, 0).empty());
+
+    int sizes[] = {5, 2, 3};
+    Mat input(3, sizes, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it.
+    EXPECT_EQ(net.getParam(matmul, 0).empty(), backend != DNN_BACKEND_CUDA);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
+{
+    const String model = _tf("models/gemm_vector_bias.onnx");
+    Mat big(16, 6, CV_32F), small(3, 6, CV_32F);
+    randu(big, -1.0, 1.0);
+    randu(small, -1.0, 1.0);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    // Forward the large shape first: the thin pack is built only for small M and never re-checked.
+    net.setInput(big);
+    Mat big_first = net.forward().clone();
+    net.setInput(small);
+    Mat small_out = net.forward().clone();
+    net.setInput(big);
+    Mat big_again = net.forward().clone();
+
+    Net fresh_big = readNetFromONNX(model);
+    fresh_big.setPreferableBackend(backend);
+    fresh_big.setPreferableTarget(target);
+    fresh_big.setInput(big);
+    normAssert(big_first, fresh_big.forward());
+    normAssert(big_again, big_first);
+
+    Net fresh_small = readNetFromONNX(model);
+    fresh_small.setPreferableBackend(backend);
+    fresh_small.setPreferableTarget(target);
+    fresh_small.setInput(small);
+    normAssert(small_out, fresh_small.forward());
 }
 
 

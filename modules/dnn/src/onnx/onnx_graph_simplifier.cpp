@@ -1893,6 +1893,27 @@ static std::string getExternalDataValue(const opencv_onnx::TensorProto& tensor_p
     return std::string();
 }
 
+// Resolves an external tensor's file path, byte offset and declared length. `length` is
+// size_t(-1) when unspecified, i.e. the payload runs to the end of the file; 0 is a real length.
+static bool resolveExternalData(const opencv_onnx::TensorProto& tensor_proto,
+                                const std::string& base_path,
+                                std::string& full_path, size_t& offset, size_t& length)
+{
+    std::string location_path = getExternalDataValue(tensor_proto, "location");
+    if (location_path.empty())
+        return false;
+    full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
+    offset = 0;
+    std::string offset_str = getExternalDataValue(tensor_proto, "offset");
+    if (!offset_str.empty())
+        offset = (size_t)std::stoull(offset_str);
+    length = (size_t)-1;
+    std::string length_str = getExternalDataValue(tensor_proto, "length");
+    if (!length_str.empty())
+        length = (size_t)std::stoull(length_str);
+    return true;
+}
+
 static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
                               std::vector<int64_t>& tensor_data, size_t& raw_data_size,
                               const std::string& base_path = "")
@@ -1901,24 +1922,17 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     if (tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL) {
     #if OPENCV_HAVE_FILESYSTEM_SUPPORT
         CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
-        std::string location_path = getExternalDataValue(tensor_proto, "location");
-        CV_CheckTrue(!location_path.empty(), "External tensor data location is not specified");
-
-        std::string full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
+        std::string full_path;
+        size_t offset = 0, declared_length = 0;
+        CV_CheckTrue(resolveExternalData(tensor_proto, base_path, full_path,
+                                         offset, declared_length),
+                     "External tensor data location is not specified");
 
         std::ifstream file(full_path, std::ios::binary | std::ios::ate);
         CV_CheckTrue(file.is_open(), "Failed to open external tensor data file");
 
         size_t file_size = (size_t)file.tellg();
-        size_t offset = 0;
-        std::string offset_str = getExternalDataValue(tensor_proto, "offset");
-        if (!offset_str.empty())
-            offset = (size_t)std::stoull(offset_str);
-
-        size_t length = file_size - offset;
-        std::string length_str = getExternalDataValue(tensor_proto, "length");
-        if (!length_str.empty())
-            length = (size_t)std::stoull(length_str);
+        size_t length = declared_length == (size_t)-1 ? file_size - offset : declared_length;
 
         CV_Check(offset, offset <= file_size, "External data offset exceeds file size");
         CV_Check(length, length <= file_size - offset, "External data length exceeds available bytes");
@@ -1950,6 +1964,91 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     }
 }
 
+// True when the payload already holds the bytes of its dataType2cv() type, so a Mat header
+// over it carries what the copy below would. The rest are unpacked, shifted, or widened.
+static bool payloadMatchesCvType(int dt, bool uint8ToInt8)
+{
+    if (onnx_dtype::isExotic(dt) ||
+        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ||
+        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ||
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ||
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ||
+        (dt == opencv_onnx::TensorProto_DataType_UINT8 && uint8ToInt8))
+        return false;
+    return dataType2cv(dt) >= 0;
+}
+
+// Off returns every external initializer to the copy path, for a caller that rewrites or deletes
+// the weight file while a Net built from it is still alive.
+static bool mmapExternalDataEnabled()
+{
+    static const bool enabled =
+        utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true);
+    return enabled;
+}
+
+// Builds a Mat over the mapped file, or returns false to leave the caller on the copy path.
+static bool mapExternalTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8,
+                              const std::string& base_path, ExternalDataCache& cache, Mat& blob)
+{
+    if (!mmapExternalDataEnabled())
+        return false;
+    if (!payloadMatchesCvType(tensor_proto.data_type(), uint8ToInt8))
+        return false;
+    int type = dataType2cv(tensor_proto.data_type());
+    if (type < 0 || tensor_proto.dims_size() == 0)
+        return false;
+
+    std::string full_path;
+    size_t offset = 0, length = 0;
+    if (!resolveExternalData(tensor_proto, base_path, full_path, offset, length))
+        return false;
+
+    const size_t size_max = std::numeric_limits<size_t>::max();
+    std::vector<int> sizes;
+    size_t total_elems = 1;
+    for (int i = 0; i < tensor_proto.dims_size(); i++)
+    {
+        int64_t d = tensor_proto.dims(i);
+        if (d <= 0)
+            return false;
+        sizes.push_back((int)d);
+        total_elems = total_elems > size_max / (size_t)d ? size_max : total_elems * (size_t)d;
+    }
+
+    // The copy path validates the payload before reading it; a header has no such moment, so a
+    // shape this mapping cannot cover goes back to that path and raises there.
+    size_t esz = CV_ELEM_SIZE(type);
+    if (offset % esz != 0 || total_elems > size_max / esz)
+        return false;
+    size_t payload = total_elems * esz;
+    if (length != (size_t)-1 && length < payload)
+        return false;
+
+    Ptr<MappedSource> src = cache.open(full_path);
+    if (src.empty())
+        return false;
+    // Only the payload is mapped; the declared length still needs the copy path's bounds check.
+    if (length != (size_t)-1 && (offset > src->fileSize() || length > src->fileSize() - offset))
+        return false;
+
+    Ptr<MappedFile> view = MappedFile::open(src, offset, payload);
+    if (view.empty())
+        return false;
+
+    blob = MappedFile::wrap(view, (int)sizes.size(), sizes.data(), type);
+    return true;
+}
+
+Ptr<MappedSource> ExternalDataCache::open(const std::string& path)
+{
+    std::map<std::string, Ptr<MappedSource> >::iterator it = files.find(path);
+    if (it != files.end())
+        return it->second;
+    // A failed open is cached too, so a file is only ever attempted once.
+    return files[path] = MappedSource::open(path);
+}
+
 // ONNX dtype -> OpenCV type. Shared with the ONNX importer (declared in the header).
 int dataType2cv(int dt)
 {
@@ -1976,7 +2075,8 @@ int dataType2cv(int dt)
         onnx_dtype::isExoticFloat(dt) ? CV_16F : -1;
 }
 
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8,
+                     const std::string base_path, ExternalDataCache* cache)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&
@@ -1998,6 +2098,15 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             return Mat(shape, type);
         }
         return Mat();
+    }
+
+    if (cache && tensor_proto.has_data_location() &&
+        tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL &&
+        cache->mappable(tensor_proto.name()))
+    {
+        Mat mapped;
+        if (mapExternalTensor(tensor_proto, uint8ToInt8, base_path, *cache, mapped))
+            return mapped;
     }
 
     // read binary data, should be just empty in case it is set in <DTYPE>_data field

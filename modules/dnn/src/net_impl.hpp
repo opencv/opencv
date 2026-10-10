@@ -520,6 +520,8 @@ struct Net::Impl : public detail::NetImplBase
     void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
     // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()
     void useCounts(std::vector<int>& usecounts) const;
+    // drops the engine's handle on constants that no surviving layer lists as an input
+    void releaseUnusedConsts();
 
     int updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain);
 

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 // backends
@@ -145,6 +146,10 @@ public:
         CV_Error(Error::StsError, "DNN/Gemm: could not derive OP mode");
     }
 
+    // finalize() drops B once it is packed, so its shape has to outlive the blob
+    MatShape constBShape() const {
+        return blobs[0].empty() ? wshape0 : shape(blobs[0]);
+    }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
@@ -159,7 +164,7 @@ public:
 
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0];
-        const auto shape_B =  constB(mode) ? shape(blobs[0]) : inputs[1];
+        const auto shape_B =  constB(mode) ? constBShape() : inputs[1];
         CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
         CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
 
@@ -225,7 +230,7 @@ public:
         CV_Assert(!inputs.empty());
         LayerGemmOpMode mode_ = getOpMode(inputs.size(), blobs.size());
         const auto shape_A = inputs[0];
-        const auto shape_B = constB(mode_) ? shape(blobs[0]) : inputs[1];
+        const auto shape_B = constB(mode_) ? constBShape() : inputs[1];
         int M = trans_a ? shape_A.back() : shape_A[shape_A.size() - 2];
         int K = trans_a ? shape_A[shape_A.size() - 2] : shape_A.back();
         int N = trans_b ? shape_B[shape_B.size() - 2] : shape_B.back();
@@ -296,8 +301,8 @@ public:
 
         LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
 
-        // pack B if it is const
-        if (constB(mode) && blobs[0].data != last_packed_blob_data) {
+        // pack B if it is const; an already-released B stays released, it has nothing left to pack
+        if (constB(mode) && !blobs[0].empty() && blobs[0].data != last_packed_blob_data) {
             packed_B.clear();
             packed_B.shrink_to_fit();
             thin_packed_B.clear();
@@ -336,8 +341,8 @@ public:
             }
 #endif
             if (!mlas_packed) {
-                fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-
+                // forward() prefers thin_packed_B whenever it is non-empty, so a generic pack
+                // built beside it would be a second N*K copy of B that no kernel ever loads.
                 if (!trans_a && blobs[0].type() == CV_32F) {
                     std::vector<Mat> outputs;
                     outputs_arr.getMatVector(outputs);
@@ -357,9 +362,30 @@ public:
                         }
                     }
                 }
+                if (thin_packed_B.empty())
+                    fastGemmPackB(blobs[0], packed_B, trans_b, opt);
             }
 
             last_packed_blob_data = blobs[0].data;
+
+            // The packed copy is what the kernels read from here on; the original is dead weight.
+            // A layer built outside a Net holds the only copy, so it keeps it.
+            Net::Impl* netimpl = getNetImpl(this);
+            if (blobs[0].type() == CV_32F &&
+                (mlas_packed || !packed_B.empty() || !thin_packed_B.empty()) &&
+                netimpl && netimpl->mainGraph) {
+                wshape0 = shape(blobs[0]);
+#ifdef HAVE_CUDA
+                // initCUDA() reads B after finalize(), so a net targeting CUDA keeps it.
+                if (netimpl->preferableBackend != DNN_BACKEND_CUDA ||
+                    !supportBackend(DNN_BACKEND_CUDA))
+#endif
+                {
+                    blobs[0].release();
+                    // A recycled address would compare equal and skip the repack.
+                    last_packed_blob_data = nullptr;
+                }
+            }
         }
 
         if (constC(mode) && flatten_a) {
@@ -519,11 +545,11 @@ public:
                 }
             }
 #endif
-            CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             if (!thin_packed_B.empty()) {
                 fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
                              thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
             } else {
+                CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
                 fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
             }
         } else {
@@ -615,6 +641,7 @@ public:
         std::vector<cuda::GpuMatND> inputs;
         inputs_.getGpuMatNDVector(inputs);
         auto B = blobs[0];
+        CV_CheckFalse(B.empty(), "DNN/Gemm/Cuda: input B (weight) was released and not retained");
         auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
@@ -773,6 +800,7 @@ private:
     int real_ndims_C;
     FastGemmOpt opt;
     const uchar* last_packed_blob_data = nullptr;
+    MatShape wshape0;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {
