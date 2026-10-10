@@ -2336,9 +2336,40 @@ void test_hal_intrin_int64()
 }
 
 //============= Floating point =====================================================================
+void test_v_round_float32()
+{
+    static const float inputValues[] = {
+        -2.5f, -3.5f, -2.6f, -2.4f, 2.5f, 3.5f, 2.6f, 2.4f,
+        -2147483648.0f, 2147483520.0f,
+        -1.0f, -1.7f, 0.49999997f, 8388609.0f
+    };
+    static const int expectedValues[] = {
+        -2, -4, -3, -2, 2, 4, 3, 2, (-2147483647 - 1), 2147483520,
+        -1, -2, 0, 8388609
+    };
+    const int valueCount = sizeof(inputValues) / sizeof(inputValues[0]);
+    const int lanes = VTraits<v_float32>::vlanes();
+    for (int offset = 0; offset < valueCount; offset += lanes)
+    {
+        Data<v_float32> data;
+        const int batchLanes = std::min(lanes, valueCount - offset);
+        for (int i = 0; i < batchLanes; ++i)
+            data[i] = inputValues[offset + i];
+
+        v_float32 a = data;
+        Data<v_int32> result = v_round(a);
+        for (int i = 0; i < batchLanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d, input=%g", offset + i, data[i]));
+            EXPECT_EQ(expectedValues[offset + i], result[i]);
+        }
+    }
+}
+
 void test_hal_intrin_float32()
 {
     DUMP_ENTRY(v_float32);
+    test_v_round_float32();
     TheTest<v_float32>()
         .test_loadstore()
         .test_interleave()
