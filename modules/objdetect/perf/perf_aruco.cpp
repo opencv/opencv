@@ -7,6 +7,42 @@
 namespace opencv_test {
 using namespace perf;
 
+typedef TestBaseWithParam<int> ArucoNestedMarkerImage;
+
+PERF_TEST_P(ArucoNestedMarkerImage, generateImageMarkerNested, Values(120, 601, 2000)) {
+    const aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_24);
+    const int sidePixels = GetParam();
+    Mat image(sidePixels, sidePixels, CV_8UC1);
+    TEST_CYCLE() {
+        aruco::generateImageMarkerNested(dictionary, 0, sidePixels, image);
+    }
+    SANITY_CHECK(image);
+}
+
+typedef tuple<int, bool> ArucoCellRatioIdentifyParams;
+typedef TestBaseWithParam<ArucoCellRatioIdentifyParams> ArucoCellRatioIdentify;
+
+PERF_TEST_P(ArucoCellRatioIdentify, identify,
+            Combine(Values((int)aruco::DICT_4X4_NESTED_5, (int)aruco::DICT_4X4_NESTED_10,
+                           (int)aruco::DICT_4X4_NESTED_24), Values(false, true))) {
+    const aruco::Dictionary dictionary = aruco::getPredefinedDictionary(get<0>(GetParam()));
+    const bool match = get<1>(GetParam());
+    const int lastId = dictionary.bytesList.rows - 1;
+    Mat candidate = match ? dictionary.getMarkerBits(lastId) :
+                            Mat(dictionary.markerSize, dictionary.markerSize, CV_32FC1, Scalar(0.5f));
+    int id = -1, rotation = -1;
+    bool identified = false;
+    TEST_CYCLE() {
+        identified = dictionary.identify(candidate, id, rotation, 1.0, 0.25f);
+    }
+    ASSERT_EQ(match, identified);
+    ASSERT_EQ(match ? lastId : -1, id);
+    if(match) {
+        ASSERT_EQ(0, rotation);
+    }
+    SANITY_CHECK_NOTHING();
+}
+
 typedef tuple<bool, int> UseArucoParams;
 typedef TestBaseWithParam<UseArucoParams> EstimateAruco;
 #define ESTIMATE_PARAMS Combine(Values(false, true), Values(-1))

@@ -55,9 +55,9 @@ int detectNestedMarkers() {
 
     cv::Mat frame;
     while(cap.read(frame)) {
-        std::vector<std::vector<cv::Point2f>> corners, rejected;
+        std::vector<std::vector<cv::Point2f>> corners;
         std::vector<int> ids;
-        detector.detectMarkers(frame, corners, ids, rejected);
+        detector.detectMarkers(frame, corners, ids);
         cv::aruco::drawDetectedMarkers(frame, corners, ids);
         cv::imshow("nested markers", frame);
         if(cv::waitKey(1) == 27) break;
@@ -87,16 +87,16 @@ int estimateNestedMarkerPose(const cv::Mat& cameraMatrix, const cv::Mat& distCoe
                            std::vector<int>{0, 1});
 
     while(cap.read(frame)) {
-        std::vector<std::vector<cv::Point2f>> corners, rejected;
+        std::vector<std::vector<cv::Point2f>> corners;
         std::vector<int> ids;
-        detector.detectMarkers(frame, corners, ids, rejected);
+        detector.detectMarkers(frame, corners, ids);
         cv::aruco::drawDetectedMarkers(frame, corners, ids);
 
         if(!ids.empty()) {
             cv::Mat objPoints, imgPoints;
             board.matchImagePoints(corners, ids, objPoints, imgPoints);
 
-            if(objPoints.total() >= 4) {
+            if(objPoints.checkVector(3) >= 4) {
                 cv::Mat rvec, tvec;
                 bool ok = cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
 
@@ -141,9 +141,9 @@ int detectCustomNestedMarkers() {
 
     cv::Mat frame;
     while(cap.read(frame)) {
-        std::vector<std::vector<cv::Point2f>> corners, rejected;
+        std::vector<std::vector<cv::Point2f>> corners;
         std::vector<int> ids;
-        detector.detectMarkers(frame, corners, ids, rejected);
+        detector.detectMarkers(frame, corners, ids);
         cv::aruco::drawDetectedMarkers(frame, corners, ids);
 
         cv::imshow("custom nested markers", frame);

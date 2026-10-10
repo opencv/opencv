@@ -53,6 +53,7 @@ static inline bool readWrite(DetectorParameters &params, const FileNode* readNod
     check |= readWriteParameter("minOtsuStdDev", params.minOtsuStdDev, readNode, writeStorage);
     check |= readWriteParameter("errorCorrectionRate", params.errorCorrectionRate, readNode, writeStorage);
     check |= readWriteParameter("minGroupDistance", params.minGroupDistance, readNode, writeStorage);
+    check |= readWriteParameter("detectNestedMarkers", params.detectNestedMarkers, readNode, writeStorage);
     // new aruco 3 functionality
     check |= readWriteParameter("useAruco3Detection", params.useAruco3Detection, readNode, writeStorage);
     check |= readWriteParameter("minSideLengthCanonicalImg", params.minSideLengthCanonicalImg, readNode, writeStorage);
