@@ -50,7 +50,11 @@ public:
         net.setPreferableTarget(parameters.target);
 
         i2bp.mean = parameters.meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / parameters.stdvalue) * (1 / 255.0);
+        const Scalar& sv = parameters.stdvalue;
+        i2bp.scalefactor = Scalar(1.0 / (sv[0] * 255.0),
+                                  1.0 / (sv[1] * 255.0),
+                                  1.0 / (sv[2] * 255.0),
+                                  0.0);
         tracking_score_threshold = parameters.tracking_score_threshold;
     }
 
@@ -60,7 +64,10 @@ public:
 
         net = model;
         i2bp.mean = meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = Scalar(1.0 / (stdvalue[0] * 255.0),
+                                  1.0 / (stdvalue[1] * 255.0),
+                                  1.0 / (stdvalue[2] * 255.0),
+                                  0.0);
         tracking_score_threshold = _tracking_score_threshold;
     }
 
