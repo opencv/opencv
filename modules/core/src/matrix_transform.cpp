@@ -1014,6 +1014,25 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_INSTRUMENT_REGION();
 
+    if( _src.dims() > 2 )
+    {
+        if (flip_mode == 0)
+        {
+            flipND(_src, _dst, 0);
+        }
+        else if (flip_mode > 0)
+        {
+            flipND(_src, _dst, 1);
+        }
+        else
+        {
+            Mat tmp;
+            flipND(_src, tmp, 0);
+            flipND(tmp, _dst, 1);
+        }
+        return;
+    }
+
     CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
 
