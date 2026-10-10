@@ -1544,6 +1544,7 @@ CV__DNN_INLINE_NS_BEGIN
      * A row is either [cx, cy, w, h] followed by one score per class, or
      * [x1, y1, x2, y2, score, classIndex] as produced by an export that folds in NMS.
      * Coordinates are blob pixels unless the name says normalized.
+     * The output is 3D, [B, C, N] or [B, N, C], and the anchor axis must be the longer one.
      * @see Model::setOutputFormat
      */
     enum DetectionOutputFormat
