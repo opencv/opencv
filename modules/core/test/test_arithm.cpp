@@ -3027,6 +3027,63 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
+// cv_abs() must return the magnitude for every input, including the lowest value of each signed
+// type, where the magnitude is not representable in that type and std::abs() is undefined.
+TEST(Core_CvAbs, lowest_signed_values)
+{
+    EXPECT_EQ((unsigned)INT_MAX + 1u, cv_abs(INT_MIN));
+    EXPECT_EQ((unsigned)INT_MAX,      cv_abs(INT_MAX));
+    EXPECT_EQ(1u,                     cv_abs(-1));
+
+    EXPECT_EQ((uint64)LLONG_MAX + 1ull, cv_abs((int64)LLONG_MIN));
+    EXPECT_EQ((uint64)LLONG_MAX,        cv_abs((int64)LLONG_MAX));
+    EXPECT_EQ(1ull,                     cv_abs((int64)-1));
+}
+
+// An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
+// Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
+// width so the body, the tail and the two together are covered.
+typedef testing::TestWithParam< tuple<int, int64_t, int, bool> > Core_NormL1_Signed;
+
+TEST_P(Core_NormL1_Signed, exact_and_non_negative)
+{
+    const int     depth  = get<0>(GetParam());
+    const int64_t value  = get<1>(GetParam());
+    const int     len    = get<2>(GetParam());
+    const bool    masked = get<3>(GetParam());
+
+    if (depth == CV_32S && (value < INT_MIN || value > INT_MAX))
+        throw SkipTestException("value is out of int32 range");
+
+    Mat src(1, len, depth);
+    for (int i = 0; i < len; i++)
+    {
+        if (depth == CV_32S)
+            src.ptr<int>(0)[i] = (int)value;
+        else
+            src.ptr<int64_t>(0)[i] = value;
+    }
+    Mat mask = masked ? Mat(1, len, CV_8U, Scalar(255)) : Mat();
+
+    const double got = cv::norm(src, NORM_L1, mask);
+    // |value| and the total are both below 2^53 for the values used here, so this is exact
+    const double expected = (double)len * std::abs((double)value);
+
+    EXPECT_GE(got, 0.0) << "an L1 norm cannot be negative";
+    EXPECT_EQ(expected, got)
+        << "depth " << depth << ", value " << value << ", length " << len
+        << (masked ? ", masked" : "");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_Signed,
+    testing::Combine(
+        testing::Values(CV_32S, CV_64S),
+        testing::Values((int64_t)INT_MIN, (int64_t)INT_MAX, (int64_t)16777217,
+                        (int64_t)1073741825, (int64_t)-1073741825, (int64_t)1000,
+                        -(1LL << 52), (1LL << 52)),
+        testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
+        testing::Bool()));
+
 TEST(Core_Norm, NORM_L2SQR_16SC4_large)
 {
     const int sizes[] = {1, 116, 40};

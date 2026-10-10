@@ -306,10 +306,12 @@ inline int cv_abs(uchar x) { return x; }
 inline int cv_abs(schar x) { return std::abs(x); }
 inline int cv_abs(ushort x) { return x; }
 inline int cv_abs(short x) { return std::abs(x); }
-inline unsigned cv_abs(int x) { return (unsigned)std::abs(x); }
+// std::abs() is undefined at the lowest value of a signed type, since the magnitude is not
+// representable in it. Negate in the unsigned type, where it is.
+inline unsigned cv_abs(int x) { return x < 0 ? 0u - (unsigned)x : (unsigned)x; }
 inline unsigned cv_abs(unsigned x) { return x; }
 inline uint64 cv_abs(uint64 x) { return x; }
-inline uint64 cv_abs(int64 x) { return (uint64)std::abs(x); }
+inline uint64 cv_abs(int64 x) { return x < 0 ? 0ull - (uint64)x : (uint64)x; }
 inline float cv_abs(hfloat x) { return std::abs((float)x); }
 inline float cv_abs(bfloat x) { return std::abs((float)x); }
 inline int cv_absdiff(uchar x, uchar y) { return (int)std::abs((int)x - (int)y); }

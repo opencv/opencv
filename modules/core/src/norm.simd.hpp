@@ -774,9 +774,11 @@ struct NormL1_SIMD<int, double> {
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            v_float32 v0 = v_abs(v_cvt_f32(vx_load(src + j))), v1 = v_abs(v_cvt_f32(vx_load(src + j + VTraits<v_int32>::vlanes())));
-            r00 = v_add(r00, v_cvt_f64(v0)); r01 = v_add(r01, v_cvt_f64_high(v0));
-            r10 = v_add(r10, v_cvt_f64(v1)); r11 = v_add(r11, v_cvt_f64_high(v1));
+            // Widen to double before taking the magnitude: exact over the whole int32 range,
+            // INT_MIN included, which a float intermediate would not be above 2^24.
+            v_int32 i0 = vx_load(src + j), i1 = vx_load(src + j + VTraits<v_int32>::vlanes());
+            r00 = v_add(r00, v_abs(v_cvt_f64(i0))); r01 = v_add(r01, v_abs(v_cvt_f64_high(i0)));
+            r10 = v_add(r10, v_abs(v_cvt_f64(i1))); r11 = v_add(r11, v_abs(v_cvt_f64_high(i1)));
         }
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         for (; j < n; j++) {
@@ -1997,9 +1999,13 @@ struct MaskedNormL1_SIMD<int, double> {
             int i = 0;
             v_float64 acc0 = vx_setzero_f64(), acc1 = vx_setzero_f64();
             for (; i <= len - vstep; i += vstep) {
-                v_int32 s = v_reinterpret_as_s32(v_and(v_abs(vx_load(src + i)), v_normmask_u32(mask + i)));
-                acc0 = v_add(acc0, v_cvt_f64(s));
-                acc1 = v_add(acc1, v_cvt_f64_high(s));
+                // Mask the value, then widen and take the magnitude in double. v_abs() does give
+                // |INT_MIN| as an unsigned 2147483648, but reinterpreting that back as int32 turns
+                // it negative again, and the widening then carries the sign into the accumulator.
+                v_int32 s = v_reinterpret_as_s32(v_and(v_reinterpret_as_u32(vx_load(src + i)),
+                                                       v_normmask_u32(mask + i)));
+                acc0 = v_add(acc0, v_abs(v_cvt_f64(s)));
+                acc1 = v_add(acc1, v_abs(v_cvt_f64_high(s)));
             }
             result = v_reduce_sum(v_add(acc0, acc1));
             for (; i < len; i++)
