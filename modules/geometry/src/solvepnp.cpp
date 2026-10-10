@@ -342,11 +342,19 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if(_inliers.needed())
     {
+        // Recompute inliers based on the final refined pose, not the RANSAC consensus mask.
+        // The refinement step may shift the pose enough to include or exclude borderline points.
+        std::vector<cv::Point2f> projected;
+        cv::projectPoints(opoints.reshape(3, npoints), rvec, tvec, cameraMatrix, distCoeffs, projected);
         Mat _local_inliers;
+        const float thresh2 = reprojectionError * reprojectionError;
         for (int i = 0; i < npoints; ++i)
         {
-            if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
-                _local_inliers.push_back(i);    // output inliers vector
+            const cv::Point2f ip = ipoints.reshape(2, npoints).at<cv::Point2f>(i);
+            float dx = ip.x - projected[i].x;
+            float dy = ip.y - projected[i].y;
+            if (dx*dx + dy*dy <= thresh2)
+                _local_inliers.push_back(i);
         }
         _local_inliers.copyTo(_inliers);
     }
