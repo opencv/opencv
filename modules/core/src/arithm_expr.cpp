@@ -945,10 +945,10 @@ void TExpr::compile()
         }
     for (int b = 0; b < nbuffers; b++) bufEszPrefix[b + 1] += bufEszPrefix[b];   // -> prefix sums
 
-    // L1 fragment cap: # elements one ~16KB scratch fragment holds (exec fragments the strip so the
+    // L1 fragment cap: # elements one ~4KB scratch fragment holds (exec fragments the strip so the
     // intermediates stay hot). Pure function of the temp byte layout, hence computed here once.
     const int totalEsz = bufEszPrefix[nbuffers];
-    capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : INT_MAX;
+    capElems = totalEsz > 0 ? std::max(64, (4 * 1024) / totalEsz) : INT_MAX;
 }
 
 
@@ -1294,15 +1294,15 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
 
             // Temps present: walk the strip in L1-sized fragments so the intermediates stay hot.
             // Byte layout (bufEszPrefix) and the fragment cap (capElems) both come from compile();
-            // scratch is totalEsz*wf0 (<= ~16KB).
+            // scratch is totalEsz*wf0 (<= ~4KB).
             const int totalEsz = bufEszPrefix[nbuffers];
             const int wf0 = std::min((int)total, capElems);
 
             const size_t region = alignSize((size_t)wf0, 8);
             // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
-            // buffer is free (we only WRITE to it); the inline 16KB covers the L1-capped size, heap backs
+            // buffer is free (we only WRITE to it); the inline 4KB covers the L1-capped size, heap backs
             // the rare larger case. uint64_t is used for memory alignment on the worst case.
-            AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> scratchBuf(
+            AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> scratchBuf(
                 divUp((size_t)totalEsz * region, (unsigned)sizeof(uint64_t)));
             uchar* scratch = (uchar*)scratchBuf.data();
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
@@ -1480,8 +1480,8 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         const size_t region = alignSize((size_t)bw * bh, 8);
         // uint64_t elements (see the note on scratchBuf above): keeps the block-local temp store
         // 8-byte aligned, which the 64-bit-lane kernels require on 32-bit ABIs.
-        AutoBuffer<uint64_t, (16*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
-            divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~16KB)
+        AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
+            divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~4KB)
         uchar* tstore = (uchar*)tstoreBuf.data();
 
         AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
