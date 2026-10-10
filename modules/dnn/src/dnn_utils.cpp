@@ -552,6 +552,29 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     }
 }
 
+// CROP_CENTER/LETTERBOX only: imageCoord = (blobCoord - offset) / resizeFactor.
+static void getBlobToImageMapping(ImagePaddingMode paddingmode, const Size& size, const Size& imgSize,
+                                   float& resizeFactor, float& offsetX, float& offsetY)
+{
+    switch (paddingmode)
+    {
+    case DNN_PMODE_CROP_CENTER:
+        resizeFactor = std::max(size.width / (float)imgSize.width,
+                                 size.height / (float)imgSize.height);
+        offsetX = -0.5f * (imgSize.width * resizeFactor - size.width);
+        offsetY = -0.5f * (imgSize.height * resizeFactor - size.height);
+        break;
+    case DNN_PMODE_LETTERBOX:
+        resizeFactor = std::min(size.width / (float)imgSize.width,
+                                 size.height / (float)imgSize.height);
+        offsetX = (float)((size.width - int(imgSize.width * resizeFactor)) / 2);
+        offsetY = (float)((size.height - int(imgSize.height * resizeFactor)) / 2);
+        break;
+    default:
+        CV_Error(cv::Error::StsBadArg, "Unknown padding mode");
+    }
+}
+
 Rect Image2BlobParams::blobRectToImageRect(const Rect &r, const Size &oriImage)
 {
     CV_Assert(!oriImage.empty());
@@ -568,36 +591,7 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std
     rImg.resize(rBlob.size());
     if (size != imgSize)
     {
-        if (this->paddingmode == DNN_PMODE_CROP_CENTER)
-        {
-            float resizeFactor = std::max(size.width / (float)imgSize.width,
-                size.height / (float)imgSize.height);
-            for (int i = 0; i < rBlob.size(); i++)
-            {
-                rImg[i] = Rect((rBlob[i].x + 0.5 * (imgSize.width * resizeFactor - size.width)) / resizeFactor,
-                               (rBlob[i].y + 0.5 * (imgSize.height * resizeFactor - size.height)) / resizeFactor,
-                               rBlob[i].width / resizeFactor,
-                               rBlob[i].height / resizeFactor);
-            }
-        }
-        else if (this->paddingmode == DNN_PMODE_LETTERBOX)
-        {
-            float resizeFactor = std::min(size.width / (float)imgSize.width,
-                size.height / (float)imgSize.height);
-            int rh = int(imgSize.height * resizeFactor);
-            int rw = int(imgSize.width * resizeFactor);
-
-            int top = (size.height - rh) / 2;
-            int left = (size.width - rw) / 2;
-            for (int i = 0; i < rBlob.size(); i++)
-            {
-                rImg[i] = Rect((rBlob[i].x - left) / resizeFactor,
-                               (rBlob[i].y - top) / resizeFactor,
-                               rBlob[i].width / resizeFactor,
-                               rBlob[i].height / resizeFactor);
-            }
-        }
-        else if (this->paddingmode == DNN_PMODE_NULL)
+        if (this->paddingmode == DNN_PMODE_NULL)
         {
             for (int i = 0; i < rBlob.size(); i++)
             {
@@ -608,7 +602,52 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std
             }
         }
         else
-            CV_Error(cv::Error::StsBadArg, "Unknown padding mode");
+        {
+            float resizeFactor, offsetX, offsetY;
+            getBlobToImageMapping(this->paddingmode, size, imgSize, resizeFactor, offsetX, offsetY);
+            for (int i = 0; i < rBlob.size(); i++)
+            {
+                rImg[i] = Rect((rBlob[i].x - offsetX) / resizeFactor,
+                               (rBlob[i].y - offsetY) / resizeFactor,
+                               rBlob[i].width / resizeFactor,
+                               rBlob[i].height / resizeFactor);
+            }
+        }
+    }
+    else
+    {
+        rImg.assign(rBlob.begin(), rBlob.end());
+    }
+}
+
+void Image2BlobParams::blobPointsToImagePoints(const std::vector<Point2f> &pBlob, std::vector<Point2f>& pImg, const Size& imgSize)
+{
+    Size size = this->size;
+    pImg.resize(pBlob.size());
+    if (size != imgSize)
+    {
+        if (this->paddingmode == DNN_PMODE_NULL)
+        {
+            for (size_t i = 0; i < pBlob.size(); i++)
+            {
+                pImg[i] = Point2f(pBlob[i].x * (float)imgSize.width / size.width,
+                                  pBlob[i].y * (float)imgSize.height / size.height);
+            }
+        }
+        else
+        {
+            float resizeFactor, offsetX, offsetY;
+            getBlobToImageMapping(this->paddingmode, size, imgSize, resizeFactor, offsetX, offsetY);
+            for (size_t i = 0; i < pBlob.size(); i++)
+            {
+                pImg[i] = Point2f((pBlob[i].x - offsetX) / resizeFactor,
+                                  (pBlob[i].y - offsetY) / resizeFactor);
+            }
+        }
+    }
+    else
+    {
+        pImg.assign(pBlob.begin(), pBlob.end());
     }
 }
 
