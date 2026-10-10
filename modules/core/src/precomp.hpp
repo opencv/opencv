@@ -399,7 +399,7 @@ inline bool isScalarLikeMat(const _InputArray& sc, int cn)
     }
     else
         return false;
-    if (!continuous || nval > 4)
+    if (!continuous || nval > 4 || (nval != 1 && nval != cn))
         return false;
     return (rows == 1 && cols == 1) || (rows == cn && cols == 1) || (rows == 1 && cols == cn);
 }

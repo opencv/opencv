@@ -3220,4 +3220,13 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+TEST(Mat, ScalarMul) {
+    cv::Mat cv_mat_1x1_c3(1, 1, CV_32FC3, cv::Scalar(1, 2, 3));
+    cv::Mat cv_mat_mul = cv_mat_1x1_c3.mul(cv::Scalar(2, 3, 4));
+    ASSERT_EQ(cv_mat_mul.rows, 1);
+    ASSERT_EQ(cv_mat_mul.cols, 1);
+    ASSERT_EQ(cv_mat_mul.type(), CV_32FC3);
+    ASSERT_EQ(cv_mat_mul.at<cv::Vec3f>(0, 0), cv::Vec3f(2, 6, 12));
+}
+
 }} // namespace
