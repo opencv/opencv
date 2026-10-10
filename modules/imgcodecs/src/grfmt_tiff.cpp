@@ -1336,7 +1336,7 @@ TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
     m_buf_supported = true;
-    m_supported_encode_key = {IMWRITE_TIFF_RESUNIT, IMWRITE_TIFF_XDPI, IMWRITE_TIFF_YDPI, IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_ROWSPERSTRIP, IMWRITE_TIFF_PREDICTOR};
+    m_supported_encode_key = {IMWRITE_TIFF_RESUNIT, IMWRITE_TIFF_XDPI, IMWRITE_TIFF_YDPI, IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_ROWSPERSTRIP, IMWRITE_TIFF_PREDICTOR, IMWRITE_TIFF_COMPRESSION_LEVEL};
 }
 
 TiffEncoder::~TiffEncoder()
@@ -1477,6 +1477,8 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     const int predictor_default_32F = IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT;
     const int predictor_default = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
     int compression = -1;
+    int compressionLevel = -1;
+    std::pair<int, int> compressionLevelValidRange = {-1, -1};
     int predictor = -1;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
@@ -1519,6 +1521,45 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION must be one of ImwriteTiffCompressionFlags. It is fallbacked to IMWRITE_TIFF_COMPRESSION_LZW", compression));
                 compression = IMWRITE_TIFF_COMPRESSION_LZW;
                 break;
+        }
+    }
+    switch (compression) {
+        case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+        case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+            compressionLevelValidRange = std::make_pair(1, 9);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_LZMA:
+            compressionLevelValidRange = std::make_pair(0, 9);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_ZSTD:
+            compressionLevelValidRange = std::make_pair(1, 22);
+            break;
+        case IMWRITE_TIFF_COMPRESSION_WEBP:
+            compressionLevelValidRange = std::make_pair(1, 100);
+            break;
+        default:
+          break;
+    }
+
+    if (readParam(params, IMWRITE_TIFF_COMPRESSION_LEVEL, compressionLevel))
+    {
+        const bool isValidCompression =
+          (compression == IMWRITE_TIFF_COMPRESSION_DEFLATE) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_LZMA) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_ZSTD) ||
+          (compression == IMWRITE_TIFF_COMPRESSION_WEBP);
+        const bool isValidValue = (compressionLevel == -1) ||
+          ((compressionLevel >= compressionLevelValidRange.first) && (compressionLevel <= compressionLevelValidRange.second));
+        if (!isValidCompression) {
+            CV_LOG_WARNING(nullptr, cv::format("IMWRITE_TIFF_COMPRESSION_LEVEL can only be used for DEFLATE, LZMA, ZSTD or WEBP compression. It is ignored."));
+            compressionLevel = -1;
+        }
+        else if (!isValidValue) {
+            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION_LEVEL=%d must be in the range %d-%d (or -1 for default). It is set to default.",
+              compressionLevel, compression,
+              compressionLevelValidRange.first, compressionLevelValidRange.second));
+            compressionLevel = -1;
         }
     }
     if(readParam(params, IMWRITE_TIFF_PREDICTOR, predictor))
@@ -1675,6 +1716,40 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bitsPerChannel));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_COMPRESSION, page_compression));
+        if (compressionLevel >= 0)
+        {
+          switch(page_compression)
+          {
+            case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+            case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZIPQUALITY, compressionLevel));
+                break;
+            case IMWRITE_TIFF_COMPRESSION_LZMA:
+                #ifdef TIFFTAG_LZMAPRESET // libtiff 4.0.0+
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_LZMAPRESET, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The LZMA compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
+                #endif
+                break;
+            case IMWRITE_TIFF_COMPRESSION_ZSTD:
+                #ifdef TIFFTAG_ZSTD_LEVEL // libtiff 4.0.10+
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ZSTD_LEVEL, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The ZSTD compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
+                #endif
+                break;
+            case IMWRITE_TIFF_COMPRESSION_WEBP:
+                #ifdef TIFFTAG_WEBP_LEVEL // libtiff 4.0.10+
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_WEBP_LEVEL, compressionLevel));
+                #else
+                CV_LOG_WARNING(nullptr, cv::format("The WEBP compression(%d) is not supported in that build of the TIFF library. It is ignored.", page_compression));
+                #endif
+                break;
+            default:
+                CV_LOG_WARNING(nullptr, cv::format("Unexpected page_compression %d", page_compression));
+                break;
+          }//end switch(page_compression)
+        }//end if (compressionLevel >= 0)
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, colorspace));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, channels));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
