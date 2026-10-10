@@ -19,14 +19,14 @@ saturated operation while Numpy addition is a modulo operation.
 
 For example, consider the below sample:
 @code{.py}
->>> x = np.uint8([250])
->>> y = np.uint8([10])
+>>> x = np.uint8([[250]])
+>>> y = np.uint8([[10]])
 
 >>> print( cv.add(x,y) ) # 250+10 = 260 => 255
 [[255]]
 
 >>> print( x+y )          # 250+10 = 260 % 256 = 4
-[4]
+[[4]]
 @endcode
 This will be more visible when you add two images. Stick with OpenCV functions, because they will provide a better result.
 
