@@ -1999,9 +1999,13 @@ struct MaskedNormL1_SIMD<int, double> {
             int i = 0;
             v_float64 acc0 = vx_setzero_f64(), acc1 = vx_setzero_f64();
             for (; i <= len - vstep; i += vstep) {
-                v_int32 s = v_reinterpret_as_s32(v_and(v_abs(vx_load(src + i)), v_normmask_u32(mask + i)));
-                acc0 = v_add(acc0, v_cvt_f64(s));
-                acc1 = v_add(acc1, v_cvt_f64_high(s));
+                // Mask the value, then widen and take the magnitude in double. v_abs() does give
+                // |INT_MIN| as an unsigned 2147483648, but reinterpreting that back as int32 turns
+                // it negative again, and the widening then carries the sign into the accumulator.
+                v_int32 s = v_reinterpret_as_s32(v_and(v_reinterpret_as_u32(vx_load(src + i)),
+                                                       v_normmask_u32(mask + i)));
+                acc0 = v_add(acc0, v_abs(v_cvt_f64(s)));
+                acc1 = v_add(acc1, v_abs(v_cvt_f64_high(s)));
             }
             result = v_reduce_sum(v_add(acc0, acc1));
             for (; i < len; i++)
