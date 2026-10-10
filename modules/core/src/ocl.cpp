@@ -55,6 +55,11 @@
 #if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
 #include <inttypes.h>
 #endif
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+
+#include "opencl/runtime/runtime_common.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
@@ -5365,7 +5370,8 @@ public:
 #ifdef HAVE_OPENCL_SVM
         ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2,
 #endif
-        ALLOCATOR_FLAGS_EXTERNAL_BUFFER = 1 << 3  // convertFromBuffer()
+        ALLOCATOR_FLAGS_EXTERNAL_BUFFER = 1 << 3,  // convertFromBuffer()
+        ALLOCATOR_FLAGS_EXTERNAL_MEMORY_KHR = 1 << 4
     };
 
     OpenCLAllocator()
@@ -6684,6 +6690,164 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
 
     return;
 } // convertFromBuffer()
+
+
+namespace {
+
+typedef intptr_t DmaBufMemProperty;
+
+typedef cl_mem (CL_API_CALL *CreateBufferWithPropertiesFn)(
+        cl_context, const DmaBufMemProperty*, cl_mem_flags, size_t, void*, cl_int*);
+typedef cl_int (CL_API_CALL *EnqueueExternalMemoryFn)(
+        cl_command_queue, cl_uint, const cl_mem*, cl_uint, const cl_event*, cl_event*);
+
+enum
+{
+    CV_CL_MEM_DEVICE_HANDLE_LIST_KHR = 0x2051,
+    CV_CL_MEM_DEVICE_HANDLE_LIST_END_KHR = 0,
+    CV_CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR = 0x2067
+};
+
+struct DmaBufExternalMemoryContext
+{
+    DmaBufExternalMemoryContext(EnqueueExternalMemoryFn acquire_, EnqueueExternalMemoryFn release_)
+        : acquire(acquire_), release(release_)
+    {
+    }
+
+    EnqueueExternalMemoryFn acquire;
+    EnqueueExternalMemoryFn release;
+};
+
+static DmaBufExternalMemoryContext* getDmaBufExternalMemoryContext(const UMat& src)
+{
+    CV_CheckTrue(src.u != NULL && src.u->handle != NULL,
+                 "External memory UMat is empty");
+    CV_CheckTrue((src.u->allocatorFlags_ & OpenCLAllocator::ALLOCATOR_FLAGS_EXTERNAL_MEMORY_KHR) != 0,
+                 "UMat is not backed by DMA-BUF external memory imported by OpenCV");
+    DmaBufExternalMemoryContext* externalContext =
+            static_cast<DmaBufExternalMemoryContext*>(src.u->allocatorContext.get());
+    CV_CheckTrue(externalContext != NULL, "External memory context is missing");
+    return externalContext;
+}
+
+} // anonymous namespace
+
+
+UMat createUMatFromDmaBuf(int fd, size_t size, size_t step, int rows, int cols, int type)
+{
+#if !defined(__linux__)
+    CV_UNUSED(fd); CV_UNUSED(size); CV_UNUSED(step); CV_UNUSED(rows); CV_UNUSED(cols); CV_UNUSED(type);
+    CV_Error(Error::StsNotImplemented, "DMA-BUF import is supported on Linux only");
+#else
+    CV_CheckGE(fd, 0, "Invalid DMA-BUF file descriptor");
+    CV_CheckGT(size, (size_t)0, "DMA-BUF size must be positive");
+    CV_CheckGT(rows, 0, "rows must be positive");
+    CV_CheckGT(cols, 0, "cols must be positive");
+    CV_CheckGE(step, (size_t)cols * CV_ELEM_SIZE(type), "step is too small for matrix type and width");
+    CV_CheckLE((size_t)rows, size / step, "DMA-BUF is smaller than the requested matrix view");
+
+    Context& context = Context::getDefault();
+    CV_CheckTrue(!context.empty(), "OpenCL context is not available");
+
+    const Device& device = Device::getDefault();
+    CV_CheckTrue(device.isExtensionSupported("cl_khr_external_memory"),
+                 "OpenCL device does not support cl_khr_external_memory");
+    CV_CheckTrue(device.isExtensionSupported("cl_khr_external_memory_dma_buf"),
+                 "OpenCL device does not support cl_khr_external_memory_dma_buf");
+
+    cl_device_id deviceId = (cl_device_id)device.ptr();
+    CV_CheckTrue(deviceId != NULL, "OpenCL device is not available");
+
+    cl_platform_id platformId = NULL;
+    CV_OCL_CHECK(clGetDeviceInfo(deviceId, CL_DEVICE_PLATFORM,
+                                 sizeof(platformId), &platformId, NULL));
+    CV_CheckTrue(platformId != NULL, "OpenCL platform is not available");
+
+    CreateBufferWithPropertiesFn createBufferWithProperties =
+            reinterpret_cast<CreateBufferWithPropertiesFn>(
+                    runtime::getOpenCLFunctionAddress("clCreateBufferWithProperties"));
+    CV_CheckTrue(createBufferWithProperties != NULL,
+                 "OpenCL 3.0 clCreateBufferWithProperties is not available");
+
+    EnqueueExternalMemoryFn acquireExternal =
+            reinterpret_cast<EnqueueExternalMemoryFn>(
+                    clGetExtensionFunctionAddressForPlatform(
+                            platformId, "clEnqueueAcquireExternalMemObjectsKHR"));
+    EnqueueExternalMemoryFn releaseExternal =
+            reinterpret_cast<EnqueueExternalMemoryFn>(
+                    clGetExtensionFunctionAddressForPlatform(
+                            platformId, "clEnqueueReleaseExternalMemObjectsKHR"));
+    CV_CheckTrue(acquireExternal != NULL && releaseExternal != NULL,
+                 "OpenCL external-memory ownership functions are not available");
+
+    // Importing an fd transfers ownership of that fd to OpenCL. Duplicate the
+    // caller's descriptor so its ownership and lifetime remain unchanged.
+    int importFd = ::dup(fd);
+    if (importFd < 0)
+        CV_Error(Error::StsError, "Failed to duplicate DMA-BUF file descriptor");
+
+    const DmaBufMemProperty properties[] = {
+        (DmaBufMemProperty)CV_CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR,
+        (DmaBufMemProperty)importFd,
+        (DmaBufMemProperty)CV_CL_MEM_DEVICE_HANDLE_LIST_KHR,
+        reinterpret_cast<DmaBufMemProperty>(deviceId),
+        (DmaBufMemProperty)CV_CL_MEM_DEVICE_HANDLE_LIST_END_KHR,
+        0
+    };
+
+    cl_int status = CL_SUCCESS;
+    cl_mem mem = createBufferWithProperties((cl_context)context.ptr(), properties,
+                                             CL_MEM_READ_WRITE, size, NULL, &status);
+    if (status != CL_SUCCESS || mem == NULL)
+    {
+        ::close(importFd);  // ownership is transferred only on successful import
+        CV_Error(Error::OpenCLApiCallError,
+                 cv::format("OpenCL DMA-BUF import failed (%d)", status));
+    }
+
+    UMat dst;
+    try
+    {
+        convertFromBuffer((void*)mem, step, rows, cols, type, dst);
+    }
+    catch (...)
+    {
+        clReleaseMemObject(mem);
+        throw;
+    }
+
+    // convertFromBuffer() retained mem for UMatData; drop the importer's
+    // temporary cl_mem reference. OpenCL keeps the imported fd/payload alive.
+    CV_OCL_CHECK(clReleaseMemObject(mem));
+
+    dst.u->allocatorFlags_ |= OpenCLAllocator::ALLOCATOR_FLAGS_EXTERNAL_MEMORY_KHR;
+    dst.u->allocatorContext = std::make_shared<DmaBufExternalMemoryContext>(
+            acquireExternal, releaseExternal);
+    return dst;
+#endif
+}
+
+
+void acquireExternalMemory(const UMat& src)
+{
+    DmaBufExternalMemoryContext* externalContext = getDmaBufExternalMemoryContext(src);
+    cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
+    CV_CheckTrue(queue != NULL, "OpenCL queue is not available");
+    cl_mem mem = (cl_mem)src.u->handle;
+    CV_OCL_CHECK(externalContext->acquire(queue, 1, &mem, 0, NULL, NULL));
+}
+
+
+void releaseExternalMemory(const UMat& src)
+{
+    DmaBufExternalMemoryContext* externalContext = getDmaBufExternalMemoryContext(src);
+    cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
+    CV_CheckTrue(queue != NULL, "OpenCL queue is not available");
+    cl_mem mem = (cl_mem)src.u->handle;
+    CV_OCL_CHECK(externalContext->release(queue, 1, &mem, 0, NULL, NULL));
+    CV_OCL_CHECK(clFinish(queue));
+}
 
 
 /*
