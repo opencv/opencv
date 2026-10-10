@@ -118,8 +118,10 @@ struct CellRatioDistance {
                 const float observed = 100.f * cellPixelRatioRow[i];
                 const int lo = saturate_cast<uint8_t>(std::ceil(observed - threshold));
                 const int hi = saturate_cast<uint8_t>(std::floor(observed + threshold));
-                lowerWritable[cell] = static_cast<uint8_t>(lo);
-                widthWritable[cell] = static_cast<uint8_t>(hi - lo); // hi >= lo
+                // A narrow interval may contain no integer percentage. A lower bound of 101
+                // rejects every valid stored ratio without wrapping a negative width to 255.
+                lowerWritable[cell] = static_cast<uint8_t>(lo <= hi ? lo : 101);
+                widthWritable[cell] = static_cast<uint8_t>(lo <= hi ? hi - lo : 0);
             }
         }
     }
@@ -135,9 +137,9 @@ struct CellRatioDistance {
 
         const uchar* expectedRatios = bytesList.ptr(id);
         for(unsigned int r = 0; r < nRotations; r++, expectedRatios += totalCells) {
-            // A cell is an error when the expected ratio is outside [lower, lower+width]. The
-            // unsigned wrap turns the two-sided range test into a single compare (all values are in [0,255]):
-            // values below 'lower' underflow to numbers (>=156), which exceeds the max width (<=100).
+            // A cell is an error when the expected ratio is outside [lower, lower+width].
+            // Unsigned subtraction makes values below 'lower' wrap outside the accepted interval.
+            // lower=101, width=0 rejects every valid stored percentage when the interval is empty.
             int currentDistance = 0;
             for(int i = 0; i < totalCells; i++)
                 currentDistance += static_cast<uint8_t>(expectedRatios[i] - lower[i]) > width[i];
@@ -469,6 +471,11 @@ Mat Dictionary::getCellRatiosFromRatioList(const Mat &ratioList, int markerSize,
 }
 
 
+// Invert floor(pixel * totalCells / sidePixels): cell boundaries require ceiling division.
+static inline int _getCellPixelBoundary(int cell, int sidePixels, int totalCells) {
+    return (int)(((int64)cell * sidePixels + totalCells - 1) / totalCells);
+}
+
 Mat Dictionary::getCellRatiosFromImage(InputArray markerImage, int markerSize, int borderBits) {
     Mat img = markerImage.getMat();
     CV_Assert(!img.empty() && img.channels() == 1 && img.depth() == CV_8U);
@@ -479,11 +486,12 @@ Mat Dictionary::getCellRatiosFromImage(InputArray markerImage, int markerSize, i
 
     Mat cellRatios(markerSize, markerSize, CV_8UC1);
     for(int y = 0; y < markerSize; y++) {
-        const int y0 = (borderBits + y) * img.rows / totalCells;
-        const int y1 = (borderBits + y + 1) * img.rows / totalCells;
+        // Match the integer pixel-to-cell mapping used by marker rendering.
+        const int y0 = _getCellPixelBoundary(borderBits + y, img.rows, totalCells);
+        const int y1 = _getCellPixelBoundary(borderBits + y + 1, img.rows, totalCells);
         for(int x = 0; x < markerSize; x++) {
-            const int x0 = (borderBits + x) * img.cols / totalCells;
-            const int x1 = (borderBits + x + 1) * img.cols / totalCells;
+            const int x0 = _getCellPixelBoundary(borderBits + x, img.cols, totalCells);
+            const int x1 = _getCellPixelBoundary(borderBits + x + 1, img.cols, totalCells);
             Mat cell = img(Range(y0, y1), Range(x0, x1));
             const int white = countNonZero(cell > 127);
             cellRatios.at<uchar>(y, x) = (uchar)cvRound(100.0 * white / (double)cell.total());
@@ -1006,15 +1014,28 @@ void generateImageMarkerNested(const Dictionary &dictionary, int outerId, int si
 
     _img.create(sidePixels, sidePixels, CV_8UC1);
     Mat img = _img.getMat();
-    for(int y = 0; y < sidePixels; y++) {
-        for(int x = 0; x < sidePixels; x++) {
-            const int cellX = x * totalCells / sidePixels;
-            const int cellY = y * totalCells / sidePixels;
-            bool isWhite = false;
-            if(cellX >= borderBits && cellX < totalCells - borderBits &&
-               cellY >= borderBits && cellY < totalCells - borderBits)
-                isWhite = outerRatios.at<uchar>(cellY - borderBits, cellX - borderBits) >= 50;
+    img.setTo(0);
+    // Fill the outer cells in blocks. Ceiling division preserves the pixel-to-cell mapping
+    // floor(pixel * totalCells / sidePixels), including sizes not divisible by totalCells.
+    for(int y = 0; y < markerSize; y++) {
+        const int y0 = _getCellPixelBoundary(borderBits + y, sidePixels, totalCells);
+        const int y1 = _getCellPixelBoundary(borderBits + y + 1, sidePixels, totalCells);
+        for(int x = 0; x < markerSize; x++) {
+            if(outerRatios.at<uchar>(y, x) < 50) continue;
+            const int x0 = _getCellPixelBoundary(borderBits + x, sidePixels, totalCells);
+            const int x1 = _getCellPixelBoundary(borderBits + x + 1, sidePixels, totalCells);
+            img(Rect(x0, y0, x1 - x0, y1 - y0)).setTo(255);
+        }
+    }
 
+    // Only pixels in the inner marker's bounding box need the rotated-coordinate calculation.
+    const int startX = max(0, (int)(centerX - halfDiag));
+    const int endX = min(sidePixels, (int)(centerX + halfDiag) + 1);
+    const int startY = max(0, (int)(centerY - halfDiag));
+    const int endY = min(sidePixels, (int)(centerY + halfDiag) + 1);
+    for(int y = startY; y < endY; y++) {
+        uchar* imageRow = img.ptr<uchar>(y);
+        for(int x = startX; x < endX; x++) {
             const double u = x + 0.5 - centerX;
             const double v = y + 0.5 - centerY;
             if(std::abs(u) + std::abs(v) <= halfDiag) {
@@ -1022,10 +1043,10 @@ void generateImageMarkerNested(const Dictionary &dictionary, int outerId, int si
                 const int col = min((int)(innerTotal * (u - v + halfDiag) / (2 * halfDiag)), innerTotal - 1);
                 const int row = min((int)(innerTotal * (u + v + halfDiag) / (2 * halfDiag)), innerTotal - 1);
                 const bool border = row == 0 || col == 0 || row == innerTotal - 1 || col == innerTotal - 1;
-                isWhite = !border && innerRatios.at<uchar>(row - 1, col - 1) >= 50;
+                bool isWhite = !border && innerRatios.at<uchar>(row - 1, col - 1) >= 50;
                 if(!hostWhite) isWhite = !isWhite;
+                imageRow[x] = isWhite ? 255 : 0;
             }
-            img.at<uchar>(y, x) = isWhite ? 255 : 0;
         }
     }
 }

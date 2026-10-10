@@ -539,5 +539,23 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(8, len(obj_pts))
         self.assertLess(np.abs(obj_pts[:, :2] + margin - img_pts).max(), 3.)
 
+    def test_cell_ratio_dictionary_helpers(self):
+        binary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        dictionary = binary.convertToCellRatioDictionary()
+        self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, dictionary.dictEncoding)
+        expected = (binary.getMarkerBits(0) * 100).astype(np.uint8)
+        marker = cv.aruco.generateImageMarker(binary, 0, 101)
+        measured = cv.aruco.Dictionary_getCellRatiosFromImage(marker, 4)
+        np.testing.assert_array_equal(expected, measured)
+        ratios = cv.aruco.Dictionary_getRatioListFromCellRatios(measured)
+        restored = cv.aruco.Dictionary_getCellRatiosFromRatioList(ratios, 4)
+        np.testing.assert_array_equal(expected, restored)
+
+        # No integer percentage matches 55.5% with a strict tolerance.
+        observed = np.full((4, 4), 0.555, dtype=np.float32)
+        self.assertEqual(16, dictionary.getDistanceToId(observed, 0, False, 0.001))
+        found, _, _ = dictionary.identify(observed, 0., 0.001)
+        self.assertFalse(found)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

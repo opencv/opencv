@@ -14,8 +14,8 @@ Why nested markers
 
 A fiducial marker of a single size has a bounded working range: a large marker is identifiable
 from far away but stops fitting the camera view up close, a small one only works near the
-camera. Nested markers solve this by printing a small marker inside a cell block of a large one,
-so that some marker is always detectable as the camera approaches the target.
+camera. Nested markers extend this range by printing a small marker inside a cell block of a
+large one. Detection still depends on image resolution, viewing angle, lighting and motion blur.
 
 One common use case is autonomous landing, or any rendezvous where the camera moves toward a known target. From far away the drone sees the large marker. As it gets closer, the inner markers start being detected. In the final approach, the small inner markers keep the target visible.
 
@@ -27,14 +27,15 @@ Non-binary dictionaries
 A cell from the host marker that contains an inner marker is neither black nor white, which is why nested markers
 require a `cv::aruco::DICT_ENCODING_CELL_RATIO` dictionary: each cell stores its expected
 white pixel ratio in percent, and identification uses
-`|observed - expected| <= validBitIdThreshold` per cell, exactly like binary markers.
+`|observed - expected| <= validBitIdThreshold` per cell after normalizing the stored
+percentages to [0, 1], exactly like binary markers.
 
 Ratio dictionaries are a general concept: any composed marker can be described this way, and you
 can build your own (see "Custom composed markers" at the end).
 
 The image below shows a nested ArUco marker with an
 inner inverted marker. On the right: the nested marker with its bit encoding in the
-center. The cell’s separation are in red and the area considered for the identification process in green.
+center. The cell boundaries are in red and the area considered for identification is in green.
 On the left: a zoom on the inner marker with the non-binary encoding corresponding to the ratio of
 white pixels inside the margins (green squares).
 
@@ -65,8 +66,8 @@ is standard ArUco:
 3. The inner marker is printed **rotated 45 degrees**, centered on the corner point shared by
    the block's 4 cells. Its half diagonal spans 0.7 outer cells, which makes the inner marker
    about 6 times smaller than the outer one. The rotation allows to keep the inner marker large while changing only small corner triangles of the outer marker cells.
-4. Both patterns have **at least 4 cells of each color**, so plain bright or dark quads never
-   resemble a marker.
+4. Both patterns have **at least 4 cells of each color** to reduce confusion with uniform
+   bright or dark regions.
 
 Because of rule 2, the printed image is fully determined by the dictionary content: the image
 generator only needs to locate the single white block and place the rotated inner marker there.
@@ -110,7 +111,13 @@ Step 2: detect with your camera
 -------------------------------
 
 Only one detector parameter changes: `cv::aruco::DetectorParameters::detectNestedMarkers`. It
-keeps markers that are found inside other markers instead of discarding them.
+keeps surrounding candidates after an inner marker is identified, allowing both markers to be
+detected.
+
+Keep the default `borderBits=1` when generating the pair and `markerBorderBits=1` in the detector
+to detect both markers with one detector. `generateImageMarkerNested()` applies `borderBits`
+only to the outer marker; the inner marker always has a one-cell border. A detector uses the
+same `markerBorderBits` value for all candidates.
 
 @snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_marker_detect_cpp
 
@@ -130,7 +137,11 @@ them together, put both markers of a pair in one `cv::aruco::Board`.
 outer marker top left corner, x right, y down, z = 0.
 
 The code below assumes `cameraMatrix` and `distCoeffs` (Python: `camera_matrix` and `dist_coeffs`)
-come from your camera calibration.
+come from your camera calibration. Run the C++ sample with
+`-mode=pose -c=camera_parameters.yml`, or the Python sample with
+`--step pose --camera-parameters camera_parameters.yml`. The file must contain the
+`camera_matrix` and `distortion_coefficients` entries. Set `sideLength` (Python: `side_length`)
+to the measured outer marker side, excluding the white margin, in meters.
 
 @snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_marker_pose_cpp
 
@@ -160,7 +171,7 @@ the observed white pixel ratio `o`, between 0 and 1. A cell matches its expected
     |o - r| <= T          with T = DetectorParameters::validBitIdThreshold (default 0.49)
 
 The candidate is accepted for a dictionary entry when at most `c` cells mismatch, where
-`c = maxCorrectionBits * errorCorrectionRate`. Binary markers are the special case where every
+`c = floor(maxCorrectionBits * errorCorrectionRate)`. Binary markers are the special case where every
 `r` is 0 or 1.
 
 ### The separation distance
@@ -191,8 +202,9 @@ each. Therefore
     D >= 2c + 1   =>   no observation is ever accepted for both entries.
 
 This is the quantity in the dictionary table above. `generateNestedDictionary()` enforces it
-between all entries, and between each entry and its own rotations so the orientation is never
-ambiguous. For binary markers `D` is the Hamming distance.
+between all entries, and between each entry and its own rotations, using the default threshold
+and an `errorCorrectionRate` at most 1. For binary markers at this threshold, `D` is the
+Hamming distance.
 
 ### Host cells and range behavior
 
@@ -200,9 +212,10 @@ The inner marker covers a corner triangle of each of the 4 host cells. Its size 
 `innerHalfDiagonal`, the half diagonal of the inner marker square in outer cell units: rotated 45
 degrees, the diagonals align with the cell grid and the covered triangle has area
 `innerHalfDiagonal^2 / 2`. With the default 0.7 that is at most `0.245` of the cell, so a host
-cell always stays within 25% of its color. A lower cell tempering of the host by the inner
-marker leads to a higher detection rate of the host marker; the bound `sqrt(0.5)` on
-`innerHalfDiagonal` keeps the tempering at or below a quarter of the cell.
+cell's full-area white ratio stays within 25% of its original binary value. A smaller inner marker
+changes less of each host cell; the bound `sqrt(0.5)` on `innerHalfDiagonal` limits the covered
+area to a quarter of the cell. The detector ignores cell margins when sampling, so its observed
+ratios can differ from these full-area ratios.
 
 ### Orientation and corner order
 
@@ -216,12 +229,12 @@ object points always correspond one to one.
 ### False positives
 
 A false positive is a random square in the scene (a window, a screen, a
-picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. Every pattern in the predefined dictionaries also keeps at least 4 cells of each color, so plain bright or dark quads never come close to a valid marker.
+picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. Every pattern in the predefined dictionaries also keeps at least 4 cells of each color to reduce confusion with uniform bright or dark regions.
 
 You can also tighten `validBitIdThreshold` from its default 0.49 to 0.4, which narrows what each
-cell accepts and rejects more false positives. The predefined dictionaries keep working:
-lowering the threshold only makes cells more selective, so the separation guarantees cannot
-weaken, and host cells stay within 0.25 of their color, below the threshold with margin.
+cell accepts and can reject more false positives. Lowering the threshold only makes cells more
+selective, so the separation guarantees cannot weaken, but valid markers can also be rejected
+more often. Test the threshold under your expected imaging conditions.
 
 ### Custom composed markers
 

@@ -102,6 +102,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     /** @brief Given a matrix of pixel ratio ranging from 0 to 1. Returns whether the marker is identified or not.
      *
      * Returns reference to the marker id in the dictionary (if any) and its rotation.
+     * `validBitIdThreshold` is the maximum allowed absolute difference between cell ratios, in [0,1].
      */
     CV_WRAP bool identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const;
 
@@ -123,7 +124,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      * @param allRotations if set, the four possible marker rotations are considered and the
      * smallest distance is returned
      * @param validBitIdThreshold maximum allowed difference between a cell pixel ratio and the
-     * dictionary bit value; cells exceeding it are counted as differing
+     * dictionary bit value, in [0,1]; cells exceeding it are counted as differing
      */
     CV_WRAP int getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const;
 
@@ -158,6 +159,8 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
 
     /** @brief Transform list of cell ratios to matrix of cell ratios, see getRatioListFromCellRatios()
+      *
+      * `ratioList` must be a single CV_8UC4 row with `markerSize*markerSize` columns and values in [0,100].
       */
     CV_WRAP static Mat getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId = 0);
 
@@ -173,6 +176,9 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
       * holding the white pixel ratio of each cell in percent [0,100], the format expected by
       * getRatioListFromCellRatios(). Useful to build custom cell-ratio dictionaries from composed
       * marker images, e.g. markers hosting nested markers.
+      * The image is divided into equally sized cells, rounding cell boundaries up to integer pixels.
+      * Rendering and resizing can introduce pixel rounding differences; use a sufficiently large
+      * image to reduce their effect on the measured ratios.
       */
     CV_WRAP static Mat getCellRatiosFromImage(InputArray markerImage, int markerSize, int borderBits = 1);
 
@@ -262,11 +268,11 @@ CV_EXPORTS_W Dictionary extendDictionary(int nMarkers, int markerSize, const Dic
 
 /** @brief Generate a dictionary of nested marker pairs
   *
-  * @param nPairs number of marker pairs; the dictionary holds 2*nPairs entries
-  * @param markerSize number of cells per dimension of each marker
+  * @param nPairs positive number of marker pairs; the dictionary holds 2*nPairs entries
+  * @param markerSize number of cells per dimension of each marker, at least 3
   * @param minDistance minimum separation distance between any two entries and between an entry
   * and its own rotations. Two cell values are separating when no single observation can match
-  * both of them under the default DetectorParameters::validBitIdThreshold
+  * both of them under the default DetectorParameters::validBitIdThreshold. Must be in [1, markerSize*markerSize].
   * @param innerHalfDiagonal half diagonal (center to corner) of the inner marker square, in
   * outer cell units. The inner marker is rotated 45 degrees, so its diagonals align with the
   * cell grid and it covers a triangle of area `innerHalfDiagonal^2 / 2` in each of the 4 host
@@ -283,7 +289,7 @@ CV_EXPORTS_W Dictionary extendDictionary(int nMarkers, int markerSize, const Dic
   * The returned dictionary uses DICT_ENCODING_CELL_RATIO and requires
   * DetectorParameters::detectNestedMarkers to detect both markers of a pair.
   * Generation is deterministic for a given randomSeed. Each pattern keeps at least 4 cells of
-  * each color, so plain bright or dark quads never resemble a marker.
+  * each color to reduce confusion with uniform bright or dark regions.
   */
 CV_EXPORTS_W Dictionary generateNestedDictionary(int nPairs, int markerSize, int minDistance = 3,
                                                  float innerHalfDiagonal = 0.7f, int randomSeed = 0);
@@ -295,7 +301,9 @@ CV_EXPORTS_W Dictionary generateNestedDictionary(int nPairs, int markerSize, int
   * @param outerId even id of the outer marker of the pair; the inner marker id is outerId + 1
   * @param sidePixels size of the output image in pixels
   * @param img output image with the outer marker hosting its rotated inner marker
-  * @param borderBits width of the outer marker border in cells
+  * @param borderBits width of the outer marker border in cells. The inner marker always has a
+  * one-cell border; use borderBits = 1 with DetectorParameters::markerBorderBits = 1 to detect
+  * both markers with one detector.
   * @param innerHalfDiagonal half diagonal of the inner marker square in outer cell units, see
   * generateNestedDictionary(); must match the value used when the dictionary was generated
   *

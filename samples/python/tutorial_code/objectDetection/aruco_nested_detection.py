@@ -5,7 +5,7 @@
 Usage:
   python3 aruco_nested_detection.py --step create
   python3 aruco_nested_detection.py --step detect
-  python3 aruco_nested_detection.py --step pose
+  python3 aruco_nested_detection.py --step pose --camera-parameters camera_parameters.yml
   python3 aruco_nested_detection.py --step custom-generate
   python3 aruco_nested_detection.py --step custom-detect
 """
@@ -28,6 +28,9 @@ def detect_markers():
 
     ## [nested_marker_detect_py]
     cap = cv.VideoCapture(0)
+    if not cap.isOpened():
+        raise RuntimeError("Could not open camera 0")
+
     params = cv.aruco.DetectorParameters()
     params.detectNestedMarkers = True
     detector = cv.aruco.ArucoDetector(dictionary, params)
@@ -41,30 +44,31 @@ def detect_markers():
         cv.imshow("nested markers", frame)
         if cv.waitKey(1) == 27:
             break
+    cap.release()
+    cv.destroyAllWindows()
     ## [nested_marker_detect_py]
 
 
-def estimate_pose():
+def estimate_pose(camera_parameters):
     import cv2 as cv
-    import numpy as np
+
+    storage = cv.FileStorage(camera_parameters, cv.FILE_STORAGE_READ)
+    if not storage.isOpened():
+        raise RuntimeError("Could not open camera parameters file")
+    camera_matrix = storage.getNode("camera_matrix").mat()
+    dist_coeffs = storage.getNode("distortion_coefficients").mat()
+    storage.release()
+    if camera_matrix is None or camera_matrix.shape != (3, 3) or dist_coeffs is None:
+        raise RuntimeError("Could not read camera parameters")
 
     dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_NESTED_10)
     cap = cv.VideoCapture(0)
+    if not cap.isOpened():
+        raise RuntimeError("Could not open camera 0")
+
     params = cv.aruco.DetectorParameters()
     params.detectNestedMarkers = True
     detector = cv.aruco.ArucoDetector(dictionary, params)
-
-    ok, frame = cap.read()
-    if not ok:
-        raise RuntimeError("Could not read from camera 0")
-
-    # Replace these with calibrated values for metric pose accuracy.
-    height, width = frame.shape[:2]
-    focal = float(max(width, height))
-    camera_matrix = np.array([[focal, 0.0, width * 0.5],
-                              [0.0, focal, height * 0.5],
-                              [0.0, 0.0, 1.0]], dtype=np.float64)
-    dist_coeffs = np.zeros((5, 1), dtype=np.float64)
 
     ## [nested_marker_pose_py]
     import numpy as np
@@ -74,6 +78,10 @@ def estimate_pose():
     board = cv.aruco.Board([outer_pts, inner_pts], dictionary, np.array([0, 1]))
 
     while True:
+        ok, frame = cap.read()
+        if not ok:
+            break
+
         corners, ids, _ = detector.detectMarkers(frame)
         cv.aruco.drawDetectedMarkers(frame, corners, ids)
 
@@ -90,9 +98,8 @@ def estimate_pose():
         if cv.waitKey(1) == 27:
             break
 
-        ok, frame = cap.read()
-        if not ok:
-            break
+    cap.release()
+    cv.destroyAllWindows()
     ## [nested_marker_pose_py]
 
 
@@ -285,6 +292,8 @@ def custom_detect():
         cv.imshow("custom nested markers", frame)
         if cv.waitKey(1) == 27:
             break
+    cap.release()
+    cv.destroyAllWindows()
     ## [nested_custom_detect_py]
 
 
@@ -292,14 +301,17 @@ def main():
     parser = argparse.ArgumentParser(description="Code for the Nested ArUco Markers tutorial.")
     parser.add_argument("--step", choices=("create", "detect", "pose", "custom-generate", "custom-detect"),
                         default="create")
+    parser.add_argument("--camera-parameters", help="Camera calibration file for pose estimation")
     args = parser.parse_args()
+    if args.step == "pose" and args.camera_parameters is None:
+        parser.error("--step pose requires --camera-parameters")
 
     if args.step == "create":
         create_marker()
     elif args.step == "detect":
         detect_markers()
     elif args.step == "pose":
-        estimate_pose()
+        estimate_pose(args.camera_parameters)
     elif args.step == "custom-generate":
         custom_generate()
     elif args.step == "custom-detect":
