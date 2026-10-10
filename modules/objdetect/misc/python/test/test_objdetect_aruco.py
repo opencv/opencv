@@ -165,9 +165,9 @@ class aruco_objdetect_test(NewOpenCVTests):
         erroneous_ratio = ratio_marker.copy()
         erroneous_ratio[0, 0] = 1.0 - erroneous_ratio[0, 0]
         dist = aruco_dict.getDistanceToId(onlyCellPixelRatio=erroneous_ratio,
-                                        id=idx,
-                                        allRotations=True,
-                                        validBitIdThreshold=valid_bit_id_threshold)
+                                          id=idx,
+                                          allRotations=True,
+                                          validBitIdThreshold=valid_bit_id_threshold)
         self.assertEqual(dist, 1)
 
     def test_aruco_detector(self):
@@ -545,10 +545,10 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, dictionary.dictEncoding)
         expected = (binary.getMarkerBits(0) * 100).astype(np.uint8)
         marker = cv.aruco.generateImageMarker(binary, 0, 101)
-        measured = cv.aruco.Dictionary_getCellRatiosFromImage(marker, 4)
+        measured = cv.aruco.Dictionary.getCellRatiosFromImage(marker, 4)
         np.testing.assert_array_equal(expected, measured)
-        ratios = cv.aruco.Dictionary_getRatioListFromCellRatios(measured)
-        restored = cv.aruco.Dictionary_getCellRatiosFromRatioList(ratios, 4)
+        ratios = cv.aruco.Dictionary.getRatioListFromCellRatios(measured)
+        restored = cv.aruco.Dictionary.getCellRatiosFromRatioList(ratios, 4)
         np.testing.assert_array_equal(expected, restored)
 
         # No integer percentage matches 55.5% with a strict tolerance.

@@ -101,6 +101,8 @@ struct CellBitMasks {
 // inclusive [lower, upper] range of valid expected values per cell:
 //   |observed - expected/100| <= threshold  <=>  ceil(100*(observed - threshold)) <= expected &&
 //                                                expected <= floor(100*(observed + threshold))
+// The threshold is widened by 1e-4 percent so that the float rounding of these products cannot
+// reject an exact match, e.g. getMarkerBits() matches its own entry at threshold 0.
 // Each rotation is then a branch-free integer pass over markerSize*markerSize bytes.
 struct CellRatioDistance {
     CellRatioDistance(const Mat &onlyCellPixelRatio, int markerSize, float validBitIdThreshold)
@@ -110,7 +112,7 @@ struct CellRatioDistance {
         uint8_t* lowerWritable = bounds.data();
         uint8_t* widthWritable = lowerWritable + totalCells;
 
-        const float threshold = 100.f * validBitIdThreshold;
+        const float threshold = 100.f * validBitIdThreshold + 1e-4f;
         int cell = 0;
         for(int j = 0; j < markerSize; j++) {
             const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
@@ -125,6 +127,9 @@ struct CellRatioDistance {
             }
         }
     }
+
+    CellRatioDistance(const CellRatioDistance&) = delete;
+    CellRatioDistance& operator=(const CellRatioDistance&) = delete;
 
     // Smallest number of erroneous cells between the candidate and dictionary marker `id`,
     // searching the tested rotations; `rotation` returns the best one.
@@ -166,7 +171,7 @@ Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0), dictEncoding(DICT
 Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr, int _dictEncoding) {
     CV_Assert(_dictEncoding == DICT_ENCODING_BINARY || _dictEncoding == DICT_ENCODING_CELL_RATIO);
     if(_dictEncoding == DICT_ENCODING_CELL_RATIO && !_bytesList.empty())
-        CV_Assert(_bytesList.cols * _bytesList.channels() == 4 * _markerSize * _markerSize);
+        CV_Assert(_markerSize > 0 && (int64)_bytesList.cols * _bytesList.channels() == 4 * (int64)_markerSize * _markerSize);
     markerSize = _markerSize;
     maxCorrectionBits = _maxcorr;
     bytesList = _bytesList;
@@ -178,22 +183,28 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
     if (fn.empty() || !readParameter("nmarkers", nMarkers, fn) || !readParameter("markersize", _markerSize, fn))
         return false;
+    if (_markerSize <= 0)
+        return false;
     int _dictEncoding = (int)DICT_ENCODING_BINARY;
     readParameter("dictEncoding", _dictEncoding, fn);
+    if (_dictEncoding != DICT_ENCODING_BINARY && _dictEncoding != DICT_ENCODING_CELL_RATIO)
+        return false;
     int _maxCorrectionBits = 0;
     readParameter("maxCorrectionBits", _maxCorrectionBits, fn);
 
     if (_dictEncoding == DICT_ENCODING_CELL_RATIO) {
         // markers are stored as the list of their cell ratios in percent, only the 0 deg rotation
-        Mat ratioList(0, 0, CV_8UC4), cellRatios(_markerSize, _markerSize, CV_8UC1);
+        Mat ratioList(0, 0, CV_8UC4), cellRatios;
         std::vector<int> markerValues;
         for (int i = 0; i < nMarkers; i++) {
             std::ostringstream ostr;
             ostr << i;
             if (!readParameter("marker_" + ostr.str(), markerValues, fn))
                 return false;
-            if (markerValues.size() != (size_t)(_markerSize * _markerSize))
+            // size_t product: a huge markersize must not overflow, nor allocate before this check
+            if (markerValues.size() != (size_t)_markerSize * _markerSize)
                 return false;
+            cellRatios.create(_markerSize, _markerSize, CV_8UC1);
             for (int j = 0; j < (int)markerValues.size(); j++) {
                 if (markerValues[j] < 0 || markerValues[j] > 100)
                     return false;
@@ -462,10 +473,10 @@ Mat Dictionary::getRatioListFromCellRatios(const Mat &cellRatios) {
 
 
 Mat Dictionary::getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId) {
-    const int totalCells = markerSize * markerSize;
     CV_Assert(markerSize > 0 && ratioList.rows == 1);
-    CV_Assert(ratioList.total() * ratioList.channels() == (size_t)(4 * totalCells));
+    CV_Assert((int64)ratioList.total() * ratioList.channels() == 4 * (int64)markerSize * markerSize);
     CV_Assert(rotationId >= 0 && rotationId < 4);
+    const int totalCells = markerSize * markerSize;
 
     return Mat(markerSize, markerSize, CV_8UC1, (void*)(ratioList.ptr() + rotationId * totalCells)).clone();
 }
@@ -480,7 +491,7 @@ Mat Dictionary::getCellRatiosFromImage(InputArray markerImage, int markerSize, i
     Mat img = markerImage.getMat();
     CV_Assert(!img.empty() && img.channels() == 1 && img.depth() == CV_8U);
     CV_Assert(markerSize > 0 && borderBits > 0);
-
+    CV_Assert((int64)markerSize + 2 * (int64)borderBits <= img.rows);
     const int totalCells = markerSize + 2 * borderBits;
     CV_Assert(img.rows == img.cols && img.rows >= totalCells);
 
@@ -997,8 +1008,8 @@ void generateImageMarkerNested(const Dictionary &dictionary, int outerId, int si
               innerHalfDiagonal * innerHalfDiagonal <= 0.5f + FLT_EPSILON);
 
     const int markerSize = dictionary.markerSize;
+    CV_Assert(markerSize > 0 && (int64)markerSize + 2 * (int64)borderBits <= sidePixels);
     const int totalCells = markerSize + 2 * borderBits;
-    CV_Assert(sidePixels >= totalCells);
 
     Mat outerRatios;
     const Point block = _findHostBlock(dictionary, outerId, outerRatios);
@@ -1058,6 +1069,8 @@ void getNestedMarkerObjectPoints(const Dictionary &dictionary, int outerId, floa
     CV_Assert(dictionary.dictEncoding == DICT_ENCODING_CELL_RATIO);
     CV_Assert(outerId >= 0 && outerId % 2 == 0 && outerId + 1 < dictionary.bytesList.rows);
     CV_Assert(outerSideLength > 0.f && borderBits > 0);
+    CV_Assert(innerHalfDiagonal >= 0.2f &&
+              innerHalfDiagonal * innerHalfDiagonal <= 0.5f + FLT_EPSILON);
 
     Mat outerRatios;
     const Point block = _findHostBlock(dictionary, outerId, outerRatios);

@@ -495,10 +495,9 @@ CV_EXPORTS_W void drawDetectedMarkers(InputOutputArray image, InputArrayOfArrays
  *
  * This function returns a marker image in its canonical form (i.e. ready to be printed)
  *
- * For `DICT_ENCODING_CELL_RATIO` dictionaries, each cell is rendered as a constant grayscale
- * intensity proportional to the expected ratio (0..255) rather than a binary pattern with the
- * requested white-pixel ratio. Such non-binary cells are primarily intended for visualization and
- * may not be directly detectable by the ArUco detector.
+ * For `DICT_ENCODING_CELL_RATIO` dictionaries, each cell is filled with the gray level
+ * 255 * ratio, not with content that produces this ratio. Use generateImageMarkerNested() to
+ * render nested marker pairs.
  */
 CV_EXPORTS_W void generateImageMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray img,
                                       int borderBits = 1);

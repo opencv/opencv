@@ -85,7 +85,7 @@ def estimate_pose(camera_parameters):
         corners, ids, _ = detector.detectMarkers(frame)
         cv.aruco.drawDetectedMarkers(frame, corners, ids)
 
-        if ids is not None:
+        if ids is not None and len(ids) > 0:
             obj_points, img_points = board.matchImagePoints(corners, ids)
 
             if len(obj_points) >= 4:
