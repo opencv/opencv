@@ -134,18 +134,19 @@ if sys.version_info >= (3, 6):
             # type: (Any, Sequence[str]) -> ClassNode
             return create_class_node(self.cv_root, class_info, namespaces)
 
-        def generate(self, output_path):
-            # type: (Union[str, Path]) -> None
+        def generate(self, output_path, preprocessor_definitions):
+            # type: (Union[str, Path], Dict[str, int]) -> None
             output_path = Path(output_path)
             py_typed_path = output_path / self.cv_root.export_name / 'py.typed'
             with failures_wrapper.delete_on_failure(py_typed_path):
-                self._generate(output_path)
+                self._generate(output_path, preprocessor_definitions)
 
         @failures_wrapper.wrap_exceptions_as_warnings
-        def _generate(self, output_path):
-            # type: (Path) -> None
+        def _generate(self, output_path, preprocessor_definitions):
+            # type: (Path, Dict[str, int]) -> None
             resolve_enum_scopes(self.cv_root, self.exported_enums)
-            generate_typing_stubs(self.cv_root, output_path)
+            generate_typing_stubs(self.cv_root, output_path,
+                                  preprocessor_definitions)
 
 
 else:
@@ -176,5 +177,5 @@ else:
         def find_class_node(self, class_info, namespaces):
             return ClassNode()
 
-        def generate(self, output_path):
+        def generate(self, output_path, preprocessor_definitions):
             pass
