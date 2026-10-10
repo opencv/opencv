@@ -268,6 +268,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
         Mat object;
         objectPoints.getMat(static_cast<int>(image_idx)).convertTo(object,
                                                                     CV_64FC3);
+        object = object.reshape(3, (int)object.total());
         Mat objectPointMean;
         objectPointScales[image_idx] =
             normalizePoints(object, normalizedObjectPoints[image_idx],
@@ -527,8 +528,11 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             Jkk = Mat::zeros(4 * n_points, 18 + 6 * (n_images + 1), CV_64FC1);
 
             Mat object  = objectPoints.getMat(image_idx).clone();
+            object = object.reshape(object.channels(), (int)object.total());
             Mat imageLeft  = imagePoints1.getMat(image_idx).clone();
+            imageLeft = imageLeft.reshape(imageLeft.channels(), (int)imageLeft.total());
             Mat imageRight  = imagePoints2.getMat(image_idx).clone();
+            imageRight = imageRight.reshape(imageRight.channels(), (int)imageRight.total());
             Mat jacobians, projected;
 
             //left camera jacobian
@@ -1009,7 +1013,9 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         Mat image, object;
 
         objectPoints.getMat(image_idx).convertTo(object,  CV_64FC3);
+        object = object.reshape(3, (int)object.total());
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
+        image = image.reshape(2, (int)image.total());
 
         bool imT = image.rows < image.cols;
         bool obT = object.rows < object.cols;
@@ -1048,7 +1054,9 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
     {
         Mat image, object;
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+        object = object.reshape(3, (int)object.total());
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
+        image = image.reshape(2, (int)image.total());
 
         bool imT = image.channels() == 1 && image.rows > image.cols;
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
@@ -1115,7 +1123,9 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     {
         Mat image, object;
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+        object = object.reshape(3, (int)object.total());
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
+        image = image.reshape(2, (int)image.total());
 
         bool imT = image.channels() == 1 && image.rows > image.cols;
 
