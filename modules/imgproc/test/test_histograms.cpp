@@ -2111,5 +2111,96 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
     EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
 
+// See https://github.com/opencv/opencv/issues/29706
+typedef testing::TestWithParam<double> Imgproc_Hist_Compare_Correl;
+
+TEST_P(Imgproc_Hist_Compare_Correl, near_constant)
+{
+    const double spread = GetParam();
+    const int n = 256;
+    const double mean = 16777215.0;
+    cv::RNG& rng = theRNG();
+
+    cv::Mat h1(n, 1, CV_32FC1), h2(n, 1, CV_32FC1);
+    for (int i = 0; i < n; i++)
+    {
+        const double t = 2.0*i/(n - 1) - 1.0;
+        h1.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*t));
+        h2.at<float>(i, 0) = (float)(mean + mean*spread*(rng.gaussian(1.0) + 0.5*(2.0*t*t - 1.0)));
+    }
+
+    EXPECT_DOUBLE_EQ(compareHist(h1, h1, cv::HISTCMP_CORREL), 1.0);
+
+    const double r = compareHist(h1, h2, cv::HISTCMP_CORREL);
+    ASSERT_FALSE(cvIsNaN(r));
+    EXPECT_LE(r, 1.0);
+    EXPECT_GE(r, -1.0);
+
+    long double m1 = 0, m2 = 0;
+    for (int i = 0; i < n; i++) { m1 += h1.at<float>(i,0); m2 += h2.at<float>(i,0); }
+    m1 /= n; m2 /= n;
+    long double cov = 0, v1 = 0, v2 = 0;
+    for (int i = 0; i < n; i++)
+    {
+        long double da = (long double)h1.at<float>(i,0) - m1;
+        long double db = (long double)h2.at<float>(i,0) - m2;
+        cov += da*db; v1 += da*da; v2 += db*db;
+    }
+    // A spread this side of one ULP leaves the histogram exactly constant, which is
+    // the degenerate case the issue reports; there is no reference to compare then,
+    // only the requirement that the result stays 1 rather than -1 or NaN.
+    if (v1 > 0 && v2 > 0)
+        EXPECT_NEAR(r, (double)(cov / std::sqrt(v1*v2)), 1e-9);
+    else
+        EXPECT_DOUBLE_EQ(r, 1.0);
+
+    int dims[] = { n };
+    cv::SparseMat sparse(1, dims, CV_32F);
+    for (int i = 0; i < n; i++)
+        sparse.ref<float>(i) = h1.at<float>(i, 0);
+    EXPECT_DOUBLE_EQ(compareHist(sparse, sparse, cv::HISTCMP_CORREL), 1.0);
+
+    // The reported case is a histogram with no spread left at all. Spelling it out
+    // rather than reaching it through a small enough spread keeps it independent of
+    // where the drawn values happen to fall relative to a float32 ULP.
+    cv::Mat flat(n, 1, CV_32FC1, cv::Scalar(mean));
+    EXPECT_DOUBLE_EQ(compareHist(flat, flat, cv::HISTCMP_CORREL), 1.0);
+    cv::Mat almost = flat.clone();
+    almost.at<float>(n / 2, 0) = (float)mean + 1.f;
+    EXPECT_DOUBLE_EQ(compareHist(almost, almost, cv::HISTCMP_CORREL), 1.0);
+    const double rf = compareHist(almost, flat, cv::HISTCMP_CORREL);
+    ASSERT_FALSE(cvIsNaN(rf));
+    EXPECT_LE(rf, 1.0);
+    EXPECT_GE(rf, -1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Hist_Compare_Correl,
+                        testing::Values(1e-1, 1e-3, 1e-5, 1e-7));
+
+// See https://github.com/opencv/opencv/issues/13990
+TEST(Imgproc_Hist_Compare, correl_multichannel_13990)
+{
+    const int rows = 64, chans = 8, n = rows*chans;
+    cv::RNG& rng = theRNG();
+
+    cv::Mat flat1(n, 1, CV_32FC1), flat2(n, 1, CV_32FC1);
+    rng.fill(flat1, cv::RNG::UNIFORM, 0.f, 1000.f);
+    rng.fill(flat2, cv::RNG::UNIFORM, 0.f, 1000.f);
+    for (int i = 0; i < n; i++)
+    {
+        flat1.at<float>(i, 0) += (float)i;
+        flat2.at<float>(i, 0) += (float)(n - i);
+    }
+
+    cv::Mat multi1(rows, 1, CV_MAKETYPE(CV_32F, chans), flat1.data);
+    cv::Mat multi2(rows, 1, CV_MAKETYPE(CV_32F, chans), flat2.data);
+
+    EXPECT_NEAR(compareHist(multi1, multi2, cv::HISTCMP_CORREL),
+                compareHist(flat1, flat2, cv::HISTCMP_CORREL), 1e-12);
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi2, cv::HISTCMP_INTERSECT),
+                     compareHist(flat1, flat2, cv::HISTCMP_INTERSECT));
+    EXPECT_DOUBLE_EQ(compareHist(multi1, multi1, cv::HISTCMP_CORREL), 1.0);
+}
+
 }} // namespace
 /* End Of File */
