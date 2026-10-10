@@ -1419,7 +1419,12 @@ template<typename R> struct TheTest
 
     TheTest & test_float_rounding()
     {
-        R input(2.5f, 3.5f, -2.5f, -3.5f);
+        Data<R> inputData;
+        inputData[0] = 2.5f;
+        inputData[1] = 3.5f;
+        inputData[2] = -2.5f;
+        inputData[3] = -3.5f;
+        R input = inputData;
         Data<typename V_RegTraits<R>::round_reg> result = v_round(input);
 
         EXPECT_EQ(cvRound(2.5f), result[0]);
