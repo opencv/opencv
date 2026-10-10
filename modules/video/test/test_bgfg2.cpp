@@ -104,5 +104,42 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsFalse)
     }
 }
 
+// https://github.com/opencv/opencv/issues/24226
+TEST(BackgroundSubtractorKNN, ZeroLearningRateFreezesModel)
+{
+    const int channels[] = {1, 3};
+
+    for (int channelIdx = 0; channelIdx < 2; channelIdx++)
+    {
+        const int cn = channels[channelIdx];
+        const int type = CV_MAKETYPE(CV_8U, cn);
+        Ptr<BackgroundSubtractorKNN> knn = createBackgroundSubtractorKNN(500, 400.0, true);
+
+        Mat train(64, 64, type, Scalar::all(40));
+        Mat other(64, 64, type, Scalar::all(200));
+        Mat fgmask;
+
+        for (int i = 0; i < 30; i++)
+            knn->apply(train, fgmask, 0.5);
+
+        Mat backgroundBefore;
+        knn->getBackgroundImage(backgroundBefore);
+
+        // A zero learning rate freezes the model: the unrelated frames are still detected as
+        // foreground, but the background image must not move at all.
+        for (int i = 0; i < 30; i++)
+            knn->apply(other, fgmask, 0.0);
+
+        EXPECT_EQ(255, fgmask.at<uchar>(10, 10));
+
+        Mat backgroundAfter;
+        knn->getBackgroundImage(backgroundAfter);
+
+        Mat diff;
+        absdiff(backgroundBefore, backgroundAfter, diff);
+        EXPECT_DOUBLE_EQ(0.0, cvtest::norm(diff, NORM_INF));
+    }
+}
+
 }} // namespace
 /* End of file. */
