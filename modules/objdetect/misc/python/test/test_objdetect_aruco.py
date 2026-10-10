@@ -165,9 +165,9 @@ class aruco_objdetect_test(NewOpenCVTests):
         erroneous_ratio = ratio_marker.copy()
         erroneous_ratio[0, 0] = 1.0 - erroneous_ratio[0, 0]
         dist = aruco_dict.getDistanceToId(onlyCellPixelRatio=erroneous_ratio,
-                                          id=idx,
-                                          allRotations=True,
-                                          validBitIdThreshold=valid_bit_id_threshold)
+                                        id=idx,
+                                        allRotations=True,
+                                        validBitIdThreshold=valid_bit_id_threshold)
         self.assertEqual(dist, 1)
 
     def test_aruco_detector(self):
@@ -515,6 +515,47 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(2, len(dictIndices))
         self.assertEqual(0, dictIndices[0])
         self.assertEqual(1, dictIndices[1])
+
+    def test_nested_dictionary(self):
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_NESTED_10)
+        self.assertEqual(20, dictionary.bytesList.shape[0])
+        self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, dictionary.dictEncoding)
+
+        # one printed pair shows the outer id 0 and the inner id 1
+        side_pixels, margin = 480, 80
+        marker = cv.aruco.generateImageMarkerNested(dictionary, 0, side_pixels)
+        img = np.pad(marker, pad_width=margin, mode='constant', constant_values=255)
+
+        params = cv.aruco.DetectorParameters()
+        params.detectNestedMarkers = True
+        detector = cv.aruco.ArucoDetector(dictionary, params)
+        corners, ids, rejected = detector.detectMarkers(img)
+        self.assertEqual(sorted(ids.ravel().tolist()), [0, 1])
+
+        # object points of the pair fuse both detections through a board
+        outer_pts, inner_pts = cv.aruco.getNestedMarkerObjectPoints(dictionary, 0, float(side_pixels))
+        board = cv.aruco.Board([outer_pts, inner_pts], dictionary, np.array([0, 1]))
+        obj_pts, img_pts = board.matchImagePoints(corners, ids)
+        self.assertEqual(8, len(obj_pts))
+        self.assertLess(np.abs(obj_pts[:, :2] + margin - img_pts).max(), 3.)
+
+    def test_cell_ratio_dictionary_helpers(self):
+        binary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        dictionary = binary.convertToCellRatioDictionary()
+        self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, dictionary.dictEncoding)
+        expected = (binary.getMarkerBits(0) * 100).astype(np.uint8)
+        marker = cv.aruco.generateImageMarker(binary, 0, 101)
+        measured = cv.aruco.Dictionary_getCellRatiosFromImage(marker, 4)
+        np.testing.assert_array_equal(expected, measured)
+        ratios = cv.aruco.Dictionary_getRatioListFromCellRatios(measured)
+        restored = cv.aruco.Dictionary_getCellRatiosFromRatioList(ratios, 4)
+        np.testing.assert_array_equal(expected, restored)
+
+        # No integer percentage matches 55.5% with a strict tolerance.
+        observed = np.full((4, 4), 0.555, dtype=np.float32)
+        self.assertEqual(16, dictionary.getDistanceToId(observed, 0, False, 0.001))
+        found, _, _ = dictionary.identify(observed, 0., 0.001)
+        self.assertFalse(found)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
