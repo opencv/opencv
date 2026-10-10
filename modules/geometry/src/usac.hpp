@@ -6,7 +6,8 @@
 #define OPENCV_USAC_USAC_HPP
 
 namespace cv { namespace usac {
-enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3, AFFINE=4, P3P=5, P6P=6, PLANE=7, SPHERE=8};
+enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3, AFFINE=4, P3P=5, P6P=6, PLANE=7, SPHERE=8,
+                        SE2=9, SIM2=10, SO3=11, SE3=12, SIM3=13, SO2=14, SCALED_SO2=15, SCALED_SO3=16};
 enum VerificationMethod { NULL_VERIFIER=0, SPRT_VERIFIER=1, ASPRT=2 };
 enum ErrorMetric {DIST_TO_LINE=0, SAMPSON_ERR=1, SGD_ERR=2, SYMM_REPR_ERR=3, FORW_REPR_ERR=4, RERPOJ=5, POINT_TO_PLANE=6, POINT_TO_SPHERE=7};
 enum MethodSolver { GEM_SOLVER=0, SVD_SOLVER=1 };
@@ -56,6 +57,12 @@ public:
 class ReprojectionErrorAffine : public Error {
 public:
     static Ptr<ReprojectionErrorAffine> create(const Mat &points);
+};
+
+// Reprojection Error for Affine 3D matrix
+class ReprojectionErrorAffine3D : public Error {
+public:
+    static Ptr<ReprojectionErrorAffine3D> create(const Mat &points);
 };
 
 class TrifocalTensorReprError : public Error {
@@ -133,6 +140,16 @@ public:
     static Ptr<AffineMinimalSolver> create(const Mat &points_);
 };
 
+//-------------------------- RIGID / SIMILARITY -----------------------
+// Rigid (rotation + translation) or similarity (+ uniform scale) transformation between
+// two 2D or 3D point sets, i.e., SE2, SIM2, SE3, SIM3, or (scaled) rotation about the origin
+// (SO2, SO3, SCALED_SO2, SCALED_SO3).
+class PointSetRegistrationMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<PointSetRegistrationMinimalSolver> create(const Mat &points_, int dim,
+                                                         bool is_scale, bool is_rotation_only);
+};
+
 class TrifocalTensorMinimalSolver : public MinimalSolver {
 public:
     static Ptr<TrifocalTensorMinimalSolver> create(const Mat &points_);
@@ -204,6 +221,13 @@ public:
 class LarssonOptimizer : public NonMinimalSolver {
 public:
     static Ptr<LarssonOptimizer> create(const Mat &calib_points_, const Matx33d &K1_, const Matx33d &K2_, int max_iters_, bool is_fundamental_);
+};
+
+//-------------------------- RIGID / SIMILARITY -----------------------
+class PointSetRegistrationNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<PointSetRegistrationNonMinimalSolver> create(const Mat &points_, int dim,
+                                                            bool is_scale, bool is_rotation_only);
 };
 
 ////////////////////////////////////////// SCORE ///////////////////////////////////////////
@@ -866,6 +890,9 @@ public:
     virtual bool isHomography () const = 0;
     virtual bool isEssential () const = 0;
     virtual bool isPnP () const = 0;
+    // rotation, rigid or similarity point set registration (SO2, SE2, SIM2, SCALED_SO2 and 3D ones)
+    virtual bool isPtsetReg () const = 0;
+    virtual bool isPtsetReg3D () const = 0;
 
     // getters
     virtual int getSampleSize () const = 0;
@@ -963,6 +990,16 @@ Mat findEssentialMat( InputArray points1, InputArray points2,
 Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers,
      int method, double ransacReprojThreshold, int maxIters,
      double confidence, int refineIters);
+
+// Rotation (SO2, SO3), scaled rotation (SCALED_SO2, SCALED_SO3), rigid (SE2, SE3) or
+// similarity (SIM2, SIM3) transformation between two point sets.
+// Returns 2x3 (2D) or 3x4 (3D) matrix, or empty matrix if the transformation could not be
+// estimated.
+Mat estimatePointSetRegistration(InputArray from, InputArray to, OutputArray inliers,
+     EstimationMethod estimator, int method, double ransacReprojThreshold, int maxIters,
+     double confidence);
+Mat estimatePointSetRegistration(InputArray from, InputArray to, OutputArray inliers,
+     EstimationMethod estimator, const UsacParams &params);
 
 void saveMask (OutputArray mask, const std::vector<bool> &inliers_mask);
 void setParameters (Ptr<Model> &params, EstimationMethod estimator, const UsacParams &usac_params,
