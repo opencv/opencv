@@ -453,6 +453,8 @@ struct AnchorFreeLayout
         AnchorFreeLayout layout;
         layout.B = out.size[0];
         int d1 = out.size[1], d2 = out.size[2];
+        CV_Check(d1, d1 != d2, "Anchor-free head: a square output gives no way to tell the anchor "
+                               "axis from the channel axis");
         layout.transposed = d1 <= d2;
         layout.C = layout.transposed ? d1 : d2;
         layout.N = layout.transposed ? d2 : d1;
@@ -511,15 +513,19 @@ bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int
     return true;
 }
 
-// Only scored rows carry coordinates; zero padding would otherwise read as normalized.
-bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout)
+// Only rows with a positive class score carry coordinates; channel 4 alone is class 0.
+bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int nm, bool explicitClass)
 {
+    const int lastScore = explicitClass ? 4 : layout.C - nm - 1;
     bool any = false;
     for (int b = 0; b < layout.B; b++)
     {
         for (int i = 0; i < layout.N; i++)
         {
-            if (layout.at(out, b, i, 4) <= 0.f)
+            bool active = false;
+            for (int c = 4; c <= lastScore && !active; c++)
+                active = layout.at(out, b, i, c) > 0.f;
+            if (!active)
                 continue;
             for (int c = 0; c < 4; c++)
             {
@@ -549,6 +555,8 @@ bool mergeSplitOutputs(const std::vector<Mat>& outs, Mat& merged)
         else
             cls = &out;
     }
+    if (box && cls && cls->size[2] == 4)
+        return false;
     if (!box || !cls || box->size[0] != cls->size[0] || box->size[1] != cls->size[1])
         return false;
 
@@ -614,7 +622,7 @@ struct HeadLayout
             return head;
         }
         head.explicitClass = lastChannelIsClassIndex(out, layout, nm);
-        head.normalized = boxesAreNormalized(out, layout);
+        head.normalized = boxesAreNormalized(out, layout, nm, head.explicitClass);
         head.cornerBox = head.explicitClass && boxesAreCorners(out, layout);
         return head;
     }
