@@ -1933,8 +1933,25 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 
 inline v_int32x4 v_round(const v_float32x4& a)
 {
-    v128_t h = wasm_f32x4_splat(0.5);
-    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_add(a.val, h)));
+    v128_t rounded = wasm_i32x4_trunc_saturate_f32x4(a.val);
+    v128_t fraction = wasm_f32x4_abs(
+            wasm_f32x4_sub(a.val, wasm_f32x4_convert_i32x4(rounded)));
+    v128_t half = wasm_f32x4_splat(0.5f);
+    v128_t tie = wasm_f32x4_eq(fraction, half);
+    v128_t above = wasm_f32x4_gt(fraction, half);
+    v128_t odd = wasm_i32x4_ne(
+            wasm_v128_and(rounded, wasm_i32x4_splat(1)),
+            wasm_i32x4_splat(0));
+    v128_t adjust = wasm_v128_or(above, wasm_v128_and(tie, odd));
+    v128_t inRange = wasm_v128_and(
+            wasm_f32x4_ge(a.val, wasm_f32x4_splat(-2147483648.0f)),
+            wasm_f32x4_lt(a.val, wasm_f32x4_splat(2147483648.0f)));
+    adjust = wasm_v128_and(adjust, inRange);
+    v128_t negative = wasm_f32x4_lt(a.val, wasm_f32x4_splat(0.0f));
+    v128_t direction = wasm_v128_bitselect(
+            wasm_i32x4_splat(-1), wasm_i32x4_splat(1), negative);
+    return v_int32x4(wasm_i32x4_add(rounded,
+            wasm_v128_bitselect(direction, wasm_i32x4_splat(0), adjust)));
 }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
