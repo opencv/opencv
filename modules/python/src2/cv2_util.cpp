@@ -1,3 +1,6 @@
+#define NO_IMPORT_ARRAY  // the numpy C-API table is imported once, in cv2.cpp
+#define PY_ARRAY_UNIQUE_SYMBOL opencv_ARRAY_API
+
 #include "cv2_util.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
@@ -21,13 +24,99 @@ int cvDepthToNumpyType(int depth)
     case CV_32F:  return NPY_FLOAT;
     case CV_64F:  return NPY_DOUBLE;
     case CV_16F:  return NPY_HALF;
-    // NumPy has no bfloat16 dtype; pyopencv_from() converts the values to float32.
+    // NumPy alone has no bfloat16; pyopencv_from() uses ml_dtypes when importable, else float32.
     case CV_16BF: return NPY_FLOAT;
     case CV_Bool: return NPY_BOOL;
     default:
         CV_Error(cv::Error::StsNotImplemented,
                  cv::format("Mat depth %d has no corresponding NumPy dtype", depth));
     }
+}
+
+namespace {
+
+// ml_dtypes registers bfloat16 and the OCP float8 formats as NumPy dtypes. When importable,
+// Mats of OpenCV's matching types keep their exact dtype instead of widening to float32.
+struct MlDtypeRegistry
+{
+    PyArray_Descr* bf16 = nullptr;
+    PyArray_Descr* e4m3fn = nullptr;
+    PyArray_Descr* e4m3fnuz = nullptr;
+
+    MlDtypeRegistry()
+    {
+        PyObject* mod = PyImport_ImportModule("ml_dtypes");
+        if (!mod)
+        {
+            PyErr_Clear();
+            return;
+        }
+        bf16 = fetch(mod, "bfloat16");
+        e4m3fn = fetch(mod, "float8_e4m3fn");
+        e4m3fnuz = fetch(mod, "float8_e4m3fnuz");
+        Py_DECREF(mod);
+    }
+
+    // The descriptors are kept for the life of the process, so they are never released.
+    static PyArray_Descr* fetch(PyObject* mod, const char* name)
+    {
+        PyObject* scalarType = PyObject_GetAttrString(mod, name);
+        if (!scalarType)
+        {
+            PyErr_Clear();
+            return nullptr;
+        }
+        PyArray_Descr* descr = nullptr;
+        if (!PyArray_DescrConverter(scalarType, &descr))
+        {
+            PyErr_Clear();
+            descr = nullptr;
+        }
+        Py_DECREF(scalarType);
+        return descr;
+    }
+};
+
+// Guarded by the GIL rather than a function-local static: the import inside the constructor
+// can release the GIL, and a thread blocked on a static-init lock while holding it deadlocks.
+const MlDtypeRegistry* g_mlDtypes = nullptr;
+
+const MlDtypeRegistry& mlDtypes()
+{
+    if (!g_mlDtypes)
+    {
+        const MlDtypeRegistry* r = new MlDtypeRegistry();
+        if (!g_mlDtypes)  // another thread may have finished first while the import ran
+            g_mlDtypes = r;
+    }
+    return *g_mlDtypes;
+}
+
+}  // namespace
+
+PyArray_Descr* mlDtypeDescrForCvDepth(int depth)
+{
+    if (depth != CV_16BF && depth != CV_8F_E4M3FN && depth != CV_8F_E4M3FNUZ)
+        return nullptr;
+    const MlDtypeRegistry& r = mlDtypes();
+    switch (depth)
+    {
+    case CV_16BF:         return r.bf16;
+    case CV_8F_E4M3FN:    return r.e4m3fn;
+    case CV_8F_E4M3FNUZ:  return r.e4m3fnuz;
+    default:              return nullptr;
+    }
+}
+
+int mlDtypeToCvDepth(int typenum)
+{
+    if (typenum < NPY_USERDEF)  // ml_dtypes types are user-defined NumPy dtypes
+        return -1;
+    const MlDtypeRegistry& r = mlDtypes();
+    if (r.bf16 && typenum == r.bf16->type_num)         return CV_16BF;
+    if (r.e4m3fn && typenum == r.e4m3fn->type_num)     return CV_8F_E4M3FN;
+    if (r.e4m3fnuz && typenum == r.e4m3fnuz->type_num) return CV_8F_E4M3FNUZ;
+    return -1;
 }
 
 int numpyTypeToCvDepth(int typenum)

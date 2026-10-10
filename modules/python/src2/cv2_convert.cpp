@@ -151,6 +151,8 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
+    if( type < 0 )
+        type = mlDtypeToCvDepth(typenum);  // bfloat16 / float8, when ml_dtypes is installed
 
     if( type < 0 )
     {
@@ -332,12 +334,44 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     return true;
 }
 
+// Hands a bfloat16 / float8 Mat back with its exact dtype; `descr` is the caller's to check.
+static PyObject* pyopencv_from_mldtype(const cv::Mat& m, PyArray_Descr* descr)
+{
+    cv::Mat cont;
+    if( m.isContinuous() )
+        cont = m;
+    else
+        ERRWRAP2(cont = m.clone());
+
+    const int cn = cont.channels();
+    int dims = cont.dims;
+    cv::AutoBuffer<npy_intp> _sizes(dims + 1);
+    for( int i = 0; i < dims; i++ )
+        _sizes[i] = (npy_intp)cont.size[i];
+    if( cn > 1 )
+        _sizes[dims++] = cn;
+
+    Py_INCREF(descr);  // PyArray_NewFromDescr steals the reference
+    PyObject* o = PyArray_NewFromDescr(&PyArray_Type, descr, dims, _sizes.data(),
+                                       nullptr, nullptr, 0, nullptr);
+    if( !o )
+        return nullptr;
+    if( !cont.empty() )
+        memcpy(PyArray_DATA((PyArrayObject*)o), cont.data, cont.total() * cont.elemSize());
+    return o;
+}
+
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    // NumPy has no bfloat16 or float8 dtype: widen these to float32 (lossless).
     if( m.depth() == CV_16BF || m.depth() == CV_8F_E4M3FN || m.depth() == CV_8F_E4M3FNUZ )
     {
+        if( PyArray_Descr* descr = mlDtypeDescrForCvDepth(m.depth()) )
+            return pyopencv_from_mldtype(m, descr);
+        // Without ml_dtypes NumPy cannot name these; widen to float32 (lossless).
+        CV_LOG_ONCE_WARNING(NULL, "Python bindings: ml_dtypes package is not found, "
+                            "bfloat16 / float8 arrays are returned as float32. "
+                            "Install ml_dtypes to keep the exact dtype.");
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));
         return pyopencv_from(m32f);
