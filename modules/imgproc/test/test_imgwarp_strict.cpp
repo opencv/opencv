@@ -89,6 +89,9 @@ protected:
     Mat src;
     Mat dst;
     Mat reference_dst;
+    // Optional per-destination-pixel mask (CV_8UC1, 0 = do not check).
+    // Empty means every pixel is validated.
+    Mat validation_mask;
 };
 
 CV_ImageWarpBaseTest::CV_ImageWarpBaseTest() :
@@ -142,6 +145,8 @@ Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
 void CV_ImageWarpBaseTest::generate_test_data()
 {
     RNG& rng = ts->get_rng();
+
+    validation_mask.release();
 
     // generating the src matrix structure
     Size ssize = randSize(rng), dsize;
@@ -256,9 +261,11 @@ void CV_ImageWarpBaseTest::validate_results() const
     {
         const float* rD = reference_dst.ptr<float>(dy);
         const float* D = _dst.ptr<float>(dy);
+        const uchar* mask = validation_mask.empty() ? 0 : validation_mask.ptr<uchar>(dy);
 
         for (int dx = 0; dx < dsize.width; ++dx)
-            if (fabs(rD[dx] - D[dx]) > t &&
+            if ((!mask || mask[dx / cn]) &&
+                fabs(rD[dx] - D[dx]) > t &&
 //                fabs(rD[dx] - D[dx]) < 250.0f &&
                 rD[dx] <= 255.0f && D[dx] <= 255.0f && rD[dx] >= 0.0f && D[dx] >= 0.0f)
             {
@@ -1671,6 +1678,37 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         Mat tmp;
         invert(M, tmp);
         M = tmp;
+    }
+
+    // Near the vanishing line the perspective denominator w tends to zero, so the
+    // back-projected source coordinate is ill-conditioned: evaluating w in float
+    // instead of double, or with a fused multiply-add, or as a reciprocal multiply,
+    // moves the sampled point by many pixels. With BORDER_REPLICATE those runaway
+    // coordinates clamp onto different edge pixels, which on the 0/255 test images
+    // produces large but meaningless differences. Skip such pixels - see
+    // https://github.com/opencv/opencv/issues/29816
+    {
+        Mat mf;
+        M.convertTo(mf, CV_32F);
+        const float* m = mf.ptr<const float>();
+        const float bound_x = 2.0f * ssize.width + 32.0f;
+        const float bound_y = 2.0f * ssize.height + 32.0f;
+
+        validation_mask.create(dsize, CV_8UC1);
+        for (int y = 0; y < dsize.height; ++y)
+        {
+            uchar* mask = validation_mask.ptr<uchar>(y);
+            for (int x = 0; x < dsize.width; ++x)
+            {
+                float w = x*m[6] + y*m[7] + m[8];
+                float sx = (x*m[0] + y*m[1] + m[2]) / w;
+                float sy = (x*m[3] + y*m[4] + m[5]) / w;
+                bool ill_conditioned = cvIsNaN(sx) || cvIsNaN(sy) ||
+                                       cvIsInf(sx) || cvIsInf(sy) ||
+                                       fabsf(sx) > bound_x || fabsf(sy) > bound_y;
+                mask[x] = ill_conditioned ? 0 : 255;
+            }
+        }
     }
 
     int inter = interpolation & INTER_MAX;
