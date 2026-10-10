@@ -1,11 +1,21 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
+
+// 8U/16U/16S/32F x C1/C3/C4.
+#define FILTER2D_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                       CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
+// filter2D accepts both integer and float kernels; separable kernels are float only.
+#define FILTER2D_KERNEL_TYPES    CV_16SC1, CV_32FC1
+#define SEPFILTER2D_KERNEL_TYPES CV_32FC1
+// Common types for the tiled parallel FilterEngine path.
+#define FILTER2D_PARALLEL_TYPES  CV_8UC1, CV_8UC3, CV_32FC1
 
 typedef TestBaseWithParam< tuple<Size, int, BorderMode> > TestFilter2d;
 typedef TestBaseWithParam< tuple<string, int> > Image_KernelSize;
@@ -37,6 +47,68 @@ PERF_TEST_P( TestFilter2d, Filter2d,
     TEST_CYCLE() cv::filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
 
     SANITY_CHECK(dst, 1);
+}
+
+typedef TestBaseWithParam< tuple<Size, MatType, int, MatType> > TestFilter2dTypes;
+
+PERF_TEST_P( TestFilter2dTypes, Filter2d_types,
+             Combine(
+                Values( sz1080p ),
+                Values( FILTER2D_TYPES ),
+                Values( 3, 5, 7, 21 ),
+                Values( FILTER2D_KERNEL_TYPES )   // kernel type
+             )
+)
+{
+    Size sz       = get<0>(GetParam());
+    int  type     = get<1>(GetParam());
+    int  kSize    = get<2>(GetParam());
+    int  kernType = get<3>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    Mat kernel(kSize, kSize, kernType);
+    randu(kernel, -3, 10);
+    if (kernType == CV_32FC1)
+    {
+        double s = fabs( sum(kernel)[0] );
+        if(s > 1e-3) kernel /= s;
+    }
+
+    declare.in(src, WARMUP_RNG).out(dst).time(20);
+
+    TEST_CYCLE() cv::filter2D(src, dst, -1, kernel, Point(-1, -1), 0., BORDER_REPLICATE);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P( TestFilter2dTypes, sepFilter2D_types,
+             Combine(
+                Values( sz1080p ),
+                Values( FILTER2D_TYPES ),
+                Values( 3, 5, 7, 21 ),
+                Values( SEPFILTER2D_KERNEL_TYPES )   // separable kernels are float
+             )
+)
+{
+    Size sz     = get<0>(GetParam());
+    int  type   = get<1>(GetParam());
+    int  kSize  = get<2>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    Mat kernelX(1, kSize, CV_32FC1);
+    Mat kernelY(1, kSize, CV_32FC1);
+    randu(kernelX, -6, 6);
+    randu(kernelY, -6, 6);
+
+    declare.in(src, WARMUP_RNG).out(dst).time(20);
+
+    TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, Point(-1, -1), 0., BORDER_REPLICATE);
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(TestFilter2d, DISABLED_Filter2d_ovx,
@@ -104,7 +176,7 @@ typedef TestBaseWithParam< tuple<Size, int, BorderMode, bool> > ImgProc_Parallel
 PERF_TEST_P( ImgProc_ParallelFilter_Perf, filter2D_parallel,
              Combine(
                  Values( Size(1280, 1024), sz1080p ),
-                 Values( CV_8UC1, CV_8UC3, CV_32FC1 ),
+                 Values( FILTER2D_PARALLEL_TYPES ),
                  Values( BORDER_DEFAULT, BORDER_CONSTANT ),
                  Values( false, true )   // false = filter2D, true = sepFilter2D
              )
