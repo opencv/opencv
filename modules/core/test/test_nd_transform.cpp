@@ -556,4 +556,35 @@ TEST(Core_SliceND, invalid)
     EXPECT_NO_THROW(cv::sliceND(a, {3}, {-1}, {-1}, d));
 }
 
+TEST(Core_Flip, ndim_26498)
+{
+    // Arrays with more than CV_CN_MAX channels arrive as dims() > 2 from Python/numpy.
+    // cv::flip must handle them via flipND rather than asserting.
+    const int sz[] = {4, 6, 513};
+    Mat src(3, sz, CV_8U);
+    cv::randu(src, 0, 256);
+
+    // Flip along axis 0 (rows)
+    Mat dst0;
+    EXPECT_NO_THROW(cv::flip(src, dst0, 0));
+    EXPECT_EQ(dst0.dims, 3);
+    EXPECT_EQ(dst0.size[0], 4);
+    EXPECT_EQ(dst0.size[1], 6);
+    EXPECT_EQ(dst0.size[2], 513);
+    // First slice of dst0 should equal last slice of src along axis 0
+    Mat src_slice0(2, sz+1, CV_8U, src.ptr());
+    Mat dst_slice0(2, sz+1, CV_8U, dst0.ptr() + (sz[0]-1)*src.step[0]);
+    EXPECT_EQ(0, cv::norm(src_slice0, dst_slice0, NORM_INF));
+
+    // Flip along axis 1 (cols)
+    Mat dst1;
+    EXPECT_NO_THROW(cv::flip(src, dst1, 1));
+    EXPECT_EQ(dst1.dims, 3);
+
+    // Flip both axes
+    Mat dstm1;
+    EXPECT_NO_THROW(cv::flip(src, dstm1, -1));
+    EXPECT_EQ(dstm1.dims, 3);
+}
+
 }} // namespace
