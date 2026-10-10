@@ -1121,4 +1121,78 @@ TEST_F(fisheyeTest, cameraRegistrationWithPerViewTransformations)
     EXPECT_NEAR(rmsErrorRegisterCamera, rmsErrorFromReprojectedImgPts, 1e-4);
 }
 
+
+TEST(Fisheye_Calibrate, point_array_shape_N1C_29692)
+{
+    // Regression test for #29692:
+    // (N, 1, C) point arrays must produce the same result as (1, N, C).
+    const cv::Matx33d K_true(500, 0, 320,
+                              0, 500, 240,
+                              0,   0,   1);
+    const cv::Vec4d D_true(0, 0, 0, 0);
+
+    // 5x5 planar grid with 0.05 m spacing
+    const int gridN = 25;
+    std::vector<cv::Point3d> objPts3d;
+    for (int r = 0; r < 5; ++r)
+        for (int c = 0; c < 5; ++c)
+            objPts3d.push_back({c * 0.05, r * 0.05, 0.0});
+
+    // 5 views with slightly different rotations / translations
+    const double rdata[5][3] = {
+        { 0.10,  0.10,  0.05},
+        {-0.10,  0.10,  0.00},
+        { 0.00, -0.10,  0.10},
+        { 0.10, -0.10, -0.05},
+        {-0.05,  0.05,  0.08}
+    };
+    const double tdata[5][3] = {
+        { 0.00,  0.00, 0.50},
+        { 0.05,  0.00, 0.50},
+        {-0.05,  0.00, 0.50},
+        { 0.00,  0.05, 0.50},
+        { 0.02, -0.03, 0.52}
+    };
+
+    std::vector<cv::Mat> objPts_col, imgPts_col; // (N, 1, C) layout
+    std::vector<cv::Mat> objPts_row, imgPts_row; // (1, N, C) layout
+
+    for (int v = 0; v < 5; ++v)
+    {
+        cv::Vec3d rvec(rdata[v][0], rdata[v][1], rdata[v][2]);
+        cv::Vec3d tvec(tdata[v][0], tdata[v][1], tdata[v][2]);
+        std::vector<cv::Point2d> imgPts2d;
+        cv::fisheye::projectPoints(objPts3d, imgPts2d, rvec, tvec, K_true, D_true);
+
+        // (N, 1, C) — column-vector of multichannel entries
+        cv::Mat o_col(gridN, 1, CV_64FC3, objPts3d.data());
+        cv::Mat i_col(gridN, 1, CV_64FC2, imgPts2d.data());
+        objPts_col.push_back(o_col.clone());
+        imgPts_col.push_back(i_col.clone());
+
+        // (1, N, C) — row-vector of multichannel entries
+        cv::Mat o_row(1, gridN, CV_64FC3, objPts3d.data());
+        cv::Mat i_row(1, gridN, CV_64FC2, imgPts2d.data());
+        objPts_row.push_back(o_row.clone());
+        imgPts_row.push_back(i_row.clone());
+    }
+
+    const cv::Size imgSize(640, 480);
+    cv::Matx33d K_col = K_true, K_row = K_true;
+    cv::Vec4d   D_col = D_true, D_row = D_true;
+
+    // Both layouts must succeed without throwing
+    EXPECT_NO_THROW(cv::fisheye::calibrate(
+        objPts_col, imgPts_col, imgSize, K_col, D_col,
+        cv::noArray(), cv::noArray(), 0));
+    EXPECT_NO_THROW(cv::fisheye::calibrate(
+        objPts_row, imgPts_row, imgSize, K_row, D_row,
+        cv::noArray(), cv::noArray(), 0));
+
+    // Results must be numerically equivalent
+    EXPECT_NEAR(K_col(0, 0), K_row(0, 0), 1e-3);
+    EXPECT_NEAR(K_col(1, 1), K_row(1, 1), 1e-3);
+    EXPECT_NEAR(K_col(0, 2), K_row(0, 2), 1e-3);
+    EXPECT_NEAR(K_col(1, 2), K_row(1, 2), 1e-3);
+}
 }} // namespace
