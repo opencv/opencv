@@ -139,12 +139,27 @@ static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
                                 const VT& Z, const VT& W, int vl)
 {
 #if CV_RVV
+    // Tuple fields are assembled with vset rather than vcreate for
+    // compatibility with compilers that lack the tuple vcreate intrinsics
+    // (Clang < 18, incl. the RISC-V Clang CI).
     if constexpr (sizeof(T) == 4)
-        __riscv_vsseg4e32_v_f32m1x4(reinterpret_cast<float*>(p),
-                                    __riscv_vcreate_v_f32m1x4(X, Y, Z, W), vl);
+    {
+        vfloat32m1x4_t seg = vfloat32m1x4_t();
+        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 0, X);
+        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 1, Y);
+        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 2, Z);
+        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 3, W);
+        __riscv_vsseg4e32_v_f32m1x4(reinterpret_cast<float*>(p), seg, vl);
+    }
     else
-        __riscv_vsseg4e64_v_f64m1x4(reinterpret_cast<double*>(p),
-                                    __riscv_vcreate_v_f64m1x4(X, Y, Z, W), vl);
+    {
+        vfloat64m1x4_t seg = vfloat64m1x4_t();
+        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 0, X);
+        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 1, Y);
+        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 2, Z);
+        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 3, W);
+        __riscv_vsseg4e64_v_f64m1x4(reinterpret_cast<double*>(p), seg, vl);
+    }
 #else
     v_store_interleave(reinterpret_cast<T*>(p), X, Y, Z, W);
 #endif
@@ -157,8 +172,7 @@ template<typename T>
 static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* point, int n)
 {
     int i = 0;
-    // 64-bit lanes need CV_SIMD_64F / CV_SIMD_SCALABLE_64F (absent e.g. on ARMv7 NEON).
-    if constexpr (sizeof(T) == 4 || CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if constexpr (sizeof(T) == 4)
     {
         typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
         const int vl = VTraits<VT>::vlanes();
@@ -206,13 +220,28 @@ void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& poi
         *y_cache_ptr = (y - oy) * inv_fy;
 
     y_cache_ptr = y_cache[0];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // Wide 32-bit rows use the vector kernel in a separate loop so that the
+    // scalar loop below keeps its plain form (and its autovectorization): the
+    // vector call is only profitable there (measured on SpacemiT K1, see PR
+    // discussion); 64-bit and narrow rows are as fast or faster scalar.
+    if constexpr (sizeof(T) == 4)
+    {
+        if (in_depth.cols >= 1024)
+        {
+            for (int y = 0; y < in_depth.rows; ++y, ++y_cache_ptr)
+            {
+                cv::Vec<T, 4>* point = points3d.ptr<cv::Vec<T, 4> >(y);
+                depthTo3dRowVec(x_cache[0], z_mat[y], *y_cache_ptr, point, in_depth.cols);
+            }
+            return;
+        }
+    }
+#endif
     for (int y = 0; y < in_depth.rows; ++y, ++y_cache_ptr)
     {
         cv::Vec<T, 4>* point = points3d.ptr<cv::Vec<T, 4> >(y);
         const T* depth = z_mat[y];
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        depthTo3dRowVec(x_cache[0], depth, *y_cache_ptr, point, in_depth.cols);
-#else
         const T* x_cache_ptr_end = x_cache[0] + in_depth.cols;
         for (x_cache_ptr = x_cache[0]; x_cache_ptr != x_cache_ptr_end; ++x_cache_ptr, ++point, ++depth)
         {
@@ -222,7 +251,6 @@ void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& poi
             (*point)[2] = z;
             (*point)[3] = 0;
         }
-#endif
     }
 }
 
