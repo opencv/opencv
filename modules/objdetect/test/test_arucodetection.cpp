@@ -5,6 +5,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/geometry.hpp"
+#include <thread>
 
 namespace cv {
     namespace aruco {
@@ -1497,5 +1498,38 @@ INSTANTIATE_TEST_CASE_P(
             aruco::CORNER_REFINE_CONTOUR,
             aruco::CORNER_REFINE_APRILTAG
         ));
+
+// Regression test for https://github.com/opencv/opencv/issues/27714
+// quad_segment_agg leaked its zmaxheap when zmaxheap_remove_max returned zero.
+// Run detectMarkers from multiple concurrent threads with CORNER_REFINE_APRILTAG
+// to exercise the early-exit path; address/memory sanitizers in CI will catch leaks.
+TEST(Objdetect_ArucoDetector, multithreaded_no_leak_27714)
+{
+    // Blank image — no markers will be found, but the quad-detection
+    // pipeline (including zmaxheap creation/destruction) is still exercised.
+    Mat image = Mat::zeros(200, 200, CV_8UC3);
+
+    aruco::DetectorParameters params;
+    params.cornerRefinementMethod = (int)aruco::CORNER_REFINE_APRILTAG;
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+    aruco::ArucoDetector detector(dict, params);
+
+    const int nthreads = 4;
+    const int niters = 10;
+    std::vector<std::thread> threads;
+    for (int t = 0; t < nthreads; ++t)
+    {
+        threads.emplace_back([&]() {
+            for (int i = 0; i < niters; ++i)
+            {
+                std::vector<int> ids;
+                std::vector<std::vector<cv::Point2f>> corners, rejected;
+                detector.detectMarkers(image, corners, ids, rejected);
+            }
+        });
+    }
+    for (auto& th : threads) th.join();
+    SUCCEED();
+}
 
 }} // namespace

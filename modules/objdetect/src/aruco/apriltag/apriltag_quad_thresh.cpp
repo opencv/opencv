@@ -509,8 +509,10 @@ int quad_segment_agg(int sz, struct line_fit_pt *lfps, int indices[4]){
         float err;
 
         int res = zmaxheap_remove_max(heap, &rv, &err);
-        if (!res)
+        if (!res) {
+            zmaxheap_destroy(heap);
             return 0;
+        }
         CV_Assert(res);
 
         // is this remove_vertex valid? (Or has one of the left/right
