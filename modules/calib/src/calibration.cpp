@@ -80,17 +80,33 @@ public:
         nimages = _nimages;
         NINTRINSIC = _NINTRINSIC;
         n_global = NINTRINSIC + nObjPoints * 3;
+        nparts = std::min(nimages, 16);
+        {
+            const size_t partBytes = (size_t)n_global * n_global * sizeof(double);
+            const size_t maxTotalPartBytes = 256 * 1024 * 1024;
+            if (partBytes > 0)
+                nparts = std::min(nparts, (int)std::max<size_t>(1, maxTotalPartBytes / partBytes));
+        }
         criteria = _criteria;
 
         U.create(n_global, n_global, CV_64F);
         ea.create(n_global, 1, CV_64F);
         deltaGlobal.create(n_global, 1, CV_64F);
 
+        U_part.resize(nparts);
+        ea_part.resize(nparts);
+        error_img.resize(nimages);
         V.resize(nimages);
         V_inv.resize(nimages);
         W.resize(nimages);
         eb.resize(nimages);
         deltaLocal.resize(nimages);
+
+        for (int p = 0; p < nparts; p++)
+        {
+            U_part[p].create(n_global, n_global, CV_64F);
+            ea_part[p].create(n_global, 1, CV_64F);
+        }
 
         for (int i = 0; i < nimages; i++)
         {
@@ -110,15 +126,29 @@ public:
 
     void reset()
     {
-        U.setTo(0);
-        ea.setTo(0);
+        U.setZero();
+        ea.setZero();
         currentError = 0;
         for (int i = 0; i < nimages; i++)
         {
-            V[i].setTo(0);
-            W[i].setTo(0);
-            eb[i].setTo(0);
+            V[i].setZero();
+            W[i].setZero();
+            eb[i].setZero();
         }
+    }
+
+    void reduceGlobal()
+    {
+        U_part[0].copyTo(U);
+        ea_part[0].copyTo(ea);
+        for (int p = 1; p < nparts; p++)
+        {
+            U += U_part[p];
+            ea += ea_part[p];
+        }
+        currentError = 0;
+        for (int i = 0; i < nimages; i++)
+            currentError += error_img[i];
     }
 
     bool step(const cv::Mat& mask)
@@ -214,7 +244,7 @@ public:
         }
 
         // Distribute the solution into the full update vector
-        deltaGlobal.setTo(0);
+        deltaGlobal.setZero();
         int j = 0;
         for (int i = 0; i < n_global; i++)
         {
@@ -285,24 +315,28 @@ public:
     void setSolveMethod(int method) { solveMethod = method; }
 
     cv::Mat U;
+    std::vector<cv::Mat> U_part;
     std::vector<cv::Mat> V;
     std::vector<cv::Mat> W;
     cv::Mat ea;
+    std::vector<cv::Mat> ea_part;
     std::vector<cv::Mat> eb;
+    std::vector<double> error_img;
     double currentError;
 
     State state;
     int NINTRINSIC;
     int nimages;
+    int nparts;
     int n_global;
     int lambdaLg10;
 
 private:
     void clearUpdates()
     {
-        deltaGlobal.setTo(0);
+        deltaGlobal.setZero();
         for (int i = 0; i < nimages; i++)
-            deltaLocal[i].setTo(0);
+            deltaLocal[i].setZero();
     }
 
     int iters;
@@ -321,12 +355,11 @@ public:
     JAccumulator(SchurLMSolver& _solver,
                  const cv::Mat& _matM, const cv::Mat& _m, const cv::Mat& _npoints,
                  const cv::Mat& _param, int _flags, double _aspectRatio,
-                 int _NINTRINSIC, bool _releaseObject, int _maxPoints,
-                 cv::Mutex& _globalMutex)
+                 int _NINTRINSIC, bool _releaseObject, int _maxPoints)
         : solver(_solver), matM(_matM), m(_m), npoints(_npoints),
           param(_param), flags(_flags), aspectRatio(_aspectRatio),
           NINTRINSIC(_NINTRINSIC), releaseObject(_releaseObject),
-          maxPoints(_maxPoints), globalMutex(_globalMutex) {}
+          maxPoints(_maxPoints) {}
 
     void operator()(const cv::Range& range) const CV_OVERRIDE
     {
@@ -345,14 +378,24 @@ public:
             JoBuf.create(maxPoints * 2, maxPoints * 3, CV_64F);
         cv::Mat errBuf(maxPoints * 2, 1, CV_64F);
 
+        int nparts = solver.nparts;
+        int istart = range.start * nimages_total / nparts;
+        int iend = range.end * nimages_total / nparts;
+        for (int p = range.start; p < range.end; p++)
+        {
+            solver.U_part[p].setZero();
+            solver.ea_part[p].setZero();
+        }
+
         int pos = 0;
-        for (int i = 0; i < range.start; i++)
+        for (int i = 0; i < istart; i++)
             pos += npoints.at<int>(i);
 
-        double localErr = 0;
-
-        for (int i = range.start; i < range.end; i++)
+        int p = range.start;
+        for (int i = istart; i < iend; i++)
         {
+            while (i >= (p + 1) * nimages_total / nparts)
+                p++;
             int ni = npoints.at<int>(i);
             int si = NINTRINSIC + i * 6;
 
@@ -369,14 +412,14 @@ public:
 
             // Buffers for derivatives
             cv::Mat Ji = JiBuf.rowRange(0, ni * 2);
-            Ji.setTo(0);
+            Ji.setZero();
             cv::Mat Je = JeBuf.rowRange(0, ni * 2);
-            Je.setTo(0);
+            Je.setZero();
             cv::Mat Jo;
             if (releaseObject)
             {
                 Jo = JoBuf.rowRange(0, ni * 2).colRange(0, ni * 3);
-                Jo.setTo(0);
+                Jo.setZero();
             }
             cv::Mat err = errBuf.rowRange(0, ni * 2);
             cv::Mat _mp = err.reshape(2, 1);
@@ -426,7 +469,7 @@ public:
                 _dpdo.copyTo(Jo);
 
             cv::subtract(_mp, _mi, _mp);
-            localErr += cv::norm(err, cv::NORM_L2SQR);
+            solver.error_img[i] = cv::norm(err, cv::NORM_L2SQR);
 
             // Accumulate V and eb blocks (per-image)
             solver.V[i] = Je.t() * Je;
@@ -441,25 +484,21 @@ public:
             }
 
             // Accumulate U and ea blocks (shared parameters)
+            cv::Mat& Ui = solver.U_part[p];
+            cv::Mat& eai = solver.ea_part[p];
+            Ui(cv::Rect(0, 0, NINTRINSIC, NINTRINSIC)) += Ji.t() * Ji;
+            eai.rowRange(0, NINTRINSIC) += Ji.t() * err;
+
+            if (releaseObject)
             {
-                cv::AutoLock lock(globalMutex);
-                solver.U(cv::Rect(0, 0, NINTRINSIC, NINTRINSIC)) += Ji.t() * Ji;
-                solver.ea.rowRange(0, NINTRINSIC) += Ji.t() * err;
-
-                if (releaseObject)
-                {
-                    cv::Mat JitJo = Ji.t() * Jo;
-                    solver.U(cv::Rect(NINTRINSIC, 0, Jo.cols, NINTRINSIC)) += JitJo;
-                    solver.U(cv::Rect(0, NINTRINSIC, NINTRINSIC, Jo.cols)) += JitJo.t();
-                    solver.U(cv::Rect(NINTRINSIC, NINTRINSIC, Jo.cols, Jo.cols)) += Jo.t() * Jo;
-                    solver.ea.rowRange(NINTRINSIC, NINTRINSIC + Jo.cols) += Jo.t() * err;
-                }
-
-                solver.currentError += localErr;
+                cv::Mat JitJo = Ji.t() * Jo;
+                Ui(cv::Rect(NINTRINSIC, 0, Jo.cols, NINTRINSIC)) += JitJo;
+                Ui(cv::Rect(0, NINTRINSIC, NINTRINSIC, Jo.cols)) += JitJo.t();
+                Ui(cv::Rect(NINTRINSIC, NINTRINSIC, Jo.cols, Jo.cols)) += Jo.t() * Jo;
+                eai.rowRange(NINTRINSIC, NINTRINSIC + Jo.cols) += Jo.t() * err;
             }
 
             pos += ni;
-            localErr = 0;
         }
     }
 
@@ -474,7 +513,6 @@ private:
     int NINTRINSIC;
     bool releaseObject;
     int maxPoints;
-    cv::Mutex& globalMutex;
 };
 
 } // anonymous namespace
@@ -1378,7 +1416,6 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
 
     // 3. run the optimization
     Mat_<double> prev_param = param_m.clone();
-    Mutex globalMutex;
 
     // Compute initial error
     Mat allErrorsBuf(1, total, CV_64FC2);
@@ -1432,10 +1469,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
 
         solver.reset();
 
-        parallel_for_(Range(0, nimages),
+        parallel_for_(Range(0, solver.nparts),
                       JAccumulator(solver, matM, _m, npoints, param_m,
                                    flags, aspectRatio, NINTRINSIC,
-                                   releaseObject, maxPoints, globalMutex));
+                                   releaseObject, maxPoints));
+        solver.reduceGlobal();
         jacobianAtCurrentParams = true;
         // JAccumulator acc(solver, matM, _m, npoints, param_m,
         //                         flags, aspectRatio, NINTRINSIC,
@@ -1528,10 +1566,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
 
                 // Compute new Jacobian at new position
                 solver.reset();
-                parallel_for_(Range(0, nimages),
+                parallel_for_(Range(0, solver.nparts),
                               JAccumulator(solver, matM, _m, npoints, param_m,
                                            flags, aspectRatio, NINTRINSIC,
-                                           releaseObject, maxPoints, globalMutex));
+                                           releaseObject, maxPoints));
+                solver.reduceGlobal();
                 jacobianAtCurrentParams = true;
             }
             else
@@ -1650,10 +1689,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         if (!jacobianAtCurrentParams)
         {
             solver.reset();
-            parallel_for_(Range(0, nimages),
+            parallel_for_(Range(0, solver.nparts),
                           JAccumulator(solver, matM, _m, npoints, param_m,
                                        flags, aspectRatio, NINTRINSIC,
-                                       releaseObject, maxPoints, globalMutex));
+                                       releaseObject, maxPoints));
+            solver.reduceGlobal();
             jacobianAtCurrentParams = true;
         }
         Mat JtJ = Mat::zeros(nparams, nparams, CV_64F);
