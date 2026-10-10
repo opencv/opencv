@@ -922,6 +922,10 @@ int cv::borderInterpolate( int p, int len, int borderType )
         if( len == 1 )
             return 0;
 
+        // Fast path: single reflection without division for small deviations.
+        if( -len + delta <= p && p < 2 * len - delta )
+            return p < 0 ? -p - 1 + delta : 2 * len - 1 - delta - p;
+        // Bounded fallback: O(1) modulo for large |p|
         const int64 period = 2LL * (len - delta);
         int64 p64 = p;
         p64 %= period;
