@@ -1186,7 +1186,8 @@ TKernel getMulFunc_(int T, int R)
         break;
     case CV_16U:
         fptr =   // scale==1 fast path: whole u16 registers via v_mul_sat; Wvec=f32 for scale
-            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, float, EwMul, float, v_uint16> :
+                 // scalar tail uses uint32_t to avoid float->int overflow for large products (#29893)
+            R == CV_16U ? vecBinaryKernel<ushort, ushort, v_float32, uint32_t, EwMul, float, v_uint16> :
             R == CV_32F ? vecBinaryKernel<ushort, float,  v_float32, float, EwMul> : nullptr;
         break;
     case CV_16S:
