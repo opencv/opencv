@@ -161,15 +161,6 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     CV_WRAP static Mat getRatioListFromCellRatios(const Mat &cellRatios);
 
 
-    /** @brief Transform list of cell ratios to matrix of cell ratios, see getRatioListFromCellRatios()
-      *
-      * `ratioList` is one `bytesList` row of a DICT_ENCODING_CELL_RATIO dictionary: a single CV_8UC4
-      * row with `markerSize*markerSize` columns, as returned by getRatioListFromCellRatios().
-      * `rotationId` selects the rotation to extract, from 0 to 3.
-      */
-    CV_WRAP static Mat getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId = 0);
-
-
     /** @brief Compute the white pixel ratio of each marker cell from a marker image
       *
       * @param markerImage square grayscale image of the marker, including its border
@@ -186,18 +177,6 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
       * marker images, e.g. markers hosting nested markers.
       */
     CV_WRAP static Mat getCellRatiosFromImage(InputArray markerImage, int markerSize, int borderBits = 1);
-
-
-    /** @brief Create a cell-ratio encoded copy of this binary dictionary
-      *
-      * The returned dictionary preserves the marker ids, marker size, rotations, and maximum
-      * correction bits, but stores each binary cell as a ratio value: 0 for black and 100 for white.
-      * This is useful as a starting point for custom cell-ratio dictionaries, for example when
-      * replacing some marker cells with non-binary ratios that represent nested markers.
-      *
-      * The source dictionary must use DICT_ENCODING_BINARY.
-      */
-    CV_WRAP Dictionary convertToCellRatioDictionary() const;
 
 
     /** @brief Get the expected cell values of a marker as a `markerSize x markerSize` CV_32FC1 Mat

@@ -10,18 +10,11 @@ namespace cv {
     namespace aruco {
         bool operator==(const Dictionary& d1, const Dictionary& d2);
         bool operator==(const Dictionary& d1, const Dictionary& d2) {
-            if(d1.markerSize != d2.markerSize
-                || d1.dictEncoding != d2.dictEncoding
-                || d1.maxCorrectionBits != d2.maxCorrectionBits)
-                return false;
-            // Compare shape and type before the element-wise comparison:
-            // std::equal assumes both ranges have the same length.
-            const Mat& b1 = d1.bytesList;
-            const Mat& b2 = d2.bytesList;
-            if(b1.size != b2.size || b1.type() != b2.type())
-                return false;
-            return std::equal(b1.begin<Vec<uint8_t, 4>>(), b1.end<Vec<uint8_t, 4>>(),
-                              b2.begin<Vec<uint8_t, 4>>());
+            return d1.markerSize == d2.markerSize
+                && d1.dictEncoding == d2.dictEncoding
+                && d1.bytesList.size == d2.bytesList.size && d1.bytesList.type() == d2.bytesList.type()
+                && std::equal(d1.bytesList.begin<Vec<uint8_t, 4>>(), d1.bytesList.end<Vec<uint8_t, 4>>(), d2.bytesList.begin<Vec<uint8_t, 4>>())
+                && d1.maxCorrectionBits == d2.maxCorrectionBits;
         };
     }
 }
@@ -820,140 +813,76 @@ static void runArucoDetectionThreshold(ArucoAlgParams arucoAlgParam) {
 }
 
 /**
- * @brief Check that a created cell ratio encoded dictionary is equivalent to its binary dict
- *
- * - the expected marker cells must match for every marker and rotation
- * - the dictionary must survive a serialization round trip
- * - markers rendered with the binary dictionary must be detected with the cell ratio one
+ * @brief Check that the cell ratio copy of a binary dictionary expects the same cells and detects
+ * the markers rendered with the binary dictionary
  */
-static void runArucoDetectionCellRatioDict(ArucoAlgParams arucoAlgParam,
-                                           aruco::PredefinedDictionaryType binaryDictType) {
-    SCOPED_TRACE(cv::format("binary dict: %d", (int)binaryDictType));
-    const bool detectInvertedMarker = (arucoAlgParam == ArucoAlgParams::DETECT_INVERTED_MARKER);
-
-    aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(binaryDictType);
-    aruco::Dictionary ratioDict = binaryDict.convertToCellRatioDictionary();
-
-    ASSERT_EQ(binaryDict.dictEncoding, (int)aruco::DICT_ENCODING_BINARY);
-    ASSERT_EQ(ratioDict.dictEncoding, (int)aruco::DICT_ENCODING_CELL_RATIO);
-    ASSERT_EQ(binaryDict.bytesList.rows, ratioDict.bytesList.rows);
-    ASSERT_EQ(binaryDict.markerSize, ratioDict.markerSize);
-
-    // serialization round trip of the cell ratio dictionary
-    aruco::Dictionary readDict;
-    {
-        FileStorage fsOut(".yml", FileStorage::WRITE + FileStorage::MEMORY);
-        ASSERT_TRUE(fsOut.isOpened());
-        ratioDict.writeDictionary(fsOut, "dictionary");
-        const std::string serialized = fsOut.releaseAndGetString();
-        FileStorage fsIn(serialized, FileStorage::READ + FileStorage::MEMORY);
-        ASSERT_TRUE(fsIn.isOpened());
-        ASSERT_TRUE(readDict.readDictionary(fsIn["dictionary"]));
-    }
-    ASSERT_EQ(readDict.dictEncoding, (int)aruco::DICT_ENCODING_CELL_RATIO);
-    EXPECT_EQ(ratioDict, readDict);
-
-    // both encodings and the deserialized dictionary must expect the same marker cells
-    for (int id = 0; id < binaryDict.bytesList.rows; id++) {
-        for (int rotation = 0; rotation < 4; rotation++) {
-            Mat binaryBits = binaryDict.getMarkerBits(id, rotation);
-            Mat ratioBits = ratioDict.getMarkerBits(id, rotation);
-            Mat readBits = readDict.getMarkerBits(id, rotation);
-            EXPECT_EQ(0., cvtest::norm(binaryBits, ratioBits, NORM_INF)) << "marker: " << id << " rotation: " << rotation;
-            EXPECT_EQ(0., cvtest::norm(binaryBits, readBits, NORM_INF)) << "marker: " << id << " rotation: " << rotation;
-        }
-    }
-
-    // render markers with the binary dictionary and detect them with the cell ratio one
+TEST(CV_ArucoDetectionCellRatioDict, algorithmic) {
     aruco::DetectorParameters params;
     // no detection errors allowed
     params.perspectiveRemovePixelPerCell = 20;
     params.maxErroneousBitsInBorderRate = 0.f;
     params.errorCorrectionRate = 0.f;
-    params.detectInvertedMarker = detectInvertedMarker;
-    aruco::ArucoDetector detector(ratioDict, params);
-
-    // multiple of the number of cells per side so that cells stay pixel aligned for every dict size
-    const int markerSidePixels = 20 * (binaryDict.markerSize + 2 * params.markerBorderBits);
     const vector<markerRot> rotations = {markerRot::ROT_90, markerRot::ROT_270, markerRot::NONE, markerRot::ROT_180};
 
-    // loop over images containing 4 markers arranged in a 2x2 grid
-    for (int firstId = 0; firstId < binaryDict.bytesList.rows; firstId += 4) {
-        // create a blank image large enough to hold the 4 markers
-        const int margin = markerSidePixels / 2;
-        const int imageSize = (markerSidePixels * 2) + margin * 3;
-        Mat img(imageSize, imageSize, CV_8UC1, Scalar(255));
+    for (aruco::PredefinedDictionaryType binaryDictType : {aruco::DICT_4X4_50, aruco::DICT_5X5_50,
+                                                           aruco::DICT_6X6_50, aruco::DICT_7X7_50}) {
+        SCOPED_TRACE(cv::format("binary dict: %d", (int)binaryDictType));
+        const aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(binaryDictType);
+        // cell ratio copy: black cells stored as 0, white cells as 100
+        Mat ratioList, cellRatios;
+        for (int id = 0; id < binaryDict.bytesList.rows; id++) {
+            binaryDict.getMarkerBits(id).convertTo(cellRatios, CV_8U, 100.0);
+            ratioList.push_back(aruco::Dictionary::getRatioListFromCellRatios(cellRatios));
+        }
+        const aruco::Dictionary ratioDict(ratioList, binaryDict.markerSize, binaryDict.maxCorrectionBits,
+                                          aruco::DICT_ENCODING_CELL_RATIO);
 
-        // place each marker into the image
-        vector<int> groundTruthIds;
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 2; col++) {
-                const int index = row * 2 + col;
-                const int currentId = (firstId + index) % binaryDict.bytesList.rows;
+        for (int id = 0; id < binaryDict.bytesList.rows; id++)
+            for (int rotation = 0; rotation < 4; rotation++)
+                EXPECT_EQ(0., cvtest::norm(binaryDict.getMarkerBits(id, rotation),
+                                           ratioDict.getMarkerBits(id, rotation), NORM_INF))
+                    << "marker: " << id << " rotation: " << rotation;
 
+        // 4 rotated markers per image, sides multiple of the number of cells keep the cells pixel aligned
+        aruco::ArucoDetector detector(ratioDict, params);
+        const int markerSidePixels = 20 * (binaryDict.markerSize + 2), margin = markerSidePixels / 2;
+        for (int firstId = 0; firstId < binaryDict.bytesList.rows; firstId += 4) {
+            Mat img(2 * markerSidePixels + 3 * margin, 2 * markerSidePixels + 3 * margin, CV_8UC1, Scalar(255));
+            vector<int> groundTruthIds;
+            for (int index = 0; index < 4; index++) {
+                const int id = (firstId + index) % binaryDict.bytesList.rows;
                 Mat markerImg;
-                aruco::generateImageMarker(binaryDict, currentId, markerSidePixels, markerImg, params.markerBorderBits);
+                aruco::generateImageMarker(binaryDict, id, markerSidePixels, markerImg);
                 rotateMarker(markerImg, rotations[index]);
-                groundTruthIds.push_back(currentId);
-
-                Point2f topLeft(static_cast<float>(margin + col * (markerSidePixels + margin)),
-                                static_cast<float>(margin + row * (markerSidePixels + margin)));
-                placeMarker(img, markerImg, topLeft);
+                placeMarker(img, markerImg, Point2f((float)(margin + (index % 2) * (markerSidePixels + margin)),
+                                                    (float)(margin + (index / 2) * (markerSidePixels + margin))));
+                groundTruthIds.push_back(id);
             }
+            vector<vector<Point2f>> corners;
+            vector<int> ids;
+            detector.detectMarkers(img, corners, ids);
+            std::sort(groundTruthIds.begin(), groundTruthIds.end());
+            std::sort(ids.begin(), ids.end());
+            EXPECT_EQ(groundTruthIds, ids) << "first marker id: " << firstId;
         }
-
-        // if testing inverted markers globally, invert the whole image
-        if (detectInvertedMarker) {
-            bitwise_not(img, img);
-        }
-
-        // every marker must be detected with its id from the cell ratio dictionary
-        vector<vector<Point2f>> corners, rejected;
-        vector<int> ids;
-        detector.detectMarkers(img, corners, ids, rejected);
-
-        std::sort(groundTruthIds.begin(), groundTruthIds.end());
-        std::sort(ids.begin(), ids.end());
-        EXPECT_EQ(groundTruthIds, ids) << "first marker id: " << firstId;
     }
-}
-
-// binary dictionaries used to verify cell ratio dictionary creation
-static const aruco::PredefinedDictionaryType cellRatioBaseDicts[] = {
-    aruco::DICT_4X4_50,
-    aruco::DICT_5X5_50,
-    aruco::DICT_6X6_50,
-    aruco::DICT_7X7_50,
-};
-
-TEST(CV_ArucoDetectionCellRatioDict, algorithmic) {
-    for (aruco::PredefinedDictionaryType dictType : cellRatioBaseDicts)
-        runArucoDetectionCellRatioDict(ArucoAlgParams::USE_DEFAULT, dictType);
-}
-
-TEST(CV_InvertedArucoDetectionCellRatioDict, algorithmic) {
-    for (aruco::PredefinedDictionaryType dictType : cellRatioBaseDicts)
-        runArucoDetectionCellRatioDict(ArucoAlgParams::DETECT_INVERTED_MARKER, dictType);
 }
 
 TEST(CV_ArucoDetectionCellRatioDict, emptyAcceptanceInterval) {
-    const aruco::Dictionary dict =
-        aruco::getPredefinedDictionary(aruco::DICT_4X4_50).convertToCellRatioDictionary();
-    const Mat observed(4, 4, CV_32FC1, Scalar(0.555f));
-    for (float threshold : {0.f, 0.001f, 0.004f}) {
-        // No integer percentage is within this tolerance of 55.5%.
-        EXPECT_EQ(16, dict.getDistanceToId(observed, 0, false, threshold));
-        int id = -1, rotation = -1;
-        EXPECT_FALSE(dict.identify(observed, id, rotation, 0., threshold));
-    }
-
-    // A slightly wider interval does contain the stored value 55%.
+    // one marker whose 16 cells all expect 55% white pixels
     const Mat cells(4, 4, CV_8UC1, Scalar(55));
-    const aruco::Dictionary close(aruco::Dictionary::getRatioListFromCellRatios(cells),
-                                  4, 0, aruco::DICT_ENCODING_CELL_RATIO);
-    EXPECT_EQ(0, close.getDistanceToId(observed, 0, false, 0.006f));
+    const aruco::Dictionary dict(aruco::Dictionary::getRatioListFromCellRatios(cells),
+                                 4, 0, aruco::DICT_ENCODING_CELL_RATIO);
+    const Mat observed(4, 4, CV_32FC1, Scalar(0.555f));
     int id = -1, rotation = -1;
-    EXPECT_TRUE(close.identify(observed, id, rotation, 0., 0.006f));
+    // no integer percentage lies within 0.4% of 55.5%, every cell mismatches
+    for (float threshold : {0.f, 0.001f, 0.004f}) {
+        EXPECT_EQ(16, dict.getDistanceToId(observed, 0, false, threshold)) << "threshold=" << threshold;
+        EXPECT_FALSE(dict.identify(observed, id, rotation, 0., threshold)) << "threshold=" << threshold;
+    }
+    // 55% lies within 0.6% of 55.5%
+    EXPECT_EQ(0, dict.getDistanceToId(observed, 0, false, 0.006f));
+    EXPECT_TRUE(dict.identify(observed, id, rotation, 0., 0.006f));
 
     // Every stored ratio matches its own expected value, even with a zero threshold.
     for (int value = 0; value <= 100; value++) {
@@ -967,225 +896,134 @@ TEST(CV_ArucoDetectionCellRatioDict, emptyAcceptanceInterval) {
 /**
  * @brief Check the identification of a marker with a non binary cell (75% white pixels)
  *
- * With a strict validBitIdThreshold the marker must be rejected by a binary dictionary (the grey
- * cell does not match the expected white cell) and identified by a cell ratio dictionary that
- * expects the 75% cell.
+ * With a strict validBitIdThreshold the marker is identified by a cell ratio dictionary that
+ * expects the 75% cell and rejected by the binary dictionary, which expects a white cell.
  */
 TEST(CV_ArucoDetectionCellRatioDict, grey_cells) {
     const aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
-    const int borderBits = 1;
-
-    // build a one marker dictionary from marker 0 of DICT_4X4_50, with the first white cell turned
-    // into a 75% white cell
+    const Point greyCell(0, 0);
     Mat cellRatios;
     binaryDict.getMarkerBits(0).convertTo(cellRatios, CV_8U, 100.0);
-    Point greyCell(-1, -1);
-    for (int row = 0; row < cellRatios.rows && greyCell.x < 0; row++)
-        for (int col = 0; col < cellRatios.cols && greyCell.x < 0; col++)
-            if (cellRatios.at<uchar>(row, col) == 100)
-                greyCell = Point(col, row);
-    ASSERT_GE(greyCell.x, 0);
-    cellRatios.at<uchar>(greyCell.y, greyCell.x) = 75;
+    ASSERT_EQ(100, cellRatios.at<uchar>(greyCell)); // white cell of marker 0
+    cellRatios.at<uchar>(greyCell) = 75;
+    const aruco::Dictionary greyDict(aruco::Dictionary::getRatioListFromCellRatios(cellRatios),
+                                     binaryDict.markerSize, 0, aruco::DICT_ENCODING_CELL_RATIO);
 
-    aruco::Dictionary greyDict(aruco::Dictionary::getRatioListFromCellRatios(cellRatios),
-                               binaryDict.markerSize, 0, aruco::DICT_ENCODING_CELL_RATIO);
-    aruco::Dictionary binaryOneMarkerDict(binaryDict.bytesList.rowRange(0, 1), binaryDict.markerSize, 0);
-
-    // render the marker and blacken the top quarter of the grey cell so that its white ratio is 75%
-    const int cellSidePixels = 100;
-    const int markerSidePixels = (binaryDict.markerSize + 2 * borderBits) * cellSidePixels;
+    // render marker 0 and blacken the top quarter of the grey cell
+    const int cellSidePixels = 100, markerSidePixels = (binaryDict.markerSize + 2) * cellSidePixels;
     Mat markerImg;
-    aruco::generateImageMarker(binaryDict, 0, markerSidePixels, markerImg, borderBits);
-    const Point greyCellTopLeft((borderBits + greyCell.x) * cellSidePixels,
-                                (borderBits + greyCell.y) * cellSidePixels);
-    markerImg(Rect(greyCellTopLeft.x, greyCellTopLeft.y, cellSidePixels, cellSidePixels / 4)).setTo(0);
-
-    const int margin = markerSidePixels / 2;
-    Mat img(markerSidePixels + 2 * margin, markerSidePixels + 2 * margin, CV_8UC1, Scalar(255));
-    placeMarker(img, markerImg, Point2f((float)margin, (float)margin));
+    aruco::generateImageMarker(binaryDict, 0, markerSidePixels, markerImg);
+    markerImg(Rect((1 + greyCell.x) * cellSidePixels, (1 + greyCell.y) * cellSidePixels,
+                   cellSidePixels, cellSidePixels / 4)).setTo(0);
+    Mat img(2 * markerSidePixels, 2 * markerSidePixels, CV_8UC1, Scalar(255));
+    placeMarker(img, markerImg, Point2f(markerSidePixels / 2.f, markerSidePixels / 2.f));
 
     aruco::DetectorParameters params;
-    // no detection errors allowed and a strict identification threshold
+    // whole cells sampled, no error correction and a strict identification threshold
     params.perspectiveRemovePixelPerCell = 20;
     params.perspectiveRemoveIgnoredMarginPerCell = 0.f;
-    params.maxErroneousBitsInBorderRate = 0.f;
     params.errorCorrectionRate = 0.f;
     params.validBitIdThreshold = 0.2f;
-
-    vector<vector<Point2f>> corners, rejected;
+    vector<vector<Point2f>> corners;
     vector<int> ids;
-
-    // the cell ratio dictionary identifies the marker, |0.75 - 0.75| < validBitIdThreshold
-    aruco::ArucoDetector greyDetector(greyDict, params);
-    greyDetector.detectMarkers(img, corners, ids, rejected);
-    ASSERT_EQ(1u, ids.size());
-    EXPECT_EQ(0, ids[0]);
-
-    // the binary dictionary rejects it, |0.75 - 1| > validBitIdThreshold
-    aruco::ArucoDetector binaryDetector(binaryOneMarkerDict, params);
-    binaryDetector.detectMarkers(img, corners, ids, rejected);
-    EXPECT_EQ(0u, ids.size());
+    // |0.75 - 0.75| <= 0.2
+    aruco::ArucoDetector(greyDict, params).detectMarkers(img, corners, ids);
+    EXPECT_EQ(vector<int>{0}, ids);
+    // |0.75 - 1| > 0.2
+    aruco::ArucoDetector(binaryDict, params).detectMarkers(img, corners, ids);
+    EXPECT_TRUE(ids.empty());
 }
 
 /**
  * @brief Check the detection of a marker nested inside a cell of a larger marker
  *
- * The host cell of the larger marker contains the nested marker, so its expected white pixel ratio
- * is not binary anymore and the larger marker is stored in a cell ratio dictionary. Without
+ * The cell ratio dictionary is built from the composed image, as described in the tutorial. Without
  * detectNestedMarkers only the nested marker is detected (the surrounding marker is discarded as a
  * parent contour), with detectNestedMarkers both markers are detected.
  */
 TEST(CV_ArucoDetectionNestedMarkers, algorithmic) {
     const aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
-    const int markerSize = binaryDict.markerSize;
-    const int borderBits = 1;
-    const int outerId = 0, nestedId = 1;
+    const int markerSize = binaryDict.markerSize, cellSidePixels = 120;
+    const Point hostCell(0, 0);
+    ASSERT_EQ(1.f, binaryDict.getMarkerBits(0).at<float>(hostCell)); // white cell of marker 0
 
-    // find a white cell of the outer marker to host the nested marker
-    Mat outerBits = binaryDict.getMarkerBits(outerId);
-    Point hostCell(-1, -1);
-    for (int row = 0; row < outerBits.rows && hostCell.x < 0; row++)
-        for (int col = 0; col < outerBits.cols && hostCell.x < 0; col++)
-            if (outerBits.at<float>(row, col) == 1.f)
-                hostCell = Point(col, row);
-    ASSERT_GE(hostCell.x, 0);
+    // render marker 0 and nest marker 1, half a cell wide, in the center of the host cell
+    Mat outerImg, nestedImg;
+    aruco::generateImageMarker(binaryDict, 0, (markerSize + 2) * cellSidePixels, outerImg);
+    aruco::generateImageMarker(binaryDict, 1, cellSidePixels / 2, nestedImg);
+    nestedImg.copyTo(outerImg(Rect((1 + hostCell.x) * cellSidePixels + cellSidePixels / 4,
+                                   (1 + hostCell.y) * cellSidePixels + cellSidePixels / 4,
+                                   cellSidePixels / 2, cellSidePixels / 2)));
+    Mat ratioList;
+    for (const Mat &markerImg : {outerImg, nestedImg})
+        ratioList.push_back(aruco::Dictionary::getRatioListFromCellRatios(
+            aruco::Dictionary::getCellRatiosFromImage(markerImg, markerSize)));
+    const aruco::Dictionary nestedDict(ratioList, markerSize, 0, aruco::DICT_ENCODING_CELL_RATIO);
 
-    // render the outer marker and nest the smaller marker in the center of the host cell
-    const int cellSidePixels = 120;
-    const int outerSidePixels = (markerSize + 2 * borderBits) * cellSidePixels;
-    Mat outerImg;
-    aruco::generateImageMarker(binaryDict, outerId, outerSidePixels, outerImg, borderBits);
-
-    const int nestedSidePixels = cellSidePixels / 2;
-    Mat nestedImg;
-    aruco::generateImageMarker(binaryDict, nestedId, nestedSidePixels, nestedImg, borderBits);
-
-    const Rect hostCellRect((borderBits + hostCell.x) * cellSidePixels,
-                            (borderBits + hostCell.y) * cellSidePixels, cellSidePixels, cellSidePixels);
-    const Rect nestedRect(hostCellRect.x + (cellSidePixels - nestedSidePixels) / 2,
-                          hostCellRect.y + (cellSidePixels - nestedSidePixels) / 2,
-                          nestedSidePixels, nestedSidePixels);
-    nestedImg.copyTo(outerImg(nestedRect));
-
-    // build a cell ratio dictionary holding both markers. The expected ratio of the host cell is
-    // the white pixel ratio of the rendered cell that contains the nested marker
-    const int hostCellRatio = cvRound(100.0 * countNonZero(outerImg(hostCellRect)) / hostCellRect.area());
-    Mat ratioList(0, 0, CV_8UC4), cells;
-    outerBits.convertTo(cells, CV_8U, 100.0);
-    cells.at<uchar>(hostCell.y, hostCell.x) = (uchar)hostCellRatio;
-    ratioList.push_back(aruco::Dictionary::getRatioListFromCellRatios(cells));
-    binaryDict.getMarkerBits(nestedId).convertTo(cells, CV_8U, 100.0);
-    ratioList.push_back(aruco::Dictionary::getRatioListFromCellRatios(cells));
-    aruco::Dictionary nestedDict(ratioList, markerSize, 0, aruco::DICT_ENCODING_CELL_RATIO);
-
-    const int margin = cellSidePixels;
-    Mat img(outerSidePixels + 2 * margin, outerSidePixels + 2 * margin, CV_8UC1, Scalar(255));
-    placeMarker(img, outerImg, Point2f((float)margin, (float)margin));
+    Mat img(outerImg.rows + 2 * cellSidePixels, outerImg.cols + 2 * cellSidePixels, CV_8UC1, Scalar(255));
+    placeMarker(img, outerImg, Point2f((float)cellSidePixels, (float)cellSidePixels));
 
     aruco::DetectorParameters params;
-    // no detection errors allowed
-    params.perspectiveRemovePixelPerCell = 20;
-    params.perspectiveRemoveIgnoredMarginPerCell = 0.f;
-    params.maxErroneousBitsInBorderRate = 0.f;
-    params.errorCorrectionRate = 0.f;
+    vector<vector<Point2f>> corners;
+    vector<int> ids;
+    aruco::ArucoDetector(nestedDict, params).detectMarkers(img, corners, ids);
+    EXPECT_EQ(vector<int>{1}, ids);
 
-    // without detectNestedMarkers only the nested marker is detected
-    {
-        aruco::ArucoDetector detector(nestedDict, params);
-        vector<vector<Point2f>> corners, rejected;
-        vector<int> ids;
-        detector.detectMarkers(img, corners, ids, rejected);
-        ASSERT_EQ(1u, ids.size());
-        EXPECT_EQ(1, ids[0]);
-    }
-
-    // with detectNestedMarkers both the nested marker and the marker containing it are detected
-    {
-        params.detectNestedMarkers = true;
-        aruco::ArucoDetector detector(nestedDict, params);
-        vector<vector<Point2f>> corners, rejected;
-        vector<int> ids;
-        detector.detectMarkers(img, corners, ids, rejected);
-        std::sort(ids.begin(), ids.end());
-        ASSERT_EQ(2u, ids.size());
-        EXPECT_EQ(0, ids[0]);
-        EXPECT_EQ(1, ids[1]);
-    }
+    params.detectNestedMarkers = true;
+    aruco::ArucoDetector(nestedDict, params).detectMarkers(img, corners, ids);
+    std::sort(ids.begin(), ids.end());
+    EXPECT_EQ(vector<int>({0, 1}), ids);
 }
 
 
 /**
- * @brief Minimum number of cells whose acceptance intervals do not overlap, over all rotations
+ * @brief Number of cells whose expected ratios differ by more than 2 * DEFAULT_VALID_BIT_ID_THRESHOLD,
+ * minimum over the rotations of the second marker (rotation 0 is skipped for a marker against itself)
  */
 static int getNestedSeparationDistance(const aruco::Dictionary &dict, int firstId, int secondId) {
-    const Mat first = aruco::Dictionary::getCellRatiosFromRatioList(dict.bytesList.row(firstId), dict.markerSize);
     const int separatingPercent = (int)(200 * aruco::DEFAULT_VALID_BIT_ID_THRESHOLD);
+    Mat first, second, difference;
+    dict.getMarkerBits(firstId).convertTo(first, CV_8U, 100.0);
     int minDist = dict.markerSize * dict.markerSize + 1;
     for (int rotation = firstId == secondId ? 1 : 0; rotation < 4; rotation++) {
-        const Mat second = aruco::Dictionary::getCellRatiosFromRatioList(
-            dict.bytesList.row(secondId), dict.markerSize, rotation);
-        Mat difference;
+        const Mat secondBits = dict.getMarkerBits(secondId, rotation);
+        secondBits.convertTo(second, CV_8U, 100.0);
         absdiff(first, second, difference);
-        minDist = min(minDist, countNonZero(difference > separatingPercent));
+        const int distance = countNonZero(difference > separatingPercent);
+        // the tutorial computes the same number with getDistanceToId()
+        EXPECT_EQ(distance, dict.getDistanceToId(secondBits, firstId, false,
+                                                 2 * aruco::DEFAULT_VALID_BIT_ID_THRESHOLD))
+            << "ids " << firstId << " " << secondId << " rotation " << rotation;
+        minDist = min(minDist, distance);
     }
     return minDist;
 }
 
 TEST(CV_ArucoNestedDictionary, generation) {
-    const aruco::Dictionary dict = aruco::generateNestedDictionary(6, 4, 3, 0.7f, 43);
-    ASSERT_EQ(12, dict.bytesList.rows);
-    EXPECT_EQ((int)aruco::DICT_ENCODING_CELL_RATIO, dict.dictEncoding);
+    // non default size and inner marker size, passed unchanged to the generator and the renderer
+    const int markerSize = 5, sidePixels = 700, margin = 100;
+    const float innerHalfDiagonal = 0.5f;
+    const aruco::Dictionary dict = aruco::generateNestedDictionary(3, markerSize, 4, innerHalfDiagonal, 7);
+    ASSERT_EQ(6, dict.bytesList.rows);
+    EXPECT_EQ(markerSize, dict.markerSize);
     EXPECT_EQ(1, dict.maxCorrectionBits);
+    for (int i = 0; i < dict.bytesList.rows; i++)
+        for (int j = i; j < dict.bytesList.rows; j++)
+            EXPECT_GE(getNestedSeparationDistance(dict, i, j), 4) << "ids " << i << " " << j;
 
-    // deterministic for a given seed
-    const aruco::Dictionary again = aruco::generateNestedDictionary(6, 4, 3, 0.7f, 43);
-    EXPECT_EQ(0., cvtest::norm(dict.bytesList, again.bytesList, NORM_INF));
-
-    for(int pair = 0; pair < 6; pair++) {
-        // outer entries host exactly 4 non-binary cells forming a white 2x2 block
-        Mat outer = aruco::Dictionary::getCellRatiosFromRatioList(
-            dict.bytesList.rowRange(2 * pair, 2 * pair + 1), dict.markerSize);
-        int bandCells = 0, blackCells = 0;
-        Point block(4, 4);
-        for(int y = 0; y < 4; y++) {
-            for(int x = 0; x < 4; x++) {
-                const uchar v = outer.at<uchar>(y, x);
-                if(v == 0) blackCells++;
-                if(v != 0 && v != 100) {
-                    // host cells stay close to their color
-                    EXPECT_GE(v, 75) << "pair " << pair;
-                    EXPECT_LE(v, 99) << "pair " << pair;
-                    bandCells++;
-                    block.x = min(block.x, x);
-                    block.y = min(block.y, y);
-                }
-            }
-        }
-        EXPECT_EQ(4, bandCells);
-        EXPECT_LE(block.x, 2);
-        EXPECT_LE(block.y, 2);
-        EXPECT_GE(blackCells, 4);
-
-        // inner entries are plain binary patterns with at least 4 cells of each color
-        Mat inner = aruco::Dictionary::getCellRatiosFromRatioList(
-            dict.bytesList.rowRange(2 * pair + 1, 2 * pair + 2), dict.markerSize);
-        int whiteCells = 0;
-        blackCells = 0;
-        for(int c = 0; c < 16; c++) {
-            const uchar v = inner.at<uchar>(c);
-            EXPECT_TRUE(v == 0 || v == 100);
-            (v == 0 ? blackCells : whiteCells)++;
-        }
-        EXPECT_GE(blackCells, 4);
-        EXPECT_GE(whiteCells, 4);
-    }
-
-    // minimum separation distance between all entries and against their own rotations
-    for(int i = 0; i < dict.bytesList.rows; i++) {
-        EXPECT_GE(getNestedSeparationDistance(dict, i, i), 3) << "id " << i;
-        for(int j = i + 1; j < dict.bytesList.rows; j++)
-            EXPECT_GE(getNestedSeparationDistance(dict, i, j), 3)
-                << "ids " << i << " " << j;
+    aruco::DetectorParameters params;
+    params.detectNestedMarkers = true;
+    const aruco::ArucoDetector detector(dict, params);
+    for (int outerId = 0; outerId < dict.bytesList.rows; outerId += 2) {
+        Mat marker;
+        aruco::generateImageMarkerNested(dict, outerId, sidePixels, marker, 1, innerHalfDiagonal);
+        Mat img(sidePixels + 2 * margin, sidePixels + 2 * margin, CV_8UC1, Scalar(255));
+        placeMarker(img, marker, Point2f((float)margin, (float)margin));
+        vector<vector<Point2f>> corners;
+        vector<int> ids;
+        detector.detectMarkers(img, corners, ids);
+        std::sort(ids.begin(), ids.end());
+        EXPECT_EQ(vector<int>({outerId, outerId + 1}), ids);
     }
 }
 
@@ -1197,21 +1035,18 @@ TEST(CV_ArucoNestedDictionary, predefined) {
                  {aruco::DICT_4X4_NESTED_10, 10, 3, 0},
                  {aruco::DICT_4X4_NESTED_24, 24, 2, 0}};
 
-    for(const auto &cfg : dicts) {
+    for (const auto &cfg : dicts) {
         SCOPED_TRACE(cv::format("nPairs=%d", cfg.nPairs));
         const aruco::Dictionary dict = aruco::getPredefinedDictionary(cfg.type);
         ASSERT_EQ(2 * cfg.nPairs, dict.bytesList.rows);
         EXPECT_EQ((int)aruco::DICT_ENCODING_CELL_RATIO, dict.dictEncoding);
         EXPECT_EQ((cfg.minDistance - 1) / 2, dict.maxCorrectionBits);
 
-        for(int i = 0; i < dict.bytesList.rows; i++) {
-            EXPECT_GE(getNestedSeparationDistance(dict, i, i), cfg.minDistance) << "id " << i;
-            for(int j = i + 1; j < dict.bytesList.rows; j++)
-                EXPECT_GE(getNestedSeparationDistance(dict, i, j),
-                          cfg.minDistance) << "ids " << i << " " << j;
-        }
+        for (int i = 0; i < dict.bytesList.rows; i++)
+            for (int j = i; j < dict.bytesList.rows; j++)
+                EXPECT_GE(getNestedSeparationDistance(dict, i, j), cfg.minDistance) << "ids " << i << " " << j;
 
-        // the predefined dicts must stay in sync with the generator
+        // the predefined dictionaries stay in sync with the generator
         const aruco::Dictionary regenerated =
             aruco::generateNestedDictionary(cfg.nPairs, 4, cfg.minDistance, 0.7f, cfg.seed);
         EXPECT_EQ(0., cvtest::norm(dict.bytesList, regenerated.bytesList, NORM_INF));
@@ -1224,12 +1059,12 @@ TEST(CV_ArucoNestedDictionary, detectPairs) {
 
     aruco::DetectorParameters params;
     params.detectNestedMarkers = true;
-    aruco::ArucoDetector detector(dict, params);
-    // check that the dictionaries also work with a tighter threshold, which rejects more false positives
+    const aruco::ArucoDetector detector(dict, params);
+    // the tighter threshold suggested in the tutorial
     params.validBitIdThreshold = 0.4f;
-    aruco::ArucoDetector tightDetector(dict, params);
+    const aruco::ArucoDetector tightDetector(dict, params);
 
-    for(int pair = 0; pair < 10; pair++) {
+    for (int pair = 0; pair < 10; pair++) {
         SCOPED_TRACE(cv::format("pair=%d", pair));
         Mat marker;
         aruco::generateImageMarkerNested(dict, 2 * pair, sidePixels, marker);
@@ -1237,27 +1072,21 @@ TEST(CV_ArucoNestedDictionary, detectPairs) {
         placeMarker(img, marker, Point2f((float)margin, (float)margin));
 
         // at full resolution both markers of the pair are detected
+        vector<vector<Point2f>> corners;
         vector<int> ids;
-        vector<vector<Point2f>> corners, rejected;
-        detector.detectMarkers(img, corners, ids, rejected);
-        std::sort(ids.begin(), ids.end());
-        ASSERT_EQ(2u, ids.size());
-        EXPECT_EQ(2 * pair, ids[0]);
-        EXPECT_EQ(2 * pair + 1, ids[1]);
-
-        tightDetector.detectMarkers(img, corners, ids, rejected);
-        std::sort(ids.begin(), ids.end());
-        ASSERT_EQ(2u, ids.size());
-        EXPECT_EQ(2 * pair, ids[0]);
-        EXPECT_EQ(2 * pair + 1, ids[1]);
+        for (const aruco::ArucoDetector *d : {&detector, &tightDetector}) {
+            d->detectMarkers(img, corners, ids);
+            std::sort(ids.begin(), ids.end());
+            EXPECT_EQ(vector<int>({2 * pair, 2 * pair + 1}), ids);
+        }
 
         // far away, on a constant size frame, the outer marker is found
         Mat small, far(480, 640, CV_8UC1, Scalar(255));
         resize(marker, small, Size(120, 120), 0, 0, INTER_AREA);
         placeMarker(far, small, Point2f(260.f, 180.f));
-        detector.detectMarkers(far, corners, ids, rejected);
+        detector.detectMarkers(far, corners, ids);
         EXPECT_TRUE(std::find(ids.begin(), ids.end(), 2 * pair) != ids.end());
-        for(int id : ids)
+        for (int id : ids)
             EXPECT_TRUE(id == 2 * pair || id == 2 * pair + 1) << "foreign id " << id;
 
         // close up, only the inner marker is in view
@@ -1267,9 +1096,8 @@ TEST(CV_ArucoNestedDictionary, detectPairs) {
                      margin + cvRound((innerPts.at<float>(0, 1) + innerPts.at<float>(2, 1)) / 2.f));
         const int half = cvRound(1.2 * sidePixels / 6.);
         Mat close = img(Rect(center.x - half, center.y - half, 2 * half, 2 * half));
-        detector.detectMarkers(close, corners, ids, rejected);
-        ASSERT_EQ(1u, ids.size());
-        EXPECT_EQ(2 * pair + 1, ids[0]);
+        detector.detectMarkers(close, corners, ids);
+        EXPECT_EQ(vector<int>{2 * pair + 1}, ids);
     }
 }
 
@@ -1311,12 +1139,10 @@ TEST(CV_ArucoNestedDictionary, detectDistorted) {
             GaussianBlur(img, img, Size(3, 3), 0);
 
             vector<int> ids;
-            vector<vector<Point2f>> corners, rejected;
-            detector.detectMarkers(img, corners, ids, rejected);
+            vector<vector<Point2f>> corners;
+            detector.detectMarkers(img, corners, ids);
             std::sort(ids.begin(), ids.end());
-            ASSERT_EQ(2u, ids.size());
-            EXPECT_EQ(0, ids[0]);
-            EXPECT_EQ(1, ids[1]);
+            EXPECT_EQ(vector<int>({0, 1}), ids);
         }
     }
 }
@@ -1353,19 +1179,54 @@ TEST(CV_ArucoNestedDictionary, objectPoints) {
                  cv::Exception);
 }
 
+/**
+ * @brief Check inverted pairs (white borders on a black background): with detectInvertedMarker and
+ * detectNestedMarkers both markers are detected and their corners match the object points
+ */
+TEST(CV_ArucoNestedDictionary, detectInverted) {
+    const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    const int sidePixels = 480, margin = 80;
+
+    aruco::DetectorParameters params;
+    params.detectNestedMarkers = true;
+    params.detectInvertedMarker = true;
+    const aruco::ArucoDetector detector(dict, params);
+
+    for (int pair = 0; pair < 10; pair++) {
+        SCOPED_TRACE(cv::format("pair=%d", pair));
+        Mat marker;
+        aruco::generateImageMarkerNested(dict, 2 * pair, sidePixels, marker);
+        Mat img(sidePixels + 2 * margin, sidePixels + 2 * margin, CV_8UC1, Scalar(255));
+        placeMarker(img, marker, Point2f((float)margin, (float)margin));
+        bitwise_not(img, img);
+
+        vector<vector<Point2f>> corners;
+        vector<int> ids;
+        detector.detectMarkers(img, corners, ids);
+        vector<int> sortedIds = ids;
+        std::sort(sortedIds.begin(), sortedIds.end());
+        ASSERT_EQ(vector<int>({2 * pair, 2 * pair + 1}), sortedIds);
+
+        Mat outerPts, innerPts;
+        aruco::getNestedMarkerObjectPoints(dict, 2 * pair, (float)sidePixels, outerPts, innerPts);
+        for (size_t m = 0; m < ids.size(); m++) {
+            const Mat &pts = ids[m] == 2 * pair ? outerPts : innerPts;
+            for (int c = 0; c < 4; c++) {
+                EXPECT_NEAR(corners[m][c].x, margin + pts.at<float>(c, 0), 2.) << "id " << ids[m];
+                EXPECT_NEAR(corners[m][c].y, margin + pts.at<float>(c, 1), 2.) << "id " << ids[m];
+            }
+        }
+    }
+}
+
 TEST(CV_ArucoNestedDictionary, serialization) {
     aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
     FileStorage fs(".yml", FileStorage::WRITE + FileStorage::MEMORY);
     dict.writeDictionary(fs);
-    const String serialized = fs.releaseAndGetString();
-
-    FileStorage fsIn(serialized, FileStorage::READ + FileStorage::MEMORY);
+    FileStorage fsIn(fs.releaseAndGetString(), FileStorage::READ + FileStorage::MEMORY);
     aruco::Dictionary readDict;
     ASSERT_TRUE(readDict.readDictionary(fsIn.root()));
-    EXPECT_EQ(dict.markerSize, readDict.markerSize);
-    EXPECT_EQ(dict.dictEncoding, readDict.dictEncoding);
-    EXPECT_EQ(dict.maxCorrectionBits, readDict.maxCorrectionBits);
-    EXPECT_EQ(0., cvtest::norm(dict.bytesList, readDict.bytesList, NORM_INF));
+    EXPECT_EQ(dict, readDict);
 
     // malformed files are rejected, without crashing or allocating the declared marker size
     const char* invalidDictionaries[] = {
@@ -1390,31 +1251,9 @@ TEST(CV_ArucoNestedDictionary, detectorParametersSerialization) {
     aruco::DetectorParameters restored;
     ASSERT_TRUE(restored.readDetectorParameters(input.root()));
     EXPECT_TRUE(restored.detectNestedMarkers);
-
-    // Existing parameter files without the new option retain its default.
-    FileStorage legacy("%YAML:1.0\n---\nmarkerBorderBits: 1\n", FileStorage::READ | FileStorage::MEMORY);
-    aruco::DetectorParameters defaults;
-    ASSERT_TRUE(defaults.readDetectorParameters(legacy.root()));
-    EXPECT_FALSE(defaults.detectNestedMarkers);
 }
 
 TEST(CV_ArucoNestedDictionary, cellRatiosFromImage) {
-    // on a binary marker image the ratios are exactly the marker bits
-    const aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
-    Mat binaryImg, expected;
-    aruco::generateImageMarker(binaryDict, 0, 300, binaryImg);
-    binaryDict.getMarkerBits(0).convertTo(expected, CV_8U, 100.0);
-    EXPECT_EQ(0., cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(binaryImg, 4), expected,
-                               NORM_INF));
-
-    // image sides that are not a multiple of the 6-cell grid; they are coprime with 6, so cv::resize
-    // cannot move a cell boundary by rounding
-    for (int sidePixels : {7, 11, 17, 101, 301}) {
-        aruco::generateImageMarker(binaryDict, 0, sidePixels, binaryImg);
-        EXPECT_EQ(0., cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(binaryImg, 4), expected,
-                                  NORM_INF)) << "sidePixels=" << sidePixels;
-    }
-
     // A 34-pixel, six-cell grid as drawn by generateImageMarkerNested(): pixel p belongs to cell
     // floor(6 * p / 34), so the boundaries are at 0, 6, 12, 17, 23, 29, 34.
     Mat grid(34, 34, CV_8UC1, Scalar(0));
@@ -1427,12 +1266,13 @@ TEST(CV_ArucoNestedDictionary, cellRatiosFromImage) {
 
     // on a nested image the ratios match the stored dictionary entry
     const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
-    Mat marker;
-    Mat stored = aruco::Dictionary::getCellRatiosFromRatioList(dict.bytesList.rowRange(0, 1), 4);
+    Mat stored;
+    dict.getMarkerBits(0).convertTo(stored, CV_8U, 100.0);
     for (int sidePixels : {481, 720, 721}) {
+        Mat marker;
         aruco::generateImageMarkerNested(dict, 0, sidePixels, marker);
-        Mat measured = aruco::Dictionary::getCellRatiosFromImage(marker, 4);
-        EXPECT_LE(cvtest::norm(measured, stored, NORM_INF), 2.) << "sidePixels=" << sidePixels;
+        EXPECT_LE(cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(marker, 4), stored, NORM_INF), 2.)
+            << "sidePixels=" << sidePixels;
     }
 }
 

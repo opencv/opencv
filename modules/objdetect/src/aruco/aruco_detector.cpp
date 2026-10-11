@@ -994,13 +994,11 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
 
         for (vector<size_t>& grouped : groupedCandidates) {
-            // with detectNestedMarkers, smaller (e.g. inverted) markers nested in larger markers are
-            // kept as their own candidates, prefer the largest contour (correct for the host markers)
-            if (detectorParams.detectInvertedMarker && !detectorParams.detectNestedMarkers) // if detectInvertedMarker choose smallest contours
+            if (detectorParams.detectInvertedMarker) // if detectInvertedMarker choose smallest contours
                 std::stable_sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
                     return a > b;
                 });
-            else // otherwise choose largest contours
+            else // if detectInvertedMarker==false choose largest contours
                 std::stable_sort(grouped.begin(), grouped.end());
             size_t currId = grouped[0];
             // check if it is too near to the image border
