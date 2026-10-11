@@ -324,6 +324,32 @@ static Mat computeRayHomography(const Mat& rays, const Mat& planePoints)
     return H;
 }
 
+//! Sum of squared reprojection errors over all views, or infinity if it is not finite.
+static double reprojectionCost(const std::vector<Mat>& objectPoints, InputArrayOfArrays imagePoints,
+                               const internal::IntrinsicParams& param,
+                               const std::vector<Vec3d>& rotations,
+                               const std::vector<Vec3d>& translations)
+{
+    double cost = 0.0;
+    for (size_t view = 0; view < objectPoints.size(); ++view)
+    {
+        std::vector<Vec2d> projected;
+        internal::projectPoints(objectPoints[view], projected, Mat(rotations[view]),
+                                Mat(translations[view]), param, noArray());
+        Mat observed;
+        imagePoints.getMat(static_cast<int>(view)).convertTo(observed, CV_64FC2);
+        CV_CheckEQ(static_cast<int>(observed.total()), static_cast<int>(projected.size()),
+                   "Each image point must correspond to an object point");
+        const Vec2d* observedPoints = observed.ptr<Vec2d>();
+        for (size_t i = 0; i < projected.size(); ++i)
+        {
+            const Vec2d difference = projected[i] - observedPoints[i];
+            cost += difference.dot(difference);
+        }
+    }
+    return std::isfinite(cost) ? cost : std::numeric_limits<double>::infinity();
+}
+
 class ExtrinsicsCallback : public LMSolver::Callback
 {
 public:
@@ -1137,34 +1163,60 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
         Mat G;
         solve(JJ2, ex3, G);
-        currentParam = finalParam + alpha_smooth2*G;
+
+        // Undamped Gauss-Newton steps can overshoot and diverge. Accept the
+        // smoothed step only if the resulting poses do not increase the
+        // reprojection cost, and halve it otherwise.
+        constexpr int maximumStepHalvings = 10;
+        constexpr int poseSize = 6;
+        constexpr int rotationSize = 3;
+        const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
+        const double cost = reprojectionCost(normalizedObjectPoints, imagePoints,
+                                             finalParam, omc, Tc);
+        double stepFraction = alpha_smooth2;
+        bool accepted = false;
+        for (int halving = 0; halving <= maximumStepHalvings; ++halving)
+        {
+            currentParam = finalParam + stepFraction * G;
+            std::vector<Vec3d> candidateOmc = omc;
+            std::vector<Vec3d> candidateTc = Tc;
+            if (recompute_extrinsic)
+            {
+                CalibrateExtrinsics(normalizedObjectPoints, imagePoints, currentParam,
+                                    check_cond, thresh_cond, candidateOmc, candidateTc);
+            }
+            else
+            {
+                for (size_t view = 0; view < numberOfViews; ++view)
+                {
+                    const int offset = numberOfIntrinsics + poseSize * static_cast<int>(view);
+                    for (int coordinate = 0; coordinate < rotationSize; ++coordinate)
+                    {
+                        candidateOmc[view][coordinate] += stepFraction * G.at<double>(offset + coordinate);
+                        candidateTc[view][coordinate] += stepFraction * G.at<double>(offset + rotationSize + coordinate);
+                    }
+                }
+            }
+            if (reprojectionCost(normalizedObjectPoints, imagePoints, currentParam,
+                                 candidateOmc, candidateTc) <= cost)
+            {
+                omc = candidateOmc;
+                Tc = candidateTc;
+                accepted = true;
+                break;
+            }
+            stepFraction /= 2;
+        }
+        if (!accepted)
+        {
+            break;
+        }
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
                 Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
                 / norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
 
         finalParam = currentParam;
-
-        if (recompute_extrinsic)
-        {
-            CalibrateExtrinsics(normalizedObjectPoints, imagePoints, finalParam,
-                                check_cond, thresh_cond, omc, Tc);
-        }
-        else
-        {
-            constexpr int poseSize = 6;
-            constexpr int rotationSize = 3;
-            const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
-            for (size_t view = 0; view < numberOfViews; ++view)
-            {
-                const int offset = numberOfIntrinsics + poseSize * static_cast<int>(view);
-                for (int coordinate = 0; coordinate < rotationSize; ++coordinate)
-                {
-                    omc[view][coordinate] += alpha_smooth2 * G.at<double>(offset + coordinate);
-                    Tc[view][coordinate] += alpha_smooth2 * G.at<double>(offset + rotationSize + coordinate);
-                }
-            }
-        }
     }
 
     //-------------------------------Validation

@@ -840,10 +840,116 @@ TEST_F(fisheyeTest, CalibrationHandlesTranslatedObjectPoints)
     EXPECT_NEAR(reprojectionRms, 0.0, reprojectionTolerance);
 }
 
+/**
+ * Generates planar views of a board observed by a wide-angle fisheye camera.
+ * Only points inside the image whose rays deviate from the optical axis by
+ * less than @p maximumRayAngle are kept, which may exceed 90 degrees.
+ */
+static void createWideAngleViews(const cv::Matx33d& cameraMatrix,
+                                 const cv::Vec4d& distortion,
+                                 const cv::Size& size,
+                                 double maximumRayAngle,
+                                 std::vector<std::vector<cv::Point3d> >& objectPoints,
+                                 std::vector<std::vector<cv::Point2d> >& imagePoints,
+                                 std::vector<cv::Vec3d>& rotations,
+                                 std::vector<cv::Vec3d>& translations)
+{
+    constexpr int gridColumns = 12;
+    constexpr int gridRows = 9;
+    constexpr double gridSpacing = 100.0;
+    constexpr int numberOfViews = 40;
+    constexpr int minimumPointsPerView = 20;
+    constexpr double rotationDeviation = 0.6;
+    constexpr double depthDirectionScale = 0.4;
+    constexpr double minimumDistance = 600.0;
+    constexpr double maximumDistance = 1500.0;
+    constexpr uint64 seed = 0x5eed;
+
+    std::vector<cv::Point3d> grid;
+    const cv::Point3d gridCenter((gridColumns - 1) * gridSpacing / 2.0,
+                                 (gridRows - 1) * gridSpacing / 2.0, 0.0);
+    for (int row = 0; row < gridRows; ++row)
+    {
+        for (int column = 0; column < gridColumns; ++column)
+        {
+            grid.push_back(cv::Point3d(column * gridSpacing, row * gridSpacing, 0.0) - gridCenter);
+        }
+    }
+
+    cv::RNG rng(seed);
+    while (static_cast<int>(objectPoints.size()) < numberOfViews)
+    {
+        const cv::Vec3d rotation(rng.gaussian(rotationDeviation),
+                                 rng.gaussian(rotationDeviation),
+                                 rng.gaussian(rotationDeviation));
+        cv::Vec3d direction(rng.gaussian(1.0), rng.gaussian(1.0),
+                            std::abs(rng.gaussian(1.0)) * depthDirectionScale);
+        direction /= cv::norm(direction);
+        const cv::Vec3d translation =
+            direction * rng.uniform(minimumDistance, maximumDistance);
+
+        cv::Matx33d rotationMatrix;
+        cv::Rodrigues(rotation, rotationMatrix);
+        std::vector<cv::Point2d> projected;
+        cv::fisheye::projectPoints(grid, projected, rotation, translation,
+                                   cameraMatrix, distortion);
+
+        std::vector<cv::Point3d> visibleObjectPoints;
+        std::vector<cv::Point2d> visibleImagePoints;
+        for (size_t i = 0; i < grid.size(); ++i)
+        {
+            const cv::Vec3d camera = rotationMatrix * cv::Vec3d(grid[i]) + translation;
+            const double rayAngle = std::atan2(std::hypot(camera[0], camera[1]), camera[2]);
+            const cv::Point2d& pixel = projected[i];
+            if (rayAngle < maximumRayAngle && pixel.x >= 0 && pixel.y >= 0 &&
+                pixel.x < size.width && pixel.y < size.height)
+            {
+                visibleObjectPoints.push_back(grid[i]);
+                visibleImagePoints.push_back(pixel);
+            }
+        }
+        if (static_cast<int>(visibleObjectPoints.size()) >= minimumPointsPerView)
+        {
+            objectPoints.push_back(visibleObjectPoints);
+            imagePoints.push_back(visibleImagePoints);
+            rotations.push_back(rotation);
+            translations.push_back(translation);
+        }
+    }
+}
+
+static const cv::Size wideAngleImageSize(2432, 2048);
 static const cv::Matx33d wideAngleCameraMatrix(870.0, 0.0, 1240.0,
                                                0.0, 870.0, 998.0,
                                                0.0, 0.0, 1.0);
 static const cv::Vec4d wideAngleDistortion(-0.04, 0.0, 0.0, 0.0);
+static const double wideAngleMaximumRayAngle = 100.0 * CV_PI / 180.0;
+
+TEST_F(fisheyeTest, CalibrationRecomputesExtrinsicsForWideAngleViews)
+{
+    constexpr double reprojectionTolerance = 1e-6;
+    constexpr double cameraMatrixTolerance = 1e-6;
+    constexpr double distortionTolerance = 1e-9;
+    std::vector<std::vector<cv::Point3d> > objectPoints;
+    std::vector<std::vector<cv::Point2d> > imagePoints;
+    std::vector<cv::Vec3d> rotations;
+    std::vector<cv::Vec3d> translations;
+    createWideAngleViews(wideAngleCameraMatrix, wideAngleDistortion, wideAngleImageSize,
+                         wideAngleMaximumRayAngle, objectPoints, imagePoints,
+                         rotations, translations);
+
+    cv::Matx33d estimatedK;
+    cv::Vec4d estimatedD;
+    std::vector<cv::Vec3d> estimatedR;
+    std::vector<cv::Vec3d> estimatedT;
+    double rms = 0.0;
+    ASSERT_NO_THROW(rms = cv::fisheye::calibrate(
+        objectPoints, imagePoints, wideAngleImageSize, estimatedK, estimatedD,
+        estimatedR, estimatedT, cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC));
+    EXPECT_LT(rms, reprojectionTolerance);
+    EXPECT_MAT_NEAR(cv::Mat(estimatedK), cv::Mat(wideAngleCameraMatrix), cameraMatrixTolerance);
+    EXPECT_MAT_NEAR(cv::Mat(estimatedD), cv::Mat(wideAngleDistortion), distortionTolerance);
+}
 
 TEST_F(fisheyeTest, InitExtrinsicsRecoversPoseWithRayOnCameraPlane)
 {
