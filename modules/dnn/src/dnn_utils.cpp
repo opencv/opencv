@@ -565,6 +565,8 @@ Rect Image2BlobParams::blobRectToImageRect(const Rect &r, const Size &oriImage)
 void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std::vector<Rect>& rImg, const Size& imgSize)
 {
     Size size = this->size;
+    if (size == Size())
+        size = imgSize;
     rImg.resize(rBlob.size());
     if (size != imgSize)
     {
@@ -609,6 +611,11 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std
         }
         else
             CV_Error(cv::Error::StsBadArg, "Unknown padding mode");
+    }
+    else
+    {
+        // blobFromImagesWithParams() does not resize, crop or pad the image in this case
+        rImg = rBlob;
     }
 }
 
