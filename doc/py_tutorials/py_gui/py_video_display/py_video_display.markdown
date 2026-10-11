@@ -129,9 +129,13 @@ import cv2 as cv
 
 cap = cv.VideoCapture(0)
 
+# Get the frame width and height from the camera
+frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+
 # Define the codec and create VideoWriter object
 fourcc = cv.VideoWriter_fourcc(*'XVID')
-out = cv.VideoWriter('output.avi', fourcc, 20.0, (640,  480))
+out = cv.VideoWriter('output.avi', fourcc, 20.0, (frame_width, frame_height))
 
 while cap.isOpened():
     ret, frame = cap.read()
