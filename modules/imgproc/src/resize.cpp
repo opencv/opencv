@@ -3591,6 +3591,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
                      saturate_cast<int>(ssize.height*inv_scale_y));
         CV_Assert( !dsize.empty() );
+        // Recompute realized scale after rounding to keep all backends consistent
+        inv_scale_x = (double)dsize.width / ssize.width;
+        inv_scale_y = (double)dsize.height / ssize.height;
     }
     else
     {
