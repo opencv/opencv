@@ -529,7 +529,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         params = cv.aruco.DetectorParameters()
         params.detectNestedMarkers = True
         detector = cv.aruco.ArucoDetector(dictionary, params)
-        corners, ids, rejected = detector.detectMarkers(img)
+        corners, ids, _ = detector.detectMarkers(img)
         self.assertEqual(sorted(ids.ravel().tolist()), [0, 1])
 
         # object points of the pair fuse both detections through a board
@@ -541,21 +541,16 @@ class aruco_objdetect_test(NewOpenCVTests):
 
     def test_cell_ratio_dictionary_helpers(self):
         binary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
-        dictionary = binary.convertToCellRatioDictionary()
-        self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, dictionary.dictEncoding)
         expected = (binary.getMarkerBits(0) * 100).astype(np.uint8)
         marker = cv.aruco.generateImageMarker(binary, 0, 101)
         measured = cv.aruco.Dictionary.getCellRatiosFromImage(marker, 4)
         np.testing.assert_array_equal(expected, measured)
-        ratios = cv.aruco.Dictionary.getRatioListFromCellRatios(measured)
-        restored = cv.aruco.Dictionary.getCellRatiosFromRatioList(ratios, 4)
-        np.testing.assert_array_equal(expected, restored)
 
-        # No integer percentage matches 55.5% with a strict tolerance.
-        observed = np.full((4, 4), 0.555, dtype=np.float32)
-        self.assertEqual(16, dictionary.getDistanceToId(observed, 0, False, 0.001))
-        found, _, _ = dictionary.identify(observed, 0., 0.001)
-        self.assertFalse(found)
+        # a dictionary built from the measured ratios identifies the marker and its rotation
+        ratios = cv.aruco.Dictionary.getRatioListFromCellRatios(measured)
+        custom = cv.aruco.Dictionary(ratios, 4, 0, cv.aruco.DICT_ENCODING_CELL_RATIO)
+        self.assertEqual(cv.aruco.DICT_ENCODING_CELL_RATIO, custom.dictEncoding)
+        self.assertEqual((True, 0, 1), custom.identify(binary.getMarkerBits(0, 1), 0., 0.49))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

@@ -54,7 +54,7 @@ workflow:
 2. detect it with your camera,
 3. estimate its pose, alone or combined into a board.
 
-The predefined nested dictionaries are intentionally simple. They cover one level of nesting: one inner marker inside one outer marker. The inner id is tied to the outer id (`2k` and `2k + 1`), so only pairs such as `(0, 1)`, `(2, 3)` and `(4, 5)` have generated object points in one shared frame. The predefined sets are also small by design to keep a large inner marker distance. Deeper nesting, larger marker sets and mixed combinations can still be modeled manually with a custom dictionary and a custom `cv::aruco::Board`, but the predefined helpers do not define those layouts for you.
+The predefined nested dictionaries are intentionally simple. They cover one level of nesting: one inner marker inside one outer marker. The inner id is tied to the outer id (`2k` and `2k + 1`), so only pairs such as `(0, 1)`, `(2, 3)` and `(4, 5)` have generated object points in one shared frame. The predefined sets are also small by design to keep a large separation distance between entries. Deeper nesting, larger marker sets and mixed combinations can still be modeled manually with a custom dictionary and a custom `cv::aruco::Board`, but the predefined helpers do not define those layouts for you.
 
 Predefined nested pair dictionaries
 -----------------
@@ -71,7 +71,8 @@ is standard ArUco:
    about 6 times smaller than the outer one. The rotation allows to keep the inner marker large while changing only small corner triangles of the outer marker cells.
 4. Both patterns have **at least 4 cells of each color**, so a uniformly dark or bright square
    differs from every entry in at least 4 cells. The predefined dictionaries correct at most 1
-   cell, so such a square is never accepted with `errorCorrectionRate <= 1`.
+   cell, so such a square is never accepted with `validBitIdThreshold <= 0.49` and
+   `errorCorrectionRate <= 1`.
 
 Because of rule 2, the printed image is fully determined by the dictionary entry and
 `innerHalfDiagonal` (0.7 for the predefined dictionaries): the image generator only needs to
@@ -217,8 +218,8 @@ The inner marker covers a corner triangle of each of the 4 host cells. Its size 
 `innerHalfDiagonal`, the half diagonal of the inner marker square in outer cell units: rotated 45
 degrees, the diagonals align with the cell grid and the covered triangle has area
 `innerHalfDiagonal^2 / 2`. With the default 0.7 that is at most `0.245` of the cell, so a host
-cell keeps at least 75% white pixels. A smaller inner marker changes less of each host cell, so
-the outer marker is detected from slightly farther away, but the inner marker is then detected
+cell keeps at least 75% white pixels. A smaller inner marker changes less of each host cell and
+can make the outer marker easier to detect at a distance, but the inner marker is then detected
 only closer to the camera. The bound `sqrt(0.5)` on `innerHalfDiagonal` limits the covered area
 to a quarter of the cell.
 
@@ -234,7 +235,7 @@ object points always correspond one to one.
 ### False positives
 
 A false positive is a random square in the scene (a window, a screen, a
-picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. Uniform bright or dark squares are never accepted by the predefined dictionaries (rule 4).
+picture frame) that gets accepted as a marker. Host cells accept a wider range of observations than binary cells, so nested dictionaries are more exposed to false positives than a binary dictionary of the same size. In practice: keep the dictionary small. With `validBitIdThreshold <= 0.49` and `errorCorrectionRate <= 1`, which the defaults satisfy, uniform bright or dark squares are never accepted by the predefined dictionaries (rule 4).
 
 You can also tighten `validBitIdThreshold` from its default 0.49 to 0.4. Each cell then accepts
 a subset of the observations it accepted before, so this cannot add false positives or weaken
@@ -242,55 +243,26 @@ the separation guarantees. The cost is range: distant or blurred markers are rej
 
 ### Custom composed markers
 
-`cv::aruco::Dictionary::getCellRatiosFromImage()` measures the white ratio of each cell of any
-canonical marker image. Use it to build cell-ratio dictionaries for your own composed markers:
-render or scan the marker, measure the ratios, and pass them to
-`cv::aruco::Dictionary::getRatioListFromCellRatios()`.
+`cv::aruco::Dictionary::getCellRatiosFromImage()` measures the white pixel ratio of every cell of
+a marker image that includes its border. Use it to describe any composed marker: compose the
+image, measure its cells and store them in a `DICT_ENCODING_CELL_RATIO` dictionary with
+`cv::aruco::Dictionary::getRatioListFromCellRatios()`. The example below nests marker 1 of
+`DICT_4X4_50` in a white cell of marker 0 and writes the dictionary and the printable image
+(`--step custom` in the sample):
 
-The following example creates two small custom dictionaries, each with 3 printable nested
-markers. In the
-billboard design each printable marker has one inner marker. In the constellation design each
-printable marker has several inner markers.
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_create_py
 
-- **Billboard**: one child marker is printed axis-aligned inside a 2x2 cell block.
-- **Constellation**: several child markers are printed in selected single cells.
+To detect the printed marker, read the dictionary and use it with the detector of Step 2
+(`--step detect --dictionary custom_nested.yml` in the sample):
 
-The rendering code is only one possible design. The important OpenCV part is step 3: measure the
-cell ratios from your generated marker images and build a `DICT_ENCODING_CELL_RATIO` dictionary.
-For real dictionaries, also check the distance between inner markers and avoid very plain patterns. A simple first filter for 4x4 binary markers is to keep at least 4 cells of each color.
+@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_read_py
 
-#### Step 1: define the custom rules
+The separation distance applies to custom dictionaries too: the number of separating cells
+between entries `i` and `j` at rotation `r` is
+`dictionary.getDistanceToId(dictionary.getMarkerBits(j, r), i, false, 2 * T)`.
 
-@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_rules_py
-
-#### Step 2: generate marker images
-
-@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_render_py
-
-#### Step 3: build the dictionary from the marker images
-
-This is the central part. The marker renderer can be anything, as long as each image is a
-canonical marker image with its border.
-
-@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_build_dictionary_py
-
-#### Step 4: write the dictionary and marker images
-
-@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_write_dictionary_py
-
-The sheets generated by the example contain 3 printable nested markers per dictionary:
-
-![Billboard custom dictionary](images/custom_s2_billboard_sheet.png)
-
-![Constellation custom dictionary](images/custom_s3_constellation_sheet.png)
-
-#### Step 5: read and use the dictionary
-
-Load the YAML file and draw detections from the camera stream. This example keeps the default
-`validBitIdThreshold` value. For C++:
-
-@snippet samples/cpp/tutorial_code/objectDetection/detect_nested_markers.cpp nested_custom_detect_cpp
-
-Or in Python:
-
-@snippet samples/python/tutorial_code/objectDetection/aruco_nested_detection.py nested_custom_detect_py
+Nested markers with a black border, as in this example, are detected with
+`DetectorParameters::detectNestedMarkers` enabled and all other parameters at their defaults.
+Inverted nested markers also need `DetectorParameters::detectInvertedMarker`, which
+keeps the smallest of several close contours: black-bordered markers in the same image can then
+get less accurate corners.
