@@ -1269,6 +1269,13 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     int depth = src.depth();
     Point badPt(-1, -1);
 
+    if (depth == CV_16F)
+    {
+        Mat src32f;
+        src.convertTo(src32f, CV_32F);
+        return checkRange(src32f, quiet, pt, minVal, maxVal);
+    }
+
     if (depth < CV_32F)
     {
         int minVali = minVal <= INT_MIN ? INT_MIN : cvFloor(minVal);

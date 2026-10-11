@@ -3016,6 +3016,38 @@ TEST(Core_CheckRange, Inf_Minus)
     ASSERT_EQ(bad_pt.y, 1);
 }
 
+TEST(Core_CheckRange, Float16_regression_30233)
+{
+    // all-finite: must pass and must not read out of bounds
+    cv::Mat ones16f;
+    cv::Mat ones32f(128, 160, CV_32FC3, cv::Scalar::all(1));
+    ones32f.convertTo(ones16f, CV_16F);
+    ASSERT_TRUE(cv::checkRange(ones16f));
+
+    int sizes[] = {5, 6, 7};
+    cv::Mat ones3d32f(3, sizes, CV_32FC1, cv::Scalar(1)), ones3d16f;
+    ones3d32f.convertTo(ones3d16f, CV_16F);
+    ASSERT_TRUE(cv::checkRange(ones3d16f));
+
+    // out-of-range / NaN / Inf location reporting
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,    5,  5,  0,
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    const float bad_values[] = { 2.f, std::numeric_limits<float>::quiet_NaN(),
+                                 std::numeric_limits<float>::infinity(),
+                                 -std::numeric_limits<float>::infinity() };
+    for (float v : bad_values)
+    {
+        data[17] = v;
+        cv::Mat src16f;
+        cv::Mat(3, 3, CV_32FC3, data).convertTo(src16f, CV_16F);
+        cv::Point bad_pt(0, 0);
+        ASSERT_FALSE(cv::checkRange(src16f, true, &bad_pt, 4.5, 16.0)) << "value=" << v;
+        EXPECT_EQ(2, bad_pt.x);
+        EXPECT_EQ(1, bad_pt.y);
+    }
+}
+
 REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
