@@ -1345,5 +1345,31 @@ TEST(Imgproc_Warping, interpolate_loop)
     cv::warpAffine(src, dst, M, cv::Size(50, 50), cv::INTER_NEAREST, cv::BORDER_REFLECT_101);
 }
 
+TEST(Imgproc_Resize, scale_recomputed_from_dsize_29985)
+{
+    // Regression: when resize() is called with fx/fy (empty dsize),
+    // the realized scale after rounding must be used consistently across
+    // all backends. Previously, inv_scale was not updated to match the
+    // rounded dsize, causing up to ~104 pixel error near image edges.
+    int src_width = 55;  // chosen so round(55 * 0.5) = 28 (realized scale != 0.5)
+    Mat src(1, src_width, CV_8UC1);
+    for (int i = 0; i < src_width; i++)
+        src.at<uchar>(0, i) = (uchar)(i * 4);  // ramp
+
+    Mat dst_cpu, dst_reference;
+    cv::resize(src, dst_cpu, Size(), 0.5, 1.0, INTER_LINEAR);
+
+    // Compute reference: use explicit dsize to force correct scale computation
+    cv::resize(src, dst_reference, Size(dst_cpu.cols, dst_cpu.rows), 0, 0, INTER_LINEAR);
+
+    ASSERT_EQ(dst_cpu.size(), dst_reference.size());
+    for (int i = 0; i < dst_cpu.cols; i++)
+    {
+        int diff = std::abs((int)dst_cpu.at<uchar>(0,i) - (int)dst_reference.at<uchar>(0,i));
+        EXPECT_LE(diff, 1) << "Pixel " << i << " differs by " << diff
+                            << " (fx/fy path vs dsize path should match after scale recompute)";
+    }
+}
+
 }} // namespace
 /* End of file. */
