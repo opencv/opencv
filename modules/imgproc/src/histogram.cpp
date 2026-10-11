@@ -2168,6 +2168,21 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
+        if( method == CV_COMP_CHISQR_ALT )
+        {
+            // Include bins present only in H2; bins stored in H1 were counted above.
+            it = PH2->begin();
+            for( i = 0; i < N2; i++, ++it )
+            {
+                const SparseMat::Node* node = it.node();
+                if( !PH1->find<float>(node->idx, (size_t*)&node->hashval) )
+                {
+                    double v2 = it.value<float>();
+                    if( fabs(v2) > DBL_EPSILON )
+                        result += v2;
+                }
+            }
+        }
     }
     else if( method == CV_COMP_CORREL )
     {
@@ -2613,6 +2628,19 @@ cvCompareHist( const CvHistogram* hist1,
             double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
+        }
+        if( method == CV_COMP_CHISQR_ALT )
+        {
+            for( node2 = cvInitSparseMatIterator( mat2, &iterator );
+                 node2 != 0; node2 = cvGetNextSparseNode( &iterator ))
+            {
+                if( !cvPtrND(mat1, CV_NODE_IDX(mat2,node2), 0, 0, &node2->hashval) )
+                {
+                    double v2 = *(float*)CV_NODE_VAL(mat2,node2);
+                    if( fabs(v2) > DBL_EPSILON )
+                        result += v2;
+                }
+            }
         }
     }
     else if( method == CV_COMP_CORREL )
