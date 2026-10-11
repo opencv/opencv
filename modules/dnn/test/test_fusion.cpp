@@ -1065,4 +1065,52 @@ TEST(Fusion, NineTapAndStrided3x3Conv)
     normAssert(refConv(x, w, b, Vec2i(2, 2), pads), outs[2], "3x3 kernel, stride (2, 2)");
 }
 
+static Mat slice(const Mat& m, int axis, int start, int end)
+{
+    std::vector<Range> r(m.dims, Range::all());
+    r[axis] = Range(start, end);
+    return m(r).clone();
+}
+
+static Mat concat(const std::vector<Mat>& parts, int axis)
+{
+    std::vector<int> shape(parts[0].size.p, parts[0].size.p + parts[0].dims);
+    shape[axis] = 0;
+    for (const Mat& p : parts)
+        shape[axis] += p.size[axis];
+    Mat out(shape, CV_32F);
+    int ofs = 0;
+    for (const Mat& p : parts)
+    {
+        std::vector<Range> r(out.dims, Range::all());
+        r[axis] = Range(ofs, ofs + p.size[axis]);
+        Mat dst = out(r);
+        p.copyTo(dst);
+        ofs += p.size[axis];
+    }
+    return out;
+}
+
+// Split of a conv output stays in block layout, aligned or not; only the network input is converted.
+TEST(Fusion, SplitKeepsBlockLayout)
+{
+    Net net = loadModel("split_block_layout");
+    Mat x = randomInput({1, 8, 10, 12});
+    net.setInput(x);
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"Y_aligned", "Y_unaligned", "Y_height", "Y_default"});
+    ASSERT_EQ(4u, outs.size());
+
+    const Vec2i s1(1, 1);
+    const Vec4i p1(1, 1, 1, 1);
+    Mat c1 = refConv(x, formulaWeights({32, 8, 3, 3}), formulaWeights({32}, 2), s1, p1);
+    Mat a = slice(c1, 1, 0, 16), b = slice(c1, 1, 16, 32);
+    Mat r = b + refConv(b, formulaWeights({16, 16, 3, 3}, 5), formulaWeights({16}, 6), s1, p1);
+    normAssert(concat({a, b, r}, 1), outs[0], "aligned split");
+    normAssert(concat({slice(c1, 1, 12, 32), slice(c1, 1, 0, 12)}, 1), outs[1], "unaligned split");
+    normAssert(concat({slice(c1, 2, 0, 5), slice(c1, 2, 5, 10)}, 3), outs[2], "split along H");
+    normAssert(concat({b, a}, 1), outs[3], "split without sizes");
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout"));
+}
+
 }} // namespace opencv_test

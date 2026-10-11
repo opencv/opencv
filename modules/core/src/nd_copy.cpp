@@ -81,7 +81,7 @@ enum
     GATHER_BLOCK_BYTES = 8*1024,
     // costs are bytes weighted by the kernel; the copies are memory-bound,
     // so small stripes only add overhead
-    PARALLEL_MIN_COST = 1024*1024,
+    PARALLEL_MIN_COST = 256*1024,
     STRIPE_COST = 1024*1024
 };
 
@@ -617,7 +617,8 @@ static void runPlans(const Plan* plans, size_t np)
 
     // grouped so that the range fits into int
     const int64 ngroups = std::min(total, (int64)1 << 20);
-    const double nstripes = std::min((double)ngroups, std::max(2.0, cost/STRIPE_COST));
+    // at least one stripe per thread, so that copies below STRIPE_COST use every thread too
+    const double nstripes = std::min((double)ngroups, std::max((double)getNumThreads(), cost/STRIPE_COST));
     parallel_for_(Range(0, (int)ngroups), [&](const Range& r)
     {
         body(r.start*total/ngroups, r.end*total/ngroups);
