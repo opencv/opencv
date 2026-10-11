@@ -154,6 +154,15 @@ int bilateralFilter(const uchar* src_data, size_t src_step,
     if( depth != CV_8U || !(cn == 1 || cn == 3) || src_data == dst_data)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    // validate that the reported step sizes can actually hold a full row of
+    // pixel data; otherwise the memcpy() calls below could read/write out of
+    // the bounds of the real buffers (CWE-119)
+    if( width <= 0 || height <= 0 )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    const size_t min_row_size = (size_t)width * cn * sizeof(uchar);
+    if( min_row_size > src_step || min_row_size > dst_step )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     int i, j, maxk, radius;
 
     constexpr double eps = 1e-6;
