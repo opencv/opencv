@@ -3220,4 +3220,28 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+// Regression test for issue #30151: CV_64F gemm NaN on ARMv7 NEON
+// (CV_SIMD=1 but CV_SIMD_64F=0): simdGEMM_kj was defined inside
+// #if CV_SIMD, causing double data to be mishandled on those targets.
+TEST(Core_GEMM, gemm_double_no_nan_30151)
+{
+    Mat A = (Mat_<double>(2,2) << 1.0, 2.0, 3.0, 4.0);
+    Mat B = (Mat_<double>(2,2) << 5.0, 6.0, 7.0, 8.0);
+    Mat C;
+    cv::gemm(A, B, 1.0, noArray(), 0.0, C);
+    ASSERT_EQ(C.type(), CV_64F);
+    ASSERT_EQ(C.rows, 2);
+    ASSERT_EQ(C.cols, 2);
+    // A*B = [[19,22],[43,50]]
+    EXPECT_NEAR(C.at<double>(0,0), 19.0, 1e-9) << "Unexpected value at (0,0)";
+    EXPECT_NEAR(C.at<double>(0,1), 22.0, 1e-9) << "Unexpected value at (0,1)";
+    EXPECT_NEAR(C.at<double>(1,0), 43.0, 1e-9) << "Unexpected value at (1,0)";
+    EXPECT_NEAR(C.at<double>(1,1), 50.0, 1e-9) << "Unexpected value at (1,1)";
+    // Verify no NaN in output (the symptom on ARMv7 NEON before the fix)
+    for(int i = 0; i < C.rows; i++)
+        for(int j = 0; j < C.cols; j++)
+            EXPECT_FALSE(std::isnan(C.at<double>(i,j)))
+                << "NaN at (" << i << "," << j << ") — CV_SIMD_64F guard missing?";
+}
+
 }} // namespace
