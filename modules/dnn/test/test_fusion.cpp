@@ -798,6 +798,12 @@ TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
     checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
+// 3 input channels: the conv runs on the plain input with its own weight copy.
+TEST(Fusion, BatchNormFoldsIntoSmallCinConv)
+{
+    checkBatchNormFoldsIntoConv("batchnorm_conv_small_cin");
+}
+
 // ConvTranspose2d(8->16) -> Add(residual): the Add fuses into TransformLayout.
 TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
 {
@@ -959,6 +965,104 @@ TEST(Fusion, LayerScaleFoldsIntoGemmWeights)
     }
     EXPECT_EQ(1, scaled) << "LayerScale was not folded into the Gemm weights";
     EXPECT_EQ(1, plain) << "the Gemm whose result is shared must keep its weights";
+}
+
+// Direct NCHW convolution without groups, accumulated in double; pads are {top, left, bottom, right}.
+static Mat refConv(const Mat& x, const Mat& w, const Mat& b, Vec2i strides, Vec4i pads,
+                   Vec2i dilations = Vec2i(1, 1))
+{
+    const int N = x.size[0], C = x.size[1], H = x.size[2], W = x.size[3];
+    const int K = w.size[0], kh = w.size[2], kw = w.size[3];
+    CV_Assert(w.size[1] == C);
+    const int OH = (H + pads[0] + pads[2] - (kh - 1) * dilations[0] - 1) / strides[0] + 1;
+    const int OW = (W + pads[1] + pads[3] - (kw - 1) * dilations[1] - 1) / strides[1] + 1;
+    Mat y(std::vector<int>{N, K, OH, OW}, CV_32F);
+    const float *xp = x.ptr<float>(), *wp = w.ptr<float>();
+    float* yp = y.ptr<float>();
+    for (int n = 0; n < N; n++)
+    for (int k = 0; k < K; k++)
+    for (int oy = 0; oy < OH; oy++)
+    for (int ox = 0; ox < OW; ox++)
+    {
+        double s = b.empty() ? 0. : b.ptr<float>()[k];
+        for (int c = 0; c < C; c++)
+        for (int ky = 0; ky < kh; ky++)
+        for (int kx = 0; kx < kw; kx++)
+        {
+            const int iy = oy * strides[0] - pads[0] + ky * dilations[0];
+            const int ix = ox * strides[1] - pads[1] + kx * dilations[1];
+            if (0 <= iy && iy < H && 0 <= ix && ix < W)
+                s += (double)xp[((n * C + c) * H + iy) * W + ix] * wp[((k * C + c) * kh + ky) * kw + kx];
+        }
+        yp[((n * K + k) * OH + oy) * OW + ox] = (float)s;
+    }
+    return y;
+}
+
+static Mat silu(const Mat& x)
+{
+    Mat y = x.clone();
+    float* p = y.ptr<float>();
+    for (size_t i = 0; i < y.total(); i++)
+        p[i] = p[i] / (1.f + std::exp(-p[i]));
+    return y;
+}
+
+static Mat relu(const Mat& x)
+{
+    Mat y = x.clone();
+    float* p = y.ptr<float>();
+    for (size_t i = 0; i < y.total(); i++)
+        p[i] = std::max(p[i], 0.f);
+    return y;
+}
+
+// A conv with at most 4 input channels reads the plain input, so this RGB model needs no layout conversion.
+TEST(Fusion, SmallInputChannelConvNeedsNoLayoutConversion)
+{
+#ifdef HAVE_MLAS
+    Net net = loadModel("convolution");
+    net.setInput(randomInput({1, 3, 10, 10}));
+    net.forward();
+    EXPECT_EQ(0, fusedCount(net, "TransformLayout"));
+#else
+    throw SkipTestException("the plain-input conv path needs MLAS");
+#endif
+}
+
+// Convs with 3 input channels: stride 2 + ReLU, and dilation 2 without bias.
+TEST(Fusion, SmallInputChannelConvMatchesReference)
+{
+    Net net = loadModel("conv_small_cin");
+    Mat x = randomInput({2, 3, 17, 15});
+    net.setInput(x);
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"Y_s2", "Y_d2"});
+    ASSERT_EQ(2u, outs.size());
+
+    normAssert(relu(refConv(x, formulaWeights({16, 3, 3, 3}, 7), formulaWeights({16}, 8),
+                            Vec2i(2, 2), Vec4i(1, 1, 1, 1))),
+               outs[0], "stride 2 + ReLU");
+    normAssert(refConv(x, formulaWeights({8, 3, 3, 3}, 9), Mat(), Vec2i(1, 1), Vec4i(2, 2, 2, 2), Vec2i(2, 2)),
+               outs[1], "dilation 2");
+}
+
+// A 1x9 kernel also has 9 taps but must not take the 3x3 path; the 3x3 conv uses stride (2, 1) and (2, 2).
+TEST(Fusion, NineTapAndStrided3x3Conv)
+{
+    Net net = loadModel("conv_9tap_and_strided");
+    Mat x = randomInput({1, 16, 12, 24});
+    net.setInput(x);
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"Y_1x9", "Y_3x3", "Y_3x3_s2"});
+    ASSERT_EQ(3u, outs.size());
+
+    const Mat w = formulaWeights({32, 16, 3, 3}, 5), b = formulaWeights({32}, 6);
+    const Vec4i pads(0, 1, 1, 2);
+    normAssert(refConv(x, formulaWeights({16, 16, 1, 9}), Mat(), Vec2i(1, 1), Vec4i(0, 4, 0, 4)),
+               outs[0], "1x9 kernel");
+    normAssert(silu(refConv(x, w, b, Vec2i(2, 1), pads)), outs[1], "3x3 kernel, stride (2, 1)");
+    normAssert(refConv(x, w, b, Vec2i(2, 2), pads), outs[2], "3x3 kernel, stride (2, 2)");
 }
 
 }} // namespace opencv_test
