@@ -78,6 +78,30 @@ TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
     ASSERT_EQ(rImg, rOri);
 }
 
+TEST(blobRectToImageRect, no_resize)
+{
+    Size imgSize(64, 48);
+    Mat img(imgSize, CV_8UC1), img32f;
+    randu(img, 0, 256);
+    img.convertTo(img32f, CV_32F);
+    Rect rBlob(10, 20, 30, 15);
+    const ImagePaddingMode modes[] = { DNN_PMODE_NULL, DNN_PMODE_CROP_CENTER, DNN_PMODE_LETTERBOX };
+    for (ImagePaddingMode mode : modes)
+    {
+        // Blob size equal to the image size, or left empty: no resize, crop or padding is applied
+        for (const Size& size : { imgSize, Size() })
+        {
+            SCOPED_TRACE(cv::format("paddingmode=%d size=%dx%d", (int)mode, size.width, size.height));
+            Image2BlobParams paramNet;
+            paramNet.size = size;
+            paramNet.paddingmode = mode;
+            Mat blob = blobFromImageWithParams(img, paramNet);
+            ASSERT_EQ(0, cvtest::norm(Mat(imgSize, CV_32F, blob.ptr<float>()), img32f, NORM_INF));
+            EXPECT_EQ(rBlob, paramNet.blobRectToImageRect(rBlob, imgSize));
+        }
+    }
+}
+
 
 TEST(blobFromImage_4ch, Regression)
 {
