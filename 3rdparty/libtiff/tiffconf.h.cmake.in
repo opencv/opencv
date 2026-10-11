@@ -108,6 +108,9 @@
 /* Support libdeflate enhanced compression */
 #cmakedefine LIBDEFLATE_SUPPORT 1
 
+/* Support webp compression */
+#cmakedefine WEBP_SUPPORT 1
+
 /* Support strip chopping (whether or not to convert single-strip uncompressed
    images to multiple strips of ~8Kb to reduce memory usage) */
 #cmakedefine STRIPCHOP_DEFAULT TIFF_STRIPCHOP
