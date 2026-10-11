@@ -408,7 +408,7 @@ static inline void simdGEMM_kj_f32f64(
 }
 #endif
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<typename ST>
 static inline void simdGEMM_kj(
     const ST* a_data, const ST* _b_data, size_t b_step,
