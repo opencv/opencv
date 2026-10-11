@@ -41,6 +41,17 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    // In block layout, split sizes along channels count real channels, not blocks of 8.
+    static bool isBlockChannelSplit(const MatShape& inpShape, int axis_)
+    {
+        return inpShape.layout == DATA_LAYOUT_BLOCK && axis_ == 1;
+    }
+
+    static int axisSize(const MatShape& inpShape, int axis_)
+    {
+        return isBlockChannelSplit(inpShape, axis_) ? inpShape.C : inpShape[axis_];
+    }
+
     void getOutShapes(const MatShape& inpShape, int axis_,
                       const std::vector<int>& split,
                       std::vector<MatShape>& outShapes) const
@@ -50,6 +61,8 @@ public:
 
         int inpDims = inpShape.dims;
         CV_Assert(0 <= axis_ && axis_ < inpDims);
+        const bool blockC = isBlockChannelSplit(inpShape, axis_);
+        const int C0 = blockC ? inpShape.back() : 1;
         int totalSize_a = 0;
 
         outShapes.resize(noutputs);
@@ -57,11 +70,34 @@ public:
             MatShape outShape = inpShape;
             int s = split[i];
             CV_Assert(s >= 0);
-            CV_Assert(s <= inpShape[axis_] - totalSize_a);
-            outShape[axis_] = s;
+            CV_Assert(s <= axisSize(inpShape, axis_) - totalSize_a);
+            if (blockC) {
+                outShape[axis_] = (s + C0 - 1) / C0;
+                outShape.C = s;
+            } else {
+                outShape[axis_] = s;
+            }
             outShapes[i] = outShape;
             totalSize_a += s;
         }
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        desiredInputs.assign(actualInputs.size(), DATA_LAYOUT_UNKNOWN);
+        // Stay in block layout for a non-negative axis (negative axes count from the end, which
+        // differs between layouts). Splits not on multiples of 8 channels are repacked in forward().
+        if (!actualInputs.empty() && actualInputs[0] == DATA_LAYOUT_BLOCK && axis >= 0) {
+            desiredInputs[0] = DATA_LAYOUT_BLOCK;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+            return netimpl_->defaultC0;
+        }
+        outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        return 0;
     }
 
     void makeDefaultSplit(int totalSize, size_t noutputs, std::vector<int>& split_) const
@@ -99,7 +135,7 @@ public:
             split_ = &tempSplit;
         }
         else if (split.empty()) {
-            makeDefaultSplit(inpShape[axis_], noutputs, tempSplit);
+            makeDefaultSplit(axisSize(inpShape, axis_), noutputs, tempSplit);
             split_ = &tempSplit;
         }
 
@@ -152,7 +188,7 @@ public:
             split_ = &tempSplit;
         }
         else if (split.empty()) {
-            makeDefaultSplit(inpShape[axis_], noutputs, tempSplit);
+            makeDefaultSplit(axisSize(inpShape, axis_), noutputs, tempSplit);
             split_ = &tempSplit;
         }
         getOutShapes(inpShape, axis_, *split_, outShapes);
@@ -195,10 +231,42 @@ public:
 
     void runOp(const Mat& inp, std::vector<Mat>& outs, int axis_)
     {
+        if (isBlockChannelSplit(inp.size, axis_)) {
+            runOpBlockChannels(inp, outs);
+            return;
+        }
         std::vector<int> sizes(outs.size());
         for (size_t i = 0; i < outs.size(); i++)
             sizes[i] = outs[i].size[axis_];
         cv::split(inp, axis_, sizes, outs);
+    }
+
+    // Channel split in block layout: if every part starts on a multiple of 8 channels, split the
+    // channel blocks directly; otherwise convert to NCHW, split, and convert back.
+    void runOpBlockChannels(const Mat& inp, std::vector<Mat>& outs)
+    {
+        const int C0 = inp.size[inp.dims - 1];
+        const size_t nout = outs.size();
+        bool aligned = true;
+        for (size_t k = 0; k + 1 < nout; k++)
+            aligned = aligned && (outs[k].size.C % C0) == 0;
+        std::vector<int> sizes(nout);
+        if (aligned) {
+            for (size_t k = 0; k < nout; k++)
+                sizes[k] = outs[k].size[1];
+            splitND(inp, 1, sizes, outs);
+            return;
+        }
+
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        Mat plainInp;
+        transformLayout(inp, plainInp, origLayout, origLayout, C0);
+        for (size_t k = 0; k < nout; k++)
+            sizes[k] = outs[k].size.C;
+        std::vector<Mat> plainOuts;
+        cv::split(plainInp, 1, sizes, plainOuts);
+        for (size_t k = 0; k < nout; k++)
+            transformLayout(plainOuts[k], outs[k], DATA_LAYOUT_BLOCK, origLayout, C0);
     }
 };
 
