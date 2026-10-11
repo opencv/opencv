@@ -4559,4 +4559,12 @@ TEST(Core_Arithm, min_empty)
   EXPECT_TRUE(C.empty());
 }
 
+TEST(Core_Arithm, empty_sum)
+{
+  cv::Mat empty_mat;
+  cv::add(empty_mat, cv::Scalar(1.0), empty_mat);
+  ASSERT_TRUE(empty_mat.empty());
+  ASSERT_THROW(cv::Mat empty_sum = empty_mat + cv::Scalar(1.0), cv::Exception);
+}
+
 }} // namespace

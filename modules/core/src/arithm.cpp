@@ -623,9 +623,11 @@ enum { ARITHM_SMALL_DIRECT = 100000 };
 static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray dst,
                       InputArray mask, int dtype, int oclop, bool muldiv, const Scalar& params)
 {
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())          // empty inputs -> empty result
+    if (src1.empty() || src2.empty())          // empty inputs -> empty result
     {
+        CV_Assert((src1.empty() && src2.empty()) ||
+                  (src1.empty() && isScalarArg(src2, src1.channels())) ||
+                  (src2.empty() && isScalarArg(src1, src2.channels())));
         dst.release();
         if (dtype >= 0)
             dst.create(0, 0, dtype);
