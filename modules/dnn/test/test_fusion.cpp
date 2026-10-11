@@ -891,4 +891,74 @@ TEST(Fusion, TransformLayoutAddBroadcastResidualMatchesUnfused)
     normAssert(unfusedOut, fusedOut, "fused vs unfused, broadcast residual", 1e-5, 1e-5);
 }
 
+// Same values as formula_weights() in opencv_extra's generate_onnx_models.py.
+static Mat formulaWeights(const std::vector<int>& shape, int salt = 1)
+{
+    Mat m(shape, CV_32F);
+    float* p = m.ptr<float>();
+    for (size_t i = 0; i < m.total(); i++)
+        p[i] = (float)((int)((i * 37 + salt) % 61) - 30) / 256.f;
+    return m;
+}
+
+static Mat randomInput(const std::vector<int>& shape)
+{
+    Mat m(shape, CV_32F);
+    theRNG().fill(m, RNG::UNIFORM, -1.0, 1.0);
+    return m;
+}
+
+static Net loadModel(const std::string& name)
+{
+    return readNetFromONNX(_tf("models/" + name + ".onnx"), ENGINE_OPENCV);
+}
+
+// LayerScale after a MatMul folds into the Gemm weights, but not when the MatMul result is also an output.
+TEST(Fusion, LayerScaleFoldsIntoGemmWeights)
+{
+    Net net = loadModel("matmul_channel_affine");
+    Mat x = randomInput({2, 5, 16}), s = randomInput({2, 5, 16});
+    net.setInput(x, "X");
+    net.setInput(s, "S");
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"Y", "proj", "Y_shared"});
+    ASSERT_EQ(3u, outs.size());
+
+    const Mat W = formulaWeights({16, 24}), b = formulaWeights({24}, 2), beta = formulaWeights({24}, 4);
+    Mat gamma = formulaWeights({24}, 3) + 1;
+    const float *bp = b.ptr<float>(), *gp = gamma.ptr<float>(), *betap = beta.ptr<float>();
+    Mat px = x.reshape(1, 10) * W, ps = s.reshape(1, 10) * W;
+    Mat refY(10, 24, CV_32F), refProj(10, 24, CV_32F), refShared(10, 24, CV_32F);
+    for (int i = 0; i < 10; i++)
+        for (int n = 0; n < 24; n++)
+        {
+            refY.at<float>(i, n) = (px.at<float>(i, n) + bp[n]) * gp[n] + betap[n];
+            refProj.at<float>(i, n) = ps.at<float>(i, n) + bp[n];
+            refShared.at<float>(i, n) = refProj.at<float>(i, n) * gp[n];
+        }
+    const std::vector<int> shape{2, 5, 24};
+    normAssert(refY.reshape(1, shape), outs[0], "folded");
+    normAssert(refProj.reshape(1, shape), outs[1], "shared MatMul result");
+    normAssert(refShared.reshape(1, shape), outs[2], "not folded");
+
+    // One Gemm holds W with column n scaled by gamma[n], the other plain W.
+    Mat scaledW = W.clone();
+    for (int n = 0; n < 24; n++)
+    {
+        Mat col = scaledW.col(n);
+        col *= gp[n];
+    }
+    int scaled = 0, plain = 0;
+    for (const auto& l : net.getMainGraph()->prog())
+    {
+        if (!l || l->type != "Gemm" || l->blobs.empty() || l->blobs[0].total() != W.total())
+            continue;
+        Mat B = l->blobs[0].rows == W.rows ? l->blobs[0] : Mat(l->blobs[0].t());
+        scaled += cvtest::norm(B, scaledW, NORM_INF) < 1e-6;
+        plain += cvtest::norm(B, W, NORM_INF) < 1e-6;
+    }
+    EXPECT_EQ(1, scaled) << "LayerScale was not folded into the Gemm weights";
+    EXPECT_EQ(1, plain) << "the Gemm whose result is shared must keep its weights";
+}
+
 }} // namespace opencv_test
