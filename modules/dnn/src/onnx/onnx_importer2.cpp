@@ -1932,6 +1932,10 @@ Arg ONNXImporter2::resolveConstThroughIdentity(Arg arg)
 void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
+    // Resize always carries the data input plus scales or sizes, so the smallest
+    // valid node has 2 inputs (opset-10 [X, scales]); opset-11+ adds roi/sizes.
+    // scalesInputId below assumes that, so reject a short input list before indexing.
+    CV_CheckGE(ninputs, 2, "DNN/ONNX: Resize requires at least 2 inputs");
     layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
