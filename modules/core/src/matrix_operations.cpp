@@ -765,7 +765,13 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _src.dims() <= 2 );
+    if (_src.dims() > 2 || op > REDUCE_SUM2)
+    {
+        CV_CheckGE(dim, -_src.dims(), "reduce: dim is out of range");
+        CV_CheckLT(dim, _src.dims(), "reduce: dim is out of range");
+        cv::reduce(_src, _dst, cv::ReduceParams(op, {dim}, true, dtype < 0 && _dst.fixedType() ? _dst.depth() : dtype));
+        return;
+    }
     int op0 = op;
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( dtype < 0 )

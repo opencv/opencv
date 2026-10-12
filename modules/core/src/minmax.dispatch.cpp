@@ -6,6 +6,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "stat.hpp"
+#include "stat_parallel.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 #include <algorithm>
 
@@ -297,12 +298,12 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
 
 }
 
-void cv::minMaxIdx(InputArray _src, double* minVal,
-                   double* maxVal, int* minIdx, int* maxIdx,
-                   InputArray _mask)
+// serial implementation, also used for the pieces of the parallel version
+static void minMaxIdx_(cv::InputArray _src, double* minVal,
+                       double* maxVal, int* minIdx, int* maxIdx,
+                       cv::InputArray _mask)
 {
-    CV_INSTRUMENT_REGION();
-
+    using namespace cv;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool)) ||
                (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
@@ -388,6 +389,61 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         ofs2idx(src, minidx, minIdx);
     if( maxIdx )
         ofs2idx(src, maxidx, maxIdx);
+}
+
+void cv::minMaxIdx(InputArray _src, double* minVal,
+                   double* maxVal, int* minIdx, int* maxIdx,
+                   InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    std::vector<StatChunk> chunks;
+    if (!_src.isUMat())
+    {
+        Mat src = _src.getMat(), mask = _mask.getMat();
+        const int cn = src.channels();
+        const bool argsOk = (cn == 1 && (mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S ||
+                             mask.type() == CV_Bool) && src.size == mask.size))) ||
+                            (cn > 1 && mask.empty() && !minIdx && !maxIdx);
+        if (argsOk && splitForParallelStat(src, mask, chunks))
+        {
+            const int n = (int)chunks.size();
+            std::vector<double> mn(n), mx(n);
+            std::vector<size_t> imn(n, 0), imx(n, 0);   // 1-based row-major indices, 0 = no element
+            parallel_for_(Range(0, n), [&](const Range& r)
+            {
+                for (int i = r.start; i < r.end; i++)
+                {
+                    int a[2] = {-1, -1}, b[2] = {-1, -1};
+                    minMaxIdx_(chunks[i].src, &mn[i], &mx[i], cn == 1 ? a : nullptr, cn == 1 ? b : nullptr,
+                               chunks[i].mask);
+                    if (cn > 1)
+                        imn[i] = imx[i] = 1;
+                    else if (a[0] >= 0)
+                    {
+                        imn[i] = chunkIndexToElem(chunks[i], a) + 1;
+                        imx[i] = chunkIndexToElem(chunks[i], b) + 1;
+                    }
+                }
+            });
+            // pieces are in memory order, so taking the first strict improvement keeps the
+            // first occurrence, as in the serial version
+            int bmin = -1, bmax = -1;
+            for (int i = 0; i < n; i++)
+            {
+                if (imn[i] == 0)
+                    continue;
+                if (bmin < 0 || mn[i] < mn[bmin]) bmin = i;
+                if (bmax < 0 || mx[i] > mx[bmax]) bmax = i;
+            }
+            if (minVal) *minVal = bmin >= 0 ? mn[bmin] : 0;
+            if (maxVal) *maxVal = bmax >= 0 ? mx[bmax] : 0;
+            if (minIdx) ofs2idx(src, bmin >= 0 ? imn[bmin] : 0, minIdx);
+            if (maxIdx) ofs2idx(src, bmax >= 0 ? imx[bmax] : 0, maxIdx);
+            return;
+        }
+    }
+    minMaxIdx_(_src, minVal, maxVal, minIdx, maxIdx, _mask);
 }
 
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,

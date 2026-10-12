@@ -165,7 +165,12 @@ enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/column
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
                    REDUCE_MIN = 3,  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
-                   REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
+                   REDUCE_SUM2 = 4, //!< the output is the sum of all squared rows/columns of the matrix.
+                   REDUCE_PROD = 5, //!< the output is the product of the elements.
+                   REDUCE_L1 = 6,   //!< the output is the sum of the absolute values.
+                   REDUCE_L2 = 7,   //!< the output is the square root of the sum of the squares.
+                   REDUCE_LOG_SUM = 8,     //!< the output is the logarithm of the sum.
+                   REDUCE_LOG_SUM_EXP = 9  //!< the output is log(sum(exp(x))), computed without overflow.
                  };
 
 /** @brief Swaps two matrices
@@ -892,7 +897,8 @@ The following code demonstrates its usage for a single channel matrix.
 And the following code demonstrates its usage for a two-channel matrix.
 @snippet snippets/core_reduce.cpp example2
 
-@param src input 2D matrix.
+@param src input matrix. It may also be n-dimensional, then @p dim is the axis to reduce and the
+output keeps it with size 1 (see the cv::ReduceParams overload).
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
 a single row. 1 means that the matrix is reduced to a single column.
@@ -902,6 +908,53 @@ otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
 @sa repeat, reduceArgMin, reduceArgMax
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
+
+/** @brief The reduction that the n-dimensional #reduce performs.
+
+Everything the call needs besides the input and the output arrays, in one struct, so that further
+options can be added without changing the signature.
+
+@sa reduce
+*/
+struct CV_EXPORTS_W_SIMPLE ReduceParams
+{
+    CV_WRAP ReduceParams(int rtype = REDUCE_SUM, const std::vector<int>& axes = std::vector<int>(),
+                         bool keepdims = true, int dtype = -1);
+
+    //! reduction operation, one of #ReduceTypes.
+    CV_PROP_RW int rtype;
+    //! axes to reduce; negative values count from the end; an empty vector means all the axes.
+    CV_PROP_RW std::vector<int> axes;
+    //! whether to keep the reduced axes as axes of size 1.
+    CV_PROP_RW bool keepdims;
+    //! depth of the output; when negative, the output has the depth of the input. The result is
+    //! converted to it with saturation.
+    CV_PROP_RW int dtype;
+};
+
+/** @brief Reduces an n-dimensional array over the given axes.
+
+Every output element is the reduction (see #ReduceTypes) of the input elements that differ only in
+the reduced axes. The channels are reduced independently, so the output has as many channels as the
+input. The input may be non-continuous (e.g. a sub-array) and of any depth.
+
+The accumulation is done in the source type for #REDUCE_MAX and #REDUCE_MIN (in float for 16-bit
+floating-point types) and in float or double for the other operations (double for 32- and 64-bit
+integers, for CV_64F, and when the output depth is CV_64F).
+
+@code{.cpp}
+    Mat blob(std::vector<int>{1, 256, 80, 80}, CV_32F), channelMeans;
+    cv::reduce(blob, channelMeans, {REDUCE_AVG, {2, 3}});   // -> 1x256x1x1
+@endcode
+
+@param src input array.
+@param dst output array. With ReduceParams::keepdims, it has the shape of src with the reduced axes
+set to 1; otherwise the reduced axes are removed (reducing all the axes then gives a 0-dimensional
+array).
+@param params the reduction operation and the axes to reduce over, see cv::ReduceParams.
+@sa ReduceParams, sum, mean, minMaxIdx
+*/
+CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, const ReduceParams& params);
 
 /** @brief Creates one multi-channel array out of several single-channel ones.
 
