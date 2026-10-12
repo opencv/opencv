@@ -370,7 +370,7 @@ TEST(Fusion, SubclassOfElementWiseLayerIsRegistered)
     ASSERT_TRUE(ops->unfold(prelu.get(), m, side));
 }
 
-TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
+TEST(Fusion, ApplyTakesKernelPathThenAffinePath)
 {
     LayerMath r;
     r.setKernel(cv::dnn::getActivationFunc(ACTIV_CLIP), { 0.f, 6.f });
@@ -390,19 +390,32 @@ TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
     for (int i = 0; i < n; i++)
         EXPECT_FLOAT_EQ(want[i], y.ptr<float>()[i]) << "clip i=" << i;
 
+    // A scalar scale and shift has no kernel but is taken and run as a row loop.
     r = LayerMath();
-    r.unary(FusionEltwiseOp::SQRT, LayerMath::INPUT_VALUE);
-    PreparedFusion interp;
-    ASSERT_TRUE(interp.take(graphOf(r)));
-    EXPECT_TRUE(interp.activationFn == nullptr);
+    const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, r.constant(2.f));
+    r.binary(FusionEltwiseOp::ADD, scaled, r.constant(5.f));
+    PreparedFusion affine;
+    ASSERT_TRUE(affine.take(graphOf(r)));
+    EXPECT_TRUE(affine.activationFn == nullptr);
 
-    int big = (1 << 16) + 17;
-    Mat z(1, &big, CV_32F);
-    for (int i = 0; i < big; i++)
+    int sz[] = { 257, 384 };
+    Mat z(2, sz, CV_32F);
+    const int total = (int)z.total();
+    for (int i = 0; i < total; i++)
         z.ptr<float>()[i] = (float)(i % 100);
-    interp.run(z);
-    for (int i = 0; i < big; i += 997)
-        EXPECT_NEAR(std::sqrt((float)(i % 100)), z.ptr<float>()[i], 1e-5) << "sqrt i=" << i;
+    affine.run(z);
+    for (int i = 0; i < total; i += 997)
+        EXPECT_FLOAT_EQ(2.f * (float)(i % 100) + 5.f, z.ptr<float>()[i]) << "affine i=" << i;
+}
+
+TEST(Fusion, ExpressionWithoutKernelOrAffineFormIsRefused)
+{
+    // Evaluating it one value at a time would be slower than keeping it as its own layer.
+    LayerMath r;
+    r.unary(FusionEltwiseOp::SQRT, LayerMath::INPUT_VALUE);
+    PreparedFusion f;
+    EXPECT_FALSE(f.take(graphOf(r)));
+    EXPECT_FALSE(f.expr);
 }
 
 TEST(Fusion, PerChannelConstIndexesTheLastAxis)
@@ -521,6 +534,86 @@ TEST(Fusion, SharedRootKeepsEachChainsOwnBuffers)
         EXPECT_FLOAT_EQ(2.f,  ya.ptr<float>()[i]) << "A i=" << i;
         EXPECT_FLOAT_EQ(10.f, yb.ptr<float>()[i]) << "B i=" << i;
     }
+}
+
+TEST(Fusion, AffineWithScaleAndShiftBuffers)
+{
+    AdjacencyGraphBuilder arena;
+    const int in = arena.internNode(FusionEltwiseOp::INPUT, {});
+    LayerMath r;
+    const int shift = r.perChannelConstant(1);  // created first, so it lands on the left of the ADD
+    const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, r.perChannelConstant(0));
+    r.binary(FusionEltwiseOp::ADD, shift, scaled);
+    const int root = fusion::instantiate(arena, in, r);
+    ASSERT_GE(root, 0);
+
+    // 37 is not a multiple of any SIMD width, so every row also runs the scalar tail.
+    const int nch = 37, rows = 5;
+    Mat s(1, &nch, CV_32F), b(1, &nch, CV_32F);
+    for (int c = 0; c < nch; c++) { s.ptr<float>()[c] = 0.5f + c; b.ptr<float>()[c] = c - 3.f; }
+    Ptr<AdjacencyGraph> expr = fusion::extract(arena.graph(), root, std::vector<Mat>{ s, b });
+    ASSERT_TRUE(expr);
+    PreparedFusion f;
+    ASSERT_TRUE(f.take(expr));
+
+    int sz[] = { rows, nch };
+    Mat y(2, sz, CV_32F);
+    for (int i = 0; i < rows * nch; i++)
+        y.ptr<float>()[i] = 0.25f * i;
+    f.run(y);
+    for (int i = 0; i < rows * nch; i++) {
+        const int c = i % nch;
+        EXPECT_NEAR(0.25f * i * (0.5f + c) + (c - 3.f), y.ptr<float>()[i], 1e-3) << "i=" << i;
+    }
+}
+
+TEST(Fusion, AffineFoldsSubAndShiftBeforeScale)
+{
+    // (x + b[c]) * s[c] folds to x * s[c] + b[c] * s[c].
+    AdjacencyGraphBuilder arena;
+    const int in = arena.internNode(FusionEltwiseOp::INPUT, {});
+    LayerMath r;
+    const int shifted = r.binary(FusionEltwiseOp::ADD, LayerMath::INPUT_VALUE, r.perChannelConstant(1));
+    r.binary(FusionEltwiseOp::MUL, shifted, r.perChannelConstant(0));
+    const int root = fusion::instantiate(arena, in, r);
+    ASSERT_GE(root, 0);
+
+    const int nch = 37, rows = 3;
+    Mat s(1, &nch, CV_32F), b(1, &nch, CV_32F);
+    for (int c = 0; c < nch; c++) { s.ptr<float>()[c] = 1.f + 0.1f * c; b.ptr<float>()[c] = 2.f - c; }
+    Ptr<AdjacencyGraph> expr = fusion::extract(arena.graph(), root, std::vector<Mat>{ s, b });
+    ASSERT_TRUE(expr);
+    PreparedFusion f;
+    ASSERT_TRUE(f.take(expr));
+
+    int sz[] = { rows, nch };
+    Mat y(2, sz, CV_32F);
+    for (int i = 0; i < rows * nch; i++)
+        y.ptr<float>()[i] = (float)(i % 11);
+    f.run(y);
+    for (int i = 0; i < rows * nch; i++) {
+        const int c = i % nch;
+        EXPECT_NEAR(((float)(i % 11) + (2.f - c)) * (1.f + 0.1f * c), y.ptr<float>()[i], 1e-3) << "i=" << i;
+    }
+
+    // (x - 3) * 0.5 with scalars is taken; c - x is not affine in this form and is refused.
+    LayerMath sub;
+    const int minus = sub.binary(FusionEltwiseOp::SUB, LayerMath::INPUT_VALUE, sub.constant(3.f));
+    sub.binary(FusionEltwiseOp::MUL, minus, sub.constant(0.5f));
+    PreparedFusion fs;
+    ASSERT_TRUE(fs.take(graphOf(sub)));
+    int n = 19;
+    Mat z(1, &n, CV_32F);
+    for (int i = 0; i < n; i++)
+        z.ptr<float>()[i] = (float)i;
+    fs.run(z);
+    for (int i = 0; i < n; i++)
+        EXPECT_FLOAT_EQ((i - 3.f) * 0.5f, z.ptr<float>()[i]) << "sub i=" << i;
+
+    LayerMath rev;
+    rev.binary(FusionEltwiseOp::SUB, rev.constant(3.f), LayerMath::INPUT_VALUE);
+    PreparedFusion fr;
+    EXPECT_FALSE(fr.take(graphOf(rev)));
 }
 
 TEST(Fusion, ShapeOfStaticInputFoldsToConstant)
