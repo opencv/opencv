@@ -110,6 +110,59 @@ public:
      */
     CV_WRAP BarcodeDetector& setGradientThreshold(double thresh);
 };
+
+/** @brief Barcode encoder.
+ */
+class CV_EXPORTS_W BarcodeEncoder
+{
+protected:
+    BarcodeEncoder(); // use ::create()
+public:
+    virtual ~BarcodeEncoder();
+
+    enum Type {
+        NONE = 0,
+        EAN_8 = 1,
+        EAN_13 = 2,
+        UPC_A = 3
+    };
+
+    enum ChecksumPolicy {
+        APPEND_CHECKSUM = 0,
+        VALIDATE_CHECKSUM = 1
+    };
+
+    /** @brief Barcode encoder parameters. */
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+
+        //! Barcode type (symbology)
+        CV_PROP_RW BarcodeEncoder::Type type;
+
+        //! Checksum policy
+        CV_PROP_RW BarcodeEncoder::ChecksumPolicy checksum_policy;
+
+        //! Module width in pixels (must be >= 1)
+        CV_PROP_RW int module_width;
+
+        //! Bar height in pixels (must be >= 1)
+        CV_PROP_RW int bar_height;
+    };
+
+    /** @brief Constructor
+    @param parameters Barcode encoder parameters BarcodeEncoder::Params
+    */
+    static CV_WRAP
+    Ptr<BarcodeEncoder> create(const BarcodeEncoder::Params& parameters = BarcodeEncoder::Params());
+
+    /** @brief Generates barcode image from input string.
+     @param encoded_info Input string to encode.
+     @param output Generated barcode image (CV_8UC1).
+    */
+    CV_WRAP virtual void encode(const String& encoded_info, OutputArray output) = 0;
+};
+
 //! @}
 
 }} // cv::barcode::
