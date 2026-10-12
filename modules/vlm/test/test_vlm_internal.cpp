@@ -128,6 +128,16 @@ TEST(Vlm_Generation, ArgmaxLastTokenTieBreaksToFirst)
     EXPECT_EQ(argmaxLastToken(logits), 0);
 }
 
+TEST(Vlm_Generation, GenerateRejectsNonPositiveMaxNewTokens)
+{
+    dnn::Net embedNet, decoderNet;
+    int sizes[] = {1, 1, 4};
+    const Mat promptEmbeds(3, sizes, CV_32F, Scalar(0));
+
+    EXPECT_THROW(generateWithKVCache(embedNet, decoderNet, promptEmbeds, 1, 0, 2), cv::Exception);
+    EXPECT_THROW(generateWithKVCache(embedNet, decoderNet, promptEmbeds, 1, -5, 2), cv::Exception);
+}
+
 TEST(Vlm_Generation, ScatterImageFeaturesCopiesAtImageTokenPositions)
 {
     int hiddenDim = 4;
@@ -171,6 +181,23 @@ TEST(Vlm_Generation, ScatterImageFeaturesThrowsWhenTooFewFeatures)
 
     int imageTokenId = 99;
     std::vector<int> tokens = {imageTokenId, imageTokenId};
+    EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures),
+                 cv::Exception);
+}
+
+TEST(Vlm_Generation, ScatterImageFeaturesThrowsWhenTooManyFeatures)
+{
+    // Two feature rows but only one <image> slot: without the post-loop check the second
+    // row is silently dropped and the model sees half the image.
+    int hiddenDim = 4;
+    int embedsSizes[] = {1, 2, hiddenDim};
+    Mat inputsEmbeds(3, embedsSizes, CV_32F, Scalar(0));
+
+    int featSizes[] = {1, 2, hiddenDim};
+    Mat imageFeatures(3, featSizes, CV_32F, Scalar(1));
+
+    int imageTokenId = 99;
+    std::vector<int> tokens = {1, imageTokenId};
     EXPECT_THROW(scatterImageFeatures(inputsEmbeds, tokens, imageTokenId, imageFeatures),
                  cv::Exception);
 }
@@ -323,6 +350,18 @@ TEST(Vlm_LocalModelBase, ResetWithoutNetsThrows)
 {
     TestLocalVLMModel model;
     EXPECT_THROW(model.reset(), cv::Exception);
+}
+
+TEST(Vlm_LocalModelBase, InferRejectsNonPositiveMaxNewTokens)
+{
+    // Zero used to run the decoder once and return a token, breaking the advertised maximum.
+    TestLocalVLMModel model;
+    dnn::Net vision, embed, decoder;
+    model.registerNets(vision, embed, decoder);
+
+    const Mat image(8, 8, CV_8UC3, Scalar::all(128));
+    EXPECT_THROW(model.infer(image, "prompt", 0), cv::Exception);
+    EXPECT_THROW(model.infer(image, "prompt", -1), cv::Exception);
 }
 
 TEST(Vlm_LocalModelBase, SetBackendOrTargetWithoutNetsThrows)

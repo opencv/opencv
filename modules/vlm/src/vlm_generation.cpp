@@ -56,12 +56,20 @@ void scatterImageFeatures(Mat& inputsEmbeds, const std::vector<int>& tokens,
             memcpy(embedsData + i * hiddenDim, featData + (size_t)(featIdx++) * hiddenDim,
                    hiddenDim * sizeof(float));
         }
+
+    // The opposite mismatch is silent without this: the loop runs out of <image> slots and
+    // the remaining features are dropped, so the model sees only part of the image.
+    CV_CheckEQ(featIdx, numFeatures,
+               "vlm: fewer <image> tokens than vision-encoder output features "
+               "-- model export and preprocessor config are inconsistent");
 }
 
 std::vector<int> generateWithKVCache(Net& embedNet, Net& decoderNet,
                                       const Mat& promptInputsEmbeds, int promptLen,
                                       int maxNewTokens, int eosTokenId)
 {
+    CV_CheckGT(maxNewTokens, 0, "vlm: max_new_tokens must be positive");
+
     decoderNet.enableKVCache();
 
     std::vector<int64_t> maskData(promptLen, 1);

@@ -13,6 +13,7 @@ namespace cv { namespace vlm {
 String LocalVLMModelBase::infer(InputArray image, const String& prompt, int max_new_tokens)
 {
     CV_Assert(visionNet_ && embedNet_ && decoderNet_);
+    CV_CheckGT(max_new_tokens, 0, "vlm: max_new_tokens must be positive");
 
     Mat imageBgr = image.getMat();
     CV_CheckFalse(imageBgr.empty(), "vlm: input image is empty");

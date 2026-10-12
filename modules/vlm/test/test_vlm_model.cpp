@@ -32,6 +32,16 @@ TEST(Vlm_Model, LastTokensUsedDefaultsToUnknown_CloudModel)
     EXPECT_EQ(model->lastTokensUsed(), -1);
 }
 
+TEST(Vlm_Model, CloudInferRejectsNonPositiveMaxNewTokens)
+{
+    cv::Ptr<VLMModel> model = create(VLM_MODEL_OPENAI, "gpt-4o", "fake-api-key");
+    const Mat image(8, 8, CV_8UC3, Scalar::all(128));
+
+    // Checked before the request is built, so this makes no network call.
+    EXPECT_THROW(model->infer(image, "prompt", 0), cv::Exception);
+    EXPECT_THROW(model->infer(image, "prompt", -1), cv::Exception);
+}
+
 TEST(Vlm_Model, NonexistentModelDirThrows_PaddleOCRVL)
 {
     EXPECT_THROW(create(VLM_MODEL_PADDLEOCR_VL, "/nonexistent/model/dir"), cv::Exception);
