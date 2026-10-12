@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+
+"""Generate self-contained TFLite importer regression cases with flatc.
+
+Use OpenCV's in-tree modules/dnn/src/tflite/schema.fbs, adapted from
+b0164f014fd4f1b5af2c7b578aa7687198c5d92e. Its namespace is opencv_tflite.
+Pass its path with --schema. flatc 25.12.19 produced the checked-in bytes.
+"""
+
+import argparse
+import hashlib
+import json
+import struct
+import subprocess
+from pathlib import Path
+
+
+SCHEMA_SHA256 = "caae52a01701dce1949e2f591176583901e9ebd161336259838f0f83ddaf74ea"
+
+
+def base_model():
+    padding = [0, 0, 1, 0, 1, 0, 1, 0]
+    return {
+        "version": 3,
+        "operator_codes": [{"deprecated_builtin_code": 34, "version": 1, "builtin_code": "PAD"}],
+        "subgraphs": [{
+            "tensors": [
+                {"shape": [1, 1, 1, 1], "type": "FLOAT32", "buffer": 0, "name": "input", "has_rank": True},
+                {"shape": [4, 2], "type": "INT32", "buffer": 1, "name": "paddings", "has_rank": True},
+                {"shape": [1, 1, 1, 1], "type": "FLOAT32", "buffer": 0, "name": "output", "has_rank": True},
+            ],
+            "inputs": [0], "outputs": [2],
+            "operators": [{"opcode_index": 0, "inputs": [0, 1], "outputs": [2],
+                           "builtin_options_type": "PadOptions", "builtin_options": {}}],
+            "name": "tensor_buffer_bounds",
+        }],
+        "description": "tensor buffer bounds regression",
+        "buffers": [{}, {"data": list(struct.pack("<8i", *padding))}],
+    }
+
+
+def add_unused_tensor(model, shape, dtype, data, sparsity=None):
+    model["buffers"].append({"data": data})
+    tensor = {"shape": shape, "type": dtype, "buffer": len(model["buffers"]) - 1,
+              "name": "extra_constant", "has_rank": True}
+    if sparsity is not None:
+        tensor["sparsity"] = sparsity
+    model["subgraphs"][0]["tensors"].append(tensor)
+
+
+def cases():
+    out = []
+
+    def emit(name, description, update=None):
+        model = base_model()
+        if update is not None:
+            update(model)
+        out.append((name, description, model))
+
+    emit("tfliteControl", "PAD paddings INT32 [4,2], 32 bytes, accepted")
+    emit("tfliteShortBuffer", "PAD paddings INT32 [1048576], 32 bytes, rejected",
+         lambda m: m["subgraphs"][0]["tensors"][1].update(shape=[1048576]))
+    emit("tfliteShortElementWidth", "PAD paddings INT32 [4,2], 16 bytes, rejected",
+         lambda m: m["buffers"][1].update(data=m["buffers"][1]["data"][:16]))
+    emit("tfliteNegativeShape", "PAD paddings INT32 [-1,2], 32 bytes, rejected",
+         lambda m: m["subgraphs"][0]["tensors"][1].update(shape=[-1, 2]))
+    emit("tfliteOverflowShape", "PAD paddings INT32 [INT_MAX,INT_MAX,INT_MAX], 32 bytes, rejected",
+         lambda m: m["subgraphs"][0]["tensors"][1].update(shape=[2147483647] * 3))
+    emit("tfliteInvalidBufferIndex", "PAD paddings buffer index equals buffers count, rejected",
+         lambda m: m["subgraphs"][0]["tensors"][1].update(buffer=2))
+    emit("tfliteHugeBufferIndex", "PAD paddings buffer index UINT32_MAX, rejected",
+         lambda m: m["subgraphs"][0]["tensors"][1].update(buffer=4294967295))
+    emit("tfliteInt8Control", "unused INT8 [8] constant with 8 bytes, accepted",
+         lambda m: add_unused_tensor(m, [8], "INT8", list(range(8))))
+    emit("tfliteShortInt8Buffer", "unused INT8 [8] constant with 4 bytes, rejected",
+         lambda m: add_unused_tensor(m, [8], "INT8", list(range(4))))
+    emit("tfliteScalarControl", "unused scalar INT8 constant with 1 byte, accepted",
+         lambda m: add_unused_tensor(m, [], "INT8", [1]))
+    emit("tfliteZeroElementControl", "unused INT8 [0,4] constant with 1 byte, accepted",
+         lambda m: add_unused_tensor(m, [0, 4], "INT8", [1]))
+    emit("tfliteEmptyDataControl", "unused INT8 [8] with present empty data vector, accepted",
+         lambda m: add_unused_tensor(m, [8], "INT8", []))
+    emit("tfliteZeroFirstOverflow", "unused INT8 [0,INT_MAX,INT_MAX,INT_MAX], rejected",
+         lambda m: add_unused_tensor(m, [0] + [2147483647] * 3, "INT8", [1]))
+    emit("tfliteZeroLastOverflow", "unused INT8 [INT_MAX,INT_MAX,INT_MAX,0], rejected",
+         lambda m: add_unused_tensor(m, [2147483647] * 3 + [0], "INT8", [1]))
+    sparse = {"traversal_order": [0], "dim_metadata": [{"format": "DENSE", "dense_size": 8}]}
+    emit("tfliteSparseTensor", "unused sparse INT8 [8] with 1 byte, explicitly unsupported",
+         lambda m: add_unused_tensor(m, [8], "INT8", [1], sparse))
+    return out
+
+
+def write_inc(path, models):
+    lines = [
+        "// This file is part of OpenCV project.",
+        "// It is subject to the license terms in the LICENSE file found in the top-level directory",
+        "// of this distribution and at http://opencv.org/license.html.",
+        "",
+        "// Generated by generate_tflite_tensor_bounds_models.py using the TFLite schema.",
+        "// These tiny inline models keep malformed-input regression tests self-contained.",
+        "",
+    ]
+    for name, description, data in models:
+        lines.extend(["// " + description, "static const unsigned char " + name + "[] = {"])
+        for offset in range(0, len(data), 12):
+            lines.append("    " + ", ".join("0x%02x" % value for value in data[offset:offset + 12]) + ",")
+        lines.extend(["};", ""])
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--flatc", default="flatc")
+    parser.add_argument("--schema", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
+    if hashlib.sha256(args.schema.read_bytes()).hexdigest() != SCHEMA_SHA256:
+        parser.error("schema hash differs from the pinned TensorFlow Lite schema")
+    args.out.mkdir(parents=True, exist_ok=True)
+    built = []
+    for name, description, model in cases():
+        json_path = args.out / (name + ".json")
+        json_path.write_text(json.dumps(model, separators=(",", ":")) + "\n", encoding="utf-8")
+        subprocess.run([args.flatc, "-b", "--strict-json", "-o", str(args.out),
+                        str(args.schema), str(json_path)], check=True)
+        model_path = args.out / (name + ".tflite")
+        built.append((name, description, model_path.read_bytes()))
+    write_inc(args.out / "tflite_tensor_bounds_models.inc", built)
+    with (args.out / "SHA256SUMS").open("w", encoding="utf-8") as sums:
+        for path in sorted(args.out.glob("*.tflite")):
+            sums.write(hashlib.sha256(path.read_bytes()).hexdigest() + "  " + path.name + "\n")
+    print("generated", len(built), "TFLite models")
+
+
+if __name__ == "__main__":
+    main()
