@@ -132,6 +132,8 @@ public:
 
     String infer(InputArray image, const String& prompt, int max_new_tokens) CV_OVERRIDE
     {
+        CV_CheckGT(max_new_tokens, 0, "vlm: max_new_tokens must be positive");
+
         Mat img = image.getMat();
         CV_CheckFalse(img.empty(), "vlm: input image is empty");
 
