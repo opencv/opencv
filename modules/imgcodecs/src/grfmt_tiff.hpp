@@ -50,45 +50,6 @@
 namespace cv
 {
 
-// native simple TIFF codec
-enum TiffCompression
-{
-    TIFF_UNCOMP = 1,
-    TIFF_HUFFMAN = 2,
-    TIFF_PACKBITS = 32773
-};
-
-enum TiffByteOrder
-{
-    TIFF_ORDER_II = 0x4949,
-    TIFF_ORDER_MM = 0x4d4d
-};
-
-
-enum  TiffTag
-{
-    TIFF_TAG_WIDTH  = 256,
-    TIFF_TAG_HEIGHT = 257,
-    TIFF_TAG_BITS_PER_SAMPLE = 258,
-    TIFF_TAG_COMPRESSION = 259,
-    TIFF_TAG_PHOTOMETRIC = 262,
-    TIFF_TAG_STRIP_OFFSETS = 273,
-    TIFF_TAG_STRIP_COUNTS = 279,
-    TIFF_TAG_SAMPLES_PER_PIXEL = 277,
-    TIFF_TAG_ROWS_PER_STRIP = 278,
-    TIFF_TAG_PLANAR_CONFIG = 284,
-    TIFF_TAG_COLOR_MAP = 320
-};
-
-
-enum TiffFieldType
-{
-    TIFF_TYPE_BYTE = 1,
-    TIFF_TYPE_SHORT = 3,
-    TIFF_TYPE_LONG = 4
-};
-
-
 // libtiff based TIFF codec
 class TiffDecoder CV_FINAL : public BaseImageDecoder
 {
