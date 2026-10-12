@@ -656,6 +656,10 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         }
         catch(...)
         {
+            // an explicitly bound allocator (e.g. the CUDA one) is not silently replaced by another
+            // backend: callers pass u->handle to backend-specific code, so report the failure instead
+            if (allocator)
+                throw;
             if(a != a0)
                 u = a0->allocate(dims, size.p, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
@@ -733,9 +737,7 @@ void UMat::fit(Size _sz, int _type, UMatUsageFlags _usageFlags)
 
 void UMat::fitSameSize(InputArray m, int _type, UMatUsageFlags _usageFlags)
 {
-    int _sizes[CV_MAX_DIM];
-    int _dims = m.sizend(_sizes);
-    fit(_dims, _sizes, _type, _usageFlags);
+    fit(m.shape(), _type, _usageFlags);
 }
 
 void UMat::copySize(const UMat& m)
@@ -1287,6 +1289,22 @@ void UMat::copyTo(OutputArray _dst) const
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
             u->currAllocator->copy(u, dst.u, d, sz, srcofs, step.p, dstofs, dst.step.p, false);
+            return;
+        }
+
+        // different allocators: never map a device destination, upload into it instead
+        // (through a host Mat when both sides are device memory)
+        MatAllocator* hostAllocator = Mat::getDefaultAllocator();
+        if (dst.u->currAllocator != hostAllocator)
+        {
+            if (u->currAllocator == hostAllocator)
+                getMat(ACCESS_READ).copyTo(_dst);
+            else
+            {
+                Mat tmp;
+                copyTo(tmp);
+                tmp.copyTo(_dst);
+            }
             return;
         }
     }

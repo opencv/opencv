@@ -1472,4 +1472,28 @@ TEST(UMat, copy_scalar)
     EXPECT_EQ(5.f, m2.at<float>(0));
 }
 
+struct FailingAllocator CV_FINAL : public MatAllocator
+{
+    UMatData* allocate(int, const int*, int, void*, size_t*, AccessFlag, UMatUsageFlags) const CV_OVERRIDE
+    {
+        CV_Error(Error::StsNoMem, "test allocator always fails");
+    }
+    bool allocate(UMatData*, AccessFlag, UMatUsageFlags) const CV_OVERRIDE { return false; }
+    void deallocate(UMatData*) const CV_OVERRIDE {}
+};
+
+// a failing explicitly bound allocator is reported; only an unbound UMat falls back to the default one
+TEST(UMat, create_reports_bound_allocator_failure)
+{
+    FailingAllocator failing;
+    UMat bound;
+    bound.allocator = &failing;
+    EXPECT_THROW(bound.create(4, 4, CV_8UC1), cv::Exception);
+    EXPECT_TRUE(bound.u == NULL);
+
+    UMat unbound;
+    EXPECT_NO_THROW(unbound.create(4, 4, CV_8UC1));
+    EXPECT_TRUE(unbound.u != NULL);
+}
+
 } } // namespace opencv_test::ocl

@@ -226,6 +226,28 @@ TEST(Core_CudaUMat, op_addWeighted_host_fallback)
     EXPECT_LE(cvtest::norm(got, expected, NORM_INF), 1e-4);
 }
 
+// a host UMat copied into a CUDA UMat is uploaded, so the CUDA side never gets a host mirror
+TEST(Core_CudaUMat, copy_from_host_umat_does_not_map)
+{
+    skipIfNoCudaDevice();
+    NoOpenCL guard;
+
+    Mat src(32, 24, CV_32FC1);
+    randu(src, 0, 1);
+    UMat host;
+    src.copyTo(host);
+    ASSERT_EQ(Mat::getDefaultAllocator(), host.u->currAllocator);
+
+    UMat dev = makeCudaUMat();
+    host.copyTo(dev);
+    ASSERT_TRUE(dev.u != NULL);
+    EXPECT_TRUE(dev.u->data == NULL);
+
+    Mat back;
+    dev.copyTo(back);
+    EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
+}
+
 }} // namespace
 
 #endif // HAVE_CUDA

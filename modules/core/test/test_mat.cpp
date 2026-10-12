@@ -3220,4 +3220,41 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+// MatShape::operator== treats an unknown layout as a match, so layout and C are compared directly
+static void expectSameShape(const MatShape& expected, const MatShape& actual)
+{
+    EXPECT_EQ(expected, actual);
+    EXPECT_EQ(expected.layout, actual.layout);
+    EXPECT_EQ(expected.C, actual.C);
+}
+
+TEST(Core_Mat, fitSameSize_keeps_layout)
+{
+    const MatShape blk({2, 2, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12);
+    Mat src;
+    src.fit(blk, CV_32F);
+
+    Mat m;
+    m.fitSameSize(src, CV_32F);
+    expectSameShape(blk, m.shape());
+
+    UMat u;
+    u.fitSameSize(src, CV_32F);
+    expectSameShape(blk, u.shape());
+
+    Mat om;
+    UMat ou;
+    _OutputArray(om).fitSameSize(src, CV_32F);
+    _OutputArray(ou).fitSameSize(src, CV_32F);
+    expectSameShape(blk, om.shape());
+    expectSameShape(blk, ou.shape());
+
+    // a larger existing buffer is reused
+    Mat big(1, (int)src.total() * 2, CV_32F);
+    const uchar* data = big.data;
+    big.fitSameSize(src, CV_32F);
+    EXPECT_EQ(data, big.data);
+    expectSameShape(blk, big.shape());
+}
+
 }} // namespace
