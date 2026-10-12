@@ -5758,6 +5758,7 @@ int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivi
 
 int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivity, int ltype, int ccltype){
     const cv::Mat img = img_.getMat();
+    CV_Assert(!img.empty());
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
@@ -5783,6 +5784,7 @@ int cv::connectedComponentsWithStats(InputArray img_, OutputArray _labels, Outpu
     OutputArray centroids, int connectivity, int ltype, int ccltype)
 {
     const cv::Mat img = img_.getMat();
+    CV_Assert(!img.empty());
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids);

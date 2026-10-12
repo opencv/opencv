@@ -862,5 +862,20 @@ TEST(Imgproc_ConnectedComponents, regression_27568)
     }
 }
 
+TEST(Imgproc_ConnectedComponents, empty_input_29854)
+{
+    // Regression test for #29854:
+    // Zero-size input must raise cv::Exception instead of SIGSEGV.
+    const int shapes[][2] = {{0, 400}, {400, 0}, {0, 0}};
+    for (const auto& s : shapes)
+    {
+        Mat mask(s[0], s[1], CV_8UC1);
+        Mat labels, stats, centroids;
+        EXPECT_THROW(connectedComponents(mask, labels), cv::Exception);
+        EXPECT_THROW(connectedComponentsWithStats(mask, labels, stats, centroids), cv::Exception);
+    }
+}
+
+
 }
 } // namespace
