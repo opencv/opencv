@@ -2318,27 +2318,42 @@ TEST(Core_CheckRange, Inf_Minus)
     ASSERT_EQ(bad_pt.y, 1);
 }
 
-TEST(Core_CheckRange, Float16)
+typedef testing::TestWithParam<int> Core_CheckRange_Float;
+
+TEST_P(Core_CheckRange_Float, accuracy)
 {
-    const int depths[] = { CV_16F, CV_16BF };
-    for (size_t i = 0; i < sizeof(depths) / sizeof(depths[0]); ++i)
-    {
-        cv::Mat src(768, 1024, CV_MAKETYPE(depths[i], 3), cv::Scalar::all(1));
-        cv::Point bad_pt(-1, -1);
-
-        ASSERT_TRUE(checkRange(src, true, &bad_pt));
-        ASSERT_EQ(bad_pt.x, -1);
-        ASSERT_EQ(bad_pt.y, -1);
-    }
-
-    cv::Mat src(3, 3, CV_16FC3, cv::Scalar::all(1));
-    src.ptr<cv::hfloat>(1)[8] = cv::hfloat(std::numeric_limits<float>::infinity());
+    const int depth = GetParam();
+    cv::Mat src(3, 3, CV_MAKETYPE(depth, 3));
+    cv::randu(src, cv::Scalar::all(-10), cv::Scalar::all(10));
     cv::Point bad_pt(-1, -1);
+
+    ASSERT_TRUE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, -1);
+    ASSERT_EQ(bad_pt.y, -1);
+
+    const float inf = std::numeric_limits<float>::infinity();
+    switch (depth)
+    {
+    case CV_16F:
+        src.ptr<cv::hfloat>(1)[8] = cv::hfloat(inf);
+        break;
+    case CV_16BF:
+        src.ptr<cv::bfloat>(1)[8] = cv::bfloat(inf);
+        break;
+    case CV_32F:
+        src.ptr<float>(1)[8] = inf;
+        break;
+    default:
+        FAIL() << "Unexpected depth: " << depth;
+    }
 
     ASSERT_FALSE(checkRange(src, true, &bad_pt));
     ASSERT_EQ(bad_pt.x, 2);
     ASSERT_EQ(bad_pt.y, 1);
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_Float,
+    testing::Values(CV_16F, CV_16BF, CV_32F));
 
 REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
