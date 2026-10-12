@@ -438,12 +438,16 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         dptr = dst_pyramid[level].ptr();
         dstep = (int)dst_pyramid[level].step;
 
-        for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
-                                          dptr += dstep - size.width*3
-        )
+        const uchar* sptr_base = sptr;
+        uchar* dptr_base = dptr;
+        const double nstripes = (size.width * size.height >= 640 * 480) ? -1. : 1.;
+        parallel_for_(Range(0, size.height), [&](const Range& range) {
+        for( int i = range.start; i < range.end; i++ )
         {
+            const uchar* sptr = sptr_base + (size_t)i * sstep;
+            uchar* dptr = dptr_base + (size_t)i * dstep;
             uchar* mask = m.empty() ? NULL : m.ptr(i);
-            for( j = 0; j < size.width; j++, sptr += 3, dptr += 3 )
+            for( int j = 0; j < size.width; j++, sptr += 3, dptr += 3 )
             {
                 int x0 = j, y0 = i, x1, y1, iter;
                 int c0, c1, c2;
@@ -542,6 +546,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
                 dptr[2] = (uchar)c2;
             }
         }
+        }, nstripes);
     }
 }
 
