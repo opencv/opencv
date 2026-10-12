@@ -261,4 +261,27 @@ TEST(Imgproc_AdaptiveThreshold, gauss_inv)
     EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
 }
 
+// UMat input must be rejected for the same depths as Mat input
+TEST(Imgproc_Threshold, umat_unsupported_depth)
+{
+    const int depths[] = { CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U };
+    const int types[] = { THRESH_BINARY, THRESH_TRUNC };
+    for (int depth : depths)
+    {
+        for (int ttype : types)
+        {
+            SCOPED_TRACE(cv::format("depth=%s thresh_type=%d", depthToString(depth), ttype));
+            const int type = CV_MAKETYPE(depth, 1);
+            Mat src = Mat::zeros(64, 64, type), dst;
+            EXPECT_THROW(cv::threshold(src, dst, 3, 10, ttype), cv::Exception);
+
+            UMat usrc = src.getUMat(ACCESS_READ), udst;
+            EXPECT_THROW(cv::threshold(usrc, udst, 3, 10, ttype), cv::Exception);
+
+            UMat umask(src.size(), CV_8UC1, Scalar::all(255)), udst_masked(src.size(), type, Scalar::all(0));
+            EXPECT_THROW(cv::thresholdWithMask(usrc, udst_masked, umask, 3, 10, ttype), cv::Exception);
+        }
+    }
+}
+
 }} // namespace
