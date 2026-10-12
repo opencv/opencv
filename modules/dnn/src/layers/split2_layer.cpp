@@ -232,7 +232,7 @@ public:
     void runOp(const Mat& inp, std::vector<Mat>& outs, int axis_)
     {
         if (isBlockChannelSplit(inp.size, axis_)) {
-            runOpBlockChannels(inp, outs);
+            runOpBlockAxis1(inp, outs);
             return;
         }
         std::vector<int> sizes(outs.size());
@@ -241,26 +241,24 @@ public:
         cv::split(inp, axis_, sizes, outs);
     }
 
-    // Channel split in block layout: if every part starts on a multiple of 8 channels, split the
-    // channel blocks directly; otherwise convert to NCHW, split, and convert back.
-    void runOpBlockChannels(const Mat& inp, std::vector<Mat>& outs)
+    // Channel split in block layout, like Concat's: if every part starts on a multiple of 8
+    // channels, copy the channel blocks directly; otherwise go through NCHW.
+    void runOpBlockAxis1(const Mat& inp, std::vector<Mat>& outs)
     {
         const int C0 = inp.size[inp.dims - 1];
         const size_t nout = outs.size();
         bool aligned = true;
         for (size_t k = 0; k + 1 < nout; k++)
             aligned = aligned && (outs[k].size.C % C0) == 0;
-        std::vector<int> sizes(nout);
         if (aligned) {
-            for (size_t k = 0; k < nout; k++)
-                sizes[k] = outs[k].size[1];
-            splitND(inp, 1, sizes, outs);
+            copyChannelBlocks(inp, outs, true);
             return;
         }
 
         DataLayout origLayout = getNetImpl(this)->originalLayout;
         Mat plainInp;
         transformLayout(inp, plainInp, origLayout, origLayout, C0);
+        std::vector<int> sizes(nout);
         for (size_t k = 0; k < nout; k++)
             sizes[k] = outs[k].size.C;
         std::vector<Mat> plainOuts;

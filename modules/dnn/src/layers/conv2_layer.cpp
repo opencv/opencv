@@ -151,15 +151,17 @@ public:
             });
         }
 
-        // The small-Cin path reads this copy; it exists only for ngroups == 1.
-        if (!plainWeights_.empty()) {
-            const int inner = plainWeights_.cols / Cg;
-            for (int k = 0; k < K; k++) {
-                float* row = plainWeights_.ptr<float>(k);
-                for (int c = 0; c < Cg; c++)
-                    for (int i = 0; i < inner; i++)
-                        row[c*inner + i] *= sc[c];
-            }
+        // forwardMlasIm2col() reads this copy; it exists only for ngroups == 1.
+        if (!im2colWeights_.empty()) {
+            const int inner = im2colWeights_.cols / Cg;
+            parallel_for_(Range(0, K), [&](const Range& r) {
+                for (int k = r.start; k < r.end; k++) {
+                    float* row = im2colWeights_.ptr<float>(k);
+                    for (int c = 0; c < Cg; c++)
+                        for (int i = 0; i < inner; i++)
+                            row[c*inner + i] *= sc[c];
+                }
+            });
         }
 
         if (bias.empty()) {
@@ -308,13 +310,13 @@ public:
             }
         }
 
-        // Weights as a (Cout, Cin*kh*kw) matrix for the small-Cin path.
-        plainWeights_.release();
+        // Weights as a (Cout, Cin*kh*kw) matrix for forwardMlasIm2col().
+        im2colWeights_.release();
         if (!depthwise && ngroups == 1 && wshape0.dims == 4 && wshape0[1] <= SMALL_CIN_MAX &&
             weights_.type() == CV_32F && wtype == CV_32F && weights_.isContinuous() &&
             mlasAvailable())
         {
-            plainWeights_ = weights_.reshape(1, wshape0[0]).clone();
+            im2colWeights_ = weights_.reshape(1, wshape0[0]).clone();
         }
     }
 
@@ -322,9 +324,11 @@ public:
     // 3 channels to 8 would cost an extra layout conversion and 8/3 of the work.
     static constexpr int SMALL_CIN_MAX = 4;
 
-    bool usesSmallCinPlain() const
+    // Only with one input: constant weights taken by constArgs(), no residual. Runtime weights
+    // are re-set in forward() on the block path, so a copy of them here could go stale.
+    bool mlasIm2colEnabled() const
     {
-        return !plainWeights_.empty() && !addResidual &&
+        return inputs.size() == 1 && !im2colWeights_.empty() &&
                getNetImpl(this)->originalLayout == DATA_LAYOUT_NCHW;
     }
 
@@ -714,7 +718,7 @@ public:
         desiredInputs = actualInputs;
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
-        if (actualInputs[0] != DATA_LAYOUT_BLOCK && usesSmallCinPlain()) {
+        if (actualInputs[0] != DATA_LAYOUT_BLOCK && mlasIm2colEnabled()) {
             outputs.assign(requiredOutputs, actualInputs[0]);
             return getNetImpl(this)->defaultC0;
         }
@@ -746,8 +750,8 @@ public:
         CV_Assert(inp.isContinuous());
         if (inpshape.layout != DATA_LAYOUT_BLOCK) {
             // getLayouts() leaves the input in plain layout only for this path
-            CV_Assert(usesSmallCinPlain());
-            forwardSmallCinPlain(inp, output_arrs);
+            CV_Assert(mlasIm2colEnabled());
+            forwardMlasIm2col(inp, output_arrs);
             return;
         }
 
@@ -856,9 +860,9 @@ public:
         }
     }
 
-    // Small-Cin conv on the plain NCHW tensor: for a few output rows at a time, gather the input
-    // patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
-    void forwardSmallCinPlain(const Mat& inp0, OutputArrayOfArrays output_arrs)
+    // Conv with few input channels on the plain NCHW tensor: for a few output rows at a time, gather
+    // the input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
+    void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs)
     {
         const MatShape inpshape = inp0.shape();
         CV_Assert(inpshape.dims == 4);
@@ -902,11 +906,11 @@ public:
         const int pad_t = cs.pads[1], pad_l = cs.pads[2];
         const int KD = C*kh*kw;
         const size_t P = (size_t)OH*OW;
-        CV_Assert(plainWeights_.rows == K && plainWeights_.cols == KD);
+        CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
 
         const int rowsPerTask = std::max(1, 32 / std::max(OW, 1));
         const int tasksPerImage = (OH + rowsPerTask - 1) / rowsPerTask;
-        const float* wptr = plainWeights_.ptr<float>();
+        const float* wptr = im2colWeights_.ptr<float>();
         const float* scale = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
         const float* shift = fusedBatchNorm ? fusedBias.ptr<float>() :
                              bias.empty() ? nullptr : bias.ptr<float>();
@@ -1304,8 +1308,8 @@ public:
     int mlas_packed_M_ = 0;   // == Cout
     int mlas_packed_K_ = 0;   // == Cin
 
-    // Small-Cin path weights, (Cout, Cin*kh*kw); empty when the path is not used.
-    Mat plainWeights_;
+    // Weights for forwardMlasIm2col(), (Cout, Cin*kh*kw); empty when the path is not used.
+    Mat im2colWeights_;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)
