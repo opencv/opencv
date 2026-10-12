@@ -1149,8 +1149,12 @@ TEST(Imgproc_Warp, reject_nd_input)
 
     EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_NEAREST), cv::Exception);
     EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_LINEAR), cv::Exception);
-    EXPECT_THROW(warpAffine(src, dst, affine, Size(5, 3), INTER_NEAREST), cv::Exception);
-    EXPECT_THROW(warpPerspective(src, dst, perspective, Size(5, 3), INTER_NEAREST), cv::Exception);
+
+    // the warps take N-D input as a batch of images instead, see test_warp_batch.cpp
+    warpAffine(src, dst, affine, Size(5, 3), INTER_NEAREST);
+    EXPECT_EQ(4, dst.dims);
+    warpPerspective(src, dst, perspective, Size(5, 3), INTER_NEAREST);
+    EXPECT_EQ(4, dst.dims);
 }
 
 TEST(Imgproc_Resize, issue_26497)
