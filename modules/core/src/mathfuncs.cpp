@@ -1168,6 +1168,30 @@ check_range_function check_range_functions[] =
     &checkIntegerRange<CV_32S>
 };
 
+template<typename T>
+static void checkFloatingPointRange(Mat& src, Point& badPt, double minVal, double maxVal)
+{
+    int loc = 0;
+    int cn = src.channels();
+    Size size = getContinuousSize2D(src, cn);
+    const T* isrc = src.ptr<T>();
+    size_t step = src.step / sizeof(isrc[0]);
+
+    for( ; badPt.x < 0 && size.height--; loc += size.width, isrc += step )
+    {
+        for( int i = 0; i < size.width; i++ )
+        {
+            double val = (float)isrc[i];
+            if( !(val >= minVal && val < maxVal) )
+            {
+                int pixelId = (loc + i) / cn;
+                badPt = Point(pixelId % src.cols, pixelId / src.cols);
+                break;
+            }
+        }
+    }
+}
+
 bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
 {
     CV_INSTRUMENT_REGION();
@@ -1208,7 +1232,15 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         int cn = src.channels();
         Size size = getContinuousSize2D(src, cn);
 
-        if( depth == CV_32F )
+        if( depth == CV_16F )
+        {
+            checkFloatingPointRange<hfloat>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_16BF )
+        {
+            checkFloatingPointRange<bfloat>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_32F )
         {
             Cv32suf a, b;
             int ia, ib;

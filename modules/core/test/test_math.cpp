@@ -2318,6 +2318,28 @@ TEST(Core_CheckRange, Inf_Minus)
     ASSERT_EQ(bad_pt.y, 1);
 }
 
+TEST(Core_CheckRange, Float16)
+{
+    const int depths[] = { CV_16F, CV_16BF };
+    for (size_t i = 0; i < sizeof(depths) / sizeof(depths[0]); ++i)
+    {
+        cv::Mat src(768, 1024, CV_MAKETYPE(depths[i], 3), cv::Scalar::all(1));
+        cv::Point bad_pt(-1, -1);
+
+        ASSERT_TRUE(checkRange(src, true, &bad_pt));
+        ASSERT_EQ(bad_pt.x, -1);
+        ASSERT_EQ(bad_pt.y, -1);
+    }
+
+    cv::Mat src(3, 3, CV_16FC3, cv::Scalar::all(1));
+    src.ptr<cv::hfloat>(1)[8] = cv::hfloat(std::numeric_limits<float>::infinity());
+    cv::Point bad_pt(-1, -1);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
 REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
