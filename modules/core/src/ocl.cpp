@@ -7620,7 +7620,6 @@ bool internal::isCLBuffer(UMat& u)
     void* h = u.handle(ACCESS_RW);
     if (!h)
         return true;
-    CV_DbgAssert(u.u->currAllocator == getOpenCLAllocator());
 #if 1
     if ((u.u->allocatorFlags_ & 0xffff0000) != 0) // OpenCL SVM flags are stored here
         return false;

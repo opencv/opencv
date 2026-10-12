@@ -3027,7 +3027,8 @@ public:
     //! number of columns in the matrix; -1 when the matrix has more than 2 dimensions
     int cols;
 
-    //! custom allocator; assign before the data is allocated, see @ref UMat_Details
+    //! custom allocator; assign before the data is allocated, see @ref UMat_Details.
+    //! If it fails to allocate, create() throws instead of falling back to the default allocator.
     MatAllocator* allocator;
 
     //! usage flags for allocator; recommend do not set directly, instead set during construct/create/getUMat
