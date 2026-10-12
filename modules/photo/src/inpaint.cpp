@@ -446,7 +446,7 @@ icvTeleaInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloa
    float dist;
    const bool c3 = out.channels()==3;
    const float dirThreshold = inpaintDirThreshold();
-   const uchar* pixelLoadEnd = out.dataend - 3;
+   const uchar* pixelLoadEnd = c3 && !out.empty() ? out.dataend - 3 : out.dataend;
 
    InpaintDiskTable diskTab(range);
    for (int dk = -range; dk <= range; dk++) {
@@ -680,7 +680,7 @@ icvNSInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *
    float dist;
    const bool c3 = out.channels()==3;
    const float dirThreshold = inpaintDirThreshold();
-   const uchar* pixelLoadEnd = out.dataend - 3;
+   const uchar* pixelLoadEnd = c3 && !out.empty() ? out.dataend - 3 : out.dataend;
 
    InpaintDiskTable diskTab(range);
    for (int dk = -range; dk <= range; dk++) {
@@ -1381,9 +1381,10 @@ icvInpaint( const Mat &input_img, const Mat &inpaint_mask, Mat &output_img,
     SET_BORDER1_C1(mask,uchar,0);
     t.setTo(Scalar(1.0e6f,0,0,0));
     band.setTo(Scalar::all(0));
-    const Rect bandRoi = Rect(maskColMin, maskRowMin, maskColMax - maskColMin + 3, maskRowMax - maskRowMin + 3) & Rect(0, 0, ecols, erows);
-    const Rect rangeRoi = Rect(maskColMin + 1 - range, maskRowMin + 1 - range, maskColMax - maskColMin + 1 + 2 * range, maskRowMax - maskRowMin + 1 + 2 * range) & Rect(0, 0, ecols, erows);
+    Rect bandRoi, rangeRoi;
     if (maskColMax >= 0) {
+        bandRoi = Rect(maskColMin, maskRowMin, maskColMax - maskColMin + 3, maskRowMax - maskRowMin + 3) & Rect(0, 0, ecols, erows);
+        rangeRoi = Rect(maskColMin + 1 - range, maskRowMin + 1 - range, maskColMax - maskColMin + 1 + 2 * range, maskRowMax - maskRowMin + 1 + 2 * range) & Rect(0, 0, ecols, erows);
         cv::dilate(mask(bandRoi), band(bandRoi), el_cross, cv::Point(1, 1));
         subtract(band(bandRoi), mask(bandRoi), band(bandRoi));
     }
