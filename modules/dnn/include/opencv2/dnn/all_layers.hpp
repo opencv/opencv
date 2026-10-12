@@ -479,6 +479,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Gather2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS GatherBlockQuantizedLayer : public Layer
+    {
+    public:
+        int gather_axis;
+        int quantize_axis;
+        int block_size;
+        int bits;
+
+        static Ptr<GatherBlockQuantizedLayer> create(const LayerParams& params);
+    };
+
     /** @brief GatherElements layer
     * GatherElements takes two inputs data and indices of the same rank r >= 1 and an optional attribute axis and works such that:
     *   output[i][j][k] = data[index[i][j][k]][j][k] if axis = 0 and r = 3

@@ -11,8 +11,9 @@ namespace cv { namespace dnn {
 
 // Output columns [n_start, n_end) of Y = A @ dequant(B).T.
 // wcol is caller-owned scratch of ceil(K/block_size)*block_size floats.
-void matMulNBitsStripe(const float* a, const uchar* bq, const float* sc, float* y,
-                       int M, int N, int K, int block_size, int bits,
+// zp is null for the symmetric form, where the zero point is 2^(bits-1).
+void matMulNBitsStripe(const float* a, const uchar* bq, const float* sc, const uchar* zp,
+                       float* y, int M, int N, int K, int block_size, int bits,
                        int n_start, int n_end, float* wcol);
 
 // Below this per-block byte count the staged kernel is faster than the fused one.
@@ -23,7 +24,7 @@ void matMulNBitsSplitA(const float* a, float* a_even, float* a_odd, int pairs);
 
 // Fused 4-bit M=1 GEMV: dequant stays in registers, no column is materialized.
 void matMulNBitsGemv(const float* a_even, const float* a_odd, const uchar* bq,
-                     const float* sc, float* y, int K, int block_size,
+                     const float* sc, const uchar* zp, float* y, int K, int block_size,
                      int n_start, int n_end);
 
 }} // cv::dnn

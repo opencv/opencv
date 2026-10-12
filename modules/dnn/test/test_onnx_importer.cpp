@@ -3653,6 +3653,40 @@ TEST_P(Test_ONNX_layers, MatMulNBits_GEMV) {
     testONNXModels("matmulnbits_gemv_8bits", npy, 1e-4, 1e-3);
 }
 
+TEST_P(Test_ONNX_layers, MatMulNBits_ZeroPoints) {
+    testONNXModels("matmulnbits_zp", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_gemv_zp", npy, 1e-4, 1e-3);
+    // n_blk=5: the last zero-point byte holds one nibble, not two
+    testONNXModels("matmulnbits_gemv_zp_oddblk", npy, 1e-4, 1e-3);
+}
+
+TEST_P(Test_ONNX_layers, GatherBlockQuantized) {
+    testONNXModels("gather_block_quantized", npy, 1e-4, 1e-3);
+    // no zero_points: the symmetric 2^(bits-1) default
+    testONNXModels("gather_block_quantized_nozp", npy, 1e-4, 1e-3);
+    testONNXModels("gather_block_quantized_8bits", npy, 1e-4, 1e-3);
+    // 3 blocks of 16 over 40 values: odd block count and a partial last block
+    testONNXModels("gather_block_quantized_oddblk", npy, 1e-4, 1e-3);
+    // negative indices wrap; a repeated one must give the same row
+    testONNXModels("gather_block_quantized_negidx", npy, 1e-4, 1e-3);
+}
+
+TEST_P(Test_ONNX_layers, GroupQueryAttentionWindowBias) {
+    const std::string name = "gqa_window_bias";
+    Net net = readNetFromONNX(_tf("models/" + name + ".onnx", required), ENGINE_OPENCV);
+    ASSERT_FALSE(net.empty());
+
+    // total_sequence_length is dropped by the importer, so the remaining seven are fed by
+    // name: the order the layer takes them in is not the order the ONNX graph declares.
+    const char* names[] = {"query", "key", "value", "past_key", "past_value",
+                           "seqlens_k", "attention_bias"};
+    for (int i = 0; i < 7; i++)
+        net.setInput(blobFromNPY(_tf("data/input_" + name + format("_%d", i) + ".npy")), names[i]);
+
+    Mat out = net.forward("output");
+    normAssert(blobFromNPY(_tf("data/output_" + name + ".npy")), out, "", 1e-4, 1e-3);
+}
+
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
 }

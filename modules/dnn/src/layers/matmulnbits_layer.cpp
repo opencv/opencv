@@ -42,7 +42,7 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         CV_CheckEQ(inputs.size(), static_cast<size_t>(1),
                    "DNN/MatMulNBits: expected a single activation input; weights and scales must be constants");
-        CV_CheckEQ(blobs.size(), static_cast<size_t>(2),
+        CV_Check((int)blobs.size(), blobs.size() == 2 || blobs.size() == 3,
                    "DNN/MatMulNBits: expected packed weights and scales as constant blobs");
 
         const int n_blk = (K + block_size - 1) / block_size;   // ceil: K need not divide block_size; last block may be partial
@@ -50,6 +50,13 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
                    "DNN/MatMulNBits: packed weight size mismatch");
         CV_CheckEQ(static_cast<int>(blobs[1].total()), N * n_blk,
                    "DNN/MatMulNBits: scales size mismatch");
+        if (blobs.size() == 3) {
+            const int epb = 8 / bits;
+            CV_CheckEQ(static_cast<int>(blobs[2].total()), N * ((n_blk + epb - 1) / epb),
+                       "DNN/MatMulNBits: zero_points size mismatch");
+            CV_CheckType(blobs[2].type(), blobs[2].type() == CV_8U,
+                         "DNN/MatMulNBits: zero_points must be CV_8U");
+        }
         CV_CheckType(blobs[0].type(), blobs[0].type() == CV_8U,
                      "DNN/MatMulNBits: packed weights must be CV_8U; int32-packed weights are not supported");
         CV_CheckType(blobs[1].type(), blobs[1].type() == CV_32F,
@@ -85,13 +92,15 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         return CV_BIG_INT(2) * M * N * K;
     }
 
-    void runImpl(const Mat& A, const Mat& B, const Mat& scales, Mat& Y, Mat& split) const {
+    void runImpl(const Mat& A, const Mat& B, const Mat& scales, const Mat& zeroPoints,
+                 Mat& Y, Mat& split) const {
         const int M = static_cast<int>(A.total() / K);
         const int n_blk = (K + block_size - 1) / block_size;
 
         const float* a = A.ptr<const float>();
         const uchar* bq = B.ptr<const uchar>();
         const float* sc = scales.ptr<const float>();
+        const uchar* zp = zeroPoints.empty() ? nullptr : zeroPoints.ptr<const uchar>();
         float* y = Y.ptr<float>();
 
         // Staging costs 4 bytes written and read back per 0.5 byte of weight and amortizes
@@ -113,12 +122,12 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         // dequant buffer makes finer splitting cost more than it saves.
         parallel_for_(Range(0, N), [&](const Range& r) {
             if (fused) {
-                matMulNBitsGemv(a_even, a_odd, bq, sc, y, K, block_size, r.start, r.end);
+                matMulNBitsGemv(a_even, a_odd, bq, sc, zp, y, K, block_size, r.start, r.end);
                 return;
             }
             // whole blocks (>= K): the last block is dequantized in full
             AutoBuffer<float, 1024> wcol(n_blk * block_size);
-            matMulNBitsStripe(a, bq, sc, y, M, N, K, block_size, bits,
+            matMulNBitsStripe(a, bq, sc, zp, y, M, N, K, block_size, bits,
                               r.start, r.end, wcol.data());
         }, std::min(N / 16.0, 8.0 * std::max(1, getNumThreads())));
     }
@@ -135,12 +144,13 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
         const Mat& A = inputs[0];
         const Mat& B = blobs[0];        // packed weights, uint8 [N, n_blk, block_size*bits/8]
         const Mat& scales = blobs[1];   // fp32 [N, n_blk]
+        const Mat zeroPoints = blobs.size() == 3 ? blobs[2] : Mat();   // uint8, packed per column
         Mat& Y = outputs[0];
 
         CV_Assert(A.isContinuous() && Y.isContinuous());
 
         Mat split = internals.empty() ? Mat() : internals[0];
-        runImpl(A, B, scales, Y, split);
+        runImpl(A, B, scales, zeroPoints, Y, split);
     }
 };
 
