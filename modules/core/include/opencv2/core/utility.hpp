@@ -175,7 +175,7 @@ public:
     inline void push_back( _Tp&& value )
     { if (sz >= cap) reserve(cap + cap/2 > sz ? cap + cap/2 : sz + 1); ptr[sz++] = std::move(value); }
     inline void emplace_back( _Tp&& value ) {push_back(value);}
-    inline void pop_back() {CV_DbgCheckGT(sz, (size_t)0, "out of range"); resize(size()-1);}
+    inline void pop_back() {CV_DbgCheckGT(sz, (size_t)0, "out of range"); if (sz > 0) --sz;}
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
