@@ -261,4 +261,29 @@ TEST(Imgproc_AdaptiveThreshold, gauss_inv)
     EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
 }
 
+typedef testing::TestWithParam< tuple<perf::MatDepth, int> > Imgproc_Threshold_Unsupported_Depth;
+
+// UMat input must be rejected for the same depths as Mat input
+TEST_P(Imgproc_Threshold_Unsupported_Depth, umat)
+{
+    const int type = CV_MAKETYPE(get<0>(GetParam()), 1);
+    const int threshType = get<1>(GetParam());
+
+    Mat src = Mat::zeros(64, 64, type), dst;
+    EXPECT_THROW(cv::threshold(src, dst, 3, 10, threshType), cv::Exception);
+
+    UMat usrc = src.getUMat(ACCESS_READ), udst;
+    EXPECT_THROW(cv::threshold(usrc, udst, 3, 10, threshType), cv::Exception);
+
+    UMat umask(src.size(), CV_8UC1, Scalar::all(255)), udst_masked(src.size(), type, Scalar::all(0));
+    EXPECT_THROW(cv::thresholdWithMask(usrc, udst_masked, umask, 3, 10, threshType), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Unsupported_Depth,
+    testing::Combine(
+        testing::Values(CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U),//depth
+        testing::Values(THRESH_BINARY, THRESH_TRUNC)// threshTypes
+    )
+);
+
 }} // namespace

@@ -1415,7 +1415,8 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, InputArray _mask, 
     if ( isDisabled ||
         !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
           thresh_type == THRESH_TOZERO || thresh_type == THRESH_TOZERO_INV) ||
-        (!doubleSupport && depth == CV_64F))
+        (!doubleSupport && depth == CV_64F) ||
+        depth > CV_64F)
         return false;
 
     const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
