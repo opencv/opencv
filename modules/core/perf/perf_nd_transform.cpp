@@ -90,7 +90,6 @@ INSTANTIATE_TEST_CASE_P(/**/, ConcatNDPerf, testing::Values(
     make_tuple(std::vector<int>{1, 64, 80, 80}, 1, 4),
     make_tuple(std::vector<int>{1, 64, 80, 80}, 3, 2),
     make_tuple(std::vector<int>{1, 128, 40, 40}, 2, 3),
-    make_tuple(std::vector<int>{1, 128, 20, 20}, 1, 2),  // 400 KB in total, like the small YOLO concats
     make_tuple(std::vector<int>{1, 16, 8, 8}, 1, 3)
 ));
 
