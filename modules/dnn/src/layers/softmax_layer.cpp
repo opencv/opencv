@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../adjacency_graph.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
@@ -73,10 +74,22 @@ class SoftMaxLayerImpl CV_FINAL : public SoftmaxLayer
 {
 public:
 
+    // The factor must reach the kernel; logSoftMax has no scaled one, so it declines.
+    static bool foldScaleOp(Layer* self, int slot, float scale)
+    {
+        SoftMaxLayerImpl* l = static_cast<SoftMaxLayerImpl*>(self);
+        if (slot != 0 || l->logSoftMax)
+            return false;
+        l->scale *= scale;
+        return true;
+    }
+
     SoftMaxLayerImpl(const LayerParams& params)
     {
         axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
+        registerFusionOpsOnce<SoftMaxLayerImpl>({ nullptr, nullptr, false, nullptr, nullptr,
+                                                  &SoftMaxLayerImpl::foldScaleOp });
         scale = params.get<float>("scale", 1.f);
         coerced2d = params.get<bool>("coerced_2d", false);
         setParamsFrom(params);

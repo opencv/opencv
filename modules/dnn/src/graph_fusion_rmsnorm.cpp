@@ -158,6 +158,9 @@ struct ModelFusionRMSNorm
             if (!nary(prog[scale_idx], NaryEltwiseLayer::OPERATION::PROD)) continue;
             Arg scale = otherInput(prog[scale_idx], prog[mul_idx]->outputs[0]);
             if (scale.empty() || !netimpl->isConstArg(scale)) continue;
+            // RMSNormalization needs a rank-1 scale; Mul would have broadcast anything.
+            const MatShape sshape = netimpl->argTensor(scale).shape();
+            if (sshape.dims != 1 || sshape[0] < 2) continue;
             if (prog[scale_idx]->outputs.size() != 1) continue;
 
             LayerParams lp;

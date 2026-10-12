@@ -35,13 +35,24 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     PreparedFusion fusion;
 
  public:
+    // Scaling either operand scales the product, so both slots fold into alpha.
+    static bool foldScaleOp(Layer* self, int slot, float scale)
+    {
+        if (slot != 0 && slot != 1)
+            return false;
+        static_cast<MatMulLayerImpl*>(self)->alpha *= scale;
+        return true;
+    }
+
     static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
     {
         return static_cast<MatMulLayerImpl*>(self)->fusion.take(expr);
     }
 
     MatMulLayerImpl(const LayerParams& params) {
-        registerFusionOpsOnce<MatMulLayerImpl>({ nullptr, &MatMulLayerImpl::absorbOp });
+        registerFusionOpsOnce<MatMulLayerImpl>({ nullptr, &MatMulLayerImpl::absorbOp, false,
+                                                 nullptr, nullptr,
+                                                 &MatMulLayerImpl::foldScaleOp });
         setParamsFrom(params);
 
         trans_a = params.get<bool>("transA", false);

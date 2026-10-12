@@ -977,6 +977,34 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     curr_graph->setProg(curr_prog);
     curr_prog = saved_prog;
 
+    // Shape inference fills ArgData::shape at forward time, after every fusion pass has run.
+    for (int src = 0; src < 3; src++) {
+        const int n = src == 0 ? graph_proto->value_info_size()
+                    : src == 1 ? graph_proto->input_size() : graph_proto->output_size();
+        for (int i = 0; i < n; i++) {
+            const opencv_onnx::ValueInfoProto& vi = src == 0 ? graph_proto->value_info(i)
+                                                  : src == 1 ? graph_proto->input(i)
+                                                             : graph_proto->output(i);
+            if (!vi.has_name() || !vi.has_type() || !vi.type().has_tensor_type())
+                continue;
+            const opencv_onnx::TypeProto::Tensor& t = vi.type().tensor_type();
+            if (!t.has_shape())
+                continue;
+            const std::string name = remap(vi.name());
+            if (!netimpl->haveArg(name))
+                continue;
+            const opencv_onnx::TensorShapeProto& ts = t.shape();
+            MatShape shape(ts.dim_size());
+            for (int j = 0; j < ts.dim_size(); j++) {
+                const opencv_onnx::TensorShapeProto_Dimension& d = ts.dim(j);
+                // findDim interns by name, so two symbolic dims match only if same symbol.
+                const std::string dp = d.has_dim_param() ? d.dim_param() : std::string();
+                shape[j] = d.has_dim_value() ? (int)d.dim_value() : netimpl->findDim(dp, true);
+            }
+            netimpl->declaredShapes[netimpl->getArg(name).idx] = shape;
+        }
+    }
+
     Ptr<Graph> just_constructed = curr_graph;
     curr_graph_proto = saved_graph_proto;
     curr_graph = saved_graph;

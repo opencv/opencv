@@ -52,10 +52,23 @@ public:
         CV_Assert(0 <= axis_ && axis_ < inpDims);
         int totalSize_a = 0;
 
+        // One size may be -1 and takes the rest of the axis, as in Reshape.
+        int inferred = -1, known = 0;
+        for (size_t i = 0; i < noutputs; i++) {
+            if (split[i] == -1) {
+                CV_Assert(inferred < 0);
+                inferred = (int)i;
+            } else {
+                CV_Assert(split[i] >= 0);
+                known += split[i];
+            }
+        }
+        CV_Assert(known <= inpShape[axis_]);
+
         outShapes.resize(noutputs);
         for (size_t i = 0; i < noutputs; i++) {
             MatShape outShape = inpShape;
-            int s = split[i];
+            int s = (int)i == inferred ? inpShape[axis_] - known : split[i];
             CV_Assert(s >= 0);
             CV_Assert(s <= inpShape[axis_] - totalSize_a);
             outShape[axis_] = s;

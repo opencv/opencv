@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 #include "net_impl.hpp"
 #include "adjacency_graph.hpp"
+#include "layers/layers_common.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -296,6 +297,139 @@ struct FuseBNPass
     Net::Impl* netimpl;
     std::vector<int> usecounts;
 };
+
+// Rewrites two Slices that partition one tensor along an axis into a single Split.
+//   X -> Slice[0:P] and X -> Slice[P:end]   =>   X -> Split[{P, dim-P}]
+// The axis length must be declared, so a symbolic one is left alone rather than guessed at.
+
+struct ModelFusionSliceToSplit
+{
+    explicit ModelFusionSliceToSplit(Net::Impl* netimpl_) : netimpl(netimpl_) {}
+
+    void fuse() { fuseGraph(netimpl->mainGraph); }
+
+    // Only a single-axis step-1 slice maps onto Split. An omitted optional input is padded
+    // to an empty Arg, which is a missing step rather than a non-constant one.
+    bool readSlice(const Ptr<LayerInfo>& layer, int64_t& start, int64_t& end, int& axis) const
+    {
+        size_t n = layer->inputs.size();
+        if (n < 4 || n > 5) return false;
+        for (size_t i = 1; i < 4; i++)
+            if (!netimpl->isConstArg(layer->inputs[i])) return false;
+
+        vector<int> s, e, a, st;
+        tensorToIntVec(netimpl->argTensor(layer->inputs[1]), s);
+        tensorToIntVec(netimpl->argTensor(layer->inputs[2]), e);
+        tensorToIntVec(netimpl->argTensor(layer->inputs[3]), a);
+        if (n == 5 && !layer->inputs[4].empty()) {
+            if (!netimpl->isConstArg(layer->inputs[4])) return false;
+            tensorToIntVec(netimpl->argTensor(layer->inputs[4]), st);
+            if (st.size() != 1 || st[0] != 1) return false;
+        }
+        if (s.size() != 1 || e.size() != 1 || a.size() != 1) return false;
+
+        // tensorToIntVec saturates INT64_MAX to INT_MAX, which is the "to the end" marker.
+        start = s[0]; end = e[0]; axis = a[0];
+        return start >= 0 && end >= 0;
+    }
+
+    bool fuseGraph(Ptr<Graph>& graph)
+    {
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
+        size_t nops = prog.size();
+        bool modified = false;
+
+        for (size_t i = 0; i < nops; i++) {
+            if (!prog[i]) continue;
+            vector<Ptr<Graph>>* subgraphs = prog[i]->subgraphs();
+            if (subgraphs) {
+                for (Ptr<Graph>& g : *subgraphs)
+                    if (fuseGraph(g)) modified = true;
+            }
+        }
+
+        std::map<int, int> producer;
+        for (size_t i = 0; i < nops; i++) {
+            if (!prog[i]) continue;
+            for (Arg out : prog[i]->outputs)
+                producer[out.idx] = (int)i;
+        }
+
+        // Slice layers reading each tensor, in program order.
+        std::map<int, vector<int>> readers;
+        for (size_t i = 0; i < nops; i++) {
+            if (!prog[i] || prog[i]->inputs.empty()) continue;
+            if (!dynamic_cast<Slice2Layer*>(prog[i].get())) continue;
+            if (prog[i]->outputs.size() != 1) continue;
+            readers[prog[i]->inputs[0].idx].push_back((int)i);
+        }
+
+        vector<bool> dropped(nops, false);
+        vector<Ptr<LayerInfo>> newprog = prog;
+
+        for (const auto& kv : readers) {
+            const vector<int>& idx = kv.second;
+            if (idx.size() != 2) continue;
+
+            // A multi-output producer would have the Split read one of several results,
+            // and a Shape producer feeds indices rather than data.
+            auto pr = producer.find(kv.first);
+            if (pr != producer.end() && prog[pr->second]) {
+                if (prog[pr->second]->outputs.size() != 1) continue;
+                if (dynamic_cast<ShapeLayer*>(prog[pr->second].get())) continue;
+            }
+
+            int64_t s0 = 0, e0 = 0, s1 = 0, e1 = 0;
+            int a0 = 0, a1 = 0;
+            if (!readSlice(prog[idx[0]], s0, e0, a0)) continue;
+            if (!readSlice(prog[idx[1]], s1, e1, a1)) continue;
+            if (a0 != a1) continue;
+
+            int first = 0, second = 1;
+            if (s0 > s1) std::swap(first, second);
+            const int64_t fs = first == 0 ? s0 : s1, fe = first == 0 ? e0 : e1;
+            const int64_t ss = first == 0 ? s1 : s0, se = first == 0 ? e1 : e0;
+
+            // [0, P) then [P, end): only an open end is provably the rest of the axis.
+            if (fs != 0 || ss != fe || fe <= 0 || se != INT_MAX) continue;
+
+            LayerParams sp;
+            sp.name = prog[idx[first]]->name;
+            sp.type = "Split2";
+            sp.set("axis", a0);
+            int sizes[2] = { (int)fe, -1 };
+            sp.set("split", DictValue::arrayInt(sizes, 2));
+
+            Ptr<LayerInfo> split = LayerFactory::createLayerInstance("Split2", sp);
+            if (!split) continue;
+            split->inputs  = { prog[idx[0]]->inputs[0] };
+            split->outputs = { prog[idx[first]]->outputs[0], prog[idx[second]]->outputs[0] };
+            split->netimpl = netimpl;
+
+            newprog[idx[first]] = split;
+            dropped[idx[second]] = true;
+            modified = true;
+        }
+
+        if (modified) {
+            vector<Ptr<LayerInfo>> finalprog;
+            finalprog.reserve(nops);
+            for (size_t i = 0; i < nops; i++)
+                if (!dropped[i] && newprog[i])
+                    finalprog.push_back(newprog[i]);
+            graph->setProg(finalprog);
+        }
+        return modified;
+    }
+
+    Net::Impl* netimpl;
+};
+
+void Net::Impl::fuseSliceToSplit()
+{
+    ModelFusionSliceToSplit pass(this);
+    pass.fuse();
+}
 
 void Net::Impl::fuseBN()
 {

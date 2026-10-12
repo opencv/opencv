@@ -631,9 +631,6 @@ TEST(Fusion, RMSNormCollapsesToOneLayer)
     normAssert(out.reshape(1, 1), Mat(1, 8, CV_32F, (void*)expected), "", 1e-5, 1e-5);
 }
 
-// A LayerNorm decomposes into six of the same seven ops. Only the Div's constant
-// numerator and the first Mul's other operand tell the two apart, and a wrong match
-// changes values rather than failing, so no accuracy test would catch it.
 TEST(Fusion, LayerNormIsNotTakenForRMSNorm)
 {
     const std::string model = findDataFile("dnn/onnx/models/layer_norm_expanded.onnx");
@@ -646,6 +643,50 @@ TEST(Fusion, LayerNormIsNotTakenForRMSNorm)
     net.forward();
 
     EXPECT_EQ(fusedCount(net, "RMSNormalization"), 0);
+}
+
+TEST(Fusion, ReshapeShapeOperandFoldsToConstant)
+{
+    const std::string name = "attention_shared_shape_reshape";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(fusedCount(net, "Concat2"), 0) << "the runtime shape was not folded";
+    EXPECT_EQ(fusedCount(net, "Shape"), 0) << "the shape chain outlived its only reader";
+    EXPECT_EQ(fusedCount(net, "Gather2"), 0);
+    EXPECT_EQ(fusedCount(net, "Unsqueeze"), 0);
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               "", 1e-4, 5e-4);
+}
+
+TEST(Fusion, AdjacentSlicesCollapseToOneSplit)
+{
+    const std::string name = "slice_to_split";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(fusedCount(net, "Slice2"), 0) << "a partitioning Slice pair survived";
+    EXPECT_EQ(fusedCount(net, "Split2"), 2);
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
+}
+
+TEST(Fusion, InputScalarFoldsIntoConsumer)
+{
+    const std::string name = "input_scalar_fold";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(fusedCount(net, "NaryEltwise"), 0) << "a scalar Mul or Div was left in place";
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
 }
 
 static void checkBatchNormFoldsIntoConv(const std::string& name)
