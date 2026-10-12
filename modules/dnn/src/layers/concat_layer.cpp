@@ -91,6 +91,7 @@ public:
         for (size_t i = 0; i < inputs.size(); i++)
         {
             MatShape curShape = inputs[i];
+            CV_Assert(curShape.size() == outputs[0].size());
 
             if (padding)
             {
@@ -101,7 +102,6 @@ public:
             }
             else
             {
-                CV_Assert(curShape.size() == outputs[0].size());
                 for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
                 {
                     if (curAxis != cAxis && outputs[0][curAxis] != curShape[curAxis])

@@ -3466,6 +3466,46 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
+// OpenCV 5.x imports these nodes through ONNXImporter2, which has a separate
+// Concat implementation. Keep these focused tests on the 4.x folded path.
+#if CV_VERSION_MAJOR < 5
+#include "onnx_qconcat_axis_models.inc"
+
+static void expectConcatImportRejected(const unsigned char* model, size_t size, const char* reason)
+{
+    try
+    {
+        (void)readNetFromONNX(reinterpret_cast<const char*>(model), size);
+        FAIL() << "Invalid Concat model was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos);
+    }
+}
+
+TEST(Test_ONNX_Importer, QLinearConcatAxisBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxMixedRankControl), sizeof(onnxMixedRankControl)));
+    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxNegativeAxisControl), sizeof(onnxNegativeAxisControl)));
+    expectConcatImportRejected(onnxMixedRankInvalid, sizeof(onnxMixedRankInvalid), "Concat axis exceeds an input rank");
+    expectConcatImportRejected(onnxOutOfRangeAxis, sizeof(onnxOutOfRangeAxis), "Concat axis is outside input rank");
+}
+
+TEST(Test_ONNX_Importer, ConcatAxisBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPlainMixedRankControl), sizeof(onnxPlainMixedRankControl)));
+    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPlainSameRankControl), sizeof(onnxPlainSameRankControl)));
+    expectConcatImportRejected(onnxPlainMixedRankInvalid, sizeof(onnxPlainMixedRankInvalid), "Concat axis exceeds an input rank");
+}
+
+TEST(Test_ONNX_Importer, ConcatPaddingRankBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPaddingSameRankControl), sizeof(onnxPaddingSameRankControl)));
+    expectConcatImportRejected(onnxPaddingMixedRankInvalid, sizeof(onnxPaddingMixedRankInvalid), "curShape.size() == outputs[0].size()");
+}
+#endif
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
