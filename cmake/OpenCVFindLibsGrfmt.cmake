@@ -126,56 +126,6 @@ if(WITH_JPEG)
   endif()
   set(HAVE_JPEG YES)
 endif()
-
-# --- libtiff (optional, should be searched after zlib and libjpeg) ---
-if(WITH_TIFF)
-  if(BUILD_TIFF)
-    ocv_clear_vars(TIFF_FOUND)
-  else()
-    ocv_clear_internal_cache_vars(TIFF_LIBRARY TIFF_INCLUDE_DIR)
-    if(QNX)
-      set(TIFF_LIBRARY tiff)
-      set(TIFF_LIBRARIES tiff)
-      set(TIFF_FOUND TRUE)
-    else()
-      include(FindTIFF)
-    endif()
-    if(TIFF_FOUND)
-      ocv_parse_header("${TIFF_INCLUDE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
-    endif()
-  endif()
-
-  if(NOT TIFF_FOUND)
-    ocv_clear_vars(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
-
-    set(TIFF_LIBRARY libtiff CACHE INTERNAL "")
-    set(TIFF_LIBRARIES ${TIFF_LIBRARY})
-    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libtiff")
-    set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}" "${${TIFF_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
-    ocv_parse_header("${${TIFF_LIBRARY}_SOURCE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
-  endif()
-
-  if(TIFF_VERSION_CLASSIC AND NOT TIFF_VERSION)
-    set(TIFF_VERSION ${TIFF_VERSION_CLASSIC})
-  endif()
-
-  if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
-    set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
-  endif()
-
-  if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
-    foreach(_TIFF_INCLUDE_DIR IN LISTS TIFF_INCLUDE_DIR)
-      if(EXISTS "${_TIFF_INCLUDE_DIR}/tiffvers.h")
-        file(STRINGS "${_TIFF_INCLUDE_DIR}/tiffvers.h" tiff_version_str REGEX "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version .*")
-        string(REGEX REPLACE "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version +([^ \\n]*).*" "\\1" TIFF_VERSION_STRING "${tiff_version_str}")
-        unset(tiff_version_str)
-      endif()
-    endforeach()
-  endif()
-
-  set(HAVE_TIFF YES)
-endif()
-
 # --- libwebp (optional) ---
 
 if(WITH_WEBP)
@@ -232,6 +182,55 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
   endif()
 
 set(WEBP_VERSION "decoder: ${WEBP_DECODER_ABI_VERSION}, encoder: ${WEBP_ENCODER_ABI_VERSION}, demux: ${WEBP_DEMUX_ABI_VERSION}")
+endif()
+
+# --- libtiff (optional, should be searched after zlib, libjpeg and libwebp) ---
+if(WITH_TIFF)
+  if(BUILD_TIFF)
+    ocv_clear_vars(TIFF_FOUND)
+  else()
+    ocv_clear_internal_cache_vars(TIFF_LIBRARY TIFF_INCLUDE_DIR)
+    if(QNX)
+      set(TIFF_LIBRARY tiff)
+      set(TIFF_LIBRARIES tiff)
+      set(TIFF_FOUND TRUE)
+    else()
+      include(FindTIFF)
+    endif()
+    if(TIFF_FOUND)
+      ocv_parse_header("${TIFF_INCLUDE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
+    endif()
+  endif()
+
+  if(NOT TIFF_FOUND)
+    ocv_clear_vars(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
+
+    set(TIFF_LIBRARY libtiff CACHE INTERNAL "")
+    set(TIFF_LIBRARIES ${TIFF_LIBRARY})
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libtiff")
+    set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}" "${${TIFF_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+    ocv_parse_header("${${TIFF_LIBRARY}_SOURCE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
+  endif()
+
+  if(TIFF_VERSION_CLASSIC AND NOT TIFF_VERSION)
+    set(TIFF_VERSION ${TIFF_VERSION_CLASSIC})
+  endif()
+
+  if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
+    set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
+  endif()
+
+  if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
+    foreach(_TIFF_INCLUDE_DIR IN LISTS TIFF_INCLUDE_DIR)
+      if(EXISTS "${_TIFF_INCLUDE_DIR}/tiffvers.h")
+        file(STRINGS "${_TIFF_INCLUDE_DIR}/tiffvers.h" tiff_version_str REGEX "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version .*")
+        string(REGEX REPLACE "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version +([^ \\n]*).*" "\\1" TIFF_VERSION_STRING "${tiff_version_str}")
+        unset(tiff_version_str)
+      endif()
+    endforeach()
+  endif()
+
+  set(HAVE_TIFF YES)
 endif()
 
 # --- libjxl (optional) ---
