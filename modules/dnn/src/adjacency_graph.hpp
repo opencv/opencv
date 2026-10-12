@@ -588,6 +588,11 @@ struct FusionOps
      *  the order unfold expects to read it back. A null slot means the layer owns none.
      */
     bool (*ownedBuffers)(const Layer* self, std::vector<Mat>& out) = nullptr;
+
+    //! Folds a scalar multiplier applied to input @p slot into the layer's own parameters,
+    //! so a pass can remove the Mul without knowing where the factor lives. A Div contributes
+    //! its reciprocal. Refusing is always safe; a null slot means the layer never does.
+    bool (*foldInputScalar)(Layer* self, int slot, float scale) = nullptr;
 };
 
 /** @brief Binds @p ops to one concrete layer class. Last registration for a type wins. */
