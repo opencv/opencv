@@ -3642,6 +3642,17 @@ TEST_P(Test_ONNX_layers, MatMulNBits) {
     testONNXModels("matmulnbits_partial_block", npy, 1e-4, 1e-3);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
 }
 
+// M=1 fuses dequantization into the dot product; the M=3 cases above never reach it.
+TEST_P(Test_ONNX_layers, MatMulNBits_GEMV) {
+    testONNXModels("matmulnbits_gemv", npy, 1e-4, 1e-3);
+    // block narrower than one vector at 512 bits
+    testONNXModels("matmulnbits_gemv_bs16", npy, 1e-4, 1e-3);
+    // K=130, block_size=32: partial last block
+    testONNXModels("matmulnbits_gemv_partial", npy, 1e-4, 1e-3);
+    // 8 bits: no nibble pairing, stays on the staged kernel
+    testONNXModels("matmulnbits_gemv_8bits", npy, 1e-4, 1e-3);
+}
+
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
 }
