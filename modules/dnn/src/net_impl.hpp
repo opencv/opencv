@@ -548,6 +548,8 @@ struct Net::Impl : public detail::NetImplBase
     // fuseChains()'s chain pass limited to TransformLayout sinks; run
     // after useBlockLayout(), which is what creates those nodes
     void fuseTransformLayoutChains();
+    // collapse decomposed RMS normalization into one RMSNormalization layer
+    void fuseRMSNorm();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
     // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style

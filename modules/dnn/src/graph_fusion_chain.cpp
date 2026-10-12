@@ -481,6 +481,9 @@ void Net::Impl::fuseChains()
     fuseBN();
 
     // Order is load-bearing: each pass matches shapes the one before it leaves.
+    // RMSNorm first: the chain pass below would otherwise absorb either of its
+    // Muls into a neighbouring chain and leave the pattern unmatchable.
+    fuseRMSNorm();
     fuseAttention();
     fuseMatMulConstBToGemm();
     fuseSharedInputGemm();
