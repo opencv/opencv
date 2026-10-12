@@ -211,6 +211,7 @@ public:
     Ptr<IVideoCapture> createCapture(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params) const CV_OVERRIDE;
     Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
                                    const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE;
+    std::vector<VideoDeviceInfo> enumerateDevices() const CV_OVERRIDE;
 
     std::string getCapturePluginVersion(CV_OUT int& version_ABI, CV_OUT int& version_API)
     {
@@ -782,6 +783,24 @@ Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int f
         CV_LOG_DEBUG(NULL, "Video I/O: can't open writer: " << filename);
     }
     return Ptr<IVideoWriter>();
+}
+
+std::vector<VideoDeviceInfo> PluginBackend::enumerateDevices() const
+{
+    std::vector<VideoDeviceInfo> result;
+    if (capture_api_ && capture_api_->api_header.api_version >= 3 && capture_api_->v3.Capture_enumerate_devices)
+    {
+        struct Context { std::vector<VideoDeviceInfo>* devices; VideoCaptureAPIs backend; };
+        Context ctx{ &result, (VideoCaptureAPIs)capture_api_->v0.id };
+        capture_api_->v3.Capture_enumerate_devices(
+            [](int cam_idx, const char* cam_name, void* userdata) -> CvResult
+            {
+                Context* self = static_cast<Context*>(userdata);
+                self->devices->push_back(makeVideoDeviceInfo(cam_idx, self->backend, cam_name ? cam_name : std::string()));
+                return CV_ERROR_OK;
+            }, &ctx);
+    }
+    return result;
 }
 
 #endif  // OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(ENABLE_PLUGINS)

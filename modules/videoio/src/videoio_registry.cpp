@@ -50,6 +50,11 @@ namespace {
     cap, (BackendMode)(mode), 1000, name, createBackendFactory(createCaptureFile, createCaptureCamera, 0, createWriter) \
 },
 
+#define DECLARE_STATIC_BACKEND_WITH_DEVICES(cap, name, mode, createCaptureFile, createCaptureCamera, createWriter, enumerateDevices) \
+{ \
+    cap, (BackendMode)(mode), 1000, name, createBackendFactory(createCaptureFile, createCaptureCamera, 0, createWriter, enumerateDevices) \
+},
+
 #define DECLARE_STATIC_BACKEND_WITH_STREAM_SUPPORT(cap, name, mode, createCaptureStream) \
 { \
     cap, (BackendMode)(mode), 1000, name, createBackendFactory(0, 0, createCaptureStream, 0) \
@@ -86,7 +91,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 
     // Apple platform
 #ifdef HAVE_AVFOUNDATION
-    DECLARE_STATIC_BACKEND(CAP_AVFOUNDATION, "AVFOUNDATION", MODE_CAPTURE_ALL | MODE_WRITER, create_AVFoundation_capture_file, create_AVFoundation_capture_cam, create_AVFoundation_writer)
+    DECLARE_STATIC_BACKEND_WITH_DEVICES(CAP_AVFOUNDATION, "AVFOUNDATION", MODE_CAPTURE_ALL | MODE_WRITER, create_AVFoundation_capture_file, create_AVFoundation_capture_cam, create_AVFoundation_writer, enumerate_AVFoundation_devices)
 #endif
 
     // Windows
@@ -95,19 +100,19 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 
 #ifdef HAVE_MSMF
-    DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF)
+    DECLARE_STATIC_BACKEND_WITH_DEVICES(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF, enumerate_MSMF_devices)
     DECLARE_STATIC_BACKEND_WITH_STREAM_SUPPORT(CAP_MSMF, "MSMF", MODE_CAPTURE_BY_STREAM, cvCreateCapture_MSMF)
 #elif defined(ENABLE_PLUGINS) && defined(_WIN32)
     DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_STREAM | MODE_WRITER)
 #endif
 
 #ifdef HAVE_DSHOW
-    DECLARE_STATIC_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0)
+    DECLARE_STATIC_BACKEND_WITH_DEVICES(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0, enumerate_DShow_devices)
 #endif
 
     // Linux, some Unix
 #if defined HAVE_CAMV4L2
-    DECLARE_STATIC_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
+    DECLARE_STATIC_BACKEND_WITH_DEVICES(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0, enumerate_V4L_devices)
 #elif defined HAVE_VIDEOIO
     DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
 #endif
@@ -575,6 +580,25 @@ std::string getWriterBackendPluginVersion(VideoCaptureAPIs api,
     CV_Error(Error::StsError, "Unknown or wrong backend ID");
 }
 
+
+std::vector<VideoDeviceInfo> enumerateDevices(VideoCaptureAPIs apiPreference)
+{
+    std::vector<VideoDeviceInfo> result;
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (apiPreference != CAP_ANY && apiPreference != info.id)
+            continue;
+        CV_Assert(!info.backendFactory.empty());
+        const Ptr<IBackend> backend = info.backendFactory->getBackend();
+        if (!backend)
+            continue;
+        const std::vector<VideoDeviceInfo> devices = backend->enumerateDevices();
+        result.insert(result.end(), devices.begin(), devices.end());
+    }
+    return result;
+}
 
 } // namespace registry
 
