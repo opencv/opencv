@@ -2632,57 +2632,35 @@ std::vector<double> getWarpMatrices(int op, InputArray _M, int count, bool toInv
     return Ms;
 }
 
-// Byte offset of the p-th 2D plane; walks the axes, so views work too.
-size_t planeOffset(const Mat& m, int p)
-{
-    size_t ofs = 0;
-    for (int i = m.dims - 3; i >= 0; i--)
-    {
-        ofs += (size_t)(p % m.size[i]) * m.step[i];
-        p /= m.size[i];
-    }
-    return ofs;
-}
-
-// N-D tensor: the last two dims are H and W; matrix k applies to every plane of image k (first axis).
+// (N, H, W) tensor with channels in the type; matrix k applies to image k.
 void warpTensorBatch(const WarpKernel& kernel, const Mat& _src, OutputArray _dst,
                      const std::vector<double>& Ms, int nM, Size dsize)
 {
-    const int D = _src.dims;
-    const Size ssize(_src.size[D - 1], _src.size[D - 2]);
-    CV_Assert(!ssize.empty());
+    const int N = _src.size[0];
+    const Size ssize(_src.size[2], _src.size[1]);
+    CV_Assert(N > 0 && !ssize.empty());
     if (dsize.empty())
         dsize = ssize;
-
-    int64 planes = 1;
-    for (int i = 0; i < D - 2; i++)
-        planes *= _src.size[i];
-    CV_Assert(planes > 0 && planes * dsize.height <= INT_MAX);
-    const int numPlanes = (int)planes;
-    const int planesPerImage = numPlanes / _src.size[0];
+    CV_Assert((int64)N * dsize.height <= INT_MAX);
     const bool shared = Ms.size() == (size_t)nM;
 
-    int dstShape[CV_MAX_DIM];
-    for (int i = 0; i < D; i++)
-        dstShape[i] = _src.size[i];
-    dstShape[D - 2] = dsize.height;
-    dstShape[D - 1] = dsize.width;
-    _dst.create(D, dstShape, _src.type());
+    const int dstShape[] = { N, dsize.height, dsize.width };
+    _dst.create(3, dstShape, _src.type());
     Mat dst = _dst.getMat();
     Mat src = _src;
     if (dst.data == src.data)
         src = src.clone();
 
-    std::vector<WarpItem> items(numPlanes);
-    for (int p = 0; p < numPlanes; p++)
+    std::vector<WarpItem> items(N);
+    for (int n = 0; n < N; n++)
     {
-        WarpItem& it = items[p];
-        it.M = &Ms[shared ? 0 : (size_t)(p / planesPerImage)*nM];
-        it.srcData = src.data + planeOffset(src, p);
-        it.srcStep = src.step[D - 2];
+        WarpItem& it = items[n];
+        it.M = &Ms[shared ? 0 : (size_t)n*nM];
+        it.srcData = src.ptr(n);
+        it.srcStep = src.step[1];
         it.ssize = ssize;
-        it.dstData = dst.data + planeOffset(dst, p);
-        it.dstStep = dst.step[D - 2];
+        it.dstData = dst.ptr(n);
+        it.dstStep = dst.step[1];
         it.dsize = dsize;
     }
     runWarp(kernel, items);
@@ -2729,7 +2707,7 @@ void warpMatVectorBatch(const WarpKernel& kernel, const std::vector<Mat>& srcs, 
     runWarp(kernel, items);
 }
 
-// Entry point for every batch kind: N-D tensors, vector<Mat> and vector<UMat>.
+// Entry point for every batch kind: (N, H, W) tensors, vector<Mat> and vector<UMat>.
 void warpBatch(int op, InputArray _src, OutputArray _dst, InputArray _M, Size dsize,
                int flags, int borderType, const Scalar& borderValue, AlgorithmHint hint)
 {
@@ -2777,7 +2755,7 @@ void warpBatch(int op, InputArray _src, OutputArray _dst, InputArray _M, Size ds
     else
     {
         src = _src.getMat();
-        CV_Assert(src.dims > 2);
+        CV_Assert(src.dims == 3);
     }
     const int type = srcs ? (*srcs)[0].type() : src.type();
     CV_Assert(CV_MAT_CN(type) <= 4 || (interpolation != INTER_LANCZOS4 && interpolation != INTER_CUBIC));
@@ -2918,11 +2896,13 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
-    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() > 2)
+    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() == 3)
     {
         warpBatch(WARP_OP_AFFINE, _src, _dst, _M0, dsize, flags, borderType, borderValue, hint);
         return;
     }
+    CV_CheckLE(_src.dims(), 2, "N-D input is ambiguous (NCHW vs NHWC); pass an (N, H, W) batch with channels in the type, "
+                               "e.g. cv.Mat(batch, wrap_channels=True) from Python, or a vector of images");
 
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
@@ -3532,11 +3512,13 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
-    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() > 2)
+    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() == 3)
     {
         warpBatch(WARP_OP_PERSPECTIVE, _src, _dst, _M0, dsize, flags, borderType, borderValue, hint);
         return;
     }
+    CV_CheckLE(_src.dims(), 2, "N-D input is ambiguous (NCHW vs NHWC); pass an (N, H, W) batch with channels in the type, "
+                               "e.g. cv.Mat(batch, wrap_channels=True) from Python, or a vector of images");
 
     CV_Assert( _src.total() > 0 );
 

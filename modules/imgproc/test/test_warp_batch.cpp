@@ -47,9 +47,7 @@ static void warpOne(int op, InputArray src, OutputArray dst, InputArray M, Size 
 
 static Mat plane(const Mat& t, int p)
 {
-    const int D = t.dims;
-    const Size sz(t.size[D - 1], t.size[D - 2]);
-    return Mat(sz, t.type(), t.data + (size_t)p*t.step[D - 3], t.step[D - 2]);
+    return Mat(t.size[1], t.size[2], t.type(), const_cast<uchar*>(t.ptr(p)), t.step[1]);
 }
 
 // The batch runs every image through the kernel its own call would pick, so the match is exact.
@@ -95,33 +93,36 @@ TEST(Warp_Batch, TensorMatchesSingleImage)
                     }
 }
 
-// In an NCHW tensor, matrix n applies to all C planes of image n.
-TEST(Warp_Batch, NCHWPerImageMatrices)
+// 4-D input is rejected as ambiguous; NCHW data goes through as an (N*C, H, W) view.
+TEST(Warp_Batch, NCHWAsPlaneBatch)
 {
     const int N = 3, C = 2;
     const Size from(48, 40), to(32, 36);
     int srcSizes[] = { N, C, from.height, from.width };
     Mat src(4, srcSizes, CV_32F);
     RNG(5).fill(src, RNG::UNIFORM, 0, 255);
+    int planeSizes[] = { N*C, from.height, from.width };
+    const Mat planes = src.reshape(1, 3, planeSizes);
 
     for (int op : { OP_AFFINE, OP_PERSPECTIVE })
     {
         std::vector<Mat> Ms;
-        for (int n = 0; n < N; n++)
-            Ms.push_back(makeTransform(op, from, 7 + n));
+        for (int p = 0; p < N*C; p++)
+            Ms.push_back(makeTransform(op, from, 7 + p / C));
 
         Mat dst;
-        warpOne(op, src, dst, Ms, to, INTER_LINEAR, BORDER_CONSTANT);
-        ASSERT_EQ(4, dst.dims);
-        EXPECT_EQ(N, dst.size[0]);
-        EXPECT_EQ(C, dst.size[1]);
-        EXPECT_EQ(to.height, dst.size[2]);
-        EXPECT_EQ(to.width, dst.size[3]);
+        EXPECT_THROW(warpOne(op, src, dst, Ms[0], to, INTER_LINEAR, BORDER_CONSTANT), cv::Exception);
+
+        warpOne(op, planes, dst, Ms, to, INTER_LINEAR, BORDER_CONSTANT);
+        ASSERT_EQ(3, dst.dims);
+        EXPECT_EQ(N*C, dst.size[0]);
+        EXPECT_EQ(to.height, dst.size[1]);
+        EXPECT_EQ(to.width, dst.size[2]);
 
         for (int p = 0; p < N*C; p++)
         {
             Mat expected;
-            warpOne(op, plane(src, p), expected, Ms[p / C], to, INTER_LINEAR, BORDER_CONSTANT);
+            warpOne(op, plane(planes, p), expected, Ms[p], to, INTER_LINEAR, BORDER_CONSTANT);
             EXPECT_EQ(0, cvtest::norm(expected, plane(dst, p), NORM_INF)) << "op=" << op << " plane=" << p;
         }
     }

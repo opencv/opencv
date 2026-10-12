@@ -2140,10 +2140,10 @@ operate in-place.
 
 Besides a single 2D image, `src` may hold a batch of images, picked at runtime from `src.kind()`:
 
-- an N-D tensor (`dims >= 3`): the last two dimensions are height and width, and the leading ones
-  are batch axes. The first axis indexes the images and any axes after it (channels, say) hold
-  planes that belong to the same image. `dst` is a tensor of the same shape apart from its last
-  two dimensions, which become `dsize`;
+- a 3D tensor of shape \f$(N, H, W)\f$ with the channels held in its type, `dst` being of shape
+  \f$(N, dsize.height, dsize.width)\f$. From Python, wrap an NHWC array as
+  `cv.Mat(batch, wrap_channels=True)`. Tensors with more dimensions are rejected, since NCHW and
+  NHWC layouts cannot be told apart;
 - a `std::vector<Mat>`/`std::vector<UMat>` of images of one type, which may differ in size.
   C++ only, not usable from Python.
 
@@ -2156,7 +2156,7 @@ each image comes out exactly as it would from its own call.
 @note A `std::vector<UMat>` is warped element by element on the OpenCL device; the single parallel
 loop applies to the two host-memory kinds.
 
-@param src input image, N-D batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
+@param src input image, \f$(N, H, W)\f$ batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
 @param dst output image or batch that has the size dsize and the same type as src .
 @param M \f$2\times 3\f$ transformation matrix, or one per image of a batch (see above).
 @param dsize size of the output image; for a batch, the size of every output image. When empty,
@@ -2194,10 +2194,10 @@ The function warpPerspective transforms the source image using the specified mat
 when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
 and then put in the formula above instead of M. The function cannot operate in-place.
 
-`src` may also be a batch of images, an N-D tensor or a `std::vector<Mat>`/`std::vector<UMat>`, with
+`src` may also be a batch of images, an \f$(N, H, W)\f$ tensor or a `std::vector<Mat>`/`std::vector<UMat>`, with
 `M` holding one matrix for all of them or one per image, exactly as for #warpAffine.
 
-@param src input image, N-D batch tensor, or `std::vector<Mat>`/`std::vector<UMat>`.
+@param src input image, \f$(N, H, W)\f$ batch tensor, or `std::vector<Mat>`/`std::vector<UMat>`.
 @param dst output image or batch that has the size dsize and the same type as src .
 @param M \f$3\times 3\f$ transformation matrix, or one per image of a batch.
 @param dsize size of the output image; for a batch, the size of every output image. When empty,
