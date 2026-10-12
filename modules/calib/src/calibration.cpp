@@ -379,8 +379,16 @@ static double pointWeight(const CalibWeights& cw, int idx, double ex, double ey,
 
 static double weightedError(const CalibWeights& cw, int pos, const cv::Mat& errors, bool variance = false)
 {
-    const double* e = errors.ptr<double>();
     int n = (int)(errors.total() * errors.channels() / 2);
+    if (!cw.w.empty())
+    {
+        // Scale the residuals by sqrt(w) and reuse norm(), so unit weights give exactly the
+        // same cost as the unweighted path (multiplying by sqrt(1) is exact).
+        cv::Mat sw;
+        cv::sqrt(cw.w.colRange(pos, pos + n), sw);
+        return cv::norm(errors.reshape(2, 1).mul(sw), cv::NORM_L2SQR);
+    }
+    const double* e = errors.ptr<double>();
     double sum = 0, wx, wy;
     for (int j = 0; j < n; j++)
         sum += pointWeight(cw, pos + j, e[2 * j], e[2 * j + 1], wx, wy, variance);
