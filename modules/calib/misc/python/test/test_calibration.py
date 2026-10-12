@@ -15,6 +15,61 @@ from tests_common import NewOpenCVTests
 
 class calibration_test(NewOpenCVTests):
 
+    def test_fisheye_calibration_point_layout(self):
+        camera_matrix = np.array([[600.0, 0.0, 320.0],
+                                  [0.0, 600.0, 240.0],
+                                  [0.0, 0.0, 1.0]])
+        distortion = np.zeros((4, 1), dtype=np.float64)
+        image_size = (640, 480)
+        image_noise = 0.05
+        tolerance = 1e-10
+        max_iterations = 1
+        points = np.array([
+            [-0.4, -0.3, 0.0], [0.0, -0.3, 0.0], [0.4, -0.3, 0.0],
+            [-0.4, 0.0, 0.0], [0.0, 0.0, 0.0], [0.4, 0.0, 0.0],
+            [-0.4, 0.3, 0.0], [0.0, 0.3, 0.0], [0.4, 0.3, 0.0]])
+        rotations = np.array([[0.15, -0.1, 0.08], [-0.1, 0.12, -0.06]])
+        translations = np.array([[0.2, -0.15, 3.0], [-0.3, 0.1, 2.5]])
+        object_rows = []
+        image_rows = []
+        for rotation, translation in zip(rotations, translations):
+            objects = points.reshape(1, -1, 3).copy()
+            projected, _ = cv.fisheye.projectPoints(
+                objects, rotation, translation, camera_matrix, distortion)
+            projected = projected.reshape(1, -1, 2)
+            projected[0, 0, 0] += image_noise
+            object_rows.append(objects)
+            image_rows.append(projected)
+
+        flags = (cv.CALIB_USE_INTRINSIC_GUESS |
+                 cv.CALIB_RECOMPUTE_EXTRINSIC |
+                 cv.CALIB_FIX_FOCAL_LENGTH |
+                 cv.CALIB_FIX_PRINCIPAL_POINT |
+                 cv.CALIB_FIX_SKEW |
+                 cv.CALIB_FIX_K1 | cv.CALIB_FIX_K2 |
+                 cv.CALIB_FIX_K3 | cv.CALIB_FIX_K4)
+        criteria = (cv.TERM_CRITERIA_COUNT, max_iterations, 0.0)
+
+        def calibrate(objects, images):
+            return cv.fisheye.calibrate(
+                objects, images, image_size, camera_matrix.copy(),
+                distortion.copy(), flags=flags, criteria=criteria)
+
+        reference = calibrate(object_rows, image_rows)
+        self.assertGreater(reference[0], tolerance)
+        for column_images in (True, False):
+            for column_objects in (False, True):
+                with self.subTest(column_images=column_images,
+                                  column_objects=column_objects):
+                    objects = [p.reshape(-1, 1, 3) if column_objects else p
+                               for p in object_rows]
+                    images = [p.reshape(-1, 1, 2) if column_images else p
+                              for p in image_rows]
+                    result = calibrate(objects, images)
+                    for actual, expected in zip(result, reference):
+                        np.testing.assert_allclose(
+                            actual, expected, rtol=0.0, atol=tolerance)
+
     def test_calibration(self):
         img_names = []
         for i in range(1, 15):
