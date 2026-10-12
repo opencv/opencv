@@ -2526,6 +2526,60 @@ TEST(Compare, regression_8999)
     EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 
+// A 4x1 CV_64FC1 Mat is classified as a bindings-style Scalar (isScalarArg). That must never
+// happen against an operand of the same shape: such a pair is element-wise, as it is in 4.x.
+TEST(Core_Arithm, same_shape_is_elementwise)
+{
+    // a continuous 4x1 CV_64F operand met by a non-continuous view of the same shape - a column of
+    // a 4xN matrix of homogeneous points - used to broadcast the continuous side as a Scalar.
+    Mat Pf(4, 10, CV_32F); randu(Pf, 10, 100);
+    Mat cf = Pf.col(0), df;
+    subtract(cf.clone(), cf, df);
+    EXPECT_LT(cvtest::norm(df, NORM_INF), FLT_EPSILON);
+
+    Mat Pd(4, 10, CV_64F); randu(Pd, 10, 100);
+    Mat cd = Pd.col(0), dd;
+    subtract(cd.clone(), cd, dd);
+    EXPECT_LT(cvtest::norm(dd, NORM_INF), DBL_EPSILON);
+    subtract(cd, cd.clone(), dd);                        // the other operand order too
+    EXPECT_LT(cvtest::norm(dd, NORM_INF), DBL_EPSILON);
+
+    Mat Ps(4, 10, CV_64S); randu(Ps, 10, 100);
+    Mat cs = Ps.col(0), ds;
+    subtract(cs.clone(), cs, ds);
+    EXPECT_EQ(0, cvtest::norm(ds, NORM_INF));
+
+    UMat UPd; Pd.copyTo(UPd);                            // UMat, same thing (CPU and OpenCL paths)
+    UMat ucd = UPd.col(0), udd;
+    subtract(ucd.clone(), ucd, udd);
+    EXPECT_LT(cvtest::norm(udd.getMat(ACCESS_READ), NORM_INF), DBL_EPSILON);
+}
+
+// The flip side: a genuine Scalar partner keeps its per-channel semantics against a 4x1 CV_64FC1
+// array - only the Mat/UMat side is ever demoted to an array operand.
+TEST(Core_Arithm, scalar_vs_4x1_64F_array)
+{
+    Mat a = Mat_<double>({4, 1}, {10, 20, 30, 40}), d;
+    Mat expected1 = Mat_<double>({4, 1}, {5, 15, 25, 35});     // every element minus Scalar::val[0]
+    subtract(a, Scalar(5), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    subtract(a, Scalar(5, 6, 7, 8), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    subtract(a, Vec4d(5, 6, 7, 8), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    d = a - Scalar(5);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+
+    Mat expected2 = Mat_<double>({4, 1}, {-5, -15, -25, -35});
+    subtract(Scalar(5), a, d);
+    EXPECT_EQ(0, cvtest::norm(d, expected2, NORM_INF));
+
+    // and the bindings-style 4x1 CV_64F Scalar still broadcasts over a REAL array
+    Mat img(2, 2, CV_8UC3, Scalar(100, 110, 120));
+    subtract(img, Mat_<double>({4, 1}, {1, 2, 3, 4}), d);
+    EXPECT_EQ(0, cvtest::norm(d, Mat(2, 2, CV_8UC3, Scalar(99, 108, 117)), NORM_INF));
+}
+
 TEST(Compare, regression_16F_do_not_crash)
 {
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
