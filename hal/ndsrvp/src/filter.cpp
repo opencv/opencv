@@ -160,7 +160,7 @@ int filter(cvhalFilter2D *context,
         int j = 0;
         int16x4_t vj = {0, 1, 2, 3};
         vj += saturate_cast<short>(cal_x);
-        for(; j + cal_x < -4; j += 4, vj += 4)
+        for(; j + cal_x < -4 && j + 4 <= cal_width; j += 4, vj += 4)
         {
             int16x4_t vx = borderInterpolate_vector(vj, full_width, ctx->borderType);
             for(int k = 0; k < 4; k++) {
