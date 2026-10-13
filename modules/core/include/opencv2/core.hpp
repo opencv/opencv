@@ -1072,22 +1072,25 @@ The example scenarios of using the function are the following:
     for a central symmetry (flipCode \< 0).
 *   Reversing the order of point arrays (flipCode \> 0 or
     flipCode == 0).
-
-The input may also have a number of dimensions other than two. @p flipCode is then the index of the
-single axis to flip, -src.dims <= flipCode < src.dims with the negative values counting from the
-end, and there is no "both axes" code. The array may be multi-channel and non-continuous (e.g. a
-sub-array); the channels of each element are kept together, so the axis refers to the array
-dimensions. In-place operation (src and dst sharing data) is supported.
-
 @param src input array.
 @param dst output array of the same size and type as src.
 @param flipCode a flag to specify how to flip the array; 0 means
 flipping around the x-axis and positive value (for example, 1) means
 flipping around y-axis. Negative value (for example, -1) means flipping
-around both axes. For a src that is not two-dimensional it is the axis to flip instead.
+around both axes.
 @sa transpose, repeat, completeSymm
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
+
+/** @brief Flips a n-dimensional at given axis
+ *
+ * The input may be multi-channel and non-continuous (e.g. a sub-array); the channels of each
+ * element are kept together. In-place operation (src and dst sharing data) is supported.
+ *  @param src input array
+ *  @param dst output array that has the same shape of src
+ *  @param axis axis that performs a flip on. -src.dims <= axis < src.dims.
+ */
+CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
 
 /** @brief Removes axes of size 1 from an n-dimensional array.
  *
@@ -1878,6 +1881,10 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
  * @param dst output array of the same type as src.
  */
 CV_EXPORTS_W void transpose(InputArray src, const std::vector<int>& order, OutputArray dst);
+
+/** @deprecated Use transpose(InputArray, const std::vector<int>&, OutputArray) instead.
+ */
+CV_DEPRECATED_EXTERNAL CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
 
 /** @brief Performs the matrix transformation of every array element.
 

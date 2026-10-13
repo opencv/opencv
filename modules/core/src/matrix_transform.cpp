@@ -556,6 +556,11 @@ void transpose(InputArray src_, const std::vector<int>& order, OutputArray dst_)
     nd::copy(nd::permute(nd::viewOf(inp), order.data()), nd::viewOf(out));
 }
 
+void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst)
+{
+    transpose(src, order, dst);
+}
+
 
 // Generic scalar fallback
 CV_ALWAYS_INLINE void flipHoriz_generic( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
@@ -1010,55 +1015,11 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 #endif
 
-// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
-static void flipAxisInplace(Mat& m, int axis)
-{
-    size_t nouter = 1;
-    for (int i = 0; i < axis; i++)
-        nouter *= (size_t)m.size[i];
-    const int n = m.size[axis];
-    const size_t step = m.step[axis];
-    uchar* data = m.ptr();
-    for (size_t i = 0; i < nouter; i++, data += n*step)
-        for (int j = 0, k = n - 1; j < k; j++, k--)
-            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
-}
-
-// flip() for an input that is not two-dimensional: the code is the axis to flip.
-static void flipAxis(InputArray _src, OutputArray _dst, int _axis)
-{
-    Mat src = _src.getMat();
-
-    // verify axis
-    int ndim = src.dims;
-    CV_CheckLT(_axis, ndim, "flip: given axis is out of range");
-    CV_CheckGE(_axis, -ndim, "flip: given axis is out of range");
-    int axis = (_axis + ndim) % ndim;
-
-    _dst.create(ndim, src.size.p, src.type());
-    Mat dst = _dst.getMat();
-    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
-    {
-        flipAxisInplace(dst, axis);
-        return;
-    }
-
-    nd::View v = nd::viewOf(src);
-    nd::flip(v, axis);
-    nd::copy(v, nd::viewOf(dst));
-}
-
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_INSTRUMENT_REGION();
 
-    // only a two-dimensional array has an x- and a y-axis to name; for any other shape the code is
-    // the axis to flip
-    if (_src.dims() != 2)
-    {
-        flipAxis(_src, _dst, flip_mode);
-        return;
-    }
+    CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
 
     if (flip_mode < 0)
@@ -1094,6 +1055,45 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     if( flip_mode < 0 )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
+}
+
+// In-place flip of a continuous array: swap the slices along the axis, no temporary copy.
+static void flipNDInplace(Mat& m, int axis)
+{
+    size_t nouter = 1;
+    for (int i = 0; i < axis; i++)
+        nouter *= (size_t)m.size[i];
+    const int n = m.size[axis];
+    const size_t step = m.step[axis];
+    uchar* data = m.ptr();
+    for (size_t i = 0; i < nouter; i++, data += n*step)
+        for (int j = 0, k = n - 1; j < k; j++, k--)
+            std::swap_ranges(data + j*step, data + (j + 1)*step, data + k*step);
+}
+
+void flipND(InputArray _src, OutputArray _dst, int _axis)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+
+    // verify axis
+    int ndim = src.dims;
+    CV_CheckLT(_axis, ndim, "flipND: given axis is out of range");
+    CV_CheckGE(_axis, -ndim, "flipND: given axis is out of range");
+    int axis = (_axis + ndim) % ndim;
+
+    _dst.create(ndim, src.size.p, src.type());
+    Mat dst = _dst.getMat();
+    if (dst.data == src.data && src.isContinuous() && dst.isContinuous())
+    {
+        flipNDInplace(dst, axis);
+        return;
+    }
+
+    nd::View v = nd::viewOf(src);
+    nd::flip(v, axis);
+    nd::copy(v, nd::viewOf(dst));
 }
 
 void concat(InputArrayOfArrays _src, int axis, OutputArray _dst)

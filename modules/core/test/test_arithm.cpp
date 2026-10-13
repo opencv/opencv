@@ -2651,10 +2651,8 @@ TEST_P(FlipND, basic)
     randu(inp, 0, 255);
 
     int ndim = static_cast<int>(m_shape.size());
-    // [-ndim, ndim), except on a 2D array where a negative code means "both axes" to cv::flip
-    const int firstAxis = ndim == 2 ? 0 : -ndim;
-    std::vector<int> axes(ndim - firstAxis);
-    std::iota(axes.begin(), axes.end(), firstAxis);
+    std::vector<int> axes(ndim*2); // [-shape, shape)
+    std::iota(axes.begin(), axes.end(), -ndim);
     auto get_flipped_indices = [&inp, ndim] (size_t total, std::vector<int>& indices, int axis)
     {
         const int* shape = inp.size.p;
@@ -2676,7 +2674,7 @@ TEST_P(FlipND, basic)
     {
         int axis = axes[i];
         Mat out;
-        cv::flip(inp, out, axis);
+        cv::flipND(inp, out, axis);
         // check values
         std::vector<int> indices(ndim, 0);
         for (size_t j = 0; j < inp.total(); ++j)

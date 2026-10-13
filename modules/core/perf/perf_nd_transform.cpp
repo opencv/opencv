@@ -146,7 +146,7 @@ INSTANTIATE_TEST_CASE_P(/**/, SliceNDPerf, testing::Combine(
     testing::Values(1, 2, -1)
 ));
 
-PERF_TEST_P_(TransposeNDPerf, flip)
+PERF_TEST_P_(TransposeNDPerf, flipND)
 {
     const std::vector<int> shape = get<0>(GetParam());
     const int type = get<2>(GetParam());
@@ -154,7 +154,7 @@ PERF_TEST_P_(TransposeNDPerf, flip)
     fillRandom(src);
     const int axis = (int)shape.size() - 1;
 
-    TEST_CYCLE() cv::flip(src, dst, axis);
+    TEST_CYCLE() cv::flipND(src, dst, axis);
 
     SANITY_CHECK_NOTHING();
 }

@@ -591,8 +591,18 @@ def get_swift_type(ctype):
             swift_type = "[[" + swift_type + "]]"
     return swift_type
 
+SWIFT_KEYWORDS = {
+    "as", "break", "case", "catch", "class", "continue", "default", "defer", "deinit", "do", "else", "enum",
+    "extension", "fallthrough", "false", "for", "func", "guard", "if", "import", "in", "init", "inout", "is",
+    "let", "nil", "operator", "private", "protocol", "public", "repeat", "rethrows", "return", "self", "static",
+    "struct", "subscript", "super", "switch", "throw", "throws", "true", "try", "typealias", "var", "where", "while"
+}
+
+def swift_identifier(name):
+    return "`" + name + "`" if name in SWIFT_KEYWORDS else name
+
 def build_swift_extension_decl(name, args, constructor, static, ret_type):
-    extension_decl = "@nonobjc " + ("class " if static else "") + (("func " + name) if not constructor else "convenience init") + "("
+    extension_decl = "@nonobjc " + ("class " if static else "") + (("func " + swift_identifier(name)) if not constructor else "convenience init") + "("
     swift_args = []
     for a in args:
         if a.ctype not in type_dict:
@@ -650,7 +660,7 @@ def build_swift_signature(args):
     return swift_signature
 
 def build_unrefined_call(name, args, constructor, static, classname, has_ret):
-    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((make_objcname(classname) + ".") if static else "") + (name if not constructor else "self.init")
+    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((make_objcname(classname) + ".") if static else "") + (swift_identifier(name) if not constructor else "self.init")
     call_args = []
     for a in args:
         if a.ctype not in type_dict:

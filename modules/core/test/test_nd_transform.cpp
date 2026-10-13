@@ -303,10 +303,9 @@ TEST(Core_FlipND, random)
     {
         int dims = rng.uniform(1, 6);
         Mat src = randomArray(rng, randomShape(rng, dims, dims <= 3 ? 40 : 6), randomType(rng), rng.uniform(0, 2) != 0);
-        // a negative code means "both axes" on a 2D array, so only the other ranks take one here
-        int axis = rng.uniform(dims == 2 ? 0 : -dims, dims);
+        int axis = rng.uniform(-dims, dims);
         Mat dst;
-        cv::flip(src, dst, axis);
+        cv::flipND(src, dst, axis);
         SCOPED_TRACE(describe(src) + cv::format(" axis %d", axis));
         EXPECT_SAME(refFlip(src, (axis + dims) % dims), dst);
     }
@@ -319,7 +318,7 @@ TEST(Core_FlipND, inplace)
     {
         Mat a = randomArray(rng, {5, 7, 9}, CV_8UC3, false);
         Mat expected = refFlip(a, axis);
-        cv::flip(a, a, axis);
+        cv::flipND(a, a, axis);
         EXPECT_SAME(expected, a);
     }
 }
@@ -331,7 +330,7 @@ TEST(Core_FlipND, inplace_roi)
     {
         Mat a = randomArray(rng, {5, 7, 9}, CV_32FC2, true);
         Mat expected = refFlip(a, axis);
-        cv::flip(a, a, axis);
+        cv::flipND(a, a, axis);
         EXPECT_SAME(expected, a);
     }
 }
@@ -543,7 +542,7 @@ TEST(Core_NDTransform, scalar)
         EXPECT_EQ((size_t)1, m.total());
         EXPECT_EQ(3.5f, m.at<float>(0));
     }
-    EXPECT_ANY_THROW(cv::flip(a, t, 0));
+    EXPECT_ANY_THROW(cv::flipND(a, t, 0));
     EXPECT_ANY_THROW(cv::concat(std::vector<Mat>{a, a}, 0, t));
 }
 
