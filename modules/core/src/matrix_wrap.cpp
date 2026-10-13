@@ -1941,10 +1941,10 @@ void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
     create(arr.shape(), mtype);
 }
 
-void _OutputArray::fit(Size sz, int mtype, int i,
+void _OutputArray::fit(Size _sz, int mtype, int i,
                        bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
-    int sizes[] = {sz.height, sz.width};
+    int sizes[] = {_sz.height, _sz.width};
     fit(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
@@ -1967,13 +1967,13 @@ void _OutputArray::fit(const MatShape& shape, int mtype, int i,
     // fit(dims, sizes) resets the layout, so carry it over the same way Mat::fit(const MatShape&) does
     _InputArray::KindFlag k = kind();
     if ((k == MAT && i < 0) || (k == STD_VECTOR_MAT && i >= 0)) {
-        MatSize& sz = getMatRef(i).size;
-        sz.layout = shape.layout;
-        sz.C = shape.C;
+        MatSize& msize = getMatRef(i).size;
+        msize.layout = shape.layout;
+        msize.C = shape.C;
     } else if ((k == UMAT && i < 0) || (k == STD_VECTOR_UMAT && i >= 0)) {
-        MatSize& sz = getUMatRef(i).size;
-        sz.layout = shape.layout;
-        sz.C = shape.C;
+        MatSize& msize = getUMatRef(i).size;
+        msize.layout = shape.layout;
+        msize.C = shape.C;
     }
 }
 
