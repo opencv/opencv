@@ -1847,20 +1847,22 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
             }
 
             for (; p < p_end; p++) {
-                alignas(32) int32_t acc[K0];
-                memcpy(acc, biasbuf, K0 * sizeof(int32_t));
-
+                // Leftover pixels: the same VNNI multiply-adds as above, one pixel at a time.
+                // The weights are in the VNNI-repacked layout, so they must not be read as
+                // plain [c0][k0].
+                __m256i s = _mm256_load_si256((const __m256i*)biasbuf);
                 const int8_t* inptr_s = inpbaseptr + (size_t)p * C0;
                 const int8_t* wptr    = wbaseptr;
                 for (int c1 = 0; c1 < cblocks; c1++, inptr_s += iplanesize, wptr += C0 * K0) {
-                    for (int c0 = 0; c0 < C0; c0++) {
-                        int iv = inputIsU8 ? (int)(uint8_t)inptr_s[c0]
-                                           : (int)(uint8_t)((uint8_t)inptr_s[c0] ^ 0x80u);
-                        const int8_t* wp = wptr + c0 * K0;
-                        for (int k0 = 0; k0 < K0; k0++)
-                            acc[k0] += iv * (int)wp[k0];
-                    }
+                    __m256i wg0 = _mm256_load_si256((const __m256i*)(wptr));
+                    __m256i wg1 = _mm256_load_si256((const __m256i*)(wptr + 32));
+                    __m256i x0 = _mm256_xor_si256(_mm256_set1_epi32(*(const int32_t*)(inptr_s    )), v_xor);
+                    __m256i x1 = _mm256_xor_si256(_mm256_set1_epi32(*(const int32_t*)(inptr_s + 4)), v_xor);
+                    s = _mm256_dpbusd_epi32(s, x0, wg0);
+                    s = _mm256_dpbusd_epi32(s, x1, wg1);
                 }
+                alignas(32) int32_t acc[K0];
+                _mm256_store_si256((__m256i*)acc, s);
 
                 int8_t*       optr = outptr + (size_t)p * K0;
                 const int8_t* rptr = resptr ? resptr + (size_t)p * K0 : nullptr;
