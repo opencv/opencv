@@ -2332,16 +2332,17 @@ TEST_P(Core_CheckRange_Float, accuracy)
     ASSERT_EQ(bad_pt.y, -1);
 
     const float inf = std::numeric_limits<float>::infinity();
+    const int bad_scalar = 2 * src.channels() + 2;
     switch (depth)
     {
     case CV_16F:
-        src.ptr<cv::hfloat>(1)[8] = cv::hfloat(inf);
+        src.ptr<cv::hfloat>(1)[bad_scalar] = cv::hfloat(inf);
         break;
     case CV_16BF:
-        src.ptr<cv::bfloat>(1)[8] = cv::bfloat(inf);
+        src.ptr<cv::bfloat>(1)[bad_scalar] = cv::bfloat(inf);
         break;
     case CV_32F:
-        src.ptr<float>(1)[8] = inf;
+        src.ptr<float>(1)[bad_scalar] = inf;
         break;
     default:
         FAIL() << "Unexpected depth: " << depth;
@@ -2354,6 +2355,45 @@ TEST_P(Core_CheckRange_Float, accuracy)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_Float,
     testing::Values(CV_16F, CV_16BF, CV_32F));
+
+typedef testing::TestWithParam<int> Core_CheckRange_ExtendedInteger;
+
+TEST_P(Core_CheckRange_ExtendedInteger, accuracy)
+{
+    const int depth = GetParam();
+    cv::Mat src = cv::Mat::zeros(2, 3, CV_MAKETYPE(depth, 2));
+    cv::Point bad_pt(-1, -1);
+
+    ASSERT_TRUE(checkRange(src, true, &bad_pt, 0, 1));
+    ASSERT_EQ(bad_pt.x, -1);
+    ASSERT_EQ(bad_pt.y, -1);
+
+    const int bad_scalar = src.channels() + 1;
+    switch (depth)
+    {
+    case CV_Bool:
+        src.ptr<uchar>(1)[bad_scalar] = 1;
+        break;
+    case CV_32U:
+        src.ptr<uint32_t>(1)[bad_scalar] = 1;
+        break;
+    case CV_64U:
+        src.ptr<uint64_t>(1)[bad_scalar] = 1;
+        break;
+    case CV_64S:
+        src.ptr<int64_t>(1)[bad_scalar] = 1;
+        break;
+    default:
+        FAIL() << "Unexpected depth: " << depth;
+    }
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, 0, 1));
+    ASSERT_EQ(bad_pt.x, 1);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_ExtendedInteger,
+    testing::Values(CV_Bool, CV_32U, CV_64U, CV_64S));
 
 REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 

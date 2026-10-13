@@ -1169,7 +1169,7 @@ check_range_function check_range_functions[] =
 };
 
 template<typename T>
-static void checkFloatingPointRange(Mat& src, Point& badPt, double minVal, double maxVal)
+static void checkTypedRange(Mat& src, Point& badPt, double minVal, double maxVal)
 {
     int loc = 0;
     int cn = src.channels();
@@ -1181,7 +1181,7 @@ static void checkFloatingPointRange(Mat& src, Point& badPt, double minVal, doubl
     {
         for( int i = 0; i < size.width; i++ )
         {
-            double val = (float)isrc[i];
+            double val = (double)isrc[i];
             if( !(val >= minVal && val < maxVal) )
             {
                 int pixelId = (loc + i) / cn;
@@ -1234,11 +1234,11 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
         if( depth == CV_16F )
         {
-            checkFloatingPointRange<hfloat>(src, badPt, minVal, maxVal);
+            checkTypedRange<hfloat>(src, badPt, minVal, maxVal);
         }
         else if( depth == CV_16BF )
         {
-            checkFloatingPointRange<bfloat>(src, badPt, minVal, maxVal);
+            checkTypedRange<bfloat>(src, badPt, minVal, maxVal);
         }
         else if( depth == CV_32F )
         {
@@ -1269,7 +1269,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
                 }
             }
         }
-        else
+        else if( depth == CV_64F )
         {
             Cv64suf a, b;
             int64 ia, ib;
@@ -1297,6 +1297,26 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
                     }
                 }
             }
+        }
+        else if( depth == CV_Bool )
+        {
+            checkTypedRange<uchar>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_32U )
+        {
+            checkTypedRange<uint32_t>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_64U )
+        {
+            checkTypedRange<uint64_t>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_64S )
+        {
+            checkTypedRange<int64_t>(src, badPt, minVal, maxVal);
+        }
+        else
+        {
+            CV_Error(Error::StsUnsupportedFormat, "Unsupported matrix depth in checkRange");
         }
     }
 
