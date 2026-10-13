@@ -70,7 +70,12 @@ inline bool constantOperand(const AdjacencyGraph& g, int idx, ChannelCoef& c)
     return true;
 }
 
-enum class CoefOp { ADD, SUB, MUL };
+enum class CoefOp
+{
+    ADD = 0,
+    SUB = 1,
+    MUL = 2
+};
 
 //! out = a op b elementwise, a scalar broadcasting over a buffer; fails on unequal lengths.
 inline bool combine(const ChannelCoef& a, const ChannelCoef& b, CoefOp op, ChannelCoef& out)
