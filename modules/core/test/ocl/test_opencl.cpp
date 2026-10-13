@@ -315,4 +315,17 @@ TEST(OpenCL, move_construct_assign)
     testOpenCLKernel(k3);
 }
 
+typedef testing::TestWithParam<perf::MatDepth> OCL_KernelToStr_Unsupported_Depth;
+
+TEST_P(OCL_KernelToStr_Unsupported_Depth, throws)
+{
+    const int depth = GetParam();
+    Mat kernel = Mat::ones(1, 3, CV_MAKETYPE(depth, 1));
+    EXPECT_THROW(cv::ocl::kernelToStr(kernel), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_KernelToStr_Unsupported_Depth,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
 }} // namespace
