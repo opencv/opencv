@@ -331,6 +331,24 @@ TEST(Core_CudaUMat, op_opencl_on_falls_back)
     EXPECT_LE(cvtest::norm(w, expectedW, NORM_INF), 1e-4);
     EXPECT_EQ(0.0, cvtest::norm(c8, expected8, NORM_INF));
 }
+
+TEST(Core_CudaUMat, declined_kernel_releases_accepted_args)
+{
+    skipIfNoCudaDevice();
+    WithOpenCL guard;
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    Mat a(50, 40, CV_32FC1);
+    randu(a, 0, 10);
+    UMat ua = makeCudaUMat(), u8 = makeCudaUMat();
+    a.copyTo(ua);
+
+    ua.convertTo(u8, CV_8U, 2.0, 1.0);
+
+    EXPECT_EQ(1, ua.u->urefcount);
+    EXPECT_EQ(0, ua.u->refcount);
+}
 #endif // HAVE_OPENCL
 
 }} // namespace

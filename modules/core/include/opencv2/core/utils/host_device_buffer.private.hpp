@@ -58,6 +58,13 @@ public:
     //! Bitmask of the locations that hold the current value.
     int valid() const { return valid_; }
 
+    //! Shape of the current value, read from whichever copy holds it; an empty shape when there is none.
+    MatShape shape() const;
+    //! Type of the current value, or -1 when there is none.
+    int type() const;
+    //! True when there is no current value or it has no elements.
+    bool empty() const { return shape().empty(); }
+
 private:
     UMat* deviceForWrite(Location where, const MatShape& shape, int type);
     UMat* deviceForRead(Location where);

@@ -126,6 +126,33 @@ TEST(Core_HostDeviceBuffer, move_only)
     EXPECT_EQ(5.f, c.hostForRead().at<float>(0));
 }
 
+TEST(Core_HostDeviceBuffer, shape_and_type_follow_current_value)
+{
+    HostDeviceBuffer buf;
+    EXPECT_TRUE(buf.empty());
+    EXPECT_EQ(-1, buf.type());
+
+    const MatShape shape({1, 2, 4, 4, 8}, DATA_LAYOUT_BLOCK, 13);
+    buf.hostForWrite(shape, CV_32F).setTo(Scalar::all(1));
+    EXPECT_TRUE(buf.empty());
+
+    buf.commit(HostDeviceBuffer::HOST);
+    EXPECT_FALSE(buf.empty());
+    EXPECT_EQ(CV_32F, buf.type());
+    EXPECT_EQ(shape, buf.shape());
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, buf.shape().layout);
+    EXPECT_EQ(13, buf.shape().C);
+
+    buf.hostForWrite(MatShape({1, 0, 4}), CV_8U);
+    buf.commit(HostDeviceBuffer::HOST);
+    EXPECT_TRUE(buf.empty());
+    EXPECT_EQ(CV_8U, buf.type());
+
+    buf.reset();
+    EXPECT_TRUE(buf.empty());
+    EXPECT_EQ(-1, buf.type());
+}
+
 TEST(Core_HostDeviceBuffer, write_slot_is_not_current_until_commit)
 {
     HostDeviceBuffer buf;
