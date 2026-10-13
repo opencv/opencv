@@ -871,19 +871,15 @@ bool  TiffDecoder::readData( Mat& img )
                 tile_height0 = 1;
             }
 
-            const uint64_t src_buffer_bytes_per_row_64 = divUp(static_cast<uint64_t>(ncn) * tile_width0 * bpp, static_cast<uint64_t>(bitsPerByte));
-            CV_CheckLT(src_buffer_bytes_per_row_64, static_cast<uint64_t>(SIZE_MAX), "bytes per row overflow");
-            const size_t src_buffer_bytes_per_row = static_cast<size_t>(src_buffer_bytes_per_row_64);
-            const uint64_t src_buffer_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_bytes_per_row;
-            CV_CheckLT(src_buffer_size_64, static_cast<uint64_t>(SIZE_MAX), "buffer size overflow");
+            const uint64_t src_buffer_bytes_per_row_64 = (static_cast<uint64_t>(ncn) * tile_width0 * bpp + bitsPerByte - 1) / bitsPerByte;
+            const uint64_t src_buffer_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_bytes_per_row_64;
             CV_CheckLT(src_buffer_size_64, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
+            const size_t src_buffer_bytes_per_row = static_cast<size_t>(src_buffer_bytes_per_row_64);
             const size_t src_buffer_size = static_cast<size_t>(src_buffer_size_64);
-            const uint64_t src_buffer_unpacked_bytes_per_row_64 = divUp(static_cast<uint64_t>(ncn) * tile_width0 * dst_bpp, static_cast<uint64_t>(bitsPerByte));
-            CV_CheckLT(src_buffer_unpacked_bytes_per_row_64, static_cast<uint64_t>(SIZE_MAX), "bytes per row overflow");
-            const size_t src_buffer_unpacked_bytes_per_row = static_cast<size_t>(src_buffer_unpacked_bytes_per_row_64);
-            const uint64_t src_buffer_unpacked_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_unpacked_bytes_per_row;
-            CV_CheckLT(src_buffer_unpacked_size_64, static_cast<uint64_t>(SIZE_MAX), "buffer size overflow");
+            const uint64_t src_buffer_unpacked_bytes_per_row_64 = (static_cast<uint64_t>(ncn) * tile_width0 * dst_bpp + bitsPerByte - 1) / bitsPerByte;
+            const uint64_t src_buffer_unpacked_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_unpacked_bytes_per_row_64;
             CV_CheckLT(src_buffer_unpacked_size_64, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
+            const size_t src_buffer_unpacked_bytes_per_row = static_cast<size_t>(src_buffer_unpacked_bytes_per_row_64);
             const size_t src_buffer_unpacked_size = static_cast<size_t>(src_buffer_unpacked_size_64);
             const bool needsUnpacking = (bpp < dst_bpp);
             AutoBuffer<uchar> _src_buffer(src_buffer_size);
@@ -1064,9 +1060,6 @@ bool  TiffDecoder::readData( Mat& img )
                                 {
                                     const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
                                     uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
-            CV_CheckLT(src_buffer_unpacked_size_64, static_cast<uint64_t>(SIZE_MAX), "buffer size overflow");
-            CV_CheckLT(src_buffer_unpacked_size_64, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
-            const size_t src_buffer_unpacked_size = static_cast<size_t>(src_buffer_unpacked_size_64);
                                     if (bpp == 10)
                                         _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
                                                       (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
