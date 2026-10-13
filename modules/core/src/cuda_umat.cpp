@@ -37,21 +37,11 @@ public:
                 step[i] = step[i + 1] * (size_t)sizes[i + 1];
         }
 
-        // allocate before creating UMatData, so a failure (UMat::create then falls back) leaks nothing
-        void* handle = NULL;
-        if (total > 0)
-        {
-            cudaError_t err = cudaMalloc(&handle, total);
-            if (err != cudaSuccess)
-            {
-                (void)cudaGetLastError();  // clear it, later cudaGetLastError() checks must not see it
-                cudaSafeCall(err);
-            }
-        }
-
         UMatData* u = new UMatData(this);
         u->size = total;
-        u->handle = handle;
+
+        if (total > 0)
+            cudaSafeCall(cudaMalloc(&u->handle, total));
 
         if (data0)
         {
