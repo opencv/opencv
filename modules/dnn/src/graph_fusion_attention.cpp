@@ -15,6 +15,23 @@ CV__DNN_INLINE_NS_BEGIN
 using std::vector;
 using std::string;
 
+// Concatenates the Q, K and V biases; a missing one becomes zeros, since the Attention layer
+// always needs the full bias. Returns false if a present bias does not match its projection.
+static bool concatQKVBias(const Mat (&b)[3], const int (&n)[3], Mat& bias_qkv)
+{
+    const int total = n[0] + n[1] + n[2];
+    bias_qkv = Mat(1, &total, CV_32F, Scalar(0));
+    float* dst = bias_qkv.ptr<float>();
+    for (int i = 0; i < 3; dst += n[i++]) {
+        if (b[i].empty())
+            continue;
+        if (b[i].type() != CV_32F || b[i].total() != (size_t)n[i] || !b[i].isContinuous())
+            return false;
+        std::memcpy(dst, b[i].ptr<float>(), n[i] * sizeof(float));
+    }
+    return true;
+}
+
 struct ModelFusionAttention
 {
     ModelFusionAttention(Net::Impl* netimpl_) : netimpl(netimpl_) {}
@@ -469,8 +486,8 @@ struct ModelFusionAttention
 
         // W is already laid out as [Q|K|V] along the output dim.
         Mat W_qkv = W.clone();
-        Mat bias_qkv;
-        if (has_bias) bias_qkv = bias_mat.clone();
+        Mat bias_qkv = has_bias ? bias_mat.reshape(1, 1, &total_hidden).clone()
+                                : Mat(1, &total_hidden, CV_32F, Scalar(0));
 
         // Attention `scale` is the pre-softmax divisor; Q was multiplied by
         // q_scale, so scale = 1/q_scale.
@@ -485,7 +502,7 @@ struct ModelFusionAttention
         attn_params.set("scale", param_scale);
         attn_params.set("output_ndims", 3);
         attn_params.blobs.push_back(W_qkv);
-        if (has_bias) attn_params.blobs.push_back(bias_qkv);
+        attn_params.blobs.push_back(bias_qkv);
 
         Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(attn_params.type, attn_params);
         CV_Assert(attn_layer);
@@ -729,7 +746,6 @@ struct ModelFusionAttention
 
         if (Wq.dims != 2 || Wk.dims != 2 || Wv.dims != 2) return false;
         if (Wq.size[0] != Wk.size[0] || Wk.size[0] != Wv.size[0]) return false;
-        const int hidden_in = Wq.size[0];
         const int q_hidden = Wq.size[1];
         const int k_hidden = Wk.size[1];
         const int v_hidden = Wv.size[1];
@@ -754,24 +770,11 @@ struct ModelFusionAttention
         if (!isReshape(prog, out_r3d)) return false;
 
         // Combined [Q|K|V] weight along the output dim.
-        int total_hidden = q_hidden + k_hidden + v_hidden;
-        int wshape[] = {hidden_in, total_hidden};
-        Mat W_qkv(2, wshape, CV_32F);
-        for (int r = 0; r < hidden_in; r++) {
-            float* dst = W_qkv.ptr<float>(r);
-            std::memcpy(dst,                       Wq.ptr<float>(r), q_hidden * sizeof(float));
-            std::memcpy(dst + q_hidden,            Wk.ptr<float>(r), k_hidden * sizeof(float));
-            std::memcpy(dst + q_hidden + k_hidden, Wv.ptr<float>(r), v_hidden * sizeof(float));
-        }
+        Mat W_qkv;
+        cv::hconcat(std::vector<Mat>{Wq, Wk, Wv}, W_qkv);
         Mat bias_qkv;
-        if (!bq.empty() && !bk.empty() && !bv.empty()) {
-            const int bias_total = q_hidden + k_hidden + v_hidden;
-            bias_qkv.create(1, &bias_total, CV_32F);
-            float* dst = bias_qkv.ptr<float>();
-            std::memcpy(dst,                       bq.ptr<float>(), q_hidden * sizeof(float));
-            std::memcpy(dst + q_hidden,            bk.ptr<float>(), k_hidden * sizeof(float));
-            std::memcpy(dst + q_hidden + k_hidden, bv.ptr<float>(), v_hidden * sizeof(float));
-        }
+        if (!concatQKVBias({bq, bk, bv}, {q_hidden, k_hidden, v_hidden}, bias_qkv))
+            return false;
 
         // scale (pre-softmax divisor) = 1/q_scale, since Q was pre-multiplied.
         const float param_scale = 1.f / q_scale;
@@ -785,7 +788,7 @@ struct ModelFusionAttention
         attn_params.set("scale", param_scale);
         attn_params.set("output_ndims", 3);
         attn_params.blobs.push_back(W_qkv);
-        if (!bias_qkv.empty()) attn_params.blobs.push_back(bias_qkv);
+        attn_params.blobs.push_back(bias_qkv);
 
         Ptr<LayerInfo> attn_layer =
             LayerFactory::createLayerInstance(attn_params.type, attn_params);
@@ -1073,34 +1076,21 @@ struct ModelFusionAttention
                     Mat Wq = getProjWeight(prog[indices[q_slot]]);
                     Mat Wk = getProjWeight(prog[indices[k_slot]]);
                     Mat Wv = getProjWeight(prog[indices[v_slot]]);
-                    int input_hidden = Wq.size[0];
                     int q_hidden = Wq.size[1];
                     int k_hidden = Wk.size[1];
                     int v_hidden = Wv.size[1];
-                    int total_hidden = q_hidden + k_hidden + v_hidden;
 
-                    int wshape[] = {input_hidden, total_hidden};
-                    Mat W_qkv(2, wshape, CV_32F);
-                    for (int r = 0; r < input_hidden; r++) {
-                        float* dst = W_qkv.ptr<float>(r);
-                        memcpy(dst, Wq.ptr<float>(r), q_hidden * sizeof(float));
-                        memcpy(dst + q_hidden, Wk.ptr<float>(r), k_hidden * sizeof(float));
-                        memcpy(dst + q_hidden + k_hidden, Wv.ptr<float>(r), v_hidden * sizeof(float));
-                    }
+                    Mat W_qkv;
+                    cv::hconcat(std::vector<Mat>{Wq, Wk, Wv}, W_qkv);
 
+                    auto projBias = [&](int slot) {
+                        const auto& b = prog[indices[slot]]->blobs;
+                        return b.size() >= 2 ? b[1] : Mat();
+                    };
                     Mat bias_qkv;
-                    bool has_bias = prog[indices[q_slot]]->blobs.size() >= 2;
-                    if (has_bias) {
-                        const Mat& bq = prog[indices[q_slot]]->blobs[1];
-                        const Mat& bk = prog[indices[k_slot]]->blobs[1];
-                        const Mat& bv = prog[indices[v_slot]]->blobs[1];
-                        int bias_total = (int)(bq.total() + bk.total() + bv.total());
-                        bias_qkv.create(1, &bias_total, CV_32F);
-                        float* dst = bias_qkv.ptr<float>();
-                        memcpy(dst, bq.ptr<float>(), bq.total() * sizeof(float));
-                        memcpy(dst + bq.total(), bk.ptr<float>(), bk.total() * sizeof(float));
-                        memcpy(dst + bq.total() + bk.total(), bv.ptr<float>(), bv.total() * sizeof(float));
-                    }
+                    if (!concatQKVBias({projBias(q_slot), projBias(k_slot), projBias(v_slot)},
+                                       {q_hidden, k_hidden, v_hidden}, bias_qkv))
+                        continue;
 
                     float param_scale;
                     if (runtime_qk_scale) {
@@ -1128,8 +1118,7 @@ struct ModelFusionAttention
                     attn_params.set("output_ndims", 3);
 
                     attn_params.blobs.push_back(W_qkv);
-                    if (has_bias)
-                        attn_params.blobs.push_back(bias_qkv);
+                    attn_params.blobs.push_back(bias_qkv);
 
                     Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(
                         attn_params.type, attn_params);
