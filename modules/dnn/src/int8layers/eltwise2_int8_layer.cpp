@@ -6,14 +6,7 @@
 
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
-#include "opencv2/core/hal/intrin.hpp"
-
-#if CV_AVX2
-#include <immintrin.h>
-#endif
-#if CV_NEON
-#include <arm_neon.h>
-#endif
+#include "int8_eltwise_kernels.hpp"
 
 namespace cv {
 namespace dnn {
@@ -61,6 +54,8 @@ public:
     float offset;
     float mulCoeff;
     bool withRelu;
+    //! Zero point the sum is requantized to before the LUT; output_zp later becomes the activation's.
+    int requantZp = 0;
 
     Mat activationLUT;
     Ptr<ActivationLayerInt8> activ;
@@ -121,6 +116,7 @@ public:
                    "Eltwise2Int8: scales and zeropoints sizes must match");
         CV_Assert(output_sc > 0.f);
 
+        requantZp = output_zp;
         coeffs.resize(scales.size());
         if (op == Op::MUL) {
             CV_Assert(scales.size() == 2);
@@ -267,309 +263,45 @@ public:
             out.fit(outshape, outtype);
         }
 
-        const size_t total_elems = inp0.total();
+        const int total_elems = (int)inp0.total();
         const float* cptr = coeffs.data();
-        const float off = offset;
-        const int8_t* lutptr = !activationLUT.empty() ? activationLUT.ptr<int8_t>() : nullptr;
-
-        const float c0 = cptr[0];
-        const float c1 = cptr[1];
+        const uchar* lutptr = !activationLUT.empty() ? activationLUT.ptr<uchar>() : nullptr;
         const bool isMul = (op == Op::MUL);
-        const float mc = mulCoeff;
-        const float zp0f = isMul ? (float)zeropoints[0] : 0.f;
-        const float zp1f = isMul ? (float)zeropoints[1] : 0.f;
-        const float ozpf = (float)output_zp;
 
-        const int out_min = isU8 ? (withRelu ? output_zp : 0) : (withRelu ? output_zp : -128);
+        // For MUL, ensureCoeffs() left the input zero points in coeffs and the output one in offset.
+        const int out_min = withRelu ? requantZp : (isU8 ? 0 : -128);
         const int out_max = isU8 ? 255 : 127;
 
+        std::vector<const uchar*> inptrs(ninputs);
+        for (int k = 0; k < ninputs; k++)
+            inptrs[k] = inputs[k].ptr<uchar>();
+        uchar* outptr = out.ptr<uchar>();
+
         const double nstripes = (double)std::max(1, getNumThreads() * 4);
-
-        if (isU8) {
-            std::vector<const uint8_t*> inptrs(ninputs);
-            for (int k = 0; k < ninputs; k++)
-                inptrs[k] = inputs[k].ptr<uint8_t>();
-            const uint8_t* p0 = inptrs[0];
-            const uint8_t* p1 = inptrs[1];
-            uint8_t* outptr = out.ptr<uint8_t>();
-
-            parallel_for_(Range(0, (int)total_elems), [&](const Range& r) {
-                int i = r.start;
-            #if CV_AVX2
-                if (isMul && !lutptr && ninputs == 2) {
-                    __m256 vmc = _mm256_set1_ps(mc);
-                    __m256 vzp0 = _mm256_set1_ps(zp0f);
-                    __m256 vzp1 = _mm256_set1_ps(zp1f);
-                    __m256 vozp = _mm256_set1_ps(ozpf);
-                    __m256i vmin = _mm256_set1_epi32(out_min);
-                    __m256i vmax = _mm256_set1_epi32(out_max);
-                    for (; i <= r.end - 8; i += 8) {
-                        __m128i a8 = _mm_loadl_epi64((const __m128i*)(p0 + i));
-                        __m128i b8 = _mm_loadl_epi64((const __m128i*)(p1 + i));
-                        __m256i a32 = _mm256_cvtepu8_epi32(a8);
-                        __m256i b32 = _mm256_cvtepu8_epi32(b8);
-                        __m256 af = _mm256_sub_ps(_mm256_cvtepi32_ps(a32), vzp0);
-                        __m256 bf = _mm256_sub_ps(_mm256_cvtepi32_ps(b32), vzp1);
-                        __m256 val = _mm256_fmadd_ps(_mm256_mul_ps(af, bf), vmc, vozp);
-                        __m256i ival = _mm256_cvtps_epi32(val);
-                        ival = _mm256_max_epi32(ival, vmin);
-                        ival = _mm256_min_epi32(ival, vmax);
-                        __m128i lo = _mm256_castsi256_si128(ival);
-                        __m128i hi = _mm256_extracti128_si256(ival, 1);
-                        __m128i packed16 = _mm_packs_epi32(lo, hi);
-                        __m128i packed8 = _mm_packus_epi16(packed16, packed16);
-                        _mm_storel_epi64((__m128i*)(outptr + i), packed8);
-                    }
-                } else
-                if (!isMul && !lutptr && ninputs == 2) {
-                    __m256 vc0 = _mm256_set1_ps(c0);
-                    __m256 vc1 = _mm256_set1_ps(c1);
-                    __m256 voff = _mm256_set1_ps(off);
-                    __m256i vmin = _mm256_set1_epi32(out_min);
-                    __m256i vmax = _mm256_set1_epi32(out_max);
-
-                    for (; i <= r.end - 8; i += 8) {
-                        __m128i a8 = _mm_loadl_epi64((const __m128i*)(p0 + i));
-                        __m128i b8 = _mm_loadl_epi64((const __m128i*)(p1 + i));
-                        __m256i a32 = _mm256_cvtepu8_epi32(a8);
-                        __m256i b32 = _mm256_cvtepu8_epi32(b8);
-
-                        __m256 af = _mm256_cvtepi32_ps(a32);
-                        __m256 bf = _mm256_cvtepi32_ps(b32);
-
-                        __m256 val = _mm256_fmadd_ps(vc0, af, _mm256_fmadd_ps(vc1, bf, voff));
-
-                        __m256i ival = _mm256_cvtps_epi32(val);
-                        ival = _mm256_max_epi32(ival, vmin);
-                        ival = _mm256_min_epi32(ival, vmax);
-
-                        __m128i lo = _mm256_castsi256_si128(ival);
-                        __m128i hi = _mm256_extracti128_si256(ival, 1);
-                        __m128i packed16 = _mm_packs_epi32(lo, hi);
-                        __m128i packed8 = _mm_packus_epi16(packed16, packed16);
-
-                        _mm_storel_epi64((__m128i*)(outptr + i), packed8);
-                    }
-                }
-            #elif CV_NEON
-                if (ninputs == 2) {
-                    float32x4_t vc0 = vdupq_n_f32(c0);
-                    float32x4_t vc1 = vdupq_n_f32(c1);
-                    float32x4_t voff = vdupq_n_f32(off);
-                    float32x4_t vmc = vdupq_n_f32(mc);
-                    float32x4_t vzp0 = vdupq_n_f32(zp0f);
-                    float32x4_t vzp1 = vdupq_n_f32(zp1f);
-                    float32x4_t vozp = vdupq_n_f32(ozpf);
-                    int32x4_t vmin = vdupq_n_s32(out_min);
-                    int32x4_t vmax = vdupq_n_s32(out_max);
-
-                    for (; i <= r.end - 8; i += 8) {
-                        uint8x8_t a8 = vld1_u8(p0 + i);
-                        uint8x8_t b8 = vld1_u8(p1 + i);
-                        uint16x8_t a16 = vmovl_u8(a8);
-                        uint16x8_t b16 = vmovl_u8(b8);
-
-                        float32x4_t af_lo = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(a16))));
-                        float32x4_t bf_lo = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(b16))));
-                        float32x4_t af_hi = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(a16))));
-                        float32x4_t bf_hi = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(b16))));
-
-                        float32x4_t val_lo, val_hi;
-                        if (isMul) {
-                            val_lo = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_lo, vzp0), vsubq_f32(bf_lo, vzp1)), vmc), vozp);
-                            val_hi = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_hi, vzp0), vsubq_f32(bf_hi, vzp1)), vmc), vozp);
-                        } else {
-                            val_lo = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_lo)), vmulq_f32(vc1, bf_lo));
-                            val_hi = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_hi)), vmulq_f32(vc1, bf_hi));
-                        }
-
-#if CV_NEON_AARCH64
-                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
-                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_hi), vmin), vmax);
-#else
-                        float32x4_t half = vdupq_n_f32(0.5f);
-                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtq_s32_f32(vaddq_f32(val_lo,
-                            vbslq_f32(vcgeq_f32(val_lo, vdupq_n_f32(0.f)), half, vnegq_f32(half)))), vmin), vmax);
-                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtq_s32_f32(vaddq_f32(val_hi,
-                            vbslq_f32(vcgeq_f32(val_hi, vdupq_n_f32(0.f)), half, vnegq_f32(half)))), vmin), vmax);
-#endif
-
-                        int16x8_t p16 = vcombine_s16(vqmovn_s32(ival_lo), vqmovn_s32(ival_hi));
-                        uint8x8_t p8u = vqmovun_s16(p16);
-                        if (lutptr) {
-                            uint8_t tmp[8];
-                            vst1_u8(tmp, p8u);
-                            for (int k = 0; k < 8; k++)
-                                outptr[i + k] = (uint8_t)lutptr[tmp[k]];
-                        } else {
-                            vst1_u8(outptr + i, p8u);
-                        }
-                    }
-                }
-            #endif
-                for (; i < r.end; i++)
-                {
-                    float val;
-                    if (isMul) {
-                        val = mc * ((float)p0[i] - zp0f) * ((float)p1[i] - zp1f) + ozpf;
-                    } else {
-                        val = c0 * (float)p0[i] + c1 * (float)p1[i] + off;
-                        for (int k = 2; k < ninputs; k++)
-                            val += cptr[k] * (float)inptrs[k][i];
-                    }
-
-                    int ival = cvRound(val);
-                    ival = std::max(out_min, std::min(out_max, ival));
-
-                    if (lutptr)
-                        ival = (int)(uint8_t)lutptr[ival];
-
-                    outptr[i] = (uint8_t)ival;
-                }
-            }, nstripes);
-        } else {
-            std::vector<const int8_t*> inptrs(ninputs);
-            for (int k = 0; k < ninputs; k++)
-                inptrs[k] = inputs[k].ptr<int8_t>();
-            const int8_t* p0 = inptrs[0];
-            const int8_t* p1 = inptrs[1];
-            int8_t* outptr = out.ptr<int8_t>();
-
-            parallel_for_(Range(0, (int)total_elems), [&](const Range& r) {
-                int i = r.start;
-            #if CV_AVX2
-                if (isMul && !lutptr && ninputs == 2) {
-                    __m256 vmc = _mm256_set1_ps(mc);
-                    __m256 vzp0 = _mm256_set1_ps(zp0f);
-                    __m256 vzp1 = _mm256_set1_ps(zp1f);
-                    __m256 vozp = _mm256_set1_ps(ozpf);
-                    __m256i vmin = _mm256_set1_epi32(out_min);
-                    __m256i vmax = _mm256_set1_epi32(out_max);
-                    for (; i <= r.end - 8; i += 8) {
-                        __m128i a8 = _mm_loadl_epi64((const __m128i*)(p0 + i));
-                        __m128i b8 = _mm_loadl_epi64((const __m128i*)(p1 + i));
-                        __m256i a32 = _mm256_cvtepi8_epi32(a8);
-                        __m256i b32 = _mm256_cvtepi8_epi32(b8);
-                        __m256 af = _mm256_sub_ps(_mm256_cvtepi32_ps(a32), vzp0);
-                        __m256 bf = _mm256_sub_ps(_mm256_cvtepi32_ps(b32), vzp1);
-                        __m256 val = _mm256_fmadd_ps(_mm256_mul_ps(af, bf), vmc, vozp);
-                        __m256i ival = _mm256_cvtps_epi32(val);
-                        ival = _mm256_max_epi32(ival, vmin);
-                        ival = _mm256_min_epi32(ival, vmax);
-                        __m128i lo = _mm256_castsi256_si128(ival);
-                        __m128i hi = _mm256_extracti128_si256(ival, 1);
-                        __m128i packed16 = _mm_packs_epi32(lo, hi);
-                        __m128i packed8 = _mm_packs_epi16(packed16, packed16);
-                        _mm_storel_epi64((__m128i*)(outptr + i), packed8);
-                    }
-                } else
-                if (!isMul && !lutptr && ninputs == 2) {
-                    __m256 vc0 = _mm256_set1_ps(c0);
-                    __m256 vc1 = _mm256_set1_ps(c1);
-                    __m256 voff = _mm256_set1_ps(off);
-                    __m256i vmin = _mm256_set1_epi32(out_min);
-                    __m256i vmax = _mm256_set1_epi32(out_max);
-
-                    for (; i <= r.end - 8; i += 8) {
-                        __m128i a8 = _mm_loadl_epi64((const __m128i*)(p0 + i));
-                        __m128i b8 = _mm_loadl_epi64((const __m128i*)(p1 + i));
-                        __m256i a32 = _mm256_cvtepi8_epi32(a8);
-                        __m256i b32 = _mm256_cvtepi8_epi32(b8);
-
-                        __m256 af = _mm256_cvtepi32_ps(a32);
-                        __m256 bf = _mm256_cvtepi32_ps(b32);
-
-                        __m256 val = _mm256_fmadd_ps(vc0, af, _mm256_fmadd_ps(vc1, bf, voff));
-
-                        __m256i ival = _mm256_cvtps_epi32(val);
-                        ival = _mm256_max_epi32(ival, vmin);
-                        ival = _mm256_min_epi32(ival, vmax);
-
-                        __m128i lo = _mm256_castsi256_si128(ival);
-                        __m128i hi = _mm256_extracti128_si256(ival, 1);
-                        __m128i packed16 = _mm_packs_epi32(lo, hi);
-                        __m128i packed8 = _mm_packs_epi16(packed16, packed16);
-
-                        _mm_storel_epi64((__m128i*)(outptr + i), packed8);
-                    }
-                }
-            #elif CV_NEON
-                if (ninputs == 2) {
-                    float32x4_t vc0 = vdupq_n_f32(c0);
-                    float32x4_t vc1 = vdupq_n_f32(c1);
-                    float32x4_t voff = vdupq_n_f32(off);
-                    float32x4_t vmc = vdupq_n_f32(mc);
-                    float32x4_t vzp0 = vdupq_n_f32(zp0f);
-                    float32x4_t vzp1 = vdupq_n_f32(zp1f);
-                    float32x4_t vozp = vdupq_n_f32(ozpf);
-                    int32x4_t vmin = vdupq_n_s32(out_min);
-                    int32x4_t vmax = vdupq_n_s32(out_max);
-
-                    for (; i <= r.end - 8; i += 8) {
-                        int8x8_t a8 = vld1_s8(p0 + i);
-                        int8x8_t b8 = vld1_s8(p1 + i);
-                        int16x8_t a16 = vmovl_s8(a8);
-                        int16x8_t b16 = vmovl_s8(b8);
-
-                        float32x4_t af_lo = vcvtq_f32_s32(vmovl_s16(vget_low_s16(a16)));
-                        float32x4_t bf_lo = vcvtq_f32_s32(vmovl_s16(vget_low_s16(b16)));
-                        float32x4_t af_hi = vcvtq_f32_s32(vmovl_s16(vget_high_s16(a16)));
-                        float32x4_t bf_hi = vcvtq_f32_s32(vmovl_s16(vget_high_s16(b16)));
-
-                        float32x4_t val_lo, val_hi;
-                        if (isMul) {
-                            val_lo = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_lo, vzp0), vsubq_f32(bf_lo, vzp1)), vmc), vozp);
-                            val_hi = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_hi, vzp0), vsubq_f32(bf_hi, vzp1)), vmc), vozp);
-                        } else {
-                            val_lo = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_lo)), vmulq_f32(vc1, bf_lo));
-                            val_hi = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_hi)), vmulq_f32(vc1, bf_hi));
-                        }
-
-#if CV_NEON_AARCH64
-                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
-                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_hi), vmin), vmax);
-#else
-                        float32x4_t half = vdupq_n_f32(0.5f);
-                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtq_s32_f32(vaddq_f32(val_lo,
-                            vbslq_f32(vcgeq_f32(val_lo, vdupq_n_f32(0.f)), half, vnegq_f32(half)))), vmin), vmax);
-                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtq_s32_f32(vaddq_f32(val_hi,
-                            vbslq_f32(vcgeq_f32(val_hi, vdupq_n_f32(0.f)), half, vnegq_f32(half)))), vmin), vmax);
-#endif
-
-                        int16x8_t p16 = vcombine_s16(vqmovn_s32(ival_lo), vqmovn_s32(ival_hi));
-                        int8x8_t p8 = vqmovn_s16(p16);
-                        if (lutptr) {
-                            int8_t tmp[8];
-                            vst1_s8(tmp, p8);
-                            for (int k = 0; k < 8; k++)
-                                outptr[i + k] = (int8_t)lutptr[(int)tmp[k] + 128];
-                        } else {
-                            vst1_s8(outptr + i, p8);
-                        }
-                    }
-                }
-            #endif
-                for (; i < r.end; i++)
-                {
-                    float val;
-                    if (isMul) {
-                        val = mc * ((float)p0[i] - zp0f) * ((float)p1[i] - zp1f) + ozpf;
-                    } else {
-                        val = c0 * (float)p0[i] + c1 * (float)p1[i] + off;
-                        for (int k = 2; k < ninputs; k++)
-                            val += cptr[k] * (float)inptrs[k][i];
-                    }
-
-                    int ival = cvRound(val);
-                    ival = std::max(out_min, std::min(out_max, ival));
-
-                    if (lutptr)
-                        ival = (int)lutptr[ival + 128];
-
-                    outptr[i] = (int8_t)ival;
-                }
-            }, nstripes);
-        }
+        parallel_for_(Range(0, total_elems), [&](const Range& r) {
+            const int len = r.end - r.start;
+            if (ninputs == 2) {
+                const uchar* p0 = inptrs[0] + r.start;
+                const uchar* p1 = inptrs[1] + r.start;
+                if (isMul)
+                    mulInt8(p0, p1, outptr + r.start, len, isU8, cptr[0], cptr[1],
+                            mulCoeff, offset, out_min, out_max, lutptr);
+                else
+                    addInt8(p0, p1, outptr + r.start, len, isU8, cptr[0], cptr[1],
+                            offset, out_min, out_max, lutptr);
+                return;
+            }
+            CV_Assert(!isMul);
+            for (int i = r.start; i < r.end; i++) {
+                float val = offset;
+                for (int k = 0; k < ninputs; k++)
+                    val += cptr[k] * (isU8 ? (float)inptrs[k][i] : (float)(schar)inptrs[k][i]);
+                const int ival = std::max(out_min, std::min(out_max, cvRound(val)));
+                outptr[i] = isU8 ? (uchar)ival : (uchar)(schar)ival;
+            }
+            if (lutptr)
+                lutInt8(outptr + r.start, outptr + r.start, len, isU8, lutptr);
+        }, nstripes);
 
         if (uouts) {
             out.copyTo(uouts->at(0));
@@ -579,14 +311,18 @@ public:
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
-        if (!activ_int8.empty())
-        {
-            activ = activ_int8;
-            if (!activ_int8->blobs.empty())
-                activationLUT = activ_int8->blobs[0];
-            return true;
-        }
-        return false;
+        if (activ_int8.empty() || !activationLUT.empty())
+            return false;
+        // A layer built from ActivationInt8Params has its table in activationLUT, not in blobs.
+        Mat lut = !activ_int8->activationLUT.empty() ? activ_int8->activationLUT
+                : (!activ_int8->blobs.empty() ? activ_int8->blobs[0] : Mat());
+        if (lut.total() != 256)
+            return false;
+        // Freeze the coefficients: the caller next overwrites output_sc/zp with the activation's.
+        ensureCoeffs();
+        activ = activ_int8;
+        activationLUT = lut;
+        return true;
     }
 };
 
