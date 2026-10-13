@@ -112,10 +112,7 @@ UMat* HostDeviceBuffer::deviceForRead(Location where)
         return where == CUDA ? &cuda_ : &ocl_;
     }
     CV_Assert(valid_ != NONE && "HostDeviceBuffer: there is no value to read");
-    // take shape/type from the current copy so an unusable backend costs no download
-    const MatShape shape = (valid_ & HOST) ? host_.size : ((valid_ & CUDA) ? cuda_.size : ocl_.size);
-    const int type = (valid_ & HOST) ? host_.type() : ((valid_ & CUDA) ? cuda_.type() : ocl_.type());
-    UMat* slot = deviceForWrite(where, shape, type);
+    UMat* slot = deviceForWrite(where, shape(), type());
     if (!slot)
         return NULL;
     const Mat& src = hostForRead();
@@ -159,6 +156,28 @@ HostDeviceBuffer::Location HostDeviceBuffer::fallbackForWrite(const MatShape& sh
         return OPENCL;
     hostForWrite(shape, type);
     return HOST;
+}
+
+MatShape HostDeviceBuffer::shape() const
+{
+    if (valid_ & HOST)
+        return host_.shape();
+    if (valid_ & CUDA)
+        return cuda_.shape();
+    if (valid_ & OPENCL)
+        return ocl_.shape();
+    return MatShape();
+}
+
+int HostDeviceBuffer::type() const
+{
+    if (valid_ & HOST)
+        return host_.type();
+    if (valid_ & CUDA)
+        return cuda_.type();
+    if (valid_ & OPENCL)
+        return ocl_.type();
+    return -1;
 }
 
 void HostDeviceBuffer::commit(Location where)
