@@ -97,6 +97,22 @@ void PrintTo(const ImwriteBMPCompressionFlags& val, std::ostream* os)
     }
 }
 
+static inline
+void PrintTo(const ImwriteTiffCompressionFlags& compression, ::std::ostream* os) {
+    switch (compression) {
+        case IMWRITE_TIFF_COMPRESSION_NONE:          *os << "NONE"; break;
+        case IMWRITE_TIFF_COMPRESSION_LZW:           *os << "LZW"; break;
+        case IMWRITE_TIFF_COMPRESSION_DEFLATE:       *os << "DEFLATE"; break;
+        case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE: *os << "ADOBE_DEFLATE"; break;
+        case IMWRITE_TIFF_COMPRESSION_LZMA:          *os << "LZMA"; break;
+        case IMWRITE_TIFF_COMPRESSION_ZSTD:          *os << "ZSTD"; break;
+        case IMWRITE_TIFF_COMPRESSION_WEBP:          *os << "WEBP"; break;
+        case IMWRITE_TIFF_COMPRESSION_JXL:           *os << "JXL"; break;
+        case IMWRITE_TIFF_COMPRESSION_PIXARFILM:     *os << "PIXARFILM"; break;
+        default:                                      *os << "UNKNOWN_" << static_cast<int>(compression); break;
+    }
+}
+
 } // namespace
 
 #endif
