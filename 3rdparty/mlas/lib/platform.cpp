@@ -99,6 +99,9 @@ MlasShouldForceScalarRiscv(
 }  // namespace
 #endif
 
+// OpenCV: CPU features come from cv::checkHardwareSupport() (see mlas_threading.cpp),
+// so these per-OS checks are skipped.
+#if !defined(MLAS_OPENCV_CPUINFO)
 #if defined(MLAS_TARGET_ARM64)
 #if defined(_WIN32)
 
@@ -168,6 +171,7 @@ MLASCPUIDInfo::MLASCPUIDInfo() {}
 #endif
 
 #endif // MLAS_TARGET_ARM64
+#endif // !MLAS_OPENCV_CPUINFO
 
 #ifdef MLAS_TARGET_AMD64_IX86
 
@@ -419,6 +423,15 @@ MLAS_PLATFORM::MLAS_PLATFORM(void)
     // ARM64 and WASM intentionally do nothing here — sgemm.cpp's #else branch
     // calls MlasSgemmKernelZero / MlasSgemmKernelAdd directly without going
     // through GetMlasPlatform().GemmFloatKernel.
+
+#if defined(USE_KLEIDIAI) && defined(MLAS_TARGET_ARM64)
+    // On SME CPUs, try the KleidiAI SGEMM first; MLAS falls back to NEON if it declines.
+    if (MLAS_CPUIDINFO::GetCPUIDInfo().HasArm_SME()) {
+        this->MlasSGemmBatchOverride = ArmKleidiAI::MlasGemmBatch;
+        this->MlasSGemmPackBSizeOverride = ArmKleidiAI::MlasGemmPackBSize;
+        this->MlasSGemmPackBOverride = ArmKleidiAI::MlasGemmPackB;
+    }
+#endif
 }
 
 // FP16 HGemm kernels aren't vendored (MLAS_GEMM_ONLY) but compute.cpp references this probe; define it so static links resolve. See opencv/opencv#29342.

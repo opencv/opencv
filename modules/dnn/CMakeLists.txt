@@ -504,7 +504,8 @@ set(HAVE_MLAS 0)
 foreach(_v OPENCV_DNN_MLAS_ENABLED OPENCV_DNN_MLAS_SKIP_REASON
            MLAS_X86_64 MLAS_X86 MLAS_ARM MLAS_ARM64 MLAS_POWER
            MLAS_LOONGARCH64 MLAS_S390X MLAS_RISCV64 MLAS_WASM
-           MLAS_HAS_ASM MLAS_HAS_POWER10 MLAS_HAS_RISCV64_RVV)
+           MLAS_HAS_ASM MLAS_HAS_POWER10 MLAS_HAS_RISCV64_RVV
+           MLAS_USE_KLEIDIAI KLEIDIAI_VERSION)
   unset(${_v} CACHE)
 endforeach()
 if(NOT EMSCRIPTEN)
@@ -514,6 +515,10 @@ if(HAVE_MLAS)
   add_definitions(-DHAVE_MLAS=1)
   list(APPEND include_dirs ${MLAS_INCLUDE_DIRS})
   message(STATUS "DNN: MLAS (vendored) enabled.")
+  if(MLAS_USE_KLEIDIAI)
+    add_definitions(-DHAVE_MLAS_KLEIDIAI=1)
+    message(STATUS "DNN: MLAS uses Arm KleidiAI ${KLEIDIAI_VERSION} SME/SME2 kernels when the CPU has SME.")
+  endif()
 else()
   message(STATUS "DNN: MLAS (vendored) disabled — host arch/OS not wired up.")
 endif()

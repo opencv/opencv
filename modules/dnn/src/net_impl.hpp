@@ -31,9 +31,9 @@
 
 #ifdef HAVE_ONNXRUNTIME
 namespace Ort {
-    class Env;
-    class Session;
-    class SessionOptions;
+    struct Env;
+    struct Session;
+    struct SessionOptions;
 }
 #endif
 

@@ -1,0 +1,54 @@
+Patch against upstream kleidiai/sgemm_kleidiai.cpp and kleidiai/mlasi_kleidiai.h, base ORT v1.26.0 (62f742f).
+Looks the kernels up on use instead of during static init (CPU info comes from cv::checkHardwareSupport()).
+
+--- a/3rdparty/mlas/lib/kleidiai/mlasi_kleidiai.h
++++ b/3rdparty/mlas/lib/kleidiai/mlasi_kleidiai.h
+@@ -52,9 +52,12 @@
+ namespace ArmKleidiAI {
+ 
+ // By default we should try for SME2 first before falling back to SME.
++// OpenCV: not used by the vendored subset; left out so nothing reads CPU info during static init.
++#if !defined(MLAS_OPENCV_CPUINFO)
+ inline const bool UseSME2 = MLAS_CPUIDINFO::GetCPUIDInfo().HasArm_SME2();
+ inline const bool UseSME = MLAS_CPUIDINFO::GetCPUIDInfo().HasArm_SME();
+ inline const std::string_view vendor_name = MLAS_CPUIDINFO::GetCPUIDInfo().GetCPUVendor();
++#endif
+ 
+ // Buffer packing routines.
+ //
+--- a/3rdparty/mlas/lib/kleidiai/sgemm_kleidiai.cpp
++++ b/3rdparty/mlas/lib/kleidiai/sgemm_kleidiai.cpp
+@@ -30,8 +30,7 @@
+ };
+ static thread_local KaiTlsBuffers g_kai_tls;
+ 
+-const KaiF32SgemmKernel& sgemm_gemm = GetKleidiAISGemmUKernel();
+-const KaiF32SgemvKernel& sgemm_gemv = GetKleidiAISGemvUKernel();
++// OpenCV: kernels are looked up on use, not during static init (CPU info comes from cv::checkHardwareSupport()).
+ 
+ // Avoid vector setup overhead on tiny outputs.
+ constexpr size_t kAlphaBetaNeonMinElements = 32;
+@@ -218,6 +217,7 @@
+     const MLAS_SGEMM_DATA_PARAMS* Data,
+     size_t BatchSize
+ ) {
++        const KaiF32SgemvKernel& sgemm_gemv = GetKleidiAISGemvUKernel();
+         // Only two paths: M-path (M == 1, also covers M == N == 1) or N-path (N == 1).
+         if (M != 1 && N != 1) {
+             return false;
+@@ -404,6 +404,7 @@
+ 
+ --*/
+ {
++    const KaiF32SgemmKernel& sgemm_gemm = GetKleidiAISGemmUKernel();
+     if (N == 0 || K == 0) {
+         return false;
+     }
+@@ -489,6 +490,7 @@
+ 
+ --*/
+ {
++    const KaiF32SgemmKernel& sgemm_gemm = GetKleidiAISGemmUKernel();
+     if (M == 0 || N == 0 || BatchSize == 0) {
+         return true;
+     }

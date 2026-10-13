@@ -35,6 +35,8 @@ Source files imported verbatim from upstream:
 - `lib/softmax.h` — header included by `compute.cpp`; pure FP16-dispatch
   typedefs, harmless under FP32-only builds.
 - Per-arch SGEMM kernels under `lib/<arch>/`.
+- `lib/kleidiai/sgemm_kleidiai.cpp` and `lib/kai_ukernel_interface.{h,cpp}` —
+  the Arm KleidiAI SME/SME2 SGEMM path (see "Arm KleidiAI" below).
 
 Top-level layout:
 
@@ -93,14 +95,52 @@ re-vendor. The unified-diff form of each in-tree edit lives under
 5. `lib/core/common/{narrow,common}.h` — minimal shims for ORT internals
    that MLAS calls (not present upstream as MLAS sources, only as ORT
    includes). These are new files, not edits — no `.diff` needed.
+6. `lib/mlasi.h` — with `MLAS_OPENCV_CPUINFO`, the standalone
+   `MLASCPUIDInfo` gains `HasArm_SME()`, `HasArm_SME2()` and `GetCPUVendor()`.
+   Its constructor is defined in `mlas_threading.cpp` from
+   `cv::checkHardwareSupport()`, so MLAS sees the same CPU features as the
+   rest of OpenCV (upstream's standalone probes have no macOS branch). See
+   `patches/0004-mlasi-opencv-cpuinfo.diff`.
+7. `lib/kai_ukernel_interface.cpp` — trimmed to the FP32 selectors
+   (SGEMM, SGEMV, IMATMUL) so the quantized and BF16 micro-kernels are not
+   linked. See `patches/0005-kai-ukernel-interface-f32-only.diff`.
+8. `lib/platform.cpp` — skips the per-OS `MLASCPUIDInfo` constructors under
+   `MLAS_OPENCV_CPUINFO`, and the `MLAS_GEMM_ONLY` constructor installs the
+   `ArmKleidiAI` SGEMM overrides when `USE_KLEIDIAI` is defined and the CPU
+   has SME. See `patches/0006-platform-opencv-cpuinfo-kleidiai.diff`.
+
+9. `lib/kleidiai/sgemm_kleidiai.cpp`, `lib/kleidiai/mlasi_kleidiai.h` — the
+   kernels are looked up on use instead of in global variables, and the unused
+   `inline const` CPU checks are compiled out, so MLAS does not read CPU info
+   during static initialization. See `patches/0007-kleidiai-no-static-init.diff`.
+
+`lib/kai_ukernel_interface.h` is imported verbatim from the same upstream commit.
+
+## Arm KleidiAI
+
+On AArch64, with `WITH_KLEIDIAI=ON` (default), CMake downloads the KleidiAI
+source release (`3rdparty/kleidiai/kleidiai.cmake`, v1.20.0, the version
+pinned by ORT 1.26 - 1.30; Apache-2.0) and compiles the FP32 SME/SME2
+micro-kernels that the glue above uses directly into this object library,
+with the flags KleidiAI's own CMake uses for them
+(`-march=armv8.2-a+sve+sve2 -fno-tree-vectorize`). Nothing else from
+KleidiAI is built, linked or installed.
+
+At run time `MlasGemmBatch`, `MlasGemmPackBSize` and `MlasGemmPackB` try the
+KleidiAI kernels first when the CPU reports SME (Apple M4 and later, Armv9
+cores with SME2) and fall back to the NEON kernels when KleidiAI declines a
+shape (for example `TransA`, or M/N below one tile with unpacked B).
+`OPENCV_CPU_DISABLE=SME,SME2` turns the KleidiAI path off without a rebuild.
 
 ## Build flags
 
 - `HAVE_MLAS` is set by this directory's `CMakeLists.txt` when the host
   arch/OS is wired up.
 - `BUILD_MLAS_NO_ONNXRUNTIME=1`, `MLAS_OPENCV_THREADING=1`,
-  `MLAS_GEMM_ONLY=1` are set as private compile definitions on the OBJECT
-  library.
+  `MLAS_OPENCV_CPUINFO=1`, `MLAS_GEMM_ONLY=1` are set as private compile
+  definitions on the OBJECT library; `USE_KLEIDIAI=1` as well when the
+  KleidiAI kernels are compiled in (`MLAS_USE_KLEIDIAI`), in which case
+  `opencv_dnn` gets `HAVE_MLAS_KLEIDIAI=1`.
 
 ## Caller in OpenCV
 
@@ -108,6 +148,13 @@ The thin wrapper that dispatches OpenCV GEMMs to MLAS lives at
 [modules/dnn/src/layers/cpu_kernels/mlas_gemm.{hpp,cpp}](../../modules/dnn/src/layers/cpu_kernels/).
 It only includes `mlas.h` (the public header) and falls back to the existing
 fast_gemm path when MLAS is unavailable or the requested shape is unsupported.
+
+[modules/dnn/src/layers/cpu_kernels/mlas_conv.{hpp,cpp}](../../modules/dnn/src/layers/cpu_kernels/)
+runs dense 2D FP32 convolutions as im2col (from the NCHWc8 block layout) +
+packed SGEMM + a fused NCHWc8 epilogue. Conv2 uses it only when
+`mlasConvGemmAvailable()` (KleidiAI built in and SME present), since on other
+CPUs the NCHWc kernels are faster. `OPENCV_DNN_MLAS_CONV_GEMM=1` forces the
+path on any CPU with MLAS (used by `test_mlas_conv.cpp`), `0` turns it off.
 
 ## Upstream unit tests
 

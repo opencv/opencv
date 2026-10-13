@@ -41,6 +41,22 @@ extern "C" int opencv_dnn_mlas_max_threads()
     return n > 0 ? n : 1;
 }
 
+#if defined(MLAS_OPENCV_CPUINFO)
+// MLAS uses OpenCV's CPU detection, so OPENCV_CPU_DISABLE=SME,SME2 also turns KleidiAI off.
+MLASCPUIDInfo::MLASCPUIDInfo()
+{
+#if defined(MLAS_TARGET_ARM64)
+    has_arm_neon_dot_  = cv::checkHardwareSupport(CV_CPU_NEON_DOTPROD);
+    // Same FP16 rule as upstream.
+    has_fp16_          = has_arm_neon_dot_;
+    has_arm_neon_bf16_ = cv::checkHardwareSupport(CV_CPU_NEON_BF16);
+    has_arm_sve_       = cv::checkHardwareSupport(CV_CPU_SVE);
+    has_arm_sme_       = cv::checkHardwareSupport(CV_CPU_SME);
+    has_arm_sme2_      = has_arm_sme_ && cv::checkHardwareSupport(CV_CPU_SME2);
+#endif
+}
+#endif // MLAS_OPENCV_CPUINFO
+
 void
 MlasExecuteThreaded(
     MLAS_THREADED_ROUTINE* ThreadedRoutine,
