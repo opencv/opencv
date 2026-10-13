@@ -344,6 +344,12 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     _dst.create( src0.size(), src0.type() );
     Mat dst0 = _dst.getMat();
 
+    Mat src;
+    if( src0.data != dst0.data )
+        src = src0;
+    else
+        src0.copyTo(src);
+
     const int cn = 3;
     const int MAX_LEVELS = 8;
 
@@ -385,7 +391,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         tab[i] = (i - 255)*(i - 255);
 
     // 1. construct pyramid
-    src_pyramid[0] = src0;
+    src_pyramid[0] = src;
     dst_pyramid[0] = dst0;
     for( level = 1; level <= max_level; level++ )
     {
