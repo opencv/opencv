@@ -1719,5 +1719,47 @@ TEST(Layer_Einsum, DynamicLeadingDimensionReusesLayer)
     }
 }
 
+TEST(Layer_TopK2, ZeroK)
+{
+    Mat input(MatShape{2, 5}, CV_32F);
+    randu(input, 0.f, 1.f);
+
+    // constant K = 0, given as the "k" attribute
+    {
+        LayerParams lp;
+        lp.type = "TopK2";
+        lp.name = "topk_static";
+        lp.set("axis", 1);
+        lp.set("k", 0);
+        Ptr<Layer> layer = TopK2Layer::create(lp);
+
+        std::vector<Mat> inputs{input}, outputs;
+        runLayer(layer, inputs, outputs);
+
+        ASSERT_EQ(outputs.size(), (size_t)2);
+        EXPECT_EQ(shape(outputs[0]), MatShape({2, 0}));
+        EXPECT_EQ(shape(outputs[1]), MatShape({2, 0}));
+    }
+
+    // K = 0 coming from a tensor at runtime, as in detectors when nothing passes the
+    // score threshold; the engine skips getMemoryShapes() here, so call forward() directly
+    {
+        LayerParams lp;
+        lp.type = "TopK2";
+        lp.name = "topk_dynamic";
+        lp.set("axis", 1);
+        Ptr<Layer> layer = TopK2Layer::create(lp);
+
+        Mat k(MatShape{1}, CV_64S, Scalar(0));
+        std::vector<Mat> inputs{input, k}, outputs(2), internals;
+        layer->forward(inputs, outputs, internals);
+
+        EXPECT_EQ(shape(outputs[0]), MatShape({2, 0}));
+        EXPECT_EQ(shape(outputs[1]), MatShape({2, 0}));
+        EXPECT_EQ(outputs[0].type(), CV_32F);
+        EXPECT_EQ(outputs[1].type(), CV_64S);
+    }
+}
+
 
 }}
