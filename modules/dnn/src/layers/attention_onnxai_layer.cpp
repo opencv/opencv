@@ -570,6 +570,12 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             opt
         );
 
+        // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
+        //   0 = raw scaled QK^T, 1 = after softcap, 2 = + attention bias, 3 = post-softmax.
+        const bool want_qk = outputs.size() > 3 && !outputs[3].empty();
+        if (want_qk && qk_matmul_output_mode == 0)
+            attention_prob.copyTo(outputs[3]);
+
         // ONNX caps the raw scores first and only then adds the bias, so a -inf mask stays
         // -inf instead of being pulled back to a finite -softcap.
         if (softcap > 0.f)
@@ -577,11 +583,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                        /*has_mask*/ false, /*is_causal*/ false,
                                        /*past_seq_len*/ 0, /*do_softmax*/ false);
 
-        // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
-        //   0/1 = scaled QK^T after softcap (the ONNX reference softcaps before the mode check,
-        //   despite the spec text for 0), 2 = + attention bias, 3 = post-softmax.
-        const bool want_qk = outputs.size() > 3 && !outputs[3].empty();
-        if (want_qk && qk_matmul_output_mode <= 1)
+        if (want_qk && qk_matmul_output_mode == 1)
             attention_prob.copyTo(outputs[3]);
 
         // is_causal carries one past length for the whole batch; a window or ragged batch needs

@@ -838,6 +838,41 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_NaryElemwise_1d_Test, Combine(
 /*operation*/           testing::Values("div", "mul", "sum", "sub")
 ));
 
+// ONNX Mod with fmod=0 on signed integers: the remainder takes the divisor's sign, and
+// min % -1 is 0 instead of an overflow.
+template<typename T>
+static void testSignedIntMod(int depth)
+{
+    LayerParams lp;
+    lp.type = "NaryEltwise";
+    lp.name = "mod_Layer";
+    lp.set("operation", "mod");
+    Ptr<NaryEltwiseLayer> layer = NaryEltwiseLayer::create(lp);
+
+    const T lo = std::numeric_limits<T>::min();
+    T a[] = {lo, lo, 7, -7, 7, -7};
+    T b[] = {-1, 1, 3, 3, -3, -3};
+    T ref[] = {0, 0, 1, 2, -2, -1};
+    const int n = (int)(sizeof(a) / sizeof(a[0]));
+
+    std::vector<Mat> inputs{Mat(1, n, depth, a), Mat(1, n, depth, b)};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(1u, outputs.size());
+    ASSERT_EQ(depth, outputs[0].depth());
+    ASSERT_EQ((size_t)n, outputs[0].total());
+    const T* out = outputs[0].ptr<T>();
+    for (int i = 0; i < n; i++)
+        EXPECT_EQ(ref[i], out[i]) << "i=" << i;
+}
+
+TEST(Layer_NaryElemwise_Mod_Test, signed_int_min_by_minus_one)
+{
+    testSignedIntMod<int32_t>(CV_32S);
+    testSignedIntMod<int64_t>(CV_64S);
+}
+
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Elemwise_1d_Test;
 TEST_P(Layer_Elemwise_1d_Test, Accuracy_01D) {
 

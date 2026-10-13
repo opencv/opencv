@@ -33,6 +33,9 @@ namespace {
 // ONNX Mod with fmod=0: the remainder takes the sign of the divisor (Python/NumPy "%").
 template<typename T>
 static inline typename std::enable_if<std::is_integral<T>::value, T>::type _mod(T x, T y) {
+    // min % -1 overflows (and traps on x86); the remainder is 0 for any x.
+    if (std::is_signed<T>::value && y == static_cast<T>(-1))
+        return T(0);
     T res = static_cast<T>(x % y);
     if ((res < 0 && y > 0) || (res > 0 && y < 0)) {
         res = static_cast<T>(res + y);

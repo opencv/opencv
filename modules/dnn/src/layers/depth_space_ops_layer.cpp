@@ -319,8 +319,10 @@ public:
 
         auto mode = params.get<std::string>("mode", "DCR");
         if (mode == "CRD") {
+            is_crd = true;
             permutation = {0, 1, 3, 5, 2, 4};
         } else if (mode == "DCR") {
+            is_crd = false;
             permutation = {0, 3, 5, 1, 2, 4};
         } else {
             CV_Error(Error::StsBadArg, cv::format("SpaceToDepth: unsupported mode %s\n", mode.c_str()));
@@ -328,11 +330,12 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        // The CANN and TimVX nodes take no mode and always lay the output out as DCR.
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_CANN   ||
-               (backendId == DNN_BACKEND_TIMVX);
+               (backendId == DNN_BACKEND_CANN && !is_crd) ||
+               (backendId == DNN_BACKEND_TIMVX && !is_crd);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -392,7 +395,9 @@ public:
         using namespace ov::op;
         auto input_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ov::Node> output_node;
-        output_node = std::make_shared<v0::SpaceToDepth>(input_node, v0::SpaceToDepth::SpaceToDepthMode::BLOCKS_FIRST, static_cast<size_t>(blocksize));
+        const auto mode = is_crd ? v0::SpaceToDepth::SpaceToDepthMode::DEPTH_FIRST
+                                 : v0::SpaceToDepth::SpaceToDepthMode::BLOCKS_FIRST;
+        output_node = std::make_shared<v0::SpaceToDepth>(input_node, mode, static_cast<size_t>(blocksize));
         return Ptr<BackendNode>(new InfEngineNgraphNode(output_node));
     }
 #endif // HAVE_DNN_NGRAPH
@@ -480,6 +485,8 @@ public:
 
 private:
     int blocksize;
+
+    bool is_crd;
 };
 
 Ptr<SpaceToDepthLayer> SpaceToDepthLayer::create(const LayerParams &params) {
