@@ -42,6 +42,25 @@ static void quantizeRowInt8(const float* src, uint8_t* dst, int len, float inv_s
     }
 }
 
+// Copies n bytes with a few fixed-size (possibly overlapping) moves instead of a memcpy call.
+// Reads only [src, src+n) and writes only [dst, dst+n).
+static inline void copyBytes(uint8_t* dst, const uint8_t* src, int n)
+{
+    if (n >= 16) {
+        int i = 0;
+        for (; i + 16 <= n; i += 16)
+            memcpy(dst + i, src + i, 16);
+        if (i < n)
+            memcpy(dst + n - 16, src + n - 16, 16);
+    } else if (n >= 8) {
+        memcpy(dst, src, 8);
+        memcpy(dst + n - 8, src + n - 8, 8);
+    } else {
+        for (int i = 0; i < n; i++)
+            dst[i] = src[i];
+    }
+}
+
 static MatShape getWpackShapeInt8(const MatShape& wshape, int ngroups, int C0)
 {
     CV_Assert(wshape.dims >= 3);
@@ -188,6 +207,15 @@ public:
     Ptr<ActivationLayerInt8> activ;
 
     Mat quantizedInput; // float_input only: the input after quantizeInterleaveBlock()
+
+    // Window packing, used for the first conv of a CNN (float input with few channels, see
+    // canUseWindowPacking()). Each output pixel's receptive field (ky, kx, c) becomes the
+    // channels of an equivalent 1x1 convolution, which runs with these weights and state.
+    bool useWindows = false;
+    Mat winWeights, winWeightsVNNI; // weights of the 1x1 convolution, as weights/weightsVNNI
+    ConvState winCs;                // state of the 1x1 convolution
+    Mat paddedInput;                // quantized image, HWC, padded with the input zero point
+    Mat windowInput;                // input of the 1x1 convolution, block layout
 
     bool addResidual;
     bool inputIsU8;
@@ -386,6 +414,140 @@ public:
         });
     }
 
+    // Window packing pays off for the first conv of a CNN: a float image with only a few channels,
+    // so that in the regular kernel most of the C0 channel slots would be zero padding and every
+    // kernel tap would cost a full pass for very little work. It needs a single group and a kernel
+    // larger than 1x1, and is skipped when the packed input would get very large.
+    bool canUseWindowPacking(const MatShape& outshape, int C0) const
+    {
+        static const bool enabled =
+            utils::getConfigurationParameterBool("OPENCV_DNN_INT8_CONV_WINDOW_PACKING", true);
+        if (!enabled || !float_input || ngroups != 1 || blobs.empty() || C0 != 8 ||
+            wshape0.dims != 4 || outshape.dims != 5)
+            return false;
+        int C = wshape0[1], kh = wshape0[2], kw = wshape0[3];
+        if (C > 4 || kh * kw == 1)
+            return false;
+        size_t Cw8 = (size_t)(kh * kw * C + C0 - 1) / C0 * C0;
+        size_t nbytes = (size_t)outshape[0] * outshape[2] * outshape[3] * Cw8;
+        return nbytes <= ((size_t)64 << 20);
+    }
+
+    // Sets up the 1x1 convolution that window packing turns this convolution into: weight
+    // (k, c, ky, kx) becomes input channel (ky*kw + kx)*C + c, and the channels added to reach a
+    // multiple of C0 get zero weights. The sum of each output channel's weights does not change,
+    // so the bias arrays (biasVNNI, biasU8, biasBaselineU8) stay valid as they are.
+    void initWindowConv(const MatShape& outshape, int C0)
+    {
+        int K = wshape0[0], C = wshape0[1], kh = wshape0[2], kw = wshape0[3];
+        int Cw8 = (kh * kw * C + C0 - 1) / C0 * C0;
+        if (winWeights.empty()) {
+            const Mat& w = blobs[0];
+            CV_Assert(w.type() == CV_8SC1 && w.isContinuous() && w.total() == (size_t)K * C * kh * kw);
+            Mat w1x1(std::vector<int>{K, Cw8, 1, 1}, CV_8SC1, Scalar(0));
+            const int8_t* src = w.ptr<int8_t>();
+            int8_t* dst = w1x1.ptr<int8_t>();
+            for (int k = 0; k < K; k++)
+                for (int c = 0; c < C; c++)
+                    for (int ky = 0; ky < kh; ky++)
+                        for (int kx = 0; kx < kw; kx++)
+                            dst[(size_t)k * Cw8 + (ky * kw + kx) * C + c] =
+                                src[(((size_t)k * C + c) * kh + ky) * kw + kx];
+            repackConvWeightsInt8(w1x1, winWeights, 1, C0);
+            Mat unusedBias; // same as biasVNNI
+            repackWeightsForVNNI(winWeights, 1, K, Cw8, biasInt32, winWeightsVNNI, unusedBias);
+        }
+        int N = outshape[0], Ho = outshape[2], Wo = outshape[3];
+        MatShape wininp = MatShape({N, Cw8, Ho, Wo}, DATA_LAYOUT_NCHW).toLayout(DATA_LAYOUT_BLOCK, C0);
+        winCs.initConv(wininp, MatShape({K, Cw8, 1, 1}, DATA_LAYOUT_UNKNOWN), outshape, 1,
+                       {1, 1}, {1, 1}, {0, 0, 0, 0}, AUTO_PAD_NONE, false,
+                       FAST_ACTIV_NONE, nullptr, {});
+    }
+
+    // Makes the input of the 1x1 convolution set up by initWindowConv(), using the geometry of
+    // this convolution from cs. First the image is quantized into an HWC buffer with a border of
+    // the input zero point (the value that stands for 0.0, as the regular kernel uses for padding).
+    // Then each output pixel's window is copied row by row (kw*C contiguous bytes per kernel row
+    // when there is no dilation) and stored as Cw8/C0 channel blocks.
+    void packWindows(const Mat& fp32_nchw, int C0)
+    {
+        MatShape nchw = fp32_nchw.shape();
+        CV_Assert(nchw.dims == 4 && C0 == 8);
+        const int N = nchw[0], C = nchw[1], H = nchw[2], W = nchw[3];
+        const int kh = cs.kshape[1], kw = cs.kshape[2];
+        const int sy = cs.strides[1], sx = cs.strides[2];
+        const int dy = cs.dilations[1], dx = cs.dilations[2];
+        const int padT = cs.pads[1], padL = cs.pads[2];
+        const int Ho = cs.outshape[2], Wo = cs.outshape[3];
+        // the padded image covers every position that any window reads
+        const int Hp = std::max(padT + H + cs.pads[1 + ConvState::MAX_CONV_DIMS], (Ho - 1) * sy + (kh - 1) * dy + 1);
+        const int Wp = std::max(padL + W + cs.pads[2 + ConvState::MAX_CONV_DIMS], (Wo - 1) * sx + (kw - 1) * dx + 1);
+        const int Cw = kh * kw * C, Cw8 = (Cw + C0 - 1) / C0 * C0, C1w = Cw8 / C0;
+
+        const float inv_sc = input_sc > 0.f ? 1.f / input_sc : 0.f;
+        const int zp = input_zp;
+        const bool is_u8 = inputIsU8;
+        const uint8_t zpbyte = (uint8_t)input_zp;
+        const float* src = fp32_nchw.ptr<float>();
+        const size_t prow = (size_t)Wp * C;
+
+        paddedInput.fit({N * Hp, (int)prow}, CV_8UC1);
+        uint8_t* pbuf = paddedInput.ptr<uint8_t>();
+        parallel_for_(Range(0, N * Hp), [&](const Range& range) {
+            AutoBuffer<uint8_t> qbuf_((size_t)C * W);
+            uint8_t* qbuf = qbuf_.data();
+            for (int t = range.start; t < range.end; t++) {
+                int n = t / Hp, y = t - n * Hp - padT;
+                uint8_t* drow = pbuf + (size_t)t * prow;
+                if (y < 0 || y >= H) {
+                    memset(drow, zpbyte, prow);
+                    continue;
+                }
+                memset(drow, zpbyte, (size_t)padL * C);
+                memset(drow + (size_t)(padL + W) * C, zpbyte, (size_t)(Wp - padL - W) * C);
+                for (int c = 0; c < C; c++)
+                    quantizeRowInt8(src + (((size_t)n * C + c) * H + y) * W, qbuf + (size_t)c * W,
+                                    W, inv_sc, zp, is_u8);
+                uint8_t* d = drow + (size_t)padL * C;
+                for (int x = 0; x < W; x++)
+                    for (int c = 0; c < C; c++)
+                        d[x * C + c] = qbuf[(size_t)c * W + x];
+            }
+        });
+
+        MatShape winshape = MatShape({N, Cw8, Ho, Wo}, DATA_LAYOUT_NCHW).toLayout(DATA_LAYOUT_BLOCK, C0);
+        windowInput.fit(winshape, inputIsU8 ? CV_8UC1 : CV_8SC1);
+        uint8_t* wdst = windowInput.ptr<uint8_t>();
+        const size_t plane = (size_t)Ho * Wo * C0;  // one channel block of one image
+        parallel_for_(Range(0, N * Ho), [&](const Range& range) {
+            AutoBuffer<uint8_t> win_(Cw8);
+            uint8_t* win = win_.data();
+            memset(win + Cw, 0, Cw8 - Cw);  // the padding channels; their weights are 0
+            for (int t = range.start; t < range.end; t++) {
+                int n = t / Ho, oy = t - n * Ho;
+                const uint8_t* srow = pbuf + ((size_t)n * Hp + (size_t)oy * sy) * prow;
+                uint8_t* drow = wdst + (size_t)n * C1w * plane + (size_t)oy * Wo * C0;
+                for (int ox = 0; ox < Wo; ox++) {
+                    const uint8_t* s = srow + (size_t)ox * sx * C;
+                    for (int ky = 0; ky < kh; ky++) {
+                        const uint8_t* sk = s + (size_t)ky * dy * prow;
+                        uint8_t* wk = win + ky * kw * C;
+                        if (dx == 1) {
+                            copyBytes(wk, sk, kw * C);
+                        } else {
+                            for (int kx = 0; kx < kw; kx++)
+                                for (int c = 0; c < C; c++)
+                                    wk[kx * C + c] = sk[(size_t)kx * dx * C + c];
+                        }
+                    }
+                    uint8_t* d = drow + (size_t)ox * C0;
+                    for (int c1 = 0; c1 < C1w; c1++)
+                        memcpy(d + c1 * plane, win + c1 * 8, 8);
+                }
+            }
+        });
+    }
+
     void forward(InputArrayOfArrays input_arrs,
                  OutputArrayOfArrays output_arrs,
                  OutputArrayOfArrays) CV_OVERRIDE
@@ -393,19 +555,22 @@ public:
         int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
 
-        Mat& inp_storage = quantizedInput;  // kept between calls, so it is not reallocated every time
         Mat inp_ref = input_arrs.getMat(0);
 
+        // Shape of the int8 block-layout input of the regular kernel. For a float input the data
+        // is made further down, by quantizeInterleaveBlock() or (window packing) packWindows().
+        MatShape inpshape;
         if (float_input) {
             CV_Assert(inp_ref.type() == CV_32F);
-            int C0 = getNetImpl(this)->defaultC0;
-            quantizeInterleaveBlock(inp_ref, inp_storage, C0);
+            MatShape nchw = inp_ref.shape();
+            if (nchw.layout == DATA_LAYOUT_UNKNOWN)
+                nchw.layout = DATA_LAYOUT_NCHW;
+            inpshape = nchw.toLayout(DATA_LAYOUT_BLOCK, getNetImpl(this)->defaultC0);
+        } else {
+            CV_Assert(inp_ref.type() == CV_8SC1 || inp_ref.type() == CV_8UC1);
+            inpshape = inp_ref.shape();
         }
-
-        const Mat& inp = float_input ? inp_storage : inp_ref;
-        MatShape inpshape = inp.shape();
         CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
-        CV_Assert(inp.type() == CV_8SC1 || inp.type() == CV_8UC1);
 
         int C0 = inpshape.back();
 
@@ -447,7 +612,7 @@ public:
         MatShape outshape = convInferShape(inpshape, wshape0, emptyKernelShape,
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode);
-        int outtype = inp.type();
+        int outtype = float_input ? (inputIsU8 ? CV_8UC1 : CV_8SC1) : inp_ref.type();
 
         int outkind = output_arrs.kind();
         Mat out;
@@ -472,8 +637,22 @@ public:
             if (cs.depthwise) {
                 cs.wshape = getWpackShapeInt8(wshape0, ngroups, C0);
             }
+            useWindows = canUseWindowPacking(outshape, C0);
+            if (useWindows)
+                initWindowConv(outshape, C0);
             prevInpshape = inpshape;
         }
+
+        const Mat* inp = &inp_ref;
+        if (useWindows) {
+            packWindows(inp_ref, C0);
+            inp = &windowInput;
+        } else if (float_input) {
+            quantizeInterleaveBlock(inp_ref, quantizedInput, C0);
+            inp = &quantizedInput;
+        }
+        const Mat& wts = useWindows ? winWeights : weights;
+        const Mat& wtsVNNI = useWindows ? winWeightsVNNI : weightsVNNI;
 
         const int8_t* lutptr = !activationLUT.empty() ? activationLUT.ptr<int8_t>() : nullptr;
 
@@ -485,9 +664,9 @@ public:
             ? biasBaselineU8.ptr<int>()
             : biasInt32.ptr<int>();
 
-        convInt8Block(inp.data, resptr, out.data, cs,
-                      weights.data,
-                      weightsVNNI.empty() ? nullptr : weightsVNNI.data,
+        convInt8Block(inp->data, resptr, out.data, useWindows ? winCs : cs,
+                      wts.data,
+                      wtsVNNI.empty() ? nullptr : wtsVNNI.data,
                       baselineBias,
                       effectiveBiasVNNI,
                       outMultiplier.ptr<float>(),
