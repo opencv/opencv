@@ -159,6 +159,28 @@ TEST(Core_HostDeviceBuffer, unusable_cuda_keeps_opencl_value_without_download)
     EXPECT_EQ(HostDeviceBuffer::OPENCL, buf.valid());  // no host copy was made
 }
 
+TEST(Core_HostDeviceBuffer, opencl_disabled_after_commit_falls_back_to_host)
+{
+    OpenCLSwitch withOpenCL(true);
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    HostDeviceBuffer buf;
+    UMat* dev = buf.oclForWrite(MatShape({4, 4}), CV_32F);
+    ASSERT_TRUE(dev != NULL);
+    dev->setTo(Scalar::all(2));
+    buf.commit(HostDeviceBuffer::OPENCL);
+
+    cv::ocl::setUseOpenCL(false);
+    EXPECT_TRUE(buf.oclForRead() == NULL);
+    EXPECT_EQ(HostDeviceBuffer::HOST, buf.fallbackForRead(HostDeviceBuffer::OPENCL));
+    EXPECT_EQ(0, cvtest::norm(Mat(4, 4, CV_32F, Scalar::all(2)), buf.hostForRead(), NORM_INF));
+
+    // switching OpenCL off is not a failure, so the cached slot is usable again once it is back on
+    cv::ocl::setUseOpenCL(true);
+    EXPECT_EQ(HostDeviceBuffer::OPENCL, buf.fallbackForRead(HostDeviceBuffer::OPENCL));
+}
+
 #ifdef HAVE_CUDA
 TEST(Core_HostDeviceBuffer, cuda_roundtrip)
 {

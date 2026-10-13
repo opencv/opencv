@@ -140,9 +140,9 @@ TEST(Core_CudaUMat, kernel_interop_via_gpumat)
     EXPECT_EQ(0.0, cvtest::norm(Mat(src.size(), src.type(), Scalar(7.0f)), afterKernel, NORM_INF));
 }
 
-// P1 gives a UMat storage on CUDA, not GPU execution. With OpenCL on, cv:: ops feed the
-// CUDA pointer to the driver as a cl_mem and segfault; the tests below force OpenCL off so
-// ops resolve through the host getMat() fallback, and pin why the OpenCL path is unusable.
+// P1 gives a UMat storage on CUDA, not GPU execution. A CUDA UMat has no cl_mem, so the OpenCL
+// kernel path declines it and cv:: ops resolve through the host getMat() fallback. The tests
+// below cover that fallback with OpenCL off, and with OpenCL on where the kernel path rejects it.
 
 struct NoOpenCL
 {
@@ -275,6 +275,61 @@ TEST(Core_CudaUMat, copy_cuda_opencl_cuda)
     Mat back;
     cu2.copyTo(back);
     EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
+}
+#endif // HAVE_OPENCL
+
+#ifdef HAVE_OPENCL
+// turns OpenCL on for one test and restores the previous state afterwards
+struct WithOpenCL
+{
+    bool prev;
+    WithOpenCL() : prev(cv::ocl::useOpenCL()) { cv::ocl::setUseOpenCL(true); }
+    ~WithOpenCL() { cv::ocl::setUseOpenCL(prev); }
+};
+
+// Kernel::set must decline a CUDA UMat instead of passing its device pointer to clSetKernelArg
+TEST(Core_CudaUMat, opencl_kernel_declines_cuda_umat)
+{
+    skipIfNoCudaDevice();
+    WithOpenCL guard;
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    UMat u = makeCudaUMat();
+    Mat(8, 8, CV_32FC1, Scalar(1)).copyTo(u);
+
+    ocl::Kernel k("touch", ocl::ProgramSource("__kernel void touch(__global const float* a) {}"));
+    ASSERT_FALSE(k.empty());
+    EXPECT_EQ(-1, k.set(0, ocl::KernelArg::PtrReadOnly(u)));
+    EXPECT_TRUE(k.empty());
+}
+
+// with OpenCL on, ops reach the kernel path, are declined there and finish on the CPU
+TEST(Core_CudaUMat, op_opencl_on_falls_back)
+{
+    skipIfNoCudaDevice();
+    WithOpenCL guard;
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    Mat a(50, 40, CV_32FC1), b(50, 40, CV_32FC1);
+    randu(a, 0, 10); randu(b, 0, 10);
+
+    UMat ua = makeCudaUMat(), ub = makeCudaUMat();
+    a.copyTo(ua); b.copyTo(ub);
+
+    UMat usum = makeCudaUMat(), uw = makeCudaUMat(), u8 = makeCudaUMat();
+    cv::add(ua, ub, usum);
+    cv::addWeighted(ua, 2.0, ub, 1.0, 0.0, uw);
+    ua.convertTo(u8, CV_8U, 2.0, 1.0);
+
+    Mat sum, w, c8, expectedW, expected8;
+    usum.copyTo(sum); uw.copyTo(w); u8.copyTo(c8);
+    cv::addWeighted(a, 2.0, b, 1.0, 0.0, expectedW);
+    a.convertTo(expected8, CV_8U, 2.0, 1.0);
+    EXPECT_LE(cvtest::norm(sum, a + b, NORM_INF), 1e-5);
+    EXPECT_LE(cvtest::norm(w, expectedW, NORM_INF), 1e-4);
+    EXPECT_EQ(0.0, cvtest::norm(c8, expected8, NORM_INF));
 }
 #endif // HAVE_OPENCL
 
