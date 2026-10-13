@@ -493,11 +493,14 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                     int zi = zi_base + ofsZYX[i * 3];
                     int yi = yi_base + ofsZYX[i * 3 + 1];
                     int xi = xi_base + ofsZYX[i * 3 + 2];
-                    if ((((unsigned)zi >= (unsigned)Di_l) | ((unsigned)yi >= (unsigned)Hi_l) |
-                         ((unsigned)xi >= (unsigned)Wi_l)) != 0) continue;
-                    const int8_t* inptr = inpbaseptr + (((zi * Hi_l) + yi) * Wi_l + xi) * C0;
+                    // padding reads the input zero point (zbuf), as in the 8-pixel path
+                    bool outside = (((unsigned)zi >= (unsigned)Di_l) | ((unsigned)yi >= (unsigned)Hi_l) |
+                                    ((unsigned)xi >= (unsigned)Wi_l)) != 0;
+                    const int8_t* inptr = outside ? zbuf
+                                                  : inpbaseptr + (((zi * Hi_l) + yi) * Wi_l + xi) * C0;
+                    const int inpstep = outside ? 0 : iplanesize_l;
                     const int8_t* wptr_vnni = wbaseptr + (size_t)i * C1Max * K0 * C0;
-                    for (int c1i = 0; c1i < cblocks; c1i++, inptr += iplanesize_l) {
+                    for (int c1i = 0; c1i < cblocks; c1i++, inptr += inpstep) {
                         const int8_t* wp = wptr_vnni + (size_t)c1i * C0 * K0;
                         for (int c0 = 0; c0 < C0; c0++) {
                             int ival = inputIsU8 ? ((int)(uint8_t)inptr[c0] - 128)
@@ -1205,11 +1208,18 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                     for (int i = 0; i < ksize; i++) {
                         int zi = zi_base + ofsZYX[i*3], yi = yi_base + ofsZYX[i*3+1],
                             xi = xi_base + ofsZYX[i*3+2];
+                        __m256i inp32;
                         if ((unsigned)zi>=(unsigned)Di || (unsigned)yi>=(unsigned)Hi ||
-                            (unsigned)xi>=(unsigned)Wi) continue;
-                        const int8_t* ip = inpbaseptr + (((zi*Hi)+yi)*Wi+xi)*C0;
-                        __m256i inp32 = _mm256_cvtepu8_epi32(
-                            _mm_xor_si128(_mm_loadl_epi64((const __m128i*)ip), v_xor));
+                            (unsigned)xi>=(unsigned)Wi) {
+                            // padding: the input zero point, as in the 8-pixel border path above
+                            inp32 = inputIsU8
+                                ? _mm256_set1_epi32(inp_zp)
+                                : _mm256_set1_epi32((int)(uint8_t)((uint8_t)inp_zp ^ 0x80u));
+                        } else {
+                            const int8_t* ip = inpbaseptr + (((zi*Hi)+yi)*Wi+xi)*C0;
+                            inp32 = _mm256_cvtepu8_epi32(
+                                _mm_xor_si128(_mm_loadl_epi64((const __m128i*)ip), v_xor));
+                        }
                         __m256i w32 = _mm256_cvtepi8_epi32(
                             _mm_loadl_epi64((const __m128i*)(wbuf + i*K0)));
                         acc = _mm256_add_epi32(acc, _mm256_mullo_epi32(inp32, w32));
@@ -1384,6 +1394,14 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
     int min_ntiles = std::max(1, (nthreads * 4 + nkb - 1) / nkb);
     int TILE = std::max(SPAT_BLOCK_SIZE,
         ((planeblocks_ + min_ntiles - 1) / min_ntiles + SPAT_BLOCK_SIZE - 1) & ~(SPAT_BLOCK_SIZE - 1));
+    // A tile of fewer than SPAT_BLOCK_SIZE pixels goes through the scalar path, which skips
+    // padded taps instead of using the input zero point. Keep the last tile from being that
+    // small; the vector path covers a short final block by overlapping the previous one. A whole
+    // map of fewer pixels remains, and convInt8Block() does not send it here when it is padded.
+    // (The scalar path itself is left alone: changing it costs ~4% on ResNet50, because the
+    // compiler then keeps fewer values of the vector loops in registers.)
+    while (TILE < planeblocks_ && planeblocks_ % TILE != 0 && planeblocks_ % TILE < SPAT_BLOCK_SIZE)
+        TILE += SPAT_BLOCK_SIZE;
     int ntiles = (planeblocks_ + TILE - 1) / TILE;
     int total_tasks = nkb * ntiles;
     const __m256i v_xor = inputIsU8 ? _mm256_setzero_si256() : _mm256_set1_epi8((char)0x80);
@@ -2152,7 +2170,15 @@ void convInt8Block(const void* inp_, const void* residual_,
         return;
     }
 #if CV_AVX_VNNI
-    if (weightsVNNI_ && biasVNNI_) {
+    bool useVNNI = weightsVNNI_ && biasVNNI_;
+    if (useVNNI && cs.hasPadding()) {
+        // The AVX-VNNI kxk kernel computes a map of fewer than 8 output pixels in a scalar path
+        // that does not handle padding (see convInt8BlockVNNI_kxk); such tiny padded
+        // convolutions use the generic kernel below.
+        const MatShape& os = cs.outshape;
+        useVNNI = os.total() / ((size_t)os[0] * os[1] * os.back()) >= 8;
+    }
+    if (useVNNI) {
         convInt8BlockVNNI(inp_, residual_, out_, cs, weightsVNNI_,
                           biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
         return;
