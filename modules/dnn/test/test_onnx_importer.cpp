@@ -3469,13 +3469,16 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
 // OpenCV 5.x imports these nodes through ONNXImporter2, which has a separate
 // Concat implementation. Keep these focused tests on the 4.x folded path.
 #if CV_VERSION_MAJOR < 5
-#include "onnx_qconcat_axis_models.inc"
+static std::string concatAxisModel(const char* name)
+{
+    return _tf(std::string("models/concat_axis_") + name);
+}
 
-static void expectConcatImportRejected(const unsigned char* model, size_t size, const char* reason)
+static void expectConcatImportRejected(const char* name, const char* reason)
 {
     try
     {
-        (void)readNetFromONNX(reinterpret_cast<const char*>(model), size);
+        (void)readNetFromONNX(concatAxisModel(name));
         FAIL() << "Invalid Concat model was accepted";
     }
     catch (const cv::Exception& e)
@@ -3486,23 +3489,23 @@ static void expectConcatImportRejected(const unsigned char* model, size_t size, 
 
 TEST(Test_ONNX_Importer, QLinearConcatAxisBounds)
 {
-    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxMixedRankControl), sizeof(onnxMixedRankControl)));
-    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxNegativeAxisControl), sizeof(onnxNegativeAxisControl)));
-    expectConcatImportRejected(onnxMixedRankInvalid, sizeof(onnxMixedRankInvalid), "Concat axis exceeds an input rank");
-    expectConcatImportRejected(onnxOutOfRangeAxis, sizeof(onnxOutOfRangeAxis), "Concat axis is outside input rank");
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("control-mixed-rank.onnx")));
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("control-negative-axis.onnx")));
+    expectConcatImportRejected("invalid-source-rank.onnx", "Concat axis exceeds an input rank");
+    expectConcatImportRejected("invalid-axis-range.onnx", "Concat axis is outside input rank");
 }
 
 TEST(Test_ONNX_Importer, ConcatAxisBounds)
 {
-    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPlainMixedRankControl), sizeof(onnxPlainMixedRankControl)));
-    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPlainSameRankControl), sizeof(onnxPlainSameRankControl)));
-    expectConcatImportRejected(onnxPlainMixedRankInvalid, sizeof(onnxPlainMixedRankInvalid), "Concat axis exceeds an input rank");
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("plain-control-mixed-rank-axis0.onnx")));
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("plain-control-same-rank-axis15.onnx")));
+    expectConcatImportRejected("plain-invalid-mixed-rank-axis15.onnx", "Concat axis exceeds an input rank");
 }
 
 TEST(Test_ONNX_Importer, ConcatPaddingRankBounds)
 {
-    EXPECT_NO_THROW(readNetFromONNX(reinterpret_cast<const char*>(onnxPaddingSameRankControl), sizeof(onnxPaddingSameRankControl)));
-    expectConcatImportRejected(onnxPaddingMixedRankInvalid, sizeof(onnxPaddingMixedRankInvalid), "curShape.size() == outputs[0].size()");
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("padding-control-same-rank.onnx")));
+    expectConcatImportRejected("padding-crafted-mixed-rank.onnx", "curShape.size() == outputs[0].size()");
 }
 #endif
 
