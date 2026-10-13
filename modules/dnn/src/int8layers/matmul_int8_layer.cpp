@@ -117,8 +117,6 @@ public:
         Mat dstMat = output[0].reshape(1, outerSize);
         Mat dstMatInt32 = Mat(shape(dstMat), CV_32S);
 
-        // Int8GemmBody splits rows x output channels into stripes, so a few rows (batch size 1)
-        // still spread over all threads; keep at least 16 outputs per stripe.
         const size_t nouts = (size_t)outerSize * weightsMat.rows;
         const int nstripes = (int)std::max<size_t>(1, std::min<size_t>(getNumThreads(), nouts / 16));
         runInt8Gemm(srcMat, weightsMat, biasMat, outputMultiplier, dstMatInt32, nstripes, output_zp);

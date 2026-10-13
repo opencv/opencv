@@ -560,10 +560,6 @@ struct ModelFusionQDQ
                                     if (wz != 0) all_wzp_zero = false;
                                 }
 
-                                // Asymmetric pads (e.g. TF "SAME" with stride 2) need no check here:
-                                // Conv2Int8 keeps begin and end pads separately (ConvState), as it
-                                // already does for pads that come from auto_pad.
-
                                 // Conv2Int8's VNNI kernel processes K0=8 output channels per
                                 // SIMD iteration. When ngroups>1 and Kg<K0, multiple groups map
                                 // to the same K0-wide output slot and clobber one another, so

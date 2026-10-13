@@ -14,9 +14,6 @@
 namespace cv {
 namespace dnn {
 
-// dst[j] = saturate(cvRound(src[j] * inv_sc) + zp), as uint8 or int8.
-// The vector path rounds the same way as cvRound (to nearest, ties to even) and saturates in
-// two steps (int32 -> int16 -> 8 bit), so it produces exactly the same bytes as the scalar loop.
 static void quantizeRowInt8(const float* src, uint8_t* dst, int len, float inv_sc, int zp, bool is_u8)
 {
     int j = 0;
@@ -42,8 +39,6 @@ static void quantizeRowInt8(const float* src, uint8_t* dst, int len, float inv_s
     }
 }
 
-// Copies n bytes with a few fixed-size (possibly overlapping) moves instead of a memcpy call.
-// Reads only [src, src+n) and writes only [dst, dst+n).
 static inline void copyBytes(uint8_t* dst, const uint8_t* src, int n)
 {
     if (n >= 16) {
@@ -206,16 +201,13 @@ public:
     Mat activationLUT;
     Ptr<ActivationLayerInt8> activ;
 
-    Mat quantizedInput; // float_input only: the input after quantizeInterleaveBlock()
+    Mat quantizedInput;
 
-    // Window packing, used for the first conv of a CNN (float input with few channels, see
-    // canUseWindowPacking()). Each output pixel's receptive field (ky, kx, c) becomes the
-    // channels of an equivalent 1x1 convolution, which runs with these weights and state.
     bool useWindows = false;
-    Mat winWeights, winWeightsVNNI; // weights of the 1x1 convolution, as weights/weightsVNNI
-    ConvState winCs;                // state of the 1x1 convolution
-    Mat paddedInput;                // quantized image, HWC, padded with the input zero point
-    Mat windowInput;                // input of the 1x1 convolution, block layout
+    Mat winWeights, winWeightsVNNI;
+    ConvState winCs;
+    Mat paddedInput;
+    Mat windowInput;
 
     bool addResidual;
     bool inputIsU8;
@@ -376,15 +368,10 @@ public:
         const float* src = fp32_nchw.ptr<float>();
         uint8_t* dst = int8_block.ptr<uint8_t>();
 
-        // Split the work by stripes of pixels as well as by channel blocks. The first conv of a
-        // CNN gets an RGB image, which is a single channel block, so splitting by channel blocks
-        // alone would leave one thread doing all of it.
         const int PIX_STRIPE = 2048;
         const int nstripes = (planesize + PIX_STRIPE - 1) / PIX_STRIPE;
 
         parallel_for_(Range(0, N * C1 * nstripes), [&](const Range& range) {
-            // Each channel of a run of BLK pixels is quantized into its own row of qbuf (contiguous,
-            // so it vectorizes), then the rows are interleaved into the C0-channel block layout.
             const int BLK = 256;
             AutoBuffer<uint8_t> qbuf_(C0 * BLK);
             uint8_t* qbuf = qbuf_.data();
@@ -414,10 +401,6 @@ public:
         });
     }
 
-    // Window packing pays off for the first conv of a CNN: a float image with only a few channels,
-    // so that in the regular kernel most of the C0 channel slots would be zero padding and every
-    // kernel tap would cost a full pass for very little work. It needs a single group and a kernel
-    // larger than 1x1, and is skipped when the packed input would get very large.
     bool canUseWindowPacking(const MatShape& outshape, int C0) const
     {
         static const bool enabled =
@@ -433,10 +416,6 @@ public:
         return nbytes <= ((size_t)64 << 20);
     }
 
-    // Sets up the 1x1 convolution that window packing turns this convolution into: weight
-    // (k, c, ky, kx) becomes input channel (ky*kw + kx)*C + c, and the channels added to reach a
-    // multiple of C0 get zero weights. The sum of each output channel's weights does not change,
-    // so the bias arrays (biasVNNI, biasU8, biasBaselineU8) stay valid as they are.
     void initWindowConv(const MatShape& outshape, int C0)
     {
         int K = wshape0[0], C = wshape0[1], kh = wshape0[2], kw = wshape0[3];
@@ -454,7 +433,7 @@ public:
                             dst[(size_t)k * Cw8 + (ky * kw + kx) * C + c] =
                                 src[(((size_t)k * C + c) * kh + ky) * kw + kx];
             repackConvWeightsInt8(w1x1, winWeights, 1, C0);
-            Mat unusedBias; // same as biasVNNI
+            Mat unusedBias;
             repackWeightsForVNNI(winWeights, 1, K, Cw8, biasInt32, winWeightsVNNI, unusedBias);
         }
         int N = outshape[0], Ho = outshape[2], Wo = outshape[3];
@@ -464,11 +443,6 @@ public:
                        FAST_ACTIV_NONE, nullptr, {});
     }
 
-    // Makes the input of the 1x1 convolution set up by initWindowConv(), using the geometry of
-    // this convolution from cs. First the image is quantized into an HWC buffer with a border of
-    // the input zero point (the value that stands for 0.0, as the regular kernel uses for padding).
-    // Then each output pixel's window is copied row by row (kw*C contiguous bytes per kernel row
-    // when there is no dilation) and stored as Cw8/C0 channel blocks.
     void packWindows(const Mat& fp32_nchw, int C0)
     {
         MatShape nchw = fp32_nchw.shape();
@@ -479,7 +453,6 @@ public:
         const int dy = cs.dilations[1], dx = cs.dilations[2];
         const int padT = cs.pads[1], padL = cs.pads[2];
         const int Ho = cs.outshape[2], Wo = cs.outshape[3];
-        // the padded image covers every position that any window reads
         const int Hp = std::max(padT + H + cs.pads[1 + ConvState::MAX_CONV_DIMS], (Ho - 1) * sy + (kh - 1) * dy + 1);
         const int Wp = std::max(padL + W + cs.pads[2 + ConvState::MAX_CONV_DIMS], (Wo - 1) * sx + (kw - 1) * dx + 1);
         const int Cw = kh * kw * C, Cw8 = (Cw + C0 - 1) / C0 * C0, C1w = Cw8 / C0;
@@ -518,11 +491,11 @@ public:
         MatShape winshape = MatShape({N, Cw8, Ho, Wo}, DATA_LAYOUT_NCHW).toLayout(DATA_LAYOUT_BLOCK, C0);
         windowInput.fit(winshape, inputIsU8 ? CV_8UC1 : CV_8SC1);
         uint8_t* wdst = windowInput.ptr<uint8_t>();
-        const size_t plane = (size_t)Ho * Wo * C0;  // one channel block of one image
+        const size_t plane = (size_t)Ho * Wo * C0;
         parallel_for_(Range(0, N * Ho), [&](const Range& range) {
             AutoBuffer<uint8_t> win_(Cw8);
             uint8_t* win = win_.data();
-            memset(win + Cw, 0, Cw8 - Cw);  // the padding channels; their weights are 0
+            memset(win + Cw, 0, Cw8 - Cw);
             for (int t = range.start; t < range.end; t++) {
                 int n = t / Ho, oy = t - n * Ho;
                 const uint8_t* srow = pbuf + ((size_t)n * Hp + (size_t)oy * sy) * prow;
@@ -557,8 +530,6 @@ public:
 
         Mat inp_ref = input_arrs.getMat(0);
 
-        // Shape of the int8 block-layout input of the regular kernel. For a float input the data
-        // is made further down, by quantizeInterleaveBlock() or (window packing) packWindows().
         MatShape inpshape;
         if (float_input) {
             CV_Assert(inp_ref.type() == CV_32F);

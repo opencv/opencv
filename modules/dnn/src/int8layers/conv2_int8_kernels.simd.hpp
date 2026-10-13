@@ -493,7 +493,6 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                     int zi = zi_base + ofsZYX[i * 3];
                     int yi = yi_base + ofsZYX[i * 3 + 1];
                     int xi = xi_base + ofsZYX[i * 3 + 2];
-                    // padding reads the input zero point (zbuf), as in the 8-pixel path
                     bool outside = (((unsigned)zi >= (unsigned)Di_l) | ((unsigned)yi >= (unsigned)Hi_l) |
                                     ((unsigned)xi >= (unsigned)Wi_l)) != 0;
                     const int8_t* inptr = outside ? zbuf
@@ -1211,7 +1210,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                         __m256i inp32;
                         if ((unsigned)zi>=(unsigned)Di || (unsigned)yi>=(unsigned)Hi ||
                             (unsigned)xi>=(unsigned)Wi) {
-                            // padding: the input zero point, as in the 8-pixel border path above
                             inp32 = inputIsU8
                                 ? _mm256_set1_epi32(inp_zp)
                                 : _mm256_set1_epi32((int)(uint8_t)((uint8_t)inp_zp ^ 0x80u));
@@ -1394,12 +1392,6 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
     int min_ntiles = std::max(1, (nthreads * 4 + nkb - 1) / nkb);
     int TILE = std::max(SPAT_BLOCK_SIZE,
         ((planeblocks_ + min_ntiles - 1) / min_ntiles + SPAT_BLOCK_SIZE - 1) & ~(SPAT_BLOCK_SIZE - 1));
-    // A tile of fewer than SPAT_BLOCK_SIZE pixels goes through the scalar path, which skips
-    // padded taps instead of using the input zero point. Keep the last tile from being that
-    // small; the vector path covers a short final block by overlapping the previous one. A whole
-    // map of fewer pixels remains, and convInt8Block() does not send it here when it is padded.
-    // (The scalar path itself is left alone: changing it costs ~4% on ResNet50, because the
-    // compiler then keeps fewer values of the vector loops in registers.)
     while (TILE < planeblocks_ && planeblocks_ % TILE != 0 && planeblocks_ % TILE < SPAT_BLOCK_SIZE)
         TILE += SPAT_BLOCK_SIZE;
     int ntiles = (planeblocks_ + TILE - 1) / TILE;
@@ -1865,9 +1857,6 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
             }
 
             for (; p < p_end; p++) {
-                // Leftover pixels: the same VNNI multiply-adds as above, one pixel at a time.
-                // The weights are in the VNNI-repacked layout, so they must not be read as
-                // plain [c0][k0].
                 __m256i s = _mm256_load_si256((const __m256i*)biasbuf);
                 const int8_t* inptr_s = inpbaseptr + (size_t)p * C0;
                 const int8_t* wptr    = wbaseptr;
@@ -1906,17 +1895,6 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
     });
 }
 
-// AVX-VNNI depthwise convolution: 2D, stride along x up to 4, no dilation along x, no fused
-// residual. convInt8BlockDepthwise multiplies one kernel tap at a time with vpmulld (8
-// multiply-adds per instruction). Here, for each block of 8 channels and band of output rows:
-//  1. the input rows the band needs are transposed into one row per channel, as the unsigned
-//     bytes vpdpbusd takes, with a border of the input zero point (the padding value);
-//  2. for 8 output pixels of one channel, one pshufb gathers 4 consecutive taps of a kernel row
-//     for every pixel into a 32-bit lane, and one vpdpbusd adds them (32 multiply-adds);
-//  3. the 8 channels are requantized like in convInt8BlockDepthwise and transposed back into the
-//     block layout.
-// The integer sums and the requantization are the same as in convInt8BlockDepthwise, so the
-// output is too. Returns false for a convolution it does not handle.
 static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvState& cs,
                                        const void* weights_, const int* bias,
                                        const float* multiplier, int inp_zp, int out_zp,
@@ -1938,14 +1916,11 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
     const int K = outshape.channels();
     const int Hi = inpshape[2], Wi = inpshape[3];
     const int padT = cs.pads[1], padL = cs.pads[2];
-    const int G = (kw + 3) / 4;  // groups of 4 taps in a kernel row
-    // Width of a channel row: the image with its left padding, plus every byte the 16-byte loads
-    // of the last 8-pixel block read (at ox*sx + 4*g, and 4*sx further for the upper 4 pixels).
+    const int G = (kw + 3) / 4;
     const int Wo8 = (Wo + 7) & ~7;
     const int Wp = std::max(padL + Wi, Wo8 * sx + 4 * G + 4 * sx) + 16;
     const uint8_t padval = inputIsU8 ? (uint8_t)inp_zp : (uint8_t)((uint8_t)inp_zp ^ 0x80u);
 
-    // Bands of output rows: enough tasks for all threads, and at most ~256 KB of channel rows.
     const int nthreads = std::max(1, cv::getNumThreads());
     int nbands = std::max(1, (nthreads * 4 + N * K1 - 1) / (N * K1));
     int band = (Ho + nbands - 1) / nbands;
@@ -1967,13 +1942,11 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
         int32_t biasv[K0];
         float multv[K0];
 
-        // output pixel j of a 128-bit lane takes the 4 bytes at j*sx .. j*sx+3
         alignas(32) int8_t gidx[32];
         for (int j = 0; j < 4; j++)
             for (int t4 = 0; t4 < 4; t4++)
                 gidx[j * 4 + t4] = gidx[16 + j * 4 + t4] = (int8_t)(j * sx + t4);
         const __m256i vgather = _mm256_load_si256((const __m256i*)gidx);
-        // 4 channels x 4 pixels, channel-major -> pixel-major
         const __m256i vtr = _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                                              0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
         const __m128i v_xor = inputIsU8 ? _mm_setzero_si128() : _mm_set1_epi8((char)0x80);
@@ -1986,7 +1959,6 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
             int oy0 = b * band, oy1 = std::min(oy0 + band, Ho);
             int g0 = k1 * K0, n_g = std::min(K0, K - g0);
 
-            // wq[(ky*G + g)*8 + c]: taps 4g..4g+3 of kernel row ky of channel c, 0 where missing
             memset(wq, 0, sizeof(int32_t) * kh * G * C0);
             int8_t* wqb = (int8_t*)wq;
             for (int j = 0; j < n_g; j++) {
@@ -2004,8 +1976,6 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                 multv[j] = 0.f;
             }
 
-            // 1. channel rows for input rows iy0 .. iy0 + nrows - 1: row r, channel c at
-            //    planar + (r*8 + c)*Wp, the image starting at column padL
             const int iy0 = oy0 * sy - padT;
             const int nrows = (oy1 - 1 - oy0) * sy + (kh - 1) * dy + 1;
             const int8_t* src = inp + (size_t)(n * K1 + k1) * Hi * Wi * C0;
@@ -2024,7 +1994,6 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                 uint8_t* dp = prow + padL;
                 int x = 0;
                 for (; x <= Wi - 8; x += 8, sp += 8 * C0, dp += 8) {
-                    // 8 pixels x 8 channels -> 8 channels x 8 pixels
                     __m128i a  = _mm_xor_si128(_mm_loadu_si128((const __m128i*)sp), v_xor);
                     __m128i bb = _mm_xor_si128(_mm_loadu_si128((const __m128i*)(sp + 16)), v_xor);
                     __m128i cc = _mm_xor_si128(_mm_loadu_si128((const __m128i*)(sp + 32)), v_xor);
@@ -2049,7 +2018,6 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                         dp[c * Wp] = (uint8_t)sp[c] ^ xorbyte;
             }
 
-            // 2-3. 8 output pixels at a time
             for (int oy = oy0; oy < oy1; oy++) {
                 const uint8_t* rbase = planar + (size_t)(oy - oy0) * sy * C0 * Wp;
                 int8_t* orow = out + ((size_t)(n * K1 + k1) * Ho + oy) * Wo * K0;
@@ -2083,13 +2051,12 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                     __m256i p45 = _mm256_packs_epi32(DWV_Q(4), DWV_Q(5));
                     __m256i p67 = _mm256_packs_epi32(DWV_Q(6), DWV_Q(7));
                     #undef DWV_Q
-                    // per 128-bit lane: channels 0-3 (b03) or 4-7 (b47) x 4 pixels, channel-major
                     __m256i b03 = inputIsU8 ? _mm256_packus_epi16(p01, p23) : _mm256_packs_epi16(p01, p23);
                     __m256i b47 = inputIsU8 ? _mm256_packus_epi16(p45, p67) : _mm256_packs_epi16(p45, p67);
                     b03 = _mm256_shuffle_epi8(b03, vtr);
                     b47 = _mm256_shuffle_epi8(b47, vtr);
-                    __m256i lo = _mm256_unpacklo_epi32(b03, b47);  // pixels 0,1 | 4,5
-                    __m256i hi = _mm256_unpackhi_epi32(b03, b47);  // pixels 2,3 | 6,7
+                    __m256i lo = _mm256_unpacklo_epi32(b03, b47);
+                    __m256i hi = _mm256_unpackhi_epi32(b03, b47);
                     __m256i px03 = _mm256_permute2x128_si256(lo, hi, 0x20);
                     __m256i px47 = _mm256_permute2x128_si256(lo, hi, 0x31);
 
@@ -2393,9 +2360,6 @@ void convInt8Block(const void* inp_, const void* residual_,
 #if CV_AVX_VNNI
     bool useVNNI = weightsVNNI_ && biasVNNI_;
     if (useVNNI && cs.hasPadding()) {
-        // The AVX-VNNI kxk kernel computes a map of fewer than 8 output pixels in a scalar path
-        // that does not handle padding (see convInt8BlockVNNI_kxk); such tiny padded
-        // convolutions use the generic kernel below.
         const MatShape& os = cs.outshape;
         useVNNI = os.total() / ((size_t)os[0] * os[1] * os.back()) >= 8;
     }
