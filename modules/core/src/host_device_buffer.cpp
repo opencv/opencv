@@ -105,7 +105,12 @@ UMat* HostDeviceBuffer::deviceForWrite(Location where, const MatShape& shape, in
 UMat* HostDeviceBuffer::deviceForRead(Location where)
 {
     if (valid_ & where)
+    {
+        // OpenCL can be switched off (per thread) after the value became current there
+        if (where == OPENCL && !deviceAllocator(OPENCL))
+            return NULL;
         return where == CUDA ? &cuda_ : &ocl_;
+    }
     CV_Assert(valid_ != NONE && "HostDeviceBuffer: there is no value to read");
     // take shape/type from the current copy so an unusable backend costs no download
     const MatShape shape = (valid_ & HOST) ? host_.size : ((valid_ & CUDA) ? cuda_.size : ocl_.size);
