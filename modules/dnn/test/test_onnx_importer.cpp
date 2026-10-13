@@ -3669,10 +3669,12 @@ TEST_P(Test_ONNX_layers, GatherBlockQuantized) {
     testONNXModels("gather_block_quantized_oddblk", npy, 1e-4, 1e-3);
     // negative indices wrap; a repeated one must give the same row
     testONNXModels("gather_block_quantized_negidx", npy, 1e-4, 1e-3);
+    // past either end: unlike ONNX Gather, the slice comes back zero rather than failing
+    testONNXModels("gather_block_quantized_oob", npy, 1e-4, 1e-3);
 }
 
-TEST_P(Test_ONNX_layers, GroupQueryAttentionWindowBias) {
-    const std::string name = "gqa_window_bias";
+static void testGQAWindowBias(const std::string& name, bool required)
+{
     Net net = readNetFromONNX(_tf("models/" + name + ".onnx", required), ENGINE_OPENCV);
     ASSERT_FALSE(net.empty());
 
@@ -3685,6 +3687,12 @@ TEST_P(Test_ONNX_layers, GroupQueryAttentionWindowBias) {
 
     Mat out = net.forward("output");
     normAssert(blobFromNPY(_tf("data/output_" + name + ".npy")), out, "", 1e-4, 1e-3);
+}
+
+TEST_P(Test_ONNX_layers, GroupQueryAttentionWindowBias) {
+    testGQAWindowBias("gqa_window_bias", required);
+    // a bias of its own per head: one shared across heads cannot catch a head-0 broadcast
+    testGQAWindowBias("gqa_window_bias_perhead", required);
 }
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {

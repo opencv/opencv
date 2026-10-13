@@ -599,10 +599,14 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         } else {
             // Outside the window is -FLT_MAX either way; inside carries the bias, or 1 when
             // there is none and the kernel takes the boolean path.
-            Mat mask(std::vector<int>{batch_size, 1, seq_len_q, total_seq_kv},
+            const MatShape biasShape = fold_bias ? mask_mat.shape() : MatShape();
+            CV_CheckFalse(fold_bias && biasShape.dims != 4,
+                          "a sliding window needs a 4D attn_mask to fold");
+            // The bias may be per-head, so the window carries its head extent rather than 1.
+            const int nh_mask = fold_bias ? biasShape[1] : 1;
+            Mat mask(std::vector<int>{batch_size, nh_mask, seq_len_q, total_seq_kv},
                      fold_bias ? CV_32F : CV_8U,
                      fold_bias ? Scalar(-FLT_MAX) : Scalar(0));
-            const MatShape biasShape = fold_bias ? mask_mat.shape() : MatShape();
             for (int b = 0; b < batch_size; ++b) {
                 const int bb = fold_bias && biasShape[0] == 1 ? 0 : b;
                 for (int i = 0; i < seq_len_q; ++i) {
@@ -611,10 +615,12 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                     // Spans local_window_size tokens ending at hi, not +1 (checked vs onnxruntime).
                     if (local_window_size > 0) lo = std::max(lo, hi - local_window_size + 1);
                     if (fold_bias) {
-                        const float* bias = mask_mat.ptr<float>(bb, 0, i);
-                        float* row = mask.ptr<float>(b, 0, i);
-                        for (int j = lo; j <= hi && j < total_seq_kv; ++j)
-                            row[j] = bias[j];
+                        for (int h = 0; h < nh_mask; ++h) {
+                            const float* bias = mask_mat.ptr<float>(bb, h, i);
+                            float* row = mask.ptr<float>(b, h, i);
+                            for (int j = lo; j <= hi && j < total_seq_kv; ++j)
+                                row[j] = bias[j];
+                        }
                     } else {
                         uchar* row = mask.ptr<uchar>(b, 0, i);
                         for (int j = lo; j <= hi && j < total_seq_kv; ++j)
