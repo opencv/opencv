@@ -1165,8 +1165,8 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
     else
 #endif
-#if CV_NEON
-    if((pix_size == 2) || (pix_size == 4))
+#if CV_TRY_NEON
+    if(CV_CPU_HAS_SUPPORT_NEON && ((pix_size == 2) || (pix_size == 4)))
     {
         if(pix_size == 2)
             opt_NEON::resizeNN2_NEON(range, src, dst, x_ofs, ify);
