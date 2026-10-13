@@ -76,9 +76,9 @@ re-vendor. The unified-diff form of each in-tree edit lives under
    `modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp` on top of
    `cv::parallel_for_`. No `.diff` — the file is simply absent.
 2. `lib/mlasi.h` — `MlasGetMaximumThreadCount()` returns `cv::getNumThreads()`
-   when `MLAS_OPENCV_THREADING` is defined; `#include "core/mlas/inc/mlas.h"`
-   is rewritten to `#include "../inc/mlas.h"` because the ORT in-tree path
-   does not exist here. See `patches/0001-mlasi-opencv-threading.diff`.
+   (times 4 on hybrid CPUs) when `MLAS_OPENCV_THREADING` is defined;
+   `#include "core/mlas/inc/mlas.h"` is rewritten to `#include "../inc/mlas.h"`
+   because the ORT in-tree path does not exist here. See `patches/0001-mlasi-opencv-threading.diff`.
 3. `lib/platform.cpp` — non-SGEMM dispatch is wrapped under `MLAS_GEMM_ONLY`
    so the SGEMM-only subset builds without the rest of the MLAS sources. The
    top-of-file `erf_neon_fp16.h` / `gelu_neon_fp16.h` includes are also gated

@@ -11,9 +11,9 @@
 // with a parallel `MlasTrySimpleParallel` MLAS would still emit a single
 // iteration. We patch both halves:
 //
-//   1. MlasGetMaximumThreadCount() in mlasi.h returns cv::getNumThreads()
-//      when MLAS_OPENCV_THREADING is defined (see the small patch in
-//      mlasi.h flagged with that define).
+//   1. MlasGetMaximumThreadCount() in mlasi.h returns opencv_dnn_mlas_max_threads(),
+//      i.e. cv::getNumThreads(), times 4 on hybrid CPUs, when MLAS_OPENCV_THREADING
+//      is defined (see the small patch in mlasi.h flagged with that define).
 //   2. The three threaded entry points below dispatch to cv::parallel_for_.
 //
 // Compiled into the opencv_dnn_mlas object library only — the
@@ -35,10 +35,28 @@
 // instance so mlasi.h links — it's never read because we never call MlasQgemm.
 extern "C++" const MLAS_GEMM_QUANT_DISPATCH MlasGemmQuantDispatchDefault{};
 
+// <cpuid.h> comes from mlasi.h (guarded against GCC bug 96238); MLAS is not built on Windows.
+// CPUID.(EAX=7,ECX=0):EDX[15] is set on CPUs that mix core types (e.g. Intel P/E cores).
+static bool isHybridCpu()
+{
+#if defined(__x86_64__) || defined(__i386__)
+    unsigned a, b, c, d;
+    if (__get_cpuid_max(0, nullptr) < 7)
+        return false;
+    __cpuid_count(7, 0, a, b, c, d);
+    return (d >> 15) & 1;
+#else
+    return false;
+#endif
+}
+
+// MLAS splits each operation into this many tiles. One tile per thread leaves fast cores
+// idle while slow ones finish on hybrid CPUs, so use 4 per thread there, as ONNX Runtime does.
 extern "C" int opencv_dnn_mlas_max_threads()
 {
     int n = cv::getNumThreads();
-    return n > 0 ? n : 1;
+    static const int factor = isHybridCpu() ? 4 : 1;
+    return (n > 0 ? n : 1) * factor;
 }
 
 void

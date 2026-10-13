@@ -732,7 +732,8 @@ PERF_TEST_P_(Layer_InstanceNorm, InstanceNorm)
 }
 
 struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
-    void test_layer(const std::vector<int> x_shape, const std::vector<int> qkv_hidden_sizes, const int num_heads) {
+    void test_layer(const std::vector<int> x_shape, const std::vector<int> qkv_hidden_sizes, const int num_heads,
+                    bool const_weights = false) {
         int backendId = get<0>(GetParam());
         int targetId = get<1>(GetParam());
 
@@ -757,18 +758,25 @@ struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
         lp.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_hidden_sizes.data(), qkv_hidden_sizes.size()));
 
         Net net;
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
-        net.connect(0, 1, id, 1);
-        net.connect(0, 2, id, 2);
-
-        {
+        if (const_weights) {
+            // Weights as blobs: packed once, then every forward() takes the prepacked path.
+            lp.blobs.push_back(weight);
+            lp.blobs.push_back(bias);
+            net.addLayerToPrev(lp.name, lp.type, lp);
+            net.setInput(x);
+        } else {
+            int id = net.addLayerToPrev(lp.name, lp.type, lp);
+            net.connect(0, 0, id, 0);
+            net.connect(0, 1, id, 1);
+            net.connect(0, 2, id, 2);
             std::vector<std::string> input_names{"x", "weight", "bias"};
             net.setInputsNames(input_names);
             net.setInput(x, input_names[0]);
             net.setInput(weight, input_names[1]);
             net.setInput(bias, input_names[2]);
+        }
 
+        {
             net.setPreferableBackend(backendId);
             net.setPreferableTarget(targetId);
             Mat out = net.forward();
@@ -785,6 +793,10 @@ struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
 
 PERF_TEST_P_(Layer_Attention, VisionTransformer) {
     test_layer({1, 197, 768}, {768, 768, 768}, 12);
+}
+
+PERF_TEST_P_(Layer_Attention, BERT_ConstWeights) {
+    test_layer({1, 128, 768}, {768, 768, 768}, 12, /*const_weights=*/true);
 }
 
 // GroupQueryAttention runs on AttentionOnnxAi; these flags are what the ONNX importer sets.

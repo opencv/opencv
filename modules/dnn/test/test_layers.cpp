@@ -823,6 +823,64 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_Attention, rank4_input_matches_rank3)
+{
+    const int B0 = 2, B1 = 3, S = 17, C = 64, NH = 4;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(std::vector<int>{C, 3 * C}, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    randu(W, -1.f, 1.f);
+    randu(bias, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+
+    Mat x4(std::vector<int>{B0, B1, S, C}, CV_32F);
+    randu(x4, -1.f, 1.f);
+    Mat x3 = x4.reshape(1, std::vector<int>{B0 * B1, S, C});
+    std::vector<Mat> in4(1, x4), in3(1, x3), out4, out3;
+    runLayer(AttentionLayer::create(lp), in4, out4);
+    runLayer(AttentionLayer::create(lp), in3, out3);
+
+    EXPECT_EQ(shape(out4[0]), shape(x4));
+    normAssert(out3[0].reshape(1, std::vector<int>{B0, B1, S, C}), out4[0]);
+}
+
+TEST(Layer_Attention, qk_v_head_sizes_differ)
+{
+    const int B = 2, S = 9, C = 32, NH = 2, Hqk = C / 2, Hv = C, N = 2 * Hqk + Hv;
+    const int dqk = Hqk / NH, dv = Hv / NH;
+    std::vector<int> qkv_hidden_sizes = { Hqk, Hqk, Hv };
+    Mat W(C, N, CV_32F), bias(std::vector<int>{N}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
+    randu(W, -1.f, 1.f); randu(bias, -1.f, 1.f); randu(x, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+    std::vector<Mat> in(1, x), out;
+    runLayer(AttentionLayer::create(lp), in, out);
+
+    Mat P = x.reshape(1, B * S) * W + repeat(Mat(1, N, CV_32F, bias.ptr<float>()), B * S, 1);
+    Mat ref(B * S, Hv, CV_32F);
+    for (int b = 0; b < B; b++)
+        for (int h = 0; h < NH; h++) {
+            Mat rows = P.rowRange(b * S, (b + 1) * S);
+            Mat q = rows.colRange(h * dqk, (h + 1) * dqk);
+            Mat k = rows.colRange(Hqk + h * dqk, Hqk + (h + 1) * dqk);
+            Mat v = rows.colRange(2 * Hqk + h * dv, 2 * Hqk + (h + 1) * dv);
+            Mat s = q * k.t() * (1.0 / std::sqrt((double)dqk));
+            for (int r = 0; r < S; r++) {
+                double mx; minMaxLoc(s.row(r), nullptr, &mx);
+                Mat e; exp(s.row(r) - mx, e);
+                Mat(e / sum(e)[0]).copyTo(s.row(r));
+            }
+            Mat(s * v).copyTo(ref(Range(b * S, (b + 1) * S), Range(h * dv, (h + 1) * dv)));
+        }
+    normAssert(ref.reshape(1, std::vector<int>{B, S, Hv}), out[0]);
+}
+
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)
 {

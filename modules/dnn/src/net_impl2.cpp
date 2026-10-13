@@ -885,6 +885,16 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
         kvCacheManager.applyRoutes();
 }
 
+// 'src' is a private buffer, so hand it over instead of copying it, unless the caller
+// supplied a buffer of the same size and type to be filled in place.
+static void handOverOrCopy(const Mat& src, Mat& dst)
+{
+    if (!dst.empty() && dst.size == src.size && dst.type() == src.type())
+        src.copyTo(dst);
+    else
+        dst = src;
+}
+
 // Assign a single result to an output array, including a (pre-allocated) vector
 // of Mat/UMat, which _OutputArray::assign(Mat) does not handle.
 static void assignSingleOutput(OutputArrayOfArrays outputBlobs, const Mat& result)
@@ -893,7 +903,7 @@ static void assignSingleOutput(OutputArrayOfArrays outputBlobs, const Mat& resul
     if (k == _InputArray::STD_VECTOR_MAT) {
         std::vector<Mat>& v = outputBlobs.getMatVecRef();
         v.resize(1);
-        result.copyTo(v[0]);
+        handOverOrCopy(result, v[0]);
     } else if (k == _InputArray::STD_VECTOR_UMAT) {
         std::vector<UMat>& v = outputBlobs.getUMatVecRef();
         v.resize(1);
@@ -1045,7 +1055,7 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
         for (size_t i = 0; i < outs.size(); ++i) {
             Mat src = outs[i];
             if (outMats) {
-                src.copyTo(outMats->at(i));
+                handOverOrCopy(src, outMats->at(i));
             } else if (outUMats) {
                 src.copyTo(outUMats->at(i));
             } else {
@@ -1098,11 +1108,18 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     } else {
         CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
     }
+    // forwardGraph() already made private copies of the graph outputs; an output
+    // requested twice still gets a separate copy.
+    std::vector<char> handedOver(noutputs, 0);
     for (i = 0; i < nout; i++) {
         int j = outidxs[i];
         Mat src = outs[j];
         if (outMats) {
-            src.copyTo(outMats->at(i));
+            if (handedOver[j])
+                src.copyTo(outMats->at(i));
+            else
+                handOverOrCopy(src, outMats->at(i));
+            handedOver[j] = 1;
         } else if (outUMats) {
             src.copyTo(outUMats->at(i));
         } else {

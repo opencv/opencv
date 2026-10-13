@@ -154,6 +154,39 @@ bool mlasSgemmPacked(bool trans_a, bool trans_b,
     return true;
 }
 
+bool mlasSgemmPackedBatch(size_t batch, int M, int N, int K, float alpha,
+                          const float* const* A, int lda,
+                          const void* const* packed_B,
+                          float beta,
+                          float* const* C, int ldc)
+{
+    if (!mlasAvailable()) return false;
+    if (batch == 0 || M <= 0 || N <= 0 || K <= 0) return false;
+
+    std::vector<MLAS_SGEMM_DATA_PARAMS> data(batch);
+    for (size_t i = 0; i < batch; i++) {
+        data[i].A = A[i];
+        data[i].lda = static_cast<size_t>(lda);
+        data[i].B = static_cast<const float*>(packed_B[i]);
+        data[i].ldb = 0;  // ignored when BIsPacked
+        data[i].C = C[i];
+        data[i].ldc = static_cast<size_t>(ldc);
+        data[i].alpha = alpha;
+        data[i].beta = beta;
+        data[i].BIsPacked = true;
+    }
+
+    MlasGemmBatch(CblasNoTrans, CblasNoTrans,
+                  static_cast<size_t>(M),
+                  static_cast<size_t>(N),
+                  static_cast<size_t>(K),
+                  data.data(),
+                  batch,
+                  /*ThreadPool=*/nullptr,
+                  /*BackendKernelSelectorConfig=*/nullptr);
+    return true;
+}
+
 size_t mlasFlashAttentionBufferBytesPerThread(int q_block_size,
                                               int kv_block_size,
                                               int v_head_size)
