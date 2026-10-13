@@ -109,7 +109,10 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, RGBD_DepthTo3d,
         testing::make_tuple(127, 61),   // odd tail
         testing::make_tuple(13, 3),     // smaller than one vector
         testing::make_tuple(64, 1),
-        testing::make_tuple(320, 240)
+        testing::make_tuple(320, 240),
+        testing::make_tuple(1023, 3),   // just below the vector gate
+        testing::make_tuple(1024, 3),   // at the gate, lane-multiple width
+        testing::make_tuple(1025, 3)    // vector body + scalar tail
     )
 );
 
@@ -140,6 +143,28 @@ TEST(RGBD_DepthTo3dMisc, roiInput)
     Mat roi = big(Rect(7, 3, 31, 17));
 
     Matx33f K(400.f, 0.f, 15.5f, 0.f, 400.f, 8.5f, 0.f, 0.f, 1.f);
+
+    Mat pts_roi, pts_ref;
+    depthTo3d(roi, K, pts_roi);
+    refDepthTo3d<float>(roi, K, pts_ref);
+    expectExact<float>(pts_roi, pts_ref);
+}
+
+TEST(RGBD_DepthTo3dMisc, wideRoiInput)
+{
+    // Wide non-continuous ROI across the vector gate: body + scalar tail with
+    // special values at both ends (first column = vector start, last = tail).
+    Mat big(7, 1040, CV_32FC1);
+    randu(big, 0.5f, 8.f);
+    Mat roi = big(Rect(7, 2, 1025, 3));
+    const float special[3] = { 0.f, -3.5f, std::numeric_limits<float>::quiet_NaN() };
+    for (int y = 0; y < roi.rows; ++y)
+    {
+        roi.at<float>(y, 0) = special[y];
+        roi.at<float>(y, roi.cols - 1) = special[y];
+    }
+
+    Matx33f K(400.f, 0.f, 512.f, 0.f, 400.f, 1.f, 0.f, 0.f, 1.f);
 
     Mat pts_roi, pts_ref;
     depthTo3d(roi, K, pts_roi);
