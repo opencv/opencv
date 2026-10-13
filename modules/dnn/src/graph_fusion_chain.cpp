@@ -480,6 +480,10 @@ void Net::Impl::fuseChains()
     // the preceding conv it would find nothing left.
     fuseBN();
 
+    // After fuseBN, which would otherwise consume a BatchNorm this one needs, and before
+    // the chain pass, which can then absorb the BatchNorm now that nothing follows it.
+    foldQuantizedAffine();
+
     // Order is load-bearing: each pass matches shapes the one before it leaves.
     fuseAttention();
     fuseMatMulConstBToGemm();

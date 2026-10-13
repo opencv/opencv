@@ -303,5 +303,156 @@ void Net::Impl::fuseBN()
     pass.run();
 }
 
+// A quantizer exports a per-channel affine as BatchNorm -> Quantize -> Mul(const) -> Add(const).
+// The two int8 steps are an affine in real values, so they compose into the float BatchNorm
+// ahead of them and the Quantize simply adopts the Add's output scale.
+struct FoldQuantizedAffinePass
+{
+    FoldQuantizedAffinePass(Net::Impl* netimpl_) : netimpl(netimpl_) {}
+
+    void run()
+    {
+        netimpl->useCounts(usecounts);
+        fuseGraph(netimpl->mainGraph);
+    }
+
+    //! The quantized constant in real values, or false when it is not a usable per-channel one.
+    bool realOperand(const Eltwise2Int8Layer* elt, size_t C, Mat& out) const
+    {
+        if (elt->inputs.size() != 2 || elt->scales.size() != 2 || elt->zeropoints.size() != 2)
+            return false;
+        const Arg a = elt->inputs[1];
+        if (!netimpl->isConstArg(a))
+            return false;
+        const Mat q = netimpl->argTensor(a);
+        if (q.total() != C || !q.isContinuous() || (q.depth() != CV_8U && q.depth() != CV_8S))
+            return false;
+        const float sc = elt->scales[1];
+        const int zp = elt->zeropoints[1];
+        out.create(1, (int)C, CV_32F);
+        float* o = out.ptr<float>();
+        for (size_t i = 0; i < C; i++) {
+            const int v = q.depth() == CV_8U ? (int)q.ptr<uint8_t>()[i] : (int)q.ptr<int8_t>()[i];
+            o[i] = (v - zp) * sc;
+        }
+        return true;
+    }
+
+    Eltwise2Int8Layer* stepBefore(const std::vector<Ptr<LayerInfo> >& prog,
+                                  const std::vector<int>& producer_of, Arg a,
+                                  const char* want) const
+    {
+        if (a.idx < 0 || a.idx >= (int)producer_of.size() || usecounts[a.idx] != 1)
+            return nullptr;
+        const int idx = producer_of[a.idx];
+        if (idx < 0)
+            return nullptr;
+        Eltwise2Int8Layer* e = dynamic_cast<Eltwise2Int8Layer*>(prog[idx].get());
+        if (!e || e->with_relu || e->operation != want)
+            return nullptr;
+        return e;
+    }
+
+    void fuseGraph(Ptr<Graph>& graph)
+    {
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
+        const size_t nops = prog.size(), nargs = netimpl->args.size();
+        std::vector<Ptr<LayerInfo> > newprog(prog.begin(), prog.end());
+        std::vector<int> producer_of((int)nargs, -1);
+        bool modified = false;
+
+        for (size_t i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& layer = prog[i];
+            std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+            if (subgraphs)
+                for (Ptr<Graph>& g : *subgraphs) fuseGraph(g);
+            for (Arg out : layer->outputs)
+                if (out.idx >= 0 && out.idx < (int)nargs)
+                    producer_of[out.idx] = (int)i;
+        }
+
+        for (size_t i = 0; i < nops; i++) {
+            Eltwise2Int8Layer* add = dynamic_cast<Eltwise2Int8Layer*>(newprog[i].get());
+            if (!add || add->with_relu || add->operation != "add" || add->outputs.size() != 1)
+                continue;
+            const int mul_idx = add->inputs[0].idx >= 0 ? producer_of[add->inputs[0].idx] : -1;
+            Eltwise2Int8Layer* mul = stepBefore(newprog, producer_of, add->inputs[0], "mul");
+            if (!mul || mul->outputs.size() != 1 || mul_idx < 0)
+                continue;
+            const Arg q_out = mul->inputs[0];
+            if (q_out.idx < 0 || usecounts[q_out.idx] != 1)
+                continue;
+            const int q_idx = producer_of[q_out.idx];
+            if (q_idx < 0)
+                continue;
+            Layer* quant = (Layer*)newprog[q_idx].get();
+            if (!quant || quant->type != "QuantizeLinear" || quant->inputs.size() < 3)
+                continue;
+            const Arg bn_out = quant->inputs[0];
+            if (bn_out.idx < 0 || usecounts[bn_out.idx] != 1)
+                continue;
+            const int bn_idx = producer_of[bn_out.idx];
+            if (bn_idx < 0)
+                continue;
+            BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(newprog[bn_idx].get());
+            if (!bn)
+                continue;
+            Mat bnScale, bnShift;
+            bn->getScaleBias(bnScale, bnShift);
+            if (bnScale.empty() || bnScale.total() != bnShift.total())
+                continue;
+            const size_t C = bnScale.total();
+            Mat a, b;
+            if (!realOperand(mul, C, a) || !realOperand(add, C, b))
+                continue;
+            // Everything the rewrite needs is checked before the fold mutates the BatchNorm.
+            if (!netimpl->isConstArg(quant->inputs[1]) || !netimpl->isConstArg(quant->inputs[2]))
+                continue;
+            Mat sc = netimpl->argTensor(quant->inputs[1]).clone();
+            Mat zp = netimpl->argTensor(quant->inputs[2]).clone();
+            if (sc.total() != 1 || zp.total() != 1 || sc.depth() != CV_32F ||
+                (zp.depth() != CV_8U && zp.depth() != CV_8S))
+                continue;   // a per-channel quantizer cannot take the Add's single scale
+            const FusionOps* ops = fusionOpsFor(bn);
+            if (!ops || !ops->foldOutputAffine)
+                continue;
+            if (!ops->foldOutputAffine(bn, a, b))
+                continue;
+
+            // The Quantize now lands straight on the Add's scale, and takes over its output.
+            // Both args keep their original shape, which quantizeLinear asserts must match.
+            sc.ptr<float>()[0] = add->output_sc;
+            if (zp.depth() == CV_8U) zp.ptr<uint8_t>()[0] = (uint8_t)add->output_zp;
+            else                     zp.ptr<int8_t>()[0]  = (int8_t)add->output_zp;
+            quant->inputs[1] = netimpl->newConstArg(quant->name + "_scale_folded", sc);
+            quant->inputs[2] = netimpl->newConstArg(quant->name + "_zp_folded", zp);
+            quant->outputs[0] = add->outputs[0];
+            newprog[mul_idx] = Ptr<LayerInfo>();
+            newprog[i] = Ptr<LayerInfo>();
+            modified = true;
+        }
+
+        if (modified) {
+            size_t j = 0;
+            for (size_t i = 0; i < newprog.size(); i++)
+                if (!newprog[i].empty()) {
+                    if (j < i) newprog[j] = newprog[i];
+                    j++;
+                }
+            newprog.resize(j);
+            graph->setProg(newprog);
+        }
+    }
+
+    Net::Impl* netimpl;
+    std::vector<int> usecounts;
+};
+
+void Net::Impl::foldQuantizedAffine()
+{
+    FoldQuantizedAffinePass pass(this);
+    pass.run();
+}
+
 CV__DNN_INLINE_NS_END
 }}

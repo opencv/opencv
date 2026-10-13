@@ -372,7 +372,8 @@ public:
     BatchNorm2LayerImpl(const LayerParams& params) {
         registerFusionOpsOnce<BatchNorm2LayerImpl>(
             { &BatchNorm2LayerImpl::unfoldOp, nullptr, false, nullptr,
-              &BatchNorm2LayerImpl::ownedBuffersOp });
+              &BatchNorm2LayerImpl::ownedBuffersOp,
+              &BatchNorm2LayerImpl::foldOutputAffineOp });
         setParamsFrom(params);
         epsilon = params.get<float>("epsilon", 1e-5);
     }
@@ -390,6 +391,33 @@ public:
             return false;
         out.push_back(l->scale);
         out.push_back(l->bias);
+        return true;
+    }
+
+    static bool foldOutputAffineOp(Layer* self, const Mat& scale, const Mat& shift)
+    {
+        return static_cast<BatchNorm2LayerImpl*>(self)->foldOutputAffine(scale, shift);
+    }
+
+    //! a*(s*x + t) + b is again an affine, so the layer just restates its own constants.
+    bool foldOutputAffine(const Mat& a, const Mat& b)
+    {
+        if (scale.empty() || bias.empty() || scale.total() != bias.total())
+            return false;   // freezeScaleBias() has not run, so there is nothing to rewrite
+        if (scale.type() != CV_32F || bias.type() != CV_32F ||
+            a.type() != CV_32F || b.type() != CV_32F ||
+            a.total() != scale.total() || b.total() != scale.total() ||
+            !a.isContinuous() || !b.isContinuous())
+            return false;
+
+        const float* ap = a.ptr<float>();
+        const float* bp = b.ptr<float>();
+        float* sp = scale.ptr<float>();
+        float* tp = bias.ptr<float>();
+        for (size_t i = 0; i < scale.total(); i++) {
+            sp[i] *= ap[i];
+            tp[i] = tp[i] * ap[i] + bp[i];
+        }
         return true;
     }
 

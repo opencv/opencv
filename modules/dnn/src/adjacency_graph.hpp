@@ -588,6 +588,10 @@ struct FusionOps
      *  the order unfold expects to read it back. A null slot means the layer owns none.
      */
     bool (*ownedBuffers)(const Layer* self, std::vector<Mat>& out) = nullptr;
+
+    //! Composes a per-channel affine onto the layer's own output, so a pass can push a
+    //! trailing scale and shift backwards without knowing how the layer holds them.
+    bool (*foldOutputAffine)(Layer* self, const Mat& scale, const Mat& shift) = nullptr;
 };
 
 /** @brief Binds @p ops to one concrete layer class. Last registration for a type wins. */

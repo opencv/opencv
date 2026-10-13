@@ -1467,6 +1467,8 @@ CV__DNN_INLINE_NS_BEGIN
         std::vector<int> zeropoints;
         float output_sc;
         int output_zp;
+        String operation;
+        bool with_relu = false;
     };
 
     class CV_EXPORTS NaryEltwiseLayer : public Layer
