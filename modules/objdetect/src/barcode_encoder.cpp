@@ -4,6 +4,8 @@
 
 #include "precomp.hpp"
 #include "opencv2/objdetect/barcode.hpp"
+#include <climits>
+#include <limits>
 
 namespace cv {
 namespace barcode {
@@ -284,6 +286,11 @@ void BarcodeEncoderImpl::encode(const String& encoded_info, OutputArray output)
     }
 
     int total_modules = left_quiet + static_cast<int>(bit_string.length()) + right_quiet;
+    if (total_modules <= 0 || params_.module_width > INT_MAX / total_modules)
+    {
+        CV_Error(Error::StsBadArg, cv::format("module_width (%d) is too large for %d total modules and would cause integer overflow.",
+                                              params_.module_width, total_modules));
+    }
     int total_width = total_modules * params_.module_width;
 
     output.create(params_.bar_height, total_width, CV_8UC1);

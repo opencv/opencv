@@ -4,8 +4,31 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/objdetect/barcode.hpp"
+#include <climits>
 
 namespace opencv_test { namespace {
+
+static std::string barcodeMatToBitString(const Mat& img)
+{
+    CV_Assert(!img.empty() && img.type() == CV_8UC1);
+    std::string bits;
+    bits.reserve(img.cols);
+    for (int col = 0; col < img.cols; ++col)
+    {
+        // In generated barcode: 0 is black bar ('1'), 255 is white space ('0')
+        uchar val = img.at<uchar>(0, col);
+        bits += (val == 0) ? '1' : '0';
+    }
+    // Verify vertical consistency across all rows
+    for (int row = 1; row < img.rows; ++row)
+    {
+        for (int col = 0; col < img.cols; ++col)
+        {
+            CV_Assert(img.at<uchar>(row, col) == img.at<uchar>(0, col));
+        }
+    }
+    return bits;
+}
 
 TEST(Objdetect_Barcode_Encode, reference_patterns_ean13)
 {
@@ -53,6 +76,53 @@ TEST(Objdetect_Barcode_Encode, reference_patterns_ean13)
     {
         EXPECT_EQ(255, img.at<uchar>(20, col)) << "col " << col;
     }
+
+    // Assert the complete known GS1 module bitstream (113 modules) independently verified:
+    // First digit 6 -> parity ABBBAA
+    // Left:  2(B: 0011011), 9(B: 0010111), 1(B: 0110011), 0(B: 0100111), 4(A: 0100011), 1(A: 0011001)
+    // Right: 5(C: 1001110), 0(C: 1110010), 0(C: 1110010), 2(C: 1101100), 1(C: 1100110), 3(C: 1000010)
+    const std::string expected_ean13_bits =
+        "00000000000" // 11 quiet
+        "101"         // start guard
+        "0010011"     // '2' (B)
+        "0010111"     // '9' (B)
+        "0110011"     // '1' (B)
+        "0100111"     // '0' (B)
+        "0100011"     // '4' (A)
+        "0011001"     // '1' (A)
+        "01010"       // center guard
+        "1001110"     // '5' (C)
+        "1110010"     // '0' (C)
+        "1110010"     // '0' (C)
+        "1101100"     // '2' (C)
+        "1100110"     // '1' (C)
+        "1000010"     // '3' (C, check digit)
+        "101"         // stop guard
+        "0000000";    // 7 quiet
+    EXPECT_EQ(expected_ean13_bits, barcodeMatToBitString(img));
+
+    // Also assert second independent reference EAN-13 code (9787115279460)
+    Mat img_book;
+    encoder->encode("978711527946", img_book); // Check digit 0
+    const std::string expected_ean13_book_bits =
+        "00000000000" // 11 quiet
+        "101"         // start guard
+        "0111011"     // '7' (A parity for first digit 9)
+        "0001001"     // '8' (B)
+        "0010001"     // '7' (B)
+        "0011001"     // '1' (A)
+        "0110011"     // '1' (B)
+        "0110001"     // '5' (A)
+        "01010"       // center guard
+        "1101100"     // '2' (C)
+        "1000100"     // '7' (C)
+        "1110100"     // '9' (C)
+        "1011100"     // '4' (C)
+        "1010000"     // '6' (C)
+        "1110010"     // '0' (C, check digit)
+        "101"         // stop guard
+        "0000000";    // 7 quiet
+    EXPECT_EQ(expected_ean13_book_bits, barcodeMatToBitString(img_book));
 
     // Also test VALIDATE_CHECKSUM with 13 digits
     params.checksum_policy = barcode::BarcodeEncoder::VALIDATE_CHECKSUM;
@@ -112,6 +182,44 @@ TEST(Objdetect_Barcode_Encode, reference_patterns_ean8)
         EXPECT_EQ(255, img.at<uchar>(20, col)) << "col " << col;
     }
 
+    // Assert the complete known GS1 module bitstream (81 modules) independently verified:
+    // Left (Set A): 4(0100011), 0(0001101), 1(0011001), 7(0111011)
+    // Right (Set C): 0(1110010), 7(1000100), 2(1101100), 5(1001110)
+    const std::string expected_ean8_bits =
+        "0000000"  // 7 quiet
+        "101"      // start guard
+        "0100011"  // '4' (A)
+        "0001101"  // '0' (A)
+        "0011001"  // '1' (A)
+        "0111011"  // '7' (A)
+        "01010"    // center guard
+        "1110010"  // '0' (C)
+        "1000100"  // '7' (C)
+        "1101100"  // '2' (C)
+        "1001110"  // '5' (C, check digit)
+        "101"      // stop guard
+        "0000000"; // 7 quiet
+    EXPECT_EQ(expected_ean8_bits, barcodeMatToBitString(img));
+
+    // Assert second independent reference EAN-8 (96385074)
+    Mat img_ean8_2;
+    encoder->encode("9638507", img_ean8_2); // Check digit 4
+    const std::string expected_ean8_2_bits =
+        "0000000"  // 7 quiet
+        "101"      // start guard
+        "0001011"  // '9' (A)
+        "0101111"  // '6' (A)
+        "0111101"  // '3' (A)
+        "0110111"  // '8' (A)
+        "01010"    // center guard
+        "1001110"  // '5' (C)
+        "1110010"  // '0' (C)
+        "1000100"  // '7' (C)
+        "1011100"  // '4' (C, check digit)
+        "101"      // stop guard
+        "0000000"; // 7 quiet
+    EXPECT_EQ(expected_ean8_2_bits, barcodeMatToBitString(img_ean8_2));
+
     // Test VALIDATE_CHECKSUM with 8 digits
     params.checksum_policy = barcode::BarcodeEncoder::VALIDATE_CHECKSUM;
     Ptr<barcode::BarcodeEncoder> encoder_val = barcode::BarcodeEncoder::create(params);
@@ -169,6 +277,52 @@ TEST(Objdetect_Barcode_Encode, reference_patterns_upca)
     {
         EXPECT_EQ(255, img.at<uchar>(20, col)) << "col " << col;
     }
+
+    // Assert the complete known GS1 module bitstream (113 modules) independently verified:
+    // Left (Set A):  0(0001101), 1(0011001), 2(0010011), 3(0111101), 4(0100011), 5(0110001)
+    // Right (Set C): 6(1010000), 7(1000100), 8(1001000), 9(1110100), 0(1110010), 5(1001110)
+    const std::string expected_upca_bits =
+        "000000000" // 9 quiet
+        "101"       // start guard
+        "0001101"   // '0' (A)
+        "0011001"   // '1' (A)
+        "0010011"   // '2' (A)
+        "0111101"   // '3' (A)
+        "0100011"   // '4' (A)
+        "0110001"   // '5' (A)
+        "01010"     // center guard
+        "1010000"   // '6' (C)
+        "1000100"   // '7' (C)
+        "1001000"   // '8' (C)
+        "1110100"   // '9' (C)
+        "1110010"   // '0' (C)
+        "1001110"   // '5' (C, check digit)
+        "101"       // stop guard
+        "000000000";// 9 quiet
+    EXPECT_EQ(expected_upca_bits, barcodeMatToBitString(img));
+
+    // Assert second independent reference UPC-A (036000291452 - Wrigley's chewing gum)
+    Mat img_upca_2;
+    encoder->encode("03600029145", img_upca_2); // Check digit 2
+    const std::string expected_upca_2_bits =
+        "000000000" // 9 quiet
+        "101"       // start guard
+        "0001101"   // '0' (A)
+        "0111101"   // '3' (A)
+        "0101111"   // '6' (A)
+        "0001101"   // '0' (A)
+        "0001101"   // '0' (A)
+        "0001101"   // '0' (A)
+        "01010"     // center guard
+        "1101100"   // '2' (C)
+        "1110100"   // '9' (C)
+        "1100110"   // '1' (C)
+        "1011100"   // '4' (C)
+        "1001110"   // '5' (C)
+        "1101100"   // '2' (C, check digit)
+        "101"       // stop guard
+        "000000000";// 9 quiet
+    EXPECT_EQ(expected_upca_2_bits, barcodeMatToBitString(img_upca_2));
 
     // Test VALIDATE_CHECKSUM with 12 digits
     params.checksum_policy = barcode::BarcodeEncoder::VALIDATE_CHECKSUM;
@@ -303,6 +457,38 @@ TEST(Objdetect_Barcode_Encode, scaling_and_geometry)
             EXPECT_EQ(113 * mw, img.cols);
         }
     }
+}
+
+TEST(Objdetect_Barcode_Encode, module_width_overflow_boundary)
+{
+    barcode::BarcodeEncoder::Params params;
+    params.type = barcode::BarcodeEncoder::EAN_13;
+    params.checksum_policy = barcode::BarcodeEncoder::APPEND_CHECKSUM;
+    params.bar_height = 10;
+
+    // EAN-13 has 113 total modules.
+    // Boundary value: (INT_MAX / 113) + 1 must throw StsBadArg
+    params.module_width = (INT_MAX / 113) + 1;
+    auto encoder_ean13 = barcode::BarcodeEncoder::create(params);
+    Mat img;
+    EXPECT_THROW(encoder_ean13->encode("629104150021", img), cv::Exception);
+
+    // INT_MAX must also throw StsBadArg
+    params.module_width = INT_MAX;
+    encoder_ean13 = barcode::BarcodeEncoder::create(params);
+    EXPECT_THROW(encoder_ean13->encode("629104150021", img), cv::Exception);
+
+    // UPC-A has 113 total modules
+    params.type = barcode::BarcodeEncoder::UPC_A;
+    params.module_width = (INT_MAX / 113) + 1;
+    auto encoder_upca = barcode::BarcodeEncoder::create(params);
+    EXPECT_THROW(encoder_upca->encode("01234567890", img), cv::Exception);
+
+    // EAN-8 has 81 total modules
+    params.type = barcode::BarcodeEncoder::EAN_8;
+    params.module_width = (INT_MAX / 81) + 1;
+    auto encoder_ean8 = barcode::BarcodeEncoder::create(params);
+    EXPECT_THROW(encoder_ean8->encode("4017072", img), cv::Exception);
 }
 
 TEST(Objdetect_Barcode_Encode, decode_roundtrip_corners)
