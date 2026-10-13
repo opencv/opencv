@@ -26,6 +26,8 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <string_view>
+#include <cstring>
 #include <unordered_map>
 
 #if defined(__GNUC__)
@@ -141,6 +143,15 @@ protected:
 
     Arg resolveConstThroughIdentity(Arg arg);
 
+    // Register an initializer, reusing the Arg of an earlier constant with the same value.
+    Arg addConstArg(const std::string& name, const Mat& t);
+    // Common-subexpression elimination: outputs of the first node with a given signature.
+    struct CseEntry {
+        std::vector<Arg> args;
+        std::vector<std::string> names;
+    };
+    bool aliasOutputs(const opencv_onnx::NodeProto& node_proto, const CseEntry& prev);
+
     void raiseError() {
         have_errors = true;
     }
@@ -159,6 +170,10 @@ protected:
     // Raw ONNX dtype per produced tensor, keyed by remapped name: exports often omit
     // value_info for intermediates, and FP8 formats sharing one depth need it.
     std::unordered_map<std::string, int> produced_onnx_type;
+    // Constant dedup and CSE run on the main graph only; subgraph bodies are left as they are.
+    opencv_onnx::GraphProto* main_graph_proto = nullptr;
+    std::unordered_map<size_t, std::vector<Arg> > consts_by_value;
+    std::unordered_map<std::string, CseEntry> cse_map;
 
     std::string framework_name;
     std::set<std::string> missing_ops;
@@ -914,14 +929,25 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     std::vector<Ptr<LayerInfo> > saved_prog;
 
     curr_graph_proto = graph_proto;
+    if (mainGraph_)
+        main_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
 
     // parse constant tensors
     int n_consts = graph_proto->initializer_size();
+    // graph outputs keep their own Arg, same rule as in aliasOutputs()
+    std::set<std::string> graph_output_names;
+    if (mainGraph_)
+        for (int i = 0; i < graph_proto->output_size(); i++)
+            graph_output_names.insert(remap(graph_proto->output(i).name()));
     for (int i = 0; i < n_consts; i++) {
         opencv_onnx::TensorProto* const_i = graph_proto->mutable_initializer(i);
         Mat t = parseTensor(*const_i);
-        netimpl->newConstArg(remap(const_i->name()), t);
+        std::string name = remap(const_i->name());
+        if (mainGraph_ && !graph_output_names.count(name))
+            addConstArg(name, t);
+        else
+            netimpl->newConstArg(name, t);
         releaseONNXTensor(*const_i);
     }
 
@@ -1028,6 +1054,111 @@ void ONNXImporter2::rememberMissingOp(const std::string& opname)
     raiseError();
 }
 
+// Constants up to this size are deduplicated by value; larger ones are weights, which are
+// almost never repeated, and hashing them would only slow down loading.
+static const size_t CONST_DEDUP_MAX_BYTES = 1 << 20;
+
+// Collisions are harmless: addConstArg() compares type, shape and bytes before sharing.
+static size_t hashConst(const Mat& m)
+{
+    std::string_view bytes((const char*)m.ptr(), m.total()*m.elemSize());
+    return std::hash<std::string_view>()(bytes) ^ (size_t)m.type();
+}
+
+static bool sameConst(const Mat& a, const Mat& b)
+{
+    return a.type() == b.type() && a.shape() == b.shape() &&
+           std::memcmp(a.ptr(), b.ptr(), a.total()*a.elemSize()) == 0;
+}
+
+Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t)
+{
+    if (name.empty() || t.empty() || !t.isContinuous() ||
+        t.total()*t.elemSize() > CONST_DEDUP_MAX_BYTES)
+        return netimpl->newConstArg(name, t);
+    std::vector<Arg>& same = consts_by_value[hashConst(t)];
+    for (Arg a : same) {
+        if (sameConst(netimpl->argTensor(a), t)) {
+            netimpl->aliasArg(name, a);
+            return a;
+        }
+    }
+    Arg a = netimpl->newConstArg(name, t);
+    same.push_back(a);
+    return a;
+}
+
+// A node can be merged with an earlier identical one only if it is a pure function of its
+// inputs and attributes: a standard-domain op with a built-in parser (custom layers may keep
+// state; parseNode() checks the parser), not a random or Q/DQ op, and no subgraph bodies.
+static bool isCseCandidate(const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& domain = node_proto.domain();
+    if (!domain.empty() && domain != "ai.onnx")
+        return false;
+    // Random ops differ per call. Q/DQ stay one per consumer: fuseQDQ() folds a DequantizeLinear
+    // into MatMul/Gemm (and a weight DQ into Conv) only while it has a single consumer.
+    static const std::set<std::string> no_cse_ops = {
+        "RandomNormal", "RandomNormalLike", "RandomUniform", "RandomUniformLike",
+        "Multinomial", "Bernoulli",
+        "QuantizeLinear", "DequantizeLinear"
+    };
+    if (no_cse_ops.count(node_proto.op_type()))
+        return false;
+    for (const auto& attr : node_proto.attribute()) {
+        if (attr.has_g() || attr.graphs_size() > 0)
+            return false;
+        if (attr.has_t() && attr.t().ByteSizeLong() > CONST_DEDUP_MAX_BYTES)
+            return false;
+    }
+    return true;
+}
+
+// Op type, resolved input args (constants are already shared by value) and attributes
+// sorted by name; the node name is left out on purpose.
+static std::string makeCseKey(const opencv_onnx::NodeProto& node_proto, const std::vector<Arg>& inputs)
+{
+    std::string key = node_proto.op_type() + "|";
+    for (Arg a : inputs)
+        key += std::to_string(a.idx) + ",";
+    std::vector<const opencv_onnx::AttributeProto*> attrs;
+    for (const auto& attr : node_proto.attribute())
+        attrs.push_back(&attr);
+    std::sort(attrs.begin(), attrs.end(),
+              [](const opencv_onnx::AttributeProto* a, const opencv_onnx::AttributeProto* b)
+              { return a->name() < b->name(); });
+    for (const auto* attr : attrs)
+        key += "|" + attr->SerializeAsString();
+    return key;
+}
+
+bool ONNXImporter2::aliasOutputs(const opencv_onnx::NodeProto& node_proto, const CseEntry& prev)
+{
+    int n_outputs = node_proto.output_size();
+    if ((int)prev.args.size() != n_outputs)
+        return false;
+    for (int i = 0; i < n_outputs; i++) {
+        if (node_proto.output(i).empty())
+            continue;
+        // a name that already owns an Arg (e.g. a graph output) can't be redirected
+        if (net.haveArg(remap(node_proto.output(i))) || prev.args[i].idx <= 0)
+            return false;
+    }
+    for (int i = 0; i < n_outputs; i++) {
+        if (node_proto.output(i).empty())
+            continue;
+        std::string name = remap(node_proto.output(i));
+        netimpl->aliasArg(name, prev.args[i]);
+        // consumers may ask for the raw ONNX dtype of this name (Cast, QuantizeLinear)
+        auto it = produced_onnx_type.find(prev.names[i]);
+        if (it != produced_onnx_type.end()) {
+            int onnx_type = it->second;
+            produced_onnx_type[name] = onnx_type;
+        }
+    }
+    return true;
+}
+
 void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.output_size() >= 1);
@@ -1063,6 +1194,19 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         node_inputs.push_back(arg);
     }
 
+    // Common-subexpression elimination: a node with the same op, attributes and inputs as an
+    // earlier one computes the same values, so its outputs become names for that node's outputs.
+    std::string cse_key;
+    // Only ops with a built-in parser: anything else goes to parseCustomLayer(), i.e. to a
+    // user-registered layer that may keep state.
+    if (!have_errors && curr_graph_proto == main_graph_proto &&
+        dispatch.count(layer_type) && isCseCandidate(node_proto)) {
+        cse_key = makeCseKey(node_proto, node_inputs);
+        auto it = cse_map.find(cse_key);
+        if (it != cse_map.end() && aliasOutputs(node_proto, it->second))
+            return;
+    }
+
     int n_outputs = node_proto.output_size();
     for (int i = 0; i < n_outputs; i++) {
         std::string arg_name = remap(node_proto.output(i));
@@ -1088,6 +1232,19 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
             parseCustomLayer(layerParams, node_proto);
         } else {
             rememberMissingOp(layer_type);
+        }
+
+        // Look the outputs up by name again rather than reusing node_outputs: some parsers
+        // redirect an output name to another arg instead of adding a layer for it.
+        if (!cse_key.empty() && !have_errors) {
+            CseEntry entry;
+            for (int i = 0; i < n_outputs; i++) {
+                const std::string& raw_name = node_proto.output(i);
+                std::string name = remap(raw_name);
+                entry.names.push_back(name);
+                entry.args.push_back(!raw_name.empty() && net.haveArg(name) ? net.getArg(name) : Arg());
+            }
+            cse_map.emplace(cse_key, std::move(entry));
         }
     }
     catch (const cv::Exception& e)
