@@ -3028,7 +3028,8 @@ public:
     int cols;
 
     //! custom allocator; assign before the data is allocated, see @ref UMat_Details.
-    //! If it fails to allocate, create() throws instead of falling back to the default allocator.
+    //! If it fails to allocate, create() falls back to the standard allocator, so check
+    //! u->currAllocator before passing u->handle to backend-specific code.
     MatAllocator* allocator;
 
     //! usage flags for allocator; recommend do not set directly, instead set during construct/create/getUMat

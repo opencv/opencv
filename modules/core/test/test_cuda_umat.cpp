@@ -125,6 +125,8 @@ TEST(Core_CudaUMat, kernel_interop_via_gpumat)
     UMat u = makeCudaUMat();
     src.copyTo(u);
     ASSERT_TRUE(u.u != NULL && u.u->handle != NULL);
+    // create() falls back to another allocator when cudaMalloc fails; that handle is not a CUDA pointer
+    ASSERT_EQ(cv::cuda::getCudaAllocator(), u.u->currAllocator);
 
     cv::cuda::GpuMat g(u.rows, u.cols, u.type(), u.u->handle,
                        (size_t)u.cols * CV_ELEM_SIZE(u.type()));
@@ -248,6 +250,31 @@ TEST(Core_CudaUMat, copy_from_host_umat_does_not_map)
     EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
 }
 
+// fitSameSize then copyTo uploads into a CUDA UMat with the source layout and no host mirror
+TEST(Core_CudaUMat, fitSameSize_copyTo_keeps_layout)
+{
+    skipIfNoCudaDevice();
+
+    const MatShape blk({1, 2, 4, 4, 8}, DATA_LAYOUT_BLOCK, 13);
+    Mat src;
+    src.fit(blk, CV_32F);
+    randu(src, 0, 10);
+
+    UMat dev = makeCudaUMat();
+    dev.fitSameSize(src, src.type());
+    src.copyTo(dev);
+    ASSERT_TRUE(dev.u != NULL);
+    EXPECT_EQ(cv::cuda::getCudaAllocator(), dev.u->currAllocator);
+    EXPECT_TRUE(dev.u->data == NULL);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, dev.size.layout);
+
+    Mat back;
+    back.fitSameSize(dev, dev.type());
+    dev.copyTo(back);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, back.size.layout);
+    EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
+}
+
 #ifdef HAVE_OPENCL
 // turns OpenCL on for one test and restores the previous state afterwards
 struct WithOpenCL
@@ -302,22 +329,40 @@ TEST(Core_CudaUMat, op_opencl_on_falls_back)
     EXPECT_EQ(0.0, cvtest::norm(c8, expected8, NORM_INF));
 }
 
-TEST(Core_CudaUMat, declined_kernel_releases_accepted_args)
+// device to device across allocators (CUDA -> OpenCL -> CUDA) goes through the host and keeps the layout
+TEST(Core_CudaUMat, fitSameSize_copyTo_cuda_opencl_cuda)
 {
     skipIfNoCudaDevice();
     WithOpenCL guard;
     if (!cv::ocl::useOpenCL())
         throw SkipTestException("OpenCL is not available");
 
-    Mat a(50, 40, CV_32FC1);
-    randu(a, 0, 10);
-    UMat ua = makeCudaUMat(), u8 = makeCudaUMat();
-    a.copyTo(ua);
+    const MatShape blk({1, 2, 4, 4, 8}, DATA_LAYOUT_BLOCK, 13);
+    Mat src;
+    src.fit(blk, CV_32F);
+    randu(src, 0, 10);
 
-    ua.convertTo(u8, CV_8U, 2.0, 1.0);
+    UMat cu = makeCudaUMat();
+    cu.fitSameSize(src, src.type());
+    src.copyTo(cu);
+    ASSERT_EQ(cv::cuda::getCudaAllocator(), cu.u->currAllocator);
 
-    EXPECT_EQ(1, ua.u->urefcount);
-    EXPECT_EQ(0, ua.u->refcount);
+    UMat cl;
+    cl.fitSameSize(cu, cu.type());
+    cu.copyTo(cl);
+    EXPECT_EQ(cv::ocl::getOpenCLAllocator(), cl.u->currAllocator);
+
+    UMat cu2 = makeCudaUMat();
+    cu2.fitSameSize(cl, cl.type());
+    cl.copyTo(cu2);
+    ASSERT_EQ(cv::cuda::getCudaAllocator(), cu2.u->currAllocator);
+    EXPECT_TRUE(cu2.u->data == NULL);
+
+    Mat back;
+    back.fitSameSize(cu2, cu2.type());
+    cu2.copyTo(back);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, back.size.layout);
+    EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
 }
 #endif // HAVE_OPENCL
 

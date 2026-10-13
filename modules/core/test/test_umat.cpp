@@ -1482,18 +1482,77 @@ struct FailingAllocator CV_FINAL : public MatAllocator
     void deallocate(UMatData*) const CV_OVERRIDE {}
 };
 
-// a failing explicitly bound allocator is reported; only an unbound UMat falls back to the default one
-TEST(UMat, create_reports_bound_allocator_failure)
+// a failing bound allocator falls back to the standard one, and the fallback buffer is usable
+TEST(UMat, bound_allocator_failure_falls_back)
 {
     FailingAllocator failing;
-    UMat bound;
-    bound.allocator = &failing;
-    EXPECT_THROW(bound.create(4, 4, CV_8UC1), cv::Exception);
-    EXPECT_TRUE(bound.u == NULL);
+    Mat src(5, 7, CV_32FC3);
+    randu(src, 0, 10);
 
-    UMat unbound;
-    EXPECT_NO_THROW(unbound.create(4, 4, CV_8UC1));
-    EXPECT_TRUE(unbound.u != NULL);
+    UMat dev;
+    dev.allocator = &failing;
+    ASSERT_NO_THROW(dev.fitSameSize(src, src.type()));
+    ASSERT_TRUE(dev.u != NULL);
+    EXPECT_NE((MatAllocator*)&failing, dev.u->currAllocator);
+    src.copyTo(dev);
+
+    Mat back;
+    back.fitSameSize(dev, dev.type());
+    dev.copyTo(back);
+    EXPECT_EQ(0, cvtest::norm(src, back, NORM_INF));
+}
+
+// fitSameSize + copyTo between UMats of different allocators: device -> host UMat -> device
+TEST(UMat, fitSameSize_copyTo_across_allocators)
+{
+    const MatShape blk({1, 2, 4, 4, 8}, DATA_LAYOUT_BLOCK, 13);
+    Mat src;
+    src.fit(blk, CV_32F);
+    randu(src, 0, 10);
+
+    UMat dev;
+    dev.fitSameSize(src, src.type());
+    src.copyTo(dev);
+
+    UMat host;
+    host.allocator = Mat::getDefaultAllocator();
+    host.fitSameSize(dev, dev.type());
+    dev.copyTo(host);
+    EXPECT_EQ(Mat::getDefaultAllocator(), host.u->currAllocator);
+
+    UMat dev2;
+    dev2.fitSameSize(host, host.type());
+    host.copyTo(dev2);
+    EXPECT_EQ(dev.u->currAllocator, dev2.u->currAllocator);
+
+    Mat back;
+    back.fitSameSize(dev2, dev2.type());
+    dev2.copyTo(back);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, back.size.layout);
+    EXPECT_EQ(13, back.size.C);
+    EXPECT_EQ(0, cvtest::norm(src, back, NORM_INF));
+}
+
+// copyTo alone carries only dims and sizes; fitSameSize first keeps the layout across the transfer
+TEST(UMat, fitSameSize_copyTo_keeps_layout)
+{
+    const MatShape blk({1, 2, 4, 4, 8}, DATA_LAYOUT_BLOCK, 13);
+    Mat src;
+    src.fit(blk, CV_32F);
+    randu(src, 0, 10);
+
+    UMat dev;
+    dev.fitSameSize(src, src.type());
+    src.copyTo(dev);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, dev.size.layout);
+    EXPECT_EQ(13, dev.size.C);
+
+    Mat back;
+    back.fitSameSize(dev, dev.type());
+    dev.copyTo(back);
+    EXPECT_EQ(DATA_LAYOUT_BLOCK, back.size.layout);
+    EXPECT_EQ(13, back.size.C);
+    EXPECT_EQ(0, cvtest::norm(src, back, NORM_INF));
 }
 
 } } // namespace opencv_test::ocl
