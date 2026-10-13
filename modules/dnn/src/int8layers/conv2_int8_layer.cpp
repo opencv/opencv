@@ -14,6 +14,34 @@
 namespace cv {
 namespace dnn {
 
+// dst[j] = saturate(cvRound(src[j] * inv_sc) + zp), as uint8 or int8.
+// The vector path rounds the same way as cvRound (to nearest, ties to even) and saturates in
+// two steps (int32 -> int16 -> 8 bit), so it produces exactly the same bytes as the scalar loop.
+static void quantizeRowInt8(const float* src, uint8_t* dst, int len, float inv_sc, int zp, bool is_u8)
+{
+    int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    v_float32 v_inv = vx_setall_f32(inv_sc);
+    v_int32 v_zp = vx_setall_s32(zp);
+    for (; j <= len - 4 * VECSZ; j += 4 * VECSZ) {
+        v_int32 q0 = v_add(v_round(v_mul(vx_load(src + j), v_inv)), v_zp);
+        v_int32 q1 = v_add(v_round(v_mul(vx_load(src + j + VECSZ), v_inv)), v_zp);
+        v_int32 q2 = v_add(v_round(v_mul(vx_load(src + j + 2 * VECSZ), v_inv)), v_zp);
+        v_int32 q3 = v_add(v_round(v_mul(vx_load(src + j + 3 * VECSZ), v_inv)), v_zp);
+        v_int16 h0 = v_pack(q0, q1), h1 = v_pack(q2, q3);
+        if (is_u8)
+            v_store(dst + j, v_pack_u(h0, h1));
+        else
+            v_store((schar*)dst + j, v_pack(h0, h1));
+    }
+#endif
+    for (; j < len; j++) {
+        int q = cvRound(src[j] * inv_sc) + zp;
+        dst[j] = is_u8 ? saturate_cast<uchar>(q) : (uint8_t)saturate_cast<schar>(q);
+    }
+}
+
 static MatShape getWpackShapeInt8(const MatShape& wshape, int ngroups, int C0)
 {
     CV_Assert(wshape.dims >= 3);
@@ -158,6 +186,8 @@ public:
 
     Mat activationLUT;
     Ptr<ActivationLayerInt8> activ;
+
+    Mat quantizedInput; // float_input only: the input after quantizeInterleaveBlock()
 
     bool addResidual;
     bool inputIsU8;
@@ -318,24 +348,39 @@ public:
         const float* src = fp32_nchw.ptr<float>();
         uint8_t* dst = int8_block.ptr<uint8_t>();
 
-        parallel_for_(Range(0, N * C1), [&](const Range& range) {
-            for (int nc = range.start; nc < range.end; nc++) {
-                int n = nc / C1, c1 = nc % C1;
+        // Split the work by stripes of pixels as well as by channel blocks. The first conv of a
+        // CNN gets an RGB image, which is a single channel block, so splitting by channel blocks
+        // alone would leave one thread doing all of it.
+        const int PIX_STRIPE = 2048;
+        const int nstripes = (planesize + PIX_STRIPE - 1) / PIX_STRIPE;
+
+        parallel_for_(Range(0, N * C1 * nstripes), [&](const Range& range) {
+            // Each channel of a run of BLK pixels is quantized into its own row of qbuf (contiguous,
+            // so it vectorizes), then the rows are interleaved into the C0-channel block layout.
+            const int BLK = 256;
+            AutoBuffer<uint8_t> qbuf_(C0 * BLK);
+            uint8_t* qbuf = qbuf_.data();
+            for (int t = range.start; t < range.end; t++) {
+                int nc = t / nstripes, stripe = t - nc * nstripes;
+                int n = nc / C1, c1 = nc - n * C1;
                 int c_base = c1 * C0;
                 int nzc = std::min(C0, C - c_base);
-                const float* src_block = src + (n * C + c_base) * planesize;
-                uint8_t* dst_block = dst + (size_t)(n * C1 + c1) * planesize * C0;
-                for (int i = 0; i < planesize; i++) {
+                const float* src_block = src + ((size_t)n * C + c_base) * planesize;
+                uint8_t* dst_block = dst + ((size_t)n * C1 + c1) * planesize * C0;
+                int i1 = std::min((stripe + 1) * PIX_STRIPE, planesize);
+                for (int i = stripe * PIX_STRIPE; i < i1; i += BLK) {
+                    int len = std::min(BLK, i1 - i);
+                    for (int c = 0; c < nzc; c++)
+                        quantizeRowInt8(src_block + (size_t)c * planesize + i, qbuf + c * BLK,
+                                        len, inv_sc, zp, is_u8);
+                    uint8_t* dst_px = dst_block + (size_t)i * C0;
+                    if (nzc < C0)
+                        memset(dst_px, 0, (size_t)len * C0);
                     for (int c = 0; c < nzc; c++) {
-                        float x = src_block[c * planesize + i];
-                        int q = cvRound(x * inv_sc) + zp;
-                        if (is_u8)
-                            dst_block[i * C0 + c] = saturate_cast<uchar>(q);
-                        else
-                            dst_block[i * C0 + c] = (uint8_t)(int8_t)saturate_cast<schar>(q);
+                        const uint8_t* q = qbuf + c * BLK;
+                        for (int j = 0; j < len; j++)
+                            dst_px[(size_t)j * C0 + c] = q[j];
                     }
-                    for (int c = nzc; c < C0; c++)
-                        dst_block[i * C0 + c] = 0;
                 }
             }
         });
@@ -348,7 +393,7 @@ public:
         int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
 
-        Mat inp_storage;
+        Mat& inp_storage = quantizedInput;  // kept between calls, so it is not reallocated every time
         Mat inp_ref = input_arrs.getMat(0);
 
         if (float_input) {
