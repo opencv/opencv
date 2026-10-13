@@ -167,16 +167,15 @@ public:
 
         const BlockInfo info = resolve(data.shape(), indices.shape());
 
-        // Resolved once here: throwing from inside parallel_for_ is not reliable.
+        // Resolved once here, so the parallel loop reads a plain row; -1 means zero-fill.
         std::vector<int64_t> rows((size_t)info.gather_N);
         const int indType = indices.type();
         for (int64_t j = 0; j < info.gather_N; j++) {
             int64_t v = indType == CV_32S ? (int64_t)indices.ptr<int32_t>()[j]
                                           : indices.ptr<int64_t>()[j];
             v += v < 0 ? info.gather_axis_dim : 0;
-            if (v < 0 || v >= info.gather_axis_dim)
-                CV_Error(Error::StsOutOfRange, "DNN/GatherBlockQuantized: index out of range");
-            rows[(size_t)j] = v;
+            // Unlike ONNX Gather, an out-of-range index zeroes its slice instead of failing.
+            rows[(size_t)j] = (v < 0 || v >= info.gather_axis_dim) ? -1 : v;
         }
 
         const uchar* dataPtr = data.ptr<uchar>();
@@ -196,9 +195,13 @@ public:
                    const std::vector<int64_t>& rows, const BlockInfo& info, int idx) const
     {
         const int64_t m = idx / info.gather_N, n = idx % info.gather_N;
+        const int64_t outBase = (int64_t)idx * info.gather_block;
+        if (rows[(size_t)n] < 0) {
+            std::memset(out + outBase, 0, (size_t)info.gather_block * sizeof(float));
+            return;
+        }
         const int64_t dataBase = m * info.gather_axis_dim * info.gather_block
                                + rows[(size_t)n] * info.gather_block;
-        const int64_t outBase = (int64_t)idx * info.gather_block;
         const int64_t zpStride = (info.n_blk + info.components - 1) / info.components;
         const int mask = (1 << bits) - 1;
         const int defaultZp = 1 << (bits - 1);
