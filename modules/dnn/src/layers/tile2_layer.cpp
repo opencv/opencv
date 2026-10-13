@@ -118,10 +118,10 @@ public:
 
         int repeats[TILE_MAX_DIMS];
 
-        Mat repeatsTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
+        Mat repeatsTensor = netimpl_->hostTensor(this->inputs[1]);
         Mat axesTensor;
         if (ninputs > 2)
-            axesTensor = netimpl_->argTensor(this->inputs[2]).getMat(ACCESS_READ);
+            axesTensor = netimpl_->hostTensor(this->inputs[2]);
 
         int ndims = inputs[0].dims;
         getRepeats(repeatsTensor, axesTensor, ndims, repeats);

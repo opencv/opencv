@@ -489,19 +489,6 @@ namespace cv { namespace dnn {
         using tensor_span_type = cuda4dnn::csl::TensorSpan<value_type>;
         using tensor_view_type = cuda4dnn::csl::TensorView<value_type>;
 
-        GenericCUDABackendWrapper(UMat& m)
-            : CUDABackendWrapper(TargetID)
-        {
-            CV_Assert(m.allocator == cv::cuda::getCudaAllocator());
-            CV_CheckEQ(m.elemSize1(), sizeof(DEVICE_T), "UMat depth must match the wrapper's device element type");
-            shape = cv::dnn::shape(m);
-            hostMatDepth = m.depth();
-            offset = 0;
-
-            shared_block = std::make_shared<shared_block_type>();
-            shared_block->boundUMat = m;
-        }
-
         /* Pre-conditions:
          * - there must be no other instance of `GenericCUDABackendWrapper` which wraps the host memory used by `m`
          * - the host memory must remain allocated throughout the lifetime of this object
@@ -547,10 +534,6 @@ namespace cv { namespace dnn {
             auto numel = total(shape);
             if (numel > shared_block->boundUMat.total())
                 shared_block->boundUMat.fit(shape, shared_block->boundUMat.type());
-        }
-
-        static Ptr<BackendWrapper> create(UMat& m) {
-            return Ptr<BackendWrapper>(new GenericCUDABackendWrapper(m));
         }
 
         static Ptr<BackendWrapper> create(Mat& m) {
@@ -619,7 +602,11 @@ namespace cv { namespace dnn {
                         if (src.depth() == device.depth())
                             src.copyTo(device);
                         else
-                            src.convertTo(device, device.depth());
+                        {
+                            Mat converted;
+                            src.convertTo(converted, device.depth());
+                            converted.copyTo(device);
+                        }
                     }
                     else
                     {
@@ -634,12 +621,6 @@ namespace cv { namespace dnn {
                         else
                             src.copyTo(device);
                     }
-                }
-                else if (u->data)
-                {
-                    const size_t sz[2] = { 1, u->size };
-                    const size_t step[2] = { u->size, 1 };
-                    u->currAllocator->upload(u, u->data, 2, sz, nullptr, step, step);
                 }
                 u = shared_block->boundUMat.u;
                 if (u)

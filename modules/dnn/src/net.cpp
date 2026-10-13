@@ -482,7 +482,7 @@ ArgKind Net::argKind(Arg arg) const { return argData(arg).kind; }
 
 Mat Net::argTensor(Arg arg) const {
     CV_Assert(impl);
-    return impl->argTensor(arg).getMat(ACCESS_READ);
+    return impl->hostTensor(arg);
 }
 
 Arg Net::getArg(const std::string& name)

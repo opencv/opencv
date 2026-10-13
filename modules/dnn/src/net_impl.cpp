@@ -138,9 +138,9 @@ void Net::Impl::clear()
     args = std::vector<ArgData>();
     argnames = NamesHash();
 
-    __tensors__ = std::vector<UMat>();
+    __tensors__ = std::vector<HostDeviceBuffer>();
     bufidxs = std::vector<int>();
-    buffers = std::vector<UMat>();
+    buffers = std::vector<HostDeviceBuffer>();
     pinnedArgs = std::vector<Arg>();
 
     mainGraph = Ptr<Graph>();
@@ -151,7 +151,7 @@ void Net::Impl::clear()
 
     args.push_back(adata);
     argnames.insert(std::make_pair(std::string(""), 0));
-    __tensors__.push_back(UMat());
+    __tensors__.emplace_back();
     bufidxs.push_back(-1);
 
     prepared = false;

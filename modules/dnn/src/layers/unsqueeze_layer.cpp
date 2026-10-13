@@ -71,7 +71,7 @@ public:
         if (inputs.size() == 2)
         {
             Net::Impl* netimpl_ = getNetImpl(this);
-            Mat axesTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
+            Mat axesTensor = netimpl_->hostTensor(this->inputs[1]);
             tensorToIntVec(axesTensor, tempAxes);
             axes_ = &tempAxes;
         }

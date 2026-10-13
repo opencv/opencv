@@ -564,12 +564,12 @@ public:
         if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
             return false;
 
-        Mat padsTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
+        Mat padsTensor = netimpl_->hostTensor(this->inputs[1]);
         Mat axesTensor;
         if (ninputs >= 4) {
             if (!netimpl_->isConstArg(this->inputs[3]))
                 return false;
-            axesTensor = netimpl_->argTensor(this->inputs[3]).getMat(ACCESS_READ);
+            axesTensor = netimpl_->hostTensor(this->inputs[3]);
         }
 
         int ndims = netimpl_->argData(this->inputs[0]).shape.dims;
@@ -720,10 +720,10 @@ public:
 
         if (ninputs >= 2) {
             int ndims = inputs[0].layout == DATA_LAYOUT_BLOCK ? inputs[0].dims - 1 : inputs[0].dims;
-            Mat padsTensor = netimpl_->argTensor(this->inputs[1]).getMat(ACCESS_READ);
+            Mat padsTensor = netimpl_->hostTensor(this->inputs[1]);
             Mat axesTensor;
             if (ninputs >= 4)
-                axesTensor = netimpl_->argTensor(this->inputs[3]).getMat(ACCESS_READ);
+                axesTensor = netimpl_->hostTensor(this->inputs[3]);
             getPads(ndims, padsTensor, axesTensor, semanticPads);
         } else {
             semanticPads = pads0;

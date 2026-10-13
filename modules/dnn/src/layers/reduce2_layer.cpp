@@ -103,7 +103,7 @@ public:
         } else if (inps.size() >= 2) {
             Net::Impl* netimpl_ = getNetImpl(this);
             if (netimpl_ && netimpl_->isConstArg(inputs[1])) {
-                Mat axesTensor = netimpl_->argTensor(inputs[1]).getMat(ACCESS_READ);
+                Mat axesTensor = netimpl_->hostTensor(inputs[1]);
                 tensorToIntVec(axesTensor, axes);
             }
         }

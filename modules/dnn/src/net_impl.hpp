@@ -18,6 +18,7 @@
 #include <opencv2/dnn/layer_reg.private.hpp>
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/host_device_buffer.private.hpp>
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -43,6 +44,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 using std::make_pair;
 using std::string;
+using cv::utils::HostDeviceBuffer;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
 
@@ -146,10 +148,10 @@ struct Net::Impl : public detail::NetImplBase
     size_t totalLayers;
     std::vector<std::string> dimnames_vec;
     std::vector<ArgData> args;
-    std::vector<UMat> __tensors__;
+    std::vector<HostDeviceBuffer> __tensors__;
     std::vector<int> bufidxs;
     std::unordered_map<int, int> declaredOutputTypes;
-    std::vector<UMat> buffers;
+    std::vector<HostDeviceBuffer> buffers;
     std::vector<Mat> scratchBufs;
     // interior tensors kept alive for forward-to-layer
     // See https://github.com/opencv/opencv/issues/26349
@@ -183,8 +185,6 @@ struct Net::Impl : public detail::NetImplBase
     };
     bool fusedSnapshotValid = false;
     std::vector<FusedGraphSnapshot> fusedSnapshot;
-    std::vector<Ptr<BackendWrapper> > argWrappers;
-    std::vector<const void*> argWrapperData;
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<int64_t> dimvalues;
@@ -437,13 +437,13 @@ struct Net::Impl : public detail::NetImplBase
     Arg getArg(const std::string& name);
     bool haveArg(const std::string& name) const;
 
-    Arg newConstArg(const std::string& name, const UMat& m);
-    UMat toArgTensor(const Mat& m) const;
-    MatAllocator* tensorAllocator() const;
+    Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
-    UMat& argTensor(Arg arg) const;
+    HostDeviceBuffer& argTensor(Arg arg) const;
+    Mat hostTensor(Arg arg) const;
+    void setArgTensor(Arg arg, const Mat& m);
     int argType(Arg arg) const;
     void checkArg(Arg arg) const;
     void checkArgs(const std::vector<Arg>& args) const;
@@ -457,10 +457,6 @@ struct Net::Impl : public detail::NetImplBase
     // Save/restore the fused graph so finalize() is re-entrant across backend changes.
     void saveFusedSnapshot();
     void restoreFusedSnapshot();
-#ifdef HAVE_CUDA
-    Ptr<BackendWrapper> getCudaArgWrapper(Arg arg, UMat& t);
-#endif
-
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'
     // for outputs (according to bufidxs)

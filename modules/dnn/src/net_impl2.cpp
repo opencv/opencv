@@ -10,7 +10,6 @@
 
 #ifdef HAVE_CUDA
 #include <opencv2/core/cuda_stream_accessor.hpp>
-#include <opencv2/core/cuda.hpp>
 #endif
 
 #ifdef HAVE_ONNXRUNTIME
@@ -460,33 +459,41 @@ ArgKind Net::Impl::argKind(Arg arg) const
     return argData(arg).kind;
 }
 
-UMat& Net::Impl::argTensor(Arg arg) const
+HostDeviceBuffer& Net::Impl::argTensor(Arg arg) const
 {
     const ArgData& adata = argData(arg);
     if (adata.kind == DNN_ARG_TEMP) {
         CV_Assert(__tensors__.at(arg.idx).empty());
         int bufidx = bufidxs.at(arg.idx);
         CV_Assert(bufidx >= 0);
-        return const_cast<UMat&>(buffers.at(bufidx));
+        return const_cast<HostDeviceBuffer&>(buffers.at(bufidx));
     }
-    return const_cast<UMat&>(__tensors__.at(arg.idx));
+    return const_cast<HostDeviceBuffer&>(__tensors__.at(arg.idx));
 }
 
-MatAllocator* Net::Impl::tensorAllocator() const
+Mat Net::Impl::hostTensor(Arg arg) const
 {
+    HostDeviceBuffer& t = argTensor(arg);
+    if (t.valid() == HostDeviceBuffer::NONE)
+        return Mat();
 #ifdef HAVE_CUDA
-    if (preferableBackend == DNN_BACKEND_CUDA &&
-        (preferableTarget == DNN_TARGET_CUDA || preferableTarget == DNN_TARGET_CUDA_FP16))
-        return cv::cuda::getCudaAllocator();
+    if (t.valid() == HostDeviceBuffer::CUDA && cudaInfo)
+        cudaInfo->context.stream.synchronize();
 #endif
-    return Mat::getDefaultAllocator();
+    return t.hostForRead();
 }
 
-static void forceAllocator(UMat& t, MatAllocator* a)
+void Net::Impl::setArgTensor(Arg arg, const Mat& m)
 {
-    if (t.u && t.u->currAllocator != a)
-        t.release();
-    t.allocator = a;
+    HostDeviceBuffer& t = argTensor(arg);
+    if (m.dims == 0 && !m.data) {
+        t.reset();
+        return;
+    }
+    Mat& dst = t.hostForWrite(m.shape(), m.type());
+    if (!m.empty())
+        m.copyTo(dst);
+    t.commit(HostDeviceBuffer::HOST);
 }
 
 Arg Net::Impl::getArg(const std::string& name)
@@ -503,23 +510,14 @@ bool Net::Impl::haveArg(const std::string& name) const
     return argnames.find(name) != argnames.end();
 }
 
-UMat Net::Impl::toArgTensor(const Mat& m) const
-{
-    UMat t;
-    forceAllocator(t, Mat::getDefaultAllocator());
-    t.fit(m.shape(), m.type());
-    m.copyTo(t);
-    return t;
-}
-
-Arg Net::Impl::newConstArg(const std::string& name, const UMat& m)
+Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
 {
     if (name.empty()) {
         CV_Assert(m.empty());
         return Arg();
     }
     Arg arg = newArg(name, DNN_ARG_CONST, true);
-    __tensors__[arg.idx] = m;
+    setArgTensor(arg, m);
     ArgData& adata = args[arg.idx];
     adata.type = m.type();
     adata.shape = m.shape();
@@ -540,7 +538,7 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     adata.name = name;
     adata.kind = kind;
     args.push_back(adata);
-    __tensors__.push_back(UMat());
+    __tensors__.emplace_back();
     bufidxs.push_back(-1);
 
     return Arg(idx);
@@ -595,13 +593,12 @@ void Net::Impl::widenHalfConstants()
             continue;
         if (usecounts[i] == 0)
             continue;
-        UMat& t = __tensors__[i];
-        if (!t.empty()) {
-            UMat widened;
-            forceAllocator(widened, Mat::getDefaultAllocator()); // same allocator toArgTensor() gives const args
-            widened.fit(t.shape(), accuracy);
-            t.convertTo(widened, accuracy);
-            t = widened;
+        Arg arg((int)i);
+        if (!argTensor(arg).empty()) {
+            Mat widened;
+            widened.fit(argTensor(arg).shape(), accuracy);
+            hostTensor(arg).convertTo(widened, accuracy);
+            setArgTensor(arg, widened);
         }
         adata.type = accuracy;
     }
@@ -816,18 +813,19 @@ void Net::Impl::finalize()
                     constUsedByCuda[inp.idx] = true;
             }
         }
-        MatAllocator* cudaAlloc = cv::cuda::getCudaAllocator();
+        bool uploaded = false;
         for (size_t i = 0; i < args.size(); i++) {
             if (args[i].kind != DNN_ARG_CONST || !constUsedByCuda[i])
                 continue;
-            UMat& t = __tensors__.at(i);
-            if (t.empty() || !t.u || t.u->currAllocator == cudaAlloc)
+            HostDeviceBuffer& t = __tensors__.at(i);
+            if (t.empty() || (t.valid() & HostDeviceBuffer::CUDA))
                 continue;
-            UMat cudaT;
-            cudaT.allocator = cudaAlloc;
-            t.getMat(ACCESS_READ).copyTo(cudaT);
-            t = cudaT;
+            if (!t.cudaForRead())
+                CV_Error_(Error::GpuApiCallError, ("DNN/CUDA: cannot upload constant '%s'", args[i].name.c_str()));
+            uploaded = true;
         }
+        if (uploaded)
+            CUDA4DNN_CHECK_CUDA(cudaDeviceSynchronize());
     }
 #endif
 
@@ -879,19 +877,12 @@ void Net::Impl::allocateLayerOutputs(
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
         if (useBufferPool) {
-            UMat& out_t = argTensor(out);
-            MatAllocator* bufAlloc = (opBackend == DNN_BACKEND_CUDA) ? tensorAllocator() : Mat::getDefaultAllocator();
-            forceAllocator(out_t, bufAlloc);
 #ifdef HAVE_CUDA
-            if (opBackend == DNN_BACKEND_CUDA) {
-                out_t.fit(outShapes[i], outTypes[i]);
+            if (opBackend == DNN_BACKEND_CUDA)
                 outputs[i] = Mat(outShapes[i], outTypes[i], (void*)nullptr);
-            } else
+            else
 #endif
-            {
-                out_t.fit(outShapes[i], outTypes[i]);
-                outputs[i] = out_t.getMat(ACCESS_WRITE);
-            }
+            outputs[i] = argTensor(out).hostForWrite(outShapes[i], outTypes[i]);
         } else {
             outputs[i].fit(outShapes[i], outTypes[i]);
         }
@@ -1046,17 +1037,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
                 }
             }
 
-            const ArgData& adata = args.at(targetArg.idx);
-            Mat result;
-            UMat* srcUMat;
-            if (adata.kind == DNN_ARG_TEMP) {
-                int bufidx = bufidxs.at(targetArg.idx);
-                CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                srcUMat = &buffers[bufidx];
-            } else {
-                srcUMat = &__tensors__.at(targetArg.idx);
-            }
-            result = srcUMat->getMat(ACCESS_READ);
+            Mat result = hostTensor(targetArg);
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
                 transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
@@ -1268,18 +1249,8 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
             for (size_t k = 0; k < gr_outputs.size(); k++) {
                 if (gr_outputs[k].idx == idx) { result = outs[k]; got = true; break; }
             }
-            if (!got) {
-                const ArgData& adata = args.at(idx);
-                UMat* srcUMat;
-                if (adata.kind == DNN_ARG_TEMP) {
-                    int bufidx = bufidxs.at(idx);
-                    CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                    srcUMat = &buffers[bufidx];
-                } else {
-                    srcUMat = &__tensors__.at(idx);
-                }
-                result = srcUMat->getMat(ACCESS_READ);
-            }
+            if (!got)
+                result = hostTensor(Arg(idx));
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
                 transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
@@ -1321,7 +1292,7 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     const int PPRINT_CONTEXT = 3;
     const int PPRINT_CONST_THRESHOLD = 16;
     const int PPRINT_ALL_THRESHOLD = 100;
-    const Mat& m = argTensor(arg).getMat(ACCESS_READ);
+    const Mat m = hostTensor(arg);
     const ArgData& adata = args.at(arg.idx);
     bool constArg = adata.kind == DNN_ARG_CONST;
     // [TODO] replace with type compatibility check
@@ -1456,18 +1427,6 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
                                      adata.name.c_str(), mshape.str().c_str(),
                                      pinnedInputShapes[idx].str().c_str()));
     }
-    MatAllocator* bufAlloc = Mat::getDefaultAllocator();
-#ifdef HAVE_CUDA
-    bool graphOnCuda = false;
-    {
-        const std::vector<Ptr<LayerInfo> >& gprog = graph->prog();
-        for (size_t k = 0; k < gprog.size(); k++) {
-            if (gprog[k] && graph->opBackend((int)k) == DNN_BACKEND_CUDA) { graphOnCuda = true; break; }
-        }
-    }
-    if (graphOnCuda)
-        bufAlloc = tensorAllocator();
-#endif
     /*
      [TODO] add more detailed shape check
      if (adata.shape.dims != mshape.dims) {
@@ -1496,30 +1455,28 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
                                          idx, adata.name.c_str(), typeToString(mtype).c_str(),
                                          typeToString(adata.type).c_str()));
         }
-        UMat& inp_t = argTensor(inp);
-        forceAllocator(inp_t, bufAlloc);
-        inp_t.fit(mshape, adata_type);
+        HostDeviceBuffer& inp_t = argTensor(inp);
+        Mat& dst = inp_t.hostForWrite(mshape, adata_type);
 
         if (adata.type == CV_16BF && mtype == CV_16U)
         {
             Mat tmp(mshape, CV_16BF, (void*)m.data);
-            tmp.convertTo(inp_t, adata_type);
+            tmp.convertTo(dst, adata_type);
         }
         else if (adata.type == CV_16F && mtype == CV_16U)
         {
             Mat tmp(mshape, CV_16F, (void*)m.data);
-            tmp.convertTo(inp_t, adata_type);
+            tmp.convertTo(dst, adata_type);
         }
         else
         {
-            m.convertTo(inp_t, adata_type);
+            m.convertTo(dst, adata_type);
         }
+        inp_t.commit(HostDeviceBuffer::HOST);
     } else if (adata.kind == DNN_ARG_TEMP) {
-        int bufidx = bufidxs.at(inp.idx);
-        UMat& buf = buffers.at(bufidx);
-        forceAllocator(buf, bufAlloc);
-        buf.fit(mshape, mtype); // minimize reallocations
-        m.copyTo(buf);
+        HostDeviceBuffer& buf = buffers.at(bufidxs.at(inp.idx));
+        m.copyTo(buf.hostForWrite(mshape, mtype));
+        buf.commit(HostDeviceBuffer::HOST);
     } else {
         CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
                                      graph->name().data(), adata.name.c_str(),
@@ -1528,63 +1485,55 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
 }
 
 #ifdef HAVE_CUDA
-Ptr<BackendWrapper> Net::Impl::getCudaArgWrapper(Arg arg, UMat& t)
-{
-    int idx = arg.idx;
-    if ((int)argWrappers.size() != (int)args.size()) {
-        argWrappers.assign(args.size(), Ptr<BackendWrapper>());
-        argWrapperData.assign(args.size(), nullptr);
-    }
-    Ptr<CUDABackendWrapper> cw = argWrappers[idx].dynamicCast<CUDABackendWrapper>();
-    const void* handle = t.u ? t.u->handle : nullptr;
-    if (!cw || argWrapperData[idx] != handle) {
-        Ptr<BackendWrapper> w = wrapMat(DNN_BACKEND_CUDA, preferableTarget, t);
-        cw = w.dynamicCast<CUDABackendWrapper>();
-        cw->setStream(cudaInfo->context.stream);
-        argWrappers[idx] = w;
-        argWrapperData[idx] = handle;
-    }
-    return argWrappers[idx];
-}
-
 static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
-                          const std::vector<Arg>& inputs, const std::vector<Arg>& outputs)
+                          const std::vector<Arg>& inputs, const std::vector<Arg>& outputs,
+                          const std::vector<Mat>& outMats)
 {
     Ptr<Layer> exec = gimpl->exec_[opidx];
     CV_Assert(exec && netimpl->cudaInfo);
 
     for (size_t i = 0; i < outputs.size(); i++) {
-        if (netimpl->argTensor(outputs[i]).total() == 0)
+        if (outMats[i].total() == 0) {
+            for (size_t k = 0; k < outputs.size(); k++) {
+                HostDeviceBuffer& t = netimpl->argTensor(outputs[k]);
+                t.hostForWrite(outMats[k].shape(), outMats[k].type());
+                t.commit(HostDeviceBuffer::HOST);
+            }
             return;
-    }
-
-    MatAllocator* cudaAlloc = cv::cuda::getCudaAllocator();
-    for (size_t i = 0; i < inputs.size(); i++) {
-        UMat& t = netimpl->argTensor(inputs[i]);
-        if (t.u && t.u->currAllocator != cudaAlloc) {
-            UMat cudaT;
-            cudaT.allocator = cudaAlloc;
-            t.getMat(ACCESS_READ).copyTo(cudaT);
-            t = cudaT;
         }
     }
 
+    bool uploads = false;
+    for (size_t i = 0; i < inputs.size(); i++) {
+        const HostDeviceBuffer& t = netimpl->argTensor(inputs[i]);
+        if (!t.empty() && !(t.valid() & HostDeviceBuffer::CUDA))
+            uploads = true;
+    }
+    if (uploads)
+        netimpl->cudaInfo->context.stream.synchronize();
+
     std::vector<UMat> inpG(inputs.size()), outG(outputs.size());
     for (size_t i = 0; i < inputs.size(); i++) {
-        if (netimpl->argTensor(inputs[i]).empty())
+        HostDeviceBuffer& t = netimpl->argTensor(inputs[i]);
+        if (t.empty())
             continue;
-        Ptr<CUDABackendWrapper> cw = netimpl->getCudaArgWrapper(inputs[i], netimpl->argTensor(inputs[i]))
-                                        .dynamicCast<CUDABackendWrapper>();
-        cw->copyToDevice();
-        inpG[i] = cw->getDeviceUMat();
+        UMat* d = t.cudaForRead();
+        if (!d)
+            CV_Error(Error::GpuApiCallError, "DNN/CUDA: cannot place an input tensor on the device");
+        inpG[i] = *d;
     }
+    if (uploads)
+        CUDA4DNN_CHECK_CUDA(cudaDeviceSynchronize());
+
     for (size_t i = 0; i < outputs.size(); i++) {
-        Ptr<CUDABackendWrapper> cw = netimpl->getCudaArgWrapper(outputs[i], netimpl->argTensor(outputs[i]))
-                                        .dynamicCast<CUDABackendWrapper>();
-        cw->setDeviceDirty();
-        outG[i] = cw->getDeviceUMat();
+        UMat* d = netimpl->argTensor(outputs[i]).cudaForWrite(outMats[i].shape(), outMats[i].type());
+        if (!d)
+            CV_Error(Error::GpuApiCallError, "DNN/CUDA: cannot allocate an output tensor on the device");
+        outG[i] = *d;
     }
     exec->forwardCUDA(inpG, outG, &netimpl->cudaInfo->workspace);
+    for (size_t i = 0; i < outputs.size(); i++)
+        netimpl->argTensor(outputs[i]).commit(HostDeviceBuffer::CUDA);
 }
 #endif
 
@@ -1688,17 +1637,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
-            const UMat& u = argTensor(inp);
-            inpTypes[i] = u.type();
-            inpShapes[i] = u.shape();
+            const HostDeviceBuffer& t = argTensor(inp);
+            inpTypes[i] = t.type() < 0 ? Mat().type() : t.type();
+            inpShapes[i] = t.shape();
 #ifdef HAVE_CUDA
-            if (opBackend == DNN_BACKEND_CUDA) {
-                inpMats[i] = Mat(u.shape(), u.type(), (void*)nullptr);
-            } else
-                inpMats[i] = u.getMat(ACCESS_READ);
-#else
-            inpMats[i] = u.getMat(ACCESS_READ);
+            if (opBackend == DNN_BACKEND_CUDA)
+                inpMats[i] = t.valid() ? Mat(inpShapes[i], inpTypes[i], (void*)nullptr) : Mat();
+            else
 #endif
+            inpMats[i] = hostTensor(inp);
         }
 
         if (tracingMode != DNN_TRACE_NONE) {
@@ -1716,8 +1663,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         } else {
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
-                Arg out = outputs[i];
-                outMats[i] = argTensor(out).getMat(ACCESS_WRITE);
+                HostDeviceBuffer& t = argTensor(outputs[i]);
+                outMats[i] = t.valid() ? t.hostForWrite(t.shape(), t.type()) : Mat();
             }
             tempMats = scratchBufs;
         }
@@ -1742,31 +1689,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
 #ifdef HAVE_CUDA
             if (opBackend == DNN_BACKEND_CUDA) {
-                forwardOpCUDA(this, gimpl, opidx, inputs, outputs);
+                forwardOpCUDA(this, gimpl, opidx, inputs, outputs, outMats);
             } else
 #endif
             {
-#ifdef HAVE_CUDA
-                // CPU op: bring any device-resident inputs back to host before reading them.
-                for (size_t k = 0; k < ninputs; k++) {
-                    if (inputs[k].idx < (int)argWrappers.size() && !argWrappers[inputs[k].idx].empty()) {
-                        // Re-fetch: forwardOpCUDA may have swapped the tensor out from under the cached wrapper.
-                        Ptr<CUDABackendWrapper> cw = getCudaArgWrapper(inputs[k], argTensor(inputs[k]))
-                                                        .dynamicCast<CUDABackendWrapper>();
-                        if (cw) { cw->copyToHost(); inpMats[k] = argTensor(inputs[k]).getMat(ACCESS_READ); }
-                    }
-                }
-#endif
                 layer->forward(inpMats, outMats, tempMats);
-#ifdef HAVE_CUDA
-                // CPU produced fresh host data; invalidate any stale device copy of its outputs.
-                for (size_t k = 0; k < noutputs; k++) {
-                    if (outputs[k].idx < (int)argWrappers.size()) {
-                        Ptr<CUDABackendWrapper> cw = argWrappers[outputs[k].idx].dynamicCast<CUDABackendWrapper>();
-                        if (cw) cw->setHostDirty();
-                    }
-                }
-#endif
             }
         }
         else {
@@ -1952,33 +1879,20 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             if (opBackend == DNN_BACKEND_CUDA)
                 continue;
 #endif
-            if (adata.kind == DNN_ARG_TEMP) {
-                int bufidx = bufidxs.at(out.idx);
-                UMat& buf = buffers.at(bufidx);
-
-                if (!dynamicOutShapes) {
-                    // a sanity check: make sure that the data was not reallocated during Layer::forward()
-                    // if the layer claims it does not produce dynamic-shape outputs.
-                    CV_Assert_N(buf.u == m.u,
-                                buf.shape() == m.shape(),
-                                buf.type() == m.type(),
-                                (!m.u || m.u->data == outOrigData[i].first),
-                                (!m.u || m.u->size == outOrigData[i].second));
-                } else {
-                    forceAllocator(buf, Mat::getDefaultAllocator());
-                    buf.fit(m.shape(), m.type());
-                    m.copyTo(buf);
-                }
+            HostDeviceBuffer& t = argTensor(out);
+            if (adata.kind == DNN_ARG_TEMP && !dynamicOutShapes) {
+                // a sanity check: make sure that the data was not reallocated during Layer::forward()
+                // if the layer claims it does not produce dynamic-shape outputs.
+                CV_Assert_N(m.shape() == outShapes[i],
+                            m.type() == outTypes[i],
+                            (!m.u || m.u->data == outOrigData[i].first),
+                            (!m.u || m.u->size == outOrigData[i].second));
             } else {
-                UMat& cur = __tensors__.at(out.idx);
-                if (cur.u != m.u || cur.shape() != m.shape() || cur.type() != m.type()) {
-                    UMat freshT;
-                    forceAllocator(freshT, Mat::getDefaultAllocator());
-                    freshT.fit(m.shape(), m.type());
-                    m.copyTo(freshT);
-                    cur = freshT;
-                }
+                Mat& dst = t.hostForWrite(m.shape(), m.type());
+                if (dst.data != m.data)
+                    m.copyTo(dst);
             }
+            t.commit(HostDeviceBuffer::HOST);
         }
 
         size_t ntemps = tempMats.size();
@@ -2008,15 +1922,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     outputsVec.resize(n_gr_outputs);
     for (i = 0; i < n_gr_outputs; i++) {
         Arg out = gr_outputs[i];
-#ifdef HAVE_CUDA
-        // A graph output produced on the device must be brought back to host before it is read.
-        if (out.idx < (int)argWrappers.size() && !argWrappers[out.idx].empty()) {
-            // Re-fetch: forwardOpCUDA may have swapped the tensor out from under the cached wrapper.
-            Ptr<CUDABackendWrapper> cw = getCudaArgWrapper(out, argTensor(out)).dynamicCast<CUDABackendWrapper>();
-            if (cw) cw->copyToHost();
-        }
-#endif
-        const UMat& outm = argTensor(out);
+        const Mat outm = hostTensor(out);
         if (isMainGraph) {
             auto declared_it = declaredOutputTypes.find(out.idx);
             int declaredType = declared_it != declaredOutputTypes.end() ? declared_it->second : -1;
@@ -2026,10 +1932,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             bool widenToDeclared = declaredType >= 0 && isFloatDepth(CV_MAT_DEPTH(declaredType)) &&
                                    !isFloatDepth(outm.depth());
             if (outm.size.layout == DATA_LAYOUT_BLOCK) {
-                transformLayout(outm.getMat(ACCESS_READ), outputsVec[i], originalLayout, originalLayout, outm.size.C);
+                transformLayout(outm, outputsVec[i], originalLayout, originalLayout, outm.size.C);
             } else if (widenToDeclared) {
                 outputsVec[i].fit(outm.shape(), CV_MAKETYPE(CV_MAT_DEPTH(declaredType), outm.channels()));
-                outm.getMat(ACCESS_READ).convertTo(outputsVec[i], CV_MAT_DEPTH(declaredType));
+                outm.convertTo(outputsVec[i], CV_MAT_DEPTH(declaredType));
             } else {
                 outputsVec[i].fit(outm.shape(), outm.type());
                 outm.copyTo(outputsVec[i]);
@@ -2160,7 +2066,7 @@ bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
 
         int type;
         MatShape shape;
-        const UMat& tensor = argTensor(inp);
+        const HostDeviceBuffer& tensor = argTensor(inp);
         if (!tensor.empty()) {
             type = tensor.type();
             shape = tensor.shape();

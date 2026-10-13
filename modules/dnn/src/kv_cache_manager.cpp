@@ -121,10 +121,8 @@ void KVCacheManager::initPastTensors()
         if (dtype < 0)
             dtype = CV_32F;
 
-        UMat& past_t = netimpl->__tensors__.at(route.second);
-        past_t.release();
-        past_t.allocator = netimpl->tensorAllocator();
-        Mat((int)shape_vec.size(), shape_vec.data(), dtype, Scalar(0)).copyTo(past_t);
+        netimpl->__tensors__.at(route.second).release();
+        netimpl->setArgTensor(Arg(route.second), Mat((int)shape_vec.size(), shape_vec.data(), dtype, Scalar(0)));
         // The consumer's signature changed; the op loop re-finalizes it.
     }
 }
@@ -133,12 +131,27 @@ void KVCacheManager::applyRoutes()
 {
     for (const auto& route : presentToPastRoutes)
     {
-        const Mat& present_t = netimpl->argTensor(Arg(route.first)).getMat(ACCESS_READ);
-        UMat& past_t = netimpl->__tensors__.at(route.second);
+        HostDeviceBuffer& present_t = netimpl->argTensor(Arg(route.first));
+        HostDeviceBuffer& past_t = netimpl->__tensors__.at(route.second);
         if (present_t.empty())
             continue;
         // Grown buffer changes the consumer's signature; the op loop re-finalizes it.
-        present_t.copyTo(past_t);
+#ifdef HAVE_CUDA
+        if (present_t.valid() == HostDeviceBuffer::CUDA && netimpl->cudaInfo)
+        {
+            netimpl->cudaInfo->context.stream.synchronize();
+            UMat* src = present_t.cudaForRead();
+            UMat* dst = past_t.cudaForWrite(src->shape(), src->type());
+            if (dst)
+            {
+                src->copyTo(*dst);
+                CUDA4DNN_CHECK_CUDA(cudaDeviceSynchronize());
+                past_t.commit(HostDeviceBuffer::CUDA);
+                continue;
+            }
+        }
+#endif
+        netimpl->setArgTensor(Arg(route.second), netimpl->hostTensor(Arg(route.first)));
     }
 }
 
