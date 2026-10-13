@@ -83,7 +83,7 @@ min4( float a, float b, float c, float d )
 static inline int inpaintSkipBlocksBelow(const uchar* p, int j, int n, uchar t)
 {
 #if CV_SIMD128
-    const int nlanes = VTraits<v_uint8x16>::vlanes();
+    const int nlanes = VTraits<v_uint8>::vlanes();
     for (; j <= n - nlanes && v_reduce_max(v_load(p + j)) < t; j += nlanes) {}
 #else
     CV_UNUSED(p); CV_UNUSED(n); CV_UNUSED(t);
@@ -130,7 +130,7 @@ public:
         for (int i = 0; i < f.rows; i++) {
             const uchar* fRow = f.ptr<uchar>(i);
             for (int j = inpaintSkipBlocksBelow(fRow, 0, f.cols, 1); j < f.cols; j = inpaintSkipBlocksBelow(fRow, j, f.cols, 1)) {
-                for (int blockEnd = std::min(j + VTraits<v_uint8x16>::vlanes(), f.cols); j < blockEnd; j++) {
+                for (int blockEnd = std::min(j + VTraits<v_uint8>::vlanes(), f.cols); j < blockEnd; j++) {
                     if (fRow[j] != 0 && !Push(i, j, 0))
                         return false;
                 }
@@ -328,7 +328,7 @@ icvCalcFMM(Mat &f, Mat &t, CvPriorityQueueFloat *Heap, bool negate) {
          uchar* fRow = f.ptr<uchar>(i);
          float* tRow = t.ptr<float>(i);
          for (j = inpaintSkipBlocksBelow(fRow, 0, f.cols, CHANGE); j < f.cols; j = inpaintSkipBlocksBelow(fRow, j, f.cols, CHANGE)) {
-            for (int blockEnd = std::min(j + VTraits<v_uint8x16>::vlanes(), f.cols); j < blockEnd; j++) {
+            for (int blockEnd = std::min(j + VTraits<v_uint8>::vlanes(), f.cols); j < blockEnd; j++) {
                if (fRow[j] == CHANGE) {
                   fRow[j] = KNOWN;
                   tRow[j] = -tRow[j];
@@ -452,6 +452,7 @@ icvTeleaInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloa
    for (int dk = -range; dk <= range; dk++) {
       float* drow = diskTab.dstRow(dk);
       for (int dl = -range; dl <= range; dl++) {
+         if (dk == 0 && dl == 0) { drow[dl] = 0.f; continue; }
          cv::Point2f r;
          r.y = (float)(-dk);
          r.x = (float)(-dl);
@@ -666,8 +667,10 @@ static int inpaintNSRowWeights(const uchar* fk, const uchar* fkm1, const uchar* 
         v_float32x4 dir = v_add(v_mul(rx, gx), v_mul(vry, gy));
         const v_float32x4 rLen2 = v_add(v_mul(rx, rx), vRySq);
         const v_float32x4 gradLen2 = v_add(v_mul(gx, gx), v_mul(gy, gy));
-        const v_float32x4 dirNorm = v_abs(v_div(dir, v_sqrt(v_mul(rLen2, gradLen2))));
-        dir = v_select(v_le(v_abs(dir), vthr), vsmall, dirNorm);
+        const v_float32x4 smallMask = v_le(v_abs(dir), vthr);
+        const v_float32x4 safeDenom = v_select(smallMask, v_setall_f32(1.f), v_sqrt(v_mul(rLen2, gradLen2)));
+        const v_float32x4 dirNorm = v_abs(v_div(dir, safeDenom));
+        dir = v_select(smallMask, vsmall, dirNorm);
         v_store(w + (l - lbeg), v_mul(v_load(drow + (l - j)), dir));
     }
     return l;
@@ -776,8 +779,10 @@ icvNSInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *
                      v_float32x4 dir = v_add(v_mul(gx, v_setall_f32(r.x)), v_mul(gy, v_setall_f32(r.y)));
                      v_float32x4 gradLen2 = v_add(v_mul(gx, gx), v_mul(gy, gy));
                      v_float32x4 denom = v_sqrt(v_mul(gradLen2, v_setall_f32(VectorLength(r))));
-                     v_float32x4 dirNorm = v_abs(v_div(dir, denom));
-                     dir = v_select(v_le(v_abs(dir), vthr), vsmall, dirNorm);
+                     v_float32x4 smallMask = v_le(v_abs(dir), vthr);
+                     v_float32x4 safeDenom = v_select(smallMask, v_setall_f32(1.f), denom);
+                     v_float32x4 dirNorm = v_abs(v_div(dir, safeDenom));
+                     dir = v_select(smallMask, vsmall, dirNorm);
                      const v_float32x4 vw = v_mul(vdst, dir);
                      vIa = v_add(vIa, v_mul(vw, v_cvt_f32(inpaintLoadPixel3(o_k1 + 3*(l-1), pixelLoadEnd))));
                      vs = v_add(vs, vw);
@@ -1106,9 +1111,7 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
                      }
                   }
                   sat = (float)(Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f));
-                  {
                   out.at<data_type>(i-1,j-1) = round_cast<data_type>(sat);
-                  }
                }
 
                f.at<uchar>(i,j) = BAND;
@@ -1370,7 +1373,7 @@ icvInpaint( const Mat &input_img, const Mat &inpaint_mask, Mat &output_img,
         const uchar* src = inpaint_mask.ptr<uchar>(i);
         uchar* dst = mask.ptr<uchar>(i + 1) + 1;
         for (int j = inpaintSkipBlocksBelow(src, 0, inpaint_mask.cols, 1); j < inpaint_mask.cols; j = inpaintSkipBlocksBelow(src, j, inpaint_mask.cols, 1)) {
-            for (int blockEnd = std::min(j + VTraits<v_uint8x16>::vlanes(), inpaint_mask.cols); j < blockEnd; j++)
+            for (int blockEnd = std::min(j + VTraits<v_uint8>::vlanes(), inpaint_mask.cols); j < blockEnd; j++)
                 if (src[j] != 0) {
                     dst[j] = INSIDE;
                     maskRowMin = std::min(maskRowMin, i); maskRowMax = i;
