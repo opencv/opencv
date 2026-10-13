@@ -656,10 +656,6 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         }
         catch(...)
         {
-            // an explicitly bound allocator (e.g. the CUDA one) is not silently replaced by another
-            // backend: callers pass u->handle to backend-specific code, so report the failure instead
-            if (allocator)
-                throw;
             if(a != a0)
                 u = a0->allocate(dims, size.p, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
