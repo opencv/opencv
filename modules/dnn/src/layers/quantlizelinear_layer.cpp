@@ -17,39 +17,52 @@ namespace cv
 namespace dnn
 {
 
-// Fast path for per-tensor quantization: float → uint8 with AVX2
+// Fast path for per-tensor quantization: float -> uint8 or int8 with AVX2
 #if defined(__x86_64__) || defined(_M_X64)
+template <typename _OutTp>
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((target("avx2")))
 #endif
-static void quantizeLinearChunk_f32_u8_avx2(const float* src, uint8_t* dst,
-                                             float scale, float zp_f,
-                                             int64_t len)
+static void quantizeLinearChunk_f32_avx2(const float* src, _OutTp* dst,
+                                         float scale, int zp_i, int64_t len)
 {
+    const int lo_i = (int)std::numeric_limits<_OutTp>::lowest();
+    const int hi_i = (int)std::numeric_limits<_OutTp>::max();
     __m256 vscale = _mm256_set1_ps(scale);
-    // The zero-point is integral. Round x/scale FIRST, then add the integer zp;
-    // adding an odd zp before rounding would flip round-half-to-even ties
-    int zp_i = cvRound(zp_f);
+    // Clamp in float: a value outside int32 range converts to INT_MIN, which then
+    // saturates to the wrong end. Bounds carry the zero point so it can be added after.
+    __m256 vlo = _mm256_set1_ps((float)(lo_i - zp_i));
+    __m256 vhi = _mm256_set1_ps((float)(hi_i - zp_i));
     __m256i vzp = _mm256_set1_epi32(zp_i);
 
     int64_t j = 0;
     for (; j <= len - 8; j += 8) {
-        __m256 v = _mm256_loadu_ps(src + j);
-        __m256i vi = _mm256_cvtps_epi32(_mm256_div_ps(v, vscale)); // round half-to-even
-        vi = _mm256_add_epi32(vi, vzp);                            // + integer zero-point
-        __m128i lo = _mm256_castsi256_si128(vi);
-        __m128i hi = _mm256_extracti128_si256(vi, 1);
-        __m128i packed16 = _mm_packs_epi32(lo, hi);
-        __m128i packed8 = _mm_packus_epi16(packed16, packed16);    // saturates to [0,255]
+        __m256 v = _mm256_div_ps(_mm256_loadu_ps(src + j), vscale);
+        // max then min, so a NaN takes the second operand and lands inside the range.
+        v = _mm256_min_ps(_mm256_max_ps(v, vlo), vhi);
+        // Round before adding the zero point; an odd one would flip half-to-even ties.
+        __m256i vi = _mm256_add_epi32(_mm256_cvtps_epi32(v), vzp);
+        __m128i packed16 = _mm_packs_epi32(_mm256_castsi256_si128(vi),
+                                           _mm256_extracti128_si256(vi, 1));
+        __m128i packed8 = std::is_signed<_OutTp>::value
+                        ? _mm_packs_epi16(packed16, packed16)
+                        : _mm_packus_epi16(packed16, packed16);
         _mm_storel_epi64((__m128i*)(dst + j), packed8);
     }
-    for (; j < len; j++)
-        dst[j] = saturate_cast<uint8_t>(cvRound(src[j] / scale) + zp_i);
+    // Same clamp as the vector loop: out of range cvRound gives INT_MIN and the zero point
+    // then overflows. A NaN fails both compares and lands on the low bound, as MAXPS does.
+    const float flo = (float)(lo_i - zp_i), fhi = (float)(hi_i - zp_i);
+    for (; j < len; j++) {
+        float v = src[j] / scale;
+        v = v > flo ? v : flo;
+        v = v < fhi ? v : fhi;
+        dst[j] = (_OutTp)(cvRound(v) + zp_i);
+    }
 }
 
-static void quantizeLinearFast_f32_u8_avx2(const float* inp, uint8_t* out,
-                                            float scale, float zp_f,
-                                            int64_t total)
+template <typename _OutTp>
+static void quantizeLinearFast_f32_avx2(const float* inp, _OutTp* out,
+                                        float scale, int zp_i, int64_t total)
 {
     const int64_t block = 1024;
     int64_t nblocks = (total + block - 1) / block;
@@ -58,7 +71,7 @@ static void quantizeLinearFast_f32_u8_avx2(const float* inp, uint8_t* out,
         for (int i = r.start; i < r.end; i++) {
             int64_t ofs = i * block;
             int64_t len = std::min(block, total - ofs);
-            quantizeLinearChunk_f32_u8_avx2(inp + ofs, out + ofs, scale, zp_f, len);
+            quantizeLinearChunk_f32_avx2(inp + ofs, out + ofs, scale, zp_i, len);
         }
     });
 }
@@ -285,16 +298,23 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
         }
     }
 
-    // Fast path: per-tensor quantization float→uint8 with AVX2 + proper parallelism
+    // Fast path: per-tensor quantization float to uint8 or int8 with AVX2 + parallelism
 #if defined(__x86_64__) || defined(_M_X64)
-    if (block_size == 0 && sz_a == 1 && inptype == CV_32F && outtype == CV_8U && sctype == CV_32F
-        && checkHardwareSupport(CV_CPU_AVX2)) {
+    if (block_size == 0 && sz_a == 1 && inptype == CV_32F && sctype == CV_32F
+        && (outtype == CV_8U || outtype == CV_8S) && checkHardwareSupport(CV_CPU_AVX2)) {
         float scale_f32 = reinterpret_cast<const float*>(scale.data)[0];
-        float zp_f = zp.empty() ? 0.f : (float)reinterpret_cast<const uint8_t*>(zp.data)[0];
         int64_t total = nslices * slice_size;
-        quantizeLinearFast_f32_u8_avx2(reinterpret_cast<const float*>(inp.data),
+        if (outtype == CV_8U) {
+            int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
+            quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
                                         reinterpret_cast<uint8_t*>(out.data),
-                                        scale_f32, zp_f, total);
+                                        scale_f32, zp_i, total);
+        } else {
+            int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const int8_t*>(zp.data)[0];
+            quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
+                                        reinterpret_cast<int8_t*>(out.data),
+                                        scale_f32, zp_i, total);
+        }
         return;
     }
 #endif
@@ -427,6 +447,31 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    // Block layout reorders channels, so only a scalar scale survives it unchanged;
+    // a per-channel or blocked one would be indexed against the wrong axis.
+    bool isPerTensor() const
+    {
+        if (block_size != 0 || this->inputs.size() < 2)
+            return false;
+        Net::Impl* netimpl_ = getNetImpl(this);
+        return netimpl_ && netimpl_->isConstArg(this->inputs[1]) &&
+               netimpl_->argTensor(this->inputs[1]).total() == 1;
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        size_t ninputs = actualInputs.size();
+        CV_Assert(ninputs >= 1u);
+        desiredInputs.assign(ninputs, DATA_LAYOUT_UNKNOWN);
+        const DataLayout keep = isPerTensor() ? actualInputs[0] : DATA_LAYOUT_UNKNOWN;
+        desiredInputs[0] = keep;
+        outputs.assign(requiredOutputs, keep);
+        return 0;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
