@@ -79,6 +79,14 @@ void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, double);
 #endif
 }
 
+namespace opt_NEON
+{
+#if CV_NEON
+void resizeNN2_NEON(const Range&, const Mat&, Mat&, int*, double);
+void resizeNN4_NEON(const Range&, const Mat&, Mat&, int*, double);
+#endif
+}
+
 }
 #endif
 /* End of file. */

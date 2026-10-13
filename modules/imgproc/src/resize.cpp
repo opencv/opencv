@@ -1165,6 +1165,16 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
     else
 #endif
+#if CV_NEON
+    if((pix_size == 2) || (pix_size == 4))
+    {
+        if(pix_size == 2)
+            opt_NEON::resizeNN2_NEON(range, src, dst, x_ofs, ify);
+        else
+            opt_NEON::resizeNN4_NEON(range, src, dst, x_ofs, ify);
+    }
+    else
+#endif
     {
         resizeNNInvoker invoker(src, dst, x_ofs, ify);
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
