@@ -143,8 +143,8 @@ protected:
 
     Arg resolveConstThroughIdentity(Arg arg);
 
-    // Register an initializer, reusing the Arg of an earlier constant with the same value.
-    Arg addConstArg(const std::string& name, const Mat& t);
+    // Register an initializer, reusing the Arg of an earlier constant with the same ONNX dtype and value.
+    Arg addConstArg(const std::string& name, const Mat& t, int onnx_type);
     // Node dedup: outputs of the first node with a given signature.
     struct DedupEntry {
         std::vector<Arg> args;
@@ -172,7 +172,12 @@ protected:
     std::unordered_map<std::string, int> produced_onnx_type;
     // Constant and node dedup run on the main graph only; subgraph bodies are left as they are.
     opencv_onnx::GraphProto* main_graph_proto = nullptr;
-    std::unordered_map<size_t, std::vector<Arg> > consts_by_value;
+    // ONNX dtype is kept next to the Arg: INT4 and INT8 (or FP8 variants) decode to the same Mat type.
+    struct ConstEntry {
+        int onnx_type;
+        Arg arg;
+    };
+    std::unordered_map<size_t, std::vector<ConstEntry> > consts_by_value;
     std::unordered_map<std::string, DedupEntry> seen_nodes;
 
     std::string framework_name;
@@ -945,7 +950,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         Mat t = parseTensor(*const_i);
         std::string name = remap(const_i->name());
         if (mainGraph_ && !graph_output_names.count(name))
-            addConstArg(name, t);
+            addConstArg(name, t, const_i->data_type());
         else
             netimpl->newConstArg(name, t);
         releaseONNXTensor(*const_i);
@@ -1058,7 +1063,7 @@ void ONNXImporter2::rememberMissingOp(const std::string& opname)
 // almost never repeated, and hashing them would only slow down loading.
 static const size_t CONST_DEDUP_MAX_BYTES = 1 << 20;
 
-// Collisions are harmless: addConstArg() compares type, shape and bytes before sharing.
+// Collisions are harmless: addConstArg() compares ONNX dtype, type, shape and bytes before sharing.
 static size_t hashConst(const Mat& m)
 {
     std::string_view bytes((const char*)m.ptr(), m.total()*m.elemSize());
@@ -1071,27 +1076,27 @@ static bool sameConst(const Mat& a, const Mat& b)
            std::memcmp(a.ptr(), b.ptr(), a.total()*a.elemSize()) == 0;
 }
 
-Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t)
+Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_type)
 {
     if (name.empty() || t.empty() || !t.isContinuous() ||
         t.total()*t.elemSize() > CONST_DEDUP_MAX_BYTES)
         return netimpl->newConstArg(name, t);
-    std::vector<Arg>& same = consts_by_value[hashConst(t)];
-    for (Arg a : same) {
-        if (sameConst(netimpl->argTensor(a), t)) {
-            netimpl->aliasArg(name, a);
-            return a;
+    std::vector<ConstEntry>& same = consts_by_value[hashConst(t)];
+    for (const ConstEntry& e : same) {
+        if (e.onnx_type == onnx_type && sameConst(netimpl->argTensor(e.arg), t)) {
+            netimpl->aliasArg(name, e.arg);
+            return e.arg;
         }
     }
     Arg a = netimpl->newConstArg(name, t);
-    same.push_back(a);
+    same.push_back({onnx_type, a});
     return a;
 }
 
 // A node can be merged with an earlier identical one only if it is a pure function of its
 // inputs and attributes: a standard-domain op with a built-in parser (custom layers may keep
 // state; parseNode() checks the parser), not a random or Q/DQ op, and no subgraph bodies.
-static bool canDedupNode(const opencv_onnx::NodeProto& node_proto)
+static bool canMergeWithIdenticalNode(const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& domain = node_proto.domain();
     if (!domain.empty() && domain != "ai.onnx")
@@ -1200,7 +1205,7 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     // Only ops with a built-in parser: anything else goes to parseCustomLayer(), i.e. to a
     // user-registered layer that may keep state.
     if (!have_errors && curr_graph_proto == main_graph_proto &&
-        dispatch.count(layer_type) && canDedupNode(node_proto)) {
+        dispatch.count(layer_type) && canMergeWithIdenticalNode(node_proto)) {
         node_key = makeNodeKey(node_proto, node_inputs);
         auto it = seen_nodes.find(node_key);
         if (it != seen_nodes.end() && aliasOutputs(node_proto, it->second))

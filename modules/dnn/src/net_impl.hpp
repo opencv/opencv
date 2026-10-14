@@ -452,7 +452,7 @@ struct Net::Impl : public detail::NetImplBase
 
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
-    void aliasArg(const std::string&name, Arg arg); //used to deduplicate the constants
+    void aliasArg(const std::string& name, Arg arg); //used to deduplicate the constants
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
