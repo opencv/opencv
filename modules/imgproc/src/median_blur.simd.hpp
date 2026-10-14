@@ -798,7 +798,6 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
     typedef typename Op::value_type T;
     typedef typename Op::arg_type WT;
-    typedef typename VecOp::arg_type VT;
 
     const T* src = _src.ptr<T>();
     T* dst = _dst.ptr<T>();
