@@ -312,7 +312,7 @@ public:
 
         // Weights as a (Cout, Cin*kh*kw) matrix for forwardMlasIm2col().
         im2colWeights_.release();
-        if (!depthwise && ngroups == 1 && wshape0.dims == 4 && wshape0[1] <= SMALL_CIN_MAX &&
+        if (!depthwise && ngroups == 1 && wshape0[1] <= SMALL_CIN_MAX && isPatchEmbedding() &&
             weights_.type() == CV_32F && wtype == CV_32F && weights_.isContinuous() &&
             mlasAvailable())
         {
@@ -320,9 +320,25 @@ public:
         }
     }
 
-    // Convs with few input channels (RGB stem, ViT patch embedding) skip block layout: padding
-    // 3 channels to 8 would cost an extra layout conversion and 8/3 of the work.
+    // A ViT patch embedding with few input channels skips block layout: padding 3 channels to 8
+    // would cost an extra layout conversion and 8/3 of the work.
     static constexpr int SMALL_CIN_MAX = 4;
+
+    // Kernel equal to stride, no padding or dilation: patches do not overlap or leave the image.
+    // Other small convs keep the blocked kernel, so their results stay the same.
+    bool isPatchEmbedding() const
+    {
+        if (wshape0.dims != 4 || wshape0[2]*wshape0[3] <= 1 || strides.size() != 2 || ceil_mode ||
+            (auto_pad != AUTO_PAD_NONE && auto_pad != AUTO_PAD_VALID))
+            return false;
+        for (int i = 0; i < 2; i++)
+            if (strides[i] != wshape0[i + 2] || (!dilations.empty() && dilations[i] != 1))
+                return false;
+        for (int p : pads)
+            if (p != 0)
+                return false;
+        return true;
+    }
 
     // Only with one input: constant weights taken by constArgs(), no residual. Runtime weights
     // are re-set in forward() on the block path, so a copy of them here could go stale.
@@ -860,8 +876,8 @@ public:
         }
     }
 
-    // Conv with few input channels on the plain NCHW tensor: for a few output rows at a time, gather
-    // the input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
+    // Patch embedding on the plain NCHW tensor: for a few output rows at a time, gather the
+    // input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
     void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs)
     {
         const MatShape inpshape = inp0.shape();
@@ -900,13 +916,11 @@ public:
 
         const int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
         const int K = outshape[1], OH = outshape[2], OW = outshape[3];
-        const int kh = cs.kshape[1], kw = cs.kshape[2];
-        const int sy = cs.strides[1], sx = cs.strides[2];
-        const int dy = cs.dilations[1], dx = cs.dilations[2];
-        const int pad_t = cs.pads[1], pad_l = cs.pads[2];
+        const int kh = cs.kshape[1], kw = cs.kshape[2];  // also the strides
         const int KD = C*kh*kw;
         const size_t P = (size_t)OH*OW;
         CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
+        CV_Assert(OH*kh <= H && OW*kw <= W);
 
         const int rowsPerTask = std::max(1, 32 / std::max(OW, 1));
         const int tasksPerImage = (OH + rowsPerTask - 1) / rowsPerTask;
@@ -930,31 +944,15 @@ public:
                 float* col = colbuf.data();
 
                 // im2col: row (c, ky, kx) of col holds that input value for every output pixel here.
+                // Patches do not overlap or leave the image, so every read is inside the input.
                 for (int c = 0; c < C; c++)
                 for (int ky = 0; ky < kh; ky++)
                 for (int kx = 0; kx < kw; kx++) {
                     float* row = col + (size_t)((c*kh + ky)*kw + kx)*np;
-                    const int xofs = kx*dx - pad_l;
-                    // [ox0, ox1): output columns that read inside the image; the rest are padding zeros.
-                    int ox0 = xofs >= 0 ? 0 : (sx - 1 - xofs)/sx;
-                    int ox1 = W - 1 - xofs >= 0 ? (W - 1 - xofs)/sx + 1 : 0;
-                    ox0 = std::min(ox0, OW);
-                    ox1 = std::max(ox0, std::min(ox1, OW));
                     for (int i = 0; i < nrows; i++, row += OW) {
-                        const int iy = (oy0 + i)*sy + ky*dy - pad_t;
-                        if ((unsigned)iy >= (unsigned)H) {
-                            std::fill(row, row + OW, 0.f);
-                            continue;
-                        }
-                        const float* xrow = x + ((size_t)c*H + iy)*W + xofs;
-                        std::fill(row, row + ox0, 0.f);
-                        if (sx == 1) {
-                            std::memcpy(row + ox0, xrow + ox0, (ox1 - ox0)*sizeof(float));
-                        } else {
-                            for (int ox = ox0; ox < ox1; ox++)
-                                row[ox] = xrow[(size_t)ox*sx];
-                        }
-                        std::fill(row + ox1, row + OW, 0.f);
+                        const float* src = x + ((size_t)c*H + (oy0 + i)*kh + ky)*W + kx;
+                        for (int ox = 0; ox < OW; ox++)
+                            row[ox] = src[(size_t)ox*kw];
                     }
                 }
 
