@@ -65,6 +65,11 @@ struct ConstArgs
                 saved_tail_inputs.push_back(inp);
             }
 
+            GemmLayer* gemm = dynamic_cast<GemmLayer*>(layer_ptr);
+            // An int8 MatMul carries quantized weights in MatMulInt8Params, not as a const operand.
+            MatMulLayer* matmul = dynamic_cast<MatMulInt8Layer*>(layer_ptr)
+                                      ? nullptr : dynamic_cast<MatMulLayer*>(layer_ptr);
+            AttentionLayer* attn = dynamic_cast<AttentionLayer*>(layer_ptr);
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer_ptr);
             ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer_ptr);
             BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
@@ -92,6 +97,23 @@ struct ConstArgs
                 } else if (prelu && ninputs == 2) {
                     prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
                     prelu->inputs.resize(1);
+                    unuse_tail = true;
+                } else if (gemm) {
+                    // matrix multiply with constant weights and bias
+                    gemm->setWeights(netimpl->__tensors__[inputs[1]],
+                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    gemm->inputs.resize(1);
+                    unuse_tail = true;
+                } else if (matmul) {
+                    matmul->setWeights(netimpl->__tensors__[inputs[1]],
+                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    matmul->inputs.resize(1);
+                    unuse_tail = true;
+                } else if (attn && ninputs <= 3) {
+                    // A 4th input is the mask, which stays a runtime input.
+                    attn->setWeights(netimpl->__tensors__[inputs[1]],
+                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    attn->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {
                     // [TODO] ...

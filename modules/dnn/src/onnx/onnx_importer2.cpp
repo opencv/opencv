@@ -1569,16 +1569,11 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(B);
-        layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
+        layerParams.set("constB", true);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
             layerParams.set("have_bias", true);
             layerParams.set("constC", true);
         }
-        n_inputs = 1;
     }
 
     addLayer(layerParams, node_proto, n_inputs);
@@ -1588,15 +1583,6 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
-    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(B);
-        if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
-        }
-        n_inputs = 1;
-    }
     addLayer(layerParams, node_proto, n_inputs);
 }
 
@@ -2869,25 +2855,12 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 }
 
 void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    int i, n_inputs = node_proto.input_size();
+    int n_inputs = node_proto.input_size();
     CV_CheckTrue(params.has("num_heads"), "ONNXImporter2/parseAttention: num_heads is required but missing");
     CV_CheckTrue(params.has("qkv_hidden_sizes"), "ONNXImporter2/parseAttention: qkv_hidden_sizes is required but missing");
 
     auto param_qkv_hidden_sizes = params.get("qkv_hidden_sizes");
     CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "ONNXImporter2/parseAttention: qkv_hidden_sizes is must and only have three elements");
-
-    for (i = 1; i < n_inputs; i++) {
-        if (!net.isConstArg(node_inputs[i]))
-            break;
-    }
-
-    if (i == n_inputs) {
-        for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
-            params.blobs.push_back(blob);
-        }
-        n_inputs = 1;
-    }
 
     addLayer(params, node_proto, n_inputs);
 }

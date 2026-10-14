@@ -283,6 +283,12 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
+#ifdef HAVE_CUDA
+static const char* cudaWeightsReleasedMsg =
+    "DNN: constant weights were released after the first forward() and cannot be restored; "
+    "reload the model to run it on CUDA";
+#endif
+
 void Net::Impl::setPreferableBackend(Net& net, int backendId)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
@@ -325,6 +331,10 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 #endif
             )
         {
+#ifdef HAVE_CUDA
+            if (backendId == DNN_BACKEND_CUDA && weightsReleased)
+                CV_Error(Error::StsError, cudaWeightsReleasedMsg);
+#endif
             if (preferableBackend != backendId) {
                 preferableBackend = backendId;
                 finalized = false;  // re-select per-op executors on next finalize()
@@ -382,6 +392,8 @@ void Net::Impl::setPreferableTarget(int targetId)
 #ifdef HAVE_CUDA
         if (targetId == DNN_TARGET_CPU || IS_DNN_CUDA_TARGET(targetId))
         {
+            if (IS_DNN_CUDA_TARGET(targetId) && weightsReleased)
+                CV_Error(Error::StsError, cudaWeightsReleasedMsg);
             if (preferableTarget != targetId) {
                 preferableTarget = targetId;
                 finalized = false;  // re-select per-op executors on next finalize()
