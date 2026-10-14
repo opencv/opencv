@@ -955,6 +955,115 @@ TEST(Imgproc_Filter2D, dftFilter2d_regression_13179)
     EXPECT_LE(cvtest::norm(filtered, expected, cv::NORM_INF), 2);
 }
 
+static Mat medianBlurReference16f(const Mat& src, int ksize)
+{
+    Mat result(src.size(), src.type());
+    const int radius = ksize / 2, cn = src.channels();
+    vector<float> window(ksize * ksize);
+    for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
+            for (int c = 0; c < cn; ++c)
+            {
+                int n = 0;
+                for (int dy = -radius; dy <= radius; ++dy)
+                    for (int dx = -radius; dx <= radius; ++dx)
+                    {
+                        int sy = std::max(0, std::min(src.rows - 1, y + dy));
+                        int sx = std::max(0, std::min(src.cols - 1, x + dx));
+                        window[n++] = (float)src.ptr<hfloat>(sy)[sx * cn + c];
+                    }
+                std::nth_element(window.begin(), window.begin() + n / 2, window.end());
+                result.ptr<hfloat>(y)[x * cn + c] = hfloat(window[n / 2]);
+            }
+    return result;
+}
+
+static void expectHalfEqual(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+    for (int y = 0; y < expected.rows; ++y)
+        for (int x = 0; x < expected.cols * expected.channels(); ++x)
+            EXPECT_EQ((float)expected.ptr<hfloat>(y)[x], (float)actual.ptr<hfloat>(y)[x])
+                << "row=" << y << " element=" << x;
+}
+
+typedef testing::TestWithParam<tuple<Size, int, int> > Imgproc_MedianBlur16f;
+
+TEST_P(Imgproc_MedianBlur16f, accuracy)
+{
+    const Size size = get<0>(GetParam());
+    const int cn = get<1>(GetParam()), ksize = get<2>(GetParam());
+    Mat values(size.height + 2, size.width + 2, CV_MAKETYPE(CV_32F, cn));
+    theRNG().fill(values, RNG::UNIFORM, -100.f, 100.f);
+    Mat storage;
+    values.convertTo(storage, CV_16F);
+    const Rect roi(1, 1, size.width, size.height);
+    Mat src = storage(roi), original = src.clone();
+    const Mat expected = medianBlurReference16f(src, ksize);
+
+    Mat dst;
+    medianBlur(original, dst, ksize);
+    expectHalfEqual(expected, dst);
+
+    Mat dstStorage(storage.size(), storage.type());
+    dstStorage.reshape(1).setTo(Scalar::all(-123));
+    dst = dstStorage(roi);
+    medianBlur(src, dst, ksize);
+    ASSERT_EQ(dst.data, dstStorage(roi).data);
+    expectHalfEqual(expected, dst);
+    expectHalfEqual(original, src);
+    for (int y = 0; y < dstStorage.rows; ++y)
+        for (int x = 0; x < dstStorage.cols; ++x)
+            if (!roi.contains(Point(x, y)))
+                for (int c = 0; c < cn; ++c)
+                    EXPECT_EQ(-123.f, (float)dstStorage.ptr<hfloat>(y)[x * cn + c]);
+
+    Mat expectedStorage = storage.clone();
+    expected.copyTo(expectedStorage(roi));
+    medianBlur(src, src, ksize);
+    expectHalfEqual(expectedStorage, storage);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_MedianBlur16f,
+    testing::Combine(testing::Values(Size(1, 1), Size(1, 11), Size(11, 1),
+                                    Size(2, 2), Size(17, 13), Size(65, 7)),
+                     testing::Values(1, 3, 4, 9), testing::Values(3, 5)));
+
+TEST(Imgproc_MedianBlur, float16_special_values)
+{
+    const float values[] = {-65504.f, -1.f, -0.f, 0.f, 0x1p-24f, -0x1p-24f,
+                           65504.f, std::numeric_limits<float>::infinity(),
+                           -std::numeric_limits<float>::infinity()};
+    Mat src(13, 17, CV_16FC3);
+    for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols * src.channels(); ++x)
+            src.ptr<hfloat>(y)[x] = hfloat(values[(y * src.cols * src.channels() + x) % 9]);
+    for (int ksize : {3, 5})
+    {
+        Mat dst;
+        medianBlur(src, dst, ksize);
+        const Mat expected = medianBlurReference16f(src, ksize);
+        expectHalfEqual(expected, dst);
+    }
+
+    src.setTo(Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+    for (int ksize : {3, 5})
+    {
+        Mat dst;
+        medianBlur(src, dst, ksize);
+        for (int y = 0; y < src.rows; ++y)
+            for (int x = 0; x < src.cols * src.channels(); ++x)
+                EXPECT_TRUE(cvIsNaN((float)dst.ptr<hfloat>(y)[x]));
+    }
+}
+
+TEST(Imgproc_MedianBlur, float16_large_aperture)
+{
+    Mat src(7, 9, CV_16FC1, Scalar::all(1)), dst;
+    EXPECT_THROW(medianBlur(src, dst, 7), cv::Exception);
+}
+
 TEST(Imgproc_MedianBlur, hires_regression_13409)
 {
     Mat src(2048, 2048, CV_8UC1), dst_hires, dst_ref;

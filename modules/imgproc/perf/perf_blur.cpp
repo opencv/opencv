@@ -11,7 +11,8 @@ typedef perf::TestBaseWithParam<Size_MatType_kSize_t> Size_MatType_kSize;
 PERF_TEST_P(Size_MatType_kSize, medianBlur,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1,
+                                CV_16FC1, CV_16FC3, CV_16FC4),
                 testing::Values(3, 5)
                 )
             )
