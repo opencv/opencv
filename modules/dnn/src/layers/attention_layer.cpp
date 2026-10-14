@@ -434,7 +434,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
 #endif
             if (!projected) {
-                auto fn = [&](const Range &r) {
+                double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
+                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
                     for (int i = r.start; i < r.end; i++) {
                         fillBias(i);
                         const size_t head_size = qkv_head_sizes[i % 3];
@@ -445,9 +446,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                 packed_weight, 1.f, taskOutput(i), head_size, opt);
                         applyRotary(i);
                     }
-                };
-                double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
-                parallel_for_(Range(0, (int)loops), fn, nstripes);
+                }, nstripes);
             }
         }
 
