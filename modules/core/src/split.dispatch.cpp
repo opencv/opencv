@@ -67,7 +67,8 @@ static SplitFunc getSplitFunc(int depth)
         splitWrap<int64_t, cv::hal::split64s>, splitWrap<ushort, cv::hal::split16u>,
         splitWrap<ushort, cv::hal::split16u>, splitWrap<uchar, cv::hal::split8u>,
         splitWrap<int64_t, cv::hal::split64s>, splitWrap<int64_t, cv::hal::split64s>,
-        splitWrap<int, cv::hal::split32s>, 0, 0, 0
+        splitWrap<int, cv::hal::split32s>, splitWrap<uchar, cv::hal::split8u>,
+        splitWrap<uchar, cv::hal::split8u>, 0,
     };
 
     return splitTab[depth];

@@ -1864,10 +1864,30 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_arrays, testing::Combine(
         perf::MatType(CV_8U),
         perf::MatType(CV_16U),
         perf::MatType(CV_32S),
-        perf::MatType(CV_64F)
+        perf::MatType(CV_64F),
+        perf::MatType(CV_8F_E4M3FN),
+        perf::MatType(CV_8F_E4M3FNUZ)
     )
 )
 );
+
+typedef testing::TestWithParam<perf::MatType> Core_MixChannels_FP8;
+
+TEST_P(Core_MixChannels_FP8, reverse_channels)
+{
+    Mat src, dst64f;
+    Mat(4, 4, CV_64FC3, Scalar(1, 2, 0.5)).convertTo(src, GetParam());
+    Mat dst(src.size(), src.type());
+
+    int fromTo[] = { 0, 2, 1, 1, 2, 0 };  // reverse the channel order
+    mixChannels(&src, 1, &dst, 1, fromTo, 3);
+
+    dst.convertTo(dst64f, CV_64F);
+    EXPECT_EQ(0, cvtest::norm(dst64f, Mat(4, 4, CV_64FC3, Scalar(0.5, 2, 1)), NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_MixChannels_FP8,
+    testing::Values(perf::MatType(CV_8F_E4M3FN), perf::MatType(CV_8F_E4M3FNUZ)));
 
 TEST(Mat, regression_8680)
 {
