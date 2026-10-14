@@ -226,6 +226,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Reciprocal,     ReciprocalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Gather,         GatherLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Gather2,        Gather2Layer);
+    CV_DNN_REGISTER_LAYER_CLASS(GatherBlockQuantized, GatherBlockQuantizedLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GatherElements, GatherElementsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LayerNormalization, LayerNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(RMSNormalization, RMSNormLayer);

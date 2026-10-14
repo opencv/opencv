@@ -569,8 +569,10 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         for (int b = 1; b < batch_size && !ragged; ++b)
             ragged = (pastLen[b] != pastLen[0]);
         const bool window_mask = is_causal && (local_window_size > 0 || ragged);
-        CV_CheckFalse(window_mask && has_mask_input,
-                      "a sliding window cannot be combined with an attn_mask input");
+        // A float mask is additive, so the window can carry it; a boolean one cannot.
+        const bool fold_bias = window_mask && has_mask_input;
+        CV_CheckFalse(fold_bias && mask_mat.depth() != CV_32F,
+                      "a sliding window can only be combined with a float attn_mask");
         const int causal_past = pastLen[0];
 
         // qk_matmul_output (optional 4th output), per qk_matmul_output_mode:
@@ -595,16 +597,35 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 has_mask_input, is_causal, causal_past
             );
         } else {
-            Mat mask(std::vector<int>{batch_size, 1, seq_len_q, total_seq_kv}, CV_8U, Scalar(0));
+            // Outside the window is -FLT_MAX either way; inside carries the bias, or 1 when
+            // there is none and the kernel takes the boolean path.
+            const MatShape biasShape = fold_bias ? mask_mat.shape() : MatShape();
+            CV_CheckFalse(fold_bias && biasShape.dims != 4,
+                          "a sliding window needs a 4D attn_mask to fold");
+            // The bias may be per-head, so the window carries its head extent rather than 1.
+            const int nh_mask = fold_bias ? biasShape[1] : 1;
+            Mat mask(std::vector<int>{batch_size, nh_mask, seq_len_q, total_seq_kv},
+                     fold_bias ? CV_32F : CV_8U,
+                     fold_bias ? Scalar(-FLT_MAX) : Scalar(0));
             for (int b = 0; b < batch_size; ++b) {
+                const int bb = fold_bias && biasShape[0] == 1 ? 0 : b;
                 for (int i = 0; i < seq_len_q; ++i) {
                     const int hi = pastLen[b] + i;
                     int lo = 0;
                     // Spans local_window_size tokens ending at hi, not +1 (checked vs onnxruntime).
                     if (local_window_size > 0) lo = std::max(lo, hi - local_window_size + 1);
-                    uchar* row = mask.ptr<uchar>(b, 0, i);
-                    for (int j = lo; j <= hi && j < total_seq_kv; ++j)
-                        row[j] = 1;
+                    if (fold_bias) {
+                        for (int h = 0; h < nh_mask; ++h) {
+                            const float* bias = mask_mat.ptr<float>(bb, h, i);
+                            float* row = mask.ptr<float>(b, h, i);
+                            for (int j = lo; j <= hi && j < total_seq_kv; ++j)
+                                row[j] = bias[j];
+                        }
+                    } else {
+                        uchar* row = mask.ptr<uchar>(b, 0, i);
+                        for (int j = lo; j <= hi && j < total_seq_kv; ++j)
+                            row[j] = 1;
+                    }
                 }
             }
 

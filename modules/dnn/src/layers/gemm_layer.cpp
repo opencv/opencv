@@ -57,13 +57,24 @@ class GemmLayerImpl CV_FINAL : public GemmLayer {
 public:
     mutable int inpType = -1;
 
+    // A and B scale the product; C is the bias and would need beta, so it is refused.
+    static bool foldScaleOp(Layer* self, int slot, float scale)
+    {
+        if (slot != 0 && slot != 1)
+            return false;
+        static_cast<GemmLayerImpl*>(self)->alpha *= scale;
+        return true;
+    }
+
     static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
     {
         return static_cast<GemmLayerImpl*>(self)->fusion.take(expr);
     }
 
     GemmLayerImpl(const LayerParams& params) {
-        registerFusionOpsOnce<GemmLayerImpl>({ nullptr, &GemmLayerImpl::absorbOp });
+        registerFusionOpsOnce<GemmLayerImpl>({ nullptr, &GemmLayerImpl::absorbOp, false,
+                                               nullptr, nullptr,
+                                               &GemmLayerImpl::foldScaleOp });
         setParamsFrom(params);
 
         trans_a = params.get<bool>("transA", false);

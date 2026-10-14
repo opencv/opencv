@@ -481,12 +481,16 @@ void Net::Impl::fuseChains()
     fuseBN();
 
     // Order is load-bearing: each pass matches shapes the one before it leaves.
+    // RMSNorm first: the chain pass below would otherwise absorb either of its
+    // Muls into a neighbouring chain and leave the pattern unmatchable.
+    fuseRMSNorm();
     fuseAttention();
+    fuseSliceToSplit();
     fuseMatMulConstBToGemm();
     fuseSharedInputGemm();
     fuseReshapeTranspose();
+    fuseInputScalars();
     fuseTransposeMatMul();
-    fuseScaleSoftmax();
 
     // A sink runs the math it absorbs in its own CPU kernel. setPreferableTarget resolves
     // only CPU and CUDA while mainGraph is set, so nothing reaches here on OpenCL today.

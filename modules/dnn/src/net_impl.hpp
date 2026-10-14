@@ -131,6 +131,10 @@ struct Net::Impl : public detail::NetImplBase
     size_t totalLayers;
     std::vector<std::string> dimnames_vec;
     std::vector<ArgData> args;
+
+    // Dimensions the model declares, keyed by arg index; ArgData::shape is filled only at
+    // forward time. A symbolic dimension is its interned id, equal only to the same symbol.
+    std::map<int, MatShape> declaredShapes;
     std::vector<Mat> __tensors__;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
@@ -548,6 +552,10 @@ struct Net::Impl : public detail::NetImplBase
     // fuseChains()'s chain pass limited to TransformLayout sinks; run
     // after useBlockLayout(), which is what creates those nodes
     void fuseTransformLayoutChains();
+    // collapse decomposed RMS normalization into one RMSNormalization layer
+    void fuseRMSNorm();
+    // replace Slices that together partition one axis with a single Split
+    void fuseSliceToSplit();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
     // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style
@@ -557,10 +565,10 @@ struct Net::Impl : public detail::NetImplBase
     void fuseSharedInputGemm();
     // collapse redundant Reshape/Transpose chains
     void fuseReshapeTranspose();
+    // fold a scalar Mul/Div on an input into the consuming layer's own parameters
+    void fuseInputScalars();
     // absorb a last-two-dims Transpose into the consuming MatMul
     void fuseTransposeMatMul();
-    // fold a scalar Mul/Div before Softmax into Softmax::scale (CPU only)
-    void fuseScaleSoftmax();
     // replace constant sub-expressions with their results
 
     // widen FP16/BF16 constants to execution precision while the engine lacks half kernels

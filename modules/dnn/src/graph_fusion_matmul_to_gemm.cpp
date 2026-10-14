@@ -12,6 +12,9 @@
 // by BiasedMatmulSubgraph when it was a const Add):
 //   A(any rank) -> MatMul[const B (2D), optional const bias [N] / scalar]
 //
+// B is a blob when it was already const at parse time, and a const input arg when
+// constFold() made it const afterwards (e.g. a Transpose of an initializer).
+//
 // Replacement:
 //   A -> Gemm[transA=false, transB=mm.trans_b, alpha=mm.alpha, beta=mm.beta,
 //             constB=true, const_C=have_bias, flatten_a=false,
@@ -20,7 +23,7 @@
 // Restrictions (skip otherwise):
 //   - MatMul.trans_a must be false (ND-A flattening assumes row-major K is the
 //     last axis)
-//   - blobs.size() in {1, 2} and blobs[0] (B) is 2D float32
+//   - B is 2D float32, from blobs[0] or from a const input; a bias needs blobs[1]
 //   - if a bias is present, it must be scalar (total==1) or 1D length-N. The
 //     Gemm flatten_a=false bias path tiles a per-row pattern, so 2D / per-row
 //     biases like [M, N] aren't supported by this rewriter (they would change
@@ -69,17 +72,23 @@ struct ModelFusionMatMulToGemm
             // doesn't know how to translate to Gemm.
             if (dynamic_cast<MatMulInt8Layer*>(layer.get())) continue;
 
-            // Constant B lives in blobs[0] post-parse; if blobs is empty the
-            // MatMul has a runtime B and isn't a candidate.
-            if (layer->blobs.empty() || layer->blobs.size() > 2) continue;
+            if (layer->blobs.size() > 2) continue;
 
             if (mm->trans_a) continue;            // ND-A flatten assumes K = last axis
 
-            const Mat& B = layer->blobs[0];
+            // parseMatMul blobs a B that is const at import time; one that constFold()
+            // made const afterwards is still an input, and carries no bias.
+            Mat B;
+            bool constInputB = layer->blobs.empty();
+            if (constInputB) {
+                if (layer->inputs.size() != 2) continue;
+                if (!netimpl->isConstArg(layer->inputs[1])) continue;
+                B = netimpl->argTensor(layer->inputs[1]);
+            } else {
+                if (layer->inputs.size() != 1) continue;
+                B = layer->blobs[0];
+            }
             if (B.dims != 2 || B.type() != CV_32F) continue;
-
-            // Single runtime input expected (the const B was absorbed into blobs).
-            if (layer->inputs.size() != 1) continue;
 
             int N = mm->trans_b ? B.size[0] : B.size[1];
             int K = mm->trans_b ? B.size[1] : B.size[0];
@@ -122,7 +131,7 @@ struct ModelFusionMatMulToGemm
 
             Ptr<LayerInfo> gemm = LayerFactory::createLayerInstance("Gemm", gp);
             if (!gemm) continue;
-            gemm->inputs  = layer->inputs;
+            gemm->inputs  = constInputB ? vector<Arg>{ layer->inputs[0] } : layer->inputs;
             gemm->outputs = layer->outputs;
             gemm->netimpl = netimpl;
 

@@ -227,6 +227,7 @@ protected:
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMatMul               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMatMulNBits          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGatherBlockQuantized (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxUnpool            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNeg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -977,6 +978,34 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     curr_graph->setProg(curr_prog);
     curr_prog = saved_prog;
 
+    // Shape inference fills ArgData::shape at forward time, after every fusion pass has run.
+    for (int src = 0; src < 3; src++) {
+        const int n = src == 0 ? graph_proto->value_info_size()
+                    : src == 1 ? graph_proto->input_size() : graph_proto->output_size();
+        for (int i = 0; i < n; i++) {
+            const opencv_onnx::ValueInfoProto& vi = src == 0 ? graph_proto->value_info(i)
+                                                  : src == 1 ? graph_proto->input(i)
+                                                             : graph_proto->output(i);
+            if (!vi.has_name() || !vi.has_type() || !vi.type().has_tensor_type())
+                continue;
+            const opencv_onnx::TypeProto::Tensor& t = vi.type().tensor_type();
+            if (!t.has_shape())
+                continue;
+            const std::string name = remap(vi.name());
+            if (!netimpl->haveArg(name))
+                continue;
+            const opencv_onnx::TensorShapeProto& ts = t.shape();
+            MatShape shape(ts.dim_size());
+            for (int j = 0; j < ts.dim_size(); j++) {
+                const opencv_onnx::TensorShapeProto_Dimension& d = ts.dim(j);
+                // findDim interns by name, so two symbolic dims match only if same symbol.
+                const std::string dp = d.has_dim_param() ? d.dim_param() : std::string();
+                shape[j] = d.has_dim_value() ? (int)d.dim_value() : netimpl->findDim(dp, true);
+            }
+            netimpl->declaredShapes[netimpl->getArg(name).idx] = shape;
+        }
+    }
+
     Ptr<Graph> just_constructed = curr_graph;
     curr_graph_proto = saved_graph_proto;
     curr_graph = saved_graph;
@@ -1595,15 +1624,34 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter2::parseMatMulNBits(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
     int n_inputs = node_proto.input_size();
-    CV_CheckEQ(n_inputs, 3, "DNN/MatMulNBits: only the symmetric (A, B, scales) form is supported");
+    CV_Check(n_inputs, n_inputs == 3 || n_inputs == 4,
+             "DNN/MatMulNBits: expected (A, B, scales[, zero_points])");
     CV_CheckTrue(net.isConstArg(node_inputs[1]) && net.isConstArg(node_inputs[2]),
                  "DNN/MatMulNBits: packed weights and scales must be constants");
+    // g_idx (input 5) would reorder K, which the blocked kernels cannot express.
+    CV_CheckFalse(n_inputs > 4, "DNN/MatMulNBits: g_idx is not supported");
 
     layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
     Mat scales;
     net.argTensor(node_inputs[2]).convertTo(scales, CV_32F);
     layerParams.blobs.push_back(scales);
+    if (n_inputs == 4 && !node_inputs[3].empty()) {
+        CV_CheckTrue(net.isConstArg(node_inputs[3]),
+                     "DNN/MatMulNBits: zero_points must be a constant");
+        layerParams.blobs.push_back(net.argTensor(node_inputs[3]));
+    }
     addLayer(layerParams, node_proto, 1);
+}
+
+void ONNXImporter2::parseGatherBlockQuantized(LayerParams& layerParams,
+                                              const opencv_onnx::NodeProto& node_proto)
+{
+    const int n_inputs = node_proto.input_size();
+    CV_Check(n_inputs, n_inputs == 3 || n_inputs == 4,
+             "GatherBlockQuantized: expected (data, indices, scales[, zero_points])");
+    CV_CheckTrue(net.isConstArg(node_inputs[0]) && net.isConstArg(node_inputs[2]),
+                 "GatherBlockQuantized: the quantized table and its scales must be constants");
+    addLayer(layerParams, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2960,7 +3008,7 @@ void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_on
 }
 
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#com.microsoft.GroupQueryAttention
-// Supported opsets: com.microsoft 1. Supported inputs: 0..8, query through sin_cache.
+// Supported opsets: com.microsoft 1. Supported inputs: 0..8 and 10, attention_bias.
 // Lowers to AttentionOnnxAi, told here about seqlens_k, rotary, the window and a shared buffer.
 void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckTrue(params.has("num_heads") && params.has("kv_num_heads"),
@@ -2979,9 +3027,12 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
     if (do_rotary)
         CV_CheckTrue(hasInput(node_proto, 7) && hasInput(node_proto, 8),
                      "GroupQueryAttention: do_rotary=1 requires cos_cache and sin_cache");
-    for (int i = 9; i < node_proto.input_size(); i++)  // position_ids / attention_bias / head_sink
+    // attention_bias (10) is additive and becomes the layer's attn_mask.
+    const bool has_bias = hasInput(node_proto, 10);
+    CV_CheckFalse(hasInput(node_proto, 9), "GroupQueryAttention: position_ids is not supported");
+    for (int i = 11; i < node_proto.input_size(); i++)  // head_sink / kv scales / qk norm
         CV_CheckFalse(hasInput(node_proto, i),
-            "GroupQueryAttention: only inputs 0..8 (query .. sin_cache) are supported");
+            "GroupQueryAttention: inputs after attention_bias are not supported");
 
     // A preallocated buffer is rewritten in place, so present_key keeps past_key's length;
     // a growing cache declares a longer one. A static past alone does not separate them --
@@ -3001,6 +3052,7 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
 
     // total_sequence_length (6) is redundant with seqlens_k and dropped.
     std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
+    if (has_bias) ins.push_back(node_inputs[10]);
     if (has_past_k) { ins.push_back(node_inputs[3]); ins.push_back(node_inputs[4]); }
     ins.push_back(node_inputs[5]);
     if (do_rotary) { ins.push_back(node_inputs[7]); ins.push_back(node_inputs[8]); }
@@ -3010,7 +3062,7 @@ void ONNXImporter2::parseGroupQueryAttention(LayerParams& params, const opencv_o
     params.set("q_num_heads", params.get<int>("num_heads"));
     params.set("kv_num_heads", params.get<int>("kv_num_heads"));
     params.set("is_causal", true);
-    params.set("has_attn_mask", 0);
+    params.set("has_attn_mask", has_bias ? 1 : 0);
     params.set("has_past", has_past_k ? 1 : 0);
     params.set("has_seqlens_k", 1);
     params.set("has_rotary_cache", do_rotary ? 1 : 0);
@@ -3367,6 +3419,7 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseSimplifiedLayerNormalization;
     dispatch["SkipSimplifiedLayerNormalization"] = &ONNXImporter2::parseSkipSimplifiedLayerNorm;
     dispatch["MatMulNBits"] = &ONNXImporter2::parseMatMulNBits;
+    dispatch["GatherBlockQuantized"] = &ONNXImporter2::parseGatherBlockQuantized;
 
     domain_dispatch_map[str_domain_com_microsoft] = dispatch;
 }
