@@ -83,6 +83,18 @@ void expandGlobalPoolingParams(std::vector<size_t>& pads_begin, std::vector<size
 // Used in quantized model. It will return the (Max_element - Min_element)/127.
 double getWeightScale(const Mat& weightsMat);
 
+//! Decodes a narrow float constant in place. widenHalfConstants() leaves fp8 untouched and
+//! skips everything when enableFP16 is set, so a layer with FP32-only kernels decodes its own.
+inline void widenToFP32(Mat& m)
+{
+    if (m.type() == CV_16F || m.type() == CV_16BF ||
+        m.type() == CV_8F_E4M3FN || m.type() == CV_8F_E4M3FNUZ) {
+        Mat widened;
+        m.convertTo(widened, CV_32F);
+        m = widened;
+    }
+}
+
 // Several ONNX operations take list of integer's or float's,
 // e.g. to specify list of axes (Squeeze, Unsqueeze, Transpose, Reduce*, ...),
 // coordinates, repetitions etc. (Slice, Tile, ...), scale factors (Resize, ...).

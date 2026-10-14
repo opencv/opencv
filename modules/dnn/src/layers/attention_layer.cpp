@@ -173,15 +173,22 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         readExpr("qkv_batch", qkv_batch);
         readExpr("qkv_seq", qkv_seq);
         CV_CheckEQ(qkv_batch.empty(), qkv_seq.empty(), "DNN/Attention: qkv_batch needs qkv_seq");
+
+        // Built straight from LayerParams, the constants arrive in blobs rather than as
+        // graph inputs; take them over so there is one owner either way.
+        if (!blobs.empty()) {
+            setWeights(blobs[0], blobs.size() > 1 ? blobs[1] : Mat());
+            blobs.clear();
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
-            // AttentionOp takes const float weight/bias blobs, the input and an optional additive
+            // AttentionOp takes the const float weight and bias, the input and an optional additive
             // float mask; rotary stays on CPU
             Net::Impl* netimpl_ = getNetImpl(this);
-            if (!netimpl_ || do_rotary || blobs.size() < 2 ||
+            if (!netimpl_ || do_rotary || numConsts() < 2 ||
                 (this->inputs.size() != 1 && this->inputs.size() != 2))
                 return false;
             // an intermediate arg has no type until the first forward; refuse only a known non-float one
@@ -190,7 +197,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 if (t >= 0 && t != CV_32F)
                     return false;
             }
-            return blobs.front().type() == CV_32F && blobs.back().type() == CV_32F &&
+            return weights.type() == CV_32F && bias.type() == CV_32F &&
                    qkv_head_sizes[0] == qkv_head_sizes[1];
         }
 #endif
@@ -215,7 +222,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         return make_cuda_node<cuda4dnn::AttentionOp>(preferableTarget, std::move(context->stream),
                                                      std::move(context->cublas_handle),
-                                                     blobs.front(), blobs.back(), cfg);
+                                                     weights, bias, cfg);
     }
 #endif
 
@@ -223,12 +230,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        int num_inputs = inputs.size() + blobs.size();
+        int num_inputs = inputs.size() + numConsts();
         CV_CheckGE(num_inputs, 3, "DNN/Attention: at least three inputs are required (data, weight, bias)");
         CV_CheckLE(num_inputs, 4, "DNN/Attention: at most four inputs are supported (data, weight, bias, mask)");
         const auto &input_shape = inputs[0];
-        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
-        const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
+        const auto &weight_shape = !ownsWeights ? inputs[1] : weightShape();
+        const auto &bias_shape = !ownsBias ? inputs[2] : shape(bias);
 
         CV_CheckGE(input_shape.size(), static_cast<size_t>(3),
                    "DNN/Attention: invalid input dimension");
@@ -331,7 +338,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         int64 S = seq;
         int64 D = input_shape[nd - 1];
 
-        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        const auto &weight_shape = !ownsWeights ? inputs[1] : weightShape();
         int64 hidden = weight_shape[1];
 
         int64 q_size = (int64)qkv_hidden_sizes[0];
@@ -350,6 +357,38 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         flops += B * (int64)num_heads * CV_BIG_INT(2) * S * v_head * S;
         return flops;
     }
+
+    // constArgs() hands the constant operands over once; the layer owns them from here.
+    void setWeights(InputArray weights_arr, InputArray bias_arr) CV_OVERRIDE
+    {
+        Mat w = weights_arr.getMat();
+        CV_Assert(!w.empty());
+        weights = w;
+        wshape0 = shape(w);
+        ownsWeights = true;
+
+        Mat b = bias_arr.getMat();
+        if (!b.empty()) {
+            bias = b;
+            ownsBias = true;
+        }
+    }
+
+    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    const Mat& constBias() const CV_OVERRIDE { return bias; }
+
+    // wshape0 and the ownership flags survive, as they do after packing.
+    void releaseConstWeights() CV_OVERRIDE
+    {
+        weights.release();
+        bias.release();
+    }
+
+    //! Stays correct after prepackWeights() has packed and dropped the weight.
+    size_t numConsts() const { return (size_t)ownsWeights + (size_t)ownsBias; }
+
+    // prepackWeights() drops the weight once packed, so its shape has to outlive it
+    MatShape weightShape() const { return wshape0; }
 
     // Geometry derives from the weight shape alone, so this is safe before finalize().
     void packQKV(const Mat& weight) {
@@ -401,10 +440,23 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return !packed_weight_q.empty() || !packed_qkv_mlas.empty();
     }
 
-    // Dynamic weights (blobs empty) aren't available yet; forward() packs those.
+    // A dynamic weight is not available yet; forward() packs that one.
     void prepackWeights() CV_OVERRIDE {
-        if (!blobs.empty())
-            packQKV(blobs.front());
+        if (weights.empty())
+            return;
+        packQKV(weights);
+
+        Net::Impl* netimpl_ = getNetImpl(this);
+#ifdef HAVE_CUDA
+        // initCUDA() reads the raw weight after finalize(), so a net targeting CUDA keeps it.
+        if (netimpl_ && netimpl_->preferableBackend == DNN_BACKEND_CUDA &&
+            supportBackend(DNN_BACKEND_CUDA))
+            return;
+#endif
+        // The packed copy is what the kernels read from here on; the original is dead weight.
+        weights.release();
+        if (netimpl_)
+            netimpl_->weightsReleased = true;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
@@ -420,8 +472,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         seq_len = static_cast<size_t>(seq);
         input_hidden_size = static_cast<size_t>(input_shape[nd - 1]);
 
-        const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
-        const auto weight_shape = shape(weight);
+        const auto weight_shape = !ownsWeights ? shape(inputs[1]) : weightShape();
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
@@ -442,12 +493,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        // Dynamic weight (blobs empty) may change each call, so repack it.
-        if (blobs.empty())
+        // A dynamic weight may change each call, so repack it.
+        if (!ownsWeights)
             packQKV(inputs[1]);
         // Const weight: pack once as fallback when prepackWeights() wasn't called.
         else if (!qkvPacked())
-            packQKV(blobs.front());
+            packQKV(weights);
 
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
@@ -469,9 +520,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *QKV[3] = {Q, K, V}; // [B, N, S, H] per tensor
         {
             const auto &input = inputs[0];
-            const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
+            const auto &bias_mat = !ownsBias ? inputs[2] : bias;
             const auto *input_data = input.ptr<const float>();
-            const auto *bias_data = bias.ptr<const float>();
+            const auto *bias_data = bias_mat.ptr<const float>();
 
             // When do_rotary is false, internals.back() aliases output_buffer; harmless because rope_table is then unused.
             const auto &rope_table = internals.back();
@@ -607,10 +658,10 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
             // Additive mask broadcast-aligned right to [B,H,S,S] (size-1 dims broadcast); only present when the fusion pass attached an external mask input.
             int num_non_blob_inputs = (int)inputs.size();
-            bool has_mask = (!blobs.empty() && num_non_blob_inputs >= 2) ||
-                            (blobs.empty() && num_non_blob_inputs >= 4);
+            bool has_mask = (ownsWeights && num_non_blob_inputs >= 2) ||
+                            (!ownsWeights && num_non_blob_inputs >= 4);
             if (has_mask) {
-                const Mat &mask_mat = blobs.empty() ? inputs[3] : inputs[1];
+                const Mat &mask_mat = !ownsWeights ? inputs[3] : inputs[1];
                 CV_CheckTypeEQ(mask_mat.type(), CV_32F,
                                "DNN/Attention: mask must be float32");
 
@@ -726,8 +777,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
  private:
     bool useFlashAttention(size_t inputCount, int batch, int sequence, int valueHeadSize) const
     {
-        const bool hasMask = (!blobs.empty() && inputCount >= 2) ||
-                             (blobs.empty() && inputCount >= 4);
+        const bool hasMask = (ownsWeights && inputCount >= 2) ||
+                             (!ownsWeights && inputCount >= 4);
         return mlasAvailable() && !hasMask && batch > 0 && num_heads > 0 && sequence > 0 &&
                qkv_head_sizes[0] > 0 && valueHeadSize > 0;
     }
@@ -746,12 +797,18 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
     bool do_rotary;
     std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
+
+    Mat weights;                 //!< constant QKV weight; released once packed
+    Mat bias;                    //!< constant QKV bias
+    bool ownsWeights = false;
+    bool ownsBias = false;
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;
     Mat packed_qkv_mlas;  // used instead of packed_weight_q/k/v when MLAS is available
     size_t packed_qkv_ofs[3] = {0, 0, 0}, packed_qkv_step[3] = {0, 0, 0};
     std::vector<unsigned char> flash_scratch;
+    MatShape wshape0;
 
     FastGemmOpt opt;
 };
