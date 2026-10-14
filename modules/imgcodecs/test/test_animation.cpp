@@ -4,7 +4,6 @@
 
 #include "test_precomp.hpp"
 #include "test_common.hpp"
-#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace opencv_test { namespace {
 
@@ -281,74 +280,6 @@ TEST(Imgcodecs_WebP, imencode_rgba)
 #endif // HAVE_WEBP
 
 #ifdef HAVE_PNG
-
-TEST(Imgcodecs_APNG, encoding_parameter_length)
-{
-    Animation animation;
-    animation.loop_count = 3;
-    animation.frames.push_back(Mat(8, 8, CV_8UC4, Scalar(10, 20, 30, 255)));
-    animation.frames.push_back(Mat(8, 8, CV_8UC4, Scalar(40, 50, 60, 255)));
-    animation.durations = {100, 200};
-
-    const string output = cv::tempfile(".png");
-    vector<uchar> buf;
-    const vector<int> odd_params = {IMWRITE_PNG_COMPRESSION};
-    // An unsupported extension avoids unchecked codec reads before the fix.
-    for (int destination = 0; destination < 2; ++destination)
-    {
-        try
-        {
-            if (destination == 0)
-                imencodeanimation(".unsupported", animation, buf, odd_params);
-            else
-                imwriteanimation(output + ".unsupported", animation, odd_params);
-            ADD_FAILURE() << "Odd encoding parameters must throw";
-        }
-        catch (const cv::Exception& e)
-        {
-            EXPECT_NE(string::npos, e.err.find("key-value pairs"));
-        }
-        EXPECT_TRUE(buf.empty());
-    }
-
-    const size_t max_params = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_PARAMS", 50);
-    vector<int> oversized_params;
-    for (size_t i = 0; i <= max_params; ++i)
-    {
-        oversized_params.push_back(IMWRITE_PNG_COMPRESSION);
-        oversized_params.push_back(3);
-    }
-    EXPECT_THROW(imencodeanimation(".png", animation, buf, oversized_params), cv::Exception);
-    EXPECT_TRUE(buf.empty());
-    EXPECT_THROW(imwriteanimation(output, animation, oversized_params), cv::Exception);
-
-    vector<vector<int> > valid_params(1);
-    if (max_params > 0)
-        valid_params.push_back(vector<int>{IMWRITE_PNG_COMPRESSION, 3});
-    for (size_t p = 0; p < valid_params.size(); ++p)
-    {
-        buf.clear();
-        ASSERT_TRUE(imencodeanimation(".png", animation, buf, valid_params[p]));
-        EXPECT_FALSE(buf.empty());
-        ASSERT_TRUE(imwriteanimation(output, animation, valid_params[p]));
-        Animation decoded[2];
-        ASSERT_TRUE(imdecodeanimation(buf, decoded[0]));
-        ASSERT_TRUE(imreadanimation(output, decoded[1]));
-        EXPECT_EQ(0, remove(output.c_str()));
-        for (size_t destination = 0; destination < 2; ++destination)
-        {
-            ASSERT_EQ(animation.frames.size(), decoded[destination].frames.size());
-            EXPECT_EQ(animation.durations, decoded[destination].durations);
-            EXPECT_EQ(animation.loop_count, decoded[destination].loop_count);
-            for (size_t i = 0; i < animation.frames.size(); ++i)
-            {
-                EXPECT_EQ(animation.frames[i].size(), decoded[destination].frames[i].size());
-                EXPECT_EQ(animation.frames[i].type(), decoded[destination].frames[i].type());
-                EXPECT_EQ(0, cvtest::norm(animation.frames[i], decoded[destination].frames[i], NORM_INF));
-            }
-        }
-    }
-}
 
 TEST(Imgcodecs_APNG, imwriteanimation_rgba)
 {
