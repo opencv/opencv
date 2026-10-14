@@ -798,7 +798,7 @@ TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
     checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
-// 3 input channels: the conv runs on the plain input with its own weight copy.
+// A 4x4 patch embedding with 3 input channels: the conv runs on the plain input with its own weight copy.
 TEST(Fusion, BatchNormFoldsIntoSmallCinConv)
 {
     checkBatchNormFoldsIntoConv("batchnorm_conv_small_cin");
@@ -1017,34 +1017,41 @@ static Mat relu(const Mat& x)
     return y;
 }
 
-// A conv with at most 4 input channels reads the plain input, so this RGB model needs no layout conversion.
-TEST(Fusion, SmallInputChannelConvNeedsNoLayoutConversion)
+// A patch embedding with 3 input channels reads the plain input, so it needs no layout conversion.
+// Other small convs, like this padded 5x5 one, keep block layout and the blocked kernel.
+TEST(Fusion, OnlyPatchEmbeddingConvSkipsBlockLayout)
 {
 #ifdef HAVE_MLAS
-    Net net = loadModel("convolution");
-    net.setInput(randomInput({1, 3, 10, 10}));
-    net.forward();
-    EXPECT_EQ(0, fusedCount(net, "TransformLayout"));
+    Net patch = loadModel("conv_patch_embed");
+    patch.setInput(randomInput({2, 3, 17, 15}));
+    patch.forward();
+    EXPECT_EQ(0, fusedCount(patch, "TransformLayout"));
+
+    Net padded = loadModel("convolution");
+    padded.setInput(randomInput({1, 3, 10, 10}));
+    padded.forward();
+    EXPECT_LT(0, fusedCount(padded, "TransformLayout"));
 #else
-    throw SkipTestException("the plain-input conv path needs MLAS");
+    throw SkipTestException("the plain-input patch embedding needs MLAS");
 #endif
 }
 
-// Convs with 3 input channels: stride 2 + ReLU, and dilation 2 without bias.
-TEST(Fusion, SmallInputChannelConvMatchesReference)
+// Patch embeddings with 3 input channels: 4x4 + ReLU, and 2x3 without bias; the input size
+// is not a multiple of the patch, so the last rows and columns are dropped.
+TEST(Fusion, PatchEmbeddingConvMatchesReference)
 {
-    Net net = loadModel("conv_small_cin");
+    Net net = loadModel("conv_patch_embed");
     Mat x = randomInput({2, 3, 17, 15});
     net.setInput(x);
     std::vector<Mat> outs;
-    net.forward(outs, std::vector<String>{"Y_s2", "Y_d2"});
+    net.forward(outs, std::vector<String>{"Y_4x4", "Y_2x3"});
     ASSERT_EQ(2u, outs.size());
 
-    normAssert(relu(refConv(x, formulaWeights({16, 3, 3, 3}, 7), formulaWeights({16}, 8),
-                            Vec2i(2, 2), Vec4i(1, 1, 1, 1))),
-               outs[0], "stride 2 + ReLU");
-    normAssert(refConv(x, formulaWeights({8, 3, 3, 3}, 9), Mat(), Vec2i(1, 1), Vec4i(2, 2, 2, 2), Vec2i(2, 2)),
-               outs[1], "dilation 2");
+    normAssert(relu(refConv(x, formulaWeights({16, 3, 4, 4}, 7), formulaWeights({16}, 8),
+                            Vec2i(4, 4), Vec4i(0, 0, 0, 0))),
+               outs[0], "4x4 patch + ReLU");
+    normAssert(refConv(x, formulaWeights({8, 3, 2, 3}, 9), Mat(), Vec2i(2, 3), Vec4i(0, 0, 0, 0)),
+               outs[1], "2x3 patch");
 }
 
 // A 1x9 kernel also has 9 taps but must not take the 3x3 path; the 3x3 conv uses stride (2, 1) and (2, 2).
