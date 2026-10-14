@@ -132,8 +132,6 @@ TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
     ASSERT_EQ(32, getOptimalDFTSize(n));
     const bool roi = layout == 1;
     const bool sameSource = layout == 2;
-    SCOPED_TRACE(format("type=%d size=%d roi=%d sameSource=%d",
-                        type, n, roi, sameSource));
 
     const Size parentSize(n + (roi ? 4 : 0), n + (roi ? 4 : 0));
     const Rect rect(roi ? 1 : 0, roi ? 1 : 0, n, n);
@@ -143,7 +141,7 @@ TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
     Mat src1 = parent1(rect);
     Mat src2 = sameSource ? src1 : parent2(rect);
     Mat window = windowParent(rect);
-    RNG rng(12345);
+    RNG& rng = theRNG();
     rng.fill(src1, RNG::UNIFORM, 0.0, 1.0);
     if (!sameSource)
         warpAffine(src1, src2, Matx23d(1, 0, 3, 0, 1, -2), src1.size(),
