@@ -1135,13 +1135,11 @@ public:
                 outShape0.layout != DATA_LAYOUT_BLOCK || outShape0.C <= 1)
                 continue;
             const int C0 = s[s.dims - 1];
-            const size_t esz = inp.elemSize(), ngroups = inp.total() / C0;
+            const int ngroups = (int)(inp.total() / C0);
             Mat src = inp.isContinuous() ? inp : inp.clone(), full(s, inp.type());
-            const uchar* sp = src.ptr();
-            uchar* dp = full.ptr();
-            for (size_t g = 0; g < ngroups; g++, sp += C0*esz, dp += C0*esz)
-                for (int k = 0; k < C0; k++)
-                    memcpy(dp + k*esz, sp, esz);
+            // 2D views with one row per channel block; repeat() writes lane 0 into full's buffer in place
+            Mat lanes(ngroups, C0, inp.type(), src.data), filled(ngroups, C0, inp.type(), full.data);
+            repeat(lanes.col(0), 1, C0, filled);
             inp = full;
             filledLanes = true;
         }
