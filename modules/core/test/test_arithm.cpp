@@ -3196,10 +3196,14 @@ TEST_P(Core_ConvertFrom32U, exact_and_unsigned)
     const int      len      = get<2>(GetParam());
     const bool     scaled   = get<3>(GetParam());
 
+    // alpha of exactly 1 with beta 0 is treated as "no scale" and routes to getConvertFunc(), so the
+    // scaled arm has to use a real scale factor to reach getConvertScaleFunc() at all
+    const double alpha = scaled ? 2.0 : 1.0;
+
     Mat src(1, len, CV_32U, Scalar(value));
     Mat dst;
     if (scaled)
-        src.convertTo(dst, dstDepth, 1.0, 0.0);
+        src.convertTo(dst, dstDepth, alpha, 0.0);
     else
         src.convertTo(dst, dstDepth);
     Mat got; dst.convertTo(got, CV_64F);
@@ -3211,7 +3215,8 @@ TEST_P(Core_ConvertFrom32U, exact_and_unsigned)
         EXPECT_GE(got.at<double>(0, i), 0.0) << "an unsigned source cannot convert to a negative";
         if (dstDepth == CV_64F)
         {
-            EXPECT_EQ((double)value, got.at<double>(0, i));
+            // alpha * value stays below 2^53 for every value used here, so this is exact
+            EXPECT_EQ(alpha * (double)value, got.at<double>(0, i));
         }
     }
 }
