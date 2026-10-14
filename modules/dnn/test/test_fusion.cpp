@@ -798,6 +798,31 @@ TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
     checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
+static void checkBatchNormAbsorbs(const std::string& name, int eltwiseLeft)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(1, fusedCount(net, "BatchNorm2")) << name;
+    EXPECT_EQ(eltwiseLeft, fusedCount(net, "NaryEltwise")) << name;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               name.c_str());
+}
+
+TEST(Fusion, BatchNormAbsorbsFollowingMulAdd)
+{
+    checkBatchNormAbsorbs("batchnorm_mul_add", 0);
+}
+
+// [C,1] on a C x C plane scales rows, not channels
+TEST(Fusion, BatchNormKeepsPerRowMul)
+{
+    checkBatchNormAbsorbs("batchnorm_mul_rows", 1);
+}
+
 // ConvTranspose2d(8->16) -> Add(residual): the Add fuses into TransformLayout.
 TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
 {

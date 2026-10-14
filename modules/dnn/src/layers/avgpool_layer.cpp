@@ -537,6 +537,12 @@ static void avgPool16bf(const void* inp_, void* out_,
 typedef void (*AvgPoolFunc)(const void* inp, void* out,
                             const ConvState& cs, bool countIncludePadding);
 
+static bool haveAvgPoolHal()
+{
+    decltype(&hal_ni_dnn_avgpool3d32f) hal = cv_hal_dnn_avgpool3d32f;
+    return hal != hal_ni_dnn_avgpool3d32f;
+}
+
 class AveragePoolLayerImpl : public AveragePoolLayer
 {
 public:
@@ -670,10 +676,11 @@ public:
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
     {
         CV_Assert(actualInputs.size() == 1u);
-        // plain input stays plain: converting it costs a pass and pads few channels up to C0
+        // plain input stays plain: converting it costs a pass and pads few channels up to C0;
+        // a registered HAL hook takes block input only, so it keeps getting it
         Net::Impl* netimpl_ = getNetImpl(this);
         bool block = actualInputs[0] == DATA_LAYOUT_BLOCK ||
-                     netimpl_->originalLayout != DATA_LAYOUT_NCHW;
+                     netimpl_->originalLayout != DATA_LAYOUT_NCHW || haveAvgPoolHal();
         DataLayout layout = block ? DATA_LAYOUT_BLOCK : actualInputs[0];
         desiredInputs.assign(1, layout);
         outputs.assign(requiredOutputs, layout);

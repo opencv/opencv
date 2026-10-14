@@ -113,6 +113,56 @@ private:
         return true;
     }
 
+    //! [C,1,1] / [1,C,1,1] lies on the channel axis only when @p flow is 4D.
+    uchar onChannelAxis(Arg constArg, Arg flow) const
+    {
+        Mat t = net_.argTensor(constArg);
+        int d = t.dims;
+        if (!(d == 3 || (d == 4 && t.size[0] == 1)) || t.size[d-2] != 1 || t.size[d-1] != 1)
+            return 0;
+        return isRank4(flow) ? 1 : 0;
+    }
+
+    //! Intermediates have no shape at fusion time, so the rank is taken from the declared shape
+    //! reached through ops that keep their input's rank; anything else counts as unknown.
+    bool isRank4(Arg a) const
+    {
+        for (int last = (int)prog().size();;) {
+            int dims = net_.argData(a).shape.dims;
+            if (dims > 0)
+                return dims == 4;
+            int p = a.idx > 0 && a.idx < (int)producerOf_.size() ? producerOf_[a.idx] : -1;
+            if (p < 0 || p >= last)
+                return false;
+            last = p;
+            const LayerInfo* l = prog()[p].get();
+            int next = -1;
+            if (dynamic_cast<const NaryEltwiseLayer*>(l)) {
+                // with constants of rank <= 4 only, the output keeps the other input's rank
+                for (size_t k = 0; k < l->inputs.size(); k++) {
+                    if (!net_.isConstArg(l->inputs[k]))
+                        next = next < 0 ? (int)k : INT_MAX;
+                    else if (net_.argTensor(l->inputs[k]).dims > 4)
+                        return false;
+                }
+            } else if (keepsRank(l)) {
+                next = 0;
+            }
+            if (next < 0 || next >= (int)l->inputs.size())
+                return false;
+            a = l->inputs[next];
+        }
+    }
+
+    static bool keepsRank(const LayerInfo* l)
+    {
+        return dynamic_cast<const Conv2Layer*>(l) || dynamic_cast<const ConvTranspose2Layer*>(l) ||
+               dynamic_cast<const Concat2Layer*>(l) || dynamic_cast<const MaxPoolLayer*>(l) ||
+               dynamic_cast<const AveragePoolLayer*>(l) || dynamic_cast<const LpPoolLayer*>(l) ||
+               dynamic_cast<const PoolingLayer*>(l) || dynamic_cast<const BatchNorm2Layer*>(l) ||
+               dynamic_cast<const ActivationLayer*>(l);
+    }
+
     //! Releases the slots a refused step claimed, so the next step's ids start where it did.
     static void dropSlotsAfter(ChainCandidate& c, size_t keepBufs, size_t keepTensors)
     {
@@ -145,15 +195,15 @@ private:
     }
 
     //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
-    int bufferSlotFor(Arg a, ChainCandidate& c) const
+    int bufferSlotFor(Arg a, uchar perChannel, ChainCandidate& c) const
     {
         // Owned buffers park Arg() in the table, so a real input must never match one.
         CV_DbgAssert(a.idx != 0);
         for (size_t k = 0; k < c.constSlots.size(); k++) {
-            if (c.constSlots[k].arg.idx == a.idx)
+            if (c.constSlots[k].arg.idx == a.idx && c.constSlots[k].perChannel == perChannel)
                 return (int)k;
         }
-        c.constSlots.push_back({net_.argTensor(a), a, 0});
+        c.constSlots.push_back({net_.argTensor(a), a, perChannel});
         return (int)c.constSlots.size() - 1;
     }
 
@@ -199,7 +249,8 @@ private:
                 if (isScalar)
                     out.consts[i].value = scalarVal;
                 else
-                    out.consts[i].bufferId = bufferSlotFor(sideInputs[i], c);
+                    out.consts[i].bufferId = bufferSlotFor(sideInputs[i],
+                                                           onChannelAxis(sideInputs[i], cur), c);
                 continue;
             }
             if (!acceptsTensors || !isFusableTensorArg(sideInputs[i], anchor))
@@ -208,32 +259,6 @@ private:
         }
         out.count = (int)sideInputs.size();
         return true;
-    }
-
-    static bool isAbsorbableMath(Layer* l)
-    {
-        const FusionOps* ops = fusionOpsFor(l);
-        if (!ops || !ops->unfold)
-            return false;
-        // The operand count and kind are not known yet, so try every combination.
-        for (int n = 0; n <= ConstOperand::MAX_CONSTS; n++) {
-            for (int kind = 0; kind < 3; kind++) {
-                if (kind > 0 && n == 0)
-                    continue;   // nothing to mark, so it repeats the probe above
-                LayerMath r;
-                ConstOperand probe;
-                probe.count = n;
-                for (int i = 0; i < n; i++) {
-                    if (kind == 1)
-                        probe.consts[i].bufferId = i;
-                    else if (kind == 2)
-                        probe.consts[i].tensorId = i;
-                }
-                if (ops->unfold(l, r, probe))
-                    return true;
-            }
-        }
-        return false;
     }
 
     void growChain(size_t anchor, bool acceptsTensors, ChainCandidate& c)
@@ -323,7 +348,7 @@ private:
             if (L->outputs.size() != 1 || L->subgraphs())
                 continue;
             Layer* anchor = dynamic_cast<Layer*>(L.get());
-            if (!anchor || isAbsorbableMath(anchor))
+            if (!anchor)
                 continue;
             // A layer that cannot take anything on is no use as the head of a chain.
             const FusionOps* anchorOps = fusionOpsFor(anchor);
