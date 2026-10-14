@@ -24,8 +24,7 @@ int cvDepthToNumpyType(int depth)
     case CV_32F:  return NPY_FLOAT;
     case CV_64F:  return NPY_DOUBLE;
     case CV_16F:  return NPY_HALF;
-    // NumPy alone has no bfloat16; pyopencv_from() widens it to float32 unless the
-    // non-conventional data types are allowed (see setAllowNonConventionalDataTypes()).
+    // NumPy has no native bfloat16; pyopencv_from() widens it to float32 unless allowed.
     case CV_16BF: return NPY_FLOAT;
     case CV_Bool: return NPY_BOOL;
     default:
@@ -36,10 +35,8 @@ int cvDepthToNumpyType(int depth)
 
 namespace {
 
-// The NumPy dtypes that match OpenCV's bfloat16 / float8 depths. NumPy itself does not define
-// them; ml_dtypes registers them under these names when the user imports it. OpenCV never
-// imports ml_dtypes: the type numbers are assigned at registration time, so the descriptors
-// are looked up by name and only once the user has asked for them.
+// Dtypes registered by ml_dtypes on import. Their type numbers depend on registration order,
+// so they are resolved by name; OpenCV never imports ml_dtypes itself.
 struct NonConventionalDtype
 {
     int depth;
@@ -56,8 +53,8 @@ const int kNumNonConventionalDtypes = sizeof(kNonConventionalDtypes) / sizeof(kN
 
 bool g_allowNonConventionalDataTypes = false;
 
-// Resolved descriptors, kept for the life of the process. Only successful lookups are cached,
-// so importing ml_dtypes after the first conversion still works. Accessed under the GIL.
+// Process-lifetime cache, accessed under the GIL. Misses are not cached, so a later
+// `import ml_dtypes` still takes effect.
 PyArray_Descr* g_nonConventionalDescrs[kNumNonConventionalDtypes] = {};
 
 PyArray_Descr* nonConventionalDescr(int idx)
@@ -71,8 +68,8 @@ PyArray_Descr* nonConventionalDescr(int idx)
             descr = nullptr;
         Py_XDECREF(name);
         PyErr_Clear();
-        // Another package could register a dtype under the same name; check the layout too.
-        // itemsize is read through Python because the descriptor struct differs in NumPy 1.x / 2.x.
+        // Reject a same-named dtype with another layout; itemsize is read via Python because
+        // the descriptor struct differs between NumPy 1.x and 2.x.
         long itemsize = -1;
         if (descr)
         {

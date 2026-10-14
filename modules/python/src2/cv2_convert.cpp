@@ -334,7 +334,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     return true;
 }
 
-// Hands a bfloat16 / float8 Mat back with its exact dtype; `descr` is the caller's to check.
+// Wraps m in a NumPy array of dtype `descr`; the caller guarantees it matches m.depth().
 static PyObject* pyopencv_from_nonconventional(const cv::Mat& m, PyArray_Descr* descr)
 {
     cv::Mat cont;
