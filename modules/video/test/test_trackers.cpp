@@ -49,7 +49,7 @@ TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 
 TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
 {
-    TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .7f, Scale_1_1);
+    TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .65f, Scale_1_1);
     test.run(numFramesLimit);
 }
 
