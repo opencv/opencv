@@ -404,6 +404,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
 
     mask0.create(src0.rows, src0.cols, CV_8UC1);
     //CV_CALL( submask = (uchar*)cvAlloc( (sp+2)*(sp+2) ));
+    const double nstripes = (src0.total() >= 640 * 480) ? -1. : 1.;
 
     // 2. apply meanshift, starting from the pyramid top (i.e. the smallest layer)
     for( level = max_level; level >= 0; level-- )
@@ -446,7 +447,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
 
         const uchar* sptr_base = sptr;
         uchar* dptr_base = dptr;
-        const double nstripes = (size.width * size.height >= 640 * 480) ? -1. : 1.;
         parallel_for_(Range(0, size.height), [&](const Range& range) {
             for( int py = range.start; py < range.end; py++ )
             {
