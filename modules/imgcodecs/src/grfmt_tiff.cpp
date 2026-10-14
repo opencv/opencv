@@ -852,7 +852,6 @@ bool  TiffDecoder::readData( Mat& img )
 
 
 
-            
                         uint16_t *extra_samples = NULL;
                         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_EXTRASAMPLES, &extra_samples_num, &extra_samples ));
                         doReadScanline = ( extra_samples_num == 1 ) && ( extra_samples[0] == EXTRASAMPLE_ASSOCALPHA );
@@ -873,12 +872,14 @@ bool  TiffDecoder::readData( Mat& img )
 
             const uint64_t src_buffer_bytes_per_row_64 = (static_cast<uint64_t>(ncn) * tile_width0 * bpp + bitsPerByte - 1) / bitsPerByte;
             const uint64_t src_buffer_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_bytes_per_row_64;
-            CV_CheckLT(src_buffer_size_64, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
+            if (src_buffer_size_64 >= MAX_TILE_SIZE)
+                CV_Error(cv::Error::StsError, "buffer_size is too large: >= 1Gb");
             const size_t src_buffer_bytes_per_row = static_cast<size_t>(src_buffer_bytes_per_row_64);
             const size_t src_buffer_size = static_cast<size_t>(src_buffer_size_64);
             const uint64_t src_buffer_unpacked_bytes_per_row_64 = (static_cast<uint64_t>(ncn) * tile_width0 * dst_bpp + bitsPerByte - 1) / bitsPerByte;
             const uint64_t src_buffer_unpacked_size_64 = static_cast<uint64_t>(tile_height0) * src_buffer_unpacked_bytes_per_row_64;
-            CV_CheckLT(src_buffer_unpacked_size_64, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
+            if (src_buffer_unpacked_size_64 >= MAX_TILE_SIZE)
+                CV_Error(cv::Error::StsError, "buffer_size is too large: >= 1Gb");
             const size_t src_buffer_unpacked_bytes_per_row = static_cast<size_t>(src_buffer_unpacked_bytes_per_row_64);
             const size_t src_buffer_unpacked_size = static_cast<size_t>(src_buffer_unpacked_size_64);
             const bool needsUnpacking = (bpp < dst_bpp);
