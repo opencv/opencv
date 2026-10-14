@@ -3409,6 +3409,80 @@ TEST(Test_Gemm, FastGemmDynamicTransposeAlphaBeta)
     }
 }
 
+// fuseMatMulConstBToGemm() rewrites MatMul(A, const B) into a Gemm with flatten_a=false so
+// that A keeps its leading dims. ONNX MatMul accepts a rank-1 A - it is promoted to (1, K) and
+// the leading 1 is squeezed from Y again, so Y is (N,) - and the rewrite inherits that. The
+// Gemm has to accept it too, otherwise such a model only runs when B is a runtime input.
+TEST(Test_Gemm, Rank1AFromMatMulRewrite)
+{
+    const int K = 4, N = 6;
+    Mat B(K, N, CV_32F);
+    randu(B, -1.f, 1.f);
+
+    for (int withBias = 0; withBias <= 1; withBias++)
+    {
+        for (int depth = CV_32F; depth <= CV_64F; depth++)
+        {
+            Mat Bd = (depth == CV_32F) ? B : Mat();
+            if (depth != CV_32F)
+                B.convertTo(Bd, depth);
+            Mat bias;
+            if (withBias)
+            {
+                bias = Mat::zeros(1, N, depth);
+                randu(bias, -1.f, 1.f);
+            }
+
+            LayerParams lp;
+            lp.type = "Gemm";
+            lp.name = "gemm_rank1_a";
+            lp.set("transA", false);
+            lp.set("transB", false);
+            lp.set("alpha", 1.f);
+            lp.set("beta", withBias ? 1.f : 0.f);
+            lp.set("constB", true);
+            lp.set("const_C", (bool)withBias);
+            lp.set("have_bias", (bool)withBias);
+            if (withBias)
+                lp.set("real_ndims_C", 1);
+            lp.set("flatten_a", false);   // the mode the MatMul -> Gemm rewrite uses
+            lp.blobs.push_back(Bd);
+            if (withBias)
+                lp.blobs.push_back(bias);
+
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            ASSERT_TRUE(layer);
+
+            Mat A(std::vector<int>{K}, depth);
+            randu(A, -1.f, 1.f);
+            std::vector<Mat> inputs = {A}, outputs;
+            runLayer(layer, inputs, outputs);
+            ASSERT_EQ(outputs.size(), (size_t)1);
+            EXPECT_EQ(shape(outputs[0]), shape(N));   // (N,), as MatMul would produce
+
+            Mat expected(1, N, depth);
+            Mat a2d = A.reshape(1, 1);
+            if (withBias)
+                gemm(a2d, Bd, 1., bias, 1., expected);
+            else
+                gemm(a2d, Bd, 1., noArray(), 0., expected);
+            normAssert(outputs[0].reshape(1, 1), expected, "Gemm rank-1 A mismatch", 1e-4, 1e-4);
+        }
+    }
+
+    // A plain ONNX Gemm (flatten_a defaults to true) still requires a 2-D A.
+    LayerParams plain;
+    plain.type = "Gemm";
+    plain.name = "gemm_plain_rank1_a";
+    plain.set("transA", false);
+    plain.set("transB", false);
+    plain.blobs.push_back(B);
+    Ptr<Layer> plainLayer = LayerFactory::createLayerInstance(plain.type, plain);
+    ASSERT_TRUE(plainLayer);
+    std::vector<MatShape> inShapes(1, shape(K)), outShapes, internals;
+    EXPECT_THROW(plainLayer->getMemoryShapes(inShapes, 1, outShapes, internals), cv::Exception);
+}
+
 TEST(Test_MatMul, FastGemmBatchDynamicAndPackedBroadcast)
 {
     const int batch = 3, M = 11, N = 19, K = 67;
