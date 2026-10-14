@@ -227,7 +227,79 @@ struct BlockLayoutTransformer
         nonblockCache.assign(nargs, Arg());
 
         transformGraph(netimpl->mainGraph);
+        netimpl->useCounts(usecounts);
+        hoistConversions(netimpl->mainGraph);
     }
+
+    //! The only non-constant input of an elementwise op, or -1.
+    int flowInput(const PLayer& layer) const
+    {
+        bool elementwise = dynamic_cast<ActivationLayer*>(layer.get()) ||
+                           dynamic_cast<NaryEltwiseLayer*>(layer.get());
+        if (!elementwise || layer->outputs.size() != 1 || layer->subgraphs())
+            return -1;
+        int flow = -1;
+        for (size_t i = 0; i < layer->inputs.size(); i++) {
+            if (netimpl->isConstArg(layer->inputs[i]))
+                continue;
+            if (flow >= 0)
+                return -1;
+            flow = (int)i;
+        }
+        return flow;
+    }
+
+    // An elementwise op feeding only a conversion to plain runs after it instead: the same copy,
+    // but the op then works on C channels rather than on padded C0 lanes.
+    void hoistConversions(PGraph& g)
+    {
+        vector<PLayer> prog = g->prog();
+        size_t nops = prog.size();
+        vector<int> producer(netimpl->args.size(), -1);
+        for (size_t i = 0; i < nops; i++) {
+            vector<PGraph>* subgraphs = prog[i]->subgraphs();
+            if (subgraphs) {
+                for (PGraph& subgraph: *subgraphs)
+                    hoistConversions(subgraph);
+            }
+            for (Arg out: prog[i]->outputs)
+                producer[out.idx] = (int)i;
+        }
+
+        bool changed = false;
+        for (size_t i = 0; i < nops; i++) {
+            TransformLayoutLayer* tr = dynamic_cast<TransformLayoutLayer*>(prog[i].get());
+            if (!tr || tr->layout == DATA_LAYOUT_BLOCK)
+                continue;
+            int tidx = (int)i;
+            for (;;) {
+                Arg y = prog[tidx]->inputs[0];
+                int pidx = producer[y.idx];
+                if (pidx < 0 || usecounts[y.idx] != 1 || g->opBackend(pidx) != DNN_BACKEND_OPENCV)
+                    break;
+                const PLayer& op = prog[pidx];
+                int flow = flowInput(op);
+                if (flow < 0 || layouts[op->inputs[flow].idx] != DATA_LAYOUT_BLOCK)
+                    break;
+                // conversion: x -> y, op: y -> z, where it was op: x -> y, conversion: y -> z
+                Arg x = op->inputs[flow], z = prog[tidx]->outputs[0];
+                prog[tidx]->inputs[0] = x;
+                prog[tidx]->outputs[0] = y;
+                op->inputs[flow] = y;
+                op->outputs[0] = z;
+                layouts[y.idx] = defaultLayout;
+                std::swap(prog[tidx], prog[pidx]);
+                producer[y.idx] = pidx;
+                producer[z.idx] = tidx;
+                tidx = pidx;
+                changed = true;
+            }
+        }
+        if (changed)
+            g->setProg(prog);
+    }
+
+    vector<int> usecounts;
 };
 
 void Net::Impl::useBlockLayout()
