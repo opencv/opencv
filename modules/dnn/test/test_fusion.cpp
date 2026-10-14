@@ -608,7 +608,7 @@ TEST(Fusion, SharedProjectionsCollapseToOneGemm)
 }
 
 // A projection without bias must still fuse, with zeros for its part of the QKV bias.
-static void checkAttentionFusesWithMissingBias(const std::string& name)
+static void checkAttentionFusesWithMissingBias(const std::string& name, int nfused = 1)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
     ASSERT_TRUE(net.getMainGraph());
@@ -616,7 +616,7 @@ static void checkAttentionFusesWithMissingBias(const std::string& name)
     net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
     Mat out = net.forward();
 
-    EXPECT_EQ(1, fusedCount(net, "Attention")) << name << ": the attention block was not fused";
+    EXPECT_EQ(nfused, fusedCount(net, "Attention")) << name;
     normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
                name.c_str());
 }
@@ -639,6 +639,12 @@ TEST(Fusion, ClipAttentionWithoutKeyBias)
 TEST(Fusion, CombinedQKVAttentionWithoutBias)
 {
     checkAttentionFusesWithMissingBias("attention_combined_qkv_no_bias");
+}
+
+// A scalar K bias does not fit the K part of the QKV bias, so the block stays unfused.
+TEST(Fusion, AttentionWithWrongLengthBiasIsNotFused)
+{
+    checkAttentionFusesWithMissingBias("attention_scalar_k_bias", 0);
 }
 
 static void checkBatchNormFoldsIntoConv(const std::string& name)
