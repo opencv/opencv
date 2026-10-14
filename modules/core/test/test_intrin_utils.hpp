@@ -1960,7 +1960,10 @@ template<typename R> struct TheTest
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_expand((const cv::hfloat*)data.a.d);
+        // Exact-sized input lets sanitizers detect loads of extra half lanes.
+        std::vector<cv::hfloat> input(VTraits<R>::vlanes());
+        std::memcpy(input.data(), data.a.d, input.size() * sizeof(cv::hfloat));
+        R r1 = vx_load_expand(input.data());
         R r2(r1);
         EXPECT_EQ(1.0f, v_get0(r1));
         v_store(data_f32.a.d, r2);
