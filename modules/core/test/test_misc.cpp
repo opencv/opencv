@@ -1202,11 +1202,16 @@ TEST(Core_EmptyMat, FuzzRegressions) {
     EXPECT_NO_THROW(cv::dct(empty_mat, dst));
     EXPECT_TRUE(dst.empty());
 
-    // cv::mulSpectrums
+    // cv::mulSpectrums, cv::divSpectrums
     EXPECT_NO_THROW(cv::mulSpectrums(empty_mat, empty_mat, dst, 0));
     EXPECT_TRUE(dst.empty());
     EXPECT_NO_THROW(cv::divSpectrums(empty_mat, empty_mat, dst, 0));
     EXPECT_TRUE(dst.empty());
+    cv::Mat spec_4x4 = cv::Mat::ones(4, 4, CV_32FC1);
+    EXPECT_THROW(cv::mulSpectrums(empty_mat, spec_4x4, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::mulSpectrums(spec_4x4, empty_mat, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::divSpectrums(empty_mat, spec_4x4, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::divSpectrums(spec_4x4, empty_mat, dst, 0), cv::Exception);
 
     // cv::transposeND, cv::repeat, cv::slice
     EXPECT_THROW(cv::transposeND(empty_mat, {}, dst), cv::Exception);

@@ -292,8 +292,11 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_CheckGT(patchSize.width, 0, "");
+    CV_CheckGT(patchSize.height, 0, "");
+
     Mat image = _image.getMat();
-    if( image.empty() || patchSize.width <= 0 || patchSize.height <= 0 )
+    if( image.empty() )
     {
         _patch.release();
         return;

@@ -85,10 +85,8 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         for (int i = range.start; i < range.end; ++i)
         {
             // Neighbor indices for this point come from either the built kd-tree or the caller.
-            const int *nn_idx_ptr_base;
-            int row_cols;
-            if (buildNN) { nn_idx_ptr_base = builtIdx.ptr<int>(i); row_cols = builtIdx.cols; }
-            else         { nn_idx_ptr_base = (int *) nn_idx[i].data; row_cols = nn_idx[i].cols; }
+            const int *nn_idx_ptr_base = buildNN ? builtIdx.ptr<int>(i) : nullptr;
+            int row_cols = buildNN ? builtIdx.cols : (int)nn_idx[i].total();
             // The maximum size that may be used for this row
             int bound = max_neighbor_num > row_cols ? row_cols : max_neighbor_num;
             // The first point should be itself
@@ -96,7 +94,7 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
             // Push the nearest neighbor points to pt_set
             for (int j = 1; j < bound; ++j)
             {
-                cur_nei_idx = nn_idx_ptr_base[j];
+                cur_nei_idx = buildNN ? nn_idx_ptr_base[j] : nn_idx[i].at<int>(j);
                 // If the index is less than 0 or out of range,
                 // the nn_idx of this row will no longer have any information.
                 if (cur_nei_idx < 0 || cur_nei_idx >= pts_size) break;

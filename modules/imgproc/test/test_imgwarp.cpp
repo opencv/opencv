@@ -1359,6 +1359,14 @@ TEST(Imgproc_Warping, convertMaps_remap_warpPolar_validation)
     Mat src(10, 10, CV_8U, Scalar(0));
     EXPECT_THROW(cv::warpPolar(src, dst, Size(50, 50), Point2f(25, 25), 0, WARP_POLAR_LINEAR), cv::Exception);
     EXPECT_THROW(cv::warpPolar(src, dst, Size(50, 50), Point2f(25, 25), -5, WARP_POLAR_LINEAR), cv::Exception);
+
+    // getRectSubPix: empty image returns empty patch; non-positive patchSize throws
+    EXPECT_NO_THROW(cv::getRectSubPix(emptySrc, Size(3, 3), Point2f(1.f, 1.f), dst));
+    EXPECT_TRUE(dst.empty());
+    EXPECT_THROW(cv::getRectSubPix(src, Size(0, 3), Point2f(1.f, 1.f), dst), cv::Exception);
+    EXPECT_THROW(cv::getRectSubPix(src, Size(3, 0), Point2f(1.f, 1.f), dst), cv::Exception);
+    EXPECT_THROW(cv::getRectSubPix(src, Size(-1, 3), Point2f(1.f, 1.f), dst), cv::Exception);
+    EXPECT_THROW(cv::getRectSubPix(src, Size(3, -1), Point2f(1.f, 1.f), dst), cv::Exception);
 }
 
 }} // namespace

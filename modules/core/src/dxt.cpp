@@ -3701,20 +3701,23 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
-            ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
-
-    Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
-    if (srcA.empty() || srcB.empty())
+    if (_srcA.empty() && _srcB.empty())
     {
         _dst.release();
         return;
     }
-    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
-    size_t rows = srcA.rows, cols = srcA.cols;
 
-    CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
+    int type = _srcA.type();
+    CV_Assert( type == _srcB.type() && _srcA.size() == _srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+    CV_Assert( !_srcA.empty() && !_srcB.empty() );
+
+    CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
+            ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
+
+    Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    int depth = srcA.depth(), cn = srcA.channels();
+    size_t rows = srcA.rows, cols = srcA.cols;
 
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();
@@ -3761,7 +3764,7 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
 void cv::divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
 {
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
-    if (srcA.empty() || srcB.empty())
+    if (srcA.empty() && srcB.empty())
     {
         _dst.release();
         return;
@@ -3772,6 +3775,7 @@ void cv::divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int
 
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+    CV_Assert( !srcA.empty() && !srcB.empty() );
 
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();
