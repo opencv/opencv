@@ -1129,19 +1129,20 @@ public:
         // a 1-channel block tensor keeps its value in lane 0 only, so copy it into every lane before broadcasting
         const MatShape outShape0 = out0.shape();
         bool filledLanes = false;
-        for (Mat& inp : used_inputs) {
-            const MatShape s = inp.shape();
-            if (s.layout != DATA_LAYOUT_BLOCK || s.C != 1 ||
-                outShape0.layout != DATA_LAYOUT_BLOCK || outShape0.C <= 1)
-                continue;
-            const int C0 = s[s.dims - 1];
-            const int ngroups = (int)(inp.total() / C0);
-            Mat src = inp.isContinuous() ? inp : inp.clone(), full(s, inp.type());
-            // 2D views with one row per channel block; repeat() writes lane 0 into full's buffer in place
-            Mat lanes(ngroups, C0, inp.type(), src.data), filled(ngroups, C0, inp.type(), full.data);
-            repeat(lanes.col(0), 1, C0, filled);
-            inp = full;
-            filledLanes = true;
+        if (outShape0.layout == DATA_LAYOUT_BLOCK && outShape0.C > 1) {
+            for (Mat& inp : used_inputs) {
+                const MatShape s = inp.shape();
+                if (s.layout != DATA_LAYOUT_BLOCK || s.C != 1)
+                    continue;
+                std::vector<Range> lane0(s.dims, Range::all());
+                lane0[s.dims - 1] = Range(0, 1);
+                std::vector<int> reps(s.dims, 1);
+                reps[s.dims - 1] = s[s.dims - 1];
+                Mat full;
+                cv::repeat(inp(lane0), reps, full);
+                inp = full;
+                filledLanes = true;
+            }
         }
         if (filledLanes) {
             helper.init(used_inputs, outputs);
