@@ -80,9 +80,10 @@ static std::string dataType2str(int dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto,
+                             const std::string base_path="", ExternalDataCache* cache=nullptr)
 {
-    Mat m = getMatFromTensor(tensor_proto, false, base_path);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path, cache);
     m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -149,6 +150,7 @@ protected:
     Net::Impl* netimpl;
     std::string onnxFilename;
     std::string onnxBasePath;
+    ExternalDataCache externalData;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     // resolveConstThroughIdentity producer map, cached per graph (curr_graph_proto swaps per subgraph).
@@ -805,7 +807,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto, onnxBasePath);
+    return getMatFromTensor2(tensor_proto, onnxBasePath, &externalData);
 }
 
 std::string ONNXImporter2::remap(const std::string& name) const
@@ -893,6 +895,7 @@ void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
             rename_map.erase(it->key);
     }
 }
+
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
