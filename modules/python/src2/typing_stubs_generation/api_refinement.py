@@ -58,6 +58,12 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
         )
     ])
 
+    root.add_function("setAllowNonConventionalDataTypes", [
+        FunctionNode.Arg("allow", PrimitiveTypeNode.bool_())
+    ])
+    root.add_function("getAllowNonConventionalDataTypes",
+                      return_type=FunctionNode.RetType(PrimitiveTypeNode.bool_()))
+
 
 def make_optional_none_return(root_node: NamespaceNode,
                               function_symbol_name: SymbolName) -> None:

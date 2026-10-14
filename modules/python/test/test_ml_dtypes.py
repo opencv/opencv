@@ -15,14 +15,27 @@ class ml_dtypes_test(NewOpenCVTests):
 
     def setUp(self):
         super(ml_dtypes_test, self).setUp()
+        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
+        cv.setAllowNonConventionalDataTypes(False)
+        if self._testMethodName == "test_disallowed_widens_to_float32":
+            return
         if ml_dtypes is None:
             self.skipTest("ml_dtypes is not installed")
+        cv.setAllowNonConventionalDataTypes(True)
         # (numpy dtype, OpenCV depth, typeToString prefix, relative half-ULP)
         self.cases = [
             (ml_dtypes.bfloat16, cv.CV_16BF, "CV_16BF", 2.0 ** -8),
             (ml_dtypes.float8_e4m3fn, cv.CV_8F_E4M3FN, "CV_8F", 2.0 ** -4),
             (ml_dtypes.float8_e4m3fnuz, cv.CV_8F_E4M3FNUZ, "CV_8FNUZ", 2.0 ** -4),
         ]
+
+    def test_disallowed_widens_to_float32(self):
+        for depth in (cv.CV_16BF, cv.CV_8F_E4M3FN, cv.CV_8F_E4M3FNUZ):
+            for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
+                self.assertEqual(m.dtype, np.float32)
+        if ml_dtypes is not None:
+            with self.assertRaises((cv.error, TypeError)):
+                cv.flip(np.zeros((2, 3), dtype=ml_dtypes.bfloat16), 1)
 
     def assertSameBits(self, actual, expected):
         self.assertEqual(actual.dtype, expected.dtype)

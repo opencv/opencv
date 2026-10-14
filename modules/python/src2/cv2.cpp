@@ -118,9 +118,28 @@ static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
     Py_RETURN_NONE;
 }
 
+static PyObject* pycvSetAllowNonConventionalDataTypes(PyObject*, PyObject* value)
+{
+    int allow = PyObject_IsTrue(value);
+    if (allow < 0)
+        return NULL;
+    setAllowNonConventionalDataTypes(allow != 0);
+    Py_RETURN_NONE;
+}
+
+static PyObject* pycvGetAllowNonConventionalDataTypes(PyObject*, PyObject*)
+{
+    return PyBool_FromLong(getAllowNonConventionalDataTypes());
+}
+
 static PyMethodDef special_methods[] = {
   {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
+  {"setAllowNonConventionalDataTypes", (PyCFunction)(pycvSetAllowNonConventionalDataTypes), METH_O,
+   "setAllowNonConventionalDataTypes(allow) -> None\n. Keep bfloat16 / float8 arrays at their exact dtype "
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default."},
+  {"getAllowNonConventionalDataTypes", (PyCFunction)(pycvGetAllowNonConventionalDataTypes), METH_NOARGS,
+   "getAllowNonConventionalDataTypes() -> retval"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},

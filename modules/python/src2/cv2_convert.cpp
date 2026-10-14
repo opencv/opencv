@@ -152,7 +152,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
     if( type < 0 )
-        type = mlDtypeToCvDepth(typenum);  // bfloat16 / float8, when ml_dtypes is installed
+        type = nonConventionalTypeToCvDepth(typenum);  // bfloat16 / float8, when allowed
 
     if( type < 0 )
     {
@@ -335,7 +335,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 }
 
 // Hands a bfloat16 / float8 Mat back with its exact dtype; `descr` is the caller's to check.
-static PyObject* pyopencv_from_mldtype(const cv::Mat& m, PyArray_Descr* descr)
+static PyObject* pyopencv_from_nonconventional(const cv::Mat& m, PyArray_Descr* descr)
 {
     cv::Mat cont;
     if( m.isContinuous() )
@@ -364,14 +364,15 @@ static PyObject* pyopencv_from_mldtype(const cv::Mat& m, PyArray_Descr* descr)
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    if( m.depth() == CV_16BF || m.depth() == CV_8F_E4M3FN || m.depth() == CV_8F_E4M3FNUZ )
+    if( isNonConventionalDepth(m.depth()) )
     {
-        if( PyArray_Descr* descr = mlDtypeDescrForCvDepth(m.depth()) )
-            return pyopencv_from_mldtype(m, descr);
-        // Without ml_dtypes NumPy cannot name these; widen to float32 (lossless).
-        CV_LOG_ONCE_WARNING(NULL, "Python bindings: ml_dtypes package is not found, "
-                            "bfloat16 / float8 arrays are returned as float32. "
-                            "Install ml_dtypes to keep the exact dtype.");
+        if( PyArray_Descr* descr = nonConventionalDescrForCvDepth(m.depth()) )
+            return pyopencv_from_nonconventional(m, descr);
+        if( getAllowNonConventionalDataTypes() )
+            CV_LOG_ONCE_WARNING(NULL, "Python bindings: non-conventional data types are allowed, "
+                                "but NumPy does not know bfloat16 / float8 and they are returned as float32. "
+                                "Import ml_dtypes to keep the exact dtype.");
+        // NumPy alone cannot name these; widen to float32 (lossless).
         cv::Mat m32f;
         ERRWRAP2(m.convertTo(m32f, CV_32F));
         return pyopencv_from(m32f);
