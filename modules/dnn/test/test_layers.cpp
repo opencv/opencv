@@ -847,9 +847,12 @@ TEST(Layer_Attention, rank4_input_matches_rank3)
     normAssert(out3[0].reshape(1, std::vector<int>{B0, B1, S, C}), out4[0]);
 }
 
-TEST(Layer_Attention, qk_v_head_sizes_differ)
+typedef testing::TestWithParam<tuple<int, int> > Layer_Attention_v_hidden;
+TEST_P(Layer_Attention_v_hidden, qk_v_head_sizes_differ)
 {
-    const int B = 2, S = 9, C = 32, NH = 2, Hqk = C / 2, Hv = C, N = 2 * Hqk + Hv;
+    // The output width is Hv, which may be smaller or larger than the input width C.
+    const int Hv = get<0>(GetParam()), output_ndims = get<1>(GetParam());
+    const int B = 2, S = 9, C = 32, NH = 2, Hqk = C / 2, N = 2 * Hqk + Hv;
     const int dqk = Hqk / NH, dv = Hv / NH;
     std::vector<int> qkv_hidden_sizes = { Hqk, Hqk, Hv };
     Mat W(C, N, CV_32F), bias(std::vector<int>{N}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
@@ -859,6 +862,7 @@ TEST(Layer_Attention, qk_v_head_sizes_differ)
     lp.blobs.push_back(bias);
     lp.set("num_heads", NH);
     lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+    lp.set("output_ndims", output_ndims);
     std::vector<Mat> in(1, x), out;
     runLayer(AttentionLayer::create(lp), in, out);
 
@@ -878,8 +882,14 @@ TEST(Layer_Attention, qk_v_head_sizes_differ)
             }
             Mat(s * v).copyTo(ref(Range(b * S, (b + 1) * S), Range(h * dv, (h + 1) * dv)));
         }
-    normAssert(ref.reshape(1, std::vector<int>{B, S, Hv}), out[0]);
+    std::vector<int> ref_shape = output_ndims == 3 ? std::vector<int>{B, S, Hv} : std::vector<int>{B * S, Hv};
+    ASSERT_EQ(MatShape(ref_shape), out[0].shape());
+    normAssert(ref.reshape(1, ref_shape), out[0]);
 }
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention_v_hidden, Combine(
+    Values(16, 32, 48),  // Hv < C, Hv == C, Hv > C
+    Values(3, 2)         // output_ndims
+));
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)

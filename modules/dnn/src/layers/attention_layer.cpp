@@ -180,11 +180,17 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         CV_CheckEQ(input_shape[nd - 1], weight_shape[0], "DNN/Attention: invalid input shape");
         CV_CheckEQ(weight_shape[1], bias_shape[0], "DNN/Attention: invalid weight or bias shape");
 
+        const int v_hidden = weight_shape[1] - (int)qkv_hidden_sizes[0] - (int)qkv_hidden_sizes[1];
+        CV_CheckGT(v_hidden, 0, "DNN/Attention: qkv_hidden_sizes exceed the weight width");
+        CV_CheckEQ(v_hidden % (int)num_heads, 0, "DNN/Attention: v_hidden_size must be divisible by num_heads");
+
+        // Each token gets v_hidden output values, which may differ from the input width.
         if (output_ndims == 3) {
-            outputs.assign(1, inputs[0]);
+            MatShape output_shape = input_shape;
+            output_shape[nd - 1] = v_hidden;
+            outputs.assign(1, output_shape);
         } else if (output_ndims == 2) {
-            int seq_len = input_shape[nd - 2], input_hidden_size = input_shape[nd - 1];
-            MatShape output_shape{lead * seq_len, input_hidden_size};
+            MatShape output_shape{lead * input_shape[nd - 2], v_hidden};
             outputs.assign(1, output_shape);
         } else {
             CV_Error(Error::StsBadArg, format("DNN/Attention: invalid output dimension %zu, valid value is 2 or 3", output_ndims));
@@ -193,7 +199,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         const int batch_size_ = lead, seq_len_ = input_shape[nd - 2],
                   hidden_size_ = weight_shape.back(),
                   num_heads_ = static_cast<int>(num_heads),
-                  v_head_size_ = static_cast<int>((hidden_size_ - qkv_hidden_sizes[0] - qkv_hidden_sizes[1]) / num_heads);
+                  v_head_size_ = v_hidden / num_heads_;
 
         MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
                  attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
