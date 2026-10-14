@@ -234,7 +234,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             B_mat = &promoted_B;
         }
 
-        if (B_mat && B_mat->data != last_packed_input_B_data) {
+        if (B_mat && helper.N > 0 && helper.K > 0 && B_mat->data != last_packed_input_B_data) {
             packed_input_B.clear();
             packed_input_B.shrink_to_fit();
             thin_packed_B.clear();
@@ -340,8 +340,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         const auto *a = A.ptr<const float>();
         auto *y = Y.ptr<float>();
+        // Without a bias the gemm overwrites Y (beta = 0), so Y needs no zero-fill.
+        const bool has_bias = (inputs.size() + blobs.size()) >= 3;
+        const float gemm_beta = has_bias ? beta : 0.f;
         // add bias if existed
-        if ((inputs.size() + blobs.size()) >= 3) {
+        if (has_bias) {
             const auto &shape_Y = shape(Y);
             if (blobs.empty()) { // bias from input
                 const auto &bias_mat = inputs.back();
@@ -369,8 +372,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 const auto *bias = broadcast_bias.ptr<const float>();
                 std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
-        } else {
-            std::memset(y, 0, Y.total() * sizeof(float));
+        }
+        // Any of M, N, K == 0 means the product contributes nothing, and finalize()
+        // skips packing B whenever N or K is 0 - never reach the gemm dispatch below.
+        if (helper.M == 0 || helper.N == 0 || helper.K == 0) {
+            if (!has_bias)
+                std::memset(y, 0, Y.total() * sizeof(float));
+            fusion.run(Y);
+            return;
         }
 
         if (blobs.empty()) {
@@ -385,29 +394,29 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 done = mlasSgemmBatch(helper.batch,
                                       helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                                       trans_a, trans_b, helper.M, helper.N, helper.K,
-                                      alpha, a, lda_mem, b, ldb_mem, beta, y, helper.ldc);
+                                      alpha, a, lda_mem, b, ldb_mem, gemm_beta, y, helper.ldc);
             }
             if (!done) {
                 fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                               helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                              b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+                              b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
             }
         } else if (!thin_packed_B.empty()) {
             fastGemmThin(helper.M, helper.N, helper.K, alpha,
                          a, helper.lda0, helper.lda1,
-                         thin_packed_B.data(), beta,
+                         thin_packed_B.data(), gemm_beta,
                          y, helper.ldc, opt.multi_thread);
         } else if (!packed_input_B.empty()) {
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                          packed_input_B.data(), beta, y, helper.ldc, opt);
+                          packed_input_B.data(), gemm_beta, y, helper.ldc, opt);
         } else {
             // truly dynamic B (changes every call — no packing cache available)
             const auto &B = inputs[1];
             const auto *b = B.ptr<const float>();
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                          b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+                          b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
         }
         fusion.run(Y);
     }
@@ -538,6 +547,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         // does not support bias as input
         if (inputs.size() >= 3) {
+            return false;
+        }
+        // batch_A/batch_B below divide by M*K and N*K; the CPU path handles empty dims
+        if (helper.M == 0 || helper.N == 0 || helper.K == 0) {
             return false;
         }
 

@@ -3603,4 +3603,78 @@ TEST(Test_MatMul, PackedBroadcastMultipleSlices)
     normAssert(outputs[0], expected, "MatMul packed broadcast multi-slice mismatch", 1e-4, 1e-4);
 }
 
+// Any of M, N, K == 0 (an empty A or B) used to divide by zero - M * K and N * K are
+// read while computing per-batch row indices (MatMulHelper::compute(), forward_ocl())
+// and while packing a constant B (fastGemmPackBSize(), fastGemmThinEligible()) - and a
+// constant B with nothing to pack used to fall through to the dynamic-B branch and read
+// inputs[1] out of bounds (constant B never appears in `inputs`). The result is
+// well-defined regardless of which dimension is empty: an all-zero [M, N] output.
+TEST(Test_MatMul, EmptyDimsDoNotCrash)
+{
+    const int dims[][3] = {  // {M, K, N}
+        {0, 4, 5},  // empty A (no rows)
+        {3, 4, 0},  // empty B (no columns)
+        {3, 0, 4},  // empty contraction dim
+    };
+    for (const auto &d : dims)
+    {
+        const int M = d[0], K = d[1], N = d[2];
+        for (bool constB : {false, true})
+        {
+            Mat A(M, K, CV_32F);
+            Mat B(K, N, CV_32F);
+
+            LayerParams lp;
+            lp.type = "MatMul";
+            lp.name = "matmul_empty_dims";
+            if (constB)
+                lp.blobs.push_back(B);
+
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            ASSERT_TRUE(layer);
+            std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B};
+            std::vector<Mat> outputs;
+            runLayer(layer, inputs, outputs);
+            ASSERT_EQ(outputs.size(), (size_t)1);
+            ASSERT_EQ(shape(outputs[0]), MatShape({M, N}));
+
+            Mat expected = Mat::zeros(M, N, CV_32F);
+            normAssert(outputs[0], expected, "MatMul empty-dims output mismatch", 1e-4, 1e-4);
+        }
+    }
+}
+
+// Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
+// M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
+// B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.
+TEST(Test_MatMul, NoBiasIgnoresOutputContents)
+{
+    const int K = 53, N = 67;
+    for (int M : {2, 37})
+    for (bool constB : {false, true})
+    {
+        Mat A(M, K, CV_32F), B(K, N, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(B, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_no_bias";
+        if (constB)
+            lp.blobs.push_back(B);
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B};
+        std::vector<Mat> outputs(1, Mat(M, N, CV_32F, Scalar(std::numeric_limits<float>::quiet_NaN())));
+        std::vector<Mat> internals;
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, internals);
+
+        Mat expected;
+        gemm(A, B, 1., noArray(), 0., expected);
+        normAssert(outputs[0], expected, "MatMul no-bias output mismatch", 1e-4, 1e-4);
+    }
+}
+
 }} // namespace
