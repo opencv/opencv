@@ -3043,6 +3043,37 @@ TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run();
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
+
+TEST(Core_GEMM, inplace_complex)
+{
+    const Mat a64 = (Mat_<Vec2d>(2, 2) << Vec2d(1, 2), Vec2d(2, -1),
+                                        Vec2d(-3, 1), Vec2d(4, 2));
+    const Mat b64 = (Mat_<Vec2d>(2, 2) << Vec2d(3, 4), Vec2d(-2, 1),
+                                        Vec2d(1, -3), Vec2d(2, 5));
+    const Mat expected64 = (Mat_<Vec2d>(2, 2) << Vec2d(-6, 3), Vec2d(5, 5),
+                                               Vec2d(-3, -19), Vec2d(3, 19));
+    const int types[] = {CV_32FC2, CV_64FC2};
+    for (int i = 0; i < 2; ++i)
+    {
+        SCOPED_TRACE(types[i]);
+        Mat a, b, expected, actual;
+        a64.convertTo(a, types[i]);
+        b64.convertTo(b, types[i]);
+        expected64.convertTo(expected, types[i]);
+
+        gemm(a, b, 1, Mat(), 0, actual);
+        EXPECT_EQ(0., cvtest::norm(actual, expected, NORM_INF)) << "out-of-place";
+
+        Mat aliasA = a.clone();
+        gemm(aliasA, b, 1, Mat(), 0, aliasA);
+        EXPECT_EQ(0., cvtest::norm(aliasA, expected, NORM_INF)) << "destination aliases A";
+
+        Mat aliasB = b.clone();
+        gemm(a, aliasB, 1, Mat(), 0, aliasB);
+        EXPECT_EQ(0., cvtest::norm(aliasB, expected, NORM_INF)) << "destination aliases B";
+    }
+}
+
 TEST(Core_Invert, accuracy) { Core_InvertTest test; test.safe_run(); }
 TEST(Core_Mahalanobis, accuracy) { Core_MahalanobisTest test; test.safe_run(); }
 TEST(Core_MulTransposed, accuracy) { Core_MulTransposedTest test; test.safe_run(); }

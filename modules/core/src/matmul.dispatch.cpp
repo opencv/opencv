@@ -421,7 +421,7 @@ void gemm(InputArray matA, InputArray matB, double alpha,
         CV_Assert( type == CV_64FC2 );
         hal::gemm64fc(A.ptr<double>(), A.step, B.ptr<double>(), B.step, alpha,
                       C.ptr<double>(), C.step, beta,
-                      D.ptr<double>(), D.step,
+                      DProxyPtr->ptr<double>(), DProxyPtr->step,
                       a_size.height, a_size.width, DProxyPtr->cols, flags);
     }
 
