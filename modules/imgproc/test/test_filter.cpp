@@ -1058,6 +1058,20 @@ TEST(Imgproc_MedianBlur, float16_special_values)
     }
 }
 
+TEST(Imgproc_MedianBlur, float16_external_buffer)
+{
+    hfloat data[24];
+    for (int i = 0; i < 24; ++i)
+        data[i] = hfloat((float)i - 12.f);
+    Mat src(3, 8, CV_16FC1, data);
+    for (int ksize : {3, 5})
+    {
+        Mat dst;
+        medianBlur(src, dst, ksize);
+        expectHalfEqual(medianBlurReference16f(src, ksize), dst);
+    }
+}
+
 TEST(Imgproc_MedianBlur, float16_large_aperture)
 {
     Mat src(7, 9, CV_16FC1, Scalar::all(1)), dst;

@@ -31,7 +31,14 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
 
     TEST_CYCLE() medianBlur(src, dst, ksize);
 
-    SANITY_CHECK(dst);
+    if (dst.depth() == CV_16F)
+    {
+        Mat dst32;
+        dst.convertTo(dst32, CV_32F);
+        SANITY_CHECK(dst32);
+    }
+    else
+        SANITY_CHECK(dst);
 }
 
 CV_ENUM(BorderType3x3, BORDER_REPLICATE, BORDER_CONSTANT)
