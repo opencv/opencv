@@ -2871,6 +2871,67 @@ TEST(ImgProc_ParallelFilter, morphology_compound)
     }
 }
 
+typedef tuple<Size, int, int, int> ParallelSeparableFilterParams;
+typedef TestWithParam<ParallelSeparableFilterParams> ImgProc_ParallelSeparableFilter;
+
+TEST_P(ImgProc_ParallelSeparableFilter, borders_and_overlap)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const int layout = get<3>(GetParam());
+    // Uneven row counts exercise partial parallel ranges and non-centred anchors.
+    const Rect srcROI(3, 5, size.width, size.height);
+    const Rect dstROI = layout == 2 ? Rect(6, 9, size.width, size.height) : srcROI;
+    Mat input(size.height + 14, size.width + 11, type);
+    randu(input, 0, 256);
+    const Mat kernel = getStructuringElement(MORPH_RECT, Size(5, 5));
+    const Mat kx = (Mat_<float>(1, 5) << 0.125f, 0.25f, 0.25f, 0.25f, 0.125f);
+    const Mat ky = Mat::ones(1, 5, CV_32F) / 5.f;
+    const Point anchor(1, 3);
+    const Scalar borderValue(17, 33, 49, 65);
+    ScopedThreadsGuard threadsGuard;
+
+    for (int op = 0; op < 3; ++op)
+    {
+        Mat referenceParent = input.clone(), parallelParent = input.clone();
+        // The reference reads immutable input, including for overlapping ROIs.
+        Mat referenceSrc = input(srcROI), parallelSrc = parallelParent(srcROI);
+        Mat referenceDst, parallelDst;
+        if (layout != 0)
+        {
+            referenceDst = referenceParent(dstROI);
+            parallelDst = parallelParent(dstROI);
+        }
+        for (int pass = 0; pass < 2; ++pass)
+        {
+            threadsGuard.set(pass == 0 ? 1 : 8);
+            const Mat& src = pass == 0 ? referenceSrc : parallelSrc;
+            Mat& dst = pass == 0 ? referenceDst : parallelDst;
+            if (op == 0)
+                erode(src, dst, kernel, anchor, 1, border, borderValue);
+            else if (op == 1)
+                dilate(src, dst, kernel, anchor, 1, border, borderValue);
+            else
+                sepFilter2D(src, dst, -1, kx, ky, anchor, 0, border);
+        }
+        EXPECT_EQ(0, cv::norm(referenceDst, parallelDst, NORM_INF)) << "operation=" << op;
+        EXPECT_EQ(0, cv::norm(referenceParent, parallelParent, NORM_INF)) << "operation=" << op;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableFilter,
+    Combine(
+        Values(Size(1001, 1049), Size(127, 8301)),
+        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1,
+               CV_32FC1, CV_32FC3, CV_64FC1),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101,
+               BORDER_CONSTANT | BORDER_ISOLATED, BORDER_REPLICATE | BORDER_ISOLATED,
+               BORDER_REFLECT_101 | BORDER_ISOLATED),
+        Values(0, 1, 2) // out-of-place, in-place ROI, overlapping ROIs
+    )
+);
+
 // Regression test for ndsrvp HAL filter padding robustness:
 // Exercises extreme-but-valid anchor positions with small images and large kernels
 // to ensure HAL implementations handle boundary-dominated padding correctly.

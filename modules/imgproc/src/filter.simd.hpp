@@ -378,6 +378,39 @@ static void fillTileBorder(
     }
 }
 
+class RowRangeFilterInvoker : public ParallelLoopBody
+{
+public:
+    RowRangeFilterInvoker(const FilterEngine& _fe, const Mat& _src, Mat& _dst)
+        : fe(_fe), src(_src), dst(_dst)
+    {
+        src.locateROI(wholeSize, ofs);
+    }
+
+    virtual void operator()(const Range& range) const CV_OVERRIDE
+    {
+        // Only stateless filters are shared; each range has its own ring buffer.
+        FilterEngine engine(fe.filter2D, fe.rowFilter, fe.columnFilter,
+                            fe.srcType, fe.dstType, fe.bufType,
+                            fe.rowBorderType, fe.columnBorderType);
+        // Preserve the already converted (including morphology's default) value.
+        engine.constBorderValue = fe.constBorderValue;
+        FilterEngine__start(engine, wholeSize, Size(src.cols, range.size()),
+                            Point(ofs.x, ofs.y + range.start));
+        int y = engine.startY - ofs.y;
+        FilterEngine__proceed(engine, src.ptr() + y * (ptrdiff_t)src.step,
+                              (int)src.step, engine.endY - engine.startY,
+                              dst.ptr(range.start), (int)dst.step);
+    }
+
+private:
+    const FilterEngine& fe;
+    const Mat& src;
+    Mat& dst;
+    Size wholeSize;
+    Point ofs;
+};
+
 class TiledFilterInvoker : public ParallelLoopBody
 {
     struct TiledFilterBuffers {
@@ -579,6 +612,21 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
 
         // Heuristic: Balance L2 cache locality (128) vs parallel load balancing (64).
         int tileSize = (src.total() < (size_t)nthreads * 128 * 128 * 4) ? 64 : 128;
+        int bufferRows = std::max(this_.ksize.height + 3,
+                                 std::max(this_.anchor.y, this_.ksize.height - this_.anchor.y - 1) * 2 + 1);
+        size_t stripeBufferSize = CV_ELEM_SIZE(this_.bufType) *
+                                  alignSize(src.cols, VEC_ALIGN) * bufferRows;
+        if (this_.isSeparable() && src.rows >= nthreads &&
+            stripeBufferSize <= (size_t)tileSize * tileSize)
+        {
+            // Full-width stripes avoid repeating row-filter calls and horizontal
+            // border preparation. Keep their ring buffers within the working-set
+            // budget of a byte-valued tile; larger buffers retain the tiled path.
+            RowRangeFilterInvoker invoker(this_, src_copy, dst);
+            parallel_for_(Range(0, dst.rows), invoker, nthreads);
+            return;
+        }
+
         int totalTiles = ((dst.cols + tileSize - 1) / tileSize) * ((dst.rows + tileSize - 1) / tileSize);
 
         TiledFilterInvoker invoker(this_, src_copy, dst, tileSize);
