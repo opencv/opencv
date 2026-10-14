@@ -2018,14 +2018,20 @@ static bool mapExternalTensor(const opencv_onnx::TensorProto& tensor_proto, bool
 
     Ptr<MappedSource> src = cache.open(full_path);
     if (src.empty())
+    {
+        cache.warnMappingUnavailable(full_path);
         return false;
+    }
     // Only the payload is mapped; the declared length still needs the copy path's bounds check.
     if (length != (size_t)-1 && (offset > src->fileSize() || length > src->fileSize() - offset))
         return false;
 
     Ptr<MappedFile> view = MappedFile::open(src, offset, payload);
     if (view.empty())
+    {
+        cache.warnMappingUnavailable(full_path);
         return false;
+    }
 
     blob = MappedFile::wrap(view, (int)sizes.size(), sizes.data(), type);
     return true;
@@ -2038,6 +2044,16 @@ Ptr<MappedSource> ExternalDataCache::open(const std::string& path)
         return it->second;
     // A failed open is cached too, so a file is only ever attempted once.
     return files[path] = MappedSource::open(path);
+}
+
+// The copy path yields the same values, so an unavailable mapping is not a failure.
+void ExternalDataCache::warnMappingUnavailable(const std::string& path)
+{
+    if (warnedUnavailable)
+        return;
+    warnedUnavailable = true;
+    CV_LOG_WARNING(NULL, "DNN/ONNX: cannot map external data of '" << path
+                   << "', reading it into memory instead");
 }
 
 // ONNX dtype -> OpenCV type. Shared with the ONNX importer (declared in the header).

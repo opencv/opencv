@@ -2384,12 +2384,21 @@ TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
 
     const uint64_t views = cv::dnn::mappedViewCount();
-    testONNXModels("layer_norm_external_data_unaligned", npy);
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ true);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
     // A refused mapping copies instead and yields the same values; only the count separates them.
     if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
     {
         EXPECT_GT(cv::dnn::mappedViewCount(), views);
     }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
 }
 
 TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)

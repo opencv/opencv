@@ -41,9 +41,12 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
 struct ExternalDataCache
 {
     Ptr<MappedSource> open(const std::string& path);
+    void warnMappingUnavailable(const std::string& path);
 
     // What readNetFromONNX()'s mapExternalData asked for, after the environment override.
     bool mappingEnabled = true;
+
+    bool warnedUnavailable = false;
 
     std::map<std::string, Ptr<MappedSource> > files;
 };
