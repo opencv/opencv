@@ -334,30 +334,22 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     return true;
 }
 
-// Wraps m in a NumPy array of dtype `descr`; the caller guarantees it matches m.depth().
+// Builds an empty or 0-D array of dtype `descr`; the caller guarantees it matches m.depth().
 static PyObject* pyopencv_from_nonconventional(const cv::Mat& m, PyArray_Descr* descr)
 {
-    cv::Mat cont;
-    if( m.isContinuous() )
-        cont = m;
-    else
-        ERRWRAP2(cont = m.clone());
-
-    const int cn = cont.channels();
-    int dims = cont.dims;
+    const int cn = m.channels();
+    int dims = m.dims;
     cv::AutoBuffer<npy_intp> _sizes(dims + 1);
     for( int i = 0; i < dims; i++ )
-        _sizes[i] = (npy_intp)cont.size[i];
+        _sizes[i] = (npy_intp)m.size[i];
     if( cn > 1 )
         _sizes[dims++] = cn;
 
     Py_INCREF(descr);  // PyArray_NewFromDescr steals the reference
     PyObject* o = PyArray_NewFromDescr(&PyArray_Type, descr, dims, _sizes.data(),
                                        nullptr, nullptr, 0, nullptr);
-    if( !o )
-        return nullptr;
-    if( !cont.empty() )
-        memcpy(PyArray_DATA((PyArrayObject*)o), cont.data, cont.total() * cont.elemSize());
+    if( o && !m.empty() )
+        memcpy(PyArray_DATA((PyArrayObject*)o), m.data, m.elemSize());
     return o;
 }
 
@@ -366,16 +358,21 @@ PyObject* pyopencv_from(const cv::Mat& m)
 {
     if( isNonConventionalDepth(m.depth()) )
     {
-        if( PyArray_Descr* descr = nonConventionalDescrForCvDepth(m.depth()) )
+        PyArray_Descr* descr = nonConventionalDescrForCvDepth(m.depth());
+        if( !descr )
+        {
+            if( getAllowNonConventionalDataTypes() )
+                CV_LOG_ONCE_WARNING(NULL, "Python bindings: non-conventional data types are allowed, "
+                                    "but NumPy does not know bfloat16 / float8 and they are returned as float32. "
+                                    "Import ml_dtypes to keep the exact dtype.");
+            // NumPy alone cannot name these; widen to float32 (lossless).
+            cv::Mat m32f;
+            ERRWRAP2(m.convertTo(m32f, CV_32F));
+            return pyopencv_from(m32f);
+        }
+        if( m.empty() || m.dims == 0 )
             return pyopencv_from_nonconventional(m, descr);
-        if( getAllowNonConventionalDataTypes() )
-            CV_LOG_ONCE_WARNING(NULL, "Python bindings: non-conventional data types are allowed, "
-                                "but NumPy does not know bfloat16 / float8 and they are returned as float32. "
-                                "Import ml_dtypes to keep the exact dtype.");
-        // NumPy alone cannot name these; widen to float32 (lossless).
-        cv::Mat m32f;
-        ERRWRAP2(m.convertTo(m32f, CV_32F));
-        return pyopencv_from(m32f);
+        // Otherwise share the path below: NumpyAllocator allocates with `descr`.
     }
     if( m.empty() )
     {

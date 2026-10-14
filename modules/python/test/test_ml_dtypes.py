@@ -59,6 +59,12 @@ class ml_dtypes_test(NewOpenCVTests):
             strided = a[:, ::2]
             self.assertSameBits(cv.flip(strided, 0), strided[::-1])
 
+    def test_dst_is_returned(self):
+        for dt, _, _, _ in self.cases:
+            a = np.arange(6, dtype=np.float32).reshape(2, 3).astype(dt)
+            d = np.empty_like(a)
+            self.assertIs(cv.flip(a, 1, dst=d), d)
+
     def test_mat_allocated_in_cpp_to_numpy(self):
         ref = cv.utils.generateVectorOfMat(2, 3, 4, cv.CV_32F)
         for dt, depth, _, rtol in self.cases:
