@@ -2018,14 +2018,23 @@ static bool mapExternalTensor(const opencv_onnx::TensorProto& tensor_proto, bool
 
     Ptr<MappedSource> src = cache.open(full_path);
     if (src.empty())
+    {
+        // The copy path yields the same values, so an unavailable mapping is not a failure.
+        CV_LOG_ONCE_WARNING(NULL, "DNN/ONNX: cannot map external data of '" << full_path
+                            << "', reading it into memory instead");
         return false;
+    }
     // Only the payload is mapped; the declared length still needs the copy path's bounds check.
     if (length != (size_t)-1 && (offset > src->fileSize() || length > src->fileSize() - offset))
         return false;
 
     Ptr<MappedFile> view = MappedFile::open(src, offset, payload);
     if (view.empty())
+    {
+        CV_LOG_ONCE_WARNING(NULL, "DNN/ONNX: cannot map external data of '" << full_path
+                            << "', reading it into memory instead");
         return false;
+    }
 
     blob = MappedFile::wrap(view, (int)sizes.size(), sizes.data(), type);
     return true;

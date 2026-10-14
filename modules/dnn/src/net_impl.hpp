@@ -583,7 +583,7 @@ inline Net::Impl* getNetImpl(const LayerInfo* op)
     return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
 
-Net readNetFromONNX2(const String&, bool mapExternalData = true);
+Net readNetFromONNX2(const String&, bool mapExternalData);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
 #ifdef HAVE_ONNXRUNTIME

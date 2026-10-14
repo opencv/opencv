@@ -906,7 +906,6 @@ void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
     }
 }
 
-
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
@@ -3431,7 +3430,7 @@ Net readNetFromONNX2(const std::vector<uchar>& buffer)
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
 
-Net readNetFromONNX2(const String&) {
+Net readNetFromONNX2(const String&, bool) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 

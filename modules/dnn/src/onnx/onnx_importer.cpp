@@ -87,6 +87,11 @@ Net readNetFromONNX(const String& onnxFile, int engine, bool mapExternalData)
     return readNetFromONNX2(onnxFile, mapExternalData);
 }
 
+Net readNetFromONNX(const String& onnxFile, int engine)
+{
+    return readNetFromONNX(onnxFile, engine, false);
+}
+
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 {
     if (resolveOnnxEngine(engine) == ENGINE_ORT)
@@ -163,6 +168,10 @@ Mat readTensorFromONNX(const String& path)
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
 
 Net readNetFromONNX(const String&, int, bool) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromONNX(const String&, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
