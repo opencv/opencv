@@ -125,7 +125,8 @@ static void precompRotationTable(float *data,
 
 
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/v1.16.1/docs/ContribOperators.md#com.microsoft.Attention
-// Extension: input may be [..., S, C]; leading dims are flattened into the batch dim (spec: 3D only).
+// Extension: a fused Attention may take [..., C] and group its tokens into batch and sequence the
+// way the replaced QKV reshape did (spec: 3D only).
 class AttentionLayerImpl CV_FINAL : public AttentionLayer {
  public:
     AttentionLayerImpl(const LayerParams &params) {
@@ -154,6 +155,18 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         output_ndims = params.get<int>("output_ndims", 3);
 
         do_rotary = params.get<bool>("do_rotary", false);
+
+        // Set by the attention fusion: {factor, dims...} for the QKV reshape's batch and sequence
+        // entries, factor -1 when the entry is inferred.
+        auto readExpr = [&](const char* key, std::vector<int>& expr) {
+            if (!params.has(key)) return;
+            const DictValue& v = params.get(key);
+            for (int i = 0; i < v.size(); i++)
+                expr.push_back(v.get<int>(i));
+        };
+        readExpr("qkv_batch", qkv_batch);
+        readExpr("qkv_seq", qkv_seq);
+        CV_CheckEQ(qkv_batch.empty(), qkv_seq.empty(), "DNN/Attention: qkv_batch needs qkv_seq");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -171,11 +184,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
 
-        // Input is [..., S, C]; all leading dims are treated as one batch dim.
-        CV_CheckGE(input_shape.size(), static_cast<size_t>(3), "DNN/Attention: invalid input dimension");
+        CV_CheckGE(input_shape.size(), static_cast<size_t>(3),
+                   "DNN/Attention: invalid input dimension");
         CV_CheckEQ(weight_shape.size(), static_cast<size_t>(2), "DNN/Attention: invalid weight dimension");
         const int nd = (int)input_shape.size();
-        const int lead = (int)total(input_shape, 0, nd - 2);
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
 
         CV_CheckEQ(input_shape[nd - 1], weight_shape[0], "DNN/Attention: invalid input shape");
         CV_CheckEQ(weight_shape[1], bias_shape[0], "DNN/Attention: invalid weight or bias shape");
@@ -190,13 +204,13 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             output_shape[nd - 1] = v_hidden;
             outputs.assign(1, output_shape);
         } else if (output_ndims == 2) {
-            MatShape output_shape{lead * input_shape[nd - 2], v_hidden};
+            MatShape output_shape{batch * seq, v_hidden};
             outputs.assign(1, output_shape);
         } else {
             CV_Error(Error::StsBadArg, format("DNN/Attention: invalid output dimension %zu, valid value is 2 or 3", output_ndims));
         }
 
-        const int batch_size_ = lead, seq_len_ = input_shape[nd - 2],
+        const int batch_size_ = batch, seq_len_ = seq,
                   hidden_size_ = weight_shape.back(),
                   num_heads_ = static_cast<int>(num_heads),
                   v_head_size_ = v_hidden / num_heads_;
@@ -222,13 +236,46 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return false;
     }
 
+    // Batch and sequence length the attention runs over. The tokens are contiguous, so any split
+    // of them recorded by the fusion is a view; without a record the input must be [B, S, C].
+    void groupTokens(const MatShape& input_shape, int& batch, int& seq) const
+    {
+        const int nd = (int)input_shape.size();
+        if (qkv_batch.empty()) {
+            CV_CheckEQ(nd, 3, "DNN/Attention: input must be [batch, sequence, hidden]");
+            batch = input_shape[0];
+            seq = input_shape[1];
+            return;
+        }
+        const int tokens = (int)total(input_shape, 0, nd - 1);
+        auto eval = [&](const std::vector<int>& expr) {
+            int v = expr[0];
+            for (size_t i = 1; i < expr.size() && v >= 0; i++) {
+                const int d = expr[i] < 0 ? expr[i] + nd : expr[i];
+                CV_CheckGE(d, 0, "DNN/Attention: QKV reshape refers to a missing input dim");
+                CV_CheckLT(d, nd - 1, "DNN/Attention: QKV reshape refers to a missing input dim");
+                v *= input_shape[d];
+            }
+            return v;
+        };
+        batch = eval(qkv_batch);
+        seq = eval(qkv_seq);
+        if (batch < 0 && seq > 0) batch = tokens / seq;
+        if (seq < 0 && batch > 0) seq = tokens / batch;
+        CV_CheckGT(batch, 0, "DNN/Attention: invalid QKV reshape");
+        CV_CheckEQ(batch * seq, tokens,
+                   "DNN/Attention: QKV reshape does not match the token count");
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         const auto &input_shape = inputs[0];
         const int nd = (int)input_shape.size();
-        int64 B = (int64)total(input_shape, 0, nd - 2);
-        int64 S = input_shape[nd - 2];
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
+        int64 B = batch;
+        int64 S = seq;
         int64 D = input_shape[nd - 1];
 
         const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
@@ -314,8 +361,10 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         inputs_arr.getMatVector(inputs);
         const auto input_shape = shape(inputs[0]);
         const int nd = (int)input_shape.size();
-        batch_size = total(input_shape, 0, nd - 2);
-        seq_len = static_cast<size_t>(input_shape[nd - 2]);
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
+        batch_size = static_cast<size_t>(batch);
+        seq_len = static_cast<size_t>(seq);
         input_hidden_size = static_cast<size_t>(input_shape[nd - 1]);
 
         const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
@@ -638,6 +687,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t hidden_size;
 
     bool do_rotary;
+    std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;

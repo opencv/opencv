@@ -840,11 +840,63 @@ TEST(Layer_Attention, rank4_input_matches_rank3)
     randu(x4, -1.f, 1.f);
     Mat x3 = x4.reshape(1, std::vector<int>{B0 * B1, S, C});
     std::vector<Mat> in4(1, x4), in3(1, x3), out4, out3;
-    runLayer(AttentionLayer::create(lp), in4, out4);
+    // As recorded by the fusion for a QKV reshape to [B0 * B1, S, H, D].
+    LayerParams lp4 = lp;
+    int batch_dims[] = {1, 0, 1}, inferred[] = {-1};
+    lp4.set("qkv_batch", DictValue::arrayInt(batch_dims, 3));
+    lp4.set("qkv_seq", DictValue::arrayInt(inferred, 1));
+    runLayer(AttentionLayer::create(lp4), in4, out4);
     runLayer(AttentionLayer::create(lp), in3, out3);
 
     EXPECT_EQ(shape(out4[0]), shape(x4));
     normAssert(out3[0].reshape(1, std::vector<int>{B0, B1, S, C}), out4[0]);
+}
+
+// The fusion records how the replaced QKV reshape grouped the tokens, as {factor, input dims...} or
+// {-1} for inferred. Any grouping is a view of the same tokens; without a record the input is 3D.
+TEST(Layer_Attention, groups_tokens_like_the_qkv_reshape)
+{
+    // C divides the 48 tokens, so a grouping by the hidden dim is not caught by the count alone.
+    const int B0 = 2, B1 = 3, S = 8, C = 16, NH = 4;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(std::vector<int>{C, 3 * C}, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    randu(W, -1.f, 1.f);
+    randu(bias, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+
+    auto grouped = [&](std::vector<int> batch, std::vector<int> seq) {
+        LayerParams p = lp;
+        p.set("qkv_batch", DictValue::arrayInt(batch.data(), (int)batch.size()));
+        p.set("qkv_seq", DictValue::arrayInt(seq.data(), (int)seq.size()));
+        return p;
+    };
+    auto run = [](const LayerParams& p, const Mat& x) {
+        std::vector<Mat> in(1, x), out;
+        runLayer(AttentionLayer::create(p), in, out);
+        return out[0];
+    };
+    auto rejects = [](const LayerParams& p, const MatShape& inp) {
+        std::vector<MatShape> outs, internals;
+        EXPECT_ANY_THROW(AttentionLayer::create(p)->getMemoryShapes({inp}, 1, outs, internals));
+    };
+
+    Mat x4(std::vector<int>{B0, B1, S, C}, CV_32F);
+    randu(x4, -1.f, 1.f);
+    // A QKV reshape to [B0, B1 * S, H, D]: each B0 item attends over all of its B1 * S tokens.
+    Mat ref = run(lp, x4.reshape(1, std::vector<int>{B0, B1 * S, C}));
+    ref = ref.reshape(1, std::vector<int>{B0, B1, S, C});
+    normAssert(ref, run(grouped({1, 0}, {1, 1, 2}), x4));
+    normAssert(ref, run(grouped({B0}, {-1}), x4));
+    normAssert(ref, run(grouped({-1}, {1, 1, 2}), x4));
+    normAssert(ref, run(grouped({1, -4}, {1, -3, -2}), x4));
+
+    rejects(lp, shape(x4));
+    rejects(grouped({5}, {-1}), shape(x4));
+    rejects(grouped({1, 3}, {-1}), shape(x4));
 }
 
 typedef testing::TestWithParam<tuple<int, int> > Layer_Attention_v_hidden;
