@@ -2381,8 +2381,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
     }
     ASSERT_GE(gemm, 0);
 
-    // The constant operands go to the layer, not to blobs, as they already do for Conv.
-    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+    // The constant operands go to the layer, not to blobs.
+    EXPECT_EQ(shape(net.getParam(gemm, 0)), shape(6, 4));
+    EXPECT_EQ(shape(net.getParam(gemm, 1)), shape(1, 4));
 
     Mat input(3, 6, CV_32F);
     randu(input, -1.0, 1.0);
@@ -2403,6 +2404,7 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
 
     const Mat expected = input * B;
     normAssert(expected, out - bias_only);
+    // Packing released the weight, and nothing can give it back.
     EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
 }
 
@@ -2423,7 +2425,7 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
             matmul = id;
     }
     ASSERT_GE(matmul, 0);
-    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+    EXPECT_EQ(shape(net.getParam(matmul, 0)), shape(5, 3, 4));
 
     const int asizes[] = {5, 2, 3}, bsizes[] = {5, 3, 4};
     Mat input(3, asizes, CV_32F), B(3, bsizes, CV_32F);
@@ -2484,8 +2486,7 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
 
 TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
 {
-    // The QKV projection folds into a single Attention op, which takes its constants through
-    // setWeights() like every other const-weight layer, so they never pass through blobs.
+    // The QKV projection folds into one Attention op, whose constants never reach blobs.
     Net net = readNetFromONNX(_tf("models/attention.onnx"));
     ASSERT_FALSE(net.empty());
     net.setPreferableBackend(backend);
