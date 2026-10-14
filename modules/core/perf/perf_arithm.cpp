@@ -451,7 +451,7 @@ static cv::Mat makeTransposeNDInput3D(Size sz, int type)
     return Mat(3, dims, CV_MAKETYPE(CV_MAT_DEPTH(type), 1));
 }
 
-PERF_TEST_P_(BinaryOpTest, transposeND_identity_order)
+PERF_TEST_P_(BinaryOpTest, transpose_identity_order)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -464,12 +464,12 @@ PERF_TEST_P_(BinaryOpTest, transposeND_identity_order)
 
     declare.in(a, WARMUP_RNG).out(b);
 
-    TEST_CYCLE() cv::transposeND(a, order, b);
+    TEST_CYCLE() cv::transpose(a, order, b);
 
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(BinaryOpTest, transposeND_2d_swap_order)
+PERF_TEST_P_(BinaryOpTest, transpose_2d_swap_order)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -481,13 +481,13 @@ PERF_TEST_P_(BinaryOpTest, transposeND_2d_swap_order)
 
     declare.in(a, WARMUP_RNG).out(b);
 
-    TEST_CYCLE() cv::transposeND(a, order, b);
+    TEST_CYCLE() cv::transpose(a, order, b);
 
     SANITY_CHECK_NOTHING();
 }
 
 
-PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
+PERF_TEST_P_(BinaryOpTest, transpose_generic_keep_tail_order)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -501,12 +501,12 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
     //BUG: //BUG: in/out calls do not support arrays with more than 2 dimentions
     //declare.in(a).out(b);
 
-    TEST_CYCLE() cv::transposeND(a, order, b);
+    TEST_CYCLE() cv::transpose(a, order, b);
 
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
+PERF_TEST_P_(BinaryOpTest, transpose_generic_move_tail_order)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
@@ -520,7 +520,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
     //BUG: in/out calls do not support arrays with more than 2 dimentions
     //declare.in(a).out(b);
 
-    TEST_CYCLE() cv::transposeND(a, order, b);
+    TEST_CYCLE() cv::transpose(a, order, b);
 
     SANITY_CHECK_NOTHING();
 }

@@ -177,13 +177,13 @@ public:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outshape, inptype);
-            tileND(inp, std::vector<int>(repeats, repeats + ndims), outs[0]);
+            cv::repeat(inp, std::vector<int>(repeats, repeats + ndims), outs[0]);
         } else if (kind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
             outs[0].fit(outshape, inptype);
             Mat temp(outshape, inptype);
-            tileND(inp, std::vector<int>(repeats, repeats + ndims), temp);
+            cv::repeat(inp, std::vector<int>(repeats, repeats + ndims), temp);
             temp.copyTo(outs[0]);
         } else {
             CV_Error(Error::StsNotImplemented, "");

@@ -2660,7 +2660,7 @@ TEST_P(TransposeND, basic)
     do
     {
         Mat out;
-        cv::transposeND(inp, order, out);
+        cv::transpose(inp, order, out);
         std::vector<int> id(order.size());
         for (size_t i = 0; i < inp.total(); ++i)
         {

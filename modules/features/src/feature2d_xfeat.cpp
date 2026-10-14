@@ -56,7 +56,7 @@ static Mat toNCHW(const Mat& blob, int channelsHint)
     CV_Assert(blob.size[3] == channelsHint);
     Mat out;
     Mat src = blob.isContinuous() ? blob : blob.clone();
-    transposeND(src, {0, 3, 1, 2}, out);
+    cv::transpose(src, {0, 3, 1, 2}, out);
     return out;
 }
 
@@ -183,7 +183,7 @@ public:
         {
             CV_Assert(kptBlob.size[3] == 64 || kptBlob.size[3] == 65);
             Mat src = kptBlob.isContinuous() ? kptBlob : kptBlob.clone();
-            transposeND(src, {0, 3, 1, 2}, kptBlob);
+            cv::transpose(src, {0, 3, 1, 2}, kptBlob);
         }
         Mat relBlob = toNCHW(outs[2], 1);
         CV_Assert(featBlob.dims == 4 && kptBlob.dims == 4 && relBlob.dims == 4);

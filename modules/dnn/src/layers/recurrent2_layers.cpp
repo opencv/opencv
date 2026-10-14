@@ -500,7 +500,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::vector<int> perm(input[0].dims);
                 std::iota(perm.begin(), perm.end(), 0);
                 std::swap(perm[0], perm[1]);
-                cv::transposeND(input[0], perm, xSeqFirst);
+                cv::transpose(input[0], perm, xSeqFirst);
             }
             Mat xTs = xSeqFirst.reshape(1, batchSizeTotal);
 
@@ -520,11 +520,11 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             Mat y4d = hOutAll.reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
             Mat ySeqFirst;   // (seq, dirs, batch, hid): the layout=0 Y; Yh sliced from it
             if (layout == SEQ_BATCH_HID) {
-                cv::transposeND(y4d, {0, 2, 1, 3}, output[0]);
+                cv::transpose(y4d, {0, 2, 1, 3}, output[0]);
                 ySeqFirst = output[0];
             } else {
-                cv::transposeND(y4d, {0, 2, 1, 3}, ySeqFirst);
-                cv::transposeND(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
+                cv::transpose(y4d, {0, 2, 1, 3}, ySeqFirst);
+                cv::transpose(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
             }
 
             if (produceOutputYh){
@@ -548,7 +548,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 hOut = hOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
 
                 if (layout == BATCH_SEQ_HID){
-                    cv::transposeND(hOut, {1, 0, 2}, dst);
+                    cv::transpose(hOut, {1, 0, 2}, dst);
                 }
                 else{
                     hOut.copyTo(dst);
@@ -576,7 +576,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 tmp = tmp.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
 
                 if (layout == BATCH_SEQ_HID){
-                    cv::transposeND(tmp, {1, 0, 2}, dst);
+                    cv::transpose(tmp, {1, 0, 2}, dst);
                 } else {
                     tmp.copyTo(dst);
                 }
@@ -593,7 +593,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // permute to (seq, dirs, batch, hidden); the `layout` only affects the FINAL Yc order
             // below, the last-timestep/last-direction slicing is layout-independent
             cv::Mat newCellState;
-            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+            cv::transpose(cOut, {0, 2, 1, 3}, newCellState);
             cOut = newCellState;
 
             if (numDirs == 1)
@@ -629,7 +629,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // (dirs, batch, hid), or (batch, dirs, hid) for the batch-first layout - written into the
             // preallocated dst in place
             if (layout == BATCH_SEQ_HID){
-                cv::transposeND(cOut, {1, 0, 2}, dst);
+                cv::transpose(cOut, {1, 0, 2}, dst);
             } else {
                 cOut.copyTo(dst);
             }

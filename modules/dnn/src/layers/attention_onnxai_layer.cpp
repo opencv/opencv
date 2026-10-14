@@ -508,8 +508,8 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 const std::vector<Range> past_r{Range::all(), Range(0, past_seq_kv), Range::all()};
                 const std::vector<Range> cur_r {Range::all(), Range(past_seq_kv, total_seq_kv), Range::all()};
                 Mat pk, pv;
-                cv::transposeND(inputs[map.past_k], {0, 2, 1, 3}, pk);
-                cv::transposeND(inputs[map.past_v], {0, 2, 1, 3}, pv);
+                cv::transpose(inputs[map.past_k], {0, 2, 1, 3}, pk);
+                cv::transpose(inputs[map.past_v], {0, 2, 1, 3}, pv);
                 pk.reshape(1, 3, pk_sz).copyTo(K_eff(past_r)); K_src.copyTo(K_eff(cur_r));
                 pv.reshape(1, 3, pv_sz).copyTo(V_eff(past_r)); inputs[2].copyTo(V_eff(cur_r));
             }
@@ -641,7 +641,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 eff.reshape(1, out.dims, out.size.p).copyTo(out);
             } else {
                 int sz[4] = {batch_size, total_seq_kv, nhkv, head_size};
-                cv::transposeND(eff.reshape(1, 4, sz), {0, 2, 1, 3}, out);
+                cv::transpose(eff.reshape(1, 4, sz), {0, 2, 1, 3}, out);
             }
         };
         if (outputs.size() > 1) writePresent(outputs[1], K_eff, qk_head_size);
@@ -682,7 +682,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             int dims[3] = {batch_size, total, row};
             out.create(3, dims, CV_32F);
             Mat past3;
-            cv::transposeND(past, {0, 2, 1, 3}, past3);
+            cv::transpose(past, {0, 2, 1, 3}, past3);
             const float* src = past3.ptr<float>();
             const float* add = fresh.ptr<float>();
             float* dst = out.ptr<float>();

@@ -198,7 +198,7 @@ public:
         std::vector<int> sizes(outs.size());
         for (size_t i = 0; i < outs.size(); i++)
             sizes[i] = outs[i].size[axis_];
-        splitND(inp, axis_, sizes, outs);
+        cv::split(inp, axis_, sizes, outs);
     }
 };
 

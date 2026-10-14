@@ -61,7 +61,7 @@ struct DepthSpaceOps {
     void cpuCompute(const Mat &input, Mat &output) {
         const auto output_shape = shape(output);
         Mat tmp;
-        cv::transposeND(input.reshape(1, internal_shape), permutation, tmp);
+        cv::transpose(input.reshape(1, internal_shape), permutation, tmp);
         tmp.reshape(1, output_shape).copyTo(output);
     }
 
