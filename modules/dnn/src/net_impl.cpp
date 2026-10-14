@@ -1729,6 +1729,27 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
                 return;
             }
 
+            GemmLayer* gemm = dynamic_cast<GemmLayer*>(layer.get());
+            if (gemm && numParam == 0) {
+                gemm->setWeights(blob, Mat());
+                markLayerWeightsChanged(layer);
+                return;
+            }
+
+            MatMulLayer* matmul = dynamic_cast<MatMulLayer*>(layer.get());
+            if (matmul && numParam == 0) {
+                matmul->setWeights(blob, Mat());
+                markLayerWeightsChanged(layer);
+                return;
+            }
+
+            AttentionLayer* attn = dynamic_cast<AttentionLayer*>(layer.get());
+            if (attn && numParam == 0) {
+                attn->setWeights(blob, Mat());
+                markLayerWeightsChanged(layer);
+                return;
+            }
+
             CV_Error_(Error::StsOutOfRange,
                       ("DNN: op producing '%s' has fewer than %d params",
                        outputTensorName.c_str(), numParam + 1));

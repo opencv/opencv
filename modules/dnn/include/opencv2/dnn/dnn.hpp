@@ -853,6 +853,9 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Returns parameter blob of the layer.
          *  @param layer name or id of the layer.
          *  @param numParam index of the layer parameter in the Layer::blobs array.
+         *  @note With ENGINE_OPENCV the constant weights of Conv, ConvTranspose, Gemm, MatMul and
+         *  Attention are owned by the layer, not by Layer::blobs, so getParam() throws for them.
+         *  setParam() still reaches them, by the op's output tensor name.
          *  @see Layer::blobs
          */
         CV_WRAP Mat getParam(int layer, int numParam = 0) const;

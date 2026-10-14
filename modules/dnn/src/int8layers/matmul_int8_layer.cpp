@@ -17,6 +17,19 @@ class MatMulInt8LayerImpl CV_FINAL : public MatMulInt8Layer
 public:
     enum { VEC_ALIGN = 32 };
 
+    static const Mat& noConstOperand() { static const Mat empty; return empty; }
+
+    // Quantized weights arrive through MatMulInt8Params, so this layer owns no FP32 constant
+    // and reports none: the const-weight passes then skip it.
+    void setWeights(InputArray, InputArray) CV_OVERRIDE
+    {
+        CV_Error(Error::StsNotImplemented,
+                 "DNN/MatMulInt8: weights are set through MatMulInt8Params");
+    }
+    const Mat& constWeights() const CV_OVERRIDE { return noConstOperand(); }
+    const Mat& constBias() const CV_OVERRIDE { return noConstOperand(); }
+    void releaseConstWeights() CV_OVERRIDE {}
+
     MatMulInt8LayerImpl(const MatMulInt8Params& p)
     {
         name = p.name;

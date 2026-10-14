@@ -2364,6 +2364,288 @@ TEST_P(Test_ONNX_layers, Gemm_External_Data)
     testONNXModels("gemm_external_data", npy);
 }
 
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
+{
+    Net net = readNetFromONNX(_tf("models/gemm_vector_bias.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int gemm = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "Gemm")
+            gemm = id;
+    }
+    ASSERT_GE(gemm, 0);
+
+    // The constant operands go to the layer, not to blobs, as they already do for Conv.
+    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // constArgs() hands the constants over on that first forward, so setParam has to follow it.
+    // An empty bias keeps the model's C, so the two forwards below differ by A * B exactly.
+    net.setParam("Y", 0, Mat::zeros(6, 4, CV_32F));
+    net.setInput(input);
+    const Mat bias_only = net.forward().clone();
+
+    Mat B(6, 4, CV_32F);
+    randu(B, -1.0, 1.0);
+    net.setParam("Y", 0, B);
+    net.setInput(input);
+    const Mat out = net.forward().clone();
+
+    const Mat expected = input * B;
+    normAssert(expected, out - bias_only);
+    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
+{
+    // B is 3-D, so fuseMatMulConstBToGemm declines it and the layer stays a MatMul.
+    Net net = readNetFromONNX(_tf("models/matmul_3d_init.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int matmul = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "MatMul")
+            matmul = id;
+    }
+    ASSERT_GE(matmul, 0);
+    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+
+    const int asizes[] = {5, 2, 3}, bsizes[] = {5, 3, 4};
+    Mat input(3, asizes, CV_32F), B(3, bsizes, CV_32F);
+    randu(input, -1.0, 1.0);
+    randu(B, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // constArgs() hands B over on that first forward, so setParam has to follow it.
+    net.setParam("output", 0, B);
+    net.setInput(input);
+    Mat out = net.forward().clone();
+    ASSERT_EQ(shape(out), shape(5, 2, 4));
+
+    for (int b = 0; b < asizes[0]; b++)
+    {
+        const Mat a_slice(2, 3, CV_32F, input.ptr<float>(b));
+        const Mat b_slice(3, 4, CV_32F, B.ptr<float>(b));
+        const Mat out_slice(2, 4, CV_32F, out.ptr<float>(b));
+        normAssert(a_slice * b_slice, out_slice);
+    }
+    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
+{
+    const String model = _tf("models/gemm_vector_bias.onnx");
+    Mat big(16, 6, CV_32F), small(3, 6, CV_32F);
+    randu(big, -1.0, 1.0);
+    randu(small, -1.0, 1.0);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    // Forward the large shape first: the thin pack is built only for small M and never re-checked.
+    net.setInput(big);
+    Mat big_first = net.forward().clone();
+    net.setInput(small);
+    Mat small_out = net.forward().clone();
+    net.setInput(big);
+    Mat big_again = net.forward().clone();
+
+    Net fresh_big = readNetFromONNX(model);
+    fresh_big.setPreferableBackend(backend);
+    fresh_big.setPreferableTarget(target);
+    fresh_big.setInput(big);
+    normAssert(big_first, fresh_big.forward());
+    normAssert(big_again, big_first);
+
+    Net fresh_small = readNetFromONNX(model);
+    fresh_small.setPreferableBackend(backend);
+    fresh_small.setPreferableTarget(target);
+    fresh_small.setInput(small);
+    normAssert(small_out, fresh_small.forward());
+}
+
+TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
+{
+    // The QKV projection folds into a single Attention op, which takes its constants through
+    // setWeights() like every other const-weight layer, so they never pass through blobs.
+    Net net = readNetFromONNX(_tf("models/attention.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    const Mat input = blobFromNPY(_tf("data/input_attention.npy"));
+    const Mat ref = blobFromNPY(_tf("data/output_attention.npy"));
+
+    // The layer does not exist until the fusion runs, which is part of the first forward.
+    net.setInput(input);
+    const Mat out = net.forward().clone();
+
+    int attn = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int id = net.getLayerId(names[i]);
+        if (net.getLayer(id)->type == "Attention")
+            attn = id;
+    }
+    ASSERT_GE(attn, 0);
+    EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
+    normAssert(ref, out);
+}
+
+TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Requires a CUDA-enabled build");
+
+    const String model = _tf("models/matmul_3d_init.onnx");
+    const int sizes[] = {5, 2, 3};
+    Mat input(3, sizes, CV_32F);
+    randu(input, -1.0, 1.0);
+
+    Net cpu_only = readNetFromONNX(model);
+    cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cpu_only.setInput(input);
+    const Mat expected = cpu_only.forward().clone();
+
+    // CPU -> CUDA -> CPU
+    Net net = readNetFromONNX(model);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setInput(input);
+    net.forward();
+
+    net.setPreferableBackend(DNN_BACKEND_CUDA);
+    net.setPreferableTarget(target);
+    net.setInput(input);
+    normAssert(expected, net.forward());
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setInput(input);
+    normAssert(expected, net.forward());
+
+    // CUDA -> CPU
+    Net cuda_first = readNetFromONNX(model);
+    cuda_first.setPreferableBackend(DNN_BACKEND_CUDA);
+    cuda_first.setPreferableTarget(target);
+    cuda_first.setInput(input);
+    cuda_first.forward();
+
+    cuda_first.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cuda_first.setPreferableTarget(DNN_TARGET_CPU);
+    cuda_first.setInput(input);
+    normAssert(expected, cuda_first.forward());
+}
+
+TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Requires a CUDA-enabled build");
+
+    const String model = _tf("models/attention.onnx");
+    const Mat input = blobFromNPY(_tf("data/input_attention.npy"));
+    const Mat expected = blobFromNPY(_tf("data/output_attention.npy"));
+
+    // CPU -> CUDA -> CPU
+    Net net = readNetFromONNX(model);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setInput(input);
+    net.forward();
+
+    net.setPreferableBackend(DNN_BACKEND_CUDA);
+    net.setPreferableTarget(target);
+    net.setInput(input);
+    normAssert(expected, net.forward());
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setInput(input);
+    normAssert(expected, net.forward());
+
+    // CUDA -> CPU
+    Net cuda_first = readNetFromONNX(model);
+    cuda_first.setPreferableBackend(DNN_BACKEND_CUDA);
+    cuda_first.setPreferableTarget(target);
+    cuda_first.setInput(input);
+    cuda_first.forward();
+
+    cuda_first.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cuda_first.setPreferableTarget(DNN_TARGET_CPU);
+    cuda_first.setInput(input);
+    normAssert(expected, cuda_first.forward());
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
+{
+    // Without CUDA there is nothing to switch to: setPreferableBackend() warns and keeps the
+    // net on the CPU, so the refusal below cannot be observed.
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Requires a CUDA-enabled build");
+
+    const String model = _tf("models/gemm_vector_bias.onnx");
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+
+    // CPU -> CUDA: refused, because the CPU forward released the weight.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        net.forward();
+        EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
+    }
+
+    // CUDA -> CPU: served, since a net on CUDA keeps the weight for initCUDA().
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_CUDA);
+        net.setPreferableTarget(target);
+        net.setInput(input);
+        net.forward();
+
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        const Mat out = net.forward().clone();
+
+        Net cpu_only = readNetFromONNX(model);
+        cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
+        cpu_only.setInput(input);
+        normAssert(cpu_only.forward(), out);
+    }
+
+    // CPU -> CUDA -> CPU: the refused hop leaves the net on CPU and still correct.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        const Mat first = net.forward().clone();
+
+        EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        normAssert(first, net.forward());
+    }
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {

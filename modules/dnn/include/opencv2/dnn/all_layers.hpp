@@ -1879,6 +1879,18 @@ CV__DNN_INLINE_NS_BEGIN
         float beta;
         bool flatten_a;
 
+        //! Takes ownership of the constant operands. An empty `bias` leaves the current one.
+        virtual void setWeights(InputArray weights, InputArray bias) = 0;
+
+        //! What setWeights() took, for the graph passes. The weight goes empty once
+        //! finalize() has packed it, so a pass that needs it must run before inference.
+        virtual const Mat& constWeights() const = 0;
+        virtual const Mat& constBias() const = 0;
+
+        //! Drops constants a graph pass has already copied elsewhere. Shapes survive, as they
+        //! do after packing; only call it on a layer the graph is removing.
+        virtual void releaseConstWeights() = 0;
+
         static Ptr<GemmLayer> create(const LayerParams& params);
     };
 
@@ -1888,6 +1900,18 @@ CV__DNN_INLINE_NS_BEGIN
         bool trans_b;
         float alpha;
         float beta;
+
+        //! Takes ownership of the constant operands. An empty `bias` leaves the current one.
+        virtual void setWeights(InputArray weights, InputArray bias) = 0;
+
+        //! What setWeights() took, for the graph passes. The weight goes empty once
+        //! finalize() has packed it, so a pass that needs it must run before inference.
+        virtual const Mat& constWeights() const = 0;
+        virtual const Mat& constBias() const = 0;
+
+        //! Drops constants a graph pass has already copied elsewhere. Shapes survive, as they
+        //! do after packing; only call it on a layer the graph is removing.
+        virtual void releaseConstWeights() = 0;
 
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };
@@ -1960,6 +1984,18 @@ CV__DNN_INLINE_NS_BEGIN
 
     class CV_EXPORTS AttentionLayer : public Layer {
      public:
+        //! Takes ownership of the constant QKV operands. An empty `bias` leaves the current one.
+        virtual void setWeights(InputArray weights, InputArray bias) = 0;
+
+        //! What setWeights() took, for the graph passes. The weight goes empty once
+        //! prepackWeights() has packed it, so a pass that needs it must run before inference.
+        virtual const Mat& constWeights() const = 0;
+        virtual const Mat& constBias() const = 0;
+
+        //! Drops constants a graph pass has already copied elsewhere. Shapes survive, as they
+        //! do after packing; only call it on a layer the graph is removing.
+        virtual void releaseConstWeights() = 0;
+
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
 

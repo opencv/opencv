@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 // backends
@@ -79,13 +80,37 @@ public:
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
 
-        for (Mat& blob : blobs) {
-            if (blob.type() == CV_16F || blob.type() == CV_16BF ||
-                blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
-                Mat widened;
-                blob.convertTo(widened, CV_32F);
-                blob = widened;
+        // Built straight from LayerParams, the constants arrive in blobs rather than as
+        // graph inputs; take them over so there is one owner either way.
+        if (!blobs.empty()) {
+            if (blobs.size() == 1 && !const_B && (const_C || have_bias)) {
+                bias = blobs[0];  // two runtime inputs, so the lone blob is C
+                widenToFP32(bias);
+                ownsBias = true;
+            } else {
+                setWeights(blobs[0], blobs.size() > 1 ? blobs[1] : Mat());
             }
+            blobs.clear();
+        }
+    }
+
+    // constArgs() hands the constant operands over once; the layer owns them from here.
+    void setWeights(InputArray weights_arr, InputArray bias_arr) CV_OVERRIDE
+    {
+        Mat w = weights_arr.getMat();
+        CV_Assert(!w.empty());
+        widenToFP32(w);
+        weights = w;
+        wshape0 = shape(w);
+        ownsWeights = true;
+        // A recycled address would compare equal and skip the repack.
+        last_packed_blob_data = nullptr;
+
+        Mat b = bias_arr.getMat();
+        if (!b.empty()) {
+            widenToFP32(b);
+            bias = b;
+            ownsBias = true;
         }
     }
 
@@ -116,8 +141,22 @@ public:
 
 
 
-    LayerGemmOpMode getOpMode(size_t n_inputs, size_t n_blobs) const {
-        if (n_blobs == 0) return LayerGemmOpMode::noblob;
+    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    const Mat& constBias() const CV_OVERRIDE { return bias; }
+
+    // wshape0 and the ownership flags survive, as they do after packing.
+    void releaseConstWeights() CV_OVERRIDE
+    {
+        weights.release();
+        bias.release();
+    }
+
+    //! Stays correct after finalize() has packed and dropped the weight.
+    size_t numConsts() const { return (size_t)ownsWeights + (size_t)ownsBias; }
+
+    LayerGemmOpMode getOpMode(size_t n_inputs) const {
+        size_t n_consts = numConsts();
+        if (n_consts == 0) return LayerGemmOpMode::noblob;
         if (n_inputs == 3) return LayerGemmOpMode::noblob ; // if all inputs are given, then no blobs are used
         if (n_inputs == 2) {
             if (have_bias) {
@@ -128,16 +167,16 @@ public:
                     return LayerGemmOpMode::blobC;
                 return LayerGemmOpMode::blobC;
             } else {
-                if (n_blobs == 1)
+                if (n_consts == 1)
                     // 2 inputs, no bias => input[1] is B
                     return LayerGemmOpMode::noblob;
-                if (n_blobs == 2)
+                if (n_consts == 2)
                     return LayerGemmOpMode::blobC;
             }
         }
         if (n_inputs == 1) {
             // only A is given per input
-            if (n_blobs == 2)
+            if (n_consts == 2)
                 return LayerGemmOpMode::blobBC;
             else
                 return LayerGemmOpMode::blobB;
@@ -145,21 +184,23 @@ public:
         CV_Error(Error::StsError, "DNN/Gemm: could not derive OP mode");
     }
 
+    // finalize() drops B once it is packed, so its shape has to outlive it
+    MatShape constBShape() const { return wshape0; }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        int num_inputs = static_cast<int>(inputs.size() + blobs.size());
+        int num_inputs = static_cast<int>(inputs.size() + numConsts());
 
         CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
         CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
 
-        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
+        LayerGemmOpMode mode = getOpMode(inputs.size());
 
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0];
-        const auto shape_B =  constB(mode) ? shape(blobs[0]) : inputs[1];
+        const auto shape_B =  constB(mode) ? constBShape() : inputs[1];
         // flatten_a=false is only produced by the in-graph MatMul -> Gemm rewrite, and ONNX
         // MatMul does accept a rank-1 A: it is promoted to (1, K) and the leading 1 is
         // squeezed from the result again, so Y is (N,). Handle that as (1, K) here instead of
@@ -184,7 +225,7 @@ public:
 
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
         if (have_bias) {
-            const auto shape_C = constC(mode) ? shape(blobs.back()) : inputs.back();
+            const auto shape_C = constC(mode) ? shape(bias) : inputs.back();
 
             auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
@@ -230,9 +271,9 @@ public:
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_Assert(!inputs.empty());
-        LayerGemmOpMode mode_ = getOpMode(inputs.size(), blobs.size());
+        LayerGemmOpMode mode_ = getOpMode(inputs.size());
         const auto shape_A = inputs[0];
-        const auto shape_B = constB(mode_) ? shape(blobs[0]) : inputs[1];
+        const auto shape_B = constB(mode_) ? constBShape() : inputs[1];
         int M = trans_a ? shape_A.back()
                         : (shape_A.size() >= 2 ? shape_A[shape_A.size() - 2] : 1);
         int K = trans_a ? shape_A[shape_A.size() - 2] : shape_A.back();
@@ -302,10 +343,10 @@ public:
         if (inputs[0].depth() == CV_64F)
             return;
 
-        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
+        LayerGemmOpMode mode = getOpMode(inputs.size());
 
-        // pack B if it is const
-        if (constB(mode) && blobs[0].data != last_packed_blob_data) {
+        // pack B if it is const; an already-released B stays released, it has nothing left to pack
+        if (constB(mode) && !weights.empty() && weights.data != last_packed_blob_data) {
             packed_B.clear();
             packed_B.shrink_to_fit();
             thin_packed_B.clear();
@@ -326,7 +367,7 @@ public:
                 const int ma = shape_A.size() >= 2 ? shape_A[shape_A.size() - 2] : 1;
                 const int M  = shape_Y.size() >= 2 ? shape_Y[shape_Y.size() - 2] : 1;
                 const int K  = trans_a ? ma : na;
-                const Mat& Bmat = blobs[0];
+                const Mat& Bmat = weights;
                 const int ldb = Bmat.size[Bmat.dims - 1];
                 const size_t packed_bytes = mlasSgemmPackBSize(trans_a, trans_b, N, K);
                 if (packed_bytes > 0 && packed_bytes <= static_cast<size_t>(INT_MAX)) {
@@ -345,34 +386,63 @@ public:
             }
 #endif
             if (!mlas_packed) {
-                fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-
-                if (!trans_a && blobs[0].type() == CV_32F) {
+                // forward() prefers thin_packed_B whenever it is non-empty, so a generic pack
+                // built beside it would be a second N*K copy of B that no kernel ever loads.
+                if (!trans_a && weights.type() == CV_32F) {
                     std::vector<Mat> outputs;
                     outputs_arr.getMatVector(outputs);
                     if (!outputs.empty()) {
                         const auto &Y = outputs[0];
                         const auto shape_Y = shape(Y);
                         const int N = shape_Y.back();
-                        const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
+                        const int K = trans_b ? weights.size[1] : weights.size[0];
                         const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
                                                         : (int)(Y.total() / (size_t)N);
                         if (fastGemmThinEligible(rows_thin, N, K)) {
                             thin_packed_B.resize(fastGemmThinPackBSize(N, K));
                             const size_t ldb_K = trans_b ? 1 : N;
                             const size_t ldb_N = trans_b ? K : 1;
-                            fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
+                            fastGemmThinPackB(N, K, weights.ptr<const float>(),
                                               ldb_K, ldb_N, thin_packed_B.data());
                         }
                     }
                 }
+                if (thin_packed_B.empty())
+                    fastGemmPackB(weights, packed_B, trans_b, opt);
             }
 
-            last_packed_blob_data = blobs[0].data;
+            last_packed_blob_data = weights.data;
+        }
+
+        // A layer built outside a Net holds the only copy of B, and so does one on the legacy
+        // execution path, whose OpenVINO/Vulkan/CANN arms read it after finalize().
+        Net::Impl* netimpl = getNetImpl(this);
+        const bool ownedByGraph = netimpl && netimpl->mainGraph;
+        bool keepForCuda = false;
+#ifdef HAVE_CUDA
+        // initCUDA() reads B after finalize(), so a net targeting CUDA keeps it.
+        keepForCuda = ownedByGraph && netimpl->preferableBackend == DNN_BACKEND_CUDA &&
+                      supportBackend(DNN_BACKEND_CUDA);
+#endif
+
+        bool packed_ready = !packed_B.empty() || !thin_packed_B.empty();
+#ifdef HAVE_MLAS
+        packed_ready = packed_ready || packed_B_mlas_N > 0;
+#endif
+
+        // The packed copy is what the kernels read from here on; the original is dead weight.
+        // A net moved off CUDA frees B on its next finalize.
+        if (constB(mode) && !weights.empty() && !keepForCuda && ownedByGraph &&
+            weights.type() == CV_32F && packed_ready) {
+            weights.release();
+            // A recycled address would compare equal and skip the repack.
+            last_packed_blob_data = nullptr;
+            // Only Gemm has a registered CUDA exec, so only its weight can be asked for again.
+            netimpl->weightsReleased = true;
         }
 
         if (constC(mode) && flatten_a) {
-            const auto &C = blobs.back();
+            const auto &C = bias;
 
             std::vector<Mat> outputs;
             outputs_arr.getMatVector(outputs);
@@ -411,7 +481,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
+        LayerGemmOpMode mode = getOpMode(inputs.size());
 
         if (inputs[0].depth() == CV_64F) {
             forwardDouble(inputs, outputs, mode);
@@ -441,7 +511,7 @@ public:
             float *ptr_y = Y.ptr<float>();
             if (flatten_a) {
                 if (!constC(mode) || broadcast_C.empty()) {
-                    broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
+                    broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : bias));
                 }
                 int step = M * N;
                 CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
@@ -461,7 +531,7 @@ public:
                 // ND output: tile the (1D / scalar) bias across all `rows`
                 // rows, scaled by beta. The rewriter restricts bias to scalar
                 // or 1D length-N; assert here.
-                const Mat& C = (inputs.size() >= 3) ? inputs.back() : blobs.back();
+                const Mat& C = (inputs.size() >= 3) ? inputs.back() : bias;
                 const float* c = C.ptr<const float>();
                 if (C.total() == 1) {
                     float val = beta * (*c);
@@ -532,11 +602,11 @@ public:
                 }
             }
 #endif
-            CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             if (!thin_packed_B.empty()) {
                 fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
                              thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
             } else {
+                CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
                 fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
             }
         } else {
@@ -589,7 +659,7 @@ public:
     {
         const Mat &A = inputs[0];
         Mat &Y = outputs[0];
-        const Mat &B = constB(mode) ? blobs[0] : inputs[1];
+        const Mat &B = constB(mode) ? weights : inputs[1];
 
         CV_CheckTypeEQ(B.depth(), CV_64F, "DNN/Gemm: B must be CV_64F to match A");
         CV_Assert(A.isContinuous() && Y.isContinuous());
@@ -608,7 +678,7 @@ public:
 
         const bool haveC = constC(mode) || inputs.size() >= 3;
         if (haveC) {
-            const Mat& C = (inputs.size() >= 3) ? inputs.back() : blobs.back();
+            const Mat& C = (inputs.size() >= 3) ? inputs.back() : bias;
             CV_CheckTypeEQ(C.depth(), CV_64F, "DNN/Gemm: C must be CV_64F to match A");
             fillBroadcastCDouble(rows, N, C, (double)beta, Yview);
             cv::gemm(Aview, B, (double)alpha, Yview, 1.0, Yview, flags);
@@ -627,8 +697,9 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<cuda::GpuMatND> inputs;
         inputs_.getGpuMatNDVector(inputs);
-        auto B = blobs[0];
-        auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
+        auto B = weights;
+        CV_CheckFalse(B.empty(), "DNN/Gemm/Cuda: input B (weight) was released and not retained");
+        auto C = have_bias && const_C ? bias : Mat(); // in most cases C is constant
 
         if (!trans_b)
             cv::transpose(B, B);
@@ -658,7 +729,7 @@ public:
         op->update_input_desc_x1(*desc_x1);
         // set inputs : x2
         if (const_B) {
-            auto B = blobs[0];
+            auto B = weights;
             auto op_const_B = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_w", name.c_str()));
             op->set_input_x2_by_name(*(op_const_B->getOp()), "y");
             op->update_input_desc_x2(*(op_const_B->getTensorDesc()));
@@ -672,7 +743,7 @@ public:
         }
         // set inputs : bias
         // TODO: clearify if the bias needs to be constant here
-        auto mat_C = have_bias && const_C ? blobs.back() : Mat::zeros(1, 1, CV_32F);
+        auto mat_C = have_bias && const_C ? bias : Mat::zeros(1, 1, CV_32F);
         auto shape_C = shape(mat_C);
         if (real_ndims_C == 1) {
             int dim = static_cast<int>(mat_C.total());
@@ -696,7 +767,7 @@ public:
         ov::Output<ov::Node> nodeA = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         ov::Output<ov::Node> nodeB;
         if (const_B)
-            nodeB = std::make_shared<ov::op::v0::Constant>(ov::element::f32, getShape(blobs[0]), blobs[0].data);
+            nodeB = std::make_shared<ov::op::v0::Constant>(ov::element::f32, getShape(weights), weights.data);
         else
             nodeB = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
@@ -724,8 +795,8 @@ public:
         ov::Output<ov::Node> nodeC;
         if (const_C)
         {
-            auto shape_C = blobs.back().total() == blobs.back().size[0] ? ov::Shape{blobs.back().total()} : getShape(blobs.back());
-            nodeC = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape_C, blobs.back().data);
+            auto shape_C = bias.total() == bias.size[0] ? ov::Shape{bias.total()} : getShape(bias);
+            nodeC = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape_C, bias.data);
         }
         else
         {
@@ -758,7 +829,7 @@ public:
 
         std::vector<Mat> vkBlobs;
         if (const_B) {
-            vkBlobs.push_back(blobs[0]);
+            vkBlobs.push_back(weights);
         }
 
         auto wrapper_A = inputs[0].dynamicCast<VkComBackendWrapper>();
@@ -782,10 +853,15 @@ private:
     int packed_B_mlas_N = 0;
     int packed_B_mlas_K = 0;
 #endif
+    Mat weights;                 //!< constant B; released once packed, ownsWeights survives
+    Mat bias;                    //!< constant C
+    bool ownsWeights = false;
+    bool ownsBias = false;
     std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;
     const uchar* last_packed_blob_data = nullptr;
+    MatShape wshape0;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {

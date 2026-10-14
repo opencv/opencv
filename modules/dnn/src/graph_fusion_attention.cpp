@@ -60,15 +60,33 @@ struct ModelFusionAttention
         return dynamic_cast<MatMulLayer*>(prog[idx].get()) != nullptr;
     }
 
+    static Mat projWeight(const Ptr<LayerInfo>& l)
+    {
+        if (const GemmLayer* g = dynamic_cast<const GemmLayer*>(l.get()))
+            return g->constWeights();
+        if (const MatMulLayer* m = dynamic_cast<const MatMulLayer*>(l.get()))
+            return m->constWeights();
+        return Mat();
+    }
+
+    static Mat projBias(const Ptr<LayerInfo>& l)
+    {
+        if (const GemmLayer* g = dynamic_cast<const GemmLayer*>(l.get()))
+            return g->constBias();
+        if (const MatMulLayer* m = dynamic_cast<const MatMulLayer*>(l.get()))
+            return m->constBias();
+        return Mat();
+    }
+
     static bool isProjCandidate(const Ptr<LayerInfo>& l)
     {
-        if (l->blobs.empty() || l->inputs.size() != 1) return false;
+        if (projWeight(l).empty() || l->inputs.size() != 1) return false;
         if (dynamic_cast<MatMulLayer*>(l.get()))
             return true;
         GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
         if (!g) return false;
         if (g->trans_a || g->alpha != 1.f) return false;
-        if (l->blobs.size() == 2 && g->beta != 1.f) return false;
+        if (!projBias(l).empty() && g->beta != 1.f) return false;
         return true;
     }
 
@@ -76,7 +94,7 @@ struct ModelFusionAttention
     // layout, transposing if the source is a Gemm with trans_b.
     static Mat getProjWeight(const Ptr<LayerInfo>& l)
     {
-        const Mat& W = l->blobs[0];
+        const Mat W = projWeight(l);
         GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
         if (g && g->trans_b) {
             Mat Wt;
@@ -328,12 +346,13 @@ struct ModelFusionAttention
 
         Arg cur = prog[qkv_matmul_idx]->outputs[0];
 
-        // Optional bias: separate Add op or Gemm's blobs[1].
+        // Optional bias: separate Add op or the layer's own constant bias.
         int add_idx = -1;
         Mat bias_mat;
         bool has_bias = false;
-        if (prog[qkv_matmul_idx]->blobs.size() >= 2) {
-            bias_mat = prog[qkv_matmul_idx]->blobs[1];
+        Mat qkv_bias = projBias(prog[qkv_matmul_idx]);
+        if (!qkv_bias.empty()) {
+            bias_mat = qkv_bias;
             has_bias = bias_mat.total() == (size_t)total_hidden && bias_mat.type() == CV_32F;
             if (!has_bias) return false;
         }
@@ -467,10 +486,11 @@ struct ModelFusionAttention
                 collectShapeChain(prog, it->second, extra_ops);
         }
 
-        // W is already laid out as [Q|K|V] along the output dim.
-        Mat W_qkv = W.clone();
+        // W is already laid out as [Q|K|V] along the output dim and nothing writes it, so the
+        // fused weight can alias it.
+        Mat W_qkv = W;
         Mat bias_qkv;
-        if (has_bias) bias_qkv = bias_mat.clone();
+        if (has_bias) bias_qkv = bias_mat;
 
         // Attention `scale` is the pre-softmax divisor; Q was multiplied by
         // q_scale, so scale = 1/q_scale.
@@ -484,11 +504,11 @@ struct ModelFusionAttention
         attn_params.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_sizes, 3));
         attn_params.set("scale", param_scale);
         attn_params.set("output_ndims", 3);
-        attn_params.blobs.push_back(W_qkv);
-        if (has_bias) attn_params.blobs.push_back(bias_qkv);
-
         Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(attn_params.type, attn_params);
         CV_Assert(attn_layer);
+        AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+        CV_Assert(attn);
+        attn->setWeights(W_qkv, has_bias ? bias_qkv : Mat());
         Arg shared_input = prog[qkv_matmul_idx]->inputs[0];
         attn_layer->inputs  = { shared_input };
         attn_layer->outputs = prog[out_reshape_idx]->outputs;
@@ -511,7 +531,7 @@ struct ModelFusionAttention
         if (!removalIsSelfContained(prog, to_remove, attn_out_args))
             return false;
 
-        for (int op : to_remove) removed_ops.insert(op);
+        dropReplacedOps(prog, to_remove, removed_ops);
         const int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
         return true;
@@ -645,7 +665,7 @@ struct ModelFusionAttention
                 }
             }
             if (!got_bias || !got_runtime2) return -1;
-            out_bias = netimpl->argTensor(bias_arg).clone();
+            out_bias = netimpl->argTensor(bias_arg);
             ops_consumed.insert(next_idx);
             mm_idx = stepProducer(matmul_out_arg);
         } else {
@@ -654,12 +674,12 @@ struct ModelFusionAttention
 
         if (mm_idx < 0 || !prog[mm_idx]) return -1;
         if (!dynamic_cast<MatMulLayer*>(prog[mm_idx].get())) return -1;
-        if (prog[mm_idx]->blobs.empty()) return -1;
+        if (projWeight(prog[mm_idx]).empty()) return -1;
         if (prog[mm_idx]->inputs.size() != 1) return -1;
-        out_W = prog[mm_idx]->blobs[0].clone();
+        out_W = projWeight(prog[mm_idx]);
         // Folded MatMul carries bias as a second blob (real_ndims_C >= 1).
-        if (out_bias.empty() && prog[mm_idx]->blobs.size() >= 2)
-            out_bias = prog[mm_idx]->blobs.back().clone();
+        if (out_bias.empty())
+            out_bias = projBias(prog[mm_idx]);
         return mm_idx;
     }
 
@@ -682,7 +702,7 @@ struct ModelFusionAttention
         int qk_matmul_idx = it->second;
         if (qk_matmul_idx < 0 || !prog[qk_matmul_idx]) return false;
         if (!dynamic_cast<MatMulLayer*>(prog[qk_matmul_idx].get())) return false;
-        if (!prog[qk_matmul_idx]->blobs.empty()) return false;
+        if (!projWeight(prog[qk_matmul_idx]).empty()) return false;
         if (prog[qk_matmul_idx]->inputs.size() != 2) return false;
         Arg q_arg = prog[qk_matmul_idx]->inputs[0];
         Arg k_arg = prog[qk_matmul_idx]->inputs[1];
@@ -691,7 +711,7 @@ struct ModelFusionAttention
         int av_matmul_idx = singleConsumer(sm_out);
         if (av_matmul_idx < 0 || !prog[av_matmul_idx]) return false;
         if (!dynamic_cast<MatMulLayer*>(prog[av_matmul_idx].get())) return false;
-        if (!prog[av_matmul_idx]->blobs.empty()) return false;
+        if (!projWeight(prog[av_matmul_idx]).empty()) return false;
         if (prog[av_matmul_idx]->inputs.size() != 2) return false;
         Arg v_arg;
         bool got_v = false;
@@ -784,12 +804,12 @@ struct ModelFusionAttention
         attn_params.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_sizes, 3));
         attn_params.set("scale", param_scale);
         attn_params.set("output_ndims", 3);
-        attn_params.blobs.push_back(W_qkv);
-        if (!bias_qkv.empty()) attn_params.blobs.push_back(bias_qkv);
-
         Ptr<LayerInfo> attn_layer =
             LayerFactory::createLayerInstance(attn_params.type, attn_params);
         if (!attn_layer) return false;
+        AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+        if (!attn) return false;
+        attn->setWeights(W_qkv, bias_qkv);
         attn_layer->inputs  = { shared_input };
         attn_layer->outputs = prog[out_r3d]->outputs;
         attn_layer->netimpl = netimpl;
@@ -806,7 +826,7 @@ struct ModelFusionAttention
         if (!removalIsSelfContained(prog, to_remove, attn_out_args))
             return false;
 
-        for (int op : to_remove) removed_ops.insert(op);
+        dropReplacedOps(prog, to_remove, removed_ops);
         int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
         replacements.push_back({insert_pos, attn_layer});
         return true;
@@ -831,6 +851,22 @@ struct ModelFusionAttention
             }
         }
         return true;
+    }
+
+    void dropReplacedOps(const vector<Ptr<LayerInfo>>& prog, const std::set<int>& to_remove,
+                         std::set<int>& removed_ops) const
+    {
+        for (int op : to_remove) {
+            removed_ops.insert(op);
+            // The fused weight is built, so these sources are duplicates; dropping here
+            // rather than at setProg() bounds the live copy to one block.
+            if (op < 0 || op >= (int)prog.size() || !prog[op])
+                continue;
+            if (GemmLayer* g = dynamic_cast<GemmLayer*>(prog[op].get()))
+                g->releaseConstWeights();
+            else if (MatMulLayer* m = dynamic_cast<MatMulLayer*>(prog[op].get()))
+                m->releaseConstWeights();
+        }
     }
 
     bool fuseGraph(Ptr<Graph>& graph)
@@ -890,7 +926,7 @@ struct ModelFusionAttention
 
                 bool shapes_ok = true;
                 for (int k = 0; k < 3; k++) {
-                    const Mat& w = prog[indices[k]]->blobs[0];
+                    const Mat w = projWeight(prog[indices[k]]);
                     if (w.dims != 2) { shapes_ok = false; break; }
                 }
                 if (!shapes_ok) continue;
@@ -1089,11 +1125,11 @@ struct ModelFusionAttention
                     }
 
                     Mat bias_qkv;
-                    bool has_bias = prog[indices[q_slot]]->blobs.size() >= 2;
+                    const Mat bq = projBias(prog[indices[q_slot]]);
+                    const Mat bk = projBias(prog[indices[k_slot]]);
+                    const Mat bv = projBias(prog[indices[v_slot]]);
+                    bool has_bias = !bq.empty() && !bk.empty() && !bv.empty();
                     if (has_bias) {
-                        const Mat& bq = prog[indices[q_slot]]->blobs[1];
-                        const Mat& bk = prog[indices[k_slot]]->blobs[1];
-                        const Mat& bv = prog[indices[v_slot]]->blobs[1];
                         int bias_total = (int)(bq.total() + bk.total() + bv.total());
                         bias_qkv.create(1, &bias_total, CV_32F);
                         float* dst = bias_qkv.ptr<float>();
@@ -1127,13 +1163,12 @@ struct ModelFusionAttention
                     attn_params.set("scale", param_scale);
                     attn_params.set("output_ndims", 3);
 
-                    attn_params.blobs.push_back(W_qkv);
-                    if (has_bias)
-                        attn_params.blobs.push_back(bias_qkv);
-
                     Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(
                         attn_params.type, attn_params);
                     CV_Assert(attn_layer);
+                    AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+                    CV_Assert(attn);
+                    attn->setWeights(W_qkv, has_bias ? bias_qkv : Mat());
 
                     Arg shared_input = prog[indices[0]]->inputs[0];
                     if (has_mask)
@@ -1178,8 +1213,7 @@ struct ModelFusionAttention
                     if (!removalIsSelfContained(prog, to_remove, attn_out_args))
                         continue;
 
-                    for (int op : to_remove)
-                        removed_ops.insert(op);
+                    dropReplacedOps(prog, to_remove, removed_ops);
 
                     int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
                     attention_replacements_.push_back({insert_pos, attn_layer});
