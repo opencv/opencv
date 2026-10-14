@@ -76,9 +76,8 @@ void registerCudaCommonExecs()
 }
 
 
-void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
+void Net::Impl::initCUDABackend()
 {
-    CV_UNUSED(blobsToKeep_);
     CV_Assert(preferableBackend == DNN_BACKEND_CUDA);
 
     if (!cudaInfo) /* we need to check only once */

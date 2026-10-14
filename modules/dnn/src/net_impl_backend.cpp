@@ -255,7 +255,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     else if (preferableBackend == DNN_BACKEND_CUDA)
     {
 #ifdef HAVE_CUDA
-        initCUDABackend(blobsToKeep_);
+        initCUDABackend();
 #else
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of CUDA/CUDNN");
 #endif

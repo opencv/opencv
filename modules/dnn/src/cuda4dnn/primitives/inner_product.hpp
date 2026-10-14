@@ -25,8 +25,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class InnerProductOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         InnerProductOp(csl::Stream stream_, csl::cublas::Handle handle, std::size_t axis, const Mat& weights, const Mat& bias)
             : stream(std::move(stream_)), cublasHandle(std::move(handle)), axis{ axis }
         {

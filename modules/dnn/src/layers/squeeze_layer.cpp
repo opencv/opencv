@@ -72,7 +72,7 @@ public:
             CV_Assert(axes.empty()); // if we have a dedicated 'axes' input,
                                      // we should not have 'axes' attribute at the same time
             Net::Impl* netimpl_ = getNetImpl(this);
-            Mat axesTensor = netimpl_->hostTensor(this->inputs[1]);
+            Mat axesTensor = netimpl_->argTensor(this->inputs[1]);
             tensorToIntVec(axesTensor, tempAxes);
             axes_ = &tempAxes;
         }

@@ -29,8 +29,9 @@ struct ConstArgs
     void unuse(Arg inp)
     {
         CV_Assert(usecounts[inp.idx] > 0);
-        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp))
-            netimpl->__tensors__[inp.idx].release();
+        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
+            netimpl->__tensors__[inp.idx] = Mat(); // deallocate unused tensor
+        }
     }
 
     void processGraph(Ptr<Graph>& graph)
@@ -73,15 +74,15 @@ struct ConstArgs
             if (tail_const) {
                 if (conv) {
                     // convolution with constant weights and bias
-                    conv->setWeights(netimpl->hostTensor(inputs[1]),
-                                     ninputs > 2 ? netimpl->hostTensor(inputs[2]) : Mat(),
+                    conv->setWeights(netimpl->__tensors__[inputs[1]],
+                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
                                      netimpl->defaultC0, netimpl->accuracy);
                     conv->inputs.resize(1);
                     unuse_tail = true;
                 } else if (deconv) {
                     // deconvolution with constant weights and bias
-                    deconv->setWeights(netimpl->hostTensor(inputs[1]),
-                                       ninputs > 2 ? netimpl->hostTensor(inputs[2]) : Mat(),
+                    deconv->setWeights(netimpl->__tensors__[inputs[1]],
+                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
                                        netimpl->defaultC0, netimpl->accuracy);
                     deconv->inputs.resize(1);
                     unuse_tail = true;
@@ -89,7 +90,7 @@ struct ConstArgs
                     // batch norm with constant parameters
                     unuse_tail = true;
                 } else if (prelu && ninputs == 2) {
-                    prelu->setSlope(netimpl->hostTensor(inputs[1]));
+                    prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
                     prelu->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {

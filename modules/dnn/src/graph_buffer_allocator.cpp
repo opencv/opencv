@@ -203,7 +203,7 @@ struct BufferAllocator
         netimpl->bufidxs = bufidxs;
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
-            netimpl->buffers[i].release();
+            netimpl->buffers[i] = Mat();
     }
 
     void assign(const Ptr<Graph>& graph)

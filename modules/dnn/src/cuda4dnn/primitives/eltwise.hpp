@@ -51,8 +51,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class EltwiseOp final : public EltwiseOpBase {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         EltwiseOp(csl::Stream stream_, EltwiseOpType op_, std::vector<float> coeffs_)
             : EltwiseOpBase(std::move(stream_), op_, std::move(coeffs_))
         {

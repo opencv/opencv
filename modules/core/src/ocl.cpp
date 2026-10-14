@@ -3473,8 +3473,7 @@ struct Kernel::Impl
         {
             if( u[i] )
             {
-                if( CV_XADD(&u[i]->urefcount, -1) == 1 &&
-                    (u[i]->refcount == 0 || u[i]->originalUMatData != NULL) )
+                if( CV_XADD(&u[i]->urefcount, -1) == 1 )
                 {
                     u[i]->flags |= UMatData::ASYNC_CLEANUP;
                     try
@@ -5968,72 +5967,68 @@ public:
 
         CV_Assert(u->handle != 0);
 
+        UMatDataAutoLock autolock(u);
+
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        cl_int retval = 0;
+        if( !u->copyOnMap() && u->deviceMemMapped() )
         {
-            UMatDataAutoLock autolock(u);
-
-            cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-            cl_int retval = 0;
-            if( !u->copyOnMap() && u->deviceMemMapped() )
-            {
-                CV_Assert(u->data != NULL);
+            CV_Assert(u->data != NULL);
 #ifdef HAVE_OPENCL_SVM
-                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+            {
+                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
                 {
-                    if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
-                    {
-                        Context& ctx = Context::getDefault();
-                        const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
-                        CV_DbgAssert(svmFns->isValid());
+                    Context& ctx = Context::getDefault();
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
 
-                        CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) != 0);
-                        {
-                            CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
-                            cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle,
-                                    0, NULL, NULL);
-                            CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
-                            clFinish(q);
-                            u->allocatorFlags_ &= ~svm::OPENCL_SVM_BUFFER_MAP;
-                        }
+                    CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) != 0);
+                    {
+                        CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                        cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle,
+                                0, NULL, NULL);
+                        CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                        clFinish(q);
+                        u->allocatorFlags_ &= ~svm::OPENCL_SVM_BUFFER_MAP;
                     }
-                    if (u->refcount == 0)
-                        u->data = 0;
-                    u->markDeviceCopyObsolete(false);
-                    u->markHostCopyObsolete(true);
                 }
-                else
-#endif
                 if (u->refcount == 0)
-                {
-                    CV_Assert(u->mapcount-- == 1);
-                    retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0);
-                    CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, u->data, (long long int)u->size).c_str());
-                    if (Device::getDefault().isAMD())
-                    {
-                        // required for multithreaded applications (see stitching test)
-                        CV_OCL_DBG_CHECK(clFinish(q));
-                    }
-                    u->markDeviceMemMapped(false);
                     u->data = 0;
-                    u->markDeviceCopyObsolete(false);
-                    u->markHostCopyObsolete(true);
-                }
+                u->markDeviceCopyObsolete(false);
+                u->markHostCopyObsolete(true);
+                return;
             }
-            else if( u->copyOnMap() && u->deviceCopyObsolete() )
-            {
-                AlignedDataPtr<true, false> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
-#ifdef HAVE_OPENCL_SVM
-                CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
 #endif
-                retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                    0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
-                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
-                        (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
+            if (u->refcount == 0)
+            {
+                CV_Assert(u->mapcount-- == 1);
+                retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, u->data, (long long int)u->size).c_str());
+                if (Device::getDefault().isAMD())
+                {
+                    // required for multithreaded applications (see stitching test)
+                    CV_OCL_DBG_CHECK(clFinish(q));
+                }
+                u->markDeviceMemMapped(false);
+                u->data = 0;
                 u->markDeviceCopyObsolete(false);
                 u->markHostCopyObsolete(true);
             }
         }
-        if (u->urefcount == 0 && u->refcount == 0)
-            deallocate(u);
+        else if( u->copyOnMap() && u->deviceCopyObsolete() )
+        {
+            AlignedDataPtr<true, false> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
+#ifdef HAVE_OPENCL_SVM
+            CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
+#endif
+            retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
+                    (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
+            u->markDeviceCopyObsolete(false);
+            u->markHostCopyObsolete(true);
+        }
     }
 
     bool checkContinuous(int dims, const size_t sz[],

@@ -22,8 +22,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     struct BaseOp : public CUDABackendNode
     {
     protected:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         void forward(
             const std::vector<UMat>& inputs,
             const std::vector<UMat>& outputs,

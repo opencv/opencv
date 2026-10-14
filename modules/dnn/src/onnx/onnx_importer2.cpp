@@ -964,8 +964,6 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
            popRenames(local_renames);
            return Ptr<Graph>();
         }
-        if (mainGraph_ && netimpl->args.at(arg.idx).type >= 0)
-            netimpl->declaredOutputTypes[arg.idx] = netimpl->args.at(arg.idx).type;
         outputs.push_back(arg);
     }
 
@@ -1347,7 +1345,7 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
     data.kind = DNN_ARG_CONST;
     data.type = m.type();
     data.shape = m.shape();
-    netimpl->setArgTensor(out, m);
+    netimpl->__tensors__.at(out.idx) = m;
 }
 
 // BUG: https://github.com/opencv/opencv/issues/26308
@@ -1967,7 +1965,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     Arg scalesArg = node_inputs[scalesInputId];
     Mat scales;
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
-        scales = netimpl->hostTensor(scalesArg);
+        scales = netimpl->argTensor(scalesArg);
 
     if (interp_mode == "tf_crop_and_resize")
     {
@@ -1981,7 +1979,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
 
         if (staticRoi && (!hasSizes || staticSizes))
         {
-            Mat roiMat = netimpl->hostTensor(roiArg), roiF;
+            Mat roiMat = netimpl->argTensor(roiArg), roiF;
             CV_CheckEQ(roiMat.total(), (size_t)4,
                       "ONNX/Resize: ROI must have 4 values [y1,x1,y2,x2]");
             roiMat.convertTo(roiF, CV_32F);
@@ -1992,7 +1990,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
 
             if (hasSizes && staticSizes)
             {
-                Mat szMat = netimpl->hostTensor(sizesArg), sz;
+                Mat szMat = netimpl->argTensor(sizesArg), sz;
                 CV_CheckEQ(szMat.total(), (size_t)4,
                           "ONNX/Resize: sizes must have 4 values [N,C,H,W]");
                 szMat.convertTo(sz, CV_32S);
@@ -2020,12 +2018,12 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
             // sizes may reach a const through Identity node(s); adopt only rank-3 (NCW),
             // otherwise unsupported today, so no rank-4 NCHW path can regress.
             Arg resolved = resolveConstThroughIdentity(sizesArg);
-            if (netimpl->isConstArg(resolved) && netimpl->argTensor(resolved).shape().total() == 3)
+            if (netimpl->isConstArg(resolved) && netimpl->argTensor(resolved).total() == 3)
                 sizesArg = resolved;
         }
         if (netimpl->isConstArg(sizesArg))
         {
-            Mat shapes_ = netimpl->hostTensor(sizesArg), shapes;
+            Mat shapes_ = netimpl->argTensor(sizesArg), shapes;
             size_t nsz = shapes_.total();
             CV_Check(nsz, nsz == 4 || nsz == 3, "ONNX/Resize: sizes must be NCHW (4) or NCW (3)");
             shapes_.convertTo(shapes, CV_32S);

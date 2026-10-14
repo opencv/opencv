@@ -30,7 +30,7 @@ public:
         for (int i = 0; i < dims; i++)
             total *= (size_t)sizes[i];
 
-        if (step && dims > 0)
+        if (step)
         {
             step[dims - 1] = elemSize;
             for (int i = dims - 2; i >= 0; i--)
@@ -106,22 +106,16 @@ public:
             cudaSafeCall(cudaMemcpy(u->handle, u->data, u->size, cudaMemcpyHostToDevice));
             u->markDeviceCopyObsolete(false);
         }
-        if (u->urefcount == 0 && u->refcount == 0)
-            deallocate(u);
     }
 
     void download(UMatData* u, void* dstptr, int dims, const size_t sz[],
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dststep[]) const CV_OVERRIDE
     {
-        if (!u || !dstptr)
+        if (!u || !u->handle || !dstptr)
             return;
-        if (u->deviceCopyObsolete() && u->data)
-            copyPlanes((uchar*)u->data, srcofs, srcstep, (uchar*)dstptr, 0, dststep,
-                       dims, sz, cudaMemcpyHostToHost);
-        else if (u->handle)
-            copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, 0, dststep,
-                       dims, sz, cudaMemcpyDeviceToHost);
+        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, 0, dststep,
+                   dims, sz, cudaMemcpyDeviceToHost);
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],

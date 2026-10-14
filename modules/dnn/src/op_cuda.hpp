@@ -320,47 +320,28 @@ namespace cv { namespace dnn {
         return Ptr<BackendNode>(new NodeType<bool>(std::forward<Args>(args)...));
     }
 
-    /** @brief returns a UMat header that shares `buf`'s device memory but views only the
-     * `shape`-sized slice starting `offsetElems` elements in.
-     *
-     * Used to give several backend wrappers their own view into one larger, contiguous
-     * pre-allocated buffer (e.g. classic-engine concat fusion). `buf` must be contiguous.
-     */
+    static inline void checkCudaAllocated(const UMat& u)
+    {
+        if (u.u && u.u->currAllocator != cv::cuda::getCudaAllocator())
+            CV_Error(Error::GpuApiCallError, "DNN/CUDA: cannot allocate a device tensor");
+    }
+
     static inline UMat sliceUMat(const UMat& buf, const MatShape& shape, std::size_t offsetElems)
     {
         std::size_t total = shape.total();
-        if (offsetElems == 0 && total == buf.total())
+        if (total == 0)
             return buf;
 
-        if (buf.dims <= 2)
-        {
-            UMat flat = buf.reshape(1, (int)buf.total());
-            UMat sub = flat.rowRange((int)offsetElems, (int)(offsetElems + total));
-            return sub.reshape(1, shape);
-        }
+        std::size_t bufTotal = buf.total() * buf.channels();
+        CV_Assert(buf.isContinuous());
+        CV_Assert(offsetElems + total <= bufTotal);
+        if (offsetElems == 0 && total == bufTotal)
+            return buf.reshape(1, shape);
 
-        MatShape bufShape = cv::dnn::shape(buf);
-        CV_Assert(bufShape.size() == shape.size());
-        int axis = -1;
-        for (int i = 0; i < (int)bufShape.size(); i++)
-        {
-            if (bufShape[i] != shape[i])
-            {
-                CV_Assert(axis == -1);
-                axis = i;
-            }
-        }
-        CV_Assert(axis >= 0);
-
-        std::size_t innerStride = 1;
-        for (int i = axis + 1; i < (int)bufShape.size(); i++)
-            innerStride *= (std::size_t)bufShape[i];
-        CV_Assert(innerStride > 0 && offsetElems % innerStride == 0);
-        int start = (int)(offsetElems / innerStride);
-
-        std::vector<Range> ranges(bufShape.size(), Range::all());
-        ranges[axis] = Range(start, start + shape[axis]);
-        return UMat(buf, ranges);
+        int flatSize[] = { (int)bufTotal, 1 };
+        UMat flat = buf.reshape(1, 2, flatSize);
+        UMat sub = flat.rowRange((int)offsetElems, (int)(offsetElems + total));
+        return sub.reshape(1, shape);
     }
 
     /* base class for all CUDA backend/target wrappers */
@@ -501,20 +482,14 @@ namespace cv { namespace dnn {
             offset = 0;
 
             shared_block = std::make_shared<shared_block_type>();
+            shared_block->host_dirty = true;
+            shared_block->device_dirty = false;
 
             int deviceDepth = (hostMatDepth == CV_32F && TargetID == DNN_TARGET_CUDA_FP16) ? CV_16F : hostMatDepth;
             UMat u;
             u.allocator = cv::cuda::getCudaAllocator();
             u.fit(shape, deviceDepth);
-            if (deviceDepth == hostMatDepth)
-                m.copyTo(u);
-            else
-            {
-                // a fresh CUDA buffer is device-authoritative, so convertTo() into it would map RW and read unwritten memory
-                Mat converted;
-                m.convertTo(converted, deviceDepth);
-                converted.copyTo(u);
-            }
+            checkCudaAllocated(u);
             shared_block->boundUMat = u;
             hostMat = m;
         }
@@ -533,7 +508,10 @@ namespace cv { namespace dnn {
 
             auto numel = total(shape);
             if (numel > shared_block->boundUMat.total())
+            {
                 shared_block->boundUMat.fit(shape, shared_block->boundUMat.type());
+                checkCudaAllocated(shared_block->boundUMat);
+            }
         }
 
         static Ptr<BackendWrapper> create(Mat& m) {
@@ -545,16 +523,16 @@ namespace cv { namespace dnn {
         }
 
         void copyToHost() override {
-            // Drain the stream first; hostCopyObsolete() says nothing about in-flight kernels.
-            shared_block->stream.synchronize();
-
-            UMatData* u = shared_block->boundUMat.u;
-            if (!u || !u->hostCopyObsolete())
+            if (!shared_block->device_dirty)
                 return;
+
+            shared_block->host_dirty = false;
+            shared_block->device_dirty = false;
 
             if (!hostMat.empty())
             {
                 CV_Assert(offset == 0);
+                shared_block->stream.synchronize();
 
                 Mat& host = hostMat;
                 CV_Assert(host.isContinuous() && host.total() >= shape.total());
@@ -576,69 +554,43 @@ namespace cv { namespace dnn {
         }
 
         void setHostDirty() override {
-            if (shared_block->boundUMat.u) {
-                shared_block->boundUMat.u->markHostCopyObsolete(false);
-                shared_block->boundUMat.u->markDeviceCopyObsolete(true);
-            }
+            shared_block->device_dirty = false;
+            shared_block->host_dirty = true;
         }
 
         void copyToDevice() override {
-            UMatData* u = shared_block->boundUMat.u;
-            if (u && u->deviceCopyObsolete())
+            if (!shared_block->host_dirty)
+                return;
+
+            shared_block->host_dirty = false;
+            shared_block->device_dirty = false;
+
+            if (!hostMat.empty())
             {
-                shared_block->stream.synchronize();
-                if (!hostMat.empty())
-                {
-                    CV_Assert(offset == 0);
+                CV_Assert(offset == 0);
 
-                    const Mat& host = hostMat;
-                    CV_Assert(host.isContinuous() && host.total() >= shape.total());
+                const Mat& host = hostMat;
+                CV_Assert(host.isContinuous() && host.total() >= shape.total());
 
-                    Mat src(shape, host.depth(), host.data);
+                std::size_t total = shape.total();
+                if (total == 0)
+                    return;
 
-                    if (shape.total() == shared_block->boundUMat.total())
-                    {
-                        UMat& device = shared_block->boundUMat;
-                        if (src.depth() == device.depth())
-                            src.copyTo(device);
-                        else
-                        {
-                            Mat converted;
-                            src.convertTo(converted, device.depth());
-                            converted.copyTo(device);
-                        }
-                    }
-                    else
-                    {
-                        UMat device = sliceUMat(shared_block->boundUMat, shape, offset);
-                        CV_Assert(device.total() == shape.total());
-                        if (src.depth() != device.depth())
-                        {
-                            Mat tmp;
-                            src.convertTo(tmp, device.depth());
-                            tmp.copyTo(device);
-                        }
-                        else
-                            src.copyTo(device);
-                    }
-                }
-                u = shared_block->boundUMat.u;
-                if (u)
-                {
-                    u->markDeviceCopyObsolete(false);
-                    u->markHostCopyObsolete(false);
-                }
-                // the upload runs on the default stream; DNN's stream is non-blocking, so kernels
-                // would otherwise start reading this buffer before the transfer completes
-                CUDA4DNN_CHECK_CUDA(cudaDeviceSynchronize());
+                Mat src(shape, host.depth(), host.data);
+                Mat converted;
+                if (src.depth() != shared_block->boundUMat.depth())
+                    src.convertTo(converted, shared_block->boundUMat.depth());
+                const Mat& staged = converted.empty() ? src : converted;
+                CV_CheckEQ(staged.elemSize1(), sizeof(DEVICE_T), "host data must match the device element type");
+
+                CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(getDevicePtr(), staged.data, total * sizeof(DEVICE_T),
+                                                    cudaMemcpyHostToDevice, shared_block->stream.get()));
             }
         }
 
         void setDeviceDirty() override {
-            if (shared_block->boundUMat.u) {
-                shared_block->boundUMat.u->markDeviceCopyObsolete(false);
-                shared_block->boundUMat.u->markHostCopyObsolete(true);
-            }
+            shared_block->device_dirty = true;
+            shared_block->host_dirty = false;
         }
 
         MatShape getShape() const noexcept override { return shape; }
@@ -718,6 +670,9 @@ namespace cv { namespace dnn {
         cv::Mat hostMat;
 
         struct shared_block_type {
+            bool host_dirty;
+            bool device_dirty;
+
             cuda4dnn::csl::Stream stream;
 
             cv::UMat boundUMat;

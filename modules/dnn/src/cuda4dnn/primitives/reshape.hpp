@@ -18,8 +18,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class ReshapeOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         ReshapeOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(

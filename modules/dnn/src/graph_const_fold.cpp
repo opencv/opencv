@@ -39,10 +39,6 @@ struct ConstFolding
         size_t nargs = netimpl->args.size();
         netimpl->__tensors__.resize(nargs);
         netimpl->useCounts(usecounts);
-        for (size_t i = 1; i < nargs; i++) {
-            if (usecounts[i] == 0 && netimpl->args[i].kind == DNN_ARG_CONST)
-                netimpl->__tensors__[i].release();
-        }
         knownShapes.assign(nargs, MatShape());
         knownTypes.assign(nargs, -1);
         const std::vector<Arg>& graphInputs = netimpl->mainGraph->inputs();
@@ -54,7 +50,7 @@ struct ConstFolding
             const ArgData& adata = netimpl->args.at(inp.idx);
             if (adata.type < 0)
                 continue;
-            const HostDeviceBuffer& t = netimpl->argTensor(inp);
+            const Mat& t = netimpl->argTensor(inp);
             if (!t.empty() && t.shape() != pinned)
                 continue;
             setKnown(inp, pinned, t.empty() ? adata.type : t.type());
@@ -94,8 +90,9 @@ struct ConstFolding
     void unuse(Arg inp)
     {
         CV_Assert(usecounts[inp.idx] > 0);
-        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp))
-            netimpl->__tensors__[inp.idx].release();
+        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
+            netimpl->__tensors__[inp.idx] = Mat(); // deallocate unused tensor
+        }
     }
 
     bool processGraph(Ptr<Graph>& graph)
@@ -111,9 +108,6 @@ struct ConstFolding
         std::vector<MatShape> inpShapes, outShapes, tempShapes;
 
         for (i = 0; i < nops; i++) {
-            // drop stale Mat views before the subgraph 'continue' below skips the per-op reset
-            inpMats.clear();
-            tempMats.clear();
             const Ptr<LayerInfo>& layer = prog[i];
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
@@ -137,12 +131,12 @@ struct ConstFolding
                 if (!const_arg)
                     all_const = false;
                 if (all_const) {
-                    const Mat& m = netimpl->hostTensor(inp);
+                    const Mat& m = netimpl->argTensor(inp);
                     inpMats[j] = m;
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
                 } else if (const_arg) {
-                    const HostDeviceBuffer& m = netimpl->argTensor(inp);
+                    const Mat& m = netimpl->argTensor(inp);
                     inpTypes[j] = m.type();
                     inpShapes[j] = m.shape();
                 } else if (knownTypes[inp.idx] >= 0) {
@@ -167,7 +161,7 @@ struct ConstFolding
                 if (!layer->dynamicOutputShapes())
                     netimpl->allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes,
                                                   outShapes, outOrigData, outMats, tempTypes, tempShapes, tempMats,
-                                                  netimpl->scratchBufs, false, DNN_BACKEND_OPENCV);
+                                                  netimpl->scratchBufs, false);
                 Ptr<Layer> execLayer = layer.dynamicCast<Layer>();
                 CV_Assert(execLayer);  // const-folded ops are CPU-executable (monolithic) layers
                 execLayer->finalize(inpMats, outMats);
@@ -180,16 +174,12 @@ struct ConstFolding
                     out_data.type = m.type();
                     out_data.shape = m.shape();
                     out_data.kind = DNN_ARG_CONST; // re-classify each output as constant
+                    netimpl->__tensors__.at(out.idx) = m;
                     if (out.idx > 0)
                         setKnown(out, m.shape(), m.type());
-                    netimpl->setArgTensor(out, m);
                 }
 
                 modified = true;
-                // release all Mat views before unuse() may deallocate the underlying constant tensors
-                inpMats.clear();
-                outMats.clear();
-                tempMats.clear();
                 for (size_t i = 0; i < ninputs; i++)
                     unuse(inputs[i]);
                 //printf("folded %s: %s\n", op->name().data(), node->name().data());
