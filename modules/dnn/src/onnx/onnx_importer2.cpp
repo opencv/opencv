@@ -93,7 +93,7 @@ class ONNXImporter2
 public:
     ONNXImporter2();
 
-    Net parseFile(const char *onnxFile);
+    Net parseFile(const char *onnxFile, bool mapExternalData = true);
     Net parseBuffer(const void* buffer, size_t sizeBuffer);
 
 protected:
@@ -337,10 +337,20 @@ ONNXImporter2::ONNXImporter2() :
     netimpl = net.getImpl();
 }
 
-Net ONNXImporter2::parseFile(const char *onnxFilename_)
+// The caller asks for mapping; OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA=0 forces it off for every
+// model, the way OPENCV_FORCE_DNN_ENGINE overrides the engine argument. Read once.
+static bool resolveExternalDataMapping(bool requested)
+{
+    static const bool allowed =
+        utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true);
+    return allowed && requested;
+}
+
+Net ONNXImporter2::parseFile(const char *onnxFilename_, bool mapExternalData)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+    externalData.mappingEnabled = resolveExternalDataMapping(mapExternalData);
 
     onnxBasePath = utils::fs::getParent(onnxFilename_);
 
@@ -3375,10 +3385,10 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 }
 
 
-Net readNetFromONNX2(const String& onnxFile)
+Net readNetFromONNX2(const String& onnxFile, bool mapExternalData)
 {
     ONNXImporter2 importer;
-    Net net = importer.parseFile(onnxFile.c_str());
+    Net net = importer.parseFile(onnxFile.c_str(), mapExternalData);
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
         //net.setTracingMode(DNN_TRACE_ALL);

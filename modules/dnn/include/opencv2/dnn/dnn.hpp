@@ -1256,12 +1256,15 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
      *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
+     *  @param mapExternalData map weights held in external data files instead of copying them.
+     *  Mapping saves the copy, but those files must then stay in place and unmodified for as long
+     *  as the Net is alive; pass false to copy them. The OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA
+     *  environment variable, read once when the first model is loaded, forces mapping off for
+     *  every model when set to 0.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
-     *  @note Weights held in external data files are mapped rather than copied, so those files
-     *  must stay in place and unmodified for as long as the Net is alive. Set
-     *  OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA=0 to copy them instead.
      */
-    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile,
+                                     int engine=ENGINE_AUTO, bool mapExternalData=true);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.

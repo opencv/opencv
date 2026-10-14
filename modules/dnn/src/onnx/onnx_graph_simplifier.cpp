@@ -1978,20 +1978,11 @@ static bool payloadMatchesCvType(int dt, bool uint8ToInt8)
     return dataType2cv(dt) >= 0;
 }
 
-// Off returns every external initializer to the copy path, for a caller that rewrites or deletes
-// the weight file while a Net built from it is still alive.
-static bool mmapExternalDataEnabled()
-{
-    static const bool enabled =
-        utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true);
-    return enabled;
-}
-
 // Builds a Mat over the mapped file, or returns false to leave the caller on the copy path.
 static bool mapExternalTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8,
                               const std::string& base_path, ExternalDataCache& cache, Mat& blob)
 {
-    if (!mmapExternalDataEnabled())
+    if (!cache.mappingEnabled)
         return false;
     if (!payloadMatchesCvType(tensor_proto.data_type(), uint8ToInt8))
         return false;
@@ -2104,6 +2095,8 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL &&
         !tensor_proto.name().empty())
     {
+        // A mapping is an optimization, never a requirement: anything the platform, the file
+        // or the range cannot supply falls through to the copy path below, with identical values.
         Mat mapped;
         if (mapExternalTensor(tensor_proto, uint8ToInt8, base_path, *cache, mapped))
             return mapped;

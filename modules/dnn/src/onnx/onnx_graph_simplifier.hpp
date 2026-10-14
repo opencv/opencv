@@ -42,6 +42,9 @@ struct ExternalDataCache
 {
     Ptr<MappedSource> open(const std::string& path);
 
+    // What readNetFromONNX()'s mapExternalData asked for, after the environment override.
+    bool mappingEnabled = true;
+
     std::map<std::string, Ptr<MappedSource> > files;
 };
 

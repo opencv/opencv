@@ -12,17 +12,22 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+// Alignment a view must start at; 0 where the platform supplies no mapping.
+size_t mappingGranularity();
+
 // Where a weight file is and how far it extends, so each constant can be mapped on its own.
 class MappedSource
 {
 public:
-    // Empty Ptr when the platform or the file cannot supply a mapping; callers copy instead.
+    MappedSource() {}  // use open(); public only so makePtr() can construct it
+
+    // Empty Ptr when the platform or the file cannot supply a mapping; callers copy instead,
+    // which is a fall-back rather than an error, so nothing here throws.
     static Ptr<MappedSource> open(const std::string& path);
 
     size_t fileSize() const { return fileSize_; }
 
 private:
-    MappedSource() {}
     MappedSource(const MappedSource&);
     MappedSource& operator=(const MappedSource&);
     friend class MappedFile;
@@ -35,6 +40,7 @@ private:
 class MappedFile
 {
 public:
+    MappedFile() {}  // use open(); public only so makePtr() can construct it
     ~MappedFile();
 
     // Maps [offset, offset + length) alone. Empty Ptr leaves the caller on the copy path.
@@ -46,9 +52,13 @@ public:
     uchar* data() const { return payload; }
 
 private:
-    MappedFile() {}
     MappedFile(const MappedFile&);
     MappedFile& operator=(const MappedFile&);
+
+    // Called by every platform's open(); false means the range cannot be mapped.
+    static bool prepareRange(const Ptr<MappedSource>& src, size_t offset, size_t length,
+                             size_t& viewOffset, size_t& viewLength, size_t& delta);
+    static Ptr<MappedFile> finishView(void* base, size_t viewLength, size_t delta);
 
     // What the platform unmaps, never the payload: the base is rounded down to the granularity.
     uchar* viewBase = nullptr;
