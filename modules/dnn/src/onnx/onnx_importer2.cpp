@@ -145,12 +145,12 @@ protected:
 
     // Register an initializer, reusing the Arg of an earlier constant with the same ONNX dtype and value.
     Arg addConstArg(const std::string& name, const Mat& t, int onnx_type);
-    // Node dedup: outputs of the first node with a given signature.
-    struct DedupEntry {
+    // Node merging: outputs of the first node with a given signature.
+    struct FirstNodeOutputs {
         std::vector<Arg> args;
         std::vector<std::string> names;
     };
-    bool aliasOutputs(const opencv_onnx::NodeProto& node_proto, const DedupEntry& prev);
+    bool aliasOutputs(const opencv_onnx::NodeProto& node_proto, const FirstNodeOutputs& prev);
 
     void raiseError() {
         have_errors = true;
@@ -170,7 +170,7 @@ protected:
     // Raw ONNX dtype per produced tensor, keyed by remapped name: exports often omit
     // value_info for intermediates, and FP8 formats sharing one depth need it.
     std::unordered_map<std::string, int> produced_onnx_type;
-    // Constant and node dedup run on the main graph only; subgraph bodies are left as they are.
+    // Constant sharing and node merging run on the main graph only; subgraph bodies are left as they are.
     opencv_onnx::GraphProto* main_graph_proto = nullptr;
     // ONNX dtype is kept next to the Arg: INT4 and INT8 (or FP8 variants) decode to the same Mat type.
     struct ConstEntry {
@@ -178,7 +178,7 @@ protected:
         Arg arg;
     };
     std::unordered_map<size_t, std::vector<ConstEntry> > consts_by_value;
-    std::unordered_map<std::string, DedupEntry> seen_nodes;
+    std::unordered_map<std::string, FirstNodeOutputs> seen_nodes;
 
     std::string framework_name;
     std::set<std::string> missing_ops;
@@ -1059,9 +1059,9 @@ void ONNXImporter2::rememberMissingOp(const std::string& opname)
     raiseError();
 }
 
-// Constants up to this size are deduplicated by value; larger ones are weights, which are
+// Constants up to this size are shared by value; larger ones are weights, which are
 // almost never repeated, and hashing them would only slow down loading.
-static const size_t CONST_DEDUP_MAX_BYTES = 1 << 20;
+static const size_t MAX_SHARED_CONST_BYTES = 1 << 20;
 
 // Collisions are harmless: addConstArg() compares ONNX dtype, type, shape and bytes before sharing.
 static size_t hashConst(const Mat& m)
@@ -1079,7 +1079,7 @@ static bool sameConst(const Mat& a, const Mat& b)
 Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_type)
 {
     if (name.empty() || t.empty() || !t.isContinuous() ||
-        t.total()*t.elemSize() > CONST_DEDUP_MAX_BYTES)
+        t.total()*t.elemSize() > MAX_SHARED_CONST_BYTES)
         return netimpl->newConstArg(name, t);
     std::vector<ConstEntry>& same = consts_by_value[hashConst(t)];
     for (const ConstEntry& e : same) {
@@ -1095,25 +1095,27 @@ Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_t
 
 // A node can be merged with an earlier identical one only if it is a pure function of its
 // inputs and attributes: a standard-domain op with a built-in parser (custom layers may keep
-// state; parseNode() checks the parser), not a random or Q/DQ op, and no subgraph bodies.
+// state; parseNode() checks the parser), not a random op or one folded into its consumer,
+// and no subgraph bodies.
 static bool canMergeWithIdenticalNode(const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& domain = node_proto.domain();
     if (!domain.empty() && domain != "ai.onnx")
         return false;
-    // Random ops differ per call. Q/DQ stay one per consumer: fuseQDQ() folds a DequantizeLinear
-    // into MatMul/Gemm (and a weight DQ into Conv) only while it has a single consumer.
-    static const std::set<std::string> no_dedup_ops = {
+    // Random ops differ per call. The rest stay one per consumer, since their folds need a single
+    // consumer: Q/DQ into MatMul/Gemm/Conv, Transpose into MatMul, BatchNorm into the next Conv.
+    static const std::set<std::string> never_merged_ops = {
         "RandomNormal", "RandomNormalLike", "RandomUniform", "RandomUniformLike",
         "Multinomial", "Bernoulli",
-        "QuantizeLinear", "DequantizeLinear"
+        "QuantizeLinear", "DequantizeLinear",
+        "Transpose", "BatchNormalization"
     };
-    if (no_dedup_ops.count(node_proto.op_type()))
+    if (never_merged_ops.count(node_proto.op_type()))
         return false;
     for (const auto& attr : node_proto.attribute()) {
         if (attr.has_g() || attr.graphs_size() > 0)
             return false;
-        if (attr.has_t() && attr.t().ByteSizeLong() > CONST_DEDUP_MAX_BYTES)
+        if (attr.has_t() && attr.t().ByteSizeLong() > MAX_SHARED_CONST_BYTES)
             return false;
     }
     return true;
@@ -1137,7 +1139,7 @@ static std::string makeNodeKey(const opencv_onnx::NodeProto& node_proto, const s
     return key;
 }
 
-bool ONNXImporter2::aliasOutputs(const opencv_onnx::NodeProto& node_proto, const DedupEntry& prev)
+bool ONNXImporter2::aliasOutputs(const opencv_onnx::NodeProto& node_proto, const FirstNodeOutputs& prev)
 {
     int n_outputs = node_proto.output_size();
     if ((int)prev.args.size() != n_outputs)
@@ -1199,7 +1201,7 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         node_inputs.push_back(arg);
     }
 
-    // Node dedup: a node with the same op, attributes and inputs as an earlier one computes
+    // Node merging: a node with the same op, attributes and inputs as an earlier one computes
     // the same values, so its outputs become names for that node's outputs.
     std::string node_key;
     // Only ops with a built-in parser: anything else goes to parseCustomLayer(), i.e. to a
@@ -1242,7 +1244,7 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         // Look the outputs up by name again rather than reusing node_outputs: some parsers
         // redirect an output name to another arg instead of adding a layer for it.
         if (!node_key.empty() && !have_errors) {
-            DedupEntry entry;
+            FirstNodeOutputs entry;
             for (int i = 0; i < n_outputs; i++) {
                 const std::string& raw_name = node_proto.output(i);
                 std::string name = remap(raw_name);
