@@ -297,6 +297,16 @@ if(JPEG_SUPPORT AND old-jpeg)
   set(OJPEG_SUPPORT TRUE)
 endif()
 
+# WEBP
+set(WEBP_SUPPORT FALSE)
+if(HAVE_WEBP)
+  set(WEBP_SUPPORT TRUE)
+  if(TARGET ${WEBP_LIBRARY} AND DEFINED ${WEBP_LIBRARY}_BINARY_DIR)
+    include_directories("${${WEBP_LIBRARY}_BINARY_DIR}")
+  endif()
+  include_directories(${WEBP_INCLUDE_DIR})
+endif()
+
 # OpenCV: turned off
 set(JBIG_SUPPORT 0)
 set(LZMA_SUPPORT 0)  # OpenCV: turned off
@@ -329,6 +339,9 @@ endif()
 if(JPEG12_INCLUDE_DIR)
   list(APPEND TIFF_INCLUDES ${JPEG12_INCLUDE_DIR})
 endif()
+if(WEBP_INCLUDE_DIR)
+  list(APPEND TIFF_INCLUDES ${WEBP_INCLUDE_DIR})
+endif()
 if(JBIG_INCLUDE_DIR)
   list(APPEND TIFF_INCLUDES ${JBIG_INCLUDE_DIR})
 endif()
@@ -349,6 +362,9 @@ if(JPEG_LIBRARIES)
 endif()
 if(JPEG12_LIBRARIES)
   list(APPEND TIFF_LIBRARY_DEPS ${JPEG12_LIBRARIES})
+endif()
+if(WEBP_LIBRARIES)
+  list(APPEND TIFF_LIBRARY_DEPS ${WEBP_LIBRARIES})
 endif()
 if(JBIG_LIBRARIES)
   list(APPEND TIFF_LIBRARY_DEPS ${JBIG_LIBRARIES})
@@ -462,6 +478,9 @@ ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018 /wd4311 /wd4312)
 
 add_library(${TIFF_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
+if(HAVE_WEBP)
+  target_link_libraries(${TIFF_LIBRARY} ${WEBP_LIBRARY})
+endif()
 
 set_target_properties(${TIFF_LIBRARY}
     PROPERTIES

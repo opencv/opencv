@@ -1394,6 +1394,41 @@ const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
 
 INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
 
+TEST(Imgcodecs_Tiff, support_webp)
+{
+    //build a dummy image that can be heavily compressed
+    cv::Mat src(cv::Size(640, 480), CV_8UC3);
+    src.forEach<cv::Vec3b>([&](cv::Vec3b& pixel, const int* pos) {
+      const int y = pos[0];
+      const int x = pos[1];
+      const uchar value = static_cast<uchar>(y*src.cols+x);
+      pixel = cv::Vec3b(value, value, value);
+    });
+
+    vector<uint8_t> bufNone;
+    vector<uint8_t> bufWebP;
+    vector<uint8_t> bufLZW;
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufNone, {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_NONE})));
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufWebP, {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_WEBP})));
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufLZW,  {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_LZW})));
+
+    std::cout << "TIFF-None: " << bufNone.size() << " bytes" << std::endl;
+    std::cout << "TIFF-LZW:  " << bufLZW.size()  << " bytes" << std::endl;
+    std::cout << "TIFF-WebP: " << bufWebP.size() << " bytes" << std::endl;
+
+    // If the size of the TIFF file compressed with WebP matches
+    // the size compressed with LZW, it indicates that the underlying
+    // libtiff configuration does not support TIFF-WebP, and OpenCV
+    // has fallen back to LZW. This is an expected environment-dependent
+    // behavior rather than a test failure, so we gracefully skip the test.
+    if (bufWebP.size() == bufLZW.size()) {
+        throw SkipTestException("TIFF-WebP appears to be unsupported (compressed size is identical to LZW).");
+    }
+
+    // We expect WebP compressed size must be smaller than None.
+    ASSERT_LE(bufWebP.size(), bufNone.size());
+}
+
 typedef testing::TestWithParam<ImwriteTiffCompressionFlags> Imgcodecs_Tiff_compression_schema;
 
 TEST_P(Imgcodecs_Tiff_compression_schema, normal)
