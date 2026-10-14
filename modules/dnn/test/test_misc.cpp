@@ -642,17 +642,17 @@ static void testForwardOutputsArePrivate(EngineType engine)
     normAssert(dup[0], dup[1]);
 }
 
-TEST(Net, forward_outputs_are_private)
+typedef testing::TestWithParam<EngineType> Net_ForwardOutputsArePrivate;
+TEST_P(Net_ForwardOutputsArePrivate, Accuracy)
 {
-    testForwardOutputsArePrivate(ENGINE_OPENCV);
+    testForwardOutputsArePrivate(GetParam());
 }
-
+INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::Values(
+    ENGINE_OPENCV
 #ifdef HAVE_ONNXRUNTIME
-TEST(Net, forward_outputs_are_private_ort)
-{
-    testForwardOutputsArePrivate(ENGINE_ORT);
-}
+    , ENGINE_ORT
 #endif
+));
 
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);

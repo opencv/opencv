@@ -11,18 +11,18 @@ partitions according to OpenCV's thread budget, not ORT's).
 @@ -35,7 +35,9 @@
  #endif
  #endif  // MLAS_NO_EXCEPTION
- 
+
 -#include "core/mlas/inc/mlas.h"
 +// Vendored under 3rdparty/mlas/. The ORT path "core/mlas/inc/mlas.h" only
 +// works when MLAS is part of the ORT source tree.
 +#include "../inc/mlas.h"
- 
+
  #if defined(_WIN32)
  #ifndef WIN32_LEAN_AND_MEAN
-@@ -1675,13 +1677,23 @@
+@@ -1675,13 +1678,23 @@
      );
- 
- 
+
+
 +#if defined(MLAS_OPENCV_THREADING)
 +// Defined in modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp: cv::getNumThreads(),
 +// times 4 on hybrid CPUs. Hidden behind a free function so this header doesn't need to
