@@ -506,14 +506,18 @@ template<typename _Tp>
 static void maxPoolNchwWithIndices(const _Tp* inp, _Tp* out, int64_t* outIdx,
                                    int N, int C, int Hi, int Wi, int H, int W,
                                    int kH, int kW, int sH, int sW,
-                                   int padH, int padW, int dilH, int dilW)
+                                   int padH, int padW, int dilH, int dilW,
+                                   int storageOrder)
 {
     int NC = N * C;
     int inHW = Hi * Wi;
     int outHW = H * W;
+    // ONNX indices flatten the whole input (batch included); storage_order picks the plane layout.
+    const int64_t idxStepY = storageOrder == 0 ? Wi : 1;
+    const int64_t idxStepX = storageOrder == 0 ? 1 : Hi;
     parallel_for_(Range(0, NC), [&](const Range& r) {
         for (int nc = r.start; nc < r.end; nc++) {
-            int c = nc % C;
+            const int64_t idxBase = (int64_t)nc * inHW;
             const _Tp* inp_nc = inp + nc * inHW;
             _Tp*       out_nc = out + nc * outHW;
             int64_t*   idx_nc = outIdx + nc * outHW;
@@ -532,14 +536,13 @@ static void maxPoolNchwWithIndices(const _Tp* inp, _Tp* out, int64_t* outIdx,
                             _Tp v = inp_nc[yi * Wi + xi];
                             if (v > vmax) {
                                 vmax = v;
-                                // ONNX storage_order=0: index = (c*Hi + yi)*Wi + xi
-                                idxmax = (int64_t)(c * Hi + yi) * Wi + xi;
+                                idxmax = idxBase + yi * idxStepY + xi * idxStepX;
                             }
                         }
                     }
                     if (idxmax < 0) {
                         vmax = (_Tp)0;
-                        idxmax = (int64_t)(c * Hi + 0) * Wi + 0;
+                        idxmax = idxBase;
                     }
                     out_nc[yo * W + xo] = vmax;
                     idx_nc[yo * W + xo] = idxmax;
@@ -798,22 +801,22 @@ public:
             case CV_32F:
                 maxPoolNchwWithIndices<float>(
                     inp.ptr<float>(), outVal.ptr<float>(), outIdx.ptr<int64_t>(),
-                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW);
+                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW, storage_order);
                 break;
             case CV_8S:
                 maxPoolNchwWithIndices<int8_t>(
                     inp.ptr<int8_t>(), outVal.ptr<int8_t>(), outIdx.ptr<int64_t>(),
-                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW);
+                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW, storage_order);
                 break;
             case CV_8U:
                 maxPoolNchwWithIndices<uint8_t>(
                     inp.ptr<uint8_t>(), outVal.ptr<uint8_t>(), outIdx.ptr<int64_t>(),
-                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW);
+                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW, storage_order);
                 break;
             case CV_64F:
                 maxPoolNchwWithIndices<double>(
                     inp.ptr<double>(), outVal.ptr<double>(), outIdx.ptr<int64_t>(),
-                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW);
+                    N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW, storage_order);
                 break;
             default:
                 CV_Error(Error::BadDepth, "MaxPool with indices: unsupported data type");

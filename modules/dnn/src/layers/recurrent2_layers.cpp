@@ -540,8 +540,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         {
             // TODO: implement
             if (numDirs == 1){
-                // take a slice of output[0]
-                Mat hOut = scr.rowRange(scr.size[0] - 1, scr.size[0]);
+                // Last step processed: Y[-1] going forward, Y[0] going in reverse.
+                const int lastTs = reverse ? 0 : scr.size[0] - 1;
+                Mat hOut = scr.rowRange(lastTs, lastTs + 1);
 
                 // reshape 1x1xBxH -> 1xBxH
                 int shp[] = {1, batchSize, numHidden};
@@ -598,8 +599,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             if (numDirs == 1)
             {
-                // Slice: Yh = Y[-1, :, :, :]
-                Range ranges[] = {cv::Range(cOut.size[0] - 1, cOut.size[0]), cv::Range::all(), cv::Range::all(), cv::Range::all()};
+                // Last step processed: Y[-1] going forward, Y[0] going in reverse.
+                const int lastTs = reverse ? 0 : cOut.size[0] - 1;
+                Range ranges[] = {cv::Range(lastTs, lastTs + 1), cv::Range::all(), cv::Range::all(), cv::Range::all()};
                 cOut = cOut(ranges);
                 // Reshape: 1x1xBxH -> 1xBxH
                 int shp[] = {1, batchSize, numHidden};

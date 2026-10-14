@@ -30,10 +30,24 @@ namespace dnn
 {
 
 namespace {
-static int _mod(int x, int y) {
-    int res = x % y;
+// ONNX Mod with fmod=0: the remainder takes the sign of the divisor (Python/NumPy "%").
+template<typename T>
+static inline typename std::enable_if<std::is_integral<T>::value, T>::type _mod(T x, T y) {
+    // min % -1 overflows (and traps on x86); the remainder is 0 for any x.
+    if (std::is_signed<T>::value && y == static_cast<T>(-1))
+        return T(0);
+    T res = static_cast<T>(x % y);
     if ((res < 0 && y > 0) || (res > 0 && y < 0)) {
-        res += y;
+        res = static_cast<T>(res + y);
+    }
+    return res;
+}
+
+template<typename T>
+static inline typename std::enable_if<!std::is_integral<T>::value, T>::type _mod(T x, T y) {
+    T res = static_cast<T>(std::fmod((double)x, (double)y));
+    if (res != T(0) && ((res < T(0)) != (y < T(0)))) {
+        res = static_cast<T>(res + y);
     }
     return res;
 }
@@ -1190,7 +1204,7 @@ public:
                     break;
                 }
                 case OPERATION::MOD: {
-                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    auto mod = [] (const T &a, const T &b) { return _mod<T>(a, b); };
                     binary_forward<T, T>(mod, std::forward<Args>(args)...);
                     break;
                 }
@@ -1330,7 +1344,7 @@ public:
                     break;
                 }
                 case OPERATION::MOD: {
-                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    auto mod = [] (const T &a, const T &b) { return _mod<T>(a, b); };
                     binary_forward<T, T>(mod, std::forward<Args>(args)...);
                     break;
                 }
