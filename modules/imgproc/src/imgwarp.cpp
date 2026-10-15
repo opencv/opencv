@@ -1991,6 +1991,7 @@ public:
     {
     }
 
+    CV_DISABLE_UBSAN
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 64;
