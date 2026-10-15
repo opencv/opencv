@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
+#include "accel/accel_impl.hpp"
 
 namespace cv {
 
@@ -1938,6 +1939,7 @@ Mat _OutputArray::reinterpret(int mtype) const
 
 void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
 {
+    accel::impl::SamePlacement place(*this, arr);   // a new UMat output goes where its model lives
     create(arr.shape(), mtype);
 }
 
@@ -1979,6 +1981,7 @@ void _OutputArray::fit(const MatShape& shape, int mtype, int i,
 
 void _OutputArray::fitSameSize(const _InputArray& arr, int mtype) const
 {
+    accel::impl::SamePlacement place(*this, arr);   // a new UMat output goes where its model lives
     fit(arr.shape(), mtype);
 }
 

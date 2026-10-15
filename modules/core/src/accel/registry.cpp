@@ -401,6 +401,83 @@ const void* Backend::opTable(const char* module, uint32_t version)
     return table;
 }
 
+//! takes one more reference unless the count already dropped to zero (the owner is releasing)
+static bool addRefIfAlive(int* counter)
+{
+#if defined(_MSC_VER)
+    long cur = *(volatile long*)counter;
+    while (cur > 0)
+    {
+        const long prev = _InterlockedCompareExchange((volatile long*)counter, cur + 1, cur);
+        if (prev == cur)
+            return true;
+        cur = prev;
+    }
+    return false;
+#else
+    int cur = __atomic_load_n(counter, __ATOMIC_ACQUIRE);
+    while (cur > 0)
+        if (__atomic_compare_exchange_n(counter, &cur, cur + 1, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+            return true;
+    return false;
+#endif
+}
+
+void Backend::registerBacking(BufferState* st, UMatData* u)
+{
+    if (!st->alloc.backing_id)
+        return;
+    BackingEntry e;
+    e.st = st;
+    e.u = u;
+    e.offset = st->alloc.backing_offset;
+    e.size = u->size;
+    std::lock_guard<std::mutex> lk(backingsMutex_);
+    backings_.insert(std::make_pair(st->alloc.backing_id, e));
+}
+
+void Backend::unregisterBacking(const BufferState* st)
+{
+    if (!st->alloc.backing_id)
+        return;
+    std::lock_guard<std::mutex> lk(backingsMutex_);
+    std::pair<std::multimap<uint64_t, BackingEntry>::iterator, std::multimap<uint64_t, BackingEntry>::iterator> r =
+            backings_.equal_range(st->alloc.backing_id);
+    for (std::multimap<uint64_t, BackingEntry>::iterator it = r.first; it != r.second; ++it)
+    {
+        if (it->second.st == st)
+        {
+            backings_.erase(it);
+            return;
+        }
+    }
+}
+
+UMatData* Backend::findBacking(uint64_t id, uint64_t offset, uint64_t size, uint32_t requiredFlags, bool reference,
+                               size_t& viewOffset)
+{
+    std::lock_guard<std::mutex> lk(backingsMutex_);
+    std::pair<std::multimap<uint64_t, BackingEntry>::iterator, std::multimap<uint64_t, BackingEntry>::iterator> r =
+            backings_.equal_range(id);
+    for (std::multimap<uint64_t, BackingEntry>::iterator it = r.first; it != r.second; ++it)
+    {
+        const BackingEntry& e = it->second;
+        if (offset + size <= e.offset || e.offset + e.size <= offset)
+            continue;   // another part of the same memory
+        if (offset < e.offset || offset + size > e.offset + e.size)
+            CV_Error_(Error::StsBadArg, ("accel(%s): this memory overlaps a buffer that is already held, but is "
+                                         "not inside it; wrap the whole memory once and take views of it", name_.c_str()));
+        if ((e.st->alloc.desc.flags & requiredFlags) != requiredFlags)
+            CV_Error_(Error::StsBadArg, ("accel(%s): this memory is already held as a writable or unprotected "
+                                         "buffer; it cannot also be wrapped read-only or protected", name_.c_str()));
+        if (reference ? !addRefIfAlive(&e.u->urefcount) : e.u->urefcount <= 0)
+            continue;   // being released right now: a new buffer for it is fine
+        viewOffset = (size_t)(offset - e.offset);
+        return e.u;
+    }
+    return NULL;
+}
+
 bool Backend::canAccess(int device, const cvAccelMemoryDesc& desc)
 {
     if (desc.backend_id == (uint32_t)id_ && (int)desc.device_index == device)
@@ -1042,16 +1119,44 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     ext.offset = memory.offset;
     ext.size = memory.size ? memory.size : total;
     ext.flags = (memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (memory.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
-    m.u = a->wrap(ext, total);
-    // core enforces both, whatever the backend reports
-    if (memory.readOnly)
-        m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_READ_ONLY;
-    if (memory.protectedContent)
-        m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_PROTECTED;
-    m.offset = 0;
+    ext.layout_modifier = memory.layoutModifier;
+    ext.fourcc = memory.fourcc;
+    size_t viewOffset = 0;
+    m.u = a->wrap(ext, total, &viewOffset);
+    const bool shared = viewOffset != (size_t)-1;   // a view of a buffer core already holds (referenced)
+    if (!shared && memory.readOnly)
+        m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_READ_ONLY;   // a restriction the caller sets on itself
+    m.offset = shared ? viewOffset : 0;
     finalizeHdr(m);
-    m.addref();
+    if (!shared)
+        m.addref();
     return m;
+}
+
+std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& image)
+{
+    CV_Assert(!image.planes.empty());
+    std::vector<UMat> planes;
+    for (size_t i = 0; i < image.planes.size(); i++)
+    {
+        const ExternalPlane& p = image.planes[i];
+        CV_Assert(p.rows > 0 && p.cols > 0 && p.type >= 0);
+        const size_t rowBytes = (size_t)p.cols * CV_ELEM_SIZE(p.type);
+        const size_t pitch = p.pitch ? p.pitch : rowBytes;
+        CV_Assert(pitch >= rowBytes && "accel: a plane's pitch is shorter than its rows");
+        ExternalMemory mem;
+        mem.type = image.type;
+        mem.handle = p.handle;
+        mem.offset = p.offset;
+        mem.size = pitch * (size_t)(p.rows - 1) + rowBytes;
+        mem.readOnly = image.readOnly;
+        mem.protectedContent = image.protectedContent;
+        mem.layoutModifier = image.layoutModifier;
+        mem.fourcc = image.fourcc;
+        const size_t steps[2] = { pitch, (size_t)CV_ELEM_SIZE(p.type) };
+        planes.push_back(wrapExternalMemory(device, mem, MatShape({p.rows, p.cols}), p.type, steps));
+    }
+    return planes;
 }
 
 struct DeviceAccess::Impl

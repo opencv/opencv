@@ -223,6 +223,11 @@ struct OpCall::Impl
 
     RunResult run(Invoker fn, void* userdata);
 private:
+    /** Plans the arguments for @p device and asks the backend (QUERY; skipped when @p fn is
+        NULL). @p cost: bytes the plan copies. @p protectedRefused: the plan would put results of
+        protected content into ordinary memory. */
+    cvAccelStatus evaluate(Backend* b, int device, Invoker fn, void* userdata, std::vector<cvAccelView>& views,
+                           cvAccelCall& call, const void*& table, uint64_t& cost, bool& protectedRefused);
     bool planArgs(Backend* b, int device);
     void createOutput(Arg& a, Backend* b, int device);
 };
@@ -368,62 +373,33 @@ void OpCall::Impl::createOutput(Arg& a, Backend* b, int device)
     describeUMat(a);
 }
 
-RunResult OpCall::Impl::run(Invoker fn, void* userdata)
+cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* userdata, std::vector<cvAccelView>& views,
+                                     cvAccelCall& call, const void*& table, uint64_t& cost, bool& protectedRefused)
 {
-    if (unsupported)
-        return NOT_HANDLED;
-
-    // 1. device
-    const ScopeEntry* scope = currentScope();
-    int backendId = 0, device = 0;
-    StreamPtr stream;
-    bool anyOnDevice = false, shadowOnDevice = false;
-    for (size_t i = 0; i < args.size(); i++)
-    {
-        const Arg& a = args[i];
-        if (!a.onDevice)
-            continue;
-        if (!anyOnDevice && !scope)
-        {
-            backendId = (int)a.desc.backend_id;
-            device = (int)a.desc.device_index;
-        }
-        anyOnDevice = true;
-        if (a.desc.host_access == CV_ACCEL_HOST_ACCESS_COPY || a.desc.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED)
-            shadowOnDevice = true;
-    }
-    if (scope)
-    {
-        backendId = scope->backendId;
-        device = scope->device;
-        stream = scope->stream;
-    }
-    if (backendId == 0)
-        return anyOnDevice ? CPU_ONLY : NOT_HANDLED;   // a host scope runs everything on the CPU
-    Backend* b = Registry::getInstance().get(backendId);
-    if (!b || b->isLost(device))
-        return anyOnDevice ? CPU_ONLY : NOT_HANDLED;
-
-    // 2. plan
     planArgs(b, device);
     const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
     // Protected content (secure video) never reaches the CPU, and nothing computed from it may
     // land in ordinary memory: outputs and temporaries are protected too.
+    protectedIn = false;
+    protectedRefused = false;
     for (size_t i = 0; i < args.size(); i++)
         if (!args[i].isOutput && args[i].plan != PLAN_ABSENT && (args[i].desc.flags & CV_ACCEL_MEMF_PROTECTED))
             protectedIn = true;
-    for (size_t i = 0; protectedIn && i < args.size(); i++)
+    cost = 0;
+    for (size_t i = 0; i < args.size(); i++)
     {
         const Arg& a = args[i];
-        if (a.isOutput && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_COPY_BACK) && !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
-            CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
-                                        "protected memory (pass an empty output to get some)", name));
+        if (protectedIn && a.isOutput && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_COPY_BACK) &&
+            !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
+            protectedRefused = true;
+        if (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK)
+            cost += planBytes(a.shape, a.type) * (a.plan == PLAN_COPY_BACK && !a.fullOverwrite ? 2 : 1);
     }
+    if (protectedRefused || !fn)
+        return CV_ACCEL_NOT_IMPLEMENTED;
     const uint32_t plannedFlags = protectedIn ? CV_ACCEL_MEMF_PROTECTED : 0;
 
-    // 3. query
-    const void* table = b->opTable(module, version);
-    std::vector<cvAccelView> views(args.size());
+    table = b->opTable(module, version);
     for (size_t i = 0; i < args.size(); i++)
     {
         Arg& a = args[i];
@@ -457,31 +433,112 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             break;
         }
     }
-    cvAccelCall call;
     memset(&call, 0, sizeof(call));
     call.struct_size = (uint32_t)sizeof(call);
     call.mode = CV_ACCEL_QUERY;
     call.device = device;
     call.op_name = name;
-    cvAccelStatus status = table ? fn(table, &call, views.data(), userdata) : CV_ACCEL_NOT_IMPLEMENTED;
-    if (status == CV_ACCEL_NOT_IMPLEMENTED)
+    return table ? fn(table, &call, views.data(), userdata) : CV_ACCEL_NOT_IMPLEMENTED;
+}
+
+RunResult OpCall::Impl::run(Invoker fn, void* userdata)
+{
+    if (unsupported)
+        return NOT_HANDLED;
+
+    // 1. candidate devices: the scope's, or every device that holds an argument (in argument order)
+    const ScopeEntry* scope = currentScope();
+    StreamPtr stream;
+    bool anyOnDevice = false, shadowOnDevice = false;
+    std::vector<std::pair<int, int> > candidates;
+    for (size_t i = 0; i < args.size(); i++)
     {
+        const Arg& a = args[i];
+        if (!a.onDevice)
+            continue;
+        anyOnDevice = true;
+        if (a.desc.host_access == CV_ACCEL_HOST_ACCESS_COPY || a.desc.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED)
+            shadowOnDevice = true;
+        const std::pair<int, int> c((int)a.desc.backend_id, (int)a.desc.device_index);
+        if (!scope && std::find(candidates.begin(), candidates.end(), c) == candidates.end())
+            candidates.push_back(c);
+    }
+    if (scope)
+    {
+        if (scope->backendId == 0)
+            return anyOnDevice ? CPU_ONLY : NOT_HANDLED;   // a host scope runs everything on the CPU
+        candidates.assign(1, std::make_pair(scope->backendId, scope->device));
+        stream = scope->stream;
+    }
+    if (candidates.empty())
+        return NOT_HANDLED;
+
+    // 2. plan and query every candidate (both free of side effects); the device that accepts and
+    //    moves the fewest bytes wins, the earlier argument's device on a tie
+    std::vector<cvAccelView> views(args.size());
+    cvAccelCall call;
+    const void* table = NULL;
+    int best = -1;
+    uint64_t bestCost = 0;
+    bool protectedRefused = false;
+    for (size_t c = 0; c < candidates.size(); c++)
+    {
+        Backend* cb = Registry::getInstance().get(candidates[c].first);
+        if (!cb || cb->isLost(candidates[c].second))
+            continue;
+        uint64_t cost = 0;
+        bool refused = false;
+        const cvAccelStatus st = evaluate(cb, candidates[c].second, fn, userdata, views, call, table, cost, refused);
+        if (refused)
+            protectedRefused = true;
+        else if (st == CV_ACCEL_OK && (best < 0 || cost < bestCost))
+        {
+            best = (int)c;
+            bestCost = cost;
+        }
+        else if (st != CV_ACCEL_OK && st != CV_ACCEL_NOT_IMPLEMENTED)
+            cb->check(st, name, candidates[c].second);
+    }
+
+    if (best < 0)
+    {
+        if (protectedRefused)
+            CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
+                                        "protected memory (pass an empty output to get some)", name));
         if (!anyOnDevice)
             return NOT_HANDLED;
+        Backend* fb = Registry::getInstance().get(candidates[0].first);
+        if (!fb || fb->isLost(candidates[0].second))
+            return CPU_ONLY;
+        const int fdevice = candidates[0].second;
+        uint64_t cost = 0;
+        bool refused = false;
+        evaluate(fb, fdevice, NULL, NULL, views, call, table, cost, refused);  // plans only: where outputs belong
         if (protectedIn)
             CV_Error_(Error::StsNotImplemented, ("accel(%s): %s is not implemented for these arguments, and the "
-                                                 "CPU cannot read protected content", b->name().c_str(), name));
+                                                 "CPU cannot read protected content", fb->name().c_str(), name));
         counters().cpuFallbacks++;
-        CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << " runs on the CPU (not implemented for these arguments)");
+        CV_LOG_DEBUG(NULL, "accel(" << fb->name() << "): " << name << " runs on the CPU (not implemented for these arguments)");
         if (shadowOnDevice)
             onImplicitTransfer("runs on the CPU, so device data is copied to the host", name);
         // results go where they would have gone if the backend had run the operation
         for (size_t i = 0; i < args.size(); i++)
             if (args[i].isOutput && args[i].plan == PLAN_CREATE)
-                createOutput(args[i], b, device);
+                createOutput(args[i], fb, fdevice);
         return CPU_ONLY;
     }
-    b->check(status, name, device);
+
+    Backend* b = Registry::getInstance().get(candidates[best].first);
+    const int device = candidates[best].second;
+    if (candidates.size() > 1)
+    {
+        uint64_t cost = 0;
+        bool refused = false;
+        const cvAccelStatus status = evaluate(b, device, fn, userdata, views, call, table, cost, refused);   // the winner's plan
+        CV_Assert(status == CV_ACCEL_OK && !refused);
+    }
+    const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
+    cvAccelStatus status = CV_ACCEL_OK;
 
     // 4. prepare: outputs, temporaries and uploads (these may touch the CPU side, so they
     //    happen before the submission window)

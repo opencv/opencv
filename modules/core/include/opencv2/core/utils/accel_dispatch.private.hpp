@@ -79,6 +79,9 @@ device fail at once; OpenCV keeps a lost device lost for the rest of the process
 test may use it, at its end. */
 CV_EXPORTS void emulatorInjectFailure(int status, bool synchronous = false);
 
+//! the kernels of @p device report NOT_IMPLEMENTED while @p disable holds (a device without the operation)
+CV_EXPORTS void emulatorDisableOps(int device, bool disable);
+
 //! makes the next end_cpu_access after a CPU write fail (on any emulator device), once
 CV_EXPORTS void emulatorFailNextCpuFlush();
 
@@ -88,6 +91,11 @@ CV_EXPORTS void setWaitTimeout(uint64 ms);
 CV_EXPORTS void reviveDevices();
 //! turns OPENCV_ACCEL_VALIDATE on or off at run time (read-only Mat views are checksummed)
 CV_EXPORTS void setValidation(bool on);
+
+/** @brief Device memory of "another library" (not held by OpenCV), filled with @p value; returns
+its device pointer for ExternalMemory::DEVICE_POINTER. With @p protectedContent the emulator
+allocates it as protected memory and attests that when it is wrapped. Never freed. */
+CV_EXPORTS int64 emulatorAllocateExternal(int device, size_t size, int value, bool protectedContent);
 
 /** @brief A simulated dma-buf of @p size bytes, shared with other "drivers"; returns its fd for
 ExternalMemory::DMABUF_FD on "emulator:1". */

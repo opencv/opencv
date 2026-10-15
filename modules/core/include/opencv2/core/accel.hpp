@@ -221,13 +221,43 @@ struct CV_EXPORTS ExternalMemory
         DEVICE_POINTER = 5,     //!< native pointer of the device's own API (non-owning)
         AHARDWAREBUFFER = 6
     };
-    ExternalMemory() : type(HOST_POINTER), handle(0), offset(0), size(0), readOnly(false), protectedContent(false) {}
+    ExternalMemory() : type(HOST_POINTER), handle(0), offset(0), size(0), readOnly(false), protectedContent(false),
+                       layoutModifier(0), fourcc(0) {}
     Type type;
     int64 handle;           //!< pointer, file descriptor or native handle
     size_t offset;
     size_t size;
     bool readOnly;
-    bool protectedContent;  //!< protected content, e.g. a dma-buf from a secure heap (see MemoryInfo)
+    /** The memory must hold protected content (a dma-buf from a secure heap, say): the wrap is
+        refused unless the backend attests it. Protection itself always comes from the backend. */
+    bool protectedContent;
+    /** DRM format modifier: 0 for linear memory; a tiled or compressed layout (GPU tiling, DCC,
+        AFBC, ...) has no CPU view, and only operations of a device that knows the layout use it. */
+    uint64 layoutModifier;
+    unsigned fourcc;        //!< DRM fourcc of the image the memory holds (NV12, P010, ...), 0 if none
+};
+
+//! one plane of an external image: its buffer and where the plane lies in it
+struct CV_EXPORTS ExternalPlane
+{
+    ExternalPlane() : handle(0), offset(0), pitch(0), rows(0), cols(0), type(-1) {}
+    int64 handle;           //!< the plane's buffer (dma-buf fd, device pointer, ...); planes may share one
+    size_t offset;          //!< bytes from the start of the buffer to the plane
+    size_t pitch;           //!< bytes from one row of the plane to the next
+    int rows, cols, type;   //!< the plane as a matrix: NV12 is 8UC1 luma and 8UC2 chroma at half size
+};
+
+//! a multi-plane image in external memory (a decoder's NV12 or P010 frame, a camera buffer)
+struct CV_EXPORTS ExternalImage
+{
+    ExternalImage() : type(ExternalMemory::DMABUF_FD), layoutModifier(0), fourcc(0), readOnly(false),
+                      protectedContent(false) {}
+    ExternalMemory::Type type;
+    std::vector<ExternalPlane> planes;
+    uint64 layoutModifier;  //!< see ExternalMemory::layoutModifier
+    unsigned fourcc;        //!< DRM fourcc, informational
+    bool readOnly;
+    bool protectedContent;
 };
 
 /** @brief Wraps external memory into a UMat without copying.
@@ -236,6 +266,11 @@ releasing the last reference waits for pending device work on it. Throws if the 
 cannot import that kind of memory. */
 CV_EXPORTS UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
                                    const MatShape& shape, int type, const size_t* steps = 0);
+
+/** @brief Wraps each plane of an external image into a UMat, in the order of the planes, with
+the plane's pitch as its row step. Planes in one buffer and planes in separate buffers (one fd
+each) both work; every plane keeps the synchronization of the buffer it lies in. */
+CV_EXPORTS std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& image);
 
 /** @brief Explicit device access for the user's own kernels.
 

@@ -91,8 +91,9 @@ struct Driver
     typedef CUresult (CUDAAPI *CtxGet)(CUcontext*);
     typedef CUresult (CUDAAPI *CtxPush)(CUcontext);
     typedef CUresult (CUDAAPI *CtxPop)(CUcontext*);
+    typedef CUresult (CUDAAPI *AddressRange)(CUdeviceptr*, size_t*, CUdeviceptr);
 
-    Driver() : deviceGet(0), primaryRetain(0), ctxGet(0), ctxPush(0), ctxPop(0), ok(false)
+    Driver() : deviceGet(0), primaryRetain(0), ctxGet(0), ctxPush(0), ctxPop(0), addressRange(0), ok(false)
     {
 #if defined(_WIN32)
         HMODULE lib = LoadLibraryA("nvcuda.dll");
@@ -108,6 +109,7 @@ struct Driver
         ctxGet = (CtxGet)CV_CUDA_DRIVER_SYM("cuCtxGetCurrent");
         ctxPush = (CtxPush)CV_CUDA_DRIVER_SYM("cuCtxPushCurrent_v2");
         ctxPop = (CtxPop)CV_CUDA_DRIVER_SYM("cuCtxPopCurrent_v2");
+        addressRange = (AddressRange)CV_CUDA_DRIVER_SYM("cuMemGetAddressRange_v2");   // optional
 #undef CV_CUDA_DRIVER_SYM
         ok = init && deviceGet && primaryRetain && ctxGet && ctxPush && ctxPop && init(0) == CUDA_SUCCESS;
     }
@@ -133,6 +135,7 @@ struct Driver
     CtxGet ctxGet;
     CtxPush ctxPush;
     CtxPop ctxPop;
+    AddressRange addressRange;
     bool ok;
     std::mutex mutex;
     std::vector<CUcontext> primaries;
@@ -393,6 +396,7 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     }
     out->size = size;
     out->backend_data = a;
+    out->backing_id = out->handle;  // its own base address: a later wrap of it is found (see backing_id)
     return CV_ACCEL_OK;
 }
 
@@ -480,6 +484,15 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
         out->handle = (uint64_t)(uintptr_t)ptr;
         out->backend_data = a;
+        // the allocation it lies in: a wrap of a UMat's own memory becomes a view of that UMat
+        Driver& drv = driver();
+        CUdeviceptr base = 0;
+        size_t range = 0;
+        if (drv.ok && drv.addressRange && drv.addressRange(&base, &range, (CUdeviceptr)(uintptr_t)ptr) == CUDA_SUCCESS)
+        {
+            out->backing_id = (uint64_t)base;
+            out->backing_offset = (uint64_t)((uintptr_t)ptr - (uintptr_t)base);
+        }
     }
     else
         return CV_ACCEL_NOT_IMPLEMENTED;    // TODO: cudaImportExternalMemory for dma-buf / opaque fds

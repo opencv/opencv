@@ -56,6 +56,8 @@ cvAccelStatus fail(cvAccelStatus st, const std::string& msg)
 }
 
 std::atomic<long long> g_liveAllocations(0);
+
+
 std::atomic<long long> g_liveByDevice[EMU_DEVICES];   // zero: static storage
 
 void countAllocation(int device, int delta)
@@ -68,6 +70,9 @@ void countAllocation(int device, int delta)
 std::atomic<int> g_managedCpuAccess(0);
 std::atomic<int> g_managedDeviceWork(0);
 std::atomic<long long> g_violations(0);
+
+//! devices whose kernels report NOT_IMPLEMENTED (emulatorDisableOps): a device without the operation
+std::atomic<bool> g_opsDisabled[EMU_DEVICES];
 
 //! one-shot (emulatorFailNextCpuFlush): the next end_cpu_access after a CPU write fails
 std::atomic<bool> g_failNextFlush(false);
@@ -114,7 +119,34 @@ struct EmuAlloc
     bool scrambled;     //!< bytes are stored XOR SCRAMBLE
     bool cpuOpen;       //!< between begin_cpu_access and end_cpu_access
     FakeDmaBuf* dmabuf; //!< an imported simulated dma-buf, NULL otherwise
+    bool protectedMem;  //!< protected content (allocated with CV_ACCEL_MEMF_PROTECTED, or on emulator:3)
 };
+
+//! owned device allocations by base address, to tell which one a device pointer lies in
+std::mutex& ownedMutex()
+{
+    static std::mutex* m = new std::mutex();
+    return *m;
+}
+std::map<uintptr_t, EmuAlloc*>& ownedAllocations()
+{
+    static std::map<uintptr_t, EmuAlloc*>* m = new std::map<uintptr_t, EmuAlloc*>();
+    return *m;
+}
+//! base address of the owned allocation that holds @p p (0 if none) and whether it is protected
+uintptr_t ownedBase(uintptr_t p, bool* isProtected = NULL)
+{
+    std::lock_guard<std::mutex> lk(ownedMutex());
+    std::map<uintptr_t, EmuAlloc*>::const_iterator it = ownedAllocations().upper_bound(p);
+    if (it == ownedAllocations().begin())
+        return 0;
+    --it;
+    if (p >= it->first + (it->second->size ? it->second->size : 1))
+        return 0;
+    if (isProtected)
+        *isProtected = it->second->protectedMem;
+    return it->first;
+}
 
 bool isScrambledDesc(const cvAccelMemoryDesc& d, int device)
 {
@@ -488,6 +520,12 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
         out->handle = (uint64_t)(uintptr_t)a->mem;
         out->size = size;
         out->backend_data = a;
+        out->backing_id = out->handle;  // its own base address (see backing_id)
+        a->protectedMem = (d.flags & CV_ACCEL_MEMF_PROTECTED) != 0;
+        {
+            std::lock_guard<std::mutex> lk(ownedMutex());
+            ownedAllocations()[(uintptr_t)a->mem] = a;
+        }
         countAllocation(device, 1);
         return CV_ACCEL_OK;
     }
@@ -509,7 +547,13 @@ cvAccelStatus CV_API_CALL emu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEX
     if (a->cpuView != a->mem)
         fastFree(a->cpuView);
     if (a->owned)
+    {
+        {
+            std::lock_guard<std::mutex> lk(ownedMutex());
+            ownedAllocations().erase((uintptr_t)a->mem);
+        }
         fastFree(a->mem);
+    }
     countAllocation(a->device, -1);
     delete a;
     alloc->backend_data = 0;
@@ -537,14 +581,20 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             a->size = (size_t)ext->size;
             a->mem = a->cpuView = buf->mem.data() + ext->offset;
             a->dmabuf = buf;
+            // a tiled or compressed layout has no linear CPU view
+            const uint64_t modifier = ext->struct_size >= offsetof(cvAccelExternalMemory, layout_modifier) + sizeof(uint64_t)
+                                      ? ext->layout_modifier : 0;
             out->desc.device_index = (uint32_t)device;
             out->desc.kind = CV_ACCEL_MEM_SHARED;
-            out->desc.host_access = CV_ACCEL_HOST_ACCESS_COHERENT;
+            out->desc.host_access = modifier ? CV_ACCEL_HOST_ACCESS_NONE : CV_ACCEL_HOST_ACCESS_COHERENT;
             out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
+            out->desc.layout_modifier = modifier;
             out->desc.flags = CV_ACCEL_MEMF_IMPORTED | CV_ACCEL_MEMF_EXTERNAL_SYNC | (ext->flags & CV_ACCEL_MEMF_READ_ONLY);
             out->handle = (uint64_t)(uintptr_t)a->mem;
             out->size = ext->size;
             out->backend_data = a;
+            out->backing_id = (1ull << 63) | (uint64_t)ext->handle;     // the dma-buf itself, like its inode
+            out->backing_offset = ext->offset;
             countAllocation(device, 1);
             return CV_ACCEL_OK;
         }
@@ -568,16 +618,25 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             a->owned = false;
             a->scrambled = true;
             a->cpuOpen = false;
-            // a protected source (a secure decoder's frame, say) stays protected
-            const bool prot = (ext->flags & CV_ACCEL_MEMF_PROTECTED) != 0;
+            // the backend, not the caller, attests protection: memory of a protected allocation
+            // (a secure decoder's frame, say) is protected, whatever the caller asked for
+            bool prot = false;
+            const uintptr_t base = ownedBase((uintptr_t)(intptr_t)ext->handle + ext->offset, &prot);
             out->desc.device_index = (uint32_t)device;
             out->desc.kind = CV_ACCEL_MEM_DEVICE;
             out->desc.host_access = prot ? CV_ACCEL_HOST_ACCESS_NONE : CV_ACCEL_HOST_ACCESS_COPY;
             out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
-            out->desc.flags = CV_ACCEL_MEMF_IMPORTED | (ext->flags & (CV_ACCEL_MEMF_READ_ONLY | CV_ACCEL_MEMF_PROTECTED));
+            out->desc.flags = CV_ACCEL_MEMF_IMPORTED | (ext->flags & CV_ACCEL_MEMF_READ_ONLY) |
+                              (prot ? CV_ACCEL_MEMF_PROTECTED : 0);
             out->handle = (uint64_t)(uintptr_t)a->mem;
             out->size = ext->size;
             out->backend_data = a;
+            a->protectedMem = prot;
+            if (base)   // the allocation it lies in
+            {
+                out->backing_id = (uint64_t)base;
+                out->backing_offset = (uint64_t)((uintptr_t)a->mem - base);
+            }
             countAllocation(device, 1);
             return CV_ACCEL_OK;
         }
@@ -933,10 +992,11 @@ bool sameFormat(const cvAccelCall* call, const cvAccelView* a, const cvAccelView
     return isScrambledDesc(a->alloc->desc, call->device) == isScrambledDesc(b->alloc->desc, call->device);
 }
 
-//! like a real kernel, the emulator must know how to address memory (a device pointer, ...)
+//! like a real kernel, the emulator must know how to address memory (a device pointer, ...),
+//! and its kernels work on linear layouts only
 bool addressable(const cvAccelView* v)
 {
-    return v->alloc && v->alloc->desc.handle_kind != CV_ACCEL_HANDLE_NONE;
+    return v->alloc && v->alloc->desc.handle_kind != CV_ACCEL_HANDLE_NONE && v->alloc->desc.layout_modifier == 0;
 }
 
 Mat viewToMat(const cvAccelView* v)
@@ -949,6 +1009,8 @@ cvAccelStatus CV_API_CALL emu_flip(const cvAccelCall* call, const cvAccelView* s
 {
     if (deviceLost(call->device))
         return lostError();
+    if (call->device >= 0 && call->device < EMU_DEVICES && g_opsDisabled[call->device].load())
+        return CV_ACCEL_NOT_IMPLEMENTED;
     try
     {
         if (!addressable(src) || !addressable(dst) || src->dims != 2 || dst->dims != 2 || src->type != dst->type)
@@ -973,6 +1035,8 @@ cvAccelStatus CV_API_CALL emu_transpose(const cvAccelCall* call, const cvAccelVi
 {
     if (deviceLost(call->device))
         return lostError();
+    if (call->device >= 0 && call->device < EMU_DEVICES && g_opsDisabled[call->device].load())
+        return CV_ACCEL_NOT_IMPLEMENTED;
     try
     {
         if (!addressable(src) || !addressable(dst) || src->dims != 2 || dst->dims != 2 || src->type != dst->type)
@@ -1080,6 +1144,17 @@ int64 emulatorViolations()
     return (int64)impl::g_violations.load();
 }
 
+int64 emulatorAllocateExternal(int device, size_t size, int value, bool protectedContent)
+{
+    cvAccelAllocation a;
+    memset(&a, 0, sizeof(a));
+    CV_Assert(impl::emu_allocate(device, size, CV_ACCEL_MEM_DEVICE, protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0, &a)
+              == CV_ACCEL_OK);
+    impl::EmuAlloc* e = (impl::EmuAlloc*)a.backend_data;
+    memset(e->mem, e->scrambled ? (value ^ impl::SCRAMBLE) : value, e->size);
+    return (int64)(intptr_t)e->mem;     // memory of "another library": never freed
+}
+
 int64 emulatorCreateDmaBuf(size_t size)
 {
     static int64 next = 1000;
@@ -1110,6 +1185,12 @@ int emulatorDmaBufAttachedFences(int64 fd)
     CV_Assert(buf);
     std::lock_guard<std::mutex> lk(buf->m);
     return buf->attached;
+}
+
+void emulatorDisableOps(int device, bool disable)
+{
+    CV_Assert(0 <= device && device < impl::EMU_DEVICES);
+    impl::g_opsDisabled[device].store(disable);
 }
 
 void emulatorFailNextCpuFlush()

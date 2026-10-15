@@ -1054,6 +1054,26 @@ bool isDeviceAllocator(const MatAllocator* a)
     return dynamic_cast<const DeviceAllocator*>(a) != NULL;
 }
 
+SamePlacement::SamePlacement(const _OutputArray& out, const _InputArray& model) : out_(NULL)
+{
+    if (out.kind() != _InputArray::UMAT || model.kind() != _InputArray::UMAT)
+        return;
+    UMat& o = out.getUMatRef();
+    if (o.allocator)
+        return;     // explicit placement wins
+    const UMat& m = *(const UMat*)model.getObj();
+    if (!m.u || !m.u->accelState || !isDeviceAllocator(m.u->currAllocator))
+        return;
+    o.allocator = const_cast<MatAllocator*>(m.u->currAllocator);
+    out_ = &o;
+}
+
+SamePlacement::~SamePlacement()
+{
+    if (out_)
+        out_->allocator = NULL;     // placement belongs to the data, not to the header
+}
+
 bool sameAccelDevice(const UMatData* a, const UMatData* b)
 {
     return a && b && a->accelState && b->accelState &&
@@ -1141,6 +1161,7 @@ UMatData* DeviceAllocator::createState(UMatData* u, const cvAccelAllocation& a, 
     u->handle = (void*)(uintptr_t)a.handle;
     if (a.desc.host_access == CV_ACCEL_HOST_ACCESS_DEVICE_IDLE)
         b_->idleGate(device_).used = true;
+    b_->registerBacking(st, u);
     noteBufferCreated();
     return u;
 }
@@ -1202,8 +1223,10 @@ UMatData* DeviceAllocator::allocate(int dims, const int* sizes, int type, void* 
     return u;
 }
 
-UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) const
+UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total, size_t* viewOffset) const
 {
+    if (viewOffset)
+        *viewOffset = (size_t)-1;   // not a view
     if (!b_->fn().import_memory)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): the backend cannot import external memory", b_->name().c_str()));
     const void* hostPtr = ext.type == CV_ACCEL_EXTMEM_HOST_POINTER ? (const void*)((uchar*)(intptr_t)ext.handle + ext.offset) : 0;
@@ -1239,6 +1262,59 @@ UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) 
         }
     }
     CV_Assert(a.size >= total);
+    if (a.desc.layout_modifier != ext.layout_modifier)
+    {
+        // a backend that does not know the layout (or predates the field) reports it as linear:
+        // using tiled or compressed memory as linear would read garbage
+        if (b_->fn().deallocate(&a) != CV_ACCEL_OK)
+            CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to release an import: " << b_->fn().get_last_error());
+        if (hostPtr)
+            b_->releaseHostImport(device_, hostPtr);
+        CV_Error_(Error::StsNotImplemented, ("accel(%s): the backend cannot import memory with layout modifier 0x%llx",
+                                             b_->name().c_str(), (unsigned long long)ext.layout_modifier));
+    }
+    if ((ext.flags & CV_ACCEL_MEMF_PROTECTED) && !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
+    {
+        // protection is attested by the backend, never taken on the caller's word
+        if (b_->fn().deallocate(&a) != CV_ACCEL_OK)
+            CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to release an import: " << b_->fn().get_last_error());
+        if (hostPtr)
+            b_->releaseHostImport(device_, hostPtr);
+        CV_Error_(Error::StsBadArg, ("accel(%s): the backend does not attest that this memory is protected",
+                                     b_->name().c_str()));
+    }
+    if (a.backing_id)
+    {
+        // memory that core already holds (a UMat's own, or an earlier wrap): a view of that
+        // buffer, so that both share one synchronization state
+        UMatData* held = NULL;
+        size_t offset = 0;
+        try
+        {
+            const uint32_t required = ext.flags & (CV_ACCEL_MEMF_READ_ONLY | CV_ACCEL_MEMF_PROTECTED);
+            held = b_->findBacking(a.backing_id, a.backing_offset, total, required, viewOffset != NULL, offset);
+            if (held && !viewOffset)
+                CV_Error_(Error::StsBadArg, ("accel(%s): this memory is already held by a UMat; take a view of "
+                                             "that UMat instead", b_->name().c_str()));
+        }
+        catch (...)
+        {
+            if (b_->fn().deallocate(&a) != CV_ACCEL_OK)
+                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to release an import: " << b_->fn().get_last_error());
+            if (hostPtr)
+                b_->releaseHostImport(device_, hostPtr);
+            throw;
+        }
+        if (held)
+        {
+            if (b_->fn().deallocate(&a) != CV_ACCEL_OK)     // the new import is not needed
+                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to release an import: " << b_->fn().get_last_error());
+            if (hostPtr)
+                b_->releaseHostImport(device_, hostPtr);
+            *viewOffset = offset;
+            return held;
+        }
+    }
     UMatData* u = new UMatData(this);
     u->size = total;
     u->flags |= UMatData::USER_ALLOCATED;
@@ -1300,6 +1376,7 @@ bool DeviceAllocator::allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsag
         }
         if (!copied)
         {
+            b_->unregisterBacking(st);
             u->accelState = NULL;
             u->handle = 0;
             destroyBufferState(st);
@@ -1323,6 +1400,7 @@ void DeviceAllocator::deallocate(UMatData* u) const
     CV_Assert(u->refcount == 0 && "UMat deallocation error: some derived Mat is still alive");
     BufferState* st = u->accelState;
     CV_Assert(st);
+    b_->unregisterBacking(st);  // first: lookups must never see a UMatData that is going away
 
     // From here on errors are logged, not thrown: this runs from ~UMat.
     if (st->hostMapped)

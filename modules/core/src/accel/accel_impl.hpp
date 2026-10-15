@@ -172,6 +172,17 @@ public:
 
     /** A device stays lost once lost; a failure without a known device loses the whole backend.
         Lock-free and never throws: called from release paths and from check(). */
+    /** Live buffers by the identity of their physical memory (cvAccelAllocation::backing_id),
+        so that aliases of one memory share one buffer and one synchronization state. */
+    void registerBacking(BufferState* st, UMatData* u);
+    //! runs while @p st's UMatData is still alive (deallocate), before anything is freed
+    void unregisterBacking(const BufferState* st);
+    /** The live buffer whose range holds [offset, offset+size) of @p id, or NULL; with
+        @p reference, one more UMat reference is taken on it. Throws when the range overlaps a
+        live buffer only partly, or when the buffer lacks @p requiredFlags (read-only, protected). */
+    UMatData* findBacking(uint64_t id, uint64_t offset, uint64_t size, uint32_t requiredFlags, bool reference,
+                          size_t& viewOffset);
+
     //! tests only: forgets that devices were lost (accel::detail::reviveDevices)
     void revive() CV_NOEXCEPT
     {
@@ -238,6 +249,15 @@ private:
     std::atomic<bool> lost_;
     std::atomic<bool> lostDevices_[MAX_TRACKED_DEVICES];
     std::atomic<bool> noPinnedShadow_[MAX_TRACKED_DEVICES];
+    struct BackingEntry
+    {
+        BufferState* st;
+        UMatData* u;
+        uint64_t offset;
+        uint64_t size;
+    };
+    std::mutex backingsMutex_;
+    std::multimap<uint64_t, BackingEntry> backings_;
     std::vector<std::unique_ptr<IdleGate> > idleGates_;
     std::map<std::pair<int, uintptr_t>, uintptr_t> hostImports_;   //!< (device, first page) -> end
     std::multimap<std::pair<int, uint64_t>, cvAccelAllocation> pinnedCache_;
@@ -423,8 +443,10 @@ public:
     int device() const { return device_; }
     int kind() const { return kind_; }
 
-    //! wraps external memory (wrapExternalMemory)
-    UMatData* wrap(const cvAccelExternalMemory& ext, size_t total) const;
+    /** Wraps external memory (wrapExternalMemory). When the memory is a range of a buffer that
+        core already holds, returns that buffer with one more UMat reference and its offset in
+        @p viewOffset; without @p viewOffset such an alias is refused. */
+    UMatData* wrap(const cvAccelExternalMemory& ext, size_t total, size_t* viewOffset = NULL) const;
 
 private:
     UMatData* createState(UMatData* u, const cvAccelAllocation& a, bool imported) const;
@@ -441,6 +463,20 @@ void destroyBufferState(BufferState* st);
 
 //! true for allocators of accelerator backends: their data must never move elsewhere silently
 bool isDeviceAllocator(const MatAllocator* a);
+
+/** _OutputArray::createSameSize / fitSameSize: while it lives, an output UMat without an
+    allocator of its own is created on the device that holds @p model, so a function without an
+    accelerator hook keeps its data on the device even when it runs on the CPU. */
+class SamePlacement
+{
+public:
+    SamePlacement(const _OutputArray& out, const _InputArray& model);
+    ~SamePlacement();
+private:
+    SamePlacement(const SamePlacement&);
+    SamePlacement& operator=(const SamePlacement&);
+    UMat* out_;
+};
 
 //! both buffers live on the same device of the same accelerator backend
 bool sameAccelDevice(const UMatData* a, const UMatData* b);

@@ -206,7 +206,12 @@ typedef struct cvAccelAllocation
     uint64_t size;              //!< bytes requested (allocate) or imported, never rounded up: whole-buffer copies use it
     void* backend_data;         //!< private to the backend
     cvAccelMemoryDesc desc;
-    uint64_t reserved[2];       //!< zero; room for new fields (the size stays)
+    /** identity of the physical memory: the same for every allocation and import that reach it
+        while it lives (its base address, a CUDA buffer id, a dma-buf's inode, ...); 0 when not
+        known. A wrap of memory that core already holds becomes a view of that buffer, so that
+        both share one synchronization state. */
+    uint64_t backing_id;
+    uint64_t backing_offset;    //!< where handle lies in that memory
 } cvAccelAllocation;
 
 /** @brief An n-dimensional strided view into an allocation (an argument of an operation).
@@ -293,6 +298,12 @@ typedef struct cvAccelExternalMemory
     uint64_t offset;
     uint64_t size;
     uint32_t flags;         //!< CV_ACCEL_MEMF_READ_ONLY, CV_ACCEL_MEMF_PROTECTED
+    /** DRM format modifier of the memory: 0 for linear, anything else for a tiled or compressed
+        layout without a linear CPU view. The backend reports it back in desc.layout_modifier;
+        core refuses an import whose backend reports another layout (one that predates this
+        field reports linear). */
+    uint64_t layout_modifier;
+    uint32_t fourcc;        //!< DRM fourcc of the image the memory holds (NV12, P010, ...), 0 if none; informational
 } cvAccelExternalMemory;
 
 /** @brief External fence types for cross-device synchronization without a CPU wait. */

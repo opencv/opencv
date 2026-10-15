@@ -54,7 +54,11 @@ Checked against 5.x at e13b74e9a7 (15 October 2026) with PR #30259 applied.
 3. **Correct first, then zero-copy.** The protocol decides when to wait, flush, invalidate
    or copy. When memory is shared, the copy steps disappear and the rest stays.
 4. **Where data lives does not depend on op coverage.** A cv:: call on device data produces
-   its output on that device whether the backend implemented the call or not.
+   its output on that device whether the backend implemented the call or not. Functions with
+   an accelerator hook always do. Without a hook, every output created after the shape of an
+   input (`createSameSize`, as the element-wise operations do) follows that input's device,
+   and other new outputs go where `UMat::create` puts them: the `ExecutionScope`'s device
+   inside a scope, host memory outside one, until the function gets its hook.
 5. **No hidden copies.** Every transfer is visible in `cv::accel::TransferStats`, and
    `TRANSFER_FORBID` turns implicit ones into errors.
 6. **A stable C boundary.** Backends can ship inside OpenCV or as plugins, written in C or
@@ -243,7 +247,9 @@ see the same DRAM:
    never reaches the CPU: `getMat`, downloads and CPU fallbacks throw. Whatever is computed
    from it stays protected: outputs and temporaries of the call are allocated protected
    (`CV_ACCEL_MEMF_PROTECTED` in `allocate`), and an ordinary output, a Mat output or a
-   device copy into ordinary memory is refused.
+   device copy into ordinary memory is refused. Protection is attested by the backend that
+   owns the memory: `ExternalMemory::protectedContent` only makes a wrap fail when the backend
+   does not attest it.
 9. **Imported dma-bufs.** Buffers from cameras, decoders or displays may carry implicit
    fences. Core brackets every device use of them, its own operations and copies as well as
    the caller's work under a `DeviceAccess`, with `begin_device_access` (the stream waits for
@@ -312,8 +318,11 @@ and temporaries that do not exist yet are described by the backend itself
 
 ### Choosing the device
 
-The innermost `cv::accel::ExecutionScope` of the calling thread wins. Otherwise the call
-runs on the device of the first argument that lives on one ("compute follows data"). For
+The innermost `cv::accel::ExecutionScope` of the calling thread wins. Otherwise every device
+that holds an argument is a candidate: the dispatcher plans the call for each, asks its
+backend (QUERY, free of side effects), and picks the device that accepts and copies the fewest
+bytes, the earlier argument's device on a tie ("compute follows data", weighed by coverage and
+transfer cost). For
 each argument the dispatcher plans one of four things: use its memory in place (the device
 can access it), upload it into a temporary, create the output on the device, or produce the
 output in a temporary and copy it to where the caller keeps it (a Mat, a UMat on another
@@ -415,6 +424,9 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | read-only imported memory | device writes refused, CPU write views throw | `acquireForDevice` |
 | pageable memory in a DMA | host copies are pinned; user Mats are not pinned implicitly | `ensureShadow` |
 | overlapping host imports | refused, the caller copies | `Backend::reserveHostImport` |
+| multi-plane images (NV12, P010), one fd or one per plane | one UMat per plane with its own pitch | `wrapExternalImage` |
+| tiled or compressed layouts (DRM modifiers) | no CPU view; refused by backends that do not report the layout back | `ExternalMemory::layoutModifier` |
+| the same device memory or dma-buf wrapped twice, or a UMat's own memory wrapped | a view of the buffer core already holds, so one synchronization state; a range that only partly overlaps it is refused | `Backend::findBacking`, `cvAccelAllocation::backing_id` |
 | misaligned host imports (device alignment; cache-line granule for non-coherent memory) | refused, the caller copies | `DeviceAllocator::wrap` |
 | two devices of one backend | peer access where it is enabled (CUDA: `OPENCV_ACCEL_CUDA_PEER_ACCESS`, at enumeration), else a staged copy | `can_access` |
 | two backends | staged copy, counted as a transfer | `UMat::copyTo` |
@@ -495,6 +507,32 @@ or clean shows as stale data), its managed device counts device work that overla
 access, and a sixth device fails on request (asynchronous errors, device loss) to check that
 no error escapes a destructor. `OPENCV_ACCEL_EMULATOR_DELAY_US` delays every queued task to
 expose missing waits.
+
+## Evidence so far
+
+Measured on an Intel Core i9-14900KS with an NVIDIA GeForce RTX 5090 (CUDA 12.0, driver 570),
+GCC 13.3, Release builds:
+
+- `opencv_test_core --gtest_filter='Core_Accel*'`: the emulator tests (protocol, failure
+  injection, device loss, dma-buf fences, multi-plane images, aliasing, read-only and
+  protected memory, wait limits, device choice) pass, also repeated, in separate processes
+  and with every device task delayed (`OPENCV_ACCEL_EMULATOR_DELAY_US`).
+- The six `Core_Accel_CUDA` tests pass on the RTX 5090: transfer accounting of a host round
+  trip, device-to-device copies, placement after CPU fallbacks, backing identity through
+  `cuMemGetAddressRange`, ordering against a kernel the caller launches on the legacy default
+  stream, and copy-back of Mat-backed UMats. The whole `opencv_test_core` passes with and
+  without CUDA.
+- ThreadSanitizer (`-fsanitize=thread`, pthreads backend): no data race in the accelerator
+  tests, over repeated runs and with delayed device tasks.
+- Cost, 4x4 flip: 0.14 us on a Mat, 0.6 us on a host UMat with a backend registered, 2.4 us
+  dispatched to the emulator (8 to 9 us including the wait for its worker thread).
+- CUDA, 4K BGR frame (24.9 MB): upload 9 to 12 GB/s (GpuMat::upload 8 to 10); `getMat` into the
+  pinned host copy 20 to 25 GB/s, against 5.5 to 7 GB/s into pageable memory (GpuMat::download
+  7); device copy 810 GB/s. A chain flip, flip, add, `getMat` on GPU data without CUDA kernels
+  moves the frame across the bus once.
+
+Not covered yet: NPU hardware (the emulator's non-coherent and device-idle devices stand in),
+HIP, multiple GPUs (peer access, contexts on other devices), and performance of real kernels.
 
 ## Migration plan
 
