@@ -86,6 +86,12 @@ extern "C" {
 //! timeout value meaning "wait forever"
 #define CV_ACCEL_INFINITE ((uint64_t)-1)
 
+/** @brief Flags of stream_create. */
+typedef enum cvAccelStreamFlags
+{
+    CV_ACCEL_STREAM_NON_BLOCKING = 1 << 0  //!< no implicit ordering with the device API's default stream
+} cvAccelStreamFlags;
+
 typedef enum cvAccelStatus
 {
     CV_ACCEL_OK = 0,
@@ -290,7 +296,7 @@ enum
     CV_ACCEL_CAP_IMPORT_DMABUF = 1 << 5,
     CV_ACCEL_CAP_EXPORT_DMABUF = 1 << 6,
     CV_ACCEL_CAP_EXTERNAL_FENCE = 1 << 7,   //!< fence_export / stream_wait_external
-    CV_ACCEL_CAP_PEER_ACCESS = 1 << 8,      //!< kernels can read other devices of the same backend
+    CV_ACCEL_CAP_PEER_ACCESS = 1 << 8,      //!< kernels reach memory of another device of this backend (can_access tells which)
     CV_ACCEL_CAP_STREAMS_THREAD_SAFE = 1 << 9, //!< one stream may be used from several threads at once
     /** may hand out memory that the CPU may touch only while the device is idle
         (CV_ACCEL_HOST_ACCESS_DEVICE_IDLE); core then gates every submission from the start */
@@ -338,7 +344,9 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     /** OK when kernels of @p device can read and write memory described by @p desc in place.
         @p own_device is the device index when the memory was allocated or imported by this
         backend, and -1 when it belongs to the host or to another backend. Core never asks
-        about the backend's own memory on the same device: that is always accessible. */
+        about the backend's own memory on the same device: that is always accessible. Core
+        asks while planning, so this has no side effects: what it reports is set up beforehand
+        (peer access, for instance, when the devices are enumerated). */
     cvAccelStatus (CV_API_CALL *can_access)(int device, const cvAccelMemoryDesc* desc, int own_device) CV_ACCEL_NOEXCEPT;
     /** Starts CPU access to [offset, offset+size) with access flags (cv::AccessFlag values).
         Called after all device work on the allocation finished. For NONCOHERENT memory this
@@ -357,6 +365,10 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
 
     //! @name Streams and fences
     //! @{
+    /** Creates an in-order queue. Unless @p flags hold CV_ACCEL_STREAM_NON_BLOCKING, its work
+        is ordered with the device API's default stream (the CUDA/HIP legacy stream), so that
+        a kernel the caller launches there after UMat::handle() runs before OpenCV's next use
+        of the buffer, as with an OpenCL queue that both share. */
     cvAccelStatus (CV_API_CALL *stream_create)(int device, uint32_t flags, cvAccelStream* out) CV_ACCEL_NOEXCEPT;
     cvAccelStatus (CV_API_CALL *stream_destroy)(cvAccelStream stream) CV_ACCEL_NOEXCEPT;
     //! new fence (reference count 1) that completes when all work enqueued so far completes

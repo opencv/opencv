@@ -21,11 +21,20 @@
 #ifdef HAVE_CUDA
 
 #include <cuda_runtime.h>
+#include <cuda.h>   // driver API types only: libcuda is loaded at run time (see Driver)
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/tls.hpp>
 
 #include <chrono>
+#include <mutex>
 #include <thread>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 
 namespace cv { namespace accel { namespace impl {
 
@@ -72,20 +81,102 @@ cvAccelStatus status(cudaError_t e, const char* what)
 }
 
 //! the runtime's current device is per thread state shared with the user's code: restore it
+/** The driver API's context stack. Core links the CUDA runtime only; libcuda comes with the
+    driver, so it is loaded at run time and a missing one does not keep OpenCV from loading. */
+struct Driver
+{
+    typedef CUresult (CUDAAPI *Init)(unsigned int);
+    typedef CUresult (CUDAAPI *DeviceGet)(CUdevice*, int);
+    typedef CUresult (CUDAAPI *PrimaryRetain)(CUcontext*, CUdevice);
+    typedef CUresult (CUDAAPI *CtxGet)(CUcontext*);
+    typedef CUresult (CUDAAPI *CtxPush)(CUcontext);
+    typedef CUresult (CUDAAPI *CtxPop)(CUcontext*);
+
+    Driver() : deviceGet(0), primaryRetain(0), ctxGet(0), ctxPush(0), ctxPop(0), ok(false)
+    {
+#if defined(_WIN32)
+        HMODULE lib = LoadLibraryA("nvcuda.dll");
+#define CV_CUDA_DRIVER_SYM(name) (lib ? (void*)GetProcAddress(lib, name) : NULL)
+#else
+        void* lib = dlopen("libcuda.so.1", RTLD_NOW | RTLD_LOCAL);
+#define CV_CUDA_DRIVER_SYM(name) (lib ? dlsym(lib, name) : NULL)
+#endif
+        // the library stays loaded: contexts outlive every guard
+        Init init = (Init)CV_CUDA_DRIVER_SYM("cuInit");
+        deviceGet = (DeviceGet)CV_CUDA_DRIVER_SYM("cuDeviceGet");
+        primaryRetain = (PrimaryRetain)CV_CUDA_DRIVER_SYM("cuDevicePrimaryCtxRetain");
+        ctxGet = (CtxGet)CV_CUDA_DRIVER_SYM("cuCtxGetCurrent");
+        ctxPush = (CtxPush)CV_CUDA_DRIVER_SYM("cuCtxPushCurrent_v2");
+        ctxPop = (CtxPop)CV_CUDA_DRIVER_SYM("cuCtxPopCurrent_v2");
+#undef CV_CUDA_DRIVER_SYM
+        ok = init && deviceGet && primaryRetain && ctxGet && ctxPush && ctxPop && init(0) == CUDA_SUCCESS;
+    }
+
+    //! primary context of a runtime device (the ordinals match), retained once; NULL if unavailable
+    CUcontext primary(int device)
+    {
+        std::lock_guard<std::mutex> lk(mutex);
+        if (device >= (int)primaries.size())
+            primaries.resize(device + 1, (CUcontext)NULL);
+        if (!primaries[device])
+        {
+            CUdevice dev = 0;
+            CUcontext ctx = NULL;
+            if (deviceGet(&dev, device) == CUDA_SUCCESS && primaryRetain(&ctx, dev) == CUDA_SUCCESS)
+                primaries[device] = ctx;
+        }
+        return primaries[device];
+    }
+
+    DeviceGet deviceGet;
+    PrimaryRetain primaryRetain;
+    CtxGet ctxGet;
+    CtxPush ctxPush;
+    CtxPop ctxPop;
+    bool ok;
+    std::mutex mutex;
+    std::vector<CUcontext> primaries;
+};
+
+Driver& driver()
+{
+    static Driver* d = new Driver();    // never destroyed: guards may run during static destruction
+    return *d;
+}
+
+/** Makes the device current for the scope and then restores exactly what the thread had: the
+    caller's own context (NVDEC, FFmpeg and other driver-API users push theirs), or none at all.
+    Restoring with cudaSetDevice cannot do that: since CUDA 12 it creates the primary context of
+    the device it restores, so a thread that never used GPU 0 would get one there (hundreds of
+    MB of its memory), and a driver-API context would be replaced by a primary one. */
 struct DeviceGuard
 {
-    explicit DeviceGuard(int device) : prev(-1)
+    explicit DeviceGuard(int device) : pushed(false), prev(-1)
     {
-        if (cudaGetDevice(&prev) == cudaSuccess && prev != device)
-            cudaSetDevice(device);
-        else
+        Driver& d = driver();
+        CUcontext ctx = d.ok ? d.primary(device) : NULL;
+        CUcontext cur = NULL;
+        if (ctx && d.ctxGet(&cur) == CUDA_SUCCESS)
+        {
+            if (cur != ctx)
+                pushed = d.ctxPush(ctx) == CUDA_SUCCESS;
+            return;
+        }
+        // no driver API: the runtime's current device, with the caveat above
+        if (cudaGetDevice(&prev) != cudaSuccess || prev == device || cudaSetDevice(device) != cudaSuccess)
             prev = -1;
     }
     ~DeviceGuard()
     {
-        if (prev >= 0)
+        if (pushed)
+        {
+            CUcontext popped = NULL;
+            driver().ctxPop(&popped);
+        }
+        else if (prev >= 0)
             cudaSetDevice(prev);
     }
+    bool pushed;
     int prev;
 };
 
@@ -96,6 +187,7 @@ struct DeviceProps
     int pageableMemoryAccess;
     int hostRegisterSupported;
     uint32_t sharedHostAccess;   //!< how the CPU sees pinned memory mapped into this GPU
+    uint64_t peerEnabled;        //!< bit j: kernels here reach memory of GPU j (peer access is on)
 };
 
 std::vector<DeviceProps>& devices()
@@ -124,6 +216,26 @@ std::vector<DeviceProps>& devices()
             const int cc = p.prop.major * 10 + p.prop.minor;
             p.sharedHostAccess = (p.prop.integrated && cc < 72) ? CV_ACCEL_HOST_ACCESS_UNCACHED
                                                                 : CV_ACCEL_HOST_ACCESS_COHERENT;
+        }
+        // Peer access maps every allocation of one GPU into the other's address space and makes
+        // every later allocation and free on both slower: only on request, once, here (so that
+        // can_access stays free of side effects).
+        if (n > 1 && utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA_PEER_ACCESS", false))
+        {
+            for (int i = 0; i < n && i < 64; i++)
+            {
+                for (int j = 0; j < n && j < 64; j++)
+                {
+                    int can = 0;
+                    if (i == j || cudaDeviceCanAccessPeer(&can, i, j) != cudaSuccess || !can)
+                        continue;
+                    DeviceGuard guard(i);
+                    const cudaError_t e = cudaDeviceEnablePeerAccess(j, 0);
+                    if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled)
+                        (*d)[i].peerEnabled |= (uint64_t)1 << j;
+                    cudaGetLastError();
+                }
+            }
         }
     });
     return *d;
@@ -171,7 +283,9 @@ cvAccelStatus CV_API_CALL cu_get_device_info(int device, cvAccelDeviceInfo* info
     info->vendor_id = 0x10de;
     info->total_memory = p.prop.totalGlobalMem;
     info->caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_MANAGED |
-                 CV_ACCEL_CAP_PEER_ACCESS | CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
+                 CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
+    if (p.peerEnabled)
+        info->caps |= CV_ACCEL_CAP_PEER_ACCESS;
     if (p.prop.integrated)
         info->caps |= CV_ACCEL_CAP_SHARED;
     if (!p.concurrentManagedAccess)
@@ -381,15 +495,9 @@ cvAccelStatus CV_API_CALL cu_can_access(int device, const cvAccelMemoryDesc* des
         // mapped pinned and managed memory is visible to every GPU
         if (desc->kind == CV_ACCEL_MEM_HOST_PINNED || desc->kind == CV_ACCEL_MEM_SHARED || desc->kind == CV_ACCEL_MEM_MANAGED)
             return CV_ACCEL_OK;
-        int can = 0;
-        if (cudaDeviceCanAccessPeer(&can, device, own_device) != cudaSuccess || !can)
-            return CV_ACCEL_NOT_IMPLEMENTED;
-        DeviceGuard guard(device);
-        cudaError_t e = cudaDeviceEnablePeerAccess(own_device, 0);
-        if (e != cudaSuccess && e != cudaErrorPeerAccessAlreadyEnabled)
-            return status(e, "cudaDeviceEnablePeerAccess");
-        cudaGetLastError();
-        return CV_ACCEL_OK;
+        // device memory of another GPU: only where peer access was enabled (see devices())
+        const uint64_t peers = devices()[device].peerEnabled;
+        return own_device < 64 && ((peers >> own_device) & 1) ? CV_ACCEL_OK : CV_ACCEL_NOT_IMPLEMENTED;
     }
     // plain host memory: only with HMM / ATS (Grace Hopper, recent drivers)
     if (desc->kind == CV_ACCEL_MEM_HOST && desc->handle_kind == CV_ACCEL_HANDLE_HOST_POINTER &&
@@ -456,14 +564,17 @@ cvAccelStatus CV_API_CALL cu_copy(int device, cvAccelStream stream, const cvAcce
                          r->dims, r->size, ((CudaStream*)stream)->s);
 }
 
-cvAccelStatus CV_API_CALL cu_stream_create(int device, uint32_t /*flags*/, cvAccelStream* out) CV_ACCEL_NOEXCEPT
+cvAccelStatus CV_API_CALL cu_stream_create(int device, uint32_t flags, cvAccelStream* out) CV_ACCEL_NOEXCEPT
 {
     DeviceGuard guard(device);
     CudaStream* s = new (std::nothrow) CudaStream();
     if (!s)
         return CV_ACCEL_OUT_OF_MEMORY;
     s->device = device;
-    cudaError_t e = cudaStreamCreateWithFlags(&s->s, cudaStreamNonBlocking);
+    // a blocking stream is ordered with the legacy default stream, which most CUDA code (and
+    // cv::cuda::Stream::Null()) uses to hand buffers over without events
+    const unsigned cudaFlags = (flags & CV_ACCEL_STREAM_NON_BLOCKING) ? cudaStreamNonBlocking : cudaStreamDefault;
+    cudaError_t e = cudaStreamCreateWithFlags(&s->s, cudaFlags);
     if (e != cudaSuccess)
     {
         delete s;

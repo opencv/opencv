@@ -3022,6 +3022,10 @@ public:
         a CUDA device pointer for cv::cuda::getCudaAllocator().
         The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
         returned to the OpenCV buffer pool.
+        For memory of an accelerator backend (see cv::accel) the call first waits for OpenCV's work
+        on the buffer. Work the caller then enqueues on the device API's default stream (the CUDA or
+        HIP legacy stream) runs before OpenCV's next use of the UMat; work on other streams needs
+        cv::accel::DeviceAccess.
      */
     void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;

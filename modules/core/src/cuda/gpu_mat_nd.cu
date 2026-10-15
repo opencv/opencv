@@ -227,6 +227,10 @@ void GpuMatND::upload(InputArray src, Stream& stream)
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
     CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(getDevicePtr(), mat.data, totalMemSize(), cudaMemcpyHostToDevice, _stream));
+    // the host view of a UMat ends with this call, and it is often pinned memory, where the
+    // copy really is asynchronous: it must not outlive the view
+    if (src.isUMat())
+        stream.waitForCompletion();
 }
 
 /////////////////////////////////////////////////////
@@ -261,6 +265,9 @@ void GpuMatND::download(OutputArray dst, Stream& stream) const
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
     CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.getDevicePtr(), mat.total() * mat.elemSize(), cudaMemcpyDeviceToHost, _stream));
+    // the host view of a UMat ends with this call (see upload)
+    if (dst.isUMat())
+        stream.waitForCompletion();
 }
 
 void GpuMatND::fit(const MatShape& _shape, int _type)

@@ -240,6 +240,10 @@ void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
     CV_CUDEV_SAFE_CALL( cudaMemcpy2DAsync(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice, stream) );
+    // the host view of a UMat ends with this call, and it is often pinned memory, where the
+    // copy really is asynchronous: it must not outlive the view
+    if (arr.isUMat())
+        _stream.waitForCompletion();
 }
 
 /////////////////////////////////////////////////////
@@ -266,6 +270,9 @@ void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
     CV_CUDEV_SAFE_CALL( cudaMemcpy2DAsync(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost, stream) );
+    // the host view of a UMat ends with this call (see upload)
+    if (_dst.isUMat())
+        _stream.waitForCompletion();
 }
 
 /////////////////////////////////////////////////////
