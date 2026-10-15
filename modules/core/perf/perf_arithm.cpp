@@ -832,6 +832,24 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , RotateTest,
     )
 );
 
+typedef perf::TestBaseWithParam<std::tuple<Size, int, perf::MatType> > RotateC3Test;
+
+PERF_TEST_P_(RotateC3Test, rotate_c3)
+{
+    const Size size = get<0>(GetParam());
+    const int code = get<1>(GetParam());
+    const int type = get<2>(GetParam());
+    Mat src(size, type), dst(Size(size.height, size.width), type);
+    declare.in(src, WARMUP_RNG).out(dst);
+    TEST_CYCLE() rotate(src, dst, code);
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, RotateC3Test, testing::Combine(
+    testing::Values(szVGA, sz720p, sz1080p),
+    testing::Values(ROTATE_90_CLOCKWISE, ROTATE_90_COUNTERCLOCKWISE),
+    testing::Values(CV_8UC3, CV_16UC3, CV_32FC3, CV_64FC3)));
+
 
 ///////////// PatchNaNs ////////////////////////
 
