@@ -1257,6 +1257,8 @@ bool imwriteanimation(const String& filename, const Animation& animation, const 
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     return imwriteanimation_(filename, animation, params);
 }
 
@@ -1289,6 +1291,8 @@ bool imencodeanimation(const String& ext, const Animation& animation, std::vecto
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     return imencodeanimation_(ext, animation, buf, params);
 }
 
