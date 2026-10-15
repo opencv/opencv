@@ -387,10 +387,10 @@ DEF_CVT_FUNC(32u16u, cvt_, unsigned, ushort, v_uint32)
 DEF_CVT_FUNC(32u16s, cvt_, unsigned, short,  v_int32)
 DEF_CVT_SCALAR_FUNC(32u32s, unsigned, int)
 DEF_CVT_FUNC(32u32f, cvt_, unsigned, float,  v_float32)
-DEF_CVT_FUNC(32u64f, cvt_, unsigned, double, v_float32)
+DEF_CVT_FUNC(32u64f, cvt_64f, unsigned, double, v_float64)
 DEF_CVT_SCALAR_FUNC(32u64s, unsigned, int64_t)
 DEF_CVT_FUNC(32u16f, cvt1_, unsigned, hfloat, v_float32)
-DEF_CVT_FUNC(32u16bf, cvt1_, int, bfloat, v_float32)
+DEF_CVT_FUNC(32u16bf, cvt1_, unsigned, bfloat, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
