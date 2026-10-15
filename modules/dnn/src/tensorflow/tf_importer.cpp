@@ -338,6 +338,7 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             dimY = 1; dimX = 2; dimC = 3;
         }
         if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
+            (layout == DNN_LAYOUT_NDHWC && val.list().i_size() != 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported strides");
         if (layout == DNN_LAYOUT_NDHWC) {
@@ -388,6 +389,7 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             dimY = 1; dimX = 2; dimC = 3;
         }
         if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
+            (layout == DNN_LAYOUT_NDHWC && val.list().i_size() != 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported ksize");
 
