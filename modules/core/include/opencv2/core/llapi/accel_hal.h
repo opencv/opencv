@@ -47,9 +47,10 @@ Rules a backend must follow, because core relies on them for correctness:
    boundaries, so that cache maintenance of one buffer never touches bytes of another.
 4. begin_cpu_access / end_cpu_access may widen the range (dma-buf syncs whole buffers,
    Vulkan whole atoms) and must retry interrupted system calls (EINTR / EAGAIN).
-5. An imported dma-buf may carry implicit fences from other drivers (camera, decoder,
-   display). Work enqueued on it waits for them, and after writing, the backend attaches
-   its own fence to the dma-buf (DMA_BUF_IOCTL_EXPORT_SYNC_FILE / IMPORT_SYNC_FILE).
+5. Imported memory that carries implicit fences of other drivers (a dma-buf from a camera,
+   decoder or display) is flagged CV_ACCEL_MEMF_EXTERNAL_SYNC. Core brackets every device use
+   of it, OpenCV's and the caller's (DeviceAccess), with begin_device_access and
+   end_device_access, and begin_cpu_access waits for those fences as DMA_BUF_IOCTL_SYNC does.
 6. A backend without CV_ACCEL_CAP_ASYNC runs work during the enqueue call and returns
    fences that are already complete.
 7. Imported host memory is never freed or reused by the backend; overlapping imports are
@@ -63,6 +64,10 @@ Rules a backend must follow, because core relies on them for correctness:
    queued nothing (core falls back, or frees memory and retries). After any other error part
    of the work may be queued: core records a fence after it (or synchronizes the device) and
    treats everything the work writes as invalid until it is written whole.
+10. begin_cpu_access on memory flagged CV_ACCEL_MEMF_READ_ONLY returns a read-only mapping
+   where the platform allows it (a dma-buf mmap'ed PROT_READ), so that a write through a Mat
+   view faults instead of changing the memory. (Host copies of such memory are core's own
+   pages, protected the same way.)
 
 @note Preview only (no backward compatibility until ABI version 1).
 */
@@ -84,8 +89,8 @@ extern "C" {
 #endif
 
 #define CV_ACCEL_ABI_VERSION 0
-//! 1: describe_allocation
-#define CV_ACCEL_API_VERSION 1
+//! 1: describe_allocation; 2: begin_device_access / end_device_access
+#define CV_ACCEL_API_VERSION 2
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -170,7 +175,8 @@ enum
 {
     CV_ACCEL_MEMF_IMPORTED = 1 << 0,    //!< memory is owned outside of OpenCV (user pointer, dma-buf, ...)
     CV_ACCEL_MEMF_READ_ONLY = 1 << 1,   //!< writes are not allowed (e.g. imported read-only memory)
-    CV_ACCEL_MEMF_PROTECTED = 1 << 2    //!< protected content: never readable by the CPU
+    CV_ACCEL_MEMF_PROTECTED = 1 << 2,   //!< protected content: never readable by the CPU
+    CV_ACCEL_MEMF_EXTERNAL_SYNC = 1 << 3 //!< carries implicit fences of other drivers (dma-buf): see begin_device_access
 };
 
 /** @brief Where an allocation lives and how it can be accessed.
@@ -425,6 +431,18 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         exist yet, so that the QUERY step sees the memory the operation will really get. */
     cvAccelStatus (CV_API_CALL *describe_allocation)(int device, uint64_t size, uint32_t kind, uint32_t flags,
                                                      cvAccelMemoryDesc* desc) CV_ACCEL_NOEXCEPT;
+
+    /** optional, for memory flagged CV_ACCEL_MEMF_EXTERNAL_SYNC: later work on @p stream waits
+        for the fences other drivers attached to the memory (their last write for a read, every
+        use for a write), e.g. DMA_BUF_IOCTL_EXPORT_SYNC_FILE and a wait on the sync_file. Core
+        calls it before any device work touches such memory. @p access: cv::AccessFlag values. */
+    cvAccelStatus (CV_API_CALL *begin_device_access)(const cvAccelAllocation* alloc, cvAccelStream stream,
+                                                     uint32_t access) CV_ACCEL_NOEXCEPT;
+    /** optional: attaches @p fence, which completes the work begun with begin_device_access, to
+        the memory, so that other drivers wait for it (DMA_BUF_IOCTL_IMPORT_SYNC_FILE: as the
+        write fence after a write, as a read fence otherwise). */
+    cvAccelStatus (CV_API_CALL *end_device_access)(const cvAccelAllocation* alloc, cvAccelFence fence,
+                                                   uint32_t access) CV_ACCEL_NOEXCEPT;
 };
 
 typedef struct OpenCV_Core_Accel_API_v0

@@ -14,6 +14,7 @@
 #include <opencv2/core/accel.hpp>
 #include <opencv2/core/utils/accel_dispatch.private.hpp>
 
+#include <fstream>
 #include <thread>
 
 namespace opencv_test { namespace {
@@ -273,6 +274,72 @@ TEST(Core_Accel, copy_out_while_a_mat_view_is_open)
     EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(42)), u.getMat(ACCESS_READ)));   // the writes survived
 }
 
+TEST(Core_Accel, failed_cache_flush_never_publishes_cpu_writes)
+{
+    // non-coherent shared memory: CPU writes reach the device only through end_cpu_access
+    accel::Device d = emulator(NONCOHERENT);
+    UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
+    {
+        Mat view = u.getMat(ACCESS_RW);
+        view.setTo(Scalar(7));
+        accel::detail::emulatorFailNextCpuFlush();
+    }   // the flush fails: the device may hold old bytes, new bytes, or both
+    UMat out;
+    EXPECT_THROW(cv::flip(u, out, 1), cv::Exception);     // readers get an error, not stale data
+    EXPECT_THROW(u.getMat(ACCESS_READ), cv::Exception);
+    Mat(8, 8, CV_8UC1, Scalar(3)).copyTo(u);                // written whole: usable again
+    EXPECT_EQ(3, u.getMat(ACCESS_READ).at<uchar>(0, 0));
+}
+
+#ifdef __linux__
+//! permissions ("rw-p", ...) of the mapping that holds @p p, from /proc/self/maps
+static std::string mappingPermissions(const void* p)
+{
+    std::ifstream maps("/proc/self/maps");
+    std::string line;
+    const uintptr_t a = (uintptr_t)p;
+    while (std::getline(maps, line))
+    {
+        unsigned long long lo = 0, hi = 0;
+        char perms[8] = {0};
+        if (sscanf(line.c_str(), "%llx-%llx %7s", &lo, &hi, perms) == 3 && lo <= a && a < hi)
+            return perms;
+    }
+    return "";
+}
+
+TEST(Core_Accel, read_only_memory_has_a_read_only_cpu_view)
+{
+    // read-only device memory (a wrapped pointer, say): a write through its Mat view faults
+    accel::Device d = emulator(DISCRETE);
+    UMat owner = makeOn(d, Mat(64, 64, CV_8UC1, Scalar(3)));
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DEVICE_POINTER;
+    mem.handle = (int64)(intptr_t)owner.handle(ACCESS_READ);
+    mem.size = 64 * 64;
+    mem.readOnly = true;
+    UMat ro = accel::wrapExternalMemory(d, mem, MatShape({64, 64}), CV_8UC1);
+    Mat view = ro.getMat(ACCESS_READ);
+    EXPECT_EQ(3, view.at<uchar>(63, 63));
+    const std::string perms = mappingPermissions(view.data);
+    ASSERT_EQ(4u, perms.size());
+    EXPECT_EQ('r', perms[0]);
+    EXPECT_EQ('-', perms[1]);
+}
+#endif
+
+TEST(Core_Accel, validation_mode_catches_writes_through_read_views)
+{
+    accel::detail::setValidation(true);
+    UMat u = makeOn(emulator(COHERENT), Mat(8, 8, CV_8UC1, Scalar(1)));
+    {
+        Mat view = u.getMat(ACCESS_READ);
+        view.at<uchar>(0, 0) = 9;           // a write the protocol never hears about
+    }
+    EXPECT_THROW(u.getMat(ACCESS_READ), cv::Exception);    // the buffer is no longer trusted
+    accel::detail::setValidation(false);
+}
+
 TEST(Core_Accel, protected_memory_never_reaches_the_cpu)
 {
     accel::Device d = emulator(PROTECTED_MEM);
@@ -400,6 +467,41 @@ TEST(Core_Accel, mat_backed_umat_stays_inside_the_mat)
         ASSERT_EQ(0x11, buf[i]) << "byte " << i << " after the Mat was overwritten";
 }
 
+TEST(Core_Accel, mat_calls_inside_a_scope_run_on_its_device)
+{
+    Mat src(16, 24, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    for (int dev : {DISCRETE, COHERENT})
+    {
+        accel::ExecutionScope scope(emulator(dev));
+        accel::resetTransferStats();
+        Mat dst;
+        cv::flip(src, dst, 0);          // Mat in, Mat out: still the scope's device
+        EXPECT_EQ(1u, accel::getTransferStats().deviceOps) << "device " << dev;
+        EXPECT_EQ(0, maxDiff(ref, dst));
+    }
+}
+
+TEST(Core_Accel, host_outputs_are_written_in_place_when_the_device_can)
+{
+    // a coherent iGPU addresses host memory: no temporary, no copy back
+    Mat src(32, 40, CV_8UC4), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    accel::ExecutionScope scope(emulator(COHERENT));
+    accel::resetTransferStats();
+    Mat dst;
+    cv::flip(src, dst, 0);
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+    EXPECT_EQ(0u, accel::getTransferStats().transfers);
+    EXPECT_EQ(0, maxDiff(ref, dst));
+
+    Mat same = src.clone();
+    cv::flip(same, same, 0);            // output over its own input: through a temporary
+    EXPECT_EQ(0, maxDiff(ref, same));
+}
+
 TEST(Core_Accel, clone_stays_on_the_device)
 {
     accel::Device d = emulator(DISCRETE);
@@ -470,6 +572,39 @@ TEST(Core_Accel, wrapped_device_memory_reads_its_content)
         w.copyTo(res);
         EXPECT_EQ(0, maxDiff(src, res));
     }
+}
+
+TEST(Core_Accel, dma_buf_fences_of_other_drivers_are_honoured)
+{
+    // a dma-buf that another driver (a camera) fills: the frame is valid once its fence completes
+    accel::Device d = emulator(COHERENT);
+    const int64 fd = accel::detail::emulatorCreateDmaBuf(16 * 16);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DMABUF_FD;
+    mem.handle = fd;
+    mem.size = 16 * 16;
+    UMat frame = accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1);
+
+    accel::detail::emulatorDmaBufProduce(fd, 9, 20000);    // the camera writes 9s, 20 ms from now
+    UMat out;
+    cv::flip(frame, out, 1);                                // the device waits for the camera's fence
+    EXPECT_EQ(9, out.getMat(ACCESS_READ).at<uchar>(0, 0));
+
+    accel::detail::emulatorDmaBufProduce(fd, 4, 20000);
+    EXPECT_EQ(4, frame.getMat(ACCESS_READ).at<uchar>(0, 0));   // and so does the CPU
+
+    const int attached = accel::detail::emulatorDmaBufAttachedFences(fd);
+    UMat src = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(5)));
+    cv::flip(src, frame, 0);                                // a device write into the dma-buf...
+    EXPECT_GT(accel::detail::emulatorDmaBufAttachedFences(fd), attached);  // ...hands its fence on
+}
+
+TEST(Core_Accel, device_access_checks_the_stream)
+{
+    UMat u = makeOn(emulator(DISCRETE), Mat(4, 4, CV_8UC1, Scalar(1)));
+    accel::Stream other = accel::Stream::getDefault(emulator(COHERENT));
+    EXPECT_THROW({ accel::DeviceAccess acc(u, other, ACCESS_READ); }, cv::Exception);  // a device that cannot reach it
+    EXPECT_NO_THROW({ accel::DeviceAccess acc(u, accel::Stream::getDefault(emulator(DISCRETE)), ACCESS_READ); });
 }
 
 TEST(Core_Accel, functions_without_a_hook_still_work)
@@ -594,6 +729,29 @@ TEST(Core_Accel, device_sync_waits_for_streams_of_finished_threads)
     EXPECT_EQ(2, y.getMat(ACCESS_READ).at<uchar>(0, 0));           // another buffer: the device drains first
     EXPECT_EQ(violations, accel::detail::emulatorViolations());
     EXPECT_EQ(1, out.getMat(ACCESS_READ).at<uchar>(0, 0));
+}
+
+TEST(Core_Accel, wait_limit_never_hands_back_memory_the_device_still_uses)
+{
+    accel::Device d = emulator(COHERENT);
+    accel::detail::setWaitTimeout(5);  // ms; device work below takes 50 ms
+    runWithDeviceDelay(50000, [&]() {
+        std::vector<uchar> storage(4096 * 2);
+        uchar* p = alignPtr(storage.data(), 4096);
+        Mat host(32, 32, CV_8UC1, p);
+        host.setTo(Scalar(0));
+        accel::ExternalMemory mem;
+        mem.type = accel::ExternalMemory::HOST_POINTER;
+        mem.handle = (int64)(intptr_t)p;
+        mem.size = host.total();
+        UMat w = accel::wrapExternalMemory(d, mem, MatShape({32, 32}), CV_8UC1);
+        UMat src = makeOn(d, Mat(32, 32, CV_8UC1, Scalar(7)));
+        src.copyTo(w);                  // a device copy into the owner's memory: no limit on that wait
+        w.release();
+        EXPECT_EQ(0, maxDiff(Mat(32, 32, CV_8UC1, Scalar(7)), host));
+    });
+    accel::detail::setWaitTimeout(0);
+    accel::detail::reviveDevices();
 }
 
 TEST(Core_Accel, copy_into_wrapped_memory_is_done_on_return)

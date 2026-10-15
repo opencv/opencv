@@ -154,18 +154,18 @@ bool FenceRef::isComplete() const
 }
 
 //! OPENCV_ACCEL_WAIT_TIMEOUT_MS: a device that does not finish in time is considered lost (0: wait forever)
-static uint64_t waitTimeoutNs()
+static std::atomic<uint64_t>& waitTimeoutNs()
 {
-    static uint64_t ns = (uint64_t)utils::getConfigurationParameterSizeT("OPENCV_ACCEL_WAIT_TIMEOUT_MS", 0) * 1000000u;
+    static std::atomic<uint64_t> ns((uint64_t)utils::getConfigurationParameterSizeT("OPENCV_ACCEL_WAIT_TIMEOUT_MS", 0) * 1000000u);
     return ns;
 }
 
-void FenceRef::wait() const
+void FenceRef::wait(bool bounded) const
 {
     if (!f_)
         return;
     counters().hostWaits++;
-    const uint64_t timeout = waitTimeoutNs();
+    const uint64_t timeout = bounded ? waitTimeoutNs().load() : 0;
     const cvAccelStatus st = b_->fn().fence_wait(f_, timeout ? timeout : CV_ACCEL_INFINITE);
     if (st == CV_ACCEL_TIMEOUT)
     {
@@ -198,11 +198,11 @@ FenceRef::Poll FenceRef::poll() const CV_NOEXCEPT
     return FAILED;
 }
 
-bool FenceRef::waitNoThrow() const CV_NOEXCEPT
+bool FenceRef::waitNoThrow(bool bounded) const CV_NOEXCEPT
 {
     try
     {
-        wait();
+        wait(bounded);
         return true;
     }
     catch (const std::exception& e)
@@ -406,6 +406,9 @@ bool Backend::canAccess(int device, const cvAccelMemoryDesc& desc)
     if (desc.backend_id == (uint32_t)id_ && (int)desc.device_index == device)
         return true;
     if (!fn().can_access)
+        return false;
+    // implicit fences are bracketed by the owning backend only (begin/end_device_access)
+    if (desc.backend_id != (uint32_t)id_ && (desc.flags & CV_ACCEL_MEMF_EXTERNAL_SYNC))
         return false;
     const int own = desc.backend_id == (uint32_t)id_ ? (int)desc.device_index : -1;
     return fn().can_access(device, &desc, own) == CV_ACCEL_OK;
@@ -777,6 +780,12 @@ bool isActive()
     return impl::activity().load(std::memory_order_relaxed) > 0;
 }
 
+bool inExecutionScope()
+{
+    const impl::ScopeEntry* s = impl::currentScope();
+    return s && s->backendId != 0;
+}
+
 bool isOpenCLSuppressed()
 {
     if (impl::oclSuppressCount().load(std::memory_order_relaxed) == 0)
@@ -1087,6 +1096,15 @@ DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag acces
 {
     CV_Assert(m.u && m.u->accelState && "accel: DeviceAccess needs a UMat allocated on a device");
     CV_Assert(!stream.empty());
+    // the caller's work runs on that stream with this memory's handle
+    const BufferState* st = m.u->accelState;
+    const StreamPtr& sp = stream.impl->s;
+    if (sp->backend != st->backend)
+        CV_Error_(Error::StsBadArg, ("accel: DeviceAccess: the stream belongs to backend '%s', the UMat to '%s'",
+                                     sp->backend->name().c_str(), st->backend->name().c_str()));
+    if (sp->device != st->device && !sp->backend->canAccess(sp->device, st->alloc.desc))
+        CV_Error_(Error::StsBadArg, ("accel: DeviceAccess: device %d cannot reach the UMat's memory on device %d",
+                                     sp->device, st->device));
     std::unique_ptr<Impl> impl_(new Impl());
     impl_->m = m;
     impl_->s = stream.impl->s;
@@ -1122,6 +1140,23 @@ DeviceAccess::~DeviceAccess()
     catch (...) {}
     delete p;
 }
+
+namespace detail {
+
+void setWaitTimeout(uint64 ms)
+{
+    impl::waitTimeoutNs().store(ms * 1000000u);
+}
+
+void reviveDevices()
+{
+    impl::ensureInitialized();
+    std::vector<impl::Backend*> all = impl::Registry::getInstance().all();
+    for (size_t i = 0; i < all.size(); i++)
+        all[i]->revive();
+}
+
+} // namespace detail
 
 uint64 DeviceAccess::handle() const
 {

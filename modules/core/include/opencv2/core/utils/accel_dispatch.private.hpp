@@ -44,6 +44,9 @@ enum RunResult
 //! true once at least one accelerator backend is registered (cheap)
 CV_EXPORTS bool isActive();
 
+//! true while an ExecutionScope that names a device is active on the calling thread (cheap)
+CV_EXPORTS bool inExecutionScope();
+
 //! true while the calling thread runs the CPU fallback of an accelerator call
 CV_EXPORTS bool isOpenCLSuppressed();
 
@@ -75,6 +78,24 @@ backend that fails halfway through a call. CV_ACCEL_DEVICE_LOST also makes every
 device fail at once; OpenCV keeps a lost device lost for the rest of the process, so only one
 test may use it, at its end. */
 CV_EXPORTS void emulatorInjectFailure(int status, bool synchronous = false);
+
+//! makes the next end_cpu_access after a CPU write fail (on any emulator device), once
+CV_EXPORTS void emulatorFailNextCpuFlush();
+
+//! sets the OPENCV_ACCEL_WAIT_TIMEOUT_MS limit at run time (0: wait forever); tests and diagnostics
+CV_EXPORTS void setWaitTimeout(uint64 ms);
+//! tests only: forgets that devices were lost (a lost device otherwise stays lost for the process)
+CV_EXPORTS void reviveDevices();
+//! turns OPENCV_ACCEL_VALIDATE on or off at run time (read-only Mat views are checksummed)
+CV_EXPORTS void setValidation(bool on);
+
+/** @brief A simulated dma-buf of @p size bytes, shared with other "drivers"; returns its fd for
+ExternalMemory::DMABUF_FD on "emulator:1". */
+CV_EXPORTS int64 emulatorCreateDmaBuf(size_t size);
+//! another driver (a camera, say) writes @p value into the whole dma-buf @p delayUs from now; users wait for it
+CV_EXPORTS void emulatorDmaBufProduce(int64 fd, int value, int delayUs);
+//! how many fences OpenCV has attached to the dma-buf so far (end_device_access)
+CV_EXPORTS int emulatorDmaBufAttachedFences(int64 fd);
 
 /** @brief Disables the OpenCL path for the rest of the current cv:: call.
 
@@ -137,7 +158,7 @@ private:
 //! @cond IGNORED
 #define CV_ACCEL_RUN_(condition, func, ...) \
     cv::accel::detail::OpenCLSuppressor __cv_accel_ocl_suppressor; \
-    if ((condition) && cv::accel::detail::isActive()) \
+    if (cv::accel::detail::isActive() && ((condition) || cv::accel::detail::inExecutionScope())) \
     { \
         int __cv_accel_result = (func); \
         if (__cv_accel_result == cv::accel::detail::HANDLED) \

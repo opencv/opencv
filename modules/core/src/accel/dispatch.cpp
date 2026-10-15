@@ -138,9 +138,9 @@ cvAccelMemoryDesc plannedDesc(Backend* b, int device, uint32_t kind, uint64_t si
     return d;
 }
 
-//! a view of a buffer the call will allocate on @p device (an output or a temporary)
+//! a continuous view of a buffer the call will allocate (an output or a temporary)
 void fillPlannedView(cvAccelView& v, cvAccelAllocation& alloc, const MatShape& shape, int type,
-                     Backend* b, int device, uint32_t kind, uint32_t flags)
+                     const cvAccelMemoryDesc& desc)
 {
     size_t steps[CV_ACCEL_MAX_DIMS];
     size_t total = CV_ELEM_SIZE(type);
@@ -151,8 +151,34 @@ void fillPlannedView(cvAccelView& v, cvAccelAllocation& alloc, const MatShape& s
     }
     memset(&alloc, 0, sizeof(alloc));
     alloc.size = total;
-    alloc.desc = plannedDesc(b, device, kind, total, flags);
+    alloc.desc = desc;
     fillView(v, &alloc, 0, type, shape.dims, shape.p, steps);
+}
+
+size_t planBytes(const MatShape& shape, int type)
+{
+    size_t total = CV_ELEM_SIZE(type);
+    for (int i = 0; i < shape.dims; i++)
+        total *= (size_t)shape.p[i];
+    return total;
+}
+
+//! host bytes an argument covers (conservatively: whole buffers), NULLs for device memory
+void hostRange(const Arg& a, const Mat& m, const uchar*& begin, const uchar*& end)
+{
+    begin = end = NULL;
+    if (!a.isHost)
+        return;
+    if (!m.empty())
+    {
+        begin = m.datastart;
+        end = m.dataend;
+    }
+    else if (a.isUMat && a.um.u && a.um.u->data)
+    {
+        begin = a.um.u->data;
+        end = begin + a.um.u->size;
+    }
 }
 
 void fillHostView(cvAccelView& v, cvAccelAllocation& alloc, const Mat& m)
@@ -253,7 +279,10 @@ void OpCall::output(OutputArray arr, const MatShape& shape, int type, bool fullO
         describeUMat(a);
     }
     else if (k == _InputArray::MAT)
+    {
         a.isHost = true;
+        a.desc = hostMemoryDesc();
+    }
     else
         p->unsupported = true;
     p->args.push_back(a);
@@ -279,19 +308,42 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
                 a.plan = PLAN_UPLOAD;
             continue;
         }
-        const bool exists = a.isUMat && !a.um.empty() && sameShape(a.um, a.shape) && a.um.type() == a.type;
+        bool exists = false;
+        Mat hostOut;    // the caller's Mat, when it already has the right shape and type
+        if (a.isUMat)
+            exists = !a.um.empty() && sameShape(a.um, a.shape) && a.um.type() == a.type;
+        else
+        {
+            hostOut = a.arr->getMat();
+            exists = !hostOut.empty() && hostOut.shape() == a.shape && hostOut.type() == a.type;
+            if (!exists)
+                hostOut.release();
+        }
         if (a.isUMat && !exists)
             a.plan = PLAN_CREATE;
-        else if (exists && a.onDevice && b->canAccess(device, a.desc))
-            a.plan = PLAN_IN_PLACE;
+        else if ((a.onDevice || a.isHost) && b->canAccess(device, a.desc))
+            a.plan = PLAN_IN_PLACE;     // device memory, or host memory the device addresses (an iGPU, an NPU)
         else
-            a.plan = PLAN_COPY_BACK;    // a Mat, or a UMat on memory the device cannot write
+            a.plan = PLAN_COPY_BACK;    // memory the device cannot write
         // an output that overlaps an input is produced in a temporary
         if (a.plan == PLAN_IN_PLACE)
         {
+            const uchar *ob, *oe;
+            hostRange(a, hostOut, ob, oe);
             for (size_t j = 0; j < args.size(); j++)
-                if (!args[j].isOutput && args[j].plan == PLAN_IN_PLACE && args[j].isUMat && overlaps(a.um, args[j].um))
+            {
+                const Arg& in = args[j];
+                if (in.isOutput || in.plan != PLAN_IN_PLACE)
+                    continue;
+                const uchar *ib, *ie;
+                hostRange(in, in.mat, ib, ie);
+                const bool clash = (a.isUMat && in.isUMat && overlaps(a.um, in.um)) ||
+                                   (ob && ib && ob < ie && ib < oe);
+                if (clash)
                     a.plan = PLAN_COPY_BACK;
+            }
+            if (a.plan == PLAN_IN_PLACE && !a.isUMat)
+                a.mat = hostOut;    // empty when the Mat is created later, after QUERY
         }
     }
     return true;
@@ -389,14 +441,19 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 a.viewAlloc.desc = a.desc;
                 fillView(v, &a.viewAlloc, a.um.offset, a.um.type(), a.um.dims, a.um.size.p, a.um.step.p);
             }
-            else
+            else if (!a.mat.empty())
             {
                 fillHostView(v, a.viewAlloc, a.mat);
                 a.viewAlloc.handle = 0;
             }
+            else
+            {
+                fillPlannedView(v, a.viewAlloc, a.shape, a.type, hostMemoryDesc());  // a Mat output made after QUERY
+            }
             break;
         default:
-            fillPlannedView(v, a.viewAlloc, a.shape, a.type, b, device, plannedKind, plannedFlags);
+            fillPlannedView(v, a.viewAlloc, a.shape, a.type,
+                            plannedDesc(b, device, plannedKind, planBytes(a.shape, a.type), plannedFlags));
             break;
         }
     }
@@ -432,6 +489,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         stream = b->defaultStream(device);
     const MatAllocator* deviceAllocator = b->allocator(device, (int)plannedKind, protectedIn);
     bool needSync = syncDebugMode();
+    bool borrowed = false;      // the call uses memory that goes back to its owner: no time limit on the wait
     for (size_t i = 0; i < args.size(); i++)
     {
         Arg& a = args[i];
@@ -468,9 +526,14 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         else if (a.plan == PLAN_IN_PLACE && !a.onDevice)
         {
             // plain host memory used in place by a device that can address it
-            if (a.isUMat)
-                a.mat = a.um.getMat(ACCESS_READ);   // host allocator: no copy
-            needSync = true;    // finish before the caller can touch that memory again
+            if (a.isOutput && !a.isUMat)
+            {
+                a.arr->create(a.shape, a.type);     // the caller's Mat (nothing to do when it fits)
+                a.mat = a.arr->getMat();
+            }
+            else if (a.isUMat)
+                a.mat = a.um.getMat(a.isOutput ? ACCESS_WRITE : ACCESS_READ);  // host allocator: no copy
+            needSync = borrowed = true;     // finish before the caller can touch that memory again
         }
     }
 
@@ -497,7 +560,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             a.mode = a.isOutput ? (DEV_WRITE | (a.fullOverwrite && coversAllocation(target) ? DEV_DISCARD : 0)) : DEV_READ;
             acq.add(target.u, a.mode);
             if (target.u->accelState->imported)
-                needSync = true;    // user memory: the owner may touch it once we return
+                needSync = borrowed = true;     // user memory: the owner may touch it once we return
         }
         std::vector<FenceRef> waits;
         if (!acq.acquire(stream, waits))
@@ -528,7 +591,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 }
                 else
                 {
-                    CV_Assert(!a.isOutput && a.isHost);
+                    CV_Assert(a.isHost && !a.mat.empty());
                     fillHostView(v, a.viewAlloc, a.mat);
                 }
                 if (!viewFitsAllocation(v))
@@ -580,7 +643,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             a.temp.copyTo(*a.arr);
     }
     if (needSync)
-        done.wait();
+        done.wait(!borrowed);
     return HANDLED;
 }
 

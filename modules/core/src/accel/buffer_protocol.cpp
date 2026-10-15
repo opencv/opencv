@@ -34,9 +34,20 @@
 #include "accel_impl.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 #include <algorithm>
 #include <functional>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 namespace cv { namespace accel { namespace impl {
 
@@ -45,14 +56,15 @@ enum ShadowSource
     SHADOW_NONE = 0,
     SHADOW_FASTMALLOC = 1,
     SHADOW_BACKEND = 2,     //!< pinned host memory from the backend: one DMA per transfer
-    SHADOW_USER = 3         //!< the Mat that the UMat was created from (Mat::getUMat)
+    SHADOW_USER = 3,        //!< the Mat that the UMat was created from (Mat::getUMat)
+    SHADOW_PAGES = 4        //!< core's own pages, read-only except during downloads (read-only memory)
 };
 
 BufferState::BufferState(Backend* b, int device_)
-    : backend(b), device(device_), shadow(0), shadowFromBackend(false),
+    : backend(b), device(device_), shadow(0), shadowFromBackend(false), shadowPages(0),
       busy(false), pendingReaders(0), pendingWriters(0), hostMapped(false), hostAccess(0),
       imported(false), fromMat(false), hostImport(0), idleGateHeld(false), poisoned(false), generation(0),
-      matGeneration(0)
+      matGeneration(0), viewHash(0), viewHashed(false)
 {
     memset(&alloc, 0, sizeof(alloc));
     memset(&shadowAlloc, 0, sizeof(shadowAlloc));
@@ -62,6 +74,8 @@ static inline int shadowSource(const BufferState* st)
 {
     if (!st->shadow)
         return SHADOW_NONE;
+    if (st->shadowPages)
+        return SHADOW_PAGES;
     if (st->fromMat)
         return SHADOW_USER;
     return st->shadowFromBackend ? SHADOW_BACKEND : SHADOW_FASTMALLOC;
@@ -177,6 +191,38 @@ void clearPoison(BufferState* st)
     st->poisonReason.clear();
 }
 
+/** Memory with implicit fences of other drivers (CV_ACCEL_MEMF_EXTERNAL_SYNC, e.g. a camera's
+    dma-buf): device work on it waits for their fences, and they wait for the work's fence. */
+void beginExternal(BufferState* st, const StreamPtr& s, int access)
+{
+    Backend* b = st->backend;
+    if (!(st->alloc.desc.flags & CV_ACCEL_MEMF_EXTERNAL_SYNC) || !b->fn().begin_device_access)
+        return;
+    b->check(b->fn().begin_device_access(&st->alloc, s->handle, (uint32_t)access), "begin_device_access", st->device);
+}
+
+//! never throws: runs when the work is already queued
+void endExternal(BufferState* st, const FenceRef& f, int access) CV_NOEXCEPT
+{
+    Backend* b = st->backend;
+    if (!(st->alloc.desc.flags & CV_ACCEL_MEMF_EXTERNAL_SYNC) || !b->fn().end_device_access || f.empty())
+        return;
+    if (b->fn().end_device_access(&st->alloc, f.get(), (uint32_t)access) != CV_ACCEL_OK)
+    {
+        try
+        {
+            CV_LOG_ERROR(NULL, "accel(" << b->name() << "): end_device_access failed, other drivers may not wait for "
+                         "this work: " << b->fn().get_last_error());
+        }
+        catch (...) {}
+    }
+}
+
+int accessOfMode(int mode)
+{
+    return ((mode & DEV_READ) ? ACCESS_READ : 0) | ((mode & DEV_WRITE) ? ACCESS_WRITE : 0);
+}
+
 void checkNotPoisoned(const BufferState* st)
 {
     if (st->poisoned)
@@ -232,10 +278,113 @@ void waitDeviceWork(BufferState* st, std::unique_lock<std::mutex>& lk, bool writ
         checkNotPoisoned(st);
 }
 
+//////////////////////////////////// pages a write can fault on ////////////////////////////////////
+
+size_t pageRounded(size_t size)
+{
+#ifdef _WIN32
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    const size_t page = si.dwPageSize ? si.dwPageSize : 4096;
+#else
+    const long ps = sysconf(_SC_PAGESIZE);
+    const size_t page = ps > 0 ? (size_t)ps : 4096;
+#endif
+    return (size + page - 1) / page * page;
+}
+
+uchar* allocPages(size_t size)
+{
+#ifdef _WIN32
+    return (uchar*)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    void* p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    return p == MAP_FAILED ? NULL : (uchar*)p;
+#endif
+}
+
+void freePages(uchar* p, size_t size)
+{
+#ifdef _WIN32
+    CV_UNUSED(size);
+    VirtualFree(p, 0, MEM_RELEASE);
+#else
+    munmap(p, size);
+#endif
+}
+
+bool protectPages(uchar* p, size_t size, bool writable)
+{
+#ifdef _WIN32
+    DWORD old = 0;
+    return VirtualProtect(p, size, writable ? PAGE_READWRITE : PAGE_READONLY, &old) != 0;
+#else
+    return mprotect(p, size, writable ? (PROT_READ | PROT_WRITE) : PROT_READ) == 0;
+#endif
+}
+
+//! lets a download write core's read-only host copy, for the duration of the scope
+struct WritablePages
+{
+    explicit WritablePages(BufferState* st_) : st(st_->shadowPages ? st_ : NULL)
+    {
+        if (st && !protectPages(st->shadow, st->shadowPages, true))
+            CV_Error(Error::StsError, "accel: cannot unprotect the host copy of read-only memory for a download");
+    }
+    ~WritablePages()
+    {
+        if (st)
+            protectPages(st->shadow, st->shadowPages, false);
+    }
+    BufferState* st;
+};
+
+//////////////////////////////////// validation mode ////////////////////////////////////
+
+//! OPENCV_ACCEL_VALIDATE: read-only Mat views are checksummed, and a write through one is reported
+std::atomic<bool>& validating()
+{
+    static std::atomic<bool> v(utils::getConfigurationParameterBool("OPENCV_ACCEL_VALIDATE", false));
+    return v;
+}
+
+uint64 hashBytes(const uchar* p, size_t n)
+{
+    uint64 h = 0xcbf29ce484222325ull;
+    size_t i = 0;
+    for (; i + 8 <= n; i += 8)
+    {
+        uint64 w;
+        memcpy(&w, p + i, 8);
+        h = (h ^ w) * 0x100000001b3ull;
+    }
+    for (; i < n; i++)
+        h = (h ^ p[i]) * 0x100000001b3ull;
+    return h;
+}
+
 void ensureShadow(BufferState* st)
 {
     if (st->shadow)
         return;
+    if (st->alloc.desc.flags & CV_ACCEL_MEMF_READ_ONLY)
+    {
+        // Read-only memory: the host copy is mapped read-only, so a write through a Mat view
+        // faults instead of corrupting it. Only downloads lift the protection, for their duration.
+        const size_t size = pageRounded((size_t)st->alloc.size);
+        if (uchar* p = allocPages(size))
+        {
+            if (protectPages(p, size, false))
+            {
+                st->shadow = p;
+                st->shadowPages = size;
+                st->shadowFromBackend = false;
+                return;
+            }
+            freePages(p, size);
+        }
+        CV_LOG_WARNING(NULL, "accel: no page-protected host copy for read-only memory; writes through its Mat views go undetected");
+    }
     Backend* b = st->backend;
     if ((b->deviceInfo(st->device).caps & CV_ACCEL_CAP_HOST_PINNED) && b->pinnedShadowAllowed(st->device))
     {
@@ -291,16 +440,19 @@ void downloadWhole(BufferState* st)
     if (shadowSource(st) == SHADOW_BACKEND)
         r.flags |= CV_ACCEL_COPY_HOST_PINNED;
     FenceRef f;
+    WritablePages writable(st);     // read-only memory: its protected host copy takes the download
     try
     {
+        beginExternal(st, s, ACCESS_READ);
         b->check(b->fn().copy(st->device, s->handle, &r), "copy (device to host)", st->device);
         f = recordFence(s);
-        f.wait();
+        endExternal(st, f, ACCESS_READ);
+        f.wait(false);  // the host copy may be a Mat's memory, and this fence is not kept
     }
     catch (...)
     {
         if (f.empty())
-            fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, writing the host copy
+            fenceAfterFailure(s).waitNoThrow(false);    // part of the copy may be queued, writing the host copy
         throw;
     }
     Counters& c = counters();
@@ -335,10 +487,12 @@ void uploadShadowLocked(BufferState* st, UMatData* u, const StreamPtr& s, bool w
     FenceRef f;
     try
     {
+        beginExternal(st, s, ACCESS_WRITE);
         uploadWhole(st, s);
         f = recordFence(s);
+        endExternal(st, f, ACCESS_WRITE);
         if (waitNow)
-            f.wait();
+            f.wait(false);  // reads the host copy, which may be a Mat's memory
     }
     catch (...)
     {
@@ -468,6 +622,17 @@ void upgradeHostAccessLocked(BufferState* st, UMatData* u)
 void endHostAccessLocked(BufferState* st, UMatData* u)
 {
     const int access = st->hostAccess;
+    if (st->viewHashed)
+    {
+        // OPENCV_ACCEL_VALIDATE: a view opened with ACCESS_READ must come back unchanged
+        st->viewHashed = false;
+        if (u->data && hashBytes(u->data, u->size) != st->viewHash)
+        {
+            st->poisoned = true;
+            st->poisonReason = "a Mat view opened with ACCESS_READ was written (OPENCV_ACCEL_VALIDATE)";
+            try { CV_LOG_ERROR(NULL, "accel: " << st->poisonReason); } catch (...) {}
+        }
+    }
     if (usesShadow(st))
     {
         if (access & ACCESS_WRITE)
@@ -480,11 +645,17 @@ void endHostAccessLocked(BufferState* st, UMatData* u)
     }
     else
     {
-        endCpuAccess(st, access);
+        const bool flushed = endCpuAccess(st, access);
         if (access & ACCESS_WRITE)
         {
             u->markDeviceCopyObsolete(false);
             st->generation++;
+            if (!flushed)
+            {
+                // the device may see part of the CPU's writes: invalid until written whole
+                st->poisoned = true;
+                st->poisonReason = "end_cpu_access failed after a CPU write";
+            }
         }
     }
     if (st->idleGateHeld)
@@ -582,6 +753,9 @@ Mat getHostView(const UMat& m, AccessFlag accessFlags)
                 beginHostAccessLocked(st, u, access);
             else
                 upgradeHostAccessLocked(st, u);
+            st->viewHashed = first && !(access & ACCESS_WRITE) && validating().load();
+            if (st->viewHashed)
+                st->viewHash = hashBytes(u->data, u->size);
             st->hostMapped = true;
             u->mapcount = 1;    // UMatData::~UMatData unmaps chained views (getMat().getUMat()) only then
             if (first && idle.active())
@@ -798,6 +972,8 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                 return false;
             }
         }
+        for (size_t i = 0; i < uses_.size(); i++)
+            beginExternal(uses_[i].u->accelState, stream, accessOfMode(uses_[i].mode));
     }
     catch (...)
     {
@@ -810,14 +986,20 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
 void DeviceAcquisition::record(const FenceRef& fence)
 {
     for (size_t i = 0; i < acquired_; i++)
+    {
+        endExternal(uses_[i].u->accelState, fence, accessOfMode(uses_[i].mode));
         finishOne(uses_[i].u, uses_[i].mode, longHold_, holder_, &fence);
+    }
     acquired_ = 0;
 }
 
 void DeviceAcquisition::fail(const FenceRef& fence, const std::string& reason)
 {
     for (size_t i = 0; i < acquired_; i++)
+    {
+        endExternal(uses_[i].u->accelState, fence, accessOfMode(uses_[i].mode));
         finishOne(uses_[i].u, uses_[i].mode, longHold_, holder_, &fence, reason.c_str());
+    }
     acquired_ = 0;
 }
 
@@ -850,6 +1032,11 @@ void destroyBufferState(BufferState* st)
     {
         fastFree(st->shadow);
     }
+    else if (shadowSource(st) == SHADOW_PAGES)
+    {
+        freePages(st->shadow, st->shadowPages);
+        st->shadowPages = 0;
+    }
     st->shadow = 0;
     if (!lost && (st->alloc.handle || st->alloc.backend_data))
     {
@@ -878,9 +1065,12 @@ bool sameAccelDevice(const UMatData* a, const UMatData* b)
     from ~UMat, so it never throws; false when the device failed (logged, device marked lost). */
 static bool drainForRelease(BufferState* st) CV_NOEXCEPT
 {
-    bool ok = st->writeFence.waitNoThrow();
+    // memory that goes back to its owner is never handed back while the device may still use
+    // it: no time limit here (a device that reports a failure has stopped)
+    const bool borrowed = st->imported || st->fromMat;
+    bool ok = st->writeFence.waitNoThrow(!borrowed);
     for (size_t i = 0; i < st->readFences.size(); i++)
-        ok = st->readFences[i].waitNoThrow() && ok;
+        ok = st->readFences[i].waitNoThrow(!borrowed) && ok;
     st->writeFence.reset();
     st->readFences.clear();
     return ok && !st->backend->isLost(st->device);
@@ -1096,10 +1286,25 @@ bool DeviceAllocator::allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsag
     {
         // memory with a CPU view: copy the content in now, the Mat keeps its own bytes and
         // gets them back only if the UMat is written (see matGeneration)
-        IdleCpuGuard idle(st);
-        void* p = beginCpuAccess(st, ACCESS_WRITE);
-        memcpy(p, u->origdata, u->size);
-        endCpuAccess(st, ACCESS_WRITE);
+        bool copied = false;
+        try
+        {
+            IdleCpuGuard idle(st);
+            void* p = beginCpuAccess(st, ACCESS_WRITE);
+            memcpy(p, u->origdata, u->size);
+            copied = endCpuAccess(st, ACCESS_WRITE);    // a failed flush: the device would not see it
+        }
+        catch (const std::exception& e)
+        {
+            CV_LOG_WARNING(NULL, "accel: " << e.what());
+        }
+        if (!copied)
+        {
+            u->accelState = NULL;
+            u->handle = 0;
+            destroyBufferState(st);
+            return false;   // Mat::getUMat falls back to the host allocator
+        }
         u->markHostCopyObsolete(false);
         u->markDeviceCopyObsolete(false);
     }
@@ -1221,14 +1426,16 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
         FenceRef f;
         try
         {
+            beginExternal(st, s, ACCESS_READ);
             b_->check(b_->fn().copy(device_, s->handle, &r), "copy (device to host)", device_);
             f = recordFence(s);
-            f.wait();   // the destination is user memory
+            endExternal(st, f, ACCESS_READ);
+            f.wait(false);  // the destination is user memory: no time limit
         }
         catch (...)
         {
             if (f.empty())
-                fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, writing user memory
+                fenceAfterFailure(s).waitNoThrow(false);    // part of the copy may be queued, writing user memory
             throw;
         }
         Counters& c = counters();
@@ -1303,17 +1510,19 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         FenceRef f;
         try
         {
+            beginExternal(st, s, ACCESS_WRITE);
             b_->check(b_->fn().copy(device_, s->handle, &r), "copy (host to device)", device_);
             f = recordFence(s);
+            endExternal(st, f, ACCESS_WRITE);
             lk.unlock();
-            f.wait();   // the source is user memory that may be freed when we return
+            f.wait(false);  // the source is user memory that may be freed when we return: no time limit
             lk.lock();
         }
         catch (...)
         {
             const std::string reason = currentExceptionMessage();
             if (f.empty())
-                fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, reading user memory
+                fenceAfterFailure(s).waitNoThrow(false);    // part of the copy may be queued, reading user memory
             if (!lk.owns_lock())
                 lk.lock();
             // the device copy may be partly overwritten: invalid until written whole
@@ -1340,7 +1549,15 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
     void* p = beginCpuAccess(st, ACCESS_WRITE);
     copyND((uchar*)p + dstOffset, dststep, (const uchar*)srcptr, srcstep, dims, sz);
     if (!endCpuAccess(st, ACCESS_WRITE))
+    {
+        // the device may see part of the new content: invalid until written whole
+        st->poisoned = true;
+        st->poisonReason = "end_cpu_access failed after a copy into the UMat";
+        u->markHostCopyObsolete(false);
+        u->markDeviceCopyObsolete(false);
+        st->generation++;
         CV_Error_(Error::StsError, ("accel(%s): end_cpu_access failed after a copy into the UMat", b_->name().c_str()));
+    }
     u->markHostCopyObsolete(false);
     u->markDeviceCopyObsolete(false);
     st->generation++;
@@ -1404,7 +1621,7 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
     c.bytesD2D += totalND(sz, dims);
     c.transfers++;
     if (src->accelState->imported || dst->accelState->imported)
-        done.wait();    // user memory: the owner may touch it once we return (as in OpCall)
+        done.wait(false);   // user memory: the owner may touch it once we return (as in OpCall), no time limit
 }
 
 bool DeviceAllocator::getMemoryDesc(const UMatData* u, cvAccelMemoryDesc* desc) const
@@ -1416,3 +1633,12 @@ bool DeviceAllocator::getMemoryDesc(const UMatData* u, cvAccelMemoryDesc* desc) 
 }
 
 }}} // namespace cv::accel::impl
+
+namespace cv { namespace accel { namespace detail {
+
+void setValidation(bool on)
+{
+    impl::validating().store(on);
+}
+
+}}} // namespace cv::accel::detail

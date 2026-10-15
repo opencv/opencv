@@ -164,8 +164,9 @@ public:
 /** @brief Routes cv:: calls made on this thread to a device or a stream.
 
 Inside the scope, new UMat data created by UMat::create() without an explicit allocator is
-placed on the device, and operations whose inputs that device can access run there. Scopes
-nest; the innermost one wins. */
+placed on the device, and operations that the device implements run there, Mat arguments
+included: the device uses host memory in place where it can address it and copies it
+otherwise. Scopes nest; the innermost one wins. */
 class CV_EXPORTS ExecutionScope
 {
 public:

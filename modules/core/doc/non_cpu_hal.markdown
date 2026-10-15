@@ -245,8 +245,16 @@ see the same DRAM:
    (`CV_ACCEL_MEMF_PROTECTED` in `allocate`), and an ordinary output, a Mat output or a
    device copy into ordinary memory is refused.
 9. **Imported dma-bufs.** Buffers from cameras, decoders or displays may carry implicit
-   fences. The backend waits for them before use and attaches its own fence after writing
-   (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE` / `IMPORT_SYNC_FILE`), so other drivers stay ordered.
+   fences. Core brackets every device use of them, its own operations and copies as well as
+   the caller's work under a `DeviceAccess`, with `begin_device_access` (the stream waits for
+   the other drivers' fences) and `end_device_access` (they get the work's fence), and CPU
+   access waits for them as `DMA_BUF_IOCTL_SYNC` does.
+10. **Read-only memory.** A CPU view of read-only memory cannot be written: its host copy is
+   core's own pages, mapped read-only except while a download fills them, and backends map
+   dma-bufs read-only. With `OPENCV_ACCEL_VALIDATE`, every view opened with `ACCESS_READ` is
+   checksummed, and a buffer whose view came back changed is marked failed (this also covers
+   memory the CPU addresses directly, which core cannot protect without touching its
+   neighbours on the same pages).
 
 ### Discrete GPUs without extra copies
 
@@ -423,7 +431,7 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | call fails after queuing part of its work | its buffers wait for the queued part (a fence, or a device sync); what it writes is poisoned until written whole | `DeviceAcquisition::fail` |
 | device lost | that device marked lost (other devices keep working), its calls fall back, its allocations are leaked rather than freed | `Backend::markLost` |
 | device error while a UMat is destroyed | logged, never thrown; host-side state is still freed | `drainForRelease` |
-| device that never finishes | optional limit on every CPU wait (`OPENCV_ACCEL_WAIT_TIMEOUT_MS`), then the device is lost | `FenceRef::wait` |
+| device that never finishes | optional limit on CPU waits (`OPENCV_ACCEL_WAIT_TIMEOUT_MS`), then the device is lost; waits that guard memory going back to its owner (user buffers, imported memory, a Mat's memory) have no limit | `FenceRef::wait` |
 | a view outside its allocation | rejected before every EXECUTE | `viewFitsAllocation` |
 | exception inside a backend | cannot cross the C boundary | `CV_ACCEL_NOEXCEPT` |
 | plugin built against an older table | missing entries read as NULL | `CV_ACCEL_OP_PRESENT` |
