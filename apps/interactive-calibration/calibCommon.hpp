@@ -84,6 +84,7 @@ namespace calib
         cv::Size boardSizeUnits; // board size in squares, circles, etc.
         int charucoDictName;
         std::string charucoDictFile;
+        int charucoBoardType;
         int calibrationStep;
         float charucoSquareLength, charucoMarkerSize;
         float captureDelay;
