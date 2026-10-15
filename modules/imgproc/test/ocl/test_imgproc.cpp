@@ -525,8 +525,8 @@ OCL_TEST_P(CLAHETest, ReflectedBorder)
     {
         const Size size = sizes[i];
         Mat image(size, CV_8UC1);
-        RNG rng(0x12345678);
-        rng.fill(image, RNG::UNIFORM, 0, 256);
+        RNG dataRng(0x12345678);
+        dataRng.fill(image, RNG::UNIFORM, 0, 256);
         const int bottom = (gridSize.height - size.height % gridSize.height) % gridSize.height;
         const int right = (gridSize.width - size.width % gridSize.width) % gridSize.width;
         Mat padded;
