@@ -531,7 +531,7 @@ void transpose(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 
     Mat inp = src_.getMat();
     const int ndims = inp.dims;
-    CV_CheckGE(ndims, 1, "transposeND: 0-dimensional arrays are not supported");
+    CV_Assert(!(ndims == 0 && inp.empty()));
     CV_CheckEQ(order.size(), static_cast<size_t>(ndims), "Number of dimensions shouldn't change");
 
     bool used[CV_MAX_DIM] = {false};
@@ -1198,7 +1198,7 @@ void repeat(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
 
     Mat src = _src.getMat();
     const int ndims = src.dims;
-    CV_CheckGE(ndims, 1, "repeat: 0-dimensional arrays are not supported");
+    CV_Assert(!(ndims == 0 && src.empty()));
     CV_CheckEQ(repeats.size(), (size_t)ndims, "repeat: the number of repeats must match the number of dimensions");
 
     int outShape[CV_MAX_DIM];
@@ -1253,7 +1253,7 @@ void slice(InputArray _src, const std::vector<int>& starts, const std::vector<in
 
     Mat src = _src.getMat();
     const int ndims = src.dims, nslices = (int)starts.size();
-    CV_CheckGE(ndims, 1, "slice: 0-dimensional arrays are not supported");
+    CV_Assert(!(ndims == 0 && src.empty()));
     CV_CheckLE(nslices, ndims, "slice: too many starts");
     CV_CheckEQ(ends.size(), starts.size(), "slice: starts and ends must have the same size");
     CV_Check(steps.size(), steps.empty() || steps.size() == starts.size(),
