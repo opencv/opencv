@@ -1093,8 +1093,7 @@ Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_t
     return a;
 }
 
-// Merge a node into an earlier identical one only if it is a pure standard-domain op with no
-// subgraphs; fold passes take a merged producer into each of its consumers separately.
+// Merge a node into an earlier identical one only if it is a pure standard-domain op with no subgraphs.
 static bool canMergeWithIdenticalNode(const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& domain = node_proto.domain();
