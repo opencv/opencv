@@ -710,6 +710,30 @@ template<class Op, class VecOp> struct MorphFilter : public BaseFilter
     VecOp vecOp;
 };
 
+template<typename stype, class VecErode, class VecDilate>
+Ptr<BaseRowFilter> makeMorphRowFilter(int op, int ksize, int anchor)
+{
+    if( op == MORPH_ERODE )
+        return makePtr<MorphRowFilter<MinOp<stype>, VecErode> >(ksize, anchor);
+    return makePtr<MorphRowFilter<MaxOp<stype>, VecDilate> >(ksize, anchor);
+}
+
+template<typename stype, class VecErode, class VecDilate>
+Ptr<BaseColumnFilter> makeMorphColumnFilter(int op, int ksize, int anchor)
+{
+    if( op == MORPH_ERODE )
+        return makePtr<MorphColumnFilter<MinOp<stype>, VecErode> >(ksize, anchor);
+    return makePtr<MorphColumnFilter<MaxOp<stype>, VecDilate> >(ksize, anchor);
+}
+
+template<typename stype, class VecErode, class VecDilate>
+Ptr<BaseFilter> makeMorphFilter(int op, const Mat& kernel, Point anchor)
+{
+    if( op == MORPH_ERODE )
+        return makePtr<MorphFilter<MinOp<stype>, VecErode> >(kernel, anchor);
+    return makePtr<MorphFilter<MaxOp<stype>, VecDilate> >(kernel, anchor);
+}
+
 } // namespace anon
 
 /////////////////////////////////// External Interface /////////////////////////////////////
@@ -722,41 +746,13 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
     if( anchor < 0 )
         anchor = ksize/2;
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
-    if( op == MORPH_ERODE )
+    switch( depth )
     {
-        if( depth == CV_8U )
-            return makePtr<MorphRowFilter<MinOp<uchar>,
-                                      ErodeRowVec8u> >(ksize, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphRowFilter<MinOp<ushort>,
-                                      ErodeRowVec16u> >(ksize, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphRowFilter<MinOp<short>,
-                                      ErodeRowVec16s> >(ksize, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphRowFilter<MinOp<float>,
-                                      ErodeRowVec32f> >(ksize, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphRowFilter<MinOp<double>,
-                                      ErodeRowVec64f> >(ksize, anchor);
-    }
-    else
-    {
-        if( depth == CV_8U )
-            return makePtr<MorphRowFilter<MaxOp<uchar>,
-                                      DilateRowVec8u> >(ksize, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphRowFilter<MaxOp<ushort>,
-                                      DilateRowVec16u> >(ksize, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphRowFilter<MaxOp<short>,
-                                      DilateRowVec16s> >(ksize, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphRowFilter<MaxOp<float>,
-                                      DilateRowVec32f> >(ksize, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphRowFilter<MaxOp<double>,
-                                      DilateRowVec64f> >(ksize, anchor);
+    case CV_8U:  return makeMorphRowFilter<uchar,  ErodeRowVec8u,  DilateRowVec8u >(op, ksize, anchor);
+    case CV_16U: return makeMorphRowFilter<ushort, ErodeRowVec16u, DilateRowVec16u>(op, ksize, anchor);
+    case CV_16S: return makeMorphRowFilter<short,  ErodeRowVec16s, DilateRowVec16s>(op, ksize, anchor);
+    case CV_32F: return makeMorphRowFilter<float,  ErodeRowVec32f, DilateRowVec32f>(op, ksize, anchor);
+    case CV_64F: return makeMorphRowFilter<double, ErodeRowVec64f, DilateRowVec64f>(op, ksize, anchor);
     }
 
     CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
@@ -770,41 +766,13 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
     if( anchor < 0 )
         anchor = ksize/2;
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
-    if( op == MORPH_ERODE )
+    switch( depth )
     {
-        if( depth == CV_8U )
-            return makePtr<MorphColumnFilter<MinOp<uchar>,
-                                         ErodeColumnVec8u> >(ksize, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphColumnFilter<MinOp<ushort>,
-                                         ErodeColumnVec16u> >(ksize, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphColumnFilter<MinOp<short>,
-                                         ErodeColumnVec16s> >(ksize, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphColumnFilter<MinOp<float>,
-                                         ErodeColumnVec32f> >(ksize, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphColumnFilter<MinOp<double>,
-                                         ErodeColumnVec64f> >(ksize, anchor);
-    }
-    else
-    {
-        if( depth == CV_8U )
-            return makePtr<MorphColumnFilter<MaxOp<uchar>,
-                                         DilateColumnVec8u> >(ksize, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphColumnFilter<MaxOp<ushort>,
-                                         DilateColumnVec16u> >(ksize, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphColumnFilter<MaxOp<short>,
-                                         DilateColumnVec16s> >(ksize, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphColumnFilter<MaxOp<float>,
-                                         DilateColumnVec32f> >(ksize, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphColumnFilter<MaxOp<double>,
-                                         DilateColumnVec64f> >(ksize, anchor);
+    case CV_8U:  return makeMorphColumnFilter<uchar,  ErodeColumnVec8u,  DilateColumnVec8u >(op, ksize, anchor);
+    case CV_16U: return makeMorphColumnFilter<ushort, ErodeColumnVec16u, DilateColumnVec16u>(op, ksize, anchor);
+    case CV_16S: return makeMorphColumnFilter<short,  ErodeColumnVec16s, DilateColumnVec16s>(op, ksize, anchor);
+    case CV_32F: return makeMorphColumnFilter<float,  ErodeColumnVec32f, DilateColumnVec32f>(op, ksize, anchor);
+    case CV_64F: return makeMorphColumnFilter<double, ErodeColumnVec64f, DilateColumnVec64f>(op, ksize, anchor);
     }
 
     CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
@@ -817,31 +785,13 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
     int depth = CV_MAT_DEPTH(type);
     anchor = normalizeAnchor(anchor, kernel.size());
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
-    if( op == MORPH_ERODE )
+    switch( depth )
     {
-        if( depth == CV_8U )
-            return makePtr<MorphFilter<MinOp<uchar>, ErodeVec8u> >(kernel, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphFilter<MinOp<ushort>, ErodeVec16u> >(kernel, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphFilter<MinOp<short>, ErodeVec16s> >(kernel, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphFilter<MinOp<float>, ErodeVec32f> >(kernel, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphFilter<MinOp<double>, ErodeVec64f> >(kernel, anchor);
-    }
-    else
-    {
-        if( depth == CV_8U )
-            return makePtr<MorphFilter<MaxOp<uchar>, DilateVec8u> >(kernel, anchor);
-        if( depth == CV_16U )
-            return makePtr<MorphFilter<MaxOp<ushort>, DilateVec16u> >(kernel, anchor);
-        if( depth == CV_16S )
-            return makePtr<MorphFilter<MaxOp<short>, DilateVec16s> >(kernel, anchor);
-        if( depth == CV_32F )
-            return makePtr<MorphFilter<MaxOp<float>, DilateVec32f> >(kernel, anchor);
-        if( depth == CV_64F )
-            return makePtr<MorphFilter<MaxOp<double>, DilateVec64f> >(kernel, anchor);
+    case CV_8U:  return makeMorphFilter<uchar,  ErodeVec8u,  DilateVec8u >(op, kernel, anchor);
+    case CV_16U: return makeMorphFilter<ushort, ErodeVec16u, DilateVec16u>(op, kernel, anchor);
+    case CV_16S: return makeMorphFilter<short,  ErodeVec16s, DilateVec16s>(op, kernel, anchor);
+    case CV_32F: return makeMorphFilter<float,  ErodeVec32f, DilateVec32f>(op, kernel, anchor);
+    case CV_64F: return makeMorphFilter<double, ErodeVec64f, DilateVec64f>(op, kernel, anchor);
     }
 
     CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
