@@ -56,9 +56,14 @@ namespace cv
 template <typename T> static inline
 void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
 {
+    // a cv::Scalar carries 4 values; an element with more than 4 channels takes 0 in the rest
+    // (the same rule Mat::ones() already documents for the 2..4-channel case)
+    const int n = std::min(cn, 4);
     int i = 0;
-    for(; i < cn; i++)
+    for(; i < n; i++)
         buf[i] = saturate_cast<T>(s.val[i]);
+    for(; i < cn; i++)
+        buf[i] = saturate_cast<T>(0.);
     for(; i < unroll_to; i++)
         buf[i] = buf[i-cn];
 }
@@ -68,7 +73,6 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     CV_INSTRUMENT_REGION();
 
     const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert(cn <= 4);
     switch(depth)
     {
     case CV_8U:
@@ -131,10 +135,15 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
     // unroll the scalar
     if( scn < cn )
     {
-        CV_Assert( scn == 1 );
+        CV_Assert( scn == 1 || scn == 4 );
         size_t esz1 = CV_ELEM_SIZE1(buftype);
-        for( size_t i = esz1; i < esz; i++ )
-            scbuf[i] = scbuf[i - esz1];
+        if( scn == 1 )                       // one value -> broadcast it over every channel
+        {
+            for( size_t i = esz1; i < esz; i++ )
+                scbuf[i] = scbuf[i - esz1];
+        }
+        else                                 // a cv::Scalar on a >4-channel array: the rest is 0
+            memset( scbuf + 4*esz1, 0, esz - 4*esz1 );
     }
     for( size_t i = esz; i < blocksize*esz; i++ )
         scbuf[i] = scbuf[i - esz];
@@ -723,14 +732,19 @@ Mat& Mat::operator = (const Scalar& s)
 
         if( it.nplanes > 0 )
         {
-            double scalar[12];
-            scalarToRawData(s, scalar, type(), 12);
-            size_t blockSize = 12*elemSize1();
+            // the scratch block must hold a whole number of elements: 12 == lcm(1,2,3,4) for the
+            // classic 1..4-channel types, rounded up to a multiple of cn for the wider ones.
+            const int cn = channels();
+            const int unroll_to = cn <= 4 ? 12 : ((12 + cn - 1)/cn)*cn;
+            AutoBuffer<double, 12> _scalar(unroll_to);   // >= unroll_to*elemSize1() bytes, 8-aligned
+            double* scalar = _scalar.data();
+            scalarToRawData(s, scalar, type(), unroll_to);
+            size_t blockSize = unroll_to*elemSize1();
 
             for( size_t j = 0; j < elsize; j += blockSize )
             {
                 size_t sz = MIN(blockSize, elsize - j);
-                CV_Assert(sz <= sizeof(scalar));
+                CV_Assert(sz <= unroll_to*sizeof(double));
                 memcpy( dptr + j, scalar, sz );
             }
         }
@@ -812,8 +826,12 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     Mat value = _value.getMat(), mask = _mask.getMat();
 
-    CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     int cn = channels(), mcn = mask.channels();
+    // a cv::Scalar (a 4x1 CV_64F column) is a valid value for any channel count - channels past
+    // the 4th take 0, the same rule as Mat::operator=(const Scalar&) / scalarToRawData()
+    CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ) ||
+               (cn > 4 && value.dims == 2 && value.size() == Size(1, 4) &&
+                value.type() == CV_64F && value.isContinuous()) );
     CV_Assert( mask.empty() || ((mask.depth() == CV_8U || mask.depth() == CV_8S || mask.depth() == CV_Bool) &&
                (mcn == 1 || mcn == cn) && size == mask.size) );
 

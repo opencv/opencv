@@ -987,6 +987,9 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A Scalar holds 4 values, so for types with more than 4 channels only the first 4 channels
+    are initialized from s and the remaining ones are set to 0. To fill every channel of such a
+    matrix with the same value, use Mat::setTo() with a single value, e.g. `m.setTo(0.9)`.
     */
     Mat(int rows, int cols, int type, const Scalar& s);
 
@@ -998,6 +1001,9 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A Scalar holds 4 values, so for types with more than 4 channels only the first 4 channels
+    are initialized from s and the remaining ones are set to 0. To fill every channel of such a
+    matrix with the same value, use Mat::setTo() with a single value, e.g. `m.setTo(0.9)`.
       */
     Mat(Size size, int type, const Scalar& s);
 
@@ -1038,6 +1044,9 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A Scalar holds 4 values, so for types with more than 4 channels only the first 4 channels
+    are initialized from s and the remaining ones are set to 0. To fill every channel of such a
+    matrix with the same value, use Mat::setTo() with a single value, e.g. `m.setTo(0.9)`.
     */
     Mat(int ndims, const int* sizes, int type, const Scalar& s);
 
@@ -1048,6 +1057,9 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A Scalar holds 4 values, so for types with more than 4 channels only the first 4 channels
+    are initialized from s and the remaining ones are set to 0. To fill every channel of such a
+    matrix with the same value, use Mat::setTo() with a single value, e.g. `m.setTo(0.9)`.
     */
     Mat(const std::vector<int>& sizes, int type, const Scalar& s);
 
@@ -1058,6 +1070,9 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A Scalar holds 4 values, so for types with more than 4 channels only the first 4 channels
+    are initialized from s and the remaining ones are set to 0. To fill every channel of such a
+    matrix with the same value, use Mat::setTo() with a single value, e.g. `m.setTo(0.9)`.
     */
     Mat(const MatShape& shape, int type, const Scalar& s);
 
@@ -1487,14 +1502,18 @@ public:
     void assignTo( Mat& m, int type=-1 ) const;
 
     /** @brief Sets all or some of the array elements to the specified value.
-    @param s Assigned scalar converted to the actual array type.
+    @param s Assigned scalar converted to the actual array type. A Scalar holds 4 values, so for
+    arrays with more than 4 channels only the first 4 channels are taken from s and the remaining
+    ones are set to 0; use setTo() with a single value to fill every channel with the same value.
     */
     Mat& operator = (const Scalar& s);
 
     /** @brief Sets all or some of the array elements to the specified value.
 
     This is an advanced variant of the Mat::operator=(const Scalar& s) operator.
-    @param value Assigned scalar converted to the actual array type.
+    @param value Assigned value converted to the actual array type. A single value (e.g. a double)
+    is broadcast to every channel; a Scalar sets the first (up to 4) channels and zeroes the rest;
+    a value with exactly channels() elements sets the channels one by one.
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
     elements need to be copied. The mask has to be of type CV_8U, CV_8S or CV_Bool and can have 1 or
     multiple channels.
