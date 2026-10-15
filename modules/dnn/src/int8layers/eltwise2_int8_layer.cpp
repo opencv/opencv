@@ -103,8 +103,6 @@ public:
 
         std::string opStr = params.get<String>("operation", "add");
         op = (opStr == "mul" || opStr == "prod") ? Op::MUL : Op::ADD;
-        operation = opStr;
-        with_relu = withRelu;
 
         if (params.has("input_scales"))
         {
@@ -138,8 +136,6 @@ public:
         output_zp = p.output_zp;
         withRelu = p.with_relu;
         op = (p.operation == "mul" || p.operation == "prod") ? Op::MUL : Op::ADD;
-        operation = p.operation;
-        with_relu = p.with_relu;
         offset = 0.f;
         mulCoeff = 0.f;
     }

@@ -575,7 +575,6 @@ struct Net::Impl : public detail::NetImplBase
     void useBlockLayout();
     // fuse BN into following Conv2 weights
     void fuseBN();
-    void foldQuantizedAffine();
 
 };  // Net::Impl
 
