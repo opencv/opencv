@@ -67,6 +67,11 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
     // L2 metric
     float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
+    samePointEps = std::min(samePointEps, rect1.size.width);
+    samePointEps = std::min(samePointEps, rect1.size.height);
+    samePointEps = std::min(samePointEps, rect2.size.width);
+    samePointEps = std::min(samePointEps, rect2.size.height);
+    samePointEps = std::max(1e-16f, samePointEps);
 
     int ret = INTERSECT_FULL;
 

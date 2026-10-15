@@ -469,6 +469,24 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_18520)
     }
 }
 
+TEST(Imgproc_RotatedRectangleIntersection, regression_large_disjoint_rectangles)
+{
+    const RotatedRect r1(
+        Point2f(0, 0),
+        Size2f(10000000.f, 10000000.f),
+        0);
+    const RotatedRect r2(
+        Point2f(11000000.f, 0),
+        Size2f(10000000.f, 10000000.f),
+        0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_NONE, interType);
+    EXPECT_TRUE(intersections.empty());
+}
+
 TEST(Imgproc_RotatedRectangleIntersection, regression_19824)
 {
     RotatedRect r1(
