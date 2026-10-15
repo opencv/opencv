@@ -34,6 +34,15 @@ int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, 
 
     if( ippiCopySubpixIntersect )
     {
+        // IPP mishandles samples clamped to the top-right corner. Use the
+        // portable path for windows touching that corner; this also prevents
+        // an out-of-bounds read for one-column images.
+        const float x0 = (float)center_x - (patch_width - 1) * 0.5f;
+        const float y0 = (float)center_y - (patch_height - 1) * 0.5f;
+        const float xLast = x0 + patch_width - 1;
+        if( y0 < 0.f && xLast >= src_width - 1 )
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
         IppiPoint minpt = {0, 0}, maxpt = {0, 0};
         IppiPoint_32f icenter = {(float)center_x, (float)center_y};
         IppiSize src_size = {src_width, src_height}, win_size = {patch_width, patch_height};
