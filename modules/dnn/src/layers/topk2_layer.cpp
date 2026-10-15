@@ -52,7 +52,7 @@ public:
         sorted  = params.get<int>("sorted", 1) == 1;
         if (params.has("k")) {
             K = params.get<int>("k");
-            CV_CheckGT(K, 0, "TopK2: K needs to be a positive integer");
+            CV_CheckGE(K, 0, "TopK2: K must be non-negative");
             dynamicK = false;
         } else {
             dynamicK = true;
@@ -76,7 +76,7 @@ public:
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_Assert(!inputs.empty());
-        CV_Assert(K > 0);
+        CV_Assert(K >= 0);
         const MatShape& inShape = inputs[0];
         int inputDims = static_cast<int>(inShape.size());
         int a = normalize_axis(axis, inputDims);
@@ -164,7 +164,7 @@ public:
             CV_Assert(inputs[1].type() == CV_64S);
             CV_Assert(inputs[1].total() == 1);
             int64_t kTemp = inputs[1].at<int64_t>(0);
-            CV_CheckGT(kTemp, 0, "TopK2: dynamic K must be > 0");
+            CV_CheckGE(kTemp, 0, "TopK2: dynamic K must be non-negative");
             CV_CheckLT(kTemp, input.size[normalized_axis] + 1, "TopK2: dynamic K is out of range");
             kVal = static_cast<int>(kTemp);
         }
@@ -190,6 +190,11 @@ public:
         } else {
             CV_Error(cv::Error::StsBadArg, cv::format("Unsupported output array kind: %d", kind));
         }
+
+        // ONNX asks for K > 0, but detectors produce K = 0 when nothing passes the
+        // score threshold; like ONNX Runtime, return empty values and indices
+        if (kVal == 0)
+            return;
 
         switch (input.depth()) {
             case CV_8U:   FindTopK<uint8_t          >(input, output_value, output_index, normalized_axis, kVal); break;

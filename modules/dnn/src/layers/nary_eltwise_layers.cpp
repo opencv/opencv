@@ -343,23 +343,26 @@ public:
         size_t i, ninputs = shapes.size();
         CV_Assert(ninputs > 0u);
 
-        int C0 = shapes[0].C, dims0 = shapes[0].dims, maxdims = dims0;
-        bool constC = true;
+        int dims0 = shapes[0].dims, maxdims = dims0, maxC = 0;
+        for (i = 0; i < ninputs; i++)
+            maxC = std::max(maxC, shapes[i].C);
+        // a 1-channel block input broadcasts over the channels, forward() fills its lanes
+        bool broadcastableC = true;
         bool allBlock = true;
         bool constDims = true;
         for (i = 0; i < ninputs; i++) {
             const MatShape& inpShape = shapes[i];
             int dims = inpShape.dims;
             allBlock = allBlock && inpShape.layout == DATA_LAYOUT_BLOCK;
-            constC = constC && inpShape.C == C0;
+            broadcastableC = broadcastableC && (inpShape.C == maxC || inpShape.C == 1);
             constDims = constDims && dims == dims0;
             maxdims = std::max(maxdims, dims);
         }
 
         MatShape outShape(maxdims, 1);
-        if (allBlock && constC && constDims) {
+        if (allBlock && broadcastableC && constDims) {
             outShape.layout = DATA_LAYOUT_BLOCK;
-            outShape.C = C0;
+            outShape.C = maxC;
         }
 
         for (i = 0; i < ninputs; i++)
@@ -1119,6 +1122,29 @@ public:
                 if (modified)
                     inp = inp(ranges).clone();
             }
+            helper.init(used_inputs, outputs);
+            CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+        }
+
+        // a 1-channel block tensor keeps its value in lane 0 only, so copy it into every lane before broadcasting
+        const MatShape outShape0 = out0.shape();
+        bool filledLanes = false;
+        if (outShape0.layout == DATA_LAYOUT_BLOCK && outShape0.C > 1) {
+            for (Mat& inp : used_inputs) {
+                const MatShape s = inp.shape();
+                if (s.layout != DATA_LAYOUT_BLOCK || s.C != 1)
+                    continue;
+                std::vector<Range> lane0(s.dims, Range::all());
+                lane0[s.dims - 1] = Range(0, 1);
+                std::vector<int> reps(s.dims, 1);
+                reps[s.dims - 1] = s[s.dims - 1];
+                Mat full;
+                cv::repeat(inp(lane0), reps, full);
+                inp = full;
+                filledLanes = true;
+            }
+        }
+        if (filledLanes) {
             helper.init(used_inputs, outputs);
             CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
         }
