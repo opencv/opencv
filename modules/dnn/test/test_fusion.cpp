@@ -945,4 +945,23 @@ TEST(Fusion, ConversionToPlainMovesAboveElementwiseOps)
     EXPECT_EQ("TransformLayout", (*(deconv + 1))->type);
 }
 
+TEST(Fusion, ChannelSliceKeepsBlockLayout)
+{
+    Net net = forwardAgainstReference("slice_channels_block");
+    EXPECT_EQ(1, fusedCount(net, "Slice2"));
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+TEST(Fusion, ChannelSliceKeepsBlockLayoutUnaligned)
+{
+    Net net = forwardAgainstReference("slice_channels_block_unaligned");
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+TEST(Fusion, ChannelSliceConstantUnalignedStaysPlain)
+{
+    Net net = forwardAgainstReference("slice_channels_const_unaligned");
+    EXPECT_EQ(3, fusedCount(net, "TransformLayout"));
+}
+
 }} // namespace opencv_test
