@@ -49,21 +49,32 @@ CV_EXPORTS bool isOpenCLSuppressed();
 
 /** @brief Registers the built-in emulator backend (tests; or set OPENCV_ACCEL_EMULATOR=1).
 
-The emulator runs on the CPU but behaves like four devices with different memory models:
+The emulator runs on the CPU but behaves like six devices with different memory models:
 "emulator:0" discrete (host access only through copies), "emulator:1" coherent shared
 memory, "emulator:2" shared memory without cache coherence (it keeps a separate CPU view
 that only begin/end_cpu_access synchronize, so a missing cache operation shows up as
-wrong data), "emulator:3" protected memory (no CPU access) and "emulator:4" managed memory
-that the CPU may only touch while the device is idle. Work runs asynchronously on worker
+wrong data), "emulator:3" protected memory (no CPU access), "emulator:4" managed memory
+that the CPU may only touch while the device is idle, and "emulator:5", a discrete device
+that fails on request (emulatorInjectFailure). Work runs asynchronously on worker
 threads; OPENCV_ACCEL_EMULATOR_DELAY_US delays every task to expose missing waits.
 @return the backend id */
 CV_EXPORTS int registerEmulatorBackend();
 
-//! number of emulator allocations alive right now (tests of deferred release)
-CV_EXPORTS int64 emulatorLiveAllocations();
+//! number of emulator allocations alive right now, on one device or (-1) on all (tests of release)
+CV_EXPORTS int64 emulatorLiveAllocations(int device = -1);
 
 //! times device work and CPU access overlapped on "emulator:4" (a fault on real hardware)
 CV_EXPORTS int64 emulatorViolations();
+
+/** @brief Makes work on "emulator:5" fail from now on (@p status is a cvAccelStatus, 0 restores
+normal operation).
+
+By default the work is queued and fails later: fences recorded from now on report @p status.
+With @p synchronous, operations and copies queue their work and then return @p status, like a
+backend that fails halfway through a call. CV_ACCEL_DEVICE_LOST also makes every call on the
+device fail at once; OpenCV keeps a lost device lost for the rest of the process, so only one
+test may use it, at its end. */
+CV_EXPORTS void emulatorInjectFailure(int status, bool synchronous = false);
 
 /** @brief Disables the OpenCL path for the rest of the current cv:: call.
 

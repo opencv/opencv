@@ -38,7 +38,8 @@ namespace cv { namespace accel { namespace impl {
 
 namespace {
 
-enum { EMU_DISCRETE = 0, EMU_COHERENT = 1, EMU_NONCOHERENT = 2, EMU_PROTECTED = 3, EMU_MANAGED = 4, EMU_DEVICES = 5 };
+enum { EMU_DISCRETE = 0, EMU_COHERENT = 1, EMU_NONCOHERENT = 2, EMU_PROTECTED = 3, EMU_MANAGED = 4,
+       EMU_FAILING = 5, EMU_DEVICES = 6 };
 
 const uchar SCRAMBLE = 0x5A;
 const uchar POISON = 0xCD;
@@ -55,11 +56,47 @@ cvAccelStatus fail(cvAccelStatus st, const std::string& msg)
 }
 
 std::atomic<long long> g_liveAllocations(0);
+std::atomic<long long> g_liveByDevice[EMU_DEVICES];   // zero: static storage
+
+void countAllocation(int device, int delta)
+{
+    g_liveAllocations += delta;
+    g_liveByDevice[device] += delta;
+}
 
 // EMU_MANAGED: what would fault on real hardware
 std::atomic<int> g_managedCpuAccess(0);
 std::atomic<int> g_managedDeviceWork(0);
 std::atomic<long long> g_violations(0);
+
+// EMU_FAILING: the status its work reports (emulatorInjectFailure)
+std::atomic<int> g_failingStatus(CV_ACCEL_OK);
+std::atomic<bool> g_failSynchronously(false);
+
+//! what a fence recorded now on @p device reports once the work before it is done
+cvAccelStatus asyncFailure(int device)
+{
+    return device == EMU_FAILING && !g_failSynchronously.load() ? (cvAccelStatus)g_failingStatus.load() : CV_ACCEL_OK;
+}
+
+//! what a call on @p device returns after queuing its work (a backend failing halfway through)
+cvAccelStatus syncFailure(int device)
+{
+    const cvAccelStatus st = device == EMU_FAILING && g_failSynchronously.load() ?
+                             (cvAccelStatus)g_failingStatus.load() : CV_ACCEL_OK;
+    return st == CV_ACCEL_OK ? st : fail(st, "emulated failure after queuing the work");
+}
+
+//! a lost device rejects every call and never makes anyone wait (backend rule 8)
+bool deviceLost(int device)
+{
+    return device == EMU_FAILING && g_failingStatus.load() == CV_ACCEL_DEVICE_LOST;
+}
+
+cvAccelStatus lostError()
+{
+    return fail(CV_ACCEL_DEVICE_LOST, "emulator:5 is lost");
+}
 
 struct EmuAlloc
 {
@@ -77,7 +114,7 @@ bool isScrambledDesc(const cvAccelMemoryDesc& d, int device)
 {
     if (d.kind == CV_ACCEL_MEM_HOST || d.kind == CV_ACCEL_MEM_HOST_PINNED || d.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER)
         return false;
-    return device == EMU_DISCRETE || device == EMU_PROTECTED;
+    return device == EMU_DISCRETE || device == EMU_PROTECTED || device == EMU_FAILING;
 }
 
 uchar* devicePtr(const cvAccelAllocation* a)
@@ -92,11 +129,14 @@ bool isScrambled(const cvAccelAllocation* a)
 
 struct EmuFence
 {
-    EmuFence() : done(false), refs(1) {}
+    explicit EmuFence(int device_)
+        : done(false), refs(1), device(device_), status(asyncFailure(device_)) {}
     std::mutex m;
     std::condition_variable cv;
     bool done;
     std::atomic<int> refs;
+    int device;
+    cvAccelStatus status;   //!< what the work before the fence reports once it is done
 
     void signal()
     {
@@ -237,12 +277,13 @@ cvAccelStatus CV_API_CALL emu_get_device_info(int device, cvAccelDeviceInfo* inf
     static const char* names[EMU_DEVICES] = {
         "emulated discrete GPU", "emulated coherent shared memory",
         "emulated non-coherent shared memory", "emulated protected memory",
-        "emulated managed memory without concurrent access" };
+        "emulated managed memory without concurrent access", "emulated discrete GPU for failure tests" };
     static const uint32_t types[EMU_DEVICES] = {
         CV_ACCEL_DEVICE_GPU_DISCRETE, CV_ACCEL_DEVICE_GPU_INTEGRATED, CV_ACCEL_DEVICE_NPU, CV_ACCEL_DEVICE_OTHER,
-        CV_ACCEL_DEVICE_GPU_INTEGRATED };
+        CV_ACCEL_DEVICE_GPU_INTEGRATED, CV_ACCEL_DEVICE_GPU_DISCRETE };
     static const uint32_t preferred[EMU_DEVICES] = {
-        CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_MANAGED };
+        CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_MANAGED,
+        CV_ACCEL_MEM_DEVICE };
     const uint32_t size = info->struct_size;
     memset(info, 0, sizeof(*info));
     info->struct_size = size;
@@ -268,6 +309,8 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
 {
     if (!out || device < 0 || device >= EMU_DEVICES)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (deviceLost(device))
+        return lostError();
     try
     {
         memset(out, 0, sizeof(*out));
@@ -294,6 +337,7 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
             switch (device)
             {
             case EMU_DISCRETE:
+            case EMU_FAILING:
                 d.kind = CV_ACCEL_MEM_DEVICE;
                 d.host_access = CV_ACCEL_HOST_ACCESS_COPY;
                 d.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
@@ -330,7 +374,7 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
         out->handle = (uint64_t)(uintptr_t)a->mem;
         out->size = size;
         out->backend_data = a;
-        g_liveAllocations++;
+        countAllocation(device, 1);
         return CV_ACCEL_OK;
     }
     catch (const std::bad_alloc&)
@@ -352,10 +396,10 @@ cvAccelStatus CV_API_CALL emu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEX
         fastFree(a->cpuView);
     if (a->owned)
         fastFree(a->mem);
+    countAllocation(a->device, -1);
     delete a;
     alloc->backend_data = 0;
     alloc->handle = 0;
-    g_liveAllocations--;
     return CV_ACCEL_OK;
 }
 
@@ -385,7 +429,7 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
         out->handle = (uint64_t)(uintptr_t)a->mem;
         out->size = ext->size;
         out->backend_data = a;
-        g_liveAllocations++;
+        countAllocation(device, 1);
         return CV_ACCEL_OK;
     }
     catch (const std::exception& e)
@@ -413,6 +457,8 @@ cvAccelStatus CV_API_CALL emu_begin_cpu_access(const cvAccelAllocation* alloc, u
     if (!alloc || !alloc->backend_data || !host_ptr || offset + size > alloc->size)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
+    if (deviceLost(a->device))
+        return lostError();
     if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED)
     {
         if (!a->cpuOpen)
@@ -459,10 +505,12 @@ cvAccelStatus CV_API_CALL emu_end_cpu_access(const cvAccelAllocation* alloc, uin
     return CV_ACCEL_OK;
 }
 
-cvAccelStatus CV_API_CALL emu_copy(int /*device*/, cvAccelStream stream, const cvAccelCopyRegion* r) CV_ACCEL_NOEXCEPT
+cvAccelStatus CV_API_CALL emu_copy(int device, cvAccelStream stream, const cvAccelCopyRegion* r) CV_ACCEL_NOEXCEPT
 {
     if (!stream || !r || r->dims <= 0 || r->dims > CV_ACCEL_MAX_DIMS)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (deviceLost(device))
+        return lostError();
     if ((!r->src.alloc && !r->src.host) || (!r->dst.alloc && !r->dst.host))
         return fail(CV_ACCEL_INVALID_ARGUMENT, "copy endpoint without memory");
     try
@@ -476,7 +524,7 @@ cvAccelStatus CV_API_CALL emu_copy(int /*device*/, cvAccelStream stream, const c
         ((EmuStream*)stream)->push([=]() {
             copyND(dst, dstep.data(), src, sstep.data(), dims, sz.data(), xorBytes);
         }, true);
-        return CV_ACCEL_OK;
+        return syncFailure(device);
     }
     catch (const std::exception& e)
     {
@@ -488,6 +536,8 @@ cvAccelStatus CV_API_CALL emu_stream_create(int device, uint32_t /*flags*/, cvAc
 {
     if (!out || device < 0 || device >= EMU_DEVICES)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (deviceLost(device))
+        return lostError();
     try
     {
         EmuStream* s = new EmuStream(device);
@@ -519,9 +569,11 @@ cvAccelStatus CV_API_CALL emu_stream_record_fence(cvAccelStream stream, cvAccelF
 {
     if (!stream || !out)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (deviceLost(((EmuStream*)stream)->device))
+        return lostError();
     try
     {
-        EmuFence* f = new EmuFence();
+        EmuFence* f = new EmuFence(((EmuStream*)stream)->device);
         f->refs++;  // one reference for the task
         ((EmuStream*)stream)->push([f]() { f->signal(); f->release(); });
         *out = (cvAccelFence)f;
@@ -554,7 +606,12 @@ cvAccelStatus CV_API_CALL emu_fence_wait(cvAccelFence fence, uint64_t timeout_ns
 {
     if (!fence)
         return CV_ACCEL_OK;
-    return ((EmuFence*)fence)->wait(timeout_ns) ? CV_ACCEL_OK : CV_ACCEL_TIMEOUT;
+    EmuFence* f = (EmuFence*)fence;
+    if (deviceLost(f->device))
+        return lostError();
+    if (!f->wait(timeout_ns))
+        return CV_ACCEL_TIMEOUT;
+    return f->status == CV_ACCEL_OK ? CV_ACCEL_OK : fail(f->status, "emulated device failure");
 }
 
 cvAccelStatus CV_API_CALL emu_fence_retain(cvAccelFence fence) CV_ACCEL_NOEXCEPT
@@ -573,6 +630,8 @@ cvAccelStatus CV_API_CALL emu_fence_release(cvAccelFence fence) CV_ACCEL_NOEXCEP
 
 cvAccelStatus CV_API_CALL emu_device_synchronize(int device) CV_ACCEL_NOEXCEPT
 {
+    if (deviceLost(device))
+        return lostError();
     std::vector<EmuFence*> fences;
     {
         std::lock_guard<std::mutex> lk(streamsMutex());
@@ -608,6 +667,8 @@ Mat viewToMat(const cvAccelView* v)
 cvAccelStatus CV_API_CALL emu_flip(const cvAccelCall* call, const cvAccelView* src, const cvAccelView* dst,
                                    int flipMode) CV_ACCEL_NOEXCEPT
 {
+    if (deviceLost(call->device))
+        return lostError();
     try
     {
         if (!src->alloc || !dst->alloc || src->dims != 2 || dst->dims != 2 || src->type != dst->type)
@@ -620,7 +681,7 @@ cvAccelStatus CV_API_CALL emu_flip(const cvAccelCall* call, const cvAccelView* s
             return CV_ACCEL_OK;
         Mat s = viewToMat(src), d = viewToMat(dst);
         ((EmuStream*)call->stream)->push([s, d, flipMode]() mutable { cv::flip(s, d, flipMode); }, true);
-        return CV_ACCEL_OK;
+        return syncFailure(call->device);
     }
     catch (const std::exception& e)
     {
@@ -630,6 +691,8 @@ cvAccelStatus CV_API_CALL emu_flip(const cvAccelCall* call, const cvAccelView* s
 
 cvAccelStatus CV_API_CALL emu_transpose(const cvAccelCall* call, const cvAccelView* src, const cvAccelView* dst) CV_ACCEL_NOEXCEPT
 {
+    if (deviceLost(call->device))
+        return lostError();
     try
     {
         if (!src->alloc || !dst->alloc || src->dims != 2 || dst->dims != 2 || src->type != dst->type)
@@ -642,7 +705,7 @@ cvAccelStatus CV_API_CALL emu_transpose(const cvAccelCall* call, const cvAccelVi
             return CV_ACCEL_OK;
         Mat s = viewToMat(src), d = viewToMat(dst);
         ((EmuStream*)call->stream)->push([s, d]() mutable { cv::transpose(s, d); }, true);
-        return CV_ACCEL_OK;
+        return syncFailure(call->device);
     }
     catch (const std::exception& e)
     {
@@ -722,14 +785,22 @@ const OpenCV_Core_Accel_API* emulatorBackendApi()
 
 namespace accel { namespace detail {
 
-int64 emulatorLiveAllocations()
+int64 emulatorLiveAllocations(int device)
 {
-    return (int64)impl::g_liveAllocations.load();
+    if (device < 0 || device >= impl::EMU_DEVICES)
+        return (int64)impl::g_liveAllocations.load();
+    return (int64)impl::g_liveByDevice[device].load();
 }
 
 int64 emulatorViolations()
 {
     return (int64)impl::g_violations.load();
+}
+
+void emulatorInjectFailure(int status, bool synchronous)
+{
+    impl::g_failSynchronously.store(synchronous);
+    impl::g_failingStatus.store(status);
 }
 
 }} // namespace accel::detail

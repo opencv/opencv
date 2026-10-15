@@ -17,6 +17,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace cv { namespace accel { namespace impl {
@@ -39,13 +40,14 @@ struct StreamHolder
 };
 typedef std::shared_ptr<StreamHolder> StreamPtr;
 
-/** Counted reference to a backend fence and the stream it was recorded on. */
+/** Counted reference to a backend fence, the stream it was recorded on and that stream's device. */
 class FenceRef
 {
 public:
-    FenceRef() : b_(0), f_(0), streamUid_(0) {}
+    FenceRef() : b_(0), f_(0), streamUid_(0), device_(-1) {}
     //! adopts the reference returned by stream_record_fence
-    FenceRef(Backend* b, cvAccelFence f, uint64 streamUid) : b_(b), f_(f), streamUid_(streamUid) {}
+    FenceRef(Backend* b, cvAccelFence f, uint64 streamUid, int device)
+        : b_(b), f_(f), streamUid_(streamUid), device_(device) {}
     FenceRef(const FenceRef& o);
     FenceRef& operator=(const FenceRef& o);
     ~FenceRef() { reset(); }
@@ -55,17 +57,35 @@ public:
     Backend* backend() const { return b_; }
     cvAccelFence get() const { return f_; }
     uint64 streamUid() const { return streamUid_; }
+    int device() const { return device_; }
 
-    //! polls; an empty fence is complete
+    //! polls; an empty fence is complete; throws if the device reports an error
     bool isComplete() const;
-    //! CPU wait (counted in TransferStats::hostWaits)
+    //! CPU wait (counted in TransferStats::hostWaits); throws on device errors and on timeout
     void wait() const;
+
+    enum Poll { DONE, PENDING, FAILED };
+    /** Never throws: for release paths, which run from destructors. A failure is logged (and
+        DEVICE_LOST marks the device lost); the work behind the fence no longer runs, so the
+        caller may free what it used. */
+    Poll poll() const CV_NOEXCEPT;
+    //! never throws; false when the device failed
+    bool waitNoThrow() const CV_NOEXCEPT;
 
 private:
     Backend* b_;
     cvAccelFence f_;
     uint64 streamUid_;
+    int device_;
 };
+
+/** After a failed enqueue, or a failed fence record after one: the backend may have queued part
+    of the work. Returns a fence after it, or an empty fence once the device is idle (or lost,
+    when even that fails). Never throws. */
+FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT;
+
+//! the message of the exception being handled (call inside a catch block)
+std::string currentExceptionMessage();
 
 //! records a fence at the current end of @p s
 FenceRef recordFence(const StreamPtr& s);
@@ -124,8 +144,8 @@ public:
     int deviceCount();
     cvAccelDeviceInfo deviceInfo(int device);
 
-    //! throws cv::Exception with the backend message unless @p st is CV_ACCEL_OK
-    void check(cvAccelStatus st, const char* what) const;
+    //! throws cv::Exception with the backend message unless @p st is CV_ACCEL_OK; DEVICE_LOST marks @p device lost
+    void check(cvAccelStatus st, const char* what, int device = -1) const;
 
     //! cached op table of a module, NULL when the backend has none
     const void* opTable(const char* module, uint32_t version);
@@ -144,8 +164,19 @@ public:
     //! frees deferred buffers whose fences completed; with @p waitAll, waits for all of them
     void collectDeferred(bool waitAll);
 
-    bool isLost() const { return lost_.load(); }
-    void markLost() { lost_.store(true); }
+    /** A device stays lost once lost; a failure without a known device loses the whole backend.
+        Lock-free and never throws: called from release paths and from check(). */
+    bool isLost(int device) const CV_NOEXCEPT
+    {
+        return lost_.load() || (device >= 0 && device < MAX_TRACKED_DEVICES && lostDevices_[device].load());
+    }
+    void markLost(int device) CV_NOEXCEPT
+    {
+        if (device >= 0 && device < MAX_TRACKED_DEVICES)
+            lostDevices_[device].store(true);
+        else
+            lost_.store(true);
+    }
 
     IdleGate& idleGate(int device);
 
@@ -176,7 +207,9 @@ private:
     std::map<std::string, const void*> opTables_;
     std::map<std::pair<int, int>, MatAllocator*> allocators_;
     std::vector<BufferState*> deferred_;
+    enum { MAX_TRACKED_DEVICES = 64 };  //!< devices past this are tracked together, as the backend
     std::atomic<bool> lost_;
+    std::atomic<bool> lostDevices_[MAX_TRACKED_DEVICES];
     std::vector<std::unique_ptr<IdleGate> > idleGates_;
     std::map<std::pair<int, uintptr_t>, uintptr_t> hostImports_;   //!< (device, first page) -> end
     std::multimap<std::pair<int, uint64_t>, cvAccelAllocation> pinnedCache_;
@@ -250,7 +283,14 @@ struct BufferState
     std::mutex mutex;
     std::condition_variable cond;
     bool busy;                      //!< a host transition that waits outside of the mutex is running
-    int pendingDeviceOps;           //!< operations between acquireForDevice and recordDeviceUse
+    int pendingReaders;             //!< device operations between acquire and record that only read
+    int pendingWriters;             //!< ... that write; a writer excludes everyone, a reader excludes writers
+    struct Hold
+    {
+        std::thread::id thread;
+        int mode;
+    };
+    std::vector<Hold> longHolds;    //!< open DeviceAccess objects, to report same-thread conflicts
     bool hostMapped;                //!< Mat views may exist (UMatData::refcount was > 0)
     int hostAccess;                 //!< union of AccessFlag over the current mapping
     FenceRef writeFence;            //!< last device write
@@ -279,17 +319,51 @@ enum DeviceMode
     DEV_DISCARD = 4     //!< together with DEV_WRITE: the whole allocation is overwritten
 };
 
-/** Prepares @p u for use by work that will be enqueued on @p stream: uploads the host copy
-    when it is newer, and returns the fences the work must wait for. Returns false (and
-    changes nothing) when a live Mat view conflicts with @p mode. */
-bool acquireForDevice(UMatData* u, const StreamPtr& stream, int mode, std::vector<FenceRef>& waits);
-//! records the completion fence of the work enqueued after acquireForDevice
-void recordDeviceUse(UMatData* u, const FenceRef& fence, int mode);
-//! undoes acquireForDevice when nothing was enqueued
-void abandonDeviceUse(UMatData* u);
+struct DeviceUse
+{
+    UMatData* u;
+    int mode;           //!< DEV_* flags
+};
 
-//! waits for all device work on @p u (CPU wait)
-void waitForDevice(UMatData* u);
+/** The buffers one piece of device work uses, acquired together.
+
+acquire() takes them in one global order (by state address), so concurrent acquirers never
+wait for each other in a cycle, and a buffer added twice is acquired once with the union of
+the modes. Each buffer waits while a conflicting operation sits between acquire and record,
+gets its host copy uploaded when that is newer, and contributes the fences the work must
+wait for. If anything fails, or the object goes away before record(), every buffer acquired
+so far is released, so no path leaves a buffer acquired. A long hold (DeviceAccess) is
+remembered per thread, so that the same thread touching the buffer again gets an error
+instead of a deadlock. */
+class DeviceAcquisition
+{
+public:
+    explicit DeviceAcquisition(bool longHold = false) : longHold_(longHold), acquired_(0) {}
+    ~DeviceAcquisition() { abandon(); }
+
+    void add(UMatData* u, int mode);
+    bool empty() const { return uses_.empty(); }
+
+    /** Returns false and holds nothing when a live Mat view conflicts with a use. Appends the
+        fences that work enqueued on @p stream must wait for to @p waits. */
+    bool acquire(const StreamPtr& stream, std::vector<FenceRef>& waits);
+    //! the work was enqueued: @p fence completes it; releases every buffer
+    void record(const FenceRef& fence);
+    /** The work failed after the backend may have queued part of it: every buffer takes
+        @p fence (empty: nothing runs any more) and the written ones are poisoned; releases
+        every buffer. */
+    void fail(const FenceRef& fence, const std::string& reason);
+    //! nothing was enqueued; releases every buffer (safe to call more than once)
+    void abandon();
+
+private:
+    DeviceAcquisition(const DeviceAcquisition&);
+    DeviceAcquisition& operator=(const DeviceAcquisition&);
+    std::vector<DeviceUse> uses_;
+    bool longHold_;
+    size_t acquired_;
+    std::thread::id holder_;
+};
 
 /** The allocator for one (backend, device, memory kind). It owns no state of its own: the
     coherence protocol lives in the functions above, so every backend gets the same rules. */

@@ -6,7 +6,8 @@
 
 // Non-CPU HAL: the coherence protocol, checked on the built-in emulator.
 // emulator:0 discrete, 1 coherent shared, 2 non-coherent shared, 3 protected, 4 managed
-// (CPU access only while the device is idle). See accel_dispatch.private.hpp.
+// (CPU access only while the device is idle), 5 discrete that fails on request.
+// See accel_dispatch.private.hpp.
 
 #include "test_precomp.hpp"
 
@@ -17,7 +18,7 @@
 
 namespace opencv_test { namespace {
 
-enum { DISCRETE = 0, COHERENT = 1, NONCOHERENT = 2, PROTECTED_MEM = 3, MANAGED = 4 };
+enum { DISCRETE = 0, COHERENT = 1, NONCOHERENT = 2, PROTECTED_MEM = 3, MANAGED = 4, FAILING = 5 };
 
 static accel::Device emulator(int index)
 {
@@ -411,5 +412,72 @@ TEST(Core_Accel, release_while_in_flight_is_deferred)
     });
 }
 #endif
+
+// The only test that uses emulator:5: OpenCV keeps a lost device lost for the whole process.
+TEST(Core_Accel, device_failures_never_escape_a_destructor)
+{
+    accel::Device d = emulator(FAILING);
+    Mat src(16, 16, CV_8UC1), other(16, 16, CV_8UC1);
+    randu(src, 0, 128);
+    randu(other, 128, 255);
+
+    // 1. work that fails asynchronously: readers get the error, releases free everything
+    {
+        UMat u = makeOn(d, src);
+        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
+        UMat out;
+        cv::flip(u, out, 1);
+        EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
+        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    }
+    EXPECT_EQ(0, accel::detail::emulatorLiveAllocations(FAILING));
+
+    // 2. a UMat made from a Mat: a failed result is not copied back, the Mat keeps its content
+    {
+        accel::ExecutionScope scope(d);
+        Mat m = src.clone();
+        {
+            UMat u = m.getUMat(ACCESS_RW);
+            UMat dev = makeOn(d, other);
+            accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
+            dev.copyTo(u);
+            accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        }
+        EXPECT_EQ(0, maxDiff(src, m));
+    }
+    EXPECT_EQ(0, accel::detail::emulatorLiveAllocations(FAILING));
+
+    // 3. calls that fail after queuing their work: what they write is invalid until written whole
+    {
+        UMat u = makeOn(d, src), out, c = makeOn(d, other);
+        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, true);
+        EXPECT_THROW(cv::flip(u, out, 1), cv::Exception);
+        EXPECT_THROW(u.copyTo(c), cv::Exception);
+        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
+        EXPECT_THROW(c.getMat(ACCESS_READ), cv::Exception);
+
+        cv::flip(u, out, 1);                // written whole: usable again
+        Mat ref, res;
+        cv::flip(src, ref, 1);
+        out.copyTo(res);                    // a download into res, no host copy kept
+        EXPECT_EQ(0, maxDiff(ref, res));
+    }
+    EXPECT_EQ(0, accel::detail::emulatorLiveAllocations(FAILING));
+
+    // 4. a lost device: its memory is leaked rather than freed, the other devices keep working
+    {
+        UMat u = makeOn(d, src);
+        const int64 live = accel::detail::emulatorLiveAllocations(FAILING);
+        accel::detail::emulatorInjectFailure(CV_ACCEL_DEVICE_LOST);
+        EXPECT_THROW(u.getMat(ACCESS_READ), cv::Exception);
+        u.release();
+        EXPECT_EQ(live, accel::detail::emulatorLiveAllocations(FAILING));
+    }
+    UMat a = makeOn(emulator(DISCRETE), src), b;
+    accel::resetTransferStats();
+    cv::flip(a, b, 1);
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+}
 
 }} // namespace

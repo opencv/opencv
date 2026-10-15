@@ -109,7 +109,7 @@ StreamHolder::~StreamHolder()
     }
 }
 
-FenceRef::FenceRef(const FenceRef& o) : b_(o.b_), f_(o.f_), streamUid_(o.streamUid_)
+FenceRef::FenceRef(const FenceRef& o) : b_(o.b_), f_(o.f_), streamUid_(o.streamUid_), device_(o.device_)
 {
     if (f_)
         b_->fn().fence_retain(f_);
@@ -125,6 +125,7 @@ FenceRef& FenceRef::operator=(const FenceRef& o)
         b_ = o.b_;
         f_ = o.f_;
         streamUid_ = o.streamUid_;
+        device_ = o.device_;
     }
     return *this;
 }
@@ -136,6 +137,7 @@ void FenceRef::reset()
     b_ = 0;
     f_ = 0;
     streamUid_ = 0;
+    device_ = -1;
 }
 
 bool FenceRef::isComplete() const
@@ -147,8 +149,15 @@ bool FenceRef::isComplete() const
         return true;
     if (st == CV_ACCEL_TIMEOUT)
         return false;
-    b_->check(st, "fence_wait");
+    b_->check(st, "fence_wait", device_);
     return true;
+}
+
+//! OPENCV_ACCEL_WAIT_TIMEOUT_MS: a device that does not finish in time is considered lost (0: wait forever)
+static uint64_t waitTimeoutNs()
+{
+    static uint64_t ns = (uint64_t)utils::getConfigurationParameterSizeT("OPENCV_ACCEL_WAIT_TIMEOUT_MS", 0) * 1000000u;
+    return ns;
 }
 
 void FenceRef::wait() const
@@ -156,14 +165,90 @@ void FenceRef::wait() const
     if (!f_)
         return;
     counters().hostWaits++;
-    b_->check(b_->fn().fence_wait(f_, CV_ACCEL_INFINITE), "fence_wait");
+    const uint64_t timeout = waitTimeoutNs();
+    const cvAccelStatus st = b_->fn().fence_wait(f_, timeout ? timeout : CV_ACCEL_INFINITE);
+    if (st == CV_ACCEL_TIMEOUT)
+    {
+        b_->markLost(device_);
+        CV_Error_(Error::StsError, ("accel(%s): device %d did not finish its work within %llu ms "
+                                    "(OPENCV_ACCEL_WAIT_TIMEOUT_MS); the device is considered lost",
+                                    b_->name().c_str(), device_, (unsigned long long)(timeout / 1000000u)));
+    }
+    b_->check(st, "fence_wait", device_);
+}
+
+FenceRef::Poll FenceRef::poll() const CV_NOEXCEPT
+{
+    if (!f_)
+        return DONE;
+    const cvAccelStatus st = b_->fn().fence_wait(f_, 0);
+    if (st == CV_ACCEL_OK)
+        return DONE;
+    if (st == CV_ACCEL_TIMEOUT)
+        return PENDING;
+    // the work behind the fence failed and is no longer running (see fence_wait)
+    if (st == CV_ACCEL_DEVICE_LOST)
+        b_->markLost(device_);
+    try
+    {
+        CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): device " << device_ << " failed (status " << (int)st
+                     << "): " << b_->fn().get_last_error());
+    }
+    catch (...) {}
+    return FAILED;
+}
+
+bool FenceRef::waitNoThrow() const CV_NOEXCEPT
+{
+    try
+    {
+        wait();
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        try { CV_LOG_ERROR(NULL, "accel: " << e.what()); } catch (...) {}
+    }
+    catch (...) {}
+    return false;
+}
+
+FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
+{
+    Backend* b = s->backend;
+    cvAccelFence f = 0;
+    if (b->fn().stream_record_fence(s->handle, &f) == CV_ACCEL_OK && f)
+        return FenceRef(b, f, s->uid, s->device);
+    if (b->fn().device_synchronize(s->device) != CV_ACCEL_OK)
+        b->markLost(s->device);     // nothing more can be known about what still runs there
+    return FenceRef();
+}
+
+std::string currentExceptionMessage()
+{
+    try
+    {
+        throw;
+    }
+    catch (const cv::Exception& e)
+    {
+        return e.err;
+    }
+    catch (const std::exception& e)
+    {
+        return e.what();
+    }
+    catch (...)
+    {
+        return "unknown error";
+    }
 }
 
 FenceRef recordFence(const StreamPtr& s)
 {
     cvAccelFence f = 0;
-    s->backend->check(s->backend->fn().stream_record_fence(s->handle, &f), "stream_record_fence");
-    return FenceRef(s->backend, f, s->uid);
+    s->backend->check(s->backend->fn().stream_record_fence(s->handle, &f), "stream_record_fence", s->device);
+    return FenceRef(s->backend, f, s->uid, s->device);
 }
 
 void streamWait(const StreamPtr& s, const FenceRef& f)
@@ -172,7 +257,7 @@ void streamWait(const StreamPtr& s, const FenceRef& f)
         return;     // in-order stream: earlier work is already ordered
     if (f.backend() == s->backend)
     {
-        s->backend->check(s->backend->fn().stream_wait_fence(s->handle, f.get()), "stream_wait_fence");
+        s->backend->check(s->backend->fn().stream_wait_fence(s->handle, f.get()), "stream_wait_fence", s->device);
         return;
     }
     if (f.isComplete())
@@ -196,7 +281,10 @@ Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const s
     : id_(id), api_(api), priority_(priority),
       name_(api->v0.backend_name ? api->v0.backend_name : "unnamed"), origin_(origin),
       enumerated_(false), lost_(false), pinnedCacheBytes_(0)
-{}
+{
+    for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
+        lostDevices_[i].store(false);
+}
 
 static uint64_t pinnedCacheLimit()
 {
@@ -276,12 +364,12 @@ cvAccelDeviceInfo Backend::deviceInfo(int device)
     return devices_[device];
 }
 
-void Backend::check(cvAccelStatus st, const char* what) const
+void Backend::check(cvAccelStatus st, const char* what, int device) const
 {
     if (st == CV_ACCEL_OK)
         return;
     if (st == CV_ACCEL_DEVICE_LOST)
-        const_cast<Backend*>(this)->markLost();
+        const_cast<Backend*>(this)->markLost(device);
     const char* msg = fn().get_last_error ? fn().get_last_error() : "";
     const Error::Code code = st == CV_ACCEL_NOT_IMPLEMENTED ? Error::StsNotImplemented :
                              st == CV_ACCEL_OUT_OF_MEMORY ? Error::StsNoMem : Error::StsError;
@@ -333,7 +421,7 @@ StreamPtr Backend::defaultStream(int device)
     if (it != ts.streams.end())
         return it->second;
     cvAccelStream h = 0;
-    check(fn().stream_create(device, 0, &h), "stream_create");
+    check(fn().stream_create(device, 0, &h), "stream_create", device);
     StreamPtr s = std::make_shared<StreamHolder>(this, device, h);
     ts.streams[key] = s;
     return s;
@@ -440,20 +528,22 @@ void Backend::collectDeferred(bool waitAll)
             return;
         pending.swap(deferred_);
     }
-    // no UMat refers to these buffers any more, so no other thread touches them
+    // No UMat refers to these buffers any more, so no other thread touches them. This runs
+    // at the end of every release, from destructors: it must not throw, and a failed device
+    // counts as done (nothing will run there any more; host-side state is freed regardless).
     std::vector<BufferState*> keep;
     for (size_t i = 0; i < pending.size(); i++)
     {
         BufferState* st = pending[i];
         if (waitAll)
         {
-            st->writeFence.wait();
+            st->writeFence.waitNoThrow();
             for (size_t j = 0; j < st->readFences.size(); j++)
-                st->readFences[j].wait();
+                st->readFences[j].waitNoThrow();
         }
-        bool done = st->writeFence.isComplete();
+        bool done = st->writeFence.poll() != FenceRef::PENDING;
         for (size_t j = 0; done && j < st->readFences.size(); j++)
-            done = st->readFences[j].isComplete();
+            done = st->readFences[j].poll() != FenceRef::PENDING;
         if (done)
         {
             st->writeFence.reset();
@@ -802,7 +892,7 @@ Stream::Stream(const Device& device)
     CV_Assert(!device.empty() && "accel: the host has no streams");
     Backend* b = backendOf(device);
     cvAccelStream h = 0;
-    b->check(b->fn().stream_create(device.index(), 0, &h), "stream_create");
+    b->check(b->fn().stream_create(device.index(), 0, &h), "stream_create", device.index());
     impl = makePtr<Impl>();
     impl->s = std::make_shared<StreamHolder>(b, device.index(), h);
 }
@@ -936,50 +1026,48 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
 
 struct DeviceAccess::Impl
 {
+    Impl() : acq(true) {}
     UMat m;
     StreamPtr s;
-    int mode;
+    DeviceAcquisition acq;  //!< a long hold: released when the DeviceAccess goes away
 };
 
 DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag access) : p(0)
 {
     CV_Assert(m.u && m.u->accelState && "accel: DeviceAccess needs a UMat allocated on a device");
     CV_Assert(!stream.empty());
-    Impl* impl_ = new Impl();
+    std::unique_ptr<Impl> impl_(new Impl());
     impl_->m = m;
     impl_->s = stream.impl->s;
-    impl_->mode = ((access & ACCESS_READ) ? DEV_READ : 0) | ((access & ACCESS_WRITE) ? DEV_WRITE : 0);
+    int mode = ((access & ACCESS_READ) ? DEV_READ : 0) | ((access & ACCESS_WRITE) ? DEV_WRITE : 0);
+    impl_->acq.add(m.u, mode ? mode : DEV_READ);
     std::vector<FenceRef> waits;
-    if (!acquireForDevice(m.u, impl_->s, impl_->mode, waits))
-    {
-        delete impl_;
+    if (!impl_->acq.acquire(impl_->s, waits))
         CV_Error(Error::StsError, "accel: DeviceAccess: a conflicting Mat view of the UMat is alive");
-    }
-    try
-    {
-        for (size_t i = 0; i < waits.size(); i++)
-            streamWait(impl_->s, waits[i]);
-    }
-    catch (...)
-    {
-        abandonDeviceUse(m.u);
-        delete impl_;
-        throw;
-    }
-    p = impl_;
+    for (size_t i = 0; i < waits.size(); i++)
+        streamWait(impl_->s, waits[i]);     // on failure the acquisition is released with impl_
+    p = impl_.release();
 }
 
 DeviceAccess::~DeviceAccess()
 {
     try
     {
-        recordDeviceUse(p->m.u, recordFence(p->s), p->mode);
+        FenceRef done;
+        try
+        {
+            done = recordFence(p->s);
+        }
+        catch (const std::exception& e)
+        {
+            // the caller's work is not tracked: what it touched waits for the device, and what
+            // it could write is invalid until overwritten
+            CV_LOG_ERROR(NULL, "accel: DeviceAccess: can't record the stream position: " << e.what());
+            p->acq.fail(fenceAfterFailure(p->s), e.what());
+        }
+        p->acq.record(done);    // nothing left to record after fail()
     }
-    catch (const std::exception& e)
-    {
-        CV_LOG_ERROR(NULL, "accel: DeviceAccess: can't record the stream position: " << e.what());
-        abandonDeviceUse(p->m.u);
-    }
+    catch (...) {}
     delete p;
 }
 

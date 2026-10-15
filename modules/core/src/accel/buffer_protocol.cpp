@@ -35,6 +35,9 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <algorithm>
+#include <functional>
+
 namespace cv { namespace accel { namespace impl {
 
 enum ShadowSource
@@ -47,7 +50,7 @@ enum ShadowSource
 
 BufferState::BufferState(Backend* b, int device_)
     : backend(b), device(device_), shadow(0), shadowFromBackend(false),
-      busy(false), pendingDeviceOps(0), hostMapped(false), hostAccess(0),
+      busy(false), pendingReaders(0), pendingWriters(0), hostMapped(false), hostAccess(0),
       imported(false), fromMat(false), hostImport(0), idleGateHeld(false), poisoned(false), generation(0)
 {
     memset(&alloc, 0, sizeof(alloc));
@@ -120,10 +123,23 @@ bool viewFitsAllocation(const cvAccelView& v)
 
 namespace {
 
-//! keeps BufferState::busy set for the lifetime of the object, and wakes waiters at the end
+//! true while device work that conflicts with an access of this kind is between acquire and record
+inline bool deviceUseInFlight(const BufferState* st, bool write)
+{
+    return st->pendingWriters != 0 || (write && st->pendingReaders != 0);
+}
+
+/** Keeps BufferState::busy set for the lifetime of the object, and wakes waiters at the end.
+    Busy is set only once no other transition runs and no conflicting device operation sits
+    between acquire and record: a transition never holds busy while it waits for one,
+    because that operation may itself be waiting for busy (a call holding another buffer). */
 struct BusyScope
 {
-    BusyScope(BufferState* st_, std::unique_lock<std::mutex>& lk_) : st(st_), lk(lk_) { st->busy = true; }
+    BusyScope(BufferState* st_, std::unique_lock<std::mutex>& lk_, bool write) : st(st_), lk(lk_)
+    {
+        st->cond.wait(lk, [this, write]{ return !st->busy && !deviceUseInFlight(st, write); });
+        st->busy = true;
+    }
     ~BusyScope()
     {
         if (!lk.owns_lock())
@@ -135,22 +151,29 @@ struct BusyScope
     std::unique_lock<std::mutex>& lk;
 };
 
-bool fencesComplete(BufferState* st)
+//! release path, never throws: true when no fence is pending (a failed device counts as done)
+bool fencesSettled(BufferState* st)
 {
     if (!st->writeFence.empty())
     {
-        if (!st->writeFence.isComplete())
+        if (st->writeFence.poll() == FenceRef::PENDING)
             return false;
         st->writeFence.reset();
     }
     for (size_t i = 0; i < st->readFences.size(); )
     {
-        if (st->readFences[i].isComplete())
-            st->readFences.erase(st->readFences.begin() + i);
-        else
+        if (st->readFences[i].poll() == FenceRef::PENDING)
             return false;
+        st->readFences.erase(st->readFences.begin() + i);
     }
     return true;
+}
+
+//! written whole: earlier failures no longer matter
+void clearPoison(BufferState* st)
+{
+    st->poisoned = false;
+    st->poisonReason.clear();
 }
 
 void checkNotPoisoned(const BufferState* st)
@@ -162,10 +185,11 @@ void checkNotPoisoned(const BufferState* st)
 
 /** Waits on the CPU for device work that conflicts with a CPU access. Called with st->busy
     set, so no new device work on this buffer can start meanwhile; the mutex is released
-    during the waits so that operations in flight can record their fences. */
-void waitDeviceWork(BufferState* st, std::unique_lock<std::mutex>& lk, bool write)
+    during the waits so that operations in flight can record their fences. A poisoned buffer
+    throws, unless the caller is about to overwrite all of it (@p overwriteAll). */
+void waitDeviceWork(BufferState* st, std::unique_lock<std::mutex>& lk, bool write, bool overwriteAll = false)
 {
-    st->cond.wait(lk, [st]{ return st->pendingDeviceOps == 0; });
+    CV_DbgAssert(st->busy && !deviceUseInFlight(st, write));  // see BusyScope
     FenceRef lastWrite;
     if (!st->writeFence.empty() && !st->writeFence.isComplete())
         lastWrite = st->writeFence;
@@ -178,7 +202,8 @@ void waitDeviceWork(BufferState* st, std::unique_lock<std::mutex>& lk, bool writ
     }
     if (lastWrite.empty() && reads.empty())
     {
-        checkNotPoisoned(st);
+        if (!overwriteAll)
+            checkNotPoisoned(st);
         return;
     }
     lk.unlock();
@@ -202,7 +227,8 @@ void waitDeviceWork(BufferState* st, std::unique_lock<std::mutex>& lk, bool writ
         st->writeFence.reset();
     if (write)
         st->readFences.clear();
-    checkNotPoisoned(st);
+    if (!overwriteAll)
+        checkNotPoisoned(st);
 }
 
 void ensureShadow(BufferState* st)
@@ -249,8 +275,19 @@ void downloadWhole(BufferState* st)
     r.dst.host = st->shadow;
     if (shadowSource(st) == SHADOW_BACKEND)
         r.flags |= CV_ACCEL_COPY_HOST_PINNED;
-    b->check(b->fn().copy(st->device, s->handle, &r), "copy (device to host)");
-    recordFence(s).wait();
+    FenceRef f;
+    try
+    {
+        b->check(b->fn().copy(st->device, s->handle, &r), "copy (device to host)", st->device);
+        f = recordFence(s);
+        f.wait();
+    }
+    catch (...)
+    {
+        if (f.empty())
+            fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, writing the host copy
+        throw;
+    }
     Counters& c = counters();
     c.bytesD2H += st->alloc.size;
     c.transfers++;
@@ -266,7 +303,7 @@ void uploadWhole(BufferState* st, const StreamPtr& s)
     r.dst.alloc = &st->alloc;
     if (shadowSource(st) == SHADOW_BACKEND)
         r.flags |= CV_ACCEL_COPY_HOST_PINNED;
-    b->check(b->fn().copy(st->device, s->handle, &r), "copy (host to device)");
+    b->check(b->fn().copy(st->device, s->handle, &r), "copy (host to device)", st->device);
     Counters& c = counters();
     c.bytesH2D += st->alloc.size;
     c.transfers++;
@@ -280,10 +317,26 @@ void uploadShadowLocked(BufferState* st, UMatData* u, const StreamPtr& s, bool w
         streamWait(s, st->writeFence);
     for (size_t i = 0; i < st->readFences.size(); i++)
         streamWait(s, st->readFences[i]);
-    uploadWhole(st, s);
-    FenceRef f = recordFence(s);
-    if (waitNow)
-        f.wait();
+    FenceRef f;
+    try
+    {
+        uploadWhole(st, s);
+        f = recordFence(s);
+        if (waitNow)
+            f.wait();
+    }
+    catch (...)
+    {
+        // part of the copy may be queued: later users wait for it. The device copy stays
+        // obsolete, so its next use uploads again.
+        if (f.empty())
+        {
+            FenceRef after = fenceAfterFailure(s);
+            if (!after.empty())
+                st->writeFence = after;
+        }
+        throw;
+    }
     st->writeFence = f;
     st->readFences.clear();
     u->markDeviceCopyObsolete(false);
@@ -327,12 +380,12 @@ void* beginCpuAccess(BufferState* st, int access)
 {
     Backend* b = st->backend;
     if (hostAccessClass(st) == CV_ACCEL_HOST_ACCESS_DEVICE_IDLE)
-        b->check(b->fn().device_synchronize(st->device), "device_synchronize");
+        b->check(b->fn().device_synchronize(st->device), "device_synchronize", st->device);
     void* p = 0;
     cvAccelStatus status = b->fn().begin_cpu_access(&st->alloc, 0, st->alloc.size, (uint32_t)access, &p);
     if (status == CV_ACCEL_OK && !p)
         status = CV_ACCEL_INTERNAL_ERROR;
-    b->check(status, "begin_cpu_access");
+    b->check(status, "begin_cpu_access", st->device);
     return p;
 }
 
@@ -346,7 +399,7 @@ bool endCpuAccess(BufferState* st, int access)
     CV_LOG_ERROR(NULL, "accel(" << b->name() << "): end_cpu_access failed: " << b->fn().get_last_error()
                  << ". CPU writes may not be visible to the device.");
     if (status == CV_ACCEL_DEVICE_LOST)
-        b->markLost();
+        b->markLost(st->device);
     return false;
 }
 
@@ -383,7 +436,7 @@ void upgradeHostAccessLocked(BufferState* st, UMatData* u)
     // the mapping is already open (and holds the device gate): only announce the write
     void* p = 0;
     Backend* b = st->backend;
-    b->check(b->fn().begin_cpu_access(&st->alloc, 0, st->alloc.size, ACCESS_WRITE, &p), "begin_cpu_access");
+    b->check(b->fn().begin_cpu_access(&st->alloc, 0, st->alloc.size, ACCESS_WRITE, &p), "begin_cpu_access", st->device);
     CV_Assert(p == (void*)u->data);
 }
 
@@ -462,6 +515,19 @@ size_t totalND(const size_t* sz, int dims)
     return t;
 }
 
+//! a DeviceAccess open on this thread would make the caller wait for itself: report it instead
+void checkOwnHolds(const BufferState* st, bool write)
+{
+    const std::thread::id self = std::this_thread::get_id();
+    for (size_t i = 0; i < st->longHolds.size(); i++)
+    {
+        const BufferState::Hold& h = st->longHolds[i];
+        if (h.thread == self && (write || (h.mode & DEV_WRITE)))
+            CV_Error(Error::StsError, "accel: a DeviceAccess opened on this thread still holds this UMat; "
+                                      "destroy it before using the UMat elsewhere");
+    }
+}
+
 } // namespace
 
 //////////////////////////////////// host access ////////////////////////////////////
@@ -478,13 +544,14 @@ Mat getHostView(const UMat& m, AccessFlag accessFlags)
     {
         IdleCpuGuard idle(st);  // before the lock: see IdleGate
         std::unique_lock<std::mutex> lk(st->mutex);
-        st->cond.wait(lk, [st]{ return !st->busy && st->pendingDeviceOps == 0; });
         const bool write = (access & ACCESS_WRITE) != 0;
+        checkOwnHolds(st, write);
+        st->cond.wait(lk, [st, write]{ return !st->busy && !deviceUseInFlight(st, write); });
         const bool first = !st->hostMapped;
         const bool upgrade = !first && write && !(st->hostAccess & ACCESS_WRITE);
         if (first || upgrade)
         {
-            BusyScope busy(st, lk);
+            BusyScope busy(st, lk, write);
             waitDeviceWork(st, lk, write);
             if (first)
                 beginHostAccessLocked(st, u, access);
@@ -526,7 +593,8 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
 {
     BufferState* st = u->accelState;
     std::unique_lock<std::mutex> lk(st->mutex);
-    st->cond.wait(lk, [st]{ return !st->busy && st->pendingDeviceOps == 0; });
+    checkOwnHolds(st, true);
+    BusyScope busy(st, lk, true);
     if (st->hostMapped)
     {
         if (u->refcount == 0)
@@ -534,7 +602,6 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
         else
             CV_Error(Error::StsError, "UMat::handle(): a Mat view of this UMat is alive");
     }
-    BusyScope busy(st, lk);
     // the caller's work may go to any stream: wait for everything
     waitDeviceWork(st, lk, true);
     if (usesShadow(st) && u->deviceCopyObsolete() && !u->hostCopyObsolete())
@@ -550,25 +617,30 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
 
 //////////////////////////////////// device access ////////////////////////////////////
 
-bool acquireForDevice(UMatData* u, const StreamPtr& stream, int mode, std::vector<FenceRef>& waits)
+namespace {
+
+//! acquires one buffer (see DeviceAcquisition); false when a live Mat view conflicts
+bool acquireOne(UMatData* u, const StreamPtr& stream, int mode, bool longHold, std::vector<FenceRef>& waits)
 {
     BufferState* st = u->accelState;
-    CV_Assert(st && stream);
     std::unique_lock<std::mutex> lk(st->mutex);
-    st->cond.wait(lk, [st]{ return !st->busy; });
-    checkNotPoisoned(st);
+    const bool write = (mode & DEV_WRITE) != 0;
+    checkOwnHolds(st, write);
+    st->cond.wait(lk, [st, write]{ return !st->busy && !deviceUseInFlight(st, write); });
+    const bool needContent = (mode & DEV_READ) || !(mode & DEV_DISCARD);
+    if (needContent)
+        checkNotPoisoned(st);   // a write of the whole buffer may reuse a poisoned one
 
     if (st->hostMapped)
     {
         if (u->refcount == 0)
             endHostAccessLocked(st, u);     // the last view is gone, its unmap has not run yet
-        else if ((mode & DEV_WRITE) || (st->hostAccess & ACCESS_WRITE))
+        else if (write || (st->hostAccess & ACCESS_WRITE))
             return false;                   // live Mat views: the device must not race with them
     }
-    if ((mode & DEV_WRITE) && (st->alloc.desc.flags & CV_ACCEL_MEMF_READ_ONLY))
+    if (write && (st->alloc.desc.flags & CV_ACCEL_MEMF_READ_ONLY))
         return false;
 
-    const bool needContent = (mode & DEV_READ) || !(mode & DEV_DISCARD);
     if (usesShadow(st) && u->deviceCopyObsolete() && !u->hostCopyObsolete() && needContent)
     {
         // the host copy is newer: the backend that owns the memory uploads it
@@ -579,64 +651,157 @@ bool acquireForDevice(UMatData* u, const StreamPtr& stream, int mode, std::vecto
 
     if (!st->writeFence.empty() && st->writeFence.streamUid() != stream->uid)
         waits.push_back(st->writeFence);
-    if (mode & DEV_WRITE)
+    if (write)
     {
         for (size_t i = 0; i < st->readFences.size(); i++)
             if (st->readFences[i].streamUid() != stream->uid)
                 waits.push_back(st->readFences[i]);
+        st->pendingWriters++;
     }
-    st->pendingDeviceOps++;
+    else
+        st->pendingReaders++;
+    if (longHold)
+    {
+        BufferState::Hold h;
+        h.thread = std::this_thread::get_id();
+        h.mode = mode;
+        st->longHolds.push_back(h);
+    }
     return true;
 }
 
-void recordDeviceUse(UMatData* u, const FenceRef& fence, int mode)
+//! ends one acquisition; with @p fence the work was enqueued and completes at that fence
+void finishOne(UMatData* u, int mode, bool longHold, std::thread::id holder, const FenceRef* fence,
+               const char* failure = NULL)
 {
     BufferState* st = u->accelState;
     std::lock_guard<std::mutex> lk(st->mutex);
-    if (mode & DEV_WRITE)
+    const bool write = (mode & DEV_WRITE) != 0;
+    if (fence)
     {
-        st->writeFence = fence;
-        st->readFences.clear();
-        u->markHostCopyObsolete(true);
-        u->markDeviceCopyObsolete(false);
-        st->generation++;
-    }
-    else
-    {
-        bool replaced = false;
-        for (size_t i = 0; i < st->readFences.size(); i++)
+        if (write)
         {
-            if (st->readFences[i].streamUid() == fence.streamUid())
+            // writers exclude everyone, so every read fence here was waited for by this work
+            st->writeFence = *fence;
+            st->readFences.clear();
+            u->markHostCopyObsolete(true);
+            u->markDeviceCopyObsolete(false);
+            st->generation++;
+            if (failure)
             {
-                st->readFences[i] = fence;  // in-order stream: the newer fence covers the older one
-                replaced = true;
+                // part of the content may have been written: invalid until written whole
+                st->poisoned = true;
+                st->poisonReason = failure;
+            }
+            else if (mode & DEV_DISCARD)
+            {
+                clearPoison(st);
+            }
+        }
+        else if (!fence->empty())
+        {
+            bool replaced = false;
+            for (size_t i = 0; i < st->readFences.size(); i++)
+            {
+                if (st->readFences[i].streamUid() == fence->streamUid())
+                {
+                    st->readFences[i] = *fence;     // in-order stream: the newer fence covers the older one
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+                st->readFences.push_back(*fence);
+        }
+    }
+    int& pending = write ? st->pendingWriters : st->pendingReaders;
+    CV_DbgAssert(pending > 0);
+    if (pending > 0)
+        pending--;
+    if (longHold)
+    {
+        for (size_t i = 0; i < st->longHolds.size(); i++)
+        {
+            if (st->longHolds[i].thread == holder && st->longHolds[i].mode == mode)
+            {
+                st->longHolds.erase(st->longHolds.begin() + i);
                 break;
             }
         }
-        if (!replaced)
-            st->readFences.push_back(fence);
     }
-    CV_Assert(st->pendingDeviceOps > 0);
-    st->pendingDeviceOps--;
     st->cond.notify_all();
 }
 
-void abandonDeviceUse(UMatData* u)
+} // namespace
+
+void DeviceAcquisition::add(UMatData* u, int mode)
 {
-    BufferState* st = u->accelState;
-    std::lock_guard<std::mutex> lk(st->mutex);
-    CV_Assert(st->pendingDeviceOps > 0);
-    st->pendingDeviceOps--;
-    st->cond.notify_all();
+    CV_Assert(u && u->accelState && acquired_ == 0);
+    for (size_t i = 0; i < uses_.size(); i++)
+    {
+        if (uses_[i].u == u)
+        {
+            // the same buffer twice: one acquisition doing both; discard only if both overwrite it all
+            const int m = uses_[i].mode;
+            const bool discard = (m & DEV_DISCARD) && (mode & DEV_DISCARD) && !((m | mode) & DEV_READ);
+            uses_[i].mode = ((m | mode) & (DEV_READ | DEV_WRITE)) | (discard ? DEV_DISCARD : 0);
+            return;
+        }
+    }
+    DeviceUse d;
+    d.u = u;
+    d.mode = mode;
+    uses_.push_back(d);
 }
 
-void waitForDevice(UMatData* u)
+bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& waits)
 {
-    BufferState* st = u->accelState;
-    std::unique_lock<std::mutex> lk(st->mutex);
-    st->cond.wait(lk, [st]{ return !st->busy; });
-    BusyScope busy(st, lk);
-    waitDeviceWork(st, lk, true);
+    CV_Assert(acquired_ == 0);
+    // one global order: an acquirer holding a buffer only ever waits for buffers after it
+    std::sort(uses_.begin(), uses_.end(), [](const DeviceUse& a, const DeviceUse& b) {
+        return std::less<const BufferState*>()(a.u->accelState, b.u->accelState);
+    });
+    holder_ = std::this_thread::get_id();
+    try
+    {
+        for (; acquired_ < uses_.size(); acquired_++)
+        {
+            if (!acquireOne(uses_[acquired_].u, stream, uses_[acquired_].mode, longHold_, waits))
+            {
+                abandon();
+                return false;
+            }
+        }
+    }
+    catch (...)
+    {
+        abandon();
+        throw;
+    }
+    return true;
+}
+
+void DeviceAcquisition::record(const FenceRef& fence)
+{
+    for (size_t i = 0; i < acquired_; i++)
+        finishOne(uses_[i].u, uses_[i].mode, longHold_, holder_, &fence);
+    acquired_ = 0;
+}
+
+void DeviceAcquisition::fail(const FenceRef& fence, const std::string& reason)
+{
+    for (size_t i = 0; i < acquired_; i++)
+        finishOne(uses_[i].u, uses_[i].mode, longHold_, holder_, &fence, reason.c_str());
+    acquired_ = 0;
+}
+
+void DeviceAcquisition::abandon()
+{
+    while (acquired_ > 0)
+    {
+        acquired_--;
+        finishOne(uses_[acquired_].u, uses_[acquired_].mode, longHold_, holder_, NULL);
+    }
 }
 
 //////////////////////////////////// release ////////////////////////////////////
@@ -644,17 +809,23 @@ void waitForDevice(UMatData* u)
 void destroyBufferState(BufferState* st)
 {
     Backend* b = st->backend;
+    // A lost device rejects every call, or is still running after a timed-out wait (where a
+    // free would block, as cudaFree does): its allocations are leaked, host memory is freed.
+    const bool lost = b->isLost(st->device);
     if (shadowSource(st) == SHADOW_BACKEND)
     {
-        st->shadowAlloc.desc.device_index = (uint32_t)st->device;
-        b->recyclePinned(st->shadowAlloc);
+        if (!lost)
+        {
+            st->shadowAlloc.desc.device_index = (uint32_t)st->device;
+            b->recyclePinned(st->shadowAlloc);
+        }
     }
     else if (shadowSource(st) == SHADOW_FASTMALLOC)
     {
         fastFree(st->shadow);
     }
     st->shadow = 0;
-    if (st->alloc.handle || st->alloc.backend_data)
+    if (!lost && (st->alloc.handle || st->alloc.backend_data))
     {
         if (b->fn().deallocate(&st->alloc) != CV_ACCEL_OK)
             CV_LOG_ERROR(NULL, "accel(" << b->name() << "): failed to free device memory: " << b->fn().get_last_error());
@@ -677,10 +848,53 @@ bool sameAccelDevice(const UMatData* a, const UMatData* b)
            a->accelState->device == b->accelState->device;
 }
 
+/** Release path: waits for every fence on a buffer that nothing refers to any more. Runs
+    from ~UMat, so it never throws; false when the device failed (logged, device marked lost). */
+static bool drainForRelease(BufferState* st) CV_NOEXCEPT
+{
+    bool ok = st->writeFence.waitNoThrow();
+    for (size_t i = 0; i < st->readFences.size(); i++)
+        ok = st->readFences[i].waitNoThrow() && ok;
+    st->writeFence.reset();
+    st->readFences.clear();
+    return ok && !st->backend->isLost(st->device);
+}
+
+//! release path: the device result back into the memory of the Mat the UMat came from; never throws
+static void copyBackToMat(UMatData* u, BufferState* st) CV_NOEXCEPT
+{
+    try
+    {
+        if (usesShadow(st))
+        {
+            downloadWhole(st);  // into the Mat's memory
+        }
+        else
+        {
+            IdleCpuGuard idle(st);
+            void* p = beginCpuAccess(st, ACCESS_READ);
+            memcpy(u->origdata, p, u->size);
+            endCpuAccess(st, ACCESS_READ);
+        }
+        return;
+    }
+    catch (const std::exception& e)
+    {
+        try { CV_LOG_ERROR(NULL, "accel: " << e.what()); } catch (...) {}
+    }
+    catch (...) {}
+    try
+    {
+        CV_LOG_ERROR(NULL, "accel(" << st->backend->name() << "): the device result could not be copied back; "
+                     "the Mat keeps its previous content");
+    }
+    catch (...) {}
+}
+
 static bool readyToFree(BufferState* st)
 {
     std::lock_guard<std::mutex> lk(st->mutex);
-    return st->pendingDeviceOps == 0 && fencesComplete(st);
+    return st->pendingReaders == 0 && st->pendingWriters == 0 && fencesSettled(st);
 }
 
 //////////////////////////////////// DeviceAllocator ////////////////////////////////////
@@ -750,7 +964,7 @@ UMatData* DeviceAllocator::allocate(int dims, const int* sizes, int type, void* 
             b_->collectDeferred(true);
             status = b_->fn().allocate(device_, total, (uint32_t)kind, 0, &a);
         }
-        b_->check(status, "allocate");
+        b_->check(status, "allocate", device_);
     }
     UMatData* u = new UMatData(this);
     u->size = total;
@@ -777,7 +991,7 @@ UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) 
     if (status == CV_ACCEL_NOT_IMPLEMENTED)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): this kind of external memory cannot be imported "
                                              "(type %d); copy it into a UMat instead", b_->name().c_str(), (int)ext.type));
-    b_->check(status, "import_memory");
+    b_->check(status, "import_memory", device_);
     CV_Assert(a.size >= total);
     UMatData* u = new UMatData(this);
     u->size = total;
@@ -844,23 +1058,18 @@ void DeviceAllocator::deallocate(UMatData* u) const
     BufferState* st = u->accelState;
     CV_Assert(st);
 
+    // From here on errors are logged, not thrown: this runs from ~UMat.
     if (st->fromMat)
     {
         // the memory or the content belongs to a Mat: finish everything, then hand it back
-        waitForDevice(u);
+        const bool deviceOk = drainForRelease(st);
         if (!st->imported && u->hostCopyObsolete() && !u->deviceCopyObsolete())
         {
-            if (usesShadow(st))
-            {
-                downloadWhole(st);  // into the Mat's memory
-            }
+            if (deviceOk && !st->poisoned)
+                copyBackToMat(u, st);
             else
-            {
-                IdleCpuGuard idle(st);
-                void* p = beginCpuAccess(st, ACCESS_READ);
-                memcpy(u->origdata, p, u->size);
-                endCpuAccess(st, ACCESS_READ);
-            }
+                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): the device failed before its result was copied "
+                             "back; the Mat keeps its previous content");
         }
         u->accelState = NULL;
         destroyBufferState(st);
@@ -870,6 +1079,7 @@ void DeviceAllocator::deallocate(UMatData* u) const
         u->currAllocator = u->prevAllocator;
         u->prevAllocator = NULL;
         u->currAllocator->deallocate(u);
+        b_->collectDeferred(false);
         return;
     }
 
@@ -877,12 +1087,7 @@ void DeviceAllocator::deallocate(UMatData* u) const
     u->handle = 0;
     u->data = u->origdata = 0;
     if (st->imported)
-    {
-        // the owner may reuse the memory as soon as we return
-        std::unique_lock<std::mutex> lk(st->mutex);
-        BusyScope busy(st, lk);
-        waitDeviceWork(st, lk, true);
-    }
+        drainForRelease(st);  // the owner may reuse the memory as soon as we return
     if (st->imported || readyToFree(st))
         destroyBufferState(st);
     else
@@ -914,8 +1119,8 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
     checkHostAccessAllowed(st, ACCESS_READ);
     IdleCpuGuard idle(st);
     std::unique_lock<std::mutex> lk(st->mutex);
-    st->cond.wait(lk, [st]{ return !st->busy; });
-    BusyScope busy(st, lk);
+    checkOwnHolds(st, false);
+    BusyScope busy(st, lk, false);
     waitDeviceWork(st, lk, false);
     const size_t srcOffset = offsetND(srcofs, srcstep, dims);
     if (usesShadow(st))
@@ -942,8 +1147,19 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
         r.src.alloc = &st->alloc;
         r.src.offset = srcOffset;
         r.dst.host = dstptr;
-        b_->check(b_->fn().copy(device_, s->handle, &r), "copy (device to host)");
-        recordFence(s).wait();  // the destination is user memory
+        FenceRef f;
+        try
+        {
+            b_->check(b_->fn().copy(device_, s->handle, &r), "copy (device to host)", device_);
+            f = recordFence(s);
+            f.wait();   // the destination is user memory
+        }
+        catch (...)
+        {
+            if (f.empty())
+                fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, writing user memory
+            throw;
+        }
         Counters& c = counters();
         c.bytesD2H += totalND(sz, dims);
         c.transfers++;
@@ -962,13 +1178,17 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         CV_Error_(Error::StsError, ("accel(%s): this UMat wraps read-only memory", b_->name().c_str()));
     IdleCpuGuard idle(st);
     std::unique_lock<std::mutex> lk(st->mutex);
-    st->cond.wait(lk, [st]{ return !st->busy; });
+    checkOwnHolds(st, true);
+    BusyScope busy(st, lk, true);
     if (st->hostMapped && u->refcount > 0)
         CV_Error(Error::StsError, "accel: cannot copy into a UMat while a Mat view of it is alive");
     if (st->hostMapped)
         endHostAccessLocked(st, u);
-    BusyScope busy(st, lk);
     const size_t dstOffset = offsetND(dstofs, dststep, dims);
+    // a copy into all of the buffer may reuse a poisoned one, a copy into part of it may not
+    const bool whole = dstOffset == 0 && totalND(sz, dims) == u->size;
+    if (!whole)
+        checkNotPoisoned(st);
     // memory without a CPU view (discrete, protected) is written by the device's copy engine;
     // data may enter protected memory, it just never comes out
     if (usesShadow(st) || hostAccessClass(st) == CV_ACCEL_HOST_ACCESS_NONE)
@@ -976,9 +1196,11 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         if (usesShadow(st) && u->deviceCopyObsolete() && !u->hostCopyObsolete())
         {
             // the host copy is current anyway: write there, the device copy follows lazily
-            waitDeviceWork(st, lk, true);
+            waitDeviceWork(st, lk, true, whole);
             copyND(st->shadow + dstOffset, dststep, (const uchar*)srcptr, srcstep, dims, sz);
             st->generation++;
+            if (whole)
+                clearPoison(st);
             return;
         }
         // one DMA straight into the device copy, after everyone using the old content
@@ -1000,22 +1222,43 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         r.src.host = const_cast<void*>(srcptr);
         r.dst.alloc = &st->alloc;
         r.dst.offset = dstOffset;
-        b_->check(b_->fn().copy(device_, s->handle, &r), "copy (host to device)");
-        FenceRef f = recordFence(s);
-        lk.unlock();
-        f.wait();   // the source is user memory that may be freed when we return
-        lk.lock();
+        FenceRef f;
+        try
+        {
+            b_->check(b_->fn().copy(device_, s->handle, &r), "copy (host to device)", device_);
+            f = recordFence(s);
+            lk.unlock();
+            f.wait();   // the source is user memory that may be freed when we return
+            lk.lock();
+        }
+        catch (...)
+        {
+            const std::string reason = currentExceptionMessage();
+            if (f.empty())
+                fenceAfterFailure(s).waitNoThrow();     // part of the copy may be queued, reading user memory
+            if (!lk.owns_lock())
+                lk.lock();
+            // the device copy may be partly overwritten: invalid until written whole
+            st->poisoned = true;
+            st->poisonReason = reason;
+            u->markHostCopyObsolete(true);
+            u->markDeviceCopyObsolete(false);
+            st->generation++;
+            throw;
+        }
         st->writeFence = f;
         st->readFences.clear();
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
         st->generation++;
+        if (whole)
+            clearPoison(st);
         Counters& c = counters();
         c.bytesH2D += totalND(sz, dims);
         c.transfers++;
         return;
     }
-    waitDeviceWork(st, lk, true);
+    waitDeviceWork(st, lk, true, whole);
     void* p = beginCpuAccess(st, ACCESS_WRITE);
     copyND((uchar*)p + dstOffset, dststep, (const uchar*)srcptr, srcstep, dims, sz);
     if (!endCpuAccess(st, ACCESS_WRITE))
@@ -1023,26 +1266,26 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
     u->markHostCopyObsolete(false);
     u->markDeviceCopyObsolete(false);
     st->generation++;
+    if (whole)
+        clearPoison(st);
 }
 
 void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
                            const size_t srcofs[], const size_t srcstep[],
                            const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
-    // same allocator: a device-to-device copy on this device
+    // two buffers of one device (the same buffer for a copy between its ROIs): a device copy
     CV_Assert(src->accelState && dst->accelState);
     StreamPtr s = b_->defaultStream(device_);
     const size_t srcOffset = offsetND(srcofs, srcstep, dims);
     const size_t dstOffset = offsetND(dstofs, dststep, dims);
     const bool whole = dstOffset == 0 && totalND(sz, dims) == dst->size;
+    DeviceAcquisition acq;
+    acq.add(src, DEV_READ);
+    acq.add(dst, DEV_WRITE | (whole ? DEV_DISCARD : 0));
     std::vector<FenceRef> waits;
-    if (!acquireForDevice(src, s, DEV_READ, waits))
-        CV_Error(Error::StsError, "accel: cannot copy from a UMat while a writable Mat view of it is alive");
-    if (!acquireForDevice(dst, s, DEV_WRITE | (whole ? DEV_DISCARD : 0), waits))
-    {
-        abandonDeviceUse(src);
-        CV_Error(Error::StsError, "accel: cannot copy into a UMat while a Mat view of it is alive");
-    }
+    if (!acq.acquire(s, waits))
+        CV_Error(Error::StsError, "accel: cannot copy between UMats while a conflicting Mat view of one of them is alive");
     for (size_t i = 0; i < waits.size(); i++)
         streamWait(s, waits[i]);
     cvAccelCopyRegion r;
@@ -1059,16 +1302,22 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
     r.src.offset = srcOffset;
     r.dst.alloc = &dst->accelState->alloc;
     r.dst.offset = dstOffset;
-    cvAccelStatus status = b_->fn().copy(device_, s->handle, &r);
-    if (status != CV_ACCEL_OK)
+    const cvAccelStatus status = b_->fn().copy(device_, s->handle, &r);
+    if (status == CV_ACCEL_NOT_IMPLEMENTED || status == CV_ACCEL_OUT_OF_MEMORY)
+        b_->check(status, "copy (device to device)", device_);     // nothing was queued: the acquisition is abandoned
+    FenceRef done;
+    try
     {
-        abandonDeviceUse(src);
-        abandonDeviceUse(dst);
-        b_->check(status, "copy (device to device)");
+        b_->check(status, "copy (device to device)", device_);
+        done = recordFence(s);
     }
-    FenceRef f = recordFence(s);
-    recordDeviceUse(src, f, DEV_READ);
-    recordDeviceUse(dst, f, DEV_WRITE);
+    catch (...)
+    {
+        // part of the copy may be queued: the buffers wait for it, the destination is invalid
+        acq.fail(fenceAfterFailure(s), currentExceptionMessage());
+        throw;
+    }
+    acq.record(done);
     Counters& c = counters();
     c.bytesD2D += totalND(sz, dims);
     c.transfers++;
