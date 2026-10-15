@@ -112,6 +112,11 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
                     expected.ptr<float>()[(n * outChannels + c) * outputSize + pos] += bias.ptr<float>()[c];
 
         std::vector<Mat> inputs(1, input), outputs;
+
+        // Workaround GCC 16 array-bounds false positive warning
+        // Explicit reserve() before push_back() is required to quiet the compiler.
+        inputs.reserve(3); // input, weights(option), bias(option)
+
         if (dynamicWeights)
         {
             inputs.push_back(weights);
