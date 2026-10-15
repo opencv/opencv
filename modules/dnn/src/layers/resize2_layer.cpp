@@ -1123,6 +1123,28 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    // The cases where cv::resize computes exactly what ONNX Resize asks for; returns the
+    // cv::InterpolationFlags value, or -1 to use the kernels of this layer.
+    int imgprocInterpolation(const Mat& inp, const Mat& out) const
+    {
+        if (inp.dims != 4 || out.dims != 4 || inp.depth() != CV_32F || out.depth() != CV_32F ||
+            inp.shape().layout == DATA_LAYOUT_BLOCK || antialias || alignCorners)
+            return -1;
+        const int inH = inp.size[2], inW = inp.size[3], outH = out.size[2], outW = out.size[3];
+        const bool halfPixel = coordTransMode == "half_pixel" ||
+                               (coordTransMode == "pytorch_half_pixel" && outH > 1 && outW > 1);
+        if (!halfPixel)
+            return -1;
+        // cv::resize maps coordinates with the ratio of the sizes
+        if (std::abs(scaleHeight*outH - inH) > 1e-5f*inH || std::abs(scaleWidth*outW - inW) > 1e-5f*inW)
+            return -1;
+        if (interpolation == "bilinear" || interpolation == "opencv_linear")
+            return INTER_LINEAR;
+        if (interpolation == "cubic" && cubicCoeffA == -0.75f && !excludeOutside)
+            return INTER_CUBIC;
+        return -1;
+    }
+
     void updateOutSizeAndScale(const MatShape& inpShape, const MatShape& outShape)
     {
         CV_Assert(inpShape.dims >= 4 && outShape.dims >= 4);
@@ -1295,7 +1317,12 @@ public:
             out = out_;
         }
 
-        if (antialias && inp.dims == 4 &&
+        const int cvInterpolation = imgprocInterpolation(inp, out);
+        if (cvInterpolation >= 0)
+        {
+            cv::resize(inp, out, Size(out.size[3], out.size[2]), 0, 0, cvInterpolation);
+        }
+        else if (antialias && inp.dims == 4 &&
             (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
         {
             const bool cubic = (interpolation == "cubic");

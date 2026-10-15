@@ -2110,6 +2110,10 @@ To shrink an image, it will generally look best with #INTER_AREA interpolation, 
 enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
+The input may also be an n-dimensional array (e.g. an NCHW tensor): then every 2D plane formed by
+its two innermost axes is resized, dsize (or fx, fy) refers to those two axes, and the other axes
+and the channels are kept.
+
 @param src input image.
 @param dst output image; it has the size dsize (when it is non-zero) or the size computed from
 src.size(), fx, and fy; the type of dst is the same as of src.
