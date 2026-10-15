@@ -3639,6 +3639,41 @@ TEST(Test_MatMul, EmptyDimsDoNotCrash)
     }
 }
 
+// K == 0 skips the gemm entirely, so beta must be applied to the bias explicitly instead of
+// relying on the (never-called) gemm's own beta. Rank-2 bias, both as a constant blob
+// (finalize()'s broadcast_bias path) and as a dynamic input (forward()'s own broadcast path).
+TEST(Test_MatMul, EmptyKDimAppliesBetaToBias)
+{
+    const int M = 3, N = 4;
+    Mat bias(M, N, CV_32F);
+    randu(bias, -1.f, 1.f);
+    const float beta = 2.0f;
+
+    for (bool constB : {false, true})
+    {
+        Mat A(M, 0, CV_32F), B(0, N, CV_32F);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_empty_k_bias";
+        lp.set("beta", beta);
+        lp.set("real_ndims_C", 2);
+        if (constB) {
+            lp.blobs.push_back(B);
+            lp.blobs.push_back(bias);
+        }
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B, bias};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+
+        Mat expected = beta * bias;
+        normAssert(outputs[0], expected, "MatMul empty-K bias/beta mismatch", 1e-4, 1e-4);
+    }
+}
+
 // Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
 // M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
 // B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.

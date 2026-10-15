@@ -264,8 +264,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 auto *broadcast_bias_ptr = broadcast_bias.ptr<float>();
 
                 const auto *bias = bias_mat.ptr<const float>();
+                // Stored unscaled, same as the dynamic-bias path in forward(): beta is applied
+                // exactly once there, either by the gemm's own beta or explicitly if skipped.
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
-                    float b = (*bias) * beta;
+                    float b = *bias;
                     for (size_t i = 0; i < broadcast_bias.total(); i++) {
                         broadcast_bias_ptr[i] = b;
                     }
@@ -275,7 +277,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                     for (size_t i = 0; i < loops; i++) {
                         size_t step = i * inner_size;
                         for (size_t j = 0; j < inner_size; j++) {
-                            broadcast_bias_ptr[step + j] = beta * bias[j];
+                            broadcast_bias_ptr[step + j] = bias[j];
                         }
                     }
                 } else {
@@ -346,11 +348,13 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         // add bias if existed
         if (has_bias) {
             const auto &shape_Y = shape(Y);
+            // Stored unscaled here; beta is applied exactly once below, either by the gemm's
+            // own beta (M, N, K all > 0) or explicitly when the gemm is skipped.
             if (blobs.empty()) { // bias from input
                 const auto &bias_mat = inputs.back();
                 const auto *bias = bias_mat.ptr<const float>();
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
-                    float b = (*bias) * beta;
+                    float b = *bias;
                     for (size_t i = 0; i < Y.total(); i++) {
                         y[i] = b;
                     }
@@ -361,7 +365,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                         for (int i = r.start; i < r.end; i++) {
                             const size_t output_offset = i * inner_size;
                             for (size_t j = 0; j < inner_size; j++) {
-                                y[output_offset + j] = beta * bias[j];
+                                y[output_offset + j] = bias[j];
                             }
                         }
                     }, double(batches * inner_size * (1 / 1024.0)));
@@ -374,10 +378,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
         }
         // Any of M, N, K == 0 means the product contributes nothing, and finalize()
-        // skips packing B whenever N or K is 0 - never reach the gemm dispatch below.
+        // skips packing B whenever N or K is 0 - never reach the gemm dispatch (and its own
+        // beta) below, so apply beta to the bias prefill here instead.
         if (helper.M == 0 || helper.N == 0 || helper.K == 0) {
             if (!has_bias)
                 std::memset(y, 0, Y.total() * sizeof(float));
+            else if (beta != 1.f)
+                for (size_t i = 0; i < Y.total(); i++)
+                    y[i] *= beta;
             fusion.run(Y);
             return;
         }
