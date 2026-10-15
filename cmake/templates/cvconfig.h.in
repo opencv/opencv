@@ -92,6 +92,9 @@
 /* NVIDIA Video Encoding API*/
 #cmakedefine HAVE_NVCUVENC
 
+/* AMD rocDecode Video Decoding API*/
+#cmakedefine HAVE_ROCDECODE
+
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
 #cmakedefine HAVE_OPENCL_STATIC
