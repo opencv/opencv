@@ -3735,6 +3735,13 @@ int Kernel::set(int i, const UMat& m)
     return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
+// a CUDA-backed UMat carries a device pointer in u->handle, not a cl_mem
+static bool isCudaBacked(const UMatData* u)
+{
+    const MatAllocator* cudaAllocator = cv::cuda::getCudaAllocator();
+    return u && cudaAllocator && u->currAllocator == cudaAllocator;
+}
+
 int Kernel::set(int i, const KernelArg& arg)
 {
     if( !p || !p->handle )
@@ -3760,10 +3767,10 @@ int Kernel::set(int i, const KernelArg& arg)
             CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=NULL)", p->name.c_str(), (int)i).c_str());
             return i + 1;
         }
-        // a UMat from another allocator (e.g. CUDA) has no cl_mem; decline so the caller falls back to CPU
-        if (arg.m->u && arg.m->u->currAllocator != getOpenCLAllocator())
+        // a CUDA-backed UMat has no cl_mem; decline so the caller falls back to CPU
+        if (isCudaBacked(arg.m->u))
         {
-            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is not backed by the OpenCL allocator, declining",
+            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is backed by the CUDA allocator, declining",
                     p->name.c_str(), (int)i));
             p->cleanupUMats();
             p->release();
@@ -7603,12 +7610,12 @@ bool internal::isPerformanceCheckBypassed()
 
 bool internal::isCLBuffer(UMat& u)
 {
-    // a UMat from another allocator (e.g. CUDA) has a handle that is not a cl_mem
-    if (u.u && u.u->currAllocator != getOpenCLAllocator())
+    if (isCudaBacked(u.u))
         return false;
     void* h = u.handle(ACCESS_RW);
     if (!h)
         return true;
+    CV_DbgAssert(u.u->currAllocator == getOpenCLAllocator());
 #if 1
     if ((u.u->allocatorFlags_ & 0xffff0000) != 0) // OpenCL SVM flags are stored here
         return false;
