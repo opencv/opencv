@@ -312,6 +312,13 @@ protected:
                      const std::vector<Arg>& scale_zp, const std::vector<Arg>& outputs,
                      const opencv_onnx::NodeProto& node_proto, int output_onnx_dtype = -1);
 
+    Arg addElemAdd(const std::string& name, const opencv_onnx::NodeProto& node_proto,
+                   Arg a, Arg b);
+    void addMultiHeadAttentionBias(const std::string& bn, const opencv_onnx::NodeProto& node_proto,
+                                   Arg bias, Arg& q, Arg& k, Arg& v);
+    Arg addKeyPaddingMaskBias(const std::string& bn, const opencv_onnx::NodeProto& node_proto,
+                              Arg key_padding_mask, Arg like, float mask_filter_value);
+
     std::map<std::string, int> onnx_opset_map;  // map from OperatorSetIdProto
     void parseOperatorSet();
 
@@ -2926,40 +2933,205 @@ static bool hasOutput(const opencv_onnx::NodeProto& node, int i) {
     return i < node.output_size() && !node.output(i).empty();
 }
 
-// com.microsoft MultiHeadAttention (unpacked Q/K/V) -> AttentionOnnxAi.
+Arg ONNXImporter2::addElemAdd(const std::string& name, const opencv_onnx::NodeProto& node_proto,
+                              Arg a, Arg b) {
+    LayerParams lp;
+    lp.name = name;
+    lp.type = "NaryEltwise";
+    lp.set("operation", "add");
+    Arg out = net.getArg(name);
+    node_inputs = {a, b};
+    node_outputs = {out};
+    addLayer(lp, node_proto, 2);
+    return out;
+}
+
+// bias = [q(H), k(H), v(rest)]; H = query's hidden size, read at runtime (Shape layer) since
+// Q/K/V are usually in-graph projections, not graph inputs with a known shape at import time.
+void ONNXImporter2::addMultiHeadAttentionBias(const std::string& bn,
+                                              const opencv_onnx::NodeProto& node_proto,
+                                              Arg bias, Arg& q, Arg& k, Arg& v) {
+    const MatShape& qs = netimpl->args.at(q.idx).shape;
+    const int H = qs.dims >= 1 ? qs[qs.dims - 1] : -1;
+    if (H > 0 && net.isConstArg(bias)) {
+        // Static split: no Shape/Slice2 at runtime, so the net stays shape-inferable past
+        // this node (a runtime Slice2 would make tryInferGraphShapes give up here on, costing
+        // getLayerShapes()/getFLOPS() every layer downstream - see the fallback below).
+        const Mat b = net.argTensor(bias);
+        const int L = (int)b.total();
+        CV_CheckGT(L, 2 * H, "MultiHeadAttention: bias is shorter than 2*hidden_size");
+        const int beg[3] = {0, H, 2 * H}, len[3] = {H, H, L - 2 * H};
+        Arg* dst[3] = {&q, &k, &v};
+        const char* tag[3] = {"q", "k", "v"};
+        const Mat b1d = b.reshape(1, std::vector<int>{L});
+        for (int i = 0; i < 3; i++) {
+            const Mat part = Mat(b1d, std::vector<Range>{Range(beg[i], beg[i] + len[i])}).clone();
+            Arg c = netimpl->newConstArg(bn + "/" + tag[i] + "_bias", part);
+            *dst[i] = addElemAdd(bn + "/" + tag[i] + "_bias_add", node_proto, *dst[i], c);
+        }
+        return;
+    }
+
+    // Fallback: H unknown at import (Q is an in-graph projection) or bias isn't constant, so
+    // it's read at runtime instead; the runtime Slice2 bounds below make the net shape-dynamic
+    // from here on (see the static path above).
+    LayerParams shapeLp;
+    shapeLp.name = bn + "/q_hidden";
+    shapeLp.type = "Shape";
+    shapeLp.set("start", -1);
+    Arg h = net.getArg(shapeLp.name);
+    node_inputs = {q};
+    node_outputs = {h};
+    addLayer(shapeLp, node_proto, 1);
+
+    Arg h2 = addElemAdd(bn + "/q_hidden_x2", node_proto, h, h);
+    Arg zero = netimpl->newConstArg(bn + "/bias_begin", Mat(std::vector<int>{1}, CV_64S, Scalar(0)));
+    Arg end = netimpl->newConstArg(bn + "/bias_end", Mat(std::vector<int>{1}, CV_64S, Scalar(INT_MAX)));
+
+    const Arg bounds[3][2] = {{zero, h}, {h, h2}, {h2, end}};
+    Arg* dst[3] = {&q, &k, &v};
+    const char* tag[3] = {"q", "k", "v"};
+    for (int i = 0; i < 3; i++) {
+        LayerParams sliceLp;
+        sliceLp.name = bn + "/" + tag[i] + "_bias";
+        sliceLp.type = "Slice2";
+        Arg b = net.getArg(sliceLp.name);
+        node_inputs = {bias, bounds[i][0], bounds[i][1]};
+        node_outputs = {b};
+        addLayer(sliceLp, node_proto, 3);
+        *dst[i] = addElemAdd(bn + "/" + tag[i] + "_bias_add", node_proto, *dst[i], b);
+    }
+}
+
+// key_padding_mask (0 = pad, 1 = keep), (batch, kv_seq) form only, lowered to an additive
+// (batch, 1, 1, kv_seq) attn_mask so its batch axis is not read as the query axis.
+Arg ONNXImporter2::addKeyPaddingMaskBias(const std::string& bn,
+                                         const opencv_onnx::NodeProto& node_proto,
+                                         Arg key_padding_mask, Arg like, float mask_filter_value) {
+    // Rank is only known here for shaped graph inputs. The 1D forms (batch_size) /
+    // (3*batch_size+2) hold key lengths, not 0/1 flags; unsqueezed to (B,1,1) they become a
+    // per-row additive constant that softmax is invariant to, so masking would silently do
+    // nothing instead of failing - reject a rank-unknown mask at runtime instead of guessing.
+    const MatShape& mShape = netimpl->args.at(key_padding_mask.idx).shape;
+    if (mShape.dims >= 0) {
+        CV_CheckEQ(mShape.dims, 2,
+                   "MultiHeadAttention: only a (batch_size, kv_sequence_length) key_padding_mask "
+                   "is supported");
+    } else {
+        // Reshape2 with a constant {0, 0} spec throws at runtime on a rank-1 input (MatShape::
+        // reshape: "0 refers to an axis the source does not have") and passes a 2D mask through
+        // unchanged, without needing the rank at import time.
+        LayerParams rankLp;
+        rankLp.name = bn + "/key_padding_mask_2d";
+        rankLp.type = "Reshape2";
+        const int spec[2] = {0, 0};
+        rankLp.set("shape", DictValue::arrayInt(spec, 2));
+        Arg mask_2d = net.getArg(rankLp.name);
+        node_inputs = {key_padding_mask};
+        node_outputs = {mask_2d};
+        addLayer(rankLp, node_proto, 1);
+        key_padding_mask = mask_2d;
+    }
+
+    // Two-input Cast2 (CastLike): the output follows `like`'s (query's) runtime type, so the
+    // mask stays CV_16F under fp16 inference instead of being hardcoded to CV_32F.
+    LayerParams castLp;
+    castLp.name = bn + "/key_padding_mask_cast";
+    castLp.type = "Cast2";
+    Arg mask_cast = net.getArg(castLp.name);
+    node_inputs = {key_padding_mask, like};
+    node_outputs = {mask_cast};
+    addLayer(castLp, node_proto, 2);
+
+    // mask*(-mfv) + mfv: 1 -> 0, 0 -> mask_filter_value.
+    LayerParams powLp;
+    powLp.name = bn + "/key_padding_mask_additive";
+    powLp.type = "Power";
+    powLp.set("power", 1.f);
+    powLp.set("scale", -mask_filter_value);
+    powLp.set("shift", mask_filter_value);
+    Arg mask_additive = net.getArg(powLp.name);
+    node_inputs = {mask_cast};
+    node_outputs = {mask_additive};
+    addLayer(powLp, node_proto, 1);
+
+    LayerParams unsqLp;
+    unsqLp.name = bn + "/key_padding_mask_4d";
+    unsqLp.type = "Unsqueeze";
+    std::vector<int> axes{1, 2};
+    unsqLp.set("axes", DictValue::arrayInt(axes.data(), axes.size()));
+    Arg mask_4d = net.getArg(unsqLp.name);
+    node_inputs = {mask_additive};
+    node_outputs = {mask_4d};
+    addLayer(unsqLp, node_proto, 1);
+
+    return mask_4d;
+}
+
+// Operator spec: https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#com.microsoft.MultiHeadAttention
+// Supported opsets: com.microsoft 1. Inputs 0..7 (query..past_value); key_padding_mask only
+// in (batch_size, kv_sequence_length) form. Lowers to AttentionOnnxAi.
 void ONNXImporter2::parseMultiHeadAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     CV_CheckTrue(params.has("num_heads"), "MultiHeadAttention: num_heads is required");
     CV_CheckTrue(hasInput(node_proto, 1) && hasInput(node_proto, 2),
                  "MultiHeadAttention: separate key and value are required");
-    CV_CheckFalse(hasInput(node_proto, 3) || hasInput(node_proto, 4),
-        "MultiHeadAttention: bias / key_padding_mask inputs are not supported");
     for (int i = 8; i < node_proto.input_size(); i++)  // past_sequence_length / cache_indirection
         CV_CheckFalse(hasInput(node_proto, i),
-            "MultiHeadAttention: only query/key/value/attention_bias/past_key/past_value are supported");
+            "MultiHeadAttention: only query/key/value/bias/key_padding_mask/attention_bias/"
+            "past_key/past_value are supported");
 
     // inputs: query, key, value, bias, key_padding_mask, attention_bias, past_key, past_value, ...
     const bool has_past_k = hasInput(node_proto, 6), has_past_v = hasInput(node_proto, 7);
     CV_CheckTrue(has_past_k == has_past_v,
                  "MultiHeadAttention: past_key and past_value must be provided as a pair");
 
-    std::vector<Arg> ins{node_inputs[0], node_inputs[1], node_inputs[2]};
-    if (hasInput(node_proto, 5)) ins.push_back(node_inputs[5]);  // attention_bias -> mask
+    // The helpers below call addLayer() themselves, which overwrites node_inputs/node_outputs;
+    // save and restore them for AttentionOnnxAi's own addLayer() call at the end.
+    const std::vector<Arg> orig_node_inputs = node_inputs, orig_node_outputs = node_outputs;
+    const std::string bn = params.name;
+    Arg q = orig_node_inputs[0], k = orig_node_inputs[1], v = orig_node_inputs[2];
+
+    // bias is part of the input projection, not the attention math, so it's split and added
+    // into Q/K/V before they reach AttentionOnnxAi.
+    if (hasInput(node_proto, 3))
+        addMultiHeadAttentionBias(bn, node_proto, orig_node_inputs[3], q, k, v);
+
+    Arg mask;
+    bool has_mask = false;
+    if (hasInput(node_proto, 4)) {
+        const float mask_filter_value = params.get<float>("mask_filter_value", -10000.f);
+        mask = addKeyPaddingMaskBias(bn, node_proto, orig_node_inputs[4], q, mask_filter_value);
+        has_mask = true;
+    }
+    if (hasInput(node_proto, 5)) {
+        // attention_bias is already additive; combine it with the key_padding_mask bias when
+        // both are present instead of dropping one on the floor.
+        mask = has_mask ? addElemAdd(bn + "/mask_add", node_proto, mask, orig_node_inputs[5])
+                        : orig_node_inputs[5];
+        has_mask = true;
+    }
+
+    std::vector<Arg> ins{q, k, v};
+    if (has_mask) ins.push_back(mask);  // attn_mask
     if (has_past_k) {
         // The past length is read back off past_key's shape. A fixed seq dim means a shared-buffer
         // cache whose real length lives in past_sequence_length, so the unwritten tail would be
         // taken as history.
-        const MatShape& pk = netimpl->args.at(node_inputs[6].idx).shape;
+        const MatShape& pk = netimpl->args.at(orig_node_inputs[6].idx).shape;
         if (pk.dims >= 2)
             CV_CheckLE(pk[pk.dims - 2], 0,
                 "MultiHeadAttention: past_key has a fixed sequence length (shared-buffer / static "
                 "cache export); only dynamic-cache exports are supported");
-        ins.push_back(node_inputs[6]); ins.push_back(node_inputs[7]);
+        ins.push_back(orig_node_inputs[6]); ins.push_back(orig_node_inputs[7]);
     }
     node_inputs = ins;
+    node_outputs = orig_node_outputs;
 
     params.type = "AttentionOnnxAi";
     params.set("q_num_heads", params.get<int>("num_heads"));   // MHA is not grouped
     params.set("kv_num_heads", params.get<int>("num_heads"));
+    params.set("has_attn_mask", has_mask ? 1 : 0);
+    params.set("has_past", has_past_k ? 1 : 0);
     if (params.get<int>("unidirectional", 0))
         params.set("is_causal", true);
 

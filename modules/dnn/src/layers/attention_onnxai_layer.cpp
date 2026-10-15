@@ -236,6 +236,21 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
         const int total_seq_kv = seq_len_k;
 
+        // The kernel broadcasts attn_mask right-aligned with no bounds checks of its own, so the
+        // ONNX-legal form with a last dim shorter than total_kv_seq (-inf padded) is rejected
+        // here as unsupported, not as a malformed model.
+        if (map.mask >= 0) {
+            const MatShape& ms = inputs[map.mask];
+            CV_CheckLE(ms.dims, 4, "attn_mask must have at most 4 dims");
+            const int full[4] = {batch_size, nhq, seq_len_q, total_seq_kv};
+            for (int i = 0; i < ms.dims; i++) {
+                const int d = ms[i], f = full[4 - ms.dims + i];
+                CV_Check(d, d == 1 || d == f,
+                         "attn_mask must broadcast to [batch, q_num_heads, q_seq, total_kv_seq]; "
+                         "a last dim shorter than total_kv_seq is not supported");
+            }
+        }
+
         CV_CheckTrue(q_hn % kv_hn == 0,
                      "q_num_heads must be divisible by kv_num_heads");
 
