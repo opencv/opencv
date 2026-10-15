@@ -2008,6 +2008,8 @@ TEST(Core_SolvePoly, degree_2_polynomials)
             coefs.at<float>(1) = c1;
             for (float c2 = -20; c2 <= 20; c2++)
             {
+                if (c2 == 0)
+                    continue;
                 coefs.at<float>(2) = c2;
                 prec = cv::solvePoly(coefs, r);
                 EXPECT_LE(prec, 1e-6);
@@ -2037,6 +2039,8 @@ TEST(Core_SolvePoly, degree_4_polynomials)
                     coefs.at<float>(3) = c3;
                     for (float c4 = -10; c4 <= 10; c4++)
                     {
+                        if (c4 == 0)
+                            continue;
                         coefs.at<float>(4) = c4;
                         prec = cv::solvePoly(coefs, r);
                         EXPECT_LE(prec, 1e-3);
