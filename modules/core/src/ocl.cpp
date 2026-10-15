@@ -122,6 +122,8 @@
 #endif
 
 #include "umatrix.hpp"
+#include "opencv2/core/llapi/accel_hal.h"
+#include "opencv2/core/utils/accel_dispatch.private.hpp"
 
 namespace cv { namespace ocl {
 
@@ -1201,6 +1203,9 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
+    // the CPU fallback of an accelerator call must not route its data into OpenCL
+    if (cv::accel::detail::isOpenCLSuppressed())
+        return false;
     CoreTLSData& data = getCoreTlsData();
     if (data.useOpenCL < 0)
     {
@@ -3735,11 +3740,26 @@ int Kernel::set(int i, const UMat& m)
     return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
-// a CUDA-backed UMat carries a device pointer in u->handle, not a cl_mem
-static bool isCudaBacked(const UMatData* u)
+// True when the allocator states that u->handle is not a cl_mem: a CUDA or HIP device
+// pointer, an accelerator buffer, a dma-buf. Allocators that do not describe themselves
+// (including user allocators) keep the previous behaviour.
+static bool isNonOpenCLMemory(const UMatData* u)
 {
-    const MatAllocator* cudaAllocator = cv::cuda::getCudaAllocator();
-    return u && cudaAllocator && u->currAllocator == cudaAllocator;
+    cvAccelMemoryDesc d;
+    if (!u || !u->currAllocator || !u->currAllocator->getMemoryDesc(u, &d))
+        return false;
+    if (d.backend_id != 0)
+        return true;    // owned by an accelerator backend, whatever the handle looks like
+    switch (d.handle_kind)
+    {
+    case CV_ACCEL_HANDLE_DEVICE_POINTER:
+    case CV_ACCEL_HANDLE_VK_BUFFER:
+    case CV_ACCEL_HANDLE_DMABUF_FD:
+    case CV_ACCEL_HANDLE_OPAQUE:
+        return true;
+    default:
+        return false;
+    }
 }
 
 int Kernel::set(int i, const KernelArg& arg)
@@ -3767,10 +3787,10 @@ int Kernel::set(int i, const KernelArg& arg)
             CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=NULL)", p->name.c_str(), (int)i).c_str());
             return i + 1;
         }
-        // a CUDA-backed UMat has no cl_mem; decline so the caller falls back to CPU
-        if (isCudaBacked(arg.m->u))
+        // memory of another device API has no cl_mem; decline so the caller falls back to CPU
+        if (isNonOpenCLMemory(arg.m->u))
         {
-            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is backed by the CUDA allocator, declining",
+            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat memory is not an OpenCL buffer, declining",
                     p->name.c_str(), (int)i));
             p->cleanupUMats();
             p->release();
@@ -6574,6 +6594,19 @@ public:
         }
     }
 
+    bool getMemoryDesc(const UMatData* u, cvAccelMemoryDesc* desc) const CV_OVERRIDE
+    {
+        if (!u || !desc)
+            return false;
+        memset(desc, 0, sizeof(*desc));
+        // OpenCL stays on its own T-API path: backend_id 0 keeps it out of the Non-CPU HAL
+        const bool copyOnMap = (u->flags & UMatData::COPY_ON_MAP) != 0;
+        desc->kind = copyOnMap ? CV_ACCEL_MEM_DEVICE : CV_ACCEL_MEM_SHARED;
+        desc->host_access = copyOnMap ? CV_ACCEL_HOST_ACCESS_COPY : CV_ACCEL_HOST_ACCESS_COHERENT;
+        desc->handle_kind = CV_ACCEL_HANDLE_CL_MEM;
+        return true;
+    }
+
     BufferPoolController* getBufferPoolController(const char* id) const CV_OVERRIDE
     {
         ocl::Context ctx = Context::getDefault();
@@ -7615,7 +7648,7 @@ bool internal::isPerformanceCheckBypassed()
 
 bool internal::isCLBuffer(UMat& u)
 {
-    if (isCudaBacked(u.u))
+    if (isNonOpenCLMemory(u.u))
         return false;
     void* h = u.handle(ACCESS_RW);
     if (!h)

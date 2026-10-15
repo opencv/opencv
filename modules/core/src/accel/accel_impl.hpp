@@ -1,0 +1,376 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
+#ifndef OPENCV_CORE_SRC_ACCEL_IMPL_HPP
+#define OPENCV_CORE_SRC_ACCEL_IMPL_HPP
+
+#include "opencv2/core/accel.hpp"
+#include "opencv2/core/llapi/accel_hal.h"
+#include "opencv2/core/utils/accel_dispatch.private.hpp"
+
+#include <atomic>
+#include <condition_variable>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace cv { namespace accel { namespace impl {
+
+class Backend;
+struct BufferState;
+
+//////////////////////////////// streams and fences ////////////////////////////////
+
+/** A backend stream owned by core. uid identifies the stream for its whole life, so a
+    destroyed stream whose handle gets reused is never mistaken for a live one. */
+struct StreamHolder
+{
+    StreamHolder(Backend* b, int device, cvAccelStream handle);
+    ~StreamHolder();
+    Backend* backend;
+    int device;
+    cvAccelStream handle;
+    uint64 uid;
+};
+typedef std::shared_ptr<StreamHolder> StreamPtr;
+
+/** Counted reference to a backend fence and the stream it was recorded on. */
+class FenceRef
+{
+public:
+    FenceRef() : b_(0), f_(0), streamUid_(0) {}
+    //! adopts the reference returned by stream_record_fence
+    FenceRef(Backend* b, cvAccelFence f, uint64 streamUid) : b_(b), f_(f), streamUid_(streamUid) {}
+    FenceRef(const FenceRef& o);
+    FenceRef& operator=(const FenceRef& o);
+    ~FenceRef() { reset(); }
+
+    void reset();
+    bool empty() const { return f_ == 0; }
+    Backend* backend() const { return b_; }
+    cvAccelFence get() const { return f_; }
+    uint64 streamUid() const { return streamUid_; }
+
+    //! polls; an empty fence is complete
+    bool isComplete() const;
+    //! CPU wait (counted in TransferStats::hostWaits)
+    void wait() const;
+
+private:
+    Backend* b_;
+    cvAccelFence f_;
+    uint64 streamUid_;
+};
+
+//! records a fence at the current end of @p s
+FenceRef recordFence(const StreamPtr& s);
+
+//! makes later work on @p s wait for @p f: on the device when both belong to one backend, on the CPU otherwise
+void streamWait(const StreamPtr& s, const FenceRef& f);
+
+//////////////////////////////////// backends ////////////////////////////////////
+
+/** Per-device gate for memory the CPU may touch only while the device is idle
+    (CV_ACCEL_HOST_ACCESS_DEVICE_IDLE). While the CPU holds such memory, no new device work
+    is started on that device: it would make the CPU access fault.
+
+    A handshake on two counters, so that nobody waits while holding a buffer lock: the CPU
+    side increments cpuMappings, then waits until no submission is in progress (before it
+    locks any buffer); a submission increments submitting, then backs off to the CPU path if
+    cpuMappings is not zero. With sequentially consistent atomics at least one side sees the
+    other, and the CPU side drains the device (device_synchronize) after its wait. Costs
+    nothing until the first allocation of that class on the device. */
+struct IdleGate
+{
+    IdleGate() : used(false), cpuMappings(0), submitting(0) {}
+    std::atomic<bool> used;
+    std::atomic<int> cpuMappings;
+    std::atomic<int> submitting;
+    std::mutex mutex;
+    std::condition_variable cond;   //!< signalled when submitting drops to zero
+};
+
+/** Submission window of one operation on a device (see IdleGate). */
+class SubmitWindow
+{
+public:
+    explicit SubmitWindow(IdleGate& gate);
+    ~SubmitWindow() { close(); }
+    //! the CPU holds DEVICE_IDLE memory of this device: no device work may start now
+    bool blocked() const { return blocked_; }
+    void close();
+private:
+    IdleGate* gate_;
+    bool open_;
+    bool blocked_;
+};
+
+class Backend
+{
+public:
+    Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin);
+
+    int id() const { return id_; }
+    const std::string& name() const { return name_; }
+    int priority() const { return priority_; }
+    const std::string& origin() const { return origin_; }
+    const OpenCV_Core_Accel_API_v0_0_api_entries& fn() const { return api_->v0; }
+
+    int deviceCount();
+    cvAccelDeviceInfo deviceInfo(int device);
+
+    //! throws cv::Exception with the backend message unless @p st is CV_ACCEL_OK
+    void check(cvAccelStatus st, const char* what) const;
+
+    //! cached op table of a module, NULL when the backend has none
+    const void* opTable(const char* module, uint32_t version);
+
+    //! true when kernels on @p device can use memory described by @p desc in place
+    bool canAccess(int device, const cvAccelMemoryDesc& desc);
+
+    //! per-thread default stream of @p device
+    StreamPtr defaultStream(int device);
+
+    //! the generic allocator for @p device and memory kind (cvAccelMemoryKind), never released
+    MatAllocator* allocator(int device, int kind);
+
+    //! takes ownership of a released buffer whose device work may still be running
+    void deferRelease(BufferState* st);
+    //! frees deferred buffers whose fences completed; with @p waitAll, waits for all of them
+    void collectDeferred(bool waitAll);
+
+    bool isLost() const { return lost_.load(); }
+    void markLost() { lost_.store(true); }
+
+    IdleGate& idleGate(int device);
+
+    /** Pinned host blocks for host copies, reused by exact size. Allocating pinned memory is
+        slow and stalls the streams of the device, so it should not happen per buffer. */
+    bool takePinned(int device, uint64_t size, cvAccelAllocation& out);
+    //! keeps the block for reuse, or frees it when the cache is full (OPENCV_ACCEL_PINNED_CACHE_MB)
+    void recyclePinned(cvAccelAllocation& a);
+
+    /** Reserves the pages of a host range for an import. Pinning works on whole pages and
+        overlapping imports fail or, worse, tear down each other's mappings (Level Zero), so
+        a range touching pages that are already imported is refused and the caller copies. */
+    bool reserveHostImport(int device, const void* ptr, size_t size);
+    void releaseHostImport(int device, const void* ptr);
+
+private:
+    void enumerate();
+
+    int id_;
+    const OpenCV_Core_Accel_API* api_;
+    int priority_;
+    std::string name_;
+    std::string origin_;
+
+    std::mutex mutex_;
+    bool enumerated_;
+    std::vector<cvAccelDeviceInfo> devices_;
+    std::map<std::string, const void*> opTables_;
+    std::map<std::pair<int, int>, MatAllocator*> allocators_;
+    std::vector<BufferState*> deferred_;
+    std::atomic<bool> lost_;
+    std::vector<std::unique_ptr<IdleGate> > idleGates_;
+    std::map<std::pair<int, uintptr_t>, uintptr_t> hostImports_;   //!< (device, first page) -> end
+    std::multimap<std::pair<int, uint64_t>, cvAccelAllocation> pinnedCache_;
+    uint64_t pinnedCacheBytes_;
+};
+
+class Registry
+{
+public:
+    static Registry& getInstance();
+
+    //! registers a backend table; returns its id (> 0), or 0 when the table is rejected
+    int add(const OpenCV_Core_Accel_API* api, int priority, const std::string& origin);
+
+    bool isActive() const { return active_.load(std::memory_order_acquire); }
+    Backend* get(int id);                       //!< NULL for 0 and unknown ids
+    Backend* find(const std::string& name);
+    std::vector<Backend*> all();                //!< by priority, highest first
+
+    //! loads the libraries listed in OPENCV_ACCEL_PLUGINS (';'-separated)
+    void loadPlugins();
+
+private:
+    Registry();
+
+    std::mutex mutex_;
+    std::vector<Backend*> backends_;            //!< never shrinks; index = id - 1
+    std::atomic<bool> active_;
+};
+
+//! loads built-in backends and plugins once; cheap afterwards
+void ensureInitialized();
+
+//////////////////////////////// execution scope ////////////////////////////////
+
+struct ScopeEntry
+{
+    int backendId;
+    int device;
+    StreamPtr stream;   //!< empty: the device's per-thread default stream
+};
+
+//! innermost ExecutionScope of the calling thread, NULL outside of any scope
+const ScopeEntry* currentScope();
+
+//! allocator of the innermost scope's device, NULL when there is none (used by UMat::getStdAllocator)
+MatAllocator* scopeAllocator();
+
+//////////////////////////////// buffer state and protocol ////////////////////////////////
+
+/** State that core keeps for every UMatData created by a DeviceAllocator.
+
+Which copy is current is kept in UMatData::flags as for other allocators:
+HOST_COPY_OBSOLETE (the CPU view is stale) and DEVICE_COPY_OBSOLETE (the device copy is
+stale). Both set means the content is uninitialized and no transfer is ever needed.
+For memory with a single physical copy (COHERENT, NONCOHERENT, ...), HOST_COPY_OBSOLETE
+means the CPU must wait and invalidate before reading. */
+struct BufferState
+{
+    BufferState(Backend* b, int device);
+
+    Backend* backend;
+    int device;
+    cvAccelAllocation alloc;        //!< the memory UMat::handle() refers to
+
+    //! host copy for HOST_ACCESS_COPY and HOST_ACCESS_UNCACHED memory; pinned when the backend can
+    uchar* shadow;
+    cvAccelAllocation shadowAlloc;  //!< valid when the shadow came from the backend (pinned)
+    bool shadowFromBackend;
+
+    std::mutex mutex;
+    std::condition_variable cond;
+    bool busy;                      //!< a host transition that waits outside of the mutex is running
+    int pendingDeviceOps;           //!< operations between acquireForDevice and recordDeviceUse
+    bool hostMapped;                //!< Mat views may exist (UMatData::refcount was > 0)
+    int hostAccess;                 //!< union of AccessFlag over the current mapping
+    FenceRef writeFence;            //!< last device write
+    std::vector<FenceRef> readFences; //!< device reads after the last write, one per stream
+
+    bool imported;                  //!< memory belongs to the user: releasing waits for the device
+    bool fromMat;                   //!< created by Mat::getUMat: the content goes back to the Mat
+    const void* hostImport;         //!< imported host range reserved with Backend::reserveHostImport
+    bool idleGateHeld;              //!< the current mapping counts in IdleGate::cpuMappings
+    bool poisoned;                  //!< the device work that wrote the content failed
+    std::string poisonReason;
+    uint64 generation;              //!< incremented by every write
+};
+
+//! UMat::getMat() for buffers with accelState
+Mat getHostView(const UMat& m, AccessFlag access);
+//! MatAllocator::unmap() for buffers with accelState (the last Mat view is gone)
+void endHostView(UMatData* u);
+//! UMat::handle() for buffers with accelState: waits for everything and returns the device handle
+void* deviceHandleBlocking(UMatData* u, AccessFlag access);
+
+enum DeviceMode
+{
+    DEV_READ = 1,
+    DEV_WRITE = 2,      //!< partial write: the rest of the buffer must stay intact
+    DEV_DISCARD = 4     //!< together with DEV_WRITE: the whole allocation is overwritten
+};
+
+/** Prepares @p u for use by work that will be enqueued on @p stream: uploads the host copy
+    when it is newer, and returns the fences the work must wait for. Returns false (and
+    changes nothing) when a live Mat view conflicts with @p mode. */
+bool acquireForDevice(UMatData* u, const StreamPtr& stream, int mode, std::vector<FenceRef>& waits);
+//! records the completion fence of the work enqueued after acquireForDevice
+void recordDeviceUse(UMatData* u, const FenceRef& fence, int mode);
+//! undoes acquireForDevice when nothing was enqueued
+void abandonDeviceUse(UMatData* u);
+
+//! waits for all device work on @p u (CPU wait)
+void waitForDevice(UMatData* u);
+
+/** The allocator for one (backend, device, memory kind). It owns no state of its own: the
+    coherence protocol lives in the functions above, so every backend gets the same rules. */
+class DeviceAllocator CV_FINAL : public MatAllocator
+{
+public:
+    DeviceAllocator(Backend* b, int device, int kind);
+
+    UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step,
+                       AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    void deallocate(UMatData* u) const CV_OVERRIDE;
+    void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE;
+    void unmap(UMatData* u) const CV_OVERRIDE;
+    void download(UMatData* u, void* dst, int dims, const size_t sz[],
+                  const size_t srcofs[], const size_t srcstep[], const size_t dststep[]) const CV_OVERRIDE;
+    void upload(UMatData* u, const void* src, int dims, const size_t sz[],
+                const size_t dstofs[], const size_t dststep[], const size_t srcstep[]) const CV_OVERRIDE;
+    void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dstofs[], const size_t dststep[], bool sync) const CV_OVERRIDE;
+    bool getMemoryDesc(const UMatData* u, cvAccelMemoryDesc* desc) const CV_OVERRIDE;
+
+    Backend* backend() const { return b_; }
+    int device() const { return device_; }
+    int kind() const { return kind_; }
+
+    //! wraps external memory (wrapExternalMemory)
+    UMatData* wrap(const cvAccelExternalMemory& ext, size_t total) const;
+
+private:
+    UMatData* createState(UMatData* u, const cvAccelAllocation& a, bool imported) const;
+    int kindFor(UMatUsageFlags usageFlags) const;
+
+    Backend* b_;
+    int device_;
+    int kind_;
+};
+
+//! frees the backend memory of a released buffer and deletes @p st (fences must be complete)
+void destroyBufferState(BufferState* st);
+
+//! true for allocators of accelerator backends: their data must never move elsewhere silently
+bool isDeviceAllocator(const MatAllocator* a);
+
+//! both buffers live on the same device of the same accelerator backend
+bool sameAccelDevice(const UMatData* a, const UMatData* b);
+
+//! live device buffers keep the hook in cv:: functions active (see detail::isActive)
+void noteBufferCreated();
+void noteBufferDestroyed();
+
+//! describes @p u through its allocator; false when the allocator does not know
+bool queryMemoryDesc(const UMatData* u, cvAccelMemoryDesc& desc);
+
+//! host memory description used for Mat and host UMat arguments
+cvAccelMemoryDesc hostMemoryDesc();
+
+//! true when the bytes covered by @p v lie inside its allocation (overflow-safe)
+bool viewFitsAllocation(const cvAccelView& v);
+
+///////////////////////////////////// stats /////////////////////////////////////
+
+struct Counters
+{
+    std::atomic<uint64> bytesH2D, bytesD2H, bytesD2D, transfers, implicitTransfers,
+                        deviceOps, cpuFallbacks, hostWaits;
+    Counters();
+};
+Counters& counters();
+
+//! applies the TransferPolicy to an implicit transfer; throws for TRANSFER_FORBID
+void onImplicitTransfer(const char* what, const char* opName);
+
+///////////////////////////////////// built-in backends /////////////////////////////////////
+
+const OpenCV_Core_Accel_API* emulatorBackendApi();
+#ifdef HAVE_CUDA
+const OpenCV_Core_Accel_API* cudaBackendApi();
+#endif
+
+}}} // namespace cv::accel::impl
+
+#endif // OPENCV_CORE_SRC_ACCEL_IMPL_HPP

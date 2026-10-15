@@ -7,6 +7,7 @@
 // CUDA-backed MatAllocator for UMat (Phase P1): synchronous host<->device transfers.
 
 #include "precomp.hpp"
+#include "opencv2/core/llapi/accel_hal.h"
 
 namespace cv { namespace cuda {
 
@@ -130,6 +131,18 @@ public:
                    dims, sz, cudaMemcpyHostToDevice);
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
+    }
+
+    // the handle is a CUDA device pointer, so OpenCL declines these buffers (see ocl.cpp)
+    bool getMemoryDesc(const UMatData*, cvAccelMemoryDesc* desc) const CV_OVERRIDE
+    {
+        if (!desc)
+            return false;
+        memset(desc, 0, sizeof(*desc));
+        desc->kind = CV_ACCEL_MEM_DEVICE;
+        desc->host_access = CV_ACCEL_HOST_ACCESS_COPY;
+        desc->handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
+        return true;
     }
 
     // Same-world D2D only; UMat::copyTo calls copy() solely when both share this allocator.

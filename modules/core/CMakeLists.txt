@@ -97,10 +97,15 @@ file(GLOB_RECURSE core_parallel_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.h")
 ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${core_parallel_hdrs})
 
+# C interface for out-of-tree plugins (accelerator backends, see llapi/accel_hal.h)
+file(GLOB core_llapi_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/llapi/*.h")
+ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${core_llapi_hdrs})
+
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_parallel_hdrs} ${core_llapi_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)

@@ -57,8 +57,13 @@
 #include <functional>
 #include <type_traits>
 
+//! see opencv2/core/llapi/accel_hal.h
+struct cvAccelMemoryDesc;
+
 namespace cv
 {
+
+namespace accel { namespace impl { struct BufferState; } }
 
 //! @addtogroup core_basic
 //! @{
@@ -691,6 +696,15 @@ public:
 
     // default implementation returns DummyBufferPoolController
     virtual BufferPoolController* getBufferPoolController(const char* id = NULL) const;
+
+    /** @brief Describes where the memory of @p data lives and what UMatData::handle holds.
+
+    Code that has to know whether it can use a buffer (the OpenCL path, accelerator
+    backends) asks the allocator instead of comparing allocator pointers, so allocators
+    written by users keep working. The default implementation returns false ("unknown"),
+    which keeps the behaviour OpenCV had before this method existed.
+    */
+    virtual bool getMemoryDesc(const UMatData* data, struct ::cvAccelMemoryDesc* desc) const;
 };
 
 
@@ -739,6 +753,8 @@ struct CV_EXPORTS UMatData
     int mapcount;
     UMatData* originalUMatData;
     std::shared_ptr<void> allocatorContext;
+    //! coherence state of memory owned by an accelerator backend (Non-CPU HAL), NULL otherwise
+    accel::impl::BufferState* accelState;
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
@@ -2799,20 +2815,21 @@ cv::cuda::getCudaAllocator). Headers, reference counting, ROIs and submatrices a
 n-dimensional shapes behave as they do in Mat.
 
 Passing UMat instead of Mat to a cv:: function is the basis of the Transparent API
-(T-API). The dispatch is not keyed on the allocator: a cv:: call takes its OpenCL branch
-when OpenCL is active and the arguments are UMat objects, and otherwise maps the data
-back to host memory and runs the CPU implementation. UMat has no `data` pointer and no
-element accessors, because there may be no host address to expose; host access goes
-through UMat::getMat.
+(T-API). A cv:: call whose UMat arguments live on an accelerator (see @ref core_accel)
+runs on that accelerator when its backend implements the function, and on the CPU
+otherwise. UMat data of the OpenCL allocator takes the OpenCL branch when OpenCL is active.
+Any other UMat is mapped to host memory and processed by the CPU implementation. UMat has
+no `data` pointer and no element accessors, because there may be no host address to
+expose; host access goes through UMat::getMat.
 
 @note
   A non-default allocator must be assigned to @ref cv::UMat::allocator "UMat::allocator"
-  before the data is allocated. OpenCL is the only allocator with accelerated cv::
-  implementations, and because the T-API branch tests only whether OpenCL is active, a
-  UMat backed by any other device allocator must not be passed to cv:: functions while
-  OpenCL is enabled.
+  before the data is allocated, or the allocation must happen inside a
+  cv::accel::ExecutionScope. Which code may use a buffer is decided by
+  MatAllocator::getMemoryDesc, so a buffer from another device allocator is never handed
+  to OpenCL kernels.
 
-@sa Mat, MatAllocator, UMatUsageFlags, cv::ocl::getOpenCLAllocator,
+@sa Mat, MatAllocator, UMatUsageFlags, cv::accel::Device, cv::ocl::getOpenCLAllocator,
 cv::cuda::getCudaAllocator
 */
 class CV_EXPORTS UMat
@@ -2851,9 +2868,10 @@ public:
     /** @brief Returns a Mat header giving host access to the same data
     @note
       The data is mapped into host memory on the first such view and unmapped when the
-      returned Mat is destroyed. @p flags is widened to ACCESS_RW internally, so the
-      mapping is always read-write and the allocator may write back even after
-      read-only use.
+      returned Mat is destroyed. For data on an accelerator the call waits for device work
+      that conflicts with @p flags, and a view requested with ACCESS_READ never causes a
+      write-back: writing through it is undefined. For other allocators @p flags is
+      widened to ACCESS_RW internally.
     @param flags combination of AccessFlag values
     */
     Mat getMat(AccessFlag flags) const;

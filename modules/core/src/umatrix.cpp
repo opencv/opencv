@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
+#include "accel/accel_impl.hpp"
 
 #include <opencv2/core/utils/tls.hpp>
 
@@ -67,10 +68,13 @@ UMatData::UMatData(const MatAllocator* allocator)
     userdata = 0;
     allocatorFlags_ = 0;
     originalUMatData = NULL;
+    accelState = NULL;
 }
 
 UMatData::~UMatData()
 {
+    // a DeviceAllocator hands its state over (or frees it) before deleting the UMatData
+    CV_DbgAssert(accelState == NULL);
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
     CV_Assert(mapcount == 0);
@@ -446,6 +450,9 @@ UMat& UMat::operator=(UMat&& m)
 
 MatAllocator* UMat::getStdAllocator()
 {
+    // inside cv::accel::ExecutionScope new data goes to the scope's device
+    if (MatAllocator* a = accel::impl::scopeAllocator())
+        return a;
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
@@ -656,6 +663,9 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         }
         catch(...)
         {
+            // data that was asked for on an accelerator never silently lands somewhere else
+            if(accel::impl::isDeviceAllocator(a))
+                throw;
             if(a != a0)
                 u = a0->allocate(dims, size.p, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
@@ -1168,6 +1178,8 @@ Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)
         return Mat();
+    if (u->accelState)
+        return accel::impl::getHostView(*this, accessFlags);   // honours ACCESS_READ: no write-back
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
@@ -1200,6 +1212,9 @@ void* UMat::handle(AccessFlag accessFlags) const
 {
     if( !u )
         return 0;
+
+    if (u->accelState)
+        return accel::impl::deviceHandleBlocking(u, accessFlags);
 
     CV_Assert(u->refcount == 0);
     CV_Assert(!u->deviceCopyObsolete() || u->copyOnMap());
@@ -1260,7 +1275,26 @@ void UMat::copyTo(OutputArray _dst) const
         return;
     }
 
-    _dst.create( dims, size.p, stype );
+    if (u && u->accelState && _dst.isUMat() && _dst.empty())
+    {
+        // a copy of device data stays on the device (UMat::clone, copyTo into a new UMat)
+        UMat& d = _dst.getUMatRef();
+        MatAllocator* saved = d.allocator;
+        if (!saved)
+            d.allocator = const_cast<MatAllocator*>(u->currAllocator);
+        try
+        {
+            _dst.create( dims, size.p, stype );
+        }
+        catch (...)
+        {
+            d.allocator = saved;
+            throw;
+        }
+        d.allocator = saved;
+    }
+    else
+        _dst.create( dims, size.p, stype );
     if (empty())
         return;
 
@@ -1280,7 +1314,8 @@ void UMat::copyTo(OutputArray _dst) const
         if( u == dst.u && dst.offset == offset )
             return;
 
-        if (u->currAllocator == dst.u->currAllocator)
+        if (u->currAllocator == dst.u->currAllocator ||
+            accel::impl::sameAccelDevice(u, dst.u))   // any two buffers of one accelerator: device copy
         {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
