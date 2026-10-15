@@ -160,12 +160,19 @@ public:
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0];
         const auto shape_B =  constB(mode) ? shape(blobs[0]) : inputs[1];
-        CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
+        // flatten_a=false is only produced by the in-graph MatMul -> Gemm rewrite, and ONNX
+        // MatMul does accept a rank-1 A: it is promoted to (1, K) and the leading 1 is
+        // squeezed from the result again, so Y is (N,). Handle that as (1, K) here instead of
+        // rejecting it; a genuine ONNX Gemm (plain Gemm layer, flatten_a=true) still needs 2D.
+        const bool rank1_A = !flatten_a && shape_A.size() == 1;
+        CV_Check(shape_A.size(), rank1_A || shape_A.size() >= 2,
+                 "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
         CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
 
         // Check legal matrix multiplication
         size_t dims_A = shape_A.size();
-        int ma = shape_A[dims_A - 2], na = shape_A[dims_A - 1];
+        int ma = rank1_A ? 1 : shape_A[dims_A - 2];
+        int na = shape_A[dims_A - 1];
         int mb = shape_B[0], nb = shape_B[1];
         int M = trans_a ? na : ma;
         int N = trans_b ? mb : nb;
@@ -226,7 +233,8 @@ public:
         LayerGemmOpMode mode_ = getOpMode(inputs.size(), blobs.size());
         const auto shape_A = inputs[0];
         const auto shape_B = constB(mode_) ? shape(blobs[0]) : inputs[1];
-        int M = trans_a ? shape_A.back() : shape_A[shape_A.size() - 2];
+        int M = trans_a ? shape_A.back()
+                        : (shape_A.size() >= 2 ? shape_A[shape_A.size() - 2] : 1);
         int K = trans_a ? shape_A[shape_A.size() - 2] : shape_A.back();
         int N = trans_b ? shape_B[shape_B.size() - 2] : shape_B.back();
 
@@ -313,9 +321,10 @@ public:
                 const auto shape_A = shape(inputs[0]);
                 const auto shape_Y = shape(outputs[0]);
                 const int na = shape_A[shape_A.size() - 1];
-                const int ma = shape_A[shape_A.size() - 2];
                 const int N  = shape_Y[shape_Y.size() - 1];
-                const int M  = shape_Y[shape_Y.size() - 2];
+                // rank-1 A / (N,) Y of the MatMul rewrite: M == 1 (see getMemoryShapes())
+                const int ma = shape_A.size() >= 2 ? shape_A[shape_A.size() - 2] : 1;
+                const int M  = shape_Y.size() >= 2 ? shape_Y[shape_Y.size() - 2] : 1;
                 const int K  = trans_a ? ma : na;
                 const Mat& Bmat = blobs[0];
                 const int ldb = Bmat.size[Bmat.dims - 1];
@@ -414,9 +423,13 @@ public:
 
         const auto shape_A = shape(A), shape_Y = shape(Y);
         size_t dims_A = shape_A.size();
-        int ma = shape_A[dims_A - 2], na = shape_A[dims_A - 1];
+        // rank-1 A / (N,) Y: the MatMul rewrite promotes A to (1, K) and squeezes the leading 1
+        // from the result, so the single row / single dimension stands for M == 1.
+        int ma = dims_A >= 2 ? shape_A[dims_A - 2] : 1;
+        int na = shape_A[dims_A - 1];
         size_t dims_Y = shape_Y.size();
-        int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
+        int M = dims_Y >= 2 ? shape_Y[dims_Y - 2] : 1;
+        int N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
 
         // In flatten_a=false mode the output keeps A's leading dims, so the

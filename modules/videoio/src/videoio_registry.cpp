@@ -149,7 +149,7 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_STATIC_BACKEND(CAP_XIAPI, "XIMEA", MODE_CAPTURE_ALL, create_XIMEA_capture_file, create_XIMEA_capture_cam, 0)
 #endif
 #ifdef HAVE_ARAVIS_API
-    DECLARE_STATIC_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX, 0, create_Aravis_capture, 0)
+    DECLARE_STATIC_BACKEND_WITH_DEVICES(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX, 0, create_Aravis_capture, 0, enumerate_Aravis_devices)
 #endif
 
 #ifdef HAVE_UEYE // uEye

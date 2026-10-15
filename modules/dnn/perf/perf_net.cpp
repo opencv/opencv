@@ -331,7 +331,7 @@ PERF_TEST_P_(DNNTestNetwork, EfficientNet)
 {
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(224, 224), Scalar(), true);
-    transposeND(inp, {0, 2, 3, 1}, inp);
+    cv::transpose(inp, {0, 2, 3, 1}, inp);
     processNet("dnn/efficientnet-lite4.onnx", "", inp);
 }
 
@@ -355,7 +355,7 @@ PERF_TEST_P_(DNNTestNetwork, MPPalm) {
     Mat inp(cv::Size(192, 192), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
-    transposeND(inp, {0, 2, 3, 1}, inp);
+    cv::transpose(inp, {0, 2, 3, 1}, inp);
     processNet("dnn/palm_detection_mediapipe_2023feb.onnx", "", inp);
 }
 
@@ -363,7 +363,7 @@ PERF_TEST_P_(DNNTestNetwork, MPHand) {
     Mat inp(cv::Size(224, 224), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
-    transposeND(inp, {0, 2, 3, 1}, inp);
+    cv::transpose(inp, {0, 2, 3, 1}, inp);
     processNet("dnn/handpose_estimation_mediapipe_2023feb.onnx", "", inp);
 }
 
@@ -371,7 +371,7 @@ PERF_TEST_P_(DNNTestNetwork, MPPose) {
     Mat inp(cv::Size(256, 256), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
-    transposeND(inp, {0, 2, 3, 1}, inp);
+    cv::transpose(inp, {0, 2, 3, 1}, inp);
     processNet("dnn/pose_estimation_mediapipe_2023mar.onnx", "", inp);
 }
 

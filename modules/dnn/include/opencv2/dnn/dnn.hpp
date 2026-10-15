@@ -1395,6 +1395,9 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param rBlob rect in blob coordinates.
          *  @param size original input image size.
          *  @returns rectangle in original image coordinates.
+         *  @note If the `size` member is empty, the @p size argument is used as the blob size, as in
+         *  @ref blobFromImagesWithParams. For a batch created with an empty `size` member, the blob size is the size
+         *  of the first image, so set the member to that size before mapping rects of the other images.
          */
         CV_WRAP Rect blobRectToImageRect(const Rect &rBlob, const Size &size);
 
@@ -1402,6 +1405,9 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param rBlob rect in blob coordinates.
          *  @param rImg result rect in image coordinates.
          *  @param size original input image size.
+         *  @note If the `size` member is empty, the @p size argument is used as the blob size, as in
+         *  @ref blobFromImagesWithParams. For a batch created with an empty `size` member, the blob size is the size
+         *  of the first image, so set the member to that size before mapping rects of the other images.
          */
         CV_WRAP void blobRectsToImageRects(const std::vector<Rect> &rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
     };

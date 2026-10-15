@@ -616,8 +616,8 @@ class CppHeaderParser(object):
                                                  ("CV_CDECL", ""),
                                                  ("CV_WRAP ", " "),
                                                  ("CV_INLINE", ""),
-                                                 ("CV_DEPRECATED", ""),
                                                  ("CV_DEPRECATED_EXTERNAL", ""),
+                                                 ("CV_DEPRECATED", ""),
                                                  ("CV_NODISCARD_STD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):

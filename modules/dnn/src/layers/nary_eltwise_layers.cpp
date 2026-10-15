@@ -30,10 +30,24 @@ namespace dnn
 {
 
 namespace {
-static int _mod(int x, int y) {
-    int res = x % y;
+// ONNX Mod with fmod=0: the remainder takes the sign of the divisor (Python/NumPy "%").
+template<typename T>
+static inline typename std::enable_if<std::is_integral<T>::value, T>::type _mod(T x, T y) {
+    // min % -1 overflows (and traps on x86); the remainder is 0 for any x.
+    if (std::is_signed<T>::value && y == static_cast<T>(-1))
+        return T(0);
+    T res = static_cast<T>(x % y);
     if ((res < 0 && y > 0) || (res > 0 && y < 0)) {
-        res += y;
+        res = static_cast<T>(res + y);
+    }
+    return res;
+}
+
+template<typename T>
+static inline typename std::enable_if<!std::is_integral<T>::value, T>::type _mod(T x, T y) {
+    T res = static_cast<T>(std::fmod((double)x, (double)y));
+    if (res != T(0) && ((res < T(0)) != (y < T(0)))) {
+        res = static_cast<T>(res + y);
     }
     return res;
 }
@@ -329,23 +343,26 @@ public:
         size_t i, ninputs = shapes.size();
         CV_Assert(ninputs > 0u);
 
-        int C0 = shapes[0].C, dims0 = shapes[0].dims, maxdims = dims0;
-        bool constC = true;
+        int dims0 = shapes[0].dims, maxdims = dims0, maxC = 0;
+        for (i = 0; i < ninputs; i++)
+            maxC = std::max(maxC, shapes[i].C);
+        // a 1-channel block input broadcasts over the channels, forward() fills its lanes
+        bool broadcastableC = true;
         bool allBlock = true;
         bool constDims = true;
         for (i = 0; i < ninputs; i++) {
             const MatShape& inpShape = shapes[i];
             int dims = inpShape.dims;
             allBlock = allBlock && inpShape.layout == DATA_LAYOUT_BLOCK;
-            constC = constC && inpShape.C == C0;
+            broadcastableC = broadcastableC && (inpShape.C == maxC || inpShape.C == 1);
             constDims = constDims && dims == dims0;
             maxdims = std::max(maxdims, dims);
         }
 
         MatShape outShape(maxdims, 1);
-        if (allBlock && constC && constDims) {
+        if (allBlock && broadcastableC && constDims) {
             outShape.layout = DATA_LAYOUT_BLOCK;
-            outShape.C = C0;
+            outShape.C = maxC;
         }
 
         for (i = 0; i < ninputs; i++)
@@ -1109,6 +1126,29 @@ public:
             CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
         }
 
+        // a 1-channel block tensor keeps its value in lane 0 only, so copy it into every lane before broadcasting
+        const MatShape outShape0 = out0.shape();
+        bool filledLanes = false;
+        if (outShape0.layout == DATA_LAYOUT_BLOCK && outShape0.C > 1) {
+            for (Mat& inp : used_inputs) {
+                const MatShape s = inp.shape();
+                if (s.layout != DATA_LAYOUT_BLOCK || s.C != 1)
+                    continue;
+                std::vector<Range> lane0(s.dims, Range::all());
+                lane0[s.dims - 1] = Range(0, 1);
+                std::vector<int> reps(s.dims, 1);
+                reps[s.dims - 1] = s[s.dims - 1];
+                Mat full;
+                cv::repeat(inp(lane0), reps, full);
+                inp = full;
+                filledLanes = true;
+            }
+        }
+        if (filledLanes) {
+            helper.init(used_inputs, outputs);
+            CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+        }
+
         if (op == OPERATION::POW) {
             CV_Assert(used_inputs.size() == 2);
             const int out_type = outputs[0].type();
@@ -1190,7 +1230,7 @@ public:
                     break;
                 }
                 case OPERATION::MOD: {
-                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    auto mod = [] (const T &a, const T &b) { return _mod<T>(a, b); };
                     binary_forward<T, T>(mod, std::forward<Args>(args)...);
                     break;
                 }
@@ -1330,7 +1370,7 @@ public:
                     break;
                 }
                 case OPERATION::MOD: {
-                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    auto mod = [] (const T &a, const T &b) { return _mod<T>(a, b); };
                     binary_forward<T, T>(mod, std::forward<Args>(args)...);
                     break;
                 }

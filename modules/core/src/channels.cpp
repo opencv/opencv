@@ -85,7 +85,7 @@ static MixChannelsFunc getMixchFunc(int depth)
         mixChannels16u, mixChannels32s, mixChannels32s,
         mixChannels64s, mixChannels16u, mixChannels16u,
         mixChannels8u, mixChannels64s, mixChannels64s,
-        mixChannels32s, 0
+        mixChannels32s, mixChannels8u, mixChannels8u
     };
 
     return mixchTab[depth];

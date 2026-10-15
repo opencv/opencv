@@ -60,7 +60,7 @@ static Mat Transpose(
     MatShape order(permutation.begin(), permutation.end());
 
     std::vector<int> order_(order.begin(), order.end());
-    cv::transposeND((reshape ? input_reshaped : input), order_, output);
+    cv::transpose((reshape ? input_reshaped : input), order_, output);
     return output;
 }
 

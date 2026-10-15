@@ -16,11 +16,7 @@
 "test_ai_onnx_ml_label_encoder_tensor_value_only_mapping",
 "test_ai_onnx_ml_tree_ensemble_set_membership",
 "test_ai_onnx_ml_tree_ensemble_single_tree",
-"test_attention_3d_with_past_and_present_qk_matmul_softcap_expanded", // softcap qk_matmul_output reference disagrees with onnxruntime; bad ref data
-"test_attention_3d_with_past_and_present_qk_matmul_softcap", // softcap qk_matmul_output reference disagrees with onnxruntime; bad ref data
 "test_attention_4d_diff_heads_mask4d_padded_kv", // needs the nonpad_kv_seqlen input (padded-KV variant) which is not supported yet
-"test_attention_4d_with_qk_matmul_softcap", // softcap qk_matmul_output reference disagrees with onnxruntime (~0.77); bad ref data
-"test_attention_4d_with_qk_matmul_softcap_expanded", // ditto (same reference data)
 "test_averagepool_2d_ceil_last_window_starts_on_pad",
 "test_averagepool_2d_dilations",
 "test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False",
@@ -95,8 +91,6 @@
 "test_dft_axis",
 "test_equal_string",
 "test_equal_string_broadcast",
-"test_group_normalization_epsilon_expanded",
-"test_group_normalization_example_expanded",
 "test_identity_opt",  //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt",  // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
@@ -138,8 +132,6 @@
 "test_quantizelinear_int4",
 "test_quantizelinear_uint16",
 "test_quantizelinear_uint4",
-"test_range_float_type_positive_delta_expanded",  // ---- Unsupported operations: Loop ---
-"test_range_int32_type_negative_delta_expanded",  // ---- same as above ---
 "test_regex_full_match_basic",
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",
@@ -240,11 +232,8 @@
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
 "test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded",
 "test_range_bfloat16_type_positive_delta_expanded",
-"test_range_float16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
 // Attention softcap accuracy
-"test_attention_4d_softcap_neginf_mask",
-"test_attention_4d_softcap_neginf_mask_poison",
 // CausalConvWithState fp16 (expanded) accuracy
 "test_causal_conv_with_state_fp16_expanded",
 "test_causal_conv_with_state_silu_fp16_expanded",

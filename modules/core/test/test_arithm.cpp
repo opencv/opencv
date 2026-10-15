@@ -2660,7 +2660,7 @@ TEST_P(TransposeND, basic)
     do
     {
         Mat out;
-        cv::transposeND(inp, order, out);
+        cv::transpose(inp, order, out);
         std::vector<int> id(order.size());
         for (size_t i = 0; i < inp.total(); ++i)
         {
@@ -4676,6 +4676,82 @@ TEST(Core_Arithm, empty_sum)
   cv::add(empty_mat, cv::Scalar(1.0), empty_mat);
   ASSERT_TRUE(empty_mat.empty());
   ASSERT_THROW(cv::Mat empty_sum = empty_mat + cv::Scalar(1.0), cv::Exception);
+}
+
+TEST(Core_Arithm, mul_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U: float32: (1 * 0.7f) * 175 = 122.49999... -> 122; float16: 123
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(175));
+        cv::Mat dst;
+        cv::multiply(a, b, dst, 0.7);
+        EXPECT_EQ(0, cv::countNonZero(dst != 122));
+    }
+    // CV_8S: float32: (-124 * (1/7.f)) * -5 = 88.5714... -> 89; float16: 88
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-124));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-5));
+        cv::Mat dst;
+        cv::multiply(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 89));
+    }
+}
+
+TEST(Core_Arithm, div_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U: float32: (21 * (1/7.f)) / 6 = 0.50000006f -> 1; float16: 0
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(21));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(6));
+        cv::Mat dst;
+        cv::divide(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 1));
+    }
+    // CV_8S: float32: (-105 * (1/7.f)) / -30 = 0.50000006f -> 1; float16: 0
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-105));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-30));
+        cv::Mat dst;
+        cv::divide(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 1));
+    }
+}
+
+TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U precision: float32: 1 * (1/3.f) + 1 * (2/3.f) + 0.5f = 1.5f -> 2; float16: 1
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat dst;
+        cv::addWeighted(a, 1.0 / 3.0, b, 2.0 / 3.0, 0.5, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 2));
+    }
+    // CV_8U overflow avoidance: 255 * 300 - 255 * 299 = 255; float16 intermediate overflows > 65504 to inf/nan
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(255));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(255));
+        cv::Mat dst;
+        cv::addWeighted(a, 300.0, b, -299.0, 0.0, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 255));
+    }
+    // CV_8S precision: float32: -1 * (1/3.f) + -1 * (2/3.f) - 0.5f = -1.5f -> -2; float16: -1
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-1));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-1));
+        cv::Mat dst;
+        cv::addWeighted(a, 1.0 / 3.0, b, 2.0 / 3.0, -0.5, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != -2));
+    }
+    // CV_8S overflow avoidance: 127 * 600 - 127 * 599 = 127; float16 intermediate overflows > 65504 to inf/nan
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(127));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(127));
+        cv::Mat dst;
+        cv::addWeighted(a, 600.0, b, -599.0, 0.0, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 127));
+    }
 }
 
 }} // namespace

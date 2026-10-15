@@ -1196,35 +1196,25 @@ CV_EXPORTS_W void reshape(InputArray src, OutputArray dst, const std::vector<int
  * All the arrays must have the same type and number of dimensions, and the same size along every
  * axis except @p axis. The arrays may be multi-channel and non-continuous; the channels of each
  * element are kept together, so @p axis refers to the array dimensions, not to the channels.
- * For 2D arrays concatND(src, 0, dst) is equivalent to vconcat() and concatND(src, 1, dst) to hconcat().
+ * For 2D arrays concat(src, 0, dst) is equivalent to vconcat() and concat(src, 1, dst) to hconcat().
  * @param src input arrays
  * @param axis axis to concatenate along; -dims <= axis < dims
  * @param dst output array
- * @sa splitND, hconcat, vconcat
+ * @sa split, hconcat, vconcat
  */
-CV_EXPORTS_W void concatND(InputArrayOfArrays src, int axis, OutputArray dst);
+CV_EXPORTS_W void concat(InputArrayOfArrays src, int axis, OutputArray dst);
 
 /** @brief Splits an n-dimensional array into several arrays along the given axis.
  *
- * This is the inverse of concatND(). Not to be confused with split(), which separates the channels.
+ * This is the inverse of concat(). The two-argument split() is a different operation: it separates
+ * the channels of the elements, while this one cuts the array along one of its dimensions.
  * @param src input array; may be multi-channel and non-continuous
  * @param axis axis to split along; -src.dims <= axis < src.dims
  * @param sizes size of each output array along @p axis; the values must sum up to src.size[axis]
  * @param dst output arrays, one per element of @p sizes
- * @sa concatND
+ * @sa concat
  */
-CV_EXPORTS_W void splitND(InputArray src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays dst);
-
-/** @brief Repeats an n-dimensional array along each axis.
- *
- * dst.size[i] == src.size[i]*repeats[i]. This is the n-dimensional version of repeat(), and matches
- * numpy.tile and ONNX Tile for arrays of the same rank.
- * @param src input array; may be multi-channel and non-continuous
- * @param repeats number of copies along each axis; must have src.dims non-negative elements
- * @param dst output array of the same type as src
- * @sa repeat
- */
-CV_EXPORTS_W void tileND(InputArray src, const std::vector<int>& repeats, OutputArray dst);
+CV_EXPORTS_W void split(InputArray src, int axis, const std::vector<int>& sizes, OutputArrayOfArrays dst);
 
 /** @brief Copies a strided slice of an n-dimensional array.
  *
@@ -1240,8 +1230,8 @@ CV_EXPORTS_W void tileND(InputArray src, const std::vector<int>& repeats, Output
  * @param steps step along each sliced axis (non-zero, may be negative); empty means all ones
  * @param dst output array of the same type as src
  */
-CV_EXPORTS_W void sliceND(InputArray src, const std::vector<int>& starts, const std::vector<int>& ends,
-                          const std::vector<int>& steps, OutputArray dst);
+CV_EXPORTS_W void slice(InputArray src, const std::vector<int>& starts, const std::vector<int>& ends,
+                        const std::vector<int>& steps, OutputArray dst);
 
 /** @brief Broadcast the given Mat to the given shape.
  * @param src input array
@@ -1312,6 +1302,16 @@ vertical axis.
 horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
+
+/** @brief Repeats an n-dimensional array along each axis.
+ *
+ * dst.size[i] == src.size[i]*repeats[i], the n-dimensional counterpart of the two-axis form above.
+ * It matches numpy.tile and ONNX Tile for arrays of the same rank.
+ * @param src input array; may be multi-channel and non-continuous
+ * @param repeats number of copies along each axis; must have src.dims non-negative elements
+ * @param dst output array of the same type as src
+ */
+CV_EXPORTS_W void repeat(InputArray src, const std::vector<int>& repeats, OutputArray dst);
 
 /** @brief Applies horizontal concatenation to given matrices.
 
@@ -1933,7 +1933,11 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
  * The i'th axis of dst will correspond to the axis numbered order[i] of the input.
  * @param dst output array of the same type as src.
  */
-CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
+CV_EXPORTS_W void transpose(InputArray src, const std::vector<int>& order, OutputArray dst);
+
+/** @deprecated Use transpose(InputArray, const std::vector<int>&, OutputArray) instead.
+ */
+CV_DEPRECATED_EXTERNAL CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
 
 /** @brief Performs the matrix transformation of every array element.
 
