@@ -105,6 +105,7 @@ typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
 #ifdef HAVE_OPENCV_VIDEO
 typedef TrackerMIL::Params TrackerMIL_Params;
+typedef MultiTracker::Params MultiTracker_Params;
 #endif
 
 #ifdef HAVE_OPENCV_XIMGPROC
@@ -474,6 +475,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::Point3_<float>>("Point3fVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
+    register_vector<cv::Rect2d>("Rect2dVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
     register_vector<cv::DMatch>("DMatchVector");
     register_vector<std::vector<char>>("CharVectorVector");
