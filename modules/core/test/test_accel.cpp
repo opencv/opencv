@@ -581,6 +581,21 @@ TEST(Core_Accel, release_while_in_flight_is_deferred)
     });
 }
 
+TEST(Core_Accel, device_sync_waits_for_streams_of_finished_threads)
+{
+    // managed memory: the CPU may touch it only while the device is idle, which includes work
+    // queued by a thread that has exited since (its stream is gone, its work is not)
+    accel::Device d = emulator(MANAGED);
+    UMat x = makeOn(d, Mat(64, 64, CV_8UC1, Scalar(1)));
+    UMat y = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(2)));
+    UMat out;
+    const int64 violations = accel::detail::emulatorViolations();
+    runWithDeviceDelay(20000, [&]() { cv::flip(x, out, 0); });     // still queued when the thread ends
+    EXPECT_EQ(2, y.getMat(ACCESS_READ).at<uchar>(0, 0));           // another buffer: the device drains first
+    EXPECT_EQ(violations, accel::detail::emulatorViolations());
+    EXPECT_EQ(1, out.getMat(ACCESS_READ).at<uchar>(0, 0));
+}
+
 TEST(Core_Accel, copy_into_wrapped_memory_is_done_on_return)
 {
     accel::Device d = emulator(COHERENT);

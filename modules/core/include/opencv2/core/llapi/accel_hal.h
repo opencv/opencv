@@ -382,6 +382,9 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         a kernel the caller launches there after UMat::handle() runs before OpenCV's next use
         of the buffer, as with an OpenCL queue that both share. */
     cvAccelStatus (CV_API_CALL *stream_create)(int device, uint32_t flags, cvAccelStream* out) CV_ACCEL_NOEXCEPT;
+    /** Returns at once, like cudaStreamDestroy: work already queued still completes and its
+        fences stay valid. It must not wait for other threads: core destroys a thread's streams
+        during OpenCV's thread-exit cleanup, under a lock other exiting threads need. */
     cvAccelStatus (CV_API_CALL *stream_destroy)(cvAccelStream stream) CV_ACCEL_NOEXCEPT;
     //! new fence (reference count 1) that completes when all work enqueued so far completes
     cvAccelStatus (CV_API_CALL *stream_record_fence)(cvAccelStream stream, cvAccelFence* out) CV_ACCEL_NOEXCEPT;

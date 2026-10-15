@@ -30,6 +30,7 @@ namespace {
 
 enum Plan
 {
+    PLAN_UNDECIDED = -1,    //!< given, not planned yet (planArgs decides)
     PLAN_ABSENT = 0,        //!< optional argument that was not given
     PLAN_IN_PLACE = 1,      //!< the device works on the argument's own memory
     PLAN_UPLOAD = 2,        //!< input copied into a temporary on the device
@@ -40,7 +41,7 @@ enum Plan
 struct Arg
 {
     Arg() : isOutput(false), arr(0), type(-1), fullOverwrite(true), isUMat(false), isHost(false),
-            onDevice(false), plan(PLAN_ABSENT), mode(0)
+            onDevice(false), plan(PLAN_UNDECIDED), mode(0)
     {
         memset(&desc, 0, sizeof(desc));
         memset(&viewAlloc, 0, sizeof(viewAlloc));
@@ -548,6 +549,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 // allowed: nothing was queued
                 acq.abandon();
                 counters().cpuFallbacks++;
+                CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << " runs on the CPU (declined at EXECUTE)");
                 return CPU_ONLY;
             }
             queued = status != CV_ACCEL_OUT_OF_MEMORY;

@@ -161,21 +161,26 @@ struct EmuFence
     }
 };
 
+struct EmuStream;
+//! the worker of a stream: runs its queue, and deletes the stream once it is retired and drained
+void runStream(EmuStream* s);
+
 struct EmuStream
 {
-    explicit EmuStream(int device_) : device(device_), stop(false)
+    explicit EmuStream(int device_) : device(device_), stop(false), retired(false)
     {
         delayUs = utils::getConfigurationParameterSizeT("OPENCV_ACCEL_EMULATOR_DELAY_US", 0);
-        worker = std::thread([this]{ loop(); });
     }
-    ~EmuStream()
+    /** stream_destroy, called with streamsMutex held: returns at once, like cudaStreamDestroy.
+        The worker finishes the queue and then deletes the stream; joining it here would
+        deadlock, since core destroys a thread's streams during OpenCV's thread-exit cleanup,
+        under a lock that the exiting worker needs for its own cleanup. Allocates nothing. */
+    void retire()
     {
-        {
-            std::lock_guard<std::mutex> lk(m);
-            stop = true;
-        }
+        retired = true;
+        std::lock_guard<std::mutex> lk(m);  // notify under the lock: the worker cannot delete us before we let go
+        stop = true;
         cv.notify_all();
-        worker.join();  // drains the queue first
     }
     //! @p deviceWork: a kernel or a copy (as opposed to fence bookkeeping)
     void push(std::function<void()> task, bool deviceWork = false)
@@ -224,11 +229,11 @@ struct EmuStream
     typedef std::pair<std::function<void()>, bool> Task;
     int device;
     size_t delayUs;
-    std::thread worker;
     std::mutex m;
     std::condition_variable cv;
     std::deque<Task> q;
     bool stop;
+    bool retired;   //!< destroyed by its owner, still draining (under streamsMutex)
 };
 
 std::mutex& streamsMutex()
@@ -237,10 +242,29 @@ std::mutex& streamsMutex()
     return *m;
 }
 
+//! every stream whose worker runs, retired ones included until they drain (under streamsMutex)
 std::set<EmuStream*>& liveStreams()
 {
     static std::set<EmuStream*>* s = new std::set<EmuStream*>();
     return *s;
+}
+
+//! signalled when a retired stream has drained and left liveStreams
+std::condition_variable& streamsDrained()
+{
+    static std::condition_variable* c = new std::condition_variable();
+    return *c;
+}
+
+void runStream(EmuStream* s)
+{
+    s->loop();  // returns once the stream is retired and its queue is empty
+    {
+        std::lock_guard<std::mutex> lk(streamsMutex());
+        liveStreams().erase(s);
+        streamsDrained().notify_all();
+    }
+    delete s;
 }
 
 //! n-dimensional strided copy, sz[dims-1] in bytes; XOR when exactly one side is scrambled
@@ -607,10 +631,22 @@ cvAccelStatus CV_API_CALL emu_stream_create(int device, uint32_t /*flags*/, cvAc
         return lostError();
     try
     {
-        EmuStream* s = new EmuStream(device);
-        std::lock_guard<std::mutex> lk(streamsMutex());
-        liveStreams().insert(s);
-        *out = (cvAccelStream)s;
+        std::unique_ptr<EmuStream> s(new EmuStream(device));
+        {
+            std::lock_guard<std::mutex> lk(streamsMutex());
+            liveStreams().insert(s.get());
+        }
+        try
+        {
+            std::thread(runStream, s.get()).detach();   // from here on the worker owns the stream
+        }
+        catch (...)
+        {
+            std::lock_guard<std::mutex> lk(streamsMutex());
+            liveStreams().erase(s.get());
+            throw;
+        }
+        *out = (cvAccelStream)s.release();
         return CV_ACCEL_OK;
     }
     catch (const std::exception& e)
@@ -623,12 +659,15 @@ cvAccelStatus CV_API_CALL emu_stream_destroy(cvAccelStream stream) CV_ACCEL_NOEX
 {
     if (!stream)
         return CV_ACCEL_OK;
-    EmuStream* s = (EmuStream*)stream;
+    try
     {
         std::lock_guard<std::mutex> lk(streamsMutex());
-        liveStreams().erase(s);
+        ((EmuStream*)stream)->retire();     // the worker drains the queue, then deletes the stream
     }
-    delete s;
+    catch (...)
+    {
+        return CV_ACCEL_INTERNAL_ERROR;     // a mutex that cannot be locked: the stream stays alive
+    }
     return CV_ACCEL_OK;
 }
 
@@ -695,28 +734,54 @@ cvAccelStatus CV_API_CALL emu_fence_release(cvAccelFence fence) CV_ACCEL_NOEXCEP
     return CV_ACCEL_OK;
 }
 
+//! fences that are released when the holder goes away, whatever happens in between
+struct FenceList
+{
+    ~FenceList()
+    {
+        for (size_t i = 0; i < fences.size(); i++)
+            fences[i]->release();
+    }
+    std::vector<EmuFence*> fences;
+};
+
 cvAccelStatus CV_API_CALL emu_device_synchronize(int device) CV_ACCEL_NOEXCEPT
 {
     if (deviceLost(device))
         return lostError();
-    std::vector<EmuFence*> fences;
+    try
     {
-        std::lock_guard<std::mutex> lk(streamsMutex());
+        FenceList list;
+        std::unique_lock<std::mutex> lk(streamsMutex());
+        list.fences.reserve(liveStreams().size());
         for (std::set<EmuStream*>::iterator it = liveStreams().begin(); it != liveStreams().end(); ++it)
         {
-            if ((*it)->device != device)
+            if ((*it)->device != device || (*it)->retired)
                 continue;
             cvAccelFence f = 0;
             if (emu_stream_record_fence((cvAccelStream)*it, &f) == CV_ACCEL_OK)
-                fences.push_back((EmuFence*)f);
+                list.fences.push_back((EmuFence*)f);    // capacity is reserved: never throws
         }
+        // retired streams drain on their own; their workers leave liveStreams when done
+        streamsDrained().wait(lk, [device]() {
+            for (std::set<EmuStream*>::const_iterator it = liveStreams().begin(); it != liveStreams().end(); ++it)
+                if ((*it)->device == device && (*it)->retired)
+                    return false;
+            return true;
+        });
+        lk.unlock();
+        for (size_t i = 0; i < list.fences.size(); i++)
+            list.fences[i]->wait(CV_ACCEL_INFINITE);
+        return CV_ACCEL_OK;
     }
-    for (size_t i = 0; i < fences.size(); i++)
+    catch (const std::bad_alloc&)
     {
-        fences[i]->wait(CV_ACCEL_INFINITE);
-        fences[i]->release();
+        return CV_ACCEL_OUT_OF_MEMORY;
     }
-    return CV_ACCEL_OK;
+    catch (...)
+    {
+        return CV_ACCEL_INTERNAL_ERROR;
+    }
 }
 
 ////////////////////////////////// operations //////////////////////////////////
