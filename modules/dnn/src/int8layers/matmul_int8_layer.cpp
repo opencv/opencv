@@ -40,6 +40,7 @@ public:
             blobs = { p.weights.clone(), p.bias.clone(), p.outputMultiplier.clone() };
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;
+
             if (vecsize % VEC_ALIGN != 0)
             {
                 int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
@@ -162,6 +163,7 @@ private:
         p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
         p.useLASX = checkHardwareSupport(CPU_LASX);
         p.useRVV = checkHardwareSupport(CPU_RVV);
+        p.useSVE = checkHardwareSupport(CPU_SVE);
 
         parallel_for_(Range(0, nstripes), p, nstripes);
     }
@@ -171,7 +173,7 @@ private:
     public:
         Int8GemmBody() : srcMat(0), weights(0), biasMat(0), outputMultiplier(0),
                          dstMat(0), nstripes(0), outZp(0),
-                         useAVX2(false), useAVX512(false), useLASX(false), useRVV(false) {}
+                         useAVX2(false), useAVX512(false), useLASX(false), useRVV(false), useSVE(false) {}
 
         void operator()(const Range& r) const CV_OVERRIDE
         {
@@ -228,6 +230,12 @@ private:
                     opt_RVP052::fastGEMM1T(sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp);
                 else
             #endif
+            #if CV_TRY_SVE && CV_SVE
+                if(useSVE){
+                    opt_SVE::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                }
+                else
+            #endif
                 {
                     int i = 0;
             #if CV_SIMD128
@@ -280,6 +288,7 @@ private:
         bool useAVX512;
         bool useLASX;
         bool useRVV;
+        bool useSVE;
     };
 
     int inp_dims;
