@@ -751,6 +751,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
 cv::RNG& cv::theRNG()
 {
+    return *getCoreTlsData().rng;
+}
+
+cv::Ptr<cv::RNG> cv::theRNGPtr()
+{
     return getCoreTlsData().rng;
 }
 
