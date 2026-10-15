@@ -145,6 +145,13 @@ public:
     //! builds GpuMat from host memory (Blocking call)
     CV_WRAP explicit GpuMat(InputArray arr, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
+    //! wraps an external device pointer (no copy, does not own the memory)
+    //! data is the raw GPU address (e.g. torch tensor .data_ptr()) as an integer
+    CV_WRAP static GpuMat fromDevicePointer(size_t data, int rows, int cols, int type, size_t step = Mat::AUTO_STEP)
+    {
+        return GpuMat(rows, cols, type, reinterpret_cast<void*>(data), step);
+    }
+
     //! destructor - calls release()
     ~GpuMat();
 
