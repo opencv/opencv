@@ -2662,7 +2662,7 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
 
     checkOpenCLVersion();  // clCreateFromGLTexture requires OpenCL 1.2
 
-    UMat u = src.getUMat();
+    UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -2725,6 +2725,14 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(texture.size(), textureType);
     UMat u = dst.getUMat();
+    if (!ocl::internal::isOpenCLMemory(u))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+        convertFromGLTexture2D(texture, tmp);
+        tmp.copyTo(u);
+        return;
+    }
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);

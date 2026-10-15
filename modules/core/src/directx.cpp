@@ -966,7 +966,7 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
-    UMat u = src.getUMat();
+    UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1066,7 +1066,7 @@ static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11T
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
-    UMat u = src.getUMat();
+    UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1163,6 +1163,14 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), textureType);
     UMat u = dst.getUMat();
+    if (!ocl::internal::isOpenCLMemory(u))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+        __convertFromD3D11Texture2DKHR(pD3D11Texture2D, tmp);
+        tmp.copyTo(u);
+        return;
+    }
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1260,6 +1268,14 @@ static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, Outp
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), textureType);
     UMat u = dst.getUMat();
+    if (!ocl::internal::isOpenCLMemory(u))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+        __convertFromD3D11Texture2DNV(pD3D11Texture2D, tmp);
+        tmp.copyTo(u);
+        return;
+    }
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1422,7 +1438,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 
     cl_context context = (cl_context)ctx.ptr();
 
-    UMat u = src.getUMat();
+    UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1484,6 +1500,14 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), textureType);
     UMat u = dst.getUMat();
+    if (!ocl::internal::isOpenCLMemory(u))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+        convertFromD3D10Texture2D(pD3D10Texture2D, tmp);
+        tmp.copyTo(u);
+        return;
+    }
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1550,7 +1574,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 
     cl_context context = (cl_context)ctx.ptr();
 
-    UMat u = src.getUMat();
+    UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
@@ -1619,6 +1643,14 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), surfaceType);
     UMat u = dst.getUMat();
+    if (!ocl::internal::isOpenCLMemory(u))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+        convertFromDirect3DSurface9(pDirect3DSurface9, tmp, surfaceSharedHandle);
+        tmp.copyTo(u);
+        return;
+    }
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);

@@ -25,10 +25,16 @@ waited for, when caches must be cleaned or invalidated). A backend never changes
 state itself; it only executes the primitives it is asked to execute.
 
 Compatibility rules:
-- every struct passed across this boundary starts with a size field or is wrapped in a
-  struct that does; fields are only ever appended;
-- a table entry outside of the size reported by the backend reads as NULL;
-- NULL entries and CV_ACCEL_NOT_IMPLEMENTED both mean "not supported, no side effects".
+- structs with a struct_size field grow at their end only. The side that fills one writes
+  at most struct_size bytes of it, and the side that reads one reads only the fields that
+  lie within struct_size (the others count as zero);
+- structs without one (cvAccelMemoryDesc, cvAccelAllocation, cvAccelView,
+  cvAccelCopyEndpoint) keep their size, since they are embedded or passed in arrays: new
+  fields take their reserved space, which the side that creates them sets to zero;
+- a table entry outside of the size reported by the backend reads as NULL, and the plugin
+  loader asks for the highest API version first;
+- NULL entries and CV_ACCEL_NOT_IMPLEMENTED both mean "not supported, no side effects";
+- cvAccelStatus is 32 bits wide whatever the compiler's enum size (see its MAX_ENUM).
 
 Rules a backend must follow, because core relies on them for correctness:
 1. Report the true host-access class of every allocation, decided at run time (the same
@@ -78,7 +84,8 @@ extern "C" {
 #endif
 
 #define CV_ACCEL_ABI_VERSION 0
-#define CV_ACCEL_API_VERSION 0
+//! 1: describe_allocation
+#define CV_ACCEL_API_VERSION 1
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -100,7 +107,8 @@ typedef enum cvAccelStatus
     CV_ACCEL_INVALID_ARGUMENT = 3,
     CV_ACCEL_TIMEOUT = 4,           //!< a wait expired, or a fence is still pending (timeout 0)
     CV_ACCEL_DEVICE_LOST = 5,       //!< the device can no longer be used
-    CV_ACCEL_INTERNAL_ERROR = 6
+    CV_ACCEL_INTERNAL_ERROR = 6,
+    CV_ACCEL_STATUS_MAX_ENUM = 0x7FFFFFFF   //!< keeps the type 32 bits wide (-fshort-enums, DSP toolchains)
 } cvAccelStatus;
 
 typedef enum cvAccelDeviceType
@@ -182,6 +190,7 @@ typedef struct cvAccelMemoryDesc
     uint64_t layout_modifier;   //!< 0 = linear; otherwise a DRM-style format modifier with no linear CPU view
     uint32_t base_alignment;    //!< alignment of the allocation start, bytes
     uint32_t coherence_granule; //!< NONCOHERENT: cache line or atom size cache operations work on; else 0
+    uint32_t reserved[6];       //!< zero; room for new fields (the size stays)
 } cvAccelMemoryDesc;
 
 /** @brief One physical allocation, filled in by the backend. */
@@ -191,6 +200,7 @@ typedef struct cvAccelAllocation
     uint64_t size;              //!< bytes requested (allocate) or imported, never rounded up: whole-buffer copies use it
     void* backend_data;         //!< private to the backend
     cvAccelMemoryDesc desc;
+    uint64_t reserved[2];       //!< zero; room for new fields (the size stays)
 } cvAccelAllocation;
 
 /** @brief An n-dimensional strided view into an allocation (an argument of an operation).
@@ -208,6 +218,7 @@ typedef struct cvAccelView
     int32_t dims;
     int32_t size[CV_ACCEL_MAX_DIMS];
     uint64_t step[CV_ACCEL_MAX_DIMS];   //!< bytes; step[dims-1] is the element size
+    uint64_t reserved[2];               //!< zero; room for new fields (views are passed in arrays)
 } cvAccelView;
 
 typedef struct cvAccelStream_t* cvAccelStream; //!< in-order queue, owned by the backend
@@ -237,6 +248,7 @@ typedef struct cvAccelCopyEndpoint
     void* host;
     uint64_t offset;
     uint64_t step[CV_ACCEL_MAX_DIMS];
+    uint64_t reserved[2];       //!< zero; room for new fields (the size stays)
 } cvAccelCopyEndpoint;
 
 /** @brief cvAccelCopyRegion::flags */

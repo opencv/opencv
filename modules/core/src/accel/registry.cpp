@@ -638,7 +638,8 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
     const int id = (int)backends_.size() + 1;
     backends_.push_back(new Backend(id, api, priority, origin));  // capacity is reserved: get() never sees a reallocation
     active_.store(true, std::memory_order_release);
-    CV_LOG_INFO(NULL, "accel: registered backend '" << api->v0.backend_name << "' (" << origin << ", priority " << priority << ")");
+    CV_LOG_INFO(NULL, "accel: registered backend '" << api->v0.backend_name << "' (" << origin << ", API "
+                << h.api_version << ", priority " << priority << ")");
     return id;
 }
 
@@ -699,7 +700,11 @@ void Registry::loadPlugins()
             CV_LOG_WARNING(NULL, "accel: " << path << " is not an accelerator plugin");
             continue;
         }
-        const OpenCV_Core_Accel_API* api = init(CV_ACCEL_ABI_VERSION, CV_ACCEL_API_VERSION, NULL);
+        // the highest API version first, like the other plugin loaders: a plugin built against
+        // an older header may only answer for the version it knows
+        const OpenCV_Core_Accel_API* api = NULL;
+        for (int v = CV_ACCEL_API_VERSION; v >= 0 && !api; v--)
+            api = init(CV_ACCEL_ABI_VERSION, v, NULL);
         if (add(api, 50, "plugin " + path))
             lib->disableAutomaticLibraryUnloading();   // tables and code must outlive every buffer
     }

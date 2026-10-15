@@ -6832,6 +6832,14 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_HEIGHT, sizeof(size_t), &h, 0));
 
     dst.create((int)h, (int)w, type);
+    if (!internal::isOpenCLMemory(dst))
+    {
+        // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+        UMat tmp = internal::toOpenCLMemory(dst, false);
+        convertFromImage(cl_mem_image, tmp);
+        tmp.copyTo(dst);
+        return;
+    }
 
     cl_mem clBuffer = (cl_mem)dst.handle(ACCESS_READ);
 
@@ -7461,6 +7469,14 @@ struct Image2D::Impl
         if (!isFormatSupported(format))
             CV_Error(Error::OpenCLApiCallError, "Image format is not supported");
 
+        if (!internal::isOpenCLMemory(src))
+        {
+            // memory of another device API (see cv::accel): an image can only take a copy
+            CV_Assert(!alias && "an OpenCL image cannot alias memory of another device API");
+            init(internal::toOpenCLMemory(src), norm, false);
+            return;
+        }
+
         if (alias && !src.handle(ACCESS_RW))
             CV_Error(Error::OpenCLApiCallError, "Incorrect UMat, handle is null");
 
@@ -7550,7 +7566,7 @@ bool Image2D::canCreateAlias(const UMat &m)
 {
     bool ret = false;
     const Device & d = ocl::Device::getDefault();
-    if (d.imageFromBufferSupport() && !m.empty())
+    if (d.imageFromBufferSupport() && !m.empty() && internal::isOpenCLMemory(m))
     {
         // This is the required pitch alignment in pixels
         uint pitchAlign = d.imagePitchAlignment();
@@ -7644,6 +7660,24 @@ bool internal::isPerformanceCheckBypassed()
         initialized = true;
     }
     return value;
+}
+
+bool internal::isOpenCLMemory(const UMat& u)
+{
+    return !isNonOpenCLMemory(u.u);
+}
+
+UMat internal::toOpenCLMemory(const UMat& u, bool copyContent)
+{
+    if (!isNonOpenCLMemory(u.u))
+        return u;
+    UMat m;
+    m.allocator = getOpenCLAllocator();
+    if (copyContent)
+        u.copyTo(m);    // through host memory: the two device APIs share no buffers
+    else
+        m.create(u.dims, u.size.p, u.type());
+    return m;
 }
 
 bool internal::isCLBuffer(UMat& u)

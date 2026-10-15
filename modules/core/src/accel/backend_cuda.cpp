@@ -272,32 +272,35 @@ cvAccelStatus CV_API_CALL cu_get_device_count(int* count) CV_ACCEL_NOEXCEPT
 
 cvAccelStatus CV_API_CALL cu_get_device_info(int device, cvAccelDeviceInfo* info) CV_ACCEL_NOEXCEPT
 {
-    if (device < 0 || device >= (int)devices().size())
+    if (!info || device < 0 || device >= (int)devices().size())
         return CV_ACCEL_INVALID_ARGUMENT;
     const DeviceProps& p = devices()[device];
-    const uint32_t size = info->struct_size;
-    memset(info, 0, sizeof(*info));
-    info->struct_size = size;
-    info->device_type = p.prop.integrated ? CV_ACCEL_DEVICE_GPU_INTEGRATED : CV_ACCEL_DEVICE_GPU_DISCRETE;
-    strncpy(info->name, p.prop.name, sizeof(info->name) - 1);
-    info->vendor_id = 0x10de;
-    info->total_memory = p.prop.totalGlobalMem;
-    info->caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_MANAGED |
-                 CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
+    cvAccelDeviceInfo d;
+    memset(&d, 0, sizeof(d));
+    d.device_type = p.prop.integrated ? CV_ACCEL_DEVICE_GPU_INTEGRATED : CV_ACCEL_DEVICE_GPU_DISCRETE;
+    strncpy(d.name, p.prop.name, sizeof(d.name) - 1);
+    d.vendor_id = 0x10de;
+    d.total_memory = p.prop.totalGlobalMem;
+    d.caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_MANAGED |
+             CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
     if (p.peerEnabled)
-        info->caps |= CV_ACCEL_CAP_PEER_ACCESS;
+        d.caps |= CV_ACCEL_CAP_PEER_ACCESS;
     if (p.prop.integrated)
-        info->caps |= CV_ACCEL_CAP_SHARED;
+        d.caps |= CV_ACCEL_CAP_SHARED;
     if (!p.concurrentManagedAccess)
-        info->caps |= CV_ACCEL_CAP_DEVICE_IDLE_MEMORY;  // managed memory faults on the CPU while a kernel runs
+        d.caps |= CV_ACCEL_CAP_DEVICE_IDLE_MEMORY;  // managed memory faults on the CPU while a kernel runs
     if (p.hostRegisterSupported)
     {
         // any address: the driver pins whole pages, and core refuses two imports that share a
         // page (cudaHostRegister would fail with cudaErrorHostMemoryAlreadyRegistered)
-        info->caps |= CV_ACCEL_CAP_IMPORT_HOST_PTR;
-        info->host_import_alignment = 0;
+        d.caps |= CV_ACCEL_CAP_IMPORT_HOST_PTR;
+        d.host_import_alignment = 0;
     }
-    info->preferred_kind = p.prop.integrated ? CV_ACCEL_MEM_SHARED : CV_ACCEL_MEM_DEVICE;
+    d.preferred_kind = p.prop.integrated ? CV_ACCEL_MEM_SHARED : CV_ACCEL_MEM_DEVICE;
+    // the caller's struct may be older (smaller) than ours: write what it has room for
+    const uint32_t size = info->struct_size;
+    memcpy(info, &d, std::min<size_t>(size, sizeof(d)));
+    info->struct_size = size;
     return CV_ACCEL_OK;
 }
 

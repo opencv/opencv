@@ -284,23 +284,26 @@ cvAccelStatus CV_API_CALL emu_get_device_info(int device, cvAccelDeviceInfo* inf
     static const uint32_t preferred[EMU_DEVICES] = {
         CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_SHARED, CV_ACCEL_MEM_DEVICE, CV_ACCEL_MEM_MANAGED,
         CV_ACCEL_MEM_DEVICE };
-    const uint32_t size = info->struct_size;
-    memset(info, 0, sizeof(*info));
-    info->struct_size = size;
-    info->device_type = types[device];
-    strncpy(info->name, names[device], sizeof(info->name) - 1);
-    info->caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
+    cvAccelDeviceInfo d;
+    memset(&d, 0, sizeof(d));
+    d.device_type = types[device];
+    strncpy(d.name, names[device], sizeof(d.name) - 1);
+    d.caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
     if (device == EMU_COHERENT || device == EMU_NONCOHERENT)
-        info->caps |= CV_ACCEL_CAP_SHARED;
+        d.caps |= CV_ACCEL_CAP_SHARED;
     if (device == EMU_MANAGED)
-        info->caps |= CV_ACCEL_CAP_MANAGED | CV_ACCEL_CAP_DEVICE_IDLE_MEMORY;
+        d.caps |= CV_ACCEL_CAP_MANAGED | CV_ACCEL_CAP_DEVICE_IDLE_MEMORY;
     if (device == EMU_COHERENT)
     {
-        info->caps |= CV_ACCEL_CAP_IMPORT_HOST_PTR;
-        info->host_import_alignment = 64;
+        d.caps |= CV_ACCEL_CAP_IMPORT_HOST_PTR;
+        d.host_import_alignment = 64;
     }
-    info->total_memory = (uint64_t)1 << 32;
-    info->preferred_kind = preferred[device];
+    d.total_memory = (uint64_t)1 << 32;
+    d.preferred_kind = preferred[device];
+    // the caller's struct may be older (smaller) than ours: write what it has room for
+    const uint32_t size = info->struct_size;
+    memcpy(info, &d, std::min<size_t>(size, sizeof(d)));
+    info->struct_size = size;
     return CV_ACCEL_OK;
 }
 

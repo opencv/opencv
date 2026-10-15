@@ -548,7 +548,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         "OpenCL/VA_INTEL: Can't interop with current OpenCL context - VA display mismatch: " << context_display << "(context) vs " << (void*)display << "(surface)");
     if (isValidContextDisplay && interop)
     {
-        UMat u = src.getUMat();
+        UMat u = ocl::internal::toOpenCLMemory(src.getUMat());     // a copy for memory of another device API
 
         // TODO Add support for roi
         CV_Assert(u.offset == 0);
@@ -686,6 +686,14 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
     if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
         UMat u = dst.getUMat();
+        if (!ocl::internal::isOpenCLMemory(u))
+        {
+            // memory of another device API (see cv::accel): convert into OpenCL memory, then copy
+            UMat tmp = ocl::internal::toOpenCLMemory(u, false);
+            convertFromVASurface(display, surface, size, tmp);
+            tmp.copyTo(u);
+            return;
+        }
 
         // TODO Add support for roi
         CV_Assert(u.offset == 0);

@@ -908,6 +908,15 @@ CV_EXPORTS bool isPerformanceCheckBypassed();
 
 CV_EXPORTS bool isCLBuffer(UMat& u);
 
+//! true when u.handle() is a cl_mem (false for memory of another device API, see cv::accel)
+CV_EXPORTS bool isOpenCLMemory(const UMat& u);
+
+/** @p u itself when its handle() is a cl_mem. Otherwise (memory of another device API, see
+    cv::accel) a UMat in OpenCL memory: a copy of @p u, or with @p copyContent false one of the
+    same shape for a result that the caller copies back. Interop code that passes handles to
+    OpenCL calls goes through this. */
+CV_EXPORTS UMat toOpenCLMemory(const UMat& u, bool copyContent = true);
+
 } // namespace internal
 #endif
 
