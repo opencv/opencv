@@ -3603,12 +3603,7 @@ TEST(Test_MatMul, PackedBroadcastMultipleSlices)
     normAssert(outputs[0], expected, "MatMul packed broadcast multi-slice mismatch", 1e-4, 1e-4);
 }
 
-// Any of M, N, K == 0 (an empty A or B) used to divide by zero - M * K and N * K are
-// read while computing per-batch row indices (MatMulHelper::compute(), forward_ocl())
-// and while packing a constant B (fastGemmPackBSize(), fastGemmThinEligible()) - and a
-// constant B with nothing to pack used to fall through to the dynamic-B branch and read
-// inputs[1] out of bounds (constant B never appears in `inputs`). The result is
-// well-defined regardless of which dimension is empty: an all-zero [M, N] output.
+// M, N or K == 0 used to divide by zero or read out of bounds.
 TEST(Test_MatMul, EmptyDimsDoNotCrash)
 {
     const int dims[][3] = {  // {M, K, N}

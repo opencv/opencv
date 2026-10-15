@@ -159,10 +159,9 @@ struct MatMulHelper {
         // packed_B holds one packed (N, K) matrix per batch slice of B; B_batch is that
         // slice count, which can be smaller than `batch` when B is broadcast.
         size_t packed_B_inner_size = B_batch > 0 ? packed_B_size / B_batch : 0;
-        const size_t B_step = (size_t)N * K;  // 0 when B is empty
         packed_B_offsets.resize(B_offsets.size());
         for (size_t i = 0; i < packed_B_offsets.size(); i++) {
-            packed_B_offsets[i] = B_step > 0 ? (B_offsets[i] / B_step) * packed_B_inner_size : 0;
+            packed_B_offsets[i] = (B_offsets[i] / (N * K)) * packed_B_inner_size;
         }
     }
 };
