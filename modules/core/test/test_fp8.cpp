@@ -269,4 +269,27 @@ TEST(Core_FP8, simd_scale_encode_matches_scalar)
         }
 }
 
+TEST(Core_FP8, print)
+{
+    const int depths[] = { CV_8F_E4M3FN, CV_8F_E4M3FNUZ };
+    const char* numpyNames[] = { "float8_e4m3fn", "float8_e4m3fnuz" };
+    for (int i = 0; i < 2; i++)
+    {
+        Mat m;
+        Mat(Matx13d(1, 0.5, -2)).convertTo(m, depths[i]);
+
+        std::ostringstream text;
+        text << m;
+        EXPECT_EQ("[1, 0.5, -2]", text.str());
+
+        std::ostringstream numpy;
+        numpy << format(m, Formatter::FMT_NUMPY);
+        EXPECT_EQ(cv::format("array([[1, 0.5, -2]], dtype='%s')", numpyNames[i]), numpy.str());
+
+        std::ostringstream pretty;
+        pprint(pretty, m);
+        EXPECT_EQ("1, 0.5, -2", pretty.str());
+    }
+}
+
 }} // namespace
