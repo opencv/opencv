@@ -1958,66 +1958,73 @@ TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
     }
 }
 
-TEST(Imgproc_Hist_Calc, uint16_uniform_bin_precision)
+typedef std::tuple<float, float, int, ushort, int> HistBinPrecisionCase;
+typedef ::testing::TestWithParam<std::tuple<HistBinPrecisionCase, int, bool>> Imgproc_Hist_BinPrecision;
+
+TEST_P(Imgproc_Hist_BinPrecision, uint16_uniform)
 {
+    const HistBinPrecisionCase& testCase = std::get<0>(GetParam());
+    const int width = std::get<1>(GetParam());
+    const bool roi = std::get<2>(GetParam());
+    const float range[] = { std::get<0>(testCase), std::get<1>(testCase) };
+    const int bins = std::get<2>(testCase);
+    const ushort value = std::get<3>(testCase);
+    const int expectedBin = std::get<4>(testCase);
+    const float* ranges[] = { range };
     const int* channels = NULL;  // Exercise the built-in path rather than a HAL implementation.
-    const int widths[] = { 1, 7, 8, 9, 65, 257 };
-    const float limits[][2] = { { 0, 10000 }, { 0, 65535 }, { -1000, 9000 } };
-    const int bins[] = { 180, 4096, 180 };
-    const ushort values[] = { 2500, 65423, 1500 };
-    const int expectedBins[] = { 45, 4088, 45 };
 
-    for (int i = 0; i < 3; ++i)
-    {
-        const float* ranges[] = { limits[i] };
-        Mat expected = Mat::zeros(1, &bins[i], CV_32F);
-        for (size_t j = 0; j < sizeof(widths) / sizeof(widths[0]); ++j)
-        {
-            SCOPED_TRACE(::testing::Message() << "range case=" << i << " width=" << widths[j]);
-            for (int roi = 0; roi < 2; ++roi)
-            {
-                Mat storage(3, widths[j] + roi * 5, CV_16UC1, Scalar(values[i]));
-                Mat image = storage(Rect(0, 0, widths[j], storage.rows));
-                expected.at<float>(expectedBins[i]) = static_cast<float>(image.total());
-                Mat hist;
-                calcHist(&image, 1, channels, Mat(), hist, 1, &bins[i], ranges);
-                EXPECT_EQ(0, cvtest::norm(expected, hist, NORM_INF));
+    Mat storage(3, width + (roi ? 5 : 0), CV_16UC1, Scalar(value));
+    Mat image = storage(Rect(0, 0, width, storage.rows));
+    Mat expected = Mat::zeros(1, &bins, CV_32F);
+    expected.at<float>(expectedBin) = static_cast<float>(image.total());
+    Mat hist;
+    calcHist(&image, 1, channels, Mat(), hist, 1, &bins, ranges);
+    EXPECT_EQ(0, cvtest::norm(expected, hist, NORM_INF));
 
-                Mat mask(image.size(), CV_8U, Scalar(255));
-                Mat masked;
-                calcHist(&image, 1, channels, mask, masked, 1, &bins[i], ranges);
-                EXPECT_EQ(0, cvtest::norm(expected, masked, NORM_INF));
-            }
-        }
-    }
+    Mat mask(image.size(), CV_8U, Scalar(255));
+    Mat masked;
+    calcHist(&image, 1, channels, mask, masked, 1, &bins, ranges);
+    EXPECT_EQ(0, cvtest::norm(expected, masked, NORM_INF));
 }
 
-TEST(Imgproc_Hist_Calc, uint16_uniform_mask_consistency)
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Hist_BinPrecision, ::testing::Combine(
+    ::testing::Values(HistBinPrecisionCase(0.f, 10000.f, 180, 2500, 45),
+                      HistBinPrecisionCase(0.f, 65535.f, 4096, 65423, 4088),
+                      HistBinPrecisionCase(-1000.f, 9000.f, 180, 1500, 45)),
+    ::testing::Values(1, 7, 8, 9, 65, 257),
+    ::testing::Bool()));
+
+typedef std::tuple<float, float, int> HistRangeCase;
+typedef ::testing::TestWithParam<HistRangeCase> Imgproc_Hist_MaskConsistency;
+
+TEST_P(Imgproc_Hist_MaskConsistency, uint16_uniform)
 {
+    const float range[] = { std::get<0>(GetParam()), std::get<1>(GetParam()) };
+    const int bins = std::get<2>(GetParam());
+    const float* ranges[] = { range };
     const int* channels = NULL;  // Exercise the built-in path rather than a HAL implementation.
-    const float limits[][2] = {
-        { 0, 10000 }, { 0, 65535 }, { -1000, 9000 }, { 1.25f, 5000.5f },
-        { 1, 10001 }, { 0, 65536 }, { 0, 65536 }
-    };
-    const int bins[] = { 180, 4096, 180, 1000, 180, 256, 65536 };
     Mat image(256, 256, CV_16UC1);
     for (int y = 0; y < image.rows; ++y)
         for (int x = 0; x < image.cols; ++x)
             image.at<ushort>(y, x) = static_cast<ushort>(y * image.cols + x);
     Mat mask(image.size(), CV_8U, Scalar(255));
 
-    for (int i = 0; i < 7; ++i)
-    {
-        SCOPED_TRACE(i);
-        const float* ranges[] = { limits[i] };
-        Mat expected, hist;
-        calcHist(&image, 1, channels, mask, expected, 1, &bins[i], ranges);
-        calcHist(&image, 1, channels, Mat(), hist, 1, &bins[i], ranges);
-        EXPECT_EQ(0, cvtest::norm(expected, hist, NORM_INF));
-        calcHist(&image, 1, channels, Mat(), hist, 1, &bins[i], ranges, true, true);
-        EXPECT_EQ(0, cvtest::norm(expected * 2, hist, NORM_INF));
-    }
+    Mat expected, hist;
+    calcHist(&image, 1, channels, mask, expected, 1, &bins, ranges);
+    calcHist(&image, 1, channels, Mat(), hist, 1, &bins, ranges);
+    EXPECT_EQ(0, cvtest::norm(expected, hist, NORM_INF));
+    calcHist(&image, 1, channels, Mat(), hist, 1, &bins, ranges, true, true);
+    EXPECT_EQ(0, cvtest::norm(expected * 2, hist, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Hist_MaskConsistency, ::testing::Values(
+    HistRangeCase(0.f, 10000.f, 180),
+    HistRangeCase(0.f, 65535.f, 4096),
+    HistRangeCase(-1000.f, 9000.f, 180),
+    HistRangeCase(1.25f, 5000.5f, 1000),
+    HistRangeCase(1.f, 10001.f, 180),
+    HistRangeCase(0.f, 65536.f, 256),
+    HistRangeCase(0.f, 65536.f, 65536)));
 
 TEST(Imgproc_Hist_Calc, badarg)
 {
