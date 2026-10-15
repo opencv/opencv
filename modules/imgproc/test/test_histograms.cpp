@@ -1943,13 +1943,16 @@ TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
     const float* ranges1[] = { range1 };
     const float* ranges2[] = { range2 };
 
-    setUseOptimized(false);
+    bool ipp_status = cv::ipp::useIPP();
     cv::calcHist(&m, n_images, channels, mask, hist1, dims, hist_size, ranges1);
     cv::calcHist(&m, n_images, channels, mask, hist2, dims, hist_size, ranges2);
 
-    setUseOptimized(true);
+    cv::ipp::setUseIPP(!ipp_status);
     cv::calcHist(&m, n_images, channels, mask, hist1_opt, dims, hist_size, ranges1);
     cv::calcHist(&m, n_images, channels, mask, hist2_opt, dims, hist_size, ranges2);
+
+    // restore IPP status
+    cv::ipp::setUseIPP(ipp_status);
 
     for(int i = 0; i < 1000; i++)
     {
