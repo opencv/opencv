@@ -964,6 +964,61 @@ TEST(Calib3d_StereoSGBM, regression_29761)
     EXPECT_EQ(countNonZero(leftDisp != -StereoMatcher::DISP_SCALE), 0);
 }
 
+/* < cost type, x2 is past the last column (otherwise it is before the first one) > */
+typedef tuple < int, bool > ValidateDisparity_Params_t;
+
+typedef testing::TestWithParam< ValidateDisparity_Params_t > Calib3d_ValidateDisparity;
+
+TEST_P(Calib3d_ValidateDisparity, out_of_range_disparity)
+{
+    const int costType = get<0>(GetParam());
+    const bool pastEnd = get<1>(GetParam());
+
+    // The row is wide enough for validateDisparity to allocate its work buffer on the heap.
+    const int cols = 160, numberOfDisparities = 16, disp12MaxDiff = 0;
+    const int minDisparity = pastEnd ? 0 : 2;
+    const short invalid = (short)((minDisparity - 1)*16);
+
+    struct Px { int x; short d; int cost; short expected; };
+    std::vector<Px> pixels;
+    if( pastEnd )
+    {
+        // disparity -2 at x = 159 gives x2 = 161 >= cols
+        pixels.push_back({100, 80, 0, 80});
+        pixels.push_back({159, -32, 0, -32});
+    }
+    else
+    {
+        // x = 154 and x = 155 both map to slot 152, 154 has the lower cost, so 155 fails the cross-check.
+        // x = 159 gives x2 = -8, which is outside the buffer and used to overwrite the cost of slot 152.
+        pixels.push_back({154, 32, 0, 32});
+        pixels.push_back({155, 48, 10, invalid});
+        pixels.push_back({159, 2672, 0, 2672});
+    }
+
+    Mat1s disp(1, cols, invalid), expected(1, cols, invalid);
+    Mat1i cost32(1, cols, 0);
+    for( size_t i = 0; i < pixels.size(); i++ )
+    {
+        disp(0, pixels[i].x) = pixels[i].d;
+        cost32(0, pixels[i].x) = pixels[i].cost;
+        expected(0, pixels[i].x) = pixels[i].expected;
+    }
+    Mat cost;
+    cost32.convertTo(cost, costType);
+
+    validateDisparity(disp, cost, minDisparity, numberOfDisparities, disp12MaxDiff);
+
+    EXPECT_EQ(0, cvtest::norm(disp, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Calib3d_ValidateDisparity,
+        testing::Combine(
+            testing::Values(CV_16S, CV_32S),
+            testing::Bool()
+            )
+        );
+
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
