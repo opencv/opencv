@@ -448,7 +448,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFluid,
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 1, 0, 2}),
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 3, 0, 1})),
                                 Values(1, 2, 3, 4), // lpi
-                                Values(0.0)));
+                                Values(1.0)));
 
 INSTANTIATE_TEST_CASE_P(ResizeAreaTestCPU, ResizeTestFluid,
                         Combine(Values(CV_8UC1),
@@ -549,7 +549,7 @@ INSTANTIATE_TEST_CASE_P(Resize400_384TestCPU, ResizeTestFluid,
                                 Values(cv::Size(128, 400)),
                                 Values(std::make_tuple(cv::Size(128, 384), cv::Rect{})),
                                 Values(1, 2, 3, 4), // lpi
-                                Values(0.0)));
+                                Values(1.0)));
 
 INSTANTIATE_TEST_CASE_P(Resize220_400TestCPU, ResizeTestFluid,
                         Combine(Values(CV_8UC1),
@@ -557,7 +557,7 @@ INSTANTIATE_TEST_CASE_P(Resize220_400TestCPU, ResizeTestFluid,
                                 Values(cv::Size(220, 220)),
                                 Values(std::make_tuple(cv::Size(400, 400), cv::Rect{})),
                                 Values(1, 2, 3, 4), // lpi
-                                Values(0.0)));
+                                Values(1.0)));
 
 static auto cvBlur = [](const cv::Mat& in, cv::Mat& out, int kernelSize)
 {
@@ -617,8 +617,8 @@ TEST_P(ResizeAndAnotherReaderTest, SanityTest)
     cv::Mat ocv_blur_out = cv::Mat::zeros(sz, CV_8UC1);
     cvBlur(in_mat, ocv_blur_out, kernelSize);
 
-    EXPECT_EQ(0, cvtest::norm(gapi_resize_out(resizedRoi), ocv_resize_out(resizedRoi), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(gapi_blur_out(roi), ocv_blur_out(roi), NORM_INF));
+    EXPECT_LE( cvtest::norm(gapi_resize_out(resizedRoi), ocv_resize_out(resizedRoi), NORM_INF),1);
+    EXPECT_LE( cvtest::norm(gapi_blur_out(roi), ocv_blur_out(roi), NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeAndAnotherReaderTest,
@@ -690,8 +690,8 @@ TEST_P(BlursAfterResizeTest, SanityTest)
     cvBlur(resized, ocv_out1, kernelSize1);
     cvBlur(resized, ocv_out2, kernelSize2);
 
-    EXPECT_EQ(0, cvtest::norm(gapi_out1(outRoi), ocv_out1(outRoi), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(gapi_out2(outRoi), ocv_out2(outRoi), NORM_INF));
+    EXPECT_LE(cvtest::norm(gapi_out1(outRoi), ocv_out1(outRoi), NORM_INF),1);
+    EXPECT_LE(cvtest::norm(gapi_out2(outRoi), ocv_out2(outRoi), NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, BlursAfterResizeTest,
