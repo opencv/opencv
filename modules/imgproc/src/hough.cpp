@@ -977,8 +977,8 @@ void HoughLines( InputArray _image, OutputArray lines,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Check(rho, std::isfinite(rho), "rho is not finite");
-    CV_Check(theta, std::isfinite(theta), "theta is not finite");
+    CV_Check(rho, std::isfinite(rho) && (float)rho > 0, "rho must be positive and finite");
+    CV_Check(theta, std::isfinite(theta) && (float)theta > 0, "theta must be positive and finite");
     CV_CheckGT(threshold, 0, "threshold must be greater than 0");
     CV_CheckGE(max_theta, min_theta, "max_theta must be greater than min_theta");
 
@@ -1011,8 +1011,8 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Check(rho, std::isfinite(rho), "rho is not finite");
-    CV_Check(theta, std::isfinite(theta), "theta is not finite");
+    CV_Check(rho, std::isfinite(rho) && (float)rho > 0, "rho must be positive and finite");
+    CV_Check(theta, std::isfinite(theta) && (float)theta > 0, "theta must be positive and finite");
     CV_CheckGT(threshold, 0, "threshold must be greater than 0");
     CV_Check(minLineLength, std::isfinite(minLineLength) && minLineLength >= 0, "minLineLength out of range");
     CV_Check(maxGap, std::isfinite(maxGap) && maxGap >= 0, "maxGap out of range");

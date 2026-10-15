@@ -965,7 +965,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
 {
     CV_TRACE_FUNCTION_VERBOSE();
 
-    CV_Assert(len > 0);
+    CV_DbgAssert(len > 0);
 
 #ifdef CV_STATIC_ANALYSIS
     if(p >= 0 && p < len)

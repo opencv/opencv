@@ -321,6 +321,16 @@ TEST(Core_BorderInterpolate, wrap_no_overflow_29232)
     EXPECT_LT(r, 5);
 }
 
+TEST(Core_CopyMakeBorder, empty_src_and_overflow)
+{
+    Mat emptySrc, dst;
+    EXPECT_THROW(cv::copyMakeBorder(emptySrc, dst, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+
+    Mat src(5, 5, CV_8UC1, Scalar(1));
+    EXPECT_THROW(cv::copyMakeBorder(src, dst, INT_MAX, 1, 0, 0, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+    EXPECT_THROW(cv::copyMakeBorder(src, dst, 0, 0, INT_MAX, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+}
+
 TEST(Core_MixChannels, empty_and_mismatched_inputs)
 {
     Mat emptySrc, emptyDst;
