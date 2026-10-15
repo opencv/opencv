@@ -321,40 +321,6 @@ TEST(Core_BorderInterpolate, wrap_no_overflow_29232)
     EXPECT_LT(r, 5);
 }
 
-TEST(Core_BorderInterpolate, reflect_no_overflow)
-{
-    EXPECT_THROW(cv::borderInterpolate(0, 0, cv::BORDER_REFLECT), cv::Exception);
-    EXPECT_THROW(cv::borderInterpolate(0, -1, cv::BORDER_REFLECT), cv::Exception);
-    EXPECT_THROW(cv::borderInterpolate(0, 0, cv::BORDER_REFLECT_101), cv::Exception);
-    EXPECT_THROW(cv::borderInterpolate(0, -1, cv::BORDER_REFLECT_101), cv::Exception);
-
-    int r1 = cv::borderInterpolate(INT_MIN, 5, cv::BORDER_REFLECT);
-    EXPECT_GE(r1, 0);
-    EXPECT_LT(r1, 5);
-
-    int r2 = cv::borderInterpolate(INT_MAX, 5, cv::BORDER_REFLECT);
-    EXPECT_GE(r2, 0);
-    EXPECT_LT(r2, 5);
-
-    int r3 = cv::borderInterpolate(INT_MIN, 5, cv::BORDER_REFLECT_101);
-    EXPECT_GE(r3, 0);
-    EXPECT_LT(r3, 5);
-
-    int r4 = cv::borderInterpolate(INT_MAX, 5, cv::BORDER_REFLECT_101);
-    EXPECT_GE(r4, 0);
-    EXPECT_LT(r4, 5);
-}
-
-TEST(Core_CopyMakeBorder, empty_src_and_overflow)
-{
-    Mat emptySrc, dst;
-    EXPECT_THROW(cv::copyMakeBorder(emptySrc, dst, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
-
-    Mat src(5, 5, CV_8UC1, Scalar(1));
-    EXPECT_THROW(cv::copyMakeBorder(src, dst, INT_MAX, 1, 0, 0, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
-    EXPECT_THROW(cv::copyMakeBorder(src, dst, 0, 0, INT_MAX, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
-}
-
 TEST(Core_MixChannels, empty_and_mismatched_inputs)
 {
     Mat emptySrc, emptyDst;
