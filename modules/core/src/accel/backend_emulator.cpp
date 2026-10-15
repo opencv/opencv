@@ -408,8 +408,39 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
 {
     if (!ext || !out)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (device == EMU_DISCRETE && ext->type == CV_ACCEL_EXTMEM_DEVICE_POINTER)
+    {
+        // memory of another emulator allocation on this device, like a cudaMalloc pointer
+        // from another library: stored scrambled, reached by the CPU only through copies
+        try
+        {
+            memset(out, 0, sizeof(*out));
+            EmuAlloc* a = new EmuAlloc();
+            a->device = device;
+            a->kind = CV_ACCEL_MEM_DEVICE;
+            a->size = (size_t)ext->size;
+            a->mem = a->cpuView = (uchar*)(intptr_t)ext->handle + ext->offset;
+            a->owned = false;
+            a->scrambled = true;
+            a->cpuOpen = false;
+            out->desc.device_index = (uint32_t)device;
+            out->desc.kind = CV_ACCEL_MEM_DEVICE;
+            out->desc.host_access = CV_ACCEL_HOST_ACCESS_COPY;
+            out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
+            out->desc.flags = CV_ACCEL_MEMF_IMPORTED | (ext->flags & CV_ACCEL_MEMF_READ_ONLY);
+            out->handle = (uint64_t)(uintptr_t)a->mem;
+            out->size = ext->size;
+            out->backend_data = a;
+            countAllocation(device, 1);
+            return CV_ACCEL_OK;
+        }
+        catch (const std::exception& e)
+        {
+            return fail(CV_ACCEL_INTERNAL_ERROR, e.what());
+        }
+    }
     if (device != EMU_COHERENT || ext->type != CV_ACCEL_EXTMEM_HOST_POINTER)
-        return fail(CV_ACCEL_NOT_IMPLEMENTED, "only the coherent device imports host memory");
+        return fail(CV_ACCEL_NOT_IMPLEMENTED, "the coherent device imports host memory, the discrete one device pointers");
     try
     {
         memset(out, 0, sizeof(*out));

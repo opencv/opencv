@@ -283,7 +283,10 @@ Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const s
       enumerated_(false), lost_(false), pinnedCacheBytes_(0)
 {
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
+    {
         lostDevices_[i].store(false);
+        noPinnedShadow_[i].store(false);
+    }
 }
 
 static uint64_t pinnedCacheLimit()

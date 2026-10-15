@@ -553,6 +553,9 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, new_step.p, accessFlags, usageFlags);
         new_u->originalUMatData = u;
+        // the allocator counts whole rows, but the last row of a view of external memory may
+        // end before its step does: copies to and from the device must stop at dataend
+        new_u->size = std::min(new_u->size, (size_t)(dataend - datastart));
     }
     bool allocated = false;
     try

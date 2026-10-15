@@ -420,6 +420,19 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 else
                     a.mat.copyTo(a.temp);
             }
+            else if (!a.fullOverwrite)
+            {
+                // the whole temporary is copied back: what the operation leaves alone must
+                // already hold the output's current content
+                if (a.isUMat)
+                    a.um.copyTo(a.temp);    // a UMat output to copy back always exists (see planArgs)
+                else
+                {
+                    Mat current = a.arr->getMat();
+                    if (!current.empty() && current.type() == a.type && current.shape() == a.shape)
+                        current.copyTo(a.temp);
+                }
+            }
         }
         else if (a.plan == PLAN_IN_PLACE && !a.onDevice)
         {

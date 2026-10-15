@@ -204,6 +204,28 @@ TEST(Core_Accel, partial_device_write_keeps_the_rest_of_the_buffer)
     EXPECT_EQ(0, maxDiff(ref, u.getMat(ACCESS_READ)));
 }
 
+TEST(Core_Accel, partly_written_output_keeps_the_rest)
+{
+    // an operation that writes the top half of its output only (fullOverwrite = false); the
+    // output is a Mat, so the device writes a temporary that is then copied into it
+    accel::Device d = emulator(DISCRETE);
+    Mat src(8, 8, CV_8UC1), dst(8, 8, CV_8UC1, Scalar(5));
+    randu(src, 0, 255);
+    UMat usrc = makeOn(d, src);
+    accel::detail::OpCall call("test.flip_top_half", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
+    call.input(usrc);
+    call.output(dst, src.shape(), src.type(), false);
+    EXPECT_EQ(accel::detail::HANDLED, call.run([](const void* t, const cvAccelCall* c, const cvAccelView* v) {
+        cvAccelView half[2] = { v[0], v[1] };
+        half[0].size[0] /= 2;
+        half[1].size[0] /= 2;
+        return ((const cvAccelOpsCore_v0*)t)->flip(c, &half[0], &half[1], 1);
+    }));
+    Mat ref(8, 8, CV_8UC1, Scalar(5));
+    cv::flip(src.rowRange(0, 4), ref.rowRange(0, 4), 1);
+    EXPECT_EQ(0, maxDiff(ref, dst));
+}
+
 TEST(Core_Accel, in_place_operation)
 {
     accel::Device d = emulator(DISCRETE);
@@ -235,6 +257,20 @@ TEST(Core_Accel, writable_mat_view_keeps_the_device_away)
 
     cv::flip(u, out, 1);                    // view gone: back on the device
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+}
+
+TEST(Core_Accel, copy_out_while_a_mat_view_is_open)
+{
+    // non-coherent memory: the view's writes sit in CPU caches until the view ends
+    accel::Device d = emulator(NONCOHERENT);
+    UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
+    Mat view = u.getMat(ACCESS_RW);
+    view.setTo(Scalar(42));
+    Mat res;
+    u.copyTo(res);
+    EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(42)), res));
+    view.release();
+    EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(42)), u.getMat(ACCESS_READ)));   // the writes survived
 }
 
 TEST(Core_Accel, protected_memory_never_reaches_the_cpu)
@@ -295,6 +331,46 @@ TEST(Core_Accel, host_mat_used_in_place_by_a_coherent_device)
     }
 }
 
+TEST(Core_Accel, mat_gets_back_what_was_written_through_its_umat)
+{
+    // coherent shared memory: the UMat holds its own copy of the Mat's bytes
+    accel::Device d = emulator(COHERENT);
+    Mat m(8, 8, CV_8UC1, Scalar(3));
+    {
+        accel::ExecutionScope scope(d);
+        UMat u = m.getUMat(ACCESS_RW);
+        u.getMat(ACCESS_WRITE).setTo(Scalar(9));    // a CPU write through the UMat
+    }
+    EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(9)), m));
+    {
+        accel::ExecutionScope scope(d);
+        UMat u = m.getUMat(ACCESS_RW);
+        Mat(8, 8, CV_8UC1, Scalar(5)).copyTo(u);    // an upload
+    }
+    EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(5)), m));
+}
+
+TEST(Core_Accel, mat_backed_umat_stays_inside_the_mat)
+{
+    // external memory whose last row ends before its step does, followed by other data
+    const int rows = 4, cols = 6, step = 16;
+    const size_t extent = (size_t)step * (rows - 1) + cols;
+    std::vector<uchar> buf(extent + step, 0xEE);
+    Mat m(rows, cols, CV_8UC1, buf.data(), step);
+    Mat src(rows, cols, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    {
+        accel::ExecutionScope scope(emulator(DISCRETE));
+        UMat u = m.getUMat(ACCESS_RW);
+        cv::flip(src, u, 0);                                // written on the device
+        std::fill(buf.begin() + extent, buf.end(), 0x11);   // the data after the Mat changes meanwhile
+    }
+    EXPECT_EQ(0, maxDiff(ref, m));
+    for (size_t i = extent; i < buf.size(); i++)
+        ASSERT_EQ(0x11, buf[i]) << "byte " << i << " after the Mat was overwritten";
+}
+
 TEST(Core_Accel, clone_stays_on_the_device)
 {
     accel::Device d = emulator(DISCRETE);
@@ -335,6 +411,30 @@ TEST(Core_Accel, wrapped_host_memory_and_overlapping_imports)
 
     w.release();    // waits for the device: the memory goes back to its owner
     EXPECT_NO_THROW(accel::wrapExternalMemory(d, mem, MatShape({64, 64}), CV_8UC1));
+}
+
+TEST(Core_Accel, wrapped_device_memory_reads_its_content)
+{
+    // like a device pointer from another library: the content is in device memory, and the
+    // host copy that the CPU needs does not exist yet
+    accel::Device d = emulator(DISCRETE);
+    Mat src(24, 32, CV_8UC1);
+    randu(src, 0, 255);
+    UMat owner = makeOn(d, src);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DEVICE_POINTER;
+    mem.handle = (int64)(intptr_t)owner.handle(ACCESS_READ);
+    mem.size = src.total();
+    {
+        UMat w = accel::wrapExternalMemory(d, mem, MatShape({24, 32}), CV_8UC1);
+        EXPECT_EQ(0, maxDiff(src, w.getMat(ACCESS_READ)));
+    }
+    {
+        UMat w = accel::wrapExternalMemory(d, mem, MatShape({24, 32}), CV_8UC1);
+        Mat res;
+        w.copyTo(res);
+        EXPECT_EQ(0, maxDiff(src, res));
+    }
 }
 
 TEST(Core_Accel, functions_without_a_hook_still_work)
@@ -409,6 +509,25 @@ TEST(Core_Accel, release_while_in_flight_is_deferred)
         trigger.create(1, 1, CV_8UC1);
         trigger.release();
         EXPECT_EQ(before, accel::detail::emulatorLiveAllocations());
+    });
+}
+
+TEST(Core_Accel, copy_into_wrapped_memory_is_done_on_return)
+{
+    accel::Device d = emulator(COHERENT);
+    runWithDeviceDelay(20000, [&]() {
+        std::vector<uchar> storage(4096 * 2);
+        uchar* p = alignPtr(storage.data(), 4096);
+        Mat host(32, 32, CV_8UC1, p);
+        host.setTo(Scalar(0));
+        accel::ExternalMemory mem;
+        mem.type = accel::ExternalMemory::HOST_POINTER;
+        mem.handle = (int64)(intptr_t)p;
+        mem.size = host.total();
+        UMat w = accel::wrapExternalMemory(d, mem, MatShape({32, 32}), CV_8UC1);
+        UMat src = makeOn(d, Mat(32, 32, CV_8UC1, Scalar(7)));
+        src.copyTo(w);                      // a device copy into the owner's memory
+        EXPECT_EQ(0, maxDiff(Mat(32, 32, CV_8UC1, Scalar(7)), host));   // read directly, not through w
     });
 }
 #endif

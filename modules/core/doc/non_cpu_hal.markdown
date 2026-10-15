@@ -246,7 +246,9 @@ see the same DRAM:
 
 - The host copy of device memory is pinned, from a size-keyed cache
   (`OPENCV_ACCEL_PINNED_CACHE_MB`), so every transfer is one DMA and pinning never happens
-  per buffer (pinning is slow and stalls the device's streams).
+  per buffer (pinning is slow and stalls the device's streams). Only pinned memory that the
+  CPU reaches through its caches is used: where the backend reports it uncached (Jetson
+  before Xavier) or write-combined, host copies stay in pageable memory.
 - A read-only CPU use costs one download and no write-back.
 - A CPU write is uploaded once, when the device next needs the data. Three CPU fallbacks in
   a row cost one download, not three round trips.

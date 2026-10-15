@@ -180,6 +180,19 @@ public:
 
     IdleGate& idleGate(int device);
 
+    /** Whether pinned memory of @p device may hold the CPU's working copy of a buffer. Cleared
+        the first time the backend hands out pinned memory that the CPU reaches uncached (older
+        Jetson), write-combined or without coherence. */
+    bool pinnedShadowAllowed(int device) const CV_NOEXCEPT
+    {
+        return device < 0 || device >= MAX_TRACKED_DEVICES || !noPinnedShadow_[device].load();
+    }
+    void disallowPinnedShadow(int device) CV_NOEXCEPT
+    {
+        if (device >= 0 && device < MAX_TRACKED_DEVICES)
+            noPinnedShadow_[device].store(true);
+    }
+
     /** Pinned host blocks for host copies, reused by exact size. Allocating pinned memory is
         slow and stalls the streams of the device, so it should not happen per buffer. */
     bool takePinned(int device, uint64_t size, cvAccelAllocation& out);
@@ -210,6 +223,7 @@ private:
     enum { MAX_TRACKED_DEVICES = 64 };  //!< devices past this are tracked together, as the backend
     std::atomic<bool> lost_;
     std::atomic<bool> lostDevices_[MAX_TRACKED_DEVICES];
+    std::atomic<bool> noPinnedShadow_[MAX_TRACKED_DEVICES];
     std::vector<std::unique_ptr<IdleGate> > idleGates_;
     std::map<std::pair<int, uintptr_t>, uintptr_t> hostImports_;   //!< (device, first page) -> end
     std::multimap<std::pair<int, uint64_t>, cvAccelAllocation> pinnedCache_;
@@ -303,6 +317,7 @@ struct BufferState
     bool poisoned;                  //!< the device work that wrote the content failed
     std::string poisonReason;
     uint64 generation;              //!< incremented by every write
+    uint64 matGeneration;           //!< fromMat: the generation of the content copied from the Mat
 };
 
 //! UMat::getMat() for buffers with accelState

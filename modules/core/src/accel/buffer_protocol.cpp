@@ -51,7 +51,8 @@ enum ShadowSource
 BufferState::BufferState(Backend* b, int device_)
     : backend(b), device(device_), shadow(0), shadowFromBackend(false),
       busy(false), pendingReaders(0), pendingWriters(0), hostMapped(false), hostAccess(0),
-      imported(false), fromMat(false), hostImport(0), idleGateHeld(false), poisoned(false), generation(0)
+      imported(false), fromMat(false), hostImport(0), idleGateHeld(false), poisoned(false), generation(0),
+      matGeneration(0)
 {
     memset(&alloc, 0, sizeof(alloc));
     memset(&shadowAlloc, 0, sizeof(shadowAlloc));
@@ -236,21 +237,35 @@ void ensureShadow(BufferState* st)
     if (st->shadow)
         return;
     Backend* b = st->backend;
-    if (b->deviceInfo(st->device).caps & CV_ACCEL_CAP_HOST_PINNED)
+    if ((b->deviceInfo(st->device).caps & CV_ACCEL_CAP_HOST_PINNED) && b->pinnedShadowAllowed(st->device))
     {
         cvAccelAllocation a;
         memset(&a, 0, sizeof(a));
         if (b->takePinned(st->device, st->alloc.size, a) ||
             b->fn().allocate(st->device, st->alloc.size, CV_ACCEL_MEM_HOST_PINNED, 0, &a) == CV_ACCEL_OK)
         {
-            a.desc.backend_id = (uint32_t)b->id();
-            st->shadowAlloc = a;
-            st->shadow = (uchar*)(uintptr_t)a.handle;
-            st->shadowFromBackend = true;
-            return;
+            if (a.desc.host_access == CV_ACCEL_HOST_ACCESS_COHERENT && a.desc.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER)
+            {
+                a.desc.backend_id = (uint32_t)b->id();
+                st->shadowAlloc = a;
+                st->shadow = (uchar*)(uintptr_t)a.handle;
+                st->shadowFromBackend = true;
+                return;
+            }
+            // The CPU works in the host copy: memory it reaches uncached (pinned memory on
+            // Jetson before Xavier), write-combined or without coherence would slow every
+            // access down or need cache maintenance. Pageable memory from now on.
+            CV_LOG_INFO(NULL, "accel(" << b->name() << "): pinned memory of device " << st->device
+                        << " is not CPU-cached; host copies use pageable memory");
+            b->disallowPinnedShadow(st->device);
+            if (b->fn().deallocate(&a) != CV_ACCEL_OK)
+                CV_LOG_ERROR(NULL, "accel(" << b->name() << "): failed to free pinned memory: " << b->fn().get_last_error());
         }
-        // pinned memory is a limited resource: fall back to pageable memory
-        CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): no pinned memory for a host copy, using pageable memory");
+        else
+        {
+            // pinned memory is a limited resource: fall back to pageable memory
+            CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): no pinned memory for a host copy, using pageable memory");
+        }
     }
     st->shadow = (uchar*)fastMalloc((size_t)st->alloc.size);
     st->shadowFromBackend = false;
@@ -407,9 +422,10 @@ void beginHostAccessLocked(BufferState* st, UMatData* u, int access)
 {
     if (usesShadow(st))
     {
+        const bool fresh = !st->shadow;     // a new host copy holds nothing yet, whatever the flags say
         ensureShadow(st);
         u->data = st->shadow;
-        if (u->hostCopyObsolete() && !u->deviceCopyObsolete())
+        if ((u->hostCopyObsolete() || fresh) && !u->deviceCopyObsolete())
         {
             downloadWhole(st);
             u->markHostCopyObsolete(false);
@@ -999,9 +1015,12 @@ UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) 
     createState(u, a, true);
     u->accelState->hostImport = hostPtr;
     u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_IMPORTED;
-    // the content belongs to the owner of the memory: it is current wherever the memory is
-    u->markHostCopyObsolete(false);
+    // The content belongs to the owner and lives in the memory, which the device addresses.
+    // Memory with a CPU view is also the host copy; COPY and UNCACHED memory get their host
+    // copy on the first CPU access, memory without CPU access never.
+    BufferState* st = u->accelState;
     u->markDeviceCopyObsolete(false);
+    u->markHostCopyObsolete(usesShadow(st) || hostAccessClass(st) == CV_ACCEL_HOST_ACCESS_NONE);
     return u;
 }
 
@@ -1035,14 +1054,16 @@ bool DeviceAllocator::allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsag
     }
     else
     {
-        // memory with a CPU view: copy the content in now, the Mat keeps its own bytes
+        // memory with a CPU view: copy the content in now, the Mat keeps its own bytes and
+        // gets them back only if the UMat is written (see matGeneration)
         IdleCpuGuard idle(st);
         void* p = beginCpuAccess(st, ACCESS_WRITE);
         memcpy(p, u->origdata, u->size);
         endCpuAccess(st, ACCESS_WRITE);
-        u->markHostCopyObsolete(true);  // the CPU view must be (re)opened through the protocol
+        u->markHostCopyObsolete(false);
         u->markDeviceCopyObsolete(false);
     }
+    st->matGeneration = st->generation;
     u->prevAllocator = u->currAllocator;
     u->currAllocator = this;
     u->flags |= UMatData::TEMP_UMAT;
@@ -1063,7 +1084,11 @@ void DeviceAllocator::deallocate(UMatData* u) const
     {
         // the memory or the content belongs to a Mat: finish everything, then hand it back
         const bool deviceOk = drainForRelease(st);
-        if (!st->imported && u->hostCopyObsolete() && !u->deviceCopyObsolete())
+        // For COPY and UNCACHED memory the Mat's memory is the host copy: only a device write
+        // leaves it stale. Other memory holds its own copy of the content: any write counts.
+        const bool matStale = usesShadow(st) ? u->hostCopyObsolete() && !u->deviceCopyObsolete()
+                                             : st->generation != st->matGeneration;
+        if (!st->imported && matStale)
         {
             if (deviceOk && !st->poisoned)
                 copyBackToMat(u, st);
@@ -1125,7 +1150,7 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
     const size_t srcOffset = offsetND(srcofs, srcstep, dims);
     if (usesShadow(st))
     {
-        if (!u->hostCopyObsolete() || u->deviceCopyObsolete())
+        if ((!u->hostCopyObsolete() && st->shadow) || u->deviceCopyObsolete())
         {
             // the host copy is current (or nothing was ever written): no DMA at all
             if (st->shadow)
@@ -1163,6 +1188,13 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
         Counters& c = counters();
         c.bytesD2H += totalND(sz, dims);
         c.transfers++;
+        return;
+    }
+    if (st->hostMapped)
+    {
+        // a Mat view is open: read through its mapping. A second begin_cpu_access would
+        // invalidate CPU caches under writes the view has not flushed yet.
+        copyND((uchar*)dstptr, dststep, u->data + srcOffset, srcstep, dims, sz);
         return;
     }
     const void* p = beginCpuAccess(st, ACCESS_READ);
@@ -1321,6 +1353,8 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
     Counters& c = counters();
     c.bytesD2D += totalND(sz, dims);
     c.transfers++;
+    if (src->accelState->imported || dst->accelState->imported)
+        done.wait();    // user memory: the owner may touch it once we return (as in OpCall)
 }
 
 bool DeviceAllocator::getMemoryDesc(const UMatData* u, cvAccelMemoryDesc* desc) const

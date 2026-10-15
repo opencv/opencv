@@ -182,7 +182,7 @@ typedef struct cvAccelMemoryDesc
 typedef struct cvAccelAllocation
 {
     uint64_t handle;            //!< see cvAccelHandleKind; 64 bits so device addresses fit on 32-bit hosts
-    uint64_t size;              //!< bytes
+    uint64_t size;              //!< bytes requested (allocate) or imported, never rounded up: whole-buffer copies use it
     void* backend_data;         //!< private to the backend
     cvAccelMemoryDesc desc;
 } cvAccelAllocation;
