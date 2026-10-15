@@ -1093,22 +1093,19 @@ Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_t
     return a;
 }
 
-// A node can be merged with an earlier identical one only if it is a pure function of its
-// inputs and attributes: a standard-domain op with a built-in parser (custom layers may keep
-// state; parseNode() checks the parser), not a random op or one folded into its consumer,
-// and no subgraph bodies.
+// Merge a node into an earlier identical one only if it is a pure standard-domain op with no
+// subgraphs; fold passes take a merged producer into each of its consumers separately.
 static bool canMergeWithIdenticalNode(const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& domain = node_proto.domain();
     if (!domain.empty() && domain != "ai.onnx")
         return false;
-    // Random ops differ per call. The rest stay one per consumer, since their folds need a single
-    // consumer: Q/DQ into MatMul/Gemm/Conv, Transpose into MatMul, BatchNorm into the next Conv.
+    // Random ops differ per call. Q/DQ stay one per consumer: QDQ exports emit them that way
+    // and the QDQ pass matches each one with the op it quantizes.
     static const std::set<std::string> never_merged_ops = {
         "RandomNormal", "RandomNormalLike", "RandomUniform", "RandomUniformLike",
         "Multinomial", "Bernoulli",
-        "QuantizeLinear", "DequantizeLinear",
-        "Transpose", "BatchNormalization"
+        "QuantizeLinear", "DequantizeLinear"
     };
     if (never_merged_ops.count(node_proto.op_type()))
         return false;

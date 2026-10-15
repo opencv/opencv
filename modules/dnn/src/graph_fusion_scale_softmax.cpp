@@ -53,12 +53,9 @@ struct ModelFusionScaleSoftmax
             }
         }
 
+        // Graph outputs count as uses, so a producer that is one never reaches zero.
         vector<int> usecounts;
         netimpl->useCounts(usecounts);
-
-        std::set<int> externalArgs;
-        for (Arg out : graph->outputs())
-            externalArgs.insert(out.idx);
 
         std::map<int, int> producer;
         for (size_t i = 0; i < nops; i++) {
@@ -111,14 +108,17 @@ struct ModelFusionScaleSoftmax
             }
             if (!std::isfinite(scalar)) continue;
 
-            bool single_consumer = usecounts[sm_in.idx] == 1
-                                && externalArgs.count(sm_in.idx) == 0;
-            if (!single_consumer) continue;
-
             sm->scale *= scalar;
-            layer->inputs[0] = pl->inputs[x_slot];
-            dropped[prod_idx] = true;
-            usecounts[sm_in.idx] = 0;
+            // A shared Mul/Div stays until its last consumer has folded it.
+            Arg src = pl->inputs[x_slot];
+            layer->inputs[0] = src;
+            usecounts[src.idx]++;
+            if (--usecounts[sm_in.idx] == 0) {
+                dropped[prod_idx] = true;
+                for (Arg a : pl->inputs)
+                    if (a.idx > 0)
+                        usecounts[a.idx]--;
+            }
             modified = true;
         }
 

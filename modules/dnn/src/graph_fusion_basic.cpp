@@ -246,15 +246,19 @@ struct FuseBNPass
                 Arg conv_inp0 = inputs[0];
                 int bn_idx = conv_inp0.idx >= 0 && conv_inp0.idx < (int)producer_of.size()
                              ? producer_of[conv_inp0.idx] : -1;
-                if (bn_idx >= 0 && usecounts[conv_inp0.idx] == 1) {
+                if (bn_idx >= 0) {
                     BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(newprog[bn_idx].get());
                     if (bn && fuseForward(conv, bn)) {
+                        // Each conv owns its weights, so a shared BN folds into all of them.
                         Arg bn_inp0 = bn->inputs[0];
                         layer_ptr->inputs[0] = bn_inp0;
-                        usecounts[conv_inp0.idx] = 0;
                         if (bn_inp0.idx >= 0)
                             usecounts[bn_inp0.idx]++;
-                        newprog[bn_idx] = Ptr<LayerInfo>();
+                        if (--usecounts[conv_inp0.idx] == 0) {
+                            newprog[bn_idx] = Ptr<LayerInfo>();
+                            if (bn_inp0.idx >= 0)
+                                usecounts[bn_inp0.idx]--;
+                        }
                         modified = true;
                     }
                 }
