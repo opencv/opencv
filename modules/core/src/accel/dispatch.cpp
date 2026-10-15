@@ -121,8 +121,25 @@ void fillView(cvAccelView& v, const cvAccelAllocation* alloc, size_t offset, int
 }
 
 //! view of a continuous array that does not exist yet (QUERY of a planned temporary)
+//! what the backend will report for memory it has not allocated yet (see describe_allocation)
+cvAccelMemoryDesc plannedDesc(Backend* b, int device, uint32_t kind, uint64_t size, uint32_t flags)
+{
+    cvAccelMemoryDesc d;
+    memset(&d, 0, sizeof(d));
+    if (!b->fn().describe_allocation || b->fn().describe_allocation(device, size, kind, flags, &d) != CV_ACCEL_OK)
+    {
+        memset(&d, 0, sizeof(d));   // the backend cannot tell: only what core knows for sure
+        d.kind = kind;
+        d.flags = flags;
+    }
+    d.backend_id = (uint32_t)b->id();
+    d.device_index = (uint32_t)device;
+    return d;
+}
+
+//! a view of a buffer the call will allocate on @p device (an output or a temporary)
 void fillPlannedView(cvAccelView& v, cvAccelAllocation& alloc, const MatShape& shape, int type,
-                     const cvAccelMemoryDesc& desc)
+                     Backend* b, int device, uint32_t kind, uint32_t flags)
 {
     size_t steps[CV_ACCEL_MAX_DIMS];
     size_t total = CV_ELEM_SIZE(type);
@@ -133,7 +150,7 @@ void fillPlannedView(cvAccelView& v, cvAccelAllocation& alloc, const MatShape& s
     }
     memset(&alloc, 0, sizeof(alloc));
     alloc.size = total;
-    alloc.desc = desc;
+    alloc.desc = plannedDesc(b, device, kind, total, flags);
     fillView(v, &alloc, 0, type, shape.dims, shape.p, steps);
 }
 
@@ -169,11 +186,12 @@ void describeUMat(Arg& a)
 struct OpCall::Impl
 {
     Impl(const char* name_, const char* module_, uint32_t version_)
-        : name(name_), module(module_), version(version_), unsupported(false) {}
+        : name(name_), module(module_), version(version_), unsupported(false), protectedIn(false) {}
     const char* name;
     const char* module;
     uint32_t version;
     bool unsupported;
+    bool protectedIn;   //!< an input holds protected content: so do the outputs and temporaries
     std::vector<Arg> args;
 
     RunResult run(Invoker fn, void* userdata);
@@ -282,7 +300,7 @@ void OpCall::Impl::createOutput(Arg& a, Backend* b, int device)
 {
     UMat& d = a.arr->getUMatRef();
     MatAllocator* saved = d.allocator;
-    d.allocator = b->allocator(device, (int)b->deviceInfo(device).preferred_kind);
+    d.allocator = b->allocator(device, (int)b->deviceInfo(device).preferred_kind, protectedIn);
     try
     {
         a.arr->create(a.shape, a.type);
@@ -335,11 +353,20 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
 
     // 2. plan
     planArgs(b, device);
-    cvAccelMemoryDesc deviceDesc;
-    memset(&deviceDesc, 0, sizeof(deviceDesc));
-    deviceDesc.backend_id = (uint32_t)b->id();
-    deviceDesc.device_index = (uint32_t)device;
-    deviceDesc.kind = b->deviceInfo(device).preferred_kind;
+    const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
+    // Protected content (secure video) never reaches the CPU, and nothing computed from it may
+    // land in ordinary memory: outputs and temporaries are protected too.
+    for (size_t i = 0; i < args.size(); i++)
+        if (!args[i].isOutput && args[i].plan != PLAN_ABSENT && (args[i].desc.flags & CV_ACCEL_MEMF_PROTECTED))
+            protectedIn = true;
+    for (size_t i = 0; protectedIn && i < args.size(); i++)
+    {
+        const Arg& a = args[i];
+        if (a.isOutput && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_COPY_BACK) && !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
+            CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
+                                        "protected memory (pass an empty output to get some)", name));
+    }
+    const uint32_t plannedFlags = protectedIn ? CV_ACCEL_MEMF_PROTECTED : 0;
 
     // 3. query
     const void* table = b->opTable(module, version);
@@ -368,7 +395,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             }
             break;
         default:
-            fillPlannedView(v, a.viewAlloc, a.shape, a.type, deviceDesc);
+            fillPlannedView(v, a.viewAlloc, a.shape, a.type, b, device, plannedKind, plannedFlags);
             break;
         }
     }
@@ -383,6 +410,9 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     {
         if (!anyOnDevice)
             return NOT_HANDLED;
+        if (protectedIn)
+            CV_Error_(Error::StsNotImplemented, ("accel(%s): %s is not implemented for these arguments, and the "
+                                                 "CPU cannot read protected content", b->name().c_str(), name));
         counters().cpuFallbacks++;
         CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << " runs on the CPU (not implemented for these arguments)");
         if (shadowOnDevice)
@@ -399,7 +429,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     //    happen before the submission window)
     if (!stream)
         stream = b->defaultStream(device);
-    const MatAllocator* deviceAllocator = b->allocator(device, (int)deviceDesc.kind);
+    const MatAllocator* deviceAllocator = b->allocator(device, (int)plannedKind, protectedIn);
     bool needSync = syncDebugMode();
     for (size_t i = 0; i < args.size(); i++)
     {

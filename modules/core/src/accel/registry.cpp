@@ -282,6 +282,10 @@ Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const s
       name_(api->v0.backend_name ? api->v0.backend_name : "unnamed"), origin_(origin),
       enumerated_(false), lost_(false), pinnedCacheBytes_(0)
 {
+    // a backend built against an older header has a shorter table: what it lacks reads as NULL
+    memset(&fn_, 0, sizeof(fn_));
+    const size_t entries = api->api_header.valid_size - offsetof(OpenCV_Core_Accel_API_v0, v0);
+    memcpy(&fn_, &api->v0, std::min(entries, sizeof(fn_)));
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
     {
         lostDevices_[i].store(false);
@@ -348,6 +352,8 @@ void Backend::enumerate()
             memset(&info, 0, sizeof(info));
         }
         info.name[sizeof(info.name) - 1] = 0;
+        if (info.caps & CV_ACCEL_CAP_DEVICE_IDLE_MEMORY)
+            idleGates_[i]->used = true;     // before any submission, so none can slip past the gate
         CV_LOG_INFO(NULL, "accel(" << name_ << "): device " << i << ": " << info.name);
     }
 }
@@ -430,16 +436,16 @@ StreamPtr Backend::defaultStream(int device)
     return s;
 }
 
-MatAllocator* Backend::allocator(int device, int kind)
+MatAllocator* Backend::allocator(int device, int kind, bool protectedMem)
 {
     std::lock_guard<std::mutex> lk(mutex_);
     enumerate();
     CV_Assert(0 <= device && device < (int)devices_.size());
-    const std::pair<int, int> key(device, kind);
+    const std::pair<int, int> key(device, kind | (protectedMem ? 1 << 16 : 0));
     std::map<std::pair<int, int>, MatAllocator*>::const_iterator it = allocators_.find(key);
     if (it != allocators_.end())
         return it->second;
-    MatAllocator* a = new DeviceAllocator(this, device, kind);  // never deleted, like the OpenCL allocator
+    MatAllocator* a = new DeviceAllocator(this, device, kind, protectedMem);  // never deleted, like the OpenCL allocator
     allocators_[key] = a;
     return a;
 }
@@ -592,7 +598,10 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
     if (!api)
         return 0;
     const OpenCV_API_Header& h = api->api_header;
-    if (h.valid_size < sizeof(OpenCV_Core_Accel_API_v0))
+    // every table has the entries up to get_last_error; later ones were appended
+    const size_t minSize = offsetof(OpenCV_Core_Accel_API_v0, v0) +
+                           offsetof(OpenCV_Core_Accel_API_v0_0_api_entries, describe_allocation);
+    if (h.valid_size < minSize)
     {
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: API table is too small");
         return 0;
@@ -880,6 +889,7 @@ MemoryInfo describe(const UMat& m)
     info.hostAccess = (HostAccess)d.host_access;
     info.imported = (d.flags & CV_ACCEL_MEMF_IMPORTED) != 0;
     info.readOnly = (d.flags & CV_ACCEL_MEMF_READ_ONLY) != 0;
+    info.protectedContent = (d.flags & CV_ACCEL_MEMF_PROTECTED) != 0;
     return info;
 }
 
@@ -1017,10 +1027,13 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     ext.handle = (int64_t)memory.handle;
     ext.offset = memory.offset;
     ext.size = memory.size ? memory.size : total;
-    ext.flags = memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0;
+    ext.flags = (memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (memory.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
     m.u = a->wrap(ext, total);
+    // core enforces both, whatever the backend reports
     if (memory.readOnly)
         m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_READ_ONLY;
+    if (memory.protectedContent)
+        m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_PROTECTED;
     m.offset = 0;
     finalizeHdr(m);
     m.addref();
@@ -1029,9 +1042,39 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
 
 struct DeviceAccess::Impl
 {
-    Impl() : acq(true) {}
+    Impl() : gate(0), acq(true) {}
+    ~Impl()
+    {
+        if (gate)
+        {
+            std::lock_guard<std::mutex> lk(gate->mutex);
+            std::vector<std::thread::id>::iterator it = std::find(gate->holders.begin(), gate->holders.end(), holder);
+            if (it != gate->holders.end())
+                gate->holders.erase(it);
+        }
+    }
+    /** The caller may run device work at any time while the access exists: like an operation,
+        it keeps the CPU out of device-idle memory of the device (see IdleGate). */
+    void enterGate()
+    {
+        IdleGate& g = s->backend->idleGate(s->device);
+        window.reset(new SubmitWindow(g));
+        if (window->blocked())
+            CV_Error(Error::StsError, "accel: DeviceAccess: the CPU holds device-idle memory of this device "
+                                      "(a Mat view of it is open)");
+        if (g.used.load())
+        {
+            std::lock_guard<std::mutex> lk(g.mutex);
+            holder = std::this_thread::get_id();
+            g.holders.push_back(holder);
+            gate = &g;
+        }
+    }
     UMat m;
     StreamPtr s;
+    std::unique_ptr<SubmitWindow> window;   //!< open for the whole access, closed last
+    IdleGate* gate;                         //!< set while registered in gate->holders
+    std::thread::id holder;
     DeviceAcquisition acq;  //!< a long hold: released when the DeviceAccess goes away
 };
 
@@ -1042,6 +1085,7 @@ DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag acces
     std::unique_ptr<Impl> impl_(new Impl());
     impl_->m = m;
     impl_->s = stream.impl->s;
+    impl_->enterGate();
     int mode = ((access & ACCESS_READ) ? DEV_READ : 0) | ((access & ACCESS_WRITE) ? DEV_WRITE : 0);
     impl_->acq.add(m.u, mode ? mode : DEV_READ);
     std::vector<FenceRef> waits;

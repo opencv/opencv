@@ -113,6 +113,7 @@ struct IdleGate
     std::atomic<int> submitting;
     std::mutex mutex;
     std::condition_variable cond;   //!< signalled when submitting drops to zero
+    std::vector<std::thread::id> holders;   //!< threads with an open DeviceAccess here (under mutex)
 };
 
 /** Submission window of one operation on a device (see IdleGate). */
@@ -139,7 +140,8 @@ public:
     const std::string& name() const { return name_; }
     int priority() const { return priority_; }
     const std::string& origin() const { return origin_; }
-    const OpenCV_Core_Accel_API_v0_0_api_entries& fn() const { return api_->v0; }
+    //! the backend's entries; those past the size of its table read as NULL
+    const OpenCV_Core_Accel_API_v0_0_api_entries& fn() const { return fn_; }
 
     int deviceCount();
     cvAccelDeviceInfo deviceInfo(int device);
@@ -157,7 +159,8 @@ public:
     StreamPtr defaultStream(int device);
 
     //! the generic allocator for @p device and memory kind (cvAccelMemoryKind), never released
-    MatAllocator* allocator(int device, int kind);
+    //! @p protectedMem: allocations for results computed from protected content
+    MatAllocator* allocator(int device, int kind, bool protectedMem = false);
 
     //! takes ownership of a released buffer whose device work may still be running
     void deferRelease(BufferState* st);
@@ -210,6 +213,7 @@ private:
 
     int id_;
     const OpenCV_Core_Accel_API* api_;
+    OpenCV_Core_Accel_API_v0_0_api_entries fn_;     //!< zero-filled copy of the backend's table
     int priority_;
     std::string name_;
     std::string origin_;
@@ -385,7 +389,7 @@ private:
 class DeviceAllocator CV_FINAL : public MatAllocator
 {
 public:
-    DeviceAllocator(Backend* b, int device, int kind);
+    DeviceAllocator(Backend* b, int device, int kind, bool protectedMem = false);
 
     UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step,
                        AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
@@ -416,6 +420,7 @@ private:
     Backend* b_;
     int device_;
     int kind_;
+    bool protected_;    //!< allocates protected memory (CV_ACCEL_MEMF_PROTECTED)
 };
 
 //! frees the backend memory of a released buffer and deletes @p st (fences must be complete)

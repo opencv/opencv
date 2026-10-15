@@ -291,7 +291,10 @@ enum
     CV_ACCEL_CAP_EXPORT_DMABUF = 1 << 6,
     CV_ACCEL_CAP_EXTERNAL_FENCE = 1 << 7,   //!< fence_export / stream_wait_external
     CV_ACCEL_CAP_PEER_ACCESS = 1 << 8,      //!< kernels can read other devices of the same backend
-    CV_ACCEL_CAP_STREAMS_THREAD_SAFE = 1 << 9 //!< one stream may be used from several threads at once
+    CV_ACCEL_CAP_STREAMS_THREAD_SAFE = 1 << 9, //!< one stream may be used from several threads at once
+    /** may hand out memory that the CPU may touch only while the device is idle
+        (CV_ACCEL_HOST_ACCESS_DEVICE_IDLE); core then gates every submission from the start */
+    CV_ACCEL_CAP_DEVICE_IDLE_MEMORY = 1 << 10
 };
 
 typedef struct cvAccelDeviceInfo
@@ -322,7 +325,9 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     //! @{
     /** Allocates @p size bytes of the requested kind. The backend may return another kind
         (e.g. MANAGED when SHARED is requested on a discrete GPU) but desc must describe the
-        result truthfully. backend_id in desc is filled in by core. */
+        result truthfully. backend_id in desc is filled in by core. @p flags may hold
+        CV_ACCEL_MEMF_PROTECTED: protected memory, for results computed from protected
+        content; a device without any returns CV_ACCEL_NOT_IMPLEMENTED. */
     cvAccelStatus (CV_API_CALL *allocate)(int device, uint64_t size, uint32_t kind, uint32_t flags,
                                           cvAccelAllocation* out) CV_ACCEL_NOEXCEPT;
     cvAccelStatus (CV_API_CALL *deallocate)(cvAccelAllocation* alloc) CV_ACCEL_NOEXCEPT;
@@ -384,6 +389,15 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
 
     //! message for the last error on the calling thread (never NULL)
     const char* (CV_API_CALL *get_last_error)(void) CV_ACCEL_NOEXCEPT;
+
+    // Entries below were appended later: tables of older backends end above, and core reads
+    // what they lack as NULL.
+
+    /** optional: the description allocate() would give @p size bytes of @p kind on @p device,
+        without allocating. Core asks while it plans a call whose outputs or temporaries do not
+        exist yet, so that the QUERY step sees the memory the operation will really get. */
+    cvAccelStatus (CV_API_CALL *describe_allocation)(int device, uint64_t size, uint32_t kind, uint32_t flags,
+                                                     cvAccelMemoryDesc* desc) CV_ACCEL_NOEXCEPT;
 };
 
 typedef struct OpenCV_Core_Accel_API_v0

@@ -229,7 +229,10 @@ see the same DRAM:
 5. **Device-idle memory.** On parts where touching managed memory during any kernel faults,
    the CPU announces itself on the device's gate, waits until no submission is in
    progress, drains the device, and while it holds the memory every new operation on that
-   device runs on the CPU. A handshake on two counters avoids lock-order deadlocks.
+   device runs on the CPU. A handshake on two counters avoids lock-order deadlocks. The
+   gate is on from enumeration (`CV_ACCEL_CAP_DEVICE_IDLE_MEMORY`), and a `DeviceAccess`
+   counts as a submission for as long as it exists, since the caller's own work may run at
+   any time.
 6. **Bounds.** Before every EXECUTE call, core checks that each view lies inside its
    allocation (overflow-safe). On SoCs where the NPU has no IOMMU, a wrong stride is not an
    error but memory corruption.
@@ -237,7 +240,10 @@ see the same DRAM:
    writes into memory that was reused. Imported memory goes back to its owner only after the
    device is done.
 8. **Protected memory.** Data can be uploaded into it and processed on the device, but it
-   never reaches the CPU: `getMat`, downloads and CPU fallbacks throw.
+   never reaches the CPU: `getMat`, downloads and CPU fallbacks throw. Whatever is computed
+   from it stays protected: outputs and temporaries of the call are allocated protected
+   (`CV_ACCEL_MEMF_PROTECTED` in `allocate`), and an ordinary output, a Mat output or a
+   device copy into ordinary memory is refused.
 9. **Imported dma-bufs.** Buffers from cameras, decoders or displays may carry implicit
    fences. The backend waits for them before use and attaches its own fence after writing
    (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE` / `IMPORT_SYNC_FILE`), so other drivers stay ordered.
@@ -292,7 +298,9 @@ void flip(InputArray _src, OutputArray _dst, int flip_mode)
 Operations are typed C functions in per-module tables, like the CPU HAL's `cv_hal_*`
 entries, so the compiler checks every argument. Each call is made twice: first in `QUERY`
 mode, with no handles and no side effects, and only if the backend accepts, in `EXECUTE`
-mode. Nothing is allocated, uploaded or waited for before a backend has said yes.
+mode. Nothing is allocated, uploaded or waited for before a backend has said yes. Outputs
+and temporaries that do not exist yet are described by the backend itself
+(`describe_allocation`), so the answer covers the memory the call will really get.
 
 ### Choosing the device
 
@@ -398,7 +406,8 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | protected memory, tiled layouts | CPU access and CPU fallback throw | `checkHostAccessAllowed` |
 | read-only imported memory | device writes refused, CPU write views throw | `acquireForDevice` |
 | pageable memory in a DMA | host copies are pinned; user Mats are not pinned implicitly | `ensureShadow` |
-| overlapping or misaligned host imports | refused, the caller copies | `Backend::reserveHostImport` |
+| overlapping host imports | refused, the caller copies | `Backend::reserveHostImport` |
+| misaligned host imports (device alignment; cache-line granule for non-coherent memory) | refused, the caller copies | `DeviceAllocator::wrap` |
 | two devices of one backend | peer access if the backend allows, else a staged copy | `can_access` |
 | two backends | staged copy, counted as a transfer | `UMat::copyTo` |
 | legacy and user allocators | describe themselves or keep their old behaviour | `getMemoryDesc` |

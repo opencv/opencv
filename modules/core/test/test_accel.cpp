@@ -294,6 +294,35 @@ TEST(Core_Accel, protected_memory_never_reaches_the_cpu)
     EXPECT_THROW(cv::transpose(uf, t), cv::Exception);
 }
 
+TEST(Core_Accel, protected_content_stays_in_protected_memory)
+{
+    // a protected frame (from a secure decoder, say) next to ordinary memory on one device
+    accel::Device d = emulator(DISCRETE);
+    Mat src(8, 8, CV_8UC1);
+    randu(src, 0, 255);
+    UMat owner = makeOn(d, src);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DEVICE_POINTER;
+    mem.handle = (int64)(intptr_t)owner.handle(ACCESS_READ);
+    mem.size = src.total();
+    mem.protectedContent = true;
+    UMat secure = accel::wrapExternalMemory(d, mem, MatShape({8, 8}), CV_8UC1);
+    EXPECT_TRUE(accel::describe(secure).protectedContent);
+    EXPECT_THROW(secure.getMat(ACCESS_READ), cv::Exception);
+
+    UMat out;
+    cv::flip(secure, out, 1);                   // runs on the device, into protected memory
+    EXPECT_TRUE(accel::describe(out).protectedContent);
+    EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
+
+    UMat plain = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(0)));
+    Mat host;
+    EXPECT_THROW(cv::flip(secure, plain, 1), cv::Exception);   // an ordinary output would expose it
+    EXPECT_THROW(cv::flip(secure, host, 1), cv::Exception);    // and so would a Mat
+    EXPECT_THROW(secure.copyTo(plain), cv::Exception);
+    EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(0)), plain));
+}
+
 TEST(Core_Accel, transfer_policy_reports_hidden_copies)
 {
     Mat src(8, 8, CV_32FC3, Scalar::all(1));
@@ -411,6 +440,12 @@ TEST(Core_Accel, wrapped_host_memory_and_overlapping_imports)
 
     w.release();    // waits for the device: the memory goes back to its owner
     EXPECT_NO_THROW(accel::wrapExternalMemory(d, mem, MatShape({64, 64}), CV_8UC1));
+
+    // this device imports host memory on 64-byte boundaries only
+    accel::ExternalMemory odd = mem;
+    odd.handle = (int64)(intptr_t)(p + 1);
+    odd.size = 63 * 64;
+    EXPECT_THROW(accel::wrapExternalMemory(d, odd, MatShape({63, 64}), CV_8UC1), cv::Exception);
 }
 
 TEST(Core_Accel, wrapped_device_memory_reads_its_content)
@@ -473,6 +508,40 @@ TEST(Core_Accel, device_idle_memory_holds_back_device_work)
 }
 
 #ifndef _WIN32
+TEST(Core_Accel, mat_view_chain_ends_its_mapping)
+{
+    // the CPU may touch this memory only while the device is idle: an open mapping keeps
+    // device work away, so it has to end when the last view goes
+    accel::Device d = emulator(MANAGED);
+    Mat src(8, 8, CV_8UC1);
+    randu(src, 0, 255);
+    UMat u = makeOn(d, src);
+    {
+        UMat t = u.getMat(ACCESS_READ).getUMat(ACCESS_READ);    // the Mat in between is gone already
+    }   // the last view of the mapping goes with t
+    accel::resetTransferStats();
+    UMat out;
+    cv::flip(u, out, 1);
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+}
+
+TEST(Core_Accel, device_access_keeps_the_cpu_out_of_device_idle_memory)
+{
+    accel::Device d = emulator(MANAGED);
+    UMat a = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
+    UMat b = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(2)));
+    accel::Stream s = accel::Stream::getDefault(d);
+    {
+        Mat view = a.getMat(ACCESS_READ);  // the CPU is inside device-idle memory...
+        EXPECT_THROW({ accel::DeviceAccess acc(b, s, ACCESS_RW); }, cv::Exception);   // ...so no device work
+    }
+    {
+        accel::DeviceAccess acc(b, s, ACCESS_RW);  // the caller's kernels may run at any time now
+        EXPECT_THROW(a.getMat(ACCESS_READ), cv::Exception);   // an error, not a wait for itself
+    }
+    EXPECT_EQ(1, a.getMat(ACCESS_READ).at<uchar>(0, 0));
+}
+
 TEST(Core_Accel, cpu_waits_for_queued_device_work)
 {
     accel::Device d = emulator(DISCRETE);

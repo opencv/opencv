@@ -121,12 +121,15 @@ private:
 /** @brief Where UMat data lives and how the CPU can reach it. */
 struct CV_EXPORTS MemoryInfo
 {
-    MemoryInfo() : kind(MEMORY_HOST), hostAccess(HOST_ACCESS_COHERENT), imported(false), readOnly(false) {}
+    MemoryInfo() : kind(MEMORY_HOST), hostAccess(HOST_ACCESS_COHERENT), imported(false), readOnly(false),
+                   protectedContent(false) {}
     Device device;          //!< empty for host memory
     MemoryKind kind;
     HostAccess hostAccess;
     bool imported;          //!< memory belongs to someone else (user pointer, dma-buf, ...)
     bool readOnly;
+    //! protected content (secure video): never readable by the CPU, results computed from it stay protected
+    bool protectedContent;
 };
 
 //! describes the memory behind @p m; host memory and legacy OpenCL buffers report an empty device
@@ -217,12 +220,13 @@ struct CV_EXPORTS ExternalMemory
         DEVICE_POINTER = 5,     //!< native pointer of the device's own API (non-owning)
         AHARDWAREBUFFER = 6
     };
-    ExternalMemory() : type(HOST_POINTER), handle(0), offset(0), size(0), readOnly(false) {}
+    ExternalMemory() : type(HOST_POINTER), handle(0), offset(0), size(0), readOnly(false), protectedContent(false) {}
     Type type;
     int64 handle;           //!< pointer, file descriptor or native handle
     size_t offset;
     size_t size;
     bool readOnly;
+    bool protectedContent;  //!< protected content, e.g. a dma-buf from a secure heap (see MemoryInfo)
 };
 
 /** @brief Wraps external memory into a UMat without copying.

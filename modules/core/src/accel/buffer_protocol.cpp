@@ -371,6 +371,14 @@ public:
         gate_ = &st->backend->idleGate(st->device);
         gate_->cpuMappings++;
         std::unique_lock<std::mutex> lk(gate_->mutex);
+        if (std::find(gate_->holders.begin(), gate_->holders.end(), std::this_thread::get_id()) != gate_->holders.end())
+        {
+            // waiting would mean waiting for ourselves
+            gate_->cpuMappings--;
+            gate_ = 0;
+            CV_Error(Error::StsError, "accel: a DeviceAccess open on this thread may run device work at any time, "
+                                      "so the CPU cannot touch device-idle memory of that device until it is destroyed");
+        }
         gate_->cond.wait(lk, [this]{ return gate_->submitting.load() == 0; });
     }
     ~IdleCpuGuard()
@@ -486,6 +494,7 @@ void endHostAccessLocked(BufferState* st, UMatData* u)
     }
     st->hostMapped = false;
     st->hostAccess = 0;
+    u->mapcount = 0;
 }
 
 void checkHostAccessAllowed(const BufferState* st, int access)
@@ -574,6 +583,7 @@ Mat getHostView(const UMat& m, AccessFlag accessFlags)
             else
                 upgradeHostAccessLocked(st, u);
             st->hostMapped = true;
+            u->mapcount = 1;    // UMatData::~UMatData unmaps chained views (getMat().getUMat()) only then
             if (first && idle.active())
             {
                 st->idleGateHeld = true;    // the mapping holds the gate until it ends
@@ -915,8 +925,8 @@ static bool readyToFree(BufferState* st)
 
 //////////////////////////////////// DeviceAllocator ////////////////////////////////////
 
-DeviceAllocator::DeviceAllocator(Backend* b, int device, int kind)
-    : b_(b), device_(device), kind_(kind)
+DeviceAllocator::DeviceAllocator(Backend* b, int device, int kind, bool protectedMem)
+    : b_(b), device_(device), kind_(kind), protected_(protectedMem)
 {}
 
 int DeviceAllocator::kindFor(UMatUsageFlags usageFlags) const
@@ -970,17 +980,28 @@ UMatData* DeviceAllocator::allocate(int dims, const int* sizes, int type, void* 
     cvAccelAllocation a;
     memset(&a, 0, sizeof(a));
     const int kind = kindFor(usageFlags);
+    const uint32_t allocFlags = protected_ ? CV_ACCEL_MEMF_PROTECTED : 0;
     cvAccelStatus status = CV_ACCEL_OK;
     if (total > 0)
     {
-        status = b_->fn().allocate(device_, total, (uint32_t)kind, 0, &a);
+        status = b_->fn().allocate(device_, total, (uint32_t)kind, allocFlags, &a);
         if (status == CV_ACCEL_OUT_OF_MEMORY)
         {
             // memory held by buffers that are released but still in flight
             b_->collectDeferred(true);
-            status = b_->fn().allocate(device_, total, (uint32_t)kind, 0, &a);
+            status = b_->fn().allocate(device_, total, (uint32_t)kind, allocFlags, &a);
         }
+        if (protected_ && status == CV_ACCEL_NOT_IMPLEMENTED)
+            CV_Error_(Error::StsNotImplemented, ("accel(%s): device %d has no protected memory for results "
+                                                 "computed from protected content", b_->name().c_str(), device_));
         b_->check(status, "allocate", device_);
+        if (protected_ && !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
+        {
+            if (b_->fn().deallocate(&a) != CV_ACCEL_OK)
+                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to free device memory: " << b_->fn().get_last_error());
+            CV_Error_(Error::StsError, ("accel(%s): the backend returned ordinary memory for protected content",
+                                        b_->name().c_str()));
+        }
     }
     UMatData* u = new UMatData(this);
     u->size = total;
@@ -996,6 +1017,10 @@ UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) 
     if (!b_->fn().import_memory)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): the backend cannot import external memory", b_->name().c_str()));
     const void* hostPtr = ext.type == CV_ACCEL_EXTMEM_HOST_POINTER ? (const void*)((uchar*)(intptr_t)ext.handle + ext.offset) : 0;
+    const uint32_t align = hostPtr ? b_->deviceInfo(device_).host_import_alignment : 0;
+    if (align > 1 && (uintptr_t)hostPtr % align != 0)
+        CV_Error_(Error::StsBadArg, ("accel(%s): the device imports host memory on %u-byte boundaries only; "
+                                     "copy it into a UMat instead", b_->name().c_str(), (unsigned)align));
     if (hostPtr && !b_->reserveHostImport(device_, hostPtr, (size_t)ext.size))
         CV_Error_(Error::StsError, ("accel(%s): this host memory overlaps memory that is already imported "
                                     "(pinning works on whole pages); copy it into a UMat instead", b_->name().c_str()));
@@ -1008,6 +1033,21 @@ UMatData* DeviceAllocator::wrap(const cvAccelExternalMemory& ext, size_t total) 
         CV_Error_(Error::StsNotImplemented, ("accel(%s): this kind of external memory cannot be imported "
                                              "(type %d); copy it into a UMat instead", b_->name().c_str(), (int)ext.type));
     b_->check(status, "import_memory", device_);
+    if (hostPtr && a.desc.host_access == CV_ACCEL_HOST_ACCESS_NONCOHERENT)
+    {
+        // cache maintenance works on whole granules: a partial one at either end would write
+        // back or drop bytes of the data next to it (backend rule 3)
+        const uint64_t g = a.desc.coherence_granule;
+        if (g == 0 || (uintptr_t)hostPtr % g != 0 || ext.size % g != 0)
+        {
+            if (b_->fn().deallocate(&a) != CV_ACCEL_OK)
+                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): failed to release an import: " << b_->fn().get_last_error());
+            b_->releaseHostImport(device_, hostPtr);
+            CV_Error_(Error::StsBadArg, ("accel(%s): host memory imported without cache coherence must start and end "
+                                         "on %u-byte boundaries; copy it into a UMat instead",
+                                         b_->name().c_str(), (unsigned)g));
+        }
+    }
     CV_Assert(a.size >= total);
     UMatData* u = new UMatData(this);
     u->size = total;
@@ -1080,6 +1120,12 @@ void DeviceAllocator::deallocate(UMatData* u) const
     CV_Assert(st);
 
     // From here on errors are logged, not thrown: this runs from ~UMat.
+    if (st->hostMapped)
+    {
+        // the last view went without an unmap: flush its CPU writes, release the device gate
+        std::lock_guard<std::mutex> lk(st->mutex);
+        endHostAccessLocked(st, u);
+    }
     if (st->fromMat)
     {
         // the memory or the content belongs to a Mat: finish everything, then hand it back
@@ -1308,6 +1354,10 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
 {
     // two buffers of one device (the same buffer for a copy between its ROIs): a device copy
     CV_Assert(src->accelState && dst->accelState);
+    if ((src->accelState->alloc.desc.flags & CV_ACCEL_MEMF_PROTECTED) &&
+        !(dst->accelState->alloc.desc.flags & CV_ACCEL_MEMF_PROTECTED))
+        CV_Error_(Error::StsError, ("accel(%s): protected content cannot be copied into ordinary memory",
+                                    b_->name().c_str()));
     StreamPtr s = b_->defaultStream(device_);
     const size_t srcOffset = offsetND(srcofs, srcstep, dims);
     const size_t dstOffset = offsetND(dstofs, dststep, dims);
